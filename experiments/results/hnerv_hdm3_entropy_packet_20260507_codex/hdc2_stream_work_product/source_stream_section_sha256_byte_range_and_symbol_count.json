@@ -1,0 +1,25 @@
+{
+  "dispatch_attempted": false,
+  "ready_for_exact_eval_dispatch": false,
+  "requirement_id": "source_stream_section_sha256_byte_range_and_symbol_count",
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+  "source_label": "public_pr106_belt_and_suspenders",
+  "source_member_name": "0.bin",
+  "stream": {
+    "byte_range_basis": "single_member_payload_offset",
+    "bytes": 170278,
+    "codec": "brotli",
+    "decoded_raw_bytes": 229070,
+    "decoded_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+    "end": 170282,
+    "name": "decoder_packed_brotli",
+    "q_stream_bytes": 228958,
+    "scale_stream_bytes": 112,
+    "sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004",
+    "start": 4,
+    "symbol_count": 229070
+  },
+  "tool": "tac.hnerv_entropy_candidate_packet.build_hdc2_stream_byte_equivalence_work_product"
+}

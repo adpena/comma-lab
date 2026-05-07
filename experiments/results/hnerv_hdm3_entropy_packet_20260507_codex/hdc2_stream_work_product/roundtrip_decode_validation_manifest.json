@@ -1,0 +1,17 @@
+{
+  "candidate_decoded_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+  "candidate_stream_bytes": 221381,
+  "candidate_stream_sha256": "41816a2834eb9ca3e9ff78e138b30a1c22b0ec4d580cea8de55042dcb624cc5f",
+  "dispatch_attempted": false,
+  "q_roundtrip_equal": true,
+  "raw_equal": true,
+  "ready_for_exact_eval_dispatch": false,
+  "requirement_id": "roundtrip_decode_validation_manifest",
+  "roundtrip_valid": true,
+  "scale_roundtrip_equal": true,
+  "schema_version": 1,
+  "score_claim": false,
+  "source_decoder_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+  "source_label": "public_pr106_belt_and_suspenders",
+  "tool": "tac.hnerv_entropy_candidate_packet.build_hdc2_stream_byte_equivalence_work_product"
+}

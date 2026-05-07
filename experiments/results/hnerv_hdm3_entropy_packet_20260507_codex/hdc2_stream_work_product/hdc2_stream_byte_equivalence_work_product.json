@@ -1,0 +1,352 @@
+{
+  "bounded_hdc2_recode_variants": [
+    {
+      "archive_ready": false,
+      "bytes": 208821,
+      "candidate_stream_file": {
+        "bytes": 208821,
+        "id": "candidate_hdm2_mixed_context_stream",
+        "path": "experiments/results/hnerv_hdm3_entropy_packet_20260507_codex/hdc2_stream_work_product/candidate_hdm2_mixed_context_stream.bin",
+        "sha256": "4a1db82f170db62038ad683d6024920b1da59cd9e54e8fda8e3109605fc08bc5"
+      },
+      "codec": "HDM2_global_prev_symbol_mixed_range_raw_schema_indexed_uint8",
+      "context_count": 247,
+      "context_token_count": 228930,
+      "header_bytes": 19329,
+      "mixed_payload_bytes": 189380,
+      "q_roundtrip_equal": true,
+      "range_context_count": 60,
+      "range_payload_bytes": 147466,
+      "raw_context_count": 187,
+      "raw_equal": true,
+      "raw_payload_bytes": 41914,
+      "raw_scale_bytes": 112,
+      "scale_roundtrip_equal": true,
+      "schema_metadata_elided_vs_hdc2_bytes": 444,
+      "sha256": "4a1db82f170db62038ad683d6024920b1da59cd9e54e8fda8e3109605fc08bc5",
+      "variant": "mixed_range_raw_global_prev_symbol_schema_indexed_q_streams_plus_raw_scales"
+    },
+    {
+      "archive_ready": false,
+      "brotli_quality": 11,
+      "bytes": 170113,
+      "candidate_stream_file": {
+        "bytes": 170113,
+        "id": "candidate_hdm3_q_brotli_split_stream",
+        "path": "experiments/results/hnerv_hdm3_entropy_packet_20260507_codex/hdc2_stream_work_product/candidate_hdm3_q_brotli_split_stream.bin",
+        "sha256": "149a41ecf4d1614757c9369838e3a7cb9f03a648fe9b61a2317e9b7f2996b256"
+      },
+      "codec": "HDM3_fixed_schema_q_brotli_raw_scales",
+      "fixed_schema": true,
+      "header_bytes": 7,
+      "q_brotli_bytes": 169994,
+      "q_roundtrip_equal": true,
+      "q_stream_bytes": 228958,
+      "raw_equal": true,
+      "raw_scale_bytes": 112,
+      "scale_roundtrip_equal": true,
+      "sha256": "149a41ecf4d1614757c9369838e3a7cb9f03a648fe9b61a2317e9b7f2996b256",
+      "variant": "hdm3_q_brotli_split_fixed_schema_q_stream_plus_raw_scales"
+    }
+  ],
+  "byte_accounted_model_overhead_reduction_manifest": {
+    "accounting_closed": true,
+    "byte_accounting": {
+      "actual_bytes": 221381,
+      "known_container_overhead_bytes": 0,
+      "known_encoded_payload_bytes": 180541,
+      "known_model_overhead_bytes": 40840,
+      "known_unattributed_bytes": 0
+    },
+    "dispatch_attempted": false,
+    "ready_for_exact_eval_dispatch": false,
+    "remaining_for_archive_candidate": [
+      "runtime_decoder_contract",
+      "candidate_archive_manifest",
+      "strict_pre_submission_compliance_json",
+      "exact_cuda_auth_eval"
+    ],
+    "requirement_id": "byte_accounted_model_overhead_reduction_manifest",
+    "schema_version": 1,
+    "score_claim": false,
+    "source_label": "public_pr106_belt_and_suspenders",
+    "source_variant": {
+      "accounted_bytes": 221381,
+      "bytes": 221381,
+      "header_bytes": 40840,
+      "range_payload_bytes": 180429,
+      "raw_scale_bytes": 112,
+      "sha256": "41816a2834eb9ca3e9ff78e138b30a1c22b0ec4d580cea8de55042dcb624cc5f",
+      "variant": "range_prev_symbol_global_q_streams_plus_raw_scales"
+    },
+    "target_bytes": 40840,
+    "target_bytes_field": "hdc2.header_bytes",
+    "target_kind": "known_model_overhead",
+    "tool": "tac.hnerv_entropy_candidate_packet.build_hdc2_stream_byte_equivalence_work_product"
+  },
+  "byte_accounted_static_model_context_reduction_manifest": {
+    "accounting_closed": true,
+    "blockers": [],
+    "candidate_variant": {
+      "bytes": 208821,
+      "context_count": 247,
+      "context_token_count": 228930,
+      "header_bytes": 19329,
+      "range_context_count": 60,
+      "raw_context_count": 187,
+      "raw_equal": true,
+      "sha256": "4a1db82f170db62038ad683d6024920b1da59cd9e54e8fda8e3109605fc08bc5",
+      "variant": "mixed_range_raw_global_prev_symbol_schema_indexed_q_streams_plus_raw_scales"
+    },
+    "dispatch_attempted": false,
+    "ready_for_exact_eval_dispatch": false,
+    "requirement_id": "byte_accounted_static_model_context_reduction_manifest",
+    "schema_metadata_elided_vs_hdc2_bytes": 444,
+    "schema_version": 1,
+    "score_claim": false,
+    "source_label": "public_pr106_belt_and_suspenders",
+    "source_variant": {
+      "bytes": 221381,
+      "context_count": 247,
+      "context_token_count": 228930,
+      "header_bytes": 40840,
+      "sha256": "41816a2834eb9ca3e9ff78e138b30a1c22b0ec4d580cea8de55042dcb624cc5f",
+      "variant": "range_prev_symbol_global_q_streams_plus_raw_scales"
+    },
+    "static_context_header_reduction_bytes": 21511,
+    "tool": "tac.hnerv_entropy_candidate_packet.build_hdc2_stream_byte_equivalence_work_product"
+  },
+  "candidate_stream_file": {
+    "bytes": 221381,
+    "id": "candidate_hdc2_global_prev_symbol_stream",
+    "path": "experiments/results/hnerv_hdm3_entropy_packet_20260507_codex/hdc2_stream_work_product/candidate_hdc2_global_prev_symbol_stream.bin",
+    "sha256": "41816a2834eb9ca3e9ff78e138b30a1c22b0ec4d580cea8de55042dcb624cc5f"
+  },
+  "candidate_stream_section_manifest": {
+    "candidate_archive_manifest_available": false,
+    "candidate_archive_sha256": "",
+    "candidate_stream_file": {
+      "bytes": 221381,
+      "id": "candidate_hdc2_global_prev_symbol_stream",
+      "path": "experiments/results/hnerv_hdm3_entropy_packet_20260507_codex/hdc2_stream_work_product/candidate_hdc2_global_prev_symbol_stream.bin",
+      "sha256": "41816a2834eb9ca3e9ff78e138b30a1c22b0ec4d580cea8de55042dcb624cc5f"
+    },
+    "dispatch_attempted": false,
+    "ready_for_exact_eval_dispatch": false,
+    "requirement_id": "candidate_stream_section_sha256_byte_range_and_byte_count",
+    "schema_version": 1,
+    "score_claim": false,
+    "source_label": "public_pr106_belt_and_suspenders",
+    "stream": {
+      "byte_count": 221381,
+      "byte_range_basis": "standalone_candidate_stream_file",
+      "bytes": 221381,
+      "codec": "HDC2_global_prev_symbol_range_uint8",
+      "context_count": 247,
+      "context_token_count": 228930,
+      "end": 221381,
+      "header_bytes": 40840,
+      "name": "decoder_hdc2_global_prev_symbol_range_uint8",
+      "range_payload_bytes": 180429,
+      "raw_scale_bytes": 112,
+      "sha256": "41816a2834eb9ca3e9ff78e138b30a1c22b0ec4d580cea8de55042dcb624cc5f",
+      "start": 0,
+      "variant": "range_prev_symbol_global_q_streams_plus_raw_scales"
+    },
+    "tool": "tac.hnerv_entropy_candidate_packet.build_hdc2_stream_byte_equivalence_work_product"
+  },
+  "closed_requirement_ids": [
+    "source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256",
+    "source_stream_section_sha256_byte_range_and_symbol_count",
+    "candidate_stream_section_sha256_byte_range_and_byte_count",
+    "old_new_decoded_output_sha256_equality_report",
+    "roundtrip_decode_validation_manifest"
+  ],
+  "decoded_output_equivalence_report": {
+    "blockers_remaining_for_full_archive_equivalence": [
+      "candidate_archive_manifest_missing",
+      "runtime_tree_parity_manifest_missing",
+      "full_inflate_output_equivalence_not_run",
+      "exact_cuda_auth_eval_not_run"
+    ],
+    "decoded_object": "hnerv_decoder_raw_bytes",
+    "decoded_output_equal": true,
+    "dispatch_attempted": false,
+    "equivalence_scope": "decoder_stream_raw_bytes_only_not_video_output_or_archive_runtime",
+    "new_decoded_output": {
+      "bytes": 229070,
+      "sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703"
+    },
+    "old_decoded_output": {
+      "bytes": 229070,
+      "sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703"
+    },
+    "old_new_sha256_equal": true,
+    "ready_for_exact_eval_dispatch": false,
+    "requirement_id": "old_new_decoded_output_sha256_equality_report",
+    "schema_version": 1,
+    "score_claim": false,
+    "source_label": "public_pr106_belt_and_suspenders",
+    "tool": "tac.hnerv_entropy_candidate_packet.build_hdc2_stream_byte_equivalence_work_product"
+  },
+  "dispatch_attempted": false,
+  "gpu_required": false,
+  "old_new_model_context_table_diff": {
+    "blockers": [],
+    "context_count_equal": true,
+    "context_token_count_equal": true,
+    "dispatch_attempted": false,
+    "header_bytes_delta": -21511,
+    "new_variant": {
+      "bytes": 208821,
+      "context_count": 247,
+      "context_token_count": 228930,
+      "header_bytes": 19329,
+      "range_context_count": 60,
+      "raw_context_count": 187,
+      "sha256": "4a1db82f170db62038ad683d6024920b1da59cd9e54e8fda8e3109605fc08bc5",
+      "variant": "mixed_range_raw_global_prev_symbol_schema_indexed_q_streams_plus_raw_scales"
+    },
+    "old_variant": {
+      "bytes": 221381,
+      "context_count": 247,
+      "context_token_count": 228930,
+      "header_bytes": 40840,
+      "sha256": "41816a2834eb9ca3e9ff78e138b30a1c22b0ec4d580cea8de55042dcb624cc5f",
+      "variant": "range_prev_symbol_global_q_streams_plus_raw_scales"
+    },
+    "raw_equal": true,
+    "ready_for_exact_eval_dispatch": false,
+    "requirement_id": "old_new_model_context_table_diff",
+    "schema_metadata_elided_vs_hdc2_bytes": 444,
+    "schema_version": 1,
+    "score_claim": false,
+    "source_label": "public_pr106_belt_and_suspenders",
+    "tool": "tac.hnerv_entropy_candidate_packet.build_hdc2_stream_byte_equivalence_work_product"
+  },
+  "planning_only": true,
+  "ready_for_archive_preflight": false,
+  "ready_for_exact_eval_dispatch": false,
+  "remaining_blockers": [
+    "candidate_archive_manifest_missing",
+    "strict_pre_submission_compliance_json_missing",
+    "meta_lagrangian_atom_export_missing",
+    "runtime_tree_parity_manifest_missing",
+    "requires_lane_dispatch_claim_before_gpu",
+    "requires_exact_cuda_auth_eval"
+  ],
+  "roundtrip_decode_validation_manifest": {
+    "candidate_decoded_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+    "candidate_stream_bytes": 221381,
+    "candidate_stream_sha256": "41816a2834eb9ca3e9ff78e138b30a1c22b0ec4d580cea8de55042dcb624cc5f",
+    "dispatch_attempted": false,
+    "q_roundtrip_equal": true,
+    "raw_equal": true,
+    "ready_for_exact_eval_dispatch": false,
+    "requirement_id": "roundtrip_decode_validation_manifest",
+    "roundtrip_valid": true,
+    "scale_roundtrip_equal": true,
+    "schema_version": 1,
+    "score_claim": false,
+    "source_decoder_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+    "source_label": "public_pr106_belt_and_suspenders",
+    "tool": "tac.hnerv_entropy_candidate_packet.build_hdc2_stream_byte_equivalence_work_product"
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "score_evidence_grade": "invalid",
+  "source_archive": {
+    "bytes": 186239,
+    "id": "source_archive_zip",
+    "path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+    "sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58"
+  },
+  "source_archive_manifest": {
+    "archive": {
+      "bytes": 186239,
+      "member_bytes": 186131,
+      "member_name": "0.bin",
+      "member_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+      "path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+      "sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58"
+    },
+    "dispatch_attempted": false,
+    "inflate_runtime_manifest": {
+      "files": [
+        {
+          "bytes": 1032,
+          "relative_path": "inflate.sh",
+          "sha256": "da3375673901a2de4bb2439a0cdf92c5d4232b436ab396bab8bd93a953ac96c0"
+        }
+      ],
+      "repo_local_tac_import_manifest": {
+        "discovery": "static_ast_recursive_import_closure",
+        "file_count": 0,
+        "files": [],
+        "module_count": 0,
+        "parse_errors": [],
+        "root_import_modules": [],
+        "runtime_root_name": "pr106_belt_and_suspenders_adapter",
+        "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+        "tac_root_relative_path": "src/tac",
+        "unresolved_modules": []
+      },
+      "runtime_file_count": 1,
+      "runtime_root": "/teamspace/studios/this_studio/pact/experiments/results/public_runtime_adapters_20260504_codex/pr106_belt_and_suspenders_adapter",
+      "runtime_tree_sha256": "7f4f458f23f5c92d1e94891c27fd429266081ac66b359f40b7ce68ef4acd17dd",
+      "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+      "upstream_evaluate_py": {
+        "bytes": 6005,
+        "relative_path": "evaluate.py",
+        "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+      }
+    },
+    "ready_for_exact_eval_dispatch": false,
+    "requirement_id": "source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256",
+    "runtime_manifest_source_json": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json",
+    "runtime_tree_sha256": "7f4f458f23f5c92d1e94891c27fd429266081ac66b359f40b7ce68ef4acd17dd",
+    "schema_version": 1,
+    "score_claim": false,
+    "score_evidence_grade": "invalid",
+    "source_label": "public_pr106_belt_and_suspenders",
+    "tool": "tac.hnerv_entropy_candidate_packet.build_hdc2_stream_byte_equivalence_work_product"
+  },
+  "source_exact_eval_json": {
+    "bytes": 6662,
+    "id": "source_exact_eval_json",
+    "path": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json",
+    "sha256": "30b364d6b538f08987fc098198fb9cbbd9be4776d3f0a3bec8bf5bf7b10c2047"
+  },
+  "source_profile": {
+    "bytes": 15227,
+    "id": "hnerv_decoder_structural_recode_profile",
+    "path": "experiments/results/hnerv_hdm3_entropy_packet_20260507_codex/profile.json",
+    "sha256": "a3032ee4c4614abe4a52192a4fc84c295a25cd804d8ccd31ac1327c05864b042"
+  },
+  "source_stream_section_manifest": {
+    "dispatch_attempted": false,
+    "ready_for_exact_eval_dispatch": false,
+    "requirement_id": "source_stream_section_sha256_byte_range_and_symbol_count",
+    "schema_version": 1,
+    "score_claim": false,
+    "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+    "source_label": "public_pr106_belt_and_suspenders",
+    "source_member_name": "0.bin",
+    "stream": {
+      "byte_range_basis": "single_member_payload_offset",
+      "bytes": 170278,
+      "codec": "brotli",
+      "decoded_raw_bytes": 229070,
+      "decoded_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+      "end": 170282,
+      "name": "decoder_packed_brotli",
+      "q_stream_bytes": 228958,
+      "scale_stream_bytes": 112,
+      "sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004",
+      "start": 4,
+      "symbol_count": 229070
+    },
+    "tool": "tac.hnerv_entropy_candidate_packet.build_hdc2_stream_byte_equivalence_work_product"
+  },
+  "tool": "tac.hnerv_entropy_candidate_packet.build_hdc2_stream_byte_equivalence_work_product"
+}

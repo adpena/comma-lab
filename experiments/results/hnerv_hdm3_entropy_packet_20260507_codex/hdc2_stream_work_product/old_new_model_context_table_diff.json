@@ -1,0 +1,33 @@
+{
+  "blockers": [],
+  "context_count_equal": true,
+  "context_token_count_equal": true,
+  "dispatch_attempted": false,
+  "header_bytes_delta": -21511,
+  "new_variant": {
+    "bytes": 208821,
+    "context_count": 247,
+    "context_token_count": 228930,
+    "header_bytes": 19329,
+    "range_context_count": 60,
+    "raw_context_count": 187,
+    "sha256": "4a1db82f170db62038ad683d6024920b1da59cd9e54e8fda8e3109605fc08bc5",
+    "variant": "mixed_range_raw_global_prev_symbol_schema_indexed_q_streams_plus_raw_scales"
+  },
+  "old_variant": {
+    "bytes": 221381,
+    "context_count": 247,
+    "context_token_count": 228930,
+    "header_bytes": 40840,
+    "sha256": "41816a2834eb9ca3e9ff78e138b30a1c22b0ec4d580cea8de55042dcb624cc5f",
+    "variant": "range_prev_symbol_global_q_streams_plus_raw_scales"
+  },
+  "raw_equal": true,
+  "ready_for_exact_eval_dispatch": false,
+  "requirement_id": "old_new_model_context_table_diff",
+  "schema_metadata_elided_vs_hdc2_bytes": 444,
+  "schema_version": 1,
+  "score_claim": false,
+  "source_label": "public_pr106_belt_and_suspenders",
+  "tool": "tac.hnerv_entropy_candidate_packet.build_hdc2_stream_byte_equivalence_work_product"
+}

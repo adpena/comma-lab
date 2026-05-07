@@ -1,0 +1,398 @@
+{
+  "adapter_notes": [
+    "adapted_from_raw_equal_hdc2_structural_recode_profile",
+    "targets_use_profile_recorded_bytes_only",
+    "section_entropy_bits_per_byte_summaries_are_not_treated_as_symbol_counts"
+  ],
+  "audit_source_kind": "hnerv_structural_recode_profile_adapted_entropy_overhead_audit",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "planning_only_entropy_codec_gap_audit",
+    "requires_byte_equivalent_codec_transform",
+    "requires_roundtrip_decode_validation",
+    "requires_archive_manifest_preflight",
+    "requires_runtime_parity_proof",
+    "requires_lane_dispatch_claim_before_gpu",
+    "requires_exact_cuda_auth_eval"
+  ],
+  "entropy_overhead_target_ranking": [
+    {
+      "accounting_source": "hnerv_decoder_structural_recode_profile.hdc2_variant",
+      "actual_bytes": 221381,
+      "best_static_arithmetic_container_floor_bytes": null,
+      "best_static_arithmetic_container_kind": "",
+      "byte_equivalence_blockers": [
+        "missing_source_archive_manifest",
+        "missing_source_stream_sha256_and_byte_range",
+        "missing_candidate_stream_sha256_and_byte_range",
+        "missing_decoded_output_byte_equivalence_report",
+        "missing_roundtrip_decode_validation_manifest",
+        "missing_candidate_archive_manifest",
+        "missing_runtime_tree_parity_manifest"
+      ],
+      "codec_surface": "src/tac/hnerv_decoder_recode.py",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "planning_only_entropy_codec_gap_audit",
+        "requires_byte_equivalent_codec_transform",
+        "requires_roundtrip_decode_validation",
+        "requires_archive_manifest_preflight",
+        "requires_runtime_parity_proof",
+        "requires_lane_dispatch_claim_before_gpu",
+        "requires_exact_cuda_auth_eval"
+      ],
+      "entropy_floor_bytes": 156562,
+      "exact_next_artifact_requirements": [
+        "byte_accounted_model_overhead_reduction_manifest",
+        "byte_accounted_static_model_context_reduction_manifest",
+        "old_new_model_context_table_diff",
+        "source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256",
+        "source_stream_section_sha256_byte_range_and_symbol_count",
+        "candidate_stream_section_sha256_byte_range_and_byte_count",
+        "old_new_decoded_output_sha256_equality_report",
+        "roundtrip_decode_validation_manifest",
+        "candidate_archive_manifest_with_member_sha256s",
+        "strict_pre_submission_compliance_json",
+        "meta_lagrangian_atom_json_with_byte_delta_and_interaction_assumptions"
+      ],
+      "fail_closed_criteria": [
+        "refuse_if_counts_missing_or_nonpositive",
+        "refuse_if_actual_bytes_missing_or_nonpositive",
+        "refuse_if_count_record_sequence_is_malformed",
+        "refuse_if_known_overhead_accounting_exceeds_actual_bytes",
+        "refuse_if_huffman_lengths_not_prefix_floor",
+        "refuse_if_aq_floor_used_with_alphabet_size_less_than_two",
+        "refuse_if_roundtrip_decode_validation_missing"
+      ],
+      "known_overhead_accounting_complete": true,
+      "label": "public_pr106_belt_and_suspenders:hdc2_global_prev_symbol_contexts",
+      "meta_lagrangian_atom_export": {
+        "atom_template": {
+          "archive_manifest_path": "",
+          "archive_manifest_sha256": "",
+          "atom_id": "public_pr106_belt_and_suspenders_hdc2_global_prev_symbol_contexts:known_model_overhead",
+          "byte_delta": -40840,
+          "confidence": 0.0,
+          "dispatchable": false,
+          "estimated_byte_delta": -40840,
+          "evidence_grade": "invalid_planning_target_until_byte_equivalent_candidate",
+          "expected_pose_dist_delta": 0.0,
+          "expected_seg_dist_delta": 0.0,
+          "family": "hnerv_known_model_overhead",
+          "family_group": "hnerv_rate_equivalent_recode",
+          "interaction_assumptions": [
+            "rate_only_decoded_output_equivalence_required"
+          ],
+          "pareto_scope": "hnerv_rate_equivalent_recode:public_pr106_belt_and_suspenders_hdc2_global_prev_symbol_contexts",
+          "raw_equal": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_claim": false,
+          "target_bytes": 40840,
+          "target_bytes_field": "hdc2.header_bytes"
+        },
+        "export_blockers": [
+          "planning_target_not_byte_closed_candidate",
+          "missing_source_archive_manifest",
+          "missing_source_stream_sha256_and_byte_range",
+          "missing_candidate_stream_sha256_and_byte_range",
+          "missing_decoded_output_byte_equivalence_report",
+          "missing_roundtrip_decode_validation_manifest",
+          "missing_candidate_archive_manifest",
+          "missing_runtime_tree_parity_manifest",
+          "missing_archive_manifest_path",
+          "missing_archive_manifest_sha256"
+        ],
+        "export_ready": false,
+        "ready_for_meta_lagrangian_atom_export": false,
+        "schema": "meta_lagrangian_atom_export_v1"
+      },
+      "planning_only": true,
+      "rank": 1,
+      "readiness_stage": "planning_target_requires_byte_equivalent_artifacts",
+      "ready_for_archive_preflight": false,
+      "ready_for_byte_closed_candidate_build": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_meta_lagrangian_atom_export": false,
+      "required_next_artifact": "byte_accounted_model_overhead_reduction_manifest",
+      "score_claim": false,
+      "source": "public_pr106_belt_and_suspenders",
+      "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+      "source_decoder_section_sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004",
+      "source_variant": {
+        "codec": "HDC2_global_prev_symbol_range_uint8",
+        "sha256": "41816a2834eb9ca3e9ff78e138b30a1c22b0ec4d580cea8de55042dcb624cc5f",
+        "variant": "range_prev_symbol_global_q_streams_plus_raw_scales"
+      },
+      "target_action": "reduce_or_share_static_model_context_metadata",
+      "target_bytes": 40840,
+      "target_bytes_field": "hdc2.header_bytes",
+      "target_kind": "known_model_overhead"
+    },
+    {
+      "accounting_source": "hnerv_decoder_structural_recode_profile.entropy_summary",
+      "actual_bytes": 221381,
+      "best_static_arithmetic_container_floor_bytes": null,
+      "best_static_arithmetic_container_kind": "",
+      "byte_equivalence_blockers": [
+        "missing_source_archive_manifest",
+        "missing_source_stream_sha256_and_byte_range",
+        "missing_candidate_stream_sha256_and_byte_range",
+        "missing_decoded_output_byte_equivalence_report",
+        "missing_roundtrip_decode_validation_manifest",
+        "missing_candidate_archive_manifest",
+        "missing_runtime_tree_parity_manifest"
+      ],
+      "codec_surface": "src/tac/hnerv_decoder_recode.py",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "planning_only_entropy_codec_gap_audit",
+        "requires_byte_equivalent_codec_transform",
+        "requires_roundtrip_decode_validation",
+        "requires_archive_manifest_preflight",
+        "requires_runtime_parity_proof",
+        "requires_lane_dispatch_claim_before_gpu",
+        "requires_exact_cuda_auth_eval"
+      ],
+      "entropy_floor_bytes": 156562,
+      "exact_next_artifact_requirements": [
+        "roundtrip_payload_recode_manifest",
+        "byte_equivalent_payload_entropy_recode_manifest",
+        "entropy_coder_decoder_contract",
+        "source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256",
+        "source_stream_section_sha256_byte_range_and_symbol_count",
+        "candidate_stream_section_sha256_byte_range_and_byte_count",
+        "old_new_decoded_output_sha256_equality_report",
+        "roundtrip_decode_validation_manifest",
+        "candidate_archive_manifest_with_member_sha256s",
+        "strict_pre_submission_compliance_json",
+        "meta_lagrangian_atom_json_with_byte_delta_and_interaction_assumptions"
+      ],
+      "fail_closed_criteria": [
+        "refuse_if_counts_missing_or_nonpositive",
+        "refuse_if_actual_bytes_missing_or_nonpositive",
+        "refuse_if_count_record_sequence_is_malformed",
+        "refuse_if_known_overhead_accounting_exceeds_actual_bytes",
+        "refuse_if_huffman_lengths_not_prefix_floor",
+        "refuse_if_aq_floor_used_with_alphabet_size_less_than_two",
+        "refuse_if_roundtrip_decode_validation_missing"
+      ],
+      "known_overhead_accounting_complete": true,
+      "label": "public_pr106_belt_and_suspenders:hdc2_global_prev_symbol_contexts",
+      "meta_lagrangian_atom_export": {
+        "atom_template": {
+          "archive_manifest_path": "",
+          "archive_manifest_sha256": "",
+          "atom_id": "public_pr106_belt_and_suspenders_hdc2_global_prev_symbol_contexts:known_payload_entropy_gap",
+          "byte_delta": -23979,
+          "confidence": 0.0,
+          "dispatchable": false,
+          "estimated_byte_delta": -23979,
+          "evidence_grade": "invalid_planning_target_until_byte_equivalent_candidate",
+          "expected_pose_dist_delta": 0.0,
+          "expected_seg_dist_delta": 0.0,
+          "family": "hnerv_known_payload_entropy_gap",
+          "family_group": "hnerv_rate_equivalent_recode",
+          "interaction_assumptions": [
+            "rate_only_decoded_output_equivalence_required"
+          ],
+          "pareto_scope": "hnerv_rate_equivalent_recode:public_pr106_belt_and_suspenders_hdc2_global_prev_symbol_contexts",
+          "raw_equal": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_claim": false,
+          "target_bytes": 23979,
+          "target_bytes_field": "hdc2.range_payload_bytes_plus_raw_scale_bytes_minus_per_tensor_prev_symbol_entropy_floor_plus_raw_scales_bytes"
+        },
+        "export_blockers": [
+          "planning_target_not_byte_closed_candidate",
+          "missing_source_archive_manifest",
+          "missing_source_stream_sha256_and_byte_range",
+          "missing_candidate_stream_sha256_and_byte_range",
+          "missing_decoded_output_byte_equivalence_report",
+          "missing_roundtrip_decode_validation_manifest",
+          "missing_candidate_archive_manifest",
+          "missing_runtime_tree_parity_manifest",
+          "missing_archive_manifest_path",
+          "missing_archive_manifest_sha256"
+        ],
+        "export_ready": false,
+        "ready_for_meta_lagrangian_atom_export": false,
+        "schema": "meta_lagrangian_atom_export_v1"
+      },
+      "planning_only": true,
+      "rank": 2,
+      "readiness_stage": "planning_target_requires_byte_equivalent_artifacts",
+      "ready_for_archive_preflight": false,
+      "ready_for_byte_closed_candidate_build": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_meta_lagrangian_atom_export": false,
+      "required_next_artifact": "roundtrip_payload_recode_manifest",
+      "score_claim": false,
+      "source": "public_pr106_belt_and_suspenders",
+      "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+      "source_decoder_section_sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004",
+      "source_variant": {
+        "codec": "HDC2_global_prev_symbol_range_uint8",
+        "sha256": "41816a2834eb9ca3e9ff78e138b30a1c22b0ec4d580cea8de55042dcb624cc5f",
+        "variant": "range_prev_symbol_global_q_streams_plus_raw_scales"
+      },
+      "target_action": "prototype_byte_equivalent_entropy_coder_for_encoded_payload",
+      "target_bytes": 23979,
+      "target_bytes_field": "hdc2.range_payload_bytes_plus_raw_scale_bytes_minus_per_tensor_prev_symbol_entropy_floor_plus_raw_scales_bytes",
+      "target_kind": "known_payload_entropy_gap"
+    }
+  ],
+  "evidence_grade": "empirical",
+  "fail_closed_criteria": [
+    "refuse_if_counts_missing_or_nonpositive",
+    "refuse_if_actual_bytes_missing_or_nonpositive",
+    "refuse_if_count_record_sequence_is_malformed",
+    "refuse_if_known_overhead_accounting_exceeds_actual_bytes",
+    "refuse_if_huffman_lengths_not_prefix_floor",
+    "refuse_if_aq_floor_used_with_alphabet_size_less_than_two",
+    "refuse_if_roundtrip_decode_validation_missing",
+    "refuse_if_hdc2_raw_roundtrip_not_true",
+    "refuse_if_hdc2_accounting_does_not_sum_to_variant_bytes",
+    "refuse_if_profile_lacks_exact_hdc2_variant_bytes"
+  ],
+  "gpu_required": false,
+  "known_overhead_accounting": {
+    "complete_stream_accounting_count": 1,
+    "largest_known_overhead_streams": [
+      {
+        "actual_bytes": 221381,
+        "dispatch_blockers": [
+          "planning_only_entropy_codec_gap_audit",
+          "requires_byte_equivalent_codec_transform",
+          "requires_roundtrip_decode_validation",
+          "requires_archive_manifest_preflight",
+          "requires_runtime_parity_proof",
+          "requires_lane_dispatch_claim_before_gpu",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "entropy_floor_bytes": 156562,
+        "known_container_overhead_bytes": 0,
+        "known_encoded_payload_bytes": 180541,
+        "known_model_overhead_bytes": 40840,
+        "known_overhead_accounting_complete": true,
+        "known_overhead_bytes": 40840,
+        "known_payload_gap_to_entropy_floor_bytes": 23979,
+        "known_unattributed_bytes": 0,
+        "label": "public_pr106_belt_and_suspenders:hdc2_global_prev_symbol_contexts",
+        "ready_for_exact_eval_dispatch": false
+      }
+    ],
+    "streams_with_known_accounting": 1,
+    "total_known_container_overhead_bytes": 0,
+    "total_known_encoded_payload_bytes": 180541,
+    "total_known_model_overhead_bytes": 40840,
+    "total_known_overhead_bytes": 40840,
+    "total_known_payload_gap_to_entropy_floor_bytes": 23979,
+    "total_known_unattributed_bytes": 0
+  },
+  "planning_only": true,
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": 1,
+  "score_claim": false,
+  "score_evidence_grade": "invalid",
+  "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+  "source_decoder_section_sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004",
+  "source_label": "public_pr106_belt_and_suspenders",
+  "source_tool": "tac.hnerv_decoder_recode.build_structural_recode_profile",
+  "stream_count": 1,
+  "streams": [
+    {
+      "actual_bytes": 221381,
+      "codec_surface": "src/tac/hnerv_decoder_recode.py",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "planning_only_entropy_codec_gap_audit",
+        "requires_byte_equivalent_codec_transform",
+        "requires_roundtrip_decode_validation",
+        "requires_archive_manifest_preflight",
+        "requires_runtime_parity_proof",
+        "requires_lane_dispatch_claim_before_gpu",
+        "requires_exact_cuda_auth_eval"
+      ],
+      "entropy_floor_bytes": 156562,
+      "evidence_grade": "empirical",
+      "fail_closed_criteria": [
+        "refuse_if_counts_missing_or_nonpositive",
+        "refuse_if_actual_bytes_missing_or_nonpositive",
+        "refuse_if_count_record_sequence_is_malformed",
+        "refuse_if_known_overhead_accounting_exceeds_actual_bytes",
+        "refuse_if_huffman_lengths_not_prefix_floor",
+        "refuse_if_aq_floor_used_with_alphabet_size_less_than_two",
+        "refuse_if_roundtrip_decode_validation_missing"
+      ],
+      "hdc2_variant": {
+        "bytes": 221381,
+        "codec": "HDC2_global_prev_symbol_range_uint8",
+        "header_bytes": 40840,
+        "q_roundtrip_equal": true,
+        "range_payload_bytes": 180429,
+        "raw_equal": true,
+        "raw_scale_bytes": 112,
+        "scale_roundtrip_equal": true,
+        "sha256": "41816a2834eb9ca3e9ff78e138b30a1c22b0ec4d580cea8de55042dcb624cc5f",
+        "variant": "range_prev_symbol_global_q_streams_plus_raw_scales"
+      },
+      "known_container_overhead_bytes": 0,
+      "known_encoded_payload_bytes": 180541,
+      "known_model_overhead_bytes": 40840,
+      "known_overhead_accounting_complete": true,
+      "known_overhead_bytes": 40840,
+      "known_payload_gap_to_entropy_floor_bytes": 23979,
+      "known_unattributed_bytes": 0,
+      "label": "public_pr106_belt_and_suspenders:hdc2_global_prev_symbol_contexts",
+      "missing_for_full_symbol_count_audit": [
+        "full_hdc2_range_payload_symbol_counts",
+        "full_context_conditioned_symbol_counts"
+      ],
+      "planning_only": true,
+      "q_stream_bytes": 228958,
+      "ready_for_exact_eval_dispatch": false,
+      "scale_stream_bytes": 112,
+      "score_claim": false,
+      "source": "public_pr106_belt_and_suspenders",
+      "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+      "source_decoder_raw_bytes": 229070,
+      "source_decoder_section_bytes": 170278,
+      "source_decoder_section_sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004"
+    }
+  ],
+  "tool": "tac.hnerv_entropy_candidate_packet.hnerv_profile_entropy_overhead_adapter",
+  "tool_run_manifest": {
+    "argv": [
+      "--entropy-audit",
+      "experiments/results/hnerv_hdm3_entropy_packet_20260507_codex/profile.json",
+      "--entropy-audit-json-out",
+      "experiments/results/hnerv_hdm3_entropy_packet_20260507_codex/entropy_overhead_audit.json",
+      "--hdc2-stream-work-product-profile",
+      "experiments/results/hnerv_hdm3_entropy_packet_20260507_codex/profile.json",
+      "--hdc2-stream-work-product-source-archive",
+      "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+      "--hdc2-stream-work-product-source-exact-eval-json",
+      "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json",
+      "--hdc2-stream-work-product-dir",
+      "experiments/results/hnerv_hdm3_entropy_packet_20260507_codex/hdc2_stream_work_product",
+      "--json-out",
+      "experiments/results/hnerv_hdm3_entropy_packet_20260507_codex/candidate_packet.json",
+      "--fail-if-missing"
+    ],
+    "canonical_payload_without_tool_manifest_sha256": "4fc5eb1f90885e756e171a12dd1396d8bfdf63d88395fac30cfa77ba58d282ca",
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 15227,
+        "path": "experiments/results/hnerv_hdm3_entropy_packet_20260507_codex/profile.json",
+        "sha256": "a3032ee4c4614abe4a52192a4fc84c295a25cd804d8ccd31ac1327c05864b042"
+      }
+    ],
+    "output_path": "experiments/results/hnerv_hdm3_entropy_packet_20260507_codex/entropy_overhead_audit.json",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "tools/build_hnerv_entropy_candidate_packet.py"
+  },
+  "total_actual_bytes": 221381
+}
