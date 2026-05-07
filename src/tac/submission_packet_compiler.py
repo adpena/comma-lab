@@ -21,7 +21,48 @@ from tac.submission_archive import validate_archive_member_name
 
 SCHEMA_VERSION = "submission_packet_compiler.v1"
 MANIFEST_NAME = "submission_packet_compiler_manifest.json"
-TARGET_PROFILES = ("contest_one_video_replay", "production_generalized")
+TARGET_PROFILE_POLICIES: dict[str, dict[str, Any]] = {
+    "contest_one_video_replay": {
+        "contest_dispatch_candidate": True,
+        "allows_one_video_replay": True,
+        "requires_cross_video_generalization": False,
+        "allows_optional_device_learning": False,
+        "description": (
+            "Contest-only overfit replay; all score-affecting replay data and "
+            "runtime code must be self-contained in the packet or fixed contest code."
+        ),
+    },
+    "contest_generalized": {
+        "contest_dispatch_candidate": True,
+        "allows_one_video_replay": False,
+        "requires_cross_video_generalization": True,
+        "allows_optional_device_learning": False,
+        "description": (
+            "Contest-compliant generalized packet; no one-video lookup-table or "
+            "fixed-replay assumptions may be required for decode."
+        ),
+    },
+    "production_generalized": {
+        "contest_dispatch_candidate": False,
+        "allows_one_video_replay": False,
+        "requires_cross_video_generalization": True,
+        "allows_optional_device_learning": False,
+        "description": (
+            "comma-ai/openpilot production target with deterministic behavior across videos."
+        ),
+    },
+    "production_edge_adaptive": {
+        "contest_dispatch_candidate": False,
+        "allows_one_video_replay": False,
+        "requires_cross_video_generalization": True,
+        "allows_optional_device_learning": True,
+        "description": (
+            "Production-only edge target; optional on-device learning is allowed "
+            "only outside contest mode and must have deterministic fallbacks."
+        ),
+    },
+}
+TARGET_PROFILES = tuple(TARGET_PROFILE_POLICIES)
 MODES = ("inspect", "identity", "canonicalize", "optimize")
 SUPPORTED_ZIP_METHODS = {zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED}
 LOCAL_FILE_HEADER_SIG = 0x04034B50
@@ -206,7 +247,7 @@ def inspect_packet(
 ) -> dict[str, Any]:
     """Inspect a contest packet and emit deterministic conformance vectors."""
     packet = Path(packet_path)
-    if target_profile not in TARGET_PROFILES:
+    if target_profile not in TARGET_PROFILE_POLICIES:
         raise PacketCompilerError(f"unknown target_profile: {target_profile}")
     if not packet.exists():
         raise PacketCompilerError(f"packet path does not exist: {packet}")
@@ -230,6 +271,7 @@ def inspect_packet(
         "schema_version": SCHEMA_VERSION,
         "mode": "inspect",
         "target_profile": target_profile,
+        "target_profile_policy": dict(TARGET_PROFILE_POLICIES[target_profile]),
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
         "packet": {

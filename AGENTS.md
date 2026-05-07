@@ -422,7 +422,7 @@ deconstruct it into typed streams and conformance vectors, then emit either an
 identical packet or an intentionally byte-different packet whose changes are
 proven by manifest.
 
-The compiler has at least two legitimate targets:
+The compiler has at least four legitimate targets:
 
 - `contest_one_video_replay`: overfit to the contest video. This target may
   replace learned inference with deterministic replay, distilled byte
@@ -431,11 +431,21 @@ The compiler has at least two legitimate targets:
   one scored video. It is valid only when all replay data and runtime code are
   inside the packet or fixed contest code, the scored inflate path consumes
   them, and exact CUDA auth eval validates the resulting archive.
+- `contest_generalized`: contest-compliant, but not one-video replay. This
+  target must keep the runtime contract valid for unseen contest-shaped videos
+  and must not require per-frame lookup tables or fixed replay data from the
+  scored video. Use it when a native/codegen rewrite should remain a normal
+  contest submission rather than an overfit replay artifact.
 - `production_generalized`: works across videos and product targets. This
   target may use the same deconstruction and native-codegen infrastructure, but
   it must preserve generalization, device portability, maintainability,
   openpilot/comma-ai integration constraints, and deterministic reproducible
   builds across supported platforms.
+- `production_edge_adaptive`: production-only, outside contest mode. This
+  target may include optional on-device learning or edge adaptation only when
+  deterministic fallbacks, reproducible builds, and explicit capability gates
+  are present. It is not a contest dispatch target unless a separate
+  contest-profile packet with charged-bit proof is emitted.
 
 Minimum contract:
 

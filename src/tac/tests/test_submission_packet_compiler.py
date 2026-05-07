@@ -9,6 +9,8 @@ import pytest
 
 from tac.submission_packet_compiler import (
     MANIFEST_NAME,
+    TARGET_PROFILE_POLICIES,
+    TARGET_PROFILES,
     PacketCompilerError,
     compile_packet,
     inspect_packet,
@@ -44,6 +46,8 @@ def test_inspect_packet_emits_deterministic_golden_vectors(tmp_path: Path) -> No
     assert first == second
     assert first["schema_version"] == "submission_packet_compiler.v1"
     assert first["target_profile"] == "contest_one_video_replay"
+    assert first["target_profile_policy"]["contest_dispatch_candidate"] is True
+    assert first["target_profile_policy"]["allows_one_video_replay"] is True
     assert first["score_claim"] is False
     assert first["ready_for_exact_eval_dispatch"] is False
     assert first["contest_compliance"]["blockers"] == []
@@ -107,3 +111,23 @@ def test_unknown_target_profile_rejected(tmp_path: Path) -> None:
 
     with pytest.raises(PacketCompilerError, match="unknown target_profile"):
         inspect_packet(packet, target_profile="ambiguous")
+
+
+def test_target_profiles_are_explicit_and_have_dispatch_policies(
+    tmp_path: Path,
+) -> None:
+    packet = _write_packet(tmp_path / "packet")
+
+    assert set(TARGET_PROFILES) == set(TARGET_PROFILE_POLICIES)
+    assert "contest_generalized" in TARGET_PROFILES
+    assert "production_edge_adaptive" in TARGET_PROFILES
+
+    contest = inspect_packet(packet, target_profile="contest_generalized")
+    assert contest["target_profile_policy"]["contest_dispatch_candidate"] is True
+    assert contest["target_profile_policy"]["allows_one_video_replay"] is False
+    assert contest["target_profile_policy"]["requires_cross_video_generalization"] is True
+
+    edge = inspect_packet(packet, target_profile="production_edge_adaptive")
+    assert edge["target_profile_policy"]["contest_dispatch_candidate"] is False
+    assert edge["target_profile_policy"]["allows_optional_device_learning"] is True
+    assert edge["target_profile_policy"]["requires_cross_video_generalization"] is True

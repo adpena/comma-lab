@@ -692,10 +692,16 @@ The compiler must support separate target profiles:
   distilled byte transducers, or per-frame/per-pair streams derived from the
   trained model's behavior on the scored video. It is admissible only when the
   archive remains self-contained and exact CUDA auth eval validates it.
+- `contest_generalized`: contest-compliant but not one-video replay. It must
+  preserve the runtime contract for unseen contest-shaped videos and must not
+  rely on fixed per-frame lookup tables or replay data from the scored video.
 - `production_generalized`: comma-ai/openpilot production target. It may reuse
   the same byte-deconstruction machinery, but must preserve cross-video
   behavior, portability, maintainability, and deterministic reproducible native
   builds.
+- `production_edge_adaptive`: production-only edge target. Optional on-device
+  learning is allowed only outside contest mode and only behind deterministic
+  fallbacks, reproducible builds, and explicit capability gates.
 
 Required modes:
 
