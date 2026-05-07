@@ -150,26 +150,40 @@ class Op1_PR101SplitBrotli:
         *,
         context: dict[str, Any],
     ) -> EncodeResult:
+        # Bug-hunter v2 fix 2026-05-07 (LOW, re-opened from prior round):
+        # the previous version called ``encode_decoder_compact(...,
+        # auto_select=True)`` (which runs ``auto_select_byte_maps`` inside)
+        # and then re-ran ``auto_select_byte_maps`` here just to populate
+        # ``op_state`` for the decoder side. That doubled the per-encode
+        # auto-select cost (~30 extra brotli evals per encode call) for
+        # zero correctness benefit. Now we compute the effective byte_maps
+        # once -- either from the explicit override, the auto_select path,
+        # or PR101's defaults -- and thread it through ``encode_decoder_compact``
+        # with ``auto_select=False`` so the encoder doesn't re-derive it.
         from tac.pr101_split_brotli_codec import encode_decoder_compact
 
         bytes_in = sum(t.numel() * t.element_size() for t in state_dict.values())
+
+        if self.explicit_overrides is not None:
+            effective_byte_maps: dict[int, str] | None = dict(self.explicit_overrides)
+        elif self.auto_select:
+            from tac.pr101_split_brotli_codec import auto_select_byte_maps
+            effective_byte_maps = auto_select_byte_maps(
+                state_dict, brotli_quality=self.brotli_quality
+            )
+        else:
+            effective_byte_maps = None  # let PR101 default DECODER_BYTE_MAPS apply
+
         blob = encode_decoder_compact(
             state_dict,
             brotli_quality=self.brotli_quality,
-            effective_byte_maps=self.explicit_overrides,
-            auto_select=self.auto_select and self.explicit_overrides is None,
+            effective_byte_maps=effective_byte_maps,
+            auto_select=False,  # already computed above; do not re-derive
         )
-        # Capture the override that was actually used (caller may pass None +
-        # auto_select=True, in which case the encoder ran auto_select_byte_maps
-        # internally; we re-compute it here for the decoder side).
+
         op_state: dict[str, Any] = {}
-        if self.explicit_overrides is not None:
-            op_state["effective_byte_maps"] = dict(self.explicit_overrides)
-        elif self.auto_select:
-            from tac.pr101_split_brotli_codec import auto_select_byte_maps
-            op_state["effective_byte_maps"] = auto_select_byte_maps(
-                state_dict, brotli_quality=self.brotli_quality
-            )
+        if effective_byte_maps is not None:
+            op_state["effective_byte_maps"] = effective_byte_maps
         return EncodeResult(
             blob=blob,
             bytes_in=bytes_in,

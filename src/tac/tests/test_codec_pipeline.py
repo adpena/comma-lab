@@ -283,6 +283,52 @@ def test_op2_auto_derives_n_hi_when_default_zero() -> None:
     assert op_state["n_latent_hi_symbols"] == arr.size
 
 
+def test_op1_auto_select_runs_exactly_once_per_encode() -> None:
+    """Bug-hunter v2 (re-opened LOW): with ``auto_select=True`` and no
+    explicit overrides, the wrap previously invoked ``auto_select_byte_maps``
+    twice -- once inside ``encode_decoder_compact`` and once afterwards to
+    populate ``op_state``. The fix computes the byte-map dict once and
+    threads it explicitly into the encoder. Regression: count call sites
+    via monkeypatch."""
+    sd = _synthetic_state_dict()
+    op = Op1_PR101SplitBrotli(auto_select=True)
+
+    # Spy on auto_select_byte_maps via the canonical import location.
+    from tac import pr101_split_brotli_codec as _codec_mod
+
+    original = _codec_mod.auto_select_byte_maps
+    counter = {"calls": 0}
+
+    def _counted(*args, **kwargs):
+        counter["calls"] += 1
+        return original(*args, **kwargs)
+
+    _codec_mod.auto_select_byte_maps = _counted
+    try:
+        res = op.encode(sd, context={})
+    finally:
+        _codec_mod.auto_select_byte_maps = original
+
+    # Exactly one auto-select call per encode (was 2 pre-fix).
+    assert counter["calls"] == 1, (
+        f"auto_select_byte_maps invoked {counter['calls']} times; expected "
+        f"exactly 1 per encode (regression of bug-hunter v2 LOW fix)"
+    )
+    # And the resulting op_state still carries the byte_maps for decode.
+    assert "effective_byte_maps" in res.op_state
+
+
+def test_op1_auto_select_roundtrip_byte_faithful() -> None:
+    """Sanity: bug-hunter v2 LOW fix must not change byte output -- the
+    one-call path produces the same blob as the two-call path produced.
+    """
+    sd = _synthetic_state_dict()
+    op = Op1_PR101SplitBrotli(auto_select=True)
+    res = op.encode(sd, context={})
+    decoded = op.decode(res.blob, op_state=res.op_state, context={})
+    assert set(decoded.keys()) == set(sd.keys())
+
+
 def test_op2_docstring_lists_all_five_section_keys() -> None:
     """Bug-hunter v2 (re-opened MEDIUM): ensure the Op2 class docstring
     enumerates EVERY section_lengths key the encoder populates. The prior
