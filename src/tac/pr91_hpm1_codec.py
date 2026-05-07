@@ -155,6 +155,9 @@ PR91_HPM1_SOURCE_FAILURE_FRAME = 0
 PR91_HPM1_SOURCE_FAILURE_GROUP = 10
 PR91_HPM1_SOURCE_FAILURE_SYMBOL_IN_GROUP = 191
 PR91_HPM1_SOURCE_FAILURE_DECODED_BEFORE = 5951
+DEFAULT_PR91_HPM1_RANGE_PREFIX_WINDOW_SYMBOLS = (1024, 256, 64, 16, 1)
+DEFAULT_PR91_HPM1_RANGE_PREFIX_REPLAY_SYMBOL_LIMIT = 2048
+DEFAULT_PR91_HPM1_RANGE_PREFIX_MAX_TARGET_DECODED_BEFORE = 4096
 
 _QUARANTINE_SPEC = (
     ".recovery_quarantine_20260505T004735Z/src/tac/pr91_hpm1_codec.recovery_spec.json"
@@ -936,6 +939,73 @@ def _range_decoder_state_summary(decoder: Any, *, label: str) -> dict[str, Any]:
     return state
 
 
+def _call_noarg_public_method(obj: Any, name: str) -> Any:
+    member = getattr(obj, name, None)
+    if not callable(member):
+        return None
+    return member()
+
+
+def _uint32_words_digest(words: Any, *, preview: int = 8) -> dict[str, Any]:
+    arr = np.ascontiguousarray(np.asarray(words, dtype=np.uint32), dtype=np.uint32)
+    return {
+        "uint32_word_count": int(arr.size),
+        "sha256": sha256_bytes(arr.tobytes()),
+        "first_words_hex": [f"0x{int(word):08x}" for word in arr[:preview]],
+        "last_words_hex": [f"0x{int(word):08x}" for word in arr[-preview:]],
+    }
+
+
+def _common_prefix_uint32_words(a: np.ndarray, b: np.ndarray) -> int:
+    left = np.ascontiguousarray(a, dtype=np.uint32)
+    right = np.ascontiguousarray(b, dtype=np.uint32)
+    limit = min(int(left.size), int(right.size))
+    if limit <= 0:
+        return 0
+    mismatch = np.flatnonzero(left[:limit] != right[:limit])
+    if int(mismatch.size) == 0:
+        return limit
+    return int(mismatch[0])
+
+
+def _range_encoder_state_summary(encoder: Any, *, label: str) -> dict[str, Any]:
+    """Record deterministic public RangeEncoder state without mutating it."""
+
+    state: dict[str, Any] = {
+        "label": label,
+        "api": "constriction.stream.queue.RangeEncoder",
+    }
+    for name in ("num_bits", "num_words", "is_empty"):
+        try:
+            value = _call_noarg_public_method(encoder, name)
+        except Exception as exc:  # pragma: no cover - dependency-specific
+            state[f"{name}_error"] = f"{type(exc).__name__}: {exc}"
+            continue
+        if value is not None:
+            state[name] = int(value) if isinstance(value, (bool, int, np.integer)) else value
+    try:
+        pos = _call_noarg_public_method(encoder, "pos")
+    except Exception as exc:  # pragma: no cover - dependency-specific
+        state["pos_error"] = f"{type(exc).__name__}: {exc}"
+    else:
+        if isinstance(pos, tuple) and len(pos) == 2:
+            queue_index, interval = pos
+            state["pos"] = {
+                "queue_index": int(queue_index),
+                "interval": [int(value) for value in interval],
+            }
+        elif pos is not None:
+            state["pos"] = str(pos)
+    try:
+        clone = encoder.clone()
+        state["compressed_words_snapshot"] = _uint32_words_digest(
+            clone.get_compressed()
+        )
+    except Exception as exc:  # pragma: no cover - dependency-specific
+        state["compressed_words_snapshot_error"] = f"{type(exc).__name__}: {exc}"
+    return state
+
+
 def _single_row_range_model_roundtrip(
     raw_row: np.ndarray,
     *,
@@ -1183,6 +1253,635 @@ def _reference_group_symbol_window(
             "These are canonical PR85/QMA9 reference tokens under the requested "
             "layout, not proven PR91 encoder semantic tokens."
         ),
+    }
+
+
+def _prefix_checkpoint_symbol_counts(
+    *,
+    target_decoded_before: int,
+    target_group_start: int,
+    total_collected_symbols: int,
+    range_prefix_window_symbols: tuple[int, ...],
+) -> list[dict[str, Any]]:
+    """Build deterministic prefix checkpoints around one failed range row."""
+
+    windows = sorted(
+        {
+            int(window)
+            for window in range_prefix_window_symbols
+            if int(window) > 0
+        },
+        reverse=True,
+    )
+    labels: dict[int, str] = {
+        0: "empty_stream",
+        int(target_group_start): "target_group_start",
+        int(target_decoded_before): "before_failure_row",
+        int(target_decoded_before) + 1: "including_failure_row",
+    }
+    for window in windows:
+        count = max(0, int(target_decoded_before) - window)
+        labels.setdefault(count, f"failure_minus_{window}_symbols")
+
+    rows: list[dict[str, Any]] = []
+    for count in sorted(labels):
+        if count < 0 or count > int(total_collected_symbols):
+            continue
+        rows.append(
+            {
+                "label": labels[count],
+                "symbol_count": int(count),
+                "symbols_before_failure_remaining": int(
+                    int(target_decoded_before) - int(count)
+                ),
+                "includes_failure_symbol": bool(
+                    int(count) > int(target_decoded_before)
+                ),
+            }
+        )
+    return rows
+
+
+def _validate_range_prefix_window_symbols(
+    range_prefix_window_symbols: tuple[int, ...] | list[int],
+) -> tuple[int, ...]:
+    windows = tuple(int(value) for value in range_prefix_window_symbols)
+    bad = [int(value) for value in windows if int(value) <= 0]
+    if bad:
+        raise Pr91Hpm1Error(
+            "hpm1_range_state_prefix_probe",
+            "range_prefix_window_symbols_must_be_positive",
+            bad_values=bad,
+        )
+    return windows
+
+
+def _replay_prefix_against_words(
+    words: np.ndarray,
+    raw_rows: list[np.ndarray],
+    reference_symbols: list[int],
+    *,
+    symbol_count: int,
+    probability_variant: str | Any,
+    prob_eps: float,
+) -> dict[str, Any]:
+    """Decode a bounded prefix against a supplied word array."""
+
+    if int(symbol_count) == 0:
+        return {
+            "status": "decoded_empty_prefix",
+            "passed": True,
+            "decoded_symbol_count": 0,
+        }
+    arr = np.ascontiguousarray(words, dtype=np.uint32)
+    if int(arr.size) == 0:
+        return {
+            "status": "empty_word_stream_for_nonempty_prefix",
+            "passed": False,
+            "decoded_symbol_count": 0,
+        }
+
+    decoder = _pr86_hpac_codec.constriction.stream.queue.RangeDecoder(arr)
+    decoded: list[int] = []
+    for index in range(int(symbol_count)):
+        cat = _categorical_from_probs(
+            raw_rows[index],
+            prob_eps=prob_eps,
+            variant=probability_variant,
+        )
+        try:
+            symbol = int(decoder.decode(cat))
+        except Exception as exc:
+            return {
+                "status": "range_decode_exception",
+                "passed": False,
+                "decoded_symbol_count": int(index),
+                "exception_type": type(exc).__name__,
+                "exception_text": str(exc),
+                "decoder_state_after_exception": _range_decoder_state_summary(
+                    decoder,
+                    label="after_prefix_replay_exception",
+                ),
+            }
+        decoded.append(symbol)
+        expected = int(reference_symbols[index])
+        if symbol != expected:
+            return {
+                "status": "decoded_symbol_mismatch",
+                "passed": False,
+                "decoded_symbol_count": int(index + 1),
+                "first_mismatch": {
+                    "symbol_index": int(index),
+                    "decoded_symbol": int(symbol),
+                    "reference_symbol": expected,
+                },
+                "decoded_prefix_sha256": sha256_bytes(
+                    np.asarray(decoded, dtype=np.uint8).tobytes()
+                ),
+                "decoder_state_after_mismatch": _range_decoder_state_summary(
+                    decoder,
+                    label="after_prefix_replay_mismatch",
+                ),
+            }
+
+    decoded_arr = np.asarray(decoded, dtype=np.uint8)
+    return {
+        "status": "decoded_reference_prefix",
+        "passed": True,
+        "decoded_symbol_count": int(symbol_count),
+        "decoded_prefix_sha256": sha256_bytes(decoded_arr.tobytes()),
+        "decoder_state_after_replay": _range_decoder_state_summary(
+            decoder,
+            label="after_prefix_replay",
+        ),
+    }
+
+
+def _build_range_prefix_checkpoint_report(
+    raw_rows: list[np.ndarray],
+    reference_symbols: list[int],
+    submitted_words: np.ndarray,
+    checkpoint: Mapping[str, Any],
+    *,
+    probability_variant: str | Any,
+    prob_eps: float,
+    replay_symbol_limit: int,
+) -> dict[str, Any]:
+    """Encode/replay one local reference prefix and compare word summaries."""
+
+    symbol_count = int(checkpoint["symbol_count"])
+    encoder = _pr86_hpac_codec.constriction.stream.queue.RangeEncoder()
+    for index in range(symbol_count):
+        cat = _categorical_from_probs(
+            raw_rows[index],
+            prob_eps=prob_eps,
+            variant=probability_variant,
+        )
+        encoder.encode(int(reference_symbols[index]), cat)
+
+    local_words = np.ascontiguousarray(
+        np.asarray(encoder.clone().get_compressed(), dtype=np.uint32),
+        dtype=np.uint32,
+    )
+    submitted_same_count = np.ascontiguousarray(
+        submitted_words[: int(local_words.size)],
+        dtype=np.uint32,
+    )
+    full_prefix_match = bool(
+        int(local_words.size) == int(submitted_same_count.size)
+        and np.array_equal(local_words, submitted_same_count)
+    )
+    local_replay: dict[str, Any]
+    submitted_replay: dict[str, Any]
+    submitted_full_replay: dict[str, Any]
+    if symbol_count > int(replay_symbol_limit):
+        local_replay = {
+            "status": "not_attempted_symbol_limit",
+            "passed": False,
+            "symbol_count": symbol_count,
+            "limit": int(replay_symbol_limit),
+        }
+        submitted_replay = dict(local_replay)
+        submitted_full_replay = dict(local_replay)
+    else:
+        local_replay = _replay_prefix_against_words(
+            local_words,
+            raw_rows,
+            reference_symbols,
+            symbol_count=symbol_count,
+            probability_variant=probability_variant,
+            prob_eps=prob_eps,
+        )
+        submitted_full_replay = _replay_prefix_against_words(
+            submitted_words,
+            raw_rows,
+            reference_symbols,
+            symbol_count=symbol_count,
+            probability_variant=probability_variant,
+            prob_eps=prob_eps,
+        )
+        submitted_replay = _replay_prefix_against_words(
+            submitted_same_count,
+            raw_rows,
+            reference_symbols,
+            symbol_count=symbol_count,
+            probability_variant=probability_variant,
+            prob_eps=prob_eps,
+        )
+
+    return {
+        "label": str(checkpoint["label"]),
+        "symbol_count": symbol_count,
+        "symbols_before_failure_remaining": int(
+            checkpoint["symbols_before_failure_remaining"]
+        ),
+        "includes_failure_symbol": bool(checkpoint["includes_failure_symbol"]),
+        "range_encoder_state": _range_encoder_state_summary(
+            encoder,
+            label=f"after_encoding_{symbol_count}_reference_symbols",
+        ),
+        "local_reference_prefix_words": _uint32_words_digest(local_words),
+        "submitted_same_word_count_prefix": _uint32_words_digest(submitted_same_count),
+        "submitted_word_comparison": {
+            "same_word_count_prefix_matches": full_prefix_match,
+            "same_word_count_prefix_scope": (
+                "submitted stream truncated to the independently finalized "
+                "local prefix word count"
+            ),
+            "common_prefix_word_count": _common_prefix_uint32_words(
+                local_words,
+                submitted_same_count,
+            ),
+            "local_word_count": int(local_words.size),
+            "submitted_total_word_count": int(submitted_words.size),
+            "submitted_full_stream_prefix_replay_passed": bool(
+                submitted_full_replay.get("passed") is True
+            ),
+        },
+        "local_reference_prefix_replay": local_replay,
+        "submitted_same_word_count_replay": submitted_replay,
+        "submitted_full_stream_prefix_replay": submitted_full_replay,
+        "scope_note": (
+            "Local prefix words are independently finalized reference-context "
+            "range streams; mismatch with the submitted full stream is a "
+            "range-state diagnostic, not a score or parity claim. The full "
+            "submitted stream replay is the prefix-decode fidelity check; the "
+            "same-word-count replay is only a truncation sensitivity diagnostic."
+        ),
+    }
+
+
+def _hash_probability_row_sequences(
+    raw_rows: list[np.ndarray],
+    normalized_rows: list[np.ndarray],
+    reference_symbols: list[int],
+    decoded_symbols: list[int],
+    *,
+    target_decoded_before: int,
+    range_prefix_window_symbols: tuple[int, ...],
+) -> dict[str, Any]:
+    target = int(target_decoded_before)
+    raw_before = np.ascontiguousarray(np.vstack(raw_rows[:target]))
+    norm_before = np.ascontiguousarray(np.vstack(normalized_rows[:target]))
+    raw_including = np.ascontiguousarray(np.vstack(raw_rows[: target + 1]))
+    norm_including = np.ascontiguousarray(np.vstack(normalized_rows[: target + 1]))
+    reference_before = np.asarray(reference_symbols[:target], dtype=np.uint8)
+    reference_including = np.asarray(reference_symbols[: target + 1], dtype=np.uint8)
+    decoded_before = np.asarray(decoded_symbols[:target], dtype=np.uint8)
+
+    windows = []
+    for window in sorted({int(v) for v in range_prefix_window_symbols if int(v) > 0}):
+        start = max(0, target - window)
+        end = min(len(normalized_rows), target + 1)
+        norm_window = np.ascontiguousarray(np.vstack(normalized_rows[start:end]))
+        ref_window = np.asarray(reference_symbols[start:end], dtype=np.uint8)
+        windows.append(
+            {
+                "symbols_before_failure_window": int(window),
+                "start_global_symbol": int(start),
+                "end_global_symbol_exclusive": int(end),
+                "includes_failure_row": bool(end > target),
+                "normalized_rows_sha256": sha256_bytes(norm_window.tobytes()),
+                "reference_symbols_sha256": sha256_bytes(ref_window.tobytes()),
+            }
+        )
+
+    return {
+        "schema": "pr91_hpm1_probability_row_sequence_hashes_v1",
+        "rows_before_failure": {
+            "count": int(raw_before.shape[0]),
+            "raw_softmax_sha256": sha256_bytes(raw_before.tobytes()),
+            "normalized_for_categorical_sha256": sha256_bytes(norm_before.tobytes()),
+            "reference_symbols_sha256": sha256_bytes(reference_before.tobytes()),
+            "submitted_decoded_symbols_sha256": sha256_bytes(decoded_before.tobytes()),
+        },
+        "rows_including_failure": {
+            "count": int(raw_including.shape[0]),
+            "raw_softmax_sha256": sha256_bytes(raw_including.tobytes()),
+            "normalized_for_categorical_sha256": sha256_bytes(
+                norm_including.tobytes()
+            ),
+            "reference_symbols_sha256": sha256_bytes(reference_including.tobytes()),
+        },
+        "failure_window_hashes": windows,
+    }
+
+
+def _trace_hpm1_reference_forced_range_state_prefix_probe(
+    model: Any,
+    payload: Hpm1MaskPayload,
+    reference_tokens: np.ndarray,
+    *,
+    probability_variant: str | Any,
+    prob_eps: float,
+    device: str,
+    spatial_order_candidate: str,
+    target_failure: Mapping[str, Any],
+    range_prefix_window_symbols: tuple[int, ...],
+    replay_symbol_limit: int,
+) -> dict[str, Any]:
+    """Probe probability-row and range-prefix state before one failed row."""
+
+    if torch is None or F is None:  # pragma: no cover - optional dependency path
+        raise Pr91Hpm1Error("dependency_contract", "torch_missing")
+    if _pr86_hpac_codec.constriction is None:  # pragma: no cover
+        raise Pr91Hpm1Error("dependency_contract", "constriction_missing")
+    if str(device) != "cpu":
+        raise Pr91Hpm1Error(
+            "device_contract",
+            "hpm1_range_state_prefix_probe_is_cpu_only",
+            requested_device=device,
+        )
+    if int(replay_symbol_limit) < 0:
+        raise Pr91Hpm1Error(
+            "hpm1_range_state_prefix_probe",
+            "replay_symbol_limit_must_be_nonnegative",
+            replay_symbol_limit=replay_symbol_limit,
+        )
+
+    target_frame = int(target_failure["frame"])
+    target_group = int(target_failure["group"])
+    target_symbol = int(target_failure["symbol_in_group"])
+    target_decoded_before = int(target_failure["decoded_symbol_count_before_failure"])
+    resolved = resolve_hpac_probability_variant(probability_variant)
+    dev = torch.device(device)
+    model = model.to(dev).eval()
+    masks = _group_masks(
+        payload.height,
+        payload.width,
+        P=payload.predictor_count,
+        delta=payload.delta,
+        device=dev,
+    )
+    submitted_words = _hpm1_token_words_for_candidate(payload, "source_little_uint32")
+    decoder = _pr86_hpac_codec.constriction.stream.queue.RangeDecoder(submitted_words)
+    decoded_prev = torch.zeros((1, payload.height, payload.width), dtype=torch.long, device=dev)
+    decoded_symbols = 0
+    target_group_start: int | None = None
+    raw_rows: list[np.ndarray] = []
+    normalized_rows: list[np.ndarray] = []
+    reference_symbols: list[int] = []
+    submitted_decoded_symbols: list[int] = []
+    reference_mismatch_count = 0
+    first_reference_mismatch: dict[str, Any] | None = None
+    failure_report: dict[str, Any] | None = None
+    started_at = time.time()
+
+    with torch.no_grad():
+        for frame in range(target_frame + 1):
+            idx = torch.tensor([frame], dtype=torch.long, device=dev)
+            cur = torch.zeros((1, payload.height, payload.width), dtype=torch.long, device=dev)
+            frame_start_symbols = decoded_symbols
+            for group, mask in enumerate(masks):
+                if mask is None:
+                    continue
+                group_start_symbols = decoded_symbols
+                coords = _hpm1_group_coords_for_spatial_order(
+                    payload,
+                    group=group,
+                    mask=mask,
+                    candidate=spatial_order_candidate,
+                    device=dev,
+                )
+                logits = model(cur, idx, decoded_prev)
+                probs = F.softmax(logits.float(), dim=1)
+                probs_at_group = (
+                    probs[0][:, coords[:, 0], coords[:, 1]]
+                    .permute(1, 0)
+                    .contiguous()
+                )
+                probs_np = probs_at_group.cpu().numpy()
+                ref_at_group = reference_tokens[
+                    frame,
+                    coords[:, 0].detach().cpu().numpy(),
+                    coords[:, 1].detach().cpu().numpy(),
+                ].astype(np.int64, copy=False)
+                decoded = np.empty(int(probs_at_group.shape[0]), dtype=np.int64)
+                for symbol_in_group, row in enumerate(probs_np):
+                    if frame == target_frame and group == target_group:
+                        target_group_start = int(group_start_symbols)
+                    if (
+                        frame > target_frame
+                        or (frame == target_frame and group > target_group)
+                        or (
+                            frame == target_frame
+                            and group == target_group
+                            and symbol_in_group > target_symbol
+                        )
+                    ):
+                        break
+                    normalized = _normalize_probability_row(
+                        row,
+                        prob_eps=prob_eps,
+                        variant=resolved,
+                    )
+                    raw_rows.append(np.ascontiguousarray(row))
+                    normalized_rows.append(np.ascontiguousarray(normalized))
+                    reference_symbol = int(ref_at_group[symbol_in_group])
+                    reference_symbols.append(reference_symbol)
+                    cat = _categorical_from_probs(row, prob_eps=prob_eps, variant=resolved)
+                    decoder_state_before = _range_decoder_state_summary(
+                        decoder,
+                        label="before_decode_attempt",
+                    )
+                    try:
+                        decoded_symbol = int(decoder.decode(cat))
+                    except Exception as exc:
+                        decoder_state_after = _range_decoder_state_summary(
+                            decoder,
+                            label="after_failed_decode_exception",
+                        )
+                        raw_row = np.ascontiguousarray(row)
+                        norm_row = np.ascontiguousarray(normalized)
+                        failure_report = {
+                            "stage": "submitted_tokens_decode",
+                            "reason": "hpac_entropy_decode_contract_mismatch",
+                            "exception_type": type(exc).__name__,
+                            "exception_text": str(exc),
+                            "frame": int(frame),
+                            "group": int(group),
+                            "symbol_in_group": int(symbol_in_group),
+                            "decoded_symbol_count_before_failure": int(decoded_symbols),
+                            "group_start_decoded_symbols": int(group_start_symbols),
+                            "frame_start_decoded_symbols": int(frame_start_symbols),
+                            "range_decoder_diagnostic": {
+                                "state_before_decode": decoder_state_before,
+                                "state_after_failed_decode": decoder_state_after,
+                                "not_stream_exhaustion": bool(
+                                    decoder_state_before.get("maybe_exhausted") is False
+                                ),
+                            },
+                            "failing_probability_row": {
+                                "raw_softmax": {
+                                    "dtype": str(raw_row.dtype),
+                                    "sha256": sha256_bytes(raw_row.tobytes()),
+                                    "values": [
+                                        round(float(value), 10)
+                                        for value in raw_row.tolist()
+                                    ],
+                                    "sum": round(float(raw_row.sum()), 10),
+                                },
+                                "normalized_for_categorical": {
+                                    "dtype": str(norm_row.dtype),
+                                    "sha256": sha256_bytes(norm_row.tobytes()),
+                                    "values": [
+                                        round(float(value), 10)
+                                        for value in norm_row.tolist()
+                                    ],
+                                    "sum": round(float(norm_row.sum()), 10),
+                                    "argmax_symbol": int(norm_row.argmax()),
+                                    "min": round(float(norm_row.min()), 10),
+                                    "max": round(float(norm_row.max()), 10),
+                                },
+                            },
+                            "failure_row_interpretation": _failure_row_interpretation(
+                                raw_row,
+                                norm_row,
+                                probability_variant=resolved,
+                                prob_eps=prob_eps,
+                                decoder_state_before=decoder_state_before,
+                                context_mode="reference_teacher_forced_range_state_prefix",
+                                reference_symbol=reference_symbol,
+                            ),
+                        }
+                        break
+                    submitted_decoded_symbols.append(decoded_symbol)
+                    decoded[symbol_in_group] = decoded_symbol
+                    if decoded_symbol != reference_symbol:
+                        reference_mismatch_count += 1
+                        if first_reference_mismatch is None:
+                            yx = coords[symbol_in_group].detach().cpu().numpy()
+                            first_reference_mismatch = {
+                                "global_symbol": int(decoded_symbols),
+                                "frame": int(frame),
+                                "group": int(group),
+                                "symbol_in_group": int(symbol_in_group),
+                                "pixel_yx": {"y": int(yx[0]), "x": int(yx[1])},
+                                "decoded_symbol": decoded_symbol,
+                                "reference_symbol": reference_symbol,
+                            }
+                    decoded_symbols += 1
+                if failure_report is not None:
+                    break
+                if frame == target_frame and group == target_group:
+                    break
+                cur[0, coords[:, 0], coords[:, 1]] = torch.from_numpy(
+                    ref_at_group
+                ).to(dev)
+            if failure_report is not None:
+                break
+            decoded_prev = torch.from_numpy(
+                reference_tokens[frame : frame + 1].astype(np.int64, copy=False)
+            ).to(dev)
+
+    if failure_report is None:
+        return {
+            "schema": "pr91_hpm1_range_state_prefix_probe_v1",
+            "status": "target_failure_not_reproduced",
+            "passed": False,
+            "score_claim": False,
+            "dispatch_allowed": False,
+            "target_failure": dict(target_failure),
+            "decoded_symbols_reached": int(decoded_symbols),
+            "collected_symbol_count": len(reference_symbols),
+            "scope_note": (
+                "This probe is only valid when the submitted range failure is "
+                "reproduced at the requested target row."
+            ),
+        }
+
+    observed_failure = {
+        key: int(failure_report[key])
+        for key in (
+            "frame",
+            "group",
+            "symbol_in_group",
+            "decoded_symbol_count_before_failure",
+        )
+    }
+    target_signature = {
+        "frame": target_frame,
+        "group": target_group,
+        "symbol_in_group": target_symbol,
+        "decoded_symbol_count_before_failure": target_decoded_before,
+    }
+    target_reproduced = observed_failure == target_signature
+    if target_group_start is None:
+        target_group_start = int(failure_report["group_start_decoded_symbols"])
+    checkpoints = _prefix_checkpoint_symbol_counts(
+        target_decoded_before=target_decoded_before,
+        target_group_start=target_group_start,
+        total_collected_symbols=len(reference_symbols),
+        range_prefix_window_symbols=range_prefix_window_symbols,
+    )
+    checkpoint_reports = [
+        _build_range_prefix_checkpoint_report(
+            raw_rows,
+            reference_symbols,
+            submitted_words,
+            checkpoint,
+            probability_variant=resolved,
+            prob_eps=prob_eps,
+            replay_symbol_limit=replay_symbol_limit,
+        )
+        for checkpoint in checkpoints
+    ]
+
+    return {
+        "schema": "pr91_hpm1_range_state_prefix_probe_v1",
+        "status": (
+            "target_failure_reproduced_with_reference_context"
+            if target_reproduced
+            else "different_failure_row_observed"
+        ),
+        "passed": False,
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "full_decode_proven": False,
+        "byte_exact_reencode_proven": False,
+        "device": device,
+        "probability_variant": resolved.name,
+        "prob_eps": float(prob_eps),
+        "spatial_order_candidate": spatial_order_candidate,
+        "target_failure": target_signature,
+        "observed_failure": observed_failure,
+        "target_failure_reproduced": bool(target_reproduced),
+        "target_group_start_decoded_symbols": int(target_group_start),
+        "submitted_token_stream": {
+            "bytes": len(payload.tokens),
+            "sha256": sha256_bytes(payload.tokens),
+            **_token_words_summary(submitted_words),
+            "word_order_candidate": "source_little_uint32",
+        },
+        "reference_teacher_forcing": {
+            "reference_mismatch_count_before_failure": int(reference_mismatch_count),
+            "first_decoded_reference_mismatch": first_reference_mismatch,
+        },
+        "probability_row_sequence_hashes": _hash_probability_row_sequences(
+            raw_rows,
+            normalized_rows,
+            reference_symbols,
+            submitted_decoded_symbols,
+            target_decoded_before=target_decoded_before,
+            range_prefix_window_symbols=range_prefix_window_symbols,
+        ),
+        "range_prefix_reconstruction": {
+            "schema": "pr91_hpm1_range_prefix_reconstruction_windows_v1",
+            "window_symbols_before_failure": [
+                int(value)
+                for value in range_prefix_window_symbols
+                if int(value) > 0
+            ],
+            "checkpoint_symbol_counts": checkpoints,
+            "checkpoint_results": checkpoint_reports,
+        },
+        "failure": failure_report,
+        "scope_note": (
+            "Local CPU forensic probe only. It narrows prior context/range-state "
+            "hypotheses but does not prove HPM1 decode parity, byte-exact "
+            "re-encoding, score validity, or dispatch readiness."
+        ),
+        "elapsed_sec": round(time.time() - started_at, 3),
     }
 
 
@@ -2957,6 +3656,16 @@ def run_pr91_hpm1_reference_teacher_forcing_probe(
     require_expected_reference_sha: bool = True,
     reference_window_before: int = 2,
     reference_window_after: int = 5,
+    run_range_prefix_probe: bool = False,
+    range_prefix_window_symbols: tuple[int, ...] | list[int] = (
+        DEFAULT_PR91_HPM1_RANGE_PREFIX_WINDOW_SYMBOLS
+    ),
+    range_prefix_replay_symbol_limit: int = (
+        DEFAULT_PR91_HPM1_RANGE_PREFIX_REPLAY_SYMBOL_LIMIT
+    ),
+    range_prefix_max_target_decoded_before: int = (
+        DEFAULT_PR91_HPM1_RANGE_PREFIX_MAX_TARGET_DECODED_BEFORE
+    ),
 ) -> dict[str, Any]:
     """Test whether PR85/QMA9 semantic teacher-forcing advances HPM1 replay."""
 
@@ -2974,6 +3683,21 @@ def run_pr91_hpm1_reference_teacher_forcing_probe(
             "reference_window_counts_must_be_nonnegative",
             reference_window_before=reference_window_before,
             reference_window_after=reference_window_after,
+        )
+    range_prefix_windows = _validate_range_prefix_window_symbols(
+        range_prefix_window_symbols
+    )
+    if int(range_prefix_replay_symbol_limit) < 0:
+        raise Pr91Hpm1Error(
+            "hpm1_range_state_prefix_probe",
+            "replay_symbol_limit_must_be_nonnegative",
+            replay_symbol_limit=range_prefix_replay_symbol_limit,
+        )
+    if int(range_prefix_max_target_decoded_before) < 0:
+        raise Pr91Hpm1Error(
+            "hpm1_range_state_prefix_probe",
+            "range_prefix_max_target_decoded_before_must_be_nonnegative",
+            range_prefix_max_target_decoded_before=range_prefix_max_target_decoded_before,
         )
     archive_path = Path(archive)
     payload = extract_pr91_hpm1_payload(archive_path)
@@ -3036,6 +3760,63 @@ def run_pr91_hpm1_reference_teacher_forcing_probe(
             reference_window_before=reference_window_before,
             reference_window_after=reference_window_after,
         )
+        range_prefix_trace: dict[str, Any] | None = None
+        if run_range_prefix_probe:
+            reference_signature = _failure_row_signature(reference_trace)
+            if reference_signature is None:
+                range_prefix_trace = {
+                    "schema": "pr91_hpm1_range_state_prefix_probe_v1",
+                    "status": "not_attempted_no_reference_forced_failure_row",
+                    "passed": False,
+                    "score_claim": False,
+                    "dispatch_allowed": False,
+                    "full_decode_proven": False,
+                    "byte_exact_reencode_proven": False,
+                    "reason": (
+                        "range-prefix reconstruction requires a reproduced "
+                        "reference-forced entropy failure row"
+                    ),
+                }
+            elif (
+                int(reference_signature["decoded_symbol_count_before_failure"])
+                > int(range_prefix_max_target_decoded_before)
+            ):
+                range_prefix_trace = {
+                    "schema": "pr91_hpm1_range_state_prefix_probe_v1",
+                    "status": "not_attempted_target_exceeds_symbol_budget",
+                    "passed": False,
+                    "score_claim": False,
+                    "dispatch_allowed": False,
+                    "full_decode_proven": False,
+                    "byte_exact_reencode_proven": False,
+                    "target_failure": dict(reference_signature),
+                    "target_decoded_symbols_before_failure": int(
+                        reference_signature["decoded_symbol_count_before_failure"]
+                    ),
+                    "range_prefix_max_target_decoded_before": int(
+                        range_prefix_max_target_decoded_before
+                    ),
+                    "reason": (
+                        "range-prefix reconstruction replays model context to "
+                        "the target row; raise the explicit budget for slow "
+                        "forensic runs."
+                    ),
+                }
+            else:
+                range_prefix_trace = (
+                    _trace_hpm1_reference_forced_range_state_prefix_probe(
+                        model,
+                        payload,
+                        reference_tokens,
+                        probability_variant=probability_variant,
+                        prob_eps=prob_eps,
+                        device=device,
+                        spatial_order_candidate=candidate,
+                        target_failure=reference_signature,
+                        range_prefix_window_symbols=range_prefix_windows,
+                        replay_symbol_limit=range_prefix_replay_symbol_limit,
+                    )
+                )
         decoded_before = _decoded_symbols_or_before_failure(decoded_trace)
         reference_before = _decoded_symbols_or_before_failure(reference_trace)
         advances_beyond_decoded = (
@@ -3154,6 +3935,11 @@ def run_pr91_hpm1_reference_teacher_forcing_probe(
                         )
                         else None
                     ),
+                    **(
+                        {"range_state_prefix_probe": range_prefix_trace}
+                        if run_range_prefix_probe
+                        else {}
+                    ),
                 },
             }
         )
@@ -3239,6 +4025,17 @@ def run_pr91_hpm1_reference_teacher_forcing_probe(
                 "window_before": int(reference_window_before),
                 "window_after": int(reference_window_after),
                 "scope": "canonical_reference_tokens_at_failure_row",
+            },
+            "range_prefix_probe": {
+                "enabled": bool(run_range_prefix_probe),
+                "window_symbols_before_failure": [
+                    int(value) for value in range_prefix_windows
+                ],
+                "replay_symbol_limit": int(range_prefix_replay_symbol_limit),
+                "scope": (
+                    "local CPU reference-forced range-state prefix "
+                    "reconstruction; not score or dispatch evidence"
+                ),
             },
             "candidate_scope": {
                 "requested_candidates": list(requested_candidates),

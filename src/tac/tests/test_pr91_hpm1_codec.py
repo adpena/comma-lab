@@ -18,6 +18,7 @@ from tac.pr91_hpm1_codec import (
     DEFAULT_PR85_QMA9_DECODED_REFERENCE_TOKEN_SOURCE,
     DEFAULT_PR91_ARCHIVE,
     Pr91Hpm1Error,
+    _build_range_prefix_checkpoint_report,
     build_hpm1_mask_segment,
     raw_tokens_to_mod5_residual_symbols,
     reconstruct_raw_tokens_from_mod5_residual_symbols,
@@ -175,6 +176,65 @@ def test_residual_symbol_helpers_roundtrip_raw_tokens() -> None:
 
     assert np.array_equal(reconstructed, raw)
     assert np.array_equal(prev[1], raw[0])
+
+
+def test_range_prefix_report_uses_full_submitted_stream_for_replay_fidelity() -> None:
+    from tac import pr86_hpac_codec as hpac
+    from tac.pr86_hpac_codec import _categorical_from_probs, resolve_hpac_probability_variant
+
+    if hpac.constriction is None:
+        pytest.skip("constriction range coder not available")
+
+    variant = resolve_hpac_probability_variant("source_float64_perfect_false")
+    prob_eps = 1e-7
+    raw_rows = [
+        [0.13967194, 0.35001042, 0.036982268, 0.18408185, 0.28925356],
+        [0.32995138, 0.12997232, 0.14624487, 0.069891952, 0.32393944],
+        [0.10581783, 0.19149975, 0.35863638, 0.0025626249, 0.34148338],
+        [0.23717724, 0.14965372, 0.22940776, 0.34873247, 0.035028793],
+        [0.030576656, 0.153622, 0.046496011, 0.41406411, 0.3552413],
+        [0.14635567, 0.16271545, 0.3738628, 0.12896068, 0.1881054],
+        [0.16463628, 0.24333154, 0.27017367, 0.20877452, 0.11308403],
+        [0.11138923, 0.16113052, 0.21459962, 0.26848581, 0.24439484],
+        [0.20496184, 0.23433173, 0.1810969, 0.24599564, 0.13361396],
+        [0.27676371, 0.35983056, 0.01177596, 0.2360076, 0.11562212],
+        [0.14937177, 0.33929735, 0.12357872, 0.23127869, 0.15647344],
+    ]
+    raw_rows_np = [
+        np.asarray(row, dtype=np.float32)
+        for row in raw_rows
+    ]
+    reference_symbols = [2, 3, 3, 3, 1, 0, 1, 1, 3, 0, 3]
+    encoder = hpac.constriction.stream.queue.RangeEncoder()
+    for index, symbol in enumerate(reference_symbols):
+        encoder.encode(
+            int(symbol),
+            _categorical_from_probs(raw_rows_np[index], prob_eps=prob_eps, variant=variant),
+        )
+    submitted_words = np.ascontiguousarray(encoder.get_compressed(), dtype=np.uint32)
+
+    report = _build_range_prefix_checkpoint_report(
+        raw_rows_np,
+        reference_symbols,
+        submitted_words,
+        {
+            "label": "deterministic_prefix_fixture",
+            "symbol_count": 9,
+            "symbols_before_failure_remaining": 0,
+            "includes_failure_symbol": False,
+        },
+        probability_variant=variant,
+        prob_eps=prob_eps,
+        replay_symbol_limit=32,
+    )
+
+    assert report["submitted_word_comparison"]["same_word_count_prefix_matches"] is False
+    assert report["submitted_same_word_count_replay"]["passed"] is False
+    assert report["submitted_full_stream_prefix_replay"]["passed"] is True
+    assert report["submitted_full_stream_prefix_replay"]["decoded_symbol_count"] == 9
+    assert report["submitted_word_comparison"][
+        "submitted_full_stream_prefix_replay_passed"
+    ] is True
 
 
 def test_pr91_probability_matrix_is_fail_closed_not_notimplemented(tmp_path: Path) -> None:
@@ -627,6 +687,25 @@ def test_pr91_reference_teacher_forcing_probe_cli_narrows_false_lead(
     ] is True
 
 
+def test_pr91_reference_teacher_forcing_probe_cli_help_lists_range_prefix_flags() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "audit_pr91_hpm1_reference_teacher_forcing_probe.py"),
+            "--help",
+        ],
+        check=True,
+        cwd=REPO,
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+
+    assert "--range-prefix-probe" in result.stdout
+    assert "--range-prefix-window-symbols" in result.stdout
+    assert "--range-prefix-replay-symbol-limit" in result.stdout
+    assert "--range-prefix-max-target-decoded-before" in result.stdout
+
+
 def test_pr91_reference_teacher_forcing_probe_records_phase_major_next_row_artifact() -> None:
     if not DEFAULT_PR91_ARCHIVE.is_file():
         pytest.skip("canonical PR91 archive not available")
@@ -640,6 +719,9 @@ def test_pr91_reference_teacher_forcing_probe_records_phase_major_next_row_artif
         candidates=("phase_major_row_major",),
         reference_window_before=1,
         reference_window_after=3,
+        run_range_prefix_probe=True,
+        range_prefix_window_symbols=(1,),
+        range_prefix_replay_symbol_limit=0,
         write_json=False,
     )
 
@@ -708,6 +790,22 @@ def test_pr91_reference_teacher_forcing_probe_records_phase_major_next_row_artif
     ] == [-1, 0, 1, 2, 3]
     assert len(reference_window["reference_symbols_sha256"]) == 64
     assert reference_window["failed_reference_symbol"] in range(5)
+    range_prefix = row["range_state_prefix_probe"]
+    assert range_prefix["schema"] == "pr91_hpm1_range_state_prefix_probe_v1"
+    assert range_prefix["status"] == "not_attempted_target_exceeds_symbol_budget"
+    assert range_prefix["score_claim"] is False
+    assert range_prefix["dispatch_allowed"] is False
+    assert range_prefix["full_decode_proven"] is False
+    assert range_prefix["byte_exact_reencode_proven"] is False
+    assert range_prefix["target_failure"] == {
+        "frame": 0,
+        "group": 17,
+        "symbol_in_group": 437,
+        "decoded_symbol_count_before_failure": 15989,
+    }
+    assert range_prefix["target_decoded_symbols_before_failure"] == 15989
+    assert range_prefix["range_prefix_max_target_decoded_before"] == 4096
+    assert "slow forensic runs" in range_prefix["reason"]
 
 
 def test_pr91_probe_contracts_fail_closed_on_bad_inputs(tmp_path: Path) -> None:
@@ -749,6 +847,27 @@ def test_pr91_probe_contracts_fail_closed_on_bad_inputs(tmp_path: Path) -> None:
         run_pr91_hpm1_reference_teacher_forcing_probe(
             archive,
             reference_window_after=-1,
+        )
+    with pytest.raises(Pr91Hpm1Error, match="range_prefix_window_symbols_must_be_positive"):
+        run_pr91_hpm1_reference_teacher_forcing_probe(
+            archive,
+            run_range_prefix_probe=True,
+            range_prefix_window_symbols=(0,),
+        )
+    with pytest.raises(Pr91Hpm1Error, match="replay_symbol_limit_must_be_nonnegative"):
+        run_pr91_hpm1_reference_teacher_forcing_probe(
+            archive,
+            run_range_prefix_probe=True,
+            range_prefix_replay_symbol_limit=-1,
+        )
+    with pytest.raises(
+        Pr91Hpm1Error,
+        match="range_prefix_max_target_decoded_before_must_be_nonnegative",
+    ):
+        run_pr91_hpm1_reference_teacher_forcing_probe(
+            archive,
+            run_range_prefix_probe=True,
+            range_prefix_max_target_decoded_before=-1,
         )
 
 

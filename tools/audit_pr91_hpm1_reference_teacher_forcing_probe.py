@@ -19,6 +19,9 @@ from tac.pr91_hpm1_codec import (  # noqa: E402
     DEFAULT_HPAC_PROBABILITY_VARIANT,
     DEFAULT_PR85_QMA9_DECODED_REFERENCE_TOKEN_SOURCE,
     DEFAULT_PR91_ARCHIVE,
+    DEFAULT_PR91_HPM1_RANGE_PREFIX_MAX_TARGET_DECODED_BEFORE,
+    DEFAULT_PR91_HPM1_RANGE_PREFIX_REPLAY_SYMBOL_LIMIT,
+    DEFAULT_PR91_HPM1_RANGE_PREFIX_WINDOW_SYMBOLS,
     run_pr91_hpm1_reference_teacher_forcing_probe,
 )
 from tac.repo_io import json_text  # noqa: E402
@@ -69,6 +72,40 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=DEFAULT_CANDIDATES,
         help="Comma-separated spatial traversal candidates to teacher-force.",
     )
+    parser.add_argument(
+        "--range-prefix-probe",
+        action="store_true",
+        help=(
+            "Run the local fail-closed range-prefix/probability-sequence "
+            "diagnostic at each teacher-forced entropy failure row."
+        ),
+    )
+    parser.add_argument(
+        "--range-prefix-window-symbols",
+        default=",".join(str(value) for value in DEFAULT_PR91_HPM1_RANGE_PREFIX_WINDOW_SYMBOLS),
+        help=(
+            "Comma-separated positive prefix windows before the failure row "
+            "for --range-prefix-probe."
+        ),
+    )
+    parser.add_argument(
+        "--range-prefix-replay-symbol-limit",
+        type=int,
+        default=DEFAULT_PR91_HPM1_RANGE_PREFIX_REPLAY_SYMBOL_LIMIT,
+        help=(
+            "Maximum prefix length to replay during range-prefix diagnostics; "
+            "larger checkpoints still record word/probability hashes."
+        ),
+    )
+    parser.add_argument(
+        "--range-prefix-max-target-decoded-before",
+        type=int,
+        default=DEFAULT_PR91_HPM1_RANGE_PREFIX_MAX_TARGET_DECODED_BEFORE,
+        help=(
+            "Maximum target decoded-symbol prefix for automatic range-prefix "
+            "reconstruction. Raise explicitly for slow deep forensic runs."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -77,6 +114,24 @@ def _parse_candidates(text: str) -> tuple[str, ...]:
     if not candidates:
         raise SystemExit("--spatial-order-candidates must not be empty")
     return candidates
+
+
+def _parse_positive_int_csv(text: str, *, option: str) -> tuple[int, ...]:
+    values: list[int] = []
+    for part in text.split(","):
+        stripped = part.strip()
+        if not stripped:
+            continue
+        try:
+            value = int(stripped)
+        except ValueError as exc:
+            raise SystemExit(f"{option} must contain only integers") from exc
+        if value <= 0:
+            raise SystemExit(f"{option} values must be positive")
+        values.append(value)
+    if not values:
+        raise SystemExit(f"{option} must not be empty")
+    return tuple(values)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -93,6 +148,15 @@ def main(argv: list[str] | None = None) -> int:
         require_expected_reference_sha=not args.allow_unexpected_reference_sha,
         reference_window_before=args.reference_window_before,
         reference_window_after=args.reference_window_after,
+        run_range_prefix_probe=args.range_prefix_probe,
+        range_prefix_window_symbols=_parse_positive_int_csv(
+            args.range_prefix_window_symbols,
+            option="--range-prefix-window-symbols",
+        ),
+        range_prefix_replay_symbol_limit=args.range_prefix_replay_symbol_limit,
+        range_prefix_max_target_decoded_before=(
+            args.range_prefix_max_target_decoded_before
+        ),
         write_json=False,
     )
     input_paths = [

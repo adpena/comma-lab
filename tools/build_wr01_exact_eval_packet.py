@@ -9,8 +9,8 @@ import hashlib
 import json
 import os
 import re
-import shutil
 import shlex
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -43,10 +43,22 @@ DEFAULT_RESULT_DIR = Path(
     "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex"
 )
 DEFAULT_RELEASE_SURFACE_SUBDIR = "release_surface"
+RUNTIME_DECODE_VALIDATION_SCHEMA = "hnerv_wavelet_runtime_decode_validation.v1"
+RUNTIME_DECODE_VALIDATION_FILENAME = "hnerv_wavelet_runtime_decode_validation.json"
+RUNTIME_DECODE_REVIEW_SCHEMA = "hnerv_wavelet_compress_time_runtime_decode_review.v1"
+RUNTIME_DECODE_REVIEW_FILENAME = "hnerv_wavelet_compress_time_runtime_decode_review.json"
+RUNTIME_APPLY_SCHEMA = "hnerv_wavelet_runtime_apply.v1"
+APPLY_TRANSFORM_TOOL = "tac.hnerv_wavelet_apply_transform.build_wavelet_apply_transform_candidate"
 DEFAULT_CLAIMS_PATH = Path(".omx/state/active_lane_dispatch_claims.md")
 DEFAULT_CLAIM_TTL_HOURS = 24
 CONTEST_ORIGINAL_BYTES = 37_545_489
 RATE_SCORE_PER_BYTE = 25.0 / CONTEST_ORIGINAL_BYTES
+RUNTIME_REQUIRED_DISPATCH_BLOCKERS = (
+    "requires_archive_manifest_preflight",
+    "requires_component_response_or_exact_cuda_eval",
+    "requires_lane_dispatch_claim",
+    "requires_exact_cuda_auth_eval",
+)
 TERMINAL_CLAIM_PREFIXES = (
     "completed_",
     "failed_",
@@ -103,6 +115,25 @@ def _read_json(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError(f"expected JSON object: {path}")
     return payload
+
+
+def _json_text(payload: Any) -> str:
+    return json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
+
+
+def _json_line(payload: Any) -> str:
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n"
+
+
+def _sha256_json_line(payload: Any) -> str:
+    return hashlib.sha256(_json_line(payload).encode("utf-8")).hexdigest()
+
+
+def _manifest_sha256_excluding_self(payload: dict[str, Any]) -> str:
+    stripped = {
+        key: value for key, value in payload.items() if key != "manifest_sha256_excluding_self"
+    }
+    return hashlib.sha256(_json_text(stripped).encode("utf-8")).hexdigest()
 
 
 def _q(value: object) -> str:
@@ -205,6 +236,26 @@ def _repo_display_path(path: Path) -> str:
         return full.resolve().relative_to(REPO_ROOT.resolve()).as_posix()
     except ValueError:
         return full.as_posix()
+
+
+def _paths_equivalent(actual: Any, expected: Path) -> bool:
+    if not isinstance(actual, str) or not actual:
+        return False
+    try:
+        actual_path = _repo_path(Path(actual)).resolve(strict=False)
+        expected_path = _repo_path(expected).resolve(strict=False)
+    except OSError:
+        return False
+    return actual_path == expected_path
+
+
+def _runtime_decode_validation_path(result_dir: Path, manifest_payload: dict[str, Any]) -> Path:
+    del manifest_payload
+    return result_dir / RUNTIME_DECODE_VALIDATION_FILENAME
+
+
+def _runtime_decode_review_path(result_dir: Path) -> Path:
+    return result_dir / RUNTIME_DECODE_REVIEW_FILENAME
 
 
 def _release_relative_path(release_dir: Path, target: Path) -> str:
@@ -362,6 +413,8 @@ def build_release_surface(args: argparse.Namespace, *, now_utc: dt.datetime) -> 
         "candidate_manifest": args.result_dir / "manifest.json",
         "public_replay_preflight": args.result_dir / "public_replay_preflight.json",
         "payload_section_diff": args.result_dir / "payload_section_diff_vs_pr106x.json",
+        "runtime_decode_validation": _runtime_decode_validation_path(args.result_dir, manifest_payload),
+        "runtime_decode_review": _runtime_decode_review_path(args.result_dir),
         "lightning_exact_eval_dry_run": args.result_dir / "lightning_exact_eval_dry_run.json",
         "wr01_exact_eval_packet": args.result_dir / "wr01_exact_eval_packet.json",
     }
@@ -794,6 +847,591 @@ def _check_condition(
         blockers.append(name)
 
 
+def _dispatch_blockers(payload: dict[str, Any] | Any) -> list[str]:
+    if not isinstance(payload, dict):
+        return []
+    raw = payload.get("dispatch_blockers")
+    return [str(item) for item in raw] if isinstance(raw, list) else []
+
+
+def _check_required_runtime_dispatch_blockers(
+    checks: list[dict[str, Any]],
+    blockers: list[str],
+    prefix: str,
+    payload: dict[str, Any] | Any,
+) -> None:
+    actual = _dispatch_blockers(payload)
+    for required in RUNTIME_REQUIRED_DISPATCH_BLOCKERS:
+        _check_condition(
+            checks,
+            blockers,
+            f"{prefix}_missing_dispatch_blocker:{required}",
+            required in actual,
+            actual=actual,
+            expected=f"contains {required}",
+        )
+
+
+def _check_declared_manifest_sha256(
+    checks: list[dict[str, Any]],
+    blockers: list[str],
+    prefix: str,
+    payload: dict[str, Any],
+) -> str | None:
+    declared = payload.get("manifest_sha256_excluding_self")
+    _check_condition(
+        checks,
+        blockers,
+        f"{prefix}_manifest_sha256_missing_or_malformed",
+        _is_sha256(declared),
+        actual=declared,
+        expected="64-char lowercase hex sha256",
+    )
+    computed = _manifest_sha256_excluding_self(payload)
+    if _is_sha256(declared):
+        _check_equal(
+            checks,
+            blockers,
+            f"{prefix}_manifest_sha256_mismatch",
+            declared,
+            computed,
+        )
+    return computed
+
+
+def _expected_runtime_apply_manifest_hashes(manifest_payload: dict[str, Any]) -> list[str]:
+    hashes = {
+        _sha256_json_line(manifest_payload),
+        _manifest_sha256_excluding_self(manifest_payload),
+    }
+    declared = manifest_payload.get("manifest_sha256_excluding_self")
+    if _is_sha256(declared):
+        hashes.add(str(declared))
+    return sorted(hashes)
+
+
+def _runtime_decode_gate_diagnostics(
+    *,
+    result_dir: Path,
+    manifest_path: Path,
+    manifest_payload: dict[str, Any],
+    runtime_decode_validation_path: Path,
+    runtime_decode_validation_payload: dict[str, Any],
+    runtime_decode_review_path: Path,
+    runtime_decode_review_payload: dict[str, Any],
+    archive_identity: dict[str, Any],
+    changed_section_name: Any,
+    changed_section_source_sha256: Any,
+    changed_section_sha256: Any,
+) -> dict[str, Any]:
+    gate_blockers: list[str] = []
+    checks: list[dict[str, Any]] = []
+    validation_exists = _repo_path(runtime_decode_validation_path).is_file()
+    review_exists = _repo_path(runtime_decode_review_path).is_file()
+    expected_runtime_apply_path = (
+        Path(str(manifest_payload.get("manifest_path")))
+        if isinstance(manifest_payload.get("manifest_path"), str)
+        and manifest_payload.get("manifest_path")
+        else manifest_path
+    )
+
+    _check_condition(
+        checks,
+        gate_blockers,
+        "runtime_decode_validation_file_missing",
+        validation_exists,
+        actual=_repo_display_path(runtime_decode_validation_path),
+        expected="existing WR01 runtime decode validation manifest",
+    )
+    _check_condition(
+        checks,
+        gate_blockers,
+        "runtime_decode_review_file_missing",
+        review_exists,
+        actual=_repo_display_path(runtime_decode_review_path),
+        expected="existing WR01 runtime apply/decode review manifest",
+    )
+    _check_present(
+        checks,
+        gate_blockers,
+        "manifest_runtime_decode_validation_manifest_path_missing",
+        manifest_payload.get("runtime_decode_validation_manifest_path"),
+    )
+    _check_condition(
+        checks,
+        gate_blockers,
+        "manifest_runtime_decode_validation_manifest_path_mismatch",
+        _paths_equivalent(
+            manifest_payload.get("runtime_decode_validation_manifest_path"),
+            runtime_decode_validation_path,
+        ),
+        actual=manifest_payload.get("runtime_decode_validation_manifest_path"),
+        expected=_repo_display_path(runtime_decode_validation_path),
+    )
+    _check_present(
+        checks,
+        gate_blockers,
+        "manifest_runtime_apply_manifest_path_missing",
+        manifest_payload.get("manifest_path"),
+    )
+    if _is_sha256(manifest_payload.get("manifest_sha256_excluding_self")):
+        _check_equal(
+            checks,
+            gate_blockers,
+            "manifest_manifest_sha256_mismatch",
+            manifest_payload.get("manifest_sha256_excluding_self"),
+            _manifest_sha256_excluding_self(manifest_payload),
+        )
+    _check_equal(
+        checks,
+        gate_blockers,
+        "manifest_tool_mismatch",
+        manifest_payload.get("tool"),
+        APPLY_TRANSFORM_TOOL,
+    )
+    _check_equal(
+        checks,
+        gate_blockers,
+        "manifest_score_claim_not_false",
+        manifest_payload.get("score_claim"),
+        False,
+    )
+    _check_equal(
+        checks,
+        gate_blockers,
+        "manifest_dispatch_attempted_not_false",
+        manifest_payload.get("dispatch_attempted"),
+        False,
+    )
+    _check_equal(
+        checks,
+        gate_blockers,
+        "manifest_ready_for_archive_preflight_not_false",
+        manifest_payload.get("ready_for_archive_preflight"),
+        False,
+    )
+    _check_equal(
+        checks,
+        gate_blockers,
+        "manifest_ready_for_exact_eval_dispatch_not_false",
+        manifest_payload.get("ready_for_exact_eval_dispatch"),
+        False,
+    )
+    _check_required_runtime_dispatch_blockers(
+        checks,
+        gate_blockers,
+        "manifest",
+        manifest_payload,
+    )
+
+    runtime_apply = manifest_payload.get("runtime_apply")
+    _check_condition(
+        checks,
+        gate_blockers,
+        "runtime_apply_block_missing",
+        isinstance(runtime_apply, dict),
+        actual=type(runtime_apply).__name__,
+        expected="object",
+    )
+    if isinstance(runtime_apply, dict):
+        _check_equal(checks, gate_blockers, "runtime_apply_schema_mismatch", runtime_apply.get("schema"), RUNTIME_APPLY_SCHEMA)
+        _check_equal(checks, gate_blockers, "runtime_apply_status_mismatch", runtime_apply.get("status"), "applied")
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_apply_ready_for_runtime_apply_review_not_true",
+            runtime_apply.get("ready_for_runtime_apply_review"),
+            True,
+        )
+        _check_equal(checks, gate_blockers, "runtime_apply_score_claim_not_false", runtime_apply.get("score_claim"), False)
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_apply_dispatch_attempted_not_false",
+            runtime_apply.get("dispatch_attempted"),
+            False,
+        )
+        _check_equal(checks, gate_blockers, "runtime_apply_section_name_mismatch", runtime_apply.get("section_name"), changed_section_name)
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_apply_source_section_sha256_mismatch",
+            runtime_apply.get("source_section_sha256"),
+            changed_section_source_sha256,
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_apply_candidate_section_sha256_mismatch",
+            runtime_apply.get("candidate_section_sha256"),
+            changed_section_sha256,
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_apply_source_raw_sha256_mismatch",
+            runtime_apply.get("source_raw_sha256"),
+            manifest_payload.get("source_raw_sha256"),
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_apply_candidate_raw_sha256_mismatch",
+            runtime_apply.get("candidate_raw_sha256"),
+            manifest_payload.get("candidate_raw_sha256"),
+        )
+        applied_atom_ids = runtime_apply.get("applied_atom_ids")
+        _check_condition(
+            checks,
+            gate_blockers,
+            "runtime_apply_applied_atom_ids_missing",
+            isinstance(applied_atom_ids, list) and bool(applied_atom_ids),
+            actual=applied_atom_ids,
+            expected="nonempty list",
+        )
+        _check_condition(
+            checks,
+            gate_blockers,
+            "runtime_apply_applied_atom_count_not_positive",
+            _is_positive_int(runtime_apply.get("applied_atom_count")),
+            actual=runtime_apply.get("applied_atom_count"),
+            expected="positive integer",
+        )
+
+    validation_sha256 = None
+    if validation_exists:
+        validation_sha256 = _check_declared_manifest_sha256(
+            checks,
+            gate_blockers,
+            "runtime_decode_validation",
+            runtime_decode_validation_payload,
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_validation_schema_mismatch",
+            runtime_decode_validation_payload.get("schema"),
+            RUNTIME_DECODE_VALIDATION_SCHEMA,
+        )
+        _check_condition(
+            checks,
+            gate_blockers,
+            "runtime_decode_validation_manifest_path_mismatch",
+            _paths_equivalent(
+                runtime_decode_validation_payload.get("manifest_path"),
+                runtime_decode_validation_path,
+            ),
+            actual=runtime_decode_validation_payload.get("manifest_path"),
+            expected=_repo_display_path(runtime_decode_validation_path),
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "manifest_runtime_decode_validation_manifest_sha256_mismatch",
+            manifest_payload.get("runtime_decode_validation_manifest_sha256"),
+            validation_sha256,
+        )
+        embedded_validation = manifest_payload.get("runtime_decode_validation")
+        _check_condition(
+            checks,
+            gate_blockers,
+            "manifest_runtime_decode_validation_block_missing",
+            isinstance(embedded_validation, dict),
+            actual=type(embedded_validation).__name__,
+            expected="object",
+        )
+        if isinstance(embedded_validation, dict):
+            _check_equal(
+                checks,
+                gate_blockers,
+                "manifest_runtime_decode_validation_embedded_sha256_mismatch",
+                _manifest_sha256_excluding_self(embedded_validation),
+                validation_sha256,
+            )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_validation_ready_for_runtime_decode_review_not_true",
+            runtime_decode_validation_payload.get("ready_for_runtime_decode_review"),
+            True,
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_validation_ready_for_archive_preflight_not_false",
+            runtime_decode_validation_payload.get("ready_for_archive_preflight"),
+            False,
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_validation_ready_for_exact_eval_dispatch_not_false",
+            runtime_decode_validation_payload.get("ready_for_exact_eval_dispatch"),
+            False,
+        )
+        _check_equal(checks, gate_blockers, "runtime_decode_validation_score_claim_not_false", runtime_decode_validation_payload.get("score_claim"), False)
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_validation_dispatch_attempted_not_false",
+            runtime_decode_validation_payload.get("dispatch_attempted"),
+            False,
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_validation_exact_cuda_auth_eval_not_false",
+            runtime_decode_validation_payload.get("exact_cuda_auth_eval"),
+            False,
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_validation_blockers_not_empty",
+            runtime_decode_validation_payload.get("blockers") or [],
+            [],
+        )
+        _check_required_runtime_dispatch_blockers(
+            checks,
+            gate_blockers,
+            "runtime_decode_validation",
+            runtime_decode_validation_payload,
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_validation_source_archive_sha256_mismatch",
+            runtime_decode_validation_payload.get("source_archive_sha256"),
+            manifest_payload.get("source_archive_sha256"),
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_validation_source_archive_bytes_mismatch",
+            runtime_decode_validation_payload.get("source_archive_bytes"),
+            manifest_payload.get("source_archive_bytes"),
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_validation_candidate_archive_sha256_mismatch",
+            runtime_decode_validation_payload.get("candidate_archive_sha256"),
+            archive_identity["sha256"],
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_validation_candidate_archive_bytes_mismatch",
+            runtime_decode_validation_payload.get("candidate_archive_bytes"),
+            archive_identity["bytes"],
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_validation_source_payload_sha256_mismatch",
+            runtime_decode_validation_payload.get("source_payload_sha256"),
+            manifest_payload.get("source_payload_sha256"),
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_validation_candidate_payload_sha256_mismatch",
+            runtime_decode_validation_payload.get("candidate_payload_sha256"),
+            manifest_payload.get("candidate_payload_sha256"),
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_validation_section_name_mismatch",
+            runtime_decode_validation_payload.get("section_name"),
+            changed_section_name,
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_validation_changed_section_only_not_true",
+            runtime_decode_validation_payload.get("changed_section_only"),
+            True,
+        )
+
+    review_sha256 = None
+    if review_exists:
+        review_sha256 = _check_declared_manifest_sha256(
+            checks,
+            gate_blockers,
+            "runtime_decode_review",
+            runtime_decode_review_payload,
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_review_schema_mismatch",
+            runtime_decode_review_payload.get("schema"),
+            RUNTIME_DECODE_REVIEW_SCHEMA,
+        )
+        _check_condition(
+            checks,
+            gate_blockers,
+            "runtime_decode_review_manifest_path_mismatch",
+            _paths_equivalent(runtime_decode_review_payload.get("manifest_path"), runtime_decode_review_path),
+            actual=runtime_decode_review_payload.get("manifest_path"),
+            expected=_repo_display_path(runtime_decode_review_path),
+        )
+        _check_equal(checks, gate_blockers, "runtime_decode_review_status_mismatch", runtime_decode_review_payload.get("status"), "ready")
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_review_ready_for_runtime_apply_review_not_true",
+            runtime_decode_review_payload.get("ready_for_runtime_apply_review"),
+            True,
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_review_ready_for_decode_validation_review_not_true",
+            runtime_decode_review_payload.get("ready_for_decode_validation_review"),
+            True,
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_review_ready_for_archive_preflight_not_false",
+            runtime_decode_review_payload.get("ready_for_archive_preflight"),
+            False,
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_review_ready_for_exact_eval_dispatch_not_false",
+            runtime_decode_review_payload.get("ready_for_exact_eval_dispatch"),
+            False,
+        )
+        _check_equal(checks, gate_blockers, "runtime_decode_review_score_claim_not_false", runtime_decode_review_payload.get("score_claim"), False)
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_review_dispatch_attempted_not_false",
+            runtime_decode_review_payload.get("dispatch_attempted"),
+            False,
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_review_blockers_not_empty",
+            runtime_decode_review_payload.get("blockers") or [],
+            [],
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_review_runtime_apply_blockers_not_empty",
+            runtime_decode_review_payload.get("runtime_apply_blockers") or [],
+            [],
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_review_decode_validation_blockers_not_empty",
+            runtime_decode_review_payload.get("decode_validation_blockers") or [],
+            [],
+        )
+        _check_required_runtime_dispatch_blockers(
+            checks,
+            gate_blockers,
+            "runtime_decode_review",
+            runtime_decode_review_payload,
+        )
+        _check_condition(
+            checks,
+            gate_blockers,
+            "runtime_decode_review_apply_manifest_path_mismatch",
+            _paths_equivalent(
+                runtime_decode_review_payload.get("runtime_apply_manifest_path"),
+                expected_runtime_apply_path,
+            ),
+            actual=runtime_decode_review_payload.get("runtime_apply_manifest_path"),
+            expected=_repo_display_path(expected_runtime_apply_path),
+        )
+        expected_apply_hashes = _expected_runtime_apply_manifest_hashes(manifest_payload)
+        _check_condition(
+            checks,
+            gate_blockers,
+            "runtime_decode_review_apply_manifest_sha256_mismatch",
+            runtime_decode_review_payload.get("runtime_apply_manifest_sha256")
+            in expected_apply_hashes,
+            actual=runtime_decode_review_payload.get("runtime_apply_manifest_sha256"),
+            expected=expected_apply_hashes,
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_review_runtime_decode_validation_schema_mismatch",
+            runtime_decode_review_payload.get("runtime_decode_validation_schema"),
+            RUNTIME_DECODE_VALIDATION_SCHEMA,
+        )
+        _check_condition(
+            checks,
+            gate_blockers,
+            "runtime_decode_review_runtime_decode_validation_path_mismatch",
+            _paths_equivalent(
+                runtime_decode_review_payload.get("runtime_decode_validation_manifest_path"),
+                runtime_decode_validation_path,
+            ),
+            actual=runtime_decode_review_payload.get("runtime_decode_validation_manifest_path"),
+            expected=_repo_display_path(runtime_decode_validation_path),
+        )
+        if validation_sha256 is not None:
+            _check_equal(
+                checks,
+                gate_blockers,
+                "runtime_decode_review_runtime_decode_validation_sha256_mismatch",
+                runtime_decode_review_payload.get("runtime_decode_validation_manifest_sha256"),
+                validation_sha256,
+            )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_review_runtime_decode_validation_ready_not_true",
+            runtime_decode_review_payload.get("runtime_decode_validation_ready"),
+            True,
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_review_candidate_archive_sha256_mismatch",
+            runtime_decode_review_payload.get("runtime_apply_candidate_archive_sha256"),
+            archive_identity["sha256"],
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_review_candidate_archive_bytes_mismatch",
+            runtime_decode_review_payload.get("runtime_apply_candidate_archive_bytes"),
+            archive_identity["bytes"],
+        )
+        _check_equal(
+            checks,
+            gate_blockers,
+            "runtime_decode_review_changed_section_name_mismatch",
+            runtime_decode_review_payload.get("runtime_apply_changed_section_name"),
+            changed_section_name,
+        )
+
+    return {
+        "schema": "wr01_runtime_apply_decode_gate_v1",
+        "result_dir": _repo_display_path(result_dir),
+        "runtime_decode_validation_path": _repo_display_path(runtime_decode_validation_path),
+        "runtime_decode_review_path": _repo_display_path(runtime_decode_review_path),
+        "runtime_decode_validation_exists": validation_exists,
+        "runtime_decode_review_exists": review_exists,
+        "runtime_decode_validation_manifest_sha256": validation_sha256,
+        "runtime_decode_review_manifest_sha256": review_sha256,
+        "ready": not gate_blockers,
+        "blockers": gate_blockers,
+        "checks": checks,
+    }
+
+
 def build_packet(args: argparse.Namespace) -> dict[str, Any]:
     now_utc = _now_utc(args)
     result_dir = args.result_dir
@@ -804,12 +1442,17 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
     payload_diff = result_dir / "payload_section_diff_vs_pr106x.json"
     strength_summary = Path("experiments/results/hnerv_wavelet_apply_transform_wr01_strength_summary_20260506_codex.json")
     manifest = result_dir / "manifest.json"
+    manifest_payload = _read_json(manifest) if _repo_path(manifest).is_file() else {}
+    runtime_decode_validation = _runtime_decode_validation_path(result_dir, manifest_payload)
+    runtime_decode_review = _runtime_decode_review_path(result_dir)
 
     missing_env = [name for name in REQUIRED_ENV if not os.environ.get(name)]
     artifacts = [
         archive,
         args.baseline_json,
         manifest,
+        runtime_decode_validation,
+        runtime_decode_review,
         preflight,
         compliance,
         payload_diff,
@@ -818,7 +1461,12 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
     ]
     artifact_statuses = [_artifact_status(path) for path in artifacts]
     missing_artifacts = [row["path"] for row in artifact_statuses if not row["exists"]]
-    manifest_payload = _read_json(manifest) if _repo_path(manifest).is_file() else {}
+    runtime_decode_validation_payload = (
+        _read_json(runtime_decode_validation) if _repo_path(runtime_decode_validation).is_file() else {}
+    )
+    runtime_decode_review_payload = (
+        _read_json(runtime_decode_review) if _repo_path(runtime_decode_review).is_file() else {}
+    )
     preflight_payload = _read_json(preflight) if _repo_path(preflight).is_file() else {}
     compliance_payload = _read_json(compliance) if _repo_path(compliance).is_file() else {}
     payload_diff_payload = _read_json(payload_diff) if _repo_path(payload_diff).is_file() else {}
@@ -826,6 +1474,8 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
     artifact_flag_violations = _artifact_flag_violations(
         {
             "manifest": manifest_payload,
+            "runtime_decode_validation": runtime_decode_validation_payload,
+            "runtime_decode_review": runtime_decode_review_payload,
             "public_replay_preflight": preflight_payload,
             "pre_submission_compliance": compliance_payload,
             "payload_section_diff": payload_diff_payload,
@@ -895,6 +1545,19 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         manifest=manifest,
         preflight=preflight,
         payload_diff=payload_diff,
+    )
+    runtime_decode_gate = _runtime_decode_gate_diagnostics(
+        result_dir=result_dir,
+        manifest_path=manifest,
+        manifest_payload=manifest_payload,
+        runtime_decode_validation_path=runtime_decode_validation,
+        runtime_decode_validation_payload=runtime_decode_validation_payload,
+        runtime_decode_review_path=runtime_decode_review,
+        runtime_decode_review_payload=runtime_decode_review_payload,
+        archive_identity=archive_identity,
+        changed_section_name=changed_section_name,
+        changed_section_source_sha256=changed_section_source_sha256,
+        changed_section_sha256=changed_section_sha256,
     )
 
     _check_equal(
@@ -1346,6 +2009,10 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "--extra-artifact",
         payload_diff.as_posix(),
         "--extra-artifact",
+        runtime_decode_validation.as_posix(),
+        "--extra-artifact",
+        runtime_decode_review.as_posix(),
+        "--extra-artifact",
         strength_summary.as_posix(),
     ]
     harvest_cmd = [
@@ -1375,24 +2042,34 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         blockers.append("payload_section_diff_not_ready")
     if not dry_run_ready:
         blockers.append("lightning_dry_run_not_ready")
+    if not runtime_decode_gate["ready"]:
+        blockers.append("runtime_decode_gate_not_ready")
     if artifact_flag_violations:
         blockers.append("artifact_score_or_dispatch_flag_violation")
     blockers.extend(consistency_blockers)
+    blockers.extend(runtime_decode_gate["blockers"])
     static_blockers = list(blockers)
     static_packet_ready = not static_blockers
-    dispatch_gate = (
-        "eligible_for_cuda_auth_eval_after_lane_claim"
-        if static_packet_ready
-        else "blocked_static_packet_ready_until_static_blockers_clear"
-    )
+    operator_lane_blockers = []
     if missing_env:
-        blockers.append("missing_lightning_environment")
+        operator_lane_blockers.append("missing_lightning_environment")
     if lane_claim_preflight["conflict_present"]:
-        blockers.append("active_lane_dispatch_claim_conflict")
+        operator_lane_blockers.append("active_lane_dispatch_claim_conflict")
     if not lane_claim_preflight["active_claim_present"]:
-        blockers.append("missing_active_lane_dispatch_claim")
+        operator_lane_blockers.append("missing_active_lane_dispatch_claim")
     if not args.operator_approved_exact_cuda:
-        blockers.append("missing_operator_exact_cuda_approval")
+        operator_lane_blockers.append("missing_operator_exact_cuda_approval")
+    blockers.extend(operator_lane_blockers)
+    ready_for_exact_eval_dispatch = static_packet_ready and not operator_lane_blockers
+    dispatch_gate = (
+        "blocked_static_packet_ready_until_static_blockers_clear"
+        if not static_packet_ready
+        else (
+            "eligible_for_cuda_auth_eval_after_lane_claim"
+            if ready_for_exact_eval_dispatch
+            else "blocked_operator_lane_gates_until_env_claim_approval"
+        )
+    )
     source_archive_bytes = manifest_payload.get("source_archive_bytes")
     archive_byte_delta = (
         args.archive_bytes - int(source_archive_bytes)
@@ -1511,13 +2188,15 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "score_claim": False,
         "dispatch_attempted": False,
         "dispatch_gate": dispatch_gate,
-        "dispatch_unlocked": static_packet_ready,
-        "ready_for_exact_eval_dispatch_claim": static_packet_ready,
+        "dispatch_unlocked": ready_for_exact_eval_dispatch,
+        "ready_for_exact_eval_dispatch": ready_for_exact_eval_dispatch,
+        "ready_for_exact_eval_dispatch_claim": ready_for_exact_eval_dispatch,
         "candidate_static_preflight_ready": static_packet_ready,
         "ready_for_submit": not blockers,
         "static_packet_ready": static_packet_ready,
         "blockers": blockers,
         "static_blockers": static_blockers,
+        "operator_lane_blockers": operator_lane_blockers,
         "missing_env": missing_env,
         "missing_artifacts": missing_artifacts,
         "operator_approved_exact_cuda": bool(args.operator_approved_exact_cuda),
@@ -1542,6 +2221,11 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "dry_run_ready": dry_run_ready,
         "dry_run_submit_readiness": dry_run_submit_readiness,
         "dry_run_queue_metadata": dry_run_queue_metadata,
+        "runtime_decode_gate_ready": runtime_decode_gate["ready"],
+        "runtime_decode_gate_blockers": runtime_decode_gate["blockers"],
+        "runtime_decode_gate": runtime_decode_gate,
+        "runtime_decode_validation_path": _repo_display_path(runtime_decode_validation),
+        "runtime_decode_review_path": _repo_display_path(runtime_decode_review),
         "artifact_flag_violations": artifact_flag_violations,
         "artifact_consistency_ok": not consistency_blockers,
         "artifact_consistency_checks": consistency_checks,

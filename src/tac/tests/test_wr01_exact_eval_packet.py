@@ -10,6 +10,16 @@ import zipfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
+APPLY_TRANSFORM_TOOL = "tac.hnerv_wavelet_apply_transform.build_wavelet_apply_transform_candidate"
+RUNTIME_DECODE_VALIDATION_SCHEMA = "hnerv_wavelet_runtime_decode_validation.v1"
+RUNTIME_DECODE_REVIEW_SCHEMA = "hnerv_wavelet_compress_time_runtime_decode_review.v1"
+RUNTIME_APPLY_SCHEMA = "hnerv_wavelet_runtime_apply.v1"
+RUNTIME_DISPATCH_BLOCKERS = [
+    "requires_archive_manifest_preflight",
+    "requires_component_response_or_exact_cuda_eval",
+    "requires_lane_dispatch_claim",
+    "requires_exact_cuda_auth_eval",
+]
 
 
 def test_wr01_exact_eval_packet_reports_missing_env_without_dispatch(tmp_path: Path) -> None:
@@ -53,13 +63,20 @@ def test_wr01_exact_eval_packet_reports_missing_env_without_dispatch(tmp_path: P
     assert payload["proxy_row"] is False
     assert payload["score_claim"] is False
     assert payload["dispatch_attempted"] is False
-    assert payload["dispatch_gate"] == "eligible_for_cuda_auth_eval_after_lane_claim"
-    assert payload["dispatch_unlocked"] is True
-    assert payload["ready_for_exact_eval_dispatch_claim"] is True
-    assert payload["candidate_static_preflight_ready"] is True
-    assert payload["static_packet_ready"] is True
+    assert payload["dispatch_gate"] == "blocked_static_packet_ready_until_static_blockers_clear"
+    assert payload["dispatch_unlocked"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["ready_for_exact_eval_dispatch_claim"] is False
+    assert payload["candidate_static_preflight_ready"] is False
+    assert payload["static_packet_ready"] is False
     assert payload["ready_for_submit"] is False
+    assert "runtime_decode_gate_not_ready" in payload["static_blockers"]
+    assert "runtime_decode_validation_file_missing" in payload["static_blockers"]
+    assert "runtime_decode_review_file_missing" in payload["static_blockers"]
+    assert payload["runtime_decode_gate_ready"] is False
+    assert payload["runtime_decode_gate"]["ready"] is False
     assert "missing_lightning_environment" in payload["blockers"]
+    assert "missing_lightning_environment" in payload["operator_lane_blockers"]
     assert payload["source_archive_sha256"] == "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e"
     assert payload["source_archive_bytes"] == 186231
     assert "pre_submission_compliance_failed" not in payload["blockers"]
@@ -187,6 +204,10 @@ def test_wr01_exact_eval_packet_builds_release_surface_and_refreshes_static_comp
     assert "pre_submission_compliance_failed" not in payload["static_blockers"]
     assert payload["static_packet_ready"] is True
     assert payload["ready_for_submit"] is False
+    assert payload["dispatch_gate"] == "blocked_operator_lane_gates_until_env_claim_approval"
+    assert payload["dispatch_unlocked"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["runtime_decode_gate_ready"] is True
     assert "missing_lightning_environment" in payload["blockers"]
     assert "missing_active_lane_dispatch_claim" in payload["blockers"]
     assert "missing_operator_exact_cuda_approval" in payload["blockers"]
@@ -308,6 +329,19 @@ def test_wr01_exact_eval_packet_accepts_matching_custody_artifacts(tmp_path: Pat
             },
         },
     )
+    _write_matching_runtime_decode_gate_artifacts(
+        result_dir=result_dir,
+        manifest=manifest,
+        archive_sha256=archive_sha256,
+        archive_bytes=archive_bytes,
+        source_archive_sha256=source_archive_sha256,
+        source_archive_bytes=123,
+        source_payload_sha256=source_payload_sha256,
+        candidate_payload_sha256=candidate_payload_sha256,
+        changed_section_name="latents_and_sidecar_brotli",
+        changed_source_sha256=changed_source_sha256,
+        changed_section_sha256=changed_section_sha256,
+    )
     out = tmp_path / "packet.json"
     claims_path = tmp_path / "claims.md"
     _write_claims(claims_path, lane_id="lane", job_name="job")
@@ -355,6 +389,11 @@ def test_wr01_exact_eval_packet_accepts_matching_custody_artifacts(tmp_path: Pat
 
     payload = json.loads(out.read_text())
     assert payload["ready_for_submit"] is True
+    assert payload["ready_for_exact_eval_dispatch"] is True
+    assert payload["runtime_decode_gate_ready"] is True
+    assert payload["runtime_decode_gate_blockers"] == []
+    assert payload["runtime_decode_gate"]["ready"] is True
+    assert payload["runtime_decode_gate"]["blockers"] == []
     assert payload["candidate_id"] == "lane"
     assert payload["family"] == "hnerv_wavelet_wr01_apply_transform"
     assert payload["pareto_scope"] == "hnerv_rate_only_exact_archive"
@@ -376,6 +415,7 @@ def test_wr01_exact_eval_packet_accepts_matching_custody_artifacts(tmp_path: Pat
     assert payload["dispatch_gate"] == "eligible_for_cuda_auth_eval_after_lane_claim"
     assert payload["dispatch_unlocked"] is True
     assert payload["ready_for_exact_eval_dispatch_claim"] is True
+    assert payload["operator_lane_blockers"] == []
     assert payload["operator_approved_exact_cuda"] is True
     assert payload["lane_claim_preflight"]["active_claim_present"] is True
     assert payload["source_archive_sha256"] == source_archive_sha256
@@ -554,6 +594,7 @@ def test_wr01_exact_eval_packet_refuses_truthy_score_or_dispatch_flags(tmp_path:
     assert payload["static_packet_ready"] is False
     assert payload["candidate_static_preflight_ready"] is False
     assert payload["dispatch_unlocked"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
     assert "artifact_score_or_dispatch_flag_violation" in payload["blockers"]
     assert payload["artifact_flag_violations"] == [
         {
@@ -569,6 +610,72 @@ def test_wr01_exact_eval_packet_refuses_truthy_score_or_dispatch_flags(tmp_path:
             "expected": False,
         },
     ]
+
+
+def test_wr01_exact_eval_packet_fails_closed_without_runtime_decode_review(
+    tmp_path: Path,
+) -> None:
+    fixture = _write_matching_packet_artifacts(tmp_path)
+    result_dir = fixture["result_dir"]
+    (result_dir / "hnerv_wavelet_runtime_decode_validation.json").unlink()
+    (result_dir / "hnerv_wavelet_compress_time_runtime_decode_review.json").unlink()
+
+    payload = _run_packet_builder_for_fixture(tmp_path, fixture)
+
+    assert payload["ready_for_submit"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["static_packet_ready"] is False
+    assert payload["operator_lane_blockers"] == []
+    assert "missing_artifacts" in payload["static_blockers"]
+    assert "runtime_decode_gate_not_ready" in payload["static_blockers"]
+    assert payload["runtime_decode_gate_ready"] is False
+    assert "runtime_decode_validation_file_missing" in payload["runtime_decode_gate_blockers"]
+    assert "runtime_decode_review_file_missing" in payload["runtime_decode_gate_blockers"]
+
+
+def test_wr01_exact_eval_packet_requires_sha_linked_scoreless_runtime_review(
+    tmp_path: Path,
+) -> None:
+    fixture = _write_matching_packet_artifacts(tmp_path)
+    review_path = (
+        fixture["result_dir"] / "hnerv_wavelet_compress_time_runtime_decode_review.json"
+    )
+    review_payload = json.loads(review_path.read_text(encoding="utf-8"))
+    review_payload["score_claim"] = True
+    review_payload["dispatch_attempted"] = True
+    review_payload["runtime_decode_validation_manifest_sha256"] = "f" * 64
+    review_payload["dispatch_blockers"] = [
+        blocker
+        for blocker in review_payload["dispatch_blockers"]
+        if blocker != "requires_lane_dispatch_claim"
+    ]
+    _write_json_with_self_hash(review_path, review_payload)
+
+    payload = _run_packet_builder_for_fixture(tmp_path, fixture)
+
+    assert payload["ready_for_submit"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["static_packet_ready"] is False
+    assert payload["operator_lane_blockers"] == []
+    assert "runtime_decode_gate_not_ready" in payload["static_blockers"]
+    assert "artifact_score_or_dispatch_flag_violation" in payload["static_blockers"]
+    gate_blockers = payload["runtime_decode_gate_blockers"]
+    assert "runtime_decode_review_score_claim_not_false" in gate_blockers
+    assert "runtime_decode_review_dispatch_attempted_not_false" in gate_blockers
+    assert (
+        "runtime_decode_review_runtime_decode_validation_sha256_mismatch"
+        in gate_blockers
+    )
+    assert (
+        "runtime_decode_review_missing_dispatch_blocker:requires_lane_dispatch_claim"
+        in gate_blockers
+    )
+    assert {
+        "artifact": "runtime_decode_review",
+        "flag": "score_claim",
+        "actual": True,
+        "expected": False,
+    } in payload["artifact_flag_violations"]
 
 
 def test_wr01_exact_eval_packet_blocks_noop_hashes_and_missing_source_custody(tmp_path: Path) -> None:
@@ -636,12 +743,81 @@ def test_wr01_exact_eval_packet_blocks_noop_hashes_and_missing_source_custody(tm
     assert "dry_run_job_name_mismatch" not in payload["blockers"]
 
 
+def _run_packet_builder_for_fixture(tmp_path: Path, fixture: dict[str, object]) -> dict:
+    out = tmp_path / "packet.json"
+    claims_path = tmp_path / "claims.md"
+    _write_claims(claims_path, lane_id="lane", job_name="job")
+    env = os.environ.copy()
+    for key in (
+        "LIGHTNING_SSH_TARGET",
+        "LIGHTNING_REMOTE_PACT",
+        "LIGHTNING_UPSTREAM_DIR",
+        "LIGHTNING_TEAMSPACE",
+        "LIGHTNING_STUDIO",
+        "LIGHTNING_SDK_USER",
+    ):
+        env[key] = "fixture"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "build_wr01_exact_eval_packet.py"),
+            "--job-name",
+            "job",
+            "--lane-id",
+            "lane",
+            "--archive",
+            str(fixture["archive"]),
+            "--baseline-json",
+            str(fixture["baseline"]),
+            "--result-dir",
+            str(fixture["result_dir"]),
+            "--archive-sha256",
+            str(fixture["archive_sha256"]),
+            "--archive-bytes",
+            str(fixture["archive_bytes"]),
+            "--claims-path",
+            str(claims_path),
+            "--now-utc",
+            "2026-05-06T10:00:00Z",
+            "--operator-approved-exact-cuda",
+            "--json-out",
+            str(out),
+        ],
+        check=True,
+        text=True,
+        env=env,
+    )
+    return json.loads(out.read_text())
+
+
 def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
 def _write_json(path: Path, payload: dict) -> None:
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _manifest_sha256_excluding_self(payload: dict) -> str:
+    stripped = {
+        key: value for key, value in payload.items() if key != "manifest_sha256_excluding_self"
+    }
+    return _sha256(
+        (
+            json.dumps(stripped, indent=2, sort_keys=True, allow_nan=False) + "\n"
+        ).encode("utf-8")
+    )
+
+
+def _write_json_with_self_hash(path: Path, payload: dict) -> dict:
+    hashed = dict(payload)
+    hashed["manifest_sha256_excluding_self"] = _manifest_sha256_excluding_self(hashed)
+    _write_json(path, hashed)
+    return hashed
 
 
 def _write_single_member_zip(path: Path, payload: bytes) -> None:
@@ -795,6 +971,19 @@ def _write_matching_packet_artifacts(
             },
         },
     )
+    _write_matching_runtime_decode_gate_artifacts(
+        result_dir=result_dir,
+        manifest=manifest,
+        archive_sha256=archive_sha256,
+        archive_bytes=archive_bytes,
+        source_archive_sha256=source_archive_sha256,
+        source_archive_bytes=source_archive_bytes,
+        source_payload_sha256=source_payload_sha256,
+        candidate_payload_sha256=candidate_payload_sha256,
+        changed_section_name="latents_and_sidecar_brotli",
+        changed_source_sha256=changed_source_sha256,
+        changed_section_sha256=changed_section_sha256,
+    )
     return {
         "archive": archive,
         "archive_sha256": archive_sha256,
@@ -802,3 +991,108 @@ def _write_matching_packet_artifacts(
         "baseline": baseline,
         "result_dir": result_dir,
     }
+
+
+def _write_matching_runtime_decode_gate_artifacts(
+    *,
+    result_dir: Path,
+    manifest: Path,
+    archive_sha256: str,
+    archive_bytes: int,
+    source_archive_sha256: str,
+    source_archive_bytes: int,
+    source_payload_sha256: str,
+    candidate_payload_sha256: str,
+    changed_section_name: str,
+    changed_source_sha256: str,
+    changed_section_sha256: str,
+) -> None:
+    dispatch_blockers = list(RUNTIME_DISPATCH_BLOCKERS)
+    validation = result_dir / "hnerv_wavelet_runtime_decode_validation.json"
+    review = result_dir / "hnerv_wavelet_compress_time_runtime_decode_review.json"
+    validation_payload = _write_json_with_self_hash(
+        validation,
+        {
+            "schema": RUNTIME_DECODE_VALIDATION_SCHEMA,
+            "manifest_path": validation.as_posix(),
+            "validation_mode": "local_wr01_runtime_decode_validation_not_score",
+            "ready_for_runtime_decode_review": True,
+            "ready_for_archive_preflight": False,
+            "ready_for_exact_eval_dispatch": False,
+            "score_claim": False,
+            "dispatch_attempted": False,
+            "exact_cuda_auth_eval": False,
+            "blockers": [],
+            "dispatch_blockers": dispatch_blockers,
+            "source_archive_sha256": source_archive_sha256,
+            "source_archive_bytes": source_archive_bytes,
+            "candidate_archive_sha256": archive_sha256,
+            "candidate_archive_bytes": archive_bytes,
+            "source_payload_sha256": source_payload_sha256,
+            "candidate_payload_sha256": candidate_payload_sha256,
+            "section_name": changed_section_name,
+            "changed_section_only": True,
+        },
+    )
+    manifest_payload = json.loads(manifest.read_text(encoding="utf-8"))
+    manifest_payload.setdefault("source_raw_sha256", source_payload_sha256)
+    manifest_payload.setdefault("candidate_raw_sha256", candidate_payload_sha256)
+    runtime_apply = {
+        "schema": RUNTIME_APPLY_SCHEMA,
+        "status": "applied",
+        "ready_for_runtime_apply_review": True,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "section_name": changed_section_name,
+        "source_section_sha256": changed_source_sha256,
+        "candidate_section_sha256": changed_section_sha256,
+        "source_raw_sha256": manifest_payload["source_raw_sha256"],
+        "candidate_raw_sha256": manifest_payload["candidate_raw_sha256"],
+        "applied_atom_ids": ["wr01_fixture_atom"],
+        "applied_atom_count": 1,
+    }
+    manifest_payload.update(
+        {
+            "tool": APPLY_TRANSFORM_TOOL,
+            "manifest_path": manifest.as_posix(),
+            "ready_for_archive_preflight": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_blockers": dispatch_blockers,
+            "runtime_apply": runtime_apply,
+            "runtime_decode_validation_manifest_path": validation.as_posix(),
+            "runtime_decode_validation_manifest_sha256": validation_payload[
+                "manifest_sha256_excluding_self"
+            ],
+            "runtime_decode_validation": validation_payload,
+        }
+    )
+    manifest_payload = _write_json_with_self_hash(manifest, manifest_payload)
+    _write_json_with_self_hash(
+        review,
+        {
+            "schema": RUNTIME_DECODE_REVIEW_SCHEMA,
+            "manifest_path": review.as_posix(),
+            "status": "ready",
+            "ready_for_runtime_apply_review": True,
+            "ready_for_decode_validation_review": True,
+            "ready_for_archive_preflight": False,
+            "ready_for_exact_eval_dispatch": False,
+            "score_claim": False,
+            "dispatch_attempted": False,
+            "blockers": [],
+            "runtime_apply_blockers": [],
+            "decode_validation_blockers": [],
+            "dispatch_blockers": dispatch_blockers,
+            "runtime_apply_manifest_path": manifest.as_posix(),
+            "runtime_apply_manifest_sha256": manifest_payload["manifest_sha256_excluding_self"],
+            "runtime_decode_validation_schema": RUNTIME_DECODE_VALIDATION_SCHEMA,
+            "runtime_decode_validation_manifest_path": validation.as_posix(),
+            "runtime_decode_validation_manifest_sha256": validation_payload[
+                "manifest_sha256_excluding_self"
+            ],
+            "runtime_decode_validation_ready": True,
+            "runtime_apply_candidate_archive_sha256": archive_sha256,
+            "runtime_apply_candidate_archive_bytes": archive_bytes,
+            "runtime_apply_changed_section_name": changed_section_name,
+        },
+    )
