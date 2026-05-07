@@ -359,3 +359,57 @@ def test_pipeline_aborts_when_op3_refuses_bits5() -> None:
     pipeline = CodecPipeline([Op3_ApogeeIntN_Substrate(bits=5)])
     with pytest.raises(ValueError, match="DEFERRED-pending-research"):
         pipeline.encode(sd)
+
+
+# ---------------------------------------------------------------------------
+# Bug-hunter v2 (re-opened MEDIUM): partial-substrate refusal at decode
+# ---------------------------------------------------------------------------
+
+def test_op3_decode_refuses_partial_substrate_under_skip_validate() -> None:
+    """When ``pipeline.encode(skip_validate=True)`` is used with a state_dict
+    missing some FIXED_STATE_SCHEMA names, Op3 previously emitted a partial
+    blob that decode happily reconstructed -- silently corrupting the
+    substrate handed to downstream Op1/Op2. Per re-opened bug-hunter v2
+    finding, decode now refuses partial blobs at the substrate boundary."""
+    full_sd = _synthetic_state_dict()
+    # Drop one schema tensor to provoke the bug.
+    schema_names = [name for name, _ in FIXED_STATE_SCHEMA]
+    dropped = schema_names[0]
+    partial_sd = {n: t for n, t in full_sd.items() if n != dropped}
+
+    op = Op3_ApogeeIntN_Substrate(bits=6)
+    # encode does not check schema completeness (only validate does); under
+    # skip_validate=True the partial encode succeeds and produces a blob
+    # missing the dropped tensor.
+    res = op.encode(partial_sd, context={})
+    # Decode used to silently return a partial state_dict; now it must raise.
+    with pytest.raises(ValueError, match="partial substrate refused"):
+        op.decode(res.blob, op_state=res.op_state, context={})
+
+
+def test_op3_pipeline_skip_validate_partial_state_dict_fails_at_decode() -> None:
+    """Pipeline-level guard: under skip_validate=True the encode succeeds but
+    the substrate-transform `current_state = op.decode(...)` step fails loudly
+    with the partial-substrate ValueError (not a downstream KeyError)."""
+    full_sd = _synthetic_state_dict()
+    schema_names = [name for name, _ in FIXED_STATE_SCHEMA]
+    dropped = schema_names[-1]
+    partial_sd = {n: t for n, t in full_sd.items() if n != dropped}
+
+    pipeline = CodecPipeline([
+        Op3_ApogeeIntN_Substrate(bits=6),
+        Op1_PR101SplitBrotli(auto_select=False),
+    ])
+    with pytest.raises(ValueError, match="partial substrate refused"):
+        pipeline.encode(partial_sd, skip_validate=True)
+
+
+def test_op3_full_state_dict_skip_validate_still_roundtrips() -> None:
+    """Sanity counterpart: skip_validate=True with a COMPLETE state_dict
+    must still roundtrip cleanly through Op3."""
+    sd = _synthetic_state_dict()
+    op = Op3_ApogeeIntN_Substrate(bits=6)
+    res = op.encode(sd, context={})
+    decoded = op.decode(res.blob, op_state=res.op_state, context={})
+    schema_names = {name for name, _ in FIXED_STATE_SCHEMA}
+    assert set(decoded.keys()) == schema_names

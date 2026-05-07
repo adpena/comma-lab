@@ -186,6 +186,20 @@ class Op3_ApogeeIntN_Substrate:
         op_state: dict[str, Any],
         context: dict[str, Any],
     ) -> dict[str, torch.Tensor]:
+        # Bug-hunter v2 fix 2026-05-07 (MEDIUM, re-opened from prior round):
+        # `Op3_ApogeeIntN_Substrate.decode` previously trusted the encoder-side
+        # `tensor_names` list and silently produced a partial state_dict when a
+        # caller bypassed `validate()` via `pipeline.encode(..., skip_validate=
+        # True)` and supplied a state_dict missing some FIXED_STATE_SCHEMA
+        # tensors. With ``transforms_state_dict=True`` set, the partial dict
+        # then fed downstream Op1/Op2 encoders that crashed inside
+        # `encode_decoder_compact` / `encode_decoder_ac` with an opaque
+        # KeyError — i.e. silent substrate corruption that punted the failure
+        # to the next op. Per Selfcomp's wire-format contract, the substrate
+        # transform must round-trip ALL FIXED_STATE_SCHEMA tensors or refuse
+        # cleanly at THIS boundary, not punt to the next op.
+        from tac.pr101_split_brotli_codec import FIXED_STATE_SCHEMA
+
         if blob[:4] != self._BLOB_MAGIC:
             raise ValueError(
                 f"Op3 decode: bad blob magic {blob[:4]!r}, expected "
@@ -199,6 +213,20 @@ class Op3_ApogeeIntN_Substrate:
             raise ValueError(
                 f"Op3 decode: blob says {n_tens} tensors but op_state has "
                 f"{len(tensor_names)} names - wrapper/op_state mismatch"
+            )
+        # Substrate-transform roundtrip integrity: refuse to decode a partial
+        # state_dict. Op3 declares ``transforms_state_dict=True``, so any
+        # downstream op consumes our reconstruction; missing schema names will
+        # corrupt that op's encode silently.
+        schema_names = [name for name, _shape in FIXED_STATE_SCHEMA]
+        if n_tens != len(schema_names):
+            missing = [n for n in schema_names if n not in tensor_names]
+            raise ValueError(
+                f"Op3 decode: partial substrate refused — blob carries "
+                f"{n_tens} tensors but FIXED_STATE_SCHEMA has "
+                f"{len(schema_names)}. Missing: {sorted(missing)}. Re-encode "
+                f"with the full state_dict (or run validate() to catch this "
+                f"before encode)."
             )
         sd: dict[str, torch.Tensor] = {}
         for name in tensor_names:
