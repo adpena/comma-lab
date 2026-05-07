@@ -395,12 +395,14 @@ def compute_pareto(candidates: list[Candidate]) -> list[Candidate]:
 
     Falls back to the scalar path on ``len <= 1`` (no dominance possible).
     Vectorization is meaningful even at N=138 (≈19,000 comparisons in
-    the scalar path become a single broadcast). Per operator directive
-    'continue lowering things to rust and optimization and vectorizing
-    and parallelizing' — numpy ops dispatch to BLAS/LAPACK (effective
-    C/Rust under the hood).
+    the scalar path become a single broadcast through NumPy's native
+    vectorized kernels).
     """
     n = len(candidates)
+    for c in candidates:
+        c.pareto_dominated_by = None
+        c.pareto_dominators_count = 0
+        c.is_frontier = False
     if n <= 1:
         for c in candidates:
             c.is_frontier = True

@@ -146,6 +146,27 @@ def test_vectorized_matches_scalar_dominates() -> None:
     )
 
 
+def test_compute_pareto_is_idempotent_on_same_candidate_objects() -> None:
+    mod = _load_tool_module()
+    cands = [
+        mod.Candidate("a", d_seg=0.001, d_pose=1e-5, archive_bytes=100),
+        mod.Candidate("b", d_seg=0.002, d_pose=2e-5, archive_bytes=200),
+    ]
+
+    first = mod.compute_pareto(cands)
+    first_state = [
+        (c.label, c.pareto_dominators_count, c.pareto_dominated_by, c.is_frontier)
+        for c in first
+    ]
+    second = mod.compute_pareto(cands)
+    second_state = [
+        (c.label, c.pareto_dominators_count, c.pareto_dominated_by, c.is_frontier)
+        for c in second
+    ]
+
+    assert second_state == first_state
+
+
 def test_nan_input_rejected_by_loader(tmp_path) -> None:
     """Self-protection: NaN d_seg/d_pose in evidence file → loader returns None.
     This prevents scorer-divergence artifacts from corrupting the frontier.
