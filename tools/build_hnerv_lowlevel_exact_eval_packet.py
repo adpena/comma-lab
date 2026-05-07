@@ -165,6 +165,38 @@ def _release_surface_status(release_dir: Path) -> dict[str, Any]:
     }
 
 
+def _remaining_required_for_score_or_dispatch(
+    *, operator_approved_exact_cuda: bool
+) -> list[str]:
+    remaining = [
+        "lightning_submit_environment",
+        "active_level2_lane_dispatch_claim",
+        "exact_cuda_auth_eval",
+        "contest_auth_eval_adjudication",
+        "operator_score_claim_review",
+    ]
+    if not operator_approved_exact_cuda:
+        remaining.insert(0, "operator_exact_cuda_approval")
+    return remaining
+
+
+def _remaining_required_report_text(*, operator_approved_exact_cuda: bool) -> str:
+    labels = {
+        "operator_exact_cuda_approval": "operator exact-CUDA approval",
+        "lightning_submit_environment": "Lightning submit environment",
+        "active_level2_lane_dispatch_claim": "active Level-2 lane claim",
+        "exact_cuda_auth_eval": "exact CUDA auth eval",
+        "contest_auth_eval_adjudication": "contest auth eval adjudication",
+        "operator_score_claim_review": "operator score-claim review",
+    }
+    return ", ".join(
+        labels[item]
+        for item in _remaining_required_for_score_or_dispatch(
+            operator_approved_exact_cuda=operator_approved_exact_cuda
+        )
+    )
+
+
 def _source_line_for_wrapper(source_inflate: Path) -> str:
     source_full = _repo_path(source_inflate)
     try:
@@ -619,7 +651,8 @@ def _release_surface_report(
         f"candidate_manifest: {_repo_rel(args.result_dir / 'manifest.json')}",
         f"payload_section_diff: {_repo_rel(args.result_dir / 'payload_section_diff_vs_source.json')}",
         f"public_replay_preflight: {_repo_rel(args.result_dir / 'public_replay_preflight.json')}",
-        "remaining_for_score_or_dispatch: exact CUDA auth eval, adjudication, active lane claim, operator approval",
+        "remaining_for_score_or_dispatch: "
+        f"{_remaining_required_report_text(operator_approved_exact_cuda=bool(args.operator_approved_exact_cuda))}",
         "notes: This file intentionally records no score and no promotion claim.",
     ]
     return "\n".join(lines) + "\n"
@@ -713,12 +746,9 @@ def build_release_surface(
                 "exists": _repo_path(_packet_output_path(args)).is_file(),
             },
         },
-        "remaining_required_for_score_or_dispatch": [
-            "exact_cuda_auth_eval",
-            "contest_auth_eval_adjudication",
-            "active_level2_lane_dispatch_claim",
-            "operator_score_claim_review",
-        ],
+        "remaining_required_for_score_or_dispatch": _remaining_required_for_score_or_dispatch(
+            operator_approved_exact_cuda=bool(args.operator_approved_exact_cuda)
+        ),
     }
     manifest_dst = release_full / "archive_manifest.json"
     manifest_dst.write_text(json_text(surface_manifest), encoding="utf-8")
@@ -899,6 +929,12 @@ def _is_terminal_claim_status(status: str) -> bool:
     return any(status.startswith(prefix) for prefix in TERMINAL_CLAIM_PREFIXES)
 
 
+def _terminal_claim_audit_row(claim: dict[str, str]) -> dict[str, str]:
+    row = dict(claim)
+    row["claim_status"] = row.pop("status", "")
+    return row
+
+
 def lane_claim_preflight(args: argparse.Namespace, *, now_utc: dt.datetime) -> dict[str, Any]:
     full = _repo_path(args.claims_path)
     status: dict[str, Any] = {
@@ -909,6 +945,10 @@ def lane_claim_preflight(args: argparse.Namespace, *, now_utc: dt.datetime) -> d
         "ttl_hours": args.claim_ttl_hours,
         "matching_active_claims": [],
         "conflicting_active_claims": [],
+        "matching_terminal_claims": [],
+        "latest_matching_terminal_claim": None,
+        "latest_matching_terminal_status": "",
+        "terminal_claim_disposition": "",
         "active_claim_present": False,
         "conflict_present": False,
     }
@@ -930,12 +970,34 @@ def lane_claim_preflight(args: argparse.Namespace, *, now_utc: dt.datetime) -> d
     active = [
         claim for claim in latest_by_job.values() if not _is_terminal_claim_status(claim.get("status", ""))
     ]
+    terminal = [
+        claim for claim in latest_by_job.values() if _is_terminal_claim_status(claim.get("status", ""))
+    ]
     status["matching_active_claims"] = [
         claim for claim in active if claim.get("instance_job_id") == args.job_name
     ]
     status["conflicting_active_claims"] = [
         claim for claim in active if claim.get("instance_job_id") != args.job_name
     ]
+    matching_terminal_raw = [
+        claim for claim in terminal if claim.get("instance_job_id") == args.job_name
+    ]
+    status["matching_terminal_claims"] = [
+        _terminal_claim_audit_row(claim) for claim in matching_terminal_raw
+    ]
+    if matching_terminal_raw:
+        latest_terminal_raw = max(
+            matching_terminal_raw,
+            key=lambda claim: _parse_utc(claim.get("timestamp_utc"))
+            or dt.datetime.min.replace(tzinfo=dt.UTC),
+        )
+        latest_terminal = _terminal_claim_audit_row(latest_terminal_raw)
+        status["latest_matching_terminal_claim"] = latest_terminal
+        status["latest_matching_terminal_status"] = latest_terminal.get("claim_status", "")
+        status["terminal_claim_disposition"] = (
+            "terminal claim rows are audit history only; a fresh active claim "
+            "is still required before exact-eval dispatch"
+        )
     status["active_claim_present"] = bool(status["matching_active_claims"])
     status["conflict_present"] = bool(status["conflicting_active_claims"])
     return status
@@ -1064,6 +1126,46 @@ def _harvest_cmd(args: argparse.Namespace) -> list[str]:
         str(args.archive_bytes),
         "--require-adjudication",
     ]
+
+
+def _submit_blocker_disposition(
+    *,
+    submit_blockers: list[str],
+    missing_env: list[str],
+    claim_report: dict[str, Any],
+    static_ready: bool,
+) -> dict[str, Any]:
+    latest_terminal_status = str(claim_report.get("latest_matching_terminal_status") or "")
+    return {
+        "schema": "hnerv_lowlevel_submit_blocker_disposition_v1",
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "remote_gpu_run": False,
+        "method_failure": False,
+        "static_packet_ready": static_ready,
+        "current_submit_blockers": list(submit_blockers),
+        "missing_env": list(missing_env),
+        "environment_status": (
+            "blocked_missing_lightning_environment" if missing_env else "present"
+        ),
+        "environment_disposition": (
+            "missing Lightning env is an operator/environment blocker, not method "
+            "or archive failure"
+            if missing_env
+            else "required Lightning env vars were present when the packet was built"
+        ),
+        "lane_claim_status": (
+            "active_claim_present"
+            if claim_report.get("active_claim_present")
+            else "missing_active_claim"
+        ),
+        "latest_matching_terminal_status": latest_terminal_status,
+        "terminal_claim_disposition": (
+            claim_report.get("terminal_claim_disposition")
+            or "no matching terminal claim row was found in the current TTL window"
+        ),
+        "exact_remaining_blockers": list(submit_blockers),
+    }
 
 
 def build_packet(args: argparse.Namespace) -> dict[str, Any]:
@@ -1234,6 +1336,12 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "ready_for_submit": not submit_blockers,
         "static_blockers": static_blockers,
         "submit_blockers": submit_blockers,
+        "submit_blocker_disposition": _submit_blocker_disposition(
+            submit_blockers=submit_blockers,
+            missing_env=missing_env,
+            claim_report=claim_report,
+            static_ready=static_ready,
+        ),
         "score_blockers": score_blockers,
         "missing_env": missing_env,
         "lane_claim_preflight": claim_report,
@@ -1276,6 +1384,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
                 {
                     "order": 1,
                     "id": "verify_lightning_env",
+                    "purpose": "fail loudly until all Lightning identity and path env vars are loaded",
                     "dispatches_remote_gpu": False,
                     "writes_repo_state": False,
                     "copy_safe_command": _one_liner(_required_env_check_cmd()),
@@ -1283,6 +1392,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
                 {
                     "order": 2,
                     "id": "refresh_static_packet_no_dispatch",
+                    "purpose": "refresh static custody, runtime preflight, compliance, and packet without claiming or dispatching",
                     "dispatches_remote_gpu": False,
                     "writes_repo_state": True,
                     "copy_safe_command": _one_liner(_refresh_cmd(args, packet_path=packet_path)),
@@ -1290,6 +1400,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
                 {
                     "order": 3,
                     "id": "claim_lane_no_dispatch",
+                    "purpose": "record the Level-2 lane claim only after the environment check passes; this does not submit a remote job",
                     "dispatches_remote_gpu": False,
                     "writes_repo_state": True,
                     "copy_safe_command": _one_liner(_claim_cmd(args)),
@@ -1297,6 +1408,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
                 {
                     "order": 4,
                     "id": "refresh_with_operator_exact_cuda_approval",
+                    "purpose": "record operator exact-CUDA approval after claim/env gates are satisfied; still no remote job",
                     "dispatches_remote_gpu": False,
                     "writes_repo_state": True,
                     "copy_safe_command": _one_liner(
@@ -1306,6 +1418,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
                 {
                     "order": 5,
                     "id": "submit_exact_cuda",
+                    "purpose": "first remote/GPU action; run only after ready_for_submit is true",
                     "dispatches_remote_gpu": True,
                     "writes_repo_state": True,
                     "copy_safe_command": _one_liner(_submit_cmd(args)),
@@ -1313,6 +1426,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
                 {
                     "order": 6,
                     "id": "harvest_after_completion",
+                    "purpose": "harvest and require adjudication only after the Lightning job reaches a terminal state",
                     "dispatches_remote_gpu": False,
                     "writes_repo_state": True,
                     "copy_safe_command": _one_liner(_harvest_cmd(args)),

@@ -25,7 +25,7 @@
     "inflate_sh": "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh",
     "ready_for_exact_eval_runtime": true,
     "remaining_blockers": [],
-    "runtime_tree_sha256": "f402908b2490718c4f7b76987335ec1a496cb12ab71c27e1e1aea4024d5712cb",
+    "runtime_tree_sha256": "2a3bbb259179152ca38e659370afdeeabf670bf1f96e2bc91568a7c9cfc93b47",
     "runtime_tree_source": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/public_replay_preflight.json"
   },
   "expected_pose_dist_delta": 0.0,
@@ -36,7 +36,7 @@
     "inflate_sh": "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh",
     "ready_for_fixed_runtime_exact_eval": true,
     "remaining_blockers": [],
-    "runtime_tree_sha256": "f402908b2490718c4f7b76987335ec1a496cb12ab71c27e1e1aea4024d5712cb",
+    "runtime_tree_sha256": "2a3bbb259179152ca38e659370afdeeabf670bf1f96e2bc91568a7c9cfc93b47",
     "runtime_tree_source": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/public_replay_preflight.json",
     "upstream_dir": "upstream"
   },
@@ -106,7 +106,7 @@
     }
   ],
   "ready_for_exact_eval_dispatch_claim": true,
-  "recorded_at_utc": "2026-05-07T12:30:00Z",
+  "recorded_at_utc": "2026-05-07T17:15:43Z",
   "remote_jobs_dispatched": false,
   "schema": "hnerv_lowlevel_exact_eval_candidate_manifest_v1",
   "schema_version": 1,

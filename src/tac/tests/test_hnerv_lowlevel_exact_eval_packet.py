@@ -93,6 +93,8 @@ def test_lowlevel_exact_eval_packet_builds_static_release_surface(tmp_path: Path
     report = (release_surface / "report.txt").read_text(encoding="utf-8")
     assert f"archive_sha256: {fixture['candidate_archive_sha256']}" in report
     assert "score_claim: false" in report
+    assert "Lightning submit environment" in report
+    assert "operator exact-CUDA approval" in report
 
     manifest = json.loads((result_dir / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["schema"] == "hnerv_lowlevel_exact_eval_candidate_manifest_v1"
@@ -226,6 +228,11 @@ def test_lowlevel_exact_eval_packet_records_operator_approval_without_dispatch(
         "missing_lightning_environment",
         "missing_active_lane_dispatch_claim",
     ]
+    assert packet["submit_blocker_disposition"]["method_failure"] is False
+    assert (
+        packet["submit_blocker_disposition"]["environment_status"]
+        == "blocked_missing_lightning_environment"
+    )
     assert packet["dispatch_attempted"] is False
     assert packet["remote_gpu_run"] is False
     manifest = json.loads((result_dir / "manifest.json").read_text(encoding="utf-8"))
@@ -237,6 +244,78 @@ def test_lowlevel_exact_eval_packet_records_operator_approval_without_dispatch(
     )
     assert release_manifest["operator_approved_exact_cuda"] is True
     assert release_manifest["approved_exact_eval_target"] is True
+    assert "lightning_submit_environment" in release_manifest["remaining_required_for_score_or_dispatch"]
+    assert "operator_exact_cuda_approval" not in release_manifest["remaining_required_for_score_or_dispatch"]
+    report = (result_dir / "release_surface" / "report.txt").read_text(encoding="utf-8")
+    assert "Lightning submit environment" in report
+    assert "operator exact-CUDA approval" not in report
+
+
+def test_lowlevel_exact_eval_packet_surfaces_terminal_env_refusal_as_audit(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    for name in module.REQUIRED_ENV:
+        monkeypatch.delenv(name, raising=False)
+    fixture = _write_lowlevel_fixture(tmp_path)
+    claims_path = tmp_path / "claims.md"
+    claims_path.write_text(
+        "| timestamp_utc | agent | lane_id | platform | instance_job_id | predicted_eta_utc | status | notes |\n"
+        "| --- | --- | --- | --- | --- | --- | --- | --- |\n"
+        "| 2026-05-07T15:42:13Z | codex:gpt-5.5 | fixture_q10 | lightning | "
+        "exact_eval_fixture_q10 |  | refused_dispatch_missing_lightning_env | "
+        "operator env missing; no remote job submitted |\n",
+        encoding="utf-8",
+    )
+    result_dir = tmp_path / "terminal_refusal_packet"
+
+    args = module.build_arg_parser().parse_args(
+        [
+            "--candidate-result",
+            str(fixture["result_json"]),
+            "--archive",
+            str(fixture["candidate_archive"]),
+            "--baseline-json",
+            str(fixture["baseline_json"]),
+            "--inflate-sh",
+            str(fixture["inflate_sh"]),
+            "--upstream-dir",
+            str(fixture["upstream_dir"]),
+            "--result-dir",
+            str(result_dir),
+            "--release-surface-dir",
+            str(result_dir / "release_surface"),
+            "--lane-id",
+            "fixture_q10",
+            "--job-name",
+            "exact_eval_fixture_q10",
+            "--claims-path",
+            str(claims_path),
+            "--now-utc",
+            "2026-05-07T17:15:43Z",
+            "--operator-approved-exact-cuda",
+        ]
+    )
+
+    packet = module.build_packet(args)
+
+    assert packet["ready_for_submit"] is False
+    assert packet["lane_claim_preflight"]["active_claim_present"] is False
+    assert packet["lane_claim_preflight"]["latest_matching_terminal_status"] == (
+        "refused_dispatch_missing_lightning_env"
+    )
+    assert packet["lane_claim_preflight"]["matching_terminal_claims"][0]["claim_status"] == (
+        "refused_dispatch_missing_lightning_env"
+    )
+    disposition = packet["submit_blocker_disposition"]
+    assert disposition["method_failure"] is False
+    assert disposition["latest_matching_terminal_status"] == "refused_dispatch_missing_lightning_env"
+    assert "not method" in disposition["environment_disposition"]
+    assert disposition["lane_claim_status"] == "missing_active_claim"
+    readiness = json.loads((result_dir / "dispatch_readiness_preflight.json").read_text(encoding="utf-8"))
+    assert readiness["lane_claim"]["latest_matching_terminal_status"] == (
+        "refused_dispatch_missing_lightning_env"
+    )
 
 
 def test_lowlevel_exact_eval_packet_cli_materializes_packet(tmp_path: Path) -> None:

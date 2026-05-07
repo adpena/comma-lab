@@ -61,7 +61,31 @@
     "conflicting_active_claims": [],
     "job_name": "exact_eval_pr106_q10_151byte_brotli_20260507",
     "lane_id": "pr106_q10_151byte_brotli",
+    "latest_matching_terminal_claim": {
+      "agent": "codex:gpt-5.5",
+      "claim_status": "refused_dispatch_missing_lightning_env",
+      "instance_job_id": "exact_eval_pr106_q10_151byte_brotli_20260507",
+      "lane_id": "pr106_q10_151byte_brotli",
+      "notes": "Operator approved q10 exact CUDA, but this shell has no LIGHTNING_SSH_TARGET, LIGHTNING_REMOTE_PACT, LIGHTNING_UPSTREAM_DIR, LIGHTNING_TEAMSPACE, LIGHTNING_STUDIO, or LIGHTNING_SDK_USER; no remote job submitted.",
+      "platform": "lightning",
+      "predicted_eta_utc": "",
+      "timestamp_utc": "2026-05-07T15:42:13Z"
+    },
+    "latest_matching_terminal_status": "refused_dispatch_missing_lightning_env",
     "matching_active_claims": [],
+    "matching_terminal_claims": [
+      {
+        "agent": "codex:gpt-5.5",
+        "claim_status": "refused_dispatch_missing_lightning_env",
+        "instance_job_id": "exact_eval_pr106_q10_151byte_brotli_20260507",
+        "lane_id": "pr106_q10_151byte_brotli",
+        "notes": "Operator approved q10 exact CUDA, but this shell has no LIGHTNING_SSH_TARGET, LIGHTNING_REMOTE_PACT, LIGHTNING_UPSTREAM_DIR, LIGHTNING_TEAMSPACE, LIGHTNING_STUDIO, or LIGHTNING_SDK_USER; no remote job submitted.",
+        "platform": "lightning",
+        "predicted_eta_utc": "",
+        "timestamp_utc": "2026-05-07T15:42:13Z"
+      }
+    ],
+    "terminal_claim_disposition": "terminal claim rows are audit history only; a fresh active claim is still required before exact-eval dispatch",
     "ttl_hours": 24
   },
   "lane_id": "pr106_q10_151byte_brotli",
@@ -90,13 +114,15 @@
         "dispatches_remote_gpu": false,
         "id": "verify_lightning_env",
         "order": 1,
+        "purpose": "fail loudly until all Lightning identity and path env vars are loaded",
         "writes_repo_state": false
       },
       {
-        "copy_safe_command": ".venv/bin/python tools/build_hnerv_lowlevel_exact_eval_packet.py --candidate-result experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/manifest.json --archive experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/pr106_hnerv_brotli_repack_candidate.zip --archive-sha256 626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7 --archive-bytes 186088 --baseline-json experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json --inflate-sh experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh --upstream-dir upstream --result-dir experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex --release-surface-dir experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface --lane-id pr106_q10_151byte_brotli --job-name exact_eval_pr106_q10_151byte_brotli_20260507 --claims-path .omx/state/active_lane_dispatch_claims.md --claim-ttl-hours 24 --agent codex:gpt-5.5 --now-utc 2026-05-07T12:30:00Z --json-out experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json",
+        "copy_safe_command": ".venv/bin/python tools/build_hnerv_lowlevel_exact_eval_packet.py --candidate-result experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/manifest.json --archive experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/pr106_hnerv_brotli_repack_candidate.zip --archive-sha256 626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7 --archive-bytes 186088 --baseline-json experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json --inflate-sh experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh --upstream-dir upstream --result-dir experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex --release-surface-dir experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface --lane-id pr106_q10_151byte_brotli --job-name exact_eval_pr106_q10_151byte_brotli_20260507 --claims-path .omx/state/active_lane_dispatch_claims.md --claim-ttl-hours 24 --agent codex:gpt-5.5 --now-utc 2026-05-07T17:15:43Z --json-out experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json",
         "dispatches_remote_gpu": false,
         "id": "refresh_static_packet_no_dispatch",
         "order": 2,
+        "purpose": "refresh static custody, runtime preflight, compliance, and packet without claiming or dispatching",
         "writes_repo_state": true
       },
       {
@@ -104,13 +130,15 @@
         "dispatches_remote_gpu": false,
         "id": "claim_lane_no_dispatch",
         "order": 3,
+        "purpose": "record the Level-2 lane claim only after the environment check passes; this does not submit a remote job",
         "writes_repo_state": true
       },
       {
-        "copy_safe_command": ".venv/bin/python tools/build_hnerv_lowlevel_exact_eval_packet.py --candidate-result experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/manifest.json --archive experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/pr106_hnerv_brotli_repack_candidate.zip --archive-sha256 626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7 --archive-bytes 186088 --baseline-json experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json --inflate-sh experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh --upstream-dir upstream --result-dir experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex --release-surface-dir experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface --lane-id pr106_q10_151byte_brotli --job-name exact_eval_pr106_q10_151byte_brotli_20260507 --claims-path .omx/state/active_lane_dispatch_claims.md --claim-ttl-hours 24 --agent codex:gpt-5.5 --now-utc 2026-05-07T12:30:00Z --json-out experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json --operator-approved-exact-cuda",
+        "copy_safe_command": ".venv/bin/python tools/build_hnerv_lowlevel_exact_eval_packet.py --candidate-result experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/manifest.json --archive experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/pr106_hnerv_brotli_repack_candidate.zip --archive-sha256 626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7 --archive-bytes 186088 --baseline-json experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json --inflate-sh experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh --upstream-dir upstream --result-dir experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex --release-surface-dir experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface --lane-id pr106_q10_151byte_brotli --job-name exact_eval_pr106_q10_151byte_brotli_20260507 --claims-path .omx/state/active_lane_dispatch_claims.md --claim-ttl-hours 24 --agent codex:gpt-5.5 --now-utc 2026-05-07T17:15:43Z --json-out experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json --operator-approved-exact-cuda",
         "dispatches_remote_gpu": false,
         "id": "refresh_with_operator_exact_cuda_approval",
         "order": 4,
+        "purpose": "record operator exact-CUDA approval after claim/env gates are satisfied; still no remote job",
         "writes_repo_state": true
       },
       {
@@ -118,6 +146,7 @@
         "dispatches_remote_gpu": true,
         "id": "submit_exact_cuda",
         "order": 5,
+        "purpose": "first remote/GPU action; run only after ready_for_submit is true",
         "writes_repo_state": true
       },
       {
@@ -125,6 +154,7 @@
         "dispatches_remote_gpu": false,
         "id": "harvest_after_completion",
         "order": 6,
+        "purpose": "harvest and require adjudication only after the Lightning job reaches a terminal state",
         "writes_repo_state": true
       }
     ]
@@ -133,7 +163,7 @@
   "pareto_scope": "hnerv_rate_only_exact_archive",
   "ready_for_exact_eval_dispatch_claim": true,
   "ready_for_submit": false,
-  "recorded_at_utc": "2026-05-07T12:30:00Z",
+  "recorded_at_utc": "2026-05-07T17:15:43Z",
   "refreshes": {
     "dispatch_readiness": {
       "blockers": [
@@ -143,7 +173,7 @@
           "severity": "blocking"
         }
       ],
-      "command": ".venv/bin/python experiments/preflight_candidate_manifest_dispatch_readiness.py --manifest experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/manifest.json --claims-path .omx/state/active_lane_dispatch_claims.md --now-utc 2026-05-07T12:30:00Z --ttl-hours 24 --json-out experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/dispatch_readiness_preflight.json",
+      "command": ".venv/bin/python experiments/preflight_candidate_manifest_dispatch_readiness.py --manifest experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/manifest.json --claims-path .omx/state/active_lane_dispatch_claims.md --now-utc 2026-05-07T17:15:43Z --ttl-hours 24 --json-out experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/dispatch_readiness_preflight.json",
       "json_out": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/dispatch_readiness_preflight.json",
       "lane_claim": {
         "active_claim_present": false,
@@ -153,14 +183,64 @@
         "conflicting_active_claims": [],
         "job_name": "exact_eval_pr106_q10_151byte_brotli_20260507",
         "lane_id": "pr106_q10_151byte_brotli",
+        "latest_matching_terminal_claim": {
+          "agent": "codex:gpt-5.5",
+          "claim_status": "refused_dispatch_missing_lightning_env",
+          "instance_job_id": "exact_eval_pr106_q10_151byte_brotli_20260507",
+          "lane_id": "pr106_q10_151byte_brotli",
+          "notes": "Operator approved q10 exact CUDA, but this shell has no LIGHTNING_SSH_TARGET, LIGHTNING_REMOTE_PACT, LIGHTNING_UPSTREAM_DIR, LIGHTNING_TEAMSPACE, LIGHTNING_STUDIO, or LIGHTNING_SDK_USER; no remote job submitted.",
+          "platform": "lightning",
+          "predicted_eta_utc": "",
+          "timestamp_utc": "2026-05-07T15:42:13Z"
+        },
+        "latest_matching_terminal_status": "refused_dispatch_missing_lightning_env",
         "matching_active_claims": [],
+        "matching_terminal_claims": [
+          {
+            "agent": "codex:gpt-5.5",
+            "claim_status": "refused_dispatch_missing_lightning_env",
+            "instance_job_id": "exact_eval_pr106_q10_151byte_brotli_20260507",
+            "lane_id": "pr106_q10_151byte_brotli",
+            "notes": "Operator approved q10 exact CUDA, but this shell has no LIGHTNING_SSH_TARGET, LIGHTNING_REMOTE_PACT, LIGHTNING_UPSTREAM_DIR, LIGHTNING_TEAMSPACE, LIGHTNING_STUDIO, or LIGHTNING_SDK_USER; no remote job submitted.",
+            "platform": "lightning",
+            "predicted_eta_utc": "",
+            "timestamp_utc": "2026-05-07T15:42:13Z"
+          }
+        ],
+        "terminal_claim_disposition": "terminal claim rows are audit history only; a fresh active claim is still required before exact-eval dispatch",
         "ttl_hours": 24
       },
       "ready_for_exact_eval_dispatch": false,
       "returncode": 0,
       "schema": "hnerv_lowlevel_dispatch_readiness_preflight_refresh_v1",
       "stderr_tail": "",
-      "stdout_tail": "{\n  \"blockers\": [],\n  \"candidate_id\": \"pr106_q10_151byte_brotli\",\n  \"dispatch_performed\": false,\n  \"lane_claim\": {\n    \"active_conflicts\": [],\n    \"checked\": true,\n    \"claim_count\": 878,\n    \"claims_path\": \".omx/state/active_lane_dispatch_claims.md\",\n    \"lane_id\": \"pr106_q10_151byte_brotli\",\n    \"now_utc\": \"2026-05-07T12:30:00Z\",\n    \"ttl_hours\": 24.0\n  },\n  \"manifest_path\": \"experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/manifest.json\",\n  \"ready_for_exact_eval_dispatch\": true,\n  \"remote_jobs_dispatched\": false,\n  \"schema\": \"candidate_manifest_dispatch_readiness_preflight_v1\",\n  \"score_claim\": false,\n  \"warnings\": [\n    {\n      \"code\": \"lane_claim_still_required\",\n      \"detail\": \"dispatch_gate='eligible_for_cuda_auth_eval_after_lane_claim'; verify active Level-2 lane claim before GPU dispatch\"\n    }\n  ]\n}\n"
+      "stdout_tail": "",
+      "stdout_tail_disposition": "parsed_into_underlying_static_readiness_stdout_and_superseded_by_lane_claim_overlay",
+      "underlying_static_readiness_stdout": {
+        "blockers": [],
+        "candidate_id": "pr106_q10_151byte_brotli",
+        "dispatch_performed": false,
+        "lane_claim": {
+          "active_conflicts": [],
+          "checked": true,
+          "claim_count": 883,
+          "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+          "lane_id": "pr106_q10_151byte_brotli",
+          "now_utc": "2026-05-07T17:15:43Z",
+          "ttl_hours": 24.0
+        },
+        "manifest_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/manifest.json",
+        "ready_for_exact_eval_dispatch": true,
+        "remote_jobs_dispatched": false,
+        "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
+        "score_claim": false,
+        "warnings": [
+          {
+            "code": "lane_claim_still_required",
+            "detail": "dispatch_gate='eligible_for_cuda_auth_eval_after_lane_claim'; verify active Level-2 lane claim before GPU dispatch"
+          }
+        ]
+      }
     },
     "public_replay_preflight": {
       "command": ".venv/bin/python experiments/preflight_public_replay_intake.py --archive experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/pr106_hnerv_brotli_repack_candidate.zip --inflate-sh experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh --upstream-dir upstream --expected-archive-sha256 626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7 --expected-archive-size-bytes 186088 --json-out experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/public_replay_preflight.json --fail-if-not-ready",
@@ -168,7 +248,7 @@
       "returncode": 0,
       "schema": "hnerv_lowlevel_public_replay_preflight_refresh_v1",
       "stderr_tail": "",
-      "stdout_tail": "3e4443\"\n        },\n        {\n          \"bytes\": 1866,\n          \"path\": \"src/stages/stage8_muon_finetune.py\",\n          \"root\": \"experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders\",\n          \"sha256\": \"9e036c99b7fc58fa24f954be251bebb5af4cddd3b84fe408b9ebc2b94b58ed5f\"\n        },\n        {\n          \"bytes\": 2488,\n          \"path\": \"src/train.py\",\n          \"root\": \"experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders\",\n          \"sha256\": \"d88610929db7f42b7a3522a77ded29b2a9a4e7abe63eae7bc5915fa4b8e58b79\"\n        }\n      ],\n      \"runtime_root\": \"experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter\",\n      \"source_bytes_py_sh\": 70104,\n      \"status\": \"passed\",\n      \"violations\": []\n    },\n    \"status\": \"passed\"\n  },\n  \"schema\": \"public_replay_intake_preflight_v1\",\n  \"score_claim\": false,\n  \"tool\": \"experiments/preflight_public_replay_intake.py\"\n}\n"
+      "stdout_tail": "3e4443\"\n        },\n        {\n          \"bytes\": 1866,\n          \"path\": \"src/stages/stage8_muon_finetune.py\",\n          \"root\": \"experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders\",\n          \"sha256\": \"9e036c99b7fc58fa24f954be251bebb5af4cddd3b84fe408b9ebc2b94b58ed5f\"\n        },\n        {\n          \"bytes\": 2488,\n          \"path\": \"src/train.py\",\n          \"root\": \"experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders\",\n          \"sha256\": \"d88610929db7f42b7a3522a77ded29b2a9a4e7abe63eae7bc5915fa4b8e58b79\"\n        }\n      ],\n      \"runtime_root\": \"experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter\",\n      \"source_bytes_py_sh\": 71587,\n      \"status\": \"passed\",\n      \"violations\": []\n    },\n    \"status\": \"passed\"\n  },\n  \"schema\": \"public_replay_intake_preflight_v1\",\n  \"score_claim\": false,\n  \"tool\": \"experiments/preflight_public_replay_intake.py\"\n}\n"
     },
     "release_surface_generation": {
       "files": {
@@ -179,10 +259,10 @@
           "sha256": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7"
         },
         "archive_manifest.json": {
-          "bytes": 2610,
+          "bytes": 2646,
           "exists": true,
           "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface/archive_manifest.json",
-          "sha256": "b67c6f25359ff4a7c67538241d5be9d7f3f393a1c8d08021f7c5755f851643df"
+          "sha256": "eb0925e2580e94a237af85acb6b8a59c476c5db7e001422f1d9db983b0382364"
         },
         "inflate.sh": {
           "bytes": 631,
@@ -191,10 +271,10 @@
           "sha256": "ae5c88193316a1ec1cbe9d6d6ba4cb2149a4f674ef018bffdeb8a5cb59e1bf83"
         },
         "report.txt": {
-          "bytes": 1160,
+          "bytes": 1226,
           "exists": true,
           "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface/report.txt",
-          "sha256": "cb7deaa93801cca50e31591402edc36efc068f7689fd1e7d92bdd112347c823d"
+          "sha256": "5f19e0b03c76e5806c37f05568c4fa2bd46122841481f600aab83e4810c0ac99"
         }
       },
       "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface",
@@ -219,10 +299,10 @@
         "sha256": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7"
       },
       "archive_manifest.json": {
-        "bytes": 2610,
+        "bytes": 2646,
         "exists": true,
         "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface/archive_manifest.json",
-        "sha256": "b67c6f25359ff4a7c67538241d5be9d7f3f393a1c8d08021f7c5755f851643df"
+        "sha256": "eb0925e2580e94a237af85acb6b8a59c476c5db7e001422f1d9db983b0382364"
       },
       "inflate.sh": {
         "bytes": 631,
@@ -231,10 +311,10 @@
         "sha256": "ae5c88193316a1ec1cbe9d6d6ba4cb2149a4f674ef018bffdeb8a5cb59e1bf83"
       },
       "report.txt": {
-        "bytes": 1160,
+        "bytes": 1226,
         "exists": true,
         "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface/report.txt",
-        "sha256": "cb7deaa93801cca50e31591402edc36efc068f7689fd1e7d92bdd112347c823d"
+        "sha256": "5f19e0b03c76e5806c37f05568c4fa2bd46122841481f600aab83e4810c0ac99"
       }
     },
     "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface",
@@ -254,6 +334,35 @@
   "source_payload_sha256": null,
   "static_blockers": [],
   "static_packet_ready": true,
+  "submit_blocker_disposition": {
+    "current_submit_blockers": [
+      "missing_lightning_environment",
+      "missing_active_lane_dispatch_claim"
+    ],
+    "dispatch_attempted": false,
+    "environment_disposition": "missing Lightning env is an operator/environment blocker, not method or archive failure",
+    "environment_status": "blocked_missing_lightning_environment",
+    "exact_remaining_blockers": [
+      "missing_lightning_environment",
+      "missing_active_lane_dispatch_claim"
+    ],
+    "lane_claim_status": "missing_active_claim",
+    "latest_matching_terminal_status": "refused_dispatch_missing_lightning_env",
+    "method_failure": false,
+    "missing_env": [
+      "LIGHTNING_SSH_TARGET",
+      "LIGHTNING_REMOTE_PACT",
+      "LIGHTNING_UPSTREAM_DIR",
+      "LIGHTNING_TEAMSPACE",
+      "LIGHTNING_STUDIO",
+      "LIGHTNING_SDK_USER"
+    ],
+    "remote_gpu_run": false,
+    "schema": "hnerv_lowlevel_submit_blocker_disposition_v1",
+    "score_claim": false,
+    "static_packet_ready": true,
+    "terminal_claim_disposition": "terminal claim rows are audit history only; a fresh active claim is still required before exact-eval dispatch"
+  },
   "submit_blockers": [
     "missing_lightning_environment",
     "missing_active_lane_dispatch_claim"

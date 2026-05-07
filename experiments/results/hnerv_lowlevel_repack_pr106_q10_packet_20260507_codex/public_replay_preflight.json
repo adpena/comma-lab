@@ -66,7 +66,7 @@
   "ready_for_exact_eval_dispatch": true,
   "runtime": {
     "inflate_sh": "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh",
-    "inflate_sh_sha256": "02d5e131790bf4f3f7dbb4e9ae9603ef7bfccf1ad4f4b3be7cd9e06e7be57dfa",
+    "inflate_sh_sha256": "a9bad807419677fb7d0d3162f70114cdc249e1ed717e417b484fc716a2c9d6aa",
     "runtime_manifest": {
       "external_dependency_roots": [
         {
@@ -199,27 +199,192 @@
       ],
       "files": [
         {
-          "bytes": 2004,
+          "bytes": 1102,
+          "relative_path": "hdm3_normalize.py",
+          "repo_relative_path": "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/hdm3_normalize.py",
+          "sha256": "3561c609cf597cf095f2b28439929dddf7ec20e54b3d120912f519fde128dee8"
+        },
+        {
+          "bytes": 2385,
           "relative_path": "inflate.sh",
           "repo_relative_path": "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh",
-          "sha256": "02d5e131790bf4f3f7dbb4e9ae9603ef7bfccf1ad4f4b3be7cd9e06e7be57dfa"
+          "sha256": "a9bad807419677fb7d0d3162f70114cdc249e1ed717e417b484fc716a2c9d6aa"
         }
       ],
       "repo_local_tac_import_manifest": {
         "discovery": "static_ast_recursive_import_closure",
-        "file_count": 0,
-        "files": [],
-        "module_count": 0,
+        "file_count": 26,
+        "files": [
+          {
+            "bytes": 3090,
+            "module": "tac",
+            "relative_path": "src/tac/__init__.py",
+            "sha256": "38c87d4295b3ec26f4ef5f96f27a4a34f6003b2355fbe5c06bac1b3cd95e66c7"
+          },
+          {
+            "bytes": 35513,
+            "module": "tac.architectures",
+            "relative_path": "src/tac/architectures.py",
+            "sha256": "fd21f739b05dce8385745b3a257bdd76b2f46b0af9efac77e95ac0559bdd9728"
+          },
+          {
+            "bytes": 43384,
+            "module": "tac.arithmetic_qint_codec",
+            "relative_path": "src/tac/arithmetic_qint_codec.py",
+            "sha256": "f840393cee6b758f1227ac8eb5f34b4526ab229f08e74268bed0021bdc36049d"
+          },
+          {
+            "bytes": 34945,
+            "module": "tac.block_fp_codec",
+            "relative_path": "src/tac/block_fp_codec.py",
+            "sha256": "22e5a77d17a23c2202b74825e885b7cb54c55d6ee4e18008cd0587484ec4bdca"
+          },
+          {
+            "bytes": 9254,
+            "module": "tac.camera",
+            "relative_path": "src/tac/camera.py",
+            "sha256": "ef1683f5468219e110ad2d226f773d9830889229454e28693add01ef638a88d9"
+          },
+          {
+            "bytes": 9329,
+            "module": "tac.data",
+            "relative_path": "src/tac/data.py",
+            "sha256": "61a39364b2967ebab7c1244bc9a2bc46809cc91d85c53566b59b60cfe8b9c5c9"
+          },
+          {
+            "bytes": 10156,
+            "module": "tac.evaluate",
+            "relative_path": "src/tac/evaluate.py",
+            "sha256": "7afc3d623276c02547f8a31511103c68a209353523d30d5a3d724fddb7cdc9e4"
+          },
+          {
+            "bytes": 60909,
+            "module": "tac.hnerv_decoder_recode",
+            "relative_path": "src/tac/hnerv_decoder_recode.py",
+            "sha256": "09c1689009fed97b942c61dd9aec40c93222b03b097efe3c2ff0bf4745435376"
+          },
+          {
+            "bytes": 9282,
+            "module": "tac.hnerv_hdm3_runtime_adapter",
+            "relative_path": "src/tac/hnerv_hdm3_runtime_adapter.py",
+            "sha256": "2b6cf6ff038777da7308ac362b0e907ffe4f5655078baf4f46ab604078efef0c"
+          },
+          {
+            "bytes": 26406,
+            "module": "tac.hnerv_lowlevel_packer",
+            "relative_path": "src/tac/hnerv_lowlevel_packer.py",
+            "sha256": "378a77b7799a82a9921412313e58d70c964a5a67fff20ec3e293f36f43b85c69"
+          },
+          {
+            "bytes": 20269,
+            "module": "tac.hnerv_section_repack",
+            "relative_path": "src/tac/hnerv_section_repack.py",
+            "sha256": "69dbd99d7b06f1609f3163d1debc44ff4fb5ba002b705239602125a0f6520766"
+          },
+          {
+            "bytes": 8951,
+            "module": "tac.lora_pose",
+            "relative_path": "src/tac/lora_pose.py",
+            "sha256": "60bd996645dc54f43fcffa769614d660056442b7ff3685df6d7bfac6db5e0b16"
+          },
+          {
+            "bytes": 12662,
+            "module": "tac.lora_pose_v2",
+            "relative_path": "src/tac/lora_pose_v2.py",
+            "sha256": "f8bfb519efa5d74e0ee13a2437ce54225ac58164a5785042a78dbe2d810397d9"
+          },
+          {
+            "bytes": 2940,
+            "module": "tac.lossless",
+            "relative_path": "src/tac/lossless/__init__.py",
+            "sha256": "2d62d9d49dbed80daf874c9504865d186fb41334d8fdacdfec13078c2ef096c8"
+          },
+          {
+            "bytes": 27867,
+            "module": "tac.lossless.frequency_coder",
+            "relative_path": "src/tac/lossless/frequency_coder.py",
+            "sha256": "0f6353b69623c22f2ebbbf889c6fe7c05d156558b6846681cfdc603c3a38dec8"
+          },
+          {
+            "bytes": 13568,
+            "module": "tac.lossless.range_coder",
+            "relative_path": "src/tac/lossless/range_coder.py",
+            "sha256": "806c2de0e118c0b398f9757f29907eceb848f3724094af3ff66124e5e048cb68"
+          },
+          {
+            "bytes": 2146,
+            "module": "tac.models",
+            "relative_path": "src/tac/models.py",
+            "sha256": "5182bfeac975b138d7e6e2b1364c0bde1c8e2cb38217fc268f7447c405538fcf"
+          },
+          {
+            "bytes": 9341,
+            "module": "tac.pose_delta_codec",
+            "relative_path": "src/tac/pose_delta_codec.py",
+            "sha256": "7b50f1a5646691df050845f88dc3aa11dde1c045e1c4b3e013fa0add6c2f8458"
+          },
+          {
+            "bytes": 19515,
+            "module": "tac.pose_delta_codec_v2",
+            "relative_path": "src/tac/pose_delta_codec_v2.py",
+            "sha256": "46bb16843662d0c8ce896fafd126a70588875a44c4dc2e3a4f475d09406ec4eb"
+          },
+          {
+            "bytes": 181623,
+            "module": "tac.profiles",
+            "relative_path": "src/tac/profiles.py",
+            "sha256": "107c206d6670b8e05763abeb52073f60ea46df9620a609cf09f7889abb36f947"
+          },
+          {
+            "bytes": 13931,
+            "module": "tac.psd_lumaskip_renderer",
+            "relative_path": "src/tac/psd_lumaskip_renderer.py",
+            "sha256": "3978c7bed70795ddab3b87e3a48f52864aaa6d8657aaacd8a8074f4ae6e3381a"
+          },
+          {
+            "bytes": 41635,
+            "module": "tac.quantization",
+            "relative_path": "src/tac/quantization.py",
+            "sha256": "d650275312bae3faa4d16072efbafac0d93189088165586bd7a0ab397d27c681"
+          },
+          {
+            "bytes": 2162,
+            "module": "tac.repo_io",
+            "relative_path": "src/tac/repo_io.py",
+            "sha256": "a6cef28b68dc01e7ade55d1650d92e4d225b745971187114e5ad57e8ae36ebb5"
+          },
+          {
+            "bytes": 18562,
+            "module": "tac.scorer",
+            "relative_path": "src/tac/scorer.py",
+            "sha256": "d7cc469e4b3171ca80a3806f45848d72c3c31aea390f0140bdaa0c2637420373"
+          },
+          {
+            "bytes": 3741,
+            "module": "tac.semantic_label_contract",
+            "relative_path": "src/tac/semantic_label_contract.py",
+            "sha256": "d54c992b86f2ac22e2380338e3c23f1cf573a1d8b58b13a4d23c57bfca942352"
+          },
+          {
+            "bytes": 84507,
+            "module": "tac.submission_archive",
+            "relative_path": "src/tac/submission_archive.py",
+            "sha256": "bfe06196fc321c112294eceae9a6541d83cae5c2c37cc416094a17136b018edd"
+          }
+        ],
+        "module_count": 31,
         "parse_errors": [],
-        "root_import_modules": [],
+        "root_import_modules": [
+          "tac.hnerv_hdm3_runtime_adapter"
+        ],
         "runtime_root_name": "pr106_belt_and_suspenders_adapter",
         "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
         "tac_root_relative_path": "src/tac",
         "unresolved_modules": []
       },
-      "runtime_file_count": 1,
+      "runtime_file_count": 2,
       "runtime_root": "/Users/adpena/Projects/pact/experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter",
-      "runtime_tree_sha256": "f402908b2490718c4f7b76987335ec1a496cb12ab71c27e1e1aea4024d5712cb",
+      "runtime_tree_sha256": "2a3bbb259179152ca38e659370afdeeabf670bf1f96e2bc91568a7c9cfc93b47",
       "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
       "upstream_evaluate_py": {
         "bytes": 6005,
@@ -228,17 +393,23 @@
       }
     },
     "runtime_root": "/Users/adpena/Projects/pact/experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter",
-    "runtime_tree_sha256": "f402908b2490718c4f7b76987335ec1a496cb12ab71c27e1e1aea4024d5712cb",
+    "runtime_tree_sha256": "2a3bbb259179152ca38e659370afdeeabf670bf1f96e2bc91568a7c9cfc93b47",
     "source_payload_scan": {
       "extra_roots": [
         "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders"
       ],
       "files": [
         {
-          "bytes": 2004,
+          "bytes": 1102,
+          "path": "hdm3_normalize.py",
+          "root": "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter",
+          "sha256": "3561c609cf597cf095f2b28439929dddf7ec20e54b3d120912f519fde128dee8"
+        },
+        {
+          "bytes": 2385,
           "path": "inflate.sh",
           "root": "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter",
-          "sha256": "02d5e131790bf4f3f7dbb4e9ae9603ef7bfccf1ad4f4b3be7cd9e06e7be57dfa"
+          "sha256": "a9bad807419677fb7d0d3162f70114cdc249e1ed717e417b484fc716a2c9d6aa"
         },
         {
           "bytes": 991,
@@ -362,7 +533,7 @@
         }
       ],
       "runtime_root": "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter",
-      "source_bytes_py_sh": 70104,
+      "source_bytes_py_sh": 71587,
       "status": "passed",
       "violations": []
     },

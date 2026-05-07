@@ -1,5 +1,5 @@
 HNeRV low-level Brotli static release surface
-recorded_at_utc: 2026-05-07T12:30:00Z
+recorded_at_utc: 2026-05-07T17:15:43Z
 candidate_id: pr106_q10_151byte_brotli
 family: hnerv_lowlevel_brotli_repack
 scope: upload-file static surface only
@@ -16,5 +16,5 @@ byte_delta_vs_source_archive: -151
 candidate_manifest: experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/manifest.json
 payload_section_diff: experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/payload_section_diff_vs_source.json
 public_replay_preflight: experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/public_replay_preflight.json
-remaining_for_score_or_dispatch: exact CUDA auth eval, adjudication, active lane claim, operator approval
+remaining_for_score_or_dispatch: Lightning submit environment, active Level-2 lane claim, exact CUDA auth eval, contest auth eval adjudication, operator score-claim review
 notes: This file intentionally records no score and no promotion claim.

@@ -37,18 +37,19 @@
     }
   },
   "operator_approved_exact_cuda": true,
-  "recorded_at_utc": "2026-05-07T12:30:00Z",
+  "recorded_at_utc": "2026-05-07T17:15:43Z",
   "release_surface_scope": "static_upload_files_only_no_auth_eval_no_dispatch",
   "remaining_required_for_score_or_dispatch": [
+    "lightning_submit_environment",
+    "active_level2_lane_dispatch_claim",
     "exact_cuda_auth_eval",
     "contest_auth_eval_adjudication",
-    "active_level2_lane_dispatch_claim",
     "operator_score_claim_review"
   ],
   "remote_gpu_run": false,
   "report": {
     "path": "report.txt",
-    "sha256": "cb7deaa93801cca50e31591402edc36efc068f7689fd1e7d92bdd112347c823d"
+    "sha256": "5f19e0b03c76e5806c37f05568c4fa2bd46122841481f600aab83e4810c0ac99"
   },
   "schema": "hnerv_lowlevel_release_surface_manifest_v1",
   "schema_version": 1,
