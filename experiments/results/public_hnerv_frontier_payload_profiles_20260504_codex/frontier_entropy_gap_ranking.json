@@ -260,9 +260,9 @@
     "dispatch_attempted": false,
     "input_files": [
       {
-        "bytes": 38566,
+        "bytes": 54222,
         "path": "experiments/results/public_hnerv_frontier_payload_profiles_20260504_codex/scorecard.json",
-        "sha256": "2452d5b445b0e8be720e6475eb13dadaeea61edb85eb6f8a115e01b996321559"
+        "sha256": "be5a426990ba21c7912f971ab247fb6ab0fcbae7c0a570c6118dc1a89f47cf52"
       },
       {
         "bytes": 18138,

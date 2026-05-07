@@ -1,0 +1,99 @@
+{
+  "blockers": [],
+  "byte_accounting": {
+    "actual_hdc2_replacement_bytes": 221381,
+    "combined_known_target_bytes": 64819,
+    "current_frontier_section_bytes": 170127,
+    "minimum_payload_reduction_needed_after_zero_model_overhead_bytes": 10415,
+    "model_overhead_target_bytes": 40840,
+    "net_byte_delta_after_combined_targets": -13565,
+    "net_byte_delta_after_model_overhead_only": 10414,
+    "net_byte_delta_now": 51254,
+    "payload_entropy_gap_target_bytes": 23979,
+    "projected_bytes_after_combined_targets": 156562,
+    "projected_bytes_after_model_overhead_only": 180541,
+    "projected_rate_score_delta_after_combined_targets": -0.009032376699102255
+  },
+  "closed_stream_evidence": {
+    "candidate_stream_bytes": 221381,
+    "candidate_stream_sha256": "41816a2834eb9ca3e9ff78e138b30a1c22b0ec4d580cea8de55042dcb624cc5f",
+    "decoded_output_equal": true,
+    "old_new_sha256_equal": true,
+    "q_roundtrip_equal": true,
+    "raw_equal": true,
+    "roundtrip_valid": true,
+    "scale_roundtrip_equal": true
+  },
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "combined_entropy_manifest_is_planning_only",
+    "requires_actual_decoder_runtime_implementation",
+    "requires_candidate_archive_manifest",
+    "requires_strict_pre_submission_compliance",
+    "requires_lane_dispatch_claim_before_gpu",
+    "requires_exact_cuda_auth_eval"
+  ],
+  "gpu_required": false,
+  "next_required_artifacts": [
+    "actual_static_model_context_elision_or_shared_codebook_implementation",
+    "actual_payload_entropy_gap_reduction_implementation",
+    "candidate_archive_manifest_with_member_sha256s",
+    "runtime_tree_parity_manifest",
+    "strict_pre_submission_compliance_json",
+    "meta_lagrangian_atom_json_with_byte_delta_and_interaction_assumptions"
+  ],
+  "planning_only": true,
+  "ready_for_archive_preflight": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": 1,
+  "score_claim": false,
+  "target": {
+    "frontier_archive_bytes": 186080,
+    "frontier_archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
+    "frontier_score": 0.20935073680571203,
+    "frontier_section_bytes": 170127,
+    "label": "public_pr106_belt_and_suspenders:hdc2_global_prev_symbol_contexts",
+    "section": "decoder_packed_brotli",
+    "source_stream_decoded_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+    "source_stream_sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004"
+  },
+  "tool": "tac.hnerv_hdc2_combined_entropy",
+  "tool_run_manifest": {
+    "argv": [
+      "--frontier-ranking",
+      "experiments/results/public_hnerv_frontier_payload_profiles_20260504_codex/frontier_entropy_gap_ranking.json",
+      "--entropy-audit",
+      "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/entropy_overhead_audit_from_pr106_decoder_recode_profile.json",
+      "--hdc2-work-product",
+      "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/hdc2_stream_byte_equivalence_work_product.json",
+      "--json-out",
+      "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_combined_entropy_reduction_manifest.json",
+      "--md-out",
+      "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_combined_entropy_reduction_manifest.md"
+    ],
+    "canonical_payload_without_tool_manifest_sha256": "1a7c3e93509ae28c214268bf0060199e0297322542b35042cdd42f98bf5cf87f",
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 13951,
+        "path": "experiments/results/public_hnerv_frontier_payload_profiles_20260504_codex/frontier_entropy_gap_ranking.json",
+        "sha256": "db9b877a3b0dc4c6437255c46de4b5fd6aeac7457ed15f18b75008283bf989f2"
+      },
+      {
+        "bytes": 18138,
+        "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/entropy_overhead_audit_from_pr106_decoder_recode_profile.json",
+        "sha256": "0514a47f7e786f5353d4a3329a3f7be734d03dbd0816b7376dde536c5d639d82"
+      },
+      {
+        "bytes": 9221,
+        "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/hdc2_stream_byte_equivalence_work_product.json",
+        "sha256": "8147676c478053cf2d8d0b7bd0053058d262d6a9ff58312d3f78f51bfbf4dfdf"
+      }
+    ],
+    "output_path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_combined_entropy_reduction_manifest.json",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "tools/build_hnerv_hdc2_combined_entropy_manifest.py"
+  }
+}

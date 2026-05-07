@@ -63,18 +63,17 @@ def test_wr01_exact_eval_packet_reports_missing_env_without_dispatch(tmp_path: P
     assert payload["proxy_row"] is False
     assert payload["score_claim"] is False
     assert payload["dispatch_attempted"] is False
-    assert payload["dispatch_gate"] == "blocked_static_packet_ready_until_static_blockers_clear"
+    assert payload["dispatch_gate"] == "blocked_operator_lane_gates_until_env_claim_approval"
     assert payload["dispatch_unlocked"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
     assert payload["ready_for_exact_eval_dispatch_claim"] is False
-    assert payload["candidate_static_preflight_ready"] is False
-    assert payload["static_packet_ready"] is False
+    assert payload["candidate_static_preflight_ready"] is True
+    assert payload["static_packet_ready"] is True
     assert payload["ready_for_submit"] is False
-    assert "runtime_decode_gate_not_ready" in payload["static_blockers"]
-    assert "runtime_decode_validation_file_missing" in payload["static_blockers"]
-    assert "runtime_decode_review_file_missing" in payload["static_blockers"]
-    assert payload["runtime_decode_gate_ready"] is False
-    assert payload["runtime_decode_gate"]["ready"] is False
+    assert payload["static_blockers"] == []
+    assert payload["runtime_decode_gate_ready"] is True
+    assert payload["runtime_decode_gate"]["ready"] is True
+    assert payload["runtime_decode_gate"]["blockers"] == []
     assert "missing_lightning_environment" in payload["blockers"]
     assert "missing_lightning_environment" in payload["operator_lane_blockers"]
     assert payload["source_archive_sha256"] == "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e"

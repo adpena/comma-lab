@@ -39,13 +39,23 @@
       "release_surface_relative_path": "../public_replay_preflight.json",
       "repo_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json"
     },
+    "runtime_decode_review": {
+      "exists": true,
+      "release_surface_relative_path": "../hnerv_wavelet_compress_time_runtime_decode_review.json",
+      "repo_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_compress_time_runtime_decode_review.json"
+    },
+    "runtime_decode_validation": {
+      "exists": true,
+      "release_surface_relative_path": "../hnerv_wavelet_runtime_decode_validation.json",
+      "repo_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_runtime_decode_validation.json"
+    },
     "wr01_exact_eval_packet": {
       "exists": true,
       "release_surface_relative_path": "../wr01_exact_eval_packet.json",
       "repo_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json"
     }
   },
-  "recorded_at_utc": "2026-05-07T00:00:00Z",
+  "recorded_at_utc": "2026-05-07T03:22:59Z",
   "release_surface_scope": "static_upload_files_only_no_auth_eval_no_dispatch",
   "remaining_required_for_score_or_dispatch": [
     "exact_cuda_auth_eval",
@@ -56,7 +66,7 @@
   "remote_gpu_run": false,
   "report": {
     "path": "report.txt",
-    "sha256": "3bf8eba8a7a8647bbf58de5abeb13bdf342b5d9ee05cf47c6a301e952ac6391c"
+    "sha256": "e749718e01a0e7b42d4abdcb8785e618d5cd7e8e3a299cfd730e5f5f388b9a05"
   },
   "schema": "wr01_release_surface_manifest_v1",
   "schema_version": 1,

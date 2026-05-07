@@ -286,12 +286,7 @@ def test_wavelet_compress_time_harness_reviews_runtime_apply_decode_manifest(
         source_archive=archive,
         selected_atoms_manifest=planning["selected_atoms_manifest"],
     )
-    exact_decode_validation = {
-        "source_archive_sha256": source.archive_sha256,
-        "exact_decode_validation": True,
-        "validated_sections": ["latents_and_sidecar_brotli"],
-        "score_claim": False,
-    }
+    runtime_decode_validation = runtime_apply_manifest["runtime_decode_validation"]
 
     manifest = build_wavelet_compress_time_harness(
         source_archive=archive,
@@ -305,11 +300,12 @@ def test_wavelet_compress_time_harness_reviews_runtime_apply_decode_manifest(
         expected_source_archive_sha256=source.archive_sha256,
         expected_source_archive_bytes=source.archive_bytes,
         runtime_apply_manifest=runtime_apply_manifest,
-        exact_decode_validation=exact_decode_validation,
+        exact_decode_validation=runtime_decode_validation,
     )
 
     review_path = tmp_path / "reviewed" / RUNTIME_DECODE_REVIEW_FILENAME
     review = manifest["output_manifest"]["runtime_decode_review"]
+    decode_validation = manifest["output_manifest"]["decode_validation"]
     assert json.loads(review_path.read_text(encoding="utf-8")) == review
     assert review["schema"] == RUNTIME_DECODE_REVIEW_SCHEMA
     assert review["status"] == "ready"
@@ -324,6 +320,15 @@ def test_wavelet_compress_time_harness_reviews_runtime_apply_decode_manifest(
     assert review["runtime_decode_validation_manifest_sha256"] == runtime_apply_manifest[
         "runtime_decode_validation"
     ]["manifest_sha256_excluding_self"]
+    assert decode_validation["status"] == "ready"
+    assert decode_validation["ready"] is True
+    assert decode_validation["exact_validation_available"] is False
+    assert decode_validation["runtime_decode_validation_available"] is True
+    assert decode_validation["validation_manifest_sha256"] == runtime_decode_validation[
+        "manifest_sha256_excluding_self"
+    ]
+    assert decode_validation["validated_sections"] == ["latents_and_sidecar_brotli"]
+    assert decode_validation["blockers"] == []
     assert set(review["runtime_apply_atom_ids"]) == set(
         planning["selected_atoms_manifest"]["selected_atom_ids"]
     )
@@ -333,6 +338,7 @@ def test_wavelet_compress_time_harness_reviews_runtime_apply_decode_manifest(
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert "missing_runtime_apply_manifest" not in manifest["blockers"]
     assert "missing_exact_decode_validation_manifest" not in manifest["blockers"]
+    assert "exact_decode_validation_flag_missing" not in manifest["blockers"]
     assert "compress_time_atom_training_not_implemented" in manifest["blockers"]
     assert "requires_exact_cuda_auth_eval" in manifest["dispatch_blockers"]
 

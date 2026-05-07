@@ -1182,6 +1182,7 @@ def _decode_validation_placeholder(
             "status": "blocked",
             "ready": False,
             "exact_validation_available": False,
+            "runtime_decode_validation_available": False,
             "fail_closed": True,
             "validation_manifest_sha256": None,
             "validated_source_archive_sha256": None,
@@ -1196,6 +1197,43 @@ def _decode_validation_placeholder(
     validation_source = str(
         validation.get("source_archive_sha256") or validation.get("validated_source_archive_sha256") or ""
     )
+    if validation.get("schema") == APPLY_TRANSFORM_RUNTIME_DECODE_SCHEMA:
+        if validation_source != source_archive_sha256:
+            blockers.append("runtime_decode_validation_source_archive_sha256_mismatch")
+        if validation.get("score_claim") is not False:
+            blockers.append("runtime_decode_validation_score_claim_not_false")
+        if validation.get("dispatch_attempted") is not False:
+            blockers.append("runtime_decode_validation_dispatch_attempted_not_false")
+        if validation.get("ready_for_runtime_decode_review") is not True:
+            blockers.append("runtime_decode_validation_not_ready")
+        if validation.get("ready_for_exact_eval_dispatch") is not False:
+            blockers.append("runtime_decode_validation_exact_eval_dispatch_not_blocked")
+        if validation.get("exact_cuda_auth_eval") is not False:
+            blockers.append("runtime_decode_validation_exact_cuda_auth_eval_not_false")
+        if validation.get("blockers") or []:
+            blockers.append("runtime_decode_validation_has_blockers")
+        if validation.get("changed_section_only") is not True:
+            blockers.append("runtime_decode_validation_changed_section_only_not_true")
+        validated_sections = [str(section) for section in validation.get("changed_section_names") or []]
+        if not validated_sections and validation.get("section_name"):
+            validated_sections = [str(validation["section_name"])]
+        for section_name in target_sections:
+            if section_name not in validated_sections:
+                blockers.append(f"runtime_decode_validation_missing_section:{section_name}")
+        return {
+            "status": "ready" if not blockers else "blocked",
+            "ready": not blockers,
+            "exact_validation_available": False,
+            "runtime_decode_validation_available": not blockers,
+            "validation_mode": validation.get("validation_mode"),
+            "fail_closed": bool(blockers),
+            "validation_manifest_sha256": validation.get("manifest_sha256_excluding_self")
+            or validation_sha256,
+            "validated_source_archive_sha256": validation_source or None,
+            "validated_sections": validated_sections,
+            "blockers": blockers,
+            "score_claim": False,
+        }
     if validation_source != source_archive_sha256:
         blockers.append("exact_decode_validation_source_archive_sha256_mismatch")
     if validation.get("score_claim") is not False:
@@ -1214,6 +1252,7 @@ def _decode_validation_placeholder(
         "status": "ready" if not blockers else "blocked",
         "ready": not blockers,
         "exact_validation_available": not blockers,
+        "runtime_decode_validation_available": False,
         "fail_closed": bool(blockers),
         "validation_manifest_sha256": validation_sha256,
         "validated_source_archive_sha256": validation_source or None,

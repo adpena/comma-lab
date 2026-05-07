@@ -50,7 +50,17 @@ def main(argv: list[str] | None = None) -> int:
             "manifest tying the applied WR01 atom IDs back to the selected atoms."
         ),
     )
-    parser.add_argument("--exact-decode-validation", type=Path)
+    parser.add_argument(
+        "--exact-decode-validation",
+        type=Path,
+        help=(
+            "Optional decode validation manifest. Accepts either an exact WR01 "
+            "decode-validation manifest or the local "
+            "hnerv_wavelet_runtime_decode_validation.v1 manifest emitted by "
+            "build_hnerv_wavelet_apply_transform_candidate.py; neither is "
+            "treated as score or dispatch evidence by this harness."
+        ),
+    )
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--fail-if-blocked", action="store_true")
     args = parser.parse_args(argv)

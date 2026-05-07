@@ -319,9 +319,19 @@
       "path": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/contest_auth_eval.adjudicated.json"
     },
     {
-      "bytes": 3813,
+      "bytes": 48282,
       "exists": true,
       "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json"
+    },
+    {
+      "bytes": 22617,
+      "exists": true,
+      "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_runtime_decode_validation.json"
+    },
+    {
+      "bytes": 6952,
+      "exists": true,
+      "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_compress_time_runtime_decode_review.json"
     },
     {
       "bytes": 11701,
@@ -362,7 +372,7 @@
   "commands": {
     "claim": ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id wr01_apply_pr106x_half --platform lightning --instance-job-id exact_eval_wr01_apply_pr106x_half_20260506 --agent codex:gpt-5.5 --status active_exact_eval --notes 'WR01 half exact CUDA eval; archive_sha256=d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628 bytes=186222; static_preflight=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json'",
     "harvest": ".venv/bin/python scripts/launch_lightning_batch_job.py harvest-ssh --state-path .omx/state/lightning_batch_jobs.json --job-name exact_eval_wr01_apply_pr106x_half_20260506 --ssh-target $LIGHTNING_SSH_TARGET --expected-archive-sha256 d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628 --expected-archive-size-bytes 186222 --require-adjudication",
-    "submit": ".venv/bin/python scripts/lightning_exact_eval_repro.py --job-name exact_eval_wr01_apply_pr106x_half_20260506 --stage-workspace --submit --archive experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip --baseline-json experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/contest_auth_eval.adjudicated.json --inflate-sh experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/inflate.sh --upstream-dir $LIGHTNING_UPSTREAM_DIR --remote $LIGHTNING_SSH_TARGET --remote-pact $LIGHTNING_REMOTE_PACT --studio $LIGHTNING_STUDIO --teamspace $LIGHTNING_TEAMSPACE --sdk-user $LIGHTNING_SDK_USER --machine ${LIGHTNING_MACHINE:-T4} --predicted-band 0.18 0.25 --regression-threshold 0.02 --max-posenet-relative 1.25 --max-segnet-relative 1.10 --max-sane-score 1.0 --component-trace --queue-metadata lane=wr01_apply_pr106x_half --queue-metadata archive_manifest=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json --queue-metadata public_preflight=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json --queue-metadata payload_section_diff=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/pre_submission_compliance.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_wr01_strength_summary_20260506_codex.json"
+    "submit": ".venv/bin/python scripts/lightning_exact_eval_repro.py --job-name exact_eval_wr01_apply_pr106x_half_20260506 --stage-workspace --submit --archive experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip --baseline-json experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/contest_auth_eval.adjudicated.json --inflate-sh experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/inflate.sh --upstream-dir $LIGHTNING_UPSTREAM_DIR --remote $LIGHTNING_SSH_TARGET --remote-pact $LIGHTNING_REMOTE_PACT --studio $LIGHTNING_STUDIO --teamspace $LIGHTNING_TEAMSPACE --sdk-user $LIGHTNING_SDK_USER --machine ${LIGHTNING_MACHINE:-T4} --predicted-band 0.18 0.25 --regression-threshold 0.02 --max-posenet-relative 1.25 --max-segnet-relative 1.10 --max-sane-score 1.0 --component-trace --queue-metadata lane=wr01_apply_pr106x_half --queue-metadata archive_manifest=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json --queue-metadata public_preflight=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json --queue-metadata payload_section_diff=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/pre_submission_compliance.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_runtime_decode_validation.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_compress_time_runtime_decode_review.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_wr01_strength_summary_20260506_codex.json"
   },
   "compliance_failure_summary": {
     "categories": {
@@ -382,8 +392,8 @@
   "conflicts_with_atoms": [],
   "conflicts_with_families": [],
   "dispatch_attempted": false,
-  "dispatch_gate": "eligible_for_cuda_auth_eval_after_lane_claim",
-  "dispatch_unlocked": true,
+  "dispatch_gate": "blocked_operator_lane_gates_until_env_claim_approval",
+  "dispatch_unlocked": false,
   "dry_run_queue_metadata": {
     "actual": {
       "archive_manifest": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json",
@@ -449,6 +459,11 @@
     "LIGHTNING_SDK_USER"
   ],
   "operator_approved_exact_cuda": false,
+  "operator_lane_blockers": [
+    "missing_lightning_environment",
+    "missing_active_lane_dispatch_claim",
+    "missing_operator_exact_cuda_approval"
+  ],
   "operator_next_steps": {
     "copy_safe": true,
     "current_blockers": [
@@ -502,7 +517,7 @@
         "writes_repo_state": false
       },
       {
-        "copy_safe_command": ".venv/bin/python scripts/lightning_exact_eval_repro.py --job-name exact_eval_wr01_apply_pr106x_half_20260506 --stage-workspace --submit --archive experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip --baseline-json experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/contest_auth_eval.adjudicated.json --inflate-sh experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/inflate.sh --upstream-dir $LIGHTNING_UPSTREAM_DIR --remote $LIGHTNING_SSH_TARGET --remote-pact $LIGHTNING_REMOTE_PACT --studio $LIGHTNING_STUDIO --teamspace $LIGHTNING_TEAMSPACE --sdk-user $LIGHTNING_SDK_USER --machine ${LIGHTNING_MACHINE:-T4} --predicted-band 0.18 0.25 --regression-threshold 0.02 --max-posenet-relative 1.25 --max-segnet-relative 1.10 --max-sane-score 1.0 --component-trace --queue-metadata lane=wr01_apply_pr106x_half --queue-metadata archive_manifest=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json --queue-metadata public_preflight=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json --queue-metadata payload_section_diff=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/pre_submission_compliance.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_wr01_strength_summary_20260506_codex.json",
+        "copy_safe_command": ".venv/bin/python scripts/lightning_exact_eval_repro.py --job-name exact_eval_wr01_apply_pr106x_half_20260506 --stage-workspace --submit --archive experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip --baseline-json experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/contest_auth_eval.adjudicated.json --inflate-sh experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/inflate.sh --upstream-dir $LIGHTNING_UPSTREAM_DIR --remote $LIGHTNING_SSH_TARGET --remote-pact $LIGHTNING_REMOTE_PACT --studio $LIGHTNING_STUDIO --teamspace $LIGHTNING_TEAMSPACE --sdk-user $LIGHTNING_SDK_USER --machine ${LIGHTNING_MACHINE:-T4} --predicted-band 0.18 0.25 --regression-threshold 0.02 --max-posenet-relative 1.25 --max-segnet-relative 1.10 --max-sane-score 1.0 --component-trace --queue-metadata lane=wr01_apply_pr106x_half --queue-metadata archive_manifest=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json --queue-metadata public_preflight=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json --queue-metadata payload_section_diff=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/pre_submission_compliance.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_runtime_decode_validation.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_compress_time_runtime_decode_review.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_wr01_strength_summary_20260506_codex.json",
         "dispatches_remote_gpu": true,
         "id": "submit_exact_cuda",
         "order": 6,
@@ -524,9 +539,10 @@
   "payload_diff_ready": true,
   "preflight_ready": true,
   "proxy_row": false,
-  "ready_for_exact_eval_dispatch_claim": true,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_exact_eval_dispatch_claim": false,
   "ready_for_submit": false,
-  "recorded_at_utc": "2026-05-07T00:00:00Z",
+  "recorded_at_utc": "2026-05-07T03:22:59Z",
   "release_surface": {
     "exists": true,
     "files": {
@@ -537,10 +553,10 @@
         "sha256": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628"
       },
       "archive_manifest.json": {
-        "bytes": 3256,
+        "bytes": 3864,
         "exists": true,
         "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json",
-        "sha256": "8a140a0f333ef736ec197d3b72af833854ac442d11ea5a3746bc46e826a8e2ca"
+        "sha256": "4553efa43b1e5ec81f18c9a0b6688ab0b7b7677f49255559a7378cedf37e08fd"
       },
       "inflate.sh": {
         "bytes": 681,
@@ -552,7 +568,7 @@
         "bytes": 1238,
         "exists": true,
         "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/report.txt",
-        "sha256": "3bf8eba8a7a8647bbf58de5abeb13bdf342b5d9ee05cf47c6a301e952ac6391c"
+        "sha256": "e749718e01a0e7b42d4abdcb8785e618d5cd7e8e3a299cfd730e5f5f388b9a05"
       }
     },
     "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface",
@@ -567,10 +583,10 @@
         "sha256": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628"
       },
       "archive_manifest.json": {
-        "bytes": 3256,
+        "bytes": 3864,
         "exists": true,
         "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json",
-        "sha256": "8a140a0f333ef736ec197d3b72af833854ac442d11ea5a3746bc46e826a8e2ca"
+        "sha256": "4553efa43b1e5ec81f18c9a0b6688ab0b7b7677f49255559a7378cedf37e08fd"
       },
       "inflate.sh": {
         "bytes": 681,
@@ -582,12 +598,614 @@
         "bytes": 1238,
         "exists": true,
         "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/report.txt",
-        "sha256": "3bf8eba8a7a8647bbf58de5abeb13bdf342b5d9ee05cf47c6a301e952ac6391c"
+        "sha256": "e749718e01a0e7b42d4abdcb8785e618d5cd7e8e3a299cfd730e5f5f388b9a05"
       }
     },
     "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface",
     "schema": "wr01_release_surface_generation_v1"
   },
+  "runtime_decode_gate": {
+    "blockers": [],
+    "checks": [
+      {
+        "actual": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_runtime_decode_validation.json",
+        "expected": "existing WR01 runtime decode validation manifest",
+        "name": "runtime_decode_validation_file_missing",
+        "ok": true
+      },
+      {
+        "actual": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_compress_time_runtime_decode_review.json",
+        "expected": "existing WR01 runtime apply/decode review manifest",
+        "name": "runtime_decode_review_file_missing",
+        "ok": true
+      },
+      {
+        "actual": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_runtime_decode_validation.json",
+        "expected": "present",
+        "name": "manifest_runtime_decode_validation_manifest_path_missing",
+        "ok": true
+      },
+      {
+        "actual": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_runtime_decode_validation.json",
+        "expected": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_runtime_decode_validation.json",
+        "name": "manifest_runtime_decode_validation_manifest_path_mismatch",
+        "ok": true
+      },
+      {
+        "actual": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.json",
+        "expected": "present",
+        "name": "manifest_runtime_apply_manifest_path_missing",
+        "ok": true
+      },
+      {
+        "actual": "tac.hnerv_wavelet_apply_transform.build_wavelet_apply_transform_candidate",
+        "expected": "tac.hnerv_wavelet_apply_transform.build_wavelet_apply_transform_candidate",
+        "name": "manifest_tool_mismatch",
+        "ok": true
+      },
+      {
+        "actual": false,
+        "expected": false,
+        "name": "manifest_score_claim_not_false",
+        "ok": true
+      },
+      {
+        "actual": false,
+        "expected": false,
+        "name": "manifest_dispatch_attempted_not_false",
+        "ok": true
+      },
+      {
+        "actual": false,
+        "expected": false,
+        "name": "manifest_ready_for_archive_preflight_not_false",
+        "ok": true
+      },
+      {
+        "actual": false,
+        "expected": false,
+        "name": "manifest_ready_for_exact_eval_dispatch_not_false",
+        "ok": true
+      },
+      {
+        "actual": [
+          "requires_archive_manifest_preflight",
+          "requires_component_response_or_exact_cuda_eval",
+          "requires_lane_dispatch_claim",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "expected": "contains requires_archive_manifest_preflight",
+        "name": "manifest_missing_dispatch_blocker:requires_archive_manifest_preflight",
+        "ok": true
+      },
+      {
+        "actual": [
+          "requires_archive_manifest_preflight",
+          "requires_component_response_or_exact_cuda_eval",
+          "requires_lane_dispatch_claim",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "expected": "contains requires_component_response_or_exact_cuda_eval",
+        "name": "manifest_missing_dispatch_blocker:requires_component_response_or_exact_cuda_eval",
+        "ok": true
+      },
+      {
+        "actual": [
+          "requires_archive_manifest_preflight",
+          "requires_component_response_or_exact_cuda_eval",
+          "requires_lane_dispatch_claim",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "expected": "contains requires_lane_dispatch_claim",
+        "name": "manifest_missing_dispatch_blocker:requires_lane_dispatch_claim",
+        "ok": true
+      },
+      {
+        "actual": [
+          "requires_archive_manifest_preflight",
+          "requires_component_response_or_exact_cuda_eval",
+          "requires_lane_dispatch_claim",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "expected": "contains requires_exact_cuda_auth_eval",
+        "name": "manifest_missing_dispatch_blocker:requires_exact_cuda_auth_eval",
+        "ok": true
+      },
+      {
+        "actual": "dict",
+        "expected": "object",
+        "name": "runtime_apply_block_missing",
+        "ok": true
+      },
+      {
+        "actual": "hnerv_wavelet_runtime_apply.v1",
+        "expected": "hnerv_wavelet_runtime_apply.v1",
+        "name": "runtime_apply_schema_mismatch",
+        "ok": true
+      },
+      {
+        "actual": "applied",
+        "expected": "applied",
+        "name": "runtime_apply_status_mismatch",
+        "ok": true
+      },
+      {
+        "actual": true,
+        "expected": true,
+        "name": "runtime_apply_ready_for_runtime_apply_review_not_true",
+        "ok": true
+      },
+      {
+        "actual": false,
+        "expected": false,
+        "name": "runtime_apply_score_claim_not_false",
+        "ok": true
+      },
+      {
+        "actual": false,
+        "expected": false,
+        "name": "runtime_apply_dispatch_attempted_not_false",
+        "ok": true
+      },
+      {
+        "actual": "latents_and_sidecar_brotli",
+        "expected": "latents_and_sidecar_brotli",
+        "name": "runtime_apply_section_name_mismatch",
+        "ok": true
+      },
+      {
+        "actual": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+        "expected": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+        "name": "runtime_apply_source_section_sha256_mismatch",
+        "ok": true
+      },
+      {
+        "actual": "2d85c4891e06906833e6a106dd486184121159a2380b581dc0e0b7d56603e939",
+        "expected": "2d85c4891e06906833e6a106dd486184121159a2380b581dc0e0b7d56603e939",
+        "name": "runtime_apply_candidate_section_sha256_mismatch",
+        "ok": true
+      },
+      {
+        "actual": "a38778c6304bacba39705cd9c45af337d73bc90c6b7b4ccf2563febfc312328e",
+        "expected": "a38778c6304bacba39705cd9c45af337d73bc90c6b7b4ccf2563febfc312328e",
+        "name": "runtime_apply_source_raw_sha256_mismatch",
+        "ok": true
+      },
+      {
+        "actual": "5fc6d95f9f769c9dad7b575a0ab81198be19fa5339733a50d1f212d76a4dc413",
+        "expected": "5fc6d95f9f769c9dad7b575a0ab81198be19fa5339733a50d1f212d76a4dc413",
+        "name": "runtime_apply_candidate_raw_sha256_mismatch",
+        "ok": true
+      },
+      {
+        "actual": [
+          "wr01-latents-and-sidecar-brotli-c08cfb33cc603978",
+          "wr01-latents-and-sidecar-brotli-d88e4fb4df8d0696",
+          "wr01-latents-and-sidecar-brotli-e37150f76eee8b34",
+          "wr01-latents-and-sidecar-brotli-f1dac93e07b78e76",
+          "wr01-latents-and-sidecar-brotli-b0dbb9984e517736",
+          "wr01-latents-and-sidecar-brotli-42eb4cadfef2e2af",
+          "wr01-latents-and-sidecar-brotli-819467fc762474b0",
+          "wr01-latents-and-sidecar-brotli-14726a2cd2f360ac",
+          "wr01-latents-and-sidecar-brotli-43e22772c970f753",
+          "wr01-latents-and-sidecar-brotli-305fc96c0d810c42",
+          "wr01-latents-and-sidecar-brotli-c339458a97b36a9e",
+          "wr01-latents-and-sidecar-brotli-3b9a3d4a0a0970d2",
+          "wr01-latents-and-sidecar-brotli-4295f97e32b68258",
+          "wr01-latents-and-sidecar-brotli-307e9b87efb06841",
+          "wr01-latents-and-sidecar-brotli-23990bf1d62c7035",
+          "wr01-latents-and-sidecar-brotli-ad811c5c9c933e6d",
+          "wr01-latents-and-sidecar-brotli-54c7f27882c9cf6d",
+          "wr01-latents-and-sidecar-brotli-9b286aaa4c289c81",
+          "wr01-latents-and-sidecar-brotli-194e8caf67074f4c",
+          "wr01-latents-and-sidecar-brotli-dff65e2c7d61cc13",
+          "wr01-latents-and-sidecar-brotli-5108dc5ce8d65798",
+          "wr01-latents-and-sidecar-brotli-812ac7990aeea355",
+          "wr01-latents-and-sidecar-brotli-ce57275dad2e9d47",
+          "wr01-latents-and-sidecar-brotli-8729557a0e6ecf6b",
+          "wr01-latents-and-sidecar-brotli-a5e05255282005d1",
+          "wr01-latents-and-sidecar-brotli-edd6b8ab79cdce53",
+          "wr01-latents-and-sidecar-brotli-711d64434e77b20c",
+          "wr01-latents-and-sidecar-brotli-c910156cde412393",
+          "wr01-latents-and-sidecar-brotli-21c7fab23abc9f30",
+          "wr01-latents-and-sidecar-brotli-e69df92cacf46cfd",
+          "wr01-latents-and-sidecar-brotli-5ddc8c3192827738",
+          "wr01-latents-and-sidecar-brotli-80272669a00f13b5"
+        ],
+        "expected": "nonempty list",
+        "name": "runtime_apply_applied_atom_ids_missing",
+        "ok": true
+      },
+      {
+        "actual": 32,
+        "expected": "positive integer",
+        "name": "runtime_apply_applied_atom_count_not_positive",
+        "ok": true
+      },
+      {
+        "actual": "04f9a2f8013f1d79fbde1a5d505068b98f5550ed116318e0f5acb86b94c726cc",
+        "expected": "64-char lowercase hex sha256",
+        "name": "runtime_decode_validation_manifest_sha256_missing_or_malformed",
+        "ok": true
+      },
+      {
+        "actual": "04f9a2f8013f1d79fbde1a5d505068b98f5550ed116318e0f5acb86b94c726cc",
+        "expected": "04f9a2f8013f1d79fbde1a5d505068b98f5550ed116318e0f5acb86b94c726cc",
+        "name": "runtime_decode_validation_manifest_sha256_mismatch",
+        "ok": true
+      },
+      {
+        "actual": "hnerv_wavelet_runtime_decode_validation.v1",
+        "expected": "hnerv_wavelet_runtime_decode_validation.v1",
+        "name": "runtime_decode_validation_schema_mismatch",
+        "ok": true
+      },
+      {
+        "actual": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_runtime_decode_validation.json",
+        "expected": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_runtime_decode_validation.json",
+        "name": "runtime_decode_validation_manifest_path_mismatch",
+        "ok": true
+      },
+      {
+        "actual": "04f9a2f8013f1d79fbde1a5d505068b98f5550ed116318e0f5acb86b94c726cc",
+        "expected": "04f9a2f8013f1d79fbde1a5d505068b98f5550ed116318e0f5acb86b94c726cc",
+        "name": "manifest_runtime_decode_validation_manifest_sha256_mismatch",
+        "ok": true
+      },
+      {
+        "actual": "dict",
+        "expected": "object",
+        "name": "manifest_runtime_decode_validation_block_missing",
+        "ok": true
+      },
+      {
+        "actual": "04f9a2f8013f1d79fbde1a5d505068b98f5550ed116318e0f5acb86b94c726cc",
+        "expected": "04f9a2f8013f1d79fbde1a5d505068b98f5550ed116318e0f5acb86b94c726cc",
+        "name": "manifest_runtime_decode_validation_embedded_sha256_mismatch",
+        "ok": true
+      },
+      {
+        "actual": true,
+        "expected": true,
+        "name": "runtime_decode_validation_ready_for_runtime_decode_review_not_true",
+        "ok": true
+      },
+      {
+        "actual": false,
+        "expected": false,
+        "name": "runtime_decode_validation_ready_for_archive_preflight_not_false",
+        "ok": true
+      },
+      {
+        "actual": false,
+        "expected": false,
+        "name": "runtime_decode_validation_ready_for_exact_eval_dispatch_not_false",
+        "ok": true
+      },
+      {
+        "actual": false,
+        "expected": false,
+        "name": "runtime_decode_validation_score_claim_not_false",
+        "ok": true
+      },
+      {
+        "actual": false,
+        "expected": false,
+        "name": "runtime_decode_validation_dispatch_attempted_not_false",
+        "ok": true
+      },
+      {
+        "actual": false,
+        "expected": false,
+        "name": "runtime_decode_validation_exact_cuda_auth_eval_not_false",
+        "ok": true
+      },
+      {
+        "actual": [],
+        "expected": [],
+        "name": "runtime_decode_validation_blockers_not_empty",
+        "ok": true
+      },
+      {
+        "actual": [
+          "runtime_decode_validation_is_not_score_evidence",
+          "requires_archive_manifest_preflight",
+          "requires_component_response_or_exact_cuda_eval",
+          "requires_lane_dispatch_claim",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "expected": "contains requires_archive_manifest_preflight",
+        "name": "runtime_decode_validation_missing_dispatch_blocker:requires_archive_manifest_preflight",
+        "ok": true
+      },
+      {
+        "actual": [
+          "runtime_decode_validation_is_not_score_evidence",
+          "requires_archive_manifest_preflight",
+          "requires_component_response_or_exact_cuda_eval",
+          "requires_lane_dispatch_claim",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "expected": "contains requires_component_response_or_exact_cuda_eval",
+        "name": "runtime_decode_validation_missing_dispatch_blocker:requires_component_response_or_exact_cuda_eval",
+        "ok": true
+      },
+      {
+        "actual": [
+          "runtime_decode_validation_is_not_score_evidence",
+          "requires_archive_manifest_preflight",
+          "requires_component_response_or_exact_cuda_eval",
+          "requires_lane_dispatch_claim",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "expected": "contains requires_lane_dispatch_claim",
+        "name": "runtime_decode_validation_missing_dispatch_blocker:requires_lane_dispatch_claim",
+        "ok": true
+      },
+      {
+        "actual": [
+          "runtime_decode_validation_is_not_score_evidence",
+          "requires_archive_manifest_preflight",
+          "requires_component_response_or_exact_cuda_eval",
+          "requires_lane_dispatch_claim",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "expected": "contains requires_exact_cuda_auth_eval",
+        "name": "runtime_decode_validation_missing_dispatch_blocker:requires_exact_cuda_auth_eval",
+        "ok": true
+      },
+      {
+        "actual": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e",
+        "expected": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e",
+        "name": "runtime_decode_validation_source_archive_sha256_mismatch",
+        "ok": true
+      },
+      {
+        "actual": 186231,
+        "expected": 186231,
+        "name": "runtime_decode_validation_source_archive_bytes_mismatch",
+        "ok": true
+      },
+      {
+        "actual": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+        "expected": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+        "name": "runtime_decode_validation_candidate_archive_sha256_mismatch",
+        "ok": true
+      },
+      {
+        "actual": 186222,
+        "expected": 186222,
+        "name": "runtime_decode_validation_candidate_archive_bytes_mismatch",
+        "ok": true
+      },
+      {
+        "actual": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+        "expected": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+        "name": "runtime_decode_validation_source_payload_sha256_mismatch",
+        "ok": true
+      },
+      {
+        "actual": "803a0940f92ec1cb1b70e9815fb6c666650b5371625e17103104baa21e96b4e7",
+        "expected": "803a0940f92ec1cb1b70e9815fb6c666650b5371625e17103104baa21e96b4e7",
+        "name": "runtime_decode_validation_candidate_payload_sha256_mismatch",
+        "ok": true
+      },
+      {
+        "actual": "latents_and_sidecar_brotli",
+        "expected": "latents_and_sidecar_brotli",
+        "name": "runtime_decode_validation_section_name_mismatch",
+        "ok": true
+      },
+      {
+        "actual": true,
+        "expected": true,
+        "name": "runtime_decode_validation_changed_section_only_not_true",
+        "ok": true
+      },
+      {
+        "actual": "ca6f94c5aa163485a7f4559c051e57b3625f7d3fe8de3ba2b66fb491b8af2c14",
+        "expected": "64-char lowercase hex sha256",
+        "name": "runtime_decode_review_manifest_sha256_missing_or_malformed",
+        "ok": true
+      },
+      {
+        "actual": "ca6f94c5aa163485a7f4559c051e57b3625f7d3fe8de3ba2b66fb491b8af2c14",
+        "expected": "ca6f94c5aa163485a7f4559c051e57b3625f7d3fe8de3ba2b66fb491b8af2c14",
+        "name": "runtime_decode_review_manifest_sha256_mismatch",
+        "ok": true
+      },
+      {
+        "actual": "hnerv_wavelet_compress_time_runtime_decode_review.v1",
+        "expected": "hnerv_wavelet_compress_time_runtime_decode_review.v1",
+        "name": "runtime_decode_review_schema_mismatch",
+        "ok": true
+      },
+      {
+        "actual": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_compress_time_runtime_decode_review.json",
+        "expected": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_compress_time_runtime_decode_review.json",
+        "name": "runtime_decode_review_manifest_path_mismatch",
+        "ok": true
+      },
+      {
+        "actual": "ready",
+        "expected": "ready",
+        "name": "runtime_decode_review_status_mismatch",
+        "ok": true
+      },
+      {
+        "actual": true,
+        "expected": true,
+        "name": "runtime_decode_review_ready_for_runtime_apply_review_not_true",
+        "ok": true
+      },
+      {
+        "actual": true,
+        "expected": true,
+        "name": "runtime_decode_review_ready_for_decode_validation_review_not_true",
+        "ok": true
+      },
+      {
+        "actual": false,
+        "expected": false,
+        "name": "runtime_decode_review_ready_for_archive_preflight_not_false",
+        "ok": true
+      },
+      {
+        "actual": false,
+        "expected": false,
+        "name": "runtime_decode_review_ready_for_exact_eval_dispatch_not_false",
+        "ok": true
+      },
+      {
+        "actual": false,
+        "expected": false,
+        "name": "runtime_decode_review_score_claim_not_false",
+        "ok": true
+      },
+      {
+        "actual": false,
+        "expected": false,
+        "name": "runtime_decode_review_dispatch_attempted_not_false",
+        "ok": true
+      },
+      {
+        "actual": [],
+        "expected": [],
+        "name": "runtime_decode_review_blockers_not_empty",
+        "ok": true
+      },
+      {
+        "actual": [],
+        "expected": [],
+        "name": "runtime_decode_review_runtime_apply_blockers_not_empty",
+        "ok": true
+      },
+      {
+        "actual": [],
+        "expected": [],
+        "name": "runtime_decode_review_decode_validation_blockers_not_empty",
+        "ok": true
+      },
+      {
+        "actual": [
+          "runtime_decode_review_is_not_score_evidence",
+          "requires_archive_manifest_preflight",
+          "requires_component_response_or_exact_cuda_eval",
+          "requires_lane_dispatch_claim",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "expected": "contains requires_archive_manifest_preflight",
+        "name": "runtime_decode_review_missing_dispatch_blocker:requires_archive_manifest_preflight",
+        "ok": true
+      },
+      {
+        "actual": [
+          "runtime_decode_review_is_not_score_evidence",
+          "requires_archive_manifest_preflight",
+          "requires_component_response_or_exact_cuda_eval",
+          "requires_lane_dispatch_claim",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "expected": "contains requires_component_response_or_exact_cuda_eval",
+        "name": "runtime_decode_review_missing_dispatch_blocker:requires_component_response_or_exact_cuda_eval",
+        "ok": true
+      },
+      {
+        "actual": [
+          "runtime_decode_review_is_not_score_evidence",
+          "requires_archive_manifest_preflight",
+          "requires_component_response_or_exact_cuda_eval",
+          "requires_lane_dispatch_claim",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "expected": "contains requires_lane_dispatch_claim",
+        "name": "runtime_decode_review_missing_dispatch_blocker:requires_lane_dispatch_claim",
+        "ok": true
+      },
+      {
+        "actual": [
+          "runtime_decode_review_is_not_score_evidence",
+          "requires_archive_manifest_preflight",
+          "requires_component_response_or_exact_cuda_eval",
+          "requires_lane_dispatch_claim",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "expected": "contains requires_exact_cuda_auth_eval",
+        "name": "runtime_decode_review_missing_dispatch_blocker:requires_exact_cuda_auth_eval",
+        "ok": true
+      },
+      {
+        "actual": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.json",
+        "expected": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.json",
+        "name": "runtime_decode_review_apply_manifest_path_mismatch",
+        "ok": true
+      },
+      {
+        "actual": "cb387bd025832aecf63918120333acef9133380ee5ac99d5cd1e1f8a853f4609",
+        "expected": [
+          "cb387bd025832aecf63918120333acef9133380ee5ac99d5cd1e1f8a853f4609",
+          "f106d31d1ffc5f5e991e3e96faef6f849b4020521538c4d819610ab548e48f91"
+        ],
+        "name": "runtime_decode_review_apply_manifest_sha256_mismatch",
+        "ok": true
+      },
+      {
+        "actual": "hnerv_wavelet_runtime_decode_validation.v1",
+        "expected": "hnerv_wavelet_runtime_decode_validation.v1",
+        "name": "runtime_decode_review_runtime_decode_validation_schema_mismatch",
+        "ok": true
+      },
+      {
+        "actual": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_runtime_decode_validation.json",
+        "expected": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_runtime_decode_validation.json",
+        "name": "runtime_decode_review_runtime_decode_validation_path_mismatch",
+        "ok": true
+      },
+      {
+        "actual": "04f9a2f8013f1d79fbde1a5d505068b98f5550ed116318e0f5acb86b94c726cc",
+        "expected": "04f9a2f8013f1d79fbde1a5d505068b98f5550ed116318e0f5acb86b94c726cc",
+        "name": "runtime_decode_review_runtime_decode_validation_sha256_mismatch",
+        "ok": true
+      },
+      {
+        "actual": true,
+        "expected": true,
+        "name": "runtime_decode_review_runtime_decode_validation_ready_not_true",
+        "ok": true
+      },
+      {
+        "actual": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+        "expected": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+        "name": "runtime_decode_review_candidate_archive_sha256_mismatch",
+        "ok": true
+      },
+      {
+        "actual": 186222,
+        "expected": 186222,
+        "name": "runtime_decode_review_candidate_archive_bytes_mismatch",
+        "ok": true
+      },
+      {
+        "actual": "latents_and_sidecar_brotli",
+        "expected": "latents_and_sidecar_brotli",
+        "name": "runtime_decode_review_changed_section_name_mismatch",
+        "ok": true
+      }
+    ],
+    "ready": true,
+    "result_dir": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex",
+    "runtime_decode_review_exists": true,
+    "runtime_decode_review_manifest_sha256": "ca6f94c5aa163485a7f4559c051e57b3625f7d3fe8de3ba2b66fb491b8af2c14",
+    "runtime_decode_review_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_compress_time_runtime_decode_review.json",
+    "runtime_decode_validation_exists": true,
+    "runtime_decode_validation_manifest_sha256": "04f9a2f8013f1d79fbde1a5d505068b98f5550ed116318e0f5acb86b94c726cc",
+    "runtime_decode_validation_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_runtime_decode_validation.json",
+    "schema": "wr01_runtime_apply_decode_gate_v1"
+  },
+  "runtime_decode_gate_blockers": [],
+  "runtime_decode_gate_ready": true,
+  "runtime_decode_review_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_compress_time_runtime_decode_review.json",
+  "runtime_decode_validation_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_runtime_decode_validation.json",
   "schema": "wr01_exact_eval_operator_packet_v1",
   "schema_version": 1,
   "score_claim": false,
