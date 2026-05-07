@@ -3033,6 +3033,264 @@ def _trace_hpm1_submitted_prefix_token_recovery(
     }
 
 
+def _trace_hpm1_next_row_suffix_scan(
+    model: Any,
+    payload: Hpm1MaskPayload,
+    *,
+    probability_variant: str | Any,
+    prob_eps: float,
+    device: str,
+    spatial_order_candidate: str,
+    valid_preview_limit: int,
+) -> dict[str, Any]:
+    """Scan alternate rows at the first submitted-stream entropy failure.
+
+    This is a local forensic classifier, not a decoder. It replays the chosen
+    spatial hypothesis until the first range mismatch, clones the public
+    ``RangeDecoder`` state immediately before the failed symbol, and then tests
+    every remaining coordinate row in the failed group against that exact range
+    prefix. If no row decodes, the blocker is tighter than a simple "next
+    coordinate in this group was wrong" explanation.
+    """
+
+    if torch is None or F is None:  # pragma: no cover - optional dependency path
+        raise Pr91Hpm1Error("dependency_contract", "torch_missing")
+    if _pr86_hpac_codec.constriction is None:  # pragma: no cover
+        raise Pr91Hpm1Error("dependency_contract", "constriction_missing")
+    if str(device) != "cpu":
+        raise Pr91Hpm1Error(
+            "device_contract",
+            "hpm1_next_row_suffix_scan_is_cpu_only",
+            requested_device=device,
+        )
+    if int(valid_preview_limit) < 0:
+        raise Pr91Hpm1Error(
+            "hpm1_next_row_suffix_scan",
+            "valid_preview_limit_must_be_nonnegative",
+            valid_preview_limit=valid_preview_limit,
+        )
+    _spatial_order_description(spatial_order_candidate)
+
+    started_at = time.time()
+    resolved = resolve_hpac_probability_variant(probability_variant)
+    dev = torch.device(device)
+    model = model.to(dev).eval()
+    masks = _group_masks(
+        payload.height,
+        payload.width,
+        P=payload.predictor_count,
+        delta=payload.delta,
+        device=dev,
+    )
+    words = _hpm1_token_words_for_candidate(payload, "source_little_uint32")
+    decoder = _pr86_hpac_codec.constriction.stream.queue.RangeDecoder(words)
+    if not hasattr(decoder, "clone"):
+        raise Pr91Hpm1Error(
+            "hpm1_next_row_suffix_scan",
+            "range_decoder_clone_unavailable",
+        )
+
+    decoded_prev = torch.zeros((1, payload.height, payload.width), dtype=torch.long, device=dev)
+    decoded_symbols = 0
+    failure_report: dict[str, Any] | None = None
+    suffix_scan: dict[str, Any] | None = None
+
+    with torch.no_grad():
+        for frame in range(payload.n_frames):
+            idx = torch.tensor([frame], dtype=torch.long, device=dev)
+            cur = torch.zeros((1, payload.height, payload.width), dtype=torch.long, device=dev)
+            frame_start_symbols = decoded_symbols
+            for group, mask in enumerate(masks):
+                if mask is None:
+                    continue
+                group_start_symbols = decoded_symbols
+                coords = _hpm1_group_coords_for_spatial_order(
+                    payload,
+                    group=group,
+                    mask=mask,
+                    candidate=spatial_order_candidate,
+                    device=dev,
+                )
+                coord_rows = coords[:, 0].detach().cpu().numpy()
+                coord_cols = coords[:, 1].detach().cpu().numpy()
+                logits = model(cur, idx, decoded_prev)
+                probs = F.softmax(logits.float(), dim=1)
+                probs_at_group = (
+                    probs[0][:, coords[:, 0], coords[:, 1]]
+                    .permute(1, 0)
+                    .contiguous()
+                )
+                probs_np = probs_at_group.cpu().numpy()
+                decoded = np.empty(int(probs_at_group.shape[0]), dtype=np.int64)
+                for symbol_in_group, row in enumerate(probs_np):
+                    raw_row = np.ascontiguousarray(row)
+                    normalized = np.ascontiguousarray(
+                        _normalize_probability_row(
+                            raw_row,
+                            prob_eps=prob_eps,
+                            variant=resolved,
+                        )
+                    )
+                    cat = _categorical_from_probs(raw_row, prob_eps=prob_eps, variant=resolved)
+                    decoder_state_before = _range_decoder_state_summary(
+                        decoder,
+                        label="before_next_row_suffix_scan_decode",
+                    )
+                    decoder_before = decoder.clone()
+                    try:
+                        decoded_symbol = int(decoder.decode(cat))
+                    except Exception as exc:
+                        y = int(coord_rows[symbol_in_group])
+                        x = int(coord_cols[symbol_in_group])
+                        failure_report = {
+                            "stage": "submitted_tokens_decode",
+                            "reason": "hpac_entropy_decode_contract_mismatch",
+                            "exception_type": type(exc).__name__,
+                            "exception_text": str(exc),
+                            "frame": int(frame),
+                            "group": int(group),
+                            "symbol_in_group": int(symbol_in_group),
+                            "decoded_symbol_count_before_failure": int(decoded_symbols),
+                            "group_start_decoded_symbols": int(group_start_symbols),
+                            "frame_start_decoded_symbols": int(frame_start_symbols),
+                            "pixel_yx": {"y": y, "x": x},
+                            "range_decoder_diagnostic": {
+                                "state_before_decode": decoder_state_before,
+                                "state_after_failed_decode": _range_decoder_state_summary(
+                                    decoder,
+                                    label="after_next_row_suffix_scan_decode_exception",
+                                ),
+                                "not_stream_exhaustion": bool(
+                                    decoder_state_before.get("maybe_exhausted") is False
+                                ),
+                            },
+                            "failing_probability_row": {
+                                "raw_softmax_sha256": sha256_bytes(raw_row.tobytes()),
+                                "normalized_sha256": sha256_bytes(normalized.tobytes()),
+                                "normalized_values": [
+                                    round(float(value), 10)
+                                    for value in normalized.tolist()
+                                ],
+                                "argmax_symbol": int(normalized.argmax()),
+                            },
+                        }
+                        valid_rows: list[dict[str, Any]] = []
+                        valid_count = 0
+                        tested = 0
+                        for candidate_symbol_in_group in range(
+                            int(symbol_in_group),
+                            int(probs_np.shape[0]),
+                        ):
+                            tested += 1
+                            candidate_row = np.ascontiguousarray(
+                                probs_np[candidate_symbol_in_group]
+                            )
+                            candidate_decoder = decoder_before.clone()
+                            try:
+                                candidate_symbol = int(
+                                    candidate_decoder.decode(
+                                        _categorical_from_probs(
+                                            candidate_row,
+                                            prob_eps=prob_eps,
+                                            variant=resolved,
+                                        )
+                                    )
+                                )
+                            except Exception:
+                                continue
+                            valid_count += 1
+                            candidate_normalized = np.ascontiguousarray(
+                                _normalize_probability_row(
+                                    candidate_row,
+                                    prob_eps=prob_eps,
+                                    variant=resolved,
+                                )
+                            )
+                            order = np.argsort(-candidate_normalized, kind="stable")
+                            cy = int(coord_rows[candidate_symbol_in_group])
+                            cx = int(coord_cols[candidate_symbol_in_group])
+                            if len(valid_rows) < int(valid_preview_limit):
+                                valid_rows.append(
+                                    {
+                                        "candidate_symbol_in_group": int(
+                                            candidate_symbol_in_group
+                                        ),
+                                        "pixel_yx": {"y": cy, "x": cx},
+                                        "decoded_symbol": int(candidate_symbol),
+                                        "decoded_symbol_probability": round(
+                                            float(candidate_normalized[candidate_symbol]),
+                                            10,
+                                        ),
+                                        "decoded_symbol_rank": int(
+                                            np.where(order == candidate_symbol)[0][0] + 1
+                                        ),
+                                        "argmax_symbol": int(order[0]),
+                                        "normalized_probability_row_sha256": sha256_bytes(
+                                            candidate_normalized.tobytes()
+                                        ),
+                                    }
+                                )
+                        suffix_scan = {
+                            "schema": "pr91_hpm1_next_row_suffix_scan_v1",
+                            "scope": (
+                                "remaining coordinates in the first failed group "
+                                "under the same cloned range state, model context, "
+                                "probability variant, and prob_eps"
+                            ),
+                            "candidate_rows_tested": int(tested),
+                            "valid_next_row_count": int(valid_count),
+                            "valid_next_row_preview_limit": int(valid_preview_limit),
+                            "valid_next_row_preview": valid_rows,
+                            "any_valid_next_row": bool(valid_rows),
+                            "classification": (
+                                "at_least_one_remaining_group_row_decodes"
+                                if valid_rows
+                                else "no_remaining_group_row_decodes_from_failure_state"
+                            ),
+                        }
+                        break
+
+                    decoded[symbol_in_group] = decoded_symbol
+                    decoded_symbols += 1
+                if failure_report is not None:
+                    break
+                cur[0, coords[:, 0], coords[:, 1]] = torch.from_numpy(decoded).to(dev)
+            if failure_report is not None:
+                break
+            decoded_prev = cur.clone()
+
+    return {
+        "schema": "pr91_hpm1_next_row_suffix_scan_trace_v1",
+        "status": (
+            "classified_first_entropy_failure_next_row_suffix"
+            if failure_report is not None
+            else "no_entropy_failure_observed"
+        ),
+        "passed": failure_report is not None,
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "full_decode_proven": False,
+        "byte_exact_reencode_proven": False,
+        "device": device,
+        "probability_variant": resolved.name,
+        "prob_eps": float(prob_eps),
+        "spatial_order_candidate": spatial_order_candidate,
+        "spatial_order_description": _spatial_order_description(spatial_order_candidate),
+        "decoded_symbol_count_before_failure": int(decoded_symbols),
+        "failure": failure_report,
+        "suffix_scan": suffix_scan,
+        "blocker_tightening": (
+            "The first entropy mismatch is not explained by choosing a later "
+            "coordinate from the same failed group under this spatial order."
+            if suffix_scan
+            and suffix_scan.get("classification")
+            == "no_remaining_group_row_decodes_from_failure_state"
+            else "Suffix scan did not close the next-coordinate hypothesis."
+        ),
+        "elapsed_sec": round(time.time() - started_at, 3),
+    }
+
+
 def _trace_hpm1_reference_teacher_forced_spatial_order_failure(
     model: Any,
     payload: Hpm1MaskPayload,
@@ -5465,6 +5723,132 @@ def run_pr91_hpm1_submitted_prefix_token_recovery_probe(
     if strict and report["ready_for_exact_eval_dispatch"] is not True:
         raise Pr91Hpm1Error(
             "hpm1_submitted_prefix_token_recovery_probe",
+            str(report["status"]),
+            report=report,
+        )
+    return _jsonable(report)
+
+
+def run_pr91_hpm1_next_row_suffix_scan_probe(
+    archive: Path = DEFAULT_PR91_ARCHIVE,
+    *,
+    device: str = "cpu",
+    probability_variant: str = DEFAULT_HPAC_PROBABILITY_VARIANT,
+    prob_eps: float = PROB_EPS,
+    spatial_order_candidate: str = "tile_major_row_major",
+    valid_preview_limit: int = 16,
+    output_dir: Path | None = None,
+    strict: bool = False,
+    write_json: bool = True,
+) -> dict[str, Any]:
+    """Classify the first PR91/HPM1 entropy mismatch by scanning suffix rows."""
+
+    started_at = time.time()
+    if str(device) != "cpu":
+        raise Pr91Hpm1Error(
+            "device_contract",
+            "pr91_hpm1_next_row_suffix_scan_probe_is_cpu_only",
+            requested_device=device,
+        )
+    _spatial_order_description(spatial_order_candidate)
+    archive_path = Path(archive)
+    payload = extract_pr91_hpm1_payload(archive_path)
+    dependency_report = collect_dependency_report(strict=False)
+    static_report = validate_hpm1_static_contract(payload)
+    relationship = compare_hpm1_to_pr86_hpac_contract(payload)
+    runtime_sources = analyze_pr91_hpm1_runtime_sources()
+    model = load_hpm1_hpac_model(payload, device=device)
+    trace = _trace_hpm1_next_row_suffix_scan(
+        model,
+        payload,
+        probability_variant=probability_variant,
+        prob_eps=prob_eps,
+        device=device,
+        spatial_order_candidate=spatial_order_candidate,
+        valid_preview_limit=valid_preview_limit,
+    )
+    suffix_scan = trace.get("suffix_scan", {})
+    no_remaining_row_decodes = (
+        isinstance(suffix_scan, Mapping)
+        and suffix_scan.get("classification")
+        == "no_remaining_group_row_decodes_from_failure_state"
+    )
+    report: dict[str, Any] = {
+        "schema": "pr91_hpm1_next_row_suffix_scan_probe_v1",
+        "tool": "tac.pr91_hpm1_codec.run_pr91_hpm1_next_row_suffix_scan_probe",
+        "recorded_at_utc": datetime.now(UTC).replace(microsecond=0).isoformat(),
+        "status": (
+            "narrowed_not_single_next_coordinate_error"
+            if no_remaining_row_decodes
+            else str(trace.get("status"))
+        ),
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "dispatch_attempted": False,
+        "dispatch_performed": False,
+        "gpu_or_remote_work": False,
+        "local_only": True,
+        "ready_for_exact_eval_dispatch": False,
+        "promotion_eligible": False,
+        "evidence_grade": "empirical",
+        "evidence_scope": "local_cpu_hpm1_range_state_next_row_suffix_scan",
+        "device": device,
+        "archive": _archive_report(archive_path),
+        "hpm1_static_contract": static_report,
+        "pr86_hpac_relationship": relationship,
+        "dependency_report": dependency_report,
+        "runtime_source_contract": runtime_sources,
+        "payload": {
+            "config": payload.config(),
+            "tokens_bytes": len(payload.tokens),
+            "tokens_sha256": sha256_bytes(payload.tokens),
+            "hpac_bytes": len(payload.hpac),
+            "hpac_sha256": sha256_bytes(payload.hpac),
+        },
+        "spatial_order_probe": {
+            "candidate": spatial_order_candidate,
+            "description": _spatial_order_description(spatial_order_candidate),
+            "source_contract": spatial_order_candidate == "source_mask_row_major",
+            "dispatch_allowed": False,
+            "scope_note": (
+                "This probe scans only the remaining rows in the first failed "
+                "group under a cloned local range state. It is not a source "
+                "contract unless source_mask_row_major is selected, and it is "
+                "never score or dispatch evidence."
+            ),
+        },
+        "next_row_suffix_scan": trace,
+        "exact_missing_grammar": {
+            "status": "still_open_after_next_row_suffix_scan",
+            "narrowed": (
+                "same-group next-coordinate/order explanation at the first "
+                "failure row"
+                if no_remaining_row_decodes
+                else "next-coordinate/order explanation remains open"
+            ),
+            "remaining_open_classes": [
+                "encoder-side probability numeric contract before the failure row",
+                "range-coder construction/finalization contract",
+                "cross-group or earlier context/order drift",
+                "true PR91 symbols beyond the first entropy failure",
+                "byte-exact full-stream reencode",
+            ],
+        },
+        "next_required_proofs": [
+            "scan earlier context/order pivots or recover the encoder-side HPAC source contract",
+            "recover a full semantic token stream before byte-exact reencode work",
+            "keep all non-source spatial/context hypotheses fail-closed and non-dispatchable",
+        ],
+        "elapsed_sec": round(time.time() - started_at, 3),
+    }
+    if write_json and output_dir is not None:
+        write_json_report(
+            report,
+            Path(output_dir) / "next_row_suffix_scan_probe.json",
+        )
+    if strict and report["ready_for_exact_eval_dispatch"] is not True:
+        raise Pr91Hpm1Error(
+            "hpm1_next_row_suffix_scan_probe",
             str(report["status"]),
             report=report,
         )
