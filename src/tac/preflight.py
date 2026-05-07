@@ -15463,6 +15463,20 @@ _ORPHAN_CHECK_EXEMPT_MODULES = {
     # Library helpers / utilities (imported by other tac.* modules)
     "bootstrap_codegen", "checkpoint_names", "cost_tracker",
     "data", "models", "checkpoint", "evaluate", "parametrize_strip",
+    # 2026-05-06 batch: tested-library primitives with direct test_<name>.py
+    # coverage in src/tac/tests/. These are confirmed library helpers used
+    # only via internal cross-references + tests, never via deploy scripts
+    # or profiles. Adding to exempt list documents that tests are the
+    # acceptance surface; new lanes wanting these primitives should import
+    # them via `from tac import X`. Orphan-check haystack still excludes
+    # tests/ on purpose (tests alone shouldn't keep orphan production code
+    # alive), so the exemption is the right escape hatch here.
+    "alpha_mask_codec_readiness",       # paradigm-α codec contract registry
+    "arithmetic_terminal",              # arithmetic terminal codec primitive
+    "joint_admm_proximal_pose_delta",   # joint-ADMM pose-delta proximal codec
+    "joint_admm_proximal_water_filling_v2",  # joint-ADMM water-filling v2
+    "mdl_bayesian_codec",               # MDL/Bayesian codec primitive
+    "public_submission_refs",           # public-submission reference catalog
 }
 
 
