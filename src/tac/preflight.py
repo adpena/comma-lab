@@ -15555,7 +15555,9 @@ def check_no_orphan_src_tac_modules(
         # Recursive scan: experiments/**/*.py covers nested experiment dirs
         # (kaggle_kernels/, results/{lane}/, etc.) which import tac.* modules.
         for py in sorted(exp_dir.rglob("*.py")):
-            # Skip cached intake / harvest snapshots
+            # Skip OSS-export mirror + cached intake / harvest snapshots
+            if _is_oss_export_mirror_path(py):
+                continue
             rel_s = str(py.relative_to(root))
             if "_intake_" in rel_s or "/__pycache__/" in rel_s:
                 continue
@@ -15563,8 +15565,10 @@ def check_no_orphan_src_tac_modules(
     # Cross-references: src/tac/**/*.py (research, visualization, experiments,
     # submissions subdirs — modules legitimately import each other internally).
     for py in sorted(src_tac.rglob("*.py")):
-        # Skip the file itself wouldn't false-positive (the regex matches
-        # `tac.<name>` not the bare module name) but also skip tests/.
+        # Skip the OSS-export mirror, tests/ (orphan check excludes them on
+        # purpose so test files alone can't keep a module alive), and pycache.
+        if _is_oss_export_mirror_path(py):
+            continue
         rel_parts = py.relative_to(src_tac).parts
         if "tests" in rel_parts or "__pycache__" in rel_parts:
             continue
@@ -15573,11 +15577,15 @@ def check_no_orphan_src_tac_modules(
     tools_dir = root / "tools"
     if tools_dir.is_dir():
         for py in sorted(tools_dir.rglob("*.py")):
+            if _is_oss_export_mirror_path(py):
+                continue
             scan_file(py)
     # Submissions: inflate / runtime code may import tac.* modules
     sub_dir = root / "submissions"
     if sub_dir.is_dir():
         for py in sorted(sub_dir.rglob("*.py")):
+            if _is_oss_export_mirror_path(py):
+                continue
             scan_file(py)
 
     violations: list[str] = []
