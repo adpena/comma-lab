@@ -1010,6 +1010,15 @@ def expected_atom_score_delta(
         archive_manifest_path,
         archive_manifest_sha256,
     )
+    archive_bytes, archive_bytes_source, archive_bytes_blockers = _optional_int_field(
+        atom,
+        ("archive_bytes", "observed_archive_bytes", "candidate_archive_bytes"),
+    )
+    source_artifact_bytes, source_artifact_bytes_source, source_artifact_bytes_blockers = _optional_int_field(
+        atom,
+        ("source_artifact_bytes", "artifact_bytes", "source_bytes"),
+    )
+    source_dispatch_blockers = _unique_ordered_strings(atom.get("dispatch_blockers") or [])
     byte_closed_archive_manifest_attached = bool(archive_manifest_custody["verified"])
     proxy_row = _proxy_row(evidence_grade, atom)
     requested_dispatchable = bool(
@@ -1018,8 +1027,11 @@ def expected_atom_score_delta(
     dispatch_blockers = [
         "planning_only_lagrangian_atom",
         "requires_exact_cuda_auth_eval",
+        *source_dispatch_blockers,
         *rank_blockers,
         *archive_manifest_custody["blockers"],
+        *archive_bytes_blockers,
+        *source_artifact_bytes_blockers,
     ]
     if not byte_closed_archive_manifest_attached:
         dispatch_blockers.append("requires_byte_closed_archive")
@@ -1100,6 +1112,11 @@ def expected_atom_score_delta(
         "evidence_source_path": atom.get("evidence_source_path", ""),
         "evidence_source_sha256": atom.get("evidence_source_sha256", ""),
         "source_archive_sha256": atom.get("source_archive_sha256", ""),
+        "source_dispatch_blockers": source_dispatch_blockers,
+        "archive_bytes": archive_bytes,
+        "archive_bytes_source": archive_bytes_source,
+        "source_artifact_bytes": source_artifact_bytes,
+        "source_artifact_bytes_source": source_artifact_bytes_source,
         "archive_manifest_path": archive_manifest_path,
         "archive_manifest_sha256": archive_manifest_sha256,
         "archive_manifest_custody": archive_manifest_custody,

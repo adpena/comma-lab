@@ -39,12 +39,17 @@ import json
 import sys
 from dataclasses import asdict
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 sys.path.insert(0, str(REPO_ROOT))
 
 from experiments.distortion_proxy_local import make_distortion_proxy  # type: ignore  # noqa: E402
+from tac.optimization.meta_lagrangian_ledger_adapter import (  # noqa: E402
+    adapt_artifact_to_atoms,
+    search_candidates_from_atoms,
+)
 from tac.optimizer.meta_lagrangian import (  # noqa: E402
     LagrangianConstraints,
     MetaLagrangianSearch,
@@ -102,6 +107,42 @@ def _display_path(path: Path) -> str:
         return str(path)
 
 
+def _load_candidates_from_path(path: Path) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+    """Load strict candidates, adapting known ledger artifacts when needed."""
+
+    if path.suffix != ".jsonl":
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(payload, list):
+            return payload, None
+        if isinstance(payload, dict):
+            embedded = payload.get("candidates_for_meta_lagrangian_search_cli")
+            if isinstance(embedded, list):
+                return embedded, {
+                    "schema": "meta_lagrangian_candidate_input_adapter_v1",
+                    "source_format": str(payload.get("schema") or "embedded_candidate_envelope"),
+                    "source_path": _display_path(path),
+                    "canonical_atom_count": len(payload.get("atoms") or payload.get("rows") or []),
+                    "search_candidate_count": len(embedded),
+                    "score_claim": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "dispatch_blockers": [
+                        "embedded_candidates_still_forensic_until_exact_cuda",
+                    ],
+                }
+
+    adapted = adapt_artifact_to_atoms(path, repo_root=REPO_ROOT)
+    candidates = search_candidates_from_atoms(adapted.atoms)
+    report = adapted.to_dict()
+    report["search_projection_policy"] = (
+        "only atoms with archive_bytes, rel_err_pct, and n_layers are projected "
+        "to MetaLagrangianSearch.evaluate_candidate; all atoms remain available "
+        "for field/Pareto planning through the canonical adapter rows"
+    )
+    report["search_candidate_count"] = len(candidates)
+    report["candidates_for_meta_lagrangian_search_cli"] = candidates
+    return candidates, report
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--lane-class", required=True,
@@ -131,14 +172,22 @@ def main(argv: list[str] | None = None) -> int:
     proxy = make_distortion_proxy(anchors_path)
 
     # Load candidates
+    candidate_input_adapter = None
     if args.candidates_json:
-        candidates = json.loads(args.candidates_json.read_text())
+        candidates, candidate_input_adapter = _load_candidates_from_path(args.candidates_json)
     elif args.auto_sweep_bits:
         bits = [int(b.strip()) for b in args.auto_sweep_bits.split(",")]
         candidates = _auto_sweep_apogee(bits)
     else:
         print("FATAL: must specify --candidates-json or --auto-sweep-bits", file=sys.stderr)
         return 2
+    if candidate_input_adapter is not None:
+        print(
+            "[meta-lagrangian] adapted "
+            f"{candidate_input_adapter.get('atom_count', candidate_input_adapter.get('canonical_atom_count', 0))} "
+            f"canonical atoms from {candidate_input_adapter.get('source_format')}; "
+            f"{len(candidates)} strict search candidates"
+        )
     if not candidates:
         print("WARN: candidate list is empty", file=sys.stderr)
 
@@ -191,6 +240,7 @@ def main(argv: list[str] | None = None) -> int:
             "anchors_path": _display_path(anchors_path),
             "constraints": asdict(constraints),
             "candidates_evaluated": len(candidates),
+            "candidate_input_adapter": candidate_input_adapter,
             "local_search_engine_eligible": len([e for e in evaluations if e.eligible_for_dispatch]),
             "ready_for_exact_eval_dispatch_count": len(dispatch_ready),
             "eligible_for_dispatch": 0,

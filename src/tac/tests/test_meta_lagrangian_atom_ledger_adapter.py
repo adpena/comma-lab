@@ -9,6 +9,12 @@ import sys
 
 import pytest
 
+from tac.optimization.meta_lagrangian_allocator import build_atom_ledger
+from tac.optimization.meta_lagrangian_ledger_adapter import (
+    adapt_artifact_to_atoms,
+    search_candidates_from_atoms,
+)
+
 
 def _load_tool_module():
     repo_root = pathlib.Path(__file__).resolve().parents[3]
@@ -30,6 +36,190 @@ def _write_ledger(path: pathlib.Path, records: list[dict]) -> None:
     with path.open("w") as handle:
         for record in records:
             handle.write(json.dumps(record) + "\n")
+
+
+def _load_search_cli_module():
+    repo_root = pathlib.Path(__file__).resolve().parents[3]
+    path = repo_root / "tools" / "meta_lagrangian_search_cli.py"
+    spec = importlib.util.spec_from_file_location(
+        "meta_lagrangian_search_cli",
+        path,
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"could not load {path}")
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_canonical_adapter_ingests_bilevel_jsonl_into_field_atoms(
+    tmp_path: pathlib.Path,
+) -> None:
+    ledger_path = tmp_path / "bilevel_atom_ledger.jsonl"
+    _write_ledger(
+        ledger_path,
+        [
+            {
+                "phase": 2,
+                "substrate_label": "synthetic 600-frame poses",
+                "substrate_path": "src/tac/codec_pipeline_raft_pose.py",
+                "contest_cuda_score": None,
+                "evidence_grade": "[CPU-prep]",
+                "archive_bytes": 7262,
+                "archive_sha256": None,
+                "cathedral_op": "Op_RAFTPoseStream",
+                "dispatch_blockers": ["requires_raft_flow_extraction"],
+                "notes": "CPU-only prep row",
+            }
+        ],
+    )
+
+    result = adapt_artifact_to_atoms(ledger_path, repo_root=tmp_path)
+    atoms = list(result.atoms)
+
+    assert result.source_format == "bilevel_atom_ledger_jsonl"
+    assert result.score_claim is False
+    assert result.ready_for_exact_eval_dispatch is False
+    assert len(atoms) == 1
+    atom = atoms[0]
+    assert atom["evidence_grade"] == "[CPU-prep]"
+    assert atom["archive_bytes"] == 7262
+    assert atom["source_artifact_bytes"] == 7262
+    assert atom["score_claim"] is False
+    assert atom["byte_delta"] == 0
+    assert "missing_byte_delta_vs_anchor" in atom["dispatch_blockers"]
+    assert "requires_raft_flow_extraction" in atom["dispatch_blockers"]
+
+    field_ledger = build_atom_ledger(
+        atoms,
+        base_pose_dist=0.01,
+        source=str(ledger_path),
+    )
+    row = field_ledger["rows"][0]
+    assert row["score_claim"] is False
+    assert row["evidence_grade"] == "[CPU-prep]"
+    assert row["archive_bytes"] == 7262
+    assert row["source_artifact_bytes"] == 7262
+    assert "requires_raft_flow_extraction" in row["source_dispatch_blockers"]
+    assert "requires_raft_flow_extraction" in row["dispatch_blockers"]
+    assert "requires_exact_cuda_auth_eval" in row["exact_dispatch_blockers"]["blockers"]
+
+
+def test_candidate_packet_manifest_adapts_selected_target_atom_template(
+    tmp_path: pathlib.Path,
+) -> None:
+    packet_path = tmp_path / "candidate_packet.json"
+    packet_path.write_text(
+        json.dumps(
+            {
+                "score_claim": False,
+                "score_evidence_grade": "invalid",
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_blockers": ["requires_lane_dispatch_claim_before_gpu"],
+                "missing_artifacts": ["candidate_archive_manifest_with_member_sha256s"],
+                "audit_summary": {"total_actual_bytes": 221381},
+                "selected_target": {
+                    "row": {
+                        "label": "public_pr106:hdc2",
+                        "actual_bytes": 221381,
+                        "target_bytes": 40840,
+                        "dispatch_blockers": ["requires_roundtrip_decode_validation"],
+                        "meta_lagrangian_atom_export": {
+                            "export_blockers": [
+                                "planning_target_not_byte_closed_candidate",
+                                "missing_archive_manifest_path",
+                            ],
+                            "atom_template": {
+                                "atom_id": "public_pr106_hdc2:known_model_overhead",
+                                "family": "hnerv_known_model_overhead",
+                                "family_group": "hnerv_rate_equivalent_recode",
+                                "pareto_scope": "hnerv_rate_equivalent_recode:public_pr106_hdc2",
+                                "byte_delta": -40840,
+                                "confidence": 0.0,
+                                "evidence_grade": (
+                                    "invalid_planning_target_until_byte_equivalent_candidate"
+                                ),
+                                "expected_seg_dist_delta": 0.0,
+                                "expected_pose_dist_delta": 0.0,
+                                "raw_equal": False,
+                                "score_claim": False,
+                                "target_bytes": 40840,
+                                "interaction_assumptions": [
+                                    "rate_only_decoded_output_equivalence_required"
+                                ],
+                            },
+                        },
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = adapt_artifact_to_atoms(packet_path, repo_root=tmp_path)
+    atom = result.atoms[0]
+
+    assert result.source_format == "candidate_packet_manifest_json"
+    assert atom["byte_delta"] == -40840
+    assert atom["source_artifact_bytes"] == 221381
+    assert atom["target_bytes"] == 40840
+    assert atom["score_claim"] is False
+    assert "requires_roundtrip_decode_validation" in atom["dispatch_blockers"]
+    assert "planning_target_not_byte_closed_candidate" in atom["dispatch_blockers"]
+    assert search_candidates_from_atoms(result.atoms) == []
+
+    field_ledger = build_atom_ledger(
+        result.atoms,
+        base_pose_dist=0.01,
+        source=str(packet_path),
+    )
+    row = field_ledger["rows"][0]
+    assert row["score_claim"] is False
+    assert row["source_artifact_bytes"] == 221381
+    assert row["evidence_grade"] == (
+        "invalid_planning_target_until_byte_equivalent_candidate"
+    )
+    assert "planning_target_not_byte_closed_candidate" in row["dispatch_blockers"]
+
+
+def test_search_cli_reuses_candidates_json_for_jsonl_adapter(
+    tmp_path: pathlib.Path,
+) -> None:
+    mod = _load_search_cli_module()
+    ledger_path = tmp_path / "bilevel_atom_ledger.jsonl"
+    _write_ledger(
+        ledger_path,
+        [
+            {
+                "phase": 8,
+                "candidate_id": "jsonl_projectable",
+                "evidence_grade": "[CPU-prep]",
+                "archive_bytes": 185000,
+                "archive_sha256": "a" * 64,
+                "byte_delta": -10,
+                "rel_err_pct": 0.25,
+                "n_layers": 13,
+                "cathedral_op": "Op_Test",
+            }
+        ],
+    )
+
+    candidates, adapter_report = mod._load_candidates_from_path(ledger_path)
+
+    assert adapter_report["source_format"] == "bilevel_atom_ledger_jsonl"
+    assert adapter_report["score_claim"] is False
+    assert adapter_report["ready_for_exact_eval_dispatch"] is False
+    assert adapter_report["atom_count"] == 1
+    assert candidates == [
+        {
+            "candidate_id": "jsonl_projectable",
+            "archive_bytes": 185000,
+            "rel_err_pct": 0.25,
+            "n_layers": 13,
+            "lane_class": "bilevel_atom_ledger",
+        }
+    ]
 
 
 def test_read_ledger_handles_missing_file(tmp_path: pathlib.Path) -> None:
