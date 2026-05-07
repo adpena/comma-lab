@@ -474,6 +474,8 @@ def _hpm1_runtime_consumer_proof_report(
         blockers.append("runtime_execution_proof_hpm1_hpac_model_load_not_proven")
     if not expected_fail_closed_exit:
         blockers.append("runtime_execution_proof_hpm1_fail_closed_exit_not_proven")
+    if not full_decode_reencode_parity_proven:
+        blockers.append("runtime_execution_proof_hpm1_full_decode_reencode_parity_not_proven")
 
     summary["accepted"] = not blockers
     summary["blockers"] = blockers
@@ -551,6 +553,9 @@ def _decode_reencode_parity_report(
             blockers.append("decode_reencode_payload_member_charged_sha256_mismatch")
     if report.get("payload_member_sha256") != payload_sha:
         blockers.append("decode_reencode_payload_member_sha256_mismatch")
+    hpm1_payload = isinstance(payload_raw, bytes) and payload_raw.startswith(HPM1_PAYLOAD_MAGIC)
+    summary["hpm1_payload"] = hpm1_payload
+    summary["hpm1_full_decode_600_frames"] = False
 
     full_decode = report.get("full_decode")
     full_decode_proven = isinstance(full_decode, dict) and full_decode.get("passed") is True
@@ -562,6 +567,10 @@ def _decode_reencode_parity_report(
         summary["decoded_frame_count"] = frame_count if isinstance(frame_count, int) else None
         if not isinstance(frame_count, int) or frame_count <= 0:
             blockers.append("decode_reencode_full_decode_frame_count_invalid")
+        if hpm1_payload:
+            summary["hpm1_full_decode_600_frames"] = frame_count == 600
+            if frame_count != 600:
+                blockers.append("decode_reencode_hpm1_full_decode_frame_count_not_600")
         decoded_sha = full_decode.get("decoded_masks_sha256", full_decode.get("decoded_payload_sha256"))
         summary["decoded_masks_sha256"] = decoded_sha if isinstance(decoded_sha, str) else ""
         if not _is_sha256(decoded_sha):
@@ -573,7 +582,13 @@ def _decode_reencode_parity_report(
     if not reencode_proven:
         blockers.append("decode_reencode_byte_exact_reencode_not_proven")
     else:
-        reencoded_sha = reencode.get("reencoded_payload_sha256", reencode.get("reencoded_member_sha256"))
+        reencoded_sha = reencode.get(
+            "reencoded_payload_sha256",
+            reencode.get(
+                "reencoded_member_sha256",
+                reencode.get("reencoded_hpm1_sha256"),
+            ),
+        )
         summary["reencoded_payload_sha256"] = reencoded_sha if isinstance(reencoded_sha, str) else ""
         if reencode.get("byte_exact") is not True:
             blockers.append("decode_reencode_byte_exact_flag_not_true")
@@ -609,6 +624,10 @@ def _decode_reencode_parity_report(
             proof_frame_count = proof_full_decode.get("frame_count")
             if not isinstance(proof_frame_count, int) or proof_frame_count <= 0:
                 proof_blockers.append("decode_reencode_independent_proof_full_decode_frame_count_invalid")
+            if hpm1_payload and proof_frame_count != 600:
+                proof_blockers.append(
+                    "decode_reencode_independent_proof_hpm1_full_decode_frame_count_not_600"
+                )
             proof_decoded_sha = proof_full_decode.get(
                 "decoded_masks_sha256",
                 proof_full_decode.get("decoded_payload_sha256"),
@@ -622,7 +641,10 @@ def _decode_reencode_parity_report(
         else:
             proof_reencoded_sha = proof_reencode.get(
                 "reencoded_payload_sha256",
-                proof_reencode.get("reencoded_member_sha256"),
+                proof_reencode.get(
+                    "reencoded_member_sha256",
+                    proof_reencode.get("reencoded_hpm1_sha256"),
+                ),
             )
             if proof_reencode.get("byte_exact") is not True:
                 proof_blockers.append("decode_reencode_independent_proof_byte_exact_flag_not_true")

@@ -279,6 +279,43 @@ def _minimal_hpm1_payload() -> bytes:
     )
 
 
+def _replace_with_hpm1_payload(candidate: dict) -> str:
+    hpm1_payload = _minimal_hpm1_payload()
+    _replace_charged_archive_member(
+        candidate,
+        member_name="categorical_payload.bin",
+        raw=hpm1_payload,
+    )
+    payload_sha = sha256_bytes(hpm1_payload)
+    class_codebook_sha = next(
+        record["sha256"]
+        for record in candidate["charged_members"]
+        if record["name"] == "class_codebook.json"
+    )
+    label_prior_payload_manifest = json.dumps(
+        build_categorical_label_prior_payload_manifest(
+            source_archive_sha256=candidate["source_archive_sha256"],
+            payload_member="categorical_payload.bin",
+            payload_member_sha256=payload_sha,
+            class_codebook_member="class_codebook.json",
+            class_codebook_sha256=class_codebook_sha,
+            conditioning_priors=candidate["conditioning_priors"],
+        ),
+        indent=2,
+        sort_keys=True,
+    ).encode("utf-8") + b"\n"
+    _replace_charged_archive_member(
+        candidate,
+        member_name=LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER,
+        raw=label_prior_payload_manifest,
+    )
+    candidate["decode_reencode_parity"]["payload_member_sha256"] = payload_sha
+    candidate["decode_reencode_parity"]["byte_exact_reencode"][
+        "reencoded_payload_sha256"
+    ] = payload_sha
+    return payload_sha
+
+
 def _hpm1_semantic_parity_fail_closed(
     *,
     payload_sha: str,
@@ -441,6 +478,48 @@ def _attach_complete_dispatch_proofs(candidate: dict, tmp_path: Path) -> None:
     }
 
 
+def _set_decode_reencode_frame_count(
+    candidate: dict,
+    tmp_path: Path,
+    *,
+    frame_count: int,
+) -> None:
+    candidate["decode_reencode_parity"]["full_decode"]["frame_count"] = frame_count
+    proof_path = tmp_path / "decode_reencode_independent_proof.json"
+    proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    proof["full_decode"]["frame_count"] = frame_count
+    write_json(proof_path, proof)
+    candidate["decode_reencode_parity"]["independent_proof_artifact"] = {
+        "path": proof_path.name,
+        "bytes": proof_path.stat().st_size,
+        "sha256": sha256_file(proof_path),
+    }
+
+
+def _attach_hpm1_runtime_report_summary(
+    candidate: dict,
+    tmp_path: Path,
+    *,
+    full_decode_reencode_parity_proven: bool,
+) -> None:
+    proof_path = tmp_path / "runtime_execution_independent_proof.json"
+    proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    proof["expected_fail_closed_exit"] = True
+    proof["runtime_report_summary"] = {
+        "kind": "categorical_charged_runtime_consumer_report",
+        "payload_codec": "HPM1",
+        "hpm1_structural_reencode_passed": True,
+        "hpm1_hpac_model_load_passed": True,
+        "full_decode_reencode_parity_proven": full_decode_reencode_parity_proven,
+    }
+    write_json(proof_path, proof)
+    candidate["runtime_loader_parity"]["runtime_execution_proof"] = {
+        "path": proof_path.name,
+        "bytes": proof_path.stat().st_size,
+        "sha256": sha256_file(proof_path),
+    }
+
+
 def test_audit_categorical_candidate_manifest_fails_closed_on_self_attested_parity(
     tmp_path: Path,
 ) -> None:
@@ -522,17 +601,7 @@ def test_audit_categorical_candidate_manifest_requires_hpm1_runtime_consumer_sum
     tmp_path: Path,
 ) -> None:
     candidate = _base_candidate(tmp_path)
-    hpm1_payload = _minimal_hpm1_payload()
-    _replace_charged_archive_member(
-        candidate,
-        member_name="categorical_payload.bin",
-        raw=hpm1_payload,
-    )
-    payload_sha = sha256_bytes(hpm1_payload)
-    candidate["decode_reencode_parity"]["payload_member_sha256"] = payload_sha
-    candidate["decode_reencode_parity"]["byte_exact_reencode"][
-        "reencoded_payload_sha256"
-    ] = payload_sha
+    _replace_with_hpm1_payload(candidate)
     _attach_complete_dispatch_proofs(candidate, tmp_path)
 
     manifest = audit_categorical_candidate_manifest(
@@ -550,6 +619,70 @@ def test_audit_categorical_candidate_manifest_requires_hpm1_runtime_consumer_sum
     assert (
         "runtime_execution_proof_hpm1_runtime_report_summary_missing"
         in manifest["dispatch_blockers"]
+    )
+
+
+def test_audit_categorical_candidate_manifest_rejects_hpm1_one_frame_decode_reencode_fixture(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    _replace_with_hpm1_payload(candidate)
+    _attach_complete_dispatch_proofs(candidate, tmp_path)
+    _attach_hpm1_runtime_report_summary(
+        candidate,
+        tmp_path,
+        full_decode_reencode_parity_proven=True,
+    )
+
+    manifest = audit_categorical_candidate_manifest(
+        candidate,
+        repo_root=REPO,
+        manifest_dir=tmp_path,
+    )
+    blockers = set(manifest["dispatch_blockers"])
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["decode_reencode_parity"]["hpm1_payload"] is True
+    assert manifest["decode_reencode_parity"]["hpm1_full_decode_600_frames"] is False
+    assert "decode_reencode_hpm1_full_decode_frame_count_not_600" in blockers
+    assert (
+        "decode_reencode_independent_proof_hpm1_full_decode_frame_count_not_600"
+        in blockers
+    )
+
+
+def test_audit_categorical_candidate_manifest_rejects_hpm1_runtime_without_full_decode_reencode(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    _replace_with_hpm1_payload(candidate)
+    _attach_complete_dispatch_proofs(candidate, tmp_path)
+    _set_decode_reencode_frame_count(candidate, tmp_path, frame_count=600)
+    _attach_hpm1_runtime_report_summary(
+        candidate,
+        tmp_path,
+        full_decode_reencode_parity_proven=False,
+    )
+
+    manifest = audit_categorical_candidate_manifest(
+        candidate,
+        repo_root=REPO,
+        manifest_dir=tmp_path,
+    )
+    blockers = set(manifest["dispatch_blockers"])
+    runtime_proof = manifest["runtime_loader_parity"]["runtime_execution_proof"]
+    hpm1_runtime = runtime_proof["hpm1_runtime_consumer_proof"]
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["decode_reencode_parity"]["accepted"] is True
+    assert manifest["decode_reencode_parity"]["hpm1_full_decode_600_frames"] is True
+    assert manifest["exact_eval_dispatch_requirements"]["accepted"] is True
+    assert runtime_proof["accepted"] is False
+    assert hpm1_runtime["accepted"] is False
+    assert hpm1_runtime["full_decode_reencode_parity_proven"] is False
+    assert (
+        "runtime_execution_proof_hpm1_full_decode_reencode_parity_not_proven"
+        in blockers
     )
 
 

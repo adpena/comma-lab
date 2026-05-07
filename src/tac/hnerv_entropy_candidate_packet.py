@@ -100,6 +100,16 @@ HDC2_STREAM_ARTIFACT_REQUIREMENTS = {
     ),
     "old_new_model_context_table_diff": "old_new_model_context_table_diff",
 }
+HDC2_RUNTIME_DECODER_CONTRACT_REQUIREMENT_ID = (
+    "hdc2_runtime_decoder_contract_with_inflate_consumer"
+)
+HDC2_ARCHIVE_CANDIDATE_CONTRACT_REQUIREMENT_ID = (
+    "hdc2_archive_candidate_manifest_with_decoder_stream_consumed"
+)
+HDC2_DIRECT_ARCHIVE_RUNTIME_REQUIREMENTS = [
+    HDC2_RUNTIME_DECODER_CONTRACT_REQUIREMENT_ID,
+    HDC2_ARCHIVE_CANDIDATE_CONTRACT_REQUIREMENT_ID,
+]
 
 
 class HnervEntropyCandidatePacketError(ValueError):
@@ -576,6 +586,8 @@ def build_hdc2_stream_byte_equivalence_work_product(
         "old_new_model_context_table_diff": old_new_context_diff,
         "bounded_hdc2_recode_variants": bounded_hdc2_recode_variants,
         "remaining_blockers": [
+            "hdc2_runtime_decoder_contract_with_inflate_consumer_missing",
+            "hdc2_archive_candidate_manifest_with_decoder_stream_consumed_missing",
             "candidate_archive_manifest_missing",
             "strict_pre_submission_compliance_json_missing",
             "meta_lagrangian_atom_export_missing",
@@ -1208,7 +1220,9 @@ def _adapted_target_row(
         "accounting_source": accounting_source,
         "target_action": action["target_action"],
         "required_next_artifact": action["required_next_artifact"],
-        "exact_next_artifact_requirements": _exact_next_artifact_requirements(target_kind),
+        "exact_next_artifact_requirements": _hdc2_exact_next_artifact_requirements(
+            target_kind
+        ),
         "byte_equivalence_blockers": list(BYTE_EQUIVALENCE_BLOCKERS),
         "actual_bytes": actual_bytes,
         "entropy_floor_bytes": entropy_floor_bytes,
@@ -1223,6 +1237,9 @@ def _adapted_target_row(
             "sha256": hdc2.get("sha256"),
         },
         "readiness_stage": "planning_target_requires_byte_equivalent_artifacts",
+        "hdc2_direct_archive_runtime_requirements": list(
+            HDC2_DIRECT_ARCHIVE_RUNTIME_REQUIREMENTS
+        ),
         "planning_only": True,
         "score_claim": False,
         "dispatch_attempted": False,
@@ -1276,6 +1293,15 @@ def _exact_next_artifact_requirements(target_kind: str) -> list[str]:
             action["required_next_artifact"],
             *TARGET_KIND_ARTIFACT_REQUIREMENTS[target_kind],
             *COMMON_EXACT_NEXT_ARTIFACT_REQUIREMENTS,
+        ]
+    )
+
+
+def _hdc2_exact_next_artifact_requirements(target_kind: str) -> list[str]:
+    return _unique_ordered(
+        [
+            *_exact_next_artifact_requirements(target_kind),
+            *HDC2_DIRECT_ARCHIVE_RUNTIME_REQUIREMENTS,
         ]
     )
 
@@ -1748,6 +1774,10 @@ def _validate_requirement_artifact(requirement_id: str, payload: Any) -> dict[st
         blockers.extend(_validate_static_context_reduction(payload, requirement_id))
     elif requirement_id == "old_new_model_context_table_diff":
         blockers.extend(_validate_old_new_context_table_diff(payload, requirement_id))
+    elif requirement_id == HDC2_RUNTIME_DECODER_CONTRACT_REQUIREMENT_ID:
+        blockers.extend(_validate_hdc2_runtime_decoder_contract(payload, requirement_id))
+    elif requirement_id == HDC2_ARCHIVE_CANDIDATE_CONTRACT_REQUIREMENT_ID:
+        blockers.extend(_validate_hdc2_archive_candidate_contract(payload, requirement_id))
     else:
         blockers.append(f"{requirement_id}:no_requirement_validator")
     return {
@@ -1983,6 +2013,65 @@ def _validate_old_new_context_table_diff(
     return blockers
 
 
+def _validate_hdc2_runtime_decoder_contract(
+    payload: Mapping[str, Any],
+    requirement_id: str,
+) -> list[str]:
+    blockers: list[str] = []
+    if payload.get("contract") != "hnerv_hdc2_runtime_decoder_contract_v1":
+        blockers.append(f"{requirement_id}:contract_unexpected")
+    if payload.get("decoder_magic") != "HDC2":
+        blockers.append(f"{requirement_id}:decoder_magic_not_hdc2")
+    for key in (
+        "runtime_consumes_hdc2_decoder_section",
+        "decoder_contract_closed",
+        "inflate_consumer_integrated",
+        "raw_decoder_equivalence_proven",
+    ):
+        if payload.get(key) is not True:
+            blockers.append(f"{requirement_id}:{key}_not_true")
+    blockers.extend(_require_sha_field(payload, "source_decoder_raw_sha256", requirement_id))
+    blockers.extend(_require_sha_field(payload, "candidate_decoder_raw_sha256", requirement_id))
+    if str(payload.get("source_decoder_raw_sha256") or "") != str(
+        payload.get("candidate_decoder_raw_sha256") or ""
+    ):
+        blockers.append(f"{requirement_id}:decoder_raw_sha256_mismatch")
+    return blockers
+
+
+def _validate_hdc2_archive_candidate_contract(
+    payload: Mapping[str, Any],
+    requirement_id: str,
+) -> list[str]:
+    blockers: list[str] = []
+    if payload.get("contract") != "hnerv_hdc2_archive_candidate_manifest_v1":
+        blockers.append(f"{requirement_id}:contract_unexpected")
+    if payload.get("candidate_variant") != HDC2_VARIANT_NAME:
+        blockers.append(f"{requirement_id}:candidate_variant_not_hdc2")
+    for key in (
+        "archive_build_gate",
+        "byte_different_archive",
+        "candidate_decoder_section_is_hdc2",
+        "runtime_consumes_candidate_decoder",
+    ):
+        if payload.get(key) is not True:
+            blockers.append(f"{requirement_id}:{key}_not_true")
+    for key in (
+        "candidate_archive_sha256",
+        "candidate_payload_sha256",
+        "candidate_decoder_section_sha256",
+        "source_archive_sha256",
+    ):
+        blockers.extend(_require_sha_field(payload, key, requirement_id))
+    for key in (
+        "candidate_archive_bytes",
+        "candidate_payload_bytes",
+        "candidate_decoder_section_bytes",
+    ):
+        blockers.extend(_require_positive_int_field(payload, key, requirement_id))
+    return blockers
+
+
 def _validate_meta_lagrangian_atom_manifest(
     payload: Mapping[str, Any],
     requirement_id: str,
@@ -2148,6 +2237,9 @@ __all__ = [
     "ADAPTED_AUDIT_TOOL_NAME",
     "BLOCKER_TO_REQUIREMENT",
     "DISCOVERY_REQUIRED_SOURCE_ARTIFACTS",
+    "HDC2_ARCHIVE_CANDIDATE_CONTRACT_REQUIREMENT_ID",
+    "HDC2_DIRECT_ARCHIVE_RUNTIME_REQUIREMENTS",
+    "HDC2_RUNTIME_DECODER_CONTRACT_REQUIREMENT_ID",
     "HDC2_STREAM_ARTIFACT_REQUIREMENTS",
     "HDC2_STREAM_WORK_PRODUCT_TOOL_NAME",
     "PACKET_DISPATCH_BLOCKERS",
