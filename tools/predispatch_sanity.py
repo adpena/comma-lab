@@ -51,6 +51,7 @@ from tac.repo_io import json_line, json_text, read_json, sha256_file  # noqa: E4
 
 DEFAULT_ANCHORS_DIR = REPO_ROOT / ".omx" / "calibration"
 OVERRIDE_LOG = REPO_ROOT / ".omx" / "state" / "predispatch_overrides.log"
+CONTEST_ORIGINAL_BYTES = 37_545_489
 APOGEE_ALLOWED_EVIDENCE_SEMANTICS = {
     "contest_faithful_distortion_model",
     "scorer_basin_parity_gate",
@@ -119,8 +120,16 @@ def _gate_sanity_lossy_vs_lossless(
     predicted_high: float,
     rel_err_pct: float,
     anchors: list[CalibrationAnchor],
+    archive_path: Path,
+    evidence_json_path: Path | None,
 ) -> GateResult:
-    """Gate 2: predicted band must respect lossy-cannot-beat-lossless invariant."""
+    """Gate 2: predicted band must respect the rate-distortion lower bound.
+
+    A lossy candidate can beat a lossless baseline if it spends fewer charged
+    bytes and has exact-byte non-proxy evidence that scorer-visible distortion
+    stays inside the trusted basin. It cannot beat the baseline by more than
+    the official rate-term delta without claiming distortion improvement.
+    """
     if rel_err_pct == 0.0:
         return GateResult(
             name="sanity_lossy_vs_lossless",
@@ -136,13 +145,45 @@ def _gate_sanity_lossy_vs_lossless(
             confidence="low",
         )
     lossless_score = lossless[0].contest_cuda_score
+    lossless_bytes = lossless[0].archive_bytes
     if predicted_high < lossless_score:
+        candidate_bytes = archive_path.stat().st_size
+        official_rate_delta = 25.0 * (candidate_bytes - lossless_bytes) / CONTEST_ORIGINAL_BYTES
+        rate_only_floor = lossless_score + official_rate_delta
+        if candidate_bytes < lossless_bytes and predicted_high >= rate_only_floor - 1e-12:
+            evidence_gate = _validate_non_proxy_readiness_evidence(
+                archive_path=archive_path,
+                evidence_json_path=evidence_json_path,
+                gate_name="sanity_lossy_vs_lossless",
+            )
+            if evidence_gate.passed:
+                return GateResult(
+                    name="sanity_lossy_vs_lossless",
+                    passed=True,
+                    detail=(
+                        f"predicted_high={predicted_high:.4f} < lossless baseline "
+                        f"{lossless_score:.4f}, but candidate is {lossless_bytes - candidate_bytes} "
+                        "charged bytes smaller; official rate-only floor is "
+                        f"{rate_only_floor:.4f}, and {evidence_gate.detail}"
+                    ),
+                )
+            return GateResult(
+                name="sanity_lossy_vs_lossless",
+                passed=False,
+                detail=(
+                    f"lossy predicted_high={predicted_high:.4f} is below lossless baseline "
+                    f"{lossless_score:.4f} only within the official rate-only floor "
+                    f"{rate_only_floor:.4f}, but exact-byte non-proxy readiness evidence "
+                    f"is missing or invalid: {evidence_gate.detail}"
+                ),
+            )
         return GateResult(
             name="sanity_lossy_vs_lossless",
             passed=False,
             detail=(
                 f"predicted_high={predicted_high:.4f} < lossless baseline {lossless_score:.4f}. "
-                "A lossy compression cannot strictly improve every component; this band is incoherent."
+                "A lossy candidate can beat lossless only by the official rate-term delta "
+                "and only with exact-byte non-proxy evidence that distortion stays in basin."
             ),
         )
     return GateResult(
@@ -444,7 +485,14 @@ def predispatch_sanity(
 
     gates = [
         _gate_anchors_sufficient(lane_class, anchors_dir),
-        _gate_sanity_lossy_vs_lossless(predicted_low, predicted_high, rel_err_pct, anchors),
+        _gate_sanity_lossy_vs_lossless(
+            predicted_low,
+            predicted_high,
+            rel_err_pct,
+            anchors,
+            archive_path,
+            readiness_evidence_json,
+        ),
         _gate_distortion_proxy(
             rel_err_pct=rel_err_pct,
             distortion_proxy_was_run=distortion_proxy_was_run,
