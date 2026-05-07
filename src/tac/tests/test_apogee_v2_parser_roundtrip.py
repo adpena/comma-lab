@@ -18,7 +18,6 @@ import zipfile
 from pathlib import Path
 
 import pytest
-import torch
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PR106_ARCHIVE = REPO_ROOT / (
@@ -32,12 +31,15 @@ APOGEE_V2_INFLATE_DIR = REPO_ROOT / "submissions/apogee_v2"
 
 def _load_apogee_v2_parser():
     sys.path.insert(0, str(APOGEE_V2_INFLATE_DIR))
+    sys.modules.pop("inflate", None)
+    sys.modules.pop("codec", None)
     from inflate import parse_apogee_v2_archive  # type: ignore[import-not-found]
     return parse_apogee_v2_archive
 
 
 def _load_pr106_parser():
     sys.path.insert(0, str(REPO_ROOT / "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/src"))
+    sys.modules.pop("codec", None)
     from codec import parse_packed_archive  # type: ignore[import-not-found]
     return parse_packed_archive
 

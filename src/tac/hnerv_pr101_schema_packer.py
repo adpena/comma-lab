@@ -38,6 +38,15 @@ VARIANT_NAME = "pr101_schema_split_brotli_f32_scale_raw_equal"
 FP16_SCALE_PROBE_VARIANT_NAME = "pr101_schema_split_brotli_fp16_scale_runtime_probe"
 LEGACY_BROTLI_QUALITY = 10
 RUNTIME_DECODER_ADAPTER_CONTRACT = "pr101_schema_runtime_decoder_section_adapter_v1"
+RUNTIME_DECODER_INTEGRATION_TARGETS = (
+    "submissions/pr106_latent_sidecar/src/codec.py",
+    "submissions/apogee_v2/src/codec.py",
+)
+RUNTIME_DECODER_PATCH_SENTINELS = (
+    "def decode_pr101_schema_decoder_raw",
+    "decode_pr101_schema_decoder_raw(data, legacy_error=legacy_error)",
+    "def decompress_concatenated_brotli_streams",
+)
 
 DECODER_STORAGE_ORDER = (
     14, 22, 7, 6, 19, 10, 25, 4, 20, 9, 12, 15, 5, 11,
@@ -451,11 +460,13 @@ def build_pr101_schema_archive_candidate(
             and parse_ff_packed_brotli_hnerv(candidate_payload).latents_and_sidecar_brotli
             == packed.latents_and_sidecar_brotli
         ),
+        repo_root=repo,
     )
     runtime_decoder_adapter = _runtime_decoder_section_adapter_report(
         source_decoder_section=packed.decoder_packed_brotli,
         candidate_decoder_section=stream,
         candidate_decoder_raw_equal=raw_equal,
+        repo_root=repo,
     )
     fp16_probe_delta = len(fp16_probe_stream) - len(packed.decoder_packed_brotli)
     dispatch_blockers = list(
@@ -748,6 +759,7 @@ def _runtime_adapter_blocker_report(
     candidate_payload: bytes,
     candidate_decoder_raw_equal: bool,
     candidate_latents_preserved: bool,
+    repo_root: Path,
 ) -> dict[str, Any]:
     source_restored, source_proof = restore_pr101_schema_payload_to_legacy_brotli(source_payload)
     candidate_proof: dict[str, Any] = {
@@ -771,11 +783,13 @@ def _runtime_adapter_blocker_report(
         == candidate_proof.get("latents_and_sidecar_input_sha256")
         and candidate_proof.get("ready_for_public_runtime_inflate") is True
     )
+    submission_runtime_patch_status = _submission_runtime_decoder_adapter_status(repo_root)
     dispatch_blockers = [
-        "pr101_schema_submission_runtime_adapter_not_integrated",
         "pr101_schema_runtime_tree_parity_manifest_missing",
         "pr101_schema_inflate_output_parity_missing",
     ]
+    if not submission_runtime_patch_status["all_targets_patched"]:
+        dispatch_blockers.insert(0, "pr101_schema_submission_runtime_adapter_not_integrated")
     if not candidate_payload:
         dispatch_blockers.insert(0, "pr101_schema_candidate_archive_not_materialized")
     if bool(candidate_payload) and not adapter_parity_closed:
@@ -799,7 +813,8 @@ def _runtime_adapter_blocker_report(
         ),
         "schema_payload_adapter_parity_closed": adapter_parity_closed,
         "ready_for_public_runtime_inflate": adapter_parity_closed,
-        "submission_runtime_integrated": False,
+        "submission_runtime_integrated": submission_runtime_patch_status["all_targets_patched"],
+        "submission_runtime_patch_status": submission_runtime_patch_status,
         "runtime_tree_parity_manifest_present": False,
         "ready_for_exact_eval_dispatch": False,
         "dispatch_blockers": dispatch_blockers,
@@ -811,6 +826,7 @@ def _runtime_decoder_section_adapter_report(
     source_decoder_section: bytes,
     candidate_decoder_section: bytes,
     candidate_decoder_raw_equal: bool,
+    repo_root: Path,
 ) -> dict[str, Any]:
     source_raw = b""
     candidate_raw = b""
@@ -852,13 +868,19 @@ def _runtime_decoder_section_adapter_report(
     )
     if not adapter_code_path_ready:
         blockers.append("pr101_schema_runtime_decoder_adapter_not_closed")
+    submission_runtime_patch_status = _submission_runtime_decoder_adapter_status(repo_root)
     integration_blockers = [
         *blockers,
-        "pr101_schema_submission_runtime_adapter_not_integrated",
-        "pr101_schema_submission_runtime_callsite_not_patched",
         "pr101_schema_runtime_tree_parity_manifest_missing",
         "pr101_schema_inflate_output_parity_missing",
     ]
+    if not submission_runtime_patch_status["all_targets_patched"]:
+        integration_blockers.extend(
+            [
+                "pr101_schema_submission_runtime_adapter_not_integrated",
+                "pr101_schema_submission_runtime_callsite_not_patched",
+            ]
+        )
     return {
         "schema_version": SCHEMA_VERSION,
         "contract": RUNTIME_DECODER_ADAPTER_CONTRACT,
@@ -878,16 +900,49 @@ def _runtime_decoder_section_adapter_report(
         "candidate_decoder_raw_equal_to_source": candidate_raw_equal_to_source,
         "adapter_code_path_ready": adapter_code_path_ready,
         "ready_for_runtime_callsite_patch": adapter_code_path_ready,
-        "runtime_patch_owned_by_this_turn": False,
-        "submission_runtime_patch_applied": False,
+        "runtime_patch_owned_by_this_turn": submission_runtime_patch_status["all_targets_patched"],
+        "submission_runtime_patch_applied": submission_runtime_patch_status["all_targets_patched"],
+        "submission_runtime_patch_status": submission_runtime_patch_status,
         "runtime_tree_parity_manifest_present": False,
         "inflate_output_parity_present": False,
         "ready_for_exact_eval_dispatch": False,
-        "integration_targets": [
-            "submissions/pr106_latent_sidecar/src/codec.py::decode_packed_decoder",
-            "submissions/apogee_v2/src/codec.py::decode_packed_decoder",
-        ],
+        "integration_targets": list(RUNTIME_DECODER_INTEGRATION_TARGETS),
         "integration_blockers": list(dict.fromkeys(integration_blockers)),
+    }
+
+
+def _submission_runtime_decoder_adapter_status(repo_root: Path) -> dict[str, Any]:
+    rows: list[dict[str, Any]] = []
+    for relative in RUNTIME_DECODER_INTEGRATION_TARGETS:
+        path = repo_root / relative
+        if not path.is_file():
+            rows.append(
+                {
+                    "path": relative,
+                    "exists": False,
+                    "patched": False,
+                    "missing_sentinels": list(RUNTIME_DECODER_PATCH_SENTINELS),
+                    "sha256": "",
+                    "bytes": None,
+                }
+            )
+            continue
+        text = path.read_text()
+        missing = [sentinel for sentinel in RUNTIME_DECODER_PATCH_SENTINELS if sentinel not in text]
+        rows.append(
+            {
+                "path": relative,
+                "exists": True,
+                "patched": not missing,
+                "missing_sentinels": missing,
+                "sha256": sha256_file(path),
+                "bytes": path.stat().st_size,
+            }
+        )
+    return {
+        "contract": "pr101_schema_submission_runtime_patch_status_v1",
+        "targets": rows,
+        "all_targets_patched": all(row["patched"] for row in rows),
     }
 
 

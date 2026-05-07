@@ -182,14 +182,20 @@ def test_build_pr101_schema_archive_candidate_allows_forensic_archive_with_overr
     assert manifest["runtime_adapter_proof"]["candidate_legacy_decode_without_adapter"] is False
     assert manifest["runtime_adapter_proof"]["ready_for_public_runtime_inflate"] is True
     assert manifest["runtime_decoder_section_adapter"]["adapter_code_path_ready"] is True
-    assert manifest["runtime_decoder_section_adapter"]["submission_runtime_patch_applied"] is False
+    assert manifest["runtime_decoder_section_adapter"]["submission_runtime_patch_applied"] is True
+    assert (
+        manifest["runtime_decoder_section_adapter"]["submission_runtime_patch_status"][
+            "all_targets_patched"
+        ]
+        is True
+    )
     assert (
         manifest["runtime_decoder_section_adapter"]["candidate_decoder_adapter_proof"]["mode"]
         == "pr101_schema_split_brotli"
     )
     assert (
         "pr101_schema_submission_runtime_callsite_not_patched"
-        in manifest["runtime_decoder_section_adapter"]["integration_blockers"]
+        not in manifest["runtime_decoder_section_adapter"]["integration_blockers"]
     )
     expected_classification = (
         "stack_candidate"
@@ -198,7 +204,8 @@ def test_build_pr101_schema_archive_candidate_allows_forensic_archive_with_overr
     )
     assert manifest["hidden_gem_classification"]["classification"] == expected_classification
     assert manifest["hidden_gem_classification"]["runtime_adapter_payload_parity_closed"] is True
-    assert "pr101_schema_submission_runtime_adapter_not_integrated" in manifest["dispatch_blockers"]
+    assert "pr101_schema_submission_runtime_adapter_not_integrated" not in manifest["dispatch_blockers"]
+    assert "pr101_schema_runtime_tree_parity_manifest_missing" in manifest["dispatch_blockers"]
     assert "exact_cuda_auth_eval_missing" in manifest["dispatch_blockers"]
 
     candidate_archive = REPO / manifest["candidate_archive_path"]

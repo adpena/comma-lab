@@ -15,10 +15,10 @@ Round-trip verified bit-exact.
 """
 import io
 import struct
+
+import brotli
 import numpy as np
 import torch
-import brotli
-
 
 N_QUANT = 127
 
@@ -56,6 +56,36 @@ FIXED_STATE_SCHEMA = [
 
 
 PACKED_STATE_SCHEMA = sorted(FIXED_STATE_SCHEMA, key=lambda item: -int(np.prod(item[1])))
+DECODER_STORAGE_ORDER = (
+    14, 22, 7, 6, 19, 10, 25, 4, 20, 9, 12, 15, 5, 11,
+    18, 1, 21, 3, 27, 13, 2, 26, 24, 17, 16, 23, 8, 0,
+)
+DECODER_STREAM_ENDS = (1, 2, 22, 23, 26, 27, 28)
+CONV4_STORAGE_PERMS = {
+    2: (3, 0, 2, 1),
+    4: (3, 0, 2, 1),
+    6: (0, 1, 2, 3),
+    8: (3, 0, 1, 2),
+    10: (3, 0, 2, 1),
+    12: (3, 0, 1, 2),
+    14: (1, 0, 2, 3),
+    16: (3, 0, 2, 1),
+    18: (1, 0, 2, 3),
+    20: (0, 3, 2, 1),
+    22: (0, 3, 2, 1),
+    24: (0, 2, 3, 1),
+    26: (0, 1, 3, 2),
+}
+CONV4_INVERSE_PERMS = {
+    idx: tuple(int(value) for value in np.argsort(perm))
+    for idx, perm in CONV4_STORAGE_PERMS.items()
+}
+DECODER_BYTE_MAPS = {
+    9: "negzig",
+    14: "negzig",
+    20: "twos",
+    27: "off",
+}
 
 
 def decode_fixed_decoder(data):
@@ -77,7 +107,15 @@ def decode_fixed_decoder(data):
 
 def decode_packed_decoder(data):
     """Decode the packed fixed HNeRV state schema."""
-    raw = brotli.decompress(data)
+    try:
+        raw = brotli.decompress(data)
+    except brotli.error as legacy_error:
+        raw = decode_pr101_schema_decoder_raw(data, legacy_error=legacy_error)
+    return decode_packed_decoder_raw(raw)
+
+
+def decode_packed_decoder_raw(raw):
+    """Decode raw q-stream + f32-scale bytes into the packed fixed schema."""
     pos = 0
     quantized = []
     for _, shape in PACKED_STATE_SCHEMA:
@@ -93,6 +131,98 @@ def decode_packed_decoder(data):
         scale = struct.unpack_from("<f", raw, scales_pos + 4 * index)[0]
         sd[name] = torch.from_numpy(quantized[index].astype(np.float32).reshape(shape)) * scale
     return sd
+
+
+def decode_pr101_schema_decoder_raw(data, *, legacy_error=None):
+    """Decode PR101 schema-split decoder streams into PR106 packed raw bytes.
+
+    This is a fail-closed runtime adapter: legacy PR106 single-Brotli remains
+    the default path, and this fallback is used only when legacy Brotli decode
+    rejects the decoder section.
+    """
+    try:
+        schema_raw = decompress_concatenated_brotli_streams(data, len(DECODER_STREAM_ENDS))
+    except ValueError as exc:
+        prefix = "decoder section is neither legacy PR106 Brotli nor PR101 schema-split"
+        if legacy_error is not None:
+            prefix += f"; legacy_error={legacy_error}"
+        raise ValueError(f"{prefix}; schema_error={exc}") from exc
+
+    cursor = 0
+    records_by_name = {}
+    for fixed_index in DECODER_STORAGE_ORDER:
+        name, shape = FIXED_STATE_SCHEMA[fixed_index]
+        value_count = int(np.prod(shape))
+        mapped = np.frombuffer(
+            read_exact(schema_raw, cursor, value_count, f"{name}:q"),
+            dtype=np.uint8,
+        )
+        cursor += value_count
+        scale_f32 = read_exact(schema_raw, cursor, 4, f"{name}:scale")
+        cursor += 4
+        q_storage = decode_mapped_u8(mapped, DECODER_BYTE_MAPS.get(fixed_index, "zig"))
+        if len(shape) == 4:
+            storage_perm = CONV4_STORAGE_PERMS[fixed_index]
+            inverse_perm = CONV4_INVERSE_PERMS[fixed_index]
+            stored_shape = tuple(shape[index] for index in storage_perm)
+            q_original = np.transpose(q_storage.reshape(stored_shape), inverse_perm).copy()
+        else:
+            q_original = q_storage.reshape(shape)
+        records_by_name[name] = (q_original.reshape(-1), scale_f32)
+    if cursor != len(schema_raw):
+        raise ValueError("PR101 schema decoder has trailing raw bytes")
+
+    raw_parts = []
+    scale_parts = []
+    for name, shape in PACKED_STATE_SCHEMA:
+        record = records_by_name.get(name)
+        if record is None:
+            raise ValueError(f"missing decoded schema record: {name}")
+        q_original, scale_f32 = record
+        if q_original.size != int(np.prod(shape)):
+            raise ValueError(f"decoded schema shape mismatch for {name}")
+        raw_parts.append(zigzag_encode_i8(q_original.astype(np.int8)).tobytes())
+        scale_parts.append(scale_f32)
+    return b"".join(raw_parts + scale_parts)
+
+
+def decompress_concatenated_brotli_streams(payload, n_streams):
+    outputs = []
+    cursor = 0
+    for _ in range(n_streams):
+        decoder = brotli.Decompressor()
+        chunks = []
+        try:
+            while cursor < len(payload) and not decoder.is_finished():
+                chunks.append(decoder.process(payload[cursor:cursor + 1]))
+                cursor += 1
+        except brotli.error as exc:
+            raise ValueError("invalid PR101 schema Brotli stream") from exc
+        if not decoder.is_finished():
+            raise ValueError("truncated PR101 schema Brotli stream")
+        outputs.append(b"".join(chunks))
+    if cursor != len(payload):
+        raise ValueError("trailing PR101 schema Brotli stream bytes")
+    return b"".join(outputs)
+
+
+def decode_mapped_u8(values, byte_map):
+    if byte_map == "zig":
+        return zigzag_decode_u8(values)
+    if byte_map == "negzig":
+        return (-zigzag_decode_u8(values).astype(np.int16)).astype(np.int8)
+    if byte_map == "off":
+        return (values.astype(np.int16) - 128).astype(np.int8)
+    if byte_map == "twos":
+        return values.view(np.int8)
+    raise ValueError(f"unknown decoder byte map: {byte_map}")
+
+
+def read_exact(payload, cursor, size, label):
+    end = cursor + size
+    if end > len(payload):
+        raise ValueError(f"truncated PR101 schema decoder at {label}")
+    return payload[cursor:end]
 
 
 def decode_fixed_latents(data):
@@ -178,9 +308,11 @@ def encode_decoder(q_sd):
     buf.write(struct.pack("<I", len(q_sd)))
     for name, (q, scale, shape) in q_sd.items():
         nb = name.encode('utf-8')
-        buf.write(struct.pack("<I", len(nb))); buf.write(nb)
+        buf.write(struct.pack("<I", len(nb)))
+        buf.write(nb)
         buf.write(struct.pack("<I", len(shape)))
-        for s in shape: buf.write(struct.pack("<I", s))
+        for s in shape:
+            buf.write(struct.pack("<I", s))
         buf.write(struct.pack("<f", scale))
         buf.write(struct.pack("<I", q.size))
         buf.write(zigzag_encode_i8(q).tobytes())
@@ -277,9 +409,12 @@ def build_archive(decoder_state_dict, latents, meta_dict):
     latents_brotli = brotli.compress(latents_payload, quality=11)
 
     out = io.BytesIO()
-    out.write(struct.pack("<I", len(meta_brotli))); out.write(meta_brotli)
-    out.write(struct.pack("<I", len(decoder_blob))); out.write(decoder_blob)
-    out.write(struct.pack("<I", len(latents_brotli))); out.write(latents_brotli)
+    out.write(struct.pack("<I", len(meta_brotli)))
+    out.write(meta_brotli)
+    out.write(struct.pack("<I", len(decoder_blob)))
+    out.write(decoder_blob)
+    out.write(struct.pack("<I", len(latents_brotli)))
+    out.write(latents_brotli)
     return out.getvalue()
 
 

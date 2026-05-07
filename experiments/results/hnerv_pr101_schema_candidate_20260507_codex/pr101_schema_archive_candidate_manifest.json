@@ -20,10 +20,8 @@
   },
   "dispatch_attempted": false,
   "dispatch_blockers": [
-    "pr101_schema_submission_runtime_adapter_not_integrated",
     "pr101_schema_runtime_tree_parity_manifest_missing",
     "pr101_schema_inflate_output_parity_missing",
-    "pr101_schema_submission_runtime_callsite_not_patched",
     "strict_pre_submission_compliance_json_missing",
     "lane_dispatch_claim_missing",
     "exact_cuda_auth_eval_missing"
@@ -669,10 +667,8 @@
   },
   "hidden_gem_classification": {
     "blockers": [
-      "pr101_schema_submission_runtime_adapter_not_integrated",
       "pr101_schema_runtime_tree_parity_manifest_missing",
       "pr101_schema_inflate_output_parity_missing",
-      "pr101_schema_submission_runtime_callsite_not_patched",
       "strict_pre_submission_compliance_json_missing",
       "lane_dispatch_claim_missing",
       "exact_cuda_auth_eval_missing"
@@ -762,7 +758,6 @@
     "content_detection_required": true,
     "contract": "pr101_schema_runtime_adapter_proof_v1",
     "dispatch_blockers": [
-      "pr101_schema_submission_runtime_adapter_not_integrated",
       "pr101_schema_runtime_tree_parity_manifest_missing",
       "pr101_schema_inflate_output_parity_missing"
     ],
@@ -831,7 +826,29 @@
       "score_claim": false
     },
     "source_restored_payload_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
-    "submission_runtime_integrated": false
+    "submission_runtime_integrated": true,
+    "submission_runtime_patch_status": {
+      "all_targets_patched": true,
+      "contract": "pr101_schema_submission_runtime_patch_status_v1",
+      "targets": [
+        {
+          "bytes": 16850,
+          "exists": true,
+          "missing_sentinels": [],
+          "patched": true,
+          "path": "submissions/pr106_latent_sidecar/src/codec.py",
+          "sha256": "2abb3ae103e92f65677e8ad0178b9015651ba58f4d5364e59b396aef9fe8dda1"
+        },
+        {
+          "bytes": 16850,
+          "exists": true,
+          "missing_sentinels": [],
+          "patched": true,
+          "path": "submissions/apogee_v2/src/codec.py",
+          "sha256": "2abb3ae103e92f65677e8ad0178b9015651ba58f4d5364e59b396aef9fe8dda1"
+        }
+      ]
+    }
   },
   "runtime_decoder_section_adapter": {
     "adapter_code_path_ready": true,
@@ -870,18 +887,16 @@
     "fail_closed_unknown_decoder_section": true,
     "inflate_output_parity_present": false,
     "integration_blockers": [
-      "pr101_schema_submission_runtime_adapter_not_integrated",
-      "pr101_schema_submission_runtime_callsite_not_patched",
       "pr101_schema_runtime_tree_parity_manifest_missing",
       "pr101_schema_inflate_output_parity_missing"
     ],
     "integration_targets": [
-      "submissions/pr106_latent_sidecar/src/codec.py::decode_packed_decoder",
-      "submissions/apogee_v2/src/codec.py::decode_packed_decoder"
+      "submissions/pr106_latent_sidecar/src/codec.py",
+      "submissions/apogee_v2/src/codec.py"
     ],
     "ready_for_exact_eval_dispatch": false,
     "ready_for_runtime_callsite_patch": true,
-    "runtime_patch_owned_by_this_turn": false,
+    "runtime_patch_owned_by_this_turn": true,
     "runtime_tree_parity_manifest_present": false,
     "schema_version": 1,
     "score_claim": false,
@@ -910,7 +925,29 @@
       "score_claim": false
     },
     "source_decoder_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
-    "submission_runtime_patch_applied": false
+    "submission_runtime_patch_applied": true,
+    "submission_runtime_patch_status": {
+      "all_targets_patched": true,
+      "contract": "pr101_schema_submission_runtime_patch_status_v1",
+      "targets": [
+        {
+          "bytes": 16850,
+          "exists": true,
+          "missing_sentinels": [],
+          "patched": true,
+          "path": "submissions/pr106_latent_sidecar/src/codec.py",
+          "sha256": "2abb3ae103e92f65677e8ad0178b9015651ba58f4d5364e59b396aef9fe8dda1"
+        },
+        {
+          "bytes": 16850,
+          "exists": true,
+          "missing_sentinels": [],
+          "patched": true,
+          "path": "submissions/apogee_v2/src/codec.py",
+          "sha256": "2abb3ae103e92f65677e8ad0178b9015651ba58f4d5364e59b396aef9fe8dda1"
+        }
+      ]
+    }
   },
   "schema_split_stats": {
     "brotli_quality": 11,
