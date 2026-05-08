@@ -5,6 +5,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import struct
 import subprocess
 import sys
 from pathlib import Path
@@ -101,6 +102,10 @@ def _jcsk_preview_bytes() -> bytes:
             "streams": [],
         }
     )
+
+
+def _noop_jcsp_bytes() -> bytes:
+    return b"JCSP" + struct.pack("<HBIIB", 1, 0, 0, 0, 1)
 
 
 def test_runtime_bridge_detects_real_jcsp_but_refuses_consumption(
@@ -265,6 +270,38 @@ def test_runtime_bridge_marks_preexisting_raw_outputs_unproven(
         output_contract["dispatch_blockers"]
     )
     assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
+def test_runtime_bridge_refuses_zero_stream_jcsp_noop_packet(
+    tmp_path: Path,
+) -> None:
+    bridge = _load_bridge_module()
+    archive_dir = tmp_path / "archive"
+    archive_dir.mkdir()
+    (archive_dir / "jcsp.bin").write_bytes(_noop_jcsp_bytes())
+    inflated_dir = tmp_path / "inflated"
+    inflated_dir.mkdir()
+    names_file = tmp_path / "names.txt"
+    names_file.write_text("route/video.hevc\n", encoding="utf-8")
+
+    manifest = bridge.probe_jcsp_runtime_bridge(
+        archive_dir,
+        inflated_dir=inflated_dir,
+        video_names_file=names_file,
+    )
+
+    assert manifest["detected_real_jcsp_member"] is True
+    assert manifest["noop_fixture"] is True
+    assert manifest["stream_count"] == 0
+    assert manifest["ready_for_runtime_loader"] is False
+    assert manifest["consumes_required_member"] is False
+    assert manifest["ready_for_submission_runtime_consumption"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["runtime_action"] == "refuse_zero_stream_jcsp_noop_packet"
+    assert bridge.JCSP_RUNTIME_NOOP_PACKET_BLOCKER in manifest["dispatch_blockers"]
+    assert JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER in (
+        manifest["dispatch_blockers"]
+    )
 
 
 def test_runtime_raw_output_parity_proof_requires_bridge_emission(
@@ -592,6 +629,39 @@ def test_real_aq_rawvideo_readiness_reports_refusal_reason(
     assert failure["blocker"] == "jcsp_aq_rawvideo_unexpected_raw_stream"
     assert bridge.JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER in manifest["dispatch_blockers"]
     assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
+def test_real_aq_rawvideo_modes_refuse_zero_stream_jcsp_noop_packet(
+    tmp_path: Path,
+) -> None:
+    bridge = _load_bridge_module()
+    archive_dir = tmp_path / "archive"
+    archive_dir.mkdir()
+    (archive_dir / "jcsp.bin").write_bytes(_noop_jcsp_bytes())
+    candidate_dir = tmp_path / "candidate"
+
+    plan = bridge.plan_jcsp_real_raw_output_emission(
+        archive_dir,
+        expected_raw_outputs=["route/video.raw"],
+    )
+    emitted = bridge.emit_jcsp_real_raw_outputs(
+        archive_dir,
+        expected_raw_outputs=["route/video.raw"],
+        output_dir=candidate_dir,
+    )
+
+    assert plan["parsed_container"]["noop_fixture"] is True
+    assert plan["would_emit_contest_raw_outputs"] is False
+    assert plan["ready_for_raw_output_emission"] is False
+    assert bridge.JCSP_RUNTIME_NOOP_PACKET_BLOCKER in plan["dispatch_blockers"]
+    assert emitted["parsed_container"]["noop_fixture"] is True
+    assert emitted["real_raw_outputs_emitted"] is False
+    assert emitted["raw_output_emission_attempted"] is False
+    assert not (candidate_dir / "route" / "video.raw").exists()
+    assert bridge.JCSP_RUNTIME_NOOP_PACKET_BLOCKER in emitted["dispatch_blockers"]
+    assert JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER in (
+        emitted["dispatch_blockers"]
+    )
 
 
 def test_real_aq_rawvideo_decoder_accepts_compact_aqc1_payload() -> None:

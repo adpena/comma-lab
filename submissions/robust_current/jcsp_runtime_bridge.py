@@ -50,6 +50,7 @@ JCSP_RUNTIME_FIXTURE_RAW_OUTPUT_SOURCE = (
 JCSP_RUNTIME_FIXTURE_RAW_OUTPUT_BLOCKER = (
     "jcsp_fixture_raw_passthrough_not_dispatch_proof"
 )
+JCSP_RUNTIME_NOOP_PACKET_BLOCKER = "jcsp_zero_stream_noop_packet"
 JCSP_RUNTIME_DECODER_ADAPTER_SCHEMA = "jcsp_runtime_decoder_adapter_contract_v1"
 JCSP_RUNTIME_DECODED_STREAM_SCHEMA = "jcsp_runtime_decoded_stream_v1"
 JCSP_RUNTIME_REAL_DECODER_BLOCKER = "jcsp_real_stream_decoder_adapter_missing"
@@ -1004,6 +1005,8 @@ def emit_jcsp_fixture_raw_outputs(
                     "stream_count": parsed["stream_count"],
                     "noop_fixture": parsed["noop_fixture"],
                 }
+                if parsed["noop_fixture"]:
+                    blockers.append(JCSP_RUNTIME_NOOP_PACKET_BLOCKER)
                 expected_set = set(expected)
                 for stream in parsed["streams"]:
                     decoded, blocker = decoder_adapter.decode_stream(
@@ -1184,6 +1187,8 @@ def plan_jcsp_real_raw_output_emission(
                 parsed_summary = {"parse_error": str(exc)}
             else:
                 parsed_summary = _parsed_container_summary(parsed)
+                if parsed["noop_fixture"]:
+                    blockers.append(JCSP_RUNTIME_NOOP_PACKET_BLOCKER)
                 expected_set = set(expected)
                 for stream in parsed["streams"]:
                     decoded, blocker = decoder_adapter.decode_stream(
@@ -1341,6 +1346,8 @@ def emit_jcsp_real_raw_outputs(
                 parsed_summary = {"parse_error": str(exc)}
             else:
                 parsed_summary = _parsed_container_summary(parsed)
+                if parsed["noop_fixture"]:
+                    blockers.append(JCSP_RUNTIME_NOOP_PACKET_BLOCKER)
                 expected_set = set(expected)
                 for stream in parsed["streams"]:
                     decoded, blocker = decoder_adapter.decode_stream(
@@ -1940,24 +1947,45 @@ def probe_jcsp_runtime_bridge(
             )
         else:
             base.update(parsed)
-            base.update(
-                {
-                    "detected_real_jcsp_member": True,
-                    "ready_for_runtime_loader": True,
-                    "runtime_action": "refuse_until_jcsp_raw_output_emission_and_parity",
-                    "refusal_reason": (
-                        "real JCSP container parsed and a narrow AQ rawvideo "
-                        "adapter exists, but the probe path does not emit raw "
-                        "outputs or prove parity"
-                    ),
-                    "dispatch_blockers": [
-                        JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
-                        "jcsp_runtime_preflight_adapter_not_requested",
-                        *output_contract["dispatch_blockers"],
-                        "exact_cuda_auth_eval_missing",
-                    ],
-                }
-            )
+            if parsed["noop_fixture"]:
+                base.update(
+                    {
+                        "detected_real_jcsp_member": True,
+                        "ready_for_runtime_loader": False,
+                        "runtime_action": "refuse_zero_stream_jcsp_noop_packet",
+                        "refusal_reason": (
+                            "real JCSP container has zero streams; refusing "
+                            "no-op packet before runtime consumption"
+                        ),
+                        "dispatch_blockers": [
+                            JCSP_RUNTIME_NOOP_PACKET_BLOCKER,
+                            JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
+                            *output_contract["dispatch_blockers"],
+                            "exact_cuda_auth_eval_missing",
+                        ],
+                    }
+                )
+            else:
+                base.update(
+                    {
+                        "detected_real_jcsp_member": True,
+                        "ready_for_runtime_loader": True,
+                        "runtime_action": (
+                            "refuse_until_jcsp_raw_output_emission_and_parity"
+                        ),
+                        "refusal_reason": (
+                            "real JCSP container parsed and a narrow AQ rawvideo "
+                            "adapter exists, but the probe path does not emit raw "
+                            "outputs or prove parity"
+                        ),
+                        "dispatch_blockers": [
+                            JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
+                            "jcsp_runtime_preflight_adapter_not_requested",
+                            *output_contract["dispatch_blockers"],
+                            "exact_cuda_auth_eval_missing",
+                        ],
+                    }
+                )
     else:
         base.update(
             {
