@@ -15,6 +15,8 @@ The lane this module operationalises:
    contiguous blocks of size ``B``. For each block we compute the per-block
    scale ``s_b = max(|s_i|)`` for ``i ∈ block``. Storage of ``s_b`` is in
    ``fp16`` (2 bytes/block) or ``uint8`` (1 byte/block) per ablation cell.
+   The int8 alphabet includes ``-128``, so true max-abs scale is in
+   ``[0, 128]``; uint8 scale side-info reports its saturation explicitly.
 2. Ballé hyperprior consumes ``s_b`` as the conditioning side-information
    and derives a per-block sigma ``σ_b = sigma_floor + α * s_b`` (a
    monotone-positive map; trivial deterministic decoder so encoder and
@@ -88,6 +90,8 @@ _VERSION: int = 1
 _HEADER_SIZE: int = 12  # magic(4) + version(1) + scale_quant(1) + block_size(2) + n_total(4)
 _ALPHABET: Tuple[int, int] = (-128, 127)
 _NUM_SYMBOLS: int = 256
+_MAX_UINT16: int = (1 << 16) - 1
+_MAX_UINT32: int = (1 << 32) - 1
 
 # ChARM range coder payload header is uint16 → max 65535 bytes per ChARM
 # stream. We chunk the input into BLOCK-aligned groups, each a separate
@@ -127,6 +131,48 @@ ALPHA_DEFAULT: float = 0.55
 SCALE_QUANT_FP16: int = 0  # 2 bytes per block (default, finest)
 SCALE_QUANT_FP32: int = 1  # 4 bytes per block (debug; rarely useful)
 SCALE_QUANT_UINT8: int = 2  # 1 byte per block (coarsest)
+_UINT8_SCALE_STEP: float = 0.5
+_UINT8_SCALE_MAX_REPRESENTABLE: float = 127.5
+
+
+def _validate_block_size(block_size: int, *, for_wire: bool) -> int:
+    if block_size is None:
+        raise ValueError("block_size is required")
+    if isinstance(block_size, bool):
+        raise ValueError("block_size must be an integer >= 1, not bool")
+    try:
+        block_size_i = int(block_size)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"block_size must be an integer >= 1, got {block_size!r}") from exc
+    if block_size_i != block_size:
+        raise ValueError(f"block_size must be an integer >= 1, got {block_size!r}")
+    if block_size_i < 1:
+        raise ValueError(f"block_size must be >= 1, got {block_size}")
+    if for_wire and block_size_i > _MAX_UINT16:
+        raise ValueError(
+            "block_size must fit the A6BF uint16 wire header "
+            f"(<= {_MAX_UINT16}); got {block_size_i}"
+        )
+    return block_size_i
+
+
+def _as_int8_symbol_stream(symbols: np.ndarray, *, caller: str) -> np.ndarray:
+    if symbols is None:
+        raise ValueError(f"{caller}: symbols is required")
+    flat = np.ascontiguousarray(symbols).reshape(-1)
+    if flat.size == 0:
+        return flat.astype(np.int8, copy=False)
+    if not np.issubdtype(flat.dtype, np.integer):
+        raise ValueError(
+            f"{caller}: symbols must have an integer dtype, got {flat.dtype}"
+        )
+    if flat.dtype != np.int8:
+        if flat.min() < -128 or flat.max() > 127:
+            raise ValueError(
+                f"symbols out of int8 range: min={int(flat.min())}, max={int(flat.max())}"
+            )
+        flat = flat.astype(np.int8)
+    return flat
 
 
 def _scale_bytes_per_block(scale_quant: int) -> int:
@@ -148,9 +194,15 @@ def _quantize_scale(scale: float, *, mode: int) -> bytes:
     if mode == SCALE_QUANT_FP32:
         return np.array([scale], dtype="<f4").tobytes()
     if mode == SCALE_QUANT_UINT8:
-        # Map [0, 127] → [0, 255]: the int8 alphabet's max abs is 127, so
-        # scale ∈ [0, 127]. Round to nearest, clamp.
-        q = int(round(min(max(scale, 0.0), 127.0) * 2.0))
+        # Half-step scale code. True int8 max-abs can be 128 because of
+        # ``-128``; uint8 v1 saturates that one endpoint to 127.5 and the
+        # ledger reports the quantization error.
+        q = int(
+            round(
+                min(max(scale, 0.0), _UINT8_SCALE_MAX_REPRESENTABLE)
+                / _UINT8_SCALE_STEP
+            )
+        )
         q = max(0, min(255, q))
         return bytes((q,))
     raise ValueError(f"unknown scale_quant code {mode}")
@@ -169,7 +221,7 @@ def _dequantize_scale(blob: bytes, *, mode: int) -> float:
     if mode == SCALE_QUANT_UINT8:
         if len(blob) != 1:
             raise ValueError(f"uint8 scale blob must be 1 byte, got {len(blob)}")
-        return float(blob[0]) / 2.0
+        return float(blob[0]) * _UINT8_SCALE_STEP
     raise ValueError(f"unknown scale_quant code {mode}")
 
 
@@ -215,7 +267,7 @@ def hyperprior_sigma_from_scale(
         alpha: linear coefficient on scale.
 
     Returns:
-        Positive float sigma in the band ``[sigma_floor, sigma_floor + 127*α]``.
+        Positive float sigma in the band ``[sigma_floor, sigma_floor + 128*α]``.
     """
     if scale < 0.0:
         raise ValueError(f"scale must be >= 0; got {scale}")
@@ -258,11 +310,8 @@ def split_into_blockfp(
         :class:`BlockFPSplit`. The last block may be smaller than
         ``block_size`` if ``len(symbols)`` is not a multiple.
     """
-    if symbols is None:
-        raise ValueError("split_into_blockfp: symbols is required")
-    if block_size is None or block_size < 1:
-        raise ValueError(f"block_size must be >= 1, got {block_size}")
-    flat = np.ascontiguousarray(symbols).reshape(-1)
+    block_size = _validate_block_size(block_size, for_wire=False)
+    flat = _as_int8_symbol_stream(symbols, caller="split_into_blockfp")
     n_total = int(flat.size)
     if n_total == 0:
         return BlockFPSplit(
@@ -272,13 +321,6 @@ def split_into_blockfp(
             scales=np.zeros((0,), dtype=np.float32),
             blocks=[],
         )
-    if flat.dtype != np.int8:
-        # Be permissive on dtype as long as values are int8-range.
-        if flat.min() < -128 or flat.max() > 127:
-            raise ValueError(
-                f"symbols out of int8 range: min={int(flat.min())}, max={int(flat.max())}"
-            )
-        flat = flat.astype(np.int8)
     n_blocks = (n_total + block_size - 1) // block_size
     blocks: list[np.ndarray] = []
     scales = np.zeros((n_blocks,), dtype=np.float32)
@@ -286,7 +328,7 @@ def split_into_blockfp(
         lo = b * block_size
         hi = min(lo + block_size, n_total)
         block = flat[lo:hi]
-        # Per-block scale: max abs of the int8 block. Falls in [0, 127].
+        # Per-block scale: max abs of the int8 block. Falls in [0, 128].
         # An all-zero block has scale 0, which the dequantize path treats
         # as σ = sigma_floor (a tight Gaussian centered at zero, the
         # natural choice for a degenerate block).
@@ -342,10 +384,7 @@ def compose_blockfp_with_hyperprior(
             * ``payload_bytes`` (range-coded residuals + their header)
             * ``n_blocks``, ``block_size``, ``scale_quant``
     """
-    if symbols is None:
-        raise ValueError("compose_blockfp_with_hyperprior: symbols is required")
-    if block_size is None or block_size < 1:
-        raise ValueError(f"block_size must be >= 1, got {block_size}")
+    block_size = _validate_block_size(block_size, for_wire=True)
     if scale_quant not in (SCALE_QUANT_FP16, SCALE_QUANT_FP32, SCALE_QUANT_UINT8):
         raise ValueError(f"unknown scale_quant {scale_quant}")
     _validate_wire_hyperparams(sigma_floor=sigma_floor, alpha=alpha)
@@ -362,6 +401,18 @@ def compose_blockfp_with_hyperprior(
         s_q = _quantize_scale(float(split.scales[b]), mode=scale_quant)
         side_info.extend(s_q)
         decoded_scales[b] = _dequantize_scale(bytes(s_q), mode=scale_quant)
+    if split.n_blocks:
+        scale_errors = np.abs(
+            decoded_scales.astype(np.float64) - split.scales.astype(np.float64)
+        )
+        max_scale_quantization_error = float(scale_errors.max())
+    else:
+        max_scale_quantization_error = 0.0
+    scale_quantization_saturated_blocks = (
+        int(np.count_nonzero(split.scales > _UINT8_SCALE_MAX_REPRESENTABLE))
+        if scale_quant == SCALE_QUANT_UINT8
+        else 0
+    )
 
     # ── Range-code the residuals in BLOCK-aligned chunks, each its own
     # ChARM stream (uint16 payload-len cap forces chunking on long inputs).
@@ -431,15 +482,23 @@ def compose_blockfp_with_hyperprior(
         "n_total": split.n_total,
         "scale_quant": int(scale_quant),
         "scale_bytes_per_block": scale_byte_size,
+        "scale_side_info_exact": max_scale_quantization_error == 0.0,
+        "scale_quantization_max_abs_error": max_scale_quantization_error,
+        "scale_quantization_saturated_blocks": scale_quantization_saturated_blocks,
         "sigma_floor": sigma_floor,
         "alpha": alpha,
     }
 
     # CompressAI / arithmetic_qint_codec pattern: never ship a wire format
     # that doesn't decode. CLAUDE.md non-negotiable.
-    if verify_roundtrip and split.n_total > 0:
+    if verify_roundtrip:
         recovered = decompose_blockfp_with_hyperprior(encoded)
-        if not np.array_equal(recovered, np.asarray(symbols, dtype=np.int8).reshape(-1)):
+        expected = (
+            np.concatenate(split.blocks)
+            if split.blocks
+            else np.zeros((0,), dtype=np.int8)
+        )
+        if not np.array_equal(recovered, expected):
             raise RuntimeError(
                 "compose_blockfp_with_hyperprior: encode/decode roundtrip failed; "
                 "the compose is not bit-deterministic — refusing to ship"
@@ -477,8 +536,7 @@ def decompose_blockfp_with_hyperprior(
     scale_quant = encoded[5]
     (block_size,) = struct.unpack_from("<H", encoded, 6)
     (n_total,) = struct.unpack_from("<I", encoded, 8)
-    if block_size < 1:
-        raise ValueError(f"decompose: block_size must be >= 1, got {block_size}")
+    _validate_block_size(block_size, for_wire=True)
     _validate_wire_hyperparams(sigma_floor=sigma_floor, alpha=alpha)
 
     cursor = _HEADER_SIZE
@@ -593,12 +651,17 @@ def encode_blockfp_only(
     Wire layout: header + side-info (scales) + raw int8 residuals
     (1 byte/symbol).
     """
+    block_size = _validate_block_size(block_size, for_wire=True)
     split = split_into_blockfp(symbols, block_size=block_size)
     scale_byte_size = _scale_bytes_per_block(scale_quant)
     side_info = bytearray()
     for b in range(split.n_blocks):
         side_info.extend(_quantize_scale(float(split.scales[b]), mode=scale_quant))
-    flat = np.ascontiguousarray(np.asarray(symbols, dtype=np.int8)).reshape(-1)
+    flat = (
+        np.concatenate(split.blocks)
+        if split.blocks
+        else np.zeros((0,), dtype=np.int8)
+    )
     payload = flat.tobytes()  # raw int8, 1 byte/symbol
     header = (
         b"BFRO"
@@ -633,7 +696,7 @@ def encode_hyperprior_only(
     The "Ballé hyperprior standalone" baseline: a single sigma derived from
     the global max abs is used for the entire stream. No per-block side-info.
     """
-    flat = np.ascontiguousarray(np.asarray(symbols, dtype=np.int8)).reshape(-1)
+    flat = _as_int8_symbol_stream(symbols, caller="encode_hyperprior_only")
     global_scale = float(np.abs(flat.astype(np.int16)).max()) if flat.size else 0.0
     sigma = hyperprior_sigma_from_scale(global_scale)
     pmf = gaussian_pmf_int8(

@@ -246,6 +246,13 @@ def main(argv: list[str] | None = None) -> int:
                 "payload_bytes": ledger["payload_bytes"],
                 "side_info_bytes": ledger["side_info_bytes"],
                 "header_bytes": ledger["header_bytes"],
+                "scale_side_info_exact": ledger["scale_side_info_exact"],
+                "scale_quantization_max_abs_error": ledger[
+                    "scale_quantization_max_abs_error"
+                ],
+                "scale_quantization_saturated_blocks": ledger[
+                    "scale_quantization_saturated_blocks"
+                ],
                 "compose_bytes": ledger["total_bytes"],
                 "archive_bytes": archive_b,
                 "delta_baseline": delta,

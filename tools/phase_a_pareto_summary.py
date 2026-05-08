@@ -383,10 +383,11 @@ def render_markdown(entries: list[PhaseAEntry]) -> str:
         "(-34,607 B) AND hyperprior-only (-18,356 B); does NOT beat PR101 "
         "brotli baseline (+35,891 B). Verdict "
         "`incremental_improvement_insufficient` (NOT killed per CLAUDE.md "
-        "kill-as-last-resort); 5 reactivation criteria documented in "
-        "`feedback_pr101_a6_selfcomp_blockfp_hyperprior_byte_anchor_landed_20260508.md` "
-        "(joint-AC over scale stream, learned hyper-decoder MLP, cross-tensor "
-        "grouping, PR106 substrate, compose-after-lossy_coarsening).",
+        "kill-as-last-resort); reactivation criteria are documented in "
+        "`.omx/research/pr101_a6_selfcomp_blockfp_hyperprior_measured_negative_20260508_codex.md` "
+        "with PR106 substrate ranked first, then learned hyper-decoder MLP, "
+        "cross-tensor grouping, joint-AC over scale stream, and "
+        "compose-after-lossy_coarsening.",
         "",
     ])
     return "\n".join(lines) + "\n"

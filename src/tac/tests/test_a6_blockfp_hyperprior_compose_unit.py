@@ -18,6 +18,7 @@ import struct
 
 import numpy as np
 import pytest
+from tac.codec import a6_selfcomp_blockfp_hyperprior_compose as a6
 
 from tac.codec.a6_selfcomp_blockfp_hyperprior_compose import (
     ALPHA_DEFAULT,
@@ -66,6 +67,21 @@ def test_roundtrip_each_scale_quant_mode(scale_quant: int):
     encoded, _ = compose_blockfp_with_hyperprior(
         symbols, block_size=32, scale_quant=scale_quant
     )
+    recovered = decompose_blockfp_with_hyperprior(encoded)
+    np.testing.assert_array_equal(recovered, symbols)
+
+
+def test_uint8_scale_side_info_saturates_int8_min_explicitly():
+    symbols = np.array([-128, 0, 1], dtype=np.int8)
+    encoded, ledger = compose_blockfp_with_hyperprior(
+        symbols, block_size=3, scale_quant=SCALE_QUANT_UINT8
+    )
+
+    assert encoded[ledger["header_bytes"]] == 255
+    assert ledger["scale_quantization_saturated_blocks"] == 1
+    assert ledger["scale_quantization_max_abs_error"] == 0.5
+    assert ledger["scale_side_info_exact"] is False
+
     recovered = decompose_blockfp_with_hyperprior(encoded)
     np.testing.assert_array_equal(recovered, symbols)
 
@@ -145,12 +161,33 @@ def test_all_equal_tensor_roundtrips():
 def test_empty_tensor_roundtrips():
     symbols = np.zeros((0,), dtype=np.int8)
     encoded, ledger = compose_blockfp_with_hyperprior(
-        symbols, block_size=16, scale_quant=SCALE_QUANT_FP16, verify_roundtrip=False
+        symbols, block_size=16, scale_quant=SCALE_QUANT_FP16
     )
     assert ledger["n_total"] == 0
     assert ledger["n_blocks"] == 0
     recovered = decompose_blockfp_with_hyperprior(encoded)
     assert recovered.shape == (0,)
+
+
+def test_empty_tensor_default_verification_invokes_decode(monkeypatch):
+    calls = 0
+    real_decompose = a6.decompose_blockfp_with_hyperprior
+
+    def wrapped_decompose(encoded, *, sigma_floor=a6.SIGMA_FLOOR, alpha=a6.ALPHA_DEFAULT):
+        nonlocal calls
+        calls += 1
+        return real_decompose(encoded, sigma_floor=sigma_floor, alpha=alpha)
+
+    monkeypatch.setattr(a6, "decompose_blockfp_with_hyperprior", wrapped_decompose)
+
+    encoded, _ledger = a6.compose_blockfp_with_hyperprior(
+        np.zeros((0,), dtype=np.int8),
+        block_size=16,
+        scale_quant=a6.SCALE_QUANT_FP16,
+    )
+
+    assert encoded.startswith(b"A6BF")
+    assert calls == 1
 
 
 def test_empty_non_int8_tensor_splits_without_reduction_error():
@@ -310,6 +347,20 @@ def test_compose_rejects_negative_block_size():
     symbols = np.zeros(4, dtype=np.int8)
     with pytest.raises(ValueError, match="block_size"):
         compose_blockfp_with_hyperprior(symbols, block_size=0)
+
+
+def test_compose_rejects_block_size_that_cannot_fit_wire_header():
+    symbols = np.zeros(4, dtype=np.int8)
+    with pytest.raises(ValueError, match="uint16 wire header"):
+        compose_blockfp_with_hyperprior(symbols, block_size=65_536)
+    with pytest.raises(ValueError, match="uint16 wire header"):
+        encode_blockfp_only(symbols, block_size=65_536)
+
+
+def test_split_into_blockfp_rejects_non_integer_symbols():
+    symbols = np.array([0.25, 1.0, -1.0], dtype=np.float32)
+    with pytest.raises(ValueError, match="integer dtype"):
+        split_into_blockfp(symbols, block_size=3)
 
 
 def test_split_into_blockfp_handles_partial_last_block():

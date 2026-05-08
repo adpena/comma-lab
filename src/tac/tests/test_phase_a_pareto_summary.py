@@ -79,6 +79,20 @@ def test_render_markdown_exposes_solver_budget_and_axis_separation() -> None:
     assert "| ADMM_lossy_coarsening_baseline | 147,285 | -30,859 | +10,182 |" in md
 
 
+def test_render_markdown_references_existing_a6_ledger() -> None:
+    mod = _load_tool_module()
+
+    md = mod.render_markdown([])
+
+    ledger = (
+        mod.REPO_ROOT
+        / ".omx/research/pr101_a6_selfcomp_blockfp_hyperprior_measured_negative_20260508_codex.md"
+    )
+    assert str(ledger.relative_to(mod.REPO_ROOT)) in md
+    assert ledger.is_file()
+    assert "PR106 substrate ranked first" in md
+
+
 def test_render_json_carries_machine_readable_planning_targets() -> None:
     mod = _load_tool_module()
     entry = _entry(mod, lane="ADMM_lossy_coarsening_baseline", archive_bytes=147_285)
