@@ -874,11 +874,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help=(
             "Operator opt-out: this script fine-tunes PR101 latents (not a "
-            "contest-bound renderer); the saved checkpoint is consumed by "
-            "tools/build_pr101_finetuned_archive.py which builds the archive "
-            "and is the path that owns auth_eval. Per CLAUDE.md "
-            "'Auth eval EVERYWHERE': the archive build path is where the "
-            "[contest-CUDA] eval lives; this fine-tune is a precursor."
+            "contest-bound renderer); the saved checkpoint is consumed by a "
+            "downstream lane that builds a byte-closed archive and then owns "
+            "the exact auth-eval dispatch. Per CLAUDE.md 'Auth eval "
+            "EVERYWHERE': the archive/eval lane is where the [contest-CUDA] "
+            "eval lives; this fine-tune is a precursor."
         ),
     )
     args = parser.parse_args()

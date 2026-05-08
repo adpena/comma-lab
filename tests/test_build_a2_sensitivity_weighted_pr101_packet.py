@@ -375,12 +375,18 @@ def test_inflate_parity_allows_score_affecting_output_byte_differences(tmp_path:
     inflate.write_text(
         f"""#!/usr/bin/env bash
 set -euo pipefail
+DATA_DIR="$1"
+OUTPUT_DIR="$2"
+FILE_LIST="$3"
+export DATA_DIR OUTPUT_DIR FILE_LIST
 {sys.executable} - <<'PY'
+import os
 import pathlib
-import zipfile
 
-payload = zipfile.ZipFile("archive.zip").read("x")
-out = pathlib.Path("frames")
+data_dir = pathlib.Path(os.environ["DATA_DIR"])
+output_dir = pathlib.Path(os.environ["OUTPUT_DIR"])
+payload = (data_dir / "x").read_bytes()
+out = output_dir / "frames"
 out.mkdir(exist_ok=True)
 (out / "000000.bin").write_bytes(payload)
 PY

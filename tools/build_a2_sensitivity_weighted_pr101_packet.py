@@ -1433,22 +1433,50 @@ def verify_inflate_parity(
     source_work.mkdir()
     candidate_work.mkdir()
 
-    def _run_inflate(archive: Path, out_dir: Path) -> dict[str, Any]:
-        # Copy archive to a stable path the script expects, then run.
-        target_archive = out_dir / "archive.zip"
-        shutil.copyfile(archive, target_archive)
+    def _extract_archive(archive: Path, data_dir: Path) -> None:
+        with zipfile.ZipFile(archive) as zf:
+            for info in zf.infolist():
+                name = info.filename
+                if not name or name.startswith("/") or ".." in Path(name).parts:
+                    raise ValueError(f"unsafe archive member for inflate parity: {name!r}")
+                target = data_dir / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                if name.endswith("/"):
+                    target.mkdir(parents=True, exist_ok=True)
+                    continue
+                target.write_bytes(zf.read(info))
+
+    def _run_inflate(archive: Path, run_dir: Path) -> dict[str, Any]:
+        data_dir = run_dir / "data"
+        output_dir = run_dir / "out"
+        file_list = run_dir / "file_list.txt"
+        data_dir.mkdir()
+        output_dir.mkdir()
+        _extract_archive(archive, data_dir)
+        file_list.write_text("0.mkv\n", encoding="utf-8")
+        env = os.environ.copy()
+        python_dir = str(Path(sys.executable).parent)
+        env["PATH"] = f"{python_dir}{os.pathsep}{env.get('PATH', '')}"
         proc = subprocess.run(
-            ["bash", str(inflate_sh.resolve())],
-            cwd=str(out_dir),
+            [
+                "bash",
+                str(inflate_sh.resolve()),
+                str(data_dir),
+                str(output_dir),
+                str(file_list),
+            ],
+            cwd=str(run_dir),
             capture_output=True,
             text=True,
             check=False,
             timeout=timeout_seconds,
+            env=env,
         )
         return {
             "returncode": proc.returncode,
             "stdout_tail": proc.stdout[-2000:],
             "stderr_tail": proc.stderr[-2000:],
+            "output_dir": str(output_dir),
         }
 
     try:
@@ -1479,14 +1507,12 @@ def verify_inflate_parity(
         for path in sorted(root.rglob("*")):
             if not path.is_file():
                 continue
-            if path.name == "archive.zip":  # the input we copied in
-                continue
             rel = path.relative_to(root).as_posix()
             result[rel] = hashlib.sha256(path.read_bytes()).hexdigest()
         return result
 
-    source_files = _file_map(source_work)
-    candidate_files = _file_map(candidate_work)
+    source_files = _file_map(Path(source_result["output_dir"]))
+    candidate_files = _file_map(Path(candidate_result["output_dir"]))
 
     differing: list[str] = []
     for rel, sha in source_files.items():
@@ -1517,7 +1543,10 @@ def verify_inflate_parity(
         contract_errors.append("inflate_output_bytes_differ_for_noop_candidate")
     return {
         "passed": passed,
-        "command": f"bash {inflate_sh.resolve()} (run on source & candidate; compare outputs)",
+        "command": (
+            f"bash {inflate_sh.resolve()} <data_dir> <output_dir> <file_list> "
+            "(run on source & candidate; compare output dirs)"
+        ),
         "contract": "same_output_paths_nonempty_and_optional_byte_identity",
         "expect_output_byte_identical": bool(expect_output_byte_identical),
         "source_output_count": len(source_files),

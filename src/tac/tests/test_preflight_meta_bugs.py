@@ -2229,6 +2229,8 @@ class TestPreflightAllInvokesMetaBugChecks:
             "check_dispatch_cli_shell_hazards",
             "check_reverse_engineering_tree_curation",
             "check_feature_flags_have_live_objective_effect",
+            "check_no_fastvit_attention_compounding_claim",
+            "check_no_auth_eval_optout_help_text_consumer_unverified",
         ]
         missing = [c for c in required_checks if c not in src]
         assert missing == [], (

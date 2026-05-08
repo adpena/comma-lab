@@ -507,6 +507,14 @@ def preflight_all(
         check_subagent_commit_serializer_uses_lock(strict=False, verbose=verbose)
         check_claude_md_catalog_no_duplicate_numbers(strict=True, verbose=verbose)
         check_subagent_commits_have_co_author_trailer(strict=False, verbose=verbose)
+        # 2026-05-08 council Round 1 action items #5/#6. These are
+        # warn-only on first landing because legacy research ledgers still
+        # contain superseded FastViT/attention phrasing, and existing
+        # opt-out help text is being cleaned incrementally. Keep them visible
+        # in normal operator preflight until live count reaches zero, then
+        # promote to strict.
+        check_no_fastvit_attention_compounding_claim(strict=False, verbose=verbose)
+        check_no_auth_eval_optout_help_text_consumer_unverified(strict=False, verbose=verbose)
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -25659,6 +25667,280 @@ def check_subagent_commits_have_co_author_trailer(
         else:
             print(
                 f"  [co-author-trailer] OK ({scanned} commit(s) scanned)"
+            )
+    return violations
+
+
+def check_no_fastvit_attention_compounding_claim(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """FastViT-precision-compounding-claim gate (council Round 1 action #5).
+
+    Bug class: research notes claim "FastViT attention precision compounding"
+    explains the 23x PoseNet CPU/CUDA drift. PoseNet's FastViT-T12 backbone is
+    RepMixer/conv-style — there is no softmax-attention path to compound. The
+    hypothesis was structurally wrong; codex caught it on 2026-05-08 and
+    superseded three claude-authored research notes (commits 879d9b13 +
+    d12f9e26 + 1165ec2e + 96842d94 + 332fe36a + 8d0c4ec7).
+
+    This check prevents regression: scans `.omx/research/**/*.md` and
+    `docs/**/*.md` for lines mentioning "FastViT" within ±3 lines of
+    "attention", and flags any co-occurrence UNLESS a supersession marker
+    appears in the same window ("RepMixer", "conv", "superseded", "stale",
+    "wrong", "FALSIFIED", "no softmax", "NOT softmax").
+
+    See CLAUDE.md "Auth eval EVERYWHERE" + recursive-review-process gap
+    captured in council_phase_a_complete_extreme_rigor_review_20260508.md
+    §3.3 (Round 2). Catalog #121.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    SUPERSESSION_MARKERS = (
+        "repmixer", "conv-style", "convolutional", "superseded", "supersede",
+        "stale", "structurally wrong", "FALSIFIED", "no softmax",
+        "not softmax", "diagnostic only", "Round 2 §8", "loader-byte drift",
+    )
+    SCOPES = [
+        root / ".omx" / "research",
+        root / "docs",
+    ]
+    EXCLUDE_PATH_MARKERS = (
+        "/public_pr",
+        "/vendored",
+        "/_intake",
+        "/results/",  # vendored public PR clones land here
+    )
+    violations: list[str] = []
+    scanned = 0
+    for scope in SCOPES:
+        if not scope.is_dir():
+            continue
+        for path in sorted(scope.rglob("*.md")):
+            rel_check = path.relative_to(root).as_posix()
+            if any(m in rel_check for m in EXCLUDE_PATH_MARKERS):
+                continue
+            try:
+                lines = path.read_text(encoding="utf-8").splitlines()
+            except OSError:
+                continue
+            scanned += 1
+            for i, line in enumerate(lines):
+                if "FastViT" not in line and "fastvit" not in line.lower():
+                    continue
+                lo = max(0, i - 3)
+                hi = min(len(lines), i + 4)
+                window = "\n".join(lines[lo:hi])
+                if "attention" not in window.lower():
+                    continue
+                # Co-occurrence detected. Check supersession markers in same window.
+                window_lower = window.lower()
+                if any(m.lower() in window_lower for m in SUPERSESSION_MARKERS):
+                    continue
+                rel = path.relative_to(root).as_posix()
+                violations.append(
+                    f"{rel}:{i + 1}: FastViT/attention co-occurrence within ±3 "
+                    f"lines without supersession marker. PoseNet's FastViT-T12 "
+                    f"is RepMixer/conv-style; the 'attention precision "
+                    f"compounding' hypothesis was structurally wrong. Add a "
+                    f"supersession marker (e.g. 'RepMixer', 'superseded', "
+                    f"'NOT softmax') if intentionally referencing the "
+                    f"retired hypothesis."
+                )
+                # One violation per file is enough — operator can fix all
+                # co-occurrences when they edit the file.
+                break
+    if violations and strict:
+        raise MetaBugViolation(
+            "FASTVIT-ATTENTION-COMPOUNDING-CLAIM VIOLATIONS:\n"
+            + "\n".join(violations)
+        )
+    if verbose:
+        if violations:
+            print(
+                f"  [no-fastvit-attention-compounding] {len(violations)} "
+                f"violation(s) across {scanned} markdown file(s)"
+            )
+        else:
+            print(
+                f"  [no-fastvit-attention-compounding] OK "
+                f"({scanned} markdown file(s) scanned)"
+            )
+    return violations
+
+
+def check_no_auth_eval_optout_help_text_consumer_unverified(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """`--no-auth-eval-on-best` help-text consumer verification (council
+    Round 1 action #6).
+
+    Bug class: training scripts that opt out of auth-eval-everywhere via the
+    `--no-auth-eval-on-best` flag must name a downstream consumer in the help
+    text that DOES run auth_eval. If the named consumer never invokes
+    auth_eval, the opt-out flag is dishonest — operator/agent reads the help
+    text and trusts the chain, but no auth_eval ever happens.
+
+    This check parses the help string of every `--no-auth-eval-on-best`
+    argparse declaration, extracts any `tools/...py`, `experiments/...py`,
+    `src/...py`, `scripts/...sh` paths, and grep each for an auth_eval
+    invocation (`auth_eval_renderer.py`, `run_auth_eval`, `auth_eval` import
+    + call). Refuses if any named consumer cannot be verified to run
+    auth_eval.
+
+    See CLAUDE.md "Auth eval EVERYWHERE" + Round 2 §3.4 of
+    council_phase_a_complete_extreme_rigor_review_20260508.md. Catalog #122.
+    """
+    import re as _re
+
+    root = Path(repo_root or REPO_ROOT)
+    AUTH_EVAL_INDICATORS = (
+        "auth_eval_renderer.py",
+        "auth_eval_renderer.main",
+        "from auth_eval",
+        "import auth_eval",
+        "run_auth_eval(",
+        "subprocess.run([..., 'auth_eval_renderer.py'",
+        "auth_eval_renderer'",
+        '"auth_eval_renderer"',
+    )
+    PATH_PATTERN = _re.compile(
+        r"\b(tools|experiments|src|scripts)/[A-Za-z0-9_./-]+\.(py|sh)\b"
+    )
+    violations: list[str] = []
+    scanned = 0
+    consumer_files: set[str] = set()
+    # Walk experiments/ for argparse files defining the flag.
+    experiments_dir = root / "experiments"
+    if not experiments_dir.is_dir():
+        if verbose:
+            print(
+                "  [auth-eval-optout-consumer-verified] OK "
+                "(no experiments/)"
+            )
+        return []
+    for path in sorted(experiments_dir.rglob("*.py")):
+        rel_check = path.relative_to(root).as_posix()
+        # Skip results/ clones (gitignored; contain exports of preflight.py
+        # itself + historical copies of training scripts)
+        if "/results/" in rel_check or rel_check.startswith("experiments/results/"):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        if "--no-auth-eval-on-best" not in text:
+            continue
+        # Skip files where the flag appears only inside a help string of
+        # ANOTHER flag (e.g. preflight.py's own SUPERSESSION_MARKERS list).
+        # The flag must appear inside an add_argument() call.
+        if "add_argument(\"--no-auth-eval-on-best" not in text and \
+           "add_argument('--no-auth-eval-on-best" not in text and \
+           'add_argument(\n        "--no-auth-eval-on-best' not in text and \
+           "add_argument(\n        '--no-auth-eval-on-best" not in text:
+            continue
+        scanned += 1
+        # Find the help string. Locate the add_argument(...) block containing
+        # --no-auth-eval-on-best and extract the help= value.
+        flag_idx = text.find("--no-auth-eval-on-best")
+        # Walk forward to find help= (within ~1000 chars).
+        help_window = text[flag_idx:flag_idx + 2000]
+        help_match = _re.search(
+            r"help\s*=\s*\((?P<body>(?:[^()]|\([^()]*\))*)\)",
+            help_window,
+            _re.DOTALL,
+        )
+        if not help_match:
+            help_match = _re.search(
+                r'help\s*=\s*"(?P<body>[^"]+)"', help_window, _re.DOTALL
+            )
+        if not help_match:
+            help_match = _re.search(
+                r"help\s*=\s*'(?P<body>[^']+)'", help_window, _re.DOTALL
+            )
+        if not help_match:
+            rel = path.relative_to(root).as_posix()
+            violations.append(
+                f"{rel}: --no-auth-eval-on-best defined but help= text "
+                f"not parseable. Per council Round 2 §3.4, the help string "
+                f"must name the downstream consumer that owns auth_eval."
+            )
+            continue
+        help_body = help_match.group("body")
+        consumer_paths = PATH_PATTERN.findall(help_body)
+        # findall returns list of tuples for grouped patterns. Re-extract
+        # full path matches.
+        consumer_paths_full = [
+            m.group(0) for m in PATH_PATTERN.finditer(help_body)
+        ]
+        if not consumer_paths_full:
+            # No consumer named in help text. Acceptable if help body
+            # explicitly says "downstream lane" or similar non-path
+            # description, but flag for operator review.
+            help_body_lower = help_body.lower()
+            if any(
+                kw in help_body_lower
+                for kw in ("downstream lane", "real codec stage", "downstream consumer")
+            ):
+                continue  # generic-language opt-out OK per current pattern
+            rel = path.relative_to(root).as_posix()
+            violations.append(
+                f"{rel}: --no-auth-eval-on-best help= text names no "
+                f"specific downstream consumer (no tools/.../experiments/... "
+                f"path) AND no generic 'downstream lane' phrasing. Operator "
+                f"cannot verify the opt-out is honest. Update help= text "
+                f"to name the specific consumer."
+            )
+            continue
+        # For each named consumer, verify it runs auth_eval.
+        for consumer_rel in consumer_paths_full:
+            consumer_path = root / consumer_rel
+            if not consumer_path.is_file():
+                rel = path.relative_to(root).as_posix()
+                violations.append(
+                    f"{rel}: help= names downstream consumer "
+                    f"`{consumer_rel}` but file does not exist."
+                )
+                continue
+            try:
+                consumer_text = consumer_path.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            consumer_files.add(consumer_rel)
+            if not any(
+                indicator in consumer_text for indicator in AUTH_EVAL_INDICATORS
+            ):
+                rel = path.relative_to(root).as_posix()
+                violations.append(
+                    f"{rel}: help= names downstream consumer "
+                    f"`{consumer_rel}` as the auth-eval owner, but that "
+                    f"file does not invoke auth_eval (no auth_eval_renderer.py "
+                    f"reference, no run_auth_eval call, no auth_eval import). "
+                    f"Either the consumer's auth-eval path is missing, or "
+                    f"the help= text names the wrong file."
+                )
+    if violations and strict:
+        raise MetaBugViolation(
+            "AUTH-EVAL-OPTOUT-CONSUMER-UNVERIFIED VIOLATIONS:\n"
+            + "\n".join(violations)
+        )
+    if verbose:
+        if violations:
+            print(
+                f"  [auth-eval-optout-consumer-verified] "
+                f"{len(violations)} violation(s) across {scanned} "
+                f"opt-out-defining file(s); {len(consumer_files)} "
+                f"unique consumer(s) checked"
+            )
+        else:
+            print(
+                f"  [auth-eval-optout-consumer-verified] OK "
+                f"({scanned} opt-out-defining file(s) scanned, "
+                f"{len(consumer_files)} unique consumer(s) verified)"
             )
     return violations
 
