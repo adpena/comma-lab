@@ -300,6 +300,14 @@ should dispatch a PR104 paired CPU+CUDA eval to **calibrate** the class
    commits via `tools/subagent_commit_serializer.py`. This closes the
    loop without operator intervention.
 
+   Codex follow-up: `tools/harvest_cuda_cpu_axis_profile_registry.py`
+   now provides the concrete harvester entry point. It ingests explicit
+   `--pair CPU_JSON CUDA_JSON`, already-combined `--combined-json`, or
+   `--scan-root` artifacts, requires full-sample `[contest-CPU]` and
+   `[contest-CUDA]` axes for the same archive SHA/bytes and runtime-tree
+   SHA, rejects macOS CPU advisory artifacts for registry mutation, and
+   emits `score_claim=false` / `promotion_eligible=false` reports.
+
 3. **Defer cathedral_autopilot wiring.** The recommender today still
    uses the static helper. After this layer lands, swap
    `cathedral_autopilot._rank_techniques`'s `CudaCpuCalibration(...)`
@@ -323,6 +331,7 @@ should dispatch a PR104 paired CPU+CUDA eval to **calibrate** the class
 | `src/tac/optimization/cuda_cpu_axis_calibration.py` | Static helper (sister subagent a618cdd6) — bootstrap source for HNeRV constants |
 | `src/tac/tests/test_cuda_cpu_axis_profile_registry.py` | 33 tests (bootstrap, update, outlier, classifier, persistence, harvest) |
 | `src/tac/tests/test_cuda_cpu_axis_adaptive_analyzer.py` | 14 tests (registry handle, adapter functions) |
+| `tools/harvest_cuda_cpu_axis_profile_registry.py` | Operational exact-artifact harvester; pairs contest-CPU and contest-CUDA JSONs by archive/runtime custody before registry updates |
 | `tools/analyze_cpu_cuda_eval_drift.py` | Existing diagnosis tool — input source for the harvester |
 | `reports/public_pr100_108_eval_comment_scorecard_20260508.json` | Bootstrap anchors source |
 | `.omx/state/cuda_cpu_axis_profile_registry.json` | Persisted registry (gitignored) |
