@@ -140,7 +140,8 @@ def write_dispatch_manifest(
     predicted_eta_utc: str,
     args_dict: dict,
 ) -> Path:
-    in_flight = dispatch_attempted and dispatch_status.startswith("fired")
+    in_flight = dispatch_attempted and dispatch_status == "fired" and bool(session_id)
+    manual_verification = dispatch_status == "fired_no_session_id_verify_manually"
     manifest = {
         "lane_id": lane_id,
         "schema_version": "phase_a1_dispatch_manifest_v1",
@@ -179,9 +180,14 @@ def write_dispatch_manifest(
             f"--session-id {session_id} --local-dir {lane_dir}/harvested"
             if session_id
             else (
-                "use platform-specific status command with the instance_job_id"
-                if in_flight
-                else None
+                "verify platform state manually with the instance_job_id; "
+                "lane claim was closed terminally because session_id was missing"
+                if manual_verification
+                else (
+                    "use platform-specific status command with the instance_job_id"
+                    if in_flight
+                    else None
+                )
             )
         ),
         "args": args_dict,
@@ -487,6 +493,39 @@ def main(argv: list[str] | None = None) -> int:
 
     write_heartbeat(lane_dir, f"DISPATCH_FIRED session_id={session_id or 'unknown'}")
 
+    # R3-3 fix (A1 review 2026-05-08): if dispatch_ok=True but session_id=None,
+    # the launcher returned success (SSH worked) but we couldn't parse a
+    # session_id from its output — usually means the remote script exited
+    # before reaching the session-id stamp (e.g., GPU not attached, conda
+    # torch CUDA mismatch). Without explicit closure here the lane claim
+    # would remain in `active_dispatching` and block any re-fire by raising
+    # "REFUSING_DISPATCH: active claim(s) already exist" until manually
+    # closed via --force. Close it terminally with a status that signals
+    # manual verification is required.
+    if not session_id:
+        claim_lane(
+            lane_id=args.lane_id,
+            platform=platform_for_claim,
+            instance_job_id=instance_job_id,
+            predicted_eta_utc=started_at_utc,
+            notes=(
+                "Phase A1 dispatch SSH submitted successfully but session_id "
+                "could not be parsed from launcher output. Likely cause: "
+                "remote script exited before stamping session_id (no GPU / "
+                "torch CUDA mismatch). Verify remote state manually before "
+                "re-firing; this status is non-active so re-fire is unblocked."
+            ),
+            status="fired_no_session_id_verify_manually",
+            force=True,
+        )
+        sys.stderr.write(
+            "[dispatch] WARNING: session_id was not parsed from launcher "
+            "output. Lane claim closed as 'fired_no_session_id_verify_manually' "
+            f"so re-fire is unblocked. Verify remote state for "
+            f"instance_job_id={instance_job_id} via platform-specific tooling "
+            "before assuming the dispatch is live.\n"
+        )
+
     manifest_path = write_dispatch_manifest(
         lane_dir,
         lane_id=args.lane_id,
@@ -503,7 +542,9 @@ def main(argv: list[str] | None = None) -> int:
         timeout_hours=args.timeout_hours,
         session_id=session_id,
         dispatch_attempted=True,
-        dispatch_status="fired" if session_id else "fired_session_id_unknown",
+        dispatch_status=(
+            "fired" if session_id else "fired_no_session_id_verify_manually"
+        ),
         started_at_utc=started_at_utc,
         predicted_eta_utc=predicted_eta_utc,
         args_dict={k: str(v) for k, v in vars(args).items()},
