@@ -368,7 +368,53 @@ This applies to:
 
 **Pose TTO specifically:** the TTO loop MUST run a smoke auth eval at step 100 (and every 200 steps after) so the proxy-auth gap is detected within $0.50 of GPU spend, not at $5+ end-of-run.
 
-**The authoritative measurement loop is:** contest-CUDA `inflate.sh` → `upstream/evaluate.py` on the EXACT archive bytes. Nothing else counts. Memory: `feedback_proxy_auth_math_useless`.
+**The authoritative measurement loop is:** contest `inflate.sh` → `upstream/evaluate.py` on the EXACT archive bytes. Nothing else counts. Memory: `feedback_proxy_auth_math_useless`.
+
+## Submission auth eval — BOTH CPU AND CUDA, ON 1:1 CONTEST-COMPLIANT HARDWARE — NON-NEGOTIABLE
+
+**Every submission archive (anything that will be PR'd to the contest, or that we use to claim "medal-band score" / "frontier") MUST get authoritative auth eval scores on BOTH `--device cuda` AND `--device cpu`, AND BOTH must run on hardware that is 1:1 contest-compliant with the contest's GitHub Actions CI runner.** The contest leaderboard ranks by the CPU eval, not the CUDA eval. Verified 2026-05-08:
+
+- PR102 (third prize) public CUDA comment: 0.22839 — matches our T4 replay within 3×10⁻⁶
+- PR102 (third prize) public CPU comment: **0.19538** — this is the medal-band score the prize was awarded against
+- Δ CUDA−CPU: +0.033 on PR102
+
+**Our PR #107 (apogee submission) was scored ONLY on CUDA at 0.22936; the maintainer never triggered a CPU eval. We don't know if our PR was in the medal band because the CPU score was never measured.** This is a structural blind spot we MUST close from now on — but ONLY via 1:1 contest-compliant hardware.
+
+**1:1 hardware-compliance rule (NON-NEGOTIABLE):**
+
+- Local macOS (M-series ARM, Intel iMac, anywhere on Apple Silicon or otherwise) is NEVER a 1:1 axis for CPU auth eval. ARM CPU floating-point intrinsics differ from x86_64 in ways that affect SegNet/PoseNet output bytes.
+- Required CPU substrate: **Linux x86_64** (Ubuntu LTS, matching the contest's GitHub Actions `ubuntu-latest` runner family; AMD EPYC or Intel Xeon class). The contest CI runs on x86_64 Linux; our CPU eval must too.
+- Required CUDA substrate: **NVIDIA T4 / A100 / 4090 / equivalent** (matching the contest's CUDA runner; T4 is the contest's reference for the bot's CUDA comments).
+- Both eval paths must use IDENTICAL upstream `evaluate.py` SHA, IDENTICAL `public_test_video_names.txt`, IDENTICAL video payloads, IDENTICAL `inflate.sh` runtime tree, IDENTICAL archive bytes.
+
+**Rules:**
+
+1. **Dual-eval is mandatory for any submission packet.** Before declaring a candidate "ready to PR" or "frontier-anchored," produce BOTH a `[contest-CUDA]` artifact AND a `[contest-CPU]` artifact on the EXACT same archive bytes via `upstream/evaluate.py` on `--device cuda` AND `--device cpu` respectively.
+
+2. **Both tags are authoritative for their axis IF AND ONLY IF the hardware is 1:1 contest-compliant.** `[contest-CUDA]` requires NVIDIA GPU on Linux. `[contest-CPU]` requires x86_64 Linux. Apple Silicon CPU eval is `[macOS-CPU advisory]` (NOT `[contest-CPU]`) and is non-promotable.
+
+3. **The CUDA−CPU gap is empirical and per-archive.** Do NOT assume PR102's −0.033 gap generalizes to our archives without measurement. Pose component appears to be the dominant gap source (5× difference on PR102 pose between CUDA and CPU), likely FastViT attention numerics. Each architecture/checkpoint has its own gap.
+
+4. **CPU eval execution (where to run):**
+   - **Vast.ai CPU instance** (Linux x86_64; cheap; matches contest CI architecture)
+   - **Modal CPU container** (Linux x86_64; ~$0.06/hr; matches contest CI architecture)
+   - **Lightning CPU Studio** (Linux x86_64; matches contest CI architecture)
+   - **GitHub Actions CI workflow** itself (the actual contest hardware)
+   - **NOT** local M5 Max / Apple Silicon / any macOS — use only as a smoke / dev-loop signal, NOT as the authoritative axis. Tag any local CPU eval as `[macOS-CPU advisory only]`.
+
+5. **CPU eval discipline (regardless of where it runs):**
+   - Use `--device cpu` on `upstream/evaluate.py` directly. Verify `torch.cuda.is_available() == False`.
+   - Force NO MPS path (which doesn't exist on Linux x86_64 anyway, but be explicit).
+   - Tag results `[contest-CPU]` distinctly ONLY when running on Linux x86_64. Apple Silicon CPU eval is `[macOS-CPU advisory only]`.
+   - CPU eval on a small Vast.ai / Modal CPU instance takes 60-120 min for 600 samples (matching the contest GitHub Actions CPU runner). Budget accordingly.
+
+6. **For non-submission empirical work (intermediate candidates, ablations, sweep arms), CUDA-only is still the right discipline** to keep proxy-auth gap risk low. The dual-eval mandate applies specifically to ARCHIVES THAT WILL SHIP or are used to make medal-band/frontier claims.
+
+7. **Existing CUDA-only artifacts are NOT retroactively invalidated.** They remain `[contest-CUDA]` with their CUDA-axis truth value. The dual-eval mandate is forward-looking: from this rule's commit forward, every shippable archive gets both axes on 1:1 contest-compliant hardware.
+
+8. **Lane Maturity registry must reflect both axes.** A lane reaching Level 2/3 with a `[contest-CUDA]` anchor but no `[contest-CPU]` anchor (on Linux x86_64) is incomplete for medal-band ranking purposes — record both or record the missing one as a known gap.
+
+Memory: `feedback_dual_cpu_cuda_auth_eval_mandatory_20260508.md` (this rule's source memo). Cross-ref `feedback_cuda_cpu_auth_eval_drift_pr102_pr104_20260508` (codex's drift hypothesis matrix that established the empirical basis).
 
 ## eval_roundtrip — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
@@ -433,7 +479,7 @@ Cross-references: Council D audit `.omx/research/council_ema_audit_20260429.md`;
 PoseNet specifically drifts 23×. Likely cause: FastViT-T12 attention softmax + YUV6 chroma plane numerics differ between MPS and CUDA float16 implementations.
 
 **Rules:**
-1. ALL auth eval must run on CUDA (Vast.ai 4090, A100, T4). Never MPS, never CPU.
+1. ALL **intermediate / non-submission** auth eval must run on CUDA (Vast.ai 4090, A100, T4). Never MPS as the authoritative axis. **EXCEPTION: submission packets (PR'd archives or "frontier-claimed" archives) require BOTH `[contest-CUDA]` AND `[contest-CPU]` per the new "Submission auth eval — BOTH CPU AND CUDA" section above.** The "never CPU" prohibition in the original rule was about local MPS-style CPU forward passes through SegNet/PoseNet scorers (which are noise like MPS), NOT about the contest's `upstream/evaluate.py --device cpu` path (which is the contest leaderboard's official scorer for ranking). The two are different: local-CPU-scorer-noise is invalid; contest-CPU-evaluator is authoritative.
 2. MPS is acceptable for proxy scoring during training (continuous monitoring), smoke tests (architecture validation), code-correctness checks, and long cheap research-signal sweeps that only generate curve-shape priors. NEVER for strategy decisions, ranking, shipping, method retirement, or paper empirical claims.
 3. Score numbers measured on MPS may NOT be reported as "auth" or "contest-compliant" anywhere — in commits, run_log, BATTLE_PLAN, or summaries. Tag them `[MPS-PROXY]` and treat as advisory only.
 4. Before any major decision (kill/promote/ship), the score MUST come from a CUDA `inflate.sh` + `upstream/evaluate.py` run on the EXACT archive bytes.
