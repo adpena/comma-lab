@@ -1,5 +1,67 @@
 # Findings
 
+## 2026-05-08 [EMPIRICAL] Cross-paradigm winner: ADMM × continuous-K + Op1 finalizer = 137,531 B on real PR101 substrate
+
+**Source**: `Path_B_step6_ADMM_x_continuous_K_then_Op1_finalizer` empirical run, manifest at `reports/raw/pr101_cross_paradigm_hstack_vstack_20260508T060656Z/manifest.json` (commit 8d33d5c1).
+
+**Result** [CPU-prep faithful cross-paradigm test, NOT contest-CUDA]:
+
+| Composition | Bytes | Δ vs Op2_alone | Δ vs ADMM-alone |
+|---|---:|---:|---:|
+| Op2_alone (canonical 8-stack winner) | 161,942 | — | +8,303 |
+| Op1_alone | 162,202 | +260 | +8,563 |
+| β-identity → Op1 | 163,587 | +1,645 | +9,948 |
+| γ_alone | 194,867 | +32,925 | +41,228 |
+| ADMM-alone (Path B step 6 standalone) | 153,639 | -8,303 | — |
+| **ADMM × continuous-K → Op1 finalizer** | **137,531** | **-24,411** | **-16,108** |
+| Op3_int6 → Op1 (substrate-mismatch) | 309,470 | +147,528 | +155,831 |
+| Op3_int7 → Op1 (substrate-mismatch) | 362,469 | +200,527 | +208,830 |
+
+First measured cross-paradigm composition on real PR101 substrate that BEATS standalone Path B step 6 AND beats every canonical 8-stack matrix entry. Tagged `MEASURED_CONFIG_NOT_DISPATCHABLE`; score_claim=False; promotion_eligible=False; ready_for_exact_eval_dispatch=False. Distortion → score impact unmeasured; rel_err pre-finalizer 4.15%.
+
+**Substrate-mismatch corollary**: Op3 (apogee_intN) is STACKABLE in the type system but ballooned PR101 archives by +147K-200K B. Op3 was designed for HNeRV/PR106 substrate; PR101's split-Brotli `auto_select_byte_maps` cannot exploit Op3's block-FP wire format. This refines the substrate-mismatch corollary from 2026-05-07 (PR101 byte-maps yielded only -241 B on PR106): substrate-tied codecs lose decisively in the *wrong* direction too.
+
+**Composability taxonomy verified**:
+- STACKABLE: Op3, β (transforms_state_dict=True; produces a new substrate consumable by downstream codecs)
+- SUBSTITUTIONAL: Op1, Op2, γ (independent terminal codec choices; not stackable on each other)
+
+---
+
+## 2026-05-08 [EMPIRICAL] Path B Ω-OPT — allocation MECHANISM dominates codec-basis on PR101
+
+**Source**: 6 of 8 Ω-OPT levels empirically anchored on real PR101 substrate (commits e27a4a2e, 6b355e64, f11c1107, 4f2cfd55, b8aa5c43, 983598d2). Cumulative summary at `feedback_path_b_convergent_findings_summary_20260508.md`.
+
+**Convergent finding**: Joint-ADMM Lagrangian allocation (step 5) is the validated active ingredient that BEATS greedy by 12-65 KB AND beats analytical at low rel_err. At rms_target=0.05 (achieves 4.36%): ADMM=150,000 B vs subagent D analytical 156,344 B@3.86% — beats by 6,344 B [empirical:reports/raw/pr101_omega_opt_joint_admm_*]. Step 6 (ADMM × continuous-K basis) at 152,420 B@4.33% confirms allocation MECHANISM is dominant; codec basis is secondary on PR101's near-iid INT8 substrate.
+
+**Negative-evidence anchors** (Path B steps 2-4):
+- Multi-pass IMP post-hoc: avg |Δ|=64.4 B across 9 configs × 3 alphas — buys ZERO bytes [empirical:6b355e64]. Decomposes the Ω-OPT multi-pass-IMP -15bp prediction: post-hoc coalesce contribution=0; retrain contribution=UNTESTED.
+- HStack-of-VStacks per-tensor brotli: -40 B NET — sidechannel (84 B) dominates savings (44 B) [empirical:f11c1107]. PR101 substrate has flat per-tensor brotli loss surface.
+- HStack codec-CHOICE brotli/sparsity: frontier saves 14K-82K B at rel_err 7-35% but DOMINATED by analytical lossy_coarsening at the same rel_err [empirical:4f2cfd55]. Sharp elbow at α=0.3 boundary (~11% rel_err); no graceful midpoint.
+
+**Empirical byte-floor on PR101 substrate**: ~150 KB at 4-5% rel_err. The codec lane has saturated; remaining headroom requires distortion validation (CUDA dispatch), not codec cleverness.
+
+---
+
+## 2026-05-08 [EMPIRICAL] Lossy_coarsening_analytical CUDA dispatch returned 0.3517 [contest-CUDA A-negative]
+
+**Source**: `experiments/results/lightning_batch/lossy-coarsening-cuda-20260508T0312-noproject/auth_eval_work/contest_auth_eval.json` + adversarial review at `.omx/research/lossy_coarsening_exact_cuda_adversarial_review_20260508_worker_b.md`.
+
+**Result** [contest-CUDA, Lightning T4]:
+- score = 0.351718793322788
+- archive_bytes = 156,404 (matches expected); SHA256 verified
+- segnet = 0.00186125 / posenet = 0.00037762 / rate = 0.00416572
+
+Status: **measured_config_retired** (per-tensor K budget = 0.05). Predicted band 0.189 [predicted; from 156,344 B byte anchor + assumption-of-distortion-equivalence] FALSIFIED at this configuration — actual score 0.352 is 1.86× above the active HNeRV anchor 0.20898.
+
+**Reactivation criteria**:
+1. Retrain or jointly optimize the renderer under scorer-aware loss instead of post-hoc lossy coarsening
+2. Prove byte-closed runtime packet with component-risk mitigation and exact CUDA score below the active HNeRV anchor
+3. Classify whether loss is SegNet, PoseNet, or runtime/harness driven before any broader method conclusion
+
+Tag: `falsification_scope = measured_config_only_per_tensor_K_budget_0.05`. Per CLAUDE.md `forbidden_premature_class_level_falsification`, this is NOT a class-level kill — only this specific configuration is retired; the lossy_coarsening method family remains DEFERRED-pending-research.
+
+---
+
 ## 2026-05-07 [STRATEGIC] Top-3 medal PRs build on each other's archives — bolt-on engineering, not bespoke codecs
 
 **Source**: bit-level deconstruction of PRs #95/#98/#100/#101/#102/#103 — see
