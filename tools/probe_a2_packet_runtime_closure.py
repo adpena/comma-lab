@@ -152,11 +152,14 @@ def _load_packet_runtime(packet_dir: Path):
         )
     old_model = sys.modules.get("model")
     old_codec = sys.modules.get("codec")
+    old_dont_write_bytecode = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
     sys.path.insert(0, str(src_dir))
     try:
         model_mod = _load_module("model", model_path)
         codec_mod = _load_module("codec", codec_path)
     finally:
+        sys.dont_write_bytecode = old_dont_write_bytecode
         try:
             sys.path.remove(str(src_dir))
         except ValueError:

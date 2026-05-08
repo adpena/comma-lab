@@ -866,9 +866,12 @@ print(json.dumps({
     },
 }, sort_keys=True))
 '''
+    env = os.environ.copy()
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
     proc = subprocess.run(
         [sys.executable, "-c", script, str(packet_dir), str(candidate_archive_path)],
         capture_output=True,
+        env=env,
         text=True,
         check=False,
     )

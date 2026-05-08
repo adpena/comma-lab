@@ -172,3 +172,9 @@ checks:
   `experiments/results/track1_phase_a2_packet_ladder_codex_hardened_20260508T161558Z/variants/weighted_k_00_rms_0p0386/pre_submission_compliance.nonfinal.json`
 - standalone runtime closure probe:
   `experiments/results/track1_phase_a2_packet_ladder_codex_hardened_20260508T161558Z/variants/weighted_k_00_rms_0p0386/a2_runtime_closure_probe.json`
+
+The generated packet runtime source files remain ignored raw custody under
+`experiments/results/`. The untracked-source runtime baseline was updated from
+`10502` to `10509` source-like files, SHA-256
+`02f1b7e3dbff968e9306c1214224773406e3e60a722f11804ffbde0eac98f09a`, after the
+new A2 packet manifests and ledgers captured the useful signal.
