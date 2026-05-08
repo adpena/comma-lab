@@ -1,0 +1,44 @@
+{
+  "surrogate_optimum": {
+    "q": 10,
+    "lgwin": 10,
+    "lgblock": 16,
+    "bytes": 162341
+  },
+  "EMPIRICAL_BEST": {
+    "q": 11,
+    "lgwin": 16,
+    "lgblock": 19,
+    "bytes": 162150
+  },
+  "near_best_alt": {
+    "q": 11,
+    "lgwin": 14,
+    "lgblock": 19,
+    "bytes": 162154
+  },
+  "cma_local_min": {
+    "q": 11,
+    "lgwin": 13,
+    "lgblock": 18,
+    "bytes": 162154
+  },
+  "optuna_winner": {
+    "q": 10,
+    "lgwin": 13,
+    "lgblock": 19,
+    "bytes": 162156
+  },
+  "low_lgwin_q11": {
+    "q": 11,
+    "lgwin": 10,
+    "lgblock": 16,
+    "bytes": 162339
+  },
+  "q10_lgwin16_lgblock16": {
+    "q": 10,
+    "lgwin": 16,
+    "lgblock": 16,
+    "bytes": 162335
+  }
+}

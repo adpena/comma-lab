@@ -1,0 +1,197 @@
+{
+  "best_complexity": 19,
+  "best_equation": "(((529.77734 / q) - (lgwin / (q - 3.0589917))) * lgwin) + ((538.6563 / (9.36337 - q)) + 162254.23)",
+  "charged_bits_changed": false,
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "cpu_only_symbolic_regression",
+    "no_archive_substitution_performed",
+    "no_score_affecting_payload_change_proof",
+    "missing_byte_closed_archive_manifest",
+    "missing_exact_cuda_auth_eval",
+    "symbolic_surrogate_is_planning_signal_only"
+  ],
+  "dispatchable": false,
+  "empirical_best": {
+    "bytes_out": 162150,
+    "lgblock": 19,
+    "lgwin": 16,
+    "q": 11,
+    "source_file": "experiments/results/optuna_pr101_known_best_probe_20260507_codex/optuna_atom_ledger.jsonl"
+  },
+  "evidence_grade": "[CPU-prep faithful PySR-symbolic-regression test]",
+  "evidence_semantics": "cpu_pysr_symbolic_regression_forensic",
+  "falsification_scope": "symbolic_surrogate_fit_only_no_score_test",
+  "family_falsified": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "metrics": {
+    "test_mae": 266.8583355061532,
+    "test_r2": 0.8758963011209875,
+    "test_rmse": 368.3572540549881,
+    "train_r2": 0.9517208128700337
+  },
+  "n_test": 18,
+  "n_train": 73,
+  "n_trajectories_total": 113,
+  "n_trajectories_unique": 91,
+  "notes": "PySR symbolic regression on CMA-ES + Optuna PR101 brotli-param trajectory data; CPU-only forensic planning; surrogate is a closed-form prediction of bytes_out(q, lgwin, lgblock) on the PR101 substrate. Surrogate-derived optima MUST be validated against the actual brotli encoder before any dispatch.",
+  "pareto_front": [
+    {
+      "complexity": 1,
+      "equation": "163688.47",
+      "loss": 5864658.5,
+      "score": 0.0,
+      "sympy_format": "163688.470000000"
+    },
+    {
+      "complexity": 3,
+      "equation": "163696.1 - q",
+      "loss": 5855396.0,
+      "score": 0.0007903121891141123,
+      "sympy_format": "163696.1 - q"
+    },
+    {
+      "complexity": 5,
+      "equation": "(q * -660.6899) + 169145.64",
+      "loss": 2802296.0,
+      "score": 0.36846227404908166,
+      "sympy_format": "169145.64 + q*(-660.6899)"
+    },
+    {
+      "complexity": 6,
+      "equation": "(log(q) * -3731.7278) + 171239.62",
+      "loss": 2447106.8,
+      "score": 0.135532652376793,
+      "sympy_format": "171239.62 - 3731.7278*log(q)"
+    },
+    {
+      "complexity": 7,
+      "equation": "((lgwin * 645.6949) / q) + 161998.6",
+      "loss": 2275436.5,
+      "score": 0.0727345266575957,
+      "sympy_format": "lgwin*645.6949/q + 161998.6"
+    },
+    {
+      "complexity": 9,
+      "equation": "((lgwin * 1413.8785) / (q - -1.2086196)) + 160861.83",
+      "loss": 1907808.6,
+      "score": 0.08810832430079624,
+      "sympy_format": "lgwin*1413.8785/(q - 1*(-1.2086196)) + 160861.83"
+    },
+    {
+      "complexity": 10,
+      "equation": "((622.7782 / (q - log(q))) * lgwin) + 161531.64",
+      "loss": 1705972.0,
+      "score": 0.1118202172552512,
+      "sympy_format": "622.7782*lgwin/(q - log(q)) + 161531.64"
+    },
+    {
+      "complexity": 11,
+      "equation": "(lgwin * (619.34186 / (q - sqrt(log(q))))) - -161682.19",
+      "loss": 1686088.1,
+      "score": 0.01172392420384499,
+      "sympy_format": "619.34186*lgwin/(q - sqrt(log(q))) + 161682.19"
+    },
+    {
+      "complexity": 12,
+      "equation": "((lgwin / (q - log(q - 0.24803199))) * 751.4851) + 161202.02",
+      "loss": 1632784.9,
+      "score": 0.032124027516709085,
+      "sympy_format": "751.4851*lgwin/(q - log(q - 0.24803199)) + 161202.02"
+    },
+    {
+      "complexity": 13,
+      "equation": "(((542.444 / q) - (lgwin / (q - 3.0574906))) * lgwin) + 162176.66",
+      "loss": 788895.4,
+      "score": 0.7274086243549313,
+      "sympy_format": "lgwin*(-lgwin/(q - 1*3.0574906) + 542.444/q) + 162176.66"
+    },
+    {
+      "complexity": 15,
+      "equation": "((lgwin + -5.768039) * ((758.69867 / q) + (-68.50967 / (q - 3.132917)))) + 162362.66",
+      "loss": 769635.7,
+      "score": 0.012358226585373685,
+      "sympy_format": "(lgwin - 5.768039)*(-68.50967/(q - 1*3.132917) + 758.69867/q) + 162362.66"
+    },
+    {
+      "complexity": 17,
+      "equation": "162176.66 + ((lgwin * ((543.4276 / q) - (lgwin / (q - 3.0574906)))) - sqrt(exp(q)))",
+      "loss": 725114.8,
+      "score": 0.029793649431232357,
+      "sympy_format": "lgwin*(-lgwin/(q - 3.0574906) + 543.4276/q) - sqrt(exp(q)) + 162176.66"
+    },
+    {
+      "complexity": 19,
+      "equation": "(((529.77734 / q) - (lgwin / (q - 3.0589917))) * lgwin) + ((538.6563 / (9.36337 - q)) + 162254.23)",
+      "loss": 283142.34,
+      "score": 0.47019012387601566,
+      "sympy_format": "lgwin*(-lgwin/(q - 1*3.0589917) + 529.77734/q) + 162254.23 + 538.6563/(9.36337 - q)"
+    },
+    {
+      "complexity": 21,
+      "equation": "((((515.8803 / q) - ((lgwin / (q - 3.0589273)) + q)) * lgwin) + (552.74304 / (9.360835 - q))) + 162348.2",
+      "loss": 263473.56,
+      "score": 0.03599835900206081,
+      "sympy_format": "lgwin*(-(lgwin/(q - 1*3.0589273) + q) + 515.8803/q) + 162348.2 + 552.74304/(9.360835 - q)"
+    },
+    {
+      "complexity": 23,
+      "equation": "((553.8711 / (9.38161 - q)) + (lgwin * ((512.8089 / q) - ((lgwin + lgwin) / (q - 3.1089375))))) + (162347.77 - lgwin)",
+      "loss": 252089.56,
+      "score": 0.022084300096280852,
+      "sympy_format": "lgwin*(-(lgwin + lgwin)/(q - 1*3.1089375) + 512.8089/q) - lgwin + 162347.77 + 553.8711/(9.38161 - q)"
+    },
+    {
+      "complexity": 25,
+      "equation": "(603.2797 / (9.404795 - q)) + (((lgwin * (((521.3583 / q) - ((lgwin + lgwin) / (q - 3.1143982))) - lgwin)) + 162593.16) - lgwin)",
+      "loss": 245476.19,
+      "score": 0.013292232205277168,
+      "sympy_format": "lgwin*(-lgwin - (lgwin + lgwin)/(q - 1*3.1143982) + 521.3583/q) - lgwin + 162593.16 + 603.2797/(9.404795 - q)"
+    }
+  ],
+  "pysr_config": {
+    "binary_operators": [
+      "+",
+      "-",
+      "*",
+      "/"
+    ],
+    "deterministic": true,
+    "maxsize": 25,
+    "model_selection": "best",
+    "niterations": 100,
+    "population_size": 40,
+    "procs": 1,
+    "seed": 0,
+    "train_frac": 0.8,
+    "unary_operators": [
+      "log",
+      "exp",
+      "sqrt"
+    ]
+  },
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "pr101_pysr_cmaes_symbolic_regression_report_v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "surrogate_optimum": {
+    "lgblock": 16,
+    "lgwin": 10,
+    "n_grid_points": 1485,
+    "predicted_bytes_out": 161923.4944669737,
+    "q": 10
+  },
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ],
+  "timestamp_utc": "2026-05-08T07:53:29Z",
+  "tool": "tools/pr101_pysr_cmaes_trajectory_symbolic_regression.py",
+  "trajectory_sources": [
+    "experiments/results/cma_pr101_real_substrate_20260507T222605Z/cma_pr101_atom_ledger.jsonl",
+    "experiments/results/cma_pr101_real_substrate_cmaes_20260507T223229Z/cma_pr101_atom_ledger.jsonl",
+    "experiments/results/optuna_pr101_known_best_probe_20260507_codex/optuna_atom_ledger.jsonl",
+    "experiments/results/optuna_pr101_real_substrate_20260507T230716Z/optuna_atom_ledger.jsonl",
+    "experiments/results/optuna_pr101_real_substrate_hardened_20260507_codex/optuna_atom_ledger.jsonl"
+  ]
+}
