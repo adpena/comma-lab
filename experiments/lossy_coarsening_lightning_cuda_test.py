@@ -154,6 +154,11 @@ DEFAULT_PR101_SOURCE_DIR = (
     / "source/submissions/hnerv_ft_microcodec"
 )
 LIGHTNING_ACTIVE_JOBS_PATH = REPO_ROOT / ".omx" / "state" / "lightning_active_jobs.json"
+CPU_BUILD_SCORE_BLOCKERS = [
+    "cpu_build_rel_err_proxy_not_score_evidence",
+    "exact_cuda_auth_eval_not_yet_harvested",
+    "requires_contest_auth_eval_json_before_score_promotion_rank_or_kill",
+]
 
 
 def _utc_now_iso() -> str:
@@ -173,6 +178,27 @@ def _job_name() -> str:
 
 def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def cpu_build_proxy_guard_fields() -> dict[str, object]:
+    """Fail-closed custody fields for the local CPU build artifact.
+
+    The build output can be worth submitting for exact eval, but the local
+    byte/rel_err smoke itself cannot promote, rank, kill, or claim score.
+    """
+    return {
+        "evidence_semantics": "cpu_build_byte_closed_candidate_proxy_no_score",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "cuda_eval_worth_testing": True,
+        "family_falsified": False,
+        "falsification_scope": "none_cpu_build_proxy_only",
+        "score_claim_blockers": list(CPU_BUILD_SCORE_BLOCKERS),
+        "dispatch_blockers": list(CPU_BUILD_SCORE_BLOCKERS),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -524,6 +550,24 @@ if __name__ == "__main__":
 
 
 # Forked inflate.sh — same structure as PR101's, points to forked inflate.py.
+#
+# BUG-FIX 2026-05-08 (companion to arch_shrink ego_flow+pose forward fix):
+#   The prior dispatch (lossy-coarsening-cuda-20260508t020152z) crashed at
+#   inflate time with `ModuleNotFoundError: No module named 'brotli'`. The
+#   custom inflate.py imports brotli + numpy + torch but the Lightning
+#   `.venv` is pip-less and never had brotli installed (the canonical
+#   `bootstrap_dali_hash_pinned.py` Stage 1 installs DALI + scientific
+#   wheels, not the inflate-side runtime). The canonical fix is the same
+#   one `submissions/robust_current/inflate.sh` already uses: invoke the
+#   inflate via `uv run --with brotli==<spec> --with torch==<spec> --with
+#   numpy==<spec> python ...` so uv resolves the runtime deps in an
+#   isolated ephemeral env. Do NOT inline `pip install brotli` per
+#   CLAUDE.md "Forbidden re-implementing remote bootstrap inline" —
+#   `uv run --with` IS the canonical pattern for ephemeral inflate-time
+#   deps. INFLATE_TORCH_SPEC must be cu124 on driver<580 hosts (Lightning
+#   T4 g4dn.2xlarge has driver 580.126.09 → CUDA 13, but the dispatcher
+#   pins cu124 because the staged INFLATE_TORCH_SPEC env var is exported
+#   prior to entering this script).
 FORKED_INFLATE_SH = '''#!/usr/bin/env bash
 # Forked PR101 inflate.sh for lossy_coarsening_analytical lane.
 set -euo pipefail
@@ -536,7 +580,27 @@ FILE_LIST="${3:?file list required}"
 
 mkdir -p "$OUTPUT_DIR"
 
-PYBIN="${PYTHON:-python}"
+# Canonical inflate-time uv ephemeral env (mirrors
+# `submissions/robust_current/inflate.sh` lines 74-90). The `--with` specs
+# pull brotli + torch + numpy into an ephemeral resolution; this works
+# even when the host `.venv` is pip-less (Lightning Studio default).
+INFLATE_BROTLI_SPEC="${INFLATE_BROTLI_SPEC:-brotli==1.2.0}"
+INFLATE_TORCH_SPEC="${INFLATE_TORCH_SPEC:-torch==2.5.1+cu124}"
+INFLATE_NUMPY_SPEC="${INFLATE_NUMPY_SPEC:-numpy==2.4.4}"
+UV_BIN="${UV_BIN:-$(command -v uv || echo /usr/local/bin/uv)}"
+if [ ! -x "$UV_BIN" ]; then
+  echo "FATAL: uv not on PATH (UV_BIN=$UV_BIN); the canonical inflate-time" >&2
+  echo "       env requires uv. Bootstrap with `scripts/ensure_remote_uv.sh`." >&2
+  exit 1
+fi
+
+UV_WITH_INFLATE_DEPS=(
+  --with "$INFLATE_BROTLI_SPEC"
+  --with "$INFLATE_TORCH_SPEC"
+  --with "$INFLATE_NUMPY_SPEC"
+)
+
+echo "[lossy-coarsening-inflate] uv specs: brotli=$INFLATE_BROTLI_SPEC torch=$INFLATE_TORCH_SPEC numpy=$INFLATE_NUMPY_SPEC" >&2
 
 while IFS= read -r line; do
   [ -z "$line" ] && continue
@@ -550,7 +614,7 @@ while IFS= read -r line; do
   [ ! -f "$SRC" ] && echo "ERROR: ${SRC} not found" >&2 && exit 1
 
   printf "Inflating %s ... " "$line"
-  "$PYBIN" "$HERE/inflate.py" "$SRC" "$DST"
+  "$UV_BIN" run "${UV_WITH_INFLATE_DEPS[@]}" python "$HERE/inflate.py" "$SRC" "$DST"
 done < "$FILE_LIST"
 '''
 
@@ -701,6 +765,13 @@ export TAC_UPSTREAM_DIR="$WORKSPACE/upstream"
 export INFLATE_TORCH_SPEC={INFLATE_TORCH_SPEC}
 export UV_EXTRA_INDEX_URL={UV_EXTRA_INDEX_URL}
 export UV_INDEX_STRATEGY={UV_INDEX_STRATEGY}
+# 2026-05-08 fix: forked inflate.sh uses `uv run --with brotli/torch/numpy`
+# (canonical pattern from submissions/robust_current/inflate.sh) so brotli
+# resolves at inflate time even when the host .venv is pip-less. Export the
+# specs here so the FORKED_INFLATE_SH env-var defaults can be overridden
+# from the dispatcher rather than hard-coded inside the staged script.
+export INFLATE_BROTLI_SPEC=brotli==1.2.0
+export INFLATE_NUMPY_SPEC=numpy==2.4.4
 
 # AppleDouble cleanup before any rsync-staged paths are read.
 find "$WORKSPACE" -name '._*' -type f -delete 2>/dev/null || true
@@ -709,6 +780,21 @@ LOG_DIR="$WORKSPACE/{output_subdir}"
 mkdir -p "$LOG_DIR"
 
 log() {{ echo "[lossy-coarsening] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }}
+
+# Ensure uv is on PATH BEFORE any `uv run` invocation. Lightning's
+# `.venv/bin/python` does not expose uv on the system PATH; the canonical
+# helper `scripts/ensure_remote_uv.sh` symlinks uv to /usr/local/bin/uv.
+# Do NOT inline `curl ... astral.sh/uv/install.sh | sh` here per CLAUDE.md
+# "Forbidden re-implementing remote bootstrap inline".
+if ! command -v uv >/dev/null 2>&1; then
+    log "uv not on PATH; bootstrapping via scripts/ensure_remote_uv.sh"
+    bash "$WORKSPACE/scripts/ensure_remote_uv.sh" --symlink-system >"$LOG_DIR/ensure_remote_uv.log" 2>&1 || {{
+        echo "FATAL: ensure_remote_uv.sh failed; see $LOG_DIR/ensure_remote_uv.log" >&2
+        exit 6
+    }}
+fi
+export UV_BIN="${{UV_BIN:-$(command -v uv)}}"
+log "uv ready: UV_BIN=$UV_BIN"
 
 # Stage 0: GPU presence check.
 log "=== Stage 0: GPU presence check ==="
@@ -1279,8 +1365,7 @@ def main(argv: list[str] | None = None) -> int:
         "per_tensor_K": section["per_tensor_K"],
         "predicted_band": [args.predicted_low, args.predicted_high],
         "evidence_grade": "[CPU-build]",
-        "score_claim": False,
-        "promotion_eligible": False,
+        **cpu_build_proxy_guard_fields(),
     }
     build_manifest_path.write_text(
         json.dumps(build_manifest, indent=2) + "\n", encoding="utf-8"

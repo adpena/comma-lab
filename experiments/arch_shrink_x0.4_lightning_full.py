@@ -449,10 +449,29 @@ def stage_workspace(
 
     The launcher's source-manifest contract requires this even when no archive
     artifact is staged (training will produce the archive on the remote).
+
+    BUG-FIX 2026-05-08 (companion to train_renderer ego_flow+pose forward fix):
+      ``experiments/results/lane_a_landed/optimized_poses.pt`` is the
+      load-bearing pose stream the Q-FAITHFUL training requires
+      (``--qfaithful-training-poses``). However ``experiments/results/`` is in
+      ``lightning_repro_workspace.EXCLUDED_PREFIXES`` (line 88) so the rsync
+      source-traversal silently drops it. Without an explicit ``--artifact``
+      override the file never lands on Lightning, ``_load_qfaithful_training_poses``
+      raises ``FileNotFoundError``, and the dispatch wastes a round-trip.
+      Stage the pose file as an artifact (``include_excluded=True``) so it
+      survives EXCLUDED_PREFIXES.
     """
     manifest_dir = REPO_ROOT / "experiments" / "results" / "lightning_batch" / job_name
     manifest_dir.mkdir(parents=True, exist_ok=True)
     manifest_out = manifest_dir / "source_manifest.json"
+    pose_artifact = REPO_ROOT / "experiments" / "results" / "lane_a_landed" / "optimized_poses.pt"
+    if not pose_artifact.is_file():
+        sys.exit(
+            f"FATAL: required Q-FAITHFUL training pose artifact missing: {pose_artifact}\n"
+            f"  This is the load-bearing pose stream cited in CLAUDE.md "
+            f"`project_baseline_poses_load_bearing` and required by the "
+            f"`scripts/remote_lane_q_faithful_jointgen.sh` canonical pattern."
+        )
     cmd = [
         sys.executable,
         str(REPO_ROOT / "scripts" / "lightning_repro_workspace.py"),
@@ -478,6 +497,10 @@ def stage_workspace(
         "tools",
         "--source",
         "pyproject.toml",
+        # Force-stage the load-bearing Q-FAITHFUL pose artifact past
+        # EXCLUDED_PREFIXES (`experiments/results/`).
+        "--artifact",
+        str(pose_artifact),
         "--requirements-mode",
         "no-install",
         "--no-install",

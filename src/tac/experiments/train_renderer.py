@@ -1553,12 +1553,17 @@ def evaluate_fp4(
                 H_m, W_m = mask_t1.shape[-2], mask_t1.shape[-1]
                 ego_flow = sim_zoom_warp(pair_idx_t, H_m, W_m)
 
+            # See companion fix in train_loop ~line 3155: when use_zoom_flow=True
+            # AND variant=quantizr_faithful, both ego_flow and qfaithful_pose
+            # are non-None. Pass BOTH; the shim swallows ego_flow via **_kwargs
+            # and still receives the mandatory pose= kwarg. Eval must mirror
+            # training's forward contract or the proxy-auth gap re-opens.
+            forward_kwargs: dict = {}
             if ego_flow is not None:
-                rendered_pair = model(mask_t, mask_t1, ego_flow=ego_flow)
-            elif qfaithful_pose is not None:
-                rendered_pair = model(mask_t, mask_t1, pose=qfaithful_pose)
-            else:
-                rendered_pair = model(mask_t, mask_t1)  # (1, 2, H, W, 3)
+                forward_kwargs["ego_flow"] = ego_flow
+            if qfaithful_pose is not None:
+                forward_kwargs["pose"] = qfaithful_pose
+            rendered_pair = model(mask_t, mask_t1, **forward_kwargs)
             # uint8 round-trip to match official scorer pipeline
             rendered_pair = rendered_pair.round().clamp(0, 255).to(torch.uint8).float()
 
@@ -3149,15 +3154,22 @@ def train(args: argparse.Namespace):
 
             # Forward: render pair from masks. Only AsymmetricPairGenerator
             # accepts ego_flow (see renderer.py:1035-1100); the legacy
-            # PairGenerator.forward() takes only (mask_t, mask_t1). Branch on
-            # presence of ego_flow rather than model class so this stays
-            # variant-agnostic.
+            # PairGenerator.forward() takes only (mask_t, mask_t1). The
+            # _QuantizrFaithfulShim REQUIRES `pose=` kwarg AND swallows
+            # `ego_flow` via **_kwargs. The q_faithful_dilated_88k profile
+            # sets BOTH use_zoom_flow=True (so ego_flow is computed) AND
+            # variant=quantizr_faithful (so qfaithful_pose is loaded);
+            # historically the ego_flow branch dropped pose and the shim
+            # raised at the first forward step. Now: when both are present,
+            # pass both — the shim's **_kwargs swallows ego_flow harmlessly
+            # while still receiving the required pose. Branch on presence
+            # rather than model class so this stays variant-agnostic.
+            forward_kwargs: dict = {}
             if ego_flow is not None:
-                rendered_pair = model(mask_t, mask_t1, ego_flow=ego_flow)
-            elif qfaithful_pose is not None:
-                rendered_pair = model(mask_t, mask_t1, pose=qfaithful_pose)
-            else:
-                rendered_pair = model(mask_t, mask_t1)  # (1, 2, H, W, 3)
+                forward_kwargs["ego_flow"] = ego_flow
+            if qfaithful_pose is not None:
+                forward_kwargs["pose"] = qfaithful_pose
+            rendered_pair = model(mask_t, mask_t1, **forward_kwargs)
 
             if in_pretrain:
                 # Phase 1: L1 + edge loss only -- no scorer, much faster
