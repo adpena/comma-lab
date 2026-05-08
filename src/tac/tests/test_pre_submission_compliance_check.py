@@ -286,6 +286,24 @@ def test_pre_submission_check_rejects_local_central_method_skew(tmp_path: Path) 
     assert "zip_local_header_metadata_matches:x" in failed
 
 
+def test_pre_submission_check_reports_local_central_name_skew_directly(tmp_path: Path) -> None:
+    mod = _load_module()
+    _write_submission(tmp_path / "submission")
+    archive = tmp_path / "submission" / "archive.zip"
+    data = bytearray(archive.read_bytes())
+    local_name_offset = 30
+    assert data[local_name_offset:local_name_offset + 1] == b"x"
+    data[local_name_offset:local_name_offset + 1] = b"y"
+    archive.write_bytes(data)
+
+    _record, checks = mod.inspect_archive(archive, expect_single_member="x")
+
+    failed = {check.name for check in checks if not check.passed}
+    assert "zip_local_header_matches:x" in failed
+    assert "zip_local_header_metadata_matches:x" in failed
+    assert "zip_member_payload_readable:x" in failed
+
+
 def test_pre_submission_check_contest_final_requires_dispatch_identity(
     tmp_path: Path,
 ) -> None:
@@ -442,6 +460,44 @@ def test_pre_submission_check_dispatch_claim_linkage_requires_terminal_row(tmp_p
     )
     assert not report["passed"]
     assert "dispatch_claim_terminal_row" in _failed_check_names(report)
+
+
+def test_pre_submission_check_dispatch_claim_linkage_uses_newest_matching_row(tmp_path: Path) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission")
+    claims = tmp_path / "claims.md"
+    claims.write_text(
+        "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
+        "|---|---|---|---|---|---|---|---|\n"
+        "| 2026-05-08T01:00:00Z | codex | lane-a | lightning | job-a | "
+        "2026-05-08T02:00Z | active_exact_eval | newest row still active |\n"
+        "| 2026-05-08T00:00:00Z | codex | lane-a | lightning | job-a | "
+        "2026-05-08T00:30Z | completed_score=0.209 | stale older terminal |\n",
+        encoding="utf-8",
+    )
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--require-auth-eval",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+
+    assert not report["passed"]
+    assert "dispatch_claim_terminal_row" in _failed_check_names(report)
+    assert report["dispatch_claims"]["latest_matching_status"] == "active_exact_eval"
 
 
 def test_pre_submission_check_dispatch_claim_linkage_accepts_live_eight_column_schema(tmp_path: Path) -> None:

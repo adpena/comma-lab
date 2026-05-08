@@ -199,8 +199,12 @@ def validate_packet_section_manifest_batch(
         blockers.append("batch_schema_version_mismatch")
     if payload.get("score_claim") is not False:
         blockers.append("batch_score_claim_not_false")
+    if payload.get("score_evidence_grade") != "invalid_no_score":
+        blockers.append("batch_score_evidence_grade_not_invalid_no_score")
     if payload.get("dispatch_attempted") is not False:
         blockers.append("batch_dispatch_attempted_not_false")
+    if payload.get("gpu_required") is not False:
+        blockers.append("batch_gpu_required_not_false")
     if payload.get("ready_for_exact_eval_dispatch") is not False:
         blockers.append("batch_ready_for_exact_eval_dispatch_not_false")
     blockers.extend(_validate_parser_section_gate(payload.get("parser_section_gate"), "batch"))
@@ -608,8 +612,12 @@ def _validate_manifest_shape(manifest: Mapping[str, Any]) -> list[str]:
         blockers.append("schema_version_mismatch")
     if manifest.get("score_claim") is not False:
         blockers.append("score_claim_not_false")
+    if manifest.get("score_evidence_grade") != "invalid_no_score":
+        blockers.append("score_evidence_grade_not_invalid_no_score")
     if manifest.get("dispatch_attempted") is not False:
         blockers.append("dispatch_attempted_not_false")
+    if manifest.get("gpu_required") is not False:
+        blockers.append("gpu_required_not_false")
     if manifest.get("ready_for_exact_eval_dispatch") is not False:
         blockers.append("ready_for_exact_eval_dispatch_not_false")
     blockers.extend(_validate_parser_section_gate(manifest.get("parser_section_gate"), "manifest"))
@@ -828,13 +836,13 @@ def _is_sha256(value: Any) -> bool:
 
 
 __all__ = [
-    "BATCH_SCHEMA",
-    "MANIFEST_SCHEMA",
     "A2K1_MAGIC",
+    "BATCH_SCHEMA",
     "CPLX1_MAGIC",
+    "MANIFEST_SCHEMA",
+    "PARSER_A2K1",
     "PARSER_AUTO",
     "PARSER_CHOICES",
-    "PARSER_A2K1",
     "PARSER_CPLX1",
     "PARSER_PR101",
     "PARSER_PR103",

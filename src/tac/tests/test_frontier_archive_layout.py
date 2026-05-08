@@ -151,7 +151,7 @@ def test_pr106_like_invalid_brotli_streams_fail_closed(tmp_path: Path) -> None:
     manifest = inspect_frontier_archive_layout(archive)
 
     assert manifest["logical_layout"] is None
-    assert any("No known internal grammar was proven" in caution for caution in manifest["cautions"])
+    assert any("PR106-like" in caution and "ambiguous" in caution for caution in manifest["cautions"])
 
 
 def test_unknown_single_member_does_not_create_logical_budget(tmp_path: Path) -> None:

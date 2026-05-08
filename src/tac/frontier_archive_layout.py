@@ -288,6 +288,37 @@ def _inspect_pr106_inner(member_name: str, blob: bytes) -> dict[str, Any] | None
     }
 
 
+def _pr106_header_like_failure(blob: bytes) -> str | None:
+    """Return a fail-closed reason for PR106-looking bytes that do not parse.
+
+    PR106 packets carry an explicit 0xff marker plus a 24-bit decoder-stream
+    length. If that contract is present but the declared Brotli streams do not
+    validate, the bytes are not safe to reinterpret as a fixed-offset PR101
+    packet. That fallback would give parser authority to malformed PR106-like
+    bytes.
+    """
+
+    if len(blob) < PR106_HEADER_LEN or blob[0] != PR106_HEADER_MAGIC:
+        return None
+    decoder_len = int.from_bytes(blob[1:4], "little")
+    decoder_start = PR106_HEADER_LEN
+    decoder_end = decoder_start + decoder_len
+    if decoder_len <= 0:
+        return "PR106-like 0xff header has non-positive decoder length; logical parser fails closed."
+    if decoder_end > len(blob):
+        return "PR106-like 0xff header decoder length exceeds payload; logical parser fails closed."
+    decoder = blob[decoder_start:decoder_end]
+    tail = blob[decoder_end:]
+    decoder_valid = _brotli_decompresses(decoder)
+    tail_valid = _brotli_decompresses(tail)
+    if not (decoder_valid and tail_valid):
+        return (
+            "PR106-like 0xff header present but declared Brotli streams did not both decode; "
+            "fallback fixed-offset parsers are suppressed as ambiguous/unvalidated."
+        )
+    return None
+
+
 def _brotli_decompresses(data: bytes) -> bool:
     if not data:
         return False
@@ -373,6 +404,9 @@ def _parse_cplx1_blob(blob: bytes) -> dict[str, Any] | None:
 
 
 def _resolve_logical_layout(member_name: str, blob: bytes) -> tuple[dict[str, Any] | None, list[str]]:
+    pr106_failure = _pr106_header_like_failure(blob)
+    if pr106_failure is not None:
+        return None, [pr106_failure]
     candidates = [
         candidate
         for candidate in (

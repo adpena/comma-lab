@@ -138,6 +138,27 @@ def verify_archive(archive_path: Path, expected_sha: str) -> int:
     return archive_path.stat().st_size
 
 
+def submission_runtime_contract_error(submission_name: str, pr_number: str | None) -> str | None:
+    """Return a fail-fast reason when the GHA workflow cannot see inflate.sh.
+
+    The fork workflow downloads only ``archive.zip`` from ``submission_url``.
+    The runtime files, especially ``inflate.sh``, must already exist under
+    ``submissions/<submission_name>/`` in the checked-out repository. For new
+    non-baseline submissions that means the caller must provide ``--pr-number``
+    pointing at a fork PR whose merge ref contains that directory.
+    """
+
+    if submission_name == "baseline":
+        return None
+    if pr_number:
+        return None
+    return (
+        "non-baseline GHA CPU eval requires --pr-number for a PR whose checkout "
+        f"contains submissions/{submission_name}/inflate.sh; eval.yml downloads "
+        "only archive.zip and does not provide runtime files from the release asset"
+    )
+
+
 def create_release_with_asset(
     archive_path: Path,
     release_tag: str,
@@ -153,7 +174,7 @@ def create_release_with_asset(
         f"Auto-created by tools/dispatch_cpu_eval_via_github_actions.py.\n\n"
         f"- archive_sha256: {archive_sha}\n"
         f"- archive_size_bytes: {archive_size}\n"
-        f"- dispatched_at_utc: {dt.datetime.now(dt.timezone.utc).isoformat()}\n"
+        f"- dispatched_at_utc: {dt.datetime.now(dt.UTC).isoformat()}\n"
         f"- purpose: CPU auth eval on contest-compliant Linux x86_64 runner\n"
     )
     result = run_gh(
@@ -529,6 +550,13 @@ def main() -> int:
         f"sha256={args.archive_sha} bytes={archive_size}",
         flush=True,
     )
+    runtime_contract_error = submission_runtime_contract_error(
+        args.submission_name,
+        args.pr_number,
+    )
+    if runtime_contract_error:
+        sys.stderr.write(f"[fatal] {runtime_contract_error}\n")
+        return 2
 
     evaluate_py_sha = (
         sha256_of(args.evaluate_py_path)
@@ -536,10 +564,10 @@ def main() -> int:
         else "<not-found>"
     )
 
-    dispatched_at = dt.datetime.now(dt.timezone.utc).isoformat()
+    dispatched_at = dt.datetime.now(dt.UTC).isoformat()
     release_tag = args.release_tag or (
         f"cpu-eval-{args.submission_name}-"
-        + dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        + dt.datetime.now(dt.UTC).strftime("%Y%m%dT%H%M%SZ")
     )
 
     asset_url = create_release_with_asset(
@@ -566,7 +594,7 @@ def main() -> int:
     print(f"[ok] workflow dispatched: run_id={run_id} url={run_url}", flush=True)
 
     info = poll_run(run_id, args.repo)
-    completed_at = dt.datetime.now(dt.timezone.utc).isoformat()
+    completed_at = dt.datetime.now(dt.UTC).isoformat()
     if info.get("conclusion") != "success":
         sys.stderr.write(
             f"[fatal] workflow run {run_id} concluded "

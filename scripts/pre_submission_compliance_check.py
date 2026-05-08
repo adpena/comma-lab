@@ -232,11 +232,28 @@ def inspect_archive(path: Path, *, expect_single_member: str | None = None) -> t
                 reason = unsafe_zip_name(central)
                 local_reason = unsafe_zip_name(local or "")
                 header_mismatches = _local_central_header_mismatches(local_meta, info)
+                _add(checks, f"zip_member_safe:{central or '<empty>'}", reason is None, reason or central)
+                _add(
+                    checks,
+                    f"zip_local_header_matches:{central or '<empty>'}",
+                    local == central and local_reason is None,
+                    f"central={central!r} local={local!r} local_reason={local_reason}",
+                )
+                _add(
+                    checks,
+                    f"zip_local_header_metadata_matches:{central or '<empty>'}",
+                    not header_mismatches,
+                    ", ".join(header_mismatches) or central,
+                )
                 try:
                     payload = zf.read(info)
                     member_sha = _bytes_sha256(payload)
-                except RuntimeError:
+                    member_readable = True
+                    member_read_details = central
+                except (RuntimeError, zipfile.BadZipFile, OSError) as exc:
                     member_sha = None
+                    member_readable = False
+                    member_read_details = repr(exc)
                 record["members"].append(
                     {
                         "name": central,
@@ -252,18 +269,11 @@ def inspect_archive(path: Path, *, expect_single_member: str | None = None) -> t
                         },
                     }
                 )
-                _add(checks, f"zip_member_safe:{central or '<empty>'}", reason is None, reason or central)
                 _add(
                     checks,
-                    f"zip_local_header_matches:{central or '<empty>'}",
-                    local == central and local_reason is None,
-                    f"central={central!r} local={local!r} local_reason={local_reason}",
-                )
-                _add(
-                    checks,
-                    f"zip_local_header_metadata_matches:{central or '<empty>'}",
-                    not header_mismatches,
-                    ", ".join(header_mismatches) or central,
+                    f"zip_member_payload_readable:{central or '<empty>'}",
+                    member_readable,
+                    member_read_details,
                 )
                 if central in PACKED_PAYLOAD_MEMBER_NAMES:
                     packed_payload_count += 1
@@ -800,7 +810,9 @@ def inspect_dispatch_claims(path: Path, lane_id: str | None, job_id: str | None)
         return {"required": False}, checks
     exists = path.is_file()
     _add(checks, "dispatch_claims_exists", exists, _rel(path))
-    terminal = False
+    latest_matching_status: str | None = None
+    latest_matching_row: str | None = None
+    matching_rows = 0
     rows: list[str] = []
     if exists:
         rows = [
@@ -834,11 +846,32 @@ def inspect_dispatch_claims(path: Path, lane_id: str | None, job_id: str | None)
             if (
                 (lane_id is None or row_lane == lane_id)
                 and (job_id is None or row_job == job_id)
-                and status.startswith(TERMINAL_DISPATCH_STATUS_PREFIXES)
             ):
-                terminal = True
-    _add(checks, "dispatch_claim_terminal_row", terminal, f"lane_id={lane_id} job_id={job_id}")
-    return {"path": _rel(path), "exists": exists, "rows": len(rows)}, checks
+                matching_rows += 1
+                if latest_matching_status is None:
+                    latest_matching_status = status
+                    latest_matching_row = row
+    terminal = bool(
+        latest_matching_status
+        and latest_matching_status.startswith(TERMINAL_DISPATCH_STATUS_PREFIXES)
+    )
+    _add(
+        checks,
+        "dispatch_claim_terminal_row",
+        terminal,
+        (
+            f"lane_id={lane_id} job_id={job_id} matching_rows={matching_rows} "
+            f"latest_matching_status={latest_matching_status!r}"
+        ),
+    )
+    return {
+        "path": _rel(path),
+        "exists": exists,
+        "rows": len(rows),
+        "matching_rows": matching_rows,
+        "latest_matching_status": latest_matching_status,
+        "latest_matching_row": latest_matching_row,
+    }, checks
 
 
 def inspect_public_hygiene(paths: list[Path]) -> tuple[dict[str, Any], list[Check]]:

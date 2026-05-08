@@ -86,7 +86,11 @@ def test_build_monolithic_pr106_section_candidate_updates_header_and_manifest(
 
 def test_frontier_layout_prefers_pr106_magic_even_when_member_is_x(tmp_path: Path) -> None:
     archive = tmp_path / "pr106x.zip"
-    _write_zip(archive, name="x", payload=_pr106_payload(b"d" * 12, b"tail"))
+    _write_zip(
+        archive,
+        name="x",
+        payload=_pr106_payload(brotli.compress(b"decoder"), brotli.compress(b"tail")),
+    )
 
     manifest = inspect_frontier_archive_layout(archive)
 
@@ -103,7 +107,7 @@ def test_frontier_layout_fails_closed_on_ambiguous_unvalidated_member_x(tmp_path
     manifest = inspect_frontier_archive_layout(archive)
 
     assert manifest["logical_layout"] is None
-    assert any("ambiguous" in caution for caution in manifest["cautions"])
+    assert any("PR106-like" in caution and "ambiguous" in caution for caution in manifest["cautions"])
 
 
 def test_frontier_layout_resolves_ambiguous_member_x_with_brotli_streams(tmp_path: Path) -> None:

@@ -11,7 +11,6 @@ import pytest
 from tac.analysis.hnerv_packet_sections import (
     A2K1_MAGIC,
     CPLX1_MAGIC,
-    HnervPacketSectionManifestError,
     MANIFEST_SCHEMA,
     PARSER_A2K1,
     PARSER_CPLX1,
@@ -20,6 +19,7 @@ from tac.analysis.hnerv_packet_sections import (
     PARSER_PR106,
     PR101_DECODER_BLOB_LEN,
     PR101_LATENT_BLOB_LEN,
+    HnervPacketSectionManifestError,
     build_packet_section_manifest,
     build_packet_section_manifest_batch,
     validate_packet_section_manifest,
@@ -275,11 +275,31 @@ def test_batch_manifest_validation_rejects_false_authority_fields(
     batch = build_packet_section_manifest_batch([("fixture", archive, PARSER_PR106)])
     batch["ready_for_exact_eval_dispatch"] = True
     batch["parser_section_gate"]["score_claim"] = True
+    batch["score_evidence_grade"] = "A++"
+    batch["gpu_required"] = True
 
     blockers = validate_packet_section_manifest_batch(batch)
 
     assert "batch_ready_for_exact_eval_dispatch_not_false" in blockers
     assert "batch_parser_section_gate_score_claim_not_false" in blockers
+    assert "batch_score_evidence_grade_not_invalid_no_score" in blockers
+    assert "batch_gpu_required_not_false" in blockers
+
+
+def test_single_manifest_validation_rejects_false_authority_fields(tmp_path: Path) -> None:
+    archive = tmp_path / "pr106.zip"
+    decoder = b"abc"
+    payload = bytes([0xFF]) + len(decoder).to_bytes(3, "little") + decoder + b"tail"
+    _stored_zip(archive, "0.bin", payload)
+    batch = build_packet_section_manifest_batch([("fixture", archive, PARSER_PR106)])
+    manifest = batch["records"][0]
+    manifest["score_evidence_grade"] = "A++"
+    manifest["gpu_required"] = True
+
+    blockers = validate_packet_section_manifest_batch(manifest)
+
+    assert "score_evidence_grade_not_invalid_no_score" in blockers
+    assert "gpu_required_not_false" in blockers
 
 
 def _stored_zip(path: Path, name: str, payload: bytes) -> None:
