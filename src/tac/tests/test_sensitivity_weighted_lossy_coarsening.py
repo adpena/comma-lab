@@ -91,6 +91,12 @@ def test_tool_builds_cpu_only_no_score_manifest(tmp_path: Path, monkeypatch) -> 
     assert manifest["implementation"]["allocator_module"] == (
         "tac.optimization.lagrangian_per_tensor_allocation"
     )
+    assert manifest["implementation"]["byte_closed_packet_ladder_builder"] == (
+        "tools/build_a2_sensitivity_weighted_pr101_packet.py"
+    )
+    assert manifest["packet_ladder_builder"]["selected_k_schedule_field"] == (
+        "weighted_k_allocations[].selected_Ks"
+    )
 
 
 def test_tool_rejects_stub_sensitivity_unless_explicitly_allowed(

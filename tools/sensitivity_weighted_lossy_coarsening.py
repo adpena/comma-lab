@@ -57,6 +57,7 @@ from tac.repo_io import repo_relative, sha256_file, write_json
 
 TOOL_NAME = "tools/sensitivity_weighted_lossy_coarsening.py"
 SCHEMA_VERSION = "phase_a2_sensitivity_weighted_lossy_coarsening.v1"
+PACKET_LADDER_BUILDER = "tools/build_a2_sensitivity_weighted_pr101_packet.py"
 DEFAULT_STATE_DICT = (
     REPO_ROOT
     / "experiments/results/pr101_codecop_sweep_20260507_codex"
@@ -309,6 +310,17 @@ def build_manifest(args: argparse.Namespace) -> dict[str, Any]:
             "allocator_module": "tac.optimization.lagrangian_per_tensor_allocation",
             "cost_curve_module": "tac.codec.cost_curves",
             "joint_encoder_source": "tools/pr101_lossy_coarsening_analytical.encode_with_per_tensor_K",
+            "byte_closed_packet_ladder_builder": PACKET_LADDER_BUILDER,
+        },
+        "packet_ladder_builder": {
+            "tool": PACKET_LADDER_BUILDER,
+            "selected_k_schedule_field": "weighted_k_allocations[].selected_Ks",
+            "status_from_this_manifest": "not_built_by_k_selection_tool",
+            "closure_contract": (
+                "Builder must emit archive bytes/SHA/member manifest and packet-local "
+                "runtime custody before any exact-eval dispatch consideration."
+            ),
+            "authority": "no_score_no_dispatch_until_packet_builder_manifest_and_exact_auth_eval",
         },
         "inputs": {
             "state_dict": repo_relative(args.state_dict, REPO_ROOT),
