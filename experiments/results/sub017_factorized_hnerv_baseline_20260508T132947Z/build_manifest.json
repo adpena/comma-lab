@@ -1,0 +1,57 @@
+{
+  "schema_version": "factorized_hnerv_codec.v1",
+  "lane_id": "factorized_hnerv_v1",
+  "build_timestamp_utc": "2026-05-08T13:29:48Z",
+  "substrate_archive": "/Users/adpena/Projects/pact/experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/archive.zip",
+  "factorized_tensor_indices": [],
+  "per_tensor_ranks": [],
+  "per_tensor_rel_errs": [],
+  "per_tensor_rel_err_form": "rms",
+  "factor_section_bytes": 0,
+  "non_factorized_section_bytes": 162451,
+  "decoder_section_bytes": 162523,
+  "latent_section_bytes": 15839,
+  "archive_payload_bytes": 178371,
+  "archive_zip_bytes": 178479,
+  "archive_sha256": "9c944009abfacee9a52cd05f7f2f48fba36ce61a8382795193642083c5ee705a",
+  "brotli_quality": 11,
+  "score_claim": false,
+  "ready_for_exact_eval_dispatch": false,
+  "byte_proxy_only": true,
+  "cuda_eval_worth_testing": "pending_relerr_review",
+  "evidence_grade": "[CPU-build proxy; not yet contest-CPU or contest-CUDA anchored]",
+  "dispatch_blockers": [
+    "no_cpu_eval_yet",
+    "no_cuda_eval_yet",
+    "rel_err_per_tensor_above_baseline_relerr_envelope"
+  ],
+  "smoke_test": {
+    "smoke_decode_ok": true,
+    "smoke_state_dict_keys": 28,
+    "smoke_forward_shape": [
+      4,
+      2,
+      3,
+      384,
+      512
+    ],
+    "smoke_forward_value_range": [
+      0.0003826759639196098,
+      254.99742126464844
+    ],
+    "smoke_archive_bytes": 178479
+  },
+  "plan_used": {
+    "factorized_indices": [],
+    "per_index_rank": {}
+  },
+  "target_modes": [
+    "contest_exact_eval"
+  ],
+  "deployment_target": "t4_contest_runtime",
+  "score_affecting_payload_changed": true,
+  "charged_bits_changed": true,
+  "custody_status": "ci-rebuildable",
+  "rel_err_form": "rms",
+  "notes": "Factorized HNeRV runtime closes codex sub017_plan dispatch blocker factorized_hnerv_runtime_not_implemented. Empirical PR107 substrate spectrum is near-flat (top-5 singular values within 0.74-1.0 of max) so SVD low-rank at low rank yields HIGH per-tensor rel_err (~40-50% RMS at codex's recommended ranks). Runtime ships as a BUILD-ONLY anchor for future Q-FAITHFUL retrains that explicitly enforce low-rank structure. Tagged DEFERRED-pending-research per CLAUDE.md 'KILL is LAST RESORT'; predicted score lift NOT claimed."
+}
