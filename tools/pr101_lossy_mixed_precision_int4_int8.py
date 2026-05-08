@@ -112,7 +112,7 @@ def per_tensor_rel_err_stats(orig: np.ndarray, recon: np.ndarray) -> dict[str, f
     mask = np.abs(orig_f) > eps
     if not mask.any():
         return {"rel_err_pct_mean": 0.0, "n_nontrivial": 0}
-    rel_err = 100.0 * abs_err[mask] / np.abs(orig_f[mask])
+    rel_err = 100.0 * abs_err[mask] / np.abs(orig_f[mask])  # REL_ERR_NON_CANONICAL_OK: per-element L1 percentage for PR101 int4/int8 mixed-precision sweep; not allocator-fed
     return {
         "rel_err_pct_mean": float(rel_err.mean()),
         "n_nontrivial": int(mask.sum()),

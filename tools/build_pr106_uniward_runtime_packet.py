@@ -381,7 +381,7 @@ def _encode_decoder_brotli_with_per_tensor_K(
     scales_concat = b"".join(tb.scale_f32 for tb in tensors)
     decoder_raw = q_concat + scales_concat
     decoder_brotli = brotli.compress(decoder_raw, quality=brotli_quality)
-    rel_err = abs_err_total / abs_orig_total if abs_orig_total > 1e-9 else 0.0
+    rel_err = abs_err_total / abs_orig_total if abs_orig_total > 1e-9 else 0.0  # REL_ERR_NON_CANONICAL_OK: global L1 ratio for PR106 UNIWARD runtime packet (joint encoder); see docstring at line 333. See .omx/research/rel_err_inconsistency_audit_20260508_claude.md
     return {
         "decoder_brotli": decoder_brotli,
         "decoder_brotli_bytes": len(decoder_brotli),
@@ -636,7 +636,7 @@ def _local_smoke_roundtrip(
         per_tensor.append(
             {"name": name, "rel_err_vs_encoder": err / denom if denom > 1e-9 else 0.0}
         )
-    rel_err_smoke = abs_err_total / abs_orig_total if abs_orig_total > 1e-9 else 0.0
+    rel_err_smoke = abs_err_total / abs_orig_total if abs_orig_total > 1e-9 else 0.0  # REL_ERR_NON_CANONICAL_OK: global L1 ratio for PR106 UNIWARD weight-identity smoke probe; consistent with joint-encoder form
 
     # The encoder writes the K-rounded int8 directly into the wire stream.
     # The decoder reads it back as int8 * scale_f32. Identity should hold to

@@ -372,7 +372,7 @@ def encode_decode_measure(
     abs_err = np.abs(rec_real - sub.raw).astype(np.float64)
     abs_orig = np.abs(sub.raw).astype(np.float64)
     denom = abs_orig.sum()
-    rel_err = float(abs_err.sum() / denom) if denom > 1e-9 else float(abs_err.sum())
+    rel_err = float(abs_err.sum() / denom) if denom > 1e-9 else float(abs_err.sum())  # REL_ERR_NON_CANONICAL_OK: global L1 ratio for FALSIFIED CompressAI factorized-prior sweep; not allocator-fed
 
     model_blob = serialize_model(model)
     model_brotli = brotli.compress(model_blob, quality=11, lgwin=22, lgblock=24)

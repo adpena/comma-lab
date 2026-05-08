@@ -202,7 +202,7 @@ def _encode_decoder_brotli_with_per_tensor_K(
     decoder_brotli = brotli.compress(decoder_raw, quality=brotli_quality)
 
     archive_bytes = len(decoder_brotli) + PR106_ARCHIVE_OVERHEAD_BYTES
-    rel_err = abs_err_total / abs_orig_total if abs_orig_total > 1e-9 else 0.0
+    rel_err = abs_err_total / abs_orig_total if abs_orig_total > 1e-9 else 0.0  # REL_ERR_NON_CANONICAL_OK: global L1 ratio for PR106 omega-opt joint-encoder bisect target; see allocator hook contract. See .omx/research/rel_err_inconsistency_audit_20260508_claude.md
     return {
         "decoder_brotli_bytes": len(decoder_brotli),
         "archive_overhead_bytes": PR106_ARCHIVE_OVERHEAD_BYTES,

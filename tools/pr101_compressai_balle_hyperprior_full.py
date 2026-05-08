@@ -391,7 +391,7 @@ def encode_decode_measure(
     abs_orig = np.abs(substrate.raw_symbols).astype(np.float64)
     # Relative error: mean(|err|) / mean(|orig|), clamped at 1.0 on zero-magnitude
     denom = abs_orig.sum()
-    rel_err = float(abs_err.sum()) if denom < 1e-9 else float(abs_err.sum() / denom)
+    rel_err = float(abs_err.sum()) if denom < 1e-9 else float(abs_err.sum() / denom)  # REL_ERR_NON_CANONICAL_OK: global L1 ratio for FALSIFIED CompressAI Ballé hyperprior full sweep; not allocator-fed
     mean_abs_err = float(abs_err.mean())
     max_abs_err = int(abs_err.max())
     nonzero_diff_frac = float((abs_err > 0).mean())

@@ -608,7 +608,7 @@ def encode_decode_measure(
         nonzero_diff += int((diff > 0).sum())
         n_total += orig.size
 
-    rel_err = float(abs_err / abs_orig) if abs_orig > 1e-9 else float(abs_err)
+    rel_err = float(abs_err / abs_orig) if abs_orig > 1e-9 else float(abs_err)  # REL_ERR_NON_CANONICAL_OK: global L1 ratio for FALSIFIED Ballé cross-tensor hyperprior sweep; not allocator-fed
 
     return {
         "z_string_count": len(z_strings),

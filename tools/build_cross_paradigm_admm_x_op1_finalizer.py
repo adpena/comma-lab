@@ -269,7 +269,7 @@ def _build_dequantized_substrate_via_admm(
         per_tensor_scales.append(float(qt.scale))
         n_symbols += int(symbols_i32.size)
 
-    rel_err = abs_err / abs_orig if abs_orig > 1e-9 else 0.0
+    rel_err = abs_err / abs_orig if abs_orig > 1e-9 else 0.0  # REL_ERR_NON_CANONICAL_OK: global L1 ratio for cross-paradigm ADMM-x-Op1-finalizer; matches PR101 Path B family form
     stats = {
         "rel_err_int8_after_admm": rel_err,
         "n_tensors": n_tensors,

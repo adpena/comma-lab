@@ -352,7 +352,7 @@ def encode_decode_one(
     abs_err = np.abs(rec_real - raw_symbols).astype(np.float64)
     abs_orig = np.abs(raw_symbols).astype(np.float64)
     denom = abs_orig.sum()
-    rel_err = float(abs_err.sum() / denom) if denom > 1e-9 else float(abs_err.sum())
+    rel_err = float(abs_err.sum() / denom) if denom > 1e-9 else float(abs_err.sum())  # REL_ERR_NON_CANONICAL_OK: global L1 ratio for FALSIFIED CompressAI Ballé sweep; not allocator-fed
     model_blob = serialize_model(model)
     model_brotli = brotli.compress(model_blob, quality=11, lgwin=22, lgblock=24)
     return {

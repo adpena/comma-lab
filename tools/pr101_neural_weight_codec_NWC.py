@@ -399,7 +399,7 @@ def encode_decode_all(
     model_blob = serialize_shared_model(model)
     model_brotli = brotli.compress(model_blob, quality=11, lgwin=22, lgblock=24)
 
-    rel_err = cum_abs_err / cum_abs_orig if cum_abs_orig > 1e-9 else cum_abs_err
+    rel_err = cum_abs_err / cum_abs_orig if cum_abs_orig > 1e-9 else cum_abs_err  # REL_ERR_NON_CANONICAL_OK: global L1 ratio for FALSIFIED PR101 neural-weight-codec sweep; not allocator-fed
     side_info_bytes = N_TENSORS * 8  # z_mean, z_std per tensor
     archive_bytes = (
         len(payload_brotli) + len(model_brotli) + side_info_bytes

@@ -236,7 +236,7 @@ def _build_no_dead_k_decoder_section(
     brotli_payload = brotli.compress(
         flat, quality=brotli_quality, lgwin=22, lgblock=24
     )
-    rel_err = abs_err_total / abs_orig_total if abs_orig_total > 1e-9 else 0.0
+    rel_err = abs_err_total / abs_orig_total if abs_orig_total > 1e-9 else 0.0  # REL_ERR_NON_CANONICAL_OK: global L1 ratio for PR101 unified-winners stack (joint encoder); same form as PR101 lossy_coarsening
 
     scale_arr = np.array(scales_fp16, dtype=np.float16)
     if not scale_arr.dtype.isnative or sys.byteorder != "little":
@@ -324,7 +324,7 @@ def _build_dequantized_substrate_uniward(
         per_tensor_scales.append(float(qt.scale))
         n_symbols += int(symbols_i32.size)
 
-    rel_err = abs_err / abs_orig if abs_orig > 1e-9 else 0.0
+    rel_err = abs_err / abs_orig if abs_orig > 1e-9 else 0.0  # REL_ERR_NON_CANONICAL_OK: global L1 ratio for PR101 unified-winners stage_1_2_3 substrate; consistent with cross-paradigm composition form
     return rebuilt, {
         "rel_err_int8_after_uniward_admm": rel_err,
         "n_tensors": n_tensors,
@@ -868,8 +868,7 @@ def _smoke_roundtrip_no_dead_k(
         )
         abs_orig += denom_q
         abs_err += err_q
-    rel_err = abs_err / abs_orig if abs_orig > 1e-9 else 0.0
-
+    rel_err = abs_err / abs_orig if abs_orig > 1e-9 else 0.0  # REL_ERR_NON_CANONICAL_OK: global L1 ratio for PR101 unified-winners weight-identity smoke probe
     n_pairs = int(latents.shape[0]) if hasattr(latents, "shape") else None
     return {
         "passed": True,
@@ -921,7 +920,7 @@ def _smoke_roundtrip_cplx_op1(
         )
         abs_orig += denom
         abs_err += err
-    rel_err = abs_err / abs_orig if abs_orig > 1e-9 else 0.0
+    rel_err = abs_err / abs_orig if abs_orig > 1e-9 else 0.0  # REL_ERR_NON_CANONICAL_OK: global L1 ratio for PR101 unified-winners post-stage smoke; consistent with mainline form
 
     return {
         "passed": True,

@@ -245,7 +245,7 @@ def _build_lossy_decoder_section_with_fixed_Ks(
     brotli_payload = brotli.compress(
         flat, quality=brotli_quality, lgwin=22, lgblock=24
     )
-    rel_err = abs_err_total / abs_orig_total if abs_orig_total > 1e-9 else 0.0
+    rel_err = abs_err_total / abs_orig_total if abs_orig_total > 1e-9 else 0.0  # REL_ERR_NON_CANONICAL_OK: global L1 ratio for ADMM-x-lossy_coarsening Path B step6; preserves 0.0415 anchor. See .omx/research/rel_err_inconsistency_audit_20260508_claude.md
 
     K_bytes = bytes(Ks)
     scale_arr = np.array(scales_fp16, dtype=np.float16)
@@ -324,7 +324,7 @@ def _local_smoke_roundtrip(
         )
         abs_orig += denom_q
         abs_err += err_q
-    rel_err = abs_err / abs_orig if abs_orig > 1e-9 else 0.0
+    rel_err = abs_err / abs_orig if abs_orig > 1e-9 else 0.0  # REL_ERR_NON_CANONICAL_OK: global L1 ratio for fp32 smoke probe; consistent with Path B step6 mainline form
 
     # Latent + sidecar passthrough sanity: we did not modify those bytes, so
     # the latents tensor should decode without error and have N_PAIRS rows.

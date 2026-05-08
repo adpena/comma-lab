@@ -167,7 +167,7 @@ def step3_lossy_coarsening_per_tensor(tensor: np.ndarray, mask: np.ndarray) -> t
         eps = 1e-8
         valid = np.abs(nz_values) > eps
         if valid.any():
-            rel_err = float((np.abs(recon_nz[valid] - nz_values[valid]) / np.abs(nz_values[valid])).mean()) * 100.0
+            rel_err = float((np.abs(recon_nz[valid] - nz_values[valid]) / np.abs(nz_values[valid])).mean()) * 100.0  # REL_ERR_NON_CANONICAL_OK: per-element L1 mean as percentage; PR101 omega-opt linear-stack convention; not allocator-fed
         else:
             rel_err = 0.0
         if rel_err < 5.0:

@@ -109,7 +109,7 @@ def main():
                 # Error (absolute and relative)
                 abs_err = (exact_delta_pose - linear_delta_pose).pow(2).sum().sqrt().item()
                 exact_mag = exact_delta_pose.pow(2).sum().sqrt().item()
-                rel_err = abs_err / (exact_mag + 1e-12)
+                rel_err = abs_err / (exact_mag + 1e-12)  # REL_ERR_NON_CANONICAL_OK: L2 ratio of pose deltas in trust-region sweep (Bayesian sensitivity); not allocator-fed
 
                 results[alpha].append({
                     "abs_err": abs_err,

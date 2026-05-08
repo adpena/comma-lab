@@ -165,6 +165,7 @@ DEFAULT_PR101_SOURCE_DIR = (
     / "source/submissions/hnerv_ft_microcodec/src"
 )
 DEFAULT_PREDICTED_BAND = (0.18, 0.22)
+DEFAULT_SELECTED_KS_MAX_FP32_SMOKE_REL_ERR = 0.055
 
 CPU_BUILD_SCORE_BLOCKERS = [
     "cpu_build_rel_err_proxy_not_score_evidence",
@@ -213,6 +214,8 @@ def cpu_build_proxy_guard_fields() -> dict[str, object]:
 
 def _guard_fields_with_selected_Ks_source_blockers(
     k_source_metadata: dict[str, object],
+    *,
+    selected_Ks_fp32_smoke_guard: dict[str, object] | None = None,
 ) -> dict[str, object]:
     guard = cpu_build_proxy_guard_fields()
     extra: list[str] = []
@@ -226,12 +229,118 @@ def _guard_fields_with_selected_Ks_source_blockers(
             if blocker_str in SELECTED_KS_SOURCE_BLOCKERS_CLOSED_BY_BYTE_CLOSED_BUILD:
                 continue
             extra.append(f"selected_Ks_source_blocker:{blocker_str}")
+    if (
+        selected_Ks_fp32_smoke_guard is not None
+        and selected_Ks_fp32_smoke_guard.get("verdict") == "rejected"
+    ):
+        guard["cuda_eval_worth_testing"] = False
+        for blocker in selected_Ks_fp32_smoke_guard.get("blockers") or []:
+            extra.append(str(blocker))
     for key in ("score_claim_blockers", "dispatch_blockers"):
         current = guard.get(key)
         if not isinstance(current, list):  # pragma: no cover - guard shape sanity
             raise TypeError(f"guard field {key!r} must be a list")
         guard[key] = sorted({*current, *extra})
     return guard
+
+
+def _blend_selected_Ks_with_baseline_additive_cap(
+    selected_Ks: list[int],
+    *,
+    additive_cap: int,
+    baseline_Ks: tuple[int, ...] = ADMM_PATH_B_STEP6_KS,
+) -> tuple[list[int], dict[str, object]]:
+    """Cap externally selected Ks against the default no-dead-K baseline.
+
+    Larger K means more aggressive coarsening.  This blend keeps score-aware
+    selections when they are less aggressive than the baseline, but limits
+    tensors that jump far beyond the baseline to ``baseline + additive_cap``.
+    It is a CPU risk-control prototype for beta/Jacobian-Fisher reactivation:
+    preserve some byte pressure while preventing one diagnostic importance
+    vector from spending all rel_err budget on a few tensors.
+    """
+
+    if isinstance(additive_cap, bool) or additive_cap < 0:
+        raise SystemExit("--selected-Ks-additive-baseline-cap must be >= 0")
+    if len(selected_Ks) != len(baseline_Ks):
+        raise SystemExit(
+            "FATAL: selected_Ks length does not match baseline_Ks length "
+            f"({len(selected_Ks)} != {len(baseline_Ks)})"
+        )
+    blended: list[int] = []
+    changed: list[dict[str, object]] = []
+    for idx, (selected, baseline) in enumerate(
+        zip(selected_Ks, baseline_Ks, strict=True)
+    ):
+        cap = min(255, int(baseline) + int(additive_cap))
+        value = min(int(selected), cap) if int(selected) > int(baseline) else int(selected)
+        blended.append(value)
+        if value != int(selected):
+            changed.append(
+                {
+                    "tensor_index": idx,
+                    "tensor_name": FIXED_STATE_SCHEMA[idx][0],
+                    "baseline_K": int(baseline),
+                    "selected_K_original": int(selected),
+                    "selected_K_after_blend": int(value),
+                    "additive_cap": int(additive_cap),
+                }
+            )
+    return blended, {
+        "selected_Ks_blend_mode": "baseline_additive_cap",
+        "selected_Ks_blend_baseline_source": "ADMM_PATH_B_STEP6_KS",
+        "selected_Ks_blend_additive_cap": int(additive_cap),
+        "selected_Ks_original_from_json": list(selected_Ks),
+        "selected_Ks_after_blend": list(blended),
+        "selected_Ks_blend_changed_count": len(changed),
+        "selected_Ks_blend_changes": changed,
+    }
+
+
+def _selected_Ks_fp32_smoke_safety_guard(
+    *,
+    k_source_metadata: dict[str, object],
+    smoke: dict[str, object],
+    archive_bytes: int,
+    max_fp32_smoke_rel_err: float,
+) -> dict[str, object]:
+    """Classify selected-K vectors using aggregate fp32 smoke rel_err.
+
+    This is deliberately separate from the wire-format integrity smoke.  A
+    vector may decode correctly while still being too risky as a score-lowering
+    candidate because aggregate fp32 rel_err is far above the baseline trust
+    region.
+    """
+
+    if k_source_metadata.get("per_tensor_K_source") != "selected_Ks_json":
+        return {
+            "applied": False,
+            "verdict": "not_applicable_builtin_Ks",
+            "blockers": [],
+        }
+    if (
+        isinstance(max_fp32_smoke_rel_err, bool)
+        or not isinstance(max_fp32_smoke_rel_err, int | float)
+        or not np.isfinite(float(max_fp32_smoke_rel_err))
+        or float(max_fp32_smoke_rel_err) <= 0.0
+    ):
+        raise SystemExit("--selected-Ks-max-fp32-smoke-rel-err must be finite and > 0")
+    rel_err = float(smoke["rel_err_vs_quantized_fp32"])
+    max_tensor = float(smoke["max_per_tensor_rel_err"])
+    threshold = float(max_fp32_smoke_rel_err)
+    blockers: list[str] = []
+    if rel_err > threshold:
+        blockers.append("selected_Ks_fp32_smoke_rel_err_above_guard")
+    verdict = "passed" if not blockers else "rejected"
+    return {
+        "applied": True,
+        "verdict": verdict,
+        "aggregate_fp32_smoke_rel_err": rel_err,
+        "max_per_tensor_fp32_smoke_rel_err": max_tensor,
+        "max_allowed_fp32_smoke_rel_err": threshold,
+        "archive_bytes": int(archive_bytes),
+        "blockers": blockers,
+    }
 
 
 def _closed_selected_Ks_source_blockers(
@@ -476,7 +585,7 @@ def _build_lossy_decoder_section_no_K(
     brotli_payload = brotli.compress(
         flat, quality=brotli_quality, lgwin=22, lgblock=24
     )
-    rel_err = abs_err_total / abs_orig_total if abs_orig_total > 1e-9 else 0.0
+    rel_err = abs_err_total / abs_orig_total if abs_orig_total > 1e-9 else 0.0  # REL_ERR_NON_CANONICAL_OK: global L1 ratio for ADMM-x-lossy_coarsening Path B step6 no-dead-k variant; same form as mainline. See .omx/research/rel_err_inconsistency_audit_20260508_claude.md
 
     scale_arr = np.array(scales_fp16, dtype=np.float16)
     if not scale_arr.dtype.isnative or sys.byteorder != "little":
@@ -844,7 +953,7 @@ def _local_smoke_roundtrip(
         )
         abs_orig += denom_q
         abs_err += err_q
-    rel_err = abs_err / abs_orig if abs_orig > 1e-9 else 0.0
+    rel_err = abs_err / abs_orig if abs_orig > 1e-9 else 0.0  # REL_ERR_NON_CANONICAL_OK: global L1 ratio for fp32 smoke probe (no-dead-k variant); consistent with mainline form
 
     n_pairs = int(latents.shape[0]) if hasattr(latents, "shape") else None
     return {
@@ -910,7 +1019,36 @@ def main(argv: list[str] | None = None) -> int:
         default=ADMM_RMS_TARGET,
         help="RMS target row to read from --selected-Ks-json.",
     )
+    p.add_argument(
+        "--selected-Ks-additive-baseline-cap",
+        type=int,
+        default=None,
+        help=(
+            "Optional beta/Jacobian-Fisher reactivation risk blend: when an "
+            "external selected-Ks vector is more aggressive than the default "
+            "no-dead-K baseline, cap that tensor's K at baseline_K + this "
+            "integer before building the archive."
+        ),
+    )
+    p.add_argument(
+        "--selected-Ks-max-fp32-smoke-rel-err",
+        type=float,
+        default=DEFAULT_SELECTED_KS_MAX_FP32_SMOKE_REL_ERR,
+        help=(
+            "Selected-Ks CPU safety guard. External selected-Ks vectors with "
+            "aggregate fp32 smoke rel_err above this value are marked "
+            "cuda_eval_worth_testing=False and receive a dispatch blocker. "
+            "The build still writes custody artifacts for review."
+        ),
+    )
     args = p.parse_args(argv)
+    if (
+        args.selected_Ks_additive_baseline_cap is not None
+        and args.selected_Ks_json is None
+    ):
+        sys.exit(
+            "FATAL: --selected-Ks-additive-baseline-cap requires --selected-Ks-json"
+        )
 
     if not args.state_dict.is_file():
         sys.exit(f"FATAL: --state-dict not found: {args.state_dict}")
@@ -934,6 +1072,12 @@ def main(argv: list[str] | None = None) -> int:
             args.selected_Ks_json,
             rms_target=float(args.selected_Ks_rms_target),
         )
+        if args.selected_Ks_additive_baseline_cap is not None:
+            Ks, blend_metadata = _blend_selected_Ks_with_baseline_additive_cap(
+                Ks,
+                additive_cap=int(args.selected_Ks_additive_baseline_cap),
+            )
+            k_source_metadata.update(blend_metadata)
     else:
         Ks = list(ADMM_PATH_B_STEP6_KS)
         k_source_metadata = {
@@ -1030,7 +1174,24 @@ def main(argv: list[str] | None = None) -> int:
             + ", ".join(removed_cache_dirs)
         )
 
-    guard_fields = _guard_fields_with_selected_Ks_source_blockers(k_source_metadata)
+    selected_Ks_fp32_smoke_guard = _selected_Ks_fp32_smoke_safety_guard(
+        k_source_metadata=k_source_metadata,
+        smoke=smoke,
+        archive_bytes=archive_bytes,
+        max_fp32_smoke_rel_err=float(args.selected_Ks_max_fp32_smoke_rel_err),
+    )
+    if selected_Ks_fp32_smoke_guard.get("applied"):
+        print(
+            "[selected-Ks guard] "
+            f"verdict={selected_Ks_fp32_smoke_guard['verdict']} "
+            f"fp32_rel_err={selected_Ks_fp32_smoke_guard['aggregate_fp32_smoke_rel_err']:.6f} "
+            f"threshold={selected_Ks_fp32_smoke_guard['max_allowed_fp32_smoke_rel_err']:.6f}"
+        )
+
+    guard_fields = _guard_fields_with_selected_Ks_source_blockers(
+        k_source_metadata,
+        selected_Ks_fp32_smoke_guard=selected_Ks_fp32_smoke_guard,
+    )
     build_manifest = {
         "schema_version": SCHEMA_VERSION,
         "tool": TOOL_NAME,
@@ -1055,6 +1216,7 @@ def main(argv: list[str] | None = None) -> int:
         "rel_err_actual_int8": section["rel_err"],
         "rel_err_actual_fp32_smoke": smoke["rel_err_vs_quantized_fp32"],
         "max_per_tensor_rel_err_fp32_smoke": smoke["max_per_tensor_rel_err"],
+        "selected_Ks_fp32_smoke_safety_guard": selected_Ks_fp32_smoke_guard,
         "brotli_quality": args.brotli_quality,
         "archive_relpath": str(archive_path.relative_to(REPO_ROOT)),
         "archive_bytes": archive_bytes,

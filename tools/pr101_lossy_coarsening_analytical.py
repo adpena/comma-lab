@@ -143,7 +143,7 @@ def encode_with_per_tensor_K(
     )
     side_info = bytes(Ks)  # 28 bytes
     archive_bytes = len(payload_brotli) + len(side_info) + ARCHIVE_OVERHEAD_BYTES
-    rel_err = abs_err_total / abs_orig_total if abs_orig_total > 1e-9 else 0.0
+    rel_err = abs_err_total / abs_orig_total if abs_orig_total > 1e-9 else 0.0  # REL_ERR_NON_CANONICAL_OK: global L1 ratio for PR101 lossy_coarsening; preserves 0.0386/0.0149/0.0019 anchors. See .omx/research/rel_err_inconsistency_audit_20260508_claude.md
     return {
         "payload_brotli_bytes": len(payload_brotli),
         "side_info_bytes": len(side_info),
