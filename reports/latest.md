@@ -1,5 +1,82 @@
 # Latest Report - 2026-05-04 PR106 belt_and_suspenders adapter contest-faithful status
 
+## 2026-05-08 (evening) — Recursive hardening + Phase A ablation pass
+
+**Headline:** 11 STRICT/warn preflight gates landed, ~395 violations
+extincted, META-META commit-machinery protections live, 4018 long-lived
+artifacts classified, Strategic Secrecy Rule retired (contest is over),
+Phase A ablations A1–A4 + A3-alt anchored.
+
+**Preflight gates (Catalog #109 → #119):**
+- #109 public PR intake clones pristine — STRICT @ 0
+- #110 recovery_metadata append-only — STRICT @ 0
+- #111 status no-stale-dirty-paths — STRICT @ 0
+- #112 rebuild no-baked-state — STRICT @ 0
+- #113 META artifact_lifecycle umbrella (`enumerate_unregistered=True` strict-flip after 4018-path classification) — STRICT @ 0 on changed-paths scope
+- #114 PR101 synthetic-target gate — STRICT @ 0
+- #115 packet-blocker evidence-matches — STRICT @ 0
+- #117 serializer-uses-lock — warn-only (legacy backlog clearing naturally)
+- #118 catalog-no-duplicate-numbers — STRICT @ 0
+- #119 co-author-trailer — warn-only (legacy backlog)
+
+**META-META commit-machinery (commit `4695d222`):**
+- FIX-1: working-tree pre/post-lock hash check (concurrent-edit-leak detection, refuses rc=3)
+- FIX-2: `tools/claim_catalog_number.py` atomic via fcntl on `.omx/state/next_catalog_number.txt`
+- FIX-3: serializer auto-appends Co-Authored-By trailer (idempotent)
+- FIX-4: `audit_unregistered_long_lived_artifacts()` enumerates `git ls-files` under LONG_LIVED_ARTIFACT_ROOTS
+
+**Strategic Secrecy Rule retired** (commit `e6806fa0`): contest is over.
+Code-level cross-references in `src/tac/deploy/`, `optimal_stack_orchestrator.py`,
+and `tools/oss_publish_staging.py` updated to descriptive language without
+rule citation (commit `648b498c`).
+
+**Auto-fork-PR tooling for GHA CPU eval** (commit `406b4211`):
+- `tools/create_fork_pr_for_submission.py` clones fork, branches, copies
+  submission_dir to `submissions/<name>/`, opens draft PR, returns PR number
+- `tools/dispatch_cpu_eval_via_github_actions.py --auto-create-fork-pr` flag
+  closes the runtime-contract gap from `pr102_cpu_eval_gha_runtime_contract_failure_20260508_codex.md`
+
+**Phase A Pareto (current state, see `reports/phase_a_pareto_20260508.md`):**
+
+| Lane | Archive bytes | Δ vs brotli (178,144 B) | Verdict |
+|---|---:|---:|---|
+| A0 mdl_baseline | — | — | byte_proxy_only_deterministic |
+| A1 score_gradient | (dispatch tooling landed; infra-blocked on Lightning GPU/Vast.ai credit) | — | dispatchable |
+| A2 xavier_l2 | 156,344 | -21,800 | FALSIFIED proxy (-3,635 B regression vs uniform) |
+| A3-alt mallat_wavelet | 156,344 | -21,800 | incremental_improvement_insufficient (Mallat > Xavier in 2/4 cells; both fail uniform) |
+| A4 charm_hyperprior toy | byte-tight (CARM2 wire format) | — | dispatch-ready ($15 Lightning T4 awaiting authorization) |
+| ADMM_lossy_coarsening_baseline | 147,285 | -30,859 | Path B baseline; -28 KB savings @ 4-5% rel_err |
+
+**Class-level finding:** TWO weight-domain importance proxies (Xavier-L2 +
+Mallat wavelet) have now failed to beat uniform on PR101's near-iid
+substrate. Future Decision 3 reactivation MUST use score-domain
+(Hessian-trace, score-gradient) or byte-domain (compression-hardness)
+proxies, NOT a third weight-domain proxy. Per CLAUDE.md "KILL is LAST
+RESORT", the lane is `incremental_improvement_insufficient`, not killed —
+reactivation criteria documented per memo.
+
+**A1 + A4 + A3-alt review verdict:**
+- A1 dispatch tooling: 3 CRITICAL fixes applied (`load_differentiable_scorers`
+  signature, canonical `simulate_eval_roundtrip` resize cycle, stale claim
+  closure structural fix), 2 Medium fixes, 1 advisory closed. Re-fire
+  ready when Lightning GPU attached or Vast.ai topped up.
+- A4 ChARM range coder: 4 Medium fixes applied (deterministic ZIP, CARM2
+  framing docs, dead param), 4 Low findings closed. R1-1 entropy caveat
+  documented. NOT a dispatch blocker.
+- A3-alt Mallat: see Pareto table above.
+
+**In flight (subagents):**
+- A4-alt Filler STC pose codec (`a486e05e919e6e4a3`)
+- A5 frame-conditional bit budget (`ad826bad077a82dc0`)
+- PHASE 4 INTEGRATION paper harness + secrecy audit (`ae1a9dbbe6e8b2af3`)
+
+**Awaiting operator:**
+- A1 dispatch ($8 Lightning T4): Lightning GPU attach OR Vast.ai credit topup
+- A4 dispatch ($15 Lightning T4): authorization with documented R1-1 caveat
+- PARADIGM-δεζ (#307) + PHASE 4 INTEGRATION (#308): major work needing strategic alignment
+
+---
+
 ## 2026-05-08 — CUDA vs CPU auth eval split: leaderboard ranks by CPU axis
 
 **Headline:** the contest's `upstream/evaluate.py` produces two distinct
