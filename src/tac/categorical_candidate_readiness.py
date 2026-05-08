@@ -70,6 +70,12 @@ REQUIRED_CONTROL_NAMES = (
     "charged_member_presence_control",
     "runtime_consumes_conditioning_control",
 )
+SEMANTIC_SYMBOL_BRIDGE_REQUIRED_CLASSES = (
+    "identity_reference_symbol",
+    "global_label_permutation",
+    "constant_mod5_offset",
+    "previous_frame_mod5_residual",
+)
 REQUIRED_MEMBER_ROLES = ("categorical_payload", "decoder_or_runtime_consumer")
 CONTEST_ARCHIVE_CONTRACT = "contest_archive_zip"
 CONTEST_INFLATE_MEMBER = "inflate.sh"
@@ -1170,8 +1176,14 @@ def _hpm1_semantic_parity_fail_closed_report(
         "failure_context": {},
         "semantic_symbol_bridge_checked": False,
         "semantic_symbol_bridge_missing": False,
+        "semantic_symbol_bridge_schema": "",
         "semantic_symbol_bridge_status": "",
         "semantic_symbol_bridge_missing_classes": [],
+        "semantic_symbol_bridge_remaining_open_classes": [],
+        "semantic_symbol_bridge_requested_symbol_count": None,
+        "semantic_symbol_bridge_decoded_symbol_count": None,
+        "semantic_symbol_bridge_first_mismatch": {},
+        "semantic_symbol_bridge_next_patch_target": "",
         "full_decode_proven": False,
         "byte_exact_semantic_reencode_proven": False,
         "blockers": [],
@@ -1289,6 +1301,10 @@ def _hpm1_semantic_parity_fail_closed_report(
             if semantic_bridge is None:
                 semantic_bridge = payload.get("semantic_symbol_bridge_probe")
             if isinstance(semantic_bridge, dict):
+                bridge_schema = semantic_bridge.get("schema")
+                summary["semantic_symbol_bridge_schema"] = (
+                    bridge_schema if isinstance(bridge_schema, str) else ""
+                )
                 summary["semantic_symbol_bridge_checked"] = (
                     semantic_bridge.get("attempted") is True
                 )
@@ -1305,22 +1321,79 @@ def _hpm1_semantic_parity_fail_closed_report(
                     summary["semantic_symbol_bridge_missing_classes"] = [
                         str(item) for item in missing_classes
                     ]
+                remaining_open = semantic_bridge.get("remaining_open_classes")
+                if isinstance(remaining_open, list):
+                    summary["semantic_symbol_bridge_remaining_open_classes"] = [
+                        str(item) for item in remaining_open
+                    ]
+                next_patch_target = semantic_bridge.get("next_patch_target", "")
+                summary["semantic_symbol_bridge_next_patch_target"] = (
+                    next_patch_target if isinstance(next_patch_target, str) else ""
+                )
+                requested_symbol_count = semantic_bridge.get("requested_symbol_count")
+                decoded_symbol_count = semantic_bridge.get("decoded_symbol_count")
+                summary["semantic_symbol_bridge_requested_symbol_count"] = (
+                    requested_symbol_count if isinstance(requested_symbol_count, int) else None
+                )
+                summary["semantic_symbol_bridge_decoded_symbol_count"] = (
+                    decoded_symbol_count if isinstance(decoded_symbol_count, int) else None
+                )
+                first_mismatch = semantic_bridge.get("first_identity_mismatch")
+                if not isinstance(first_mismatch, dict):
+                    symbol_sequences = semantic_bridge.get("symbol_sequences")
+                    if isinstance(symbol_sequences, dict):
+                        first_mismatch = symbol_sequences.get(
+                            "first_reference_submitted_mismatch"
+                        )
+                summary["semantic_symbol_bridge_first_mismatch"] = (
+                    first_mismatch if isinstance(first_mismatch, dict) else {}
+                )
+                if bridge_schema != "pr91_hpm1_semantic_symbol_bridge_fail_closed_summary_v1":
+                    blockers.append("hpm1_semantic_parity_symbol_bridge_schema_mismatch")
                 if semantic_bridge.get("score_claim") is not False:
                     blockers.append("hpm1_semantic_parity_symbol_bridge_score_claim_must_be_false")
                 if semantic_bridge.get("dispatch_allowed") is not False:
                     blockers.append("hpm1_semantic_parity_symbol_bridge_dispatch_allowed")
                 if semantic_bridge.get("dispatch_attempted") is not False:
                     blockers.append("hpm1_semantic_parity_symbol_bridge_dispatch_attempted")
+                if semantic_bridge.get("local_only") is not True:
+                    blockers.append("hpm1_semantic_parity_symbol_bridge_local_only_not_true")
                 if semantic_bridge.get("attempted") is not True:
                     blockers.append("hpm1_semantic_parity_symbol_bridge_not_attempted")
                 if semantic_bridge.get("prefix_completed") is not True:
                     blockers.append("hpm1_semantic_parity_symbol_bridge_prefix_not_completed")
+                if not isinstance(requested_symbol_count, int) or requested_symbol_count <= 0:
+                    blockers.append("hpm1_semantic_parity_symbol_bridge_requested_count_invalid")
+                if not isinstance(decoded_symbol_count, int) or decoded_symbol_count <= 0:
+                    blockers.append("hpm1_semantic_parity_symbol_bridge_decoded_count_invalid")
+                elif (
+                    semantic_bridge.get("prefix_completed") is True
+                    and decoded_symbol_count != requested_symbol_count
+                ):
+                    blockers.append("hpm1_semantic_parity_symbol_bridge_prefix_count_mismatch")
+                tested_classes = semantic_bridge.get("tested_bridge_classes")
+                if not isinstance(tested_classes, list):
+                    blockers.append("hpm1_semantic_parity_symbol_bridge_tested_classes_missing")
+                else:
+                    for bridge_class in SEMANTIC_SYMBOL_BRIDGE_REQUIRED_CLASSES:
+                        if bridge_class not in tested_classes:
+                            blockers.append(
+                                "hpm1_semantic_parity_symbol_bridge_required_class_missing:"
+                                f"{bridge_class}"
+                            )
+                if not isinstance(summary["semantic_symbol_bridge_first_mismatch"], dict) or not isinstance(
+                    summary["semantic_symbol_bridge_first_mismatch"].get("symbol_index"),
+                    int,
+                ):
+                    blockers.append("hpm1_semantic_parity_symbol_bridge_first_mismatch_missing")
                 if semantic_bridge.get("bridge_found") is not False:
                     blockers.append("hpm1_semantic_parity_symbol_bridge_still_open")
                 if semantic_bridge.get("bridge_missing") is not True:
                     blockers.append("hpm1_semantic_parity_symbol_bridge_missing_not_proven")
                 if semantic_bridge.get("passed") is not True:
                     blockers.append("hpm1_semantic_parity_symbol_bridge_not_passed")
+            else:
+                blockers.append("hpm1_semantic_parity_symbol_bridge_missing")
 
             divergence = payload.get("divergence_caught_before_exact_eval") is True
             summary["divergence_caught_before_exact_eval"] = divergence
