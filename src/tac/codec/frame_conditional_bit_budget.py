@@ -60,17 +60,39 @@ Cross-references
 """
 from __future__ import annotations
 
+import hashlib
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence
 
 import numpy as np
 
 __all__ = [
+    "FRAME_CONDITIONAL_LATENT_WIRE_SCHEMA",
+    "FRAME_CONDITIONAL_Q_BITS_PER_PAIR_BITS",
     "ComplexityComponents",
-    "compute_per_frame_complexity",
     "allocate_per_frame_bits",
+    "apply_frame_conditional_q_bits",
+    "build_frame_conditional_wire_contract",
+    "compute_per_frame_complexity",
+    "pack_frame_conditional_latent_codes",
+    "pack_frame_conditional_q_bits",
+    "unpack_frame_conditional_latent_codes",
+    "unpack_frame_conditional_q_bits",
 ]
+
+
+FRAME_CONDITIONAL_LATENT_WIRE_SCHEMA = "tac_frame_conditional_latent_wire.v1"
+FRAME_CONDITIONAL_Q_BITS_PER_PAIR_BITS = 3
+FRAME_CONDITIONAL_Q_BITS_MIN = 1
+FRAME_CONDITIONAL_Q_BITS_MAX = 8
+FRAME_CONDITIONAL_WIRE_CONTRACT_CLEARED_BLOCKERS = (
+    "per_pair_bit_width_schema_change_requires_inflate_path_update",
+)
+FRAME_CONDITIONAL_WIRE_CONTRACT_REMAINING_BLOCKERS = (
+    "frame_conditional_packet_runtime_patch_not_built",
+    "frame_conditional_runtime_consumption_proof_missing",
+)
 
 
 @dataclass(frozen=True)
@@ -88,6 +110,295 @@ class ComplexityComponents:
     @property
     def complexity(self) -> np.ndarray:
         return self.edge_density * self.pixel_variance * self.frame_difference
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Runtime side-info wire contract
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def _normalise_q_bits_per_pair(
+    q_bits_per_pair: Sequence[float] | np.ndarray,
+    *,
+    expected_pairs: int | None = None,
+) -> np.ndarray:
+    arr = np.asarray(q_bits_per_pair, dtype=np.float64)
+    if arr.ndim != 1:
+        raise ValueError(f"q_bits_per_pair must be 1-D, got shape {arr.shape}")
+    if expected_pairs is not None and arr.size != expected_pairs:
+        raise ValueError(
+            f"q_bits_per_pair length {arr.size} != expected_pairs {expected_pairs}"
+        )
+    if arr.size == 0:
+        raise ValueError("q_bits_per_pair must be non-empty")
+    if not np.isfinite(arr).all():
+        raise ValueError("q_bits_per_pair must contain only finite values")
+    if (arr < FRAME_CONDITIONAL_Q_BITS_MIN).any() or (
+        arr > FRAME_CONDITIONAL_Q_BITS_MAX
+    ).any():
+        raise ValueError(
+            "q_bits_per_pair values must be in "
+            f"[{FRAME_CONDITIONAL_Q_BITS_MIN}, {FRAME_CONDITIONAL_Q_BITS_MAX}]"
+        )
+    q_bits = np.floor(arr).astype(np.uint8)
+    if (q_bits < FRAME_CONDITIONAL_Q_BITS_MIN).any() or (
+        q_bits > FRAME_CONDITIONAL_Q_BITS_MAX
+    ).any():
+        raise ValueError("floored q_bits_per_pair values are outside uint3 range")
+    return q_bits
+
+
+def _validate_q_codes_pair_first(q_pair_first: np.ndarray) -> np.ndarray:
+    q = np.asarray(q_pair_first)
+    if q.ndim != 2:
+        raise ValueError(f"q_pair_first must be 2-D, got shape {q.shape}")
+    if q.size == 0:
+        raise ValueError("q_pair_first must be non-empty")
+    if not np.issubdtype(q.dtype, np.integer):
+        raise ValueError(f"q_pair_first must have integer dtype, got {q.dtype}")
+    if (q < 0).any() or (q > 255).any():
+        raise ValueError("q_pair_first values must be uint8-compatible")
+    return q.astype(np.uint8, copy=False)
+
+
+def _append_msb_bits(out: bytearray, bit_pos: int, value: int, width: int) -> int:
+    if width < 0:
+        raise ValueError(f"bit width must be non-negative, got {width}")
+    if value < 0 or value >= (1 << width):
+        raise ValueError(f"value {value} does not fit in {width} bits")
+    for shift in range(width - 1, -1, -1):
+        if value & (1 << shift):
+            out[bit_pos // 8] |= 1 << (7 - (bit_pos % 8))
+        bit_pos += 1
+    return bit_pos
+
+
+def _read_msb_bits(data: bytes, bit_pos: int, width: int) -> tuple[int, int]:
+    value = 0
+    for _ in range(width):
+        if bit_pos >= len(data) * 8:
+            raise ValueError("bitstream truncated")
+        value = (value << 1) | ((data[bit_pos // 8] >> (7 - (bit_pos % 8))) & 1)
+        bit_pos += 1
+    return value, bit_pos
+
+
+def _assert_zero_padding(data: bytes, bit_pos: int) -> None:
+    while bit_pos < len(data) * 8:
+        if (data[bit_pos // 8] >> (7 - (bit_pos % 8))) & 1:
+            raise ValueError("non-zero padding bits in frame-conditional bitstream")
+        bit_pos += 1
+
+
+def pack_frame_conditional_q_bits(
+    q_bits_per_pair: Sequence[float] | np.ndarray,
+) -> bytes:
+    """Pack per-pair q-bit widths as fixed 3-bit MSB-first values.
+
+    The wire value is ``q_bits - 1`` so the valid decoded range is exactly
+    ``1..8``. For PR101's 600 frame-pairs this is 600 * 3 / 8 = 225 bytes.
+    The payload is intentionally headerless: the surrounding A5 packet schema
+    fixes the pair count, and this function fails closed on length mismatch
+    during decode.
+    """
+    q_bits = _normalise_q_bits_per_pair(q_bits_per_pair)
+    total_bits = q_bits.size * FRAME_CONDITIONAL_Q_BITS_PER_PAIR_BITS
+    out = bytearray((total_bits + 7) // 8)
+    bit_pos = 0
+    for value in q_bits:
+        bit_pos = _append_msb_bits(
+            out,
+            bit_pos,
+            int(value) - 1,
+            FRAME_CONDITIONAL_Q_BITS_PER_PAIR_BITS,
+        )
+    return bytes(out)
+
+
+def unpack_frame_conditional_q_bits(
+    data: bytes,
+    *,
+    n_pairs: int,
+) -> np.ndarray:
+    """Decode the fixed 3-bit A5 q-bit side-info stream."""
+    if n_pairs <= 0:
+        raise ValueError(f"n_pairs must be positive, got {n_pairs}")
+    expected_bits = n_pairs * FRAME_CONDITIONAL_Q_BITS_PER_PAIR_BITS
+    expected_bytes = (expected_bits + 7) // 8
+    if len(data) != expected_bytes:
+        raise ValueError(
+            f"q-bit side-info length {len(data)} != expected {expected_bytes}"
+        )
+    out = np.empty(n_pairs, dtype=np.uint8)
+    bit_pos = 0
+    for i in range(n_pairs):
+        code, bit_pos = _read_msb_bits(
+            data,
+            bit_pos,
+            FRAME_CONDITIONAL_Q_BITS_PER_PAIR_BITS,
+        )
+        out[i] = code + 1
+    _assert_zero_padding(data, bit_pos)
+    return out
+
+
+def apply_frame_conditional_q_bits(
+    q_pair_first: np.ndarray,
+    q_bits_per_pair: Sequence[float] | np.ndarray,
+) -> np.ndarray:
+    """Apply per-pair q-bit truncation to PR101 uint8 latent codes.
+
+    This is the decode-side semantic transform that A5's side-info authorizes:
+    pair ``i`` retains the top ``q_bits[i]`` bits of each uint8 symbol and
+    zeroes the low bits. It is idempotent and deterministic.
+    """
+    q = _validate_q_codes_pair_first(q_pair_first).copy()
+    q_bits = _normalise_q_bits_per_pair(q_bits_per_pair, expected_pairs=q.shape[0])
+    for i, bits in enumerate(q_bits):
+        bit_count = int(bits)
+        if bit_count == FRAME_CONDITIONAL_Q_BITS_MAX:
+            continue
+        shift = FRAME_CONDITIONAL_Q_BITS_MAX - bit_count
+        q[i] = ((q[i].astype(np.uint16) >> shift) << shift).astype(np.uint8)
+    return q
+
+
+def pack_frame_conditional_latent_codes(
+    q_pair_first: np.ndarray,
+    q_bits_per_pair: Sequence[float] | np.ndarray,
+) -> bytes:
+    """Pack PR101 latent uint8 codes using per-pair variable-width q-bits.
+
+    The q-bit side-info is not advisory here: the decoder needs it to know
+    where each pair's symbol boundaries are in this bitstream.
+    """
+    q = _validate_q_codes_pair_first(q_pair_first)
+    q_bits = _normalise_q_bits_per_pair(q_bits_per_pair, expected_pairs=q.shape[0])
+    total_bits = int(q_bits.astype(np.uint64).sum()) * q.shape[1]
+    out = bytearray((total_bits + 7) // 8)
+    bit_pos = 0
+    for pair_idx, bits in enumerate(q_bits):
+        bit_count = int(bits)
+        shift = FRAME_CONDITIONAL_Q_BITS_MAX - bit_count
+        for symbol in q[pair_idx]:
+            code = int(symbol) >> shift
+            bit_pos = _append_msb_bits(out, bit_pos, code, bit_count)
+    return bytes(out)
+
+
+def unpack_frame_conditional_latent_codes(
+    data: bytes,
+    q_bits_per_pair: Sequence[float] | np.ndarray,
+    *,
+    latent_dim: int,
+) -> np.ndarray:
+    """Decode A5 variable-width latent codes into uint8 PR101 code space."""
+    if latent_dim <= 0:
+        raise ValueError(f"latent_dim must be positive, got {latent_dim}")
+    q_bits = _normalise_q_bits_per_pair(q_bits_per_pair)
+    expected_bits = int(q_bits.astype(np.uint64).sum()) * latent_dim
+    expected_bytes = (expected_bits + 7) // 8
+    if len(data) != expected_bytes:
+        raise ValueError(
+            f"latent bitstream length {len(data)} != expected {expected_bytes}"
+        )
+    out = np.empty((q_bits.size, latent_dim), dtype=np.uint8)
+    bit_pos = 0
+    for pair_idx, bits in enumerate(q_bits):
+        bit_count = int(bits)
+        shift = FRAME_CONDITIONAL_Q_BITS_MAX - bit_count
+        for dim_idx in range(latent_dim):
+            code, bit_pos = _read_msb_bits(data, bit_pos, bit_count)
+            out[pair_idx, dim_idx] = (code << shift) & 255
+    _assert_zero_padding(data, bit_pos)
+    return out
+
+
+def _sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def build_frame_conditional_wire_contract(
+    q_bits_per_pair: Sequence[float] | np.ndarray,
+    *,
+    latent_dim: int,
+    q_pair_first: np.ndarray | None = None,
+) -> dict[str, object]:
+    """Return no-score A5 wire-contract metadata for manifests/guards.
+
+    This contract proves that side-info bytes are typed and decoder-consumed by
+    local helpers. It does not claim an inflate/runtime packet exists; the
+    returned blockers keep exact-eval readiness fail-closed until a packet-local
+    PR101 inflate patch and runtime-consumption proof land.
+    """
+    q_bits = _normalise_q_bits_per_pair(q_bits_per_pair)
+    sideinfo = pack_frame_conditional_q_bits(q_bits)
+    decoded_q_bits = unpack_frame_conditional_q_bits(sideinfo, n_pairs=q_bits.size)
+    q_bits_roundtrip_passed = bool(np.array_equal(decoded_q_bits, q_bits))
+    record: dict[str, object] = {
+        "schema": FRAME_CONDITIONAL_LATENT_WIRE_SCHEMA,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "runtime_decoder_helper": (
+            "tac.codec.frame_conditional_bit_budget."
+            "unpack_frame_conditional_latent_codes"
+        ),
+        "sideinfo_decoder_helper": (
+            "tac.codec.frame_conditional_bit_budget."
+            "unpack_frame_conditional_q_bits"
+        ),
+        "wire_encoding": {
+            "q_bits_per_pair": "3bit_msb_q_bits_minus_1",
+            "latent_codes": "per_pair_msb_variable_width_uint8_top_bits",
+            "latent_dim": int(latent_dim),
+            "n_pairs": int(q_bits.size),
+        },
+        "q_bits_sideinfo": {
+            "bytes": len(sideinfo),
+            "bits_per_pair": FRAME_CONDITIONAL_Q_BITS_PER_PAIR_BITS,
+            "sha256": _sha256_bytes(sideinfo),
+            "q_bits_min": int(q_bits.min()),
+            "q_bits_max": int(q_bits.max()),
+            "q_bits_mean": float(q_bits.mean()),
+        },
+        "q_bits_roundtrip": {
+            "passed": q_bits_roundtrip_passed,
+            "decoded_sha256": _sha256_bytes(decoded_q_bits.tobytes()),
+        },
+        "decoder_helper_consumes_sideinfo_bytes": True,
+        "cleared_blockers": list(FRAME_CONDITIONAL_WIRE_CONTRACT_CLEARED_BLOCKERS),
+        "remaining_blockers": list(FRAME_CONDITIONAL_WIRE_CONTRACT_REMAINING_BLOCKERS),
+    }
+    if q_pair_first is not None:
+        q = _validate_q_codes_pair_first(q_pair_first)
+        if q.shape[0] != q_bits.size:
+            raise ValueError(
+                f"q_pair_first pair count {q.shape[0]} != q_bits length {q_bits.size}"
+            )
+        if q.shape[1] != latent_dim:
+            raise ValueError(
+                f"q_pair_first latent_dim {q.shape[1]} != requested {latent_dim}"
+            )
+        latent_payload = pack_frame_conditional_latent_codes(q, q_bits)
+        decoded = unpack_frame_conditional_latent_codes(
+            latent_payload,
+            q_bits,
+            latent_dim=latent_dim,
+        )
+        expected = apply_frame_conditional_q_bits(q, q_bits)
+        record["latent_wire_payload"] = {
+            "bytes": len(latent_payload),
+            "sha256": _sha256_bytes(latent_payload),
+            "source_q_codes_sha256": _sha256_bytes(q.tobytes()),
+            "decoded_q_codes_sha256": _sha256_bytes(decoded.tobytes()),
+            "score_affecting_payload_changed": bool(not np.array_equal(q, decoded)),
+        }
+        record["latent_decode_roundtrip"] = {
+            "passed": bool(np.array_equal(decoded, expected)),
+            "expected_truncated_q_codes_sha256": _sha256_bytes(expected.tobytes()),
+        }
+    return record
 
 
 # ─────────────────────────────────────────────────────────────────────────

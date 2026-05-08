@@ -6,6 +6,12 @@ import pytest
 from tac.codec.frame_conditional_bit_budget import (
     ComplexityComponents,
     allocate_per_frame_bits,
+    apply_frame_conditional_q_bits,
+    build_frame_conditional_wire_contract,
+    pack_frame_conditional_latent_codes,
+    pack_frame_conditional_q_bits,
+    unpack_frame_conditional_latent_codes,
+    unpack_frame_conditional_q_bits,
 )
 
 
@@ -73,3 +79,72 @@ def test_allocate_per_frame_bits_rejects_invalid_inputs() -> None:
         allocate_per_frame_bits([1.0, 2.0], 10.0, floor=1.2)
     with pytest.raises(ValueError, match="cap"):
         allocate_per_frame_bits([1.0, 2.0], 10.0, cap=0.9)
+
+
+def test_pack_frame_conditional_q_bits_roundtrips_pr101_sideinfo_size() -> None:
+    q_bits = np.resize(np.arange(1, 9, dtype=np.uint8), 600)
+
+    packed = pack_frame_conditional_q_bits(q_bits)
+    decoded = unpack_frame_conditional_q_bits(packed, n_pairs=600)
+
+    assert len(packed) == 225
+    np.testing.assert_array_equal(decoded, q_bits)
+
+
+def test_unpack_frame_conditional_q_bits_fails_closed_on_bad_padding() -> None:
+    packed = bytearray(pack_frame_conditional_q_bits([1, 2, 3]))
+    packed[-1] |= 1
+
+    with pytest.raises(ValueError, match="non-zero padding"):
+        unpack_frame_conditional_q_bits(bytes(packed), n_pairs=3)
+
+
+def test_frame_conditional_latent_codes_require_sideinfo_for_decode() -> None:
+    q = np.array(
+        [
+            [255, 128, 17, 1],
+            [255, 128, 17, 1],
+        ],
+        dtype=np.uint8,
+    )
+    q_bits = np.array([4, 8], dtype=np.uint8)
+
+    packed = pack_frame_conditional_latent_codes(q, q_bits)
+    decoded = unpack_frame_conditional_latent_codes(packed, q_bits, latent_dim=4)
+
+    np.testing.assert_array_equal(
+        decoded[0],
+        np.array([240, 128, 16, 0], dtype=np.uint8),
+    )
+    np.testing.assert_array_equal(decoded[1], q[1])
+    np.testing.assert_array_equal(decoded, apply_frame_conditional_q_bits(q, q_bits))
+    with pytest.raises(ValueError, match="latent bitstream length"):
+        unpack_frame_conditional_latent_codes(
+            packed,
+            np.array([8, 8], dtype=np.uint8),
+            latent_dim=4,
+        )
+
+
+def test_build_frame_conditional_wire_contract_is_no_score_and_fail_closed() -> None:
+    q = np.arange(24, dtype=np.uint8).reshape(3, 8)
+    contract = build_frame_conditional_wire_contract(
+        [2.9, 4.1, 8.0],
+        latent_dim=8,
+        q_pair_first=q,
+    )
+
+    assert contract["score_claim"] is False
+    assert contract["ready_for_exact_eval_dispatch"] is False
+    assert contract["decoder_helper_consumes_sideinfo_bytes"] is True
+    assert contract["q_bits_sideinfo"]["bytes"] == 2
+    assert contract["q_bits_roundtrip"]["passed"] is True
+    assert contract["latent_decode_roundtrip"]["passed"] is True
+    assert (
+        "per_pair_bit_width_schema_change_requires_inflate_path_update"
+        in contract["cleared_blockers"]
+    )
+    assert (
+        "frame_conditional_packet_runtime_patch_not_built"
+        in contract["remaining_blockers"]
+    )

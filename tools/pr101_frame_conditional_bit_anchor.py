@@ -23,9 +23,10 @@ impact of frame-conditional bit allocation as a *re-quantisation proxy*:
      down, clamped to ≥1 and ≤8).
   5. Re-quantise PR101's actual de-quantised float latents to ``q_bits_i``
      precision per pair. Re-encode via the same LZMA delta-pipeline used
-     by PR101's codec (fixed format, no schema change). Measure the new
-     latent stream byte size + sidecar overhead for per-pair bit-width
-     metadata (≤600 bytes worst case).
+     by PR101's codec (byte proxy path), and materialize the typed A5
+     side-info contract that an inflate-side variable-width latent decoder
+     would consume. Measure the new latent stream byte size + the 225-byte
+     per-pair bit-width side-info payload.
   6. Compare to the uniform-allocation baseline (eta=0).
 
 Why this is a valid byte-anchor (and what it does NOT measure)
@@ -83,6 +84,11 @@ PR101_SOURCE = (
 sys.path.insert(0, str(PR101_SOURCE))
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
+from tac.codec.frame_conditional_bit_budget import (  # noqa: E402
+    apply_frame_conditional_q_bits,
+    build_frame_conditional_wire_contract,
+)
+
 # Constants from PR101's codec.py (mirrored — we do NOT mutate the upstream
 # clone; per CLAUDE.md "Forbidden in-place edits to public PR intake clones").
 PR101_DECODER_BLOB_LEN = 162_164
@@ -102,6 +108,10 @@ DISPATCH_BLOCKERS = [
     "no_archive_substitution_performed",
     "missing_exact_cuda_auth_eval",
     "requires_exact_cuda_auth_eval_before_any_score_use",
+    "frame_conditional_packet_runtime_patch_not_built",
+    "frame_conditional_runtime_consumption_proof_missing",
+]
+CLEARED_BY_TYPED_WIRE_CONTRACT = [
     "per_pair_bit_width_schema_change_requires_inflate_path_update",
 ]
 
@@ -118,6 +128,8 @@ def _proxy_evidence_contract() -> dict[str, object]:
         "ready_for_exact_eval_dispatch": False,
         "dispatch_attempted": False,
         "proxy_row": True,
+        "typed_sideinfo_wire_contract_landed": True,
+        "cleared_blockers": list(CLEARED_BY_TYPED_WIRE_CONTRACT),
         "dispatch_blockers": list(DISPATCH_BLOCKERS),
     }
 
@@ -128,9 +140,8 @@ def _proxy_evidence_contract() -> dict[str, object]:
 
 
 def _read_pr101_archive_bytes(archive_path: Path) -> bytes:
-    with zipfile.ZipFile(archive_path) as z:
-        with z.open("x") as f:
-            return f.read()
+    with zipfile.ZipFile(archive_path) as z, z.open("x") as f:
+        return f.read()
 
 
 def _extract_pr101_latent_payload(archive_bytes: bytes) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -243,19 +254,22 @@ def _requantise_per_pair(
     re-quantisation that emulates how reduced per-pair precision would
     affect the LZMA delta-encoder's compressibility.
     """
-    out = q_pair_first.copy().astype(np.uint8)
-    for i in range(out.shape[0]):
-        b = int(np.floor(q_bits_per_pair[i]))
-        b = max(1, min(8, b))
-        if b == 8:
-            continue
-        shift = 8 - b
-        # Round-to-nearest re-quantisation in uint8 space.
-        x = out[i].astype(np.int32)
-        # Reconstruct by quantise-then-dequantise: floor(x / 2**shift) * 2**shift.
-        x = (x >> shift) << shift
-        out[i] = np.clip(x, 0, 255).astype(np.uint8)
-    return out
+    return apply_frame_conditional_q_bits(q_pair_first, q_bits_per_pair)
+
+
+def _implicit_uniform_wire_contract() -> dict[str, object]:
+    return {
+        "schema": "tac_frame_conditional_latent_wire.v1",
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "sideinfo_required": False,
+        "reason": "eta_zero_uniform_allocation_uses_stock_pr101_latent_schema",
+        "q_bits_sideinfo": {"bytes": 0},
+        "decoder_helper_consumes_sideinfo_bytes": False,
+        "cleared_blockers": [],
+        "remaining_blockers": [],
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -309,9 +323,22 @@ def _sweep_etas(
         q_bits_per_pair = _bits_per_pair_to_q_bits(bits_per_pair, PR101_LATENT_DIM)
         q_requant = _requantise_per_pair(q_pair_first, q_bits_per_pair)
         new_latent_bytes = _encode_pr101_latent_stream(mins, scales, q_requant)
-        # Per-pair bit-width sidechannel cost: ⌈log2(8)⌉ = 3 bits per pair → ⌈600*3/8⌉ = 225 bytes
-        sidechannel_overhead = int(np.ceil(PR101_N_PAIRS * 3 / 8))
-        # If eta=0 (uniform) the sidechannel can be omitted.
+        wire_contract = (
+            _implicit_uniform_wire_contract()
+            if eta == 0.0
+            else build_frame_conditional_wire_contract(
+                q_bits_per_pair,
+                latent_dim=PR101_LATENT_DIM,
+                q_pair_first=q_pair_first,
+            )
+        )
+        # Per-pair bit-width sidechannel cost is now materialized by the typed
+        # A5 wire helper: 3 bits per pair -> 600*3/8 = 225 bytes for PR101.
+        q_bits_sideinfo = wire_contract.get("q_bits_sideinfo")
+        sidechannel_overhead = int(
+            q_bits_sideinfo.get("bytes", 0) if isinstance(q_bits_sideinfo, dict) else 0
+        )
+        # If eta=0 (uniform) the stock PR101 latent schema can be retained.
         if eta == 0.0:
             sidechannel_overhead = 0
         total_bytes = (
@@ -339,6 +366,9 @@ def _sweep_etas(
                 "q_bits_per_pair_min": float(q_bits_per_pair.min()),
                 "q_bits_per_pair_max": float(q_bits_per_pair.max()),
                 "q_bits_per_pair_mean": float(q_bits_per_pair.mean()),
+                "q_bits_per_pair_floor_min": int(np.floor(q_bits_per_pair).min()),
+                "q_bits_per_pair_floor_max": int(np.floor(q_bits_per_pair).max()),
+                "frame_conditional_wire_contract": wire_contract,
                 **_proxy_evidence_contract(),
                 "source": (
                     f"{EVIDENCE_GRADE} {output_dir} "
@@ -348,6 +378,7 @@ def _sweep_etas(
         )
 
     rows.sort(key=lambda r: r["archive_delta_bytes"])
+    best_wire_contract = rows[0]["frame_conditional_wire_contract"]
     return {
         "schema": SCHEMA_VERSION,
         "tool": TOOL_NAME,
@@ -368,6 +399,21 @@ def _sweep_etas(
         "rows": rows,
         "best_eta": rows[0]["eta"],
         "best_archive_delta_bytes": rows[0]["archive_delta_bytes"],
+        "frame_conditional_wire_contract_status": {
+            "schema": best_wire_contract.get("schema")
+            if isinstance(best_wire_contract, dict)
+            else None,
+            "typed_sideinfo_wire_contract_landed": True,
+            "decoder_helper_consumes_sideinfo_bytes": bool(
+                best_wire_contract.get("decoder_helper_consumes_sideinfo_bytes")
+            )
+            if isinstance(best_wire_contract, dict)
+            else False,
+            "cleared_blockers": list(CLEARED_BY_TYPED_WIRE_CONTRACT),
+            "remaining_blockers": list(DISPATCH_BLOCKERS),
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
         **_proxy_evidence_contract(),
         "score_affecting_payload_changed": True,
         "charged_bits_changed": True,
@@ -440,8 +486,9 @@ def main(argv: list[str] | None = None) -> int:
         f"archive_delta_bytes={manifest['best_archive_delta_bytes']:+d}\n"
     )
     print("NOTE: byte-anchor only. score_claim=False; per-pair score-marginal")
-    print("      required before any dispatch. dispatch_blocker:")
-    print("      awaiting_per_frame_score_marginal.\n")
+    print("      required before any dispatch. side-info wire contract exists,")
+    print("      but packet-local inflate integration + runtime proof remain")
+    print("      active dispatch blockers.\n")
     return 0
 
 

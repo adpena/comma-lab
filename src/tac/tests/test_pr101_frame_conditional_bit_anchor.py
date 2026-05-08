@@ -57,3 +57,27 @@ def test_frame_conditional_anchor_proxy_contract_is_non_promotable() -> None:
     assert contract["rank_or_kill_eligible"] is False
     assert contract["ready_for_exact_eval_dispatch"] is False
     assert "awaiting_per_frame_score_marginal" in contract["dispatch_blockers"]
+    assert contract["typed_sideinfo_wire_contract_landed"] is True
+    assert (
+        "per_pair_bit_width_schema_change_requires_inflate_path_update"
+        in contract["cleared_blockers"]
+    )
+    assert (
+        "per_pair_bit_width_schema_change_requires_inflate_path_update"
+        not in contract["dispatch_blockers"]
+    )
+    assert (
+        "frame_conditional_packet_runtime_patch_not_built"
+        in contract["dispatch_blockers"]
+    )
+
+
+def test_uniform_anchor_row_keeps_stock_pr101_schema() -> None:
+    tool = _load_tool()
+
+    contract = tool._implicit_uniform_wire_contract()
+
+    assert contract["score_claim"] is False
+    assert contract["sideinfo_required"] is False
+    assert contract["q_bits_sideinfo"]["bytes"] == 0
+    assert contract["decoder_helper_consumes_sideinfo_bytes"] is False

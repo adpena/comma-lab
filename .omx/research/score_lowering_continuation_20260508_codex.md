@@ -122,3 +122,52 @@ Delta versus prior A5 note:
 - Prior Phase A table carried best A5 around `-1,264` to `-1,278 B`.
 - The widened local sweep improves the byte proxy to `-4,098 B`, still
   non-promotable until the blockers above are closed.
+
+## A5 Typed Side-Info Wire Contract
+
+Local code artifact:
+
+- `src/tac/codec/frame_conditional_bit_budget.py` now defines
+  `tac_frame_conditional_latent_wire.v1`.
+- Per-pair q-bit side info is fixed 3-bit MSB-first `q_bits - 1`; PR101's
+  600 pairs consume exactly `225 B`.
+- `unpack_frame_conditional_latent_codes(...)` consumes the decoded side info
+  to parse per-pair variable-width latent symbols, then reconstructs uint8
+  PR101 code-space values by zero-filling discarded low bits.
+- `build_frame_conditional_wire_contract(...)` emits no-score manifest fields:
+  side-info SHA-256, variable-width latent payload SHA-256, roundtrip proof,
+  `score_claim=false`, and `ready_for_exact_eval_dispatch=false`.
+
+Smoke command:
+
+```bash
+.venv/bin/python tools/pr101_frame_conditional_bit_anchor.py \
+  --pr101-archive experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip \
+  --video-path upstream/videos/0.mkv \
+  --etas 0.0 4.0 \
+  --floor 0.25 \
+  --cap 3.0 \
+  --output-dir experiments/results/pr101_frame_conditional_bit_codex_20260508T_wire_contract_smoke
+```
+
+Smoke artifact:
+
+- Manifest:
+  `experiments/results/pr101_frame_conditional_bit_codex_20260508T_wire_contract_smoke/build_manifest.json`
+- Best row remains `eta=4.0`, `archive_delta_bytes=-4,098` byte proxy.
+- Typed side-info bytes: `225 B`, SHA-256
+  `2685786664c499e41e768259823c91e8b4164cd95845e5765aa658620fee05d4`.
+- Variable-width latent proof payload: `9,387 B`, SHA-256
+  `7b222b242523d7f86f4e4e420da6467f1a7916d91577bf6fa0912a469a3c0f13`.
+
+Blocker status:
+
+- Cleared locally as a schema blocker:
+  `per_pair_bit_width_schema_change_requires_inflate_path_update`.
+- Still active before any dispatch or score claim:
+  `awaiting_per_frame_score_marginal`,
+  `frame_conditional_packet_runtime_patch_not_built`,
+  `frame_conditional_runtime_consumption_proof_missing`,
+  `no_archive_substitution_performed`,
+  `missing_exact_cuda_auth_eval`,
+  `requires_exact_cuda_auth_eval_before_any_score_use`.
