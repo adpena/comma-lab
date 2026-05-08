@@ -4,19 +4,19 @@
 **Author**: Subagent INTEGRATE
 **Status**: blueprint — requires Phase 2-4 empirical anchors before populating
 **Related task**: #308 PHASE 4 INTEGRATION
-**disclosure_status**: PRIVATE_pending_operator_approval (per Strategic Secrecy Rule)
+**disclosure_status**: internal-private until operator approves disclosure for a specific surface
 **evidence_tag_default**: `[predicted-band, NOT contest-CUDA]` for every score row below
    unless an inline `[contest-CUDA]` tag with auth-eval JSON cross-reference is present.
 
 > **All score rows in this blueprint carry `[predicted-band, NOT contest-CUDA]`
 > unless explicitly tagged otherwise.** Per CLAUDE.md
-> `forbidden_empirical_claim_without_evidence_tag` and `Strategic Secrecy Rule`,
-> the blueprint structure may be intentional paper harness, but no row may
-> imply a measured score until an exact CUDA auth eval lands. The PR #101 /
-> #103 / #102 / #100 / #106 / #103-on-PR106 / #107 / Quantizr rows in §3 are
-> public claimed scores treated as `[external; not yet exact-replayed]` per
-> "Frontier target" non-negotiable. Local rows are `[predicted-band]` until
-> a contest-CUDA artifact is in custody.
+> `forbidden_empirical_claim_without_evidence_tag`, the blueprint structure may
+> be intentional paper harness, but no row may imply a measured score until an
+> exact CUDA auth eval lands. The PR #101 / #103 / #102 / #100 / #106 /
+> #103-on-PR106 / #107 / Quantizr rows in §3 are public claimed scores treated
+> as `[external; not yet exact-replayed]` per "Frontier target"
+> non-negotiable. Local rows are `[predicted-band]` until a contest-CUDA
+> artifact is in custody.
 
 ## 1. Purpose
 
@@ -143,20 +143,21 @@ harness adds:
 - `tests/test_compliance_check_integration.py` — assert paper rows pass
   `scripts/pre_submission_compliance_check.py --contest-final --strict`
 
-## 6. Disclosure posture (CLAUDE.md "Strategic Secrecy Rule")
+## 6. Disclosure posture
 
-Per the Strategic Secrecy Rule:
+Operational disclosure posture for this blueprint:
 
-- The δεζ blueprint and this harness blueprint are PRIVATE until operator
-  authorizes disclosure.
+- The δεζ blueprint and this harness blueprint are internal-private until
+  operator authorizes disclosure on a specific surface.
 - The PR #107 (`apogee`) public disclosure already names the OSS `tac` library
   (`https://github.com/adpena/tac`) per
   `project_pr107_disclosure_tac_oss_public_20260505`.
-- comma-lab repo remains PRIVATE; no operational levers (Joint-ADMM allocation
-  weights, learned-prior architecture, FiLM-protect patterns) are disclosed
-  publicly.
-- Cloudflare site URL stays in private docs only per current operator policy.
-- Any paper publication must wait for operator approval (Gate 5: "approve
+- comma-lab repo remains internal-private; operational levers (Joint-ADMM
+  allocation weights, learned-prior architecture, FiLM-protect patterns) are
+  not disclosed publicly without explicit operator sign-off.
+- Internal supplemental URLs and credentials stay confined to private repo
+  documentation until operator explicitly approves a broader surface.
+- Paper publication is gated on operator approval (Gate 5: "approve
   public submission. IRREVERSIBLE disclosure").
 
 ## 7. Outputs (when populated)

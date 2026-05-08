@@ -21,7 +21,7 @@ disclosure_policy:
     - "Lane Omega (Hessian-aware quantization) schedule"
     - "Lane DARTS-S architecture-search recipe"
     - "Specific Selfcomp paradigm sequencing decisions"
-    - "Cloudflare site URL (until human approval)"
+    - "Internal supplemental URLs and credentials (until operator approves a surface)"
 score_lanes:
   contest_compliant_floor: 1.043987524793892
   contest_compliant_floor_evidence: "experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/eval/contest_auth_eval.json"
