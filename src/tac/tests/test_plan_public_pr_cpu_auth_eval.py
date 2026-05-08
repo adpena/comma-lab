@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import sys
 from pathlib import Path
+
+import pytest
 
 
 def _load_tool():
@@ -49,6 +52,8 @@ def test_build_plan_forces_cpu_and_non_promotion_semantics() -> None:
     assert plan["score_claim"] is False
     assert plan["rank_or_kill_eligible"] is False
     assert plan["evidence_semantics"] == "public_cpu_leaderboard_reproduction_not_cuda_promotion"
+    assert plan["input_closure"]["ready_to_execute"] is False
+    assert set(plan["input_closure"]["missing_inputs"]) == {"archive", "inflate_sh"}
     command = plan["command"]
     assert command[command.index("--device") + 1] == "cpu"
     assert command[command.index("--archive") + 1] == row["archive"]["path"]
@@ -61,3 +66,44 @@ def test_load_rows_accepts_wrapped_ledger(tmp_path: Path) -> None:
     ledger.write_text(json.dumps({"rows": [{"pr": 100}]}), encoding="utf-8")
 
     assert mod.load_rows(ledger) == [{"pr": 100}]
+
+
+def test_public_cpu_execute_refuses_missing_input_closure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mod = _load_tool()
+    ledger = tmp_path / "ledger.json"
+    ledger.write_text(
+        json.dumps(
+            {
+                "rows": [
+                    {
+                        "pr": 102,
+                        "leaderboard_name": "hnerv",
+                        "archive": {"path": str(tmp_path / "missing.zip")},
+                        "source": {
+                            "key_files": {
+                                "inflate_sh": {"path": str(tmp_path / "missing-inflate.sh")}
+                            }
+                        },
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "plan_public_pr_cpu_auth_eval.py",
+            "--pr",
+            "102",
+            "--ledger",
+            str(ledger),
+            "--execute",
+        ],
+    )
+
+    with pytest.raises(SystemExit, match="missing inputs: archive, inflate_sh"):
+        mod.main()

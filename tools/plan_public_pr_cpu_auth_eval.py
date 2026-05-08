@@ -37,6 +37,25 @@ def load_rows(path: Path) -> list[dict[str, Any]]:
     raise ValueError(f"unsupported ledger shape: {path}")
 
 
+def _input_closure(paths: dict[str, Path]) -> dict[str, Any]:
+    entries = {}
+    missing = []
+    for name, path in paths.items():
+        exists = path.exists()
+        entries[name] = {
+            "path": str(path),
+            "exists": exists,
+            "is_file": path.is_file() if exists else False,
+        }
+        if not exists:
+            missing.append(name)
+    return {
+        "required_inputs": entries,
+        "missing_inputs": missing,
+        "ready_to_execute": not missing,
+    }
+
+
 def find_pr_row(rows: list[dict[str, Any]], pr: int) -> dict[str, Any]:
     for row in rows:
         if row.get("pr") == pr:
@@ -65,6 +84,8 @@ def build_plan(
         raise ValueError(f"PR {pr} row has no archive path")
     if not inflate_path:
         raise ValueError(f"PR {pr} row has no inflate.sh path")
+    archive_path_obj = Path(archive_path)
+    inflate_path_obj = Path(inflate_path)
 
     run_id = run_id or f"public-pr{pr}-{_safe_slug(str(name))}-cpu-auth-{_utc_now_compact()}"
     work_dir = work_dir or Path("experiments/results/public_cpu_auth_eval") / run_id
@@ -104,6 +125,14 @@ def build_plan(
         "inflate_sh": inflate_path,
         "upstream_dir": str(upstream_dir),
         "video_names_file": str(video_names_file),
+        "input_closure": _input_closure(
+            {
+                "archive": archive_path_obj,
+                "inflate_sh": inflate_path_obj,
+                "upstream_dir": upstream_dir,
+                "video_names_file": video_names_file,
+            }
+        ),
         "work_dir": str(work_dir),
         "device": "cpu",
         "evidence_semantics": "public_cpu_leaderboard_reproduction_not_cuda_promotion",
@@ -156,6 +185,9 @@ def main() -> int:
     print(text)
 
     if args.execute:
+        if not plan["input_closure"]["ready_to_execute"]:
+            missing = ", ".join(plan["input_closure"]["missing_inputs"])
+            raise SystemExit(f"refusing to execute public CPU auth eval plan with missing inputs: {missing}")
         return subprocess.run(plan["command"], cwd=args.repo_root).returncode
     return 0
 
