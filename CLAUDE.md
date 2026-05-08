@@ -662,6 +662,32 @@ Requirements:
 
 This is the openpilot standard: deterministic, reproducible, no runtime format negotiation, schema-first data contracts, fail-fast validation at every boundary. We are professional engineers contributing to production infrastructure. The ad-hoc approach is over.
 
+## Beauty, simplicity, and developer experience — non-negotiable
+
+Beauty and elegance are engineering constraints here, not decoration. Prefer
+small typed abstractions, clear names, deterministic schemas, and composable
+contracts that make the next lane easier to build correctly. A powerful idea is
+not done until a new engineer can find it, run it, inspect its artifacts,
+understand its failure modes, and compose it with adjacent codec stages without
+reverse-engineering hidden state.
+
+When adding or hardening planner, codec, archive, native, or training code:
+
+- choose the simplest abstraction that preserves the real invariants;
+- keep public APIs expressive, documented, typed, and stable enough for OSS
+  users and future native ports;
+- make artifacts human-readable where possible and machine-checkable always;
+- separate contest-only overfit paths from production/generalized paths with
+  explicit metadata instead of runtime guesswork;
+- delete dead fields, stale adapters, and duplicate one-offs once a canonical
+  contract replaces them;
+- add conformance vectors, examples, and focused tests so Rust/Zig/C/assembly
+  ports can prove byte-for-byte behavior against the Python oracle.
+
+Do not hide complexity behind vague helpers. If the domain is inherently hard,
+make the interface narrow and explicit, preserve the proof artifacts, and keep
+the implementation readable enough for adversarial review.
+
 ## Contest vs production target modes — non-negotiable
 
 Exact-eval dispatch tools are contest-score actuators. They may consume only

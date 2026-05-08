@@ -21,7 +21,10 @@ available charged byte mass.
 
 ## 0. Executive Position
 
-- **Contest frontier**: 0.20935 [contest-CUDA] (PR106x-lowlevel-brotli, 186080 bytes)
+- **Contest frontier / active local rate anchor**: superseded from
+  PR106x-lowlevel-brotli (`0.20935073680571203`, `186080` bytes) to
+  PR103-on-PR106 (`0.2089810755823297`, `185578` bytes) after the 2026-05-08
+  exact-eval/layout cleanup. PR106x remains a predecessor/control substrate.
 - **Public top 3**: 0.193 / 0.195 / 0.195 (PR #101 / #103 / #102)
 - **Wave-Ω stack ceiling**: 0.180 [predicted-band, NOT contest-CUDA]
 - **Shannon realistic floor**: 0.155 [council-derived]

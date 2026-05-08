@@ -1,0 +1,95 @@
+{
+  "baseline_score": 0.20898105277982337,
+  "canonical_score": 0.351718793322788,
+  "custody": {
+    "archive_bytes": 156404,
+    "archive_sha256": "ab8a8a13c70b3d3bbf2ce3d8a81a77691b776a6e0fb1cbe9ce504dc3f59c1b28",
+    "command": [
+      "experiments/contest_auth_eval.py",
+      "--archive",
+      "/teamspace/studios/this_studio/pact/experiments/results/lossy_coarsening_20260508T030750Z/archive.zip",
+      "--inflate-sh",
+      "/teamspace/studios/this_studio/pact/experiments/results/lossy_coarsening_20260508T030750Z/submission_dir/inflate.sh",
+      "--upstream-dir",
+      "upstream",
+      "--device",
+      "cuda",
+      "--keep-work-dir",
+      "--work-dir",
+      "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/lossy-coarsening-cuda-20260508T0312-noproject/auth_eval_work"
+    ],
+    "device": "cuda",
+    "gpu_model": "Tesla T4",
+    "inflate_script": "/teamspace/studios/this_studio/pact/experiments/results/lossy_coarsening_20260508T030750Z/submission_dir/inflate.sh",
+    "n_samples": 600
+  },
+  "dispatch_claim_state": {
+    "claims_file_present": true,
+    "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+    "latest_claim": {
+      "agent": "codex:gpt-5",
+      "instance_job_id": "lossy-coarsening-cuda-20260508T0312-noproject",
+      "lane_id": "lossy_coarsening_analytical_cuda",
+      "notes": "custody correction: exact A-negative reviewed; actual artifact=experiments/results/lightning_batch/lossy-coarsening-cuda-20260508T0312-noproject/auth_eval_work/contest_auth_eval.json review_packet=.omx/research/lossy_coarsening_exact_cuda_result_review_20260508_codex.json archive_bytes=156404 score=0.351718793322788 measured_config_retired_only",
+      "platform": "lightning",
+      "predicted_eta_utc": "",
+      "status": "completed_score_0.351719_reviewed",
+      "timestamp_utc": "2026-05-08T06:17:58Z"
+    },
+    "latest_status": "completed_score_0.351719_reviewed",
+    "matching_claim_count": 4,
+    "terminal_status_recorded": true
+  },
+  "exact_cuda_evidence": true,
+  "failure_class": "legitimate_score_regression_or_component_collapse",
+  "family_falsified": false,
+  "job_id": "lossy-coarsening-cuda-20260508T0312-noproject",
+  "lane_id": "lossy_coarsening_analytical_cuda",
+  "measured_config_status": "measured_config_retired",
+  "method_family_retired": false,
+  "notes": [
+    "This packet can retire only the measured config unless the broader kill discipline is separately satisfied.",
+    "Exact CUDA evidence may update solver trust regions after adversarial review."
+  ],
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "reactivation_criteria": [
+    "retrain or jointly optimize the renderer under scorer-aware loss instead of applying post-hoc lossy coarsening",
+    "prove byte-closed runtime packet with component-risk mitigation and exact CUDA score below the active HNeRV anchor",
+    "classify whether the loss is SegNet, PoseNet, or runtime/harness driven before any broader method conclusion"
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "review_requirements": {
+    "contest_compliance_review_required": true,
+    "engineering_review_required": true,
+    "geometry_review_required": true,
+    "math_review_required": true,
+    "optimization_review_required": true
+  },
+  "reviewer": "codex",
+  "runtime_custody": {
+    "external_dependency_roots": [],
+    "payload_closure_fields_present": true,
+    "runtime_file_count": 4,
+    "runtime_files_listed": true,
+    "runtime_manifest_present": true,
+    "runtime_tree_sha256": "d55ed9a31ab76a2498fdce98ddb5852544c504ad166fd68df1323f341ca4b3e7"
+  },
+  "schema": "tac_result_review_packet_v1",
+  "score_claim": false,
+  "score_recomputation": {
+    "abs_delta_vs_reported": 3.7041200662280005e-09,
+    "archive_bytes": 156404,
+    "available": true,
+    "avg_posenet_dist": 0.00037762,
+    "avg_segnet_dist": 0.00186125,
+    "matches_reported": true,
+    "rate_term": 0.1041430037041201,
+    "recomputed_score": 0.35171879702690806,
+    "reported_score": 0.351718793322788
+  },
+  "source_json_path": "experiments/results/lightning_batch/lossy-coarsening-cuda-20260508T0312-noproject/auth_eval_work/contest_auth_eval.json",
+  "source_json_sha256": "e795b83c8ab6a8b5fccef43f2eb97f07e90c56f390ae60ace9a1bb406ee268de",
+  "technique": "lossy_coarsening_analytical",
+  "tool": "tools/build_result_review_packet.py"
+}

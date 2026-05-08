@@ -1,4 +1,12 @@
 {
+  "supersession_20260508": {
+    "active_hnerv_rate_anchor": "PR103-on-PR106",
+    "archive_bytes": 185578,
+    "archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+    "strict_formula_score": 0.2089810755823297,
+    "supersedes": "PR106x-lowlevel-brotli as the current HNeRV rate anchor",
+    "note": "This roadmap predates the PR103-on-PR106 exact eval and monolithic-layout correction. PR106x rows are predecessor/control rows only; PR101/PR106 pose, mask, and renderer budgets must be parser-proven logical sections, not ZIP member categories."
+  },
   "dirty_blocked_row_count": 0,
   "dirty_path_count": 10,
   "dirty_paths": [
@@ -1335,11 +1343,11 @@
       ],
       "dirty_path_blockers": [],
       "dispatch_attempted": false,
-      "evidence_grade": "A++ exact CUDA for PR106x; empirical for PR106 q10 rebuild until exact eval",
+      "evidence_grade": "superseded predecessor A++ exact CUDA for PR106x; active rate anchor is PR103-on-PR106 at 185578 bytes",
       "key": "hnerv_lowlevel_brotli_repack",
       "missing_code_path_count": 0,
       "missing_evidence_path_count": 0,
-      "next_patch": "Promote only exact-evaluated archive SHAs; surface PR106x lgblock16 -1B and PR106 q10 as local archive candidates until candidate-specific preflight, lane claim, and exact CUDA auth eval land.",
+      "next_patch": "Preserve PR106x lgblock16 -1B and PR106 q10 as predecessor local archive candidates only; future rate-only candidates must beat the PR103-on-PR106 185578-byte floor or stack cleanly before exact CUDA spend.",
       "priority_tier": 20,
       "readiness_stage": "exact_evidence_present_review_before_promotion",
       "ready_for_exact_eval_dispatch": false,
@@ -1348,7 +1356,7 @@
       "safe_to_touch_now": true,
       "score_claim": false,
       "stackability": "high: raw-equivalent section recode should stack before scorer-changing atoms",
-      "status": "exact_evaluated_pr106x_rate_frontier",
+      "status": "superseded_exact_pr106x_rate_control",
       "title": "HNeRV low-level brotli repack"
     },
     {

@@ -4,6 +4,22 @@ This ledger records exact-replay and byte-forensics work for the late public
 HNeRV frontier. Public PR scores are external until exact CUDA replay of the
 exact archive bytes through `archive.zip -> inflate.sh -> upstream/evaluate.py`.
 
+## 2026-05-08 Monolithic-Layout Supersession
+
+Later layout verification proves the stock PR101 and PR106 archives are
+single-member ZIP packets with parser-proven internal sections, not separate
+ZIP members for masks, poses, or renderer files. Treat this ledger's section
+byte anatomy as parser-level evidence only. Any older phrasing that implies a
+member-level pose/mask/renderer budget is superseded by
+`reports/frontier_monolithic_archive_layout_20260508.json` and
+`.omx/research/frontier_monolithic_archive_layout_20260508_codex.md`.
+
+Current local A++ HNeRV rate anchor is now PR103-on-PR106 at strict formula
+score `0.2089810755823297`, `185578` bytes, SHA-256
+`ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce`.
+PR106/PR106x rows below are preserved as predecessor evidence and source
+substrates, not as the current rate anchor.
+
 ## Current Exact Frontier
 
 - PR101 `hnerv_ft_microcodec` exact T4 A++ replay:
@@ -207,7 +223,7 @@ Four T4 jobs harvested terminal. **PR106 belt_and_suspenders adapter replays at 
 
 PR106's win is **PoseNet domination**: pose contribution `0.018306` is **~2.3× lower** than PR101/103/105 (`0.041355`-`0.041554`). PR106 trades +8KB rate (`+5314 bytes` vs PR101) for a sqrt(10·pose_dist) advantage. That's the Fridrich square-root-law in action — concentrated bytes purchasing disproportionate pose reduction.
 
-The PR105 vs PR106 split (same `kitchen_sink`/`belt_and_suspenders` author family) reveals that PR106's extra ~8KB delivers most of its score advantage via pose-targeted capacity, not segmentation. That's the highest-EV optimization signal we have right now: **the pose decoder/encoder bottleneck dominates the public frontier, not seg or pure rate**.
+The PR105 vs PR106 split (same `kitchen_sink`/`belt_and_suspenders` author family) reveals that PR106's extra ~8KB correlates with most of its score advantage via lower PoseNet contribution, not segmentation. Supersession after the monolithic-layout finding: this does **not** prove a separate PR106 pose member or member-level pose budget. The actionable surface is PR106's parser-proven `decoder_packed_brotli` plus `latents_and_sidecar_brotli`, or a new charged sidecar/runtime packet with exact CUDA proof.
 
 ### Strict interpretation of x-repack evidence
 
@@ -231,3 +247,5 @@ The public frontier is now decoder-saturated brotli (170KB on PR106) — entropy
 1. Update `reports/latest.md` to record PR106 as new exact public frontier.
 2. Spawn comprehensive PR107 reorganization subagent: gh-repo research + internal hidden-gem audit + tac OSS plan + month-of-work writeup + senior-engineer review.
 3. Build PR106 stacking lane: HNeRV decoder self-compression (NWC) + arithmetic coding of decoder/latent streams + RAFT-derived pose sidecar.
+   Supersession: the RAFT-derived pose sidecar is a new charged packet/runtime
+   design, not replacement of an existing PR106 pose ZIP member.

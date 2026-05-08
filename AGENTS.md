@@ -294,6 +294,29 @@ guardrails. Do not bury them in chat.
   components, explicit lowering passes, profile-guided feedback, deterministic
   byte emission, and exact CUDA validation as the final optimizer check.
 
+Returned results must be investigated adversarially before they change lane
+status. This applies to exact CUDA positives, exact CUDA negatives, proxy/MPS
+signals, byte-only wins, remote failures, queue anomalies, and subagent
+findings. The minimum result-review packet is:
+
+- custody: archive/path bytes and SHA-256, runtime tree SHA, command, hardware,
+  sample count, structured JSON path, logs, and dispatch-claim status;
+- recomputation: formula score recomputed from component fields when present,
+  archive byte term checked against `25 * bytes / 37,545,489`, and payload
+  closure checked against the scored `inflate.sh`;
+- classification: legitimate score movement, measured-config regression,
+  harness bug, archive/runtime bug, proxy leakage, no-op, dependency failure,
+  component collapse, timeout/infrastructure, or indeterminate;
+- adversarial review: engineering, mathematical, scorer-geometry, optimization,
+  and contest-compliance explanations considered before status changes;
+- reactivation criteria: the exact evidence, implementation change, or
+  theoretical proof that would reopen or supersede the conclusion.
+
+Do not collapse "a result came back bad" into "the lane is dead." Bad results
+usually update trust regions, dispatch gates, solver priors, byte floors,
+or implementation TODOs. They kill only the measured configuration unless the
+Kill Discipline section's stronger standard is met.
+
 ## Build Discipline — OSS, Paper, Production, Composability
 
 Every lane, codec, training script, decoder, optimizer, and tool must be
@@ -353,6 +376,32 @@ short-term contest gains that compromise long-term value are net-negative.
 Subagents and codex-spawned helpers must inherit these four constituencies
 in their commits — review their output for OSS hygiene, ledger entries,
 production fitness, and composability hooks before promoting.
+
+## Beauty, Simplicity, And Developer Experience
+
+Beauty and elegance are engineering constraints here, not decoration. Prefer
+small typed abstractions, clear names, deterministic schemas, and composable
+contracts that make the next lane easier to build correctly. A powerful idea is
+not done until a new engineer can find it, run it, inspect its artifacts,
+understand its failure modes, and compose it with adjacent codec stages without
+reverse-engineering hidden state.
+
+When adding or hardening planner, codec, archive, native, or training code:
+
+- choose the simplest abstraction that preserves the real invariants;
+- keep public APIs expressive, documented, typed, and stable enough for OSS
+  users and future native ports;
+- make artifacts human-readable where possible and machine-checkable always;
+- separate contest-only overfit paths from production/generalized paths with
+  explicit metadata instead of runtime guesswork;
+- delete dead fields, stale adapters, and duplicate one-offs once a canonical
+  contract replaces them;
+- add conformance vectors, examples, and focused tests so Rust/Zig/C/assembly
+  ports can prove byte-for-byte behavior against the Python oracle.
+
+Do not hide complexity behind vague helpers. If the domain is inherently hard,
+make the interface narrow and explicit, preserve the proof artifacts, and keep
+the implementation readable enough for adversarial review.
 
 ## Contest Versus Production Targeting
 
@@ -681,6 +730,13 @@ Non-negotiable compliance rules:
 Do not use broad `KILL`, `dead`, or permanent-retirement language unless the
 Grand Council has completed deep adversarial review and reached three clean
 consensus passes on scope.
+
+User mandate 2026-05-08: investigate every returned result deeply,
+adversarially, and rigorously; falsify or kill only as an absolute last
+resort. A single exact CUDA failure can retire a measured archive/config after
+custody review, but it cannot retire the method family unless independent exact
+evidence or a mathematical impossibility proof survives the review packet
+above, research-path exhaustion, and documented reactivation criteria.
 
 For any bad, surprising, or disappointing result:
 

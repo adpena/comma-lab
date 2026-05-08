@@ -6,6 +6,17 @@ Bounded local review of the HNeRV scorecard, PR106x low-level Brotli repack
 manifest, and HDC2 entropy-overhead audit. This pass did not dispatch remote
 work, did not claim a lane, and did not make a new score claim.
 
+## 2026-05-08 Supersession
+
+This ranking predates the PR103-on-PR106 exact eval. The active local A++
+HNeRV rate anchor is now PR103-on-PR106 at strict formula score
+`0.2089810755823297`, `185578` bytes, SHA-256
+`ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce`.
+PR106x-lowlevel-brotli remains a predecessor/control substrate only. HDC2 or
+other rate-only entropy follow-ups must beat `185578` archive bytes, not only
+the older PR106x decoder-section threshold, unless they stack with a
+scorer-changing packet.
+
 ## Durable Artifacts
 
 - [empirical:experiments/results/public_hnerv_frontier_payload_profiles_20260504_codex/frontier_entropy_gap_ranking.json]
@@ -16,7 +27,7 @@ work, did not claim a lane, and did not make a new score claim.
 
 ## Result
 
-The current exact frontier selected from the local scorecard is
+The superseded exact frontier selected from the then-current local scorecard was
 `PR106x-lowlevel-brotli`, score `0.20935073680571203`, archive bytes `186080`,
 archive SHA-256
 `b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f`.
@@ -35,7 +46,7 @@ frontier `decoder_packed_brotli` section through the PR106x low-level repack
 section-diff audit. The current HDC2 stream is byte-negative against the exact
 frontier decoder section:
 
-- current frontier decoder section: `170127` bytes
+- historical PR106x frontier decoder section: `170127` bytes
 - HDC2 stream bytes: `221381`
 - net delta now: `+51254` bytes
 - HDC2 model-overhead target alone: still `+10414` bytes after reduction

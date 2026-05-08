@@ -3,14 +3,176 @@
     {
       "classification": "research_untracked",
       "disposition": "track",
+      "note": "track: durable 2026-05-08 research/control-plane ledger; small, non-provider source of truth.",
+      "path": ".omx/research/all_lanes_preflight_blockers_20260508_codex.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 research/control-plane ledger; small, non-provider source of truth.",
+      "path": ".omx/research/arch_shrink_x0_4_lightning_poll_20260508_codex.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 live Lightning strategy ledger; no score claim or raw provider transcript.",
+      "path": ".omx/research/arch_shrink_lightning_live_strategy_20260508_worker_l3.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 research/control-plane ledger; small, non-provider source of truth.",
+      "path": ".omx/research/arch_shrink_x0_4_lightning_review_20260508_worker_a.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 research/control-plane ledger; small, non-provider source of truth.",
+      "path": ".omx/research/autopilot_evidence_semantics_review_20260508_worker_b.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 autopilot post-session planning memo; planning-only, no score claim.",
+      "path": ".omx/research/autopilot_post_session_refresh_planning_memo_20260508.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 research/control-plane ledger; small, non-provider source of truth.",
+      "path": ".omx/research/cathedral_autopilot_lossy_coarsening_catalog_closure_20260508_worker_e1.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 research/control-plane ledger; small, non-provider source of truth.",
+      "path": ".omx/research/cross_paradigm_dispatch_readiness_review_20260508_worker_d.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 frontier dispatch target ledger; planning-only, no score claim.",
+      "path": ".omx/research/frontier_next_dispatch_targets_20260508_worker_f3.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
       "note": "track: durable 2026-05-06 dirty-state custody ledger; no raw provider state or score claim.",
       "path": ".omx/research/dirty_state_custody_cleanup_20260506_codex.md"
     },
     {
       "classification": "research_untracked",
       "disposition": "track",
+      "note": "track: durable 2026-05-08 research/control-plane ledger; small, non-provider source of truth.",
+      "path": ".omx/research/hnerv_generated_schema_packet_scaffold_20260508_codex.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
       "note": "track: durable research/control-plane ledger or disposition manifest; small, non-provider source of truth.",
       "path": ".omx/research/hnerv_payload_scorecard_followup_20260505_codex.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 research/control-plane ledger; small, non-provider source of truth.",
+      "path": ".omx/research/implementation_vs_model_verdict_chain_review_20260508_codex.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 research/control-plane ledger; small, non-provider source of truth.",
+      "path": ".omx/research/lightning_round3_harvest_and_runtime_failures_20260508_codex.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 research/control-plane ledger; small, non-provider source of truth.",
+      "path": ".omx/research/lossy_coarsening_exact_cuda_adversarial_review_20260508_worker_b.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 research/control-plane ledger; small, non-provider source of truth.",
+      "path": ".omx/research/lossy_coarsening_exact_cuda_result_review_20260508_codex.json"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 research/control-plane ledger; small, non-provider source of truth.",
+      "path": ".omx/research/lossy_falsification_scope_audit_20260508_codex.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 research/control-plane ledger; small, non-provider source of truth.",
+      "path": ".omx/research/lossy_int4_mixed_precision_coarsening_adversarial_review_20260508_codex.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 research/control-plane ledger; small, non-provider source of truth.",
+      "path": ".omx/research/monolithic_packet_bridge_review_20260508_worker_c.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 research/control-plane ledger; small, non-provider source of truth.",
+      "path": ".omx/research/monolithic_packet_candidate_bridge_20260508_codex.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 research/control-plane ledger; small, non-provider source of truth.",
+      "path": ".omx/research/monolithic_packet_closure_floor_gate_20260508_worker_m1.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 runtime-consumption proof ledger; no GPU dispatch or score claim.",
+      "path": ".omx/research/monolithic_runtime_consumption_proof_20260508_worker_r2.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 monolithic below-floor candidate hunt; byte-only, no score claim.",
+      "path": ".omx/research/monolithic_below_floor_candidate_hunt_20260508_worker_b3.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 canonicalization plan ledger; plan-only, no raw provider state or score claim.",
+      "path": ".omx/research/no_signal_loss_canonicalization_plan_20260508_worker_c2.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 preflight performance diagnosis ledger; no raw provider state or score claim.",
+      "path": ".omx/research/preflight_profile_no_output_diagnosis_20260508_worker_p2.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 research/control-plane ledger; small, non-provider source of truth.",
+      "path": ".omx/research/omega_opt_anchor_discipline_20260508_codex.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 research/control-plane ledger; small, non-provider source of truth.",
+      "path": ".omx/research/paper_proxy_claim_language_audit_20260508_worker_d.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 research/control-plane ledger; small, non-provider source of truth.",
+      "path": ".omx/research/preflight_dirty_state_drift_review_20260508_worker_p1.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 engineering simplification queue; small source-control ledger.",
+      "path": ".omx/research/post_review_engineering_simplifications_queued_20260508.md"
     },
     {
       "classification": "research_untracked",
@@ -97,6 +259,48 @@
       "path": "experiments/profile_pr97_h3_intake.py"
     },
     {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: small structured report/evidence summary; raw provider artifacts remain in ignored experiment locations.",
+      "path": "reports/cathedral_autopilot_catalog_updated_20260508.json"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: generated post-session autopilot refresh report; planning-only, no score claim.",
+      "path": "reports/autopilot_plan_post_session_refresh_20260508.json"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: generated current-frontier autopilot plan with validation queue; planning-only, no score claim.",
+      "path": "reports/cathedral_autopilot_plan_pr103_pr106_to_0155_20260508.json"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: generated current-frontier autopilot plan with validation queue; planning-only, no score claim.",
+      "path": "reports/cathedral_autopilot_plan_pr103_pr106_to_019_20260508.json"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: generated post-session meta-Lagrangian ranking report; planning-only, no score claim.",
+      "path": "reports/cathedral_meta_lagrangian_ranking_post_session_refresh_20260508.json"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: small structured report/evidence summary; raw provider artifacts remain in ignored experiment locations.",
+      "path": "reports/lossy_coarsening_exact_cuda_evidence_row_20260508.json"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: small structured report/evidence summary; raw provider artifacts remain in ignored experiment locations.",
+      "path": "reports/omega_opt_linear_stack_packet_20260508.json"
+    },
+    {
       "classification": "reverse_engineering_untracked",
       "disposition": "track",
       "note": "track: curated public-submission deconstruction notes/source, not raw provider dump.",
@@ -110,9 +314,33 @@
     },
     {
       "classification": "source_untracked",
+      "disposition": "recovery_queue",
+      "note": "recovery_queue: recovered remote lane runbook signal; not promoted as reviewed dispatch surface until stream-decomposition, claim-gate, and runtime contract are hardened.",
+      "path": "scripts/remote_lane_joint_codec_stack.sh"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "recovery_queue",
+      "note": "recovery_queue: recovered remote lane runbook signal; not promoted as reviewed dispatch surface until claim-gate and runtime contract are hardened.",
+      "path": "scripts/remote_lane_nwcs_sensitivity_weighted.sh"
+    },
+    {
+      "classification": "source_untracked",
       "disposition": "track",
       "note": "track: recovered remote lane script with custody/proxy classification and preflight coverage.",
       "path": "scripts/remote_lane_q_faithful_jointgen.sh"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "recovery_queue",
+      "note": "recovery_queue: recovered remote lane runbook signal; not promoted as reviewed dispatch surface until init-pose CLI, claim-gate, and runtime contract are hardened.",
+      "path": "scripts/remote_lane_raft_pose_init.sh"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "recovery_queue",
+      "note": "recovery_queue: recovered remote lane runbook signal; not promoted as reviewed dispatch surface until claim-gate and runtime contract are hardened.",
+      "path": "scripts/remote_lane_riemannian_pose_tto.sh"
     },
     {
       "classification": "source_untracked",
@@ -129,8 +357,38 @@
     {
       "classification": "source_untracked",
       "disposition": "track",
+      "note": "track: reusable tac implementation surface for codec, planner, packet, or custody logic.",
+      "path": "src/tac/codec/__init__.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: reusable tac codec implementation surface for cost curves and planner workflows.",
+      "path": "src/tac/codec/cost_curves.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: reusable tac codec implementation surface for per-tensor codec composition workflows.",
+      "path": "src/tac/codec/per_tensor_codecs.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: reusable tac implementation surface for codec, planner, packet, or custody logic.",
+      "path": "src/tac/codec/syndrome_trellis_codec.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
       "note": "track: canonical library source recovered into main implementation surface.",
       "path": "src/tac/deploy/lightning/defaults.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: reusable tac implementation surface for codec, planner, packet, or custody logic.",
+      "path": "src/tac/deploy/lightning/round3_harvest.py"
     },
     {
       "classification": "source_untracked",
@@ -149,6 +407,54 @@
       "disposition": "track",
       "note": "track: canonical library source recovered into main implementation surface.",
       "path": "src/tac/hidden_gems.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: reusable tac implementation surface for codec, planner, packet, or custody logic.",
+      "path": "src/tac/hnerv_generated_schema_packet.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-active HNeRV wavelet sidechannel WIP; excluded from dirty-custody cleanup and expected to be owned by the score lane.",
+      "path": "src/tac/hnerv_wavelet_sidechannel.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: reusable tac implementation surface for codec, planner, packet, or custody logic.",
+      "path": "src/tac/monolithic_codec_op_replacement.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: reusable tac implementation surface for codec, planner, packet, or custody logic.",
+      "path": "src/tac/monolithic_packet_candidate.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: reusable tac implementation surface for codec, planner, packet, or custody logic.",
+      "path": "src/tac/monolithic_packet_closure_gate.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: reusable tac implementation surface for codec, planner, packet, or custody logic.",
+      "path": "src/tac/omega_opt_claims.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: reusable tac implementation surface for codec, planner, packet, or custody logic.",
+      "path": "src/tac/omega_opt_linear_stack_packet.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: reusable tac optimization implementation surface for per-tensor Lagrangian allocation.",
+      "path": "src/tac/optimization/lagrangian_per_tensor_allocation.py"
     },
     {
       "classification": "source_untracked",
@@ -213,8 +519,26 @@
     {
       "classification": "source_untracked",
       "disposition": "track",
+      "note": "track: focused regression test preserving codec, preflight, or dispatch correctness.",
+      "path": "src/tac/tests/test_build_hnerv_generated_schema_candidate.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused regression test preserving codec, preflight, or dispatch correctness.",
+      "path": "src/tac/tests/test_build_monolithic_runtime_consumption_proof.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
       "note": "track: regression coverage for recovered tac/comma-lab functionality.",
       "path": "src/tac/tests/test_build_pr85_stbm1br_pr92_rmb1_randmulti_candidate.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused regression test preserving codec, preflight, or dispatch correctness.",
+      "path": "src/tac/tests/test_build_result_review_packet.py"
     },
     {
       "classification": "source_untracked",
@@ -237,6 +561,12 @@
     {
       "classification": "source_untracked",
       "disposition": "track",
+      "note": "track: focused regression test preserving codec, preflight, or dispatch correctness.",
+      "path": "src/tac/tests/test_export_active_lane_claim_json.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
       "note": "track: regression coverage for recovered tac/comma-lab functionality.",
       "path": "src/tac/tests/test_hidden_gem_readiness.py"
     },
@@ -249,8 +579,182 @@
     {
       "classification": "source_untracked",
       "disposition": "track",
+      "note": "track: focused regression test preserving codec, preflight, or dispatch correctness.",
+      "path": "src/tac/tests/test_hnerv_generated_schema_packet.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-active HNeRV wavelet sidechannel regression WIP; excluded from dirty-custody cleanup and expected to be owned by the score lane.",
+      "path": "src/tac/tests/test_hnerv_wavelet_sidechannel.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
       "note": "track: regression coverage for recovered tac/comma-lab functionality.",
       "path": "src/tac/tests/test_launch_lightning_alpha_geo0_pose_regen.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused preflight regression test preserving exact score/dispatch custody semantics.",
+      "path": "src/tac/tests/preflight/__init__.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused preflight regression test preserving exact score/dispatch custody semantics.",
+      "path": "src/tac/tests/preflight/test_check_b1_encoder_decoder_roundtrip.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused preflight regression test preserving exact score/dispatch custody semantics.",
+      "path": "src/tac/tests/preflight/test_check_b2_evidence_archive_bytes_provenance.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused preflight regression test preserving exact score/dispatch custody semantics.",
+      "path": "src/tac/tests/preflight/test_check_b3_build_manifest_archive_custody.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused preflight regression test preserving exact score/dispatch custody semantics.",
+      "path": "src/tac/tests/preflight/test_check_b4_admm_naming_impl.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused preflight regression test preserving exact score/dispatch custody semantics.",
+      "path": "src/tac/tests/preflight/test_check_b5_inflate_dead_bytes.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused preflight regression test preserving exact score/dispatch custody semantics.",
+      "path": "src/tac/tests/preflight/test_check_b6_retired_config_redispatch.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused preflight regression test preserving exact score/dispatch custody semantics.",
+      "path": "src/tac/tests/preflight/test_check_b7_paper_research_score_lane_tag.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused preflight regression test preserving exact score/dispatch custody semantics.",
+      "path": "src/tac/tests/preflight/test_check_b8_pr101_torch_load_allowlist.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused regression test preserving codec, preflight, or dispatch correctness.",
+      "path": "src/tac/tests/test_monolithic_codec_op_replacement.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused regression test preserving codec, preflight, or dispatch correctness.",
+      "path": "src/tac/tests/test_monolithic_packet_candidate.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused regression test preserving codec, preflight, or dispatch correctness.",
+      "path": "src/tac/tests/test_monolithic_packet_closure_gate.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused regression test preserving codec cost-curve planner correctness.",
+      "path": "src/tac/tests/test_codec_cost_curves.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused regression test preserving per-tensor codec composition correctness.",
+      "path": "src/tac/tests/test_codec_per_tensor_codecs.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused regression test preserving codec pipeline CPL2 integer-key roundtrip behavior.",
+      "path": "src/tac/tests/test_codec_pipeline_cpl2_int_key_roundtrip.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused regression test preserving optimization Lagrangian per-tensor allocation behavior.",
+      "path": "src/tac/tests/test_optimization_lagrangian_per_tensor_allocation.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused regression test preserving codec, preflight, or dispatch correctness.",
+      "path": "src/tac/tests/test_omega_opt_anchor_discipline_tool.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused regression test preserving codec, preflight, or dispatch correctness.",
+      "path": "src/tac/tests/test_omega_opt_claims.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused regression test preserving codec, preflight, or dispatch correctness.",
+      "path": "src/tac/tests/test_omega_opt_linear_stack_packet.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused regression test preserving codec, preflight, or dispatch correctness.",
+      "path": "src/tac/tests/test_pr101_cross_paradigm_hstack_vstack.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused regression test preserving codec, preflight, or dispatch correctness.",
+      "path": "src/tac/tests/test_pr101_lossy_proxy_guardrails.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused regression test preserving preflight scan scope and operator responsiveness.",
+      "path": "src/tac/tests/test_preflight_codebase_drift_scan_scope.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused regression test for monolithic runtime-consumption proof closure.",
+      "path": "src/tac/tests/test_prove_monolithic_runtime_consumption.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused regression test preserving codec, preflight, or dispatch correctness.",
+      "path": "src/tac/tests/test_pr101_omega_opt_admm_x_lossy_coarsening.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused regression test preserving codec, preflight, or dispatch correctness.",
+      "path": "src/tac/tests/test_pr101_omega_opt_joint_admm_allocation.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused regression test preserving codec, preflight, or dispatch correctness.",
+      "path": "src/tac/tests/test_pr101_omega_opt_uniward_weighted.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused regression test preserving PR106 Omega-OPT per-tensor Lagrangian allocation behavior.",
+      "path": "src/tac/tests/test_pr106_omega_opt_lagrangian_per_tensor_allocation.py"
     },
     {
       "classification": "source_untracked",
@@ -267,8 +771,20 @@
     {
       "classification": "source_untracked",
       "disposition": "track",
+      "note": "track: focused regression test preserving codec, preflight, or dispatch correctness.",
+      "path": "src/tac/tests/test_pr_alpha_mask_stc_empirical.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
       "note": "track: regression coverage for recovered tac/comma-lab functionality.",
       "path": "src/tac/tests/test_preflight_candidate_manifest_dispatch_readiness.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused regression test preserving codec, preflight, or dispatch correctness.",
+      "path": "src/tac/tests/test_preflight_harden_2026_05_08_checks.py"
     },
     {
       "classification": "source_untracked",
@@ -303,6 +819,12 @@
     {
       "classification": "source_untracked",
       "disposition": "track",
+      "note": "track: focused regression test preserving codec, preflight, or dispatch correctness.",
+      "path": "src/tac/tests/test_prove_hnerv_generated_schema_runtime_packet.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
       "note": "track: regression coverage for recovered tac/comma-lab functionality.",
       "path": "src/tac/tests/test_qh0_record_serializer.py"
     },
@@ -321,8 +843,20 @@
     {
       "classification": "source_untracked",
       "disposition": "track",
+      "note": "track: focused regression test preserving codec, preflight, or dispatch correctness.",
+      "path": "src/tac/tests/test_run_monolithic_candidate_preflight.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
       "note": "track: regression coverage for recovered tac/comma-lab functionality.",
       "path": "src/tac/tests/test_submission_archive_safety.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused regression test preserving codec, preflight, or dispatch correctness.",
+      "path": "src/tac/tests/test_syndrome_trellis_codec.py"
     },
     {
       "classification": "source_untracked",
@@ -341,24 +875,6 @@
       "disposition": "track",
       "note": "track: regression coverage for recovered tac/comma-lab functionality.",
       "path": "tests/test_comma_lab_reverse_engineering.py"
-    },
-    {
-      "classification": "source_untracked",
-      "disposition": "track",
-      "note": "track: operator-active HNeRV wavelet sidechannel WIP; excluded from dirty-custody cleanup and expected to be owned by the score lane.",
-      "path": "src/tac/hnerv_wavelet_sidechannel.py"
-    },
-    {
-      "classification": "source_untracked",
-      "disposition": "track",
-      "note": "track: operator-active HNeRV wavelet sidechannel regression WIP; excluded from dirty-custody cleanup and expected to be owned by the score lane.",
-      "path": "src/tac/tests/test_hnerv_wavelet_sidechannel.py"
-    },
-    {
-      "classification": "source_untracked",
-      "disposition": "track",
-      "note": "track: operator-active HNeRV wavelet sidechannel candidate-builder WIP; excluded from dirty-custody cleanup and expected to be owned by the score lane.",
-      "path": "tools/build_hnerv_wavelet_sidechannel_candidate.py"
     },
     {
       "classification": "source_untracked",
@@ -405,38 +921,164 @@
     {
       "classification": "source_untracked",
       "disposition": "track",
+      "note": "track: operator-visible tool wired into reproducible codec/planner/preflight workflows.",
+      "path": "tools/build_hnerv_generated_schema_candidate.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-active HNeRV wavelet sidechannel candidate-builder WIP; excluded from dirty-custody cleanup and expected to be owned by the score lane.",
+      "path": "tools/build_hnerv_wavelet_sidechannel_candidate.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible tool wired into reproducible codec/planner/preflight workflows.",
+      "path": "tools/build_monolithic_codec_op_replacement_manifest.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible tool wired into reproducible codec/planner/preflight workflows.",
+      "path": "tools/build_monolithic_runtime_consumption_proof.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible tool wired into reproducible codec/planner/preflight workflows.",
+      "path": "tools/build_monolithic_stack_candidate.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible tool wired into reproducible codec/planner/preflight workflows.",
+      "path": "tools/build_result_review_packet.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible tool wired into reproducible codec/planner/preflight workflows.",
+      "path": "tools/check_admm_naming_matches_iterative_consensus_implementation.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible tool wired into reproducible codec/planner/preflight workflows.",
+      "path": "tools/check_build_manifest_archive_custody_clean.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible tool wired into reproducible codec/planner/preflight workflows.",
+      "path": "tools/check_encoder_decoder_dequantization_roundtrip_tested.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible tool wired into reproducible codec/planner/preflight workflows.",
+      "path": "tools/check_evidence_row_archive_bytes_has_provenance.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible tool wired into reproducible codec/planner/preflight workflows.",
+      "path": "tools/check_inflate_wire_format_no_dead_bytes.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible tool wired into reproducible codec/planner/preflight workflows.",
+      "path": "tools/check_monolithic_packet_closure_gate.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible tool wired into reproducible codec/planner/preflight workflows.",
+      "path": "tools/check_omega_opt_anchor_discipline.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible tool wired into reproducible codec/planner/preflight workflows.",
+      "path": "tools/check_omega_opt_linear_stack_packet.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible tool wired into reproducible codec/planner/preflight workflows.",
+      "path": "tools/check_pr101_tools_torch_load_allowlist.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible tool wired into reproducible codec/planner/preflight workflows.",
+      "path": "tools/check_predispatch_retired_config_warning.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible tool wired into reproducible codec/planner/preflight workflows.",
+      "path": "tools/export_active_lane_claim_json.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
       "note": "track: canonical audit/dispatch/tooling CLI used by all-lanes preflight or recovery workflows.",
       "path": "tools/list_hidden_gems.py"
     },
     {
       "classification": "source_untracked",
       "disposition": "track",
+      "note": "track: operator-visible tool wired into reproducible codec/planner/preflight workflows.",
+      "path": "tools/materialize_omega_opt_linear_stack_packet.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible CPU-prep tool for PR101 unified-winners cross-paradigm stack measurement.",
+      "path": "tools/pr101_unified_winners_stack_empirical.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible tool wired into reproducible codec/planner/preflight workflows.",
+      "path": "tools/pr101_omega_opt_uniward_weighted_allocation.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible empirical planner tool for PR106 Omega-OPT per-tensor Lagrangian allocation.",
+      "path": "tools/pr106_omega_opt_lagrangian_per_tensor_allocation_empirical.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible tool wired into reproducible codec/planner/preflight workflows.",
+      "path": "tools/pr_alpha_mask_stc_empirical.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible tool wired into reproducible codec/planner/preflight workflows.",
+      "path": "tools/prove_hnerv_generated_schema_runtime_packet.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible no-score proof tool for monolithic runtime-consumption closure.",
+      "path": "tools/prove_monolithic_runtime_consumption.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible tool wired into reproducible codec/planner/preflight workflows.",
+      "path": "tools/run_monolithic_candidate_preflight.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
       "note": "track: canonical audit/dispatch/tooling CLI used by all-lanes preflight or recovery workflows.",
       "path": "tools/tool_bootstrap.py"
-    },
-    {
-      "classification": "source_untracked",
-      "disposition": "recovery_queue",
-      "note": "recovery_queue: recovered remote lane runbook signal; not promoted as reviewed dispatch surface until claim-gate and runtime contract are hardened.",
-      "path": "scripts/remote_lane_nwcs_sensitivity_weighted.sh"
-    },
-    {
-      "classification": "source_untracked",
-      "disposition": "recovery_queue",
-      "note": "recovery_queue: recovered remote lane runbook signal; not promoted as reviewed dispatch surface until stream-decomposition, claim-gate, and runtime contract are hardened.",
-      "path": "scripts/remote_lane_joint_codec_stack.sh"
-    },
-    {
-      "classification": "source_untracked",
-      "disposition": "recovery_queue",
-      "note": "recovery_queue: recovered remote lane runbook signal; not promoted as reviewed dispatch surface until init-pose CLI, claim-gate, and runtime contract are hardened.",
-      "path": "scripts/remote_lane_raft_pose_init.sh"
-    },
-    {
-      "classification": "source_untracked",
-      "disposition": "recovery_queue",
-      "note": "recovery_queue: recovered remote lane runbook signal; not promoted as reviewed dispatch surface until claim-gate and runtime contract are hardened.",
-      "path": "scripts/remote_lane_riemannian_pose_tto.sh"
     }
   ],
   "policy": "Every source-like untracked path must be track, recovery_queue, ignore_private, or ignore_rebuildable with rationale.",

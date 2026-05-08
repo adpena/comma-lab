@@ -343,12 +343,15 @@ fail closed instead of silently emitting promotable stubs. The next tranche must
 convert fail-closed scaffolding into one byte-closed candidate that can enter
 the dispatch claim path.
 
-Current exact local anchor from the reviewed state is PR106x-lowlevel-brotli at
-score `0.20935073680571203`, `186080` bytes, exact T4 evidence. If SegNet and
-PoseNet components remain unchanged, sub-0.15 by rate alone would require an
-archive around `96946` bytes, about `89134` fewer bytes than that anchor. This
-means small repacks are custody controls and incremental wins; sub-0.15 needs a
-representation/distortion/pose breakthrough or a large byte-mass collapse.
+Supersession after the 2026-05-08 exact-eval/layout cleanup: the current exact
+local anchor from this reviewed state was PR106x-lowlevel-brotli at score
+`0.20935073680571203`, `186080` bytes, exact T4 evidence. The active local A++
+HNeRV rate anchor is now PR103-on-PR106 at strict formula score
+`0.2089810755823297`, `185578` bytes. If SegNet and PoseNet components remain
+unchanged, sub-0.15 by rate alone would require a far smaller archive than
+either anchor; small repacks are custody controls and incremental wins, while
+sub-0.15 needs a representation/distortion/pose breakthrough or a large
+byte-mass collapse.
 
 Priority order:
 
@@ -357,7 +360,8 @@ Priority order:
 2. Categorical label-contract artifact and permutation controls: highest
    hidden-gem unlock for QMA9/CLADE/SPADE/openpilot work.
 3. HNeRV entropy negative/positive byte accounting: fastest exact-byte
-   decision on whether HDC2 can lower the current PR106x frontier.
+   decision on whether HDC2 can lower the active PR103-on-PR106 `185578`-byte
+   floor, not merely the superseded PR106x frontier.
 4. LA-pose scorer-visible bridge: required before telescopic foveation or
    latent-action pose priors can affect score.
 5. Meta selector lexicographic/KKT cleanup: prevents arbitrary planning weights
@@ -369,9 +373,10 @@ plus lane claim, then exact CUDA auth eval.
 
 Additional custody/action notes from synthesis:
 
-- Refresh `reports/latest.md` and paper result tables so PR106x-lowlevel is
-  clearly the local analysis anchor, while PR100 remains only a submitted packet
-  context where applicable.
+- Refresh `reports/latest.md` and paper result tables so PR103-on-PR106 is
+  clearly the active local HNeRV rate anchor, while PR106x-lowlevel remains a
+  predecessor/control and PR100 remains only a submitted packet context where
+  applicable.
 - Record PR108 as an external non-frontier intake row: it is newer, but its PR
   body reports CPU score `3.59`, so it is not a score threat.
 - Before dispatch or release claims, write a dirty-worktree custody note that

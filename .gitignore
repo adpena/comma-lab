@@ -170,6 +170,9 @@ experiments/results/public_pr*_intake_*/__pycache__/
 # 13MB lightning log (one-time, not durable)
 .omx/state/lightning_refresh_all_followup_*.jsonl
 
+# Debug smoke outputs from PHASE 4 canonical orchestrator (rebuildable; not durable)
+experiments/results/orch_smoke_*/
+
 # Auto-memory snapshot dirs are interesting, but raw snapshots are operator
 # backups. Extract/canonicalize useful material into .omx/research/ or
 # docs/paper/ara/ before publishing.

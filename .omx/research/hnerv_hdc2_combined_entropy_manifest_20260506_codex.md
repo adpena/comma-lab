@@ -2,12 +2,21 @@
 
 ## Summary
 
-The current exact local HNeRV rate frontier is
+2026-05-08 supersession: the current exact local HNeRV rate frontier is now
+PR103-on-PR106 at strict formula score `0.2089810755823297`, `185578` bytes,
+SHA-256 `ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce`.
+The PR106x row below is preserved as the historical source/control substrate
+for this HDC2 analysis, not the active anchor.
+
+The superseded local HNeRV rate frontier used by this manifest was
 `PR106x-lowlevel-brotli`, score `0.20935073680571203`, archive bytes
 `186080`, archive SHA-256
 `b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f`.
 
-The next entropy target is the `decoder_packed_brotli` section. The HDC2
+The next entropy target in this historical PR106x substrate was the
+`decoder_packed_brotli` section. Any current rate-only successor must also
+beat the PR103-on-PR106 `185578`-byte archive floor or stack with a
+scorer-changing packet. The HDC2
 global previous-symbol stream is raw-equal and deterministic, but still
 rate-negative until both model overhead and payload gap are reduced together.
 
@@ -24,7 +33,7 @@ rate-negative until both model overhead and payload gap are reduced together.
 
 ## Byte Accounting
 
-- current frontier section bytes: `170127`
+- historical PR106x frontier section bytes: `170127`
 - current HDC2 replacement bytes: `221381`
 - net delta now: `+51254`
 - model overhead target: `40840`
@@ -56,4 +65,3 @@ This is planning evidence only: `score_claim=false`,
   - `17 passed`
 - `.venv/bin/ruff check src/tac/hnerv_hdc2_combined_entropy.py tools/build_hnerv_hdc2_combined_entropy_manifest.py src/tac/tests/test_hnerv_hdc2_combined_entropy.py`
   - passed
-

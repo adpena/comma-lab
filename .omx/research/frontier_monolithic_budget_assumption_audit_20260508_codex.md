@@ -79,6 +79,33 @@ layout tests passed (`3 passed`).
   non-portability to absence of separate tile/mask/pose ZIP members and PR106's
   parser-proven global latent surface.
 
+## 2026-05-08 Stale-Assumption Cleanup Addendum
+
+Worker Stale-Assumption Cleanup patched the highest-risk doc/ledger surfaces
+inside the stated ownership boundary:
+
+- `.omx/research/pr106_pose_axis_forensic_memo_20260507_claude.md` now marks
+  PR101 `poses.pt` / `~3.6 KB pose data` wording as a superseded stock-archive
+  assumption and requires parser-proven sections or a new charged sidecar.
+- `.omx/research/public_hnerv_frontier_deconstruction_20260504_codex.md` now
+  marks PR106 extra-byte pose claims as score-component correlation, not proof
+  of a separate pose member or member-level pose budget.
+- `reports/latest.md`, `docs/paper/04_results.md`,
+  `.omx/research/frontier_roadmap_status_20260506_codex.{md,json}`,
+  `.omx/research/cross_paradigm_frontier_inventory_20260506_codex.md`,
+  `.omx/research/hnerv_frontier_entropy_gap_ranking_20260507_codex.md`, and
+  `.omx/research/hnerv_hdc2_combined_entropy_manifest_20260506_codex.md` now
+  identify PR103-on-PR106 (`0.2089810755823297`, `185578` bytes) as the active
+  local A++ HNeRV rate anchor over PR106x.
+- `.omx/research/adversarial_review_papers_grand_council_20260506_codex.md`
+  and `.omx/research/paradigm_delta_epsilon_zeta_phase1_blueprint_20260507_claude.md`
+  now mark PR106x-lowlevel as a superseded predecessor/control rather than the
+  current exact local anchor.
+
+The code/test examples in findings 2 and 3 remain outside this cleanup
+worker's doc/ledger ownership and are preserved as review TODOs, not silently
+edited.
+
 ## Operating Rule
 
 For PR101/PR106-style HNeRV archives, budget claims must name parser-proven

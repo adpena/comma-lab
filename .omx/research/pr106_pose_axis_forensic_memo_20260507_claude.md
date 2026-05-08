@@ -5,6 +5,15 @@
 **Anchor evidence**: PR103-on-PR106 standalone @ 0.20898 [contest-CUDA]
   (`experiments/results/pr103_repack_pr106_standalone_20260507/pre_submission_compliance.contest_final.json`)
 
+**2026-05-08 monolithic-layout supersession**: the stock PR101 and PR106
+HNeRV archives are single-member ZIP packets. They do not expose a separate
+`poses.pt`, mask member, renderer member, or ZIP-member-level pose budget.
+Pose-axis conclusions below remain score-component and logical-stream routing
+signals only. Any PR101/PR106 pose intervention must either target a
+parser-proven internal section (`decoder_blob`, `latent_blob`, `sidecar_blob`,
+`decoder_packed_brotli`, or `latents_and_sidecar_brotli`) or create a new
+charged runtime packet/sidecar with old/new archive SHA and exact CUDA proof.
+
 ## Why this memo
 
 This session landed three artifacts that all touch the pose axis:
@@ -47,10 +56,15 @@ worth 2.71× a byte of seg improvement at PR106. The CLAUDE.md note on
 SegNet vs PoseNet importance correctly flags this as the new operating-point
 regime.
 
-### 2. The pose stream IS targetable — three landed CodecOps prove it
+### 2. The pose-score axis is targetable — but no standalone pose member is proven
 
-PR101 gold (0.193) ships ~3.6 KB of pose data. PR103/PR102 (0.195) ship
-similar. The current cathedral has THREE pose CodecOps:
+Supersession after the monolithic-layout finding: the older shorthand
+"PR101 ships ~3.6 KB of pose data" is not valid as member-level archive
+accounting for the stock PR101 packet. PR101 has parser-proven
+`decoder_blob`, `latent_blob`, and `sidecar_blob` sections only; PR106 has
+`decoder_packed_brotli` plus `latents_and_sidecar_brotli`. The current
+cathedral still has THREE pose CodecOps, but they are candidate logical
+transforms/new charged sidecars until a runtime packet consumes their bytes:
 
 | Op | Landed | Strategy | Wire format |
 |---|---|---|---|
@@ -115,6 +129,13 @@ axes populated** so the 3-axis frontier can grow.
 
 ### P1: KL-pose k-sweep on real PR101 pose trajectory (Kalle WIRE §4.1)
 
+Supersession after the monolithic-layout finding: this P1 command is a
+historical actuator sketch, not a valid PR101 stock-archive dispatch as
+written. There is no parser-proven PR101 `poses.pt` member. A valid sweep must
+first define the pose substrate from a parser-proven section or emit a new
+charged sidecar/runtime packet whose manifest records old/new archive SHA,
+charged bytes, runtime consumption, and exact CUDA evaluation.
+
 The k-sweep is a single dispatch:
 
 ```bash
@@ -133,7 +154,8 @@ GPU spend.)
 
 Predicted: PR101's smooth pose trajectory will exhibit similar k=2 ≈ 100%
 variance retention as our synthetic. Expected savings:
-  - PR101 raw poses ~3.6 KB (per archive bytes accounting)
+  - superseded assumption: PR101 raw poses ~3.6 KB (not valid as stock
+    PR101 member-level archive accounting)
   - KL k=2 ~1.5 KB (estimated from the 2.80× synthetic ratio)
   - Δ-rate = -2.1 KB → score Δ = -25 × 2100 / 37,545,489 = **-0.0014**
   [predicted-band only — needs contest-CUDA verification]
