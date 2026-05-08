@@ -26,6 +26,9 @@ parsers, profilers, planners, or packers are invoked.
 
 - `pr95_hnerv/` documents the PR95-family HNeRV single-member archive grammar,
   exact-replay boundary, and residual-atom planning surface.
+- `public_pr102_pr108_intake_20260508/` records the corrected PR102 HNeRV
+  custody target, the stale wrong-asset gap, PR102 public CPU/CUDA drift, and
+  PR108's non-frontier AV1/ROI/sharpening archive intake.
 - `public_frontier/` contains curated source-sized public runtime references
   from public submission deconstruction and orphan-pyc recovery. It is forensic
   reference material, not score evidence or an active experiment output tree.
