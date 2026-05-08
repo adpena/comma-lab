@@ -229,7 +229,7 @@ class HyperpriorDecoder(nn.Module):
 class CharmContextNet(nn.Module):
     """Tiny channel-conditional context predictor (1D mask conv across channels)."""
 
-    def __init__(self, num_weight_channels: int = 64):
+    def __init__(self) -> None:
         super().__init__()
         self.conv = nn.Conv1d(1, 4, kernel_size=3, padding=2)  # causal-ish
         self.fc = nn.Linear(4, 2)  # (μ_offset, log_σ_offset)
@@ -273,7 +273,7 @@ class CharmHyperprior(nn.Module):
         super().__init__()
         self.encoder = HyperpriorEncoder(num_channels)
         self.decoder = HyperpriorDecoder(num_channels, num_weight_channels)
-        self.context = CharmContextNet(num_weight_channels)
+        self.context = CharmContextNet()
         self.num_channels = num_channels
         self.num_weight_channels = num_weight_channels
 
@@ -394,10 +394,16 @@ def encode_weight_with_charm(
         n_padded (uint32 BE) — symbols after channel-padding
         num_channels (uint32 BE) — channel grouping used for ChARM PMFs
         per-channel (mu, log_sigma) as fp16 BE pairs (2 * 2 * num_channels bytes)
-        range_coded_payload_len (uint32 BE)
-        range_coded_payload (bytes) — produced by ChARMRangeEncoder over the
-            quantised INT8 stream, with the c-th channel coded under the
-            Gaussian PMF parameterised by (mu_c, exp(log_sigma_c)).
+        range_coded_payload_len (uint32 BE) — total length of the embedded
+            CHRC blob (NOT just the inner range-coded bits)
+        range_coded_payload (bytes) — a self-contained CHRC-framed blob produced
+            by ``ChARMRangeEncoder.finish()``. Includes an 18-byte CHRC header
+            (magic 'CHRC' + version + alphabet bounds + num_symbols +
+            pmf_total_bits + payload_len) followed by the inner range-coded
+            bits. CARM2 stores the blob verbatim; the ChARM decoder validates
+            and parses the CHRC header internally on decode. Per-channel
+            symbols are coded under the Gaussian PMF parameterised by
+            (mu_c, exp(log_sigma_c)) recovered from the fp16 sidecar above.
         z_len (uint32 BE)
         z (z_len bytes — informational for now; future ChARM2 versions can
            rederive (mu, sigma) from z + decoder weights instead of shipping
@@ -502,6 +508,13 @@ def decode_weight_with_charm(blob: bytes, expected_shape: tuple[int, ...]) -> to
     Supports both wire formats:
       - 'CARM2' (current; range-coded payload, byte-tight)
       - 'CARM'  (legacy toy format; raw INT8 dump)
+
+    For CARM2: the ``range_coded_payload`` field is a self-contained CHRC
+    blob (18-byte CHRC header + inner range-coded bits). This function reads
+    ``range_payload_len`` bytes verbatim and hands them to
+    ``ChARMRangeDecoder``, which validates the embedded CHRC header before
+    decoding. The fp16 sidecar (mu, log_sigma) per channel is read FIRST and
+    used to derive byte-identical PMFs to those the encoder used.
 
     Roundtrip-exact at INT8 granularity in both cases.
     """
@@ -1097,12 +1110,23 @@ def build_archive(output_dir: Path, train_result: dict, cfg: TrainConfig) -> dic
     }
     (output_dir / "provenance.json").write_text(json.dumps(provenance, indent=2))
 
-    # Zip the archive dir
+    # Zip the archive dir.
+    # Use deterministic ZipInfo entries (pinned epoch + fixed permissions) so
+    # rebuilds from the same bytes produce a byte-identical archive — required
+    # for archive_sha256 custody to be reproducible across replays. Per
+    # CLAUDE.md preflight rule R5-r6 #5 (`check_archive_builders_use_deterministic_zip`).
+    _ZIP_EPOCH = (2000, 1, 1, 0, 0, 0)
     archive_zip = output_dir / "archive.zip"
     with zipfile.ZipFile(archive_zip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for p in sorted(archive_dir.iterdir()):
-            zf.write(p, arcname=p.name)
-        zf.write(manifest_path, arcname="build_manifest.json")
+            zi = zipfile.ZipInfo(filename=p.name, date_time=_ZIP_EPOCH)
+            zi.compress_type = zipfile.ZIP_DEFLATED
+            zi.external_attr = (0o644 & 0xFFFF) << 16
+            zf.writestr(zi, p.read_bytes())
+        zi_m = zipfile.ZipInfo(filename="build_manifest.json", date_time=_ZIP_EPOCH)
+        zi_m.compress_type = zipfile.ZIP_DEFLATED
+        zi_m.external_attr = (0o644 & 0xFFFF) << 16
+        zf.writestr(zi_m, manifest_path.read_bytes())
 
     archive_sha = hashlib.sha256(archive_zip.read_bytes()).hexdigest()
     archive_bytes = archive_zip.stat().st_size
