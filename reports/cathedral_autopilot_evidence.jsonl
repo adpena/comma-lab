@@ -1,3 +1,4 @@
 {"technique": "lossy_int4_quantization", "empirical_archive_bytes": 100799, "source": "[CPU-prep empirical] /Users/adpena/Projects/pact/reports/raw/pr101_int4_sweep_20260508T001119Z/manifest.json (block_size=1024)", "timestamp": "2026-05-08T00:11:19Z"}
 {"technique": "kalle_fold_mixture_canonical_shapes", "empirical_archive_bytes": 205963, "source": "[CPU-prep empirical] /Users/adpena/Projects/pact/reports/raw/pr101_kalle_fold_20260508T001304Z/manifest.json", "timestamp": "2026-05-08T00:13:04Z"}
 {"technique": "tiny_nn_pmf_predictor", "empirical_archive_bytes": 179276, "source": "[CPU-prep empirical] reports/raw/pr101_tiny_nn_20260508T001420Z.json (tensor_only variant)", "timestamp": "2026-05-08T00:14:20Z"}
+{"technique": "compressai_balle_hyperprior", "empirical_archive_bytes": 207065, "source": "[MPS-research-signal] /Users/adpena/Projects/pact/reports/raw/pr101_balle_hyperprior_20260508T002237Z/manifest.json", "timestamp": "2026-05-08T00:22:37Z"}
