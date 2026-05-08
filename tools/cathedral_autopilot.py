@@ -23,8 +23,8 @@ ranked playbook of next actions. It composes:
   - ``tac.score_geometry_floor_explorer`` - what-if technique floors
   - ``tac.score_geometry_stacking`` - Volterra cross-axis interaction
   - The meta-Lagrangian search (``tac.optimizer.meta_lagrangian``)
-  - The grand-council encoder-ceiling synthesis (memory file)
-  - The Markov-1 falsification + iid empirical floor finding
+  - The PR101 entropy-floor triage reports
+  - The charged Markov-table and iid empirical floor findings
 
 The recommender does NOT dispatch GPU jobs. It outputs a structured plan
 with concrete shell commands the operator (or
@@ -89,7 +89,8 @@ PR101_SUBSTRATE = {
     "per_tensor_aac": 178_181,
     "iid_per_tensor_floor": 159_822,
     "markov1_oracle_floor_bytes": 152_106,
-    "markov1_oracle_plus_table_bytes": 209_051,  # falsified: table dominates
+    "markov1_sparse_varint_table_archive_bytes": 200_219,
+    "markov1_dense_u16_table_archive_bytes": 209_103,
 }
 
 
@@ -442,9 +443,11 @@ def build_plan(
             f"Top-3 techniques rank by predicted score-delta."
         )
     notes.append(
-        "Encoder-side ceiling for PR101 (no ML) is empirically 178 KB per "
-        "grand-council 30k synthesis. Sub-178 KB requires NN encoder OR "
-        "architectural change. Architecture has 5-10x more headroom."
+        "PR101 hand-coded entropy probes are saturated near the 178 KB brotli/AAC band: "
+        "the best charged Markov-1 table rerun is 200,219 B, so the currently tested "
+        "table-transmission path loses. This is not a global no-ML impossibility proof; "
+        "sub-178 KB still needs a new charged coder, a shared decoder model, or lower-entropy "
+        "weights. Architecture has 5-10x more predicted headroom."
     )
 
     return AutopilotPlan(

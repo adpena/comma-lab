@@ -413,7 +413,7 @@ Cross-references: Council D audit `.omx/research/council_ema_audit_20260429.md`;
 
 ## MPS auth eval is NOISE — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
-**LOCAL MPS IS NEVER TO BE USED FOR STRATEGY, PLANNING, OR ANALYSIS.** Verified 2026-04-25 with side-by-side gating measurement on the same pinned archive:
+**LOCAL MPS IS NEVER TO BE USED AS SCORE TRUTH OR AS THE AUTHORITY FOR STRATEGY, PLANNING, OR ANALYSIS.** Verified 2026-04-25 with side-by-side gating measurement on the same pinned archive:
 
 | Metric | Local MPS | CUDA A100 (contest scorer) | Drift |
 |---|---|---|---|
@@ -425,11 +425,13 @@ PoseNet specifically drifts 23×. Likely cause: FastViT-T12 attention softmax + 
 
 **Rules:**
 1. ALL auth eval must run on CUDA (Vast.ai 4090, A100, T4). Never MPS, never CPU.
-2. MPS is acceptable ONLY for proxy scoring during training (continuous monitoring), smoke tests (architecture validation), and code-correctness checks. NEVER for strategy decisions, ranking, or shipping.
+2. MPS is acceptable for proxy scoring during training (continuous monitoring), smoke tests (architecture validation), code-correctness checks, and long cheap research-signal sweeps that only generate curve-shape priors. NEVER for strategy decisions, ranking, shipping, method retirement, or paper empirical claims.
 3. Score numbers measured on MPS may NOT be reported as "auth" or "contest-compliant" anywhere — in commits, run_log, BATTLE_PLAN, or summaries. Tag them `[MPS-PROXY]` and treat as advisory only.
 4. Before any major decision (kill/promote/ship), the score MUST come from a CUDA `inflate.sh` + `upstream/evaluate.py` run on the EXACT archive bytes.
 5. preflight should reject auth eval invocations with `--device mps` and warn loudly.
 6. The historical "2.01" / "2.26" / "2.91" numbers in memory and BATTLE_PLAN may all be MPS artifacts. The first verified CUDA contest-compliant baseline is 0.90 (2026-04-25 21:00).
+
+2026-05-07 refinement: use the local MPS GPU as a free signal generator, not as a judge. Any long MPS sweep that feeds autopilot, meta-Lagrangian, Pareto, or bilevel planning must be serialized through `tools/build_mps_research_signal_manifest.py` / `tac.optimization.mps_research_signal` and stamped `evidence_grade="MPS-research-signal"`, `score_claim=false`, `promotion_eligible=false`, and `ready_for_exact_eval_dispatch=false`. The output may seed candidates and curve-fit priors; exact CUDA auth eval on a byte-closed archive is still required before score use.
 
 This is the 5th catastrophic measurement bug class. Every score above this line in the run_log was potentially wrong by a factor of 2-3. Sub-Quantizr-0.33 is genuinely reachable from the true 0.90 baseline; do not give up real GPU dollars on the wrong baseline ever again.
 

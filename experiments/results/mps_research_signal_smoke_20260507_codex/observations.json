@@ -1,0 +1,44 @@
+[
+  {
+    "archive_bytes": 100000,
+    "curve_id": "width_x0_4",
+    "device": "mps",
+    "d_pose_proxy": 0.00005,
+    "d_seg_proxy": 0.0009,
+    "family": "arch_shrink",
+    "params": {
+      "epoch": 0,
+      "width_mult": 0.4
+    },
+    "proxy_loss": 0.55,
+    "variant_id": "epoch_000"
+  },
+  {
+    "archive_bytes": 120000,
+    "curve_id": "width_x0_4",
+    "device": "mps",
+    "d_pose_proxy": 0.000031,
+    "d_seg_proxy": 0.00072,
+    "family": "arch_shrink",
+    "params": {
+      "epoch": 10,
+      "width_mult": 0.4
+    },
+    "proxy_loss": 0.2,
+    "variant_id": "epoch_010"
+  },
+  {
+    "archive_bytes": 180000,
+    "curve_id": "width_x0_4",
+    "device": "mps",
+    "d_pose_proxy": 0.00003,
+    "d_seg_proxy": 0.0007,
+    "family": "arch_shrink",
+    "params": {
+      "epoch": 20,
+      "width_mult": 0.4
+    },
+    "proxy_loss": 0.18,
+    "variant_id": "epoch_020"
+  }
+]

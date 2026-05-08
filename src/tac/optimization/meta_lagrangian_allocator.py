@@ -25,6 +25,9 @@ NON_RANKABLE_EVIDENCE_GRADES = {
     "external",
 }
 PROXY_EVIDENCE_GRADE_MARKERS = (
+    "advisory",
+    "cpu",
+    "mps",
     "planning",
     "proxy",
     "prediction",

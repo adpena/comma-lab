@@ -1,0 +1,282 @@
+{
+  "anchor": {
+    "archive_bytes": 180000,
+    "available": true,
+    "d_pose": 3e-05,
+    "d_seg": 0.0007,
+    "evidence_grade_required": "contest-CUDA",
+    "score_claim": false,
+    "score_formula_value": 0.2071751196376796
+  },
+  "curve_count": 1,
+  "curves": [
+    {
+      "archive_byte_range": [
+        100000,
+        180000
+      ],
+      "curve_id": "width_x0_4",
+      "family": "arch_shrink",
+      "finite_difference_slopes": [
+        {
+          "byte_step": 20000,
+          "from_variant_id": "epoch_000",
+          "metric_delta": -0.35000000000000003,
+          "metric_delta_per_byte": -1.7500000000000002e-05,
+          "to_variant_id": "epoch_010"
+        },
+        {
+          "byte_step": 60000,
+          "from_variant_id": "epoch_010",
+          "metric_delta": -0.020000000000000018,
+          "metric_delta_per_byte": -3.333333333333336e-07,
+          "to_variant_id": "epoch_020"
+        }
+      ],
+      "flattening_detected": true,
+      "interpretation": "candidate_generation_prior_only",
+      "lowest_proxy_observation": {
+        "archive_bytes": 180000,
+        "candidate_generation_only": true,
+        "metric": "proxy_loss",
+        "metric_value": 0.18,
+        "variant_id": "epoch_020"
+      },
+      "metric": "proxy_loss",
+      "point_count": 3,
+      "promotion_eligible": false,
+      "score_claim": false
+    }
+  ],
+  "device_contract": {
+    "allowed_uses": [
+      "proxy_curve_shape_discovery",
+      "smoke_test",
+      "code_correctness_check",
+      "candidate_generation_prior"
+    ],
+    "cuda_auth_eval_required_for_score_use": true,
+    "device_family": "mps",
+    "forbidden_uses": [
+      "auth_eval",
+      "score_claim",
+      "promotion",
+      "falsification",
+      "method_retirement",
+      "paper_empirical_claim"
+    ]
+  },
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "mps_proxy_signal_not_score_evidence",
+    "not_cuda_auth_eval",
+    "no_exact_archive_adjudication",
+    "not_promotion_eligible",
+    "requires_exact_cuda_auth_eval_before_any_score_use"
+  ],
+  "evidence_grade": "MPS-research-signal",
+  "evidence_semantics": "mps_proxy_curve_shape_only",
+  "meta_lagrangian_atoms": [
+    {
+      "atom_id": "mps_signal:arch_shrink:epoch_000",
+      "byte_delta": -80000,
+      "confidence": 0.05,
+      "dispatch_blockers": [
+        "mps_proxy_signal_not_score_evidence",
+        "not_cuda_auth_eval",
+        "no_exact_archive_adjudication",
+        "not_promotion_eligible",
+        "requires_exact_cuda_auth_eval_before_any_score_use"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "MPS-research-signal",
+      "evidence_semantics": "mps_proxy_curve_shape_only",
+      "expected_pose_dist_delta": 2e-05,
+      "expected_seg_dist_delta": 0.00019999999999999998,
+      "family": "arch_shrink",
+      "family_group": "mps_research_signal:arch_shrink",
+      "interaction_assumptions": [
+        "mps_proxy_curve_shape_may_not_transfer_to_cuda_scorer"
+      ],
+      "pareto_scope": "mps_research_signal:width_x0_4",
+      "proxy_row": true,
+      "rankable": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "source_artifact_bytes": 100000
+    },
+    {
+      "atom_id": "mps_signal:arch_shrink:epoch_010",
+      "byte_delta": -60000,
+      "confidence": 0.05,
+      "dispatch_blockers": [
+        "mps_proxy_signal_not_score_evidence",
+        "not_cuda_auth_eval",
+        "no_exact_archive_adjudication",
+        "not_promotion_eligible",
+        "requires_exact_cuda_auth_eval_before_any_score_use"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "MPS-research-signal",
+      "evidence_semantics": "mps_proxy_curve_shape_only",
+      "expected_pose_dist_delta": 1.0000000000000006e-06,
+      "expected_seg_dist_delta": 2.0000000000000052e-05,
+      "family": "arch_shrink",
+      "family_group": "mps_research_signal:arch_shrink",
+      "interaction_assumptions": [
+        "mps_proxy_curve_shape_may_not_transfer_to_cuda_scorer"
+      ],
+      "pareto_scope": "mps_research_signal:width_x0_4",
+      "proxy_row": true,
+      "rankable": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "source_artifact_bytes": 120000
+    },
+    {
+      "atom_id": "mps_signal:arch_shrink:epoch_020",
+      "byte_delta": 0,
+      "confidence": 0.05,
+      "dispatch_blockers": [
+        "mps_proxy_signal_not_score_evidence",
+        "not_cuda_auth_eval",
+        "no_exact_archive_adjudication",
+        "not_promotion_eligible",
+        "requires_exact_cuda_auth_eval_before_any_score_use"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "MPS-research-signal",
+      "evidence_semantics": "mps_proxy_curve_shape_only",
+      "expected_pose_dist_delta": 0.0,
+      "expected_seg_dist_delta": 0.0,
+      "family": "arch_shrink",
+      "family_group": "mps_research_signal:arch_shrink",
+      "interaction_assumptions": [
+        "mps_proxy_curve_shape_may_not_transfer_to_cuda_scorer"
+      ],
+      "pareto_scope": "mps_research_signal:width_x0_4",
+      "proxy_row": true,
+      "rankable": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "source_artifact_bytes": 180000
+    }
+  ],
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "row_count": 3,
+  "rows": [
+    {
+      "archive_bytes": 100000,
+      "byte_delta_vs_anchor": -80000,
+      "curve_id": "width_x0_4",
+      "d_pose_proxy": 5e-05,
+      "d_seg_proxy": 0.0009,
+      "device": "mps",
+      "dispatch_blockers": [
+        "mps_proxy_signal_not_score_evidence",
+        "not_cuda_auth_eval",
+        "no_exact_archive_adjudication",
+        "not_promotion_eligible",
+        "requires_exact_cuda_auth_eval_before_any_score_use"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "MPS-research-signal",
+      "evidence_semantics": "mps_proxy_curve_shape_only",
+      "expected_pose_dist_delta_proxy": 2e-05,
+      "expected_seg_dist_delta_proxy": 0.00019999999999999998,
+      "family": "arch_shrink",
+      "params": {
+        "epoch": 0,
+        "width_mult": 0.4
+      },
+      "promotion_eligible": false,
+      "proxy_formula_delta_vs_anchor": -0.028228544550464585,
+      "proxy_formula_value": 0.178946575087215,
+      "proxy_loss": 0.55,
+      "proxy_row": true,
+      "ready_for_exact_eval_dispatch": false,
+      "row_index": 0,
+      "score_claim": false,
+      "source_artifact": "",
+      "variant_id": "epoch_000",
+      "wall_clock_seconds": null
+    },
+    {
+      "archive_bytes": 120000,
+      "byte_delta_vs_anchor": -60000,
+      "curve_id": "width_x0_4",
+      "d_pose_proxy": 3.1e-05,
+      "d_seg_proxy": 0.00072,
+      "device": "mps",
+      "dispatch_blockers": [
+        "mps_proxy_signal_not_score_evidence",
+        "not_cuda_auth_eval",
+        "no_exact_archive_adjudication",
+        "not_promotion_eligible",
+        "requires_exact_cuda_auth_eval_before_any_score_use"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "MPS-research-signal",
+      "evidence_semantics": "mps_proxy_curve_shape_only",
+      "expected_pose_dist_delta_proxy": 1.0000000000000006e-06,
+      "expected_seg_dist_delta_proxy": 2.0000000000000052e-05,
+      "family": "arch_shrink",
+      "params": {
+        "epoch": 10,
+        "width_mult": 0.4
+      },
+      "promotion_eligible": false,
+      "proxy_formula_delta_vs_anchor": -0.037665228401360024,
+      "proxy_formula_value": 0.16950989123631957,
+      "proxy_loss": 0.2,
+      "proxy_row": true,
+      "ready_for_exact_eval_dispatch": false,
+      "row_index": 1,
+      "score_claim": false,
+      "source_artifact": "",
+      "variant_id": "epoch_010",
+      "wall_clock_seconds": null
+    },
+    {
+      "archive_bytes": 180000,
+      "byte_delta_vs_anchor": 0,
+      "curve_id": "width_x0_4",
+      "d_pose_proxy": 3e-05,
+      "d_seg_proxy": 0.0007,
+      "device": "mps",
+      "dispatch_blockers": [
+        "mps_proxy_signal_not_score_evidence",
+        "not_cuda_auth_eval",
+        "no_exact_archive_adjudication",
+        "not_promotion_eligible",
+        "requires_exact_cuda_auth_eval_before_any_score_use"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "MPS-research-signal",
+      "evidence_semantics": "mps_proxy_curve_shape_only",
+      "expected_pose_dist_delta_proxy": 0.0,
+      "expected_seg_dist_delta_proxy": 0.0,
+      "family": "arch_shrink",
+      "params": {
+        "epoch": 20,
+        "width_mult": 0.4
+      },
+      "promotion_eligible": false,
+      "proxy_formula_delta_vs_anchor": 0.0,
+      "proxy_formula_value": 0.2071751196376796,
+      "proxy_loss": 0.18,
+      "proxy_row": true,
+      "ready_for_exact_eval_dispatch": false,
+      "row_index": 2,
+      "score_claim": false,
+      "source_artifact": "",
+      "variant_id": "epoch_020",
+      "wall_clock_seconds": null
+    }
+  ],
+  "run_id": "mps_research_signal_smoke_20260507_codex",
+  "schema": "mps_research_signal_manifest.v1",
+  "score_claim": false,
+  "source": "experiments/results/mps_research_signal_smoke_20260507_codex/observations.json"
+}

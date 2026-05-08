@@ -1,0 +1,942 @@
+{
+  "atom_count": 3,
+  "base_pose_dist": 0.01,
+  "byte_closed_archive_manifest_attached_count": 0,
+  "byte_closed_manifest_required_for_kkt": true,
+  "byte_closed_manifest_required_for_pareto": true,
+  "conflict_family_counts": {},
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "planning_only_atom_ranking",
+    "requires_stack_interaction_review",
+    "requires_exact_cuda_auth_eval"
+  ],
+  "family_group_counts": {
+    "mps_research_signal:arch_shrink": 3
+  },
+  "kkt_ready_for_field_planning_count": 0,
+  "lexicographic_feasibility_order": [
+    "ready_for_exact_eval_dispatch desc",
+    "rankable desc",
+    "byte_closed_archive_manifest_attached desc",
+    "non_proxy_row desc",
+    "pareto_frontier desc",
+    "kkt_ready_for_field_planning desc",
+    "expected_total_score_delta asc",
+    "expected_information_gain_nats desc"
+  ],
+  "pareto_eligible_count": 0,
+  "pareto_summary": {
+    "eligibility": "rankable_verified_byte_closed_archive_manifest_and_non_proxy",
+    "objective_direction": {
+      "archive_bytes": "min",
+      "archive_ready_for_stack_review": "max",
+      "byte_delta": "min",
+      "confidence": "max",
+      "expected_pose_dist_delta": "min",
+      "expected_seg_dist_delta": "min",
+      "expected_total_score_delta": "min"
+    },
+    "rankable_dominated_count": 0,
+    "rankable_frontier_count": 0,
+    "scope_counts": {
+      "mps_research_signal:width_x0_4": {
+        "dominated": 0,
+        "eligible": 0,
+        "frontier": 0,
+        "ineligible": 3,
+        "missing_byte_closed_manifest": 3,
+        "proxy": 3,
+        "rankable": 0,
+        "total": 3
+      }
+    },
+    "scope_default": "family_group"
+  },
+  "proxy_row_count": 3,
+  "proxy_rows_dispatchable": false,
+  "ready_for_exact_eval_dispatch": false,
+  "requested_dispatchable_refused_count": 0,
+  "rows": [
+    {
+      "allocation_inference": false,
+      "archive_bytes": null,
+      "archive_bytes_source": "",
+      "archive_manifest_custody": {
+        "archive_bytes": null,
+        "archive_bytes_valid": false,
+        "archive_sha256": "",
+        "archive_sha256_valid": false,
+        "blockers": [],
+        "exists": false,
+        "is_file": false,
+        "manifest_json_valid": false,
+        "path": "",
+        "score_claim_false": false,
+        "sha256": "",
+        "sha256_matches": false,
+        "sha256_valid": false,
+        "verified": false
+      },
+      "archive_manifest_path": "",
+      "archive_manifest_sha256": "",
+      "archive_ready_for_stack_review": false,
+      "atom_id": "mps_signal:arch_shrink:epoch_000",
+      "byte_closed_archive_manifest_attached": false,
+      "byte_delta": -80000,
+      "class_support": [],
+      "confidence": 0.05,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [],
+      "dispatch_blockers": [
+        "planning_only_lagrangian_atom",
+        "requires_exact_cuda_auth_eval",
+        "mps_proxy_signal_not_score_evidence",
+        "not_cuda_auth_eval",
+        "no_exact_archive_adjudication",
+        "not_promotion_eligible",
+        "requires_exact_cuda_auth_eval_before_any_score_use",
+        "source_marked_non_rankable",
+        "requires_byte_closed_archive",
+        "proxy_row_not_dispatchable"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "MPS-research-signal",
+      "evidence_source_path": "",
+      "evidence_source_sha256": "",
+      "exact_dispatch_blockers": {
+        "blocker_categories": {
+          "custody": [
+            "no_exact_archive_adjudication",
+            "requires_byte_closed_archive",
+            "missing_byte_closed_archive_manifest"
+          ],
+          "dirty_worktree": [],
+          "dispatch_claim": [],
+          "exact_cuda_eval": [
+            "requires_exact_cuda_auth_eval",
+            "not_cuda_auth_eval",
+            "requires_exact_cuda_auth_eval_before_any_score_use"
+          ],
+          "interaction_model": [],
+          "kkt_or_admm": [
+            "proxy_evidence_not_kkt_ready",
+            "kkt:kkt_proof_or_admm_result_missing",
+            "kkt_not_ready_for_field_planning"
+          ],
+          "other": [
+            "not_promotion_eligible",
+            "source_marked_non_rankable",
+            "non_rankable_atom"
+          ],
+          "pareto_frontier": [
+            "pareto_ineligible_atom",
+            "pareto_ineligible_for_field_selection"
+          ],
+          "proxy_or_planning": [
+            "planning_only_lagrangian_atom",
+            "mps_proxy_signal_not_score_evidence",
+            "proxy_row_not_dispatchable",
+            "proxy_row"
+          ],
+          "runtime": [],
+          "score_claim": []
+        },
+        "blocker_count": 18,
+        "blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_exact_cuda_auth_eval",
+          "mps_proxy_signal_not_score_evidence",
+          "not_cuda_auth_eval",
+          "no_exact_archive_adjudication",
+          "not_promotion_eligible",
+          "requires_exact_cuda_auth_eval_before_any_score_use",
+          "source_marked_non_rankable",
+          "requires_byte_closed_archive",
+          "proxy_row_not_dispatchable",
+          "missing_byte_closed_archive_manifest",
+          "proxy_evidence_not_kkt_ready",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "kkt_not_ready_for_field_planning",
+          "non_rankable_atom",
+          "pareto_ineligible_atom",
+          "proxy_row",
+          "pareto_ineligible_for_field_selection"
+        ],
+        "dispatch_attempted": false,
+        "dispatchable": false,
+        "next_required_proof": [
+          "verified_byte_closed_archive_manifest_with_sha256_and_bytes",
+          "non_proxy_empirical_or_cuda_evidence",
+          "passed_kkt_proof_or_converged_admm_waterline_result",
+          "pareto_eligible_byte_closed_non_proxy_rankable_atom",
+          "candidate_packet_static_preflight_and_exact_cuda_auth_eval"
+        ],
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "exact_dispatch_blockers_v1",
+        "score_claim": false
+      },
+      "expected_information_gain_nats": 0.0,
+      "expected_pose_dist_delta": 2e-05,
+      "expected_score_variance": 0.0,
+      "expected_seg_dist_delta": 0.00019999999999999998,
+      "expected_total_score_delta": -0.052252912759,
+      "expected_uncertainty_reduction": {
+        "has_uncertainty_signal": false,
+        "source_fields": [],
+        "total_variance_reduction": 0.0
+      },
+      "family": "arch_shrink",
+      "family_group": "mps_research_signal:arch_shrink",
+      "field_interaction_contract": {
+        "assumption_count": 1,
+        "assumptions": [
+          "mps_proxy_curve_shape_may_not_transfer_to_cuda_scorer"
+        ],
+        "blockers": [],
+        "conflicts_with_atoms": [],
+        "conflicts_with_families": [],
+        "interaction_model": "",
+        "schema": "field_interaction_contract_v1",
+        "status": "passed",
+        "volterra_order": null,
+        "volterra_order_source": "",
+        "volterra_scope": "undeclared_order_first_order_assumptions_only",
+        "volterra_terms": [],
+        "volterra_terms_declared": false
+      },
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "geometry_priors": [],
+      "hard_pair_support": [],
+      "interaction_assumptions": [
+        "mps_proxy_curve_shape_may_not_transfer_to_cuda_scorer"
+      ],
+      "kkt_blockers": [
+        "source_marked_non_rankable",
+        "missing_byte_closed_archive_manifest",
+        "proxy_evidence_not_kkt_ready",
+        "kkt:kkt_proof_or_admm_result_missing"
+      ],
+      "kkt_proof": {
+        "blockers": [
+          "kkt_proof_or_admm_result_missing"
+        ],
+        "candidates": [],
+        "kind": "",
+        "residual": null,
+        "source": "",
+        "status": "blocked",
+        "tolerance": null
+      },
+      "kkt_ready_for_field_planning": false,
+      "lexicographic_feasibility_tuple": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        -0.052252912759,
+        0.0
+      ],
+      "non_dominated_frontier_reason": {
+        "dominated_by": [],
+        "eligibility_blockers": [
+          "non_rankable_atom",
+          "missing_byte_closed_archive_manifest",
+          "proxy_row"
+        ],
+        "eligible": false,
+        "frontier": false,
+        "objective_directions": {
+          "archive_bytes": "min",
+          "archive_ready_for_stack_review": "max",
+          "byte_delta": "min",
+          "confidence": "max",
+          "expected_pose_dist_delta": "min",
+          "expected_seg_dist_delta": "min",
+          "expected_total_score_delta": "min"
+        },
+        "objectives": {
+          "archive_ready_for_stack_review": 0.0,
+          "byte_delta": -80000.0,
+          "confidence": 0.05,
+          "expected_pose_dist_delta": 2e-05,
+          "expected_seg_dist_delta": 0.00019999999999999998,
+          "expected_total_score_delta": -0.052252912759
+        },
+        "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
+        "schema": "non_dominated_frontier_reason_v1",
+        "scope": "mps_research_signal:width_x0_4",
+        "status": "ineligible"
+      },
+      "observation_noise_variance": 0.0,
+      "openpilot_priors": [],
+      "pair_support": [],
+      "pareto_dominated_by": [],
+      "pareto_eligibility_blockers": [
+        "non_rankable_atom",
+        "missing_byte_closed_archive_manifest",
+        "proxy_row"
+      ],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_objectives": {
+        "archive_ready_for_stack_review": 0.0,
+        "byte_delta": -80000.0,
+        "confidence": 0.05,
+        "expected_pose_dist_delta": 2e-05,
+        "expected_seg_dist_delta": 0.00019999999999999998,
+        "expected_total_score_delta": -0.052252912759
+      },
+      "pareto_scope": "mps_research_signal:width_x0_4",
+      "planning_priority_rankable": false,
+      "pose_score_delta_confidence_weighted": 1.5803491e-05,
+      "proxy_row": true,
+      "rankable": false,
+      "rate_score_delta": -0.05326871625,
+      "ready_for_exact_eval_dispatch": false,
+      "requested_dispatchable": false,
+      "research_basis_ids": [],
+      "score_claim": false,
+      "score_evidence_contract": {
+        "blockers": [
+          "missing_byte_closed_archive_manifest",
+          "planning_or_proxy_atom_not_score_evidence",
+          "proxy_or_planning_evidence_grade_not_score_evidence",
+          "missing_exact_cuda_positive_score_evidence"
+        ],
+        "exact_cuda_grade": false,
+        "exact_positive_cuda_evidence": false,
+        "expected_total_score_delta": -0.052252912759,
+        "planning_only_is_score_evidence": false,
+        "planning_priority_rankable": false,
+        "schema": "meta_lagrangian_atom_score_evidence_contract_v1",
+        "score_evidence_rankable": false,
+        "status": "blocked"
+      },
+      "score_evidence_rankable": false,
+      "score_lowering_evidence": false,
+      "seg_score_delta_confidence_weighted": 0.001,
+      "selection_blockers": [
+        "kkt_not_ready_for_field_planning",
+        "missing_byte_closed_archive_manifest",
+        "non_rankable_atom",
+        "pareto_ineligible_atom",
+        "proxy_row"
+      ],
+      "selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 10.0,
+        "missing_byte_closed_archive_manifest": 100.0,
+        "non_rankable_atom": 1000.0,
+        "pareto_ineligible_atom": 25.0,
+        "proxy_row": 50.0
+      },
+      "selection_penalty_units": 1185.0,
+      "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
+      "selection_score_delta": -0.052252912759,
+      "source_archive_sha256": "",
+      "source_artifact_bytes": 100000,
+      "source_artifact_bytes_source": "source_artifact_bytes",
+      "source_dispatch_blockers": [
+        "mps_proxy_signal_not_score_evidence",
+        "not_cuda_auth_eval",
+        "no_exact_archive_adjudication",
+        "not_promotion_eligible",
+        "requires_exact_cuda_auth_eval_before_any_score_use"
+      ]
+    },
+    {
+      "allocation_inference": false,
+      "archive_bytes": null,
+      "archive_bytes_source": "",
+      "archive_manifest_custody": {
+        "archive_bytes": null,
+        "archive_bytes_valid": false,
+        "archive_sha256": "",
+        "archive_sha256_valid": false,
+        "blockers": [],
+        "exists": false,
+        "is_file": false,
+        "manifest_json_valid": false,
+        "path": "",
+        "score_claim_false": false,
+        "sha256": "",
+        "sha256_matches": false,
+        "sha256_valid": false,
+        "verified": false
+      },
+      "archive_manifest_path": "",
+      "archive_manifest_sha256": "",
+      "archive_ready_for_stack_review": false,
+      "atom_id": "mps_signal:arch_shrink:epoch_010",
+      "byte_closed_archive_manifest_attached": false,
+      "byte_delta": -60000,
+      "class_support": [],
+      "confidence": 0.05,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [],
+      "dispatch_blockers": [
+        "planning_only_lagrangian_atom",
+        "requires_exact_cuda_auth_eval",
+        "mps_proxy_signal_not_score_evidence",
+        "not_cuda_auth_eval",
+        "no_exact_archive_adjudication",
+        "not_promotion_eligible",
+        "requires_exact_cuda_auth_eval_before_any_score_use",
+        "source_marked_non_rankable",
+        "requires_byte_closed_archive",
+        "proxy_row_not_dispatchable"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "MPS-research-signal",
+      "evidence_source_path": "",
+      "evidence_source_sha256": "",
+      "exact_dispatch_blockers": {
+        "blocker_categories": {
+          "custody": [
+            "no_exact_archive_adjudication",
+            "requires_byte_closed_archive",
+            "missing_byte_closed_archive_manifest"
+          ],
+          "dirty_worktree": [],
+          "dispatch_claim": [],
+          "exact_cuda_eval": [
+            "requires_exact_cuda_auth_eval",
+            "not_cuda_auth_eval",
+            "requires_exact_cuda_auth_eval_before_any_score_use"
+          ],
+          "interaction_model": [],
+          "kkt_or_admm": [
+            "proxy_evidence_not_kkt_ready",
+            "kkt:kkt_proof_or_admm_result_missing",
+            "kkt_not_ready_for_field_planning"
+          ],
+          "other": [
+            "not_promotion_eligible",
+            "source_marked_non_rankable",
+            "non_rankable_atom"
+          ],
+          "pareto_frontier": [
+            "pareto_ineligible_atom",
+            "pareto_ineligible_for_field_selection"
+          ],
+          "proxy_or_planning": [
+            "planning_only_lagrangian_atom",
+            "mps_proxy_signal_not_score_evidence",
+            "proxy_row_not_dispatchable",
+            "proxy_row"
+          ],
+          "runtime": [],
+          "score_claim": []
+        },
+        "blocker_count": 18,
+        "blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_exact_cuda_auth_eval",
+          "mps_proxy_signal_not_score_evidence",
+          "not_cuda_auth_eval",
+          "no_exact_archive_adjudication",
+          "not_promotion_eligible",
+          "requires_exact_cuda_auth_eval_before_any_score_use",
+          "source_marked_non_rankable",
+          "requires_byte_closed_archive",
+          "proxy_row_not_dispatchable",
+          "missing_byte_closed_archive_manifest",
+          "proxy_evidence_not_kkt_ready",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "kkt_not_ready_for_field_planning",
+          "non_rankable_atom",
+          "pareto_ineligible_atom",
+          "proxy_row",
+          "pareto_ineligible_for_field_selection"
+        ],
+        "dispatch_attempted": false,
+        "dispatchable": false,
+        "next_required_proof": [
+          "verified_byte_closed_archive_manifest_with_sha256_and_bytes",
+          "non_proxy_empirical_or_cuda_evidence",
+          "passed_kkt_proof_or_converged_admm_waterline_result",
+          "pareto_eligible_byte_closed_non_proxy_rankable_atom",
+          "candidate_packet_static_preflight_and_exact_cuda_auth_eval"
+        ],
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "exact_dispatch_blockers_v1",
+        "score_claim": false
+      },
+      "expected_information_gain_nats": 0.0,
+      "expected_pose_dist_delta": 1.0000000000000006e-06,
+      "expected_score_variance": 0.0,
+      "expected_seg_dist_delta": 2.0000000000000052e-05,
+      "expected_total_score_delta": -0.039850746638,
+      "expected_uncertainty_reduction": {
+        "has_uncertainty_signal": false,
+        "source_fields": [],
+        "total_variance_reduction": 0.0
+      },
+      "family": "arch_shrink",
+      "family_group": "mps_research_signal:arch_shrink",
+      "field_interaction_contract": {
+        "assumption_count": 1,
+        "assumptions": [
+          "mps_proxy_curve_shape_may_not_transfer_to_cuda_scorer"
+        ],
+        "blockers": [],
+        "conflicts_with_atoms": [],
+        "conflicts_with_families": [],
+        "interaction_model": "",
+        "schema": "field_interaction_contract_v1",
+        "status": "passed",
+        "volterra_order": null,
+        "volterra_order_source": "",
+        "volterra_scope": "undeclared_order_first_order_assumptions_only",
+        "volterra_terms": [],
+        "volterra_terms_declared": false
+      },
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "geometry_priors": [],
+      "hard_pair_support": [],
+      "interaction_assumptions": [
+        "mps_proxy_curve_shape_may_not_transfer_to_cuda_scorer"
+      ],
+      "kkt_blockers": [
+        "source_marked_non_rankable",
+        "missing_byte_closed_archive_manifest",
+        "proxy_evidence_not_kkt_ready",
+        "kkt:kkt_proof_or_admm_result_missing"
+      ],
+      "kkt_proof": {
+        "blockers": [
+          "kkt_proof_or_admm_result_missing"
+        ],
+        "candidates": [],
+        "kind": "",
+        "residual": null,
+        "source": "",
+        "status": "blocked",
+        "tolerance": null
+      },
+      "kkt_ready_for_field_planning": false,
+      "lexicographic_feasibility_tuple": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        -0.039850746638,
+        0.0
+      ],
+      "non_dominated_frontier_reason": {
+        "dominated_by": [],
+        "eligibility_blockers": [
+          "non_rankable_atom",
+          "missing_byte_closed_archive_manifest",
+          "proxy_row"
+        ],
+        "eligible": false,
+        "frontier": false,
+        "objective_directions": {
+          "archive_bytes": "min",
+          "archive_ready_for_stack_review": "max",
+          "byte_delta": "min",
+          "confidence": "max",
+          "expected_pose_dist_delta": "min",
+          "expected_seg_dist_delta": "min",
+          "expected_total_score_delta": "min"
+        },
+        "objectives": {
+          "archive_ready_for_stack_review": 0.0,
+          "byte_delta": -60000.0,
+          "confidence": 0.05,
+          "expected_pose_dist_delta": 1.0000000000000006e-06,
+          "expected_seg_dist_delta": 2.0000000000000052e-05,
+          "expected_total_score_delta": -0.039850746638
+        },
+        "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
+        "schema": "non_dominated_frontier_reason_v1",
+        "scope": "mps_research_signal:width_x0_4",
+        "status": "ineligible"
+      },
+      "observation_noise_variance": 0.0,
+      "openpilot_priors": [],
+      "pair_support": [],
+      "pareto_dominated_by": [],
+      "pareto_eligibility_blockers": [
+        "non_rankable_atom",
+        "missing_byte_closed_archive_manifest",
+        "proxy_row"
+      ],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_objectives": {
+        "archive_ready_for_stack_review": 0.0,
+        "byte_delta": -60000.0,
+        "confidence": 0.05,
+        "expected_pose_dist_delta": 1.0000000000000006e-06,
+        "expected_seg_dist_delta": 2.0000000000000052e-05,
+        "expected_total_score_delta": -0.039850746638
+      },
+      "pareto_scope": "mps_research_signal:width_x0_4",
+      "planning_priority_rankable": false,
+      "pose_score_delta_confidence_weighted": 7.9055e-07,
+      "proxy_row": true,
+      "rankable": false,
+      "rate_score_delta": -0.039951537187,
+      "ready_for_exact_eval_dispatch": false,
+      "requested_dispatchable": false,
+      "research_basis_ids": [],
+      "score_claim": false,
+      "score_evidence_contract": {
+        "blockers": [
+          "missing_byte_closed_archive_manifest",
+          "planning_or_proxy_atom_not_score_evidence",
+          "proxy_or_planning_evidence_grade_not_score_evidence",
+          "missing_exact_cuda_positive_score_evidence"
+        ],
+        "exact_cuda_grade": false,
+        "exact_positive_cuda_evidence": false,
+        "expected_total_score_delta": -0.039850746638,
+        "planning_only_is_score_evidence": false,
+        "planning_priority_rankable": false,
+        "schema": "meta_lagrangian_atom_score_evidence_contract_v1",
+        "score_evidence_rankable": false,
+        "status": "blocked"
+      },
+      "score_evidence_rankable": false,
+      "score_lowering_evidence": false,
+      "seg_score_delta_confidence_weighted": 0.0001,
+      "selection_blockers": [
+        "kkt_not_ready_for_field_planning",
+        "missing_byte_closed_archive_manifest",
+        "non_rankable_atom",
+        "pareto_ineligible_atom",
+        "proxy_row"
+      ],
+      "selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 10.0,
+        "missing_byte_closed_archive_manifest": 100.0,
+        "non_rankable_atom": 1000.0,
+        "pareto_ineligible_atom": 25.0,
+        "proxy_row": 50.0
+      },
+      "selection_penalty_units": 1185.0,
+      "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
+      "selection_score_delta": -0.039850746638,
+      "source_archive_sha256": "",
+      "source_artifact_bytes": 120000,
+      "source_artifact_bytes_source": "source_artifact_bytes",
+      "source_dispatch_blockers": [
+        "mps_proxy_signal_not_score_evidence",
+        "not_cuda_auth_eval",
+        "no_exact_archive_adjudication",
+        "not_promotion_eligible",
+        "requires_exact_cuda_auth_eval_before_any_score_use"
+      ]
+    },
+    {
+      "allocation_inference": false,
+      "archive_bytes": null,
+      "archive_bytes_source": "",
+      "archive_manifest_custody": {
+        "archive_bytes": null,
+        "archive_bytes_valid": false,
+        "archive_sha256": "",
+        "archive_sha256_valid": false,
+        "blockers": [],
+        "exists": false,
+        "is_file": false,
+        "manifest_json_valid": false,
+        "path": "",
+        "score_claim_false": false,
+        "sha256": "",
+        "sha256_matches": false,
+        "sha256_valid": false,
+        "verified": false
+      },
+      "archive_manifest_path": "",
+      "archive_manifest_sha256": "",
+      "archive_ready_for_stack_review": false,
+      "atom_id": "mps_signal:arch_shrink:epoch_020",
+      "byte_closed_archive_manifest_attached": false,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.05,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [],
+      "dispatch_blockers": [
+        "planning_only_lagrangian_atom",
+        "requires_exact_cuda_auth_eval",
+        "mps_proxy_signal_not_score_evidence",
+        "not_cuda_auth_eval",
+        "no_exact_archive_adjudication",
+        "not_promotion_eligible",
+        "requires_exact_cuda_auth_eval_before_any_score_use",
+        "source_marked_non_rankable",
+        "requires_byte_closed_archive",
+        "proxy_row_not_dispatchable"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "MPS-research-signal",
+      "evidence_source_path": "",
+      "evidence_source_sha256": "",
+      "exact_dispatch_blockers": {
+        "blocker_categories": {
+          "custody": [
+            "no_exact_archive_adjudication",
+            "requires_byte_closed_archive",
+            "missing_byte_closed_archive_manifest"
+          ],
+          "dirty_worktree": [],
+          "dispatch_claim": [],
+          "exact_cuda_eval": [
+            "requires_exact_cuda_auth_eval",
+            "not_cuda_auth_eval",
+            "requires_exact_cuda_auth_eval_before_any_score_use"
+          ],
+          "interaction_model": [],
+          "kkt_or_admm": [
+            "proxy_evidence_not_kkt_ready",
+            "kkt:kkt_proof_or_admm_result_missing",
+            "kkt_not_ready_for_field_planning"
+          ],
+          "other": [
+            "not_promotion_eligible",
+            "source_marked_non_rankable",
+            "non_rankable_atom"
+          ],
+          "pareto_frontier": [
+            "pareto_ineligible_atom",
+            "pareto_ineligible_for_field_selection"
+          ],
+          "proxy_or_planning": [
+            "planning_only_lagrangian_atom",
+            "mps_proxy_signal_not_score_evidence",
+            "proxy_row_not_dispatchable",
+            "proxy_row"
+          ],
+          "runtime": [],
+          "score_claim": []
+        },
+        "blocker_count": 18,
+        "blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_exact_cuda_auth_eval",
+          "mps_proxy_signal_not_score_evidence",
+          "not_cuda_auth_eval",
+          "no_exact_archive_adjudication",
+          "not_promotion_eligible",
+          "requires_exact_cuda_auth_eval_before_any_score_use",
+          "source_marked_non_rankable",
+          "requires_byte_closed_archive",
+          "proxy_row_not_dispatchable",
+          "missing_byte_closed_archive_manifest",
+          "proxy_evidence_not_kkt_ready",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "kkt_not_ready_for_field_planning",
+          "non_rankable_atom",
+          "pareto_ineligible_atom",
+          "proxy_row",
+          "pareto_ineligible_for_field_selection"
+        ],
+        "dispatch_attempted": false,
+        "dispatchable": false,
+        "next_required_proof": [
+          "verified_byte_closed_archive_manifest_with_sha256_and_bytes",
+          "non_proxy_empirical_or_cuda_evidence",
+          "passed_kkt_proof_or_converged_admm_waterline_result",
+          "pareto_eligible_byte_closed_non_proxy_rankable_atom",
+          "candidate_packet_static_preflight_and_exact_cuda_auth_eval"
+        ],
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "exact_dispatch_blockers_v1",
+        "score_claim": false
+      },
+      "expected_information_gain_nats": 0.0,
+      "expected_pose_dist_delta": 0.0,
+      "expected_score_variance": 0.0,
+      "expected_seg_dist_delta": 0.0,
+      "expected_total_score_delta": 0.0,
+      "expected_uncertainty_reduction": {
+        "has_uncertainty_signal": false,
+        "source_fields": [],
+        "total_variance_reduction": 0.0
+      },
+      "family": "arch_shrink",
+      "family_group": "mps_research_signal:arch_shrink",
+      "field_interaction_contract": {
+        "assumption_count": 1,
+        "assumptions": [
+          "mps_proxy_curve_shape_may_not_transfer_to_cuda_scorer"
+        ],
+        "blockers": [],
+        "conflicts_with_atoms": [],
+        "conflicts_with_families": [],
+        "interaction_model": "",
+        "schema": "field_interaction_contract_v1",
+        "status": "passed",
+        "volterra_order": null,
+        "volterra_order_source": "",
+        "volterra_scope": "undeclared_order_first_order_assumptions_only",
+        "volterra_terms": [],
+        "volterra_terms_declared": false
+      },
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "geometry_priors": [],
+      "hard_pair_support": [],
+      "interaction_assumptions": [
+        "mps_proxy_curve_shape_may_not_transfer_to_cuda_scorer"
+      ],
+      "kkt_blockers": [
+        "source_marked_non_rankable",
+        "missing_byte_closed_archive_manifest",
+        "proxy_evidence_not_kkt_ready",
+        "kkt:kkt_proof_or_admm_result_missing"
+      ],
+      "kkt_proof": {
+        "blockers": [
+          "kkt_proof_or_admm_result_missing"
+        ],
+        "candidates": [],
+        "kind": "",
+        "residual": null,
+        "source": "",
+        "status": "blocked",
+        "tolerance": null
+      },
+      "kkt_ready_for_field_planning": false,
+      "lexicographic_feasibility_tuple": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        0.0,
+        0.0
+      ],
+      "non_dominated_frontier_reason": {
+        "dominated_by": [],
+        "eligibility_blockers": [
+          "non_rankable_atom",
+          "missing_byte_closed_archive_manifest",
+          "proxy_row"
+        ],
+        "eligible": false,
+        "frontier": false,
+        "objective_directions": {
+          "archive_bytes": "min",
+          "archive_ready_for_stack_review": "max",
+          "byte_delta": "min",
+          "confidence": "max",
+          "expected_pose_dist_delta": "min",
+          "expected_seg_dist_delta": "min",
+          "expected_total_score_delta": "min"
+        },
+        "objectives": {
+          "archive_ready_for_stack_review": 0.0,
+          "byte_delta": 0.0,
+          "confidence": 0.05,
+          "expected_pose_dist_delta": 0.0,
+          "expected_seg_dist_delta": 0.0,
+          "expected_total_score_delta": 0.0
+        },
+        "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
+        "schema": "non_dominated_frontier_reason_v1",
+        "scope": "mps_research_signal:width_x0_4",
+        "status": "ineligible"
+      },
+      "observation_noise_variance": 0.0,
+      "openpilot_priors": [],
+      "pair_support": [],
+      "pareto_dominated_by": [],
+      "pareto_eligibility_blockers": [
+        "non_rankable_atom",
+        "missing_byte_closed_archive_manifest",
+        "proxy_row"
+      ],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_objectives": {
+        "archive_ready_for_stack_review": 0.0,
+        "byte_delta": 0.0,
+        "confidence": 0.05,
+        "expected_pose_dist_delta": 0.0,
+        "expected_seg_dist_delta": 0.0,
+        "expected_total_score_delta": 0.0
+      },
+      "pareto_scope": "mps_research_signal:width_x0_4",
+      "planning_priority_rankable": false,
+      "pose_score_delta_confidence_weighted": 0.0,
+      "proxy_row": true,
+      "rankable": false,
+      "rate_score_delta": 0.0,
+      "ready_for_exact_eval_dispatch": false,
+      "requested_dispatchable": false,
+      "research_basis_ids": [],
+      "score_claim": false,
+      "score_evidence_contract": {
+        "blockers": [
+          "missing_byte_closed_archive_manifest",
+          "planning_or_proxy_atom_not_score_evidence",
+          "proxy_or_planning_evidence_grade_not_score_evidence",
+          "missing_exact_cuda_positive_score_evidence",
+          "expected_delta_not_score_lowering"
+        ],
+        "exact_cuda_grade": false,
+        "exact_positive_cuda_evidence": false,
+        "expected_total_score_delta": 0.0,
+        "planning_only_is_score_evidence": false,
+        "planning_priority_rankable": false,
+        "schema": "meta_lagrangian_atom_score_evidence_contract_v1",
+        "score_evidence_rankable": false,
+        "status": "blocked"
+      },
+      "score_evidence_rankable": false,
+      "score_lowering_evidence": false,
+      "seg_score_delta_confidence_weighted": 0.0,
+      "selection_blockers": [
+        "kkt_not_ready_for_field_planning",
+        "missing_byte_closed_archive_manifest",
+        "non_rankable_atom",
+        "pareto_ineligible_atom",
+        "proxy_row"
+      ],
+      "selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 10.0,
+        "missing_byte_closed_archive_manifest": 100.0,
+        "non_rankable_atom": 1000.0,
+        "pareto_ineligible_atom": 25.0,
+        "proxy_row": 50.0
+      },
+      "selection_penalty_units": 1185.0,
+      "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
+      "selection_score_delta": 0.0,
+      "source_archive_sha256": "",
+      "source_artifact_bytes": 180000,
+      "source_artifact_bytes_source": "source_artifact_bytes",
+      "source_dispatch_blockers": [
+        "mps_proxy_signal_not_score_evidence",
+        "not_cuda_auth_eval",
+        "no_exact_archive_adjudication",
+        "not_promotion_eligible",
+        "requires_exact_cuda_auth_eval_before_any_score_use"
+      ]
+    }
+  ],
+  "schema_version": 2,
+  "score_claim": false,
+  "score_evidence_rankable_count": 0,
+  "selection_penalties": {
+    "kkt_not_ready_for_field_planning": 10.0,
+    "missing_byte_closed_archive_manifest": 100.0,
+    "non_rankable_atom": 1000.0,
+    "pareto_dominated_atom": 5.0,
+    "pareto_ineligible_atom": 25.0,
+    "proxy_row": 50.0,
+    "requested_dispatchable_refused": 1.0
+  },
+  "selection_policy": "lexicographic_feasibility_tuple_orders_rows_before_pure_expected_score_delta; penalty_terms_are_diagnostic_only",
+  "source": "experiments/results/mps_research_signal_smoke_20260507_codex/manifest.json",
+  "tool": "tac.optimization.meta_lagrangian_allocator.build_atom_ledger"
+}

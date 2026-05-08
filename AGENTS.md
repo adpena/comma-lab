@@ -548,6 +548,37 @@ CPU output must never promote, rank, kill, retire a method, validate a stack,
 or anchor paper claims. If a local/MPS result disagrees with CUDA auth eval,
 CUDA auth eval wins.
 
+## Local MPS Research-Signal Harvesting
+
+The local Apple MPS device is an underused free discovery engine. Use it
+aggressively for long cheap sweeps that identify curve shapes, code failures,
+and candidate priors, but never let it become score evidence.
+
+Allowed MPS uses:
+
+- proxy curve-shape discovery for distortion-vs-bytes and loss-vs-bytes sweeps;
+- smoke tests and code-correctness checks;
+- candidate generation priors for the meta-Lagrangian, Pareto, bilevel, and
+  dispatch-advisor planners;
+- early flattening detection before spending CUDA dollars.
+
+Required MPS artifact contract:
+
+- `evidence_grade="MPS-research-signal"` and
+  `evidence_semantics="mps_proxy_curve_shape_only"`;
+- `score_claim=false`, `promotion_eligible=false`,
+  `ready_for_exact_eval_dispatch=false`, and `dispatchable=false`;
+- explicit blockers including `mps_proxy_signal_not_score_evidence`,
+  `not_cuda_auth_eval`, and `requires_exact_cuda_auth_eval_before_any_score_use`;
+- no lane rank, kill, retirement, paper empirical claim, or stack validation
+  until the same idea produces byte-closed archive evidence and exact CUDA auth
+  eval.
+
+The canonical adapter is
+`tools/build_mps_research_signal_manifest.py`, backed by
+`tac.optimization.mps_research_signal`. Feed its proxy atoms into planners only
+as priors; planners must keep those rows proxy-only and non-dispatchable.
+
 ## Contest Compliance
 
 Non-negotiable compliance rules:
