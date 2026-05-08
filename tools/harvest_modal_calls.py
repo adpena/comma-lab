@@ -30,10 +30,12 @@ for mfile in sorted(metadata_files):
         fc = modal.functions.FunctionCall.from_id(call_id)
         result = fc.get(timeout=2)
         rc = result.get("returncode", "?")
-        elapsed = result.get("elapsed_seconds", 0)
+        elapsed_raw = result.get("elapsed_seconds")
+        elapsed = elapsed_raw if isinstance(elapsed_raw, (int, float)) else 0
         timed_out = result.get("timed_out", False)
         n_artifacts = len(result.get("artifacts", {}))
-        tail = result.get("stdout_tail", "")[-500:]
+        tail = result.get("stdout_tail", "") or ""
+        tail = tail[-500:]
 
         # Heuristic crash classification
         crash_kind = "OK"
@@ -59,7 +61,7 @@ for mfile in sorted(metadata_files):
                 print(f"    SKIP {relpath}: {e}")
 
         # Save full stdout tail too
-        (artifacts_dir / "_stdout_tail.txt").write_text(result.get("stdout_tail", ""))
+        (artifacts_dir / "_stdout_tail.txt").write_text(result.get("stdout_tail", "") or "")
         (artifacts_dir / "_harvest_summary.json").write_text(json.dumps({
             "rc": rc, "elapsed_seconds": elapsed, "timed_out": timed_out,
             "n_artifacts": n_artifacts, "crash_kind": crash_kind,

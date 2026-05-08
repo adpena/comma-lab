@@ -279,13 +279,38 @@ done < "$FILE_LIST"
 # Submission_dir staging
 # ---------------------------------------------------------------------------
 
+_PR101_NESTED_SUBMISSION_PATH = Path("submissions") / "hnerv_ft_microcodec" / "src"
+
+
+def _resolve_pr101_codec_dir(pr101_source_dir: Path) -> Path:
+    """Locate the directory that actually holds codec.py + model.py.
+
+    Two layouts are accepted:
+      1. ``pr101_source_dir/codec.py`` (flat — legacy/test fixtures)
+      2. ``pr101_source_dir/submissions/hnerv_ft_microcodec/src/codec.py``
+         (PR101 intake clone — what `--pr101-source-dir` typically points at)
+    """
+    flat_codec = pr101_source_dir / "codec.py"
+    flat_model = pr101_source_dir / "model.py"
+    if flat_codec.is_file() and flat_model.is_file():
+        return pr101_source_dir
+    nested = pr101_source_dir / _PR101_NESTED_SUBMISSION_PATH
+    if (nested / "codec.py").is_file() and (nested / "model.py").is_file():
+        return nested
+    raise SystemExit(
+        "FATAL: PR101 codec.py/model.py not found at either layout under "
+        f"{pr101_source_dir} (tried flat root and {_PR101_NESTED_SUBMISSION_PATH})"
+    )
+
+
 def _stage_submission_dir(submission_dir: Path, pr101_source_dir: Path) -> None:
     """Copy PR101 codec.py + model.py + write forked inflate.py + inflate.sh."""
     submission_dir.mkdir(parents=True, exist_ok=True)
     src_dir = submission_dir / "src"
     src_dir.mkdir(parents=True, exist_ok=True)
+    codec_dir = _resolve_pr101_codec_dir(pr101_source_dir)
     for fname in ("codec.py", "model.py"):
-        src_path = pr101_source_dir / fname
+        src_path = codec_dir / fname
         if not src_path.is_file():
             raise SystemExit(f"FATAL: PR101 source missing: {src_path}")
         shutil.copy2(src_path, src_dir / fname)
