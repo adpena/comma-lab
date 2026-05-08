@@ -236,15 +236,27 @@ class CharmContextNet(nn.Module):
         self.act = nn.GELU()
 
     def forward(self, w_quantized_so_far: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """w_quantized_so_far: (1, 1, num_chans_so_far) — channel-summary view.
+
+        Returns scalar (μ_offset, log_σ_offset) tensors used by the parent
+        ChARM forward to refine the hyperprior's per-channel (μ_h, σ_h).
+
+        Codex review 2026-05-08 finding charm_high_b: this network was
+        DEAD CODE in the prior version (parent forward never called it),
+        so a pre-existing transpose bug at line "out = self.fc(x.squeeze(-1).T).T"
+        was hidden. Fixed here with the canonical (1,4)→(2,) flow.
+        """
         # w_quantized_so_far: (1, 1, num_chans_so_far)
         if w_quantized_so_far.shape[-1] == 0:
-            return torch.zeros(1, 1, device=w_quantized_so_far.device), torch.zeros(
-                1, 1, device=w_quantized_so_far.device
+            return (
+                torch.zeros((), device=w_quantized_so_far.device),
+                torch.zeros((), device=w_quantized_so_far.device),
             )
-        x = self.act(self.conv(w_quantized_so_far))
-        x = x.mean(dim=-1, keepdim=True)  # (1, 4, 1)
-        out = self.fc(x.squeeze(-1).T).T  # (2, 1)
-        mu_off, log_sigma_off = out[0], out[1]
+        x = self.act(self.conv(w_quantized_so_far))  # (1, 4, T)
+        x = x.mean(dim=-1)  # (1, 4)
+        out = self.fc(x).squeeze(0)  # (2,)
+        mu_off = out[0]
+        log_sigma_off = out[1]
         return mu_off, log_sigma_off
 
 
@@ -266,7 +278,19 @@ class CharmHyperprior(nn.Module):
         self.num_weight_channels = num_weight_channels
 
     def forward(self, weight: torch.Tensor) -> dict[str, torch.Tensor]:
-        """weight: arbitrary-shape tensor; we flatten and chunk into channel groups."""
+        """weight: arbitrary-shape tensor; we flatten and chunk into channel groups.
+
+        ChARM 2020 channel-conditional rate model:
+            p(w_c | z, w_<c) = N(μ_c + μ_off(w_<c), σ_c · exp(log_σ_off(w_<c)))
+        where (μ_c, σ_c) come from the hyperprior decoder applied to z, and
+        (μ_off, log_σ_off) are autoregressive offsets predicted from previously
+        decoded channels via ``self.context``. This makes the cross-entropy
+        objective truly channel-conditional, matching ChARM 2020. (Codex review
+        2026-05-08 caught the prior version's failure to call ``self.context``;
+        codex_finding_charm_high_a_b_FIXED.)
+
+        [empirical:src/tac/tests/test_train_charm_50k_toy_rate_math.py]
+        """
         device = weight.device
         # Quantize to INT8 (round to nearest, scale by max-abs)
         scale = weight.abs().max().clamp(min=1e-8)
@@ -285,15 +309,43 @@ class CharmHyperprior(nn.Module):
         # Encode hyperprior z from a 1D flatten view
         # (1, 1, N) → encoder
         z = self.encoder(w_flat.reshape(1, 1, -1))  # (1, num_channels)
-        # Decode μ, σ per channel
-        mu, sigma = self.decoder(z)  # each (num_weight_channels,)
-        # Compute differentiable rate estimate (Round 1 review fix #1: corrected
-        # differential-entropy formula; was missing the `e` factor and conflated
-        # nat units with bits in the cross-entropy correction term).
-        # For a Gaussian with predicted (μ_pred, σ_pred) modeling INT8 weights with
-        # quantization step Δ=1, the per-symbol cross-entropy in bits is:
-        #     H(emp || pred) = 0.5·log2(2π·e·σ_pred²) bits  [diff entropy]
-        #                    + 0.5·log2(e)·(σ_emp²+(μ_pred−μ_emp)²)/σ_pred²  [bits cor]
+        # Decode hyperprior μ_h, σ_h per channel (the "factorized hyperprior" piece)
+        mu_h, sigma_h = self.decoder(z)  # each (num_weight_channels,)
+
+        # ChARM 2020 channel-conditional refinement: for each channel c, predict
+        # (μ_off, log_σ_off) from the channel-mean of w_<c (decoded so far). This
+        # is the autoregressive context branch that turns the factorized
+        # hyperprior into a proper ChARM rate model.
+        per_channel_mean_decoded = w_chunked.mean(dim=-1)  # (num_weight_channels,) — channel-summary used for context
+        mu_offsets = torch.zeros_like(mu_h)
+        log_sigma_offsets = torch.zeros_like(mu_h)
+        for c in range(self.num_weight_channels):
+            if c == 0:
+                continue  # no prior channels for c=0; offsets stay zero
+            # Pass channel-summaries of w_<c into the context net
+            prior_summary = per_channel_mean_decoded[:c].reshape(1, 1, -1)
+            mu_off_c, log_sigma_off_c = self.context(prior_summary)
+            mu_offsets[c] = mu_off_c.reshape(())
+            log_sigma_offsets[c] = log_sigma_off_c.reshape(())
+
+        # Combine hyperprior + context to form per-channel ChARM (μ, σ).
+        mu = mu_h + mu_offsets
+        sigma = (sigma_h * torch.exp(log_sigma_offsets)).clamp(min=1e-6, max=10.0)
+
+        # Compute differentiable rate estimate. Codex review 2026-05-08 caught
+        # an `e` double-count in the prior formula: it added 0.5·log2(2π·e·σ²)
+        # AND a separate 0.5·log2(e)·ratio correction, so the matched-Gaussian
+        # case (var_emp=σ², μ_emp=μ) would yield 0.5·log2(2π·e·σ²) + 0.5·log2(e)
+        # ≈ 0.5·log2(2π·e²·σ²) — inflated by 0.7213 bits/symbol.
+        #
+        # The corrected formula keeps the entropy-plus-KL form but subtracts 1
+        # from the correction term so the matched case yields exactly the
+        # differential entropy:
+        #   H(emp || pred) = 0.5·log2(2π·e·σ²) [bits, differential entropy]
+        #                  + 0.5·log2(e)·(var_ratio + mean_diff − 1) [KL bits]
+        # Matched limit: var_ratio=1, mean_diff=0, correction=0, result equals
+        # 0.5·log2(2π·e·σ²) ✓
+        # [empirical:src/tac/tests/test_train_charm_50k_toy_rate_math.py]
         per_channel_mean = w_chunked.mean(dim=-1)  # (num_weight_channels,)
         per_channel_std = w_chunked.std(dim=-1).clamp(min=1e-6)  # (num_weight_channels,)
         log2_e = 1.4426950408889634
@@ -302,7 +354,7 @@ class CharmHyperprior(nn.Module):
         )
         var_ratio = per_channel_std.pow(2) / sigma.pow(2)
         mean_diff = (mu - per_channel_mean).pow(2) / sigma.pow(2)
-        correction_bits = 0.5 * log2_e * (var_ratio + mean_diff)
+        correction_bits = 0.5 * log2_e * (var_ratio + mean_diff - 1.0)  # codex_charm_high_a fix
         cross_entropy_per_sample_bits = diff_entropy_bits + correction_bits
         # Each channel has group_size samples; total bits = sum(group_size * H_c)
         rate_bits = (cross_entropy_per_sample_bits.sum() * group_size).clamp(min=0.0)
@@ -314,6 +366,10 @@ class CharmHyperprior(nn.Module):
             "z": z,
             "mu": mu,
             "sigma": sigma,
+            "mu_hyperprior": mu_h,
+            "sigma_hyperprior": sigma_h,
+            "mu_context_offsets": mu_offsets,
+            "log_sigma_context_offsets": log_sigma_offsets,
             "rate_bits": rate_bits_total,
             "rate_bits_weight": rate_bits,
             "rate_bits_z": torch.tensor(z_rate_bits, device=device),
