@@ -20,13 +20,22 @@ extensions:
                                 same as γ here, NOT mask payload).
   Stack 2 (α + β + γ):          β.identity → γ — establishes that β as identity
                                 doesn't ladder up the byte cost beyond γ alone.
-  Stack 3 (Path B step 6 ADMM × continuous-K + Op1 finalizer):
-                                a custom-built composition where the Joint-ADMM
-                                continuous-K mechanism (153,639 B at 4.15%
-                                rel_err per commit 983598d2) is followed by a
-                                final Op1 split-Brotli pass on the dequantized
-                                substrate. Tests whether the post-ADMM substrate
-                                is more or less compressible than raw fp32.
+  Stack 3 (Path B step 6 Lagrangian per-tensor allocation × continuous-K + Op1 finalizer):
+                                a custom-built composition where the Lagrangian
+                                per-tensor allocation continuous-K mechanism
+                                (153,639 B at 4.15% rel_err per commit 983598d2)
+                                is followed by a final Op1 split-Brotli pass on
+                                the dequantized substrate. Tests whether the
+                                post-allocation substrate is more or less
+                                compressible than raw fp32.
+
+NAMING CORRECTION (REVIEW-MATH, 2026-05-08, Dykstra council finding)
+--------------------------------------------------------------------
+"Path B step 6 ADMM" = Lagrangian per-tensor allocation via λ-bisection
+over INDEPENDENT per-tensor argmin problems, NOT iterative primal-dual
+ADMM with consensus / dual-variable updates. The Stack 3 label keeps the
+historical "ADMM" prefix for backward compatibility but the mechanism is
+correctly named "lagrangian_per_tensor_allocation_x_continuous_K".
 
 PLUS the canonical eight stacks (Op1_alone, Op2_alone, Op_GammaJointADMM_alone,
 β-identity→Op1, Op3(int6)→Op1, Op3(int6)→Op2, Op3(int7)→Op1,

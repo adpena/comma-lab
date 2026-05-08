@@ -1,7 +1,22 @@
 #!/usr/bin/env python3
-"""PR101 Joint-ADMM cross-component allocation — Path B step 5 empirical anchor.
+"""PR101 Lagrangian per-tensor allocation — Path B step 5 empirical anchor.
 
-The Ω-OPT design predicts -5bp from Joint-ADMM coordination across components
+NAMING CORRECTION (REVIEW-MATH, 2026-05-08, Dykstra council finding)
+--------------------------------------------------------------------
+The historical name "Joint-ADMM" is mathematically misleading: this tool
+implements **Lagrangian per-tensor allocation** via λ-bisection over
+INDEPENDENT per-tensor argmin problems, NOT iterative primal-dual ADMM with
+consensus / dual-variable updates. The ``rho_init`` knob, splitting
+operators, and primal-dual update rules of full ADMM are absent here.
+
+The full primal-dual ADMM with consensus constraints lives in
+``src/tac/joint_admm_coordinator.py`` (Op_GammaJointADMM); this file is a
+distinct simpler mechanism. To avoid downstream confusion, the **technique**
+field in evidence rows is now ``lagrangian_per_tensor_allocation`` (was
+``joint_admm_lagrangian_allocation``); historical rows are NOT rewritten,
+they get a ``renamed_to`` forward reference.
+
+The Ω-OPT design predicts -5bp from coordinated cross-component allocation
 (0.105 vs HStack 0.110). This tool tests whether per-tensor distortion
 allocation via Lagrangian λ beats the uniform-per-tensor-budget greedy
 selector tested in Path B step 4.
@@ -72,8 +87,14 @@ from tac.pr101_split_brotli_codec import (  # noqa: E402
 )
 
 TOOL_NAME = "tools/pr101_omega_opt_joint_admm_allocation_empirical.py"
-SCHEMA_VERSION = "pr101_omega_opt_joint_admm_allocation_empirical.v1"
-EVIDENCE_GRADE = "[CPU-prep faithful Path-B-step-5 Joint-ADMM Lagrangian-allocation test]"
+# v2 schema bump for REVIEW-MATH naming clarification: technique is
+# Lagrangian per-tensor allocation, not primal-dual ADMM.
+SCHEMA_VERSION = "pr101_omega_opt_lagrangian_per_tensor_allocation_empirical.v2"
+SCHEMA_VERSION_HISTORICAL = "pr101_omega_opt_joint_admm_allocation_empirical.v1"
+EVIDENCE_GRADE = (
+    "[CPU-prep faithful Path-B-step-5 Lagrangian-per-tensor-allocation test "
+    "(historical name: Joint-ADMM Lagrangian-allocation)]"
+)
 
 
 def encode_brotli_only(symbols: np.ndarray) -> tuple[int, float]:
@@ -290,7 +311,10 @@ def main(argv: list[str] | None = None) -> int:
         target = next((r for r in manifest["comparison_at_rms_targets"] if abs(r["rms_target"] - 0.10) < 1e-9),
                       manifest["comparison_at_rms_targets"][0])
         evidence_row = {
-            "technique": "joint_admm_lagrangian_allocation",
+            "technique": "lagrangian_per_tensor_allocation",
+            "technique_historical_alias": "joint_admm_lagrangian_allocation",
+            "renamed_to": "lagrangian_per_tensor_allocation",
+            "renamed_per": "REVIEW-MATH 2026-05-08 Dykstra naming finding",
             "empirical_archive_bytes": target["admm_bytes"],
             "evidence_grade": EVIDENCE_GRADE,
             "evidence_marker": EVIDENCE_GRADE,

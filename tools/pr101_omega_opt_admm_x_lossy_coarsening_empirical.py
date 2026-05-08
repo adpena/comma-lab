@@ -1,8 +1,21 @@
 #!/usr/bin/env python3
-"""PR101 Joint-ADMM × continuous lossy_coarsening — Path B step 6 empirical anchor.
+"""PR101 Lagrangian per-tensor allocation × continuous lossy_coarsening —
+Path B step 6 empirical anchor.
+
+NAMING CORRECTION (REVIEW-MATH, 2026-05-08, Dykstra council finding)
+--------------------------------------------------------------------
+The historical name "Joint-ADMM × continuous lossy_coarsening" is
+mathematically misleading: this tool implements **Lagrangian per-tensor
+allocation** via λ-bisection over INDEPENDENT per-tensor argmin problems
+over a continuous-K basis, NOT iterative primal-dual ADMM with consensus.
+
+The technique field in evidence rows is now
+``lagrangian_per_tensor_allocation_x_continuous_lossy_coarsening`` (was
+``joint_admm_x_continuous_lossy_coarsening``); historical rows are NOT
+rewritten, they get a ``renamed_to`` forward reference.
 
 The high-EV combination of two empirical winners:
-- Path B step 5: Joint-ADMM Lagrangian-allocation MECHANISM (allocates
+- Path B step 5: Lagrangian per-tensor allocation MECHANISM (allocates
   per-tensor distortion non-uniformly via λ bisection)
 - Subagent D: continuous lossy_coarsening (per-tensor K-step rounding;
   achieves 156,344 B at 3.86% rel_err on PR101)
@@ -64,8 +77,18 @@ from pr101_lossy_coarsening_analytical import (  # noqa: E402
 )
 
 TOOL_NAME = "tools/pr101_omega_opt_admm_x_lossy_coarsening_empirical.py"
-SCHEMA_VERSION = "pr101_omega_opt_admm_x_lossy_coarsening_empirical.v1"
-EVIDENCE_GRADE = "[CPU-prep faithful Path-B-step-6 ADMM × continuous lossy_coarsening test]"
+# v2 schema bump for REVIEW-MATH naming clarification: technique is
+# Lagrangian per-tensor allocation × continuous lossy_coarsening, not
+# primal-dual ADMM.
+SCHEMA_VERSION = (
+    "pr101_omega_opt_lagrangian_per_tensor_x_continuous_lossy_coarsening_empirical.v2"
+)
+SCHEMA_VERSION_HISTORICAL = "pr101_omega_opt_admm_x_lossy_coarsening_empirical.v1"
+EVIDENCE_GRADE = (
+    "[CPU-prep faithful Path-B-step-6 Lagrangian-per-tensor-allocation × "
+    "continuous lossy_coarsening test "
+    "(historical name: ADMM × continuous lossy_coarsening)]"
+)
 
 K_RANGE = list(range(1, 65))
 
@@ -265,7 +288,10 @@ def main(argv: list[str] | None = None) -> int:
                        if abs(r["rms_target"] - 0.0386) < 1e-9),
                       manifest["comparison_at_rms_targets"][0])
         evidence_row = {
-            "technique": "joint_admm_x_continuous_lossy_coarsening",
+            "technique": "lagrangian_per_tensor_allocation_x_continuous_lossy_coarsening",
+            "technique_historical_alias": "joint_admm_x_continuous_lossy_coarsening",
+            "renamed_to": "lagrangian_per_tensor_allocation_x_continuous_lossy_coarsening",
+            "renamed_per": "REVIEW-MATH 2026-05-08 Dykstra naming finding",
             "empirical_archive_bytes": target["admm_K_lagrangian"]["archive_bytes"],
             "evidence_grade": EVIDENCE_GRADE,
             "evidence_marker": EVIDENCE_GRADE,

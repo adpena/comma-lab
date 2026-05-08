@@ -1,11 +1,20 @@
 #!/usr/bin/env python3
-"""Build the Path B step 6 ADMM × lossy_coarsening byte-closed candidate archive.
+"""Build the Path B step 6 Lagrangian per-tensor allocation × lossy_coarsening
+byte-closed candidate archive (historically named "ADMM × lossy_coarsening").
+
+NAMING CORRECTION (REVIEW-MATH, 2026-05-08, Dykstra council finding)
+--------------------------------------------------------------------
+The historical name "ADMM" in this tool refers to the **Lagrangian
+per-tensor allocation** mechanism (λ-bisection over independent per-tensor
+argmin), NOT iterative primal-dual ADMM. The filename and inputs are kept
+backward-compatible; the docstring + manifest field
+``review_math_naming_clarification`` document the actual mechanism.
 
 Source-of-finding
 -----------------
 ``reports/raw/pr101_omega_opt_admm_x_lossy_coarsening_20260508T041303Z/manifest.json``
 (commit 983598d2 of ``tools/pr101_omega_opt_admm_x_lossy_coarsening_empirical.py``)
-showed that Joint-ADMM Lagrangian-allocation over a continuous-K basis
+showed that Lagrangian per-tensor allocation over a continuous-K basis
 produces a smaller archive than subagent D's greedy per-tensor-budget
 approach when both target the same RMS distortion.
 
@@ -461,6 +470,19 @@ def main(argv: list[str] | None = None) -> int:
         "lane_id": LANE_ID,
         "built_at_utc": _utc_now_iso(),
         "source_admm_manifest": ADMM_SOURCE_MANIFEST,
+        "review_math_naming_clarification": {
+            "historical_name": "ADMM",
+            "actual_mechanism": "lagrangian_per_tensor_allocation",
+            "rationale": (
+                "λ-bisection over INDEPENDENT per-tensor argmin problems; "
+                "no iterative primal-dual ADMM updates, no consensus "
+                "constraints. Renamed per REVIEW-MATH 2026-05-08 Dykstra "
+                "council finding."
+            ),
+            "filename_kept_for_backward_compat": True,
+        },
+        "technique_canonical_name": "lagrangian_per_tensor_allocation_x_continuous_lossy_coarsening",
+        "technique_historical_alias": "admm_x_lossy_coarsening_path_b_step6",
         "admm_rms_target": ADMM_RMS_TARGET,
         "admm_lambda": ADMM_PROXY_LAMBDA,
         "admm_proxy_archive_bytes": ADMM_PROXY_ARCHIVE_BYTES,
