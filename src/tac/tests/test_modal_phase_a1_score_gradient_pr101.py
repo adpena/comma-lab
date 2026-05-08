@@ -1,4 +1,7 @@
 import ast
+import json
+import subprocess
+import sys
 from pathlib import Path
 
 
@@ -61,3 +64,67 @@ def test_modal_phase_a1_recover_preserves_harvest_command_and_ttl() -> None:
     assert "Modal result-cache TTL" in text
     assert "tools/harvest_modal_calls.py" in text
     assert "recover --label <instance_job_id>" in text
+
+
+def test_modal_phase_a1_recover_closes_terminal_claim_rows() -> None:
+    text = _source()
+    recover = text[text.index("def recover("):]
+
+    assert "completed_modal_recovered" in text
+    assert "failed_modal_recovered" in text
+    assert "failed_modal_result_cache_expired" in text
+    assert "_returncode_is_zero(rc)" in recover
+    assert recover.index("result = fc.get(timeout=2)") < recover.index(
+        "_close_modal_recovery_claim("
+    )
+
+
+def test_modal_phase_a1_direct_plan_does_not_spawn_or_claim(tmp_path: Path) -> None:
+    pr101_archive = tmp_path / "archive.zip"
+    pr101_archive.write_bytes(b"not-a-real-archive-but-custody-bytes")
+    source_dir = tmp_path / "src"
+    source_dir.mkdir()
+    (source_dir / "model.py").write_text("VALUE = 1\n")
+    video_path = tmp_path / "0.mkv"
+    video_path.write_bytes(b"fake-video-bytes")
+    json_out = tmp_path / "plan.json"
+    claim_file = REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md"
+    before_claims = claim_file.read_text() if claim_file.exists() else None
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "plan",
+            "--pr101-archive", str(pr101_archive),
+            "--pr101-source-dir", str(source_dir),
+            "--video-path", str(video_path),
+            "--label", "unit-test-plan",
+            "--epochs", "3",
+            "--json-out", str(json_out),
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads(json_out.read_text())
+    stdout_payload = json.loads(proc.stdout)
+    assert stdout_payload == payload
+    assert payload["instance_job_id"] == "unit-test-plan"
+    assert payload["dispatch_attempted"] is False
+    assert payload["remote_or_gpu_eval_started"] is False
+    assert payload["lane_claim_opened"] is False
+    assert payload["modal_app_creation_not_attempted"] is True
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["ready_for_modal_dispatch_command"] is True
+    assert payload["validation_errors"] == []
+    assert payload["params"]["epochs"] == 3
+    assert ".venv/bin/modal" in payload["dispatch_command"]
+    assert "--detach" in payload["dispatch_command"]
+    after_claims = claim_file.read_text() if claim_file.exists() else None
+    assert after_claims == before_claims

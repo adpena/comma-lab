@@ -259,6 +259,34 @@ def test_a2_certified_binding_rejects_stub_and_map_sha_mismatch(tmp_path) -> Non
         validate_a2_certified_sensitivity_binding(stale, manifest_root=tmp_path)
 
 
+def test_a2_certified_binding_rejects_conflicting_declared_sensitivity_shas(tmp_path) -> None:
+    manifest_path = tmp_path / "component_sensitivity_v1.json"
+    write_component_sensitivity_manifest(manifest_path, _valid_manifest())
+    a2_manifest = {
+        "sensitivity_artifact": {
+            "path": "combined_certified_sensitivity_map.pt",
+            "status": "passed",
+            "allow_diagnostic_sensitivity": False,
+            "metadata_blockers": [],
+            "sha256": SHA_C,
+            "component_sensitivity_manifest": {
+                "path": "component_sensitivity_v1.json",
+                "sha256": sha256_file(manifest_path),
+                "component": "combined",
+            },
+        },
+        "inputs": {
+            "sensitivity_map_sha256": SHA_A,
+        },
+    }
+
+    with pytest.raises(
+        ComponentSensitivityArtifactError,
+        match=r"inputs\.sensitivity_map_sha256 does not match certified combined map",
+    ):
+        validate_a2_certified_sensitivity_binding(a2_manifest, manifest_root=tmp_path)
+
+
 def test_promotion_sample_plan_requires_full_absolute_pair_ids() -> None:
     missing = _valid_manifest()
     missing["sample_plan"]["holdout_pairs"].pop()  # type: ignore[index,union-attr]

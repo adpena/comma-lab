@@ -70,6 +70,9 @@ Currently runs:
   Gate #23: tools/audit_a2_packet_ladder_closure.py --strict
            (A2 packet/probe artifacts keep no-score authority fields and
             inherited dispatch blockers alive until exact eval closure)
+  Gate #24: Phase A post-green custody/discoverability source gate
+           (A5 readiness, A6 measured-negative, and Modal A1 recovery
+            surfaces remain visible and fail-closed without dispatching)
   Lane #1: tools/dispatch_dryrun_apogee_intN.py --all-pareto-frontier
            --allow-forensic-byte-only
            (self-protection check: Apogee intN remains byte-only and blocked
@@ -147,6 +150,10 @@ FRONTIER_ARCHIVE_LAYOUT_AUDIT = TOOLS / "pr106_archive_decomposition.py"
 OMEGA_OPT_ANCHOR_AUDIT = TOOLS / "check_omega_opt_anchor_discipline.py"
 EVAL_LOADER_DRIFT_PROBE = TOOLS / "probe_eval_loader_drift.py"
 A2_PACKET_LADDER_CLOSURE_AUDIT = TOOLS / "audit_a2_packet_ladder_closure.py"
+A5_PACKET_READINESS_TOOL = TOOLS / "build_pr101_frame_conditional_packet_readiness.py"
+A6_BLOCKFP_HYPERPRIOR_ANCHOR = TOOLS / "pr101_a6_blockfp_hyperprior_anchor.py"
+MODAL_A1_SCORE_GRADIENT_DISPATCHER = REPO / "experiments/modal_phase_a1_score_gradient_pr101.py"
+LIGHTNING_A1_SCORE_GRADIENT_DISPATCHER = TOOLS / "dispatch_phase_a1_score_gradient_pr101.py"
 EVAL_LOADER_DRIFT_MISSING_PREREQ_CLASS = "missing_prerequisite"
 EVAL_LOADER_DRIFT_PROBE_RUNTIME_ERROR_CLASS = "probe_runtime_error"
 EVAL_LOADER_DRIFT_KNOWN_MISSING_PREREQ_CODES = frozenset(
@@ -1429,6 +1436,68 @@ def _run_pr91_hpm1_fail_closed_gate() -> tuple[bool, str]:
     )
 
 
+def _run_phase_a_post_green_discoverability_gate() -> tuple[bool, str]:
+    failures: list[str] = []
+    for label, path in (
+        ("A5 packet readiness tool", A5_PACKET_READINESS_TOOL),
+        ("A6 measured-negative anchor", A6_BLOCKFP_HYPERPRIOR_ANCHOR),
+        ("Modal A1 dispatcher", MODAL_A1_SCORE_GRADIENT_DISPATCHER),
+        ("Lightning A1 dispatcher", LIGHTNING_A1_SCORE_GRADIENT_DISPATCHER),
+    ):
+        if not path.is_file():
+            failures.append(f"missing {label}: {path.relative_to(REPO)}")
+
+    sources: dict[str, str] = {}
+    for path in (
+        A5_PACKET_READINESS_TOOL,
+        A6_BLOCKFP_HYPERPRIOR_ANCHOR,
+        MODAL_A1_SCORE_GRADIENT_DISPATCHER,
+    ):
+        if path.is_file():
+            sources[path.name] = path.read_text(encoding="utf-8")
+
+    a5_source = sources.get(A5_PACKET_READINESS_TOOL.name, "")
+    if "build_packet_readiness(" not in a5_source or "--fail-if-not-ready" not in a5_source:
+        failures.append("A5 packet-readiness CLI is not discoverable as a fail-if-not-ready gate")
+
+    a6_source = sources.get(A6_BLOCKFP_HYPERPRIOR_ANCHOR.name, "")
+    for needle in (
+        '"promotion_eligible": False',
+        '"rank_or_kill_eligible": False',
+        '"family_falsified": False',
+        '"score_affecting_payload_changed": False',
+        '"charged_bits_changed": False',
+    ):
+        if needle not in a6_source:
+            failures.append(f"A6 anchor missing fail-closed measured-negative field {needle}")
+
+    modal_source = sources.get(MODAL_A1_SCORE_GRADIENT_DISPATCHER.name, "")
+    for needle in (
+        "plan_cli(",
+        '"dispatch_attempted": False',
+        '"remote_or_gpu_eval_started": False',
+        "_close_modal_recovery_claim(",
+        "completed_modal_recovered",
+        "failed_modal_recovered",
+        "failed_modal_result_cache_expired",
+    ):
+        if needle not in modal_source:
+            failures.append(f"Modal A1 dispatcher missing no-dispatch/recovery guard {needle}")
+    if modal_source:
+        claim_idx = modal_source.find("claim_rc = _claim_lane(")
+        spawn_idx = modal_source.find("call = run_phase_a1_t4.spawn(")
+        if claim_idx < 0 or spawn_idx < 0 or claim_idx > spawn_idx:
+            failures.append("Modal A1 dispatcher must claim the lane before spawn")
+
+    if failures:
+        return False, "Phase A post-green discoverability failed: " + "; ".join(failures)
+    return True, (
+        "Phase A post-green discoverability: PASS "
+        "(A5 readiness CLI, A6 measured-negative manifest, Modal A1 plan/recover, "
+        "and A1 dispatcher surfaces are visible and fail-closed)"
+    )
+
+
 def _execute_step(step: PreflightStep) -> PreflightResult:
     start = time.perf_counter()
     try:
@@ -1637,6 +1706,10 @@ def main(argv: list[str] | None = None) -> int:
         OMEGA_OPT_ANCHOR_AUDIT,
         EVAL_LOADER_DRIFT_PROBE,
         A2_PACKET_LADDER_CLOSURE_AUDIT,
+        A5_PACKET_READINESS_TOOL,
+        A6_BLOCKFP_HYPERPRIOR_ANCHOR,
+        MODAL_A1_SCORE_GRADIENT_DISPATCHER,
+        LIGHTNING_A1_SCORE_GRADIENT_DISPATCHER,
         HSTACK_VSTACK_PLAN,
         PR91_HPM1_READINESS_ARTIFACT,
         PR91_HPM1_RUNTIME_CONTRACT_ARTIFACT,
@@ -1849,6 +1922,14 @@ def main(argv: list[str] | None = None) -> int:
             ),
             "  ✓ Gate #23: A2 packet ladder closure — PASSED",
             "  ✗ Gate #23: A2 packet ladder closure — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            24,
+            "Phase A post-green custody discoverability",
+            _run_phase_a_post_green_discoverability_gate,
+            "  ✓ Gate #24: Phase A post-green custody discoverability — PASSED",
+            "  ✗ Gate #24: Phase A post-green custody discoverability — FAILED",
         ),
     ]
     lane_steps = [

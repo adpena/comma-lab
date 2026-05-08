@@ -192,6 +192,89 @@ def test_a5_packet_readiness_rejects_score_claiming_anchor(tmp_path: Path) -> No
     assert manifest["ready_for_exact_eval_dispatch"] is False
 
 
+def test_a5_packet_readiness_rejects_nested_authority_flags(tmp_path: Path) -> None:
+    path = _a5_manifest(tmp_path / "a5.json")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["rows"][0]["frame_conditional_wire_contract"]["promotion_eligible"] = True
+    path.write_text(json_text(payload), encoding="utf-8")
+
+    manifest = build_packet_readiness(a5_manifest_path=path, repo_root=tmp_path)
+
+    assert (
+        "a5_manifest_authority_flag_true:"
+        "$.rows[0].frame_conditional_wire_contract.promotion_eligible"
+    ) in manifest["readiness_blockers"]
+    assert manifest["score_claim"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
+def test_a5_packet_readiness_rejects_non_numeric_score_marginals(
+    tmp_path: Path,
+) -> None:
+    a5_manifest = _a5_manifest(tmp_path / "a5.json")
+    artifacts = {
+        CANDIDATE_ARCHIVE_MANIFEST: _write_json(
+            tmp_path / "candidate_archive.json",
+            {
+                "score_claim": False,
+                "charged_bits_changed": True,
+                "candidate_archive": {
+                    "path": "candidate/archive.zip",
+                    "bytes": 900,
+                    "sha256": "d" * 64,
+                },
+            },
+        ),
+        PACKET_RUNTIME_PATCH_MANIFEST: _write_json(
+            tmp_path / "runtime_patch.json",
+            {
+                "score_claim": False,
+                "packet_local_runtime_patch": {
+                    "consumes_schema": FRAME_CONDITIONAL_LATENT_WIRE_SCHEMA,
+                    "parse_archive_consumes_q_bits_sideinfo": True,
+                    "decode_latents_consumes_variable_width_payload": True,
+                },
+            },
+        ),
+        RUNTIME_CONSUMPTION_PROOF: _write_json(
+            tmp_path / "runtime_proof.json",
+            {
+                "score_claim": False,
+                "ready_for_exact_eval_runtime": True,
+                "consumed_q_bits_sideinfo_sha256": "b" * 64,
+                "consumed_latent_wire_payload_sha256": "c" * 64,
+            },
+        ),
+        PER_PAIR_SCORE_MARGINAL_MANIFEST: _write_json(
+            tmp_path / "marginals.json",
+            {
+                "score_claim": False,
+                "n_pairs": 2,
+                "marginal_evidence_available": True,
+                "per_pair_score_marginals": ["0.1", 0.2],
+            },
+        ),
+        STRICT_PRE_SUBMISSION_COMPLIANCE_JSON: _write_json(
+            tmp_path / "strict_compliance.json",
+            {"score_claim": False, "ok": True},
+        ),
+    }
+
+    manifest = build_packet_readiness(
+        a5_manifest_path=a5_manifest,
+        artifact_paths=artifacts,
+        repo_root=tmp_path,
+    )
+
+    assert PER_PAIR_SCORE_MARGINAL_MANIFEST in manifest["invalid_artifacts"]
+    assert (
+        f"{PER_PAIR_SCORE_MARGINAL_MANIFEST}:marginals_not_finite_numeric"
+        in manifest["readiness_blockers"]
+    )
+    assert manifest["ready_for_exact_eval_after_lane_claim"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
 def test_a5_packet_readiness_cli_writes_fail_closed_json(tmp_path: Path) -> None:
     tool = _load_tool()
     out = tmp_path / "readiness.json"

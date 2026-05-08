@@ -9,7 +9,9 @@ manifest that names the exact missing artifacts before any exact-eval spend.
 from __future__ import annotations
 
 import json
+import math
 from collections.abc import Mapping, Sequence
+from numbers import Real
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +28,16 @@ PACKET_RUNTIME_PATCH_MANIFEST = "packet_local_runtime_patch_manifest"
 RUNTIME_CONSUMPTION_PROOF = "frame_conditional_runtime_consumption_proof"
 PER_PAIR_SCORE_MARGINAL_MANIFEST = "per_pair_score_marginal_manifest"
 STRICT_PRE_SUBMISSION_COMPLIANCE_JSON = "strict_pre_submission_compliance_json"
+FALSE_AUTHORITY_KEYS = frozenset(
+    {
+        "score_claim",
+        "promotion_eligible",
+        "rank_or_kill_eligible",
+        "score_promotion_allowed",
+        "ready_for_exact_eval_dispatch",
+        "dispatch_attempted",
+    }
+)
 
 REQUIRED_ARTIFACTS: tuple[tuple[str, str, str], ...] = (
     (
@@ -193,6 +205,8 @@ def _summarize_a5_manifest(
         blockers.append("a5_manifest_must_be_byte_proxy_only")
     if manifest.get("ready_for_exact_eval_dispatch") is True:
         blockers.append("a5_manifest_unexpectedly_claims_exact_eval_readiness")
+    for path in _true_authority_flag_paths(manifest):
+        blockers.append(f"a5_manifest_authority_flag_true:{path}")
 
     rows = manifest.get("rows")
     best_row: Mapping[str, Any] | None = None
@@ -207,6 +221,12 @@ def _summarize_a5_manifest(
             blockers.append("a5_manifest_rows_have_no_objects")
     else:
         blockers.append("a5_manifest_rows_missing")
+    if best_row is not None:
+        best_delta = best_row.get("archive_delta_bytes")
+        if not _is_finite_number(best_delta):
+            blockers.append("best_a5_row_archive_delta_bytes_not_finite")
+        elif float(best_delta) >= 0.0:
+            blockers.append("best_a5_row_archive_delta_bytes_not_negative")
 
     wire_contract: Mapping[str, Any] = {}
     if best_row is not None and isinstance(best_row.get("frame_conditional_wire_contract"), Mapping):
@@ -238,6 +258,8 @@ def _summarize_a5_manifest(
         blockers.append("q_bits_sideinfo_sha256_missing")
     if not _is_sha256(latent_sha):
         blockers.append("latent_wire_payload_sha256_missing")
+    if latent_payload.get("score_affecting_payload_changed") is not True:
+        blockers.append("latent_wire_payload_changed_not_true")
 
     return (
         {
@@ -414,6 +436,8 @@ def _validate_score_marginal_manifest(
     blockers: list[str] = []
     if payload.get("score_claim") is True:
         blockers.append(f"{PER_PAIR_SCORE_MARGINAL_MANIFEST}:score_claim_must_be_false")
+    for path in _true_authority_flag_paths(payload):
+        blockers.append(f"{PER_PAIR_SCORE_MARGINAL_MANIFEST}:authority_flag_true:{path}")
     expected_n_pairs = _as_int(context.get("expected_n_pairs"))
     manifest_n_pairs = _as_int(payload.get("n_pairs"))
     if expected_n_pairs is not None and manifest_n_pairs != expected_n_pairs:
@@ -423,7 +447,12 @@ def _validate_score_marginal_manifest(
         "marginal_evidence_available"
     ) is True
     if isinstance(marginals, Sequence) and not isinstance(marginals, (str, bytes)):
-        ready = ready or (expected_n_pairs is None or len(marginals) == expected_n_pairs)
+        if expected_n_pairs is not None and len(marginals) != expected_n_pairs:
+            blockers.append(f"{PER_PAIR_SCORE_MARGINAL_MANIFEST}:marginal_count_mismatch")
+        if not _all_finite_numbers(marginals):
+            blockers.append(f"{PER_PAIR_SCORE_MARGINAL_MANIFEST}:marginals_not_finite_numeric")
+        else:
+            ready = ready or (expected_n_pairs is None or len(marginals) == expected_n_pairs)
     if not ready:
         blockers.append(
             f"{PER_PAIR_SCORE_MARGINAL_MANIFEST}:per_pair_score_marginals_not_ready"
@@ -594,6 +623,29 @@ def _as_int(value: Any) -> int | None:
 
 def _is_sha256(value: str) -> bool:
     return len(value) == 64 and all(ch in "0123456789abcdefABCDEF" for ch in value)
+
+
+def _is_finite_number(value: Any) -> bool:
+    return not isinstance(value, bool) and isinstance(value, Real) and math.isfinite(float(value))
+
+
+def _all_finite_numbers(values: Sequence[Any]) -> bool:
+    return all(_is_finite_number(value) for value in values)
+
+
+def _true_authority_flag_paths(value: Any, *, path: str = "$") -> list[str]:
+    paths: list[str] = []
+    if isinstance(value, Mapping):
+        for key, child in value.items():
+            child_path = f"{path}.{key}"
+            if str(key) in FALSE_AUTHORITY_KEYS and child is True:
+                paths.append(child_path)
+            paths.extend(_true_authority_flag_paths(child, path=child_path))
+        return paths
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        for index, child in enumerate(value):
+            paths.extend(_true_authority_flag_paths(child, path=f"{path}[{index}]"))
+    return paths
 
 
 def _dedupe(values: Sequence[str]) -> list[str]:

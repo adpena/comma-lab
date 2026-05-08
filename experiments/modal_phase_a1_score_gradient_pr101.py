@@ -55,6 +55,15 @@ does not block):
         --video-path upstream/videos/0.mkv \\
         --epochs 200
 
+Local plan only (no Modal app creation, no lane claim, no GPU spend):
+
+    .venv/bin/python experiments/modal_phase_a1_score_gradient_pr101.py plan \\
+        --pr101-archive experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip \\
+        --pr101-source-dir experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/source/submissions/hnerv_ft_microcodec/src \\
+        --video-path upstream/videos/0.mkv \\
+        --epochs 200 \\
+        --json-out experiments/results/track1_phase_a1_score_gradient_plan.json
+
 Recover (within 24h of dispatch — Modal result-cache TTL):
 
     .venv/bin/python experiments/modal_phase_a1_score_gradient_pr101.py recover \\
@@ -906,6 +915,276 @@ def run_phase_a1_t4(
 # Local-side: lane claim + dispatch metadata + recover
 # ---------------------------------------------------------------------------
 
+def _phase_a1_dispatch_command(
+    *,
+    pr101_archive: Path,
+    pr101_source_dir: Path,
+    video_path: Path,
+    label: str,
+    epochs: int,
+    steps_per_epoch: int,
+    batch_size: int,
+    lr: float,
+    max_frames: int,
+    aux_kl_weight: float,
+    aux_pixel_l1_weight: float,
+    train_timeout_hours: float,
+    build_timeout_minutes: float,
+    eval_timeout_minutes: float,
+    timeout_hours: float,
+    cost_cap_usd: float,
+    predicted_low: float,
+    predicted_high: float,
+) -> list[str]:
+    """Return the audited Modal command a human/operator can dispatch later."""
+    return [
+        "PYTHONPATH=src:upstream:$PWD",
+        ".venv/bin/modal",
+        "run",
+        "--detach",
+        "experiments/modal_phase_a1_score_gradient_pr101.py",
+        "--pr101-archive", str(pr101_archive),
+        "--pr101-source-dir", str(pr101_source_dir),
+        "--video-path", str(video_path),
+        "--label", label,
+        "--epochs", str(int(epochs)),
+        "--steps-per-epoch", str(int(steps_per_epoch)),
+        "--batch-size", str(int(batch_size)),
+        "--lr", str(float(lr)),
+        "--max-frames", str(int(max_frames)),
+        "--aux-kl-weight", str(float(aux_kl_weight)),
+        "--aux-pixel-l1-weight", str(float(aux_pixel_l1_weight)),
+        "--train-timeout-hours", str(float(train_timeout_hours)),
+        "--build-timeout-minutes", str(float(build_timeout_minutes)),
+        "--eval-timeout-minutes", str(float(eval_timeout_minutes)),
+        "--timeout-hours", str(float(timeout_hours)),
+        "--cost-cap-usd", str(float(cost_cap_usd)),
+        "--predicted-low", str(float(predicted_low)),
+        "--predicted-high", str(float(predicted_high)),
+    ]
+
+
+def build_local_plan(
+    *,
+    pr101_archive: str,
+    pr101_source_dir: str,
+    video_path: str,
+    label: str | None,
+    epochs: int,
+    steps_per_epoch: int,
+    batch_size: int,
+    lr: float,
+    max_frames: int,
+    aux_kl_weight: float,
+    aux_pixel_l1_weight: float,
+    train_timeout_hours: float,
+    build_timeout_minutes: float,
+    eval_timeout_minutes: float,
+    timeout_hours: float,
+    cost_cap_usd: float,
+    predicted_low: float,
+    predicted_high: float,
+) -> tuple[dict[str, Any], int]:
+    """Build a local-only A1 dispatch plan without touching Modal or claims.
+
+    ``modal run --print-only`` still asks Modal to create the app. This path is
+    a zero-remote, zero-GPU custody artifact for operator review and later
+    dispatch once provider billing/auth is healthy.
+    """
+    pr101_archive_path = Path(pr101_archive).resolve()
+    pr101_source_dir_path = Path(pr101_source_dir).resolve()
+    video_path_resolved = Path(video_path).resolve()
+
+    if label:
+        instance_job_id = _safe_label(label)
+    else:
+        timestamp = dt.datetime.now(tz=dt.UTC).strftime("%Y%m%dT%H%M%SZ")
+        instance_job_id = f"track1_phase_a1_score_gradient_{timestamp}_modal"
+
+    now = dt.datetime.now(tz=dt.UTC)
+    predicted_eta_utc = (
+        now + dt.timedelta(hours=float(timeout_hours))
+    ).isoformat(timespec="seconds").replace("+00:00", "Z")
+    estimated_cost = HOURLY_RATE_T4_USD * float(timeout_hours)
+
+    validation_errors: list[str] = []
+    if not pr101_archive_path.is_file():
+        validation_errors.append(f"missing_pr101_archive:{pr101_archive_path}")
+    if not pr101_source_dir_path.is_dir():
+        validation_errors.append(f"missing_pr101_source_dir:{pr101_source_dir_path}")
+    if not video_path_resolved.is_file():
+        validation_errors.append(f"missing_video_path:{video_path_resolved}")
+    if estimated_cost > float(cost_cap_usd):
+        validation_errors.append(
+            f"estimated_cost_exceeds_cap:{estimated_cost:.2f}>{float(cost_cap_usd):.2f}"
+        )
+
+    inputs: dict[str, Any] = {
+        "pr101_archive": {"path": str(pr101_archive_path), "exists": pr101_archive_path.is_file()},
+        "pr101_source_dir": {"path": str(pr101_source_dir_path), "exists": pr101_source_dir_path.is_dir()},
+        "video": {"path": str(video_path_resolved), "exists": video_path_resolved.is_file()},
+    }
+    if not validation_errors:
+        pr101_archive_data, pr101_archive_sha, pr101_archive_size = _read_input(
+            pr101_archive_path, "PR101 archive"
+        )
+        del pr101_archive_data
+        pr101_source_zip, pr101_source_zip_sha, pr101_source_zip_size = _read_dir_as_tarball(
+            pr101_source_dir_path, "PR101 source dir"
+        )
+        del pr101_source_zip
+        video_data, video_sha, video_size = _read_input(video_path_resolved, "video")
+        del video_data
+        inputs.update(
+            {
+                "pr101_archive": {
+                    "path": str(pr101_archive_path),
+                    "exists": True,
+                    "bytes": pr101_archive_size,
+                    "sha256": pr101_archive_sha,
+                },
+                "pr101_source_zip": {
+                    "source_dir": str(pr101_source_dir_path),
+                    "exists": True,
+                    "bytes": pr101_source_zip_size,
+                    "sha256": pr101_source_zip_sha,
+                    "format": "zip_stored_directory_snapshot",
+                },
+                "video": {
+                    "path": str(video_path_resolved),
+                    "exists": True,
+                    "bytes": video_size,
+                    "sha256": video_sha,
+                },
+            }
+        )
+
+    params = {
+        "epochs": int(epochs),
+        "steps_per_epoch": int(steps_per_epoch),
+        "batch_size": int(batch_size),
+        "lr": float(lr),
+        "max_frames": int(max_frames),
+        "aux_kl_weight": float(aux_kl_weight),
+        "aux_pixel_l1_weight": float(aux_pixel_l1_weight),
+        "train_timeout_hours": float(train_timeout_hours),
+        "build_timeout_minutes": float(build_timeout_minutes),
+        "eval_timeout_minutes": float(eval_timeout_minutes),
+        "timeout_hours": float(timeout_hours),
+        "cost_cap_usd": float(cost_cap_usd),
+    }
+    dispatch_command = _phase_a1_dispatch_command(
+        pr101_archive=pr101_archive_path,
+        pr101_source_dir=pr101_source_dir_path,
+        video_path=video_path_resolved,
+        label=instance_job_id,
+        epochs=epochs,
+        steps_per_epoch=steps_per_epoch,
+        batch_size=batch_size,
+        lr=lr,
+        max_frames=max_frames,
+        aux_kl_weight=aux_kl_weight,
+        aux_pixel_l1_weight=aux_pixel_l1_weight,
+        train_timeout_hours=train_timeout_hours,
+        build_timeout_minutes=build_timeout_minutes,
+        eval_timeout_minutes=eval_timeout_minutes,
+        timeout_hours=timeout_hours,
+        cost_cap_usd=cost_cap_usd,
+        predicted_low=predicted_low,
+        predicted_high=predicted_high,
+    )
+    plan = {
+        "schema_version": "phase_a1_modal_local_plan_v1",
+        "tool": "experiments/modal_phase_a1_score_gradient_pr101.py",
+        "app": APP_NAME,
+        "lane_id": "track1_phase_a1_score_gradient",
+        "instance_job_id": instance_job_id,
+        "created_at_utc": now.isoformat(timespec="seconds").replace("+00:00", "Z"),
+        "predicted_eta_utc": predicted_eta_utc,
+        "estimated_cost_usd": estimated_cost,
+        "predicted_band": [float(predicted_low), float(predicted_high)],
+        "inputs": inputs,
+        "params": params,
+        "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
+        "auth_eval_device": "cuda",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "dispatch_attempted": False,
+        "remote_or_gpu_eval_started": False,
+        "lane_claim_opened": False,
+        "modal_app_creation_not_attempted": True,
+        "modal_billing_safe": True,
+        "ready_for_modal_dispatch_command": not validation_errors,
+        "validation_errors": validation_errors,
+        "dispatch_command": dispatch_command,
+        "dispatch_command_shell": " ".join(dispatch_command),
+        "recover_command_after_dispatch": (
+            ".venv/bin/python experiments/modal_phase_a1_score_gradient_pr101.py recover "
+            f"--label {instance_job_id}"
+        ),
+        "evidence_grade": "[plan-only]",
+        "notes": [
+            "Local plan path exists because `modal run --print-only` still creates a Modal app.",
+            "No lane claim is required until an actual remote/GPU dispatch is attempted.",
+            "No score promotion is allowed from this plan artifact.",
+        ],
+    }
+    return plan, 0 if not validation_errors else 2
+
+
+def plan_cli(argv: list[str] | None = None) -> int:
+    """Direct Python CLI for local-only A1 plans."""
+    parser = argparse.ArgumentParser(
+        prog="modal_phase_a1_score_gradient_pr101.py plan",
+        description="Write a Modal A1 dispatch plan without app creation, lane claim, or GPU spend.",
+    )
+    parser.add_argument("--pr101-archive", default=str(DEFAULT_PR101_ARCHIVE))
+    parser.add_argument("--pr101-source-dir", default=str(DEFAULT_PR101_SOURCE_DIR))
+    parser.add_argument("--video-path", default=str(DEFAULT_VIDEO_PATH))
+    parser.add_argument("--label", default=None)
+    parser.add_argument("--epochs", type=int, default=200)
+    parser.add_argument("--steps-per-epoch", type=int, default=20)
+    parser.add_argument("--batch-size", type=int, default=4)
+    parser.add_argument("--lr", type=float, default=1e-4)
+    parser.add_argument("--max-frames", type=int, default=1200)
+    parser.add_argument("--aux-kl-weight", type=float, default=1.0)
+    parser.add_argument("--aux-pixel-l1-weight", type=float, default=0.01)
+    parser.add_argument("--train-timeout-hours", type=float, default=3.5)
+    parser.add_argument("--build-timeout-minutes", type=float, default=10.0)
+    parser.add_argument("--eval-timeout-minutes", type=float, default=30.0)
+    parser.add_argument("--timeout-hours", type=float, default=DEFAULT_TIMEOUT_HOURS)
+    parser.add_argument("--cost-cap-usd", type=float, default=DEFAULT_COST_CAP_USD)
+    parser.add_argument("--predicted-low", type=float, default=0.150)
+    parser.add_argument("--predicted-high", type=float, default=0.220)
+    parser.add_argument("--json-out", default=None)
+    args = parser.parse_args(argv)
+    payload, rc = build_local_plan(
+        pr101_archive=args.pr101_archive,
+        pr101_source_dir=args.pr101_source_dir,
+        video_path=args.video_path,
+        label=args.label,
+        epochs=args.epochs,
+        steps_per_epoch=args.steps_per_epoch,
+        batch_size=args.batch_size,
+        lr=args.lr,
+        max_frames=args.max_frames,
+        aux_kl_weight=args.aux_kl_weight,
+        aux_pixel_l1_weight=args.aux_pixel_l1_weight,
+        train_timeout_hours=args.train_timeout_hours,
+        build_timeout_minutes=args.build_timeout_minutes,
+        eval_timeout_minutes=args.eval_timeout_minutes,
+        timeout_hours=args.timeout_hours,
+        cost_cap_usd=args.cost_cap_usd,
+        predicted_low=args.predicted_low,
+        predicted_high=args.predicted_high,
+    )
+    if args.json_out:
+        _write_json(Path(args.json_out), payload)
+    sys.stdout.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    return rc
+
+
 def _claim_lane(
     *,
     lane_id: str,
@@ -939,6 +1218,70 @@ def _claim_lane(
     if proc.returncode != 0:
         sys.stderr.write(proc.stderr)
     return proc.returncode
+
+
+def _utc_now_iso() -> str:
+    return dt.datetime.now(dt.UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def _returncode_is_zero(value: Any) -> bool:
+    if isinstance(value, bool):
+        return False
+    if isinstance(value, int):
+        return value == 0
+    if isinstance(value, str):
+        return value.strip() == "0"
+    return False
+
+
+def _metadata_instance_job_id(label: str, metadata: dict[str, Any]) -> str:
+    raw = metadata.get("instance_job_id") or metadata.get("label") or label
+    return _safe_label(str(raw))
+
+
+def _close_modal_recovery_claim(
+    *,
+    instance_job_id: str,
+    call_id: str,
+    rc: Any,
+    summary: dict[str, Any],
+) -> int:
+    status = (
+        "completed_modal_recovered"
+        if _returncode_is_zero(rc) and summary.get("passed") is True
+        else "failed_modal_recovered"
+    )
+    notes = (
+        f"Phase A1 Modal recover harvested call_id={call_id}; rc={rc!r}; "
+        f"stage={summary.get('stage')!r}; passed={summary.get('passed')!r}. "
+        "Terminal claim row closes the dispatch once cached artifacts are recovered."
+    )
+    return _claim_lane(
+        lane_id="track1_phase_a1_score_gradient",
+        instance_job_id=instance_job_id,
+        predicted_eta_utc=_utc_now_iso(),
+        notes=notes,
+        status=status,
+        force=True,
+    )
+
+
+def _close_modal_expired_claim(
+    *,
+    instance_job_id: str,
+    call_id: str,
+) -> int:
+    return _claim_lane(
+        lane_id="track1_phase_a1_score_gradient",
+        instance_job_id=instance_job_id,
+        predicted_eta_utc=_utc_now_iso(),
+        notes=(
+            f"Phase A1 Modal recover failed because result cache expired for call_id={call_id}; "
+            "terminal failure closes the stale active claim."
+        ),
+        status="failed_modal_result_cache_expired",
+        force=True,
+    )
 
 
 def _write_dispatch_metadata(
@@ -1268,12 +1611,20 @@ def recover(label: str) -> int:
     if not call_id:
         print(f"FATAL: {metadata_path} has no call_id", file=sys.stderr)
         return 2
+    instance_job_id = _metadata_instance_job_id(label, metadata)
     print(f"[recover] label={label} call_id={call_id}")
     try:
         fc = modal.functions.FunctionCall.from_id(call_id)
         result = fc.get(timeout=2)
     except modal.exception.OutputExpiredError:
         print(f"FATAL: Modal result cache EXPIRED for call_id={call_id} (>24h since dispatch)")
+        close_rc = _close_modal_expired_claim(
+            instance_job_id=instance_job_id,
+            call_id=call_id,
+        )
+        if close_rc != 0:
+            print(f"FATAL: failed to close expired Modal claim rc={close_rc}", file=sys.stderr)
+            return 6
         return 3
     except TimeoutError:
         print(f"NOT READY: call_id={call_id} still queued or running. Re-run later.")
@@ -1311,6 +1662,7 @@ def recover(label: str) -> int:
     summary_path = out_dir / "harvest_summary.json"
     _write_json(summary_path, {
         "label": label,
+        "instance_job_id": instance_job_id,
         "call_id": call_id,
         "returncode": rc,
         "elapsed_seconds": elapsed,
@@ -1325,11 +1677,20 @@ def recover(label: str) -> int:
         "tag": summary.get("tag"),
     })
     print(f"[recover] summary saved: {summary_path}")
-    return 0 if rc == 0 else 1
+    close_rc = _close_modal_recovery_claim(
+        instance_job_id=instance_job_id,
+        call_id=call_id,
+        rc=rc,
+        summary=summary,
+    )
+    if close_rc != 0:
+        print(f"FATAL: failed to close recovered Modal claim rc={close_rc}", file=sys.stderr)
+        return 6
+    return 0 if _returncode_is_zero(rc) else 1
 
 
 # ---------------------------------------------------------------------------
-# CLI dispatch (recover subcommand only — main is the modal local_entrypoint)
+# CLI helpers. Dispatch itself remains the Modal local_entrypoint.
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
@@ -1341,9 +1702,13 @@ if __name__ == "__main__":
                             help="instance_job_id (e.g., track1_phase_a1_score_gradient_<ts>_modal)")
         args = parser.parse_args(sys.argv[2:])
         sys.exit(recover(args.label))
+    elif len(sys.argv) >= 2 and sys.argv[1] == "plan":
+        sys.exit(plan_cli(sys.argv[2:]))
     else:
         print(
             "USAGE:\n"
+            "  Plan only: .venv/bin/python experiments/modal_phase_a1_score_gradient_pr101.py "
+            "plan [args]\n"
             "  Dispatch:  PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach \\\n"
             "             experiments/modal_phase_a1_score_gradient_pr101.py [args]\n"
             "  Recover:   .venv/bin/python experiments/modal_phase_a1_score_gradient_pr101.py "

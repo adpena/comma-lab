@@ -327,11 +327,26 @@ def main(argv: list[str] | None = None) -> int:
         "tool": TOOL_NAME,
         "codec_tag": CODEC_TAG,
         "timestamp": timestamp,
+        "evidence_grade": "[byte-anchor]",
+        "evidence_semantics": "byte_roundtrip_proxy_no_score",
         "score_claim": False,
         "byte_proxy_only": True,
         "ready_for_exact_eval_dispatch": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
         "cuda_eval_worth_testing": False,
+        "dispatch_attempted": False,
+        "proxy_row": True,
+        "family_falsified": False,
         "measured_config_negative": measured_config_negative,
+        "falsification_scope": (
+            "current_max_abs_scale_conditional_range_coder_proxy_only"
+            if measured_config_negative
+            else "none_proxy_anchor_only"
+        ),
+        "score_affecting_payload_changed": False,
+        "charged_bits_changed": False,
+        "downstream_selection_can_change_charged_bits": True,
         "dispatch_blockers": list(DISPATCH_BLOCKERS),
         "cleared_blockers": [],
         "cleared_blockers_by_evidence": {},

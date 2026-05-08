@@ -730,19 +730,21 @@ def validate_a2_certified_sensitivity_binding(
     component_map_bytes = _optional_any(component_map, ("bytes", "size_bytes"))
     if component_map_bytes is not None:
         _require_positive_int_value(component_map_bytes, f"component_maps.{component}.bytes")
-    a2_sensitivity_sha256 = _a2_sensitivity_map_sha256(a2_manifest, artifact)
-    if a2_sensitivity_sha256 is None:
+    declared_a2_sensitivity_sha256s = _a2_sensitivity_map_sha256s(a2_manifest, artifact)
+    if not declared_a2_sensitivity_sha256s:
         raise ComponentSensitivityArtifactError(
             "A2 manifest inputs.sensitivity_map_sha256 or sensitivity_artifact.sha256 "
             "is required to bind selected_Ks to the certified component map"
         )
-    a2_sensitivity_sha256 = a2_sensitivity_sha256.lower()
-    _validate_sha256(a2_sensitivity_sha256, "A2 sensitivity map sha256")
-    if a2_sensitivity_sha256 != component_map_sha256:
-        raise ComponentSensitivityArtifactError(
-            f"A2 sensitivity map sha256 does not match certified {component} map: "
-            f"a2={a2_sensitivity_sha256} certified={component_map_sha256}"
-        )
+    for field_name, value in declared_a2_sensitivity_sha256s:
+        digest = value.lower()
+        _validate_sha256(digest, field_name)
+        if digest != component_map_sha256:
+            raise ComponentSensitivityArtifactError(
+                f"A2 sensitivity map sha256 {field_name} does not match certified "
+                f"{component} map: a2={digest} certified={component_map_sha256}"
+            )
+    a2_sensitivity_sha256 = component_map_sha256
 
     return {
         "format": A2_CERTIFIED_SENSITIVITY_BINDING_FORMAT,
@@ -796,21 +798,22 @@ def _a2_component_sensitivity_manifest_reference(
     }, "component_sensitivity_manifest"
 
 
-def _a2_sensitivity_map_sha256(
+def _a2_sensitivity_map_sha256s(
     a2_manifest: Mapping[str, Any],
     artifact: Mapping[str, Any],
-) -> str | None:
+) -> list[tuple[str, str]]:
+    declared: list[tuple[str, str]] = []
     for key in _A2_SENSITIVITY_MAP_SHA_KEYS:
         value = artifact.get(key)
         if isinstance(value, str):
-            return value
+            declared.append((f"sensitivity_artifact.{key}", value))
     inputs = a2_manifest.get("inputs")
     if isinstance(inputs, Mapping):
         for key in _A2_SENSITIVITY_MAP_SHA_KEYS:
             value = inputs.get(key)
             if isinstance(value, str):
-                return value
-    return None
+                declared.append((f"inputs.{key}", value))
+    return declared
 
 
 def _validate_inputs(inputs: Mapping[str, Any], *, promotion: bool) -> None:

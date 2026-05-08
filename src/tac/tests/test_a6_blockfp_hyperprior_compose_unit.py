@@ -15,6 +15,7 @@ Tests are organised by the contract sections in the module docstring:
 from __future__ import annotations
 
 import struct
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -33,6 +34,31 @@ from tac.codec.a6_selfcomp_blockfp_hyperprior_compose import (
     hyperprior_sigma_from_scale,
     split_into_blockfp,
 )
+
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+A6_ANCHOR_TOOL = REPO_ROOT / "tools" / "pr101_a6_blockfp_hyperprior_anchor.py"
+
+
+def test_a6_anchor_build_manifest_carries_measured_negative_semantics() -> None:
+    text = A6_ANCHOR_TOOL.read_text(encoding="utf-8")
+    start = text.index("build_manifest = {")
+    end = text.index("(args.output_dir / \"build_manifest.json\")", start)
+    build_manifest_source = text[start:end]
+
+    for needle in (
+        '"score_claim": False',
+        '"promotion_eligible": False',
+        '"rank_or_kill_eligible": False',
+        '"dispatch_attempted": False',
+        '"family_falsified": False',
+        '"score_affecting_payload_changed": False',
+        '"charged_bits_changed": False',
+        '"falsification_scope":',
+        '"current_max_abs_scale_conditional_range_coder_proxy_only"',
+        '"none_proxy_anchor_only"',
+    ):
+        assert needle in build_manifest_source
 
 
 # ── 1. Roundtrip on synthetic streams ─────────────────────────────────────
