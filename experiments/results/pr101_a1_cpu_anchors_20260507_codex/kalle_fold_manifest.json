@@ -1,0 +1,430 @@
+{
+  "schema": "pr101_kalle_fold_mixture_codec.v2",
+  "tool": "tools/pr101_kalle_fold_mixture_codec.py",
+  "evidence_grade": "empirical",
+  "evidence_marker": "[CPU-prep empirical]",
+  "evidence_semantics": "cpu_kalle_fold_mixture_byte_anchor_no_decoder_no_score",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "dispatch_attempted": false,
+  "score_affecting_payload_changed": false,
+  "charged_bits_changed": false,
+  "dispatch_blockers": [
+    "mixture_decoder_not_wired_into_runtime_packet",
+    "no_archive_substitution_performed",
+    "no_decode_roundtrip_fixture_for_full_packet",
+    "missing_exact_cuda_auth_eval"
+  ],
+  "input_state_dict": "experiments/results/pr101_codecop_sweep_20260507_codex/pr101_decoder_state_dict.pt",
+  "input_state_dict_sha256": "b863362aaba1b9cae9b944f5e5b1a43a53ca824b7899ed7b80a2e2146d66f053",
+  "n_tensors": 28,
+  "total_elements": 228958,
+  "metadata_blob_bytes": 400,
+  "metadata_brotli_bytes": 404,
+  "ac_payload_concat_bytes": 189460,
+  "payload_brotli_bytes": 189465,
+  "decoder_blob_bytes": 189869,
+  "archive_overhead_bytes": 16094,
+  "archive_bytes": 205963,
+  "comparison_brotli_optuna_archive_bytes": 178144,
+  "delta_vs_brotli_optuna_archive_bytes": 27819,
+  "catalog_prediction_archive_bytes": 173500,
+  "delta_vs_catalog_prediction_bytes": 32463,
+  "weighted_kl_bits_per_element": 1.0293785089098924,
+  "per_tensor": [
+    {
+      "name": "stem.weight",
+      "n_elements": 48384,
+      "kl_bits_per_element": 0.9892722654250758,
+      "ac_payload_bytes": 37568,
+      "mixture_weights": [
+        0.7977170341632289,
+        0.17658200030006455,
+        0.025698336851806048,
+        2.6286849005764705e-06
+      ],
+      "sigma": 17.177712530106692,
+      "b": 17.45750317891564
+    },
+    {
+      "name": "stem.bias",
+      "n_elements": 1728,
+      "kl_bits_per_element": 0.09627676136494405,
+      "ac_payload_bytes": 1580,
+      "mixture_weights": [
+        0.9999998241749912,
+        1.6911250329463687e-07,
+        1.7492549823286108e-11,
+        6.69501291588233e-09
+      ],
+      "sigma": 38.36008678469259,
+      "b": 4025.3995422750013
+    },
+    {
+      "name": "blocks.0.weight",
+      "n_elements": 46656,
+      "kl_bits_per_element": 1.0354382474251844,
+      "ac_payload_bytes": 38348,
+      "mixture_weights": [
+        0.9256214365190493,
+        0.0743669031583395,
+        1.1341341028715267e-07,
+        1.1546909201040323e-05
+      ],
+      "sigma": 22.701270377311634,
+      "b": 20.113217275888857
+    },
+    {
+      "name": "blocks.0.bias",
+      "n_elements": 144,
+      "kl_bits_per_element": 1.06937166680074,
+      "ac_payload_bytes": 140,
+      "mixture_weights": [
+        0.9689110398482376,
+        0.0001684438455995873,
+        0.01971414140233272,
+        0.011206374903830299
+      ],
+      "sigma": 48.630153937268204,
+      "b": 1457.6800474166312
+    },
+    {
+      "name": "blocks.1.weight",
+      "n_elements": 46656,
+      "kl_bits_per_element": 1.0308921326833558,
+      "ac_payload_bytes": 38448,
+      "mixture_weights": [
+        0.9489274511889447,
+        0.033281331253146744,
+        0.017790507488253254,
+        7.100696551954495e-07
+      ],
+      "sigma": 23.126840556415566,
+      "b": 30.467416755291552
+    },
+    {
+      "name": "blocks.1.bias",
+      "n_elements": 144,
+      "kl_bits_per_element": 1.1536410498669705,
+      "ac_payload_bytes": 140,
+      "mixture_weights": [
+        0.4648366617242815,
+        0.4280389297653583,
+        0.009985788955654447,
+        0.09713861955470572
+      ],
+      "sigma": 46.760493258672284,
+      "b": 33.827636455983196
+    },
+    {
+      "name": "blocks.2.weight",
+      "n_elements": 34992,
+      "kl_bits_per_element": 1.0643502956643156,
+      "ac_payload_bytes": 30096,
+      "mixture_weights": [
+        0.9848084636908088,
+        0.0015889850149043343,
+        0.012262015329908085,
+        0.0013405359643788041
+      ],
+      "sigma": 28.74862220966316,
+      "b": 0.002138134669599557
+    },
+    {
+      "name": "blocks.2.bias",
+      "n_elements": 108,
+      "kl_bits_per_element": 1.3592930600266275,
+      "ac_payload_bytes": 108,
+      "mixture_weights": [
+        0.794500703049544,
+        0.045961658100685844,
+        0.0064166155838802546,
+        0.1531210232658899
+      ],
+      "sigma": 53.69750248864436,
+      "b": 4.1659048533771665
+    },
+    {
+      "name": "blocks.3.weight",
+      "n_elements": 19440,
+      "kl_bits_per_element": 1.0470003653206292,
+      "ac_payload_bytes": 16568,
+      "mixture_weights": [
+        0.9956032954111511,
+        0.003697262645637279,
+        1.656892187769274e-05,
+        0.0006828730213339759
+      ],
+      "sigma": 27.093991489998626,
+      "b": 65.75311253365321
+    },
+    {
+      "name": "blocks.3.bias",
+      "n_elements": 80,
+      "kl_bits_per_element": 1.344869063524247,
+      "ac_payload_bytes": 76,
+      "mixture_weights": [
+        0.8081522179630006,
+        0.07705803974852159,
+        0.023071607902219807,
+        0.09171813438625805
+      ],
+      "sigma": 33.056325112042664,
+      "b": 8.919074864180507
+    },
+    {
+      "name": "blocks.4.weight",
+      "n_elements": 12960,
+      "kl_bits_per_element": 0.9017013696001317,
+      "ac_payload_bytes": 11620,
+      "mixture_weights": [
+        0.9841593014886237,
+        0.00098563581885581,
+        0.01250800574954253,
+        0.0023470569429777737
+      ],
+      "sigma": 35.16918111510452,
+      "b": 271.57055225081973
+    },
+    {
+      "name": "blocks.4.bias",
+      "n_elements": 72,
+      "kl_bits_per_element": 1.7598645909151958,
+      "ac_payload_bytes": 72,
+      "mixture_weights": [
+        0.9326310659908599,
+        0.023322170946886978,
+        0.031004072835965284,
+        0.013042690226287785
+      ],
+      "sigma": 51.92921470227628,
+      "b": 3.465113038445458
+    },
+    {
+      "name": "blocks.5.weight",
+      "n_elements": 11664,
+      "kl_bits_per_element": 1.1140490645069843,
+      "ac_payload_bytes": 9296,
+      "mixture_weights": [
+        0.8450664048286602,
+        0.15492768046906774,
+        1.294015069847774e-07,
+        5.7853007650237114e-06
+      ],
+      "sigma": 19.290925426974088,
+      "b": 17.74006922872335
+    },
+    {
+      "name": "blocks.5.bias",
+      "n_elements": 72,
+      "kl_bits_per_element": 1.6211952711615136,
+      "ac_payload_bytes": 68,
+      "mixture_weights": [
+        0.6195690226161455,
+        0.27101841333581356,
+        5.5729671411132694e-08,
+        0.1094125083183695
+      ],
+      "sigma": 30.756207431946017,
+      "b": 19.85062555084029
+    },
+    {
+      "name": "skips.2.weight",
+      "n_elements": 972,
+      "kl_bits_per_element": 1.4108104959349228,
+      "ac_payload_bytes": 868,
+      "mixture_weights": [
+        0.9678262479764232,
+        4.6642084206756055e-05,
+        0.024890074129328664,
+        0.007237035810041479
+      ],
+      "sigma": 34.822952366652736,
+      "b": 2674.712724953844
+    },
+    {
+      "name": "skips.2.bias",
+      "n_elements": 27,
+      "kl_bits_per_element": 3.3288573379846325,
+      "ac_payload_bytes": 28,
+      "mixture_weights": [
+        0.9188036407557072,
+        4.0138218688158525e-05,
+        6.282033106556295e-06,
+        0.08114993899249809
+      ],
+      "sigma": 55.009695981679904,
+      "b": 124.06319836580357
+    },
+    {
+      "name": "skips.3.weight",
+      "n_elements": 540,
+      "kl_bits_per_element": 1.4818474683565894,
+      "ac_payload_bytes": 508,
+      "mixture_weights": [
+        0.9999903142072818,
+        3.333911171947833e-07,
+        1.0782413183857319e-10,
+        9.352293777077564e-06
+      ],
+      "sigma": 44.21151445330626,
+      "b": 2532.4841098632082
+    },
+    {
+      "name": "skips.3.bias",
+      "n_elements": 20,
+      "kl_bits_per_element": 3.4475309597515937,
+      "ac_payload_bytes": 20,
+      "mixture_weights": [
+        0.6916552862074734,
+        0.0004874542983309936,
+        2.343928870649336e-07,
+        0.30785702510130863
+      ],
+      "sigma": 42.87193733704291,
+      "b": 3015.4561597893767
+    },
+    {
+      "name": "skips.4.weight",
+      "n_elements": 360,
+      "kl_bits_per_element": 1.8012714418519233,
+      "ac_payload_bytes": 340,
+      "mixture_weights": [
+        0.971845252532369,
+        3.316763453344398e-07,
+        0.028154413621033866,
+        2.1702517345770063e-09
+      ],
+      "sigma": 49.16343395389753,
+      "b": 3090.5478734697012
+    },
+    {
+      "name": "skips.4.bias",
+      "n_elements": 18,
+      "kl_bits_per_element": 3.7944392021245203,
+      "ac_payload_bytes": 20,
+      "mixture_weights": [
+        0.13514266529260388,
+        3.6672700665481246e-05,
+        4.954968755262242e-08,
+        0.8648206124570431
+      ],
+      "sigma": 20.15036971000246,
+      "b": 290.18997847247766
+    },
+    {
+      "name": "refine.0.weight",
+      "n_elements": 1458,
+      "kl_bits_per_element": 1.3060423497676141,
+      "ac_payload_bytes": 1236,
+      "mixture_weights": [
+        0.8058711044523891,
+        0.17563347973397533,
+        6.39196676551837e-08,
+        0.018495351893967976
+      ],
+      "sigma": 24.972220991766243,
+      "b": 19.325746281297864
+    },
+    {
+      "name": "refine.0.bias",
+      "n_elements": 9,
+      "kl_bits_per_element": 4.794560079013235,
+      "ac_payload_bytes": 12,
+      "mixture_weights": [
+        0.11836989953306339,
+        4.0304078899587106e-06,
+        2.1125273161766402e-08,
+        0.8816260489337735
+      ],
+      "sigma": 15.452300682733162,
+      "b": 156.4218112865599
+    },
+    {
+      "name": "refine.1.weight",
+      "n_elements": 1458,
+      "kl_bits_per_element": 1.1828411186124366,
+      "ac_payload_bytes": 1300,
+      "mixture_weights": [
+        0.8386038580909921,
+        0.1436239026359056,
+        0.01393813181193431,
+        0.0038341074611681135
+      ],
+      "sigma": 34.87189184400681,
+      "b": 22.506490496812123
+    },
+    {
+      "name": "refine.1.bias",
+      "n_elements": 18,
+      "kl_bits_per_element": 3.9211909269842202,
+      "ac_payload_bytes": 20,
+      "mixture_weights": [
+        0.16526053294654752,
+        0.002982670385739808,
+        2.865749203523133e-07,
+        0.8317565100927923
+      ],
+      "sigma": 42.72692221476462,
+      "b": 2.2394240625789954
+    },
+    {
+      "name": "rgb_0.weight",
+      "n_elements": 486,
+      "kl_bits_per_element": 1.4265434473835927,
+      "ac_payload_bytes": 428,
+      "mixture_weights": [
+        0.35369297029849234,
+        0.6178103737773025,
+        0.028495021478562227,
+        1.6344456428759703e-06
+      ],
+      "sigma": 32.51335555030176,
+      "b": 24.988635147227463
+    },
+    {
+      "name": "rgb_0.bias",
+      "n_elements": 3,
+      "kl_bits_per_element": 5.321094394498397,
+      "ac_payload_bytes": 4,
+      "mixture_weights": [
+        0.6138162195162993,
+        9.921099960581694e-06,
+        1.2768187514927065e-07,
+        0.3861737317018649
+      ],
+      "sigma": 8.2102177950413,
+      "b": 8.371039789499296
+    },
+    {
+      "name": "rgb_1.weight",
+      "n_elements": 486,
+      "kl_bits_per_element": 1.3016787857300645,
+      "ac_payload_bytes": 432,
+      "mixture_weights": [
+        0.9400831166468436,
+        5.6284178398202574e-05,
+        0.038141286166618056,
+        0.02171931300814006
+      ],
+      "sigma": 33.61330630536104,
+      "b": 1618.429284475496
+    },
+    {
+      "name": "rgb_1.bias",
+      "n_elements": 3,
+      "kl_bits_per_element": 6.409400647553955,
+      "ac_payload_bytes": 4,
+      "mixture_weights": [
+        2.2461560990598288e-06,
+        2.245975852693038e-06,
+        2.246160221545231e-06,
+        0.9999932617078268
+      ],
+      "sigma": 8.027697245154295,
+      "b": 3.9947253467070314
+    }
+  ]
+}

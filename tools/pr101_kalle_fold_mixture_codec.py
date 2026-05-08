@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as _dt
+import hashlib
 import json
 import struct
 import sys
@@ -53,12 +54,39 @@ from tac.pr101_split_brotli_codec import (  # noqa: E402
 )
 
 TOOL_NAME = "tools/pr101_kalle_fold_mixture_codec.py"
-SCHEMA_VERSION = "pr101_kalle_fold_mixture_codec.v1"
+SCHEMA_VERSION = "pr101_kalle_fold_mixture_codec.v2"
 ARCHIVE_OVERHEAD_BYTES = 16_094
+REFERENCE_BROTLI_OPTUNA_ARCHIVE_BYTES = 178_144
+PREDICTED_KALLE_FOLD_ARCHIVE_BYTES = 173_500
+EVIDENCE_GRADE = "empirical"
+EVIDENCE_MARKER = "[CPU-prep empirical]"
+EVIDENCE_SEMANTICS = "cpu_kalle_fold_mixture_byte_anchor_no_decoder_no_score"
+DISPATCH_BLOCKERS = [
+    "mixture_decoder_not_wired_into_runtime_packet",
+    "no_archive_substitution_performed",
+    "no_decode_roundtrip_fixture_for_full_packet",
+    "missing_exact_cuda_auth_eval",
+]
 
 # Symmetric INT8 alphabet: [-127, +127] = 255 levels (zero is symbol 127).
 N_SYMBOLS = 2 * N_QUANT + 1  # 255
 SYMBOL_AXIS = np.arange(-N_QUANT, N_QUANT + 1, dtype=np.float64)
+
+
+def repo_relative(path: Path) -> str:
+    """Return a stable repo-relative path when possible."""
+    try:
+        return path.resolve().relative_to(REPO_ROOT.resolve()).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def empirical_pmf(symbols_i8: np.ndarray) -> np.ndarray:
@@ -159,6 +187,7 @@ def run_codec(state_dict_path: Path) -> dict:
     """Quantize, fit mixtures per-tensor, AC-encode, brotli-wrap, measure."""
     import torch
 
+    input_sha256 = sha256_file(state_dict_path)
     sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)
     if not isinstance(sd, dict):
         raise SystemExit(f"state_dict at {state_dict_path} is not a dict")
@@ -220,8 +249,19 @@ def run_codec(state_dict_path: Path) -> dict:
     return {
         "schema": SCHEMA_VERSION,
         "tool": TOOL_NAME,
-        "evidence_grade": "[CPU-prep empirical]",
-        "input_state_dict": str(state_dict_path),
+        "evidence_grade": EVIDENCE_GRADE,
+        "evidence_marker": EVIDENCE_MARKER,
+        "evidence_semantics": EVIDENCE_SEMANTICS,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "score_affecting_payload_changed": False,
+        "charged_bits_changed": False,
+        "dispatch_blockers": DISPATCH_BLOCKERS,
+        "input_state_dict": repo_relative(state_dict_path),
+        "input_state_dict_sha256": input_sha256,
         "n_tensors": len(FIXED_STATE_SCHEMA),
         "total_elements": total_elements,
         "metadata_blob_bytes": len(metadata_blob),
@@ -231,6 +271,14 @@ def run_codec(state_dict_path: Path) -> dict:
         "decoder_blob_bytes": len(total_decoder_blob),
         "archive_overhead_bytes": ARCHIVE_OVERHEAD_BYTES,
         "archive_bytes": archive_bytes,
+        "comparison_brotli_optuna_archive_bytes": REFERENCE_BROTLI_OPTUNA_ARCHIVE_BYTES,
+        "delta_vs_brotli_optuna_archive_bytes": (
+            archive_bytes - REFERENCE_BROTLI_OPTUNA_ARCHIVE_BYTES
+        ),
+        "catalog_prediction_archive_bytes": PREDICTED_KALLE_FOLD_ARCHIVE_BYTES,
+        "delta_vs_catalog_prediction_bytes": (
+            archive_bytes - PREDICTED_KALLE_FOLD_ARCHIVE_BYTES
+        ),
         "weighted_kl_bits_per_element": total_kl_bits / max(total_elements, 1),
         "per_tensor": per_tensor,
     }
@@ -263,14 +311,18 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"manifest: {args.output_json}")
     print(f"\narchive_bytes: {manifest['archive_bytes']:,} B")
-    print(f"  vs cathedral_autopilot prediction: 173,500 B")
-    delta = manifest["archive_bytes"] - 173_500
+    print(f"  vs cathedral_autopilot prediction: {PREDICTED_KALLE_FOLD_ARCHIVE_BYTES:,} B")
+    delta = manifest["delta_vs_catalog_prediction_bytes"]
     print(f"  delta: {delta:+,} B "
           f"({'BEAT' if delta < -1000 else 'TIED' if abs(delta) <= 1000 else 'MISSED'} prediction)")
-    print(f"\n  vs brotli baseline: 178,144 B")
-    delta_brotli = manifest["archive_bytes"] - 178_144
+    print(f"\n  vs brotli baseline: {REFERENCE_BROTLI_OPTUNA_ARCHIVE_BYTES:,} B")
+    delta_brotli = manifest["delta_vs_brotli_optuna_archive_bytes"]
     print(f"  delta: {delta_brotli:+,} B "
           f"({'BEAT' if delta_brotli < 0 else 'TIES' if abs(delta_brotli) < 100 else 'LOSES'} brotli)")
+    print(
+        "  evidence: CPU byte anchor only; decoder/runtime packet not wired, "
+        "no score claim, not promotable"
+    )
     print()
     print(f"  metadata: {manifest['metadata_blob_bytes']:,} raw → "
           f"{manifest['metadata_brotli_bytes']:,} B brotli")
@@ -282,7 +334,20 @@ def main(argv: list[str] | None = None) -> int:
         evidence_row = {
             "technique": "kalle_fold_mixture_canonical_shapes",
             "empirical_archive_bytes": manifest["archive_bytes"],
-            "source": f"[CPU-prep empirical] {args.output_json}",
+            "empirical_d_seg": None,
+            "empirical_d_pose": None,
+            "evidence_grade": EVIDENCE_GRADE,
+            "evidence_marker": EVIDENCE_MARKER,
+            "evidence_semantics": EVIDENCE_SEMANTICS,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+            "score_affecting_payload_changed": False,
+            "charged_bits_changed": False,
+            "dispatch_blockers": DISPATCH_BLOCKERS,
+            "source": f"{EVIDENCE_MARKER} {repo_relative(args.output_json)}",
             "timestamp": _dt.datetime.now(_dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
         args.output_evidence.parent.mkdir(parents=True, exist_ok=True)

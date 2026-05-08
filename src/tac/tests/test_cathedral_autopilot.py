@@ -192,6 +192,38 @@ def test_feedback_loop_overrides_predicted_with_empirical(tmp_path: Path) -> Non
     assert brotli_row["empirical_anchor_n"] == 3
     assert brotli_row["catalog_prior_bytes"] == 178_144
     assert "empirical-anchor-N3" in brotli_row["evidence_grade"]
+    assert brotli_row["empirical_anchor_promotable"] is True
+
+
+def test_feedback_loop_preserves_non_promotable_cpu_anchor() -> None:
+    """CPU/MPS byte anchors can inform planning but must stay non-promotable."""
+    autopilot = _load_autopilot()
+    evidence = [
+        autopilot.TechniqueEvidence(
+            technique="lossy_int4_quantization",
+            empirical_archive_bytes=100_799,
+            evidence_semantics="cpu_lossy_int4_quantization_byte_anchor_no_decode_no_score",
+            score_claim=False,
+            promotion_eligible=False,
+            rank_or_kill_eligible=False,
+            ready_for_exact_eval_dispatch=False,
+            dispatch_blockers=["missing_exact_cuda_auth_eval"],
+            source="[CPU-prep empirical] experiments/results/a1/lossy_int4_manifest.json",
+        ),
+    ]
+    updated = autopilot.update_catalog_from_evidence(
+        autopilot.ARCH_TECHNIQUES,
+        evidence,
+    )
+    int4_row = next(r for r in updated if r["name"] == "lossy_int4_quantization")
+
+    assert int4_row["predicted_archive_bytes"] == 100_799
+    assert int4_row["empirical_anchor_promotable"] is False
+    assert int4_row["empirical_anchor_score_claim"] is False
+    assert int4_row["ready_for_exact_eval_dispatch"] is False
+    assert int4_row["rank_or_kill_eligible"] is False
+    assert "planning-only" in int4_row["evidence_grade"]
+    assert "missing_exact_cuda_auth_eval" in int4_row["dispatch_blockers"]
 
 
 def test_high_signal_filter_drops_low_delta_techniques() -> None:

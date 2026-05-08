@@ -224,6 +224,14 @@ class TechniqueEvidence:
     empirical_score: float | None = None
     empirical_d_seg: float | None = None
     empirical_d_pose: float | None = None
+    evidence_grade: str = ""
+    evidence_marker: str = ""
+    evidence_semantics: str = ""
+    score_claim: bool | None = None
+    promotion_eligible: bool | None = None
+    rank_or_kill_eligible: bool | None = None
+    ready_for_exact_eval_dispatch: bool | None = None
+    dispatch_blockers: list[str] = field(default_factory=list)
     source: str = ""
     timestamp: str = ""
 
@@ -260,6 +268,27 @@ def _load_evidence(path: Path) -> list[TechniqueEvidence]:
                 float(r["empirical_d_pose"])
                 if r.get("empirical_d_pose") is not None else None
             ),
+            evidence_grade=str(r.get("evidence_grade", "")),
+            evidence_marker=str(r.get("evidence_marker", "")),
+            evidence_semantics=str(r.get("evidence_semantics", "")),
+            score_claim=(
+                bool(r["score_claim"]) if r.get("score_claim") is not None else None
+            ),
+            promotion_eligible=(
+                bool(r["promotion_eligible"])
+                if r.get("promotion_eligible") is not None else None
+            ),
+            rank_or_kill_eligible=(
+                bool(r["rank_or_kill_eligible"])
+                if r.get("rank_or_kill_eligible") is not None else None
+            ),
+            ready_for_exact_eval_dispatch=(
+                bool(r["ready_for_exact_eval_dispatch"])
+                if r.get("ready_for_exact_eval_dispatch") is not None else None
+            ),
+            dispatch_blockers=[
+                str(blocker) for blocker in r.get("dispatch_blockers", [])
+            ] if isinstance(r.get("dispatch_blockers", []), list) else [],
             source=str(r.get("source", "")),
             timestamp=str(r.get("timestamp", "")),
         ))
@@ -292,12 +321,38 @@ def update_catalog_from_evidence(
             empirical_bytes.sort()
             n = len(empirical_bytes)
             median = empirical_bytes[n // 2]
+            explicit_non_promotable = any(
+                e.score_claim is False
+                or e.promotion_eligible is False
+                or e.rank_or_kill_eligible is False
+                or e.ready_for_exact_eval_dispatch is False
+                for e in obs
+            )
+            blockers = sorted({
+                blocker
+                for e in obs
+                for blocker in e.dispatch_blockers
+            })
             new_t["catalog_prior_bytes"] = t["predicted_archive_bytes"]
             new_t["predicted_archive_bytes"] = median
             new_t["empirical_anchor_n"] = n
             new_t["empirical_anchor_bytes"] = median
             new_t["empirical_anchor_sources"] = [e.source for e in obs if e.source]
-            new_t["evidence_grade"] = f"[empirical-anchor-N{n}]"
+            new_t["empirical_anchor_evidence_semantics"] = sorted({
+                e.evidence_semantics for e in obs if e.evidence_semantics
+            })
+            if explicit_non_promotable:
+                new_t["evidence_grade"] = f"[empirical-anchor-N{n}; planning-only]"
+                new_t["empirical_anchor_promotable"] = False
+                new_t["empirical_anchor_score_claim"] = False
+                new_t["ready_for_exact_eval_dispatch"] = False
+                new_t["rank_or_kill_eligible"] = False
+                new_t["dispatch_blockers"] = blockers or [
+                    "empirical_anchor_not_promotable_without_exact_cuda_auth_eval"
+                ]
+            else:
+                new_t["evidence_grade"] = f"[empirical-anchor-N{n}]"
+                new_t["empirical_anchor_promotable"] = True
         out.append(new_t)
     return out
 

@@ -1,0 +1,285 @@
+{
+  "arch_technique_ranking": [
+    {
+      "cost_dollars": 25.0,
+      "cost_hours": 24.0,
+      "current_score_baseline": 0.2040578662595819,
+      "description": "70% sparsity via IMP retraining; arch unchanged",
+      "evidence_grade": "[predicted]",
+      "gain_per_dollar": 0.0030135178156821983,
+      "gain_per_hour": 0.00313908105800229,
+      "name": "sparsity_alpha_0.7_imp_retrain",
+      "predicted_archive_bytes": 65000,
+      "predicted_gap_to_target": -0.026280079132473072,
+      "predicted_score_after": 0.12871992086752693,
+      "predicted_score_delta": 0.07533794539205496,
+      "reaches_target": true,
+      "risk": "training_side"
+    },
+    {
+      "cost_dollars": 15.0,
+      "cost_hours": 12.0,
+      "current_score_baseline": 0.2040578662595819,
+      "description": "88K-element renderer (Quantizr-class); full retrain",
+      "evidence_grade": "[predicted]",
+      "gain_per_dollar": 0.004356670739681493,
+      "gain_per_hour": 0.005445838424601866,
+      "name": "arch_shrink_x0.4_quantizr_class",
+      "predicted_archive_bytes": 80000,
+      "predicted_gap_to_target": -0.01629219483564051,
+      "predicted_score_after": 0.1387078051643595,
+      "predicted_score_delta": 0.0653500610952224,
+      "reaches_target": true,
+      "risk": "architectural"
+    },
+    {
+      "cost_dollars": 20.0,
+      "cost_hours": 18.0,
+      "current_score_baseline": 0.2040578662595819,
+      "description": "Selfcomp/Quantizr-style: renderer is its own decoder",
+      "evidence_grade": "[predicted]",
+      "gain_per_dollar": 0.0029345735782000336,
+      "gain_per_hour": 0.0032606373091111484,
+      "name": "self_compress_neural_codec",
+      "predicted_archive_bytes": 90000,
+      "predicted_gap_to_target": -0.009633605304418785,
+      "predicted_score_after": 0.1453663946955812,
+      "predicted_score_delta": 0.058691471564000675,
+      "reaches_target": true,
+      "risk": "architectural"
+    },
+    {
+      "catalog_prior_bytes": 105440,
+      "cost_dollars": 8.0,
+      "cost_hours": 6.0,
+      "current_score_baseline": 0.2040578662595819,
+      "description": "n_quant=15 (int4) with QAT/LSQ retuning",
+      "dispatch_blockers": [
+        "component_distortion_unknown",
+        "lossy_weight_quantization_not_decoded_or_scored",
+        "missing_exact_cuda_auth_eval",
+        "no_archive_substitution_performed",
+        "no_runtime_decoder_packet_built"
+      ],
+      "empirical_anchor_bytes": 100799,
+      "empirical_anchor_evidence_semantics": [
+        "cpu_lossy_int4_quantization_byte_anchor_no_decode_no_score"
+      ],
+      "empirical_anchor_n": 1,
+      "empirical_anchor_promotable": false,
+      "empirical_anchor_score_claim": false,
+      "empirical_anchor_sources": [
+        "[CPU-prep empirical] experiments/results/pr101_a1_cpu_anchors_20260507_codex/lossy_int4_manifest.json (block_size=1024)"
+      ],
+      "evidence_grade": "[empirical-anchor-N1; planning-only]",
+      "gain_per_dollar": 0.006437607591154297,
+      "gain_per_hour": 0.00858347678820573,
+      "name": "lossy_int4_quantization",
+      "predicted_archive_bytes": 100799,
+      "predicted_gap_to_target": -0.0024429944696524875,
+      "predicted_score_after": 0.1525570055303475,
+      "predicted_score_delta": 0.05150086072923438,
+      "rank_or_kill_eligible": false,
+      "reaches_target": true,
+      "ready_for_exact_eval_dispatch": false,
+      "risk": "lossy_high"
+    }
+  ],
+  "encoder_technique_ranking": [
+    {
+      "cost_dollars": 5.0,
+      "cost_hours": 4.0,
+      "current_score_baseline": 0.2040578662595819,
+      "description": "Balle scale-hyperprior NN; subagent-verdict joint floor",
+      "evidence_grade": "[subagent-predicted]",
+      "gain_per_dollar": 0.0026826125503386033,
+      "gain_per_hour": 0.003353265687923254,
+      "name": "compressai_balle_hyperprior",
+      "predicted_archive_bytes": 158000,
+      "predicted_gap_to_target": 0.03564480350788887,
+      "predicted_score_after": 0.19064480350788887,
+      "predicted_score_delta": 0.013413062751693017,
+      "reaches_target": false,
+      "risk": "lossless"
+    },
+    {
+      "cost_dollars": 0.0,
+      "cost_hours": 3.0,
+      "current_score_baseline": 0.2040578662595819,
+      "description": "200-param MLP predicting per-tensor PMF; ~400B model + AAC",
+      "evidence_grade": "[predicted]",
+      "gain_per_dollar": 0.014840664347187005,
+      "gain_per_hour": 0.002473444057864501,
+      "name": "tiny_nn_pmf_predictor",
+      "predicted_archive_bytes": 167000,
+      "predicted_gap_to_target": 0.04163753408598839,
+      "predicted_score_after": 0.19663753408598839,
+      "predicted_score_delta": 0.007420332173593502,
+      "reaches_target": false,
+      "risk": "lossless"
+    },
+    {
+      "cost_dollars": 0.0,
+      "cost_hours": 0.5,
+      "current_score_baseline": 0.2040578662595819,
+      "description": "Current best brotli + Optuna q=11/lgwin=16/lgblock=19",
+      "evidence_grade": "[contest-CUDA]",
+      "gain_per_dollar": 0.0,
+      "gain_per_hour": 0.0,
+      "name": "brotli_optuna_default",
+      "predicted_archive_bytes": 178144,
+      "predicted_gap_to_target": 0.04905786625958189,
+      "predicted_score_after": 0.2040578662595819,
+      "predicted_score_delta": 0.0,
+      "reaches_target": false,
+      "risk": "lossless"
+    },
+    {
+      "cost_dollars": 0.0,
+      "cost_hours": 1.0,
+      "current_score_baseline": 0.2040578662595819,
+      "description": "Adaptive arithmetic coding per-tensor; ties brotli within 37 B",
+      "evidence_grade": "[CPU-prep]",
+      "gain_per_dollar": 0.0,
+      "gain_per_hour": 0.0,
+      "name": "per_tensor_adaptive_aac",
+      "predicted_archive_bytes": 178181,
+      "predicted_gap_to_target": 0.04905786625958189,
+      "predicted_score_after": 0.2040578662595819,
+      "predicted_score_delta": 0.0,
+      "reaches_target": false,
+      "risk": "lossless"
+    },
+    {
+      "catalog_prior_bytes": 173500,
+      "cost_dollars": 0.0,
+      "cost_hours": 2.0,
+      "current_score_baseline": 0.2040578662595819,
+      "description": "4-component mixture (Gaussian+Laplace+sparse+uniform) on PMFs",
+      "dispatch_blockers": [
+        "missing_exact_cuda_auth_eval",
+        "mixture_decoder_not_wired_into_runtime_packet",
+        "no_archive_substitution_performed",
+        "no_decode_roundtrip_fixture_for_full_packet"
+      ],
+      "empirical_anchor_bytes": 205963,
+      "empirical_anchor_evidence_semantics": [
+        "cpu_kalle_fold_mixture_byte_anchor_no_decoder_no_score"
+      ],
+      "empirical_anchor_n": 1,
+      "empirical_anchor_promotable": false,
+      "empirical_anchor_score_claim": false,
+      "empirical_anchor_sources": [
+        "[CPU-prep empirical] experiments/results/pr101_a1_cpu_anchors_20260507_codex/kalle_fold_manifest.json"
+      ],
+      "evidence_grade": "[empirical-anchor-N1; planning-only]",
+      "gain_per_dollar": 0.0,
+      "gain_per_hour": 0.0,
+      "name": "kalle_fold_mixture_canonical_shapes",
+      "predicted_archive_bytes": 205963,
+      "predicted_gap_to_target": 0.04905786625958189,
+      "predicted_score_after": 0.2040578662595819,
+      "predicted_score_delta": 0.0,
+      "rank_or_kill_eligible": false,
+      "reaches_target": false,
+      "ready_for_exact_eval_dispatch": false,
+      "risk": "lossless"
+    }
+  ],
+  "evidence_grade": "[CPU-prep planning-only]",
+  "notes": [
+    "Operating regime: pose-dominated regime (d_pose 3.40e-05 < 2.50e-04); prioritize pose-targeted lanes \u2014 they have 2.71x the marginal score-per-byte vs seg lanes here",
+    "Importance flip threshold: d_pose = 2.50e-04",
+    "Score decomposition: seg=0.06700 + pose=0.01844 + rate=0.11862",
+    "To reach 0.15500: need -0.04906 score points. Top-3 techniques rank by predicted score-delta.",
+    "PR101 hand-coded entropy probes are saturated near the 178 KB brotli/AAC band: the best charged Markov-1 table rerun is 200,219 B, so the currently tested table-transmission path loses. This is not a global no-ML impossibility proof; sub-178 KB still needs a new charged coder, a shared decoder model, or lower-entropy weights. Architecture has 5-10x more predicted headroom."
+  ],
+  "operator_state": {
+    "archive_bytes": 178144,
+    "current_score": 0.2040578662595819,
+    "d_pose": 3.4e-05,
+    "d_seg": 0.00067,
+    "label": "pr101_a1_cpu_anchor_review"
+  },
+  "recommended_top_3": [
+    {
+      "cost_dollars": 25.0,
+      "cost_hours": 24.0,
+      "current_score_baseline": 0.2040578662595819,
+      "description": "70% sparsity via IMP retraining; arch unchanged",
+      "evidence_grade": "[predicted]",
+      "gain_per_dollar": 0.0030135178156821983,
+      "gain_per_hour": 0.00313908105800229,
+      "name": "sparsity_alpha_0.7_imp_retrain",
+      "predicted_archive_bytes": 65000,
+      "predicted_gap_to_target": -0.026280079132473072,
+      "predicted_score_after": 0.12871992086752693,
+      "predicted_score_delta": 0.07533794539205496,
+      "reaches_target": true,
+      "risk": "training_side"
+    },
+    {
+      "cost_dollars": 15.0,
+      "cost_hours": 12.0,
+      "current_score_baseline": 0.2040578662595819,
+      "description": "88K-element renderer (Quantizr-class); full retrain",
+      "evidence_grade": "[predicted]",
+      "gain_per_dollar": 0.004356670739681493,
+      "gain_per_hour": 0.005445838424601866,
+      "name": "arch_shrink_x0.4_quantizr_class",
+      "predicted_archive_bytes": 80000,
+      "predicted_gap_to_target": -0.01629219483564051,
+      "predicted_score_after": 0.1387078051643595,
+      "predicted_score_delta": 0.0653500610952224,
+      "reaches_target": true,
+      "risk": "architectural"
+    },
+    {
+      "cost_dollars": 20.0,
+      "cost_hours": 18.0,
+      "current_score_baseline": 0.2040578662595819,
+      "description": "Selfcomp/Quantizr-style: renderer is its own decoder",
+      "evidence_grade": "[predicted]",
+      "gain_per_dollar": 0.0029345735782000336,
+      "gain_per_hour": 0.0032606373091111484,
+      "name": "self_compress_neural_codec",
+      "predicted_archive_bytes": 90000,
+      "predicted_gap_to_target": -0.009633605304418785,
+      "predicted_score_after": 0.1453663946955812,
+      "predicted_score_delta": 0.058691471564000675,
+      "reaches_target": true,
+      "risk": "architectural"
+    }
+  ],
+  "schema": "cathedral_autopilot.v1",
+  "score_geometry": {
+    "decomposition": {
+      "pose_term": 0.018439088914585774,
+      "rate_term": 0.1186187773449961,
+      "seg_term": 0.067
+    },
+    "flip_threshold": 0.00025,
+    "gradient": {
+      "d_bytes": 6.658589531221714e-07,
+      "d_pose": 271.1630722733202,
+      "d_seg": 100.0
+    },
+    "operating_regime": {
+      "advice": "pose-dominated regime (d_pose 3.40e-05 < 2.50e-04); prioritize pose-targeted lanes \u2014 they have 2.71x the marginal score-per-byte vs seg lanes here",
+      "marginal_ratio_seg_over_pose": 0.3687817782917155,
+      "pose_dominates": true,
+      "seg_dominates": false
+    }
+  },
+  "target_score_gap_analysis": {
+    "bytes_only_feasible": true,
+    "bytes_only_required_archive_bytes": 104467,
+    "bytes_only_savings_required": 73677,
+    "information_floor_at_current_bytes": 0.1186187773449961,
+    "pose_only_feasible": false,
+    "pose_only_required_d_pose": null,
+    "score_gap": 0.04905786625958189,
+    "target_score": 0.155
+  },
+  "tool": "tools/cathedral_autopilot.py"
+}

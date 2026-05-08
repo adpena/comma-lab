@@ -1,0 +1,1282 @@
+{
+  "schema": "pr101_lossy_int4_block_sweep.v2",
+  "tool": "tools/pr101_lossy_int4_block_sweep.py",
+  "evidence_grade": "empirical",
+  "evidence_marker": "[CPU-prep empirical]",
+  "evidence_semantics": "cpu_lossy_int4_quantization_byte_anchor_no_decode_no_score",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "dispatch_attempted": false,
+  "score_affecting_payload_changed": false,
+  "charged_bits_changed": false,
+  "dispatch_blockers": [
+    "lossy_weight_quantization_not_decoded_or_scored",
+    "no_runtime_decoder_packet_built",
+    "no_archive_substitution_performed",
+    "component_distortion_unknown",
+    "missing_exact_cuda_auth_eval"
+  ],
+  "input_state_dict": "experiments/results/pr101_codecop_sweep_20260507_codex/pr101_decoder_state_dict.pt",
+  "input_state_dict_sha256": "b863362aaba1b9cae9b944f5e5b1a43a53ca824b7899ed7b80a2e2146d66f053",
+  "block_sizes_swept": [
+    32,
+    64,
+    128,
+    256,
+    512,
+    1024
+  ],
+  "archive_overhead_bytes": 16094,
+  "best_block_size": 1024,
+  "best_archive_bytes": 100799,
+  "comparison_brotli_optuna_archive_bytes": 178144,
+  "delta_vs_brotli_optuna_archive_bytes": -77345,
+  "catalog_prediction_archive_bytes": 105440,
+  "delta_vs_catalog_prediction_bytes": -4641,
+  "rows": [
+    {
+      "block_size": 1024,
+      "raw_payload_bytes": 114967,
+      "brotli_bytes": 84705,
+      "archive_bytes": 100799,
+      "compression_ratio": 0.73677664025329,
+      "n_elements": 228958,
+      "bits_per_element": 2.95966945902742,
+      "per_tensor": [
+        {
+          "name": "stem.weight",
+          "n_elements": 48384,
+          "n_blocks": 48,
+          "scales_bytes": 96,
+          "codes_bytes": 24192
+        },
+        {
+          "name": "stem.bias",
+          "n_elements": 1728,
+          "n_blocks": 2,
+          "scales_bytes": 4,
+          "codes_bytes": 864
+        },
+        {
+          "name": "blocks.0.weight",
+          "n_elements": 46656,
+          "n_blocks": 46,
+          "scales_bytes": 92,
+          "codes_bytes": 23328
+        },
+        {
+          "name": "blocks.0.bias",
+          "n_elements": 144,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 72
+        },
+        {
+          "name": "blocks.1.weight",
+          "n_elements": 46656,
+          "n_blocks": 46,
+          "scales_bytes": 92,
+          "codes_bytes": 23328
+        },
+        {
+          "name": "blocks.1.bias",
+          "n_elements": 144,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 72
+        },
+        {
+          "name": "blocks.2.weight",
+          "n_elements": 34992,
+          "n_blocks": 35,
+          "scales_bytes": 70,
+          "codes_bytes": 17496
+        },
+        {
+          "name": "blocks.2.bias",
+          "n_elements": 108,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 54
+        },
+        {
+          "name": "blocks.3.weight",
+          "n_elements": 19440,
+          "n_blocks": 19,
+          "scales_bytes": 38,
+          "codes_bytes": 9720
+        },
+        {
+          "name": "blocks.3.bias",
+          "n_elements": 80,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 40
+        },
+        {
+          "name": "blocks.4.weight",
+          "n_elements": 12960,
+          "n_blocks": 13,
+          "scales_bytes": 26,
+          "codes_bytes": 6480
+        },
+        {
+          "name": "blocks.4.bias",
+          "n_elements": 72,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 36
+        },
+        {
+          "name": "blocks.5.weight",
+          "n_elements": 11664,
+          "n_blocks": 12,
+          "scales_bytes": 24,
+          "codes_bytes": 5832
+        },
+        {
+          "name": "blocks.5.bias",
+          "n_elements": 72,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 36
+        },
+        {
+          "name": "skips.2.weight",
+          "n_elements": 972,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 486
+        },
+        {
+          "name": "skips.2.bias",
+          "n_elements": 27,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 14
+        },
+        {
+          "name": "skips.3.weight",
+          "n_elements": 540,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 270
+        },
+        {
+          "name": "skips.3.bias",
+          "n_elements": 20,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 10
+        },
+        {
+          "name": "skips.4.weight",
+          "n_elements": 360,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 180
+        },
+        {
+          "name": "skips.4.bias",
+          "n_elements": 18,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 9
+        },
+        {
+          "name": "refine.0.weight",
+          "n_elements": 1458,
+          "n_blocks": 2,
+          "scales_bytes": 4,
+          "codes_bytes": 729
+        },
+        {
+          "name": "refine.0.bias",
+          "n_elements": 9,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 5
+        },
+        {
+          "name": "refine.1.weight",
+          "n_elements": 1458,
+          "n_blocks": 2,
+          "scales_bytes": 4,
+          "codes_bytes": 729
+        },
+        {
+          "name": "refine.1.bias",
+          "n_elements": 18,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 9
+        },
+        {
+          "name": "rgb_0.weight",
+          "n_elements": 486,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 243
+        },
+        {
+          "name": "rgb_0.bias",
+          "n_elements": 3,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 2
+        },
+        {
+          "name": "rgb_1.weight",
+          "n_elements": 486,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 243
+        },
+        {
+          "name": "rgb_1.bias",
+          "n_elements": 3,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 2
+        }
+      ]
+    },
+    {
+      "block_size": 512,
+      "raw_payload_bytes": 115411,
+      "brotli_bytes": 88488,
+      "archive_bytes": 104582,
+      "compression_ratio": 0.7667206765386315,
+      "n_elements": 228958,
+      "bits_per_element": 3.091850907153277,
+      "per_tensor": [
+        {
+          "name": "stem.weight",
+          "n_elements": 48384,
+          "n_blocks": 95,
+          "scales_bytes": 190,
+          "codes_bytes": 24192
+        },
+        {
+          "name": "stem.bias",
+          "n_elements": 1728,
+          "n_blocks": 4,
+          "scales_bytes": 8,
+          "codes_bytes": 864
+        },
+        {
+          "name": "blocks.0.weight",
+          "n_elements": 46656,
+          "n_blocks": 92,
+          "scales_bytes": 184,
+          "codes_bytes": 23328
+        },
+        {
+          "name": "blocks.0.bias",
+          "n_elements": 144,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 72
+        },
+        {
+          "name": "blocks.1.weight",
+          "n_elements": 46656,
+          "n_blocks": 92,
+          "scales_bytes": 184,
+          "codes_bytes": 23328
+        },
+        {
+          "name": "blocks.1.bias",
+          "n_elements": 144,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 72
+        },
+        {
+          "name": "blocks.2.weight",
+          "n_elements": 34992,
+          "n_blocks": 69,
+          "scales_bytes": 138,
+          "codes_bytes": 17496
+        },
+        {
+          "name": "blocks.2.bias",
+          "n_elements": 108,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 54
+        },
+        {
+          "name": "blocks.3.weight",
+          "n_elements": 19440,
+          "n_blocks": 38,
+          "scales_bytes": 76,
+          "codes_bytes": 9720
+        },
+        {
+          "name": "blocks.3.bias",
+          "n_elements": 80,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 40
+        },
+        {
+          "name": "blocks.4.weight",
+          "n_elements": 12960,
+          "n_blocks": 26,
+          "scales_bytes": 52,
+          "codes_bytes": 6480
+        },
+        {
+          "name": "blocks.4.bias",
+          "n_elements": 72,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 36
+        },
+        {
+          "name": "blocks.5.weight",
+          "n_elements": 11664,
+          "n_blocks": 23,
+          "scales_bytes": 46,
+          "codes_bytes": 5832
+        },
+        {
+          "name": "blocks.5.bias",
+          "n_elements": 72,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 36
+        },
+        {
+          "name": "skips.2.weight",
+          "n_elements": 972,
+          "n_blocks": 2,
+          "scales_bytes": 4,
+          "codes_bytes": 486
+        },
+        {
+          "name": "skips.2.bias",
+          "n_elements": 27,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 14
+        },
+        {
+          "name": "skips.3.weight",
+          "n_elements": 540,
+          "n_blocks": 2,
+          "scales_bytes": 4,
+          "codes_bytes": 270
+        },
+        {
+          "name": "skips.3.bias",
+          "n_elements": 20,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 10
+        },
+        {
+          "name": "skips.4.weight",
+          "n_elements": 360,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 180
+        },
+        {
+          "name": "skips.4.bias",
+          "n_elements": 18,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 9
+        },
+        {
+          "name": "refine.0.weight",
+          "n_elements": 1458,
+          "n_blocks": 3,
+          "scales_bytes": 6,
+          "codes_bytes": 729
+        },
+        {
+          "name": "refine.0.bias",
+          "n_elements": 9,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 5
+        },
+        {
+          "name": "refine.1.weight",
+          "n_elements": 1458,
+          "n_blocks": 3,
+          "scales_bytes": 6,
+          "codes_bytes": 729
+        },
+        {
+          "name": "refine.1.bias",
+          "n_elements": 18,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 9
+        },
+        {
+          "name": "rgb_0.weight",
+          "n_elements": 486,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 243
+        },
+        {
+          "name": "rgb_0.bias",
+          "n_elements": 3,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 2
+        },
+        {
+          "name": "rgb_1.weight",
+          "n_elements": 486,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 243
+        },
+        {
+          "name": "rgb_1.bias",
+          "n_elements": 3,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 2
+        }
+      ]
+    },
+    {
+      "block_size": 256,
+      "raw_payload_bytes": 116301,
+      "brotli_bytes": 92739,
+      "archive_bytes": 108833,
+      "compression_ratio": 0.7974050094152243,
+      "n_elements": 228958,
+      "bits_per_element": 3.2403846993771785,
+      "per_tensor": [
+        {
+          "name": "stem.weight",
+          "n_elements": 48384,
+          "n_blocks": 189,
+          "scales_bytes": 378,
+          "codes_bytes": 24192
+        },
+        {
+          "name": "stem.bias",
+          "n_elements": 1728,
+          "n_blocks": 7,
+          "scales_bytes": 14,
+          "codes_bytes": 864
+        },
+        {
+          "name": "blocks.0.weight",
+          "n_elements": 46656,
+          "n_blocks": 183,
+          "scales_bytes": 366,
+          "codes_bytes": 23328
+        },
+        {
+          "name": "blocks.0.bias",
+          "n_elements": 144,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 72
+        },
+        {
+          "name": "blocks.1.weight",
+          "n_elements": 46656,
+          "n_blocks": 183,
+          "scales_bytes": 366,
+          "codes_bytes": 23328
+        },
+        {
+          "name": "blocks.1.bias",
+          "n_elements": 144,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 72
+        },
+        {
+          "name": "blocks.2.weight",
+          "n_elements": 34992,
+          "n_blocks": 137,
+          "scales_bytes": 274,
+          "codes_bytes": 17496
+        },
+        {
+          "name": "blocks.2.bias",
+          "n_elements": 108,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 54
+        },
+        {
+          "name": "blocks.3.weight",
+          "n_elements": 19440,
+          "n_blocks": 76,
+          "scales_bytes": 152,
+          "codes_bytes": 9720
+        },
+        {
+          "name": "blocks.3.bias",
+          "n_elements": 80,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 40
+        },
+        {
+          "name": "blocks.4.weight",
+          "n_elements": 12960,
+          "n_blocks": 51,
+          "scales_bytes": 102,
+          "codes_bytes": 6480
+        },
+        {
+          "name": "blocks.4.bias",
+          "n_elements": 72,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 36
+        },
+        {
+          "name": "blocks.5.weight",
+          "n_elements": 11664,
+          "n_blocks": 46,
+          "scales_bytes": 92,
+          "codes_bytes": 5832
+        },
+        {
+          "name": "blocks.5.bias",
+          "n_elements": 72,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 36
+        },
+        {
+          "name": "skips.2.weight",
+          "n_elements": 972,
+          "n_blocks": 4,
+          "scales_bytes": 8,
+          "codes_bytes": 486
+        },
+        {
+          "name": "skips.2.bias",
+          "n_elements": 27,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 14
+        },
+        {
+          "name": "skips.3.weight",
+          "n_elements": 540,
+          "n_blocks": 3,
+          "scales_bytes": 6,
+          "codes_bytes": 270
+        },
+        {
+          "name": "skips.3.bias",
+          "n_elements": 20,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 10
+        },
+        {
+          "name": "skips.4.weight",
+          "n_elements": 360,
+          "n_blocks": 2,
+          "scales_bytes": 4,
+          "codes_bytes": 180
+        },
+        {
+          "name": "skips.4.bias",
+          "n_elements": 18,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 9
+        },
+        {
+          "name": "refine.0.weight",
+          "n_elements": 1458,
+          "n_blocks": 6,
+          "scales_bytes": 12,
+          "codes_bytes": 729
+        },
+        {
+          "name": "refine.0.bias",
+          "n_elements": 9,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 5
+        },
+        {
+          "name": "refine.1.weight",
+          "n_elements": 1458,
+          "n_blocks": 6,
+          "scales_bytes": 12,
+          "codes_bytes": 729
+        },
+        {
+          "name": "refine.1.bias",
+          "n_elements": 18,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 9
+        },
+        {
+          "name": "rgb_0.weight",
+          "n_elements": 486,
+          "n_blocks": 2,
+          "scales_bytes": 4,
+          "codes_bytes": 243
+        },
+        {
+          "name": "rgb_0.bias",
+          "n_elements": 3,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 2
+        },
+        {
+          "name": "rgb_1.weight",
+          "n_elements": 486,
+          "n_blocks": 2,
+          "scales_bytes": 4,
+          "codes_bytes": 243
+        },
+        {
+          "name": "rgb_1.bias",
+          "n_elements": 3,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 2
+        }
+      ]
+    },
+    {
+      "block_size": 128,
+      "raw_payload_bytes": 118091,
+      "brotli_bytes": 97657,
+      "archive_bytes": 113751,
+      "compression_ratio": 0.8269639515289057,
+      "n_elements": 228958,
+      "bits_per_element": 3.412224076031412,
+      "per_tensor": [
+        {
+          "name": "stem.weight",
+          "n_elements": 48384,
+          "n_blocks": 378,
+          "scales_bytes": 756,
+          "codes_bytes": 24192
+        },
+        {
+          "name": "stem.bias",
+          "n_elements": 1728,
+          "n_blocks": 14,
+          "scales_bytes": 28,
+          "codes_bytes": 864
+        },
+        {
+          "name": "blocks.0.weight",
+          "n_elements": 46656,
+          "n_blocks": 365,
+          "scales_bytes": 730,
+          "codes_bytes": 23328
+        },
+        {
+          "name": "blocks.0.bias",
+          "n_elements": 144,
+          "n_blocks": 2,
+          "scales_bytes": 4,
+          "codes_bytes": 72
+        },
+        {
+          "name": "blocks.1.weight",
+          "n_elements": 46656,
+          "n_blocks": 365,
+          "scales_bytes": 730,
+          "codes_bytes": 23328
+        },
+        {
+          "name": "blocks.1.bias",
+          "n_elements": 144,
+          "n_blocks": 2,
+          "scales_bytes": 4,
+          "codes_bytes": 72
+        },
+        {
+          "name": "blocks.2.weight",
+          "n_elements": 34992,
+          "n_blocks": 274,
+          "scales_bytes": 548,
+          "codes_bytes": 17496
+        },
+        {
+          "name": "blocks.2.bias",
+          "n_elements": 108,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 54
+        },
+        {
+          "name": "blocks.3.weight",
+          "n_elements": 19440,
+          "n_blocks": 152,
+          "scales_bytes": 304,
+          "codes_bytes": 9720
+        },
+        {
+          "name": "blocks.3.bias",
+          "n_elements": 80,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 40
+        },
+        {
+          "name": "blocks.4.weight",
+          "n_elements": 12960,
+          "n_blocks": 102,
+          "scales_bytes": 204,
+          "codes_bytes": 6480
+        },
+        {
+          "name": "blocks.4.bias",
+          "n_elements": 72,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 36
+        },
+        {
+          "name": "blocks.5.weight",
+          "n_elements": 11664,
+          "n_blocks": 92,
+          "scales_bytes": 184,
+          "codes_bytes": 5832
+        },
+        {
+          "name": "blocks.5.bias",
+          "n_elements": 72,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 36
+        },
+        {
+          "name": "skips.2.weight",
+          "n_elements": 972,
+          "n_blocks": 8,
+          "scales_bytes": 16,
+          "codes_bytes": 486
+        },
+        {
+          "name": "skips.2.bias",
+          "n_elements": 27,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 14
+        },
+        {
+          "name": "skips.3.weight",
+          "n_elements": 540,
+          "n_blocks": 5,
+          "scales_bytes": 10,
+          "codes_bytes": 270
+        },
+        {
+          "name": "skips.3.bias",
+          "n_elements": 20,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 10
+        },
+        {
+          "name": "skips.4.weight",
+          "n_elements": 360,
+          "n_blocks": 3,
+          "scales_bytes": 6,
+          "codes_bytes": 180
+        },
+        {
+          "name": "skips.4.bias",
+          "n_elements": 18,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 9
+        },
+        {
+          "name": "refine.0.weight",
+          "n_elements": 1458,
+          "n_blocks": 12,
+          "scales_bytes": 24,
+          "codes_bytes": 729
+        },
+        {
+          "name": "refine.0.bias",
+          "n_elements": 9,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 5
+        },
+        {
+          "name": "refine.1.weight",
+          "n_elements": 1458,
+          "n_blocks": 12,
+          "scales_bytes": 24,
+          "codes_bytes": 729
+        },
+        {
+          "name": "refine.1.bias",
+          "n_elements": 18,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 9
+        },
+        {
+          "name": "rgb_0.weight",
+          "n_elements": 486,
+          "n_blocks": 4,
+          "scales_bytes": 8,
+          "codes_bytes": 243
+        },
+        {
+          "name": "rgb_0.bias",
+          "n_elements": 3,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 2
+        },
+        {
+          "name": "rgb_1.weight",
+          "n_elements": 486,
+          "n_blocks": 4,
+          "scales_bytes": 8,
+          "codes_bytes": 243
+        },
+        {
+          "name": "rgb_1.bias",
+          "n_elements": 3,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 2
+        }
+      ]
+    },
+    {
+      "block_size": 64,
+      "raw_payload_bytes": 121665,
+      "brotli_bytes": 103558,
+      "archive_bytes": 119652,
+      "compression_ratio": 0.8511733037438869,
+      "n_elements": 228958,
+      "bits_per_element": 3.6184103634727767,
+      "per_tensor": [
+        {
+          "name": "stem.weight",
+          "n_elements": 48384,
+          "n_blocks": 756,
+          "scales_bytes": 1512,
+          "codes_bytes": 24192
+        },
+        {
+          "name": "stem.bias",
+          "n_elements": 1728,
+          "n_blocks": 27,
+          "scales_bytes": 54,
+          "codes_bytes": 864
+        },
+        {
+          "name": "blocks.0.weight",
+          "n_elements": 46656,
+          "n_blocks": 729,
+          "scales_bytes": 1458,
+          "codes_bytes": 23328
+        },
+        {
+          "name": "blocks.0.bias",
+          "n_elements": 144,
+          "n_blocks": 3,
+          "scales_bytes": 6,
+          "codes_bytes": 72
+        },
+        {
+          "name": "blocks.1.weight",
+          "n_elements": 46656,
+          "n_blocks": 729,
+          "scales_bytes": 1458,
+          "codes_bytes": 23328
+        },
+        {
+          "name": "blocks.1.bias",
+          "n_elements": 144,
+          "n_blocks": 3,
+          "scales_bytes": 6,
+          "codes_bytes": 72
+        },
+        {
+          "name": "blocks.2.weight",
+          "n_elements": 34992,
+          "n_blocks": 547,
+          "scales_bytes": 1094,
+          "codes_bytes": 17496
+        },
+        {
+          "name": "blocks.2.bias",
+          "n_elements": 108,
+          "n_blocks": 2,
+          "scales_bytes": 4,
+          "codes_bytes": 54
+        },
+        {
+          "name": "blocks.3.weight",
+          "n_elements": 19440,
+          "n_blocks": 304,
+          "scales_bytes": 608,
+          "codes_bytes": 9720
+        },
+        {
+          "name": "blocks.3.bias",
+          "n_elements": 80,
+          "n_blocks": 2,
+          "scales_bytes": 4,
+          "codes_bytes": 40
+        },
+        {
+          "name": "blocks.4.weight",
+          "n_elements": 12960,
+          "n_blocks": 203,
+          "scales_bytes": 406,
+          "codes_bytes": 6480
+        },
+        {
+          "name": "blocks.4.bias",
+          "n_elements": 72,
+          "n_blocks": 2,
+          "scales_bytes": 4,
+          "codes_bytes": 36
+        },
+        {
+          "name": "blocks.5.weight",
+          "n_elements": 11664,
+          "n_blocks": 183,
+          "scales_bytes": 366,
+          "codes_bytes": 5832
+        },
+        {
+          "name": "blocks.5.bias",
+          "n_elements": 72,
+          "n_blocks": 2,
+          "scales_bytes": 4,
+          "codes_bytes": 36
+        },
+        {
+          "name": "skips.2.weight",
+          "n_elements": 972,
+          "n_blocks": 16,
+          "scales_bytes": 32,
+          "codes_bytes": 486
+        },
+        {
+          "name": "skips.2.bias",
+          "n_elements": 27,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 14
+        },
+        {
+          "name": "skips.3.weight",
+          "n_elements": 540,
+          "n_blocks": 9,
+          "scales_bytes": 18,
+          "codes_bytes": 270
+        },
+        {
+          "name": "skips.3.bias",
+          "n_elements": 20,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 10
+        },
+        {
+          "name": "skips.4.weight",
+          "n_elements": 360,
+          "n_blocks": 6,
+          "scales_bytes": 12,
+          "codes_bytes": 180
+        },
+        {
+          "name": "skips.4.bias",
+          "n_elements": 18,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 9
+        },
+        {
+          "name": "refine.0.weight",
+          "n_elements": 1458,
+          "n_blocks": 23,
+          "scales_bytes": 46,
+          "codes_bytes": 729
+        },
+        {
+          "name": "refine.0.bias",
+          "n_elements": 9,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 5
+        },
+        {
+          "name": "refine.1.weight",
+          "n_elements": 1458,
+          "n_blocks": 23,
+          "scales_bytes": 46,
+          "codes_bytes": 729
+        },
+        {
+          "name": "refine.1.bias",
+          "n_elements": 18,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 9
+        },
+        {
+          "name": "rgb_0.weight",
+          "n_elements": 486,
+          "n_blocks": 8,
+          "scales_bytes": 16,
+          "codes_bytes": 243
+        },
+        {
+          "name": "rgb_0.bias",
+          "n_elements": 3,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 2
+        },
+        {
+          "name": "rgb_1.weight",
+          "n_elements": 486,
+          "n_blocks": 8,
+          "scales_bytes": 16,
+          "codes_bytes": 243
+        },
+        {
+          "name": "rgb_1.bias",
+          "n_elements": 3,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 2
+        }
+      ]
+    },
+    {
+      "block_size": 32,
+      "raw_payload_bytes": 128817,
+      "brotli_bytes": 110768,
+      "archive_bytes": 126862,
+      "compression_ratio": 0.8598865056630725,
+      "n_elements": 228958,
+      "bits_per_element": 3.870334297119996,
+      "per_tensor": [
+        {
+          "name": "stem.weight",
+          "n_elements": 48384,
+          "n_blocks": 1512,
+          "scales_bytes": 3024,
+          "codes_bytes": 24192
+        },
+        {
+          "name": "stem.bias",
+          "n_elements": 1728,
+          "n_blocks": 54,
+          "scales_bytes": 108,
+          "codes_bytes": 864
+        },
+        {
+          "name": "blocks.0.weight",
+          "n_elements": 46656,
+          "n_blocks": 1458,
+          "scales_bytes": 2916,
+          "codes_bytes": 23328
+        },
+        {
+          "name": "blocks.0.bias",
+          "n_elements": 144,
+          "n_blocks": 5,
+          "scales_bytes": 10,
+          "codes_bytes": 72
+        },
+        {
+          "name": "blocks.1.weight",
+          "n_elements": 46656,
+          "n_blocks": 1458,
+          "scales_bytes": 2916,
+          "codes_bytes": 23328
+        },
+        {
+          "name": "blocks.1.bias",
+          "n_elements": 144,
+          "n_blocks": 5,
+          "scales_bytes": 10,
+          "codes_bytes": 72
+        },
+        {
+          "name": "blocks.2.weight",
+          "n_elements": 34992,
+          "n_blocks": 1094,
+          "scales_bytes": 2188,
+          "codes_bytes": 17496
+        },
+        {
+          "name": "blocks.2.bias",
+          "n_elements": 108,
+          "n_blocks": 4,
+          "scales_bytes": 8,
+          "codes_bytes": 54
+        },
+        {
+          "name": "blocks.3.weight",
+          "n_elements": 19440,
+          "n_blocks": 608,
+          "scales_bytes": 1216,
+          "codes_bytes": 9720
+        },
+        {
+          "name": "blocks.3.bias",
+          "n_elements": 80,
+          "n_blocks": 3,
+          "scales_bytes": 6,
+          "codes_bytes": 40
+        },
+        {
+          "name": "blocks.4.weight",
+          "n_elements": 12960,
+          "n_blocks": 405,
+          "scales_bytes": 810,
+          "codes_bytes": 6480
+        },
+        {
+          "name": "blocks.4.bias",
+          "n_elements": 72,
+          "n_blocks": 3,
+          "scales_bytes": 6,
+          "codes_bytes": 36
+        },
+        {
+          "name": "blocks.5.weight",
+          "n_elements": 11664,
+          "n_blocks": 365,
+          "scales_bytes": 730,
+          "codes_bytes": 5832
+        },
+        {
+          "name": "blocks.5.bias",
+          "n_elements": 72,
+          "n_blocks": 3,
+          "scales_bytes": 6,
+          "codes_bytes": 36
+        },
+        {
+          "name": "skips.2.weight",
+          "n_elements": 972,
+          "n_blocks": 31,
+          "scales_bytes": 62,
+          "codes_bytes": 486
+        },
+        {
+          "name": "skips.2.bias",
+          "n_elements": 27,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 14
+        },
+        {
+          "name": "skips.3.weight",
+          "n_elements": 540,
+          "n_blocks": 17,
+          "scales_bytes": 34,
+          "codes_bytes": 270
+        },
+        {
+          "name": "skips.3.bias",
+          "n_elements": 20,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 10
+        },
+        {
+          "name": "skips.4.weight",
+          "n_elements": 360,
+          "n_blocks": 12,
+          "scales_bytes": 24,
+          "codes_bytes": 180
+        },
+        {
+          "name": "skips.4.bias",
+          "n_elements": 18,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 9
+        },
+        {
+          "name": "refine.0.weight",
+          "n_elements": 1458,
+          "n_blocks": 46,
+          "scales_bytes": 92,
+          "codes_bytes": 729
+        },
+        {
+          "name": "refine.0.bias",
+          "n_elements": 9,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 5
+        },
+        {
+          "name": "refine.1.weight",
+          "n_elements": 1458,
+          "n_blocks": 46,
+          "scales_bytes": 92,
+          "codes_bytes": 729
+        },
+        {
+          "name": "refine.1.bias",
+          "n_elements": 18,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 9
+        },
+        {
+          "name": "rgb_0.weight",
+          "n_elements": 486,
+          "n_blocks": 16,
+          "scales_bytes": 32,
+          "codes_bytes": 243
+        },
+        {
+          "name": "rgb_0.bias",
+          "n_elements": 3,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 2
+        },
+        {
+          "name": "rgb_1.weight",
+          "n_elements": 486,
+          "n_blocks": 16,
+          "scales_bytes": 32,
+          "codes_bytes": 243
+        },
+        {
+          "name": "rgb_1.bias",
+          "n_elements": 3,
+          "n_blocks": 1,
+          "scales_bytes": 2,
+          "codes_bytes": 2
+        }
+      ]
+    }
+  ]
+}
