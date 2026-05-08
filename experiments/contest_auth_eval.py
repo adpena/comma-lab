@@ -517,7 +517,8 @@ def _record_provenance(work_dir: Path, archive: Path, inflate_sh: Path,
             "PYTHONHASHSEED", "PYTORCH_CUDA_ALLOC_CONF", "LD_LIBRARY_PATH",
             "CONFIG_ENV_PATH", "PYTHON_INFLATE", "LANE_MM_SIGMA",
             "INFLATE_BROTLI_SPEC", "INFLATE_AV_SPEC", "INFLATE_TORCH_SPEC",
-            "INFLATE_NUMPY_SPEC", "UV_BIN", "UV_PROJECT_ENVIRONMENT",
+            "INFLATE_TORCHVISION_SPEC", "INFLATE_NUMPY_SPEC", "UV_BIN",
+            "UV_PROJECT_ENVIRONMENT",
         )},
     }
     # GPU + driver — recorded in provenance for downstream comparison.

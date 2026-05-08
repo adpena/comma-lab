@@ -127,6 +127,7 @@ Submit through the wrapper:
   --queue-metadata source_prs=102 \
   --queue-metadata pr102_readiness=experiments/results/public_pr102_exact_replay_adapter_20260508_codex/readiness.json \
   --env INFLATE_TORCH_SPEC=torch==2.5.1+cu124 \
+  --env INFLATE_TORCHVISION_SPEC=torchvision==0.20.1+cu124 \
   --env UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124 \
   --env UV_INDEX_STRATEGY=unsafe-best-match \
   --component-trace \

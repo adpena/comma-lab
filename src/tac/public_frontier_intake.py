@@ -55,6 +55,8 @@ class _LocalZipHeader:
     filename: str
     flag_bits: int
     compress_type: int
+    mod_time: int
+    mod_date: int
     crc32: int
     compressed_size: int
     uncompressed_size: int
@@ -135,6 +137,10 @@ def _local_central_header_mismatch_blockers(
         blockers.append(f"{name}:central_local_compression_method_mismatch")
     if local_header.flag_bits != central_header.flag_bits:
         blockers.append(f"{name}:central_local_general_purpose_flags_mismatch")
+    if local_header.mod_time != central_header._raw_time:
+        blockers.append(f"{name}:central_local_mod_time_mismatch")
+    if local_header.mod_date != _dos_date_from_datetime(central_header.date_time):
+        blockers.append(f"{name}:central_local_mod_date_mismatch")
     if (local_header.flag_bits | central_header.flag_bits) & 0x08:
         return blockers
     if local_header.crc32 != central_header.CRC:
@@ -161,8 +167,8 @@ def _local_header(raw: bytes, offset: int) -> _LocalZipHeader | None:
             _version,
             flag_bits,
             method,
-            _time,
-            _date,
+            mod_time,
+            mod_date,
             crc,
             compressed,
             uncompressed,
@@ -182,10 +188,17 @@ def _local_header(raw: bytes, offset: int) -> _LocalZipHeader | None:
         filename=_decode_zip_name(raw[name_start:name_end], flag_bits),
         flag_bits=flag_bits,
         compress_type=method,
+        mod_time=mod_time,
+        mod_date=mod_date,
         crc32=crc,
         compressed_size=compressed,
         uncompressed_size=uncompressed,
     )
+
+
+def _dos_date_from_datetime(date_time: tuple[int, int, int, int, int, int]) -> int:
+    year, month, day, _hour, _minute, _second = date_time
+    return ((year - 1980) << 9) | (month << 5) | day
 
 
 def _validate_archive_member_name(name: str) -> str:

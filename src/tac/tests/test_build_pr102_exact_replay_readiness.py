@@ -89,6 +89,7 @@ def test_pr102_readiness_records_custody_risks_and_command(tmp_path: Path) -> No
     assert "${LIGHTNING_MACHINE:-g4dn.2xlarge}" in runbook["wrapper_submit_command"]
     assert "--source-manifest" not in runbook["wrapper_submit_command"]
     assert "--submit" in runbook["wrapper_submit_command"]
+    assert "INFLATE_TORCHVISION_SPEC=torchvision==0.20.1+cu124" in runbook["wrapper_submit_command"]
     assert "experiments/results/pr102/archive.zip" in runbook["source_manifest_expected_artifacts"]
     assert "experiments/results/pr102_adapter/inflate.sh" in runbook["source_manifest_expected_artifacts"]
     assert "experiments/results/pr102_adapter/readiness.json" in runbook["source_manifest_expected_artifacts"]

@@ -48,6 +48,8 @@ def _patch_first_local_header(
     *,
     flag_bits: int | None = None,
     compress_type: int | None = None,
+    mod_time: int | None = None,
+    mod_date: int | None = None,
     crc32: int | None = None,
     compressed_size: int | None = None,
     uncompressed_size: int | None = None,
@@ -59,6 +61,10 @@ def _patch_first_local_header(
         fields[2] = flag_bits
     if compress_type is not None:
         fields[3] = compress_type
+    if mod_time is not None:
+        fields[4] = mod_time
+    if mod_date is not None:
+        fields[5] = mod_date
     if crc32 is not None:
         fields[6] = crc32
     if compressed_size is not None:
@@ -124,6 +130,8 @@ def test_profile_rejects_local_central_zip_header_field_mismatches(tmp_path: Pat
         archive,
         flag_bits=0x0800,
         compress_type=zipfile.ZIP_DEFLATED,
+        mod_time=1,
+        mod_date=34,
         crc32=0,
         compressed_size=len(x) + 1,
         uncompressed_size=len(x) + 2,
@@ -135,6 +143,8 @@ def test_profile_rejects_local_central_zip_header_field_mismatches(tmp_path: Pat
     blockers = set(report["strict_zip"]["blockers"])
     assert "x:central_local_compression_method_mismatch" in blockers
     assert "x:central_local_general_purpose_flags_mismatch" in blockers
+    assert "x:central_local_mod_time_mismatch" in blockers
+    assert "x:central_local_mod_date_mismatch" in blockers
     assert "x:central_local_crc32_mismatch" in blockers
     assert "x:central_local_compressed_size_mismatch" in blockers
     assert "x:central_local_uncompressed_size_mismatch" in blockers

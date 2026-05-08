@@ -1621,6 +1621,7 @@ def _inflate_runtime_bootstrap_command(
     specs = []
     for key in (
         "INFLATE_TORCH_SPEC",
+        "INFLATE_TORCHVISION_SPEC",
         "INFLATE_BROTLI_SPEC",
         "INFLATE_AV_SPEC",
         "INFLATE_NUMPY_SPEC",

@@ -580,6 +580,8 @@ def _build_lightning_exact_eval_runbook(
         "--env",
         "INFLATE_TORCH_SPEC=torch==2.5.1+cu124",
         "--env",
+        "INFLATE_TORCHVISION_SPEC=torchvision==0.20.1+cu124",
+        "--env",
         "UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124",
         "--env",
         "UV_INDEX_STRATEGY=unsafe-best-match",

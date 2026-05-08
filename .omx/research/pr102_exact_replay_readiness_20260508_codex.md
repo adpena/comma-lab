@@ -129,6 +129,7 @@ Submit through the wrapper:
   --queue-metadata source_prs=102 \
   --queue-metadata pr102_readiness=experiments/results/public_pr102_exact_replay_adapter_20260508_codex/readiness.json \
   --env INFLATE_TORCH_SPEC=torch==2.5.1+cu124 \
+  --env INFLATE_TORCHVISION_SPEC=torchvision==0.20.1+cu124 \
   --env UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124 \
   --env UV_INDEX_STRATEGY=unsafe-best-match \
   --component-trace \
@@ -164,7 +165,16 @@ harvested for the exact archive bytes.
 - Launcher record:
   `.omx/state/pr102-public-exact-replay-g4dn2-20260508T101510Z_lightning_batch_record.json`
 - Initial refreshed status: `Pending` at `2026-05-08T10:16:24Z`
-- Latest refreshed status: `Running` at `2026-05-08T10:22:04Z`
+- Terminal status: `Failed` at `2026-05-08T10:32:12Z`
+- Evidence disposition: `invalid`, pre-hardening/dirty-worktree infrastructure
+  failure. The source manifest staged pre-hardening adapter SHA
+  `f642750cc62e...`, not hardened adapter SHA `9a47abf46ddb...`.
+- Failure class: inflate completed successfully and wrote strict 1200-frame raw
+  output, then `upstream/evaluate.py` failed before score JSON while importing
+  `torchvision` (`RuntimeError: operator torchvision::nms does not exist`).
+  This is a remote torch/torchvision mismatch, not PR102 method evidence.
+- Local harvest classification:
+  `experiments/results/lightning_batch/pr102-public-exact-replay-g4dn2-20260508T101510Z/lightning_artifact_infra_failure.json`
 
 Refused pre-submit attempts are preserved in
 `.omx/state/active_lane_dispatch_claims.md`:
@@ -179,15 +189,14 @@ Refused pre-submit attempts are preserved in
   alias on this AWS cluster before job creation, so the same packet was
   relaunched with concrete `g4dn.2xlarge`.
 
-Harvest command when terminal:
+Harvest command used:
 
 ```bash
 .venv/bin/python scripts/launch_lightning_batch_job.py harvest-ssh \
   --job-name pr102-public-exact-replay-g4dn2-20260508T101510Z \
   --ssh-target s_01knw7wnzbe79wfq5mqqbx1mbz@ssh.lightning.ai \
   --expected-archive-sha256 afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641 \
-  --expected-archive-size-bytes 178981 \
-  --require-adjudication
+  --expected-archive-size-bytes 178981
 ```
 
 ## Adapter Inflate Script

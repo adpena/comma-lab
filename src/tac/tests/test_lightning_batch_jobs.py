@@ -713,6 +713,7 @@ def test_exact_cuda_eval_command_installs_declared_external_inflate_deps() -> No
         adjudication=_adjudication(),
         env={
             "INFLATE_TORCH_SPEC": "torch==2.5.1+cu124",
+            "INFLATE_TORCHVISION_SPEC": "torchvision==0.20.1+cu124",
             "INFLATE_BROTLI_SPEC": "brotli==1.2.0",
             "INFLATE_AV_SPEC": "av==17.0.1",
         },
@@ -721,6 +722,7 @@ def test_exact_cuda_eval_command_installs_declared_external_inflate_deps() -> No
 
     assert "lightning_exact_eval_inflate_runtime_bootstrap" in command
     assert "torch==2.5.1+cu124" in command
+    assert "torchvision==0.20.1+cu124" in command
     assert "brotli==1.2.0" in command
     assert "av==17.0.1" in command
     assert "uv, 'pip', 'install'" in command
@@ -1506,11 +1508,19 @@ def test_t4_exact_eval_submit_requires_driver_compatible_torch_pin(tmp_path: Pat
         module._validate_exact_eval_submit_inputs(args)
 
     args.env = ["INFLATE_TORCH_SPEC=torch==2.5.1+cu124"]
+    with pytest.raises(SystemExit, match="INFLATE_TORCHVISION_SPEC"):
+        module._validate_exact_eval_submit_inputs(args)
+
+    args.env = [
+        "INFLATE_TORCH_SPEC=torch==2.5.1+cu124",
+        "INFLATE_TORCHVISION_SPEC=torchvision==0.20.1+cu124",
+    ]
     with pytest.raises(SystemExit, match="UV_EXTRA_INDEX_URL"):
         module._validate_exact_eval_submit_inputs(args)
 
     args.env = [
         "INFLATE_TORCH_SPEC=torch==2.5.1+cu124",
+        "INFLATE_TORCHVISION_SPEC=torchvision==0.20.1+cu124",
         "UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124",
         "UV_INDEX_STRATEGY=unsafe-best-match",
     ]

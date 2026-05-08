@@ -236,7 +236,15 @@ def test_queue_command_forwards_exact_eval_env_overrides(tmp_path: Path) -> None
     mod = _load_module()
     archive, baseline = _fixture_repo(tmp_path)
     args = mod.build_parser().parse_args(
-        [*_base_args(archive, baseline), "--env", "INFLATE_TORCH_SPEC=torch==2.5.1+cu124", "--env", "UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124"]
+        [
+            *_base_args(archive, baseline),
+            "--env",
+            "INFLATE_TORCH_SPEC=torch==2.5.1+cu124",
+            "--env",
+            "INFLATE_TORCHVISION_SPEC=torchvision==0.20.1+cu124",
+            "--env",
+            "UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124",
+        ]
     )
 
     plan = mod.build_plan(args, repo_root=tmp_path)
@@ -250,6 +258,7 @@ def test_queue_command_forwards_exact_eval_env_overrides(tmp_path: Path) -> None
     ]
     assert env_values == [
         "INFLATE_TORCH_SPEC=torch==2.5.1+cu124",
+        "INFLATE_TORCHVISION_SPEC=torchvision==0.20.1+cu124",
         "UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124",
     ]
     assert plan["env"] == env_values

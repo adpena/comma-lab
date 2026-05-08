@@ -619,6 +619,13 @@ def _validate_t4_exact_eval_runtime_env(args: argparse.Namespace) -> None:
             "so inflate-side torch cannot resolve to a CUDA-13 wheel on an older driver"
         )
     if "+cu124" in torch_spec:
+        torchvision_spec = str(env.get("INFLATE_TORCHVISION_SPEC", "")).strip()
+        if "+cu124" not in torchvision_spec:
+            raise SystemExit(
+                "T4/g4dn exact-eval submit blocked; cu124 torch pin requires "
+                "--env INFLATE_TORCHVISION_SPEC=torchvision==0.20.1+cu124 "
+                "so upstream scorer imports do not mix torch and torchvision builds"
+            )
         extra_index = str(env.get("UV_EXTRA_INDEX_URL", "")).strip()
         strategy = str(env.get("UV_INDEX_STRATEGY", "")).strip()
         if "download.pytorch.org/whl/cu124" not in extra_index or strategy != "unsafe-best-match":
