@@ -32,8 +32,17 @@ def build_gate_from_paths(
     lane_claim_json: Path | None = None,
     dry_run: bool = False,
     active_rate_only_floor_archive_bytes: int | None = ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES,
+    expected_lane_id: str | None = None,
+    expected_instance_job_id: str | None = None,
 ) -> dict[str, Any]:
-    """Load JSON files and return the reusable monolithic closure gate."""
+    """Load JSON files and return the reusable monolithic closure gate.
+
+    ``expected_lane_id`` / ``expected_instance_job_id`` bind the supplied
+    lane claim to the candidate's intended dispatch (Level-2 dispatch
+    custody, codex HIGH finding #2 2026-05-08). When omitted, the
+    binding falls back to ``candidate_manifest["lane_claim"]`` (if
+    present); otherwise the gate refuses readiness.
+    """
 
     manifest = _load_json_object(candidate_manifest_path, label="candidate manifest")
     runtime_proof = (
@@ -52,6 +61,8 @@ def build_gate_from_paths(
         lane_claim=lane_claim,
         dry_run=dry_run,
         active_rate_only_floor_archive_bytes=active_rate_only_floor_archive_bytes,
+        expected_lane_id=expected_lane_id,
+        expected_instance_job_id=expected_instance_job_id,
     )
     return {
         **gate,
@@ -60,6 +71,8 @@ def build_gate_from_paths(
             "runtime_proof_json": str(runtime_proof_json) if runtime_proof_json is not None else None,
             "lane_claim_json": str(lane_claim_json) if lane_claim_json is not None else None,
         },
+        "cli_expected_lane_id": expected_lane_id,
+        "cli_expected_instance_job_id": expected_instance_job_id,
     }
 
 
@@ -91,6 +104,24 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Allow missing lane-claim proof for closure review; never authorizes dispatch.",
     )
+    parser.add_argument(
+        "--expected-lane-id",
+        type=str,
+        default=None,
+        help=(
+            "Bind the supplied lane claim to this lane id; refuses readiness "
+            "if the claim's lane_id does not match (Level-2 dispatch custody)."
+        ),
+    )
+    parser.add_argument(
+        "--expected-instance-job-id",
+        type=str,
+        default=None,
+        help=(
+            "Bind the supplied lane claim to this instance/job id; refuses "
+            "readiness if the claim's instance_job_id does not match."
+        ),
+    )
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--fail-if-not-ready", action="store_true")
     args = parser.parse_args(argv)
@@ -102,6 +133,8 @@ def main(argv: list[str] | None = None) -> int:
             lane_claim_json=args.lane_claim_json,
             dry_run=args.dry_run,
             active_rate_only_floor_archive_bytes=args.active_rate_only_floor_archive_bytes,
+            expected_lane_id=args.expected_lane_id,
+            expected_instance_job_id=args.expected_instance_job_id,
         )
     except (MonolithicPacketClosureGateCliError, OSError, json.JSONDecodeError) as exc:
         raise SystemExit(f"monolithic packet closure gate failed: {exc}") from None

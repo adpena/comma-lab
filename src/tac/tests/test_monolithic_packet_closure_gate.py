@@ -11,10 +11,16 @@ if TYPE_CHECKING:
     import pytest
 
 
-def _manifest(*, archive_bytes: int = 123, changed: bool = True) -> dict:
+def _manifest(
+    *,
+    archive_bytes: int = 123,
+    changed: bool = True,
+    lane_id: str | None = "unit_lane",
+    instance_job_id: str | None = "unit_job",
+) -> dict:
     old_sha = "1" * 64
     new_sha = "2" * 64
-    return {
+    manifest: dict = {
         "schema": "tac_monolithic_packet_candidate_v1",
         "candidate_id": "unit-monolithic",
         "score_claim": False,
@@ -59,6 +65,14 @@ def _manifest(*, archive_bytes: int = 123, changed: bool = True) -> dict:
             }
         ],
     }
+    lane_binding: dict[str, str] = {}
+    if lane_id is not None:
+        lane_binding["lane_id"] = lane_id
+    if instance_job_id is not None:
+        lane_binding["instance_job_id"] = instance_job_id
+    if lane_binding:
+        manifest["lane_claim"] = lane_binding
+    return manifest
 
 
 def _runtime_proof(*, section_sha: str = "2" * 64) -> dict:

@@ -49,8 +49,28 @@ def build_monolithic_packet_closure_gate(
     lane_claim: Mapping[str, Any] | None = None,
     dry_run: bool = False,
     active_rate_only_floor_archive_bytes: int | None = ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES,
+    expected_lane_id: str | None = None,
+    expected_instance_job_id: str | None = None,
 ) -> dict[str, Any]:
-    """Return the fail-closed exact-dispatch gate for one monolithic candidate."""
+    """Return the fail-closed exact-dispatch gate for one monolithic candidate.
+
+    The supplied ``lane_claim`` MUST match the candidate's intended lane and
+    job. The expected values resolve in the following order:
+
+      1. ``expected_lane_id`` / ``expected_instance_job_id`` keyword args
+         (preferred — bound by the caller / dispatch tool).
+      2. ``candidate_manifest["lane_claim"]["lane_id"]`` /
+         ``candidate_manifest["lane_claim"]["instance_job_id"]`` (preferred
+         when builder writes lane binding into the manifest).
+
+    If neither source provides a binding, the gate refuses to authorize
+    dispatch (codex HIGH finding #2 2026-05-08): a valid active claim for
+    a *different* lane could otherwise satisfy the lane-claim section and
+    misattribute GPU spend.
+
+    Per ``CLAUDE.md`` "Cross-agent dispatch coordination" + Level-2
+    dispatch-custody guard.
+    """
 
     manifest_summary, manifest_blockers = _manifest_summary(candidate_manifest)
     mutation_summary, mutation_blockers = _logical_mutation_summary(candidate_manifest)
@@ -59,7 +79,18 @@ def build_monolithic_packet_closure_gate(
         candidate_manifest=candidate_manifest,
         changed_sections=mutation_summary["changed_sections"],
     )
-    lane_summary, lane_blockers = _lane_claim_summary(lane_claim, dry_run=dry_run)
+    expected_lane = _resolve_expected_lane_binding(
+        candidate_manifest=candidate_manifest,
+        explicit_lane_id=expected_lane_id,
+        explicit_instance_job_id=expected_instance_job_id,
+    )
+    lane_summary, lane_blockers = _lane_claim_summary(
+        lane_claim,
+        dry_run=dry_run,
+        expected_lane_id=expected_lane["lane_id"],
+        expected_instance_job_id=expected_lane["instance_job_id"],
+        binding_blockers=expected_lane["blockers"],
+    )
     floor_summary, floor_blockers = _rate_only_floor_summary(
         candidate_manifest,
         active_rate_only_floor_archive_bytes=active_rate_only_floor_archive_bytes,
@@ -320,8 +351,15 @@ def _lane_claim_summary(
     claim: Mapping[str, Any] | None,
     *,
     dry_run: bool,
+    expected_lane_id: str | None = None,
+    expected_instance_job_id: str | None = None,
+    binding_blockers: list[str] | None = None,
 ) -> tuple[dict[str, Any], list[str]]:
-    blockers: list[str] = []
+    # Binding blockers only apply when a claim is actually provided OR
+    # when we are not in dry_run mode. dry_run + no claim is a closure
+    # review path that cannot misattribute GPU spend (no dispatch will be
+    # authorized regardless of binding).
+    incoming_binding_blockers = list(binding_blockers or [])
     summary: dict[str, Any] = {
         "required": not dry_run,
         "provided": isinstance(claim, Mapping),
@@ -331,11 +369,19 @@ def _lane_claim_summary(
         "claim_status": None,
         "claims_path": None,
         "missing_allowed_by_dry_run": dry_run and not isinstance(claim, Mapping),
+        "expected_lane_id": expected_lane_id,
+        "expected_instance_job_id": expected_instance_job_id,
+        "lane_id_bound": False,
+        "instance_job_id_bound": False,
     }
     if not isinstance(claim, Mapping):
         if dry_run:
+            # No claim, no dispatch authorization: binding cannot misattribute.
             return summary, []
-        return summary, ["active_lane_claim_missing"]
+        return summary, [*incoming_binding_blockers, "active_lane_claim_missing"]
+    # Claim is provided: surface binding-availability blockers so a wrong-lane
+    # claim cannot satisfy the gate.
+    blockers: list[str] = list(incoming_binding_blockers)
 
     status = claim.get("claim_status", claim.get("status"))
     lane_id = claim.get("lane_id")
@@ -343,6 +389,16 @@ def _lane_claim_summary(
     claims_path = claim.get("claims_path")
     claimed_with = claim.get("claimed_with")
     row_hash = claim.get("claim_row_sha256")
+    lane_id_bound = (
+        isinstance(lane_id, str)
+        and isinstance(expected_lane_id, str)
+        and lane_id == expected_lane_id
+    )
+    instance_job_id_bound = (
+        isinstance(instance_job_id, str)
+        and isinstance(expected_instance_job_id, str)
+        and instance_job_id == expected_instance_job_id
+    )
     summary.update(
         {
             "active": claim.get("active") is True,
@@ -350,6 +406,8 @@ def _lane_claim_summary(
             "instance_job_id": instance_job_id if isinstance(instance_job_id, str) else None,
             "claim_status": status if isinstance(status, str) else None,
             "claims_path": claims_path if isinstance(claims_path, str) else None,
+            "lane_id_bound": lane_id_bound,
+            "instance_job_id_bound": instance_job_id_bound,
         }
     )
     if claim.get("schema") != ACTIVE_LANE_CLAIM_SCHEMA:
@@ -378,7 +436,69 @@ def _lane_claim_summary(
         blockers.append("lane_claim_row_sha256_invalid")
     elif isinstance(claims_path, str) and not _claim_file_contains_row_hash(Path(claims_path), row_hash):
         blockers.append("lane_claim_row_not_found_in_claims_file")
+    # Lane-binding enforcement: refuse readiness when supplied claim is
+    # for a different lane / job than the candidate's intended dispatch.
+    # Codex HIGH finding #2 2026-05-08.
+    if (
+        isinstance(expected_lane_id, str)
+        and expected_lane_id
+        and isinstance(lane_id, str)
+        and lane_id
+        and lane_id != expected_lane_id
+    ):
+        blockers.append("lane_claim_lane_id_mismatch")
+    if (
+        isinstance(expected_instance_job_id, str)
+        and expected_instance_job_id
+        and isinstance(instance_job_id, str)
+        and instance_job_id
+        and instance_job_id != expected_instance_job_id
+    ):
+        blockers.append("lane_claim_instance_job_id_mismatch")
     return summary, blockers
+
+
+def _resolve_expected_lane_binding(
+    *,
+    candidate_manifest: Mapping[str, Any],
+    explicit_lane_id: str | None,
+    explicit_instance_job_id: str | None,
+) -> dict[str, Any]:
+    """Resolve the lane/job binding expected for this candidate.
+
+    Precedence: explicit kwargs > ``candidate_manifest["lane_claim"]``.
+
+    Returns blockers when no binding is available — the gate refuses to
+    authorize exact-eval dispatch without an explicit lane / job binding
+    (Level-2 dispatch-custody guard, codex HIGH finding #2).
+    """
+
+    blockers: list[str] = []
+    lane_id: str | None = explicit_lane_id if (
+        isinstance(explicit_lane_id, str) and explicit_lane_id
+    ) else None
+    instance_job_id: str | None = explicit_instance_job_id if (
+        isinstance(explicit_instance_job_id, str) and explicit_instance_job_id
+    ) else None
+    manifest_binding = candidate_manifest.get("lane_claim")
+    if isinstance(manifest_binding, Mapping):
+        if lane_id is None:
+            value = manifest_binding.get("lane_id")
+            if isinstance(value, str) and value:
+                lane_id = value
+        if instance_job_id is None:
+            value = manifest_binding.get("instance_job_id")
+            if isinstance(value, str) and value:
+                instance_job_id = value
+    if lane_id is None:
+        blockers.append("expected_lane_id_missing")
+    if instance_job_id is None:
+        blockers.append("expected_instance_job_id_missing")
+    return {
+        "lane_id": lane_id,
+        "instance_job_id": instance_job_id,
+        "blockers": blockers,
+    }
 
 
 def _rate_only_floor_summary(
