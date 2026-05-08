@@ -43,7 +43,7 @@ R_YF(D) ≤ R_Sh(D)
 
 with strict inequality whenever there exist `X̂_1 ≠ X̂_2` such that `Φ(X̂_1) = Φ(X̂_2)` (i.e., whenever the scorer's preimage on its output space is non-trivial).
 
-**Sketch of proof:** Every Shannon-feasible scheme attaining `(R_Sh(D), D)` is also YF-feasible at the same rate and the same or strictly lower task-aware distortion (because preserving pixel-fidelity preserves `Φ(X̂)`). Conversely, YF-feasibility allows arbitrary perceptual distortion as long as `Φ(X̂)` is preserved, so any non-trivial preimage of `Φ` admits cheaper reconstructions that are perceptually different but task-identical. The inequality is strict precisely when the preimage is non-trivial, which holds for the contest's SegNet (whose stride-2 EfficientNet-B2 stem coarsens spatial detail) and PoseNet (whose YUV6 input + FastViT-T12 attention coarsens chroma detail), among other coarsening operations.
+**Sketch of proof:** Every Shannon-feasible scheme attaining `(R_Sh(D), D)` is also YF-feasible at the same rate and the same or strictly lower task-aware distortion (because preserving pixel-fidelity preserves `Φ(X̂)`). Conversely, YF-feasibility allows arbitrary perceptual distortion as long as `Φ(X̂)` is preserved, so any non-trivial preimage of `Φ` admits cheaper reconstructions that are perceptually different but task-identical. The inequality is strict precisely when the preimage is non-trivial, which holds for the contest's SegNet (whose stride-2 EfficientNet-B2 stem coarsens spatial detail) and PoseNet (whose YUV6 input plus FastViT-T12 RepMixer/conv backbone coarsens chroma and motion detail), among other coarsening operations.
 
 ### A2.2 Empirical bracket
 

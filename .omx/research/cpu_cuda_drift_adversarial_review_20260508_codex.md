@@ -76,8 +76,9 @@ substrate class.
 
 1. Run `tools/probe_eval_loader_drift.py` on a T4 with DALI available and
    record per-channel LSB differences.
-2. Force PyAV ground-truth decode while running CUDA scorer kernels as a
-   mechanism-only fork. This isolates loader from network.
+2. Run the shared-tensor 2x2 matrix: CUDA forward on dumped PyAV tensors and
+   CPU forward on dumped DALI tensors where available. Do not instantiate
+   `AVVideoDataset` with a CUDA device; upstream rejects that path.
 3. Inject uniform integer noise of amplitude 1, 2, and 3 LSB into a PyAV
    decoded tensor and run PoseNet on T4. If amplitude about 1.5 LSB induces
    pose drift near `1.4e-4`, H1 becomes dominant.

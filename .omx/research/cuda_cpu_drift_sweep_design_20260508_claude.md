@@ -282,7 +282,11 @@ architecture-class calibration problem.
 
 **Prescription E3.1 — Pick high-R architecture:** if qhnerv has R = 6 vs HNeRV's R = 5, switching to qhnerv gives an extra 0.55 × √(pose_cuda) × (1/√6 − 1/√5) ≈ 0.55 × √(pose_cuda) × 0.083 ≈ 0.001 CPU points at PR106-class pose_cuda. Not huge, but if H3 has a 2× spread (e.g., AV1 = 3, HNeRV = 5), the choice between submission classes is leaderboard-determining.
 
-**Prescription E3.2 — Adversarial architecture probe:** intentionally engineer reconstructions that maximize FastViT-T12 attention-pattern fragility (i.e., maximize R_pose). Possible levers: introduce specific high-frequency patterns at the YUV6 sub-blocking boundary, or maximize chroma subsampling rounding errors — whatever the FastViT softmax is most CPU-vs-CUDA-divergent on.
+**Prescription E3.2 — Architecture sensitivity probe:** intentionally test
+reconstructions that stress YUV6 sub-blocking boundaries, chroma upsampling,
+and RepMixer/conv feature sensitivity. The earlier "FastViT attention-pattern
+fragility" wording is superseded; PoseNet uses FastViT-T12 RepMixer blocks,
+not attention blocks.
 
 ### If H4 (pose-magnitude-dependent) wins
 
@@ -310,7 +314,9 @@ Per the recursive-design discipline: before any 25-PR full sweep, run a **3-PR v
 
 **Decision rule on results:**
 
-- All three R_pose ∈ [4.5, 5.5] **→ H1 confirmed; full 25-PR sweep is now diminishing returns. Run S6 (5 AV1 PRs) only to settle the high-pose tail; deprioritize S2/S5.**
+- All three R_pose ∈ [4.5, 5.5] **→ H1 supported for the validation slice;
+  full 25-PR sweep may be reduced, but do not call the mechanism confirmed.
+  Run S6 (5 AV1 PRs) to settle the high-pose tail before generalizing.**
 - PR106 R_pose < 4 **→ H2 wins. Compute ε_cpu_pose, reallocate pose-bit-budget for our submission.**
 - PR104 R_pose ≠ ~5 by > 0.5 **→ H3 wins. Run 5-PR cross-family stratum (97, 86, 56, 60, 49) to map R-by-family.**
 - PR91 R_pose drifts smoothly from PR106's value **→ H4 wins. Run 10-PR pose-magnitude stratum (S5 + S6) to fit the curve.**
@@ -325,10 +331,18 @@ Per the recursive-design discipline: before any 25-PR full sweep, run a **3-PR v
 
 ## 8. Open questions
 
-1. **Is ε_cpu_pose a function of FP32 precision or FastViT softmax bit-exactness?** PyTorch softmax on CPU uses serial summation; on CUDA it uses parallel-reduction with different ordering. The MSE of two sets of float32 values diverging by a few ulp gives a noise floor in the 1e-7 range — but pose distortion is the MSE of the FastViT output, which has been through ~6 transformer blocks of softmax. Cumulative attention divergence could be 1e-5 to 1e-6.
+1. **Is ε_cpu_pose a function of FP32 precision, DALI/PyAV input bytes, or
+   their interaction?** PoseNet uses RepMixer/conv blocks rather than softmax
+   attention, so the right probe is shared-input CPU/CUDA forwards plus
+   DALI/PyAV tensor custody, not an attention-specific softmax test.
 2. **Is YUV6 chroma rounding contributing?** The chroma subsampling in `rgb_to_yuv6` does a 4-pixel mean × 0.25 multiply. CPU and CUDA float32 multiply are bit-exact but the surrounding `clamp_(0.0, 255.0)` may behave differently at clamp boundaries. Probably negligible (clamp is element-wise) but worth measuring on a small input set.
 3. **Does `nn.functional.interpolate(mode='bilinear')` differ between CPU and CUDA?** CUDA uses cuDNN's bilinear kernel; CPU uses PyTorch's reference implementation. Known to differ at ulp level on edge pixels. For 384×512 → 512×384 resize this is a contributor but not the dominant one.
-4. **Why is R_seg (1.17) so much smaller than R_pose (5.0)?** SegNet has no attention. EfficientNet-B2's SE blocks have a small softmax-like sigmoid but it's element-wise, no cross-token reductions. Hypothesis: R_seg ≈ 1.17 is the "pure FP32 precision noise" baseline; R_pose's extra 4× factor is FastViT attention-specific. This predicts R_pose stays 5 across all reasonable archives but R_seg stays near 1.17. **Test:** verify R_seg in the smoke (PR106/104/91) — should also be 1.15-1.20. If R_seg drifts above 1.3 anywhere, the simple explanation breaks.
+4. **Why is R_seg (1.17) so much smaller than R_pose (5.0)?** SegNet is
+   argmax-scored while PoseNet is regression-scored, so classification-margin
+   stability is the leading explanation. This does not prove a specific
+   decoder/network share. **Test:** verify R_seg in the smoke
+   (PR106/104/91). If R_seg drifts above 1.3 anywhere, the simple
+   regression-vs-argmax explanation breaks.
 5. **Could the R_pose constancy be a coincidence of all 5 datapoints sharing similar reconstruction statistics (HNeRV's smoothness)?** Test with PR97 (H3 grayscale + AV1) and PR60 (raw AV1). If those produce R_pose between 3 and 4, the constancy was substrate-locked. Sample with cross-family probes in S4.
 6. **Is the contest organizers' CPU eval substrate (GitHub Actions Linux x86_64) bit-exact with Modal's CPU container?** The protocol memo `public_pr_auth_eval_comment_drift_and_dual_axis_protocol_20260508_codex.md` flags this as a substrate-trust gap. Modal CPU smoke-verify on PR102 is the canonical gate; if Modal CPU produces 0.195 ± 1e-3 vs the public 0.19538, the substrate is contest-grade for our purposes.
 7. **Is the leaderboard ranking actually CPU?** The protocol memo asserts this with PR102 evidence. We should periodically re-verify by observing leaderboard changes when a public CPU comment lands (vs a public CUDA comment).
@@ -353,4 +367,8 @@ Per the recursive-design discipline: before any 25-PR full sweep, run a **3-PR v
 3. **(P1) If smoke supports H2/H3/H4:** run the relevant 5-10 PR follow-up stratum. $3-5, 6-9 hrs.
 4. **(P2) Apply Prescription E1.2 (seg-priority on PR107 successor)** — even before the sweep completes, the existing 5 paired datapoints justify treating seg as 1.85× more leaderboard-marginal than pose at PR106 frontier. This is a planner reweighting, no new dispatch needed.
 5. **(P2) Time-stamped CPU comment monitoring:** every 24h refresh `tools/public_pr_eval_comment_scorecard.py` to catch any new CPU comments on existing PRs (e.g., PR104 currently has only CUDA, PR106/107 have only CUDA). When CPUs land for those, R extends naturally.
-6. **(P3) FastViT-T12 attention bit-exactness probe:** narrow microbenchmark — single FastViT-T12 forward pass on 16 random YUV6 inputs, CPU vs CUDA, output MSE per block. Locates the divergence to specific layers. ~$0.25 of GPU + an hour. Useful for the "open question 1" math but not load-bearing for the leaderboard.
+6. **(P3) FastViT-T12 RepMixer/conv shared-input probe:** narrow
+   microbenchmark — single FastViT-T12 forward pass on 16 YUV6 tensors, CPU
+   vs CUDA, output MSE per block. Locates divergence to specific layers and
+   avoids the superseded attention framing. ~$0.25 of GPU + an hour. Useful
+   for the "open question 1" math but not load-bearing for the leaderboard.

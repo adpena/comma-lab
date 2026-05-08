@@ -205,7 +205,7 @@ PR60, PR97, PR104, etc., the harvester ingests them automatically.
 | subagent | role | this layer's relationship |
 | --- | --- | --- |
 | **a618cdd6** static helper `cuda_cpu_axis_calibration.py` | Hardcoded HNeRV constants (R_POSE_HNERV=5.04, etc.) | **Bootstrap source.** This module imports the constants when available; falls back to in-module empirical means if the helper isn't on disk yet. The static helper handles the single-class HNeRV calibration; this layer handles per-class learning. |
-| **a22d581a** deep-theory mechanism dive | Welch's-law + 4 noise sources, decoder-network 25/75 split | **Default constants source.** `DEFAULT_DECODER_POSE_DRIFT_FRACTION=0.25` and `DEFAULT_POSE_FLOOR_ESTIMATE=1.4e-4` come from this analysis. |
+| **a22d581a** deep-theory mechanism dive | Welch's-law fit + candidate noise sources; 25/75 split now unmeasured | **Prior source only.** `DEFAULT_DECODER_POSE_DRIFT_FRACTION=0.25` is a bootstrap prior pending the shared-tensor DALI/PyAV x CPU/CUDA matrix, not a measured constant. `DEFAULT_POSE_FLOOR_ESTIMATE=1.4e-4` is a fitted HNeRV-band residual scale. |
 | **ad0875a8** 25-PR sweep design | Empirical anchors for PR60/97/104/etc. | **Anchor producer.** Once the sweep dispatches and harvests adjudicated JSONs, the online-learning hook ingests them automatically — no manual update step. |
 | **a43dd96b** decoder drift introspection | Refines the decoder fraction per-class | **Override source.** Once measured per-class, the `decoder_drift_fraction` field on each `ArchitectureProfile` can be set manually (or via a future helper). |
 | **a71a34f7** writeup subagent | Paper / writeup | This memo is the durable record. The writeup can pull from §1-§4 verbatim. |

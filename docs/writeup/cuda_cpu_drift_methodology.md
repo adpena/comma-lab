@@ -311,9 +311,10 @@ aware Lagrangian for the cathedral autopilot.
 
 ### 4.3 Training-time SegNet boundary robustness
 
-Predicted +0.001 CPU-leaderboard score at -0.008 CUDA score. Net positive
-at the leaderboard substrate, but only if achieved by changing the renderer
-or training objective. Do **not** import or run SegNet inside `inflate.py`;
+This is a leaderboard-axis hypothesis, not a measured causality claim.
+It may be positive if changing the renderer or training objective makes
+class boundaries more stable under both score axes, but paired CPU/CUDA
+exact eval must decide. Do **not** import or run SegNet inside `inflate.py`;
 inflate is scorer-free and must remain contest-compliant.
 
 ```python

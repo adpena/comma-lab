@@ -20,7 +20,11 @@ The widely-shared first-principles intuition that **"FastViT's attention layers 
 2. **T4 (sm_75 Turing) does not support TF32.** TF32 was introduced on Ampere (sm_80, A100) in 2020. On T4 the choice is FP32 (full precision) or FP16/BF16 (Tensor Cores). PyTorch's `cuda.matmul.allow_tf32` flag is a no-op on T4 — there is no TF32 datapath to enable. Setting it `True` does nothing on this hardware.
 3. **`torch.backends.cuda.matmul.allow_tf32` defaults to FALSE in PyTorch ≥ 1.12.** Even on Ampere/Hopper hardware where TF32 is available, matmul stays FP32 by default. `cudnn.allow_tf32` defaults to TRUE — but again, on T4 this does nothing.
 
-The actual mechanism for the **5.0× pose ratio** + **1.17× seg ratio** is a combination of **four independent, additive precision-noise sources**, each contributing ~25% of the variance, all concentrated in the FP32 forward path and not in any TF32/tensor-core path:
+The measured facts are the **5.0× pose ratio** and **1.17× seg ratio**.
+The mechanism is not isolated. The current live explanation is a set of
+candidate contributors, potentially additive, whose shares must be measured by
+the shared-tensor DALI/PyAV x CPU/CUDA matrix. Do not treat the earlier 25/75
+or four-equal-source split as measured causality:
 
 (A) **Cuda vs CPU floating-point reduction order in conv2d / depthwise-conv2d.** cuDNN's IMPLICIT_PRECOMP_GEMM and WINOGRAD algorithms use parallel reduction trees with non-deterministic accumulation order. CPU (oneDNN/MKL) uses serial reduction. Per-output-pixel relative error is ~1e-6 to 1e-5. With ~50+ conv layers in FastViT-T12 + EfficientNet-B2 stem, this compounds.
 
@@ -39,16 +43,24 @@ The actual mechanism for the **5.0× pose ratio** + **1.17× seg ratio** is a co
 - Seg contribution: 100×0.000676 − 100×0.000576 = **+0.0100** (30% of gap)
 - Rate contribution: identical (both = 25 × 178981 / 37545489 = 0.1192)
 
-**Variance decomposition of pose noise (assuming independent additive sources):**
+**Variance decomposition of pose noise (model fit, not localization):**
 - pose_dist_cuda ≈ pose_signal + sigma²_noise_cuda
 - 1.73e-4 ≈ 3.46e-5 + 1.39e-4 ⇒ sigma_cuda ≈ 0.012 (RMS noise on the 6-dim regression output)
-- This 0.012 RMS noise floor is the **precision floor** of CUDA pose computation. We CAN'T see below it on CUDA without changing precision policy.
+- This 0.012 RMS value is a fitted residual scale for the HNeRV medal-band
+  cluster. It may come from decoder bytes, network kernels, or both.
 
 **Five actionable bullets**:
 
-- **Exploit 1**: At medal band, CUDA pose loss is mostly noise floor. Training with `pose_weight ÷ 5` is approximately optimal for CPU-leaderboard reward — see also ad0875a8 §6 leaderboard cost-curve inversion.
-- **Exploit 2**: Setting `cudnn.deterministic=True` + `cudnn.benchmark=False` on the contest CUDA path would REDUCE noise variance (deterministic algorithms have tighter accumulation order). Risk: 2-3× slower eval but bit-exactly reproducible CUDA scores. Engineering cost: 2 lines added to `evaluate.py`. **Operator-only — modifying upstream is forbidden.**
-- **Exploit 3**: SegNet boundary smoothing (one extra round of bilinear smoothing on logits before argmax) reduces argmax-flip rate at the cost of seg precision on stable regions. Estimated trade: 5-10% reduction in seg_cuda at <1% cost in seg_cpu. **Net positive for CPU leaderboard.**
+- **Exploit 1**: At medal band, CUDA pose improvements appear to transfer
+  less efficiently to the CPU leaderboard axis. Training with lower
+  effective pose weight is a testable ablation, not an optimum claim.
+- **Exploit 2**: Setting `cudnn.deterministic=True` + `cudnn.benchmark=False`
+  on the contest CUDA path might reduce CUDA-axis jitter, but this requires
+  upstream changes and is only organizer-facing advocacy. **Operator-only —
+  modifying upstream is forbidden.**
+- **Exploit 3**: SegNet boundary robustness belongs in training/offline
+  candidate generation only. Do not smooth scorer logits in `inflate.py`, and
+  do not claim CPU leaderboard benefit without paired exact eval.
 - **Exploit 4**: Quantization-aware training with **noise injection at the FastViT output** during training (`noise_std=0.012` matched to CUDA's noise floor) makes the model robust to CUDA precision noise without affecting CPU performance. The `noise_std` rule is already in CLAUDE.md (eval_roundtrip), but the magnitude calibration to the CUDA noise floor is new and should land in `experiments/pipeline.py`.
 - **Exploit 5**: Other contest components with hidden CPU-CUDA splits: (a) inflate-time decoder (no — both CPU and CUDA use `TensorVideoDataset` for the inflated `.raw` files; only the GT side has DALI vs PyAV split), (b) arithmetic decoders / range coders in PR101/PR103 inflate paths (potentially yes — see §8). The seg-rate-pose decomposition is the only meaningful CPU-CUDA axis for the score formula itself.
 
@@ -337,7 +349,10 @@ Observed CUDA noise RMS on pose: sqrt(1.39e-4) = **0.0118**. **Match within 2%.*
 
 For seg, the relevant L is the same FastViT-equivalent body for EfficientNet-B2 (~50 conv ops). sigma_per_op for seg depends on the argmax stability margin. With class-confidence margins ~0.1 and per-op ulp drift ~1e-6, only ~10% of pixels near class boundaries flip. **Match within ~10%.**
 
-**Verdict: STRONGLY SUPPORTED for the FP32-on-T4 substrate.** The 5× pose ratio is consistent with sqrt(50)-scaled per-op random walk where each op has ~1.7e-3 relative error.
+**Verdict: consistent with the medal-band fit, not localized.** The 5×
+pose ratio is consistent with a sqrt(50)-scaled random-walk model, but the
+same observed ratio may also be explained by DALI/PyAV input-byte drift or
+a mixed mechanism.
 
 ### 6.4 Model C — Precision floor
 
@@ -351,7 +366,10 @@ This model predicts:
 
 This is the prediction that **ad0875a8's S5 + S6 strata should empirically test.** If we measure PR60's AV1 baseline and find R drops to 1.05, that strongly supports model C/B.
 
-**Verdict: STRONGLY SUPPORTED. C is essentially a saturated form of B.** The two are observationally indistinguishable at medal band; they diverge only at very high or very low pose magnitudes. The S5/S6 sweep (PR91, PR60, PR49) is the discriminator.
+**Verdict: consistent with the medal-band fit.** C is essentially a
+saturated form of B. The two are observationally indistinguishable at medal
+band; they diverge only at very high or very low pose magnitudes. The S5/S6
+sweep (PR91, PR60, PR49) is the discriminator.
 
 ### 6.5 Model D — Saturating non-linearity
 
@@ -365,7 +383,7 @@ For FastViT-T12, BatchNorm2d after every conv would cap per-output drift. Empiri
 
 ### 6.6 Combined verdict and predictions
 
-The most defensible model is a **B+C hybrid**:
+The current working model is a **B+C hybrid**:
 
 ```
 sigma²_cuda(L) = sum over ops i of sigma_i²
@@ -386,7 +404,8 @@ Predictions for ad0875a8's empirical sweep:
 | 60 (AV1 high) | 5e-3 | 1 + 1.4e-4/5e-3 ≈ 1.03 (≈1) |
 | 105 (medal-band) | 3.4e-5 | 1 + 1.4e-4/3.4e-5 ≈ 5.1 (matches observed) |
 
-**These are the falsifiable predictions of the model.** ad0875a8's sweep design directly tests these via S3, S5, S6 strata.
+**These are falsifiable predictions, not measured causality.** ad0875a8's
+sweep design directly tests these via S3, S5, S6 strata.
 
 For seg, the same logic with `epsilon_floor_seg = 1.0e-4` (the additive seg noise variance) gives:
 - HNeRV cluster: 1 + 1.0e-4/5.7e-4 = 1.18 ✓
@@ -408,10 +427,10 @@ if cfg.add_calibrated_cuda_noise:
     pose_logits = pose_logits + cuda_noise_std * torch.randn_like(pose_logits)
 ```
 
-This makes the model **noise-robust** to CUDA's precision-noise floor by training as if CUDA were the inference target. Risk: net negative on CPU (CPU has no such noise; we're now adding noise that doesn't exist there). Mitigation: scale `cuda_noise_std` by a fraction (0.5×) and validate on both axes.
-
-**Expected CPU score gain: small (model already trained near-CPU-optimal).**
-**Expected CUDA score gain: 0.000-0.005 (modest robustness gain at CUDA inference time).**
+This is a robustness hypothesis, not a measured gain. Risk: net negative on
+CPU if the injected noise does not match the real CPU/CUDA or DALI/PyAV split.
+Mitigation: scale `cuda_noise_std` by a fraction (0.5×) and validate on both
+axes before using it in planning.
 
 ### 7.2 Training-time SegNet boundary robustness (supersedes earlier inflate-logit smoothing)
 
@@ -431,7 +450,7 @@ loss = seg_loss + boundary_loss + pose_loss + rate_loss
 Any measured gain must be promoted only after paired CPU/CUDA exact eval on
 the byte-closed archive/runtime pair.
 
-### 7.3 Pose-weight rebalancing (engineering cost: 1 LOC, predicted strict improvement on CPU lederboard)
+### 7.3 Pose-weight rebalancing (engineering cost: 1 LOC, CPU-leaderboard ablation)
 
 If we know the leaderboard scores against CPU, our training Lagrangian should weight components according to **CPU sensitivity**, not CUDA sensitivity. Concretely:
 

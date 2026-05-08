@@ -181,12 +181,16 @@ FastViT internals.
 
 A direct discriminator microbench is sketched in
 `.omx/research/cuda_cpu_pose_drift_mechanism_deep_dive_20260508_claude.md`
-§9.3: force `DefaultDatasetClass = AVVideoDataset` while running
-`--device cuda`. If the score moves near the CPU score, decoder mismatch is
-dominant. If it stays near the CUDA score, network kernels dominate. A
-separate low-cost test perturbs an AV-decoded tensor by 1 to 3 LSB and runs
-PoseNet on T4; if 1.5 LSB produces the observed pose delta, the decoder
-hypothesis becomes the leading explanation.
+§9.3, but the original implementation prescription has been superseded:
+do not instantiate `AVVideoDataset` with a CUDA device, because upstream
+asserts non-CUDA for that class. The rigorous test is a shared-tensor
+matrix: decode with PyAV on CPU, hash/dump those tensors, decode with DALI
+on a CUDA host where available, then feed each decoded tensor batch through
+CPU and CUDA scorer forwards. Movement across those cells separates
+decoder-byte drift from network-kernel drift. A separate low-cost test
+perturbs an AV-decoded tensor by 1 to 3 LSB and runs PoseNet on T4; if
+1.5 LSB produces the observed pose delta, the decoder hypothesis becomes
+the leading explanation.
 
 ### 3.2 PoseNet kernel precision (plausible, not localized)
 
@@ -437,9 +441,11 @@ These are tractable with small-scale dispatches:
    high-pose substrate at pose<sub>cuda</sub> ≈ 5e-3 — 5e-2 should saturate
    the additive-noise model and give R<sub>pose</sub> → 1. Tested directly
    by the S6 stratum.
-3. **What's the decoder-vs-FP32 split?** The 1-line `DefaultDatasetClass =
-   AVVideoDataset` + `--device cuda` discriminator produces a decisive
-   number: ~0.220 → mixed, ~0.195 → all-decoder, ~0.228 → all-FP32.
+3. **What's the decoder-vs-FP32 split?** The shared-tensor 2x2 matrix
+   (CPU+PyAV, CUDA+DALI, CUDA forward on PyAV tensors, and CPU forward on
+   DALI tensors where available) estimates the split. The older one-line
+   `AVVideoDataset` + `--device cuda` idea is invalid because upstream
+   `AVVideoDataset` asserts a non-CUDA device.
 4. **What's the layer-by-layer drift profile?** Falsifies / confirms the
    `sqrt(L)·ε` additive-noise model vs a saturation model. $0.25 / 1-hour
    T4.

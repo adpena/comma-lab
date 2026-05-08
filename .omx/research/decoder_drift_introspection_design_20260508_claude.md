@@ -245,7 +245,9 @@ Test C is the cheapest (no GPU needed) and discriminates H1/H2 if the curve at d
 - **Submission auth eval discipline**: ALWAYS run the AV path locally + the DALI path on Lightning T4 BEFORE submitting; gap > 0.01 score points means decoder drift is not under control.
 
 ### If H2 (network-dominant) holds
-- **a22d581a's FastViT compounding hypothesis stands.** Replace FastViT or train at lower attention precision.
+- **Network-kernel drift dominates on shared inputs.** Localize it with the
+  PoseNet/SegNet shared-input tracer; do not revive the superseded FastViT
+  attention framing unless a future architecture actually contains attention.
 - **Decoder choice doesn't matter for our exploits.** Both DALI and AV produce nearly-identical bytes; the divergence is in network kernels.
 
 ### If H3 (mixed) holds
