@@ -1,0 +1,1328 @@
+{
+  "archive_overhead_bytes": 16094,
+  "best_variant_by_reference_accounting": {
+    "delta_vs_brotli_optuna_reference_accounting": 635,
+    "delta_vs_iid_per_tensor_floor_reference_accounting": 2863,
+    "delta_vs_per_tensor_aac_reference_accounting": 598,
+    "estimated_archive_bytes_reference_accounting": 178779,
+    "variant": "tensor_only"
+  },
+  "charged_bits_changed": false,
+  "comparison_brotli_optuna_archive_bytes": 178144,
+  "comparison_iid_per_tensor_floor_archive_bytes": 175916,
+  "comparison_naive_markov1_aac_archive_bytes": 199238,
+  "comparison_per_tensor_aac_archive_bytes": 178181,
+  "cpu_only": true,
+  "dispatch_blockers": [
+    "planning_probe_only",
+    "no_actual_range_or_ans_bitstream",
+    "no_runtime_model_serializer_or_decoder",
+    "model_parameter_quantization_is_estimated_not_packet_verified",
+    "no_archive_substitution_performed",
+    "missing_exact_cuda_auth_eval"
+  ],
+  "disposition": "negative_smoke_loses_after_charging_model_parameters",
+  "evidence_grade": "empirical",
+  "evidence_semantics": "cpu_tiny_nn_pmf_planning_probe",
+  "fixed_seed": 17,
+  "include_position_features": false,
+  "input_state_dict": "experiments/results/cma_pr101_real_substrate_20260507T222605Z/pr101_decoder_state_dict.pt",
+  "input_state_dict_sha256": "b863362aaba1b9cae9b944f5e5b1a43a53ca824b7899ed7b80a2e2146d66f053",
+  "n_categories": 255,
+  "n_tensors": 28,
+  "n_total_symbols": 228958,
+  "per_tensor_input_summary": [
+    {
+      "idx": 0,
+      "n_distinct_symbols": 118,
+      "n_elements": 48384,
+      "name": "stem.weight",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        1728,
+        28
+      ]
+    },
+    {
+      "idx": 1,
+      "n_distinct_symbols": 194,
+      "n_elements": 1728,
+      "name": "stem.bias",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        1728
+      ]
+    },
+    {
+      "idx": 2,
+      "n_distinct_symbols": 131,
+      "n_elements": 46656,
+      "name": "blocks.0.weight",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        144,
+        36,
+        3,
+        3
+      ]
+    },
+    {
+      "idx": 3,
+      "n_distinct_symbols": 101,
+      "n_elements": 144,
+      "name": "blocks.0.bias",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        144
+      ]
+    },
+    {
+      "idx": 4,
+      "n_distinct_symbols": 151,
+      "n_elements": 46656,
+      "name": "blocks.1.weight",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        144,
+        36,
+        3,
+        3
+      ]
+    },
+    {
+      "idx": 5,
+      "n_distinct_symbols": 96,
+      "n_elements": 144,
+      "name": "blocks.1.bias",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        144
+      ]
+    },
+    {
+      "idx": 6,
+      "n_distinct_symbols": 172,
+      "n_elements": 34992,
+      "name": "blocks.2.weight",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        108,
+        36,
+        3,
+        3
+      ]
+    },
+    {
+      "idx": 7,
+      "n_distinct_symbols": 88,
+      "n_elements": 108,
+      "name": "blocks.2.bias",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        108
+      ]
+    },
+    {
+      "idx": 8,
+      "n_distinct_symbols": 155,
+      "n_elements": 19440,
+      "name": "blocks.3.weight",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        80,
+        27,
+        3,
+        3
+      ]
+    },
+    {
+      "idx": 9,
+      "n_distinct_symbols": 63,
+      "n_elements": 80,
+      "name": "blocks.3.bias",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        80
+      ]
+    },
+    {
+      "idx": 10,
+      "n_distinct_symbols": 206,
+      "n_elements": 12960,
+      "name": "blocks.4.weight",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        72,
+        20,
+        3,
+        3
+      ]
+    },
+    {
+      "idx": 11,
+      "n_distinct_symbols": 60,
+      "n_elements": 72,
+      "name": "blocks.4.bias",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        72
+      ]
+    },
+    {
+      "idx": 12,
+      "n_distinct_symbols": 92,
+      "n_elements": 11664,
+      "name": "blocks.5.weight",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        72,
+        18,
+        3,
+        3
+      ]
+    },
+    {
+      "idx": 13,
+      "n_distinct_symbols": 53,
+      "n_elements": 72,
+      "name": "blocks.5.bias",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        72
+      ]
+    },
+    {
+      "idx": 14,
+      "n_distinct_symbols": 77,
+      "n_elements": 972,
+      "name": "skips.2.weight",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        27,
+        36,
+        1,
+        1
+      ]
+    },
+    {
+      "idx": 15,
+      "n_distinct_symbols": 23,
+      "n_elements": 27,
+      "name": "skips.2.bias",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        27
+      ]
+    },
+    {
+      "idx": 16,
+      "n_distinct_symbols": 92,
+      "n_elements": 540,
+      "name": "skips.3.weight",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        20,
+        27,
+        1,
+        1
+      ]
+    },
+    {
+      "idx": 17,
+      "n_distinct_symbols": 20,
+      "n_elements": 20,
+      "name": "skips.3.bias",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        20
+      ]
+    },
+    {
+      "idx": 18,
+      "n_distinct_symbols": 73,
+      "n_elements": 360,
+      "name": "skips.4.weight",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        18,
+        20,
+        1,
+        1
+      ]
+    },
+    {
+      "idx": 19,
+      "n_distinct_symbols": 18,
+      "n_elements": 18,
+      "name": "skips.4.bias",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        18
+      ]
+    },
+    {
+      "idx": 20,
+      "n_distinct_symbols": 73,
+      "n_elements": 1458,
+      "name": "refine.0.weight",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        9,
+        18,
+        3,
+        3
+      ]
+    },
+    {
+      "idx": 21,
+      "n_distinct_symbols": 9,
+      "n_elements": 9,
+      "name": "refine.0.bias",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        9
+      ]
+    },
+    {
+      "idx": 22,
+      "n_distinct_symbols": 110,
+      "n_elements": 1458,
+      "name": "refine.1.weight",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        18,
+        9,
+        3,
+        3
+      ]
+    },
+    {
+      "idx": 23,
+      "n_distinct_symbols": 17,
+      "n_elements": 18,
+      "name": "refine.1.bias",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        18
+      ]
+    },
+    {
+      "idx": 24,
+      "n_distinct_symbols": 69,
+      "n_elements": 486,
+      "name": "rgb_0.weight",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        3,
+        18,
+        3,
+        3
+      ]
+    },
+    {
+      "idx": 25,
+      "n_distinct_symbols": 3,
+      "n_elements": 3,
+      "name": "rgb_0.bias",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        3
+      ]
+    },
+    {
+      "idx": 26,
+      "n_distinct_symbols": 76,
+      "n_elements": 486,
+      "name": "rgb_1.weight",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        3,
+        18,
+        3,
+        3
+      ]
+    },
+    {
+      "idx": 27,
+      "n_distinct_symbols": 3,
+      "n_elements": 3,
+      "name": "rgb_1.bias",
+      "scale_fp16_side_info_bytes": 2,
+      "shape": [
+        3
+      ]
+    }
+  ],
+  "range_stream_header_bytes_estimate": 16,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "pr101_tiny_nn_predict_pmf.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "tensor_scale_bytes_total": 56,
+  "tool": "tools/pr101_tiny_nn_predict_pmf.py",
+  "torch_threads": 1,
+  "variants": [
+    {
+      "batch_size": 16384,
+      "delta_vs_brotli_optuna_reference_accounting": 635,
+      "delta_vs_iid_per_tensor_floor_reference_accounting": 2863,
+      "delta_vs_per_tensor_aac_reference_accounting": 598,
+      "epochs": 500,
+      "estimated_archive_bytes_conservative_packet_accounting": 178851,
+      "estimated_archive_bytes_reference_accounting": 178779,
+      "fit_on_same_symbols": true,
+      "float_model_bits": 1285149.3272942214,
+      "float_model_payload_bytes": 160644,
+      "int8_dequantized_model_bits": 1286112.8559736002,
+      "int8_dequantized_model_payload_bytes": 160765,
+      "learning_rate": 0.02,
+      "max_train_symbols": 0,
+      "model_parameter_byte_estimate": {
+        "brotli_fp16_bytes": 4167,
+        "brotli_int8_symmetric_bytes": 1920,
+        "parameter_count": 2264,
+        "raw_fp16_bytes": 4528,
+        "raw_fp32_bytes": 9056,
+        "raw_int8_symmetric_bytes": 2272
+      },
+      "per_tensor_results_float_model": [
+        {
+          "bits_per_symbol": 5.225681366397005,
+          "idx": 0,
+          "model_bits": 252839.3672317527,
+          "model_bytes": 31605,
+          "n_elements": 48384,
+          "name": "stem.weight"
+        },
+        {
+          "bits_per_symbol": 7.374806243590721,
+          "idx": 1,
+          "model_bits": 12743.665188924766,
+          "model_bytes": 1593,
+          "n_elements": 1728,
+          "name": "stem.bias"
+        },
+        {
+          "bits_per_symbol": 5.541975886765616,
+          "idx": 2,
+          "model_bits": 258566.4269729366,
+          "model_bytes": 32321,
+          "n_elements": 46656,
+          "name": "blocks.0.weight"
+        },
+        {
+          "bits_per_symbol": 7.63960693744665,
+          "idx": 3,
+          "model_bits": 1100.1033989923176,
+          "model_bytes": 138,
+          "n_elements": 144,
+          "name": "blocks.0.bias"
+        },
+        {
+          "bits_per_symbol": 5.565369664303213,
+          "idx": 4,
+          "model_bits": 259657.8870577307,
+          "model_bytes": 32458,
+          "n_elements": 46656,
+          "name": "blocks.1.weight"
+        },
+        {
+          "bits_per_symbol": 7.55376787398881,
+          "idx": 5,
+          "model_bits": 1087.7425738543886,
+          "model_bytes": 136,
+          "n_elements": 144,
+          "name": "blocks.1.bias"
+        },
+        {
+          "bits_per_symbol": 5.8186412804199605,
+          "idx": 6,
+          "model_bits": 203605.89568445526,
+          "model_bytes": 25451,
+          "n_elements": 34992,
+          "name": "blocks.2.weight"
+        },
+        {
+          "bits_per_symbol": 7.719038768137413,
+          "idx": 7,
+          "model_bits": 833.6561869588405,
+          "model_bytes": 105,
+          "n_elements": 108,
+          "name": "blocks.2.bias"
+        },
+        {
+          "bits_per_symbol": 5.777350597242386,
+          "idx": 8,
+          "model_bits": 112311.695610392,
+          "model_bytes": 14039,
+          "n_elements": 19440,
+          "name": "blocks.3.weight"
+        },
+        {
+          "bits_per_symbol": 7.079595653845965,
+          "idx": 9,
+          "model_bits": 566.3676523076772,
+          "model_bytes": 71,
+          "n_elements": 80,
+          "name": "blocks.3.bias"
+        },
+        {
+          "bits_per_symbol": 6.277231453282272,
+          "idx": 10,
+          "model_bits": 81352.91963453824,
+          "model_bytes": 10170,
+          "n_elements": 12960,
+          "name": "blocks.4.weight"
+        },
+        {
+          "bits_per_symbol": 7.591393091793569,
+          "idx": 11,
+          "model_bits": 546.580302609137,
+          "model_bytes": 69,
+          "n_elements": 72,
+          "name": "blocks.4.bias"
+        },
+        {
+          "bits_per_symbol": 5.2699932578041135,
+          "idx": 12,
+          "model_bits": 61469.20135902718,
+          "model_bytes": 7684,
+          "n_elements": 11664,
+          "name": "blocks.5.weight"
+        },
+        {
+          "bits_per_symbol": 7.144213739795477,
+          "idx": 13,
+          "model_bits": 514.3833892652743,
+          "model_bytes": 65,
+          "n_elements": 72,
+          "name": "blocks.5.bias"
+        },
+        {
+          "bits_per_symbol": 6.531466217036407,
+          "idx": 14,
+          "model_bits": 6348.585162959387,
+          "model_bytes": 794,
+          "n_elements": 972,
+          "name": "skips.2.weight"
+        },
+        {
+          "bits_per_symbol": 7.702088158068374,
+          "idx": 15,
+          "model_bits": 207.9563802678461,
+          "model_bytes": 26,
+          "n_elements": 27,
+          "name": "skips.2.bias"
+        },
+        {
+          "bits_per_symbol": 6.96094617339801,
+          "idx": 16,
+          "model_bits": 3758.910933634925,
+          "model_bytes": 470,
+          "n_elements": 540,
+          "name": "skips.3.weight"
+        },
+        {
+          "bits_per_symbol": 7.269532192769885,
+          "idx": 17,
+          "model_bits": 145.3906438553977,
+          "model_bytes": 19,
+          "n_elements": 20,
+          "name": "skips.3.bias"
+        },
+        {
+          "bits_per_symbol": 6.891672886533854,
+          "idx": 18,
+          "model_bits": 2481.0022391521875,
+          "model_bytes": 311,
+          "n_elements": 360,
+          "name": "skips.4.weight"
+        },
+        {
+          "bits_per_symbol": 7.699274674773727,
+          "idx": 19,
+          "model_bits": 138.58694414592708,
+          "model_bytes": 18,
+          "n_elements": 18,
+          "name": "skips.4.bias"
+        },
+        {
+          "bits_per_symbol": 5.849739875683339,
+          "idx": 20,
+          "model_bits": 8528.920738746308,
+          "model_bytes": 1067,
+          "n_elements": 1458,
+          "name": "refine.0.weight"
+        },
+        {
+          "bits_per_symbol": 6.977096134160275,
+          "idx": 21,
+          "model_bits": 62.79386520744248,
+          "model_bytes": 8,
+          "n_elements": 9,
+          "name": "refine.0.bias"
+        },
+        {
+          "bits_per_symbol": 6.534027908293557,
+          "idx": 22,
+          "model_bits": 9526.612690292006,
+          "model_bytes": 1191,
+          "n_elements": 1458,
+          "name": "refine.1.weight"
+        },
+        {
+          "bits_per_symbol": 7.72196782377344,
+          "idx": 23,
+          "model_bits": 138.99542082792192,
+          "model_bytes": 18,
+          "n_elements": 18,
+          "name": "refine.1.bias"
+        },
+        {
+          "bits_per_symbol": 6.61001500528343,
+          "idx": 24,
+          "model_bits": 3212.4672925677473,
+          "model_bytes": 402,
+          "n_elements": 486,
+          "name": "rgb_0.weight"
+        },
+        {
+          "bits_per_symbol": 1.8359957444614883,
+          "idx": 25,
+          "model_bits": 5.507987233384465,
+          "model_bytes": 1,
+          "n_elements": 3,
+          "name": "rgb_0.bias"
+        },
+        {
+          "bits_per_symbol": 6.949749765939014,
+          "idx": 26,
+          "model_bits": 3377.578386246361,
+          "model_bytes": 423,
+          "n_elements": 486,
+          "name": "rgb_1.weight"
+        },
+        {
+          "bits_per_symbol": 6.707381628440629,
+          "idx": 27,
+          "model_bits": 20.122144885321887,
+          "model_bytes": 3,
+          "n_elements": 3,
+          "name": "rgb_1.bias"
+        }
+      ],
+      "per_tensor_results_int8_dequantized_model": [
+        {
+          "bits_per_symbol": 5.231518162739887,
+          "idx": 0,
+          "model_bits": 253121.7747860067,
+          "model_bytes": 31641,
+          "n_elements": 48384,
+          "name": "stem.weight"
+        },
+        {
+          "bits_per_symbol": 7.380493748073121,
+          "idx": 1,
+          "model_bits": 12753.493196670353,
+          "model_bytes": 1595,
+          "n_elements": 1728,
+          "name": "stem.bias"
+        },
+        {
+          "bits_per_symbol": 5.545465357659988,
+          "idx": 2,
+          "model_bits": 258729.2317269844,
+          "model_bytes": 32342,
+          "n_elements": 46656,
+          "name": "blocks.0.weight"
+        },
+        {
+          "bits_per_symbol": 7.651566534550915,
+          "idx": 3,
+          "model_bits": 1101.8255809753318,
+          "model_bytes": 138,
+          "n_elements": 144,
+          "name": "blocks.0.bias"
+        },
+        {
+          "bits_per_symbol": 5.570115460676915,
+          "idx": 4,
+          "model_bits": 259879.30693334213,
+          "model_bytes": 32485,
+          "n_elements": 46656,
+          "name": "blocks.1.weight"
+        },
+        {
+          "bits_per_symbol": 7.558329006763158,
+          "idx": 5,
+          "model_bits": 1088.3993769738947,
+          "model_bytes": 137,
+          "n_elements": 144,
+          "name": "blocks.1.bias"
+        },
+        {
+          "bits_per_symbol": 5.821747407568901,
+          "idx": 6,
+          "model_bits": 203714.58528565097,
+          "model_bytes": 25465,
+          "n_elements": 34992,
+          "name": "blocks.2.weight"
+        },
+        {
+          "bits_per_symbol": 7.726033442682016,
+          "idx": 7,
+          "model_bits": 834.4116118096576,
+          "model_bytes": 105,
+          "n_elements": 108,
+          "name": "blocks.2.bias"
+        },
+        {
+          "bits_per_symbol": 5.782119560929514,
+          "idx": 8,
+          "model_bits": 112404.40426446975,
+          "model_bytes": 14051,
+          "n_elements": 19440,
+          "name": "blocks.3.weight"
+        },
+        {
+          "bits_per_symbol": 7.084419423237366,
+          "idx": 9,
+          "model_bits": 566.7535538589892,
+          "model_bytes": 71,
+          "n_elements": 80,
+          "name": "blocks.3.bias"
+        },
+        {
+          "bits_per_symbol": 6.278542061298897,
+          "idx": 10,
+          "model_bits": 81369.90511443371,
+          "model_bytes": 10172,
+          "n_elements": 12960,
+          "name": "blocks.4.weight"
+        },
+        {
+          "bits_per_symbol": 7.588146059345279,
+          "idx": 11,
+          "model_bits": 546.3465162728601,
+          "model_bytes": 69,
+          "n_elements": 72,
+          "name": "blocks.4.bias"
+        },
+        {
+          "bits_per_symbol": 5.273927171502177,
+          "idx": 12,
+          "model_bits": 61515.08652840139,
+          "model_bytes": 7690,
+          "n_elements": 11664,
+          "name": "blocks.5.weight"
+        },
+        {
+          "bits_per_symbol": 7.153723692457586,
+          "idx": 13,
+          "model_bits": 515.0681058569462,
+          "model_bytes": 65,
+          "n_elements": 72,
+          "name": "blocks.5.bias"
+        },
+        {
+          "bits_per_symbol": 6.53757354603226,
+          "idx": 14,
+          "model_bits": 6354.521486743357,
+          "model_bytes": 795,
+          "n_elements": 972,
+          "name": "skips.2.weight"
+        },
+        {
+          "bits_per_symbol": 7.703589171687282,
+          "idx": 15,
+          "model_bits": 207.99690763555662,
+          "model_bytes": 26,
+          "n_elements": 27,
+          "name": "skips.2.bias"
+        },
+        {
+          "bits_per_symbol": 6.966108160048759,
+          "idx": 16,
+          "model_bits": 3761.69840642633,
+          "model_bytes": 471,
+          "n_elements": 540,
+          "name": "skips.3.weight"
+        },
+        {
+          "bits_per_symbol": 7.296494669669312,
+          "idx": 17,
+          "model_bits": 145.92989339338624,
+          "model_bytes": 19,
+          "n_elements": 20,
+          "name": "skips.3.bias"
+        },
+        {
+          "bits_per_symbol": 6.906879026891314,
+          "idx": 18,
+          "model_bits": 2486.476449680873,
+          "model_bytes": 311,
+          "n_elements": 360,
+          "name": "skips.4.weight"
+        },
+        {
+          "bits_per_symbol": 7.743943690463957,
+          "idx": 19,
+          "model_bits": 139.39098642835123,
+          "model_bytes": 18,
+          "n_elements": 18,
+          "name": "skips.4.bias"
+        },
+        {
+          "bits_per_symbol": 5.854729424082548,
+          "idx": 20,
+          "model_bits": 8536.195500312355,
+          "model_bytes": 1068,
+          "n_elements": 1458,
+          "name": "refine.0.weight"
+        },
+        {
+          "bits_per_symbol": 6.950529171495793,
+          "idx": 21,
+          "model_bits": 62.55476254346214,
+          "model_bytes": 8,
+          "n_elements": 9,
+          "name": "refine.0.bias"
+        },
+        {
+          "bits_per_symbol": 6.527178693796881,
+          "idx": 22,
+          "model_bits": 9516.626535555853,
+          "model_bytes": 1190,
+          "n_elements": 1458,
+          "name": "refine.1.weight"
+        },
+        {
+          "bits_per_symbol": 7.725617219188016,
+          "idx": 23,
+          "model_bits": 139.0611099453843,
+          "model_bytes": 18,
+          "n_elements": 18,
+          "name": "refine.1.bias"
+        },
+        {
+          "bits_per_symbol": 6.6154389106121325,
+          "idx": 24,
+          "model_bits": 3215.1033105574966,
+          "model_bytes": 402,
+          "n_elements": 486,
+          "name": "rgb_0.weight"
+        },
+        {
+          "bits_per_symbol": 1.8894368308048932,
+          "idx": 25,
+          "model_bits": 5.66831049241468,
+          "model_bytes": 1,
+          "n_elements": 3,
+          "name": "rgb_0.bias"
+        },
+        {
+          "bits_per_symbol": 6.95658617681096,
+          "idx": 26,
+          "model_bits": 3380.9008819301266,
+          "model_bytes": 423,
+          "n_elements": 486,
+          "name": "rgb_1.weight"
+        },
+        {
+          "bits_per_symbol": 6.711379881107888,
+          "idx": 27,
+          "model_bits": 20.134139643323664,
+          "model_bytes": 3,
+          "n_elements": 3,
+          "name": "rgb_1.bias"
+        }
+      ],
+      "primary_model_parameter_byte_estimate_name": "brotli_int8_symmetric_bytes",
+      "primary_model_parameter_bytes": 1920,
+      "rank": 7,
+      "uses_previous_symbol": false,
+      "variant": "tensor_only"
+    },
+    {
+      "batch_size": 16384,
+      "delta_vs_brotli_optuna_reference_accounting": 1490,
+      "delta_vs_iid_per_tensor_floor_reference_accounting": 3718,
+      "delta_vs_per_tensor_aac_reference_accounting": 1453,
+      "epochs": 500,
+      "estimated_archive_bytes_conservative_packet_accounting": 179706,
+      "estimated_archive_bytes_reference_accounting": 179634,
+      "fit_on_same_symbols": true,
+      "float_model_bits": 1284188.5938364845,
+      "float_model_payload_bytes": 160524,
+      "int8_dequantized_model_bits": 1287302.2509597905,
+      "int8_dequantized_model_payload_bytes": 160913,
+      "learning_rate": 0.02,
+      "max_train_symbols": 0,
+      "model_parameter_byte_estimate": {
+        "brotli_fp16_bytes": 7532,
+        "brotli_int8_symmetric_bytes": 2627,
+        "parameter_count": 4056,
+        "raw_fp16_bytes": 8112,
+        "raw_fp32_bytes": 16224,
+        "raw_int8_symmetric_bytes": 4066
+      },
+      "per_tensor_results_float_model": [
+        {
+          "bits_per_symbol": 5.22326788744943,
+          "idx": 0,
+          "model_bits": 252722.59346635322,
+          "model_bytes": 31591,
+          "n_elements": 48384,
+          "name": "stem.weight"
+        },
+        {
+          "bits_per_symbol": 7.332769505178407,
+          "idx": 1,
+          "model_bits": 12671.025704948288,
+          "model_bytes": 1584,
+          "n_elements": 1728,
+          "name": "stem.bias"
+        },
+        {
+          "bits_per_symbol": 5.54159467695764,
+          "idx": 2,
+          "model_bits": 258548.64124813565,
+          "model_bytes": 32319,
+          "n_elements": 46656,
+          "name": "blocks.0.weight"
+        },
+        {
+          "bits_per_symbol": 7.347810623723556,
+          "idx": 3,
+          "model_bits": 1058.084729816192,
+          "model_bytes": 133,
+          "n_elements": 144,
+          "name": "blocks.0.bias"
+        },
+        {
+          "bits_per_symbol": 5.562796573592441,
+          "idx": 4,
+          "model_bits": 259537.83693752892,
+          "model_bytes": 32443,
+          "n_elements": 46656,
+          "name": "blocks.1.weight"
+        },
+        {
+          "bits_per_symbol": 7.364905546345851,
+          "idx": 5,
+          "model_bits": 1060.5463986738025,
+          "model_bytes": 133,
+          "n_elements": 144,
+          "name": "blocks.1.bias"
+        },
+        {
+          "bits_per_symbol": 5.815203426654214,
+          "idx": 6,
+          "model_bits": 203485.59830548425,
+          "model_bytes": 25436,
+          "n_elements": 34992,
+          "name": "blocks.2.weight"
+        },
+        {
+          "bits_per_symbol": 7.460552156149072,
+          "idx": 7,
+          "model_bits": 805.7396328640998,
+          "model_bytes": 101,
+          "n_elements": 108,
+          "name": "blocks.2.bias"
+        },
+        {
+          "bits_per_symbol": 5.769485318492315,
+          "idx": 8,
+          "model_bits": 112158.7945914906,
+          "model_bytes": 14020,
+          "n_elements": 19440,
+          "name": "blocks.3.weight"
+        },
+        {
+          "bits_per_symbol": 7.0887792522297985,
+          "idx": 9,
+          "model_bits": 567.1023401783839,
+          "model_bytes": 71,
+          "n_elements": 80,
+          "name": "blocks.3.bias"
+        },
+        {
+          "bits_per_symbol": 6.254314511114988,
+          "idx": 10,
+          "model_bits": 81055.91606405024,
+          "model_bytes": 10132,
+          "n_elements": 12960,
+          "name": "blocks.4.weight"
+        },
+        {
+          "bits_per_symbol": 7.52367320318983,
+          "idx": 11,
+          "model_bits": 541.7044706296678,
+          "model_bytes": 68,
+          "n_elements": 72,
+          "name": "blocks.4.bias"
+        },
+        {
+          "bits_per_symbol": 5.270029313294507,
+          "idx": 12,
+          "model_bits": 61469.62191026713,
+          "model_bytes": 7684,
+          "n_elements": 11664,
+          "name": "blocks.5.weight"
+        },
+        {
+          "bits_per_symbol": 7.012598245249317,
+          "idx": 13,
+          "model_bits": 504.90707365795083,
+          "model_bytes": 64,
+          "n_elements": 72,
+          "name": "blocks.5.bias"
+        },
+        {
+          "bits_per_symbol": 6.566514327899052,
+          "idx": 14,
+          "model_bits": 6382.651926717878,
+          "model_bytes": 798,
+          "n_elements": 972,
+          "name": "skips.2.weight"
+        },
+        {
+          "bits_per_symbol": 7.659986397474579,
+          "idx": 15,
+          "model_bits": 206.81963273181364,
+          "model_bytes": 26,
+          "n_elements": 27,
+          "name": "skips.2.bias"
+        },
+        {
+          "bits_per_symbol": 6.867406853002409,
+          "idx": 16,
+          "model_bits": 3708.399700621301,
+          "model_bytes": 464,
+          "n_elements": 540,
+          "name": "skips.3.weight"
+        },
+        {
+          "bits_per_symbol": 6.796855625483024,
+          "idx": 17,
+          "model_bits": 135.9371125096605,
+          "model_bytes": 17,
+          "n_elements": 20,
+          "name": "skips.3.bias"
+        },
+        {
+          "bits_per_symbol": 6.840162110532713,
+          "idx": 18,
+          "model_bits": 2462.4583597917767,
+          "model_bytes": 308,
+          "n_elements": 360,
+          "name": "skips.4.weight"
+        },
+        {
+          "bits_per_symbol": 7.13186523259006,
+          "idx": 19,
+          "model_bits": 128.37357418662108,
+          "model_bytes": 17,
+          "n_elements": 18,
+          "name": "skips.4.bias"
+        },
+        {
+          "bits_per_symbol": 5.915238871397353,
+          "idx": 20,
+          "model_bits": 8624.41827449734,
+          "model_bytes": 1079,
+          "n_elements": 1458,
+          "name": "refine.0.weight"
+        },
+        {
+          "bits_per_symbol": 5.602146664617581,
+          "idx": 21,
+          "model_bits": 50.419319981558225,
+          "model_bytes": 7,
+          "n_elements": 9,
+          "name": "refine.0.bias"
+        },
+        {
+          "bits_per_symbol": 6.580828297190708,
+          "idx": 22,
+          "model_bits": 9594.847657304052,
+          "model_bytes": 1200,
+          "n_elements": 1458,
+          "name": "refine.1.weight"
+        },
+        {
+          "bits_per_symbol": 7.180909486918241,
+          "idx": 23,
+          "model_bits": 129.25637076452833,
+          "model_bytes": 17,
+          "n_elements": 18,
+          "name": "refine.1.bias"
+        },
+        {
+          "bits_per_symbol": 6.579560979920336,
+          "idx": 24,
+          "model_bits": 3197.6666362412834,
+          "model_bytes": 400,
+          "n_elements": 486,
+          "name": "rgb_0.weight"
+        },
+        {
+          "bits_per_symbol": 1.52609355587596,
+          "idx": 25,
+          "model_bits": 4.57828066762788,
+          "model_bytes": 1,
+          "n_elements": 3,
+          "name": "rgb_0.bias"
+        },
+        {
+          "bits_per_symbol": 6.897794347832476,
+          "idx": 26,
+          "model_bits": 3352.328053046583,
+          "model_bytes": 420,
+          "n_elements": 486,
+          "name": "rgb_1.weight"
+        },
+        {
+          "bits_per_symbol": 7.445668293444091,
+          "idx": 27,
+          "model_bits": 22.337004880332273,
+          "model_bytes": 3,
+          "n_elements": 3,
+          "name": "rgb_1.bias"
+        }
+      ],
+      "per_tensor_results_int8_dequantized_model": [
+        {
+          "bits_per_symbol": 5.238330087973706,
+          "idx": 0,
+          "model_bits": 253451.3629765198,
+          "model_bytes": 31682,
+          "n_elements": 48384,
+          "name": "stem.weight"
+        },
+        {
+          "bits_per_symbol": 7.351147138108116,
+          "idx": 1,
+          "model_bits": 12702.782254650825,
+          "model_bytes": 1588,
+          "n_elements": 1728,
+          "name": "stem.bias"
+        },
+        {
+          "bits_per_symbol": 5.553410248382316,
+          "idx": 2,
+          "model_bits": 259099.90854852533,
+          "model_bytes": 32388,
+          "n_elements": 46656,
+          "name": "blocks.0.weight"
+        },
+        {
+          "bits_per_symbol": 7.360000754016712,
+          "idx": 3,
+          "model_bits": 1059.8401085784064,
+          "model_bytes": 133,
+          "n_elements": 144,
+          "name": "blocks.0.bias"
+        },
+        {
+          "bits_per_symbol": 5.572689819671269,
+          "idx": 4,
+          "model_bits": 259999.41622658272,
+          "model_bytes": 32500,
+          "n_elements": 46656,
+          "name": "blocks.1.weight"
+        },
+        {
+          "bits_per_symbol": 7.400858328416888,
+          "idx": 5,
+          "model_bits": 1065.7235992920318,
+          "model_bytes": 134,
+          "n_elements": 144,
+          "name": "blocks.1.bias"
+        },
+        {
+          "bits_per_symbol": 5.8332963978636005,
+          "idx": 6,
+          "model_bits": 204118.70755404313,
+          "model_bytes": 25515,
+          "n_elements": 34992,
+          "name": "blocks.2.weight"
+        },
+        {
+          "bits_per_symbol": 7.509537707065759,
+          "idx": 7,
+          "model_bits": 811.0300723631019,
+          "model_bytes": 102,
+          "n_elements": 108,
+          "name": "blocks.2.bias"
+        },
+        {
+          "bits_per_symbol": 5.78071274454405,
+          "idx": 8,
+          "model_bits": 112377.05575393634,
+          "model_bytes": 14048,
+          "n_elements": 19440,
+          "name": "blocks.3.weight"
+        },
+        {
+          "bits_per_symbol": 7.094664636128444,
+          "idx": 9,
+          "model_bits": 567.5731708902755,
+          "model_bytes": 71,
+          "n_elements": 80,
+          "name": "blocks.3.bias"
+        },
+        {
+          "bits_per_symbol": 6.2658877799811075,
+          "idx": 10,
+          "model_bits": 81205.90562855515,
+          "model_bytes": 10151,
+          "n_elements": 12960,
+          "name": "blocks.4.weight"
+        },
+        {
+          "bits_per_symbol": 7.54117110027228,
+          "idx": 11,
+          "model_bits": 542.9643192196041,
+          "model_bytes": 68,
+          "n_elements": 72,
+          "name": "blocks.4.bias"
+        },
+        {
+          "bits_per_symbol": 5.293785170696057,
+          "idx": 12,
+          "model_bits": 61746.710230998804,
+          "model_bytes": 7719,
+          "n_elements": 11664,
+          "name": "blocks.5.weight"
+        },
+        {
+          "bits_per_symbol": 7.021483251176559,
+          "idx": 13,
+          "model_bits": 505.5467940847122,
+          "model_bytes": 64,
+          "n_elements": 72,
+          "name": "blocks.5.bias"
+        },
+        {
+          "bits_per_symbol": 6.587555514885718,
+          "idx": 14,
+          "model_bits": 6403.103960468918,
+          "model_bytes": 801,
+          "n_elements": 972,
+          "name": "skips.2.weight"
+        },
+        {
+          "bits_per_symbol": 7.702147676805028,
+          "idx": 15,
+          "model_bits": 207.95798727373577,
+          "model_bytes": 26,
+          "n_elements": 27,
+          "name": "skips.2.bias"
+        },
+        {
+          "bits_per_symbol": 6.89058295986044,
+          "idx": 16,
+          "model_bits": 3720.9147983246376,
+          "model_bytes": 466,
+          "n_elements": 540,
+          "name": "skips.3.weight"
+        },
+        {
+          "bits_per_symbol": 6.808667118772041,
+          "idx": 17,
+          "model_bits": 136.17334237544082,
+          "model_bytes": 18,
+          "n_elements": 20,
+          "name": "skips.3.bias"
+        },
+        {
+          "bits_per_symbol": 6.848645242688765,
+          "idx": 18,
+          "model_bits": 2465.5122873679557,
+          "model_bytes": 309,
+          "n_elements": 360,
+          "name": "skips.4.weight"
+        },
+        {
+          "bits_per_symbol": 7.205597940414898,
+          "idx": 19,
+          "model_bits": 129.70076292746816,
+          "model_bytes": 17,
+          "n_elements": 18,
+          "name": "skips.4.bias"
+        },
+        {
+          "bits_per_symbol": 5.919722555830842,
+          "idx": 20,
+          "model_bits": 8630.955486401368,
+          "model_bytes": 1079,
+          "n_elements": 1458,
+          "name": "refine.0.weight"
+        },
+        {
+          "bits_per_symbol": 5.673677994511375,
+          "idx": 21,
+          "model_bits": 51.06310195060237,
+          "model_bytes": 7,
+          "n_elements": 9,
+          "name": "refine.0.bias"
+        },
+        {
+          "bits_per_symbol": 6.579227119366076,
+          "idx": 22,
+          "model_bits": 9592.513140035739,
+          "model_bytes": 1200,
+          "n_elements": 1458,
+          "name": "refine.1.weight"
+        },
+        {
+          "bits_per_symbol": 7.229760509183584,
+          "idx": 23,
+          "model_bits": 130.1356891653045,
+          "model_bytes": 17,
+          "n_elements": 18,
+          "name": "refine.1.bias"
+        },
+        {
+          "bits_per_symbol": 6.573967486958428,
+          "idx": 24,
+          "model_bits": 3194.948198661796,
+          "model_bytes": 400,
+          "n_elements": 486,
+          "name": "rgb_0.weight"
+        },
+        {
+          "bits_per_symbol": 1.5529219321697536,
+          "idx": 25,
+          "model_bits": 4.658765796509261,
+          "model_bytes": 1,
+          "n_elements": 3,
+          "name": "rgb_0.bias"
+        },
+        {
+          "bits_per_symbol": 6.9074231567845255,
+          "idx": 26,
+          "model_bits": 3357.0076541972794,
+          "model_bytes": 420,
+          "n_elements": 486,
+          "name": "rgb_1.weight"
+        },
+        {
+          "bits_per_symbol": 7.696219039906663,
+          "idx": 27,
+          "model_bits": 23.08865711971999,
+          "model_bytes": 3,
+          "n_elements": 3,
+          "name": "rgb_1.bias"
+        }
+      ],
+      "primary_model_parameter_byte_estimate_name": "brotli_int8_symmetric_bytes",
+      "primary_model_parameter_bytes": 2627,
+      "rank": 7,
+      "uses_previous_symbol": true,
+      "variant": "tensor_prev_symbol"
+    }
+  ]
+}
