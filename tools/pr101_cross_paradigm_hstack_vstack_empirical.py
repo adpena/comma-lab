@@ -251,8 +251,12 @@ def main() -> None:
 
     import torch
 
+    # weights_only=True per REVIEW-ENG C4 (2026-05-08): the PR101 substrate
+    # state_dict is a tensor-only checkpoint (28-tensor decoder), no
+    # non-tensor objects expected; weights_only=True closes the unpickle
+    # arbitrary-code-execution surface.
     state_dict = torch.load(
-        args.state_dict, map_location="cpu", weights_only=False
+        args.state_dict, map_location="cpu", weights_only=True
     )
     state_dict_bytes = sum(
         t.numel() * t.element_size() for t in state_dict.values()

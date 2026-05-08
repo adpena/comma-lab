@@ -140,7 +140,8 @@ def greedy_uniform_per_tensor_budget(
 
 def run_experiment(state_dict_path: Path, rms_targets: list[float]) -> dict:
     import torch
-    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)
+    # weights_only=True per REVIEW-ENG C4 (2026-05-08): tensor-only state_dict.
+    sd = torch.load(state_dict_path, map_location="cpu", weights_only=True)
     tensors: list[TensorBlob] = []
     for name, _shape in FIXED_STATE_SCHEMA:
         qt = _quantize_tensor(name, sd[name], n_quant=N_QUANT)

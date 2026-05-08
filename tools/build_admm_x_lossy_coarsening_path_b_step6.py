@@ -212,7 +212,7 @@ def _build_lossy_decoder_section_with_fixed_Ks(
         if not isinstance(k, int) or k < 1 or k > 255:
             raise SystemExit(f"FATAL: K out of [1,255] range: {k!r}")
 
-    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)
+    sd = torch.load(state_dict_path, map_location="cpu", weights_only=True)  # REVIEW-ENG C4: tensor-only state_dict
     scales_fp16: list[float] = []
     rounded_chunks: list[np.ndarray] = []
     abs_orig_total = 0.0
@@ -297,7 +297,7 @@ def _local_smoke_roundtrip(
     decoder_sd, latents, meta = forked_inflate.parse_lossy_archive(inner)
 
     sd_ref = torch.load(
-        pr101_state_dict_path, map_location="cpu", weights_only=False
+        pr101_state_dict_path, map_location="cpu", weights_only=True  # REVIEW-ENG C4: tensor-only state_dict
     )
     abs_orig = 0.0
     abs_err = 0.0

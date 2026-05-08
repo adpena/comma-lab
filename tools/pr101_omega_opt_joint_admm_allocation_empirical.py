@@ -169,7 +169,8 @@ def bisect_lambda_for_rms_target(curves: list[list[dict]], rms_target: float) ->
 
 def run_experiment(state_dict_path: Path, alphas: list[float], rms_targets: list[float]) -> dict:
     import torch
-    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)
+    # weights_only=True per REVIEW-ENG C4 (2026-05-08): tensor-only state_dict.
+    sd = torch.load(state_dict_path, map_location="cpu", weights_only=True)
     quantized: list[tuple[str, np.ndarray]] = []
     for name, _shape in FIXED_STATE_SCHEMA:
         qt = _quantize_tensor(name, sd[name], n_quant=N_QUANT)
