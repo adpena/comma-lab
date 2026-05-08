@@ -433,11 +433,186 @@ def predict_cpu_axis_marginals(
     }
 
 
+@dataclass(frozen=True)
+class DualAxisDispatchRecommendation:
+    """Operating-point-aware dual-axis (CUDA + CPU) dispatch recommendation.
+
+    Combines :func:`score_gradient` and :func:`predict_cpu_axis_marginals` into
+    a single artifact that names the score-cheapest axis on each evaluation
+    substrate, flags axis-priority divergence, and maps each axis to the
+    Phase A decisions that attack it. Pure prediction; no score claim.
+
+    Cross-ref: ``.omx/research/grand_council_extreme_rigor_track_1_20260508.md``
+    Decision 2 (score-gradient) attacks seg+pose; Decision 3 (sensitivity-quant)
+    attacks bytes; Decision 1 (co-trained Ballé) attacks bytes via co-design.
+    """
+
+    cuda_d_seg: float
+    cuda_d_pose: float
+    archive_bytes: int
+    cuda_seg_marginal: float
+    cuda_pose_marginal: float
+    cuda_bytes_marginal: float
+    cuda_priority_axis: Literal["seg", "pose", "bytes"]
+    cpu_d_seg: float
+    cpu_d_pose: float
+    cpu_seg_marginal: float
+    cpu_pose_marginal: float
+    cpu_bytes_marginal: float
+    cpu_priority_axis: Literal["seg", "pose", "bytes"]
+    axis_priority_differs: bool
+    target_score_cpu: float | None
+    cpu_score_at_operating_point: float
+    cpu_score_gap_to_target: float | None
+    decision_attack_map: dict[str, list[str]]
+    advice: str
+
+    @property
+    def evidence_grade(self) -> str:
+        return "[prediction; dual-axis-dispatch-recommendation]"
+
+    @property
+    def score_claim(self) -> bool:
+        return False
+
+    @property
+    def promotion_eligible(self) -> bool:
+        return False
+
+
+def recommend_dispatch_axis_dual(
+    *,
+    cuda_d_seg: float,
+    cuda_d_pose: float,
+    archive_bytes: int,
+    target_score_cpu: float | None = None,
+    archive_class: str = "hnerv",
+    reference_bytes: int = CONTEST_REFERENCE_BYTES,
+) -> DualAxisDispatchRecommendation:
+    """Synthesize a dual-axis (CUDA + CPU) dispatch recommendation.
+
+    The contest leaderboard ranks by CPU eval (per CLAUDE.md "Submission
+    auth eval — BOTH CPU AND CUDA"). Our internal CUDA anchor is correlated
+    but offset; the constant ~0.033 CUDA-CPU gap on HNeRV-cluster archives
+    means optimizing for CUDA usually transfers to CPU, but axis priority
+    can diverge near the importance flip threshold (d_pose = 2.5e-4).
+
+    This helper:
+      * computes per-axis marginals at the operating point on BOTH substrates;
+      * names the score-cheapest axis on each (the priority axis);
+      * flags divergence (rare but possible near the flip);
+      * maps each axis to Phase A decisions that attack it;
+      * computes the CPU score gap to a target if supplied.
+
+    Used by :mod:`tools.dispatch_advisor` to rank Phase A ablations after
+    each anchor lands. NOT a score claim and NOT promotion-eligible — this
+    is a planning view that surfaces priorities; the actual exact-eval
+    artifact must produce a ``[contest-CUDA]`` or ``[contest-CPU]`` tag.
+    """
+    if cuda_d_seg < 0.0 or cuda_d_pose < 0.0 or archive_bytes < 0:
+        raise ValueError("dispatch recommendation inputs must be non-negative")
+
+    cuda_grad = score_gradient(cuda_d_seg, cuda_d_pose, reference_bytes=reference_bytes)
+    cpu_view = predict_cpu_axis_marginals(
+        d_seg_cuda=cuda_d_seg,
+        d_pose_cuda=cuda_d_pose,
+        archive_class=archive_class,
+        reference_bytes=reference_bytes,
+    )
+
+    def _priority(seg_marg: float, pose_marg: float, bytes_marg: float) -> Literal["seg", "pose", "bytes"]:
+        # Priority is the axis with the highest marginal score-improvement
+        # per unit reduction. d_bytes is in score/byte; d_seg and d_pose are
+        # in score/distortion-unit. We compare them by normalizing to a
+        # common "score-points if axis is fully zeroed" scale.
+        if not math.isfinite(pose_marg):
+            return "pose"
+        candidates: list[tuple[float, Literal["seg", "pose", "bytes"]]] = [
+            (seg_marg, "seg"),
+            (pose_marg, "pose"),
+            (bytes_marg * float(archive_bytes), "bytes"),
+        ]
+        return max(candidates, key=lambda x: x[0])[1]
+
+    cuda_priority = _priority(cuda_grad.d_seg, cuda_grad.d_pose, cuda_grad.d_bytes)
+    cpu_priority = _priority(
+        float(cpu_view["seg_marginal"]),
+        float(cpu_view["pose_marginal"]),
+        float(cpu_view["bytes_marginal"]),
+    )
+    differs = cuda_priority != cpu_priority
+
+    cpu_score_at_op = contest_score(
+        float(cpu_view["cpu_d_seg"]),
+        float(cpu_view["cpu_d_pose"]),
+        archive_bytes,
+        reference_bytes=reference_bytes,
+    )
+    cpu_gap = (
+        cpu_score_at_op - target_score_cpu
+        if target_score_cpu is not None
+        else None
+    )
+
+    decision_attack_map: dict[str, list[str]] = {
+        "seg": ["A1_score_gradient_segnet_kl", "A3_alt_mallat_wavelet_importance"],
+        "pose": ["A1_score_gradient_posenet_mse", "A4_alt_filler_stc_pose_encoding"],
+        "bytes": [
+            "A2_sensitivity_aware_quantization",
+            "A4_charm_co_trained_hyperprior",
+            "A5_frame_conditional_bit_budget",
+            "A6_block_fp_x_hyperprior_compose",
+        ],
+    }
+
+    if differs:
+        advice = (
+            f"AXIS-PRIORITY DIVERGENCE: CUDA priority is {cuda_priority!r} but "
+            f"CPU priority is {cpu_priority!r}. Per leaderboard ranking on the "
+            f"CPU axis, prefer {cpu_priority!r}-attacking Phase A decisions. "
+            f"Phase A actuator should weight {cpu_priority!r} ablations higher."
+        )
+    else:
+        advice = (
+            f"axis priority CONSISTENT across CUDA + CPU: {cuda_priority!r}. "
+            f"Phase A should prioritize {cuda_priority!r}-attacking ablations: "
+            f"{decision_attack_map[cuda_priority]}"
+        )
+    if target_score_cpu is not None and cpu_gap is not None:
+        advice += (
+            f" CPU score gap to target {target_score_cpu:.4f}: "
+            f"{cpu_gap:+.4f} (positive = above target, more work needed)."
+        )
+
+    return DualAxisDispatchRecommendation(
+        cuda_d_seg=cuda_d_seg,
+        cuda_d_pose=cuda_d_pose,
+        archive_bytes=archive_bytes,
+        cuda_seg_marginal=cuda_grad.d_seg,
+        cuda_pose_marginal=cuda_grad.d_pose,
+        cuda_bytes_marginal=cuda_grad.d_bytes,
+        cuda_priority_axis=cuda_priority,
+        cpu_d_seg=float(cpu_view["cpu_d_seg"]),
+        cpu_d_pose=float(cpu_view["cpu_d_pose"]),
+        cpu_seg_marginal=float(cpu_view["seg_marginal"]),
+        cpu_pose_marginal=float(cpu_view["pose_marginal"]),
+        cpu_bytes_marginal=float(cpu_view["bytes_marginal"]),
+        cpu_priority_axis=cpu_priority,
+        axis_priority_differs=differs,
+        target_score_cpu=target_score_cpu,
+        cpu_score_at_operating_point=cpu_score_at_op,
+        cpu_score_gap_to_target=cpu_gap,
+        decision_attack_map=decision_attack_map,
+        advice=advice,
+    )
+
+
 __all__ = [
     "CONTEST_REFERENCE_BYTES",
     "POSE_COEFFICIENT_INSIDE_SQRT",
     "RATE_COEFFICIENT",
     "SEG_COEFFICIENT",
+    "DualAxisDispatchRecommendation",
     "OperatingRegime",
     "ScoreDecomposition",
     "ScoreGradient",
@@ -450,6 +625,7 @@ __all__ = [
     "operating_regime",
     "predict_cpu_axis_marginals",
     "project_onto_pareto_envelope",
+    "recommend_dispatch_axis_dual",
     "score_decomposition",
     "score_gradient",
 ]

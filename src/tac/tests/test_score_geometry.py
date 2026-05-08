@@ -8,6 +8,7 @@ import pytest
 from tac.contest_rate_distortion_system import contest_score as canonical_contest_score
 from tac.score_geometry import (
     CONTEST_REFERENCE_BYTES,
+    DualAxisDispatchRecommendation,
     contest_score,
     equal_score_curve_archive_bytes,
     equal_score_curve_d_pose,
@@ -17,6 +18,7 @@ from tac.score_geometry import (
     operating_regime,
     predict_cpu_axis_marginals,
     project_onto_pareto_envelope,
+    recommend_dispatch_axis_dual,
     score_decomposition,
     score_gradient,
 )
@@ -270,3 +272,69 @@ def test_predict_cpu_axis_marginals_negative_input_raises() -> None:
         predict_cpu_axis_marginals(d_seg_cuda=-0.1, d_pose_cuda=1e-4)
     with pytest.raises(ValueError):
         predict_cpu_axis_marginals(d_seg_cuda=1e-4, d_pose_cuda=-0.1)
+
+
+# ---------------------------------------------------------------------------
+# Dual-axis dispatch recommendation — added 2026-05-08 (Phase A planning)
+# ---------------------------------------------------------------------------
+
+
+def test_dual_axis_recommendation_returns_dataclass() -> None:
+    rec = recommend_dispatch_axis_dual(
+        cuda_d_seg=6.88e-4, cuda_d_pose=1.74e-4, archive_bytes=178392,
+    )
+    assert isinstance(rec, DualAxisDispatchRecommendation)
+    assert rec.evidence_grade == "[prediction; dual-axis-dispatch-recommendation]"
+    assert rec.score_claim is False
+    assert rec.promotion_eligible is False
+
+
+def test_dual_axis_priority_axis_is_pose_at_pr107_frontier() -> None:
+    """PR107 operating point: pose_avg=3.58e-5 << flip threshold 2.5e-4."""
+    rec = recommend_dispatch_axis_dual(
+        cuda_d_seg=6.88e-4, cuda_d_pose=1.74e-4, archive_bytes=178392,
+    )
+    # CUDA pose marginal (5/sqrt(10*1.74e-4) ~= 119.9) > seg marginal (100)
+    assert rec.cuda_priority_axis == "pose"
+    # CPU pose is even smaller, so pose still wins on CPU axis
+    assert rec.cpu_priority_axis == "pose"
+    assert rec.axis_priority_differs is False
+
+
+def test_dual_axis_target_score_gap_is_signed_correctly() -> None:
+    rec = recommend_dispatch_axis_dual(
+        cuda_d_seg=6.88e-4, cuda_d_pose=1.74e-4, archive_bytes=178392,
+        target_score_cpu=0.17,
+    )
+    # PR107 CPU score is ~0.197; gap is positive (above target)
+    assert rec.cpu_score_gap_to_target is not None
+    assert rec.cpu_score_gap_to_target > 0.0
+    assert "0.17" in rec.advice
+
+
+def test_dual_axis_decision_attack_map_covers_all_axes() -> None:
+    rec = recommend_dispatch_axis_dual(
+        cuda_d_seg=6.88e-4, cuda_d_pose=1.74e-4, archive_bytes=178392,
+    )
+    assert "seg" in rec.decision_attack_map
+    assert "pose" in rec.decision_attack_map
+    assert "bytes" in rec.decision_attack_map
+    # bytes attack list includes Phase A4 (council G5 gate-clearer)
+    assert any("A4" in d for d in rec.decision_attack_map["bytes"])
+    # seg attack list includes A1 score-gradient
+    assert any("A1" in d for d in rec.decision_attack_map["seg"])
+
+
+def test_dual_axis_negative_inputs_raise() -> None:
+    with pytest.raises(ValueError):
+        recommend_dispatch_axis_dual(
+            cuda_d_seg=-0.1, cuda_d_pose=1e-4, archive_bytes=178392,
+        )
+    with pytest.raises(ValueError):
+        recommend_dispatch_axis_dual(
+            cuda_d_seg=1e-4, cuda_d_pose=-0.1, archive_bytes=178392,
+        )
+    with pytest.raises(ValueError):
+        recommend_dispatch_axis_dual(
+            cuda_d_seg=1e-4, cuda_d_pose=1e-4, archive_bytes=-1,
+        )
