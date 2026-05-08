@@ -10,8 +10,10 @@ deterministic build manifest.
 It is a THIN orchestrator: it does not invent codec primitives. Every
 step delegates to the canonical CodecOp instances (Op1, Op2, Op3, β, γ,
 α-mask portfolio) and the Path B step 6 ADMM × continuous-K mechanism
-that produced the cross-paradigm winner anchor (137,531 B at 4.15%
-rel_err on PR101 substrate, commit 8d33d5c1).
+that produced the cross-paradigm winner anchor (137,469 B at 4.15%
+rel_err on PR101 substrate, sha c33243a1...; corrected from phantom
+137,531 B sha ea3b23ed... per Codex CRITICAL #4.1 fix at commit 98d2174b
+which dropped the /N_QUANT divisor + applied fp16(scale) cast on dequant).
 
 Per CLAUDE.md "Deterministic packet compiler": this orchestrator runs in
 ``optimize`` mode by default, supports ``identity`` and ``canonicalize``
@@ -50,7 +52,7 @@ matching the "forbidden silent-skip cascades" rule.
 Four canonical CLI smoke invocations (also in tests file)
 ---------------------------------------------------------
 
-1. **default winner** — reproduce the cross-paradigm winner (137,531 B):
+1. **default winner** — reproduce the cross-paradigm winner (137,469 B):
 
     python tools/canonical_cross_paradigm_stack_orchestrator.py \\
         --gamma-joint-allocator ADMM-continuous-K \\
@@ -89,8 +91,11 @@ Four canonical CLI smoke invocations (also in tests file)
 Cross-references
 ----------------
 * Phase 4 design memo: ``.omx/research/phase4_optimal_stack_design_20260508_claude.md``
-* Cross-paradigm winner anchor (137,531 B): commit 8d33d5c1,
+* Cross-paradigm winner anchor (137,469 B sha c33243a1...): corrected
+  encoder at commit 98d2174b. Phantom predecessor (137,531 B sha ea3b23ed...)
+  is retained as forensic record at
   ``reports/raw/pr101_cross_paradigm_hstack_vstack_20260508T060656Z/manifest.json``
+  but no longer dispatchable.
 * CodecOp Protocol + CPL1 wire format: :mod:`tac.codec_pipeline`
 * Path B step 6 ADMM mechanism: ``tools/pr101_omega_opt_admm_x_lossy_coarsening_empirical.py``
 * Lane registry pre-registration: ``lane_phase4_canonical_stack_orchestrator``
@@ -261,12 +266,26 @@ def _stage_gamma_admm_continuous_k(
 
     # Rebuild the lossy-coarsened state_dict (post-ADMM) so downstream
     # ops can re-encode on the lower-entropy substrate.
+    #
+    # Substrate-mismatch fix 2026-05-08 (Codex CRITICAL #4.1, ORCH-SYNC Bug 1):
+    # Earlier orchestrator code applied an incorrect /N_QUANT (=127) divisor
+    # on the dequantization path here, reproducing the PHANTOM 137,531 B
+    # (sha ea3b23ed...) anchor that DID NOT match the runtime decoder at
+    # admm_x_lossy_coarsening_path_b_step6_*/submission_dir/inflate.py
+    # (which dequantizes as ``q_i8.astype(fp32) * fp16_scale``). The
+    # corrected formula yields 137,469 B (sha c33243a1...), matching the
+    # corrected encoder at tools/pr101_cross_paradigm_hstack_vstack_empirical.py
+    # commit 98d2174b. ``N_QUANT`` is retained as an audit constant (still
+    # imported above) but is intentionally NOT used on the dequant path.
     Ks = list(admm_result["Ks"])
     rebuilt: dict[str, "torch.Tensor"] = {}
+    dequantization_formula = "rounded.astype(np.float32) * float(np.float16(scale))"
     for (name, scale, shape), tb, K in zip(quant_meta, tensors, Ks, strict=True):
         rounded = (np.round(tb.raw.astype(np.float64) / K) * K).astype(np.int32)
         rounded = np.clip(rounded, -127, 127).astype(np.int8)
-        deq = (rounded.astype(np.float32) / float(N_QUANT)) * scale
+        # dequantize to fp32: q_i8 * fp16(scale) -- matches runtime decoder
+        scale_fp16 = float(np.float16(scale))
+        deq = rounded.astype(np.float32) * scale_fp16
         rebuilt[name] = torch.from_numpy(deq.reshape(shape))
 
     record = StageRecord(

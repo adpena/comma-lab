@@ -4,8 +4,11 @@ Coverage (per parent task spec; smoke-runs of the four canonical examples):
 
   1. ``build_parser`` exposes every required CLI flag with the right choices.
   2. The default winner config (γ ADMM-continuous-K + Op1 finalizer at
-     rms=0.0386) reproduces the cross-paradigm winner ANCHOR cleanly: bytes_out
-     within ~1% of the recorded 137,531 B and rel_err ~ 0.0415.
+     rms=0.0386) reproduces the corrected cross-paradigm winner ANCHOR
+     cleanly: bytes_out within ~1% of 137,469 B (sha c33243a1...,
+     corrected encoder commit 98d2174b) and rel_err ~ 0.0415. The prior
+     phantom 137,531 B (sha ea3b23ed...) is retained as forensic record
+     only — no longer dispatchable.
   3. The conservative config (γ ADMM-continuous-K + finalizer=none + lower
      rms) emits a γ-only path with empty archive bytes (γ=continuous-K does
      not itself emit a substitutional blob — the post-γ substrate is
@@ -110,7 +113,7 @@ def test_build_parser_exposes_required_flags() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Test 2: default winner reproduces 137,531 B anchor (within ~1%)
+# Test 2: default winner reproduces 137,469 B anchor (within ~1%)
 # ---------------------------------------------------------------------------
 
 
@@ -126,12 +129,23 @@ def test_default_winner_reproduces_xparadigm_anchor(
         delta_eps_zeta="none",
         op_finalizer="Op1-PR101-split-brotli",
     )
-    # XPARADIGM cross-paradigm winner anchor: 137,531 B (commit 8d33d5c1).
+    # XPARADIGM cross-paradigm corrected winner anchor: 137,469 B
+    # (sha c33243a1..., commit 98d2174b which dropped the /N_QUANT divisor
+    # + applied fp16(scale) cast on the dequant path). Phantom predecessor
+    # 137,531 B (sha ea3b23ed...) is retained as forensic record only.
     # Allow ~1.5% slack — the orchestrator's auto_select=True path may
     # land 1-2K different than the empirical ablation depending on
     # brotli build / quality variation.
     assert 134_000 <= result.archive_bytes <= 141_000, (
         f"archive_bytes={result.archive_bytes} not in expected 134K-141K band"
+    )
+    # Tighter assertion: corrected pipeline must NOT reproduce the phantom.
+    # The phantom sha was ea3b23ed4bfedf30de706719d37e04563bfbb08cec22deb579393f2aebaf9023.
+    PHANTOM_SHA = (
+        "ea3b23ed4bfedf30de706719d37e04563bfbb08cec22deb579393f2aebaf9023"
+    )
+    assert result.archive_blob_sha256 != PHANTOM_SHA, (
+        "orchestrator reproduced the PHANTOM sha — /N_QUANT divisor regressed"
     )
     assert result.achieved_rel_err is not None
     assert 0.035 <= result.achieved_rel_err <= 0.045, (
