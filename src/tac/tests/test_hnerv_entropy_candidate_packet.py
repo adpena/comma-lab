@@ -224,6 +224,108 @@ def test_hdc2_stream_work_product_closes_stream_requirements_but_not_archive(
     assert "old_new_model_context_table_diff" in available_ids
 
 
+def test_hdc2_archive_contract_rejects_byte_negative_fixture(tmp_path: Path) -> None:
+    fixture = _write_hdc2_fixture(tmp_path)
+    work_product = build_hdc2_stream_byte_equivalence_work_product(
+        fixture["profile_path"],
+        fixture["archive_path"],
+        source_exact_eval_json_path=fixture["exact_eval_path"],
+        candidate_stream_path=tmp_path / "candidate_hdc2.bin",
+        repo_root=tmp_path,
+    )
+    artifacts = _write_hdc2_requirement_artifacts(tmp_path, work_product)
+    hdc2_archive_contract = tmp_path / "hdc2_archive_contract.json"
+    hdc2_archive_contract.write_text(
+        json_text(
+            _hdc2_archive_candidate_contract(
+                source_archive_bytes=1000,
+                candidate_archive_bytes=1200,
+                source_decoder_section_bytes=100,
+                candidate_decoder_section_bytes=150,
+                candidate_rate_positive=False,
+            )
+        ),
+        encoding="utf-8",
+    )
+    artifacts[HDC2_ARCHIVE_CANDIDATE_CONTRACT_REQUIREMENT_ID] = hdc2_archive_contract
+
+    manifest = build_candidate_packet_manifest(
+        fixture["profile_path"],
+        artifact_paths=artifacts,
+        repo_root=tmp_path,
+    )
+
+    assert HDC2_ARCHIVE_CANDIDATE_CONTRACT_REQUIREMENT_ID in manifest[
+        "invalid_requirement_artifacts"
+    ]
+    record = next(
+        row
+        for row in manifest["packet_requirements"]
+        if row["id"] == HDC2_ARCHIVE_CANDIDATE_CONTRACT_REQUIREMENT_ID
+    )
+    assert record["available"] is False
+    assert record["missing_reason"] == "validation_blockers"
+    blockers = record["validation_blockers"]
+    assert (
+        f"{HDC2_ARCHIVE_CANDIDATE_CONTRACT_REQUIREMENT_ID}:candidate_rate_positive_not_true"
+        in blockers
+    )
+    assert (
+        f"{HDC2_ARCHIVE_CANDIDATE_CONTRACT_REQUIREMENT_ID}:candidate_archive_bytes_not_less_than_source_archive_bytes"
+        in blockers
+    )
+    assert (
+        f"{HDC2_ARCHIVE_CANDIDATE_CONTRACT_REQUIREMENT_ID}:candidate_decoder_section_bytes_not_less_than_source_decoder_section_bytes"
+        in blockers
+    )
+    assert manifest["ready_for_archive_preflight"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
+def test_hdc2_archive_contract_accepts_only_strict_byte_win(tmp_path: Path) -> None:
+    fixture = _write_hdc2_fixture(tmp_path)
+    work_product = build_hdc2_stream_byte_equivalence_work_product(
+        fixture["profile_path"],
+        fixture["archive_path"],
+        source_exact_eval_json_path=fixture["exact_eval_path"],
+        candidate_stream_path=tmp_path / "candidate_hdc2.bin",
+        repo_root=tmp_path,
+    )
+    artifacts = _write_hdc2_requirement_artifacts(tmp_path, work_product)
+    hdc2_archive_contract = tmp_path / "hdc2_archive_contract.json"
+    hdc2_archive_contract.write_text(
+        json_text(
+            _hdc2_archive_candidate_contract(
+                source_archive_bytes=1200,
+                candidate_archive_bytes=1000,
+                source_decoder_section_bytes=150,
+                candidate_decoder_section_bytes=100,
+                candidate_rate_positive=True,
+            )
+        ),
+        encoding="utf-8",
+    )
+    artifacts[HDC2_ARCHIVE_CANDIDATE_CONTRACT_REQUIREMENT_ID] = hdc2_archive_contract
+
+    manifest = build_candidate_packet_manifest(
+        fixture["profile_path"],
+        artifact_paths=artifacts,
+        repo_root=tmp_path,
+    )
+
+    assert HDC2_ARCHIVE_CANDIDATE_CONTRACT_REQUIREMENT_ID not in manifest[
+        "invalid_requirement_artifacts"
+    ]
+    record = next(
+        row
+        for row in manifest["packet_requirements"]
+        if row["id"] == HDC2_ARCHIVE_CANDIDATE_CONTRACT_REQUIREMENT_ID
+    )
+    assert record["available"] is True
+    assert record["validation"]["valid"] is True
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
 def test_candidate_packet_can_build_audit_from_stream_profile(tmp_path: Path) -> None:
     profile_path = tmp_path / "streams.json"
     profile_path.write_text(
@@ -780,6 +882,39 @@ def _write_hdc2_requirement_artifacts(
         path.write_text(json_text(work_product[name]), encoding="utf-8")
         artifacts[requirement_id] = path
     return artifacts
+
+
+def _hdc2_archive_candidate_contract(
+    *,
+    source_archive_bytes: int,
+    candidate_archive_bytes: int,
+    source_decoder_section_bytes: int,
+    candidate_decoder_section_bytes: int,
+    candidate_rate_positive: bool,
+) -> dict:
+    return {
+        "contract": "hnerv_hdc2_archive_candidate_manifest_v1",
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "candidate_variant": "range_prev_symbol_global_q_streams_plus_raw_scales",
+        "archive_build_gate": True,
+        "byte_different_archive": True,
+        "candidate_rate_positive": candidate_rate_positive,
+        "candidate_decoder_section_is_hdc2": True,
+        "runtime_consumes_candidate_decoder": True,
+        "source_archive_sha256": "a" * 64,
+        "source_payload_sha256": "b" * 64,
+        "source_decoder_section_sha256": "c" * 64,
+        "candidate_archive_sha256": "d" * 64,
+        "candidate_payload_sha256": "e" * 64,
+        "candidate_decoder_section_sha256": "f" * 64,
+        "source_archive_bytes": source_archive_bytes,
+        "candidate_archive_bytes": candidate_archive_bytes,
+        "candidate_payload_bytes": max(1, candidate_archive_bytes - 100),
+        "source_decoder_section_bytes": source_decoder_section_bytes,
+        "candidate_decoder_section_bytes": candidate_decoder_section_bytes,
+    }
 
 
 def _structural_recode_profile() -> dict:

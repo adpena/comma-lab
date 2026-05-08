@@ -2051,6 +2051,7 @@ def _validate_hdc2_archive_candidate_contract(
     for key in (
         "archive_build_gate",
         "byte_different_archive",
+        "candidate_rate_positive",
         "candidate_decoder_section_is_hdc2",
         "runtime_consumes_candidate_decoder",
     ):
@@ -2061,14 +2062,38 @@ def _validate_hdc2_archive_candidate_contract(
         "candidate_payload_sha256",
         "candidate_decoder_section_sha256",
         "source_archive_sha256",
+        "source_payload_sha256",
+        "source_decoder_section_sha256",
     ):
         blockers.extend(_require_sha_field(payload, key, requirement_id))
     for key in (
         "candidate_archive_bytes",
         "candidate_payload_bytes",
         "candidate_decoder_section_bytes",
+        "source_archive_bytes",
+        "source_decoder_section_bytes",
     ):
         blockers.extend(_require_positive_int_field(payload, key, requirement_id))
+    candidate_archive_bytes = _field_as_int(payload, "candidate_archive_bytes")
+    source_archive_bytes = _field_as_int(payload, "source_archive_bytes")
+    if (
+        candidate_archive_bytes is not None
+        and source_archive_bytes is not None
+        and candidate_archive_bytes >= source_archive_bytes
+    ):
+        blockers.append(
+            f"{requirement_id}:candidate_archive_bytes_not_less_than_source_archive_bytes"
+        )
+    candidate_decoder_bytes = _field_as_int(payload, "candidate_decoder_section_bytes")
+    source_decoder_bytes = _field_as_int(payload, "source_decoder_section_bytes")
+    if (
+        candidate_decoder_bytes is not None
+        and source_decoder_bytes is not None
+        and candidate_decoder_bytes >= source_decoder_bytes
+    ):
+        blockers.append(
+            f"{requirement_id}:candidate_decoder_section_bytes_not_less_than_source_decoder_section_bytes"
+        )
     return blockers
 
 
