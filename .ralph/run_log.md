@@ -521,3 +521,57 @@ I declared clean-source STC FALSIFIED based on a local MPS-encoder run that prod
 - "It's just a smoke test" is the same rationalization that produced the 23× PoseNet drift incident on 2026-04-25.
 - The strict-mode check `check_no_mps_fallback_default` covers DEFAULT device selection but does not cover EXPLICIT --device mps in CLI invocations. Consider adding a STRICT check that warns when --device mps is passed to any strategic-measurement script.
 
+## 2026-05-08T01:30:00-05:00 — Path B Ω-OPT 6/8 anchored + cross-paradigm 137,531 B winner + Lightning canonical bootstrap fix
+
+**Session arc.** This shift landed: (1) 6 of 8 Ω-OPT levels empirically anchored on real PR101 substrate, (2) the first cross-paradigm composition that beats every canonical 8-stack matrix entry, (3) the Lightning canonical bootstrap fix that extincts a 7-failure dep-discovery cascade bug class, (4) the Phase 4 INTEGRATION design memo + paper harness blueprint, (5) the ADMM byte-closed candidate archive ready for CUDA dispatch, and (6) the lossy_coarsening_analytical CUDA negative result.
+
+**Empirical byte anchors landed (all [CPU-prep faithful], real PR101 substrate, fp32_bytes=915,832, 28-tensor decoder state_dict):**
+
+| Path B step | Commit | Tool | Result |
+|---|---|---|---|
+| 1 — linear stack composition | e27a4a2e | first 1:1 byte anchor | proves Ω-OPT linear-stack prediction is anchorable |
+| 2 — multi-pass IMP post-hoc | 6b355e64 | `tools/pr101_omega_opt_multipass_imp_empirical.py` | avg \|Δ\|=64.4 B; ZERO bytes from coalesce |
+| 3 — HStack-of-VStacks brotli | f11c1107 | `tools/pr101_omega_opt_hstack_of_vstacks_empirical.py` | -40 B NET (sidechannel dominates) |
+| 4 — per-tensor codec-CHOICE | 4f2cfd55 | `tools/pr101_omega_opt_per_tensor_codec_choice_empirical.py` | DOMINATED by analytical at all rel_err |
+| 5 — Joint-ADMM Lagrangian | b8aa5c43 | `tools/pr101_omega_opt_joint_admm_allocation_empirical.py` | BEATS greedy by 12-65 KB; first Ω-OPT win |
+| 6 — ADMM × continuous-K | 983598d2 | `tools/pr101_omega_opt_admm_x_lossy_coarsening_empirical.py` | +14.6KB savings vs greedy at rms=3.86% |
+
+**Cross-paradigm winner (commit 8d33d5c1, subagent XPARADIGM):**
+
+`tools/pr101_cross_paradigm_hstack_vstack_empirical.py` ran the canonical 8-stack composition matrix on the real PR101 substrate AND extended it with Path B step 6 ADMM × continuous-K → Op1 finalizer. Result: **137,531 B [CPU-prep faithful cross-paradigm test]** — beats ADMM-alone 153,639 by -16,108 B and beats canonical winner Op2_alone 161,942 by -24,411 B. **First cross-paradigm composition on real PR101 substrate that beats every canonical 8-stack matrix entry.** Tagged MEASURED_CONFIG_NOT_DISPATCHABLE; score_claim=False; ready_for_exact_eval_dispatch=False.
+
+Substrate-mismatch: Op3 (apogee_intN) is STACKABLE in the type system but ballooned PR101 archives by +147K-200K B (Op3_int6→Op1=309,470; Op3_int7→Op1=362,469). Op3 was designed for HNeRV/PR106 substrate.
+
+**ADMM byte-closed candidate (commit 82bfc648):**
+
+Path B step 6 ADMM standalone byte-closed candidate at 153,699 B at 4.15% rel_err, with submission_dir + inflate.sh + inflate.py + src/codec.py + src/model.py staged. Distinct from the cross-paradigm winner (the latter still needs decoder wiring for the Op1 finalizer pass). Ready for CUDA dispatch post-review-clearance.
+
+**Phase 4 INTEGRATION blueprint (commit e8ae721c, subagent INTEGRATE):**
+
+`phase4_optimal_stack_design_20260508_claude.md` + `phase4_paper_harness_blueprint_20260508.md`. Aggressive predicted band: 0.155-0.175. Conservative: 0.140-0.180. Phase 2 GPU dispatch budget: $18-35 Lightning T4 / $29-60 4090 / $60-120 A100. Mandatory precondition: apogee_int6 [contest-CUDA] eval ($0.30-0.60). Secrecy audit clean (no Cloudflare URL, no operational levers, no /tmp paths, no score claims).
+
+**Lightning canonical bootstrap fix (commit 256d6fe1):**
+
+7 sequential dep-discovery failures (uv → ensurepip → cu124 → find → brotli → timm → einops...) replaced with one `bash scripts/remote_archive_only_eval.sh` invocation. The wrapper installs the FULL dep closure in one pass, auto-pins INFLATE_TORCH_SPEC by driver version, and runs contest_auth_eval.py. Closes the `forbidden_remote_bootstrap_inline` re-violation. Memory: `feedback_lossy_coarsening_lightning_6th_failure_use_canonical_bootstrap_20260508.md`.
+
+**Lossy_coarsening_analytical CUDA result [contest-CUDA A-negative]:**
+
+Job `lossy-coarsening-cuda-20260508T0312-noproject` Lightning T4 returned score = 0.3517 at 156,404 archive bytes. Per-tensor K budget = 0.05 retired (measured_config_only). The byte-anchor 156,344 B @ 3.86% rel_err did NOT translate to predicted 0.189 score — distortion → score mapping FALSIFIED at this configuration.
+
+**Lightning T4 in flight:** arch_shrink_x0.4 Q-FAITHFUL retrain (job `arch-shrink-x0-4-lightning-20260508t010514z`) ~4h elapsed of 12-18h ETA, ~$9.90 budget. First [contest-CUDA] anchor for the architecture lane.
+
+**Adversarial review gate active:** 4 commits pending clearance (256d6fe1, 82bfc648, e8ae721c, 8d33d5c1).
+
+**Memory landings (subset, ~10 files this session):**
+- `feedback_path_b_convergent_findings_summary_20260508.md` — cumulative Path B 1-6 summary
+- `feedback_path_b_step{2,3,4,5,6}_*_20260508.md` — per-step empirical anchors
+- `feedback_cross_paradigm_hstack_vstack_empirical_anchors_20260508.md` — XPARADIGM landing
+- `feedback_lossy_coarsening_lightning_6th_failure_use_canonical_bootstrap_20260508.md` — bootstrap-fix postmortem
+- `feedback_pr106_archive_is_monolithic_single_file_20260508.md` — Ω-OPT mask-budget assumption overturned
+- `feedback_recursive_adversarial_review_omega_opt_designs_20260508.md` — 7 rounds, 3/3 CLEAN
+- `project_arch_shrink_x0_4_lightning_DISPATCHED_20260508.md` — arch_shrink in flight
+- `project_phase4_optimal_stack_design_landed_20260508.md` — Phase 4 blueprint
+
+**Strategic state:** PR101 codec lane has saturated (~150 KB byte-floor at 4-5% rel_err); allocation mechanism beats codec basis empirically; remaining headroom requires CUDA distortion validation, not codec cleverness; cross-paradigm 137,531 B winner is the candidate-of-record for next dispatch (pending decoder wiring + review clearance).
+
+
