@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL = REPO_ROOT / "tools" / "pr101_frame_conditional_bit_anchor.py"
@@ -81,3 +82,47 @@ def test_uniform_anchor_row_keeps_stock_pr101_schema() -> None:
     assert contract["sideinfo_required"] is False
     assert contract["q_bits_sideinfo"]["bytes"] == 0
     assert contract["decoder_helper_consumes_sideinfo_bytes"] is False
+
+
+def test_uniform_only_sweep_does_not_report_changed_charged_bits(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    tool = _load_tool()
+    monkeypatch.setattr(tool, "PR101_DECODER_BLOB_LEN", 10)
+    monkeypatch.setattr(tool, "PR101_LATENT_BLOB_LEN", 4)
+    monkeypatch.setattr(tool, "PR101_N_PAIRS", 2)
+    monkeypatch.setattr(tool, "PR101_LATENT_DIM", 4)
+    monkeypatch.setattr(tool, "_read_pr101_archive_bytes", lambda _path: b"A" * 20)
+    monkeypatch.setattr(
+        tool,
+        "_extract_pr101_latent_payload",
+        lambda _archive: (
+            np.zeros(4, dtype=np.float32),
+            np.ones(4, dtype=np.float32),
+            np.arange(8, dtype=np.uint8).reshape(2, 4),
+        ),
+    )
+    monkeypatch.setattr(tool, "_encode_pr101_latent_stream", lambda *_args: b"LATN")
+    monkeypatch.setattr(
+        tool,
+        "_build_per_pair_complexity",
+        lambda *_args, **_kwargs: np.ones(2, dtype=np.float64),
+    )
+
+    manifest = tool._sweep_etas(
+        tmp_path / "archive.zip",
+        tmp_path / "0.mkv",
+        [0.0],
+        floor=0.5,
+        cap=2.0,
+        output_dir=tmp_path,
+    )
+
+    assert manifest["best_eta"] == 0.0
+    assert manifest["score_affecting_payload_changed"] is False
+    assert manifest["charged_bits_changed"] is False
+    assert manifest["best_archive_delta_bytes"] == 0
+    assert manifest["rows"][0]["sidechannel_overhead_bytes"] == 0
+    assert manifest["rows"][0]["score_affecting_payload_changed"] is False
+    assert manifest["rows"][0]["charged_bits_changed"] is False

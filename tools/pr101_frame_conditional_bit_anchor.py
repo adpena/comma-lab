@@ -15,7 +15,7 @@ impact of frame-conditional bit allocation as a *re-quantisation proxy*:
   1. Read 1200 frames from ``upstream/videos/0.mkv`` and compute
      per-frame edge-density × pixel-variance × frame-difference complexity.
   2. Pair-average the 1200 frame complexities to 600 per-pair complexities.
-  3. Allocate total latent bit budget (134,400 bits = 16,800 bytes ÷ 8)
+  3. Allocate total latent bit budget (134,400 bits = 16,800 bytes × 8)
      across 600 pairs at eta ∈ {0.0, 0.5, 1.0, 2.0} via
      :func:`tac.codec.frame_conditional_bit_budget.allocate_per_frame_bits`.
   4. For each eta, compute the per-pair quantisation precision implied by
@@ -305,6 +305,7 @@ def _sweep_etas(
 
     # Baseline: re-encode the original (no re-quant) to confirm format parity.
     baseline_latent_bytes = _encode_pr101_latent_stream(mins, scales, q_pair_first)
+    baseline_latent_sha256 = hashlib.sha256(baseline_latent_bytes).hexdigest()
     baseline_total_bytes = (
         PR101_DECODER_BLOB_LEN + len(baseline_latent_bytes) + (len(archive_bytes) - PR101_DECODER_BLOB_LEN - PR101_LATENT_BLOB_LEN)
     )
@@ -323,6 +324,8 @@ def _sweep_etas(
         q_bits_per_pair = _bits_per_pair_to_q_bits(bits_per_pair, PR101_LATENT_DIM)
         q_requant = _requantise_per_pair(q_pair_first, q_bits_per_pair)
         new_latent_bytes = _encode_pr101_latent_stream(mins, scales, q_requant)
+        new_latent_sha256 = hashlib.sha256(new_latent_bytes).hexdigest()
+        payload_changed = bool(not np.array_equal(q_pair_first, q_requant))
         wire_contract = (
             _implicit_uniform_wire_contract()
             if eta == 0.0
@@ -341,6 +344,11 @@ def _sweep_etas(
         # If eta=0 (uniform) the stock PR101 latent schema can be retained.
         if eta == 0.0:
             sidechannel_overhead = 0
+        charged_bits_changed = bool(
+            payload_changed
+            or sidechannel_overhead > 0
+            or new_latent_sha256 != baseline_latent_sha256
+        )
         total_bytes = (
             PR101_DECODER_BLOB_LEN
             + len(new_latent_bytes)
@@ -355,10 +363,14 @@ def _sweep_etas(
                 "latent_bytes_new": len(new_latent_bytes),
                 "latent_bytes_baseline": len(baseline_latent_bytes),
                 "latent_delta_bytes": len(new_latent_bytes) - len(baseline_latent_bytes),
+                "latent_payload_sha256": new_latent_sha256,
+                "baseline_latent_payload_sha256": baseline_latent_sha256,
                 "sidechannel_overhead_bytes": sidechannel_overhead,
                 "archive_bytes_new": total_bytes,
                 "archive_bytes_baseline": baseline_total_bytes,
                 "archive_delta_bytes": total_bytes - baseline_total_bytes,
+                "score_affecting_payload_changed": payload_changed,
+                "charged_bits_changed": charged_bits_changed,
                 "bits_per_pair_min": float(bits_per_pair.min()),
                 "bits_per_pair_max": float(bits_per_pair.max()),
                 "bits_per_pair_mean": float(bits_per_pair.mean()),
@@ -378,6 +390,7 @@ def _sweep_etas(
         )
 
     rows.sort(key=lambda r: r["archive_delta_bytes"])
+    best_row = rows[0]
     best_wire_contract = rows[0]["frame_conditional_wire_contract"]
     return {
         "schema": SCHEMA_VERSION,
@@ -415,8 +428,10 @@ def _sweep_etas(
             "ready_for_exact_eval_dispatch": False,
         },
         **_proxy_evidence_contract(),
-        "score_affecting_payload_changed": True,
-        "charged_bits_changed": True,
+        "score_affecting_payload_changed": bool(
+            best_row["score_affecting_payload_changed"]
+        ),
+        "charged_bits_changed": bool(best_row["charged_bits_changed"]),
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
         "rank_or_kill_eligible": False,
