@@ -92,15 +92,37 @@ score claim:
   contest-CPU auth eval, no operator score-claim review, no packet-local
   inflate parity.
 
+## Runtime Closure Probe
+
+Added `tools/probe_a2_packet_runtime_closure.py` as a scorer-free closure
+probe for A2 packets. It imports only the packet-local runtime, parses the
+stock source archive and A2 candidate archive through that runtime, and checks
+strict model state loading. It does not render raw frames, load PoseNet/SegNet,
+dispatch remote work, or claim a score.
+
+Real probe on the same `weighted_k_00_rms_0p0386` packet:
+
+- output:
+  `experiments/results/track1_phase_a2_packet_ladder_codex_20260508T160150Z/variants/weighted_k_00_rms_0p0386/a2_runtime_closure_probe.json`
+- status: `runtime_closure_verified_no_score`
+- source parser path: stock fallback, 28 decoder tensors, latents `[600, 28]`
+- candidate parser path: `A2K1` length prefix, 28 decoder tensors, latents
+  `[600, 28]`
+- score-affecting payload changed: true
+- manifest SHA-256 excluding self:
+  `4d5376006cf473816976488e9ff5c845a1686bc228f8e3e5adcc316431067185`
+- cleared blocker: `packet_local_inflate_parity_not_run`
+- remaining blockers: no Level-2 lane claim, no exact CUDA auth eval, no
+  contest-CPU auth eval, no operator score-claim review.
+
 ## Remaining Blockers
 
 Before any A2 packet can be used as score evidence:
 
-1. run local source-vs-candidate inflate parity on the selected packet;
-2. run pre-submission compliance on the reviewed packet surface;
-3. claim the Level-2 lane before any exact eval dispatch;
-4. run exact CUDA and contest-CPU auth eval;
-5. perform operator score-claim review.
+1. run pre-submission compliance on the reviewed packet surface;
+2. claim the Level-2 lane before any exact eval dispatch;
+3. run exact CUDA and contest-CPU auth eval;
+4. perform operator score-claim review.
 
 Until those are complete, this lane remains an empirical byte-closure actuator
 only.
