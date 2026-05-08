@@ -61,6 +61,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from tac.optimization.candidate_evidence_contract import (  # noqa: E402
+    has_positive_exact_cuda_evidence_marker,
     promotable_exact_cuda_evidence_blockers,
 )
 from tac.optimization.cuda_cpu_axis_calibration import CudaCpuCalibration  # noqa: E402
@@ -444,6 +445,7 @@ class TechniqueEvidence:
     promotion_eligible: bool | None = None
     rank_or_kill_eligible: bool | None = None
     ready_for_exact_eval_dispatch: bool | None = None
+    exact_cuda_auth_eval: bool | None = None
     contest_dispatch_verdict: str = ""
     measured_config_status: str = ""
     family_falsified: bool | None = None
@@ -461,6 +463,32 @@ class TechniqueEvidence:
     timestamp: str = ""
 
 
+def _strict_json_bool(
+    row: dict[str, Any],
+    key: str,
+    schema_blockers: list[str],
+) -> bool | None:
+    """Parse JSON booleans without accepting truthy strings or integers."""
+
+    if key not in row or row.get(key) is None:
+        return None
+    value = row[key]
+    if isinstance(value, bool):
+        return value
+    schema_blockers.append(f"invalid_evidence_schema_boolean:{key}")
+    return None
+
+
+def _evidence_dispatch_blockers(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value] if value else []
+    if isinstance(value, list):
+        return [str(blocker) for blocker in value if str(blocker)]
+    return [f"invalid_evidence_schema_dispatch_blockers:{type(value).__name__}"]
+
+
 def _load_evidence(path: Path) -> list[TechniqueEvidence]:
     """Read JSONL or JSON-array of evidence rows. Skips malformed rows."""
     text = path.read_text(encoding="utf-8").strip()
@@ -475,6 +503,8 @@ def _load_evidence(path: Path) -> list[TechniqueEvidence]:
     for r in rows:
         if not isinstance(r, dict) or "technique" not in r:
             continue
+        schema_blockers: list[str] = []
+        dispatch_blockers = _evidence_dispatch_blockers(r.get("dispatch_blockers"))
         out.append(TechniqueEvidence(
             technique=str(r["technique"]),
             empirical_archive_bytes=(
@@ -536,9 +566,7 @@ def _load_evidence(path: Path) -> list[TechniqueEvidence]:
                 float(r["network_pose_ratio_cuda_over_cpu"])
                 if r.get("network_pose_ratio_cuda_over_cpu") is not None else None
             ),
-            score_claim=(
-                bool(r["score_claim"]) if r.get("score_claim") is not None else None
-            ),
+            score_claim=_strict_json_bool(r, "score_claim", schema_blockers),
             score_contest_cpu=(
                 float(r["score_contest_cpu"])
                 if r.get("score_contest_cpu") is not None else None
@@ -547,27 +575,25 @@ def _load_evidence(path: Path) -> list[TechniqueEvidence]:
                 float(r["score_contest_cuda"])
                 if r.get("score_contest_cuda") is not None else None
             ),
-            promotion_eligible=(
-                bool(r["promotion_eligible"])
-                if r.get("promotion_eligible") is not None else None
+            promotion_eligible=_strict_json_bool(
+                r, "promotion_eligible", schema_blockers
             ),
-            rank_or_kill_eligible=(
-                bool(r["rank_or_kill_eligible"])
-                if r.get("rank_or_kill_eligible") is not None else None
+            rank_or_kill_eligible=_strict_json_bool(
+                r, "rank_or_kill_eligible", schema_blockers
             ),
-            ready_for_exact_eval_dispatch=(
-                bool(r["ready_for_exact_eval_dispatch"])
-                if r.get("ready_for_exact_eval_dispatch") is not None else None
+            ready_for_exact_eval_dispatch=_strict_json_bool(
+                r, "ready_for_exact_eval_dispatch", schema_blockers
+            ),
+            exact_cuda_auth_eval=_strict_json_bool(
+                r, "exact_cuda_auth_eval", schema_blockers
             ),
             contest_dispatch_verdict=str(r.get("contest_dispatch_verdict", "")),
             measured_config_status=str(r.get("measured_config_status", "")),
-            family_falsified=(
-                bool(r["family_falsified"])
-                if r.get("family_falsified") is not None else None
+            family_falsified=_strict_json_bool(
+                r, "family_falsified", schema_blockers
             ),
-            method_family_retired=(
-                bool(r["method_family_retired"])
-                if r.get("method_family_retired") is not None else None
+            method_family_retired=_strict_json_bool(
+                r, "method_family_retired", schema_blockers
             ),
             exact_result_review_path=str(
                 r.get("exact_result_review_path")
@@ -578,27 +604,31 @@ def _load_evidence(path: Path) -> list[TechniqueEvidence]:
             reactivation_criteria=[
                 str(item) for item in r.get("reactivation_criteria", [])
             ] if isinstance(r.get("reactivation_criteria", []), list) else [],
-            dispatch_blockers=[
-                str(blocker) for blocker in r.get("dispatch_blockers", [])
-            ] if isinstance(r.get("dispatch_blockers", []), list) else [],
-            score_affecting_payload_changed=(
-                bool(r["score_affecting_payload_changed"])
-                if r.get("score_affecting_payload_changed") is not None else None
+            score_affecting_payload_changed=_strict_json_bool(
+                r, "score_affecting_payload_changed", schema_blockers
             ),
-            charged_bits_changed=(
-                bool(r["charged_bits_changed"])
-                if r.get("charged_bits_changed") is not None else None
+            charged_bits_changed=_strict_json_bool(
+                r, "charged_bits_changed", schema_blockers
             ),
-            cuda_eval_worth_testing=(
-                bool(r["cuda_eval_worth_testing"])
-                if r.get("cuda_eval_worth_testing") is not None else None
+            cuda_eval_worth_testing=_strict_json_bool(
+                r, "cuda_eval_worth_testing", schema_blockers
             ),
-            byte_proxy_only=(
-                bool(r["byte_proxy_only"])
-                if r.get("byte_proxy_only") is not None else None
-            ),
-            proxy_row=(
-                bool(r["proxy_row"]) if r.get("proxy_row") is not None else None
+            byte_proxy_only=_strict_json_bool(r, "byte_proxy_only", schema_blockers),
+            proxy_row=_strict_json_bool(r, "proxy_row", schema_blockers),
+            dispatch_blockers=list(
+                dict.fromkeys(
+                    [
+                        *dispatch_blockers,
+                        *(
+                            [
+                                "invalid_evidence_schema_non_promotable",
+                                *schema_blockers,
+                            ]
+                            if schema_blockers
+                            else []
+                        ),
+                    ]
+                )
             ),
             source=str(r.get("source", "")),
             timestamp=str(r.get("timestamp", "")),
@@ -694,11 +724,9 @@ def _is_exact_negative_or_retired_evidence(evidence: TechniqueEvidence) -> bool:
         )
         if part
     )
-    exact_cuda = (
-        "contest-cuda" in text
-        or "contest_cuda" in text
-        or "exact_cuda_auth_eval" in text
-        or evidence.evidence_grade.strip().lower() in {"a", "a++", "a-negative"}
+    exact_cuda = has_positive_exact_cuda_evidence_marker(
+        asdict(evidence),
+        include_negative_grade=True,
     )
     if not exact_cuda:
         return False
@@ -1441,7 +1469,7 @@ def _rank_techniques(
     d_seg: float, d_pose: float, current_archive_bytes: int,
     current_score: float, target_score: float | None,
     min_score_delta: float = 0.0,
-    rank_axis: str = "cuda",
+    rank_axis: str = "dual",
     architecture_class: str = "hnerv",
     current_score_axis: str = "cuda",
 ) -> list[dict[str, Any]]:
@@ -1455,8 +1483,9 @@ def _rank_techniques(
     Args:
         d_seg, d_pose: distortion at the *current* operating point.
         current_score: current contest score.
-        rank_axis: ``"cuda"`` (default — legacy) or ``"cpu"`` to primary-rank
-            by the CPU-axis predicted score delta.
+        rank_axis: ``"dual"`` (default), ``"cuda"``, or ``"cpu"``. The
+            dual-axis mode primary-ranks by the smaller predicted improvement
+            across CUDA and CPU so neither scorer path is silently privileged.
         architecture_class: calibration class for the CPU-axis prediction
             (default ``"hnerv"``).
         current_score_axis: which axis ``current_score`` was measured on
@@ -1468,8 +1497,10 @@ def _rank_techniques(
     below ``min_score_delta`` are dropped (always keeping the top-1 row so
     callers never get an empty list).
     """
-    if rank_axis not in {"cuda", "cpu"}:
-        raise ValueError(f"rank_axis must be 'cuda' or 'cpu'; got {rank_axis!r}")
+    if rank_axis not in {"cuda", "cpu", "dual"}:
+        raise ValueError(
+            f"rank_axis must be 'cuda', 'cpu', or 'dual'; got {rank_axis!r}"
+        )
     if current_score_axis not in {"cuda", "cpu"}:
         raise ValueError(
             f"current_score_axis must be 'cuda' or 'cpu'; got {current_score_axis!r}"
@@ -1477,20 +1508,28 @@ def _rank_techniques(
     cal = CudaCpuCalibration(architecture_class=architecture_class)
     # Compute the "current score" on the OPPOSITE axis for delta computation.
     if current_score_axis == "cuda":
+        d_seg_cuda = d_seg
+        d_pose_cuda = d_pose
+        d_seg_cpu = d_seg / cal.r_seg
+        d_pose_cpu = d_pose / cal.r_pose
         current_cuda_score = current_score
         current_cpu_band = cal.predict_cpu_from_cuda(
             current_score,
-            d_pose_cuda=d_pose,
-            d_seg_cuda=d_seg,
+            d_pose_cuda=d_pose_cuda,
+            d_seg_cuda=d_seg_cuda,
             archive_bytes=current_archive_bytes,
         )
         current_cpu_score = current_cpu_band.score_point
     else:
+        d_seg_cpu = d_seg
+        d_pose_cpu = d_pose
+        d_seg_cuda = d_seg * cal.r_seg
+        d_pose_cuda = d_pose * cal.r_pose
         current_cpu_score = current_score
         current_cuda_band = cal.predict_cuda_from_cpu(
             current_score,
-            d_pose_cpu=d_pose,
-            d_seg_cpu=d_seg,
+            d_pose_cpu=d_pose_cpu,
+            d_seg_cpu=d_seg_cpu,
             archive_bytes=current_archive_bytes,
         )
         current_cuda_score = current_cuda_band.score_point
@@ -1506,33 +1545,51 @@ def _rank_techniques(
             cpu_score_hi = current_cpu_score
             cpu_calibration = "no-change"
         else:
-            # CUDA-axis prediction (legacy primary).
-            # ``d_seg`` / ``d_pose`` are caller-supplied; if
-            # ``current_score_axis="cpu"`` the caller is responsible for
-            # passing CUDA distortions (this helper does not rebase them).
+            # CUDA-axis prediction (legacy back-compat keys).
             score_after = _technique_score_after(
                 baseline_bytes=current_archive_bytes,
                 technique_bytes=t["predicted_archive_bytes"],
-                d_seg=d_seg, d_pose=d_pose,
+                d_seg=d_seg_cuda, d_pose=d_pose_cuda,
             )
             score_delta = current_cuda_score - score_after
-            # CPU-axis prediction band.
-            dual = _technique_score_after_dual_axis(
-                baseline_bytes=current_archive_bytes,
-                technique_bytes=t["predicted_archive_bytes"],
-                d_seg_cuda=d_seg, d_pose_cuda=d_pose,
-                architecture_class=architecture_class,
-            )
-            cpu_score_after = dual["predicted_cpu_score"]
-            cpu_score_lo = dual["predicted_cpu_score_lo"]
-            cpu_score_hi = dual["predicted_cpu_score_hi"]
-            cpu_calibration = dual["predicted_cpu_score_calibration"]
+            if current_score_axis == "cpu":
+                # The supplied distortions are already CPU-axis components;
+                # do not rebase them a second time.
+                cpu_score_after = _technique_score_after(
+                    baseline_bytes=current_archive_bytes,
+                    technique_bytes=t["predicted_archive_bytes"],
+                    d_seg=d_seg_cpu, d_pose=d_pose_cpu,
+                )
+                cpu_score_lo = cpu_score_after
+                cpu_score_hi = cpu_score_after
+                cpu_calibration = "cpu-axis-direct"
+            else:
+                # CPU-axis prediction band from measured CUDA components.
+                dual = _technique_score_after_dual_axis(
+                    baseline_bytes=current_archive_bytes,
+                    technique_bytes=t["predicted_archive_bytes"],
+                    d_seg_cuda=d_seg_cuda, d_pose_cuda=d_pose_cuda,
+                    architecture_class=architecture_class,
+                )
+                cpu_score_after = dual["predicted_cpu_score"]
+                cpu_score_lo = dual["predicted_cpu_score_lo"]
+                cpu_score_hi = dual["predicted_cpu_score_hi"]
+                cpu_calibration = dual["predicted_cpu_score_calibration"]
         cpu_score_delta = current_cpu_score - cpu_score_after
         cost_dollars = max(t["cost_dollars"], 0.5)  # floor for pure-CPU items
         # Pick primary delta based on rank_axis. Existing back-compat key
-        # ``predicted_score_delta`` continues to be CUDA-axis.
-        primary_delta = score_delta if rank_axis == "cuda" else cpu_score_delta
-        primary_score_after = score_after if rank_axis == "cuda" else cpu_score_after
+        # ``predicted_score_delta`` continues to be CUDA-axis. Dual-axis mode
+        # is conservative: rank by the smaller predicted gain and target-gap
+        # by the worse predicted score across CUDA/CPU.
+        if rank_axis == "cuda":
+            primary_delta = score_delta
+            primary_score_after = score_after
+        elif rank_axis == "cpu":
+            primary_delta = cpu_score_delta
+            primary_score_after = cpu_score_after
+        else:
+            primary_delta = min(score_delta, cpu_score_delta)
+            primary_score_after = max(score_after, cpu_score_after)
         gain_per_dollar = primary_delta / cost_dollars if cost_dollars > 0 else 0.0
         gap_to_target = (
             primary_score_after - target_score if target_score is not None else None
@@ -1562,8 +1619,8 @@ def _rank_techniques(
             "active_ranking_blocked": active_ranking_blocked,
             "retired_from_active_ranking": retired_from_active_ranking,
         })
-    # Primary-axis ranking; back-compat sort still uses CUDA delta when
-    # rank_axis="cuda".
+    # Primary-axis ranking; default dual mode uses the conservative smaller
+    # predicted gain across CUDA and CPU.
     rows.sort(key=lambda r: (
         r["active_ranking_blocked"],
         -r["primary_score_delta"],
@@ -1786,7 +1843,7 @@ def build_plan(
     prior_evidence: list[TechniqueEvidence] | None = None,
     min_score_delta: float = 0.0,
     include_axis_priorities: bool = True,
-    rank_axis: str = "cuda",
+    rank_axis: str = "dual",
     current_score_axis: str = "cuda",
     architecture_class: str = "hnerv",
 ) -> AutopilotPlan:
@@ -1995,8 +2052,15 @@ def main(argv: list[str] | None = None) -> int:
                         help="JSONL/JSON of TechniqueEvidence rows; updates catalog before ranking")
     p_plan.add_argument("--min-score-delta", type=float, default=0.0,
                         help="High-signal filter: drop techniques predicting <delta score (top-1 always kept)")
-    p_plan.add_argument("--rank-axis", choices=["cuda", "cpu"], default="cuda",
-                        help="Primary ranking axis; both axes remain reported")
+    p_plan.add_argument(
+        "--rank-axis",
+        choices=["dual", "cuda", "cpu"],
+        default="dual",
+        help=(
+            "Primary ranking axis; default dual ranks by the smaller predicted "
+            "CUDA/CPU gain while both axes remain reported"
+        ),
+    )
     p_plan.add_argument("--current-score-axis", "--score-axis",
                         choices=["cuda", "cpu"], default="cuda",
                         help="Axis of the supplied d_seg/d_pose/current state")
@@ -2010,7 +2074,7 @@ def main(argv: list[str] | None = None) -> int:
     p_pareto.add_argument("--output", type=Path, required=True)
     p_pareto.add_argument("--prior-evidence", type=Path, default=None)
     p_pareto.add_argument("--min-score-delta", type=float, default=0.0)
-    p_pareto.add_argument("--rank-axis", choices=["cuda", "cpu"], default="cuda")
+    p_pareto.add_argument("--rank-axis", choices=["dual", "cuda", "cpu"], default="dual")
     p_pareto.add_argument("--current-score-axis", "--score-axis",
                           choices=["cuda", "cpu"], default="cuda")
     p_pareto.add_argument("--architecture-class", default="hnerv")
@@ -2165,7 +2229,7 @@ def _render_plan_summary(plan: AutopilotPlan) -> str:
                     f"(currently {s['d_pose']:.4e}; factor {f_imp_s})"
                 )
     lines.append("")
-    rank_axis = s.get("rank_axis", "cuda")
+    rank_axis = s.get("rank_axis", "dual")
     lines.append(f"TOP-3 RECOMMENDED ACTIONS (ranked by {rank_axis}-axis score-delta then cost):")
     for i, rec in enumerate(plan.recommended_top_3, 1):
         lines.append(
@@ -2180,14 +2244,14 @@ def _render_plan_summary(plan: AutopilotPlan) -> str:
     for r in plan.encoder_technique_ranking[:3]:
         lines.append(
             f"  {r['name']:<40s}  bytes={r['predicted_archive_bytes']:,}  "
-            f"score={r['predicted_score_after']:.5f}  Delta={r['predicted_score_delta']:+.5f}"
+            f"score={r['primary_score_after']:.5f}  Delta={r['primary_score_delta']:+.5f}"
         )
     lines.append("")
     lines.append("ARCHITECTURE TECHNIQUES (top 3 by score-delta):")
     for r in plan.arch_technique_ranking[:3]:
         lines.append(
             f"  {r['name']:<40s}  bytes={r['predicted_archive_bytes']:,}  "
-            f"score={r['predicted_score_after']:.5f}  Delta={r['predicted_score_delta']:+.5f}"
+            f"score={r['primary_score_after']:.5f}  Delta={r['primary_score_delta']:+.5f}"
         )
     if plan.validation_queue:
         lines.append("")

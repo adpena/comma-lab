@@ -10,10 +10,12 @@ ignored explicitly.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 try:
     from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
@@ -65,6 +67,23 @@ GENERATED_ROOTS = (
     "reports/raw",
     "reports/private",
 )
+RUNTIME_PACKET_DIR_NAMES = frozenset(
+    {
+        "full_runtime_packet",
+        "replay_submission",
+        "runtime_packet",
+        "submission_dir",
+    }
+)
+RUNTIME_ENTRYPOINT_NAMES = frozenset(
+    {
+        "compress.py",
+        "compress.sh",
+        "inflate.py",
+        "inflate.sh",
+    }
+)
+RUNTIME_SOURCE_BASELINE_ALGORITHM = "pact_runtime_source_set_v1"
 
 
 @dataclass(frozen=True)
@@ -128,6 +147,18 @@ def _is_source_like_path(path: str) -> bool:
     return _is_under_root(posix, SOURCE_ROOTS) or _is_generated_custody_path(posix)
 
 
+def _is_runtime_source_like_path(path: str) -> bool:
+    posix = path.replace("\\", "/")
+    if not _is_source_like_path(posix) or not _is_generated_custody_path(posix):
+        return False
+    parts = tuple(part for part in posix.split("/") if part)
+    if not parts:
+        return False
+    if parts[-1] in RUNTIME_ENTRYPOINT_NAMES:
+        return True
+    return any(part in RUNTIME_PACKET_DIR_NAMES for part in parts)
+
+
 def _default_disposition_for_record(record: UntrackedRecord) -> str:
     if record.classification != "generated_custody_source_untracked":
         return "track"
@@ -153,14 +184,36 @@ def classify_untracked_path(path: str) -> UntrackedRecord | None:
     return UntrackedRecord(posix, "source_untracked", "source-like artifact is untracked")
 
 
-def load_disposition_manifest(path: Path | None) -> dict[str, dict[str, str]]:
+def _validate_runtime_source_baseline(path: Path, index: int, baseline: Any) -> dict[str, object]:
+    if not isinstance(baseline, dict):
+        raise ValueError(f"{path}: entries[{index}].runtime_source_baseline must be an object")
+    algorithm = baseline.get("algorithm", RUNTIME_SOURCE_BASELINE_ALGORITHM)
+    count = baseline.get("count")
+    sha256 = baseline.get("sha256")
+    if algorithm != RUNTIME_SOURCE_BASELINE_ALGORITHM:
+        raise ValueError(
+            f"{path}: entries[{index}].runtime_source_baseline.algorithm={algorithm!r}; "
+            f"expected {RUNTIME_SOURCE_BASELINE_ALGORITHM!r}"
+        )
+    if not isinstance(count, int) or count < 0:
+        raise ValueError(f"{path}: entries[{index}].runtime_source_baseline.count must be a nonnegative int")
+    if (
+        not isinstance(sha256, str)
+        or len(sha256) != 64
+        or any(ch not in "0123456789abcdef" for ch in sha256)
+    ):
+        raise ValueError(f"{path}: entries[{index}].runtime_source_baseline.sha256 must be lowercase sha256 hex")
+    return {"algorithm": algorithm, "count": count, "sha256": sha256}
+
+
+def load_disposition_manifest(path: Path | None) -> dict[str, dict[str, Any]]:
     if path is None or not path.exists():
         return {}
     payload = json.loads(path.read_text())
     entries = payload.get("entries")
     if not isinstance(entries, list):
         raise ValueError(f"{path}: expected top-level entries list")
-    out: dict[str, dict[str, str]] = {}
+    out: dict[str, dict[str, Any]] = {}
     for index, entry in enumerate(entries):
         if not isinstance(entry, dict):
             raise ValueError(f"{path}: entries[{index}] is not an object")
@@ -184,7 +237,20 @@ def load_disposition_manifest(path: Path | None) -> dict[str, dict[str, str]]:
             )
         if not isinstance(note, str) or not note:
             raise ValueError(f"{path}: entries[{index}].note must be a nonempty string")
-        out[relpath] = {"disposition": disposition, "note": note, "path_kind": path_kind}
+        loaded_entry: dict[str, Any] = {
+            "disposition": disposition,
+            "note": note,
+            "path_kind": path_kind,
+        }
+        if "runtime_source_baseline" in entry:
+            if path_kind != "prefix":
+                raise ValueError(
+                    f"{path}: entries[{index}].runtime_source_baseline is only valid for prefix entries"
+                )
+            loaded_entry["runtime_source_baseline"] = _validate_runtime_source_baseline(
+                path, index, entry["runtime_source_baseline"]
+            )
+        out[relpath] = loaded_entry
     return out
 
 
@@ -225,7 +291,7 @@ def _git_tracked_files(repo_root: Path) -> set[str]:
 
 
 def find_invalid_disposition_paths(
-    dispositions: dict[str, dict[str, str]],
+    dispositions: dict[str, dict[str, Any]],
     *,
     live_untracked_paths: set[str],
     tracked_source_like_paths: set[str],
@@ -247,8 +313,8 @@ def find_invalid_disposition_paths(
 
 
 def find_disposition_for_path(
-    dispositions: dict[str, dict[str, str]], relpath: str
-) -> dict[str, str] | None:
+    dispositions: dict[str, dict[str, Any]], relpath: str
+) -> dict[str, Any] | None:
     exact = dispositions.get(relpath)
     if exact is not None and exact.get("path_kind", "exact") == "exact":
         return exact
@@ -260,6 +326,108 @@ def find_disposition_for_path(
     if not prefix_matches:
         return None
     return max(prefix_matches, key=lambda item: len(item[0]))[1]
+
+
+def find_exact_disposition_for_path(
+    dispositions: dict[str, dict[str, Any]], relpath: str
+) -> dict[str, Any] | None:
+    exact = dispositions.get(relpath)
+    if exact is not None and exact.get("path_kind", "exact") == "exact":
+        return exact
+    return None
+
+
+def find_prefix_disposition_for_path(
+    dispositions: dict[str, dict[str, Any]], relpath: str
+) -> tuple[str, dict[str, Any]] | None:
+    prefix_matches = [
+        (prefix, entry)
+        for prefix, entry in dispositions.items()
+        if entry.get("path_kind", "exact") == "prefix" and relpath.startswith(prefix)
+    ]
+    if not prefix_matches:
+        return None
+    return max(prefix_matches, key=lambda item: len(item[0]))
+
+
+def _runtime_source_file_fingerprint(repo_root: Path, relpath: str) -> str:
+    path = repo_root / relpath
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def build_runtime_source_baseline(repo_root: Path, relpaths: list[str] | tuple[str, ...]) -> dict[str, object]:
+    digest = hashlib.sha256()
+    digest.update((RUNTIME_SOURCE_BASELINE_ALGORITHM + "\n").encode())
+    runtime_paths = sorted(path.replace("\\", "/") for path in relpaths if _is_runtime_source_like_path(path))
+    for relpath in runtime_paths:
+        file_path = repo_root / relpath
+        size = file_path.stat().st_size
+        file_sha256 = _runtime_source_file_fingerprint(repo_root, relpath)
+        digest.update(f"{relpath}\0{size}\0{file_sha256}\n".encode())
+    return {
+        "algorithm": RUNTIME_SOURCE_BASELINE_ALGORITHM,
+        "count": len(runtime_paths),
+        "sha256": digest.hexdigest(),
+    }
+
+
+def find_runtime_source_custody_blockers(
+    dispositions: dict[str, dict[str, Any]],
+    runtime_source_paths: list[str] | tuple[str, ...],
+    *,
+    repo_root: Path,
+) -> tuple[list[str], list[dict[str, object]]]:
+    blockers: list[str] = []
+    prefix_runtime_paths: dict[str, list[str]] = {}
+    prefix_entries: dict[str, dict[str, Any]] = {}
+
+    for relpath in sorted(path.replace("\\", "/") for path in runtime_source_paths):
+        if find_exact_disposition_for_path(dispositions, relpath) is not None:
+            continue
+        prefix_match = find_prefix_disposition_for_path(dispositions, relpath)
+        if prefix_match is None:
+            continue
+        prefix, entry = prefix_match
+        baseline = entry.get("runtime_source_baseline")
+        if baseline is None:
+            blockers.append(
+                f"{relpath}: runtime source-like artifact matched prefix {prefix} "
+                "without exact disposition or runtime_source_baseline"
+            )
+            continue
+        prefix_entries[prefix] = entry
+        prefix_runtime_paths.setdefault(prefix, []).append(relpath)
+
+    baseline_summaries: list[dict[str, object]] = []
+    for prefix, paths in sorted(prefix_runtime_paths.items()):
+        expected = prefix_entries[prefix]["runtime_source_baseline"]
+        actual = build_runtime_source_baseline(repo_root, paths)
+        status = (
+            "matched"
+            if expected["count"] == actual["count"] and expected["sha256"] == actual["sha256"]
+            else "mismatch"
+        )
+        summary = {
+            "prefix": prefix,
+            "status": status,
+            "expected_count": expected["count"],
+            "expected_sha256": expected["sha256"],
+            "actual_count": actual["count"],
+            "actual_sha256": actual["sha256"],
+            "sample_paths": paths[:20],
+        }
+        baseline_summaries.append(summary)
+        if status != "matched":
+            blockers.append(
+                f"{prefix}: runtime_source_baseline mismatch "
+                f"(expected count={expected['count']} sha256={expected['sha256']}; "
+                f"actual count={actual['count']} sha256={actual['sha256']})"
+            )
+    return blockers, baseline_summaries
 
 
 def audit_untracked_source_artifacts(
@@ -288,6 +456,7 @@ def audit_untracked_source_artifacts(
         if "D" in status and _is_source_like_path(path)
     )
     shadowed_delete_paths = sorted(set(source_like_deletes) & untracked_paths)
+    runtime_source_paths = sorted(record.path for record in records if _is_runtime_source_like_path(record.path))
 
     by_class: dict[str, int] = {}
     by_disposition: dict[str, int] = {}
@@ -305,10 +474,16 @@ def audit_untracked_source_artifacts(
         else:
             disposition_name = disposition["disposition"]
             by_disposition[disposition_name] = by_disposition.get(disposition_name, 0) + 1
+    runtime_source_blockers, runtime_source_baselines = find_runtime_source_custody_blockers(
+        dispositions,
+        runtime_source_paths,
+        repo_root=repo_root,
+    )
 
     blockers = tuple(
         [f"{r.path}: {r.classification}: undispositioned source-like artifact" for r in undispositioned]
         + [f"{path}: disposition entry does not match a live untracked source path" for path in invalid_disposition_paths]
+        + runtime_source_blockers
     )
     return AuditReport(
         audit="untracked_source_artifacts",
@@ -330,6 +505,12 @@ def audit_untracked_source_artifacts(
                 1 for record in records if record.classification == "generated_custody_source_untracked"
             ),
             "resolved_tracked_disposition_count": len(set(dispositions) & tracked_source_like_paths),
+            "runtime_source_baseline_blocker_count": len(runtime_source_blockers),
+            "runtime_source_baselines": runtime_source_baselines,
+            "runtime_source_exact_disposition_count": sum(
+                1 for path in runtime_source_paths if find_exact_disposition_for_path(dispositions, path) is not None
+            ),
+            "runtime_source_like_count": len(runtime_source_paths),
             "shadowed_index_delete_count": len(shadowed_delete_paths),
             "shadowed_index_delete_paths": shadowed_delete_paths[:50],
             "source_like_delete_count": len(source_like_deletes),

@@ -79,3 +79,25 @@ Verified post-change:
 
 The four current `track` dispositions are the two small research ledgers plus
 the candidate evidence contract helper and its focused regression test.
+
+## Runtime Source Baseline Hardening Addendum
+
+Adversarial review found the prefix disposition was too broad for executable
+runtime packets: a new `experiments/results/.../submission_dir/inflate.py`
+could have been hidden by the `experiments/results/` prefix alone. The audit
+now treats generated runtime source as a stricter sub-class. Runtime source
+under a broad prefix requires either:
+
+1. an exact per-artifact disposition entry, or
+2. a pinned `runtime_source_baseline` on the prefix entry.
+
+Current `experiments/results/` runtime-source baseline:
+
+- `algorithm`: `pact_runtime_source_set_v1`
+- `count`: `81`
+- `sha256`: `b31fd76d44c800135e2a5b28308a49d15a3a75e746e6b829ae81eb0ceab54223`
+
+This preserves raw custody signal without promoting raw runtime packets to
+canonical source. Any newly generated submission/runtime packet now changes
+the baseline count or hash and fails strict audit until it is either
+summarized/promoted, exactly dispositioned, or intentionally rebaselined.

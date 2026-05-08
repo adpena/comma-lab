@@ -142,6 +142,20 @@ PR91_HPM1_RUNTIME_CONTRACT_AUDIT = TOOLS / "audit_pr91_hpm1_runtime_contract.py"
 FRONTIER_ARCHIVE_LAYOUT_AUDIT = TOOLS / "pr106_archive_decomposition.py"
 OMEGA_OPT_ANCHOR_AUDIT = TOOLS / "check_omega_opt_anchor_discipline.py"
 EVAL_LOADER_DRIFT_PROBE = TOOLS / "probe_eval_loader_drift.py"
+EVAL_LOADER_DRIFT_MISSING_PREREQ_CLASS = "missing_prerequisite"
+EVAL_LOADER_DRIFT_PROBE_RUNTIME_ERROR_CLASS = "probe_runtime_error"
+EVAL_LOADER_DRIFT_KNOWN_MISSING_PREREQ_CODES = frozenset(
+    {
+        "upstream_frame_utils_py",
+        "pyav_available",
+        "cuda_available",
+        "dali_available",
+        "video_names_file_exists",
+        "data_dir_exists",
+        "sample_videos_exist",
+        "cuda_dali_runtime_available",
+    }
+)
 HSTACK_VSTACK_PLAN = REPO / "reports/hstack_vstack_multipass_plan_20260507.json"
 PR91_HPM1_READINESS_ARTIFACT = REPO / "experiments/results/pr91_hpm1_readiness_20260506_codex/readiness.json"
 PR91_HPM1_RUNTIME_CONTRACT_ARTIFACT = (
@@ -717,6 +731,41 @@ def _run_frontier_monolithic_layout_gate() -> tuple[bool, str]:
     )
 
 
+def _eval_loader_drift_missing_prereq_pass(payload: dict[str, object]) -> tuple[bool, str]:
+    unavailable_class = payload.get("comparison_unavailable_class")
+    reasons_raw = payload.get("comparison_unavailable_reasons")
+    if isinstance(reasons_raw, list):
+        reasons = [str(reason) for reason in reasons_raw]
+    else:
+        reason = payload.get("comparison_unavailable_reason")
+        reasons = [str(reason)] if reason else []
+
+    if unavailable_class != EVAL_LOADER_DRIFT_MISSING_PREREQ_CLASS:
+        reason_text = "; ".join(reasons) if reasons else "no unavailable reason emitted"
+        return False, (
+            "eval loader drift probe unavailable for non-prerequisite reason "
+            f"({unavailable_class or 'unknown'}): {reason_text}"
+        )
+
+    codes_raw = payload.get("comparison_unavailable_codes")
+    if not isinstance(codes_raw, list) or not codes_raw:
+        return False, "eval loader drift probe missing typed unavailable codes"
+    codes = [str(code) for code in codes_raw]
+    unknown_codes = sorted(set(codes) - EVAL_LOADER_DRIFT_KNOWN_MISSING_PREREQ_CODES)
+    if unknown_codes:
+        return False, (
+            "eval loader drift probe emitted unknown missing-prereq code(s): "
+            + ", ".join(unknown_codes)
+        )
+
+    return True, (
+        "eval loader drift probe: PASS "
+        "(known missing prerequisite(s): "
+        + ", ".join(codes)
+        + "; non-promotable plan artifact validated)"
+    )
+
+
 def _run_eval_loader_drift_probe_gate() -> tuple[bool, str]:
     with tempfile.TemporaryDirectory(prefix="pact_eval_loader_drift_preflight_") as tmp:
         output_path = Path(tmp) / "eval_loader_drift_probe.json"
@@ -735,9 +784,11 @@ def _run_eval_loader_drift_probe_gate() -> tuple[bool, str]:
             text=True,
         )
         output = proc.stdout + proc.stderr
-        # Exit 2 means CUDA/DALI unavailable. That is a valid non-promotable
-        # local plan, not a preflight failure.
-        if proc.returncode not in {0, 2}:
+        # Exit 2 means a typed missing prerequisite. Exit 3 means the probe hit
+        # a runtime error after prerequisites were available; parse its JSON so
+        # all-lanes can fail with the typed reason instead of treating every
+        # unavailable comparison as an environment skip.
+        if proc.returncode not in {0, 2, 3}:
             return False, output
         try:
             payload = json.loads(output_path.read_text(encoding="utf-8"))
@@ -750,10 +801,7 @@ def _run_eval_loader_drift_probe_gate() -> tuple[bool, str]:
     if payload.get("rank_or_kill_eligible") is not False:
         return False, "eval loader drift probe must never be rank/kill eligible"
     if payload.get("comparison_available") is False:
-        return True, (
-            "eval loader drift probe: PASS "
-            "(CUDA/DALI unavailable here; non-promotable plan artifact validated)"
-        )
+        return _eval_loader_drift_missing_prereq_pass(payload)
     rows = payload.get("comparison_rows")
     if not isinstance(rows, list) or not rows:
         return False, "eval loader drift probe comparison was available but emitted no rows"

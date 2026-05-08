@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from tools.audit_untracked_source_artifacts import (
+    build_runtime_source_baseline,
     classify_untracked_path,
     find_disposition_for_path,
     find_invalid_disposition_paths,
+    find_runtime_source_custody_blockers,
     load_disposition_manifest,
     parse_git_status_porcelain,
     parse_git_status_records,
@@ -106,6 +108,88 @@ def test_disposition_manifest_supports_generated_custody_prefixes(tmp_path) -> N
         "experiments/results/run/submission_dir/inflate.py",
     )
     assert disposition["disposition"] == "ignore_rebuildable"
+
+
+def test_runtime_source_under_broad_prefix_requires_exact_entry_or_baseline(tmp_path) -> None:
+    dispositions = {
+        "experiments/results/": {
+            "disposition": "ignore_rebuildable",
+            "note": "raw local custody; promote summaries only",
+            "path_kind": "prefix",
+        }
+    }
+
+    blockers, baselines = find_runtime_source_custody_blockers(
+        dispositions,
+        ["experiments/results/new_run/submission_dir/inflate.py"],
+        repo_root=tmp_path,
+    )
+
+    assert baselines == []
+    assert blockers == [
+        "experiments/results/new_run/submission_dir/inflate.py: runtime source-like artifact "
+        "matched prefix experiments/results/ without exact disposition or runtime_source_baseline"
+    ]
+
+
+def test_runtime_source_under_broad_prefix_allows_exact_disposition(tmp_path) -> None:
+    runtime_path = "experiments/results/new_run/submission_dir/inflate.py"
+    dispositions = {
+        "experiments/results/": {
+            "disposition": "ignore_rebuildable",
+            "note": "raw local custody; promote summaries only",
+            "path_kind": "prefix",
+        },
+        runtime_path: {
+            "disposition": "ignore_rebuildable",
+            "note": "reviewed runtime source artifact",
+            "path_kind": "exact",
+        },
+    }
+
+    blockers, baselines = find_runtime_source_custody_blockers(
+        dispositions,
+        [runtime_path],
+        repo_root=tmp_path,
+    )
+
+    assert blockers == []
+    assert baselines == []
+
+
+def test_runtime_source_baseline_detects_new_submission_inflate(tmp_path) -> None:
+    baseline_path = "experiments/results/known_run/submission_dir/inflate.py"
+    new_path = "experiments/results/new_run/submission_dir/inflate.py"
+    (tmp_path / baseline_path).parent.mkdir(parents=True)
+    (tmp_path / baseline_path).write_text("print('known')\n")
+    (tmp_path / new_path).parent.mkdir(parents=True)
+    (tmp_path / new_path).write_text("print('new')\n")
+    baseline = build_runtime_source_baseline(tmp_path, [baseline_path])
+    dispositions = {
+        "experiments/results/": {
+            "disposition": "ignore_rebuildable",
+            "note": "raw local custody; promote summaries only",
+            "path_kind": "prefix",
+            "runtime_source_baseline": baseline,
+        }
+    }
+
+    blockers, baselines = find_runtime_source_custody_blockers(
+        dispositions,
+        [baseline_path, new_path],
+        repo_root=tmp_path,
+    )
+
+    assert len(baselines) == 1
+    assert baselines[0]["prefix"] == "experiments/results/"
+    assert baselines[0]["status"] == "mismatch"
+    assert baselines[0]["expected_count"] == 1
+    assert baselines[0]["actual_count"] == 2
+    assert blockers == [
+        "experiments/results/: runtime_source_baseline mismatch "
+        f"(expected count=1 sha256={baseline['sha256']}; "
+        f"actual count=2 sha256={baselines[0]['actual_sha256']})"
+    ]
 
 
 def test_disposition_entries_remain_valid_after_tracking() -> None:

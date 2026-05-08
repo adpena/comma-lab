@@ -5,6 +5,9 @@ cuda``. Empirical sweep across the HNeRV cluster (PR100/101/102/103/105) on
 2026-05-08 measured a near-constant axis-rebase from CUDA scores to CPU
 scores:
 
+This module is analysis-only and emits no archive bytes; deterministic-bytes acceptable
+because byte-match is N/A for this pure calibration transform.
+
   * ``R_pose = d_pose_cuda / d_pose_cpu ≈ 5.04 ± 0.10``  (HNeRV cluster)
   * ``R_seg  = d_seg_cuda  / d_seg_cpu  ≈ 1.17 ± 0.01``  (HNeRV cluster)
   * ``score(cpu) - score(cuda) ≈ -0.033`` (constant gap, dominated by pose
@@ -211,7 +214,7 @@ class CudaCpuCalibration:
             score_gap_override if score_gap_override is not None else SCORE_GAP_HNERV_CONSTANT
         )
         self.sigma_inflation = float(sigma_inflation)
-        self._is_anchored = architecture_class == "hnerv"
+        self._is_anchored = self.architecture_class == "hnerv"
 
     # -- prediction --------------------------------------------------------
 

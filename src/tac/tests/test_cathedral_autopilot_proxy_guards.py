@@ -4,6 +4,8 @@ import importlib.util
 import sys
 from pathlib import Path
 
+from tac.score_geometry import contest_score
+
 REPO = Path(__file__).resolve().parents[3]
 
 
@@ -343,6 +345,47 @@ def test_build_plan_threads_cpu_rank_axis_into_rankings() -> None:
             r["cost_dollars"],
         ),
     )[:3]
+
+
+def test_cpu_score_axis_uses_supplied_cpu_components_directly() -> None:
+    tool = _load_tool_module()
+    catalog = [{
+        "name": "cpu_axis_candidate",
+        "predicted_archive_bytes": 100_000,
+        "cost_dollars": 1.0,
+        "cost_hours": 1.0,
+    }]
+    current_bytes = 200_000
+    candidate_bytes = 100_000
+    d_seg_cpu = 0.0006
+    d_pose_cpu = 0.000035
+    current_cpu_score = contest_score(
+        d_seg=d_seg_cpu,
+        d_pose=d_pose_cpu,
+        archive_bytes=current_bytes,
+    )
+
+    ranked = tool._rank_techniques(
+        catalog,
+        d_seg=d_seg_cpu,
+        d_pose=d_pose_cpu,
+        current_archive_bytes=current_bytes,
+        current_score=current_cpu_score,
+        target_score=None,
+        rank_axis="cpu",
+        current_score_axis="cpu",
+        architecture_class="hnerv_ft_microcodec",
+    )
+
+    expected_cpu_after = contest_score(
+        d_seg=d_seg_cpu,
+        d_pose=d_pose_cpu,
+        archive_bytes=candidate_bytes,
+    )
+    row = ranked[0]
+    assert row["predicted_cpu_score"] == expected_cpu_after
+    assert row["primary_score_after"] == expected_cpu_after
+    assert row["predicted_cpu_score_calibration"] == "cpu-axis-direct"
 
 
 def test_unknown_evidence_techniques_are_reported_not_ranked() -> None:

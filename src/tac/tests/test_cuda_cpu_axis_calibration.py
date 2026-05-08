@@ -249,6 +249,12 @@ def test_registry_architecture_class_aliases_normalize() -> None:
     assert normalize_architecture_class("not-a-real-arch") == "unknown"
 
 
+def test_hnerv_aliases_are_anchored_not_extrapolated() -> None:
+    cal = CudaCpuCalibration(architecture_class="hnerv_ft_microcodec")
+    assert cal.architecture_class == "hnerv"
+    assert cal.predict_cpu_from_cuda(0.20).calibration_quality == "hnerv-anchored"
+
+
 def test_unknown_architecture_class_falls_back_to_extrapolated_unknown() -> None:
     cal = CudaCpuCalibration(architecture_class="not-a-real-arch")
     assert cal.architecture_class == "unknown"

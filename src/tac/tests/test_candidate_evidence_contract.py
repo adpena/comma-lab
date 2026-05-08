@@ -45,6 +45,50 @@ def test_promotable_exact_cuda_evidence_passes_with_full_contract() -> None:
     assert is_promotable_exact_cuda_evidence(row) is True
 
 
+def test_string_booleans_are_schema_invalid_and_not_promotable() -> None:
+    row = {
+        "technique": "candidate",
+        "empirical_archive_bytes": 100_000,
+        "score_contest_cuda": 0.18,
+        "evidence_grade": "[contest-CUDA]",
+        "score_claim": "false",
+        "promotion_eligible": True,
+        "rank_or_kill_eligible": True,
+        "ready_for_exact_eval_dispatch": True,
+        "archive_sha256": "a" * 64,
+        "runtime_tree_sha256": "b" * 64,
+        "dispatch_blockers": [],
+    }
+
+    blockers = promotable_exact_cuda_evidence_blockers(row)
+
+    assert is_promotable_exact_cuda_evidence(row) is False
+    assert "invalid_evidence_schema_non_promotable" in blockers
+    assert "invalid_evidence_schema_boolean:score_claim" in blockers
+    assert "score_claim_true_required" in blockers
+
+
+def test_negated_exact_cuda_requirement_text_is_not_positive_marker() -> None:
+    row = {
+        "technique": "candidate",
+        "empirical_archive_bytes": 100_000,
+        "score_contest_cuda": 0.18,
+        "evidence_semantics": "requires_exact_cuda_auth_eval_before_any_score_use",
+        "score_claim": True,
+        "promotion_eligible": True,
+        "rank_or_kill_eligible": True,
+        "ready_for_exact_eval_dispatch": True,
+        "archive_sha256": "a" * 64,
+        "runtime_tree_sha256": "b" * 64,
+        "dispatch_blockers": [],
+    }
+
+    blockers = promotable_exact_cuda_evidence_blockers(row)
+
+    assert is_promotable_exact_cuda_evidence(row) is False
+    assert "exact_cuda_evidence_marker_required" in blockers
+
+
 def test_negative_or_proxy_marked_rows_never_promote() -> None:
     row = {
         "technique": "candidate",

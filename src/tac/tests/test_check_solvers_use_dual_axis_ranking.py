@@ -43,14 +43,17 @@ def test_strict_mode_raises_on_violations(tmp_path) -> None:
         )
 
 
-def test_companion_key_in_same_file_dismisses_violation(tmp_path) -> None:
-    """If the file mentions any dual-axis companion key, all
-    primary-key references are presumed paired."""
+def test_companion_key_in_same_row_dismisses_violation(tmp_path) -> None:
+    """Dual-axis companion keys must live in the same emitted row."""
     solver_dir = tmp_path / "src" / "tac" / "optimization"
     solver_dir.mkdir(parents=True)
     (solver_dir / "good_solver.py").write_text(
-        "predicted_score_delta = 0.1\n"
-        "predicted_cpu_score = 0.16\n",  # companion key present
+        "def rank():\n"
+        "    return [{\n"
+        "        'predicted_score_delta': 0.1,\n"
+        "        'predicted_cuda_score': 0.21,\n"
+        "        'predicted_cpu_score': 0.16,\n"
+        "    }]\n",
         encoding="utf-8",
     )
     violations = check_solvers_use_dual_axis_ranking(
@@ -59,6 +62,28 @@ def test_companion_key_in_same_file_dismisses_violation(tmp_path) -> None:
         verbose=False,
     )
     assert violations == []
+
+
+def test_companion_key_elsewhere_in_file_does_not_dismiss_bad_row(tmp_path) -> None:
+    """A good row must not waive a later primary-only row in the same file."""
+    solver_dir = tmp_path / "src" / "tac" / "optimization"
+    solver_dir.mkdir(parents=True)
+    (solver_dir / "mixed_solver.py").write_text(
+        "def rank():\n"
+        "    return [\n"
+        "        {'predicted_score_delta': 0.1, 'predicted_cpu_score': 0.16},\n"
+        "        {'name': 'bad', 'predicted_score_delta': 0.2},\n"
+        "    ]\n",
+        encoding="utf-8",
+    )
+    violations = check_solvers_use_dual_axis_ranking(
+        repo_root=tmp_path,
+        strict=False,
+        verbose=False,
+    )
+    assert len(violations) == 1, violations
+    assert "bad" not in violations[0]
+    assert "predicted_score_delta" in violations[0]
 
 
 def test_waiver_marker_dismisses_violation(tmp_path) -> None:

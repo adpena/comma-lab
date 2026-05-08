@@ -29,6 +29,8 @@ import torch
 
 REPO = Path(__file__).resolve().parents[1]
 UPSTREAM = REPO / "upstream"
+COMPARISON_UNAVAILABLE_MISSING_PREREQUISITE = "missing_prerequisite"
+COMPARISON_UNAVAILABLE_PROBE_RUNTIME_ERROR = "probe_runtime_error"
 
 
 def _jsonable(value: Any) -> Any:
@@ -194,13 +196,32 @@ def detect_artifacts(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
-def _missing_reasons(required_artifacts: tuple[str, ...], artifacts: dict[str, Any]) -> list[str]:
+def _mark_comparison_unavailable(
+    report: dict[str, Any],
+    *,
+    unavailable_class: str,
+    reasons: list[str],
+    codes: list[str],
+) -> None:
+    report["comparison_available"] = False
+    report["comparison_unavailable_class"] = unavailable_class
+    report["comparison_unavailable_reason"] = "; ".join(reasons)
+    report["comparison_unavailable_reasons"] = reasons
+    report["comparison_unavailable_codes"] = codes
+
+
+def _missing_reasons(
+    required_artifacts: tuple[str, ...],
+    artifacts: dict[str, Any],
+) -> tuple[list[str], list[str]]:
     reasons = []
+    codes = []
     for key in required_artifacts:
         if artifacts.get(key) is not True:
             detail = artifacts.get("sample_video_error") if key == "sample_videos_exist" else None
             reasons.append(f"{key}=false" + (f" ({detail})" if detail else ""))
-    return reasons
+            codes.append(key)
+    return reasons, codes
 
 
 def _cuda_dali_available() -> tuple[bool, str | None]:
@@ -306,19 +327,30 @@ def build_probe_report(args: argparse.Namespace) -> dict[str, Any]:
         "data_dir_exists",
         "sample_videos_exist",
     )
-    missing = _missing_reasons(required, artifacts)
+    missing, missing_codes = _missing_reasons(required, artifacts)
     if missing:
-        report["comparison_available"] = False
-        report["comparison_unavailable_reasons"] = missing
-        report["comparison_unavailable_reason"] = "; ".join(missing)
+        _mark_comparison_unavailable(
+            report,
+            unavailable_class=COMPARISON_UNAVAILABLE_MISSING_PREREQUISITE,
+            reasons=missing,
+            codes=missing_codes,
+        )
         return report
 
     cuda_ok, cuda_reason = _cuda_dali_available()
-    report["comparison_available"] = cuda_ok
-    report["comparison_unavailable_reason"] = cuda_reason
     if not cuda_ok:
-        report["comparison_unavailable_reasons"] = [cuda_reason]
+        _mark_comparison_unavailable(
+            report,
+            unavailable_class=COMPARISON_UNAVAILABLE_MISSING_PREREQUISITE,
+            reasons=[cuda_reason or "cuda_dali_runtime_unavailable"],
+            codes=["cuda_dali_runtime_available"],
+        )
         return report
+    report["comparison_available"] = True
+    report["comparison_unavailable_class"] = None
+    report["comparison_unavailable_reason"] = None
+    report["comparison_unavailable_reasons"] = []
+    report["comparison_unavailable_codes"] = []
 
     try:
         if str(UPSTREAM) not in sys.path:
@@ -385,9 +417,12 @@ def build_probe_report(args: argparse.Namespace) -> dict[str, Any]:
             )
     except Exception as exc:
         reason = f"probe_runtime_error: {type(exc).__name__}: {exc}"
-        report["comparison_available"] = False
-        report["comparison_unavailable_reason"] = reason
-        report["comparison_unavailable_reasons"] = [reason]
+        _mark_comparison_unavailable(
+            report,
+            unavailable_class=COMPARISON_UNAVAILABLE_PROBE_RUNTIME_ERROR,
+            reasons=[reason],
+            codes=[COMPARISON_UNAVAILABLE_PROBE_RUNTIME_ERROR],
+        )
         return report
 
     report["comparison_rows"] = rows
@@ -396,11 +431,17 @@ def build_probe_report(args: argparse.Namespace) -> dict[str, Any]:
     report["comparison_incomplete_reason"] = incomplete_reason
     if not rows:
         reason = incomplete_reason or "no_comparison_rows_emitted"
-        report["comparison_unavailable_reason"] = reason
-        report["comparison_unavailable_reasons"] = [reason]
+        _mark_comparison_unavailable(
+            report,
+            unavailable_class=COMPARISON_UNAVAILABLE_PROBE_RUNTIME_ERROR,
+            reasons=[f"probe_runtime_error: {reason}"],
+            codes=[COMPARISON_UNAVAILABLE_PROBE_RUNTIME_ERROR],
+        )
     else:
+        report["comparison_unavailable_class"] = None
         report["comparison_unavailable_reason"] = None
         report["comparison_unavailable_reasons"] = []
+        report["comparison_unavailable_codes"] = []
     return report
 
 
@@ -427,6 +468,8 @@ def main(argv: list[str] | None = None) -> int:
         args.json_out.write_text(text + "\n", encoding="utf-8")
     print(text)
     if report.get("comparison_available") is False:
+        if report.get("comparison_unavailable_class") == COMPARISON_UNAVAILABLE_PROBE_RUNTIME_ERROR:
+            return 3
         return 2
     return 0
 

@@ -19,7 +19,12 @@
       "disposition": "ignore_rebuildable",
       "note": "prefix: experiment result trees are raw rebuildable custody; track only promoted source, ledgers, or compact manifests outside this root.",
       "path": "experiments/results/",
-      "path_kind": "prefix"
+      "path_kind": "prefix",
+      "runtime_source_baseline": {
+        "algorithm": "pact_runtime_source_set_v1",
+        "count": 81,
+        "sha256": "b31fd76d44c800135e2a5b28308a49d15a3a75e746e6b829ae81eb0ceab54223"
+      }
     },
     {
       "classification": "generated_custody_source_untracked",

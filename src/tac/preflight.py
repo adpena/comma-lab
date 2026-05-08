@@ -2590,6 +2590,65 @@ def _collect_assigned_args_attrs(tree: ast.Module) -> set[str]:
     return out
 
 
+def _collect_argparse_namespace_attrs(tree: ast.Module) -> set[str]:
+    """Return argparse-created Namespace attrs that are not spelled as flags.
+
+    `_parse_argparse_signature()` records long `--flag` forms for launcher
+    arity checks. The dead-resolver scanner needs a slightly different view:
+    every attribute argparse may put on `args`. That includes subparser
+    `dest="cmd"`, explicit `dest=` overrides, and positional arguments.
+    """
+    out: set[str] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func_str = ast.unparse(node.func) if hasattr(ast, "unparse") else ""
+        if func_str.endswith(".set_defaults"):
+            for kw in node.keywords:
+                if kw.arg:
+                    out.add(kw.arg)
+            continue
+        if not (
+            func_str.endswith(".add_argument")
+            or func_str.endswith(".add_subparsers")
+        ):
+            continue
+
+        explicit_dest = False
+        for kw in node.keywords:
+            if (
+                kw.arg == "dest"
+                and isinstance(kw.value, ast.Constant)
+                and isinstance(kw.value.value, str)
+                and kw.value.value
+            ):
+                out.add(kw.value.value)
+                explicit_dest = True
+
+        if explicit_dest or not func_str.endswith(".add_argument"):
+            continue
+
+        # No explicit dest: argparse derives option attrs from the first long
+        # option, or from the positional name when the argument is positional.
+        long_forms: list[str] = []
+        positional_attr = ""
+        for arg in node.args:
+            if not (isinstance(arg, ast.Constant) and isinstance(arg.value, str)):
+                continue
+            if arg.value.startswith("--"):
+                long_forms.append(arg.value)
+                continue
+            if arg.value.startswith("-"):
+                continue
+            positional_attr = _flag_to_attr(arg.value)
+            break
+        if long_forms:
+            out.add(_flag_to_attr(long_forms[0]))
+        elif positional_attr:
+            out.add(positional_attr)
+    return out
+
+
 def _scan_python_for_dead_resolvers(
     path: Path,
     repo_root: Path,
@@ -2608,10 +2667,9 @@ def _scan_python_for_dead_resolvers(
     except (SyntaxError, UnicodeDecodeError):
         return []
 
-    sig = _parse_argparse_signature(path) or {}
-    flag_attrs = {_flag_to_attr(f) for f in sig.keys()}
+    argparse_attrs = _collect_argparse_namespace_attrs(tree)
     assigned_attrs = _collect_assigned_args_attrs(tree)
-    known_attrs = flag_attrs | assigned_attrs
+    known_attrs = argparse_attrs | assigned_attrs
 
     rel = path.relative_to(repo_root) if path.is_absolute() else path
     violations: list[str] = []
@@ -23906,11 +23964,10 @@ def _scan_dual_axis_ranking_violations(repo_root: Path) -> list[str]:
     """Scan solver/recommender modules for primary-only ranking keys.
 
     A violation is a Python file inside the dual-axis surfaces that:
-      * mentions one of :data:`_DUAL_AXIS_PRIMARY_KEYS` (e.g.,
-        ``predicted_score_delta``), AND
-      * does not also mention any of :data:`_DUAL_AXIS_DUAL_AXIS_MARKERS`
-        ANYWHERE in the same file, AND
-      * does not carry a same-line waiver marker
+      * emits a row/dict carrying one of :data:`_DUAL_AXIS_PRIMARY_KEYS`
+        (e.g., ``predicted_score_delta``), AND
+      * that same row/dict does not also carry a CUDA/CPU companion key, AND
+      * the offending row does not carry a waiver marker
         ``# DUAL_AXIS_RANKING_WAIVED:<reason>`` adjacent to the offending
         line.
     """
@@ -23927,22 +23984,73 @@ def _scan_dual_axis_ranking_violations(repo_root: Path) -> list[str]:
             text = path.read_text(encoding="utf-8")
         except (UnicodeDecodeError, FileNotFoundError):
             continue
-        # File-level allow: if any companion key is present, all primary-key
-        # mentions are presumed paired with axis tags.
-        if any(marker in text for marker in _DUAL_AXIS_DUAL_AXIS_MARKERS):
-            continue
-        # Otherwise, check for primary-only mentions.
         rel = path.relative_to(repo_root) if path.is_absolute() else path
-        for i, line in enumerate(text.splitlines(), start=1):
-            if not any(key in line for key in _DUAL_AXIS_PRIMARY_KEYS):
+        lines = text.splitlines()
+        covered_lines: set[int] = set()
+
+        try:
+            tree = ast.parse(text, filename=str(path))
+        except SyntaxError:
+            tree = None
+
+        prose_lines: set[int] = set()
+        if tree is not None:
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Constant) and isinstance(node.value, str):
+                    start = int(getattr(node, "lineno", 0) or 0)
+                    end = int(getattr(node, "end_lineno", start) or start)
+                    if start:
+                        prose_lines.update(range(start, end + 1))
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Dict):
+                    continue
+                row_keys: set[str] = set()
+                for key in node.keys:
+                    if isinstance(key, ast.Constant) and isinstance(key.value, str):
+                        row_keys.add(key.value)
+                if not row_keys.intersection(_DUAL_AXIS_PRIMARY_KEYS):
+                    continue
+                start = int(getattr(node, "lineno", 1))
+                end = int(getattr(node, "end_lineno", start))
+                covered_lines.update(range(start, end + 1))
+                row_text = "\n".join(lines[start - 1:end])
+                if _DUAL_AXIS_WAIVER_MARKER in row_text:
+                    continue
+                if row_keys.intersection(_DUAL_AXIS_DUAL_AXIS_MARKERS):
+                    continue
+                primary = sorted(row_keys.intersection(_DUAL_AXIS_PRIMARY_KEYS))
+                violations.append(
+                    f"{rel}:{start}: solver row carries primary-only key(s) "
+                    f"{primary} without dual-axis (CUDA + CPU) companion keys "
+                    "(predicted_cuda_score / predicted_cpu_score). "
+                    f"Add the companion in the same row or annotate with "
+                    f"'# {_DUAL_AXIS_WAIVER_MARKER}<reason>'."
+                )
+
+        primary_key_re = re.compile(
+            r"(?<![A-Za-z0-9_])("
+            + "|".join(re.escape(key) for key in _DUAL_AXIS_PRIMARY_KEYS)
+            + r")(?![A-Za-z0-9_])"
+        )
+        companion_key_re = re.compile(
+            r"(?<![A-Za-z0-9_])("
+            + "|".join(re.escape(key) for key in _DUAL_AXIS_DUAL_AXIS_MARKERS)
+            + r")(?![A-Za-z0-9_])"
+        )
+        for i, line in enumerate(lines, start=1):
+            if i in covered_lines:
                 continue
-            # Same-line waiver marker.
-            if _DUAL_AXIS_WAIVER_MARKER in line:
+            if i in prose_lines:
                 continue
             # Defensive: skip docstrings/comments that are obviously prose.
             stripped = line.strip()
-            if stripped.startswith("#") and "predicted_" not in stripped.split("#", 1)[1]:
-                # Pure comment without code reference.
+            if stripped.startswith(("#", '"""', "'''")):
+                continue
+            if not primary_key_re.search(line):
+                continue
+            if _DUAL_AXIS_WAIVER_MARKER in line:
+                continue
+            if companion_key_re.search(line):
                 continue
             violations.append(
                 f"{rel}:{i}: solver row carries '{stripped[:80]}' "

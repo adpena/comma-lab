@@ -170,6 +170,7 @@ def test_feedback_loop_overrides_predicted_with_empirical(tmp_path: Path) -> Non
             empirical_archive_bytes=170_000,
             empirical_score=0.191,
             score_contest_cuda=0.191,
+            evidence_grade="[contest-CUDA]",
             score_claim=True,
             promotion_eligible=True,
             rank_or_kill_eligible=True,
@@ -183,6 +184,7 @@ def test_feedback_loop_overrides_predicted_with_empirical(tmp_path: Path) -> Non
             empirical_archive_bytes=171_000,
             empirical_score=0.192,
             score_contest_cuda=0.192,
+            evidence_grade="[contest-CUDA]",
             score_claim=True,
             promotion_eligible=True,
             rank_or_kill_eligible=True,
@@ -196,6 +198,7 @@ def test_feedback_loop_overrides_predicted_with_empirical(tmp_path: Path) -> Non
             empirical_archive_bytes=169_500,
             empirical_score=0.190,
             score_contest_cuda=0.190,
+            evidence_grade="[contest-CUDA]",
             score_claim=True,
             promotion_eligible=True,
             rank_or_kill_eligible=True,
@@ -489,6 +492,59 @@ def test_evidence_update_subcommand_produces_anchored_catalog(tmp_path: Path) ->
     assert balle["empirical_anchor_n"] == 1
 
 
+def test_load_evidence_rejects_string_booleans_and_preserves_string_blocker(
+    tmp_path: Path,
+) -> None:
+    autopilot = _load_autopilot()
+    ev_path = tmp_path / "evidence.jsonl"
+    ev_path.write_text(
+        json.dumps({
+            "technique": "compressai_balle_hyperprior",
+            "empirical_archive_bytes": 162_000,
+            "score_contest_cuda": 0.18,
+            "evidence_grade": "[contest-CUDA]",
+            "score_claim": "false",
+            "promotion_eligible": "true",
+            "rank_or_kill_eligible": True,
+            "ready_for_exact_eval_dispatch": True,
+            "archive_sha256": "a" * 64,
+            "runtime_tree_sha256": "b" * 64,
+            "dispatch_blockers": "requires_exact_cuda_auth_eval_before_any_score_use",
+        }) + "\n",
+        encoding="utf-8",
+    )
+
+    evidence = autopilot._load_evidence(ev_path)
+    row = evidence[0]
+
+    assert row.score_claim is None
+    assert row.promotion_eligible is None
+    assert (
+        "requires_exact_cuda_auth_eval_before_any_score_use"
+        in row.dispatch_blockers
+    )
+    assert "invalid_evidence_schema_non_promotable" in row.dispatch_blockers
+    assert "invalid_evidence_schema_boolean:score_claim" in row.dispatch_blockers
+    assert (
+        "invalid_evidence_schema_boolean:promotion_eligible"
+        in row.dispatch_blockers
+    )
+    assert autopilot._is_explicitly_promotable_evidence(row) is False
+
+
+def test_negated_exact_cuda_requirement_does_not_retire_measured_config() -> None:
+    autopilot = _load_autopilot()
+    evidence = autopilot.TechniqueEvidence(
+        technique="lossy_coarsening_analytical",
+        empirical_archive_bytes=156_404,
+        evidence_semantics="requires_exact_cuda_auth_eval_before_any_score_use",
+        contest_dispatch_verdict="measured_config_retired_exact_cuda_negative",
+        measured_config_status="measured_config_retired",
+    )
+
+    assert autopilot._is_exact_negative_or_retired_evidence(evidence) is False
+
+
 # ---------------------------------------------------------------------------
 # Dual-axis (CUDA + CPU) ranking — added 2026-05-08 per CLAUDE.md
 # "Submission auth eval — BOTH CPU AND CUDA"
@@ -588,6 +644,35 @@ def test_rank_axis_cpu_changes_primary_score_after() -> None:
     assert rows_cpu[0]["primary_score_after"] == rows_cpu[0]["predicted_cpu_score"]
     # And primary_score_after differs between the two modes.
     assert rows_cuda[0]["primary_score_after"] != rows_cpu[0]["primary_score_after"]
+
+
+def test_rank_axis_default_is_dual_conservative() -> None:
+    autopilot = _load_autopilot()
+    techniques = [{
+        "name": "test_tech",
+        "predicted_archive_bytes": 160_000,
+        "cost_hours": 1.0,
+        "cost_dollars": 0.0,
+        "model_spec": {"architecture_class": "test"},
+    }]
+    rows = autopilot._rank_techniques(
+        techniques,
+        d_seg=6.7e-4,
+        d_pose=3.4e-5,
+        current_archive_bytes=178_144,
+        current_score=0.193,
+        target_score=None,
+    )
+    row = rows[0]
+    assert row["rank_axis"] == "dual"
+    assert row["primary_score_delta"] == min(
+        row["predicted_cuda_score_delta"],
+        row["predicted_cpu_score_delta"],
+    )
+    assert row["primary_score_after"] == max(
+        row["predicted_cuda_score"],
+        row["predicted_cpu_score"],
+    )
 
 
 def test_invalid_rank_axis_raises() -> None:

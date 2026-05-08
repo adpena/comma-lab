@@ -13,11 +13,10 @@ import pytest
 
 from tac.preflight import (
     DeadResolverViolation,
-    _import_inside_try_handler,
     _is_resolvable_submodule,
     _module_top_level_names,
-    _scan_python_for_dead_objective_feature,
     _scan_python_for_dead_imports,
+    _scan_python_for_dead_objective_feature,
     _scan_python_for_dead_resolvers,
     check_feature_flags_have_live_objective_effect,
     preflight_dead_resolvers,
@@ -75,6 +74,103 @@ def test_dead_resolver_satisfied_by_argparse_flag(tmp_path: Path) -> None:
             args = parse_args()
             x = getattr(args, "pose_dim", 0)
             return x
+    """)
+    v = _scan_python_for_dead_resolvers(script, root)
+    assert v == [], v
+
+
+def test_dead_resolver_satisfied_by_argparse_dest_override(tmp_path: Path) -> None:
+    """Explicit argparse dest= creates the Namespace attr even when the flag
+    spelling differs from the getattr name."""
+    root = _stub_repo(tmp_path)
+    script = root / "experiments" / "good_dest.py"
+    _write(script, """
+        import argparse
+        def parse_args():
+            p = argparse.ArgumentParser()
+            p.add_argument("--lane", dest="lane_id")
+            return p.parse_args()
+        def build():
+            args = parse_args()
+            return getattr(args, "lane_id", None)
+    """)
+    v = _scan_python_for_dead_resolvers(script, root)
+    assert v == [], v
+
+
+def test_dead_resolver_flags_wrong_attr_when_argparse_dest_renames_it(tmp_path: Path) -> None:
+    """A flag with dest= does not also create the flag-spelled attr."""
+    root = _stub_repo(tmp_path)
+    script = root / "experiments" / "bad_dest_flag_attr.py"
+    _write(script, """
+        import argparse
+        def parse_args():
+            p = argparse.ArgumentParser()
+            p.add_argument("--lane", dest="lane_id")
+            return p.parse_args()
+        def build():
+            args = parse_args()
+            return getattr(args, "lane", None)
+    """)
+    v = _scan_python_for_dead_resolvers(script, root)
+    assert len(v) == 1, v
+    assert "lane" in v[0]
+    assert "DEAD RESOLVER" in v[0]
+
+
+def test_dead_resolver_satisfied_by_subparser_dest(tmp_path: Path) -> None:
+    """argparse add_subparsers(dest='cmd') is a real Namespace attr; the
+    scanner must not force launchers to assign args.cmd by hand."""
+    root = _stub_repo(tmp_path)
+    script = root / "scripts" / "good_subparser_dest.py"
+    _write(script, """
+        import argparse
+        def parse_args():
+            p = argparse.ArgumentParser()
+            sub = p.add_subparsers(dest="cmd", required=True)
+            sub.add_parser("exact-eval")
+            return p.parse_args()
+        def build():
+            args = parse_args()
+            return getattr(args, "cmd", None)
+    """)
+    v = _scan_python_for_dead_resolvers(script, root)
+    assert v == [], v
+
+
+def test_dead_resolver_satisfied_by_argparse_set_defaults(tmp_path: Path) -> None:
+    """set_defaults(func=...) creates the attr selected by subcommands."""
+    root = _stub_repo(tmp_path)
+    script = root / "scripts" / "good_set_defaults.py"
+    _write(script, """
+        import argparse
+        def parse_args():
+            p = argparse.ArgumentParser()
+            sub = p.add_subparsers(dest="cmd", required=True)
+            exact = sub.add_parser("exact-eval")
+            exact.set_defaults(func=lambda args: 0)
+            return p.parse_args()
+        def build():
+            args = parse_args()
+            return getattr(args, "func", None)
+    """)
+    v = _scan_python_for_dead_resolvers(script, root)
+    assert v == [], v
+
+
+def test_dead_resolver_satisfied_by_positional_argparse_attr(tmp_path: Path) -> None:
+    """Positional argparse arguments also create Namespace attrs."""
+    root = _stub_repo(tmp_path)
+    script = root / "experiments" / "good_positional.py"
+    _write(script, """
+        import argparse
+        def parse_args():
+            p = argparse.ArgumentParser()
+            p.add_argument("archive_path")
+            return p.parse_args()
+        def build():
+            args = parse_args()
+            return getattr(args, "archive_path", None)
     """)
     v = _scan_python_for_dead_resolvers(script, root)
     assert v == [], v
