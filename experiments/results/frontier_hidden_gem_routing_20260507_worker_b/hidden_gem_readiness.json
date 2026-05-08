@@ -1,0 +1,1199 @@
+{
+  "audit": "hidden_gem_readiness",
+  "entries": [
+    {
+      "category": "mask_representation",
+      "dispatch_blockers": [
+        "hidden_gem_registry_not_exact_eval_dispatch_evidence",
+        "registry_status_planning"
+      ],
+      "eligible_for_local_patch": false,
+      "evidence": [
+        {
+          "bytes": 4124,
+          "exists": true,
+          "kind": "file",
+          "path": ".omx/research/charged_mask_grammar_atoms_20260502_codex.md",
+          "sha256": "8090513734321959a0897a247aa8a943bca8e6bcb6d480453293ed1fc425a2a7"
+        },
+        {
+          "bytes": 95895,
+          "exists": true,
+          "kind": "file",
+          "path": ".omx/research/charged_mask_grammar_ego_foveation_greenup_20260502_codex.md",
+          "sha256": "48f74959273162221ea3fb1f3039169ecc1f96931343909bb299f5ed4d8fbbd5"
+        },
+        {
+          "bytes": 18711,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/hyperbolic_foveation.py",
+          "sha256": "719ea4ab4e5653ab53abd5ecd9504fa6b811a4d32b54a95f89e2e86efe6b546f"
+        },
+        {
+          "bytes": 10958,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/tests/test_hyperbolic_foveation.py",
+          "sha256": "12035a803d41e2e4ab92e124e5e0b6b01db3015a27fb6c441d32f4b1fb3141e1"
+        }
+      ],
+      "integration_targets": [
+        {
+          "bytes": 18145,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/mask_entropy_coder.py",
+          "sha256": "c8d049fe14025ece7950d5a2fafbc9e0e840e872a23ce2bea97fb1b334a06300"
+        },
+        {
+          "bytes": 18711,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/hyperbolic_foveation.py",
+          "sha256": "719ea4ab4e5653ab53abd5ecd9504fa6b811a4d32b54a95f89e2e86efe6b546f"
+        }
+      ],
+      "key": "charged_mask_grammar_atoms",
+      "missing_evidence_paths": [],
+      "missing_integration_targets": [],
+      "next_patch": "Define a charged atom manifest that separates syntax bytes, decoder bytes, and frozen input streams before renderer integration.",
+      "readiness_status": "planning_tracked",
+      "ready_for_exact_eval_dispatch": false,
+      "registry_status": "planning"
+    },
+    {
+      "category": "renderer_payload",
+      "dispatch_blockers": [
+        "hidden_gem_registry_not_exact_eval_dispatch_evidence",
+        "registry_status_implemented_guarded"
+      ],
+      "eligible_for_local_patch": false,
+      "evidence": [
+        {
+          "bytes": 17746,
+          "exists": true,
+          "kind": "file",
+          "path": ".omx/research/component_sensitivity_map_certification_20260501_codex.md",
+          "sha256": "344391ac0812cfccb240186fab09543c9a14e1786646a51f1b62c6751e9da930"
+        },
+        {
+          "bytes": 1351,
+          "exists": true,
+          "kind": "file",
+          "path": ".omx/research/component_sensitivity_byte_plan_manifest_20260506_codex.md",
+          "sha256": "f14aa834cf5ab169fd17ae5714d25a10bb889cf7895a265298391d395a303358"
+        },
+        {
+          "bytes": 5511,
+          "exists": true,
+          "kind": "file",
+          "path": ".omx/research/owv3_fisher_byte_aware_redesign_spec_20260430_codex.md",
+          "sha256": "feaf4984a42fb4cf4dc4d92de00f9a4efae99749059b93abc660a461a658281c"
+        },
+        {
+          "bytes": 56545,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/component_sensitivity_artifact.py",
+          "sha256": "b61a00c314f72279dac8b0c7d66711f5132b0e3948bfe1d7b7c4f323b52a9eb8"
+        },
+        {
+          "bytes": 44100,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/owv3_sensitivity_weighted.py",
+          "sha256": "23e6c78ab1a90040e0f3c9bbfd486635ce050262490826e25908266bf6a73f78"
+        },
+        {
+          "bytes": 17809,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/tests/test_sweep_owv3_byte_plan.py",
+          "sha256": "42e7e28d394cd6d9d71cb833d45ef14a1143775db9429f0626a26b3b6e323497"
+        }
+      ],
+      "integration_targets": [
+        {
+          "bytes": 69981,
+          "exists": true,
+          "kind": "file",
+          "path": "experiments/sweep_owv3_byte_plan.py",
+          "sha256": "3bcc036bde7372cf33a363c7cc77b6597db2fbea1ba7159b7c1577cc0fc8ec4c"
+        },
+        {
+          "bytes": 44100,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/owv3_sensitivity_weighted.py",
+          "sha256": "23e6c78ab1a90040e0f3c9bbfd486635ce050262490826e25908266bf6a73f78"
+        }
+      ],
+      "key": "component_sensitivity_byte_allocator",
+      "missing_evidence_paths": [],
+      "missing_integration_targets": [],
+      "next_patch": "Use `experiments/sweep_owv3_byte_plan.py --manifest-only` as the fast planning preflight, then run the full sweep only with authoritative CUDA sensitivity custody.",
+      "readiness_status": "implemented_guarded_tracked",
+      "ready_for_exact_eval_dispatch": false,
+      "registry_status": "implemented_guarded"
+    },
+    {
+      "category": "renderer_payload",
+      "dispatch_blockers": [
+        "hidden_gem_registry_not_exact_eval_dispatch_evidence",
+        "registry_status_prototype"
+      ],
+      "eligible_for_local_patch": false,
+      "evidence": [
+        {
+          "bytes": 3281,
+          "exists": true,
+          "kind": "file",
+          "path": "reports/local_smoke_coolchic_c3_20260425.md",
+          "sha256": "0ee8805b0ed16e5d36d0240a25d526f53ab19a9f9213522f1ad8d81211dbc628"
+        },
+        {
+          "bytes": 9786,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/contrib/coolchic_renderer.py",
+          "sha256": "d6bacc5bf893090c9eacf4c4fd05ed776cbb6d89ef5bb4bfcbe994fc5c326038"
+        },
+        {
+          "bytes": 8871,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/contrib/coolchic_darts.py",
+          "sha256": "3c0c38b0f0e996cbb2b9116e0fea7fd3b6d95501cb995cee6214a67f87884487"
+        },
+        {
+          "bytes": 181623,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/profiles.py",
+          "sha256": "107c206d6670b8e05763abeb52073f60ea46df9620a609cf09f7889abb36f947"
+        },
+        {
+          "bytes": 224260,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/experiments/train_renderer.py",
+          "sha256": "4777c5b5ddc8d56a0766f33d72d6d07373d153969e1a736b977f83047017358d"
+        }
+      ],
+      "integration_targets": [
+        {
+          "bytes": 2052,
+          "exists": true,
+          "kind": "file",
+          "path": "tools/list_hidden_gems.py",
+          "sha256": "641171976146c573a0f540cca30e4214d27015a11120bdb280b1f8bba429955d"
+        },
+        {
+          "bytes": 224260,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/experiments/train_renderer.py",
+          "sha256": "4777c5b5ddc8d56a0766f33d72d6d07373d153969e1a736b977f83047017358d"
+        }
+      ],
+      "key": "coolchic_c3_renderer_trend_gate",
+      "missing_evidence_paths": [],
+      "missing_integration_targets": [],
+      "next_patch": "Add a deterministic CUDA smoke-matrix runner and block archive wiring until trend metadata proves non-regression.",
+      "readiness_status": "prototype_tracked",
+      "ready_for_exact_eval_dispatch": false,
+      "registry_status": "prototype"
+    },
+    {
+      "category": "latent_repair",
+      "dispatch_blockers": [
+        "hidden_gem_registry_not_exact_eval_dispatch_evidence",
+        "registry_status_implemented_guarded"
+      ],
+      "eligible_for_local_patch": false,
+      "evidence": [
+        {
+          "bytes": 5210,
+          "exists": true,
+          "kind": "file",
+          "path": ".omx/research/pr85_correction_atom_waterfill_worker_20260504.md",
+          "sha256": "c90d1550302557d317605d4725a038c2c98370b5d5609e93d6c7cba4efdeca80"
+        },
+        {
+          "bytes": 1566,
+          "exists": true,
+          "kind": "file",
+          "path": ".omx/research/engineered_correction_component_trace_gate_20260506_codex.md",
+          "sha256": "edf326e59a8287a61191d53fd753f0469e94d3f629dbedd5ccf5d64f3ab097c3"
+        },
+        {
+          "bytes": 44414,
+          "exists": true,
+          "kind": "file",
+          "path": "experiments/precompute_gradient_corrections.py",
+          "sha256": "6635be6a774a3ced52c5f7bee4e8c9f09f4c9ace28ce027a7e81eef0df7f812f"
+        },
+        {
+          "bytes": 16772,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/engineered_correction_readiness.py",
+          "sha256": "fe50eded755a1e88319c76e74813c7b26cfe238d768f4156de04408c6015471c"
+        },
+        {
+          "bytes": 7306,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/engineered_corrections.py",
+          "sha256": "009e4e49bd31fc5fb608af05f44cd5249bb19671c6a39c348b335027e8591c54"
+        },
+        {
+          "bytes": 7479,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/engineered_corrections_v2.py",
+          "sha256": "415c14d7a950decd703312dc934853d514b5a763165f923d1296eb4419691596"
+        },
+        {
+          "bytes": 8578,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/tests/test_engineered_correction_readiness.py",
+          "sha256": "13a6d31b393f42319e38c72ab47ae39a65248d8e9e68f1330ce60340915a17fa"
+        }
+      ],
+      "integration_targets": [
+        {
+          "bytes": 4043,
+          "exists": true,
+          "kind": "file",
+          "path": "tools/audit_engineered_corrections.py",
+          "sha256": "c430bac256e0bfbc97a13f10b291ac82ffe346775ca93c0c26749b46458054bc"
+        },
+        {
+          "bytes": 53519,
+          "exists": true,
+          "kind": "file",
+          "path": "tools/all_lanes_preflight.py",
+          "sha256": "181538ec0aca4e01676fc635ad731543aae1c10001ef0f6a401a699c3b5ea13e"
+        },
+        {
+          "bytes": 7479,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/engineered_corrections_v2.py",
+          "sha256": "415c14d7a950decd703312dc934853d514b5a763165f923d1296eb4419691596"
+        },
+        {
+          "bytes": 44414,
+          "exists": true,
+          "kind": "file",
+          "path": "experiments/precompute_gradient_corrections.py",
+          "sha256": "6635be6a774a3ced52c5f7bee4e8c9f09f4c9ace28ce027a7e81eef0df7f812f"
+        }
+      ],
+      "key": "engineered_correction_atom_gate",
+      "missing_evidence_paths": [],
+      "missing_integration_targets": [],
+      "next_patch": "Wire signed correction readiness reports into a byte-closed archive builder candidate; exact dispatch remains blocked until candidate diff and archive preflight prove charged atom consumption.",
+      "readiness_status": "implemented_guarded_tracked",
+      "ready_for_exact_eval_dispatch": false,
+      "registry_status": "implemented_guarded"
+    },
+    {
+      "category": "latent_repair",
+      "dispatch_blockers": [
+        "hidden_gem_registry_not_exact_eval_dispatch_evidence",
+        "registry_status_implemented_guarded"
+      ],
+      "eligible_for_local_patch": false,
+      "evidence": [
+        {
+          "bytes": 47622,
+          "exists": true,
+          "kind": "file",
+          "path": ".omx/research/council_strategic_design_decisions_20260430.md",
+          "sha256": "1224e1a8df851561b0c6b841ff7f7f48b46961174b601998cd127987e635f846"
+        },
+        {
+          "bytes": 31088,
+          "exists": true,
+          "kind": "file",
+          "path": ".omx/research/council_uniward_v8_fridrich_shannon_audit_20260429.md",
+          "sha256": "420f0a12079c4571971b6322ca55fd178b82dc193809233ff951acd8399eba4d"
+        },
+        {
+          "bytes": 1698,
+          "exists": true,
+          "kind": "file",
+          "path": ".omx/research/fridrich_inverse_steg_allocator_20260506_codex.md",
+          "sha256": "d945a7978e5eec1250e203250be41f4f35e61431554b31f6fbe2aaf03444d73a"
+        },
+        {
+          "bytes": 56166,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/fridrich.py",
+          "sha256": "3ddbc91fc5b49b9b4bf892503674c0beaebeb538aab80facb74d68511d038312"
+        },
+        {
+          "bytes": 17997,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/fridrich_losses.py",
+          "sha256": "e6b90742a136e39874517ffa7abb79d11d7698b5b02feea64e590cb773366cfd"
+        },
+        {
+          "bytes": 6055,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/uniward_texture.py",
+          "sha256": "901e522d002d4ec896dfb4f8957838e4a747732854046171b580c006f3e8e7ed"
+        },
+        {
+          "bytes": 5493,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/tests/test_uniward_texture.py",
+          "sha256": "46f8df421812cec8965e97b9a9f212fe0c43fd8dfc85a0f82d677759d058c9ef"
+        },
+        {
+          "bytes": 10616,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/tests/test_hnerv_section_repack.py",
+          "sha256": "93212b0f43b7952d1022def30432a376632a3e2319c000ac86087f6638453b8c"
+        },
+        {
+          "bytes": 8578,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/tests/test_engineered_correction_readiness.py",
+          "sha256": "13a6d31b393f42319e38c72ab47ae39a65248d8e9e68f1330ce60340915a17fa"
+        }
+      ],
+      "integration_targets": [
+        {
+          "bytes": 20269,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/hnerv_section_repack.py",
+          "sha256": "69dbd99d7b06f1609f3163d1debc44ff4fb5ba002b705239602125a0f6520766"
+        },
+        {
+          "bytes": 16772,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/engineered_correction_readiness.py",
+          "sha256": "fe50eded755a1e88319c76e74813c7b26cfe238d768f4156de04408c6015471c"
+        },
+        {
+          "bytes": 36297,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/uniward_delta.py",
+          "sha256": "a0abc4141670a23d72d2cd655a888e40ef73419eff49387a6b58b1bda34c689a"
+        }
+      ],
+      "key": "fridrich_inverse_steg_allocator",
+      "missing_evidence_paths": [],
+      "missing_integration_targets": [],
+      "next_patch": "Feed detector-cost manifests into the stack orchestrator as optimizer feedback only; keep archive builds blocked until charged atoms alter a byte-closed candidate.",
+      "readiness_status": "implemented_guarded_tracked",
+      "ready_for_exact_eval_dispatch": false,
+      "registry_status": "implemented_guarded"
+    },
+    {
+      "category": "archive_packing",
+      "dispatch_blockers": [
+        "hidden_gem_registry_not_exact_eval_dispatch_evidence",
+        "registry_status_implemented_guarded"
+      ],
+      "eligible_for_local_patch": false,
+      "evidence": [
+        {
+          "bytes": 12539,
+          "exists": true,
+          "kind": "file",
+          "path": ".omx/research/public_hnerv_frontier_deconstruction_20260504_codex.md",
+          "sha256": "437275ccfbaa19c7acbedae5294786a15e2b5a9cb3bbd8a33766c4028d1ba1b7"
+        },
+        {
+          "bytes": 1367,
+          "exists": true,
+          "kind": "file",
+          "path": ".omx/research/hnerv_candidate_diff_guard_20260506_codex.md",
+          "sha256": "a6e0cd3c339c801173b89af030edc91a1fff114eceaf29b534335ef7e43dcc78"
+        },
+        {
+          "bytes": 30737,
+          "exists": true,
+          "kind": "file",
+          "path": "experiments/build_hnerv_frontier_scorecard.py",
+          "sha256": "2dd44c03e47ac1a262cef242ceb9234857d4058aea7c2495f282457588432b2b"
+        },
+        {
+          "bytes": 7470,
+          "exists": true,
+          "kind": "file",
+          "path": "experiments/profile_hnerv_frontier_payloads.py",
+          "sha256": "151a92d56396aa69e6e47c0e364decf39ef2b19c4b9646b85f874497ad1a3b10"
+        },
+        {
+          "bytes": 5649,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/tests/test_archive_byte_profile.py",
+          "sha256": "f0d0ae57b1bbf7e148adda670282bac0155d06ceaf87f52789fe721e75bd3430"
+        }
+      ],
+      "integration_targets": [
+        {
+          "bytes": 20228,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/archive_byte_profile.py",
+          "sha256": "d19173e4f2461fcb824b0f38be54a0f48973fcd6238c5a55fe81bcbe2d4d7605"
+        },
+        {
+          "bytes": 6285,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/public_submission_refs.py",
+          "sha256": "1f77a6867c55550fc971d3b7f210caa815a598321c866d88b9f3714ca8311d6c"
+        }
+      ],
+      "key": "hnerv_payload_scorecard_followups",
+      "missing_evidence_paths": [],
+      "missing_integration_targets": [],
+      "next_patch": "Use `tac.archive_byte_profile.build_candidate_diff_manifest` as the mandatory no-op control for future HNeRV repack candidates before archive preflight or exact CUDA eval.",
+      "readiness_status": "implemented_guarded_tracked",
+      "ready_for_exact_eval_dispatch": false,
+      "registry_status": "implemented_guarded"
+    },
+    {
+      "category": "stack_composition",
+      "dispatch_blockers": [
+        "hidden_gem_registry_not_exact_eval_dispatch_evidence",
+        "registry_status_planning"
+      ],
+      "eligible_for_local_patch": false,
+      "evidence": [
+        {
+          "bytes": 330492,
+          "exists": true,
+          "kind": "file",
+          "path": ".omx/research/contest_faithful_swarm_execution_20260502_codex.md",
+          "sha256": "590292e9cdb060e3b2c676f9cca89b9c8a69b96c7966377179c5f975e09c7ef3"
+        },
+        {
+          "bytes": 9264,
+          "exists": true,
+          "kind": "file",
+          "path": ".omx/research/works_negatives_hardened_stack_20260502_codex.md",
+          "sha256": "897a71ac3a7fa04626fa3e5c630be46e1f40f58ef60fea6a7fcee810cc51e524"
+        },
+        {
+          "bytes": 32310,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/joint_admm_coordinator.py",
+          "sha256": "4d14e9d5a47cee9272be55955cf0e0ef78919ee13fddd77e1e1e8f7eb0af36a5"
+        },
+        {
+          "bytes": 28856,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/stack_compositions.py",
+          "sha256": "486f33f8ee8797278d031e4ae0c7a055a3ecb1c3211ae0ec74a6a66a72d6e85c"
+        }
+      ],
+      "integration_targets": [
+        {
+          "bytes": 98421,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/joint_codec_stack_orchestrator.py",
+          "sha256": "f1a1b3a54ac5217e33de6570ae530c00fae0db3dc6775cd9cb5dee0a3204b66a"
+        },
+        {
+          "bytes": 28856,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/stack_compositions.py",
+          "sha256": "486f33f8ee8797278d031e4ae0c7a055a3ecb1c3211ae0ec74a6a66a72d6e85c"
+        }
+      ],
+      "key": "joint_stack_contract_manifest",
+      "missing_evidence_paths": [],
+      "missing_integration_targets": [],
+      "next_patch": "Add a typed local manifest that records each stack stage and its byte contract without dispatch metadata.",
+      "readiness_status": "planning_tracked",
+      "ready_for_exact_eval_dispatch": false,
+      "registry_status": "planning"
+    },
+    {
+      "category": "entropy_coding",
+      "dispatch_blockers": [
+        "hidden_gem_registry_not_exact_eval_dispatch_evidence",
+        "registry_status_prototype"
+      ],
+      "eligible_for_local_patch": false,
+      "evidence": [
+        {
+          "bytes": 79588,
+          "exists": true,
+          "kind": "file",
+          "path": ".omx/research/grand_council_paradigm_shift_to_shannon_floor_20260430.md",
+          "sha256": "97e63e3a9798698c3f9081b29308ef0a50a510bca48909ee6ce0d257504d58fa"
+        },
+        {
+          "bytes": 43384,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/arithmetic_qint_codec.py",
+          "sha256": "f840393cee6b758f1227ac8eb5f34b4526ab229f08e74268bed0021bdc36049d"
+        },
+        {
+          "bytes": 35631,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/entropy_archive.py",
+          "sha256": "f932ca4d6dc9a64c00836867aad6e523455e897f5864e0ac950754f4af3e4e68"
+        },
+        {
+          "bytes": 13692,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/tests/test_arithmetic_qint_codec.py",
+          "sha256": "cdff5fda5710bdc109d9f586a44e375ffd3a76cdb95e7ed32c8bf19bc331f657"
+        }
+      ],
+      "integration_targets": [
+        {
+          "bytes": 20228,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/archive_byte_profile.py",
+          "sha256": "d19173e4f2461fcb824b0f38be54a0f48973fcd6238c5a55fe81bcbe2d4d7605"
+        },
+        {
+          "bytes": 35631,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/entropy_archive.py",
+          "sha256": "f932ca4d6dc9a64c00836867aad6e523455e897f5864e0ac950754f4af3e4e68"
+        }
+      ],
+      "key": "latent_sidecar_arithmetic_terminal",
+      "missing_evidence_paths": [],
+      "missing_integration_targets": [],
+      "next_patch": "Port static-model arithmetic pack and unpack helpers onto HNeRV latent-correction sidecar bytes with a parity-first fixture.",
+      "readiness_status": "prototype_tracked",
+      "ready_for_exact_eval_dispatch": false,
+      "registry_status": "prototype"
+    },
+    {
+      "category": "mask_representation",
+      "dispatch_blockers": [
+        "hidden_gem_registry_not_exact_eval_dispatch_evidence",
+        "registry_status_planning"
+      ],
+      "eligible_for_local_patch": false,
+      "evidence": [
+        {
+          "bytes": 10391,
+          "exists": true,
+          "kind": "file",
+          "path": ".omx/research/lane12_nerv_l2_unblock_worker_e_20260430.md",
+          "sha256": "3646ebf90133fec0980e18ff1ce56eb44bacd1d3b258cfcb35bdd32bf0d2a93d"
+        },
+        {
+          "bytes": 37682,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/nerv_mask_codec.py",
+          "sha256": "69d710c229e5eb54dc8828d45eacf98e9ac50fe6bc1928a4e5a188be1003e2b8"
+        },
+        {
+          "bytes": 50450,
+          "exists": true,
+          "kind": "file",
+          "path": "experiments/train_nerv_mask.py",
+          "sha256": "73beb4ffdd30d19f1c7946770d40d9ea195699f2a09927e0e917daf3098a34e8"
+        },
+        {
+          "bytes": 21368,
+          "exists": true,
+          "kind": "file",
+          "path": "scripts/remote_lane_nerv.sh",
+          "sha256": "50d7d688834b3c18a169989b945643a8eaf7694fb547b2caea6c19964060d30e"
+        }
+      ],
+      "integration_targets": [
+        {
+          "bytes": 2052,
+          "exists": true,
+          "kind": "file",
+          "path": "tools/list_hidden_gems.py",
+          "sha256": "641171976146c573a0f540cca30e4214d27015a11120bdb280b1f8bba429955d"
+        },
+        {
+          "bytes": 37682,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/nerv_mask_codec.py",
+          "sha256": "69d710c229e5eb54dc8828d45eacf98e9ac50fe6bc1928a4e5a188be1003e2b8"
+        }
+      ],
+      "key": "nerv_mask_l2_readiness",
+      "missing_evidence_paths": [],
+      "missing_integration_targets": [],
+      "next_patch": "Add a dry-run readiness command that checks L2 clearance, runtime dispatch, dependency closure, and exact archive-builder availability.",
+      "readiness_status": "planning_tracked",
+      "ready_for_exact_eval_dispatch": false,
+      "registry_status": "planning"
+    },
+    {
+      "category": "stack_composition",
+      "dispatch_blockers": [
+        "hidden_gem_registry_not_exact_eval_dispatch_evidence",
+        "registry_status_implemented_guarded"
+      ],
+      "eligible_for_local_patch": false,
+      "evidence": [
+        {
+          "bytes": 330492,
+          "exists": true,
+          "kind": "file",
+          "path": ".omx/research/contest_faithful_swarm_execution_20260502_codex.md",
+          "sha256": "590292e9cdb060e3b2c676f9cca89b9c8a69b96c7966377179c5f975e09c7ef3"
+        },
+        {
+          "bytes": 22908,
+          "exists": true,
+          "kind": "file",
+          "path": "experiments/repack_pr106_with_water_filling.py",
+          "sha256": "c05d18478b2f279682d293b11504e86cb555a70df97f4456ec0d16200d2bba27"
+        },
+        {
+          "bytes": 24287,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/water_filling_codec_v2.py",
+          "sha256": "c7b93d3c66d1c5d81d3279f4ea9cd010d74f7396d02eb57b3abe491d3527c6a3"
+        },
+        {
+          "bytes": 20367,
+          "exists": true,
+          "kind": "file",
+          "path": "tools/dispatch_dryrun_omega_w_v3.py",
+          "sha256": "177197db51961c58593f946b25e06563d8ef1a3a1cbf417d945de57c9b650167"
+        }
+      ],
+      "integration_targets": [
+        {
+          "bytes": 20367,
+          "exists": true,
+          "kind": "file",
+          "path": "tools/dispatch_dryrun_omega_w_v3.py",
+          "sha256": "177197db51961c58593f946b25e06563d8ef1a3a1cbf417d945de57c9b650167"
+        },
+        {
+          "bytes": 53519,
+          "exists": true,
+          "kind": "file",
+          "path": "tools/all_lanes_preflight.py",
+          "sha256": "181538ec0aca4e01676fc635ad731543aae1c10001ef0f6a401a699c3b5ea13e"
+        }
+      ],
+      "key": "omega_w_v3_real_sensitivity_gate",
+      "missing_evidence_paths": [],
+      "missing_integration_targets": [],
+      "next_patch": "Wire certified sensitivity maps into a concrete OWV3 candidate builder and keep exact CUDA eval as the only promotion path.",
+      "readiness_status": "implemented_guarded_tracked",
+      "ready_for_exact_eval_dispatch": false,
+      "registry_status": "implemented_guarded"
+    },
+    {
+      "category": "stack_composition",
+      "dispatch_blockers": [
+        "hidden_gem_registry_not_exact_eval_dispatch_evidence",
+        "registry_status_implemented_guarded"
+      ],
+      "eligible_for_local_patch": false,
+      "evidence": [
+        {
+          "bytes": 20324,
+          "exists": true,
+          "kind": "file",
+          "path": "experiments/build_pr106_latent_sidecar.py",
+          "sha256": "283d45d376a362dbc8bd5f89a88da820f3bf515390c7ab6361e175f50d905f14"
+        },
+        {
+          "bytes": 24517,
+          "exists": true,
+          "kind": "file",
+          "path": "experiments/build_pr106_yshift_sidechannel.py",
+          "sha256": "f0ebd68f55406e986ab2ba031b1bfbe7782aae3a81f5440cfc34bd884fb78bbd"
+        },
+        {
+          "bytes": 23855,
+          "exists": true,
+          "kind": "file",
+          "path": "experiments/build_pr106_lrl1_sidechannel.py",
+          "sha256": "2fd398dbaa332c1ff07aca6bd3988dace02ce052f5d88e7748af5ec7ab03e84e"
+        },
+        {
+          "bytes": 25475,
+          "exists": true,
+          "kind": "file",
+          "path": "experiments/build_pr106_stacked.py",
+          "sha256": "1f58674fbfc1b19c644128d99eb83ad520d0bd8c66127ed5afbe9b8eb2cc0d68"
+        },
+        {
+          "bytes": 27048,
+          "exists": true,
+          "kind": "file",
+          "path": "tools/operator_briefing.py",
+          "sha256": "f9ab8972618cc2622e18385e184c0cb17224d39401f10216326bf632041b453e"
+        }
+      ],
+      "integration_targets": [
+        {
+          "bytes": 53519,
+          "exists": true,
+          "kind": "file",
+          "path": "tools/all_lanes_preflight.py",
+          "sha256": "181538ec0aca4e01676fc635ad731543aae1c10001ef0f6a401a699c3b5ea13e"
+        },
+        {
+          "bytes": 27048,
+          "exists": true,
+          "kind": "file",
+          "path": "tools/operator_briefing.py",
+          "sha256": "f9ab8972618cc2622e18385e184c0cb17224d39401f10216326bf632041b453e"
+        }
+      ],
+      "key": "pr106_sidechannel_stack_gate",
+      "missing_evidence_paths": [],
+      "missing_integration_targets": [],
+      "next_patch": "Implement one CUDA scorer-backed yshift or latent search mode, then feed its exact CUDA artifact back into the stack gate.",
+      "readiness_status": "implemented_guarded_tracked",
+      "ready_for_exact_eval_dispatch": false,
+      "registry_status": "implemented_guarded"
+    },
+    {
+      "category": "mask_representation",
+      "dispatch_blockers": [
+        "hidden_gem_registry_not_exact_eval_dispatch_evidence",
+        "registry_status_implemented_guarded"
+      ],
+      "eligible_for_local_patch": false,
+      "evidence": [
+        {
+          "bytes": 2123,
+          "exists": true,
+          "kind": "file",
+          "path": ".omx/research/pr91_hpm1_readiness_20260506_codex.md",
+          "sha256": "b697810f9833fb3bfa34a9953f5eb4dcbbf305544d6edfb051dcb3208d529a5f"
+        },
+        {
+          "bytes": 1599,
+          "exists": true,
+          "kind": "file",
+          "path": ".omx/research/pr91_hpm1_runtime_contract_gate_20260506_codex.md",
+          "sha256": "3c59943e46e2f76447b091273268c3a32284d17564f0742086d82d68a52c62e6"
+        },
+        {
+          "bytes": 344162,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/pr91_hpm1_codec.py",
+          "sha256": "0ebef1973d3690f509154f61d5c20aca83cf21964726c98fee9f21ee4152ed28"
+        },
+        {
+          "bytes": 20511,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/pr91_hpm1_readiness.py",
+          "sha256": "b0cf39a25ca99e26c8e31a3c79e9d68af14b16fdb81caec192dbc22a5d36a877"
+        },
+        {
+          "bytes": 10189,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/pr91_hpm1_runtime_contract.py",
+          "sha256": "a35d52017cc5b144c655ed0a48363ccc8e4c687f0067a9012542be50f2e651f6"
+        },
+        {
+          "bytes": 4867,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/tests/test_pr91_hpm1_runtime_contract.py",
+          "sha256": "b9393ad68aaa2325587080f4d526230591c4ad1840f1fb3e488edf9ac914b3d6"
+        },
+        {
+          "bytes": 9767,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/tests/test_pr91_hpm1_readiness.py",
+          "sha256": "1ccf83cad05d6a84f6849f77677edd7b020299131bc530d8250d380374debc47"
+        }
+      ],
+      "integration_targets": [
+        {
+          "bytes": 2221,
+          "exists": true,
+          "kind": "file",
+          "path": "tools/audit_pr91_hpm1_readiness.py",
+          "sha256": "96a26b1b5e0d8b3fea48216e1af7e8e2ced26d882f0da3df7cf6ca12e7bcbf26"
+        },
+        {
+          "bytes": 1955,
+          "exists": true,
+          "kind": "file",
+          "path": "tools/audit_pr91_hpm1_runtime_contract.py",
+          "sha256": "35e6ac533b7408ce692997aeb517822ee5d390a947ab3b0dcc01617fdd9ae454"
+        },
+        {
+          "bytes": 11401,
+          "exists": true,
+          "kind": "file",
+          "path": "experiments/replay_pr91_hpm1_mask.py",
+          "sha256": "d1d60bde1c2110d3b9ebaa9e6d19eb0b55136886dd17bd4f4f29f425c01377fc"
+        },
+        {
+          "bytes": 20406,
+          "exists": true,
+          "kind": "file",
+          "path": "experiments/preflight_pr91_pr92_replay_contracts.py",
+          "sha256": "a72575efc9e64deee7e6593f3546dfed89e3f4bf47c026eca4cf46fec3fac2c7"
+        }
+      ],
+      "key": "pr91_hpm1_runtime_contract",
+      "missing_evidence_paths": [],
+      "missing_integration_targets": [],
+      "next_patch": "Produce a real `pr91_hpm1_decode_reencode_parity_v1` report from the HPM1 decoder; only then can the readiness audit narrow to exact CUDA eval.",
+      "readiness_status": "implemented_guarded_tracked",
+      "ready_for_exact_eval_dispatch": false,
+      "registry_status": "implemented_guarded"
+    },
+    {
+      "category": "latent_repair",
+      "dispatch_blockers": [
+        "hidden_gem_registry_not_exact_eval_dispatch_evidence",
+        "registry_status_prototype"
+      ],
+      "eligible_for_local_patch": false,
+      "evidence": [
+        {
+          "bytes": 6104,
+          "exists": true,
+          "kind": "file",
+          "path": ".omx/research/public_hnerv_adapter_replays_20260504_codex.md",
+          "sha256": "76f70a7cc46d3f98a0e7f17ffd532a406ab410c2b3d8e3406d0ef6779f2ff9e2"
+        },
+        {
+          "bytes": 12539,
+          "exists": true,
+          "kind": "file",
+          "path": ".omx/research/public_hnerv_frontier_deconstruction_20260504_codex.md",
+          "sha256": "437275ccfbaa19c7acbedae5294786a15e2b5a9cb3bbd8a33766c4028d1ba1b7"
+        },
+        {
+          "bytes": 30737,
+          "exists": true,
+          "kind": "file",
+          "path": "experiments/build_hnerv_frontier_scorecard.py",
+          "sha256": "2dd44c03e47ac1a262cef242ceb9234857d4058aea7c2495f282457588432b2b"
+        },
+        {
+          "bytes": 7470,
+          "exists": true,
+          "kind": "file",
+          "path": "experiments/profile_hnerv_frontier_payloads.py",
+          "sha256": "151a92d56396aa69e6e47c0e364decf39ef2b19c4b9646b85f874497ad1a3b10"
+        }
+      ],
+      "integration_targets": [
+        {
+          "bytes": 20228,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/archive_byte_profile.py",
+          "sha256": "d19173e4f2461fcb824b0f38be54a0f48973fcd6238c5a55fe81bcbe2d4d7605"
+        },
+        {
+          "bytes": 6285,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/public_submission_refs.py",
+          "sha256": "1f77a6867c55550fc971d3b7f210caa815a598321c866d88b9f3714ca8311d6c"
+        }
+      ],
+      "key": "pr95_residual_atom_planner",
+      "missing_evidence_paths": [],
+      "missing_integration_targets": [],
+      "next_patch": "Create a tracked PR95-family atom planner with a no-op-resistant fixture and candidate-member diff report before any archive rebuild.",
+      "readiness_status": "prototype_tracked",
+      "ready_for_exact_eval_dispatch": false,
+      "registry_status": "prototype"
+    },
+    {
+      "category": "geometry_pose",
+      "dispatch_blockers": [
+        "hidden_gem_registry_not_exact_eval_dispatch_evidence",
+        "registry_status_prototype"
+      ],
+      "eligible_for_local_patch": false,
+      "evidence": [
+        {
+          "bytes": 5721,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/raft_pose.py",
+          "sha256": "920ec0f0e1b7f59b69481e50bcdfb55c6be5c75097366ec86aafe3a230a991d1"
+        },
+        {
+          "bytes": 23299,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/raft_radial_pose.py",
+          "sha256": "39c71c00b593ecac84f84434605c5b0e134f3bc1b51d366c1d6697b5b2aa38ab"
+        },
+        {
+          "bytes": 7044,
+          "exists": true,
+          "kind": "file",
+          "path": "experiments/compute_raft_flow.py",
+          "sha256": "3c371dc11853bce3dee949cd67e079713d06fe1c7eef2ae838b7875aac44233b"
+        },
+        {
+          "bytes": 7826,
+          "exists": true,
+          "kind": "file",
+          "path": "experiments/derive_poses_from_raft.py",
+          "sha256": "aee54a83759fdd0b2e0054a400d92e5e6fca391b0f080659582b1de014d7d76e"
+        },
+        {
+          "bytes": 9564,
+          "exists": true,
+          "kind": "file",
+          "path": "scripts/remote_lane_fl_raft_derived_poses.sh",
+          "sha256": "c71b5e92afbcd365dffd42e3856ebf41fdae8447572f5b6c7fb02b0ee8b07d39"
+        }
+      ],
+      "integration_targets": [
+        {
+          "bytes": 23299,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/raft_radial_pose.py",
+          "sha256": "39c71c00b593ecac84f84434605c5b0e134f3bc1b51d366c1d6697b5b2aa38ab"
+        },
+        {
+          "bytes": 7826,
+          "exists": true,
+          "kind": "file",
+          "path": "experiments/derive_poses_from_raft.py",
+          "sha256": "aee54a83759fdd0b2e0054a400d92e5e6fca391b0f080659582b1de014d7d76e"
+        }
+      ],
+      "key": "raft_radial_pose_readiness",
+      "missing_evidence_paths": [],
+      "missing_integration_targets": [],
+      "next_patch": "Add a RAFT readiness command that emits a pose-disagreement artifact and refuses inflate/runtime modes without that proof.",
+      "readiness_status": "prototype_tracked",
+      "ready_for_exact_eval_dispatch": false,
+      "registry_status": "prototype"
+    },
+    {
+      "category": "latent_repair",
+      "dispatch_blockers": [
+        "hidden_gem_registry_not_exact_eval_dispatch_evidence",
+        "registry_status_prototype"
+      ],
+      "eligible_for_local_patch": false,
+      "evidence": [
+        {
+          "bytes": 21333,
+          "exists": true,
+          "kind": "file",
+          "path": ".omx/research/contest_grade_all_lane_results_audit_20260430.md",
+          "sha256": "1ccd06e661c35b39d198f4ec707ecce96c9a1bd14564e1014e90b84e63163e0b"
+        },
+        {
+          "bytes": 47622,
+          "exists": true,
+          "kind": "file",
+          "path": ".omx/research/council_strategic_design_decisions_20260430.md",
+          "sha256": "1224e1a8df851561b0c6b841ff7f7f48b46961174b601998cd127987e635f846"
+        },
+        {
+          "bytes": 22142,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/wavelet_mask_codec.py",
+          "sha256": "1181dabb0e6391ef449a5523252e4253e7bb14405ab362b56e59fc1842772140"
+        },
+        {
+          "bytes": 7590,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/wavelet_variance.py",
+          "sha256": "22b547e1a0cabf199a1d2061bd243a140da664f2d8c0448883bd1278f8d21e8b"
+        },
+        {
+          "bytes": 20864,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/contrib/wavelet_renderer.py",
+          "sha256": "9c0a10bcacce8e46c68c91d6176f5c3a886cc8f649b572c2e4341ed7ea1d77b0"
+        },
+        {
+          "bytes": 14353,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/hnerv_wavelet_residual.py",
+          "sha256": "7fbc22b1f063dc52364e9288b77e4be49285a7b46462d230065b2b9217b401ab"
+        },
+        {
+          "bytes": 19388,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/hnerv_wavelet_sidechannel.py",
+          "sha256": "57abdc95111bb964bb607ff971b480d4580bf798d23c96f2b1c1cb66ab8cdaab"
+        },
+        {
+          "bytes": 13301,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/hnerv_wavelet_apply_gate.py",
+          "sha256": "60747bd0b481269a5cda761c28d66acfcbb0f8094b632780b40689e2654f9044"
+        },
+        {
+          "bytes": 35847,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/hnerv_wavelet_apply_transform.py",
+          "sha256": "a3418575e78cd4c3cef2e17700d49b95dc120c8acbc3a026c51ab4a9f5ce7af4"
+        },
+        {
+          "bytes": 9443,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/tests/test_wavelet_mask_codec.py",
+          "sha256": "21dcc46c60f37a47cf1036850e8f24a0e84074f530f410450d39a95d4805304a"
+        },
+        {
+          "bytes": 5808,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/tests/test_hnerv_wavelet_residual.py",
+          "sha256": "4ce7eef621c9e43edb64c3cc6d95fc907ec4fbcec21d4ceeb4e0463177ac4472"
+        },
+        {
+          "bytes": 4873,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/tests/test_hnerv_wavelet_sidechannel.py",
+          "sha256": "6a43d6194e0230a38a1eca281314cefb79d5e2432f1acc31b5b4c4ccd8746142"
+        },
+        {
+          "bytes": 6881,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/tests/test_hnerv_wavelet_apply_gate.py",
+          "sha256": "a4b965a30cfbcf686fb5d8211df284c1080f32384a81795c6ecc21b516cd3f93"
+        },
+        {
+          "bytes": 10223,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/tests/test_hnerv_wavelet_apply_transform.py",
+          "sha256": "808b38c35513aec2e6dce5160ffab6a0c46d160c1e757f402610d06f49b82586"
+        },
+        {
+          "bytes": 21325,
+          "exists": true,
+          "kind": "file",
+          "path": ".omx/research/hnerv_wavelet_sidechannel_candidate_20260506_codex.md",
+          "sha256": "ecabd9304d06b10c2ebb7ab9f9d0362912b07d83202291639b76ae8fdc671efe"
+        }
+      ],
+      "integration_targets": [
+        {
+          "bytes": 20269,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/hnerv_section_repack.py",
+          "sha256": "69dbd99d7b06f1609f3163d1debc44ff4fb5ba002b705239602125a0f6520766"
+        },
+        {
+          "bytes": 20228,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/archive_byte_profile.py",
+          "sha256": "d19173e4f2461fcb824b0f38be54a0f48973fcd6238c5a55fe81bcbe2d4d7605"
+        },
+        {
+          "bytes": 22142,
+          "exists": true,
+          "kind": "file",
+          "path": "src/tac/wavelet_mask_codec.py",
+          "sha256": "1181dabb0e6391ef449a5523252e4253e7bb14405ab362b56e59fc1842772140"
+        },
+        {
+          "bytes": 2125,
+          "exists": true,
+          "kind": "file",
+          "path": "tools/plan_hnerv_wavelet_residual.py",
+          "sha256": "d5f504ae6c55c6589bd7bda8d96a6d8a86d65105d7fc2b29ea8fde966dd6a32a"
+        },
+        {
+          "bytes": 2199,
+          "exists": true,
+          "kind": "file",
+          "path": "tools/build_hnerv_wavelet_sidechannel_candidate.py",
+          "sha256": "2bb9b75eccfdc2c594c6c2ee282dc29303920a4a1aafd4d1fdf6aa46a49c51d6"
+        },
+        {
+          "bytes": 1795,
+          "exists": true,
+          "kind": "file",
+          "path": "tools/audit_hnerv_wavelet_apply_gate.py",
+          "sha256": "6aaf361a41e9ca260a08d374921672484bd4a4ac1c2833ef89705d52718aeb5d"
+        },
+        {
+          "bytes": 3204,
+          "exists": true,
+          "kind": "file",
+          "path": "tools/build_hnerv_wavelet_apply_transform_candidate.py",
+          "sha256": "6df3a00be120757a5d2c6713d3b4563f2659f6714a9e75efc07d0449c4333c31"
+        }
+      ],
+      "key": "wavelet_residual_basis_gate",
+      "missing_evidence_paths": [],
+      "missing_integration_targets": [],
+      "next_patch": "Claim lane dispatch, run exact CUDA auth eval on the byte-negative offline WR01 half-strength candidate, then harvest and adjudicate before promotion.",
+      "readiness_status": "prototype_tracked",
+      "ready_for_exact_eval_dispatch": false,
+      "registry_status": "prototype"
+    }
+  ],
+  "schema_version": 1,
+  "summary": {
+    "eligible_for_local_patch_count": 0,
+    "entry_count": 15,
+    "missing_evidence_path_count": 0,
+    "missing_integration_target_count": 0,
+    "readiness_status_counts": {
+      "implemented_guarded_tracked": 7,
+      "planning_tracked": 3,
+      "prototype_tracked": 5
+    },
+    "ready_for_exact_eval_dispatch_count": 0
+  }
+}

@@ -1,0 +1,375 @@
+{
+  "entries": [
+    {
+      "category": "mask_representation",
+      "contest_compliance_notes": [
+        "Manifest must avoid hidden side channels and must record every charged byte source.",
+        "Planning artifact only; exact archive custody is required before promotion."
+      ],
+      "evidence_paths": [
+        ".omx/research/charged_mask_grammar_atoms_20260502_codex.md",
+        ".omx/research/charged_mask_grammar_ego_foveation_greenup_20260502_codex.md",
+        "src/tac/hyperbolic_foveation.py",
+        "src/tac/tests/test_hyperbolic_foveation.py"
+      ],
+      "integration_targets": [
+        "src/tac/mask_entropy_coder.py",
+        "src/tac/hyperbolic_foveation.py"
+      ],
+      "key": "charged_mask_grammar_atoms",
+      "next_patch": "Define a charged atom manifest that separates syntax bytes, decoder bytes, and frozen input streams before renderer integration.",
+      "status": "planning",
+      "summary": "Turn the charged mask grammar and ego-foveation notes into a byte-accounted local atom manifest before any renderer integration.",
+      "title": "Charged mask grammar atoms"
+    },
+    {
+      "category": "renderer_payload",
+      "contest_compliance_notes": [
+        "Local byte analysis only; exact archive eval is required before promotion.",
+        "Do not reference provider workspaces or state files from the manifest."
+      ],
+      "evidence_paths": [
+        ".omx/research/component_sensitivity_map_certification_20260501_codex.md",
+        ".omx/research/component_sensitivity_byte_plan_manifest_20260506_codex.md",
+        ".omx/research/owv3_fisher_byte_aware_redesign_spec_20260430_codex.md",
+        "src/tac/component_sensitivity_artifact.py",
+        "src/tac/owv3_sensitivity_weighted.py",
+        "src/tac/tests/test_sweep_owv3_byte_plan.py"
+      ],
+      "integration_targets": [
+        "experiments/sweep_owv3_byte_plan.py",
+        "src/tac/owv3_sensitivity_weighted.py"
+      ],
+      "key": "component_sensitivity_byte_allocator",
+      "next_patch": "Use `experiments/sweep_owv3_byte_plan.py --manifest-only` as the fast planning preflight, then run the full sweep only with authoritative CUDA sensitivity custody.",
+      "status": "implemented_guarded",
+      "summary": "Use certified component-sensitivity artifacts to plan renderer payload byte allocation without reading provider queues or launching eval work.",
+      "title": "Component sensitivity byte allocator"
+    },
+    {
+      "category": "renderer_payload",
+      "contest_compliance_notes": [
+        "Smoke and trend artifacts are development evidence only.",
+        "Renderer payload changes need byte-closed archives and exact CUDA replay."
+      ],
+      "evidence_paths": [
+        "reports/local_smoke_coolchic_c3_20260425.md",
+        "src/tac/contrib/coolchic_renderer.py",
+        "src/tac/contrib/coolchic_darts.py",
+        "src/tac/profiles.py",
+        "src/tac/experiments/train_renderer.py"
+      ],
+      "integration_targets": [
+        "tools/list_hidden_gems.py",
+        "src/tac/experiments/train_renderer.py"
+      ],
+      "key": "coolchic_c3_renderer_trend_gate",
+      "next_patch": "Add a deterministic CUDA smoke-matrix runner and block archive wiring until trend metadata proves non-regression.",
+      "status": "prototype",
+      "summary": "Promote Cool-Chic and C3 renderer prototypes from local wiring smoke to a controlled CUDA trend gate before archive integration.",
+      "title": "Cool-Chic C3 renderer trend gate"
+    },
+    {
+      "category": "latent_repair",
+      "contest_compliance_notes": [
+        "No correction atom can promote from proxy or byte-only evidence.",
+        "Every runtime-applied atom must be charged inside the archive."
+      ],
+      "evidence_paths": [
+        ".omx/research/pr85_correction_atom_waterfill_worker_20260504.md",
+        ".omx/research/engineered_correction_component_trace_gate_20260506_codex.md",
+        "experiments/precompute_gradient_corrections.py",
+        "src/tac/engineered_correction_readiness.py",
+        "src/tac/engineered_corrections.py",
+        "src/tac/engineered_corrections_v2.py",
+        "src/tac/tests/test_engineered_correction_readiness.py"
+      ],
+      "integration_targets": [
+        "tools/audit_engineered_corrections.py",
+        "tools/all_lanes_preflight.py",
+        "src/tac/engineered_corrections_v2.py",
+        "experiments/precompute_gradient_corrections.py"
+      ],
+      "key": "engineered_correction_atom_gate",
+      "next_patch": "Wire signed correction readiness reports into a byte-closed archive builder candidate; exact dispatch remains blocked until candidate diff and archive preflight prove charged atom consumption.",
+      "status": "implemented_guarded",
+      "summary": "Make AMR-style and pixel-diff correction atoms no-op-resistant, signed by component traces, and fail-closed before dispatch.",
+      "title": "Engineered correction atom gate"
+    },
+    {
+      "category": "latent_repair",
+      "contest_compliance_notes": [
+        "Fridrich/UNIWARD maps are optimizer feedback only until consumed by charged archive bytes.",
+        "No prior UNIWARD result promotes without proving the computed payload reached inflate."
+      ],
+      "evidence_paths": [
+        ".omx/research/council_strategic_design_decisions_20260430.md",
+        ".omx/research/council_uniward_v8_fridrich_shannon_audit_20260429.md",
+        ".omx/research/fridrich_inverse_steg_allocator_20260506_codex.md",
+        "src/tac/fridrich.py",
+        "src/tac/fridrich_losses.py",
+        "src/tac/uniward_texture.py",
+        "src/tac/tests/test_uniward_texture.py",
+        "src/tac/tests/test_hnerv_section_repack.py",
+        "src/tac/tests/test_engineered_correction_readiness.py"
+      ],
+      "integration_targets": [
+        "src/tac/hnerv_section_repack.py",
+        "src/tac/engineered_correction_readiness.py",
+        "src/tac/uniward_delta.py"
+      ],
+      "key": "fridrich_inverse_steg_allocator",
+      "next_patch": "Feed detector-cost manifests into the stack orchestrator as optimizer feedback only; keep archive builds blocked until charged atoms alter a byte-closed candidate.",
+      "status": "implemented_guarded",
+      "summary": "Use UNIWARD/Fridrich-style detector-aware costs as allocation feedback for charged residual atoms and HNeRV section transforms.",
+      "title": "Fridrich inverse-steg allocator"
+    },
+    {
+      "category": "archive_packing",
+      "contest_compliance_notes": [
+        "Byte forensics only; no archive is eligible for dispatch until exact replay gates pass.",
+        "Candidate manifests must preserve archive and member hashes."
+      ],
+      "evidence_paths": [
+        ".omx/research/public_hnerv_frontier_deconstruction_20260504_codex.md",
+        ".omx/research/hnerv_candidate_diff_guard_20260506_codex.md",
+        "experiments/build_hnerv_frontier_scorecard.py",
+        "experiments/profile_hnerv_frontier_payloads.py",
+        "src/tac/tests/test_archive_byte_profile.py"
+      ],
+      "integration_targets": [
+        "src/tac/archive_byte_profile.py",
+        "src/tac/public_submission_refs.py"
+      ],
+      "key": "hnerv_payload_scorecard_followups",
+      "next_patch": "Use `tac.archive_byte_profile.build_candidate_diff_manifest` as the mandatory no-op control for future HNeRV repack candidates before archive preflight or exact CUDA eval.",
+      "status": "implemented_guarded",
+      "summary": "Make public HNeRV payload anatomy drive deterministic repack follow-ups from section bytes and provenance instead of prose.",
+      "title": "HNeRV payload scorecard follow-ups"
+    },
+    {
+      "category": "stack_composition",
+      "contest_compliance_notes": [
+        "No provider state, provider logs, or live job identifiers belong in this manifest.",
+        "Stack deltas remain planning evidence until exact archive custody exists."
+      ],
+      "evidence_paths": [
+        ".omx/research/contest_faithful_swarm_execution_20260502_codex.md",
+        ".omx/research/works_negatives_hardened_stack_20260502_codex.md",
+        "src/tac/joint_admm_coordinator.py",
+        "src/tac/stack_compositions.py"
+      ],
+      "integration_targets": [
+        "src/tac/joint_codec_stack_orchestrator.py",
+        "src/tac/stack_compositions.py"
+      ],
+      "key": "joint_stack_contract_manifest",
+      "next_patch": "Add a typed local manifest that records each stack stage and its byte contract without dispatch metadata.",
+      "status": "planning",
+      "summary": "Record representation, prediction, quantization, hyperprior, arithmetic, and pack stages as typed local contracts before stacking experiments.",
+      "title": "Joint stack contract manifest"
+    },
+    {
+      "category": "entropy_coding",
+      "contest_compliance_notes": [
+        "Side information must be charged inside the packed payload.",
+        "Inflate must remain scorer-free and deterministic."
+      ],
+      "evidence_paths": [
+        ".omx/research/grand_council_paradigm_shift_to_shannon_floor_20260430.md",
+        "src/tac/arithmetic_qint_codec.py",
+        "src/tac/entropy_archive.py",
+        "src/tac/tests/test_arithmetic_qint_codec.py"
+      ],
+      "integration_targets": [
+        "src/tac/archive_byte_profile.py",
+        "src/tac/entropy_archive.py"
+      ],
+      "key": "latent_sidecar_arithmetic_terminal",
+      "next_patch": "Port static-model arithmetic pack and unpack helpers onto HNeRV latent-correction sidecar bytes with a parity-first fixture.",
+      "status": "prototype",
+      "summary": "Reuse static arithmetic-coding helpers for latent-correction sidecar bytes after proving byte-for-byte decode parity on fixtures.",
+      "title": "Latent sidecar arithmetic terminal"
+    },
+    {
+      "category": "mask_representation",
+      "contest_compliance_notes": [
+        "No training run or archive can promote without the L2 clearance artifact.",
+        "Learned mask bytes and decoder state must be charged inside the archive."
+      ],
+      "evidence_paths": [
+        ".omx/research/lane12_nerv_l2_unblock_worker_e_20260430.md",
+        "src/tac/nerv_mask_codec.py",
+        "experiments/train_nerv_mask.py",
+        "scripts/remote_lane_nerv.sh"
+      ],
+      "integration_targets": [
+        "tools/list_hidden_gems.py",
+        "src/tac/nerv_mask_codec.py"
+      ],
+      "key": "nerv_mask_l2_readiness",
+      "next_patch": "Add a dry-run readiness command that checks L2 clearance, runtime dispatch, dependency closure, and exact archive-builder availability.",
+      "status": "planning",
+      "summary": "Recover the NeRV mask codec lane as a guarded build-only path until L2 clearance, parser closure, and pose provenance are present.",
+      "title": "NeRV mask L2 readiness"
+    },
+    {
+      "category": "stack_composition",
+      "contest_compliance_notes": [
+        "Sensitivity is optimizer feedback, not score evidence.",
+        "Production dispatch needs exact source archive identity, CUDA device provenance, and component_sensitivity_map_certification_v1 metadata."
+      ],
+      "evidence_paths": [
+        ".omx/research/contest_faithful_swarm_execution_20260502_codex.md",
+        "experiments/repack_pr106_with_water_filling.py",
+        "src/tac/water_filling_codec_v2.py",
+        "tools/dispatch_dryrun_omega_w_v3.py"
+      ],
+      "integration_targets": [
+        "tools/dispatch_dryrun_omega_w_v3.py",
+        "tools/all_lanes_preflight.py"
+      ],
+      "key": "omega_w_v3_real_sensitivity_gate",
+      "next_patch": "Wire certified sensitivity maps into a concrete OWV3 candidate builder and keep exact CUDA eval as the only promotion path.",
+      "status": "implemented_guarded",
+      "summary": "Make the PR106 water-fill repack lane refuse stub, stale, or mismatched sensitivity metadata before production dispatch.",
+      "title": "Omega-W-V3 real sensitivity gate"
+    },
+    {
+      "category": "stack_composition",
+      "contest_compliance_notes": [
+        "Proxy self-consistency cannot unlock exact-eval dispatch by itself.",
+        "Production readiness proves sister archives are anchored to the same PR106 payload, manifests match archive paths and bytes, and stacked dispatch blockers remain explicit until exact CUDA auth eval."
+      ],
+      "evidence_paths": [
+        "experiments/build_pr106_latent_sidecar.py",
+        "experiments/build_pr106_yshift_sidechannel.py",
+        "experiments/build_pr106_lrl1_sidechannel.py",
+        "experiments/build_pr106_stacked.py",
+        "tools/operator_briefing.py"
+      ],
+      "integration_targets": [
+        "tools/all_lanes_preflight.py",
+        "tools/operator_briefing.py"
+      ],
+      "key": "pr106_sidechannel_stack_gate",
+      "next_patch": "Implement one CUDA scorer-backed yshift or latent search mode, then feed its exact CUDA artifact back into the stack gate.",
+      "status": "implemented_guarded",
+      "summary": "Coordinate latent, yshift, LRL1, and stacked PR106 sidechannels through one dry-run gate so sister archives cannot drift or dispatch from proxy-only modes.",
+      "title": "PR106 sidechannel stack gate"
+    },
+    {
+      "category": "mask_representation",
+      "contest_compliance_notes": [
+        "Static custody and runtime-contract audits are not score evidence.",
+        "No PR91/HPM1 candidate may dispatch until the HPM1 runtime consumes charged bytes without uncharged sidecars or fallback."
+      ],
+      "evidence_paths": [
+        ".omx/research/pr91_hpm1_readiness_20260506_codex.md",
+        ".omx/research/pr91_hpm1_runtime_contract_gate_20260506_codex.md",
+        "src/tac/pr91_hpm1_codec.py",
+        "src/tac/pr91_hpm1_readiness.py",
+        "src/tac/pr91_hpm1_runtime_contract.py",
+        "src/tac/tests/test_pr91_hpm1_runtime_contract.py",
+        "src/tac/tests/test_pr91_hpm1_readiness.py"
+      ],
+      "integration_targets": [
+        "tools/audit_pr91_hpm1_readiness.py",
+        "tools/audit_pr91_hpm1_runtime_contract.py",
+        "experiments/replay_pr91_hpm1_mask.py",
+        "experiments/preflight_pr91_pr92_replay_contracts.py"
+      ],
+      "key": "pr91_hpm1_runtime_contract",
+      "next_patch": "Produce a real `pr91_hpm1_decode_reencode_parity_v1` report from the HPM1 decoder; only then can the readiness audit narrow to exact CUDA eval.",
+      "status": "implemented_guarded",
+      "summary": "Keep the public PR91 HPM1 mask stream visible as a high-EV categorical rate signal while its HPAC device contract, full decode, and re-encode parity remain fail-closed.",
+      "title": "PR91 HPM1 runtime contract"
+    },
+    {
+      "category": "latent_repair",
+      "contest_compliance_notes": [
+        "Sidecars must stay forbidden and every atom plan must preserve source hashes.",
+        "Candidate archives need exact replay custody before promotion."
+      ],
+      "evidence_paths": [
+        ".omx/research/public_hnerv_adapter_replays_20260504_codex.md",
+        ".omx/research/public_hnerv_frontier_deconstruction_20260504_codex.md",
+        "experiments/build_hnerv_frontier_scorecard.py",
+        "experiments/profile_hnerv_frontier_payloads.py"
+      ],
+      "integration_targets": [
+        "src/tac/archive_byte_profile.py",
+        "src/tac/public_submission_refs.py"
+      ],
+      "key": "pr95_residual_atom_planner",
+      "next_patch": "Create a tracked PR95-family atom planner with a no-op-resistant fixture and candidate-member diff report before any archive rebuild.",
+      "status": "prototype",
+      "summary": "Turn PR95-family residual atom notes into a tracked no-op-resistant candidate-member diff workflow.",
+      "title": "PR95 residual atom planner"
+    },
+    {
+      "category": "geometry_pose",
+      "contest_compliance_notes": [
+        "RAFT outputs are profile feedback until charged bytes consume them in inflate.",
+        "Small geometry errors require exact CUDA component gates before promotion."
+      ],
+      "evidence_paths": [
+        "src/tac/raft_pose.py",
+        "src/tac/raft_radial_pose.py",
+        "experiments/compute_raft_flow.py",
+        "experiments/derive_poses_from_raft.py",
+        "scripts/remote_lane_fl_raft_derived_poses.sh"
+      ],
+      "integration_targets": [
+        "src/tac/raft_radial_pose.py",
+        "experiments/derive_poses_from_raft.py"
+      ],
+      "key": "raft_radial_pose_readiness",
+      "next_patch": "Add a RAFT readiness command that emits a pose-disagreement artifact and refuses inflate/runtime modes without that proof.",
+      "status": "prototype",
+      "summary": "Use RAFT and radial ego-motion as pose-sidecar or TTO-initializer feedback only after disagreement and runtime-consumption proofs exist.",
+      "title": "RAFT radial pose readiness"
+    },
+    {
+      "category": "latent_repair",
+      "contest_compliance_notes": [
+        "Wavelet coefficients are charged side information unless generated by fixed contest code.",
+        "Exact CUDA archive eval is required before ranking any wavelet residual transform."
+      ],
+      "evidence_paths": [
+        ".omx/research/contest_grade_all_lane_results_audit_20260430.md",
+        ".omx/research/council_strategic_design_decisions_20260430.md",
+        "src/tac/wavelet_mask_codec.py",
+        "src/tac/wavelet_variance.py",
+        "src/tac/contrib/wavelet_renderer.py",
+        "src/tac/hnerv_wavelet_residual.py",
+        "src/tac/hnerv_wavelet_sidechannel.py",
+        "src/tac/hnerv_wavelet_apply_gate.py",
+        "src/tac/hnerv_wavelet_apply_transform.py",
+        "src/tac/tests/test_wavelet_mask_codec.py",
+        "src/tac/tests/test_hnerv_wavelet_residual.py",
+        "src/tac/tests/test_hnerv_wavelet_sidechannel.py",
+        "src/tac/tests/test_hnerv_wavelet_apply_gate.py",
+        "src/tac/tests/test_hnerv_wavelet_apply_transform.py",
+        ".omx/research/hnerv_wavelet_sidechannel_candidate_20260506_codex.md"
+      ],
+      "integration_targets": [
+        "src/tac/hnerv_section_repack.py",
+        "src/tac/archive_byte_profile.py",
+        "src/tac/wavelet_mask_codec.py",
+        "tools/plan_hnerv_wavelet_residual.py",
+        "tools/build_hnerv_wavelet_sidechannel_candidate.py",
+        "tools/audit_hnerv_wavelet_apply_gate.py",
+        "tools/build_hnerv_wavelet_apply_transform_candidate.py"
+      ],
+      "key": "wavelet_residual_basis_gate",
+      "next_patch": "Claim lane dispatch, run exact CUDA auth eval on the byte-negative offline WR01 half-strength candidate, then harvest and adjudicate before promotion.",
+      "status": "prototype",
+      "summary": "Use wavelet bases as compact residual or mask-side correction coordinates, not as an unchecked replacement for the current HNeRV anchor.",
+      "title": "Wavelet residual basis gate"
+    }
+  ],
+  "entry_count": 15,
+  "registry": "hidden_gems",
+  "schema_version": 1
+}
