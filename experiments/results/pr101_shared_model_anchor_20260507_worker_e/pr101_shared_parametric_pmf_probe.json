@@ -1,0 +1,4883 @@
+{
+  "archive_overhead_bytes": 16094,
+  "autodiscovered_state_dict": false,
+  "baseline_per_tensor_empirical_pmf": {
+    "archive_estimate_bytes_brotli_fp16_table": 179389,
+    "archive_estimate_bytes_raw_fp16_table": 190196,
+    "brotli_fp16_table_bytes": 3473,
+    "delta_iid_floor_archive_vs_175916": 0,
+    "fp16_table_payload_bytes": 159822,
+    "iid_floor_archive_bytes_without_model_tables": 175916,
+    "iid_floor_payload_bytes": 159822,
+    "n_symbols": 228958,
+    "n_tensors": 28,
+    "name": "per_tensor_empirical_pmf_reference",
+    "raw_fp16_table_bytes": 14280
+  },
+  "best_model_by_archive_estimate": {
+    "archive_estimate_bytes": 179046,
+    "delta_vs_175916": 3130,
+    "delta_vs_178144": 902,
+    "delta_vs_178181": 865,
+    "model_parameter_bytes": 2697,
+    "name": "shared_canonical_pmf_clusters_identity_k12",
+    "payload_estimate_bytes": 160255,
+    "verdict": "negative_loses_after_charging_model_bytes"
+  },
+  "charged_bits_changed": false,
+  "comparison_brotli_optuna_archive_bytes": 178144,
+  "comparison_iid_per_tensor_floor_archive_bytes": 175916,
+  "comparison_per_tensor_aac_archive_bytes": 178181,
+  "cpu_only": true,
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "planning_probe_only",
+    "no_actual_range_or_ans_bitstream",
+    "no_runtime_model_serializer_or_decoder",
+    "model_parameter_serializations_are_estimates_not_packet_verified",
+    "no_archive_substitution_performed",
+    "missing_exact_cuda_auth_eval"
+  ],
+  "disposition": "planning_negative_shared_model_probe_loses_after_charged_model_bytes",
+  "evidence_grade": "empirical",
+  "evidence_marker": "[CPU-prep empirical]",
+  "evidence_semantics": "cpu_shared_model_pmf_planning_probe",
+  "input_state_dict": "experiments/results/cma_pr101_real_substrate_cmaes_20260507T223229Z/pr101_decoder_state_dict.pt",
+  "input_state_dict_sha256": "b863362aaba1b9cae9b944f5e5b1a43a53ca824b7899ed7b80a2e2146d66f053",
+  "model_results": [
+    {
+      "archive_estimate_bytes": 206561,
+      "delta_vs_175916": 30645,
+      "delta_vs_178144": 28417,
+      "delta_vs_178181": 28380,
+      "delta_vs_brotli_optuna_archive_bytes": 28417,
+      "delta_vs_iid_per_tensor_floor_archive_bytes": 30645,
+      "delta_vs_per_tensor_aac_archive_bytes": 28380,
+      "fit_on_same_symbols": true,
+      "model_family": "shared_spike_laplace_gaussian_grid",
+      "model_parameter_byte_estimate": {
+        "assignment_bytes": 32,
+        "brotli_parameter_bytes": 564,
+        "header_bytes": 16,
+        "parameter_encoding": "brotli_fp16_param_descriptors_plus_assignments",
+        "primary_model_parameter_bytes": 612,
+        "raw_parameter_bytes": 5632
+      },
+      "model_parameter_bytes": 612,
+      "n_models": 512,
+      "n_symbols": 228958,
+      "n_tensors": 28,
+      "name": "shared_parametric_spike_laplace_gaussian_identity",
+      "payload_estimate_bits": 1518839.040809633,
+      "payload_estimate_bytes": 189855,
+      "per_tensor_assignments": [
+        {
+          "assigned_model": 4,
+          "idx": 0,
+          "model_bits": 304340.4106568631,
+          "model_bytes": 38043,
+          "n_symbols": 48384,
+          "n_unique_symbols": 118,
+          "name": "stem.weight"
+        },
+        {
+          "assigned_model": 352,
+          "idx": 1,
+          "model_bits": 12614.81524166933,
+          "model_bytes": 1577,
+          "n_symbols": 1728,
+          "n_unique_symbols": 194,
+          "name": "stem.bias"
+        },
+        {
+          "assigned_model": 257,
+          "idx": 2,
+          "model_bits": 306851.545489426,
+          "model_bytes": 38357,
+          "n_symbols": 46656,
+          "n_unique_symbols": 131,
+          "name": "blocks.0.weight"
+        },
+        {
+          "assigned_model": 423,
+          "idx": 3,
+          "model_bits": 1089.6476147400226,
+          "model_bytes": 137,
+          "n_symbols": 144,
+          "n_unique_symbols": 101,
+          "name": "blocks.0.bias"
+        },
+        {
+          "assigned_model": 262,
+          "idx": 4,
+          "model_bits": 307598.01534135133,
+          "model_bytes": 38450,
+          "n_symbols": 46656,
+          "n_unique_symbols": 151,
+          "name": "blocks.1.weight"
+        },
+        {
+          "assigned_model": 196,
+          "idx": 5,
+          "model_bits": 1090.2239568634493,
+          "model_bytes": 137,
+          "n_symbols": 144,
+          "n_unique_symbols": 96,
+          "name": "blocks.1.bias"
+        },
+        {
+          "assigned_model": 293,
+          "idx": 6,
+          "model_bits": 240767.21917304583,
+          "model_bytes": 30096,
+          "n_symbols": 34992,
+          "n_unique_symbols": 172,
+          "name": "blocks.2.weight"
+        },
+        {
+          "assigned_model": 231,
+          "idx": 7,
+          "model_bits": 836.9369586331815,
+          "model_bytes": 105,
+          "n_symbols": 108,
+          "n_unique_symbols": 88,
+          "name": "blocks.2.bias"
+        },
+        {
+          "assigned_model": 289,
+          "idx": 8,
+          "model_bits": 132609.30760590217,
+          "model_bytes": 16577,
+          "n_symbols": 19440,
+          "n_unique_symbols": 155,
+          "name": "blocks.3.weight"
+        },
+        {
+          "assigned_model": 103,
+          "idx": 9,
+          "model_bits": 577.8033770571042,
+          "model_bytes": 73,
+          "n_symbols": 80,
+          "n_unique_symbols": 63,
+          "name": "blocks.3.bias"
+        },
+        {
+          "assigned_model": 326,
+          "idx": 10,
+          "model_bits": 92965.3788346017,
+          "model_bytes": 11621,
+          "n_symbols": 12960,
+          "n_unique_symbols": 206,
+          "name": "blocks.4.weight"
+        },
+        {
+          "assigned_model": 456,
+          "idx": 11,
+          "model_bits": 545.9288809746494,
+          "model_bytes": 69,
+          "n_symbols": 72,
+          "n_unique_symbols": 60,
+          "name": "blocks.4.bias"
+        },
+        {
+          "assigned_model": 257,
+          "idx": 12,
+          "model_bits": 74816.52991081557,
+          "model_bytes": 9353,
+          "n_symbols": 11664,
+          "n_unique_symbols": 92,
+          "name": "blocks.5.weight"
+        },
+        {
+          "assigned_model": 99,
+          "idx": 13,
+          "model_bits": 519.1250280604934,
+          "model_bytes": 65,
+          "n_symbols": 72,
+          "n_unique_symbols": 53,
+          "name": "blocks.5.bias"
+        },
+        {
+          "assigned_model": 326,
+          "idx": 14,
+          "model_bits": 6943.392064351092,
+          "model_bytes": 868,
+          "n_symbols": 972,
+          "n_unique_symbols": 77,
+          "name": "skips.2.weight"
+        },
+        {
+          "assigned_model": 451,
+          "idx": 15,
+          "model_bits": 209.6458959898004,
+          "model_bytes": 27,
+          "n_symbols": 27,
+          "n_unique_symbols": 23,
+          "name": "skips.2.bias"
+        },
+        {
+          "assigned_model": 385,
+          "idx": 16,
+          "model_bits": 4040.3573487073554,
+          "model_bytes": 506,
+          "n_symbols": 540,
+          "n_unique_symbols": 92,
+          "name": "skips.3.weight"
+        },
+        {
+          "assigned_model": 480,
+          "idx": 17,
+          "model_bits": 156.3351453015349,
+          "model_bytes": 20,
+          "n_symbols": 20,
+          "n_unique_symbols": 20,
+          "name": "skips.3.bias"
+        },
+        {
+          "assigned_model": 422,
+          "idx": 18,
+          "model_bits": 2717.1149528670458,
+          "model_bytes": 340,
+          "n_symbols": 360,
+          "n_unique_symbols": 73,
+          "name": "skips.4.weight"
+        },
+        {
+          "assigned_model": 483,
+          "idx": 19,
+          "model_bits": 145.845511670415,
+          "model_bytes": 19,
+          "n_symbols": 18,
+          "n_unique_symbols": 18,
+          "name": "skips.4.bias"
+        },
+        {
+          "assigned_model": 259,
+          "idx": 20,
+          "model_bits": 9880.919576662685,
+          "model_bytes": 1236,
+          "n_symbols": 1458,
+          "n_unique_symbols": 73,
+          "name": "refine.0.weight"
+        },
+        {
+          "assigned_model": 483,
+          "idx": 21,
+          "model_bits": 73.4905736033869,
+          "model_bytes": 10,
+          "n_symbols": 9,
+          "n_unique_symbols": 9,
+          "name": "refine.0.bias"
+        },
+        {
+          "assigned_model": 326,
+          "idx": 22,
+          "model_bits": 10399.388612727267,
+          "model_bytes": 1300,
+          "n_symbols": 1458,
+          "n_unique_symbols": 110,
+          "name": "refine.1.weight"
+        },
+        {
+          "assigned_model": 483,
+          "idx": 23,
+          "model_bits": 144.9266328910863,
+          "model_bytes": 19,
+          "n_symbols": 18,
+          "n_unique_symbols": 17,
+          "name": "refine.1.bias"
+        },
+        {
+          "assigned_model": 68,
+          "idx": 24,
+          "model_bits": 3406.881554879401,
+          "model_bytes": 426,
+          "n_symbols": 486,
+          "n_unique_symbols": 69,
+          "name": "rgb_0.weight"
+        },
+        {
+          "assigned_model": 227,
+          "idx": 25,
+          "model_bits": 23.5742407137962,
+          "model_bytes": 3,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_0.bias"
+        },
+        {
+          "assigned_model": 331,
+          "idx": 26,
+          "model_bits": 3449.030939945938,
+          "model_bytes": 432,
+          "n_symbols": 486,
+          "n_unique_symbols": 76,
+          "name": "rgb_1.weight"
+        },
+        {
+          "assigned_model": 483,
+          "idx": 27,
+          "model_bits": 25.249689318096948,
+          "model_bytes": 4,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_1.bias"
+        }
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "scale_grid_size": 8,
+      "score_claim": false,
+      "sharing_gain_vs_per_tensor_brotli_fp16_table_bytes": -27172,
+      "sharing_gain_vs_per_tensor_raw_fp16_table_bytes": -16365,
+      "spike_grid": [
+        0.0,
+        0.02,
+        0.05,
+        0.1,
+        0.2,
+        0.35,
+        0.5,
+        0.7
+      ],
+      "transform": "identity",
+      "uniform_grid": [
+        0.0,
+        0.001,
+        0.005,
+        0.02
+      ],
+      "used_models": 22,
+      "verdict": "negative_loses_after_charging_model_bytes"
+    },
+    {
+      "archive_estimate_bytes": 219209,
+      "delta_vs_175916": 43293,
+      "delta_vs_178144": 41065,
+      "delta_vs_178181": 41028,
+      "delta_vs_brotli_optuna_archive_bytes": 41065,
+      "delta_vs_iid_per_tensor_floor_archive_bytes": 43293,
+      "delta_vs_per_tensor_aac_archive_bytes": 41028,
+      "fit_on_same_symbols": true,
+      "model_family": "shared_spike_laplace_gaussian_grid",
+      "model_parameter_byte_estimate": {
+        "assignment_bytes": 32,
+        "brotli_parameter_bytes": 566,
+        "header_bytes": 16,
+        "parameter_encoding": "brotli_fp16_param_descriptors_plus_assignments",
+        "primary_model_parameter_bytes": 614,
+        "raw_parameter_bytes": 5632
+      },
+      "model_parameter_bytes": 614,
+      "n_models": 512,
+      "n_symbols": 228958,
+      "n_tensors": 28,
+      "name": "shared_parametric_spike_laplace_gaussian_delta_mod255",
+      "payload_estimate_bits": 1620005.886055263,
+      "payload_estimate_bytes": 202501,
+      "per_tensor_assignments": [
+        {
+          "assigned_model": 4,
+          "idx": 0,
+          "model_bits": 327714.82614492124,
+          "model_bytes": 40965,
+          "n_symbols": 48384,
+          "n_unique_symbols": 240,
+          "name": "stem.weight"
+        },
+        {
+          "assigned_model": 323,
+          "idx": 1,
+          "model_bits": 12859.782995288511,
+          "model_bytes": 1608,
+          "n_symbols": 1728,
+          "n_unique_symbols": 217,
+          "name": "stem.bias"
+        },
+        {
+          "assigned_model": 262,
+          "idx": 2,
+          "model_bits": 328975.3406106818,
+          "model_bytes": 41122,
+          "n_symbols": 46656,
+          "n_unique_symbols": 247,
+          "name": "blocks.0.weight"
+        },
+        {
+          "assigned_model": 359,
+          "idx": 3,
+          "model_bits": 1083.2024117883159,
+          "model_bytes": 136,
+          "n_symbols": 144,
+          "n_unique_symbols": 93,
+          "name": "blocks.0.bias"
+        },
+        {
+          "assigned_model": 262,
+          "idx": 4,
+          "model_bits": 329153.34888009226,
+          "model_bytes": 41145,
+          "n_symbols": 46656,
+          "n_unique_symbols": 242,
+          "name": "blocks.1.weight"
+        },
+        {
+          "assigned_model": 448,
+          "idx": 5,
+          "model_bits": 1120.3382636021654,
+          "model_bytes": 141,
+          "n_symbols": 144,
+          "n_unique_symbols": 101,
+          "name": "blocks.1.bias"
+        },
+        {
+          "assigned_model": 325,
+          "idx": 6,
+          "model_bits": 256245.20440729812,
+          "model_bytes": 32031,
+          "n_symbols": 34992,
+          "n_unique_symbols": 253,
+          "name": "blocks.2.weight"
+        },
+        {
+          "assigned_model": 483,
+          "idx": 7,
+          "model_bits": 869.1922491509494,
+          "model_bytes": 109,
+          "n_symbols": 108,
+          "n_unique_symbols": 89,
+          "name": "blocks.2.bias"
+        },
+        {
+          "assigned_model": 294,
+          "idx": 8,
+          "model_bits": 139921.21980259698,
+          "model_bytes": 17491,
+          "n_symbols": 19440,
+          "n_unique_symbols": 251,
+          "name": "blocks.3.weight"
+        },
+        {
+          "assigned_model": 227,
+          "idx": 9,
+          "model_bits": 623.4833231602943,
+          "model_bytes": 78,
+          "n_symbols": 80,
+          "n_unique_symbols": 72,
+          "name": "blocks.3.bias"
+        },
+        {
+          "assigned_model": 359,
+          "idx": 10,
+          "model_bits": 97608.6166444811,
+          "model_bytes": 12202,
+          "n_symbols": 12960,
+          "n_unique_symbols": 253,
+          "name": "blocks.4.weight"
+        },
+        {
+          "assigned_model": 483,
+          "idx": 11,
+          "model_bits": 569.8475235875047,
+          "model_bytes": 72,
+          "n_symbols": 72,
+          "n_unique_symbols": 59,
+          "name": "blocks.4.bias"
+        },
+        {
+          "assigned_model": 260,
+          "idx": 12,
+          "model_bits": 79468.01951870938,
+          "model_bytes": 9934,
+          "n_symbols": 11664,
+          "n_unique_symbols": 199,
+          "name": "blocks.5.weight"
+        },
+        {
+          "assigned_model": 160,
+          "idx": 13,
+          "model_bits": 545.0733434012451,
+          "model_bytes": 69,
+          "n_symbols": 72,
+          "n_unique_symbols": 60,
+          "name": "blocks.5.bias"
+        },
+        {
+          "assigned_model": 391,
+          "idx": 14,
+          "model_bits": 7383.038745382482,
+          "model_bytes": 923,
+          "n_symbols": 972,
+          "n_unique_symbols": 207,
+          "name": "skips.2.weight"
+        },
+        {
+          "assigned_model": 449,
+          "idx": 15,
+          "model_bits": 211.20279459098253,
+          "model_bytes": 27,
+          "n_symbols": 27,
+          "n_unique_symbols": 26,
+          "name": "skips.2.bias"
+        },
+        {
+          "assigned_model": 455,
+          "idx": 16,
+          "model_bits": 4199.027441755518,
+          "model_bytes": 525,
+          "n_symbols": 540,
+          "n_unique_symbols": 200,
+          "name": "skips.3.weight"
+        },
+        {
+          "assigned_model": 483,
+          "idx": 17,
+          "model_bits": 164.00948797566468,
+          "model_bytes": 21,
+          "n_symbols": 20,
+          "n_unique_symbols": 19,
+          "name": "skips.3.bias"
+        },
+        {
+          "assigned_model": 487,
+          "idx": 18,
+          "model_bits": 2834.5522611254983,
+          "model_bytes": 355,
+          "n_symbols": 360,
+          "n_unique_symbols": 183,
+          "name": "skips.4.weight"
+        },
+        {
+          "assigned_model": 483,
+          "idx": 19,
+          "model_bits": 147.26653481379378,
+          "model_bytes": 19,
+          "n_symbols": 18,
+          "n_unique_symbols": 17,
+          "name": "skips.4.bias"
+        },
+        {
+          "assigned_model": 263,
+          "idx": 20,
+          "model_bits": 10305.707514417263,
+          "model_bytes": 1289,
+          "n_symbols": 1458,
+          "n_unique_symbols": 172,
+          "name": "refine.0.weight"
+        },
+        {
+          "assigned_model": 483,
+          "idx": 21,
+          "model_bits": 72.5380829055122,
+          "model_bytes": 10,
+          "n_symbols": 9,
+          "n_unique_symbols": 9,
+          "name": "refine.0.bias"
+        },
+        {
+          "assigned_model": 69,
+          "idx": 22,
+          "model_bits": 10657.401341976409,
+          "model_bytes": 1333,
+          "n_symbols": 1458,
+          "n_unique_symbols": 210,
+          "name": "refine.1.weight"
+        },
+        {
+          "assigned_model": 483,
+          "idx": 23,
+          "model_bits": 145.30719465016145,
+          "model_bytes": 19,
+          "n_symbols": 18,
+          "n_unique_symbols": 18,
+          "name": "refine.1.bias"
+        },
+        {
+          "assigned_model": 295,
+          "idx": 24,
+          "model_bits": 3502.292819962471,
+          "model_bytes": 438,
+          "n_symbols": 486,
+          "n_unique_symbols": 142,
+          "name": "rgb_0.weight"
+        },
+        {
+          "assigned_model": 227,
+          "idx": 25,
+          "model_bits": 23.368427494065863,
+          "model_bytes": 3,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_0.bias"
+        },
+        {
+          "assigned_model": 327,
+          "idx": 26,
+          "model_bits": 3584.2984654280995,
+          "model_bytes": 449,
+          "n_symbols": 486,
+          "n_unique_symbols": 159,
+          "name": "rgb_1.weight"
+        },
+        {
+          "assigned_model": 468,
+          "idx": 27,
+          "model_bits": 18.378824025397755,
+          "model_bytes": 3,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_1.bias"
+        }
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "scale_grid_size": 8,
+      "score_claim": false,
+      "sharing_gain_vs_per_tensor_brotli_fp16_table_bytes": -39820,
+      "sharing_gain_vs_per_tensor_raw_fp16_table_bytes": -29013,
+      "spike_grid": [
+        0.0,
+        0.02,
+        0.05,
+        0.1,
+        0.2,
+        0.35,
+        0.5,
+        0.7
+      ],
+      "transform": "delta_mod255",
+      "uniform_grid": [
+        0.0,
+        0.001,
+        0.005,
+        0.02
+      ],
+      "used_models": 20,
+      "verdict": "negative_loses_after_charging_model_bytes"
+    },
+    {
+      "archive_estimate_bytes": 202100,
+      "delta_vs_175916": 26184,
+      "delta_vs_178144": 23956,
+      "delta_vs_178181": 23919,
+      "delta_vs_brotli_optuna_archive_bytes": 23956,
+      "delta_vs_iid_per_tensor_floor_archive_bytes": 26184,
+      "delta_vs_per_tensor_aac_archive_bytes": 23919,
+      "fit_on_same_symbols": true,
+      "model_family": "shared_empirical_pmf_temperature_spike_residual",
+      "model_parameter_byte_estimate": {
+        "assignment_bytes": 28,
+        "brotli_parameter_bytes": 729,
+        "header_bytes": 16,
+        "parameter_encoding": "brotli_global_fp16_pmf_and_temperature_descriptors_plus_assignments",
+        "primary_model_parameter_bytes": 773,
+        "raw_parameter_bytes": 1615
+      },
+      "model_parameter_bytes": 773,
+      "n_models": 221,
+      "n_symbols": 228958,
+      "n_tensors": 28,
+      "name": "shared_empirical_temperature_spike_identity",
+      "payload_estimate_bits": 1481861.10471339,
+      "payload_estimate_bytes": 185233,
+      "per_tensor_assignments": [
+        {
+          "assigned_model": 110,
+          "idx": 0,
+          "model_bits": 303197.30288093514,
+          "model_bytes": 37900,
+          "n_symbols": 48384,
+          "n_unique_symbols": 118,
+          "name": "stem.weight"
+        },
+        {
+          "assigned_model": 57,
+          "idx": 1,
+          "model_bits": 12725.318848303892,
+          "model_bytes": 1591,
+          "n_symbols": 1728,
+          "n_unique_symbols": 194,
+          "name": "stem.bias"
+        },
+        {
+          "assigned_model": 104,
+          "idx": 2,
+          "model_bits": 299924.5402003741,
+          "model_bytes": 37491,
+          "n_symbols": 46656,
+          "n_unique_symbols": 131,
+          "name": "blocks.0.weight"
+        },
+        {
+          "assigned_model": 33,
+          "idx": 3,
+          "model_bits": 1091.6098750020888,
+          "model_bytes": 137,
+          "n_symbols": 144,
+          "n_unique_symbols": 101,
+          "name": "blocks.0.bias"
+        },
+        {
+          "assigned_model": 122,
+          "idx": 4,
+          "model_bits": 292099.8018913431,
+          "model_bytes": 36513,
+          "n_symbols": 46656,
+          "n_unique_symbols": 151,
+          "name": "blocks.1.weight"
+        },
+        {
+          "assigned_model": 32,
+          "idx": 5,
+          "model_bits": 1089.766718922081,
+          "model_bytes": 137,
+          "n_symbols": 144,
+          "n_unique_symbols": 96,
+          "name": "blocks.1.bias"
+        },
+        {
+          "assigned_model": 96,
+          "idx": 6,
+          "model_bits": 230961.28076329987,
+          "model_bytes": 28871,
+          "n_symbols": 34992,
+          "n_unique_symbols": 172,
+          "name": "blocks.2.weight"
+        },
+        {
+          "assigned_model": 19,
+          "idx": 7,
+          "model_bits": 834.8124861654062,
+          "model_bytes": 105,
+          "n_symbols": 108,
+          "n_unique_symbols": 88,
+          "name": "blocks.2.bias"
+        },
+        {
+          "assigned_model": 92,
+          "idx": 8,
+          "model_bits": 130007.13321166325,
+          "model_bytes": 16251,
+          "n_symbols": 19440,
+          "n_unique_symbols": 155,
+          "name": "blocks.3.weight"
+        },
+        {
+          "assigned_model": 59,
+          "idx": 9,
+          "model_bits": 579.3161332158829,
+          "model_bytes": 73,
+          "n_symbols": 80,
+          "n_unique_symbols": 63,
+          "name": "blocks.3.bias"
+        },
+        {
+          "assigned_model": 70,
+          "idx": 10,
+          "model_bits": 92451.8224052586,
+          "model_bytes": 11557,
+          "n_symbols": 12960,
+          "n_unique_symbols": 206,
+          "name": "blocks.4.weight"
+        },
+        {
+          "assigned_model": 34,
+          "idx": 11,
+          "model_bits": 543.1366039411956,
+          "model_bytes": 68,
+          "n_symbols": 72,
+          "n_unique_symbols": 60,
+          "name": "blocks.4.bias"
+        },
+        {
+          "assigned_model": 104,
+          "idx": 12,
+          "model_bits": 74031.67250027493,
+          "model_bytes": 9254,
+          "n_symbols": 11664,
+          "n_unique_symbols": 92,
+          "name": "blocks.5.weight"
+        },
+        {
+          "assigned_model": 65,
+          "idx": 13,
+          "model_bits": 516.8930630087259,
+          "model_bytes": 65,
+          "n_symbols": 72,
+          "n_unique_symbols": 53,
+          "name": "blocks.5.bias"
+        },
+        {
+          "assigned_model": 59,
+          "idx": 14,
+          "model_bits": 7042.851313572898,
+          "model_bytes": 881,
+          "n_symbols": 972,
+          "n_unique_symbols": 77,
+          "name": "skips.2.weight"
+        },
+        {
+          "assigned_model": 13,
+          "idx": 15,
+          "model_bits": 208.38615606435616,
+          "model_bytes": 27,
+          "n_symbols": 27,
+          "n_unique_symbols": 23,
+          "name": "skips.2.bias"
+        },
+        {
+          "assigned_model": 42,
+          "idx": 16,
+          "model_bits": 4058.7385036036108,
+          "model_bytes": 508,
+          "n_symbols": 540,
+          "n_unique_symbols": 92,
+          "name": "skips.3.weight"
+        },
+        {
+          "assigned_model": 13,
+          "idx": 17,
+          "model_bits": 154.1273244842866,
+          "model_bytes": 20,
+          "n_symbols": 20,
+          "n_unique_symbols": 20,
+          "name": "skips.3.bias"
+        },
+        {
+          "assigned_model": 33,
+          "idx": 18,
+          "model_bits": 2717.4578533666713,
+          "model_bytes": 340,
+          "n_symbols": 360,
+          "n_unique_symbols": 73,
+          "name": "skips.4.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 19,
+          "model_bits": 144.68523066973174,
+          "model_bytes": 19,
+          "n_symbols": 18,
+          "n_unique_symbols": 18,
+          "name": "skips.4.bias"
+        },
+        {
+          "assigned_model": 91,
+          "idx": 20,
+          "model_bits": 9833.658534748694,
+          "model_bytes": 1230,
+          "n_symbols": 1458,
+          "n_unique_symbols": 73,
+          "name": "refine.0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 21,
+          "model_bits": 72.74933387860868,
+          "model_bytes": 10,
+          "n_symbols": 9,
+          "n_unique_symbols": 9,
+          "name": "refine.0.bias"
+        },
+        {
+          "assigned_model": 58,
+          "idx": 22,
+          "model_bits": 10518.454257806301,
+          "model_bytes": 1315,
+          "n_symbols": 1458,
+          "n_unique_symbols": 110,
+          "name": "refine.1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 23,
+          "model_bits": 144.3679536922123,
+          "model_bytes": 19,
+          "n_symbols": 18,
+          "n_unique_symbols": 17,
+          "name": "refine.1.bias"
+        },
+        {
+          "assigned_model": 72,
+          "idx": 24,
+          "model_bits": 3420.610269971078,
+          "model_bytes": 428,
+          "n_symbols": 486,
+          "n_unique_symbols": 69,
+          "name": "rgb_0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 25,
+          "model_bits": 23.262737671479286,
+          "model_bytes": 3,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_0.bias"
+        },
+        {
+          "assigned_model": 72,
+          "idx": 26,
+          "model_bits": 3442.827865686345,
+          "model_bytes": 431,
+          "n_symbols": 486,
+          "n_unique_symbols": 76,
+          "name": "rgb_1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 27,
+          "model_bits": 24.519796465565793,
+          "model_bytes": 4,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_1.bias"
+        }
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sharing_gain_vs_per_tensor_brotli_fp16_table_bytes": -22711,
+      "sharing_gain_vs_per_tensor_raw_fp16_table_bytes": -11904,
+      "temperature_grid": [
+        0.2,
+        0.24737173441903207,
+        0.30596387494740074,
+        0.37843407207653174,
+        0.46806946386414316,
+        0.5789357755232978,
+        0.716061734542128,
+        0.8856671661239336,
+        1.0954451150103321,
+        1.3549107903048094,
+        1.6758331609038108,
+        2.072768778048523,
+        2.5637220383774046,
+        3.170961836008573,
+        3.922031645749996,
+        4.850998853277535,
+        6.0
+      ],
+      "transform": "identity",
+      "used_models": 19,
+      "verdict": "negative_loses_after_charging_model_bytes",
+      "zero_boost_grid": [
+        0.12500000000000003,
+        0.19842513149602495,
+        0.3149802624737183,
+        0.5000000000000001,
+        0.7937005259840998,
+        1.2599210498948734,
+        2.0,
+        3.1748021039363987,
+        5.039684199579492,
+        7.999999999999998,
+        12.699208415745598,
+        20.158736798317964,
+        32.0
+      ]
+    },
+    {
+      "archive_estimate_bytes": 203152,
+      "cluster_init": "schema_order",
+      "cluster_k": 1,
+      "cluster_sizes": [
+        28
+      ],
+      "delta_vs_175916": 27236,
+      "delta_vs_178144": 25008,
+      "delta_vs_178181": 24971,
+      "delta_vs_brotli_optuna_archive_bytes": 25008,
+      "delta_vs_iid_per_tensor_floor_archive_bytes": 27236,
+      "delta_vs_per_tensor_aac_archive_bytes": 24971,
+      "fit_on_same_symbols": true,
+      "model_family": "shared_canonical_pmf_clusters",
+      "model_parameter_byte_estimate": {
+        "assignment_bytes": 0,
+        "brotli_parameter_bytes": 458,
+        "header_bytes": 16,
+        "parameter_encoding": "brotli_fp16_shared_pmf_tables_plus_assignments",
+        "primary_model_parameter_bytes": 474,
+        "raw_parameter_bytes": 510
+      },
+      "model_parameter_bytes": 474,
+      "n_models": 1,
+      "n_symbols": 228958,
+      "n_tensors": 28,
+      "name": "shared_canonical_pmf_clusters_identity_k1",
+      "payload_estimate_bits": 1492670.4399014846,
+      "payload_estimate_bytes": 186584,
+      "per_tensor_assignments": [
+        {
+          "assigned_model": 0,
+          "idx": 0,
+          "model_bits": 304585.1587062258,
+          "model_bytes": 38074,
+          "n_symbols": 48384,
+          "n_unique_symbols": 118,
+          "name": "stem.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 1,
+          "model_bits": 13459.907884157514,
+          "model_bytes": 1683,
+          "n_symbols": 1728,
+          "n_unique_symbols": 194,
+          "name": "stem.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 2,
+          "model_bits": 301489.1268263686,
+          "model_bytes": 37687,
+          "n_symbols": 46656,
+          "n_unique_symbols": 131,
+          "name": "blocks.0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 3,
+          "model_bits": 1210.020535384264,
+          "model_bytes": 152,
+          "n_symbols": 144,
+          "n_unique_symbols": 101,
+          "name": "blocks.0.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 4,
+          "model_bits": 293159.66395424417,
+          "model_bytes": 36645,
+          "n_symbols": 46656,
+          "n_unique_symbols": 151,
+          "name": "blocks.1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 5,
+          "model_bits": 1199.742319395129,
+          "model_bytes": 150,
+          "n_symbols": 144,
+          "n_unique_symbols": 96,
+          "name": "blocks.1.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 6,
+          "model_bits": 231037.61716452663,
+          "model_bytes": 28880,
+          "n_symbols": 34992,
+          "n_unique_symbols": 172,
+          "name": "blocks.2.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 7,
+          "model_bits": 962.2522194192608,
+          "model_bytes": 121,
+          "n_symbols": 108,
+          "n_unique_symbols": 88,
+          "name": "blocks.2.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 8,
+          "model_bits": 130614.45950911377,
+          "model_bytes": 16327,
+          "n_symbols": 19440,
+          "n_unique_symbols": 155,
+          "name": "blocks.3.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 9,
+          "model_bits": 605.6858058712522,
+          "model_bytes": 76,
+          "n_symbols": 80,
+          "n_unique_symbols": 63,
+          "name": "blocks.3.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 10,
+          "model_bits": 95096.49367917562,
+          "model_bytes": 11888,
+          "n_symbols": 12960,
+          "n_unique_symbols": 206,
+          "name": "blocks.4.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 11,
+          "model_bits": 602.2364989753906,
+          "model_bytes": 76,
+          "n_symbols": 72,
+          "n_unique_symbols": 60,
+          "name": "blocks.4.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 12,
+          "model_bits": 74505.95505470104,
+          "model_bytes": 9314,
+          "n_symbols": 11664,
+          "n_unique_symbols": 92,
+          "name": "blocks.5.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 13,
+          "model_bits": 536.182839939091,
+          "model_bytes": 68,
+          "n_symbols": 72,
+          "n_unique_symbols": 53,
+          "name": "blocks.5.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 14,
+          "model_bits": 7362.836026801457,
+          "model_bytes": 921,
+          "n_symbols": 972,
+          "n_unique_symbols": 77,
+          "name": "skips.2.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 15,
+          "model_bits": 239.8060146173072,
+          "model_bytes": 30,
+          "n_symbols": 27,
+          "n_unique_symbols": 23,
+          "name": "skips.2.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 16,
+          "model_bits": 4413.49965842859,
+          "model_bytes": 552,
+          "n_symbols": 540,
+          "n_unique_symbols": 92,
+          "name": "skips.3.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 17,
+          "model_bits": 176.69699771455106,
+          "model_bytes": 23,
+          "n_symbols": 20,
+          "n_unique_symbols": 20,
+          "name": "skips.3.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 18,
+          "model_bits": 3003.599531368387,
+          "model_bytes": 376,
+          "n_symbols": 360,
+          "n_unique_symbols": 73,
+          "name": "skips.4.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 19,
+          "model_bits": 188.13373235964164,
+          "model_bytes": 24,
+          "n_symbols": 18,
+          "n_unique_symbols": 18,
+          "name": "skips.4.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 20,
+          "model_bits": 9908.388087811578,
+          "model_bytes": 1239,
+          "n_symbols": 1458,
+          "n_unique_symbols": 73,
+          "name": "refine.0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 21,
+          "model_bits": 96.10260829523138,
+          "model_bytes": 13,
+          "n_symbols": 9,
+          "n_unique_symbols": 9,
+          "name": "refine.0.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 22,
+          "model_bits": 10911.379199826633,
+          "model_bytes": 1364,
+          "n_symbols": 1458,
+          "n_unique_symbols": 110,
+          "name": "refine.1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 23,
+          "model_bits": 186.54902648688508,
+          "model_bytes": 24,
+          "n_symbols": 18,
+          "n_unique_symbols": 17,
+          "name": "refine.1.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 24,
+          "model_bits": 3507.1668213430494,
+          "model_bytes": 439,
+          "n_symbols": 486,
+          "n_unique_symbols": 69,
+          "name": "rgb_0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 25,
+          "model_bits": 27.09939455252661,
+          "model_bytes": 4,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_0.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 26,
+          "model_bits": 3551.2953810382273,
+          "model_bytes": 444,
+          "n_symbols": 486,
+          "n_unique_symbols": 76,
+          "name": "rgb_1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 27,
+          "model_bits": 33.384423342697815,
+          "model_bytes": 5,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_1.bias"
+        }
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sharing_gain_vs_per_tensor_brotli_fp16_table_bytes": -23763,
+      "sharing_gain_vs_per_tensor_raw_fp16_table_bytes": -12956,
+      "transform": "identity",
+      "used_models": 1,
+      "verdict": "negative_loses_after_charging_model_bytes"
+    },
+    {
+      "archive_estimate_bytes": 195068,
+      "cluster_init": "schema_order",
+      "cluster_k": 2,
+      "cluster_sizes": [
+        27,
+        1
+      ],
+      "delta_vs_175916": 19152,
+      "delta_vs_178144": 16924,
+      "delta_vs_178181": 16887,
+      "delta_vs_brotli_optuna_archive_bytes": 16924,
+      "delta_vs_iid_per_tensor_floor_archive_bytes": 19152,
+      "delta_vs_per_tensor_aac_archive_bytes": 16887,
+      "fit_on_same_symbols": true,
+      "model_family": "shared_canonical_pmf_clusters",
+      "model_parameter_byte_estimate": {
+        "assignment_bytes": 4,
+        "brotli_parameter_bytes": 696,
+        "header_bytes": 16,
+        "parameter_encoding": "brotli_fp16_shared_pmf_tables_plus_assignments",
+        "primary_model_parameter_bytes": 716,
+        "raw_parameter_bytes": 1020
+      },
+      "model_parameter_bytes": 716,
+      "n_models": 2,
+      "n_symbols": 228958,
+      "n_tensors": 28,
+      "name": "shared_canonical_pmf_clusters_identity_k2",
+      "payload_estimate_bits": 1426061.2917650696,
+      "payload_estimate_bytes": 178258,
+      "per_tensor_assignments": [
+        {
+          "assigned_model": 1,
+          "idx": 0,
+          "model_bits": 252653.24545427578,
+          "model_bytes": 31582,
+          "n_symbols": 48384,
+          "n_unique_symbols": 118,
+          "name": "stem.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 1,
+          "model_bits": 13600.272406325661,
+          "model_bytes": 1701,
+          "n_symbols": 1728,
+          "n_unique_symbols": 194,
+          "name": "stem.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 2,
+          "model_bits": 291398.82141816884,
+          "model_bytes": 36425,
+          "n_symbols": 46656,
+          "n_unique_symbols": 131,
+          "name": "blocks.0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 3,
+          "model_bits": 1218.59089344771,
+          "model_bytes": 153,
+          "n_symbols": 144,
+          "n_unique_symbols": 101,
+          "name": "blocks.0.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 4,
+          "model_bits": 289554.7125284254,
+          "model_bytes": 36195,
+          "n_symbols": 46656,
+          "n_unique_symbols": 151,
+          "name": "blocks.1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 5,
+          "model_bits": 1201.2688071568523,
+          "model_bytes": 151,
+          "n_symbols": 144,
+          "n_unique_symbols": 96,
+          "name": "blocks.1.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 6,
+          "model_bits": 227801.73732282504,
+          "model_bytes": 28476,
+          "n_symbols": 34992,
+          "n_unique_symbols": 172,
+          "name": "blocks.2.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 7,
+          "model_bits": 956.8025220042905,
+          "model_bytes": 120,
+          "n_symbols": 108,
+          "n_unique_symbols": 88,
+          "name": "blocks.2.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 8,
+          "model_bits": 126952.8882683274,
+          "model_bytes": 15870,
+          "n_symbols": 19440,
+          "n_unique_symbols": 155,
+          "name": "blocks.3.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 9,
+          "model_bits": 615.0935453323324,
+          "model_bytes": 77,
+          "n_symbols": 80,
+          "n_unique_symbols": 63,
+          "name": "blocks.3.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 10,
+          "model_bits": 97262.95668884987,
+          "model_bytes": 12158,
+          "n_symbols": 12960,
+          "n_unique_symbols": 206,
+          "name": "blocks.4.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 11,
+          "model_bits": 600.1544062381801,
+          "model_bytes": 76,
+          "n_symbols": 72,
+          "n_unique_symbols": 60,
+          "name": "blocks.4.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 12,
+          "model_bits": 77218.39027491417,
+          "model_bytes": 9653,
+          "n_symbols": 11664,
+          "n_unique_symbols": 92,
+          "name": "blocks.5.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 13,
+          "model_bits": 533.7998669758383,
+          "model_bytes": 67,
+          "n_symbols": 72,
+          "n_unique_symbols": 53,
+          "name": "blocks.5.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 14,
+          "model_bits": 7395.132059057375,
+          "model_bytes": 925,
+          "n_symbols": 972,
+          "n_unique_symbols": 77,
+          "name": "skips.2.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 15,
+          "model_bits": 235.58983203957712,
+          "model_bytes": 30,
+          "n_symbols": 27,
+          "n_unique_symbols": 23,
+          "name": "skips.2.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 16,
+          "model_bits": 4462.065696904269,
+          "model_bytes": 558,
+          "n_symbols": 540,
+          "n_unique_symbols": 92,
+          "name": "skips.3.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 17,
+          "model_bits": 172.6258729024926,
+          "model_bytes": 22,
+          "n_symbols": 20,
+          "n_unique_symbols": 20,
+          "name": "skips.3.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 18,
+          "model_bits": 3017.8739385483505,
+          "model_bytes": 378,
+          "n_symbols": 360,
+          "n_unique_symbols": 73,
+          "name": "skips.4.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 19,
+          "model_bits": 187.66474446520792,
+          "model_bytes": 24,
+          "n_symbols": 18,
+          "n_unique_symbols": 18,
+          "name": "skips.4.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 20,
+          "model_bits": 10120.771633950091,
+          "model_bytes": 1266,
+          "n_symbols": 1458,
+          "n_unique_symbols": 73,
+          "name": "refine.0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 21,
+          "model_bits": 95.658520265245,
+          "model_bytes": 12,
+          "n_symbols": 9,
+          "n_unique_symbols": 9,
+          "name": "refine.0.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 22,
+          "model_bits": 11385.703506612686,
+          "model_bytes": 1424,
+          "n_symbols": 1458,
+          "n_unique_symbols": 110,
+          "name": "refine.1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 23,
+          "model_bits": 184.7195206204076,
+          "model_bytes": 24,
+          "n_symbols": 18,
+          "n_unique_symbols": 17,
+          "name": "refine.1.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 24,
+          "model_bits": 3590.1733658454714,
+          "model_bytes": 449,
+          "n_symbols": 486,
+          "n_unique_symbols": 69,
+          "name": "rgb_0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 25,
+          "model_bits": 27.61080274425358,
+          "model_bytes": 4,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_0.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 26,
+          "model_bits": 3584.2201995761234,
+          "model_bytes": 449,
+          "n_symbols": 486,
+          "n_unique_symbols": 76,
+          "name": "rgb_1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 27,
+          "model_bits": 32.74766827049979,
+          "model_bytes": 5,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_1.bias"
+        }
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sharing_gain_vs_per_tensor_brotli_fp16_table_bytes": -15679,
+      "sharing_gain_vs_per_tensor_raw_fp16_table_bytes": -4872,
+      "transform": "identity",
+      "used_models": 2,
+      "verdict": "negative_loses_after_charging_model_bytes"
+    },
+    {
+      "archive_estimate_bytes": 189887,
+      "cluster_init": "largest_tensors_first",
+      "cluster_k": 3,
+      "cluster_sizes": [
+        26,
+        1,
+        1
+      ],
+      "delta_vs_175916": 13971,
+      "delta_vs_178144": 11743,
+      "delta_vs_178181": 11706,
+      "delta_vs_brotli_optuna_archive_bytes": 11743,
+      "delta_vs_iid_per_tensor_floor_archive_bytes": 13971,
+      "delta_vs_per_tensor_aac_archive_bytes": 11706,
+      "fit_on_same_symbols": true,
+      "model_family": "shared_canonical_pmf_clusters",
+      "model_parameter_byte_estimate": {
+        "assignment_bytes": 7,
+        "brotli_parameter_bytes": 933,
+        "header_bytes": 16,
+        "parameter_encoding": "brotli_fp16_shared_pmf_tables_plus_assignments",
+        "primary_model_parameter_bytes": 956,
+        "raw_parameter_bytes": 1530
+      },
+      "model_parameter_bytes": 956,
+      "n_models": 3,
+      "n_symbols": 228958,
+      "n_tensors": 28,
+      "name": "shared_canonical_pmf_clusters_identity_k3",
+      "payload_estimate_bits": 1382695.1687334836,
+      "payload_estimate_bytes": 172837,
+      "per_tensor_assignments": [
+        {
+          "assigned_model": 1,
+          "idx": 0,
+          "model_bits": 252653.24545427578,
+          "model_bytes": 31582,
+          "n_symbols": 48384,
+          "n_unique_symbols": 118,
+          "name": "stem.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 1,
+          "model_bits": 13629.668690840728,
+          "model_bytes": 1704,
+          "n_symbols": 1728,
+          "n_unique_symbols": 194,
+          "name": "stem.bias"
+        },
+        {
+          "assigned_model": 2,
+          "idx": 2,
+          "model_bits": 258450.1797260704,
+          "model_bytes": 32307,
+          "n_symbols": 46656,
+          "n_unique_symbols": 131,
+          "name": "blocks.0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 3,
+          "model_bits": 1230.9078957249214,
+          "model_bytes": 154,
+          "n_symbols": 144,
+          "n_unique_symbols": 101,
+          "name": "blocks.0.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 4,
+          "model_bits": 283003.50932175526,
+          "model_bytes": 35376,
+          "n_symbols": 46656,
+          "n_unique_symbols": 151,
+          "name": "blocks.1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 5,
+          "model_bits": 1205.165815479171,
+          "model_bytes": 151,
+          "n_symbols": 144,
+          "n_unique_symbols": 96,
+          "name": "blocks.1.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 6,
+          "model_bits": 224047.02222593696,
+          "model_bytes": 28006,
+          "n_symbols": 34992,
+          "n_unique_symbols": 172,
+          "name": "blocks.2.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 7,
+          "model_bits": 964.0005520980749,
+          "model_bytes": 121,
+          "n_symbols": 108,
+          "n_unique_symbols": 88,
+          "name": "blocks.2.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 8,
+          "model_bits": 126986.79070938638,
+          "model_bytes": 15874,
+          "n_symbols": 19440,
+          "n_unique_symbols": 155,
+          "name": "blocks.3.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 9,
+          "model_bits": 607.7015133893187,
+          "model_bytes": 76,
+          "n_symbols": 80,
+          "n_unique_symbols": 63,
+          "name": "blocks.3.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 10,
+          "model_bits": 96107.57624279623,
+          "model_bytes": 12014,
+          "n_symbols": 12960,
+          "n_unique_symbols": 206,
+          "name": "blocks.4.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 11,
+          "model_bits": 595.4320467028095,
+          "model_bytes": 75,
+          "n_symbols": 72,
+          "n_unique_symbols": 60,
+          "name": "blocks.4.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 12,
+          "model_bits": 78033.29896373287,
+          "model_bytes": 9755,
+          "n_symbols": 11664,
+          "n_unique_symbols": 92,
+          "name": "blocks.5.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 13,
+          "model_bits": 536.1523384229213,
+          "model_bytes": 68,
+          "n_symbols": 72,
+          "n_unique_symbols": 53,
+          "name": "blocks.5.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 14,
+          "model_bits": 7602.095381573137,
+          "model_bytes": 951,
+          "n_symbols": 972,
+          "n_unique_symbols": 77,
+          "name": "skips.2.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 15,
+          "model_bits": 235.03803392537262,
+          "model_bytes": 30,
+          "n_symbols": 27,
+          "n_unique_symbols": 23,
+          "name": "skips.2.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 16,
+          "model_bits": 4384.898854217956,
+          "model_bytes": 549,
+          "n_symbols": 540,
+          "n_unique_symbols": 92,
+          "name": "skips.3.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 17,
+          "model_bits": 169.37295492291292,
+          "model_bytes": 22,
+          "n_symbols": 20,
+          "n_unique_symbols": 20,
+          "name": "skips.3.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 18,
+          "model_bits": 3028.1467749155745,
+          "model_bytes": 379,
+          "n_symbols": 360,
+          "n_unique_symbols": 73,
+          "name": "skips.4.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 19,
+          "model_bits": 182.2910144967751,
+          "model_bytes": 23,
+          "n_symbols": 18,
+          "n_unique_symbols": 18,
+          "name": "skips.4.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 20,
+          "model_bits": 10141.813381266034,
+          "model_bytes": 1268,
+          "n_symbols": 1458,
+          "n_unique_symbols": 73,
+          "name": "refine.0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 21,
+          "model_bits": 93.91397468823804,
+          "model_bytes": 12,
+          "n_symbols": 9,
+          "n_unique_symbols": 9,
+          "name": "refine.0.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 22,
+          "model_bits": 11417.61554967911,
+          "model_bytes": 1428,
+          "n_symbols": 1458,
+          "n_unique_symbols": 110,
+          "name": "refine.1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 23,
+          "model_bits": 183.13122215879093,
+          "model_bytes": 23,
+          "n_symbols": 18,
+          "n_unique_symbols": 17,
+          "name": "refine.1.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 24,
+          "model_bits": 3541.5489842338047,
+          "model_bytes": 443,
+          "n_symbols": 486,
+          "n_unique_symbols": 69,
+          "name": "rgb_0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 25,
+          "model_bits": 28.59772728767662,
+          "model_bytes": 4,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_0.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 26,
+          "model_bits": 3604.361977205522,
+          "model_bytes": 451,
+          "n_symbols": 486,
+          "n_unique_symbols": 76,
+          "name": "rgb_1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 27,
+          "model_bits": 31.691406300917794,
+          "model_bytes": 4,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_1.bias"
+        }
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sharing_gain_vs_per_tensor_brotli_fp16_table_bytes": -10498,
+      "sharing_gain_vs_per_tensor_raw_fp16_table_bytes": 309,
+      "transform": "identity",
+      "used_models": 3,
+      "verdict": "negative_loses_after_charging_model_bytes"
+    },
+    {
+      "archive_estimate_bytes": 185897,
+      "cluster_init": "largest_tensors_first",
+      "cluster_k": 4,
+      "cluster_sizes": [
+        25,
+        1,
+        1,
+        1
+      ],
+      "delta_vs_175916": 9981,
+      "delta_vs_178144": 7753,
+      "delta_vs_178181": 7716,
+      "delta_vs_brotli_optuna_archive_bytes": 7753,
+      "delta_vs_iid_per_tensor_floor_archive_bytes": 9981,
+      "delta_vs_per_tensor_aac_archive_bytes": 7716,
+      "fit_on_same_symbols": true,
+      "model_family": "shared_canonical_pmf_clusters",
+      "model_parameter_byte_estimate": {
+        "assignment_bytes": 7,
+        "brotli_parameter_bytes": 1119,
+        "header_bytes": 16,
+        "parameter_encoding": "brotli_fp16_shared_pmf_tables_plus_assignments",
+        "primary_model_parameter_bytes": 1142,
+        "raw_parameter_bytes": 2040
+      },
+      "model_parameter_bytes": 1142,
+      "n_models": 4,
+      "n_symbols": 228958,
+      "n_tensors": 28,
+      "name": "shared_canonical_pmf_clusters_identity_k4",
+      "payload_estimate_bits": 1349282.6327778727,
+      "payload_estimate_bytes": 168661,
+      "per_tensor_assignments": [
+        {
+          "assigned_model": 1,
+          "idx": 0,
+          "model_bits": 252653.24545427578,
+          "model_bytes": 31582,
+          "n_symbols": 48384,
+          "n_unique_symbols": 118,
+          "name": "stem.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 1,
+          "model_bits": 13471.60585300383,
+          "model_bytes": 1684,
+          "n_symbols": 1728,
+          "n_unique_symbols": 194,
+          "name": "stem.bias"
+        },
+        {
+          "assigned_model": 2,
+          "idx": 2,
+          "model_bits": 258450.1797260704,
+          "model_bytes": 32307,
+          "n_symbols": 46656,
+          "n_unique_symbols": 131,
+          "name": "blocks.0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 3,
+          "model_bits": 1201.164805824111,
+          "model_bytes": 151,
+          "n_symbols": 144,
+          "n_unique_symbols": 101,
+          "name": "blocks.0.bias"
+        },
+        {
+          "assigned_model": 3,
+          "idx": 4,
+          "model_bits": 259467.50766665686,
+          "model_bytes": 32434,
+          "n_symbols": 46656,
+          "n_unique_symbols": 151,
+          "name": "blocks.1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 5,
+          "model_bits": 1185.0537322647838,
+          "model_bytes": 149,
+          "n_symbols": 144,
+          "n_unique_symbols": 96,
+          "name": "blocks.1.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 6,
+          "model_bits": 220432.46646946366,
+          "model_bytes": 27555,
+          "n_symbols": 34992,
+          "n_unique_symbols": 172,
+          "name": "blocks.2.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 7,
+          "model_bits": 943.1369044001135,
+          "model_bytes": 118,
+          "n_symbols": 108,
+          "n_unique_symbols": 88,
+          "name": "blocks.2.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 8,
+          "model_bits": 127504.74636360866,
+          "model_bytes": 15939,
+          "n_symbols": 19440,
+          "n_unique_symbols": 155,
+          "name": "blocks.3.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 9,
+          "model_bits": 607.1858151943662,
+          "model_bytes": 76,
+          "n_symbols": 80,
+          "n_unique_symbols": 63,
+          "name": "blocks.3.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 10,
+          "model_bits": 93287.53770546702,
+          "model_bytes": 11661,
+          "n_symbols": 12960,
+          "n_unique_symbols": 206,
+          "name": "blocks.4.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 11,
+          "model_bits": 592.1009603011339,
+          "model_bytes": 75,
+          "n_symbols": 72,
+          "n_unique_symbols": 60,
+          "name": "blocks.4.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 12,
+          "model_bits": 74702.48173075069,
+          "model_bytes": 9338,
+          "n_symbols": 11664,
+          "n_unique_symbols": 92,
+          "name": "blocks.5.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 13,
+          "model_bits": 540.6474282571617,
+          "model_bytes": 68,
+          "n_symbols": 72,
+          "n_unique_symbols": 53,
+          "name": "blocks.5.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 14,
+          "model_bits": 7443.153842655925,
+          "model_bytes": 931,
+          "n_symbols": 972,
+          "n_unique_symbols": 77,
+          "name": "skips.2.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 15,
+          "model_bits": 234.54181835254235,
+          "model_bytes": 30,
+          "n_symbols": 27,
+          "n_unique_symbols": 23,
+          "name": "skips.2.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 16,
+          "model_bits": 4360.0853275117115,
+          "model_bytes": 546,
+          "n_symbols": 540,
+          "n_unique_symbols": 92,
+          "name": "skips.3.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 17,
+          "model_bits": 171.7693124977708,
+          "model_bytes": 22,
+          "n_symbols": 20,
+          "n_unique_symbols": 20,
+          "name": "skips.3.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 18,
+          "model_bits": 2934.4987237265345,
+          "model_bytes": 367,
+          "n_symbols": 360,
+          "n_unique_symbols": 73,
+          "name": "skips.4.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 19,
+          "model_bits": 179.77821462917834,
+          "model_bytes": 23,
+          "n_symbols": 18,
+          "n_unique_symbols": 18,
+          "name": "skips.4.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 20,
+          "model_bits": 10255.778022136417,
+          "model_bytes": 1282,
+          "n_symbols": 1458,
+          "n_unique_symbols": 73,
+          "name": "refine.0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 21,
+          "model_bits": 89.77590063545556,
+          "model_bytes": 12,
+          "n_symbols": 9,
+          "n_unique_symbols": 9,
+          "name": "refine.0.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 22,
+          "model_bits": 11199.422990161655,
+          "model_bytes": 1400,
+          "n_symbols": 1458,
+          "n_unique_symbols": 110,
+          "name": "refine.1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 23,
+          "model_bits": 179.00193481018306,
+          "model_bytes": 23,
+          "n_symbols": 18,
+          "n_unique_symbols": 17,
+          "name": "refine.1.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 24,
+          "model_bits": 3622.07138106715,
+          "model_bytes": 453,
+          "n_symbols": 486,
+          "n_unique_symbols": 69,
+          "name": "rgb_0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 25,
+          "model_bits": 26.74374152004691,
+          "model_bytes": 4,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_0.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 26,
+          "model_bits": 3516.341682469226,
+          "model_bytes": 440,
+          "n_symbols": 486,
+          "n_unique_symbols": 76,
+          "name": "rgb_1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 27,
+          "model_bits": 30.609270160432462,
+          "model_bytes": 4,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_1.bias"
+        }
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sharing_gain_vs_per_tensor_brotli_fp16_table_bytes": -6508,
+      "sharing_gain_vs_per_tensor_raw_fp16_table_bytes": 4299,
+      "transform": "identity",
+      "used_models": 4,
+      "verdict": "negative_loses_after_charging_model_bytes"
+    },
+    {
+      "archive_estimate_bytes": 183065,
+      "cluster_init": "largest_tensors_first",
+      "cluster_k": 5,
+      "cluster_sizes": [
+        23,
+        1,
+        1,
+        1,
+        2
+      ],
+      "delta_vs_175916": 7149,
+      "delta_vs_178144": 4921,
+      "delta_vs_178181": 4884,
+      "delta_vs_brotli_optuna_archive_bytes": 4921,
+      "delta_vs_iid_per_tensor_floor_archive_bytes": 7149,
+      "delta_vs_per_tensor_aac_archive_bytes": 4884,
+      "fit_on_same_symbols": true,
+      "model_family": "shared_canonical_pmf_clusters",
+      "model_parameter_byte_estimate": {
+        "assignment_bytes": 11,
+        "brotli_parameter_bytes": 1416,
+        "header_bytes": 16,
+        "parameter_encoding": "brotli_fp16_shared_pmf_tables_plus_assignments",
+        "primary_model_parameter_bytes": 1443,
+        "raw_parameter_bytes": 2550
+      },
+      "model_parameter_bytes": 1443,
+      "n_models": 5,
+      "n_symbols": 228958,
+      "n_tensors": 28,
+      "name": "shared_canonical_pmf_clusters_identity_k5",
+      "payload_estimate_bits": 1324223.7965952817,
+      "payload_estimate_bytes": 165528,
+      "per_tensor_assignments": [
+        {
+          "assigned_model": 1,
+          "idx": 0,
+          "model_bits": 252653.24545427578,
+          "model_bytes": 31582,
+          "n_symbols": 48384,
+          "n_unique_symbols": 118,
+          "name": "stem.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 1,
+          "model_bits": 13316.105424618057,
+          "model_bytes": 1665,
+          "n_symbols": 1728,
+          "n_unique_symbols": 194,
+          "name": "stem.bias"
+        },
+        {
+          "assigned_model": 2,
+          "idx": 2,
+          "model_bits": 258450.1797260704,
+          "model_bytes": 32307,
+          "n_symbols": 46656,
+          "n_unique_symbols": 131,
+          "name": "blocks.0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 3,
+          "model_bits": 1179.319053351475,
+          "model_bytes": 148,
+          "n_symbols": 144,
+          "n_unique_symbols": 101,
+          "name": "blocks.0.bias"
+        },
+        {
+          "assigned_model": 3,
+          "idx": 4,
+          "model_bits": 259467.50766665686,
+          "model_bytes": 32434,
+          "n_symbols": 46656,
+          "n_unique_symbols": 151,
+          "name": "blocks.1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 5,
+          "model_bits": 1166.0644987496207,
+          "model_bytes": 146,
+          "n_symbols": 144,
+          "n_unique_symbols": 96,
+          "name": "blocks.1.bias"
+        },
+        {
+          "assigned_model": 4,
+          "idx": 6,
+          "model_bits": 203492.16384941776,
+          "model_bytes": 25437,
+          "n_symbols": 34992,
+          "n_unique_symbols": 172,
+          "name": "blocks.2.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 7,
+          "model_bits": 936.3974472374077,
+          "model_bytes": 118,
+          "n_symbols": 108,
+          "n_unique_symbols": 88,
+          "name": "blocks.2.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 8,
+          "model_bits": 124201.86545039293,
+          "model_bytes": 15526,
+          "n_symbols": 19440,
+          "n_unique_symbols": 155,
+          "name": "blocks.3.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 9,
+          "model_bits": 604.8857615429226,
+          "model_bytes": 76,
+          "n_symbols": 80,
+          "n_unique_symbols": 63,
+          "name": "blocks.3.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 10,
+          "model_bits": 91152.28875985151,
+          "model_bytes": 11395,
+          "n_symbols": 12960,
+          "n_unique_symbols": 206,
+          "name": "blocks.4.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 11,
+          "model_bits": 587.4605430466013,
+          "model_bytes": 74,
+          "n_symbols": 72,
+          "n_unique_symbols": 60,
+          "name": "blocks.4.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 12,
+          "model_bits": 73060.056847397,
+          "model_bytes": 9133,
+          "n_symbols": 11664,
+          "n_unique_symbols": 92,
+          "name": "blocks.5.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 13,
+          "model_bits": 538.4889766589494,
+          "model_bytes": 68,
+          "n_symbols": 72,
+          "n_unique_symbols": 53,
+          "name": "blocks.5.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 14,
+          "model_bits": 7305.860936872341,
+          "model_bytes": 914,
+          "n_symbols": 972,
+          "n_unique_symbols": 77,
+          "name": "skips.2.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 15,
+          "model_bits": 229.49942611395582,
+          "model_bytes": 29,
+          "n_symbols": 27,
+          "n_unique_symbols": 23,
+          "name": "skips.2.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 16,
+          "model_bits": 4346.008775279114,
+          "model_bytes": 544,
+          "n_symbols": 540,
+          "n_unique_symbols": 92,
+          "name": "skips.3.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 17,
+          "model_bits": 179.1054686724205,
+          "model_bytes": 23,
+          "n_symbols": 20,
+          "n_unique_symbols": 20,
+          "name": "skips.3.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 18,
+          "model_bits": 2948.078482892071,
+          "model_bytes": 369,
+          "n_symbols": 360,
+          "n_unique_symbols": 73,
+          "name": "skips.4.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 19,
+          "model_bits": 171.84589770705722,
+          "model_bytes": 22,
+          "n_symbols": 18,
+          "n_unique_symbols": 18,
+          "name": "skips.4.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 20,
+          "model_bits": 9824.632451803085,
+          "model_bytes": 1229,
+          "n_symbols": 1458,
+          "n_unique_symbols": 73,
+          "name": "refine.0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 21,
+          "model_bits": 88.00714620523756,
+          "model_bytes": 12,
+          "n_symbols": 9,
+          "n_unique_symbols": 9,
+          "name": "refine.0.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 22,
+          "model_bits": 10946.445341088893,
+          "model_bytes": 1369,
+          "n_symbols": 1458,
+          "n_unique_symbols": 110,
+          "name": "refine.1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 23,
+          "model_bits": 178.9043036769222,
+          "model_bytes": 23,
+          "n_symbols": 18,
+          "n_unique_symbols": 17,
+          "name": "refine.1.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 24,
+          "model_bits": 3627.471876424778,
+          "model_bytes": 454,
+          "n_symbols": 486,
+          "n_unique_symbols": 69,
+          "name": "rgb_0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 25,
+          "model_bits": 24.528144529130977,
+          "model_bytes": 4,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_0.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 26,
+          "model_bits": 3517.293967302159,
+          "model_bytes": 440,
+          "n_symbols": 486,
+          "n_unique_symbols": 76,
+          "name": "rgb_1.weight"
+        },
+        {
+          "assigned_model": 4,
+          "idx": 27,
+          "model_bits": 30.084917447392726,
+          "model_bytes": 4,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_1.bias"
+        }
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sharing_gain_vs_per_tensor_brotli_fp16_table_bytes": -3676,
+      "sharing_gain_vs_per_tensor_raw_fp16_table_bytes": 7131,
+      "transform": "identity",
+      "used_models": 5,
+      "verdict": "negative_loses_after_charging_model_bytes"
+    },
+    {
+      "archive_estimate_bytes": 181121,
+      "cluster_init": "largest_tensors_first",
+      "cluster_k": 6,
+      "cluster_sizes": [
+        22,
+        1,
+        1,
+        1,
+        2,
+        1
+      ],
+      "delta_vs_175916": 5205,
+      "delta_vs_178144": 2977,
+      "delta_vs_178181": 2940,
+      "delta_vs_brotli_optuna_archive_bytes": 2977,
+      "delta_vs_iid_per_tensor_floor_archive_bytes": 5205,
+      "delta_vs_per_tensor_aac_archive_bytes": 2940,
+      "fit_on_same_symbols": true,
+      "model_family": "shared_canonical_pmf_clusters",
+      "model_parameter_byte_estimate": {
+        "assignment_bytes": 11,
+        "brotli_parameter_bytes": 1676,
+        "header_bytes": 16,
+        "parameter_encoding": "brotli_fp16_shared_pmf_tables_plus_assignments",
+        "primary_model_parameter_bytes": 1703,
+        "raw_parameter_bytes": 3060
+      },
+      "model_parameter_bytes": 1703,
+      "n_models": 6,
+      "n_symbols": 228958,
+      "n_tensors": 28,
+      "name": "shared_canonical_pmf_clusters_identity_k6",
+      "payload_estimate_bits": 1306589.2123016359,
+      "payload_estimate_bytes": 163324,
+      "per_tensor_assignments": [
+        {
+          "assigned_model": 1,
+          "idx": 0,
+          "model_bits": 252653.24545427578,
+          "model_bytes": 31582,
+          "n_symbols": 48384,
+          "n_unique_symbols": 118,
+          "name": "stem.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 1,
+          "model_bits": 13327.521986029898,
+          "model_bytes": 1666,
+          "n_symbols": 1728,
+          "n_unique_symbols": 194,
+          "name": "stem.bias"
+        },
+        {
+          "assigned_model": 2,
+          "idx": 2,
+          "model_bits": 258450.1797260704,
+          "model_bytes": 32307,
+          "n_symbols": 46656,
+          "n_unique_symbols": 131,
+          "name": "blocks.0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 3,
+          "model_bits": 1167.605351919893,
+          "model_bytes": 146,
+          "n_symbols": 144,
+          "n_unique_symbols": 101,
+          "name": "blocks.0.bias"
+        },
+        {
+          "assigned_model": 3,
+          "idx": 4,
+          "model_bits": 259467.50766665686,
+          "model_bytes": 32434,
+          "n_symbols": 46656,
+          "n_unique_symbols": 151,
+          "name": "blocks.1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 5,
+          "model_bits": 1167.108085393328,
+          "model_bytes": 146,
+          "n_symbols": 144,
+          "n_unique_symbols": 96,
+          "name": "blocks.1.bias"
+        },
+        {
+          "assigned_model": 4,
+          "idx": 6,
+          "model_bits": 203492.16384941776,
+          "model_bytes": 25437,
+          "n_symbols": 34992,
+          "n_unique_symbols": 172,
+          "name": "blocks.2.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 7,
+          "model_bits": 931.9247041131682,
+          "model_bytes": 117,
+          "n_symbols": 108,
+          "n_unique_symbols": 88,
+          "name": "blocks.2.bias"
+        },
+        {
+          "assigned_model": 5,
+          "idx": 8,
+          "model_bits": 112182.13694060061,
+          "model_bytes": 14023,
+          "n_symbols": 19440,
+          "n_unique_symbols": 155,
+          "name": "blocks.3.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 9,
+          "model_bits": 604.4337229743055,
+          "model_bytes": 76,
+          "n_symbols": 80,
+          "n_unique_symbols": 63,
+          "name": "blocks.3.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 10,
+          "model_bits": 88260.40110362222,
+          "model_bytes": 11033,
+          "n_symbols": 12960,
+          "n_unique_symbols": 206,
+          "name": "blocks.4.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 11,
+          "model_bits": 578.5206997131082,
+          "model_bytes": 73,
+          "n_symbols": 72,
+          "n_unique_symbols": 60,
+          "name": "blocks.4.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 12,
+          "model_bits": 70283.80575084787,
+          "model_bytes": 8786,
+          "n_symbols": 11664,
+          "n_unique_symbols": 92,
+          "name": "blocks.5.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 13,
+          "model_bits": 550.896741458704,
+          "model_bytes": 69,
+          "n_symbols": 72,
+          "n_unique_symbols": 53,
+          "name": "blocks.5.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 14,
+          "model_bits": 7232.122700485911,
+          "model_bytes": 905,
+          "n_symbols": 972,
+          "n_unique_symbols": 77,
+          "name": "skips.2.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 15,
+          "model_bits": 228.1229423046442,
+          "model_bytes": 29,
+          "n_symbols": 27,
+          "n_unique_symbols": 23,
+          "name": "skips.2.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 16,
+          "model_bits": 4284.794472282819,
+          "model_bytes": 536,
+          "n_symbols": 540,
+          "n_unique_symbols": 92,
+          "name": "skips.3.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 17,
+          "model_bits": 174.99392408226703,
+          "model_bytes": 22,
+          "n_symbols": 20,
+          "n_unique_symbols": 20,
+          "name": "skips.3.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 18,
+          "model_bits": 3001.37349865637,
+          "model_bytes": 376,
+          "n_symbols": 360,
+          "n_unique_symbols": 73,
+          "name": "skips.4.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 19,
+          "model_bits": 171.3329559646222,
+          "model_bytes": 22,
+          "n_symbols": 18,
+          "n_unique_symbols": 18,
+          "name": "skips.4.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 20,
+          "model_bits": 10123.911904395074,
+          "model_bytes": 1266,
+          "n_symbols": 1458,
+          "n_unique_symbols": 73,
+          "name": "refine.0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 21,
+          "model_bits": 87.40632253522828,
+          "model_bytes": 11,
+          "n_symbols": 9,
+          "n_unique_symbols": 9,
+          "name": "refine.0.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 22,
+          "model_bits": 10767.284768644493,
+          "model_bytes": 1346,
+          "n_symbols": 1458,
+          "n_unique_symbols": 110,
+          "name": "refine.1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 23,
+          "model_bits": 173.6348426608888,
+          "model_bytes": 22,
+          "n_symbols": 18,
+          "n_unique_symbols": 17,
+          "name": "refine.1.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 24,
+          "model_bits": 3610.069545198638,
+          "model_bytes": 452,
+          "n_symbols": 486,
+          "n_unique_symbols": 69,
+          "name": "rgb_0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 25,
+          "model_bits": 22.616398108764788,
+          "model_bytes": 3,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_0.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 26,
+          "model_bits": 3564.011325775081,
+          "model_bytes": 446,
+          "n_symbols": 486,
+          "n_unique_symbols": 76,
+          "name": "rgb_1.weight"
+        },
+        {
+          "assigned_model": 4,
+          "idx": 27,
+          "model_bits": 30.084917447392726,
+          "model_bytes": 4,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_1.bias"
+        }
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sharing_gain_vs_per_tensor_brotli_fp16_table_bytes": -1732,
+      "sharing_gain_vs_per_tensor_raw_fp16_table_bytes": 9075,
+      "transform": "identity",
+      "used_models": 6,
+      "verdict": "negative_loses_after_charging_model_bytes"
+    },
+    {
+      "archive_estimate_bytes": 180000,
+      "cluster_init": "largest_tensors_first",
+      "cluster_k": 7,
+      "cluster_sizes": [
+        21,
+        1,
+        1,
+        1,
+        2,
+        1,
+        1
+      ],
+      "delta_vs_175916": 4084,
+      "delta_vs_178144": 1856,
+      "delta_vs_178181": 1819,
+      "delta_vs_brotli_optuna_archive_bytes": 1856,
+      "delta_vs_iid_per_tensor_floor_archive_bytes": 4084,
+      "delta_vs_per_tensor_aac_archive_bytes": 1819,
+      "fit_on_same_symbols": true,
+      "model_family": "shared_canonical_pmf_clusters",
+      "model_parameter_byte_estimate": {
+        "assignment_bytes": 11,
+        "brotli_parameter_bytes": 1927,
+        "header_bytes": 16,
+        "parameter_encoding": "brotli_fp16_shared_pmf_tables_plus_assignments",
+        "primary_model_parameter_bytes": 1954,
+        "raw_parameter_bytes": 3570
+      },
+      "model_parameter_bytes": 1954,
+      "n_models": 7,
+      "n_symbols": 228958,
+      "n_tensors": 28,
+      "name": "shared_canonical_pmf_clusters_identity_k7",
+      "payload_estimate_bits": 1295612.7121480322,
+      "payload_estimate_bytes": 161952,
+      "per_tensor_assignments": [
+        {
+          "assigned_model": 1,
+          "idx": 0,
+          "model_bits": 252653.24545427578,
+          "model_bytes": 31582,
+          "n_symbols": 48384,
+          "n_unique_symbols": 118,
+          "name": "stem.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 1,
+          "model_bits": 13511.845938857366,
+          "model_bytes": 1689,
+          "n_symbols": 1728,
+          "n_unique_symbols": 194,
+          "name": "stem.bias"
+        },
+        {
+          "assigned_model": 2,
+          "idx": 2,
+          "model_bits": 258450.1797260704,
+          "model_bytes": 32307,
+          "n_symbols": 46656,
+          "n_unique_symbols": 131,
+          "name": "blocks.0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 3,
+          "model_bits": 1192.8045882380063,
+          "model_bytes": 150,
+          "n_symbols": 144,
+          "n_unique_symbols": 101,
+          "name": "blocks.0.bias"
+        },
+        {
+          "assigned_model": 3,
+          "idx": 4,
+          "model_bits": 259467.50766665686,
+          "model_bytes": 32434,
+          "n_symbols": 46656,
+          "n_unique_symbols": 151,
+          "name": "blocks.1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 5,
+          "model_bits": 1169.3483795431744,
+          "model_bytes": 147,
+          "n_symbols": 144,
+          "n_unique_symbols": 96,
+          "name": "blocks.1.bias"
+        },
+        {
+          "assigned_model": 4,
+          "idx": 6,
+          "model_bits": 203492.16384941776,
+          "model_bytes": 25437,
+          "n_symbols": 34992,
+          "n_unique_symbols": 172,
+          "name": "blocks.2.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 7,
+          "model_bits": 933.1061480352912,
+          "model_bytes": 117,
+          "n_symbols": 108,
+          "n_unique_symbols": 88,
+          "name": "blocks.2.bias"
+        },
+        {
+          "assigned_model": 5,
+          "idx": 8,
+          "model_bits": 112182.13694060061,
+          "model_bytes": 14023,
+          "n_symbols": 19440,
+          "n_unique_symbols": 155,
+          "name": "blocks.3.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 9,
+          "model_bits": 625.949589533406,
+          "model_bytes": 79,
+          "n_symbols": 80,
+          "n_unique_symbols": 63,
+          "name": "blocks.3.bias"
+        },
+        {
+          "assigned_model": 6,
+          "idx": 10,
+          "model_bits": 81252.94882369254,
+          "model_bytes": 10157,
+          "n_symbols": 12960,
+          "n_unique_symbols": 206,
+          "name": "blocks.4.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 11,
+          "model_bits": 599.5887511504151,
+          "model_bytes": 75,
+          "n_symbols": 72,
+          "n_unique_symbols": 60,
+          "name": "blocks.4.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 12,
+          "model_bits": 65922.26270506406,
+          "model_bytes": 8241,
+          "n_symbols": 11664,
+          "n_unique_symbols": 92,
+          "name": "blocks.5.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 13,
+          "model_bits": 554.8680141359674,
+          "model_bytes": 70,
+          "n_symbols": 72,
+          "n_unique_symbols": 53,
+          "name": "blocks.5.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 14,
+          "model_bits": 7411.843669586717,
+          "model_bytes": 927,
+          "n_symbols": 972,
+          "n_unique_symbols": 77,
+          "name": "skips.2.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 15,
+          "model_bits": 234.22092027998224,
+          "model_bytes": 30,
+          "n_symbols": 27,
+          "n_unique_symbols": 23,
+          "name": "skips.2.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 16,
+          "model_bits": 4281.545497102449,
+          "model_bytes": 536,
+          "n_symbols": 540,
+          "n_unique_symbols": 92,
+          "name": "skips.3.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 17,
+          "model_bits": 176.36313848187575,
+          "model_bytes": 23,
+          "n_symbols": 20,
+          "n_unique_symbols": 20,
+          "name": "skips.3.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 18,
+          "model_bits": 2940.1334087158984,
+          "model_bytes": 368,
+          "n_symbols": 360,
+          "n_unique_symbols": 73,
+          "name": "skips.4.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 19,
+          "model_bits": 176.1795545400664,
+          "model_bytes": 23,
+          "n_symbols": 18,
+          "n_unique_symbols": 18,
+          "name": "skips.4.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 20,
+          "model_bits": 10008.671244286686,
+          "model_bytes": 1252,
+          "n_symbols": 1458,
+          "n_unique_symbols": 73,
+          "name": "refine.0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 21,
+          "model_bits": 85.94852684081567,
+          "model_bytes": 11,
+          "n_symbols": 9,
+          "n_unique_symbols": 9,
+          "name": "refine.0.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 22,
+          "model_bits": 10823.08786511734,
+          "model_bytes": 1353,
+          "n_symbols": 1458,
+          "n_unique_symbols": 110,
+          "name": "refine.1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 23,
+          "model_bits": 178.3677132816703,
+          "model_bytes": 23,
+          "n_symbols": 18,
+          "n_unique_symbols": 17,
+          "name": "refine.1.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 24,
+          "model_bits": 3598.6021287214726,
+          "model_bytes": 450,
+          "n_symbols": 486,
+          "n_unique_symbols": 69,
+          "name": "rgb_0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 25,
+          "model_bits": 22.79728533067921,
+          "model_bytes": 3,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_0.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 26,
+          "model_bits": 3636.909703027512,
+          "model_bytes": 455,
+          "n_symbols": 486,
+          "n_unique_symbols": 76,
+          "name": "rgb_1.weight"
+        },
+        {
+          "assigned_model": 4,
+          "idx": 27,
+          "model_bits": 30.084917447392726,
+          "model_bytes": 4,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_1.bias"
+        }
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sharing_gain_vs_per_tensor_brotli_fp16_table_bytes": -611,
+      "sharing_gain_vs_per_tensor_raw_fp16_table_bytes": 10196,
+      "transform": "identity",
+      "used_models": 7,
+      "verdict": "negative_loses_after_charging_model_bytes"
+    },
+    {
+      "archive_estimate_bytes": 179101,
+      "cluster_init": "largest_tensors_first",
+      "cluster_k": 8,
+      "cluster_sizes": [
+        21,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "delta_vs_175916": 3185,
+      "delta_vs_178144": 957,
+      "delta_vs_178181": 920,
+      "delta_vs_brotli_optuna_archive_bytes": 957,
+      "delta_vs_iid_per_tensor_floor_archive_bytes": 3185,
+      "delta_vs_per_tensor_aac_archive_bytes": 920,
+      "fit_on_same_symbols": true,
+      "model_family": "shared_canonical_pmf_clusters",
+      "model_parameter_byte_estimate": {
+        "assignment_bytes": 11,
+        "brotli_parameter_bytes": 2071,
+        "header_bytes": 16,
+        "parameter_encoding": "brotli_fp16_shared_pmf_tables_plus_assignments",
+        "primary_model_parameter_bytes": 2098,
+        "raw_parameter_bytes": 4080
+      },
+      "model_parameter_bytes": 2098,
+      "n_models": 8,
+      "n_symbols": 228958,
+      "n_tensors": 28,
+      "name": "shared_canonical_pmf_clusters_identity_k8",
+      "payload_estimate_bits": 1287264.9782619248,
+      "payload_estimate_bytes": 160909,
+      "per_tensor_assignments": [
+        {
+          "assigned_model": 1,
+          "idx": 0,
+          "model_bits": 252653.24545427578,
+          "model_bytes": 31582,
+          "n_symbols": 48384,
+          "n_unique_symbols": 118,
+          "name": "stem.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 1,
+          "model_bits": 12750.444746071757,
+          "model_bytes": 1594,
+          "n_symbols": 1728,
+          "n_unique_symbols": 194,
+          "name": "stem.bias"
+        },
+        {
+          "assigned_model": 2,
+          "idx": 2,
+          "model_bits": 258450.1797260704,
+          "model_bytes": 32307,
+          "n_symbols": 46656,
+          "n_unique_symbols": 131,
+          "name": "blocks.0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 3,
+          "model_bits": 1108.1688401793297,
+          "model_bytes": 139,
+          "n_symbols": 144,
+          "n_unique_symbols": 101,
+          "name": "blocks.0.bias"
+        },
+        {
+          "assigned_model": 3,
+          "idx": 4,
+          "model_bits": 259467.50766665686,
+          "model_bytes": 32434,
+          "n_symbols": 46656,
+          "n_unique_symbols": 151,
+          "name": "blocks.1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 5,
+          "model_bits": 1099.6004319438855,
+          "model_bytes": 138,
+          "n_symbols": 144,
+          "n_unique_symbols": 96,
+          "name": "blocks.1.bias"
+        },
+        {
+          "assigned_model": 4,
+          "idx": 6,
+          "model_bits": 203491.70735093427,
+          "model_bytes": 25437,
+          "n_symbols": 34992,
+          "n_unique_symbols": 172,
+          "name": "blocks.2.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 7,
+          "model_bits": 863.6567496733857,
+          "model_bytes": 108,
+          "n_symbols": 108,
+          "n_unique_symbols": 88,
+          "name": "blocks.2.bias"
+        },
+        {
+          "assigned_model": 5,
+          "idx": 8,
+          "model_bits": 112182.13694060061,
+          "model_bytes": 14023,
+          "n_symbols": 19440,
+          "n_unique_symbols": 155,
+          "name": "blocks.3.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 9,
+          "model_bits": 579.0886038862708,
+          "model_bytes": 73,
+          "n_symbols": 80,
+          "n_unique_symbols": 63,
+          "name": "blocks.3.bias"
+        },
+        {
+          "assigned_model": 6,
+          "idx": 10,
+          "model_bits": 81252.94882369254,
+          "model_bytes": 10157,
+          "n_symbols": 12960,
+          "n_unique_symbols": 206,
+          "name": "blocks.4.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 11,
+          "model_bits": 559.4112631772703,
+          "model_bytes": 70,
+          "n_symbols": 72,
+          "n_unique_symbols": 60,
+          "name": "blocks.4.bias"
+        },
+        {
+          "assigned_model": 7,
+          "idx": 12,
+          "model_bits": 61355.879420759724,
+          "model_bytes": 7670,
+          "n_symbols": 11664,
+          "n_unique_symbols": 92,
+          "name": "blocks.5.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 13,
+          "model_bits": 515.8705645577962,
+          "model_bytes": 65,
+          "n_symbols": 72,
+          "n_unique_symbols": 53,
+          "name": "blocks.5.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 14,
+          "model_bits": 6866.323871369079,
+          "model_bytes": 859,
+          "n_symbols": 972,
+          "n_unique_symbols": 77,
+          "name": "skips.2.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 15,
+          "model_bits": 213.0826747954068,
+          "model_bytes": 27,
+          "n_symbols": 27,
+          "n_unique_symbols": 23,
+          "name": "skips.2.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 16,
+          "model_bits": 3983.8578109067416,
+          "model_bytes": 498,
+          "n_symbols": 540,
+          "n_unique_symbols": 92,
+          "name": "skips.3.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 17,
+          "model_bits": 161.78937674997448,
+          "model_bytes": 21,
+          "n_symbols": 20,
+          "n_unique_symbols": 20,
+          "name": "skips.3.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 18,
+          "model_bits": 2722.505459164097,
+          "model_bytes": 341,
+          "n_symbols": 360,
+          "n_unique_symbols": 73,
+          "name": "skips.4.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 19,
+          "model_bits": 162.60451200697963,
+          "model_bytes": 21,
+          "n_symbols": 18,
+          "n_unique_symbols": 18,
+          "name": "skips.4.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 20,
+          "model_bits": 9673.518647668096,
+          "model_bytes": 1210,
+          "n_symbols": 1458,
+          "n_unique_symbols": 73,
+          "name": "refine.0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 21,
+          "model_bits": 80.97642171099261,
+          "model_bytes": 11,
+          "n_symbols": 9,
+          "n_unique_symbols": 9,
+          "name": "refine.0.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 22,
+          "model_bits": 10018.519775643459,
+          "model_bytes": 1253,
+          "n_symbols": 1458,
+          "n_unique_symbols": 110,
+          "name": "refine.1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 23,
+          "model_bits": 158.66282720885363,
+          "model_bytes": 20,
+          "n_symbols": 18,
+          "n_unique_symbols": 17,
+          "name": "refine.1.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 24,
+          "model_bits": 3373.1706216218804,
+          "model_bytes": 422,
+          "n_symbols": 486,
+          "n_unique_symbols": 69,
+          "name": "rgb_0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 25,
+          "model_bits": 21.715974495369785,
+          "model_bytes": 3,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_0.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 26,
+          "model_bits": 3469.958701886489,
+          "model_bytes": 434,
+          "n_symbols": 486,
+          "n_unique_symbols": 76,
+          "name": "rgb_1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 27,
+          "model_bits": 28.445004217635002,
+          "model_bytes": 4,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_1.bias"
+        }
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sharing_gain_vs_per_tensor_brotli_fp16_table_bytes": 288,
+      "sharing_gain_vs_per_tensor_raw_fp16_table_bytes": 11095,
+      "transform": "identity",
+      "used_models": 8,
+      "verdict": "negative_loses_after_charging_model_bytes"
+    },
+    {
+      "archive_estimate_bytes": 179256,
+      "cluster_init": "largest_tensors_first",
+      "cluster_k": 9,
+      "cluster_sizes": [
+        19,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2
+      ],
+      "delta_vs_175916": 3340,
+      "delta_vs_178144": 1112,
+      "delta_vs_178181": 1075,
+      "delta_vs_brotli_optuna_archive_bytes": 1112,
+      "delta_vs_iid_per_tensor_floor_archive_bytes": 3340,
+      "delta_vs_per_tensor_aac_archive_bytes": 1075,
+      "fit_on_same_symbols": true,
+      "model_family": "shared_canonical_pmf_clusters",
+      "model_parameter_byte_estimate": {
+        "assignment_bytes": 14,
+        "brotli_parameter_bytes": 2277,
+        "header_bytes": 16,
+        "parameter_encoding": "brotli_fp16_shared_pmf_tables_plus_assignments",
+        "primary_model_parameter_bytes": 2307,
+        "raw_parameter_bytes": 4590
+      },
+      "model_parameter_bytes": 2307,
+      "n_models": 9,
+      "n_symbols": 228958,
+      "n_tensors": 28,
+      "name": "shared_canonical_pmf_clusters_identity_k9",
+      "payload_estimate_bits": 1286834.8518552766,
+      "payload_estimate_bytes": 160855,
+      "per_tensor_assignments": [
+        {
+          "assigned_model": 1,
+          "idx": 0,
+          "model_bits": 252653.24545427578,
+          "model_bytes": 31582,
+          "n_symbols": 48384,
+          "n_unique_symbols": 118,
+          "name": "stem.weight"
+        },
+        {
+          "assigned_model": 8,
+          "idx": 1,
+          "model_bits": 12452.103403014653,
+          "model_bytes": 1557,
+          "n_symbols": 1728,
+          "n_unique_symbols": 194,
+          "name": "stem.bias"
+        },
+        {
+          "assigned_model": 2,
+          "idx": 2,
+          "model_bits": 258450.1797260704,
+          "model_bytes": 32307,
+          "n_symbols": 46656,
+          "n_unique_symbols": 131,
+          "name": "blocks.0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 3,
+          "model_bits": 1117.1807145729929,
+          "model_bytes": 140,
+          "n_symbols": 144,
+          "n_unique_symbols": 101,
+          "name": "blocks.0.bias"
+        },
+        {
+          "assigned_model": 3,
+          "idx": 4,
+          "model_bits": 259467.50766665686,
+          "model_bytes": 32434,
+          "n_symbols": 46656,
+          "n_unique_symbols": 151,
+          "name": "blocks.1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 5,
+          "model_bits": 1109.4024540536318,
+          "model_bytes": 139,
+          "n_symbols": 144,
+          "n_unique_symbols": 96,
+          "name": "blocks.1.bias"
+        },
+        {
+          "assigned_model": 4,
+          "idx": 6,
+          "model_bits": 203491.70735093427,
+          "model_bytes": 25437,
+          "n_symbols": 34992,
+          "n_unique_symbols": 172,
+          "name": "blocks.2.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 7,
+          "model_bits": 869.9129884757809,
+          "model_bytes": 109,
+          "n_symbols": 108,
+          "n_unique_symbols": 88,
+          "name": "blocks.2.bias"
+        },
+        {
+          "assigned_model": 5,
+          "idx": 8,
+          "model_bits": 112182.13694060061,
+          "model_bytes": 14023,
+          "n_symbols": 19440,
+          "n_unique_symbols": 155,
+          "name": "blocks.3.weight"
+        },
+        {
+          "assigned_model": 8,
+          "idx": 9,
+          "model_bits": 562.5626541873585,
+          "model_bytes": 71,
+          "n_symbols": 80,
+          "n_unique_symbols": 63,
+          "name": "blocks.3.bias"
+        },
+        {
+          "assigned_model": 6,
+          "idx": 10,
+          "model_bits": 81252.94882369254,
+          "model_bytes": 10157,
+          "n_symbols": 12960,
+          "n_unique_symbols": 206,
+          "name": "blocks.4.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 11,
+          "model_bits": 564.7211007340878,
+          "model_bytes": 71,
+          "n_symbols": 72,
+          "n_unique_symbols": 60,
+          "name": "blocks.4.bias"
+        },
+        {
+          "assigned_model": 7,
+          "idx": 12,
+          "model_bits": 61355.879420759724,
+          "model_bytes": 7670,
+          "n_symbols": 11664,
+          "n_unique_symbols": 92,
+          "name": "blocks.5.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 13,
+          "model_bits": 517.2887063902798,
+          "model_bytes": 65,
+          "n_symbols": 72,
+          "n_unique_symbols": 53,
+          "name": "blocks.5.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 14,
+          "model_bits": 6854.762974539682,
+          "model_bytes": 857,
+          "n_symbols": 972,
+          "n_unique_symbols": 77,
+          "name": "skips.2.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 15,
+          "model_bits": 216.62331162758505,
+          "model_bytes": 28,
+          "n_symbols": 27,
+          "n_unique_symbols": 23,
+          "name": "skips.2.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 16,
+          "model_bits": 3990.743645788904,
+          "model_bytes": 499,
+          "n_symbols": 540,
+          "n_unique_symbols": 92,
+          "name": "skips.3.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 17,
+          "model_bits": 163.17715979192153,
+          "model_bytes": 21,
+          "n_symbols": 20,
+          "n_unique_symbols": 20,
+          "name": "skips.3.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 18,
+          "model_bits": 2721.5074266732195,
+          "model_bytes": 341,
+          "n_symbols": 360,
+          "n_unique_symbols": 73,
+          "name": "skips.4.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 19,
+          "model_bits": 163.77460435808598,
+          "model_bytes": 21,
+          "n_symbols": 18,
+          "n_unique_symbols": 18,
+          "name": "skips.4.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 20,
+          "model_bits": 9563.179083161454,
+          "model_bytes": 1196,
+          "n_symbols": 1458,
+          "n_unique_symbols": 73,
+          "name": "refine.0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 21,
+          "model_bits": 83.16535166490792,
+          "model_bytes": 11,
+          "n_symbols": 9,
+          "n_unique_symbols": 9,
+          "name": "refine.0.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 22,
+          "model_bits": 9950.146323257628,
+          "model_bytes": 1244,
+          "n_symbols": 1458,
+          "n_unique_symbols": 110,
+          "name": "refine.1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 23,
+          "model_bits": 160.15739672266642,
+          "model_bytes": 21,
+          "n_symbols": 18,
+          "n_unique_symbols": 17,
+          "name": "refine.1.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 24,
+          "model_bits": 3380.0308924313495,
+          "model_bytes": 423,
+          "n_symbols": 486,
+          "n_unique_symbols": 69,
+          "name": "rgb_0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 25,
+          "model_bits": 21.380961143799876,
+          "model_bytes": 3,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_0.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 26,
+          "model_bits": 3491.624095262835,
+          "model_bytes": 437,
+          "n_symbols": 486,
+          "n_unique_symbols": 76,
+          "name": "rgb_1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 27,
+          "model_bits": 27.801224433476868,
+          "model_bytes": 4,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_1.bias"
+        }
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sharing_gain_vs_per_tensor_brotli_fp16_table_bytes": 133,
+      "sharing_gain_vs_per_tensor_raw_fp16_table_bytes": 10940,
+      "transform": "identity",
+      "used_models": 9,
+      "verdict": "negative_loses_after_charging_model_bytes"
+    },
+    {
+      "archive_estimate_bytes": 179235,
+      "cluster_init": "largest_tensors_first",
+      "cluster_k": 10,
+      "cluster_sizes": [
+        17,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        2
+      ],
+      "delta_vs_175916": 3319,
+      "delta_vs_178144": 1091,
+      "delta_vs_178181": 1054,
+      "delta_vs_brotli_optuna_archive_bytes": 1091,
+      "delta_vs_iid_per_tensor_floor_archive_bytes": 3319,
+      "delta_vs_per_tensor_aac_archive_bytes": 1054,
+      "fit_on_same_symbols": true,
+      "model_family": "shared_canonical_pmf_clusters",
+      "model_parameter_byte_estimate": {
+        "assignment_bytes": 14,
+        "brotli_parameter_bytes": 2460,
+        "header_bytes": 16,
+        "parameter_encoding": "brotli_fp16_shared_pmf_tables_plus_assignments",
+        "primary_model_parameter_bytes": 2490,
+        "raw_parameter_bytes": 5100
+      },
+      "model_parameter_bytes": 2490,
+      "n_models": 10,
+      "n_symbols": 228958,
+      "n_tensors": 28,
+      "name": "shared_canonical_pmf_clusters_identity_k10",
+      "payload_estimate_bits": 1285206.218083147,
+      "payload_estimate_bytes": 160651,
+      "per_tensor_assignments": [
+        {
+          "assigned_model": 1,
+          "idx": 0,
+          "model_bits": 252653.24545427578,
+          "model_bytes": 31582,
+          "n_symbols": 48384,
+          "n_unique_symbols": 118,
+          "name": "stem.weight"
+        },
+        {
+          "assigned_model": 8,
+          "idx": 1,
+          "model_bits": 12452.103403014653,
+          "model_bytes": 1557,
+          "n_symbols": 1728,
+          "n_unique_symbols": 194,
+          "name": "stem.bias"
+        },
+        {
+          "assigned_model": 2,
+          "idx": 2,
+          "model_bits": 258450.1797260704,
+          "model_bytes": 32307,
+          "n_symbols": 46656,
+          "n_unique_symbols": 131,
+          "name": "blocks.0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 3,
+          "model_bits": 1122.1987384088782,
+          "model_bytes": 141,
+          "n_symbols": 144,
+          "n_unique_symbols": 101,
+          "name": "blocks.0.bias"
+        },
+        {
+          "assigned_model": 3,
+          "idx": 4,
+          "model_bits": 259467.50766665686,
+          "model_bytes": 32434,
+          "n_symbols": 46656,
+          "n_unique_symbols": 151,
+          "name": "blocks.1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 5,
+          "model_bits": 1115.2501628108075,
+          "model_bytes": 140,
+          "n_symbols": 144,
+          "n_unique_symbols": 96,
+          "name": "blocks.1.bias"
+        },
+        {
+          "assigned_model": 4,
+          "idx": 6,
+          "model_bits": 203491.70735093427,
+          "model_bytes": 25437,
+          "n_symbols": 34992,
+          "n_unique_symbols": 172,
+          "name": "blocks.2.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 7,
+          "model_bits": 873.1389569984624,
+          "model_bytes": 110,
+          "n_symbols": 108,
+          "n_unique_symbols": 88,
+          "name": "blocks.2.bias"
+        },
+        {
+          "assigned_model": 5,
+          "idx": 8,
+          "model_bits": 112182.13694060061,
+          "model_bytes": 14023,
+          "n_symbols": 19440,
+          "n_unique_symbols": 155,
+          "name": "blocks.3.weight"
+        },
+        {
+          "assigned_model": 8,
+          "idx": 9,
+          "model_bits": 562.5626541873585,
+          "model_bytes": 71,
+          "n_symbols": 80,
+          "n_unique_symbols": 63,
+          "name": "blocks.3.bias"
+        },
+        {
+          "assigned_model": 6,
+          "idx": 10,
+          "model_bits": 81252.94882369254,
+          "model_bytes": 10157,
+          "n_symbols": 12960,
+          "n_unique_symbols": 206,
+          "name": "blocks.4.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 11,
+          "model_bits": 558.3456358673509,
+          "model_bytes": 70,
+          "n_symbols": 72,
+          "n_unique_symbols": 60,
+          "name": "blocks.4.bias"
+        },
+        {
+          "assigned_model": 7,
+          "idx": 12,
+          "model_bits": 61355.879420759724,
+          "model_bytes": 7670,
+          "n_symbols": 11664,
+          "n_unique_symbols": 92,
+          "name": "blocks.5.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 13,
+          "model_bits": 515.3204964242855,
+          "model_bytes": 65,
+          "n_symbols": 72,
+          "n_unique_symbols": 53,
+          "name": "blocks.5.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 14,
+          "model_bits": 6763.911889332205,
+          "model_bytes": 846,
+          "n_symbols": 972,
+          "n_unique_symbols": 77,
+          "name": "skips.2.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 15,
+          "model_bits": 211.55510254524168,
+          "model_bytes": 27,
+          "n_symbols": 27,
+          "n_unique_symbols": 23,
+          "name": "skips.2.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 16,
+          "model_bits": 3994.6115877911584,
+          "model_bytes": 500,
+          "n_symbols": 540,
+          "n_unique_symbols": 92,
+          "name": "skips.3.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 17,
+          "model_bits": 163.9648668883068,
+          "model_bytes": 21,
+          "n_symbols": 20,
+          "n_unique_symbols": 20,
+          "name": "skips.3.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 18,
+          "model_bits": 2719.9059724341573,
+          "model_bytes": 340,
+          "n_symbols": 360,
+          "n_unique_symbols": 73,
+          "name": "skips.4.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 19,
+          "model_bits": 161.43259571633797,
+          "model_bytes": 21,
+          "n_symbols": 18,
+          "n_unique_symbols": 18,
+          "name": "skips.4.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 20,
+          "model_bits": 9350.016485554712,
+          "model_bytes": 1169,
+          "n_symbols": 1458,
+          "n_unique_symbols": 73,
+          "name": "refine.0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 21,
+          "model_bits": 82.25597890676727,
+          "model_bytes": 11,
+          "n_symbols": 9,
+          "n_unique_symbols": 9,
+          "name": "refine.0.bias"
+        },
+        {
+          "assigned_model": 9,
+          "idx": 22,
+          "model_bits": 8672.362335927512,
+          "model_bytes": 1085,
+          "n_symbols": 1458,
+          "n_unique_symbols": 110,
+          "name": "refine.1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 23,
+          "model_bits": 159.6257340336173,
+          "model_bytes": 20,
+          "n_symbols": 18,
+          "n_unique_symbols": 17,
+          "name": "refine.1.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 24,
+          "model_bits": 3383.52823610168,
+          "model_bytes": 423,
+          "n_symbols": 486,
+          "n_unique_symbols": 69,
+          "name": "rgb_0.weight"
+        },
+        {
+          "assigned_model": 9,
+          "idx": 25,
+          "model_bits": 20.24636576585165,
+          "model_bytes": 3,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_0.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 26,
+          "model_bits": 3443.5228503378044,
+          "model_bytes": 431,
+          "n_symbols": 486,
+          "n_unique_symbols": 76,
+          "name": "rgb_1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 27,
+          "model_bits": 26.752651109525903,
+          "model_bytes": 4,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_1.bias"
+        }
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sharing_gain_vs_per_tensor_brotli_fp16_table_bytes": 154,
+      "sharing_gain_vs_per_tensor_raw_fp16_table_bytes": 10961,
+      "transform": "identity",
+      "used_models": 10,
+      "verdict": "negative_loses_after_charging_model_bytes"
+    },
+    {
+      "archive_estimate_bytes": 179106,
+      "cluster_init": "largest_tensors_first",
+      "cluster_k": 11,
+      "cluster_sizes": [
+        16,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        2,
+        1
+      ],
+      "delta_vs_175916": 3190,
+      "delta_vs_178144": 962,
+      "delta_vs_178181": 925,
+      "delta_vs_brotli_optuna_archive_bytes": 962,
+      "delta_vs_iid_per_tensor_floor_archive_bytes": 3190,
+      "delta_vs_per_tensor_aac_archive_bytes": 925,
+      "fit_on_same_symbols": true,
+      "model_family": "shared_canonical_pmf_clusters",
+      "model_parameter_byte_estimate": {
+        "assignment_bytes": 14,
+        "brotli_parameter_bytes": 2567,
+        "header_bytes": 16,
+        "parameter_encoding": "brotli_fp16_shared_pmf_tables_plus_assignments",
+        "primary_model_parameter_bytes": 2597,
+        "raw_parameter_bytes": 5610
+      },
+      "model_parameter_bytes": 2597,
+      "n_models": 11,
+      "n_symbols": 228958,
+      "n_tensors": 28,
+      "name": "shared_canonical_pmf_clusters_identity_k11",
+      "payload_estimate_bits": 1283316.893893924,
+      "payload_estimate_bytes": 160415,
+      "per_tensor_assignments": [
+        {
+          "assigned_model": 1,
+          "idx": 0,
+          "model_bits": 252653.24545427578,
+          "model_bytes": 31582,
+          "n_symbols": 48384,
+          "n_unique_symbols": 118,
+          "name": "stem.weight"
+        },
+        {
+          "assigned_model": 8,
+          "idx": 1,
+          "model_bits": 12452.103403014653,
+          "model_bytes": 1557,
+          "n_symbols": 1728,
+          "n_unique_symbols": 194,
+          "name": "stem.bias"
+        },
+        {
+          "assigned_model": 2,
+          "idx": 2,
+          "model_bits": 258450.1797260704,
+          "model_bytes": 32307,
+          "n_symbols": 46656,
+          "n_unique_symbols": 131,
+          "name": "blocks.0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 3,
+          "model_bits": 1108.2725503098109,
+          "model_bytes": 139,
+          "n_symbols": 144,
+          "n_unique_symbols": 101,
+          "name": "blocks.0.bias"
+        },
+        {
+          "assigned_model": 3,
+          "idx": 4,
+          "model_bits": 259467.50766665686,
+          "model_bytes": 32434,
+          "n_symbols": 46656,
+          "n_unique_symbols": 151,
+          "name": "blocks.1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 5,
+          "model_bits": 1102.32642106513,
+          "model_bytes": 138,
+          "n_symbols": 144,
+          "n_unique_symbols": 96,
+          "name": "blocks.1.bias"
+        },
+        {
+          "assigned_model": 4,
+          "idx": 6,
+          "model_bits": 203491.70735093427,
+          "model_bytes": 25437,
+          "n_symbols": 34992,
+          "n_unique_symbols": 172,
+          "name": "blocks.2.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 7,
+          "model_bits": 864.192534213945,
+          "model_bytes": 109,
+          "n_symbols": 108,
+          "n_unique_symbols": 88,
+          "name": "blocks.2.bias"
+        },
+        {
+          "assigned_model": 5,
+          "idx": 8,
+          "model_bits": 112182.13694060061,
+          "model_bytes": 14023,
+          "n_symbols": 19440,
+          "n_unique_symbols": 155,
+          "name": "blocks.3.weight"
+        },
+        {
+          "assigned_model": 8,
+          "idx": 9,
+          "model_bits": 562.5626541873585,
+          "model_bytes": 71,
+          "n_symbols": 80,
+          "n_unique_symbols": 63,
+          "name": "blocks.3.bias"
+        },
+        {
+          "assigned_model": 6,
+          "idx": 10,
+          "model_bits": 81252.94882369254,
+          "model_bytes": 10157,
+          "n_symbols": 12960,
+          "n_unique_symbols": 206,
+          "name": "blocks.4.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 11,
+          "model_bits": 543.2966771982119,
+          "model_bytes": 68,
+          "n_symbols": 72,
+          "n_unique_symbols": 60,
+          "name": "blocks.4.bias"
+        },
+        {
+          "assigned_model": 7,
+          "idx": 12,
+          "model_bits": 61355.879420759724,
+          "model_bytes": 7670,
+          "n_symbols": 11664,
+          "n_unique_symbols": 92,
+          "name": "blocks.5.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 13,
+          "model_bits": 514.6814320252074,
+          "model_bytes": 65,
+          "n_symbols": 72,
+          "n_unique_symbols": 53,
+          "name": "blocks.5.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 14,
+          "model_bits": 6518.93623373626,
+          "model_bytes": 815,
+          "n_symbols": 972,
+          "n_unique_symbols": 77,
+          "name": "skips.2.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 15,
+          "model_bits": 207.8855763872735,
+          "model_bytes": 26,
+          "n_symbols": 27,
+          "n_unique_symbols": 23,
+          "name": "skips.2.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 16,
+          "model_bits": 3961.389144423954,
+          "model_bytes": 496,
+          "n_symbols": 540,
+          "n_unique_symbols": 92,
+          "name": "skips.3.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 17,
+          "model_bits": 161.26321553162936,
+          "model_bytes": 21,
+          "n_symbols": 20,
+          "n_unique_symbols": 20,
+          "name": "skips.3.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 18,
+          "model_bits": 2640.411712986369,
+          "model_bytes": 331,
+          "n_symbols": 360,
+          "n_unique_symbols": 73,
+          "name": "skips.4.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 19,
+          "model_bits": 157.313730622982,
+          "model_bytes": 20,
+          "n_symbols": 18,
+          "n_unique_symbols": 18,
+          "name": "skips.4.bias"
+        },
+        {
+          "assigned_model": 10,
+          "idx": 20,
+          "model_bits": 7968.7982906926,
+          "model_bytes": 997,
+          "n_symbols": 1458,
+          "n_unique_symbols": 73,
+          "name": "refine.0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 21,
+          "model_bits": 78.29405422376061,
+          "model_bytes": 10,
+          "n_symbols": 9,
+          "n_unique_symbols": 9,
+          "name": "refine.0.bias"
+        },
+        {
+          "assigned_model": 9,
+          "idx": 22,
+          "model_bits": 8672.362335927512,
+          "model_bytes": 1085,
+          "n_symbols": 1458,
+          "n_unique_symbols": 110,
+          "name": "refine.1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 23,
+          "model_bits": 154.3338331471911,
+          "model_bytes": 20,
+          "n_symbols": 18,
+          "n_unique_symbols": 17,
+          "name": "refine.1.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 24,
+          "model_bits": 3348.641927374717,
+          "model_bytes": 419,
+          "n_symbols": 486,
+          "n_unique_symbols": 69,
+          "name": "rgb_0.weight"
+        },
+        {
+          "assigned_model": 9,
+          "idx": 25,
+          "model_bits": 20.24636576585165,
+          "model_bytes": 3,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_0.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 26,
+          "model_bits": 3400.739190737484,
+          "model_bytes": 426,
+          "n_symbols": 486,
+          "n_unique_symbols": 76,
+          "name": "rgb_1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 27,
+          "model_bits": 25.237227361878215,
+          "model_bytes": 4,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_1.bias"
+        }
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sharing_gain_vs_per_tensor_brotli_fp16_table_bytes": 283,
+      "sharing_gain_vs_per_tensor_raw_fp16_table_bytes": 11090,
+      "transform": "identity",
+      "used_models": 11,
+      "verdict": "negative_loses_after_charging_model_bytes"
+    },
+    {
+      "archive_estimate_bytes": 179046,
+      "cluster_init": "largest_tensors_first",
+      "cluster_k": 12,
+      "cluster_sizes": [
+        14,
+        1,
+        1,
+        1,
+        2,
+        1,
+        1,
+        1,
+        2,
+        1,
+        1,
+        2
+      ],
+      "delta_vs_175916": 3130,
+      "delta_vs_178144": 902,
+      "delta_vs_178181": 865,
+      "delta_vs_brotli_optuna_archive_bytes": 902,
+      "delta_vs_iid_per_tensor_floor_archive_bytes": 3130,
+      "delta_vs_per_tensor_aac_archive_bytes": 865,
+      "fit_on_same_symbols": true,
+      "model_family": "shared_canonical_pmf_clusters",
+      "model_parameter_byte_estimate": {
+        "assignment_bytes": 14,
+        "brotli_parameter_bytes": 2667,
+        "header_bytes": 16,
+        "parameter_encoding": "brotli_fp16_shared_pmf_tables_plus_assignments",
+        "primary_model_parameter_bytes": 2697,
+        "raw_parameter_bytes": 6120
+      },
+      "model_parameter_bytes": 2697,
+      "n_models": 12,
+      "n_symbols": 228958,
+      "n_tensors": 28,
+      "name": "shared_canonical_pmf_clusters_identity_k12",
+      "payload_estimate_bits": 1282038.6947090798,
+      "payload_estimate_bytes": 160255,
+      "per_tensor_assignments": [
+        {
+          "assigned_model": 1,
+          "idx": 0,
+          "model_bits": 252653.24545427578,
+          "model_bytes": 31582,
+          "n_symbols": 48384,
+          "n_unique_symbols": 118,
+          "name": "stem.weight"
+        },
+        {
+          "assigned_model": 8,
+          "idx": 1,
+          "model_bits": 12452.103403014653,
+          "model_bytes": 1557,
+          "n_symbols": 1728,
+          "n_unique_symbols": 194,
+          "name": "stem.bias"
+        },
+        {
+          "assigned_model": 2,
+          "idx": 2,
+          "model_bits": 258450.1797260704,
+          "model_bytes": 32307,
+          "n_symbols": 46656,
+          "n_unique_symbols": 131,
+          "name": "blocks.0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 3,
+          "model_bits": 1104.9887934543117,
+          "model_bytes": 139,
+          "n_symbols": 144,
+          "n_unique_symbols": 101,
+          "name": "blocks.0.bias"
+        },
+        {
+          "assigned_model": 3,
+          "idx": 4,
+          "model_bits": 259467.50766665686,
+          "model_bytes": 32434,
+          "n_symbols": 46656,
+          "n_unique_symbols": 151,
+          "name": "blocks.1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 5,
+          "model_bits": 1098.211455190714,
+          "model_bytes": 138,
+          "n_symbols": 144,
+          "n_unique_symbols": 96,
+          "name": "blocks.1.bias"
+        },
+        {
+          "assigned_model": 4,
+          "idx": 6,
+          "model_bits": 203492.16384941776,
+          "model_bytes": 25437,
+          "n_symbols": 34992,
+          "n_unique_symbols": 172,
+          "name": "blocks.2.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 7,
+          "model_bits": 867.1237245818102,
+          "model_bytes": 109,
+          "n_symbols": 108,
+          "n_unique_symbols": 88,
+          "name": "blocks.2.bias"
+        },
+        {
+          "assigned_model": 5,
+          "idx": 8,
+          "model_bits": 112182.13694060061,
+          "model_bytes": 14023,
+          "n_symbols": 19440,
+          "n_unique_symbols": 155,
+          "name": "blocks.3.weight"
+        },
+        {
+          "assigned_model": 8,
+          "idx": 9,
+          "model_bits": 562.5626541873585,
+          "model_bytes": 71,
+          "n_symbols": 80,
+          "n_unique_symbols": 63,
+          "name": "blocks.3.bias"
+        },
+        {
+          "assigned_model": 6,
+          "idx": 10,
+          "model_bits": 81252.94882369254,
+          "model_bytes": 10157,
+          "n_symbols": 12960,
+          "n_unique_symbols": 206,
+          "name": "blocks.4.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 11,
+          "model_bits": 540.1342726092854,
+          "model_bytes": 68,
+          "n_symbols": 72,
+          "n_unique_symbols": 60,
+          "name": "blocks.4.bias"
+        },
+        {
+          "assigned_model": 7,
+          "idx": 12,
+          "model_bits": 61355.879420759724,
+          "model_bytes": 7670,
+          "n_symbols": 11664,
+          "n_unique_symbols": 92,
+          "name": "blocks.5.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 13,
+          "model_bits": 529.5383094854951,
+          "model_bytes": 67,
+          "n_symbols": 72,
+          "n_unique_symbols": 53,
+          "name": "blocks.5.bias"
+        },
+        {
+          "assigned_model": 11,
+          "idx": 14,
+          "model_bits": 5571.656628490552,
+          "model_bytes": 697,
+          "n_symbols": 972,
+          "n_unique_symbols": 77,
+          "name": "skips.2.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 15,
+          "model_bits": 209.72383856033952,
+          "model_bytes": 27,
+          "n_symbols": 27,
+          "n_unique_symbols": 23,
+          "name": "skips.2.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 16,
+          "model_bits": 3805.494851125561,
+          "model_bytes": 476,
+          "n_symbols": 540,
+          "n_unique_symbols": 92,
+          "name": "skips.3.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 17,
+          "model_bits": 159.80474178496297,
+          "model_bytes": 20,
+          "n_symbols": 20,
+          "n_unique_symbols": 20,
+          "name": "skips.3.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 18,
+          "model_bits": 2605.663275293081,
+          "model_bytes": 326,
+          "n_symbols": 360,
+          "n_unique_symbols": 73,
+          "name": "skips.4.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 19,
+          "model_bits": 161.4902545377918,
+          "model_bytes": 21,
+          "n_symbols": 18,
+          "n_unique_symbols": 18,
+          "name": "skips.4.bias"
+        },
+        {
+          "assigned_model": 10,
+          "idx": 20,
+          "model_bits": 7968.7982906926,
+          "model_bytes": 997,
+          "n_symbols": 1458,
+          "n_unique_symbols": 73,
+          "name": "refine.0.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 21,
+          "model_bits": 75.48014490886959,
+          "model_bytes": 10,
+          "n_symbols": 9,
+          "n_unique_symbols": 9,
+          "name": "refine.0.bias"
+        },
+        {
+          "assigned_model": 9,
+          "idx": 22,
+          "model_bits": 8671.883290199361,
+          "model_bytes": 1084,
+          "n_symbols": 1458,
+          "n_unique_symbols": 110,
+          "name": "refine.1.weight"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 23,
+          "model_bits": 151.25448338084482,
+          "model_bytes": 19,
+          "n_symbols": 18,
+          "n_unique_symbols": 17,
+          "name": "refine.1.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 24,
+          "model_bits": 3252.4153104387856,
+          "model_bytes": 407,
+          "n_symbols": 486,
+          "n_unique_symbols": 69,
+          "name": "rgb_0.weight"
+        },
+        {
+          "assigned_model": 11,
+          "idx": 25,
+          "model_bits": 18.167543252458103,
+          "model_bytes": 3,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_0.bias"
+        },
+        {
+          "assigned_model": 0,
+          "idx": 26,
+          "model_bits": 3348.0526449698464,
+          "model_bytes": 419,
+          "n_symbols": 486,
+          "n_unique_symbols": 76,
+          "name": "rgb_1.weight"
+        },
+        {
+          "assigned_model": 4,
+          "idx": 27,
+          "model_bits": 30.084917447392726,
+          "model_bytes": 4,
+          "n_symbols": 3,
+          "n_unique_symbols": 3,
+          "name": "rgb_1.bias"
+        }
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sharing_gain_vs_per_tensor_brotli_fp16_table_bytes": 343,
+      "sharing_gain_vs_per_tensor_raw_fp16_table_bytes": 11150,
+      "transform": "identity",
+      "used_models": 12,
+      "verdict": "negative_loses_after_charging_model_bytes"
+    }
+  ],
+  "n_categories": 255,
+  "n_symbols": 228958,
+  "n_symbols_total": 228958,
+  "n_tensors": 28,
+  "per_tensor_input_summary": [
+    {
+      "idx": 0,
+      "n_symbols": 48384,
+      "n_unique_symbols": 118,
+      "name": "stem.weight",
+      "shape": [
+        1728,
+        28
+      ]
+    },
+    {
+      "idx": 1,
+      "n_symbols": 1728,
+      "n_unique_symbols": 194,
+      "name": "stem.bias",
+      "shape": [
+        1728
+      ]
+    },
+    {
+      "idx": 2,
+      "n_symbols": 46656,
+      "n_unique_symbols": 131,
+      "name": "blocks.0.weight",
+      "shape": [
+        144,
+        36,
+        3,
+        3
+      ]
+    },
+    {
+      "idx": 3,
+      "n_symbols": 144,
+      "n_unique_symbols": 101,
+      "name": "blocks.0.bias",
+      "shape": [
+        144
+      ]
+    },
+    {
+      "idx": 4,
+      "n_symbols": 46656,
+      "n_unique_symbols": 151,
+      "name": "blocks.1.weight",
+      "shape": [
+        144,
+        36,
+        3,
+        3
+      ]
+    },
+    {
+      "idx": 5,
+      "n_symbols": 144,
+      "n_unique_symbols": 96,
+      "name": "blocks.1.bias",
+      "shape": [
+        144
+      ]
+    },
+    {
+      "idx": 6,
+      "n_symbols": 34992,
+      "n_unique_symbols": 172,
+      "name": "blocks.2.weight",
+      "shape": [
+        108,
+        36,
+        3,
+        3
+      ]
+    },
+    {
+      "idx": 7,
+      "n_symbols": 108,
+      "n_unique_symbols": 88,
+      "name": "blocks.2.bias",
+      "shape": [
+        108
+      ]
+    },
+    {
+      "idx": 8,
+      "n_symbols": 19440,
+      "n_unique_symbols": 155,
+      "name": "blocks.3.weight",
+      "shape": [
+        80,
+        27,
+        3,
+        3
+      ]
+    },
+    {
+      "idx": 9,
+      "n_symbols": 80,
+      "n_unique_symbols": 63,
+      "name": "blocks.3.bias",
+      "shape": [
+        80
+      ]
+    },
+    {
+      "idx": 10,
+      "n_symbols": 12960,
+      "n_unique_symbols": 206,
+      "name": "blocks.4.weight",
+      "shape": [
+        72,
+        20,
+        3,
+        3
+      ]
+    },
+    {
+      "idx": 11,
+      "n_symbols": 72,
+      "n_unique_symbols": 60,
+      "name": "blocks.4.bias",
+      "shape": [
+        72
+      ]
+    },
+    {
+      "idx": 12,
+      "n_symbols": 11664,
+      "n_unique_symbols": 92,
+      "name": "blocks.5.weight",
+      "shape": [
+        72,
+        18,
+        3,
+        3
+      ]
+    },
+    {
+      "idx": 13,
+      "n_symbols": 72,
+      "n_unique_symbols": 53,
+      "name": "blocks.5.bias",
+      "shape": [
+        72
+      ]
+    },
+    {
+      "idx": 14,
+      "n_symbols": 972,
+      "n_unique_symbols": 77,
+      "name": "skips.2.weight",
+      "shape": [
+        27,
+        36,
+        1,
+        1
+      ]
+    },
+    {
+      "idx": 15,
+      "n_symbols": 27,
+      "n_unique_symbols": 23,
+      "name": "skips.2.bias",
+      "shape": [
+        27
+      ]
+    },
+    {
+      "idx": 16,
+      "n_symbols": 540,
+      "n_unique_symbols": 92,
+      "name": "skips.3.weight",
+      "shape": [
+        20,
+        27,
+        1,
+        1
+      ]
+    },
+    {
+      "idx": 17,
+      "n_symbols": 20,
+      "n_unique_symbols": 20,
+      "name": "skips.3.bias",
+      "shape": [
+        20
+      ]
+    },
+    {
+      "idx": 18,
+      "n_symbols": 360,
+      "n_unique_symbols": 73,
+      "name": "skips.4.weight",
+      "shape": [
+        18,
+        20,
+        1,
+        1
+      ]
+    },
+    {
+      "idx": 19,
+      "n_symbols": 18,
+      "n_unique_symbols": 18,
+      "name": "skips.4.bias",
+      "shape": [
+        18
+      ]
+    },
+    {
+      "idx": 20,
+      "n_symbols": 1458,
+      "n_unique_symbols": 73,
+      "name": "refine.0.weight",
+      "shape": [
+        9,
+        18,
+        3,
+        3
+      ]
+    },
+    {
+      "idx": 21,
+      "n_symbols": 9,
+      "n_unique_symbols": 9,
+      "name": "refine.0.bias",
+      "shape": [
+        9
+      ]
+    },
+    {
+      "idx": 22,
+      "n_symbols": 1458,
+      "n_unique_symbols": 110,
+      "name": "refine.1.weight",
+      "shape": [
+        18,
+        9,
+        3,
+        3
+      ]
+    },
+    {
+      "idx": 23,
+      "n_symbols": 18,
+      "n_unique_symbols": 17,
+      "name": "refine.1.bias",
+      "shape": [
+        18
+      ]
+    },
+    {
+      "idx": 24,
+      "n_symbols": 486,
+      "n_unique_symbols": 69,
+      "name": "rgb_0.weight",
+      "shape": [
+        3,
+        18,
+        3,
+        3
+      ]
+    },
+    {
+      "idx": 25,
+      "n_symbols": 3,
+      "n_unique_symbols": 3,
+      "name": "rgb_0.bias",
+      "shape": [
+        3
+      ]
+    },
+    {
+      "idx": 26,
+      "n_symbols": 486,
+      "n_unique_symbols": 76,
+      "name": "rgb_1.weight",
+      "shape": [
+        3,
+        18,
+        3,
+        3
+      ]
+    },
+    {
+      "idx": 27,
+      "n_symbols": 3,
+      "n_unique_symbols": 3,
+      "name": "rgb_1.bias",
+      "shape": [
+        3
+      ]
+    }
+  ],
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "pr101_shared_parametric_pmf_probe.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "tool": "tools/pr101_shared_parametric_pmf_probe.py"
+}

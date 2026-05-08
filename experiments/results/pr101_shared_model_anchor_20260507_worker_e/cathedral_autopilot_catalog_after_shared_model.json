@@ -1,0 +1,120 @@
+{
+  "arch_catalog": [
+    {
+      "cost_dollars": 25.0,
+      "cost_hours": 24.0,
+      "description": "70% sparsity via IMP retraining; arch unchanged",
+      "evidence_grade": "[predicted]",
+      "name": "sparsity_alpha_0.7_imp_retrain",
+      "predicted_archive_bytes": 65000,
+      "risk": "training_side"
+    },
+    {
+      "cost_dollars": 15.0,
+      "cost_hours": 12.0,
+      "description": "88K-element renderer (Quantizr-class); full retrain",
+      "evidence_grade": "[predicted]",
+      "name": "arch_shrink_x0.4_quantizr_class",
+      "predicted_archive_bytes": 80000,
+      "risk": "architectural"
+    },
+    {
+      "cost_dollars": 20.0,
+      "cost_hours": 18.0,
+      "description": "Selfcomp/Quantizr-style: renderer is its own decoder",
+      "evidence_grade": "[predicted]",
+      "name": "self_compress_neural_codec",
+      "predicted_archive_bytes": 90000,
+      "risk": "architectural"
+    },
+    {
+      "cost_dollars": 8.0,
+      "cost_hours": 6.0,
+      "description": "n_quant=15 (int4) with QAT/LSQ retuning",
+      "evidence_grade": "[predicted]",
+      "name": "lossy_int4_quantization",
+      "predicted_archive_bytes": 105440,
+      "risk": "lossy_high"
+    }
+  ],
+  "encoder_catalog": [
+    {
+      "cost_dollars": 0.0,
+      "cost_hours": 0.5,
+      "description": "Current best brotli + Optuna q=11/lgwin=16/lgblock=19",
+      "evidence_grade": "[contest-CUDA]",
+      "name": "brotli_optuna_default",
+      "predicted_archive_bytes": 178144,
+      "risk": "lossless"
+    },
+    {
+      "cost_dollars": 0.0,
+      "cost_hours": 1.0,
+      "description": "Adaptive arithmetic coding per-tensor; ties brotli within 37 B",
+      "evidence_grade": "[CPU-prep]",
+      "name": "per_tensor_adaptive_aac",
+      "predicted_archive_bytes": 178181,
+      "risk": "lossless"
+    },
+    {
+      "cost_dollars": 0.0,
+      "cost_hours": 3.0,
+      "description": "200-param MLP predicting per-tensor PMF; ~400B model + AAC",
+      "evidence_grade": "[predicted]",
+      "name": "tiny_nn_pmf_predictor",
+      "predicted_archive_bytes": 167000,
+      "risk": "lossless"
+    },
+    {
+      "cost_dollars": 5.0,
+      "cost_hours": 4.0,
+      "description": "Balle scale-hyperprior NN; subagent-verdict joint floor",
+      "evidence_grade": "[subagent-predicted]",
+      "name": "compressai_balle_hyperprior",
+      "predicted_archive_bytes": 158000,
+      "risk": "lossless"
+    },
+    {
+      "cost_dollars": 0.0,
+      "cost_hours": 2.0,
+      "description": "4-component mixture (Gaussian+Laplace+sparse+uniform) on PMFs",
+      "evidence_grade": "[predicted]",
+      "name": "kalle_fold_mixture_canonical_shapes",
+      "predicted_archive_bytes": 173500,
+      "risk": "lossless"
+    },
+    {
+      "catalog_prior_bytes": 179046,
+      "cost_dollars": 0.0,
+      "cost_hours": 2.0,
+      "description": "Shared FP16 PMF clusters over PR101 quantized tensors; measured negative",
+      "dispatch_blockers": [
+        "missing_exact_cuda_auth_eval",
+        "model_parameter_serializations_are_estimates_not_packet_verified",
+        "no_actual_range_or_ans_bitstream",
+        "no_archive_substitution_performed",
+        "no_runtime_model_serializer_or_decoder",
+        "planning_probe_only"
+      ],
+      "empirical_anchor_bytes": 179046,
+      "empirical_anchor_evidence_semantics": [
+        "cpu_shared_model_pmf_planning_probe"
+      ],
+      "empirical_anchor_n": 1,
+      "empirical_anchor_promotable": false,
+      "empirical_anchor_score_claim": false,
+      "empirical_anchor_sources": [
+        "[CPU-prep empirical] experiments/results/pr101_shared_model_anchor_20260507_worker_e/pr101_shared_parametric_pmf_probe.json (shared_canonical_pmf_clusters_identity_k12)"
+      ],
+      "evidence_grade": "[empirical-anchor-N1; planning-only]",
+      "name": "shared_canonical_pmf_clusters",
+      "predicted_archive_bytes": 179046,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "risk": "lossless"
+    }
+  ],
+  "n_evidence_rows": 1,
+  "schema": "cathedral_autopilot.v1",
+  "tool": "tools/cathedral_autopilot.py"
+}

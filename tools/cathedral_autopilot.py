@@ -141,6 +141,15 @@ ENCODER_TECHNIQUES = [
         "evidence_grade": "[predicted]",
         "description": "4-component mixture (Gaussian+Laplace+sparse+uniform) on PMFs",
     },
+    {
+        "name": "shared_canonical_pmf_clusters",
+        "predicted_archive_bytes": 179_046,
+        "cost_hours": 2.0,
+        "cost_dollars": 0.0,
+        "risk": "lossless",
+        "evidence_grade": "[CPU-prep empirical; planning-only]",
+        "description": "Shared FP16 PMF clusters over PR101 quantized tensors; measured negative",
+    },
 ]
 
 
