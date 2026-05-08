@@ -227,6 +227,10 @@ def _base_atom(
         "evidence_grade": _planning_evidence_grade(payload),
         "source_evidence_grade": str(payload.get("evidence_grade") or ""),
         "source_evidence_semantics": str(payload.get("evidence_semantics") or ""),
+        "target_modes": ["planning_only"],
+        "deployment_target": "desktop_research",
+        "score_affecting_payload_changed": False,
+        "charged_bits_changed": False,
         "planning_only": True,
         "proxy_row": True,
         "score_claim": False,
@@ -256,6 +260,8 @@ def _base_atom(
             "ready_for_exact_eval_dispatch": False,
             "dispatchable": False,
             "score_claim": False,
+            "score_affecting_payload_changed": False,
+            "charged_bits_changed": False,
             "promotion_eligible": False,
             "promotable": False,
             "planning_only": True,
@@ -446,6 +452,10 @@ def _policy_counts(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     planning_only_count = sum(1 for row in rows if row.get("planning_only") is True)
     proxy_row_count = sum(1 for row in rows if row.get("proxy_row") is True)
     score_claim_count = sum(1 for row in rows if row.get("score_claim") is True)
+    score_affecting_payload_changed_count = sum(
+        1 for row in rows if row.get("score_affecting_payload_changed") is True
+    )
+    charged_bits_changed_count = sum(1 for row in rows if row.get("charged_bits_changed") is True)
     dispatchable_count = sum(1 for row in rows if row.get("dispatchable") is True)
     ready_count = sum(1 for row in rows if row.get("ready_for_exact_eval_dispatch") is True)
     promotion_eligible_count = sum(
@@ -458,12 +468,16 @@ def _policy_counts(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "planning_only_atom_count": planning_only_count,
         "proxy_row_count": proxy_row_count,
         "score_claim_atom_count": score_claim_count,
+        "score_affecting_payload_changed_atom_count": score_affecting_payload_changed_count,
+        "charged_bits_changed_atom_count": charged_bits_changed_count,
         "dispatchable_atom_count": dispatchable_count,
         "ready_for_exact_eval_dispatch_atom_count": ready_count,
         "promotion_eligible_atom_count": promotion_eligible_count,
         "all_rows_planning_only": planning_only_count == row_count,
         "all_rows_proxy": proxy_row_count == row_count,
         "all_rows_non_score_claim": score_claim_count == 0,
+        "all_rows_non_score_affecting_payload_changed": score_affecting_payload_changed_count == 0,
+        "all_rows_no_charged_bits_changed": charged_bits_changed_count == 0,
         "all_rows_non_dispatchable": dispatchable_count == 0,
         "all_rows_not_ready_for_exact_eval_dispatch": ready_count == 0,
         "all_rows_non_promotable": promotion_eligible_count == 0,
@@ -471,6 +485,8 @@ def _policy_counts(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             planning_only_count == row_count
             and proxy_row_count == row_count
             and score_claim_count == 0
+            and score_affecting_payload_changed_count == 0
+            and charged_bits_changed_count == 0
             and dispatchable_count == 0
             and ready_count == 0
             and promotion_eligible_count == 0
@@ -560,6 +576,8 @@ def build_summary(
         "planning_only": True,
         "proxy_rows": True,
         "score_claim": False,
+        "score_affecting_payload_changed": False,
+        "charged_bits_changed": False,
         "promotion_eligible": False,
         "promotable": False,
         "dispatch_attempted": False,
@@ -632,6 +650,8 @@ def build_ledger_markdown(summary: Mapping[str, Any], rows: Sequence[Mapping[str
             f"- planning-only rows: `{policy.get('planning_only_atom_count', 0)}`",
             f"- proxy rows: `{policy.get('proxy_row_count', 0)}`",
             f"- score-claim rows: `{policy.get('score_claim_atom_count', 0)}`",
+            f"- score-affecting payload changed rows: `{policy.get('score_affecting_payload_changed_atom_count', 0)}`",
+            f"- charged bits changed rows: `{policy.get('charged_bits_changed_atom_count', 0)}`",
             f"- dispatchable rows: `{policy.get('dispatchable_atom_count', 0)}`",
             f"- exact-eval-ready rows: `{policy.get('ready_for_exact_eval_dispatch_atom_count', 0)}`",
             f"- promotion-eligible rows: `{policy.get('promotion_eligible_atom_count', 0)}`",

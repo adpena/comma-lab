@@ -142,6 +142,7 @@
       "target_payload_bytes_estimate": 152220
     }
   ],
+  "charged_bits_changed": false,
   "dispatch_attempted": false,
   "dispatch_blockers": [
     "codec_op_entropy_floor_atom_is_planning_only",
@@ -157,7 +158,7 @@
     "codec_op_context_transform_entropy_floor",
     "codec_op_provable_entropy_floor"
   ],
-  "generated_at_unix_seconds": 1778200034,
+  "generated_at_unix_seconds": 1778200423,
   "input_paths": [
     "reports/pr101_provable_optimal_floor.json",
     "reports/pr101_context_transform_floor_probe.json"
@@ -190,12 +191,15 @@
   ],
   "planning_only": true,
   "policy": {
+    "all_rows_no_charged_bits_changed": true,
     "all_rows_non_dispatchable": true,
     "all_rows_non_promotable": true,
+    "all_rows_non_score_affecting_payload_changed": true,
     "all_rows_non_score_claim": true,
     "all_rows_not_ready_for_exact_eval_dispatch": true,
     "all_rows_planning_only": true,
     "all_rows_proxy": true,
+    "charged_bits_changed_atom_count": 0,
     "dispatchable_atom_count": 0,
     "fail_closed": true,
     "planning_only_atom_count": 26,
@@ -203,6 +207,7 @@
     "proxy_row_count": 26,
     "ready_for_exact_eval_dispatch_atom_count": 0,
     "row_count": 26,
+    "score_affecting_payload_changed_atom_count": 0,
     "score_claim_atom_count": 0
   },
   "policy_review": {
@@ -226,6 +231,7 @@
   "proxy_rows": true,
   "ready_for_exact_eval_dispatch": false,
   "schema": "codec_op_entropy_floor_to_ledger.summary.v1",
+  "score_affecting_payload_changed": false,
   "score_claim": false,
   "tool": "tools/codec_op_entropy_floor_to_ledger.py"
 }

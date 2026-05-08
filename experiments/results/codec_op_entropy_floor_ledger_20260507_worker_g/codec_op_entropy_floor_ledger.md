@@ -22,6 +22,8 @@ This ledger records the Worker G hardening pass for converting PR101 CodecOp ent
 - planning-only rows: `26`
 - proxy rows: `26`
 - score-claim rows: `0`
+- score-affecting payload changed rows: `0`
+- charged bits changed rows: `0`
 - dispatchable rows: `0`
 - exact-eval-ready rows: `0`
 - promotion-eligible rows: `0`

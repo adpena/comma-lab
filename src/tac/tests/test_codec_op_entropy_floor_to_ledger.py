@@ -86,11 +86,17 @@ def test_provable_floor_report_emits_planning_only_atoms(
     assert markov2["planning_only"] is True
     assert markov2["proxy_row"] is True
     assert markov2["score_claim"] is False
+    assert markov2["score_affecting_payload_changed"] is False
+    assert markov2["charged_bits_changed"] is False
     assert markov2["promotion_eligible"] is False
     assert markov2["promotable"] is False
     assert markov2["dispatchable"] is False
     assert markov2["ready_for_exact_eval_dispatch"] is False
+    assert markov2["target_modes"] == ["planning_only"]
+    assert markov2["deployment_target"] == "desktop_research"
     assert markov2["readiness"]["promotion_eligible"] is False
+    assert markov2["readiness"]["score_affecting_payload_changed"] is False
+    assert markov2["readiness"]["charged_bits_changed"] is False
     assert markov2["readiness"]["ready_for_exact_eval_dispatch"] is False
     assert "model_table_overhead_not_charged" in markov2["dispatch_blockers"]
     assert "requires_exact_cuda_auth_eval" in markov2["dispatch_blockers"]
@@ -164,6 +170,8 @@ def test_context_transform_report_refuses_source_readiness_flags(
     assert markov2["ready_for_exact_eval_dispatch"] is False
     assert markov2["dispatchable"] is False
     assert markov2["score_claim"] is False
+    assert markov2["score_affecting_payload_changed"] is False
+    assert markov2["charged_bits_changed"] is False
     assert markov2["planning_only"] is True
     assert markov2["promotion_eligible"] is False
     assert "source_ready_for_exact_eval_dispatch_true_refused_by_adapter" in markov2["dispatch_blockers"]
@@ -227,14 +235,20 @@ def test_cli_writes_jsonl_atoms_json_and_summary(tmp_path: pathlib.Path) -> None
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
     assert jsonl_rows == atoms_json_rows
     assert jsonl_rows[0]["ready_for_exact_eval_dispatch"] is False
+    assert jsonl_rows[0]["score_affecting_payload_changed"] is False
+    assert jsonl_rows[0]["charged_bits_changed"] is False
     assert jsonl_rows[0]["promotion_eligible"] is False
     assert jsonl_rows[0]["planning_only"] is True
     assert summary["ready_for_exact_eval_dispatch"] is False
+    assert summary["score_affecting_payload_changed"] is False
+    assert summary["charged_bits_changed"] is False
     assert summary["planning_only"] is True
     assert summary["promotion_eligible"] is False
     assert summary["negative_byte_delta_atom_count"] == 1
     assert summary["policy"]["fail_closed"] is True
     assert summary["policy"]["promotion_eligible_atom_count"] == 0
+    assert summary["policy"]["score_affecting_payload_changed_atom_count"] == 0
+    assert summary["policy"]["charged_bits_changed_atom_count"] == 0
     assert summary["best_negative_byte_deltas"][0]["byte_delta"] == -2228
     assert "promotion-eligible rows: `0`" in ledger_md_path.read_text(encoding="utf-8")
 
@@ -267,6 +281,8 @@ def test_current_pr101_reports_emit_fail_closed_repo_local_policy_rows() -> None
     assert summary["policy"]["planning_only_atom_count"] == 26
     assert summary["policy"]["proxy_row_count"] == 26
     assert summary["policy"]["score_claim_atom_count"] == 0
+    assert summary["policy"]["score_affecting_payload_changed_atom_count"] == 0
+    assert summary["policy"]["charged_bits_changed_atom_count"] == 0
     assert summary["policy"]["dispatchable_atom_count"] == 0
     assert summary["policy"]["ready_for_exact_eval_dispatch_atom_count"] == 0
     assert summary["policy"]["promotion_eligible_atom_count"] == 0
@@ -274,6 +290,8 @@ def test_current_pr101_reports_emit_fail_closed_repo_local_policy_rows() -> None
     assert all(row["planning_only"] is True for row in rows)
     assert all(row["proxy_row"] is True for row in rows)
     assert all(row["score_claim"] is False for row in rows)
+    assert all(row["score_affecting_payload_changed"] is False for row in rows)
+    assert all(row["charged_bits_changed"] is False for row in rows)
     assert all(row["dispatchable"] is False for row in rows)
     assert all(row["ready_for_exact_eval_dispatch"] is False for row in rows)
     assert all(row["promotion_eligible"] is False for row in rows)

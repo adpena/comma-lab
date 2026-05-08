@@ -5,7 +5,9 @@
     "baseline_archive_bytes": 178144,
     "baseline_archive_bytes_source": "empirical_encoders.brotli_optuna_optimum.bytes_archive",
     "byte_delta": -64037,
+    "charged_bits_changed": false,
     "confidence": 0.2,
+    "deployment_target": "desktop_research",
     "dispatch_attempted": false,
     "dispatch_blockers": [
       "codec_op_entropy_floor_atom_is_planning_only",
@@ -63,15 +65,18 @@
     "promotion_eligible": false,
     "proxy_row": true,
     "readiness": {
+      "charged_bits_changed": false,
       "dispatchable": false,
       "planning_only": true,
       "promotable": false,
       "promotion_eligible": false,
       "proxy_row": true,
       "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
       "score_claim": false
     },
     "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
     "score_claim": false,
     "source_artifact_bytes": 114107,
     "source_evidence_grade": "derivation",
@@ -81,6 +86,9 @@
     "source_schema": "pr101_compression_floor_ladder.v2",
     "source_tool": "tools/pr101_provable_optimal_floor.py",
     "target_archive_bytes_estimate": 114107,
+    "target_modes": [
+      "planning_only"
+    ],
     "target_payload_bytes_estimate": 98013
   },
   {
@@ -89,7 +97,9 @@
     "baseline_archive_bytes": 178144,
     "baseline_archive_bytes_source": "empirical_encoders.brotli_optuna_optimum.bytes_archive",
     "byte_delta": -9944,
+    "charged_bits_changed": false,
     "confidence": 0.2,
+    "deployment_target": "desktop_research",
     "dispatch_attempted": false,
     "dispatch_blockers": [
       "codec_op_entropy_floor_atom_is_planning_only",
@@ -147,15 +157,18 @@
     "promotion_eligible": false,
     "proxy_row": true,
     "readiness": {
+      "charged_bits_changed": false,
       "dispatchable": false,
       "planning_only": true,
       "promotable": false,
       "promotion_eligible": false,
       "proxy_row": true,
       "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
       "score_claim": false
     },
     "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
     "score_claim": false,
     "source_artifact_bytes": 168200,
     "source_evidence_grade": "derivation",
@@ -165,6 +178,9 @@
     "source_schema": "pr101_compression_floor_ladder.v2",
     "source_tool": "tools/pr101_provable_optimal_floor.py",
     "target_archive_bytes_estimate": 168200,
+    "target_modes": [
+      "planning_only"
+    ],
     "target_payload_bytes_estimate": 152106
   },
   {
@@ -173,7 +189,9 @@
     "baseline_archive_bytes": 178144,
     "baseline_archive_bytes_source": "empirical_encoders.brotli_optuna_optimum.bytes_archive",
     "byte_delta": -2228,
+    "charged_bits_changed": false,
     "confidence": 0.2,
+    "deployment_target": "desktop_research",
     "dispatch_attempted": false,
     "dispatch_blockers": [
       "codec_op_entropy_floor_atom_is_planning_only",
@@ -231,15 +249,18 @@
     "promotion_eligible": false,
     "proxy_row": true,
     "readiness": {
+      "charged_bits_changed": false,
       "dispatchable": false,
       "planning_only": true,
       "promotable": false,
       "promotion_eligible": false,
       "proxy_row": true,
       "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
       "score_claim": false
     },
     "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
     "score_claim": false,
     "source_artifact_bytes": 175916,
     "source_evidence_grade": "derivation",
@@ -249,6 +270,9 @@
     "source_schema": "pr101_compression_floor_ladder.v2",
     "source_tool": "tools/pr101_provable_optimal_floor.py",
     "target_archive_bytes_estimate": 175916,
+    "target_modes": [
+      "planning_only"
+    ],
     "target_payload_bytes_estimate": 159822
   },
   {
@@ -257,7 +281,9 @@
     "baseline_archive_bytes": 178144,
     "baseline_archive_bytes_source": "empirical_encoders.brotli_optuna_optimum.bytes_archive",
     "byte_delta": -2228,
+    "charged_bits_changed": false,
     "confidence": 0.2,
+    "deployment_target": "desktop_research",
     "dispatch_attempted": false,
     "dispatch_blockers": [
       "codec_op_entropy_floor_atom_is_planning_only",
@@ -315,15 +341,18 @@
     "promotion_eligible": false,
     "proxy_row": true,
     "readiness": {
+      "charged_bits_changed": false,
       "dispatchable": false,
       "planning_only": true,
       "promotable": false,
       "promotion_eligible": false,
       "proxy_row": true,
       "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
       "score_claim": false
     },
     "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
     "score_claim": false,
     "source_artifact_bytes": 175916,
     "source_evidence_grade": "derivation",
@@ -333,6 +362,9 @@
     "source_schema": "pr101_compression_floor_ladder.v2",
     "source_tool": "tools/pr101_provable_optimal_floor.py",
     "target_archive_bytes_estimate": 175916,
+    "target_modes": [
+      "planning_only"
+    ],
     "target_payload_bytes_estimate": 159822
   },
   {
@@ -341,7 +373,9 @@
     "baseline_archive_bytes": 178144,
     "baseline_archive_bytes_source": "empirical_encoders.brotli_optuna_optimum.bytes_archive",
     "byte_delta": 24534,
+    "charged_bits_changed": false,
     "confidence": 0.2,
+    "deployment_target": "desktop_research",
     "dispatch_attempted": false,
     "dispatch_blockers": [
       "codec_op_entropy_floor_atom_is_planning_only",
@@ -399,15 +433,18 @@
     "promotion_eligible": false,
     "proxy_row": true,
     "readiness": {
+      "charged_bits_changed": false,
       "dispatchable": false,
       "planning_only": true,
       "promotable": false,
       "promotion_eligible": false,
       "proxy_row": true,
       "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
       "score_claim": false
     },
     "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
     "score_claim": false,
     "source_artifact_bytes": 202678,
     "source_evidence_grade": "derivation",
@@ -417,6 +454,9 @@
     "source_schema": "pr101_compression_floor_ladder.v2",
     "source_tool": "tools/pr101_provable_optimal_floor.py",
     "target_archive_bytes_estimate": 202678,
+    "target_modes": [
+      "planning_only"
+    ],
     "target_payload_bytes_estimate": 186584
   },
   {
@@ -425,8 +465,10 @@
     "baseline_archive_bytes": 178144,
     "baseline_archive_bytes_source": "comparison_brotli_optuna_archive_bytes",
     "byte_delta": -2228,
+    "charged_bits_changed": false,
     "confidence": 0.2,
     "context_transform": "identity",
+    "deployment_target": "desktop_research",
     "dispatch_attempted": false,
     "dispatch_blockers": [
       "codec_op_entropy_floor_atom_is_planning_only",
@@ -486,15 +528,18 @@
     "promotion_eligible": false,
     "proxy_row": true,
     "readiness": {
+      "charged_bits_changed": false,
       "dispatchable": false,
       "planning_only": true,
       "promotable": false,
       "promotion_eligible": false,
       "proxy_row": true,
       "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
       "score_claim": false
     },
     "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
     "score_claim": false,
     "source_artifact_bytes": 175916,
     "source_evidence_grade": "derivation",
@@ -504,6 +549,9 @@
     "source_schema": "pr101_context_transform_floor_probe.v1",
     "source_tool": "tools/pr101_context_transform_floor_probe.py",
     "target_archive_bytes_estimate": 175916,
+    "target_modes": [
+      "planning_only"
+    ],
     "target_payload_bytes_estimate": 159822
   },
   {
@@ -512,8 +560,10 @@
     "baseline_archive_bytes": 178144,
     "baseline_archive_bytes_source": "comparison_brotli_optuna_archive_bytes",
     "byte_delta": -9944,
+    "charged_bits_changed": false,
     "confidence": 0.2,
     "context_transform": "identity",
+    "deployment_target": "desktop_research",
     "dispatch_attempted": false,
     "dispatch_blockers": [
       "codec_op_entropy_floor_atom_is_planning_only",
@@ -573,15 +623,18 @@
     "promotion_eligible": false,
     "proxy_row": true,
     "readiness": {
+      "charged_bits_changed": false,
       "dispatchable": false,
       "planning_only": true,
       "promotable": false,
       "promotion_eligible": false,
       "proxy_row": true,
       "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
       "score_claim": false
     },
     "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
     "score_claim": false,
     "source_artifact_bytes": 168200,
     "source_evidence_grade": "derivation",
@@ -591,6 +644,9 @@
     "source_schema": "pr101_context_transform_floor_probe.v1",
     "source_tool": "tools/pr101_context_transform_floor_probe.py",
     "target_archive_bytes_estimate": 168200,
+    "target_modes": [
+      "planning_only"
+    ],
     "target_payload_bytes_estimate": 152106
   },
   {
@@ -599,8 +655,10 @@
     "baseline_archive_bytes": 178144,
     "baseline_archive_bytes_source": "comparison_brotli_optuna_archive_bytes",
     "byte_delta": -64037,
+    "charged_bits_changed": false,
     "confidence": 0.2,
     "context_transform": "identity",
+    "deployment_target": "desktop_research",
     "dispatch_attempted": false,
     "dispatch_blockers": [
       "codec_op_entropy_floor_atom_is_planning_only",
@@ -660,15 +718,18 @@
     "promotion_eligible": false,
     "proxy_row": true,
     "readiness": {
+      "charged_bits_changed": false,
       "dispatchable": false,
       "planning_only": true,
       "promotable": false,
       "promotion_eligible": false,
       "proxy_row": true,
       "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
       "score_claim": false
     },
     "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
     "score_claim": false,
     "source_artifact_bytes": 114107,
     "source_evidence_grade": "derivation",
@@ -678,6 +739,9 @@
     "source_schema": "pr101_context_transform_floor_probe.v1",
     "source_tool": "tools/pr101_context_transform_floor_probe.py",
     "target_archive_bytes_estimate": 114107,
+    "target_modes": [
+      "planning_only"
+    ],
     "target_payload_bytes_estimate": 98013
   },
   {
@@ -686,8 +750,10 @@
     "baseline_archive_bytes": 178144,
     "baseline_archive_bytes_source": "comparison_brotli_optuna_archive_bytes",
     "byte_delta": -2228,
+    "charged_bits_changed": false,
     "confidence": 0.2,
     "context_transform": "signed_zigzag",
+    "deployment_target": "desktop_research",
     "dispatch_attempted": false,
     "dispatch_blockers": [
       "codec_op_entropy_floor_atom_is_planning_only",
@@ -747,15 +813,18 @@
     "promotion_eligible": false,
     "proxy_row": true,
     "readiness": {
+      "charged_bits_changed": false,
       "dispatchable": false,
       "planning_only": true,
       "promotable": false,
       "promotion_eligible": false,
       "proxy_row": true,
       "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
       "score_claim": false
     },
     "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
     "score_claim": false,
     "source_artifact_bytes": 175916,
     "source_evidence_grade": "derivation",
@@ -765,6 +834,9 @@
     "source_schema": "pr101_context_transform_floor_probe.v1",
     "source_tool": "tools/pr101_context_transform_floor_probe.py",
     "target_archive_bytes_estimate": 175916,
+    "target_modes": [
+      "planning_only"
+    ],
     "target_payload_bytes_estimate": 159822
   },
   {
@@ -773,8 +845,10 @@
     "baseline_archive_bytes": 178144,
     "baseline_archive_bytes_source": "comparison_brotli_optuna_archive_bytes",
     "byte_delta": -9944,
+    "charged_bits_changed": false,
     "confidence": 0.2,
     "context_transform": "signed_zigzag",
+    "deployment_target": "desktop_research",
     "dispatch_attempted": false,
     "dispatch_blockers": [
       "codec_op_entropy_floor_atom_is_planning_only",
@@ -834,15 +908,18 @@
     "promotion_eligible": false,
     "proxy_row": true,
     "readiness": {
+      "charged_bits_changed": false,
       "dispatchable": false,
       "planning_only": true,
       "promotable": false,
       "promotion_eligible": false,
       "proxy_row": true,
       "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
       "score_claim": false
     },
     "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
     "score_claim": false,
     "source_artifact_bytes": 168200,
     "source_evidence_grade": "derivation",
@@ -852,6 +929,9 @@
     "source_schema": "pr101_context_transform_floor_probe.v1",
     "source_tool": "tools/pr101_context_transform_floor_probe.py",
     "target_archive_bytes_estimate": 168200,
+    "target_modes": [
+      "planning_only"
+    ],
     "target_payload_bytes_estimate": 152106
   },
   {
@@ -860,8 +940,10 @@
     "baseline_archive_bytes": 178144,
     "baseline_archive_bytes_source": "comparison_brotli_optuna_archive_bytes",
     "byte_delta": -64037,
+    "charged_bits_changed": false,
     "confidence": 0.2,
     "context_transform": "signed_zigzag",
+    "deployment_target": "desktop_research",
     "dispatch_attempted": false,
     "dispatch_blockers": [
       "codec_op_entropy_floor_atom_is_planning_only",
@@ -921,15 +1003,18 @@
     "promotion_eligible": false,
     "proxy_row": true,
     "readiness": {
+      "charged_bits_changed": false,
       "dispatchable": false,
       "planning_only": true,
       "promotable": false,
       "promotion_eligible": false,
       "proxy_row": true,
       "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
       "score_claim": false
     },
     "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
     "score_claim": false,
     "source_artifact_bytes": 114107,
     "source_evidence_grade": "derivation",
@@ -939,6 +1024,9 @@
     "source_schema": "pr101_context_transform_floor_probe.v1",
     "source_tool": "tools/pr101_context_transform_floor_probe.py",
     "target_archive_bytes_estimate": 114107,
+    "target_modes": [
+      "planning_only"
+    ],
     "target_payload_bytes_estimate": 98013
   },
   {
@@ -947,8 +1035,10 @@
     "baseline_archive_bytes": 178144,
     "baseline_archive_bytes_source": "comparison_brotli_optuna_archive_bytes",
     "byte_delta": -2228,
+    "charged_bits_changed": false,
     "confidence": 0.2,
     "context_transform": "zero_mask_nonzero_value",
+    "deployment_target": "desktop_research",
     "dispatch_attempted": false,
     "dispatch_blockers": [
       "codec_op_entropy_floor_atom_is_planning_only",
@@ -1008,15 +1098,18 @@
     "promotion_eligible": false,
     "proxy_row": true,
     "readiness": {
+      "charged_bits_changed": false,
       "dispatchable": false,
       "planning_only": true,
       "promotable": false,
       "promotion_eligible": false,
       "proxy_row": true,
       "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
       "score_claim": false
     },
     "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
     "score_claim": false,
     "source_artifact_bytes": 175916,
     "source_evidence_grade": "derivation",
@@ -1026,6 +1119,9 @@
     "source_schema": "pr101_context_transform_floor_probe.v1",
     "source_tool": "tools/pr101_context_transform_floor_probe.py",
     "target_archive_bytes_estimate": 175916,
+    "target_modes": [
+      "planning_only"
+    ],
     "target_payload_bytes_estimate": 159822
   },
   {
@@ -1034,8 +1130,10 @@
     "baseline_archive_bytes": 178144,
     "baseline_archive_bytes_source": "comparison_brotli_optuna_archive_bytes",
     "byte_delta": -9830,
+    "charged_bits_changed": false,
     "confidence": 0.2,
     "context_transform": "zero_mask_nonzero_value",
+    "deployment_target": "desktop_research",
     "dispatch_attempted": false,
     "dispatch_blockers": [
       "codec_op_entropy_floor_atom_is_planning_only",
@@ -1095,15 +1193,18 @@
     "promotion_eligible": false,
     "proxy_row": true,
     "readiness": {
+      "charged_bits_changed": false,
       "dispatchable": false,
       "planning_only": true,
       "promotable": false,
       "promotion_eligible": false,
       "proxy_row": true,
       "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
       "score_claim": false
     },
     "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
     "score_claim": false,
     "source_artifact_bytes": 168314,
     "source_evidence_grade": "derivation",
@@ -1113,6 +1214,9 @@
     "source_schema": "pr101_context_transform_floor_probe.v1",
     "source_tool": "tools/pr101_context_transform_floor_probe.py",
     "target_archive_bytes_estimate": 168314,
+    "target_modes": [
+      "planning_only"
+    ],
     "target_payload_bytes_estimate": 152220
   },
   {
@@ -1121,8 +1225,10 @@
     "baseline_archive_bytes": 178144,
     "baseline_archive_bytes_source": "comparison_brotli_optuna_archive_bytes",
     "byte_delta": -62438,
+    "charged_bits_changed": false,
     "confidence": 0.2,
     "context_transform": "zero_mask_nonzero_value",
+    "deployment_target": "desktop_research",
     "dispatch_attempted": false,
     "dispatch_blockers": [
       "codec_op_entropy_floor_atom_is_planning_only",
@@ -1182,15 +1288,18 @@
     "promotion_eligible": false,
     "proxy_row": true,
     "readiness": {
+      "charged_bits_changed": false,
       "dispatchable": false,
       "planning_only": true,
       "promotable": false,
       "promotion_eligible": false,
       "proxy_row": true,
       "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
       "score_claim": false
     },
     "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
     "score_claim": false,
     "source_artifact_bytes": 115706,
     "source_evidence_grade": "derivation",
@@ -1200,6 +1309,9 @@
     "source_schema": "pr101_context_transform_floor_probe.v1",
     "source_tool": "tools/pr101_context_transform_floor_probe.py",
     "target_archive_bytes_estimate": 115706,
+    "target_modes": [
+      "planning_only"
+    ],
     "target_payload_bytes_estimate": 99612
   },
   {
@@ -1208,8 +1320,10 @@
     "baseline_archive_bytes": 178144,
     "baseline_archive_bytes_source": "comparison_brotli_optuna_archive_bytes",
     "byte_delta": 11747,
+    "charged_bits_changed": false,
     "confidence": 0.2,
     "context_transform": "abs_sign_split",
+    "deployment_target": "desktop_research",
     "dispatch_attempted": false,
     "dispatch_blockers": [
       "codec_op_entropy_floor_atom_is_planning_only",
@@ -1269,15 +1383,18 @@
     "promotion_eligible": false,
     "proxy_row": true,
     "readiness": {
+      "charged_bits_changed": false,
       "dispatchable": false,
       "planning_only": true,
       "promotable": false,
       "promotion_eligible": false,
       "proxy_row": true,
       "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
       "score_claim": false
     },
     "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
     "score_claim": false,
     "source_artifact_bytes": 189891,
     "source_evidence_grade": "derivation",
@@ -1287,6 +1404,9 @@
     "source_schema": "pr101_context_transform_floor_probe.v1",
     "source_tool": "tools/pr101_context_transform_floor_probe.py",
     "target_archive_bytes_estimate": 189891,
+    "target_modes": [
+      "planning_only"
+    ],
     "target_payload_bytes_estimate": 173797
   },
   {
@@ -1295,8 +1415,10 @@
     "baseline_archive_bytes": 178144,
     "baseline_archive_bytes_source": "comparison_brotli_optuna_archive_bytes",
     "byte_delta": 6809,
+    "charged_bits_changed": false,
     "confidence": 0.2,
     "context_transform": "abs_sign_split",
+    "deployment_target": "desktop_research",
     "dispatch_attempted": false,
     "dispatch_blockers": [
       "codec_op_entropy_floor_atom_is_planning_only",
@@ -1356,15 +1478,18 @@
     "promotion_eligible": false,
     "proxy_row": true,
     "readiness": {
+      "charged_bits_changed": false,
       "dispatchable": false,
       "planning_only": true,
       "promotable": false,
       "promotion_eligible": false,
       "proxy_row": true,
       "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
       "score_claim": false
     },
     "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
     "score_claim": false,
     "source_artifact_bytes": 184953,
     "source_evidence_grade": "derivation",
@@ -1374,6 +1499,9 @@
     "source_schema": "pr101_context_transform_floor_probe.v1",
     "source_tool": "tools/pr101_context_transform_floor_probe.py",
     "target_archive_bytes_estimate": 184953,
+    "target_modes": [
+      "planning_only"
+    ],
     "target_payload_bytes_estimate": 168859
   },
   {
@@ -1382,8 +1510,10 @@
     "baseline_archive_bytes": 178144,
     "baseline_archive_bytes_source": "comparison_brotli_optuna_archive_bytes",
     "byte_delta": -27988,
+    "charged_bits_changed": false,
     "confidence": 0.2,
     "context_transform": "abs_sign_split",
+    "deployment_target": "desktop_research",
     "dispatch_attempted": false,
     "dispatch_blockers": [
       "codec_op_entropy_floor_atom_is_planning_only",
@@ -1443,15 +1573,18 @@
     "promotion_eligible": false,
     "proxy_row": true,
     "readiness": {
+      "charged_bits_changed": false,
       "dispatchable": false,
       "planning_only": true,
       "promotable": false,
       "promotion_eligible": false,
       "proxy_row": true,
       "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
       "score_claim": false
     },
     "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
     "score_claim": false,
     "source_artifact_bytes": 150156,
     "source_evidence_grade": "derivation",
@@ -1461,6 +1594,9 @@
     "source_schema": "pr101_context_transform_floor_probe.v1",
     "source_tool": "tools/pr101_context_transform_floor_probe.py",
     "target_archive_bytes_estimate": 150156,
+    "target_modes": [
+      "planning_only"
+    ],
     "target_payload_bytes_estimate": 134062
   },
   {
@@ -1469,8 +1605,10 @@
     "baseline_archive_bytes": 178144,
     "baseline_archive_bytes_source": "comparison_brotli_optuna_archive_bytes",
     "byte_delta": 37234,
+    "charged_bits_changed": false,
     "confidence": 0.2,
     "context_transform": "delta_mod255",
+    "deployment_target": "desktop_research",
     "dispatch_attempted": false,
     "dispatch_blockers": [
       "codec_op_entropy_floor_atom_is_planning_only",
@@ -1530,15 +1668,18 @@
     "promotion_eligible": false,
     "proxy_row": true,
     "readiness": {
+      "charged_bits_changed": false,
       "dispatchable": false,
       "planning_only": true,
       "promotable": false,
       "promotion_eligible": false,
       "proxy_row": true,
       "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
       "score_claim": false
     },
     "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
     "score_claim": false,
     "source_artifact_bytes": 215378,
     "source_evidence_grade": "derivation",
@@ -1548,6 +1689,9 @@
     "source_schema": "pr101_context_transform_floor_probe.v1",
     "source_tool": "tools/pr101_context_transform_floor_probe.py",
     "target_archive_bytes_estimate": 215378,
+    "target_modes": [
+      "planning_only"
+    ],
     "target_payload_bytes_estimate": 199284
   },
   {
@@ -1556,8 +1700,10 @@
     "baseline_archive_bytes": 178144,
     "baseline_archive_bytes_source": "comparison_brotli_optuna_archive_bytes",
     "byte_delta": 8451,
+    "charged_bits_changed": false,
     "confidence": 0.2,
     "context_transform": "delta_mod255",
+    "deployment_target": "desktop_research",
     "dispatch_attempted": false,
     "dispatch_blockers": [
       "codec_op_entropy_floor_atom_is_planning_only",
@@ -1617,15 +1763,18 @@
     "promotion_eligible": false,
     "proxy_row": true,
     "readiness": {
+      "charged_bits_changed": false,
       "dispatchable": false,
       "planning_only": true,
       "promotable": false,
       "promotion_eligible": false,
       "proxy_row": true,
       "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
       "score_claim": false
     },
     "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
     "score_claim": false,
     "source_artifact_bytes": 186595,
     "source_evidence_grade": "derivation",
@@ -1635,6 +1784,9 @@
     "source_schema": "pr101_context_transform_floor_probe.v1",
     "source_tool": "tools/pr101_context_transform_floor_probe.py",
     "target_archive_bytes_estimate": 186595,
+    "target_modes": [
+      "planning_only"
+    ],
     "target_payload_bytes_estimate": 170501
   },
   {
@@ -1643,8 +1795,10 @@
     "baseline_archive_bytes": 178144,
     "baseline_archive_bytes_source": "comparison_brotli_optuna_archive_bytes",
     "byte_delta": -107115,
+    "charged_bits_changed": false,
     "confidence": 0.2,
     "context_transform": "delta_mod255",
+    "deployment_target": "desktop_research",
     "dispatch_attempted": false,
     "dispatch_blockers": [
       "codec_op_entropy_floor_atom_is_planning_only",
@@ -1704,15 +1858,18 @@
     "promotion_eligible": false,
     "proxy_row": true,
     "readiness": {
+      "charged_bits_changed": false,
       "dispatchable": false,
       "planning_only": true,
       "promotable": false,
       "promotion_eligible": false,
       "proxy_row": true,
       "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
       "score_claim": false
     },
     "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
     "score_claim": false,
     "source_artifact_bytes": 71029,
     "source_evidence_grade": "derivation",
@@ -1722,6 +1879,9 @@
     "source_schema": "pr101_context_transform_floor_probe.v1",
     "source_tool": "tools/pr101_context_transform_floor_probe.py",
     "target_archive_bytes_estimate": 71029,
+    "target_modes": [
+      "planning_only"
+    ],
     "target_payload_bytes_estimate": 54935
   },
   {
@@ -1730,8 +1890,10 @@
     "baseline_archive_bytes": 178144,
     "baseline_archive_bytes_source": "comparison_brotli_optuna_archive_bytes",
     "byte_delta": 21022,
+    "charged_bits_changed": false,
     "confidence": 0.2,
     "context_transform": "nibble_split",
+    "deployment_target": "desktop_research",
     "dispatch_attempted": false,
     "dispatch_blockers": [
       "codec_op_entropy_floor_atom_is_planning_only",
@@ -1791,15 +1953,18 @@
     "promotion_eligible": false,
     "proxy_row": true,
     "readiness": {
+      "charged_bits_changed": false,
       "dispatchable": false,
       "planning_only": true,
       "promotable": false,
       "promotion_eligible": false,
       "proxy_row": true,
       "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
       "score_claim": false
     },
     "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
     "score_claim": false,
     "source_artifact_bytes": 199166,
     "source_evidence_grade": "derivation",
@@ -1809,6 +1974,9 @@
     "source_schema": "pr101_context_transform_floor_probe.v1",
     "source_tool": "tools/pr101_context_transform_floor_probe.py",
     "target_archive_bytes_estimate": 199166,
+    "target_modes": [
+      "planning_only"
+    ],
     "target_payload_bytes_estimate": 183072
   },
   {
@@ -1817,8 +1985,10 @@
     "baseline_archive_bytes": 178144,
     "baseline_archive_bytes_source": "comparison_brotli_optuna_archive_bytes",
     "byte_delta": 20021,
+    "charged_bits_changed": false,
     "confidence": 0.2,
     "context_transform": "nibble_split",
+    "deployment_target": "desktop_research",
     "dispatch_attempted": false,
     "dispatch_blockers": [
       "codec_op_entropy_floor_atom_is_planning_only",
@@ -1878,15 +2048,18 @@
     "promotion_eligible": false,
     "proxy_row": true,
     "readiness": {
+      "charged_bits_changed": false,
       "dispatchable": false,
       "planning_only": true,
       "promotable": false,
       "promotion_eligible": false,
       "proxy_row": true,
       "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
       "score_claim": false
     },
     "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
     "score_claim": false,
     "source_artifact_bytes": 198165,
     "source_evidence_grade": "derivation",
@@ -1896,6 +2069,9 @@
     "source_schema": "pr101_context_transform_floor_probe.v1",
     "source_tool": "tools/pr101_context_transform_floor_probe.py",
     "target_archive_bytes_estimate": 198165,
+    "target_modes": [
+      "planning_only"
+    ],
     "target_payload_bytes_estimate": 182071
   },
   {
@@ -1904,8 +2080,10 @@
     "baseline_archive_bytes": 178144,
     "baseline_archive_bytes_source": "comparison_brotli_optuna_archive_bytes",
     "byte_delta": 14649,
+    "charged_bits_changed": false,
     "confidence": 0.2,
     "context_transform": "nibble_split",
+    "deployment_target": "desktop_research",
     "dispatch_attempted": false,
     "dispatch_blockers": [
       "codec_op_entropy_floor_atom_is_planning_only",
@@ -1965,15 +2143,18 @@
     "promotion_eligible": false,
     "proxy_row": true,
     "readiness": {
+      "charged_bits_changed": false,
       "dispatchable": false,
       "planning_only": true,
       "promotable": false,
       "promotion_eligible": false,
       "proxy_row": true,
       "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
       "score_claim": false
     },
     "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
     "score_claim": false,
     "source_artifact_bytes": 192793,
     "source_evidence_grade": "derivation",
@@ -1983,6 +2164,9 @@
     "source_schema": "pr101_context_transform_floor_probe.v1",
     "source_tool": "tools/pr101_context_transform_floor_probe.py",
     "target_archive_bytes_estimate": 192793,
+    "target_modes": [
+      "planning_only"
+    ],
     "target_payload_bytes_estimate": 176699
   },
   {
@@ -1991,8 +2175,10 @@
     "baseline_archive_bytes": 178144,
     "baseline_archive_bytes_source": "comparison_brotli_optuna_archive_bytes",
     "byte_delta": 63393,
+    "charged_bits_changed": false,
     "confidence": 0.2,
     "context_transform": "bitplanes",
+    "deployment_target": "desktop_research",
     "dispatch_attempted": false,
     "dispatch_blockers": [
       "codec_op_entropy_floor_atom_is_planning_only",
@@ -2052,15 +2238,18 @@
     "promotion_eligible": false,
     "proxy_row": true,
     "readiness": {
+      "charged_bits_changed": false,
       "dispatchable": false,
       "planning_only": true,
       "promotable": false,
       "promotion_eligible": false,
       "proxy_row": true,
       "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
       "score_claim": false
     },
     "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
     "score_claim": false,
     "source_artifact_bytes": 241537,
     "source_evidence_grade": "derivation",
@@ -2070,6 +2259,9 @@
     "source_schema": "pr101_context_transform_floor_probe.v1",
     "source_tool": "tools/pr101_context_transform_floor_probe.py",
     "target_archive_bytes_estimate": 241537,
+    "target_modes": [
+      "planning_only"
+    ],
     "target_payload_bytes_estimate": 225443
   },
   {
@@ -2078,8 +2270,10 @@
     "baseline_archive_bytes": 178144,
     "baseline_archive_bytes_source": "comparison_brotli_optuna_archive_bytes",
     "byte_delta": 63277,
+    "charged_bits_changed": false,
     "confidence": 0.2,
     "context_transform": "bitplanes",
+    "deployment_target": "desktop_research",
     "dispatch_attempted": false,
     "dispatch_blockers": [
       "codec_op_entropy_floor_atom_is_planning_only",
@@ -2139,15 +2333,18 @@
     "promotion_eligible": false,
     "proxy_row": true,
     "readiness": {
+      "charged_bits_changed": false,
       "dispatchable": false,
       "planning_only": true,
       "promotable": false,
       "promotion_eligible": false,
       "proxy_row": true,
       "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
       "score_claim": false
     },
     "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
     "score_claim": false,
     "source_artifact_bytes": 241421,
     "source_evidence_grade": "derivation",
@@ -2157,6 +2354,9 @@
     "source_schema": "pr101_context_transform_floor_probe.v1",
     "source_tool": "tools/pr101_context_transform_floor_probe.py",
     "target_archive_bytes_estimate": 241421,
+    "target_modes": [
+      "planning_only"
+    ],
     "target_payload_bytes_estimate": 225327
   },
   {
@@ -2165,8 +2365,10 @@
     "baseline_archive_bytes": 178144,
     "baseline_archive_bytes_source": "comparison_brotli_optuna_archive_bytes",
     "byte_delta": 63207,
+    "charged_bits_changed": false,
     "confidence": 0.2,
     "context_transform": "bitplanes",
+    "deployment_target": "desktop_research",
     "dispatch_attempted": false,
     "dispatch_blockers": [
       "codec_op_entropy_floor_atom_is_planning_only",
@@ -2226,15 +2428,18 @@
     "promotion_eligible": false,
     "proxy_row": true,
     "readiness": {
+      "charged_bits_changed": false,
       "dispatchable": false,
       "planning_only": true,
       "promotable": false,
       "promotion_eligible": false,
       "proxy_row": true,
       "ready_for_exact_eval_dispatch": false,
+      "score_affecting_payload_changed": false,
       "score_claim": false
     },
     "ready_for_exact_eval_dispatch": false,
+    "score_affecting_payload_changed": false,
     "score_claim": false,
     "source_artifact_bytes": 241351,
     "source_evidence_grade": "derivation",
@@ -2244,6 +2449,9 @@
     "source_schema": "pr101_context_transform_floor_probe.v1",
     "source_tool": "tools/pr101_context_transform_floor_probe.py",
     "target_archive_bytes_estimate": 241351,
+    "target_modes": [
+      "planning_only"
+    ],
     "target_payload_bytes_estimate": 225257
   }
 ]
