@@ -71,6 +71,26 @@ also accepts hex-string CRCs in archive-member manifests. The stricter
 identity checks remain intact; stale SHA, stale size, and stale member metadata
 still fail.
 
+## Runtime Portability Fix
+
+A local macOS CPU advisory eval exposed two pre-score runtime issues before
+the scorer ran:
+
+1. `inflate.sh` called bare `python`, which is absent on this machine.
+2. The fallback `python3` lacks the packet runtime's Python dependencies
+   outside the repo virtualenv.
+
+The packet builder now rewrites the packet-local PR101 `inflate.sh` call to:
+
+```bash
+"${PYTHON:-python3}" "$HERE/inflate.py" "$SRC" "$DST"
+```
+
+This keeps the contest/runtime default simple while allowing local custody
+evals to set `PYTHON=.venv/bin/python`. The regenerated packet keeps the same
+archive bytes and SHA-256 because only runtime source changed, not charged
+archive bytes.
+
 ## Focused Verification
 
 ```bash
@@ -95,9 +115,48 @@ Result: `24 passed`.
 
 Result: exit `0`.
 
+Local advisory eval command:
+
+```bash
+PYTHON=.venv/bin/python .venv/bin/python -u experiments/contest_auth_eval.py \
+  --archive experiments/results/pr101_frame_conditional_runtime_packet_20260508_codex/packet/archive.zip \
+  --inflate-sh experiments/results/pr101_frame_conditional_runtime_packet_20260508_codex/packet/inflate.sh \
+  --upstream-dir upstream \
+  --device cpu \
+  --work-dir experiments/results/pr101_frame_conditional_runtime_packet_20260508_codex/macos_cpu_advisory_work \
+  --json-out experiments/results/pr101_frame_conditional_runtime_packet_20260508_codex/contest_auth_eval.macos_cpu_advisory.json \
+  --inflate-timeout 1800 \
+  --evaluate-timeout 5400 \
+  --keep-work-dir
+```
+
+Result:
+
+- Evidence grade: `[macOS-CPU advisory]`
+- Evidence semantics: `non_contest_cpu_auth_eval_advisory`
+- Archive bytes: `172615`
+- Canonical score: `1.937884415209767`
+- PoseNet distortion: `0.07864571`
+- SegNet distortion: `0.00936123`
+- Rate contribution: `0.11493725`
+- JSON:
+  `experiments/results/pr101_frame_conditional_runtime_packet_20260508_codex/contest_auth_eval.macos_cpu_advisory.json`
+
+Disposition:
+
+- The measured `eta=4.0`, complexity-proxy A5 q-bit schedule is retired as a
+  measured configuration. The collapse is component-side, not rate-side:
+  `-4098` byte proxy savings cannot compensate for PoseNet/SegNet loss.
+- This is not a family kill. Reactivation requires a less destructive q-bit
+  schedule or a score-domain/Jacobian-derived schedule that preserves PR101
+  latents on high-score pairs, followed by another local advisory eval before
+  any contest CUDA/CPU spend.
+- Do not exact-eval this exact archive remotely unless the operator explicitly
+  wants a formal negative on the contest axes.
+
 ## Next Gate
 
-Before exact eval: claim a Level-2 lane for this exact A5 candidate archive,
-then run paired exact CUDA and contest-CPU auth eval. The advisory per-pair
-artifact is a dispatch-prior signal only and must not be promoted as achieved
-score.
+Before any renewed A5 exact eval: build a safer A5 variant with score-domain
+allocation, claim a Level-2 lane for that exact candidate archive, then run
+paired exact CUDA and contest-CPU auth eval. The advisory per-pair artifact is
+a dispatch-prior signal only and must not be promoted as achieved score.

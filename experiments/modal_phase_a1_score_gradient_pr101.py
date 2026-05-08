@@ -596,10 +596,12 @@ def _run_phase_a1_inner(
     pr101_archive.write_bytes(pr101_archive_bytes)
     pr101_source_zip.write_bytes(pr101_source_zip_bytes)
     video_path.write_bytes(video_bytes)
-    # Unpack pr101_source_zip → pr101_source_dir
-    pr101_source_dir.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(pr101_source_zip) as zf:
-        zf.extractall(pr101_source_dir)
+    # Unpack pr101_source_zip → pr101_source_dir.
+    # Use tac.submission_archive.safe_extract_zip — raw ZipFile.extractall is
+    # forbidden by preflight check_no_raw_zip_extractall (zip-slip, duplicate
+    # members, symlinks all hide until later in the pipeline).
+    from tac.submission_archive import safe_extract_zip
+    safe_extract_zip(pr101_source_zip, pr101_source_dir)
 
     stage = "input_custody"
     command_results: list[dict[str, Any]] = []

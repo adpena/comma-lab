@@ -25829,6 +25829,10 @@ def check_no_auth_eval_optout_help_text_consumer_unverified(
         # itself + historical copies of training scripts)
         if "/results/" in rel_check or rel_check.startswith("experiments/results/"):
             continue
+        # Skip OSS-export mirror tree (avoids self-flagging preflight on
+        # exported copies of training scripts in the public mirror).
+        if _is_oss_export_mirror_path(path):
+            continue
         try:
             text = path.read_text(encoding="utf-8")
         except OSError:

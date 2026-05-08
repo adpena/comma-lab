@@ -178,6 +178,7 @@ def build_frame_conditional_runtime_packet(
     packet_dir = output_dir / "packet"
     packet_dir.mkdir(parents=True)
     runtime_files_before_patch = _copy_runtime_tree(source_runtime_dir, packet_dir)
+    inflate_patch = _patch_packet_inflate_sh(packet_dir)
     runtime_patch = _patch_packet_codec(packet_dir)
 
     candidate_member_payload = _build_a5_member_payload(
@@ -340,6 +341,7 @@ def build_frame_conditional_runtime_packet(
         "parser_section_custody": parser_section_custody,
         "runtime_packet": {
             "packet_dir": _repo_rel(packet_dir),
+            "inflate_patch": inflate_patch,
             "runtime_patch": runtime_patch,
             "runtime_custody": {
                 "copied_file_count": len(runtime_files_before_patch),
@@ -709,6 +711,28 @@ def parse_archive(archive_bytes):
         "header_bytes": A5_HEADER_LEN,
         "source_runtime_mutated": False,
         "score_claim": False,
+    }
+
+
+def _patch_packet_inflate_sh(packet_dir: Path) -> dict[str, Any]:
+    inflate_path = packet_dir / "inflate.sh"
+    if not inflate_path.is_file():
+        raise FrameConditionalRuntimePacketError(f"packet runtime missing {inflate_path}")
+    text = inflate_path.read_text(encoding="utf-8")
+    old = 'python "$HERE/inflate.py" "$SRC" "$DST"'
+    new = '"${PYTHON:-python3}" "$HERE/inflate.py" "$SRC" "$DST"'
+    if old not in text and new not in text:
+        raise FrameConditionalRuntimePacketError(
+            "packet inflate.sh does not contain the expected PR101 inflate.py call"
+        )
+    if old in text:
+        text = text.replace(old, new, 1)
+        inflate_path.write_text(text, encoding="utf-8")
+    return {
+        "inflate_sh_path": _repo_rel(inflate_path),
+        "inflate_sh_sha256": sha256_file(inflate_path),
+        "portable_python_fallback": True,
+        "python_invocation": new,
     }
 
 

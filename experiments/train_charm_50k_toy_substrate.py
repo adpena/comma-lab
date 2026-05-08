@@ -720,10 +720,13 @@ def simulate_eval_roundtrip(
         frames = frames + torch.randn_like(frames) * noise_std / 255.0
     # 384 → 874 upsample
     frames_874 = F.interpolate(frames, size=(874, 1164), mode="bilinear", align_corners=False)
-    # uint8 quantize via STE
+    # uint8 quantize via canonical STE (tac.quantization.Uint8STE).
+    # Equivalent to the manual `round() then detach` pattern but routes
+    # through the project-wide STE helper to satisfy the
+    # `check_no_bare_round_in_eval_roundtrip` preflight contract.
+    from tac.quantization import Uint8STE
     frames_874 = frames_874.clamp(0, 1)
-    frames_uint8 = (frames_874 * 255.0).round() / 255.0
-    frames_uint8 = frames_874 + (frames_uint8 - frames_874).detach()
+    frames_uint8 = Uint8STE.apply(frames_874 * 255.0) / 255.0
     # Back to 384
     frames_384 = F.interpolate(frames_uint8, size=(384, 512), mode="bilinear", align_corners=False)
     return frames_384

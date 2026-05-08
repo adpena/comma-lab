@@ -5,8 +5,8 @@ bug pattern — argparse defaults that silently override profile values.
 
 - **CRITICAL** (matches a key in `tac.profiles.PROFILES`): **0**
 - **SUSPICIOUS** (non-None default, no profile match): **15**
-- **SAFE** (default=None or action implies None): **19680**
-- **TOTAL ARGUMENTS SCANNED**: **19695**
+- **SAFE** (default=None or action implies None): **19703**
+- **TOTAL ARGUMENTS SCANNED**: **19718**
 - **CANONICAL TRAINING ENTRYPOINTS SCANNED**: `src/tac/experiments/train_renderer.py`, `experiments/pipeline.py`
 
 ---

@@ -1,3 +1,9 @@
+<!--
+generated_at: 2026-05-08T23:26:58Z
+from_state_hash: 61c3b8cce4f221ca37988c2a382ff59568df7daa
+regenerated_by: claude:fix-all-bugs-pass
+-->
+
 # Latest Report - 2026-05-04 PR106 belt_and_suspenders adapter contest-faithful status
 
 ## 2026-05-08 (evening) — Recursive hardening + Phase A ablation pass
@@ -73,7 +79,11 @@ reactivation criteria documented per memo.
   `feedback_pr101_pose_filler_stc_byte_anchor_landed_20260508.md`.
   First empirical anchor at
   `experiments/results/pr101_pose_filler_stc_20260508T194527Z/`.
-- A5 frame-conditional bit budget — best η=2.0 saves -1,278 B on PR101.
+- A5 frame-conditional bit budget — byte-closed runtime packet landed, but
+  the current complexity-only schedule is a measured-config negative:
+  macOS CPU advisory score **1.937884** (`pose=0.078646`,
+  `seg=0.009361`, `172,615 B`). Reactivate with score-domain q-bit
+  allocation, not the η=4 complexity schedule.
 - A6 Selfcomp block-FP × Ballé hyperprior compose — measured-config
   negative. Best compose **B=64, sq=uint8 = 214,035 B**, which loses to
   PR101 brotli by +35,891 B. Treat this as a scoped proxy retirement for

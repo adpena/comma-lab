@@ -64,7 +64,16 @@ def _write_zip(path: Path, payload: bytes) -> None:
 def _write_runtime(path: Path, *, latent_blob_len: int) -> Path:
     path.mkdir(parents=True, exist_ok=True)
     inflate = path / "inflate.sh"
-    inflate.write_text("#!/usr/bin/env bash\nset -euo pipefail\n", encoding="utf-8")
+    inflate.write_text(
+        """#!/usr/bin/env bash
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SRC="$1"
+DST="$2"
+python "$HERE/inflate.py" "$SRC" "$DST"
+""",
+        encoding="utf-8",
+    )
     inflate.chmod(0o755)
     (path / "inflate.py").write_text("print('unused in unit test')\n", encoding="utf-8")
     src = path / "src"
@@ -212,6 +221,7 @@ def test_builds_a5_runtime_packet_and_consumption_proof(
         manifest["packet_local_runtime_patch"]["decode_latents_consumes_variable_width_payload"]
         is True
     )
+    assert manifest["runtime_packet"]["inflate_patch"]["portable_python_fallback"] is True
     assert manifest["parser_section_gate"]["ready"] is True
     assert manifest["parser_section_manifest"]["section_names"] == [
         "a5fc_magic",
@@ -227,6 +237,10 @@ def test_builds_a5_runtime_packet_and_consumption_proof(
     ]
 
     archive_path = REPO_ROOT / manifest["candidate_archive_relpath"]
+    inflate_sh = archive_path.parent / "inflate.sh"
+    assert '"${PYTHON:-python3}" "$HERE/inflate.py" "$SRC" "$DST"' in inflate_sh.read_text(
+        encoding="utf-8"
+    )
     with zipfile.ZipFile(archive_path) as zf:
         candidate_payload = zf.read("x")
     assert candidate_payload.startswith(b"A5FC")
