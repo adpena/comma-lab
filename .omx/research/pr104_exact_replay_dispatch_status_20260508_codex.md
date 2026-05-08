@@ -93,3 +93,33 @@ Hardening landed locally after this finding:
 Patch verification generated a hardened PR104 plan with `25` artifacts,
 including `inflate.py`, `src/model.py`, `src/codec.py`, and all non-cache files
 under the declared runtime root.
+
+## 2026-05-08T11:33Z Hardened Relaunch Addendum
+
+Replacement job:
+`pr104-public-exact-replay-rootstaged-g4dn2-20260508T1130Z`.
+
+The relaunch used the hardened source-manifest path after commit `8418b029`.
+The stage-only remote manifest check reported `REMOTE_MANIFEST_VERIFY: OK` with:
+
+- Manifest path:
+  `.omx/state/pr104-public-exact-replay-rootstaged-g4dn2-20260508T1130Z_manifest.json`.
+- Source manifest SHA-256:
+  `a284ea6c4977c532b5c912df0f95728ff5f974419515c2f7207514cd98bd7537`.
+- Manifest file count: `2202`.
+- Manifest total bytes: `36690115`.
+- Declared dependency root:
+  `experiments/results/public_pr_intake_full/public_pr104_intake_20260505_auto/source/submissions/qhnerv_ft_best`.
+
+The submit plan contains `25` top-level artifacts and the exact-eval command
+contains `--source-manifest`,
+`--remote-preflight-ssh-target`, `--dispatch-lane-id`,
+`--teamspace comma-lab`, and `--user adpena`. Queue metadata records both the
+PR104 readiness ledger and source manifest.
+
+Lightning refresh at `2026-05-08T11:33:21Z` reported the replacement job as
+`Running` on SDK machine `T4`. Immediate guarded harvest still returned
+`ARTIFACT_NOT_READY`, which remains `invalid` evidence and carries no score,
+promotion, or method conclusion. The active lane claim is
+`active_dispatching` until either an adjudicated JSON is harvested or a
+terminal failure is recorded.

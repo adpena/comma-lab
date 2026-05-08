@@ -217,3 +217,26 @@ local custody references in
 Do not spend exact CUDA on PR108 unless it becomes needed for public-watch
 completeness, because it is not a plausible sub-0.19/sub-0.23 candidate.
 - `awk` recomputation for the rounded PR104 public CUDA-comment score
+
+## 2026-05-08T11:34Z Public PR Watch Refresh
+
+GitHub PR state was refreshed again with:
+
+```bash
+gh pr list --repo commaai/comma_video_compression_challenge --state all --limit 20 --json number,title,author,headRefOid,updatedAt,createdAt,state,url
+```
+
+The newest observed PR remains PR108:
+
+- PR: `108`, `andimin01`, author `andrei-minca`.
+- URL:
+  `https://github.com/commaai/comma_video_compression_challenge/pull/108`.
+- Head SHA: `59c1bbd544bb2aa166656d24d7de117ad3e3e62e`.
+- State: `OPEN`.
+- Created: `2026-05-05T16:32:51Z`.
+- Updated: `2026-05-05T16:33:07Z`.
+
+No newer public PR appeared in the refreshed top-20 PR list. This does not
+change the exact frontier or authorize score claims; PR108 remains external and
+non-frontier by its own CPU report unless future evidence changes the intake
+priority.
