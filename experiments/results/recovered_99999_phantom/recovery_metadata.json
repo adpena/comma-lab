@@ -1,18 +1,26 @@
 {
-  "archive_zip": null,
-  "artifacts": [],
-  "completed_at_utc": "2026-04-30T06:08:28.216341+00:00",
-  "elapsed_seconds": 4.00420103687793e-05,
+  "schema_version": "recovery_metadata.v2_attempts",
   "instance_id": 99999,
   "lane_label": "phantom",
-  "masks_mkv": null,
-  "notes": [
-    "Could not resolve SSH details (vastai show failed or instance already gone). Skipping recovery."
-  ],
-  "poses_pt": null,
   "recovery_dir": "/Users/adpena/Projects/pact/experiments/results/recovered_99999_phantom",
-  "renderer_bin": null,
-  "skipped_patterns": [],
-  "ssh_reachable": false,
-  "started_at_utc": "2026-04-30T06:08:28.216305+00:00"
+  "attempts": [
+    {
+      "attempt_kind": "initial",
+      "started_at_utc": "2026-04-30T06:08:28.216305+00:00",
+      "completed_at_utc": "2026-04-30T06:08:28.216341+00:00",
+      "elapsed_seconds": 4.00420103687793e-05,
+      "ssh_reachable": false,
+      "archive_zip": null,
+      "artifacts": [],
+      "renderer_bin": null,
+      "masks_mkv": null,
+      "poses_pt": null,
+      "skipped_patterns": [],
+      "notes": [
+        "Could not resolve SSH details (vastai show failed or instance already gone). Skipping recovery."
+      ],
+      "command_log_path": null,
+      "substantive_change_from_prior_attempt": null
+    }
+  ]
 }

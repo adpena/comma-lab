@@ -1,18 +1,26 @@
 {
-  "archive_zip": null,
-  "artifacts": [],
-  "completed_at_utc": "2026-04-30T06:08:28.217576+00:00",
-  "elapsed_seconds": 4.4374988647177815e-05,
+  "schema_version": "recovery_metadata.v2_attempts",
   "instance_id": 42,
   "lane_label": "dead",
-  "masks_mkv": null,
-  "notes": [
-    "SSH reachability probe to root@ghost:12345 failed. Instance may be unreachable. Skipping recovery."
-  ],
-  "poses_pt": null,
   "recovery_dir": "/Users/adpena/Projects/pact/experiments/results/recovered_42_dead",
-  "renderer_bin": null,
-  "skipped_patterns": [],
-  "ssh_reachable": false,
-  "started_at_utc": "2026-04-30T06:08:28.217538+00:00"
+  "attempts": [
+    {
+      "attempt_kind": "initial",
+      "started_at_utc": "2026-04-30T06:08:28.217538+00:00",
+      "completed_at_utc": "2026-04-30T06:08:28.217576+00:00",
+      "elapsed_seconds": 4.4374988647177815e-05,
+      "ssh_reachable": false,
+      "archive_zip": null,
+      "artifacts": [],
+      "renderer_bin": null,
+      "masks_mkv": null,
+      "poses_pt": null,
+      "skipped_patterns": [],
+      "notes": [
+        "SSH reachability probe to root@ghost:12345 failed. Instance may be unreachable. Skipping recovery."
+      ],
+      "command_log_path": null,
+      "substantive_change_from_prior_attempt": null
+    }
+  ]
 }
