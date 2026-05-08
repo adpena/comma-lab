@@ -81,7 +81,6 @@ import json
 import shutil
 import struct
 import sys
-import zipfile
 from pathlib import Path
 
 import brotli
@@ -498,9 +497,9 @@ def _stage_forked_submission_dir_no_k(
             raise SystemExit(f"FATAL: PR101 source missing: {src_file}")
         shutil.copy2(src_file, src_dir / fname)
 
-    # Reuse the original inflate.sh (the runtime contract is identical: it
-    # invokes inflate.py <src.bin> <dst.raw> and the format-specific decode
-    # is in inflate.py itself).
+    # Reuse the original inflate.sh (the runtime contract is identical:
+    # contest auth-eval calls inflate.sh <data_dir> <output_dir> <file_list>,
+    # and the format-specific decode is in inflate.py itself).
     original_sh = (
         REPO_ROOT
         / "experiments/results/admm_x_lossy_coarsening_path_b_step6_20260508T060435Z"
@@ -510,13 +509,41 @@ def _stage_forked_submission_dir_no_k(
     if original_sh.is_file():
         shutil.copy2(original_sh, submission_dir / "inflate.sh")
     else:
-        # Minimal fallback if the original artifact is gone: a stub that
-        # invokes inflate.py with the canonical contract.
+        # Minimal fallback if the original artifact is gone: a wrapper that
+        # invokes inflate.py with the canonical three-arg contest contract.
         (submission_dir / "inflate.sh").write_text(
             "#!/usr/bin/env bash\n"
             'set -euo pipefail\n'
-            'HERE="$(cd "$(dirname "$0")" && pwd)"\n'
-            'exec python "$HERE/inflate.py" "$1" "$2"\n'
+            'HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"\n'
+            'DATA_DIR="${1:?data dir required}"\n'
+            'OUTPUT_DIR="${2:?output dir required}"\n'
+            'FILE_LIST="${3:?file list required}"\n'
+            'mkdir -p "$OUTPUT_DIR"\n'
+            'INFLATE_BROTLI_SPEC="${INFLATE_BROTLI_SPEC:-brotli==1.2.0}"\n'
+            'INFLATE_TORCH_SPEC="${INFLATE_TORCH_SPEC:-torch==2.5.1+cu124}"\n'
+            'INFLATE_NUMPY_SPEC="${INFLATE_NUMPY_SPEC:-numpy==2.4.4}"\n'
+            'UV_BIN="${UV_BIN:-$(command -v uv || echo /usr/local/bin/uv)}"\n'
+            'if [ ! -x "$UV_BIN" ]; then\n'
+            '  echo "FATAL: uv not on PATH (UV_BIN=$UV_BIN); the canonical inflate-time env requires uv." >&2\n'
+            '  exit 1\n'
+            'fi\n'
+            'UV_WITH_INFLATE_DEPS=(\n'
+            '  --with "$INFLATE_BROTLI_SPEC"\n'
+            '  --with "$INFLATE_TORCH_SPEC"\n'
+            '  --with "$INFLATE_NUMPY_SPEC"\n'
+            ')\n'
+            'while IFS= read -r line; do\n'
+            '  [ -z "$line" ] && continue\n'
+            '  BASE="${line%.*}"\n'
+            '  SRC="${DATA_DIR}/x"\n'
+            '  if [ ! -f "$SRC" ]; then\n'
+            '    SRC="${DATA_DIR}/${BASE}.bin"\n'
+            '  fi\n'
+            '  DST="${OUTPUT_DIR}/${BASE}.raw"\n'
+            '  [ ! -f "$SRC" ] && echo "ERROR: ${SRC} not found" >&2 && exit 1\n'
+            '  printf "Inflating %s ... " "$line"\n'
+            '  "$UV_BIN" run --no-project "${UV_WITH_INFLATE_DEPS[@]}" python "$HERE/inflate.py" "$SRC" "$DST"\n'
+            'done < "$FILE_LIST"\n'
         )
         (submission_dir / "inflate.sh").chmod(0o755)
 
@@ -764,11 +791,11 @@ def main(argv: list[str] | None = None) -> int:
         f"(archive={archive_bytes:,} B, sha256={archive_sha[:16]}...)"
     )
     print(
-        f"[admm-build-no-dead-k] DONE. CPU build complete. "
-        f"ready_for_exact_eval_dispatch=False; "
-        f"cuda_eval_worth_testing=True. "
-        f"REVIEW-ENG C3 dispatch_blocker apogee_int6_contest_cuda_anchor_required_first "
-        f"applies to BOTH variants."
+        "[admm-build-no-dead-k] DONE. CPU build complete. "
+        "ready_for_exact_eval_dispatch=False; "
+        "cuda_eval_worth_testing=True. "
+        "REVIEW-ENG C3 dispatch_blocker apogee_int6_contest_cuda_anchor_required_first "
+        "applies to BOTH variants."
     )
     return 0
 

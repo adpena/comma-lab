@@ -79,11 +79,72 @@ BLOCKED_EVIDENCE_MARKERS = (
     "proxy",
     "forensic",
     "mps",
+    "cpu-build",
+    "cpu_build",
+    "cpu build",
+    "cpu-only",
+    "cpu_only",
+    "cpu only",
     "cpu-prep",
     "cpu_prep",
+    "cpu prep",
     "cpu research",
+    "local-only",
+    "local_only",
+    "local only",
     "research-signal",
     "research_signal",
+    "research signal",
+)
+EVIDENCE_GUARD_TEXT_KEYS = (
+    "evidence_semantics",
+    "evidence_grade",
+    "evidence_marker",
+    "evidence_markers",
+    "score_evidence_grade",
+    "source",
+    "source_text",
+    "source_note",
+    "source_notes",
+    "source_provenance",
+    "provenance",
+    "notes",
+    "tags",
+)
+CONTEST_DISPATCH_VERDICT_KEYS = (
+    "contest_dispatch_verdict",
+    "dispatch_verdict",
+    "cuda_eval_verdict",
+)
+BLOCKED_CONTEST_DISPATCH_VERDICT_MARKERS = (
+    "deferred",
+    "refuse",
+    "blocked",
+    "do not dispatch",
+    "do_not_dispatch",
+    "not dispatch",
+    "not_dispatch",
+    "pending research",
+    "pending-research",
+    "pending_research",
+    "research only",
+    "research-only",
+    "research_signal",
+    "research-signal",
+    "proxy",
+    "forensic",
+    "mps",
+    "cpu-build",
+    "cpu_build",
+    "cpu build",
+    "cpu-only",
+    "cpu_only",
+    "cpu only",
+    "cpu-prep",
+    "cpu_prep",
+    "cpu prep",
+    "prediction",
+    "predicted",
 )
 PREDICTED_SCORE_FIELDS = (
     "predicted_score",
@@ -286,6 +347,28 @@ def _flatten_text(value: object) -> list[str]:
             out.extend(_flatten_text(inner))
         return out
     return [str(value)]
+
+
+def _searchable_text(raw_text: str) -> str:
+    text = raw_text.strip().lower()
+    variants = {
+        text,
+        text.replace("_", "-"),
+        text.replace("_", " "),
+        text.replace("-", "_"),
+        text.replace("-", " "),
+        text.replace("_", " ").replace("-", " "),
+    }
+    return " ".join(sorted(variant for variant in variants if variant))
+
+
+def _candidate_guard_text(candidate: dict, keys: tuple[str, ...]) -> tuple[str, str]:
+    parts: list[str] = []
+    for key in keys:
+        if key in candidate and candidate.get(key) is not None:
+            parts.extend(_flatten_text(candidate.get(key)))
+    raw_text = " ".join(part.strip().lower() for part in parts if part.strip())
+    return raw_text, _searchable_text(raw_text)
 
 
 def _candidate_text(candidate: dict) -> str:
@@ -513,16 +596,27 @@ def _candidate_blockers(
     # gating predicate for the actuator.
     if candidate.get("ready_for_exact_eval_dispatch") is not True:
         blockers.append("candidate_not_ready_for_exact_eval_dispatch")
-    evidence_text = " ".join(
-        str(candidate.get(key) or "").strip().lower()
-        for key in ("evidence_semantics", "evidence_grade")
-        if candidate.get(key)
+    if not str(candidate.get("evidence_semantics") or "").strip():
+        blockers.append("evidence_semantics_missing")
+    evidence_text, searchable_evidence_text = _candidate_guard_text(
+        candidate,
+        EVIDENCE_GUARD_TEXT_KEYS,
     )
     if (
         evidence_text in BLOCKED_EVIDENCE_SEMANTICS
-        or any(marker in evidence_text for marker in BLOCKED_EVIDENCE_MARKERS)
+        or searchable_evidence_text in BLOCKED_EVIDENCE_SEMANTICS
+        or any(marker in searchable_evidence_text for marker in BLOCKED_EVIDENCE_MARKERS)
     ):
         blockers.append(f"blocked_evidence_semantics:{evidence_text or 'missing'}")
+    verdict_text, searchable_verdict_text = _candidate_guard_text(
+        candidate,
+        CONTEST_DISPATCH_VERDICT_KEYS,
+    )
+    if any(
+        marker in searchable_verdict_text
+        for marker in BLOCKED_CONTEST_DISPATCH_VERDICT_MARKERS
+    ):
+        blockers.append(f"blocked_contest_dispatch_verdict:{verdict_text or 'missing'}")
     predicted_score_fields = [key for key in PREDICTED_SCORE_FIELDS if key in candidate]
     if predicted_score_fields:
         blockers.append(

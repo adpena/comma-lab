@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from pathlib import Path
 
 import pytest
@@ -165,3 +166,81 @@ def test_cached_read_text_resolve_failure_falls_through_to_original(
         f"R8-1 resolve guard regressed: the resolve-step marker leaked "
         f"into the user-visible exception. Got: {exc_info.value!r}"
     )
+
+
+def test_preflight_all_wraps_programmatic_codebase_scan_in_fs_cache(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tac import preflight as preflight_mod
+    import tac.preflight_fs_cache as fs_cache
+
+    class Sentinel(Exception):
+        pass
+
+    events: list[tuple[str, bool]] = []
+    active = False
+
+    @contextlib.contextmanager
+    def fake_cached_filesystem(*, cache_reads: bool = False):
+        nonlocal active
+        events.append(("enter", cache_reads))
+        active = True
+        try:
+            yield
+        finally:
+            active = False
+            events.append(("exit", cache_reads))
+
+    def fake_check_codebase_drift(*, strict: bool, verbose: bool):
+        assert strict is True
+        assert verbose is False
+        assert active is True
+        raise Sentinel("stop after first codebase check")
+
+    monkeypatch.setattr(fs_cache, "cached_filesystem", fake_cached_filesystem)
+    monkeypatch.setattr(preflight_mod, "check_codebase_drift", fake_check_codebase_drift)
+
+    with pytest.raises(Sentinel):
+        preflight_mod.preflight_all(verbose=False)
+
+    assert events == [("enter", True), ("exit", True)]
+
+
+def test_preflight_all_cache_can_be_disabled_for_diagnostic_calls(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tac import preflight as preflight_mod
+    import tac.preflight_fs_cache as fs_cache
+
+    class Sentinel(Exception):
+        pass
+
+    @contextlib.contextmanager
+    def forbidden_cached_filesystem(*, cache_reads: bool = False):
+        raise AssertionError("cache should not be entered")
+        yield
+
+    def fake_check_codebase_drift(*, strict: bool, verbose: bool):
+        raise Sentinel("stop after first codebase check")
+
+    monkeypatch.setattr(fs_cache, "cached_filesystem", forbidden_cached_filesystem)
+    monkeypatch.setattr(preflight_mod, "check_codebase_drift", fake_check_codebase_drift)
+
+    with pytest.raises(Sentinel):
+        preflight_mod.preflight_all(verbose=False, use_fs_cache=False)
+
+
+def test_preflight_all_skips_fs_cache_when_codebase_scan_is_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tac import preflight as preflight_mod
+    import tac.preflight_fs_cache as fs_cache
+
+    @contextlib.contextmanager
+    def forbidden_cached_filesystem(*, cache_reads: bool = False):
+        raise AssertionError("artifactless no-codebase preflight should not cache")
+        yield
+
+    monkeypatch.setattr(fs_cache, "cached_filesystem", forbidden_cached_filesystem)
+
+    preflight_mod.preflight_all(check_codebase=False, verbose=False)

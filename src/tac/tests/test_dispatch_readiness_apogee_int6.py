@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
@@ -43,3 +44,10 @@ def test_apogee_int6_cli_json_cannot_become_dispatch_ready(monkeypatch, capsys) 
         check["name"] == "predicted_band_below_frontier" and check["ok"] is False
         for check in payload["checks"]
     )
+
+
+def test_apogee_intn_inflate_sh_is_executable_for_contest_runtime() -> None:
+    inflate_sh = REPO / "submissions" / "apogee_intN" / "inflate.sh"
+
+    assert inflate_sh.is_file()
+    assert os.access(inflate_sh, os.X_OK)

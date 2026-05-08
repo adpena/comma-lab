@@ -155,6 +155,7 @@ PR106X_ARCHIVE = (
     / "experiments/results/lightning_batch/"
     / "exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/archive.zip"
 )
+TIMING_PROFILE_SCHEMA = "pact.all_lanes_preflight_timing.v1"
 
 LANES = [
     {
@@ -1087,6 +1088,61 @@ def _execute_step(step: PreflightStep) -> PreflightResult:
     )
 
 
+def _timing_row(result: PreflightResult) -> dict[str, object]:
+    step = result.step
+    return {
+        "section": step.section,
+        "number": step.number,
+        "name": step.name,
+        "passed": result.passed,
+        "elapsed_s": round(float(result.elapsed_s), 6),
+        "forensic_only": step.forensic_only,
+        "local_smoke_only": step.local_smoke_only,
+    }
+
+
+def _build_timing_profile(
+    results: list[PreflightResult],
+    *,
+    max_workers: int,
+    wall_elapsed_s: float,
+) -> dict[str, object]:
+    """Build a deterministic timing payload for DX profiling and CI trends."""
+    rows = [
+        _timing_row(result)
+        for result in sorted(results, key=lambda item: (item.step.section, item.step.number))
+    ]
+    hot_steps = sorted(
+        rows,
+        key=lambda row: (
+            -float(row["elapsed_s"]),
+            str(row["section"]),
+            int(row["number"]),
+            str(row["name"]),
+        ),
+    )
+    return {
+        "schema": TIMING_PROFILE_SCHEMA,
+        "max_workers": int(max_workers),
+        "wall_elapsed_s": round(float(wall_elapsed_s), 6),
+        "serial_elapsed_s": round(sum(result.elapsed_s for result in results), 6),
+        "slowest_step_elapsed_s": round(
+            max((result.elapsed_s for result in results), default=0.0),
+            6,
+        ),
+        "step_count": len(results),
+        "passed_count": sum(1 for result in results if result.passed),
+        "failed_count": sum(1 for result in results if not result.passed),
+        "steps": rows,
+        "hot_steps": hot_steps,
+    }
+
+
+def _write_timing_profile(path: Path, payload: dict[str, object]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json_text(payload), encoding="utf-8")
+
+
 def _default_jobs(step_count: int) -> int:
     cpu_count = os.cpu_count() or 2
     return max(1, min(step_count, cpu_count, 8))
@@ -1117,6 +1173,15 @@ def main(argv: list[str] | None = None) -> int:
         "--timings",
         action="store_true",
         help="Append per-step wall-clock timings to the summary.",
+    )
+    parser.add_argument(
+        "--timings-json",
+        type=Path,
+        default=None,
+        help=(
+            "Write a deterministic JSON timing profile for slow-gate triage "
+            "and Rust-acceleration planning."
+        ),
     )
     args = parser.parse_args(argv)
 
@@ -1375,12 +1440,14 @@ def main(argv: list[str] | None = None) -> int:
         print("FATAL: --jobs must be >= 1", file=sys.stderr)
         return 2
     max_workers = args.jobs or _default_jobs(len(steps))
+    run_started = time.perf_counter()
     if max_workers == 1:
         results = [_execute_step(step) for step in steps]
     else:
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = [executor.submit(_execute_step, step) for step in steps]
             results = [future.result() for future in futures]
+    wall_elapsed_s = time.perf_counter() - run_started
 
     n_passed = 0
     n_failed = 0
@@ -1410,6 +1477,14 @@ def main(argv: list[str] | None = None) -> int:
         for result in sorted(results, key=lambda item: item.elapsed_s, reverse=True):
             step = result.step
             print(f"  {result.elapsed_s:6.2f}s  {step.section} #{step.number}: {step.name}")
+    if args.timings_json is not None:
+        timing_profile = _build_timing_profile(
+            results,
+            max_workers=max_workers,
+            wall_elapsed_s=wall_elapsed_s,
+        )
+        _write_timing_profile(args.timings_json, timing_profile)
+        print(f"\nTiming profile JSON: {args.timings_json}")
     print()
     if n_failed == 0:
         print(f"ALL {n_passed} PREFLIGHT CHECKS PASSED.")

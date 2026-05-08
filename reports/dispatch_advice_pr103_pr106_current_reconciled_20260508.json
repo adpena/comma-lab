@@ -1,0 +1,74 @@
+{
+  "advice": {
+    "archive_bytes": 185578,
+    "axis_priorities": [
+      {
+        "estimated_effort_class": "moderate",
+        "marginal_value": 272.7723627949905,
+        "name": "pose",
+        "rationale": "dS/d(d_pose) = 272.77 at this operating point. Improving d_pose by 1e-5 reduces score by ~0.00273 (linear approximation; pose term is sqrt so the actual reduction is slightly larger for the same delta)."
+      },
+      {
+        "estimated_effort_class": "moderate",
+        "marginal_value": 100.0,
+        "name": "seg",
+        "rationale": "dS/d(d_seg) = 100.00 (constant). Improving d_seg by 1e-4 reduces score by 0.01000."
+      },
+      {
+        "estimated_effort_class": "moderate",
+        "marginal_value": 0.0006658589531221714,
+        "name": "bytes",
+        "rationale": "dS/dB = 6.659e-07 per byte (constant 0.00067 per 1000 bytes). Saving 1 KB reduces score by 0.00067."
+      }
+    ],
+    "d_pose": 3.36e-05,
+    "d_seg": 0.00067082,
+    "floor_technique_priorities": [],
+    "label": "adhoc",
+    "notes": [
+      "pose-dominated regime (d_pose 3.36e-05 < 2.50e-04); prioritize pose-targeted lanes \u2014 they have 2.73x the marginal score-per-byte vs seg lanes here",
+      "information floor at this byte budget = 0.12357 (strict lower bound; achievable only at d_seg=d_pose=0)."
+    ],
+    "operating_regime_summary": {
+      "advice": "pose-dominated regime (d_pose 3.36e-05 < 2.50e-04); prioritize pose-targeted lanes \u2014 they have 2.73x the marginal score-per-byte vs seg lanes here",
+      "crossover_distance_log10": -0.8716007312821936,
+      "d_pose": 3.36e-05,
+      "flip_threshold": 0.00025,
+      "marginal_ratio_seg_over_pose": 0.3666060555964672,
+      "pose_dominates": true,
+      "seg_dominates": false
+    },
+    "score": 0.2089810755823297,
+    "score_decomposition": {
+      "fractions": [
+        0.32099557250853816,
+        0.0877127401547993,
+        0.5912916873366625
+      ],
+      "pose_term": 0.01833030277982336,
+      "rate_term": 0.12356877280250632,
+      "seg_term": 0.067082,
+      "total": 0.2089810755823297
+    },
+    "target_score_curves": {
+      "current_score": 0.2089810755823297,
+      "score_gap": 0.0189810755823297,
+      "target_score": 0.19,
+      "to_reach_target_holding_seg_and_bytes": {
+        "current_d_pose": 3.36e-05,
+        "feasible": false,
+        "improvement_factor": null,
+        "required_d_pose": null
+      },
+      "to_reach_target_holding_seg_and_pose": {
+        "byte_savings_required": 28507,
+        "current_archive_bytes": 185578,
+        "feasible": true,
+        "required_archive_bytes": 157071
+      }
+    }
+  },
+  "evidence_grade": "[CPU-prep planning-only]",
+  "schema": "dispatch_advisor.v1",
+  "tool": "tools/dispatch_advisor.py"
+}

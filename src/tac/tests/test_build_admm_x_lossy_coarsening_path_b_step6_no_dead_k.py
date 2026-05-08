@@ -82,6 +82,19 @@ def test_no_dead_k_tool_dispatch_blocker_includes_c3_apogee_int6() -> None:
     assert "apogee_int6_contest_cuda_anchor_required_first" in src
 
 
+def test_no_dead_k_fallback_inflate_sh_uses_contest_three_arg_contract() -> None:
+    """If the historical source inflate.sh artifact is missing, the fallback
+    generator must still emit the contest auth-eval three-arg wrapper.
+    """
+    src = _read_tool_source()
+    assert 'DATA_DIR="${1:?data dir required}"' in src
+    assert 'OUTPUT_DIR="${2:?output dir required}"' in src
+    assert 'FILE_LIST="${3:?file list required}"' in src
+    assert 'while IFS= read -r line' in src
+    assert '${BASE}.raw' in src
+    assert 'exec python "$HERE/inflate.py" "$1" "$2"' not in src
+
+
 def test_no_dead_k_section_total_bytes_28_smaller_than_original() -> None:
     """Direct module-level constant check — when imported, the tool's
     `_build_lossy_decoder_section_no_K` returns a ``section_total_bytes``

@@ -282,6 +282,8 @@ def preflight_all(
     archive_path: str | Path | None = None,
     check_codebase: bool = True,
     verbose: bool = True,
+    use_fs_cache: bool = True,
+    _fs_cache_wrapped: bool = False,
 ) -> None:
     """Single entry point: run ALL preflight checks. Raises on any failure.
 
@@ -295,6 +297,28 @@ def preflight_all(
     profile_name + tto_frames_path + gt_poses_path + masks_path. Inflate-time
     preflight needs renderer_path + masks_path + archive_path.
     """
+    if check_codebase and use_fs_cache and not _fs_cache_wrapped:
+        from tac.preflight_fs_cache import cached_filesystem
+
+        # Full codebase preflight repeatedly scans the same source files.
+        # Apply the measured cache for library callers too; artifact-only
+        # callers skip this path and still read their inputs live.
+        with cached_filesystem(cache_reads=True):
+            preflight_all(
+                profile_name=profile_name,
+                profile_arch=profile_arch,
+                tto_frames_path=tto_frames_path,
+                gt_poses_path=gt_poses_path,
+                masks_path=masks_path,
+                renderer_path=renderer_path,
+                archive_path=archive_path,
+                check_codebase=check_codebase,
+                verbose=verbose,
+                use_fs_cache=use_fs_cache,
+                _fs_cache_wrapped=True,
+            )
+        return
+
     # 1. Codebase drift check (cheap, always run unless explicitly disabled)
     if check_codebase:
         check_codebase_drift(strict=True, verbose=verbose)
@@ -23363,25 +23387,19 @@ if __name__ == "__main__":
                 print(f"Unknown profile: {args.profile}", file=sys.stderr)
                 sys.exit(2)
             profile_arch = PROFILES[args.profile]
-        from tac.preflight_fs_cache import cached_filesystem
-
-        # cache_reads=True hits the read_text/read_bytes cache too — restricted
-        # to source-tree files (src/, scripts/, tools/, experiments/build_*,
-        # submissions/, etc.) so synthetic-manifest checks that mutate temp
-        # files within a single check still see fresh content.
-        # Empirical: 425s -> ~30s preflight_all on a 12,500-file repo.
-        with cached_filesystem(cache_reads=True):
-            preflight_all(
-                profile_name=args.profile,
-                profile_arch=profile_arch,
-                tto_frames_path=args.tto_frames,
-                gt_poses_path=args.gt_poses,
-                masks_path=args.masks,
-                renderer_path=args.renderer,
-                archive_path=args.archive,
-                check_codebase=not args.no_codebase,
-                verbose=True,
-            )
+        # preflight_all applies the measured source-tree filesystem cache for
+        # full codebase scans, so CLI and library callers share one path.
+        preflight_all(
+            profile_name=args.profile,
+            profile_arch=profile_arch,
+            tto_frames_path=args.tto_frames,
+            gt_poses_path=args.gt_poses,
+            masks_path=args.masks,
+            renderer_path=args.renderer,
+            archive_path=args.archive,
+            check_codebase=not args.no_codebase,
+            verbose=True,
+        )
         print("\nPREFLIGHT PASSED")
     except (PreflightError, ArityViolation, FilenameContractError,
             CodebaseDriftError, LoaderFormatSafetyError) as e:

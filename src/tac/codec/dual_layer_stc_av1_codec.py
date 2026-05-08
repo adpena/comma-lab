@@ -135,12 +135,16 @@ def _validate_deltas(deltas: np.ndarray) -> np.ndarray:
         raise ValueError(f"deltas must be 1-D, got shape {arr.shape}")
     if arr.size == 0:
         raise ValueError("deltas must be non-empty")
-    arr = arr.astype(np.int16, copy=False)
-    if arr.min() < -127 or arr.max() > 127:
+    if not np.issubdtype(arr.dtype, np.integer):
+        raise ValueError(f"deltas must be integer-valued, got dtype {arr.dtype}")
+
+    arr64 = arr.astype(np.int64, copy=False)
+    if arr64.min() < -127 or arr64.max() > 127:
         raise ValueError(
-            f"deltas must fit in int8 range; got [{int(arr.min())}, {int(arr.max())}]"
+            "deltas must fit in int8 range; "
+            f"got [{int(arr64.min())}, {int(arr64.max())}]"
         )
-    return arr
+    return arr64.astype(np.int16, copy=False)
 
 
 def encode_dual_layer(
@@ -262,6 +266,8 @@ def decode_dual_layer(blob: bytes) -> np.ndarray:
             f"layer1 decompressed length {len(sign_bytes)} != declared n_symbols {n_sym}"
         )
     sign = np.frombuffer(sign_bytes, dtype=np.int8).copy()
+    if sign.size and not np.isin(sign, (-1, 0, 1)).all():
+        raise ValueError("layer1 sign payload contains values outside {-1, 0, +1}")
     nonzero_mask = sign != 0
     if int(nonzero_mask.sum()) != n_nz:
         raise ValueError(
@@ -271,6 +277,8 @@ def decode_dual_layer(blob: bytes) -> np.ndarray:
     if flags & FLAG_EMPTY_MAGNITUDE:
         if n_nz != 0:
             raise ValueError("FLAG_EMPTY_MAGNITUDE set but n_nonzero != 0")
+        if layer2_len != 0:
+            raise ValueError("FLAG_EMPTY_MAGNITUDE set but layer2 payload is non-empty")
         magnitudes = np.zeros(0, dtype=np.uint8)
     else:
         magnitudes = np.frombuffer(_brotli_decompress(layer2_payload), dtype=np.uint8).copy()

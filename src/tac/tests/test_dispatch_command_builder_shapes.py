@@ -213,6 +213,115 @@ def test_parallel_dispatch_rejects_spoofed_mps_ready_candidate(
     assert "mps" in message
 
 
+def test_parallel_dispatch_rejects_spoofed_cpu_build_ready_candidate(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    candidate = _ready_custody_candidate(
+        tmp_path,
+        evidence_grade="[CPU-build]",
+        evidence_semantics="contest_cuda_exact_eval_positive",
+    )
+    ranked = _write_ranked_input(tmp_path, [candidate])
+
+    try:
+        tool._load_top_k(ranked, k=None)
+    except tool.DispatchInputError as exc:
+        message = str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected DispatchInputError")
+
+    assert "blocked_evidence_semantics:" in message
+    assert "cpu-build" in message.lower()
+
+
+def test_parallel_dispatch_rejects_spoofed_evidence_marker_cpu_only_candidate(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    candidate = _ready_custody_candidate(
+        tmp_path,
+        evidence_semantics="contest_cuda_exact_eval_positive",
+        evidence_marker="[CPU-only]",
+        promotion_eligible=True,
+        rank_or_kill_eligible=True,
+    )
+    ranked = _write_ranked_input(tmp_path, [candidate])
+
+    try:
+        tool._load_top_k(ranked, k=None)
+    except tool.DispatchInputError as exc:
+        message = str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected DispatchInputError")
+
+    assert "blocked_evidence_semantics:" in message
+    assert "cpu-only" in message.lower()
+
+
+def test_parallel_dispatch_rejects_spoofed_source_text_local_only_candidate(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    candidate = _ready_custody_candidate(
+        tmp_path,
+        evidence_semantics="contest_cuda_exact_eval_positive",
+        source_text="local only CPU prep artifact; no contest CUDA replay yet",
+    )
+    ranked = _write_ranked_input(tmp_path, [candidate])
+
+    try:
+        tool._load_top_k(ranked, k=None)
+    except tool.DispatchInputError as exc:
+        message = str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected DispatchInputError")
+
+    assert "blocked_evidence_semantics:" in message
+    assert "local only" in message.lower()
+    assert "cpu prep" in message.lower()
+
+
+def test_parallel_dispatch_rejects_deferred_research_dispatch_verdict(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    candidate = _ready_custody_candidate(
+        tmp_path,
+        evidence_semantics="contest_cuda_exact_eval_positive",
+        contest_dispatch_verdict="DEFERRED-pending-research",
+    )
+    ranked = _write_ranked_input(tmp_path, [candidate])
+
+    try:
+        tool._load_top_k(ranked, k=None)
+    except tool.DispatchInputError as exc:
+        message = str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected DispatchInputError")
+
+    assert "blocked_contest_dispatch_verdict:" in message
+    assert "deferred-pending-research" in message.lower()
+
+
+def test_parallel_dispatch_rejects_missing_evidence_semantics_with_custody(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    candidate = _ready_custody_candidate(tmp_path)
+    del candidate["evidence_semantics"]
+    ranked = _write_ranked_input(tmp_path, [candidate])
+
+    try:
+        tool._load_top_k(ranked, k=None)
+    except tool.DispatchInputError as exc:
+        message = str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected DispatchInputError")
+
+    assert "evidence_semantics_missing" in message
+
+
 def test_parallel_dispatch_rejects_candidate_archive_bytes_above_floor_by_default(
     tmp_path: Path,
 ) -> None:

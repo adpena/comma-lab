@@ -11,11 +11,13 @@ Reference per Filler & Pevný 2010 IEEE TIFS 5(2):388-393 (dual-layer STC).
 """
 from __future__ import annotations
 
+import brotli
 import numpy as np
 import pytest
 
 from tac.codec.dual_layer_stc_av1_codec import (
     DualLayerStats,
+    FLAG_EMPTY_MAGNITUDE,
     HEADER_STRUCT,
     LAYER2_LEN_STRUCT,
     MAGIC,
@@ -94,6 +96,17 @@ def test_encode_rejects_out_of_range() -> None:
         encode_dual_layer(np.array([0, 200, -1], dtype=np.int16))
 
 
+def test_encode_rejects_out_of_range_before_narrowing() -> None:
+    """Large integer inputs must be rejected, not wrapped through int16."""
+    with pytest.raises(ValueError):
+        encode_dual_layer(np.array([0, 40000, -1], dtype=np.int64))
+
+
+def test_encode_rejects_non_integer_deltas() -> None:
+    with pytest.raises(ValueError):
+        encode_dual_layer(np.array([0.0, 1.0, -1.0], dtype=np.float32))
+
+
 def test_encode_rejects_oversized_magnitude() -> None:
     """Magnitude must fit in uint8 (>=0, <=127 because we still use int8 sign)."""
     with pytest.raises(ValueError):
@@ -141,6 +154,28 @@ def test_decode_rejects_truncated_blob() -> None:
     blob = encode_dual_layer(deltas)
     with pytest.raises(ValueError):
         decode_dual_layer(blob[: len(blob) // 2])
+
+
+def test_decode_rejects_non_ternary_sign_payload() -> None:
+    sign_payload = np.array([0, 2, -1], dtype=np.int8).tobytes()
+    layer1_payload = brotli.compress(sign_payload)
+    header = HEADER_STRUCT.pack(MAGIC, VERSION, 0, 3, 2, len(layer1_payload))
+    blob = header + layer1_payload + LAYER2_LEN_STRUCT.pack(0)
+    with pytest.raises(ValueError):
+        decode_dual_layer(blob)
+
+
+def test_decode_rejects_empty_magnitude_flag_with_payload() -> None:
+    deltas = np.zeros(8, dtype=np.int16)
+    blob = bytearray(encode_dual_layer(deltas))
+    blob[5] |= FLAG_EMPTY_MAGNITUDE
+    layer2_len_pos = HEADER_STRUCT.size + _layer1_len(bytes(blob))
+    blob[layer2_len_pos : layer2_len_pos + LAYER2_LEN_STRUCT.size] = (
+        LAYER2_LEN_STRUCT.pack(1)
+    )
+    blob.append(0)
+    with pytest.raises(ValueError):
+        decode_dual_layer(bytes(blob))
 
 
 # ---------------------------------------------------------------------------

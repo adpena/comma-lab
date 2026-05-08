@@ -1079,6 +1079,120 @@
       "disposition": "track",
       "note": "track: canonical audit/dispatch/tooling CLI used by all-lanes preflight or recovery workflows.",
       "path": "tools/tool_bootstrap.py"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 DX/Rust acceleration roadmap; planning-only, no score claim.",
+      "path": ".omx/research/dx_rust_acceleration_roadmap_20260508_codex.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 frontier evidence correction ledger; exact/proxy separation.",
+      "path": ".omx/research/frontier_roadmap_evidence_correction_20260508_worker_a.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 PR106 UNIWARD CPU-build smoke ledger; explicitly non-promotable.",
+      "path": ".omx/research/pr106_uniward_runtime_packet_smoke_20260508_codex.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 roadmap reconciliation ledger; planning-only, no score claim.",
+      "path": ".omx/research/roadmap_state_reconciliation_20260508_codex.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 Tier-A readiness ledger; no GPU dispatch launched.",
+      "path": ".omx/research/tier_a_dispatch_readiness_worker_b_20260508.md"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: small reconciled dispatch-advice report consumed by operator planning.",
+      "path": "reports/dispatch_advice_pr103_pr106_current_reconciled_20260508.json"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: small reconciled autopilot plan report consumed by operator planning.",
+      "path": "reports/cathedral_autopilot_plan_pr103_pr106_to_019_reconciled_20260508.json"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: small reconciled autopilot plan report consumed by operator planning.",
+      "path": "reports/cathedral_autopilot_plan_pr103_pr106_to_0155_reconciled_20260508.json"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: small reconciled meta-Lagrangian report consumed by operator planning.",
+      "path": "reports/cathedral_meta_lagrangian_ranking_pr103_pr106_to_019_reconciled_20260508.json"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: reusable dual-layer STC plus magnitude residual codec for lossless mask deltas.",
+      "path": "src/tac/codec/dual_layer_stc_av1_codec.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression tests for all-lanes preflight timing JSON output.",
+      "path": "src/tac/tests/test_all_lanes_preflight_timing_profile.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression tests for PR106 UNIWARD runtime-packet guard fields and path normalization.",
+      "path": "src/tac/tests/test_build_pr106_uniward_runtime_packet.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: roundtrip and malformed-wire tests for dual-layer STC mask codec.",
+      "path": "src/tac/tests/test_dual_layer_stc_av1_codec.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression tests for PR101 arch-shrink x Lagrangian x UNIWARD empirical tool.",
+      "path": "src/tac/tests/test_pr101_arch_shrink_x_lagrangian_x_uniward.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible CPU-only empirical tool for arch-shrink x Lagrangian x UNIWARD stacking.",
+      "path": "tools/pr101_arch_shrink_x_lagrangian_x_uniward_empirical.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible CPU-build tool for PR106 UNIWARD runtime-packet closure; non-promotable without CUDA.",
+      "path": "tools/build_pr106_uniward_runtime_packet.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: deterministic rebuild verifier for PR106 UNIWARD runtime packet custody.",
+      "path": "tools/verify_pr106_uniward_runtime_packet_sha256.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible CPU-only PySR/CMA-ES trajectory surrogate tool.",
+      "path": "tools/pr101_pysr_cmaes_trajectory_symbolic_regression.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible CPU-only empirical tool for alpha-mask dual-layer STC measurements.",
+      "path": "tools/pr_alpha_mask_dual_layer_stc_empirical.py"
     }
   ],
   "policy": "Every source-like untracked path must be track, recovery_queue, ignore_private, or ignore_rebuildable with rationale.",
