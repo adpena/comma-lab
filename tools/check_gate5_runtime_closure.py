@@ -1,0 +1,233 @@
+#!/usr/bin/env python3
+"""Gate 5 — Runtime closure gate.
+
+Source: ``.omx/research/representation_integration_gap_audit_20260508_codex.md``
+prevent-recurrence gate #5.
+
+Rule: run the exact contest inflate signature in a clean environment
+**before** dispatch (or before treating a public packet as method
+evidence). Dependency closure failures (missing ``brotli``, wrong wrapper
+signatures, hidden sidecars, local paths, CPU/CUDA mismatches) MUST be
+classified as runtime blockers, not method negatives.
+
+Detection (static):
+  Two complementary scans:
+
+  1. Build-manifest scan: any ``build_manifest.json`` that records a
+     ``submission_dir_relpath`` AND claims ``ready_for_exact_eval_dispatch=
+     true`` (or ``score_claim=true``) MUST also record:
+       * ``runtime_manifest`` non-empty (reference to runtime tree
+         description), OR
+       * ``runtime_closure_verified`` true with non-empty
+         ``runtime_closure_evidence``, OR
+       * ``inflate_smoke_log`` non-empty (path to clean-env inflate log).
+
+  2. Evidence-row scan: any row in a canonical evidence ledger that
+     marks a public PR replay (``source`` contains
+     ``public_pr<number>``) and claims a contest-CUDA negative MUST
+     classify the cause: a row with
+     ``contest_dispatch_verdict=measured_config_retired_*`` for a
+     public-PR row must include a ``failure_class`` field whose value
+     is one of:
+       * ``runtime_blocker_dependency_missing``
+       * ``runtime_blocker_wrapper_signature``
+       * ``runtime_blocker_hidden_sidecar``
+       * ``runtime_blocker_local_path``
+       * ``runtime_blocker_cpu_cuda_mismatch``
+       * ``method_negative`` (explicit "method actually failed")
+
+     This forces public-PR replay failures to disambiguate runtime vs
+     method, as the audit cites PR106 as a missing-brotli runtime
+     failure that was almost classified as method evidence.
+
+Memory ref: ``feedback_representation_integration_gap_audit_20260508_codex.md``.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+REPO_ROOT_DEFAULT = Path(__file__).resolve().parents[1]
+
+EVIDENCE_FILES: tuple[str, ...] = (
+    "reports/cathedral_autopilot_evidence.jsonl",
+    "reports/raw/pr101_omega_opt_evidence.jsonl",
+)
+
+PUBLIC_PR_PATTERN = re.compile(r"public_pr\d+", re.IGNORECASE)
+
+RECOGNIZED_FAILURE_CLASSES: tuple[str, ...] = (
+    "runtime_blocker_dependency_missing",
+    "runtime_blocker_wrapper_signature",
+    "runtime_blocker_hidden_sidecar",
+    "runtime_blocker_local_path",
+    "runtime_blocker_cpu_cuda_mismatch",
+    "runtime_blocker_other",
+    "method_negative",
+)
+
+
+@dataclass
+class Finding:
+    file_rel: str
+    line_number: int
+    technique: str
+    reason: str
+
+
+def _manifest_claims_dispatch(manifest: dict) -> bool:
+    if manifest.get("ready_for_exact_eval_dispatch") is True:
+        return True
+    if manifest.get("score_claim") is True:
+        return True
+    return str(manifest.get("contest_dispatch_verdict", "")).lower() in ("positive", "frontier")
+
+
+def _manifest_has_runtime_closure(manifest: dict) -> bool:
+    rm = manifest.get("runtime_manifest")
+    if isinstance(rm, str) and rm.strip():
+        return True
+    if isinstance(rm, (dict, list)) and len(rm) > 0:
+        return True
+    if manifest.get("runtime_closure_verified") is True and (
+        isinstance(manifest.get("runtime_closure_evidence"), str)
+        and manifest["runtime_closure_evidence"].strip()
+    ):
+        return True
+    log = manifest.get("inflate_smoke_log")
+    return bool(isinstance(log, str) and log.strip())
+
+
+def _scan_build_manifests(repo: Path) -> list[Finding]:
+    findings: list[Finding] = []
+    patterns = (
+        "experiments/results/*/build_manifest.json",
+        "experiments/results/*/*/build_manifest.json",
+    )
+    for pattern in patterns:
+        for path in repo.glob(pattern):
+            relpath = path.relative_to(repo).as_posix()
+            if "public_pr" in relpath and "intake" in relpath:
+                continue
+            try:
+                manifest = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+                continue
+            if not isinstance(manifest, dict):
+                continue
+            if not _manifest_claims_dispatch(manifest):
+                continue
+            if _manifest_has_runtime_closure(manifest):
+                continue
+            findings.append(
+                Finding(
+                    file_rel=relpath,
+                    line_number=0,
+                    technique=str(
+                        manifest.get(
+                            "lane_id", manifest.get("technique", "<unknown>")
+                        )
+                    ),
+                    reason=(
+                        "build_manifest claims dispatch readiness "
+                        "(ready_for_exact_eval_dispatch=true OR "
+                        "score_claim=true OR positive verdict) but "
+                        "lacks runtime_manifest, "
+                        "runtime_closure_verified+evidence, or "
+                        "inflate_smoke_log. Run inflate in clean env "
+                        "BEFORE dispatch. Gate 5 (runtime closure)."
+                    ),
+                )
+            )
+    return findings
+
+
+def _scan_evidence_for_public_pr_negatives(repo: Path) -> list[Finding]:
+    findings: list[Finding] = []
+    for rel in EVIDENCE_FILES:
+        path = repo / rel
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        for lineno, line in enumerate(text.splitlines(), 1):
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(row, dict):
+                continue
+            source = str(row.get("source", ""))
+            if not PUBLIC_PR_PATTERN.search(source):
+                continue
+            verdict = str(row.get("contest_dispatch_verdict", "")).lower()
+            status = str(row.get("measured_config_status", "")).lower()
+            negative = ("retired" in verdict or "negative" in verdict
+                        or "retired" in status or "negative" in status)
+            if not negative:
+                continue
+            failure_class = str(row.get("failure_class", "")).lower()
+            if failure_class in RECOGNIZED_FAILURE_CLASSES:
+                continue
+            findings.append(
+                Finding(
+                    file_rel=rel,
+                    line_number=lineno,
+                    technique=str(row.get("technique", "<unknown>")),
+                    reason=(
+                        "public-PR replay row marked negative/retired "
+                        "but missing failure_class disambiguation "
+                        "(must be one of "
+                        f"{','.join(RECOGNIZED_FAILURE_CLASSES)}). "
+                        "Don't conflate runtime blockers with method "
+                        "negatives. Gate 5 (runtime closure)."
+                    ),
+                )
+            )
+    return findings
+
+
+def scan(repo_root: Path | None = None) -> list[Finding]:
+    repo = (repo_root or REPO_ROOT_DEFAULT).resolve()
+    findings: list[Finding] = []
+    findings.extend(_scan_build_manifests(repo))
+    findings.extend(_scan_evidence_for_public_pr_negatives(repo))
+    return findings
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--repo-root", default=str(REPO_ROOT_DEFAULT))
+    parser.add_argument("--strict", action="store_true")
+    args = parser.parse_args(argv)
+    repo = Path(args.repo_root).resolve()
+    findings = scan(repo)
+    if findings:
+        print(
+            f"[gate5-runtime-closure] {len(findings)} violation(s):",
+            file=sys.stderr,
+        )
+        for f in findings[:20]:
+            print(
+                f"  • {f.file_rel}:{f.line_number} technique={f.technique}: "
+                f"{f.reason}",
+                file=sys.stderr,
+            )
+        if args.strict:
+            return 1
+    else:
+        print("[gate5-runtime-closure] OK")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

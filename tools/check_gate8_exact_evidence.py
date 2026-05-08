@@ -1,0 +1,205 @@
+#!/usr/bin/env python3
+"""Gate 8 — Exact-evidence gate (frontier-promotion contract).
+
+Source: ``.omx/research/representation_integration_gap_audit_20260508_codex.md``
+prevent-recurrence gate #8.
+
+Rule: promotion to frontier status requires an existing exact CUDA
+full-sample artifact with:
+
+  * archive bytes / archive size
+  * archive SHA-256
+  * runtime tree (manifest path or hash)
+  * exact-eval command string
+  * hardware (T4 / 4090 / A100 etc)
+  * sample count (typically 1199 pairs / 600 frame pairs)
+  * component fields (seg_dist / pose_dist / rate)
+  * formula recomputation (recomputed total score from components)
+  * logs (path to auth_eval log)
+  * dispatch-claim status (active / completed)
+
+Anything else MUST carry its lower evidence grade in the artifact
+(``[predicted]`` / ``[advisory only]`` / ``[CPU-prep]`` /
+``[byte-anchor]`` / ``[MPS-research-signal]`` / ``[scorer-basin-parity:CPU]``).
+
+Detection (static):
+  Scan canonical evidence ledgers for rows that claim frontier status
+  (any of):
+    * ``frontier_status=true`` / ``frontier_promoted=true``
+    * ``contest_dispatch_verdict`` containing
+      ``frontier`` / ``promote``
+    * ``evidence_grade`` containing ``frontier``
+
+  REQUIRE ALL of the following on each frontier row:
+    * ``archive_bytes`` (int) or ``empirical_archive_bytes``
+    * ``archive_sha256``
+    * ``runtime_manifest`` or ``runtime_tree_sha256``
+    * ``exact_eval_command``
+    * ``hardware`` (string, e.g. T4 / 4090 / A100)
+    * ``sample_count`` int >= 600
+    * ``seg_distortion`` or ``components.seg``
+    * ``pose_distortion`` or ``components.pose``
+    * ``rate_term`` or ``components.rate``
+    * ``recomputed_score``
+    * ``log_path`` non-empty
+    * ``dispatch_claim_status``
+
+  Tag-only rows that lack frontier status are exempt; the gate fires
+  only on rows that claim promotion.
+
+Memory ref: ``feedback_representation_integration_gap_audit_20260508_codex.md``.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+REPO_ROOT_DEFAULT = Path(__file__).resolve().parents[1]
+
+EVIDENCE_FILES: tuple[str, ...] = (
+    "reports/cathedral_autopilot_evidence.jsonl",
+    "reports/raw/pr101_omega_opt_evidence.jsonl",
+)
+
+
+@dataclass
+class Finding:
+    file_rel: str
+    line_number: int
+    technique: str
+    reason: str
+
+
+def _claims_frontier(row: dict) -> bool:
+    if row.get("frontier_status") is True:
+        return True
+    if row.get("frontier_promoted") is True:
+        return True
+    verdict = str(row.get("contest_dispatch_verdict", "")).lower()
+    if "frontier" in verdict or "promote" in verdict:
+        return True
+    grade = str(row.get("evidence_grade", "")).lower()
+    return "frontier" in grade
+
+
+def _has_field(row: dict, *names: str) -> bool:
+    for n in names:
+        v = row.get(n)
+        if isinstance(v, str) and v.strip():
+            return True
+        if isinstance(v, (int, float)) and v != 0:
+            return True
+        if isinstance(v, (list, dict)) and len(v) > 0:
+            return True
+    return False
+
+
+def _has_component(row: dict, key: str) -> bool:
+    if _has_field(row, key):
+        return True
+    components = row.get("components")
+    return bool(isinstance(components, dict) and components.get(key.split("_")[0]))
+
+
+def _missing_fields(row: dict) -> list[str]:
+    missing: list[str] = []
+    if not _has_field(row, "archive_bytes", "empirical_archive_bytes"):
+        missing.append("archive_bytes")
+    if not _has_field(row, "archive_sha256"):
+        missing.append("archive_sha256")
+    if not _has_field(row, "runtime_manifest", "runtime_tree_sha256"):
+        missing.append("runtime_manifest|runtime_tree_sha256")
+    if not _has_field(row, "exact_eval_command"):
+        missing.append("exact_eval_command")
+    if not _has_field(row, "hardware"):
+        missing.append("hardware")
+    sample_count = row.get("sample_count")
+    if not isinstance(sample_count, int) or sample_count < 600:
+        missing.append("sample_count>=600")
+    if not _has_component(row, "seg_distortion"):
+        missing.append("seg_distortion|components.seg")
+    if not _has_component(row, "pose_distortion"):
+        missing.append("pose_distortion|components.pose")
+    if not _has_component(row, "rate_term"):
+        missing.append("rate_term|components.rate")
+    if not _has_field(row, "recomputed_score"):
+        missing.append("recomputed_score")
+    if not _has_field(row, "log_path"):
+        missing.append("log_path")
+    if not _has_field(row, "dispatch_claim_status"):
+        missing.append("dispatch_claim_status")
+    return missing
+
+
+def scan(repo_root: Path | None = None) -> list[Finding]:
+    repo = (repo_root or REPO_ROOT_DEFAULT).resolve()
+    findings: list[Finding] = []
+    for rel in EVIDENCE_FILES:
+        path = repo / rel
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        for lineno, line in enumerate(text.splitlines(), 1):
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(row, dict):
+                continue
+            if not _claims_frontier(row):
+                continue
+            missing = _missing_fields(row)
+            if not missing:
+                continue
+            findings.append(
+                Finding(
+                    file_rel=rel,
+                    line_number=lineno,
+                    technique=str(row.get("technique", "<unknown>")),
+                    reason=(
+                        f"frontier-promotion row missing required exact "
+                        f"CUDA evidence fields: {','.join(missing)}. "
+                        f"Anything missing requires lowering the evidence "
+                        f"grade tag. Gate 8 (exact evidence)."
+                    ),
+                )
+            )
+    return findings
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--repo-root", default=str(REPO_ROOT_DEFAULT))
+    parser.add_argument("--strict", action="store_true")
+    args = parser.parse_args(argv)
+    repo = Path(args.repo_root).resolve()
+    findings = scan(repo)
+    if findings:
+        print(
+            f"[gate8-exact-evidence] {len(findings)} violation(s):",
+            file=sys.stderr,
+        )
+        for f in findings[:20]:
+            print(
+                f"  • {f.file_rel}:{f.line_number} technique={f.technique}: "
+                f"{f.reason}",
+                file=sys.stderr,
+            )
+        if args.strict:
+            return 1
+    else:
+        print("[gate8-exact-evidence] OK")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
