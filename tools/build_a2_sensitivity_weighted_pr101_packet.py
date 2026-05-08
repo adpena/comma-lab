@@ -1513,6 +1513,7 @@ def verify_inflate_parity(
 
     source_files = _file_map(Path(source_result["output_dir"]))
     candidate_files = _file_map(Path(candidate_result["output_dir"]))
+    shutil.rmtree(work_dir, ignore_errors=True)
 
     differing: list[str] = []
     for rel, sha in source_files.items():
