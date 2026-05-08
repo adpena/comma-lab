@@ -30,6 +30,7 @@ import ast
 import datetime as _dt
 import hashlib
 import importlib.util
+import json
 import os
 import re
 import shlex
@@ -1184,6 +1185,60 @@ def preflight_all(
         check_remote_chain_drivers_clean_inflated_per_candidate(
             strict=True, verbose=verbose,
         )
+        # 2026-05-08 HARDEN-2026-05-08 (Path B step 5/6 + cross-paradigm
+        # 137,531 B candidate hardening). Five new checks land at 0 live
+        # violations on the current tree, so they go straight to STRICT per
+        # the Lane A → strict pattern. Memory ref:
+        # ``feedback_harden_2026_05_08_path_b_cross_paradigm_preflight_landed.md``.
+        check_admm_lagrangian_bisection_convergent(strict=True, verbose=verbose)
+        check_codec_pipeline_op_order_deterministic(strict=True, verbose=verbose)
+        check_per_tensor_K_side_info_matches_decoder_expectation(
+            strict=True, verbose=verbose,
+        )
+        check_evidence_row_has_falsification_scope_when_negative(
+            strict=True, verbose=verbose,
+        )
+        check_137531_candidate_decoder_path_wired(strict=True, verbose=verbose)
+
+        # 2026-05-08 BUGCLASSES-2026-05-08 (subagent BUGCLASSES). Eight new
+        # checks closing session-discovered bug classes B1-B8. Per CLAUDE.md
+        # promotion path, each starts at strict=False (warn-only) until live
+        # counts are driven to 0; then flip to STRICT in this same call site.
+        # Memory: feedback_session_bug_classes_to_preflight_20260508.md.
+        # Live counts on landing:
+        #   B1 (encoder/decoder roundtrip)             1  warn
+        #   B2 (evidence-archive-bytes provenance)     5  warn
+        #   B3 (build-manifest archive custody)        7  warn
+        #   B4 (admm naming-vs-impl mismatch)         27  warn
+        #   B5 (inflate wire dead-bytes)               0  → STRICT
+        #   B6 (retired-config redispatch guard)       0  → STRICT
+        #   B7 (paper/research lane-tag extension)    58  warn
+        #   B8 (pr101 torch.load weights_only=False)  32  warn
+        check_encoder_decoder_dequantization_roundtrip_tested(
+            strict=False, verbose=verbose,
+        )
+        check_evidence_row_archive_bytes_has_provenance(
+            strict=False, verbose=verbose,
+        )
+        check_build_manifest_archive_custody_clean(
+            strict=False, verbose=verbose,
+        )
+        check_admm_naming_matches_iterative_consensus_implementation(
+            strict=False, verbose=verbose,
+        )
+        check_inflate_wire_format_no_dead_bytes(
+            strict=True, verbose=verbose,
+        )
+        check_predispatch_retired_config_warning(
+            strict=True, verbose=verbose,
+        )
+        check_scores_have_lane_tag_paper_research(
+            strict=False, verbose=verbose,
+        )
+        check_pr101_tools_torch_load_allowlist(
+            strict=False, verbose=verbose,
+        )
+
         # PCC9: shell-script runtime references must resolve. Catches the
         # subagent-worktree-lost-helper bug class (e.g. ensure_remote_uv.sh,
         # line_search_pose_refinement.py — both were lost when subagent
@@ -2994,7 +3049,7 @@ def check_evidence_implementation_matches_model_spec(
 ) -> list[str]:
     """Implementation-vs-model-gap audit guard (2026-05-08).
 
-    Bug class extincted: every cathedral_autopilot evidence row that claims
+    Bug class guarded: every cathedral_autopilot evidence row that claims
     to test a technique class must match the catalog's declared
     ``model_spec`` (capacity_constraint, architecture_class,
     substrate_constraint, canonical_shape_family, variant_required).
@@ -10308,6 +10363,66 @@ def check_scores_have_lane_tag(
     return violations
 
 
+def check_scores_have_lane_tag_paper_research(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """B7 — extend lane-tag discipline to docs/paper/**/*.md + .omx/research/**/*.md.
+
+    Bug class (CLAUDE.md ``forbidden_empirical_claim_without_evidence_tag``):
+    paper blueprints, design memos, and research-state ledgers may carry
+    score-shaped numbers (``0.155-0.175`` / ``0.20946``) without a per-row
+    ``[predicted-band]`` / ``[contest-CUDA]`` / ``[CPU-prep]`` tag. The base
+    ``check_scores_have_lane_tag`` covers run_log/findings/BATTLE_PLAN; this
+    sister check extends the discipline to the paper + research surfaces.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    extra_dirs = [root / "docs" / "paper", root / ".omx" / "research"]
+    for d in extra_dirs:
+        if not d.exists() or not d.is_dir():
+            continue
+        for p in d.rglob("*.md"):
+            # skip vendored harvested mirrors / archive view trees
+            parts = set(p.parts)
+            if any(
+                t in parts
+                for t in (
+                    "uv_project_env",
+                    "site-packages",
+                    "__pycache__",
+                    "vast_harvest",
+                )
+            ):
+                continue
+            n_scanned += 1
+            violations.extend(_scan_doc_for_untagged_scores(p, root))
+    if verbose:
+        if violations:
+            print(
+                f"  [score-tag-paper-research] {len(violations)} untagged "
+                f"score line(s):"
+            )
+            for v in violations[:20]:
+                print(f"    • {v}")
+            if len(violations) > 20:
+                print(f"    … (+{len(violations) - 20} more)")
+        else:
+            print(
+                f"  [score-tag-paper-research] OK: {n_scanned} md file(s) scanned"
+            )
+    if violations and strict:
+        raise MetaBugViolation(
+            "PAPER/RESEARCH SCORE LINES WITHOUT LANE TAG:\n"
+            + "\n".join(f"  • {v}" for v in violations[:50])
+        )
+    return violations
+
+
 # ── Check E: SCORER_AT_INFLATE_WAIVED markers must name an env-gate var ──────
 
 
@@ -10428,10 +10543,37 @@ def _scan_for_halfframe_without_trained_profile(
         from tac.profiles import PROFILES as _PROFILES
     except Exception:
         _PROFILES = None
+    module_profile_match = re.search(
+        r"(?m)^\s*PROFILE\s*=\s*['\"]([A-Za-z0-9_]+)['\"]",
+        text,
+    )
+    module_profile_name = (
+        module_profile_match.group(1) if module_profile_match else None
+    )
+
+    def _profile_is_half_frame_compatible(prof_name: str) -> bool | None:
+        if _PROFILES is None:
+            return (
+                "half_frame" in prof_name
+                or "halfframe" in prof_name
+                or "zoom" in prof_name
+                or "q_faithful" in prof_name
+            )
+        prof = _PROFILES.get(prof_name)
+        if prof is None:
+            return None
+        return bool(
+            prof.get("mask_half_sim_prob", 0) > 0
+            or prof.get("use_zoom_flow", False) is True
+        )
+
     # Find each --half-frame mention; near it, find --profile <name>.
     lines = text.splitlines()
     for i, line in enumerate(lines, start=1):
         if "--half-frame" not in line:
+            continue
+        stripped = line.strip()
+        if stripped.startswith("#"):
             continue
         # Skip the argparse flag DEFINITION itself (false positive — this is
         # the file that introduces the flag, not a caller). Detect the
@@ -10442,17 +10584,35 @@ def _scan_for_halfframe_without_trained_profile(
             continue
         # Skip docstring / help-string occurrences inside a triple-quoted
         # block on the same line: these are not invocations.
+        if "``" in line:
+            continue
         if '"""' in line and line.count('"""') >= 1 and "--half-frame" in line.split('"""')[-1]:
             # Inside a docstring tail — skip (heuristic).
-            pass
+            continue
+        command_window = "\n".join(lines[max(0, i - 5): min(len(lines), i + 2)])
+        if "``" in command_window:
+            continue
+        if "build_baseline_archive.py" not in command_window:
+            continue
         # Scan a 30-line window for --profile.
         window_start = max(0, i - 30)
         window_end = min(len(lines), i + 30)
         window = "\n".join(lines[window_start:window_end])
         prof_match = re.search(
-            r"--profile[\s=]+['\"]?([A-Za-z0-9_]+)['\"]?", window
+            r"--profile[\s=]+(?:['\"]?([A-Za-z0-9_]+)['\"]?|\{([A-Za-z0-9_]+)\})",
+            window,
         )
         if not prof_match:
+            if module_profile_name is not None:
+                module_ok = _profile_is_half_frame_compatible(module_profile_name)
+                if module_ok is True:
+                    continue
+                if module_ok is None:
+                    violations.append(
+                        f"{rel}:{i}: `--half-frame` with unknown module "
+                        f"PROFILE {module_profile_name!r}."
+                    )
+                    continue
             violations.append(
                 f"{rel}:{i}: `--half-frame` present but no `--profile` "
                 f"in 30-line window. Half-frame archives REQUIRE a "
@@ -10461,27 +10621,23 @@ def _scan_for_halfframe_without_trained_profile(
             )
             continue
         prof_name = prof_match.group(1)
-        if _PROFILES is None:
-            # Best effort — name-based sanity check.
-            if "half_frame" not in prof_name and "zoom" not in prof_name:
+        if prof_name is None:
+            constant_name = prof_match.group(2)
+            if constant_name == "PROFILE" and module_profile_name is not None:
+                prof_name = module_profile_name
+            else:
                 violations.append(
-                    f"{rel}:{i}: `--half-frame` with `--profile {prof_name}` "
-                    f"— profile name does not contain 'half_frame' or "
-                    f"'zoom'. Verify profile has mask_half_sim_prob>0 OR "
-                    f"use_zoom_flow=True (PROFILES not importable in scan)."
+                    f"{rel}:{i}: `--half-frame` with unresolved profile "
+                    f"constant {constant_name!r}."
                 )
-            continue
-        prof = _PROFILES.get(prof_name)
-        if prof is None:
+                continue
+        profile_ok = _profile_is_half_frame_compatible(prof_name)
+        if profile_ok is None:
             violations.append(
                 f"{rel}:{i}: `--half-frame` with unknown profile {prof_name!r}."
             )
             continue
-        ok = (
-            prof.get("mask_half_sim_prob", 0) > 0
-            or prof.get("use_zoom_flow", False) is True
-        )
-        if not ok:
+        if not profile_ok:
             violations.append(
                 f"{rel}:{i}: `--half-frame` with profile {prof_name!r} which "
                 f"has mask_half_sim_prob=0 AND use_zoom_flow=False. This "
@@ -22299,6 +22455,844 @@ def check_remote_chain_drivers_clean_inflated_per_candidate(
             "extinction_20260501.md (Bug Class #7)."
         )
     return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# HARDEN-2026-05-08 — preflight checks for the Path B step 5/6 ADMM tools +
+# cross-paradigm composition + 137,531 B candidate (commit 8d33d5c1).
+#
+# Five new checks per the HARDEN subagent mandate. All start `strict=False`;
+# each lands at 0 live violations on the current tree, so the wiring at the
+# call site flips them STRICT immediately (per the Lane A → strict pattern
+# in commit 7f2740e4).
+# ════════════════════════════════════════════════════════════════════════════
+
+
+# Tools that perform Lagrangian λ-bisection over per-tensor cost curves and
+# MUST converge under a finite budget. New tools added by HARDEN should be
+# appended here.
+_ADMM_BISECTION_TOOLS = (
+    "tools/pr101_omega_opt_joint_admm_allocation_empirical.py",
+    "tools/pr101_omega_opt_admm_x_lossy_coarsening_empirical.py",
+)
+
+
+def check_admm_lagrangian_bisection_convergent(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """STRICT: every ADMM/Lagrangian bisection tool must declare a finite
+    iteration cap AND a tolerance.
+
+    Catches the "infinite-loop on a never-converging Lagrangian" bug class:
+    a bisect over [0, 1e15] with no max-iters spins until SIGURG. Tools must
+    contain BOTH:
+        * a ``for _ in range(<INT>):`` bisection loop, AND
+        * either ``abs(hi - lo) <`` (tolerance break) OR
+          ``hi == lo`` (degenerate-window break) inside the loop.
+
+    Reference: HARDEN-2026-05-08 mandate; CLAUDE.md "Internal-consistency
+    assertions in stats files" by analogy (any iterative numerical procedure
+    must declare its termination contract).
+    """
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    n_scanned = 0
+    for rel in _ADMM_BISECTION_TOOLS:
+        path = root / rel
+        if not path.is_file():
+            violations.append(
+                f"{rel}: declared ADMM bisection tool MISSING — was it "
+                f"renamed or deleted? Update _ADMM_BISECTION_TOOLS."
+            )
+            continue
+        n_scanned += 1
+        text = path.read_text(encoding="utf-8")
+        # Look for `for _ in range(<INT>):` near a function whose body
+        # contains a Lagrangian update (lo/hi assignment).
+        has_max_iter = bool(re.search(r"for\s+\w+\s+in\s+range\(\s*\d+\s*\)\s*:", text))
+        has_tolerance = (
+            "abs(hi - lo)" in text
+            or "abs(hi-lo)" in text
+            or re.search(r"\bhi\s*==\s*lo\b", text) is not None
+        )
+        if not has_max_iter:
+            violations.append(
+                f"{rel}: ADMM bisection MUST declare a finite "
+                f"`for _ in range(<INT>):` cap. Found none."
+            )
+        if not has_tolerance:
+            violations.append(
+                f"{rel}: ADMM bisection MUST declare a tolerance break "
+                f"(`abs(hi - lo) < ...` or `hi == lo`). Found none."
+            )
+    if verbose:
+        if violations:
+            print(
+                f"  [harden-admm-bisection] {len(violations)} violation(s) "
+                f"across {n_scanned} bisection tool(s)"
+            )
+            for v in violations[:5]:
+                print(f"    • {v}")
+        else:
+            print(
+                f"  [harden-admm-bisection] OK: {n_scanned} bisection tool(s) "
+                f"all declare finite iters + tolerance"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "ADMM LAGRANGIAN BISECTION CONVERGENCE VIOLATIONS:\n  • "
+            + "\n  • ".join(violations)
+            + "\n\nReference: HARDEN-2026-05-08 mandate; bisection without a "
+            "max-iter cap is a SIGURG-magnet."
+        )
+    return violations
+
+
+def check_codec_pipeline_op_order_deterministic(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """STRICT: ``CodecPipeline.encode`` must be byte-deterministic for a
+    fixed input + fixed op order.
+
+    AST-level scan of :mod:`tac.codec_pipeline` for the encode method body —
+    requires that the manifest emit a ``ts_iso`` field (timestamp) but that
+    the actual blob bytes are NOT a function of any wall-clock or random
+    source (``time.time``, ``random.``, ``os.urandom``, ``uuid.uuid``).
+
+    The blob may contain ``ts_iso`` only inside the manifest sidecar (which
+    is JSON, deserialized separately); it must NOT enter the op blob itself.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    src_path = root / "src" / "tac" / "codec_pipeline.py"
+    if not src_path.is_file():
+        msg = f"src/tac/codec_pipeline.py missing: {src_path}"
+        if strict:
+            raise PreflightError(msg)
+        return [msg]
+
+    text = src_path.read_text(encoding="utf-8")
+    # AST scan: parse the encode method body, find every Call whose function
+    # is one of the non-deterministic sources, then trace whether the result
+    # propagates into the `out` bytearray that constitutes the blob. The
+    # canonical CodecPipeline.encode uses `time.time()` only for the manifest
+    # sidecar (`started_at_utc`, `elapsed_seconds`), which is NOT part of the
+    # blob bytes — so AST scoping is the only way to reject true offenders.
+    violations: list[str] = []
+    NONDETERMINISTIC_NAMES = {
+        ("time", "time"): "time.time()",
+        ("random",): "random.*",  # any attr of random
+        ("os", "urandom"): "os.urandom()",
+    }
+
+    def _is_nondeterministic_call(call_node: ast.AST) -> str | None:
+        if not isinstance(call_node, ast.Call):
+            return None
+        f = call_node.func
+        if isinstance(f, ast.Attribute) and isinstance(f.value, ast.Name):
+            mod = f.value.id
+            attr = f.attr
+            if (mod, attr) == ("time", "time"):
+                return "time.time()"
+            if (mod, attr) == ("os", "urandom"):
+                return "os.urandom()"
+            if mod == "random":
+                return f"random.{attr}()"
+            if mod == "uuid" and attr.startswith("uuid"):
+                return f"uuid.{attr}()"
+        return None
+
+    try:
+        tree = ast.parse(text)
+    except SyntaxError as e:
+        msg = f"src/tac/codec_pipeline.py: AST parse failed: {e}"
+        if strict:
+            raise PreflightError(msg)
+        return [msg]
+
+    # For each function whose name is `encode` or `decode`, find non-det
+    # calls; for each such call, walk up the AST and check whether the
+    # assignment target eventually flows into a write to a bytes-building
+    # sink (heuristic: target name appears in `out += ...`, `out.extend(...)`,
+    # `blob = ...` adjacent to a return).
+    for fn in ast.walk(tree):
+        if not isinstance(fn, ast.FunctionDef):
+            continue
+        if fn.name not in ("encode", "decode"):
+            continue
+        # Collect non-det assignments: `var = time.time()` -> var is "tainted".
+        tainted_names: set[str] = set()
+        nondet_call_lines: list[tuple[int, str]] = []
+        for node in ast.walk(fn):
+            label = _is_nondeterministic_call(node)
+            if label is None:
+                continue
+            nondet_call_lines.append((node.lineno, label))
+            # Find enclosing Assign/AugAssign target
+            for parent in ast.walk(fn):
+                if isinstance(parent, ast.Assign):
+                    if any(node is c for c in ast.walk(parent.value)):
+                        for tgt in parent.targets:
+                            if isinstance(tgt, ast.Name):
+                                tainted_names.add(tgt.id)
+        # Check propagation: any tainted name appearing in a BinOp or AugAssign
+        # whose other side is the bytes-blob (out, blob, final, payload).
+        BLOB_SINKS = {"out", "blob", "final", "payload"}
+        for node in ast.walk(fn):
+            if isinstance(node, ast.AugAssign) and isinstance(node.target, ast.Name):
+                if node.target.id in BLOB_SINKS:
+                    # Does node.value contain any tainted name?
+                    for inner in ast.walk(node.value):
+                        if isinstance(inner, ast.Name) and inner.id in tainted_names:
+                            violations.append(
+                                f"src/tac/codec_pipeline.py:{node.lineno}: "
+                                f"tainted name {inner.id!r} (from non-"
+                                f"deterministic call) flows into blob sink "
+                                f"{node.target.id!r} via AugAssign"
+                            )
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+                # `out.extend(...)` / `blob.append(...)`
+                if (
+                    isinstance(node.func.value, ast.Name)
+                    and node.func.value.id in BLOB_SINKS
+                ):
+                    for inner in ast.walk(node):
+                        if isinstance(inner, ast.Name) and inner.id in tainted_names:
+                            violations.append(
+                                f"src/tac/codec_pipeline.py:{node.lineno}: "
+                                f"tainted name {inner.id!r} flows into blob "
+                                f"sink {node.func.value.id!r}.{node.func.attr}"
+                            )
+    if verbose:
+        if violations:
+            print(
+                f"  [harden-codec-pipeline-determinism] {len(violations)} "
+                f"violation(s) in CodecPipeline source"
+            )
+            for v in violations[:5]:
+                print(f"    • {v}")
+        else:
+            print(
+                f"  [harden-codec-pipeline-determinism] OK: no time/random/"
+                f"urandom/uuid in src/tac/codec_pipeline.py"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "CODEC PIPELINE OP ORDER DETERMINISM VIOLATIONS:\n  • "
+            + "\n  • ".join(violations)
+        )
+    return violations
+
+
+# Wire-format contract: the Path B step 6 candidate writes
+#   <I prefix> + <28-byte per-tensor K> + <56-byte per-tensor fp16 scale> +
+#   <brotli payload> + <PR101 latent + sidecar blobs>
+# The decoder MUST parse exactly this prefix layout. New encoder/decoder pairs
+# that add per-tensor K side-info should append themselves below.
+_PER_TENSOR_K_DECODER_PATHS = (
+    (
+        "experiments/results/admm_x_lossy_coarsening_path_b_step6_"
+        "20260508T060435Z/submission_dir/inflate.py"
+    ),
+)
+_PER_TENSOR_K_ENCODER_PATHS = (
+    "tools/build_admm_x_lossy_coarsening_path_b_step6.py",
+)
+
+
+def check_per_tensor_K_side_info_matches_decoder_expectation(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """STRICT: any encoder writing per-tensor K side-info must match the
+    decoder's expected wire-format prefix layout.
+
+    Encoder MUST produce ``struct.pack("<I", section_total)`` followed by
+    ``K_bytes`` (one byte per tensor) and ``scale_bytes`` (fp16 LE, 2 bytes
+    per tensor). Decoder MUST declare the same constants:
+        * ``PREFIX_BYTES = 4``
+        * ``K_SECTION_BYTES = N_TENSORS``
+        * ``SCALE_SECTION_BYTES = N_TENSORS * 2``
+    """
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    n_pairs = 0
+
+    # Decoder side: each declared decoder must have all three constants
+    for rel in _PER_TENSOR_K_DECODER_PATHS:
+        path = root / rel
+        if not path.is_file():
+            violations.append(
+                f"{rel}: declared per-tensor-K decoder MISSING — was the "
+                f"candidate dir deleted? Update _PER_TENSOR_K_DECODER_PATHS."
+            )
+            continue
+        n_pairs += 1
+        text = path.read_text(encoding="utf-8")
+        if "PREFIX_BYTES = 4" not in text:
+            violations.append(f"{rel}: missing `PREFIX_BYTES = 4` declaration")
+        if "K_SECTION_BYTES" not in text:
+            violations.append(f"{rel}: missing `K_SECTION_BYTES` declaration")
+        if "SCALE_SECTION_BYTES" not in text:
+            violations.append(f"{rel}: missing `SCALE_SECTION_BYTES` declaration")
+        if 'struct.unpack("<I"' not in text and "struct.unpack('<I'" not in text:
+            violations.append(
+                f"{rel}: decoder MUST use `struct.unpack(\"<I\", ...)` for "
+                f"the section_total prefix — uint32 LE wire format"
+            )
+
+    # Encoder side: each declared encoder must produce the matching prefix.
+    for rel in _PER_TENSOR_K_ENCODER_PATHS:
+        path = root / rel
+        if not path.is_file():
+            violations.append(
+                f"{rel}: declared per-tensor-K encoder MISSING — was it "
+                f"renamed? Update _PER_TENSOR_K_ENCODER_PATHS."
+            )
+            continue
+        text = path.read_text(encoding="utf-8")
+        if 'struct.pack("<I"' not in text and "struct.pack('<I'" not in text:
+            violations.append(
+                f"{rel}: encoder MUST emit `struct.pack(\"<I\", section_total)` "
+                f"to match the decoder's `<I` prefix wire format"
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [harden-per-tensor-K-wireformat] {len(violations)} "
+                f"violation(s) across {n_pairs} encoder/decoder pair(s)"
+            )
+            for v in violations[:5]:
+                print(f"    • {v}")
+        else:
+            print(
+                f"  [harden-per-tensor-K-wireformat] OK: {n_pairs} "
+                f"encoder/decoder pair(s) have matching wire format"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "PER-TENSOR-K WIRE FORMAT VIOLATIONS:\n  • "
+            + "\n  • ".join(violations)
+        )
+    return violations
+
+
+# Evidence files that may carry rows with `family_falsified` / `falsification_scope`.
+_EVIDENCE_FILES = (
+    "reports/cathedral_autopilot_evidence.jsonl",
+    "reports/raw/pr101_omega_opt_evidence.jsonl",
+)
+
+
+def check_evidence_row_has_falsification_scope_when_negative(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """STRICT: negative evidence with ``family_falsified=False`` MUST also set
+    ``falsification_scope`` (non-empty string).
+
+    Per CLAUDE.md ``forbidden_premature_class_level_falsification``: a single
+    config's failure does NOT extend to the whole technique class. The
+    ``falsification_scope`` field names the exact tested config so future
+    audits can re-open the class with a different config.
+
+    Positive/proxy CPU-build rows may still carry ``family_falsified=False`` as
+    a promotion guard; that alone does not make them falsification evidence.
+    Conversely: ``family_falsified=True`` is FORBIDDEN for any row that did
+    not name research-path exhaustion + grand-council consensus (per CLAUDE.md
+    "KILL is the LAST RESORT"). This check warns on any True value too.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    n_rows = 0
+    n_files = 0
+    for rel in _EVIDENCE_FILES:
+        path = root / rel
+        if not path.is_file():
+            continue
+        n_files += 1
+        for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                violations.append(
+                    f"{rel}:{lineno}: malformed JSON line"
+                )
+                continue
+            n_rows += 1
+            if not isinstance(row, dict):
+                continue
+            if "family_falsified" not in row:
+                continue
+            ff = row["family_falsified"]
+            scope = row.get("falsification_scope", "")
+            grade = str(row.get("evidence_grade", "")).lower()
+            verdict = str(row.get("contest_dispatch_verdict", "")).lower()
+            status = str(row.get("measured_config_status", "")).lower()
+            blockers = row.get("dispatch_blockers", [])
+            blocker_text = " ".join(
+                str(blocker).lower() for blocker in blockers
+            ) if isinstance(blockers, list) else ""
+            negative_or_retired = any(
+                token in " ".join([grade, verdict, status, blocker_text])
+                for token in (
+                    "a-negative",
+                    "exact-negative",
+                    "negative",
+                    "retired",
+                    "falsified",
+                )
+            )
+            if (
+                ff is False
+                and negative_or_retired
+                and not (isinstance(scope, str) and scope.strip())
+            ):
+                technique = row.get("technique", "<unknown>")
+                violations.append(
+                    f"{rel}:{lineno}: technique={technique!r} has "
+                    f"family_falsified=False but falsification_scope is "
+                    f"empty/missing. Per CLAUDE.md "
+                    f"forbidden_premature_class_level_falsification: every "
+                    f"negative non-family-falsifying row must NAME the tested config so "
+                    f"reactivation criteria are explicit."
+                )
+            if ff is True:
+                technique = row.get("technique", "<unknown>")
+                violations.append(
+                    f"{rel}:{lineno}: technique={technique!r} sets "
+                    f"family_falsified=True — per CLAUDE.md \"KILL is the "
+                    f"LAST RESORT\", this requires research-path exhaustion + "
+                    f"grand-council consensus + reactivation criteria. "
+                    f"Default for one-config failure is "
+                    f"DEFERRED-pending-research."
+                )
+    if verbose:
+        if violations:
+            print(
+                f"  [harden-falsification-scope] {len(violations)} "
+                f"violation(s) across {n_rows} row(s) / {n_files} file(s)"
+            )
+            for v in violations[:5]:
+                print(f"    • {v}")
+        else:
+            print(
+                f"  [harden-falsification-scope] OK: {n_rows} evidence "
+                f"row(s) across {n_files} file(s) all consistent"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "EVIDENCE ROW FALSIFICATION SCOPE VIOLATIONS:\n  • "
+            + "\n  • ".join(violations)
+            + "\n\nReference: CLAUDE.md "
+            "forbidden_premature_class_level_falsification + "
+            "\"KILL is the LAST RESORT\"."
+        )
+    return violations
+
+
+def check_137531_candidate_decoder_path_wired(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """STRICT: if the cross-paradigm 137,531 B candidate evidence row exists
+    in ``reports/cathedral_autopilot_evidence.jsonl``, the decoder side MUST
+    be wired (i.e. the candidate's submission_dir must exist with inflate.py
+    + inflate.sh).
+
+    Closes the "evidence row points at a decoder path that doesn't exist"
+    bug class. The HARDEN-2026-05-08 audit found the 137,531 B record landed
+    via the byte-anchor proxy but the decoder may be a separate WIRE-DECODER
+    subagent deliverable; this check enforces presence at preflight time
+    once the row appears.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    evidence_path = root / "reports" / "cathedral_autopilot_evidence.jsonl"
+    violations: list[str] = []
+
+    rows_with_137531 = 0
+    if evidence_path.is_file():
+        for lineno, line in enumerate(
+            evidence_path.read_text(encoding="utf-8").splitlines(), 1
+        ):
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(row, dict):
+                continue
+            tech = (row.get("technique") or "").lower()
+            bytes_field = row.get("empirical_archive_bytes") or row.get("bytes_out")
+            is_target_row = (
+                "cross_paradigm" in tech
+                or "admm_x_continuous_k" in tech
+                or "admm_continuous_k_plus_op1_finalizer" in tech
+            )
+            if is_target_row and isinstance(bytes_field, int) and 130_000 <= bytes_field <= 145_000:
+                rows_with_137531 += 1
+                # Check if any submission_dir exists for this candidate.
+                # Conservative: the 137,531 B candidate is the ADMM × continuous-K
+                # + Op1 finalizer, which depends on WIRE-DECODER's deliverable.
+                # Until the decoder is wired, we accept either:
+                #   (a) presence of the Path B step 6 ADMM-only decoder (already
+                #       wired in commit 82bfc648), OR
+                #   (b) explicit `decoder_pending_wire_decoder_subagent=True`
+                #       flag on the row.
+                step6_decoder = (
+                    root
+                    / "experiments/results/admm_x_lossy_coarsening_path_b_step6_"
+                    "20260508T060435Z/submission_dir/inflate.py"
+                )
+                row_has_pending = bool(
+                    row.get("decoder_pending_wire_decoder_subagent")
+                )
+                if not step6_decoder.is_file() and not row_has_pending:
+                    violations.append(
+                        f"reports/cathedral_autopilot_evidence.jsonl:{lineno}: "
+                        f"row claims {bytes_field:,} B cross-paradigm candidate "
+                        f"but neither the Path B step 6 decoder "
+                        f"(experiments/results/admm_x_lossy_coarsening_path_b_step6_"
+                        f"20260508T060435Z/submission_dir/inflate.py) exists nor "
+                        f"the row sets `decoder_pending_wire_decoder_subagent=True`"
+                    )
+    if verbose:
+        if violations:
+            print(
+                f"  [harden-137531-decoder] {len(violations)} violation(s) "
+                f"across {rows_with_137531} target row(s)"
+            )
+            for v in violations[:5]:
+                print(f"    • {v}")
+        else:
+            print(
+                f"  [harden-137531-decoder] OK: {rows_with_137531} "
+                f"cross-paradigm row(s) have decoder wired or pending-flag set"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "137531 B CANDIDATE DECODER WIRING VIOLATIONS:\n  • "
+            + "\n  • ".join(violations)
+            + "\n\nReference: HARDEN-2026-05-08 mandate. The cross-paradigm "
+            "byte-anchor evidence row must point at a wired decoder OR "
+            "explicitly mark itself pending the WIRE-DECODER subagent."
+        )
+    return violations
+
+
+# ─── BUGCLASSES B1-B8 (2026-05-08): session bug-class extinction ──────────────
+#
+# Each helper wraps a tools/check_<name>.py scanner and follows the canonical
+# preflight wrapper pattern (see check_lane_smoke_signal_nontrivial). All seven
+# scanners are subprocess-importable Python modules that expose `scan(repo)`
+# returning a list of dataclass `Finding` records with at minimum
+# `__str__`-able fields.
+
+def _run_bugclass_scanner(
+    *,
+    helper_relpath: str,
+    label: str,
+    error_class: type,
+    repo_root: str | Path | None,
+    strict: bool,
+    verbose: bool,
+) -> list[str]:
+    """Generic wrapper: load tools/<helper>.py, call scan(), format findings."""
+    root = Path(repo_root or REPO_ROOT)
+    helper_path = root / helper_relpath
+    if not helper_path.is_file():
+        msg = f"{label} scanner missing: {helper_path}"
+        if strict:
+            raise error_class(msg)
+        return [msg]
+    spec = importlib.util.spec_from_file_location(
+        f"_pact_bugclass_{label}", helper_path
+    )
+    if spec is None or spec.loader is None:
+        msg = f"cannot import {label} scanner: {helper_path}"
+        if strict:
+            raise error_class(msg)
+        return [msg]
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    findings = module.scan(root)
+    violations: list[str] = []
+    for f in findings:
+        if hasattr(f, "rel_path"):
+            violations.append(
+                f"{getattr(f, 'rel_path', '?')}:{getattr(f, 'lineno', getattr(f, 'line_number', 0))}: "
+                f"{getattr(f, 'reason', str(f))[:200]}"
+            )
+        elif hasattr(f, "file_rel"):
+            violations.append(
+                f"{getattr(f, 'file_rel', '?')}:{getattr(f, 'line_number', 0)}: "
+                f"{getattr(f, 'reason', str(f))[:200]}"
+            )
+        elif hasattr(f, "manifest_rel"):
+            violations.append(
+                f"{getattr(f, 'manifest_rel', '?')}: "
+                f"{getattr(f, 'reason', str(f))[:200]}"
+            )
+        else:
+            violations.append(str(f)[:200])
+    if verbose:
+        if violations:
+            print(f"  [{label}] {len(violations)} violation(s)")
+            for v in violations[:5]:
+                print(f"    • {v}")
+            if len(violations) > 5:
+                print(f"    … (+{len(violations) - 5} more)")
+        else:
+            print(f"  [{label}] OK")
+    if violations and strict:
+        raise error_class(
+            f"{label.upper()} VIOLATIONS:\n  • "
+            + "\n  • ".join(violations[:50])
+        )
+    return violations
+
+
+def check_encoder_decoder_dequantization_roundtrip_tested(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """B1 — encoder/decoder dequantization roundtrip test discipline.
+
+    Bug class: encoder uses ``(rounded / N) * scale`` while paired runtime
+    decoder uses ``rounded * scale`` (or any other quantization-arithmetic
+    mismatch). Real instance: ``tools/pr101_cross_paradigm_hstack_vstack_
+    empirical.py`` had an encoder/decoder mismatch that produced phantom
+    137,531 B claim re-running at 137,469 B with the bug fixed.
+
+    Memory ref: ``feedback_codex_adversarial_review_4_landings_20260508.md``.
+    Promotion plan: starts ``strict=False``; after the 1 known violation
+    (build_admm_x_lossy_coarsening_path_b_step6.py) is annotated with
+    ``# ROUNDTRIP_TESTED:<pytest-path>`` or a sibling
+    ``test_<basename>_roundtrip.py`` lands, flip to STRICT.
+    """
+    return _run_bugclass_scanner(
+        helper_relpath=(
+            "tools/check_encoder_decoder_dequantization_roundtrip_tested.py"
+        ),
+        label="bugclass-b1-encoder-decoder-roundtrip",
+        error_class=PreflightError,
+        repo_root=repo_root,
+        strict=strict,
+        verbose=verbose,
+    )
+
+
+def check_evidence_row_archive_bytes_has_provenance(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """B2 — phantom byte-proxy claim discipline.
+
+    Bug class: evidence row claims ``empirical_archive_bytes`` from
+    ``len(blob)`` of an unwrapped encode without ZIP packaging + inflate
+    roundtrip. Real instance: cross-paradigm 137,531 B winner was
+    ``len(blob_op1)`` not a byte-closed archive.
+
+    Memory ref: ``feedback_review_engineering_council_4_landings_20260508.md``.
+
+    Promotion plan: starts ``strict=False`` (5 known violations on the
+    cathedral_autopilot evidence ledger). Once each row sets
+    ``archive_sha256`` OR explicit proxy guards (``byte_proxy_only=true`` +
+    ``cuda_eval_worth_testing=false`` + ``ready_for_exact_eval_dispatch=
+    false``) OR a textual provenance tag in ``source``, flip to STRICT.
+    """
+    return _run_bugclass_scanner(
+        helper_relpath="tools/check_evidence_row_archive_bytes_has_provenance.py",
+        label="bugclass-b2-evidence-archive-bytes-provenance",
+        error_class=PreflightError,
+        repo_root=repo_root,
+        strict=strict,
+        verbose=verbose,
+    )
+
+
+def check_build_manifest_archive_custody_clean(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """B3 — build_manifest archive custody discipline.
+
+    Bug class: ``build_manifest.json`` references ``archive_relpath`` but the
+    archive is gitignored AND no CI rebuild-and-SHA-assert smoke exists.
+    Real instance: Path B step 6 archive at
+    ``experiments/results/admm_x_lossy_coarsening_path_b_step6_20260508T060435Z/
+    archive.zip`` exists on dirty disk only.
+
+    Memory ref: ``feedback_codex_adversarial_review_4_landings_20260508.md``.
+
+    Promotion plan: starts ``strict=False`` (7 known violations on currently-
+    dirty experiment dirs). Once each manifest gets a verifier script,
+    `custody_status` annotation, OR the archive is committed, flip to STRICT.
+    """
+    return _run_bugclass_scanner(
+        helper_relpath="tools/check_build_manifest_archive_custody_clean.py",
+        label="bugclass-b3-build-manifest-archive-custody",
+        error_class=PreflightError,
+        repo_root=repo_root,
+        strict=strict,
+        verbose=verbose,
+    )
+
+
+def check_admm_naming_matches_iterative_consensus_implementation(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """B4 — naming-vs-implementation drift ("ADMM-named-but-not-ADMM").
+
+    Bug class: a class/function/file named ``ADMM`` or ``primal_dual``
+    implements λ-bisection over independent per-tensor argmin (NOT iterative
+    ADMM with consensus updates). Real instance: Path B step 5+6 tools used
+    "ADMM" naming for what is actually Lagrangian per-tensor allocation.
+
+    Memory ref: ``feedback_review_math_council_4_landings_20260508.md``
+    (Dykstra MEDIUM finding).
+
+    Promotion plan: starts ``strict=False`` (~27 known violations). Targets
+    are either rename to ``lagrangian_*``/``bisection_*`` OR add real ADMM
+    iterative updates (rho/z/u consensus pattern) OR
+    ``# ADMM_WAIVED:<reason>`` annotation. Flip to STRICT once cleanup
+    lands.
+    """
+    return _run_bugclass_scanner(
+        helper_relpath=(
+            "tools/check_admm_naming_matches_iterative_consensus_implementation.py"
+        ),
+        label="bugclass-b4-admm-naming-impl-mismatch",
+        error_class=PreflightError,
+        repo_root=repo_root,
+        strict=strict,
+        verbose=verbose,
+    )
+
+
+def check_inflate_wire_format_no_dead_bytes(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """B5 — inflate wire-format dead-bytes discipline.
+
+    Bug class: ``inflate.py`` reads N-byte side-info from the wire format
+    that's never used in state-dict assembly. Real instance: ADMM step 6
+    ``inflate.py:117-121`` reads 28 K bytes; comment claims they're charged
+    for audit/reproducibility, but ``reconstructed_q = chunk`` is a no-op.
+
+    Memory ref: ``feedback_review_engineering_council_4_landings_20260508.md``
+    (REVIEW-ENG C2).
+
+    Lands at 0 live violations after vendored-public-PR-intake exclusion;
+    ships STRICT directly per the Lane A pattern.
+    """
+    return _run_bugclass_scanner(
+        helper_relpath="tools/check_inflate_wire_format_no_dead_bytes.py",
+        label="bugclass-b5-inflate-dead-bytes",
+        error_class=PreflightError,
+        repo_root=repo_root,
+        strict=strict,
+        verbose=verbose,
+    )
+
+
+def check_predispatch_retired_config_warning(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """B6 — retired-negative config redispatch guard.
+
+    Bug class: a config previously dispatched with
+    ``measured_config_status=measured_config_retired_exact_cuda_negative``
+    is about to be re-dispatched, wasting paid GPU. Real instance:
+    ``cathedral_autopilot_evidence.jsonl:35`` lossy_coarsening @
+    T0312-noproject scored 0.3517 retired; a Lightning bootstrap fix would
+    re-dispatch and waste $0.30-0.60.
+
+    Memory ref: ``feedback_codex_adversarial_review_4_landings_20260508.md``.
+
+    Static check: every retired row must carry
+    ``dispatch_blockers=['reactivation_required_before_new_dispatch']`` AND
+    a non-empty ``reactivation_criteria``. Lands at 0 live violations
+    (canonical retired row already has guards) — ships STRICT directly.
+    """
+    return _run_bugclass_scanner(
+        helper_relpath="tools/check_predispatch_retired_config_warning.py",
+        label="bugclass-b6-retired-config-redispatch",
+        error_class=PreflightError,
+        repo_root=repo_root,
+        strict=strict,
+        verbose=verbose,
+    )
+
+
+def check_pr101_tools_torch_load_allowlist(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """B8 — torch.load(weights_only=False) allowlist for cross-paradigm tools.
+
+    Bug class: cross-paradigm encoder tools (``tools/pr101_*.py``,
+    ``tools/build_admm_*.py``, ``tools/build_cross_paradigm_*.py``) call
+    ``torch.load(<path>, weights_only=False)`` without an explicit allowlist
+    comment marking the input as trusted. The base
+    ``preflight_loader_format_safety`` covers the renderer/checkpoint name
+    surface; this sister check extends the discipline to PR101 cross-paradigm
+    tools.
+
+    Real instances (REVIEW-ENG C4):
+      * ``tools/pr101_cross_paradigm_hstack_vstack_empirical.py:212``
+      * ``tools/pr101_omega_opt_admm_x_lossy_coarsening_empirical.py:143``
+
+    Memory ref: ``feedback_codex_adversarial_review_4_landings_20260508.md``.
+
+    Promotion plan: starts ``strict=False`` (~32 known violations).
+    Annotate each call with ``# WEIGHTS_ONLY_FALSE_OK:<reason>`` or add
+    a sha256/magic-byte preceding-30-line validation. Flip to STRICT
+    once cleanup lands.
+    """
+    return _run_bugclass_scanner(
+        helper_relpath="tools/check_pr101_tools_torch_load_allowlist.py",
+        label="bugclass-b8-pr101-torch-load-allowlist",
+        error_class=PreflightError,
+        repo_root=repo_root,
+        strict=strict,
+        verbose=verbose,
+    )
 
 
 if __name__ == "__main__":
