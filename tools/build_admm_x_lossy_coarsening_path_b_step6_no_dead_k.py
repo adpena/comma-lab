@@ -70,6 +70,11 @@ Usage
 .. code-block:: bash
 
     .venv/bin/python tools/build_admm_x_lossy_coarsening_path_b_step6_no_dead_k.py
+
+    # Consume a beta-Fisher/Jacobian score-aware planning manifest.
+    .venv/bin/python tools/build_admm_x_lossy_coarsening_path_b_step6_no_dead_k.py \
+        --selected-Ks-json reports/raw/beta_fisher_lossy_coarsening_weights/<run>/manifest.json \
+        --selected-Ks-rms-target 0.0386
 """
 from __future__ import annotations
 
@@ -162,6 +167,13 @@ CPU_BUILD_SCORE_BLOCKERS = [
     "apogee_int6_contest_cuda_anchor_required_first",
 ]
 
+SELECTED_KS_SOURCE_BLOCKERS_CLOSED_BY_BYTE_CLOSED_BUILD = frozenset(
+    {
+        "selected_Ks_not_yet_encoded_in_no_dead_k_runtime_packet",
+        "weight_export_only_no_byte_closed_archive",
+    }
+)
+
 
 def _utc_now_iso() -> str:
     return dt.datetime.now(tz=dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -190,6 +202,117 @@ def cpu_build_proxy_guard_fields() -> dict[str, object]:
         "score_claim_blockers": list(CPU_BUILD_SCORE_BLOCKERS),
         "dispatch_blockers": list(CPU_BUILD_SCORE_BLOCKERS),
     }
+
+
+def _guard_fields_with_selected_Ks_source_blockers(
+    k_source_metadata: dict[str, object],
+) -> dict[str, object]:
+    guard = cpu_build_proxy_guard_fields()
+    extra: list[str] = []
+    if k_source_metadata.get("per_tensor_K_source") == "selected_Ks_json":
+        extra.append("selected_Ks_json_cpu_planning_not_score_authority")
+        source_semantics = k_source_metadata.get("selected_Ks_source_evidence_semantics")
+        if source_semantics:
+            extra.append(f"selected_Ks_source_evidence_semantics:{source_semantics}")
+        for blocker in k_source_metadata.get("selected_Ks_source_dispatch_blockers") or []:
+            blocker_str = str(blocker)
+            if blocker_str in SELECTED_KS_SOURCE_BLOCKERS_CLOSED_BY_BYTE_CLOSED_BUILD:
+                continue
+            extra.append(f"selected_Ks_source_blocker:{blocker_str}")
+    for key in ("score_claim_blockers", "dispatch_blockers"):
+        current = guard.get(key)
+        if not isinstance(current, list):  # pragma: no cover - guard shape sanity
+            raise TypeError(f"guard field {key!r} must be a list")
+        guard[key] = sorted({*current, *extra})
+    return guard
+
+
+def _closed_selected_Ks_source_blockers(
+    k_source_metadata: dict[str, object],
+) -> list[str]:
+    if k_source_metadata.get("per_tensor_K_source") != "selected_Ks_json":
+        return []
+    return sorted(
+        str(blocker)
+        for blocker in k_source_metadata.get("selected_Ks_source_dispatch_blockers") or []
+        if str(blocker) in SELECTED_KS_SOURCE_BLOCKERS_CLOSED_BY_BYTE_CLOSED_BUILD
+    )
+
+
+def _validate_Ks(values: list[object], *, source: str) -> list[int]:
+    n_tensors = len(FIXED_STATE_SCHEMA)
+    if len(values) != n_tensors:
+        raise SystemExit(
+            f"FATAL: {source} selected_Ks length {len(values)} != n_tensors {n_tensors}"
+        )
+    out: list[int] = []
+    for idx, value in enumerate(values):
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise SystemExit(
+                f"FATAL: {source} selected_Ks[{idx}] is not an integer: {value!r}"
+            )
+        if value < 1 or value > 255:
+            raise SystemExit(
+                f"FATAL: {source} selected_Ks[{idx}] out of [1,255]: {value!r}"
+            )
+        out.append(int(value))
+    return out
+
+
+def _load_selected_Ks_from_manifest(
+    path: Path,
+    *,
+    rms_target: float,
+) -> tuple[list[int], dict[str, object]]:
+    """Load ``weighted_k_allocations[].selected_Ks`` from a planning manifest."""
+    if not path.is_file():
+        raise SystemExit(f"FATAL: --selected-Ks-json not found: {path}")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise SystemExit(f"FATAL: {path} must contain a JSON object")
+
+    selected_row: dict[str, object] | None = None
+    rows = payload.get("weighted_k_allocations")
+    if isinstance(rows, list):
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            row_target = row.get("rms_target")
+            if isinstance(row_target, int | float) and abs(float(row_target) - rms_target) <= 1e-12:
+                selected_row = row
+                break
+        if selected_row is None and len(rows) == 1 and isinstance(rows[0], dict):
+            selected_row = rows[0]
+
+    if selected_row is None and isinstance(payload.get("selected_Ks"), list):
+        selected_row = {
+            "rms_target": rms_target,
+            "selected_Ks": payload["selected_Ks"],
+        }
+
+    if selected_row is None:
+        raise SystemExit(
+            f"FATAL: {path} has no weighted_k_allocations row for rms_target={rms_target}"
+        )
+    selected = selected_row.get("selected_Ks")
+    if not isinstance(selected, list):
+        raise SystemExit(f"FATAL: selected row in {path} lacks selected_Ks list")
+
+    source = f"{path}:weighted_k_allocations[].selected_Ks"
+    Ks = _validate_Ks(selected, source=source)
+    metadata = {
+        "per_tensor_K_source": "selected_Ks_json",
+        "selected_Ks_json": str(path),
+        "selected_Ks_json_sha256": _sha256(path.read_bytes()),
+        "selected_Ks_rms_target_requested": float(rms_target),
+        "selected_Ks_row_rms_target": selected_row.get("rms_target"),
+        "selected_Ks_row_total_bytes_proxy": selected_row.get("total_bytes"),
+        "selected_Ks_row_rel_err_proxy": selected_row.get("rel_err"),
+        "selected_Ks_source_schema": payload.get("schema", payload.get("schema_version")),
+        "selected_Ks_source_evidence_semantics": payload.get("evidence_semantics"),
+        "selected_Ks_source_dispatch_blockers": payload.get("dispatch_blockers", []),
+    }
+    return Ks, metadata
 
 
 def _build_lossy_decoder_section_no_K(
@@ -643,6 +766,24 @@ def main(argv: list[str] | None = None) -> int:
         type=float,
         default=DEFAULT_PREDICTED_BAND[1],
     )
+    p.add_argument(
+        "--selected-Ks-json",
+        "--score-weights-json",
+        dest="selected_Ks_json",
+        type=Path,
+        default=None,
+        help=(
+            "Optional beta-Fisher/Jacobian planning manifest containing "
+            "weighted_k_allocations[].selected_Ks. This changes charged bits "
+            "after the archive is rebuilt, but remains CPU-build evidence only."
+        ),
+    )
+    p.add_argument(
+        "--selected-Ks-rms-target",
+        type=float,
+        default=ADMM_RMS_TARGET,
+        help="RMS target row to read from --selected-Ks-json.",
+    )
     args = p.parse_args(argv)
 
     if not args.state_dict.is_file():
@@ -662,9 +803,29 @@ def main(argv: list[str] | None = None) -> int:
     submission_dir = build_dir / "submission_dir"
     build_manifest_path = build_dir / "build_manifest.json"
 
-    Ks = list(ADMM_PATH_B_STEP6_KS)
+    if args.selected_Ks_json is not None:
+        Ks, k_source_metadata = _load_selected_Ks_from_manifest(
+            args.selected_Ks_json,
+            rms_target=float(args.selected_Ks_rms_target),
+        )
+    else:
+        Ks = list(ADMM_PATH_B_STEP6_KS)
+        k_source_metadata = {
+            "per_tensor_K_source": "ADMM_PATH_B_STEP6_KS",
+            "selected_Ks_json": None,
+            "selected_Ks_json_sha256": None,
+            "selected_Ks_rms_target_requested": None,
+            "selected_Ks_row_rms_target": ADMM_RMS_TARGET,
+            "selected_Ks_row_total_bytes_proxy": ADMM_PROXY_ARCHIVE_BYTES,
+            "selected_Ks_row_rel_err_proxy": ADMM_PROXY_REL_ERR,
+            "selected_Ks_source_schema": None,
+            "selected_Ks_source_evidence_semantics": None,
+            "selected_Ks_source_dispatch_blockers": [],
+        }
     print(
-        f"[admm-build-no-dead-k] applying ADMM Ks (rms_target={ADMM_RMS_TARGET}, "
+        "[admm-build-no-dead-k] applying Ks "
+        f"(source={k_source_metadata['per_tensor_K_source']}, "
+        f"rms_target={k_source_metadata['selected_Ks_row_rms_target']}, "
         f"lambda={ADMM_PROXY_LAMBDA:.0f})"
     )
     print(f"[admm-build-no-dead-k]   Ks (audit-only) = {Ks}")
@@ -737,6 +898,7 @@ def main(argv: list[str] | None = None) -> int:
             "(PR101 N_PAIRS); latent_blob passthrough broken"
         )
 
+    guard_fields = _guard_fields_with_selected_Ks_source_blockers(k_source_metadata)
     build_manifest = {
         "schema_version": SCHEMA_VERSION,
         "tool": TOOL_NAME,
@@ -744,6 +906,10 @@ def main(argv: list[str] | None = None) -> int:
         "built_at_utc": _utc_now_iso(),
         "source_admm_manifest": ADMM_SOURCE_MANIFEST,
         "original_variant_tool": ORIGINAL_VARIANT_TOOL,
+        **k_source_metadata,
+        "selected_Ks_source_blockers_closed_by_this_build": (
+            _closed_selected_Ks_source_blockers(k_source_metadata)
+        ),
         "review_eng_finding_closed": "C2_drop_dead_K_bytes_28_byte_savings",
         "wire_format_diff_vs_original": (
             "removed K_section (28 bytes uint8 per-tensor) since the original "
@@ -780,7 +946,7 @@ def main(argv: list[str] | None = None) -> int:
         "evidence_grade": "[CPU-build]",
         "score_affecting_payload_changed": True,
         "charged_bits_changed": True,
-        **cpu_build_proxy_guard_fields(),
+        **guard_fields,
     }
     build_manifest_path.write_text(
         json.dumps(build_manifest, indent=2) + "\n", encoding="utf-8"

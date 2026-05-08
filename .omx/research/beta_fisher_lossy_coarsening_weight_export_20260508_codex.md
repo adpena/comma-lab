@@ -42,11 +42,11 @@ Diagnostic/stub sensitivity maps are rejected by default. The tool requires
 `--allow-diagnostic-sensitivity` to use a stub/proxy map, and the manifest
 records `diagnostic_or_stub_sensitivity_map_not_score_authority`.
 
-## Exact next integration point
+## No-dead-K builder integration
 
-Patch `tools/build_admm_x_lossy_coarsening_path_b_step6_no_dead_k.py` at
-`ADMM_PATH_B_STEP6_KS` to accept an optional
-`--score-weights-json/--selected-Ks-json` argument. The argument should read:
+Closed in the follow-up builder patch: `tools/build_admm_x_lossy_coarsening_path_b_step6_no_dead_k.py`
+now accepts optional `--score-weights-json/--selected-Ks-json` arguments.
+The argument reads:
 
 ```text
 weighted_k_allocations[].selected_Ks
@@ -65,6 +65,23 @@ from the manifest produced by:
 Then rebuild the no-dead-K archive and run static preflight. Only after the
 archive bytes, SHA-256, runtime closure, and dispatch claim are recorded should
 an exact CUDA auth eval be considered.
+
+First diagnostic-source rebuild:
+
+- Artifact:
+  `experiments/results/admm_x_lossy_coarsening_path_b_step6_no_dead_k_20260508T091537Z/`
+- Archive bytes: `159,576`
+- Archive SHA-256:
+  `efc87556699abd6520921b0c888a395f2c95de2090e888ed5843ac35fc134e89`
+- Selected Ks:
+  `[7,18,3,7,1,9,3,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]`
+- Evidence remains `[CPU-build]`; the source planning manifest used a
+  diagnostic/stub sensitivity map and cannot promote, rank, kill, or anchor
+  stack claims.
+- The rebuild closes the source-only blockers
+  `selected_Ks_not_yet_encoded_in_no_dead_k_runtime_packet` and
+  `weight_export_only_no_byte_closed_archive`, but preserves still-active
+  source blockers in both `dispatch_blockers` and `score_claim_blockers`.
 
 ## Why this is the highest-EV unblocked patch
 

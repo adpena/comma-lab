@@ -11,8 +11,11 @@ is accurate.
 """
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
+
+import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "tools"))
@@ -117,6 +120,127 @@ def test_no_dead_k_preserves_original_audit_trail() -> None:
     assert "admm_x_lossy_coarsening_path_b_step6_no_dead_k_" in src
     # Original variant tool name preserved in the manifest for cross-reference
     assert "tools/build_admm_x_lossy_coarsening_path_b_step6.py" in src
+
+
+def test_no_dead_k_can_load_selected_Ks_from_score_weight_manifest(tmp_path: Path) -> None:
+    """Score-aware beta-Fisher/Jacobian planning manifests should be able to
+    drive the no-dead-K archive builder without editing the source constant."""
+    import build_admm_x_lossy_coarsening_path_b_step6_no_dead_k as no_k
+
+    selected = [1] * len(no_k.FIXED_STATE_SCHEMA)
+    selected[0] = 2
+    manifest = {
+        "schema": "beta_fisher_lossy_coarsening_tensor_weights.v1",
+        "evidence_semantics": "cpu_allocator_weight_export_no_score_no_dispatch",
+        "dispatch_blockers": ["requires_exact_cuda_auth_eval_before_score_claim"],
+        "weighted_k_allocations": [
+            {
+                "rms_target": 0.0386,
+                "total_bytes": 159544,
+                "rel_err": 0.033605,
+                "selected_Ks": selected,
+            }
+        ],
+    }
+    path = tmp_path / "weights.json"
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    Ks, metadata = no_k._load_selected_Ks_from_manifest(path, rms_target=0.0386)
+
+    assert Ks == selected
+    assert metadata["per_tensor_K_source"] == "selected_Ks_json"
+    assert metadata["selected_Ks_row_total_bytes_proxy"] == 159544
+    assert metadata["selected_Ks_source_evidence_semantics"] == (
+        "cpu_allocator_weight_export_no_score_no_dispatch"
+    )
+
+
+def test_no_dead_k_selected_Ks_source_blockers_propagate_to_guards(
+    tmp_path: Path,
+) -> None:
+    """A diagnostic planning manifest must remain visibly non-authoritative
+    after the archive builder consumes its selected_Ks."""
+    import build_admm_x_lossy_coarsening_path_b_step6_no_dead_k as no_k
+
+    selected = [1] * len(no_k.FIXED_STATE_SCHEMA)
+    manifest = {
+        "schema": "beta_fisher_lossy_coarsening_tensor_weights.v1",
+        "evidence_semantics": "cpu_allocator_weight_export_no_score_no_dispatch",
+        "dispatch_blockers": [
+            "diagnostic_or_stub_sensitivity_map_not_score_authority",
+            "requires_exact_cuda_auth_eval_before_score_claim",
+            "selected_Ks_not_yet_encoded_in_no_dead_k_runtime_packet",
+            "weight_export_only_no_byte_closed_archive",
+        ],
+        "weighted_k_allocations": [
+            {
+                "rms_target": 0.0386,
+                "selected_Ks": selected,
+            }
+        ],
+    }
+    path = tmp_path / "weights.json"
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    _, metadata = no_k._load_selected_Ks_from_manifest(path, rms_target=0.0386)
+
+    guard = no_k._guard_fields_with_selected_Ks_source_blockers(metadata)
+    closed = no_k._closed_selected_Ks_source_blockers(metadata)
+
+    assert closed == [
+        "selected_Ks_not_yet_encoded_in_no_dead_k_runtime_packet",
+        "weight_export_only_no_byte_closed_archive",
+    ]
+
+    for key in ("dispatch_blockers", "score_claim_blockers"):
+        blockers = guard[key]
+        assert "selected_Ks_json_cpu_planning_not_score_authority" in blockers
+        assert (
+            "selected_Ks_source_evidence_semantics:"
+            "cpu_allocator_weight_export_no_score_no_dispatch"
+        ) in blockers
+        assert (
+            "selected_Ks_source_blocker:"
+            "diagnostic_or_stub_sensitivity_map_not_score_authority"
+        ) in blockers
+        assert (
+            "selected_Ks_source_blocker:"
+            "requires_exact_cuda_auth_eval_before_score_claim"
+        ) in blockers
+        assert (
+            "selected_Ks_source_blocker:"
+            "selected_Ks_not_yet_encoded_in_no_dead_k_runtime_packet"
+        ) not in blockers
+        assert (
+            "selected_Ks_source_blocker:weight_export_only_no_byte_closed_archive"
+            not in blockers
+        )
+
+
+def test_no_dead_k_rejects_bad_selected_Ks_manifest(tmp_path: Path) -> None:
+    import build_admm_x_lossy_coarsening_path_b_step6_no_dead_k as no_k
+
+    path = tmp_path / "bad.json"
+    path.write_text(
+        json.dumps(
+            {
+                "weighted_k_allocations": [
+                    {"rms_target": 0.0386, "selected_Ks": [1, 2, 3]}
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SystemExit, match="selected_Ks length"):
+        no_k._load_selected_Ks_from_manifest(path, rms_target=0.0386)
+
+
+def test_no_dead_k_cli_documents_score_weight_manifest_inputs() -> None:
+    src = _read_tool_source()
+    assert "--selected-Ks-json" in src
+    assert "--score-weights-json" in src
+    assert "weighted_k_allocations[].selected_Ks" in src
+    assert "per_tensor_K_source" in src
 
 
 def test_no_dead_k_evidence_grade_is_cpu_build() -> None:
