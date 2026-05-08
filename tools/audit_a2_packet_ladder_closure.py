@@ -36,18 +36,18 @@ A2_PATHSPECS = (
 )
 
 
-def _repo_rel(path: Path) -> str:
+def _repo_rel(path: Path, repo_root: Path) -> str:
     try:
-        return path.relative_to(REPO).as_posix()
+        return path.relative_to(repo_root).as_posix()
     except ValueError:
         return path.as_posix()
 
 
-def _tracked_manifest_paths() -> list[Path]:
+def _tracked_manifest_paths(repo_root: Path) -> list[Path]:
     try:
         result = subprocess.run(
             ["git", "ls-files", "-z", "--", *A2_PATHSPECS],
-            cwd=REPO,
+            cwd=repo_root,
             capture_output=True,
             check=False,
             timeout=20,
@@ -58,7 +58,7 @@ def _tracked_manifest_paths() -> list[Path]:
         return []
     return sorted(
         {
-            REPO / raw.decode("utf-8")
+            repo_root / raw.decode("utf-8")
             for raw in result.stdout.split(b"\0")
             if raw
         }
@@ -121,12 +121,13 @@ def _check_blockers(payload: dict[str, Any], rel: str, violations: list[str]) ->
             )
 
 
-def audit() -> dict[str, Any]:
-    paths = _tracked_manifest_paths()
+def audit(repo_root: Path = REPO) -> dict[str, Any]:
+    repo_root = repo_root.resolve()
+    paths = _tracked_manifest_paths(repo_root)
     violations: list[str] = []
     scanned: list[str] = []
     for path in paths:
-        rel = _repo_rel(path)
+        rel = _repo_rel(path, repo_root)
         payload = _read_json(path)
         if payload is None or not _looks_a2(payload, rel):
             continue
@@ -152,10 +153,11 @@ def audit() -> dict[str, Any]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--repo-root", type=Path, default=REPO)
     parser.add_argument("--strict", action="store_true")
     parser.add_argument("--json-out", type=Path)
     args = parser.parse_args(argv)
-    report = audit()
+    report = audit(args.repo_root)
     text = json.dumps(report, indent=2, sort_keys=True) + "\n"
     if args.json_out:
         args.json_out.parent.mkdir(parents=True, exist_ok=True)
