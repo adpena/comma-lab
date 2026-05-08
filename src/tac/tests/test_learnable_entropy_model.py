@@ -183,39 +183,140 @@ def test_learnable_entropy_model_rejects_z_dim_mismatch() -> None:
         LearnableEntropyModel(encoder_config=enc_cfg, decoder_config=dec_cfg)
 
 
-def test_learnable_entropy_model_rate_raises_phase2_pending() -> None:
+# -- Phase-2 CPU-feasible forward / rate / roundtrip --------------------
+
+
+def test_hyper_encoder_forward_cpu_smoke() -> None:
+    """Encoder.forward emits z with expected shape on a small weight tensor."""
     import torch
 
-    enc_cfg = HyperEncoderConfig(channel_dim=64, hidden_dim=128, n_layers=3, z_dim=16)
-    dec_cfg = HyperDecoderConfig(z_dim=16, hidden_dim=128, n_layers=3)
-    model = LearnableEntropyModel(encoder_config=enc_cfg, decoder_config=dec_cfg)
-    with pytest.raises(NotImplementedError, match="Phase 2"):
-        model.rate(torch.zeros(1))
+    enc_cfg = HyperEncoderConfig(channel_dim=8, hidden_dim=16, n_layers=2, z_dim=4)
+    enc = HyperEncoder(config=enc_cfg)
+    enc.eval()
+    # Simulate a [C_out=8, C_in=4, kH=3, kW=3] weight tensor.
+    y = torch.randn(8, 4, 3, 3)
+    z = enc(y)
+    assert z.dim() == 3
+    assert z.shape[0] == 1  # batch dim auto-inserted
+    assert z.shape[1] == enc_cfg.z_dim
 
 
-def test_learnable_entropy_model_encode_decode_raise_phase2_pending() -> None:
+def test_hyper_decoder_forward_cpu_smoke_gaussian() -> None:
     import torch
 
-    enc_cfg = HyperEncoderConfig(channel_dim=64, hidden_dim=128, n_layers=3, z_dim=16)
-    dec_cfg = HyperDecoderConfig(z_dim=16, hidden_dim=128, n_layers=3)
+    enc_cfg = HyperEncoderConfig(channel_dim=8, hidden_dim=16, n_layers=2, z_dim=4)
+    dec_cfg = HyperDecoderConfig(z_dim=4, hidden_dim=16, n_layers=2)
+    enc = HyperEncoder(config=enc_cfg)
+    dec = HyperDecoder(config=dec_cfg)
+    enc.eval()
+    dec.eval()
+    z = enc(torch.randn(8, 4, 3, 3))
+    mu, sigma = dec(z)
+    assert mu.shape[1] == 1  # gaussian -> single component
+    assert sigma.shape == mu.shape
+    assert (sigma > 0).all().item()
+    assert (sigma <= HyperDecoder.SIGMA_MAX).all().item()
+
+
+def test_hyper_decoder_mixture_mode_emits_n_components() -> None:
+    import torch
+
+    enc_cfg = HyperEncoderConfig(channel_dim=8, hidden_dim=16, n_layers=2, z_dim=4)
+    dec_cfg = HyperDecoderConfig(
+        z_dim=4, hidden_dim=16, n_layers=2, mode="mixture", n_mixture_components=3
+    )
+    enc = HyperEncoder(config=enc_cfg)
+    dec = HyperDecoder(config=dec_cfg)
+    enc.eval()
+    dec.eval()
+    z = enc(torch.randn(8, 4, 3, 3))
+    mu, sigma = dec(z)
+    assert mu.shape[1] == 3
+    assert dec._last_mixing_logits is not None
+    assert dec._last_mixing_logits.shape[1] == 3
+
+
+def test_learnable_entropy_model_rate_returns_finite_scalar_bits() -> None:
+    """Rate term should be a finite scalar tensor in bits."""
+    import torch
+
+    enc_cfg = HyperEncoderConfig(channel_dim=8, hidden_dim=16, n_layers=2, z_dim=4)
+    dec_cfg = HyperDecoderConfig(z_dim=4, hidden_dim=16, n_layers=2)
     model = LearnableEntropyModel(encoder_config=enc_cfg, decoder_config=dec_cfg)
-    with pytest.raises(NotImplementedError, match="Phase 2"):
-        model.encode(torch.zeros(1))
-    with pytest.raises(NotImplementedError, match="Phase 2"):
-        model.decode(b"", n_symbols=64)
+    model.eval()
+    y = torch.randn(8, 4, 3, 3)
+    rate = model.rate(y)
+    assert rate.dim() == 0
+    assert torch.isfinite(rate).item()
 
 
-# -- LearnableEntropyModelCodec -----------------------------------------
+def test_learnable_entropy_model_rate_mixture_finite() -> None:
+    import torch
 
-
-def test_codec_build_raises_phase2_pending() -> None:
-    enc_cfg = HyperEncoderConfig(channel_dim=64, hidden_dim=128, n_layers=3, z_dim=16)
-    dec_cfg = HyperDecoderConfig(z_dim=16, hidden_dim=128, n_layers=3)
+    enc_cfg = HyperEncoderConfig(channel_dim=8, hidden_dim=16, n_layers=2, z_dim=4)
+    dec_cfg = HyperDecoderConfig(
+        z_dim=4, hidden_dim=16, n_layers=2, mode="mixture", n_mixture_components=3
+    )
     model = LearnableEntropyModel(encoder_config=enc_cfg, decoder_config=dec_cfg)
-    with pytest.raises(NotImplementedError, match="Phase 2"):
-        LearnableEntropyModelCodec.build(model)
+    model.eval()
+    rate = model.rate(torch.randn(8, 4, 3, 3))
+    assert torch.isfinite(rate).item()
 
 
-def test_codec_parse_raises_phase2_pending() -> None:
-    with pytest.raises(NotImplementedError, match="Phase 2"):
-        LearnableEntropyModelCodec.parse(b"LEPR\x00\x00\x00\x00")
+def test_learnable_entropy_model_encode_decode_roundtrip() -> None:
+    """CPU smoke encode/decode is byte-exact at int8 quantization scale."""
+    import torch
+
+    enc_cfg = HyperEncoderConfig(channel_dim=4, hidden_dim=8, n_layers=1, z_dim=4)
+    dec_cfg = HyperDecoderConfig(z_dim=4, hidden_dim=8, n_layers=1)
+    model = LearnableEntropyModel(encoder_config=enc_cfg, decoder_config=dec_cfg)
+    y = torch.linspace(-1.0, 1.0, steps=64).reshape(4, 16)
+    bits = model.encode(y)
+    assert isinstance(bits, bytes)
+    y_decoded = model.decode(bits, n_symbols=y.numel())
+    # Quantization rounds to ~1/127 grid; tolerance ~ scale/2.
+    diff = (y_decoded - y.flatten()).abs().max().item()
+    assert diff < 0.05
+
+
+def test_learnable_entropy_model_decode_rejects_size_mismatch() -> None:
+    import torch
+
+    enc_cfg = HyperEncoderConfig(channel_dim=4, hidden_dim=8, n_layers=1, z_dim=4)
+    dec_cfg = HyperDecoderConfig(z_dim=4, hidden_dim=8, n_layers=1)
+    model = LearnableEntropyModel(encoder_config=enc_cfg, decoder_config=dec_cfg)
+    bits = model.encode(torch.zeros(16))
+    with pytest.raises(LearnableEntropyModelError, match="n_symbols"):
+        model.decode(bits, n_symbols=999)
+
+
+# -- LearnableEntropyModelCodec build/parse roundtrip -------------------
+
+
+def test_codec_build_parse_roundtrip_matches_decoder_state() -> None:
+    """Build emits a LEPR section; parse reconstructs decoder state."""
+    enc_cfg = HyperEncoderConfig(channel_dim=4, hidden_dim=8, n_layers=1, z_dim=4)
+    dec_cfg = HyperDecoderConfig(z_dim=4, hidden_dim=8, n_layers=1)
+    model = LearnableEntropyModel(encoder_config=enc_cfg, decoder_config=dec_cfg)
+    blob = LearnableEntropyModelCodec.build(model)
+    assert blob[:4] == MAGIC_LEPR
+    assert len(blob) <= MAX_LEPR_BYTES, (
+        f"Codec build returned {len(blob)} bytes > MAX_LEPR_BYTES {MAX_LEPR_BYTES}"
+    )
+    rebuilt = LearnableEntropyModelCodec.parse(blob)
+    assert rebuilt.encoder.config.z_dim == enc_cfg.z_dim
+    assert rebuilt.decoder.config.n_layers == dec_cfg.n_layers
+
+
+def test_codec_build_enforces_max_bytes() -> None:
+    """A tiny max_bytes ceiling triggers Occam-rejection at build time."""
+    enc_cfg = HyperEncoderConfig(channel_dim=4, hidden_dim=8, n_layers=1, z_dim=4)
+    dec_cfg = HyperDecoderConfig(z_dim=4, hidden_dim=8, n_layers=1)
+    model = LearnableEntropyModel(encoder_config=enc_cfg, decoder_config=dec_cfg)
+    with pytest.raises(LearnableEntropyModelError, match="max_bytes"):
+        LearnableEntropyModelCodec.build(model, max_bytes=10)
+
+
+def test_codec_parse_rejects_bad_magic() -> None:
+    with pytest.raises(LearnableEntropyModelError, match="MAGIC_LEPR"):
+        LearnableEntropyModelCodec.parse(b"BADM\x00\x00\x00\x00")
