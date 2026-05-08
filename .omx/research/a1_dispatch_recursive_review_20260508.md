@@ -68,7 +68,6 @@ Commit `d09b30f9` ("review-fix A1 dispatch CRITICAL findings (R2-1 + R3-2 + R2-3
 ```
 
 ## Findings deferred (not dispatch-blocking once R3-1 cleared)
-- **R3-3 structural fix** (`dispatch_ok=True, session_id=None` should close claim) — code change in `tools/dispatch_phase_a1_score_gradient_pr101.py` to mark claim terminal in that path.
 - **R2-5 unit tests** — argparse introspection test that would have caught R2-1.
 - **R1-3 advisory** — verify `$PYBIN` torch CUDA at remote-script entry; document expected Lightning conda image torch version.
 
@@ -94,3 +93,24 @@ The 3-clean-pass gate is NOT formally satisfied (codes were fixed but not re-rev
 - WILL not lie about ready-for-dispatch (R2-3 fixed)
 
 The deferred Medium findings (R2-5 tests + R3-3 structural) can land in a follow-up cycle without blocking the re-fire.
+
+## Addendum — R3-3 structural fix landed by codex carry-forward
+
+R3-3 is no longer deferred. `tools/dispatch_phase_a1_score_gradient_pr101.py`
+now closes the lane claim terminally as
+`fired_no_session_id_verify_manually` when the launcher reports success but no
+parseable `session_id`. The manifest also treats that status as terminal
+manual-verification state, not `dispatch_in_flight`.
+
+Regression coverage:
+
+```bash
+.venv/bin/python -m pytest src/tac/tests/test_dispatch_phase_a1_score_gradient_pr101.py -q
+```
+
+Result: `1 passed`.
+
+Remaining deferred findings after this addendum:
+
+- **R2-5 unit tests** — argparse introspection test that would have caught R2-1.
+- **R1-3 advisory** — verify `$PYBIN` torch CUDA at remote-script entry; document expected Lightning conda image torch version.
