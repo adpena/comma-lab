@@ -1,0 +1,17 @@
+=== Evaluation config ===
+  batch_size: 16
+  device: cpu
+  num_threads: 2
+  prefetch_queue_depth: 4
+  report: submissions/apogee/report.txt
+  seed: 1234
+  submission_dir: submissions/apogee
+  uncompressed_dir: /home/runner/work/comma_video_compression_challenge/comma_video_compression_challenge/videos
+  video_names_file: /home/runner/work/comma_video_compression_challenge/comma_video_compression_challenge/public_test_video_names.txt
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.00023133
+  Average SegNet Distortion: 0.00181287
+  Submission file size: 156,263 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 0.00416196
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 0.33
