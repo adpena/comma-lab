@@ -77,3 +77,36 @@ Active exact-eval job:
 
 This remains non-promotable until the Lightning CUDA auth eval returns
 `contest_auth_eval.json` and adjudication artifacts for the exact archive bytes.
+
+## Supersession note - exact CUDA result harvested
+
+The Lightning exact CUDA auth eval returned terminal artifacts for the exact
+packet above:
+
+- Artifact dir:
+  `experiments/results/lightning_batch/pr106-uniward-rms005-exact-20260508T083555Z`
+- Result JSON:
+  `experiments/results/lightning_batch/pr106-uniward-rms005-exact-20260508T083555Z/contest_auth_eval.adjudicated.json`
+- Archive bytes: `150511`
+- Archive SHA-256:
+  `0641b8ac8084b362b80e7c5bbe3c122946a8dbf7843fcbcd9f445aee7a56af7b`
+- Hardware: Tesla T4, `device=cuda`, `n_samples=600`
+- SegNet distortion: `0.0019625`
+- PoseNet distortion: `0.00016559`
+- Canonical recomputed score: `0.3371617511972341`
+- Adjudication status: `REGRESSION_REVIEW_REQUIRED`
+- Paper/science grade: `A-negative scoped forensic`
+
+Interpretation: the byte-closed PR106 UNIWARD-Lagrangian `rms_target=0.05`
+implementation is an exact CUDA regression relative to the active PR106-family
+frontier. The smaller archive did not compensate for the SegNet/PoseNet
+distortion increase. This retires only the measured `rms_target=0.05` runtime
+packet configuration; it does not kill UNIWARD, Lagrangian allocation,
+score-aware weighting, training-time UNIWARD, or future scorer/Jacobian-weighted
+variants.
+
+Dispatch claim closure is already recorded in
+`.omx/state/active_lane_dispatch_claims.md` as
+`completed_regression_review_required` for
+`pr106-uniward-rms005-exact-20260508T083555Z`, with `no promotion/no family
+kill` in the notes.
