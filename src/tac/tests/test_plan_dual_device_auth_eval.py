@@ -41,6 +41,7 @@ def _write_score_artifact(
     if device == "cpu":
         payload.update(
             {
+                "hardware": "github-actions-ubuntu-latest-x86_64",
                 "evidence_grade": "contest-CPU-1to1",
                 "promotion_eligible": False,
                 "score_claim_valid": False,

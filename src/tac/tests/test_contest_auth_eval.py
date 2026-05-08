@@ -266,6 +266,7 @@ def test_evidence_contract_tags_cpu_as_leaderboard_reproduction(cae) -> None:
     )
 
     assert contract["evidence_grade"] == "contest-CPU"
+    assert contract["lane_tag"] == "[contest-CPU]"
     assert contract["score_axis"] == "contest_cpu"
     assert contract["cpu_leaderboard_reproduction_eligible"] is True
     assert contract["promotion_eligible"] is False
@@ -280,6 +281,7 @@ def test_evidence_contract_downgrades_macos_cpu_to_advisory(cae) -> None:
     )
 
     assert contract["evidence_grade"] == "macOS-CPU advisory"
+    assert contract["lane_tag"] == "[macOS-CPU advisory]"
     assert contract["score_axis"] == "cpu_advisory"
     assert contract["cpu_leaderboard_reproduction_eligible"] is False
     assert contract["hardware_compliance_blocker"] == "contest_cpu_requires_linux_x86_64"
@@ -293,6 +295,7 @@ def test_evidence_contract_keeps_cuda_t4_as_only_promotion_axis(cae) -> None:
     )
 
     assert contract["evidence_grade"] == "A++"
+    assert contract["lane_tag"] == "[contest-CUDA]"
     assert contract["score_axis"] == "contest_cuda"
     assert contract["promotion_eligible"] is True
     assert contract["score_claim_valid"] is True

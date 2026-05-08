@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import platform
 import re
 import subprocess
 from datetime import UTC, datetime
@@ -84,6 +85,38 @@ def _cpu_only_dual_axis_completion() -> dict[str, Any]:
     }
 
 
+def _local_cpu_host_axis(
+    *,
+    system: str | None = None,
+    machine: str | None = None,
+) -> dict[str, Any]:
+    """Classify what ``contest_auth_eval.py --device cpu`` can mean locally."""
+
+    system = system if system is not None else platform.system()
+    machine = (machine if machine is not None else platform.machine()).lower()
+    is_linux_x86_64 = system == "Linux" and machine in {"x86_64", "amd64"}
+    if is_linux_x86_64:
+        return {
+            "score_axis": "contest_cpu",
+            "lane_tag": "[contest-CPU]",
+            "evidence_grade": "contest-CPU",
+            "contest_cpu_reproduction_eligible": True,
+            "hardware_compliance_blocker": None,
+            "platform_system": system,
+            "platform_machine": machine,
+        }
+    is_macos = system == "Darwin"
+    return {
+        "score_axis": "cpu_advisory",
+        "lane_tag": "[macOS-CPU advisory]" if is_macos else "[CPU advisory]",
+        "evidence_grade": "macOS-CPU advisory" if is_macos else "CPU advisory",
+        "contest_cpu_reproduction_eligible": False,
+        "hardware_compliance_blocker": "contest_cpu_requires_linux_x86_64",
+        "platform_system": system,
+        "platform_machine": machine,
+    }
+
+
 def build_plan(
     *,
     row: dict[str, Any],
@@ -107,6 +140,7 @@ def build_plan(
         raise ValueError(f"PR {pr} row has no inflate.sh path")
     archive_path_obj = Path(archive_path)
     inflate_path_obj = Path(inflate_path)
+    local_host_axis = _local_cpu_host_axis()
 
     run_id = run_id or f"public-pr{pr}-{_safe_slug(str(name))}-cpu-auth-{_utc_now_compact()}"
     work_dir = work_dir or Path("experiments/results/public_cpu_auth_eval") / run_id
@@ -158,6 +192,8 @@ def build_plan(
         "device": "cpu",
         "evidence_semantics": "public_cpu_leaderboard_reproduction_not_cuda_promotion",
         "evidence_grade": "cpu_public_replay",
+        "requested_score_axis": "contest_cpu",
+        "local_execution_axis": local_host_axis,
         "dual_axis_completion": _cpu_only_dual_axis_completion(),
         "score_claim": False,
         "promotion_eligible": False,
@@ -187,6 +223,14 @@ def main() -> int:
     parser.add_argument("--evaluate-timeout", type=int, default=1800)
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--execute", action="store_true")
+    parser.add_argument(
+        "--allow-advisory-host",
+        action="store_true",
+        help=(
+            "Allow --execute on a host that will produce cpu_advisory "
+            "instead of Linux x86_64 [contest-CPU] evidence."
+        ),
+    )
     args = parser.parse_args()
 
     rows = load_rows(args.ledger)
@@ -210,6 +254,18 @@ def main() -> int:
         if not plan["input_closure"]["ready_to_execute"]:
             missing = ", ".join(plan["input_closure"]["missing_inputs"])
             raise SystemExit(f"refusing to execute public CPU auth eval plan with missing inputs: {missing}")
+        local_axis = plan["local_execution_axis"]
+        if (
+            not local_axis["contest_cpu_reproduction_eligible"]
+            and not args.allow_advisory_host
+        ):
+            raise SystemExit(
+                "refusing to execute public CPU auth eval on this host: "
+                f"{local_axis['lane_tag']} would be advisory only "
+                f"({local_axis['hardware_compliance_blocker']}). "
+                "Run on Linux x86_64 for [contest-CPU], or pass "
+                "--allow-advisory-host to write advisory CPU evidence."
+            )
         return subprocess.run(plan["command"], cwd=args.repo_root).returncode
     return 0
 

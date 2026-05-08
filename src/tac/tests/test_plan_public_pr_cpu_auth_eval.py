@@ -52,6 +52,13 @@ def test_build_plan_forces_cpu_and_non_promotion_semantics() -> None:
     assert plan["score_claim"] is False
     assert plan["rank_or_kill_eligible"] is False
     assert plan["evidence_semantics"] == "public_cpu_leaderboard_reproduction_not_cuda_promotion"
+    assert plan["requested_score_axis"] == "contest_cpu"
+    assert plan["local_execution_axis"]["score_axis"] in {"contest_cpu", "cpu_advisory"}
+    assert plan["local_execution_axis"]["lane_tag"] in {
+        "[contest-CPU]",
+        "[macOS-CPU advisory]",
+        "[CPU advisory]",
+    }
     completion = plan["dual_axis_completion"]
     assert completion["paired_score_artifacts_complete"] is False
     assert completion["represented_axes"] == ["contest_cpu"]
@@ -66,7 +73,26 @@ def test_build_plan_forces_cpu_and_non_promotion_semantics() -> None:
     command = plan["command"]
     assert command[command.index("--device") + 1] == "cpu"
     assert command[command.index("--archive") + 1] == row["archive"]["path"]
-    assert command[command.index("--inflate-sh") + 1] == row["source"]["key_files"]["inflate_sh"]["path"]
+    assert (
+        command[command.index("--inflate-sh") + 1]
+        == row["source"]["key_files"]["inflate_sh"]["path"]
+    )
+
+
+def test_local_cpu_host_axis_distinguishes_linux_from_macos() -> None:
+    mod = _load_tool()
+
+    linux = mod._local_cpu_host_axis(system="Linux", machine="x86_64")
+    macos = mod._local_cpu_host_axis(system="Darwin", machine="arm64")
+
+    assert linux["score_axis"] == "contest_cpu"
+    assert linux["lane_tag"] == "[contest-CPU]"
+    assert linux["contest_cpu_reproduction_eligible"] is True
+    assert linux["hardware_compliance_blocker"] is None
+    assert macos["score_axis"] == "cpu_advisory"
+    assert macos["lane_tag"] == "[macOS-CPU advisory]"
+    assert macos["contest_cpu_reproduction_eligible"] is False
+    assert macos["hardware_compliance_blocker"] == "contest_cpu_requires_linux_x86_64"
 
 
 def test_load_rows_accepts_wrapped_ledger(tmp_path: Path) -> None:
@@ -115,4 +141,59 @@ def test_public_cpu_execute_refuses_missing_input_closure(
     )
 
     with pytest.raises(SystemExit, match="missing inputs: archive, inflate_sh"):
+        mod.main()
+
+
+def test_public_cpu_execute_refuses_advisory_host_even_when_inputs_exist(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mod = _load_tool()
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"PK\x05\x06" + b"\x00" * 18)
+    inflate = tmp_path / "inflate.sh"
+    inflate.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    upstream = tmp_path / "upstream"
+    upstream.mkdir()
+    video_names = upstream / "public_test_video_names.txt"
+    video_names.write_text("0.mkv\n", encoding="utf-8")
+    ledger = tmp_path / "ledger.json"
+    ledger.write_text(
+        json.dumps(
+            {
+                "rows": [
+                    {
+                        "pr": 102,
+                        "leaderboard_name": "hnerv",
+                        "archive": {"path": str(archive)},
+                        "source": {
+                            "key_files": {
+                                "inflate_sh": {"path": str(inflate)}
+                            }
+                        },
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(mod.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(mod.platform, "machine", lambda: "arm64")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "plan_public_pr_cpu_auth_eval.py",
+            "--pr",
+            "102",
+            "--ledger",
+            str(ledger),
+            "--upstream-dir",
+            str(upstream),
+            "--video-names-file",
+            str(video_names),
+            "--execute",
+        ],
+    )
+
+    with pytest.raises(SystemExit, match=r"advisory only.*--allow-advisory-host"):
         mod.main()

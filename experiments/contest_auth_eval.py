@@ -1172,6 +1172,7 @@ def _auth_eval_evidence_contract(device: str, n_samples: int, provenance: dict) 
     if is_cuda_t4_full:
         return {
             "evidence_grade": "A++",
+            "lane_tag": "[contest-CUDA]",
             "score_axis": "contest_cuda",
             "evidence_semantics": "contest_cuda_exact_auth_eval",
             "promotion_eligible": True,
@@ -1187,6 +1188,7 @@ def _auth_eval_evidence_contract(device: str, n_samples: int, provenance: dict) 
     if is_cpu_full:
         return {
             "evidence_grade": "contest-CPU",
+            "lane_tag": "[contest-CPU]",
             "score_axis": "contest_cpu",
             "evidence_semantics": "public_leaderboard_cpu_reproduction",
             "promotion_eligible": False,
@@ -1200,8 +1202,18 @@ def _auth_eval_evidence_contract(device: str, n_samples: int, provenance: dict) 
             ],
         }
     if device == "cpu" and n_samples == 600:
+        lane_tag = (
+            "[macOS-CPU advisory]"
+            if provenance.get("platform_system") == "Darwin"
+            else "[CPU advisory]"
+        )
         return {
-            "evidence_grade": "macOS-CPU advisory" if provenance.get("platform_system") == "Darwin" else "CPU advisory",
+            "evidence_grade": (
+                "macOS-CPU advisory"
+                if provenance.get("platform_system") == "Darwin"
+                else "CPU advisory"
+            ),
+            "lane_tag": lane_tag,
             "score_axis": "cpu_advisory",
             "evidence_semantics": "non_contest_cpu_auth_eval_advisory",
             "promotion_eligible": False,
@@ -1216,6 +1228,7 @@ def _auth_eval_evidence_contract(device: str, n_samples: int, provenance: dict) 
         }
     return {
         "evidence_grade": "B",
+        "lane_tag": "[diagnostic-auth-eval]",
         "score_axis": device,
         "evidence_semantics": "diagnostic_auth_eval_non_promotable",
         "promotion_eligible": False,
@@ -1246,9 +1259,10 @@ def main() -> int:
                         help="Test video names list (one per line)")
     parser.add_argument("--device", default="cuda",
                         choices=["cuda", "mps", "cpu"],
-                        help="Eval device. WARNING: mps is NOISE on PoseNet "
-                             "(23x drift vs CUDA per CLAUDE.md). Use cuda only "
-                             "for trustworthy scores.")
+                        help="Eval device. CUDA on T4/equivalent is the "
+                             "promotion axis; CPU is contest-CPU only on "
+                             "Linux x86_64, while macOS CPU is advisory. MPS "
+                             "is diagnostic only.")
     parser.add_argument("--work-dir", type=Path, default=None,
                         help="Working directory (default: tempfile)")
     parser.add_argument("--inflate-timeout", type=int, default=1800,
