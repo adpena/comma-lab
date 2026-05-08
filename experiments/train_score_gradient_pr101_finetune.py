@@ -223,10 +223,11 @@ def load_real_frame_pairs(
 ) -> torch.Tensor:
     """Decode the canonical contest video into consecutive (T=2, H, W, C) pairs.
 
-    Reuses upstream's pyav-based decoder semantics (see
-    ``upstream/frame_utils.py`` ``AVVideoDataset.__iter__``) so the GT frames
-    used for score-gradient supervision are bit-faithful to the same pipeline
-    that ``upstream/evaluate.py`` consumes.
+    Reuses upstream's PyAV-based decoder semantics, specifically
+    ``upstream/frame_utils.py::yuv420_to_rgb`` as called by
+    ``AVVideoDataset.__iter__``. Do not replace this with
+    ``frame.to_ndarray(format="rgb24")``: the CPU-vs-CUDA investigation found
+    that decoder/preprocess bytes are score-relevant.
 
     The decoded video is downsampled to ``(frame_h, frame_w)`` to match the
     decoder's training resolution. CLAUDE.md-required: never use random
@@ -242,42 +243,46 @@ def load_real_frame_pairs(
             "the canonical upstream/videos/0.mkv (or equivalent contest video)."
         )
     try:
-        import av  # noqa: PLC0415  (lazy import — pyav is large)
+        import av  # lazy import; pyav is large
     except Exception as exc:
         raise RuntimeError(
             "pyav (`av`) is required for non-smoke mode. Install it and re-run."
         ) from exc
+    yuv420_to_rgb = _load_upstream_yuv420_to_rgb()
 
     container = av.open(str(video_path))
     stream = container.streams.video[0]
 
-    frames_uint8: list[np.ndarray] = []
-    for frame in container.decode(stream):
-        # uint8 RGB (H, W, 3); upstream's AVVideoDataset uses yuv420_to_rgb
-        # but for training-resolution targets a direct rgb24 decode is fine
-        # (the decoder learns to match SegNet/PoseNet outputs at train res).
-        rgb = frame.to_ndarray(format="rgb24")  # (H_native, W_native, 3) uint8
-        frames_uint8.append(rgb)
-        if max_frames is not None and len(frames_uint8) >= max_frames:
-            break
-    container.close()
+    frames_resized_hwc: list[torch.Tensor] = []
+    try:
+        for frame in container.decode(stream):
+            # Exact CPU-eval decode path: uint8 RGB (H, W, 3) from upstream's
+            # yuv420_to_rgb helper, then resize one frame at a time. Avoid stacking
+            # full-resolution float frames; that can exceed 14 GB on the contest
+            # video before downsampling.
+            rgb_hwc = yuv420_to_rgb(frame)  # (H_native, W_native, 3) uint8 tensor
+            rgb_chw = rgb_hwc.permute(2, 0, 1).unsqueeze(0).float()
+            resized = F.interpolate(
+                rgb_chw,
+                size=(frame_h, frame_w),
+                mode="bilinear",
+                align_corners=False,
+            )
+            frames_resized_hwc.append(
+                resized.squeeze(0).permute(1, 2, 0).contiguous()
+            )
+            if max_frames is not None and len(frames_resized_hwc) >= max_frames:
+                break
+    finally:
+        container.close()
 
-    if len(frames_uint8) < 2:
+    if len(frames_resized_hwc) < 2:
         raise RuntimeError(
-            f"Video {video_path} yielded only {len(frames_uint8)} frame(s); "
+            f"Video {video_path} yielded only {len(frames_resized_hwc)} frame(s); "
             "need at least 2 for pair sampling."
         )
 
-    # Stack to a single (N, H_native, W_native, 3) uint8 tensor, then resize
-    # via torch interpolate to the training resolution. Memory: 1199 frames at
-    # 384x512x3 ≈ 696MB which fits in CPU RAM; full 874x1164x3 ≈ 3.6GB which
-    # would not. Caller is expected to pass the training-resolution H,W.
-    frames_native = torch.from_numpy(np.stack(frames_uint8))  # (N, H_n, W_n, 3) uint8
-    frames_native = frames_native.permute(0, 3, 1, 2).float()  # (N, 3, H_n, W_n)
-    frames_resized = F.interpolate(
-        frames_native, size=(frame_h, frame_w), mode="bilinear", align_corners=False,
-    )  # (N, 3, H, W) float32
-    frames_hwc = frames_resized.permute(0, 2, 3, 1).contiguous()  # (N, H, W, 3) float32
+    frames_hwc = torch.stack(frames_resized_hwc)  # (N, H, W, 3) float32
 
     # Build consecutive pairs: pair i is (frame_i, frame_{i+1}) per upstream's
     # seq_len=2 contract.
@@ -286,6 +291,22 @@ def load_real_frame_pairs(
         [frames_hwc[:n_pairs], frames_hwc[1:n_pairs + 1]], dim=1,
     )  # (N_pairs, 2, H, W, 3) float32
     return pairs
+
+
+def _load_upstream_yuv420_to_rgb() -> Any:
+    """Load the exact upstream AVVideoDataset RGB conversion helper lazily."""
+    import importlib.util
+
+    frame_utils_path = REPO_ROOT / "upstream" / "frame_utils.py"
+    spec = importlib.util.spec_from_file_location(
+        "upstream_frame_utils_for_a1_score_gradient",
+        frame_utils_path,
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Unable to load upstream frame_utils.py from {frame_utils_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.yuv420_to_rgb
 
 
 class RealPairBatchSource:
@@ -854,8 +875,9 @@ def main() -> int:
     # full training MUST use canonical sizes + real CUDA scorers + real
     # contest frame pairs (RealPairBatchSource).
     #
-    # CODEX FINDING 2026-05-08 (Pattern A review, /tmp/codex_runs/
-    # phase_a_codemath_20260508T161501Z): the prior code called
+    # CODEX FINDING 2026-05-08 (Pattern A review, recorded in
+    # .omx/research/codex_finding_pr101_synthetic_targets_recursive_review_20260508.md):
+    # the prior code called
     # ``make_synthetic_pair_batch`` on every step regardless of mode, which
     # would burn $8 of Lightning T4 optimizing PR101 weights against random
     # noise. Fix: non-smoke now refuses to start without --pr101-archive AND

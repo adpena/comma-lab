@@ -35,6 +35,14 @@
 
 **R3 verdict:** 3 PASSES, 0 issues. Counter at 3 consecutive clean rounds. Per CLAUDE.md the gate is satisfied.
 
+## Codex follow-up hardening
+
+The first refactor said it reused `AVVideoDataset` semantics but decoded frames
+through PyAV `rgb24`. That was too loose for the CPU-vs-CUDA decoder-drift
+finding. The landed patch now loads `upstream/frame_utils.py::yuv420_to_rgb`,
+uses that exact helper for every frame, and resizes per frame before stacking
+so full-resolution float tensors are never materialized in bulk.
+
 ## Final verdict
 
 **3 consecutive clean adversarial-review rounds.** The fix:
