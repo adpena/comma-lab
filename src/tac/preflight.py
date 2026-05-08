@@ -3797,10 +3797,18 @@ def check_artifact_lifecycle_compliance(
     if strict and not full_strict:
         changed_paths = _artifact_lifecycle_changed_paths(root, base_ref)
         path_filter = changed_paths
+    # FIX-4 strict-flip 2026-05-08: enumerate UNKNOWN long-lived artifacts as
+    # part of the META gate. Bug class: tracked artifacts under
+    # LONG_LIVED_ARTIFACT_ROOTS that don't match any registry pattern slip
+    # past the per-pattern guard loop entirely. Now ON unconditionally; legacy
+    # baseline of 4016 was driven to 0 by the broad-sweep registry update at
+    # commit landing this flip; new unregistered tracked artifacts must add
+    # registry pattern OR allowlist entry.
     violations = run_meta_lifecycle_audit(
         repo_root=root,
         base_ref=base_ref,
         path_filter=path_filter,
+        enumerate_unregistered=True,
     )
     if violations and strict:
         raise MetaBugViolation(
