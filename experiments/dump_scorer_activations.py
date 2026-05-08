@@ -70,6 +70,14 @@ def _gt_video_to_pair_input(
         x = torch.randint(0, 256, (1, 2, 874, 1164, 3), dtype=torch.uint8)
         return x.float().to(device), "synthetic"
 
+    if device.type == "cuda":
+        raise RuntimeError(
+            "real-video CUDA scorer introspection must not instantiate "
+            "AVVideoDataset(device='cuda'); use tools/probe_eval_loader_drift.py "
+            "--run-forward-cells with tensor custody for CUDA/DALI xray, or "
+            "provide an already-decoded shared input tensor in a future loader-cell mode"
+        )
+
     # Use upstream's AVVideoDataset so we read frames the same way the contest
     # scorer does, then slice the requested pair.
     sys_path_added = str(upstream_dir) not in sys.path

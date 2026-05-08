@@ -105,6 +105,25 @@ def _probe_contract_fields() -> dict[str, object]:
         "custody_labels": _valid_custody_labels(),
         "intended_cells": _valid_intended_cells(),
         "cell_discriminator_plan": _valid_cell_discriminator_plan(),
+        "forward_matrix_complete": False,
+        "forward_matrix_summary": {
+            **NON_PROMOTABLE_FIELDS,
+            "requested": False,
+            "complete": False,
+            "status": "not_requested",
+            "required_cell_ids": [
+                "cpu_av",
+                "cuda_dali",
+                "cuda_av_shared_input",
+                "cpu_dali",
+            ],
+            "unavailable_cell_ids": [
+                "cuda_dali",
+                "cuda_av_shared_input",
+                "cpu_dali",
+            ],
+            "forward_row_count": 0,
+        },
         "local_prerequisite_summary": {
             "cuda_available": False,
             "dali_available": False,

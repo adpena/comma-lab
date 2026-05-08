@@ -208,3 +208,38 @@ def test_cell_discriminator_plan_names_decoder_and_forward_isolation() -> None:
     assert plan["decoder_effect_fixed_cuda_forward"]["promotion_eligible"] is False
     assert all(row["dispatch_attempted"] is False for row in plan.values())
     assert all(row["ready_for_exact_eval_dispatch"] is False for row in plan.values())
+
+
+def test_forward_matrix_summary_distinguishes_plan_from_complete_measurement() -> None:
+    mod = _load_tool()
+    artifacts = _artifact_status(
+        cuda_available=True,
+        dali_available=True,
+        cuda_dali_runtime_available=True,
+    )
+    cells = mod.build_intended_cells(artifacts, include_forward_requirements=True)
+
+    not_requested = mod.forward_matrix_summary(
+        requested=False,
+        intended_cells=cells,
+        forward_rows=[],
+    )
+    complete = mod.forward_matrix_summary(
+        requested=True,
+        intended_cells=cells,
+        forward_rows=[{"batch_order": 0, "forward_matrix_complete": True}],
+    )
+    incomplete = mod.forward_matrix_summary(
+        requested=True,
+        intended_cells=cells,
+        forward_rows=[{"batch_order": 0, "forward_matrix_complete": False}],
+    )
+
+    assert not_requested["complete"] is False
+    assert not_requested["status"] == "not_requested"
+    assert complete["complete"] is True
+    assert complete["status"] == "complete"
+    assert incomplete["complete"] is False
+    assert incomplete["status"] == "runtime_incomplete"
+    assert complete["score_claim"] is False
+    assert complete["promotion_eligible"] is False

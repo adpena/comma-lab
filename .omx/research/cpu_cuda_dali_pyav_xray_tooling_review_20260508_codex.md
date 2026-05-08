@@ -129,3 +129,20 @@ while still accepting typed missing prerequisites on local non-CUDA hosts.
 As part of that integration, `experiments/dump_scorer_activations.py` should
 accept `--input-tensor` or an explicit loader-cell mode and must never
 instantiate `AVVideoDataset` with a CUDA device.
+
+## 2026-05-08 Codex follow-up
+
+Partial hardening landed after this review:
+
+- `tools/probe_eval_loader_drift.py` now emits `tensor_custody` SHA-256 records
+  for AV and DALI RGB tensors in comparison rows.
+- The probe now emits `forward_matrix_complete` and `forward_matrix_summary`
+  so plan-only, blocked, complete, and runtime-incomplete forward matrices are
+  machine-distinguishable.
+- Gate #22 in `tools/all_lanes_preflight.py` validates the new matrix schema.
+- `experiments/dump_scorer_activations.py` now fail-closes before
+  `AVVideoDataset(device='cuda')` on real-video CUDA introspection paths.
+
+Remaining gap: the canonical xray still needs a CUDA/DALI host artifact with
+all four cells filled, plus optional PoseNet+SegNet introspection records
+attached to each cell.

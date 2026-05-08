@@ -280,6 +280,21 @@ def per_channel_compare(a: torch.Tensor, b: torch.Tensor) -> list[dict[str, Any]
     return rows
 
 
+def tensor_custody(tensor: torch.Tensor) -> dict[str, Any]:
+    """Return compact custody for a tensor used in the loader-drift matrix."""
+    cpu = tensor.detach().to(device="cpu").contiguous()
+    return {
+        "shape": list(cpu.shape),
+        "dtype": str(cpu.dtype),
+        "device_recorded": "cpu",
+        "sha256": hashlib.sha256(cpu.numpy().tobytes()).hexdigest(),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def compare_numeric_tensors(a: torch.Tensor, b: torch.Tensor) -> dict[str, Any]:
     aa = a.detach().to(device="cpu", dtype=torch.float64)
     bb = b.detach().to(device="cpu", dtype=torch.float64)
@@ -674,6 +689,52 @@ def build_cell_discriminator_plan(cells: list[dict[str, Any]]) -> list[dict[str,
     return plan
 
 
+def forward_matrix_summary(
+    *,
+    requested: bool,
+    intended_cells: list[dict[str, Any]],
+    forward_rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Summarize whether the diagnostic 2x2 forward matrix completed."""
+    cell_ids = [str(cell.get("cell_id")) for cell in intended_cells]
+    unavailable = [
+        str(cell.get("cell_id"))
+        for cell in intended_cells
+        if cell.get("available") is not True
+    ]
+    if not requested:
+        status = "not_requested"
+        complete = False
+    elif unavailable:
+        status = "blocked_unavailable_cells"
+        complete = False
+    elif not forward_rows:
+        status = "no_forward_rows"
+        complete = False
+    else:
+        incomplete_rows = [
+            int(row.get("batch_order", index))
+            for index, row in enumerate(forward_rows)
+            if row.get("forward_matrix_complete") is not True
+        ]
+        complete = not incomplete_rows
+        status = "complete" if complete else "runtime_incomplete"
+    return {
+        "requested": bool(requested),
+        "complete": complete,
+        "status": status,
+        "required_cell_ids": cell_ids,
+        "unavailable_cell_ids": unavailable,
+        "forward_row_count": len(forward_rows),
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+    }
+
+
 def _cuda_dali_available() -> tuple[bool, str | None]:
     if not torch.cuda.is_available():
         return False, "torch.cuda.is_available() is false"
@@ -834,6 +895,10 @@ def _run_forward_cells_for_batch(
         "batch_order": batch_order,
         "cells": cell_reports,
         "cell_comparisons": comparisons,
+        "forward_matrix_complete": all(
+            cell_reports.get(str(cell["cell_id"]), {}).get("status") == "measured"
+            for cell in cells
+        ),
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
@@ -1000,6 +1065,12 @@ def build_probe_report(args: argparse.Namespace) -> dict[str, Any]:
         },
         "intended_cells": intended_cells,
         "cell_discriminator_plan": cell_discriminator_plan,
+        "forward_matrix_complete": False,
+        "forward_matrix_summary": forward_matrix_summary(
+            requested=bool(args.run_forward_cells),
+            intended_cells=intended_cells,
+            forward_rows=[],
+        ),
         "forward_cell_rows": [],
         "interpretation_guardrails": [
             "This probe compares decoded evaluator input tensors before PoseNet/SegNet by default.",
@@ -1094,6 +1165,10 @@ def build_probe_report(args: argparse.Namespace) -> dict[str, Any]:
                     "sequence_index_match": dali_seq_idx == av_seq_idx,
                     "dali_stats": tensor_stats(dali_cpu),
                     "av_stats": tensor_stats(av_cpu),
+                    "tensor_custody": {
+                        "dali_rgb_uint8": tensor_custody(dali_cpu),
+                        "av_rgb_uint8": tensor_custody(av_cpu),
+                    },
                     "comparison": compare_tensors(dali_cpu, av_cpu),
                     "per_rgb_channel": per_channel_compare(dali_cpu, av_cpu),
                 }
@@ -1120,6 +1195,14 @@ def build_probe_report(args: argparse.Namespace) -> dict[str, Any]:
 
     report["comparison_rows"] = rows
     report["forward_cell_rows"] = forward_rows
+    report["forward_matrix_summary"] = forward_matrix_summary(
+        requested=bool(args.run_forward_cells),
+        intended_cells=intended_cells,
+        forward_rows=forward_rows,
+    )
+    report["forward_matrix_complete"] = bool(
+        report["forward_matrix_summary"]["complete"]
+    )
     report["comparison_available"] = bool(rows)
     report["comparison_incomplete"] = incomplete_reason is not None
     report["comparison_incomplete_reason"] = incomplete_reason

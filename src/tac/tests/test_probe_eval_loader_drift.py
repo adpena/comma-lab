@@ -61,6 +61,19 @@ def test_per_channel_compare_uses_last_rgb_axis() -> None:
     assert rows[2]["max_abs_lsb"] == 0.0
 
 
+def test_tensor_custody_hashes_shared_input_bytes() -> None:
+    mod = _load_tool("probe_eval_loader_drift")
+    tensor = torch.tensor([1, 2, 3], dtype=torch.uint8)
+
+    custody = mod.tensor_custody(tensor)
+
+    assert custody["shape"] == [3]
+    assert custody["dtype"] == "torch.uint8"
+    assert len(custody["sha256"]) == 64
+    assert custody["score_claim"] is False
+    assert custody["promotion_eligible"] is False
+
+
 def test_next_batch_advances_existing_iterator() -> None:
     mod = _load_tool("probe_eval_loader_drift")
 
@@ -126,6 +139,8 @@ def test_unavailable_probe_is_non_promotable(monkeypatch) -> None:
         is True
     )
     assert "--run-forward-cells" in report["future_remote_run_contract"]["diagnostic_command"]
+    assert report["forward_matrix_complete"] is False
+    assert report["forward_matrix_summary"]["status"] == "not_requested"
 
 
 def test_missing_pyav_fails_closed_before_cuda_probe(monkeypatch) -> None:

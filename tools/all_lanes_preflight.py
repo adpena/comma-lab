@@ -917,6 +917,30 @@ def _validate_eval_loader_drift_2x2_plan(payload: dict[str, object]) -> list[str
                 + ", ".join(EVAL_LOADER_DRIFT_EXPECTED_PLAN_IDS)
             )
 
+    if not isinstance(payload.get("forward_matrix_complete"), bool):
+        failures.append("forward_matrix_complete must be boolean")
+    matrix = payload.get("forward_matrix_summary")
+    if not isinstance(matrix, dict):
+        failures.append("forward_matrix_summary must be an object")
+    else:
+        for field in ("requested", "complete"):
+            if not isinstance(matrix.get(field), bool):
+                failures.append(f"forward_matrix_summary.{field} must be boolean")
+        if not isinstance(matrix.get("status"), str) or not matrix.get("status"):
+            failures.append("forward_matrix_summary.status must be a nonempty string")
+        for field in ("required_cell_ids", "unavailable_cell_ids"):
+            if not isinstance(matrix.get(field), list):
+                failures.append(f"forward_matrix_summary.{field} must be a list")
+        if not isinstance(matrix.get("forward_row_count"), int) or isinstance(
+            matrix.get("forward_row_count"), bool
+        ):
+            failures.append("forward_matrix_summary.forward_row_count must be an integer")
+        failures.extend(
+            _eval_loader_drift_false_field_failures(
+                matrix, row_label="forward_matrix_summary"
+            )
+        )
+
     contract = payload.get("future_remote_run_contract")
     if not isinstance(contract, dict):
         failures.append("future_remote_run_contract must be an object")
