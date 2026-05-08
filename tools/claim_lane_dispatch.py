@@ -35,9 +35,10 @@ import argparse
 import contextlib
 import datetime as dt
 import fcntl
+import json
 import re
 import sys
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 DEFAULT_CLAIMS_PATH = Path(".omx/state/active_lane_dispatch_claims.md")
@@ -64,6 +65,11 @@ TERMINAL_PREFIXES = (
     "stale_assumed_dead",
     "stale_superseded",
     "stopped_",
+    "falsified_",
+    "retired_",
+    "config_retired_",
+    "measured_implementation_retired_",
+    "stop_attempt_timeout_duplicate_after_primary_negative",
 )
 
 _TABLE_HEADER_RE = re.compile(r"^\|\s*timestamp_utc\s*\|", re.MULTILINE)
@@ -83,7 +89,7 @@ class Claim:
 
 
 def _utc_now() -> dt.datetime:
-    return dt.datetime.now(tz=dt.timezone.utc).replace(microsecond=0)
+    return dt.datetime.now(tz=dt.UTC).replace(microsecond=0)
 
 
 def _parse_utc(value: str) -> dt.datetime | None:
@@ -99,8 +105,8 @@ def _parse_utc(value: str) -> dt.datetime | None:
     except ValueError:
         return None
     if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=dt.timezone.utc)
-    return parsed.astimezone(dt.timezone.utc)
+        parsed = parsed.replace(tzinfo=dt.UTC)
+    return parsed.astimezone(dt.UTC)
 
 
 def _escape_cell(value: str) -> str:
@@ -176,6 +182,120 @@ def _is_terminal(status: str) -> bool:
     return any(status.startswith(prefix) for prefix in TERMINAL_PREFIXES)
 
 
+def _latest_claims_by_job(claims: list[Claim]) -> dict[tuple[str, str], Claim]:
+    """Return the newest claim row for each ``(lane_id, instance_job_id)``."""
+
+    latest: dict[tuple[str, str], Claim] = {}
+    for claim in claims:
+        key = (claim.lane_id, claim.instance_job_id)
+        prev = latest.get(key)
+        if prev is None:
+            latest[key] = claim
+            continue
+        claim_ts = _parse_utc(claim.timestamp_utc)
+        prev_ts = _parse_utc(prev.timestamp_utc)
+        if prev_ts is None or (claim_ts is not None and claim_ts > prev_ts):
+            latest[key] = claim
+    return latest
+
+
+def _claim_age_hours(now_utc: dt.datetime, claim: Claim) -> float | None:
+    ts = _parse_utc(claim.timestamp_utc)
+    if ts is None:
+        return None
+    return max((now_utc - ts).total_seconds() / 3600.0, 0.0)
+
+
+def _summarize_claims(
+    claims: list[Claim], *, now_utc: dt.datetime, ttl_hours: float
+) -> dict[str, object]:
+    """Summarize active and stale nonterminal dispatch claims.
+
+    This is intentionally read-only. It mirrors the conflict logic used by the
+    ``claim`` subcommand: a newer terminal row closes an older nonterminal row
+    for the same ``(lane_id, instance_job_id)``.
+    """
+
+    ttl = dt.timedelta(hours=ttl_hours)
+    active: list[dict[str, object]] = []
+    stale_nonterminal: list[dict[str, object]] = []
+    terminal_latest: list[dict[str, object]] = []
+    unparsable_timestamp: list[dict[str, object]] = []
+
+    for claim in _latest_claims_by_job(claims).values():
+        row = asdict(claim)
+        row["terminal"] = _is_terminal(claim.status)
+        row["age_hours"] = _claim_age_hours(now_utc, claim)
+        ts = _parse_utc(claim.timestamp_utc)
+        if ts is None:
+            unparsable_timestamp.append(row)
+        if _is_terminal(claim.status):
+            terminal_latest.append(row)
+        elif ts is None or now_utc - ts > ttl:
+            stale_nonterminal.append(row)
+        else:
+            active.append(row)
+
+    active.sort(key=lambda row: (str(row["lane_id"]), str(row["instance_job_id"])))
+    stale_nonterminal.sort(key=lambda row: (str(row["lane_id"]), str(row["instance_job_id"])))
+    terminal_latest.sort(key=lambda row: (str(row["lane_id"]), str(row["instance_job_id"])))
+    return {
+        "schema": "pact.dispatch_claim_summary.v1",
+        "now_utc": now_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "ttl_hours": ttl_hours,
+        "total_latest_jobs": len(active) + len(stale_nonterminal) + len(terminal_latest),
+        "active_count": len(active),
+        "stale_nonterminal_count": len(stale_nonterminal),
+        "terminal_latest_count": len(terminal_latest),
+        "unparsable_timestamp_count": len(unparsable_timestamp),
+        "active": active,
+        "stale_nonterminal": stale_nonterminal,
+        "terminal_latest": terminal_latest,
+        "unparsable_timestamp": unparsable_timestamp,
+    }
+
+
+def _summary(args: argparse.Namespace) -> int:
+    now_utc = _parse_utc(args.now_utc) if args.now_utc else _utc_now()
+    if now_utc is None:
+        print(f"VALIDATION_ERROR: --now-utc is not ISO-8601: {args.now_utc!r}", file=sys.stderr)
+        return 2
+    text = args.claims_path.read_text() if args.claims_path.exists() else HEADER
+    summary = _summarize_claims(
+        _parse_claims(text), now_utc=now_utc, ttl_hours=args.ttl_hours
+    )
+    if args.format == "json":
+        print(json.dumps(summary, indent=2, sort_keys=True))
+        return 0
+
+    print(
+        "CLAIM_SUMMARY "
+        f"active={summary['active_count']} "
+        f"stale_nonterminal={summary['stale_nonterminal_count']} "
+        f"terminal_latest={summary['terminal_latest_count']} "
+        f"unparsable_timestamp={summary['unparsable_timestamp_count']}"
+    )
+    for row in summary["active"]:
+        print(
+            "ACTIVE "
+            f"lane_id={row['lane_id']} "
+            f"job={row['instance_job_id']} "
+            f"platform={row['platform']} "
+            f"status={row['status']} "
+            f"agent={row['agent']}"
+        )
+    for row in summary["stale_nonterminal"]:
+        print(
+            "STALE_NONTERMINAL "
+            f"lane_id={row['lane_id']} "
+            f"job={row['instance_job_id']} "
+            f"platform={row['platform']} "
+            f"status={row['status']} "
+            f"agent={row['agent']}"
+        )
+    return 0
+
+
 @contextlib.contextmanager
 def _file_lock(lock_path: Path):
     lock_path.parent.mkdir(parents=True, exist_ok=True)
@@ -208,10 +328,7 @@ def _claim(args: argparse.Namespace) -> int:
     lock_path = claims_path.with_suffix(claims_path.suffix + ".lock")
 
     with _file_lock(lock_path):
-        if claims_path.exists():
-            text = claims_path.read_text()
-        else:
-            text = HEADER
+        text = claims_path.read_text() if claims_path.exists() else HEADER
 
         existing = _parse_claims(text)
 
@@ -338,6 +455,15 @@ def build_parser() -> argparse.ArgumentParser:
     claim_p.add_argument("--force", action="store_true")
     claim_p.add_argument("--dry-run", action="store_true")
     claim_p.set_defaults(func=_claim)
+    summary_p = sub.add_parser(
+        "summary",
+        help="Read-only summary of active and stale nonterminal claim rows",
+    )
+    summary_p.add_argument("--claims-path", type=Path, default=DEFAULT_CLAIMS_PATH)
+    summary_p.add_argument("--ttl-hours", type=float, default=24.0)
+    summary_p.add_argument("--now-utc", default="")
+    summary_p.add_argument("--format", choices=["text", "json"], default="text")
+    summary_p.set_defaults(func=_summary)
     return parser
 
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -172,9 +173,41 @@ def test_whitespace_in_lane_id_rejected(claims_path):
 def test_terminal_prefixes_constants():
     # Spec from .pyc revealed these prefixes — verify they're all present
     expected = {"completed_", "failed_", "preempted", "cancelled",
-                "refused_dispatch", "stale_assumed_dead", "stale_superseded", "stopped_"}
+                "refused_dispatch", "stale_assumed_dead", "stale_superseded", "stopped_",
+                "falsified_", "retired_", "config_retired_",
+                "measured_implementation_retired_",
+                "stop_attempt_timeout_duplicate_after_primary_negative"}
     actual = set(cld.TERMINAL_PREFIXES)
     assert expected == actual
+
+
+def test_falsified_and_retired_statuses_close_claims(claims_path):
+    terminal_statuses = [
+        "falsified_score_1.43_pareto_dominated",
+        "retired_config_exact_negative",
+        "config_retired_pr107_b050",
+        "measured_implementation_retired_cuda_negative",
+        "stop_attempt_timeout_duplicate_after_primary_negative",
+    ]
+    for index, status in enumerate(terminal_statuses):
+        lane = f"lane_{index}"
+        cld.main([
+            "claim", "--claims-path", str(claims_path),
+            "--lane-id", lane, "--platform", "lightning", "--instance-job-id", "j1",
+            "--agent", "a1", "--status", "eval",
+        ])
+        rc = cld.main([
+            "claim", "--claims-path", str(claims_path),
+            "--lane-id", lane, "--platform", "lightning", "--instance-job-id", "j1",
+            "--agent", "a1", "--status", status,
+        ])
+        assert rc == 0
+        rc = cld.main([
+            "claim", "--claims-path", str(claims_path),
+            "--lane-id", lane, "--platform", "lightning", "--instance-job-id", "j2",
+            "--agent", "a2", "--status", "eval",
+        ])
+        assert rc == 0
 
 
 def test_stale_claim_outside_ttl_does_not_block(claims_path, monkeypatch):
@@ -209,3 +242,67 @@ def test_newest_first_ordering(claims_path):
     text = claims_path.read_text()
     # j2 (newer) should come BEFORE j1 in the file
     assert text.find("j2") < text.find("j1")
+
+
+def test_summary_reports_active_and_stale_claims(claims_path, capsys):
+    cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "fresh", "--platform", "lightning", "--instance-job-id", "j_active",
+        "--agent", "a", "--status", "training",
+        "--now-utc", "2026-05-08T00:00:00Z",
+    ])
+    cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "old", "--platform", "lightning", "--instance-job-id", "j_stale",
+        "--agent", "a", "--status", "training",
+        "--now-utc", "2026-05-06T00:00:00Z",
+    ])
+    cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "done", "--platform", "lightning", "--instance-job-id", "j_done",
+        "--agent", "a", "--status", "training",
+        "--now-utc", "2026-05-08T00:00:00Z",
+    ])
+    cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "done", "--platform", "lightning", "--instance-job-id", "j_done",
+        "--agent", "a", "--status", "completed_exact_cuda_adjudicated",
+        "--now-utc", "2026-05-08T01:00:00Z",
+    ])
+    capsys.readouterr()
+    rc = cld.main([
+        "summary", "--claims-path", str(claims_path),
+        "--now-utc", "2026-05-08T12:00:00Z",
+        "--ttl-hours", "24",
+        "--format", "json",
+    ])
+    assert rc == 0
+    out = capsys.readouterr().out
+    payload = json.loads(out)
+    assert payload["active_count"] == 1
+    assert payload["stale_nonterminal_count"] == 1
+    assert payload["terminal_latest_count"] == 1
+    assert payload["active"][0]["lane_id"] == "fresh"
+    assert payload["stale_nonterminal"][0]["lane_id"] == "old"
+    assert payload["terminal_latest"][0]["lane_id"] == "done"
+
+
+def test_summary_text_lists_active_without_mutating_claims(claims_path, capsys):
+    cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "L", "--platform", "gha", "--instance-job-id", "j1",
+        "--agent", "agent", "--status", "active_dispatching",
+        "--now-utc", "2026-05-08T10:00:00Z",
+    ])
+    before = claims_path.read_text()
+    capsys.readouterr()
+    rc = cld.main([
+        "summary", "--claims-path", str(claims_path),
+        "--now-utc", "2026-05-08T11:00:00Z",
+    ])
+    after = claims_path.read_text()
+    assert rc == 0
+    assert after == before
+    out = capsys.readouterr().out
+    assert "CLAIM_SUMMARY active=1" in out
+    assert "ACTIVE lane_id=L job=j1 platform=gha status=active_dispatching agent=agent" in out
