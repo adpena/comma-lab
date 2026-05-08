@@ -34,13 +34,17 @@ Cross-references:
 
 import argparse
 import datetime as _dt
+import hashlib
 import json
 import pathlib
 import subprocess
 import sys
 from dataclasses import asdict, dataclass
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "src"))
+
+from tools.auth_eval_records import parse_auth_eval_payload  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -62,35 +66,92 @@ class ContestCudaArtifact:
         return asdict(self)
 
 
-def _try_read_score(evidence_path: pathlib.Path) -> tuple[float, dict] | None:
-    """Try to extract a contest-CUDA score from a known evidence-file format."""
+def _sha256_file(path: pathlib.Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _error_checks_passed(data: dict) -> bool:
+    checks = data.get("checks")
+    if not isinstance(checks, list):
+        return True
+    for check in checks:
+        if not isinstance(check, dict):
+            return False
+        if check.get("severity", "error") == "error" and check.get("passed") is not True:
+            return False
+    return True
+
+
+def _record_is_promotable_contest_cuda(record: dict, *, archive_sha256: str, archive_bytes: int) -> bool:
+    try:
+        record_archive_bytes = int(record.get("archive_bytes") or -1)
+    except (TypeError, ValueError):
+        return False
+    return (
+        record.get("score_axis") == "contest_cuda"
+        and record.get("promotion_eligible") is True
+        and record.get("score_claim_valid") is True
+        and record.get("evidence_grade") == "A++"
+        and record.get("archive_sha256") == archive_sha256
+        and record_archive_bytes == archive_bytes
+    )
+
+
+def _try_read_score(
+    evidence_path: pathlib.Path,
+    *,
+    archive_path: pathlib.Path,
+) -> tuple[float, dict] | None:
+    """Extract a score only from a complete, archive-matched contest-CUDA artifact."""
     try:
         data = json.loads(evidence_path.read_text())
     except Exception:
         return None
-    # Pattern 1: contest_final compliance file with `auth_eval.score` (T4)
-    if isinstance(data, dict):
-        auth = data.get("auth_eval") or {}
-        if isinstance(auth, dict):
-            strict_formula = auth.get("strict_formula") or {}
-            score = (
-                strict_formula.get("score")
-                if isinstance(strict_formula, dict)
-                else None
+    if not isinstance(data, dict):
+        return None
+    archive_sha256 = _sha256_file(archive_path)
+    archive_bytes = archive_path.stat().st_size
+
+    # Pattern 1: pre-submission compliance wrapper. A failed compliance file
+    # can still contain a numeric score, so require the wrapper itself to pass
+    # and require its canonical parsed auth-eval record to be promotable.
+    auth = data.get("auth_eval")
+    if isinstance(auth, dict):
+        record = auth.get("record")
+        strict_formula = auth.get("strict_formula")
+        score = strict_formula.get("score") if isinstance(strict_formula, dict) else None
+        if (
+            data.get("passed") is True
+            and _error_checks_passed(data)
+            and isinstance(record, dict)
+            and isinstance(score, (int, float))
+            and _record_is_promotable_contest_cuda(
+                record,
+                archive_sha256=archive_sha256,
+                archive_bytes=archive_bytes,
             )
-            score = score or auth.get("score") or auth.get("score_total")
-            if isinstance(score, (int, float)):
-                return float(score), data
-        # Pattern 2: top-level `score` key
-        score = data.get("score") or data.get("score_total")
-        if isinstance(score, (int, float)):
+        ):
             return float(score), data
-        # Pattern 3: adjudicated.json
-        if "score" in data:
-            try:
-                return float(data["score"]), data
-            except (TypeError, ValueError):
-                pass
+        return None
+
+    # Pattern 2: raw contest_auth_eval(.adjudicated).json. Use the canonical
+    # parser so CPU/advisory/proxy JSON cannot be promoted by top-level scores.
+    record = parse_auth_eval_payload(data)
+    if (
+        record is not None
+        and record.score is not None
+        and record.score_axis == "contest_cuda"
+        and record.promotion_eligible
+        and record.score_claim_valid
+        and record.evidence_grade == "A++"
+        and record.archive_sha256 == archive_sha256
+        and record.archive_bytes == archive_bytes
+    ):
+        return float(record.score), data
     return None
 
 
@@ -121,7 +182,7 @@ def discover_contest_cuda_artifacts(
             evidence = lane_dir / candidate_name
             if not evidence.exists():
                 continue
-            parsed = _try_read_score(evidence)
+            parsed = _try_read_score(evidence, archive_path=archive_path)
             if parsed is None:
                 continue
             score, blob = parsed

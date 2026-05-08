@@ -255,6 +255,7 @@ def inspect_archive(path: Path, *, expect_single_member: str | None = None) -> t
                         "local_header_name": local,
                         "file_size": info.file_size,
                         "compress_size": info.compress_size,
+                        "crc": int(info.CRC),
                         "sha256": member_sha,
                         "unsafe_reason": reason,
                         "local_header": {
@@ -326,6 +327,48 @@ def _candidate_size(payload: dict[str, Any]) -> int | None:
         except (TypeError, ValueError):
             continue
     return None
+
+
+def _candidate_members(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    archive = payload.get("archive") if isinstance(payload.get("archive"), dict) else {}
+    candidate_archive = (
+        payload.get("candidate_archive")
+        if isinstance(payload.get("candidate_archive"), dict)
+        else {}
+    )
+    raw_members: Any = None
+    for source in (archive, candidate_archive, payload):
+        if isinstance(source, dict) and isinstance(source.get("members"), list):
+            raw_members = source["members"]
+            break
+    if raw_members is None:
+        return []
+    normalized: list[dict[str, Any]] = []
+    for member in raw_members:
+        if not isinstance(member, dict):
+            normalized.append({"_invalid_member_record": member})
+            continue
+        normalized.append(
+            {
+                "name": member.get("name"),
+                "file_size": member.get("file_size", member.get("bytes")),
+                "compress_size": member.get("compress_size"),
+                "crc": member.get("crc"),
+                "sha256": member.get("sha256"),
+            }
+        )
+    return normalized
+
+
+def _member_field_equal(actual: dict[str, Any], claimed: dict[str, Any], field: str) -> bool:
+    if field not in claimed or claimed.get(field) is None:
+        return False
+    if field in {"file_size", "compress_size", "crc"}:
+        try:
+            return int(actual.get(field)) == int(claimed.get(field))
+        except (TypeError, ValueError):
+            return False
+    return actual.get(field) == claimed.get(field)
 
 
 def _runtime_tree_candidates(payload: dict[str, Any]) -> dict[str, str]:
@@ -768,6 +811,31 @@ def inspect_archive_manifest(
         claimed_size == archive.get("bytes"),
         f"claimed={claimed_size} actual={archive.get('bytes')}",
     )
+    claimed_members = _candidate_members(payload)
+    actual_members = archive.get("members") if isinstance(archive.get("members"), list) else []
+    member_required = required and payload.get("score_claim") is not False
+    _add(
+        checks,
+        "archive_manifest_members_present",
+        (not member_required) or bool(claimed_members),
+        f"claimed_members={len(claimed_members)} actual_members={len(actual_members)}",
+    )
+    _add(
+        checks,
+        "archive_manifest_member_count_matches",
+        (not claimed_members and not member_required) or len(claimed_members) == len(actual_members),
+        f"claimed_members={len(claimed_members)} actual_members={len(actual_members)}",
+    )
+    if claimed_members or member_required:
+        for index, actual in enumerate(actual_members):
+            claimed = claimed_members[index] if index < len(claimed_members) else {}
+            for field in ("name", "file_size", "compress_size", "crc", "sha256"):
+                _add(
+                    checks,
+                    f"archive_manifest_member_{index}_{field}_matches",
+                    _member_field_equal(actual, claimed, field),
+                    f"claimed={claimed.get(field)!r} actual={actual.get(field)!r}",
+                )
     return {"path": _rel(path), "exists": True}, checks
 
 
@@ -807,6 +875,7 @@ def inspect_dispatch_claims(path: Path, lane_id: str | None, job_id: str | None)
     _add(checks, "dispatch_claims_exists", exists, _rel(path))
     latest_matching_status: str | None = None
     latest_matching_row: str | None = None
+    has_prior_nonterminal_matching_row = False
     matching_rows = 0
     rows: list[str] = []
     if exists:
@@ -846,6 +915,8 @@ def inspect_dispatch_claims(path: Path, lane_id: str | None, job_id: str | None)
                 if latest_matching_status is None:
                     latest_matching_status = status
                     latest_matching_row = row
+                elif not status.startswith(TERMINAL_DISPATCH_STATUS_PREFIXES):
+                    has_prior_nonterminal_matching_row = True
     terminal = bool(
         latest_matching_status
         and latest_matching_status.startswith(TERMINAL_DISPATCH_STATUS_PREFIXES)
@@ -859,6 +930,15 @@ def inspect_dispatch_claims(path: Path, lane_id: str | None, job_id: str | None)
             f"latest_matching_status={latest_matching_status!r}"
         ),
     )
+    _add(
+        checks,
+        "dispatch_claim_prior_active_row",
+        terminal and has_prior_nonterminal_matching_row,
+        (
+            f"lane_id={lane_id} job_id={job_id} matching_rows={matching_rows} "
+            f"has_prior_nonterminal_matching_row={has_prior_nonterminal_matching_row}"
+        ),
+    )
     return {
         "path": _rel(path),
         "exists": exists,
@@ -866,6 +946,7 @@ def inspect_dispatch_claims(path: Path, lane_id: str | None, job_id: str | None)
         "matching_rows": matching_rows,
         "latest_matching_status": latest_matching_status,
         "latest_matching_row": latest_matching_row,
+        "has_prior_nonterminal_matching_row": has_prior_nonterminal_matching_row,
     }, checks
 
 

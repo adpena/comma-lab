@@ -39,8 +39,22 @@ def test_resolve_output_root_preserves_absolute_paths(tmp_path: Path) -> None:
 def test_static_release_surface_records_archive_custody(tmp_path: Path) -> None:
     builder = _load_builder_module()
     archive_path = tmp_path / "archive.zip"
+    byte_maps = b'{"0":"zig"}'
+    op1_blob = b"op1-inner"
+    latent = b"l" * builder.LATENT_BLOB_LEN
+    sidecar = b"sidecar"
+    decoder_section_bytes = 10 + len(byte_maps) + len(op1_blob)
+    payload = (
+        builder.CPLX_MAGIC
+        + decoder_section_bytes.to_bytes(4, "little")
+        + len(byte_maps).to_bytes(2, "little")
+        + byte_maps
+        + op1_blob
+        + latent
+        + sidecar
+    )
     with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_STORED) as zf:
-        zf.writestr("x", b"payload")
+        zf.writestr("x", payload)
     archive_bytes = archive_path.stat().st_size
     archive_sha = builder._sha256(archive_path.read_bytes())
     submission_dir = tmp_path / "submission_dir"
@@ -66,5 +80,17 @@ def test_static_release_surface_records_archive_custody(tmp_path: Path) -> None:
     assert manifest["custody_status"] == "transient-allowed"
     assert "auth-eval" in manifest["custody_status_reason"]
     assert manifest["archive"]["members"][0]["name"] == "x"
+    assert manifest["parser_section_gate"]["ready"] is True
+    assert manifest["parser_section_manifest"]["section_names"] == [
+        "cplx_magic",
+        "decoder_section_len_u32le",
+        "byte_maps_json_len_u16le",
+        "byte_maps_json",
+        "op1_inner_blob",
+        "latent_blob",
+        "sidecar_blob",
+    ]
+    assert manifest["parser_section_custody"]["score_claim"] is False
+    assert surface["parser_section_gate"]["ready"] is True
     assert archive_sha in report
     assert str(archive_bytes) in report

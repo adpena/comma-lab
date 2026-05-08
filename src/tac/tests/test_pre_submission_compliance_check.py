@@ -71,7 +71,13 @@ def _write_submission(
     (root / "contest_auth_eval.json").write_text(json.dumps(auth, indent=2) + "\n", encoding="utf-8")
     with zipfile.ZipFile(archive) as zf:
         members = [
-            {"name": info.filename, "file_size": info.file_size, "sha256": mod._bytes_sha256(zf.read(info))}
+            {
+                "name": info.filename,
+                "file_size": info.file_size,
+                "compress_size": info.compress_size,
+                "crc": info.CRC,
+                "sha256": mod._bytes_sha256(zf.read(info)),
+            }
             for info in zf.infolist()
         ]
     (root / "archive_manifest.json").write_text(
@@ -91,14 +97,19 @@ def _failed_check_names(report: dict) -> set[str]:
 
 
 def _write_terminal_claim(path: Path, *, lane_id: str = "lane-a", job_id: str = "job-a") -> None:
-    row = (
+    active_row = (
+        f"| 2026-05-07T23:59:00Z | codex | {lane_id} | lightning | {job_id} | "
+        "2026-05-08T00:30Z | active_exact_eval | claimed before dispatch |\n"
+    )
+    terminal_row = (
         f"| 2026-05-08T00:00:00Z | codex | {lane_id} | lightning | {job_id} | "
         "2026-05-08T00:00Z | completed_score=0.209 | A++ |\n"
     )
     path.write_text(
         "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
         "|---|---|---|---|---|---|---|---|\n"
-        + row,
+        + terminal_row
+        + active_row,
         encoding="utf-8",
     )
 
@@ -370,6 +381,33 @@ def test_pre_submission_check_contest_final_rejects_stale_archive_manifest(tmp_p
     assert "archive_manifest_sha_matches" in _failed_check_names(report)
 
 
+def test_pre_submission_check_contest_final_rejects_stale_archive_member_metadata(tmp_path: Path) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission")
+    manifest = tmp_path / "submission" / "archive_manifest.json"
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    payload["archive"]["members"][0]["sha256"] = "b" * 64
+    payload["archive"]["members"][0]["crc"] = 0
+    manifest.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--contest-final",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+            ]
+        )
+    )
+    failed = _failed_check_names(report)
+    assert not report["passed"]
+    assert "archive_manifest_member_0_sha256_matches" in failed
+    assert "archive_manifest_member_0_crc_matches" in failed
+
+
 def test_pre_submission_check_accepts_candidate_archive_manifest_identity(tmp_path: Path) -> None:
     mod = _load_module()
     expected = _write_submission(tmp_path / "submission")
@@ -508,7 +546,9 @@ def test_pre_submission_check_dispatch_claim_linkage_accepts_live_eight_column_s
         "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
         "|---|---|---|---|---|---|---|---|\n"
         "| 2026-05-04T15:05:13Z | codex | lane-a | lightning | job-a | "
-        "2026-05-04T15:05Z | completed_score=0.209 | A++ |\n",
+        "2026-05-04T15:05Z | completed_score=0.209 | A++ |\n"
+        "| 2026-05-04T15:00:00Z | codex | lane-a | lightning | job-a | "
+        "2026-05-04T15:30Z | active_exact_eval | prior active claim |\n",
         encoding="utf-8",
     )
     report = mod.build_report(
@@ -533,6 +573,43 @@ def test_pre_submission_check_dispatch_claim_linkage_accepts_live_eight_column_s
     assert report["passed"], [c for c in report["checks"] if not c["passed"]]
 
 
+def test_pre_submission_check_dispatch_claim_linkage_rejects_terminal_without_prior_active(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission")
+    claims = tmp_path / "claims.md"
+    claims.write_text(
+        "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
+        "|---|---|---|---|---|---|---|---|\n"
+        "| 2026-05-04T15:05:13Z | codex | lane-a | lightning | job-a | "
+        "2026-05-04T15:05Z | completed_score=0.209 | fabricated terminal only |\n",
+        encoding="utf-8",
+    )
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--require-auth-eval",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+
+    assert not report["passed"]
+    assert "dispatch_claim_prior_active_row" in _failed_check_names(report)
+
+
 def test_pre_submission_check_dispatch_claim_linkage_accepts_claim_helper_terminal_statuses(
     tmp_path: Path,
 ) -> None:
@@ -543,7 +620,9 @@ def test_pre_submission_check_dispatch_claim_linkage_accepts_claim_helper_termin
         "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
         "|---|---|---|---|---|---|---|---|\n"
         "| 2026-05-04T15:05:13Z | codex | lane-a | lightning | job-a | "
-        "2026-05-04T15:05Z | cancelled_operator_request | terminal per claim helper |\n",
+        "2026-05-04T15:05Z | cancelled_operator_request | terminal per claim helper |\n"
+        "| 2026-05-04T15:00:00Z | codex | lane-a | lightning | job-a | "
+        "2026-05-04T15:30Z | active_exact_eval | prior active claim |\n",
         encoding="utf-8",
     )
     report = mod.build_report(

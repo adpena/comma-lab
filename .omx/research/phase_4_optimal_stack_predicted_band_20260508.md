@@ -3,8 +3,8 @@ title: PHASE 4 INTEGRATION — Optimal Stack Predicted Score Band
 date: 2026-05-08
 author: Subagent SYNTHESIZE (claude-opus-4-7-1m)
 status: aggregate-of-byte-anchors prediction; CUDA dispatch required for promotion
-predicted_band: [0.140, 0.180] [predicted; aggregate of byte-anchors; CUDA dispatch required for promotion]
-predicted_band_council_median: 0.157 [predicted; council-median; CUDA dispatch required for promotion]
+predicted_band: [0.139, 0.173] [predicted; aggregate of byte-anchors; CUDA dispatch required for promotion]
+predicted_band_council_median: 0.156 [predicted; council-median; CUDA dispatch required for promotion]
 score_claim: false
 ready_for_exact_eval_dispatch: false
 promotion_eligible: false
@@ -69,7 +69,7 @@ Per `.omx/research/grand_council_extreme_rigor_track_1_20260508.md` Decision
 | A2 | Sensitivity-aware quantization | 0 | 0 | 8,000–15,000 (mid 11,000) | `track1_phase_a2_sensitivity_quant_20260508T154125Z/A2_result.json`; council median |
 | A4 | ChARM channel-AR prior | 0 | 0 | 14,000–32,000 (mid 23,000) | A4 toy roundtrip exact (50K params); A4-alt CPU-build 137,531 B at 4.15% rel_err |
 | A4-alt (lane_pd_v2) | Pose-deriver / arithmetic-coded poses | 0 | 0 | 3,000–7,000 (mid 5,000) | existing `lane_pd_v2`; council substitution for Decision 4 |
-| A5 | Frame-conditional bit budget | 0 | 0 | 100–200 (mid 175) | not yet anchored; council estimate |
+| A5 | Frame-conditional bit budget | 0 | 0 | 1,278 (anchored net byte proxy) | `pr101_frame_conditional_bit_codex_20260508Tlocal/build_manifest.json`; best eta=2.0, latent delta -1,503 B, sidechannel +225 B |
 
 **Per-component caveats:**
 - A1 (Decision 2) deltas are predicted from score-gradient closure of the
@@ -81,7 +81,8 @@ Per `.omx/research/grand_council_extreme_rigor_track_1_20260508.md` Decision
 - A4 (Decision 1) toy roundtrip-exact; real-PR101 byte savings are a separate
   unverified gate. Per Quantizr+Carmack: Decision 1 LOWEST priority of the 5.
 - A4-alt is the existing `lane_pd_v2`, not a new build; treated as a free bolt-on.
-- A5 byte-savings net of side-info overhead.
+- A5 byte-savings are net of side-info overhead and remain byte-proxy only
+  until per-pair score marginals and inflate-runtime schema support land.
 
 ## 4. Composed score predictions
 
@@ -91,9 +92,9 @@ Using `tac.score_geometry.contest_score(d_seg, d_pose, archive_bytes)`:
 
 | Scenario | δ_seg | δ_pose | δ_bytes | Composed score |
 |---|---:|---:|---:|---:|
-| **Conservative (low-end of council range)** | 10% | 10% | 25,150 | **0.17303** [predicted] |
-| **Council Median** | 20% | 17.5% | 39,175 | **0.15703** [predicted] |
-| **Aggressive (high-end of council range)** | 30% | 25% | 54,200 | **0.14033** [predicted] |
+| **Conservative (low-end of council range)** | 10% | 10% | 26,278 | **0.17227** [predicted] |
+| **Council Median** | 20% | 17.5% | 40,278 | **0.15629** [predicted] |
+| **Aggressive (high-end of council range)** | 30% | 25% | 55,278 | **0.13961** [predicted] |
 
 ### 4.2 Volterra triple-stacking decomposition (median)
 
@@ -110,9 +111,9 @@ via `predict_triple_stacking()`:
 | A + C | 0.16780 | -0.02884 |
 | B + C | 0.17400 | -0.02264 |
 | **A + B + C (Volterra triple)** | **0.16048** | **-0.03616** |
-| + A4-alt 5,000 B | 0.16016 | -0.03648 |
-| + A5 175 B | 0.16015 | -0.03650 |
-| **Final 5-component (median)** | **0.15703** | **-0.03961** |
+| + A4-alt 5,000 B | 0.15715 | -0.03949 |
+| + A5 1,278 B | 0.15629 | -0.04034 |
+| **Final 5-component (median)** | **0.15629** | **-0.04034** |
 
 Stack notes:
 - `nominal_stack_ratio = 1.0000` and `triple_pose_correction = 0.0` because
@@ -130,10 +131,10 @@ Stack notes:
 
 Per the conservative/median/aggressive table:
 
-**Predicted band: 0.140–0.180 [predicted; aggregate of byte-anchors; CUDA
+**Predicted band: 0.139–0.173 [predicted; aggregate of byte-anchors; CUDA
 dispatch required for promotion]**
 
-**Council median: 0.157 [predicted; CUDA dispatch required for promotion]**
+**Council median: 0.156 [predicted; CUDA dispatch required for promotion]**
 
 The median places the stack INSIDE the medal cluster (PR101/102/103 = 0.193–
 0.195) and ahead of every public PR scored CPU. The aggressive arm of the
@@ -145,15 +146,15 @@ The composed score is most sensitive to A1 (score-gradient) and A4 (ChARM):
 
 | Risk axis | If FALSIFIED | New median composed |
 |---|---|---:|
-| A1 (Decision 2) infrastructure-blocked persists, no [contest-CUDA] anchor | drop seg/pose deltas to 0 | 0.17112 |
-| A4 (Decision 1) ChARM fails on real PR101 (canonical Ballé already failed at -0.985) | drop A4 23,000 B to 0 | 0.17000 |
-| A4 + A1 both fail | drop both | 0.18450 |
-| A2 (Decision 3) certified-sensitivity-map STILL regresses vs uniform | drop A2 11,000 B to 0 | 0.16435 |
+| A1 (Decision 2) infrastructure-blocked persists, no [contest-CUDA] anchor | drop seg/pose deltas to 0 | 0.16982 |
+| A4 (Decision 1) ChARM fails on real PR101 (canonical Ballé already failed at -0.985) | drop A4 23,000 B to 0 | 0.17161 |
+| A4 + A1 both fail | drop both | 0.18513 |
+| A2 (Decision 3) certified-sensitivity-map STILL regresses vs uniform | drop A2 11,000 B to 0 | 0.16362 |
 | All five fail (return to focal) | — | 0.19664 |
 
 Even in the worst case where Decisions 1 and 2 BOTH FAIL, the byte-only
-portion (A2 + A4-alt + A5 ≈ 16,175 B saved with no distortion increase, IF
-sensitivity map gets certified) lands at ~0.18450 — still beats the focal
+portion (A2 + A4-alt + A5 ≈ 17,278 B saved with no distortion increase, IF
+sensitivity map gets certified) lands at ~0.18513 — still beats the focal
 PR107 by 0.012, but does NOT enter the medal cluster.
 
 **A1 is the critical-path component.** Its blocker is purely infrastructure
@@ -181,8 +182,8 @@ anchors MUST land before any Phase 4 lane upgrades from `[predicted]` to
    target rms.
 
 ### Priority 2 — Deferred
-4. **A5 [runtime-cost anchor]** — verify inflate.sh runs ≤ 30 min on T4 with
-   frame-budget side-info path active.
+4. **A5 [runtime-cost anchor]** — byte proxy landed at net -1,278 B; verify
+   inflate.sh runs ≤ 30 min on T4 with frame-budget side-info path active.
 5. **A4-alt [contest-CUDA]** — `cross_paradigm_admm_x_op1_finalizer` archive
    (153,513 B sha 7bbba307) dispatched via `tools/parallel_dispatch_top_k.py`;
    confirm predicted band [0.18, 0.22] holds at score level.
@@ -203,7 +204,7 @@ DEFERRED-pending-research, not killed. Concrete reactivation criteria:
 | A1 (score-gradient) | Will gradient quality on a 50-frame random subset transfer to full 600-pair eval? | Single [contest-CUDA] dispatch produces seg or pose improvement ≥ 10% relative. |
 | A2 (sensitivity) | Does the certified sensitivity map exist in this codebase, and which forward path computes it? | Certified map produced via `tools/compute_pr101_component_sensitivity.py` (NOT YET WRITTEN); allocator output beats uniform on weighted-vs-uniform delta. |
 | A4 (Ballé/ChARM) | Will hyperprior generalize from 50K toy to 228K real PR101? Sister `compressai_balle_FIXED` failed at -0.985. | Real-PR101 byte savings ≥ 5 KB at <2% rel_err. |
-| A5 (frame budget) | Does the side-info path keep inflate ≤ 30 min on T4? | Single inflate run captures ≤ 30 min wall-clock with side-info active. |
+| A5 (frame budget) | Does the side-info path keep inflate ≤ 30 min on T4, and do per-pair score marginals justify the redistribution? | Single inflate run captures ≤ 30 min wall-clock with side-info active, and per-pair score marginal evidence is nonnegative. |
 | Stack composition | Do byte-only and seg/pose deltas truly compose linearly, or do tensor-count interactions (A2+A4 share allocation budget) erase savings? | Empirical stack archive lands a [contest-CUDA] score that recovers ≥ 80% of the predicted gain. |
 
 ## 8. Component anchor staleness audit
@@ -215,7 +216,7 @@ this memo's deltas are pinned to:
 - A2 deltas (8–15 KB): council range; current empirical row REGRESSES (-1,933 B at stub map)
 - A4 deltas (14–32 KB): council range; only A4 toy + A4-alt CPU-build land at this snapshot
 - A4-alt 3–7 KB: existing lane_pd_v2 anchor
-- A5 100–200 B: council estimate
+- A5 1,278 B: `tools/pr101_frame_conditional_bit_anchor.py` local byte proxy
 
 If new Phase A anchors land that contradict the council range, this memo's
 predicted band MUST be re-derived. The cathedral autopilot recommender

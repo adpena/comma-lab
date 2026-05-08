@@ -1242,6 +1242,39 @@ def _auth_eval_evidence_contract(device: str, n_samples: int, provenance: dict) 
     }
 
 
+def _path_is_under(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def _validate_durable_result_output(args: argparse.Namespace) -> None:
+    """Require score-grade auth-eval JSON to survive outside temp cleanup."""
+
+    temp_root = Path(tempfile.gettempdir())
+    allow_temp = bool(getattr(args, "allow_temp_work_dir", False))
+    work_dir = getattr(args, "work_dir", None)
+    json_out = getattr(args, "json_out", None)
+    if work_dir is None and json_out is None and not allow_temp:
+        raise SystemExit(
+            "contest_auth_eval score evidence requires --work-dir or --json-out. "
+            "Use --allow-temp-work-dir only for diagnostic scratch runs that must "
+            "not be treated as score custody."
+        )
+    for path in (work_dir, json_out):
+        if path is None:
+            continue
+        path_obj = Path(path)
+        if _path_is_under(path_obj, temp_root) and not allow_temp:
+            raise SystemExit(
+                f"contest_auth_eval evidence path is under temp storage: {path_obj}. "
+                "Choose a durable repo/provider work dir or pass --allow-temp-work-dir "
+                "for diagnostic scratch only."
+            )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -1265,6 +1298,11 @@ def main() -> int:
                              "is diagnostic only.")
     parser.add_argument("--work-dir", type=Path, default=None,
                         help="Working directory (default: tempfile)")
+    parser.add_argument("--json-out", type=Path, default=None,
+                        help="Optional durable copy of contest_auth_eval.json.")
+    parser.add_argument("--allow-temp-work-dir", action="store_true",
+                        help="Allow temp-dir evidence for diagnostic scratch only; "
+                             "never use for score custody.")
     parser.add_argument("--inflate-timeout", type=int, default=1800,
                         help="Inflate.sh timeout in seconds. Contest budget "
                              "is 30 min (1800s) on T4. Default matches.")
@@ -1289,6 +1327,7 @@ def main() -> int:
             f"--upstream-dir missing evaluate.py: {upstream_dir}. "
             f"Did you forget to clone the pinned upstream snapshot?"
         )
+    _validate_durable_result_output(args)
 
     # Codex F5 fix (2026-04-28, canonical guard for all lanes): the
     # submission's inflate.sh sources $SELF_DIR/config.env to read
@@ -1388,6 +1427,12 @@ def main() -> int:
         out_json = work_dir / "contest_auth_eval.json"
         with open(out_json, "w") as f:
             json.dump(result, f, indent=2)
+        if args.json_out is not None:
+            durable_json = args.json_out.resolve()
+            durable_json.parent.mkdir(parents=True, exist_ok=True)
+            with open(durable_json, "w") as f:
+                json.dump(result, f, indent=2)
+                f.write("\n")
 
         # Print sentinel line for downstream parsers (matches the format
         # auth_eval_renderer.py uses, so existing log scrapers keep working)
@@ -1400,6 +1445,8 @@ def main() -> int:
         print(f"  Rate (unscaled): {result['rate_unscaled']:.6f}")
         print(f"  Archive bytes:  {result['archive_size_bytes']:,}")
         print(f"  Result JSON:    {out_json}")
+        if args.json_out is not None:
+            print(f"  Durable JSON:   {args.json_out.resolve()}")
 
         return 0
     finally:

@@ -114,6 +114,10 @@ from tac.pr101_split_brotli_codec import (  # noqa: E402
     N_QUANT,
     _quantize_tensor,
 )
+from tac.analysis.hnerv_packet_sections import (  # noqa: E402
+    PARSER_CPLX1,
+    build_packet_section_manifest,
+)
 
 # Re-use canonical archive helpers from the Lightning builder.
 _LIGHTNING_BUILDER_PATH = (
@@ -462,6 +466,12 @@ def _write_static_release_surface(
         raise SystemExit("FATAL: staged archive SHA mismatch")
 
     member_manifest = _archive_member_manifest(staged_archive)
+    parser_section_custody = build_packet_section_manifest(
+        staged_archive,
+        label=LANE_ID,
+        parser=PARSER_CPLX1,
+        repo_root=REPO_ROOT,
+    )
     archive_manifest = {
         "schema": "cross_paradigm_admm_x_op1_static_archive_manifest.v1",
         "tool": TOOL_NAME,
@@ -489,6 +499,18 @@ def _write_static_release_surface(
             "promotion requires a rebuilt packet plus auth-eval artifact."
         ),
         "dispatch_blockers": list(CPU_BUILD_SCORE_BLOCKERS),
+        "parser_section_manifest": parser_section_custody["parser_section_manifest"],
+        "parser_section_gate": parser_section_custody["parser_section_gate"],
+        "parser_section_custody": {
+            "source": "tac.analysis.hnerv_packet_sections.build_packet_section_manifest",
+            "parser": parser_section_custody["parser"],
+            "sections": parser_section_custody["sections"],
+            "coverage": parser_section_custody["coverage"],
+            "archive": parser_section_custody["archive"],
+            "member": parser_section_custody["member"],
+            "score_claim": False,
+            "dispatch_attempted": False,
+        },
     }
     manifest_path = submission_dir / "archive_manifest.json"
     manifest_path.write_text(
@@ -524,6 +546,8 @@ def _write_static_release_surface(
         "archive_size_bytes": archive_bytes,
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
+        "parser_section_manifest": parser_section_custody["parser_section_manifest"],
+        "parser_section_gate": parser_section_custody["parser_section_gate"],
     }
 
 

@@ -1780,11 +1780,11 @@ def test_non_dry_run_studio_submit_requires_active_dispatch_claim(tmp_path: Path
     metadata = module._queue_metadata_from_args(args)
     assert metadata["dispatch_claim_skip_reason"] == "manual operator recovery during provider outage"
 
-    assert module._dispatch_claim_status_is_terminal("completed_a_negative_score=2.1") is True
-    assert module._dispatch_claim_status_is_terminal("completed_empirical_no_score") is True
-    assert module._dispatch_claim_status_is_terminal("stopped_duplicate_same_archive") is True
-    assert module._dispatch_claim_status_is_terminal("refused_dispatch_blockers_active") is True
-    assert module._dispatch_claim_status_is_terminal("stale_superseded_by_t4") is True
+    from tools.claim_lane_dispatch import TERMINAL_PREFIXES
+
+    for prefix in TERMINAL_PREFIXES:
+        assert module._dispatch_claim_status_is_terminal(f"{prefix}test") is True
+    assert module._dispatch_claim_status_is_terminal("active_exact_eval") is False
 
     claims.write_text(
         "# Active lane dispatch claims -- test\n\n"

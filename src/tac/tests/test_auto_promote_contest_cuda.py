@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 import pathlib
 
@@ -25,7 +26,6 @@ def _make_artifact_dir(
     score: float,
     evidence_filename: str = "pre_submission_compliance.contest_final.json",
     archive_bytes: int = 185_578,
-    archive_sha256: str = "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
 ) -> pathlib.Path:
     """Create a fake repo with one lane_dir containing archive + evidence."""
     repo = tmp_path / "fake_repo"
@@ -33,9 +33,22 @@ def _make_artifact_dir(
     lane_dir.mkdir(parents=True)
     archive = lane_dir / "archive.zip"
     archive.write_bytes(b"\x00" * archive_bytes)
+    archive_sha256 = hashlib.sha256(archive.read_bytes()).hexdigest()
     evidence_payload = {
-        "auth_eval": {"score": score, "archive_sha256": archive_sha256},
-        "score": score,
+        "passed": True,
+        "checks": [{"name": "all_good", "passed": True, "severity": "error"}],
+        "auth_eval": {
+            "strict_formula": {"score": score},
+            "record": {
+                "score": score,
+                "archive_bytes": archive_bytes,
+                "archive_sha256": archive_sha256,
+                "score_axis": "contest_cuda",
+                "promotion_eligible": True,
+                "score_claim_valid": True,
+                "evidence_grade": "A++",
+            },
+        },
     }
     (lane_dir / evidence_filename).write_text(json.dumps(evidence_payload))
     return repo
@@ -68,13 +81,26 @@ def test_discover_prefers_strict_formula_score(tmp_path: pathlib.Path) -> None:
     repo = tmp_path / "fake_repo"
     lane_dir = repo / "experiments/results/pr103_strict"
     lane_dir.mkdir(parents=True)
-    (lane_dir / "archive.zip").write_bytes(b"\x00")
+    archive = lane_dir / "archive.zip"
+    archive.write_bytes(b"\x00")
+    archive_sha256 = hashlib.sha256(archive.read_bytes()).hexdigest()
     (lane_dir / "pre_submission_compliance.contest_final.json").write_text(
         json.dumps(
             {
+                "passed": True,
+                "checks": [{"name": "all_good", "passed": True, "severity": "error"}],
                 "auth_eval": {
                     "score": 0.20898105277982337,
                     "strict_formula": {"score": 0.2089810755823297},
+                    "record": {
+                        "score": 0.20898105277982337,
+                        "archive_bytes": 1,
+                        "archive_sha256": archive_sha256,
+                        "score_axis": "contest_cuda",
+                        "promotion_eligible": True,
+                        "score_claim_valid": True,
+                        "evidence_grade": "A++",
+                    },
                 }
             }
         )
@@ -94,6 +120,40 @@ def test_discover_skips_lane_dir_without_archive(tmp_path: pathlib.Path) -> None
     (lane_dir / "pre_submission_compliance.contest_final.json").write_text(
         json.dumps({"auth_eval": {"score": 0.18}})
     )
+    assert mod.discover_contest_cuda_artifacts(repo) == []
+
+
+def test_discover_rejects_failed_compliance_even_with_numeric_score(tmp_path: pathlib.Path) -> None:
+    mod = _load_tool_module()
+    repo = _make_artifact_dir(tmp_path, lane_dir_name="lane_failed", score=0.01)
+    evidence = repo / "experiments/results/lane_failed/pre_submission_compliance.contest_final.json"
+    payload = json.loads(evidence.read_text(encoding="utf-8"))
+    payload["passed"] = False
+    payload["checks"] = [{"name": "failed_check", "passed": False, "severity": "error"}]
+    evidence.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert mod.discover_contest_cuda_artifacts(repo) == []
+
+
+def test_discover_rejects_cpu_or_archive_mismatched_evidence(tmp_path: pathlib.Path) -> None:
+    mod = _load_tool_module()
+    repo = _make_artifact_dir(tmp_path, lane_dir_name="lane_cpu", score=0.01)
+    evidence = repo / "experiments/results/lane_cpu/pre_submission_compliance.contest_final.json"
+    payload = json.loads(evidence.read_text(encoding="utf-8"))
+    payload["auth_eval"]["record"]["score_axis"] = "contest_cpu"
+    evidence.write_text(json.dumps(payload), encoding="utf-8")
+    assert mod.discover_contest_cuda_artifacts(repo) == []
+
+    payload["auth_eval"]["record"]["score_axis"] = "contest_cuda"
+    payload["auth_eval"]["record"]["archive_sha256"] = "b" * 64
+    evidence.write_text(json.dumps(payload), encoding="utf-8")
+    assert mod.discover_contest_cuda_artifacts(repo) == []
+
+    payload["auth_eval"]["record"]["archive_sha256"] = hashlib.sha256(
+        (repo / "experiments/results/lane_cpu/archive.zip").read_bytes()
+    ).hexdigest()
+    payload["auth_eval"]["record"]["archive_bytes"] = "not-an-int"
+    evidence.write_text(json.dumps(payload), encoding="utf-8")
     assert mod.discover_contest_cuda_artifacts(repo) == []
 
 

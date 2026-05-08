@@ -9,6 +9,7 @@ from __future__ import annotations
 import importlib.util
 import os
 import sys
+import types
 import zipfile
 from pathlib import Path
 
@@ -37,6 +38,44 @@ def _get_contest_auth_eval_module():
     return _load_module(
         REPO_ROOT / "experiments" / "contest_auth_eval.py",
         "_test_contest_auth_eval_full",
+    )
+
+
+def test_contest_auth_eval_requires_durable_result_path(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    mod = _get_contest_auth_eval_module()
+    tmp_root = tmp_path / "system_tmp"
+    durable_root = tmp_path / "repo_results"
+    tmp_root.mkdir()
+    durable_root.mkdir()
+    monkeypatch.setattr(mod.tempfile, "gettempdir", lambda: str(tmp_root))
+
+    with pytest.raises(SystemExit, match="requires --work-dir or --json-out"):
+        mod._validate_durable_result_output(
+            types.SimpleNamespace(work_dir=None, json_out=None, allow_temp_work_dir=False)
+        )
+
+    with pytest.raises(SystemExit, match="under temp storage"):
+        mod._validate_durable_result_output(
+            types.SimpleNamespace(
+                work_dir=tmp_root / "contest_eval",
+                json_out=None,
+                allow_temp_work_dir=False,
+            )
+        )
+
+    mod._validate_durable_result_output(
+        types.SimpleNamespace(
+            work_dir=durable_root / "contest_eval",
+            json_out=None,
+            allow_temp_work_dir=False,
+        )
+    )
+    mod._validate_durable_result_output(
+        types.SimpleNamespace(
+            work_dir=tmp_root / "scratch_eval",
+            json_out=None,
+            allow_temp_work_dir=True,
+        )
     )
 
 

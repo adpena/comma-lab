@@ -36,10 +36,12 @@ def test_dashboard_ingests_cpu_and_cuda_as_separate_score_axes(tmp_path: Path) -
                 "avg_segnet_dist": 0.00057599,
                 "avg_posenet_dist": 0.00003460,
                 "compression_rate": 0.004767,
-                "device": "cpu",
                 "n_samples": 600,
-                "platform_system": "Linux",
-                "platform_machine": "x86_64",
+                "provenance": {
+                    "device": "cpu",
+                    "platform_system": "Linux",
+                    "platform_machine": "x86_64",
+                },
             }
         ),
         encoding="utf-8",
@@ -54,9 +56,14 @@ def test_dashboard_ingests_cpu_and_cuda_as_separate_score_axes(tmp_path: Path) -
                 "avg_segnet_dist": 0.00067565,
                 "avg_posenet_dist": 0.00017347,
                 "rate_unscaled": 0.004767,
-                "device": "cuda",
                 "n_samples": 600,
-                "gpu_t4_match": True,
+                "promotion_eligible": True,
+                "score_claim_valid": True,
+                "evidence_grade": "A++",
+                "provenance": {
+                    "device": "cuda",
+                    "gpu_t4_match": True,
+                },
             }
         ),
         encoding="utf-8",
@@ -99,13 +106,13 @@ def test_dashboard_surfaces_hardware_blockers_for_misdeclared_cpu_axis(tmp_path:
             {
                 "canonical_score": 0.1966358879,
                 "archive_size_bytes": 178_981,
-                "device": "cpu",
                 "n_samples": 600,
                 "score_axis": "contest_cpu",
                 "evidence_grade": "contest-CPU-1to1",
                 "promotion_eligible": True,
                 "rank_or_kill_eligible": True,
                 "provenance": {
+                    "device": "cpu",
                     "platform_system": "Darwin",
                     "platform_machine": "arm64",
                 },
@@ -128,3 +135,61 @@ def test_dashboard_surfaces_hardware_blockers_for_misdeclared_cpu_axis(tmp_path:
     assert payload["axis_counts"] == {"cpu_advisory": 1}
     assert payload["rows"][0]["hardware_compliance_blocker"] == "contest_cpu_requires_linux_x86_64"
     assert "contest_cpu_requires_linux_x86_64" in dashboard._format_table(rows)
+
+
+def test_dashboard_ignores_forged_top_level_hardware_fields(tmp_path: Path) -> None:
+    dashboard = _load_dashboard_module()
+    results = tmp_path / "experiments" / "results"
+    forged_cpu_dir = results / "forged_cpu"
+    forged_cuda_dir = results / "forged_cuda"
+    forged_cpu_dir.mkdir(parents=True)
+    forged_cuda_dir.mkdir(parents=True)
+
+    (forged_cpu_dir / "contest_auth_eval.json").write_text(
+        json.dumps(
+            {
+                "canonical_score": 0.1966,
+                "archive_size_bytes": 178_981,
+                "n_samples": 600,
+                "score_axis": "contest_cpu",
+                "device": "cpu",
+                "platform_system": "Linux",
+                "platform_machine": "x86_64",
+                "provenance": {
+                    "device": "cpu",
+                    "platform_system": "Darwin",
+                    "platform_machine": "arm64",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    (forged_cuda_dir / "contest_auth_eval.json").write_text(
+        json.dumps(
+            {
+                "canonical_score": 0.2283,
+                "archive_size_bytes": 178_981,
+                "n_samples": 600,
+                "device": "cuda",
+                "gpu_t4_match": True,
+                "promotion_eligible": True,
+                "score_claim_valid": True,
+                "evidence_grade": "A++",
+                "provenance": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rows = dashboard.scan(tmp_path, scan_root=results)
+    by_dir = {Path(row.path).parent.name: row for row in rows}
+
+    forged_cpu = by_dir["forged_cpu"]
+    assert forged_cpu.score_axis == "cpu_advisory"
+    assert forged_cpu.cpu_leaderboard_reproduction_eligible is False
+    assert forged_cpu.hardware_compliance_blocker == "contest_cpu_requires_linux_x86_64"
+
+    forged_cuda = by_dir["forged_cuda"]
+    assert forged_cuda.score_axis == "unknown"
+    assert forged_cuda.promotion_eligible is False
+    assert forged_cuda.rank_or_kill_eligible is False

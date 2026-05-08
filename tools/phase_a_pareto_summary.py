@@ -101,6 +101,8 @@ def parse_manifest(manifest_path: Path) -> PhaseAEntry | None:
         or data.get("empirical_archive_bytes")
         or data.get("archive_bytes_total")
         or data.get("estimated_archive_bytes")
+        or data.get("archive_bytes_new")
+        or data.get("fstc_blob_bytes")
     )
     if archive_bytes is None:
         # Try sweep entries under "results" or "rows" keys.
@@ -109,7 +111,10 @@ def parse_manifest(manifest_path: Path) -> PhaseAEntry | None:
             if isinstance(seq, list) and seq:
                 # Take the smallest archive_bytes from the sweep.
                 bytes_list = [
-                    e.get("archive_bytes") or e.get("empirical_archive_bytes")
+                    e.get("archive_bytes")
+                    or e.get("empirical_archive_bytes")
+                    or e.get("archive_bytes_new")
+                    or e.get("fstc_blob_bytes")
                     for e in seq
                     if isinstance(e, dict)
                 ]
@@ -154,7 +159,7 @@ def parse_manifest(manifest_path: Path) -> PhaseAEntry | None:
     )
 
     # Compute deltas if archive_bytes is known.
-    if archive_bytes is not None:
+    if archive_bytes is not None and lane != "A4_alt_filler_stc_pose":
         entry.delta_vs_brotli_bytes = archive_bytes - PR101_BROTLI_BYTES
 
     # Lane-specific notes.
@@ -168,6 +173,12 @@ def parse_manifest(manifest_path: Path) -> PhaseAEntry | None:
         entry.notes.append("dispatch tooling landed; blocked on Lightning GPU/Vast.ai infra")
     if "ADMM" in lane:
         entry.notes.append("Path B baseline; -28 KB savings at 4-5% rel_err")
+    if lane == "A4_alt_filler_stc_pose":
+        entry.notes.append("pose-codec byte anchor; not comparable to full PR101 archive bytes")
+    if lane == "A5_frame_conditional_bits":
+        best_delta = data.get("best_archive_delta_bytes")
+        if isinstance(best_delta, int):
+            entry.notes.append(f"best frame-conditioned latent delta {best_delta:+,} B")
 
     return entry
 
@@ -253,8 +264,10 @@ def render_markdown(entries: list[PhaseAEntry]) -> str:
         "",
         "## Open lanes",
         "",
-        "- A4-alt (Filler STC pose codec): subagent in flight",
-        "- A5 (frame-conditional bit budget): subagent in flight",
+        "- A4-alt (Filler STC pose codec): byte-anchor landed; representative "
+        "pose-distribution only, not a PR101 monolithic archive rewrite.",
+        "- A5 (frame-conditional bit budget): byte-anchor landed; needs per-pair "
+        "score marginals + inflate side-info path before dispatch.",
         "- A6 (Selfcomp block-FP × hyperprior compose): not started",
         "",
     ])

@@ -10,8 +10,8 @@ PR101 brotli baseline: **178,144 B** (the byte-anchor most lanes target).
 | A1_score_gradient | — | — | — | [advisory only — no dispatch] | — | dispatch tooling landed; blocked on Lightning GPU/Vast.ai infra |
 | A2_xavier_l2_sensitivity | 156,344 | -21,800 | — | [byte-anchor; sensitivity_proxy=xavier_l2] | — | FALSIFIED proxy (-3,635 B regression vs uniform) |
 | A3_alt_mallat_wavelet | 156,344 | -21,800 | — | [byte-anchor; sensitivity_proxy=mallat_wavelet] | — | incremental_improvement_insufficient (Mallat > Xavier in 2/4) |
-| A4_alt_filler_stc_pose | — | — | — | byte-anchor; pose_codec=filler_stc | — | — |
-| A5_frame_conditional_bits | — | — | — | [CPU-prep faithful frame-conditional byte anchor] | — | — |
+| A4_alt_filler_stc_pose | 3,960 | — | — | byte-anchor; pose_codec=filler_stc | — | pose-codec byte anchor; not comparable to full PR101 archive bytes |
+| A5_frame_conditional_bits | 176,880 | -1,264 | — | [CPU-prep faithful frame-conditional byte anchor] | — | best frame-conditioned latent delta -1,278 B |
 | ADMM_lossy_coarsening_baseline | 147,285 | -30,859 | — | [CPU-build] | — | Path B baseline; -28 KB savings at 4-5% rel_err |
 
 ## Class-level findings
@@ -23,7 +23,7 @@ PR101 brotli baseline: **178,144 B** (the byte-anchor most lanes target).
 
 ## Open lanes
 
-- A4-alt (Filler STC pose codec): subagent in flight
-- A5 (frame-conditional bit budget): subagent in flight
+- A4-alt (Filler STC pose codec): byte-anchor landed; representative pose-distribution only, not a PR101 monolithic archive rewrite.
+- A5 (frame-conditional bit budget): byte-anchor landed; needs per-pair score marginals + inflate side-info path before dispatch.
 - A6 (Selfcomp block-FP × hyperprior compose): not started
 

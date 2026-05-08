@@ -63,6 +63,7 @@ from tac.deploy.lightning.batch_jobs import (  # noqa: E402
 )
 from tac.public_submission_refs import parse_public_pr_refs_csv  # noqa: E402
 from tac.repo_io import json_text, read_json, write_json  # noqa: E402
+from tools.claim_lane_dispatch import TERMINAL_PREFIXES as _DISPATCH_CLAIM_TERMINAL_PREFIXES  # noqa: E402
 
 SSH_AUTH_OPTIONS = (
     "-o",
@@ -293,18 +294,6 @@ def _queue_metadata_from_args(args: argparse.Namespace) -> dict[str, object]:
 
 
 _DISPATCH_CLAIMS_PATH = Path(".omx/state/active_lane_dispatch_claims.md")
-_DISPATCH_CLAIM_TERMINAL_PREFIXES = (
-    "completed_",
-    "completed_score=",
-    "completed_no_frontier",
-    "failed_",
-    "preempted",
-    "cancelled",
-    "refused_dispatch",
-    "stale_assumed_dead",
-    "stale_superseded",
-    "stopped_",
-)
 
 
 def _dispatch_claim_status_is_terminal(status: str) -> bool:

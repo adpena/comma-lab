@@ -26,6 +26,7 @@ def _install_tiny_pr101_contract(monkeypatch, tool) -> None:
     monkeypatch.setattr(tool, "FIXED_STATE_SCHEMA", (("a", (4,)), ("b", (4,))))
     monkeypatch.setattr(tool, "DECODER_BLOB_LEN", 4)
     monkeypatch.setattr(tool, "LATENT_BLOB_LEN", 2)
+    monkeypatch.setattr(tool.hnerv_packet_sections, "PR101_LATENT_BLOB_LEN", 2)
     monkeypatch.setattr(tool, "DECODER_STORAGE_ORDER", (0, 1))
     monkeypatch.setattr(tool, "DECODER_STREAM_ENDS", (2,))
     monkeypatch.setattr(tool, "CONV4_STORAGE_PERMS", {})
@@ -209,6 +210,16 @@ def test_builds_byte_closed_packet_ladder_with_non_promotable_manifest(tmp_path:
     assert "is_stub=true" in variant["dispatch_blockers"]
     assert variant["archive_member_manifest"]["layout_magic"] == "A2K1"
     assert variant["archive_member_manifest"]["decoder_len_field_matches_decoder_blob"] is True
+    assert variant["parser_section_gate"]["ready"] is True
+    assert variant["parser_section_manifest"]["section_names"] == [
+        "a2k1_magic",
+        "decoder_len_u32le",
+        "decoder_blob",
+        "latent_blob",
+        "sidecar_blob",
+    ]
+    assert variant["parser_section_custody"]["score_claim"] is False
+    assert variant["parser_section_custody"]["dispatch_attempted"] is False
     assert variant["runtime_packet"]["runtime_patch"]["codec_parse_archive_supports_a2_length_prefix"] is True
     assert variant["runtime_packet"]["runtime_checks"]["inflate_sh_bash_n"]["passed"] is True
     assert variant["runtime_packet"]["runtime_checks"]["packet_local_parse_smoke"]["passed"] is True

@@ -52,6 +52,7 @@ from tac.pr101_split_brotli_codec import (  # noqa: E402
     decode_decoder_compact,
     pack_brotli_stream,
 )
+from tac.analysis import hnerv_packet_sections  # noqa: E402
 from tac.repo_io import json_text, read_json, repo_relative, sha256_file, write_json  # noqa: E402
 
 TOOL_NAME = "tools/build_a2_sensitivity_weighted_pr101_packet.py"
@@ -989,6 +990,33 @@ def _proxy_vs_materialized(
     }
 
 
+def _parser_section_custody_for_candidate(
+    *,
+    candidate_archive_path: Path,
+    variant_id: str,
+) -> dict[str, Any]:
+    """Build no-score parser-section custody for an A2K1 candidate archive."""
+
+    section_record = hnerv_packet_sections.build_packet_section_manifest(
+        candidate_archive_path,
+        label=f"A2K1:{variant_id}",
+        parser=hnerv_packet_sections.PARSER_A2K1,
+        repo_root=REPO_ROOT,
+    )
+    return {
+        "source": "tac.analysis.hnerv_packet_sections.build_packet_section_manifest",
+        "parser": section_record["parser"],
+        "parser_section_gate": section_record["parser_section_gate"],
+        "parser_section_manifest": section_record["parser_section_manifest"],
+        "sections": section_record["sections"],
+        "coverage": section_record["coverage"],
+        "archive": section_record["archive"],
+        "member": section_record["member"],
+        "score_claim": False,
+        "dispatch_attempted": False,
+    }
+
+
 def _build_variant(
     *,
     schedule: dict[str, Any],
@@ -1029,6 +1057,10 @@ def _build_variant(
         candidate_archive_path,
         source_member_name,
         inner_member,
+    )
+    parser_section_custody = _parser_section_custody_for_candidate(
+        candidate_archive_path=candidate_archive_path,
+        variant_id=schedule["variant_id"],
     )
     source_parse_smoke = _packet_local_parse_smoke(
         packet_dir,
@@ -1140,6 +1172,9 @@ def _build_variant(
         "source_archive": source_archive_record,
         "candidate_archive": candidate_archive_record,
         "candidate_archive_relpath": _repo_rel(candidate_archive_path),
+        "parser_section_manifest": parser_section_custody["parser_section_manifest"],
+        "parser_section_gate": parser_section_custody["parser_section_gate"],
+        "parser_section_custody": parser_section_custody,
         "archive_member_manifest": {
             "member_name": source_member_name,
             "layout_magic": MAGIC.decode("ascii"),
