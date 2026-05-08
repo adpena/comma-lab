@@ -1,0 +1,24 @@
+{
+  "schema": "arch_shrink_quantizr_class_mps_overnight.v1",
+  "tool": "experiments/arch_shrink_quantizr_class_mps_overnight.py",
+  "started_at_utc": "2026-05-08T00:46:03Z",
+  "args": {
+    "target_elements": 88000,
+    "profile": "quantizr_faithful",
+    "epochs": 1500,
+    "device": "mps",
+    "output_dir": null,
+    "emit_evidence": null,
+    "dry_run": true
+  },
+  "evidence_grade": "[MPS-research-signal]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "dispatch_blockers": [
+    "mps_research_signal_only_not_contest_cuda",
+    "no_archive_substitution_performed",
+    "missing_exact_cuda_auth_eval",
+    "training_loss_proxy_not_actual_score"
+  ]
+}
