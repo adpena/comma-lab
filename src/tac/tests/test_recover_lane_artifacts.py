@@ -88,14 +88,16 @@ def test_recover_artifacts_handles_ssh_unreachable(mod, tmp_path):
         # All ssh probes fail.
         return 255, "", "Connection refused"
 
-    with patch.object(mod, "VASTAI", tmp_path / "vastai"), \
-         patch.object(mod, "RECOVERY_BASE", tmp_path):
+    with (
+        patch.object(mod, "VASTAI", tmp_path / "vastai"),
+        patch.object(mod, "RECOVERY_BASE", tmp_path),
+        patch.object(mod, "_run", side_effect=fake_run),
+    ):
         # Provide explicit host/port to bypass the vastai-CLI probe.
-        with patch.object(mod, "_run", side_effect=fake_run):
-            report = mod.recover_artifacts(
-                instance_id=42, lane_label="dead",
-                ssh_host="ghost", ssh_port=12345,
-            )
+        report = mod.recover_artifacts(
+            instance_id=42, lane_label="dead",
+            ssh_host="ghost", ssh_port=12345,
+        )
     assert report.ssh_reachable is False
     assert any("SSH reachability probe" in n for n in report.notes)
 
@@ -233,11 +235,13 @@ def test_recover_before_destroy_swallows_exceptions(mod, tmp_path):
     def boom(*args, **kwargs):
         raise RuntimeError("simulated SCP storm")
 
-    with patch.object(mod, "RECOVERY_BASE", tmp_path):
-        with patch.object(mod, "recover_artifacts", side_effect=boom):
-            out = mod.recover_before_destroy(
-                instance_id=1, lane_label="x", enabled=True,
-            )
+    with (
+        patch.object(mod, "RECOVERY_BASE", tmp_path),
+        patch.object(mod, "recover_artifacts", side_effect=boom),
+    ):
+        out = mod.recover_before_destroy(
+            instance_id=1, lane_label="x", enabled=True,
+        )
     # Best-effort: returns None on exception, doesn't raise.
     assert out is None
 
@@ -304,13 +308,15 @@ def test_overall_timeout_aborts_remaining_scps(mod, tmp_path):
             return 0, "", ""
         return 0, "", ""
 
-    with patch.object(mod, "RECOVERY_BASE", tmp_path):
-        with patch.object(mod, "_run", side_effect=fake_run):
-            report = mod.recover_artifacts(
-                instance_id=222, lane_label="timeout",
-                ssh_host="h", ssh_port=22,
-                overall_timeout_s=0,  # immediate timeout
-            )
+    with (
+        patch.object(mod, "RECOVERY_BASE", tmp_path),
+        patch.object(mod, "_run", side_effect=fake_run),
+    ):
+        report = mod.recover_artifacts(
+            instance_id=222, lane_label="timeout",
+            ssh_host="h", ssh_port=22,
+            overall_timeout_s=0,  # immediate timeout
+        )
     # We may get 0 or 1 file before the deadline check fires; either way,
     # NOT all 5 files, and the timeout note must be present.
     assert len(report.artifacts) < 5

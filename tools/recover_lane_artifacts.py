@@ -46,14 +46,13 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import shlex
 import subprocess
 import sys
 import time
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 # Re-use launcher constants so behaviour stays consistent.
@@ -336,7 +335,7 @@ def recover_artifacts(
     t0 = time.monotonic()
     rec_dir = _recovery_dir_for(instance_id, lane_label)
     rec_dir.mkdir(parents=True, exist_ok=True)
-    started = datetime.now(timezone.utc).isoformat()
+    started = datetime.now(UTC).isoformat()
     report = RecoveryReport(
         instance_id=int(instance_id),
         lane_label=str(lane_label),
@@ -457,7 +456,7 @@ def _attempt_kind_for(
 
 def _attempt_payload(report: RecoveryReport, *, command_log_path: str | None) -> dict:
     """Render a RecoveryReport as one attempt entry of the v2 schema."""
-    completed = datetime.now(timezone.utc).isoformat()
+    completed = datetime.now(UTC).isoformat()
     return {
         "attempt_kind": "revisit",
         "started_at_utc": report.started_at_utc,
@@ -489,11 +488,19 @@ def _summarize_attempt_delta(previous: dict, current: dict) -> str | None:
         "notes",
     )
     changes: list[str] = []
-    for field in fields:
-        if previous.get(field) != current.get(field):
-            if field == "artifacts":
-                prev_artifacts = previous.get(field) if isinstance(previous.get(field), list) else []
-                cur_artifacts = current.get(field) if isinstance(current.get(field), list) else []
+    for field_name in fields:
+        if previous.get(field_name) != current.get(field_name):
+            if field_name == "artifacts":
+                prev_artifacts = (
+                    previous.get(field_name)
+                    if isinstance(previous.get(field_name), list)
+                    else []
+                )
+                cur_artifacts = (
+                    current.get(field_name)
+                    if isinstance(current.get(field_name), list)
+                    else []
+                )
                 prev_bytes = sum(
                     int(a.get("size_bytes", 0))
                     for a in prev_artifacts
@@ -509,7 +516,7 @@ def _summarize_attempt_delta(previous: dict, current: dict) -> str | None:
                     f"{len(cur_artifacts)} files/{cur_bytes} bytes"
                 )
             else:
-                changes.append(f"{field} changed")
+                changes.append(f"{field_name} changed")
     if not changes:
         return None
     return "; ".join(changes[:8])
@@ -637,7 +644,7 @@ def _write_report(rec_dir: Path, report: RecoveryReport) -> None:
             )
             new_attempt["attempt_kind"] = _attempt_kind_for(previous, new_attempt)
             new_attempt["substantive_change_from_prior_attempt"] = delta
-            existing["attempts"] = list(attempts) + [new_attempt]
+            existing["attempts"] = [*list(attempts), new_attempt]
         # Always re-affirm schema_version + identity fields after a write.
         existing["schema_version"] = RECOVERY_METADATA_SCHEMA_VERSION
 
@@ -726,7 +733,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     if args.no_recover:
-        print(f"[recover_lane_artifacts] --no-recover; skipping recovery.")
+        print("[recover_lane_artifacts] --no-recover; skipping recovery.")
     else:
         report = recover_before_destroy(
             instance_id=args.instance_id,
