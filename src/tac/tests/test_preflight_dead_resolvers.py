@@ -79,6 +79,27 @@ def test_dead_resolver_satisfied_by_argparse_flag(tmp_path: Path) -> None:
     assert v == [], v
 
 
+def test_dead_resolver_satisfied_by_argparse_subclass_flag(tmp_path: Path) -> None:
+    """Strict parser subclasses are still argparse parser instances."""
+    root = _stub_repo(tmp_path)
+    script = root / "experiments" / "good_argparse_subclass.py"
+    _write(script, """
+        import argparse
+        class StrictArgumentParser(argparse.ArgumentParser):
+            pass
+        def parse_args():
+            p = StrictArgumentParser()
+            p.add_argument("--pose-dim", type=int, default=0)
+            return p.parse_args()
+        def build():
+            args = parse_args()
+            x = getattr(args, "pose_dim", 0)
+            return x
+    """)
+    v = _scan_python_for_dead_resolvers(script, root)
+    assert v == [], v
+
+
 def test_dead_resolver_satisfied_by_argparse_dest_override(tmp_path: Path) -> None:
     """Explicit argparse dest= creates the Namespace attr even when the flag
     spelling differs from the getattr name."""
@@ -156,6 +177,56 @@ def test_dead_resolver_satisfied_by_argparse_set_defaults(tmp_path: Path) -> Non
     """)
     v = _scan_python_for_dead_resolvers(script, root)
     assert v == [], v
+
+
+def test_dead_resolver_ignores_non_argparse_set_defaults_lookalike(
+    tmp_path: Path,
+) -> None:
+    """A random object's set_defaults() cannot prove argparse creates args.X."""
+    root = _stub_repo(tmp_path)
+    script = root / "scripts" / "bad_set_defaults_lookalike.py"
+    _write(script, """
+        import argparse
+        class Config:
+            def set_defaults(self, **kwargs):
+                pass
+        def parse_args():
+            p = argparse.ArgumentParser()
+            config = Config()
+            config.set_defaults(pose_dim=6)
+            return p.parse_args()
+        def build():
+            args = parse_args()
+            return getattr(args, "pose_dim", None)
+    """)
+    v = _scan_python_for_dead_resolvers(script, root)
+    assert len(v) == 1, v
+    assert "pose_dim" in v[0]
+
+
+def test_dead_resolver_ignores_non_argparse_add_argument_lookalike(
+    tmp_path: Path,
+) -> None:
+    """A builder.add_argument() helper cannot prove argparse creates args.X."""
+    root = _stub_repo(tmp_path)
+    script = root / "scripts" / "bad_add_argument_lookalike.py"
+    _write(script, """
+        import argparse
+        class Builder:
+            def add_argument(self, *args, **kwargs):
+                pass
+        def parse_args():
+            p = argparse.ArgumentParser()
+            builder = Builder()
+            builder.add_argument("--pose-dim")
+            return p.parse_args()
+        def build():
+            args = parse_args()
+            return getattr(args, "pose_dim", None)
+    """)
+    v = _scan_python_for_dead_resolvers(script, root)
+    assert len(v) == 1, v
+    assert "pose_dim" in v[0]
 
 
 def test_dead_resolver_satisfied_by_positional_argparse_attr(tmp_path: Path) -> None:

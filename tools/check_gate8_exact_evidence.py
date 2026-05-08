@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Gate 8 — Exact-evidence gate (frontier-promotion contract).
+"""Gate 8 — Exact-evidence gate (score/promotion custody contract).
 
 Source: ``.omx/research/representation_integration_gap_audit_20260508_codex.md``
 prevent-recurrence gate #8.
 
-Rule: promotion to frontier status requires an existing exact CUDA
+Rule: exact score, promotion, ranking, frontier, kill, or falsification
+claims require an existing exact CUDA
 full-sample artifact with:
 
   * archive bytes / archive size
@@ -23,14 +24,18 @@ Anything else MUST carry its lower evidence grade in the artifact
 ``[byte-anchor]`` / ``[MPS-research-signal]`` / ``[scorer-basin-parity:CPU]``).
 
 Detection (static):
-  Scan canonical evidence ledgers for rows that claim frontier status
-  (any of):
+  Scan canonical evidence ledgers for rows that claim exact score,
+  promotion, ranking, frontier, kill, or falsification status (any of):
     * ``frontier_status=true`` / ``frontier_promoted=true``
+    * ``score_claim=true`` / ``promotion_eligible=true`` /
+      ``rank_or_kill_eligible=true``
+    * exact CUDA evidence markers such as ``[contest-CUDA]`` /
+      ``[exact-CUDA]``
     * ``contest_dispatch_verdict`` containing
-      ``frontier`` / ``promote``
+      ``frontier`` / ``promote`` / ``rank`` / ``kill`` / ``falsified``
     * ``evidence_grade`` containing ``frontier``
 
-  REQUIRE ALL of the following on each frontier row:
+  REQUIRE ALL of the following on each claim row:
     * ``archive_bytes`` (int) or ``empirical_archive_bytes``
     * ``archive_sha256``
     * ``runtime_manifest`` or ``runtime_tree_sha256``
@@ -76,13 +81,138 @@ class Finding:
     reason: str
 
 
+CLAIM_BOOLEAN_FIELDS: tuple[str, ...] = (
+    "frontier_status",
+    "frontier_promoted",
+    "frontier_eligible",
+    "score_claim",
+    "score_claim_valid",
+    "promotion_eligible",
+    "rank_or_kill_eligible",
+    "rank_eligible",
+    "ranking_eligible",
+    "kill_eligible",
+    "falsification_eligible",
+    "kill_claim",
+    "falsification_claim",
+    "family_falsified",
+    "method_family_retired",
+)
+
+SCORE_CLAIM_FIELDS: tuple[str, ...] = (
+    "score_contest_cuda",
+    "contest_cuda_score",
+    "exact_cuda_score",
+    "score_cuda",
+    "auth_eval_score",
+    "empirical_score",
+)
+
+TEXT_CLAIM_FIELDS: tuple[str, ...] = (
+    "contest_dispatch_verdict",
+    "verdict",
+    "promotion_status",
+    "ranking_status",
+    "rank_status",
+    "kill_status",
+    "falsification_status",
+    "measured_config_status",
+    "method_family_status",
+)
+
+EXACT_CUDA_MARKER_FIELDS: tuple[str, ...] = (
+    "evidence_grade",
+    "evidence_marker",
+)
+
+FALSE_MARKERS = {
+    "",
+    "0",
+    "false",
+    "no",
+    "none",
+    "null",
+    "n/a",
+    "not_applicable",
+    "not applicable",
+    "no_score",
+    "no score",
+    "non_claim",
+    "non-claim",
+}
+
+TRUE_MARKERS = {
+    "1",
+    "true",
+    "yes",
+    "claimed",
+    "claim",
+    "eligible",
+    "promoted",
+    "falsified",
+    "retired",
+}
+
+
+def _normalized_text(value: object) -> str:
+    return str(value).strip().lower().replace("_", " ").replace("-", " ")
+
+
+def _truthy_claim_marker(value: object) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int | float):
+        return value != 0
+    if isinstance(value, str):
+        text = _normalized_text(value)
+        if text in FALSE_MARKERS:
+            return False
+        if text in TRUE_MARKERS:
+            return True
+    return False
+
+
+def _has_score_claim_value(value: object) -> bool:
+    if isinstance(value, bool):
+        return False
+    if isinstance(value, int | float):
+        return True
+    if isinstance(value, str):
+        return _normalized_text(value) not in FALSE_MARKERS
+    return False
+
+
+def _has_exact_cuda_marker(value: object) -> bool:
+    text = _normalized_text(value)
+    return "contest cuda" in text or "exact cuda" in text
+
+
+def _has_text_claim_marker(value: object) -> bool:
+    text = _normalized_text(value)
+    return any(
+        marker in text
+        for marker in (
+            "frontier",
+            "promote",
+            "promotion eligible",
+            "rank eligible",
+            "ranking eligible",
+            "kill eligible",
+            "falsification eligible",
+            "falsified",
+            "retired",
+        )
+    )
+
+
 def _claims_frontier(row: dict) -> bool:
-    if row.get("frontier_status") is True:
+    if any(_truthy_claim_marker(row.get(field)) for field in CLAIM_BOOLEAN_FIELDS):
         return True
-    if row.get("frontier_promoted") is True:
+    if any(_has_score_claim_value(row.get(field)) for field in SCORE_CLAIM_FIELDS):
         return True
-    verdict = str(row.get("contest_dispatch_verdict", "")).lower()
-    if "frontier" in verdict or "promote" in verdict:
+    if any(_has_exact_cuda_marker(row.get(field)) for field in EXACT_CUDA_MARKER_FIELDS):
+        return True
+    if any(_has_text_claim_marker(row.get(field)) for field in TEXT_CLAIM_FIELDS):
         return True
     grade = str(row.get("evidence_grade", "")).lower()
     return "frontier" in grade
@@ -238,7 +368,7 @@ def scan(repo_root: Path | None = None) -> list[Finding]:
                     line_number=lineno,
                     technique=str(row.get("technique", "<unknown>")),
                     reason=(
-                        f"frontier-promotion row {detail}. "
+                        f"exact-evidence claim row {detail}. "
                         f"Anything missing requires lowering the evidence "
                         f"grade tag. Gate 8 (exact evidence)."
                     ),

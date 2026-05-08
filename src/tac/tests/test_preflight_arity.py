@@ -6,6 +6,7 @@ forgets a required architectural flag, or a profile is missing a key.
 """
 from __future__ import annotations
 
+import ast
 import re
 import textwrap
 from pathlib import Path
@@ -38,6 +39,43 @@ def _stub_repo(tmp_path: Path) -> Path:
     (tmp_path / "experiments").mkdir()
     (tmp_path / "scripts").mkdir()
     return tmp_path
+
+
+def test_extract_artifact_filenames_skips_ast_when_text_has_no_artifact_suffix(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "producer.py"
+    path.write_text("VALUE = 'ordinary source with no artifact literals'\n")
+
+    class Index:
+        def read_text(self, target: Path) -> str:
+            assert target == path
+            return path.read_text()
+
+        def python_ast(self, target: Path) -> ast.AST:
+            raise AssertionError("artifact-free source should not be AST parsed")
+
+    assert _extract_artifact_filenames(path, source_index=Index()) == set()
+
+
+def test_extract_artifact_filenames_still_parses_when_suffix_is_present(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "producer.py"
+    path.write_text("OUTPUT = 'custom_renderer_blob.bin'\n")
+
+    class Index:
+        def read_text(self, target: Path) -> str:
+            assert target == path
+            return path.read_text()
+
+        def python_ast(self, target: Path) -> ast.AST:
+            assert target == path
+            return ast.parse(path.read_text(), filename=str(path))
+
+    assert _extract_artifact_filenames(path, source_index=Index()) == {
+        "custom_renderer_blob.bin"
+    }
 
 
 # ── _parse_argparse_signature ─────────────────────────────────────────────────

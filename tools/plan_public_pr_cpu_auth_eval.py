@@ -63,6 +63,27 @@ def find_pr_row(rows: list[dict[str, Any]], pr: int) -> dict[str, Any]:
     raise KeyError(f"PR {pr} not found in ledger")
 
 
+def _cpu_only_dual_axis_completion() -> dict[str, Any]:
+    return {
+        "schema": "dual_axis_auth_eval_completion.v1",
+        "required_axes": ["contest_cuda", "contest_cpu"],
+        "represented_axes": ["contest_cpu"],
+        "missing_axes": ["contest_cuda"],
+        "paired_score_artifacts_complete": False,
+        "frontier_or_medal_band_complete": False,
+        "global_priority_eligible": False,
+        "rank_or_kill_eligible": False,
+        "blockers": [
+            "missing_contest_cuda_score_artifact",
+            "cpu_only_plan_cannot_mark_dual_axis_complete",
+        ],
+        "notes": [
+            "This public-PR CPU plan is a single-axis reproduction plan.",
+            "Use tools/plan_dual_device_auth_eval.py with both score artifact JSONs before treating the candidate as paired/complete.",
+        ],
+    }
+
+
 def build_plan(
     *,
     row: dict[str, Any],
@@ -137,6 +158,7 @@ def build_plan(
         "device": "cpu",
         "evidence_semantics": "public_cpu_leaderboard_reproduction_not_cuda_promotion",
         "evidence_grade": "cpu_public_replay",
+        "dual_axis_completion": _cpu_only_dual_axis_completion(),
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,

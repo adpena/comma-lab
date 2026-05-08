@@ -13,6 +13,9 @@ import re
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+CONTEST_UNCOMPRESSED_BYTES = 37_545_489
+SCORE_TOLERANCE = 1e-6
+
 EXACT_CUDA_POSITIVE_TOKENS = frozenset(
     (
         "contest-cuda",
@@ -130,6 +133,20 @@ def _text(row: Mapping[str, Any], keys: Iterable[str]) -> str:
     return " ".join(str(row.get(key) or "") for key in keys).strip().lower()
 
 
+def _source_evidence_labels(value: Any) -> str:
+    """Return bracketed evidence labels from a free-form source string.
+
+    ``source`` often contains paths, URLs, and filenames. Those are useful
+    custody pointers but too noisy for semantic proxy/negative marker scans:
+    e.g. a valid exact-CUDA artifact may live under a directory containing
+    ``predicted``. Bracketed prefixes such as ``[MPS-research-signal]`` remain
+    intentional evidence labels and are safe to include.
+    """
+
+    labels = re.findall(r"\[([^\[\]]{1,96})\]", str(value or ""))
+    return " ".join(labels).strip().lower()
+
+
 def _tokens(value: Any) -> list[str]:
     return re.findall(r"[a-z0-9_+.-]+", str(value or "").lower())
 
@@ -244,6 +261,16 @@ def _positive_int(row: Mapping[str, Any], keys: Iterable[str]) -> bool:
     return False
 
 
+def _sample_count_present(row: Mapping[str, Any]) -> bool:
+    for key in ("sample_count", "n_samples", "num_samples"):
+        value = row.get(key)
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, int) and value >= 600:
+            return True
+    return False
+
+
 def _finite_numeric_present(row: Mapping[str, Any], keys: Iterable[str]) -> bool:
     for key in keys:
         value = row.get(key)
@@ -252,6 +279,90 @@ def _finite_numeric_present(row: Mapping[str, Any], keys: Iterable[str]) -> bool
         if isinstance(value, int | float) and math.isfinite(float(value)):
             return True
     return False
+
+
+def _component_present(row: Mapping[str, Any], component: str) -> bool:
+    field_groups = {
+        "seg": (
+            "seg_distortion",
+            "segnet_distortion",
+            "avg_segnet_dist",
+            "empirical_d_seg",
+            "d_seg",
+        ),
+        "pose": (
+            "pose_distortion",
+            "posenet_distortion",
+            "avg_posenet_dist",
+            "empirical_d_pose",
+            "d_pose",
+        ),
+        "rate": (
+            "rate_term",
+            "rate",
+            "compression_rate",
+            "archive_rate_ratio",
+        ),
+    }
+    if _finite_numeric_present(row, field_groups[component]):
+        return True
+    components = row.get("components")
+    if isinstance(components, Mapping):
+        value = components.get(component)
+        return (
+            not isinstance(value, bool)
+            and isinstance(value, int | float)
+            and math.isfinite(float(value))
+        )
+    return False
+
+
+def _finite_numeric_value(row: Mapping[str, Any], keys: Iterable[str]) -> float | None:
+    for key in keys:
+        value = row.get(key)
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, int | float) and math.isfinite(float(value)):
+            return float(value)
+    return None
+
+
+def _component_value(row: Mapping[str, Any], component: str) -> float | None:
+    field_groups = {
+        "seg": (
+            "seg_distortion",
+            "segnet_distortion",
+            "avg_segnet_dist",
+            "empirical_d_seg",
+            "d_seg",
+        ),
+        "pose": (
+            "pose_distortion",
+            "posenet_distortion",
+            "avg_posenet_dist",
+            "empirical_d_pose",
+            "d_pose",
+        ),
+        "rate": (
+            "rate_term",
+            "rate",
+            "compression_rate",
+            "archive_rate_ratio",
+        ),
+    }
+    value = _finite_numeric_value(row, field_groups[component])
+    if value is not None:
+        return value
+    components = row.get("components")
+    if isinstance(components, Mapping):
+        comp = components.get(component)
+        if (
+            not isinstance(comp, bool)
+            and isinstance(comp, int | float)
+            and math.isfinite(float(comp))
+        ):
+            return float(comp)
+    return None
 
 
 def _dispatch_blockers(row: Mapping[str, Any]) -> list[str]:
@@ -265,6 +376,16 @@ def _dispatch_blockers(row: Mapping[str, Any]) -> list[str]:
     return [str(value)] if str(value) else []
 
 
+def _nonempty_field(row: Mapping[str, Any], keys: Iterable[str]) -> bool:
+    for key in keys:
+        value = row.get(key)
+        if isinstance(value, str) and value.strip():
+            return True
+        if hasattr(value, "__fspath__"):
+            return True
+    return False
+
+
 def promotable_exact_cuda_evidence_blockers(row: Mapping[str, Any]) -> list[str]:
     """Return blockers that prevent a row from being active score evidence.
 
@@ -275,18 +396,25 @@ def promotable_exact_cuda_evidence_blockers(row: Mapping[str, Any]) -> list[str]
     """
 
     blockers: list[str] = _schema_blockers(row)
-    text = _text(
+    semantic_text = _text(
         row,
         (
             "evidence_grade",
             "evidence_marker",
             "evidence_semantics",
-            "source",
             "hardware",
             "device_axis",
             "contest_dispatch_verdict",
             "measured_config_status",
         ),
+    )
+    text = " ".join(
+        part
+        for part in (
+            semantic_text,
+            _source_evidence_labels(row.get("source")),
+        )
+        if part
     )
     grade = str(row.get("evidence_grade") or "").strip().lower()
 
@@ -321,9 +449,85 @@ def promotable_exact_cuda_evidence_blockers(row: Mapping[str, Any]) -> list[str]
         ("score_contest_cuda", "contest_cuda_score", "canonical_score_contest_cuda"),
     ):
         blockers.append("contest_cuda_score_required")
+    if not _sample_count_present(row):
+        blockers.append("sample_count_ge_600_required")
+    if not _component_present(row, "seg"):
+        blockers.append("seg_component_required")
+    if not _component_present(row, "pose"):
+        blockers.append("pose_component_required")
+    if not _component_present(row, "rate"):
+        blockers.append("rate_component_required")
+    if not _finite_numeric_present(
+        row,
+        (
+            "recomputed_score",
+            "score_recomputed_from_components",
+            "canonical_score_recomputed",
+            "contest_cuda_score_recomputed",
+        ),
+    ):
+        blockers.append("recomputed_score_required")
+    if not _nonempty_field(row, ("exact_eval_command", "eval_command")):
+        blockers.append("exact_eval_command_required")
+    if not _nonempty_field(row, ("hardware", "runner", "hardware_class")):
+        blockers.append("hardware_required")
+    if not _nonempty_field(row, ("log_path", "auth_eval_log", "log_file")):
+        blockers.append("log_path_required")
+    if not _nonempty_field(
+        row,
+        (
+            "dispatch_claim_status",
+            "dispatch_claim_latest_status",
+            "dispatch_status",
+        ),
+    ):
+        blockers.append("dispatch_claim_status_required")
 
     if _dispatch_blockers(row):
         blockers.append("source_dispatch_blockers_present")
+
+    archive_bytes = _finite_numeric_value(
+        row, ("empirical_archive_bytes", "archive_bytes")
+    )
+    seg = _component_value(row, "seg")
+    pose = _component_value(row, "pose")
+    recomputed = _finite_numeric_value(
+        row,
+        (
+            "recomputed_score",
+            "score_recomputed_from_components",
+            "canonical_score_recomputed",
+            "contest_cuda_score_recomputed",
+        ),
+    )
+    if archive_bytes is not None and seg is not None and pose is not None:
+        expected_rate_term = 25.0 * archive_bytes / CONTEST_UNCOMPRESSED_BYTES
+        rate_term = _finite_numeric_value(row, ("rate_term", "score_rate_term"))
+        if (
+            rate_term is not None
+            and abs(rate_term - expected_rate_term) > SCORE_TOLERANCE
+        ):
+            blockers.append("rate_term_formula_mismatch")
+        expected_score = 100.0 * seg + math.sqrt(10.0 * pose) + expected_rate_term
+        if (
+            recomputed is not None
+            and abs(recomputed - expected_score) > SCORE_TOLERANCE
+        ):
+            blockers.append("recomputed_score_formula_mismatch")
+        claimed_cuda = _finite_numeric_value(
+            row,
+            (
+                "score_contest_cuda",
+                "contest_cuda_score",
+                "canonical_score_contest_cuda",
+            ),
+        )
+        if (
+            claimed_cuda is not None
+            and recomputed is not None
+            and abs(claimed_cuda - recomputed) > SCORE_TOLERANCE
+        ):
+            blockers.append("contest_cuda_score_recomputed_score_mismatch")
 
     return _ordered_unique(blockers)
 

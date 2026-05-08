@@ -140,6 +140,11 @@ def _is_generated_custody_path(posix: str) -> bool:
     return _is_under_root(posix, GENERATED_ROOTS)
 
 
+def _is_generated_custody_prefix(posix: str) -> bool:
+    stripped = posix.rstrip("/")
+    return any(stripped == root or stripped.startswith(root + "/") for root in GENERATED_ROOTS)
+
+
 def _is_source_like_path(path: str) -> bool:
     posix = path.replace("\\", "/")
     if not _has_source_suffix(posix):
@@ -230,6 +235,11 @@ def load_disposition_manifest(path: Path | None) -> dict[str, dict[str, Any]]:
             )
         if path_kind == "prefix" and not relpath.endswith("/"):
             raise ValueError(f"{path}: entries[{index}].path must end in '/' when path_kind is prefix")
+        if path_kind == "prefix" and not _is_generated_custody_prefix(relpath):
+            raise ValueError(
+                f"{path}: entries[{index}].path_kind=prefix is only valid "
+                f"under generated custody roots {GENERATED_ROOTS}; got {relpath!r}"
+            )
         if disposition not in VALID_DISPOSITIONS:
             raise ValueError(
                 f"{path}: entries[{index}].disposition={disposition!r}; "
@@ -255,12 +265,7 @@ def load_disposition_manifest(path: Path | None) -> dict[str, dict[str, Any]]:
 
 
 def _is_known_audit_prefix(prefix: str) -> bool:
-    stripped = prefix.rstrip("/")
-    roots = SOURCE_ROOTS + GENERATED_ROOTS
-    return any(
-        stripped == root or stripped.startswith(root + "/") or root.startswith(stripped + "/")
-        for root in roots
-    )
+    return _is_generated_custody_prefix(prefix)
 
 
 def _git_status(repo_root: Path) -> str:
@@ -288,6 +293,37 @@ def _git_tracked_files(repo_root: Path) -> set[str]:
         stdout = proc.stdout.decode(errors="replace").strip()
         raise RuntimeError(stderr or stdout or "git ls-files failed")
     return {path for path in proc.stdout.decode().split("\0") if path}
+
+
+def _generated_source_filesystem_records(
+    repo_root: Path,
+    *,
+    tracked_paths: set[str],
+) -> list[UntrackedRecord]:
+    """Return source-like files under ignored generated custody roots.
+
+    ``git status --untracked-files=all`` omits ignored files, which is exactly
+    where many raw custody/runtime packets live. A direct bounded walk over
+    generated roots keeps those source-like artifacts visible to the
+    disposition and runtime-source-baseline gates.
+    """
+
+    records: list[UntrackedRecord] = []
+    for root in GENERATED_ROOTS:
+        root_path = repo_root / root
+        if not root_path.exists():
+            continue
+        for path in root_path.rglob("*"):
+            if not path.is_file():
+                continue
+            rel = repo_relative(path, repo_root)
+            posix = rel.replace("\\", "/")
+            if posix in tracked_paths:
+                continue
+            record = classify_untracked_path(posix)
+            if record is not None:
+                records.append(record)
+    return records
 
 
 def find_invalid_disposition_paths(
@@ -439,15 +475,23 @@ def audit_untracked_source_artifacts(
     status_text = _git_status(repo_root)
     records: list[UntrackedRecord] = []
     all_status_records = parse_git_status_records(status_text)
+    tracked_files = _git_tracked_files(repo_root)
     for _status, path in parse_git_status_porcelain(status_text):
         record = classify_untracked_path(path)
         if record is not None:
             records.append(record)
+    by_path = {record.path: record for record in records}
+    for record in _generated_source_filesystem_records(
+        repo_root,
+        tracked_paths=tracked_files,
+    ):
+        by_path.setdefault(record.path, record)
+    records = sorted(by_path.values(), key=lambda item: item.path)
 
     untracked_paths = {record.path for record in records}
     tracked_source_like_paths = {
         path.replace("\\", "/")
-        for path in _git_tracked_files(repo_root)
+        for path in tracked_files
         if _is_source_like_path(path)
     }
     source_like_deletes = sorted(
@@ -527,11 +571,18 @@ def audit_untracked_source_artifacts(
 
 
 def write_disposition_template(repo_root: Path, output_path: Path) -> None:
-    records = [
-        record
+    tracked_files = _git_tracked_files(repo_root)
+    by_path = {
+        record.path: record
         for _status, path in parse_git_status_porcelain(_git_status(repo_root))
         if (record := classify_untracked_path(path)) is not None
-    ]
+    }
+    for record in _generated_source_filesystem_records(
+        repo_root,
+        tracked_paths=tracked_files,
+    ):
+        by_path.setdefault(record.path, record)
+    records = sorted(by_path.values(), key=lambda item: item.path)
     payload = {
         "schema": "pact_untracked_source_dispositions_v1",
         "policy": "Each entry must be track, recovery_queue, ignore_private, or ignore_rebuildable.",

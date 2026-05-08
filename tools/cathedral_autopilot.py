@@ -442,6 +442,14 @@ class TechniqueEvidence:
     score_claim: bool | None = None
     score_contest_cpu: float | None = None
     score_contest_cuda: float | None = None
+    sample_count: int | None = None
+    seg_distortion: float | None = None
+    pose_distortion: float | None = None
+    rate_term: float | None = None
+    recomputed_score: float | None = None
+    exact_eval_command: str = ""
+    log_path: str = ""
+    dispatch_claim_status: str = ""
     promotion_eligible: bool | None = None
     rank_or_kill_eligible: bool | None = None
     ready_for_exact_eval_dispatch: bool | None = None
@@ -489,40 +497,100 @@ def _evidence_dispatch_blockers(value: Any) -> list[str]:
     return [f"invalid_evidence_schema_dispatch_blockers:{type(value).__name__}"]
 
 
+def _first_finite_float(row: dict[str, Any], *keys: str) -> float | None:
+    for key in keys:
+        if row.get(key) is None:
+            continue
+        return float(row[key])
+    return None
+
+
+def _first_int(row: dict[str, Any], *keys: str) -> int | None:
+    for key in keys:
+        value = row.get(key)
+        if value is None or isinstance(value, bool):
+            continue
+        return int(value)
+    return None
+
+
+def _first_text(row: dict[str, Any], *keys: str) -> str:
+    for key in keys:
+        value = row.get(key)
+        if value is None:
+            continue
+        text = str(value)
+        if text:
+            return text
+    return ""
+
+
+_LAST_EVIDENCE_LOAD_DIAGNOSTICS: list[dict[str, Any]] = []
+
+
 def _load_evidence(path: Path) -> list[TechniqueEvidence]:
     """Read JSONL or JSON-array of evidence rows. Skips malformed rows."""
+    global _LAST_EVIDENCE_LOAD_DIAGNOSTICS
+    _LAST_EVIDENCE_LOAD_DIAGNOSTICS = []
     text = path.read_text(encoding="utf-8").strip()
     if not text:
         return []
-    rows: list[Any]
+    rows: list[tuple[int, Any]] = []
     if text.startswith("["):
-        rows = json.loads(text)
+        try:
+            payload = json.loads(text)
+        except json.JSONDecodeError as exc:
+            _LAST_EVIDENCE_LOAD_DIAGNOSTICS.append({
+                "line_number": 1,
+                "reason": f"json_parse_error:{exc}",
+            })
+            return []
+        if not isinstance(payload, list):
+            _LAST_EVIDENCE_LOAD_DIAGNOSTICS.append({
+                "line_number": 1,
+                "reason": "json_payload_not_array",
+            })
+            return []
+        rows = [(idx + 1, item) for idx, item in enumerate(payload)]
     else:
-        rows = [json.loads(line) for line in text.splitlines() if line.strip()]
+        for line_number, line in enumerate(text.splitlines(), 1):
+            if not line.strip():
+                continue
+            try:
+                rows.append((line_number, json.loads(line)))
+            except json.JSONDecodeError as exc:
+                _LAST_EVIDENCE_LOAD_DIAGNOSTICS.append({
+                    "line_number": line_number,
+                    "reason": f"json_parse_error:{exc}",
+                })
     out: list[TechniqueEvidence] = []
-    for r in rows:
+    for line_number, r in rows:
         if not isinstance(r, dict) or "technique" not in r:
+            _LAST_EVIDENCE_LOAD_DIAGNOSTICS.append({
+                "line_number": line_number,
+                "reason": "row_not_object_or_missing_technique",
+            })
             continue
-        schema_blockers: list[str] = []
-        dispatch_blockers = _evidence_dispatch_blockers(r.get("dispatch_blockers"))
-        out.append(TechniqueEvidence(
-            technique=str(r["technique"]),
-            empirical_archive_bytes=(
-                int(r["empirical_archive_bytes"])
-                if r.get("empirical_archive_bytes") is not None else None
-            ),
-            empirical_score=(
-                float(r["empirical_score"])
-                if r.get("empirical_score") is not None else None
-            ),
-            empirical_d_seg=(
-                float(r["empirical_d_seg"])
-                if r.get("empirical_d_seg") is not None else None
-            ),
-            empirical_d_pose=(
-                float(r["empirical_d_pose"])
-                if r.get("empirical_d_pose") is not None else None
-            ),
+        try:
+            schema_blockers: list[str] = []
+            dispatch_blockers = _evidence_dispatch_blockers(r.get("dispatch_blockers"))
+            out.append(TechniqueEvidence(
+                technique=str(r["technique"]),
+                empirical_archive_bytes=_first_int(
+                    r, "empirical_archive_bytes", "archive_bytes"
+                ),
+                empirical_score=(
+                    float(r["empirical_score"])
+                    if r.get("empirical_score") is not None else None
+                ),
+                empirical_d_seg=(
+                    float(r["empirical_d_seg"])
+                    if r.get("empirical_d_seg") is not None else None
+                ),
+                empirical_d_pose=(
+                    float(r["empirical_d_pose"])
+                    if r.get("empirical_d_pose") is not None else None
+                ),
             evidence_grade=str(r.get("evidence_grade", "")),
             evidence_marker=str(r.get("evidence_marker", "")),
             evidence_semantics=str(r.get("evidence_semantics", "")),
@@ -568,12 +636,45 @@ def _load_evidence(path: Path) -> list[TechniqueEvidence]:
             ),
             score_claim=_strict_json_bool(r, "score_claim", schema_blockers),
             score_contest_cpu=(
-                float(r["score_contest_cpu"])
-                if r.get("score_contest_cpu") is not None else None
+                _first_finite_float(
+                    r,
+                    "score_contest_cpu",
+                    "contest_cpu_score",
+                    "canonical_score_contest_cpu",
+                )
             ),
             score_contest_cuda=(
-                float(r["score_contest_cuda"])
-                if r.get("score_contest_cuda") is not None else None
+                _first_finite_float(
+                    r,
+                    "score_contest_cuda",
+                    "contest_cuda_score",
+                    "canonical_score_contest_cuda",
+                )
+            ),
+            sample_count=_first_int(r, "sample_count", "n_samples", "num_samples"),
+            seg_distortion=_first_finite_float(
+                r, "seg_distortion", "segnet_distortion", "avg_segnet_dist", "d_seg"
+            ),
+            pose_distortion=_first_finite_float(
+                r, "pose_distortion", "posenet_distortion", "avg_posenet_dist", "d_pose"
+            ),
+            rate_term=_first_finite_float(
+                r, "rate_term", "rate", "compression_rate", "archive_rate_ratio"
+            ),
+            recomputed_score=_first_finite_float(
+                r,
+                "recomputed_score",
+                "score_recomputed_from_components",
+                "canonical_score_recomputed",
+                "contest_cuda_score_recomputed",
+            ),
+            exact_eval_command=_first_text(r, "exact_eval_command", "eval_command"),
+            log_path=_first_text(r, "log_path", "auth_eval_log", "log_file"),
+            dispatch_claim_status=_first_text(
+                r,
+                "dispatch_claim_status",
+                "dispatch_claim_latest_status",
+                "dispatch_status",
             ),
             promotion_eligible=_strict_json_bool(
                 r, "promotion_eligible", schema_blockers
@@ -632,7 +733,13 @@ def _load_evidence(path: Path) -> list[TechniqueEvidence]:
             ),
             source=str(r.get("source", "")),
             timestamp=str(r.get("timestamp", "")),
-        ))
+            ))
+        except (TypeError, ValueError) as exc:
+            _LAST_EVIDENCE_LOAD_DIAGNOSTICS.append({
+                "line_number": line_number,
+                "technique": str(r.get("technique", "")),
+                "reason": f"row_cast_error:{type(exc).__name__}:{exc}",
+            })
     return out
 
 
@@ -807,6 +914,49 @@ def _device_axis_for_evidence(evidence: TechniqueEvidence) -> str:
     return ""
 
 
+def _device_axis_evidence_blockers(
+    evidence: TechniqueEvidence,
+    axis: str,
+) -> list[str]:
+    blockers: list[str] = []
+    if not evidence.archive_sha256:
+        blockers.append("archive_sha256_required")
+    if not evidence.runtime_tree_sha256:
+        blockers.append("runtime_tree_sha256_required")
+    if evidence.sample_count is None or evidence.sample_count < 600:
+        blockers.append("sample_count_ge_600_required")
+    if not evidence.hardware:
+        blockers.append("hardware_required")
+    if not evidence.exact_eval_command:
+        blockers.append("exact_eval_command_required")
+    if not evidence.log_path:
+        blockers.append("log_path_required")
+    if evidence.empirical_archive_bytes is None or evidence.empirical_archive_bytes <= 0:
+        blockers.append("archive_bytes_required")
+    if evidence.empirical_d_seg is None:
+        blockers.append("seg_component_required")
+    if evidence.empirical_d_pose is None:
+        blockers.append("pose_component_required")
+    grade = evidence.evidence_grade.lower()
+    if axis == "contest_cpu":
+        if evidence.score_contest_cpu is None and evidence.empirical_score is None:
+            blockers.append("contest_cpu_score_required")
+        if "contest-cpu" not in grade and "contest_cpu" not in grade:
+            blockers.append("contest_cpu_grade_required")
+    elif axis == "contest_cuda":
+        if evidence.score_contest_cuda is None and evidence.empirical_score is None:
+            blockers.append("contest_cuda_score_required")
+        if not (
+            "contest-cuda" in grade
+            or "contest_cuda" in grade
+            or "exact-cuda" in grade
+            or "exact_cuda" in grade
+            or grade.strip() in {"a", "a++"}
+        ):
+            blockers.append("contest_cuda_grade_required")
+    return blockers
+
+
 def summarize_device_axis_evidence(
     evidence: list[TechniqueEvidence],
 ) -> dict[str, Any]:
@@ -834,6 +984,25 @@ def summarize_device_axis_evidence(
             advisory_count += 1
         key_ready = bool(row.archive_sha256 and row.runtime_tree_sha256)
         key = (row.technique, row.archive_sha256, row.runtime_tree_sha256)
+        axis_blockers = (
+            _device_axis_evidence_blockers(row, axis)
+            if axis in {"contest_cpu", "contest_cuda"}
+            else []
+        )
+        if axis in {"contest_cpu", "contest_cuda"} and axis_blockers:
+            unpaired.append(
+                {
+                    "technique": row.technique,
+                    "device_axis": axis,
+                    "archive_sha256": row.archive_sha256,
+                    "runtime_tree_sha256": row.runtime_tree_sha256,
+                    "evidence_grade": row.evidence_grade,
+                    "source": row.source,
+                    "reason": "incomplete_device_axis_evidence",
+                    "blockers": axis_blockers,
+                }
+            )
+            continue
         if axis in {"contest_cpu", "contest_cuda"} and key_ready:
             bucket = groups.setdefault(
                 key,
@@ -1125,6 +1294,8 @@ def summarize_evidence_semantics(
     unknown = sorted(unknown_by_name.values(), key=lambda item: item["technique"])
     return {
         "n_evidence_rows": len(ev),
+        "rejected_evidence_row_count": len(_LAST_EVIDENCE_LOAD_DIAGNOSTICS),
+        "evidence_load_diagnostics": list(_LAST_EVIDENCE_LOAD_DIAGNOSTICS),
         "device_axis_report": summarize_device_axis_evidence(ev),
         "unknown_evidence_row_count": sum(item["n_rows"] for item in unknown),
         "unknown_evidence_technique_count": len(unknown),
@@ -1319,7 +1490,20 @@ def update_catalog_from_evidence(
         exact_negative_obs = [
             e for e in obs if _is_exact_negative_or_retired_evidence(e)
         ]
-        if exact_negative_obs:
+        promotable_obs = [
+            e for e in obs if _is_explicitly_promotable_evidence(e)
+        ]
+        broad_exact_negative_obs = [
+            e for e in exact_negative_obs
+            if e.family_falsified is True or e.method_family_retired is True
+        ]
+        blocking_exact_negative_obs = (
+            broad_exact_negative_obs
+            if broad_exact_negative_obs
+            else ([] if promotable_obs else exact_negative_obs)
+        )
+        if blocking_exact_negative_obs:
+            exact_negative_obs = blocking_exact_negative_obs
             supporting_non_promotable_obs = [
                 e for e in obs
                 if (
@@ -1395,42 +1579,83 @@ def update_catalog_from_evidence(
             new_t["dispatch_blockers"] = sorted(set(blockers))
             out.append(new_t)
             continue
+        rankable_obs = promotable_obs if promotable_obs else obs
         empirical_bytes = [
-            e.empirical_archive_bytes for e in obs
+            e.empirical_archive_bytes for e in rankable_obs
             if e.empirical_archive_bytes is not None
         ]
         if empirical_bytes:
             empirical_bytes.sort()
             n = len(empirical_bytes)
             median = empirical_bytes[n // 2]
-            explicit_promotable = all(
-                _is_explicitly_promotable_evidence(e) for e in obs
+            explicit_promotable = bool(promotable_obs) and all(
+                _is_explicitly_promotable_evidence(e) for e in rankable_obs
             )
             blockers = sorted({
                 blocker
-                for e in obs
+                for e in rankable_obs
                 for blocker in e.dispatch_blockers
             })
             promotability_blockers = _ordered_unique([
                 blocker
-                for e in obs
+                for e in rankable_obs
                 if not _is_explicitly_promotable_evidence(e)
                 for blocker in _promotability_blockers(e)
             ])
+            rankable_mismatches: list[dict[str, Any]] = []
+            for e in rankable_obs:
+                reasons = detect_evidence_model_spec_mismatch(spec, e)
+                if reasons:
+                    rankable_mismatches.append({
+                        "source": e.source,
+                        "timestamp": e.timestamp,
+                        "reasons": reasons,
+                    })
             new_t["catalog_prior_bytes"] = t["predicted_archive_bytes"]
             new_t["predicted_archive_bytes"] = median
             new_t["empirical_anchor_n"] = n
             new_t["empirical_anchor_bytes"] = median
-            new_t["empirical_anchor_sources"] = [e.source for e in obs if e.source]
+            new_t["empirical_anchor_sources"] = [
+                e.source for e in rankable_obs if e.source
+            ]
             new_t["empirical_anchor_evidence_semantics"] = sorted({
-                e.evidence_semantics for e in obs if e.evidence_semantics
+                e.evidence_semantics for e in rankable_obs if e.evidence_semantics
             })
-            if explicit_promotable and not per_obs_mismatches:
+            supporting_non_promotable_obs = [
+                e for e in obs
+                if (
+                    e not in rankable_obs
+                    and not _is_exact_negative_or_retired_evidence(e)
+                )
+            ]
+            if supporting_non_promotable_obs:
+                new_t["supporting_non_promotable_evidence_n"] = len(
+                    supporting_non_promotable_obs
+                )
+                new_t["supporting_non_promotable_sources"] = [
+                    e.source for e in supporting_non_promotable_obs if e.source
+                ]
+            if exact_negative_obs:
+                new_t["retired_measured_config_evidence_n"] = len(exact_negative_obs)
+                new_t["retired_measured_config_sources"] = [
+                    e.source for e in exact_negative_obs if e.source
+                ]
+                new_t["retired_measured_config_statuses"] = _ordered_unique([
+                    e.measured_config_status for e in exact_negative_obs
+                ])
+                new_t["retired_measured_config_reactivation_criteria"] = (
+                    _ordered_unique([
+                        criterion
+                        for e in exact_negative_obs
+                        for criterion in e.reactivation_criteria
+                    ])
+                )
+            if explicit_promotable and not rankable_mismatches:
                 new_t["evidence_grade"] = f"[empirical-anchor-N{n}]"
                 new_t["empirical_anchor_promotable"] = True
             else:
                 grade_suffix = "; planning-only"
-                if per_obs_mismatches:
+                if rankable_mismatches:
                     grade_suffix = "; planning-only; model_spec_mismatch"
                 new_t["evidence_grade"] = (
                     f"[empirical-anchor-N{n}{grade_suffix}]"

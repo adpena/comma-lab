@@ -12,7 +12,12 @@
       "disposition": "ignore_private",
       "note": "prefix: local dispatch/provider state is private custody; canonical signal must be summarized into .omx/research before promotion.",
       "path": ".omx/state/",
-      "path_kind": "prefix"
+      "path_kind": "prefix",
+      "runtime_source_baseline": {
+        "algorithm": "pact_runtime_source_set_v1",
+        "count": 24,
+        "sha256": "e43b0c06c8bbe8bf960c16738c62b603e59d4774ccd122253d6fe63b69f6b485"
+      }
     },
     {
       "classification": "generated_custody_source_untracked",
@@ -22,8 +27,8 @@
       "path_kind": "prefix",
       "runtime_source_baseline": {
         "algorithm": "pact_runtime_source_set_v1",
-        "count": 81,
-        "sha256": "b31fd76d44c800135e2a5b28308a49d15a3a75e746e6b829ae81eb0ceab54223"
+        "count": 10502,
+        "sha256": "2ded6650c4e60e958eacbbd76ea3f8e5c112822bffcd7d31194a6efaf5cf71ef"
       }
     },
     {
@@ -38,7 +43,12 @@
       "disposition": "ignore_private",
       "note": "prefix: raw reports may contain provider/local custody; promote sanitized summaries into reports or .omx/research only.",
       "path": "reports/raw/",
-      "path_kind": "prefix"
+      "path_kind": "prefix",
+      "runtime_source_baseline": {
+        "algorithm": "pact_runtime_source_set_v1",
+        "count": 55,
+        "sha256": "df570e92f6f92f657fd4448dc0ce2a9b22d91cf727b760370f575a1d5382c74b"
+      }
     },
     {
       "classification": "generated_custody_source_untracked",
@@ -1282,9 +1292,75 @@
       "disposition": "track",
       "note": "track: regression tests for the fail-closed evaluator drift matrix diagnostic harness.",
       "path": "src/tac/tests/test_probe_eval_drift_matrix.py"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 extreme-rigor Track 1 council ledger; no raw provider state.",
+      "path": ".omx/research/grand_council_extreme_rigor_track_1_20260508.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 recursive adversarial Track 1 review log; no raw provider state.",
+      "path": ".omx/research/track_1_recursive_adversarial_review_20260508.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable PR107 CPU lossy-coarsening candidate matrix; score_claim=false and fail-closed blockers preserved.",
+      "path": ".omx/research/pr107_cpu_lossy_coarsening_candidate_matrix_20260508_codex.json"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression tests for canonical auth-eval score-axis parsing.",
+      "path": "src/tac/tests/test_auth_eval_records.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression tests for the Phase A Track 1 dispatch wrapper lane-claim contract.",
+      "path": "src/tac/tests/test_dispatch_phase_a_track_1_ablations.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression tests for meta-Lagrangian rank-axis metadata custody.",
+      "path": "src/tac/tests/test_cathedral_autopilot_meta_lagrangian_bridge.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression tests preventing mixed CPU/CUDA/advisory dashboard ranking.",
+      "path": "src/tac/tests/test_score_dashboard_dual_axis.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression tests for the PR107 CPU lossy-coarsening candidate matrix trust contract.",
+      "path": "tests/test_pr107_cpu_lossy_candidate_matrix.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible PR107 CPU lossy-coarsening candidate matrix builder.",
+      "path": "tools/build_pr107_cpu_lossy_candidate_matrix.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible Phase A Track 1 ablation staging wrapper with dry-run lane-claim validation.",
+      "path": "tools/dispatch_phase_a_track_1_ablations.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible Track 1 MDL lower-bound calculator for co-designed substrate planning.",
+      "path": "tools/mdl_lower_bound_calculator.py"
     }
   ],
   "policy": "Every source-like untracked path must be track, recovery_queue, ignore_private, or ignore_rebuildable with rationale.",
-  "reviewed_at_utc": "2026-05-08T15:11:00Z",
+  "reviewed_at_utc": "2026-05-08T16:10:00Z",
   "schema": "pact_untracked_source_dispositions_v1"
 }

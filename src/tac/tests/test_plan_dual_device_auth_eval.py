@@ -20,6 +20,45 @@ def _load_tool():
     return mod
 
 
+def _write_score_artifact(
+    path: Path,
+    *,
+    device: str,
+    archive_sha256: str,
+    archive_bytes: int,
+    runtime_tree_sha256: str = "runtime-tree-fixture",
+) -> None:
+    payload = {
+        "canonical_score": 0.2 if device == "cpu" else 0.23,
+        "avg_segnet_dist": 0.0005,
+        "avg_posenet_dist": 0.00004,
+        "archive_sha256": archive_sha256,
+        "archive_size_bytes": archive_bytes,
+        "device": device,
+        "n_samples": 600,
+        "runtime_tree_sha256": runtime_tree_sha256,
+    }
+    if device == "cpu":
+        payload.update(
+            {
+                "evidence_grade": "contest-CPU-1to1",
+                "promotion_eligible": False,
+                "score_claim_valid": False,
+                "rank_or_kill_eligible": False,
+            }
+        )
+    else:
+        payload.update(
+            {
+                "evidence_grade": "A++",
+                "gpu_t4_match": True,
+                "promotion_eligible": True,
+                "score_claim_valid": True,
+            }
+        )
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
 def test_dual_plan_emits_cpu_and_cuda_commands_for_same_archive(tmp_path: Path) -> None:
     mod = _load_tool()
     archive = tmp_path / "archive.zip"
@@ -53,6 +92,213 @@ def test_dual_plan_emits_cpu_and_cuda_commands_for_same_archive(tmp_path: Path) 
         assert command[command.index("--device") + 1] == device
     assert plan["evals"]["cuda"]["promotion_eligible_from_this_axis"] is True
     assert plan["evals"]["cpu"]["promotion_eligible_from_this_axis"] is False
+    completion = plan["dual_axis_completion"]
+    assert completion["paired_score_artifacts_complete"] is False
+    assert completion["global_priority_eligible"] is False
+    assert set(completion["blockers"]) == {
+        "missing_contest_cuda_score_artifact",
+        "missing_contest_cpu_score_artifact",
+    }
+
+
+def test_dual_plan_single_axis_artifact_stays_incomplete(tmp_path: Path) -> None:
+    mod = _load_tool()
+    archive = tmp_path / "archive.zip"
+    with ZipFile(archive, "w") as zf:
+        zf.writestr("x", b"payload")
+    archive_sha = mod._sha256(archive)
+    cpu_json = tmp_path / "cpu.json"
+    _write_score_artifact(
+        cpu_json,
+        device="cpu",
+        archive_sha256=archive_sha,
+        archive_bytes=archive.stat().st_size,
+    )
+
+    plan = mod.build_plan(
+        archive=archive,
+        inflate_sh=tmp_path / "inflate.sh",
+        label="fixture",
+        repo_root=Path("."),
+        run_id="fixture-run",
+        output_root=Path("experiments/results/dual_device_auth_eval"),
+        upstream_dir=Path("upstream"),
+        video_names_file=Path("upstream/public_test_video_names.txt"),
+        inflate_timeout=1800,
+        evaluate_timeout=1800,
+        cpu_artifact_json=cpu_json,
+    )
+
+    completion = plan["dual_axis_completion"]
+    assert completion["artifacts"]["cpu"]["valid_for_axis"] is True
+    assert completion["paired_score_artifacts_complete"] is False
+    assert completion["blockers"] == [
+        "missing_contest_cuda_score_artifact",
+    ]
+    assert completion["frontier_or_medal_band_complete"] is False
+
+
+def test_dual_plan_marks_pair_complete_only_with_matching_cpu_and_cuda_artifacts(
+    tmp_path: Path,
+) -> None:
+    mod = _load_tool()
+    archive = tmp_path / "archive.zip"
+    with ZipFile(archive, "w") as zf:
+        zf.writestr("x", b"payload")
+    archive_sha = mod._sha256(archive)
+    archive_bytes = archive.stat().st_size
+    cpu_json = tmp_path / "cpu.json"
+    cuda_json = tmp_path / "cuda.json"
+    _write_score_artifact(
+        cpu_json,
+        device="cpu",
+        archive_sha256=archive_sha,
+        archive_bytes=archive_bytes,
+    )
+    _write_score_artifact(
+        cuda_json,
+        device="cuda",
+        archive_sha256=archive_sha,
+        archive_bytes=archive_bytes,
+    )
+
+    plan = mod.build_plan(
+        archive=archive,
+        inflate_sh=tmp_path / "inflate.sh",
+        label="fixture",
+        repo_root=Path("."),
+        run_id="fixture-run",
+        output_root=Path("experiments/results/dual_device_auth_eval"),
+        upstream_dir=Path("upstream"),
+        video_names_file=Path("upstream/public_test_video_names.txt"),
+        inflate_timeout=1800,
+        evaluate_timeout=1800,
+        cpu_artifact_json=cpu_json,
+        cuda_artifact_json=cuda_json,
+    )
+
+    completion = plan["dual_axis_completion"]
+    assert completion["blockers"] == []
+    assert completion["paired_score_artifacts_complete"] is True
+    assert completion["global_priority_eligible"] is True
+    assert completion["frontier_or_medal_band_complete"] is True
+    assert completion["same_archive_sha256"] is True
+    assert completion["same_archive_bytes"] is True
+    assert completion["same_runtime_tree_sha256"] is True
+    assert plan["promotion_eligible"] is False
+
+
+def test_dual_plan_rejects_paired_artifacts_for_different_archive_sha(
+    tmp_path: Path,
+) -> None:
+    mod = _load_tool()
+    archive = tmp_path / "archive.zip"
+    with ZipFile(archive, "w") as zf:
+        zf.writestr("x", b"payload")
+    archive_sha = mod._sha256(archive)
+    archive_bytes = archive.stat().st_size
+    cpu_json = tmp_path / "cpu.json"
+    cuda_json = tmp_path / "cuda.json"
+    _write_score_artifact(
+        cpu_json,
+        device="cpu",
+        archive_sha256=archive_sha,
+        archive_bytes=archive_bytes,
+    )
+    _write_score_artifact(
+        cuda_json,
+        device="cuda",
+        archive_sha256="0" * 64,
+        archive_bytes=archive_bytes,
+    )
+
+    plan = mod.build_plan(
+        archive=archive,
+        inflate_sh=tmp_path / "inflate.sh",
+        label="fixture",
+        repo_root=Path("."),
+        run_id="fixture-run",
+        output_root=Path("experiments/results/dual_device_auth_eval"),
+        upstream_dir=Path("upstream"),
+        video_names_file=Path("upstream/public_test_video_names.txt"),
+        inflate_timeout=1800,
+        evaluate_timeout=1800,
+        cpu_artifact_json=cpu_json,
+        cuda_artifact_json=cuda_json,
+    )
+
+    completion = plan["dual_axis_completion"]
+    assert completion["paired_score_artifacts_complete"] is False
+    assert "cpu_cuda_archive_sha256_mismatch" in completion["blockers"]
+    assert "cuda_artifact_archive_sha256_mismatch_with_plan" in completion["blockers"]
+
+
+def test_dual_plan_requires_runtime_tree_hashes_for_paired_completion(
+    tmp_path: Path,
+) -> None:
+    mod = _load_tool()
+    archive = tmp_path / "archive.zip"
+    with ZipFile(archive, "w") as zf:
+        zf.writestr("x", b"payload")
+    archive_sha = mod._sha256(archive)
+    archive_bytes = archive.stat().st_size
+    cpu_json = tmp_path / "cpu.json"
+    cuda_json = tmp_path / "cuda.json"
+    _write_score_artifact(
+        cpu_json,
+        device="cpu",
+        archive_sha256=archive_sha,
+        archive_bytes=archive_bytes,
+    )
+    _write_score_artifact(
+        cuda_json,
+        device="cuda",
+        archive_sha256=archive_sha,
+        archive_bytes=archive_bytes,
+    )
+    cuda_payload = json.loads(cuda_json.read_text(encoding="utf-8"))
+    cuda_payload.pop("runtime_tree_sha256")
+    cuda_json.write_text(json.dumps(cuda_payload), encoding="utf-8")
+
+    plan = mod.build_plan(
+        archive=archive,
+        inflate_sh=tmp_path / "inflate.sh",
+        label="fixture",
+        repo_root=Path("."),
+        run_id="fixture-run",
+        output_root=Path("experiments/results/dual_device_auth_eval"),
+        upstream_dir=Path("upstream"),
+        video_names_file=Path("upstream/public_test_video_names.txt"),
+        inflate_timeout=1800,
+        evaluate_timeout=1800,
+        cpu_artifact_json=cpu_json,
+        cuda_artifact_json=cuda_json,
+    )
+
+    completion = plan["dual_axis_completion"]
+    assert completion["paired_score_artifacts_complete"] is False
+    assert "cuda_artifact_runtime_tree_sha256_missing" in completion["blockers"]
+    assert completion["same_runtime_tree_sha256"] is None
+
+
+def test_runtime_tree_hash_can_come_from_provenance_manifest(tmp_path: Path) -> None:
+    mod = _load_tool()
+    path = tmp_path / "artifact.json"
+    path.write_text(
+        json.dumps(
+            {
+                "provenance": {
+                    "inflate_runtime_manifest": {
+                        "runtime_tree_sha256": "nested-runtime-tree"
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    payload = json.loads(path.read_text(encoding="utf-8"))
+
+    assert mod._runtime_tree_sha256(payload) == "nested-runtime-tree"
 
 
 def test_public_pr_inputs_resolve_from_wrapped_ledger(tmp_path: Path) -> None:

@@ -1277,12 +1277,10 @@ def preflight_all(
         # recommender outputs must distinguish predicted_cuda_score vs
         # predicted_cpu_score. The contest leaderboard ranks by --device
         # cpu eval (CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA").
-        # Initial promotion phase: strict=False (warn-only); flip to
-        # STRICT after live count is driven to 0 by adding the
-        # companion keys or '# DUAL_AXIS_RANKING_WAIVED:<reason>' markers.
+        # Promoted STRICT on 2026-05-08 after the live count reached 0.
         # Memory: feedback_dual_axis_solver_integration_landed_20260508.md.
         check_solvers_use_dual_axis_ranking(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
 
         # 2026-05-08 REPRESENTATION-INTEGRATION GATES 1-10 (codex audit
@@ -2598,20 +2596,139 @@ def _collect_argparse_namespace_attrs(tree: ast.Module) -> set[str]:
     every attribute argparse may put on `args`. That includes subparser
     `dest="cmd"`, explicit `dest=` overrides, and positional arguments.
     """
+    argparse_parser_classes = {"ArgumentParser"}
+    changed_classes = True
+    while changed_classes:
+        changed_classes = False
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ClassDef):
+                continue
+            if node.name in argparse_parser_classes:
+                continue
+            for base in node.bases:
+                if (
+                    isinstance(base, ast.Attribute)
+                    and base.attr == "ArgumentParser"
+                    and isinstance(base.value, ast.Name)
+                    and base.value.id == "argparse"
+                ) or (
+                    isinstance(base, ast.Name)
+                    and base.id in argparse_parser_classes
+                ):
+                    argparse_parser_classes.add(node.name)
+                    changed_classes = True
+                    break
+
+    def _target_names(target: ast.AST) -> list[str]:
+        if isinstance(target, ast.Name):
+            return [target.id]
+        if isinstance(target, (ast.Tuple, ast.List)):
+            names: list[str] = []
+            for elt in target.elts:
+                names.extend(_target_names(elt))
+            return names
+        return []
+
+    def _is_argparse_constructor(call: ast.Call) -> bool:
+        func = call.func
+        if (
+            isinstance(func, ast.Attribute)
+            and func.attr == "ArgumentParser"
+            and isinstance(func.value, ast.Name)
+            and func.value.id == "argparse"
+        ):
+            return True
+        # Support the common `from argparse import ArgumentParser` form.
+        return isinstance(func, ast.Name) and func.id in argparse_parser_classes
+
+    def _is_subparser_expr(expr: ast.AST, subparser_symbols: set[str]) -> bool:
+        return isinstance(expr, ast.Name) and expr.id in subparser_symbols
+
+    def _is_parser_expr(
+        expr: ast.AST,
+        parser_symbols: set[str],
+        subparser_symbols: set[str],
+    ) -> bool:
+        if isinstance(expr, ast.Name) and expr.id in parser_symbols:
+            return True
+        if isinstance(expr, ast.Call):
+            if _is_argparse_constructor(expr):
+                return True
+            func = expr.func
+            if (
+                isinstance(func, ast.Attribute)
+                and func.attr == "add_parser"
+                and _is_subparser_expr(func.value, subparser_symbols)
+            ):
+                return True
+        return False
+
+    parser_symbols: set[str] = set()
+    subparser_symbols: set[str] = set()
+    changed = True
+    while changed:
+        changed = False
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.Assign, ast.AnnAssign)):
+                continue
+            value = node.value
+            if not isinstance(value, ast.Call):
+                continue
+            targets = (
+                node.targets if isinstance(node, ast.Assign)
+                else [node.target]
+            )
+            target_names = [
+                name
+                for target in targets
+                for name in _target_names(target)
+            ]
+            if not target_names:
+                continue
+            func = value.func
+            if _is_argparse_constructor(value):
+                new_names = [name for name in target_names if name not in parser_symbols]
+                if new_names:
+                    parser_symbols.update(new_names)
+                    changed = True
+                continue
+            if not isinstance(func, ast.Attribute):
+                continue
+            if (
+                func.attr == "add_subparsers"
+                and _is_parser_expr(func.value, parser_symbols, subparser_symbols)
+            ):
+                new_names = [
+                    name for name in target_names if name not in subparser_symbols
+                ]
+                if new_names:
+                    subparser_symbols.update(new_names)
+                    changed = True
+                continue
+            if (
+                func.attr == "add_parser"
+                and _is_subparser_expr(func.value, subparser_symbols)
+            ):
+                new_names = [name for name in target_names if name not in parser_symbols]
+                if new_names:
+                    parser_symbols.update(new_names)
+                    changed = True
+
     out: set[str] = set()
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
-        func_str = ast.unparse(node.func) if hasattr(ast, "unparse") else ""
-        if func_str.endswith(".set_defaults"):
+        func = node.func
+        if not isinstance(func, ast.Attribute):
+            continue
+        if not _is_parser_expr(func.value, parser_symbols, subparser_symbols):
+            continue
+        if func.attr == "set_defaults":
             for kw in node.keywords:
                 if kw.arg:
                     out.add(kw.arg)
             continue
-        if not (
-            func_str.endswith(".add_argument")
-            or func_str.endswith(".add_subparsers")
-        ):
+        if func.attr not in ("add_argument", "add_subparsers"):
             continue
 
         explicit_dest = False
@@ -2625,7 +2742,7 @@ def _collect_argparse_namespace_attrs(tree: ast.Module) -> set[str]:
                 out.add(kw.value.value)
                 explicit_dest = True
 
-        if explicit_dest or not func_str.endswith(".add_argument"):
+        if explicit_dest or func.attr != "add_argument":
             continue
 
         # No explicit dest: argparse derives option attrs from the first long
@@ -6786,9 +6903,15 @@ def _extract_artifact_filenames(path: Path, source_index=None) -> set[str]:
     """
     try:
         if source_index is not None:
+            text = source_index.read_text(path)
+        else:
+            text = path.read_text()
+        if not any(suffix in text for suffix in _ARTIFACT_SUFFIXES):
+            return set()
+        if source_index is not None:
             tree = source_index.python_ast(path)
         else:
-            tree = ast.parse(path.read_text(), filename=str(path))
+            tree = ast.parse(text, filename=str(path))
     except (OSError, SyntaxError, UnicodeDecodeError):
         return set()
     found: set[str] = set()
@@ -6842,9 +6965,15 @@ def _extract_write_literals(path: Path, source_index=None) -> set[str]:
     """
     try:
         if source_index is not None:
+            text = source_index.read_text(path)
+        else:
+            text = path.read_text()
+        if not any(suffix in text for suffix in _ARTIFACT_SUFFIXES):
+            return set()
+        if source_index is not None:
             tree = source_index.python_ast(path)
         else:
-            tree = ast.parse(path.read_text(), filename=str(path))
+            tree = ast.parse(text, filename=str(path))
     except (OSError, SyntaxError, UnicodeDecodeError):
         return set()
     found: set[str] = set()
@@ -23934,11 +24063,27 @@ ranking contract.
 
 _DUAL_AXIS_DUAL_AXIS_MARKERS = (
     "predicted_cuda_score",
+    "predicted_cuda_score_delta",
     "predicted_cpu_score",
+    "predicted_cpu_score_delta",
     "expected_cuda_score_delta",
     "expected_cpu_score_delta",
 )
 """Companion keys that satisfy the dual-axis ranking contract."""
+
+
+_DUAL_AXIS_CUDA_MARKERS = (
+    "predicted_cuda_score",
+    "predicted_cuda_score_delta",
+    "expected_cuda_score_delta",
+)
+
+
+_DUAL_AXIS_CPU_MARKERS = (
+    "predicted_cpu_score",
+    "predicted_cpu_score_delta",
+    "expected_cpu_score_delta",
+)
 
 
 _DUAL_AXIS_WAIVER_MARKER = "DUAL_AXIS_RANKING_WAIVED:"
@@ -23996,9 +24141,13 @@ def _scan_dual_axis_ranking_violations(repo_root: Path) -> list[str]:
         prose_lines: set[int] = set()
         if tree is not None:
             for node in ast.walk(tree):
-                if isinstance(node, ast.Constant) and isinstance(node.value, str):
+                if (
+                    isinstance(node, ast.Expr)
+                    and isinstance(node.value, ast.Constant)
+                    and isinstance(node.value.value, str)
+                ):
                     start = int(getattr(node, "lineno", 0) or 0)
-                    end = int(getattr(node, "end_lineno", start) or start)
+                    end = int(getattr(node.value, "end_lineno", start) or start)
                     if start:
                         prose_lines.update(range(start, end + 1))
             for node in ast.walk(tree):
@@ -24016,7 +24165,10 @@ def _scan_dual_axis_ranking_violations(repo_root: Path) -> list[str]:
                 row_text = "\n".join(lines[start - 1:end])
                 if _DUAL_AXIS_WAIVER_MARKER in row_text:
                     continue
-                if row_keys.intersection(_DUAL_AXIS_DUAL_AXIS_MARKERS):
+                if (
+                    row_keys.intersection(_DUAL_AXIS_CUDA_MARKERS)
+                    and row_keys.intersection(_DUAL_AXIS_CPU_MARKERS)
+                ):
                     continue
                 primary = sorted(row_keys.intersection(_DUAL_AXIS_PRIMARY_KEYS))
                 violations.append(
@@ -24037,6 +24189,16 @@ def _scan_dual_axis_ranking_violations(repo_root: Path) -> list[str]:
             + "|".join(re.escape(key) for key in _DUAL_AXIS_DUAL_AXIS_MARKERS)
             + r")(?![A-Za-z0-9_])"
         )
+        cuda_key_re = re.compile(
+            r"(?<![A-Za-z0-9_])("
+            + "|".join(re.escape(key) for key in _DUAL_AXIS_CUDA_MARKERS)
+            + r")(?![A-Za-z0-9_])"
+        )
+        cpu_key_re = re.compile(
+            r"(?<![A-Za-z0-9_])("
+            + "|".join(re.escape(key) for key in _DUAL_AXIS_CPU_MARKERS)
+            + r")(?![A-Za-z0-9_])"
+        )
         for i, line in enumerate(lines, start=1):
             if i in covered_lines:
                 continue
@@ -24050,7 +24212,11 @@ def _scan_dual_axis_ranking_violations(repo_root: Path) -> list[str]:
                 continue
             if _DUAL_AXIS_WAIVER_MARKER in line:
                 continue
-            if companion_key_re.search(line):
+            if (
+                companion_key_re.search(line)
+                and cuda_key_re.search(line)
+                and cpu_key_re.search(line)
+            ):
                 continue
             violations.append(
                 f"{rel}:{i}: solver row carries '{stripped[:80]}' "

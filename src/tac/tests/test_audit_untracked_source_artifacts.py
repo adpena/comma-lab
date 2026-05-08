@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from tools.audit_untracked_source_artifacts import (
+    _generated_source_filesystem_records,
     build_runtime_source_baseline,
     classify_untracked_path,
     find_disposition_for_path,
@@ -108,6 +109,41 @@ def test_disposition_manifest_supports_generated_custody_prefixes(tmp_path) -> N
         "experiments/results/run/submission_dir/inflate.py",
     )
     assert disposition["disposition"] == "ignore_rebuildable"
+
+
+def test_disposition_manifest_rejects_prefix_outside_generated_custody(tmp_path) -> None:
+    path = tmp_path / "dispositions.json"
+    path.write_text(
+        """
+        {
+          "entries": [
+            {
+              "path": "src/",
+              "path_kind": "prefix",
+              "disposition": "ignore_rebuildable",
+              "note": "too broad; would hide source edits"
+            }
+          ]
+        }
+        """
+    )
+
+    import pytest
+
+    with pytest.raises(ValueError, match="prefix is only valid under generated custody roots"):
+        load_disposition_manifest(path)
+
+
+def test_generated_source_filesystem_records_include_ignored_runtime_sources(tmp_path) -> None:
+    rel = "experiments/results/ignored_run/submission_dir/inflate.py"
+    path = tmp_path / rel
+    path.parent.mkdir(parents=True)
+    path.write_text("print('runtime')\n", encoding="utf-8")
+
+    records = _generated_source_filesystem_records(tmp_path, tracked_paths=set())
+
+    assert [record.path for record in records] == [rel]
+    assert records[0].classification == "generated_custody_source_untracked"
 
 
 def test_runtime_source_under_broad_prefix_requires_exact_entry_or_baseline(tmp_path) -> None:

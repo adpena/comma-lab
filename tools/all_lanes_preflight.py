@@ -94,6 +94,7 @@ from __future__ import annotations
 import argparse
 import concurrent.futures
 import json
+import math
 import os
 import subprocess
 import sys
@@ -155,6 +156,12 @@ EVAL_LOADER_DRIFT_KNOWN_MISSING_PREREQ_CODES = frozenset(
         "sample_videos_exist",
         "cuda_dali_runtime_available",
     }
+)
+EVAL_LOADER_DRIFT_REQUIRED_COMPARISON_METRICS = (
+    "max_abs_lsb",
+    "mean_abs_lsb",
+    "rms_abs_lsb",
+    "nonzero_fraction",
 )
 HSTACK_VSTACK_PLAN = REPO / "reports/hstack_vstack_multipass_plan_20260507.json"
 PR91_HPM1_READINESS_ARTIFACT = REPO / "experiments/results/pr91_hpm1_readiness_20260506_codex/readiness.json"
@@ -766,6 +773,37 @@ def _eval_loader_drift_missing_prereq_pass(payload: dict[str, object]) -> tuple[
     )
 
 
+def _validate_eval_loader_drift_comparison_rows(rows: object) -> list[str]:
+    if not isinstance(rows, list) or not rows:
+        return ["comparison was available but emitted no rows"]
+    failures: list[str] = []
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            failures.append(f"row {index}: expected object, got {type(row).__name__}")
+            continue
+        if row.get("path_match") is not True:
+            failures.append(f"row {index}: video path mismatch")
+        if row.get("sequence_index_match") is not True:
+            failures.append(f"row {index}: sequence index mismatch")
+        comparison = row.get("comparison")
+        if not isinstance(comparison, dict):
+            failures.append(f"row {index}: comparison object missing")
+            continue
+        if comparison.get("shape_match") is not True:
+            failures.append(f"row {index}: comparison shape mismatch")
+        numel = comparison.get("numel")
+        if not isinstance(numel, int) or isinstance(numel, bool) or numel <= 0:
+            failures.append(f"row {index}: comparison numel must be a positive integer")
+        for metric in EVAL_LOADER_DRIFT_REQUIRED_COMPARISON_METRICS:
+            value = comparison.get(metric)
+            if not isinstance(value, (int, float)) or isinstance(value, bool):
+                failures.append(f"row {index}: comparison {metric} must be numeric")
+                continue
+            if not math.isfinite(float(value)):
+                failures.append(f"row {index}: comparison {metric} must be finite")
+    return failures
+
+
 def _run_eval_loader_drift_probe_gate() -> tuple[bool, str]:
     with tempfile.TemporaryDirectory(prefix="pact_eval_loader_drift_preflight_") as tmp:
         output_path = Path(tmp) / "eval_loader_drift_probe.json"
@@ -802,11 +840,11 @@ def _run_eval_loader_drift_probe_gate() -> tuple[bool, str]:
         return False, "eval loader drift probe must never be rank/kill eligible"
     if payload.get("comparison_available") is False:
         return _eval_loader_drift_missing_prereq_pass(payload)
-    rows = payload.get("comparison_rows")
-    if not isinstance(rows, list) or not rows:
-        return False, "eval loader drift probe comparison was available but emitted no rows"
-    if any(row.get("path_match") is not True for row in rows if isinstance(row, dict)):
-        return False, "eval loader drift probe compared mismatched video paths"
+    failures = _validate_eval_loader_drift_comparison_rows(
+        payload.get("comparison_rows")
+    )
+    if failures:
+        return False, "eval loader drift probe comparison schema invalid: " + "; ".join(failures)
     return True, (
         "eval loader drift probe: PASS "
         "(DALI-vs-PyAV decoded-RGB comparison emitted; diagnostic only)"

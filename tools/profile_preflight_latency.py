@@ -40,12 +40,13 @@ ensure_repo_imports(REPO)
 from tac.repo_io import json_text, repo_relative  # noqa: E402
 
 PROFILE_SCHEMA = "pact.preflight_latency_profile.v1"
-SURFACES = (
+DEFAULT_SURFACES = (
     "preflight-all-codebase",
     "dispatch-hazards",
     "review-tracker-scan",
     "all-lanes",
 )
+SURFACES = DEFAULT_SURFACES + ("preflight-checks",)
 
 
 class SurfaceTimeoutError(TimeoutError):
@@ -78,6 +79,15 @@ class StepTiming:
         if self.metadata:
             row["metadata"] = self.metadata
         return row
+
+
+@dataclass(frozen=True)
+class PreflightCall:
+    """One preflight check call discovered from ``preflight_all`` source."""
+
+    name: str
+    constant_kwargs: dict[str, object] = field(default_factory=dict)
+    import_module: str = ""
 
 
 @dataclass(frozen=True)
@@ -148,32 +158,62 @@ def _timeout_after(seconds: float | None, *, label: str):
             signal.setitimer(signal.ITIMER_REAL, old_timer[0], old_timer[1])
 
 
-def _called_preflight_check_names(func: Callable[..., object]) -> list[str]:
-    """Return check/preflight function names called by ``preflight_all``.
+def _called_preflight_calls(func: Callable[..., object]) -> list[PreflightCall]:
+    """Return check/preflight calls made by ``preflight_all``.
 
     This intentionally discovers the current call surface from source so adding
     a new strict check automatically becomes visible in timing profiles.
     """
     source = textwrap.dedent(inspect.getsource(func))
     tree = ast.parse(source)
-    names: list[str] = []
+    calls: list[PreflightCall] = []
     seen: set[str] = set()
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Call):
-            continue
-        callee = node.func
-        if not isinstance(callee, ast.Name):
-            continue
-        name = callee.id
-        if name == "preflight_all":
-            continue
-        if not (name.startswith("check_") or name.startswith("preflight_")):
-            continue
-        if name in seen:
-            continue
-        seen.add(name)
-        names.append(name)
-    return names
+    imported_modules: dict[str, str] = {}
+
+    class Visitor(ast.NodeVisitor):
+        def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+            if not node.module:
+                return
+            for alias in node.names:
+                imported_modules[alias.asname or alias.name] = node.module
+
+        def visit_Call(self, node: ast.Call) -> None:
+            callee = node.func
+            if isinstance(callee, ast.Name):
+                name = callee.id
+                import_module = imported_modules.get(name, "")
+                if (
+                    name != "preflight_all"
+                    and (
+                        name.startswith("check_")
+                        or name.startswith("preflight_")
+                        or import_module.startswith("tac.preflight")
+                    )
+                    and name not in seen
+                ):
+                    kwargs: dict[str, object] = {}
+                    for kw in node.keywords:
+                        if kw.arg is None or not isinstance(kw.value, ast.Constant):
+                            continue
+                        kwargs[kw.arg] = kw.value.value
+                    seen.add(name)
+                    calls.append(
+                        PreflightCall(
+                            name=name,
+                            constant_kwargs=kwargs,
+                            import_module=import_module,
+                        )
+                    )
+            self.generic_visit(node)
+
+    Visitor().visit(tree)
+    return calls
+
+
+def _called_preflight_check_names(func: Callable[..., object]) -> list[str]:
+    """Return check/preflight function names called by ``preflight_all``."""
+
+    return [call.name for call in _called_preflight_calls(func)]
 
 
 def _profile_preflight_all_codebase(
@@ -252,6 +292,229 @@ def _profile_preflight_all_codebase(
             "use_fs_cache": use_fs_cache,
             "timeout_s": timeout_s if timeout_s is not None else 0,
         },
+        error_type=error_type,
+        error=error,
+    )
+
+
+def _normalize_preflight_check_filters(values: list[str]) -> list[str]:
+    filters: list[str] = []
+    for value in values:
+        for token in value.split(","):
+            token = token.strip()
+            if token:
+                filters.append(token)
+    return filters
+
+
+def _select_preflight_calls(
+    calls: list[PreflightCall],
+    filters: list[str],
+) -> tuple[list[PreflightCall], dict[str, list[str]]]:
+    """Select discovered preflight calls by exact name or substring filter.
+
+    Substring filters make the profiler ergonomic for known slow-check labels
+    from historical timing reports, e.g. ``filename_contract`` or
+    ``no_bare_round``. When a broad token matches multiple checks
+    (``eval_roundtrip``), the profiler intentionally runs all matches in the
+    original ``preflight_all`` order so the operator sees the complete cluster.
+    """
+
+    normalized = _normalize_preflight_check_filters(filters)
+    if not normalized:
+        return calls, {}
+
+    match_names_by_filter: dict[str, list[str]] = {}
+    selected_names: set[str] = set()
+    names = [call.name for call in calls]
+    for token in normalized:
+        exact = [name for name in names if name == token]
+        matches = exact or [name for name in names if token in name]
+        if not matches:
+            raise ValueError(
+                f"unknown preflight check filter {token!r}; discovered checks include: "
+                + ", ".join(names[:20])
+                + (" ..." if len(names) > 20 else "")
+            )
+        match_names_by_filter[token] = matches
+        selected_names.update(matches)
+
+    selected = [call for call in calls if call.name in selected_names]
+    return selected, match_names_by_filter
+
+
+def _preflight_check_kwargs(call: PreflightCall, func: Callable[..., object]) -> dict[str, object]:
+    """Build the kwargs used for direct check profiling.
+
+    The profiler preserves constant strictness from ``preflight_all`` and
+    forces ``verbose=False`` for stable timing output. It does not invent
+    check-specific arguments beyond that shared preflight convention.
+    """
+
+    signature = inspect.signature(func)
+    kwargs: dict[str, object] = {}
+    if "strict" in signature.parameters:
+        kwargs["strict"] = bool(call.constant_kwargs.get("strict", True))
+    if "verbose" in signature.parameters:
+        kwargs["verbose"] = False
+    return kwargs
+
+
+@contextlib.contextmanager
+def _preflight_cache_scope(use_fs_cache: bool):
+    if not use_fs_cache:
+        yield None, None
+        return
+
+    from tac.preflight_fs_cache import cached_filesystem, cache_stats
+    from tac.source_index import source_index_context
+
+    with cached_filesystem(cache_reads=True), source_index_context(REPO) as source_index:
+        yield source_index, cache_stats
+
+
+def _profile_preflight_checks(
+    *,
+    check_filters: list[str],
+    use_fs_cache: bool,
+    timeout_s: float | None,
+    check_timeout_s: float | None,
+) -> SurfaceProfile:
+    surface = "preflight-checks"
+    started = time.perf_counter()
+    steps: list[StepTiming] = []
+    status = "passed"
+    error_type = ""
+    error = ""
+    metadata: dict[str, object] = {
+        "use_fs_cache": use_fs_cache,
+        "timeout_s": timeout_s if timeout_s is not None else 0,
+        "check_timeout_s": check_timeout_s if check_timeout_s is not None else 0,
+    }
+
+    try:
+        preflight = importlib.import_module("tac.preflight")
+        calls = _called_preflight_calls(preflight.preflight_all)
+        selected, filter_matches = _select_preflight_calls(calls, check_filters)
+    except Exception as exc:
+        return SurfaceProfile(
+            name=surface,
+            status="failed",
+            elapsed_s=time.perf_counter() - started,
+            steps=[],
+            metadata=metadata,
+            error_type=type(exc).__name__,
+            error=str(exc),
+        )
+
+    metadata.update(
+        {
+            "discovered_check_count": len(calls),
+            "selected_check_count": len(selected),
+            "selected_checks": [call.name for call in selected],
+        }
+    )
+    normalized_filters = _normalize_preflight_check_filters(check_filters)
+    if normalized_filters:
+        metadata["requested_filters"] = normalized_filters
+        metadata["filter_matches"] = filter_matches
+
+    wall_deadline = (started + timeout_s) if timeout_s is not None else None
+    stop_after_current_timeout = False
+
+    with _preflight_cache_scope(use_fs_cache) as (source_index, cache_stats_func):
+        for call in selected:
+            func = getattr(preflight, call.name, None)
+            if not callable(func) and call.import_module:
+                try:
+                    imported_module = importlib.import_module(call.import_module)
+                    func = getattr(imported_module, call.name, None)
+                except Exception:
+                    func = None
+            if not callable(func):
+                status = "failed"
+                steps.append(
+                    StepTiming(
+                        surface=surface,
+                        name=call.name,
+                        elapsed_s=0.0,
+                        status="failed",
+                        detail="discovered call is not callable on tac.preflight",
+                    )
+                )
+                continue
+
+            remaining_wall = None
+            if wall_deadline is not None:
+                remaining_wall = wall_deadline - time.perf_counter()
+                if remaining_wall <= 0:
+                    status = "failed"
+                    error_type = "SurfaceTimeoutError"
+                    error = f"{surface} exceeded timeout_s={timeout_s:g}"
+                    break
+
+            effective_timeout = check_timeout_s
+            timeout_label = call.name
+            if remaining_wall is not None and (
+                effective_timeout is None or remaining_wall < effective_timeout
+            ):
+                effective_timeout = remaining_wall
+                timeout_label = surface
+                stop_after_current_timeout = True
+            else:
+                stop_after_current_timeout = False
+
+            step_started = time.perf_counter()
+            try:
+                with _timeout_after(effective_timeout, label=timeout_label):
+                    func(**_preflight_check_kwargs(call, func))
+            except Exception as exc:
+                step_status = "timeout" if isinstance(exc, SurfaceTimeoutError) else "failed"
+                status = "failed"
+                steps.append(
+                    StepTiming(
+                        surface=surface,
+                        name=call.name,
+                        elapsed_s=time.perf_counter() - step_started,
+                        status=step_status,
+                        detail=f"{type(exc).__name__}: {exc}",
+                        metadata={"kwargs": _preflight_check_kwargs(call, func)},
+                    )
+                )
+                if stop_after_current_timeout:
+                    error_type = type(exc).__name__
+                    error = str(exc)
+                    break
+                continue
+
+            steps.append(
+                StepTiming(
+                    surface=surface,
+                    name=call.name,
+                    elapsed_s=time.perf_counter() - step_started,
+                    status="passed",
+                    metadata={"kwargs": _preflight_check_kwargs(call, func)},
+                )
+            )
+
+        if source_index is not None:
+            metadata["source_index_stats"] = source_index.stats()
+        if cache_stats_func is not None:
+            metadata["fs_cache_stats"] = cache_stats_func()
+
+    if status != "passed" and not error_type:
+        failed_steps = [step for step in steps if step.status != "passed"]
+        error_type = "StepFailure"
+        error = "; ".join(f"{step.name} ({step.status})" for step in failed_steps[:8])
+        if len(failed_steps) > 8:
+            error += f"; ... +{len(failed_steps) - 8} more"
+
+    return SurfaceProfile(
+        name=surface,
+        status=status,
+        elapsed_s=time.perf_counter() - started,
+        steps=steps,
+        metadata=metadata,
         error_type=error_type,
         error=error,
     )
@@ -564,6 +827,13 @@ def _run_surface(name: str, args: argparse.Namespace) -> SurfaceProfile:
             use_fs_cache=not args.no_fs_cache,
             timeout_s=args.preflight_timeout_s,
         )
+    if name == "preflight-checks":
+        return _profile_preflight_checks(
+            check_filters=args.preflight_check,
+            use_fs_cache=not args.no_fs_cache,
+            timeout_s=args.preflight_timeout_s,
+            check_timeout_s=args.preflight_check_timeout_s,
+        )
     if name == "dispatch-hazards":
         return _profile_dispatch_hazards()
     if name == "review-tracker-scan":
@@ -588,7 +858,22 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--all-surfaces",
         action="store_true",
-        help="Profile every local surface, including all-lanes preflight.",
+        help=(
+            "Profile the default local scanner/test-adjacent suite, including "
+            "all-lanes preflight. Targeted preflight-checks is included only "
+            "when --preflight-check is supplied."
+        ),
+    )
+    parser.add_argument(
+        "--preflight-check",
+        action="append",
+        default=[],
+        metavar="NAME",
+        help=(
+            "Profile only matching preflight_all check(s) on the "
+            "preflight-checks surface. Repeatable and comma-separated; "
+            "substring filters such as filename_contract or no_bare_round are allowed."
+        ),
     )
     parser.add_argument("--json-out", type=Path, help="Write deterministic JSON report.")
     parser.add_argument("--top", type=int, default=12, help="Number of slow steps to print/store.")
@@ -609,7 +894,18 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help=(
             "Stop preflight-all-codebase after this many seconds and still emit "
-            "the partial timing report. Default: no timeout."
+            "the partial timing report. Also caps the preflight-checks surface. "
+            "Default: no timeout."
+        ),
+    )
+    parser.add_argument(
+        "--preflight-check-timeout-s",
+        type=float,
+        default=None,
+        help=(
+            "When profiling preflight-checks, stop an individual selected check "
+            "after this many seconds and continue to the next selected check. "
+            "Default: no per-check timeout."
         ),
     )
     parser.add_argument(
@@ -637,8 +933,20 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--all-lanes-jobs must be >= 1")
     if args.preflight_timeout_s is not None and args.preflight_timeout_s <= 0:
         parser.error("--preflight-timeout-s must be > 0")
+    if args.preflight_check_timeout_s is not None and args.preflight_check_timeout_s <= 0:
+        parser.error("--preflight-check-timeout-s must be > 0")
+    args.preflight_check = _normalize_preflight_check_filters(args.preflight_check)
 
-    surfaces = list(SURFACES) if args.all_surfaces else (args.surface or ["preflight-all-codebase"])
+    if args.all_surfaces:
+        surfaces = list(DEFAULT_SURFACES)
+        if args.preflight_check:
+            surfaces.append("preflight-checks")
+    elif args.surface:
+        surfaces = args.surface
+    elif args.preflight_check:
+        surfaces = ["preflight-checks"]
+    else:
+        surfaces = ["preflight-all-codebase"]
     profiles = [_run_surface(name, args) for name in surfaces]
     max_step_records = None if args.max_step_records == -1 else args.max_step_records
     report = _build_report(

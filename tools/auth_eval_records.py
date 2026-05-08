@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -20,6 +22,10 @@ class AuthEvalRecord:
     promotion_eligible: bool
     score_claim_valid: bool
     evidence_grade: str
+    score_axis: str
+    cpu_leaderboard_reproduction_eligible: bool
+    rank_or_kill_eligible: bool
+    hardware_compliance_blocker: str | None
 
 
 def _get(payload: dict[str, Any], *keys: str, default: Any = None) -> Any:
@@ -46,6 +52,112 @@ def _int(value: Any) -> int | None:
         return None
 
 
+def _first_float(*values: Any) -> float | None:
+    for value in values:
+        parsed = _float(value)
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def _first_int(*values: Any) -> int | None:
+    for value in values:
+        parsed = _int(value)
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def _parse_report_text(value: Any) -> dict[str, float | int] | None:
+    if not isinstance(value, str) or "Evaluation results over" not in value:
+        return None
+
+    def _grab_float(pattern: str) -> float | None:
+        match = re.search(pattern, value)
+        return float(match.group(1).replace(",", "")) if match else None
+
+    pose = _grab_float(r"Average PoseNet Distortion:\s*([0-9.eE+,-]+)")
+    seg = _grab_float(r"Average SegNet Distortion:\s*([0-9.eE+,-]+)")
+    rate = _grab_float(r"Compression Rate:\s*([0-9.eE+,-]+)")
+    final = _grab_float(r"Final score:.*=\s*([0-9.eE+,-]+)")
+    sample_match = re.search(r"Evaluation results over (\d+) samples", value)
+    samples = int(sample_match.group(1)) if sample_match else None
+    out: dict[str, float | int] = {}
+    if pose is not None:
+        out["avg_posenet_dist"] = pose
+    if seg is not None:
+        out["avg_segnet_dist"] = seg
+    if rate is not None:
+        out["rate_unscaled"] = rate
+    if final is not None:
+        out["final_score"] = final
+    if samples is not None:
+        out["n_samples"] = samples
+    if pose is not None and seg is not None and rate is not None:
+        out["canonical_score"] = 100.0 * seg + math.sqrt(10.0 * pose) + 25.0 * rate
+    return out or None
+
+
+def _platform_is_linux_x86_64(provenance: dict[str, Any], payload: dict[str, Any]) -> bool:
+    system = str(
+        provenance.get("platform_system")
+        or payload.get("platform_system")
+        or ""
+    )
+    machine = str(
+        provenance.get("platform_machine")
+        or payload.get("platform_machine")
+        or ""
+    ).lower()
+    hardware = str(payload.get("hardware") or provenance.get("hardware") or "").lower()
+    return (
+        system == "Linux" and machine in {"x86_64", "amd64"}
+    ) or "linux x86_64" in hardware or "github-actions-ubuntu-latest-x86_64" in hardware
+
+
+def _platform_is_macos(provenance: dict[str, Any], payload: dict[str, Any]) -> bool:
+    system = str(
+        provenance.get("platform_system")
+        or payload.get("platform_system")
+        or ""
+    )
+    hardware = str(payload.get("hardware") or provenance.get("hardware") or "").lower()
+    return system == "Darwin" or "macos" in hardware or "apple silicon" in hardware
+
+
+def _score_axis(
+    *,
+    payload: dict[str, Any],
+    provenance: dict[str, Any],
+    device: str,
+    samples: int | None,
+    gpu_t4_match: bool,
+) -> str:
+    explicit = str(payload.get("score_axis") or payload.get("device_axis") or "")
+    if explicit and explicit.lower() not in {"cpu", "cuda", "mps"}:
+        return explicit
+    grade_text = " ".join(
+        str(value)
+        for value in (
+            payload.get("evidence_grade"),
+            payload.get("lane_tag"),
+            payload.get("evidence_semantics"),
+        )
+        if value
+    ).lower()
+    if "contest-cpu" in grade_text or "contest_cpu" in grade_text:
+        return "contest_cpu"
+    if "contest-cuda" in grade_text or "contest_cuda" in grade_text:
+        return "contest_cuda"
+    if device == "cuda" and samples == 600 and gpu_t4_match:
+        return "contest_cuda"
+    if device == "cpu" and samples == 600 and _platform_is_linux_x86_64(provenance, payload):
+        return "contest_cpu"
+    if device == "cpu":
+        return "cpu_advisory"
+    return device or "unknown"
+
+
 def parse_auth_eval_payload(payload: dict[str, Any]) -> AuthEvalRecord | None:
     """Parse a score JSON using canonical auth-eval fields first.
 
@@ -58,65 +170,114 @@ def parse_auth_eval_payload(payload: dict[str, Any]) -> AuthEvalRecord | None:
     provenance = payload.get("provenance")
     if not isinstance(provenance, dict):
         provenance = {}
+    report = _parse_report_text(payload.get("report_text")) or {}
+    top_level_seg = _first_float(
+        payload.get("avg_segnet_dist"),
+        payload.get("seg_dist_avg"),
+        _get(payload, "components", "segnet_avg"),
+        payload.get("segnet_distortion"),
+        payload.get("segnet"),
+    )
+    top_level_pose = _first_float(
+        payload.get("avg_posenet_dist"),
+        payload.get("pose_dist_avg"),
+        _get(payload, "components", "posenet_avg"),
+        payload.get("posenet_distortion"),
+        payload.get("posenet"),
+        payload.get("pose_distortion"),
+    )
+    top_level_rate = _first_float(
+        payload.get("rate_unscaled"),
+        payload.get("rate"),
+        payload.get("compression_rate"),
+        _get(payload, "components", "rate"),
+    )
+    top_level_components_complete = (
+        top_level_seg is not None
+        and top_level_pose is not None
+        and top_level_rate is not None
+    )
+    score_recomputed = _float(payload.get("score_recomputed_from_components"))
+    canonical_score_recomputed = _float(payload.get("canonical_score_recomputed"))
 
-    score = (
-        _float(payload.get("canonical_score"))
-        or _float(payload.get("score_recomputed_from_components"))
-        or _float(payload.get("score"))
-        or _float(payload.get("total_score"))
-        or _float(payload.get("final_score"))
-        or _float(_get(payload, "result", "final_score"))
+    score = _first_float(
+        score_recomputed
+        if top_level_components_complete or (score_recomputed not in {None, 0.0})
+        else None,
+        report.get("canonical_score"),
+        payload.get("canonical_score"),
+        canonical_score_recomputed
+        if top_level_components_complete or (canonical_score_recomputed not in {None, 0.0})
+        else None,
+        payload.get("score"),
+        payload.get("total_score"),
+        payload.get("final_score"),
+        report.get("final_score"),
+        _get(payload, "result", "final_score"),
     )
     if score is None:
         return None
 
-    archive_bytes = (
-        _int(payload.get("archive_size_bytes"))
-        or _int(payload.get("archive_bytes"))
-        or _int(payload.get("archive_size"))
-        or _int(payload.get("bytes"))
+    archive_bytes = _first_int(
+        payload.get("archive_size_bytes"),
+        payload.get("archive_bytes"),
+        payload.get("archive_size"),
+        payload.get("bytes"),
     )
     device = str(provenance.get("device") or payload.get("device") or "?")
-    samples = _int(payload.get("n_samples")) or _int(payload.get("samples"))
+    samples = _first_int(payload.get("n_samples"), payload.get("samples"), report.get("n_samples"))
     gpu_t4_match = bool(provenance.get("gpu_t4_match") or payload.get("gpu_t4_match"))
     promotion_eligible = bool(payload.get("promotion_eligible", False))
     score_claim_valid = bool(payload.get("score_claim_valid", False))
-    if device == "cuda" and samples == 600 and gpu_t4_match:
+    axis = _score_axis(
+        payload=payload,
+        provenance=provenance,
+        device=device,
+        samples=samples,
+        gpu_t4_match=gpu_t4_match,
+    )
+    if axis == "contest_cuda":
         promotion_eligible = True if "promotion_eligible" not in payload else promotion_eligible
         score_claim_valid = True if "score_claim_valid" not in payload else score_claim_valid
+    cpu_leaderboard_reproduction_eligible = bool(
+        payload.get("cpu_leaderboard_reproduction_eligible", axis == "contest_cpu")
+    )
+    rank_or_kill_eligible = bool(
+        payload.get("rank_or_kill_eligible", promotion_eligible and axis == "contest_cuda")
+    )
     evidence_grade = str(payload.get("evidence_grade") or "")
     if not evidence_grade:
-        if device == "cuda" and samples == 600 and gpu_t4_match:
+        if axis == "contest_cuda":
             evidence_grade = "A++"
+        elif axis == "contest_cpu":
+            evidence_grade = "contest-CPU"
+        elif axis == "cpu_advisory" and _platform_is_macos(provenance, payload):
+            evidence_grade = "macOS-CPU advisory"
+        elif axis == "cpu_advisory":
+            evidence_grade = "CPU advisory"
         elif device == "cuda":
             evidence_grade = "A"
         else:
             evidence_grade = "invalid"
+    hardware_compliance_blocker = payload.get("hardware_compliance_blocker")
+    if hardware_compliance_blocker is not None:
+        hardware_compliance_blocker = str(hardware_compliance_blocker)
 
     return AuthEvalRecord(
         score=score,
         archive_bytes=archive_bytes,
         archive_sha256=str(provenance.get("archive_sha256") or payload.get("archive_sha256") or payload.get("sha256") or "") or None,
-        avg_segnet_dist=(
-            _float(payload.get("avg_segnet_dist"))
-            or _float(payload.get("seg_dist_avg"))
-            or _float(_get(payload, "components", "segnet_avg"))
-            or _float(payload.get("segnet_distortion"))
-            or _float(payload.get("segnet"))
-        ),
-        avg_posenet_dist=(
-            _float(payload.get("avg_posenet_dist"))
-            or _float(payload.get("pose_dist_avg"))
-            or _float(_get(payload, "components", "posenet_avg"))
-            or _float(payload.get("posenet_distortion"))
-            or _float(payload.get("posenet"))
-            or _float(payload.get("pose_distortion"))
-        ),
-        rate_unscaled=_float(payload.get("rate_unscaled")) or _float(payload.get("rate")) or _float(_get(payload, "components", "rate")),
+        avg_segnet_dist=_first_float(top_level_seg, report.get("avg_segnet_dist")),
+        avg_posenet_dist=_first_float(top_level_pose, report.get("avg_posenet_dist")),
+        rate_unscaled=_first_float(top_level_rate, report.get("rate_unscaled")),
         samples=samples,
         device=device,
         gpu_t4_match=gpu_t4_match,
         promotion_eligible=promotion_eligible,
         score_claim_valid=score_claim_valid,
         evidence_grade=evidence_grade,
+        score_axis=axis,
+        cpu_leaderboard_reproduction_eligible=cpu_leaderboard_reproduction_eligible,
+        rank_or_kill_eligible=rank_or_kill_eligible,
+        hardware_compliance_blocker=hardware_compliance_blocker,
     )

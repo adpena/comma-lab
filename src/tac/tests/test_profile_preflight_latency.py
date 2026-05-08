@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 REPO = Path(__file__).resolve().parents[3]
@@ -44,6 +45,151 @@ def test_called_preflight_check_names_filters_recursive_and_preserves_order() ->
     names = module._called_preflight_check_names(sample_preflight_all)
 
     assert names == ["check_alpha", "preflight_beta"]
+
+
+def test_called_preflight_calls_preserves_constant_strictness() -> None:
+    module = _load_tool()
+
+    def check_alpha(*, strict: bool, verbose: bool) -> None:
+        _ = (strict, verbose)
+
+    def check_beta(*, strict: bool, verbose: bool) -> None:
+        _ = (strict, verbose)
+
+    def sample_preflight_all() -> None:
+        check_alpha(strict=True, verbose=False)
+        check_beta(strict=False, verbose=False)
+
+    calls = module._called_preflight_calls(sample_preflight_all)
+
+    assert [(call.name, call.constant_kwargs["strict"]) for call in calls] == [
+        ("check_alpha", True),
+        ("check_beta", False),
+    ]
+
+
+def test_called_preflight_calls_records_local_import_module() -> None:
+    module = _load_tool()
+
+    def sample_preflight_all() -> None:
+        from tac.preflight_runtime_refs import check_shell_script_runtime_refs_resolve
+
+        check_shell_script_runtime_refs_resolve(strict=False, verbose=True)
+
+    calls = module._called_preflight_calls(sample_preflight_all)
+
+    assert len(calls) == 1
+    assert calls[0].name == "check_shell_script_runtime_refs_resolve"
+    assert calls[0].import_module == "tac.preflight_runtime_refs"
+
+
+def test_select_preflight_calls_accepts_substring_filters_in_preflight_order() -> None:
+    module = _load_tool()
+    calls = [
+        module.PreflightCall("preflight_filename_contract"),
+        module.PreflightCall("preflight_loader_format_safety"),
+        module.PreflightCall("check_no_bare_round_in_eval_roundtrip"),
+        module.PreflightCall("check_no_eval_roundtrip_false"),
+    ]
+
+    selected, matches = module._select_preflight_calls(
+        calls,
+        ["filename_contract,no_bare_round", "eval_roundtrip"],
+    )
+
+    assert [call.name for call in selected] == [
+        "preflight_filename_contract",
+        "check_no_bare_round_in_eval_roundtrip",
+        "check_no_eval_roundtrip_false",
+    ]
+    assert matches["filename_contract"] == ["preflight_filename_contract"]
+    assert matches["eval_roundtrip"] == [
+        "check_no_bare_round_in_eval_roundtrip",
+        "check_no_eval_roundtrip_false",
+    ]
+
+
+def test_profile_preflight_checks_runs_selected_check_with_profile_kwargs(
+    monkeypatch,
+) -> None:
+    module = _load_tool()
+    events: list[tuple[str, bool, bool]] = []
+
+    def check_alpha(*, strict: bool, verbose: bool) -> None:
+        events.append(("alpha", strict, verbose))
+
+    def check_beta(*, strict: bool, verbose: bool) -> None:
+        events.append(("beta", strict, verbose))
+
+    def preflight_all() -> None:
+        check_alpha(strict=True, verbose=True)
+        check_beta(strict=False, verbose=True)
+
+    fake_preflight = SimpleNamespace(
+        preflight_all=preflight_all,
+        check_alpha=check_alpha,
+        check_beta=check_beta,
+    )
+    real_import_module = module.importlib.import_module
+
+    monkeypatch.setattr(
+        module.importlib,
+        "import_module",
+        lambda name: (
+            fake_preflight
+            if name == "tac.preflight"
+            else real_import_module(name)
+        ),
+    )
+
+    profile = module._profile_preflight_checks(
+        check_filters=["beta"],
+        use_fs_cache=False,
+        timeout_s=None,
+        check_timeout_s=None,
+    )
+
+    assert profile.status == "passed"
+    assert [step.name for step in profile.steps] == ["check_beta"]
+    assert events == [("beta", False, False)]
+    assert profile.metadata["selected_checks"] == ["check_beta"]
+
+
+def test_profile_preflight_checks_resolves_local_imported_check(monkeypatch) -> None:
+    module = _load_tool()
+    events: list[tuple[str, bool, bool]] = []
+
+    def local_check(*, strict: bool, verbose: bool) -> None:
+        events.append(("local", strict, verbose))
+
+    def preflight_all() -> None:
+        from tac.preflight_runtime_refs import local_check
+
+        local_check(strict=False, verbose=True)
+
+    fake_preflight = SimpleNamespace(preflight_all=preflight_all)
+    fake_runtime_refs = SimpleNamespace(local_check=local_check)
+    real_import_module = module.importlib.import_module
+
+    def fake_import_module(name: str):
+        if name == "tac.preflight":
+            return fake_preflight
+        if name == "tac.preflight_runtime_refs":
+            return fake_runtime_refs
+        return real_import_module(name)
+
+    monkeypatch.setattr(module.importlib, "import_module", fake_import_module)
+
+    profile = module._profile_preflight_checks(
+        check_filters=["local_check"],
+        use_fs_cache=False,
+        timeout_s=None,
+        check_timeout_s=None,
+    )
+
+    assert profile.status == "passed"
+    assert [step.name for step in profile.steps] == ["local_check"]
+    assert events == [("local", False, False)]
 
 
 def test_build_report_sorts_hot_steps_and_keeps_surface_step_count() -> None:

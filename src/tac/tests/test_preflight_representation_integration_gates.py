@@ -624,6 +624,60 @@ def test_gate8_frontier_row_missing_fields(tmp_path: Path) -> None:
     assert any("Gate 8" in f.reason for f in findings)
 
 
+def test_gate8_score_promotion_rank_kill_claims_require_custody(
+    tmp_path: Path,
+) -> None:
+    _write_evidence_jsonl(
+        tmp_path,
+        [
+            {
+                "technique": "score_claim_marker",
+                "score_claim": True,
+                "empirical_archive_bytes": 178000,
+            },
+            {
+                "technique": "promotion_eligible_marker",
+                "promotion_eligible": True,
+                "empirical_archive_bytes": 178000,
+            },
+            {
+                "technique": "rank_or_kill_eligible_marker",
+                "rank_or_kill_eligible": True,
+                "empirical_archive_bytes": 178000,
+            },
+            {
+                "technique": "exact_cuda_grade_marker",
+                "evidence_grade": "[contest-CUDA A-negative]",
+                "score_claim": False,
+                "empirical_archive_bytes": 178000,
+            },
+            {
+                "technique": "ranking_status_marker",
+                "ranking_status": "rank eligible",
+                "empirical_archive_bytes": 178000,
+            },
+            {
+                "technique": "falsification_status_marker",
+                "falsification_status": "kill eligible",
+                "empirical_archive_bytes": 178000,
+            },
+        ],
+    )
+    mod = _load_scanner("check_gate8_exact_evidence.py")
+    findings = mod.scan(tmp_path)
+
+    techniques = {f.technique for f in findings}
+    assert techniques == {
+        "score_claim_marker",
+        "promotion_eligible_marker",
+        "rank_or_kill_eligible_marker",
+        "exact_cuda_grade_marker",
+        "ranking_status_marker",
+        "falsification_status_marker",
+    }
+    assert all("Gate 8" in f.reason for f in findings)
+
+
 def test_gate8_complete_frontier_row_passes(tmp_path: Path) -> None:
     runtime_manifest = tmp_path / "runtime.json"
     log_path = tmp_path / "auth_eval.log"
@@ -700,6 +754,32 @@ def test_gate8_predicted_row_passes(tmp_path: Path) -> None:
                 "technique": "test_predicted",
                 "evidence_grade": "[predicted]",
                 "empirical_archive_bytes": 100000,
+            }
+        ],
+    )
+    mod = _load_scanner("check_gate8_exact_evidence.py")
+    findings = mod.scan(tmp_path)
+    assert findings == []
+
+
+def test_gate8_explicit_non_claim_row_passes(tmp_path: Path) -> None:
+    """False claim markers and proxy wording do not require exact custody."""
+    _write_evidence_jsonl(
+        tmp_path,
+        [
+            {
+                "technique": "ordinary_proxy_row",
+                "evidence_grade": "[CPU-prep]",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "contest_dispatch_verdict": "DEFERRED-pending-research",
+                "dispatch_blockers": [
+                    "missing_exact_cuda_auth_eval",
+                    "requires_exact_cuda_auth_eval_before_any_score_use",
+                ],
+                "empirical_archive_bytes": 178000,
             }
         ],
     )

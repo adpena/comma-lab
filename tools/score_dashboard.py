@@ -31,8 +31,21 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+try:
+    from tools.auth_eval_records import parse_auth_eval_payload
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from auth_eval_records import parse_auth_eval_payload
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SCAN_ROOT = REPO_ROOT / "experiments" / "results"
+AXIS_SORT_ORDER = {
+    "contest_cuda": 0,
+    "contest_cpu": 1,
+    "cpu_advisory": 2,
+    "mps": 3,
+    "unknown": 4,
+}
 
 
 @dataclass
@@ -46,6 +59,12 @@ class ScoreRow:
     samples: int | None
     device: str
     gpu_match: bool
+    score_axis: str
+    evidence_grade: str
+    promotion_eligible: bool
+    score_claim_valid: bool
+    rank_or_kill_eligible: bool
+    cpu_leaderboard_reproduction_eligible: bool
     path: str
     mtime_utc: str
     extra: dict[str, Any] = field(default_factory=dict)
@@ -67,30 +86,27 @@ def _parse_one(path: Path, repo_root: Path) -> ScoreRow | None:
         return None
     if not isinstance(data, dict):
         return None
-    score = (
-        _safe_get(data, "final_score")
-        or _safe_get(data, "score")
-        or _safe_get(data, "total_score")
-        or _safe_get(data, "result", "final_score")
-    )
-    if score is None:
-        return None
-    try:
-        score = float(score)
-    except (TypeError, ValueError):
+    record = parse_auth_eval_payload(data)
+    if record is None:
         return None
     rel = path.relative_to(repo_root) if path.is_relative_to(repo_root) else path
-    mtime = dt.datetime.fromtimestamp(path.stat().st_mtime, tz=dt.timezone.utc)
+    mtime = dt.datetime.fromtimestamp(path.stat().st_mtime, tz=dt.UTC)
     return ScoreRow(
-        score=score,
-        archive_bytes=_safe_get(data, "archive_bytes") or _safe_get(data, "bytes"),
-        archive_sha256=_safe_get(data, "archive_sha256") or _safe_get(data, "sha256"),
-        seg_dist_avg=_safe_get(data, "seg_dist_avg") or _safe_get(data, "components", "segnet_avg"),
-        pose_dist_avg=_safe_get(data, "pose_dist_avg") or _safe_get(data, "components", "posenet_avg"),
-        rate=_safe_get(data, "rate") or _safe_get(data, "components", "rate"),
-        samples=_safe_get(data, "samples") or _safe_get(data, "n_samples"),
-        device=str(_safe_get(data, "device", default="?")),
-        gpu_match=bool(_safe_get(data, "gpu_t4_match", default=False)),
+        score=record.score,
+        archive_bytes=record.archive_bytes,
+        archive_sha256=record.archive_sha256,
+        seg_dist_avg=record.avg_segnet_dist,
+        pose_dist_avg=record.avg_posenet_dist,
+        rate=record.rate_unscaled,
+        samples=record.samples,
+        device=record.device,
+        gpu_match=record.gpu_t4_match,
+        score_axis=record.score_axis,
+        evidence_grade=record.evidence_grade,
+        promotion_eligible=record.promotion_eligible,
+        score_claim_valid=record.score_claim_valid,
+        rank_or_kill_eligible=record.rank_or_kill_eligible,
+        cpu_leaderboard_reproduction_eligible=record.cpu_leaderboard_reproduction_eligible,
         path=str(rel),
         mtime_utc=mtime.strftime("%Y-%m-%dT%H:%MZ"),
         extra=data,
@@ -122,30 +138,27 @@ def _parse_log(path: Path, repo_root: Path) -> ScoreRow | None:
         return None
     if not isinstance(data, dict):
         return None
-    score = (
-        _safe_get(data, "canonical_score")
-        or _safe_get(data, "score_recomputed_from_components")
-        or _safe_get(data, "final_score")
-    )
-    if score is None:
-        return None
-    try:
-        score = float(score)
-    except (TypeError, ValueError):
+    record = parse_auth_eval_payload(data)
+    if record is None:
         return None
     rel = path.relative_to(repo_root) if path.is_relative_to(repo_root) else path
-    mtime = dt.datetime.fromtimestamp(path.stat().st_mtime, tz=dt.timezone.utc)
-    prov = _safe_get(data, "provenance", default={})
+    mtime = dt.datetime.fromtimestamp(path.stat().st_mtime, tz=dt.UTC)
     return ScoreRow(
-        score=score,
-        archive_bytes=_safe_get(data, "archive_size_bytes"),
-        archive_sha256=_safe_get(prov, "archive_sha256") if isinstance(prov, dict) else None,
-        seg_dist_avg=_safe_get(data, "avg_segnet_dist"),
-        pose_dist_avg=_safe_get(data, "avg_posenet_dist"),
-        rate=_safe_get(data, "rate_unscaled"),
-        samples=_safe_get(data, "n_samples"),
-        device=str(_safe_get(prov, "device", default="?")) if isinstance(prov, dict) else "?",
-        gpu_match=bool(_safe_get(prov, "gpu_t4_match", default=False)) if isinstance(prov, dict) else False,
+        score=record.score,
+        archive_bytes=record.archive_bytes,
+        archive_sha256=record.archive_sha256,
+        seg_dist_avg=record.avg_segnet_dist,
+        pose_dist_avg=record.avg_posenet_dist,
+        rate=record.rate_unscaled,
+        samples=record.samples,
+        device=record.device,
+        gpu_match=record.gpu_t4_match,
+        score_axis=record.score_axis,
+        evidence_grade=record.evidence_grade,
+        promotion_eligible=record.promotion_eligible,
+        score_claim_valid=record.score_claim_valid,
+        rank_or_kill_eligible=record.rank_or_kill_eligible,
+        cpu_leaderboard_reproduction_eligible=record.cpu_leaderboard_reproduction_eligible,
         path=str(rel),
         mtime_utc=mtime.strftime("%Y-%m-%dT%H:%MZ"),
         extra=data,
@@ -169,7 +182,7 @@ def scan(
         if path_filter and path_filter not in str(p):
             continue
         if since:
-            mtime = dt.datetime.fromtimestamp(p.stat().st_mtime, tz=dt.timezone.utc).date()
+            mtime = dt.datetime.fromtimestamp(p.stat().st_mtime, tz=dt.UTC).date()
             if mtime < since:
                 continue
         row = _parse_one(p, repo_root)
@@ -183,7 +196,7 @@ def scan(
         if path_filter and path_filter not in str(p):
             continue
         if since:
-            mtime = dt.datetime.fromtimestamp(p.stat().st_mtime, tz=dt.timezone.utc).date()
+            mtime = dt.datetime.fromtimestamp(p.stat().st_mtime, tz=dt.UTC).date()
             if mtime < since:
                 continue
         row = _parse_log(p, repo_root)
@@ -192,17 +205,47 @@ def scan(
     return rows
 
 
+def _score_sort_key(row: ScoreRow) -> tuple[bool, float]:
+    return row.score is None, float("inf") if row.score is None else row.score
+
+
+def _axis_sort_key(axis: str) -> tuple[int, str]:
+    return AXIS_SORT_ORDER.get(axis, 100), axis
+
+
+def _rank_rows_by_axis(
+    rows: list[ScoreRow],
+    *,
+    top: int | None = None,
+) -> list[tuple[int, ScoreRow]]:
+    """Return rows sorted and ranked within each score axis.
+
+    CPU, CUDA, MPS, and advisory scores are not interchangeable measurement
+    axes. The dashboard must not imply a single global rank across them.
+    """
+
+    by_axis: dict[str, list[ScoreRow]] = {}
+    for row in rows:
+        by_axis.setdefault(row.score_axis, []).append(row)
+
+    ranked: list[tuple[int, ScoreRow]] = []
+    for axis in sorted(by_axis, key=_axis_sort_key):
+        axis_rows = sorted(by_axis[axis], key=_score_sort_key)
+        if top:
+            axis_rows = axis_rows[:top]
+        ranked.extend((axis_rank, row) for axis_rank, row in enumerate(axis_rows, start=1))
+    return ranked
+
+
 def _format_table(rows: list[ScoreRow], *, top: int | None = None) -> str:
     if not rows:
         return "(no scores found)"
-    rows_sorted = sorted(rows, key=lambda r: (r.score is None, r.score))
-    if top:
-        rows_sorted = rows_sorted[:top]
+    ranked_rows = _rank_rows_by_axis(rows, top=top)
     out_lines: list[str] = []
-    header = f"{'rank':>4}  {'score':>10}  {'bytes':>9}  {'seg_avg':>9}  {'pose_avg':>9}  {'samples':>7}  {'device':<8}  {'mtime':<17}  path"
+    header = f"{'axis_rank':>9}  {'score':>10}  {'bytes':>9}  {'seg_avg':>9}  {'pose_avg':>9}  {'samples':>7}  {'axis':<13}  {'device':<8}  {'mtime':<17}  path"
     out_lines.append(header)
     out_lines.append("-" * len(header))
-    for i, r in enumerate(rows_sorted, start=1):
+    for axis_rank, r in ranked_rows:
         score_str = f"{r.score:.6f}" if r.score is not None else "?"
         bytes_str = f"{r.archive_bytes:,}" if r.archive_bytes else "?"
         seg_str = f"{r.seg_dist_avg:.6f}" if r.seg_dist_avg is not None else "?"
@@ -213,22 +256,26 @@ def _format_table(rows: list[ScoreRow], *, top: int | None = None) -> str:
         if r.device != "cuda" and r.device != "?":
             device_str = f"{r.device}*"  # asterisk marks non-CUDA
         out_lines.append(
-            f"{i:>4}  {score_str:>10}  {bytes_str:>9}  {seg_str:>9}  {pose_str:>9}  "
-            f"{samples_str:>7}  {device_str:<8}  {r.mtime_utc:<17}  {r.path}"
+            f"{axis_rank:>9}  {score_str:>10}  {bytes_str:>9}  {seg_str:>9}  {pose_str:>9}  "
+            f"{samples_str:>7}  {r.score_axis:<13}  {device_str:<8}  {r.mtime_utc:<17}  {r.path}"
         )
     out_lines.append("")
-    out_lines.append("(* = non-CUDA device; treat as advisory only per CLAUDE.md MPS-auth-eval-is-NOISE)")
-    out_lines.append(f"({len(rows)} total scores; {len(rows_sorted)} displayed; sorted ascending — best first)")
+    out_lines.append("axis policy: contest_cuda is the strict promotion axis; contest_cpu is Linux x86 public-leaderboard reproduction; cpu_advisory/local CPU is advisory.")
+    out_lines.append("(* = non-CUDA device; inspect score_axis before using for ranking or promotion)")
+    top_text = " per axis" if top else ""
+    out_lines.append(
+        f"({len(rows)} total scores; {len(ranked_rows)} displayed; "
+        f"ranked ascending within each score axis{top_text}; no global mixed-axis rank)"
+    )
     return "\n".join(out_lines)
 
 
 def _format_json(rows: list[ScoreRow], *, top: int | None = None) -> str:
-    rows_sorted = sorted(rows, key=lambda r: (r.score is None, r.score))
-    if top:
-        rows_sorted = rows_sorted[:top]
+    ranked_rows = _rank_rows_by_axis(rows, top=top)
     out = []
-    for r in rows_sorted:
+    for axis_rank, r in ranked_rows:
         out.append({
+            "axis_rank": axis_rank,
             "score": r.score,
             "archive_bytes": r.archive_bytes,
             "archive_sha256": r.archive_sha256,
@@ -238,10 +285,29 @@ def _format_json(rows: list[ScoreRow], *, top: int | None = None) -> str:
             "samples": r.samples,
             "device": r.device,
             "gpu_t4_match": r.gpu_match,
+            "score_axis": r.score_axis,
+            "evidence_grade": r.evidence_grade,
+            "promotion_eligible": r.promotion_eligible,
+            "score_claim_valid": r.score_claim_valid,
+            "rank_or_kill_eligible": r.rank_or_kill_eligible,
+            "cpu_leaderboard_reproduction_eligible": r.cpu_leaderboard_reproduction_eligible,
             "path": r.path,
             "mtime_utc": r.mtime_utc,
         })
-    return json.dumps({"n_total": len(rows), "n_displayed": len(out), "rows": out}, indent=2)
+    axis_counts: dict[str, int] = {}
+    for row in rows:
+        axis_counts[row.score_axis] = axis_counts.get(row.score_axis, 0) + 1
+    return json.dumps(
+        {
+            "n_total": len(rows),
+            "n_displayed": len(out),
+            "axis_sort_policy": "ranked_within_score_axis_no_global_mixed_axis_rank",
+            "top_applied_per_axis": bool(top),
+            "axis_counts": dict(sorted(axis_counts.items())),
+            "rows": out,
+        },
+        indent=2,
+    )
 
 
 def main(argv: list[str] | None = None) -> int:

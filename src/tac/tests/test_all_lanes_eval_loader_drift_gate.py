@@ -85,3 +85,136 @@ def test_eval_loader_drift_gate_accepts_known_missing_prereq_json(monkeypatch) -
 
     assert passed is True
     assert "known missing prerequisite(s): cuda_available" in output
+
+
+def test_eval_loader_drift_gate_rejects_malformed_comparison_rows(monkeypatch) -> None:
+    module = _load_all_lanes_module()
+    payload = {
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "comparison_available": True,
+        "comparison_rows": [42],
+    }
+    _stub_probe_run(module, monkeypatch, payload, returncode=0)
+
+    passed, output = module._run_eval_loader_drift_probe_gate()
+
+    assert passed is False
+    assert "comparison schema invalid" in output
+    assert "row 0: expected object" in output
+
+
+def test_eval_loader_drift_gate_rejects_sequence_or_shape_mismatch(monkeypatch) -> None:
+    module = _load_all_lanes_module()
+    payload = {
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "comparison_available": True,
+        "comparison_rows": [
+            {
+                "path_match": True,
+                "sequence_index_match": False,
+                "comparison": {
+                    "shape_match": False,
+                    "numel": 100,
+                    "max_abs_lsb": 2.0,
+                    "mean_abs_lsb": 0.5,
+                    "rms_abs_lsb": 0.7,
+                    "nonzero_fraction": 0.2,
+                },
+            }
+        ],
+    }
+    _stub_probe_run(module, monkeypatch, payload, returncode=0)
+
+    passed, output = module._run_eval_loader_drift_probe_gate()
+
+    assert passed is False
+    assert "sequence index mismatch" in output
+    assert "comparison shape mismatch" in output
+
+
+def test_eval_loader_drift_gate_rejects_missing_drift_metrics(monkeypatch) -> None:
+    module = _load_all_lanes_module()
+    payload = {
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "comparison_available": True,
+        "comparison_rows": [
+            {
+                "path_match": True,
+                "sequence_index_match": True,
+                "comparison": {"shape_match": True, "numel": 100},
+            }
+        ],
+    }
+    _stub_probe_run(module, monkeypatch, payload, returncode=0)
+
+    passed, output = module._run_eval_loader_drift_probe_gate()
+
+    assert passed is False
+    assert "max_abs_lsb must be numeric" in output
+    assert "rms_abs_lsb must be numeric" in output
+
+
+def test_eval_loader_drift_gate_rejects_nonfinite_drift_metrics(monkeypatch) -> None:
+    module = _load_all_lanes_module()
+    payload = {
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "comparison_available": True,
+        "comparison_rows": [
+            {
+                "path_match": True,
+                "sequence_index_match": True,
+                "comparison": {
+                    "shape_match": True,
+                    "numel": 100,
+                    "max_abs_lsb": 2.0,
+                    "mean_abs_lsb": 0.5,
+                    "rms_abs_lsb": float("nan"),
+                    "nonzero_fraction": 0.2,
+                },
+            }
+        ],
+    }
+    _stub_probe_run(module, monkeypatch, payload, returncode=0)
+
+    passed, output = module._run_eval_loader_drift_probe_gate()
+
+    assert passed is False
+    assert "rms_abs_lsb must be finite" in output
+
+
+def test_eval_loader_drift_gate_accepts_complete_comparison_row(monkeypatch) -> None:
+    module = _load_all_lanes_module()
+    payload = {
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "comparison_available": True,
+        "comparison_rows": [
+            {
+                "path_match": True,
+                "sequence_index_match": True,
+                "comparison": {
+                    "shape_match": True,
+                    "numel": 100,
+                    "max_abs_lsb": 2.0,
+                    "mean_abs_lsb": 0.5,
+                    "rms_abs_lsb": 0.7,
+                    "nonzero_fraction": 0.2,
+                },
+            }
+        ],
+    }
+    _stub_probe_run(module, monkeypatch, payload, returncode=0)
+
+    passed, output = module._run_eval_loader_drift_probe_gate()
+
+    assert passed is True
+    assert "DALI-vs-PyAV decoded-RGB comparison emitted" in output

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -17,6 +18,43 @@ def _load_tool_module():
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def _exact_cuda_score(archive_bytes: int = 100_000) -> float:
+    return contest_score(d_seg=0.0005, d_pose=0.00003, archive_bytes=archive_bytes)
+
+
+def _exact_cuda_custody_kwargs(archive_bytes: int = 100_000) -> dict[str, object]:
+    score = _exact_cuda_score(archive_bytes)
+    rate_term = 25.0 * archive_bytes / 37_545_489
+    return {
+        "sample_count": 1199,
+        "seg_distortion": 0.0005,
+        "pose_distortion": 0.00003,
+        "rate_term": rate_term,
+        "recomputed_score": score,
+        "exact_eval_command": "python experiments/contest_auth_eval.py --device cuda",
+        "hardware": "Lightning T4",
+        "log_path": "external:contest_auth_eval.log",
+        "dispatch_claim_status": f"completed_score_{score:.6f}",
+    }
+
+
+def _device_axis_custody_kwargs(axis: str) -> dict[str, object]:
+    return {
+        "sample_count": 600,
+        "empirical_archive_bytes": 178_981,
+        "hardware": (
+            "github-actions ubuntu-24.04 linux x86_64"
+            if axis == "contest_cpu"
+            else "Lightning Tesla T4"
+        ),
+        "exact_eval_command": (
+            "python experiments/contest_auth_eval.py --device "
+            f"{'cpu' if axis == 'contest_cpu' else 'cuda'}"
+        ),
+        "log_path": f"external:{axis}.log",
+    }
 
 
 def test_autopilot_rejects_spoofed_mps_promotability_booleans() -> None:
@@ -40,11 +78,12 @@ def test_autopilot_rejects_spoofed_mps_promotability_booleans() -> None:
 
 def test_autopilot_requires_exact_cuda_for_promotable_evidence() -> None:
     tool = _load_tool_module()
+    score = _exact_cuda_score()
     exact = tool.TechniqueEvidence(
         technique="exact_anchor",
         empirical_archive_bytes=100_000,
-        empirical_score=0.18,
-        score_contest_cuda=0.18,
+        empirical_score=score,
+        score_contest_cuda=score,
         evidence_grade="[contest-CUDA]",
         evidence_semantics="contest_cuda_exact_eval_positive",
         score_claim=True,
@@ -55,6 +94,7 @@ def test_autopilot_requires_exact_cuda_for_promotable_evidence() -> None:
         runtime_tree_sha256="b" * 64,
         dispatch_blockers=[],
         source="contest_auth_eval.json",
+        **_exact_cuda_custody_kwargs(),
     )
     cpu = tool.TechniqueEvidence(
         technique="cpu_anchor",
@@ -74,6 +114,103 @@ def test_autopilot_requires_exact_cuda_for_promotable_evidence() -> None:
     assert tool._is_explicitly_promotable_evidence(exact) is True
     assert tool._is_explicitly_promotable_evidence(cpu) is False
     assert tool._is_explicitly_contest_cpu_evidence(cpu) is True
+
+
+def test_load_evidence_accepts_contest_score_aliases(tmp_path: Path) -> None:
+    tool = _load_tool_module()
+    score = _exact_cuda_score()
+    evidence_path = tmp_path / "evidence.jsonl"
+    evidence_path.write_text(
+        json.dumps(
+            {
+                "technique": "alias_row",
+                "empirical_archive_bytes": 100_000,
+                "contest_cuda_score": score,
+                "contest_cpu_score": 0.151,
+                "evidence_grade": "[contest-CUDA]",
+                "score_claim": True,
+                "promotion_eligible": True,
+                "rank_or_kill_eligible": True,
+                "ready_for_exact_eval_dispatch": True,
+                "archive_sha256": "a" * 64,
+                "runtime_tree_sha256": "b" * 64,
+                "sample_count": 1199,
+                "seg_distortion": 0.0005,
+                "pose_distortion": 0.00003,
+                "rate_term": 25.0 * 100_000 / 37_545_489,
+                "recomputed_score": score,
+                "exact_eval_command": (
+                    "python experiments/contest_auth_eval.py --device cuda"
+                ),
+                "hardware": "Lightning T4",
+                "log_path": "external:contest_auth_eval.log",
+                "dispatch_claim_status": f"completed_score_{score:.6f}",
+                "dispatch_blockers": [],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    row = tool._load_evidence(evidence_path)[0]
+
+    assert row.score_contest_cuda == score
+    assert row.score_contest_cpu == 0.151
+    assert tool._is_explicitly_promotable_evidence(row) is True
+
+
+def test_load_evidence_skips_malformed_rows_without_losing_good_rows(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool_module()
+    evidence_path = tmp_path / "evidence.jsonl"
+    score = _exact_cuda_score()
+    good_row = {
+        "technique": "good_row",
+        "empirical_archive_bytes": 100_000,
+        "contest_cuda_score": score,
+        "evidence_grade": "[contest-CUDA]",
+        "score_claim": True,
+        "promotion_eligible": True,
+        "rank_or_kill_eligible": True,
+        "ready_for_exact_eval_dispatch": True,
+        "archive_sha256": "a" * 64,
+        "runtime_tree_sha256": "b" * 64,
+        "sample_count": 1199,
+        "seg_distortion": 0.0005,
+        "pose_distortion": 0.00003,
+        "rate_term": 25.0 * 100_000 / 37_545_489,
+        "recomputed_score": score,
+        "exact_eval_command": "python experiments/contest_auth_eval.py --device cuda",
+        "hardware": "Lightning T4",
+        "log_path": "external:contest_auth_eval.log",
+        "dispatch_claim_status": f"completed_score_{score:.6f}",
+        "dispatch_blockers": [],
+    }
+    bad_cast_row = {
+        "technique": "bad_cast_row",
+        "empirical_archive_bytes": "not-an-int",
+    }
+    evidence_path.write_text(
+        "\n".join(
+            [
+                json.dumps(good_row),
+                "{not json",
+                json.dumps({"empirical_archive_bytes": 1}),
+                json.dumps(bad_cast_row),
+                json.dumps({**good_row, "technique": "second_good_row"}),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    rows = tool._load_evidence(evidence_path)
+
+    assert [row.technique for row in rows] == ["good_row", "second_good_row"]
+    diagnostics = tool._LAST_EVIDENCE_LOAD_DIAGNOSTICS
+    assert len(diagnostics) == 3
+    assert {diag["line_number"] for diag in diagnostics} == {2, 3, 4}
 
 
 def test_exact_negative_supersedes_proxy_byte_anchor() -> None:
@@ -162,6 +299,144 @@ def test_exact_negative_supersedes_proxy_byte_anchor() -> None:
     )
     assert ranked[0]["retired_from_active_ranking"] is True
     assert ranked[0]["predicted_score_delta"] == 0.0
+
+
+def test_later_exact_positive_reactivates_measured_config_negative_signal() -> None:
+    tool = _load_tool_module()
+    catalog = [{
+        "name": "reactivated_lane",
+        "predicted_archive_bytes": 180_000,
+        "cost_dollars": 5.0,
+        "cost_hours": 2.0,
+    }]
+    evidence = [
+        tool.TechniqueEvidence(
+            technique="reactivated_lane",
+            empirical_archive_bytes=90_000,
+            evidence_grade="[CPU-prep byte-only]",
+            evidence_semantics="cpu_byte_anchor_no_score",
+            score_claim=False,
+            promotion_eligible=False,
+            rank_or_kill_eligible=False,
+            ready_for_exact_eval_dispatch=False,
+            dispatch_blockers=["missing_exact_cuda_auth_eval"],
+            source="[CPU-prep byte-only] local proxy",
+        ),
+        tool.TechniqueEvidence(
+            technique="reactivated_lane",
+            empirical_archive_bytes=160_000,
+            empirical_score=0.35,
+            score_contest_cuda=0.35,
+            evidence_grade="[contest-CUDA A-negative]",
+            score_claim=False,
+            promotion_eligible=False,
+            rank_or_kill_eligible=False,
+            ready_for_exact_eval_dispatch=False,
+            contest_dispatch_verdict="measured_config_retired_exact_cuda_negative",
+            measured_config_status="measured_config_retired",
+            family_falsified=False,
+            method_family_retired=False,
+            falsification_scope="measured_config_only_old_K_budget",
+            reactivation_criteria=["joint retrain under scorer-aware loss"],
+            exact_result_review_path=".omx/research/old_negative_review.json",
+            dispatch_blockers=["reactivation_required_before_new_dispatch"],
+            source="[contest-CUDA A-negative] old measured config",
+        ),
+        tool.TechniqueEvidence(
+            technique="reactivated_lane",
+            empirical_archive_bytes=120_000,
+            empirical_score=_exact_cuda_score(120_000),
+            score_contest_cuda=_exact_cuda_score(120_000),
+            evidence_grade="[contest-CUDA]",
+            evidence_semantics="contest_cuda_exact_eval_positive",
+            score_claim=True,
+            promotion_eligible=True,
+            rank_or_kill_eligible=True,
+            ready_for_exact_eval_dispatch=True,
+            archive_sha256="a" * 64,
+            runtime_tree_sha256="b" * 64,
+            dispatch_blockers=[],
+            source="auth_eval_work/contest_auth_eval.json",
+            **_exact_cuda_custody_kwargs(120_000),
+        ),
+    ]
+
+    updated = tool.update_catalog_from_evidence(
+        catalog,
+        evidence,
+        log_warnings=False,
+    )
+
+    row = updated[0]
+    assert row["predicted_archive_bytes"] == 120_000
+    assert row["empirical_anchor_n"] == 1
+    assert row["empirical_anchor_promotable"] is True
+    assert row.get("active_ranking_blocked") is not True
+    assert row["supporting_non_promotable_evidence_n"] == 1
+    assert row["retired_measured_config_evidence_n"] == 1
+    assert row["retired_measured_config_statuses"] == ["measured_config_retired"]
+    assert row["retired_measured_config_reactivation_criteria"] == [
+        "joint retrain under scorer-aware loss"
+    ]
+
+
+def test_broad_family_negative_still_blocks_later_positive() -> None:
+    tool = _load_tool_module()
+    catalog = [{
+        "name": "family_retired_lane",
+        "predicted_archive_bytes": 180_000,
+        "cost_dollars": 5.0,
+        "cost_hours": 2.0,
+    }]
+    evidence = [
+        tool.TechniqueEvidence(
+            technique="family_retired_lane",
+            empirical_archive_bytes=160_000,
+            empirical_score=0.35,
+            score_contest_cuda=0.35,
+            evidence_grade="[contest-CUDA A-negative]",
+            score_claim=False,
+            promotion_eligible=False,
+            rank_or_kill_eligible=False,
+            ready_for_exact_eval_dispatch=False,
+            contest_dispatch_verdict="family_falsified_exact_cuda_negative",
+            measured_config_status="measured_config_retired",
+            family_falsified=True,
+            method_family_retired=False,
+            falsification_scope="family",
+            source="[contest-CUDA A-negative] family review",
+        ),
+        tool.TechniqueEvidence(
+            technique="family_retired_lane",
+            empirical_archive_bytes=120_000,
+            empirical_score=_exact_cuda_score(120_000),
+            score_contest_cuda=_exact_cuda_score(120_000),
+            evidence_grade="[contest-CUDA]",
+            evidence_semantics="contest_cuda_exact_eval_positive",
+            score_claim=True,
+            promotion_eligible=True,
+            rank_or_kill_eligible=True,
+            ready_for_exact_eval_dispatch=True,
+            archive_sha256="a" * 64,
+            runtime_tree_sha256="b" * 64,
+            dispatch_blockers=[],
+            source="auth_eval_work/contest_auth_eval.json",
+            **_exact_cuda_custody_kwargs(120_000),
+        ),
+    ]
+
+    row = tool.update_catalog_from_evidence(
+        catalog,
+        evidence,
+        log_warnings=False,
+    )[0]
+
+    assert row["predicted_archive_bytes"] == 180_000
+    assert row["active_ranking_blocked"] is True
+    assert row["family_falsified"] is True
+    assert row["exact_negative_classification"] == (
+        "broader_family_or_method_retirement_claimed"
+    )
 
 
 def test_lossy_coarsening_builtin_catalog_classifies_reviewed_negative() -> None:
@@ -476,7 +751,6 @@ def test_device_axis_report_learns_per_substrate_profile_from_paired_axes() -> N
             score_contest_cpu=0.1953761765,
             empirical_d_seg=0.00057599,
             empirical_d_pose=0.00003460,
-            empirical_archive_bytes=178_981,
             evidence_grade="[contest-CPU]",
             device_axis="contest_cpu",
             archive_sha256="same-archive",
@@ -485,6 +759,7 @@ def test_device_axis_report_learns_per_substrate_profile_from_paired_axes() -> N
             decoder_pose_ratio_cuda_over_cpu=1.25,
             network_pose_ratio_cuda_over_cpu=4.0,
             source="cpu json",
+            **_device_axis_custody_kwargs("contest_cpu"),
         ),
         tool.TechniqueEvidence(
             technique="pr102",
@@ -492,13 +767,13 @@ def test_device_axis_report_learns_per_substrate_profile_from_paired_axes() -> N
             score_contest_cuda=0.2283908312,
             empirical_d_seg=0.00067565,
             empirical_d_pose=0.00017347,
-            empirical_archive_bytes=178_981,
             evidence_grade="[contest-CUDA]",
             device_axis="contest_cuda",
             archive_sha256="same-archive",
             runtime_tree_sha256="same-runtime",
             substrate_class="hnerv_lc_v2",
             source="cuda json",
+            **_device_axis_custody_kwargs("contest_cuda"),
         ),
     ]
 
@@ -516,6 +791,45 @@ def test_device_axis_report_learns_per_substrate_profile_from_paired_axes() -> N
     assert profiles[0]["network_pose_ratio_mean_cuda_over_cpu"] == 4.0
 
 
+def test_device_axis_report_rejects_incomplete_self_labeled_pair() -> None:
+    tool = _load_tool_module()
+    evidence = [
+        tool.TechniqueEvidence(
+            technique="pr102",
+            empirical_score=0.195,
+            score_contest_cpu=0.195,
+            empirical_d_seg=0.00057,
+            empirical_d_pose=0.000034,
+            evidence_grade="[contest-CPU]",
+            device_axis="contest_cpu",
+            archive_sha256="same-archive",
+            runtime_tree_sha256="same-runtime",
+            source="cpu json",
+        ),
+        tool.TechniqueEvidence(
+            technique="pr102",
+            empirical_score=0.228,
+            score_contest_cuda=0.228,
+            empirical_d_seg=0.00067,
+            empirical_d_pose=0.00017,
+            evidence_grade="[contest-CUDA]",
+            device_axis="contest_cuda",
+            archive_sha256="same-archive",
+            runtime_tree_sha256="same-runtime",
+            source="cuda json",
+        ),
+    ]
+
+    report = tool.summarize_device_axis_evidence(evidence)
+
+    assert report["paired_comparison_count"] == 0
+    assert report["priority_status"] == "insufficient_paired_axis_evidence"
+    assert all(
+        row["reason"] == "incomplete_device_axis_evidence"
+        for row in report["unpaired_device_axis_evidence"]
+    )
+
+
 def test_device_axis_report_rejects_conflicting_duplicate_axis_rows() -> None:
     tool = _load_tool_module()
     common = {
@@ -523,6 +837,10 @@ def test_device_axis_report_rejects_conflicting_duplicate_axis_rows() -> None:
         "archive_sha256": "same-archive",
         "runtime_tree_sha256": "same-runtime",
         "substrate_class": "hnerv_lc_v2",
+        "sample_count": 600,
+        "empirical_archive_bytes": 178_981,
+        "exact_eval_command": "python experiments/contest_auth_eval.py",
+        "log_path": "external:axis.log",
     }
     evidence = [
         tool.TechniqueEvidence(
@@ -533,6 +851,7 @@ def test_device_axis_report_rejects_conflicting_duplicate_axis_rows() -> None:
             empirical_d_pose=0.000034,
             evidence_grade="[contest-CPU]",
             device_axis="contest_cpu",
+            hardware="github-actions ubuntu-24.04 linux x86_64",
             source="cpu json a",
         ),
         tool.TechniqueEvidence(
@@ -543,6 +862,7 @@ def test_device_axis_report_rejects_conflicting_duplicate_axis_rows() -> None:
             empirical_d_pose=0.000035,
             evidence_grade="[contest-CPU]",
             device_axis="contest_cpu",
+            hardware="github-actions ubuntu-24.04 linux x86_64",
             source="cpu json b",
         ),
         tool.TechniqueEvidence(
@@ -553,6 +873,7 @@ def test_device_axis_report_rejects_conflicting_duplicate_axis_rows() -> None:
             empirical_d_pose=0.00017,
             evidence_grade="[contest-CUDA]",
             device_axis="contest_cuda",
+            hardware="Lightning Tesla T4",
             source="cuda json",
         ),
     ]

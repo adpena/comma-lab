@@ -57,6 +57,51 @@ HEURISTIC_N_LAYERS = {
 }
 
 
+def _rank_axis_metadata(source_row: dict, plan_payload: dict) -> tuple[str, bool]:
+    """Return recommender rank-axis metadata without silently preferring CUDA.
+
+    Current cathedral_autopilot rows carry ``rank_axis`` explicitly. Older
+    plan JSON may only have the value on ``operator_state`` or may be missing
+    it entirely. Missing metadata is treated as the current conservative dual
+    default, but the caller also receives a boolean so stale plans remain
+    visible in downstream manifests.
+    """
+    operator_state = plan_payload.get("operator_state", {})
+    value = (
+        source_row.get("rank_axis")
+        or operator_state.get("rank_axis")
+        or plan_payload.get("rank_axis")
+    )
+    missing = value is None
+    if value is None:
+        value = "dual"
+    if value not in {"dual", "cuda", "cpu"}:
+        raise ValueError(
+            "invalid rank_axis in cathedral_autopilot plan row "
+            f"{source_row.get('name', '<unknown>')!r}: {value!r}"
+        )
+    return str(value), missing
+
+
+def _current_score_axis_metadata(source_row: dict, plan_payload: dict) -> tuple[str, bool]:
+    """Return current-score-axis metadata, preserving missing legacy state."""
+    operator_state = plan_payload.get("operator_state", {})
+    value = (
+        source_row.get("current_score_axis")
+        or operator_state.get("current_score_axis")
+        or plan_payload.get("current_score_axis")
+    )
+    missing = value is None
+    if value is None:
+        return "unspecified", True
+    if value not in {"cuda", "cpu"}:
+        raise ValueError(
+            "invalid current_score_axis in cathedral_autopilot plan row "
+            f"{source_row.get('name', '<unknown>')!r}: {value!r}"
+        )
+    return str(value), False
+
+
 def _technique_to_candidate(t: dict) -> dict:
     """Convert one recommender row into a MetaLagrangianSearch candidate dict."""
     name = t["name"]
@@ -111,6 +156,14 @@ def run_bridge(plan_json_path: Path, anchors_path: Path) -> dict:
 
     evaluations: list[dict] = []
     for cand in candidates:
+        rank_axis, rank_axis_missing = _rank_axis_metadata(
+            cand["_source_row"],
+            plan_payload,
+        )
+        current_score_axis, current_score_axis_missing = _current_score_axis_metadata(
+            cand["_source_row"],
+            plan_payload,
+        )
         ev = search.evaluate_candidate(
             candidate_id=cand["candidate_id"],
             archive_bytes=cand["archive_bytes"],
@@ -142,7 +195,8 @@ def run_bridge(plan_json_path: Path, anchors_path: Path) -> dict:
             "predicted_score_delta_from_recommender": (
                 cand["_source_row"].get("predicted_score_delta", 0.0)
             ),
-            "rank_axis_from_recommender": cand["_source_row"].get("rank_axis", "cuda"),
+            "rank_axis_from_recommender": rank_axis,
+            "rank_axis_missing_from_recommender": rank_axis_missing,
             "primary_score_delta_from_recommender": (
                 cand["_source_row"].get("primary_score_delta", 0.0)
             ),
@@ -155,9 +209,8 @@ def run_bridge(plan_json_path: Path, anchors_path: Path) -> dict:
             "predicted_cpu_score_calibration": (
                 cand["_source_row"].get("predicted_cpu_score_calibration", "")
             ),
-            "current_score_axis_from_recommender": (
-                cand["_source_row"].get("current_score_axis", "")
-            ),
+            "current_score_axis_from_recommender": current_score_axis,
+            "current_score_axis_missing_from_recommender": current_score_axis_missing,
         })
 
     # Sort by Lagrangian (lower = better; refused/failed sort to bottom via inf)

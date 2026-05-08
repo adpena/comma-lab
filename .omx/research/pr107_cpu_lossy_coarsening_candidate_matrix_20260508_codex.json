@@ -1,0 +1,1188 @@
+{
+  "baseline_cpu_anchor": {
+    "archive_member": "0.bin",
+    "archive_member_sha256": "fce200db2fe087cc6a051945b3fda2c37f5bbb3e19b8f20a1aea7201db0c9f5f",
+    "archive_relpath": "experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/archive.zip",
+    "archive_sha256": "7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb",
+    "archive_size_bytes": 178392,
+    "avg_posenet_dist": 3.58e-05,
+    "avg_segnet_dist": 0.00058931,
+    "canonical_score_display": 0.2,
+    "compression_rate": 0.00475136,
+    "device": "cpu",
+    "evaluate_py_sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b",
+    "evidence_grade": "contest-CPU-1to1",
+    "exists": true,
+    "hardware": "github-actions-ubuntu-latest-x86_64",
+    "is_contest_compliant": true,
+    "lane_tag": "[contest-CPU]",
+    "n_samples": 600,
+    "path": "experiments/results/pr107_apogee_cpu_auth_eval_gha_20260508T124452Z/contest_auth_eval.adjudicated.json",
+    "report_text_fallback_used": false,
+    "runner_arch": "x86_64",
+    "runner_image": "ubuntu-24.04",
+    "score_recomputed_from_components": 0.1966358879,
+    "workflow_run_id": 25556454358,
+    "workflow_run_url": "https://github.com/adpena/comma_video_compression_challenge/actions/runs/25556454358"
+  },
+  "builder_and_validation_surfaces": {
+    "candidate_preflight": {
+      "exists": true,
+      "path": "experiments/preflight_candidate_manifest_dispatch_readiness.py"
+    },
+    "cpu_eval_dispatcher": {
+      "exists": true,
+      "path": "tools/dispatch_cpu_eval_via_github_actions.py"
+    },
+    "cuda_exact_eval_launcher": {
+      "exists": true,
+      "path": "scripts/launch_lightning_batch_job.py"
+    },
+    "gha_harvester": {
+      "exists": true,
+      "path": "tools/harvest_gha_runs.py"
+    },
+    "lane_claim_helper": {
+      "exists": true,
+      "path": "tools/claim_lane_dispatch.py"
+    },
+    "pr107_apogee_inflate_sh": {
+      "exists": true,
+      "path": "experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/source/submissions/apogee/inflate.sh"
+    },
+    "pr107_apogee_runtime_dir": {
+      "exists": true,
+      "path": "experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/source/submissions/apogee"
+    },
+    "pr107_lossy_brotli_stack_builder": {
+      "exists": true,
+      "path": "tools/pr107_lossy_coarsening_brotli_optuna_stack.py"
+    },
+    "pr107_lossy_builder": {
+      "exists": true,
+      "path": "tools/pr107_lossy_coarsening_apogee.py"
+    },
+    "pre_submission_compliance_gate": {
+      "exists": true,
+      "path": "scripts/pre_submission_compliance_check.py"
+    },
+    "runtime_packet_builder_pattern": {
+      "exists": true,
+      "path": "tools/build_pr101_runtime_packet.py"
+    }
+  },
+  "candidates": [
+    {
+      "budget": 0.025,
+      "build_manifest": {
+        "archive_probe": {
+          "actual_bytes": 174429,
+          "actual_sha256": "92d4f9299b52040afe8b108a9984f5a87ef5e378a9a546a1253ba7be9546b5f3",
+          "blockers": [],
+          "expected_bytes": 174429,
+          "expected_sha256": "92d4f9299b52040afe8b108a9984f5a87ef5e378a9a546a1253ba7be9546b5f3",
+          "members": [
+            {
+              "bytes": 174321,
+              "compress_size": 174321,
+              "name": "0.bin",
+              "sha256": "9c0c996a7561d7025a4f93d7cdee3978e44ada1a4a1b3928b71096309fe83338"
+            }
+          ],
+          "path": "experiments/results/pr107_apogee_lossy_coarsening_b025_20260508T130700Z/archive.zip",
+          "status": "ok"
+        },
+        "archive_relpath": "experiments/results/pr107_apogee_lossy_coarsening_b025_20260508T130700Z/archive.zip",
+        "archive_sha256": "92d4f9299b52040afe8b108a9984f5a87ef5e378a9a546a1253ba7be9546b5f3",
+        "archive_size_bytes": 174429,
+        "budget": 0.025,
+        "charged_bits_changed": true,
+        "delta_zip_vs_baseline": -3963,
+        "deployment_target": "linux_x86_64_cpu_and_t4_contest_runtime",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "runtime_closure_not_yet_verified",
+          "linux_cpu_and_t4_exact_eval_not_yet_paired"
+        ],
+        "evidence_grade": "[CPU-prep]",
+        "evidence_semantics": "cpu_byte_roundtrip_proxy_no_score",
+        "member_name": "0.bin",
+        "member_sha256": "9c0c996a7561d7025a4f93d7cdee3978e44ada1a4a1b3928b71096309fe83338",
+        "member_size_bytes": 174321,
+        "path": "experiments/results/pr107_apogee_lossy_coarsening_b025_20260508T130700Z/build_manifest.json",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "rel_err": 0.006548142178331917,
+        "schema_version": "pr107_lossy_coarsening_apogee.v1",
+        "score_affecting_payload_changed": true,
+        "score_claim": false,
+        "target_modes": [
+          "contest_exact_eval"
+        ],
+        "tool": "tools/pr107_lossy_coarsening_apogee.py"
+      },
+      "candidate_id": "pr107_lossy_b025",
+      "cpu_eval": {
+        "archive_member": "0.bin",
+        "archive_member_sha256": "9c0c996a7561d7025a4f93d7cdee3978e44ada1a4a1b3928b71096309fe83338",
+        "archive_relpath": "/Users/adpena/Projects/pact/experiments/results/pr107_apogee_lossy_coarsening_b025_20260508T130700Z/archive.zip",
+        "archive_sha256": "92d4f9299b52040afe8b108a9984f5a87ef5e378a9a546a1253ba7be9546b5f3",
+        "archive_size_bytes": 174429,
+        "avg_posenet_dist": 7.229e-05,
+        "avg_segnet_dist": 0.00099468,
+        "canonical_score_display": 0.24,
+        "compression_rate": 0.0046458,
+        "device": "cpu",
+        "evaluate_py_sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b",
+        "evidence_grade": "contest-CPU-1to1",
+        "exists": true,
+        "hardware": "github-actions-ubuntu-latest-x86_64",
+        "is_contest_compliant": true,
+        "lane_tag": "[contest-CPU]",
+        "n_samples": 600,
+        "path": "experiments/results/pr107_apogee_lossy_coarsening_b025_20260508T130700Z/contest_auth_eval.adjudicated.json",
+        "report_text_fallback_used": false,
+        "runner_arch": "x86_64",
+        "runner_image": "ubuntu-24.04",
+        "score_recomputed_from_components": 0.24249979973518604,
+        "workflow_run_id": 25557507813,
+        "workflow_run_url": "https://github.com/adpena/comma_video_compression_challenge/actions/runs/25557507813"
+      },
+      "cpu_eval_trusted_for_score_delta": true,
+      "cpu_eval_validation_blockers": [],
+      "cuda_eval": {
+        "evidence_tag": "[contest-CUDA missing]",
+        "exists": false,
+        "status": "missing"
+      },
+      "delta_vs_pr107_cpu_anchor": {
+        "candidate_minus_baseline_bytes": -3963,
+        "candidate_minus_baseline_score_cpu": 0.04586391183518604,
+        "pose_term_delta_cpu": 0.007965911806761539,
+        "rate_term_saving_if_components_unchanged": 0.002638799031223165,
+        "seg_term_delta_cpu": 0.040537
+      },
+      "dispatch_attempted_by_this_tool": false,
+      "evidence_tags": [
+        "[CPU-prep]",
+        "[contest-CPU]",
+        "[contest-CUDA missing]",
+        "[no-score-claim]"
+      ],
+      "fail_closed_blockers": [
+        "do_not_make_score_claim_without_paired_cpu_cuda_review",
+        "exact_cpu_score_not_lower_than_pr107_anchor",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "medal_path_note": "Existing uniform PR107 lossy-coarsening config is not a medal-path score claim; reactivation requires scorer-aware tensor allocation or recovery plus paired CPU/CUDA exact eval.",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "rel_err": 0.006548142178331917,
+      "required_validation_commands": {
+        "candidate_preflight": ".venv/bin/python experiments/preflight_candidate_manifest_dispatch_readiness.py --manifest experiments/results/pr107_apogee_lossy_coarsening_b025_20260508T130700Z/build_manifest.json --claims-path .omx/state/active_lane_dispatch_claims.md --now-utc <utc> --fail-if-not-ready",
+        "claim_before_cuda": ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id pr107_lossy_cpu_axis_pr107_lossy_b025 --platform lightning --instance-job-id pr107_lossy_b025-cuda-exact --agent codex --predicted-eta-utc <utc> --status eval --notes \"PR107 lossy CPU-axis matrix CUDA validation\"",
+        "exact_cpu_gha": ".venv/bin/python tools/dispatch_cpu_eval_via_github_actions.py --archive-path experiments/results/pr107_apogee_lossy_coarsening_b025_20260508T130700Z/archive.zip --archive-sha 92d4f9299b52040afe8b108a9984f5a87ef5e378a9a546a1253ba7be9546b5f3 --submission-name apogee --output-dir experiments/results/pr107_lossy_b025_cpu_eval_gha --pr-number 1",
+        "exact_cuda_lightning_after_claim": ".venv/bin/python scripts/launch_lightning_batch_job.py exact-eval --job-name pr107_lossy_b025-cuda-exact --archive experiments/results/pr107_apogee_lossy_coarsening_b025_20260508T130700Z/archive.zip --repo-dir <remote_repo_dir> --upstream-dir <remote_repo_dir>/upstream --inflate-sh <remote_repo_dir>/experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/source/submissions/apogee/inflate.sh --dispatch-lane-id pr107_lossy_cpu_axis_pr107_lossy_b025 --dispatch-claims-path .omx/state/active_lane_dispatch_claims.md --expected-archive-sha256 92d4f9299b52040afe8b108a9984f5a87ef5e378a9a546a1253ba7be9546b5f3 --expected-archive-size-bytes 174429 --adjudicate --baseline-score 0.196635887900 --baseline-archive-bytes 178392 --component-reference-label pr107_cpu_anchor --max-sane-score 1.0"
+      },
+      "score_claim": false,
+      "status": "retired_on_pr107_cpu_axis_uniform_lossy_config",
+      "variant": "uniform_per_tensor_k_coarsening"
+    },
+    {
+      "budget": 0.035,
+      "build_manifest": {
+        "archive_probe": {
+          "actual_bytes": 170009,
+          "actual_sha256": "c846029478a0160adc2541a16428abbe06d59e98f0d3a95bb5a919b7487d59b5",
+          "blockers": [],
+          "expected_bytes": 170009,
+          "expected_sha256": "c846029478a0160adc2541a16428abbe06d59e98f0d3a95bb5a919b7487d59b5",
+          "members": [
+            {
+              "bytes": 169901,
+              "compress_size": 169901,
+              "name": "0.bin",
+              "sha256": "9bd206402b8a93f3ee1b0abf7fa28da91412452106ba3f842bd5a458b3a01977"
+            }
+          ],
+          "path": "experiments/results/pr107_apogee_lossy_coarsening_b035_20260508T130700Z/archive.zip",
+          "status": "ok"
+        },
+        "archive_relpath": "experiments/results/pr107_apogee_lossy_coarsening_b035_20260508T130700Z/archive.zip",
+        "archive_sha256": "c846029478a0160adc2541a16428abbe06d59e98f0d3a95bb5a919b7487d59b5",
+        "archive_size_bytes": 170009,
+        "budget": 0.035,
+        "charged_bits_changed": true,
+        "delta_zip_vs_baseline": -8383,
+        "deployment_target": "linux_x86_64_cpu_and_t4_contest_runtime",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "runtime_closure_not_yet_verified",
+          "linux_cpu_and_t4_exact_eval_not_yet_paired"
+        ],
+        "evidence_grade": "[CPU-prep]",
+        "evidence_semantics": "cpu_byte_roundtrip_proxy_no_score",
+        "member_name": "0.bin",
+        "member_sha256": "9bd206402b8a93f3ee1b0abf7fa28da91412452106ba3f842bd5a458b3a01977",
+        "member_size_bytes": 169901,
+        "path": "experiments/results/pr107_apogee_lossy_coarsening_b035_20260508T130700Z/build_manifest.json",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "rel_err": 0.015396909039855007,
+        "schema_version": "pr107_lossy_coarsening_apogee.v1",
+        "score_affecting_payload_changed": true,
+        "score_claim": false,
+        "target_modes": [
+          "contest_exact_eval"
+        ],
+        "tool": "tools/pr107_lossy_coarsening_apogee.py"
+      },
+      "candidate_id": "pr107_lossy_b035",
+      "cpu_eval": {
+        "archive_member": "0.bin",
+        "archive_member_sha256": "9bd206402b8a93f3ee1b0abf7fa28da91412452106ba3f842bd5a458b3a01977",
+        "archive_relpath": "/Users/adpena/Projects/pact/experiments/results/pr107_apogee_lossy_coarsening_b035_20260508T130700Z/archive.zip",
+        "archive_sha256": "c846029478a0160adc2541a16428abbe06d59e98f0d3a95bb5a919b7487d59b5",
+        "archive_size_bytes": 170009,
+        "avg_posenet_dist": 8.22e-05,
+        "avg_segnet_dist": 0.00118627,
+        "canonical_score_display": 0.26,
+        "compression_rate": 0.00452808,
+        "device": "cpu",
+        "evaluate_py_sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b",
+        "evidence_grade": "contest-CPU-1to1",
+        "exists": true,
+        "hardware": "github-actions-ubuntu-latest-x86_64",
+        "is_contest_compliant": true,
+        "lane_tag": "[contest-CPU]",
+        "n_samples": 600,
+        "path": "experiments/results/pr107_apogee_lossy_coarsening_b035_20260508T130700Z/contest_auth_eval.adjudicated.json",
+        "report_text_fallback_used": false,
+        "runner_arch": "x86_64",
+        "runner_image": "ubuntu-24.04",
+        "score_recomputed_from_components": 0.2604995423736629,
+        "workflow_run_id": 25557519091,
+        "workflow_run_url": "https://github.com/adpena/comma_video_compression_challenge/actions/runs/25557519091"
+      },
+      "cpu_eval_trusted_for_score_delta": true,
+      "cpu_eval_validation_blockers": [],
+      "cuda_eval": {
+        "evidence_tag": "[contest-CUDA missing]",
+        "exists": false,
+        "status": "missing"
+      },
+      "delta_vs_pr107_cpu_anchor": {
+        "candidate_minus_baseline_bytes": -8383,
+        "candidate_minus_baseline_score_cpu": 0.0638636544736629,
+        "pose_term_delta_cpu": 0.009749654445238402,
+        "rate_term_saving_if_components_unchanged": 0.005581895604023162,
+        "seg_term_delta_cpu": 0.05969599999999999
+      },
+      "dispatch_attempted_by_this_tool": false,
+      "evidence_tags": [
+        "[CPU-prep]",
+        "[contest-CPU]",
+        "[contest-CUDA missing]",
+        "[no-score-claim]"
+      ],
+      "fail_closed_blockers": [
+        "do_not_make_score_claim_without_paired_cpu_cuda_review",
+        "exact_cpu_score_not_lower_than_pr107_anchor",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "medal_path_note": "Existing uniform PR107 lossy-coarsening config is not a medal-path score claim; reactivation requires scorer-aware tensor allocation or recovery plus paired CPU/CUDA exact eval.",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "rel_err": 0.015396909039855007,
+      "required_validation_commands": {
+        "candidate_preflight": ".venv/bin/python experiments/preflight_candidate_manifest_dispatch_readiness.py --manifest experiments/results/pr107_apogee_lossy_coarsening_b035_20260508T130700Z/build_manifest.json --claims-path .omx/state/active_lane_dispatch_claims.md --now-utc <utc> --fail-if-not-ready",
+        "claim_before_cuda": ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id pr107_lossy_cpu_axis_pr107_lossy_b035 --platform lightning --instance-job-id pr107_lossy_b035-cuda-exact --agent codex --predicted-eta-utc <utc> --status eval --notes \"PR107 lossy CPU-axis matrix CUDA validation\"",
+        "exact_cpu_gha": ".venv/bin/python tools/dispatch_cpu_eval_via_github_actions.py --archive-path experiments/results/pr107_apogee_lossy_coarsening_b035_20260508T130700Z/archive.zip --archive-sha c846029478a0160adc2541a16428abbe06d59e98f0d3a95bb5a919b7487d59b5 --submission-name apogee --output-dir experiments/results/pr107_lossy_b035_cpu_eval_gha --pr-number 1",
+        "exact_cuda_lightning_after_claim": ".venv/bin/python scripts/launch_lightning_batch_job.py exact-eval --job-name pr107_lossy_b035-cuda-exact --archive experiments/results/pr107_apogee_lossy_coarsening_b035_20260508T130700Z/archive.zip --repo-dir <remote_repo_dir> --upstream-dir <remote_repo_dir>/upstream --inflate-sh <remote_repo_dir>/experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/source/submissions/apogee/inflate.sh --dispatch-lane-id pr107_lossy_cpu_axis_pr107_lossy_b035 --dispatch-claims-path .omx/state/active_lane_dispatch_claims.md --expected-archive-sha256 c846029478a0160adc2541a16428abbe06d59e98f0d3a95bb5a919b7487d59b5 --expected-archive-size-bytes 170009 --adjudicate --baseline-score 0.196635887900 --baseline-archive-bytes 178392 --component-reference-label pr107_cpu_anchor --max-sane-score 1.0"
+      },
+      "score_claim": false,
+      "status": "retired_on_pr107_cpu_axis_uniform_lossy_config",
+      "variant": "uniform_per_tensor_k_coarsening"
+    },
+    {
+      "budget": 0.05,
+      "build_manifest": {
+        "archive_probe": {
+          "actual_bytes": 156263,
+          "actual_sha256": "1349c86c662e8aff24229af6b0cddd626b3881d32411acee02ce703a78bab562",
+          "blockers": [],
+          "expected_bytes": 156263,
+          "expected_sha256": "1349c86c662e8aff24229af6b0cddd626b3881d32411acee02ce703a78bab562",
+          "members": [
+            {
+              "bytes": 156155,
+              "compress_size": 156155,
+              "name": "0.bin",
+              "sha256": "c213080389dd0fe17ef020339272a0751d65f9a0e3a87f5f48d79d8db9da304f"
+            }
+          ],
+          "path": "experiments/results/pr107_apogee_lossy_coarsening_b050_20260508T130700Z/archive.zip",
+          "status": "ok"
+        },
+        "archive_relpath": "experiments/results/pr107_apogee_lossy_coarsening_b050_20260508T130700Z/archive.zip",
+        "archive_sha256": "1349c86c662e8aff24229af6b0cddd626b3881d32411acee02ce703a78bab562",
+        "archive_size_bytes": 156263,
+        "budget": 0.05,
+        "charged_bits_changed": true,
+        "delta_zip_vs_baseline": -22129,
+        "deployment_target": "linux_x86_64_cpu_and_t4_contest_runtime",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "runtime_closure_not_yet_verified",
+          "linux_cpu_and_t4_exact_eval_not_yet_paired"
+        ],
+        "evidence_grade": "[CPU-prep]",
+        "evidence_semantics": "cpu_byte_roundtrip_proxy_no_score",
+        "member_name": "0.bin",
+        "member_sha256": "c213080389dd0fe17ef020339272a0751d65f9a0e3a87f5f48d79d8db9da304f",
+        "member_size_bytes": 156155,
+        "path": "experiments/results/pr107_apogee_lossy_coarsening_b050_20260508T130700Z/build_manifest.json",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "rel_err": 0.03856566284611934,
+        "schema_version": "pr107_lossy_coarsening_apogee.v1",
+        "score_affecting_payload_changed": true,
+        "score_claim": false,
+        "target_modes": [
+          "contest_exact_eval"
+        ],
+        "tool": "tools/pr107_lossy_coarsening_apogee.py"
+      },
+      "candidate_id": "pr107_lossy_b050",
+      "cpu_eval": {
+        "archive_member": "0.bin",
+        "archive_member_sha256": "c213080389dd0fe17ef020339272a0751d65f9a0e3a87f5f48d79d8db9da304f",
+        "archive_relpath": "/Users/adpena/Projects/pact/experiments/results/pr107_apogee_lossy_coarsening_b050_20260508T130700Z/archive.zip",
+        "archive_sha256": "1349c86c662e8aff24229af6b0cddd626b3881d32411acee02ce703a78bab562",
+        "archive_size_bytes": 156263,
+        "avg_posenet_dist": 0.00023133,
+        "avg_segnet_dist": 0.00181287,
+        "canonical_score_display": 0.33,
+        "compression_rate": 0.00416196,
+        "device": "cpu",
+        "evaluate_py_sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b",
+        "evidence_grade": "contest-CPU-1to1",
+        "exists": true,
+        "hardware": "github-actions-ubuntu-latest-x86_64",
+        "is_contest_compliant": true,
+        "lane_tag": "[contest-CPU]",
+        "n_samples": 600,
+        "path": "experiments/results/pr107_apogee_lossy_coarsening_b050_20260508T130700Z/contest_auth_eval.adjudicated.json",
+        "report_text_fallback_used": false,
+        "runner_arch": "x86_64",
+        "runner_image": "ubuntu-24.04",
+        "score_recomputed_from_components": 0.3334327774388264,
+        "workflow_run_id": 25557527476,
+        "workflow_run_url": "https://github.com/adpena/comma_video_compression_challenge/actions/runs/25557527476"
+      },
+      "cpu_eval_trusted_for_score_delta": true,
+      "cpu_eval_validation_blockers": [],
+      "cuda_eval": {
+        "evidence_tag": "[contest-CUDA missing]",
+        "exists": false,
+        "status": "missing"
+      },
+      "delta_vs_pr107_cpu_anchor": {
+        "candidate_minus_baseline_bytes": -22129,
+        "candidate_minus_baseline_score_cpu": 0.13679688953882638,
+        "pose_term_delta_cpu": 0.029175889510401898,
+        "rate_term_saving_if_components_unchanged": 0.01473479277364053,
+        "seg_term_delta_cpu": 0.122356
+      },
+      "dispatch_attempted_by_this_tool": false,
+      "evidence_tags": [
+        "[CPU-prep]",
+        "[contest-CPU]",
+        "[contest-CUDA missing]",
+        "[no-score-claim]"
+      ],
+      "fail_closed_blockers": [
+        "do_not_make_score_claim_without_paired_cpu_cuda_review",
+        "exact_cpu_score_not_lower_than_pr107_anchor",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "medal_path_note": "Existing uniform PR107 lossy-coarsening config is not a medal-path score claim; reactivation requires scorer-aware tensor allocation or recovery plus paired CPU/CUDA exact eval.",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "rel_err": 0.03856566284611934,
+      "required_validation_commands": {
+        "candidate_preflight": ".venv/bin/python experiments/preflight_candidate_manifest_dispatch_readiness.py --manifest experiments/results/pr107_apogee_lossy_coarsening_b050_20260508T130700Z/build_manifest.json --claims-path .omx/state/active_lane_dispatch_claims.md --now-utc <utc> --fail-if-not-ready",
+        "claim_before_cuda": ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id pr107_lossy_cpu_axis_pr107_lossy_b050 --platform lightning --instance-job-id pr107_lossy_b050-cuda-exact --agent codex --predicted-eta-utc <utc> --status eval --notes \"PR107 lossy CPU-axis matrix CUDA validation\"",
+        "exact_cpu_gha": ".venv/bin/python tools/dispatch_cpu_eval_via_github_actions.py --archive-path experiments/results/pr107_apogee_lossy_coarsening_b050_20260508T130700Z/archive.zip --archive-sha 1349c86c662e8aff24229af6b0cddd626b3881d32411acee02ce703a78bab562 --submission-name apogee --output-dir experiments/results/pr107_lossy_b050_cpu_eval_gha --pr-number 1",
+        "exact_cuda_lightning_after_claim": ".venv/bin/python scripts/launch_lightning_batch_job.py exact-eval --job-name pr107_lossy_b050-cuda-exact --archive experiments/results/pr107_apogee_lossy_coarsening_b050_20260508T130700Z/archive.zip --repo-dir <remote_repo_dir> --upstream-dir <remote_repo_dir>/upstream --inflate-sh <remote_repo_dir>/experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/source/submissions/apogee/inflate.sh --dispatch-lane-id pr107_lossy_cpu_axis_pr107_lossy_b050 --dispatch-claims-path .omx/state/active_lane_dispatch_claims.md --expected-archive-sha256 1349c86c662e8aff24229af6b0cddd626b3881d32411acee02ce703a78bab562 --expected-archive-size-bytes 156263 --adjudicate --baseline-score 0.196635887900 --baseline-archive-bytes 178392 --component-reference-label pr107_cpu_anchor --max-sane-score 1.0"
+      },
+      "score_claim": false,
+      "status": "retired_on_pr107_cpu_axis_uniform_lossy_config",
+      "variant": "uniform_per_tensor_k_coarsening"
+    },
+    {
+      "budget": 0.05,
+      "build_manifest": {
+        "archive_probe": {
+          "actual_bytes": 156262,
+          "actual_sha256": "c74d79e33abe95f88ffb302a13841d8b2a532fa642ca8b8d953fd58066753f9b",
+          "blockers": [],
+          "expected_bytes": 156262,
+          "expected_sha256": "c74d79e33abe95f88ffb302a13841d8b2a532fa642ca8b8d953fd58066753f9b",
+          "members": [
+            {
+              "bytes": 156154,
+              "compress_size": 156154,
+              "name": "0.bin",
+              "sha256": "46e8751ef23941120e62800fc755df8403eb2d24791874889301f17a44b68efb"
+            }
+          ],
+          "path": "experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b050/archive.zip",
+          "status": "ok"
+        },
+        "archive_relpath": "experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b050/archive.zip",
+        "archive_sha256": "c74d79e33abe95f88ffb302a13841d8b2a532fa642ca8b8d953fd58066753f9b",
+        "archive_size_bytes": 156262,
+        "budget": 0.05,
+        "charged_bits_changed": true,
+        "delta_zip_vs_baseline": -22130,
+        "deployment_target": "linux_x86_64_cpu_and_t4_contest_runtime",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "cpu_build_rel_err_proxy_not_score_evidence",
+          "runtime_closure_not_yet_verified",
+          "exact_linux_cpu_auth_eval_not_yet_harvested",
+          "exact_cuda_auth_eval_not_yet_harvested",
+          "dispatch_claim_not_created"
+        ],
+        "evidence_grade": "[CPU-prep]",
+        "evidence_semantics": "cpu_byte_roundtrip_proxy_no_score",
+        "member_name": "0.bin",
+        "member_sha256": "46e8751ef23941120e62800fc755df8403eb2d24791874889301f17a44b68efb",
+        "member_size_bytes": 156154,
+        "path": "experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b050/build_manifest.json",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "rel_err": 0.03856566284611934,
+        "schema_version": "pr107_lossy_coarsening_brotli_optuna_stack.v1",
+        "score_affecting_payload_changed": true,
+        "score_claim": false,
+        "target_modes": [
+          "contest_exact_eval"
+        ],
+        "tool": "tools/pr107_lossy_coarsening_brotli_optuna_stack.py"
+      },
+      "candidate_id": "pr107_stack_b050",
+      "cpu_eval": {
+        "exists": false,
+        "path": null,
+        "status": "missing"
+      },
+      "cpu_eval_trusted_for_score_delta": false,
+      "cpu_eval_validation_blockers": [
+        "exact_cpu_auth_eval_missing"
+      ],
+      "cuda_eval": {
+        "evidence_tag": "[contest-CUDA missing]",
+        "exists": false,
+        "status": "missing"
+      },
+      "delta_vs_pr107_cpu_anchor": {
+        "candidate_minus_baseline_bytes": -22130,
+        "candidate_minus_baseline_score_cpu": null,
+        "pose_term_delta_cpu": null,
+        "rate_term_saving_if_components_unchanged": 0.014735458632593653,
+        "seg_term_delta_cpu": null
+      },
+      "dispatch_attempted_by_this_tool": false,
+      "evidence_tags": [
+        "[CPU-prep]",
+        "[contest-CPU missing]",
+        "[contest-CUDA missing]",
+        "[no-score-claim]"
+      ],
+      "fail_closed_blockers": [
+        "do_not_make_score_claim_without_paired_cpu_cuda_review",
+        "exact_cpu_auth_eval_missing",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "medal_path_note": "Existing uniform PR107 lossy-coarsening config is not a medal-path score claim; reactivation requires scorer-aware tensor allocation or recovery plus paired CPU/CUDA exact eval.",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "rel_err": 0.03856566284611934,
+      "required_validation_commands": {
+        "candidate_preflight": ".venv/bin/python experiments/preflight_candidate_manifest_dispatch_readiness.py --manifest experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b050/build_manifest.json --claims-path .omx/state/active_lane_dispatch_claims.md --now-utc <utc> --fail-if-not-ready",
+        "claim_before_cuda": ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id pr107_lossy_cpu_axis_pr107_stack_b050 --platform lightning --instance-job-id pr107_stack_b050-cuda-exact --agent codex --predicted-eta-utc <utc> --status eval --notes \"PR107 lossy CPU-axis matrix CUDA validation\"",
+        "exact_cpu_gha": ".venv/bin/python tools/dispatch_cpu_eval_via_github_actions.py --archive-path experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b050/archive.zip --archive-sha c74d79e33abe95f88ffb302a13841d8b2a532fa642ca8b8d953fd58066753f9b --submission-name apogee --output-dir experiments/results/pr107_stack_b050_cpu_eval_gha --pr-number 1",
+        "exact_cuda_lightning_after_claim": ".venv/bin/python scripts/launch_lightning_batch_job.py exact-eval --job-name pr107_stack_b050-cuda-exact --archive experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b050/archive.zip --repo-dir <remote_repo_dir> --upstream-dir <remote_repo_dir>/upstream --inflate-sh <remote_repo_dir>/experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/source/submissions/apogee/inflate.sh --dispatch-lane-id pr107_lossy_cpu_axis_pr107_stack_b050 --dispatch-claims-path .omx/state/active_lane_dispatch_claims.md --expected-archive-sha256 c74d79e33abe95f88ffb302a13841d8b2a532fa642ca8b8d953fd58066753f9b --expected-archive-size-bytes 156262 --adjudicate --baseline-score 0.196635887900 --baseline-archive-bytes 178392 --component-reference-label pr107_cpu_anchor --max-sane-score 1.0"
+      },
+      "score_claim": false,
+      "status": "exact_cpu_missing_fail_closed",
+      "variant": "uniform_per_tensor_k_coarsening_plus_brotli_optuna"
+    },
+    {
+      "budget": 0.06,
+      "build_manifest": {
+        "archive_probe": {
+          "actual_bytes": 147958,
+          "actual_sha256": "ffc04da006f48af0fec2a6b5d2509a7963fddce438255d47846d06a242c7302d",
+          "blockers": [],
+          "expected_bytes": 147958,
+          "expected_sha256": "ffc04da006f48af0fec2a6b5d2509a7963fddce438255d47846d06a242c7302d",
+          "members": [
+            {
+              "bytes": 147850,
+              "compress_size": 147850,
+              "name": "0.bin",
+              "sha256": "c28a4a5199affb15e84dc6e8ecded49e6c2d8975da23f69b61ca046893df43f4"
+            }
+          ],
+          "path": "experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b060/archive.zip",
+          "status": "ok"
+        },
+        "archive_relpath": "experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b060/archive.zip",
+        "archive_sha256": "ffc04da006f48af0fec2a6b5d2509a7963fddce438255d47846d06a242c7302d",
+        "archive_size_bytes": 147958,
+        "budget": 0.06,
+        "charged_bits_changed": true,
+        "delta_zip_vs_baseline": -30434,
+        "deployment_target": "linux_x86_64_cpu_and_t4_contest_runtime",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "cpu_build_rel_err_proxy_not_score_evidence",
+          "runtime_closure_not_yet_verified",
+          "exact_linux_cpu_auth_eval_not_yet_harvested",
+          "exact_cuda_auth_eval_not_yet_harvested",
+          "dispatch_claim_not_created"
+        ],
+        "evidence_grade": "[CPU-prep]",
+        "evidence_semantics": "cpu_byte_roundtrip_proxy_no_score",
+        "member_name": "0.bin",
+        "member_sha256": "c28a4a5199affb15e84dc6e8ecded49e6c2d8975da23f69b61ca046893df43f4",
+        "member_size_bytes": 147850,
+        "path": "experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b060/build_manifest.json",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "rel_err": 0.05340804247699831,
+        "schema_version": "pr107_lossy_coarsening_brotli_optuna_stack.v1",
+        "score_affecting_payload_changed": true,
+        "score_claim": false,
+        "target_modes": [
+          "contest_exact_eval"
+        ],
+        "tool": "tools/pr107_lossy_coarsening_brotli_optuna_stack.py"
+      },
+      "candidate_id": "pr107_stack_b060",
+      "cpu_eval": {
+        "exists": false,
+        "path": null,
+        "status": "missing"
+      },
+      "cpu_eval_trusted_for_score_delta": false,
+      "cpu_eval_validation_blockers": [
+        "exact_cpu_auth_eval_missing"
+      ],
+      "cuda_eval": {
+        "evidence_tag": "[contest-CUDA missing]",
+        "exists": false,
+        "status": "missing"
+      },
+      "delta_vs_pr107_cpu_anchor": {
+        "candidate_minus_baseline_bytes": -30434,
+        "candidate_minus_baseline_score_cpu": null,
+        "pose_term_delta_cpu": null,
+        "rate_term_saving_if_components_unchanged": 0.020264751379320163,
+        "seg_term_delta_cpu": null
+      },
+      "dispatch_attempted_by_this_tool": false,
+      "evidence_tags": [
+        "[CPU-prep]",
+        "[contest-CPU missing]",
+        "[contest-CUDA missing]",
+        "[no-score-claim]"
+      ],
+      "fail_closed_blockers": [
+        "do_not_make_score_claim_without_paired_cpu_cuda_review",
+        "exact_cpu_auth_eval_missing",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "medal_path_note": "Existing uniform PR107 lossy-coarsening config is not a medal-path score claim; reactivation requires scorer-aware tensor allocation or recovery plus paired CPU/CUDA exact eval.",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "rel_err": 0.05340804247699831,
+      "required_validation_commands": {
+        "candidate_preflight": ".venv/bin/python experiments/preflight_candidate_manifest_dispatch_readiness.py --manifest experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b060/build_manifest.json --claims-path .omx/state/active_lane_dispatch_claims.md --now-utc <utc> --fail-if-not-ready",
+        "claim_before_cuda": ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id pr107_lossy_cpu_axis_pr107_stack_b060 --platform lightning --instance-job-id pr107_stack_b060-cuda-exact --agent codex --predicted-eta-utc <utc> --status eval --notes \"PR107 lossy CPU-axis matrix CUDA validation\"",
+        "exact_cpu_gha": ".venv/bin/python tools/dispatch_cpu_eval_via_github_actions.py --archive-path experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b060/archive.zip --archive-sha ffc04da006f48af0fec2a6b5d2509a7963fddce438255d47846d06a242c7302d --submission-name apogee --output-dir experiments/results/pr107_stack_b060_cpu_eval_gha --pr-number 1",
+        "exact_cuda_lightning_after_claim": ".venv/bin/python scripts/launch_lightning_batch_job.py exact-eval --job-name pr107_stack_b060-cuda-exact --archive experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b060/archive.zip --repo-dir <remote_repo_dir> --upstream-dir <remote_repo_dir>/upstream --inflate-sh <remote_repo_dir>/experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/source/submissions/apogee/inflate.sh --dispatch-lane-id pr107_lossy_cpu_axis_pr107_stack_b060 --dispatch-claims-path .omx/state/active_lane_dispatch_claims.md --expected-archive-sha256 ffc04da006f48af0fec2a6b5d2509a7963fddce438255d47846d06a242c7302d --expected-archive-size-bytes 147958 --adjudicate --baseline-score 0.196635887900 --baseline-archive-bytes 178392 --component-reference-label pr107_cpu_anchor --max-sane-score 1.0"
+      },
+      "score_claim": false,
+      "status": "exact_cpu_missing_fail_closed",
+      "variant": "uniform_per_tensor_k_coarsening_plus_brotli_optuna"
+    },
+    {
+      "budget": 0.07,
+      "build_manifest": {
+        "archive_probe": {
+          "actual_bytes": 142128,
+          "actual_sha256": "0f849803d1f404c3b87a3936ce59f18e75318551529ca592dc1438156b156f51",
+          "blockers": [],
+          "expected_bytes": 142128,
+          "expected_sha256": "0f849803d1f404c3b87a3936ce59f18e75318551529ca592dc1438156b156f51",
+          "members": [
+            {
+              "bytes": 142020,
+              "compress_size": 142020,
+              "name": "0.bin",
+              "sha256": "6c53afd67387f9a4143284bcd48a350812c72683166b1cb7d08ab393d1b44e01"
+            }
+          ],
+          "path": "experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b070/archive.zip",
+          "status": "ok"
+        },
+        "archive_relpath": "experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b070/archive.zip",
+        "archive_sha256": "0f849803d1f404c3b87a3936ce59f18e75318551529ca592dc1438156b156f51",
+        "archive_size_bytes": 142128,
+        "budget": 0.07,
+        "charged_bits_changed": true,
+        "delta_zip_vs_baseline": -36264,
+        "deployment_target": "linux_x86_64_cpu_and_t4_contest_runtime",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "cpu_build_rel_err_proxy_not_score_evidence",
+          "runtime_closure_not_yet_verified",
+          "exact_linux_cpu_auth_eval_not_yet_harvested",
+          "exact_cuda_auth_eval_not_yet_harvested",
+          "dispatch_claim_not_created"
+        ],
+        "evidence_grade": "[CPU-prep]",
+        "evidence_semantics": "cpu_byte_roundtrip_proxy_no_score",
+        "member_name": "0.bin",
+        "member_sha256": "6c53afd67387f9a4143284bcd48a350812c72683166b1cb7d08ab393d1b44e01",
+        "member_size_bytes": 142020,
+        "path": "experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b070/build_manifest.json",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "rel_err": 0.06181099777914732,
+        "schema_version": "pr107_lossy_coarsening_brotli_optuna_stack.v1",
+        "score_affecting_payload_changed": true,
+        "score_claim": false,
+        "target_modes": [
+          "contest_exact_eval"
+        ],
+        "tool": "tools/pr107_lossy_coarsening_brotli_optuna_stack.py"
+      },
+      "candidate_id": "pr107_stack_b070",
+      "cpu_eval": {
+        "archive_member": "0.bin",
+        "archive_member_sha256": "6c53afd67387f9a4143284bcd48a350812c72683166b1cb7d08ab393d1b44e01",
+        "archive_relpath": "experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b070/archive.zip",
+        "archive_sha256": "0f849803d1f404c3b87a3936ce59f18e75318551529ca592dc1438156b156f51",
+        "archive_size_bytes": 142128,
+        "avg_posenet_dist": 0.00065377,
+        "avg_segnet_dist": 0.0026265,
+        "canonical_score_display": 0.44,
+        "compression_rate": 0.00378549,
+        "device": "cpu",
+        "evaluate_py_sha256": null,
+        "evidence_grade": "contest-CPU-1to1",
+        "exists": true,
+        "hardware": "github-actions-ubuntu-latest-x86_64",
+        "is_contest_compliant": true,
+        "lane_tag": "[contest-CPU]",
+        "n_samples": 600,
+        "path": "experiments/results/pr107_apogee_stack_b070_cpu_eval_gha_20260508/contest_auth_eval.adjudicated.json",
+        "report_text_fallback_used": true,
+        "runner_arch": null,
+        "runner_image": null,
+        "score_recomputed_from_components": 0.43814329491935033,
+        "workflow_run_id": 25557939514,
+        "workflow_run_url": "https://github.com/adpena/comma_video_compression_challenge/actions/runs/25557939514"
+      },
+      "cpu_eval_trusted_for_score_delta": true,
+      "cpu_eval_validation_blockers": [],
+      "cuda_eval": {
+        "evidence_tag": "[contest-CUDA missing]",
+        "exists": false,
+        "status": "missing"
+      },
+      "delta_vs_pr107_cpu_anchor": {
+        "candidate_minus_baseline_bytes": -36264,
+        "candidate_minus_baseline_score_cpu": 0.24150740701935033,
+        "pose_term_delta_cpu": 0.061935156990925846,
+        "rate_term_saving_if_components_unchanged": 0.024146709076022423,
+        "seg_term_delta_cpu": 0.20371899999999998
+      },
+      "dispatch_attempted_by_this_tool": false,
+      "evidence_tags": [
+        "[CPU-prep]",
+        "[contest-CPU]",
+        "[contest-CUDA missing]",
+        "[no-score-claim]"
+      ],
+      "fail_closed_blockers": [
+        "do_not_make_score_claim_without_paired_cpu_cuda_review",
+        "exact_cpu_score_not_lower_than_pr107_anchor",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "medal_path_note": "Existing uniform PR107 lossy-coarsening config is not a medal-path score claim; reactivation requires scorer-aware tensor allocation or recovery plus paired CPU/CUDA exact eval.",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "rel_err": 0.06181099777914732,
+      "required_validation_commands": {
+        "candidate_preflight": ".venv/bin/python experiments/preflight_candidate_manifest_dispatch_readiness.py --manifest experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b070/build_manifest.json --claims-path .omx/state/active_lane_dispatch_claims.md --now-utc <utc> --fail-if-not-ready",
+        "claim_before_cuda": ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id pr107_lossy_cpu_axis_pr107_stack_b070 --platform lightning --instance-job-id pr107_stack_b070-cuda-exact --agent codex --predicted-eta-utc <utc> --status eval --notes \"PR107 lossy CPU-axis matrix CUDA validation\"",
+        "exact_cpu_gha": ".venv/bin/python tools/dispatch_cpu_eval_via_github_actions.py --archive-path experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b070/archive.zip --archive-sha 0f849803d1f404c3b87a3936ce59f18e75318551529ca592dc1438156b156f51 --submission-name apogee --output-dir experiments/results/pr107_stack_b070_cpu_eval_gha --pr-number 1",
+        "exact_cuda_lightning_after_claim": ".venv/bin/python scripts/launch_lightning_batch_job.py exact-eval --job-name pr107_stack_b070-cuda-exact --archive experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b070/archive.zip --repo-dir <remote_repo_dir> --upstream-dir <remote_repo_dir>/upstream --inflate-sh <remote_repo_dir>/experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/source/submissions/apogee/inflate.sh --dispatch-lane-id pr107_lossy_cpu_axis_pr107_stack_b070 --dispatch-claims-path .omx/state/active_lane_dispatch_claims.md --expected-archive-sha256 0f849803d1f404c3b87a3936ce59f18e75318551529ca592dc1438156b156f51 --expected-archive-size-bytes 142128 --adjudicate --baseline-score 0.196635887900 --baseline-archive-bytes 178392 --component-reference-label pr107_cpu_anchor --max-sane-score 1.0"
+      },
+      "score_claim": false,
+      "status": "retired_on_pr107_cpu_axis_uniform_lossy_config",
+      "variant": "uniform_per_tensor_k_coarsening_plus_brotli_optuna"
+    },
+    {
+      "budget": 0.08,
+      "build_manifest": {
+        "archive_probe": {
+          "actual_bytes": 136074,
+          "actual_sha256": "abeb4fc71699e8aa5fa37f0bf1d1975272c95513a726340099c806504c45dd0e",
+          "blockers": [],
+          "expected_bytes": 136074,
+          "expected_sha256": "abeb4fc71699e8aa5fa37f0bf1d1975272c95513a726340099c806504c45dd0e",
+          "members": [
+            {
+              "bytes": 135966,
+              "compress_size": 135966,
+              "name": "0.bin",
+              "sha256": "0314d0178a3dfbd1f94b8b0c8b3d7cbb430ea82dc6fb8b8f1190a2b410e76f8f"
+            }
+          ],
+          "path": "experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b080/archive.zip",
+          "status": "ok"
+        },
+        "archive_relpath": "experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b080/archive.zip",
+        "archive_sha256": "abeb4fc71699e8aa5fa37f0bf1d1975272c95513a726340099c806504c45dd0e",
+        "archive_size_bytes": 136074,
+        "budget": 0.08,
+        "charged_bits_changed": true,
+        "delta_zip_vs_baseline": -42318,
+        "deployment_target": "linux_x86_64_cpu_and_t4_contest_runtime",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "cpu_build_rel_err_proxy_not_score_evidence",
+          "runtime_closure_not_yet_verified",
+          "exact_linux_cpu_auth_eval_not_yet_harvested",
+          "exact_cuda_auth_eval_not_yet_harvested",
+          "dispatch_claim_not_created"
+        ],
+        "evidence_grade": "[CPU-prep]",
+        "evidence_semantics": "cpu_byte_roundtrip_proxy_no_score",
+        "member_name": "0.bin",
+        "member_sha256": "0314d0178a3dfbd1f94b8b0c8b3d7cbb430ea82dc6fb8b8f1190a2b410e76f8f",
+        "member_size_bytes": 135966,
+        "path": "experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b080/build_manifest.json",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "rel_err": 0.07079697249278862,
+        "schema_version": "pr107_lossy_coarsening_brotli_optuna_stack.v1",
+        "score_affecting_payload_changed": true,
+        "score_claim": false,
+        "target_modes": [
+          "contest_exact_eval"
+        ],
+        "tool": "tools/pr107_lossy_coarsening_brotli_optuna_stack.py"
+      },
+      "candidate_id": "pr107_stack_b080",
+      "cpu_eval": {
+        "archive_member": "0.bin",
+        "archive_member_sha256": "0314d0178a3dfbd1f94b8b0c8b3d7cbb430ea82dc6fb8b8f1190a2b410e76f8f",
+        "archive_relpath": "experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b080/archive.zip",
+        "archive_sha256": "abeb4fc71699e8aa5fa37f0bf1d1975272c95513a726340099c806504c45dd0e",
+        "archive_size_bytes": 136074,
+        "avg_posenet_dist": 0.00086019,
+        "avg_segnet_dist": 0.00312713,
+        "canonical_score_display": 0.5,
+        "compression_rate": 0.00362424,
+        "device": "cpu",
+        "evaluate_py_sha256": null,
+        "evidence_grade": "contest-CPU-1to1",
+        "exists": true,
+        "hardware": "github-actions-ubuntu-latest-x86_64",
+        "is_contest_compliant": true,
+        "lane_tag": "[contest-CPU]",
+        "n_samples": 600,
+        "path": "experiments/results/pr107_apogee_stack_b080_cpu_eval_gha_20260508/contest_auth_eval.adjudicated.json",
+        "report_text_fallback_used": true,
+        "runner_arch": null,
+        "runner_image": null,
+        "score_recomputed_from_components": 0.49606542850266533,
+        "workflow_run_id": 25557780130,
+        "workflow_run_url": "https://github.com/adpena/comma_video_compression_challenge/actions/runs/25557780130"
+      },
+      "cpu_eval_trusted_for_score_delta": true,
+      "cpu_eval_validation_blockers": [],
+      "cuda_eval": {
+        "evidence_tag": "[contest-CUDA missing]",
+        "exists": false,
+        "status": "missing"
+      },
+      "delta_vs_pr107_cpu_anchor": {
+        "candidate_minus_baseline_bytes": -42318,
+        "candidate_minus_baseline_score_cpu": 0.29942954060266536,
+        "pose_term_delta_cpu": 0.07382554057424077,
+        "rate_term_saving_if_components_unchanged": 0.028177819178224046,
+        "seg_term_delta_cpu": 0.253782
+      },
+      "dispatch_attempted_by_this_tool": false,
+      "evidence_tags": [
+        "[CPU-prep]",
+        "[contest-CPU]",
+        "[contest-CUDA missing]",
+        "[no-score-claim]"
+      ],
+      "fail_closed_blockers": [
+        "do_not_make_score_claim_without_paired_cpu_cuda_review",
+        "exact_cpu_score_not_lower_than_pr107_anchor",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "medal_path_note": "Existing uniform PR107 lossy-coarsening config is not a medal-path score claim; reactivation requires scorer-aware tensor allocation or recovery plus paired CPU/CUDA exact eval.",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "rel_err": 0.07079697249278862,
+      "required_validation_commands": {
+        "candidate_preflight": ".venv/bin/python experiments/preflight_candidate_manifest_dispatch_readiness.py --manifest experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b080/build_manifest.json --claims-path .omx/state/active_lane_dispatch_claims.md --now-utc <utc> --fail-if-not-ready",
+        "claim_before_cuda": ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id pr107_lossy_cpu_axis_pr107_stack_b080 --platform lightning --instance-job-id pr107_stack_b080-cuda-exact --agent codex --predicted-eta-utc <utc> --status eval --notes \"PR107 lossy CPU-axis matrix CUDA validation\"",
+        "exact_cpu_gha": ".venv/bin/python tools/dispatch_cpu_eval_via_github_actions.py --archive-path experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b080/archive.zip --archive-sha abeb4fc71699e8aa5fa37f0bf1d1975272c95513a726340099c806504c45dd0e --submission-name apogee --output-dir experiments/results/pr107_stack_b080_cpu_eval_gha --pr-number 1",
+        "exact_cuda_lightning_after_claim": ".venv/bin/python scripts/launch_lightning_batch_job.py exact-eval --job-name pr107_stack_b080-cuda-exact --archive experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b080/archive.zip --repo-dir <remote_repo_dir> --upstream-dir <remote_repo_dir>/upstream --inflate-sh <remote_repo_dir>/experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/source/submissions/apogee/inflate.sh --dispatch-lane-id pr107_lossy_cpu_axis_pr107_stack_b080 --dispatch-claims-path .omx/state/active_lane_dispatch_claims.md --expected-archive-sha256 abeb4fc71699e8aa5fa37f0bf1d1975272c95513a726340099c806504c45dd0e --expected-archive-size-bytes 136074 --adjudicate --baseline-score 0.196635887900 --baseline-archive-bytes 178392 --component-reference-label pr107_cpu_anchor --max-sane-score 1.0"
+      },
+      "score_claim": false,
+      "status": "retired_on_pr107_cpu_axis_uniform_lossy_config",
+      "variant": "uniform_per_tensor_k_coarsening_plus_brotli_optuna"
+    },
+    {
+      "budget": 0.1,
+      "build_manifest": {
+        "archive_probe": {
+          "actual_bytes": 124412,
+          "actual_sha256": "7834a856eae6138e364ad2228c0e4f39f0c7ade2b74bb5fed6ae8af715fd62db",
+          "blockers": [],
+          "expected_bytes": 124412,
+          "expected_sha256": "7834a856eae6138e364ad2228c0e4f39f0c7ade2b74bb5fed6ae8af715fd62db",
+          "members": [
+            {
+              "bytes": 124304,
+              "compress_size": 124304,
+              "name": "0.bin",
+              "sha256": "b25561fc314553d49dcef1158ebd008676ff3d5dc3cdf834c3aa045b1286a138"
+            }
+          ],
+          "path": "experiments/results/pr107_apogee_stack_aggressive_20260508/b100/archive.zip",
+          "status": "ok"
+        },
+        "archive_relpath": "experiments/results/pr107_apogee_stack_aggressive_20260508/b100/archive.zip",
+        "archive_sha256": "7834a856eae6138e364ad2228c0e4f39f0c7ade2b74bb5fed6ae8af715fd62db",
+        "archive_size_bytes": 124412,
+        "budget": 0.1,
+        "charged_bits_changed": true,
+        "delta_zip_vs_baseline": -53980,
+        "deployment_target": "linux_x86_64_cpu_and_t4_contest_runtime",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "cpu_build_rel_err_proxy_not_score_evidence",
+          "runtime_closure_not_yet_verified",
+          "exact_linux_cpu_auth_eval_not_yet_harvested",
+          "exact_cuda_auth_eval_not_yet_harvested",
+          "dispatch_claim_not_created"
+        ],
+        "evidence_grade": "[CPU-prep]",
+        "evidence_semantics": "cpu_byte_roundtrip_proxy_no_score",
+        "member_name": "0.bin",
+        "member_sha256": "b25561fc314553d49dcef1158ebd008676ff3d5dc3cdf834c3aa045b1286a138",
+        "member_size_bytes": 124304,
+        "path": "experiments/results/pr107_apogee_stack_aggressive_20260508/b100/build_manifest.json",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "rel_err": 0.09465769148016731,
+        "schema_version": "pr107_lossy_coarsening_brotli_optuna_stack.v1",
+        "score_affecting_payload_changed": true,
+        "score_claim": false,
+        "target_modes": [
+          "contest_exact_eval"
+        ],
+        "tool": "tools/pr107_lossy_coarsening_brotli_optuna_stack.py"
+      },
+      "candidate_id": "pr107_stack_b100",
+      "cpu_eval": {
+        "archive_member": null,
+        "archive_member_sha256": null,
+        "archive_relpath": "experiments/results/pr107_apogee_stack_aggressive_20260508/b100/archive.zip",
+        "archive_sha256": "7834a856eae6138e364ad2228c0e4f39f0c7ade2b74bb5fed6ae8af715fd62db",
+        "archive_size_bytes": 124412,
+        "avg_posenet_dist": 0.0019772,
+        "avg_segnet_dist": 0.00434503,
+        "canonical_score_display": 0.66,
+        "compression_rate": 0.00331363,
+        "device": "cpu",
+        "evaluate_py_sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b",
+        "evidence_grade": "contest-CPU-1to1",
+        "exists": true,
+        "hardware": "github-actions-ubuntu-latest-x86_64",
+        "is_contest_compliant": null,
+        "lane_tag": "[contest-CPU]",
+        "n_samples": 600,
+        "path": "experiments/results/pr107_apogee_stack_b100_cpu_eval_gha_20260508/contest_auth_eval.adjudicated.json",
+        "report_text_fallback_used": false,
+        "runner_arch": null,
+        "runner_image": null,
+        "score_recomputed_from_components": 0.6579566939276484,
+        "workflow_run_id": 25557781930,
+        "workflow_run_url": "https://github.com/adpena/comma_video_compression_challenge/actions/runs/25557781930"
+      },
+      "cpu_eval_trusted_for_score_delta": false,
+      "cpu_eval_validation_blockers": [
+        "contest_cpu_compliance_true_required"
+      ],
+      "cuda_eval": {
+        "evidence_tag": "[contest-CUDA missing]",
+        "exists": false,
+        "status": "missing"
+      },
+      "delta_vs_pr107_cpu_anchor": {
+        "candidate_minus_baseline_bytes": -53980,
+        "candidate_minus_baseline_score_cpu": null,
+        "pose_term_delta_cpu": 0.12169205599922392,
+        "rate_term_saving_if_components_unchanged": 0.03594306628953481,
+        "seg_term_delta_cpu": 0.37557199999999996
+      },
+      "dispatch_attempted_by_this_tool": false,
+      "evidence_tags": [
+        "[CPU-prep]",
+        "[contest-CPU]",
+        "[contest-CUDA missing]",
+        "[no-score-claim]"
+      ],
+      "fail_closed_blockers": [
+        "contest_cpu_compliance_true_required",
+        "do_not_make_score_claim_without_paired_cpu_cuda_review",
+        "exact_cpu_auth_eval_untrusted",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "medal_path_note": "Existing uniform PR107 lossy-coarsening config is not a medal-path score claim; reactivation requires scorer-aware tensor allocation or recovery plus paired CPU/CUDA exact eval.",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "rel_err": 0.09465769148016731,
+      "required_validation_commands": {
+        "candidate_preflight": ".venv/bin/python experiments/preflight_candidate_manifest_dispatch_readiness.py --manifest experiments/results/pr107_apogee_stack_aggressive_20260508/b100/build_manifest.json --claims-path .omx/state/active_lane_dispatch_claims.md --now-utc <utc> --fail-if-not-ready",
+        "claim_before_cuda": ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id pr107_lossy_cpu_axis_pr107_stack_b100 --platform lightning --instance-job-id pr107_stack_b100-cuda-exact --agent codex --predicted-eta-utc <utc> --status eval --notes \"PR107 lossy CPU-axis matrix CUDA validation\"",
+        "exact_cpu_gha": ".venv/bin/python tools/dispatch_cpu_eval_via_github_actions.py --archive-path experiments/results/pr107_apogee_stack_aggressive_20260508/b100/archive.zip --archive-sha 7834a856eae6138e364ad2228c0e4f39f0c7ade2b74bb5fed6ae8af715fd62db --submission-name apogee --output-dir experiments/results/pr107_stack_b100_cpu_eval_gha --pr-number 1",
+        "exact_cuda_lightning_after_claim": ".venv/bin/python scripts/launch_lightning_batch_job.py exact-eval --job-name pr107_stack_b100-cuda-exact --archive experiments/results/pr107_apogee_stack_aggressive_20260508/b100/archive.zip --repo-dir <remote_repo_dir> --upstream-dir <remote_repo_dir>/upstream --inflate-sh <remote_repo_dir>/experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/source/submissions/apogee/inflate.sh --dispatch-lane-id pr107_lossy_cpu_axis_pr107_stack_b100 --dispatch-claims-path .omx/state/active_lane_dispatch_claims.md --expected-archive-sha256 7834a856eae6138e364ad2228c0e4f39f0c7ade2b74bb5fed6ae8af715fd62db --expected-archive-size-bytes 124412 --adjudicate --baseline-score 0.196635887900 --baseline-archive-bytes 178392 --component-reference-label pr107_cpu_anchor --max-sane-score 1.0"
+      },
+      "score_claim": false,
+      "status": "exact_cpu_untrusted_fail_closed",
+      "variant": "uniform_per_tensor_k_coarsening_plus_brotli_optuna"
+    },
+    {
+      "budget": 0.12,
+      "build_manifest": {
+        "archive_probe": {
+          "actual_bytes": 118899,
+          "actual_sha256": "f79d30f6665d7c86c32b1744e699a95b700afd0327679af08d00cf015af0d106",
+          "blockers": [],
+          "expected_bytes": 118899,
+          "expected_sha256": "f79d30f6665d7c86c32b1744e699a95b700afd0327679af08d00cf015af0d106",
+          "members": [
+            {
+              "bytes": 118791,
+              "compress_size": 118791,
+              "name": "0.bin",
+              "sha256": "9acbbb45f5cfd3f70d3a4f7e1bc37c38603ba0ea23fd6097b6047596a488e911"
+            }
+          ],
+          "path": "experiments/results/pr107_apogee_stack_aggressive_20260508/b120/archive.zip",
+          "status": "ok"
+        },
+        "archive_relpath": "experiments/results/pr107_apogee_stack_aggressive_20260508/b120/archive.zip",
+        "archive_sha256": "f79d30f6665d7c86c32b1744e699a95b700afd0327679af08d00cf015af0d106",
+        "archive_size_bytes": 118899,
+        "budget": 0.12,
+        "charged_bits_changed": true,
+        "delta_zip_vs_baseline": -59493,
+        "deployment_target": "linux_x86_64_cpu_and_t4_contest_runtime",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "cpu_build_rel_err_proxy_not_score_evidence",
+          "runtime_closure_not_yet_verified",
+          "exact_linux_cpu_auth_eval_not_yet_harvested",
+          "exact_cuda_auth_eval_not_yet_harvested",
+          "dispatch_claim_not_created"
+        ],
+        "evidence_grade": "[CPU-prep]",
+        "evidence_semantics": "cpu_byte_roundtrip_proxy_no_score",
+        "member_name": "0.bin",
+        "member_sha256": "9acbbb45f5cfd3f70d3a4f7e1bc37c38603ba0ea23fd6097b6047596a488e911",
+        "member_size_bytes": 118791,
+        "path": "experiments/results/pr107_apogee_stack_aggressive_20260508/b120/build_manifest.json",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "rel_err": 0.11131249111111921,
+        "schema_version": "pr107_lossy_coarsening_brotli_optuna_stack.v1",
+        "score_affecting_payload_changed": true,
+        "score_claim": false,
+        "target_modes": [
+          "contest_exact_eval"
+        ],
+        "tool": "tools/pr107_lossy_coarsening_brotli_optuna_stack.py"
+      },
+      "candidate_id": "pr107_stack_b120",
+      "cpu_eval": {
+        "exists": false,
+        "path": null,
+        "status": "missing"
+      },
+      "cpu_eval_trusted_for_score_delta": false,
+      "cpu_eval_validation_blockers": [
+        "exact_cpu_auth_eval_missing"
+      ],
+      "cuda_eval": {
+        "evidence_tag": "[contest-CUDA missing]",
+        "exists": false,
+        "status": "missing"
+      },
+      "delta_vs_pr107_cpu_anchor": {
+        "candidate_minus_baseline_bytes": -59493,
+        "candidate_minus_baseline_score_cpu": null,
+        "pose_term_delta_cpu": null,
+        "rate_term_saving_if_components_unchanged": 0.03961394669809734,
+        "seg_term_delta_cpu": null
+      },
+      "dispatch_attempted_by_this_tool": false,
+      "evidence_tags": [
+        "[CPU-prep]",
+        "[contest-CPU missing]",
+        "[contest-CUDA missing]",
+        "[no-score-claim]"
+      ],
+      "fail_closed_blockers": [
+        "do_not_make_score_claim_without_paired_cpu_cuda_review",
+        "exact_cpu_auth_eval_missing",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "medal_path_note": "Existing uniform PR107 lossy-coarsening config is not a medal-path score claim; reactivation requires scorer-aware tensor allocation or recovery plus paired CPU/CUDA exact eval.",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "rel_err": 0.11131249111111921,
+      "required_validation_commands": {
+        "candidate_preflight": ".venv/bin/python experiments/preflight_candidate_manifest_dispatch_readiness.py --manifest experiments/results/pr107_apogee_stack_aggressive_20260508/b120/build_manifest.json --claims-path .omx/state/active_lane_dispatch_claims.md --now-utc <utc> --fail-if-not-ready",
+        "claim_before_cuda": ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id pr107_lossy_cpu_axis_pr107_stack_b120 --platform lightning --instance-job-id pr107_stack_b120-cuda-exact --agent codex --predicted-eta-utc <utc> --status eval --notes \"PR107 lossy CPU-axis matrix CUDA validation\"",
+        "exact_cpu_gha": ".venv/bin/python tools/dispatch_cpu_eval_via_github_actions.py --archive-path experiments/results/pr107_apogee_stack_aggressive_20260508/b120/archive.zip --archive-sha f79d30f6665d7c86c32b1744e699a95b700afd0327679af08d00cf015af0d106 --submission-name apogee --output-dir experiments/results/pr107_stack_b120_cpu_eval_gha --pr-number 1",
+        "exact_cuda_lightning_after_claim": ".venv/bin/python scripts/launch_lightning_batch_job.py exact-eval --job-name pr107_stack_b120-cuda-exact --archive experiments/results/pr107_apogee_stack_aggressive_20260508/b120/archive.zip --repo-dir <remote_repo_dir> --upstream-dir <remote_repo_dir>/upstream --inflate-sh <remote_repo_dir>/experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/source/submissions/apogee/inflate.sh --dispatch-lane-id pr107_lossy_cpu_axis_pr107_stack_b120 --dispatch-claims-path .omx/state/active_lane_dispatch_claims.md --expected-archive-sha256 f79d30f6665d7c86c32b1744e699a95b700afd0327679af08d00cf015af0d106 --expected-archive-size-bytes 118899 --adjudicate --baseline-score 0.196635887900 --baseline-archive-bytes 178392 --component-reference-label pr107_cpu_anchor --max-sane-score 1.0"
+      },
+      "score_claim": false,
+      "status": "exact_cpu_missing_fail_closed",
+      "variant": "uniform_per_tensor_k_coarsening_plus_brotli_optuna"
+    }
+  ],
+  "cathedral_autopilot": {
+    "catalog_exists": true,
+    "catalog_path": "reports/cathedral_autopilot_catalog_updated_20260508.json",
+    "evidence_exists": true,
+    "evidence_jsonl_path": "reports/cathedral_autopilot_evidence.jsonl",
+    "exact_negative_lossy_rows_count": 3,
+    "latest_lossy_rows": [
+      {
+        "contest_dispatch_verdict": "measured_config_exact_cuda_negative_reviewed",
+        "empirical_archive_bytes": 156404,
+        "empirical_score": 0.351718793322788,
+        "evidence_grade": "[contest-CUDA A-negative]",
+        "source": "[contest-CUDA] Lightning T4 g4dn.2xlarge job=lossy-coarsening-cuda-20260508T0312-noproject lossy_coarsening_analytical PR101 substrate auth_eval_json=experiments/results/lightning_batch/lossy-coarsening-cuda-20260508T0312-noproject/contest_auth_eval.json",
+        "technique": "lossy_coarsening_analytical",
+        "timestamp": "2026-05-08T03:30:36Z"
+      },
+      {
+        "contest_dispatch_verdict": "DEFERRED-pending-research",
+        "empirical_archive_bytes": 153639,
+        "empirical_score": null,
+        "evidence_grade": "[CPU-prep faithful Path-B-step-6 ADMM \u00d7 continuous lossy_coarsening test]",
+        "source": "[CPU-prep faithful Path-B-step-6 ADMM \u00d7 continuous lossy_coarsening test] /Users/adpena/Projects/pact/reports/raw/pr101_omega_opt_admm_x_lossy_coarsening_20260508T041303Z/manifest.json (rms_target=3.86%; admm_bytes=153,639; vs_greedy=+14,658; best_savings=+14,658@rms=0.0386)",
+        "technique": "joint_admm_x_continuous_lossy_coarsening",
+        "timestamp": "2026-05-08T04:13:03Z"
+      },
+      {
+        "contest_dispatch_verdict": "measured_config_retired_exact_cuda_negative",
+        "empirical_archive_bytes": 156404,
+        "empirical_score": 0.351718793322788,
+        "evidence_grade": "[contest-CUDA A-negative]",
+        "source": "[contest-CUDA A-negative] Lightning T4 exact auth eval job=lossy-coarsening-cuda-20260508T0312-noproject auth_eval_json=experiments/results/lightning_batch/lossy-coarsening-cuda-20260508T0312-noproject/auth_eval_work/contest_auth_eval.json review_packet=.omx/research/lossy_coarsening_exact_cuda_result_review_20260508_codex.json",
+        "technique": "lossy_coarsening_analytical",
+        "timestamp": "2026-05-08T06:10:51Z"
+      },
+      {
+        "contest_dispatch_verdict": "measured_config_retired_exact_cuda_negative",
+        "empirical_archive_bytes": 156404,
+        "empirical_score": 0.351718793322788,
+        "evidence_grade": "[contest-CUDA A-negative]",
+        "source": "experiments/results/lightning_batch/lossy-coarsening-cuda-20260508T0312-noproject/auth_eval_work/contest_auth_eval.json reviewed_by=.omx/research/lossy_coarsening_exact_cuda_result_review_20260508_codex.json",
+        "technique": "lossy_coarsening_analytical",
+        "timestamp": "2026-05-08T06:31:41Z"
+      },
+      {
+        "contest_dispatch_verdict": "BYTE-LOWER-THAN-PR101-brotli (-21,800 B) at proxy rel_err 0.0386; requires byte-closed runtime packet and exact CUDA auth eval",
+        "empirical_archive_bytes": 156344,
+        "empirical_score": null,
+        "evidence_grade": "[MPS-research-signal]",
+        "source": "[MPS-research-signal] /Users/adpena/Projects/pact/reports/raw/pr101_lossy_coarsening_20260508T140503Z/manifest.json (analytical per-tensor K coarsening; prior CompressAI smoke configs did not reach rel_err < 0.05 on PR101 substrate; not a neural-codec family kill)",
+        "technique": "lossy_coarsening_analytical",
+        "timestamp": "2026-05-08T14:05:04Z"
+      }
+    ],
+    "lossy_rows_count": 6,
+    "promotable_lossy_rows_count": 0,
+    "rows_read": 44
+  },
+  "created_at_utc": "2026-05-08T15:12:16Z",
+  "local_mac_cpu_diagnostic_anchor": {
+    "archive_size_bytes": 178392,
+    "avg_posenet_dist": 3.58e-05,
+    "avg_segnet_dist": 0.00058937,
+    "canonical_score_display": 0.2,
+    "compression_rate": 0.00475136,
+    "evidence_grade": "[local-macOS-CPU-diagnostic]",
+    "exists": true,
+    "n_samples": 600,
+    "original_uncompressed_bytes": 37545489,
+    "path": "experiments/results/pr107_cpu_eval_20260508/logs/report.txt",
+    "score_claim": false,
+    "score_recomputed_from_components": 0.19664188792842446
+  },
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "remote_dispatch_attempted": false,
+  "schema_version": "pr107_cpu_lossy_candidate_matrix.v1",
+  "score_claim": false,
+  "summary": {
+    "candidate_count": 9,
+    "cpu_axis_improver_count": 0,
+    "cpu_axis_improvers": [],
+    "exact_cpu_candidate_count": 6,
+    "fail_closed_verdict": "No existing PR107 uniform lossy-coarsening candidate is promoted. CPU-present configs are worse than the PR107 CPU anchor; CPU-missing configs remain fail-closed; all rows are missing exact CUDA validation.",
+    "next_medal_path_artifact": "Build scorer-aware per-tensor allocation or recovery/QAT candidate before any new dispatch; then rerun this matrix and require paired contest-CPU plus contest-CUDA review."
+  },
+  "tool": "tools/build_pr107_cpu_lossy_candidate_matrix.py"
+}

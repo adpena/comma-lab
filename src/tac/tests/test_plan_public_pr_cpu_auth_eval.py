@@ -52,6 +52,15 @@ def test_build_plan_forces_cpu_and_non_promotion_semantics() -> None:
     assert plan["score_claim"] is False
     assert plan["rank_or_kill_eligible"] is False
     assert plan["evidence_semantics"] == "public_cpu_leaderboard_reproduction_not_cuda_promotion"
+    completion = plan["dual_axis_completion"]
+    assert completion["paired_score_artifacts_complete"] is False
+    assert completion["represented_axes"] == ["contest_cpu"]
+    assert completion["missing_axes"] == ["contest_cuda"]
+    assert completion["global_priority_eligible"] is False
+    assert completion["blockers"] == [
+        "missing_contest_cuda_score_artifact",
+        "cpu_only_plan_cannot_mark_dual_axis_complete",
+    ]
     assert plan["input_closure"]["ready_to_execute"] is False
     assert set(plan["input_closure"]["missing_inputs"]) == {"archive", "inflate_sh"}
     command = plan["command"]

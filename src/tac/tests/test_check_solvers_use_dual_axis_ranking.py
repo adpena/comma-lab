@@ -81,8 +81,44 @@ def test_companion_key_elsewhere_in_file_does_not_dismiss_bad_row(tmp_path) -> N
         strict=False,
         verbose=False,
     )
-    assert len(violations) == 1, violations
-    assert "bad" not in violations[0]
+    assert len(violations) == 2, violations
+    assert all("predicted_score_delta" in v for v in violations)
+    assert any("primary-only" in v for v in violations)
+
+
+def test_subscript_assignment_to_primary_key_is_caught(tmp_path) -> None:
+    solver_dir = tmp_path / "src" / "tac" / "optimization"
+    solver_dir.mkdir(parents=True)
+    (solver_dir / "subscript_solver.py").write_text(
+        "def rank(row):\n"
+        "    row['predicted_score_delta'] = 0.1\n"
+        "    return row\n",
+        encoding="utf-8",
+    )
+    violations = check_solvers_use_dual_axis_ranking(
+        repo_root=tmp_path,
+        strict=False,
+        verbose=False,
+    )
+    assert len(violations) == 1
+    assert "predicted_score_delta" in violations[0]
+
+
+def test_string_key_assignment_is_not_misclassified_as_prose(tmp_path) -> None:
+    solver_dir = tmp_path / "src" / "tac" / "optimization"
+    solver_dir.mkdir(parents=True)
+    (solver_dir / "assign_solver.py").write_text(
+        "def rank(row):\n"
+        "    key = 'predicted_score_delta'\n"
+        "    return key\n",
+        encoding="utf-8",
+    )
+    violations = check_solvers_use_dual_axis_ranking(
+        repo_root=tmp_path,
+        strict=False,
+        verbose=False,
+    )
+    assert len(violations) == 1
     assert "predicted_score_delta" in violations[0]
 
 
@@ -113,13 +149,9 @@ def test_clean_repo_returns_no_violations(tmp_path) -> None:
 
 
 def test_real_repo_warn_only_does_not_raise() -> None:
-    """The check on the real repo runs in warn-only mode without raising
-    (live count may be > 0 while the strict-flip is gated on backfill)."""
-    # Don't pass repo_root so the default (REPO_ROOT) is used.
+    """The real repo is clean enough for strict dual-axis enforcement."""
     violations = check_solvers_use_dual_axis_ranking(
-        strict=False,
+        strict=True,
         verbose=False,
     )
-    # The real-repo violation count is informational; we do not assert on
-    # an exact number because it changes as files are backfilled.
-    assert isinstance(violations, list)
+    assert violations == []
