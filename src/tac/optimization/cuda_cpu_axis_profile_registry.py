@@ -243,6 +243,21 @@ ARCHITECTURE_CLASSES = (
 # inside the HNeRV cluster.
 HNERV_PACKED_HEADER_PREFIX = b"\xff\xff\xff\xff"
 
+_LINUX_CPU_OS_MARKERS = ("linux", "ubuntu", "debian")
+_X86_64_CPU_MARKERS = ("x86_64", "amd64", "x64")
+_MACOS_CPU_ADVISORY_MARKERS = (
+    "darwin",
+    "macos",
+    "mac os",
+    "apple",
+    "apple_silicon",
+    "arm64",
+    "aarch64",
+)
+_CUDA_HARDWARE_MARKERS = ("cuda", "nvidia", "gpu", "t4", "h100", "a100", "l4", "sm")
+_CONTEST_CPU_AXIS_MARKERS = ("contest_cpu", "contest cpu", "contest-cpu")
+_CONTEST_CUDA_AXIS_MARKERS = ("contest_cuda", "contest cuda", "contest-cuda")
+
 
 # ── Dataclasses ────────────────────────────────────────────────────────────
 @dataclass
@@ -429,6 +444,10 @@ class ProfileUpdate:
             "after": dict(self.after),
             "notes": str(self.notes),
             "timestamp_utc": datetime.now(UTC).isoformat(),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
         }
 
 
@@ -624,6 +643,10 @@ def update_profile_from_anchor(
     enriched_anchor["seeded_at_bootstrap"] = False
     enriched_anchor.setdefault("source", "unknown")
     enriched_anchor.setdefault("ingested_utc", datetime.now(UTC).isoformat())
+    enriched_anchor["score_claim"] = False
+    enriched_anchor["promotion_eligible"] = False
+    enriched_anchor["rank_or_kill_eligible"] = False
+    enriched_anchor["ready_for_exact_eval_dispatch"] = False
     if outlier_reason:
         enriched_anchor["outlier_reason"] = outlier_reason
 
@@ -838,6 +861,47 @@ def read_registry(
     return deserialize_registry(payload)
 
 
+# ── Axis-custody helpers ─────────────────────────────────────────────────────
+def _hardware_blob(*values: Any) -> str:
+    """Return a normalized hardware/provenance text blob for conservative checks."""
+    parts = [str(value).strip().lower() for value in values if value is not None]
+    return " ".join(parts).replace("-", "_")
+
+
+def _is_linux_x86_64_cpu_hardware(*values: Any) -> bool:
+    """True only for labels that can back a ``[contest-CPU]`` learning anchor."""
+    blob = _hardware_blob(*values)
+    if not blob:
+        return False
+    if any(marker in blob for marker in _MACOS_CPU_ADVISORY_MARKERS):
+        return False
+    has_linux_os = any(marker in blob for marker in _LINUX_CPU_OS_MARKERS)
+    has_x86_64 = any(marker in blob for marker in _X86_64_CPU_MARKERS)
+    return has_linux_os and has_x86_64
+
+
+def _is_cuda_eval_hardware(*values: Any) -> bool:
+    """True for recognizably CUDA/GPU hardware labels, not MPS advisories."""
+    blob = _hardware_blob(*values)
+    if not blob:
+        return False
+    if "mps" in blob or "metal" in blob:
+        return False
+    return any(marker in blob for marker in _CUDA_HARDWARE_MARKERS)
+
+
+def _has_contest_cpu_axis_metadata(*values: Any) -> bool:
+    """True when nested payload metadata explicitly identifies contest CPU."""
+    blob = _hardware_blob(*values)
+    return any(marker in blob for marker in _CONTEST_CPU_AXIS_MARKERS)
+
+
+def _has_contest_cuda_axis_metadata(*values: Any) -> bool:
+    """True when nested payload metadata explicitly identifies contest CUDA."""
+    blob = _hardware_blob(*values)
+    return any(marker in blob for marker in _CONTEST_CUDA_AXIS_MARKERS)
+
+
 # ── Online-learning hook ───────────────────────────────────────────────────
 def _extract_anchor_from_contest_auth_eval(
     contest_auth_eval_payload: dict[str, Any],
@@ -936,6 +1000,21 @@ def _extract_anchor_from_contest_auth_eval(
     ):
         return None
 
+    if not _has_contest_cpu_axis_metadata(
+        cpu.get("evidence_grade"),
+        cpu.get("score_axis"),
+    ):
+        return None
+    if not _is_linux_x86_64_cpu_hardware(cpu_hardware):
+        return None
+    if not _has_contest_cuda_axis_metadata(
+        cuda.get("evidence_grade"),
+        cuda.get("score_axis"),
+    ):
+        return None
+    if not _is_cuda_eval_hardware(cuda_hardware):
+        return None
+
     return {
         "observed_r_pose": float(cuda_pose) / float(cpu_pose),
         "observed_r_seg": float(cuda_seg) / float(cpu_seg),
@@ -952,6 +1031,8 @@ def _extract_anchor_from_contest_auth_eval(
         "sample_count": int(sample_count),
         "cpu_hardware": cpu_hardware,
         "cuda_hardware": cuda_hardware,
+        "cpu_axis_custody": "contest_cpu_linux_x86_64",
+        "cuda_axis_custody": "contest_cuda_exact_eval",
         "source": str(
             contest_auth_eval_payload.get("source", "contest_auth_eval.adjudicated")
         ),

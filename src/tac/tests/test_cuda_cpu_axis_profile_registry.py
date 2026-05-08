@@ -404,8 +404,20 @@ def _adjudicated_payload(
         "runtime_tree_sha256": "runtime-deadbeef",
         "sample_count": 1200,
         "architecture_class": architecture_class,
-        "cpu": {"pose": cpu_pose, "seg": cpu_seg, "hardware": "ubuntu-24.04-x86_64"},
-        "cuda": {"pose": cuda_pose, "seg": cuda_seg, "hardware": "t4-sm75"},
+        "cpu": {
+            "pose": cpu_pose,
+            "seg": cpu_seg,
+            "hardware": "ubuntu-24.04-x86_64",
+            "score_axis": "contest_cpu",
+            "evidence_grade": "contest-CPU-1to1",
+        },
+        "cuda": {
+            "pose": cuda_pose,
+            "seg": cuda_seg,
+            "hardware": "t4-sm75",
+            "score_axis": "contest_cuda",
+            "evidence_grade": "contest-CUDA",
+        },
         "source": "test_adjudicated_json",
     }
 
@@ -435,6 +447,8 @@ def test_harvest_extracts_paired_anchor_and_updates_registry(tmp_path: Path) -> 
     record = json.loads(lines[0])
     assert record["architecture_class"] == "hnerv_ft_microcodec"
     assert record["accepted"] is True
+    assert record["score_claim"] is False
+    assert record["promotion_eligible"] is False
 
 
 def test_harvest_returns_none_for_unpaired_payload() -> None:
@@ -464,6 +478,109 @@ def test_harvest_returns_none_for_missing_custody_fields() -> None:
 
     assert update is None
     assert registry["hnerv_ft_microcodec"].n_anchors == n_before
+
+
+def test_harvest_rejects_direct_macos_cpu_payload_without_mutating_registry() -> None:
+    registry = bootstrap_registry_from_hnerv_anchors()
+    n_before = registry["hnerv_ft_microcodec"].n_anchors
+    payload = _adjudicated_payload(
+        cpu_pose=3.4e-5, cpu_seg=5.7e-4,
+        cuda_pose=1.7e-4, cuda_seg=6.7e-4,
+    )
+    payload["cpu"]["hardware"] = "Darwin-arm64"
+
+    update = harvest_new_anchor_and_update(
+        payload,
+        registry=registry,
+        audit_log_path=None,
+    )
+
+    assert update is None
+    assert registry["hnerv_ft_microcodec"].n_anchors == n_before
+
+
+def test_harvest_rejects_direct_mps_cuda_payload_without_mutating_registry() -> None:
+    registry = bootstrap_registry_from_hnerv_anchors()
+    n_before = registry["hnerv_ft_microcodec"].n_anchors
+    payload = _adjudicated_payload(
+        cpu_pose=3.4e-5, cpu_seg=5.7e-4,
+        cuda_pose=1.7e-4, cuda_seg=6.7e-4,
+    )
+    payload["cuda"]["hardware"] = "mps-advisory"
+
+    update = harvest_new_anchor_and_update(
+        payload,
+        registry=registry,
+        audit_log_path=None,
+    )
+
+    assert update is None
+    assert registry["hnerv_ft_microcodec"].n_anchors == n_before
+
+
+def test_harvest_rejects_payload_without_explicit_axis_metadata() -> None:
+    registry = bootstrap_registry_from_hnerv_anchors()
+    n_before = registry["hnerv_ft_microcodec"].n_anchors
+    payload = _adjudicated_payload(
+        cpu_pose=3.4e-5, cpu_seg=5.7e-4,
+        cuda_pose=1.7e-4, cuda_seg=6.7e-4,
+    )
+    payload["cpu"].pop("score_axis")
+    payload["cpu"].pop("evidence_grade")
+    payload["cuda"].pop("score_axis")
+    payload["cuda"].pop("evidence_grade")
+
+    update = harvest_new_anchor_and_update(
+        payload,
+        registry=registry,
+        audit_log_path=None,
+    )
+
+    assert update is None
+    assert registry["hnerv_ft_microcodec"].n_anchors == n_before
+
+
+def test_harvest_accepts_cuda_label_with_cpu_host_when_axis_is_explicit() -> None:
+    registry = bootstrap_registry_from_hnerv_anchors()
+    payload = _adjudicated_payload(
+        cpu_pose=3.4e-5, cpu_seg=5.7e-4,
+        cuda_pose=1.7e-4, cuda_seg=6.7e-4,
+    )
+    payload["cuda"]["hardware"] = "ubuntu x86_64 CPU host with NVIDIA T4 CUDA"
+
+    update = harvest_new_anchor_and_update(
+        payload,
+        registry=registry,
+        audit_log_path=None,
+    )
+
+    assert update is not None
+    assert update.anchor["cuda_axis_custody"] == "contest_cuda_exact_eval"
+
+
+def test_harvested_anchor_carries_axis_custody_and_no_score_claim() -> None:
+    registry = bootstrap_registry_from_hnerv_anchors()
+    payload = _adjudicated_payload(
+        cpu_pose=3.4e-5, cpu_seg=5.7e-4,
+        cuda_pose=1.7e-4, cuda_seg=6.7e-4,
+    )
+
+    update = harvest_new_anchor_and_update(
+        payload,
+        registry=registry,
+        audit_log_path=None,
+    )
+
+    assert update is not None
+    assert update.anchor["cpu_axis_custody"] == "contest_cpu_linux_x86_64"
+    assert update.anchor["cuda_axis_custody"] == "contest_cuda_exact_eval"
+    assert update.anchor["score_claim"] is False
+    assert update.anchor["promotion_eligible"] is False
+    assert update.anchor["rank_or_kill_eligible"] is False
+    assert update.anchor["ready_for_exact_eval_dispatch"] is False
+    update_dict = update.to_dict()
+    assert update_dict["score_claim"] is False
+    assert update_dict["promotion_eligible"] is False
 
 
 def test_harvest_auto_instantiates_unknown_class() -> None:
