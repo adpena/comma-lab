@@ -1,0 +1,796 @@
+{
+  "baseline": {
+    "archive_overhead_bytes": 16094,
+    "base_channels": 36,
+    "codec_efficiency_vs_iid_floor": 1.0146538023551201,
+    "current_compact_decoder_payload_bytes": 162164,
+    "eval_size": [
+      384,
+      512
+    ],
+    "iid_per_tensor_floor_bits": 1278574.086865211,
+    "iid_per_tensor_floor_payload_bytes": 159822,
+    "latent_dim": 28,
+    "markov1_floor_payload_bytes": 152106,
+    "markov2_floor_payload_bytes": 98013,
+    "n_tensors": 28,
+    "n_total_symbols": 228958,
+    "reference_archive_bytes": 178144
+  },
+  "charged_bits_changed": false,
+  "evidence_partition": {
+    "derivation": [
+      "Shannon H0 payload floor, codec efficiency ratio, and contest rate-score delta formula"
+    ],
+    "empirical": [
+      "state_dict tensor count, symbols, H0, and PR101 compact Brotli bytes"
+    ],
+    "prediction": [
+      "architecture shrink, sparsity, quantization, entropy-ratio, side-info, and mask-overhead rows"
+    ]
+  },
+  "gpu_dispatch_blockers": [
+    "Parameterize HNeRVDecoder and train_stage so shrunk base_channels/latent_dim produce a generated state schema.",
+    "Implement a target codec/runtime loader for the generated schema; current PR101 FIXED_STATE_SCHEMA is hardcoded.",
+    "Run CPU roundtrip through codec pipeline and local inflate parity before any remote eval.",
+    "Claim lane via tools/claim_lane_dispatch.py before GPU training/eval dispatch.",
+    "Run exact CUDA auth eval on produced archive bytes before setting score_claim=true."
+  ],
+  "inputs": {
+    "entropy_floor_report": "reports/pr101_provable_optimal_floor.json",
+    "entropy_floor_report_sha256": "42e4f458157d26d83e7ce968a49ba462bc109553e04e7ea51ee74b2b84783688",
+    "state_dict_path": "experiments/results/cma_pr101_real_substrate_20260507T222605Z/pr101_decoder_state_dict.pt",
+    "state_dict_sha256": "b863362aaba1b9cae9b944f5e5b1a43a53ca824b7899ed7b80a2e2146d66f053"
+  },
+  "operator_next_commands": [
+    ".venv/bin/python tools/plan_pr101_arch_shrink_retraining.py --state-dict-path experiments/results/cma_pr101_real_substrate_20260507T222605Z/pr101_decoder_state_dict.pt --entropy-floor-report reports/pr101_provable_optimal_floor.json --output-dir experiments/results/pr101_arch_shrink_retraining_plan_20260507_worker_b",
+    ".venv/bin/python tools/run_deltaepszeta_training.py --state-dict experiments/results/cma_pr101_real_substrate_20260507T222605Z/pr101_decoder_state_dict.pt --n-epochs 1 --steps-per-epoch 2 --log-dir experiments/results/pr101_arch_shrink_retraining_plan_20260507_worker_b/deltaepszeta_cpu_sanity --run-label pr101_rate_proxy_sanity",
+    ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id pr101_arch_shrink_deltaepszeta_gpu --status planned --notes 'blocked until generated HNeRV schema/runtime and CPU roundtrip land'"
+  ],
+  "per_tensor_top_h0_bytes": [
+    {
+      "h0_bits_per_symbol": 5.561289148594,
+      "h0_floor_bytes": 32434,
+      "idx": 4,
+      "n_symbols": 46656,
+      "name": "blocks.1.weight",
+      "scale": 0.004058837890625,
+      "shape": [
+        144,
+        36,
+        3,
+        3
+      ]
+    },
+    {
+      "h0_bits_per_symbol": 5.539484274804954,
+      "h0_floor_bytes": 32307,
+      "idx": 2,
+      "n_symbols": 46656,
+      "name": "blocks.0.weight",
+      "scale": 0.0047454833984375,
+      "shape": [
+        144,
+        36,
+        3,
+        3
+      ]
+    },
+    {
+      "h0_bits_per_symbol": 5.221834571977242,
+      "h0_floor_bytes": 31582,
+      "idx": 0,
+      "n_symbols": 48384,
+      "name": "stem.weight",
+      "scale": 0.01201629638671875,
+      "shape": [
+        1728,
+        28
+      ]
+    },
+    {
+      "h0_bits_per_symbol": 5.81537798299213,
+      "h0_floor_bytes": 25437,
+      "idx": 6,
+      "n_symbols": 34992,
+      "name": "blocks.2.weight",
+      "scale": 0.00323486328125,
+      "shape": [
+        108,
+        36,
+        3,
+        3
+      ]
+    },
+    {
+      "h0_bits_per_symbol": 5.770686023766473,
+      "h0_floor_bytes": 14023,
+      "idx": 8,
+      "n_symbols": 19440,
+      "name": "blocks.3.weight",
+      "scale": 0.0031909942626953125,
+      "shape": [
+        80,
+        27,
+        3,
+        3
+      ]
+    },
+    {
+      "h0_bits_per_symbol": 6.269517628323635,
+      "h0_floor_bytes": 10157,
+      "idx": 10,
+      "n_symbols": 12960,
+      "name": "blocks.4.weight",
+      "scale": 0.0025844573974609375,
+      "shape": [
+        72,
+        20,
+        3,
+        3
+      ]
+    },
+    {
+      "h0_bits_per_symbol": 5.2602777026288186,
+      "h0_floor_bytes": 7670,
+      "idx": 12,
+      "n_symbols": 11664,
+      "name": "blocks.5.weight",
+      "scale": 0.006439208984375,
+      "shape": [
+        72,
+        18,
+        3,
+        3
+      ]
+    },
+    {
+      "h0_bits_per_symbol": 7.203411495331799,
+      "h0_floor_bytes": 1556,
+      "idx": 1,
+      "n_symbols": 1728,
+      "name": "stem.bias",
+      "scale": 0.0166015625,
+      "shape": [
+        1728
+      ]
+    },
+    {
+      "h0_bits_per_symbol": 5.947793726440218,
+      "h0_floor_bytes": 1084,
+      "idx": 22,
+      "n_symbols": 1458,
+      "name": "refine.1.weight",
+      "scale": 0.003505706787109375,
+      "shape": [
+        18,
+        9,
+        3,
+        3
+      ]
+    },
+    {
+      "h0_bits_per_symbol": 5.465568069753415,
+      "h0_floor_bytes": 997,
+      "idx": 20,
+      "n_symbols": 1458,
+      "name": "refine.0.weight",
+      "scale": 0.007617950439453125,
+      "shape": [
+        9,
+        18,
+        3,
+        3
+      ]
+    },
+    {
+      "h0_bits_per_symbol": 5.731671307589953,
+      "h0_floor_bytes": 697,
+      "idx": 14,
+      "n_symbols": 972,
+      "name": "skips.2.weight",
+      "scale": 0.0037708282470703125,
+      "shape": [
+        27,
+        36,
+        1,
+        1
+      ]
+    },
+    {
+      "h0_bits_per_symbol": 5.999890136551165,
+      "h0_floor_bytes": 405,
+      "idx": 16,
+      "n_symbols": 540,
+      "name": "skips.3.weight",
+      "scale": 0.003002166748046875,
+      "shape": [
+        20,
+        27,
+        1,
+        1
+      ]
+    }
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "scenarios": [
+    {
+      "byte_estimate": {
+        "archive_overhead_bytes": 16094,
+        "current_codec_efficiency_vs_iid_floor": 1.0146538023551201,
+        "delta_archive_bytes_vs_reference": -115107,
+        "expected_archive_bytes": 63037,
+        "expected_payload_bytes": 46943,
+        "mask_overhead_bytes": 4208,
+        "predicted_floor_payload_bytes": 36062,
+        "rate_score_delta_vs_reference": -0.07664502651703378,
+        "side_info_bytes": 6144
+      },
+      "charged_bits_changed": false,
+      "dispatch_blockers": [
+        "no_trained_checkpoint_for_this_architecture",
+        "no_runtime_decoder_schema_manifest_for_shrunk_HNeRV",
+        "no_inflate_output_parity_or_score_delta_classification",
+        "no_exact_cuda_auth_eval",
+        "unstructured_sparsity_mask_overhead_is_prediction_only",
+        "quantized_runtime_export_not_implemented_for_target_bits"
+      ],
+      "driver_family": "imp_plus_self_compress_hnerv",
+      "evidence_grade": "prediction",
+      "name": "stage_e_high_risk_int4_sparse",
+      "notes": "High-risk IMP/self-compress target; mask overhead charged.",
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "targets": {
+        "active_symbols": 72123,
+        "element_retention": 0.42,
+        "entropy_ratio_to_current_h0": 0.86,
+        "post_arch_symbols": 96163,
+        "predicted_h0_bits_per_active_symbol": 4.0,
+        "quant_bits": 4.0,
+        "sparse_mask_mode": "unstructured_bitmask_brotli_estimate",
+        "sparsity": 0.25
+      },
+      "training_driver_manifest_fields": {
+        "architecture_target": {
+          "element_retention": 0.42,
+          "entropy_ratio_target": 0.86,
+          "quant_bits": 4.0,
+          "requires_generated_schema": true,
+          "sparse_mask_mode": "unstructured_bitmask_brotli_estimate",
+          "structured_sparsity": 0.25
+        },
+        "archive_gates": [
+          "state_dict_roundtrip_through_target_codec",
+          "inflate_output_parity_or_explicit_distortion_classification",
+          "deterministic_archive_manifest",
+          "pre_submission_compliance_check_strict",
+          "lane_dispatch_claim_before_gpu_eval",
+          "contest_cuda_auth_eval_before_any_score_claim"
+        ],
+        "schema": "pr101_arch_shrink_retraining_run.v1",
+        "score_claim": false,
+        "source_substrate": {
+          "base_channels": 36,
+          "eval_size": [
+            384,
+            512
+          ],
+          "family": "PR101 hnerv_ft_microcodec",
+          "fixed_state_schema": "src/tac/pr101_split_brotli_codec.py::FIXED_STATE_SCHEMA",
+          "latent_dim": 28,
+          "model": "HNeRVDecoder"
+        },
+        "target_modes": [
+          "contest_exact_eval"
+        ],
+        "training": {
+          "base_curriculum": "public PR106 belt_and_suspenders eight-stage HNeRV curriculum; parameterize latent_dim/base_channels/schema before reuse",
+          "optional_loss_terms": [
+            "self_compress_width_precision_l0",
+            "codec_pipeline_epoch_byte_callback"
+          ],
+          "reproducibility_fields": [
+            "seed",
+            "git_commit",
+            "input_video_sha256",
+            "stage_configs",
+            "optimizer_state",
+            "ema_decay",
+            "best_epoch",
+            "decoder_state_dict_sha256",
+            "latents_sha256",
+            "codec_pipeline_manifest_sha256"
+          ],
+          "required_loss_terms": [
+            "segnet_distillation_or_exact_source_stage_loss",
+            "posenet_first6_pose_loss",
+            "deltaepszeta_rate_proxy_weighted_by_tensor_headroom",
+            "qat_fake_quant_matching_target_bits"
+          ]
+        }
+      }
+    },
+    {
+      "byte_estimate": {
+        "archive_overhead_bytes": 16094,
+        "current_codec_efficiency_vs_iid_floor": 1.0146538023551201,
+        "delta_archive_bytes_vs_reference": -110909,
+        "expected_archive_bytes": 67235,
+        "expected_payload_bytes": 51141,
+        "mask_overhead_bytes": 0,
+        "predicted_floor_payload_bytes": 46365,
+        "rate_score_delta_vs_reference": -0.0738497506318269,
+        "side_info_bytes": 4096
+      },
+      "charged_bits_changed": false,
+      "dispatch_blockers": [
+        "no_trained_checkpoint_for_this_architecture",
+        "no_runtime_decoder_schema_manifest_for_shrunk_HNeRV",
+        "no_inflate_output_parity_or_score_delta_classification",
+        "no_exact_cuda_auth_eval",
+        "quantized_runtime_export_not_implemented_for_target_bits"
+      ],
+      "driver_family": "self_compress_width_precision_hnerv",
+      "evidence_grade": "prediction",
+      "name": "stage_d_zeta_width_precision_int4",
+      "notes": "SCNN-style width x precision target; structured manifest only.",
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "targets": {
+        "active_symbols": 92729,
+        "element_retention": 0.45,
+        "entropy_ratio_to_current_h0": 0.9,
+        "post_arch_symbols": 103032,
+        "predicted_h0_bits_per_active_symbol": 4.0,
+        "quant_bits": 4.0,
+        "sparse_mask_mode": "structured_channel_manifest",
+        "sparsity": 0.1
+      },
+      "training_driver_manifest_fields": {
+        "architecture_target": {
+          "element_retention": 0.45,
+          "entropy_ratio_target": 0.9,
+          "quant_bits": 4.0,
+          "requires_generated_schema": true,
+          "sparse_mask_mode": "structured_channel_manifest",
+          "structured_sparsity": 0.1
+        },
+        "archive_gates": [
+          "state_dict_roundtrip_through_target_codec",
+          "inflate_output_parity_or_explicit_distortion_classification",
+          "deterministic_archive_manifest",
+          "pre_submission_compliance_check_strict",
+          "lane_dispatch_claim_before_gpu_eval",
+          "contest_cuda_auth_eval_before_any_score_claim"
+        ],
+        "schema": "pr101_arch_shrink_retraining_run.v1",
+        "score_claim": false,
+        "source_substrate": {
+          "base_channels": 36,
+          "eval_size": [
+            384,
+            512
+          ],
+          "family": "PR101 hnerv_ft_microcodec",
+          "fixed_state_schema": "src/tac/pr101_split_brotli_codec.py::FIXED_STATE_SCHEMA",
+          "latent_dim": 28,
+          "model": "HNeRVDecoder"
+        },
+        "target_modes": [
+          "contest_exact_eval"
+        ],
+        "training": {
+          "base_curriculum": "public PR106 belt_and_suspenders eight-stage HNeRV curriculum; parameterize latent_dim/base_channels/schema before reuse",
+          "optional_loss_terms": [
+            "self_compress_width_precision_l0",
+            "codec_pipeline_epoch_byte_callback"
+          ],
+          "reproducibility_fields": [
+            "seed",
+            "git_commit",
+            "input_video_sha256",
+            "stage_configs",
+            "optimizer_state",
+            "ema_decay",
+            "best_epoch",
+            "decoder_state_dict_sha256",
+            "latents_sha256",
+            "codec_pipeline_manifest_sha256"
+          ],
+          "required_loss_terms": [
+            "segnet_distillation_or_exact_source_stage_loss",
+            "posenet_first6_pose_loss",
+            "deltaepszeta_rate_proxy_weighted_by_tensor_headroom",
+            "qat_fake_quant_matching_target_bits"
+          ]
+        }
+      }
+    },
+    {
+      "byte_estimate": {
+        "archive_overhead_bytes": 16094,
+        "current_codec_efficiency_vs_iid_floor": 1.0146538023551201,
+        "delta_archive_bytes_vs_reference": -75150,
+        "expected_archive_bytes": 102994,
+        "expected_payload_bytes": 86900,
+        "mask_overhead_bytes": 0,
+        "predicted_floor_payload_bytes": 84131,
+        "rate_score_delta_vs_reference": -0.05003930032713118,
+        "side_info_bytes": 1536
+      },
+      "charged_bits_changed": false,
+      "dispatch_blockers": [
+        "no_trained_checkpoint_for_this_architecture",
+        "no_runtime_decoder_schema_manifest_for_shrunk_HNeRV",
+        "no_inflate_output_parity_or_score_delta_classification",
+        "no_exact_cuda_auth_eval",
+        "quantized_runtime_export_not_implemented_for_target_bits"
+      ],
+      "driver_family": "hnerv_arch_shrink_deltaepszeta",
+      "evidence_grade": "prediction",
+      "name": "stage_c_width075_int6_qat_dez",
+      "notes": "Int6 QAT plus structured shrink; requires runtime schema manifest.",
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "targets": {
+        "active_symbols": 128217,
+        "element_retention": 0.56,
+        "entropy_ratio_to_current_h0": 0.94,
+        "post_arch_symbols": 128217,
+        "predicted_h0_bits_per_active_symbol": 5.249258124430237,
+        "quant_bits": 6.0,
+        "sparse_mask_mode": "none",
+        "sparsity": 0.0
+      },
+      "training_driver_manifest_fields": {
+        "architecture_target": {
+          "element_retention": 0.56,
+          "entropy_ratio_target": 0.94,
+          "quant_bits": 6.0,
+          "requires_generated_schema": true,
+          "sparse_mask_mode": "none",
+          "structured_sparsity": 0.0
+        },
+        "archive_gates": [
+          "state_dict_roundtrip_through_target_codec",
+          "inflate_output_parity_or_explicit_distortion_classification",
+          "deterministic_archive_manifest",
+          "pre_submission_compliance_check_strict",
+          "lane_dispatch_claim_before_gpu_eval",
+          "contest_cuda_auth_eval_before_any_score_claim"
+        ],
+        "schema": "pr101_arch_shrink_retraining_run.v1",
+        "score_claim": false,
+        "source_substrate": {
+          "base_channels": 36,
+          "eval_size": [
+            384,
+            512
+          ],
+          "family": "PR101 hnerv_ft_microcodec",
+          "fixed_state_schema": "src/tac/pr101_split_brotli_codec.py::FIXED_STATE_SCHEMA",
+          "latent_dim": 28,
+          "model": "HNeRVDecoder"
+        },
+        "target_modes": [
+          "contest_exact_eval"
+        ],
+        "training": {
+          "base_curriculum": "public PR106 belt_and_suspenders eight-stage HNeRV curriculum; parameterize latent_dim/base_channels/schema before reuse",
+          "optional_loss_terms": [
+            "self_compress_width_precision_l0",
+            "codec_pipeline_epoch_byte_callback"
+          ],
+          "reproducibility_fields": [
+            "seed",
+            "git_commit",
+            "input_video_sha256",
+            "stage_configs",
+            "optimizer_state",
+            "ema_decay",
+            "best_epoch",
+            "decoder_state_dict_sha256",
+            "latents_sha256",
+            "codec_pipeline_manifest_sha256"
+          ],
+          "required_loss_terms": [
+            "segnet_distillation_or_exact_source_stage_loss",
+            "posenet_first6_pose_loss",
+            "deltaepszeta_rate_proxy_weighted_by_tensor_headroom",
+            "qat_fake_quant_matching_target_bits"
+          ]
+        }
+      }
+    },
+    {
+      "byte_estimate": {
+        "archive_overhead_bytes": 16094,
+        "current_codec_efficiency_vs_iid_floor": 1.0146538023551201,
+        "delta_archive_bytes_vs_reference": -61903,
+        "expected_archive_bytes": 116241,
+        "expected_payload_bytes": 100147,
+        "mask_overhead_bytes": 0,
+        "predicted_floor_payload_bytes": 98196,
+        "rate_score_delta_vs_reference": -0.04121866677512177,
+        "side_info_bytes": 512
+      },
+      "charged_bits_changed": false,
+      "dispatch_blockers": [
+        "no_trained_checkpoint_for_this_architecture",
+        "no_runtime_decoder_schema_manifest_for_shrunk_HNeRV",
+        "no_inflate_output_parity_or_score_delta_classification",
+        "no_exact_cuda_auth_eval"
+      ],
+      "driver_family": "hnerv_arch_shrink_deltaepszeta",
+      "evidence_grade": "prediction",
+      "name": "stage_b_width080_int8_dez",
+      "notes": "Moderate structured shrink with delta-epsilon-zeta rate shaping.",
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "targets": {
+        "active_symbols": 146534,
+        "element_retention": 0.64,
+        "entropy_ratio_to_current_h0": 0.96,
+        "post_arch_symbols": 146534,
+        "predicted_h0_bits_per_active_symbol": 5.360944467503221,
+        "quant_bits": 8.0,
+        "sparse_mask_mode": "none",
+        "sparsity": 0.0
+      },
+      "training_driver_manifest_fields": {
+        "architecture_target": {
+          "element_retention": 0.64,
+          "entropy_ratio_target": 0.96,
+          "quant_bits": 8.0,
+          "requires_generated_schema": true,
+          "sparse_mask_mode": "none",
+          "structured_sparsity": 0.0
+        },
+        "archive_gates": [
+          "state_dict_roundtrip_through_target_codec",
+          "inflate_output_parity_or_explicit_distortion_classification",
+          "deterministic_archive_manifest",
+          "pre_submission_compliance_check_strict",
+          "lane_dispatch_claim_before_gpu_eval",
+          "contest_cuda_auth_eval_before_any_score_claim"
+        ],
+        "schema": "pr101_arch_shrink_retraining_run.v1",
+        "score_claim": false,
+        "source_substrate": {
+          "base_channels": 36,
+          "eval_size": [
+            384,
+            512
+          ],
+          "family": "PR101 hnerv_ft_microcodec",
+          "fixed_state_schema": "src/tac/pr101_split_brotli_codec.py::FIXED_STATE_SCHEMA",
+          "latent_dim": 28,
+          "model": "HNeRVDecoder"
+        },
+        "target_modes": [
+          "contest_exact_eval"
+        ],
+        "training": {
+          "base_curriculum": "public PR106 belt_and_suspenders eight-stage HNeRV curriculum; parameterize latent_dim/base_channels/schema before reuse",
+          "optional_loss_terms": [
+            "self_compress_width_precision_l0",
+            "codec_pipeline_epoch_byte_callback"
+          ],
+          "reproducibility_fields": [
+            "seed",
+            "git_commit",
+            "input_video_sha256",
+            "stage_configs",
+            "optimizer_state",
+            "ema_decay",
+            "best_epoch",
+            "decoder_state_dict_sha256",
+            "latents_sha256",
+            "codec_pipeline_manifest_sha256"
+          ],
+          "required_loss_terms": [
+            "segnet_distillation_or_exact_source_stage_loss",
+            "posenet_first6_pose_loss",
+            "deltaepszeta_rate_proxy_weighted_by_tensor_headroom",
+            "qat_fake_quant_matching_target_bits"
+          ]
+        }
+      }
+    },
+    {
+      "byte_estimate": {
+        "archive_overhead_bytes": 16094,
+        "current_codec_efficiency_vs_iid_floor": 1.0146538023551201,
+        "delta_archive_bytes_vs_reference": -33067,
+        "expected_archive_bytes": 145077,
+        "expected_payload_bytes": 128983,
+        "mask_overhead_bytes": 0,
+        "predicted_floor_payload_bytes": 126867,
+        "rate_score_delta_vs_reference": -0.02201795800289084,
+        "side_info_bytes": 256
+      },
+      "charged_bits_changed": false,
+      "dispatch_blockers": [
+        "no_trained_checkpoint_for_this_architecture",
+        "no_runtime_decoder_schema_manifest_for_shrunk_HNeRV",
+        "no_inflate_output_parity_or_score_delta_classification",
+        "no_exact_cuda_auth_eval"
+      ],
+      "driver_family": "hnerv_arch_shrink_deltaepszeta",
+      "evidence_grade": "prediction",
+      "name": "stage_a_width090_int8_rate_shape",
+      "notes": "Conservative width shrink; target keeps PR101 topology class.",
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "targets": {
+        "active_symbols": 185456,
+        "element_retention": 0.81,
+        "entropy_ratio_to_current_h0": 0.98,
+        "post_arch_symbols": 185456,
+        "predicted_h0_bits_per_active_symbol": 5.472630810576205,
+        "quant_bits": 8.0,
+        "sparse_mask_mode": "none",
+        "sparsity": 0.0
+      },
+      "training_driver_manifest_fields": {
+        "architecture_target": {
+          "element_retention": 0.81,
+          "entropy_ratio_target": 0.98,
+          "quant_bits": 8.0,
+          "requires_generated_schema": true,
+          "sparse_mask_mode": "none",
+          "structured_sparsity": 0.0
+        },
+        "archive_gates": [
+          "state_dict_roundtrip_through_target_codec",
+          "inflate_output_parity_or_explicit_distortion_classification",
+          "deterministic_archive_manifest",
+          "pre_submission_compliance_check_strict",
+          "lane_dispatch_claim_before_gpu_eval",
+          "contest_cuda_auth_eval_before_any_score_claim"
+        ],
+        "schema": "pr101_arch_shrink_retraining_run.v1",
+        "score_claim": false,
+        "source_substrate": {
+          "base_channels": 36,
+          "eval_size": [
+            384,
+            512
+          ],
+          "family": "PR101 hnerv_ft_microcodec",
+          "fixed_state_schema": "src/tac/pr101_split_brotli_codec.py::FIXED_STATE_SCHEMA",
+          "latent_dim": 28,
+          "model": "HNeRVDecoder"
+        },
+        "target_modes": [
+          "contest_exact_eval"
+        ],
+        "training": {
+          "base_curriculum": "public PR106 belt_and_suspenders eight-stage HNeRV curriculum; parameterize latent_dim/base_channels/schema before reuse",
+          "optional_loss_terms": [
+            "self_compress_width_precision_l0",
+            "codec_pipeline_epoch_byte_callback"
+          ],
+          "reproducibility_fields": [
+            "seed",
+            "git_commit",
+            "input_video_sha256",
+            "stage_configs",
+            "optimizer_state",
+            "ema_decay",
+            "best_epoch",
+            "decoder_state_dict_sha256",
+            "latents_sha256",
+            "codec_pipeline_manifest_sha256"
+          ],
+          "required_loss_terms": [
+            "segnet_distillation_or_exact_source_stage_loss",
+            "posenet_first6_pose_loss",
+            "deltaepszeta_rate_proxy_weighted_by_tensor_headroom",
+            "qat_fake_quant_matching_target_bits"
+          ]
+        }
+      }
+    },
+    {
+      "byte_estimate": {
+        "archive_overhead_bytes": 16094,
+        "current_codec_efficiency_vs_iid_floor": 1.0146538023551201,
+        "delta_archive_bytes_vs_reference": 114,
+        "expected_archive_bytes": 178258,
+        "expected_payload_bytes": 162164,
+        "mask_overhead_bytes": 0,
+        "predicted_floor_payload_bytes": 159822,
+        "rate_score_delta_vs_reference": 7.590792065592753e-05,
+        "side_info_bytes": 0
+      },
+      "charged_bits_changed": false,
+      "dispatch_blockers": [
+        "no_trained_checkpoint_for_this_architecture",
+        "no_runtime_decoder_schema_manifest_for_shrunk_HNeRV",
+        "no_inflate_output_parity_or_score_delta_classification",
+        "no_exact_cuda_auth_eval"
+      ],
+      "driver_family": "hnerv_arch_shrink_deltaepszeta",
+      "evidence_grade": "empirical",
+      "name": "control_current_pr101_int8",
+      "notes": "Measured current-substrate control; no architecture shrink.",
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "targets": {
+        "active_symbols": 228958,
+        "element_retention": 1.0,
+        "entropy_ratio_to_current_h0": 1.0,
+        "post_arch_symbols": 228958,
+        "predicted_h0_bits_per_active_symbol": 5.584317153649189,
+        "quant_bits": 8.0,
+        "sparse_mask_mode": "none",
+        "sparsity": 0.0
+      },
+      "training_driver_manifest_fields": {
+        "architecture_target": {
+          "element_retention": 1.0,
+          "entropy_ratio_target": 1.0,
+          "quant_bits": 8.0,
+          "requires_generated_schema": false,
+          "sparse_mask_mode": "none",
+          "structured_sparsity": 0.0
+        },
+        "archive_gates": [
+          "state_dict_roundtrip_through_target_codec",
+          "inflate_output_parity_or_explicit_distortion_classification",
+          "deterministic_archive_manifest",
+          "pre_submission_compliance_check_strict",
+          "lane_dispatch_claim_before_gpu_eval",
+          "contest_cuda_auth_eval_before_any_score_claim"
+        ],
+        "schema": "pr101_arch_shrink_retraining_run.v1",
+        "score_claim": false,
+        "source_substrate": {
+          "base_channels": 36,
+          "eval_size": [
+            384,
+            512
+          ],
+          "family": "PR101 hnerv_ft_microcodec",
+          "fixed_state_schema": "src/tac/pr101_split_brotli_codec.py::FIXED_STATE_SCHEMA",
+          "latent_dim": 28,
+          "model": "HNeRVDecoder"
+        },
+        "target_modes": [
+          "contest_exact_eval"
+        ],
+        "training": {
+          "base_curriculum": "public PR106 belt_and_suspenders eight-stage HNeRV curriculum; parameterize latent_dim/base_channels/schema before reuse",
+          "optional_loss_terms": [
+            "self_compress_width_precision_l0",
+            "codec_pipeline_epoch_byte_callback"
+          ],
+          "reproducibility_fields": [
+            "seed",
+            "git_commit",
+            "input_video_sha256",
+            "stage_configs",
+            "optimizer_state",
+            "ema_decay",
+            "best_epoch",
+            "decoder_state_dict_sha256",
+            "latents_sha256",
+            "codec_pipeline_manifest_sha256"
+          ],
+          "required_loss_terms": [
+            "segnet_distillation_or_exact_source_stage_loss",
+            "posenet_first6_pose_loss",
+            "deltaepszeta_rate_proxy_weighted_by_tensor_headroom",
+            "qat_fake_quant_matching_target_bits"
+          ]
+        }
+      }
+    }
+  ],
+  "schema": "pr101_arch_shrink_retraining_plan.v1",
+  "score_claim": false,
+  "started_at_utc": "2026-05-07T00:00:00Z",
+  "tool": "tools/plan_pr101_arch_shrink_retraining.py"
+}
