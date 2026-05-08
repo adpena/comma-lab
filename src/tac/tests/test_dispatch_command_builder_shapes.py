@@ -191,6 +191,28 @@ def test_parallel_dispatch_rejects_predicted_codecop_score_fields_even_with_cust
     assert "predicted_score_field_present:predicted_score" in message
 
 
+def test_parallel_dispatch_rejects_spoofed_mps_ready_candidate(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    candidate = _ready_custody_candidate(
+        tmp_path,
+        evidence_grade="[MPS-research-signal]",
+        evidence_semantics="mps_proxy_curve_shape_only",
+    )
+    ranked = _write_ranked_input(tmp_path, [candidate])
+
+    try:
+        tool._load_top_k(ranked, k=None)
+    except tool.DispatchInputError as exc:
+        message = str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected DispatchInputError")
+
+    assert "blocked_evidence_semantics:" in message
+    assert "mps" in message
+
+
 def test_parallel_dispatch_rejects_candidate_archive_bytes_above_floor_by_default(
     tmp_path: Path,
 ) -> None:

@@ -126,6 +126,7 @@ def test_pr101_substitution_updates_manifest_and_meta_lagrangian_rows(
         "--anchor-d-pose", "0.0000336",
         "--anchor-archive-bytes", "185578",
         "--baseline-substream-bytes", str(decoder_len),
+        "--baseline-substream-role", "decoder_blob",
         "--label-prefix", "pr101_test",
         "--output", str(manifest_path),
         "--meta-lagrangian-output", str(meta_path),
@@ -222,6 +223,7 @@ def test_pr101_archive_state_source_can_replace_loose_pt(
         "--anchor-d-pose", "0.0000336",
         "--anchor-archive-bytes", "178258",
         "--baseline-substream-bytes", str(decoder_len),
+        "--baseline-substream-role", "decoder_blob",
         "--label-prefix", "pr101_archive_state",
         "--output", str(manifest_path),
         "--substrate-archive-pr101", str(source_archive),
@@ -235,3 +237,63 @@ def test_pr101_archive_state_source_can_replace_loose_pt(
     assert row["archive_path"]
     assert row["archive_member_name"] == "x"
     assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_pr101_archive_backed_sweep_rejects_nonexistent_pose_baseline(
+    tmp_path: pathlib.Path,
+) -> None:
+    mod = _load_tool_module()
+
+    class FakeEncodeResult:
+        blob = b"x"
+        bytes_out = 1
+
+    class Op_KLPoseStream:
+        def __init__(self, *, n_components: int = 2) -> None:
+            self.n_components = n_components
+
+        def encode(self, state_dict, context):
+            _ = state_dict, context
+            return FakeEncodeResult()
+
+        def decode(self, blob, context):
+            _ = blob, context
+            return {}
+
+        def validate(self, before, after, context):
+            _ = before, after, context
+            return types.SimpleNamespace(ok=True, metrics={})
+
+    fake_module = types.ModuleType("fake_pr101_pose_codec_op")
+    fake_module.Op_KLPoseStream = Op_KLPoseStream
+    sys.modules[fake_module.__name__] = fake_module
+
+    source_archive = tmp_path / "source_pr101.zip"
+    info = zipfile.ZipInfo("x")
+    info.compress_type = zipfile.ZIP_STORED
+    with zipfile.ZipFile(source_archive, "w") as zf:
+        zf.writestr(info, b"x" * (162_164 + 15_387 + 607))
+    state_dict_path = tmp_path / "state.pt"
+    torch.save({"poses_se3": torch.zeros(2, 6)}, state_dict_path)
+
+    try:
+        mod.main([
+            "--module", fake_module.__name__,
+            "--class", "Op_KLPoseStream",
+            "--state-dict-path", str(state_dict_path),
+            "--param-grid", '{"n_components": [2]}',
+            "--anchor-d-seg", "0.000671",
+            "--anchor-d-pose", "0.0000336",
+            "--anchor-archive-bytes", "178258",
+            "--baseline-substream-bytes", "3600",
+            "--baseline-substream-role", "pose_blob",
+            "--label-prefix", "bad_pr101_pose",
+            "--output", str(tmp_path / "manifest.json"),
+            "--substrate-archive-pr101", str(source_archive),
+        ])
+    except SystemExit as exc:
+        message = str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected SystemExit")
+
+    assert "PR101 has no separate pose" in message

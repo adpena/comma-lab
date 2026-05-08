@@ -38,12 +38,15 @@ Usage::
         --anchor-d-seg 0.000671 \\
         --anchor-d-pose 3.36e-5 \\
         --anchor-archive-bytes 185578 \\
-        --baseline-substream-bytes 3600 \\
+        --baseline-substream-bytes 162164 \\
+        --baseline-substream-role decoder_blob \\
         --output reports/kl_pose_sweep_manifest.json
 
 The ``--baseline-substream-bytes`` is the bytes the substrate currently
-contributes to the archive (e.g. the existing pose blob's compressed
-size). Predicted Δ-rate per candidate is
+contributes to the archive. For PR101 archive substitution this must name a
+parser-proven PR101 section such as ``decoder_blob``, ``latent_blob``, or
+``sidecar_blob``; PR101 has no separate pose blob. Predicted Δ-rate per
+candidate is
 ``(candidate_bytes - baseline_bytes) / RAW_VIDEO_BYTES * 25``.
 """
 from __future__ import annotations
@@ -70,6 +73,12 @@ from tac.contest_rate_distortion_system import (  # noqa: E402
     contest_score,
     contest_score_decomposition,
 )
+
+PR101_SUBSTITUTABLE_BASELINE_ROLES = frozenset({
+    "decoder_blob",
+    "latent_blob",
+    "sidecar_blob",
+})
 
 
 @dataclass
@@ -346,6 +355,7 @@ def emit_manifest(
     anchor_d_pose: float,
     anchor_archive_bytes: int,
     baseline_substream_bytes: int,
+    baseline_substream_role: str | None = None,
     state_dict_source: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Emit the manifest dict in the shape parallel_dispatch_top_k consumes.
@@ -361,6 +371,7 @@ def emit_manifest(
             "d_pose": anchor_d_pose,
             "archive_bytes": anchor_archive_bytes,
             "baseline_substream_bytes": baseline_substream_bytes,
+            "baseline_substream_role": baseline_substream_role,
         },
         "state_dict_source": state_dict_source,
         "n_candidates": len(sorted_cands),
@@ -405,6 +416,13 @@ def main(argv: list[str] | None = None) -> int:
                         help="Substrate's full archive bytes pre-substitution")
     parser.add_argument("--baseline-substream-bytes", type=int, required=True,
                         help="Bytes the substrate's existing target stream contributes")
+    parser.add_argument(
+        "--baseline-substream-role",
+        default=None,
+        help="Optional parser-proven source section role. Required for PR101 "
+        "archive-backed runs and must be one of decoder_blob, latent_blob, "
+        "or sidecar_blob. PR101 does not ship a separate pose stream.",
+    )
     parser.add_argument("--label-prefix", default="codec_op_sweep")
     parser.add_argument("--band-uncertainty-pct", type=float, default=0.005)
     parser.add_argument("--output", type=Path, required=True,
@@ -455,6 +473,21 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(
             "pass exactly one of --state-dict-path or --state-dict-from-pr101-archive"
         )
+    pr101_archive_backed = (
+        args.state_dict_from_pr101_archive is not None
+        or args.substrate_archive_pr101 is not None
+    )
+    if (
+        pr101_archive_backed
+        and args.baseline_substream_role not in PR101_SUBSTITUTABLE_BASELINE_ROLES
+    ):
+        allowed = ", ".join(sorted(PR101_SUBSTITUTABLE_BASELINE_ROLES))
+        raise SystemExit(
+            "PR101 archive-backed CodecOp sweeps require "
+            f"--baseline-substream-role in {{{allowed}}}; got "
+            f"{args.baseline_substream_role!r}. PR101 has no separate pose "
+            "or mask ZIP member, so pose/blob budget shortcuts are invalid."
+        )
     if args.state_dict_from_pr101_archive is not None:
         if args.state_dict_key is not None:
             raise SystemExit(
@@ -501,6 +534,7 @@ def main(argv: list[str] | None = None) -> int:
         anchor_archive_bytes=args.anchor_archive_bytes,
         baseline_substream_bytes=args.baseline_substream_bytes,
         state_dict_source=state_dict_source,
+        baseline_substream_role=args.baseline_substream_role,
     )
     manifest_rows_by_id = {row["candidate_id"]: row for row in manifest["candidates"]}
     # PR101 archive-substitution surgery wire-up (huge tranche #4):

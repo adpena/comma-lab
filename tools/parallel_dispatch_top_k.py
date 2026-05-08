@@ -74,7 +74,17 @@ BLOCKED_EVIDENCE_SEMANTICS = {
     "byte_only_forensic",
     "cpu_substrate_predicted_band",
 }
-BLOCKED_EVIDENCE_MARKERS = ("predict", "proxy", "forensic")
+BLOCKED_EVIDENCE_MARKERS = (
+    "predict",
+    "proxy",
+    "forensic",
+    "mps",
+    "cpu-prep",
+    "cpu_prep",
+    "cpu research",
+    "research-signal",
+    "research_signal",
+)
 PREDICTED_SCORE_FIELDS = (
     "predicted_score",
     "predicted_score_point_estimate",

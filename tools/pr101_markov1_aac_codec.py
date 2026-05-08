@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """Markov-1 adaptive arithmetic coding encoder/decoder for PR101 weights.
 
-This implements the SUB-BROTLI deliverable promised by the provable
-optimal floor analysis (memo
-``feedback_pr101_provable_markov1_optimal_20260507.md``):
-
-  Per-tensor Markov-1 AAC achieves ≤ 152,106 payload bytes
-  (Shannon-source-coding-theorem-provable floor for 1-symbol context),
-  vs brotli's 162,050 → ~10 KB total archive savings.
+This is an implemented Markov-1 AAC round-trip probe, not an oracle-floor
+claim. The provable floor memo estimated an ideal 1-symbol-context source
+coding bound, but a real adaptive range-coded packet must pay startup,
+smoothing, header, and implementation costs. The measured round-trip summary is
+therefore authoritative for this implementation; oracle floor rows remain
+planning-only lower bounds.
 
 Algorithm:
   For each tensor, encode symbols sequentially:
@@ -39,7 +38,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import struct
 import sys
 import time
@@ -218,7 +216,7 @@ def encode_archive_markov1(state_dict: dict, *, alpha: float = DEFAULT_ALPHA) ->
             "scale": float(qt.scale),
         })
 
-    alpha_byte = struct.pack("<B", int(alpha * 10))  # alpha × 10 in [0, 255]
+    alpha_byte = struct.pack("<B", int(alpha * 10))  # alpha x 10 in [0, 255]
     header = b"M1AAC" + alpha_byte + struct.pack("<B", 28) + b"\x00"
     archive = (
         header
@@ -314,13 +312,28 @@ def _cmd_round_trip(args) -> int:
         "schema": SCHEMA_VERSION,
         "tool": TOOL_NAME,
         "input_state_dict": str(args.state_dict_path),
+        "evidence_grade": "empirical_roundtrip_codec_no_score",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "dispatch_blockers": [
+            "markov1_aac_archive_is_byte_negative_vs_brotli_anchor",
+            "not_wrapped_in_contest_runtime_packet",
+            "missing_exact_cuda_auth_eval",
+        ],
         "alpha": args.alpha,
         "n_tensors": 28,
         "n_total_symbols": sum(r["n_symbols"] for r in encode_rows),
+        "implemented_payload_bytes": len(archive),
         "archive_bytes_no_zip": len(archive),
+        "implemented_archive_bytes_with_zip_overhead": len(archive) + archive_overhead,
         "archive_bytes_with_zip_overhead": len(archive) + archive_overhead,
         "comparison_brotli_optuna_payload_bytes": 162050,
         "comparison_brotli_optuna_archive_bytes": 178144,
+        "delta_vs_brotli_payload_bytes": len(archive) - 162050,
+        "delta_vs_brotli_archive_bytes": (len(archive) + archive_overhead) - 178144,
         "savings_vs_brotli_payload": 162050 - len(archive),
         "savings_vs_brotli_archive": 178144 - (len(archive) + archive_overhead),
         "encode_elapsed_seconds": encode_elapsed,
@@ -328,6 +341,9 @@ def _cmd_round_trip(args) -> int:
         "round_trip_byte_faithful": len(mismatches) == 0,
         "n_mismatched_tensors": len(mismatches),
         "mismatches": mismatches,
+        "oracle_markov1_floor_payload_bytes": 152106,
+        "oracle_floor_model_overhead_included": False,
+        "oracle_floor_is_implemented_codec_result": False,
         "predicted_provable_markov1_payload_bytes": 152106,
         "actual_payload_minus_predicted": len(archive) - 152106,
         "encode_rows": encode_rows,

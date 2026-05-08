@@ -39,7 +39,7 @@ def _install_tiny_schema(monkeypatch: pytest.MonkeyPatch, module: Any) -> None:
 
     def fake_quantize(_name: str, tensor: torch.Tensor, *, n_quant: int) -> Any:
         del n_quant
-        return SimpleNamespace(q_i8=tensor.numpy().astype(np.int8))
+        return SimpleNamespace(q_i8=tensor.numpy().astype(np.int8), scale=1.0)
 
     monkeypatch.setattr(module, "_quantize_tensor", fake_quantize)
 
@@ -195,3 +195,72 @@ def test_transition_table_cost_probe_is_planning_only(
     assert manifest["recomputed_markov1_oracle_payload_bytes"] > 0
     serialization_names = {row["name"] for row in manifest["serializations"]}
     assert {"dense_u16", "dense_u32", "sparse_u16", "sparse_varint"} <= serialization_names
+
+
+def test_markov1_aac_roundtrip_separates_oracle_floor_from_implemented_codec(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    tool = _load_tool("pr101_markov1_aac_codec.py")
+    _install_tiny_schema(monkeypatch, tool)
+    state_dict_path = _tiny_state_dict(tmp_path / "state.pt")
+    output = tmp_path / "markov.json"
+
+    encoded = b"implemented-markov-payload"
+    decoded = {
+        "a": np.array([127, 128, 128, 126], dtype=np.int32),
+        "b": np.array([129, 129, 127, 127], dtype=np.int32),
+    }
+    monkeypatch.setattr(
+        tool,
+        "encode_archive_markov1",
+        lambda state_dict, *, alpha: (encoded, [{"n_symbols": 4}, {"n_symbols": 4}]),
+    )
+    monkeypatch.setattr(
+        tool,
+        "decode_archive_markov1",
+        lambda archive: (decoded, []),
+    )
+
+    assert tool.main([
+        "round-trip",
+        "--state-dict-path",
+        str(state_dict_path),
+        "--output-summary",
+        str(output),
+    ]) == 0
+
+    manifest = json.loads(output.read_text())
+    assert manifest["score_claim"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert "markov1_aac_archive_is_byte_negative_vs_brotli_anchor" in manifest[
+        "dispatch_blockers"
+    ]
+    assert manifest["implemented_payload_bytes"] == len(encoded)
+    assert manifest["oracle_markov1_floor_payload_bytes"] == 152106
+    assert manifest["oracle_floor_is_implemented_codec_result"] is False
+
+
+def test_per_tensor_shannon_cli_emits_fail_closed_dispatch_metadata(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    tool = _load_tool("per_tensor_shannon_analysis.py")
+    _install_tiny_schema(monkeypatch, tool)
+    state_dict_path = _tiny_state_dict(tmp_path / "state.pt")
+    out_dir = tmp_path / "out"
+
+    assert tool.main([
+        "--state-dict",
+        str(state_dict_path),
+        "--output-dir",
+        str(out_dir),
+        "--no-stdout-table",
+    ]) == 0
+
+    manifest = json.loads((out_dir / "per_tensor_shannon.json").read_text())
+    assert manifest["score_claim"] is False
+    assert manifest["promotion_eligible"] is False
+    assert manifest["rank_or_kill_eligible"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert "shannon_floor_analysis_is_not_codec_bitstream" in manifest[
+        "dispatch_blockers"
+    ]

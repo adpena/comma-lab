@@ -21,6 +21,7 @@ from tac.repo_io import sha256_file
 ADAPTER_TOOL = "tac.optimization.meta_lagrangian_ledger_adapter"
 DEFAULT_FAMILY_GROUP = "bilevel_atom_ledger"
 DEFAULT_PACKET_FAMILY_GROUP = "candidate_packet_manifest"
+MPS_RESEARCH_SIGNAL_SCHEMA = "mps_research_signal_manifest.v1"
 EXPLICIT_BYTE_DELTA_KEYS = (
     "byte_delta_vs_substrate_anchor",
     "archive_byte_delta_vs_substrate_anchor",
@@ -41,6 +42,12 @@ EXACT_CUDA_GRADE_TOKENS = {
 ADAPTER_DISPATCH_BLOCKERS = (
     "ledger_adapter_never_dispatches",
     "requires_exact_cuda_auth_eval",
+)
+PROXY_SEARCH_EVIDENCE_MARKERS = (
+    "mps",
+    "proxy",
+    "research-signal",
+    "research_signal",
 )
 
 
@@ -487,6 +494,66 @@ def adapt_candidate_packet_json(
     )
 
 
+def adapt_mps_research_signal_manifest(
+    manifest_path: Path,
+    *,
+    repo_root: Path | None = None,
+) -> LedgerAdapterResult:
+    """Adapt an MPS research-signal manifest as proxy atoms only."""
+
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, Mapping):
+        raise LedgerAdapterError(f"{manifest_path}: MPS manifest must be an object")
+    if payload.get("schema") != MPS_RESEARCH_SIGNAL_SCHEMA:
+        raise LedgerAdapterError(
+            f"{manifest_path}: expected schema {MPS_RESEARCH_SIGNAL_SCHEMA}"
+        )
+    raw_atoms = payload.get("meta_lagrangian_atoms")
+    if not isinstance(raw_atoms, list):
+        raise LedgerAdapterError(f"{manifest_path}: missing meta_lagrangian_atoms[]")
+    atoms: list[dict[str, Any]] = []
+    for idx, raw_atom in enumerate(raw_atoms):
+        if not isinstance(raw_atom, Mapping):
+            raise LedgerAdapterError(f"{manifest_path}: atom {idx} is not an object")
+        atom = dict(raw_atom)
+        atom["score_claim"] = False
+        atom["ready_for_exact_eval_dispatch"] = False
+        atom["dispatchable"] = False
+        atom["proxy_row"] = True
+        atom["rankable"] = False
+        atom["evidence_grade"] = str(
+            atom.get("evidence_grade") or payload.get("evidence_grade") or "MPS-research-signal"
+        )
+        atom["evidence_semantics"] = str(
+            atom.get("evidence_semantics")
+            or payload.get("evidence_semantics")
+            or "mps_proxy_curve_shape_only"
+        )
+        atom["dispatch_blockers"] = _unique_ordered(
+            [
+                *ADAPTER_DISPATCH_BLOCKERS,
+                *_string_list(payload.get("dispatch_blockers")),
+                *_string_list(atom.get("dispatch_blockers")),
+                "mps_research_signal_not_search_candidate",
+            ]
+        )
+        atoms.append(atom)
+    blockers = _unique_ordered(
+        [
+            *ADAPTER_DISPATCH_BLOCKERS,
+            *_string_list(payload.get("dispatch_blockers")),
+            *(blocker for atom in atoms for blocker in _string_list(atom.get("dispatch_blockers"))),
+        ]
+    )
+    return LedgerAdapterResult(
+        source_path=_display_path(manifest_path, repo_root),
+        source_sha256=_source_sha256(manifest_path),
+        source_format="mps_research_signal_manifest_json",
+        atoms=tuple(atoms),
+        dispatch_blockers=tuple(blockers),
+    )
+
+
 def adapt_artifact_to_atoms(
     artifact_path: Path,
     *,
@@ -499,6 +566,8 @@ def adapt_artifact_to_atoms(
         return adapt_bilevel_jsonl(artifact_path, repo_root=repo_root, strict=strict)
 
     payload = json.loads(artifact_path.read_text(encoding="utf-8"))
+    if isinstance(payload, Mapping) and payload.get("schema") == MPS_RESEARCH_SIGNAL_SCHEMA:
+        return adapt_mps_research_signal_manifest(artifact_path, repo_root=repo_root)
     if isinstance(payload, Mapping) and "selected_target" in payload:
         return adapt_candidate_packet_json(artifact_path, repo_root=repo_root)
     raise LedgerAdapterError(f"{artifact_path}: unsupported meta-Lagrangian ledger artifact")
@@ -509,6 +578,16 @@ def search_candidates_from_atoms(atoms: Iterable[Mapping[str, Any]]) -> list[dic
 
     candidates: list[dict[str, Any]] = []
     for atom in atoms:
+        evidence_text = " ".join(
+            str(atom.get(key) or "").strip().lower()
+            for key in ("evidence_grade", "evidence_semantics")
+        )
+        if atom.get("proxy_row") is True:
+            continue
+        if atom.get("rankable") is False:
+            continue
+        if any(marker in evidence_text for marker in PROXY_SEARCH_EVIDENCE_MARKERS):
+            continue
         archive_bytes = _optional_int(atom.get("archive_bytes"))
         rel_err_pct = _optional_float(atom.get("rel_err_pct"))
         n_layers = _optional_int(atom.get("n_layers"))
@@ -537,6 +616,7 @@ __all__ = [
     "adapt_artifact_to_atoms",
     "adapt_bilevel_jsonl",
     "adapt_candidate_packet_json",
+    "adapt_mps_research_signal_manifest",
     "bilevel_record_to_atom",
     "candidate_packet_to_atoms",
     "read_jsonl_records",

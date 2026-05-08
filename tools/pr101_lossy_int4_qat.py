@@ -32,9 +32,10 @@ Compliance (CLAUDE.md non-negotiables):
     * Pure CPU/MPS prep — no scorer load, no contest-CUDA dispatch from
       this tool. Evidence tagged `[CPU-prep+QAT]` or `[MPS-research-signal]`.
     * Score never claimed; only BYTES + ROUNDTRIP rel_err are anchored.
-    * promotion_eligible=False. ready_for_exact_eval_dispatch is True iff
-      QAT recovers rel_err < 5% (gates dispatch decision; decision still
-      requires operator + sanity-ladder).
+    * promotion_eligible=False and ready_for_exact_eval_dispatch=False always.
+      A good local rel_err only means cuda_eval_worth_testing=True; a separate
+      byte-closed packet, runtime decoder, dispatch claim, and exact CUDA auth
+      eval must flip any dispatch flag.
     * No /tmp paths in any persisted artifact.
     * MPS allowed as research-signal source per `feedback_mps_as_research_
       signal_strategic_clarification_20260507.md`; never as a judge.
@@ -48,6 +49,7 @@ import json
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import brotli
 import numpy as np
@@ -70,6 +72,12 @@ DISPATCH_THRESHOLD_PCT = 5.0
 DEFAULT_STATE_DICT_PATH = (
     REPO_ROOT
     / "experiments/results/pr101_codecop_sweep_20260507_codex/pr101_decoder_state_dict.pt"
+)
+LOCAL_QAT_DISPATCH_BLOCKERS = (
+    "local_qat_proxy_signal_not_exact_eval_dispatch_ready",
+    "byte_closed_int4_candidate_packet_missing",
+    "no_int4_decoder_runtime_built",
+    "missing_exact_cuda_auth_eval",
 )
 
 
@@ -111,6 +119,19 @@ def select_device(prefer: str = "mps") -> torch.device:
     if torch.backends.mps.is_available():
         return torch.device("mps")
     return torch.device("cpu")
+
+
+def local_qat_dispatch_contract(*, cuda_eval_worth_testing: bool) -> dict[str, Any]:
+    """Return fail-closed dispatch metadata for local QAT research signals."""
+
+    return {
+        "cuda_eval_worth_testing": bool(cuda_eval_worth_testing),
+        "ready_for_exact_eval_dispatch": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "dispatch_attempted": False,
+        "dispatch_blockers": list(LOCAL_QAT_DISPATCH_BLOCKERS),
+    }
 
 
 # ----------------------------------------------------------------------------
@@ -622,10 +643,7 @@ def main(argv: list[str] | None = None) -> int:
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
 
-    if args.device == "auto":
-        device = select_device("mps")
-    else:
-        device = select_device(args.device)
+    device = select_device("mps") if args.device == "auto" else select_device(args.device)
     print(f"[QAT] device: {device}")
 
     # Load fp32 originals.
@@ -703,20 +721,20 @@ def main(argv: list[str] | None = None) -> int:
     # ------------------------------------------------------------------
     rel_err_pct = post_metrics["weighted_avg_rel_err_pct"]
     if rel_err_pct < 2.0 and post_metrics["max_p99_rel_err_pct"] < 10.0:
-        verdict = "DISPATCH-READY"
+        verdict = "CUDA-EVAL-WORTH-TESTING"
         verdict_reason = (
             f"weighted_avg {rel_err_pct:.3f}% < 2.0% "
             f"AND max_p99 {post_metrics['max_p99_rel_err_pct']:.3f}% < 10.0% "
             f"after QAT"
         )
-        ready_for_dispatch = True
+        cuda_eval_worth_testing = True
     elif rel_err_pct < DISPATCH_THRESHOLD_PCT:
-        verdict = "CONDITIONAL"
+        verdict = "CONDITIONAL-CUDA-EVAL-WORTH-TESTING"
         verdict_reason = (
             f"weighted_avg {rel_err_pct:.3f}% in [2.0%, {DISPATCH_THRESHOLD_PCT}%); "
             f"borderline — sanity-ladder + CUDA test recommended"
         )
-        ready_for_dispatch = True
+        cuda_eval_worth_testing = True
     else:
         verdict = "STILL-FALSIFIED"
         verdict_reason = (
@@ -726,7 +744,10 @@ def main(argv: list[str] | None = None) -> int:
             f"{rel_err_pct:.2f}% (improvement: "
             f"{(NAIVE_PTQ_REL_ERR_PCT - rel_err_pct):.2f} percentage points)"
         )
-        ready_for_dispatch = False
+        cuda_eval_worth_testing = False
+    dispatch_contract = local_qat_dispatch_contract(
+        cuda_eval_worth_testing=cuda_eval_worth_testing,
+    )
 
     # ------------------------------------------------------------------
     # Evidence grade depends on device.
@@ -752,8 +773,11 @@ def main(argv: list[str] | None = None) -> int:
         "tool": TOOL_NAME,
         "evidence_grade": evidence_grade,
         "score_claim": False,
-        "promotion_eligible": False,
-        "ready_for_exact_eval_dispatch": ready_for_dispatch,
+        "promotion_eligible": dispatch_contract["promotion_eligible"],
+        "rank_or_kill_eligible": dispatch_contract["rank_or_kill_eligible"],
+        "ready_for_exact_eval_dispatch": dispatch_contract["ready_for_exact_eval_dispatch"],
+        "cuda_eval_worth_testing": dispatch_contract["cuda_eval_worth_testing"],
+        "dispatch_attempted": dispatch_contract["dispatch_attempted"],
         "input_state_dict": repo_relative(args.state_dict),
         "input_state_dict_sha256": sha256_file(args.state_dict),
         "device": str(device),
@@ -785,13 +809,7 @@ def main(argv: list[str] | None = None) -> int:
         "archive_overhead_bytes": ARCHIVE_OVERHEAD_BYTES,
         "verdict": verdict,
         "verdict_reason": verdict_reason,
-        "dispatch_blockers": (
-            [] if ready_for_dispatch else [
-                "qat_rel_err_above_5pct_threshold",
-                "no_int4_decoder_runtime_built",
-                "missing_exact_cuda_auth_eval",
-            ]
-        ),
+        "dispatch_blockers": dispatch_contract["dispatch_blockers"],
         "supersedes_prior_FALSIFIED_tag": True,
         "n_total_elements": post_metrics["n_total_elements"],
         "n_nontrivial_elements": post_metrics["n_nontrivial_elements"],
@@ -802,8 +820,8 @@ def main(argv: list[str] | None = None) -> int:
     # ------------------------------------------------------------------
     # Cathedral evidence row.
     # ------------------------------------------------------------------
-    if ready_for_dispatch:
-        dispatch_verdict = "DISPATCH-READY-pending-runtime-and-cuda-eval"
+    if cuda_eval_worth_testing:
+        dispatch_verdict = "CUDA-EVAL-WORTH-TESTING-pending-runtime-packet"
     else:
         dispatch_verdict = "DEFERRED-pending-research"
     evidence_row = {
@@ -818,8 +836,9 @@ def main(argv: list[str] | None = None) -> int:
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
-        "ready_for_exact_eval_dispatch": ready_for_dispatch,
-        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": dispatch_contract["ready_for_exact_eval_dispatch"],
+        "dispatch_attempted": dispatch_contract["dispatch_attempted"],
+        "cuda_eval_worth_testing": dispatch_contract["cuda_eval_worth_testing"],
         "score_affecting_payload_changed": True,  # int4 grid != fp32 weights
         "charged_bits_changed": True,  # archive bytes change
         "dispatch_blockers": manifest["dispatch_blockers"],

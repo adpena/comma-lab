@@ -631,6 +631,7 @@ def _frontier_monolithic_layout_failures(payload: dict[str, object]) -> list[str
         if not isinstance(run, dict):
             failures.append(f"layout_run_{idx}_not_object")
             continue
+        archive_path = str(run.get("archive_path") or "")
         if run.get("score_claim") is not False:
             failures.append(f"layout_run_{idx}_score_claim_must_be_false")
         physical = run.get("physical_layout")
@@ -649,11 +650,21 @@ def _frontier_monolithic_layout_failures(payload: dict[str, object]) -> list[str
         if not isinstance(members, list) or len(members) != 1 or not isinstance(members[0], dict):
             failures.append(f"layout_run_{idx}_single_member_record_missing")
             continue
-        observed_member_names.add(str(members[0].get("name")))
+        member_name = str(members[0].get("name"))
+        observed_member_names.add(member_name)
         logical = run.get("logical_layout")
         if not isinstance(logical, dict):
             failures.append(f"layout_run_{idx}_logical_layout_missing")
             continue
+        grammar = str(logical.get("grammar") or "")
+        if grammar == "pr101_fixed_offset_hnerv_microcodec" and member_name != "x":
+            failures.append(f"layout_run_{idx}_pr101_member_name_must_be_x")
+        if grammar == "pr106_ff_packed_hnerv" and member_name != "0.bin":
+            failures.append(f"layout_run_{idx}_pr106_member_name_must_be_0.bin")
+        if "public_pr101" in archive_path and grammar != "pr101_fixed_offset_hnerv_microcodec":
+            failures.append(f"layout_run_{idx}_public_pr101_grammar_mismatch")
+        if "public_pr106" in archive_path and grammar != "pr106_ff_packed_hnerv":
+            failures.append(f"layout_run_{idx}_public_pr106_grammar_mismatch")
         sections = logical.get("sections")
         if not isinstance(sections, list) or not sections:
             failures.append(f"layout_run_{idx}_logical_sections_missing")

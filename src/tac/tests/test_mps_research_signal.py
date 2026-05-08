@@ -66,6 +66,7 @@ def test_mps_research_signal_manifest_is_non_promotable_and_curve_shaped() -> No
 
     assert manifest["score_claim"] is False
     assert manifest["promotion_eligible"] is False
+    assert manifest["rank_or_kill_eligible"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert manifest["evidence_grade"] == "MPS-research-signal"
     assert "candidate_generation_prior" in manifest["device_contract"]["allowed_uses"]
@@ -77,6 +78,7 @@ def test_mps_research_signal_manifest_is_non_promotable_and_curve_shaped() -> No
     assert curve["lowest_proxy_observation"]["candidate_generation_only"] is True
     assert len(manifest["meta_lagrangian_atoms"]) == 3
     assert all(atom["proxy_row"] is True for atom in manifest["meta_lagrangian_atoms"])
+    assert all(atom["rank_or_kill_eligible"] is False for atom in manifest["meta_lagrangian_atoms"])
     assert all(atom["ready_for_exact_eval_dispatch"] is False for atom in manifest["meta_lagrangian_atoms"])
 
 

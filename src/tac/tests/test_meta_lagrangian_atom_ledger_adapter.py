@@ -14,6 +14,7 @@ from tac.optimization.meta_lagrangian_ledger_adapter import (
     adapt_artifact_to_atoms,
     search_candidates_from_atoms,
 )
+from tac.optimization.mps_research_signal import build_mps_research_signal_manifest
 
 
 def _load_tool_module():
@@ -218,6 +219,85 @@ def test_search_cli_reuses_candidates_json_for_jsonl_adapter(
             "rel_err_pct": 0.25,
             "n_layers": 13,
             "lane_class": "bilevel_atom_ledger",
+        }
+    ]
+
+
+def test_mps_research_signal_manifest_adapts_but_never_projects_search_candidates(
+    tmp_path: pathlib.Path,
+) -> None:
+    manifest_path = tmp_path / "mps_manifest.json"
+    manifest = build_mps_research_signal_manifest(
+        [
+            {
+                "family": "arch_shrink",
+                "variant_id": "epoch_010",
+                "device": "mps",
+                "archive_bytes": 120_000,
+                "proxy_loss": 0.2,
+                "rel_err_pct": 0.1,
+                "n_layers": 4,
+            }
+        ],
+        source="fixture",
+        run_id="fixture",
+        anchor_d_seg=0.0007,
+        anchor_d_pose=0.00003,
+        anchor_archive_bytes=180_000,
+    )
+    # Simulate a malformed producer trying to make the proxy atom projectable.
+    manifest["meta_lagrangian_atoms"][0].update({
+        "archive_bytes": 120_000,
+        "rel_err_pct": 0.1,
+        "n_layers": 4,
+        "rankable": True,
+        "ready_for_exact_eval_dispatch": True,
+    })
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    result = adapt_artifact_to_atoms(manifest_path, repo_root=tmp_path)
+    atom = result.atoms[0]
+
+    assert result.source_format == "mps_research_signal_manifest_json"
+    assert atom["proxy_row"] is True
+    assert atom["rankable"] is False
+    assert atom["ready_for_exact_eval_dispatch"] is False
+    assert "mps_research_signal_not_search_candidate" in atom["dispatch_blockers"]
+    assert search_candidates_from_atoms(result.atoms) == []
+
+
+def test_search_candidates_from_atoms_skips_proxy_and_explicit_nonrankable_rows() -> None:
+    atoms = [
+        {
+            "atom_id": "proxy",
+            "archive_bytes": 1,
+            "rel_err_pct": 0.1,
+            "n_layers": 1,
+            "proxy_row": True,
+        },
+        {
+            "atom_id": "nonrankable",
+            "archive_bytes": 2,
+            "rel_err_pct": 0.2,
+            "n_layers": 2,
+            "rankable": False,
+        },
+        {
+            "atom_id": "planning",
+            "archive_bytes": 3,
+            "rel_err_pct": 0.3,
+            "n_layers": 3,
+            "lane_class": "safe_planning",
+        },
+    ]
+
+    assert search_candidates_from_atoms(atoms) == [
+        {
+            "candidate_id": "planning",
+            "archive_bytes": 3,
+            "rel_err_pct": 0.3,
+            "n_layers": 3,
+            "lane_class": "safe_planning",
         }
     ]
 

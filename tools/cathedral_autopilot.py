@@ -313,12 +313,44 @@ def _is_explicitly_promotable_evidence(evidence: TechniqueEvidence) -> bool:
     the producer explicitly records score/promotion/dispatch readiness and has
     no dispatch blockers.
     """
+    text = " ".join(
+        part.strip().lower()
+        for part in (
+            evidence.evidence_grade,
+            evidence.evidence_marker,
+            evidence.evidence_semantics,
+            evidence.source,
+        )
+        if part
+    )
+    exact_cuda = (
+        "contest-cuda" in text
+        or "contest_cuda" in text
+        or "exact_cuda_auth_eval" in text
+        or evidence.evidence_grade.strip().lower() in {"a", "a++"}
+    )
+    proxy_marker = any(
+        marker in text
+        for marker in (
+            "mps",
+            "cpu-prep",
+            "cpu_prep",
+            "proxy",
+            "prediction",
+            "predicted",
+            "forensic",
+            "research-signal",
+            "research_signal",
+        )
+    )
     return (
         evidence.score_claim is True
         and evidence.promotion_eligible is True
         and evidence.rank_or_kill_eligible is True
         and evidence.ready_for_exact_eval_dispatch is True
         and not evidence.dispatch_blockers
+        and exact_cuda
+        and not proxy_marker
     )
 
 

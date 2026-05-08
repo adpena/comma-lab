@@ -125,6 +125,7 @@ def test_all_lanes_frontier_layout_gate_accepts_monolithic_logical_sections() ->
         "evidence_grade": "empirical_archive_layout_cpu_no_score",
         "runs": [
             {
+                "archive_path": "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip",
                 "score_claim": False,
                 "physical_layout": {
                     "single_member_monolithic_packet": True,
@@ -133,9 +134,13 @@ def test_all_lanes_frontier_layout_gate_accepts_monolithic_logical_sections() ->
                     "member_level_pose_budget_valid": False,
                     "members": [{"name": "x"}],
                 },
-                "logical_layout": {"sections": [{"name": "decoder_blob"}]},
+                "logical_layout": {
+                    "grammar": "pr101_fixed_offset_hnerv_microcodec",
+                    "sections": [{"name": "decoder_blob"}],
+                },
             },
             {
+                "archive_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
                 "score_claim": False,
                 "physical_layout": {
                     "single_member_monolithic_packet": True,
@@ -144,7 +149,10 @@ def test_all_lanes_frontier_layout_gate_accepts_monolithic_logical_sections() ->
                     "member_level_pose_budget_valid": False,
                     "members": [{"name": "0.bin"}],
                 },
-                "logical_layout": {"sections": [{"name": "decoder_packed_brotli"}]},
+                "logical_layout": {
+                    "grammar": "pr106_ff_packed_hnerv",
+                    "sections": [{"name": "decoder_packed_brotli"}],
+                },
             },
         ],
     }
@@ -159,6 +167,7 @@ def test_all_lanes_frontier_layout_gate_rejects_member_budget_regression() -> No
         "evidence_grade": "empirical_archive_layout_cpu_no_score",
         "runs": [
             {
+                "archive_path": "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip",
                 "score_claim": False,
                 "physical_layout": {
                     "single_member_monolithic_packet": True,
@@ -167,9 +176,13 @@ def test_all_lanes_frontier_layout_gate_rejects_member_budget_regression() -> No
                     "member_level_pose_budget_valid": False,
                     "members": [{"name": "x"}],
                 },
-                "logical_layout": {"sections": [{"name": "decoder_blob"}]},
+                "logical_layout": {
+                    "grammar": "pr101_fixed_offset_hnerv_microcodec",
+                    "sections": [{"name": "decoder_blob"}],
+                },
             },
             {
+                "archive_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
                 "score_claim": False,
                 "physical_layout": {
                     "single_member_monolithic_packet": True,
@@ -178,7 +191,10 @@ def test_all_lanes_frontier_layout_gate_rejects_member_budget_regression() -> No
                     "member_level_pose_budget_valid": False,
                     "members": [{"name": "0.bin"}],
                 },
-                "logical_layout": {"sections": [{"name": "decoder_packed_brotli"}]},
+                "logical_layout": {
+                    "grammar": "pr106_ff_packed_hnerv",
+                    "sections": [{"name": "decoder_packed_brotli"}],
+                },
             },
         ],
     }
@@ -187,3 +203,48 @@ def test_all_lanes_frontier_layout_gate_rejects_member_budget_regression() -> No
 
     assert "layout_run_0_member_level_component_budgets_not_rejected" in failures
     assert "layout_run_0_member_level_mask_budget_not_rejected" in failures
+
+
+def test_all_lanes_frontier_layout_gate_rejects_swapped_pr_family_members() -> None:
+    module = _load_all_lanes_module()
+    payload = {
+        "score_claim": False,
+        "evidence_grade": "empirical_archive_layout_cpu_no_score",
+        "runs": [
+            {
+                "archive_path": "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip",
+                "score_claim": False,
+                "physical_layout": {
+                    "single_member_monolithic_packet": True,
+                    "archive_member_level_component_budgets_valid": False,
+                    "member_level_mask_budget_valid": False,
+                    "member_level_pose_budget_valid": False,
+                    "members": [{"name": "0.bin"}],
+                },
+                "logical_layout": {
+                    "grammar": "pr101_fixed_offset_hnerv_microcodec",
+                    "sections": [{"name": "decoder_blob"}],
+                },
+            },
+            {
+                "archive_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+                "score_claim": False,
+                "physical_layout": {
+                    "single_member_monolithic_packet": True,
+                    "archive_member_level_component_budgets_valid": False,
+                    "member_level_mask_budget_valid": False,
+                    "member_level_pose_budget_valid": False,
+                    "members": [{"name": "x"}],
+                },
+                "logical_layout": {
+                    "grammar": "pr106_ff_packed_hnerv",
+                    "sections": [{"name": "decoder_packed_brotli"}],
+                },
+            },
+        ],
+    }
+
+    failures = module._frontier_monolithic_layout_failures(payload)
+
+    assert "layout_run_0_pr101_member_name_must_be_x" in failures
+    assert "layout_run_1_pr106_member_name_must_be_0.bin" in failures
