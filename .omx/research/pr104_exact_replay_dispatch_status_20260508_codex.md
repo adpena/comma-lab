@@ -123,3 +123,34 @@ Lightning refresh at `2026-05-08T11:33:21Z` reported the replacement job as
 promotion, or method conclusion. The active lane claim is
 `active_dispatching` until either an adjudicated JSON is harvested or a
 terminal failure is recorded.
+
+## 2026-05-08T11:36Z Snapshot Custody Check
+
+Direct SSH inspection of the Lightning job snapshot confirmed that the
+hardened relaunch fixed the first job's dependency-root custody failure. The
+snapshot contains:
+
+- `archive.zip`
+- `inflate.py`
+- `inflate.sh`
+- `compress.sh`
+- `README.md`
+- `report.txt`
+- `src/codec.py`
+- `src/data.py`
+- `src/losses.py`
+- `src/model.py`
+- `src/optim.py`
+- `src/score.py`
+- `src/train.py`
+
+The snapshot archive hash and size matched the intended PR104 archive:
+
+```text
+6564c32a9edeeaf08abd7f0ea673ba2fda23444605ca207eb4ba794cc66797b8  archive.zip
+178637 archive.zip
+```
+
+This is a custody guard result only. It proves the replacement job has the
+runtime source closure that the stopped job lacked, but it still does not
+produce score evidence until `contest_auth_eval.adjudicated.json` is harvested.
