@@ -275,7 +275,7 @@ def _encode_op1_finalizer_blob(
 
     NOTE on CodecPipeline bypass (WIRE-DECODER 2026-05-08):
     The canonical ``CodecPipeline([Op1_PR101SplitBrotli(auto_select=True)])``
-    has a wire-format bug: ``effective_byte_maps`` integer keys are coerced
+    HAD a wire-format bug: ``effective_byte_maps`` integer keys are coerced
     to strings by ``json.dumps(op_state)`` in CPL1's wrapper, and on decode
     ``decode_decoder_compact`` does ``idx in effective_byte_maps`` for an
     integer ``idx`` — the string-keyed dict misses, falling back to
@@ -288,6 +288,14 @@ def _encode_op1_finalizer_blob(
     split-Brotli stream concatenation; the byte_maps are returned separately
     and serialized to our own CPLX wire format with int keys reconstructed
     on the decoder side.
+
+    Bug-class status update (2026-05-08, ORCH-SYNC Bug 2): the underlying
+    ``CodecPipeline`` int-key bug has now been fixed via CPL2 wire format
+    (canonical default; ``CodecPipeline.encode`` emits CPL2 magic and
+    preserves int keys in op_state via a sentinel envelope). New tools
+    SHOULD use the canonical ``CodecPipeline`` directly. This tool keeps
+    its own CPLX wrapper for forensic compat with the existing deployable
+    archive at ``cross_paradigm_admm_x_op1_finalizer_20260508T062603Z/``.
 
     Returns:
         (op1_inner_blob, effective_byte_maps_int_keyed, op1_stats)

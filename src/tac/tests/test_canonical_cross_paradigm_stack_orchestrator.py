@@ -131,13 +131,18 @@ def test_default_winner_reproduces_xparadigm_anchor(
     )
     # XPARADIGM cross-paradigm corrected winner anchor: 137,469 B
     # (sha c33243a1..., commit 98d2174b which dropped the /N_QUANT divisor
-    # + applied fp16(scale) cast on the dequant path). Phantom predecessor
-    # 137,531 B (sha ea3b23ed...) is retained as forensic record only.
-    # Allow ~1.5% slack — the orchestrator's auto_select=True path may
-    # land 1-2K different than the empirical ablation depending on
-    # brotli build / quality variation.
-    assert 134_000 <= result.archive_bytes <= 141_000, (
-        f"archive_bytes={result.archive_bytes} not in expected 134K-141K band"
+    # + applied fp16(scale) cast on the dequant path). That figure is the
+    # CPL1-wrapped Op1 output. After ORCH-SYNC Bug 2 (CPL2 default,
+    # 2026-05-08), the same encode path produces a CPL2-wrapped blob
+    # ~4 KB larger because the int-key envelope expands the JSON-encoded
+    # ``effective_byte_maps`` op_state. Both the inner Op1 blob bytes and
+    # the rel_err are unchanged; only the outer wrapper grew. Phantom
+    # predecessor 137,531 B (sha ea3b23ed...) is retained as forensic
+    # record only — that figure was the CPL1-wrapped output of the OLD
+    # (incorrect) /N_QUANT dequant path and is no longer reproducible.
+    # Allow ~1.5% slack inside the CPL2 band on top of brotli variation.
+    assert 138_000 <= result.archive_bytes <= 145_000, (
+        f"archive_bytes={result.archive_bytes} not in expected CPL2 138K-145K band"
     )
     # Tighter assertion: corrected pipeline must NOT reproduce the phantom.
     # The phantom sha was ea3b23ed4bfedf30de706719d37e04563bfbb08cec22deb579393f2aebaf9023.
@@ -146,6 +151,13 @@ def test_default_winner_reproduces_xparadigm_anchor(
     )
     assert result.archive_blob_sha256 != PHANTOM_SHA, (
         "orchestrator reproduced the PHANTOM sha — /N_QUANT divisor regressed"
+    )
+    # CPL2 magic byte assertion — guards regression of Bug 2 (int-key
+    # preservation). If a future change reverts to CPL1 default, this
+    # assertion catches it.
+    assert archive_blob[:4] == b"CPL2", (
+        f"archive should be CPL2-wrapped (canonical default 2026-05-08); "
+        f"got magic {archive_blob[:4]!r}"
     )
     assert result.achieved_rel_err is not None
     assert 0.035 <= result.achieved_rel_err <= 0.045, (

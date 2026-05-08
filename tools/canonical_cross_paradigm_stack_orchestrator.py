@@ -10,10 +10,13 @@ deterministic build manifest.
 It is a THIN orchestrator: it does not invent codec primitives. Every
 step delegates to the canonical CodecOp instances (Op1, Op2, Op3, β, γ,
 α-mask portfolio) and the Path B step 6 ADMM × continuous-K mechanism
-that produced the cross-paradigm winner anchor (137,469 B at 4.15%
-rel_err on PR101 substrate, sha c33243a1...; corrected from phantom
-137,531 B sha ea3b23ed... per Codex CRITICAL #4.1 fix at commit 98d2174b
-which dropped the /N_QUANT divisor + applied fp16(scale) cast on dequant).
+that produced the cross-paradigm corrected winner anchor (137,469 B
+inner Op1 blob sha c33243a1... at 4.15% rel_err on PR101 substrate; full
+CPL2 wrapper ~141,517 B since ORCH-SYNC Bug 2 landed CPL2 default
+2026-05-08). The inner Op1 blob is unchanged; CPL2's int-key envelope
+adds ~4 KB to the on-disk wrapper to round-trip
+``effective_byte_maps={int -> str}`` exactly. Phantom predecessor
+137,531 B sha ea3b23ed... is retained as forensic record only.
 
 Per CLAUDE.md "Deterministic packet compiler": this orchestrator runs in
 ``optimize`` mode by default, supports ``identity`` and ``canonicalize``
