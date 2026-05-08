@@ -1273,6 +1273,17 @@ def preflight_all(
         check_rel_err_definition_canonical(
             strict=False, verbose=verbose,
         )
+        # 2026-05-08 DUAL-AXIS-RANKING (operator mandate): solver/
+        # recommender outputs must distinguish predicted_cuda_score vs
+        # predicted_cpu_score. The contest leaderboard ranks by --device
+        # cpu eval (CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA").
+        # Initial promotion phase: strict=False (warn-only); flip to
+        # STRICT after live count is driven to 0 by adding the
+        # companion keys or '# DUAL_AXIS_RANKING_WAIVED:<reason>' markers.
+        # Memory: feedback_dual_axis_solver_integration_landed_20260508.md.
+        check_solvers_use_dual_axis_ranking(
+            strict=False, verbose=verbose,
+        )
 
         # 2026-05-08 REPRESENTATION-INTEGRATION GATES 1-10 (codex audit
         # `.omx/research/representation_integration_gap_audit_20260508_codex.md`).
@@ -23759,6 +23770,160 @@ def check_gate10_stack_promotion(
         strict=strict,
         verbose=verbose,
     )
+
+
+# ── Dual-axis solver ranking — added 2026-05-08 per CLAUDE.md
+# "Submission auth eval — BOTH CPU AND CUDA"
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+_DUAL_AXIS_PRIMARY_KEYS = (
+    "predicted_score",
+    "predicted_score_delta",
+    "predicted_score_after",
+)
+"""Solver-output keys that historically encoded a single CUDA-axis score.
+
+A solver row carrying ONLY one of these keys (with no
+``predicted_cuda_score`` / ``predicted_cpu_score`` companion AND no
+explicit waiver marker) is a candidate violation under the dual-axis
+ranking contract.
+"""
+
+
+_DUAL_AXIS_DUAL_AXIS_MARKERS = (
+    "predicted_cuda_score",
+    "predicted_cpu_score",
+    "expected_cuda_score_delta",
+    "expected_cpu_score_delta",
+)
+"""Companion keys that satisfy the dual-axis ranking contract."""
+
+
+_DUAL_AXIS_WAIVER_MARKER = "DUAL_AXIS_RANKING_WAIVED:"
+"""Inline waiver marker; format: ``# DUAL_AXIS_RANKING_WAIVED:<reason>``."""
+
+
+_DUAL_AXIS_SCAN_DIRS: tuple[str, ...] = (
+    "src/tac/optimization",
+    "src/tac/optimizer",
+    "src/tac/predictor",
+    "src/tac/score_geometry.py",
+    "src/tac/score_geometry_floor_explorer.py",
+    "src/tac/score_geometry_shannon_floor.py",
+    "src/tac/score_geometry_stacking.py",
+    "tools/cathedral_autopilot.py",
+    "tools/dispatch_advisor.py",
+    "tools/canonical_cross_paradigm_stack_orchestrator.py",
+    "tools/meta_lagrangian_search_cli.py",
+)
+
+
+def _scan_dual_axis_ranking_violations(repo_root: Path) -> list[str]:
+    """Scan solver/recommender modules for primary-only ranking keys.
+
+    A violation is a Python file inside the dual-axis surfaces that:
+      * mentions one of :data:`_DUAL_AXIS_PRIMARY_KEYS` (e.g.,
+        ``predicted_score_delta``), AND
+      * does not also mention any of :data:`_DUAL_AXIS_DUAL_AXIS_MARKERS`
+        ANYWHERE in the same file, AND
+      * does not carry a same-line waiver marker
+        ``# DUAL_AXIS_RANKING_WAIVED:<reason>`` adjacent to the offending
+        line.
+    """
+    violations: list[str] = []
+    candidate_paths: list[Path] = []
+    for entry in _DUAL_AXIS_SCAN_DIRS:
+        target = repo_root / entry
+        if target.is_file() and target.suffix == ".py":
+            candidate_paths.append(target)
+        elif target.is_dir():
+            candidate_paths.extend(target.rglob("*.py"))
+    for path in candidate_paths:
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, FileNotFoundError):
+            continue
+        # File-level allow: if any companion key is present, all primary-key
+        # mentions are presumed paired with axis tags.
+        if any(marker in text for marker in _DUAL_AXIS_DUAL_AXIS_MARKERS):
+            continue
+        # Otherwise, check for primary-only mentions.
+        rel = path.relative_to(repo_root) if path.is_absolute() else path
+        for i, line in enumerate(text.splitlines(), start=1):
+            if not any(key in line for key in _DUAL_AXIS_PRIMARY_KEYS):
+                continue
+            # Same-line waiver marker.
+            if _DUAL_AXIS_WAIVER_MARKER in line:
+                continue
+            # Defensive: skip docstrings/comments that are obviously prose.
+            stripped = line.strip()
+            if stripped.startswith("#") and "predicted_" not in stripped.split("#", 1)[1]:
+                # Pure comment without code reference.
+                continue
+            violations.append(
+                f"{rel}:{i}: solver row carries '{stripped[:80]}' "
+                "without dual-axis (CUDA + CPU) companion keys "
+                "(predicted_cuda_score / predicted_cpu_score). "
+                f"Add the companion or annotate with "
+                f"'# {_DUAL_AXIS_WAIVER_MARKER}<reason>'."
+            )
+    return violations
+
+
+def check_solvers_use_dual_axis_ranking(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catch solver/recommender outputs missing CUDA + CPU axis predictions.
+
+    Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA, ON 1:1
+    CONTEST-COMPLIANT HARDWARE", the contest leaderboard ranks by CPU
+    eval. Empirical sweep (HNeRV cluster 2026-05-08) showed R_pose ≈ 5.04
+    + R_seg ≈ 1.17 + score_gap ≈ 0.033. A solver row carrying only the
+    legacy ``predicted_score`` key is silently using a CUDA-axis proxy.
+
+    This check scans the solver/recommender/orchestrator surfaces for
+    primary-only keys and fails STRICT after live count is driven to 0.
+    Initially ``strict=False`` (warn-only).
+
+    Args:
+        repo_root: defaults to module REPO_ROOT.
+        strict: when True, raise on violations.
+        verbose: print summary lines.
+
+    Returns:
+        List of violation strings (empty on clean pass).
+    """
+    root = repo_root or REPO_ROOT
+    violations = _scan_dual_axis_ranking_violations(root)
+    if verbose and violations:
+        print(
+            f"  [dual-axis-ranking] {len(violations)} violation(s) — "
+            "rows missing predicted_cuda_score/predicted_cpu_score "
+            "companion keys:"
+        )
+        for v in violations[:20]:
+            print(f"    • {v}")
+        if len(violations) > 20:
+            print(f"    • ... and {len(violations) - 20} more")
+    elif verbose:
+        print(
+            "  [dual-axis-ranking] OK: solver surfaces declare CUDA + CPU "
+            "axis predicted scores."
+        )
+    if violations and strict:
+        raise PreflightError(
+            "DUAL-AXIS-RANKING violations:\n"
+            + "\n".join(f"  • {v}" for v in violations[:20])
+            + ("\n  • ..." if len(violations) > 20 else "")
+            + "\n\nPer CLAUDE.md 'Submission auth eval — BOTH CPU AND CUDA': "
+            "every solver row must distinguish predicted_cuda_score vs "
+            "predicted_cpu_score. Add the companion or annotate the row "
+            "with '# DUAL_AXIS_RANKING_WAIVED:<reason>'."
+        )
+    return violations
 
 
 if __name__ == "__main__":

@@ -3,6 +3,20 @@
 This module validates the custody envelope around PoseNet, SegNet, and combined
 sensitivity maps. It intentionally stays pure-stdlib so validation can run in
 preflight paths without importing torch or scorer code.
+
+CUDA-axis vs CPU-axis (2026-05-08):
+The Jacobian / Fisher importance values certified here are CUDA-axis
+quantities — measured on the contest's CUDA scorer in compliance with the
+strict-scorer-rule. Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA",
+the contest leaderboard ranks by CPU eval, so downstream allocators that
+consume these CUDA-axis Jacobians must rebase the per-tensor importance
+to CPU axis. The canonical rebase helper is
+:func:`tac.optimization.lagrangian_per_tensor_allocation.compute_cpu_axis_weights`,
+which divides the pose-axis term by R_pose² and the seg-axis term by R_seg²
+(empirical: R_pose ≈ 5.04, R_seg ≈ 1.17 across HNeRV cluster).
+
+This module's manifest schema is unchanged — it remains a CUDA-axis custody
+contract. The dual-axis rebase is the CONSUMER's responsibility.
 """
 from __future__ import annotations
 

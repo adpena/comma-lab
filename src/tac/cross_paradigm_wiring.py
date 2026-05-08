@@ -109,6 +109,13 @@ class CrossParadigmRuntimeContract:
             "dispatch_attempted": False,
             "score_claim_created": False,
             "cuda_claim_created": False,
+            "score_axis_contract": "dual_axis_cuda_and_cpu",
+            "score_axis_contract_notes": (
+                "Per CLAUDE.md 'Submission auth eval — BOTH CPU AND CUDA': any "
+                "lane that emits a score band must distinguish CUDA-axis vs CPU-"
+                "axis predictions. Both axes are required before exact-eval "
+                "dispatch can be approved."
+            ),
             "warnings": list(self.warnings),
             "blockers": list(self.blockers),
             "lanes": [lane.to_dict() for lane in self.lanes],

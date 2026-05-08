@@ -1069,6 +1069,38 @@ def expected_atom_score_delta(
     component_score = confidence * (seg_score + pose_score)
     rate_score = rate_score_delta(byte_delta)
     total = component_score + rate_score
+    # CPU-axis predicted total: per CLAUDE.md "Submission auth eval — BOTH
+    # CPU AND CUDA", the contest leaderboard ranks by CPU eval. We rebase
+    # the seg+pose components via R_seg / R_pose to predict the CPU-axis
+    # delta. Rate is identical (charged bytes don't depend on device).
+    # The CPU score is tagged ``predicted-cpu-extrapolated-from-cuda``;
+    # downstream consumers should treat it as a planning prediction.
+    try:
+        from tac.optimization.cuda_cpu_axis_calibration import (
+            R_POSE_HNERV,
+            R_SEG_HNERV,
+        )
+        # Damp pose contribution by R_pose² (sqrt of pose) and seg by R_seg
+        # to approximate the CPU-axis component scores at the same rate.
+        # The pose term is concave (sqrt), so the rebased pose delta is
+        # not exactly pose / R_pose; we apply the same calibration on the
+        # delta as on the underlying base pose distance.
+        cpu_seg_score = 100.0 * (expected_seg_delta / R_SEG_HNERV)
+        # CPU base pose ~= base / R_pose; CPU pose delta ~= delta / R_pose.
+        # The pose_score_delta helper expects (base, delta) so apply the
+        # rebase directly:
+        cpu_pose_score = pose_score_delta(
+            base_pose_dist / R_POSE_HNERV,
+            expected_pose_delta / R_POSE_HNERV,
+        )
+        cpu_component_score = confidence * (cpu_seg_score + cpu_pose_score)
+        cpu_total = cpu_component_score + rate_score
+        cpu_score_calibration = "hnerv-anchored-extrapolated"
+    except Exception:  # pragma: no cover - defensive; calibration is pure math
+        cpu_total = total
+        cpu_seg_score = seg_score
+        cpu_pose_score = pose_score
+        cpu_score_calibration = "fallback-cuda-equal"
     score_evidence_contract = _atom_score_evidence_contract(
         atom=atom,
         evidence_grade=evidence_grade,
@@ -1103,6 +1135,15 @@ def expected_atom_score_delta(
         "seg_score_delta_confidence_weighted": round(confidence * seg_score, 12),
         "pose_score_delta_confidence_weighted": round(confidence * pose_score, 12),
         "expected_total_score_delta": round(total, 12),
+        # CUDA-axis explicit alias (default rank axis; back-compat).
+        "expected_cuda_score_delta": round(total, 12),
+        # CPU-axis prediction (per CLAUDE.md dual-axis contract). Tagged
+        # extrapolated from CUDA via the canonical calibration; treat as a
+        # planning prediction, not an authoritative score.
+        "expected_cpu_score_delta": round(cpu_total, 12),
+        "expected_cpu_seg_score_delta": round(confidence * cpu_seg_score, 12),
+        "expected_cpu_pose_score_delta": round(confidence * cpu_pose_score, 12),
+        "expected_cpu_score_calibration": cpu_score_calibration,
         "rankable": rankable,
         "confidence": confidence,
         "pair_support": list(atom.get("pair_support") or []),

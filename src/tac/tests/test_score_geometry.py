@@ -15,6 +15,7 @@ from tac.score_geometry import (
     information_floor,
     marginal_value_per_byte,
     operating_regime,
+    predict_cpu_axis_marginals,
     project_onto_pareto_envelope,
     score_decomposition,
     score_gradient,
@@ -223,3 +224,46 @@ def test_negative_inputs_raise() -> None:
         contest_score(0, 0, -1)
     with pytest.raises(ValueError):
         score_gradient(0.0, -1)
+
+
+# ---------------------------------------------------------------------------
+# CPU-axis marginals — added 2026-05-08 per CLAUDE.md dual-axis contract
+# ---------------------------------------------------------------------------
+
+
+def test_predict_cpu_axis_marginals_includes_required_keys() -> None:
+    out = predict_cpu_axis_marginals(
+        d_seg_cuda=6.7e-4, d_pose_cuda=1.7e-4, archive_class="hnerv",
+    )
+    assert "pose_marginal" in out
+    assert "seg_marginal" in out
+    assert "bytes_marginal" in out
+    assert "seg_over_pose_marginal_cpu" in out
+    assert "pose_over_seg_marginal_cpu" in out
+    assert "cuda_d_pose" in out
+    assert "cpu_d_pose" in out
+
+
+def test_predict_cpu_axis_marginals_seg_marginal_is_constant_100() -> None:
+    out = predict_cpu_axis_marginals(
+        d_seg_cuda=6.7e-4, d_pose_cuda=1.7e-4, archive_class="hnerv",
+    )
+    assert out["seg_marginal"] == 100.0
+
+
+def test_predict_cpu_axis_marginals_at_pose_floor_returns_high_marginal() -> None:
+    """At PR106-frontier (d_pose_cuda very small, near floor), CPU pose
+    is still small and the pose marginal is HIGH (sqrt singularity)."""
+    # PR106 frontier with d_pose_cuda just above floor.
+    out = predict_cpu_axis_marginals(
+        d_seg_cuda=7.84e-4, d_pose_cuda=1.7e-4, archive_class="hnerv",
+    )
+    # CPU pose < CUDA pose (floor stripped).
+    assert out["cpu_d_pose"] < out["cuda_d_pose"]
+
+
+def test_predict_cpu_axis_marginals_negative_input_raises() -> None:
+    with pytest.raises(ValueError):
+        predict_cpu_axis_marginals(d_seg_cuda=-0.1, d_pose_cuda=1e-4)
+    with pytest.raises(ValueError):
+        predict_cpu_axis_marginals(d_seg_cuda=1e-4, d_pose_cuda=-0.1)

@@ -443,3 +443,114 @@ def test_evidence_update_subcommand_produces_anchored_catalog(tmp_path: Path) ->
     )
     assert balle["predicted_archive_bytes"] == 162_000
     assert balle["empirical_anchor_n"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Dual-axis (CUDA + CPU) ranking — added 2026-05-08 per CLAUDE.md
+# "Submission auth eval — BOTH CPU AND CUDA"
+# ---------------------------------------------------------------------------
+
+
+def test_dual_axis_rank_emits_predicted_cpu_keys() -> None:
+    """Every ranked technique row should include CUDA + CPU axis prediction
+    keys after the dual-axis integration."""
+    autopilot = _load_autopilot()
+    plan = autopilot.build_plan(
+        d_seg=6.7e-4, d_pose=3.4e-5, archive_bytes=178144,
+        target_score=0.155, label="pr106_dual_axis_test",
+    )
+    # Ranked rows live on plan.encoder_technique_ranking and
+    # plan.arch_technique_ranking; sample a row from each.
+    encoder_rows = plan.encoder_technique_ranking
+    if encoder_rows:
+        row = encoder_rows[0]
+        assert "predicted_cuda_score" in row
+        assert "predicted_cpu_score" in row
+        assert "predicted_cpu_score_lo" in row
+        assert "predicted_cpu_score_hi" in row
+        assert "predicted_cpu_score_calibration" in row
+        # CPU score should be lower than CUDA score (constant gap).
+        assert row["predicted_cpu_score"] <= row["predicted_cuda_score"]
+
+
+def test_predicted_cpu_score_band_brackets_point_estimate() -> None:
+    """The CPU score band [lo, hi] should bracket the point estimate."""
+    autopilot = _load_autopilot()
+    plan = autopilot.build_plan(
+        d_seg=6.7e-4, d_pose=3.4e-5, archive_bytes=178144,
+        target_score=0.155, label="pr106_band_test",
+    )
+    for row in plan.encoder_technique_ranking + plan.arch_technique_ranking:
+        if "predicted_cpu_score" not in row:
+            continue
+        lo = row["predicted_cpu_score_lo"]
+        hi = row["predicted_cpu_score_hi"]
+        point = row["predicted_cpu_score"]
+        # If the row was a no-change (active blocked / not improving),
+        # lo == hi == point.
+        assert lo <= point <= hi
+
+
+def test_dual_axis_helper_function_returns_required_keys() -> None:
+    """``_technique_score_after_dual_axis`` returns the required keys."""
+    autopilot = _load_autopilot()
+    out = autopilot._technique_score_after_dual_axis(
+        baseline_bytes=178_144,
+        technique_bytes=160_000,
+        d_seg_cuda=6.7e-4,
+        d_pose_cuda=3.4e-5,
+        architecture_class="hnerv",
+    )
+    assert "predicted_cuda_score" in out
+    assert "predicted_cpu_score" in out
+    assert "predicted_cpu_score_lo" in out
+    assert "predicted_cpu_score_hi" in out
+    assert "predicted_cpu_score_calibration" in out
+    # Sanity: CPU ≤ CUDA (constant gap dominates at this operating point).
+    assert out["predicted_cpu_score"] <= out["predicted_cuda_score"]
+
+
+def test_rank_axis_cpu_changes_primary_score_after() -> None:
+    """When ``rank_axis='cpu'``, primary_score_after is the CPU prediction."""
+    autopilot = _load_autopilot()
+    techniques = [
+        {
+            "name": "test_tech",
+            "predicted_archive_bytes": 160_000,
+            "cost_hours": 1.0,
+            "cost_dollars": 0.0,
+            "model_spec": {"architecture_class": "test"},
+        }
+    ]
+    rows_cuda = autopilot._rank_techniques(
+        techniques,
+        d_seg=6.7e-4, d_pose=3.4e-5,
+        current_archive_bytes=178_144,
+        current_score=0.193,
+        target_score=None,
+        rank_axis="cuda",
+    )
+    rows_cpu = autopilot._rank_techniques(
+        techniques,
+        d_seg=6.7e-4, d_pose=3.4e-5,
+        current_archive_bytes=178_144,
+        current_score=0.193,
+        target_score=None,
+        rank_axis="cpu",
+    )
+    # CUDA rank: primary_score_after == predicted_cuda_score
+    assert rows_cuda[0]["primary_score_after"] == rows_cuda[0]["predicted_cuda_score"]
+    # CPU rank: primary_score_after == predicted_cpu_score
+    assert rows_cpu[0]["primary_score_after"] == rows_cpu[0]["predicted_cpu_score"]
+    # And primary_score_after differs between the two modes.
+    assert rows_cuda[0]["primary_score_after"] != rows_cpu[0]["primary_score_after"]
+
+
+def test_invalid_rank_axis_raises() -> None:
+    autopilot = _load_autopilot()
+    import pytest as _pytest
+    with _pytest.raises(ValueError):
+        autopilot._rank_techniques(
+            [], d_seg=0, d_pose=0, current_archive_bytes=1, current_score=0,
+            target_score=None, rank_axis="invalid",
+        )

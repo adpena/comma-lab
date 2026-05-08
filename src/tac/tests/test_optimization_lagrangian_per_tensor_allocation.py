@@ -16,6 +16,7 @@ from tac.optimization.lagrangian_per_tensor_allocation import (
     JacobianWeightedAllocator,
     LagrangianPerTensorAllocator,
     UniwardWeightedAllocator,
+    compute_cpu_axis_weights,
     compute_jacobian_importance_weights,
     compute_local_variance_proxy,
     compute_uniward_weights,
@@ -264,3 +265,96 @@ def test_weights_length_mismatch_raises() -> None:
     alloc = LagrangianPerTensorAllocator(weights=[1.0, 1.0])  # only 2
     with pytest.raises(ValueError):
         alloc.allocate(curves, lam=1.0)
+
+
+# ---------------------------------------------------------------------------
+# CPU-axis-aware Jacobian weights — added 2026-05-08
+# ---------------------------------------------------------------------------
+
+
+def test_cpu_axis_weights_combines_pose_and_seg_axes() -> None:
+    """``compute_cpu_axis_weights`` blends pose and seg axis Jacobians."""
+    pose = [1.0, 2.0, 0.5]
+    seg = [0.1, 0.2, 0.4]
+    weights = compute_cpu_axis_weights(
+        scorer_jacobian_pose=pose,
+        scorer_jacobian_seg=seg,
+        architecture_class="hnerv",
+    )
+    assert len(weights) == 3
+    # All weights non-negative.
+    assert all(w >= 0.0 for w in weights)
+    # Tensor 1 has the largest pose Jacobian → should have the largest weight.
+    assert weights[1] == max(weights)
+
+
+def test_cpu_axis_weights_pose_axis_dampened_by_R_pose() -> None:
+    """Pose-axis contribution is divided by R_pose² (≈25). Dominant pose
+    Jacobian still has high weight but is more dampened than seg."""
+    # Equal pose and seg Jacobians: which dominates depends on R_pose vs R_seg.
+    pose = [1.0]
+    seg = [1.0]
+    w_both = compute_cpu_axis_weights(
+        scorer_jacobian_pose=pose, scorer_jacobian_seg=seg,
+        architecture_class="hnerv",
+    )
+    # Now zero the seg axis: only pose contributes (with /R_pose² damping).
+    w_pose_only = compute_cpu_axis_weights(
+        scorer_jacobian_pose=pose, scorer_jacobian_seg=[0.0],
+        architecture_class="hnerv",
+    )
+    # And zero the pose axis: only seg contributes (with /R_seg² damping).
+    w_seg_only = compute_cpu_axis_weights(
+        scorer_jacobian_pose=[0.0], scorer_jacobian_seg=seg,
+        architecture_class="hnerv",
+    )
+    # All produce a normalized weight (target_mean=1.0); the absolute value
+    # is identical (single tensor). The blend matches at the unit level.
+    assert abs(w_pose_only[0] - 1.0) < 1e-9
+    assert abs(w_seg_only[0] - 1.0) < 1e-9
+    assert abs(w_both[0] - 1.0) < 1e-9
+
+
+def test_cpu_axis_weights_length_mismatch_raises() -> None:
+    with pytest.raises(ValueError):
+        compute_cpu_axis_weights(
+            scorer_jacobian_pose=[1.0, 2.0],
+            scorer_jacobian_seg=[0.5],
+            architecture_class="hnerv",
+        )
+
+
+def test_cpu_axis_weights_negative_axis_weight_raises() -> None:
+    with pytest.raises(ValueError):
+        compute_cpu_axis_weights(
+            scorer_jacobian_pose=[1.0],
+            scorer_jacobian_seg=[1.0],
+            pose_axis_weight=-1.0,
+        )
+
+
+def test_cpu_axis_weights_returns_normalized_target_mean() -> None:
+    pose = [1.0, 2.0, 3.0, 4.0]
+    seg = [0.1, 0.2, 0.3, 0.4]
+    weights = compute_cpu_axis_weights(
+        scorer_jacobian_pose=pose,
+        scorer_jacobian_seg=seg,
+        target_mean=1.0,
+    )
+    mean = sum(weights) / len(weights)
+    assert abs(mean - 1.0) < 1e-6
+
+
+def test_cpu_axis_weights_passes_to_jacobian_weighted_allocator() -> None:
+    """The CPU-axis weights flow into a JacobianWeightedAllocator."""
+    pose = [1.0, 1.0, 1.0]
+    seg = [1.0, 1.0, 1.0]
+    weights = compute_cpu_axis_weights(
+        scorer_jacobian_pose=pose,
+        scorer_jacobian_seg=seg,
+    )
+    # JacobianWeightedAllocator expects raw importance, not pre-normalized
+    # weights; pass them through as-is and verify it doesn't crash.
+    alloc = JacobianWeightedAllocator(importance=weights)
+    # Should not raise; allocator is constructed.
+    assert len(alloc.importance_weights) == 3

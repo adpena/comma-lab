@@ -62,8 +62,12 @@ from tac.score_geometry import (  # noqa: E402
     importance_flip_threshold,
     information_floor,
     operating_regime,
+    predict_cpu_axis_marginals,
     score_decomposition,
     score_gradient,
+)
+from tac.optimization.cuda_cpu_axis_calibration import (  # noqa: E402
+    CudaCpuCalibration,
 )
 from tac.score_geometry_floor_explorer import (  # noqa: E402
     TechniqueResult,
@@ -100,6 +104,16 @@ class CandidateAdvice:
     target_score_curves: dict[str, object]
     floor_technique_priorities: list[dict[str, object]] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    # Dual-axis (CUDA + CPU) advice — added 2026-05-08 per CLAUDE.md
+    # "Submission auth eval — BOTH CPU AND CUDA". Default empty for
+    # backward compatibility.
+    cpu_axis_marginals: dict[str, object] = field(default_factory=dict)
+    cpu_axis_priorities: list[dict[str, object]] = field(default_factory=list)
+    predicted_cuda_score: float | None = None
+    predicted_cpu_score: float | None = None
+    predicted_cpu_score_lo: float | None = None
+    predicted_cpu_score_hi: float | None = None
+    predicted_cpu_score_calibration: str = ""
 
 
 def load_floor_technique_results(path: Path) -> tuple[int | None, list[TechniqueResult]]:
@@ -230,6 +244,8 @@ def advise_candidate(
     target_score: float | None = None,
     floor_technique_results: list[TechniqueResult] | None = None,
     floor_baseline_bytes: int | None = None,
+    architecture_class: str = "hnerv",
+    score_axis: str = "cuda",
 ) -> CandidateAdvice:
     """Build a CandidateAdvice for a single (d_seg, d_pose, B) point.
 
@@ -343,6 +359,61 @@ def advise_candidate(
             "they do not imply a score-affecting archive exists."
         )
 
+    # Dual-axis (CUDA + CPU) extension — added 2026-05-08.
+    # Always compute the CPU-axis marginals + predicted CPU score band so
+    # the operator can see both axes regardless of how `score_axis` is set.
+    cpu_marginals = predict_cpu_axis_marginals(
+        d_seg_cuda=d_seg,
+        d_pose_cuda=d_pose,
+        archive_class=architecture_class,
+    )
+    # Build axis priorities from the CPU marginals.
+    cpu_seg_priority = AxisPriority(
+        name="seg",
+        marginal_value=cpu_marginals["seg_marginal"],
+        rationale=(
+            f"dS_cpu/d(d_seg_cpu) = {cpu_marginals['seg_marginal']:.2f} "
+            f"(constant). CPU d_seg is {cpu_marginals['cpu_d_seg']:.4e} "
+            f"(rebased from CUDA via R_seg ≈ 1.17)."
+        ),
+        estimated_effort_class=_axis_effort_class("seg", d_seg, d_pose, archive_bytes),
+    )
+    cpu_pose_priority = AxisPriority(
+        name="pose",
+        marginal_value=(
+            cpu_marginals["pose_marginal"]
+            if cpu_marginals["pose_marginal"] != float("inf")
+            else float("inf")
+        ),
+        rationale=(
+            f"dS_cpu/d(d_pose_cpu) = {cpu_marginals['pose_marginal']:.2f} "
+            f"at the rebased CPU operating point (d_pose_cpu="
+            f"{cpu_marginals['cpu_d_pose']:.4e}). The pose floor saturation "
+            f"means d_pose_cuda below ~1.4e-4 maps to d_pose_cpu near zero."
+        ),
+        estimated_effort_class=_axis_effort_class("pose", d_seg, d_pose, archive_bytes),
+    )
+    cpu_bytes_priority = AxisPriority(
+        name="bytes",
+        marginal_value=cpu_marginals["bytes_marginal"] * 1000,
+        rationale=(
+            f"dS/dB = {cpu_marginals['bytes_marginal']:.3e} per byte "
+            "(identical CUDA and CPU)."
+        ),
+        estimated_effort_class=_axis_effort_class("bytes", d_seg, d_pose, archive_bytes),
+    )
+    cpu_priorities = [cpu_seg_priority, cpu_pose_priority, cpu_bytes_priority]
+    cpu_priorities.sort(
+        key=lambda p: (-1 if p.marginal_value == float("inf") else -p.marginal_value),
+    )
+    # Predicted CPU score band (from the calibration helper).
+    cal = CudaCpuCalibration(architecture_class=architecture_class)
+    cpu_band = cal.predict_cpu_from_cuda(
+        score,
+        d_pose_cuda=d_pose,
+        d_seg_cuda=d_seg,
+        archive_bytes=archive_bytes,
+    )
     return CandidateAdvice(
         label=label,
         d_seg=d_seg,
@@ -369,6 +440,13 @@ def advise_candidate(
         target_score_curves=target_curves,
         floor_technique_priorities=floor_priorities,
         notes=notes,
+        cpu_axis_marginals=cpu_marginals,
+        cpu_axis_priorities=[asdict(p) for p in cpu_priorities],
+        predicted_cuda_score=score,
+        predicted_cpu_score=cpu_band.score_point,
+        predicted_cpu_score_lo=cpu_band.score_lo,
+        predicted_cpu_score_hi=cpu_band.score_hi,
+        predicted_cpu_score_calibration=cpu_band.calibration_quality,
     )
 
 

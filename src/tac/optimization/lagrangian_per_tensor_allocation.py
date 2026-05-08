@@ -466,6 +466,71 @@ def normalize_importance_weights(
     return (arr * (float(target_mean) / mean)).tolist()
 
 
+def compute_cpu_axis_weights(
+    *,
+    scorer_jacobian_pose: Sequence[float],
+    scorer_jacobian_seg: Sequence[float],
+    pose_axis_weight: float = 1.0,
+    seg_axis_weight: float = 1.0,
+    architecture_class: str = "hnerv",
+    target_mean: float = 1.0,
+) -> list[float]:
+    """Score-axis-aware Jacobian importance for CPU-axis allocation.
+
+    Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA": the contest
+    leaderboard ranks by CPU eval. Jacobian magnitudes pulled through a
+    CUDA evaluator OVER-ATTRIBUTE pose-axis importance because the CPU
+    evaluator sees a damped pose channel (R_pose ~= 5.04). This helper
+    rebalances per-tensor importance to match the CPU evaluator's
+    sensitivity, then funnels through the canonical normalization.
+
+    Form::
+
+        w_t = pose_axis_weight * (J_pose_t^2 / R_pose^2)
+            + seg_axis_weight  * (J_seg_t^2  / R_seg^2)
+
+    The squared form preserves Fisher / Jacobian accumulation semantics;
+    dividing by ``R_*^2`` rebases each axis from CUDA-Jacobian space to
+    CPU-Jacobian space.
+
+    Args:
+        scorer_jacobian_pose: per-tensor PoseNet d(score)/d(tensor)
+            magnitude (CUDA-axis; e.g., from
+            :mod:`tac.component_sensitivity_artifact`).
+        scorer_jacobian_seg: per-tensor SegNet d(score)/d(tensor) magnitude
+            (CUDA-axis).
+        pose_axis_weight: multiplicative weight on the pose-axis term
+            (default 1.0).
+        seg_axis_weight: multiplicative weight on the seg-axis term.
+        architecture_class: calibration class for R_pose / R_seg.
+        target_mean: see :func:`normalize_importance_weights`.
+
+    Returns:
+        Per-tensor non-negative weight vector ready for the allocator.
+    """
+    from tac.optimization.cuda_cpu_axis_calibration import (
+        CudaCpuCalibration,
+    )
+    cal = CudaCpuCalibration(architecture_class=architecture_class)
+    pose = _as_finite_nonnegative_array(
+        scorer_jacobian_pose, label="scorer_jacobian_pose"
+    )
+    seg = _as_finite_nonnegative_array(
+        scorer_jacobian_seg, label="scorer_jacobian_seg"
+    )
+    if pose.size != seg.size:
+        raise ValueError(
+            f"scorer_jacobian_pose length {pose.size} != "
+            f"scorer_jacobian_seg length {seg.size}"
+        )
+    if pose_axis_weight < 0.0 or seg_axis_weight < 0.0:
+        raise ValueError("axis weights must be non-negative")
+    pose_term = pose_axis_weight * (pose ** 2) / (cal.r_pose ** 2)
+    seg_term = seg_axis_weight * (seg ** 2) / (cal.r_seg ** 2)
+    raw = pose_term + seg_term
+    return normalize_importance_weights(raw, target_mean=target_mean)
+
+
 def compute_jacobian_importance_weights(
     importance: Sequence[float],
     *,
@@ -581,6 +646,7 @@ __all__ = [
     "JointEncoderHook",
     "LagrangianPerTensorAllocator",
     "UniwardWeightedAllocator",
+    "compute_cpu_axis_weights",
     "compute_jacobian_importance_weights",
     "compute_local_variance_proxy",
     "compute_uniward_weights",

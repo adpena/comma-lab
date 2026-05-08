@@ -63,7 +63,7 @@ def shannon_entropy_bits(symbols: np.ndarray) -> tuple[float, int]:
 
 def analyze(state_dict_path: Path, evidence_jsonl: Path | None) -> dict:
     import torch
-    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)
+    sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)  # WEIGHTS_ONLY_FALSE_OK: state-dict probe; trusted local artifact
     if not isinstance(sd, dict):
         raise SystemExit(f"state_dict at {state_dict_path} is not a dict")
 
@@ -92,6 +92,19 @@ def analyze(state_dict_path: Path, evidence_jsonl: Path | None) -> dict:
     uniform_total_bytes = int(round(uniform_bits * n_total / 8.0))
     archive_uniform_floor = uniform_total_bytes + ARCHIVE_OVERHEAD_BYTES
 
+    # CPU-axis Shannon floor analysis — added 2026-05-08 per CLAUDE.md
+    # "Submission auth eval — BOTH CPU AND CUDA". Below the empirical CPU
+    # pose floor (~3.4e-5 across HNeRV cluster), additional pose accuracy
+    # is wasted because the CPU evaluator can't distinguish it. The CPU
+    # achievable floor is therefore (rate_floor + cpu_pose_floor_term).
+    try:
+        from tac.optimization.cuda_cpu_axis_calibration import (
+            cpu_pose_floor_score_contribution,
+        )
+        cpu_pose_floor_contribution = cpu_pose_floor_score_contribution()
+    except Exception:  # pragma: no cover
+        cpu_pose_floor_contribution = 0.0184  # empirical fallback
+
     # Load empirical anchors from the canonical evidence feed
     empirical_anchors: list[dict] = []
     if evidence_jsonl and evidence_jsonl.is_file():
@@ -109,6 +122,11 @@ def analyze(state_dict_path: Path, evidence_jsonl: Path | None) -> dict:
         name = row.get("technique")
         if name and "empirical_archive_bytes" in row:
             by_technique[name] = row
+
+    # Reference contest score floor (rate-only) at the iid empirical floor
+    # bytes; on the CPU axis, additional saturation from pose floor.
+    rate_only_score_at_iid_floor = 25.0 * archive_iid_floor / 37_545_489
+    cpu_floor_score = rate_only_score_at_iid_floor + cpu_pose_floor_contribution
 
     return {
         "schema": SCHEMA_VERSION,
@@ -133,6 +151,16 @@ def analyze(state_dict_path: Path, evidence_jsonl: Path | None) -> dict:
         ),
         "empirical_anchors_from_evidence_jsonl": list(by_technique.values()),
         "per_tensor": rows,
+        # CPU-axis floor decomposition (2026-05-08).
+        "cpu_pose_floor_score_contribution": cpu_pose_floor_contribution,
+        "rate_only_score_at_iid_floor": rate_only_score_at_iid_floor,
+        "cpu_axis_achievable_floor_score": cpu_floor_score,
+        "cpu_axis_floor_calibration": "hnerv-anchored",
+        "cpu_axis_floor_notes": (
+            "Below the empirical CPU pose floor (~3.4e-5 across HNeRV cluster), "
+            "additional pose accuracy is wasted. CPU floor = rate_floor + "
+            f"sqrt(10*d_pose_floor) ≈ {cpu_floor_score:.5f}."
+        ),
     }
 
 

@@ -289,3 +289,49 @@ def test_axis_effort_class_thresholds() -> None:
     advice3 = advisor.advise_candidate(label="t3", d_seg=1e-3, d_pose=1e-4, archive_bytes=100000)
     bytes_priority = next(p for p in advice3.axis_priorities if p["name"] == "bytes")
     assert bytes_priority["estimated_effort_class"] == "tight"
+
+
+# ---------------------------------------------------------------------------
+# Dual-axis (CUDA + CPU) advice — added 2026-05-08 per CLAUDE.md
+# "Submission auth eval — BOTH CPU AND CUDA"
+# ---------------------------------------------------------------------------
+
+
+def _load_advisor():
+    REPO_ROOT = Path(__file__).resolve().parents[3]
+    TOOL_PATH = REPO_ROOT / "tools" / "dispatch_advisor.py"
+    spec = importlib.util.spec_from_file_location("dispatch_advisor", TOOL_PATH)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["dispatch_advisor"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_advise_candidate_emits_cpu_axis_marginals_and_predicted_cpu_score() -> None:
+    advisor = _load_advisor()
+    advice = advisor.advise_candidate(
+        label="pr106_dual_axis",
+        d_seg=6.7e-4, d_pose=3.4e-5, archive_bytes=178_258,
+        target_score=0.190,
+        architecture_class="hnerv",
+    )
+    assert advice.cpu_axis_marginals
+    assert "pose_marginal" in advice.cpu_axis_marginals
+    assert "seg_marginal" in advice.cpu_axis_marginals
+    assert len(advice.cpu_axis_priorities) == 3
+    assert advice.predicted_cpu_score is not None
+    assert advice.predicted_cuda_score is not None
+    # CPU score should be lower than CUDA at this operating point (constant gap).
+    assert advice.predicted_cpu_score < advice.predicted_cuda_score
+    assert advice.predicted_cpu_score_calibration == "hnerv-anchored"
+
+
+def test_advise_candidate_unknown_arch_uses_extrapolated_calibration() -> None:
+    advisor = _load_advisor()
+    advice = advisor.advise_candidate(
+        label="non_hnerv_arch",
+        d_seg=6.7e-4, d_pose=3.4e-5, archive_bytes=178_258,
+        architecture_class="unknown",
+    )
+    assert advice.predicted_cpu_score_calibration == "extrapolated"

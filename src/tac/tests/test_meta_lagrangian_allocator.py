@@ -852,3 +852,70 @@ def _kkt_proof() -> dict[str, object]:
         "stationarity_residual": 0.0,
         "stationarity_tolerance": 0.001,
     }
+
+
+# ---------------------------------------------------------------------------
+# Dual-axis (CUDA + CPU) atom score-delta — added 2026-05-08 per CLAUDE.md
+# "Submission auth eval — BOTH CPU AND CUDA"
+# ---------------------------------------------------------------------------
+
+
+def test_atom_row_includes_cuda_and_cpu_score_keys(tmp_path: Path) -> None:
+    """Every atom row should carry CUDA + CPU axis predicted score delta."""
+    manifest = _archive_manifest(tmp_path)
+    row = expected_atom_score_delta(
+        {
+            "atom_id": "test_dual_axis_atom",
+            "family": "test_family",
+            "byte_delta": -1000,
+            "expected_seg_dist_delta": -0.0001,
+            "expected_pose_dist_delta": -0.00001,
+            "confidence": 0.5,
+            "evidence_grade": "empirical",
+            "interaction_assumptions": ["first_order_local_patch"],
+            "kkt_proof": _kkt_proof(),
+            "archive_manifest_path": manifest.as_posix(),
+            "archive_manifest_sha256": sha256_file(manifest),
+        },
+        base_pose_dist=0.01,
+    )
+    # Required dual-axis keys.
+    assert "expected_cuda_score_delta" in row
+    assert "expected_cpu_score_delta" in row
+    assert "expected_cpu_seg_score_delta" in row
+    assert "expected_cpu_pose_score_delta" in row
+    assert "expected_cpu_score_calibration" in row
+    # CUDA delta ≡ legacy total.
+    assert row["expected_cuda_score_delta"] == row["expected_total_score_delta"]
+    # CPU calibration tag set.
+    assert row["expected_cpu_score_calibration"] == "hnerv-anchored-extrapolated"
+
+
+def test_atom_cpu_pose_delta_smaller_magnitude_than_cuda_pose_delta(
+    tmp_path: Path,
+) -> None:
+    """CPU pose-axis delta has SMALLER magnitude than CUDA delta because
+    R_pose ≈ 5.04 dampens it."""
+    manifest = _archive_manifest(tmp_path)
+    row = expected_atom_score_delta(
+        {
+            "atom_id": "test_pose_damping",
+            "family": "test_family",
+            "byte_delta": 0,  # isolate component contribution from rate.
+            "expected_seg_dist_delta": 0.0,
+            "expected_pose_dist_delta": -0.0001,  # negative pose delta = improvement.
+            "confidence": 1.0,
+            "evidence_grade": "empirical",
+            "interaction_assumptions": ["first_order_local_patch"],
+            "kkt_proof": _kkt_proof(),
+            "archive_manifest_path": manifest.as_posix(),
+            "archive_manifest_sha256": sha256_file(manifest),
+        },
+        base_pose_dist=0.01,
+    )
+    # Pose delta on CPU axis (rebased by R_pose ≈ 5.04) has a SMALLER
+    # magnitude than the CUDA axis pose delta.
+    cuda_pose = row["pose_score_delta_confidence_weighted"]
+    cpu_pose = row["expected_cpu_pose_score_delta"]
+    # Both are negative (improvements); CPU magnitude should be smaller.
+    assert abs(cpu_pose) < abs(cuda_pose)

@@ -852,6 +852,54 @@ def _write_build_manifest(
             "tagged_evidence_grade": EVIDENCE_GRADE,
         },
     }
+    # Dual-axis (CUDA + CPU) predicted score bands — added 2026-05-08 per
+    # CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA". The orchestrator
+    # is byte-only by charter, so these bands are PURE PREDICTIONS conditioned
+    # on the byte anchor + a generic distortion-axis assumption (d_seg=6.7e-4,
+    # d_pose=3.4e-5; PR106 frontier proxy). Downstream consumers must treat
+    # these as planning-only, not score claims (the manifest already tags
+    # ``score_claim=False`` and includes the necessary dispatch blockers).
+    try:
+        from tac.optimization.cuda_cpu_axis_calibration import (
+            CudaCpuCalibration,
+        )
+        from tac.score_geometry import contest_score
+        # Adopt PR106-frontier distortion proxy for the band predictions
+        # (d_seg=6.7e-4, d_pose=3.4e-5). Operators should override these
+        # with empirical distortions when known.
+        proxy_d_seg = 6.7e-4
+        proxy_d_pose = 3.4e-5
+        cuda_predicted = contest_score(
+            d_seg=proxy_d_seg,
+            d_pose=proxy_d_pose,
+            archive_bytes=int(result.archive_bytes),
+        )
+        cal = CudaCpuCalibration(architecture_class="hnerv")
+        cpu_band = cal.predict_cpu_from_cuda(
+            cuda_predicted,
+            d_pose_cuda=proxy_d_pose,
+            d_seg_cuda=proxy_d_seg,
+            archive_bytes=int(result.archive_bytes),
+        )
+        payload["predicted_score_band"] = {
+            "predicted_cuda_score": cuda_predicted,
+            "predicted_cpu_score": cpu_band.score_point,
+            "predicted_cpu_score_lo": cpu_band.score_lo,
+            "predicted_cpu_score_hi": cpu_band.score_hi,
+            "predicted_cpu_score_calibration": cpu_band.calibration_quality,
+            "calibration_class": "hnerv",
+            "calibration_proxy_d_seg": proxy_d_seg,
+            "calibration_proxy_d_pose": proxy_d_pose,
+            "calibration_notes": (
+                "Per CLAUDE.md dual-axis: contest leaderboard ranks by --device "
+                "cpu. Bands here are conditioned on the PR106-frontier distortion "
+                "proxy; replace with empirical distortions before any dispatch."
+            ),
+        }
+    except Exception as exc:  # pragma: no cover - defensive
+        payload["predicted_score_band"] = {
+            "error": f"calibration_unavailable: {exc!r}",
+        }
     manifest_path = out_dir / "build_manifest.json"
     manifest_path.write_text(json.dumps(payload, indent=2, sort_keys=True))
     return manifest_path

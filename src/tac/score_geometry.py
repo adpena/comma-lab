@@ -362,6 +362,73 @@ def equal_score_curve_archive_bytes(
     return int(rate_term_required * reference_bytes / RATE_COEFFICIENT)
 
 
+def predict_cpu_axis_marginals(
+    archive_features: dict | None = None,
+    *,
+    d_seg_cuda: float,
+    d_pose_cuda: float,
+    archive_class: str = "hnerv",
+    reference_bytes: int = CONTEST_REFERENCE_BYTES,
+) -> dict[str, float]:
+    """Compute CPU-axis marginal sensitivities at the operating point.
+
+    Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA": the legacy
+    score-axis marginals computed on CUDA are MISLEADING for the contest
+    leaderboard, which ranks by ``--device cpu`` eval. The pose axis on CPU
+    has a SATURATED operating point (because of the 5× pose collapse), so
+    the same CUDA pose delta translates to a much smaller CPU pose delta.
+
+    This helper rebases the operating point from CUDA to CPU using the
+    canonical calibration (:mod:`tac.optimization.cuda_cpu_axis_calibration`)
+    and returns the per-axis marginals on the CPU side, plus the seg-vs-pose
+    marginal ratio at the CPU operating point.
+
+    Args:
+        archive_features: optional dict of archive metadata (currently unused;
+            reserved for future per-archive calibration overrides).
+        d_seg_cuda: CUDA-axis seg distortion at the operating point.
+        d_pose_cuda: CUDA-axis pose distortion at the operating point.
+        archive_class: calibration class for R_pose / R_seg (default
+            ``"hnerv"``).
+        reference_bytes: contest reference bytes (default
+            ``CONTEST_REFERENCE_BYTES``).
+
+    Returns:
+        Dict with keys:
+          * ``pose_marginal``: dS_cpu / d(d_pose_cpu) at the rebased point.
+          * ``seg_marginal``: dS_cpu / d(d_seg_cpu) (constant 100).
+          * ``bytes_marginal``: dS / dB (constant; identical CUDA/CPU).
+          * ``seg_over_pose_marginal_cpu``: ratio at CPU operating point.
+          * ``pose_over_seg_marginal_cpu``: inverse ratio.
+          * ``cuda_d_pose``, ``cpu_d_pose``: rebased pose values for sanity.
+          * ``cuda_d_seg``, ``cpu_d_seg``: rebased seg values for sanity.
+    """
+    if d_pose_cuda < 0.0 or d_seg_cuda < 0.0:
+        raise ValueError("d_pose_cuda and d_seg_cuda must be non-negative")
+    from tac.optimization.cuda_cpu_axis_calibration import CudaCpuCalibration
+    cal = CudaCpuCalibration(architecture_class=archive_class)
+    cpu_d_pose = cal.effective_pose_loss_for_cpu(d_pose_cuda)
+    cpu_d_seg = max(0.0, d_seg_cuda / cal.r_seg)
+    cpu_grad = score_gradient(cpu_d_seg, cpu_d_pose, reference_bytes=reference_bytes)
+    pose_marginal = cpu_grad.d_pose
+    seg_marginal = cpu_grad.d_seg
+    bytes_marginal = cpu_grad.d_bytes
+    seg_over_pose = cpu_grad.seg_over_pose_marginal
+    pose_over_seg = cpu_grad.pose_over_seg_marginal
+    return {
+        "pose_marginal": pose_marginal,
+        "seg_marginal": seg_marginal,
+        "bytes_marginal": bytes_marginal,
+        "seg_over_pose_marginal_cpu": seg_over_pose,
+        "pose_over_seg_marginal_cpu": pose_over_seg,
+        "cuda_d_pose": d_pose_cuda,
+        "cpu_d_pose": cpu_d_pose,
+        "cuda_d_seg": d_seg_cuda,
+        "cpu_d_seg": cpu_d_seg,
+        "calibration_class": archive_class,
+    }
+
+
 __all__ = [
     "CONTEST_REFERENCE_BYTES",
     "POSE_COEFFICIENT_INSIDE_SQRT",
@@ -377,6 +444,7 @@ __all__ = [
     "information_floor",
     "marginal_value_per_byte",
     "operating_regime",
+    "predict_cpu_axis_marginals",
     "project_onto_pareto_envelope",
     "score_decomposition",
     "score_gradient",

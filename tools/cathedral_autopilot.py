@@ -60,6 +60,7 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
+from tac.optimization.cuda_cpu_axis_calibration import CudaCpuCalibration  # noqa: E402
 from tac.score_geometry import (  # noqa: E402
     contest_score,
     equal_score_curve_archive_bytes,
@@ -353,8 +354,54 @@ def _technique_score_after(
     *, baseline_bytes: int, technique_bytes: int,
     d_seg: float, d_pose: float,
 ) -> float:
-    """Score if technique replaces baseline encoder, holding distortion fixed."""
+    """Score if technique replaces baseline encoder, holding distortion fixed.
+
+    Returns the CUDA-axis score (legacy default — see :func:
+    `_technique_score_after_dual_axis` for CPU-axis primary form).
+    """
     return contest_score(d_seg, d_pose, technique_bytes)
+
+
+def _technique_score_after_dual_axis(
+    *, baseline_bytes: int, technique_bytes: int,
+    d_seg_cuda: float, d_pose_cuda: float,
+    architecture_class: str = "hnerv",
+) -> dict[str, Any]:
+    """CPU + CUDA axis predicted score after a (lossless) encoder swap.
+
+    The contest leaderboard ranks by ``--device cpu`` (per CLAUDE.md
+    "Submission auth eval — BOTH CPU AND CUDA"). This helper returns
+    BOTH the CUDA-axis score (legacy) and a CPU-axis prediction band so
+    the recommender can primary-rank by CPU.
+
+    Args:
+        baseline_bytes: current archive bytes (unused; kept for symmetry).
+        technique_bytes: predicted archive bytes after technique applies.
+        d_seg_cuda: CUDA-axis seg distortion at the operating point.
+        d_pose_cuda: CUDA-axis pose distortion at the operating point.
+        architecture_class: calibration class (default ``"hnerv"``).
+
+    Returns:
+        Dict with keys ``predicted_cuda_score``, ``predicted_cpu_score``,
+        ``predicted_cpu_score_lo``, ``predicted_cpu_score_hi``,
+        ``predicted_cpu_score_calibration`` (one of ``"hnerv-anchored"``
+        / ``"extrapolated"``).
+    """
+    cuda_score = contest_score(d_seg_cuda, d_pose_cuda, technique_bytes)
+    cal = CudaCpuCalibration(architecture_class=architecture_class)
+    band = cal.predict_cpu_from_cuda(
+        cuda_score,
+        d_pose_cuda=d_pose_cuda,
+        d_seg_cuda=d_seg_cuda,
+        archive_bytes=technique_bytes,
+    )
+    return {
+        "predicted_cuda_score": cuda_score,
+        "predicted_cpu_score": band.score_point,
+        "predicted_cpu_score_lo": band.score_lo,
+        "predicted_cpu_score_hi": band.score_hi,
+        "predicted_cpu_score_calibration": band.calibration_quality,
+    }
 
 
 # Feedback-loop / continual-learning helpers
@@ -376,7 +423,20 @@ class TechniqueEvidence:
     evidence_grade: str = ""
     evidence_marker: str = ""
     evidence_semantics: str = ""
+    device_axis: str = ""
+    archive_sha256: str = ""
+    runtime_tree_sha256: str = ""
+    runtime_manifest: str = ""
+    hardware: str = ""
+    substrate_class: str = ""
+    architecture_family: str = ""
+    decoder_path: str = ""
+    loader_drift_probe_path: str = ""
+    network_drift_probe_path: str = ""
+    decoder_pose_ratio_cuda_over_cpu: float | None = None
+    network_pose_ratio_cuda_over_cpu: float | None = None
     score_claim: bool | None = None
+    score_contest_cpu: float | None = None
     score_contest_cuda: float | None = None
     promotion_eligible: bool | None = None
     rank_or_kill_eligible: bool | None = None
@@ -433,8 +493,51 @@ def _load_evidence(path: Path) -> list[TechniqueEvidence]:
             evidence_grade=str(r.get("evidence_grade", "")),
             evidence_marker=str(r.get("evidence_marker", "")),
             evidence_semantics=str(r.get("evidence_semantics", "")),
+            device_axis=str(r.get("device_axis", "") or r.get("device", "")),
+            archive_sha256=str(
+                r.get("archive_sha256")
+                or r.get("archive_sha")
+                or ""
+            ),
+            runtime_tree_sha256=str(
+                r.get("runtime_tree_sha256")
+                or r.get("inflate_runtime_tree_sha256")
+                or ""
+            ),
+            runtime_manifest=str(
+                r.get("runtime_manifest")
+                or r.get("inflate_runtime_manifest")
+                or ""
+            ),
+            hardware=str(r.get("hardware", "") or r.get("runner", "")),
+            substrate_class=str(
+                r.get("substrate_class")
+                or r.get("architecture_class")
+                or r.get("family")
+                or ""
+            ),
+            architecture_family=str(
+                r.get("architecture_family")
+                or r.get("model_family")
+                or ""
+            ),
+            decoder_path=str(r.get("decoder_path", "") or r.get("inflate_decoder", "")),
+            loader_drift_probe_path=str(r.get("loader_drift_probe_path", "")),
+            network_drift_probe_path=str(r.get("network_drift_probe_path", "")),
+            decoder_pose_ratio_cuda_over_cpu=(
+                float(r["decoder_pose_ratio_cuda_over_cpu"])
+                if r.get("decoder_pose_ratio_cuda_over_cpu") is not None else None
+            ),
+            network_pose_ratio_cuda_over_cpu=(
+                float(r["network_pose_ratio_cuda_over_cpu"])
+                if r.get("network_pose_ratio_cuda_over_cpu") is not None else None
+            ),
             score_claim=(
                 bool(r["score_claim"]) if r.get("score_claim") is not None else None
+            ),
+            score_contest_cpu=(
+                float(r["score_contest_cpu"])
+                if r.get("score_contest_cpu") is not None else None
             ),
             score_contest_cuda=(
                 float(r["score_contest_cuda"])
@@ -625,6 +728,228 @@ def _ordered_unique(values: list[str]) -> list[str]:
     return out
 
 
+def _device_axis_for_evidence(evidence: TechniqueEvidence) -> str:
+    text = " ".join(
+        part.strip().lower()
+        for part in (
+            evidence.device_axis,
+            evidence.evidence_grade,
+            evidence.evidence_marker,
+            evidence.evidence_semantics,
+            evidence.source,
+            evidence.hardware,
+        )
+        if part
+    )
+    if "macos-cpu" in text or "macos_cpu" in text or "apple silicon" in text:
+        return "macos_cpu_advisory"
+    if "contest-cpu" in text or "contest_cpu" in text:
+        return "contest_cpu"
+    if "contest-cuda" in text or "contest_cuda" in text or "exact_cuda" in text:
+        return "contest_cuda"
+    if evidence.device_axis.strip().lower() in {"cpu", "cuda", "mps"}:
+        return evidence.device_axis.strip().lower()
+    return ""
+
+
+def summarize_device_axis_evidence(
+    evidence: list[TechniqueEvidence],
+) -> dict[str, Any]:
+    """Summarize paired CPU/CUDA evidence without changing active ranking.
+
+    The selector must not prefer CPU-targeted or CUDA-targeted architectures
+    from one-sided rows. macOS CPU rows are useful high-throughput research
+    proxies after the PR107 Linux-vs-M5 check (6e-6 score gap), but a
+    device-axis comparison becomes actionable only for a specific
+    archive/runtime pair when both ``contest_cpu`` and
+    ``contest_cuda`` rows share archive SHA and runtime-tree SHA. Even then the
+    comparison is a diagnostic prior, not a replacement for the normal
+    evidence-grade promotion rules.
+    """
+    groups: dict[tuple[str, str, str], dict[str, Any]] = {}
+    class_values: dict[str, list[float]] = {}
+    component_values: dict[str, dict[str, list[float]]] = {}
+    unpaired: list[dict[str, Any]] = []
+    advisory_count = 0
+    for row in evidence:
+        axis = _device_axis_for_evidence(row)
+        if not axis:
+            continue
+        if axis == "macos_cpu_advisory":
+            advisory_count += 1
+        key_ready = bool(row.archive_sha256 and row.runtime_tree_sha256)
+        key = (row.technique, row.archive_sha256, row.runtime_tree_sha256)
+        if axis in {"contest_cpu", "contest_cuda"} and key_ready:
+            bucket = groups.setdefault(
+                key,
+                {
+                    "technique": row.technique,
+                    "archive_sha256": row.archive_sha256,
+                    "runtime_tree_sha256": row.runtime_tree_sha256,
+                    "axes": {},
+                    "sources": [],
+                },
+            )
+            score = row.score_contest_cpu if axis == "contest_cpu" else row.score_contest_cuda
+            if score is None:
+                score = row.empirical_score
+            bucket["axes"][axis] = {
+                "score": score,
+                "d_seg": row.empirical_d_seg,
+                "d_pose": row.empirical_d_pose,
+                "archive_bytes": row.empirical_archive_bytes,
+                "hardware": row.hardware,
+                "evidence_grade": row.evidence_grade,
+                "source": row.source,
+            }
+            if row.source:
+                bucket["sources"].append(row.source)
+        else:
+            unpaired.append(
+                {
+                    "technique": row.technique,
+                    "device_axis": axis,
+                    "archive_sha256": row.archive_sha256,
+                    "runtime_tree_sha256": row.runtime_tree_sha256,
+                    "evidence_grade": row.evidence_grade,
+                    "source": row.source,
+                    "reason": (
+                        "macos_cpu_research_proxy_needs_linux_contest_cpu_promotion"
+                        if axis == "macos_cpu_advisory"
+                        else "missing_archive_or_runtime_pairing_key"
+                    ),
+                }
+            )
+
+    paired: list[dict[str, Any]] = []
+    for bucket in groups.values():
+        axes = bucket["axes"]
+        if "contest_cpu" not in axes or "contest_cuda" not in axes:
+            unpaired.append(
+                {
+                    "technique": bucket["technique"],
+                    "device_axis": ",".join(sorted(axes)),
+                    "archive_sha256": bucket["archive_sha256"],
+                    "runtime_tree_sha256": bucket["runtime_tree_sha256"],
+                    "evidence_grade": "; ".join(
+                        sorted({
+                            str(axis_row.get("evidence_grade", ""))
+                            for axis_row in axes.values()
+                            if axis_row.get("evidence_grade")
+                        })
+                    ),
+                    "source": "; ".join(bucket["sources"]),
+                    "reason": "needs_both_contest_cpu_and_contest_cuda_same_archive_runtime",
+                }
+            )
+            continue
+        cpu = axes["contest_cpu"]
+        cuda = axes["contest_cuda"]
+        cpu_score = cpu.get("score")
+        cuda_score = cuda.get("score")
+        comparison: dict[str, Any] = {
+            "technique": bucket["technique"],
+            "archive_sha256": bucket["archive_sha256"],
+            "runtime_tree_sha256": bucket["runtime_tree_sha256"],
+            "contest_cpu": cpu,
+            "contest_cuda": cuda,
+            "source": "; ".join(bucket["sources"]),
+        }
+        if cpu_score is not None and cuda_score is not None:
+            comparison["score_gap_cuda_minus_cpu"] = float(cuda_score) - float(cpu_score)
+        cpu_pose = cpu.get("d_pose")
+        cuda_pose = cuda.get("d_pose")
+        cpu_seg = cpu.get("d_seg")
+        cuda_seg = cuda.get("d_seg")
+        if cpu_pose and cuda_pose:
+            pose_ratio = float(cuda_pose) / float(cpu_pose)
+            comparison["pose_ratio_cuda_over_cpu"] = pose_ratio
+            technique_rows = [
+                row for row in evidence
+                if row.technique == bucket["technique"]
+                and row.archive_sha256 == bucket["archive_sha256"]
+                and row.runtime_tree_sha256 == bucket["runtime_tree_sha256"]
+            ]
+            substrate_classes = sorted({
+                row.substrate_class for row in technique_rows if row.substrate_class
+            })
+            comparison["substrate_classes"] = substrate_classes
+            for substrate_class in substrate_classes or ["unknown_substrate"]:
+                class_values.setdefault(substrate_class, []).append(pose_ratio)
+            for row in technique_rows:
+                substrate_class = row.substrate_class or "unknown_substrate"
+                bucket_components = component_values.setdefault(
+                    substrate_class,
+                    {"decoder": [], "network": []},
+                )
+                if row.decoder_pose_ratio_cuda_over_cpu is not None:
+                    bucket_components["decoder"].append(row.decoder_pose_ratio_cuda_over_cpu)
+                if row.network_pose_ratio_cuda_over_cpu is not None:
+                    bucket_components["network"].append(row.network_pose_ratio_cuda_over_cpu)
+        if cpu_seg and cuda_seg:
+            comparison["seg_ratio_cuda_over_cpu"] = float(cuda_seg) / float(cpu_seg)
+        paired.append(comparison)
+
+    substrate_profiles = []
+    for substrate_class, values in sorted(class_values.items()):
+        mean = sum(values) / len(values)
+        variance = sum((value - mean) ** 2 for value in values) / len(values)
+        components = component_values.get(substrate_class, {"decoder": [], "network": []})
+        decoder_values = components.get("decoder", [])
+        network_values = components.get("network", [])
+        substrate_profiles.append(
+            {
+                "substrate_class": substrate_class,
+                "n": len(values),
+                "pose_ratio_mean_cuda_over_cpu": mean,
+                "pose_ratio_variance": variance,
+                "pose_ratio_values": values,
+                "decoder_pose_ratio_mean_cuda_over_cpu": (
+                    sum(decoder_values) / len(decoder_values)
+                    if decoder_values else None
+                ),
+                "network_pose_ratio_mean_cuda_over_cpu": (
+                    sum(network_values) / len(network_values)
+                    if network_values else None
+                ),
+                "posterior_status": (
+                    "needs_more_anchors" if len(values) < 3 else "empirical_profile"
+                ),
+                "outlier_policy": (
+                    "New same-class anchors outside 3 sigma should fork a new "
+                    "substrate class instead of mutating the class mean silently."
+                ),
+            }
+        )
+
+    return {
+        "policy": (
+            "Do not assign CPU-vs-GPU architecture or stack priority until "
+            "both contest-CPU and contest-CUDA are measured on the same "
+            "archive SHA and runtime-tree SHA. macOS CPU may accelerate "
+            "parallel dev sweeps after the PR107 GHA-vs-M5 check, but it "
+            "remains a research proxy until promoted by Linux x86_64 "
+            "contest-CPU."
+        ),
+        "learning_policy": (
+            "Treat CPU/CUDA drift as a Bayesian per-substrate-class profile. "
+            "Update class posteriors only from paired same-archive/runtime "
+            "anchors; loader and network drift probes are independent optional "
+            "components of R_total."
+        ),
+        "priority_status": (
+            "paired_archive_specific_diagnostics_available"
+            if paired else "insufficient_paired_axis_evidence"
+        ),
+        "paired_comparison_count": len(paired),
+        "paired_comparisons": paired,
+        "substrate_class_profiles": substrate_profiles,
+        "unpaired_device_axis_evidence_count": len(unpaired),
+        "unpaired_device_axis_evidence": unpaired,
+        "macos_cpu_advisory_count": advisory_count,
+    }
+
+
 def summarize_evidence_semantics(
     evidence: list[TechniqueEvidence] | None,
     catalogs: list[list[dict[str, Any]]],
@@ -712,6 +1037,7 @@ def summarize_evidence_semantics(
     unknown = sorted(unknown_by_name.values(), key=lambda item: item["technique"])
     return {
         "n_evidence_rows": len(ev),
+        "device_axis_report": summarize_device_axis_evidence(ev),
         "unknown_evidence_row_count": sum(item["n_rows"] for item in unknown),
         "unknown_evidence_technique_count": len(unknown),
         "unknown_evidence_techniques": unknown,
@@ -1045,39 +1371,120 @@ def _rank_techniques(
     d_seg: float, d_pose: float, current_archive_bytes: int,
     current_score: float, target_score: float | None,
     min_score_delta: float = 0.0,
+    rank_axis: str = "cuda",
+    architecture_class: str = "hnerv",
+    current_score_axis: str = "cuda",
 ) -> list[dict[str, Any]]:
     """Score each technique by predicted score gain per cost-dollar.
+
+    Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA": every row now
+    carries dual-axis predictions. The legacy ``predicted_score_*`` keys
+    remain CUDA-axis-anchored (back-compat); new ``predicted_cuda_score`` /
+    ``predicted_cpu_score`` keys are added.
+
+    Args:
+        d_seg, d_pose: distortion at the *current* operating point.
+        current_score: current contest score.
+        rank_axis: ``"cuda"`` (default — legacy) or ``"cpu"`` to primary-rank
+            by the CPU-axis predicted score delta.
+        architecture_class: calibration class for the CPU-axis prediction
+            (default ``"hnerv"``).
+        current_score_axis: which axis ``current_score`` was measured on
+            (``"cuda"`` default, or ``"cpu"`` if the operator passed a
+            CPU-anchored baseline).
+        min_score_delta: high-signal filter on the *primary-axis* delta.
 
     high-signal filter: techniques with ``predicted_score_delta`` strictly
     below ``min_score_delta`` are dropped (always keeping the top-1 row so
     callers never get an empty list).
     """
+    if rank_axis not in {"cuda", "cpu"}:
+        raise ValueError(f"rank_axis must be 'cuda' or 'cpu'; got {rank_axis!r}")
+    if current_score_axis not in {"cuda", "cpu"}:
+        raise ValueError(
+            f"current_score_axis must be 'cuda' or 'cpu'; got {current_score_axis!r}"
+        )
+    cal = CudaCpuCalibration(architecture_class=architecture_class)
+    # Compute the "current score" on the OPPOSITE axis for delta computation.
+    if current_score_axis == "cuda":
+        current_cuda_score = current_score
+        current_cpu_band = cal.predict_cpu_from_cuda(
+            current_score,
+            d_pose_cuda=d_pose,
+            d_seg_cuda=d_seg,
+            archive_bytes=current_archive_bytes,
+        )
+        current_cpu_score = current_cpu_band.score_point
+    else:
+        current_cpu_score = current_score
+        current_cuda_band = cal.predict_cuda_from_cpu(
+            current_score,
+            d_pose_cpu=d_pose,
+            d_seg_cpu=d_seg,
+            archive_bytes=current_archive_bytes,
+        )
+        current_cuda_score = current_cuda_band.score_point
     rows: list[dict[str, Any]] = []
     for t in techniques:
         active_ranking_blocked = _is_active_ranking_blocked(t)
         retired_from_active_ranking = bool(t.get("retired_from_active_ranking"))
         if active_ranking_blocked or t["predicted_archive_bytes"] >= current_archive_bytes:
-            score_after = current_score
+            score_after = current_cuda_score
             score_delta = 0.0
+            cpu_score_after = current_cpu_score
+            cpu_score_lo = current_cpu_score
+            cpu_score_hi = current_cpu_score
+            cpu_calibration = "no-change"
         else:
+            # CUDA-axis prediction (legacy primary).
+            # ``d_seg`` / ``d_pose`` are caller-supplied; if
+            # ``current_score_axis="cpu"`` the caller is responsible for
+            # passing CUDA distortions (this helper does not rebase them).
             score_after = _technique_score_after(
                 baseline_bytes=current_archive_bytes,
                 technique_bytes=t["predicted_archive_bytes"],
                 d_seg=d_seg, d_pose=d_pose,
             )
-            score_delta = current_score - score_after
+            score_delta = current_cuda_score - score_after
+            # CPU-axis prediction band.
+            dual = _technique_score_after_dual_axis(
+                baseline_bytes=current_archive_bytes,
+                technique_bytes=t["predicted_archive_bytes"],
+                d_seg_cuda=d_seg, d_pose_cuda=d_pose,
+                architecture_class=architecture_class,
+            )
+            cpu_score_after = dual["predicted_cpu_score"]
+            cpu_score_lo = dual["predicted_cpu_score_lo"]
+            cpu_score_hi = dual["predicted_cpu_score_hi"]
+            cpu_calibration = dual["predicted_cpu_score_calibration"]
+        cpu_score_delta = current_cpu_score - cpu_score_after
         cost_dollars = max(t["cost_dollars"], 0.5)  # floor for pure-CPU items
-        gain_per_dollar = score_delta / cost_dollars if cost_dollars > 0 else 0.0
+        # Pick primary delta based on rank_axis. Existing back-compat key
+        # ``predicted_score_delta`` continues to be CUDA-axis.
+        primary_delta = score_delta if rank_axis == "cuda" else cpu_score_delta
+        primary_score_after = score_after if rank_axis == "cuda" else cpu_score_after
+        gain_per_dollar = primary_delta / cost_dollars if cost_dollars > 0 else 0.0
         gap_to_target = (
-            score_after - target_score if target_score is not None else None
+            primary_score_after - target_score if target_score is not None else None
         )
         rows.append({
             **t,
             "current_score_baseline": current_score,
             "predicted_score_after": score_after,
             "predicted_score_delta": score_delta,
+            "predicted_cuda_score": score_after,
+            "predicted_cuda_score_delta": score_delta,
+            "predicted_cpu_score": cpu_score_after,
+            "predicted_cpu_score_lo": cpu_score_lo,
+            "predicted_cpu_score_hi": cpu_score_hi,
+            "predicted_cpu_score_delta": cpu_score_delta,
+            "predicted_cpu_score_calibration": cpu_calibration,
+            "rank_axis": rank_axis,
+            "current_score_axis": current_score_axis,
+            "primary_score_after": primary_score_after,
+            "primary_score_delta": primary_delta,
             "gain_per_dollar": gain_per_dollar,
-            "gain_per_hour": score_delta / max(t["cost_hours"], 0.1),
+            "gain_per_hour": primary_delta / max(t["cost_hours"], 0.1),
             "predicted_gap_to_target": gap_to_target,
             "reaches_target": (
                 gap_to_target is not None and gap_to_target <= 0
@@ -1085,13 +1492,15 @@ def _rank_techniques(
             "active_ranking_blocked": active_ranking_blocked,
             "retired_from_active_ranking": retired_from_active_ranking,
         })
+    # Primary-axis ranking; back-compat sort still uses CUDA delta when
+    # rank_axis="cuda".
     rows.sort(key=lambda r: (
         r["active_ranking_blocked"],
-        -r["predicted_score_delta"],
+        -r["primary_score_delta"],
         r["cost_dollars"],
     ))
     if min_score_delta > 0.0 and rows:
-        kept = [r for r in rows if r["predicted_score_delta"] >= min_score_delta]
+        kept = [r for r in rows if r["primary_score_delta"] >= min_score_delta]
         if not kept:
             kept = [rows[0]]  # always preserve top-1
         rows = kept
