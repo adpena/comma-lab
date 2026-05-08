@@ -1,0 +1,1508 @@
+{
+  "brotli_version": "1.2.0",
+  "created_at_utc": "2026-05-08T09:39:38+00:00",
+  "dispatch_attempted": false,
+  "evidence_label": "CPU/proxy_precoarsening_entropy_accounting",
+  "global_dispatch_blockers": [
+    "no_score_claim",
+    "no_candidate_archive_emitted",
+    "no_runtime_decoder_adapter",
+    "decoder_code_bytes_not_charged",
+    "exact_cuda_auth_eval_missing"
+  ],
+  "hstack_vstack_review": {
+    "HStack": {
+      "antagonism": [
+        "Competes with PR101 split-Brotli, HDM-style decoder recodes, and any decoder replacement that owns the same renderer weight stream.",
+        "Any custom entropy runtime adds code bytes and dependency risk that are not charged in this probe."
+      ],
+      "status": "decoder_stream_only_horizontal_candidate",
+      "synergy": [
+        "Touches parser-proven renderer decoder bytes only, so it can be evaluated independently from latent/sidecar HStack lanes once a runtime adapter exists.",
+        "Could HStack with low-level latent/sidecar repacks because those operate on disjoint logical sections."
+      ]
+    },
+    "VStack": {
+      "antagonism": [
+        "Pre-coarsening static coding is intentionally a stricter screen; it may understate a later coarsened-stack coder but cannot justify dispatch by itself.",
+        "Zero-order per-tensor models ignore sequential context that Brotli already exploits, so source-layout Brotli remains the reference to beat."
+      ],
+      "status": "terminal_entropy_stage_after_representation_quantization",
+      "synergy": [
+        "Best positioned after byte-map/order derivation and after any lossy coarsening, because those transforms change the symbol distribution being coded.",
+        "A post-coarsening rerun could shrink frequency tables and improve practical static-model economics."
+      ]
+    },
+    "score_claim": false,
+    "synergy_antagonism_verdict": "do_not_build_archive_from_precoarsening_static_entropy_probe"
+  },
+  "inputs": {
+    "pr101_archive": "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip",
+    "pr106_archive": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip"
+  },
+  "platform": "macOS-26.4-arm64-arm-64bit",
+  "python": "3.12.13",
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "precoarsening_entropy_coder_probe_v1",
+  "score_claim": false,
+  "target_count": 2,
+  "targets": [
+    {
+      "archive_bytes": 178258,
+      "archive_path": "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip",
+      "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "canonical_precoarsening_i8_stream": {
+        "brotli_q11_bytes": 162395,
+        "brotli_q11_sha256": "8bf418a9b166d5515f7656f9eca498e42d41adfe019259415280d8f4d490d625",
+        "bytes": 229014,
+        "description": "fixed-schema canonical stream: signed int8 weight codes shifted to 0..254 per tensor in schema order, followed by source scale bytes",
+        "sha256": "f7e84345be3119e5810e856312e658af0a44ce9219f56dda1a1cdea873714c80"
+      },
+      "constriction_range_packet": {
+        "available": true,
+        "codec_family": "constriction range coder",
+        "constriction_version": "0.4.2",
+        "elapsed_seconds": 0.006168,
+        "encoded_payload_bytes": 160344,
+        "encoder_num_bits_total": 1282752,
+        "evidence_label": "CPU/practical_actual_bitstream_no_runtime_adapter",
+        "fixed_packet_header_bytes": 8,
+        "frequency_table_storage": "uint16 counts_plus_one",
+        "limitations": [
+          "actual_constriction_payload_but_no_submission_runtime_decoder",
+          "separate_tensor_streams_require_charged_length_table",
+          "assumes fixed runtime schema so tensor names and shapes are not charged",
+          "does_not_include_submission_decoder_code_bytes"
+        ],
+        "model_header_bytes": 14280,
+        "n_categories": 255,
+        "per_tensor": [
+          {
+            "encoded_bytes": 31612,
+            "encoded_sha256": "a356f9c54845afd0a498803093f2cad7a96ab3eea2dff9b507ef02d3345681b7",
+            "encoder_num_bits": 252896,
+            "name": "stem.weight",
+            "roundtrip_equal": true,
+            "schema_index": 0,
+            "symbols": 48384,
+            "unique_symbols": 118
+          },
+          {
+            "encoded_bytes": 1568,
+            "encoded_sha256": "b44518f37f29fc7ff72e47b4f865e4a93b08339eaa2f4d1d8cb51c5a3a8118d6",
+            "encoder_num_bits": 12544,
+            "name": "stem.bias",
+            "roundtrip_equal": true,
+            "schema_index": 1,
+            "symbols": 1728,
+            "unique_symbols": 194
+          },
+          {
+            "encoded_bytes": 32332,
+            "encoded_sha256": "ba0a117c43b173dd22010ca8d11f0f52db299d31dd06e683e550f89202814c86",
+            "encoder_num_bits": 258656,
+            "name": "blocks.0.weight",
+            "roundtrip_equal": true,
+            "schema_index": 2,
+            "symbols": 46656,
+            "unique_symbols": 131
+          },
+          {
+            "encoded_bytes": 132,
+            "encoded_sha256": "889d0e93cebb9ac570a589bd2c20aac6d8a7d6e9cb7bea62762d05c026b7b4fa",
+            "encoder_num_bits": 1056,
+            "name": "blocks.0.bias",
+            "roundtrip_equal": true,
+            "schema_index": 3,
+            "symbols": 144,
+            "unique_symbols": 101
+          },
+          {
+            "encoded_bytes": 32456,
+            "encoded_sha256": "4a81fe32963fa4ee1bb82d85082f417850785a157eef884a1b9d5abeb4cc3377",
+            "encoder_num_bits": 259648,
+            "name": "blocks.1.weight",
+            "roundtrip_equal": true,
+            "schema_index": 4,
+            "symbols": 46656,
+            "unique_symbols": 151
+          },
+          {
+            "encoded_bytes": 132,
+            "encoded_sha256": "0059363eb1b76e47d735d3b647de9f2f382a667b1e3043e8dd1956cd4ecb6626",
+            "encoder_num_bits": 1056,
+            "name": "blocks.1.bias",
+            "roundtrip_equal": true,
+            "schema_index": 5,
+            "symbols": 144,
+            "unique_symbols": 96
+          },
+          {
+            "encoded_bytes": 25456,
+            "encoded_sha256": "8d833925fc0fb581612de285d137c63744401a3c443a2f97215326660b98ca7d",
+            "encoder_num_bits": 203648,
+            "name": "blocks.2.weight",
+            "roundtrip_equal": true,
+            "schema_index": 6,
+            "symbols": 34992,
+            "unique_symbols": 172
+          },
+          {
+            "encoded_bytes": 100,
+            "encoded_sha256": "672b1573940953537822e89ee850c75de3b2a24811139aa2069c213de1d4e8ce",
+            "encoder_num_bits": 800,
+            "name": "blocks.2.bias",
+            "roundtrip_equal": true,
+            "schema_index": 7,
+            "symbols": 108,
+            "unique_symbols": 88
+          },
+          {
+            "encoded_bytes": 14048,
+            "encoded_sha256": "47eed431e52675a3bba206e105d2fc6d0745847e7eba5b0ff794e0394b514718",
+            "encoder_num_bits": 112384,
+            "name": "blocks.3.weight",
+            "roundtrip_equal": true,
+            "schema_index": 8,
+            "symbols": 19440,
+            "unique_symbols": 155
+          },
+          {
+            "encoded_bytes": 72,
+            "encoded_sha256": "adb1b475d7db6866be39f072c594edfe501d5fb7c6479f197efac0d6920dd85a",
+            "encoder_num_bits": 576,
+            "name": "blocks.3.bias",
+            "roundtrip_equal": true,
+            "schema_index": 9,
+            "symbols": 80,
+            "unique_symbols": 63
+          },
+          {
+            "encoded_bytes": 10172,
+            "encoded_sha256": "56c1323e7c0aa1be7ba44794e7fa4b4d9056971de87ecbe5bb5cb7d35d5f0668",
+            "encoder_num_bits": 81376,
+            "name": "blocks.4.weight",
+            "roundtrip_equal": true,
+            "schema_index": 10,
+            "symbols": 12960,
+            "unique_symbols": 206
+          },
+          {
+            "encoded_bytes": 68,
+            "encoded_sha256": "474fa5abb167d4153c0596460733f8eec17ecc706b99819be91908b9634535bf",
+            "encoder_num_bits": 544,
+            "name": "blocks.4.bias",
+            "roundtrip_equal": true,
+            "schema_index": 11,
+            "symbols": 72,
+            "unique_symbols": 60
+          },
+          {
+            "encoded_bytes": 7704,
+            "encoded_sha256": "bf0615fa1dd4df9a75628a64944bec693f125c251fad1be9480b37e8eebe1c6b",
+            "encoder_num_bits": 61632,
+            "name": "blocks.5.weight",
+            "roundtrip_equal": true,
+            "schema_index": 12,
+            "symbols": 11664,
+            "unique_symbols": 92
+          },
+          {
+            "encoded_bytes": 64,
+            "encoded_sha256": "b2024118cc4b9d46469dd1881181f3db7bdcc7dc6f7ed0e8e2499a62b8ad213a",
+            "encoder_num_bits": 512,
+            "name": "blocks.5.bias",
+            "roundtrip_equal": true,
+            "schema_index": 13,
+            "symbols": 72,
+            "unique_symbols": 53
+          },
+          {
+            "encoded_bytes": 728,
+            "encoded_sha256": "b7eeac77f0b738dbc9426c5dd92f05beb42db2fea44ee38a60c41d0ec6b474c2",
+            "encoder_num_bits": 5824,
+            "name": "skips.2.weight",
+            "roundtrip_equal": true,
+            "schema_index": 14,
+            "symbols": 972,
+            "unique_symbols": 77
+          },
+          {
+            "encoded_bytes": 24,
+            "encoded_sha256": "df5b35bee7f1042ae034920ed166d0ad36540be7c8b46ec8e611c6c5bcda598c",
+            "encoder_num_bits": 192,
+            "name": "skips.2.bias",
+            "roundtrip_equal": true,
+            "schema_index": 15,
+            "symbols": 27,
+            "unique_symbols": 23
+          },
+          {
+            "encoded_bytes": 432,
+            "encoded_sha256": "d9a704aa0f6daa924ae0c47452fae20a566a3c080fc75fa9f2f7ddc35c082fc5",
+            "encoder_num_bits": 3456,
+            "name": "skips.3.weight",
+            "roundtrip_equal": true,
+            "schema_index": 16,
+            "symbols": 540,
+            "unique_symbols": 92
+          },
+          {
+            "encoded_bytes": 20,
+            "encoded_sha256": "12c029a5ff3ad56655df398e7ba79a1344f00387face1a7cb6b5d1d18a67c910",
+            "encoder_num_bits": 160,
+            "name": "skips.3.bias",
+            "roundtrip_equal": true,
+            "schema_index": 17,
+            "symbols": 20,
+            "unique_symbols": 20
+          },
+          {
+            "encoded_bytes": 284,
+            "encoded_sha256": "4973ef348ef673552ad8e9af86ec5b4a2e6735d3dad91a8b623203afa883b35c",
+            "encoder_num_bits": 2272,
+            "name": "skips.4.weight",
+            "roundtrip_equal": true,
+            "schema_index": 18,
+            "symbols": 360,
+            "unique_symbols": 73
+          },
+          {
+            "encoded_bytes": 20,
+            "encoded_sha256": "e9eab9be8edadf590f48b10bae6cc05cc5c21315480e95e49c25f6f41d621327",
+            "encoder_num_bits": 160,
+            "name": "skips.4.bias",
+            "roundtrip_equal": true,
+            "schema_index": 19,
+            "symbols": 18,
+            "unique_symbols": 18
+          },
+          {
+            "encoded_bytes": 1028,
+            "encoded_sha256": "5d342429a8b3c511df757f6070391429522d1a4819acb5d5d2df31f9ad106751",
+            "encoder_num_bits": 8224,
+            "name": "refine.0.weight",
+            "roundtrip_equal": true,
+            "schema_index": 20,
+            "symbols": 1458,
+            "unique_symbols": 73
+          },
+          {
+            "encoded_bytes": 8,
+            "encoded_sha256": "0fbf859be2d159469f04e0233a4afe4d960198786a859a754a6f2c978031b92c",
+            "encoder_num_bits": 64,
+            "name": "refine.0.bias",
+            "roundtrip_equal": true,
+            "schema_index": 21,
+            "symbols": 9,
+            "unique_symbols": 9
+          },
+          {
+            "encoded_bytes": 1112,
+            "encoded_sha256": "94b6d41d7103db9cd24190134b4c76e75ed09038a6e698cc2c40f3fcccdf8778",
+            "encoder_num_bits": 8896,
+            "name": "refine.1.weight",
+            "roundtrip_equal": true,
+            "schema_index": 22,
+            "symbols": 1458,
+            "unique_symbols": 110
+          },
+          {
+            "encoded_bytes": 16,
+            "encoded_sha256": "fef20687bbb2933b91c84b8b00412d0de71c2c3a886328355236e159b77f7307",
+            "encoder_num_bits": 128,
+            "name": "refine.1.bias",
+            "roundtrip_equal": true,
+            "schema_index": 23,
+            "symbols": 18,
+            "unique_symbols": 17
+          },
+          {
+            "encoded_bytes": 368,
+            "encoded_sha256": "cf7ee8445d1ab18a1d0cf3565924e6e8d6c5b6d5140052a1559efb3692c95191",
+            "encoder_num_bits": 2944,
+            "name": "rgb_0.weight",
+            "roundtrip_equal": true,
+            "schema_index": 24,
+            "symbols": 486,
+            "unique_symbols": 69
+          },
+          {
+            "encoded_bytes": 4,
+            "encoded_sha256": "7a2bd29360899340e35bcaf06cb0f34d4669470f5cfc2a94694acafdce0874aa",
+            "encoder_num_bits": 32,
+            "name": "rgb_0.bias",
+            "roundtrip_equal": true,
+            "schema_index": 25,
+            "symbols": 3,
+            "unique_symbols": 3
+          },
+          {
+            "encoded_bytes": 380,
+            "encoded_sha256": "357bbdb35605f3ceb9480863f694a155fc2ce9fd1c40a555406d94d25a82d11b",
+            "encoder_num_bits": 3040,
+            "name": "rgb_1.weight",
+            "roundtrip_equal": true,
+            "schema_index": 26,
+            "symbols": 486,
+            "unique_symbols": 76
+          },
+          {
+            "encoded_bytes": 4,
+            "encoded_sha256": "57e5cc21db77004c57539f1e33863c38368e7b991319f3235275f000927e280e",
+            "encoder_num_bits": 32,
+            "name": "rgb_1.bias",
+            "roundtrip_equal": true,
+            "schema_index": 27,
+            "symbols": 3,
+            "unique_symbols": 3
+          }
+        ],
+        "scale_bytes": 56,
+        "score_claim": false,
+        "smoothing": 1,
+        "stream_length_table_bytes": 112,
+        "total_estimated_bytes": 174800,
+        "total_packet_overhead_bytes": 14456,
+        "variant": "constriction_range_per_tensor_smoothed_counts"
+      },
+      "decoder_section_bytes": 162164,
+      "decoder_section_sha256": "836d1876bffd74f77f30e387a3b4cac1dbb25929cc4d348830d36cfa2a6d48a6",
+      "dispatch_blockers": [
+        "probe_only_no_candidate_archive",
+        "no_runtime_decoder_adapter",
+        "decoder_code_bytes_not_charged",
+        "strict_pre_submission_compliance_not_run",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "evidence_label": "CPU/proxy_byte_accounting_no_scorer_no_cuda",
+      "global_symbol_histogram": {
+        "entropy_bits_per_symbol": 6.519407195802,
+        "entropy_floor_bytes_without_headers": 186584,
+        "symbols": 228958,
+        "top_symbols": [
+          {
+            "count": 6488,
+            "signed_i8": -5,
+            "symbol_0_254": 122
+          },
+          {
+            "count": 6286,
+            "signed_i8": -2,
+            "symbol_0_254": 125
+          },
+          {
+            "count": 6043,
+            "signed_i8": 2,
+            "symbol_0_254": 129
+          },
+          {
+            "count": 5744,
+            "signed_i8": -7,
+            "symbol_0_254": 120
+          },
+          {
+            "count": 5528,
+            "signed_i8": 0,
+            "symbol_0_254": 127
+          },
+          {
+            "count": 5242,
+            "signed_i8": 5,
+            "symbol_0_254": 132
+          },
+          {
+            "count": 5233,
+            "signed_i8": 15,
+            "symbol_0_254": 142
+          },
+          {
+            "count": 4827,
+            "signed_i8": 7,
+            "symbol_0_254": 134
+          },
+          {
+            "count": 4760,
+            "signed_i8": -13,
+            "symbol_0_254": 114
+          },
+          {
+            "count": 4705,
+            "signed_i8": 13,
+            "symbol_0_254": 140
+          },
+          {
+            "count": 4646,
+            "signed_i8": 11,
+            "symbol_0_254": 138
+          },
+          {
+            "count": 4565,
+            "signed_i8": 9,
+            "symbol_0_254": 136
+          },
+          {
+            "count": 4554,
+            "signed_i8": 17,
+            "symbol_0_254": 144
+          },
+          {
+            "count": 4330,
+            "signed_i8": 4,
+            "symbol_0_254": 131
+          },
+          {
+            "count": 4251,
+            "signed_i8": 19,
+            "symbol_0_254": 146
+          },
+          {
+            "count": 4200,
+            "signed_i8": -3,
+            "symbol_0_254": 124
+          }
+        ],
+        "unique_symbols": 246
+      },
+      "label": "PR101 hnerv_ft_microcodec",
+      "logical_sections": [
+        {
+          "bytes": 162164,
+          "name": "decoder_blob",
+          "offset": 0,
+          "role": "renderer_decoder_weights",
+          "sha256": "836d1876bffd74f77f30e387a3b4cac1dbb25929cc4d348830d36cfa2a6d48a6"
+        },
+        {
+          "bytes": 15387,
+          "name": "latent_blob",
+          "offset": 162164,
+          "role": "latents",
+          "sha256": "de8a0da594f073efc43849334573ba06438bb37d53f9343ee6367659c0106bbe"
+        },
+        {
+          "bytes": 607,
+          "name": "sidecar_blob",
+          "offset": 177551,
+          "role": "sidecar",
+          "sha256": "6c2946e323bbbc6f8d906ef6c68989e8acbd8d60332c87da8fe8147f1ea7b12f"
+        }
+      ],
+      "member_bytes": 178158,
+      "member_name": "x",
+      "member_sha256": "5f1948f9572e65f71c614d2ff15764ee416522e25cb1b06c8b1299c1306e8aaf",
+      "parser": "pr101",
+      "q_symbol_count": 228958,
+      "reactivation_review": {
+        "brotli_q11_canonical_i8_bytes": 162395,
+        "brotli_q11_source_layout_bytes": 162164,
+        "canonical_i8_delta_vs_reference_bytes": 231,
+        "constriction_total_delta_vs_reference_bytes": 12636,
+        "rationale": "this zero-order pre-coarsening static configuration does not beat the current Brotli reference after charged model headers",
+        "reactivation_criteria": [
+          "reactivate only for runtime-prototype work if actual practical coder total, including model headers, scale bytes, and stream lengths, beats current Brotli reference",
+          "proxy-only wins may justify model design but not archive building or exact-eval dispatch",
+          "rerun after coarsening, context mixing, rANS/FSE table sharing, or another distribution-changing transform before drawing broader conclusions",
+          "any score-affecting path must later pay decoder code bytes, emit a candidate archive, pass strict preflight, and land exact CUDA auth eval"
+        ],
+        "ready_for_exact_eval_dispatch": false,
+        "reference_decoder_bytes": 162164,
+        "score_claim": false,
+        "source_decoder_section_bytes": 162164,
+        "static_proxy_total_delta_vs_reference_bytes": 12587,
+        "verdict": "measured_precoarsening_static_config_retired"
+      },
+      "scale_bytes": 56,
+      "score_claim": false,
+      "source_format": "pr101_split_brotli_fixed_offsets",
+      "source_layout_brotli_q11": {
+        "bytes": 162164,
+        "delta_vs_source_decoder_section_bytes": 0,
+        "matches_source_decoder_section": true,
+        "sha256": "836d1876bffd74f77f30e387a3b4cac1dbb25929cc4d348830d36cfa2a6d48a6"
+      },
+      "source_layout_note": "PR101 source layout is seven concatenated Brotli q11 streams over PR101 storage-order mapped uint8 codes plus fp16 scales.",
+      "source_layout_raw_bytes": 229014,
+      "source_layout_raw_sha256": "83598024bdb4d60463610db23934cdee60c3b6a81158a97e0dd55ea621833fcd",
+      "static_model_proxy": {
+        "codec_family": "AC/rANS/FSE proxy",
+        "evidence_label": "CPU/proxy_no_bitstream",
+        "fixed_packet_header_bytes": 8,
+        "frequency_table_storage": "uint16 counts_plus_one",
+        "limitations": [
+          "proxy_floor_not_an_actual_bitstream",
+          "assumes fixed runtime schema so tensor names and shapes are not charged",
+          "does_not_include_submission_decoder_code_bytes"
+        ],
+        "model_header_bytes": 14280,
+        "n_categories": 255,
+        "payload_floor_bits": 1282255.63562,
+        "payload_floor_byte_alignment": "sum_per_tensor_ceil_bits_div_8",
+        "payload_floor_bytes": 160295,
+        "per_tensor": [
+          {
+            "name": "stem.weight",
+            "schema_index": 0,
+            "smoothed_entropy_bits": 252864.364378,
+            "smoothed_entropy_payload_bytes": 31609,
+            "symbols": 48384,
+            "unique_symbols": 118
+          },
+          {
+            "name": "stem.bias",
+            "schema_index": 1,
+            "smoothed_entropy_bits": 12538.81213,
+            "smoothed_entropy_payload_bytes": 1568,
+            "symbols": 1728,
+            "unique_symbols": 194
+          },
+          {
+            "name": "blocks.0.weight",
+            "schema_index": 2,
+            "smoothed_entropy_bits": 258643.935575,
+            "smoothed_entropy_payload_bytes": 32331,
+            "symbols": 46656,
+            "unique_symbols": 131
+          },
+          {
+            "name": "blocks.0.bias",
+            "schema_index": 3,
+            "smoothed_entropy_bits": 1040.244396,
+            "smoothed_entropy_payload_bytes": 131,
+            "symbols": 144,
+            "unique_symbols": 101
+          },
+          {
+            "name": "blocks.1.weight",
+            "schema_index": 4,
+            "smoothed_entropy_bits": 259637.602652,
+            "smoothed_entropy_payload_bytes": 32455,
+            "symbols": 46656,
+            "unique_symbols": 151
+          },
+          {
+            "name": "blocks.1.bias",
+            "schema_index": 5,
+            "smoothed_entropy_bits": 1032.414321,
+            "smoothed_entropy_payload_bytes": 130,
+            "symbols": 144,
+            "unique_symbols": 96
+          },
+          {
+            "name": "blocks.2.weight",
+            "schema_index": 6,
+            "smoothed_entropy_bits": 203636.908946,
+            "smoothed_entropy_payload_bytes": 25455,
+            "symbols": 34992,
+            "unique_symbols": 172
+          },
+          {
+            "name": "blocks.2.bias",
+            "schema_index": 7,
+            "smoothed_entropy_bits": 786.35453,
+            "smoothed_entropy_payload_bytes": 99,
+            "symbols": 108,
+            "unique_symbols": 88
+          },
+          {
+            "name": "blocks.3.weight",
+            "schema_index": 8,
+            "smoothed_entropy_bits": 112351.004514,
+            "smoothed_entropy_payload_bytes": 14044,
+            "symbols": 19440,
+            "unique_symbols": 155
+          },
+          {
+            "name": "blocks.3.bias",
+            "schema_index": 9,
+            "smoothed_entropy_bits": 568.512058,
+            "smoothed_entropy_payload_bytes": 72,
+            "symbols": 80,
+            "unique_symbols": 63
+          },
+          {
+            "name": "blocks.4.weight",
+            "schema_index": 10,
+            "smoothed_entropy_bits": 81349.755124,
+            "smoothed_entropy_payload_bytes": 10169,
+            "symbols": 12960,
+            "unique_symbols": 206
+          },
+          {
+            "name": "blocks.4.bias",
+            "schema_index": 11,
+            "smoothed_entropy_bits": 514.067171,
+            "smoothed_entropy_payload_bytes": 65,
+            "symbols": 72,
+            "unique_symbols": 60
+          },
+          {
+            "name": "blocks.5.weight",
+            "schema_index": 12,
+            "smoothed_entropy_bits": 61598.141452,
+            "smoothed_entropy_payload_bytes": 7700,
+            "symbols": 11664,
+            "unique_symbols": 92
+          },
+          {
+            "name": "blocks.5.bias",
+            "schema_index": 13,
+            "smoothed_entropy_bits": 502.981972,
+            "smoothed_entropy_payload_bytes": 63,
+            "symbols": 72,
+            "unique_symbols": 53
+          },
+          {
+            "name": "skips.2.weight",
+            "schema_index": 14,
+            "smoothed_entropy_bits": 5797.524099,
+            "smoothed_entropy_payload_bytes": 725,
+            "symbols": 972,
+            "unique_symbols": 77
+          },
+          {
+            "name": "skips.2.bias",
+            "schema_index": 15,
+            "smoothed_entropy_bits": 187.428037,
+            "smoothed_entropy_payload_bytes": 24,
+            "symbols": 27,
+            "unique_symbols": 23
+          },
+          {
+            "name": "skips.3.weight",
+            "schema_index": 16,
+            "smoothed_entropy_bits": 3428.388893,
+            "smoothed_entropy_payload_bytes": 429,
+            "symbols": 540,
+            "unique_symbols": 92
+          },
+          {
+            "name": "skips.3.bias",
+            "schema_index": 17,
+            "smoothed_entropy_bits": 142.065756,
+            "smoothed_entropy_payload_bytes": 18,
+            "symbols": 20,
+            "unique_symbols": 20
+          },
+          {
+            "name": "skips.4.weight",
+            "schema_index": 18,
+            "smoothed_entropy_bits": 2256.510493,
+            "smoothed_entropy_payload_bytes": 283,
+            "symbols": 360,
+            "unique_symbols": 73
+          },
+          {
+            "name": "skips.4.bias",
+            "schema_index": 19,
+            "smoothed_entropy_bits": 127.669629,
+            "smoothed_entropy_payload_bytes": 16,
+            "symbols": 18,
+            "unique_symbols": 18
+          },
+          {
+            "name": "refine.0.weight",
+            "schema_index": 20,
+            "smoothed_entropy_bits": 8212.715701,
+            "smoothed_entropy_payload_bytes": 1027,
+            "symbols": 1458,
+            "unique_symbols": 73
+          },
+          {
+            "name": "refine.0.bias",
+            "schema_index": 21,
+            "smoothed_entropy_bits": 63.399547,
+            "smoothed_entropy_payload_bytes": 8,
+            "symbols": 9,
+            "unique_symbols": 9
+          },
+          {
+            "name": "refine.1.weight",
+            "schema_index": 22,
+            "smoothed_entropy_bits": 8872.416882,
+            "smoothed_entropy_payload_bytes": 1110,
+            "symbols": 1458,
+            "unique_symbols": 110
+          },
+          {
+            "name": "refine.1.bias",
+            "schema_index": 23,
+            "smoothed_entropy_bits": 126.499704,
+            "smoothed_entropy_payload_bytes": 16,
+            "symbols": 18,
+            "unique_symbols": 17
+          },
+          {
+            "name": "rgb_0.weight",
+            "schema_index": 24,
+            "smoothed_entropy_bits": 2918.30032,
+            "smoothed_entropy_payload_bytes": 365,
+            "symbols": 486,
+            "unique_symbols": 69
+          },
+          {
+            "name": "rgb_0.bias",
+            "schema_index": 25,
+            "smoothed_entropy_bits": 21.033682,
+            "smoothed_entropy_payload_bytes": 3,
+            "symbols": 3,
+            "unique_symbols": 3
+          },
+          {
+            "name": "rgb_1.weight",
+            "schema_index": 26,
+            "smoothed_entropy_bits": 3015.549978,
+            "smoothed_entropy_payload_bytes": 377,
+            "symbols": 486,
+            "unique_symbols": 76
+          },
+          {
+            "name": "rgb_1.bias",
+            "schema_index": 27,
+            "smoothed_entropy_bits": 21.033682,
+            "smoothed_entropy_payload_bytes": 3,
+            "symbols": 3,
+            "unique_symbols": 3
+          }
+        ],
+        "scale_bytes": 56,
+        "score_claim": false,
+        "smoothing": 1,
+        "stream_length_table_bytes": 112,
+        "total_estimated_bytes": 174751,
+        "total_packet_overhead_bytes": 14456,
+        "variant": "static_ac_rans_fse_proxy_per_tensor_smoothed_counts"
+      },
+      "zip_overhead_bytes": 100
+    },
+    {
+      "archive_bytes": 186239,
+      "archive_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+      "archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+      "canonical_precoarsening_i8_stream": {
+        "brotli_q11_bytes": 170226,
+        "brotli_q11_sha256": "749e2c9efa4f56ffa74b22c21fa9d0f6d8402c3bd918e6d65f45c0425f21abd2",
+        "bytes": 229070,
+        "description": "fixed-schema canonical stream: signed int8 weight codes shifted to 0..254 per tensor in schema order, followed by source scale bytes",
+        "sha256": "d56b298a8812da526aa0756a657d015582bc0cf2b9e14118a092a68a1ea1e49c"
+      },
+      "constriction_range_packet": {
+        "available": true,
+        "codec_family": "constriction range coder",
+        "constriction_version": "0.4.2",
+        "elapsed_seconds": 0.006167,
+        "encoded_payload_bytes": 168020,
+        "encoder_num_bits_total": 1344160,
+        "evidence_label": "CPU/practical_actual_bitstream_no_runtime_adapter",
+        "fixed_packet_header_bytes": 8,
+        "frequency_table_storage": "uint16 counts_plus_one",
+        "limitations": [
+          "actual_constriction_payload_but_no_submission_runtime_decoder",
+          "separate_tensor_streams_require_charged_length_table",
+          "assumes fixed runtime schema so tensor names and shapes are not charged",
+          "does_not_include_submission_decoder_code_bytes"
+        ],
+        "model_header_bytes": 14280,
+        "n_categories": 255,
+        "per_tensor": [
+          {
+            "encoded_bytes": 31612,
+            "encoded_sha256": "d44470814d2b4f413b799b3683ece676b892dfca4bc6daf6175285202a102860",
+            "encoder_num_bits": 252896,
+            "name": "stem.weight",
+            "roundtrip_equal": true,
+            "schema_index": 0,
+            "symbols": 48384,
+            "unique_symbols": 119
+          },
+          {
+            "encoded_bytes": 1568,
+            "encoded_sha256": "b44518f37f29fc7ff72e47b4f865e4a93b08339eaa2f4d1d8cb51c5a3a8118d6",
+            "encoder_num_bits": 12544,
+            "name": "stem.bias",
+            "roundtrip_equal": true,
+            "schema_index": 1,
+            "symbols": 1728,
+            "unique_symbols": 194
+          },
+          {
+            "encoded_bytes": 34008,
+            "encoded_sha256": "e4306ba3b652f8e0f8603bb4902fc0965984e0b017901a7187a9760b173c7477",
+            "encoder_num_bits": 272064,
+            "name": "blocks.0.weight",
+            "roundtrip_equal": true,
+            "schema_index": 2,
+            "symbols": 46656,
+            "unique_symbols": 194
+          },
+          {
+            "encoded_bytes": 132,
+            "encoded_sha256": "889d0e93cebb9ac570a589bd2c20aac6d8a7d6e9cb7bea62762d05c026b7b4fa",
+            "encoder_num_bits": 1056,
+            "name": "blocks.0.bias",
+            "roundtrip_equal": true,
+            "schema_index": 3,
+            "symbols": 144,
+            "unique_symbols": 101
+          },
+          {
+            "encoded_bytes": 34524,
+            "encoded_sha256": "3e2b2ba1ad90a97ab1dfefde763c07e9f4837465acbc424fe518597f84d07d7d",
+            "encoder_num_bits": 276192,
+            "name": "blocks.1.weight",
+            "roundtrip_equal": true,
+            "schema_index": 4,
+            "symbols": 46656,
+            "unique_symbols": 206
+          },
+          {
+            "encoded_bytes": 132,
+            "encoded_sha256": "0059363eb1b76e47d735d3b647de9f2f382a667b1e3043e8dd1956cd4ecb6626",
+            "encoder_num_bits": 1056,
+            "name": "blocks.1.bias",
+            "roundtrip_equal": true,
+            "schema_index": 5,
+            "symbols": 144,
+            "unique_symbols": 96
+          },
+          {
+            "encoded_bytes": 27648,
+            "encoded_sha256": "ae220253538727dfff8afec4e707295652727305b17bf6f8725d8e3f3c1bdda2",
+            "encoder_num_bits": 221184,
+            "name": "blocks.2.weight",
+            "roundtrip_equal": true,
+            "schema_index": 6,
+            "symbols": 34992,
+            "unique_symbols": 218
+          },
+          {
+            "encoded_bytes": 100,
+            "encoded_sha256": "672b1573940953537822e89ee850c75de3b2a24811139aa2069c213de1d4e8ce",
+            "encoder_num_bits": 800,
+            "name": "blocks.2.bias",
+            "roundtrip_equal": true,
+            "schema_index": 7,
+            "symbols": 108,
+            "unique_symbols": 88
+          },
+          {
+            "encoded_bytes": 15060,
+            "encoded_sha256": "9fbc74c7354e751244acba877fb78b1c9cffe86ba377e35a150619e4288b0199",
+            "encoder_num_bits": 120480,
+            "name": "blocks.3.weight",
+            "roundtrip_equal": true,
+            "schema_index": 8,
+            "symbols": 19440,
+            "unique_symbols": 192
+          },
+          {
+            "encoded_bytes": 72,
+            "encoded_sha256": "adb1b475d7db6866be39f072c594edfe501d5fb7c6479f197efac0d6920dd85a",
+            "encoder_num_bits": 576,
+            "name": "blocks.3.bias",
+            "roundtrip_equal": true,
+            "schema_index": 9,
+            "symbols": 80,
+            "unique_symbols": 63
+          },
+          {
+            "encoded_bytes": 10796,
+            "encoded_sha256": "d9a5377e2afa3b3a4a74a753a4635c756a9eab8ad81b23710d49701b55f756d0",
+            "encoder_num_bits": 86368,
+            "name": "blocks.4.weight",
+            "roundtrip_equal": true,
+            "schema_index": 10,
+            "symbols": 12960,
+            "unique_symbols": 218
+          },
+          {
+            "encoded_bytes": 68,
+            "encoded_sha256": "474fa5abb167d4153c0596460733f8eec17ecc706b99819be91908b9634535bf",
+            "encoder_num_bits": 544,
+            "name": "blocks.4.bias",
+            "roundtrip_equal": true,
+            "schema_index": 11,
+            "symbols": 72,
+            "unique_symbols": 60
+          },
+          {
+            "encoded_bytes": 7712,
+            "encoded_sha256": "4e543202ba12f9dbd1375511c6a67f3d5ccbd8321003a947aaf8d57e07245d59",
+            "encoder_num_bits": 61696,
+            "name": "blocks.5.weight",
+            "roundtrip_equal": true,
+            "schema_index": 12,
+            "symbols": 11664,
+            "unique_symbols": 97
+          },
+          {
+            "encoded_bytes": 64,
+            "encoded_sha256": "b2024118cc4b9d46469dd1881181f3db7bdcc7dc6f7ed0e8e2499a62b8ad213a",
+            "encoder_num_bits": 512,
+            "name": "blocks.5.bias",
+            "roundtrip_equal": true,
+            "schema_index": 13,
+            "symbols": 72,
+            "unique_symbols": 53
+          },
+          {
+            "encoded_bytes": 744,
+            "encoded_sha256": "a971cff942f3d2c3e9d2047e619162da9736890a15a2fa3d602b4fbec693cde0",
+            "encoder_num_bits": 5952,
+            "name": "skips.2.weight",
+            "roundtrip_equal": true,
+            "schema_index": 14,
+            "symbols": 972,
+            "unique_symbols": 101
+          },
+          {
+            "encoded_bytes": 24,
+            "encoded_sha256": "df5b35bee7f1042ae034920ed166d0ad36540be7c8b46ec8e611c6c5bcda598c",
+            "encoder_num_bits": 192,
+            "name": "skips.2.bias",
+            "roundtrip_equal": true,
+            "schema_index": 15,
+            "symbols": 27,
+            "unique_symbols": 23
+          },
+          {
+            "encoded_bytes": 436,
+            "encoded_sha256": "2e0799d51fd5d7e50de7cbeaf1ba2d6bde91b0ee2b423929df93902d4a4988b1",
+            "encoder_num_bits": 3488,
+            "name": "skips.3.weight",
+            "roundtrip_equal": true,
+            "schema_index": 16,
+            "symbols": 540,
+            "unique_symbols": 107
+          },
+          {
+            "encoded_bytes": 20,
+            "encoded_sha256": "12c029a5ff3ad56655df398e7ba79a1344f00387face1a7cb6b5d1d18a67c910",
+            "encoder_num_bits": 160,
+            "name": "skips.3.bias",
+            "roundtrip_equal": true,
+            "schema_index": 17,
+            "symbols": 20,
+            "unique_symbols": 20
+          },
+          {
+            "encoded_bytes": 288,
+            "encoded_sha256": "53288d220c719bd608bbf54c7aa671f91299220f163634df3826c4523f656a8c",
+            "encoder_num_bits": 2304,
+            "name": "skips.4.weight",
+            "roundtrip_equal": true,
+            "schema_index": 18,
+            "symbols": 360,
+            "unique_symbols": 81
+          },
+          {
+            "encoded_bytes": 20,
+            "encoded_sha256": "e9eab9be8edadf590f48b10bae6cc05cc5c21315480e95e49c25f6f41d621327",
+            "encoder_num_bits": 160,
+            "name": "skips.4.bias",
+            "roundtrip_equal": true,
+            "schema_index": 19,
+            "symbols": 18,
+            "unique_symbols": 18
+          },
+          {
+            "encoded_bytes": 1028,
+            "encoded_sha256": "5d342429a8b3c511df757f6070391429522d1a4819acb5d5d2df31f9ad106751",
+            "encoder_num_bits": 8224,
+            "name": "refine.0.weight",
+            "roundtrip_equal": true,
+            "schema_index": 20,
+            "symbols": 1458,
+            "unique_symbols": 73
+          },
+          {
+            "encoded_bytes": 8,
+            "encoded_sha256": "0fbf859be2d159469f04e0233a4afe4d960198786a859a754a6f2c978031b92c",
+            "encoder_num_bits": 64,
+            "name": "refine.0.bias",
+            "roundtrip_equal": true,
+            "schema_index": 21,
+            "symbols": 9,
+            "unique_symbols": 9
+          },
+          {
+            "encoded_bytes": 1184,
+            "encoded_sha256": "7702364054d0ffcc250ea2e9e1c9aa95a29566e24cfb25ec78db8591ac688a1a",
+            "encoder_num_bits": 9472,
+            "name": "refine.1.weight",
+            "roundtrip_equal": true,
+            "schema_index": 22,
+            "symbols": 1458,
+            "unique_symbols": 149
+          },
+          {
+            "encoded_bytes": 16,
+            "encoded_sha256": "fef20687bbb2933b91c84b8b00412d0de71c2c3a886328355236e159b77f7307",
+            "encoder_num_bits": 128,
+            "name": "refine.1.bias",
+            "roundtrip_equal": true,
+            "schema_index": 23,
+            "symbols": 18,
+            "unique_symbols": 17
+          },
+          {
+            "encoded_bytes": 368,
+            "encoded_sha256": "cf7ee8445d1ab18a1d0cf3565924e6e8d6c5b6d5140052a1559efb3692c95191",
+            "encoder_num_bits": 2944,
+            "name": "rgb_0.weight",
+            "roundtrip_equal": true,
+            "schema_index": 24,
+            "symbols": 486,
+            "unique_symbols": 69
+          },
+          {
+            "encoded_bytes": 4,
+            "encoded_sha256": "7a2bd29360899340e35bcaf06cb0f34d4669470f5cfc2a94694acafdce0874aa",
+            "encoder_num_bits": 32,
+            "name": "rgb_0.bias",
+            "roundtrip_equal": true,
+            "schema_index": 25,
+            "symbols": 3,
+            "unique_symbols": 3
+          },
+          {
+            "encoded_bytes": 380,
+            "encoded_sha256": "f9c662e27d56f8fa099f9ff292338253549a947f3e64a59365f784f3690aeeb7",
+            "encoder_num_bits": 3040,
+            "name": "rgb_1.weight",
+            "roundtrip_equal": true,
+            "schema_index": 26,
+            "symbols": 486,
+            "unique_symbols": 81
+          },
+          {
+            "encoded_bytes": 4,
+            "encoded_sha256": "57e5cc21db77004c57539f1e33863c38368e7b991319f3235275f000927e280e",
+            "encoder_num_bits": 32,
+            "name": "rgb_1.bias",
+            "roundtrip_equal": true,
+            "schema_index": 27,
+            "symbols": 3,
+            "unique_symbols": 3
+          }
+        ],
+        "scale_bytes": 112,
+        "score_claim": false,
+        "smoothing": 1,
+        "stream_length_table_bytes": 112,
+        "total_estimated_bytes": 182532,
+        "total_packet_overhead_bytes": 14512,
+        "variant": "constriction_range_per_tensor_smoothed_counts"
+      },
+      "decoder_section_bytes": 170278,
+      "decoder_section_sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004",
+      "dispatch_blockers": [
+        "probe_only_no_candidate_archive",
+        "no_runtime_decoder_adapter",
+        "decoder_code_bytes_not_charged",
+        "strict_pre_submission_compliance_not_run",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "evidence_label": "CPU/proxy_byte_accounting_no_scorer_no_cuda",
+      "global_symbol_histogram": {
+        "entropy_bits_per_symbol": 6.562070351182,
+        "entropy_floor_bytes_without_headers": 187805,
+        "symbols": 228958,
+        "top_symbols": [
+          {
+            "count": 6223,
+            "signed_i8": -5,
+            "symbol_0_254": 122
+          },
+          {
+            "count": 6115,
+            "signed_i8": -2,
+            "symbol_0_254": 125
+          },
+          {
+            "count": 5794,
+            "signed_i8": 2,
+            "symbol_0_254": 129
+          },
+          {
+            "count": 5642,
+            "signed_i8": -7,
+            "symbol_0_254": 120
+          },
+          {
+            "count": 5350,
+            "signed_i8": 0,
+            "symbol_0_254": 127
+          },
+          {
+            "count": 4898,
+            "signed_i8": 15,
+            "symbol_0_254": 142
+          },
+          {
+            "count": 4897,
+            "signed_i8": 5,
+            "symbol_0_254": 132
+          },
+          {
+            "count": 4851,
+            "signed_i8": -13,
+            "symbol_0_254": 114
+          },
+          {
+            "count": 4515,
+            "signed_i8": 7,
+            "symbol_0_254": 134
+          },
+          {
+            "count": 4451,
+            "signed_i8": 4,
+            "symbol_0_254": 131
+          },
+          {
+            "count": 4411,
+            "signed_i8": 13,
+            "symbol_0_254": 140
+          },
+          {
+            "count": 4313,
+            "signed_i8": 11,
+            "symbol_0_254": 138
+          },
+          {
+            "count": 4307,
+            "signed_i8": 17,
+            "symbol_0_254": 144
+          },
+          {
+            "count": 4281,
+            "signed_i8": 9,
+            "symbol_0_254": 136
+          },
+          {
+            "count": 4206,
+            "signed_i8": -3,
+            "symbol_0_254": 124
+          },
+          {
+            "count": 4024,
+            "signed_i8": -11,
+            "symbol_0_254": 116
+          }
+        ],
+        "unique_symbols": 247
+      },
+      "label": "PR106 belt_and_suspenders",
+      "logical_sections": [
+        {
+          "bytes": 4,
+          "name": "ff_header",
+          "offset": 0,
+          "role": "internal_length_header",
+          "sha256": "7939f08db7d18dd4176e8e11b1232a9be6b2371db7a4e63c1c0871fb520148b6"
+        },
+        {
+          "bytes": 170278,
+          "name": "decoder_packed_brotli",
+          "offset": 4,
+          "role": "renderer_decoder_weights",
+          "sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004"
+        },
+        {
+          "bytes": 15849,
+          "name": "latents_and_sidecar_brotli",
+          "offset": 170282,
+          "role": "latents_and_sidecar",
+          "sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32"
+        }
+      ],
+      "member_bytes": 186131,
+      "member_name": "0.bin",
+      "member_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+      "parser": "pr106",
+      "q_symbol_count": 228958,
+      "reactivation_review": {
+        "brotli_q11_canonical_i8_bytes": 170226,
+        "brotli_q11_source_layout_bytes": 170278,
+        "canonical_i8_delta_vs_reference_bytes": -52,
+        "constriction_total_delta_vs_reference_bytes": 12254,
+        "rationale": "this zero-order pre-coarsening static configuration does not beat the current Brotli reference after charged model headers",
+        "reactivation_criteria": [
+          "reactivate only for runtime-prototype work if actual practical coder total, including model headers, scale bytes, and stream lengths, beats current Brotli reference",
+          "proxy-only wins may justify model design but not archive building or exact-eval dispatch",
+          "rerun after coarsening, context mixing, rANS/FSE table sharing, or another distribution-changing transform before drawing broader conclusions",
+          "any score-affecting path must later pay decoder code bytes, emit a candidate archive, pass strict preflight, and land exact CUDA auth eval"
+        ],
+        "ready_for_exact_eval_dispatch": false,
+        "reference_decoder_bytes": 170278,
+        "score_claim": false,
+        "source_decoder_section_bytes": 170278,
+        "static_proxy_total_delta_vs_reference_bytes": 12210,
+        "verdict": "measured_precoarsening_static_config_retired"
+      },
+      "scale_bytes": 112,
+      "score_claim": false,
+      "source_format": "pr106_ff_packed_hnerv",
+      "source_layout_brotli_q11": {
+        "bytes": 170278,
+        "delta_vs_source_decoder_section_bytes": 0,
+        "matches_source_decoder_section": true,
+        "sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004"
+      },
+      "source_layout_note": "PR106 source layout is one Brotli q11 stream over packed fixed-schema zigzag uint8 codes followed by fp32 scales.",
+      "source_layout_raw_bytes": 229070,
+      "source_layout_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+      "static_model_proxy": {
+        "codec_family": "AC/rANS/FSE proxy",
+        "evidence_label": "CPU/proxy_no_bitstream",
+        "fixed_packet_header_bytes": 8,
+        "frequency_table_storage": "uint16 counts_plus_one",
+        "limitations": [
+          "proxy_floor_not_an_actual_bitstream",
+          "assumes fixed runtime schema so tensor names and shapes are not charged",
+          "does_not_include_submission_decoder_code_bytes"
+        ],
+        "model_header_bytes": 14280,
+        "n_categories": 255,
+        "payload_floor_bits": 1343694.076429,
+        "payload_floor_byte_alignment": "sum_per_tensor_ceil_bits_div_8",
+        "payload_floor_bytes": 167976,
+        "per_tensor": [
+          {
+            "name": "stem.weight",
+            "schema_index": 0,
+            "smoothed_entropy_bits": 252876.266249,
+            "smoothed_entropy_payload_bytes": 31610,
+            "symbols": 48384,
+            "unique_symbols": 119
+          },
+          {
+            "name": "stem.bias",
+            "schema_index": 1,
+            "smoothed_entropy_bits": 12538.81213,
+            "smoothed_entropy_payload_bytes": 1568,
+            "symbols": 1728,
+            "unique_symbols": 194
+          },
+          {
+            "name": "blocks.0.weight",
+            "schema_index": 2,
+            "smoothed_entropy_bits": 272043.270134,
+            "smoothed_entropy_payload_bytes": 34006,
+            "symbols": 46656,
+            "unique_symbols": 194
+          },
+          {
+            "name": "blocks.0.bias",
+            "schema_index": 3,
+            "smoothed_entropy_bits": 1040.244396,
+            "smoothed_entropy_payload_bytes": 131,
+            "symbols": 144,
+            "unique_symbols": 101
+          },
+          {
+            "name": "blocks.1.weight",
+            "schema_index": 4,
+            "smoothed_entropy_bits": 276167.538588,
+            "smoothed_entropy_payload_bytes": 34521,
+            "symbols": 46656,
+            "unique_symbols": 206
+          },
+          {
+            "name": "blocks.1.bias",
+            "schema_index": 5,
+            "smoothed_entropy_bits": 1032.414321,
+            "smoothed_entropy_payload_bytes": 130,
+            "symbols": 144,
+            "unique_symbols": 96
+          },
+          {
+            "name": "blocks.2.weight",
+            "schema_index": 6,
+            "smoothed_entropy_bits": 221162.622045,
+            "smoothed_entropy_payload_bytes": 27646,
+            "symbols": 34992,
+            "unique_symbols": 218
+          },
+          {
+            "name": "blocks.2.bias",
+            "schema_index": 7,
+            "smoothed_entropy_bits": 786.35453,
+            "smoothed_entropy_payload_bytes": 99,
+            "symbols": 108,
+            "unique_symbols": 88
+          },
+          {
+            "name": "blocks.3.weight",
+            "schema_index": 8,
+            "smoothed_entropy_bits": 120450.991098,
+            "smoothed_entropy_payload_bytes": 15057,
+            "symbols": 19440,
+            "unique_symbols": 192
+          },
+          {
+            "name": "blocks.3.bias",
+            "schema_index": 9,
+            "smoothed_entropy_bits": 568.512058,
+            "smoothed_entropy_payload_bytes": 72,
+            "symbols": 80,
+            "unique_symbols": 63
+          },
+          {
+            "name": "blocks.4.weight",
+            "schema_index": 10,
+            "smoothed_entropy_bits": 86354.575617,
+            "smoothed_entropy_payload_bytes": 10795,
+            "symbols": 12960,
+            "unique_symbols": 218
+          },
+          {
+            "name": "blocks.4.bias",
+            "schema_index": 11,
+            "smoothed_entropy_bits": 514.067171,
+            "smoothed_entropy_payload_bytes": 65,
+            "symbols": 72,
+            "unique_symbols": 60
+          },
+          {
+            "name": "blocks.5.weight",
+            "schema_index": 12,
+            "smoothed_entropy_bits": 61662.661188,
+            "smoothed_entropy_payload_bytes": 7708,
+            "symbols": 11664,
+            "unique_symbols": 97
+          },
+          {
+            "name": "blocks.5.bias",
+            "schema_index": 13,
+            "smoothed_entropy_bits": 502.981972,
+            "smoothed_entropy_payload_bytes": 63,
+            "symbols": 72,
+            "unique_symbols": 53
+          },
+          {
+            "name": "skips.2.weight",
+            "schema_index": 14,
+            "smoothed_entropy_bits": 5929.116672,
+            "smoothed_entropy_payload_bytes": 742,
+            "symbols": 972,
+            "unique_symbols": 101
+          },
+          {
+            "name": "skips.2.bias",
+            "schema_index": 15,
+            "smoothed_entropy_bits": 187.428037,
+            "smoothed_entropy_payload_bytes": 24,
+            "symbols": 27,
+            "unique_symbols": 23
+          },
+          {
+            "name": "skips.3.weight",
+            "schema_index": 16,
+            "smoothed_entropy_bits": 3481.54155,
+            "smoothed_entropy_payload_bytes": 436,
+            "symbols": 540,
+            "unique_symbols": 107
+          },
+          {
+            "name": "skips.3.bias",
+            "schema_index": 17,
+            "smoothed_entropy_bits": 142.065756,
+            "smoothed_entropy_payload_bytes": 18,
+            "symbols": 20,
+            "unique_symbols": 20
+          },
+          {
+            "name": "skips.4.weight",
+            "schema_index": 18,
+            "smoothed_entropy_bits": 2281.281437,
+            "smoothed_entropy_payload_bytes": 286,
+            "symbols": 360,
+            "unique_symbols": 81
+          },
+          {
+            "name": "skips.4.bias",
+            "schema_index": 19,
+            "smoothed_entropy_bits": 127.669629,
+            "smoothed_entropy_payload_bytes": 16,
+            "symbols": 18,
+            "unique_symbols": 18
+          },
+          {
+            "name": "refine.0.weight",
+            "schema_index": 20,
+            "smoothed_entropy_bits": 8212.715701,
+            "smoothed_entropy_payload_bytes": 1027,
+            "symbols": 1458,
+            "unique_symbols": 73
+          },
+          {
+            "name": "refine.0.bias",
+            "schema_index": 21,
+            "smoothed_entropy_bits": 63.399547,
+            "smoothed_entropy_payload_bytes": 8,
+            "symbols": 9,
+            "unique_symbols": 9
+          },
+          {
+            "name": "refine.1.weight",
+            "schema_index": 22,
+            "smoothed_entropy_bits": 9444.977343,
+            "smoothed_entropy_payload_bytes": 1181,
+            "symbols": 1458,
+            "unique_symbols": 149
+          },
+          {
+            "name": "refine.1.bias",
+            "schema_index": 23,
+            "smoothed_entropy_bits": 126.499704,
+            "smoothed_entropy_payload_bytes": 16,
+            "symbols": 18,
+            "unique_symbols": 17
+          },
+          {
+            "name": "rgb_0.weight",
+            "schema_index": 24,
+            "smoothed_entropy_bits": 2918.30032,
+            "smoothed_entropy_payload_bytes": 365,
+            "symbols": 486,
+            "unique_symbols": 69
+          },
+          {
+            "name": "rgb_0.bias",
+            "schema_index": 25,
+            "smoothed_entropy_bits": 21.033682,
+            "smoothed_entropy_payload_bytes": 3,
+            "symbols": 3,
+            "unique_symbols": 3
+          },
+          {
+            "name": "rgb_1.weight",
+            "schema_index": 26,
+            "smoothed_entropy_bits": 3035.701875,
+            "smoothed_entropy_payload_bytes": 380,
+            "symbols": 486,
+            "unique_symbols": 81
+          },
+          {
+            "name": "rgb_1.bias",
+            "schema_index": 27,
+            "smoothed_entropy_bits": 21.033682,
+            "smoothed_entropy_payload_bytes": 3,
+            "symbols": 3,
+            "unique_symbols": 3
+          }
+        ],
+        "scale_bytes": 112,
+        "score_claim": false,
+        "smoothing": 1,
+        "stream_length_table_bytes": 112,
+        "total_estimated_bytes": 182488,
+        "total_packet_overhead_bytes": 14512,
+        "variant": "static_ac_rans_fse_proxy_per_tensor_smoothed_counts"
+      },
+      "zip_overhead_bytes": 108
+    }
+  ],
+  "tool": "tools/probe_precoarsening_entropy_coders.py"
+}
