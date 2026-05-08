@@ -18,6 +18,38 @@ NON_PROMOTABLE_FIELDS = {
 }
 
 
+def _valid_device_axis_custody() -> dict[str, object]:
+    return {
+        "score_axis": "diagnostic_loader_drift",
+        "claimed_score_axes": [],
+        "score_claim_axis": "none",
+        "contest_cpu_axis_claim": False,
+        "contest_cuda_axis_claim": False,
+        "contest_cuda_claim": False,
+        "contest_cpu_claim": False,
+        "macos_cpu_advisory_claim": False,
+        "mps_claim": False,
+        "promotion_eligible": False,
+        "score_claim_valid": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+    }
+
+
+def _valid_custody_labels() -> dict[str, object]:
+    return {
+        "artifact_kind": "diagnostic_loader_forward_drift_probe",
+        "score_path": "not_run",
+        "score_claim_axis": "none",
+        "contest_cpu_axis_claim": False,
+        "contest_cuda_axis_claim": False,
+        "dispatch_attempted": False,
+        "dispatch_claim_required_before_remote_run": True,
+        "diagnostic_non_promotable": True,
+    }
+
+
 def _load_all_lanes_module() -> Any:
     spec = importlib.util.spec_from_file_location("all_lanes_eval_loader_drift_test", ALL_LANES)
     assert spec is not None
@@ -69,6 +101,8 @@ def _probe_contract_fields() -> dict[str, object]:
     return {
         **NON_PROMOTABLE_FIELDS,
         "score_axis": "diagnostic_loader_drift",
+        "device_axis_custody": _valid_device_axis_custody(),
+        "custody_labels": _valid_custody_labels(),
         "intended_cells": _valid_intended_cells(),
         "cell_discriminator_plan": _valid_cell_discriminator_plan(),
         "local_prerequisite_summary": {
@@ -369,18 +403,37 @@ def test_eval_loader_drift_gate_rejects_device_axis_claims(monkeypatch) -> None:
         unavailable_codes=["cuda_available"],
         unavailable_reason="cuda_available=false",
     )
-    payload["device_axis_custody"] = {
-        "contest_cuda_claim": True,
-        "contest_cpu_claim": False,
-        "macos_cpu_advisory_claim": False,
-        "promotion_eligible": False,
-        "score_claim_valid": False,
-        "rank_or_kill_eligible": False,
-        "ready_for_exact_eval_dispatch": False,
-    }
+    payload["device_axis_custody"] = _valid_device_axis_custody()
+    payload["device_axis_custody"]["contest_cuda_claim"] = True
     _stub_probe_run(module, monkeypatch, payload, returncode=2)
 
     passed, output = module._run_eval_loader_drift_probe_gate()
 
     assert passed is False
     assert "contest_cuda_claim=false" in output
+
+
+def test_eval_loader_drift_gate_rejects_axis_alias_claims(monkeypatch) -> None:
+    module = _load_all_lanes_module()
+    payload = _probe_payload(
+        unavailable_class=module.EVAL_LOADER_DRIFT_MISSING_PREREQ_CLASS,
+        unavailable_codes=["cuda_available"],
+        unavailable_reason="cuda_available=false",
+    )
+    device_axis_custody = payload["device_axis_custody"]
+    assert isinstance(device_axis_custody, dict)
+    device_axis_custody["contest_cuda_axis_claim"] = True
+    device_axis_custody["claimed_score_axes"] = ["contest_cuda"]
+    device_axis_custody["mps_claim"] = True
+    custody_labels = payload["custody_labels"]
+    assert isinstance(custody_labels, dict)
+    custody_labels["contest_cuda_axis_claim"] = True
+    _stub_probe_run(module, monkeypatch, payload, returncode=2)
+
+    passed, output = module._run_eval_loader_drift_probe_gate()
+
+    assert passed is False
+    assert (
+        "contest_cuda_axis_claim=false" in output
+        or "claimed_score_axes must stay empty" in output
+    )

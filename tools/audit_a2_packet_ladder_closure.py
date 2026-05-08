@@ -21,11 +21,26 @@ except ModuleNotFoundError:  # pragma: no cover
 REPO = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO)
 
-FALSE_AUTHORITY_FIELDS = {
+REQUIRED_FALSE_AUTHORITY_FIELDS = {
     "score_claim": False,
     "promotion_eligible": False,
     "rank_or_kill_eligible": False,
     "ready_for_exact_eval_dispatch": False,
+}
+OPTIONAL_FALSE_AUTHORITY_FIELDS = {
+    "score_claim_valid": False,
+    "dispatch_attempted": False,
+}
+FALSE_AUTHORITY_FIELDS = {
+    **REQUIRED_FALSE_AUTHORITY_FIELDS,
+    **OPTIONAL_FALSE_AUTHORITY_FIELDS,
+}
+PROMOTABLE_EVIDENCE_GRADES = {
+    "A",
+    "A++",
+    "contest-CPU-1to1",
+    "contest-CUDA",
+    "contest-CPU",
 }
 
 PACKET_LADDER_SCHEMAS = {
@@ -204,11 +219,24 @@ def _sensitivity_required_blockers(payload: dict[str, Any]) -> set[str]:
 
 
 def _check_authority_false(payload: dict[str, Any], rel: str, violations: list[str]) -> None:
-    for field, expected in FALSE_AUTHORITY_FIELDS.items():
+    for field, expected in REQUIRED_FALSE_AUTHORITY_FIELDS.items():
         if payload.get(field) is not expected:
             violations.append(
                 f"{rel}: {field} must be {expected!r} for A2 packet/probe artifacts "
                 "until exact eval and blocker review close"
+            )
+    for field, expected in OPTIONAL_FALSE_AUTHORITY_FIELDS.items():
+        if payload.get(field, expected) is not expected:
+            violations.append(
+                f"{rel}: {field} must be {expected!r} for A2 packet/probe artifacts "
+                "until exact eval and blocker review close"
+            )
+    for field in ("evidence_grade", "score_evidence_grade"):
+        grade = payload.get(field)
+        if isinstance(grade, str) and grade.strip() in PROMOTABLE_EVIDENCE_GRADES:
+            violations.append(
+                f"{rel}: {field}={grade!r} is promotable false authority for an A2 "
+                "packet/probe artifact while dispatch blockers remain"
             )
 
 

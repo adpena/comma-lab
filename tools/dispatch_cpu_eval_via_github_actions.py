@@ -457,6 +457,7 @@ def write_adjudicated(
     submission_name: str,
     dispatched_at: str,
     completed_at: str,
+    repo: str,
 ) -> Path:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     record = {
@@ -477,7 +478,7 @@ def write_adjudicated(
         "evaluate_py_sha256": evaluate_py_sha,
         "workflow_run_id": run_id,
         "workflow_run_url": run_url,
-        "fork_repo": UPSTREAM_FORK_REPO,
+        "fork_repo": repo,
         "submission_name": submission_name,
         "release_tag": release_tag,
         "asset_url": asset_url,
@@ -628,6 +629,7 @@ def main() -> int:
         submission_name=args.submission_name,
         dispatched_at=dispatched_at,
         completed_at=completed_at,
+        repo=args.repo,
     )
     print(
         f"[done] adjudicated.json written to {out}\n"

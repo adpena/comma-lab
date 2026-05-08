@@ -533,6 +533,42 @@ def test_pre_submission_check_dispatch_claim_linkage_accepts_live_eight_column_s
     assert report["passed"], [c for c in report["checks"] if not c["passed"]]
 
 
+def test_pre_submission_check_dispatch_claim_linkage_accepts_claim_helper_terminal_statuses(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission")
+    claims = tmp_path / "claims.md"
+    claims.write_text(
+        "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
+        "|---|---|---|---|---|---|---|---|\n"
+        "| 2026-05-04T15:05:13Z | codex | lane-a | lightning | job-a | "
+        "2026-05-04T15:05Z | cancelled_operator_request | terminal per claim helper |\n",
+        encoding="utf-8",
+    )
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--require-auth-eval",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+
+    assert report["passed"], [c for c in report["checks"] if not c["passed"]]
+
+
 def test_pre_submission_check_public_hygiene_flags_provider_ids(tmp_path: Path) -> None:
     mod = _load_module()
     _write_submission(tmp_path / "submission")

@@ -23,9 +23,11 @@ def _load_module():
 def _false_authority() -> dict[str, bool]:
     return {
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
     }
 
 
@@ -92,6 +94,44 @@ def test_audit_a2_packet_ladder_closure_scans_ignored_local_artifacts(
         "experiments/results/a2_local/candidate_manifest.json"
     ]
     assert any("cleared without evidence" in item for item in report["violations"])
+
+
+def test_audit_a2_packet_ladder_closure_rejects_extended_false_authority(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    manifest = (
+        tmp_path
+        / "experiments"
+        / "results"
+        / "a2_false_authority"
+        / "candidate_manifest.json"
+    )
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema": "a2_candidate_manifest.v1",
+                "score_claim": False,
+                "score_claim_valid": True,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": True,
+                "evidence_grade": "A++",
+                "dispatch_blockers": ["no_exact_cuda_auth_eval"],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = mod.audit(tmp_path)
+
+    assert report["passed"] is False
+    assert any("score_claim_valid must be False" in item for item in report["violations"])
+    assert any("dispatch_attempted must be False" in item for item in report["violations"])
+    assert any("evidence_grade" in item and "A++" in item for item in report["violations"])
 
 
 def test_audit_a2_packet_ladder_closure_requires_stub_sensitivity_blockers(

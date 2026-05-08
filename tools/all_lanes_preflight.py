@@ -188,6 +188,24 @@ EVAL_LOADER_DRIFT_FALSE_CUSTODY_FIELDS = (
     "ready_for_exact_eval_dispatch",
     "dispatch_attempted",
 )
+EVAL_LOADER_DRIFT_AXIS_FALSE_CUSTODY_FIELDS = (
+    "contest_cpu_axis_claim",
+    "contest_cuda_axis_claim",
+    "contest_cuda_claim",
+    "contest_cpu_claim",
+    "macos_cpu_advisory_claim",
+    "mps_claim",
+    "promotion_eligible",
+    "score_claim_valid",
+    "rank_or_kill_eligible",
+    "ready_for_exact_eval_dispatch",
+    "dispatch_attempted",
+)
+EVAL_LOADER_DRIFT_LABEL_FALSE_CUSTODY_FIELDS = (
+    "contest_cpu_axis_claim",
+    "contest_cuda_axis_claim",
+    "dispatch_attempted",
+)
 HSTACK_VSTACK_PLAN = REPO / "reports/hstack_vstack_multipass_plan_20260507.json"
 PR91_HPM1_READINESS_ARTIFACT = REPO / "experiments/results/pr91_hpm1_readiness_20260506_codex/readiness.json"
 PR91_HPM1_RUNTIME_CONTRACT_ARTIFACT = (
@@ -808,6 +826,45 @@ def _eval_loader_drift_false_field_failures(
     ]
 
 
+def _eval_loader_drift_axis_custody_failures(
+    payload: dict[str, object],
+) -> list[str]:
+    failures: list[str] = []
+    device_axis_custody = payload.get("device_axis_custody")
+    if not isinstance(device_axis_custody, dict):
+        failures.append("device_axis_custody must be an object")
+    else:
+        if device_axis_custody.get("score_axis") != "diagnostic_loader_drift":
+            failures.append(
+                "device_axis_custody.score_axis must be diagnostic_loader_drift"
+            )
+        if device_axis_custody.get("claimed_score_axes") != []:
+            failures.append("device_axis_custody.claimed_score_axes must stay empty")
+        if device_axis_custody.get("score_claim_axis") != "none":
+            failures.append("device_axis_custody.score_claim_axis must be none")
+        for field in EVAL_LOADER_DRIFT_AXIS_FALSE_CUSTODY_FIELDS:
+            if device_axis_custody.get(field) is not False:
+                failures.append(f"device_axis_custody.{field}=false required")
+
+    custody_labels = payload.get("custody_labels")
+    if not isinstance(custody_labels, dict):
+        failures.append("custody_labels must be an object")
+    else:
+        if custody_labels.get("score_path") != "not_run":
+            failures.append("custody_labels.score_path must be not_run")
+        if custody_labels.get("score_claim_axis") != "none":
+            failures.append("custody_labels.score_claim_axis must be none")
+        if custody_labels.get("diagnostic_non_promotable") is not True:
+            failures.append("custody_labels.diagnostic_non_promotable must be true")
+        for field in EVAL_LOADER_DRIFT_LABEL_FALSE_CUSTODY_FIELDS:
+            if custody_labels.get(field) is not False:
+                failures.append(f"custody_labels.{field}=false required")
+        for field in ("mps_claim", "contest_cuda_claim", "contest_cpu_claim"):
+            if field in custody_labels and custody_labels.get(field) is not False:
+                failures.append(f"custody_labels.{field}=false required")
+    return failures
+
+
 def _validate_eval_loader_drift_2x2_plan(payload: dict[str, object]) -> list[str]:
     failures: list[str] = []
     cells_raw = payload.get("intended_cells")
@@ -968,20 +1025,11 @@ def _run_eval_loader_drift_probe_gate() -> tuple[bool, str]:
     plan_failures = _validate_eval_loader_drift_2x2_plan(payload)
     if plan_failures:
         return False, "eval loader drift 2x2 plan schema invalid: " + "; ".join(plan_failures)
-    device_axis_custody = payload.get("device_axis_custody")
-    if isinstance(device_axis_custody, dict):
-        for key in (
-            "contest_cuda_claim",
-            "contest_cpu_claim",
-            "macos_cpu_advisory_claim",
-            "promotion_eligible",
-            "score_claim_valid",
-            "rank_or_kill_eligible",
-            "ready_for_exact_eval_dispatch",
-            "dispatch_attempted",
-        ):
-            if device_axis_custody.get(key) is not False:
-                return False, f"eval loader drift device-axis custody must keep {key}=false"
+    axis_custody_failures = _eval_loader_drift_axis_custody_failures(payload)
+    if axis_custody_failures:
+        return False, "eval loader drift axis custody invalid: " + "; ".join(
+            axis_custody_failures
+        )
     if payload.get("comparison_available") is False:
         return _eval_loader_drift_missing_prereq_pass(payload)
     failures = _validate_eval_loader_drift_comparison_rows(

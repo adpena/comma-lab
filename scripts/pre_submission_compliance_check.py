@@ -37,6 +37,7 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tools.auth_eval_records import parse_auth_eval_payload  # noqa: E402
+from tools.claim_lane_dispatch import TERMINAL_PREFIXES as CLAIM_TERMINAL_PREFIXES  # noqa: E402
 from tac.preflight import check_public_release_hygiene  # noqa: E402
 from tac.repo_io import json_text, read_json, repo_relative, sha256_file  # noqa: E402
 from experiments.contest_auth_eval import (  # noqa: E402
@@ -51,13 +52,7 @@ ORIGINAL_VIDEO_BYTES = 37_545_489
 SCHEMA = "pre_submission_compliance_check_v1"
 PACKED_PAYLOAD_MEMBER_NAMES = ("p", "renderer_payload.bin", "renderer_payload.bin.br")
 SHA256_RE = re.compile(r"^[0-9a-fA-F]{64}$")
-TERMINAL_DISPATCH_STATUS_PREFIXES = (
-    "completed",
-    "failed",
-    "stopped",
-    "refused_dispatch",
-    "stale_superseded",
-)
+TERMINAL_DISPATCH_STATUS_PREFIXES = tuple(CLAIM_TERMINAL_PREFIXES)
 PRIVATE_SURFACE_RE = re.compile(
     r"(/Users/|ssh\d+\.vast\.ai|fc-[A-Z0-9]{20,}|ap-[A-Za-z0-9]{12,}|sk-[A-Za-z0-9_-]{20,})"
 )
