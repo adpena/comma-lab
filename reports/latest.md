@@ -65,10 +65,31 @@ reactivation criteria documented per memo.
   documented. NOT a dispatch blocker.
 - A3-alt Mallat: see Pareto table above.
 
+**Phase A subagents (LANDED):**
+- A4-alt Filler STC pose codec (`75c99b84`) — 559+ LOC + 27 tests pass.
+  Δ vs PD-V2 on smooth-walk fixture: **−400 B (−9.17%)**; idle-dominant
+  +52% (expected — AC exploits qint=0 dominance). Verdict
+  `byte_anchor_landed`. Ledger:
+  `feedback_pr101_pose_filler_stc_byte_anchor_landed_20260508.md`.
+  First empirical anchor at
+  `experiments/results/pr101_pose_filler_stc_20260508T194527Z/`.
+- A5 frame-conditional bit budget — best η=2.0 saves -1,278 B on PR101.
+- PHASE 4 INTEGRATION paper harness — landed.
+
 **In flight (subagents):**
-- A4-alt Filler STC pose codec (`a486e05e919e6e4a3`)
-- A5 frame-conditional bit budget (`ad826bad077a82dc0`)
-- PHASE 4 INTEGRATION paper harness + secrecy audit (`ae1a9dbbe6e8b2af3`)
+- A6 Selfcomp block-FP × hyperprior compose (`a35933ea306c1a39b`)
+
+**Inline closure (post-A4-alt push, `0f50b5c5`):**
+After A4-alt landed at `75c99b84`, full-codebase preflight surfaced 2
+pre-existing `check_training_scripts_have_auth_eval` violations on the A1
++ A4 training scripts (training scripts that save a checkpoint must invoke
+auth_eval OR define an `--no-auth-eval-on-best` opt-out flag). Closed by
+adding the opt-out to each script with help text naming the downstream
+lane that owns the auth eval (`tools/build_pr101_finetuned_archive.py` for
+A1; downstream codec-stage consumer for A4). Sister fix: SyntaxWarning
+escape `\|Δ\|` removed from
+`tools/pr101_omega_opt_per_tensor_codec_choice_empirical.py:35`. Preflight
+re-run exits clean.
 
 **Awaiting operator:**
 - A1 dispatch ($8 Lightning T4): Lightning GPU attach OR Vast.ai credit topup
