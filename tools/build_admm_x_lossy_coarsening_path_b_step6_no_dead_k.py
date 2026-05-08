@@ -83,6 +83,7 @@ Usage
         --selected-Ks-json reports/raw/jacobian_fisher_importance_allocator/<run>/manifest.json \
         --selected-Ks-rms-target 0.0386
 """
+
 from __future__ import annotations
 
 import argparse
@@ -112,12 +113,8 @@ from tac.pr101_split_brotli_codec import (  # noqa: E402
 )
 
 # Reuse staging helpers from the canonical Lightning build script.
-_LIGHTNING_BUILDER_PATH = (
-    REPO_ROOT / "experiments" / "lossy_coarsening_lightning_cuda_test.py"
-)
-_spec = importlib.util.spec_from_file_location(
-    "_lossy_coarsening_lightning_cuda_test", _LIGHTNING_BUILDER_PATH
-)
+_LIGHTNING_BUILDER_PATH = REPO_ROOT / "experiments" / "lossy_coarsening_lightning_cuda_test.py"
+_spec = importlib.util.spec_from_file_location("_lossy_coarsening_lightning_cuda_test", _LIGHTNING_BUILDER_PATH)
 if _spec is None or _spec.loader is None:  # pragma: no cover - sanity
     raise SystemExit(f"FATAL: could not load builder from {_LIGHTNING_BUILDER_PATH}")
 _lightning_builder = importlib.util.module_from_spec(_spec)
@@ -135,28 +132,47 @@ TOOL_NAME = "tools/build_admm_x_lossy_coarsening_path_b_step6_no_dead_k.py"
 # Source-of-truth Ks (same vector as the original variant — only the wire
 # format changes).
 ADMM_PATH_B_STEP6_KS: tuple[int, ...] = (
-    2, 1, 5, 1, 5, 1, 5, 1, 2, 1, 2, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    2,
+    1,
+    5,
+    1,
+    5,
+    1,
+    5,
+    1,
+    2,
+    1,
+    2,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
 )
 ADMM_PROXY_ARCHIVE_BYTES = 153_639  # original-variant proxy
 ADMM_PROXY_REL_ERR = 0.0415393353487541
 ADMM_PROXY_LAMBDA = 1_276_154.6884887693
 ADMM_RMS_TARGET = 0.0386
-ADMM_SOURCE_MANIFEST = (
-    "reports/raw/pr101_omega_opt_admm_x_lossy_coarsening_20260508T041303Z/manifest.json"
-)
+ADMM_SOURCE_MANIFEST = "reports/raw/pr101_omega_opt_admm_x_lossy_coarsening_20260508T041303Z/manifest.json"
 ORIGINAL_VARIANT_TOOL = "tools/build_admm_x_lossy_coarsening_path_b_step6.py"
 
 DEFAULT_PR101_STATE_DICT = (
-    REPO_ROOT
-    / "experiments/results/pr101_codecop_sweep_20260507_codex"
-    / "pr101_decoder_state_dict.pt"
+    REPO_ROOT / "experiments/results/pr101_codecop_sweep_20260507_codex" / "pr101_decoder_state_dict.pt"
 )
 DEFAULT_PR101_FRONTIER_ARCHIVE = (
-    REPO_ROOT
-    / "experiments/results/public_pr_intake_full"
-    / "public_pr101_intake_20260505_auto"
-    / "archive.zip"
+    REPO_ROOT / "experiments/results/public_pr_intake_full" / "public_pr101_intake_20260505_auto" / "archive.zip"
 )
 DEFAULT_PR101_SOURCE_DIR = (
     REPO_ROOT
@@ -229,10 +245,7 @@ def _guard_fields_with_selected_Ks_source_blockers(
             if blocker_str in SELECTED_KS_SOURCE_BLOCKERS_CLOSED_BY_BYTE_CLOSED_BUILD:
                 continue
             extra.append(f"selected_Ks_source_blocker:{blocker_str}")
-    if (
-        selected_Ks_fp32_smoke_guard is not None
-        and selected_Ks_fp32_smoke_guard.get("verdict") == "rejected"
-    ):
+    if selected_Ks_fp32_smoke_guard is not None and selected_Ks_fp32_smoke_guard.get("verdict") == "rejected":
         guard["cuda_eval_worth_testing"] = False
         for blocker in selected_Ks_fp32_smoke_guard.get("blockers") or []:
             extra.append(str(blocker))
@@ -264,14 +277,11 @@ def _blend_selected_Ks_with_baseline_additive_cap(
         raise SystemExit("--selected-Ks-additive-baseline-cap must be >= 0")
     if len(selected_Ks) != len(baseline_Ks):
         raise SystemExit(
-            "FATAL: selected_Ks length does not match baseline_Ks length "
-            f"({len(selected_Ks)} != {len(baseline_Ks)})"
+            f"FATAL: selected_Ks length does not match baseline_Ks length ({len(selected_Ks)} != {len(baseline_Ks)})"
         )
     blended: list[int] = []
     changed: list[dict[str, object]] = []
-    for idx, (selected, baseline) in enumerate(
-        zip(selected_Ks, baseline_Ks, strict=True)
-    ):
+    for idx, (selected, baseline) in enumerate(zip(selected_Ks, baseline_Ks, strict=True)):
         cap = min(255, int(baseline) + int(additive_cap))
         value = min(int(selected), cap) if int(selected) > int(baseline) else int(selected)
         blended.append(value)
@@ -325,12 +335,26 @@ def _selected_Ks_fp32_smoke_safety_guard(
         or float(max_fp32_smoke_rel_err) <= 0.0
     ):
         raise SystemExit("--selected-Ks-max-fp32-smoke-rel-err must be finite and > 0")
-    rel_err = float(smoke["rel_err_vs_quantized_fp32"])
-    max_tensor = float(smoke["max_per_tensor_rel_err"])
     threshold = float(max_fp32_smoke_rel_err)
     blockers: list[str] = []
-    if rel_err > threshold:
+
+    rel_err_raw = smoke.get("rel_err_vs_quantized_fp32")
+    max_tensor_raw = smoke.get("max_per_tensor_rel_err")
+    rel_err = float(rel_err_raw) if isinstance(rel_err_raw, int | float) and not isinstance(rel_err_raw, bool) else None
+    max_tensor = (
+        float(max_tensor_raw)
+        if isinstance(max_tensor_raw, int | float) and not isinstance(max_tensor_raw, bool)
+        else None
+    )
+
+    if rel_err is None or not np.isfinite(rel_err) or rel_err < 0.0:
+        rel_err = None
+        blockers.append("selected_Ks_fp32_smoke_rel_err_invalid")
+    elif rel_err > threshold:
         blockers.append("selected_Ks_fp32_smoke_rel_err_above_guard")
+    if max_tensor is None or not np.isfinite(max_tensor) or max_tensor < 0.0:
+        max_tensor = None
+        blockers.append("selected_Ks_fp32_smoke_max_tensor_rel_err_invalid")
     verdict = "passed" if not blockers else "rejected"
     return {
         "applied": True,
@@ -358,19 +382,13 @@ def _closed_selected_Ks_source_blockers(
 def _validate_Ks(values: list[object], *, source: str) -> list[int]:
     n_tensors = len(FIXED_STATE_SCHEMA)
     if len(values) != n_tensors:
-        raise SystemExit(
-            f"FATAL: {source} selected_Ks length {len(values)} != n_tensors {n_tensors}"
-        )
+        raise SystemExit(f"FATAL: {source} selected_Ks length {len(values)} != n_tensors {n_tensors}")
     out: list[int] = []
     for idx, value in enumerate(values):
         if isinstance(value, bool) or not isinstance(value, int):
-            raise SystemExit(
-                f"FATAL: {source} selected_Ks[{idx}] is not an integer: {value!r}"
-            )
+            raise SystemExit(f"FATAL: {source} selected_Ks[{idx}] is not an integer: {value!r}")
         if value < 1 or value > 255:
-            raise SystemExit(
-                f"FATAL: {source} selected_Ks[{idx}] out of [1,255]: {value!r}"
-            )
+            raise SystemExit(f"FATAL: {source} selected_Ks[{idx}] out of [1,255]: {value!r}")
         out.append(int(value))
     return out
 
@@ -411,25 +429,19 @@ def _generic_allocation_selected_Ks(
     target = allocation.get("target_distortion")
     if not _is_number(target) or abs(float(target) - float(rms_target)) > 1e-12:
         raise SystemExit(
-            f"FATAL: {path}: allocation.target_distortion={target!r} does not "
-            f"match requested rms_target={rms_target}"
+            f"FATAL: {path}: allocation.target_distortion={target!r} does not match requested rms_target={rms_target}"
         )
     selected_rows = allocation.get("selected_by_tensor")
     if not isinstance(selected_rows, list):
-        raise SystemExit(
-            f"FATAL: {path}: allocation.selected_by_tensor must be a list"
-        )
+        raise SystemExit(f"FATAL: {path}: allocation.selected_by_tensor must be a list")
     selected: list[object] = []
     for idx, row in enumerate(selected_rows):
         if not isinstance(row, dict):
-            raise SystemExit(
-                f"FATAL: {path}: allocation.selected_by_tensor[{idx}] must be an object"
-            )
+            raise SystemExit(f"FATAL: {path}: allocation.selected_by_tensor[{idx}] must be an object")
         tensor_index = row.get("tensor_index")
         if tensor_index != idx:
             raise SystemExit(
-                f"FATAL: {path}: allocation.selected_by_tensor[{idx}].tensor_index "
-                f"must be {idx}; got {tensor_index!r}"
+                f"FATAL: {path}: allocation.selected_by_tensor[{idx}].tensor_index must be {idx}; got {tensor_index!r}"
             )
         expected_name = FIXED_STATE_SCHEMA[idx][0]
         tensor_name = row.get("tensor_name")
@@ -439,9 +451,7 @@ def _generic_allocation_selected_Ks(
                 f"must be {expected_name!r}; got {tensor_name!r}"
             )
         if "K" not in row:
-            raise SystemExit(
-                f"FATAL: {path}: allocation.selected_by_tensor[{idx}] lacks K"
-            )
+            raise SystemExit(f"FATAL: {path}: allocation.selected_by_tensor[{idx}] lacks K")
         selected.append(row["K"])
     return (
         {
@@ -553,9 +563,7 @@ def _build_lossy_decoder_section_no_K(
         raise SystemExit(f"FATAL: PR101 state_dict not found: {state_dict_path}")
     n_tensors = len(FIXED_STATE_SCHEMA)
     if len(Ks) != n_tensors:
-        raise SystemExit(
-            f"FATAL: Ks length {len(Ks)} != n_tensors {n_tensors} (FIXED_STATE_SCHEMA)"
-        )
+        raise SystemExit(f"FATAL: Ks length {len(Ks)} != n_tensors {n_tensors} (FIXED_STATE_SCHEMA)")
     for k in Ks:
         if not isinstance(k, int) or k < 1 or k > 255:
             raise SystemExit(f"FATAL: K out of [1,255] range: {k!r}")
@@ -574,18 +582,16 @@ def _build_lossy_decoder_section_no_K(
         rounded = np.round(symbols_i32 / K) * K
         rounded_clipped = rounded.clip(-127, 127)
         abs_orig_total += float(np.abs(symbols_i32).astype(np.float64).sum())
-        abs_err_total += float(
-            np.abs(rounded_clipped - symbols_i32).astype(np.float64).sum()
-        )
+        abs_err_total += float(np.abs(rounded_clipped - symbols_i32).astype(np.float64).sum())
         rounded_chunks.append(rounded_clipped.astype(np.int8))
         scales_fp16.append(scale_fp16)
         n_symbols += int(symbols_i32.size)
 
     flat = np.concatenate(rounded_chunks).tobytes()
-    brotli_payload = brotli.compress(
-        flat, quality=brotli_quality, lgwin=22, lgblock=24
-    )
-    rel_err = abs_err_total / abs_orig_total if abs_orig_total > 1e-9 else 0.0  # REL_ERR_NON_CANONICAL_OK: global L1 ratio for ADMM-x-lossy_coarsening Path B step6 no-dead-k variant; same form as mainline. See .omx/research/rel_err_inconsistency_audit_20260508_claude.md
+    brotli_payload = brotli.compress(flat, quality=brotli_quality, lgwin=22, lgblock=24)
+    rel_err = (
+        abs_err_total / abs_orig_total if abs_orig_total > 1e-9 else 0.0
+    )  # REL_ERR_NON_CANONICAL_OK: global L1 ratio for ADMM-x-lossy_coarsening Path B step6 no-dead-k variant; same form as mainline. See .omx/research/rel_err_inconsistency_audit_20260508_claude.md
 
     scale_arr = np.array(scales_fp16, dtype=np.float16)
     if not scale_arr.dtype.isnative or sys.byteorder != "little":
@@ -599,10 +605,7 @@ def _build_lossy_decoder_section_no_K(
     prefix = struct.pack("<I", section_total)
     decoder_bytes = prefix + section_no_prefix
     if len(decoder_bytes) != section_total:
-        raise RuntimeError(
-            f"decoder section length mismatch: declared {section_total}, "
-            f"actual {len(decoder_bytes)}"
-        )
+        raise RuntimeError(f"decoder section length mismatch: declared {section_total}, actual {len(decoder_bytes)}")
     return {
         "decoder_bytes": decoder_bytes,
         "per_tensor_K": list(Ks),  # audit-only; not in wire format
@@ -854,7 +857,7 @@ def _stage_forked_submission_dir_no_k(
         # invokes inflate.py with the canonical three-arg contest contract.
         (submission_dir / "inflate.sh").write_text(
             "#!/usr/bin/env bash\n"
-            'set -euo pipefail\n'
+            "set -euo pipefail\n"
             'HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"\n'
             'DATA_DIR="${1:?data dir required}"\n'
             'OUTPUT_DIR="${2:?output dir required}"\n'
@@ -866,20 +869,20 @@ def _stage_forked_submission_dir_no_k(
             'UV_BIN="${UV_BIN:-$(command -v uv || echo /usr/local/bin/uv)}"\n'
             'if [ ! -x "$UV_BIN" ]; then\n'
             '  echo "FATAL: uv not on PATH (UV_BIN=$UV_BIN); the canonical inflate-time env requires uv." >&2\n'
-            '  exit 1\n'
-            'fi\n'
-            'UV_WITH_INFLATE_DEPS=(\n'
+            "  exit 1\n"
+            "fi\n"
+            "UV_WITH_INFLATE_DEPS=(\n"
             '  --with "$INFLATE_BROTLI_SPEC"\n'
             '  --with "$INFLATE_TORCH_SPEC"\n'
             '  --with "$INFLATE_NUMPY_SPEC"\n'
-            ')\n'
-            'while IFS= read -r line; do\n'
+            ")\n"
+            "while IFS= read -r line; do\n"
             '  [ -z "$line" ] && continue\n'
             '  BASE="${line%.*}"\n'
             '  SRC="${DATA_DIR}/x"\n'
             '  if [ ! -f "$SRC" ]; then\n'
             '    SRC="${DATA_DIR}/${BASE}.bin"\n'
-            '  fi\n'
+            "  fi\n"
             '  DST="${OUTPUT_DIR}/${BASE}.raw"\n'
             '  [ ! -f "$SRC" ] && echo "ERROR: ${SRC} not found" >&2 && exit 1\n'
             '  printf "Inflating %s ... " "$line"\n'
@@ -907,21 +910,15 @@ def _remove_python_caches(root: Path) -> list[str]:
     return sorted(removed)
 
 
-def _local_smoke_roundtrip(
-    archive_path: Path, *, pr101_state_dict_path: Path, submission_dir: Path
-) -> dict:
+def _local_smoke_roundtrip(archive_path: Path, *, pr101_state_dict_path: Path, submission_dir: Path) -> dict:
     """Smoke test: parse the lossy archive with the no-K inflate, verify
     every tensor decodes back to the encoder's quantized form within
     ``rel_err`` tolerance.
     """
     spec_path = submission_dir / "inflate.py"
     if not spec_path.is_file():
-        raise SystemExit(
-            f"FATAL: forked inflate.py missing for smoke roundtrip: {spec_path}"
-        )
-    spec = importlib.util.spec_from_file_location(
-        "forked_inflate_admm_no_k", spec_path
-    )
+        raise SystemExit(f"FATAL: forked inflate.py missing for smoke roundtrip: {spec_path}")
+    spec = importlib.util.spec_from_file_location("forked_inflate_admm_no_k", spec_path)
     if spec is None or spec.loader is None:
         raise SystemExit(f"FATAL: cannot load forked inflate spec from {spec_path}")
     forked_inflate = importlib.util.module_from_spec(spec)
@@ -934,26 +931,22 @@ def _local_smoke_roundtrip(
     inner = _read_pr101_inner_blob(archive_path)
     decoder_sd, latents, meta = forked_inflate.parse_lossy_archive(inner)
 
-    sd_ref = torch.load(
-        pr101_state_dict_path, map_location="cpu", weights_only=True
-    )
+    sd_ref = torch.load(pr101_state_dict_path, map_location="cpu", weights_only=True)
     abs_orig = 0.0
     abs_err = 0.0
     per_tensor: list[dict] = []
     for name, _shape in FIXED_STATE_SCHEMA:
         t_dec = decoder_sd[name].cpu().numpy().astype(np.float32)
         qt_ref = _quantize_tensor(name, sd_ref[name], n_quant=N_QUANT)
-        ref_quantized = (
-            qt_ref.q_i8.astype(np.float32) * float(np.float16(qt_ref.scale))
-        ).reshape(t_dec.shape)
+        ref_quantized = (qt_ref.q_i8.astype(np.float32) * float(np.float16(qt_ref.scale))).reshape(t_dec.shape)
         denom_q = float(np.abs(ref_quantized).sum())
         err_q = float(np.abs(t_dec - ref_quantized).sum())
-        per_tensor.append(
-            {"name": name, "rel_err_vs_quantized": (err_q / denom_q) if denom_q > 1e-9 else 0.0}
-        )
+        per_tensor.append({"name": name, "rel_err_vs_quantized": (err_q / denom_q) if denom_q > 1e-9 else 0.0})
         abs_orig += denom_q
         abs_err += err_q
-    rel_err = abs_err / abs_orig if abs_orig > 1e-9 else 0.0  # REL_ERR_NON_CANONICAL_OK: global L1 ratio for fp32 smoke probe (no-dead-k variant); consistent with mainline form
+    rel_err = (
+        abs_err / abs_orig if abs_orig > 1e-9 else 0.0
+    )  # REL_ERR_NON_CANONICAL_OK: global L1 ratio for fp32 smoke probe (no-dead-k variant); consistent with mainline form
 
     n_pairs = int(latents.shape[0]) if hasattr(latents, "shape") else None
     return {
@@ -1042,13 +1035,8 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     args = p.parse_args(argv)
-    if (
-        args.selected_Ks_additive_baseline_cap is not None
-        and args.selected_Ks_json is None
-    ):
-        sys.exit(
-            "FATAL: --selected-Ks-additive-baseline-cap requires --selected-Ks-json"
-        )
+    if args.selected_Ks_additive_baseline_cap is not None and args.selected_Ks_json is None:
+        sys.exit("FATAL: --selected-Ks-additive-baseline-cap requires --selected-Ks-json")
 
     if not args.state_dict.is_file():
         sys.exit(f"FATAL: --state-dict not found: {args.state_dict}")
@@ -1058,10 +1046,7 @@ def main(argv: list[str] | None = None) -> int:
         sys.exit(f"FATAL: --pr101-source-dir not found: {args.pr101_source_dir}")
 
     timestamp = dt.datetime.now(tz=dt.UTC).strftime("%Y%m%dT%H%M%SZ")
-    build_dir = (
-        args.output_root
-        / f"admm_x_lossy_coarsening_path_b_step6_no_dead_k_{timestamp}"
-    )
+    build_dir = args.output_root / f"admm_x_lossy_coarsening_path_b_step6_no_dead_k_{timestamp}"
     build_dir.mkdir(parents=True, exist_ok=True)
     archive_path = build_dir / "archive.zip"
     submission_dir = build_dir / "submission_dir"
@@ -1099,34 +1084,20 @@ def main(argv: list[str] | None = None) -> int:
         f"lambda={ADMM_PROXY_LAMBDA:.0f})"
     )
     print(f"[admm-build-no-dead-k]   Ks (audit-only) = {Ks}")
-    section = _build_lossy_decoder_section_no_K(
-        args.state_dict, Ks, brotli_quality=args.brotli_quality
-    )
+    section = _build_lossy_decoder_section_no_K(args.state_dict, Ks, brotli_quality=args.brotli_quality)
     print(
         f"[admm-build-no-dead-k]   decoder section bytes={section['section_total_bytes']:,} "
         f"(brotli={section['brotli_payload_bytes']:,}, K_in_wire=0 vs original=28)"
     )
-    print(
-        f"[admm-build-no-dead-k]   rel_err vs int8 quantized symbols: "
-        f"{section['rel_err']:.6f}"
-    )
+    print(f"[admm-build-no-dead-k]   rel_err vs int8 quantized symbols: {section['rel_err']:.6f}")
 
     pr101_inner = _read_pr101_inner_blob(args.frontier_archive)
     _orig_decoder, latent_blob, sidecar_blob = _split_pr101_inner_blob(pr101_inner)
     if len(_orig_decoder) != DECODER_BLOB_LEN:
-        raise SystemExit(
-            f"FATAL: PR101 frontier decoder length {len(_orig_decoder)} != expected "
-            f"{DECODER_BLOB_LEN}"
-        )
+        raise SystemExit(f"FATAL: PR101 frontier decoder length {len(_orig_decoder)} != expected {DECODER_BLOB_LEN}")
     if len(latent_blob) != LATENT_BLOB_LEN:
-        raise SystemExit(
-            f"FATAL: PR101 latent_blob length {len(latent_blob)} != expected "
-            f"{LATENT_BLOB_LEN}"
-        )
-    print(
-        f"[admm-build-no-dead-k]   PR101 latent_blob={len(latent_blob):,} B "
-        f"sidecar_blob={len(sidecar_blob):,} B"
-    )
+        raise SystemExit(f"FATAL: PR101 latent_blob length {len(latent_blob)} != expected {LATENT_BLOB_LEN}")
+    print(f"[admm-build-no-dead-k]   PR101 latent_blob={len(latent_blob):,} B sidecar_blob={len(sidecar_blob):,} B")
 
     inner_blob = _build_inner_blob(section["decoder_bytes"], latent_blob, sidecar_blob)
     _write_pr101_archive(inner_blob, archive_path)
@@ -1137,13 +1108,8 @@ def main(argv: list[str] | None = None) -> int:
         f"size={archive_bytes:,} B sha256={archive_sha[:16]}..."
     )
 
-    _stage_forked_submission_dir_no_k(
-        submission_dir, pr101_source_dir=args.pr101_source_dir
-    )
-    print(
-        f"[admm-build-no-dead-k] WROTE submission dir: "
-        f"{submission_dir.relative_to(REPO_ROOT)}"
-    )
+    _stage_forked_submission_dir_no_k(submission_dir, pr101_source_dir=args.pr101_source_dir)
+    print(f"[admm-build-no-dead-k] WROTE submission dir: {submission_dir.relative_to(REPO_ROOT)}")
 
     print("[smoke] running CPU roundtrip ...")
     smoke = _local_smoke_roundtrip(
@@ -1169,10 +1135,7 @@ def main(argv: list[str] | None = None) -> int:
         )
     removed_cache_dirs = _remove_python_caches(submission_dir)
     if removed_cache_dirs:
-        print(
-            "[smoke] removed import caches from submission_dir: "
-            + ", ".join(removed_cache_dirs)
-        )
+        print("[smoke] removed import caches from submission_dir: " + ", ".join(removed_cache_dirs))
 
     selected_Ks_fp32_smoke_guard = _selected_Ks_fp32_smoke_safety_guard(
         k_source_metadata=k_source_metadata,
@@ -1181,16 +1144,29 @@ def main(argv: list[str] | None = None) -> int:
         max_fp32_smoke_rel_err=float(args.selected_Ks_max_fp32_smoke_rel_err),
     )
     if selected_Ks_fp32_smoke_guard.get("applied"):
+        fp32_rel_err = selected_Ks_fp32_smoke_guard["aggregate_fp32_smoke_rel_err"]
+        fp32_rel_err_text = "invalid" if fp32_rel_err is None else f"{float(fp32_rel_err):.6f}"
         print(
             "[selected-Ks guard] "
             f"verdict={selected_Ks_fp32_smoke_guard['verdict']} "
-            f"fp32_rel_err={selected_Ks_fp32_smoke_guard['aggregate_fp32_smoke_rel_err']:.6f} "
+            f"fp32_rel_err={fp32_rel_err_text} "
             f"threshold={selected_Ks_fp32_smoke_guard['max_allowed_fp32_smoke_rel_err']:.6f}"
         )
 
     guard_fields = _guard_fields_with_selected_Ks_source_blockers(
         k_source_metadata,
         selected_Ks_fp32_smoke_guard=selected_Ks_fp32_smoke_guard,
+    )
+    selected_Ks_guard_applied = bool(selected_Ks_fp32_smoke_guard.get("applied"))
+    rel_err_actual_fp32_smoke = (
+        selected_Ks_fp32_smoke_guard["aggregate_fp32_smoke_rel_err"]
+        if selected_Ks_guard_applied
+        else smoke["rel_err_vs_quantized_fp32"]
+    )
+    max_per_tensor_rel_err_fp32_smoke = (
+        selected_Ks_fp32_smoke_guard["max_per_tensor_fp32_smoke_rel_err"]
+        if selected_Ks_guard_applied
+        else smoke["max_per_tensor_rel_err"]
     )
     build_manifest = {
         "schema_version": SCHEMA_VERSION,
@@ -1200,9 +1176,7 @@ def main(argv: list[str] | None = None) -> int:
         "source_admm_manifest": ADMM_SOURCE_MANIFEST,
         "original_variant_tool": ORIGINAL_VARIANT_TOOL,
         **k_source_metadata,
-        "selected_Ks_source_blockers_closed_by_this_build": (
-            _closed_selected_Ks_source_blockers(k_source_metadata)
-        ),
+        "selected_Ks_source_blockers_closed_by_this_build": (_closed_selected_Ks_source_blockers(k_source_metadata)),
         "review_eng_finding_closed": "C2_drop_dead_K_bytes_28_byte_savings",
         "wire_format_diff_vs_original": (
             "removed K_section (28 bytes uint8 per-tensor) since the original "
@@ -1214,8 +1188,8 @@ def main(argv: list[str] | None = None) -> int:
         "admm_proxy_archive_bytes_original_variant": ADMM_PROXY_ARCHIVE_BYTES,
         "admm_proxy_rel_err": ADMM_PROXY_REL_ERR,
         "rel_err_actual_int8": section["rel_err"],
-        "rel_err_actual_fp32_smoke": smoke["rel_err_vs_quantized_fp32"],
-        "max_per_tensor_rel_err_fp32_smoke": smoke["max_per_tensor_rel_err"],
+        "rel_err_actual_fp32_smoke": rel_err_actual_fp32_smoke,
+        "max_per_tensor_rel_err_fp32_smoke": max_per_tensor_rel_err_fp32_smoke,
         "selected_Ks_fp32_smoke_safety_guard": selected_Ks_fp32_smoke_guard,
         "brotli_quality": args.brotli_quality,
         "archive_relpath": str(archive_path.relative_to(REPO_ROOT)),
@@ -1243,9 +1217,7 @@ def main(argv: list[str] | None = None) -> int:
         "charged_bits_changed": True,
         **guard_fields,
     }
-    build_manifest_path.write_text(
-        json.dumps(build_manifest, indent=2) + "\n", encoding="utf-8"
-    )
+    build_manifest_path.write_text(json.dumps(build_manifest, indent=2, allow_nan=False) + "\n", encoding="utf-8")
     print(
         f"[admm-build-no-dead-k] manifest: "
         f"{build_manifest_path.relative_to(REPO_ROOT)} "

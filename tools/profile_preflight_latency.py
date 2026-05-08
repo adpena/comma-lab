@@ -439,8 +439,12 @@ def _profile_all_lanes(*, jobs: int | None) -> SurfaceProfile:
                 )
             )
         metadata.update({
+            "max_workers": payload.get("max_workers"),
             "wall_elapsed_s": payload.get("wall_elapsed_s"),
             "serial_elapsed_s": payload.get("serial_elapsed_s"),
+            "parallel_speedup_estimate": payload.get("parallel_speedup_estimate"),
+            "slowest_step_elapsed_s": payload.get("slowest_step_elapsed_s"),
+            "slow_step_count": payload.get("slow_step_count"),
             "step_count": payload.get("step_count"),
         })
         return SurfaceProfile(
@@ -505,7 +509,17 @@ def _print_report(report: dict[str, object], *, top: int) -> None:
         detail = ""
         if isinstance(meta, dict):
             useful = []
-            for key in ("step_count", "file_count", "entity_count", "hazard_count", "wall_elapsed_s"):
+            for key in (
+                "step_count",
+                "file_count",
+                "entity_count",
+                "hazard_count",
+                "wall_elapsed_s",
+                "serial_elapsed_s",
+                "max_workers",
+                "parallel_speedup_estimate",
+                "slow_step_count",
+            ):
                 if key in meta:
                     useful.append(f"{key}={meta[key]}")
             if useful:

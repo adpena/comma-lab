@@ -22634,6 +22634,60 @@ _ADMM_BISECTION_TOOLS = (
 )
 
 
+def _canonical_lagrangian_allocator_has_bisection_contract(root: Path) -> bool:
+    """Return true when the canonical allocator owns max-iter + tolerance.
+
+    Thin empirical tools may delegate λ-bisection to this reviewed module.
+    Accept delegation only while the canonical implementation itself still has
+    an explicit finite loop and tolerance break.
+    """
+    allocator_path = (
+        root / "src" / "tac" / "optimization" / "lagrangian_per_tensor_allocation.py"
+    )
+    if not allocator_path.is_file():
+        return False
+    text = allocator_path.read_text(encoding="utf-8")
+    has_loop = bool(
+        re.search(r"for\s+\w+\s+in\s+range\(\s*max_iter\s*\)\s*:", text)
+    )
+    has_tolerance = (
+        "abs(hi - lo)" in text
+        or "abs(hi-lo)" in text
+        or re.search(r"\bhi\s*==\s*lo\b", text) is not None
+    )
+    return has_loop and has_tolerance
+
+
+def _delegates_to_canonical_lagrangian_bisection(text: str) -> bool:
+    """Detect reviewed delegation to LagrangianPerTensorAllocator.bisect.
+
+    The tool still must pass a concrete ``max_iter`` so the budget remains
+    visible at the callsite instead of becoming an implicit default.
+    """
+    if "LagrangianPerTensorAllocator" not in text or "bisect_for_rms_target" not in text:
+        return False
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return False
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if not (
+            isinstance(func, ast.Attribute)
+            and func.attr == "bisect_for_rms_target"
+        ):
+            continue
+        for keyword in node.keywords:
+            if keyword.arg != "max_iter":
+                continue
+            value = keyword.value
+            if isinstance(value, ast.Constant) and isinstance(value.value, int):
+                return value.value > 0
+    return False
+
+
 def check_admm_lagrangian_bisection_convergent(
     *,
     repo_root: str | Path | None = None,
@@ -22669,21 +22723,33 @@ def check_admm_lagrangian_bisection_convergent(
         text = path.read_text(encoding="utf-8")
         # Look for `for _ in range(<INT>):` near a function whose body
         # contains a Lagrangian update (lo/hi assignment).
-        has_max_iter = bool(re.search(r"for\s+\w+\s+in\s+range\(\s*\d+\s*\)\s*:", text))
+        has_max_iter = bool(
+            re.search(r"for\s+\w+\s+in\s+range\(\s*\d+\s*\)\s*:", text)
+        )
         has_tolerance = (
             "abs(hi - lo)" in text
             or "abs(hi-lo)" in text
             or re.search(r"\bhi\s*==\s*lo\b", text) is not None
         )
+        delegates_to_canonical = (
+            _delegates_to_canonical_lagrangian_bisection(text)
+            and _canonical_lagrangian_allocator_has_bisection_contract(root)
+        )
+        if delegates_to_canonical:
+            has_max_iter = True
+            has_tolerance = True
         if not has_max_iter:
             violations.append(
                 f"{rel}: ADMM bisection MUST declare a finite "
-                f"`for _ in range(<INT>):` cap. Found none."
+                f"`for _ in range(<INT>):` cap or delegate to canonical "
+                f"LagrangianPerTensorAllocator.bisect_for_rms_target with "
+                f"`max_iter=<INT>`. Found none."
             )
         if not has_tolerance:
             violations.append(
                 f"{rel}: ADMM bisection MUST declare a tolerance break "
-                f"(`abs(hi - lo) < ...` or `hi == lo`). Found none."
+                f"(`abs(hi - lo) < ...` or `hi == lo`) or delegate to the "
+                f"canonical allocator that owns that break. Found none."
             )
     if verbose:
         if violations:

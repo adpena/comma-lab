@@ -1193,9 +1193,27 @@
       "disposition": "track",
       "note": "track: operator-visible CPU-only empirical tool for alpha-mask dual-layer STC measurements.",
       "path": "tools/pr_alpha_mask_dual_layer_stc_empirical.py"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 signal-loss and custody triage ledger; no raw provider state or score claim.",
+      "path": ".omx/research/signal_loss_custody_triage_20260508_codex.md"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: fail-closed diagnostic harness for CPU/CUDA decoder and forward-pass drift matrix; non-score tool.",
+      "path": "tools/probe_eval_drift_matrix.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression tests for the fail-closed evaluator drift matrix diagnostic harness.",
+      "path": "src/tac/tests/test_probe_eval_drift_matrix.py"
     }
   ],
   "policy": "Every source-like untracked path must be track, recovery_queue, ignore_private, or ignore_rebuildable with rationale.",
-  "reviewed_at_utc": "2026-05-06T00:00:00Z",
+  "reviewed_at_utc": "2026-05-08T15:11:00Z",
   "schema": "pact_untracked_source_dispositions_v1"
 }

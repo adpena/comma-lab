@@ -9,6 +9,7 @@ These tests verify the source declares the required CLAUDE.md flags, the
 forked inflate.py source omits the K read, and the wire format documentation
 is accurate.
 """
+
 from __future__ import annotations
 
 import json
@@ -22,11 +23,7 @@ sys.path.insert(0, str(REPO_ROOT / "tools"))
 
 
 def _read_tool_source() -> str:
-    return (
-        REPO_ROOT
-        / "tools"
-        / "build_admm_x_lossy_coarsening_path_b_step6_no_dead_k.py"
-    ).read_text()
+    return (REPO_ROOT / "tools" / "build_admm_x_lossy_coarsening_path_b_step6_no_dead_k.py").read_text()
 
 
 def test_no_dead_k_tool_source_declares_required_flags() -> None:
@@ -65,12 +62,10 @@ def test_no_dead_k_forked_inflate_omits_K_section() -> None:
     # The new wire format only carries scales + brotli payload (no K).
     # The forked source must not declare K_SECTION_BYTES.
     # Find the forked source string boundary.
-    start = src.index('_FORKED_INFLATE_SRC = \'\'\'')
+    start = src.index("_FORKED_INFLATE_SRC = '''")
     end = src.index("'''", start + 30)
     forked = src[start:end]
-    assert "K_SECTION_BYTES" not in forked, (
-        "no-dead-k inflate must NOT reference K_SECTION_BYTES"
-    )
+    assert "K_SECTION_BYTES" not in forked, "no-dead-k inflate must NOT reference K_SECTION_BYTES"
     # Must reference SCALE_SECTION_BYTES (the section we still keep)
     assert "SCALE_SECTION_BYTES" in forked
     # Wire format docstring must mention "without K" / "no-dead-k"
@@ -93,8 +88,8 @@ def test_no_dead_k_fallback_inflate_sh_uses_contest_three_arg_contract() -> None
     assert 'DATA_DIR="${1:?data dir required}"' in src
     assert 'OUTPUT_DIR="${2:?output dir required}"' in src
     assert 'FILE_LIST="${3:?file list required}"' in src
-    assert 'while IFS= read -r line' in src
-    assert '${BASE}.raw' in src
+    assert "while IFS= read -r line" in src
+    assert "${BASE}.raw" in src
     assert 'exec python "$HERE/inflate.py" "$1" "$2"' not in src
 
 
@@ -150,9 +145,7 @@ def test_no_dead_k_can_load_selected_Ks_from_score_weight_manifest(tmp_path: Pat
     assert Ks == selected
     assert metadata["per_tensor_K_source"] == "selected_Ks_json"
     assert metadata["selected_Ks_row_total_bytes_proxy"] == 159544
-    assert metadata["selected_Ks_source_evidence_semantics"] == (
-        "cpu_allocator_weight_export_no_score_no_dispatch"
-    )
+    assert metadata["selected_Ks_source_evidence_semantics"] == ("cpu_allocator_weight_export_no_score_no_dispatch")
 
 
 def test_no_dead_k_can_load_selected_Ks_from_generic_jacobian_fisher_manifest(
@@ -168,9 +161,7 @@ def test_no_dead_k_can_load_selected_Ks_from_generic_jacobian_fisher_manifest(
     expected_names = [name for name, _shape in no_k.FIXED_STATE_SCHEMA]
     manifest = {
         "schema": "jacobian_fisher_importance_allocator.v1",
-        "evidence_semantics": (
-            "cpu_mps_proxy_importance_weighted_quantization_allocation_no_score_no_dispatch"
-        ),
+        "evidence_semantics": ("cpu_mps_proxy_importance_weighted_quantization_allocation_no_score_no_dispatch"),
         "dispatch_blockers": [
             "cpu_mps_proxy_importance_inputs_not_score_authority",
             "requires_exact_archive_cuda_score_custody_before_rank_promotion_or_kill",
@@ -281,26 +272,11 @@ def test_no_dead_k_selected_Ks_source_blockers_propagate_to_guards(
     for key in ("dispatch_blockers", "score_claim_blockers"):
         blockers = guard[key]
         assert "selected_Ks_json_cpu_planning_not_score_authority" in blockers
-        assert (
-            "selected_Ks_source_evidence_semantics:"
-            "cpu_allocator_weight_export_no_score_no_dispatch"
-        ) in blockers
-        assert (
-            "selected_Ks_source_blocker:"
-            "diagnostic_or_stub_sensitivity_map_not_score_authority"
-        ) in blockers
-        assert (
-            "selected_Ks_source_blocker:"
-            "requires_exact_cuda_auth_eval_before_score_claim"
-        ) in blockers
-        assert (
-            "selected_Ks_source_blocker:"
-            "selected_Ks_not_yet_encoded_in_no_dead_k_runtime_packet"
-        ) not in blockers
-        assert (
-            "selected_Ks_source_blocker:weight_export_only_no_byte_closed_archive"
-            not in blockers
-        )
+        assert ("selected_Ks_source_evidence_semantics:cpu_allocator_weight_export_no_score_no_dispatch") in blockers
+        assert ("selected_Ks_source_blocker:diagnostic_or_stub_sensitivity_map_not_score_authority") in blockers
+        assert ("selected_Ks_source_blocker:requires_exact_cuda_auth_eval_before_score_claim") in blockers
+        assert ("selected_Ks_source_blocker:selected_Ks_not_yet_encoded_in_no_dead_k_runtime_packet") not in blockers
+        assert "selected_Ks_source_blocker:weight_export_only_no_byte_closed_archive" not in blockers
 
 
 def test_no_dead_k_rejects_bad_selected_Ks_manifest(tmp_path: Path) -> None:
@@ -308,13 +284,7 @@ def test_no_dead_k_rejects_bad_selected_Ks_manifest(tmp_path: Path) -> None:
 
     path = tmp_path / "bad.json"
     path.write_text(
-        json.dumps(
-            {
-                "weighted_k_allocations": [
-                    {"rms_target": 0.0386, "selected_Ks": [1, 2, 3]}
-                ]
-            }
-        ),
+        json.dumps({"weighted_k_allocations": [{"rms_target": 0.0386, "selected_Ks": [1, 2, 3]}]}),
         encoding="utf-8",
     )
 
@@ -336,8 +306,7 @@ def test_no_dead_k_rejects_generic_jacobian_fisher_wrong_target(
                     "objective": "target_distortion",
                     "target_distortion": 0.05,
                     "selected_by_tensor": [
-                        {"tensor_name": f"tensor_{idx}.weight", "K": 1}
-                        for idx in range(len(no_k.FIXED_STATE_SCHEMA))
+                        {"tensor_name": f"tensor_{idx}.weight", "K": 1} for idx in range(len(no_k.FIXED_STATE_SCHEMA))
                     ],
                 },
             }
@@ -353,9 +322,187 @@ def test_no_dead_k_cli_documents_score_weight_manifest_inputs() -> None:
     src = _read_tool_source()
     assert "--selected-Ks-json" in src
     assert "--score-weights-json" in src
+    assert "--selected-Ks-additive-baseline-cap" in src
+    assert "--selected-Ks-max-fp32-smoke-rel-err" in src
     assert "weighted_k_allocations[].selected_Ks" in src
     assert "allocation.selected_by_tensor[].K" in src
     assert "per_tensor_K_source" in src
+
+
+def test_no_dead_k_manifest_writer_fails_closed_on_non_finite_json() -> None:
+    src = _read_tool_source()
+    assert "allow_nan=False" in src
+    assert '"rel_err_actual_fp32_smoke": rel_err_actual_fp32_smoke' in src
+    assert '"max_per_tensor_rel_err_fp32_smoke": max_per_tensor_rel_err_fp32_smoke' in src
+
+
+def test_no_dead_k_can_blend_selected_Ks_toward_baseline_additive_cap() -> None:
+    import build_admm_x_lossy_coarsening_path_b_step6_no_dead_k as no_k
+
+    selected = [
+        10,
+        24,
+        3,
+        10,
+        3,
+        10,
+        5,
+        10,
+        2,
+        1,
+        4,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+    ]
+
+    blended, metadata = no_k._blend_selected_Ks_with_baseline_additive_cap(
+        selected,
+        additive_cap=3,
+    )
+
+    assert blended == [
+        5,
+        4,
+        3,
+        4,
+        3,
+        4,
+        5,
+        4,
+        2,
+        1,
+        4,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+    ]
+    assert metadata["selected_Ks_blend_mode"] == "baseline_additive_cap"
+    assert metadata["selected_Ks_blend_additive_cap"] == 3
+    assert metadata["selected_Ks_blend_changed_count"] == 5
+    assert metadata["selected_Ks_original_from_json"] == selected
+    assert metadata["selected_Ks_after_blend"] == blended
+
+
+def test_no_dead_k_selected_Ks_fp32_guard_rejects_bad_smoke() -> None:
+    import build_admm_x_lossy_coarsening_path_b_step6_no_dead_k as no_k
+
+    metadata = {
+        "per_tensor_K_source": "selected_Ks_json",
+        "selected_Ks_source_dispatch_blockers": [],
+    }
+    smoke = {
+        "rel_err_vs_quantized_fp32": 0.08739940096338861,
+        "max_per_tensor_rel_err": 0.1929084482955193,
+    }
+
+    guard = no_k._selected_Ks_fp32_smoke_safety_guard(
+        k_source_metadata=metadata,
+        smoke=smoke,
+        archive_bytes=147285,
+        max_fp32_smoke_rel_err=0.055,
+    )
+    fields = no_k._guard_fields_with_selected_Ks_source_blockers(
+        metadata,
+        selected_Ks_fp32_smoke_guard=guard,
+    )
+
+    assert guard["verdict"] == "rejected"
+    assert guard["aggregate_fp32_smoke_rel_err"] == 0.08739940096338861
+    assert "selected_Ks_fp32_smoke_rel_err_above_guard" in guard["blockers"]
+    assert fields["cuda_eval_worth_testing"] is False
+    assert "selected_Ks_fp32_smoke_rel_err_above_guard" in fields["dispatch_blockers"]
+    assert "selected_Ks_fp32_smoke_rel_err_above_guard" in fields["score_claim_blockers"]
+
+
+def test_no_dead_k_selected_Ks_fp32_guard_rejects_non_finite_smoke() -> None:
+    import build_admm_x_lossy_coarsening_path_b_step6_no_dead_k as no_k
+
+    metadata = {
+        "per_tensor_K_source": "selected_Ks_json",
+        "selected_Ks_source_dispatch_blockers": [],
+    }
+    smoke = {
+        "rel_err_vs_quantized_fp32": float("nan"),
+        "max_per_tensor_rel_err": float("inf"),
+    }
+
+    guard = no_k._selected_Ks_fp32_smoke_safety_guard(
+        k_source_metadata=metadata,
+        smoke=smoke,
+        archive_bytes=153378,
+        max_fp32_smoke_rel_err=0.055,
+    )
+    fields = no_k._guard_fields_with_selected_Ks_source_blockers(
+        metadata,
+        selected_Ks_fp32_smoke_guard=guard,
+    )
+
+    assert guard["verdict"] == "rejected"
+    assert guard["aggregate_fp32_smoke_rel_err"] is None
+    assert guard["max_per_tensor_fp32_smoke_rel_err"] is None
+    assert "selected_Ks_fp32_smoke_rel_err_invalid" in guard["blockers"]
+    assert "selected_Ks_fp32_smoke_max_tensor_rel_err_invalid" in guard["blockers"]
+    assert fields["cuda_eval_worth_testing"] is False
+    assert "selected_Ks_fp32_smoke_rel_err_invalid" in fields["dispatch_blockers"]
+    json.dumps(guard, allow_nan=False)
+
+
+def test_no_dead_k_selected_Ks_fp32_guard_passes_safer_smoke() -> None:
+    import build_admm_x_lossy_coarsening_path_b_step6_no_dead_k as no_k
+
+    metadata = {
+        "per_tensor_K_source": "selected_Ks_json",
+        "selected_Ks_source_dispatch_blockers": [],
+    }
+    smoke = {
+        "rel_err_vs_quantized_fp32": 0.0512570250306118,
+        "max_per_tensor_rel_err": 0.08658950139649849,
+    }
+
+    guard = no_k._selected_Ks_fp32_smoke_safety_guard(
+        k_source_metadata=metadata,
+        smoke=smoke,
+        archive_bytes=153378,
+        max_fp32_smoke_rel_err=0.055,
+    )
+    fields = no_k._guard_fields_with_selected_Ks_source_blockers(
+        metadata,
+        selected_Ks_fp32_smoke_guard=guard,
+    )
+
+    assert guard["verdict"] == "passed"
+    assert guard["blockers"] == []
+    assert fields["cuda_eval_worth_testing"] is True
+    assert "selected_Ks_fp32_smoke_rel_err_above_guard" not in fields["dispatch_blockers"]
 
 
 def test_no_dead_k_removes_import_caches_from_submission_dir(tmp_path: Path) -> None:

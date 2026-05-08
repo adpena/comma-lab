@@ -161,6 +161,7 @@ PR106X_ARCHIVE = (
     / "exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/archive.zip"
 )
 TIMING_PROFILE_SCHEMA = "pact.all_lanes_preflight_timing.v1"
+SLOW_STEP_THRESHOLD_S = 0.50
 
 LANES = [
     {
@@ -1174,19 +1175,34 @@ def _build_timing_profile(
             str(row["name"]),
         ),
     )
+    serial_elapsed_s = sum(result.elapsed_s for result in results)
+    slow_steps = [
+        row
+        for row in hot_steps
+        if float(row["elapsed_s"]) >= SLOW_STEP_THRESHOLD_S
+    ]
     return {
         "schema": TIMING_PROFILE_SCHEMA,
         "max_workers": int(max_workers),
         "wall_elapsed_s": round(float(wall_elapsed_s), 6),
-        "serial_elapsed_s": round(sum(result.elapsed_s for result in results), 6),
+        "serial_elapsed_s": round(float(serial_elapsed_s), 6),
+        "parallel_speedup_estimate": round(
+            float(serial_elapsed_s) / float(wall_elapsed_s),
+            6,
+        )
+        if wall_elapsed_s > 0
+        else 0.0,
         "slowest_step_elapsed_s": round(
             max((result.elapsed_s for result in results), default=0.0),
             6,
         ),
+        "slow_step_threshold_s": SLOW_STEP_THRESHOLD_S,
+        "slow_step_count": len(slow_steps),
         "step_count": len(results),
         "passed_count": sum(1 for result in results if result.passed),
         "failed_count": sum(1 for result in results if not result.passed),
         "steps": rows,
+        "slow_steps": slow_steps,
         "hot_steps": hot_steps,
     }
 
@@ -1194,6 +1210,50 @@ def _build_timing_profile(
 def _write_timing_profile(path: Path, payload: dict[str, object]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json_text(payload), encoding="utf-8")
+
+
+def _format_timing_row(row: dict[str, object]) -> str:
+    return (
+        f"  {float(row['elapsed_s']):6.2f}s  "
+        f"{row['section']} #{row['number']}: {row['name']}"
+    )
+
+
+def _print_timing_summary(
+    results: list[PreflightResult],
+    *,
+    max_workers: int,
+    wall_elapsed_s: float,
+) -> None:
+    profile = _build_timing_profile(
+        results,
+        max_workers=max_workers,
+        wall_elapsed_s=wall_elapsed_s,
+    )
+    threshold = float(profile["slow_step_threshold_s"])
+    slow_count = int(profile["slow_step_count"])
+    hot_steps = [row for row in profile["hot_steps"] if isinstance(row, dict)]
+    print("\nTimings:")
+    print(
+        "  "
+        f"wall={float(profile['wall_elapsed_s']):.2f}s; "
+        f"serial_sum={float(profile['serial_elapsed_s']):.2f}s; "
+        f"workers={int(profile['max_workers'])}; "
+        f"estimated_speedup={float(profile['parallel_speedup_estimate']):.2f}x; "
+        f"slow_threshold={threshold:.2f}s; "
+        f"slow_steps={slow_count}/{int(profile['step_count'])}"
+    )
+    if slow_count:
+        print(f"  Slow steps (>= {threshold:.2f}s):")
+        for row in hot_steps[:slow_count]:
+            print(_format_timing_row(row))
+    else:
+        print(f"  Slow steps: none >= {threshold:.2f}s")
+    remaining = hot_steps[slow_count:]
+    if remaining:
+        print("  Remaining steps:")
+        for row in remaining:
+            print(_format_timing_row(row))
 
 
 def _default_jobs(step_count: int) -> int:
@@ -1535,10 +1595,11 @@ def main(argv: list[str] | None = None) -> int:
     for line in summary_lines:
         print(line)
     if args.timings:
-        print("\nTimings:")
-        for result in sorted(results, key=lambda item: item.elapsed_s, reverse=True):
-            step = result.step
-            print(f"  {result.elapsed_s:6.2f}s  {step.section} #{step.number}: {step.name}")
+        _print_timing_summary(
+            results,
+            max_workers=max_workers,
+            wall_elapsed_s=wall_elapsed_s,
+        )
     if args.timings_json is not None:
         timing_profile = _build_timing_profile(
             results,

@@ -2,6 +2,8 @@
 
 Evidence grade: `external_github_pr_comment` plus `tooling_protocol`.
 Score claim: false. Promotion/rank/kill claim: false.
+Addendum source: PR107 lab GHA Linux x86_64 CPU replay
+`experiments/results/pr107_apogee_cpu_auth_eval_gha_20260508T124452Z/contest_auth_eval.adjudicated.json`.
 
 ## Finding
 
@@ -26,7 +28,7 @@ printed in the host `github-actions` PR comments.
 | 104 | qhnerv_ft_best | `0.231145103318` | none observed | Local T4 replay `0.23113446620399658` matches CUDA comment. |
 | 105 | kitchen_sink (0.19797) | `0.230437255695` | `0.197973979344` | CPU comment aligns with public title band. |
 | 106 | belt_and_suspenders (0.20946) | `0.209456642376` | none observed | Local PR106 adapter replay `0.20945673680571203` matches CUDA comment. |
-| 107 | apogee submission (0.2293) | `0.229331025025` | none observed | No public CPU comment observed for our PR107 packet. |
+| 107 | apogee submission (0.2293) | `0.229331025025` | none observed publicly; lab GHA `[contest-CPU]` `0.1966358879` | No public CPU comment observed, but exact Linux x86_64 GHA replay closes the lab CPU-axis gap. |
 | 108 | andimin01 | none observed | none observed | No host eval comment in this refresh. |
 
 ## Engineering conclusion
@@ -37,8 +39,17 @@ printed in the host `github-actions` PR comments.
    This must be measured, not inferred from CUDA.
 3. Local macOS CPU is not contest-compliant CPU evidence. `[contest-CPU]`
    requires Linux x86_64 custody; local macOS CPU can only be advisory.
-4. CUDA remains the internal promotion/ranking/kill/paper-score truth. CPU is
-   a public leaderboard/PR-comment reproduction axis.
+   However, PR107 M5 Max CPU (`0.19664189`) and GHA Linux x86_64 CPU
+   (`0.1966358879`) differ by only `6e-6`, so macOS CPU is a high-value
+   development and sweep signal when explicitly tagged `[macOS-CPU advisory]`.
+4. CUDA remains the internal CUDA-axis promotion/kill/paper-score truth. CPU is
+   the public leaderboard/PR-comment axis. A shippable/frontier claim needs both
+   axes on the same archive/runtime; do not assign global priority to either
+   axis until both are measured.
+5. Mechanism attribution is not closed. Current evidence supports a CPU/CUDA
+   device-axis effect, but DALI/NVDEC-vs-PyAV decoder drift, CPU/CUDA forward
+   kernels, and pose-head numerics remain competing explanations until a 2x2
+   decoder/network diagnostic is run.
 
 ## Tooling landed
 

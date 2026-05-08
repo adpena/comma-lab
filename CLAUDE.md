@@ -125,12 +125,15 @@ command, hardware, sample count, structured JSON/log path, dispatch-claim
 state, recomputed score components, payload-consumption proof, failure class,
 and reactivation criteria. A bad result retires only the measured config unless
 research-path exhaustion plus consensus review supports a broader conclusion.
-Proxy, MPS, CPU, byte-only, or stale results may seed priors and TODOs, but
-they must not promote, rank, falsify, kill, or close a family.
+Proxy, MPS, non-`contest-CPU` CPU, byte-only, or stale results may seed priors
+and TODOs, but they must not promote, rank, falsify, kill, or close a family.
+`contest-CPU` ranks only the public leaderboard CPU axis; it does not replace
+the CUDA axis or justify extrapolating a missing paired result.
 
 The desired loop is: formulate objective and constraints -> emit typed atoms ->
 Pareto/KKT/interaction prune -> select by score delta plus expected information
-gain -> build deterministic archive -> exact CUDA eval -> reseed the solver.
+gain -> build deterministic archive -> exact CUDA eval and exact contest-CPU
+eval when the archive is a frontier/submission candidate -> reseed the solver.
 Keep this path simpler, faster, more deterministic, and more complete every
 time it is touched.
 
@@ -287,7 +290,7 @@ Writing "saves 49%" / "improves N%" / "beats baseline" / "verified" in a docstri
 Adding a kwarg to a helper without grepping for callers and updating each. Lane GP added `baseline_poses=` to `reconstruct_poses()` but the actual call at `experiments/fit_pose_gp.py:33` never passed it for ~2 weeks. After adding any kwarg with non-trivial semantics, register it in `CALLSITE_CONTRACTS` and run the AST scanner to enforce all callers pass it. (See `feedback_three_active_bug_classes_needing_strict_checks_20260429.md`.)
 
 **Forbidden MPS-derived strategic decision (the MPS-falsification trap):**
-Writing "GREEN" / "RED" / "KILL" / "promoted" / "FALSIFIED" in any record where the supporting evidence is an MPS or CPU forward pass through SegNet/PoseNet/renderer/distilled scorer. MPS PoseNet drift is 23×; SegNet 2×; score 2.5×. STC clean-source FALSIFICATION was made on MPS encoder; user correctly objected; withdrawn. Strategic decisions REQUIRE a `[contest-CUDA]` artifact in the same record/section. (See `feedback_no_local_mps_for_authoritative_kill_or_promote_20260429.md`.)
+Writing "GREEN" / "RED" / "KILL" / "promoted" / "FALSIFIED" in any record where the supporting evidence is an MPS or non-`contest-CPU` CPU forward pass through SegNet/PoseNet/renderer/distilled scorer. MPS PoseNet drift is 23×; SegNet 2×; score 2.5×. STC clean-source FALSIFICATION was made on MPS encoder; user correctly objected; withdrawn. Internal CUDA promotion/kill decisions REQUIRE a `[contest-CUDA]` artifact in the same record/section. Public-leaderboard CPU claims REQUIRE `[contest-CPU]` on exact archive/runtime custody, and still must record the missing paired CUDA/CPU axis instead of extrapolating it. (See `feedback_no_local_mps_for_authoritative_kill_or_promote_20260429.md`.)
 
 **Forbidden /tmp paths in any persisted artifact (the transient-evidence trap):**
 Writing `/tmp/<anything>` as a file path in: lane registry evidence strings, memory files, dispatch claims, commit messages, build metadata, dispatch scripts, runbooks, CLAUDE.md examples, or any other artifact that survives the current shell session. /tmp paths do NOT survive a fresh checkout, do NOT exist on remote/CI/cloud machines, and CANNOT be verified by other agents. They produce phantom "evidence" that points at nothing. User mandate 2026-05-05: "we need to stop using /tmp by principle". Forensic finding: `lane_pr106_stacked` was marked L2 with `real_archive_empirical:true` evidence pointing at `/tmp/pr106_stacked_smoke/stacked_full/pr106_stacked_archive.zip` — a path that doesn't exist on any other machine and would be lost on shell exit. **Canonical replacement**: `experiments/results/<lane_id>_<timestamp>/` for build artifacts; `.omx/state/` for ledgers; `.omx/research/` for durable analyses. Caught by `tools/check_lane_smoke_signal_nontrivial.py` (PCC9, transient_tmp_evidence detection).
@@ -378,11 +381,11 @@ This applies to:
 - PR102 (third prize) public CPU comment: **0.19538** — this is the medal-band score the prize was awarded against
 - Δ CUDA−CPU: +0.033 on PR102
 
-**Our PR #107 (apogee submission) was scored ONLY on CUDA at 0.22936; the maintainer never triggered a CPU eval. We don't know if our PR was in the medal band because the CPU score was never measured.** This is a structural blind spot we MUST close from now on — but ONLY via 1:1 contest-compliant hardware.
+**Our PR #107 (apogee submission) was scored publicly only on CUDA at 0.22936; the maintainer never triggered a CPU eval comment.** Lab replay closed that blind spot with a GHA Linux x86_64 `[contest-CPU]` score of `0.1966358879` on exact archive/runtime custody. This confirms the submission was near the public medal cluster on the CPU axis, and it proves future shippable archives must be evaluated on both axes.
 
 **1:1 hardware-compliance rule (NON-NEGOTIABLE):**
 
-- Local macOS (M-series ARM, Intel iMac, anywhere on Apple Silicon or otherwise) is NEVER a 1:1 axis for CPU auth eval. ARM CPU floating-point intrinsics differ from x86_64 in ways that affect SegNet/PoseNet output bytes.
+- Local macOS (M-series ARM, Intel iMac, anywhere on Apple Silicon or otherwise) is NEVER a 1:1 axis for CPU auth eval. It is allowed as a high-throughput advisory/dev-loop signal because PR107 M5 Max `0.19664189` matched GHA Linux x86_64 `0.1966358879` within `6e-6`, but it must be tagged `[macOS-CPU advisory only]` until confirmed on Linux x86_64.
 - Required CPU substrate: **Linux x86_64** (Ubuntu LTS, matching the contest's GitHub Actions `ubuntu-latest` runner family; AMD EPYC or Intel Xeon class). The contest CI runs on x86_64 Linux; our CPU eval must too.
 - Required CUDA substrate: **NVIDIA T4 / A100 / 4090 / equivalent** (matching the contest's CUDA runner; T4 is the contest's reference for the bot's CUDA comments).
 - Both eval paths must use IDENTICAL upstream `evaluate.py` SHA, IDENTICAL `public_test_video_names.txt`, IDENTICAL video payloads, IDENTICAL `inflate.sh` runtime tree, IDENTICAL archive bytes.
@@ -393,14 +396,14 @@ This applies to:
 
 2. **Both tags are authoritative for their axis IF AND ONLY IF the hardware is 1:1 contest-compliant.** `[contest-CUDA]` requires NVIDIA GPU on Linux. `[contest-CPU]` requires x86_64 Linux. Apple Silicon CPU eval is `[macOS-CPU advisory]` (NOT `[contest-CPU]`) and is non-promotable.
 
-3. **The CUDA−CPU gap is empirical and per-archive.** Do NOT assume PR102's −0.033 gap generalizes to our archives without measurement. Pose component appears to be the dominant gap source (5× difference on PR102 pose between CUDA and CPU), likely FastViT attention numerics. Each architecture/checkpoint has its own gap.
+3. **The CUDA−CPU gap is empirical and per-archive.** Do NOT assume PR102's −0.033 gap generalizes to our archives without measurement. Pose component appears to be the dominant gap source (5× difference on PR102 pose between CUDA and CPU), but mechanism attribution remains open: DALI/NVDEC-vs-PyAV ground-truth decode, CPU/CUDA forward-kernel drift, and pose-head numerics must be separated by the 2x2 decoder/network diagnostic before we treat any explanation as fact. Earlier FastViT attention/TF32 compounding explanations are invalid for FastViT-T12 on T4.
 
 4. **CPU eval execution (where to run):**
    - **Vast.ai CPU instance** (Linux x86_64; cheap; matches contest CI architecture)
    - **Modal CPU container** (Linux x86_64; ~$0.06/hr; matches contest CI architecture)
    - **Lightning CPU Studio** (Linux x86_64; matches contest CI architecture)
    - **GitHub Actions CI workflow** itself (the actual contest hardware)
-   - **NOT** local M5 Max / Apple Silicon / any macOS — use only as a smoke / dev-loop signal, NOT as the authoritative axis. Tag any local CPU eval as `[macOS-CPU advisory only]`.
+   - **NOT** local M5 Max / Apple Silicon / any macOS as the authoritative axis. Use macOS CPU for free parallel sweeps, curve discovery, smoke, and dev-loop ranking only; tag it `[macOS-CPU advisory only]` and promote to `[contest-CPU]` only after Linux x86_64 replay.
 
 5. **CPU eval discipline (regardless of where it runs):**
    - Use `--device cpu` on `upstream/evaluate.py` directly. Verify `torch.cuda.is_available() == False`.
@@ -408,7 +411,7 @@ This applies to:
    - Tag results `[contest-CPU]` distinctly ONLY when running on Linux x86_64. Apple Silicon CPU eval is `[macOS-CPU advisory only]`.
    - CPU eval on a small Vast.ai / Modal CPU instance takes 60-120 min for 600 samples (matching the contest GitHub Actions CPU runner). Budget accordingly.
 
-6. **For non-submission empirical work (intermediate candidates, ablations, sweep arms), CUDA-only is still the right discipline** to keep proxy-auth gap risk low. The dual-eval mandate applies specifically to ARCHIVES THAT WILL SHIP or are used to make medal-band/frontier claims.
+6. **For non-submission empirical work (intermediate candidates, ablations, sweep arms), use the cheapest faithful signal that matches the question.** CUDA is still the GPU-axis truth; macOS CPU and MPS can accelerate research-signal sweeps when tagged non-authoritatively. The dual-eval mandate applies specifically to ARCHIVES THAT WILL SHIP or are used to make medal-band/frontier claims.
 
 7. **Existing CUDA-only artifacts are NOT retroactively invalidated.** They remain `[contest-CUDA]` with their CUDA-axis truth value. The dual-eval mandate is forward-looking: from this rule's commit forward, every shippable archive gets both axes on 1:1 contest-compliant hardware.
 
@@ -482,13 +485,13 @@ Cross-references: Council D audit `.omx/research/council_ema_audit_20260429.md`;
 | SegNet distortion | 0.0024 | 0.00116 | 2x WORSE on MPS |
 | **Final score** | **2.26** | **0.90** | **2.5x WORSE on MPS** |
 
-PoseNet specifically drifts 23×. Likely cause: FastViT-T12 attention softmax + YUV6 chroma plane numerics differ between MPS and CUDA float16 implementations.
+PoseNet specifically drifts 23× on MPS. Do not attribute this to FastViT-T12 attention: FastViT-T12 is RepMixer/convolutional on the contest path. Treat MPS drift as an empirical hardware/runtime mismatch until a layerwise diagnostic proves the mechanism.
 
 **Rules:**
 1. ALL **intermediate / non-submission** auth eval must run on CUDA (Vast.ai 4090, A100, T4). Never MPS as the authoritative axis. **EXCEPTION: submission packets (PR'd archives or "frontier-claimed" archives) require BOTH `[contest-CUDA]` AND `[contest-CPU]` per the new "Submission auth eval — BOTH CPU AND CUDA" section above.** The "never CPU" prohibition in the original rule was about local MPS-style CPU forward passes through SegNet/PoseNet scorers (which are noise like MPS), NOT about the contest's `upstream/evaluate.py --device cpu` path (which is the contest leaderboard's official scorer for ranking). The two are different: local-CPU-scorer-noise is invalid; contest-CPU-evaluator is authoritative.
 2. MPS is acceptable for proxy scoring during training (continuous monitoring), smoke tests (architecture validation), code-correctness checks, and long cheap research-signal sweeps that only generate curve-shape priors. NEVER for strategy decisions, ranking, shipping, method retirement, or paper empirical claims.
 3. Score numbers measured on MPS may NOT be reported as "auth" or "contest-compliant" anywhere — in commits, run_log, BATTLE_PLAN, or summaries. Tag them `[MPS-PROXY]` and treat as advisory only.
-4. Before any major decision (kill/promote/ship), the score MUST come from a CUDA `inflate.sh` + `upstream/evaluate.py` run on the EXACT archive bytes.
+4. Before any major internal CUDA-axis decision (kill/promote) the score MUST come from a CUDA `inflate.sh` + `upstream/evaluate.py` run on the EXACT archive bytes. Before any ship/frontier/medal-band decision, the same archive must also have a `[contest-CPU]` Linux x86_64 result, and neither axis may be inferred from the other.
 5. preflight should reject auth eval invocations with `--device mps` and warn loudly.
 6. The historical "2.01" / "2.26" / "2.91" numbers in memory and BATTLE_PLAN may all be MPS artifacts. The first verified CUDA contest-compliant baseline is 0.90 (2026-04-25 21:00).
 

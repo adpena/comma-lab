@@ -130,6 +130,8 @@ def test_probe_report_is_non_promotable_when_cuda_unavailable() -> None:
     assert report["score_claim"] is False
     assert report["promotion_eligible"] is False
     assert report["rank_or_kill_eligible"] is False
+    assert report["evidence_grade"] == "diagnostic"
+    assert report["diagnostic_kind"] == "posenet_layer_drift_probe"
     assert report["comparison_available"] is False
     assert "selected_modules" in report
     assert "first exceeding activation" in " ".join(report["interpretation_guardrails"])

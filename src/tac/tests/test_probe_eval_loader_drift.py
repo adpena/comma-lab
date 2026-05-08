@@ -89,3 +89,5 @@ def test_unavailable_probe_is_non_promotable(monkeypatch) -> None:
     assert report["score_claim"] is False
     assert report["promotion_eligible"] is False
     assert report["rank_or_kill_eligible"] is False
+    assert report["evidence_grade"] == "diagnostic"
+    assert report["diagnostic_kind"] == "loader_drift_probe"

@@ -570,9 +570,10 @@ Use evidence grades rigorously:
 - `contest-CPU`: exact same archive/runtime custody through
   `archive.zip -> inflate.sh -> upstream/evaluate.py --device cpu`, full sample
   count, and component recomputation on 1:1 Linux x86_64 contest-compliant
-  hardware. This is valid only for public leaderboard/PR-comment reproduction
-  and CPU-vs-CUDA drift diagnosis. It is not internal promotion, paper score,
-  rank-frontier, kill, or method-retirement evidence.
+  hardware. This is authoritative for the public leaderboard / PR-comment CPU
+  axis and for CPU-vs-CUDA drift diagnosis. It is not a substitute for the
+  CUDA axis, and it must not by itself promote an internal CUDA lane, anchor a
+  paper score, kill a family, or retire a method.
 - `empirical`: byte, smoke, loss, round-trip, partial, or component evidence.
 - `derivation`: formula-only conclusion.
 - `prediction`: hypothesis or forecast.
@@ -580,18 +581,22 @@ Use evidence grades rigorously:
 - `invalid`: CPU outside the explicit `contest-CPU` protocol, MPS, proxy,
   stale, no-op, sidecar, missing archive, or unreproducible score evidence.
 
-No lane can promote, rank, kill, or anchor stack math from prediction,
-byte-only, CPU, MPS, proxy, smoke, memory-only, or stale-log evidence.
+No lane can promote a CUDA-axis claim, kill a family, retire a method, or
+anchor stack math from prediction, byte-only, non-`contest-CPU` CPU, MPS,
+proxy, smoke, memory-only, or stale-log evidence. A `contest-CPU` artifact may
+rank the official public-leaderboard CPU axis only when its archive/runtime
+custody is exact and the missing CUDA/CPU counterpart is recorded instead of
+inferred.
 
-## CUDA Auth Eval Is The Score Truth
+## Dual-Axis Auth Eval Truth
 
 MPS, CPU, local proxy scorers, local renderer checks, and non-canonical eval
 paths can materially distort SegNet/PoseNet behavior and total score. They are
 useful only for development, byte checks, shape checks, smoke tests, and bug
 triage.
 
-For any GPU-dependent score or signal claim, the only reliable source of truth
-is exact CUDA auth eval on the exact archive bytes through:
+For any GPU-dependent score or signal claim, the reliable GPU-axis source of
+truth is exact CUDA auth eval on the exact archive bytes through:
 
 ```text
 archive.zip -> inflate.sh -> upstream/evaluate.py
@@ -601,7 +606,12 @@ Prefer `experiments/contest_auth_eval.py --device cuda` for this path and use
 its `contest_auth_eval.json` as the canonical artifact. Local M-series/MPS
 output through SegNet/PoseNet scorers must never promote, rank, kill, retire
 a method, validate a stack, or anchor paper claims. If a local/MPS result
-disagrees with CUDA auth eval, CUDA auth eval wins.
+disagrees with CUDA auth eval, CUDA auth eval wins on the CUDA axis.
+
+The public leaderboard has an additional official CPU axis. Do not assign
+global priority to CPU or CUDA until both axes are measured for the same
+archive/runtime; report the pair as a two-axis result, not a scalar
+extrapolation.
 
 ## Submission auth eval — BOTH CPU AND CUDA, ON 1:1 CONTEST-COMPLIANT HARDWARE — NON-NEGOTIABLE
 
@@ -616,8 +626,9 @@ prize) public bot comments:
 - PR102 public CUDA: 0.22839 — matches our T4 CUDA replay within 3e-6
 - PR102 public CPU: **0.19538** — this is the medal-band score the prize was awarded against
 - PR104 public CUDA: 0.23115 — matches our T4 CUDA replay within 1e-5
-- Our PR #107 (apogee submission): public CUDA 0.22936; CPU NEVER RUN
-  (maintainer triggered only the CUDA workflow on our PR)
+- Our PR #107 (apogee submission): public CUDA 0.22936; maintainer did not
+  publish a CPU comment, but lab GHA Linux x86_64 replay landed
+  `0.1966358879` with exact archive/runtime custody.
 
 Earlier guidance "Local M-series/MPS or CPU output must never promote
 [etc.]" was a conflation of two different paths:
@@ -651,9 +662,10 @@ Earlier guidance "Local M-series/MPS or CPU output must never promote
 - **Lightning CPU Studio** (Linux x86_64)
 - **Vast.ai CPU instance** (Linux x86_64; cheap)
 - **GitHub Actions CI workflow** itself (the actual contest hardware)
-- **NOT** local M5 Max / Apple Silicon / any macOS — use only as a smoke /
-  dev-loop signal, NOT as the authoritative axis. Tag any local CPU eval
-  as `[macOS-CPU advisory only]`, NEVER `[contest-CPU]`.
+- **NOT** local M5 Max / Apple Silicon / any macOS as the authoritative axis.
+  Local macOS CPU is allowed as a high-throughput advisory/dev-loop signal
+  (PR107 M5 Max `0.19664189` vs GHA Linux x86_64 `0.1966358879`, delta
+  `6e-6`), but tag it `[macOS-CPU advisory only]`, NEVER `[contest-CPU]`.
 
 **Operational rules:**
 
@@ -666,6 +678,11 @@ Earlier guidance "Local M-series/MPS or CPU output must never promote
    Report both; do not extrapolate one from the other. The CUDA−CPU gap
    is per-archive empirical, not a constant; PR102 saw +0.033, but
    architecture/checkpoint drift can shift this.
+
+   Mechanism attribution is not closed. Treat DALI/NVDEC-vs-PyAV decoder
+   bytes, CPU/CUDA forward-kernel drift, and pose-head numerics as competing
+   hypotheses until a 2x2 decoder/network split lands. Earlier FastViT
+   attention/TF32 explanations are not valid for FastViT-T12 on T4.
 
 3. CPU eval discipline: clean CPU-only PyTorch env on Linux x86_64
    (verify `torch.cuda.is_available() == False` and no MPS path). Use
