@@ -3042,20 +3042,42 @@ def _operator_approval_state(
     *,
     operator_approved_exact_cuda: bool | None,
 ) -> dict[str, Any]:
+    """Build per-row operator_approval_state.
+
+    Per-manifest gate is AUTHORITATIVE when explicitly set (True or False).
+    Selector-wide flag only applies when per-manifest is unset (None).
+    Closes codex finding 2026-05-08: a globally-scoped approval flag MUST
+    NOT override a per-candidate explicit `false`. See preflight check
+    ``check_operator_approval_must_be_lane_scoped`` and CLAUDE.md
+    forbidden-pattern entry "operator-approval-leak".
+    """
     manifest_value = payload.get("operator_approved_exact_cuda")
     manifest_approved = manifest_value if isinstance(manifest_value, bool) else None
-    if operator_approved_exact_cuda is True:
+    # Per-manifest is authoritative when explicit. Selector-wide ONLY applies
+    # when per-manifest is None (unset). An explicit per-manifest False MUST
+    # NOT be promoted to True by the selector-wide flag.
+    if manifest_approved is False:
+        approved = False
+        source = "candidate_manifest_operator_refused_exact_cuda"
+    elif manifest_approved is True:
+        approved = True
+        source = "candidate_manifest_operator_approved_exact_cuda"
+    elif operator_approved_exact_cuda is True:
         approved = True
         source = "selector_context_operator_approved_exact_cuda"
     elif operator_approved_exact_cuda is False:
         approved = False
         source = "selector_context_operator_refused_exact_cuda"
-    elif manifest_approved is not None:
-        approved = manifest_approved
-        source = "candidate_manifest_operator_approved_exact_cuda"
     else:
         approved = None
         source = "not_recorded"
+    # Boundary assert: explicit per-manifest False must never produce approved=True
+    # regardless of selector-wide flag. This is the structural authorization-leak
+    # guard mandated by codex finding 2026-05-08.
+    assert not (manifest_approved is False and approved is True), (
+        "operator-approval-leak: per-manifest operator_approved_exact_cuda=False "
+        "must not be overridden by selector_context_operator_approved_exact_cuda=True"
+    )
     return {
         "schema": "operator_approval_state_v1",
         "approved": approved,
@@ -4120,7 +4142,20 @@ def build_selection_report(
         "dispatch_attempted": False,
         "operator_approval_state": {
             "schema": "operator_approval_state_v1",
+            # Report-level summary records the selector-wide flag, but per-row
+            # state (`row.operator_approval_state`) is authoritative for
+            # dispatch decisions. Per-manifest False on any row MUST NOT be
+            # overridden here; see ``_operator_approval_state`` and
+            # preflight ``check_operator_approval_must_be_lane_scoped``.
             "approved": operator_approved_exact_cuda if operator_approved_exact_cuda is not None else None,
+            "scope": "selector_context_only",
+            "warning": (
+                "approved is per-row; per-manifest operator_approved_exact_cuda "
+                "is authoritative when explicitly set (True or False). "
+                "Selector-wide flag applies only when per-manifest is unset. "
+                "Bind operator approval to lane_id/job_id, never trust "
+                "report-level approved as a substitute for per-row state."
+            ),
             "source": (
                 "selector_context_operator_approved_exact_cuda"
                 if operator_approved_exact_cuda is True

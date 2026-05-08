@@ -434,6 +434,19 @@ def preflight_all(
         check_evidence_implementation_matches_model_spec(
             strict=False, verbose=verbose,
         )
+        # 2026-05-08 codex finding 1 (HIGH): operator-approval-leak. A
+        # selector-wide `selector_context_operator_approved_exact_cuda: true`
+        # was overriding per-candidate `manifest_operator_approved_exact_cuda:
+        # false`, collapsing operator authorization into a global flag that
+        # could unlock GPU dispatch on candidates the operator never approved.
+        # Build-time fix lives in
+        # `tools/build_field_meta_dispatch_selection.py::_operator_approval_state`
+        # with an explicit boundary assert. This preflight scans every
+        # `*_status*.json` under `experiments/results/` and refuses any row
+        # where `approved=True && manifest_operator_approved_exact_cuda=False`.
+        # Forbidden pattern: "operator-approval-leak". Memory ref:
+        # `feedback_codex_finding_1_operator_approval_scoping_FIXED_20260508.md`.
+        check_operator_approval_must_be_lane_scoped(strict=True, verbose=verbose)
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -1257,6 +1270,15 @@ def preflight_all(
             strict=True, verbose=verbose,
         )
         check_predispatch_retired_config_warning(
+            strict=True, verbose=verbose,
+        )
+        # Check 109 — public PR intake clones MUST be pristine bytes-identical
+        # to upstream. Codex 2026-05-08 adversarial review HIGH finding:
+        # in-place waiver comments in clone source files corrupt source
+        # provenance. Lands at 0 live violations after the same-day revert
+        # of 39 stale `KL_BATCHMEAN_OK` waivers across 8 dirty clones.
+        # Memory: feedback_codex_finding_2_public_intake_pristine_FIXED_20260508.md.
+        check_public_pr_intake_clones_pristine(
             strict=True, verbose=verbose,
         )
         check_scores_have_lane_tag_paper_research(
@@ -3519,6 +3541,93 @@ def check_calibration_provenance(
             print(f"  [calibration-provenance] {len(violations)} violation(s)")
         else:
             print("  [calibration-provenance] OK")
+    return violations
+
+
+def check_operator_approval_must_be_lane_scoped(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Operator-approval-leak gate (CODEX FINDING 2026-05-08).
+
+    A globally-scoped ``selector_context_operator_approved_exact_cuda`` flag
+    must NEVER override an explicit per-manifest
+    ``manifest_operator_approved_exact_cuda: false``. This check scans every
+    ``*_status.json`` under ``experiments/results/`` (and dated
+    ``frontier_roadmap_status_*`` siblings) and refuses any
+    ``operator_approval_state`` row where ``approved == True`` AND
+    ``manifest_operator_approved_exact_cuda is False``. Such a row collapses
+    candidate-specific operator authorization into a global flag that can
+    unlock GPU dispatch on candidates the operator never approved.
+
+    Forbidden pattern: "operator-approval-leak". See
+    ``tools/build_field_meta_dispatch_selection.py::_operator_approval_state``
+    for the producing logic; the fix lands in the same file with an explicit
+    boundary assert.
+
+    Reactivation criteria: the gate may be relaxed only if the build logic
+    formally proves selector-wide flag is no longer persisted in committed
+    output AND every approval row carries a per-candidate approval artifact
+    path + SHA-256.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    results_dir = root / "experiments" / "results"
+    if not results_dir.is_dir():
+        if verbose:
+            print("  [operator-approval-scope] OK (no experiments/results)")
+        return []
+
+    violations: list[str] = []
+    scanned = 0
+    for path in sorted(results_dir.rglob("*status*.json")):
+        # Skip public_pr* intake clones (forensic inputs, owned by sister gate).
+        rel = path.relative_to(root).as_posix()
+        if "/public_pr" in rel:
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        scanned += 1
+        # Walk every dict node looking for operator_approval_state shape.
+        stack: list = [payload]
+        while stack:
+            node = stack.pop()
+            if isinstance(node, dict):
+                state = node.get("operator_approval_state")
+                if isinstance(state, dict):
+                    approved = state.get("approved")
+                    manifest_flag = state.get("manifest_operator_approved_exact_cuda")
+                    if approved is True and manifest_flag is False:
+                        # Compute a stable row identifier from surrounding context.
+                        row_id = (
+                            node.get("candidate_id")
+                            or node.get("packet_path")
+                            or node.get("source")
+                            or "unknown"
+                        )
+                        violations.append(
+                            f"{rel}: operator-approval-leak — "
+                            f"approved=True with manifest_operator_approved_exact_cuda=False "
+                            f"(row_id={row_id!r}, source={state.get('source')!r})"
+                        )
+                stack.extend(node.values())
+            elif isinstance(node, list):
+                stack.extend(node)
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "OPERATOR-APPROVAL-LEAK VIOLATIONS:\n" + "\n".join(violations)
+        )
+    if verbose:
+        if violations:
+            print(
+                f"  [operator-approval-scope] {len(violations)} violation(s) across {scanned} status file(s)"
+            )
+        else:
+            print(f"  [operator-approval-scope] OK ({scanned} status file(s) scanned)")
     return violations
 
 
@@ -23683,6 +23792,157 @@ def check_predispatch_retired_config_warning(
         strict=strict,
         verbose=verbose,
     )
+
+
+def check_public_pr_intake_clones_pristine(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Check 109 — public PR intake clones MUST be pristine bytes-identical to upstream.
+
+    Bug class: a scanner finding inside a public PR intake clone is "fixed"
+    by adding an inline waiver comment to the clone's source file. This
+    corrupts source provenance — later replay/source audits no longer match
+    the public PR head, and preflight cleanliness becomes dependent on
+    local-only edits not present upstream. Public PR clones under
+    ``experiments/results/public_pr*_intake_*/`` are forensic inputs for
+    public-frontier custody (CLAUDE.md "Public frontier watch and intake")
+    and are subject to the "Non-Negotiable Upstream Rule".
+
+    Real incident: 2026-05-08 codex adversarial review HIGH finding
+    surfaced 39 in-place ``KL_BATCHMEAN_OK`` waiver comments across 8
+    dirty clones (``submissions/{fp4_mask_gen,neural_inflate,ph4ntom_drv,
+    quantizr,svtav1_dilated_ren}/...py``). The KL-batchmean scanner had
+    already added ``_intake_`` to its ``_VENDORED_PATH_MARKERS`` exclusion
+    list (``src/tac/preflight.py:5113``); the inline waivers were dead
+    code at the time of review, but they still corrupted source
+    provenance. See:
+      * ``.omx/research/codex_finding_2_dirty_clone_revert_inventory_20260508.md``
+      * ``feedback_codex_finding_2_public_intake_pristine_FIXED_20260508.md``
+
+    Static check: discover all clones under
+    ``experiments/results/public_pr*_intake_*/`` (and the canonical
+    ``{source,repo,pr*_src}/{repo,...}`` subdirs), then for each clone
+    that is itself a git repo (``.git`` dir or file present), refuse if
+    ``git -C <clone> status --short`` returns non-empty. Replacement
+    mechanism for any LEGITIMATE waiver lives in
+    ``reverse_engineering/public_pr_waiver_manifest.json`` (committed
+    metadata, not inline edits).
+
+    Lands at 0 live violations (after 2026-05-08 revert). Ships STRICT
+    directly per the Lane A pattern.
+    """
+    import subprocess
+    root = Path(repo_root) if repo_root is not None else REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    n_skipped_not_git = 0
+
+    # Discovery: every directory matching public_pr*_intake_* under
+    # experiments/results/ (recursively, up to 4 levels deep) — covers
+    # the canonical layouts:
+    #   experiments/results/public_pr*_intake_*/source/
+    #   experiments/results/public_pr*_intake_*/repo/
+    #   experiments/results/public_pr*_intake_*/pr*_src/repo/
+    #   experiments/results/public_pr_archive_*/public_pr*_intake_*/
+    #   experiments/results/public_pr_intake_full/public_pr*_intake_*/
+    er = root / "experiments" / "results"
+    if not er.is_dir():
+        if verbose:
+            print(f"  [public-pr-intake-pristine] OK: no experiments/results/ dir")
+        return []
+
+    # Find every dir whose path contains _intake_ AND is a git repo
+    # (.git either a directory or a file pointing to gitdir).
+    candidate_clones: list[Path] = []
+    for child in er.rglob("*_intake_*"):
+        if not child.is_dir():
+            continue
+        # Common subdirs are the actual clone roots.
+        for sub in ("source", "repo", "pr91_src/repo"):
+            cand = child / sub
+            git_marker = cand / ".git"
+            if git_marker.exists():
+                candidate_clones.append(cand)
+        # The intake_*_auto layout has the clone root directly at the
+        # intake dir (no source/repo subdir). Detect via .git presence.
+        git_marker_root = child / ".git"
+        if git_marker_root.exists():
+            candidate_clones.append(child)
+
+    # Deduplicate paths (rglob can hit nested intake dirs twice).
+    seen: set[Path] = set()
+    unique_clones: list[Path] = []
+    for c in candidate_clones:
+        rp = c.resolve()
+        if rp in seen:
+            continue
+        seen.add(rp)
+        unique_clones.append(c)
+
+    for clone in unique_clones:
+        n_scanned += 1
+        try:
+            result = subprocess.run(
+                ["git", "-C", str(clone), "status", "--short"],
+                capture_output=True, text=True, timeout=30,
+            )
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+            # Clone is unreachable / not a real git repo — skip.
+            n_skipped_not_git += 1
+            continue
+        if result.returncode != 0:
+            n_skipped_not_git += 1
+            continue
+        dirty = result.stdout.strip()
+        if dirty:
+            rel = clone.relative_to(root) if clone.is_absolute() else clone
+            # Cap output to first 5 lines per clone to avoid log spam.
+            preview_lines = dirty.split("\n")[:5]
+            preview = "; ".join(preview_lines)
+            extra = (
+                f" (+{len(dirty.split(chr(10))) - 5} more)"
+                if len(dirty.split("\n")) > 5
+                else ""
+            )
+            violations.append(
+                f"{rel}: dirty git status — public PR intake clone has "
+                f"local edits that corrupt source provenance. "
+                f"Status: [{preview}{extra}]. Restore via "
+                f"`git -C {rel} checkout -- .`. Put any waiver rationale "
+                f"in `reverse_engineering/public_pr_waiver_manifest.json` "
+                f"instead of editing the clone in place."
+            )
+
+    if verbose and violations:
+        print(
+            f"  [public-pr-intake-pristine] {len(violations)} dirty clone(s) "
+            f"across {n_scanned} scanned ({n_skipped_not_git} skipped non-git):"
+        )
+        for v in violations:
+            print(f"    • {v}")
+    elif verbose:
+        print(
+            f"  [public-pr-intake-pristine] OK: {n_scanned} clone(s) clean "
+            f"({n_skipped_not_git} skipped non-git)"
+        )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "Public PR intake clones must remain pristine bytes-identical "
+            "to upstream PR head. Inline waivers in clone source files "
+            "corrupt source provenance and break replay/audit. Found "
+            f"{len(violations)} dirty clone(s):\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nRevert with `git -C <clone> checkout -- .`. Put any "
+            "legitimate waiver rationale in "
+            "`reverse_engineering/public_pr_waiver_manifest.json` "
+            "(committed metadata, not inline clone edits). See "
+            "`.omx/research/codex_finding_2_dirty_clone_revert_inventory_20260508.md`."
+        )
+    return violations
 
 
 def check_pr101_tools_torch_load_allowlist(
