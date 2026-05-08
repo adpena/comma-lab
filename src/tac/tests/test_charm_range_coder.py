@@ -16,6 +16,11 @@ from tac.codec.charm_range_coder import (
     shannon_bits_for_pmf,
 )
 
+# Canonical full INT8 alphabet endpoints, named to make the
+# `symbol - alphabet_lo → pmf-index` arithmetic explicit instead of magic.
+DEFAULT_ALPHABET_LO = -128
+DEFAULT_ALPHABET_HI = 127
+
 
 def _pmfs_for(symbols: list[int]) -> list[np.ndarray]:
     return [
@@ -237,7 +242,7 @@ def test_near_uniform_pmf_within_one_percent_of_shannon() -> None:
     assert recovered == symbols
 
     coded_bits = (len(blob) - HEADER_SIZE) * 8
-    shannon_bits = sum(shannon_bits_for_pmf(pmf, s - (-128)) for s in symbols)
+    shannon_bits = sum(shannon_bits_for_pmf(pmf, s - DEFAULT_ALPHABET_LO) for s in symbols)
     ratio = coded_bits / shannon_bits
     assert 0.99 < ratio < 1.01, f"ratio={ratio} outside ±1%"
 
@@ -294,7 +299,7 @@ def test_rate_within_one_percent_long_matched_stream() -> None:
     pmfs = [pmf for _ in range(n)]
     blob = encode_symbols(symbols, pmfs)
     coded_bits = (len(blob) - HEADER_SIZE) * 8
-    shannon_bits = sum(shannon_bits_for_pmf(pmf, s - (-128)) for s in symbols)
+    shannon_bits = sum(shannon_bits_for_pmf(pmf, s - DEFAULT_ALPHABET_LO) for s in symbols)
     ratio = coded_bits / shannon_bits
     assert 0.99 < ratio < 1.01, f"ratio={ratio} outside ±1%"
 
@@ -313,7 +318,7 @@ def test_rate_within_one_percent_per_symbol_pmfs() -> None:
     blob = encode_symbols(symbols, pmfs)
     coded_bits = (len(blob) - HEADER_SIZE) * 8
     shannon_bits = sum(
-        shannon_bits_for_pmf(pmfs[i], symbols[i] - (-128)) for i in range(n)
+        shannon_bits_for_pmf(pmfs[i], symbols[i] - DEFAULT_ALPHABET_LO) for i in range(n)
     )
     ratio = coded_bits / shannon_bits
     assert 0.99 < ratio < 1.01, f"ratio={ratio} outside ±1%"
@@ -395,3 +400,71 @@ def test_int8_residual_stream_compresses_below_raw_int8() -> None:
         f"coded {len(blob)} B not smaller than raw INT8 {raw_int8_bytes} B — "
         "ChARM PMFs not informative enough?"
     )
+
+
+# Closes A4 review R3-1 (uint16 ceiling guard path was untested).
+def test_header_to_bytes_rejects_payload_len_above_uint16_ceiling() -> None:
+    """`ChARMBitStreamHeader.to_bytes` must raise when payload_len > 65535."""
+    too_large = (1 << 16)  # 65536 — first invalid value
+    h = ChARMBitStreamHeader(
+        version=1,
+        alphabet_lo=DEFAULT_ALPHABET_LO,
+        alphabet_hi=DEFAULT_ALPHABET_HI,
+        num_symbols=1,
+        pmf_total_bits=15,
+        payload_len=too_large,
+    )
+    with pytest.raises(ValueError, match="payload_len out of uint16 range"):
+        h.to_bytes()
+
+
+def test_header_to_bytes_accepts_max_uint16_payload_len() -> None:
+    """Boundary: 65535 is the LAST valid payload_len (uint16 max)."""
+    h = ChARMBitStreamHeader(
+        version=1,
+        alphabet_lo=DEFAULT_ALPHABET_LO,
+        alphabet_hi=DEFAULT_ALPHABET_HI,
+        num_symbols=1,
+        pmf_total_bits=15,
+        payload_len=(1 << 16) - 1,
+    )
+    # Must NOT raise.
+    encoded = h.to_bytes()
+    assert len(encoded) == HEADER_SIZE
+
+
+# Closes A4 review R3-3 (decode_symbols silent-ignore behaviour was untested).
+def test_decode_symbols_silently_ignores_pmfs_beyond_num_symbols() -> None:
+    """`decode_symbols` may receive more PMFs than the encoded symbol count;
+    extras must be silently ignored — only the first ``num_symbols`` consumed.
+    """
+    # Encode a known stream of 5 symbols on the small (-3..3) alphabet.
+    alphabet = (-3, 3)
+    pmf = gaussian_pmf_int8(0.0, 1.5, alphabet_lo=-3, alphabet_hi=3)
+    symbols = [0, 1, -1, 2, -2]
+    pmfs = [pmf for _ in symbols]
+    blob = encode_symbols(symbols, pmfs, alphabet=alphabet)
+
+    # Decode passing 5 + 4 extra "wrong" PMFs that must NOT be consumed.
+    bogus_pmf = gaussian_pmf_int8(2.5, 0.1, alphabet_lo=-3, alphabet_hi=3)
+    pmfs_with_extras = pmfs + [bogus_pmf, bogus_pmf, bogus_pmf, bogus_pmf]
+    recovered = decode_symbols(blob, pmfs_with_extras)
+    assert recovered == symbols, (
+        "extras should not affect decoded symbols; got "
+        f"{recovered!r} expected {symbols!r}"
+    )
+
+
+def test_decode_symbols_rejects_too_few_pmfs() -> None:
+    """Sister test of the silent-ignore: passing FEWER PMFs than num_symbols
+    must raise (per the docstring contract).
+    """
+    alphabet = (-3, 3)
+    pmf = gaussian_pmf_int8(0.0, 1.5, alphabet_lo=-3, alphabet_hi=3)
+    symbols = [0, 1, -1, 2, -2]
+    pmfs = [pmf for _ in symbols]
+    blob = encode_symbols(symbols, pmfs, alphabet=alphabet)
+
+    too_few = pmfs[:-2]  # 3 PMFs for a 5-symbol stream
+    with pytest.raises((ValueError, IndexError, AssertionError)):
+        decode_symbols(blob, too_few)
