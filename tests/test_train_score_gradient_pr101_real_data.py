@@ -67,11 +67,9 @@ def test_load_real_frame_pairs_uses_upstream_yuv420_converter(
 
     assert calls == [10, 20, 30]
     assert container.closed is True
-    assert pairs.shape == (2, 2, 2, 3, 3)
+    assert pairs.shape == (1, 2, 2, 3, 3)
     assert torch.all(pairs[0, 0] == 10)
     assert torch.all(pairs[0, 1] == 20)
-    assert torch.all(pairs[1, 0] == 20)
-    assert torch.all(pairs[1, 1] == 30)
 
 
 def test_load_real_frame_pairs_honors_max_frames(

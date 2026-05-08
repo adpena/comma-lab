@@ -321,6 +321,64 @@ class ProvenanceGuard:
         )
 
 
+class CommittedRangeProvenanceGuard:
+    """HISTORICAL_PROVENANCE guard for already-committed ranges.
+
+    ``ProvenanceGuard`` protects the pre-commit working tree by comparing
+    ``HEAD:<path>`` to the file on disk. Once a bad mutation is committed,
+    that comparison becomes self-equal. This guard closes the CI/review gap by
+    comparing ``base_ref:<path>`` to ``head_ref:<path>``.
+    """
+
+    def __init__(self, repo_root: Path | None = None):
+        self.repo_root = Path(repo_root or REPO_ROOT)
+
+    def check(
+        self,
+        path: Path | str,
+        *,
+        append_fields: tuple[str, ...] = (),
+        base_ref: str,
+        head_ref: str = "HEAD",
+    ) -> GuardResult:
+        rel = _rel_path(path, self.repo_root)
+        before = _git_show_json(self.repo_root, base_ref, rel)
+        after = _git_show_json(self.repo_root, head_ref, rel)
+        if before is None or after is None:
+            return GuardResult(
+                path=rel, kind=ArtifactKind.HISTORICAL_PROVENANCE, violations=[]
+            )
+        if not isinstance(before, dict) or not isinstance(after, dict):
+            return GuardResult(
+                path=rel, kind=ArtifactKind.HISTORICAL_PROVENANCE, violations=[]
+            )
+
+        violations: list[str] = []
+        append_field_set = set(append_fields)
+        for key, prev in before.items():
+            cur = after.get(key, prev)
+            if key in append_field_set:
+                if isinstance(prev, list) and isinstance(cur, list) and cur[: len(prev)] != prev:
+                    violations.append(
+                        f"HISTORICAL_PROVENANCE {rel!r} append field {key!r} "
+                        f"mutated existing entries across {base_ref}..{head_ref}; "
+                        "append-only fields may add entries but not rewrite prior entries"
+                    )
+                continue
+            if isinstance(prev, (dict, list)):
+                continue
+            if cur != prev:
+                violations.append(
+                    f"HISTORICAL_PROVENANCE {rel!r} field {key!r} mutated "
+                    f"across committed range {base_ref}..{head_ref} "
+                    f"({prev!r} -> {cur!r}); append a new record instead of "
+                    "rewriting provenance"
+                )
+        return GuardResult(
+            path=rel, kind=ArtifactKind.HISTORICAL_PROVENANCE, violations=violations
+        )
+
+
 class RecipeGuard:
     """LIVE_RECIPE files must not contain baked transient values."""
 
@@ -419,6 +477,25 @@ def _is_tracked_by_git(repo_root: Path, relpath: str) -> bool:
         return False
 
 
+def _git_show_json(repo_root: Path, ref: str, relpath: str) -> Any | None:
+    try:
+        result = subprocess.run(
+            ["git", "show", f"{ref}:{relpath}"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return None
+    if result.returncode != 0:
+        return None
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return None
+
+
 # ---------------------------------------------------------------------------
 # Meta umbrella check (runs all guards on registry-classified files)
 # ---------------------------------------------------------------------------
@@ -426,6 +503,9 @@ def _is_tracked_by_git(repo_root: Path, relpath: str) -> bool:
 
 def run_meta_lifecycle_audit(
     repo_root: Path | None = None,
+    *,
+    base_ref: str | None = None,
+    head_ref: str = "HEAD",
 ) -> list[str]:
     """Run all four guards against every registry-classified file under the repo.
 
@@ -435,6 +515,7 @@ def run_meta_lifecycle_audit(
     classifier = ArtifactClassifier(root)
     live_guard = LiveStateGuard(root)
     prov_guard = ProvenanceGuard(root)
+    committed_prov_guard = CommittedRangeProvenanceGuard(root)
     recipe_guard = RecipeGuard(root)
     derived_guard = DerivedOutputGuard(root)
 
@@ -454,6 +535,14 @@ def run_meta_lifecycle_audit(
                 res = live_guard.check(path)
             elif entry.kind is ArtifactKind.HISTORICAL_PROVENANCE:
                 res = prov_guard.check(path, append_fields=entry.append_fields)
+                if base_ref:
+                    committed_res = committed_prov_guard.check(
+                        path,
+                        append_fields=entry.append_fields,
+                        base_ref=base_ref,
+                        head_ref=head_ref,
+                    )
+                    res.violations.extend(committed_res.violations)
             elif entry.kind is ArtifactKind.LIVE_RECIPE:
                 res = recipe_guard.check(path)
             elif entry.kind is ArtifactKind.DERIVED_OUTPUT:
@@ -489,6 +578,7 @@ __all__ = [
     "ArtifactKind",
     "ArtifactLifecycleViolation",
     "Classification",
+    "CommittedRangeProvenanceGuard",
     "DerivedOutputGuard",
     "GuardResult",
     "LiveStateGuard",

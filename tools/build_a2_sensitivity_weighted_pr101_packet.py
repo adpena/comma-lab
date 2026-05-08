@@ -1351,20 +1351,25 @@ def verify_inflate_parity(
     candidate_archive_path: Path,
     source_archive_path: Path,
     timeout_seconds: int = 600,
+    expect_output_byte_identical: bool = False,
 ) -> dict[str, Any]:
-    """Run `inflate.sh` on source and candidate archives, compare outputs.
+    """Run `inflate.sh` on source and candidate archives, compare output contract.
 
     The packet builder produces parse-smoke evidence at build time, which only
     validates that the wire format is parseable and the decoder loads. It does
     NOT validate that decoding produces the same outputs as the source archive.
 
     This helper closes that gap: it stages a working directory, runs the
-    packet's bundled `inflate.sh` against both archives, and compares
-    deterministic output bytes (or per-file SHA-256 if outputs are large).
+    packet's bundled `inflate.sh` against both archives, and verifies both
+    runs emit the same output file contract. Byte identity is recorded as
+    ``output_bytes_identical`` but is only required when
+    ``expect_output_byte_identical=True``. Real score-affecting A2 packets are
+    expected to change decoded frames, so requiring source/candidate output
+    bytes to match would select for no-op packets.
 
     Returns:
         Dict containing:
-          * `passed`: bool — True iff source and candidate inflate to identical bytes
+          * `passed`: bool — True iff both runs inflate and output contract is valid
           * `command`: invocation string (for reproducibility)
           * `source_output_sha256`, `candidate_output_sha256`: bytes-of-output digests
           * `differing_paths`: list of relative paths where source/candidate differ
@@ -1430,8 +1435,10 @@ def verify_inflate_parity(
             "cleared_blockers": [],
         }
 
-    # Compare every emitted file byte-for-byte. Both sides should have produced
-    # identical contents under the runtime contract.
+    # Compare every emitted file byte-for-byte while separating "same file
+    # contract" from "same decoded bytes". Score-affecting candidates should
+    # usually differ in bytes, but must still produce the same logical output
+    # surface.
     def _file_map(root: Path) -> dict[str, str]:
         result: dict[str, str] = {}
         for path in sorted(root.rglob("*")):
@@ -1455,10 +1462,29 @@ def verify_inflate_parity(
             differing.append(rel)
 
     differing = sorted(set(differing))
-    passed = not differing
+    source_paths = set(source_files)
+    candidate_paths = set(candidate_files)
+    missing_from_candidate = sorted(source_paths - candidate_paths)
+    extra_in_candidate = sorted(candidate_paths - source_paths)
+    output_contract_paths_match = not missing_from_candidate and not extra_in_candidate
+    output_contract_nonempty = bool(source_files) and bool(candidate_files)
+    output_bytes_identical = not differing
+    passed = output_contract_paths_match and output_contract_nonempty
+    if expect_output_byte_identical:
+        passed = passed and output_bytes_identical
+
+    contract_errors: list[str] = []
+    if not output_contract_nonempty:
+        contract_errors.append("inflate_output_contract_empty")
+    if not output_contract_paths_match:
+        contract_errors.append("inflate_output_paths_mismatch")
+    if expect_output_byte_identical and not output_bytes_identical:
+        contract_errors.append("inflate_output_bytes_differ_for_noop_candidate")
     return {
         "passed": passed,
         "command": f"bash {inflate_sh.resolve()} (run on source & candidate; compare outputs)",
+        "contract": "same_output_paths_nonempty_and_optional_byte_identity",
+        "expect_output_byte_identical": bool(expect_output_byte_identical),
         "source_output_count": len(source_files),
         "candidate_output_count": len(candidate_files),
         "source_combined_sha256": hashlib.sha256(
@@ -1468,6 +1494,12 @@ def verify_inflate_parity(
             json_text(candidate_files).encode("utf-8")
         ).hexdigest(),
         "differing_paths": differing,
+        "missing_from_candidate": missing_from_candidate,
+        "extra_in_candidate": extra_in_candidate,
+        "output_contract_paths_match": output_contract_paths_match,
+        "output_contract_nonempty": output_contract_nonempty,
+        "output_bytes_identical": output_bytes_identical,
+        "contract_errors": contract_errors,
         "cleared_blockers": sorted(CLEARED_BY_INFLATE_PARITY) if passed else [],
         "source_inflate_returncode": source_result["returncode"],
         "candidate_inflate_returncode": candidate_result["returncode"],
@@ -1636,6 +1668,9 @@ def main(argv: list[str] | None = None) -> int:
                     candidate_archive_path=candidate_archive,
                     source_archive_path=source_archive_resolved,
                     timeout_seconds=args.inflate_parity_timeout,
+                    expect_output_byte_identical=not bool(
+                        variant.get("score_affecting_payload_changed")
+                    ),
                 )
                 _apply_inflate_parity_to_manifest(
                     manifest_path=variant_manifest_path,

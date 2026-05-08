@@ -318,8 +318,10 @@ def test_run_inflate_parity_cli_uses_packet_subdir_archive(tmp_path: Path, monke
         candidate_archive_path,
         source_archive_path,
         timeout_seconds,
+        expect_output_byte_identical,
     ):
         del source_archive_path, timeout_seconds
+        assert expect_output_byte_identical is False
         calls.append((Path(packet_dir), Path(candidate_archive_path)))
         return {"passed": True, "cleared_blockers": ["packet_local_inflate_parity_not_run"]}
 
@@ -352,6 +354,53 @@ def test_run_inflate_parity_cli_uses_packet_subdir_archive(tmp_path: Path, monke
             output_dir / "variants" / variant_id / "packet" / "archive.zip",
         )
     ]
+
+
+def test_inflate_parity_allows_score_affecting_output_byte_differences(tmp_path: Path) -> None:
+    tool = _load_tool()
+    packet_dir = tmp_path / "packet"
+    packet_dir.mkdir()
+    inflate = packet_dir / "inflate.sh"
+    inflate.write_text(
+        f"""#!/usr/bin/env bash
+set -euo pipefail
+{sys.executable} - <<'PY'
+import pathlib
+import zipfile
+
+payload = zipfile.ZipFile("archive.zip").read("x")
+out = pathlib.Path("frames")
+out.mkdir(exist_ok=True)
+(out / "000000.bin").write_bytes(payload)
+PY
+""",
+        encoding="utf-8",
+    )
+    inflate.chmod(0o755)
+    source_archive = tmp_path / "source.zip"
+    candidate_archive = tmp_path / "candidate.zip"
+    _write_zip(source_archive, b"SOURCE")
+    _write_zip(candidate_archive, b"CANDIDATE")
+
+    score_affecting = tool.verify_inflate_parity(
+        packet_dir=packet_dir,
+        candidate_archive_path=candidate_archive,
+        source_archive_path=source_archive,
+        expect_output_byte_identical=False,
+    )
+    no_op_expected = tool.verify_inflate_parity(
+        packet_dir=packet_dir,
+        candidate_archive_path=candidate_archive,
+        source_archive_path=source_archive,
+        expect_output_byte_identical=True,
+    )
+
+    assert score_affecting["passed"] is True
+    assert score_affecting["output_contract_paths_match"] is True
+    assert score_affecting["output_bytes_identical"] is False
+    assert score_affecting["cleared_blockers"] == ["packet_local_inflate_parity_not_run"]
+    assert no_op_expected["passed"] is False
+    assert "inflate_output_bytes_differ_for_noop_candidate" in no_op_expected["contract_errors"]
 
 
 def test_refuses_output_directory_overlapping_source_runtime(tmp_path: Path, monkeypatch) -> None:

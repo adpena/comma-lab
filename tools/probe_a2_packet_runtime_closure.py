@@ -379,12 +379,24 @@ def probe_runtime_closure(
     decoded_decoder_state_changed = (
         source_probe["decoder_state_sha256"] != candidate_probe["decoder_state_sha256"]
     )
-    semantic_payload_changed = bool(candidate_manifest["semantic_payload_changed"])
-    if semantic_payload_changed and not decoded_decoder_state_changed:
+    manifest_semantic_payload_changed = bool(candidate_manifest["semantic_payload_changed"])
+    if manifest_semantic_payload_changed and not decoded_decoder_state_changed:
         raise RuntimeClosureBlocked(
             "candidate manifest claims semantic payload changed, but decoded decoder tensors match source",
             ["semantic_payload_changed_but_decoded_decoder_state_unchanged"],
         )
+    if (
+        candidate_manifest.get("present")
+        and decoded_decoder_state_changed
+        and not manifest_semantic_payload_changed
+    ):
+        raise RuntimeClosureBlocked(
+            "candidate manifest underclaims semantic payload change: decoded decoder tensors changed",
+            ["semantic_payload_underclaimed_by_manifest"],
+        )
+    semantic_payload_changed = bool(
+        manifest_semantic_payload_changed or decoded_decoder_state_changed
+    )
     dispatch_blockers = sorted(
         {
             *BASE_BLOCKERS,
@@ -413,6 +425,7 @@ def probe_runtime_closure(
             "source_candidate_member_name_match": True,
             "decoded_decoder_state_changed": decoded_decoder_state_changed,
             "semantic_payload_changed": semantic_payload_changed,
+            "manifest_semantic_payload_changed": manifest_semantic_payload_changed,
             "cleared_blockers": [],
             "cleared_blockers_by_evidence": {},
             "note": (
@@ -429,7 +442,12 @@ def probe_runtime_closure(
         ),
         "score_affecting_payload_changed": semantic_payload_changed,
         "semantic_payload_changed": semantic_payload_changed,
-        "semantic_payload_changed_source": candidate_manifest["semantic_payload_changed_source"],
+        "semantic_payload_changed_source": (
+            "decoded_decoder_state_sha256"
+            if decoded_decoder_state_changed
+            else candidate_manifest["semantic_payload_changed_source"]
+        ),
+        "manifest_semantic_payload_changed": manifest_semantic_payload_changed,
         "dispatch_blockers": dispatch_blockers,
     }
     manifest["manifest_sha256_excluding_self"] = _canonical_json_sha256(manifest)

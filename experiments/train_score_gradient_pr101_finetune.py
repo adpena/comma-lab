@@ -284,11 +284,13 @@ def load_real_frame_pairs(
 
     frames_hwc = torch.stack(frames_resized_hwc)  # (N, H, W, 3) float32
 
-    # Build consecutive pairs: pair i is (frame_i, frame_{i+1}) per upstream's
-    # seq_len=2 contract.
-    n_pairs = frames_hwc.shape[0] - 1
+    # Build non-overlapping pairs: upstream AVVideoDataset(seq_len=2) resets
+    # its sequence buffer after each emitted sample, so the contest pair stream
+    # is (0,1), (2,3), ... rather than sliding (0,1), (1,2), ...
+    n_pairs = frames_hwc.shape[0] // 2
+    pair_frames = frames_hwc[: n_pairs * 2]
     pairs = torch.stack(
-        [frames_hwc[:n_pairs], frames_hwc[1:n_pairs + 1]], dim=1,
+        [pair_frames[0::2], pair_frames[1::2]], dim=1,
     )  # (N_pairs, 2, H, W, 3) float32
     return pairs
 

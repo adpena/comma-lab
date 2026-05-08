@@ -2,7 +2,8 @@
 
 Date: 2026-05-08
 Scope: `experiments/train_charm_50k_toy_substrate.py` math fix + channel-conditional wire-in + new STRICT preflight gate
-Codex review source: `/tmp/codex_runs/phase_a_codemath_20260508T161501Z/output.txt`
+Codex review source: adversarial review transcript summarized here; this
+durable ledger is the custody surface, not a transient `/tmp` log.
 
 Per CLAUDE.md "Recursive adversarial review protocol — non-negotiable":
 3 consecutive clean passes required before deployment-equivalent landing.

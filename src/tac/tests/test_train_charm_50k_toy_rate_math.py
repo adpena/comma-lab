@@ -1,6 +1,7 @@
 """Unit tests for the corrected ChARM 50K toy rate math.
 
-Codex review (2026-05-08, /tmp/codex_runs/phase_a_codemath_20260508T161501Z) caught
+Codex review (2026-05-08), summarized in
+`.omx/research/codex_finding_charm_high_a_b_recursive_review_20260508.md`, caught
 that the prior rate formula in `experiments/train_charm_50k_toy_substrate.py` double-
 counted the `e` factor: it added both `0.5·log2(2π·e·σ²)` and a separate
 `0.5·log2(e)·ratio` correction, inflating the matched-Gaussian case by ~0.7213 bits

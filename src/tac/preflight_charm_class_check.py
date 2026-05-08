@@ -1,7 +1,8 @@
 """STRICT preflight check: ChARM-class files must actually implement
 channel-conditional autoregression — not just declare a context net.
 
-Codex finding (2026-05-08, /tmp/codex_runs/phase_a_codemath_20260508T161501Z):
+Codex finding (2026-05-08), summarized in
+`.omx/research/codex_finding_charm_high_a_b_recursive_review_20260508.md`:
 > A4 is labeled ChARM but never conditions on previous channels. The model
 > defines `self.context`, but the forward path derives mu, sigma only from z
 > and never calls the context network or conditions channel c on channels < c.
@@ -21,11 +22,9 @@ Gate semantics (STRICT mode):
 - If a class declares `self.context` but never calls it, FAIL the check.
 
 Wiring this into `preflight_all()`:
-The full preflight orchestrator lives in `src/tac/preflight.py` (24990 lines,
-currently being edited by 4 sister subagents in the same session). To avoid
-merge conflicts on commit, this gate is published as a standalone module and
-wire-in is deferred to a follow-up commit. Until then, callers can invoke
-`check_charm_class_actually_implements_channel_conditional()` directly.
+`src/tac/preflight.py` calls this gate in strict mode from the normal
+codebase preflight path, so ChARM/AR-codec class-label regressions are visible
+to standard operator flows instead of living as a private helper.
 
 CLAUDE.md catalog row 114 (proposed): "ChARM/AR-codec class declares context
 network but never invokes it — relabeled hyperprior masquerading as ChARM."

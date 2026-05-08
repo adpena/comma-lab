@@ -434,6 +434,28 @@ def preflight_all(
         check_evidence_implementation_matches_model_spec(
             strict=False, verbose=verbose,
         )
+        # 2026-05-08 codex ChARM finding: a class may be labelled ChARM/AR
+        # while declaring a context network that is never called. That turns a
+        # purported channel-conditional prior into a factorized hyperprior
+        # proxy. The standalone scanner lives in
+        # `tac.preflight_charm_class_check`; wire it here so normal operator
+        # preflight sees the guard.
+        from tac.preflight_charm_class_check import (
+            CharmClassCheckError,
+            check_charm_class_actually_implements_channel_conditional,
+        )
+        try:
+            charm_result = check_charm_class_actually_implements_channel_conditional(
+                repo_root=REPO_ROOT,
+                strict=True,
+            )
+        except CharmClassCheckError as exc:
+            raise PreflightError(str(exc)) from exc
+        if verbose:
+            print(
+                "  [charm-context-conditioning] OK: "
+                f"{charm_result['files_scanned']} file(s) scanned"
+            )
         # 2026-05-08 codex finding 1 (HIGH): operator-approval-leak. A
         # selector-wide `selector_context_operator_approved_exact_cuda: true`
         # was overriding per-candidate `manifest_operator_approved_exact_cuda:
@@ -3703,7 +3725,10 @@ def check_artifact_lifecycle_compliance(
     from tac.artifact_lifecycle import run_meta_lifecycle_audit
 
     root = Path(repo_root or REPO_ROOT)
-    violations = run_meta_lifecycle_audit(repo_root=root)
+    violations = run_meta_lifecycle_audit(
+        repo_root=root,
+        base_ref=os.environ.get("ARTIFACT_LIFECYCLE_BASE_REF") or None,
+    )
     if violations and strict:
         raise MetaBugViolation(
             "ARTIFACT-LIFECYCLE COMPLIANCE VIOLATIONS:\n"

@@ -181,7 +181,48 @@ def test_probe_marks_missing_candidate_manifest_non_promotable(tmp_path: Path) -
     manifest = json.loads(json_out.read_text(encoding="utf-8"))
     assert manifest["candidate_manifest"]["present"] is False
     assert "candidate_manifest_missing_runtime_closure_not_promotable" in manifest["dispatch_blockers"]
-    assert manifest["score_affecting_payload_changed"] is False
+    assert manifest["score_affecting_payload_changed"] is True
+    assert manifest["semantic_payload_changed_source"] == "decoded_decoder_state_sha256"
+
+
+def test_probe_blocks_manifest_semantic_underclaim_when_decoded_state_changes(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool()
+    packet_dir = _write_packet_runtime(tmp_path / "packet")
+    source_archive = _write_zip(tmp_path / "source.zip", b"SRC0")
+    candidate_archive = _write_zip(
+        tmp_path / "candidate.zip",
+        b"A2K1" + (4).to_bytes(4, "little") + b"CAND",
+    )
+    candidate_manifest = _write_candidate_manifest(
+        packet_dir.parent / "candidate_manifest.json",
+        tool=tool,
+        candidate_archive=candidate_archive,
+        semantic_payload_changed=False,
+    )
+    json_out = tmp_path / "probe.json"
+
+    rc = tool.main(
+        [
+            "--packet-dir",
+            str(packet_dir),
+            "--source-archive",
+            str(source_archive),
+            "--candidate-archive",
+            str(candidate_archive),
+            "--candidate-manifest",
+            str(candidate_manifest),
+            "--json-out",
+            str(json_out),
+            "--now-utc",
+            "2026-05-08T12:00:00Z",
+        ]
+    )
+
+    assert rc == 2
+    manifest = json.loads(json_out.read_text(encoding="utf-8"))
+    assert "semantic_payload_underclaimed_by_manifest" in manifest["dispatch_blockers"]
 
 
 def test_probe_blocks_manifest_semantic_change_without_decoded_tensor_change(tmp_path: Path) -> None:
