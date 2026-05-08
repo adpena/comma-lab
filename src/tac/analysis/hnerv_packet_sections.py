@@ -38,6 +38,7 @@ PARSER_PR101 = "pr101_microcodec_fixed"
 PARSER_PR103 = "pr103_lc_ac"
 PARSER_PR106 = "pr106_ff_packed_hnerv"
 PARSER_A2K1 = "a2k1_variable_decoder_pr101"
+PARSER_A5FC = "a5fc_frame_conditional_pr101"
 PARSER_CPLX1 = "cplx1_op1_byte_maps"
 PARSER_CHOICES = (
     PARSER_AUTO,
@@ -45,6 +46,7 @@ PARSER_CHOICES = (
     PARSER_PR103,
     PARSER_PR106,
     PARSER_A2K1,
+    PARSER_A5FC,
     PARSER_CPLX1,
 )
 
@@ -53,6 +55,8 @@ PR101_LATENT_BLOB_LEN = 15_387
 PR101_TOTAL_KNOWN_LEN = PR101_DECODER_BLOB_LEN + PR101_LATENT_BLOB_LEN + 607
 A2K1_MAGIC = b"A2K1"
 A2K1_HEADER_LEN = 8
+A5FC_MAGIC = b"A5FC"
+A5FC_HEADER_LEN = 20
 CPLX1_MAGIC = b"CPLX"
 CPLX1_HEADER_LEN = 8
 CPLX1_BYTE_MAP_LEN_FIELD_LEN = 2
@@ -82,6 +86,18 @@ A2K1_SECTION_ROLES = {
     "decoder_len_u32le": "control_or_metadata",
     "decoder_blob": "decoder_weight_stream",
     "latent_blob": "latent_stream",
+    "sidecar_blob": "sidecar_or_correction_stream",
+}
+A5FC_SECTION_ROLES = {
+    "a5fc_magic": "control_or_metadata",
+    "decoder_len_u32le": "control_or_metadata",
+    "latent_meta_len_u32le": "control_or_metadata",
+    "q_bits_sideinfo_len_u32le": "control_or_metadata",
+    "latent_wire_len_u32le": "control_or_metadata",
+    "decoder_blob": "decoder_weight_stream",
+    "latent_min_scale_fp16": "control_or_metadata",
+    "q_bits_sideinfo_3bit": "entropy_model_or_range_stream",
+    "latent_wire_variable_width": "latent_stream",
     "sidecar_blob": "sidecar_or_correction_stream",
 }
 CPLX1_SECTION_ROLES = {
@@ -344,10 +360,14 @@ def _infer_parser(
         return PARSER_PR103
     if "a2k1" in text or "a2_lossy" in text or "lossy_coarsening" in text:
         return PARSER_A2K1
+    if "a5fc" in text or "frame_conditional" in text:
+        return PARSER_A5FC
     if "cplx1" in text or "cplx" in text or "op1_finalizer" in text:
         return PARSER_CPLX1
     if payload.startswith(A2K1_MAGIC):
         return PARSER_A2K1
+    if payload.startswith(A5FC_MAGIC):
+        return PARSER_A5FC
     if payload.startswith(CPLX1_MAGIC):
         return PARSER_CPLX1
     if "pr101" in text or "hnerv_ft_microcodec" in text:
@@ -370,6 +390,8 @@ def _parse_sections(parser_name: str, payload: bytes) -> list[dict[str, Any]]:
         return _parse_pr106_sections(payload)
     if parser_name == PARSER_A2K1:
         return _parse_a2k1_sections(payload)
+    if parser_name == PARSER_A5FC:
+        return _parse_a5fc_sections(payload)
     if parser_name == PARSER_CPLX1:
         return _parse_cplx1_sections(payload)
     raise HnervPacketSectionManifestError(f"unknown parser {parser_name!r}")
@@ -468,6 +490,82 @@ def _parse_a2k1_sections(payload: bytes) -> list[dict[str, Any]]:
             offset=offset,
             data=data,
             role=A2K1_SECTION_ROLES[name],
+        )
+        for index, (name, offset, data) in enumerate(specs)
+    ]
+
+
+def _parse_a5fc_sections(payload: bytes) -> list[dict[str, Any]]:
+    if len(payload) < A5FC_HEADER_LEN:
+        raise HnervPacketSectionManifestError(
+            f"A5FC payload too short for header: got {len(payload)} bytes"
+        )
+    if payload[:4] != A5FC_MAGIC:
+        raise HnervPacketSectionManifestError("A5FC payload missing magic")
+    decoder_len = int.from_bytes(payload[4:8], "little")
+    latent_meta_len = int.from_bytes(payload[8:12], "little")
+    q_bits_sideinfo_len = int.from_bytes(payload[12:16], "little")
+    latent_wire_len = int.from_bytes(payload[16:20], "little")
+    if decoder_len <= 0:
+        raise HnervPacketSectionManifestError(
+            f"A5FC decoder length invalid: {decoder_len}"
+        )
+    if latent_meta_len <= 0:
+        raise HnervPacketSectionManifestError(
+            f"A5FC latent meta length invalid: {latent_meta_len}"
+        )
+    if q_bits_sideinfo_len <= 0:
+        raise HnervPacketSectionManifestError(
+            f"A5FC q-bit side-info length invalid: {q_bits_sideinfo_len}"
+        )
+    if latent_wire_len <= 0:
+        raise HnervPacketSectionManifestError(
+            f"A5FC latent wire length invalid: {latent_wire_len}"
+        )
+    decoder_start = A5FC_HEADER_LEN
+    decoder_end = decoder_start + decoder_len
+    latent_meta_start = decoder_end
+    latent_meta_end = latent_meta_start + latent_meta_len
+    q_bits_start = latent_meta_end
+    q_bits_end = q_bits_start + q_bits_sideinfo_len
+    latent_wire_start = q_bits_end
+    latent_wire_end = latent_wire_start + latent_wire_len
+    if latent_wire_end >= len(payload):
+        raise HnervPacketSectionManifestError(
+            "A5FC lengths leave no sidecar section: "
+            f"payload_bytes={len(payload)} latent_wire_end={latent_wire_end}"
+        )
+    specs = [
+        ("a5fc_magic", 0, payload[:4]),
+        ("decoder_len_u32le", 4, payload[4:8]),
+        ("latent_meta_len_u32le", 8, payload[8:12]),
+        ("q_bits_sideinfo_len_u32le", 12, payload[12:16]),
+        ("latent_wire_len_u32le", 16, payload[16:20]),
+        ("decoder_blob", decoder_start, payload[decoder_start:decoder_end]),
+        (
+            "latent_min_scale_fp16",
+            latent_meta_start,
+            payload[latent_meta_start:latent_meta_end],
+        ),
+        (
+            "q_bits_sideinfo_3bit",
+            q_bits_start,
+            payload[q_bits_start:q_bits_end],
+        ),
+        (
+            "latent_wire_variable_width",
+            latent_wire_start,
+            payload[latent_wire_start:latent_wire_end],
+        ),
+        ("sidecar_blob", latent_wire_end, payload[latent_wire_end:]),
+    ]
+    return [
+        _section_record(
+            index,
+            name=name,
+            offset=offset,
+            data=data,
+            role=A5FC_SECTION_ROLES[name],
         )
         for index, (name, offset, data) in enumerate(specs)
     ]
@@ -809,6 +907,8 @@ def _parser_confidence(parser_name: str) -> str:
         return "0xff header plus 24-bit decoder length"
     if parser_name == PARSER_A2K1:
         return "A2K1 magic plus u32 decoder length and PR101 latent window"
+    if parser_name == PARSER_A5FC:
+        return "A5FC magic plus side-info and variable-width PR101 latent wire"
     if parser_name == PARSER_CPLX1:
         return "CPLX magic plus decoder section length and byte_maps JSON"
     return "unknown"
@@ -837,10 +937,12 @@ def _is_sha256(value: Any) -> bool:
 
 __all__ = [
     "A2K1_MAGIC",
+    "A5FC_MAGIC",
     "BATCH_SCHEMA",
     "CPLX1_MAGIC",
     "MANIFEST_SCHEMA",
     "PARSER_A2K1",
+    "PARSER_A5FC",
     "PARSER_AUTO",
     "PARSER_CHOICES",
     "PARSER_CPLX1",
