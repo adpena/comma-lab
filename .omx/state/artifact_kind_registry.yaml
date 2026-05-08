@@ -1,0 +1,209 @@
+# Artifact kind registry — committed source of truth for the lifecycle
+# classifier (src/tac/artifact_lifecycle.py).
+#
+# Schema:
+#   - pattern: <fnmatch glob relative to repo root>
+#     kind: <LIVE_STATE | HISTORICAL_PROVENANCE | LIVE_RECIPE | DERIVED_OUTPUT | UNKNOWN>
+#     rationale: <one-line explanation>
+#     append_fields: [list]   # only meaningful for HISTORICAL_PROVENANCE
+#
+# This file is itself DERIVED_OUTPUT-shaped (it summarizes repo intent), but
+# it is committed. First match wins (registry order matters).
+#
+# Cross-ref: feedback_codex_findings_meta_pattern_artifact_lifecycle_FIXED_20260508.md
+
+# ---------------------------------------------------------------------------
+# LIVE_STATE — transient session state, must be gitignored
+# ---------------------------------------------------------------------------
+
+- pattern: ".omx/state/active_lane_dispatch_claims.md.lock"
+  kind: LIVE_STATE
+  rationale: "fcntl lock file, transient per-session"
+
+- pattern: ".omx/state/.commit-lock"
+  kind: LIVE_STATE
+  rationale: "subagent-commit-serializer lock"
+
+- pattern: ".omx/state/commit-serializer.log"
+  kind: LIVE_STATE
+  rationale: "rolling JSONL log of commit serialization"
+
+- pattern: ".omx/state/vastai_active_instances.json"
+  kind: LIVE_STATE
+  rationale: "live-fleet snapshot, regenerated per launch/destroy event"
+
+- pattern: ".omx/state/.fs_cache/**"
+  kind: LIVE_STATE
+  rationale: "preflight filesystem cache; regenerated each run"
+
+- pattern: ".claude/scheduled_tasks.lock"
+  kind: LIVE_STATE
+  rationale: "scheduler runtime lock"
+
+- pattern: "/tmp/codex_runs/**"
+  kind: LIVE_STATE
+  rationale: "transient codex review session logs (pattern A canonical path)"
+
+- pattern: "experiments/results/.codex_runs/**"
+  kind: LIVE_STATE
+  rationale: "transient codex review session logs"
+
+- pattern: "**/__pycache__/**"
+  kind: LIVE_STATE
+  rationale: "Python bytecode cache, never commit"
+
+- pattern: "**/*.pyc"
+  kind: LIVE_STATE
+  rationale: "Python compiled bytecode"
+
+# ---------------------------------------------------------------------------
+# HISTORICAL_PROVENANCE — append-only forensic records
+# ---------------------------------------------------------------------------
+
+- pattern: "experiments/results/recovered_*/recovery_metadata.json"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "recovery audit; mutation in place destroyed Apr 30 timing (codex finding 5)"
+  append_fields: [attempts, attempt_log, history]
+
+- pattern: ".omx/state/lane_maturity_audit.log"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "lane maturity gate transitions; append-only JSONL"
+  append_fields: [entries, log_lines]
+
+- pattern: ".omx/state/active_lane_dispatch_claims.md"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "lane claims ledger, terminal rows append at top per CLAUDE.md"
+  append_fields: [claims, rows]
+
+- pattern: ".ralph/run_log.md"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "research timeline log; append entries, never mutate prior"
+  append_fields: [entries]
+
+- pattern: "reports/cathedral_autopilot_evidence.jsonl"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "evidence ledger JSONL; line-append only"
+  append_fields: []
+
+- pattern: ".omx/research/*.md"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "dated research memos; append addendum, never mutate findings"
+  append_fields: [addendum, follow_up, updates]
+
+- pattern: "experiments/results/**/contest_auth_eval*.json"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "auth eval results; immutable evidence with archive_sha256 closure"
+  append_fields: []
+
+- pattern: "experiments/results/**/contest_auth_eval.adjudicated.json"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "adjudicated auth eval results; immutable"
+  append_fields: []
+
+- pattern: "experiments/results/**/build_manifest.json"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "build provenance snapshot; immutable per build"
+  append_fields: []
+
+- pattern: "experiments/results/**/provenance.json"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "captured runtime provenance; immutable"
+  append_fields: []
+
+- pattern: "experiments/results/**/dispatch_manifest.json"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "dispatch plan manifest; immutable per dispatch"
+  append_fields: []
+
+- pattern: "experiments/results/**/heartbeat.log"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "remote heartbeat log; append-only"
+  append_fields: []
+
+# ---------------------------------------------------------------------------
+# LIVE_RECIPE — reusable instructions; must not bake transient values
+# ---------------------------------------------------------------------------
+
+- pattern: "experiments/results/**/rebuild_command.txt"
+  kind: LIVE_RECIPE
+  rationale: "rebuild recipe; no baked --now-utc / --operator-approved (codex finding 4)"
+
+- pattern: "scripts/**/*.sh"
+  kind: LIVE_RECIPE
+  rationale: "deploy/run scripts; parameterize transient values"
+
+- pattern: "tools/**/*.sh"
+  kind: LIVE_RECIPE
+  rationale: "tooling shell wrappers"
+
+- pattern: "submissions/**/inflate.sh"
+  kind: LIVE_RECIPE
+  rationale: "contest inflate runtime; pinned semantics, no /tmp paths"
+
+- pattern: "submissions/**/compress.sh"
+  kind: LIVE_RECIPE
+  rationale: "contest compress runtime"
+
+- pattern: "experiments/results/**/inflate.sh"
+  kind: LIVE_RECIPE
+  rationale: "vendored inflate runtime in build packets"
+
+- pattern: ".github/workflows/*.yml"
+  kind: LIVE_RECIPE
+  rationale: "CI workflows; no baked secrets/timestamps"
+
+- pattern: ".github/workflows/*.yaml"
+  kind: LIVE_RECIPE
+  rationale: "CI workflows"
+
+# ---------------------------------------------------------------------------
+# DERIVED_OUTPUT — computed-from-state; needs regeneration header
+# ---------------------------------------------------------------------------
+
+- pattern: "experiments/results/frontier_roadmap_status_*/status.json"
+  kind: DERIVED_OUTPUT
+  rationale: "rebuilt roadmap status; do not freeze transient dirty-paths (codex finding 3)"
+
+- pattern: "experiments/results/frontier_roadmap_status_*/rebuild_command.txt"
+  kind: LIVE_RECIPE
+  rationale: "frontier roadmap rebuild recipe (sister gate covers baked timestamps)"
+
+- pattern: "reports/latest.md"
+  kind: DERIVED_OUTPUT
+  rationale: "regenerated submission status doc"
+
+- pattern: "reports/lane_maturity.md"
+  kind: DERIVED_OUTPUT
+  rationale: "regenerated from .omx/state/lane_registry.json"
+
+- pattern: ".omx/state/lane_registry.json"
+  kind: DERIVED_OUTPUT
+  rationale: "lane registry snapshot; mutated through tools/lane_maturity.py CLI only"
+
+- pattern: "reports/raw/**/*.json"
+  kind: DERIVED_OUTPUT
+  rationale: "computed from raw inputs; regeneration header required"
+
+- pattern: "experiments/results/**/predispatch_sanity_report.json"
+  kind: DERIVED_OUTPUT
+  rationale: "predispatch sanity gate report; regenerable"
+
+- pattern: "experiments/results/**/dispatch_plan.json"
+  kind: DERIVED_OUTPUT
+  rationale: "dispatch plan snapshot; regenerable"
+
+- pattern: "reports/graphs/public_site/**/*.json"
+  kind: DERIVED_OUTPUT
+  rationale: "public site sanitized output; regenerated from internal site"
+
+# ---------------------------------------------------------------------------
+# UNKNOWN — explicit not-yet-classified; flagged for human triage
+# ---------------------------------------------------------------------------
+
+- pattern: "experiments/results/recovered_*/recovery_metadata.json.bak"
+  kind: UNKNOWN
+  rationale: "backup file pattern; classify per-instance"
+
+- pattern: "experiments/results/**/*.tmp"
+  kind: UNKNOWN
+  rationale: "temp file pattern; classify per-tool"
