@@ -75,3 +75,27 @@ create score authority.
 - Unlimited-compute or inflate-time optimization probes are research signals
   unless every score-affecting bit is charged and exact CUDA eval validates the
   final archive under the contest budget.
+
+## CUDA vs CPU evaluator split (2026-05-08, post-deadline)
+
+- **The contest leaderboard ranks by `--device cpu` eval, not `--device cuda`.**
+  The contest CI bot publishes both axes per PR; the leaderboard ordering uses
+  the CPU score.
+- Empirically across the medal-band HNeRV cluster (PR100/101/102/103/105):
+  `R_pose = pose_cuda / pose_cpu = 5.04 ± 0.10`,
+  `R_seg  = seg_cuda  / seg_cpu  = 1.17 ± 0.01`,
+  `Δscore = score_cuda − score_cpu = 0.0330 ± 0.0004`.
+- Score-points decomposition: 70% pose, 30% seg, 0% rate.
+- PR #102 third-prize: CUDA bot comment 0.22839, CPU bot comment 0.19538.
+  Our T4 replay matches the CUDA comment to 3×10⁻⁶ — the gap is structural,
+  not a measurement bug.
+- Predicted CPU scores for our top archives (pending Modal CPU dispatch):
+  PR #107 apogee CUDA 0.22936 → CPU ~0.196 (silver/bronze band);
+  PR103-on-PR106 AC repack CUDA 0.20898 → CPU ~0.176.
+- Operational rule: every shippable archive now gets dual-eval — both
+  `[contest-CUDA]` and `[contest-CPU]` axes on Linux x86_64 hardware that
+  is 1:1 contest-compliant with the GitHub Actions CI runner.
+- Apple Silicon CPU eval is `[macOS-CPU advisory only]` — ARM FP32 intrinsics
+  differ from x86_64 in ways that affect SegNet/PoseNet output bytes.
+- Full disclosure: `docs/findings/cuda_cpu_auth_eval_split_20260508.md` and
+  `reports/graphs/site/cuda_cpu_split_post.md`.

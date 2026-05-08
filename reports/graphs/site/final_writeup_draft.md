@@ -286,6 +286,27 @@ Forbidden:
 - "HPM1 is decoded by `range_mask_codec.cpp`."
 - "Source-embedded payloads establish a valid compression floor."
 
+## post-deadline finding — CUDA vs CPU evaluator split
+
+The contest scorer at `upstream/evaluate.py` produces two distinct
+authoritative score axes for the same archive bytes — `--device cuda` and
+`--device cpu` — and the public leaderboard ranks by the CPU axis, not
+CUDA. Across the medal-band HNeRV cluster (PR100/101/102/103/105) we
+measured a near-constant 0.033-point gap with `R_pose = pose_cuda /
+pose_cpu = 5.04 ± 0.10` and `R_seg = seg_cuda / seg_cpu = 1.17 ± 0.01`.
+
+PR #102's third-prize 0.195 was the CPU score; the CUDA bot comment for
+the same archive bytes was 0.228. Our PR #107 `apogee` archive was scored
+only on CUDA at 0.22936 and never got a CPU score. Predicted CPU score
+for PR #107 using the empirical R values: ~0.196 — likely silver/bronze
+band, not 11th place.
+
+The dual-eval mandate — every shippable archive gets both `[contest-CUDA]`
+and `[contest-CPU]` axes on Linux x86_64 hardware — is now a CLAUDE.md
+non-negotiable. Full disclosure:
+[`docs/findings/cuda_cpu_auth_eval_split_20260508.md`](../../docs/findings/cuda_cpu_auth_eval_split_20260508.md),
+[`reports/graphs/site/cuda_cpu_split_post.md`](cuda_cpu_split_post.md).
+
 ## residual gaps
 
 - Public release hygiene scan on the exact Cloudflare/site bundle and notebook.
