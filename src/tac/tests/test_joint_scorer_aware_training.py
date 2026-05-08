@@ -297,16 +297,53 @@ def test_joint_scorer_aware_loss_rejects_non_module_scorer() -> None:
         )
 
 
-def test_joint_scorer_aware_loss_forward_raises_phase2_pending() -> None:
-    """Phase 1: forward must raise NotImplementedError."""
+def test_joint_scorer_aware_loss_forward_returns_loss_dict_cpu() -> None:
+    """Phase 2 CPU smoke: forward computes a finite loss dict."""
     import torch
 
     cfg = JointTrainingConfig(**_good_config_kwargs())
+    # Simple dummy SegNet (5-class output) and dummy PoseNet (12 dims).
+    class _DummySeg(nn.Module):
+        def forward(self, x):
+            B = x.shape[0]
+            H, W = x.shape[-2], x.shape[-1]
+            return torch.randn(B, 5, H, W)
+
+    class _DummyPose(nn.Module):
+        def forward(self, x):
+            B = x.shape[0]
+            return torch.randn(B, 12)
+
     loss = JointScorerAwareLoss(
-        config=cfg, scorer_seg=nn.Identity(), scorer_pose=nn.Identity()
+        config=cfg, scorer_seg=_DummySeg(), scorer_pose=_DummyPose()
     )
-    with pytest.raises(NotImplementedError, match="Phase 2"):
-        loss.forward(torch.zeros(1), torch.zeros(1))
+    x_hat = torch.randn(1, 3, 16, 16)
+    x_gt = torch.randn(1, 3, 16, 16)
+    out = loss.forward(x_hat, x_gt)
+    assert "loss" in out and "loss_seg" in out and "loss_pose" in out
+    assert torch.isfinite(out["loss"]).item()
+    assert torch.isfinite(out["loss_seg"]).item()
+    assert torch.isfinite(out["loss_pose"]).item()
+
+
+def test_joint_scorer_aware_loss_forward_refreshes_lambda_pose() -> None:
+    import torch
+
+    cfg = JointTrainingConfig(**_good_config_kwargs())
+
+    class _Identity(nn.Module):
+        def forward(self, x):
+            B = x.shape[0]
+            return torch.zeros(B, 12)
+
+    loss = JointScorerAwareLoss(
+        config=cfg,
+        scorer_seg=nn.Conv2d(3, 5, kernel_size=1),
+        scorer_pose=_Identity(),
+    )
+    x = torch.randn(1, 3, 8, 8)
+    out = loss.forward(x, x, current_pose_avg=1e-5)
+    assert out["lambdas_used"].lambda_pose > out["lambdas_used"].lambda_seg
 
 
 # -- ScoreAwareEvalCallback ----------------------------------------------
@@ -327,9 +364,101 @@ def test_score_aware_eval_callback_rejects_missing_pose_avg() -> None:
         )
 
 
-def test_score_aware_eval_callback_run_raises_phase2_pending() -> None:
+def test_score_aware_eval_callback_run_snapshot_restore_cpu() -> None:
+    """Phase 2: run() snapshot+restores live state and refreshes lambda_pose."""
+    import torch
+
     cb = ScoreAwareEvalCallback(
         eval_every_n_steps=200, baseline_score={"pose_avg": 1e-3}
     )
-    with pytest.raises(NotImplementedError, match="Phase 2"):
-        cb.run(model=nn.Identity(), ema=None, step=100)
+    model = nn.Linear(4, 4)
+    orig_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
+
+    def _fake_eval(m: nn.Module) -> dict[str, float]:
+        # Simulates an auth-eval producing a smaller pose_avg.
+        return {"pose_avg": 1e-5, "seg_avg": 0.05}
+
+    out = cb.run(model=model, ema=None, step=100, eval_fn=_fake_eval)
+    # State must be restored exactly.
+    for k, v in model.state_dict().items():
+        assert torch.equal(v, orig_state[k])
+    assert out["score"]["pose_avg"] == 1e-5
+    assert out["lambdas"].lambda_pose > 0
+    # baseline_score advances to current after a successful run.
+    assert cb.baseline_score["pose_avg"] == 1e-5
+
+
+def test_score_aware_eval_callback_run_smoke_no_eval_fn() -> None:
+    """run() without eval_fn is a wiring smoke (no score, no lambda update)."""
+    cb = ScoreAwareEvalCallback(
+        eval_every_n_steps=200, baseline_score={"pose_avg": 1e-3}
+    )
+    out = cb.run(model=nn.Identity(), ema=None, step=42)
+    assert out["score"] is None
+    assert out["lambdas"] is None
+    # baseline_score unchanged.
+    assert cb.baseline_score["pose_avg"] == 1e-3
+
+
+def test_train_joint_scorer_aware_renderer_cpu_smoke_runs_one_step() -> None:
+    """Phase 2: train orchestrator runs a single CPU smoke step end-to-end."""
+    import torch
+    from tac.joint_scorer_aware_training import train_joint_scorer_aware_renderer
+
+    cfg = JointTrainingConfig(**_good_config_kwargs())
+
+    class _DummySeg(nn.Module):
+        def forward(self, x):
+            return torch.randn(x.shape[0], 5, x.shape[-2], x.shape[-1])
+
+    class _DummyPose(nn.Module):
+        def forward(self, x):
+            return torch.randn(x.shape[0], 12)
+
+    renderer = nn.Identity()
+    out = train_joint_scorer_aware_renderer(
+        config=cfg,
+        renderer=renderer,
+        scorer_seg=_DummySeg(),
+        scorer_pose=_DummyPose(),
+        frames=torch.randn(1, 3, 16, 16),
+        device="cpu",
+        smoke_steps=1,
+    )
+    assert out["smoke"] is True
+    assert out["device"] == "cpu"
+    assert out["step"] == 1
+
+
+def test_train_joint_scorer_aware_renderer_rejects_cpu_without_smoke_steps() -> None:
+    from tac.joint_scorer_aware_training import train_joint_scorer_aware_renderer
+
+    cfg = JointTrainingConfig(**_good_config_kwargs())
+    with pytest.raises(JointScorerAwareTrainingError, match="smoke_steps"):
+        train_joint_scorer_aware_renderer(
+            config=cfg,
+            renderer=nn.Identity(),
+            scorer_seg=nn.Identity(),
+            scorer_pose=nn.Identity(),
+            frames=None,
+            device="cpu",
+        )
+
+
+def test_train_joint_scorer_aware_renderer_rejects_cuda_when_unavailable() -> None:
+    """Per CLAUDE.md `Forbidden device-selection defaults`, no MPS/CPU fallback."""
+    import torch
+    from tac.joint_scorer_aware_training import train_joint_scorer_aware_renderer
+
+    if torch.cuda.is_available():
+        pytest.skip("CUDA is available — cannot test the no-CUDA refusal path")
+    cfg = JointTrainingConfig(**_good_config_kwargs())
+    with pytest.raises(JointScorerAwareTrainingError, match="CUDA unavailable"):
+        train_joint_scorer_aware_renderer(
+            config=cfg,
+            renderer=nn.Identity(),
+            scorer_seg=nn.Identity(),
+            scorer_pose=nn.Identity(),
+            frames=torch.zeros(1, 3, 8, 8),
+            device="cuda",
+        )
