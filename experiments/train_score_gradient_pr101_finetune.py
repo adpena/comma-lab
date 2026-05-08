@@ -47,12 +47,11 @@ import dataclasses
 import json
 import logging
 import math
-import os
 import random
 import subprocess
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -70,16 +69,16 @@ if str(REPO_ROOT) not in sys.path:
 
 # Canonical project-internal imports (post-sys-path).
 # These are GUARANTEED to exist per Round-1 grep verification.
-from tac.training import EMA  # noqa: E402  decay-default 0.997 enforced below
-from tac.losses import (  # noqa: E402
-    scorer_loss,
+from tac.losses import (
     kl_distill_segnet_only,
+    scorer_loss,
 )
+from tac.training import EMA  # decay-default 0.997 enforced below
 
 # HNeRVDecoder is the architecture verified by Round-1 grep at
 # submissions/factorized_hnerv_v1/src/model.py.
 sys.path.insert(0, str(REPO_ROOT / "submissions" / "factorized_hnerv_v1" / "src"))
-from model import HNeRVDecoder  # noqa: E402
+from model import HNeRVDecoder
 
 LOGGER = logging.getLogger("track1_a1")
 
@@ -104,7 +103,7 @@ PIXEL_L1_WEIGHT: float = 0.0  # OFF by default — scorer_loss already supervise
 
 DEFAULT_BATCH_SIZE: int = 4
 DEFAULT_LR: float = 5e-4
-DEFAULT_LR_FINETUNE: float = 1e-4  # 0.1× base (per CLAUDE.md QAT pipeline rule)
+DEFAULT_LR_FINETUNE: float = 1e-4  # 0.1x base (per CLAUDE.md QAT pipeline rule)
 
 
 # ---------------------------------------------------------------------------
@@ -146,7 +145,7 @@ def assert_no_invented_flag(_namespace: argparse.Namespace) -> None:
 
 
 # ---------------------------------------------------------------------------
-# PR101 substrate loader (best-effort wrapper)
+# PR101 substrate loader
 # ---------------------------------------------------------------------------
 
 def load_pr101_substrate(
@@ -155,42 +154,34 @@ def load_pr101_substrate(
     *,
     smoke: bool,
 ) -> dict[str, Any]:
-    """Load PR101 weights into ``decoder``.
-
-    In smoke mode we accept a fresh init — the goal is to verify the training
-    loop produces decreasing loss and no NaN. For full Lightning dispatch the
-    PR101 archive (`experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip`)
-    must be parsed and its INT8 weight tensors loaded into ``decoder``.
-
-    The PR101 archive uses a custom split-brotli + LZMA + sidecar wire format.
-    Parsing it requires `tac.hnerv_decoder_recode` (which has a public surface
-    of ~36 functions); a future hardening pass should land a small
-    canonical loader. For now this function:
-
-        * smoke=True: skips loading, uses fresh nn.init.* defaults from
-          HNeRVDecoder (sufficient to test the training loop).
-        * smoke=False with archive_path: NOT YET WIRED — raises with a clear
-          message pointing at the loader-build follow-up task.
-
-    Returns a metadata dict for provenance.
-    """
+    """Load PR101 archive weights into ``decoder`` with strict key matching."""
     if smoke:
         return {"loader": "fresh_init", "smoke_mode": True}
     if archive_path is None or not archive_path.exists():
         raise RuntimeError(
             "Full (non-smoke) training requires --pr101-archive pointing at the "
-            "PR101 archive.zip and a wired loader. The PR101 archive parser is "
-            "not yet implemented in this module — see council follow-up "
-            "task for `experiments/load_pr101_archive_to_state_dict.py`. "
-            "For smoke validation use --smoke."
+            "PR101 archive.zip. For smoke validation use --smoke."
         )
-    raise NotImplementedError(
-        "PR101 archive→state_dict loader is a separate follow-up. The wire "
-        "format is split-brotli + LZMA + sidecar; the canonical parser surface "
-        "lives in `tac.hnerv_decoder_recode` (~36 public functions) but no "
-        "single entry-point yet returns a state_dict for `HNeRVDecoder`. "
-        "Lightning T4 dispatch is BLOCKED on building this loader."
+    from tac.pr101_archive_state_loader import (
+        Pr101ArchiveStateLoaderError,
+        load_pr101_archive_state,
     )
+
+    try:
+        loaded = load_pr101_archive_state(archive_path)
+    except Pr101ArchiveStateLoaderError as exc:
+        raise RuntimeError(
+            f"PR101 archive-to-state_dict load failed closed for {archive_path}: {exc}"
+        ) from exc
+    load_result = decoder.load_state_dict(loaded.state_dict, strict=True)
+    metadata = dict(loaded.metadata)
+    metadata["smoke_mode"] = False
+    metadata["load_into_decoder"] = {
+        "strict": True,
+        "missing_keys": list(load_result.missing_keys),
+        "unexpected_keys": list(load_result.unexpected_keys),
+    }
+    return metadata
 
 
 # ---------------------------------------------------------------------------
@@ -513,7 +504,7 @@ def train(
     with log_path.open("w") as log_f:
         for epoch in range(epochs):
             epoch_metrics = {"epoch": epoch, "step_metrics": []}
-            for step_in_epoch in range(steps_per_epoch):
+            for _step_in_epoch in range(steps_per_epoch):
                 z_batch, gt_pair_hwc = make_synthetic_pair_batch(
                     batch_size=batch_size,
                     frame_h=frame_h,
@@ -606,14 +597,19 @@ def write_provenance(output_dir: Path, args: argparse.Namespace) -> None:
             "platform": sys.platform,
         },
         "args": {k: str(v) for k, v in vars(args).items()},
-        "started_at_utc": datetime.now(timezone.utc).isoformat(),
+        "started_at_utc": datetime.now(UTC).isoformat(),
         "council_memo_ref": ".omx/research/grand_council_extreme_rigor_track_1_20260508.md",
         "council_decision": "A1 — score-gradient supervision (UNANIMOUS HIGHEST PRIORITY)",
     }
     (output_dir / "provenance.json").write_text(json.dumps(provenance, indent=2))
 
 
-def write_build_manifest(output_dir: Path, args: argparse.Namespace, result: TrainResult) -> None:
+def write_build_manifest(
+    output_dir: Path,
+    args: argparse.Namespace,
+    result: TrainResult,
+    pr101_substrate_source: dict[str, Any],
+) -> None:
     pose_delta_pct = 0.0
     seg_delta_pct = 0.0
     if not math.isnan(result.initial_pose) and result.initial_pose > 0:
@@ -626,7 +622,7 @@ def write_build_manifest(output_dir: Path, args: argparse.Namespace, result: Tra
         "decision": "A1",
         "phase": "A",
         "council_finding_reference": "council Round 2 finding 10 (kl_on_logits → kl_distill_segnet_only)",
-        "evidence_grade": "smoke" if args.smoke else "stub_pending_pr101_loader",
+        "evidence_grade": "smoke" if args.smoke else "cuda_training_no_score_claim",
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
@@ -636,10 +632,11 @@ def write_build_manifest(output_dir: Path, args: argparse.Namespace, result: Tra
         "remote_dispatch_allowed": False,
         "byte_proxy_only": True,
         "dispatch_blockers": (
-            ["pr101_archive_loader_not_yet_implemented"]
+            ["fine_tune_checkpoint_requires_archive_build_and_exact_cuda_eval"]
             if not args.smoke
             else []
         ),
+        "pr101_substrate_source": pr101_substrate_source,
         "metrics": {
             "initial_pose_dist": result.initial_pose,
             "final_pose_dist": result.final_pose,
@@ -709,13 +706,14 @@ def main() -> int:
         epochs = args.smoke_epochs
         steps_per_epoch = args.smoke_steps_per_epoch
         decoder = HNeRVDecoder(latent_dim=args.latent_dim, base_channels=36, eval_size=(frame_h, frame_w))
+        pr101_substrate_source = load_pr101_substrate(None, decoder, smoke=True)
         posenet, segnet = load_smoke_scorers(device)
     else:
         frame_h, frame_w = args.frame_h, args.frame_w
         epochs = args.epochs
         steps_per_epoch = args.steps_per_epoch
         decoder = HNeRVDecoder(latent_dim=args.latent_dim, base_channels=36, eval_size=(frame_h, frame_w))
-        load_pr101_substrate(args.pr101_archive, decoder, smoke=False)
+        pr101_substrate_source = load_pr101_substrate(args.pr101_archive, decoder, smoke=False)
         posenet, segnet = load_cuda_scorers(device)
 
     LOGGER.info(
@@ -745,7 +743,7 @@ def main() -> int:
     )
     elapsed = time.time() - t0
 
-    write_build_manifest(output_dir, args, result)
+    write_build_manifest(output_dir, args, result, pr101_substrate_source)
 
     # Smoke pass criteria: NO NaN + at least one of (seg, pose) decreased.
     if args.smoke:
