@@ -1,9 +1,10 @@
 # Public PR102/PR108 reverse-engineering intake
 
 Created UTC: `2026-05-08T09:33:23Z`
+Updated UTC: `2026-05-08T10:55:00Z`
 
-Evidence grade: `[external+empirical-custody]`. No score claim. No exact CUDA
-replay was run in this pass.
+Evidence grade: PR102 now has local `A++ contest T4` replay evidence for the
+corrected archive/runtime pair; PR108 remains `[external+empirical-custody]`.
 
 ## Scope
 
@@ -51,11 +52,17 @@ Classification:
   `experiments/results/public_pr_archive_release_view/public_pr102_intake_20260505_auto/archive.zip`
   is the wrong qpose asset (`276481` bytes, member `p`) and must not be used for
   PR102 replay.
-- Public upstream drift is real but still external evidence: PR102 has a CPU
-  report around `0.19538`, a GitHub Actions CUDA eval comment recomputing to
-  about `0.22839` from rounded fields, and a later CPU eval comment recomputing
-  to about `0.195376`. Local exact CUDA for this corrected archive is still
-  missing.
+- Public upstream drift is real and now locally reproduced on contest-equivalent
+  CUDA: PR102 has a CPU report around `0.19538`, a GitHub Actions CUDA eval
+  comment recomputing to about `0.22839` from rounded fields, and a later CPU
+  eval comment recomputing to about `0.195376`. The hardened local Lightning T4
+  replay of the corrected archive/runtime landed at `0.22839372989108092`, with
+  600 samples, archive SHA
+  `afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641`, and
+  runtime tree SHA
+  `62560a0411dc341286eebfaf6e8ed79564efeb14fb8da5e3e1be026611e7aba1`.
+  Classification: local exact CUDA confirms the public CUDA comment band and
+  mismatches the public CPU/leaderboard band.
 
 Runtime/compliance notes:
 
@@ -67,14 +74,17 @@ Runtime/compliance notes:
   `DELTA_SCALE=0.0095`, performs bicubic upsample, and adds `+1.0` to frame-0
   red channel before clamping/rounding.
 
-Fastest exact replay path:
+Exact replay result:
 
-1. Use the corrected archive path above.
-2. Materialize a source-sized public replay adapter pointing at PR102 runtime
-   files from head SHA `1e330ec5633539c48278ce3cc96d2b15ea7a9eac`.
-3. Run `.venv/bin/python experiments/contest_auth_eval.py --archive ... --inflate-sh ... --upstream-dir upstream --device cuda`.
-4. Preserve `contest_auth_eval.json`, `provenance.json`, runtime tree SHA, logs,
-   and dispatch claim status if replay is remote.
+- Job: `pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z`
+- Artifact dir:
+  `experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z`
+- Result summary:
+  `.omx/research/pr102_hardened_exact_replay_result_20260508_codex.json`
+- Score: `0.22839372989108092` `[contest-CUDA]`
+- Remaining PR102 work: byte-level decode/re-encode parity and
+  compress-to-archive reproduction; do not rerun the same archive/runtime unless
+  custody or upstream evaluator state changes.
 
 ## PR108 non-frontier intake
 
@@ -123,8 +133,8 @@ Fastest exact replay path:
 
 ## Next actions
 
-- PR102: highest value follow-up is a hardened exact CUDA replay adapter for the
-  corrected archive/runtime pair so the CPU/CUDA divergence stops being
-  external-only.
+- PR102: exact CUDA replay is complete. Next highest-value work is deconstruction
+  of the monolithic `0.bin`: decode/re-encode parity, compress-to-archive
+  reproduction, and wire-grammar proof.
 - PR108: keep the custody record; do not spend exact CUDA unless needed for a
   public drift audit or future leaderboard movement.

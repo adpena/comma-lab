@@ -1,6 +1,7 @@
 # PR102 Exact Replay Readiness - 2026-05-08
 
-Status: `DISPATCHED`. Score claim: `false`. Dispatch attempted: `true`.
+Status: `HARVESTED_A_PLUS_PLUS`. Score claim: `true` for the harvested
+contest-CUDA replay only. Dispatch attempted: `true`.
 
 ## Archive Custody
 
@@ -219,8 +220,24 @@ matching cu124 torch/torchvision pins.
 - Launcher record:
   `.omx/state/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z_lightning_batch_record.json`
 - Initial refreshed status: `Pending` at `2026-05-08T10:38:24Z`
+- Terminal status: `Completed` at `2026-05-08T10:52:13Z`
+- Harvest status: adjudicated exact CUDA replay copied locally with
+  `--require-adjudication`.
+- Local result summary:
+  `.omx/research/pr102_hardened_exact_replay_result_20260508_codex.json`
+- Local artifact dir:
+  `experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z`
+- Exact score: `0.22839372989108092` `[contest-CUDA]`
+- Components: PoseNet `0.00017347`, SegNet `0.00067568`, archive bytes
+  `178981`, samples `600`.
+- Runtime tree SHA-256:
+  `62560a0411dc341286eebfaf6e8ed79564efeb14fb8da5e3e1be026611e7aba1`
+- Claim closure: `completed_score_0.228393729891`
+- Drift disposition: local exact CUDA confirms the public CUDA comment band
+  around `0.22839` and mismatches the public CPU/leaderboard band around
+  `0.19538`. This is public CPU/CUDA eval drift, not a local replay failure.
 
-Harvest command when terminal:
+Harvest command used:
 
 ```bash
 .venv/bin/python scripts/launch_lightning_batch_job.py harvest-ssh \

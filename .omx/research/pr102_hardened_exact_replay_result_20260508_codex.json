@@ -1,0 +1,52 @@
+{
+  "schema": "pr102_hardened_exact_replay_result.v1",
+  "recorded_at_utc": "2026-05-08T10:55:00Z",
+  "score_claim": true,
+  "evidence_grade": "A++ contest T4",
+  "result_tag": "[contest-CUDA]",
+  "lane_id": "pr102_public_exact_replay_t4_hardened",
+  "job_name": "pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z",
+  "artifact_dir": "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z",
+  "archive": {
+    "bytes": 178981,
+    "sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+    "member_count": 1
+  },
+  "runtime": {
+    "runtime_tree_sha256": "62560a0411dc341286eebfaf6e8ed79564efeb14fb8da5e3e1be026611e7aba1",
+    "adapter_sha256": "9a47abf46ddb8a6b767c75ab5aacd9beabc3cffbb9c1186b940287335193f5ce",
+    "replay_generation": "hardened_py_path_torchvision_pin"
+  },
+  "hardware": {
+    "device": "cuda",
+    "gpu_model": "Tesla T4",
+    "contest_equivalent_hardware": true,
+    "n_samples": 600
+  },
+  "components": {
+    "avg_posenet_dist": 0.00017347,
+    "avg_segnet_dist": 0.00067568,
+    "rate_unscaled": 0.00476704
+  },
+  "score": {
+    "score_recomputed_from_components": 0.22839372989108092,
+    "reported_final_score_display_rounded": 0.23,
+    "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+    "score_delta_vs_public_pr102_cuda_comment": 0.0000028987110809175487,
+    "score_delta_vs_public_leaderboard_cpu_row": 0.03339372989108092
+  },
+  "custody": {
+    "contest_auth_eval_json": "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z/contest_auth_eval.json",
+    "adjudicated_json": "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z/contest_auth_eval.adjudicated.json",
+    "source_manifest": ".omx/state/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z_manifest.json",
+    "dispatch_claim_status": "completed_score_0.228393729891",
+    "component_trace_status": "diagnostic_unavailable_or_invalid"
+  },
+  "drift_classification": {
+    "status": "local_exact_cuda_confirms_public_cuda_comment_and_mismatches_public_cpu_leaderboard",
+    "public_leaderboard_score": 0.195,
+    "public_cuda_comment_recomputed_score": 0.22839083118,
+    "public_cpu_comment_recomputed_score": 0.195376176526,
+    "interpretation": "The exact corrected PR102 archive/runtime replays on local Lightning T4 in the CUDA/comment band, not the public CPU leaderboard band. This is a CPU/CUDA public-eval drift finding, not a local replay failure."
+  }
+}

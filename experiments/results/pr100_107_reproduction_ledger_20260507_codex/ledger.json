@@ -1,5 +1,5 @@
 {
-  "created_at_utc": "2026-05-07T20:00:00Z",
+  "created_at_utc": "2026-05-08T10:55:00Z",
   "evidence_grade": "[empirical:local-custody-inventory]",
   "pr_range": [
     100,
@@ -337,9 +337,16 @@
       "pr": 101,
       "ready_for_stack_atom": false,
       "research_notes": [
+        ".omx/research/pr101_arch_shrink_retraining_plan_20260507_worker_b.md",
+        ".omx/research/pr101_entropy_floor_ladder_and_aac_triage_20260507_codex.md",
+        ".omx/research/pr101_lgwin18_byte_different_candidate_20260507_codex.md",
+        ".omx/research/pr101_marginal_vs_joint_entropy_floor_20260507_codex.md",
         ".omx/research/pr101_pr103_hidden_gem_candidate_classification_20260507_worker_pr101_pr103.md",
         ".omx/research/pr101_schema_decoder_packing_signal_20260507_codex.md",
-        ".omx/research/pr_extended_bit_level_lineage_pr95_pr100_pr101_pr103_20260507_claude.md"
+        ".omx/research/pr101_shared_model_anchor_20260507_worker_e.md",
+        ".omx/research/pr101_tiny_nn_pmf_smoke_20260507_worker_a.md",
+        ".omx/research/pr_extended_bit_level_lineage_pr95_pr100_pr101_pr103_20260507_claude.md",
+        ".omx/research/precoarsening_entropy_coder_probe_pr101_pr106_20260508_codex.md"
       ],
       "source": {
         "key_files": {
@@ -410,20 +417,75 @@
         "changed_files": 7,
         "deletions": 0
       },
-      "exact_eval_artifacts": [],
+      "exact_eval_artifacts": [
+        {
+          "archive": {
+            "bytes": 178981,
+            "path": "experiments/results/lightning_batch/pr102-public-exact-replay-g4dn2-20260508T101510Z/archive.zip",
+            "sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641"
+          },
+          "avg_posenet_dist": null,
+          "avg_segnet_dist": null,
+          "device": null,
+          "dir": "experiments/results/lightning_batch/pr102-public-exact-replay-g4dn2-20260508T101510Z",
+          "json_files": [],
+          "log_files": [
+            "experiments/results/lightning_batch/pr102-public-exact-replay-g4dn2-20260508T101510Z/auth_eval.log"
+          ],
+          "runtime_tree_sha256": null,
+          "score": null,
+          "score_basis": null,
+          "structured_result_source": null
+        },
+        {
+          "archive": {
+            "bytes": 178981,
+            "path": "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z/archive.zip",
+            "sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641"
+          },
+          "archive_sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+          "archive_size_bytes": 178981,
+          "avg_posenet_dist": 0.00017347,
+          "avg_segnet_dist": 0.00067568,
+          "device": "cuda",
+          "dir": "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z",
+          "json_files": [
+            "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z/contest_auth_eval.adjudicated.json",
+            "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z/contest_auth_eval.json"
+          ],
+          "log_files": [
+            "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z/adjudication.log",
+            "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z/auth_eval.log",
+            "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z/component_trace.log"
+          ],
+          "runtime_tree_sha256": "62560a0411dc341286eebfaf6e8ed79564efeb14fb8da5e3e1be026611e7aba1",
+          "score": 0.22839372989108092,
+          "score_basis": "canonical_score",
+          "structured_result_source": "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z/contest_auth_eval.adjudicated.json"
+        }
+      ],
       "exact_eval_summary": {
         "identity_basis": [
           "archive_sha256",
           "device",
           "runtime_tree_sha256"
         ],
-        "same_archive_cuda_scored_eval_count": 0,
-        "same_archive_device_runtime_identity_count": 0,
-        "same_archive_eval_dir_count": 0,
-        "same_archive_replay_identities": [],
-        "same_archive_scored_eval_count": 0,
-        "same_archive_structured_json_eval_count": 0,
-        "total_eval_dir_count": 0
+        "same_archive_cuda_scored_eval_count": 1,
+        "same_archive_device_runtime_identity_count": 1,
+        "same_archive_eval_dir_count": 2,
+        "same_archive_replay_identities": [
+          {
+            "archive_bytes": 178981,
+            "archive_sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+            "device": "cuda",
+            "runtime_tree_sha256": "62560a0411dc341286eebfaf6e8ed79564efeb14fb8da5e3e1be026611e7aba1",
+            "score_basis": "canonical_score",
+            "structured_result_source": "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z/contest_auth_eval.adjudicated.json"
+          }
+        ],
+        "same_archive_scored_eval_count": 1,
+        "same_archive_structured_json_eval_count": 1,
+        "total_eval_dir_count": 2
       },
       "head_repo": "EthanYangTW/comma_video_compression_challenge",
       "head_sha": "1e330ec5633539c48278ce3cc96d2b15ea7a9eac",
@@ -449,23 +511,44 @@
           "runtime_tree_sha256"
         ],
         "leaderboard_score": 0.195,
-        "same_archive_scored_eval_count": 0,
-        "status": "no_same_archive_score_to_compare"
+        "local_scores_by_device": {
+          "cuda": [
+            {
+              "avg_posenet_dist": 0.00017347,
+              "avg_segnet_dist": 0.00067568,
+              "dir": "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z",
+              "replay_identity": {
+                "archive_bytes": 178981,
+                "archive_sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+                "device": "cuda",
+                "runtime_tree_sha256": "62560a0411dc341286eebfaf6e8ed79564efeb14fb8da5e3e1be026611e7aba1",
+                "score_basis": "canonical_score",
+                "structured_result_source": "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z/contest_auth_eval.adjudicated.json"
+              },
+              "runtime_tree_sha256": "62560a0411dc341286eebfaf6e8ed79564efeb14fb8da5e3e1be026611e7aba1",
+              "score": 0.22839372989108092,
+              "score_basis": "canonical_score"
+            }
+          ]
+        },
+        "matches": [],
+        "note": "A mismatch is not automatically a bad local replay. Public PR comments show some PR100+ rows were evaluated once on CUDA and again on CPU; the leaderboard may follow the CPU result while this repo's score claims still require CUDA for promoted internal lanes.",
+        "same_archive_scored_eval_count": 1,
+        "status": "leaderboard_mismatches_same_archive_cuda_replay"
       },
       "leaderboard_score": 0.195,
       "merged_at": "2026-05-04T20:08:31Z",
       "missing_proofs": [
         "compress_to_archive_1to1_reproduction_required",
-        "decode_reencode_parity_proof_required",
-        "exact_cuda_replay_missing",
-        "same_archive_structured_exact_eval_json_missing",
-        "structured_exact_eval_json_missing"
+        "decode_reencode_parity_proof_required"
       ],
       "pr": 102,
       "ready_for_stack_atom": false,
       "research_notes": [
+        ".omx/research/pr102_exact_replay_readiness_20260508_codex.md",
         ".omx/research/pr102_zero_byte_inference_tuning_custody_unblock_20260507_codex.md",
-        ".omx/research/pr102_zero_byte_tuning_custody_20260507_codex.md"
+        ".omx/research/pr102_zero_byte_tuning_custody_20260507_codex.md",
+        ".omx/research/public_pr102_pr108_reverse_engineering_intake_20260508_codex.md"
       ],
       "source": {
         "key_files": {
@@ -692,10 +775,12 @@
       "pr": 103,
       "ready_for_stack_atom": false,
       "research_notes": [
+        ".omx/research/active_pr103_pr106_floor_anatomy_20260507_worker_p.md",
         ".omx/research/hnerv_pr103_lc_ac_schema_frontier_20260507_codex.md",
         ".omx/research/pr101_pr103_hidden_gem_candidate_classification_20260507_worker_pr101_pr103.md",
         ".omx/research/pr103_pr106_ac_repack_exact_eval_20260507_codex.md",
         ".omx/research/pr103_pr106_runtime_closure_20260507_codex.md",
+        ".omx/research/pr103_static_release_runtime_custody_hardening_20260507_codex.md",
         ".omx/research/pr_extended_bit_level_lineage_pr95_pr100_pr101_pr103_20260507_claude.md"
       ],
       "source": {
@@ -1407,6 +1492,57 @@
           "avg_posenet_dist": null,
           "avg_segnet_dist": null,
           "device": null,
+          "dir": "experiments/results/lightning_batch/pr106-uniward-rms005-exact-20260508T082438Z",
+          "json_files": [],
+          "log_files": [],
+          "runtime_tree_sha256": null,
+          "score": null,
+          "score_basis": null,
+          "structured_result_source": null
+        },
+        {
+          "archive": null,
+          "avg_posenet_dist": null,
+          "avg_segnet_dist": null,
+          "device": null,
+          "dir": "experiments/results/lightning_batch/pr106-uniward-rms005-exact-20260508T083355Z",
+          "json_files": [],
+          "log_files": [],
+          "runtime_tree_sha256": null,
+          "score": null,
+          "score_basis": null,
+          "structured_result_source": null
+        },
+        {
+          "archive": {
+            "bytes": 150511,
+            "path": "experiments/results/lightning_batch/pr106-uniward-rms005-exact-20260508T083555Z/archive.zip",
+            "sha256": "0641b8ac8084b362b80e7c5bbe3c122946a8dbf7843fcbcd9f445aee7a56af7b"
+          },
+          "archive_sha256": "0641b8ac8084b362b80e7c5bbe3c122946a8dbf7843fcbcd9f445aee7a56af7b",
+          "archive_size_bytes": 150511,
+          "avg_posenet_dist": 0.00016559,
+          "avg_segnet_dist": 0.0019625,
+          "device": "cuda",
+          "dir": "experiments/results/lightning_batch/pr106-uniward-rms005-exact-20260508T083555Z",
+          "json_files": [
+            "experiments/results/lightning_batch/pr106-uniward-rms005-exact-20260508T083555Z/contest_auth_eval.adjudicated.json",
+            "experiments/results/lightning_batch/pr106-uniward-rms005-exact-20260508T083555Z/contest_auth_eval.json"
+          ],
+          "log_files": [
+            "experiments/results/lightning_batch/pr106-uniward-rms005-exact-20260508T083555Z/adjudication.log",
+            "experiments/results/lightning_batch/pr106-uniward-rms005-exact-20260508T083555Z/auth_eval.log"
+          ],
+          "runtime_tree_sha256": "234b720845c25390718eff2f7971657dacddafd3f8e1984bdc2973fab31d8c1b",
+          "score": 0.3371617511972341,
+          "score_basis": "canonical_score",
+          "structured_result_source": "experiments/results/lightning_batch/pr106-uniward-rms005-exact-20260508T083555Z/contest_auth_eval.adjudicated.json"
+        },
+        {
+          "archive": null,
+          "avg_posenet_dist": null,
+          "avg_segnet_dist": null,
+          "device": null,
           "dir": "experiments/results/lightning_batch/pr106_latent_sidecar_loop_dispatch_20260505T155645Z",
           "json_files": [],
           "log_files": [],
@@ -1421,6 +1557,19 @@
           "avg_segnet_dist": null,
           "device": null,
           "dir": "experiments/results/lightning_batch/pr106_lrl1_sidechannel_loop_dispatch_20260505T155651Z",
+          "json_files": [],
+          "log_files": [],
+          "runtime_tree_sha256": null,
+          "score": null,
+          "score_basis": null,
+          "structured_result_source": null
+        },
+        {
+          "archive": null,
+          "avg_posenet_dist": null,
+          "avg_segnet_dist": null,
+          "device": null,
+          "dir": "experiments/results/lightning_batch/pr106_uniward_rms005_preflight_20260508_codex",
           "json_files": [],
           "log_files": [],
           "runtime_tree_sha256": null,
@@ -1463,7 +1612,7 @@
         ],
         "same_archive_scored_eval_count": 1,
         "same_archive_structured_json_eval_count": 1,
-        "total_eval_dir_count": 22
+        "total_eval_dir_count": 26
       },
       "head_repo": "valtterivalo/comma_video_compression_challenge-1",
       "head_sha": "339910eb2da2048796c8555cb964c5d8cb5c194e",
@@ -1541,20 +1690,27 @@
       "pr": 106,
       "ready_for_stack_atom": false,
       "research_notes": [
+        ".omx/research/active_pr103_pr106_floor_anatomy_20260507_worker_p.md",
         ".omx/research/grand_council_pr106_substrate_findings_zig_default_20260507.md",
         ".omx/research/hnerv_decoder_recode_pr106_20260506_codex.md",
         ".omx/research/hnerv_pr106x_section_repack_plan_20260505_codex.md",
         ".omx/research/lightning_plan_disposition_wr01_apply_pr106x_half_20260507_codex.md",
         ".omx/research/pr103_pr106_ac_repack_exact_eval_20260507_codex.md",
         ".omx/research/pr103_pr106_runtime_closure_20260507_codex.md",
+        ".omx/research/pr106_entropy_floor_replication_20260507_worker_c.md",
         ".omx/research/pr106_latent_sidecar_manifest_canonicalization_20260506_codex.md",
         ".omx/research/pr106_lrl1_artifact_reducer_20260506_codex.md",
         ".omx/research/pr106_lrl1_sidechannel_custody_metadata_20260506_codex.md",
+        ".omx/research/pr106_pose_axis_forensic_memo_20260507_claude.md",
         ".omx/research/pr106_sidechannel_stack_gate_20260506_codex.md",
         ".omx/research/pr106_sidechannel_stack_readiness_20260507_codex.md",
         ".omx/research/pr106_sister_archive_zip_metadata_20260506_codex.md",
         ".omx/research/pr106_stacked_archive_sha_custody_20260506_codex.md",
         ".omx/research/pr106_stacked_sister_anchor_custody_20260506_codex.md",
+        ".omx/research/pr106_uniward_lagrangian_exact_cuda_regression_20260508_codex.md",
+        ".omx/research/pr106_uniward_runtime_packet_dispatch_readiness_worker_a_20260508.md",
+        ".omx/research/pr106_uniward_runtime_packet_dispatch_repair_20260508_codex.md",
+        ".omx/research/pr106_uniward_runtime_packet_smoke_20260508_codex.md",
         ".omx/research/pr106_yshift_cuda_score_table_producer_20260506_codex.md",
         ".omx/research/pr106_yshift_lightning_batch_dispatch_20260506_codex.md",
         ".omx/research/pr106_yshift_lightning_launcher_guard_20260506_codex.md",
@@ -1565,6 +1721,7 @@
         ".omx/research/pr106_yshift_score_table_npy_pickle_hardening_20260506_codex.md",
         ".omx/research/pr106_yshift_scorer_backed_selector_20260506_codex.md",
         ".omx/research/pr106x_archive_diet_audit_20260507_claude.md",
+        ".omx/research/precoarsening_entropy_coder_probe_pr101_pr106_20260508_codex.md",
         "reverse_engineering/orphan_pyc_recovery_20260505_codex/.omx/auto_memory_snapshot_20260504T230223Z/feedback_arithmetic_qint_codec_pr106_latents_unviable_brotli_already_below_entropy_20260504.md",
         "reverse_engineering/orphan_pyc_recovery_20260505_codex/.omx/auto_memory_snapshot_20260504T230223Z/feedback_audit_pr106_revival_plans_consolidated_findings_20260504.md",
         "reverse_engineering/orphan_pyc_recovery_20260505_codex/.omx/auto_memory_snapshot_20260504T230223Z/feedback_block_fp_codec_pr106_unviable_at_default_ternary_20260504.md",
@@ -1801,11 +1958,11 @@
   "schema_version": 1,
   "score_claim": false,
   "summary": {
-    "leaderboard_replay_drift_count": 4,
+    "leaderboard_replay_drift_count": 5,
     "missing_decode_reencode_count": 7,
-    "missing_exact_cuda_count": 2,
-    "missing_same_archive_structured_json_count": 6,
-    "missing_structured_json_count": 6,
+    "missing_exact_cuda_count": 1,
+    "missing_same_archive_structured_json_count": 5,
+    "missing_structured_json_count": 5,
     "ready_for_stack_atom_count": 0,
     "row_count": 8
   },

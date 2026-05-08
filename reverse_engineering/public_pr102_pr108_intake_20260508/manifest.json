@@ -1,237 +1,264 @@
 {
-  "schema": "public_contest_reverse_engineering_intake_v1",
   "created_at_utc": "2026-05-08T09:33:23Z",
   "created_by": "codex",
-  "evidence_grade": "external_plus_empirical_custody",
-  "score_claim": false,
-  "live_upstream_refresh": {
-    "github_repo": "commaai/comma_video_compression_challenge",
-    "readme_url": "https://raw.githubusercontent.com/commaai/comma_video_compression_challenge/master/README.md",
-    "pulls_api_url": "https://api.github.com/repos/commaai/comma_video_compression_challenge/pulls?state=all&sort=created&direction=desc&per_page=20",
-    "latest_public_prs_seen": [108, 107, 106, 105, 104, 103, 102, 101, 100],
-    "readme_leaderboard_state": {
-      "pr101": "ranked_first_0.193",
-      "pr103": "ranked_second_0.195",
-      "pr102": "ranked_third_0.195",
-      "pr108": "not_on_readme_leaderboard_at_refresh"
-    }
-  },
   "entries": [
     {
-      "pr_number": 102,
-      "title": "hnerv_lc_v2_scale095_rplus1 submission (0.19538 CPU)",
-      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/102",
-      "author": "EthanYangTW",
-      "state": "closed",
-      "merged": true,
-      "merged_at_utc": "2026-05-04T20:08:31Z",
-      "created_at_utc": "2026-05-04T11:54:32Z",
-      "updated_at_utc": "2026-05-05T19:56:56Z",
-      "head_repo": "EthanYangTW/comma_video_compression_challenge",
-      "head_ref": "submission/hnerv-lc-v2-scale095-rplus1",
-      "head_sha": "1e330ec5633539c48278ce3cc96d2b15ea7a9eac",
-      "merge_commit_sha": "0ac4e56c227bc79e94756217374490dea92a97a3",
       "archive": {
-        "canonical_url": "https://github.com/user-attachments/files/27369164/archive.zip",
-        "local_path": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/archive.zip",
         "bytes": 178981,
-        "sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
-        "zip_overhead_bytes": 108,
-        "members": [
-          {
-            "name": "0.bin",
-            "file_size": 178873,
-            "compress_size": 178873,
-            "compress_type": 0,
-            "crc32": "99b32852",
-            "sha256": "3234f0689164cfc95b7ee9f9cdf38ecf4d082cfb7048058e2b3ff0f54f864e43"
-          }
-        ],
+        "canonical_url": "https://github.com/user-attachments/files/27369164/archive.zip",
         "identity_matches": [
           {
             "label": "EthanYangTW v2-hnerv-lc-scale095 release",
-            "url": "https://github.com/EthanYangTW/comma_video_compression_challenge/releases/download/v2-hnerv-lc-scale095/archive.zip",
-            "sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641"
+            "sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+            "url": "https://github.com/EthanYangTW/comma_video_compression_challenge/releases/download/v2-hnerv-lc-scale095/archive.zip"
           },
           {
             "label": "BradyMeighan PR100 hnerv-lc-v2 release referenced by PR102 compress.sh",
-            "url": "https://github.com/BradyMeighan/comma_video_compression_challenge/releases/download/hnerv-lc-v2-archive/archive.zip",
-            "sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641"
+            "sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+            "url": "https://github.com/BradyMeighan/comma_video_compression_challenge/releases/download/hnerv-lc-v2-archive/archive.zip"
           }
-        ]
-      },
-      "source_runtime_artifacts": {
-        "runtime_source_path": "submissions/hnerv_lc_v2_scale095_rplus1/",
-        "local_source_root": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/source/submissions/hnerv_lc_v2_scale095_rplus1",
-        "files": [
+        ],
+        "local_path": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/archive.zip",
+        "members": [
           {
-            "path": "README.md",
-            "git_blob_sha1": "1915daea49ce0506ff362e936e531ee034431a93",
-            "sha256": "d4ccd8c76013739a8f420110874adb320568b57e08c4163f76c6299f52b071ba"
-          },
-          {
-            "path": "compress.sh",
-            "git_blob_sha1": "3a011a40b122d490bec60eda4152f08a518c0cfb",
-            "sha256": "8505b162f72ac7aa8a1a96b74f9904b5ff7eb3b79753024ab3c2c0311312cdc8",
-            "role": "fetches PR100 release archive and verifies afd53348f503..."
-          },
-          {
-            "path": "inflate.sh",
-            "git_blob_sha1": "a5c0cfb50198a06ecbcaf208795715f2459ad5a7",
-            "sha256": "aaccd126c0b1f411c81c8129add87c85f74c8f6177f1da290ee2b21645890247",
-            "role": "contest inflate entrypoint"
-          },
-          {
-            "path": "inflate.py",
-            "git_blob_sha1": "6b97cc2085697237d5067cae239d29303b846216",
-            "sha256": "6b7eb1fc1577c49378cd9837c8484ecbe0f46872b40576fec1291b27bd284a6c",
-            "role": "HNeRV decode, bicubic upsample, frame-0 red channel +1.0 nudge"
-          },
-          {
-            "path": "hnerv_model.py",
-            "git_blob_sha1": "6708e78d2fa8abea7ac0c6f37926c7f1c95e7980",
-            "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
-          },
-          {
-            "path": "schema.py",
-            "git_blob_sha1": "458e10c3e8f43c13b2a91f6837ec29c34eb790d4",
-            "sha256": "bc434bd596e753dbeae97c0ddce4d9cf98a50cfe862a451834864d83620d6a0a"
-          },
-          {
-            "path": "sidecar.py",
-            "git_blob_sha1": "b0dfd4c7c139e35a9fa0643de7e8b834c3ddb489",
-            "sha256": "c6a7c56bf61a8cd8e1127141d5f65f23d76d8d4c3569395af7bbb35311b78144",
-            "role": "latent correction sidecar with DELTA_SCALE=0.0095"
+            "compress_size": 178873,
+            "compress_type": 0,
+            "crc32": "99b32852",
+            "file_size": 178873,
+            "name": "0.bin",
+            "sha256": "3234f0689164cfc95b7ee9f9cdf38ecf4d082cfb7048058e2b3ff0f54f864e43"
           }
-        ]
+        ],
+        "sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+        "zip_overhead_bytes": 108
       },
-      "public_eval_observations": {
-        "pr_body_cpu_report": {
-          "device": "cpu",
-          "n_samples": 600,
-          "avg_posenet_dist": 0.00003460,
-          "avg_segnet_dist": 0.00057602,
-          "archive_bytes": 178981,
-          "reported_final_score": 0.20,
-          "exact_from_pr_body_rounded_components": 0.1953791765
-        },
-        "github_action_cuda_comment": {
-          "device": "cuda",
-          "created_at_utc": "2026-05-04T16:58:03Z",
-          "n_samples": 600,
-          "avg_posenet_dist": 0.00017347,
-          "avg_segnet_dist": 0.00067565,
-          "archive_bytes": 178981,
-          "score_recomputed_from_comment_rounded_components": 0.228390831180
-        },
-        "github_action_cpu_comment": {
-          "device": "cpu",
-          "created_at_utc": "2026-05-05T17:05:18Z",
-          "n_samples": 600,
-          "avg_posenet_dist": 0.00003460,
-          "avg_segnet_dist": 0.00057599,
-          "archive_bytes": 178981,
-          "score_recomputed_from_comment_rounded_components": 0.195376176526
-        },
-        "drift_classification": "public_cpu_vs_public_cuda_drift_external_until_local_exact_cuda_replay",
-        "local_exact_cuda_status": "missing"
-      },
+      "author": "EthanYangTW",
       "compliance_risks": [
         "inflate.sh may install brotli at inflate time via pip if missing; exact replay adapter should preinstall or fail closed instead of relying on network.",
         "Archive payload is byte-identical to PR100; score movement is runtime-only, so archive-only intake can misclassify this as duplicate or no-op.",
         "Initial PR body referenced an in-tree archive that was later deleted; the maintainer comment attachment is the canonical public archive URL.",
         "A prior auto intake captured a wrong qpose release asset with member p; do not use it for PR102 replay."
       ],
+      "created_at_utc": "2026-05-04T11:54:32Z",
       "fastest_exact_replay_path": [
-        "Use the corrected archive path above, not public_pr_archive_release_view/public_pr102_intake_20260505_auto/archive.zip.",
-        "Materialize a public replay adapter whose inflate.sh points at the PR102 runtime source and uses the repo-managed environment with brotli available.",
-        "Run experiments/contest_auth_eval.py with --archive, --inflate-sh, --upstream-dir upstream, and --device cuda; preserve contest_auth_eval.json, provenance.json, runtime_tree_sha256, logs, and dispatch claim status if remote.",
-        "Classify the CPU/CUDA divergence only after local exact CUDA replay of these exact archive bytes and runtime files."
-      ]
+        "DONE 2026-05-08: hardened Lightning T4 replay landed for the corrected archive/runtime pair.",
+        "Use local_exact_cuda_replay above for CUDA/comment drift classification; do not use the stale qpose asset.",
+        "Remaining PR102 deconstruction work is byte-level decode/re-encode parity and compress-to-archive reproduction, not another exact replay of the same archive unless custody changes."
+      ],
+      "head_ref": "submission/hnerv-lc-v2-scale095-rplus1",
+      "head_repo": "EthanYangTW/comma_video_compression_challenge",
+      "head_sha": "1e330ec5633539c48278ce3cc96d2b15ea7a9eac",
+      "merge_commit_sha": "0ac4e56c227bc79e94756217374490dea92a97a3",
+      "merged": true,
+      "merged_at_utc": "2026-05-04T20:08:31Z",
+      "pr_number": 102,
+      "public_eval_observations": {
+        "drift_classification": "local_exact_cuda_confirms_public_cuda_comment_and_mismatches_public_cpu_leaderboard",
+        "github_action_cpu_comment": {
+          "archive_bytes": 178981,
+          "avg_posenet_dist": 3.46e-05,
+          "avg_segnet_dist": 0.00057599,
+          "created_at_utc": "2026-05-05T17:05:18Z",
+          "device": "cpu",
+          "n_samples": 600,
+          "score_recomputed_from_comment_rounded_components": 0.195376176526
+        },
+        "github_action_cuda_comment": {
+          "archive_bytes": 178981,
+          "avg_posenet_dist": 0.00017347,
+          "avg_segnet_dist": 0.00067565,
+          "created_at_utc": "2026-05-04T16:58:03Z",
+          "device": "cuda",
+          "n_samples": 600,
+          "score_recomputed_from_comment_rounded_components": 0.22839083118
+        },
+        "local_exact_cuda_replay": {
+          "adjudicated_json": "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z/contest_auth_eval.adjudicated.json",
+          "archive_bytes": 178981,
+          "archive_sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+          "artifact_dir": "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z",
+          "avg_posenet_dist": 0.00017347,
+          "avg_segnet_dist": 0.00067568,
+          "contest_auth_eval_json": "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z/contest_auth_eval.json",
+          "contest_equivalent_hardware": true,
+          "device": "cuda",
+          "dispatch_claim_status": "completed_score_0.228393729891",
+          "evidence_grade": "A++ contest T4",
+          "gpu_model": "Tesla T4",
+          "n_samples": 600,
+          "runtime_tree_sha256": "62560a0411dc341286eebfaf6e8ed79564efeb14fb8da5e3e1be026611e7aba1",
+          "score_delta_vs_public_cuda_comment": 2.8987110809175487e-06,
+          "score_recomputed_from_components": 0.22839372989108092
+        },
+        "local_exact_cuda_status": "landed_hardened_t4_replay",
+        "pr_body_cpu_report": {
+          "archive_bytes": 178981,
+          "avg_posenet_dist": 3.46e-05,
+          "avg_segnet_dist": 0.00057602,
+          "device": "cpu",
+          "exact_from_pr_body_rounded_components": 0.1953791765,
+          "n_samples": 600,
+          "reported_final_score": 0.2
+        }
+      },
+      "source_runtime_artifacts": {
+        "files": [
+          {
+            "git_blob_sha1": "1915daea49ce0506ff362e936e531ee034431a93",
+            "path": "README.md",
+            "sha256": "d4ccd8c76013739a8f420110874adb320568b57e08c4163f76c6299f52b071ba"
+          },
+          {
+            "git_blob_sha1": "3a011a40b122d490bec60eda4152f08a518c0cfb",
+            "path": "compress.sh",
+            "role": "fetches PR100 release archive and verifies afd53348f503...",
+            "sha256": "8505b162f72ac7aa8a1a96b74f9904b5ff7eb3b79753024ab3c2c0311312cdc8"
+          },
+          {
+            "git_blob_sha1": "a5c0cfb50198a06ecbcaf208795715f2459ad5a7",
+            "path": "inflate.sh",
+            "role": "contest inflate entrypoint",
+            "sha256": "aaccd126c0b1f411c81c8129add87c85f74c8f6177f1da290ee2b21645890247"
+          },
+          {
+            "git_blob_sha1": "6b97cc2085697237d5067cae239d29303b846216",
+            "path": "inflate.py",
+            "role": "HNeRV decode, bicubic upsample, frame-0 red channel +1.0 nudge",
+            "sha256": "6b7eb1fc1577c49378cd9837c8484ecbe0f46872b40576fec1291b27bd284a6c"
+          },
+          {
+            "git_blob_sha1": "6708e78d2fa8abea7ac0c6f37926c7f1c95e7980",
+            "path": "hnerv_model.py",
+            "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+          },
+          {
+            "git_blob_sha1": "458e10c3e8f43c13b2a91f6837ec29c34eb790d4",
+            "path": "schema.py",
+            "sha256": "bc434bd596e753dbeae97c0ddce4d9cf98a50cfe862a451834864d83620d6a0a"
+          },
+          {
+            "git_blob_sha1": "b0dfd4c7c139e35a9fa0643de7e8b834c3ddb489",
+            "path": "sidecar.py",
+            "role": "latent correction sidecar with DELTA_SCALE=0.0095",
+            "sha256": "c6a7c56bf61a8cd8e1127141d5f65f23d76d8d4c3569395af7bbb35311b78144"
+          }
+        ],
+        "local_source_root": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/source/submissions/hnerv_lc_v2_scale095_rplus1",
+        "runtime_source_path": "submissions/hnerv_lc_v2_scale095_rplus1/"
+      },
+      "state": "closed",
+      "title": "hnerv_lc_v2_scale095_rplus1 submission (0.19538 CPU)",
+      "updated_at_utc": "2026-05-05T19:56:56Z",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/102"
     },
     {
-      "pr_number": 108,
-      "title": "andimin01",
-      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/108",
-      "author": "andrei-minca",
-      "state": "open",
-      "merged": false,
-      "merged_at_utc": null,
-      "created_at_utc": "2026-05-05T16:32:51Z",
-      "updated_at_utc": "2026-05-05T16:33:07Z",
-      "head_repo": "andrei-minca/comma_video_compression_challenge",
-      "head_ref": "andimin01",
-      "head_sha": "59c1bbd544bb2aa166656d24d7de117ad3e3e62e",
       "archive": {
+        "bytes": 442979,
         "canonical_url": "https://github.com/user-attachments/files/27408563/archive.zip",
         "local_path": "experiments/results/public_pr108_andimin01_intake_20260508_codex/archive.zip",
-        "bytes": 442979,
-        "sha256": "127b0b318ba2355cdac0d513f4027f0ca3297be4cba0f44e1ddb25cc70586804",
-        "zip_overhead_bytes": 160,
         "members": [
           {
-            "name": "0.mkv",
-            "file_size": 448786,
             "compress_size": 442819,
             "compress_type": 8,
             "crc32": "7cf70485",
+            "file_size": 448786,
+            "name": "0.mkv",
             "sha256": "3541f5031914a76d8632e094703ec1f96e59c7fb07942963379fc3d82bbe3035"
           }
-        ]
+        ],
+        "sha256": "127b0b318ba2355cdac0d513f4027f0ca3297be4cba0f44e1ddb25cc70586804",
+        "zip_overhead_bytes": 160
       },
-      "source_runtime_artifacts": {
-        "runtime_source_path": "submissions/andimin01/",
-        "files": [
-          {
-            "path": "compress.sh",
-            "git_blob_sha1": "e5e967dc6c00dad46599c75138947530ea00beef",
-            "sha256": "fb79770977357b1b8f739dbdb56cfa9425ed387137aa0271422ff24e2535929a",
-            "role": "ROI preprocess, downscale to 512x384, encode libsvtav1 preset 6 crf 40, zip archive/*.mkv"
-          },
-          {
-            "path": "inflate.sh",
-            "git_blob_sha1": "28fbf7658d30f8bce3fd15dda198346746b665ad",
-            "sha256": "a975c29b80aa5e3921b9c94d55f854f4cd614eeb7f5ae6db5465ef89b279cae2",
-            "role": "contest inflate entrypoint; expects extracted 0.mkv and writes 0.raw"
-          },
-          {
-            "path": "inflate.py",
-            "git_blob_sha1": "4d7d21796c7f89892ef88ae69c501535954d7294",
-            "sha256": "70bd774de6b163f2f974c1d8daf9d4823c1840d1074d8ce09c4dc8c4a1d5e517",
-            "role": "PyAV decode, bilinear upscale to 1164x874, per-channel sharpening, uint8 raw output"
-          },
-          {
-            "path": "roi_preprocess.py",
-            "git_blob_sha1": "40ca1f90b9938f9677b23513e9400ab87a72ff82",
-            "sha256": "3daf18d0df590c24f311a802b459ecbe6ae4c6d73d6c56efe26ce8ecffd782dd",
-            "role": "compression-side driving ROI luma denoise and chroma collapse"
-          }
-        ]
-      },
-      "public_eval_observations": {
-        "pr_body_cpu_report": {
-          "device": "cpu",
-          "n_samples": 600,
-          "avg_posenet_dist": 0.65178943,
-          "avg_segnet_dist": 0.00745649,
-          "archive_bytes": 442979,
-          "reported_final_score": 3.59,
-          "score_recomputed_from_pr_body_rounded_components": 3.593627238977
-        },
-        "readme_leaderboard_status": "not_listed_at_refresh",
-        "local_exact_cuda_status": "not_attempted_non_frontier"
-      },
+      "author": "andrei-minca",
       "compliance_risks": [
         "Non-frontier by its own PR body CPU report and current README leaderboard; exact CUDA spend is low priority unless needed for drift explanation.",
         "Inflate path depends on PyAV, torch, and video decode behavior; exact replay must capture dependency/runtime tree before comparing to CPU report.",
         "Archive member is an MKV video stream rather than a typed neural payload; useful as a ROI/AV1 baseline reference, not a HNeRV payload grammar target.",
         "No official GitHub eval result comment was present at refresh; only the submitter's CPU report is available."
       ],
+      "created_at_utc": "2026-05-05T16:32:51Z",
       "fastest_exact_replay_path": [
         "If replay is needed, create a source-sized public replay adapter from PR108 files at head_sha 59c1bbd544bb2aa166656d24d7de117ad3e3e62e.",
         "Run experiments/contest_auth_eval.py with --archive, --inflate-sh, --upstream-dir upstream, and --device cuda; preserve contest_auth_eval.json, provenance.json, runtime_tree_sha256, logs, and dispatch claim status if remote.",
         "Treat any result as classification evidence only unless it unexpectedly beats the validated frontier under exact CUDA."
-      ]
+      ],
+      "head_ref": "andimin01",
+      "head_repo": "andrei-minca/comma_video_compression_challenge",
+      "head_sha": "59c1bbd544bb2aa166656d24d7de117ad3e3e62e",
+      "merged": false,
+      "merged_at_utc": null,
+      "pr_number": 108,
+      "public_eval_observations": {
+        "local_exact_cuda_status": "not_attempted_non_frontier",
+        "pr_body_cpu_report": {
+          "archive_bytes": 442979,
+          "avg_posenet_dist": 0.65178943,
+          "avg_segnet_dist": 0.00745649,
+          "device": "cpu",
+          "n_samples": 600,
+          "reported_final_score": 3.59,
+          "score_recomputed_from_pr_body_rounded_components": 3.593627238977
+        },
+        "readme_leaderboard_status": "not_listed_at_refresh"
+      },
+      "source_runtime_artifacts": {
+        "files": [
+          {
+            "git_blob_sha1": "e5e967dc6c00dad46599c75138947530ea00beef",
+            "path": "compress.sh",
+            "role": "ROI preprocess, downscale to 512x384, encode libsvtav1 preset 6 crf 40, zip archive/*.mkv",
+            "sha256": "fb79770977357b1b8f739dbdb56cfa9425ed387137aa0271422ff24e2535929a"
+          },
+          {
+            "git_blob_sha1": "28fbf7658d30f8bce3fd15dda198346746b665ad",
+            "path": "inflate.sh",
+            "role": "contest inflate entrypoint; expects extracted 0.mkv and writes 0.raw",
+            "sha256": "a975c29b80aa5e3921b9c94d55f854f4cd614eeb7f5ae6db5465ef89b279cae2"
+          },
+          {
+            "git_blob_sha1": "4d7d21796c7f89892ef88ae69c501535954d7294",
+            "path": "inflate.py",
+            "role": "PyAV decode, bilinear upscale to 1164x874, per-channel sharpening, uint8 raw output",
+            "sha256": "70bd774de6b163f2f974c1d8daf9d4823c1840d1074d8ce09c4dc8c4a1d5e517"
+          },
+          {
+            "git_blob_sha1": "40ca1f90b9938f9677b23513e9400ab87a72ff82",
+            "path": "roi_preprocess.py",
+            "role": "compression-side driving ROI luma denoise and chroma collapse",
+            "sha256": "3daf18d0df590c24f311a802b459ecbe6ae4c6d73d6c56efe26ce8ecffd782dd"
+          }
+        ],
+        "runtime_source_path": "submissions/andimin01/"
+      },
+      "state": "open",
+      "title": "andimin01",
+      "updated_at_utc": "2026-05-05T16:33:07Z",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/108"
     }
-  ]
+  ],
+  "evidence_grade": "external_plus_empirical_custody",
+  "live_upstream_refresh": {
+    "github_repo": "commaai/comma_video_compression_challenge",
+    "latest_public_prs_seen": [
+      108,
+      107,
+      106,
+      105,
+      104,
+      103,
+      102,
+      101,
+      100
+    ],
+    "pulls_api_url": "https://api.github.com/repos/commaai/comma_video_compression_challenge/pulls?state=all&sort=created&direction=desc&per_page=20",
+    "readme_leaderboard_state": {
+      "pr101": "ranked_first_0.193",
+      "pr102": "ranked_third_0.195",
+      "pr103": "ranked_second_0.195",
+      "pr108": "not_on_readme_leaderboard_at_refresh"
+    },
+    "readme_url": "https://raw.githubusercontent.com/commaai/comma_video_compression_challenge/master/README.md"
+  },
+  "schema": "public_contest_reverse_engineering_intake_v1",
+  "score_claim": false
 }
