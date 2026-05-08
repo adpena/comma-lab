@@ -1,0 +1,33 @@
+{
+  "schema_version": "public_pr_waiver_manifest.v1",
+  "schema_doc": "Committed external-waiver manifest for public PR intake clones. Public PR clones (experiments/results/public_pr*_intake_*/) MUST remain pristine bytes-identical to upstream PR head — they are forensic inputs for source provenance. If a preflight scanner produces a finding INSIDE a clone path, the rationale lives HERE (not as an inline comment in the clone). Each row records (pr, path, line, waiver_kind, rationale, reviewed_by, reviewed_at). Scanners that recognize this manifest can consult it before flagging a violation. Currently most scanners exclude clone paths via `_VENDORED_PATH_MARKERS` (src/tac/preflight.py:5113) so the manifest is mostly empty.",
+  "discovery_paths": [
+    "experiments/results/public_pr*_intake_*/source/",
+    "experiments/results/public_pr*_intake_*/repo/",
+    "experiments/results/public_pr*_intake_*/pr*_src/repo/",
+    "experiments/results/public_pr_archive_*/public_pr*_intake_*/",
+    "experiments/results/public_pr_intake_full/public_pr*_intake_*/"
+  ],
+  "row_format": {
+    "pr": "int — public PR number (e.g., 100, 103)",
+    "path": "str — repo-relative path WITHIN the clone (e.g., 'submissions/fp4_mask_gen/compress.py')",
+    "line": "int — 1-indexed line number of the line being waived",
+    "waiver_kind": "str — one of: KL_BATCHMEAN_OK | WEIGHTS_ONLY_FALSE_OK | DEAD_BYTES_AUDIT_OK | ROUNDTRIP_TESTED | ADMM_WAIVED | <other token>",
+    "rationale": "str — why this waiver applies; usually 'public-PR-intake-external-code-not-our-quality-debt' or a more specific note",
+    "reviewed_by": "str — agent identifier (e.g., 'claude:main')",
+    "reviewed_at": "str — ISO date YYYY-MM-DD"
+  },
+  "guidance": {
+    "before_adding_a_row": "Confirm the in-tree scanner actually flags the clone path. As of 2026-05-08 the canonical scanners (KL_BATCHMEAN, MPS-fallback, dead-flag, dead-resolver, etc.) ALREADY skip `_intake_` paths via `_VENDORED_PATH_MARKERS`. If your scanner does the same, NO row is needed. The manifest exists for the rare scanner that cannot honor a path-prefix exclusion (e.g., a global rule that must inspect every Python file).",
+    "do_not_edit_clones_in_place": "Inline waiver comments INSIDE clone files corrupt source provenance. Codex 2026-05-08 review HIGH finding. Use this manifest instead.",
+    "preflight_gate": "`check_public_pr_intake_clones_pristine` (Check 109, STRICT in `preflight_all()`) refuses any clone with non-empty `git status --short`. The manifest is the only authorized location for waiver metadata."
+  },
+  "waivers": [],
+  "history": [
+    {
+      "date": "2026-05-08",
+      "actor": "claude:main",
+      "action": "manifest created; reverted 39 in-place KL_BATCHMEAN_OK waivers across 8 dirty public PR intake clones (pr100/101/103/105/106 source/, pr81/82 repo/, pr91 pr91_src/repo/). Scanners already exclude these paths via `_VENDORED_PATH_MARKERS`; waivers were stale and unneeded. See `.omx/research/codex_finding_2_dirty_clone_revert_inventory_20260508.md`."
+    }
+  ]
+}

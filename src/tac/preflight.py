@@ -23897,24 +23897,61 @@ def check_public_pr_intake_clones_pristine(
             n_skipped_not_git += 1
             continue
         dirty = result.stdout.strip()
-        if dirty:
-            rel = clone.relative_to(root) if clone.is_absolute() else clone
-            # Cap output to first 5 lines per clone to avoid log spam.
-            preview_lines = dirty.split("\n")[:5]
-            preview = "; ".join(preview_lines)
-            extra = (
-                f" (+{len(dirty.split(chr(10))) - 5} more)"
-                if len(dirty.split("\n")) > 5
-                else ""
+        if not dirty:
+            continue
+        # Distinguish text edits (real source-provenance corruption — what
+        # codex 2026-05-08 finding caught) from git-LFS pointer-vs-content
+        # state mismatches (NOT corruption — bytes match upstream LFS-smudged).
+        # `git diff --numstat` returns line counts for text files and
+        # `-\t-\t<path>` for binary/LFS files. Only flag when line counts > 0.
+        try:
+            ns = subprocess.run(
+                ["git", "-C", str(clone), "diff", "--numstat"],
+                capture_output=True, text=True, timeout=30,
             )
-            violations.append(
-                f"{rel}: dirty git status — public PR intake clone has "
-                f"local edits that corrupt source provenance. "
-                f"Status: [{preview}{extra}]. Restore via "
-                f"`git -C {rel} checkout -- .`. Put any waiver rationale "
-                f"in `reverse_engineering/public_pr_waiver_manifest.json` "
-                f"instead of editing the clone in place."
-            )
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+            ns = None
+        text_edits: list[str] = []
+        binary_or_lfs_edits: list[str] = []
+        if ns is not None and ns.returncode == 0:
+            for line in ns.stdout.strip().split("\n"):
+                if not line:
+                    continue
+                parts = line.split("\t")
+                if len(parts) < 3:
+                    continue
+                added, removed, path = parts[0], parts[1], parts[2]
+                if added == "-" and removed == "-":
+                    binary_or_lfs_edits.append(path)
+                else:
+                    text_edits.append(f"{path} (+{added}/-{removed})")
+        else:
+            # diff --numstat failed; conservative: treat all as text edits
+            text_edits = [dirty.split("\n")[0]]
+        if not text_edits:
+            # Only binary/LFS state mismatches — content is upstream-faithful.
+            continue
+        rel = clone.relative_to(root) if clone.is_absolute() else clone
+        preview_lines = text_edits[:5]
+        preview = "; ".join(preview_lines)
+        extra = (
+            f" (+{len(text_edits) - 5} more text edits)"
+            if len(text_edits) > 5
+            else ""
+        )
+        lfs_note = (
+            f" [also {len(binary_or_lfs_edits)} binary/LFS state diff(s) ignored as non-corrupting]"
+            if binary_or_lfs_edits
+            else ""
+        )
+        violations.append(
+            f"{rel}: dirty git status — public PR intake clone has "
+            f"local TEXT edits that corrupt source provenance. "
+            f"Edits: [{preview}{extra}]{lfs_note}. Restore via "
+            f"`git -C {rel} checkout -- <file>`. Put any waiver rationale "
+            f"in `reverse_engineering/public_pr_waiver_manifest.json` "
+            f"instead of editing the clone in place."
+        )
 
     if verbose and violations:
         print(
