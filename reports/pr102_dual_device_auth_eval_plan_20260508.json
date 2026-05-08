@@ -1,0 +1,288 @@
+{
+  "archive": {
+    "bytes": 178981,
+    "path": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/archive.zip",
+    "sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641"
+  },
+  "created_at_utc": "2026-05-08T12:25:29Z",
+  "evals": {
+    "cpu": {
+      "command": [
+        ".venv/bin/python",
+        "experiments/contest_auth_eval.py",
+        "--archive",
+        "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/archive.zip",
+        "--inflate-sh",
+        "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/source/submissions/hnerv_lc_v2_scale095_rplus1/inflate.sh",
+        "--upstream-dir",
+        "upstream",
+        "--video-names-file",
+        "upstream/public_test_video_names.txt",
+        "--device",
+        "cpu",
+        "--work-dir",
+        "experiments/results/dual_device_auth_eval/public-pr102-hnerv_lc_v2_scale095_rplus1-dual-auth-20260508T122529Z/cpu",
+        "--inflate-timeout",
+        "1800",
+        "--evaluate-timeout",
+        "1800",
+        "--keep-work-dir"
+      ],
+      "device": "cpu",
+      "evidence_semantics": "public_leaderboard_cpu_reproduction_axis",
+      "promotion_eligible_from_this_axis": false,
+      "work_dir": "experiments/results/dual_device_auth_eval/public-pr102-hnerv_lc_v2_scale095_rplus1-dual-auth-20260508T122529Z/cpu"
+    },
+    "cuda": {
+      "command": [
+        ".venv/bin/python",
+        "experiments/contest_auth_eval.py",
+        "--archive",
+        "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/archive.zip",
+        "--inflate-sh",
+        "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/source/submissions/hnerv_lc_v2_scale095_rplus1/inflate.sh",
+        "--upstream-dir",
+        "upstream",
+        "--video-names-file",
+        "upstream/public_test_video_names.txt",
+        "--device",
+        "cuda",
+        "--work-dir",
+        "experiments/results/dual_device_auth_eval/public-pr102-hnerv_lc_v2_scale095_rplus1-dual-auth-20260508T122529Z/cuda",
+        "--inflate-timeout",
+        "1800",
+        "--evaluate-timeout",
+        "1800",
+        "--keep-work-dir"
+      ],
+      "device": "cuda",
+      "evidence_semantics": "contest_cuda_exact_auth_eval_promotion_axis",
+      "promotion_eligible_from_this_axis": true,
+      "work_dir": "experiments/results/dual_device_auth_eval/public-pr102-hnerv_lc_v2_scale095_rplus1-dual-auth-20260508T122529Z/cuda"
+    }
+  },
+  "inflate_sh": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/source/submissions/hnerv_lc_v2_scale095_rplus1/inflate.sh",
+  "label": "public-pr102-hnerv_lc_v2_scale095_rplus1",
+  "notes": [
+    "Run both commands on the same archive bytes before PR/frontier claims.",
+    "CUDA is the internal promotion/ranking axis; CPU is the public leaderboard reproduction axis.",
+    "Do not extrapolate CPU from CUDA or CUDA from CPU; compare paired JSON artifacts only."
+  ],
+  "promotion_eligible": false,
+  "public_pr_row": {
+    "archive": {
+      "blockers": [],
+      "bytes": 178981,
+      "duplicate_members": [],
+      "is_zip": true,
+      "member_count": 1,
+      "members": [
+        {
+          "bytes": 178873,
+          "compressed_bytes": 178873,
+          "crc32": "99b32852",
+          "name": "0.bin",
+          "order": 0,
+          "prefix_ascii": "*z..[]~sE...j...",
+          "prefix_hex": "2a7a02005b5d7e7345d9f6016a81ee00",
+          "sha256": "3234f0689164cfc95b7ee9f9cdf38ecf4d082cfb7048058e2b3ff0f54f864e43",
+          "unsafe_name": false
+        }
+      ],
+      "path": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/archive.zip",
+      "present": true,
+      "sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+      "unsafe_members": []
+    },
+    "archive_basis": "pr102_zero_byte_tuning_corrected_archive",
+    "author": "EthanYangTW",
+    "binary_understanding": {
+      "compress_reproduction_status": "missing_or_external",
+      "decode_reencode_parity_status": "missing_or_external",
+      "payload_prefixes_recorded": true,
+      "wire_grammar_status": "member_prefix_only",
+      "zip_member_manifest_present": true
+    },
+    "closed_at": "2026-05-04T20:08:31Z",
+    "created_at": "2026-05-04T11:54:32Z",
+    "diff_size": {
+      "additions": 367,
+      "changed_files": 7,
+      "deletions": 0
+    },
+    "exact_eval_artifacts": [
+      {
+        "archive": {
+          "bytes": 178981,
+          "path": "experiments/results/lightning_batch/pr102-public-exact-replay-g4dn2-20260508T101510Z/archive.zip",
+          "sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641"
+        },
+        "avg_posenet_dist": null,
+        "avg_segnet_dist": null,
+        "device": null,
+        "dir": "experiments/results/lightning_batch/pr102-public-exact-replay-g4dn2-20260508T101510Z",
+        "json_files": [],
+        "log_files": [
+          "experiments/results/lightning_batch/pr102-public-exact-replay-g4dn2-20260508T101510Z/auth_eval.log"
+        ],
+        "runtime_tree_sha256": null,
+        "score": null,
+        "score_basis": null,
+        "structured_result_kind": null,
+        "structured_result_source": null
+      },
+      {
+        "archive": {
+          "bytes": 178981,
+          "path": "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z/archive.zip",
+          "sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641"
+        },
+        "archive_sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+        "archive_size_bytes": 178981,
+        "avg_posenet_dist": 0.00017347,
+        "avg_segnet_dist": 0.00067568,
+        "device": "cuda",
+        "dir": "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z",
+        "json_files": [
+          "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z/contest_auth_eval.adjudicated.json",
+          "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z/contest_auth_eval.json"
+        ],
+        "log_files": [
+          "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z/adjudication.log",
+          "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z/auth_eval.log",
+          "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z/component_trace.log"
+        ],
+        "runtime_tree_sha256": "62560a0411dc341286eebfaf6e8ed79564efeb14fb8da5e3e1be026611e7aba1",
+        "score": 0.22839372989108092,
+        "score_basis": "canonical_score",
+        "structured_result_kind": "contest_auth_eval_json_file",
+        "structured_result_source": "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z/contest_auth_eval.adjudicated.json"
+      }
+    ],
+    "exact_eval_summary": {
+      "identity_basis": [
+        "archive_sha256",
+        "device",
+        "runtime_tree_sha256"
+      ],
+      "same_archive_cuda_scored_eval_count": 1,
+      "same_archive_device_runtime_identity_count": 1,
+      "same_archive_embedded_result_json_eval_count": 0,
+      "same_archive_eval_dir_count": 2,
+      "same_archive_replay_identities": [
+        {
+          "archive_bytes": 178981,
+          "archive_sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+          "device": "cuda",
+          "runtime_tree_sha256": "62560a0411dc341286eebfaf6e8ed79564efeb14fb8da5e3e1be026611e7aba1",
+          "score_basis": "canonical_score",
+          "structured_result_source": "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z/contest_auth_eval.adjudicated.json"
+        }
+      ],
+      "same_archive_scored_eval_count": 1,
+      "same_archive_structured_json_eval_count": 1,
+      "total_eval_dir_count": 2
+    },
+    "head_repo": "EthanYangTW/comma_video_compression_challenge",
+    "head_sha": "1e330ec5633539c48278ce3cc96d2b15ea7a9eac",
+    "intake": {
+      "archive_provenance": {
+        "bytes": 569,
+        "path": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/archive_provenance.json",
+        "sha256": "7dcf89e119d3923e4c133ca4ec4ef92ff60e6dbacea34ba74d937558e140d1e9"
+      },
+      "archive_provenance_status": "downloaded",
+      "dir": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto",
+      "metadata": {
+        "bytes": 498,
+        "path": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/pr_metadata.json",
+        "sha256": "e9f9efae19a3cc0660457ac273bd8845f65d5ba31ff1b869d037c149c49ebe65"
+      }
+    },
+    "leaderboard_name": "hnerv_lc_v2_scale095_rplus1",
+    "leaderboard_replay_drift": {
+      "identity_basis": [
+        "archive_sha256",
+        "device",
+        "runtime_tree_sha256"
+      ],
+      "leaderboard_score": 0.195,
+      "local_scores_by_device": {
+        "cuda": [
+          {
+            "avg_posenet_dist": 0.00017347,
+            "avg_segnet_dist": 0.00067568,
+            "dir": "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z",
+            "replay_identity": {
+              "archive_bytes": 178981,
+              "archive_sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+              "device": "cuda",
+              "runtime_tree_sha256": "62560a0411dc341286eebfaf6e8ed79564efeb14fb8da5e3e1be026611e7aba1",
+              "score_basis": "canonical_score",
+              "structured_result_source": "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z/contest_auth_eval.adjudicated.json"
+            },
+            "runtime_tree_sha256": "62560a0411dc341286eebfaf6e8ed79564efeb14fb8da5e3e1be026611e7aba1",
+            "score": 0.22839372989108092,
+            "score_basis": "canonical_score"
+          }
+        ]
+      },
+      "matches": [],
+      "note": "A mismatch is not automatically a bad local replay. Public PR comments show some PR100+ rows were evaluated once on CUDA and again on CPU; the leaderboard may follow the CPU result while this repo's score claims still require CUDA for promoted internal lanes.",
+      "same_archive_scored_eval_count": 1,
+      "status": "leaderboard_mismatches_same_archive_cuda_replay"
+    },
+    "leaderboard_score": 0.195,
+    "merged_at": "2026-05-04T20:08:31Z",
+    "missing_proofs": [
+      "compress_to_archive_1to1_reproduction_required",
+      "decode_reencode_parity_proof_required"
+    ],
+    "pr": 102,
+    "ready_for_stack_atom": false,
+    "research_notes": [
+      ".omx/research/pr102_exact_replay_readiness_20260508_codex.md",
+      ".omx/research/pr102_zero_byte_inference_tuning_custody_unblock_20260507_codex.md",
+      ".omx/research/pr102_zero_byte_tuning_custody_20260507_codex.md",
+      ".omx/research/public_pr102_pr108_reverse_engineering_intake_20260508_codex.md"
+    ],
+    "source": {
+      "key_files": {
+        "compress_py": null,
+        "compress_sh": {
+          "bytes": 1316,
+          "path": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/source/submissions/hnerv_lc_v2_scale095_rplus1/compress.sh",
+          "sha256": "8505b162f72ac7aa8a1a96b74f9904b5ff7eb3b79753024ab3c2c0311312cdc8"
+        },
+        "inflate_py": {
+          "bytes": 5110,
+          "path": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/source/submissions/hnerv_lc_v2_scale095_rplus1/inflate.py",
+          "sha256": "6b7eb1fc1577c49378cd9837c8484ecbe0f46872b40576fec1291b27bd284a6c"
+        },
+        "inflate_sh": {
+          "bytes": 705,
+          "path": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/source/submissions/hnerv_lc_v2_scale095_rplus1/inflate.sh",
+          "sha256": "aaccd126c0b1f411c81c8129add87c85f74c8f6177f1da290ee2b21645890247"
+        },
+        "readme": {
+          "bytes": 639,
+          "path": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/source/submissions/hnerv_lc_v2_scale095_rplus1/README.md",
+          "sha256": "d4ccd8c76013739a8f420110874adb320568b57e08c4163f76c6299f52b071ba"
+        },
+        "report": null
+      },
+      "source_file_count": 7,
+      "source_files_sha256": "8a3499aa0b2468fac8d41ae8eead11b4203155768956abe4dbf5199cfd5a895e",
+      "submission_dir": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/source/submissions/hnerv_lc_v2_scale095_rplus1",
+      "submission_dir_present": true
+    },
+    "title": "hnerv_lc_v2_scale095_rplus1 submission (0.19538 CPU)"
+  },
+  "rank_or_kill_eligible": false,
+  "repo_root": ".",
+  "run_id": "public-pr102-hnerv_lc_v2_scale095_rplus1-dual-auth-20260508T122529Z",
+  "schema": "dual_device_auth_eval_plan.v1",
+  "score_claim": false,
+  "upstream_dir": "upstream",
+  "video_names_file": "upstream/public_test_video_names.txt"
+}

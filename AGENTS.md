@@ -567,12 +567,18 @@ Use evidence grades rigorously:
   regresses. This supports diagnosis and redesign, not broad family kills.
 - `B`: diagnostic CUDA evidence with incomplete custody, schema, or rerun
   proof.
+- `contest-CPU`: exact same archive/runtime custody through
+  `archive.zip -> inflate.sh -> upstream/evaluate.py --device cpu`, full sample
+  count, and component recomputation on 1:1 Linux x86_64 contest-compliant
+  hardware. This is valid only for public leaderboard/PR-comment reproduction
+  and CPU-vs-CUDA drift diagnosis. It is not internal promotion, paper score,
+  rank-frontier, kill, or method-retirement evidence.
 - `empirical`: byte, smoke, loss, round-trip, partial, or component evidence.
 - `derivation`: formula-only conclusion.
 - `prediction`: hypothesis or forecast.
 - `external`: outside paper, OSS, or leaderboard intake.
-- `invalid`: CPU, MPS, proxy, stale, no-op, sidecar, missing archive, or
-  unreproducible score evidence.
+- `invalid`: CPU outside the explicit `contest-CPU` protocol, MPS, proxy,
+  stale, no-op, sidecar, missing archive, or unreproducible score evidence.
 
 No lane can promote, rank, kill, or anchor stack math from prediction,
 byte-only, CPU, MPS, proxy, smoke, memory-only, or stale-log evidence.
@@ -679,6 +685,22 @@ Earlier guidance "Local M-series/MPS or CPU output must never promote
 6. Existing CUDA-only artifacts are NOT retroactively invalidated. They
    remain `[contest-CUDA]` with their CUDA-axis truth value. The
    dual-eval mandate is forward-looking from this rule's commit.
+
+**Required tooling surfaces:**
+
+- `experiments/contest_auth_eval.py --device cuda` emits the promotable CUDA
+  axis when it is full-sample T4-equivalent and marked `A++`.
+- `experiments/contest_auth_eval.py --device cpu` emits `contest-CPU` for
+  full-sample public leaderboard reproduction. It must set
+  `promotion_eligible=false`, `score_claim_valid=false`, and
+  `rank_or_kill_eligible=false`.
+- `tools/plan_dual_device_auth_eval.py` creates paired CPU/CUDA command plans
+  for the same archive/runtime.
+- `tools/plan_public_pr_cpu_auth_eval.py` plans or runs public-PR CPU replay
+  from the reproduction ledger.
+- `tools/public_pr_eval_comment_scorecard.py` extracts host PR-comment CUDA
+  and CPU component rows so apparent drift is classified by device, not
+  guessed.
 
 Cross-references: CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA"
 section (canonical statement of this rule); the codex drift hypothesis

@@ -273,7 +273,7 @@ Adding `--auth-eval-masks` to a subprocess call without `grep "add_argument" tar
 Writing `set -uo pipefail` (no `-e`). Calling `zip` shell binary instead of python `zipfile.ZipFile`. Passing empty captured variable to argparse. (See `feedback_zip_dep_bootstrap_trap`.)
 
 **Forbidden score claims:**
-Reporting any score that did not come from contest-CUDA `upstream/evaluate.py` on the EXACT archive bytes that will be submitted. No proxy MSE. No MPS. No "looks reasonable" extrapolation. Tag every reported score `[contest-CUDA]` or `[advisory only]`. (See `feedback_proxy_auth_math_useless`, `feedback_mps_cuda_drift_critical`.)
+Reporting any score that did not come from `upstream/evaluate.py` on the EXACT archive bytes that will be submitted. No proxy MSE. No MPS. No "looks reasonable" extrapolation. Tag every reported score by axis: `[contest-CUDA]` for CUDA promotion truth, `[contest-CPU]` for explicit public-leaderboard reproduction, or `[advisory only]` for everything else. (See `feedback_proxy_auth_math_useless`, `feedback_mps_cuda_drift_critical`.)
 
 **Forbidden component-aliasing for baselines:**
 Treating a directory of components as the "baseline" without verifying every file SHA against the archive ZIP that produced the baseline score. Components from different lanes leak into the same dir; SHA-vs-archive is the only check. (See `feedback_phantom_baseline_pattern`.)
@@ -413,6 +413,12 @@ This applies to:
 7. **Existing CUDA-only artifacts are NOT retroactively invalidated.** They remain `[contest-CUDA]` with their CUDA-axis truth value. The dual-eval mandate is forward-looking: from this rule's commit forward, every shippable archive gets both axes on 1:1 contest-compliant hardware.
 
 8. **Lane Maturity registry must reflect both axes.** A lane reaching Level 2/3 with a `[contest-CUDA]` anchor but no `[contest-CPU]` anchor (on Linux x86_64) is incomplete for medal-band ranking purposes — record both or record the missing one as a known gap.
+
+Tooling:
+- `tools/plan_dual_device_auth_eval.py` emits paired CPU/CUDA commands for the exact same archive/runtime.
+- `tools/plan_public_pr_cpu_auth_eval.py` plans or runs a public-PR CPU replay from the reproduction ledger.
+- `tools/public_pr_eval_comment_scorecard.py` extracts host PR-comment eval rows and recomputes scores from rounded PoseNet/SegNet/bytes.
+- `experiments/contest_auth_eval.py` stamps CPU full-sample results as `evidence_grade="contest-CPU"` with `promotion_eligible=false`, `score_claim_valid=false`, and `rank_or_kill_eligible=false`.
 
 Memory: `feedback_dual_cpu_cuda_auth_eval_mandatory_20260508.md` (this rule's source memo). Cross-ref `feedback_cuda_cpu_auth_eval_drift_pr102_pr104_20260508` (codex's drift hypothesis matrix that established the empirical basis).
 

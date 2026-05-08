@@ -120,7 +120,7 @@ def test_parse_report_rejects_nan(cae, tmp_path: Path):
     rp.write_text(text)
     # NaN slips past the strict number regex (won't match) so the parser
     # raises "could not parse" — also acceptable. Either way: LOUD refusal.
-    with pytest.raises(RuntimeError, match="non-finite|could not parse"):
+    with pytest.raises(RuntimeError, match=r"non-finite|could not parse"):
         cae._parse_report(rp, archive_size=337748)
 
 
@@ -258,6 +258,46 @@ def test_contest_auth_eval_source_records_inflate_budget_fields() -> None:
     assert "runtime_tree_sha256" in text
 
 
+def test_evidence_contract_tags_cpu_as_leaderboard_reproduction(cae) -> None:
+    contract = cae._auth_eval_evidence_contract(
+        "cpu",
+        600,
+        {"gpu_t4_match": False, "platform_system": "Linux", "platform_machine": "x86_64"},
+    )
+
+    assert contract["evidence_grade"] == "contest-CPU"
+    assert contract["score_axis"] == "contest_cpu"
+    assert contract["cpu_leaderboard_reproduction_eligible"] is True
+    assert contract["promotion_eligible"] is False
+    assert contract["rank_or_kill_eligible"] is False
+
+
+def test_evidence_contract_downgrades_macos_cpu_to_advisory(cae) -> None:
+    contract = cae._auth_eval_evidence_contract(
+        "cpu",
+        600,
+        {"platform_system": "Darwin", "platform_machine": "arm64"},
+    )
+
+    assert contract["evidence_grade"] == "macOS-CPU advisory"
+    assert contract["score_axis"] == "cpu_advisory"
+    assert contract["cpu_leaderboard_reproduction_eligible"] is False
+    assert contract["hardware_compliance_blocker"] == "contest_cpu_requires_linux_x86_64"
+
+
+def test_evidence_contract_keeps_cuda_t4_as_only_promotion_axis(cae) -> None:
+    contract = cae._auth_eval_evidence_contract(
+        "cuda",
+        600,
+        {"gpu_t4_match": True},
+    )
+
+    assert contract["evidence_grade"] == "A++"
+    assert contract["score_axis"] == "contest_cuda"
+    assert contract["promotion_eligible"] is True
+    assert contract["score_claim_valid"] is True
+
+
 def test_runtime_dependency_manifest_hashes_fixed_inflate_files(cae, tmp_path: Path):
     runtime = tmp_path / "submission"
     upstream = tmp_path / "upstream"
@@ -385,7 +425,7 @@ def test_extract_archive_zip_slip_protection(cae, tmp_path: Path):
     bad_zip = tmp_path / "evil.zip"
     with zipfile.ZipFile(bad_zip, "w") as z:
         z.writestr("../escaped.txt", b"pwned")
-    with pytest.raises(RuntimeError, match="NONCANONICAL|zip-slip"):
+    with pytest.raises(RuntimeError, match=r"NONCANONICAL|zip-slip"):
         cae._extract_archive(bad_zip, tmp_path / "dest")
 
 
@@ -394,7 +434,7 @@ def test_extract_archive_rejects_prefix_traversal_member(cae, tmp_path: Path):
     bad_zip = tmp_path / "evil_prefix.zip"
     with zipfile.ZipFile(bad_zip, "w") as z:
         z.writestr("../dest_evil/p", b"pwned")
-    with pytest.raises(RuntimeError, match="NONCANONICAL|zip-slip"):
+    with pytest.raises(RuntimeError, match=r"NONCANONICAL|zip-slip"):
         cae._extract_archive(bad_zip, tmp_path / "dest")
     assert not (tmp_path / "dest_evil" / "p").exists()
 
@@ -501,7 +541,7 @@ def test_main_refuses_missing_upstream(cae, tmp_path: Path):
         "--inflate-sh", str(fake_inflate),
         "--upstream-dir", str(tmp_path),
     ]
-    with pytest.raises(SystemExit, match="missing evaluate.py"):
+    with pytest.raises(SystemExit, match=r"missing evaluate\.py"):
         cae.main()
 
 

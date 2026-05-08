@@ -45,6 +45,7 @@ import ast
 import hashlib
 import json
 import os
+import platform
 import re
 import shutil
 import subprocess
@@ -508,6 +509,9 @@ def _record_provenance(work_dir: Path, archive: Path, inflate_sh: Path,
         "inflate_runtime_manifest": _runtime_dependency_manifest(inflate_sh, upstream_dir),
         "upstream_dir": str(upstream_dir),
         "device": args.device,
+        "platform_system": platform.system(),
+        "platform_machine": platform.machine(),
+        "platform_processor": platform.processor(),
         "inflate_timeout_seconds": int(args.inflate_timeout),
         "evaluate_timeout_seconds": int(args.evaluate_timeout),
         "video_names_file": str(args.video_names_file),
@@ -535,6 +539,10 @@ def _record_provenance(work_dir: Path, archive: Path, inflate_sh: Path,
         prov["torch_version"] = torch.__version__
         prov["cuda_version"] = torch.version.cuda
         prov["cuda_available"] = torch.cuda.is_available()
+        prov["mps_available"] = bool(
+            getattr(getattr(torch, "backends", None), "mps", None)
+            and torch.backends.mps.is_available()
+        )
         if torch.cuda.is_available():
             prov["cuda_device_count"] = torch.cuda.device_count()
     except ImportError:
@@ -1148,6 +1156,79 @@ def _parse_report(report_path: Path | str, *, archive_size: int,
     }
 
 
+def _auth_eval_evidence_contract(device: str, n_samples: int, provenance: dict) -> dict:
+    """Return explicit evidence semantics for the selected eval device."""
+
+    is_linux_x86_64 = (
+        provenance.get("platform_system") == "Linux"
+        and str(provenance.get("platform_machine") or "").lower() in {"x86_64", "amd64"}
+    )
+    is_cuda_t4_full = (
+        device == "cuda"
+        and n_samples == 600
+        and provenance.get("gpu_t4_match") is True
+    )
+    is_cpu_full = device == "cpu" and n_samples == 600 and is_linux_x86_64
+    if is_cuda_t4_full:
+        return {
+            "evidence_grade": "A++",
+            "score_axis": "contest_cuda",
+            "evidence_semantics": "contest_cuda_exact_auth_eval",
+            "promotion_eligible": True,
+            "score_claim_valid": True,
+            "rank_or_kill_eligible": True,
+            "cpu_leaderboard_reproduction_eligible": False,
+            "allowed_uses": [
+                "internal_cuda_frontier_ranking",
+                "promotion_review",
+                "paper_empirical_score_when_custody_complete",
+            ],
+        }
+    if is_cpu_full:
+        return {
+            "evidence_grade": "contest-CPU",
+            "score_axis": "contest_cpu",
+            "evidence_semantics": "public_leaderboard_cpu_reproduction",
+            "promotion_eligible": False,
+            "score_claim_valid": False,
+            "rank_or_kill_eligible": False,
+            "cpu_leaderboard_reproduction_eligible": True,
+            "allowed_uses": [
+                "public_leaderboard_reproduction",
+                "cpu_cuda_drift_diagnosis",
+                "medal_band_context_with_matching_archive_runtime",
+            ],
+        }
+    if device == "cpu" and n_samples == 600:
+        return {
+            "evidence_grade": "macOS-CPU advisory" if provenance.get("platform_system") == "Darwin" else "CPU advisory",
+            "score_axis": "cpu_advisory",
+            "evidence_semantics": "non_contest_cpu_auth_eval_advisory",
+            "promotion_eligible": False,
+            "score_claim_valid": False,
+            "rank_or_kill_eligible": False,
+            "cpu_leaderboard_reproduction_eligible": False,
+            "hardware_compliance_blocker": "contest_cpu_requires_linux_x86_64",
+            "allowed_uses": [
+                "diagnostic_debugging",
+                "cpu_cuda_drift_hypothesis_generation",
+            ],
+        }
+    return {
+        "evidence_grade": "B",
+        "score_axis": device,
+        "evidence_semantics": "diagnostic_auth_eval_non_promotable",
+        "promotion_eligible": False,
+        "score_claim_valid": False,
+        "rank_or_kill_eligible": False,
+        "cpu_leaderboard_reproduction_eligible": False,
+        "allowed_uses": [
+            "diagnostic_debugging",
+            "smoke_or_infrastructure_triage",
+        ],
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -1282,14 +1363,13 @@ def main() -> int:
 
         # Save final JSON next to the work dir
         result["provenance"] = prov
-        is_a_plus_plus = (
-            args.device == "cuda"
-            and result.get("n_samples") == 600
-            and prov.get("gpu_t4_match") is True
+        result.update(
+            _auth_eval_evidence_contract(
+                args.device,
+                int(result.get("n_samples") or 0),
+                prov,
+            )
         )
-        result["promotion_eligible"] = is_a_plus_plus
-        result["score_claim_valid"] = is_a_plus_plus
-        result["evidence_grade"] = "A++" if is_a_plus_plus else "B"
         result["work_dir"] = str(work_dir)
         out_json = work_dir / "contest_auth_eval.json"
         with open(out_json, "w") as f:
