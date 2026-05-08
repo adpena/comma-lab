@@ -13,6 +13,7 @@ import hashlib
 import importlib.util
 import json
 import math
+import re
 import shutil
 import time
 from pathlib import Path
@@ -53,6 +54,7 @@ _DISTILLATION_TEXT_MARKERS = (
     "distill",
     "jbl",
 )
+_SHA256_HEX_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
 def _require_number(payload: dict[str, Any], key: str) -> float:
@@ -91,6 +93,235 @@ def _canonical_json_sha256(value: Any) -> str:
     return hashlib.sha256(
         json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
+
+
+def _manifest_identity(manifest: dict[str, Any], *, manifest_path: Path) -> dict[str, Any]:
+    declared = manifest.get("manifest_sha256")
+    without_self = {key: value for key, value in manifest.items() if key != "manifest_sha256"}
+    canonical = _canonical_json_sha256(without_self)
+    if declared is not None:
+        if not isinstance(declared, str) or not _SHA256_HEX_RE.fullmatch(declared):
+            raise ValueError(f"source manifest has invalid manifest_sha256: {manifest_path}")
+        if declared != canonical:
+            raise ValueError(
+                "source manifest manifest_sha256 is stale: "
+                f"{manifest_path} expected={declared} actual={canonical}"
+            )
+    return {
+        "source_manifest_path": str(manifest_path),
+        "source_manifest_sha256": declared or canonical,
+        "source_manifest_file_sha256": sha256_file(manifest_path),
+        "source_manifest_file_count": manifest.get("file_count"),
+        "source_manifest_total_bytes": manifest.get("total_bytes"),
+    }
+
+
+def _manifest_entries_by_path(
+    manifest: dict[str, Any],
+    *,
+    manifest_path: Path,
+) -> dict[str, dict[str, Any]]:
+    files = manifest.get("files")
+    if not isinstance(files, list):
+        raise ValueError(f"source manifest missing files list: {manifest_path}")
+    out: dict[str, dict[str, Any]] = {}
+    for index, item in enumerate(files):
+        if not isinstance(item, dict):
+            raise ValueError(f"source manifest files[{index}] must be an object: {manifest_path}")
+        rel = item.get("path")
+        if not isinstance(rel, str) or not rel or rel.startswith("/") or "\\" in rel:
+            raise ValueError(f"source manifest files[{index}].path is not repo-relative: {rel!r}")
+        parts = rel.split("/")
+        if any(part in {"", ".", ".."} for part in parts):
+            raise ValueError(f"source manifest files[{index}].path is unstable: {rel!r}")
+        if rel in out:
+            raise ValueError(f"source manifest contains duplicate path: {rel}")
+        out[rel] = item
+    return out
+
+
+def _manifest_file_meta(
+    entries: dict[str, dict[str, Any]],
+    rel: str,
+    *,
+    manifest_path: Path,
+) -> dict[str, Any]:
+    entry = entries.get(rel)
+    if entry is None:
+        raise ValueError(f"source manifest missing runtime file: {rel}")
+    byte_count = entry.get("bytes")
+    sha256 = entry.get("sha256")
+    if not isinstance(byte_count, int) or isinstance(byte_count, bool) or byte_count < 0:
+        raise ValueError(f"source manifest runtime file lacks integer bytes: {rel}")
+    if not isinstance(sha256, str) or not _SHA256_HEX_RE.fullmatch(sha256):
+        raise ValueError(f"source manifest runtime file lacks sha256: {rel}")
+    local = REPO_ROOT / rel
+    if local.is_file():
+        actual_bytes = local.stat().st_size
+        actual_sha = sha256_file(local)
+        if actual_bytes != byte_count or actual_sha != sha256:
+            raise ValueError(
+                "source manifest runtime file byte/SHA mismatch: "
+                f"{rel} expected bytes={byte_count} sha256={sha256} "
+                f"actual bytes={actual_bytes} sha256={actual_sha}"
+            )
+    return {"path": rel, "bytes": byte_count, "sha256": sha256}
+
+
+def _load_sibling_json(path: Path, *, label: str) -> dict[str, Any] | None:
+    if not path.is_file():
+        return None
+    payload = read_json(path)
+    if not isinstance(payload, dict):
+        raise ValueError(f"{label} must be a JSON object: {path}")
+    return payload
+
+
+def _source_manifest_path_from_metadata(
+    metadata: dict[str, Any],
+    *,
+    artifact_dir: Path,
+) -> Path | None:
+    queue_metadata = metadata.get("queue_metadata")
+    if not isinstance(queue_metadata, dict):
+        return None
+    raw = queue_metadata.get("source_manifest")
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    path = Path(raw)
+    if path.is_absolute():
+        return path
+    repo_candidate = REPO_ROOT / path
+    if repo_candidate.exists():
+        return repo_candidate
+    return artifact_dir / path
+
+
+def _iter_eval_runtime_files(runtime_manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for item in runtime_manifest.get("files") or []:
+        if isinstance(item, dict):
+            out.append(item)
+    for root in runtime_manifest.get("external_dependency_roots") or []:
+        if not isinstance(root, dict):
+            continue
+        for item in root.get("files") or []:
+            if isinstance(item, dict):
+                out.append(item)
+    repo_local_tac = runtime_manifest.get("repo_local_tac_import_manifest")
+    if isinstance(repo_local_tac, dict):
+        for item in repo_local_tac.get("files") or []:
+            if isinstance(item, dict):
+                out.append(item)
+    return out
+
+
+def _check_source_manifest_runtime_closure(
+    *,
+    eval_provenance: dict[str, Any],
+    artifact_dir: Path,
+) -> dict[str, Any]:
+    metadata_path = artifact_dir / "lightning_queue_metadata.json"
+    eval_provenance_path = artifact_dir / "eval_provenance.json"
+    metadata = _load_sibling_json(metadata_path, label="Lightning queue metadata") or {}
+    queue_metadata = metadata.get("queue_metadata") if isinstance(metadata.get("queue_metadata"), dict) else {}
+    source_manifest_path = _source_manifest_path_from_metadata(metadata, artifact_dir=artifact_dir)
+    runtime_manifest = eval_provenance.get("inflate_runtime_manifest")
+    available = source_manifest_path is not None and source_manifest_path.is_file() and isinstance(runtime_manifest, dict)
+    result: dict[str, Any] = {
+        "schema": "source_manifest_runtime_closure_adjudication_v1",
+        "metadata_path": str(metadata_path) if metadata_path.is_file() else None,
+        "eval_provenance_path": str(eval_provenance_path) if eval_provenance_path.is_file() else None,
+        "source_manifest_path": str(source_manifest_path) if source_manifest_path is not None else None,
+        "available": available,
+        "verified": False,
+        "violations": [],
+        "checked_runtime_file_count": 0,
+        "checked_external_dependency_root_count": 0,
+    }
+    if source_manifest_path is None and isinstance(queue_metadata, dict):
+        expected_sha = queue_metadata.get("source_manifest_sha256")
+        if isinstance(expected_sha, str):
+            result["source_manifest_sha256"] = expected_sha
+        return result
+    if source_manifest_path is None:
+        return result
+    if not source_manifest_path.is_file():
+        result["violations"].append(f"source_manifest_not_found:{source_manifest_path}")
+        return result
+    if not isinstance(runtime_manifest, dict):
+        result["violations"].append("eval_provenance_missing_inflate_runtime_manifest")
+        return result
+
+    try:
+        source_manifest = read_json(source_manifest_path)
+        if not isinstance(source_manifest, dict):
+            raise ValueError("source manifest must be a JSON object")
+        identity = _manifest_identity(source_manifest, manifest_path=source_manifest_path)
+        entries = _manifest_entries_by_path(source_manifest, manifest_path=source_manifest_path)
+        result.update(identity)
+        if isinstance(queue_metadata, dict):
+            expected_manifest_sha = queue_metadata.get("source_manifest_sha256")
+            if (
+                isinstance(expected_manifest_sha, str)
+                and expected_manifest_sha != identity["source_manifest_sha256"]
+            ):
+                result["violations"].append(
+                    "queue_metadata_source_manifest_sha256_mismatch:"
+                    f"expected={expected_manifest_sha} actual={identity['source_manifest_sha256']}"
+                )
+        checked_files = []
+        for item in _iter_eval_runtime_files(runtime_manifest):
+            rel = item.get("repo_relative_path") or item.get("relative_path")
+            if not isinstance(rel, str) or not rel:
+                result["violations"].append("runtime_manifest_file_missing_repo_relative_path")
+                continue
+            expected = _manifest_file_meta(entries, rel, manifest_path=source_manifest_path)
+            actual = {
+                "path": rel,
+                "bytes": item.get("bytes"),
+                "sha256": item.get("sha256"),
+            }
+            if actual["bytes"] != expected["bytes"] or actual["sha256"] != expected["sha256"]:
+                result["violations"].append(
+                    "runtime_file_byte_sha_mismatch:"
+                    f"{rel}: source_manifest={expected['bytes']}/{expected['sha256']} "
+                    f"eval_runtime={actual['bytes']}/{actual['sha256']}"
+                )
+            checked_files.append(expected)
+        external_roots = runtime_manifest.get("external_dependency_roots") or []
+        checked_roots = []
+        for root in external_roots:
+            if not isinstance(root, dict):
+                result["violations"].append("runtime_manifest_external_root_not_object")
+                continue
+            root_rel = root.get("repo_relative_root")
+            if not isinstance(root_rel, str) or not root_rel:
+                result["violations"].append("runtime_manifest_external_root_missing_repo_relative_root")
+                continue
+            if root.get("exists") is not True:
+                result["violations"].append(f"runtime_manifest_external_root_missing:{root_rel}")
+            checked_roots.append(root_rel)
+        closure_basis = {
+            "source_manifest_sha256": result.get("source_manifest_sha256"),
+            "runtime_tree_sha256": runtime_manifest.get("runtime_tree_sha256"),
+            "checked_files": sorted(checked_files, key=lambda row: row["path"]),
+            "external_dependency_roots": sorted(checked_roots),
+        }
+        result.update(
+            {
+                "runtime_tree_sha256": runtime_manifest.get("runtime_tree_sha256"),
+                "checked_runtime_file_count": len(checked_files),
+                "checked_external_dependency_root_count": len(checked_roots),
+                "checked_external_dependency_roots": sorted(checked_roots),
+                "checked_runtime_total_bytes": sum(int(row["bytes"]) for row in checked_files),
+                "closure_sha256": _canonical_json_sha256(closure_basis),
+                "verified": not result["violations"],
+            }
+        )
+    except Exception as exc:
+        result["violations"].append(f"source_manifest_runtime_closure_error:{exc}")
+    return result
 
 
 def _distillation_policy_sha256(policy: dict[str, Any]) -> str:
@@ -447,6 +678,13 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
     )
     distillation_gate_violations = distillation_gate["violations"]
     distillation_gate_triggered = bool(distillation_gate_violations)
+    source_manifest_closure = _check_source_manifest_runtime_closure(
+        eval_provenance=eval_provenance,
+        artifact_dir=provenance_path.parent,
+    )
+    source_manifest_closure_gate_triggered = bool(
+        source_manifest_closure.get("violations")
+    )
 
     result_copy = Path(args.result_copy) if args.result_copy else contest_json
 
@@ -481,6 +719,8 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
             lane_status = "COMPONENT_AND_DISTILLATION_POLICY_REVIEW_REQUIRED"
         else:
             lane_status = "DISTILLATION_POLICY_REVIEW_REQUIRED"
+    if source_manifest_closure_gate_triggered:
+        lane_status = _add_review_status(lane_status, "SOURCE_MANIFEST_CLOSURE")
     gpu_t4_match = eval_provenance.get("gpu_t4_match")
     contest_equivalent_hardware = gpu_t4_match is True
     evidence_grade = (
@@ -491,6 +731,7 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
         and not component_gate_triggered
         and not sane_score_gate_triggered
         and not distillation_gate_triggered
+        and not source_manifest_closure_gate_triggered
     )
     promotion_eligible = scientific_score_eligible and contest_equivalent_hardware
     hardware_promotion_gate_triggered = scientific_score_eligible and not contest_equivalent_hardware
@@ -561,6 +802,11 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
             "distillation_policy_gate_triggered": distillation_gate_triggered,
             "distillation_policy_sha256": distillation_gate["policy_sha256"],
             "distillation_policy_sha256_expected": distillation_gate["expected_policy_sha256"],
+            "source_manifest_runtime_closure": source_manifest_closure,
+            "source_manifest_runtime_closure_gate_triggered": source_manifest_closure_gate_triggered,
+            "source_manifest_sha256": source_manifest_closure.get("source_manifest_sha256"),
+            "source_manifest_file_sha256": source_manifest_closure.get("source_manifest_file_sha256"),
+            "source_manifest_runtime_closure_sha256": source_manifest_closure.get("closure_sha256"),
             "lane_status": lane_status,
         }
     )
@@ -595,6 +841,9 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
         "distillation_policy_active": distillation_gate["active"],
         "distillation_policy_gate_violations": distillation_gate_violations,
         "distillation_policy_gate_triggered": distillation_gate_triggered,
+        "source_manifest_runtime_closure_gate_triggered": source_manifest_closure_gate_triggered,
+        "source_manifest_sha256": source_manifest_closure.get("source_manifest_sha256"),
+        "source_manifest_runtime_closure_sha256": source_manifest_closure.get("closure_sha256"),
         "contest_cuda_score_source": "contest_auth_eval.json:score_recomputed_from_components",
         "contest_cuda_archive_sha256": actual_archive_sha256,
         "contest_cuda_archive_bytes": actual_archive_bytes,
@@ -617,6 +866,7 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
             "component_gate_triggered": component_gate_triggered,
             "sane_score_gate_triggered": sane_score_gate_triggered,
             "distillation_policy_gate_triggered": distillation_gate_triggered,
+            "source_manifest_runtime_closure_gate_triggered": source_manifest_closure_gate_triggered,
             "score_delta_vs_baseline": score_delta_vs_baseline,
             args.delta_key: score_delta_vs_baseline,
             "adjudication_provenance": str(provenance_path),
@@ -654,6 +904,10 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
         "distillation_policy_gate_triggered": distillation_gate_triggered,
         "distillation_policy_sha256": distillation_gate["policy_sha256"],
         "distillation_policy_sha256_expected": distillation_gate["expected_policy_sha256"],
+        "source_manifest_runtime_closure": source_manifest_closure,
+        "source_manifest_runtime_closure_gate_triggered": source_manifest_closure_gate_triggered,
+        "source_manifest_sha256": source_manifest_closure.get("source_manifest_sha256"),
+        "source_manifest_runtime_closure_sha256": source_manifest_closure.get("closure_sha256"),
         "archive_sha256": actual_archive_sha256,
         "archive_bytes": actual_archive_bytes,
         "gpu_model": eval_provenance.get("gpu_model"),
@@ -756,6 +1010,7 @@ def main() -> int:
     print(f"COMPONENT_GATE_TRIGGERED={int(result['component_gate_triggered'])}")
     print(f"DISTILLATION_POLICY_ACTIVE={int(result['distillation_policy_active'])}")
     print(f"DISTILLATION_POLICY_GATE_TRIGGERED={int(result['distillation_policy_gate_triggered'])}")
+    print(f"SOURCE_MANIFEST_CLOSURE_GATE_TRIGGERED={int(result['source_manifest_runtime_closure_gate_triggered'])}")
     print(f"ARCHIVE_SHA256={result['archive_sha256']}")
     print(f"ARCHIVE_BYTES={result['archive_bytes']}")
     print(f"GPU_T4_MATCH={json.dumps(result['gpu_t4_match'])}")
@@ -798,6 +1053,13 @@ def main() -> int:
         else:
             print("FATAL: KL/JBL/distillation promotion gate violation: " + violation_json)
             exit_code = 2
+    if result["source_manifest_runtime_closure_gate_triggered"]:
+        violation_json = json.dumps(
+            result["source_manifest_runtime_closure"].get("violations", []),
+            sort_keys=True,
+        )
+        print("FATAL: source-manifest runtime byte/SHA closure violation: " + violation_json)
+        exit_code = 2
     return exit_code
 
 

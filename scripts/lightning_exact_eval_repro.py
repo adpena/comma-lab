@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import hashlib
 import importlib.util
 import json
 import math
@@ -213,6 +214,26 @@ def _manifest_entries_by_path(manifest: dict[str, Any], *, manifest_path: Path) 
     return out
 
 
+def _canonical_json_sha256(value: Any) -> str:
+    return hashlib.sha256(
+        json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+
+def _validate_source_manifest_identity(manifest: dict[str, Any], *, manifest_path: Path) -> None:
+    declared = manifest.get("manifest_sha256")
+    if declared is None:
+        return
+    expected = _canonical_json_sha256(
+        {key: value for key, value in manifest.items() if key != "manifest_sha256"}
+    )
+    if declared != expected:
+        raise ValueError(
+            "exact-eval submit blocked; staged source manifest manifest_sha256 is stale: "
+            f"{manifest_path} expected {declared!r} actual {expected!r}"
+        )
+
+
 def _assert_manifest_entry_matches_disk(entry: dict[str, Any], *, repo_root: Path, manifest_path: Path) -> None:
     rel = entry["path"]
     path = repo_root / rel
@@ -322,6 +343,7 @@ def _validate_staged_manifest_consistency(plan: dict[str, Any], *, repo_root: Pa
         raise ValueError("exact-eval plan missing paths.manifest_out")
     manifest_path = repo_root / _repo_rel(manifest_rel, repo_root=repo_root)
     manifest = _load_json(manifest_path)
+    _validate_source_manifest_identity(manifest, manifest_path=manifest_path)
     entries = _manifest_entries_by_path(manifest, manifest_path=manifest_path)
     missing: list[str] = []
     for rel in plan.get("artifacts", []):

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import sys
@@ -10,6 +11,23 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[3]
 REPRO_SCRIPT = REPO_ROOT / "scripts" / "lightning_exact_eval_repro.py"
 LAUNCH_SCRIPT = REPO_ROOT / "scripts" / "launch_lightning_batch_job.py"
+
+
+def _manifest_entry(path: str, *, payload: bytes | None = None) -> dict[str, object]:
+    raw = payload if payload is not None else path.encode("utf-8")
+    return {
+        "path": path,
+        "bytes": len(raw),
+        "sha256": hashlib.sha256(raw).hexdigest(),
+    }
+
+
+def _repo_manifest_entry(repo_root: Path, rel: str) -> dict[str, object]:
+    path = repo_root / rel
+    if path.is_file():
+        raw = path.read_bytes()
+        return _manifest_entry(rel, payload=raw)
+    return _manifest_entry(rel)
 
 
 def _load_script(path: Path, name: str, *, repo_root: Path):
@@ -139,7 +157,9 @@ def test_public_replay_submit_requires_external_inflate_sibling_closure(
     inflate_rel = _repo_rel(tmp_path, paths["inflate_sh"])
 
     def write_manifest(rels: list[str]) -> None:
-        manifest.write_text(json.dumps({"files": [{"path": rel} for rel in rels]}) + "\n")
+        manifest.write_text(
+            json.dumps({"files": [_repo_manifest_entry(tmp_path, rel) for rel in rels]}) + "\n"
+        )
 
     args = module.build_parser().parse_args(
         [
@@ -232,7 +252,9 @@ def test_public_replay_submit_requires_declared_runtime_dependency_root(
     inflate_rel = _repo_rel(tmp_path, paths["inflate_sh"])
 
     def write_manifest(rels: list[str]) -> None:
-        manifest.write_text(json.dumps({"files": [{"path": rel} for rel in rels]}) + "\n")
+        manifest.write_text(
+            json.dumps({"files": [_repo_manifest_entry(tmp_path, rel) for rel in rels]}) + "\n"
+        )
 
     args = module.build_parser().parse_args(
         [
@@ -305,10 +327,10 @@ def test_public_replay_submit_allows_external_inflate_without_config_env(
         json.dumps(
             {
                 "files": [
-                    {"path": "experiments/results/public_pr81/archive.zip"},
-                    {"path": inflate_rel},
-                    {"path": _repo_rel(tmp_path, paths["inflate_py"])},
-                    {"path": _repo_rel(tmp_path, paths["range_mask_codec"])},
+                    _repo_manifest_entry(tmp_path, "experiments/results/public_pr81/archive.zip"),
+                    _repo_manifest_entry(tmp_path, inflate_rel),
+                    _repo_manifest_entry(tmp_path, _repo_rel(tmp_path, paths["inflate_py"])),
+                    _repo_manifest_entry(tmp_path, _repo_rel(tmp_path, paths["range_mask_codec"])),
                 ]
             }
         )
@@ -376,7 +398,9 @@ def test_public_replay_submit_blocks_source_embedded_payload_loophole(
         _repo_rel(tmp_path, paths["inflate_py"]),
         _repo_rel(tmp_path, paths["range_mask_codec"]),
     ]
-    manifest.write_text(json.dumps({"files": [{"path": rel} for rel in manifest_rels]}) + "\n")
+    manifest.write_text(
+        json.dumps({"files": [_repo_manifest_entry(tmp_path, rel) for rel in manifest_rels]}) + "\n"
+    )
 
     base_args = [
         "exact-eval",

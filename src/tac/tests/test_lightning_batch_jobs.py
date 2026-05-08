@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import os
@@ -70,6 +71,22 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 CLI = REPO_ROOT / "scripts" / "launch_lightning_batch_job.py"
 EXPECTED_SHA = "a" * 64
 EXPECTED_BYTES = 123
+
+
+def _manifest_entry(path: str, *, payload: bytes | None = None) -> dict[str, object]:
+    raw = payload if payload is not None else path.encode("utf-8")
+    return {
+        "path": path,
+        "bytes": len(raw),
+        "sha256": hashlib.sha256(raw).hexdigest(),
+    }
+
+
+def _repo_manifest_entry(repo_root: Path, rel: str) -> dict[str, object]:
+    path = repo_root / rel
+    if path.is_file():
+        return _manifest_entry(rel, payload=path.read_bytes())
+    return _manifest_entry(rel)
 
 
 def _load_lightning_cli_module(tmp_path: Path):
@@ -1193,12 +1210,12 @@ def test_exact_eval_submit_requires_source_manifest_and_archive_closure(tmp_path
         module._validate_exact_eval_submit_inputs(args)
 
     manifest = tmp_path / "manifest.json"
-    manifest.write_text(json.dumps({"files": [{"path": "other.zip"}]}) + "\n")
+    manifest.write_text(json.dumps({"files": [_manifest_entry("other.zip")]}) + "\n")
     args.source_manifest = str(manifest)
     with pytest.raises(SystemExit, match="does not include archive artifact"):
         module._validate_exact_eval_submit_inputs(args)
 
-    manifest.write_text(json.dumps({"files": [{"path": "archive.zip"}]}) + "\n")
+    manifest.write_text(json.dumps({"files": [_manifest_entry("archive.zip")]}) + "\n")
     with pytest.raises(SystemExit, match="inflate runtime closure"):
         module._validate_exact_eval_submit_inputs(args)
 
@@ -1206,15 +1223,77 @@ def test_exact_eval_submit_requires_source_manifest_and_archive_closure(tmp_path
         json.dumps(
             {
                 "files": [
-                    {"path": "archive.zip"},
-                    {"path": "submissions/robust_current/inflate.sh"},
-                    {"path": "submissions/robust_current/config.env"},
+                    _manifest_entry("archive.zip"),
+                    _manifest_entry("submissions/robust_current/inflate.sh"),
+                    _manifest_entry("submissions/robust_current/config.env"),
                 ]
             }
         )
         + "\n"
     )
     module._validate_exact_eval_submit_inputs(args)
+
+
+def test_exact_eval_submit_requires_source_manifest_entry_byte_sha(tmp_path: Path) -> None:
+    module = _load_lightning_cli_module(tmp_path)
+    manifest = tmp_path / "manifest.json"
+    args = argparse.Namespace(
+        dry_run=False,
+        studio="pact",
+        source_manifest=str(manifest),
+        archive="/repo/archive.zip",
+        repo_dir="/repo",
+        queue_metadata=[],
+        env=[],
+        machine="g6e.4xlarge",
+    )
+    manifest.write_text(
+        json.dumps(
+            {
+                "files": [
+                    {"path": "archive.zip"},
+                    _manifest_entry("submissions/robust_current/inflate.sh"),
+                    _manifest_entry("submissions/robust_current/config.env"),
+                ]
+            }
+        )
+        + "\n"
+    )
+
+    with pytest.raises(SystemExit, match="lacks integer bytes"):
+        module._validate_exact_eval_submit_inputs(args)
+
+
+def test_exact_eval_submit_rejects_source_manifest_byte_sha_drift(tmp_path: Path) -> None:
+    module = _load_lightning_cli_module(tmp_path)
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"actual archive bytes")
+    manifest = tmp_path / "manifest.json"
+    args = argparse.Namespace(
+        dry_run=False,
+        studio="pact",
+        source_manifest=str(manifest),
+        archive="/repo/archive.zip",
+        repo_dir="/repo",
+        queue_metadata=[],
+        env=[],
+        machine="g6e.4xlarge",
+    )
+    manifest.write_text(
+        json.dumps(
+            {
+                "files": [
+                    _manifest_entry("archive.zip", payload=b"stale archive bytes"),
+                    _manifest_entry("submissions/robust_current/inflate.sh"),
+                    _manifest_entry("submissions/robust_current/config.env"),
+                ]
+            }
+        )
+        + "\n"
+    )
+
+    with pytest.raises(SystemExit, match="source manifest byte/SHA mismatch"):
+        module._validate_exact_eval_submit_inputs(args)
 
 
 def test_exact_eval_submit_requires_nested_external_inflate_runtime(tmp_path: Path) -> None:
@@ -1243,10 +1322,10 @@ def test_exact_eval_submit_requires_nested_external_inflate_runtime(tmp_path: Pa
         json.dumps(
             {
                 "files": [
-                    {"path": "archive.zip"},
-                    {"path": "experiments/results/candidate/submission_dir/inflate.sh"},
-                    {"path": "experiments/results/candidate/submission_dir/inflate.py"},
-                    {"path": "experiments/results/candidate/submission_dir/src/model.py"},
+                    _manifest_entry("archive.zip"),
+                    _repo_manifest_entry(tmp_path, "experiments/results/candidate/submission_dir/inflate.sh"),
+                    _repo_manifest_entry(tmp_path, "experiments/results/candidate/submission_dir/inflate.py"),
+                    _repo_manifest_entry(tmp_path, "experiments/results/candidate/submission_dir/src/model.py"),
                 ]
             }
         )
@@ -1260,17 +1339,55 @@ def test_exact_eval_submit_requires_nested_external_inflate_runtime(tmp_path: Pa
         json.dumps(
             {
                 "files": [
-                    {"path": "archive.zip"},
-                    {"path": "experiments/results/candidate/submission_dir/inflate.sh"},
-                    {"path": "experiments/results/candidate/submission_dir/inflate.py"},
-                    {"path": "experiments/results/candidate/submission_dir/src/model.py"},
-                    {"path": "experiments/results/candidate/submission_dir/src/codec.py"},
+                    _manifest_entry("archive.zip"),
+                    _repo_manifest_entry(tmp_path, "experiments/results/candidate/submission_dir/inflate.sh"),
+                    _repo_manifest_entry(tmp_path, "experiments/results/candidate/submission_dir/inflate.py"),
+                    _repo_manifest_entry(tmp_path, "experiments/results/candidate/submission_dir/src/model.py"),
+                    _repo_manifest_entry(tmp_path, "experiments/results/candidate/submission_dir/src/codec.py"),
                 ]
             }
         )
         + "\n"
     )
     module._validate_exact_eval_submit_inputs(args)
+
+
+def test_exact_eval_queue_metadata_binds_source_manifest_runtime_closure(tmp_path: Path) -> None:
+    module = _load_lightning_cli_module(tmp_path)
+    manifest = tmp_path / "source_manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "files": [
+                    _manifest_entry("archive.zip"),
+                    _manifest_entry("submissions/robust_current/inflate.sh"),
+                    _manifest_entry("submissions/robust_current/config.env"),
+                ]
+            }
+        )
+        + "\n"
+    )
+    args = argparse.Namespace(
+        cmd="exact-eval",
+        dry_run=False,
+        studio="pact",
+        source_manifest=str(manifest),
+        archive="/repo/archive.zip",
+        repo_dir="/repo",
+        queue_metadata=[],
+        env=[],
+        machine="g6e.4xlarge",
+        inflate_sh="submissions/robust_current/inflate.sh",
+    )
+
+    metadata = module._queue_metadata_from_args(args)
+
+    assert metadata["source_manifest_sha256"]
+    closure = metadata["source_manifest_runtime_closure"]
+    assert closure["archive"]["path"] == "archive.zip"
+    assert closure["runtime_file_count"] == 2
+    assert closure["source_manifest_sha256"] == metadata["source_manifest_sha256"]
+    assert metadata["source_manifest_runtime_closure_sha256"] == closure["closure_sha256"]
 
 
 def test_exact_eval_manifest_dispatch_gate_blocks_renderer_stack_without_pose_safety(tmp_path: Path) -> None:
@@ -1322,9 +1439,9 @@ def test_exact_eval_submit_requires_metadata_baseline_json_closure(tmp_path: Pat
         json.dumps(
             {
                 "files": [
-                    {"path": "archive.zip"},
-                    {"path": "submissions/robust_current/inflate.sh"},
-                    {"path": "submissions/robust_current/config.env"},
+                    _manifest_entry("archive.zip"),
+                    _manifest_entry("submissions/robust_current/inflate.sh"),
+                    _manifest_entry("submissions/robust_current/config.env"),
                 ]
             }
         )
@@ -1348,10 +1465,10 @@ def test_exact_eval_submit_requires_metadata_baseline_json_closure(tmp_path: Pat
         json.dumps(
             {
                 "files": [
-                    {"path": "archive.zip"},
-                    {"path": "submissions/robust_current/inflate.sh"},
-                    {"path": "submissions/robust_current/config.env"},
-                    {"path": "baseline/contest_auth_eval.json"},
+                    _manifest_entry("archive.zip"),
+                    _manifest_entry("submissions/robust_current/inflate.sh"),
+                    _manifest_entry("submissions/robust_current/config.env"),
+                    _manifest_entry("baseline/contest_auth_eval.json"),
                 ]
             }
         )
@@ -1419,19 +1536,23 @@ def test_exact_eval_submit_requires_cdo1_manifest_pair_basis(tmp_path: Path) -> 
         )
         + "\n"
     )
-    manifest.write_text(
-        json.dumps(
-            {
-                "files": [
-                    {"path": "archive.zip"},
-                    {"path": "submissions/robust_current/inflate.sh"},
-                    {"path": "submissions/robust_current/config.env"},
-                    {"path": "candidate/manifest.json"},
-                ]
-            }
+
+    def write_source_manifest() -> None:
+        manifest.write_text(
+            json.dumps(
+                {
+                    "files": [
+                        _manifest_entry("archive.zip"),
+                        _manifest_entry("submissions/robust_current/inflate.sh"),
+                        _manifest_entry("submissions/robust_current/config.env"),
+                        _repo_manifest_entry(tmp_path, "candidate/manifest.json"),
+                    ]
+                }
+            )
+            + "\n"
         )
-        + "\n"
-    )
+
+    write_source_manifest()
     args = argparse.Namespace(
         dry_run=False,
         studio="pact",
@@ -1452,11 +1573,13 @@ def test_exact_eval_submit_requires_cdo1_manifest_pair_basis(tmp_path: Path) -> 
     payload = json.loads(archive_manifest.read_text())
     payload["cdo1_overlay"]["pair_index_basis"] = "video_frame_pair_index"
     archive_manifest.write_text(json.dumps(payload) + "\n")
+    write_source_manifest()
     with pytest.raises(SystemExit, match="does not match archive manifest"):
         module._validate_exact_eval_submit_inputs(args)
 
     payload["cdo1_overlay"]["pair_index_basis"] = "half_frame_pair_index"
     archive_manifest.write_text(json.dumps(payload) + "\n")
+    write_source_manifest()
     module._validate_exact_eval_submit_inputs(args)
 
 
@@ -1486,9 +1609,9 @@ def test_t4_exact_eval_submit_requires_driver_compatible_torch_pin(tmp_path: Pat
         json.dumps(
             {
                 "files": [
-                    {"path": "archive.zip"},
-                    {"path": "submissions/robust_current/inflate.sh"},
-                    {"path": "submissions/robust_current/config.env"},
+                    _manifest_entry("archive.zip"),
+                    _manifest_entry("submissions/robust_current/inflate.sh"),
+                    _manifest_entry("submissions/robust_current/config.env"),
                 ]
             }
         )

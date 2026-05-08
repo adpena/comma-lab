@@ -34,6 +34,29 @@ def _load_adjudicator():
     return mod
 
 
+def _source_manifest_payload(files: list[dict[str, object]]) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "schema_version": 1,
+        "tool": "test",
+        "files": files,
+        "file_count": len(files),
+        "total_bytes": sum(int(item["bytes"]) for item in files),
+    }
+    payload["manifest_sha256"] = hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    return payload
+
+
+def _file_manifest_entry(repo_root: Path, rel: str) -> dict[str, object]:
+    raw = (repo_root / rel).read_bytes()
+    return {
+        "path": rel,
+        "bytes": len(raw),
+        "sha256": hashlib.sha256(raw).hexdigest(),
+    }
+
+
 def test_adjudicator_uses_recomputed_json_score_not_human_formula(tmp_path: Path) -> None:
     adjudicator = _load_adjudicator()
     archive = tmp_path / "archive.zip"
@@ -102,6 +125,211 @@ def test_adjudicator_uses_recomputed_json_score_not_human_formula(tmp_path: Path
     assert "hard_kill_triggered" not in prov
     assert prov["contest_cuda_gpu_t4_match"] is False
     assert prov["contest_equivalent_hardware"] is False
+
+
+def test_adjudicator_records_source_manifest_runtime_closure(tmp_path: Path) -> None:
+    adjudicator = _load_adjudicator()
+    repo = tmp_path / "repo"
+    runtime = repo / "experiments/public_runtime_adapters/pr104"
+    external = repo / "experiments/results/public_pr104/source/submissions/qhnerv_ft_best"
+    runtime.mkdir(parents=True)
+    external.mkdir(parents=True)
+    (runtime / "inflate.sh").write_text("#!/usr/bin/env bash\n")
+    (external / "inflate.py").write_text("print('inflate')\n")
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive")
+    archive_sha = hashlib.sha256(archive.read_bytes()).hexdigest()
+
+    source_manifest = tmp_path / "source_manifest.json"
+    files = [
+        _file_manifest_entry(repo, "experiments/public_runtime_adapters/pr104/inflate.sh"),
+        _file_manifest_entry(
+            repo,
+            "experiments/results/public_pr104/source/submissions/qhnerv_ft_best/inflate.py",
+        ),
+    ]
+    source_manifest.write_text(json.dumps(_source_manifest_payload(files)) + "\n")
+    manifest_sha = json.loads(source_manifest.read_text())["manifest_sha256"]
+
+    contest_json = tmp_path / "contest_auth_eval.json"
+    contest_json.write_text(
+        json.dumps(
+            {
+                "final_score": 0.5,
+                "score_recomputed_from_components": 0.5,
+                "avg_posenet_dist": 0.003,
+                "avg_segnet_dist": 0.004,
+                "archive_size_bytes": archive.stat().st_size,
+                "n_samples": 600,
+                "provenance": {
+                    "archive_sha256": archive_sha,
+                    "device": "cuda",
+                    "gpu_t4_match": True,
+                    "inflate_runtime_manifest": {
+                        "runtime_tree_sha256": "b" * 64,
+                        "files": [
+                            {
+                                "repo_relative_path": "experiments/public_runtime_adapters/pr104/inflate.sh",
+                                "bytes": files[0]["bytes"],
+                                "sha256": files[0]["sha256"],
+                            }
+                        ],
+                        "external_dependency_roots": [
+                            {
+                                "repo_relative_root": (
+                                    "experiments/results/public_pr104/source/submissions/"
+                                    "qhnerv_ft_best"
+                                ),
+                                "exists": True,
+                                "files": [
+                                    {
+                                        "repo_relative_path": (
+                                            "experiments/results/public_pr104/source/submissions/"
+                                            "qhnerv_ft_best/inflate.py"
+                                        ),
+                                        "bytes": files[1]["bytes"],
+                                        "sha256": files[1]["sha256"],
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                },
+            }
+        )
+    )
+    (tmp_path / "lightning_queue_metadata.json").write_text(
+        json.dumps(
+            {
+                "queue_metadata": {
+                    "source_manifest": str(source_manifest),
+                    "source_manifest_sha256": manifest_sha,
+                }
+            }
+        )
+        + "\n"
+    )
+    (tmp_path / "eval_provenance.json").write_text(
+        json.dumps(json.loads(contest_json.read_text())["provenance"]) + "\n"
+    )
+
+    result = adjudicator.adjudicate(
+        argparse.Namespace(
+            contest_json=str(contest_json),
+            provenance=str(tmp_path / "adjudication_provenance.json"),
+            archive=str(archive),
+            result_copy=str(tmp_path / "contest_auth_eval.adjudicated.json"),
+            baseline_score=0.6,
+            baseline_archive_bytes=None,
+            predicted_band=[0.4, 0.6],
+            hard_kill_above=None,
+            regression_threshold=0.7,
+            delta_key="score_delta_vs_baseline",
+            required_device="cuda",
+            required_samples=600,
+            max_sane_score=10.0,
+            max_posenet_dist=None,
+            max_segnet_dist=None,
+            baseline_posenet_dist=None,
+            baseline_segnet_dist=None,
+            max_posenet_relative=None,
+            max_segnet_relative=None,
+            component_reference_label="baseline",
+        )
+    )
+
+    prov = json.loads((tmp_path / "adjudication_provenance.json").read_text())
+    assert result["promotion_eligible"] is True
+    assert prov["source_manifest_sha256"] == manifest_sha
+    assert prov["source_manifest_runtime_closure"]["verified"] is True
+    assert prov["source_manifest_runtime_closure"]["checked_runtime_file_count"] == 2
+    assert prov["source_manifest_runtime_closure_gate_triggered"] is False
+
+
+def test_adjudicator_gates_promotion_on_source_manifest_runtime_sha_mismatch(tmp_path: Path) -> None:
+    adjudicator = _load_adjudicator()
+    repo = tmp_path / "repo"
+    runtime = repo / "experiments/public_runtime_adapters/pr104"
+    runtime.mkdir(parents=True)
+    (runtime / "inflate.sh").write_text("#!/usr/bin/env bash\n")
+    source_manifest = tmp_path / "source_manifest.json"
+    files = [_file_manifest_entry(repo, "experiments/public_runtime_adapters/pr104/inflate.sh")]
+    source_manifest.write_text(json.dumps(_source_manifest_payload(files)) + "\n")
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive")
+    archive_sha = hashlib.sha256(archive.read_bytes()).hexdigest()
+    contest_json = tmp_path / "contest_auth_eval.json"
+    contest_json.write_text(
+        json.dumps(
+            {
+                "final_score": 0.5,
+                "score_recomputed_from_components": 0.5,
+                "avg_posenet_dist": 0.003,
+                "avg_segnet_dist": 0.004,
+                "archive_size_bytes": archive.stat().st_size,
+                "n_samples": 600,
+                "provenance": {
+                    "archive_sha256": archive_sha,
+                    "device": "cuda",
+                    "gpu_t4_match": True,
+                    "inflate_runtime_manifest": {
+                        "runtime_tree_sha256": "c" * 64,
+                        "files": [
+                            {
+                                "repo_relative_path": "experiments/public_runtime_adapters/pr104/inflate.sh",
+                                "bytes": files[0]["bytes"],
+                                "sha256": "d" * 64,
+                            }
+                        ],
+                        "external_dependency_roots": [],
+                    },
+                },
+            }
+        )
+    )
+    manifest_sha = json.loads(source_manifest.read_text())["manifest_sha256"]
+    (tmp_path / "lightning_queue_metadata.json").write_text(
+        json.dumps(
+            {
+                "queue_metadata": {
+                    "source_manifest": str(source_manifest),
+                    "source_manifest_sha256": manifest_sha,
+                }
+            }
+        )
+        + "\n"
+    )
+
+    result = adjudicator.adjudicate(
+        argparse.Namespace(
+            contest_json=str(contest_json),
+            provenance=str(tmp_path / "adjudication_provenance.json"),
+            archive=str(archive),
+            result_copy=str(tmp_path / "contest_auth_eval.adjudicated.json"),
+            baseline_score=0.6,
+            baseline_archive_bytes=None,
+            predicted_band=[0.4, 0.6],
+            hard_kill_above=None,
+            regression_threshold=0.7,
+            delta_key="score_delta_vs_baseline",
+            required_device="cuda",
+            required_samples=600,
+            max_sane_score=10.0,
+            max_posenet_dist=None,
+            max_segnet_dist=None,
+            baseline_posenet_dist=None,
+            baseline_segnet_dist=None,
+            max_posenet_relative=None,
+            max_segnet_relative=None,
+            component_reference_label="baseline",
+        )
+    )
+
+    prov = json.loads((tmp_path / "adjudication_provenance.json").read_text())
+    assert result["promotion_eligible"] is False
+    assert result["source_manifest_runtime_closure_gate_triggered"] is True
+    assert prov["source_manifest_runtime_closure_gate_triggered"] is True
+    assert "SOURCE_MANIFEST_CLOSURE_REVIEW_REQUIRED" in prov["lane_status"]
 
 
 def test_adjudicator_regression_threshold_is_delta_vs_baseline(tmp_path: Path) -> None:
@@ -1368,7 +1596,10 @@ def test_launch_retry_refuses_timestamped_logical_duplicate(monkeypatch) -> None
     assert "UNKNOWN_EXISTING_LABEL_PREFIX" in log
 
 
-def test_live_instance_guard_matches_timestamped_logical_label(monkeypatch) -> None:
+def test_live_instance_guard_matches_timestamped_logical_label(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
     path = REPO_ROOT / "scripts" / "launch_lane_with_retry.py"
     spec = importlib.util.spec_from_file_location("_launch_lane_with_retry", path)
     assert spec and spec.loader
@@ -1389,6 +1620,9 @@ def test_live_instance_guard_matches_timestamped_logical_label(monkeypatch) -> N
             }
         ])
 
+    fake_vastai = tmp_path / "vastai"
+    fake_vastai.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    monkeypatch.setattr(launcher, "VASTAI", fake_vastai)
     monkeypatch.setattr(launcher.subprocess, "run", lambda *a, **k: Proc())
 
     matches, error = launcher.live_instances_with_label_prefix(

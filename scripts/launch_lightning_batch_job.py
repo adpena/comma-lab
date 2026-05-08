@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import hashlib
 import importlib.metadata as importlib_metadata
 import importlib.util
 import json
@@ -99,6 +100,21 @@ def _print_json(payload: object) -> None:
 def _write_json(path: str | Path, payload: object) -> None:
     write_json(path, payload)
 
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _canonical_json_sha256(payload: object) -> str:
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+
 _EXACT_EVAL_PRE_SCORE_FAILURES = (
     {
         "terminal_class": "archive_validator_whitelist_block",
@@ -151,6 +167,8 @@ _EXACT_EVAL_PRE_SCORE_FAILURES = (
 )
 
 _AUTH_LOG_SNIPPET_BYTES = 4096
+
+_SHA256_HEX_RE = re.compile(r"^[0-9a-f]{64}$")
 
 _STALE_REMOTE_ARG_HINTS = {
     "--remote": "--remote-preflight-ssh-target for submit preflight, or scripts/lightning_exact_eval_repro.py --remote at the wrapper layer",
@@ -236,13 +254,35 @@ def _parse_metadata_kv(items: list[str]) -> dict[str, str]:
     return out
 
 
-def _queue_metadata_from_args(args: argparse.Namespace) -> dict[str, str]:
+def _queue_metadata_from_args(args: argparse.Namespace) -> dict[str, object]:
     metadata = _parse_metadata_kv(args.queue_metadata)
     source_prs = metadata.get("source_prs") or metadata.get("source_public_prs")
     if source_prs:
         refs = parse_public_pr_refs_csv(source_prs)
         metadata["source_prs"] = ",".join(refs.keys())
         metadata["source_pr_urls"] = ",".join(str(ref["url"]) for ref in refs.values())
+    source_manifest = getattr(args, "source_manifest", None)
+    if source_manifest:
+        manifest_path = Path(source_manifest)
+        if manifest_path.is_file():
+            manifest = _load_json_object(manifest_path, label="source manifest")
+            identity = _source_manifest_identity(manifest, manifest_path=manifest_path)
+            metadata.setdefault("source_manifest", str(source_manifest))
+            metadata["source_manifest_sha256"] = str(identity["source_manifest_sha256"])
+            metadata["source_manifest_file_sha256"] = str(identity["source_manifest_file_sha256"])
+            if (
+                getattr(args, "cmd", None) == "exact-eval"
+                and not getattr(args, "dry_run", False)
+                and getattr(args, "studio", None)
+            ):
+                closure = _source_manifest_runtime_closure_from_args(
+                    args,
+                    manifest=manifest,
+                    manifest_path=manifest_path,
+                    identity=identity,
+                )
+                metadata["source_manifest_runtime_closure_sha256"] = closure["closure_sha256"]
+                metadata["source_manifest_runtime_closure"] = closure
     reason = getattr(args, "allow_skip_remote_preflight_reason", None)
     if reason:
         metadata["remote_preflight_skip_reason"] = str(reason).strip()
@@ -495,18 +535,138 @@ def _remote_repo_rel(path: str | None, *, repo_dir: str) -> str | None:
 
 
 def _manifest_repo_paths(manifest: dict[str, object], *, manifest_path: Path) -> set[str]:
+    return set(_manifest_entries_by_path(manifest, manifest_path=manifest_path))
+
+
+def _manifest_entries_by_path(
+    manifest: dict[str, object],
+    *,
+    manifest_path: Path,
+) -> dict[str, dict[str, object]]:
     files = manifest.get("files")
     if not isinstance(files, list):
         raise SystemExit(f"source manifest missing files list: {manifest_path}")
-    paths: set[str] = set()
+    entries: dict[str, dict[str, object]] = {}
     for index, item in enumerate(files):
         if not isinstance(item, dict) or not isinstance(item.get("path"), str):
             raise SystemExit(f"source manifest files[{index}].path must be a string: {manifest_path}")
         rel = _safe_remote_repo_rel(str(item["path"]), field=f"source manifest files[{index}].path")
-        if rel in paths:
+        if rel in entries:
             raise SystemExit(f"source manifest contains duplicate path: {rel}")
-        paths.add(rel)
-    return paths
+        entries[rel] = dict(item)
+    return entries
+
+
+def _source_manifest_identity(
+    manifest: dict[str, object],
+    *,
+    manifest_path: Path,
+) -> dict[str, object]:
+    declared = manifest.get("manifest_sha256")
+    without_self = {key: value for key, value in manifest.items() if key != "manifest_sha256"}
+    canonical = _canonical_json_sha256(without_self)
+    if declared is not None:
+        if not isinstance(declared, str) or not _SHA256_HEX_RE.fullmatch(declared):
+            raise SystemExit(f"source manifest has invalid manifest_sha256: {manifest_path}")
+        if declared != canonical:
+            raise SystemExit(
+                "source manifest manifest_sha256 is stale: "
+                f"{manifest_path} expected={declared} actual={canonical}"
+            )
+    return {
+        "source_manifest_path": str(manifest_path),
+        "source_manifest_sha256": declared or canonical,
+        "source_manifest_file_sha256": _sha256_file(manifest_path),
+        "source_manifest_file_count": manifest.get("file_count"),
+        "source_manifest_total_bytes": manifest.get("total_bytes"),
+    }
+
+
+def _manifest_entry_byte_sha(
+    entries: dict[str, dict[str, object]],
+    rel: str,
+    *,
+    manifest_path: Path,
+) -> dict[str, object]:
+    entry = entries.get(rel)
+    if entry is None:
+        raise SystemExit(
+            "exact-eval submit blocked; staged source manifest does not include "
+            f"required byte/SHA artifact: {rel}"
+        )
+    byte_count = entry.get("bytes")
+    sha256 = entry.get("sha256")
+    if not isinstance(byte_count, int) or isinstance(byte_count, bool) or byte_count < 0:
+        raise SystemExit(
+            "exact-eval submit blocked; source manifest entry lacks integer bytes "
+            f"for {rel}: {manifest_path}"
+        )
+    if not isinstance(sha256, str) or not _SHA256_HEX_RE.fullmatch(sha256):
+        raise SystemExit(
+            "exact-eval submit blocked; source manifest entry lacks sha256 "
+            f"for {rel}: {manifest_path}"
+        )
+    local_path = Path(REPO_ROOT) / rel
+    if local_path.is_file():
+        actual_bytes = local_path.stat().st_size
+        actual_sha = _sha256_file(local_path)
+        if actual_bytes != byte_count or actual_sha != sha256:
+            raise SystemExit(
+                "exact-eval submit blocked; source manifest byte/SHA mismatch "
+                f"for {rel}: expected bytes={byte_count} sha256={sha256} "
+                f"actual bytes={actual_bytes} sha256={actual_sha}"
+            )
+    return {"path": rel, "bytes": byte_count, "sha256": sha256}
+
+
+def _source_manifest_runtime_closure_from_args(
+    args: argparse.Namespace,
+    *,
+    manifest: dict[str, object],
+    manifest_path: Path,
+    identity: dict[str, object] | None = None,
+) -> dict[str, object]:
+    entries = _manifest_entries_by_path(manifest, manifest_path=manifest_path)
+    archive_rel = _remote_repo_rel(args.archive, repo_dir=args.repo_dir)
+    if archive_rel is None:
+        raise SystemExit("--archive must be inside --repo-dir for exact-eval Studio submit")
+    runtime_reqs = _exact_eval_runtime_requirements(args)
+    metadata = _parse_metadata_kv(getattr(args, "queue_metadata", []) or [])
+    optional_reqs: set[str] = set()
+    for key in ("baseline_json", "baseline_contest_auth_eval_json", "archive_manifest", "cdo1_manifest"):
+        value = metadata.get(key)
+        if not value:
+            continue
+        rel = _remote_repo_rel(value, repo_dir=args.repo_dir)
+        if rel is not None:
+            optional_reqs.add(rel)
+    required_paths = {archive_rel, *runtime_reqs, *optional_reqs}
+    files = [
+        _manifest_entry_byte_sha(entries, rel, manifest_path=manifest_path)
+        for rel in sorted(required_paths)
+    ]
+    runtime_files = [
+        _manifest_entry_byte_sha(entries, rel, manifest_path=manifest_path)
+        for rel in sorted(runtime_reqs)
+    ]
+    inflate_rel = _remote_repo_rel(_default_exact_eval_inflate_sh(args), repo_dir=args.repo_dir)
+    external_roots = _declared_runtime_dependency_roots(inflate_rel or "")
+    identity = identity or _source_manifest_identity(manifest, manifest_path=manifest_path)
+    payload: dict[str, object] = {
+        "schema": "source_manifest_runtime_closure_v1",
+        **identity,
+        "archive": _manifest_entry_byte_sha(entries, archive_rel, manifest_path=manifest_path),
+        "inflate_sh": inflate_rel,
+        "declared_dependency_roots": external_roots,
+        "required_path_count": len(files),
+        "runtime_file_count": len(runtime_files),
+        "runtime_total_bytes": sum(int(item["bytes"]) for item in runtime_files),
+        "files": files,
+        "runtime_files": runtime_files,
+    }
+    closure_basis = {key: value for key, value in payload.items() if key != "closure_sha256"}
+    payload["closure_sha256"] = _canonical_json_sha256(closure_basis)
+    return payload
 
 
 def _default_exact_eval_inflate_sh(args: argparse.Namespace) -> str:
@@ -1366,12 +1526,15 @@ def _validate_exact_eval_submit_inputs(args: argparse.Namespace) -> None:
         raise SystemExit("--archive must be inside --repo-dir for exact-eval Studio submit")
     manifest_path = Path(args.source_manifest)
     manifest = _load_json_object(manifest_path, label="source manifest")
-    manifest_paths = _manifest_repo_paths(manifest, manifest_path=manifest_path)
+    _source_manifest_identity(manifest, manifest_path=manifest_path)
+    manifest_entries = _manifest_entries_by_path(manifest, manifest_path=manifest_path)
+    manifest_paths = set(manifest_entries)
     if archive_rel not in manifest_paths:
         raise SystemExit(
             "exact-eval submit blocked; staged source manifest does not include "
             f"archive artifact: {archive_rel}"
         )
+    _manifest_entry_byte_sha(manifest_entries, archive_rel, manifest_path=manifest_path)
     runtime_reqs = _exact_eval_runtime_requirements(args)
     runtime_missing = sorted(runtime_reqs.difference(manifest_paths))
     if runtime_missing:
@@ -1379,6 +1542,8 @@ def _validate_exact_eval_submit_inputs(args: argparse.Namespace) -> None:
             "exact-eval submit blocked; staged source manifest does not include "
             "inflate runtime closure: " + ", ".join(runtime_missing)
         )
+    for rel in sorted(runtime_reqs):
+        _manifest_entry_byte_sha(manifest_entries, rel, manifest_path=manifest_path)
     _validate_no_source_embedded_payload_runtime(
         args,
         archive_rel=archive_rel,
@@ -1397,6 +1562,7 @@ def _validate_exact_eval_submit_inputs(args: argparse.Namespace) -> None:
                 "exact-eval submit blocked; staged source manifest does not include "
                 f"metadata baseline_json artifact: {baseline_json_rel}"
             )
+        _manifest_entry_byte_sha(manifest_entries, baseline_json_rel, manifest_path=manifest_path)
     archive_manifest = metadata.get("archive_manifest") or metadata.get("cdo1_manifest")
     if archive_manifest:
         archive_manifest_rel = _remote_repo_rel(archive_manifest, repo_dir=args.repo_dir)
@@ -1407,6 +1573,7 @@ def _validate_exact_eval_submit_inputs(args: argparse.Namespace) -> None:
                 "exact-eval submit blocked; staged source manifest does not include "
                 f"metadata archive_manifest artifact: {archive_manifest_rel}"
             )
+        _manifest_entry_byte_sha(manifest_entries, archive_manifest_rel, manifest_path=manifest_path)
         _validate_score_payload_manifest_metadata(
             Path(REPO_ROOT) / archive_manifest_rel,
             metadata=metadata,
