@@ -3,7 +3,7 @@ title: PHASE 4 INTEGRATION — Optimal Stack Design Memo
 date: 2026-05-08
 author: Subagent INTEGRATE (claude-opus-4-7-1m)
 status: DESIGN — empirical anchors from CPU-prep work; GPU dispatch authorization separate
-target_band: 0.155–0.175 [predicted-band, NOT contest-CUDA, NOT score_claim]
+target_band: 0.165–0.180 [predicted-band, NOT contest-CUDA, NOT score_claim — tightened by Ballé per REVIEW-MATH 2026-05-08]
 score_claim: false
 promotion_eligible: false
 ready_for_exact_eval_dispatch: false
@@ -132,12 +132,19 @@ Stage 5: PD codec pose optimization + Riemannian TTO (existing, anchored)
 
 **Aggressive (Phase 2 + 4 vision):**
 - Stage 1: ζ self-compress full renderer (~30 KB after 2000 QAT steps)
-- Stage 2: Joint-ADMM × continuous-K (mechanism-only, on smaller tensor footprint)
+- Stage 2: Lagrangian per-tensor allocation × continuous-K (mechanism-only,
+  on smaller tensor footprint; renamed from "Joint-ADMM" per REVIEW-MATH)
 - Stage 3: ε learned prior shipped (~5 KB cost; -9 KB savings predicted)
 - Stage 4: δ joint training (distortion improvements compound w/ all-of-above)
 - Stage 5: PD/Riemannian TTO (existing infrastructure)
 - Predicted archive bytes: 90-130 KB (bounded — Wave-Ω + masks live in same zip)
-- Predicted score: **0.155-0.175** [predicted-band; matches PARADIGM-δεζ blueprint target]
+- Predicted score: **0.165-0.180** [predicted-band; tightened by Ballé per
+  REVIEW-MATH 2026-05-08 until Phase 2 anchors confirm the Lagrangian
+  per-tensor allocation mechanism survives smaller tensor footprints]
+- Original predicted band 0.155-0.175 (pre-Ballé): preserved as forensic
+  reference; widened upper bound to 0.180 reflects uncertainty about whether
+  the allocation mechanism still wins after arch_shrink reduces tensor count
+  by 60%.
 
 ### 3.3 Score-band uncertainty quantification
 
@@ -152,7 +159,26 @@ wipe the rate-term gain. CPU evidence cannot answer this.
 | Stage 3 (ε) prior overfits to single video | small overhead (≤ 5 KB) | Stage 4 stabilizes |
 | Stage 4 (δ) mode-collapse | N/A | mitigated by curriculum λ ramp |
 
-### 3.4 Predispatch sanity ladder (mandatory before Phase 4 GPU dispatch)
+### 3.4 MacKay constriction recommendation (research-lane queue)
+
+Per REVIEW-MATH 2026-05-08 MacKay finding: the Op2 arithmetic-coding lane
+sits ~7 KB above the deployable joint floor measured in
+`feedback_pr101_joint_entropy_floor_subagent_verdict_20260507.md` (joint
+floor 148-162 KB; Op2_alone 161,942 B). The recommendation is to bridge
+that gap with **constriction (modern range/arithmetic coder library) +
+2-tensor-context conditioning**: feed each tensor's PMF prediction with the
+empirically-low-MI 2-tensor context (sign + DCT subset).
+
+This is a research-lane queue item — not a Phase 4 hard precondition.
+Estimated cost: 1-2 days of impl + smoke + CPU sweep. Predicted savings:
+4-7 KB on the Op2-class encoders if the cross-tensor MI assumption holds at
+the 2-tensor-context level.
+
+Trigger to advance from queue: apogee_int6 [contest-CUDA] anchor lands +
+operator agrees the gap is worth pursuing vs continuing along the
+allocation-mechanism path.
+
+### 3.5 Predispatch sanity ladder (mandatory before Phase 4 GPU dispatch)
 
 Per blueprint §5 + CLAUDE.md "Predispatch sanity for δ/ε/ζ":
 
