@@ -9,6 +9,7 @@ from tac.contest_rate_distortion_system import contest_score as canonical_contes
 from tac.score_geometry import (
     CONTEST_REFERENCE_BYTES,
     DualAxisDispatchRecommendation,
+    PlannerAxisMarginals,
     contest_score,
     equal_score_curve_archive_bytes,
     equal_score_curve_d_pose,
@@ -17,6 +18,7 @@ from tac.score_geometry import (
     marginal_value_per_byte,
     operating_regime,
     predict_cpu_axis_marginals,
+    planner_axis_marginals,
     project_onto_pareto_envelope,
     recommend_dispatch_axis_dual,
     score_decomposition,
@@ -324,6 +326,71 @@ def test_predict_cpu_axis_marginals_negative_input_raises() -> None:
         predict_cpu_axis_marginals(d_seg_cuda=-0.1, d_pose_cuda=1e-4)
     with pytest.raises(ValueError):
         predict_cpu_axis_marginals(d_seg_cuda=1e-4, d_pose_cuda=-0.1)
+
+
+# ---------------------------------------------------------------------------
+# Target-axis planner marginals — CPU leaderboard chain-rule separation
+# ---------------------------------------------------------------------------
+
+
+def test_planner_axis_marginals_cuda_internal_matches_score_gradient() -> None:
+    out = planner_axis_marginals(
+        target_axis="cuda_internal",
+        cuda_d_seg=6.88e-4,
+        cuda_d_pose=1.74e-4,
+        archive_bytes=178_392,
+    )
+    grad = score_gradient(6.88e-4, 1.74e-4)
+    assert isinstance(out, PlannerAxisMarginals)
+    assert out.input_axis == "cuda_candidate_delta"
+    assert out.seg_marginal == grad.d_seg
+    assert out.pose_marginal == pytest.approx(grad.d_pose, rel=1e-12)
+    assert out.priority_axis == "pose"
+    assert out.score_claim is False
+    assert out.promotion_eligible is False
+
+
+def test_planner_axis_marginals_cpu_leaderboard_applies_chain_rule() -> None:
+    """CPU-leaderboard planning reweights CUDA-side candidate deltas.
+
+    At this PR107/apogee-ish operating point, raw CUDA gradients prioritize
+    pose, but the calibrated CPU-leaderboard response to CUDA-coordinate
+    changes prioritizes seg after applying 1/R_pose and 1/R_seg.
+    """
+    out = planner_axis_marginals(
+        target_axis="cpu_leaderboard",
+        cuda_d_seg=6.88e-4,
+        cuda_d_pose=1.74e-4,
+        archive_bytes=178_392,
+        archive_class="hnerv",
+    )
+    assert out.calibration_class == "hnerv"
+    assert out.effective_d_pose == pytest.approx(1.74e-4 / 5.04, rel=1e-12)
+    assert out.effective_d_seg == pytest.approx(6.88e-4 / 1.17, rel=1e-12)
+    assert out.seg_chain_scale == pytest.approx(1.0 / 1.17, rel=1e-12)
+    assert out.pose_chain_scale == pytest.approx(1.0 / 5.04, rel=1e-12)
+    assert out.seg_marginal > out.pose_marginal
+    assert out.priority_axis == "seg"
+    assert out.evidence_grade == "[prediction; cpu-leaderboard chain-rule planner marginals]"
+    assert out.rank_or_kill_eligible is False
+    assert out.ready_for_exact_eval_dispatch is False
+
+
+def test_planner_axis_marginals_negative_and_unknown_axis_raise() -> None:
+    with pytest.raises(ValueError):
+        planner_axis_marginals(
+            target_axis="cuda_internal",
+            cuda_d_seg=-1e-4,
+            cuda_d_pose=1e-4,
+            archive_bytes=178_392,
+        )
+    with pytest.raises(ValueError):
+        planner_axis_marginals(
+            target_axis="not-a-real-axis",  # type: ignore[arg-type]
+            cuda_d_seg=1e-4,
+            cuda_d_pose=1e-4,
+            archive_bytes=178_392,
+        )
 
 
 # ---------------------------------------------------------------------------
