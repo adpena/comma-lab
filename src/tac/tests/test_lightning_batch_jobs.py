@@ -712,6 +712,7 @@ def test_exact_cuda_eval_command_installs_declared_external_inflate_deps() -> No
         output_dir="/out",
         adjudication=_adjudication(),
         env={
+            "INFLATE_TORCH_SPEC": "torch==2.5.1+cu124",
             "INFLATE_BROTLI_SPEC": "brotli==1.2.0",
             "INFLATE_AV_SPEC": "av==17.0.1",
         },
@@ -719,6 +720,7 @@ def test_exact_cuda_eval_command_installs_declared_external_inflate_deps() -> No
     )
 
     assert "lightning_exact_eval_inflate_runtime_bootstrap" in command
+    assert "torch==2.5.1+cu124" in command
     assert "brotli==1.2.0" in command
     assert "av==17.0.1" in command
     assert "uv, 'pip', 'install'" in command

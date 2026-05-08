@@ -354,6 +354,35 @@ fn data_descriptor_members_fail_closed() {
 }
 
 #[test]
+fn strict_name_rules_reject_control_chars_and_windows_drive_prefixes() {
+    for (name, expected) in [
+        (
+            b"bad\nname".as_slice(),
+            "unsafe_member_name:archive member contains control character",
+        ),
+        (
+            b"C:evil".as_slice(),
+            "unsafe_member_name:archive member uses Windows drive prefix",
+        ),
+    ] {
+        let raw = single_stored_member_fixture(name);
+        let inspect = inspect_zip_bytes("fixture/unsafe-name.zip", &raw);
+
+        assert!(!inspect.zip_strict);
+        assert!(
+            inspect.members[0].blockers[0].starts_with(expected),
+            "{:?}",
+            inspect.members[0].blockers
+        );
+        assert!(
+            inspect.blockers[0].contains(expected),
+            "{:?}",
+            inspect.blockers
+        );
+    }
+}
+
+#[test]
 fn cli_emits_json_and_exits_nonzero_when_blocked() {
     let dir = std::env::temp_dir().join(format!("zipwire-cli-{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
@@ -396,6 +425,16 @@ fn multi_stored_members_fixture() -> Vec<u8> {
     central_stored_file(&mut out, b"y", 0x71be_eff9, 1, 32);
     let central_size = out.len() as u32 - central_offset;
     end_of_central_directory(&mut out, 2, central_size, central_offset);
+    out
+}
+
+fn single_stored_member_fixture(name: &[u8]) -> Vec<u8> {
+    let mut out = Vec::new();
+    local_stored_file(&mut out, name, b"a", 0xe8b7_be43);
+    let central_offset = out.len() as u32;
+    central_stored_file(&mut out, name, 0xe8b7_be43, 1, 0);
+    let central_size = out.len() as u32 - central_offset;
+    end_of_central_directory(&mut out, 1, central_size, central_offset);
     out
 }
 

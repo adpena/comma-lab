@@ -702,8 +702,19 @@ fn validate_archive_member_name(name: &str) -> Result<(), String> {
     if name.contains('\0') {
         return Err(format!("archive member contains NUL byte: {name:?}"));
     }
+    if name.chars().any(|ch| (ch as u32) < 32) {
+        return Err(format!(
+            "archive member contains control character: {name:?}"
+        ));
+    }
     if name.contains('\\') {
         return Err(format!("archive member uses backslashes: {name:?}"));
+    }
+    let bytes = name.as_bytes();
+    if bytes.len() >= 2 && bytes[1] == b':' && bytes[0].is_ascii_alphabetic() {
+        return Err(format!(
+            "archive member uses Windows drive prefix: {name:?}"
+        ));
     }
     if name.starts_with('/') {
         return Err(format!("archive member path is absolute: {name:?}"));

@@ -157,6 +157,24 @@ def test_canonical_build_manifest_schema_and_byte_targets() -> None:
     assert manifest["lane_id"] == "pr106_uniward_lagrangian_runtime_packet"
     assert manifest["rms_target"] == 0.05
     assert manifest["brotli_quality"] == 11
+    assert manifest["input_source_archive_bytes"] == 186239
+    assert manifest["expected_source_archive_bytes"] == 186239
+    assert manifest["input_source_archive_sha256"] == (
+        "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58"
+    )
+    assert manifest["expected_source_archive_sha256"] == (
+        "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58"
+    )
+    assert manifest["input_source_archive_member_name"] == "0.bin"
+    assert manifest["expected_source_archive_member_name"] == "0.bin"
+    assert manifest["input_source_archive_member_bytes"] == 186131
+    assert manifest["expected_source_archive_member_bytes"] == 186131
+    assert manifest["input_source_archive_member_sha256"] == (
+        "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7"
+    )
+    assert manifest["expected_source_archive_member_sha256"] == (
+        "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7"
+    )
     assert manifest["n_tensors"] == 28
     assert manifest["n_symbols"] == 228958
     # Wire-format identity: 600 latent pairs decoded; meta matches PR106.
@@ -184,6 +202,9 @@ def test_canonical_build_manifest_schema_and_byte_targets() -> None:
     )
     assert manifest["score_affecting_payload_changed"] is True
     assert manifest["charged_bits_changed"] is True
+    assert manifest["wire_layout_identity_with_pr106_published"] is True
+    assert manifest["wire_payload_byte_identity_with_pr106_published"] is False
+    assert manifest["wire_format_identity_with_pr106_published"] is False
     assert manifest["evidence_grade"] == "[CPU-build]"
     # SHA + bytes must be present (BUGCLASSES B3).
     assert isinstance(manifest["archive_sha256"], str)

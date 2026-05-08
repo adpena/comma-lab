@@ -109,6 +109,7 @@ from tac.hnerv_decoder_recode import (  # noqa: E402
     parse_packed_decoder_brotli,
 )
 from tac.hnerv_lowlevel_packer import (  # noqa: E402
+    SingleMemberArchive,
     parse_ff_packed_brotli_hnerv,
     read_strict_single_member_zip,
 )
@@ -131,7 +132,10 @@ PR106_BASE_CHANNELS = 36
 PR106_EVAL_SIZE = (384, 512)
 PR106_DECODER_BROTLI_BASELINE_BYTES = 170_278
 PR106_ARCHIVE_BASELINE_BYTES = 186_239
+PR106_SOURCE_ARCHIVE_SHA256 = "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58"
 PR106_PUBLISHED_MEMBER_NAME = "0.bin"
+PR106_PUBLISHED_MEMBER_BYTES = 186_131
+PR106_PUBLISHED_MEMBER_SHA256 = "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7"
 # 4-byte ZIP overhead constant for stored single-member archive (verified).
 PR106_ZIP_OVERHEAD_BYTES = 108
 
@@ -223,9 +227,44 @@ class _PR106TensorBlob:
     scale_f32: bytes
 
 
-def _collect_pr106_tensors(archive_path: Path) -> tuple[list[_PR106TensorBlob], bytes, bytes]:
-    """Parse PR106 archive: return (tensors, header_4B, latents_and_sidecar_brotli)."""
+def _read_canonical_pr106_source_archive(archive_path: Path) -> SingleMemberArchive:
+    """Read and assert the exact PR106 source archive this packet targets."""
     sma = read_strict_single_member_zip(archive_path)
+    payload_sha = _sha256(sma.payload)
+    violations = []
+    if sma.archive_bytes != PR106_ARCHIVE_BASELINE_BYTES:
+        violations.append(
+            f"archive_bytes {sma.archive_bytes}!={PR106_ARCHIVE_BASELINE_BYTES}"
+        )
+    if sma.archive_sha256 != PR106_SOURCE_ARCHIVE_SHA256:
+        violations.append(
+            f"archive_sha256 {sma.archive_sha256}!={PR106_SOURCE_ARCHIVE_SHA256}"
+        )
+    if sma.member_name != PR106_PUBLISHED_MEMBER_NAME:
+        violations.append(
+            f"member_name {sma.member_name!r}!={PR106_PUBLISHED_MEMBER_NAME!r}"
+        )
+    if sma.member_bytes != PR106_PUBLISHED_MEMBER_BYTES:
+        violations.append(
+            f"member_bytes {sma.member_bytes}!={PR106_PUBLISHED_MEMBER_BYTES}"
+        )
+    if payload_sha != PR106_PUBLISHED_MEMBER_SHA256:
+        violations.append(
+            f"member_sha256 {payload_sha}!={PR106_PUBLISHED_MEMBER_SHA256}"
+        )
+    if violations:
+        raise SystemExit(
+            "FATAL: --source-archive is not the canonical PR106 frontier archive: "
+            + "; ".join(violations)
+        )
+    return sma
+
+
+def _collect_pr106_tensors(
+    source_archive: SingleMemberArchive,
+) -> tuple[list[_PR106TensorBlob], bytes, bytes]:
+    """Parse PR106 archive: return (tensors, header_4B, latents_and_sidecar_brotli)."""
+    sma = source_archive
     packed = parse_ff_packed_brotli_hnerv(sma.payload)
     parsed = parse_packed_decoder_brotli(packed.decoder_packed_brotli)
     if len(parsed.records) != len(PACKED_STATE_SCHEMA):
@@ -452,7 +491,9 @@ def _stage_pr106_submission_dir(
     + codec are byte-identical to the published runtime since K-coarsening is
     encoder-side ONLY (the decoder reads the same int8 * scale dequantization).
     """
-    submission_dir.mkdir(parents=True, exist_ok=True)
+    if submission_dir.exists():
+        shutil.rmtree(submission_dir)
+    submission_dir.mkdir(parents=True, exist_ok=False)
     src_dir = submission_dir / "src"
     src_dir.mkdir(parents=True, exist_ok=True)
 
@@ -488,6 +529,17 @@ def _stage_pr106_submission_dir(
     return out
 
 
+def _source_runtime_file_sha256(pr106_source_dir: Path) -> dict[str, str]:
+    """Hash the exact vendored PR106 runtime inputs we copy or adapt."""
+    out: dict[str, str] = {}
+    for rel in ("inflate.py", "inflate.sh", "src/codec.py", "src/model.py"):
+        path = pr106_source_dir / rel
+        if not path.is_file():
+            raise SystemExit(f"FATAL: PR106 source missing: {path}")
+        out[rel] = _sha256(path.read_bytes())
+    return out
+
+
 def _local_smoke_roundtrip(
     *,
     archive_path: Path,
@@ -520,11 +572,14 @@ def _local_smoke_roundtrip(
     if spec is None or spec.loader is None:
         raise SystemExit("FATAL: smoke cannot load codec.py spec")
     codec_mod = importlib.util.module_from_spec(spec)
+    old_dont_write_bytecode = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
     sys.path.insert(0, str(src_dir))
     try:
         spec.loader.exec_module(codec_mod)
     finally:
         sys.path.pop(0)
+        sys.dont_write_bytecode = old_dont_write_bytecode
 
     # The archive is a single-member ZIP whose member is the inner blob.
     sma = read_strict_single_member_zip(archive_path)
@@ -722,8 +777,11 @@ def main(argv: list[str] | None = None) -> int:
     print(f"[pr106-uniward-build] output: {args.output_dir}")
 
     # 1) Parse PR106 substrate
-    tensors, header_bytes, latents_and_sidecar_brotli = _collect_pr106_tensors(
+    source_archive = _read_canonical_pr106_source_archive(
         args.source_archive
+    )
+    tensors, header_bytes, latents_and_sidecar_brotli = _collect_pr106_tensors(
+        source_archive
     )
     n_tensors = len(tensors)
     n_symbols = sum(tb.raw_i8.size for tb in tensors)
@@ -774,6 +832,7 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     # 5) Stage submission_dir (PR106-byte-identical decoder)
+    source_runtime_shas = _source_runtime_file_sha256(args.pr106_source_dir)
     staged_shas = _stage_pr106_submission_dir(
         submission_dir, pr106_source_dir=args.pr106_source_dir
     )
@@ -807,7 +866,18 @@ def main(argv: list[str] | None = None) -> int:
         "lane_id": LANE_ID,
         "built_at_utc": _utc_now_iso(),
         "input_source_archive": str(args.source_archive),
+        "input_source_archive_bytes": source_archive.archive_bytes,
+        "input_source_archive_sha256": source_archive.archive_sha256,
+        "input_source_archive_member_name": source_archive.member_name,
+        "input_source_archive_member_bytes": source_archive.member_bytes,
+        "input_source_archive_member_sha256": _sha256(source_archive.payload),
+        "expected_source_archive_bytes": PR106_ARCHIVE_BASELINE_BYTES,
+        "expected_source_archive_sha256": PR106_SOURCE_ARCHIVE_SHA256,
+        "expected_source_archive_member_name": PR106_PUBLISHED_MEMBER_NAME,
+        "expected_source_archive_member_bytes": PR106_PUBLISHED_MEMBER_BYTES,
+        "expected_source_archive_member_sha256": PR106_PUBLISHED_MEMBER_SHA256,
         "input_pr106_source_dir": str(args.pr106_source_dir),
+        "input_pr106_source_file_sha256": source_runtime_shas,
         "rms_target": args.rms_target,
         "brotli_quality": args.brotli_quality,
         "predicted_band": [args.predicted_low, args.predicted_high],
@@ -850,8 +920,14 @@ def main(argv: list[str] | None = None) -> int:
             "tac.hnerv_lowlevel_packer.parse_ff_packed_brotli_hnerv",
             "tac.hnerv_lowlevel_packer.read_strict_single_member_zip",
         ],
-        "wire_format_identity_with_pr106_published": True,
-        "wire_format_diff_vs_pr106": (
+        "wire_layout_identity_with_pr106_published": True,
+        "wire_payload_byte_identity_with_pr106_published": False,
+        "wire_format_identity_with_pr106_published": False,
+        "wire_format_identity_field_superseded_by": [
+            "wire_layout_identity_with_pr106_published",
+            "wire_payload_byte_identity_with_pr106_published",
+        ],
+        "wire_layout_diff_vs_pr106": (
             "byte-identical wire layout (0xff + 3B decoder length + "
             "decoder_packed_brotli + latents_and_sidecar_brotli verbatim); "
             "the int8 symbols inside decoder_packed_brotli are K-coarsened "

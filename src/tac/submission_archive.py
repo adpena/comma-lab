@@ -16,6 +16,7 @@ import hashlib
 import importlib.util
 import json
 import logging
+import re
 import shutil
 import stat
 import struct
@@ -49,8 +50,12 @@ def validate_archive_member_name(name: str) -> str:
         raise ValueError("archive member name is empty")
     if "\x00" in name:
         raise ValueError(f"archive member contains NUL byte: {name!r}")
+    if any(ord(ch) < 32 for ch in name):
+        raise ValueError(f"archive member contains control character: {name!r}")
     if "\\" in name:
         raise ValueError(f"archive member uses backslashes: {name!r}")
+    if re.match(r"^[A-Za-z]:", name):
+        raise ValueError(f"archive member uses Windows drive prefix: {name!r}")
 
     path = PurePosixPath(name)
     if path.is_absolute():

@@ -27,7 +27,18 @@ def test_safe_extract_zip_allows_valid_members(tmp_path: Path) -> None:
     assert (out / "nested" / "masks.mkv").read_bytes() == b"m"
 
 
-@pytest.mark.parametrize("name", ["../escape", "/abs", "__MACOSX/x", ".DS_Store", "ok/.hidden"])
+@pytest.mark.parametrize(
+    "name",
+    [
+        "../escape",
+        "/abs",
+        "__MACOSX/x",
+        ".DS_Store",
+        "ok/.hidden",
+        "bad\nname",
+        "C:evil",
+    ],
+)
 def test_safe_extract_zip_rejects_unsafe_member_names(tmp_path: Path, name: str) -> None:
     with pytest.raises(ValueError):
         validate_archive_member_name(name)

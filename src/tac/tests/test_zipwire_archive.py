@@ -83,6 +83,21 @@ def test_python_fallback_blocks_data_descriptor_flag(tmp_path: Path) -> None:
     assert record["blockers"] == ["x:data_descriptor_member_not_supported"]
 
 
+@pytest.mark.parametrize("name", ["bad\nname", "C:evil"])
+def test_python_fallback_uses_submission_archive_strict_name_rules(
+    tmp_path: Path,
+    name: str,
+) -> None:
+    archive = tmp_path / "unsafe_name.zip"
+    _write_member(archive, name, b"payload-bytes", ZIP_STORED)
+
+    record = inspect_zip_headers_python(archive)
+
+    assert record["zip_strict"] is False
+    assert record["members"][0]["name"] == name
+    assert any("unsafe_member_name:" in blocker for blocker in record["blockers"])
+
+
 def test_rust_bridge_matches_python_core_fields_when_binary_is_present(
     tmp_path: Path,
 ) -> None:

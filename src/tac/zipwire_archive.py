@@ -277,8 +277,15 @@ def _decode_zip_name(raw_name: bytes, flag_bits: int, offset: int) -> str:
 
 
 def _member_safety_blockers(name: str) -> list[str]:
+    if name.endswith("/") and name.count("/") == 1:
+        # validate_archive_member_name rejects "." and hidden/system paths, but
+        # accepts a normalized "dir" member. Keep directory blocking explicit in
+        # _inspect_member and validate the normalized name here.
+        normalized = name.rstrip("/")
+    else:
+        normalized = name.rstrip("/") if name.endswith("/") else name
     try:
-        validate_archive_member_name(name.rstrip("/") if name.endswith("/") else name)
+        validate_archive_member_name(normalized)
     except ValueError as exc:
         return [f"unsafe_member_name:{exc}"]
     return []

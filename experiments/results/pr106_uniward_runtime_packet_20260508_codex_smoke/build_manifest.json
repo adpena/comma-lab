@@ -2,9 +2,25 @@
   "schema_version": "pr106_uniward_lagrangian_runtime_packet_build.v1",
   "tool": "tools/build_pr106_uniward_runtime_packet.py",
   "lane_id": "pr106_uniward_lagrangian_runtime_packet",
-  "built_at_utc": "2026-05-08T08:33:04Z",
+  "built_at_utc": "2026-05-08T08:55:19Z",
   "input_source_archive": "/Users/adpena/Projects/pact/experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+  "input_source_archive_bytes": 186239,
+  "input_source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+  "input_source_archive_member_name": "0.bin",
+  "input_source_archive_member_bytes": 186131,
+  "input_source_archive_member_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+  "expected_source_archive_bytes": 186239,
+  "expected_source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+  "expected_source_archive_member_name": "0.bin",
+  "expected_source_archive_member_bytes": 186131,
+  "expected_source_archive_member_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
   "input_pr106_source_dir": "/Users/adpena/Projects/pact/experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders",
+  "input_pr106_source_file_sha256": {
+    "inflate.py": "e64529b2ab3fea2dea377629d69288a56afd7258f456e5ae48072c107d05e79a",
+    "inflate.sh": "0cb9c3df78ad870cadd2ac6d46007b6c1aeb6a61c76b7800ae74a00addafb885",
+    "src/codec.py": "404bf6efa5effb0e021bee62374465abfc5210d1bb6aeaa5188d82ef48773c41",
+    "src/model.py": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+  },
   "rms_target": 0.05,
   "brotli_quality": 11,
   "predicted_band": [
@@ -85,8 +101,14 @@
     "tac.hnerv_lowlevel_packer.parse_ff_packed_brotli_hnerv",
     "tac.hnerv_lowlevel_packer.read_strict_single_member_zip"
   ],
-  "wire_format_identity_with_pr106_published": true,
-  "wire_format_diff_vs_pr106": "byte-identical wire layout (0xff + 3B decoder length + decoder_packed_brotli + latents_and_sidecar_brotli verbatim); the int8 symbols inside decoder_packed_brotli are K-coarsened per UniwardWeightedAllocator selection (K-rounded magnitudes stored directly, no K side-info required)",
+  "wire_layout_identity_with_pr106_published": true,
+  "wire_payload_byte_identity_with_pr106_published": false,
+  "wire_format_identity_with_pr106_published": false,
+  "wire_format_identity_field_superseded_by": [
+    "wire_layout_identity_with_pr106_published",
+    "wire_payload_byte_identity_with_pr106_published"
+  ],
+  "wire_layout_diff_vs_pr106": "byte-identical wire layout (0xff + 3B decoder length + decoder_packed_brotli + latents_and_sidecar_brotli verbatim); the int8 symbols inside decoder_packed_brotli are K-coarsened per UniwardWeightedAllocator selection (K-rounded magnitudes stored directly, no K side-info required)",
   "review_eng_finding_relevant": "C2_no_dead_K_already_applies \u2014 PR106 wire format never carried K side-info; the K-coarsened int8 stream is sufficient for decoding (decoder reads q_int8 * scale_f32, just like the lossless variant)",
   "cuda_prestage_advisory_closed": "tier_a_cuda_dispatch_packets_prestaged_20260508 candidate 2 build_tool_advisory closed by this manifest",
   "evidence_grade": "[CPU-build]",

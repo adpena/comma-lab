@@ -8,6 +8,8 @@ import warnings
 import zipfile
 from pathlib import Path
 
+import pytest
+
 REPO = Path(__file__).resolve().parents[3]
 
 
@@ -404,7 +406,7 @@ def test_parallel_dispatch_rejects_zip_slip_archive_member(
         raise AssertionError("expected DispatchInputError")
 
     assert "archive_custody:archive_zip_unsafe_member:" in message
-    assert "zip_slip_member_name" in message
+    assert "zip-slip archive member path" in message
 
 
 def test_parallel_dispatch_rejects_duplicate_archive_members(
@@ -428,6 +430,89 @@ def test_parallel_dispatch_rejects_duplicate_archive_members(
         raise AssertionError("expected DispatchInputError")
 
     assert "archive_custody:archive_zip_duplicate_members" in message
+
+
+@pytest.mark.parametrize(
+    ("mutator", "expected"),
+    [
+        ("data_descriptor", "archive_zipwire:x:data_descriptor_member_not_supported"),
+        ("encrypted", "archive_zipwire:x:encrypted_member"),
+        ("unsupported_method", "archive_zipwire:x:unsupported_zip_method:99"),
+        ("local_crc", "archive_zipwire:x:local_central_crc32_mismatch"),
+        ("local_size", "archive_zipwire:x:local_central_compressed_size_mismatch"),
+        ("local_method", "archive_zipwire:x:local_central_compress_type_mismatch"),
+    ],
+)
+def test_parallel_dispatch_rejects_zipwire_strict_blockers(
+    tmp_path: Path,
+    mutator: str,
+    expected: str,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    archive = _write_archive(tmp_path / f"{mutator}.zip")
+    _mutate_zip_header(archive, mutator)
+    candidate = _ready_custody_candidate(
+        tmp_path,
+        archive_path=archive.as_posix(),
+        archive_size_bytes=archive.stat().st_size,
+        archive_sha256=hashlib.sha256(archive.read_bytes()).hexdigest(),
+    )
+    ranked = _write_ranked_input(tmp_path, [candidate])
+
+    try:
+        tool._load_top_k(ranked, k=None)
+    except tool.DispatchInputError as exc:
+        message = str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected DispatchInputError")
+
+    assert expected in message
+
+
+def test_parallel_dispatch_rejects_directory_archive_member(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    archive = _write_archive_with_members(tmp_path / "directory.zip", ["dir/"])
+    candidate = _ready_custody_candidate(
+        tmp_path,
+        archive_path=archive.as_posix(),
+        archive_size_bytes=archive.stat().st_size,
+        archive_sha256=hashlib.sha256(archive.read_bytes()).hexdigest(),
+    )
+    ranked = _write_ranked_input(tmp_path, [candidate])
+
+    try:
+        tool._load_top_k(ranked, k=None)
+    except tool.DispatchInputError as exc:
+        message = str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected DispatchInputError")
+
+    assert "archive_zipwire:dir/:directory_member_not_supported_for_contest_packet" in message
+
+
+def _mutate_zip_header(archive: Path, mutation: str) -> None:
+    raw = bytearray(archive.read_bytes())
+    central = raw.index(b"PK\x01\x02")
+    if mutation == "data_descriptor":
+        raw[6] |= 0x08
+        raw[central + 8] |= 0x08
+    elif mutation == "encrypted":
+        raw[6] |= 0x01
+        raw[central + 8] |= 0x01
+    elif mutation == "unsupported_method":
+        raw[8] = 99
+        raw[central + 10] = 99
+    elif mutation == "local_crc":
+        raw[14] ^= 0x01
+    elif mutation == "local_size":
+        raw[18] += 1
+    elif mutation == "local_method":
+        raw[8] = 99
+    else:  # pragma: no cover - defensive
+        raise AssertionError(mutation)
+    archive.write_bytes(raw)
 
 
 def test_parallel_dispatch_rejects_production_only_target_for_contest_dispatch(

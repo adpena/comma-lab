@@ -38,17 +38,17 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import re
-import struct
 import subprocess
 import sys
 import time
-import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO / "src"))
+
+from tac.zipwire_archive import inspect_zip_headers  # noqa: E402
 
 
 @dataclass
@@ -322,53 +322,6 @@ def _candidate_archive_sha256(candidate: dict) -> str:
     return ""
 
 
-def _unsafe_zip_name(name: str) -> str | None:
-    if not name:
-        return "empty_member_name"
-    if "\\" in name:
-        return "backslash_member_name"
-    if "\x00" in name or any(ord(ch) < 32 for ch in name):
-        return "control_character_member_name"
-    if re.match(r"^[A-Za-z]:", name):
-        return "windows_drive_member_name"
-    member = PurePosixPath(name)
-    if member.is_absolute() or ".." in member.parts:
-        return "zip_slip_member_name"
-    if "__MACOSX" in member.parts:
-        return "macosx_resource_directory"
-    if any(part.startswith("._") for part in member.parts):
-        return "resource_fork_member_name"
-    if any(part.startswith(".") for part in member.parts):
-        return "hidden_sidecar_member_name"
-    if member.name in {".DS_Store", "Thumbs.db"}:
-        return "resource_sidecar_member_name"
-    return None
-
-
-def _decode_zip_name(raw: bytes, flag_bits: int) -> str | None:
-    encoding = "utf-8" if flag_bits & 0x800 else "cp437"
-    try:
-        return raw.decode(encoding, errors="strict")
-    except UnicodeDecodeError:
-        return None
-
-
-def _local_header_name(path: Path, info: zipfile.ZipInfo) -> str | None:
-    try:
-        with path.open("rb") as handle:
-            handle.seek(info.header_offset)
-            header = handle.read(30)
-            if len(header) != 30 or header[:4] != b"PK\x03\x04":
-                return None
-            flag_bits = struct.unpack_from("<H", header, 6)[0]
-            name_len, extra_len = struct.unpack_from("<HH", header, 26)
-            raw_name = handle.read(name_len)
-            handle.read(extra_len)
-    except (OSError, struct.error):
-        return None
-    return _decode_zip_name(raw_name, flag_bits)
-
-
 def _candidate_exact_score(candidate: dict) -> float | None:
     for key in ("contest_cuda_score", "final_score", "contest_score", "score"):
         parsed = _coerce_float(candidate.get(key))
@@ -614,35 +567,24 @@ def _archive_custody_blockers(
         if _is_sha256(expected_sha) and actual_sha != expected_sha:
             blockers.append("archive_sha256_mismatch")
         try:
-            with zipfile.ZipFile(path) as zf:
-                infos = zf.infolist()
-                if not infos:
-                    blockers.append("archive_zip_empty")
-                names: list[str] = []
-                for info in infos:
-                    central = info.filename
-                    names.append(central)
-                    reason = _unsafe_zip_name(central)
-                    if reason is not None:
-                        blockers.append(
-                            f"archive_zip_unsafe_member:{central or '<empty>'}:{reason}"
-                        )
-                    local = _local_header_name(path, info)
-                    local_reason = _unsafe_zip_name(local or "")
-                    if local != central:
-                        blockers.append(
-                            "archive_zip_local_header_mismatch:"
-                            f"{central or '<empty>'}!={local or '<unreadable>'}"
-                        )
-                    if local_reason is not None:
-                        blockers.append(
-                            "archive_zip_local_header_unsafe:"
-                            f"{local or '<unreadable>'}:{local_reason}"
-                        )
-                if len(names) != len(set(names)):
-                    blockers.append("archive_zip_duplicate_members")
-        except (OSError, zipfile.BadZipFile):
-            blockers.append("archive_zip_unreadable")
+            zipwire = inspect_zip_headers(path)
+        except (OSError, ValueError) as exc:
+            blockers.append(f"archive_zip_unreadable:{exc}")
+        else:
+            if int(zipwire.get("member_count") or 0) == 0:
+                blockers.append("archive_zip_empty")
+            for name in zipwire.get("duplicate_member_names") or []:
+                blockers.append(f"archive_zip_duplicate_member:{name}")
+            if zipwire.get("duplicate_member_names"):
+                blockers.append("archive_zip_duplicate_members")
+            for blocker in zipwire.get("blockers") or []:
+                blockers.append(f"archive_zipwire:{blocker}")
+                if "unsafe_member_name:" in blocker:
+                    blockers.append(f"archive_zip_unsafe_member:{blocker}")
+                if "local_central_name_mismatch" in blocker:
+                    blockers.append(f"archive_zip_local_header_mismatch:{blocker}")
+            if zipwire.get("zip_strict") is not True and not (zipwire.get("blockers") or []):
+                blockers.append("archive_zipwire:not_strict_without_blockers")
     return blockers
 
 
