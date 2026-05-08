@@ -92,6 +92,12 @@ reactivation criteria documented per memo.
   macOS CPU advisory score **1.937884** (`pose=0.078646`,
   `seg=0.009361`, `172,615 B`). Reactivate with score-domain q-bit
   allocation, not the η=4 complexity schedule.
+- Cross-paradigm ADMM × Op1 finalizer — byte-closed `153,513 B` archive
+  (`7bbba307...`) now has a local macOS CPU advisory result:
+  **0.328444** (`pose=0.00014180`, `seg=0.00188570`). Rate improves, but
+  SegNet collapse dominates. Retire this measured config unless formal exact
+  negative is needed; reactivation requires scorer-aware/seg-boundary-aware
+  allocation or a lower-distortion trust region.
 - A6 Selfcomp block-FP × Ballé hyperprior compose — measured-config
   negative. Best compose **B=64, sq=uint8 = 214,035 B**, which loses to
   PR101 brotli by +35,891 B. Treat this as a scoped proxy retirement for

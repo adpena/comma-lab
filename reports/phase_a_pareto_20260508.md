@@ -17,6 +17,7 @@ PR101 brotli baseline: **178,144 B** (the byte-anchor most lanes target).
 | A3_alt_mallat_wavelet | 156,344 | -21,800 | +19,241 | — | [byte-anchor; sensitivity_proxy=mallat_wavelet] | — | incremental_improvement_insufficient (Mallat > Xavier in 2/4) |
 | A4_alt_filler_stc_pose | 3,960 | — | n/a | — | byte-anchor; pose_codec=filler_stc | — | pose-codec byte anchor; not comparable to full PR101 archive bytes |
 | A5_frame_conditional_bits | 174,060 | -4,084 | +36,957 | — | [CPU-prep faithful frame-conditional byte anchor]; [macOS-CPU advisory negative] | — | measured eta=4 complexity schedule collapsed: advisory score 1.937884, pose 0.078646, seg 0.009361; measured-config DEFERRED-pending-research per CLAUDE.md kill-as-last-resort (family-level reactivation criteria documented) |
+| Cross_paradigm_ADMM_x_Op1 | 153,513 | -24,631 | +16,410 | 4.15% proxy | [CPU-build]; [macOS-CPU advisory negative] | — | advisory score 0.328444: rate 0.102218, pose 0.00014180, seg 0.00188570; SegNet collapse confirms rel_err proxy is insufficient |
 | ADMM_lossy_coarsening_baseline | 147,285 | -30,859 | +10,182 | — | [CPU-build] | — | Path B baseline; -28 KB savings at 4-5% rel_err |
 
 ## Class-level findings
@@ -26,10 +27,12 @@ PR101 brotli baseline: **178,144 B** (the byte-anchor most lanes target).
 - **A4 ChARM byte-tight path is the only currently dispatch-ready lane** (commit `16a2d9d0`); operator authorization on $15 Lightning T4 outstanding.
 - **A1 first Modal config is a measured-config negative.** Training/build completed, but exact CUDA was skipped by Modal DALI/NVDEC preflight and the local macOS CPU advisory score was 3.721654. Reactivation needs a constrained fine-tune that preserves the PR101 reconstruction basin; do not exact-eval this archive unless intentionally filing a formal negative.
 - **A5 eta=4 complexity allocation is a measured-config negative.** The runtime packet is byte-closed and locally runnable, but macOS CPU advisory eval scored 1.937884. Reactivation must replace the video-complexity q-bit schedule with score-domain/Jacobian/paired-component allocation before remote exact eval spend.
+- **Cross-paradigm ADMM x Op1 is rate-successful but SegNet-unsafe at this config.** The 153,513-byte archive's advisory score is 0.328444 because `100*seg=0.18857`; future cross-paradigm work needs scorer-aware or boundary-aware allocation before exact remote spend.
 
 ## Open lanes
 
 - A4-alt (Filler STC pose codec): byte-anchor landed; representative pose-distribution only, not a PR101 monolithic archive rewrite.
 - A1 (score-gradient fine-tune): Modal infra produced an archive, but the first config collapsed. Next variant needs lower LR, stronger reconstruction preservation, or early-stop controls before remote exact eval spend.
 - A5 (frame-conditional bit budget): runtime side-info path and advisory per-pair marginals landed; eta=4 complexity schedule retired after macOS CPU advisory collapse. Next variant needs score-domain q-bit allocation.
+- Cross-paradigm ADMM x Op1: measured config retired after macOS CPU advisory SegNet collapse; next variant needs lower-distortion trust region or scorer-aware allocation.
 - A6 (Selfcomp block-FP × hyperprior compose): LANDED at `97fbfef2`. Best compose B=64, sq=uint8 = 214,035 B; BEATS blockfp-only (-34,607 B) AND hyperprior-only (-18,356 B); does NOT beat PR101 brotli baseline (+35,891 B). Verdict `incremental_improvement_insufficient` (NOT killed per CLAUDE.md kill-as-last-resort); 5 reactivation criteria documented in `feedback_pr101_a6_selfcomp_blockfp_hyperprior_byte_anchor_landed_20260508.md` (joint-AC over scale stream, learned hyper-decoder MLP, cross-tensor grouping, PR106 substrate, compose-after-lossy_coarsening).

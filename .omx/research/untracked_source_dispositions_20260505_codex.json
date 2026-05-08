@@ -28,7 +28,7 @@
       "runtime_source_baseline": {
         "algorithm": "pact_runtime_source_set_v1",
         "count": 10533,
-        "sha256": "f10bead71fb3eeda33fc5afc2963925b84e5feab84a24db0976340410267b4da"
+        "sha256": "66bcd938b95878c9e98e8af6420d456dbfcf49a797d1dbae9fe4e3c1f753187d"
       }
     },
     {
@@ -1424,6 +1424,12 @@
       "disposition": "track",
       "note": "track: durable A1 Modal advisory negative ledger; no raw provider transcript or payload.",
       "path": ".omx/research/phase_a1_score_gradient_modal_advisory_negative_20260508_codex.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable cross-paradigm ADMM x Op1 advisory negative ledger; no raw provider transcript or payload.",
+      "path": ".omx/research/cross_paradigm_admm_x_op1_macos_advisory_negative_20260508_codex.md"
     }
   ],
   "policy": "Every source-like untracked path must be track, recovery_queue, ignore_private, or ignore_rebuildable with rationale.",

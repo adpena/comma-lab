@@ -759,6 +759,9 @@ UV_WITH_INFLATE_DEPS=(
 )
 
 echo "[cross-paradigm-inflate] uv specs: brotli=$INFLATE_BROTLI_SPEC torch=$INFLATE_TORCH_SPEC numpy=$INFLATE_NUMPY_SPEC" >&2
+if [ -n "${PYTHON:-}" ]; then
+  echo "[cross-paradigm-inflate] using PYTHON override: $PYTHON" >&2
+fi
 
 while IFS= read -r line; do
   [ -z "$line" ] && continue
@@ -772,7 +775,11 @@ while IFS= read -r line; do
   [ ! -f "$SRC" ] && echo "ERROR: ${SRC} not found" >&2 && exit 1
 
   printf "Inflating %s ... " "$line"
-  "$UV_BIN" run --no-project "${UV_WITH_INFLATE_DEPS[@]}" python "$HERE/inflate.py" "$SRC" "$DST"
+  if [ -n "${PYTHON:-}" ]; then
+    "$PYTHON" "$HERE/inflate.py" "$SRC" "$DST"
+  else
+    "$UV_BIN" run --no-project "${UV_WITH_INFLATE_DEPS[@]}" python "$HERE/inflate.py" "$SRC" "$DST"
+  fi
 done < "$FILE_LIST"
 '''
 

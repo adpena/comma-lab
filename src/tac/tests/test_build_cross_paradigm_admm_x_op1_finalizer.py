@@ -36,6 +36,14 @@ def test_resolve_output_root_preserves_absolute_paths(tmp_path: Path) -> None:
     assert builder._resolve_output_root(output_root) == output_root.resolve()
 
 
+def test_forked_inflate_sh_supports_python_override_for_local_advisory_eval() -> None:
+    builder = _load_builder_module()
+
+    assert 'if [ -n "${PYTHON:-}" ]; then' in builder.FORKED_INFLATE_SH
+    assert '"$PYTHON" "$HERE/inflate.py" "$SRC" "$DST"' in builder.FORKED_INFLATE_SH
+    assert '"$UV_BIN" run --no-project "${UV_WITH_INFLATE_DEPS[@]}" python "$HERE/inflate.py" "$SRC" "$DST"' in builder.FORKED_INFLATE_SH
+
+
 def test_static_release_surface_records_archive_custody(tmp_path: Path) -> None:
     builder = _load_builder_module()
     archive_path = tmp_path / "archive.zip"
