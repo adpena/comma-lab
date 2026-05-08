@@ -27,6 +27,7 @@ workspace/upstream_snapshot.json
 # being caught.)
 .omx/state/*
 !.omx/state/artifact_kind_registry.yaml
+!.omx/state/next_catalog_number.txt
 .omx/state/vastai_active_instances.json
 .omx/state/instance_setup_first_seen.json
 
@@ -142,6 +143,7 @@ src/tac.egg-info/
 .omx/state/commit-serializer.log
 .omx/state/*.json
 .omx/state/**/*.json
+!.omx/state/artifact_classification_allowlist.json
 .omx/state/*.jsonl
 .omx/state/RACE_MODE_ACTIVE.flag
 .omx/status/

@@ -477,6 +477,34 @@ def _is_tracked_by_git(repo_root: Path, relpath: str) -> bool:
         return False
 
 
+def _tracked_paths_matching_pattern(root: Path, pattern: str) -> list[Path]:
+    """Return tracked repo paths matching ``pattern`` without walking ignored trees.
+
+    Historical-provenance patterns intentionally cover large experiment result
+    globs. Strict preflight must audit committed provenance, not spend minutes
+    enumerating ignored rebuildable output directories.
+    """
+    if pattern.startswith("/"):
+        return []
+    try:
+        result = subprocess.run(
+            ["git", "ls-files"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return []
+    if result.returncode != 0:
+        return []
+    return [
+        root / rel
+        for rel in result.stdout.splitlines()
+        if fnmatch.fnmatchcase(rel, pattern)
+    ]
+
+
 def _git_show_json(repo_root: Path, ref: str, relpath: str) -> Any | None:
     try:
         result = subprocess.run(
@@ -501,13 +529,126 @@ def _git_show_json(repo_root: Path, ref: str, relpath: str) -> Any | None:
 # ---------------------------------------------------------------------------
 
 
+# FIX-4 2026-05-08: long-lived-artifact roots that the META audit enumerates
+# unconditionally (catches artifacts the registry missed). Codex verification
+# review caught that `run_meta_lifecycle_audit` only iterated REGISTERED
+# patterns; new artifact paths outside the registry slipped past the META
+# gate entirely. Now every tracked file under these roots is classified, and
+# UNKNOWN (unregistered) classifications fail strict mode unless explicitly
+# allowlisted at `.omx/state/artifact_classification_allowlist.json`.
+LONG_LIVED_ARTIFACT_ROOTS: tuple[str, ...] = (
+    "experiments/results/",
+    ".omx/state/",
+    ".omx/research/",
+    "reports/",
+    "docs/",
+    "runtime-rs/",
+    "cuda/",
+    "submissions/robust_current/",
+)
+ALLOWLIST_RELPATH = ".omx/state/artifact_classification_allowlist.json"
+
+
+def _load_classification_allowlist(repo_root: Path) -> set[str]:
+    """Load explicit per-path allowlist for UNKNOWN long-lived artifacts.
+
+    Format: {"allowlisted_paths": [{"path": "...", "reason": "..."}], ...}
+    """
+    p = repo_root / ALLOWLIST_RELPATH
+    if not p.exists():
+        return set()
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+        return {entry["path"] for entry in data.get("allowlisted_paths", [])}
+    except (json.JSONDecodeError, KeyError, TypeError):
+        return set()
+
+
+def _enumerate_long_lived_tracked_paths(repo_root: Path) -> list[str]:
+    """git ls-files restricted to long-lived-artifact roots."""
+    try:
+        result = subprocess.run(
+            ["git", "ls-files"] + list(LONG_LIVED_ARTIFACT_ROOTS),
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return []
+    if result.returncode != 0:
+        return []
+    return [line for line in result.stdout.splitlines() if line.strip()]
+
+
+def audit_unregistered_long_lived_artifacts(
+    repo_root: Path | None = None,
+    *,
+    path_filter: set[str] | None = None,
+) -> list[str]:
+    """FIX-4: enumerate tracked long-lived artifacts; flag UNKNOWN classifications.
+
+    Returns one violation string per unregistered tracked artifact under the
+    long-lived roots that classifies as UNKNOWN AND is NOT in the explicit
+    allowlist. Empty list = clean.
+
+    Bug class fixed: codex verification 2026-05-08 caught that
+    ``run_meta_lifecycle_audit`` only iterated REGISTERED patterns from the
+    YAML registry. New long-lived artifacts outside the registry slipped
+    past the META gate entirely, recreating the provenance-vs-state-confusion
+    bug class for any future tracked artifact under
+    `experiments/results/`, `.omx/state/`, `reports/`, `docs/`, etc.
+
+    The fix enumerates `git ls-files` restricted to the long-lived roots
+    and asserts every result is either a known kind (LIVE_STATE / HP /
+    LIVE_RECIPE / DERIVED_OUTPUT) OR explicitly allowlisted with a reason.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    classifier = ArtifactClassifier(root)
+    allowlist = _load_classification_allowlist(root)
+    paths = _enumerate_long_lived_tracked_paths(root)
+    violations: list[str] = []
+    for relpath in paths:
+        if path_filter is not None and relpath not in path_filter:
+            continue
+        if relpath in allowlist:
+            continue
+        classification = classifier.classify_path(relpath)
+        if classification.kind is ArtifactKind.UNKNOWN:
+            violations.append(
+                f"UNKNOWN long-lived artifact {relpath!r}: not classified by "
+                f"any registry pattern AND not in allowlist at "
+                f"{ALLOWLIST_RELPATH}. Either add a registry pattern that "
+                f"classifies it (LIVE_STATE / HISTORICAL_PROVENANCE / "
+                f"LIVE_RECIPE / DERIVED_OUTPUT), or allowlist it with a "
+                f"justification."
+            )
+    return violations
+
+
 def run_meta_lifecycle_audit(
     repo_root: Path | None = None,
     *,
     base_ref: str | None = None,
     head_ref: str = "HEAD",
+    path_filter: set[str] | None = None,
+    enumerate_unregistered: bool = False,
 ) -> list[str]:
     """Run all four guards against every registry-classified file under the repo.
+
+    When ``path_filter`` is provided, only matching repo-relative paths are
+    audited. This is how preflight blocks newly changed lifecycle violations
+    without rewriting historical evidence artifacts during legacy migration.
+
+    When ``enumerate_unregistered`` is True, ALSO enumerates `git ls-files`
+    under long-lived-artifact roots and flags any tracked file that
+    classifies as UNKNOWN (FIX-4 — closes the codex-verification gap where
+    unregistered artifacts slipped past the META gate). Default is False
+    pending operator allowlist baseline (~4016 currently-unregistered
+    artifacts in the repo; call ``audit_unregistered_long_lived_artifacts``
+    directly for the explicit unregistered-only audit, OR pass
+    ``enumerate_unregistered=True`` once the allowlist at
+    `.omx/state/artifact_classification_allowlist.json` is populated).
 
     Returns a list of violation strings (empty on clean).
     """
@@ -529,8 +670,17 @@ def run_meta_lifecycle_audit(
         if entry.pattern in seen_patterns:
             continue
         seen_patterns.add(entry.pattern)
-        # fnmatch + glob: convert pattern to glob walk under repo root
-        for path in _glob_under_root(root, entry.pattern):
+        # Audit durable repo artifacts, not the full ignored filesystem. Every
+        # lifecycle kind is a source-control contract: LIVE_STATE must not be
+        # tracked; HISTORICAL_PROVENANCE must be append-only once tracked;
+        # LIVE_RECIPE / DERIVED_OUTPUT rules protect committed surfaces. Using
+        # git-ls-files here keeps strict preflight bounded even when broad
+        # registry patterns overlap large experiment result trees.
+        paths = _tracked_paths_matching_pattern(root, entry.pattern)
+        for path in paths:
+            rel = _rel_path(path, root)
+            if path_filter is not None and rel not in path_filter:
+                continue
             if entry.kind is ArtifactKind.LIVE_STATE:
                 res = live_guard.check(path)
             elif entry.kind is ArtifactKind.HISTORICAL_PROVENANCE:
@@ -552,6 +702,14 @@ def run_meta_lifecycle_audit(
                 continue
             for v in res.violations:
                 violations.append(v)
+    # FIX-4: also flag UNKNOWN-classified long-lived artifacts.
+    if enumerate_unregistered:
+        violations.extend(
+            audit_unregistered_long_lived_artifacts(
+                repo_root=root,
+                path_filter=path_filter,
+            )
+        )
     return violations
 
 
@@ -573,6 +731,8 @@ def _glob_under_root(root: Path, pattern: str) -> list[Path]:
 
 
 __all__ = [
+    "ALLOWLIST_RELPATH",
+    "LONG_LIVED_ARTIFACT_ROOTS",
     "REGISTRY_RELPATH",
     "ArtifactClassifier",
     "ArtifactKind",
@@ -585,6 +745,7 @@ __all__ = [
     "ProvenanceGuard",
     "RecipeGuard",
     "RegistryEntry",
+    "audit_unregistered_long_lived_artifacts",
     "load_registry",
     "run_meta_lifecycle_audit",
 ]

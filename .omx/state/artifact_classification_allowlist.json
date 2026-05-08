@@ -1,0 +1,5 @@
+{
+  "schema_version": "artifact_classification_allowlist.v1",
+  "doc": "Per-path allowlist for UNKNOWN-classified long-lived artifacts that are intentionally retained. Each entry must justify why the path is exempt from the LIVE_STATE/HISTORICAL_PROVENANCE/LIVE_RECIPE/DERIVED_OUTPUT taxonomy. Entries here are ALLOWED to bypass `audit_unregistered_long_lived_artifacts`. Adding a path here is a deliberate operator choice, NOT a default. Sister gate is `check_artifact_lifecycle_compliance` (catalog #113) wired strict; FIX-4 (catalog #117) extends it with the enumerate-unregistered audit landed 2026-05-08.",
+  "allowlisted_paths": []
+}

@@ -66,6 +66,7 @@ from __future__ import annotations
 import argparse
 import datetime as _dt
 import fcntl
+import hashlib
 import json
 import os
 import socket
@@ -79,6 +80,53 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 LOCK_PATH = REPO_ROOT / ".omx/state/.commit-lock"
 LOG_PATH = REPO_ROOT / ".omx/state/commit-serializer.log"
+
+# Canonical Co-Authored-By trailer (FIX-3 2026-05-08).
+CO_AUTHOR_TRAILER = (
+    "Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
+)
+
+
+def _hash_working_tree_files(files: list[str]) -> dict[str, str]:
+    """SHA-256 each file's working-tree content (FIX-1 concurrent-edit detection).
+
+    Used to detect a sister subagent modifying our intended-to-commit files
+    between the moment we computed the pre-lock snapshot and the moment we
+    acquire LOCK_EX. If the working-tree content of any file in our list
+    changed during the lock-wait window, that's evidence that a concurrent
+    subagent's edit is about to leak into our commit. Refuse rather than
+    silently package someone else's changes under our authorship.
+
+    Bug class: META-FIX subagent's `src/tac/preflight.py` edits flowed into
+    sister FIX-5 commit `89d6eba2` because both subagents edited the file
+    in the working tree concurrently. The temp-index isolates staging but
+    `git add` reads the working tree, so concurrent working-tree edits can
+    still leak. This hash check catches that leak.
+    """
+    out: dict[str, str] = {}
+    for f in files:
+        p = REPO_ROOT / f
+        try:
+            out[f] = hashlib.sha256(p.read_bytes()).hexdigest()
+        except FileNotFoundError:
+            out[f] = "MISSING"
+        except OSError as e:
+            out[f] = f"ERROR:{type(e).__name__}"
+    return out
+
+
+def _append_co_author_trailer(message: str) -> str:
+    """Auto-append the canonical Co-Authored-By trailer (FIX-3 2026-05-08).
+
+    Idempotent: if the trailer is already present, return unchanged. Otherwise
+    append two newlines + the canonical trailer line. Subagents flagged this
+    as a recurring miss across multiple commits this session (FIX-1 00896b43,
+    FIX-3+4 c6d09bbb, FIX-5 89d6eba2, etc.).
+    """
+    if CO_AUTHOR_TRAILER in message:
+        return message
+    sep = "\n\n" if not message.endswith("\n") else "\n"
+    return message + sep + CO_AUTHOR_TRAILER + "\n"
 
 # How many seconds to wait for the lock before giving up. The pre-commit
 # hook runs full preflight (~5-10s) so 120s easily accommodates 5+ queued
@@ -252,6 +300,18 @@ def main() -> int:
         help="Subagent label for log forensics (default: $SUBAGENT_LABEL or "
              "'anonymous').",
     )
+    parser.add_argument(
+        "--no-co-author", action="store_true",
+        help="Skip auto-appending the Co-Authored-By trailer. Use ONLY for "
+             "human-authored commits or commits that intentionally have no "
+             "Claude attribution. Default: trailer auto-appended (FIX-3).",
+    )
+    parser.add_argument(
+        "--no-concurrent-edit-check", action="store_true",
+        help="Skip the FIX-1 pre-lock vs post-lock content-hash mismatch "
+             "check. Use ONLY when intentionally racing edits with a known "
+             "sister subagent (rare); default: check enabled.",
+    )
     args = parser.parse_args()
 
     # Resolve file list
@@ -282,6 +342,19 @@ def main() -> int:
         "no_stage": bool(args.no_stage),
     }
 
+    # FIX-1: snapshot working-tree content hashes BEFORE acquiring lock.
+    # If any file's content changes between this moment and post-lock, a
+    # concurrent subagent edited our intended-to-commit files and we refuse.
+    pre_lock_hashes: dict[str, str] = {}
+    if not args.no_concurrent_edit_check and not args.no_stage and files:
+        pre_lock_hashes = _hash_working_tree_files(files)
+
+    # Auto-append Co-Authored-By trailer (FIX-3, idempotent).
+    final_message = (
+        args.message if args.no_co_author
+        else _append_co_author_trailer(args.message)
+    )
+
     # Acquire lock
     t0 = time.monotonic()
     try:
@@ -292,6 +365,37 @@ def main() -> int:
         print(f"[subagent-commit-serializer] FATAL: {e!s}", file=sys.stderr)
         return 2
     wait_seconds = round(time.monotonic() - t0, 3)
+
+    # FIX-1: re-hash under the lock and compare. If a sister subagent
+    # modified our --files content during our lock-wait, refuse.
+    if not args.no_concurrent_edit_check and not args.no_stage and files:
+        post_lock_hashes = _hash_working_tree_files(files)
+        diffs = {
+            f: (pre_lock_hashes.get(f, "?"), post_lock_hashes.get(f, "?"))
+            for f in files
+            if pre_lock_hashes.get(f) != post_lock_hashes.get(f)
+        }
+        if diffs:
+            _release_lock(lock_fh)
+            _append_log({
+                **base_record,
+                "outcome": "concurrent_edit_detected",
+                "wait_seconds": wait_seconds,
+                "concurrent_edit_diffs": {
+                    f: {"pre": pre, "post": post}
+                    for f, (pre, post) in diffs.items()
+                },
+            })
+            print(
+                "[subagent-commit-serializer] REFUSED: concurrent-edit "
+                "detected on these files between pre-lock and post-lock "
+                "snapshot. A sister subagent edited our files during the "
+                "lock-wait window. Re-stage and retry; do not silently "
+                "package their changes under your commit. Files affected: "
+                f"{list(diffs.keys())!r}",
+                file=sys.stderr,
+            )
+            return 3
 
     temp_index_path: str | None = None
     try:
@@ -317,8 +421,10 @@ def main() -> int:
                 return rc
 
         # Step 2: commit (pre-commit hook fires here, inherits GIT_INDEX_FILE)
+        # final_message includes the FIX-3 Co-Authored-By trailer unless
+        # --no-co-author was passed.
         commit_t0 = time.monotonic()
-        rc, stdout, stderr = _git_commit(args.message, env, allow_empty=args.allow_empty)
+        rc, stdout, stderr = _git_commit(final_message, env, allow_empty=args.allow_empty)
         commit_seconds = round(time.monotonic() - commit_t0, 3)
 
         head_after = _git_head_sha()

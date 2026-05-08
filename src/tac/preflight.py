@@ -497,6 +497,16 @@ def preflight_all(
         # ARTIFACT_LIFECYCLE_BASE_REF is set.
         # Memory: feedback_codex_findings_meta_pattern_artifact_lifecycle_FIXED_20260508.md
         check_artifact_lifecycle_compliance(strict=True, verbose=verbose)
+        # 2026-05-08 META-META commit-machinery permanent protection
+        # (catalogs #117, #118, #119). Wired warn-only initially because
+        # legacy commits (those landed before the auto-append/serializer-
+        # log/atomic-counter machinery existed) carry expected violations;
+        # promotion-path is to clear with allowlist annotations + flip
+        # strict once live count = 0. Memory ref:
+        # feedback_meta_meta_commit_machinery_protections_20260508.md
+        check_subagent_commit_serializer_uses_lock(strict=False, verbose=verbose)
+        check_claude_md_catalog_no_duplicate_numbers(strict=True, verbose=verbose)
+        check_subagent_commits_have_co_author_trailer(strict=False, verbose=verbose)
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -3696,6 +3706,55 @@ def check_operator_approval_must_be_lane_scoped(
     return violations
 
 
+def _artifact_lifecycle_ref_exists(root: Path, ref: str) -> bool:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--verify", "--quiet", ref],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return False
+    return result.returncode == 0
+
+
+def _artifact_lifecycle_default_base_ref(root: Path) -> str | None:
+    explicit = os.environ.get("ARTIFACT_LIFECYCLE_BASE_REF")
+    if explicit:
+        return explicit
+    for ref in ("origin/main", "HEAD"):
+        if _artifact_lifecycle_ref_exists(root, ref):
+            return ref
+    return None
+
+
+def _artifact_lifecycle_changed_paths(root: Path, base_ref: str | None) -> set[str]:
+    paths: set[str] = set()
+
+    def collect(args: list[str]) -> None:
+        try:
+            result = subprocess.run(
+                ["git", *args],
+                cwd=root,
+                capture_output=True,
+                text=True,
+                timeout=20,
+            )
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+            return
+        if result.returncode != 0:
+            return
+        paths.update(line.strip() for line in result.stdout.splitlines() if line.strip())
+
+    if base_ref:
+        collect(["diff", "--name-only", "--diff-filter=ACMRTUXB", f"{base_ref}..HEAD"])
+    collect(["diff", "--name-only", "--diff-filter=ACMRTUXB", "--cached"])
+    collect(["diff", "--name-only", "--diff-filter=ACMRTUXB"])
+    return paths
+
+
 def check_artifact_lifecycle_compliance(
     *,
     repo_root: str | Path | None = None,
@@ -3729,9 +3788,17 @@ def check_artifact_lifecycle_compliance(
     from tac.artifact_lifecycle import run_meta_lifecycle_audit
 
     root = Path(repo_root or REPO_ROOT)
+    full_strict = os.environ.get("ARTIFACT_LIFECYCLE_FULL_STRICT") == "1"
+    base_ref = _artifact_lifecycle_default_base_ref(root)
+    path_filter = None
+    changed_paths: set[str] | None = None
+    if strict and not full_strict:
+        changed_paths = _artifact_lifecycle_changed_paths(root, base_ref)
+        path_filter = changed_paths
     violations = run_meta_lifecycle_audit(
         repo_root=root,
-        base_ref=os.environ.get("ARTIFACT_LIFECYCLE_BASE_REF") or None,
+        base_ref=base_ref,
+        path_filter=path_filter,
     )
     if violations and strict:
         raise MetaBugViolation(
@@ -3742,7 +3809,12 @@ def check_artifact_lifecycle_compliance(
         if violations:
             print(f"  [artifact-lifecycle] {len(violations)} violation(s)")
         else:
-            print("  [artifact-lifecycle] OK")
+            scope = (
+                f"changed-scope {len(changed_paths or set())} path(s)"
+                if strict and not full_strict
+                else "full-repo"
+            )
+            print(f"  [artifact-lifecycle] OK ({scope})")
     return violations
 
 
@@ -25318,6 +25390,255 @@ def check_packet_blocker_clearance_evidence_matches(
             )
         else:
             print(f"  [packet-clearance-evidence] OK ({scanned} manifest(s) scanned)")
+    return violations
+
+
+# ---------------------------------------------------------------------------
+# 2026-05-08 META-META commit-machinery permanent protection gates
+# (Catalog #117, #118, #119). Cover the bug classes observed across the
+# multi-burst hardening run that the per-finding fixes did NOT yet protect:
+#   - concurrent-edit-leak (META-FIX preflight.py edits flowed into FIX-5
+#     commit 89d6eba2 because both subagents edited the working tree before
+#     either acquired the commit-serializer lock; the lock prevents commit
+#     body shuffle but didn't detect concurrent working-tree edits)
+#   - catalog #N collision (FIX-A-CUSTODY fa604f72 + FIX-A-SYNTH c80162e7
+#     both grabbed Catalog #114 because there was no atomic global counter)
+#   - missing Co-Authored-By trailer (3 subagents flagged: serializer didn't
+#     auto-append; trailer missing on 00896b43, c6d09bbb, 89d6eba2, etc.)
+# Memory: feedback_meta_meta_commit_machinery_protections_20260508.md
+# ---------------------------------------------------------------------------
+
+
+def check_subagent_commit_serializer_uses_lock(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    last_n_commits: int = 50,
+) -> list[str]:
+    """Catalog #117 — every subagent commit must go through subagent_commit_serializer.
+
+    Scans the last ``last_n_commits`` commits. The serializer leaves a JSONL
+    audit log at .omx/state/commit-serializer.log; commits whose hash does
+    NOT appear in that log are deemed "bypassed the serializer" and flagged.
+
+    Operator/main-session commits can opt out by including
+    ``# NO_SERIALIZER_OK:<reason>`` in the commit message body. This is for
+    legitimate cases (operator manually committing, sister forks running
+    independent serializer instances on different machines, etc.).
+
+    Bug class fixed: META-FIX subagent's preflight.py edits flowed into
+    FIX-5 commit 89d6eba2 because the working tree was shared and the lock
+    only serialized commits, not edits. The new --no-concurrent-edit-check
+    on the serializer (FIX-1) catches the concurrent-edit case directly;
+    THIS gate enforces that every subagent commit USES the serializer (so
+    the FIX-1 protection applies).
+    """
+    repo_root = REPO_ROOT
+    log_path = repo_root / ".omx/state/commit-serializer.log"
+    seen_hashes: set[str] = set()
+    if log_path.exists():
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                try:
+                    rec = json.loads(line)
+                    h = rec.get("head_after")
+                    if h:
+                        seen_hashes.add(str(h))
+                except (json.JSONDecodeError, AttributeError):
+                    continue
+        except OSError:
+            pass
+
+    try:
+        result = subprocess.run(
+            ["git", "log", f"-{last_n_commits}", "--format=%H%x09%s%x09%b%x1f"],
+            cwd=repo_root, capture_output=True, text=True, timeout=10,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return []
+    if result.returncode != 0:
+        return []
+
+    violations: list[str] = []
+    scanned = 0
+    for raw in result.stdout.split("\x1f"):
+        raw = raw.strip()
+        if not raw:
+            continue
+        scanned += 1
+        parts = raw.split("\t", 2)
+        if len(parts) < 2:
+            continue
+        full_sha = parts[0]
+        short_sha = full_sha[:7]
+        msg = (parts[1] if len(parts) > 1 else "") + "\n" + (parts[2] if len(parts) > 2 else "")
+        if "NO_SERIALIZER_OK" in msg:
+            continue
+        if short_sha in seen_hashes or full_sha in seen_hashes:
+            continue
+        violations.append(
+            f"commit {short_sha} did not go through subagent_commit_serializer "
+            f"(no matching record in .omx/state/commit-serializer.log). Add "
+            f"`# NO_SERIALIZER_OK:<reason>` to the message body to allowlist."
+        )
+    if violations and strict:
+        msg = (
+            f"check_subagent_commit_serializer_uses_lock: {len(violations)} "
+            f"unserialized commit(s) in last {last_n_commits}; first 3:\n  "
+            + "\n  ".join(violations[:3])
+        )
+        raise PreflightError(msg)
+    if verbose:
+        if violations:
+            print(
+                f"  [commit-serializer-usage] WARN: {len(violations)} "
+                f"unserialized commit(s) in last {last_n_commits} "
+                f"(strict={strict})"
+            )
+        else:
+            print(
+                f"  [commit-serializer-usage] OK ({scanned} commit(s) scanned)"
+            )
+    return violations
+
+
+_CATALOG_LINE_RE = re.compile(r"^(\d+)\.\s+`?check_")
+
+
+def check_claude_md_catalog_no_duplicate_numbers(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #118 — CLAUDE.md catalog entries must have unique numbers.
+
+    Bug class fixed: FIX-A-CUSTODY (fa604f72) and FIX-A-SYNTH (c80162e7)
+    both grabbed Catalog #114 because they read CLAUDE.md concurrently to
+    find next-available without coordination. Sister fork manually
+    renumbered after-the-fact at 000089d1. Now ``tools/claim_catalog_number.py``
+    serializes claims via fcntl.flock, and THIS gate refuses any CLAUDE.md
+    state with duplicate ``^[0-9]+\\. \\`check_*`` lines.
+    """
+    repo_root = REPO_ROOT
+    claude_md = repo_root / "CLAUDE.md"
+    if not claude_md.is_file():
+        return []
+    try:
+        text = claude_md.read_text(encoding="utf-8")
+    except OSError:
+        return []
+    seen: dict[int, list[int]] = {}
+    for lineno, raw in enumerate(text.splitlines(), start=1):
+        m = _CATALOG_LINE_RE.match(raw)
+        if not m:
+            continue
+        n = int(m.group(1))
+        seen.setdefault(n, []).append(lineno)
+    duplicates = {n: lines for n, lines in seen.items() if len(lines) > 1}
+    violations: list[str] = []
+    for n, lines in sorted(duplicates.items()):
+        violations.append(
+            f"CLAUDE.md Catalog #{n} appears at lines {lines!r} (duplicate). "
+            f"Use `python tools/claim_catalog_number.py claim` to atomically "
+            f"reserve a unique number; renumber the sister to next-available."
+        )
+    if violations and strict:
+        msg = (
+            f"check_claude_md_catalog_no_duplicate_numbers: "
+            f"{len(violations)} duplicate catalog number(s):\n  "
+            + "\n  ".join(violations[:3])
+        )
+        raise PreflightError(msg)
+    if verbose:
+        if violations:
+            print(
+                f"  [catalog-no-duplicates] WARN: {len(violations)} "
+                f"duplicate(s) (strict={strict})"
+            )
+        else:
+            print(
+                f"  [catalog-no-duplicates] OK ({len(seen)} unique entries)"
+            )
+    return violations
+
+
+_CO_AUTHOR_LINE = (
+    "Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
+)
+
+
+def check_subagent_commits_have_co_author_trailer(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    last_n_commits: int = 50,
+) -> list[str]:
+    """Catalog #119 — subagent commits must include Co-Authored-By trailer.
+
+    Scans the last ``last_n_commits`` commits. Commits whose AuthorEmail
+    matches the operator/main-session pattern AND whose message lacks the
+    canonical trailer are flagged. Allowlist via ``# NO_CO_AUTHOR_OK:<reason>``
+    in the commit body.
+
+    Bug class fixed: 3 subagents (FIX-1, FIX-3+4, FIX-5) flagged that the
+    serializer wasn't auto-appending the trailer. FIX-3 made it automatic;
+    THIS gate enforces it on commits going forward.
+    """
+    repo_root = REPO_ROOT
+    try:
+        result = subprocess.run(
+            [
+                "git", "log", f"-{last_n_commits}",
+                "--format=%H%x09%ae%x09%B%x1f",
+            ],
+            cwd=repo_root, capture_output=True, text=True, timeout=10,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return []
+    if result.returncode != 0:
+        return []
+    violations: list[str] = []
+    scanned = 0
+    for raw in result.stdout.split("\x1f"):
+        raw = raw.strip()
+        if not raw:
+            continue
+        scanned += 1
+        parts = raw.split("\t", 2)
+        if len(parts) < 3:
+            continue
+        full_sha, _author_email, body = parts
+        short_sha = full_sha[:7]
+        if "NO_CO_AUTHOR_OK" in body:
+            continue
+        if _CO_AUTHOR_LINE in body:
+            continue
+        violations.append(
+            f"commit {short_sha} missing Co-Authored-By trailer "
+            f"({_CO_AUTHOR_LINE!r}). Add via subagent_commit_serializer "
+            f"(now auto-appends per FIX-3) or include "
+            f"`# NO_CO_AUTHOR_OK:<reason>` to allowlist."
+        )
+    if violations and strict:
+        msg = (
+            f"check_subagent_commits_have_co_author_trailer: "
+            f"{len(violations)} commit(s) missing trailer in last "
+            f"{last_n_commits}; first 3:\n  "
+            + "\n  ".join(violations[:3])
+        )
+        raise PreflightError(msg)
+    if verbose:
+        if violations:
+            print(
+                f"  [co-author-trailer] WARN: {len(violations)}/{scanned} "
+                f"commit(s) missing trailer (strict={strict})"
+            )
+        else:
+            print(
+                f"  [co-author-trailer] OK ({scanned} commit(s) scanned)"
+            )
     return violations
 
 
