@@ -375,55 +375,206 @@ class CharmHyperprior(nn.Module):
             "rate_bits_z": torch.tensor(z_rate_bits, device=device),
             "scale": scale,
             "w_int8": w_int8,
-            "n_padded": pad,
+            "n_padded": torch.tensor(w_padded.numel(), device=device),
+            "pad_count": torch.tensor(pad, device=device),
         }
 
 
 def encode_weight_with_charm(
     weight: torch.Tensor, charm: CharmHyperprior
 ) -> tuple[bytes, dict]:
-    """Encode a weight tensor → bytes using the ChARM hyperprior.
+    """Encode a weight tensor → bytes using the ChARM hyperprior + real range coding.
 
-    Returns (compressed_bytes, metadata_dict).
+    Wire format ('CARM2', the byte-tight successor to the toy 'CARM' format):
+        magic 'CARM2' (5 bytes)
+        scale (fp32, big-endian)
+        ndim (uint32, BE)
+        shape[ndim] (uint32 BE each)
+        n (uint32 BE) — total INT8 symbols (pre-padding)
+        n_padded (uint32 BE) — symbols after channel-padding
+        num_channels (uint32 BE) — channel grouping used for ChARM PMFs
+        per-channel (mu, log_sigma) as fp16 BE pairs (2 * 2 * num_channels bytes)
+        range_coded_payload_len (uint32 BE)
+        range_coded_payload (bytes) — produced by ChARMRangeEncoder over the
+            quantised INT8 stream, with the c-th channel coded under the
+            Gaussian PMF parameterised by (mu_c, exp(log_sigma_c)).
+        z_len (uint32 BE)
+        z (z_len bytes — informational for now; future ChARM2 versions can
+           rederive (mu, sigma) from z + decoder weights instead of shipping
+           the fp16 sidecar)
 
-    NOTE: This toy implementation uses a deterministic byte representation that
-    captures the int8 quantized weights + z + scale. A production implementation
-    would use range coding under the predicted (μ, σ) gaussian. For the ablation
-    we measure the IDEAL achievable rate (the differentiable rate_bits estimate),
-    which is the lower bound; any practical coder achieves rate_bits + ~0-1%
-    overhead. This is empirically validated below in the smoke roundtrip test.
+    The range coding step calls :class:`tac.codec.charm_range_coder.ChARMRangeEncoder`
+    with per-symbol PMFs derived from the per-channel (mu, sigma) predictions
+    coming out of the ChARM 2020 hyperprior (`charm.forward(weight)`). This
+    closes the empirical loop the older `CARM` format left open: archive bytes
+    are now actually byte-tight against the predicted rate (within ~1% of the
+    matched-Gaussian Shannon bound; see test_charm_range_coder.py).
+
+    [empirical:src/tac/tests/test_charm_range_coder.py]
     """
+    import struct
+
+    from tac.codec.charm_range_coder import (
+        ChARMRangeEncoder,
+        gaussian_pmf_int8,
+    )
+
     out = charm(weight)
     w_int8 = out["w_int8"].cpu().to(torch.int8)
-    z = out["z"].detach().cpu().numpy().tobytes()
     scale = float(out["scale"].item())
-    # Pack: [4-byte magic 'CARM'] [8-byte scale fp64] [4-byte ndim] [ndim*4-byte shape] [4-byte n] [n bytes int8] [4-byte z_len] [z_len bytes]
-    # Round 1 review fix #3: removed dead `b""` write; scale packed as fp32 not fp64
-    import struct
+    z_bytes = out["z"].detach().cpu().numpy().tobytes()
+    mu = out["mu"].detach().cpu().numpy().astype(np.float32)
+    sigma = out["sigma"].detach().cpu().numpy().astype(np.float32)
+    num_channels = int(charm.num_weight_channels)
+    assert mu.shape == (num_channels,) and sigma.shape == (num_channels,)
+
+    # Replicate the channel-padding the ChARM forward applies so we have
+    # exactly num_channels chunks of group_size symbols each.
+    flat = w_int8.numpy().reshape(-1)
+    n = flat.size
+    pad = (num_channels - n % num_channels) % num_channels
+    padded = np.concatenate([flat, np.zeros(pad, dtype=np.int8)])
+    group_size = padded.size // num_channels
+    chunked = padded.reshape(num_channels, group_size)
+
+    # log_sigma is stored to match the ChARM forward's natural parameterisation
+    # (sigma = exp(log_sigma)); avoids precision loss on small sigmas.
+    log_sigma = np.log(np.clip(sigma, 1e-6, None))
+    sidecar = np.stack(
+        [mu.astype(np.float16), log_sigma.astype(np.float16)], axis=1
+    )
+    sidecar_bytes = sidecar.astype(">f2").tobytes()
+    assert len(sidecar_bytes) == 2 * 2 * num_channels
+
+    # The fp16 sidecar is the wire contract. Encode using the exact values the
+    # decoder will recover from bytes; otherwise float32-vs-fp16 parameter drift
+    # changes the PMF and can corrupt the range-coded stream.
+    sidecar_canonical = np.frombuffer(sidecar_bytes, dtype=">f2").reshape(
+        num_channels, 2
+    )
+    mu_wire = sidecar_canonical[:, 0].astype(np.float64)
+    sigma_wire = np.exp(sidecar_canonical[:, 1].astype(np.float64))
+
+    # Range-code under per-channel Gaussian PMFs.
+    encoder = ChARMRangeEncoder(alphabet=(-128, 127), pmf_total_bits=15)
+    for c in range(num_channels):
+        pmf = gaussian_pmf_int8(
+            mu=float(mu_wire[c]),
+            sigma=float(sigma_wire[c]),
+            alphabet_lo=-128,
+            alphabet_hi=127,
+        )
+        for symbol in chunked[c]:
+            encoder.write_symbol(int(symbol), pmf)
+    range_payload = encoder.finish()
+
     buf = io.BytesIO()
-    buf.write(b"CARM")
+    buf.write(b"CARM2")
     buf.write(struct.pack(">f", scale))
     buf.write(struct.pack(">I", weight.dim()))
     for s in weight.shape:
         buf.write(struct.pack(">I", s))
-    n = w_int8.numel()
     buf.write(struct.pack(">I", n))
-    buf.write(w_int8.numpy().tobytes())
-    buf.write(struct.pack(">I", len(z)))
-    buf.write(z)
+    buf.write(struct.pack(">I", padded.size))
+    buf.write(struct.pack(">I", num_channels))
+    # Per-channel (mu, log_sigma) sidecar: 2 * 2 * num_channels bytes (fp16 BE).
+    buf.write(sidecar_bytes)
+    buf.write(struct.pack(">I", len(range_payload)))
+    buf.write(range_payload)
+    buf.write(struct.pack(">I", len(z_bytes)))
+    buf.write(z_bytes)
     return buf.getvalue(), {
         "shape": list(weight.shape),
         "n": int(n),
+        "n_padded": int(padded.size),
+        "num_channels": num_channels,
         "scale": scale,
         "ideal_rate_bits": float(out["rate_bits"].item()),
-        "actual_bytes": buf.tell(),
+        "range_coded_payload_bytes": int(len(range_payload)),
+        "actual_bytes": int(buf.tell()),
+        "wire_format": "CARM2",
     }
 
 
 def decode_weight_with_charm(blob: bytes, expected_shape: tuple[int, ...]) -> torch.Tensor:
-    """Decode bytes → weight tensor. Roundtrip-exact at INT8 granularity (scale*int8/127)."""
+    """Decode bytes → weight tensor.
+
+    Supports both wire formats:
+      - 'CARM2' (current; range-coded payload, byte-tight)
+      - 'CARM'  (legacy toy format; raw INT8 dump)
+
+    Roundtrip-exact at INT8 granularity in both cases.
+    """
     import struct
+
     buf = io.BytesIO(blob)
+    magic5 = buf.read(5)
+    if magic5 == b"CARM2":
+        from tac.codec.charm_range_coder import (
+            ChARMRangeDecoder,
+            gaussian_pmf_int8,
+        )
+
+        (scale,) = struct.unpack(">f", buf.read(4))
+        (ndim,) = struct.unpack(">I", buf.read(4))
+        shape = tuple(struct.unpack(">I", buf.read(4))[0] for _ in range(ndim))
+        assert shape == expected_shape, f"shape mismatch: got {shape}, expected {expected_shape}"
+        (n,) = struct.unpack(">I", buf.read(4))
+        (n_padded,) = struct.unpack(">I", buf.read(4))
+        (num_channels,) = struct.unpack(">I", buf.read(4))
+        if num_channels <= 0:
+            raise ValueError(f"CARM2 num_channels must be positive, got {num_channels}")
+        if n_padded < n:
+            raise ValueError(f"CARM2 n_padded {n_padded} < n {n}")
+        if n_padded % num_channels != 0:
+            raise ValueError(
+                f"CARM2 n_padded {n_padded} is not divisible by num_channels {num_channels}"
+            )
+        sidecar_bytes = buf.read(2 * 2 * num_channels)
+        if len(sidecar_bytes) != 2 * 2 * num_channels:
+            raise ValueError("truncated CARM2 sidecar")
+        sidecar = np.frombuffer(sidecar_bytes, dtype=">f2").reshape(num_channels, 2)
+        mu = sidecar[:, 0].astype(np.float64)
+        log_sigma = sidecar[:, 1].astype(np.float64)
+        sigma = np.exp(log_sigma)
+        (range_payload_len,) = struct.unpack(">I", buf.read(4))
+        range_payload = buf.read(range_payload_len)
+        if len(range_payload) != range_payload_len:
+            raise ValueError("truncated CARM2 range payload")
+        # Drain the trailing z (informational; not consumed at decode time).
+        (z_len,) = struct.unpack(">I", buf.read(4))
+        z_bytes = buf.read(z_len)
+        if len(z_bytes) != z_len:
+            raise ValueError("truncated CARM2 z payload")
+        if buf.read(1) != b"":
+            raise ValueError("trailing bytes after CARM2 payload")
+        # Decode range payload symbol-by-symbol under per-channel PMFs.
+        group_size = n_padded // num_channels
+        decoder = ChARMRangeDecoder(range_payload, alphabet=(-128, 127))
+        if decoder.num_symbols != n_padded:
+            raise ValueError(
+                f"CARM2 range payload symbol count {decoder.num_symbols} "
+                f"!= n_padded {n_padded}"
+            )
+        recovered = np.zeros(n_padded, dtype=np.int8)
+        for c in range(num_channels):
+            pmf = gaussian_pmf_int8(
+                mu=float(mu[c]),
+                sigma=float(sigma[c]),
+                alphabet_lo=-128,
+                alphabet_hi=127,
+            )
+            for k in range(group_size):
+                recovered[c * group_size + k] = decoder.read_symbol(pmf)
+        if decoder.num_symbols_read != n_padded:
+            raise ValueError("CARM2 range decoder stopped before n_padded symbols")
+        # Strip channel-padding to recover original n symbols.
+        w_int8 = torch.from_numpy(recovered[:n].astype(np.int8))
+        # Round 3 review: full INT8 range [-128, 127] (matches encode_with_charm)
+        w_recovered = (w_int8.float() / 127.0 * scale).reshape(shape)
+        return w_recovered
+    # Legacy 'CARM' fallback. Magic was 4 bytes; rewind one byte.
+    buf.seek(0)
     magic = buf.read(4)
     assert magic == b"CARM", f"bad magic: {magic!r}"
     (scale,) = struct.unpack(">f", buf.read(4))
@@ -433,7 +584,6 @@ def decode_weight_with_charm(blob: bytes, expected_shape: tuple[int, ...]) -> to
     (n,) = struct.unpack(">I", buf.read(4))
     # Round 1 review fix #2: np.frombuffer + copy avoids torch's non-writable warning
     w_int8 = torch.from_numpy(np.frombuffer(buf.read(n), dtype=np.int8).copy())
-    # consume z (informational only at decode time for the toy)
     (z_len,) = struct.unpack(">I", buf.read(4))
     _ = buf.read(z_len)
     w_recovered = (w_int8.float() / 127.0 * scale).reshape(shape)
@@ -857,13 +1007,11 @@ def build_archive(output_dir: Path, train_result: dict, cfg: TrainConfig) -> dic
     charm.load_state_dict(ckpt["ema_charm_shadow"])
     charm.eval()
 
-    # Round 2 review: split "naive INT8 encode" (the actual bytes in archive.zip)
-    # from "ideal hyperprior rate" (the [predicted] achievable bytes if we wired
-    # range coding under predicted (μ, σ)). Manifest reports BOTH so the ablation
-    # is honest: the toy validates the rate-loss SIGNAL works, not the production
-    # encode path. Production Phase C wires GaussianConditional + range coding.
+    # Current CARM2 path is a real range-coded INT8 stream under the ChARM PMFs.
+    # Keep the ideal rate estimate beside the charged bytes so rate-model drift
+    # is auditable instead of hidden behind a single "compressed" number.
     encoded_weights: dict[str, dict] = {}
-    total_naive_int8_bytes = 0
+    total_charm_weight_bytes = 0
     total_ideal_rate_bits = 0.0
     for name, weight in state.items():
         if not isinstance(weight, torch.Tensor):
@@ -877,13 +1025,13 @@ def build_archive(output_dir: Path, train_result: dict, cfg: TrainConfig) -> dic
             "blob_path": f"{name.replace('.', '_')}.bin",
             "metadata": meta,
         }
-        total_naive_int8_bytes += len(blob)
+        total_charm_weight_bytes += len(blob)
         total_ideal_rate_bits += float(meta["ideal_rate_bits"])
         # Write the blob into the archive dir
         blob_path = archive_dir / encoded_weights[name]["blob_path"]
         blob_path.write_bytes(blob)
     total_ideal_rate_bytes = total_ideal_rate_bits / 8.0
-    total_compressed_bytes = total_naive_int8_bytes  # what's actually in archive.zip
+    total_compressed_bytes = total_charm_weight_bytes  # what's actually in archive.zip
 
     # Save the full hyperprior state for decoder side (in archive.zip)
     hp_state_path = archive_dir / "hyperprior_state.pt"
@@ -903,13 +1051,12 @@ def build_archive(output_dir: Path, train_result: dict, cfg: TrainConfig) -> dic
         "encoded_weight_bytes": int(total_compressed_bytes),
         "hyperprior_state_bytes": int(hp_state_size),
         "total_compressed_bytes": int(total_compressed_bytes + hp_state_size),
-        # Round 2 review: distinguish naive INT8 (actual blob bytes) from
-        # ideal hyperprior rate ([predicted] lower bound, achievable with
-        # GaussianConditional + range coding which is Phase C work)
-        "naive_int8_total_bytes": int(total_naive_int8_bytes),
+        "charm_range_coded_weight_bytes": int(total_charm_weight_bytes),
         "ideal_hyperprior_rate_bits": float(total_ideal_rate_bits),
         "ideal_hyperprior_rate_bytes_predicted": float(total_ideal_rate_bytes),
-        "production_encode_path_pending": "Phase C: replace toy INT8 dump with compressai.GaussianConditional range coding",
+        "rate_model_gap_bytes": float(total_charm_weight_bytes - total_ideal_rate_bytes),
+        "wire_format": "CARM2",
+        "production_encode_path_pending": False,
         "evidence_grade": "contest_cuda_pending",
         "score_claim": False,
         "score_claim_valid": False,

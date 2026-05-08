@@ -22,7 +22,11 @@ import torch
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "experiments"))
 
-from train_charm_50k_toy_substrate import CharmHyperprior  # noqa: E402
+from train_charm_50k_toy_substrate import (  # noqa: E402
+    CharmHyperprior,
+    decode_weight_with_charm,
+    encode_weight_with_charm,
+)
 
 
 def _gaussian_diff_entropy_bits(sigma: float) -> float:
@@ -153,3 +157,40 @@ def test_charm_hyperprior_emits_separated_hyperprior_and_context() -> None:
     # μ_final = μ_h + μ_offsets
     expected_mu = out["mu_hyperprior"] + out["mu_context_offsets"]
     assert torch.allclose(out["mu"], expected_mu, atol=1e-6)
+
+
+def test_carm2_wire_roundtrips_from_canonical_sidecar_pmfs() -> None:
+    """CARM2 must encode with the same fp16 sidecar parameters used at decode.
+
+    A prior wiring encoded with float32 (μ, σ) but decoded from fp16
+    (μ, log_σ), which can desynchronize the range-coder PMF and corrupt the
+    stream. This test locks the byte-stream contract to sidecar-canonical PMFs.
+    """
+    torch.manual_seed(17)
+    charm = CharmHyperprior(num_channels=2, num_weight_channels=4)
+    weight = torch.randn(3, 5) * 0.2
+
+    blob, meta = encode_weight_with_charm(weight, charm)
+    recovered = decode_weight_with_charm(blob, tuple(weight.shape))
+
+    assert blob.startswith(b"CARM2")
+    assert meta["wire_format"] == "CARM2"
+    assert meta["actual_bytes"] == len(blob)
+    assert meta["n_padded"] % meta["num_channels"] == 0
+    scale = weight.abs().max().clamp(min=1e-8)
+    expected = (
+        (weight / scale * 127.0).round().clamp(min=-128.0, max=127.0)
+        / 127.0
+        * scale
+    )
+    assert torch.allclose(recovered, expected, atol=1e-5)
+
+
+def test_carm2_decoder_rejects_trailing_bytes() -> None:
+    torch.manual_seed(23)
+    charm = CharmHyperprior(num_channels=2, num_weight_channels=4)
+    weight = torch.randn(2, 3) * 0.1
+    blob, _meta = encode_weight_with_charm(weight, charm)
+
+    with pytest.raises(ValueError, match="trailing bytes"):
+        decode_weight_with_charm(blob + b"hidden", tuple(weight.shape))
