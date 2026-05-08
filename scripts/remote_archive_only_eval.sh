@@ -39,9 +39,6 @@ LOG_DIR="${LOG_DIR:-$WORKSPACE/${ARCHIVE_LABEL}_results}"
 mkdir -p "$LOG_DIR"
 PROVENANCE="$LOG_DIR/provenance.json"
 HEARTBEAT="$LOG_DIR/heartbeat.log"
-GIT_HASH=$(cd "$WORKSPACE" && git rev-parse HEAD 2>/dev/null || echo "no-git")
-GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>&1 | head -1)
-DRIVER_VER=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>&1 | head -1)
 
 log() { echo "[archive-only-eval] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
 
@@ -272,6 +269,14 @@ require_declared_source_shas() {
         log "source_sha_ok: $rel $actual"
     done <<< "$REQUIRED_SOURCE_SHA256S"
 }
+
+if [ "${REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY:-0}" = "1" ]; then
+    return 0 2>/dev/null || exit 0
+fi
+
+GIT_HASH=$(cd "$WORKSPACE" && git rev-parse HEAD 2>/dev/null || echo "no-git")
+GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>&1 | head -1)
+DRIVER_VER=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>&1 | head -1)
 
 # Heartbeat (every 60s) — preflight Check 41
 ( while true; do echo "$(date -u +%FT%TZ) heartbeat pid=$$" >> "$HEARTBEAT"; sleep 60; done ) &

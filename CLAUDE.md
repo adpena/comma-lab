@@ -609,6 +609,13 @@ You must not edit without explicit human approval:
 - If upstream behavior appears wrong, inconvenient, or blocking, work around it only from the allowed mutation frontier and record the issue in repo state instead of changing upstream.
 - If any experiment, proxy, or tooling change depends on upstream edits, stop treating it as compliant until the human has explicitly authorized that upstream modification.
 
+## Public Disclosure Hygiene
+
+- Public release is intentional, not automatic. Keep credentials, private infrastructure URLs, local absolute paths, raw provider logs, unpublished operator state, and account metadata out of GitHub/docs/site/public supplement surfaces.
+- Detailed OSS/paper writeups are allowed when they are deliberately promoted, but private `.omx/state`, raw experiment directories, and provider transcripts must be sanitized into release manifests or dated research ledgers first.
+- Cloudflare/Lightning/public supplement links belong in sanitized release manifests or approved public docs, not incidental logs or generated state files.
+- If a claim, archive recipe, or implementation detail is still marked private/pending approval in a ledger, preserve that disclosure label until the human explicitly changes it or a newer committed release manifest supersedes it.
+
 ## Operating rules
 
 - Prefer at most 3 experiments per cycle.

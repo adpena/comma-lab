@@ -92,7 +92,7 @@ def claim_lane(
         "--lane-id", lane_id,
         "--platform", platform,
         "--instance-job-id", instance_job_id,
-        "--agent", "claude:dispatch_phase_a1_score_gradient_pr101",
+        "--agent", "codex:dispatch_phase_a1_score_gradient_pr101",
         "--predicted-eta-utc", predicted_eta_utc,
         "--status", status,
     ]
@@ -213,7 +213,8 @@ def dispatch_lightning(
     """Submit the lane to Lightning via launch_lane_lightning.py dispatch.
 
     The remote script reads PR101_ARCHIVE_PATH / VIDEO_PATH / etc. from env.
-    Returns the session_id if the dispatch was fired, else None.
+    Returns (session_id, fired_ok). ``session_id`` may be None when the
+    underlying launcher succeeded but did not print a parseable session id.
     """
     lane_script = "scripts/remote_track1_phase_a1_score_gradient_pr101.sh"
 
@@ -508,8 +509,11 @@ def main(argv: list[str] | None = None) -> int:
         args_dict={k: str(v) for k, v in vars(args).items()},
     )
     print(f"[dispatch] FIRED session_id={session_id} manifest={manifest_path}")
-    print(f"[harvest-hint] .venv/bin/python scripts/launch_lane_lightning.py status --session-id {session_id}")
-    print(f"[harvest-hint] .venv/bin/python scripts/launch_lane_lightning.py harvest --session-id {session_id} --local-dir {lane_dir}/harvested")
+    if session_id:
+        print(f"[harvest-hint] .venv/bin/python scripts/launch_lane_lightning.py status --session-id {session_id}")
+        print(f"[harvest-hint] .venv/bin/python scripts/launch_lane_lightning.py harvest --session-id {session_id} --local-dir {lane_dir}/harvested")
+    else:
+        print(f"[harvest-hint] session_id was not parsed; use instance_job_id={instance_job_id} with platform status tooling")
     return 0
 
 

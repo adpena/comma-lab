@@ -159,6 +159,7 @@ def test_write_manifest_produces_valid_json(tmp_path: Path) -> None:
         archive_path=Path("/tmp/archive.zip"),
         archive_sha256="abc123",
         reused_existing_pr=False,
+        draft=True,
     )
     assert manifest_path.exists()
     data = json.loads(manifest_path.read_text())
