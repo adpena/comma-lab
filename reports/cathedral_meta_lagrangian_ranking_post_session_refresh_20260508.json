@@ -1,0 +1,62 @@
+{
+  "schema": "cathedral_meta_lagrangian_bridge.v1",
+  "tool": "tools/cathedral_autopilot_meta_lagrangian_bridge.py",
+  "evidence_grade": "[distortion-proxy:local]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "input_plan_json": "reports/autopilot_plan_post_session_refresh_20260508.json",
+  "anchors_path": "/Users/adpena/Projects/pact/.omx/calibration/anchors_apogee_intN.json",
+  "n_candidates": 2,
+  "n_eligible_for_dispatch": 0,
+  "evaluations": [
+    {
+      "candidate_id": "autopilot_self_compress_neural_codec",
+      "technique_name": "self_compress_neural_codec",
+      "archive_bytes": 90000,
+      "rel_err_pct": 0.0,
+      "proxy_pose": 3.4e-05,
+      "proxy_seg": 0.00067819,
+      "proxy_score": 0.14618539469558117,
+      "band_low": 0.07118539469558116,
+      "band_high": 0.22118539469558118,
+      "band_refused": false,
+      "band_refusal_reason": "",
+      "lagrangian": 0.14618539469558117,
+      "rate_violation": 0.0,
+      "pose_violation": 0.0,
+      "seg_violation": 0.0,
+      "sanity_passed": false,
+      "sanity_failures": [
+        "sanity_skipped: archive_path not yet produced"
+      ],
+      "rank_key": Infinity,
+      "eligible_for_dispatch": false,
+      "predicted_score_delta_from_recommender": 0.05917688274082672
+    },
+    {
+      "candidate_id": "autopilot_brotli_optuna_default",
+      "technique_name": "brotli_optuna_default",
+      "archive_bytes": 178144,
+      "rel_err_pct": 0.0,
+      "proxy_pose": 3.4e-05,
+      "proxy_seg": 0.00067819,
+      "proxy_score": 0.20487686625958185,
+      "band_low": 0.12987686625958184,
+      "band_high": 0.27987686625958186,
+      "band_refused": false,
+      "band_refusal_reason": "",
+      "lagrangian": 0.20487686625958185,
+      "rate_violation": 0.0,
+      "pose_violation": 0.0,
+      "seg_violation": 0.0,
+      "sanity_passed": false,
+      "sanity_failures": [
+        "sanity_skipped: archive_path not yet produced"
+      ],
+      "rank_key": Infinity,
+      "eligible_for_dispatch": false,
+      "predicted_score_delta_from_recommender": 0.00048541117682604495
+    }
+  ]
+}
