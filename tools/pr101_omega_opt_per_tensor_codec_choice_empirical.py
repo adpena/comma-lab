@@ -53,16 +53,18 @@ from __future__ import annotations
 import argparse
 import datetime as _dt
 import json
-import struct
 import sys
 from pathlib import Path
 
-import brotli
 import numpy as np
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
+from tac.codec.per_tensor_codecs import (  # noqa: E402
+    encode_brotli_only,
+    encode_sparsity_alpha,
+)
 from tac.pr101_split_brotli_codec import (  # noqa: E402
     FIXED_STATE_SCHEMA,
     N_QUANT,
@@ -73,45 +75,8 @@ TOOL_NAME = "tools/pr101_omega_opt_per_tensor_codec_choice_empirical.py"
 SCHEMA_VERSION = "pr101_omega_opt_per_tensor_codec_choice_empirical.v1"
 EVIDENCE_GRADE = "[CPU-prep faithful Path-B-step-4 per-tensor codec-CHOICE HStack test]"
 
-
-def encode_brotli_only(symbols: np.ndarray) -> tuple[int, float]:
-    bytes_b = len(brotli.compress(symbols.tobytes(), quality=11, lgwin=16, lgblock=19))
-    return bytes_b, 0.0
-
-
-def encode_sparsity_alpha(symbols: np.ndarray, alpha: float) -> tuple[int, float]:
-    """Zero out smallest-magnitude alpha fraction; return (bytes, rel_err)."""
-    n = symbols.size
-    if alpha <= 0:
-        return encode_brotli_only(symbols)
-    n_keep = max(1, int(round((1.0 - alpha) * n)))
-    if n_keep >= n:
-        return encode_brotli_only(symbols)
-
-    abs_vals = np.abs(symbols.flatten().astype(np.int32))
-    top_idx = np.argpartition(abs_vals, n - n_keep)[n - n_keep:]
-    top_idx_sorted = np.sort(top_idx)
-    nz_values = symbols.flatten()[top_idx_sorted].astype(np.int8)
-
-    # Reconstruction: full vector with kept values, zeros elsewhere
-    recon = np.zeros_like(symbols.flatten(), dtype=np.int8)
-    recon[top_idx_sorted] = nz_values
-
-    # rel_err: L2 of (orig - recon) / L2 of orig
-    diff = symbols.flatten().astype(np.float64) - recon.astype(np.float64)
-    orig_l2 = float(np.linalg.norm(symbols.flatten().astype(np.float64))) + 1e-12
-    diff_l2 = float(np.linalg.norm(diff))
-    rel_err = diff_l2 / orig_l2
-
-    # CSR encoding: delta-coded indices + values
-    deltas = np.diff(np.concatenate([np.array([0], dtype=np.uint32), top_idx_sorted.astype(np.uint32)])).astype(np.uint32)
-    payload = (
-        struct.pack("<II", n, nz_values.size)
-        + deltas.tobytes()
-        + nz_values.tobytes()
-    )
-    bytes_b = len(brotli.compress(payload, quality=11, lgwin=16, lgblock=19))
-    return bytes_b, rel_err
+# encode_brotli_only and encode_sparsity_alpha re-exported from
+# tac.codec.per_tensor_codecs to remove drift across tools.
 
 
 def measure_per_tensor_codecs(quantized: list[tuple[str, np.ndarray]], alphas: list[float]) -> list[dict]:

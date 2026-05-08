@@ -51,20 +51,30 @@ import json
 import sys
 from pathlib import Path
 
-import brotli
 import numpy as np
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 sys.path.insert(0, str(REPO_ROOT / "tools"))
 
+from tac.codec.cost_curves import (  # noqa: E402
+    DEFAULT_K_RANGE,
+    precompute_per_tensor_K_curves as _canonical_precompute_K_curves,
+)
+from tac.optimization.lagrangian_per_tensor_allocation import (  # noqa: E402
+    LagrangianPerTensorAllocator,
+    UniwardWeightedAllocator,
+    compute_local_variance_proxy as _canonical_local_variance,
+    compute_uniward_weights as _canonical_uniward_weights,
+)
 from tac.pr101_split_brotli_codec import (  # noqa: E402
     FIXED_STATE_SCHEMA,
     N_QUANT,
     _quantize_tensor,
 )
 
-# Reuse subagent D's machinery and Path B step 6's helpers
+# Reuse subagent D's joint encoder; per-tensor K curves and Lagrangian
+# bisection delegate to the canonical primitives.
 from pr101_lossy_coarsening_analytical import (  # noqa: E402
     TensorBlob,
     encode_with_per_tensor_K,
@@ -78,107 +88,63 @@ EVIDENCE_GRADE = (
     "[CPU-prep faithful Fridrich-UNIWARD-weighted Path-B-step-7 test]"
 )
 
-K_RANGE = list(range(1, 65))
-EPS_VARIANCE = 1e-6
+K_RANGE = list(DEFAULT_K_RANGE)
 
-
-# ---------------------------------------------------------------------------
-# UNIWARD variance proxy
-# ---------------------------------------------------------------------------
+# UNIWARD variance proxy and weights are now canonical in
+# tac.optimization.lagrangian_per_tensor_allocation. The historical 1e-6
+# floor used here was looser than the canonical 1e-12; we preserve the
+# stricter canonical default. The per-tensor K-curve precompute and
+# λ-bisection (uniform and UNIWARD-weighted) delegate to canonical
+# primitives. Module-local thin wrappers below preserve the historical
+# CLI / call signatures.
 
 
 def compute_local_variance_proxy(tensors: list[TensorBlob]) -> list[float]:
-    """Return per-tensor variance of the int8 symbol distribution.
-
-    This is the CPU analogue of UNIWARD's local-variance residual: a tensor
-    whose int8 symbols span a wide dynamic range is "textured" and absorbs
-    error well; a tensor whose symbols cluster near zero is "smooth" and
-    distortion there is detector-visible.
-    """
-    variances: list[float] = []
-    for tb in tensors:
-        symbols = tb.raw.astype(np.float64)
-        var = float(np.var(symbols)) if symbols.size > 0 else 0.0
-        variances.append(var)
-    return variances
+    """Per-tensor variance proxy (delegates to tac.optimization)."""
+    return _canonical_local_variance([t.raw for t in tensors])
 
 
 def compute_uniward_weights(variances: list[float]) -> list[float]:
-    """``w(t) = 1 / (var(t) + ε)`` — inverse-variance per CLAUDE.md UNIWARD rule.
-
-    Higher variance → lower weight → more error budget allocated there.
-    Lower variance → higher weight → cost forces less error there.
-    """
-    return [1.0 / (v + EPS_VARIANCE) for v in variances]
-
-
-# ---------------------------------------------------------------------------
-# Per-tensor K curve precomputation
-# ---------------------------------------------------------------------------
+    """Inverse-variance UNIWARD weights (delegates to tac.optimization)."""
+    return _canonical_uniward_weights(variances)
 
 
 def precompute_per_tensor_K_curves(tensors: list[TensorBlob]) -> list[list[dict]]:
-    """For each tensor, compute (K, achieved_rel_err, per_tensor_byte_proxy)
-    over ``K_RANGE``. ``byte_proxy`` is a per-tensor brotli over the rounded
-    int8 — an over-estimate of joint contribution but monotone in K.
-    """
-    curves: list[list[dict]] = []
-    for tb in tensors:
-        rows = []
-        abs_sum = float(np.abs(tb.raw).astype(np.float64).sum()) + 1e-12
-        for K in K_RANGE:
-            rounded = np.round(tb.raw / K) * K
-            err = float(np.abs(rounded - tb.raw).astype(np.float64).sum())
-            re = err / abs_sum
-            rounded_i8 = rounded.clip(-127, 127).astype(np.int8)
-            byte_proxy = len(
-                brotli.compress(rounded_i8.tobytes(), quality=11, lgwin=16, lgblock=19)
-            )
-            rows.append({"K": K, "rel_err": re, "byte_proxy": byte_proxy})
-        curves.append(rows)
-    return curves
+    """Per-tensor K curves (delegates to tac.codec.cost_curves)."""
+    return _canonical_precompute_K_curves(tensors, K_range=K_RANGE)
 
 
-# ---------------------------------------------------------------------------
-# Lagrangian selection (uniform vs UNIWARD-weighted)
-# ---------------------------------------------------------------------------
+def _make_joint_encoder(tensors: list[TensorBlob]):
+    def hook(selections: list[dict]) -> dict:
+        Ks = [int(s["K"]) for s in selections]
+        result = encode_with_per_tensor_K(tensors, Ks)
+        return {
+            "total_bytes": int(result["archive_bytes"]),
+            "rel_err": float(result["rel_err"]),
+            **{
+                k: v
+                for k, v in result.items()
+                if k not in {"archive_bytes", "rel_err"}
+            },
+        }
+
+    return hook
 
 
 def lagrangian_select_Ks_uniform(
     curves: list[list[dict]], lam: float
 ) -> tuple[list[int], list[float]]:
-    """Path B step 6 baseline: ``cost(K) = byte_proxy + λ · rel_err²``."""
-    Ks: list[int] = []
-    rel_errs: list[float] = []
-    for tensor_curve in curves:
-        cost = [r["byte_proxy"] + lam * r["rel_err"] ** 2 for r in tensor_curve]
-        idx = int(np.argmin(cost))
-        Ks.append(tensor_curve[idx]["K"])
-        rel_errs.append(tensor_curve[idx]["rel_err"])
-    return Ks, rel_errs
+    """Uniform-weighted Lagrangian K selection (delegates to tac.optimization)."""
+    res = LagrangianPerTensorAllocator().allocate(curves, lam)
+    return [int(s["K"]) for s in res.selections], list(res.per_tensor_rel_errs)
 
 
 def lagrangian_select_Ks_uniward(
     curves: list[list[dict]], weights: list[float], lam: float
 ) -> tuple[list[int], list[float]]:
-    """UNIWARD: ``cost(K) = byte_proxy + λ · w(t) · rel_err²``.
-
-    ``w(t)`` is the inverse-variance weight; tensors with high variance carry
-    a low weight and therefore are encouraged to absorb more rel_err.
-    """
-    Ks: list[int] = []
-    rel_errs: list[float] = []
-    for tensor_curve, w in zip(curves, weights, strict=True):
-        cost = [r["byte_proxy"] + lam * w * r["rel_err"] ** 2 for r in tensor_curve]
-        idx = int(np.argmin(cost))
-        Ks.append(tensor_curve[idx]["K"])
-        rel_errs.append(tensor_curve[idx]["rel_err"])
-    return Ks, rel_errs
-
-
-# ---------------------------------------------------------------------------
-# λ bisection for global RMS rel_err target
-# ---------------------------------------------------------------------------
+    """UNIWARD-weighted Lagrangian K selection (delegates to tac.optimization)."""
+    res = LagrangianPerTensorAllocator(weights=weights).allocate(curves, lam)
+    return [int(s["K"]) for s in res.selections], list(res.per_tensor_rel_errs)
 
 
 def bisect_for_global_rms_uniward(
@@ -188,24 +154,17 @@ def bisect_for_global_rms_uniward(
     rms_target: float,
     max_iter: int = 80,
 ) -> dict:
-    """Bisect λ so the joint-encoded RMS rel_err <= ``rms_target`` under
-    UNIWARD-weighted Lagrangian selection."""
-    lo, hi = 0.0, 1e15
-    last_result = None
-    for _ in range(max_iter):
-        mid = (lo + hi) / 2 if hi < 1e15 else lo * 10 + 1
-        Ks, _ = lagrangian_select_Ks_uniward(curves, weights, mid)
-        result = encode_with_per_tensor_K(tensors, Ks)
-        rms = result["rel_err"]
-        last_result = {"lambda": mid, **result, "rms_rel_err": rms}
-        if rms <= rms_target:
-            hi = mid
-        else:
-            lo = mid
-        if hi == lo or abs(hi - lo) < 1e-12:
-            break
-    assert last_result is not None
-    return last_result
+    """UNIWARD-weighted λ bisection (delegates to tac.optimization)."""
+    res = LagrangianPerTensorAllocator(
+        weights=weights, joint_encoder=_make_joint_encoder(tensors)
+    ).bisect_for_rms_target(curves, rms_target, max_iter=max_iter, lam_hi=1e15)
+    return {
+        "lambda": res.lam,
+        "rms_rel_err": res.rel_err,
+        "rel_err": res.rel_err,
+        "archive_bytes": res.total_bytes,
+        **res.joint_extras,
+    }
 
 
 def bisect_for_global_rms_uniform(
@@ -214,23 +173,17 @@ def bisect_for_global_rms_uniform(
     rms_target: float,
     max_iter: int = 80,
 ) -> dict:
-    """Path B step 6 baseline: bisect λ for ``rel_err²`` Lagrangian."""
-    lo, hi = 0.0, 1e15
-    last_result = None
-    for _ in range(max_iter):
-        mid = (lo + hi) / 2 if hi < 1e15 else lo * 10 + 1
-        Ks, _ = lagrangian_select_Ks_uniform(curves, mid)
-        result = encode_with_per_tensor_K(tensors, Ks)
-        rms = result["rel_err"]
-        last_result = {"lambda": mid, **result, "rms_rel_err": rms}
-        if rms <= rms_target:
-            hi = mid
-        else:
-            lo = mid
-        if hi == lo or abs(hi - lo) < 1e-12:
-            break
-    assert last_result is not None
-    return last_result
+    """Uniform-weighted λ bisection baseline (delegates to tac.optimization)."""
+    res = LagrangianPerTensorAllocator(
+        joint_encoder=_make_joint_encoder(tensors)
+    ).bisect_for_rms_target(curves, rms_target, max_iter=max_iter, lam_hi=1e15)
+    return {
+        "lambda": res.lam,
+        "rms_rel_err": res.rel_err,
+        "rel_err": res.rel_err,
+        "archive_bytes": res.total_bytes,
+        **res.joint_extras,
+    }
 
 
 # ---------------------------------------------------------------------------
