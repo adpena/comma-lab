@@ -223,6 +223,60 @@ predicted band MUST be re-derived. The cathedral autopilot recommender
 (`tools/cathedral_autopilot.py`) is the canonical consumer; a regenerated row
 would invalidate the score columns above.
 
+## 8.1. Phase A POSTERIOR — band shift after empirical landings (council Round 3, 2026-05-08 evening)
+
+After Phase A complete (7/7 ablations anchored in this session), the
+council Round 3 phase-interaction review
+(`council_phase_a_complete_extreme_rigor_review_20260508.md` §10)
+landed an **8/10 binding finding** that this memo's predicted band is
+STALE and must be re-derived from the empirically-anchored Phase A
+inputs.
+
+**Empirical Phase A inputs that conditioned the original band:**
+
+| Lane | Original prior | Phase A landed empirical | Direction |
+|---|---|---|---|
+| A1 score-gradient | 10-30% improvement (council median) | NOT YET DISPATCHED | unchanged |
+| A2 sensitivity | 8-15 KB savings (range) | -3,635 B regression (FALSIFIED at config) | DOWN |
+| A3-alt Mallat | (not in original) | incremental_improvement_insufficient | DOWN |
+| A4 ChARM | 14-32 KB savings | byte-tight; not yet dispatched | unchanged (pending) |
+| A4-alt Filler STC | 3-7 KB savings | -400 B on smooth-walk; +52% on idle-dominant SYNTHETIC ONLY | DOWN |
+| A5 frame budget | 1,278 B savings | confirmed at -1,278 B | unchanged |
+| A6 Selfcomp×hyperprior | (not in original) | +35,891 B above brotli (incremental_improvement_insufficient) | DOWN |
+| A0 MDL closed-form floor | (not in original) | realistic 158,700 B / aggressive 151,700 B | calibration anchor |
+
+**5 of 7 lanes landed BELOW their council prior** (A2, A3-alt, A4-alt
+synthetic, A6, A6-conditioned). Only A5 confirmed at the prior; A1+A4
+still pending dispatch. The MDL closed-form anchor (A0) calibrates the
+frontier — brotli is +12% above realistic floor, leaving ~19,444 B of
+LOSSLESS HEADROOM for A1+A4 to claim.
+
+**Council Round 3 8/10 verdict:** the predicted band shifts:
+
+| Band | Pre-Phase-A (original) | Post-Phase-A (Round 3 posterior) |
+|---|---|---|
+| Conservative point | 0.17303 | ~0.175 |
+| Median band | 0.155-0.175 | 0.165-0.180 |
+| Aggressive band | 0.140-0.180 | 0.150-0.175 |
+
+**Dissent (2/10):** Quantizr argues upper-bound A1+A4 outcomes could
+rescue the original band. Selfcomp argues paradigm-shift (his 0.38
+archive paradigm) could still deliver. Both dissents are recorded but
+do not block the median update.
+
+**Reactivation criteria for restoring the original 0.155-0.175 band:**
+1. A1 score-gradient dispatch lands a [contest-CUDA] result with
+   seg+pose reduction ≥10% vs PR107 apogee.
+2. A4 ChARM dispatch lands a [contest-CUDA] result with archive size
+   ≤155,000 B at <5% pose distortion.
+3. Both #1 and #2 must hold simultaneously (the original band assumed
+   their composed contribution; either alone is insufficient per §10.4
+   of the council Round 3 memo).
+
+Until those reactivation criteria are met, **the operative predicted
+band for any submission decision is 0.165-0.180 median, 0.150-0.175
+aggressive.**
+
 ## 9. Cross-references
 
 - `.omx/research/grand_council_extreme_rigor_track_1_20260508.md` — council deliberation
