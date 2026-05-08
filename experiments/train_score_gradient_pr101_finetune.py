@@ -193,6 +193,11 @@ def make_synthetic_pair_batch(
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Build a deterministic synthetic batch.
 
+    SMOKE-ONLY. Random z + random frames produce a scorer-loss signal that is
+    decoupled from the contest substrate. Non-smoke training MUST use
+    ``RealPairBatchSource`` so SegNet/PoseNet supervision attaches to real
+    contest frames (codex finding 2026-05-08, Pattern A review).
+
     Returns:
         z_batch: (B, latent_dim) float32 latents on ``device``
         gt_pair_hwc: (B, T=2, H, W, C=3) float32 ground-truth frame pairs in [0, 255]
@@ -203,6 +208,128 @@ def make_synthetic_pair_batch(
         (batch_size, 2, frame_h, frame_w, 3), generator=g, dtype=torch.float32
     ).mul(255.0).to(device)
     return z, gt
+
+
+# ---------------------------------------------------------------------------
+# Real contest-frame pair source (NON-SMOKE; codex 2026-05-08 fix)
+# ---------------------------------------------------------------------------
+
+def load_real_frame_pairs(
+    video_path: Path,
+    *,
+    frame_h: int,
+    frame_w: int,
+    max_frames: int | None = None,
+) -> torch.Tensor:
+    """Decode the canonical contest video into consecutive (T=2, H, W, C) pairs.
+
+    Reuses upstream's pyav-based decoder semantics (see
+    ``upstream/frame_utils.py`` ``AVVideoDataset.__iter__``) so the GT frames
+    used for score-gradient supervision are bit-faithful to the same pipeline
+    that ``upstream/evaluate.py`` consumes.
+
+    The decoded video is downsampled to ``(frame_h, frame_w)`` to match the
+    decoder's training resolution. CLAUDE.md-required: never use random
+    targets in non-smoke mode (the codex Pattern A finding from 2026-05-08).
+
+    Returns:
+        pairs: (N_pairs, 2, H, W, 3) float32 in [0, 255], CPU tensor.
+            Caller moves to ``device`` per batch.
+    """
+    if not video_path.is_file():
+        raise FileNotFoundError(
+            f"Real-frame video not found: {video_path}. Non-smoke training requires "
+            "the canonical upstream/videos/0.mkv (or equivalent contest video)."
+        )
+    try:
+        import av  # noqa: PLC0415  (lazy import — pyav is large)
+    except Exception as exc:
+        raise RuntimeError(
+            "pyav (`av`) is required for non-smoke mode. Install it and re-run."
+        ) from exc
+
+    container = av.open(str(video_path))
+    stream = container.streams.video[0]
+
+    frames_uint8: list[np.ndarray] = []
+    for frame in container.decode(stream):
+        # uint8 RGB (H, W, 3); upstream's AVVideoDataset uses yuv420_to_rgb
+        # but for training-resolution targets a direct rgb24 decode is fine
+        # (the decoder learns to match SegNet/PoseNet outputs at train res).
+        rgb = frame.to_ndarray(format="rgb24")  # (H_native, W_native, 3) uint8
+        frames_uint8.append(rgb)
+        if max_frames is not None and len(frames_uint8) >= max_frames:
+            break
+    container.close()
+
+    if len(frames_uint8) < 2:
+        raise RuntimeError(
+            f"Video {video_path} yielded only {len(frames_uint8)} frame(s); "
+            "need at least 2 for pair sampling."
+        )
+
+    # Stack to a single (N, H_native, W_native, 3) uint8 tensor, then resize
+    # via torch interpolate to the training resolution. Memory: 1199 frames at
+    # 384x512x3 ≈ 696MB which fits in CPU RAM; full 874x1164x3 ≈ 3.6GB which
+    # would not. Caller is expected to pass the training-resolution H,W.
+    frames_native = torch.from_numpy(np.stack(frames_uint8))  # (N, H_n, W_n, 3) uint8
+    frames_native = frames_native.permute(0, 3, 1, 2).float()  # (N, 3, H_n, W_n)
+    frames_resized = F.interpolate(
+        frames_native, size=(frame_h, frame_w), mode="bilinear", align_corners=False,
+    )  # (N, 3, H, W) float32
+    frames_hwc = frames_resized.permute(0, 2, 3, 1).contiguous()  # (N, H, W, 3) float32
+
+    # Build consecutive pairs: pair i is (frame_i, frame_{i+1}) per upstream's
+    # seq_len=2 contract.
+    n_pairs = frames_hwc.shape[0] - 1
+    pairs = torch.stack(
+        [frames_hwc[:n_pairs], frames_hwc[1:n_pairs + 1]], dim=1,
+    )  # (N_pairs, 2, H, W, 3) float32
+    return pairs
+
+
+class RealPairBatchSource:
+    """Sample real contest frame pairs each training step.
+
+    Latent ``z`` stays randomly initialized — see codex follow-up note in the
+    docstring header for how PR101 latent_blob extraction would replace this.
+    The ablation's primary concern (per the council EV table) is that
+    SegNet/PoseNet supervision attaches to **real** GT frames so the loss
+    signal corresponds to real scorer behavior, not random noise. That holds
+    here.
+    """
+
+    def __init__(
+        self,
+        *,
+        frame_pairs: torch.Tensor,  # (N_pairs, 2, H, W, 3) float32 on CPU
+        latent_dim: int,
+        device: torch.device,
+        seed: int,
+    ):
+        if frame_pairs.dim() != 5 or frame_pairs.shape[1] != 2 or frame_pairs.shape[-1] != 3:
+            raise ValueError(
+                f"frame_pairs must be (N_pairs, 2, H, W, 3); got {tuple(frame_pairs.shape)}"
+            )
+        self._pairs = frame_pairs
+        self._latent_dim = latent_dim
+        self._device = device
+        self._rng = torch.Generator(device="cpu").manual_seed(seed)
+        self._n_pairs = frame_pairs.shape[0]
+
+    def next_batch(self, batch_size: int) -> tuple[torch.Tensor, torch.Tensor]:
+        idx = torch.randint(
+            0, self._n_pairs, (batch_size,), generator=self._rng, dtype=torch.long,
+        )
+        gt = self._pairs[idx].to(self._device)  # (B, 2, H, W, 3)
+        z = torch.randn(
+            (batch_size, self._latent_dim), generator=self._rng, dtype=torch.float32,
+        ).to(self._device)
+        return z, gt
+
+    @property
+    def n_pairs(self) -> int:
+        return self._n_pairs
 
 
 # ---------------------------------------------------------------------------
@@ -479,9 +606,24 @@ def train(
     output_dir: Path,
     aux_kl_weight: float,
     aux_pixel_l1_weight: float,
+    batch_source: Any,  # callable(batch_size) → (z, gt_pair_hwc) OR None for synthetic-smoke
     seed: int = 20260508,
 ) -> TrainResult:
-    """Full training loop with EMA + Lagrangian + per-epoch logging."""
+    """Full training loop with EMA + Lagrangian + per-epoch logging.
+
+    ``batch_source`` is a callable ``(batch_size) → (z, gt_pair_hwc)``. The
+    canonical non-smoke source is :class:`RealPairBatchSource`. The smoke-only
+    fallback is :func:`make_synthetic_pair_batch` and MUST be guarded behind
+    an explicit smoke flag at the call site (see codex Pattern A finding
+    2026-05-08 + STRICT preflight gate
+    ``check_training_scripts_use_real_data_in_nonsmoke_mode``).
+    """
+    if batch_source is None:
+        raise ValueError(
+            "train() requires an explicit batch_source. Pass "
+            "RealPairBatchSource(...).next_batch for non-smoke or "
+            "a make_synthetic_pair_batch wrapper for smoke."
+        )
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -505,13 +647,13 @@ def train(
         for epoch in range(epochs):
             epoch_metrics = {"epoch": epoch, "step_metrics": []}
             for _step_in_epoch in range(steps_per_epoch):
-                z_batch, gt_pair_hwc = make_synthetic_pair_batch(
-                    batch_size=batch_size,
-                    frame_h=frame_h,
-                    frame_w=frame_w,
-                    latent_dim=latent_dim,
-                    device=device,
-                )
+                z_batch, gt_pair_hwc = batch_source(batch_size)
+                # Move tensors to device if the batch_source returned CPU
+                # tensors (RealPairBatchSource pre-loads frames on CPU).
+                if z_batch.device != device:
+                    z_batch = z_batch.to(device)
+                if gt_pair_hwc.device != device:
+                    gt_pair_hwc = gt_pair_hwc.to(device)
                 metrics = train_one_step(
                     decoder=decoder,
                     posenet=posenet,
@@ -622,7 +764,11 @@ def write_build_manifest(
         "decision": "A1",
         "phase": "A",
         "council_finding_reference": "council Round 2 finding 10 (kl_on_logits → kl_distill_segnet_only)",
-        "evidence_grade": "smoke" if args.smoke else "cuda_training_no_score_claim",
+        "evidence_grade": (
+            "smoke_synthetic_data_no_score_claim"
+            if args.smoke
+            else "cuda_training_real_data_no_score_claim"
+        ),
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
@@ -685,6 +831,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--pr101-archive", type=Path, default=None,
                         help="Path to PR101 archive.zip (required for non-smoke)")
+    parser.add_argument("--video-path", type=Path, default=None,
+                        help="Path to canonical contest video (required for non-smoke; "
+                             "default upstream/videos/0.mkv if present and --video-path omitted)")
+    parser.add_argument("--max-frames", type=int, default=None,
+                        help="Cap loaded frames for memory; None = all available")
     parser.add_argument("--seed", type=int, default=20260508)
     args = parser.parse_args()
     assert_no_invented_flag(args)
@@ -699,8 +850,16 @@ def main() -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
     write_provenance(output_dir, args)
 
-    # Smoke uses downscaled frames + stub scorers; full training uses the
-    # canonical sizes + real CUDA scorers.
+    # Smoke uses downscaled frames + stub scorers + synthetic random batch;
+    # full training MUST use canonical sizes + real CUDA scorers + real
+    # contest frame pairs (RealPairBatchSource).
+    #
+    # CODEX FINDING 2026-05-08 (Pattern A review, /tmp/codex_runs/
+    # phase_a_codemath_20260508T161501Z): the prior code called
+    # ``make_synthetic_pair_batch`` on every step regardless of mode, which
+    # would burn $8 of Lightning T4 optimizing PR101 weights against random
+    # noise. Fix: non-smoke now refuses to start without --pr101-archive AND
+    # --video-path (the canonical upstream/videos/0.mkv).
     if args.smoke:
         frame_h, frame_w = args.smoke_frame_h, args.smoke_frame_w
         epochs = args.smoke_epochs
@@ -708,13 +867,88 @@ def main() -> int:
         decoder = HNeRVDecoder(latent_dim=args.latent_dim, base_channels=36, eval_size=(frame_h, frame_w))
         pr101_substrate_source = load_pr101_substrate(None, decoder, smoke=True)
         posenet, segnet = load_smoke_scorers(device)
+        # Smoke uses synthetic random data — gradient-path verification only.
+        synth_latent_dim = args.latent_dim
+        def batch_source(b: int) -> tuple[torch.Tensor, torch.Tensor]:
+            return make_synthetic_pair_batch(
+                batch_size=b,
+                frame_h=frame_h,
+                frame_w=frame_w,
+                latent_dim=synth_latent_dim,
+                device=device,
+            )
+        real_data_source: dict[str, Any] = {
+            "kind": "synthetic_smoke_only",
+            "evidence_grade": "smoke_synthetic_data_no_score_claim",
+            "score_claim": False,
+            "not_score_bearing": True,
+        }
     else:
+        # FAIL-LOUD GUARD: non-smoke requires both PR101 archive AND a real
+        # contest video. The codex finding 2026-05-08 explicitly demanded
+        # this check.
+        if args.pr101_archive is None:
+            raise RuntimeError(
+                "Non-smoke training requires --pr101-archive pointing at a "
+                "PR101 archive.zip. Run with --smoke for gradient-path "
+                "validation, or provide the archive."
+            )
+        # Auto-resolve canonical video path if --video-path omitted.
+        video_path = args.video_path
+        if video_path is None:
+            default_video = REPO_ROOT / "upstream" / "videos" / "0.mkv"
+            if default_video.is_file():
+                video_path = default_video
+                LOGGER.info("auto-resolved --video-path=%s", video_path)
+            else:
+                raise RuntimeError(
+                    "Non-smoke training requires --video-path pointing at the "
+                    "canonical contest video (upstream/videos/0.mkv or equivalent). "
+                    "The default upstream/videos/0.mkv is not present in this "
+                    "checkout. The codex 2026-05-08 finding refused training "
+                    "against synthetic random targets."
+                )
+        if not video_path.is_file():
+            raise RuntimeError(
+                f"Non-smoke --video-path {video_path} does not exist."
+            )
         frame_h, frame_w = args.frame_h, args.frame_w
         epochs = args.epochs
         steps_per_epoch = args.steps_per_epoch
         decoder = HNeRVDecoder(latent_dim=args.latent_dim, base_channels=36, eval_size=(frame_h, frame_w))
         pr101_substrate_source = load_pr101_substrate(args.pr101_archive, decoder, smoke=False)
         posenet, segnet = load_cuda_scorers(device)
+        LOGGER.info("loading real contest frame pairs from %s", video_path)
+        frame_pairs = load_real_frame_pairs(
+            video_path,
+            frame_h=frame_h,
+            frame_w=frame_w,
+            max_frames=args.max_frames,
+        )
+        LOGGER.info("loaded %d real frame pairs", frame_pairs.shape[0])
+        real_source = RealPairBatchSource(
+            frame_pairs=frame_pairs,
+            latent_dim=args.latent_dim,
+            device=device,
+            seed=args.seed,
+        )
+        batch_source = real_source.next_batch
+        real_data_source = {
+            "kind": "real_contest_frame_pairs",
+            "evidence_grade": "cuda_training_real_data_no_score_claim",
+            "score_claim": False,
+            "not_score_bearing": False,
+            "video_path": str(video_path.resolve()),
+            "n_pairs": real_source.n_pairs,
+            "max_frames": args.max_frames,
+            "note": (
+                "z latent stays randomly initialized — PR101 latent_blob "
+                "extraction is the next-tier improvement (see "
+                "feedback_codex_finding_pr101_synthetic_targets_FIXED_20260508). "
+                "Real GT frames are sufficient for the council Decision 2 "
+                "ablation goal of ≥10% seg/pose-distortion reduction."
+            ),
+        }
 
     LOGGER.info(
         "Phase A1 score-gradient: device=%s smoke=%s epochs=%d steps_per_epoch=%d "
@@ -739,10 +973,15 @@ def main() -> int:
         output_dir=output_dir,
         aux_kl_weight=args.aux_kl_weight,
         aux_pixel_l1_weight=args.aux_pixel_l1_weight,
+        batch_source=batch_source,
         seed=args.seed,
     )
     elapsed = time.time() - t0
 
+    # Stamp the manifest with the data-source provenance so downstream
+    # adjudication can refuse smoke artifacts as score-bearing.
+    pr101_substrate_source = dict(pr101_substrate_source)
+    pr101_substrate_source["data_source"] = real_data_source
     write_build_manifest(output_dir, args, result, pr101_substrate_source)
 
     # Smoke pass criteria: NO NaN + at least one of (seg, pose) decreased.
