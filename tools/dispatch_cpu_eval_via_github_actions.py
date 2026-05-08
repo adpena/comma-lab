@@ -543,6 +543,27 @@ def main() -> int:
             "eval.yml exposes pr_number as an optional workflow_dispatch input."
         ),
     )
+    p.add_argument(
+        "--submission-dir",
+        type=Path,
+        default=None,
+        help=(
+            "local path to a submission directory (containing inflate.sh + "
+            "runtime files). Used together with --auto-create-fork-pr to "
+            "auto-publish the runtime to a fork PR before dispatch."
+        ),
+    )
+    p.add_argument(
+        "--auto-create-fork-pr",
+        action="store_true",
+        help=(
+            "if --submission-name is non-baseline AND --pr-number is missing, "
+            "auto-invoke tools/create_fork_pr_for_submission.py to create a "
+            "draft fork PR providing submissions/<name>/ runtime, then use the "
+            "returned PR number for the workflow dispatch. Requires "
+            "--submission-dir."
+        ),
+    )
     args = p.parse_args()
 
     archive_size = verify_archive(args.archive_path, args.archive_sha)
@@ -555,6 +576,53 @@ def main() -> int:
         args.submission_name,
         args.pr_number,
     )
+    if runtime_contract_error and args.auto_create_fork_pr:
+        if args.submission_dir is None:
+            sys.stderr.write(
+                "[fatal] --auto-create-fork-pr requires --submission-dir\n"
+            )
+            return 2
+        # Auto-create the fork PR providing submissions/<name>/ runtime.
+        helper = Path(__file__).resolve().parent / "create_fork_pr_for_submission.py"
+        proc = subprocess.run(
+            [
+                sys.executable, str(helper),
+                "--submission-dir", str(args.submission_dir),
+                "--submission-name", args.submission_name,
+                "--fork-repo", args.repo,
+                "--archive-path", str(args.archive_path),
+                "--archive-sha256", args.archive_sha,
+                "--reuse-existing",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if proc.returncode != 0:
+            sys.stderr.write(
+                f"[fatal] create_fork_pr_for_submission.py failed: "
+                f"rc={proc.returncode}\n  stderr: {proc.stderr!r}\n"
+            )
+            return 2
+        pr_number_str = (proc.stdout or "").strip().splitlines()[-1] if proc.stdout else ""
+        try:
+            args.pr_number = str(int(pr_number_str))
+        except (ValueError, TypeError):
+            sys.stderr.write(
+                f"[fatal] could not parse PR number from "
+                f"create_fork_pr_for_submission.py output: {pr_number_str!r}\n"
+            )
+            return 2
+        print(
+            f"[ok] auto-created fork PR #{args.pr_number} for "
+            f"submission {args.submission_name!r}",
+            flush=True,
+        )
+        # Re-validate now that --pr-number is set.
+        runtime_contract_error = submission_runtime_contract_error(
+            args.submission_name,
+            args.pr_number,
+        )
     if runtime_contract_error:
         sys.stderr.write(f"[fatal] {runtime_contract_error}\n")
         return 2

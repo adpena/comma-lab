@@ -74,3 +74,21 @@ def test_gha_cpu_dispatch_adjudicated_record_uses_requested_repo(tmp_path: Path)
 
     record = json.loads(out.read_text(encoding="utf-8"))
     assert record["fork_repo"] == "example/fork"
+
+
+def test_gha_cpu_dispatch_argparse_exposes_auto_create_fork_pr_flags() -> None:
+    """Smoke test: argparse must expose --submission-dir and --auto-create-fork-pr."""
+    import subprocess
+    import sys
+
+    proc = subprocess.run(
+        [sys.executable, str(TOOL), "--help"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, f"--help failed: {proc.stderr!r}"
+    out = proc.stdout
+    assert "--submission-dir" in out
+    assert "--auto-create-fork-pr" in out
+    assert "create_fork_pr_for_submission.py" in out
