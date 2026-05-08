@@ -116,3 +116,74 @@ def test_all_lanes_cross_paradigm_gate_rejects_geometry_dispatch_ready_drift() -
         "lapose_motion_atom_allocator: "
         "geometry_feedback_contract_ready_for_exact_eval_dispatch_false"
     ) in failures
+
+
+def test_all_lanes_frontier_layout_gate_accepts_monolithic_logical_sections() -> None:
+    module = _load_all_lanes_module()
+    payload = {
+        "score_claim": False,
+        "evidence_grade": "empirical_archive_layout_cpu_no_score",
+        "runs": [
+            {
+                "score_claim": False,
+                "physical_layout": {
+                    "single_member_monolithic_packet": True,
+                    "archive_member_level_component_budgets_valid": False,
+                    "member_level_mask_budget_valid": False,
+                    "member_level_pose_budget_valid": False,
+                    "members": [{"name": "x"}],
+                },
+                "logical_layout": {"sections": [{"name": "decoder_blob"}]},
+            },
+            {
+                "score_claim": False,
+                "physical_layout": {
+                    "single_member_monolithic_packet": True,
+                    "archive_member_level_component_budgets_valid": False,
+                    "member_level_mask_budget_valid": False,
+                    "member_level_pose_budget_valid": False,
+                    "members": [{"name": "0.bin"}],
+                },
+                "logical_layout": {"sections": [{"name": "decoder_packed_brotli"}]},
+            },
+        ],
+    }
+
+    assert module._frontier_monolithic_layout_failures(payload) == []
+
+
+def test_all_lanes_frontier_layout_gate_rejects_member_budget_regression() -> None:
+    module = _load_all_lanes_module()
+    payload = {
+        "score_claim": False,
+        "evidence_grade": "empirical_archive_layout_cpu_no_score",
+        "runs": [
+            {
+                "score_claim": False,
+                "physical_layout": {
+                    "single_member_monolithic_packet": True,
+                    "archive_member_level_component_budgets_valid": True,
+                    "member_level_mask_budget_valid": True,
+                    "member_level_pose_budget_valid": False,
+                    "members": [{"name": "x"}],
+                },
+                "logical_layout": {"sections": [{"name": "decoder_blob"}]},
+            },
+            {
+                "score_claim": False,
+                "physical_layout": {
+                    "single_member_monolithic_packet": True,
+                    "archive_member_level_component_budgets_valid": False,
+                    "member_level_mask_budget_valid": False,
+                    "member_level_pose_budget_valid": False,
+                    "members": [{"name": "0.bin"}],
+                },
+                "logical_layout": {"sections": [{"name": "decoder_packed_brotli"}]},
+            },
+        ],
+    }
+
+    failures = module._frontier_monolithic_layout_failures(payload)
+
+    assert "layout_run_0_member_level_component_budgets_not_rejected" in failures
+    assert "layout_run_0_member_level_mask_budget_not_rejected" in failures

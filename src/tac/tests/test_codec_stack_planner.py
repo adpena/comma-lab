@@ -44,6 +44,8 @@ def test_default_plan_is_deterministic_and_scoreless() -> None:
     assert manifest["metadata"]["score_claim"] is False
     assert manifest["metadata"]["dispatch_attempted"] is False
     assert manifest["metadata"]["axis_semantics"] == HSTACK_VSTACK_AXIS_SEMANTICS
+    assert "archive-component" not in manifest["metadata"]["axis_semantics"]["hstack_parallel"]
+    assert "parser-proven logical stream" in manifest["metadata"]["axis_semantics"]["hstack_parallel"]
     assert manifest["metadata"]["nested_optimization"]["levels"] == list(NESTED_OPTIMIZATION_LEVELS)
     assert manifest["metadata"]["nested_optimization"]["score_band_prediction"] == PREDICTED_NESTED_SCORE_BAND
     assert manifest["metadata"]["nested_optimization"]["score_band_prediction"]["score_claim"] is False
@@ -109,10 +111,11 @@ def test_plan_models_hstack_vstack_and_multipass_surfaces() -> None:
             ],
             "byte_semantics": manifest["parallel_groups"][0]["byte_semantics"],
             "blockers": [
+                "single_member_internal_section_map_missing",
                 "parallel_stream_byte_ledger_missing",
                 "cross_stream_budget_reconciliation_missing",
             ],
-            "repair_criteria": ["record_per_stream_charged_bytes_and_merge_order_sha256"],
+            "repair_criteria": ["record_per_stream_internal_offsets_lengths_sha256_and_merge_order_sha256"],
         }
     ]
     assert [item["pass_id"] for item in manifest["passes"]] == [
@@ -153,6 +156,9 @@ def test_stack_axis_semantics_match_project_definition() -> None:
 
     assert set(serial_axes.values()) == {"vstack_serial"}
     assert set(parallel_axes.values()) == {"hstack_parallel"}
+    for component in manifest["components"]:
+        if component["component_id"] in parallel_axes:
+            assert f"{component['streams'][0]}_internal_parser_section_missing" in component["blockers"]
     assert all(item["transform_id"].startswith("vstack_") for item in manifest["serial_transforms"])
     assert all(item["group_id"].startswith("hstack_") for item in manifest["parallel_groups"])
 

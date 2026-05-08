@@ -4,8 +4,9 @@ This module is deliberately scoreless. It describes candidate codec-stack
 repairs, byte/evidence semantics, blockers, and promotion gates before any
 archive is allowed to leave planning. In this planner:
 
-* HStack means horizontal, parallel composition across independent archive
-  components such as renderer weights, masks, poses, and residuals.
+* HStack means horizontal, parallel composition across parser-proven logical
+  streams inside the monolithic contest packet. It must not be inferred from
+  ZIP member names on PR101/PR106-style HNeRV frontier archives.
 * VStack means vertical, serial transforms inside one component stream:
   ``representation -> prediction -> quantization -> hyperprior -> arithmetic -> pack``.
 * Multipass means compress-time repeated planning/eval passes that emit one
@@ -30,7 +31,7 @@ ABSOLUTE_MAX_PASSES: int = 5
 SCORE_PROMOTION_EVIDENCE_GRADES: tuple[str, ...] = ("A", "A++")
 
 HSTACK_VSTACK_AXIS_SEMANTICS: dict[str, str] = {
-    "hstack_parallel": "parallel independent archive-component codecs merged into one deterministic packet",
+    "hstack_parallel": "parallel parser-proven logical stream codecs merged into one monolithic packet",
     "vstack_serial": "serial representation-to-pack transforms inside one component stream",
     "multipass": "compress-time repeated planning and training passes only",
 }
@@ -808,11 +809,21 @@ def build_hstack_vstack_multipass_plan(
             ),
             byte_semantics=_planning_semantics(
                 evidence_semantics="hstack_parallel_component_plan_only",
-                blockers=("parallel_stream_byte_ledger_missing", "cross_stream_budget_reconciliation_missing"),
-                repair_criteria=("record_per_stream_charged_bytes_and_merge_order_sha256",),
+                blockers=(
+                    "single_member_internal_section_map_missing",
+                    "parallel_stream_byte_ledger_missing",
+                    "cross_stream_budget_reconciliation_missing",
+                ),
+                repair_criteria=(
+                    "record_per_stream_internal_offsets_lengths_sha256_and_merge_order_sha256",
+                ),
             ),
-            blockers=("parallel_stream_byte_ledger_missing", "cross_stream_budget_reconciliation_missing"),
-            repair_criteria=("record_per_stream_charged_bytes_and_merge_order_sha256",),
+            blockers=(
+                "single_member_internal_section_map_missing",
+                "parallel_stream_byte_ledger_missing",
+                "cross_stream_budget_reconciliation_missing",
+            ),
+            repair_criteria=("record_per_stream_internal_offsets_lengths_sha256_and_merge_order_sha256",),
         ),
     )
     passes = _build_passes(max_passes=max_passes, include_balle_hyperprior=include_balle_hyperprior)
@@ -877,11 +888,19 @@ def _parallel_stream_component(component_id: str, family: str, stream_name: str)
         runtime_packet_required=True,
         byte_semantics=_planning_semantics(
             evidence_semantics=f"{stream_name}_parallel_stream_plan_only",
-            blockers=(f"{stream_name}_charged_byte_ledger_missing", f"{stream_name}_roundtrip_vector_missing"),
-            repair_criteria=(f"record_{stream_name}_bytes_sha256_and_decode_vector",),
+            blockers=(
+                f"{stream_name}_internal_parser_section_missing",
+                f"{stream_name}_charged_byte_ledger_missing",
+                f"{stream_name}_roundtrip_vector_missing",
+            ),
+            repair_criteria=(f"record_{stream_name}_offset_len_sha256_and_decode_vector",),
         ),
-        blockers=(f"{stream_name}_charged_byte_ledger_missing", f"{stream_name}_roundtrip_vector_missing"),
-        repair_criteria=(f"record_{stream_name}_bytes_sha256_and_decode_vector",),
+        blockers=(
+            f"{stream_name}_internal_parser_section_missing",
+            f"{stream_name}_charged_byte_ledger_missing",
+            f"{stream_name}_roundtrip_vector_missing",
+        ),
+        repair_criteria=(f"record_{stream_name}_offset_len_sha256_and_decode_vector",),
     )
 
 

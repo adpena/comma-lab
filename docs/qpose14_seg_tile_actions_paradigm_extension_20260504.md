@@ -72,7 +72,9 @@ qpose14 is the MAXIMALIST extreme — finer-grained than PR100 by O(N_tiles_per_
 The qpose14 pattern is **3-bit search space PER tile** (~7-8 actions in the codebook) instead of PR100's 8-bit search (i8 = 256 deltas). This makes the brute-force search more tractable per-tile, but the tile count multiplies.
 
 For our PR106-stacking work:
-- **NOT directly portable**: PR106 has no tile structure (no mask, no per-tile representation). PR106's 28 latent dims are global per pair, not per-tile.
+- **NOT directly portable**: PR106 exposes no separate tile, mask, or pose ZIP
+  member; the verified HNeRV parser surface is decoder weights plus 28 global
+  latent dims per pair, not a per-tile representation.
 - **PORTABLE WITH ARCHITECTURE CHANGE**: a future PR106 variant that adds a per-tile residual would unlock this pattern. Out of scope for /loop-tick polish.
 - **VALIDATES the paradigm**: 4 independent implementations of "small parameter-sparse correction sidechannels trained against the scorer" is now confirmed, spanning from per-pair (cheap) to per-tile (maximalist). This is the actual Shannon-floor mechanism.
 

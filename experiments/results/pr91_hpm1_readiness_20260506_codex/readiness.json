@@ -5,10 +5,13 @@
       "decode_reencode_parity_report_missing"
     ],
     "byte_exact_reencode": false,
+    "dispatch_allowed": false,
     "full_decode_600_frames": false,
     "present": false,
+    "ready_for_exact_eval_dispatch": false,
     "runtime_loader_sidecar_free": false
   },
+  "dispatch_allowed": false,
   "dispatch_attempted": false,
   "dispatch_blockers": [
     "byte_exact_hpm1_reencode",
@@ -62,7 +65,7 @@
     },
     "runtime_source_inventory": {
       "passed": true,
-      "reason": "public PR91 runtime source inventory includes required release sources",
+      "reason": "public PR91 runtime source inventory includes byte-matching required release sources",
       "required_for_dispatch": true,
       "status": "passed"
     },
@@ -177,6 +180,17 @@
   "ready_for_exact_eval_dispatch": false,
   "runtime_source_inventory": {
     "contains_range_codec_cpp": true,
+    "dispatch_allowed": false,
+    "expected_runtime_source_manifest_sources": [
+      ".omx/research/public_pr91_hpac_hybrid_intake_20260504_codex.md",
+      "experiments/results/public_pr_archive_release_view/public_pr91_intake_20260505_auto/source/submissions/hpac_coder_hybrid"
+    ],
+    "expected_runtime_source_sha256": {
+      "inflate.py": "9665d3832abd8f720617cad4e976536ef9ff4ce9a117623b9a00229c518a22ba",
+      "inflate.sh": "2c37f19e210f97c8926b70594e4d57fd8b0256dadace0cd55c28bbe6995ff027",
+      "pr86_hpac.py": "f86f3067386928478d983817c9f9ee095ce6eb02aee8c0fbb7987cd0af1f9b01",
+      "range_mask_codec.cpp": "23a6d9b622b231f61c73cd57eae3af96ca6133d07fab85e384a72e257317fb25"
+    },
     "file_count": 6,
     "files": [
       {
@@ -191,25 +205,35 @@
       },
       {
         "bytes": 86673,
+        "expected_sha256": "9665d3832abd8f720617cad4e976536ef9ff4ce9a117623b9a00229c518a22ba",
+        "matches_expected_sha256": true,
         "path": "inflate.py",
         "sha256": "9665d3832abd8f720617cad4e976536ef9ff4ce9a117623b9a00229c518a22ba"
       },
       {
         "bytes": 228,
+        "expected_sha256": "2c37f19e210f97c8926b70594e4d57fd8b0256dadace0cd55c28bbe6995ff027",
+        "matches_expected_sha256": true,
         "path": "inflate.sh",
         "sha256": "2c37f19e210f97c8926b70594e4d57fd8b0256dadace0cd55c28bbe6995ff027"
       },
       {
         "bytes": 19657,
+        "expected_sha256": "f86f3067386928478d983817c9f9ee095ce6eb02aee8c0fbb7987cd0af1f9b01",
+        "matches_expected_sha256": true,
         "path": "pr86_hpac.py",
         "sha256": "f86f3067386928478d983817c9f9ee095ce6eb02aee8c0fbb7987cd0af1f9b01"
       },
       {
         "bytes": 60201,
+        "expected_sha256": "23a6d9b622b231f61c73cd57eae3af96ca6133d07fab85e384a72e257317fb25",
+        "matches_expected_sha256": true,
         "path": "range_mask_codec.cpp",
         "sha256": "23a6d9b622b231f61c73cd57eae3af96ca6133d07fab85e384a72e257317fb25"
       }
     ],
+    "mismatched_required_source_files": [],
+    "missing_expected_source_sha256": [],
     "missing_required_source_files": [],
     "pycache_file_count": 2,
     "pycache_files": [
@@ -225,10 +249,14 @@
       }
     ],
     "pycache_only": false,
+    "ready_for_exact_eval_dispatch": false,
     "required_source_files": [
+      "inflate.sh",
       "inflate.py",
-      "pr86_hpac.py"
+      "pr86_hpac.py",
+      "range_mask_codec.cpp"
     ],
+    "required_source_files_match_expected": true,
     "required_source_files_present": true,
     "score_claim": false,
     "source_dir": "experiments/results/public_pr_archive_release_view/public_pr91_intake_20260505_auto/source/submissions/hpac_coder_hybrid",
@@ -236,21 +264,29 @@
     "source_files": [
       {
         "bytes": 86673,
+        "expected_sha256": "9665d3832abd8f720617cad4e976536ef9ff4ce9a117623b9a00229c518a22ba",
+        "matches_expected_sha256": true,
         "path": "inflate.py",
         "sha256": "9665d3832abd8f720617cad4e976536ef9ff4ce9a117623b9a00229c518a22ba"
       },
       {
         "bytes": 228,
+        "expected_sha256": "2c37f19e210f97c8926b70594e4d57fd8b0256dadace0cd55c28bbe6995ff027",
+        "matches_expected_sha256": true,
         "path": "inflate.sh",
         "sha256": "2c37f19e210f97c8926b70594e4d57fd8b0256dadace0cd55c28bbe6995ff027"
       },
       {
         "bytes": 19657,
+        "expected_sha256": "f86f3067386928478d983817c9f9ee095ce6eb02aee8c0fbb7987cd0af1f9b01",
+        "matches_expected_sha256": true,
         "path": "pr86_hpac.py",
         "sha256": "f86f3067386928478d983817c9f9ee095ce6eb02aee8c0fbb7987cd0af1f9b01"
       },
       {
         "bytes": 60201,
+        "expected_sha256": "23a6d9b622b231f61c73cd57eae3af96ca6133d07fab85e384a72e257317fb25",
+        "matches_expected_sha256": true,
         "path": "range_mask_codec.cpp",
         "sha256": "23a6d9b622b231f61c73cd57eae3af96ca6133d07fab85e384a72e257317fb25"
       }
@@ -273,7 +309,7 @@
       "--json-out",
       "experiments/results/pr91_hpm1_readiness_20260506_codex/readiness.json"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "40b8c872cba3e42573f4ca0887115f7293e07116a61fc870b611eace1892d605",
+    "canonical_payload_without_tool_manifest_sha256": "f6896b798a9487625f33b1fe0068410b0f5632bd544e8aae729e0d362e006f99",
     "dispatch_attempted": false,
     "input_files": [
       {

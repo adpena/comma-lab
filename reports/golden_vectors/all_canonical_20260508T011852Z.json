@@ -1,0 +1,332 @@
+{
+  "goldens": [
+    {
+      "schema": "golden_vector_emitter.v1",
+      "tool": "tools/golden_vector_emitter.py",
+      "evidence_grade": "[CPU-prep golden vector]",
+      "score_claim": false,
+      "codec": "brotli",
+      "codec_params": {
+        "quality": 11,
+        "lgwin": 16,
+        "lgblock": 19,
+        "mode": "MODE_GENERIC"
+      },
+      "n_vectors": 11,
+      "all_roundtrip_byte_faithful": true,
+      "vectors": [
+        {
+          "name": "all_zeros_int8_1024",
+          "dtype": "int8",
+          "shape": [
+            1024
+          ],
+          "input_bytes": 1024,
+          "input_sha256": "5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+          "encoded_bytes": 11,
+          "encoded_sha256": "7de54fd6600e06742e16cb6a482573c552debcb5608f597b0208b87e5acc0314",
+          "decoded_bytes": 1024,
+          "decoded_sha256": "5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+          "roundtrip_byte_faithful": true,
+          "compression_ratio": 0.0107421875
+        },
+        {
+          "name": "all_ones_int8_1024",
+          "dtype": "int8",
+          "shape": [
+            1024
+          ],
+          "input_bytes": 1024,
+          "input_sha256": "5a648d8015900d89664e00e125df179636301a2d8fa191c1aa2bd9358ea53a69",
+          "encoded_bytes": 11,
+          "encoded_sha256": "f1301c856eedce40e34c2fba8b3f4f761a8aacec7ced226d51860a21e26a272a",
+          "decoded_bytes": 1024,
+          "decoded_sha256": "5a648d8015900d89664e00e125df179636301a2d8fa191c1aa2bd9358ea53a69",
+          "roundtrip_byte_faithful": true,
+          "compression_ratio": 0.0107421875
+        },
+        {
+          "name": "single_int8_minus_127",
+          "dtype": "int8",
+          "shape": [
+            1
+          ],
+          "input_bytes": 1,
+          "input_sha256": "591b7cc95037822dec5a4d593a2e2e8b19c07ddd2570e5699003d17f14c440a6",
+          "encoded_bytes": 5,
+          "encoded_sha256": "a2666a2ba5856a17a3f421558e8b80b273dc614b9e354a3a34083f390fc92d96",
+          "decoded_bytes": 1,
+          "decoded_sha256": "591b7cc95037822dec5a4d593a2e2e8b19c07ddd2570e5699003d17f14c440a6",
+          "roundtrip_byte_faithful": true,
+          "compression_ratio": 5.0
+        },
+        {
+          "name": "single_int8_127",
+          "dtype": "int8",
+          "shape": [
+            1
+          ],
+          "input_bytes": 1,
+          "input_sha256": "620bfdaa346b088fb49998d92f19a7eaf6bfc2fb0aee015753966da1028cb731",
+          "encoded_bytes": 5,
+          "encoded_sha256": "8c2ba653efe88c2fca3eb202dfda69983fa2dbee045ca693f4366e3f38fc95df",
+          "decoded_bytes": 1,
+          "decoded_sha256": "620bfdaa346b088fb49998d92f19a7eaf6bfc2fb0aee015753966da1028cb731",
+          "roundtrip_byte_faithful": true,
+          "compression_ratio": 5.0
+        },
+        {
+          "name": "max_magnitude_int8_512",
+          "dtype": "int8",
+          "shape": [
+            512
+          ],
+          "input_bytes": 512,
+          "input_sha256": "806c140e696030b92b2baab061986023160ff6e549068239aed3182579ec191d",
+          "encoded_bytes": 11,
+          "encoded_sha256": "7a28a599fe5d840cd29a310b7345775463dde1af9b224cb52d4b9d1229af1808",
+          "decoded_bytes": 512,
+          "decoded_sha256": "806c140e696030b92b2baab061986023160ff6e549068239aed3182579ec191d",
+          "roundtrip_byte_faithful": true,
+          "compression_ratio": 0.021484375
+        },
+        {
+          "name": "alternating_pos_neg_int8_4096",
+          "dtype": "int8",
+          "shape": [
+            4096
+          ],
+          "input_bytes": 4096,
+          "input_sha256": "75e7f47b169e7b19fd5c13293fad72f1188b574089cc07f66f6b43e9f0437d32",
+          "encoded_bytes": 14,
+          "encoded_sha256": "0797785d889285212acd1affcb70671b6684e95067095ee8d4eeb45ace25a8f4",
+          "decoded_bytes": 4096,
+          "decoded_sha256": "75e7f47b169e7b19fd5c13293fad72f1188b574089cc07f66f6b43e9f0437d32",
+          "roundtrip_byte_faithful": true,
+          "compression_ratio": 0.00341796875
+        },
+        {
+          "name": "uniform_int8_4096",
+          "dtype": "int8",
+          "shape": [
+            4096
+          ],
+          "input_bytes": 4096,
+          "input_sha256": "0434cad1b3b1e199fceeb6f9e40e70d680dc4c6ace52940b285dd67079c52bd9",
+          "encoded_bytes": 4100,
+          "encoded_sha256": "c04a0dfa90349c48846cbb02c30542689c1ab9e138cd5faa6a938acb60233184",
+          "decoded_bytes": 4096,
+          "decoded_sha256": "0434cad1b3b1e199fceeb6f9e40e70d680dc4c6ace52940b285dd67079c52bd9",
+          "roundtrip_byte_faithful": true,
+          "compression_ratio": 1.0009765625
+        },
+        {
+          "name": "gaussian_int8_8192",
+          "dtype": "int8",
+          "shape": [
+            8192
+          ],
+          "input_bytes": 8192,
+          "input_sha256": "b2715c1f7da8fe55db9fc995de01812ea52ff714d1766626c442e88c3177600f",
+          "encoded_bytes": 6911,
+          "encoded_sha256": "19d3fd415df5fa3f7cf41c09549ae229d1ac70ec7cb8ef99645e66dd8d147d90",
+          "decoded_bytes": 8192,
+          "decoded_sha256": "b2715c1f7da8fe55db9fc995de01812ea52ff714d1766626c442e88c3177600f",
+          "roundtrip_byte_faithful": true,
+          "compression_ratio": 0.8436279296875
+        },
+        {
+          "name": "sparse_int8_8192",
+          "dtype": "int8",
+          "shape": [
+            8192
+          ],
+          "input_bytes": 8192,
+          "input_sha256": "ee134fa25b8706d5452d4da08cf49cf07db5fd7663489d56c70d65e68f7a63d2",
+          "encoded_bytes": 1685,
+          "encoded_sha256": "d8ccb571f4604ff6edcb20f2056584d147cb3130f569c66526c711b1221d6101",
+          "decoded_bytes": 8192,
+          "decoded_sha256": "ee134fa25b8706d5452d4da08cf49cf07db5fd7663489d56c70d65e68f7a63d2",
+          "roundtrip_byte_faithful": true,
+          "compression_ratio": 0.2056884765625
+        },
+        {
+          "name": "small_fp16_1024",
+          "dtype": "float16",
+          "shape": [
+            1024
+          ],
+          "input_bytes": 2048,
+          "input_sha256": "a829bca18f11371575121f6d844de9fb1719c4bade0c5f01e1dc9ae9623a1284",
+          "encoded_bytes": 1896,
+          "encoded_sha256": "818f6c6a9145c1cdcd1bfa2c7053f140f750b445f2fee0b13b2629441eb9b39c",
+          "decoded_bytes": 2048,
+          "decoded_sha256": "a829bca18f11371575121f6d844de9fb1719c4bade0c5f01e1dc9ae9623a1284",
+          "roundtrip_byte_faithful": true,
+          "compression_ratio": 0.92578125
+        },
+        {
+          "name": "small_fp32_1024",
+          "dtype": "float32",
+          "shape": [
+            1024
+          ],
+          "input_bytes": 4096,
+          "input_sha256": "547b2f47f1f4b6310814c780c9628ad3c95ffa88a68ccd41baa2ccceca554504",
+          "encoded_bytes": 3812,
+          "encoded_sha256": "7fbd1fc4fdcb994db8fa6c660039ee2a962b2338663bba8029b1c2d84d7f3c1f",
+          "decoded_bytes": 4096,
+          "decoded_sha256": "547b2f47f1f4b6310814c780c9628ad3c95ffa88a68ccd41baa2ccceca554504",
+          "roundtrip_byte_faithful": true,
+          "compression_ratio": 0.9306640625
+        }
+      ]
+    },
+    {
+      "schema": "golden_vector_emitter.v1",
+      "tool": "tools/golden_vector_emitter.py",
+      "evidence_grade": "[CPU-prep golden vector]",
+      "score_claim": false,
+      "codec": "int4_nibble_pack",
+      "codec_params": {
+        "bias": 8,
+        "range": [
+          -7,
+          7
+        ]
+      },
+      "n_vectors": 9,
+      "all_roundtrip_byte_faithful": true,
+      "vectors": [
+        {
+          "name": "all_zeros_int8_1024",
+          "dtype": "int4_packed_from_int8",
+          "shape": [
+            1024
+          ],
+          "input_bytes": 1024,
+          "input_sha256": "5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+          "encoded_bytes": 512,
+          "encoded_sha256": "32005f49ae3f2789042a26d7c556ab6aaf87b41b0b0395f23ae34b20f8eb4c10",
+          "decoded_codes_sha256": "5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+          "roundtrip_byte_faithful": true,
+          "compression_ratio": 0.5
+        },
+        {
+          "name": "all_ones_int8_1024",
+          "dtype": "int4_packed_from_int8",
+          "shape": [
+            1024
+          ],
+          "input_bytes": 1024,
+          "input_sha256": "5a648d8015900d89664e00e125df179636301a2d8fa191c1aa2bd9358ea53a69",
+          "encoded_bytes": 512,
+          "encoded_sha256": "18e0ee479e871f0ebc02e188f61afcadc453667a40c385fe9680996453e041b3",
+          "decoded_codes_sha256": "5a648d8015900d89664e00e125df179636301a2d8fa191c1aa2bd9358ea53a69",
+          "roundtrip_byte_faithful": true,
+          "compression_ratio": 0.5
+        },
+        {
+          "name": "single_int8_minus_127",
+          "dtype": "int4_packed_from_int8",
+          "shape": [
+            1
+          ],
+          "input_bytes": 1,
+          "input_sha256": "d52022534fa2dba3bb8a45809c425f42a5dd8786ef8d206fcff19c1fd66725b4",
+          "encoded_bytes": 1,
+          "encoded_sha256": "c555eab45d08845ae9f10d452a99bfcb06f74a50b988fe7e48dd323789b88ee3",
+          "decoded_codes_sha256": "d52022534fa2dba3bb8a45809c425f42a5dd8786ef8d206fcff19c1fd66725b4",
+          "roundtrip_byte_faithful": true,
+          "compression_ratio": 1.0
+        },
+        {
+          "name": "single_int8_127",
+          "dtype": "int4_packed_from_int8",
+          "shape": [
+            1
+          ],
+          "input_bytes": 1,
+          "input_sha256": "ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879",
+          "encoded_bytes": 1,
+          "encoded_sha256": "fde502858306c235a3121e42326b53228b7ef4690eeed92a2b2eafe73c03a3ef",
+          "decoded_codes_sha256": "ca358758f6d27e6cf45272937977a748fd88391db679ceda7dc7bf1f005ee879",
+          "roundtrip_byte_faithful": true,
+          "compression_ratio": 1.0
+        },
+        {
+          "name": "max_magnitude_int8_512",
+          "dtype": "int4_packed_from_int8",
+          "shape": [
+            512
+          ],
+          "input_bytes": 512,
+          "input_sha256": "15933044960fd23a7daaac9ce51355f1f39894d1c3fe6de21b59b28ce2c77e77",
+          "encoded_bytes": 256,
+          "encoded_sha256": "3d6876a0146de8576eb2395a858de1213d1b92c65b779df3a331cfd5a4584546",
+          "decoded_codes_sha256": "15933044960fd23a7daaac9ce51355f1f39894d1c3fe6de21b59b28ce2c77e77",
+          "roundtrip_byte_faithful": true,
+          "compression_ratio": 0.5
+        },
+        {
+          "name": "alternating_pos_neg_int8_4096",
+          "dtype": "int4_packed_from_int8",
+          "shape": [
+            4096
+          ],
+          "input_bytes": 4096,
+          "input_sha256": "555d2449ad9e42d03985b133a27d39f58644107fb9cdec20cc26e233e7172062",
+          "encoded_bytes": 2048,
+          "encoded_sha256": "69322ed350f698a628160a1b5270856f1d5c44eb8ca7c35bacbaf342e643e05f",
+          "decoded_codes_sha256": "555d2449ad9e42d03985b133a27d39f58644107fb9cdec20cc26e233e7172062",
+          "roundtrip_byte_faithful": true,
+          "compression_ratio": 0.5
+        },
+        {
+          "name": "uniform_int8_4096",
+          "dtype": "int4_packed_from_int8",
+          "shape": [
+            4096
+          ],
+          "input_bytes": 4096,
+          "input_sha256": "29b81aa20b2e23e2fcab7b1aba23bc840064fbd95efdf7d2636aa97594b8021f",
+          "encoded_bytes": 2048,
+          "encoded_sha256": "c47e571ab836aa12539e3696efbdd023c9cbe2f5c01c199a39ec303237c06bf2",
+          "decoded_codes_sha256": "29b81aa20b2e23e2fcab7b1aba23bc840064fbd95efdf7d2636aa97594b8021f",
+          "roundtrip_byte_faithful": true,
+          "compression_ratio": 0.5
+        },
+        {
+          "name": "gaussian_int8_8192",
+          "dtype": "int4_packed_from_int8",
+          "shape": [
+            8192
+          ],
+          "input_bytes": 8192,
+          "input_sha256": "cbba3fcb7e5a02430aaf9559743f0d8be8e5a70189d54ecf772fd029619c688a",
+          "encoded_bytes": 4096,
+          "encoded_sha256": "ca94542ca1f61cd8f4026f0dc007385592e63ed3ffe40a973dedc93c27b34adc",
+          "decoded_codes_sha256": "cbba3fcb7e5a02430aaf9559743f0d8be8e5a70189d54ecf772fd029619c688a",
+          "roundtrip_byte_faithful": true,
+          "compression_ratio": 0.5
+        },
+        {
+          "name": "sparse_int8_8192",
+          "dtype": "int4_packed_from_int8",
+          "shape": [
+            8192
+          ],
+          "input_bytes": 8192,
+          "input_sha256": "f228d1c4005cd4a5978868287ca7adbb81c67a90d5b57ba3f981a1e8a063dc2d",
+          "encoded_bytes": 4096,
+          "encoded_sha256": "14c64c4e3524a204a2fc41f17e76827c651f4d0e7432f82260818d682d76ce53",
+          "decoded_codes_sha256": "f228d1c4005cd4a5978868287ca7adbb81c67a90d5b57ba3f981a1e8a063dc2d",
+          "roundtrip_byte_faithful": true,
+          "compression_ratio": 0.5
+        }
+      ]
+    }
+  ],
+  "tool": "tools/golden_vector_emitter.py",
+  "schema": "golden_vector_emitter.v1"
+}

@@ -26,7 +26,9 @@ Quantizr is a **fundamentally different architecture** (not just a different enc
 - **FP4 weight quantization**: 88K params × 4 bits = ~44KB raw, brotli to ~64KB
 
 Implications for our PR106-stacking lanes:
-- **NOT a candidate for stacking on PR106** — PR106 has no mask channel, no pose vectors. Architecture mismatch.
+- **NOT a candidate for stacking on PR106** — PR106 does not expose separate
+  `mask` or `pose` ZIP members; the verified HNeRV parser surface is decoder
+  weights plus global per-pair latents/sidecar bytes. Architecture mismatch.
 - **IS the target of our Q-FAITHFUL clone effort** — separately tracked lane that aims to reproduce this paradigm in-house.
 - **Quantizr ≠ apogee_intN** — apogee_intN works on PR106's 28-tensor HNeRV decoder; Quantizr's model.pt.br is JointFrameGenerator weights (different schema entirely).
 

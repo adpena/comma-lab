@@ -56,6 +56,9 @@ Currently runs:
            tools/audit_pr91_hpm1_runtime_contract.py
            (PR91/HPM1 high-EV categorical path stays byte-custody-clean,
             operator-visible, and fail-closed until HPAC parity/runtime gates)
+  Gate #20: tools/pr106_archive_decomposition.py
+           (PR101/PR106 frontier archives are treated as single-member
+            monolithic packets; logical budgets require internal parser proof)
   Lane #1: tools/dispatch_dryrun_apogee_intN.py --all-pareto-frontier
            --allow-forensic-byte-only
            (self-protection check: Apogee intN remains byte-only and blocked
@@ -128,6 +131,7 @@ STAGED_PUBLIC_RELEASE_HYGIENE_AUDIT = TOOLS / "audit_staged_public_release_hygie
 CROSS_PARADIGM_FRONTIER_INVENTORY = TOOLS / "build_cross_paradigm_frontier_inventory.py"
 PR91_HPM1_READINESS_AUDIT = TOOLS / "audit_pr91_hpm1_readiness.py"
 PR91_HPM1_RUNTIME_CONTRACT_AUDIT = TOOLS / "audit_pr91_hpm1_runtime_contract.py"
+FRONTIER_ARCHIVE_LAYOUT_AUDIT = TOOLS / "pr106_archive_decomposition.py"
 PR91_HPM1_READINESS_ARTIFACT = REPO / "experiments/results/pr91_hpm1_readiness_20260506_codex/readiness.json"
 PR91_HPM1_RUNTIME_CONTRACT_ARTIFACT = (
     REPO / "experiments/results/pr91_hpm1_runtime_contract_20260506_codex/runtime_contract.json"
@@ -611,6 +615,84 @@ def _run_cross_paradigm_frontier_inventory_gate() -> tuple[bool, str]:
     )
 
 
+def _frontier_monolithic_layout_failures(payload: dict[str, object]) -> list[str]:
+    """Validate PR101/PR106 frontier layout is not budgeted by ZIP members."""
+    failures: list[str] = []
+    if payload.get("score_claim") is not False:
+        failures.append("layout_payload_score_claim_must_be_false")
+    if payload.get("evidence_grade") != "empirical_archive_layout_cpu_no_score":
+        failures.append("layout_payload_evidence_grade_must_be_cpu_archive_only")
+    runs = payload.get("runs")
+    if not isinstance(runs, list) or len(runs) < 2:
+        return [*failures, "layout_payload_missing_pr101_pr106_runs"]
+    expected_member_names = {"x", "0.bin"}
+    observed_member_names: set[str] = set()
+    for idx, run in enumerate(runs):
+        if not isinstance(run, dict):
+            failures.append(f"layout_run_{idx}_not_object")
+            continue
+        if run.get("score_claim") is not False:
+            failures.append(f"layout_run_{idx}_score_claim_must_be_false")
+        physical = run.get("physical_layout")
+        if not isinstance(physical, dict):
+            failures.append(f"layout_run_{idx}_physical_layout_missing")
+            continue
+        if physical.get("single_member_monolithic_packet") is not True:
+            failures.append(f"layout_run_{idx}_not_single_member_monolithic_packet")
+        if physical.get("archive_member_level_component_budgets_valid") is not False:
+            failures.append(f"layout_run_{idx}_member_level_component_budgets_not_rejected")
+        if physical.get("member_level_mask_budget_valid") is not False:
+            failures.append(f"layout_run_{idx}_member_level_mask_budget_not_rejected")
+        if physical.get("member_level_pose_budget_valid") is not False:
+            failures.append(f"layout_run_{idx}_member_level_pose_budget_not_rejected")
+        members = physical.get("members")
+        if not isinstance(members, list) or len(members) != 1 or not isinstance(members[0], dict):
+            failures.append(f"layout_run_{idx}_single_member_record_missing")
+            continue
+        observed_member_names.add(str(members[0].get("name")))
+        logical = run.get("logical_layout")
+        if not isinstance(logical, dict):
+            failures.append(f"layout_run_{idx}_logical_layout_missing")
+            continue
+        sections = logical.get("sections")
+        if not isinstance(sections, list) or not sections:
+            failures.append(f"layout_run_{idx}_logical_sections_missing")
+    missing_members = sorted(expected_member_names - observed_member_names)
+    if missing_members:
+        failures.append("layout_expected_member_name_missing: " + ", ".join(missing_members))
+    return failures
+
+
+def _run_frontier_monolithic_layout_gate() -> tuple[bool, str]:
+    with tempfile.TemporaryDirectory(prefix="pact_frontier_layout_preflight_") as tmp:
+        output_path = Path(tmp) / "frontier_layout.json"
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(FRONTIER_ARCHIVE_LAYOUT_AUDIT),
+                "--output-json",
+                str(output_path),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        output = proc.stdout + proc.stderr
+        if proc.returncode != 0:
+            return False, output
+        try:
+            payload = json.loads(output_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            return False, f"frontier layout audit emitted invalid JSON: {exc}\n{output}"
+    failures = _frontier_monolithic_layout_failures(payload)
+    if failures:
+        return False, "frontier monolithic layout contract failed:\n" + "\n".join(failures)
+    return True, (
+        "frontier monolithic layout: PASS "
+        "(PR101/PR106 are single-member packets; member-level mask/pose budgets rejected; "
+        "logical sections parser-proven)"
+    )
+
+
 def _cross_paradigm_queue_routing_failures(action_queue: list[object]) -> list[str]:
     """Validate post-anchor first-tranche routing."""
     failures: list[str] = []
@@ -1054,6 +1136,7 @@ def main(argv: list[str] | None = None) -> int:
         CROSS_PARADIGM_FRONTIER_INVENTORY,
         PR91_HPM1_READINESS_AUDIT,
         PR91_HPM1_RUNTIME_CONTRACT_AUDIT,
+        FRONTIER_ARCHIVE_LAYOUT_AUDIT,
         PR91_HPM1_READINESS_ARTIFACT,
         PR91_HPM1_RUNTIME_CONTRACT_ARTIFACT,
         LOCAL_CUSTODY_RELEASE_MANIFEST,
@@ -1225,6 +1308,14 @@ def main(argv: list[str] | None = None) -> int:
             _run_pr91_hpm1_fail_closed_gate,
             "  ✓ Gate #19: PR91 HPM1 fail-closed custody — PASSED",
             "  ✗ Gate #19: PR91 HPM1 fail-closed custody — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            20,
+            "frontier monolithic archive layout",
+            _run_frontier_monolithic_layout_gate,
+            "  ✓ Gate #20: frontier monolithic archive layout — PASSED",
+            "  ✗ Gate #20: frontier monolithic archive layout — FAILED",
         ),
     ]
     lane_steps = [
