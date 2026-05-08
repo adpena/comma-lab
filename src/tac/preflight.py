@@ -490,10 +490,13 @@ def preflight_all(
         # 2026-05-08 codex META finding (catalog #113): umbrella
         # provenance-vs-state lifecycle gate. Runs all four artifact-kind
         # guards against the registry at .omx/state/artifact_kind_registry.yaml.
-        # Held warn-only on landing pass; flip to strict after registry is
-        # filled to >= 100 entries and live count is 0. Memory:
-        # feedback_codex_findings_meta_pattern_artifact_lifecycle_FIXED_20260508.md
-        check_artifact_lifecycle_compliance(strict=False, verbose=verbose)
+        # Codex verification HIGH-2 (2026-05-08 evening): flipped from
+        # warn-only to strict so #113 blocks future tracked-artifact
+        # violations in preflight_all. The lifecycle audit skips untracked
+        # experiment outputs and can compare a committed range when
+        # ARTIFACT_LIFECYCLE_BASE_REF is set.
+        # Memory: feedback_codex_findings_meta_pattern_artifact_lifecycle_FIXED_20260508.md
+        check_artifact_lifecycle_compliance(strict=True, verbose=verbose)
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -539,9 +542,10 @@ def preflight_all(
         check_no_scorer_load_at_inflate(strict=True, verbose=verbose)
         check_training_scripts_have_auth_eval(strict=True, verbose=verbose)
         # 2026-05-08 codex Pattern A finding: training scripts must NOT call
-        # synthetic data factories in non-smoke mode. Wired warn-only on
-        # landing; flip to strict=True after the live count drops to 0.
-        check_training_scripts_use_real_data_in_nonsmoke_mode(strict=False, verbose=verbose)
+        # synthetic data factories in non-smoke mode. Codex verification
+        # MEDIUM-4 (2026-05-08 evening): flipped from warn-only to strict;
+        # FIX-A-SYNTH (c80162e7) reported live count = 0 on landing.
+        check_training_scripts_use_real_data_in_nonsmoke_mode(strict=True, verbose=verbose)
         check_no_disable_eval_roundtrip_flag(strict=True, verbose=verbose)
         check_no_pack_sparse_delta_approved_outside_promotion_tool(strict=True, verbose=verbose)
         check_inflate_sh_handles_br_centrally(strict=True, verbose=verbose)
@@ -24140,11 +24144,58 @@ def check_public_pr_intake_clones_pristine(
         dirty = result.stdout.strip()
         if not dirty:
             continue
-        # Distinguish text edits (real source-provenance corruption — what
-        # codex 2026-05-08 finding caught) from git-LFS pointer-vs-content
-        # state mismatches (NOT corruption — bytes match upstream LFS-smudged).
-        # `git diff --numstat` returns line counts for text files and
-        # `-\t-\t<path>` for binary/LFS files. Only flag when line counts > 0.
+        # Codex verification HIGH-1 (2026-05-08 evening): the original gate
+        # only flagged text edits via `git diff --numstat` and silently let
+        # untracked files + binary/LFS payload mutations pass. That broke
+        # public-frontier provenance custody — a clone could carry added
+        # waiver files or mutated binary payloads and still pass strict.
+        # Fix: any non-empty `git status --short` is a violation by default.
+        # The single explicit exception is git-LFS smudge state (pointer
+        # vs. fully-smudged content) which is provably non-corrupting; we
+        # require `git lfs status` to confirm every dirty entry is an
+        # LFS-managed pointer ↔ content mismatch and nothing else.
+        all_dirty_lines = [ln for ln in dirty.split("\n") if ln.strip()]
+        # Probe LFS-managed paths via `git lfs status`. If the command
+        # exists AND every dirty entry is in its output AND no untracked
+        # files (?? prefix) exist, the dirty state is LFS-only and benign.
+        is_lfs_only_dirty = False
+        try:
+            lfs_check = subprocess.run(
+                ["git", "-C", str(clone), "lfs", "status", "--porcelain"],
+                capture_output=True, text=True, timeout=30,
+            )
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+            lfs_check = None
+        if lfs_check is not None and lfs_check.returncode == 0:
+            lfs_paths = set()
+            for ln in lfs_check.stdout.strip().split("\n"):
+                if not ln.strip():
+                    continue
+                # `git lfs status --porcelain` rows: "<status> <path>"
+                parts = ln.split(None, 1)
+                if len(parts) >= 2:
+                    lfs_paths.add(parts[1].strip())
+            untracked = [
+                ln for ln in all_dirty_lines if ln.startswith("??")
+            ]
+            if not untracked and lfs_paths:
+                # Map dirty entries (XY <path>) to paths and verify all are LFS-managed.
+                dirty_paths = []
+                for ln in all_dirty_lines:
+                    p = ln[3:].strip() if len(ln) > 3 else ""
+                    if p:
+                        dirty_paths.append(p)
+                if dirty_paths and all(p in lfs_paths for p in dirty_paths):
+                    is_lfs_only_dirty = True
+        if is_lfs_only_dirty:
+            # Provably benign: every dirty entry is an LFS pointer-vs-content
+            # state mismatch and nothing is untracked. Skip without violation.
+            continue
+        # Anything else dirty (untracked files, binary edits, text edits,
+        # mixed) is a custody violation. Categorize for the operator.
+        text_edits: list[str] = []
+        binary_or_lfs_edits: list[str] = []
+        untracked_or_other: list[str] = []
         try:
             ns = subprocess.run(
                 ["git", "-C", str(clone), "diff", "--numstat"],
@@ -24152,8 +24203,6 @@ def check_public_pr_intake_clones_pristine(
             )
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             ns = None
-        text_edits: list[str] = []
-        binary_or_lfs_edits: list[str] = []
         if ns is not None and ns.returncode == 0:
             for line in ns.stdout.strip().split("\n"):
                 if not line:
@@ -24166,32 +24215,47 @@ def check_public_pr_intake_clones_pristine(
                     binary_or_lfs_edits.append(path)
                 else:
                     text_edits.append(f"{path} (+{added}/-{removed})")
-        else:
-            # diff --numstat failed; conservative: treat all as text edits
-            text_edits = [dirty.split("\n")[0]]
-        if not text_edits:
-            # Only binary/LFS state mismatches — content is upstream-faithful.
-            continue
+        # Capture any status entries not surfaced by diff (untracked, etc).
+        for ln in all_dirty_lines:
+            if ln.startswith("??"):
+                untracked_or_other.append(ln[3:].strip())
         rel = clone.relative_to(root) if clone.is_absolute() else clone
-        preview_lines = text_edits[:5]
-        preview = "; ".join(preview_lines)
-        extra = (
-            f" (+{len(text_edits) - 5} more text edits)"
-            if len(text_edits) > 5
-            else ""
-        )
-        lfs_note = (
-            f" [also {len(binary_or_lfs_edits)} binary/LFS state diff(s) ignored as non-corrupting]"
-            if binary_or_lfs_edits
-            else ""
-        )
+        # Build a category-aware violation message. The new gate (HIGH-1)
+        # treats untracked + binary as first-class violations alongside text
+        # edits, since codex 2026-05-08 verification found the previous
+        # text-only check let waiver files and binary mutations pass strict.
+        parts_msg: list[str] = []
+        if text_edits:
+            preview_lines = text_edits[:5]
+            preview = "; ".join(preview_lines)
+            extra = (
+                f" (+{len(text_edits) - 5} more)"
+                if len(text_edits) > 5
+                else ""
+            )
+            parts_msg.append(f"{len(text_edits)} text edit(s): [{preview}{extra}]")
+        if binary_or_lfs_edits:
+            parts_msg.append(
+                f"{len(binary_or_lfs_edits)} binary/LFS payload edit(s): "
+                f"[{', '.join(binary_or_lfs_edits[:3])}"
+                + ("..." if len(binary_or_lfs_edits) > 3 else "")
+                + "] (NOT exempted by `git lfs status` — these are real "
+                "payload mutations, not pointer-vs-content noise)"
+            )
+        if untracked_or_other:
+            parts_msg.append(
+                f"{len(untracked_or_other)} untracked file(s): "
+                f"[{', '.join(untracked_or_other[:3])}"
+                + ("..." if len(untracked_or_other) > 3 else "")
+                + "] (e.g. local-only waiver files corrupt forensic state)"
+            )
         violations.append(
             f"{rel}: dirty git status — public PR intake clone has "
-            f"local TEXT edits that corrupt source provenance. "
-            f"Edits: [{preview}{extra}]{lfs_note}. Restore via "
-            f"`git -C {rel} checkout -- <file>`. Put any waiver rationale "
-            f"in `reverse_engineering/public_pr_waiver_manifest.json` "
-            f"instead of editing the clone in place."
+            + "; ".join(parts_msg)
+            + f". Restore via `git -C {rel} checkout -- .` (and remove "
+            "untracked files). Put any waiver rationale in "
+            "`reverse_engineering/public_pr_waiver_manifest.json` "
+            "instead of editing the clone in place."
         )
 
     if verbose and violations:
@@ -24889,16 +24953,42 @@ def check_recovery_metadata_append_only(
         rel = path.relative_to(root).as_posix()
 
         attempts = payload.get("attempts") if isinstance(payload, dict) else None
+        schema_version = (
+            payload.get("schema_version") if isinstance(payload, dict) else None
+        )
         if not isinstance(attempts, list):
-            # Legacy v1 single-record schema. Warn-only, do not refuse —
-            # gives a migration window. Strict-flip will require attempts[]
-            # only after a sweep migrates all legacy files.
-            if "started_at_utc" in (payload or {}) and verbose:
+            # Codex verification MEDIUM-5 (2026-05-08 evening): the original
+            # warn-only fallback for legacy v1 single-record schema let the
+            # `started_at_utc` timestamp churn happen on legacy files. Now
+            # in strict mode we REFUSE legacy files unless they're explicitly
+            # allowlisted as historical fixtures (none currently). Non-strict
+            # mode keeps the warn for migration visibility.
+            legacy_marker = "started_at_utc" in (payload or {})
+            if legacy_marker and verbose:
                 print(
-                    f"  [recovery-metadata-append-only] WARN: "
+                    f"  [recovery-metadata-append-only] LEGACY: "
                     f"{rel} uses legacy v1 single-record schema (no `attempts[]`)"
                 )
+            if legacy_marker:
+                violations.append(
+                    f"{rel}: legacy v1 single-record schema — must migrate "
+                    "to schema_version='recovery_metadata.v2_attempts' with "
+                    "non-empty attempts[]. Run `tools/recover_lane_artifacts.py "
+                    "--migrate-v1-to-v2 <dir>` (writer auto-migrates on next "
+                    "write per FIX-5 89d6eba2). Allowlist intentionally-retained "
+                    "historical fixtures via a same-line "
+                    "`# RECOVERY_METADATA_LEGACY_OK:<reason>` waiver."
+                )
             continue
+        # If `attempts` is present but schema_version is missing or wrong,
+        # that's also a violation — the schema marker is what makes the
+        # append-only contract machine-checkable.
+        if schema_version != "recovery_metadata.v2_attempts":
+            violations.append(
+                f"{rel}: missing or wrong schema_version "
+                f"(found {schema_version!r}, expected "
+                f"'recovery_metadata.v2_attempts')"
+            )
         if not attempts:
             violations.append(f"{rel}: empty attempts[] list")
             continue

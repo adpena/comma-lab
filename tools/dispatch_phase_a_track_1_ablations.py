@@ -607,18 +607,29 @@ def main() -> int:
     # Write rollup manifest
     timestamp = utc_timestamp()
     rollup_path = output_root / f"phase_a_dispatch_rollup_{timestamp}.json"
+    # Codex verification MEDIUM-6 (2026-05-08 evening): rollup fields renamed
+    # from `decisions_dispatched` (execution-shaped) to `decisions_staged`
+    # (intent-shaped) so machine-readable consumers cannot mistake the rollup
+    # for completed-dispatch state. This wrapper does NOT launch jobs;
+    # `execution_attempted: false` makes that machine-checkable.
     rollup = {
         "phase": "A",
-        "wrapper_version": "1.0",
+        "wrapper_version": "1.1",
+        "wrapper_role": "staging_planner",
+        "execution_attempted": False,
         "council_memo_ref": ".omx/research/grand_council_extreme_rigor_track_1_20260508.md",
-        "decisions_dispatched": decisions,
+        "decisions_staged": decisions,
         "total_estimated_cost_usd": total_cost,
         "total_budget_cap_usd": args.total_budget,
         "results": results,
         "next_action": (
-            "After Lightning dispatches complete, harvest via "
-            "tools/harvest_modal_calls.py / tools/harvest_gha_runs.py and "
-            "verify each lane's [contest-CUDA] + [contest-CPU] dual-eval per CLAUDE.md."
+            "INVOKE per-decision launcher to actually run each ablation "
+            "(experiments/train_charm_*, train_score_gradient_*, "
+            "tools/pr101_sensitivity_*, etc). This rollup represents "
+            "DISPATCH INTENT, NOT execution. After per-decision runs land "
+            "their own artifacts, harvest via tools/harvest_modal_calls.py "
+            "/ tools/harvest_gha_runs.py + verify each lane's "
+            "[contest-CUDA] + [contest-CPU] dual-eval per CLAUDE.md."
         ),
     }
     rollup_path.write_text(json.dumps(rollup, indent=2))
