@@ -305,6 +305,23 @@ def _load_evidence(path: Path) -> list[TechniqueEvidence]:
     return out
 
 
+def _is_explicitly_promotable_evidence(evidence: TechniqueEvidence) -> bool:
+    """Return true only for rows that explicitly opt into promotion semantics.
+
+    Absence of custody fields must fail closed. CPU/MPS/proxy rows may still
+    update planning byte estimates, but they cannot be labeled promotable unless
+    the producer explicitly records score/promotion/dispatch readiness and has
+    no dispatch blockers.
+    """
+    return (
+        evidence.score_claim is True
+        and evidence.promotion_eligible is True
+        and evidence.rank_or_kill_eligible is True
+        and evidence.ready_for_exact_eval_dispatch is True
+        and not evidence.dispatch_blockers
+    )
+
+
 def update_catalog_from_evidence(
     catalog: list[dict[str, Any]],
     evidence: list[TechniqueEvidence],
@@ -331,12 +348,8 @@ def update_catalog_from_evidence(
             empirical_bytes.sort()
             n = len(empirical_bytes)
             median = empirical_bytes[n // 2]
-            explicit_non_promotable = any(
-                e.score_claim is False
-                or e.promotion_eligible is False
-                or e.rank_or_kill_eligible is False
-                or e.ready_for_exact_eval_dispatch is False
-                for e in obs
+            explicit_promotable = all(
+                _is_explicitly_promotable_evidence(e) for e in obs
             )
             blockers = sorted({
                 blocker
@@ -351,18 +364,18 @@ def update_catalog_from_evidence(
             new_t["empirical_anchor_evidence_semantics"] = sorted({
                 e.evidence_semantics for e in obs if e.evidence_semantics
             })
-            if explicit_non_promotable:
+            if explicit_promotable:
+                new_t["evidence_grade"] = f"[empirical-anchor-N{n}]"
+                new_t["empirical_anchor_promotable"] = True
+            else:
                 new_t["evidence_grade"] = f"[empirical-anchor-N{n}; planning-only]"
                 new_t["empirical_anchor_promotable"] = False
                 new_t["empirical_anchor_score_claim"] = False
                 new_t["ready_for_exact_eval_dispatch"] = False
                 new_t["rank_or_kill_eligible"] = False
                 new_t["dispatch_blockers"] = blockers or [
-                    "empirical_anchor_not_promotable_without_exact_cuda_auth_eval"
+                    "empirical_anchor_not_promotable_without_explicit_exact_eval_custody"
                 ]
-            else:
-                new_t["evidence_grade"] = f"[empirical-anchor-N{n}]"
-                new_t["empirical_anchor_promotable"] = True
         out.append(new_t)
     return out
 
@@ -433,7 +446,7 @@ def _maybe_axis_priorities(
     """
     try:
         sys.path.insert(0, str(REPO_ROOT / "tools"))
-        import dispatch_advisor as _adv  # noqa: E402
+        import dispatch_advisor as _adv
         adv = _adv.advise_candidate(
             label="autopilot_inline",
             d_seg=d_seg,

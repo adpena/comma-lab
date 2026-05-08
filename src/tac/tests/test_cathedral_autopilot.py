@@ -166,16 +166,28 @@ def test_feedback_loop_overrides_predicted_with_empirical(tmp_path: Path) -> Non
         autopilot.TechniqueEvidence(
             technique="brotli_optuna_default",
             empirical_archive_bytes=170_000,
+            score_claim=True,
+            promotion_eligible=True,
+            rank_or_kill_eligible=True,
+            ready_for_exact_eval_dispatch=True,
             source="[contest-CUDA] reports/run_a.json",
         ),
         autopilot.TechniqueEvidence(
             technique="brotli_optuna_default",
             empirical_archive_bytes=171_000,
+            score_claim=True,
+            promotion_eligible=True,
+            rank_or_kill_eligible=True,
+            ready_for_exact_eval_dispatch=True,
             source="[contest-CUDA] reports/run_b.json",
         ),
         autopilot.TechniqueEvidence(
             technique="brotli_optuna_default",
             empirical_archive_bytes=169_500,
+            score_claim=True,
+            promotion_eligible=True,
+            rank_or_kill_eligible=True,
+            ready_for_exact_eval_dispatch=True,
             source="[contest-CUDA] reports/run_c.json",
         ),
     ]
@@ -224,6 +236,34 @@ def test_feedback_loop_preserves_non_promotable_cpu_anchor() -> None:
     assert int4_row["rank_or_kill_eligible"] is False
     assert "planning-only" in int4_row["evidence_grade"]
     assert "missing_exact_cuda_auth_eval" in int4_row["dispatch_blockers"]
+
+
+def test_feedback_loop_treats_missing_custody_flags_as_planning_only() -> None:
+    """Rows without explicit exact-eval custody can anchor planning, not promotion."""
+    autopilot = _load_autopilot()
+    evidence = [
+        autopilot.TechniqueEvidence(
+            technique="tiny_nn_pmf_predictor",
+            empirical_archive_bytes=178_779,
+            source="[CPU-prep] reports/pr101_tiny_nn_pmf_smoke.json",
+        ),
+    ]
+    updated = autopilot.update_catalog_from_evidence(
+        autopilot.ENCODER_TECHNIQUES,
+        evidence,
+    )
+    row = next(r for r in updated if r["name"] == "tiny_nn_pmf_predictor")
+
+    assert row["predicted_archive_bytes"] == 178_779
+    assert row["empirical_anchor_promotable"] is False
+    assert row["empirical_anchor_score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert row["rank_or_kill_eligible"] is False
+    assert "planning-only" in row["evidence_grade"]
+    assert (
+        "empirical_anchor_not_promotable_without_explicit_exact_eval_custody"
+        in row["dispatch_blockers"]
+    )
 
 
 def test_high_signal_filter_drops_low_delta_techniques() -> None:

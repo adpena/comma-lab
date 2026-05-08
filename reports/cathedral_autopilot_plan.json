@@ -1,35 +1,33 @@
 {
   "arch_technique_ranking": [
     {
-      "cost_dollars": 25.0,
-      "cost_hours": 24.0,
-      "current_score_baseline": 0.2040578662595819,
-      "description": "70% sparsity via IMP retraining; arch unchanged",
-      "evidence_grade": "[predicted]",
-      "gain_per_dollar": 0.0030135178156821983,
-      "gain_per_hour": 0.00313908105800229,
-      "name": "sparsity_alpha_0.7_imp_retrain",
-      "predicted_archive_bytes": 65000,
-      "predicted_gap_to_target": -0.026280079132473072,
-      "predicted_score_after": 0.12871992086752693,
-      "predicted_score_delta": 0.07533794539205496,
-      "reaches_target": true,
-      "risk": "training_side"
-    },
-    {
+      "catalog_prior_bytes": 80000,
       "cost_dollars": 15.0,
       "cost_hours": 12.0,
       "current_score_baseline": 0.2040578662595819,
       "description": "88K-element renderer (Quantizr-class); full retrain",
-      "evidence_grade": "[predicted]",
-      "gain_per_dollar": 0.004356670739681493,
-      "gain_per_hour": 0.005445838424601866,
+      "dispatch_blockers": [
+        "empirical_anchor_not_promotable_without_explicit_exact_eval_custody"
+      ],
+      "empirical_anchor_bytes": 83571,
+      "empirical_anchor_evidence_semantics": [],
+      "empirical_anchor_n": 1,
+      "empirical_anchor_promotable": false,
+      "empirical_anchor_score_claim": false,
+      "empirical_anchor_sources": [
+        "[CPU-prep empirical byte-anchor only] reports/raw/pr101_arch_shrink_20260508T003827Z/manifest.json (ratio=0.4, post-hoc no retrain; channel L2-truncate)"
+      ],
+      "evidence_grade": "[empirical-anchor-N1; planning-only]",
+      "gain_per_dollar": 0.004198151918241542,
+      "gain_per_hour": 0.005247689897801927,
       "name": "arch_shrink_x0.4_quantizr_class",
-      "predicted_archive_bytes": 80000,
-      "predicted_gap_to_target": -0.01629219483564051,
-      "predicted_score_after": 0.1387078051643595,
-      "predicted_score_delta": 0.0653500610952224,
+      "predicted_archive_bytes": 83571,
+      "predicted_gap_to_target": -0.013914412514041241,
+      "predicted_score_after": 0.14108558748595876,
+      "predicted_score_delta": 0.06297227877362313,
+      "rank_or_kill_eligible": false,
       "reaches_target": true,
+      "ready_for_exact_eval_dispatch": false,
       "risk": "architectural"
     },
     {
@@ -49,71 +47,89 @@
       "risk": "architectural"
     },
     {
+      "catalog_prior_bytes": 65000,
+      "cost_dollars": 25.0,
+      "cost_hours": 24.0,
+      "current_score_baseline": 0.2040578662595819,
+      "description": "70% sparsity via IMP retraining; arch unchanged",
+      "dispatch_blockers": [
+        "empirical_anchor_not_promotable_without_explicit_exact_eval_custody"
+      ],
+      "empirical_anchor_bytes": 94671,
+      "empirical_anchor_evidence_semantics": [],
+      "empirical_anchor_n": 1,
+      "empirical_anchor_promotable": false,
+      "empirical_anchor_score_claim": false,
+      "empirical_anchor_sources": [
+        "[CPU-prep empirical byte-anchor only] reports/raw/pr101_sparsity_sweep_20260508T002611Z/manifest.json (alpha=0.7, post-hoc no retrain)"
+      ],
+      "evidence_grade": "[empirical-anchor-N1; planning-only]",
+      "gain_per_dollar": 0.0022232497757586813,
+      "gain_per_hour": 0.0023158851830819595,
+      "name": "sparsity_alpha_0.7_imp_retrain",
+      "predicted_archive_bytes": 94671,
+      "predicted_gap_to_target": -0.006523378134385138,
+      "predicted_score_after": 0.14847662186561486,
+      "predicted_score_delta": 0.05558124439396703,
+      "rank_or_kill_eligible": false,
+      "reaches_target": true,
+      "ready_for_exact_eval_dispatch": false,
+      "risk": "training_side"
+    },
+    {
+      "catalog_prior_bytes": 105440,
       "cost_dollars": 8.0,
       "cost_hours": 6.0,
       "current_score_baseline": 0.2040578662595819,
       "description": "n_quant=15 (int4) with QAT/LSQ retuning",
-      "evidence_grade": "[predicted]",
-      "gain_per_dollar": 0.006051326165974296,
-      "gain_per_hour": 0.008068434887965728,
+      "dispatch_blockers": [
+        "empirical_anchor_not_promotable_without_explicit_exact_eval_custody"
+      ],
+      "empirical_anchor_bytes": 100799,
+      "empirical_anchor_evidence_semantics": [],
+      "empirical_anchor_n": 3,
+      "empirical_anchor_promotable": false,
+      "empirical_anchor_score_claim": false,
+      "empirical_anchor_sources": [
+        "[CPU-prep empirical] reports/raw/pr101_int4_sweep_20260508T001119Z/manifest.json (block_size=1024)",
+        "[CPU-prep precision proxy] reports/raw/pr101_int4_roundtrip_20260508T003449Z/manifest.json (FALSIFIED for dispatch: 37% rel_err >> 2% threshold)",
+        "[CPU-prep empirical] retag-after-adversarial-audit 2026-05-07 \u2014 naive PTQ only; QAT, LSQ, per-channel, mixed-precision, GPTQ/AWQ NOT tested. Cf. CLAUDE.md apogee_int4 anti-pattern"
+      ],
+      "evidence_grade": "[empirical-anchor-N3; planning-only]",
+      "gain_per_dollar": 0.006437607591154297,
+      "gain_per_hour": 0.00858347678820573,
       "name": "lossy_int4_quantization",
-      "predicted_archive_bytes": 105440,
-      "predicted_gap_to_target": 0.000647256931787521,
-      "predicted_score_after": 0.15564725693178752,
-      "predicted_score_delta": 0.04841060932779437,
-      "reaches_target": false,
+      "predicted_archive_bytes": 100799,
+      "predicted_gap_to_target": -0.0024429944696524875,
+      "predicted_score_after": 0.1525570055303475,
+      "predicted_score_delta": 0.05150086072923438,
+      "rank_or_kill_eligible": false,
+      "reaches_target": true,
+      "ready_for_exact_eval_dispatch": false,
       "risk": "lossy_high"
     }
   ],
+  "axis_priorities": [
+    {
+      "estimated_effort_class": "moderate",
+      "marginal_value": 271.1630722733202,
+      "name": "pose",
+      "rationale": "dS/d(d_pose) = 271.16 at this operating point. Improving d_pose by 1e-5 reduces score by ~0.00271 (linear approximation; pose term is sqrt so the actual reduction is slightly larger for the same delta)."
+    },
+    {
+      "estimated_effort_class": "moderate",
+      "marginal_value": 100.0,
+      "name": "seg",
+      "rationale": "dS/d(d_seg) = 100.00 (constant). Improving d_seg by 1e-4 reduces score by 0.01000."
+    },
+    {
+      "estimated_effort_class": "moderate",
+      "marginal_value": 0.0006658589531221714,
+      "name": "bytes",
+      "rationale": "dS/dB = 6.659e-07 per byte (constant 0.00067 per 1000 bytes). Saving 1 KB reduces score by 0.00067."
+    }
+  ],
   "encoder_technique_ranking": [
-    {
-      "cost_dollars": 5.0,
-      "cost_hours": 4.0,
-      "current_score_baseline": 0.2040578662595819,
-      "description": "Ball\u00e9 scale-hyperprior NN; subagent-verdict joint floor",
-      "evidence_grade": "[subagent-predicted]",
-      "gain_per_dollar": 0.0026826125503386033,
-      "gain_per_hour": 0.003353265687923254,
-      "name": "compressai_balle_hyperprior",
-      "predicted_archive_bytes": 158000,
-      "predicted_gap_to_target": 0.03564480350788887,
-      "predicted_score_after": 0.19064480350788887,
-      "predicted_score_delta": 0.013413062751693017,
-      "reaches_target": false,
-      "risk": "lossless"
-    },
-    {
-      "cost_dollars": 0.0,
-      "cost_hours": 3.0,
-      "current_score_baseline": 0.2040578662595819,
-      "description": "200-param MLP predicting per-tensor PMF; ~400B model + AAC",
-      "evidence_grade": "[predicted]",
-      "gain_per_dollar": 0.014840664347187005,
-      "gain_per_hour": 0.002473444057864501,
-      "name": "tiny_nn_pmf_predictor",
-      "predicted_archive_bytes": 167000,
-      "predicted_gap_to_target": 0.04163753408598839,
-      "predicted_score_after": 0.19663753408598839,
-      "predicted_score_delta": 0.007420332173593502,
-      "reaches_target": false,
-      "risk": "lossless"
-    },
-    {
-      "cost_dollars": 0.0,
-      "cost_hours": 2.0,
-      "current_score_baseline": 0.2040578662595819,
-      "description": "4-component mixture (Gaussian+Laplace+sparse+uniform) on PMFs",
-      "evidence_grade": "[predicted]",
-      "gain_per_dollar": 0.006184497956598756,
-      "gain_per_hour": 0.001546124489149689,
-      "name": "kalle_fold_mixture_canonical_shapes",
-      "predicted_archive_bytes": 173500,
-      "predicted_gap_to_target": 0.04596561728128251,
-      "predicted_score_after": 0.2009656172812825,
-      "predicted_score_delta": 0.003092248978299378,
-      "reaches_target": false,
-      "risk": "lossless"
-    },
     {
       "cost_dollars": 0.0,
       "cost_hours": 0.5,
@@ -145,6 +161,116 @@
       "predicted_score_delta": 0.0,
       "reaches_target": false,
       "risk": "lossless"
+    },
+    {
+      "catalog_prior_bytes": 167000,
+      "cost_dollars": 0.0,
+      "cost_hours": 3.0,
+      "current_score_baseline": 0.2040578662595819,
+      "description": "200-param MLP predicting per-tensor PMF; ~400B model + AAC",
+      "dispatch_blockers": [
+        "empirical_anchor_not_promotable_without_explicit_exact_eval_custody"
+      ],
+      "empirical_anchor_bytes": 179276,
+      "empirical_anchor_evidence_semantics": [],
+      "empirical_anchor_n": 3,
+      "empirical_anchor_promotable": false,
+      "empirical_anchor_score_claim": false,
+      "empirical_anchor_sources": [
+        "[CPU-prep empirical] reports/raw/pr101_tiny_nn_20260508T001420Z.json (tensor_only variant)",
+        "[CPU-prep MDL smoke final] reports/pr101_tiny_nn_pmf_smoke.json (tensor_only rank=7 epochs=500; loses by +635B vs Brotli+Optuna)",
+        "[CPU-prep empirical] retag-after-adversarial-audit 2026-05-07 \u2014 only rank=8 tested; rank>=32, LSTM/transformer, cross-tensor context NOT tested"
+      ],
+      "evidence_grade": "[empirical-anchor-N3; planning-only]",
+      "gain_per_dollar": 0.0,
+      "gain_per_hour": 0.0,
+      "name": "tiny_nn_pmf_predictor",
+      "predicted_archive_bytes": 179276,
+      "predicted_gap_to_target": 0.04905786625958189,
+      "predicted_score_after": 0.2040578662595819,
+      "predicted_score_delta": 0.0,
+      "rank_or_kill_eligible": false,
+      "reaches_target": false,
+      "ready_for_exact_eval_dispatch": false,
+      "risk": "lossless"
+    },
+    {
+      "catalog_prior_bytes": 173500,
+      "cost_dollars": 0.0,
+      "cost_hours": 2.0,
+      "current_score_baseline": 0.2040578662595819,
+      "description": "4-component mixture (Gaussian+Laplace+sparse+uniform) on PMFs",
+      "dispatch_blockers": [
+        "empirical_anchor_not_promotable_without_explicit_exact_eval_custody"
+      ],
+      "empirical_anchor_bytes": 205963,
+      "empirical_anchor_evidence_semantics": [],
+      "empirical_anchor_n": 2,
+      "empirical_anchor_promotable": false,
+      "empirical_anchor_score_claim": false,
+      "empirical_anchor_sources": [
+        "[CPU-prep empirical] reports/raw/pr101_kalle_fold_20260508T001304Z/manifest.json",
+        "[CPU-prep empirical] retag-after-adversarial-audit 2026-05-07 \u2014 4-comp mixture insufficient capacity; higher comp/hierarchical/sparse-dict NOT tested"
+      ],
+      "evidence_grade": "[empirical-anchor-N2; planning-only]",
+      "gain_per_dollar": 0.0,
+      "gain_per_hour": 0.0,
+      "name": "kalle_fold_mixture_canonical_shapes",
+      "predicted_archive_bytes": 205963,
+      "predicted_gap_to_target": 0.04905786625958189,
+      "predicted_score_after": 0.2040578662595819,
+      "predicted_score_delta": 0.0,
+      "rank_or_kill_eligible": false,
+      "reaches_target": false,
+      "ready_for_exact_eval_dispatch": false,
+      "risk": "lossless"
+    },
+    {
+      "cost_dollars": 0.0,
+      "cost_hours": 2.0,
+      "current_score_baseline": 0.2040578662595819,
+      "description": "Shared FP16 PMF clusters over PR101 quantized tensors; measured negative",
+      "evidence_grade": "[CPU-prep empirical; planning-only]",
+      "gain_per_dollar": 0.0,
+      "gain_per_hour": 0.0,
+      "name": "shared_canonical_pmf_clusters",
+      "predicted_archive_bytes": 179046,
+      "predicted_gap_to_target": 0.04905786625958189,
+      "predicted_score_after": 0.2040578662595819,
+      "predicted_score_delta": 0.0,
+      "reaches_target": false,
+      "risk": "lossless"
+    },
+    {
+      "catalog_prior_bytes": 158000,
+      "cost_dollars": 5.0,
+      "cost_hours": 4.0,
+      "current_score_baseline": 0.2040578662595819,
+      "description": "Balle scale-hyperprior NN; subagent-verdict joint floor",
+      "dispatch_blockers": [
+        "empirical_anchor_not_promotable_without_explicit_exact_eval_custody"
+      ],
+      "empirical_anchor_bytes": 207065,
+      "empirical_anchor_evidence_semantics": [],
+      "empirical_anchor_n": 2,
+      "empirical_anchor_promotable": false,
+      "empirical_anchor_score_claim": false,
+      "empirical_anchor_sources": [
+        "[MPS-research-signal] reports/raw/pr101_balle_hyperprior_20260508T002237Z/manifest.json",
+        "[MPS-research-signal] retag-after-adversarial-audit 2026-05-07 \u2014 only 1.1KB MLP tested; 5-10KB MLP / full ScaleHyperprior / cross-tensor hyperprior NOT tested"
+      ],
+      "evidence_grade": "[empirical-anchor-N2; planning-only]",
+      "gain_per_dollar": 0.0,
+      "gain_per_hour": 0.0,
+      "name": "compressai_balle_hyperprior",
+      "predicted_archive_bytes": 207065,
+      "predicted_gap_to_target": 0.04905786625958189,
+      "predicted_score_after": 0.2040578662595819,
+      "predicted_score_delta": 0.0,
+      "rank_or_kill_eligible": false,
+      "reaches_target": false,
+      "ready_for_exact_eval_dispatch": false,
+      "risk": "lossless"
     }
   ],
   "evidence_grade": "[CPU-prep planning-only]",
@@ -152,8 +278,8 @@
     "Operating regime: pose-dominated regime (d_pose 3.40e-05 < 2.50e-04); prioritize pose-targeted lanes \u2014 they have 2.71x the marginal score-per-byte vs seg lanes here",
     "Importance flip threshold: d_pose = 2.50e-04",
     "Score decomposition: seg=0.06700 + pose=0.01844 + rate=0.11862",
-    "To reach 0.15500: need \u22120.04906 score points. Top-3 techniques rank by predicted score-delta.",
-    "Encoder-side ceiling for PR101 (no ML) is empirically 178 KB per grand-council 30k synthesis. Sub-178 KB requires NN encoder OR architectural change. Architecture has 5-10\u00d7 more headroom."
+    "To reach 0.15500: need -0.04906 score points. Top-3 techniques rank by predicted score-delta.",
+    "PR101 hand-coded entropy probes are saturated near the 178 KB brotli/AAC band: the best charged Markov-1 table rerun is 200,219 B, so the currently tested table-transmission path loses. This is not a global no-ML impossibility proof; sub-178 KB still needs a new charged coder, a shared decoder model, or lower-entropy weights. Architecture has 5-10x more predicted headroom."
   ],
   "operator_state": {
     "archive_bytes": 178144,
@@ -164,35 +290,33 @@
   },
   "recommended_top_3": [
     {
-      "cost_dollars": 25.0,
-      "cost_hours": 24.0,
-      "current_score_baseline": 0.2040578662595819,
-      "description": "70% sparsity via IMP retraining; arch unchanged",
-      "evidence_grade": "[predicted]",
-      "gain_per_dollar": 0.0030135178156821983,
-      "gain_per_hour": 0.00313908105800229,
-      "name": "sparsity_alpha_0.7_imp_retrain",
-      "predicted_archive_bytes": 65000,
-      "predicted_gap_to_target": -0.026280079132473072,
-      "predicted_score_after": 0.12871992086752693,
-      "predicted_score_delta": 0.07533794539205496,
-      "reaches_target": true,
-      "risk": "training_side"
-    },
-    {
+      "catalog_prior_bytes": 80000,
       "cost_dollars": 15.0,
       "cost_hours": 12.0,
       "current_score_baseline": 0.2040578662595819,
       "description": "88K-element renderer (Quantizr-class); full retrain",
-      "evidence_grade": "[predicted]",
-      "gain_per_dollar": 0.004356670739681493,
-      "gain_per_hour": 0.005445838424601866,
+      "dispatch_blockers": [
+        "empirical_anchor_not_promotable_without_explicit_exact_eval_custody"
+      ],
+      "empirical_anchor_bytes": 83571,
+      "empirical_anchor_evidence_semantics": [],
+      "empirical_anchor_n": 1,
+      "empirical_anchor_promotable": false,
+      "empirical_anchor_score_claim": false,
+      "empirical_anchor_sources": [
+        "[CPU-prep empirical byte-anchor only] reports/raw/pr101_arch_shrink_20260508T003827Z/manifest.json (ratio=0.4, post-hoc no retrain; channel L2-truncate)"
+      ],
+      "evidence_grade": "[empirical-anchor-N1; planning-only]",
+      "gain_per_dollar": 0.004198151918241542,
+      "gain_per_hour": 0.005247689897801927,
       "name": "arch_shrink_x0.4_quantizr_class",
-      "predicted_archive_bytes": 80000,
-      "predicted_gap_to_target": -0.01629219483564051,
-      "predicted_score_after": 0.1387078051643595,
-      "predicted_score_delta": 0.0653500610952224,
+      "predicted_archive_bytes": 83571,
+      "predicted_gap_to_target": -0.013914412514041241,
+      "predicted_score_after": 0.14108558748595876,
+      "predicted_score_delta": 0.06297227877362313,
+      "rank_or_kill_eligible": false,
       "reaches_target": true,
+      "ready_for_exact_eval_dispatch": false,
       "risk": "architectural"
     },
     {
@@ -210,6 +334,36 @@
       "predicted_score_delta": 0.058691471564000675,
       "reaches_target": true,
       "risk": "architectural"
+    },
+    {
+      "catalog_prior_bytes": 65000,
+      "cost_dollars": 25.0,
+      "cost_hours": 24.0,
+      "current_score_baseline": 0.2040578662595819,
+      "description": "70% sparsity via IMP retraining; arch unchanged",
+      "dispatch_blockers": [
+        "empirical_anchor_not_promotable_without_explicit_exact_eval_custody"
+      ],
+      "empirical_anchor_bytes": 94671,
+      "empirical_anchor_evidence_semantics": [],
+      "empirical_anchor_n": 1,
+      "empirical_anchor_promotable": false,
+      "empirical_anchor_score_claim": false,
+      "empirical_anchor_sources": [
+        "[CPU-prep empirical byte-anchor only] reports/raw/pr101_sparsity_sweep_20260508T002611Z/manifest.json (alpha=0.7, post-hoc no retrain)"
+      ],
+      "evidence_grade": "[empirical-anchor-N1; planning-only]",
+      "gain_per_dollar": 0.0022232497757586813,
+      "gain_per_hour": 0.0023158851830819595,
+      "name": "sparsity_alpha_0.7_imp_retrain",
+      "predicted_archive_bytes": 94671,
+      "predicted_gap_to_target": -0.006523378134385138,
+      "predicted_score_after": 0.14847662186561486,
+      "predicted_score_delta": 0.05558124439396703,
+      "rank_or_kill_eligible": false,
+      "reaches_target": true,
+      "ready_for_exact_eval_dispatch": false,
+      "risk": "training_side"
     }
   ],
   "schema": "cathedral_autopilot.v1",
