@@ -8,17 +8,18 @@ Test:
   2. Decode int4 -> fp32 (per-block dequantize)
   3. Compute relative error |q(x) - x| / |x| per element
   4. Report: weighted_avg, p50, p90, p99, max + per-tensor breakdown
-  5. Verdict: DISPATCH-READY if weighted_avg <2% AND p99 <10%
+  5. Verdict: CUDA-EVAL-WORTH-TESTING if weighted_avg <2% AND p99 <10%
               CONDITIONAL if 2-5% (still worth trying CUDA)
-              FALSIFIED if >5% (reconstruction too lossy)
+              MEASURED_CONFIG_NOT_DISPATCHABLE if >5%
 
 The threshold (<2% weighted_avg) comes from `feedback_q_faithful_NEVER_
 reproduced_quantizr_score_20260505.md`: prior int4 quant attempts went
 sour above 2% rel_err per the apogee_intN basin parity findings.
 
 CLAUDE.md compliance: pure CPU + numpy, no scorer load, no contest score
-claim. Output is a precision proxy that gates the [contest-CUDA] dispatch
-decision; actual score requires CUDA auth eval on the bytes-out archive.
+claim. Output is a precision proxy that can recommend more engineering, but it
+never marks a lane exact-eval-ready. Actual score requires a byte-closed
+runtime packet plus CUDA auth eval on the exact archive bytes.
 """
 from __future__ import annotations
 
@@ -44,10 +45,12 @@ DEFAULT_STATE_DICT_PATH = (
     / "experiments/results/pr101_codecop_sweep_20260507_codex/pr101_decoder_state_dict.pt"
 )
 EVIDENCE_GRADE = "[CPU-prep precision proxy]"
-DISPATCH_BLOCKERS_IF_FALSIFIED = [
-    "rel_err_above_2pct_threshold",
+DISPATCH_BLOCKERS_BASE = [
     "no_int4_decoder_runtime_built",
+    "byte_closed_int4_runtime_packet_missing",
     "missing_exact_cuda_auth_eval",
+    "requires_exact_cuda_auth_eval_before_any_score_use",
+    "cpu_proxy_rel_err_not_score_evidence",
 ]
 
 
@@ -142,36 +145,51 @@ def measure_full_roundtrip(state_dict_path: Path, block_size: int) -> dict:
     weighted_avg_rel_err_pct = weighted_rel_err_sum / max(n_nontrivial_total, 1)
     weighted_avg_abs_err = weighted_abs_err_sum / max(total_elements, 1)
 
-    # Verdict
+    # Verdict — CPU rel_err is a PROXY only. Per CLAUDE.md MPS-falsification
+    # rule: NO CPU/MPS measurement may set ready_for_exact_eval_dispatch=True.
+    # The verdict here only RECOMMENDS whether a CUDA test is worth running.
     if weighted_avg_rel_err_pct < 2.0 and max_p99 < 10.0:
-        verdict = "DISPATCH-READY"
+        verdict = "CUDA-EVAL-WORTH-TESTING"
         verdict_reason = (
             f"weighted_avg {weighted_avg_rel_err_pct:.3f}% < 2.0% "
-            f"AND max_p99 {max_p99:.3f}% < 10.0%"
+            f"AND max_p99 {max_p99:.3f}% < 10.0%; CUDA auth eval likely worthwhile"
         )
-        ready_for_cuda_dispatch = True
+        cuda_eval_worth_testing = True
     elif weighted_avg_rel_err_pct < 5.0:
         verdict = "CONDITIONAL"
         verdict_reason = (
             f"weighted_avg {weighted_avg_rel_err_pct:.3f}% in [2.0%, 5.0%); "
             f"borderline — CUDA test recommended but expect ~10-30% score regression"
         )
-        ready_for_cuda_dispatch = False
+        cuda_eval_worth_testing = True
     else:
-        verdict = "FALSIFIED"
+        verdict = "MEASURED_CONFIG_NOT_DISPATCHABLE"
         verdict_reason = (
             f"weighted_avg {weighted_avg_rel_err_pct:.3f}% >= 5.0%; "
-            f"reconstruction too lossy for [contest-CUDA] dispatch"
+            f"reconstruction too lossy for this measured config; "
+            f"family stays DEFERRED-pending-research per audit"
         )
-        ready_for_cuda_dispatch = False
+        cuda_eval_worth_testing = False
+
+    # ready_for_exact_eval_dispatch is ALWAYS False from CPU/MPS evidence.
+    # Only [contest-CUDA] auth eval can flip it to True.
+    dispatch_blockers = list(DISPATCH_BLOCKERS_BASE)
+    if not cuda_eval_worth_testing:
+        dispatch_blockers.insert(0, "rel_err_above_5pct_threshold")
 
     return {
         "schema": SCHEMA_VERSION,
         "tool": TOOL_NAME,
         "evidence_grade": EVIDENCE_GRADE,
+        "evidence_semantics": "cpu_roundtrip_rel_err_proxy_no_score",
         "score_claim": False,
         "promotion_eligible": False,
-        "ready_for_exact_eval_dispatch": ready_for_cuda_dispatch,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "cuda_eval_worth_testing": cuda_eval_worth_testing,
+        "family_falsified": False,
+        "falsification_scope": "measured_configuration_only",
         "block_size": block_size,
         "n_tensors": len(FIXED_STATE_SCHEMA),
         "n_total_elements": total_elements,
@@ -182,7 +200,7 @@ def measure_full_roundtrip(state_dict_path: Path, block_size: int) -> dict:
         "max_max_rel_err_pct": max_max,
         "verdict": verdict,
         "verdict_reason": verdict_reason,
-        "dispatch_blockers": [] if ready_for_cuda_dispatch else DISPATCH_BLOCKERS_IF_FALSIFIED,
+        "dispatch_blockers": dispatch_blockers,
         "per_tensor": per_tensor,
     }
 
@@ -230,9 +248,8 @@ def main(argv: list[str] | None = None) -> int:
     primary = runs[0]
     print(f"PRIMARY VERDICT (block_size={primary['block_size']}): {primary['verdict']}")
     print(f"  reason: {primary['verdict_reason']}")
-    if primary["ready_for_exact_eval_dispatch"]:
-        print(f"\nNEXT: dispatch CUDA auth eval on the 100,799 B int4 archive.")
-        print(f"      Tool: tools/parallel_dispatch_top_k.py with int4 codec lane.")
+    if primary["cuda_eval_worth_testing"]:
+        print(f"\nNEXT: build a byte-closed int4 runtime packet before any CUDA auth eval.")
     else:
         print(f"\nNEXT: do NOT dispatch CUDA. Higher precision int5/int6 may help; "
               f"or fall back to int8 baseline.")
