@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import sys
 from pathlib import Path
 from zipfile import ZipFile
+
+import pytest
 
 
 def _load_tool():
@@ -41,6 +44,8 @@ def test_dual_plan_emits_cpu_and_cuda_commands_for_same_archive(tmp_path: Path) 
     assert set(plan["evals"]) == {"cuda", "cpu"}
     assert plan["archive"]["path"] == str(archive)
     assert plan["archive"]["sha256"] == mod._sha256(archive)
+    assert plan["input_closure"]["ready_to_execute"] is True
+    assert plan["input_closure"]["missing_inputs"] == []
     for device in ("cuda", "cpu"):
         command = plan["evals"][device]["command"]
         assert command[command.index("--archive") + 1] == str(archive)
@@ -75,3 +80,45 @@ def test_public_pr_inputs_resolve_from_wrapped_ledger(tmp_path: Path) -> None:
     assert inflate == Path("inflate.sh")
     assert label.startswith("public-pr102-hnerv")
     assert row["pr"] == 102
+
+
+def test_dual_plan_records_missing_input_closure(tmp_path: Path) -> None:
+    mod = _load_tool()
+
+    plan = mod.build_plan(
+        archive=tmp_path / "missing.zip",
+        inflate_sh=tmp_path / "missing-inflate.sh",
+        label="fixture",
+        repo_root=Path("."),
+        run_id="fixture-run",
+        output_root=Path("experiments/results/dual_device_auth_eval"),
+        upstream_dir=Path("upstream"),
+        video_names_file=Path("upstream/public_test_video_names.txt"),
+        inflate_timeout=1800,
+        evaluate_timeout=1800,
+    )
+
+    assert plan["input_closure"]["ready_to_execute"] is False
+    assert set(plan["input_closure"]["missing_inputs"]) == {"archive", "inflate_sh"}
+    assert plan["score_claim"] is False
+    assert plan["promotion_eligible"] is False
+
+
+def test_execute_refuses_missing_input_closure(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    mod = _load_tool()
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "plan_dual_device_auth_eval.py",
+            "--archive",
+            str(tmp_path / "missing.zip"),
+            "--inflate-sh",
+            str(tmp_path / "missing-inflate.sh"),
+            "--execute",
+            "cpu",
+        ],
+    )
+
+    with pytest.raises(SystemExit, match="missing inputs: archive, inflate_sh"):
+        mod.main()

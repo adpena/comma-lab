@@ -38,6 +38,25 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
+def _input_closure(paths: dict[str, Path]) -> dict[str, Any]:
+    entries = {}
+    missing = []
+    for name, path in paths.items():
+        exists = path.exists()
+        entries[name] = {
+            "path": str(path),
+            "exists": exists,
+            "is_file": path.is_file() if exists else False,
+        }
+        if not exists:
+            missing.append(name)
+    return {
+        "required_inputs": entries,
+        "missing_inputs": missing,
+        "ready_to_execute": not missing,
+    }
+
+
 def _load_ledger_rows(path: Path) -> list[dict[str, Any]]:
     data = json.loads(path.read_text(encoding="utf-8"))
     if isinstance(data, dict) and isinstance(data.get("rows"), list):
@@ -115,6 +134,14 @@ def build_plan(
     archive_meta: dict[str, Any] = {"path": str(archive)}
     if archive.exists():
         archive_meta.update({"bytes": archive.stat().st_size, "sha256": _sha256(archive)})
+    input_closure = _input_closure(
+        {
+            "archive": archive,
+            "inflate_sh": inflate_sh,
+            "upstream_dir": upstream_dir,
+            "video_names_file": video_names_file,
+        }
+    )
 
     evals: dict[str, dict[str, Any]] = {}
     for device in ("cuda", "cpu"):
@@ -149,6 +176,7 @@ def build_plan(
         "inflate_sh": str(inflate_sh),
         "upstream_dir": str(upstream_dir),
         "video_names_file": str(video_names_file),
+        "input_closure": input_closure,
         "evals": evals,
         "public_pr_row": public_pr_row,
         "score_claim": False,
@@ -211,6 +239,9 @@ def main() -> int:
     print(text)
 
     if args.execute:
+        if not plan["input_closure"]["ready_to_execute"]:
+            missing = ", ".join(plan["input_closure"]["missing_inputs"])
+            raise SystemExit(f"refusing to execute dual-device auth eval plan with missing inputs: {missing}")
         devices = ("cpu", "cuda") if args.execute == "both" else (args.execute,)
         for device in devices:
             result = subprocess.run(plan["evals"][device]["command"], cwd=args.repo_root)
