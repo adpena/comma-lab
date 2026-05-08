@@ -69,7 +69,7 @@ an exact CUDA auth eval be considered.
 First diagnostic-source rebuild:
 
 - Artifact:
-  `experiments/results/admm_x_lossy_coarsening_path_b_step6_no_dead_k_20260508T091537Z/`
+  `experiments/results/admm_x_lossy_coarsening_path_b_step6_no_dead_k_20260508T092353Z/`
 - Archive bytes: `159,576`
 - Archive SHA-256:
   `efc87556699abd6520921b0c888a395f2c95de2090e888ed5843ac35fc134e89`
@@ -78,6 +78,8 @@ First diagnostic-source rebuild:
 - Evidence remains `[CPU-build]`; the source planning manifest used a
   diagnostic/stub sensitivity map and cannot promote, rank, kill, or anchor
   stack claims.
+- The runtime staging directory is cache-clean after smoke import: no
+  `__pycache__` files remain for recursive staging or release packaging.
 - The rebuild closes the source-only blockers
   `selected_Ks_not_yet_encoded_in_no_dead_k_runtime_packet` and
   `weight_export_only_no_byte_closed_archive`, but preserves still-active

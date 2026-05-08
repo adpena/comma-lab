@@ -243,6 +243,25 @@ def test_no_dead_k_cli_documents_score_weight_manifest_inputs() -> None:
     assert "per_tensor_K_source" in src
 
 
+def test_no_dead_k_removes_import_caches_from_submission_dir(tmp_path: Path) -> None:
+    import build_admm_x_lossy_coarsening_path_b_step6_no_dead_k as no_k
+
+    root = tmp_path / "submission_dir"
+    (root / "__pycache__").mkdir(parents=True)
+    (root / "__pycache__" / "inflate.cpython-312.pyc").write_bytes(b"cache")
+    (root / "src" / "__pycache__").mkdir(parents=True)
+    (root / "src" / "__pycache__" / "codec.cpython-312.pyc").write_bytes(b"cache")
+    keep = root / "src" / "codec.py"
+    keep.write_text("# keep\n", encoding="utf-8")
+
+    removed = no_k._remove_python_caches(root)
+
+    assert removed == ["__pycache__", "src/__pycache__"]
+    assert not (root / "__pycache__").exists()
+    assert not (root / "src" / "__pycache__").exists()
+    assert keep.read_text(encoding="utf-8") == "# keep\n"
+
+
 def test_no_dead_k_evidence_grade_is_cpu_build() -> None:
     """Per CPU-only ML/scoring policy: cuda_eval_worth_testing=True is allowed
     (this is a free byte-win on a candidate already approved for dispatch),

@@ -7,7 +7,7 @@ builder/wiring artifact, not a score claim.
 ## Artifact
 
 - Build dir:
-  `experiments/results/admm_x_lossy_coarsening_path_b_step6_no_dead_k_20260508T091537Z/`
+  `experiments/results/admm_x_lossy_coarsening_path_b_step6_no_dead_k_20260508T092353Z/`
 - Builder:
   `tools/build_admm_x_lossy_coarsening_path_b_step6_no_dead_k.py`
 - Source planning manifest:
@@ -22,6 +22,10 @@ builder/wiring artifact, not a score claim.
 - Smoke rel_err vs quantized fp32: `0.056739`
 - Max per-tensor smoke rel_err: `0.142895`
 - Latent pairs decoded in smoke: `600`
+- Runtime staging hygiene: smoke-created `__pycache__` directories were
+  removed from `submission_dir/` after import verification; the final staged
+  runtime tree contains only `inflate.py`, `inflate.sh`, `src/codec.py`, and
+  `src/model.py`.
 
 ## Evidence class
 

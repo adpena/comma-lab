@@ -673,6 +673,22 @@ def _stage_forked_submission_dir_no_k(
     (submission_dir / "inflate.py").write_text(_FORKED_INFLATE_SRC)
 
 
+def _remove_python_caches(root: Path) -> list[str]:
+    """Remove import-time cache files from a staged runtime tree.
+
+    The CPU smoke imports the staged ``inflate.py`` and vendored ``src`` files,
+    which can create ``__pycache__`` directories. They are not runtime inputs
+    and should not be available for recursive staging or release packaging.
+    """
+    removed: list[str] = []
+    for cache_dir in sorted(root.rglob("__pycache__"), reverse=True):
+        if not cache_dir.is_dir():
+            continue
+        removed.append(str(cache_dir.relative_to(root)))
+        shutil.rmtree(cache_dir)
+    return sorted(removed)
+
+
 def _local_smoke_roundtrip(
     archive_path: Path, *, pr101_state_dict_path: Path, submission_dir: Path
 ) -> dict:
@@ -897,6 +913,12 @@ def main(argv: list[str] | None = None) -> int:
             f"FATAL: smoke decoded n_pairs={smoke['n_latent_pairs_decoded']} != 600 "
             "(PR101 N_PAIRS); latent_blob passthrough broken"
         )
+    removed_cache_dirs = _remove_python_caches(submission_dir)
+    if removed_cache_dirs:
+        print(
+            "[smoke] removed import caches from submission_dir: "
+            + ", ".join(removed_cache_dirs)
+        )
 
     guard_fields = _guard_fields_with_selected_Ks_source_blockers(k_source_metadata)
     build_manifest = {
@@ -928,6 +950,7 @@ def main(argv: list[str] | None = None) -> int:
         "archive_bytes": archive_bytes,
         "archive_sha256": archive_sha,
         "submission_dir_relpath": str(submission_dir.relative_to(REPO_ROOT)),
+        "submission_dir_import_cache_dirs_removed": removed_cache_dirs,
         "input_state_dict": str(args.state_dict),
         "input_frontier_archive": str(args.frontier_archive),
         "input_pr101_source_dir": str(args.pr101_source_dir),
