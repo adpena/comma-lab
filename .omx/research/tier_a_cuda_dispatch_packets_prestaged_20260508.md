@@ -16,11 +16,29 @@ requires explicit operator approval per the
 
 ## Operator authorization checklist (preview)
 
-| # | Lane | Archive bytes | SHA-256 (truncated) | AUTH | Blockers cleared? |
-|---|---|---:|---|:---:|:---:|
-| 1 | `pr101_admm_step6_no_dead_k` | 153,671 | `b7b09089…` | `[ ]` | inflate.sh 3-arg ✓; verify-tool ✗ (covers sibling); sanity gates ✗ (anchors=0/3, distortion proxy unset) |
-| 2 | `pr106_lagrangian_per_tensor_uniward` | 150,511 | `0641b8ac…` | `[ ]` | runtime packet BUILT (Subagent BUILD-PR106-UNIWARD-RUNTIME); 1200-frame smoke roundtrip ✓; B3 verifier ✓; sanity gates ✗ (anchors=0; no PR106 Lagrangian calibration) |
-| 3 | `apogee_int6_contest_cuda_anchor` | 170,450 | `0176a269…` | `[ ]` | basin-parity PASSED; sanity gates ✗ (predicted < rate-distortion floor); 2026-05-07 prior REFUSED at Lightning AWS T4 capacity |
+| # | Lane | Archive bytes | SHA-256 (truncated) | AUTH | Blockers cleared? | DISPATCHED | SCORE |
+|---|---|---:|---|:---:|:---:|:---:|---|
+| 1 | `pr101_admm_step6_no_dead_k` | 153,671 | `b7b09089…` | `[x]` | inflate.sh 3-arg ✓; verify-tool ✗ (covers sibling); sanity gates ✗ (anchors=0/3, distortion proxy unset) | **NOT-DISPATCHED** | n/a (blocked on C3 anchor) |
+| 2 | `pr106_lagrangian_per_tensor_uniward` | 150,511 | `0641b8ac…` | `[x]` | runtime packet BUILT (Subagent BUILD-PR106-UNIWARD-RUNTIME); 1200-frame smoke roundtrip ✓; B3 verifier ✓; sanity gates ✗ (anchors=0; no PR106 Lagrangian calibration) | **REFUSED (codex)** — runtime_path_blocker 2026-05-08T08:29:31Z | n/a |
+| 3 | `apogee_int6_contest_cuda_anchor` | 170,450 | `0176a269…` | `[x]` | basin-parity PASSED; sanity gates ✗ (predicted < rate-distortion floor); 2026-05-07 prior REFUSED at Lightning AWS T4 capacity | **REFUSED (claude)** — t4_capacity_aws_cluster_400 2026-05-08T08:31:56Z | n/a |
+
+## 2026-05-08 dispatch session result (Subagent DISPATCH-TIER-A)
+
+**Cost: $0.00 (zero successful submissions; all three blocks PRE-SUBMIT).**
+
+- **C3 (apogee_int6)**: claude_lab_subagent_dispatch_tier_a claimed `active_dispatching` 08:27:12Z, staged 1496-file source manifest (207MB) to Lightning Studio, ran predispatch_sanity with operator override (logged), invoked dispatcher with `--machine T4 --studio lossy-compression-challenge --teamspace comma-lab --user adpena --source-manifest <path> --env INFLATE_TORCH_SPEC=torch==2.5.1+cu124 --remote-preflight-ssh-target <SSH> --adjudicate --regression-threshold 0.10 --predicted-band 0.190 0.204`. Lightning SDK returned `ApiException(400) "accelerator T4 not found for this AWS cluster"` on both T4 (g4dn.2xlarge) and T4_SMALL (g4dn.xlarge). Closed terminal 08:31:56Z. Same capacity refusal as 2026-05-07 prior attempt.
+- **C2 (PR106 UNIWARD)**: codex:gpt-5 was already `active_staging` 08:24:50Z when this session opened — per CLAUDE.md "CROSS-AGENT DISPATCH COORDINATION" I did NOT attempt to dispatch C2 (cross-agent conflict). Codex closed C2 terminal 08:29:31Z with `refused_dispatch_runtime_path_blocker` ("staged inflate runtime fails canonical auth eval import path; patching builder/wrapper before reclaiming") — separate failure mode from C3.
+- **C1 (ADMM no-dead-K)**: NOT attempted — manifest blocker `apogee_int6_contest_cuda_anchor_required_first` requires C3 contest-CUDA anchor to land first; C3 refused, so C1 stays blocked. Will dispatch automatically once C3 lands ANY contest-CUDA score (existence-based blocker, not score-band).
+
+**Reactivation criteria** (per CLAUDE.md `forbidden_premature_class_level_falsification` — these are MEASURED_CONFIG_NOT_DISPATCHABLE, NOT falsified):
+
+| Candidate | Reactivation path |
+|---|---|
+| C3 | Lightning T4 capacity returns OR Vast.ai 4090 SDK installed (`uv pip install vastai`) OR L40S budget approved (~$1.45 for 30 min) |
+| C2 | Codex completes runtime-path patch + reclaims `pr106_uniward_lagrangian_runtime_packet` lane |
+| C1 | Auto-unblocks when C3 lands a contest-CUDA score (any score, positive or negative) |
+
+Memory: `feedback_tier_a_cuda_dispatch_results_20260508.md`.
 
 **Authorization semantics:** Toggling AUTH = `[x]` is the gate that lets the
 operator (or a downstream subagent acting under operator approval) flip the
