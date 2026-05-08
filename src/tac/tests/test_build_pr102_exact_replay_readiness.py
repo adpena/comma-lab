@@ -1,0 +1,237 @@
+from __future__ import annotations
+
+import hashlib
+import importlib.util
+import json
+import stat
+import sys
+from pathlib import Path
+from zipfile import ZIP_STORED, ZipFile, ZipInfo
+
+import pytest
+
+REPO = Path(__file__).resolve().parents[3]
+SCRIPT = REPO / "tools" / "build_pr102_exact_replay_readiness.py"
+
+
+def _load_module():
+    for path in (REPO, REPO / "tools"):
+        value = str(path)
+        if value not in sys.path:
+            sys.path.insert(0, value)
+    spec = importlib.util.spec_from_file_location("build_pr102_exact_replay_readiness_under_test", SCRIPT)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+tool = _load_module()
+
+
+def test_pr102_readiness_records_custody_risks_and_command(tmp_path: Path) -> None:
+    fixture = _write_pr102_fixture(tmp_path)
+
+    report = tool.build_pr102_exact_replay_readiness(
+        manifest_path=fixture["manifest"],
+        repo_root=tmp_path,
+        adapter_rel_path="experiments/results/pr102_adapter/inflate.sh",
+    )
+
+    payload = report.to_dict()
+    assert payload["adapter_plan_ready"] is True
+    assert payload["score_claim"] is False
+    assert payload["dispatch_attempted"] is False
+    assert payload["summary"]["archive"]["sha256"] == fixture["archive_sha256"]
+    assert payload["summary"]["archive"]["members"][0]["sha256"] == fixture["member_sha256"]
+    assert payload["summary"]["runtime_source"]["file_count"] == 7
+    assert payload["summary"]["runtime_source"]["source_tree_sha256"]
+
+    risks = payload["summary"]["dependency_network_risks"]
+    assert risks["required_python_modules_for_adapter_preflight"] == ["brotli", "numpy", "torch"]
+    assert any("pip install" in finding["text"] for finding in risks["network_or_install_findings"])
+    assert any("pip', 'install" in finding["text"] for finding in risks["network_or_install_findings"])
+    assert any("curl" in finding["text"] for finding in risks["network_or_install_findings"])
+
+    adapter = payload["summary"]["adapter_plan"]
+    assert adapter["contest_auth_eval_command"] == [
+        ".venv/bin/python",
+        "experiments/contest_auth_eval.py",
+        "--archive",
+        "experiments/results/pr102/archive.zip",
+        "--inflate-sh",
+        "experiments/results/pr102_adapter/inflate.sh",
+        "--upstream-dir",
+        "upstream",
+        "--device",
+        "cuda",
+    ]
+    assert "pip install" not in adapter["inflate_sh_text"]
+    assert "PACT_RUNTIME_DEPENDENCY_ROOT" in adapter["inflate_sh_text"]
+    assert 'if [ "$#" -ne 3 ]; then' in adapter["inflate_sh_text"]
+    assert "required PR102 runtime dependency missing" in adapter["inflate_sh_text"]
+
+
+def test_pr102_readiness_fails_closed_on_archive_hash_mismatch(tmp_path: Path) -> None:
+    fixture = _write_pr102_fixture(tmp_path)
+    manifest = json.loads(fixture["manifest"].read_text(encoding="utf-8"))
+    manifest["entries"][0]["archive"]["sha256"] = "0" * 64
+    fixture["manifest"].write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    report = tool.build_pr102_exact_replay_readiness(
+        manifest_path=fixture["manifest"],
+        repo_root=tmp_path,
+    )
+
+    assert report.ready is False
+    assert "archive_sha256_mismatch" in report.blockers
+    assert report.to_dict()["summary"]["adapter_plan"]["contest_auth_eval_command"] == []
+
+
+def test_materialize_adapter_plan_writes_source_sized_files(tmp_path: Path) -> None:
+    fixture = _write_pr102_fixture(tmp_path)
+    report = tool.build_pr102_exact_replay_readiness(
+        manifest_path=fixture["manifest"],
+        repo_root=tmp_path,
+        adapter_rel_path="experiments/results/pr102_adapter/inflate.sh",
+    )
+
+    materialized = tool.materialize_adapter_plan(
+        report,
+        adapter_dir=tmp_path / "experiments/results/pr102_adapter",
+        repo_root=tmp_path,
+    )
+
+    inflate_sh = tmp_path / "experiments/results/pr102_adapter/inflate.sh"
+    readme = tmp_path / "experiments/results/pr102_adapter/README.md"
+    assert inflate_sh.is_file()
+    assert readme.is_file()
+    assert inflate_sh.stat().st_mode & stat.S_IXUSR
+    assert "pip install" not in inflate_sh.read_text(encoding="utf-8")
+    assert materialized.summary["adapter_plan"]["materialized_files"] == [
+        "experiments/results/pr102_adapter/inflate.sh",
+        "experiments/results/pr102_adapter/README.md",
+    ]
+    assert (
+        materialized.summary["next_status_after_this_artifact"]
+        == "adapter_materialized_ready_for_exact_cuda_replay_after_dispatch_claim"
+    )
+
+
+def test_materialize_adapter_refuses_omx_state(tmp_path: Path) -> None:
+    fixture = _write_pr102_fixture(tmp_path)
+    report = tool.build_pr102_exact_replay_readiness(
+        manifest_path=fixture["manifest"],
+        repo_root=tmp_path,
+    )
+    (tmp_path / ".omx/state").mkdir(parents=True)
+
+    with pytest.raises(ValueError, match=r"\.omx/state"):
+        tool.materialize_adapter_plan(
+            report,
+            adapter_dir=tmp_path / ".omx/state/pr102_adapter",
+            repo_root=tmp_path,
+        )
+
+
+def _write_pr102_fixture(repo_root: Path) -> dict[str, object]:
+    (repo_root / "experiments/contest_auth_eval.py").parent.mkdir(parents=True)
+    (repo_root / "experiments/contest_auth_eval.py").write_text("# contest auth eval placeholder\n")
+    archive_path = repo_root / "experiments/results/pr102/archive.zip"
+    member = _write_archive(archive_path, b"pr102-payload")
+    runtime_root = repo_root / "experiments/results/pr102/source/submissions/hnerv_lc_v2_scale095_rplus1"
+    runtime_files = {
+        "README.md": "PR102 fixture runtime\n",
+        "compress.sh": "#!/usr/bin/env bash\ncurl -L https://example.invalid/archive.zip -o archive.zip\n",
+        "inflate.sh": "#!/usr/bin/env bash\npython -c \"import brotli\" || pip install brotli\n",
+        "inflate.py": (
+            "import subprocess\nimport sys\n"
+            "import brotli\nimport numpy as np\nimport torch\n"
+            "subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'brotli'])\n"
+        ),
+        "hnerv_model.py": "import torch\n",
+        "schema.py": "SCHEMA = []\nMETA = {}\n",
+        "sidecar.py": "def decode_corrections(_blob):\n    return None, None\n",
+    }
+    manifest_files = []
+    for rel, text in runtime_files.items():
+        path = runtime_root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+        manifest_files.append(
+            {
+                "path": rel,
+                "git_blob_sha1": hashlib.sha1(text.encode("utf-8")).hexdigest(),
+                "sha256": _sha256(path.read_bytes()),
+                "role": "contest inflate entrypoint" if rel == "inflate.sh" else None,
+            }
+        )
+
+    manifest = {
+        "schema": "public_contest_reverse_engineering_intake_v1",
+        "created_at_utc": "2026-05-08T09:33:23Z",
+        "evidence_grade": "external_plus_empirical_custody",
+        "score_claim": False,
+        "entries": [
+            {
+                "pr_number": 102,
+                "title": "hnerv_lc_v2_scale095_rplus1 submission",
+                "url": "https://github.com/commaai/comma_video_compression_challenge/pull/102",
+                "head_sha": "1" * 40,
+                "archive": {
+                    "canonical_url": "https://github.com/user-attachments/files/27369164/archive.zip",
+                    "local_path": "experiments/results/pr102/archive.zip",
+                    "bytes": archive_path.stat().st_size,
+                    "sha256": _sha256(archive_path.read_bytes()),
+                    "zip_overhead_bytes": archive_path.stat().st_size - member["compress_size"],
+                    "members": [member],
+                },
+                "source_runtime_artifacts": {
+                    "runtime_source_path": "submissions/hnerv_lc_v2_scale095_rplus1/",
+                    "local_source_root": (
+                        "experiments/results/pr102/source/submissions/hnerv_lc_v2_scale095_rplus1"
+                    ),
+                    "files": manifest_files,
+                },
+                "public_eval_observations": {
+                    "local_exact_cuda_status": "missing",
+                },
+                "compliance_risks": [
+                    "inflate.sh may install brotli at inflate time via pip if missing.",
+                ],
+            }
+        ],
+    }
+    manifest_path = repo_root / "reverse_engineering/public_pr102_pr108_intake_20260508/manifest.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return {
+        "manifest": manifest_path,
+        "archive_sha256": _sha256(archive_path.read_bytes()),
+        "member_sha256": member["sha256"],
+    }
+
+
+def _write_archive(path: Path, payload: bytes) -> dict[str, object]:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    info = ZipInfo("0.bin", date_time=(1980, 1, 1, 0, 0, 0))
+    info.compress_type = ZIP_STORED
+    info.external_attr = 0o644 << 16
+    with ZipFile(path, "w") as zf:
+        zf.writestr(info, payload)
+    with ZipFile(path) as zf:
+        stored = zf.getinfo("0.bin")
+        data = zf.read("0.bin")
+        return {
+            "name": stored.filename,
+            "file_size": stored.file_size,
+            "compress_size": stored.compress_size,
+            "compress_type": stored.compress_type,
+            "crc32": f"{stored.CRC:08x}",
+            "sha256": _sha256(data),
+        }
+
+
+def _sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()

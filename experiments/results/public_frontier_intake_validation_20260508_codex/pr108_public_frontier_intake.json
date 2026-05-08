@@ -1,0 +1,56 @@
+{
+  "archive": {
+    "bytes": 442979,
+    "path": "experiments/results/public_pr108_andimin01_intake_20260508_codex/archive.zip",
+    "sha256": "127b0b318ba2355cdac0d513f4027f0ca3297be4cba0f44e1ddb25cc70586804"
+  },
+  "baseline_diffs": [],
+  "blockers": [
+    "byte_intake_only_not_score_evidence",
+    "requires_exact_cuda_auth_eval_for_score_claim"
+  ],
+  "dispatchable": false,
+  "evidence_grade": "byte_intake_only",
+  "label": "archive",
+  "member_count": 1,
+  "members": [
+    {
+      "compressed_bytes": 442819,
+      "compression_method": "deflated",
+      "crc32": "7cf70485",
+      "name": "0.mkv",
+      "read_error": null,
+      "sha256": "3541f5031914a76d8632e094703ec1f96e59c7fb07942963379fc3d82bbe3035",
+      "uncompressed_bytes": 448786
+    }
+  ],
+  "primary_member": {
+    "compressed_bytes": 442819,
+    "compression_method": "deflated",
+    "crc32": "7cf70485",
+    "name": "0.mkv",
+    "read_error": null,
+    "sha256": "3541f5031914a76d8632e094703ec1f96e59c7fb07942963379fc3d82bbe3035",
+    "uncompressed_bytes": 448786
+  },
+  "promotion_eligible": false,
+  "schema": "public_frontier_archive_intake_v1",
+  "score_claim": false,
+  "segment_profile": {
+    "error": "pr85_v5_8byte_lengths segment 'mask' is truncated: end=14632242 raw=448786",
+    "segments": [],
+    "status": "not_pr85_bundle"
+  },
+  "side_info": {
+    "charged_bytes": 0,
+    "member_count": 0,
+    "members": [],
+    "requires_runtime_contract_review": false
+  },
+  "strict_zip": {
+    "blockers": [],
+    "member_count": 1,
+    "valid": true
+  },
+  "tool": "experiments/profile_public_frontier_intake.py"
+}

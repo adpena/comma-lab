@@ -14,11 +14,13 @@ Spec source: bytecode disassembly of compiled .pyc; whitespace + inline comments
 from __future__ import annotations
 
 import hashlib
-import numpy as np
 import struct
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import PurePosixPath
-from typing import Any, Mapping
+from typing import Any
+
+import numpy as np
 
 SEGMENT_ORDER: tuple[str, ...] = (
     "mask",
@@ -101,7 +103,7 @@ class Pr85Bundle:
         return {name: len(bytes(segment)) for name, segment in self.segments.items()}
 
     @property
-    def segment_contracts(self) -> dict[str, "Pr85SegmentContract"]:
+    def segment_contracts(self) -> dict[str, Pr85SegmentContract]:
         """Return deterministic local byte contracts for parsed segments."""
 
         return {
@@ -460,8 +462,8 @@ def parse_pr85_bundle(raw: bytes) -> Pr85Bundle:
     accepts both and chooses explicit-30 only when the header is internally
     plausible.
     """
-    # REHYDRATED from disassembly. v5 = 24-byte header (8 lengths × uint24);
-    # explicit_30 = 30-byte header (10 lengths × uint24) used for local recodes.
+    # REHYDRATED from disassembly. v5 = 24-byte header (8 lengths x uint24);
+    # explicit_30 = 30-byte header (10 lengths x uint24) used for local recodes.
     if len(raw) < 24:
         raise Pr85BundleError("PR85 bundle is shorter than the v5 24-byte header")
 
@@ -497,7 +499,7 @@ def parse_pr85_bundle(raw: bytes) -> Pr85Bundle:
 
 
 def pack_pr85_bundle(
-    segments: Mapping[str, bytes], *, header_mode: str
+    segments: Mapping[str, bytes], *, header_mode: str = "v5"
 ) -> bytes:
     """Serialize validated PR85 segment bytes.
 
@@ -681,10 +683,7 @@ def build_pr85_qpost_bin(
     lengths: list[int] = []
     payloads: list[bytes] = []
     for name in QPOST_STREAM_NAMES:
-        if name == "randmulti":
-            data = randmulti_bytes
-        else:
-            data = bytes(segments[name])
+        data = randmulti_bytes if name == "randmulti" else bytes(segments[name])
         lengths.append(len(data))
         payloads.append(data)
     # QPS1 magic + eight uint32 lengths (little-endian) + concatenated payloads.
@@ -693,7 +692,7 @@ def build_pr85_qpost_bin(
     profile: dict[str, Any] = {
         "qpost_bytes": len(qpost),
         "qpost_sha256": _sha256(qpost),
-        "stream_lengths": dict(zip(QPOST_STREAM_NAMES, lengths)),
+        "stream_lengths": dict(zip(QPOST_STREAM_NAMES, lengths, strict=True)),
         "randmulti_transcoded_qrm1": bool(transcode_randmulti_qrm1),
     }
     if randmulti_profile:
@@ -746,7 +745,7 @@ def decode_pr85_p1d1_pose_to_fp16(
         lengths.append(n_bytes)
     pose = np.zeros((600, 6), dtype=np.float32)
     stream_value_counts: dict[int, int] = {}
-    for dim, n_bytes in zip(dims, lengths):
+    for dim, n_bytes in zip(dims, lengths, strict=True):
         if cursor + n_bytes > len(raw):
             raise Pr85BundleError(
                 f"P1D1 dimension {dim} stream truncated at offset {cursor}"

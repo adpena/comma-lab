@@ -1,0 +1,334 @@
+{
+  "dispatch_attempted": false,
+  "gpu_required": false,
+  "parser_section_gate": {
+    "blockers": [],
+    "dispatch_attempted": false,
+    "name": "parser-section gate",
+    "ready": true,
+    "score_claim": false
+  },
+  "ready_for_exact_eval_dispatch": false,
+  "records": [
+    {
+      "archive": {
+        "bytes": 178258,
+        "path": "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip",
+        "sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e"
+      },
+      "coverage": {
+        "contiguous": true,
+        "covers_payload": true,
+        "payload_bytes": 178158,
+        "section_bytes": 178158,
+        "section_count": 3
+      },
+      "dispatch_attempted": false,
+      "gpu_required": false,
+      "label": "PR101",
+      "member": {
+        "bytes": 178158,
+        "name": "x",
+        "sha256": "5f1948f9572e65f71c614d2ff15764ee416522e25cb1b06c8b1299c1306e8aaf",
+        "zip_compress_size": 178158,
+        "zip_compress_type": 0,
+        "zip_crc": 1831506049
+      },
+      "notes": [
+        "parser-section custody only",
+        "no component score, score movement, or dispatch authorization is claimed"
+      ],
+      "parser": {
+        "confidence": "fixed public PR101 offsets",
+        "name": "pr101_microcodec_fixed",
+        "requested": "auto"
+      },
+      "parser_section_gate": {
+        "blockers": [],
+        "dispatch_attempted": false,
+        "name": "parser-section gate",
+        "ready": true,
+        "score_claim": false
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "tac_hnerv_packet_section_manifest.v1",
+      "schema_version": 1,
+      "score_claim": false,
+      "score_evidence_grade": "invalid_no_score",
+      "sections": [
+        {
+          "bytes": 162164,
+          "end": 162164,
+          "index": 0,
+          "length": 162164,
+          "name": "decoder_compact_brotli_streams",
+          "offset": 0,
+          "optimization_role": "decoder_weight_stream",
+          "score_claim": false,
+          "sha256": "836d1876bffd74f77f30e387a3b4cac1dbb25929cc4d348830d36cfa2a6d48a6",
+          "start": 0
+        },
+        {
+          "bytes": 15387,
+          "end": 177551,
+          "index": 1,
+          "length": 15387,
+          "name": "latents_raw_lzma_delta_u8",
+          "offset": 162164,
+          "optimization_role": "latent_stream",
+          "score_claim": false,
+          "sha256": "de8a0da594f073efc43849334573ba06438bb37d53f9343ee6367659c0106bbe",
+          "start": 162164
+        },
+        {
+          "bytes": 607,
+          "end": 178158,
+          "index": 2,
+          "length": 607,
+          "name": "sidecar_dim_delta_huffman_enum",
+          "offset": 177551,
+          "optimization_role": "sidecar_or_correction_stream",
+          "score_claim": false,
+          "sha256": "6c2946e323bbbc6f8d906ef6c68989e8acbd8d60332c87da8fe8147f1ea7b12f",
+          "start": 177551
+        }
+      ],
+      "tool": "tac.analysis.hnerv_packet_sections"
+    },
+    {
+      "archive": {
+        "bytes": 178223,
+        "path": "experiments/results/public_pr103_intake_20260504_codex/archive.zip",
+        "sha256": "31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30"
+      },
+      "coverage": {
+        "contiguous": true,
+        "covers_payload": true,
+        "payload_bytes": 178123,
+        "section_bytes": 178123,
+        "section_count": 8
+      },
+      "dispatch_attempted": false,
+      "gpu_required": false,
+      "label": "PR103",
+      "member": {
+        "bytes": 178123,
+        "name": "x",
+        "sha256": "dd92b065b8fbd2bfe9de837eb110a971c2675ecca4247e2658b4628b464d72ec",
+        "zip_compress_size": 178123,
+        "zip_compress_type": 0,
+        "zip_crc": 3344665778
+      },
+      "notes": [
+        "parser-section custody only",
+        "no component score, score movement, or dispatch authorization is claimed"
+      ],
+      "parser": {
+        "confidence": "existing PR103 lc_ac parser",
+        "name": "pr103_lc_ac",
+        "requested": "auto"
+      },
+      "parser_section_gate": {
+        "blockers": [],
+        "dispatch_attempted": false,
+        "name": "parser-section gate",
+        "ready": true,
+        "score_claim": false
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "tac_hnerv_packet_section_manifest.v1",
+      "schema_version": 1,
+      "score_claim": false,
+      "score_evidence_grade": "invalid_no_score",
+      "sections": [
+        {
+          "bytes": 56,
+          "end": 56,
+          "index": 0,
+          "length": 56,
+          "name": "scales_fp16",
+          "offset": 0,
+          "optimization_role": "control_or_metadata",
+          "score_claim": false,
+          "sha256": "778f6dc4f27ef44b4fd197a3e22fe8b0bc07acdc72475ec36bed0f218182ce94",
+          "start": 0
+        },
+        {
+          "bytes": 7097,
+          "end": 7153,
+          "index": 1,
+          "length": 7097,
+          "name": "non_ac_weights_brotli",
+          "offset": 56,
+          "optimization_role": "decoder_weight_stream",
+          "score_claim": false,
+          "sha256": "1a25a07b4c9e24b6497a193dd80a3c67086bb3a70e14f56b7b2384ae697a7002",
+          "start": 56
+        },
+        {
+          "bytes": 895,
+          "end": 8048,
+          "index": 2,
+          "length": 895,
+          "name": "ac_histograms_brotli",
+          "offset": 7153,
+          "optimization_role": "entropy_model_or_range_stream",
+          "score_claim": false,
+          "sha256": "ce7c9a404015b19ef1b8e70de61da4aa3dbdb952a78e38e6c25cbaeb32078a95",
+          "start": 7153
+        },
+        {
+          "bytes": 153856,
+          "end": 161904,
+          "index": 3,
+          "length": 153856,
+          "name": "merged_range_coded_weights_and_hi_latents",
+          "offset": 8048,
+          "optimization_role": "entropy_model_or_range_stream",
+          "score_claim": false,
+          "sha256": "08f0a219b395e6783c522bacc8239f01dcb3d27d9f7f8d2291a7478d04859de7",
+          "start": 8048
+        },
+        {
+          "bytes": 112,
+          "end": 162016,
+          "index": 4,
+          "length": 112,
+          "name": "latent_min_scale_fp16",
+          "offset": 161904,
+          "optimization_role": "control_or_metadata",
+          "score_claim": false,
+          "sha256": "7cf743ec1151536cd6cab55ebf3041dc8311cd08362208fb347b5bdb4b3c40b6",
+          "start": 161904
+        },
+        {
+          "bytes": 15537,
+          "end": 177553,
+          "index": 5,
+          "length": 15537,
+          "name": "latent_low_bytes_brotli",
+          "offset": 162016,
+          "optimization_role": "latent_stream",
+          "score_claim": false,
+          "sha256": "5f33edaf176f52572b0406f8bfd1ef658f731125109b8284e1089b564f1ce896",
+          "start": 162016
+        },
+        {
+          "bytes": 15,
+          "end": 177568,
+          "index": 6,
+          "length": 15,
+          "name": "latent_hi_histogram_brotli",
+          "offset": 177553,
+          "optimization_role": "entropy_model_or_range_stream",
+          "score_claim": false,
+          "sha256": "1bbb4815aa10e8709b9bcce908f498d6bd15cc5274ffb9ce55e293dfe8390a19",
+          "start": 177553
+        },
+        {
+          "bytes": 555,
+          "end": 178123,
+          "index": 7,
+          "length": 555,
+          "name": "sidecar_corrections_brotli",
+          "offset": 177568,
+          "optimization_role": "sidecar_or_correction_stream",
+          "score_claim": false,
+          "sha256": "91d819d805a0640dd706b29228372d0a09d7a03275066b7b5659200c04afc198",
+          "start": 177568
+        }
+      ],
+      "tool": "tac.analysis.hnerv_packet_sections"
+    },
+    {
+      "archive": {
+        "bytes": 186239,
+        "path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+        "sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58"
+      },
+      "coverage": {
+        "contiguous": true,
+        "covers_payload": true,
+        "payload_bytes": 186131,
+        "section_bytes": 186131,
+        "section_count": 3
+      },
+      "dispatch_attempted": false,
+      "gpu_required": false,
+      "label": "PR106",
+      "member": {
+        "bytes": 186131,
+        "name": "0.bin",
+        "sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+        "zip_compress_size": 186131,
+        "zip_compress_type": 0,
+        "zip_crc": 2863720531
+      },
+      "notes": [
+        "parser-section custody only",
+        "no component score, score movement, or dispatch authorization is claimed"
+      ],
+      "parser": {
+        "confidence": "0xff header plus 24-bit decoder length",
+        "name": "pr106_ff_packed_hnerv",
+        "requested": "auto"
+      },
+      "parser_section_gate": {
+        "blockers": [],
+        "dispatch_attempted": false,
+        "name": "parser-section gate",
+        "ready": true,
+        "score_claim": false
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "tac_hnerv_packet_section_manifest.v1",
+      "schema_version": 1,
+      "score_claim": false,
+      "score_evidence_grade": "invalid_no_score",
+      "sections": [
+        {
+          "bytes": 4,
+          "end": 4,
+          "index": 0,
+          "length": 4,
+          "name": "packed_header_ff_len24",
+          "offset": 0,
+          "optimization_role": "control_or_metadata",
+          "score_claim": false,
+          "sha256": "7939f08db7d18dd4176e8e11b1232a9be6b2371db7a4e63c1c0871fb520148b6",
+          "start": 0
+        },
+        {
+          "bytes": 170278,
+          "end": 170282,
+          "index": 1,
+          "length": 170278,
+          "name": "decoder_packed_brotli",
+          "offset": 4,
+          "optimization_role": "decoder_weight_stream",
+          "score_claim": false,
+          "sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004",
+          "start": 4
+        },
+        {
+          "bytes": 15849,
+          "end": 186131,
+          "index": 2,
+          "length": 15849,
+          "name": "latents_and_sidecar_brotli",
+          "offset": 170282,
+          "optimization_role": "latent_stream",
+          "score_claim": false,
+          "sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+          "start": 170282
+        }
+      ],
+      "tool": "tac.analysis.hnerv_packet_sections"
+    }
+  ],
+  "schema": "tac_hnerv_packet_section_manifest_batch.v1",
+  "schema_version": 1,
+  "score_claim": false,
+  "score_evidence_grade": "invalid_no_score",
+  "tool": "tac.analysis.hnerv_packet_sections"
+}
