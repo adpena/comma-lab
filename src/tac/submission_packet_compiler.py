@@ -15,12 +15,17 @@ import struct
 import subprocess
 import zipfile
 import zlib
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
-from tac.submission_archive import validate_archive_member_name
+from tac.submission_archive import (
+    DETERMINISTIC_ZIP_DATE_TIME,
+    DETERMINISTIC_ZIP_FILE_MODE,
+    validate_archive_member_name,
+)
 
 SCHEMA_VERSION = "submission_packet_compiler.v1"
+RUNTIME_TREE_SCHEMA_VERSION = "runtime_tree_manifest.v1"
 MANIFEST_NAME = "submission_packet_compiler_manifest.json"
 TARGET_PROFILE_POLICIES: dict[str, dict[str, Any]] = {
     "contest_one_video_replay": {
@@ -80,13 +85,27 @@ ZIPWIRE_MEMBER_CORE_FIELDS = (
     "name",
     "local_header_name",
     "local_central_name_match",
+    "member_order_index",
     "header_offset",
+    "data_offset",
     "compress_type",
     "compressed_bytes",
     "uncompressed_bytes",
     "crc32",
+    "payload_sha256",
+    "compressed_payload_sha256",
+    "date_time",
     "flag_bits",
+    "external_attr",
+    "create_system",
+    "unix_permissions",
     "blockers",
+)
+SCORE_DISPATCH_BLOCKERS = (
+    "score_claim_forbidden_without_exact_cuda_auth_eval",
+    "dispatch_readiness_forbidden_without_byte_closed_archive_and_exact_cuda_auth_eval",
+    "level2_dispatch_claim_required_before_any_remote_exact_eval",
+    "pre_submission_compliance_check_required_before_release_or_promotion",
 )
 
 
@@ -115,21 +134,51 @@ def _canonical_json(payload: dict[str, Any]) -> str:
 
 
 def _local_header_name(raw_zip: bytes, info: zipfile.ZipInfo) -> str:
+    return str(_local_header_record(raw_zip, info)["name"])
+
+
+def _local_header_record(raw_zip: bytes, info: zipfile.ZipInfo) -> dict[str, Any]:
     offset = int(info.header_offset)
     if offset < 0 or offset + 30 > len(raw_zip):
         raise PacketCompilerError(f"local header offset out of range: {offset}")
-    sig = struct.unpack_from("<I", raw_zip, offset)[0]
+    (
+        sig,
+        version_needed,
+        flag_bits,
+        compress_type,
+        mod_time,
+        mod_date,
+        crc32,
+        compressed_size,
+        uncompressed_size,
+        name_len,
+        extra_len,
+    ) = struct.unpack_from("<IHHHHHIIIHH", raw_zip, offset)
     if sig != LOCAL_FILE_HEADER_SIG:
         raise PacketCompilerError(f"bad local header signature at offset {offset}")
-    flag_bits = struct.unpack_from("<H", raw_zip, offset + 6)[0]
-    name_len = struct.unpack_from("<H", raw_zip, offset + 26)[0]
-    extra_len = struct.unpack_from("<H", raw_zip, offset + 28)[0]
     start = offset + 30
     end = start + name_len
     if end > len(raw_zip) or end + extra_len > len(raw_zip):
         raise PacketCompilerError(f"local header name/extra out of range at offset {offset}")
     encoding = "utf-8" if flag_bits & (1 << 11) else "cp437"
-    return raw_zip[start:end].decode(encoding)
+    extra_start = end
+    extra_end = extra_start + extra_len
+    return {
+        "signature": f"{sig:08x}",
+        "version_needed": int(version_needed),
+        "flag_bits": int(flag_bits),
+        "compress_type": int(compress_type),
+        "mod_time": int(mod_time),
+        "mod_date": int(mod_date),
+        "crc32": f"{crc32:08x}",
+        "compressed_bytes": int(compressed_size),
+        "uncompressed_bytes": int(uncompressed_size),
+        "name": raw_zip[start:end].decode(encoding),
+        "name_bytes": int(name_len),
+        "extra_bytes": int(extra_len),
+        "extra_sha256": _sha256_bytes(raw_zip[extra_start:extra_end]),
+        "data_offset": int(extra_end),
+    }
 
 
 def _member_safety_blockers(name: str) -> list[str]:
@@ -140,36 +189,92 @@ def _member_safety_blockers(name: str) -> list[str]:
     return []
 
 
+def _member_order_sha256(names: list[str]) -> str:
+    h = hashlib.sha256()
+    for name in names:
+        h.update(name.encode("utf-8"))
+        h.update(b"\0")
+    return h.hexdigest()
+
+
+def _zip_datetime_string(date_time: tuple[int, int, int, int, int, int]) -> str:
+    year, month, day, hour, minute, second = date_time
+    return f"{year:04d}-{month:02d}-{day:02d}T{hour:02d}:{minute:02d}:{second:02d}"
+
+
 def _inspect_archive(archive_path: Path) -> dict[str, Any]:
     blockers: list[str] = []
     raw_zip = archive_path.read_bytes()
     member_rows: list[dict[str, Any]] = []
     duplicate_names: list[str] = []
+    archive_comment_bytes = 0
     try:
         with zipfile.ZipFile(archive_path) as zf:
+            archive_comment_bytes = len(zf.comment)
+            if zf.comment:
+                blockers.append("archive_comment_not_empty")
             infos = zf.infolist()
             seen: set[str] = set()
             for info in infos:
                 if info.filename in seen:
                     duplicate_names.append(info.filename)
                 seen.add(info.filename)
-            for info in infos:
+            for member_index, info in enumerate(infos):
                 row_blockers = _member_safety_blockers(info.filename)
                 if info.is_dir():
                     row_blockers.append("directory_member_not_supported_for_contest_packet")
                 if info.flag_bits & 1:
                     row_blockers.append("encrypted_member")
+                if info.flag_bits & (1 << 3):
+                    row_blockers.append("data_descriptor_not_supported_for_deterministic_packet")
                 if info.compress_type not in SUPPORTED_ZIP_METHODS:
                     row_blockers.append(f"unsupported_zip_method:{info.compress_type}")
+                unix_mode = (int(info.external_attr) >> 16) & 0o177777
+                unix_permissions = unix_mode & 0o7777
+                unix_file_type = unix_mode & 0o170000
+                if unix_file_type and stat.S_ISLNK(unix_file_type):
+                    row_blockers.append("symlink_member_not_supported_for_contest_packet")
+                if tuple(info.date_time) != DETERMINISTIC_ZIP_DATE_TIME:
+                    row_blockers.append(
+                        "noncanonical_zip_timestamp:"
+                        f"{_zip_datetime_string(tuple(info.date_time))}"
+                    )
+                if unix_permissions != DETERMINISTIC_ZIP_FILE_MODE:
+                    row_blockers.append(
+                        "noncanonical_zip_permissions:"
+                        f"{oct(unix_permissions)}"
+                    )
+                if int(info.create_system) != 3:
+                    row_blockers.append(f"noncanonical_zip_create_system:{info.create_system}")
+                if info.extra:
+                    row_blockers.append(f"central_directory_extra_not_empty:{len(info.extra)}")
+                if getattr(info, "comment", b""):
+                    row_blockers.append(
+                        f"central_directory_comment_not_empty:{len(info.comment)}"
+                    )
                 try:
-                    local_name = _local_header_name(raw_zip, info)
+                    local_header = _local_header_record(raw_zip, info)
+                    local_name = str(local_header["name"])
                 except PacketCompilerError as exc:
+                    local_header = {}
                     local_name = ""
                     row_blockers.append(f"local_header_error:{exc}")
                 if local_name and local_name != info.filename:
                     row_blockers.append("local_central_name_mismatch")
+                if local_header.get("extra_bytes", 0):
+                    row_blockers.append(
+                        f"local_header_extra_not_empty:{local_header['extra_bytes']}"
+                    )
                 payload = b""
                 payload_sha256 = ""
+                compressed_payload_sha256 = ""
+                data_offset = local_header.get("data_offset")
+                if isinstance(data_offset, int):
+                    data_end = data_offset + int(info.compress_size)
+                    if data_offset <= len(raw_zip) and data_end <= len(raw_zip):
+                        compressed_payload_sha256 = _sha256_bytes(raw_zip[data_offset:data_end])
+                    else:
+                        row_blockers.append("compressed_payload_slice_out_of_range")
                 computed_crc32 = None
                 if not info.is_dir() and not (info.flag_bits & 1):
                     try:
@@ -186,7 +291,9 @@ def _inspect_archive(archive_path: Path) -> dict[str, Any]:
                     "name": info.filename,
                     "local_header_name": local_name,
                     "local_central_name_match": bool(local_name == info.filename),
+                    "member_order_index": member_index,
                     "header_offset": int(info.header_offset),
+                    "data_offset": data_offset,
                     "compress_type": int(info.compress_type),
                     "compressed_bytes": int(info.compress_size),
                     "uncompressed_bytes": int(info.file_size),
@@ -195,10 +302,22 @@ def _inspect_archive(archive_path: Path) -> dict[str, Any]:
                         f"{computed_crc32:08x}" if computed_crc32 is not None else None
                     ),
                     "payload_sha256": payload_sha256,
+                    "payload_bytes": len(payload),
+                    "compressed_payload_sha256": compressed_payload_sha256,
                     "date_time": list(info.date_time),
                     "flag_bits": int(info.flag_bits),
                     "external_attr": int(info.external_attr),
+                    "external_attr_hex": f"{int(info.external_attr):08x}",
                     "create_system": int(info.create_system),
+                    "unix_mode": unix_mode,
+                    "unix_permissions": unix_permissions,
+                    "unix_permissions_octal": oct(unix_permissions),
+                    "local_header": local_header,
+                    "central_directory": {
+                        "extra_bytes": len(info.extra),
+                        "extra_sha256": _sha256_bytes(info.extra),
+                        "comment_bytes": len(getattr(info, "comment", b"")),
+                    },
                     "blockers": row_blockers,
                 }
                 member_rows.append(row)
@@ -207,12 +326,32 @@ def _inspect_archive(archive_path: Path) -> dict[str, Any]:
         blockers.append(f"bad_zip:{exc}")
     for name in sorted(set(duplicate_names)):
         blockers.append(f"duplicate_archive_member:{name}")
+    member_order = [str(row["name"]) for row in member_rows]
     return {
         "path": _json_ready_path(archive_path),
         "bytes": archive_path.stat().st_size,
         "sha256": _sha256_file(archive_path),
         "member_count": len(member_rows),
         "duplicate_member_names": sorted(set(duplicate_names)),
+        "zip_metadata": {
+            "canonical_timestamp": list(DETERMINISTIC_ZIP_DATE_TIME),
+            "canonical_unix_permissions": DETERMINISTIC_ZIP_FILE_MODE,
+            "canonical_unix_permissions_octal": oct(DETERMINISTIC_ZIP_FILE_MODE),
+            "archive_comment_bytes": archive_comment_bytes,
+            "member_order": member_order,
+            "member_order_sha256": _member_order_sha256(member_order),
+            "all_timestamps_canonical": all(
+                tuple(row["date_time"]) == DETERMINISTIC_ZIP_DATE_TIME
+                for row in member_rows
+            ),
+            "all_permissions_canonical": all(
+                row["unix_permissions"] == DETERMINISTIC_ZIP_FILE_MODE
+                for row in member_rows
+            ),
+            "all_local_central_names_match": all(
+                bool(row["local_central_name_match"]) for row in member_rows
+            ),
+        },
         "members": member_rows,
         "blockers": sorted(set(blockers)),
         "zip_strict": not blockers,
@@ -394,7 +533,29 @@ def _run_native_zipwire(
 def _iter_packet_files(packet_path: Path) -> list[Path]:
     if packet_path.is_file():
         return [packet_path]
-    return sorted(path for path in packet_path.rglob("*") if path.is_file())
+    return sorted(
+        path
+        for path in packet_path.rglob("*")
+        if path.is_file() or path.is_symlink()
+    )
+
+
+def _runtime_path_blockers(rel: str) -> list[str]:
+    blockers: list[str] = []
+    if not rel:
+        return ["empty_runtime_path"]
+    if "\\" in rel:
+        blockers.append(f"runtime_path_uses_backslashes:{rel}")
+    if "\x00" in rel or any(ord(ch) < 32 for ch in rel):
+        blockers.append(f"runtime_path_control_character:{rel}")
+    path = PurePosixPath(rel)
+    if path.is_absolute() or not path.parts or any(part in ("", ".", "..") for part in path.parts):
+        blockers.append(f"runtime_path_not_relative_safe:{rel}")
+    if "__MACOSX" in path.parts or any(part.startswith("._") for part in path.parts):
+        blockers.append(f"runtime_path_resource_fork_or_macosx:{rel}")
+    if any(part.startswith(".") for part in path.parts) or path.name in {".DS_Store", "Thumbs.db"}:
+        blockers.append(f"runtime_path_hidden_or_system:{rel}")
+    return blockers
 
 
 def _runtime_tree_rows(packet_path: Path) -> list[dict[str, Any]]:
@@ -403,12 +564,19 @@ def _runtime_tree_rows(packet_path: Path) -> list[dict[str, Any]]:
         return rows
     for path in _iter_packet_files(packet_path):
         rel = path.relative_to(packet_path).as_posix()
+        mode = stat.S_IMODE(path.lstat().st_mode if path.is_symlink() else path.stat().st_mode)
+        row_blockers = _runtime_path_blockers(rel)
+        if path.is_symlink():
+            row_blockers.append(f"runtime_symlink_not_supported:{rel}")
         rows.append(
             {
                 "path": rel,
-                "bytes": path.stat().st_size,
-                "sha256": _sha256_file(path),
-                "mode": stat.S_IMODE(path.stat().st_mode),
+                "bytes": path.stat().st_size if not path.is_symlink() else None,
+                "sha256": _sha256_file(path) if not path.is_symlink() else None,
+                "mode": mode,
+                "mode_octal": oct(mode),
+                "executable": bool(mode & stat.S_IXUSR),
+                "blockers": row_blockers,
             }
         )
     return rows
@@ -422,8 +590,32 @@ def _tree_sha256(rows: list[dict[str, Any]]) -> str:
         h.update(str(row["bytes"]).encode("ascii"))
         h.update(b"\0")
         h.update(str(row["sha256"]).encode("ascii"))
+        h.update(b"\0")
+        h.update(str(row.get("mode", "")).encode("ascii"))
         h.update(b"\n")
     return h.hexdigest()
+
+
+def _runtime_tree_manifest(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    blockers = sorted(
+        {
+            str(blocker)
+            for row in rows
+            for blocker in row.get("blockers", [])
+        }
+    )
+    return {
+        "schema_version": RUNTIME_TREE_SCHEMA_VERSION,
+        "tree_sha256": _tree_sha256(rows),
+        "file_count": len(rows),
+        "files": rows,
+        "blockers": blockers,
+        "hooks": {
+            "pre_submission_compliance_check_arg": "--expected-runtime-tree-sha256",
+            "manifest_field": "runtime_tree_manifest.tree_sha256",
+            "mode_semantics": "path + bytes + sha256 + POSIX mode",
+        },
+    }
 
 
 def _resolve_packet_paths(packet_path: Path) -> tuple[Path, Path | None]:
@@ -462,6 +654,18 @@ def inspect_packet(
         blockers.append("archive_only_packet_runtime_missing")
 
     runtime_rows = _runtime_tree_rows(packet)
+    runtime_tree = _runtime_tree_manifest(runtime_rows)
+    blockers.extend(f"runtime_tree:{blocker}" for blocker in runtime_tree["blockers"])
+    inflate_info = None
+    if inflate_path is not None:
+        inflate_info = {
+            "path": _json_ready_path(inflate_path),
+            "bytes": inflate_path.stat().st_size,
+            "sha256": _sha256_file(inflate_path),
+            "executable": bool(inflate_path.stat().st_mode & stat.S_IXUSR),
+        }
+        if not inflate_info["executable"]:
+            blockers.append("inflate_sh_not_executable")
     native_zipwire, native_blockers = _run_native_zipwire(
         archive_path,
         archive,
@@ -474,36 +678,41 @@ def inspect_packet(
         "target_profile": target_profile,
         "target_profile_policy": dict(TARGET_PROFILE_POLICIES[target_profile]),
         "score_claim": False,
+        "promotion_eligible": False,
+        "dispatchable": False,
         "ready_for_exact_eval_dispatch": False,
         "packet": {
             "path": _json_ready_path(packet),
             "kind": "archive" if packet.is_file() else "directory",
-            "tree_sha256": _tree_sha256(runtime_rows),
+            "tree_sha256": runtime_tree["tree_sha256"],
             "files": runtime_rows,
         },
+        "runtime_tree_manifest": runtime_tree,
         "archive": archive,
         "native_zipwire": native_zipwire,
-        "inflate_sh": (
-            {
-                "path": _json_ready_path(inflate_path),
-                "bytes": inflate_path.stat().st_size,
-                "sha256": _sha256_file(inflate_path),
-                "executable": bool(inflate_path.stat().st_mode & stat.S_IXUSR),
-            }
-            if inflate_path is not None else None
-        ),
+        "inflate_sh": inflate_info,
         "contest_compliance": {
             "checked": True,
             "contest_compliant_packet_shape": not blockers,
             "blockers": sorted(set(blockers)),
             "notes": [
-                "inspect/identity proof only; exact CUDA auth eval and lane claim still required",
+                "inspect/identity proof only; no score claim, promotion, or dispatch readiness",
+                "exact CUDA auth eval, byte-closed archive custody, strict compliance, and lane claim still required",
             ],
+        },
+        "score_dispatch_gate": {
+            "score_claim": False,
+            "promotion_eligible": False,
+            "dispatchable": False,
+            "ready_for_exact_eval_dispatch": False,
+            "evidence_grade": "byte_custody_only",
+            "blockers": list(SCORE_DISPATCH_BLOCKERS),
         },
         "golden_vectors": {
             "archive_sha256": archive["sha256"] if archive else None,
             "member_vectors": archive["members"] if archive else [],
-            "runtime_tree_sha256": _tree_sha256(runtime_rows),
+            "runtime_tree_sha256": runtime_tree["tree_sha256"],
+            "runtime_tree_manifest": runtime_tree,
         },
     }
 
@@ -521,6 +730,7 @@ def _copy_packet_identity(packet_path: Path, output_dir: Path) -> list[dict[str,
                 "path": "archive.zip",
                 "bytes": dst.stat().st_size,
                 "sha256": _sha256_file(dst),
+                "mode": stat.S_IMODE(dst.stat().st_mode),
             }
         )
         return copied
@@ -535,6 +745,7 @@ def _copy_packet_identity(packet_path: Path, output_dir: Path) -> list[dict[str,
                 "path": rel.as_posix(),
                 "bytes": dst.stat().st_size,
                 "sha256": _sha256_file(dst),
+                "mode": stat.S_IMODE(dst.stat().st_mode),
             }
         )
     return copied
