@@ -1,0 +1,1028 @@
+{
+  "anchor_id": "pr103_pr106_active_floor",
+  "components": [
+    {
+      "blockers": [
+        "old_new_archive_boundary_missing"
+      ],
+      "byte_semantics": {
+        "blockers": [
+          "old_new_archive_boundary_missing"
+        ],
+        "byte_delta_vs_baseline": null,
+        "charged_bits_changed": false,
+        "dispatchable": false,
+        "estimated_archive_bytes": null,
+        "evidence_grade": "empirical",
+        "evidence_semantics": "existing_anchor_for_planning_no_new_score_claim",
+        "measured_archive_bytes": null,
+        "model_overhead_bytes": null,
+        "promotion_eligible": false,
+        "repair_criteria": [
+          "record_anchor_archive_bytes_and_sha256_before_rewrite"
+        ],
+        "score_affecting_payload_changed": false,
+        "score_claim": false
+      },
+      "component_id": "baseline_packet",
+      "depends_on": [],
+      "deterministic": true,
+      "exact_roundtrip_required": false,
+      "family": "contest_archive_packet",
+      "notes": [],
+      "repair_criteria": [
+        "record_anchor_archive_bytes_and_sha256_before_rewrite"
+      ],
+      "role": "input_anchor",
+      "runtime_packet_required": false,
+      "stack_axis": "source",
+      "streams": [
+        "archive_zip"
+      ]
+    },
+    {
+      "blockers": [
+        "canonical_qint_vector_manifest_missing",
+        "symbol_stream_roundtrip_vectors_missing"
+      ],
+      "byte_semantics": {
+        "blockers": [
+          "canonical_qint_vector_manifest_missing",
+          "symbol_stream_roundtrip_vectors_missing"
+        ],
+        "byte_delta_vs_baseline": null,
+        "charged_bits_changed": false,
+        "dispatchable": false,
+        "estimated_archive_bytes": null,
+        "evidence_grade": "prediction",
+        "evidence_semantics": "symbol_stream_contract_plan_only",
+        "measured_archive_bytes": null,
+        "model_overhead_bytes": null,
+        "promotion_eligible": false,
+        "repair_criteria": [
+          "emit_cross_language_qint_vectors_with_shapes_offsets_and_sha256"
+        ],
+        "score_affecting_payload_changed": false,
+        "score_claim": false
+      },
+      "component_id": "quantized_symbol_streams",
+      "depends_on": [
+        "baseline_packet"
+      ],
+      "deterministic": true,
+      "exact_roundtrip_required": true,
+      "family": "qint_symbol_streams",
+      "notes": [],
+      "repair_criteria": [
+        "emit_cross_language_qint_vectors_with_shapes_offsets_and_sha256"
+      ],
+      "role": "quantization",
+      "runtime_packet_required": true,
+      "stack_axis": "vstack_serial",
+      "streams": [
+        "renderer_weights_qint",
+        "mask_qint",
+        "pose_qint",
+        "residual_qint"
+      ]
+    },
+    {
+      "blockers": [
+        "negative_control_not_a_promotion_candidate"
+      ],
+      "byte_semantics": {
+        "blockers": [
+          "negative_control_not_a_promotion_candidate"
+        ],
+        "byte_delta_vs_baseline": 793,
+        "charged_bits_changed": false,
+        "dispatchable": false,
+        "estimated_archive_bytes": null,
+        "evidence_grade": "empirical",
+        "evidence_semantics": "static_shared_pmf_k12_negative_control_after_charged_bytes",
+        "measured_archive_bytes": null,
+        "model_overhead_bytes": null,
+        "promotion_eligible": false,
+        "repair_criteria": [
+          "use_as_floor_and_overhead_warning_only"
+        ],
+        "score_affecting_payload_changed": false,
+        "score_claim": false
+      },
+      "component_id": "static_shared_pmf_k12_negative_control",
+      "depends_on": [
+        "quantized_symbol_streams"
+      ],
+      "deterministic": true,
+      "exact_roundtrip_required": true,
+      "family": "static_shared_pmf",
+      "notes": [
+        "static_shared_pmf_k12_measured_delta_vs_brotli_bytes=793"
+      ],
+      "repair_criteria": [
+        "use_as_floor_and_overhead_warning_only"
+      ],
+      "role": "negative_control",
+      "runtime_packet_required": true,
+      "stack_axis": "vstack_serial",
+      "streams": [
+        "renderer_weights_qint",
+        "model_weight_qint"
+      ]
+    },
+    {
+      "blockers": [
+        "learned_model_overhead_not_amortized",
+        "model_overhead_accounting_missing",
+        "exact_reconstruction_roundtrip_missing",
+        "runtime_packet_consumption_missing",
+        "charged_archive_byte_delta_missing",
+        "exact_cuda_auth_eval_missing",
+        "static_shared_pmf_k12_negative_plus_793_bytes_requires_repair"
+      ],
+      "byte_semantics": {
+        "blockers": [
+          "learned_model_overhead_not_amortized",
+          "model_overhead_accounting_missing",
+          "exact_reconstruction_roundtrip_missing",
+          "runtime_packet_consumption_missing",
+          "charged_archive_byte_delta_missing",
+          "exact_cuda_auth_eval_missing",
+          "static_shared_pmf_k12_negative_plus_793_bytes_requires_repair"
+        ],
+        "byte_delta_vs_baseline": 793,
+        "charged_bits_changed": false,
+        "dispatchable": false,
+        "estimated_archive_bytes": null,
+        "evidence_grade": "prediction",
+        "evidence_semantics": "learned_hyperprior_candidate_plan_only_zero_score_claim",
+        "measured_archive_bytes": null,
+        "model_overhead_bytes": null,
+        "promotion_eligible": false,
+        "repair_criteria": [
+          "prove_model_overhead_bytes_are_less_than_conditional_entropy_savings",
+          "record_model_weight_bytes_z_stream_bytes_headers_and_archive_delta",
+          "prove_encode_decode_exact_reconstruction_on_canonical_qint_vectors",
+          "prove_runtime_packet_contains_and_consumes_all_hyperprior_side_info",
+          "record_old_new_archive_sha256_and_charged_byte_delta",
+          "run_full_sample_exact_cuda_auth_eval_before_any_score_claim"
+        ],
+        "score_affecting_payload_changed": false,
+        "score_claim": false
+      },
+      "component_id": "balle_full_learned_hyperprior",
+      "depends_on": [
+        "quantized_symbol_streams"
+      ],
+      "deterministic": true,
+      "exact_roundtrip_required": true,
+      "family": "balle_full_learned_hyperprior",
+      "notes": [
+        "full_balle_family_may_replace_static_pmf_only_after_mdl_overhead_win",
+        "do_not_touch_shared_pmf_or_balle_codec_implementation_from_planner"
+      ],
+      "repair_criteria": [
+        "prove_model_overhead_bytes_are_less_than_conditional_entropy_savings",
+        "record_model_weight_bytes_z_stream_bytes_headers_and_archive_delta",
+        "prove_encode_decode_exact_reconstruction_on_canonical_qint_vectors",
+        "prove_runtime_packet_contains_and_consumes_all_hyperprior_side_info",
+        "record_old_new_archive_sha256_and_charged_byte_delta",
+        "run_full_sample_exact_cuda_auth_eval_before_any_score_claim"
+      ],
+      "role": "hyperprior",
+      "runtime_packet_required": true,
+      "stack_axis": "vstack_serial",
+      "streams": [
+        "renderer_weights_qint",
+        "model_weight_qint"
+      ]
+    },
+    {
+      "blockers": [
+        "terminal_coder_payload_vectors_missing",
+        "no_old_new_payload_sha256"
+      ],
+      "byte_semantics": {
+        "blockers": [
+          "terminal_coder_payload_vectors_missing",
+          "no_old_new_payload_sha256"
+        ],
+        "byte_delta_vs_baseline": null,
+        "charged_bits_changed": false,
+        "dispatchable": false,
+        "estimated_archive_bytes": null,
+        "evidence_grade": "prediction",
+        "evidence_semantics": "terminal_entropy_coder_contract_plan_only",
+        "measured_archive_bytes": null,
+        "model_overhead_bytes": null,
+        "promotion_eligible": false,
+        "repair_criteria": [
+          "prove_payload_decode_identity_and_fail_closed_malformed_vectors"
+        ],
+        "score_affecting_payload_changed": false,
+        "score_claim": false
+      },
+      "component_id": "arithmetic_terminal_coder",
+      "depends_on": [
+        "quantized_symbol_streams"
+      ],
+      "deterministic": true,
+      "exact_roundtrip_required": true,
+      "family": "range_arithmetic_terminal",
+      "notes": [],
+      "repair_criteria": [
+        "prove_payload_decode_identity_and_fail_closed_malformed_vectors"
+      ],
+      "role": "arithmetic",
+      "runtime_packet_required": true,
+      "stack_axis": "vstack_serial",
+      "streams": [
+        "renderer_weights_qint",
+        "model_weight_qint",
+        "mask_qint",
+        "pose_qint",
+        "residual_qint"
+      ]
+    },
+    {
+      "blockers": [
+        "mask_charged_byte_ledger_missing",
+        "mask_roundtrip_vector_missing"
+      ],
+      "byte_semantics": {
+        "blockers": [
+          "mask_charged_byte_ledger_missing",
+          "mask_roundtrip_vector_missing"
+        ],
+        "byte_delta_vs_baseline": null,
+        "charged_bits_changed": false,
+        "dispatchable": false,
+        "estimated_archive_bytes": null,
+        "evidence_grade": "prediction",
+        "evidence_semantics": "mask_parallel_stream_plan_only",
+        "measured_archive_bytes": null,
+        "model_overhead_bytes": null,
+        "promotion_eligible": false,
+        "repair_criteria": [
+          "record_mask_bytes_sha256_and_decode_vector"
+        ],
+        "score_affecting_payload_changed": false,
+        "score_claim": false
+      },
+      "component_id": "mask_stream_component",
+      "depends_on": [
+        "baseline_packet"
+      ],
+      "deterministic": true,
+      "exact_roundtrip_required": true,
+      "family": "mask_video_stream",
+      "notes": [],
+      "repair_criteria": [
+        "record_mask_bytes_sha256_and_decode_vector"
+      ],
+      "role": "parallel_stream",
+      "runtime_packet_required": true,
+      "stack_axis": "hstack_parallel",
+      "streams": [
+        "mask"
+      ]
+    },
+    {
+      "blockers": [
+        "pose_charged_byte_ledger_missing",
+        "pose_roundtrip_vector_missing"
+      ],
+      "byte_semantics": {
+        "blockers": [
+          "pose_charged_byte_ledger_missing",
+          "pose_roundtrip_vector_missing"
+        ],
+        "byte_delta_vs_baseline": null,
+        "charged_bits_changed": false,
+        "dispatchable": false,
+        "estimated_archive_bytes": null,
+        "evidence_grade": "prediction",
+        "evidence_semantics": "pose_parallel_stream_plan_only",
+        "measured_archive_bytes": null,
+        "model_overhead_bytes": null,
+        "promotion_eligible": false,
+        "repair_criteria": [
+          "record_pose_bytes_sha256_and_decode_vector"
+        ],
+        "score_affecting_payload_changed": false,
+        "score_claim": false
+      },
+      "component_id": "pose_stream_component",
+      "depends_on": [
+        "baseline_packet"
+      ],
+      "deterministic": true,
+      "exact_roundtrip_required": true,
+      "family": "pose_stream",
+      "notes": [],
+      "repair_criteria": [
+        "record_pose_bytes_sha256_and_decode_vector"
+      ],
+      "role": "parallel_stream",
+      "runtime_packet_required": true,
+      "stack_axis": "hstack_parallel",
+      "streams": [
+        "pose"
+      ]
+    },
+    {
+      "blockers": [
+        "residual_charged_byte_ledger_missing",
+        "residual_roundtrip_vector_missing"
+      ],
+      "byte_semantics": {
+        "blockers": [
+          "residual_charged_byte_ledger_missing",
+          "residual_roundtrip_vector_missing"
+        ],
+        "byte_delta_vs_baseline": null,
+        "charged_bits_changed": false,
+        "dispatchable": false,
+        "estimated_archive_bytes": null,
+        "evidence_grade": "prediction",
+        "evidence_semantics": "residual_parallel_stream_plan_only",
+        "measured_archive_bytes": null,
+        "model_overhead_bytes": null,
+        "promotion_eligible": false,
+        "repair_criteria": [
+          "record_residual_bytes_sha256_and_decode_vector"
+        ],
+        "score_affecting_payload_changed": false,
+        "score_claim": false
+      },
+      "component_id": "residual_stream_component",
+      "depends_on": [
+        "baseline_packet"
+      ],
+      "deterministic": true,
+      "exact_roundtrip_required": true,
+      "family": "residual_correction_stream",
+      "notes": [],
+      "repair_criteria": [
+        "record_residual_bytes_sha256_and_decode_vector"
+      ],
+      "role": "parallel_stream",
+      "runtime_packet_required": true,
+      "stack_axis": "hstack_parallel",
+      "streams": [
+        "residual"
+      ]
+    },
+    {
+      "blockers": [
+        "runtime_packet_not_built",
+        "inflate_consumption_probe_missing",
+        "no_sidecar_audit_missing"
+      ],
+      "byte_semantics": {
+        "blockers": [
+          "runtime_packet_not_built",
+          "inflate_consumption_probe_missing",
+          "no_sidecar_audit_missing"
+        ],
+        "byte_delta_vs_baseline": null,
+        "charged_bits_changed": false,
+        "dispatchable": false,
+        "estimated_archive_bytes": null,
+        "evidence_grade": "prediction",
+        "evidence_semantics": "runtime_packet_contract_plan_only",
+        "measured_archive_bytes": null,
+        "model_overhead_bytes": null,
+        "promotion_eligible": false,
+        "repair_criteria": [
+          "archive_zip_contains_all_score_affecting_model_side_info",
+          "inflate_sh_consumes_packet_without_external_state_or_network",
+          "pre_submission_compliance_check_strict_passes"
+        ],
+        "score_affecting_payload_changed": false,
+        "score_claim": false
+      },
+      "component_id": "runtime_packet_materializer",
+      "depends_on": [
+        "arithmetic_terminal_coder"
+      ],
+      "deterministic": true,
+      "exact_roundtrip_required": true,
+      "family": "contest_runtime_packet",
+      "notes": [],
+      "repair_criteria": [
+        "archive_zip_contains_all_score_affecting_model_side_info",
+        "inflate_sh_consumes_packet_without_external_state_or_network",
+        "pre_submission_compliance_check_strict_passes"
+      ],
+      "role": "pack",
+      "runtime_packet_required": true,
+      "stack_axis": "vstack_serial",
+      "streams": [
+        "archive_zip",
+        "inflate_runtime"
+      ]
+    }
+  ],
+  "manifest_sha256": "35f85fecdd98f3ec88a6303dfd8ebbf2d27b106345c6ec969954e64cccd8e632",
+  "metadata": {
+    "archive_layout": {
+      "dispatch_requires": [
+        "codecop_dag_manifest",
+        "tree_archive_member_order_sha256",
+        "charged_byte_delta_per_node",
+        "decode_roundtrip_per_leaf"
+      ],
+      "shape": "dag_of_codecops_with_tree_structured_archive_layout",
+      "status": "planning_contract_only"
+    },
+    "axis_semantics": {
+      "hstack_parallel": "parallel independent archive-component codecs merged into one deterministic packet",
+      "multipass": "compress-time repeated planning and training passes only",
+      "vstack_serial": "serial representation-to-pack transforms inside one component stream"
+    },
+    "canonical_qat_pipeline": {
+      "passes": [
+        "anchor",
+        "finetune",
+        "joint",
+        "qat",
+        "final"
+      ],
+      "status": "required_pipeline_shape_not_training_evidence"
+    },
+    "dispatch_attempted": false,
+    "negative_prior": {
+      "delta_bytes_vs_brotli_after_charged_bytes": 793,
+      "family": "static_shared_pmf_k12",
+      "semantics": "negative_control_not_family_kill_for_learned_hyperprior"
+    },
+    "nested_optimization": {
+      "levels": [
+        "meta_pass_score_feedback",
+        "bilevel_substrate_training",
+        "multipass_refinement",
+        "hstack_parallel_components",
+        "vstack_serial_transforms",
+        "per_tensor_hstack_parallel_substreams"
+      ],
+      "score_band_prediction": {
+        "evidence_grade": "prediction",
+        "full_nested_score_feedback_prediction": 0.09,
+        "linear_stack_prediction": 0.13,
+        "promotion_allowed": false,
+        "score_claim": false
+      },
+      "status": "design_contract_only_no_score_claim"
+    },
+    "planner_scope": "components_serial_transforms_parallel_components_passes_byte_semantics_blockers",
+    "quality_mandate": [
+      "beautiful",
+      "elegant",
+      "human_readable",
+      "composable",
+      "creative",
+      "reusable",
+      "expressive",
+      "canonical",
+      "production_hardened",
+      "oss_ready",
+      "paper_ready"
+    ],
+    "score_claim": false,
+    "target_modes": [
+      "contest_exact_eval"
+    ]
+  },
+  "parallel_groups": [
+    {
+      "blockers": [
+        "parallel_stream_byte_ledger_missing",
+        "cross_stream_budget_reconciliation_missing"
+      ],
+      "byte_semantics": {
+        "blockers": [
+          "parallel_stream_byte_ledger_missing",
+          "cross_stream_budget_reconciliation_missing"
+        ],
+        "byte_delta_vs_baseline": null,
+        "charged_bits_changed": false,
+        "dispatchable": false,
+        "estimated_archive_bytes": null,
+        "evidence_grade": "prediction",
+        "evidence_semantics": "hstack_parallel_component_plan_only",
+        "measured_archive_bytes": null,
+        "model_overhead_bytes": null,
+        "promotion_eligible": false,
+        "repair_criteria": [
+          "record_per_stream_charged_bytes_and_merge_order_sha256"
+        ],
+        "score_affecting_payload_changed": false,
+        "score_claim": false
+      },
+      "component_ids": [
+        "mask_stream_component",
+        "pose_stream_component",
+        "residual_stream_component",
+        "arithmetic_terminal_coder"
+      ],
+      "group_id": "hstack_parallel_stream_components",
+      "merge_policy": "independent_streams_then_deterministic_packet_merge",
+      "repair_criteria": [
+        "record_per_stream_charged_bytes_and_merge_order_sha256"
+      ]
+    }
+  ],
+  "passes": [
+    {
+      "blockers": [
+        "old_new_archive_boundary_missing",
+        "qint_deconstruction_not_proven"
+      ],
+      "byte_semantics": {
+        "blockers": [
+          "old_new_archive_boundary_missing",
+          "qint_deconstruction_not_proven"
+        ],
+        "byte_delta_vs_baseline": null,
+        "charged_bits_changed": false,
+        "dispatchable": false,
+        "estimated_archive_bytes": null,
+        "evidence_grade": "prediction",
+        "evidence_semantics": "multipass_plan_stage_no_archive_score_claim",
+        "measured_archive_bytes": null,
+        "model_overhead_bytes": null,
+        "promotion_eligible": false,
+        "repair_criteria": [
+          "planner_outputs_zero_score_claim",
+          "each_score_affecting_transform_has_charged_byte_delta_proof",
+          "each_codec_component_has_exact_roundtrip_or_is_marked_non_decoding",
+          "inflate_runtime_consumes_packet_without_score_sidecars",
+          "exact_cuda_auth_eval_required_before_score_promotion"
+        ],
+        "score_affecting_payload_changed": false,
+        "score_claim": false
+      },
+      "evidence_gate": "planning_only_no_score_claim_exact_roundtrip_runtime_packet_required",
+      "fail_closed_criteria": [
+        "planner_outputs_zero_score_claim",
+        "each_score_affecting_transform_has_charged_byte_delta_proof",
+        "each_codec_component_has_exact_roundtrip_or_is_marked_non_decoding",
+        "inflate_runtime_consumes_packet_without_score_sidecars",
+        "exact_cuda_auth_eval_required_before_score_promotion"
+      ],
+      "hstack_group_ids": [],
+      "pass_id": "pass_00_anchor_deconstruction",
+      "pass_index": 0,
+      "purpose": "anchor deconstruction plus static PMF negative-control accounting",
+      "vstack_transform_ids": [
+        "vstack_deconstruct_to_qint_streams"
+      ]
+    },
+    {
+      "blockers": [
+        "learned_hyperprior_repair_not_proven",
+        "arithmetic_payload_identity_vectors_missing"
+      ],
+      "byte_semantics": {
+        "blockers": [
+          "learned_hyperprior_repair_not_proven",
+          "arithmetic_payload_identity_vectors_missing"
+        ],
+        "byte_delta_vs_baseline": null,
+        "charged_bits_changed": false,
+        "dispatchable": false,
+        "estimated_archive_bytes": null,
+        "evidence_grade": "prediction",
+        "evidence_semantics": "multipass_plan_stage_no_archive_score_claim",
+        "measured_archive_bytes": null,
+        "model_overhead_bytes": null,
+        "promotion_eligible": false,
+        "repair_criteria": [
+          "planner_outputs_zero_score_claim",
+          "each_score_affecting_transform_has_charged_byte_delta_proof",
+          "each_codec_component_has_exact_roundtrip_or_is_marked_non_decoding",
+          "inflate_runtime_consumes_packet_without_score_sidecars",
+          "exact_cuda_auth_eval_required_before_score_promotion"
+        ],
+        "score_affecting_payload_changed": false,
+        "score_claim": false
+      },
+      "evidence_gate": "planning_only_no_score_claim_exact_roundtrip_runtime_packet_required",
+      "fail_closed_criteria": [
+        "planner_outputs_zero_score_claim",
+        "each_score_affecting_transform_has_charged_byte_delta_proof",
+        "each_codec_component_has_exact_roundtrip_or_is_marked_non_decoding",
+        "inflate_runtime_consumes_packet_without_score_sidecars",
+        "exact_cuda_auth_eval_required_before_score_promotion"
+      ],
+      "hstack_group_ids": [],
+      "pass_id": "pass_01_vstack_hyperprior_repair",
+      "pass_index": 1,
+      "purpose": "serial VStack learned-hyperprior repair and arithmetic payload contract",
+      "vstack_transform_ids": [
+        "vstack_learned_hyperprior_repair",
+        "vstack_arithmetic_terminal_encode"
+      ]
+    },
+    {
+      "blockers": [
+        "parallel_stream_byte_ledger_missing",
+        "runtime_packet_not_built"
+      ],
+      "byte_semantics": {
+        "blockers": [
+          "parallel_stream_byte_ledger_missing",
+          "runtime_packet_not_built"
+        ],
+        "byte_delta_vs_baseline": null,
+        "charged_bits_changed": false,
+        "dispatchable": false,
+        "estimated_archive_bytes": null,
+        "evidence_grade": "prediction",
+        "evidence_semantics": "multipass_plan_stage_no_archive_score_claim",
+        "measured_archive_bytes": null,
+        "model_overhead_bytes": null,
+        "promotion_eligible": false,
+        "repair_criteria": [
+          "planner_outputs_zero_score_claim",
+          "each_score_affecting_transform_has_charged_byte_delta_proof",
+          "each_codec_component_has_exact_roundtrip_or_is_marked_non_decoding",
+          "inflate_runtime_consumes_packet_without_score_sidecars",
+          "exact_cuda_auth_eval_required_before_score_promotion"
+        ],
+        "score_affecting_payload_changed": false,
+        "score_claim": false
+      },
+      "evidence_gate": "planning_only_no_score_claim_exact_roundtrip_runtime_packet_required",
+      "fail_closed_criteria": [
+        "planner_outputs_zero_score_claim",
+        "each_score_affecting_transform_has_charged_byte_delta_proof",
+        "each_codec_component_has_exact_roundtrip_or_is_marked_non_decoding",
+        "inflate_runtime_consumes_packet_without_score_sidecars",
+        "exact_cuda_auth_eval_required_before_score_promotion"
+      ],
+      "hstack_group_ids": [
+        "hstack_parallel_stream_components"
+      ],
+      "pass_id": "pass_02_hstack_packet_closure",
+      "pass_index": 2,
+      "purpose": "parallel HStack byte reconciliation and runtime packet closure",
+      "vstack_transform_ids": [
+        "vstack_packet_materialize"
+      ]
+    },
+    {
+      "blockers": [
+        "multipass_refinement_exact_eval_gate_missing"
+      ],
+      "byte_semantics": {
+        "blockers": [
+          "multipass_refinement_exact_eval_gate_missing"
+        ],
+        "byte_delta_vs_baseline": null,
+        "charged_bits_changed": false,
+        "dispatchable": false,
+        "estimated_archive_bytes": null,
+        "evidence_grade": "prediction",
+        "evidence_semantics": "multipass_plan_stage_no_archive_score_claim",
+        "measured_archive_bytes": null,
+        "model_overhead_bytes": null,
+        "promotion_eligible": false,
+        "repair_criteria": [
+          "planner_outputs_zero_score_claim",
+          "each_score_affecting_transform_has_charged_byte_delta_proof",
+          "each_codec_component_has_exact_roundtrip_or_is_marked_non_decoding",
+          "inflate_runtime_consumes_packet_without_score_sidecars",
+          "exact_cuda_auth_eval_required_before_score_promotion"
+        ],
+        "score_affecting_payload_changed": false,
+        "score_claim": false
+      },
+      "evidence_gate": "planning_only_no_score_claim_exact_roundtrip_runtime_packet_required",
+      "fail_closed_criteria": [
+        "planner_outputs_zero_score_claim",
+        "each_score_affecting_transform_has_charged_byte_delta_proof",
+        "each_codec_component_has_exact_roundtrip_or_is_marked_non_decoding",
+        "inflate_runtime_consumes_packet_without_score_sidecars",
+        "exact_cuda_auth_eval_required_before_score_promotion"
+      ],
+      "hstack_group_ids": [
+        "hstack_parallel_stream_components"
+      ],
+      "pass_id": "pass_03_multipass_refinement",
+      "pass_index": 3,
+      "purpose": "compress-time multipass refinement with no inflate-time scorer",
+      "vstack_transform_ids": [
+        "vstack_arithmetic_terminal_encode",
+        "vstack_packet_materialize"
+      ]
+    },
+    {
+      "blockers": [
+        "multipass_refinement_exact_eval_gate_missing"
+      ],
+      "byte_semantics": {
+        "blockers": [
+          "multipass_refinement_exact_eval_gate_missing"
+        ],
+        "byte_delta_vs_baseline": null,
+        "charged_bits_changed": false,
+        "dispatchable": false,
+        "estimated_archive_bytes": null,
+        "evidence_grade": "prediction",
+        "evidence_semantics": "multipass_plan_stage_no_archive_score_claim",
+        "measured_archive_bytes": null,
+        "model_overhead_bytes": null,
+        "promotion_eligible": false,
+        "repair_criteria": [
+          "planner_outputs_zero_score_claim",
+          "each_score_affecting_transform_has_charged_byte_delta_proof",
+          "each_codec_component_has_exact_roundtrip_or_is_marked_non_decoding",
+          "inflate_runtime_consumes_packet_without_score_sidecars",
+          "exact_cuda_auth_eval_required_before_score_promotion"
+        ],
+        "score_affecting_payload_changed": false,
+        "score_claim": false
+      },
+      "evidence_gate": "planning_only_no_score_claim_exact_roundtrip_runtime_packet_required",
+      "fail_closed_criteria": [
+        "planner_outputs_zero_score_claim",
+        "each_score_affecting_transform_has_charged_byte_delta_proof",
+        "each_codec_component_has_exact_roundtrip_or_is_marked_non_decoding",
+        "inflate_runtime_consumes_packet_without_score_sidecars",
+        "exact_cuda_auth_eval_required_before_score_promotion"
+      ],
+      "hstack_group_ids": [
+        "hstack_parallel_stream_components"
+      ],
+      "pass_id": "pass_04_multipass_refinement",
+      "pass_index": 4,
+      "purpose": "compress-time multipass refinement with no inflate-time scorer",
+      "vstack_transform_ids": [
+        "vstack_arithmetic_terminal_encode",
+        "vstack_packet_materialize"
+      ]
+    }
+  ],
+  "plan_id": "hstack_vstack_hyperprior_repair_20260507_worker_h",
+  "promotion_policy": {
+    "default_blockers": [
+      "planning_artifact_only",
+      "score_claim_forbidden_until_exact_cuda_auth_eval"
+    ],
+    "exact_eval_dispatch_requires": [
+      "score_affecting_payload_changed",
+      "charged_bits_changed",
+      "archive_old_new_sha256_recorded",
+      "exact_reconstruction_roundtrip_passed",
+      "runtime_packet_contains_all_required_model_and_side_info",
+      "inflate_path_consumes_packet_without_external_sidecars"
+    ],
+    "fail_closed": true,
+    "policy_id": "hstack_vstack_hyperprior_fail_closed_policy",
+    "schema": "tac_codec_stack_fail_closed_promotion_policy_v1",
+    "score_promotion_requires": [
+      "full_sample_exact_cuda_auth_eval_json",
+      "archive_zip_sha256_matches_eval_manifest",
+      "component_distances_recomputed_from_cuda_eval",
+      "dispatch_claim_closed_with_terminal_status"
+    ]
+  },
+  "promotion_status": {
+    "blockers": [
+      "planning_artifact_only",
+      "score_claim_forbidden_until_exact_cuda_auth_eval",
+      "old_new_archive_boundary_missing",
+      "canonical_qint_vector_manifest_missing",
+      "symbol_stream_roundtrip_vectors_missing",
+      "negative_control_not_a_promotion_candidate",
+      "learned_model_overhead_not_amortized",
+      "model_overhead_accounting_missing",
+      "exact_reconstruction_roundtrip_missing",
+      "runtime_packet_consumption_missing",
+      "charged_archive_byte_delta_missing",
+      "exact_cuda_auth_eval_missing",
+      "static_shared_pmf_k12_negative_plus_793_bytes_requires_repair",
+      "terminal_coder_payload_vectors_missing",
+      "no_old_new_payload_sha256",
+      "mask_charged_byte_ledger_missing",
+      "mask_roundtrip_vector_missing",
+      "pose_charged_byte_ledger_missing",
+      "pose_roundtrip_vector_missing",
+      "residual_charged_byte_ledger_missing",
+      "residual_roundtrip_vector_missing",
+      "runtime_packet_not_built",
+      "inflate_consumption_probe_missing",
+      "no_sidecar_audit_missing",
+      "qint_deconstruction_not_proven",
+      "arithmetic_payload_identity_vectors_missing",
+      "runtime_packet_materialization_missing",
+      "parallel_stream_byte_ledger_missing",
+      "cross_stream_budget_reconciliation_missing",
+      "learned_hyperprior_repair_not_proven",
+      "multipass_refinement_exact_eval_gate_missing",
+      "no_component_has_charged_bits_changed_proof"
+    ],
+    "dispatchable": false,
+    "promotion_eligible": false,
+    "required_repairs": [
+      "record_anchor_archive_bytes_and_sha256_before_rewrite",
+      "emit_cross_language_qint_vectors_with_shapes_offsets_and_sha256",
+      "use_as_floor_and_overhead_warning_only",
+      "prove_model_overhead_bytes_are_less_than_conditional_entropy_savings",
+      "record_model_weight_bytes_z_stream_bytes_headers_and_archive_delta",
+      "prove_encode_decode_exact_reconstruction_on_canonical_qint_vectors",
+      "prove_runtime_packet_contains_and_consumes_all_hyperprior_side_info",
+      "record_old_new_archive_sha256_and_charged_byte_delta",
+      "run_full_sample_exact_cuda_auth_eval_before_any_score_claim",
+      "prove_payload_decode_identity_and_fail_closed_malformed_vectors",
+      "record_mask_bytes_sha256_and_decode_vector",
+      "record_pose_bytes_sha256_and_decode_vector",
+      "record_residual_bytes_sha256_and_decode_vector",
+      "archive_zip_contains_all_score_affecting_model_side_info",
+      "inflate_sh_consumes_packet_without_external_state_or_network",
+      "pre_submission_compliance_check_strict_passes",
+      "emit_qint_deconstruction_manifest_with_sha256",
+      "prove_arithmetic_payload_roundtrip_and_malformed_fail_closed",
+      "prove_runtime_packet_contains_all_score_affecting_bytes",
+      "record_per_stream_charged_bytes_and_merge_order_sha256",
+      "planner_outputs_zero_score_claim",
+      "each_score_affecting_transform_has_charged_byte_delta_proof",
+      "each_codec_component_has_exact_roundtrip_or_is_marked_non_decoding",
+      "inflate_runtime_consumes_packet_without_score_sidecars",
+      "exact_cuda_auth_eval_required_before_score_promotion"
+    ],
+    "score_claim": false
+  },
+  "schema": "tac_hstack_vstack_multipass_plan_v2",
+  "serial_transforms": [
+    {
+      "blockers": [
+        "qint_deconstruction_not_proven"
+      ],
+      "byte_semantics": {
+        "blockers": [
+          "qint_deconstruction_not_proven"
+        ],
+        "byte_delta_vs_baseline": null,
+        "charged_bits_changed": false,
+        "dispatchable": false,
+        "estimated_archive_bytes": null,
+        "evidence_grade": "prediction",
+        "evidence_semantics": "deconstruction_transform_plan_only",
+        "measured_archive_bytes": null,
+        "model_overhead_bytes": null,
+        "promotion_eligible": false,
+        "repair_criteria": [
+          "emit_qint_deconstruction_manifest_with_sha256"
+        ],
+        "score_affecting_payload_changed": false,
+        "score_claim": false
+      },
+      "inputs": [
+        "baseline_packet"
+      ],
+      "order_index": 0,
+      "outputs": [
+        "quantized_symbol_streams"
+      ],
+      "repair_criteria": [
+        "emit_qint_deconstruction_manifest_with_sha256"
+      ],
+      "transform_id": "vstack_deconstruct_to_qint_streams",
+      "transform_kind": "representation_to_quantized_symbols"
+    },
+    {
+      "blockers": [
+        "learned_model_overhead_not_amortized",
+        "model_overhead_accounting_missing",
+        "exact_reconstruction_roundtrip_missing",
+        "runtime_packet_consumption_missing",
+        "charged_archive_byte_delta_missing",
+        "exact_cuda_auth_eval_missing",
+        "static_shared_pmf_k12_negative_plus_793_bytes_requires_repair"
+      ],
+      "byte_semantics": {
+        "blockers": [
+          "learned_model_overhead_not_amortized",
+          "model_overhead_accounting_missing",
+          "exact_reconstruction_roundtrip_missing",
+          "runtime_packet_consumption_missing",
+          "charged_archive_byte_delta_missing",
+          "exact_cuda_auth_eval_missing",
+          "static_shared_pmf_k12_negative_plus_793_bytes_requires_repair"
+        ],
+        "byte_delta_vs_baseline": null,
+        "charged_bits_changed": false,
+        "dispatchable": false,
+        "estimated_archive_bytes": null,
+        "evidence_grade": "prediction",
+        "evidence_semantics": "learned_hyperprior_transform_plan_only",
+        "measured_archive_bytes": null,
+        "model_overhead_bytes": null,
+        "promotion_eligible": false,
+        "repair_criteria": [
+          "prove_model_overhead_bytes_are_less_than_conditional_entropy_savings",
+          "record_model_weight_bytes_z_stream_bytes_headers_and_archive_delta",
+          "prove_encode_decode_exact_reconstruction_on_canonical_qint_vectors",
+          "prove_runtime_packet_contains_and_consumes_all_hyperprior_side_info",
+          "record_old_new_archive_sha256_and_charged_byte_delta",
+          "run_full_sample_exact_cuda_auth_eval_before_any_score_claim"
+        ],
+        "score_affecting_payload_changed": false,
+        "score_claim": false
+      },
+      "inputs": [
+        "quantized_symbol_streams"
+      ],
+      "order_index": 1,
+      "outputs": [
+        "balle_full_learned_hyperprior"
+      ],
+      "repair_criteria": [
+        "prove_model_overhead_bytes_are_less_than_conditional_entropy_savings",
+        "record_model_weight_bytes_z_stream_bytes_headers_and_archive_delta",
+        "prove_encode_decode_exact_reconstruction_on_canonical_qint_vectors",
+        "prove_runtime_packet_contains_and_consumes_all_hyperprior_side_info",
+        "record_old_new_archive_sha256_and_charged_byte_delta",
+        "run_full_sample_exact_cuda_auth_eval_before_any_score_claim"
+      ],
+      "transform_id": "vstack_learned_hyperprior_repair",
+      "transform_kind": "quantized_symbols_to_learned_hyperprior_sideinfo"
+    },
+    {
+      "blockers": [
+        "arithmetic_payload_identity_vectors_missing"
+      ],
+      "byte_semantics": {
+        "blockers": [
+          "arithmetic_payload_identity_vectors_missing"
+        ],
+        "byte_delta_vs_baseline": null,
+        "charged_bits_changed": false,
+        "dispatchable": false,
+        "estimated_archive_bytes": null,
+        "evidence_grade": "prediction",
+        "evidence_semantics": "arithmetic_terminal_transform_plan_only",
+        "measured_archive_bytes": null,
+        "model_overhead_bytes": null,
+        "promotion_eligible": false,
+        "repair_criteria": [
+          "prove_arithmetic_payload_roundtrip_and_malformed_fail_closed"
+        ],
+        "score_affecting_payload_changed": false,
+        "score_claim": false
+      },
+      "inputs": [
+        "balle_full_learned_hyperprior"
+      ],
+      "order_index": 2,
+      "outputs": [
+        "arithmetic_terminal_coder"
+      ],
+      "repair_criteria": [
+        "prove_arithmetic_payload_roundtrip_and_malformed_fail_closed"
+      ],
+      "transform_id": "vstack_arithmetic_terminal_encode",
+      "transform_kind": "entropy_model_to_arithmetic_payload"
+    },
+    {
+      "blockers": [
+        "runtime_packet_materialization_missing"
+      ],
+      "byte_semantics": {
+        "blockers": [
+          "runtime_packet_materialization_missing"
+        ],
+        "byte_delta_vs_baseline": null,
+        "charged_bits_changed": false,
+        "dispatchable": false,
+        "estimated_archive_bytes": null,
+        "evidence_grade": "prediction",
+        "evidence_semantics": "packet_materialization_transform_plan_only",
+        "measured_archive_bytes": null,
+        "model_overhead_bytes": null,
+        "promotion_eligible": false,
+        "repair_criteria": [
+          "prove_runtime_packet_contains_all_score_affecting_bytes"
+        ],
+        "score_affecting_payload_changed": false,
+        "score_claim": false
+      },
+      "inputs": [
+        "arithmetic_terminal_coder"
+      ],
+      "order_index": 3,
+      "outputs": [
+        "runtime_packet_materializer"
+      ],
+      "repair_criteria": [
+        "prove_runtime_packet_contains_all_score_affecting_bytes"
+      ],
+      "transform_id": "vstack_packet_materialize",
+      "transform_kind": "payloads_to_runtime_packet"
+    }
+  ],
+  "static_pmf_delta_bytes": 793
+}
