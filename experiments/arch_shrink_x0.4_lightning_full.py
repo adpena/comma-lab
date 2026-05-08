@@ -263,6 +263,94 @@ mkdir -p "$LOG_DIR/extracted"
 [ -f "$LOG_DIR/extracted/masks.mkv" ] || {{ log "FATAL: masks.mkv extract failed"; exit 2; }}
 log "  masks.mkv extracted ($(stat -c '%s' "$LOG_DIR/extracted/masks.mkv" 2>/dev/null || stat -f '%z' "$LOG_DIR/extracted/masks.mkv") bytes)"
 
+# Stage 1b: fail-closed contract audit for the Q-FAITHFUL half-frame stream.
+# QFAI/JointFrameGenerator consumes the odd-frame mask (mask_t1) plus the
+# deployed pose stream. It intentionally has no motion/zoom module, so
+# zoom_scalars are not required for this renderer family; the important
+# contest-faithfulness check is that the charged mask stream is exactly the
+# 600 odd-frame stream that the deployed runtime will pass as mask_t1.
+MASK_CONTRACT_AUDIT="$LOG_DIR/arch_shrink_half_frame_contract.json"
+MASKS_MKV="$LOG_DIR/extracted/masks.mkv" MASK_CONTRACT_AUDIT="$MASK_CONTRACT_AUDIT" "$PYBIN" - <<'PY'
+import json
+import os
+import shutil
+import subprocess
+from pathlib import Path
+
+mask_path = Path(os.environ["MASKS_MKV"])
+audit_path = Path(os.environ["MASK_CONTRACT_AUDIT"])
+expected_frames = 600
+frame_count_source = ""
+try:
+    import av
+    container = av.open(str(mask_path))
+    try:
+        frame_count = sum(1 for _ in container.decode(video=0))
+    finally:
+        container.close()
+    frame_count_source = "pyav"
+except Exception as pyav_exc:
+    ffprobe = shutil.which("ffprobe")
+    if ffprobe is None:
+        raise SystemExit(
+            "FATAL: could not decode half-frame masks.mkv for frame-count audit; "
+            "PyAV failed with %r and ffprobe is unavailable." % (pyav_exc,)
+        )
+    proc = subprocess.run(
+        [
+            ffprobe,
+            "-v",
+            "error",
+            "-count_frames",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=nb_read_frames",
+            "-of",
+            "default=nokey=1:noprint_wrappers=1",
+            str(mask_path),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        raise SystemExit(
+            "FATAL: ffprobe half-frame masks.mkv frame-count audit failed rc=%s stderr=%r; "
+            "PyAV error was %r" % (proc.returncode, proc.stderr[-500:], pyav_exc)
+        )
+    try:
+        frame_count = int(proc.stdout.strip().splitlines()[-1])
+    except (IndexError, ValueError) as exc:
+        raise SystemExit(
+            "FATAL: ffprobe half-frame masks.mkv frame-count audit returned "
+            "unparseable output %r; PyAV error was %r" % (proc.stdout, pyav_exc)
+        ) from exc
+    frame_count_source = "ffprobe"
+if frame_count != expected_frames:
+    raise SystemExit(
+        "FATAL: arch-shrink Q-FAITHFUL half-frame mask stream has %s frames; "
+        "expected exactly %s odd-frame masks before training."
+        % (frame_count, expected_frames)
+    )
+audit = dict(
+    schema_version="arch_shrink_half_frame_contract.v1",
+    mask_path=str(mask_path),
+    mask_frame_count=frame_count,
+    mask_frame_count_source=frame_count_source,
+    expected_mask_frame_count=expected_frames,
+    mask_stream="odd_frame_masks_only",
+    renderer_family="QFAI JointFrameGenerator",
+    runtime_consumes="mask_t1_plus_optimized_poses",
+    zoom_scalars_required=False,
+    score_claim=False,
+    promotion_eligible=False,
+)
+audit_path.write_text(json.dumps(audit, indent=2, sort_keys=True) + "\n")
+print("half-frame contract audit: " + json.dumps(audit, sort_keys=True))
+PY
+log "  half-frame contract audit: $MASK_CONTRACT_AUDIT"
+
 # Stage 2: training (Q-FAITHFUL JointFrameGenerator path).
 # --no-auth-eval-on-best is REQUIRED — variant=quantizr_faithful is not in
 # _VARIANTS_BUILD_RENDERER_FP4A_OK; the FP4A export path can't serialise the

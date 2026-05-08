@@ -153,6 +153,27 @@ def test_arch_shrink_remote_command_uses_qfaithful_manual_eval_path() -> None:
     assert "contest_auth_eval.json" in command
 
 
+def test_arch_shrink_remote_command_audits_half_frame_contract_before_training() -> None:
+    module = _load_script("experiments/arch_shrink_x0.4_lightning_full.py")
+
+    command = module.build_remote_command(
+        job_name="arch-test",
+        remote_pact="/remote/pact",
+    )
+
+    audit_idx = command.index("arch_shrink_half_frame_contract.json")
+    train_idx = command.index("src/tac/experiments/train_renderer.py")
+    assert audit_idx < train_idx
+    assert "expected_frames = 600" in command
+    assert "frame_count != expected_frames" in command
+    assert 'frame_count_source = "ffprobe"' in command
+    assert "-count_frames" in command
+    assert "PyAV failed" in command
+    assert "expected exactly %s odd-frame masks before training" in command
+    assert 'runtime_consumes="mask_t1_plus_optimized_poses"' in command
+    assert "zoom_scalars_required=False" in command
+
+
 def test_qfaithful_training_path_passes_pose_through_forward_kwargs() -> None:
     source = (REPO_ROOT / "src/tac/experiments/train_renderer.py").read_text(
         encoding="utf-8"
