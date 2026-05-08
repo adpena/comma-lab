@@ -203,3 +203,70 @@ this workspace and keep Python fallback paths.
   runtime closure, and the normal CUDA auth-eval process.
 - New Rust crates must live under `runtime-rs/` and reuse the existing
   workspace, CLI/test pattern, and no-secret public-release hygiene.
+
+## 2026-05-08 XHigh DX Latency Profile Update
+
+Scope: local preflight/test-adjacent DX only. No dispatch, score claim, archive
+candidate, or Rust implementation was introduced in this pass.
+
+New artifact:
+
+- `tools/profile_preflight_latency.py` writes
+  `pact.preflight_latency_profile.v1` JSON and a short terminal table. It can
+  profile:
+  - `preflight-all-codebase` with per-check monkeypatch timing and optional
+    `--preflight-timeout-s` partial-report cutoff;
+  - `dispatch-hazards` per scanned file;
+  - `review-tracker-scan` per parsed Python file without writing tracker DB
+    state;
+  - `all-lanes` by reusing `tools/all_lanes_preflight.py --timings-json`.
+
+Measured current local profile:
+
+- `dispatch-hazards`: `0.439s`, 674 files, 0 hazards.
+- `review-tracker-scan`: `2.419s`, 2,012 files, 28,717 entities. Slowest
+  single parse was `src/tac/preflight.py` at `0.140s`.
+- `preflight-all-codebase --preflight-timeout-s 90`: timed out at `90.393s`
+  after 37 timed checks. Slow completed checks:
+  - `preflight_loader_format_safety`: `36.634s`
+  - `preflight_filename_contract`: `18.699s`
+  - `check_no_mps_fallback_default`: `8.338s`
+  - `check_no_compromised_lightning_supply_chain`: `8.180s`
+  - `preflight_dead_resolvers`: `8.055s`
+  - `check_codebase_drift`: `3.140s`
+  - timeout fired inside `check_no_eval_roundtrip_false` after `3.358s`
+- `all-lanes` through the profiler: `1.58s` wall / `1.547s` inner wall, with
+  Gate #10 failing only because this tranche's new source files were still
+  untracked when measured. Slowest all-lanes gate was PR91/HPM1 custody at
+  about `1.0s`.
+
+Small hardening fix found during profiling:
+
+- `check_lightning_exact_eval_manifest_runtime_closure` now includes
+  `INFLATE_TORCHVISION_SPEC=torchvision==0.20.1+cu124` in its internal
+  "complete cu124" fixture, matching the launcher validator's current T4/g4dn
+  runtime contract. This removed a fail-fast preflight fixture drift and let
+  the profiler reach the real scanner-heavy hot path.
+
+Rust decision:
+
+- Do not introduce Rust for this tranche. The current evidence points first to
+  broad Python AST/text scanners (`preflight_loader_format_safety`,
+  `preflight_filename_contract`, eval-roundtrip/default scanners) and repeated
+  source traversal policy, not a narrow byte parser that can be safely ported
+  today.
+- Candidate Rust boundary remains a shared source-index CLI under
+  `runtime-rs/` only after Python profiler JSON is stable and parity fixtures
+  cover ignored directories, symlinks, broken files, waiver-line semantics, and
+  exact scanner output. Python remains the authoritative oracle until then.
+
+Verification:
+
+- `.venv/bin/python -m pytest src/tac/tests/test_profile_preflight_latency.py`
+- `.venv/bin/python -m pytest src/tac/tests/test_all_lanes_preflight_timing_profile.py`
+- `.venv/bin/python -m pytest src/tac/tests/test_preflight_meta_bugs.py::TestLightningExactEvalManifestRuntimeClosure src/tac/tests/test_preflight_meta_bugs.py::TestLightningExactEvalDaliBootstrap`
+- `.venv/bin/python -m py_compile tools/profile_preflight_latency.py src/tac/preflight.py src/tac/tests/test_preflight_meta_bugs.py`
+- `.venv/bin/python tools/profile_preflight_latency.py --surface dispatch-hazards --surface review-tracker-scan --json-out /tmp/pact_preflight_latency_scanners.json --top 10`
+- `.venv/bin/python tools/profile_preflight_latency.py --surface preflight-all-codebase --preflight-timeout-s 90 --json-out /tmp/pact_preflight_all_latency.json --top 20`
+- `.venv/bin/python tools/profile_preflight_latency.py --surface all-lanes --json-out /tmp/pact_profile_all_lanes_surface.json --top 8`
+- `.venv/bin/python tools/all_lanes_preflight.py --timings-json /tmp/pact_all_lanes_timings.json --timings` failed only on Gate #10 because the new profiler/test files were untracked at measurement time.

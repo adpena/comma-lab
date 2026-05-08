@@ -53,6 +53,7 @@ from tac.preflight import (
     check_inflate_scorer_load_has_runtime_banner,
     check_inflate_sh_handles_br_centrally,
     check_kl_div_reduction_correct,
+    check_lightning_exact_eval_manifest_runtime_closure,
     check_lightning_exact_eval_runner_bootstraps_dali,
     check_lightning_ssh_static_policy,
     check_no_active_mcp_server_config,
@@ -503,6 +504,14 @@ class TestLightningExactEvalDaliBootstrap:
         )
         with pytest.raises(ValueError, match="DALI runner preflight"):
             spec.validate()
+
+
+class TestLightningExactEvalManifestRuntimeClosure:
+    def test_manifest_runtime_closure_preflight_tracks_cu124_torchvision_pin(self) -> None:
+        assert check_lightning_exact_eval_manifest_runtime_closure(
+            strict=True,
+            verbose=False,
+        ) == []
 
 
 # ─── Check 0c: Lightning SSH static policy guard ────────────────────────────

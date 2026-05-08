@@ -17551,6 +17551,7 @@ def check_lightning_exact_eval_manifest_runtime_closure(
             )
             args.env = [
                 "INFLATE_TORCH_SPEC=torch==2.5.1+cu124",
+                "INFLATE_TORCHVISION_SPEC=torchvision==0.20.1+cu124",
                 "UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124",
                 "UV_INDEX_STRATEGY=unsafe-best-match",
             ]
@@ -17572,6 +17573,7 @@ def check_lightning_exact_eval_manifest_runtime_closure(
 
             args.env = [
                 "INFLATE_TORCH_SPEC=torch==2.5.1+cu124",
+                "INFLATE_TORCHVISION_SPEC=torchvision==0.20.1+cu124",
                 "UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124",
                 "UV_INDEX_STRATEGY=unsafe-best-match",
             ]
