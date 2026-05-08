@@ -1265,6 +1265,14 @@ def preflight_all(
         check_pr101_tools_torch_load_allowlist(
             strict=False, verbose=verbose,
         )
+        # B9 — rel_err canonical-definition discipline (codex adversarial
+        # review #1, 2026-05-08). Live count on landing: 0. Held warn-only
+        # for one tranche; flip to STRICT after a follow-on review of any
+        # new call sites. Memory:
+        # ``feedback_rel_err_l1_rms_canonicalization_20260508.md``.
+        check_rel_err_definition_canonical(
+            strict=False, verbose=verbose,
+        )
 
         # 2026-05-08 REPRESENTATION-INTEGRATION GATES 1-10 (codex audit
         # `.omx/research/representation_integration_gap_audit_20260508_codex.md`).
@@ -23426,6 +23434,51 @@ def check_pr101_tools_torch_load_allowlist(
     return _run_bugclass_scanner(
         helper_relpath="tools/check_pr101_tools_torch_load_allowlist.py",
         label="bugclass-b8-pr101-torch-load-allowlist",
+        error_class=PreflightError,
+        repo_root=repo_root,
+        strict=strict,
+        verbose=verbose,
+    )
+
+
+def check_rel_err_definition_canonical(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """B9 — rel_err canonical-definition discipline.
+
+    Bug class: re-implementing ``rel_err`` inline silently in heterogeneous
+    forms (L1 / L2 / RMS / per-element percentage) and feeding the result
+    into the Lagrangian per-tensor allocator's squared penalty
+    ``cost = bytes + λ · w · rel_err²``. The squared penalty is a
+    rate-MSE Lagrangian dual ONLY when ``rel_err`` is RMS / L2 (an
+    inner-product-space distortion); L1 ratios make the dual ill-posed.
+
+    Real instances (codex adversarial review #1, 2026-05-08):
+      * ``tac.codec.per_tensor_codecs.encode_sparsity_alpha`` returned L2
+        ratio while ``encode_lossy_K_coarsen`` returned L1 ratio under the
+        SAME key ``rel_err``.
+      * ``tools/build_pr106_uniward_runtime_packet.py`` joint hook
+        reported global L1 while the allocator bisected on RMS.
+      * ``tools/pr101_omega_opt_per_tensor_codec_choice_empirical.py``
+        aggregated mixed-form rel_err values into ``sqrt(mean(e²))``.
+
+    Memory ref: ``feedback_rel_err_l1_rms_canonicalization_20260508.md``
+    + ``.omx/research/rel_err_inconsistency_audit_20260508_claude.md``.
+
+    Promotion plan: starts ``strict=False``. Council verdict (10/10
+    inner-circle) is RMS-canonical with explicit ``mode="l1"`` /
+    ``mode="max"`` opt-ins via ``tac.codec.rel_err.compute_rel_err``.
+    Existing PR101/PR106/Path-B tools have legitimate L1 semantics and
+    are annotated ``# REL_ERR_NON_CANONICAL_OK:<reason>``. Live count on
+    landing: 0. Flip to STRICT in ``preflight_all()`` after one tranche
+    of new-callsite review.
+    """
+    return _run_bugclass_scanner(
+        helper_relpath="tools/check_rel_err_definition_canonical.py",
+        label="bugclass-b9-rel-err-canonical",
         error_class=PreflightError,
         repo_root=repo_root,
         strict=strict,
