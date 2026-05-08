@@ -561,7 +561,11 @@ if __name__ == "__main__":
 #   one `submissions/robust_current/inflate.sh` already uses: invoke the
 #   inflate via `uv run --with brotli==<spec> --with torch==<spec> --with
 #   numpy==<spec> python ...` so uv resolves the runtime deps in an
-#   isolated ephemeral env. Do NOT inline `pip install brotli` per
+#   isolated ephemeral env. The forked inflate must also pass
+#   `uv run --no-project`: without it, uv may discover the repo `pyproject.toml`
+#   from the submission dir, sync/remove the shared `.venv`, and leave
+#   `upstream/evaluate.py` without evaluator deps such as timm. Do NOT inline
+#   `pip install brotli` per
 #   CLAUDE.md "Forbidden re-implementing remote bootstrap inline" —
 #   `uv run --with` IS the canonical pattern for ephemeral inflate-time
 #   deps. INFLATE_TORCH_SPEC must be cu124 on driver<580 hosts (Lightning
@@ -582,8 +586,8 @@ mkdir -p "$OUTPUT_DIR"
 
 # Canonical inflate-time uv ephemeral env (mirrors
 # `submissions/robust_current/inflate.sh` lines 74-90). The `--with` specs
-# pull brotli + torch + numpy into an ephemeral resolution; this works
-# even when the host `.venv` is pip-less (Lightning Studio default).
+# pull brotli + torch + numpy into an ephemeral resolution; `--no-project`
+# prevents uv from mutating the repo/evaluator environment while doing so.
 INFLATE_BROTLI_SPEC="${INFLATE_BROTLI_SPEC:-brotli==1.2.0}"
 INFLATE_TORCH_SPEC="${INFLATE_TORCH_SPEC:-torch==2.5.1+cu124}"
 INFLATE_NUMPY_SPEC="${INFLATE_NUMPY_SPEC:-numpy==2.4.4}"
@@ -614,7 +618,7 @@ while IFS= read -r line; do
   [ ! -f "$SRC" ] && echo "ERROR: ${SRC} not found" >&2 && exit 1
 
   printf "Inflating %s ... " "$line"
-  "$UV_BIN" run "${UV_WITH_INFLATE_DEPS[@]}" python "$HERE/inflate.py" "$SRC" "$DST"
+  "$UV_BIN" run --no-project "${UV_WITH_INFLATE_DEPS[@]}" python "$HERE/inflate.py" "$SRC" "$DST"
 done < "$FILE_LIST"
 '''
 
@@ -746,10 +750,39 @@ def build_remote_command(
 
     Unlike ``arch_shrink_x0.4_lightning_full.py`` this does NO training — the
     archive is pre-built locally and staged via ``lightning_repro_workspace.py``.
+
+    Bootstrap discipline (2026-05-08, BSF subagent — 7th-failure structural
+    fix). After 6 sequential dep-discovery failures (uv→ensurepip→cu124→find
+    →brotli→timm; predicted next: einops, then segmentation_models_pytorch,
+    av, safetensors, tqdm), this dispatcher now delegates inflate + eval to
+    the canonical ``scripts/remote_archive_only_eval.sh`` wrapper, which:
+
+      - Self-bootstraps uv via ``scripts/ensure_remote_uv.sh`` (line ~72).
+      - Auto-pins ``INFLATE_TORCH_SPEC`` (cu124 if driver<580 else cu13)
+        in ``require_uv_and_ffmpeg_contract`` (line ~108).
+      - Installs ffmpeg + BtbN fallback (line ~83 / ~155).
+      - Strips macOS resource forks (line ~91).
+      - Installs the FULL scorer dep closure (timm, einops,
+        segmentation_models_pytorch, safetensors, av, tqdm) into ``$PYBIN``
+        via ``ensure_scorer_runtime_deps`` (line ~192).
+      - Runs ``contest_auth_eval.py`` against the staged archive (line ~378)
+        and writes ``contest_auth_eval.json`` + ``provenance.json``.
+
+    This kills the per-script ``uv run --with X==Y`` whack-a-mole. The
+    forked ``inflate.sh`` (FORKED_INFLATE_SH constant above) still uses its
+    own ``uv run --no-project --with brotli/torch/numpy`` pattern at
+    inflate time — that's the canonical inflate-time pattern from
+    ``submissions/robust_current/inflate.sh`` and is NOT covered by the
+    forbidden_remote_bootstrap_inline rule. The wrapper exports
+    INFLATE_BROTLI_SPEC / INFLATE_TORCH_SPEC / INFLATE_NUMPY_SPEC so the
+    forked inflate.sh's defaults match the canonical specs.
+
+    Memory: ``feedback_lossy_coarsening_lightning_6th_failure_use_canonical_bootstrap_20260508``
+    + CLAUDE.md ``forbidden_remote_bootstrap_inline``.
     """
     output_subdir = f"experiments/results/lightning_batch/{job_name}"
-    auth_eval_dir = f"{output_subdir}/auth_eval_work"
-    auth_eval_log = f"{output_subdir}/auth_eval.log"
+    archive_label = f"lossy_coarsening_{job_name}"
+    log_dir_relpath = f"{output_subdir}"
     auth_eval_result_json = f"{output_subdir}/contest_auth_eval.json"
 
     return f"""set -euo pipefail
@@ -758,48 +791,35 @@ cd {remote_pact}
 mkdir -p {output_subdir}
 PYBIN=/teamspace/studios/this_studio/pact/.venv/bin/python
 WORKSPACE={remote_pact}
+export PYBIN
+export WORKSPACE
 export PYTHONHASHSEED=1234
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 export PYTHONPATH="$WORKSPACE/src:$WORKSPACE/upstream:$WORKSPACE:${{PYTHONPATH:-}}"
 export TAC_UPSTREAM_DIR="$WORKSPACE/upstream"
+# Pin cu124 wheel for Lightning T4 (driver<580). The canonical wrapper
+# auto-pins this from nvidia-smi but exporting here makes the dispatcher
+# intent explicit and avoids the cu13 silent-CPU-fallback trap on this
+# specific machine class.
 export INFLATE_TORCH_SPEC={INFLATE_TORCH_SPEC}
 export UV_EXTRA_INDEX_URL={UV_EXTRA_INDEX_URL}
 export UV_INDEX_STRATEGY={UV_INDEX_STRATEGY}
-# 2026-05-08 fix: forked inflate.sh uses `uv run --with brotli/torch/numpy`
-# (canonical pattern from submissions/robust_current/inflate.sh) so brotli
-# resolves at inflate time even when the host .venv is pip-less. Export the
-# specs here so the FORKED_INFLATE_SH env-var defaults can be overridden
-# from the dispatcher rather than hard-coded inside the staged script.
+# Forked inflate.sh's uv run --no-project specs (canonical pattern from
+# submissions/robust_current/inflate.sh) — the wrapper exports these so
+# they propagate to the inflate-time ephemeral env.
 export INFLATE_BROTLI_SPEC=brotli==1.2.0
 export INFLATE_NUMPY_SPEC=numpy==2.4.4
 
-# AppleDouble cleanup before any rsync-staged paths are read.
-find "$WORKSPACE" -name '._*' -type f -delete 2>/dev/null || true
-
-LOG_DIR="$WORKSPACE/{output_subdir}"
+LOG_DIR="$WORKSPACE/{log_dir_relpath}"
 mkdir -p "$LOG_DIR"
+export LOG_DIR
 
 log() {{ echo "[lossy-coarsening] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }}
 
-# Ensure uv is on PATH BEFORE any `uv run` invocation. Lightning's
-# `.venv/bin/python` does not expose uv on the system PATH; the canonical
-# helper `scripts/ensure_remote_uv.sh` symlinks uv to /usr/local/bin/uv.
-# Do NOT inline `curl ... astral.sh/uv/install.sh | sh` here per CLAUDE.md
-# "Forbidden re-implementing remote bootstrap inline".
-if ! command -v uv >/dev/null 2>&1; then
-    log "uv not on PATH; bootstrapping via scripts/ensure_remote_uv.sh"
-    bash "$WORKSPACE/scripts/ensure_remote_uv.sh" --symlink-system >"$LOG_DIR/ensure_remote_uv.log" 2>&1 || {{
-        echo "FATAL: ensure_remote_uv.sh failed; see $LOG_DIR/ensure_remote_uv.log" >&2
-        exit 6
-    }}
-fi
-export UV_BIN="${{UV_BIN:-$(command -v uv)}}"
-log "uv ready: UV_BIN=$UV_BIN"
-
-# Stage 0: GPU presence check.
-log "=== Stage 0: GPU presence check ==="
+# Stage 0a: GPU presence check (fail-fast if Lightning gave us a CPU host).
+log "=== Stage 0a: GPU presence check ==="
 "$PYBIN" -c "
-import torch, sys
+import sys, torch
 if not torch.cuda.is_available():
     print('FATAL: torch.cuda.is_available()=False on Lightning T4', file=sys.stderr)
     sys.exit(2)
@@ -808,8 +828,12 @@ mem_gb = round(torch.cuda.get_device_properties(0).total_memory / 1e9, 1)
 print(f'OK: GPU={{name}} mem={{mem_gb}}GB cuda_version={{torch.version.cuda}}')
 "
 
-PROVENANCE="$LOG_DIR/provenance.json"
-HEARTBEAT="$LOG_DIR/heartbeat.log"
+# Stage 0b: provenance + heartbeat (lossy-coarsening-specific). The canonical
+# wrapper writes its own provenance.json under $LOG_DIR; this dispatcher-side
+# row captures the lane_id / job_name / archive_relpath / submission_dir_relpath
+# that the wrapper does not know about.
+DISPATCHER_PROVENANCE="$LOG_DIR/dispatcher_provenance.json"
+HEARTBEAT="$LOG_DIR/dispatcher_heartbeat.log"
 GIT_HASH=$(cd "$WORKSPACE" && git rev-parse HEAD 2>/dev/null || echo "no-git")
 GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>&1 | head -1)
 DRIVER_VER=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>&1 | head -1)
@@ -828,10 +852,11 @@ prov = {{
     'inflate_torch_spec': '{INFLATE_TORCH_SPEC}',
     'archive_relpath': '{archive_relpath}',
     'submission_dir_relpath': '{submission_dir_relpath}',
+    'bootstrap_path': 'scripts/remote_archive_only_eval.sh',
 }}
-with open('$PROVENANCE', 'w') as f:
+with open('$DISPATCHER_PROVENANCE', 'w') as f:
     json.dump(prov, f, indent=2)
-print('provenance:', json.dumps(prov))
+print('dispatcher_provenance:', json.dumps(prov))
 "
 ( while true; do
     GPU=$(nvidia-smi --query-gpu=utilization.gpu,memory.used --format=csv,noheader 2>&1 | tr '\\n' ' ')
@@ -841,15 +866,8 @@ print('provenance:', json.dumps(prov))
 HB_PID=$!
 trap 'kill $HB_PID 2>/dev/null || true' EXIT
 
-# Stage 1: hash-pinned DALI bootstrap. Lightning's uv-created .venv can be
-# pip-less, so never assume "$PYBIN -m pip" exists.
-log "=== Stage 1: hash-pinned DALI bootstrap ==="
-"$PYBIN" scripts/bootstrap_dali_hash_pinned.py \\
-    --json-out "$LOG_DIR/lightning_dali_bootstrap.json" \\
-    --requirements-out "$LOG_DIR/lightning_dali_requirements.txt" \\
-    --timeout 900
-
-# Stage 2: contest_auth_eval [contest-CUDA] on the staged lossy archive.
+# Stage 0c: archive + forked inflate.sh existence checks (cheap, fail-loud
+# BEFORE the canonical wrapper bootstraps deps).
 ARCHIVE="$WORKSPACE/{archive_relpath}"
 INFLATE_SH="$WORKSPACE/{submission_dir_relpath}/inflate.sh"
 if [ ! -f "$ARCHIVE" ]; then
@@ -864,32 +882,50 @@ ARCHIVE_BYTES=$(stat -c '%s' "$ARCHIVE" 2>/dev/null || stat -f '%z' "$ARCHIVE")
 log "  archive: $ARCHIVE bytes=$ARCHIVE_BYTES"
 log "  inflate: $INFLATE_SH"
 
-log "=== Stage 2: contest_auth_eval [contest-CUDA] ==="
-rm -rf "$WORKSPACE/{auth_eval_dir}"
-"$PYBIN" -u experiments/contest_auth_eval.py \\
-    --archive "$ARCHIVE" \\
-    --inflate-sh "$INFLATE_SH" \\
-    --upstream-dir upstream \\
-    --device cuda \\
-    --keep-work-dir \\
-    --work-dir "$WORKSPACE/{auth_eval_dir}" 2>&1 | tee "{auth_eval_log}"
-PIPE_RC=("${{PIPESTATUS[@]}}")
-if [ "${{PIPE_RC[0]}}" -ne 0 ]; then
-    log "FATAL: contest_auth_eval rc=${{PIPE_RC[0]}}"
-    exit "${{PIPE_RC[0]}}"
+# Stage 1+2: delegate uv/ffmpeg/scorer-deps bootstrap + contest_auth_eval to
+# the canonical wrapper. Per CLAUDE.md forbidden_remote_bootstrap_inline:
+# DO NOT add per-script `uv run --with X==Y` lines or copy-paste install
+# commands — they whack-a-mole the next dep. The wrapper installs the FULL
+# dep closure in one pass and runs evaluate.py with cuda.
+log "=== Stage 1+2: scripts/remote_archive_only_eval.sh (canonical bootstrap + auth-eval) ==="
+ARCHIVE_PATH="$ARCHIVE" \\
+ARCHIVE_LABEL="{archive_label}" \\
+INFLATE_SH="$INFLATE_SH" \\
+LOG_DIR="$LOG_DIR" \\
+PREDICTED_LOW="0.18" \\
+PREDICTED_HIGH="0.22" \\
+CONTROLLED_BASELINE="PR101 frontier 0.20406 [contest-CUDA] (public_pr101_intake_20260505_auto)" \\
+KEEP_EVAL_WORK=0 \\
+SKIP_NVDEC_PROBE="${{SKIP_NVDEC_PROBE:-0}}" \\
+WORKSPACE="$WORKSPACE" \\
+PYBIN="$PYBIN" \\
+INFLATE_TORCH_SPEC="$INFLATE_TORCH_SPEC" \\
+UV_EXTRA_INDEX_URL="$UV_EXTRA_INDEX_URL" \\
+UV_INDEX_STRATEGY="$UV_INDEX_STRATEGY" \\
+INFLATE_BROTLI_SPEC="$INFLATE_BROTLI_SPEC" \\
+INFLATE_NUMPY_SPEC="$INFLATE_NUMPY_SPEC" \\
+    bash "$WORKSPACE/scripts/remote_archive_only_eval.sh"
+WRAPPER_RC=$?
+if [ "$WRAPPER_RC" -ne 0 ]; then
+    log "FATAL: scripts/remote_archive_only_eval.sh rc=$WRAPPER_RC"
+    exit "$WRAPPER_RC"
 fi
 
-# Stage 3: capture RESULT_JSON.
+# Stage 3: capture RESULT_JSON. The canonical wrapper writes
+# $LOG_DIR/contest_auth_eval.json (line ~401 of remote_archive_only_eval.sh).
+# Augment it with lane_id / job_name / archive_relpath / submission_dir_relpath
+# fields the harvester expects.
+WRAPPER_JSON="$LOG_DIR/contest_auth_eval.json"
+OUT_JSON="$WORKSPACE/{auth_eval_result_json}"
 "$PYBIN" -c "
-import json, re
-log_path = '{auth_eval_log}'
-out_path = '{auth_eval_result_json}'
-with open(log_path) as f:
-    text = f.read()
-m = re.search(r'RESULT_JSON\\s*(\\{{.*?\\}})', text, re.DOTALL)
-if not m:
-    raise SystemExit('FATAL: no RESULT_JSON in auth_eval log')
-data = json.loads(m.group(1))
+import json
+work_json = '$WRAPPER_JSON'
+out_path = '$OUT_JSON'
+try:
+    with open(work_json) as f:
+        data = json.load(f)
+except FileNotFoundError as exc:
+    raise SystemExit(f'FATAL: missing canonical wrapper JSON: {{work_json}}') from exc
 data['archive_path'] = '$ARCHIVE'
 data['archive_bytes'] = int('$ARCHIVE_BYTES')
 data['lane_id'] = '{LANE_ID}'
@@ -897,6 +933,7 @@ data['job_name'] = '{job_name}'
 data['evidence_grade'] = '[contest-CUDA]'
 data['archive_relpath'] = '{archive_relpath}'
 data['submission_dir_relpath'] = '{submission_dir_relpath}'
+data['bootstrap_path'] = 'scripts/remote_archive_only_eval.sh'
 with open(out_path, 'w') as f:
     json.dump(data, f, indent=2)
 print('contest_auth_eval result:', json.dumps(data))
@@ -1093,6 +1130,7 @@ def persist_active_job(
         if archive_path.is_relative_to(REPO_ROOT)
         else str(archive_path),
         "archive_bytes": archive_bytes,
+        "archive_sha256": _sha256(archive_path.read_bytes()),
         "predicted_band": list(predicted_band),
         "evidence_tag_pending": "[contest-CUDA]",
         "manifest_path": str(manifest_path.relative_to(REPO_ROOT))
