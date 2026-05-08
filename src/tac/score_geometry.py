@@ -100,6 +100,41 @@ class OperatingRegime:
     advice: str
 
 
+@dataclass(frozen=True)
+class TargetByteBudget:
+    """Closed-form byte budget for a target score under fixed distortion floors.
+
+    This is a planning artifact, not score evidence. It answers questions like:
+
+        "If CPU pose is at the measured floor and SegNet is held at a chosen
+        floor, how small must the archive be to reach score < 0.17?"
+
+    ``max_archive_bytes`` is ``None`` when the supplied distortion floors
+    already exceed the target before spending any bytes.
+    """
+
+    target_score: float
+    d_seg_floor: float
+    d_pose_floor: float
+    distortion_floor_score: float
+    rate_term_budget: float
+    max_archive_bytes: int | None
+    current_archive_bytes: int | None
+    required_savings_bytes: int | None
+    feasible_under_floors: bool
+    evidence_grade: str = "[prediction; closed-form target byte budget]"
+    score_claim: bool = False
+    promotion_eligible: bool = False
+    rank_or_kill_eligible: bool = False
+    ready_for_exact_eval_dispatch: bool = False
+
+    @property
+    def blocker(self) -> str | None:
+        if self.feasible_under_floors:
+            return None
+        return "distortion_floors_exceed_target_before_rate"
+
+
 def contest_score(
     d_seg: float,
     d_pose: float,
@@ -379,6 +414,63 @@ def equal_score_curve_archive_bytes(
     if rate_term_required < 0.0:
         return None
     return int(rate_term_required * reference_bytes / RATE_COEFFICIENT)
+
+
+def target_byte_budget_for_score(
+    *,
+    target_score: float,
+    d_seg_floor: float,
+    d_pose_floor: float,
+    current_archive_bytes: int | None = None,
+    reference_bytes: int = CONTEST_REFERENCE_BYTES,
+) -> TargetByteBudget:
+    """Return the maximum archive byte budget for a target score.
+
+    The algebra is direct from the contest objective:
+
+    ``B_max = floor((S_target - 100*d_seg - sqrt(10*d_pose)) * N / 25)``.
+
+    This function is intentionally CPU/GPU agnostic: callers must pass the
+    floor values for the score axis they are planning against. For public
+    leaderboard planning, pass CPU-axis floors from paired CPU eval or a
+    clearly tagged prediction. For internal promotion, use exact CUDA floors.
+
+    Returns a :class:`TargetByteBudget` tagged as prediction-only; it cannot
+    promote, rank, retire, or dispatch a candidate without exact eval custody.
+    """
+    if target_score < 0.0:
+        raise ValueError("target_score must be non-negative")
+    if d_seg_floor < 0.0 or d_pose_floor < 0.0:
+        raise ValueError("distortion floors must be non-negative")
+    if current_archive_bytes is not None and current_archive_bytes < 0:
+        raise ValueError("current_archive_bytes must be non-negative")
+
+    distortion_floor_score = (
+        SEG_COEFFICIENT * d_seg_floor
+        + math.sqrt(POSE_COEFFICIENT_INSIDE_SQRT * d_pose_floor)
+    )
+    rate_term_budget = target_score - distortion_floor_score
+    feasible = rate_term_budget >= 0.0
+    max_bytes = (
+        int(math.floor(rate_term_budget * reference_bytes / RATE_COEFFICIENT))
+        if feasible
+        else None
+    )
+    required_savings: int | None = None
+    if max_bytes is not None and current_archive_bytes is not None:
+        required_savings = max(0, int(current_archive_bytes) - max_bytes)
+
+    return TargetByteBudget(
+        target_score=target_score,
+        d_seg_floor=d_seg_floor,
+        d_pose_floor=d_pose_floor,
+        distortion_floor_score=distortion_floor_score,
+        rate_term_budget=rate_term_budget,
+        max_archive_bytes=max_bytes,
+        current_archive_bytes=current_archive_bytes,
+        required_savings_bytes=required_savings,
+        feasible_under_floors=feasible,
+    )
 
 
 def predict_cpu_axis_marginals(
@@ -675,6 +767,7 @@ __all__ = [
     "OperatingRegime",
     "ScoreDecomposition",
     "ScoreGradient",
+    "TargetByteBudget",
     "contest_score",
     "equal_score_curve_archive_bytes",
     "equal_score_curve_d_pose",
@@ -687,4 +780,5 @@ __all__ = [
     "recommend_dispatch_axis_dual",
     "score_decomposition",
     "score_gradient",
+    "target_byte_budget_for_score",
 ]

@@ -420,6 +420,36 @@ PY
     assert "inflate_output_bytes_differ_for_noop_candidate" in no_op_expected["contract_errors"]
 
 
+def test_inflate_parity_cleans_temp_work_on_nonzero_exit(tmp_path: Path) -> None:
+    tool = _load_tool()
+    packet_dir = tmp_path / "packet"
+    packet_dir.mkdir()
+    inflate = packet_dir / "inflate.sh"
+    inflate.write_text(
+        """#!/usr/bin/env bash
+set -euo pipefail
+exit 7
+""",
+        encoding="utf-8",
+    )
+    inflate.chmod(0o755)
+    source_archive = tmp_path / "source.zip"
+    candidate_archive = tmp_path / "candidate.zip"
+    _write_zip(source_archive, b"SOURCE")
+    _write_zip(candidate_archive, b"CANDIDATE")
+
+    result = tool.verify_inflate_parity(
+        packet_dir=packet_dir,
+        candidate_archive_path=candidate_archive,
+        source_archive_path=source_archive,
+        expect_output_byte_identical=False,
+    )
+
+    assert result["passed"] is False
+    assert result["error"] == "inflate.sh non-zero exit"
+    assert not (packet_dir / ".inflate_parity_work").exists()
+
+
 def test_refuses_output_directory_overlapping_source_runtime(tmp_path: Path, monkeypatch) -> None:
     tool = _load_tool()
     _install_tiny_pr101_contract(monkeypatch, tool)

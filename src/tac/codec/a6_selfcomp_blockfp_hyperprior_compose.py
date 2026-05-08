@@ -263,13 +263,6 @@ def split_into_blockfp(
     if block_size is None or block_size < 1:
         raise ValueError(f"block_size must be >= 1, got {block_size}")
     flat = np.ascontiguousarray(symbols).reshape(-1)
-    if flat.dtype != np.int8:
-        # Be permissive on dtype as long as values are int8-range.
-        if flat.min() < -128 or flat.max() > 127:
-            raise ValueError(
-                f"symbols out of int8 range: min={int(flat.min())}, max={int(flat.max())}"
-            )
-        flat = flat.astype(np.int8)
     n_total = int(flat.size)
     if n_total == 0:
         return BlockFPSplit(
@@ -279,6 +272,13 @@ def split_into_blockfp(
             scales=np.zeros((0,), dtype=np.float32),
             blocks=[],
         )
+    if flat.dtype != np.int8:
+        # Be permissive on dtype as long as values are int8-range.
+        if flat.min() < -128 or flat.max() > 127:
+            raise ValueError(
+                f"symbols out of int8 range: min={int(flat.min())}, max={int(flat.max())}"
+            )
+        flat = flat.astype(np.int8)
     n_blocks = (n_total + block_size - 1) // block_size
     blocks: list[np.ndarray] = []
     scales = np.zeros((n_blocks,), dtype=np.float32)
@@ -525,13 +525,21 @@ def decompose_blockfp_with_hyperprior(
             )
         chunk_payload = encoded[cursor : cursor + chunk_payload_len]
         cursor += chunk_payload_len
-        dec = ChARMRangeDecoder(chunk_payload, alphabet=_ALPHABET)
 
         chunk_end_block = block_cursor + n_blocks_in_chunk
         if chunk_end_block > n_blocks:
             raise ValueError(
                 f"decompose: chunk overshoots block count "
                 f"({chunk_end_block} > {n_blocks})"
+            )
+        expected_chunk_symbols = (
+            min(chunk_end_block * block_size, n_total) - block_cursor * block_size
+        )
+        dec = ChARMRangeDecoder(chunk_payload, alphabet=_ALPHABET)
+        if dec.num_symbols != expected_chunk_symbols:
+            raise ValueError(
+                f"decompose: chunk symbol count mismatch "
+                f"({dec.num_symbols} != {expected_chunk_symbols})"
             )
         for b in range(block_cursor, chunk_end_block):
             sigma = hyperprior_sigma_from_scale(

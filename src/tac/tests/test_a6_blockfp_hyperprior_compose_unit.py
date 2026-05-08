@@ -14,6 +14,8 @@ Tests are organised by the contract sections in the module docstring:
 """
 from __future__ import annotations
 
+import struct
+
 import numpy as np
 import pytest
 
@@ -149,6 +151,15 @@ def test_empty_tensor_roundtrips():
     assert ledger["n_blocks"] == 0
     recovered = decompose_blockfp_with_hyperprior(encoded)
     assert recovered.shape == (0,)
+
+
+def test_empty_non_int8_tensor_splits_without_reduction_error():
+    symbols = np.zeros((0,), dtype=np.int64)
+    split = split_into_blockfp(symbols, block_size=16)
+    assert split.n_total == 0
+    assert split.n_blocks == 0
+    assert split.blocks == []
+    assert split.scales.shape == (0,)
 
 
 # ── 4. Hyperprior degenerate cases ────────────────────────────────────────
@@ -369,6 +380,29 @@ def test_decompose_rejects_tampered_zero_block_size():
     tampered = bytearray(encoded)
     tampered[6:8] = b"\x00\x00"
     with pytest.raises(ValueError, match="block_size"):
+        decompose_blockfp_with_hyperprior(bytes(tampered))
+
+
+def test_decompose_rejects_chunk_symbol_count_mismatch():
+    symbols = np.array([1, -2, 3, -4], dtype=np.int8)
+    encoded, ledger = compose_blockfp_with_hyperprior(symbols, block_size=4)
+    tampered = bytearray(encoded)
+
+    chunk_payload_start = (
+        ledger["header_bytes"]
+        + ledger["side_info_bytes"]
+        + 4  # n_chunks
+        + 8  # n_blocks_in_chunk + chunk_payload_len
+    )
+    charm_num_symbols_offset = 10
+    struct.pack_into(
+        ">I",
+        tampered,
+        chunk_payload_start + charm_num_symbols_offset,
+        int(ledger["n_total"]) + 1,
+    )
+
+    with pytest.raises(ValueError, match="chunk symbol count mismatch"):
         decompose_blockfp_with_hyperprior(bytes(tampered))
 
 

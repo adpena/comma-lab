@@ -21,6 +21,7 @@ from tac.score_geometry import (
     recommend_dispatch_axis_dual,
     score_decomposition,
     score_gradient,
+    target_byte_budget_for_score,
 )
 
 # ---------------------------------------------------------------------------
@@ -212,6 +213,38 @@ def test_equal_score_curve_returns_none_when_unreachable() -> None:
     assert equal_score_curve_d_pose(target, d_seg=0.001, archive_bytes=178258) is None
 
 
+def test_target_byte_budget_for_sub017_cpu_floor_math() -> None:
+    """Closed-form CPU-axis byte budget for the sub-0.17 planning target."""
+    budget = target_byte_budget_for_score(
+        target_score=0.17,
+        d_seg_floor=6.0e-4,
+        d_pose_floor=3.5e-5,
+        current_archive_bytes=178_392,
+    )
+    assert budget.feasible_under_floors is True
+    assert budget.blocker is None
+    assert 136_000 <= budget.max_archive_bytes <= 138_000
+    assert budget.required_savings_bytes is not None
+    assert 40_000 <= budget.required_savings_bytes <= 43_000
+    assert budget.score_claim is False
+    assert budget.promotion_eligible is False
+    assert budget.rank_or_kill_eligible is False
+    assert budget.ready_for_exact_eval_dispatch is False
+
+
+def test_target_byte_budget_rejects_infeasible_distortion_floors() -> None:
+    budget = target_byte_budget_for_score(
+        target_score=0.17,
+        d_seg_floor=0.002,
+        d_pose_floor=1e-3,
+        current_archive_bytes=178_392,
+    )
+    assert budget.feasible_under_floors is False
+    assert budget.max_archive_bytes is None
+    assert budget.required_savings_bytes is None
+    assert budget.blocker == "distortion_floors_exceed_target_before_rate"
+
+
 # ---------------------------------------------------------------------------
 # Negative / edge inputs
 # ---------------------------------------------------------------------------
@@ -226,6 +259,25 @@ def test_negative_inputs_raise() -> None:
         contest_score(0, 0, -1)
     with pytest.raises(ValueError):
         score_gradient(0.0, -1)
+    with pytest.raises(ValueError):
+        target_byte_budget_for_score(
+            target_score=-0.1,
+            d_seg_floor=0.0,
+            d_pose_floor=0.0,
+        )
+    with pytest.raises(ValueError):
+        target_byte_budget_for_score(
+            target_score=0.17,
+            d_seg_floor=-1e-4,
+            d_pose_floor=0.0,
+        )
+    with pytest.raises(ValueError):
+        target_byte_budget_for_score(
+            target_score=0.17,
+            d_seg_floor=0.0,
+            d_pose_floor=0.0,
+            current_archive_bytes=-1,
+        )
 
 
 # ---------------------------------------------------------------------------

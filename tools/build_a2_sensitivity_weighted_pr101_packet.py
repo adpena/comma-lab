@@ -1483,13 +1483,22 @@ def verify_inflate_parity(
         source_result = _run_inflate(source_archive_path, source_work)
         candidate_result = _run_inflate(candidate_archive_path, candidate_work)
     except subprocess.TimeoutExpired as exc:
+        shutil.rmtree(work_dir, ignore_errors=True)
         return {
             "passed": False,
             "error": f"inflate.sh timed out after {timeout_seconds}s: {exc}",
             "cleared_blockers": [],
         }
+    except Exception as exc:
+        shutil.rmtree(work_dir, ignore_errors=True)
+        return {
+            "passed": False,
+            "error": f"inflate parity failed before output comparison: {exc}",
+            "cleared_blockers": [],
+        }
 
     if source_result["returncode"] != 0 or candidate_result["returncode"] != 0:
+        shutil.rmtree(work_dir, ignore_errors=True)
         return {
             "passed": False,
             "error": "inflate.sh non-zero exit",
