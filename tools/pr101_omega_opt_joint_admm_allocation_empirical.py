@@ -70,16 +70,25 @@ from __future__ import annotations
 import argparse
 import datetime as _dt
 import json
-import struct
 import sys
 from pathlib import Path
 
-import brotli
 import numpy as np
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
+from tac.codec.cost_curves import (  # noqa: E402
+    greedy_uniform_per_tensor_budget_sparsity,
+    precompute_per_tensor_sparsity_curves,
+)
+from tac.codec.per_tensor_codecs import (  # noqa: E402
+    encode_brotli_only,
+    encode_sparsity_alpha,
+)
+from tac.optimization.lagrangian_per_tensor_allocation import (  # noqa: E402
+    LagrangianPerTensorAllocator,
+)
 from tac.pr101_split_brotli_codec import (  # noqa: E402
     FIXED_STATE_SCHEMA,
     N_QUANT,
@@ -97,94 +106,50 @@ EVIDENCE_GRADE = (
 )
 
 
-def encode_brotli_only(symbols: np.ndarray) -> tuple[int, float]:
-    return len(brotli.compress(symbols.tobytes(), quality=11, lgwin=16, lgblock=19)), 0.0
+# NOTE: encode_brotli_only, encode_sparsity_alpha, the per-tensor sparsity
+# curve precompute, the greedy-budget selector, and the Lagrangian allocator
+# all delegate to the canonical primitives in tac.codec / tac.optimization.
+# This file is a thin orchestrator + CLI for the Path B step 5 anchor.
 
 
-def encode_sparsity_alpha(symbols: np.ndarray, alpha: float) -> tuple[int, float]:
-    n = symbols.size
-    if alpha <= 0:
-        return encode_brotli_only(symbols)
-    n_keep = max(1, int(round((1.0 - alpha) * n)))
-    if n_keep >= n:
-        return encode_brotli_only(symbols)
-    abs_vals = np.abs(symbols.flatten().astype(np.int32))
-    top_idx = np.argpartition(abs_vals, n - n_keep)[n - n_keep:]
-    top_idx_sorted = np.sort(top_idx)
-    nz_values = symbols.flatten()[top_idx_sorted].astype(np.int8)
-    recon = np.zeros_like(symbols.flatten(), dtype=np.int8)
-    recon[top_idx_sorted] = nz_values
-    diff = symbols.flatten().astype(np.float64) - recon.astype(np.float64)
-    orig_l2 = float(np.linalg.norm(symbols.flatten().astype(np.float64))) + 1e-12
-    rel_err = float(np.linalg.norm(diff)) / orig_l2
-    deltas = np.diff(np.concatenate([np.array([0], dtype=np.uint32), top_idx_sorted.astype(np.uint32)])).astype(np.uint32)
-    payload = struct.pack("<II", n, nz_values.size) + deltas.tobytes() + nz_values.tobytes()
-    return len(brotli.compress(payload, quality=11, lgwin=16, lgblock=19)), rel_err
+def measure_curves(
+    quantized: list[tuple[str, np.ndarray]], alphas: list[float]
+) -> list[list[dict]]:
+    """Per-tensor sparsity curves (delegates to tac.codec.cost_curves)."""
+    return precompute_per_tensor_sparsity_curves(quantized, alphas)
 
 
-def measure_curves(quantized: list[tuple[str, np.ndarray]], alphas: list[float]) -> list[list[dict]]:
-    """For each tensor, return list of {alpha, bytes, rel_err}."""
-    out: list[list[dict]] = []
-    for _, syms in quantized:
-        rows: list[dict] = []
-        b0, e0 = encode_brotli_only(syms)
-        rows.append({"alpha": 0.0, "bytes": b0, "rel_err": e0})
-        for alpha in alphas:
-            b, e = encode_sparsity_alpha(syms, alpha)
-            rows.append({"alpha": alpha, "bytes": b, "rel_err": e})
-        out.append(rows)
-    return out
+def greedy_uniform_budget(
+    curves: list[list[dict]], budget: float
+) -> tuple[int, float]:
+    """Greedy uniform-budget selector (delegates to tac.codec.cost_curves)."""
+    return greedy_uniform_per_tensor_budget_sparsity(curves, budget)
 
 
-def greedy_uniform_budget(curves: list[list[dict]], budget: float) -> tuple[int, float]:
-    """Each tensor picks the smallest-bytes codec whose rel_err <= budget."""
-    total_bytes = 0
-    rel_errs: list[float] = []
-    for tensor_rows in curves:
-        valid = [r for r in tensor_rows if r["rel_err"] <= budget]
-        best = min(valid, key=lambda r: r["bytes"])
-        total_bytes += best["bytes"]
-        rel_errs.append(best["rel_err"])
-    rms_rel_err = float(np.sqrt(np.mean([e ** 2 for e in rel_errs])))
-    return total_bytes, rms_rel_err
+def lagrangian_allocate(
+    curves: list[list[dict]], lam: float
+) -> tuple[int, float, list[float]]:
+    """Lagrangian per-tensor selection (delegates to tac.optimization)."""
+    res = LagrangianPerTensorAllocator().allocate(curves, lam)
+    return res.total_bytes, res.rel_err, res.per_tensor_rel_errs
 
 
-def lagrangian_allocate(curves: list[list[dict]], lam: float) -> tuple[int, float, list[float]]:
-    """For Lagrangian λ, each tensor picks codec minimizing (bytes + λ * rel_err^2)."""
-    total_bytes = 0
-    rel_errs: list[float] = []
-    for tensor_rows in curves:
-        cost = [r["bytes"] + lam * r["rel_err"] ** 2 for r in tensor_rows]
-        idx = int(np.argmin(cost))
-        chosen = tensor_rows[idx]
-        total_bytes += chosen["bytes"]
-        rel_errs.append(chosen["rel_err"])
-    rms = float(np.sqrt(np.mean([e ** 2 for e in rel_errs])))
-    return total_bytes, rms, rel_errs
+def bisect_lambda_for_rms_target(
+    curves: list[list[dict]], rms_target: float
+) -> dict:
+    """λ-bisection (delegates to tac.optimization).
 
-
-def bisect_lambda_for_rms_target(curves: list[list[dict]], rms_target: float) -> dict:
-    """Find λ such that the achieved RMS rel_err is ≤ rms_target."""
-    # Large λ → all tensors pick lowest rel_err (= brotli_only, rel_err=0)
-    # Small λ → all tensors pick highest sparsity (max rel_err)
-    lo, hi = 0.0, 1e12
-    for _ in range(60):
-        mid = (lo + hi) / 2 if hi < 1e12 else lo * 10 + 1
-        bytes_total, rms, _ = lagrangian_allocate(curves, mid)
-        if rms <= rms_target:
-            hi = mid  # achievable; tighten by lowering λ → more rel_err allowed
-        else:
-            lo = mid  # too much rel_err; raise λ
-        if abs(hi - lo) < 1e-9 or hi == lo:
-            break
-    final_lam = hi
-    bytes_total, rms, rel_errs = lagrangian_allocate(curves, final_lam)
+    Returns the historical key shape used by the manifest writer.
+    """
+    res = LagrangianPerTensorAllocator().bisect_for_rms_target(
+        curves, rms_target, max_iter=60, lam_hi=1e12
+    )
     return {
-        "lambda": final_lam,
-        "total_bytes": bytes_total,
-        "achieved_rms_rel_err": rms,
-        "per_tensor_rel_errs": rel_errs,
-        "n_sparsified": sum(1 for e in rel_errs if e > 0),
+        "lambda": res.lam,
+        "total_bytes": res.total_bytes,
+        "achieved_rms_rel_err": res.rel_err,
+        "per_tensor_rel_errs": res.per_tensor_rel_errs,
+        "n_sparsified": sum(1 for e in res.per_tensor_rel_errs if e > 0),
     }
 
 
