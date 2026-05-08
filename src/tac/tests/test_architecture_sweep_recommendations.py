@@ -4,6 +4,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 from tac.optimization.architecture_sweep_recommendations import (
     ArchitectureSweepRecommendationError,
@@ -12,6 +13,47 @@ from tac.optimization.architecture_sweep_recommendations import (
 )
 
 REPO = Path(__file__).resolve().parents[3]
+
+
+def _evidence_grades(payload: Any) -> list[str]:
+    if isinstance(payload, dict):
+        out: list[str] = []
+        for key, value in payload.items():
+            if key == "evidence_grade":
+                out.append(str(value))
+            out.extend(_evidence_grades(value))
+        return out
+    if isinstance(payload, list):
+        out = []
+        for item in payload:
+            out.extend(_evidence_grades(item))
+        return out
+    return []
+
+
+def _assert_fail_closed_dispatch_fields(payload: dict[str, Any]) -> None:
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["rank_or_kill_eligible"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["dispatchable"] is False
+    assert "not_exact_cuda_auth_eval" in payload["dispatch_blockers"]
+    assert payload.get("reason") or payload.get("dispatch_block_reason")
+
+
+def _claim_row(
+    *,
+    timestamp: str,
+    lane_id: str,
+    instance_job_id: str,
+    expires_at: str,
+    status: str,
+    notes: str,
+) -> str:
+    return (
+        f"| {timestamp} | claude_lab | {lane_id} | lightning | {instance_job_id} | "
+        f"{expires_at} | {status} | {notes} |\n"
+    )
 
 
 def _mps_manifest() -> dict[str, object]:
@@ -102,6 +144,9 @@ def test_normalizes_cpu_mps_sources_and_blocks_dispatch() -> None:
     assert all(row["rank_or_kill_eligible"] is False for row in manifest["rows"])
     assert all(row["dispatchable"] is False for row in manifest["rows"])
     assert {row["evidence_grade"] for row in manifest["rows"]} == {"empirical", "prediction"}
+    assert set(_evidence_grades(manifest)) <= {"empirical", "prediction"}
+    assert "MPS-research-signal" not in json.dumps(manifest)
+    assert "[CPU-prep empirical byte-anchor only]" not in json.dumps(manifest)
     assert all("not_exact_cuda_auth_eval" in row["dispatch_blockers"] for row in manifest["rows"])
 
     curves = {(curve["family"], curve["curve_id"]): curve for curve in manifest["curves"]}
@@ -113,27 +158,13 @@ def test_normalizes_cpu_mps_sources_and_blocks_dispatch() -> None:
         assert curve["ready_for_exact_eval_dispatch"] is False
         best = curve["best_research_signal_row"]
         assert best["candidate_generation_only"] is True
-        assert best["score_claim"] is False
-        assert best["promotion_eligible"] is False
-        assert best["rank_or_kill_eligible"] is False
-        assert best["ready_for_exact_eval_dispatch"] is False
-        assert best["dispatchable"] is False
-        assert "not_exact_cuda_auth_eval" in best["dispatch_blockers"]
+        _assert_fail_closed_dispatch_fields(best)
 
     for recommendation in manifest["dispatch_recommendations"]:
-        assert recommendation["score_claim"] is False
-        assert recommendation["promotion_eligible"] is False
-        assert recommendation["rank_or_kill_eligible"] is False
-        assert recommendation["ready_for_exact_eval_dispatch"] is False
-        assert recommendation["dispatchable"] is False
-        assert "not_exact_cuda_auth_eval" in recommendation["dispatch_blockers"]
+        _assert_fail_closed_dispatch_fields(recommendation)
         for candidate in recommendation.get("candidate_generation_curve_ids", []):
             assert candidate["candidate_generation_only"] is True
-            assert candidate["score_claim"] is False
-            assert candidate["promotion_eligible"] is False
-            assert candidate["rank_or_kill_eligible"] is False
-            assert candidate["ready_for_exact_eval_dispatch"] is False
-            assert candidate["dispatchable"] is False
+            _assert_fail_closed_dispatch_fields(candidate)
 
     recommendations = [row["recommendation"] for row in manifest["dispatch_recommendations"]]
     assert "preserve_exact_cuda_promotion_gates" in recommendations
@@ -230,21 +261,72 @@ def test_dispatch_claim_parser_closes_older_active_rows() -> None:
     ]
 
 
-def test_dispatch_claim_parser_detects_hyphenated_arch_shrink_claim_without_active_jobs() -> None:
+def test_dispatch_state_detects_hyphenated_arch_shrink_and_dedupes() -> None:
     manifest = build_architecture_sweep_recommendations(
         [ManifestSource("mps.json", _mps_manifest())],
         run_id="fixture_hyphenated_claim",
-        lightning_active_jobs=[],
+        lightning_active_jobs=[
+            {
+                "lane_id": "arch-shrink-x0.4-lightning",
+                "job_name": "manual-width-retrain-20260508T024304Z",
+                "submitted_at_utc": "2026-05-08T02:43:10Z",
+            },
+            {
+                "lane_id": "arch_shrink_x0.4_lightning",
+                "job_name": "manual-width-retrain-20260508T024304Z",
+                "submitted_at_utc": "2026-05-08T02:43:10Z",
+            },
+        ],
         dispatch_claims_markdown=(
             "| timestamp_utc | agent | lane_id | platform | instance/job_id | expires_at | status | notes |\n"
             "|---|---|---|---|---|---|---|---|\n"
-            "| 2026-05-08T02:43:09Z | claude_lab | arch-shrink-x0.4-lightning | lightning | arch-shrink-x0-4-lightning-20260508T024304Z | 2026-05-08T20:43:09Z | active_dispatching | active |\n"
+            + _claim_row(
+                timestamp="2026-05-08T02:48:09Z",
+                lane_id="arch-shrink-x0.4-lightning",
+                instance_job_id="arch-shrink-x0-4-lightning-20260508T020205Z",
+                expires_at="",
+                status="failed_no_auth_eval_json",
+                notes="terminal with alternate spelling",
+            )
+            + _claim_row(
+                timestamp="2026-05-08T02:43:09Z",
+                lane_id="arch-shrink-x0.4-lightning",
+                instance_job_id="arch-shrink-x0-4-lightning-20260508T024304Z",
+                expires_at="2026-05-08T20:43:09Z",
+                status="active_dispatching",
+                notes="active",
+            )
+            + _claim_row(
+                timestamp="2026-05-08T02:42:09Z",
+                lane_id="arch_shrink_x0.4_lightning",
+                instance_job_id="arch-shrink-x0-4-lightning-20260508T024304Z",
+                expires_at="2026-05-08T20:42:09Z",
+                status="active_dispatching",
+                notes="duplicate active alternate spelling",
+            )
+            + _claim_row(
+                timestamp="2026-05-08T02:02:09Z",
+                lane_id="arch_shrink_x0.4_lightning",
+                instance_job_id="arch-shrink-x0-4-lightning-20260508T020205Z",
+                expires_at="2026-05-08T20:02:09Z",
+                status="active_dispatching",
+                notes="older active closed by hyphenated terminal",
+            )
         ),
     )
 
     claims = manifest["lightning_arch_shrink_state"]["active_claims"]
+    jobs = manifest["lightning_arch_shrink_state"]["active_jobs"]
     assert manifest["lightning_arch_shrink_state"]["do_not_duplicate_dispatch"] is True
     assert [claim["lane_id"] for claim in claims] == ["arch-shrink-x0.4-lightning"]
+    assert [job["lane_id"] for job in jobs] == ["arch-shrink-x0.4-lightning"]
+    assert (
+        sum(
+            row["recommendation"] == "do_not_duplicate_active_arch_shrink_lightning_dispatch"
+            for row in manifest["dispatch_recommendations"]
+        )
+        == 1
+    )
 
 
 def test_unknown_source_schema_fails_closed() -> None:

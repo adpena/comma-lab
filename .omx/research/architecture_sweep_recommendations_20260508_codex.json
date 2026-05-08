@@ -11,6 +11,7 @@
       "best_research_signal_row": {
         "archive_bytes": 180000,
         "candidate_generation_only": true,
+        "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
         "dispatch_blockers": [
           "cpu_mps_research_signal_not_score_evidence",
           "no_score_claim_from_normalized_manifest",
@@ -25,6 +26,7 @@
         "promotion_eligible": false,
         "rank_or_kill_eligible": false,
         "ready_for_exact_eval_dispatch": false,
+        "reason": "Best local research-signal row only; exact CUDA promotion gates have not been satisfied.",
         "score_claim": false,
         "variant_id": "epoch_020"
       },
@@ -34,6 +36,7 @@
       ],
       "curve_id": "width_x0_4",
       "device_family": "mps",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "cpu_mps_research_signal_not_score_evidence",
         "no_score_claim_from_normalized_manifest",
@@ -73,6 +76,7 @@
       "best_research_signal_row": {
         "archive_bytes": 102994,
         "candidate_generation_only": true,
+        "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
         "dispatch_blockers": [
           "cpu_mps_research_signal_not_score_evidence",
           "no_score_claim_from_normalized_manifest",
@@ -87,6 +91,7 @@
         "promotion_eligible": false,
         "rank_or_kill_eligible": false,
         "ready_for_exact_eval_dispatch": false,
+        "reason": "Best local research-signal row only; exact CUDA promotion gates have not been satisfied.",
         "score_claim": false,
         "variant_id": "stage_c_width075_int6_qat_dez"
       },
@@ -96,6 +101,7 @@
       ],
       "curve_id": "hnerv_arch_shrink_deltaepszeta",
       "device_family": "cpu",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "cpu_mps_research_signal_not_score_evidence",
         "no_score_claim_from_normalized_manifest",
@@ -142,6 +148,7 @@
       "best_research_signal_row": {
         "archive_bytes": 63037,
         "candidate_generation_only": true,
+        "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
         "dispatch_blockers": [
           "cpu_mps_research_signal_not_score_evidence",
           "no_score_claim_from_normalized_manifest",
@@ -156,6 +163,7 @@
         "promotion_eligible": false,
         "rank_or_kill_eligible": false,
         "ready_for_exact_eval_dispatch": false,
+        "reason": "Best local research-signal row only; exact CUDA promotion gates have not been satisfied.",
         "score_claim": false,
         "variant_id": "stage_e_high_risk_int4_sparse"
       },
@@ -165,6 +173,7 @@
       ],
       "curve_id": "imp_plus_self_compress_hnerv",
       "device_family": "cpu",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "cpu_mps_research_signal_not_score_evidence",
         "no_score_claim_from_normalized_manifest",
@@ -189,6 +198,7 @@
       "best_research_signal_row": {
         "archive_bytes": 49137,
         "candidate_generation_only": true,
+        "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
         "dispatch_blockers": [
           "cpu_mps_research_signal_not_score_evidence",
           "no_score_claim_from_normalized_manifest",
@@ -203,6 +213,7 @@
         "promotion_eligible": false,
         "rank_or_kill_eligible": false,
         "ready_for_exact_eval_dispatch": false,
+        "reason": "Best local research-signal row only; exact CUDA promotion gates have not been satisfied.",
         "score_claim": false,
         "variant_id": "alpha_0_9"
       },
@@ -212,6 +223,7 @@
       ],
       "curve_id": "post_hoc_sparsity_alpha",
       "device_family": "cpu",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "cpu_mps_research_signal_not_score_evidence",
         "no_score_claim_from_normalized_manifest",
@@ -279,6 +291,7 @@
       "best_research_signal_row": {
         "archive_bytes": null,
         "candidate_generation_only": true,
+        "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
         "dispatch_blockers": [
           "cpu_mps_research_signal_not_score_evidence",
           "no_score_claim_from_normalized_manifest",
@@ -293,6 +306,7 @@
         "promotion_eligible": false,
         "rank_or_kill_eligible": false,
         "ready_for_exact_eval_dispatch": false,
+        "reason": "Best local research-signal row only; exact CUDA promotion gates have not been satisfied.",
         "score_claim": false,
         "variant_id": "brotli_q11_renderer_bin"
       },
@@ -302,6 +316,7 @@
       ],
       "curve_id": "general_compressor_headroom",
       "device_family": "cpu",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "cpu_mps_research_signal_not_score_evidence",
         "no_score_claim_from_normalized_manifest",
@@ -334,6 +349,7 @@
       "best_research_signal_row": {
         "archive_bytes": null,
         "candidate_generation_only": true,
+        "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
         "dispatch_blockers": [
           "cpu_mps_research_signal_not_score_evidence",
           "no_score_claim_from_normalized_manifest",
@@ -348,6 +364,7 @@
         "promotion_eligible": false,
         "rank_or_kill_eligible": false,
         "ready_for_exact_eval_dispatch": false,
+        "reason": "Best local research-signal row only; exact CUDA promotion gates have not been satisfied.",
         "score_claim": false,
         "variant_id": "c3_residual:uniform_i4lz_bytes"
       },
@@ -357,6 +374,7 @@
       ],
       "curve_id": "c3_residual",
       "device_family": "cpu",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "cpu_mps_research_signal_not_score_evidence",
         "no_score_claim_from_normalized_manifest",
@@ -389,6 +407,7 @@
       "best_research_signal_row": {
         "archive_bytes": null,
         "candidate_generation_only": true,
+        "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
         "dispatch_blockers": [
           "cpu_mps_research_signal_not_score_evidence",
           "no_score_claim_from_normalized_manifest",
@@ -403,6 +422,7 @@
         "promotion_eligible": false,
         "rank_or_kill_eligible": false,
         "ready_for_exact_eval_dispatch": false,
+        "reason": "Best local research-signal row only; exact CUDA promotion gates have not been satisfied.",
         "score_claim": false,
         "variant_id": "coolchic:uniform_i4lz_bytes"
       },
@@ -412,6 +432,7 @@
       ],
       "curve_id": "coolchic",
       "device_family": "cpu",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "cpu_mps_research_signal_not_score_evidence",
         "no_score_claim_from_normalized_manifest",
@@ -444,6 +465,7 @@
       "best_research_signal_row": {
         "archive_bytes": 67235,
         "candidate_generation_only": true,
+        "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
         "dispatch_blockers": [
           "cpu_mps_research_signal_not_score_evidence",
           "no_score_claim_from_normalized_manifest",
@@ -458,6 +480,7 @@
         "promotion_eligible": false,
         "rank_or_kill_eligible": false,
         "ready_for_exact_eval_dispatch": false,
+        "reason": "Best local research-signal row only; exact CUDA promotion gates have not been satisfied.",
         "score_claim": false,
         "variant_id": "stage_d_zeta_width_precision_int4"
       },
@@ -467,6 +490,7 @@
       ],
       "curve_id": "self_compress_width_precision_hnerv",
       "device_family": "cpu",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "cpu_mps_research_signal_not_score_evidence",
         "no_score_claim_from_normalized_manifest",
@@ -498,6 +522,7 @@
   ],
   "dispatch_recommendations": [
     {
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "cpu_mps_research_signal_not_score_evidence",
         "no_score_claim_from_normalized_manifest",
@@ -519,6 +544,7 @@
           "best_variant_id": "coolchic:uniform_i4lz_bytes",
           "candidate_generation_only": true,
           "curve_id": "coolchic",
+          "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
           "dispatch_blockers": [
             "cpu_mps_research_signal_not_score_evidence",
             "no_score_claim_from_normalized_manifest",
@@ -531,12 +557,14 @@
           "promotion_eligible": false,
           "rank_or_kill_eligible": false,
           "ready_for_exact_eval_dispatch": false,
+          "reason": "Local build-order signal only; exact CUDA promotion gates have not been satisfied.",
           "score_claim": false
         },
         {
           "best_variant_id": "c3_residual:uniform_i4lz_bytes",
           "candidate_generation_only": true,
           "curve_id": "c3_residual",
+          "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
           "dispatch_blockers": [
             "cpu_mps_research_signal_not_score_evidence",
             "no_score_claim_from_normalized_manifest",
@@ -549,12 +577,14 @@
           "promotion_eligible": false,
           "rank_or_kill_eligible": false,
           "ready_for_exact_eval_dispatch": false,
+          "reason": "Local build-order signal only; exact CUDA promotion gates have not been satisfied.",
           "score_claim": false
         },
         {
           "best_variant_id": "alpha_0_9",
           "candidate_generation_only": true,
           "curve_id": "post_hoc_sparsity_alpha",
+          "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
           "dispatch_blockers": [
             "cpu_mps_research_signal_not_score_evidence",
             "no_score_claim_from_normalized_manifest",
@@ -567,9 +597,11 @@
           "promotion_eligible": false,
           "rank_or_kill_eligible": false,
           "ready_for_exact_eval_dispatch": false,
+          "reason": "Local build-order signal only; exact CUDA promotion gates have not been satisfied.",
           "score_claim": false
         }
       ],
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "cpu_mps_research_signal_not_score_evidence",
         "no_score_claim_from_normalized_manifest",
@@ -586,6 +618,7 @@
       "score_claim": false
     },
     {
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "cpu_mps_research_signal_not_score_evidence",
         "no_score_claim_from_normalized_manifest",
@@ -669,6 +702,7 @@
       "byte_delta_vs_anchor": -80000,
       "curve_id": "width_x0_4",
       "device_family": "mps",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "mps_proxy_signal_not_score_evidence",
         "not_cuda_auth_eval",
@@ -708,6 +742,7 @@
       "byte_delta_vs_anchor": -60000,
       "curve_id": "width_x0_4",
       "device_family": "mps",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "mps_proxy_signal_not_score_evidence",
         "not_cuda_auth_eval",
@@ -747,6 +782,7 @@
       "byte_delta_vs_anchor": 0,
       "curve_id": "width_x0_4",
       "device_family": "mps",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "mps_proxy_signal_not_score_evidence",
         "not_cuda_auth_eval",
@@ -786,6 +822,7 @@
       "byte_delta_vs_anchor": -115107,
       "curve_id": "imp_plus_self_compress_hnerv",
       "device_family": "cpu",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "no_trained_checkpoint_for_this_architecture",
         "no_runtime_decoder_schema_manifest_for_shrunk_HNeRV",
@@ -833,6 +870,7 @@
       "byte_delta_vs_anchor": -110909,
       "curve_id": "self_compress_width_precision_hnerv",
       "device_family": "cpu",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "no_trained_checkpoint_for_this_architecture",
         "no_runtime_decoder_schema_manifest_for_shrunk_HNeRV",
@@ -879,6 +917,7 @@
       "byte_delta_vs_anchor": -75150,
       "curve_id": "hnerv_arch_shrink_deltaepszeta",
       "device_family": "cpu",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "no_trained_checkpoint_for_this_architecture",
         "no_runtime_decoder_schema_manifest_for_shrunk_HNeRV",
@@ -925,6 +964,7 @@
       "byte_delta_vs_anchor": -61903,
       "curve_id": "hnerv_arch_shrink_deltaepszeta",
       "device_family": "cpu",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "no_trained_checkpoint_for_this_architecture",
         "no_runtime_decoder_schema_manifest_for_shrunk_HNeRV",
@@ -970,6 +1010,7 @@
       "byte_delta_vs_anchor": -33067,
       "curve_id": "hnerv_arch_shrink_deltaepszeta",
       "device_family": "cpu",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "no_trained_checkpoint_for_this_architecture",
         "no_runtime_decoder_schema_manifest_for_shrunk_HNeRV",
@@ -1015,6 +1056,7 @@
       "byte_delta_vs_anchor": 114,
       "curve_id": "hnerv_arch_shrink_deltaepszeta",
       "device_family": "cpu",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "no_trained_checkpoint_for_this_architecture",
         "no_runtime_decoder_schema_manifest_for_shrunk_HNeRV",
@@ -1060,6 +1102,7 @@
       "byte_delta_vs_anchor": null,
       "curve_id": "post_hoc_sparsity_alpha",
       "device_family": "cpu",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "post_hoc_sparsity_not_retrained",
         "score_impact_unknown_without_contest_cuda",
@@ -1100,6 +1143,7 @@
       "byte_delta_vs_anchor": null,
       "curve_id": "post_hoc_sparsity_alpha",
       "device_family": "cpu",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "post_hoc_sparsity_not_retrained",
         "score_impact_unknown_without_contest_cuda",
@@ -1140,6 +1184,7 @@
       "byte_delta_vs_anchor": null,
       "curve_id": "post_hoc_sparsity_alpha",
       "device_family": "cpu",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "post_hoc_sparsity_not_retrained",
         "score_impact_unknown_without_contest_cuda",
@@ -1180,6 +1225,7 @@
       "byte_delta_vs_anchor": null,
       "curve_id": "post_hoc_sparsity_alpha",
       "device_family": "cpu",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "post_hoc_sparsity_not_retrained",
         "score_impact_unknown_without_contest_cuda",
@@ -1220,6 +1266,7 @@
       "byte_delta_vs_anchor": null,
       "curve_id": "post_hoc_sparsity_alpha",
       "device_family": "cpu",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "post_hoc_sparsity_not_retrained",
         "score_impact_unknown_without_contest_cuda",
@@ -1260,6 +1307,7 @@
       "byte_delta_vs_anchor": null,
       "curve_id": "post_hoc_sparsity_alpha",
       "device_family": "cpu",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "post_hoc_sparsity_not_retrained",
         "score_impact_unknown_without_contest_cuda",
@@ -1300,6 +1348,7 @@
       "byte_delta_vs_anchor": null,
       "curve_id": "post_hoc_sparsity_alpha",
       "device_family": "cpu",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "post_hoc_sparsity_not_retrained",
         "score_impact_unknown_without_contest_cuda",
@@ -1340,6 +1389,7 @@
       "byte_delta_vs_anchor": null,
       "curve_id": "c3_residual",
       "device_family": "cpu",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "cpu_mps_research_signal_not_score_evidence",
         "no_score_claim_from_normalized_manifest",
@@ -1376,6 +1426,7 @@
       "byte_delta_vs_anchor": null,
       "curve_id": "c3_residual",
       "device_family": "cpu",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "cpu_mps_research_signal_not_score_evidence",
         "no_score_claim_from_normalized_manifest",
@@ -1412,6 +1463,7 @@
       "byte_delta_vs_anchor": null,
       "curve_id": "coolchic",
       "device_family": "cpu",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "cpu_mps_research_signal_not_score_evidence",
         "no_score_claim_from_normalized_manifest",
@@ -1448,6 +1500,7 @@
       "byte_delta_vs_anchor": null,
       "curve_id": "coolchic",
       "device_family": "cpu",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "cpu_mps_research_signal_not_score_evidence",
         "no_score_claim_from_normalized_manifest",
@@ -1484,6 +1537,7 @@
       "byte_delta_vs_anchor": null,
       "curve_id": "general_compressor_headroom",
       "device_family": "cpu",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "cpu_mps_research_signal_not_score_evidence",
         "no_score_claim_from_normalized_manifest",
@@ -1516,6 +1570,7 @@
       "byte_delta_vs_anchor": null,
       "curve_id": "general_compressor_headroom",
       "device_family": "cpu",
+      "dispatch_block_reason": "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied.",
       "dispatch_blockers": [
         "cpu_mps_research_signal_not_score_evidence",
         "no_score_claim_from_normalized_manifest",

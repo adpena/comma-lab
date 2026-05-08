@@ -47,6 +47,32 @@ TERMINAL_CLAIM_PREFIXES = (
 )
 
 CANONICAL_RESEARCH_EVIDENCE_GRADE = "empirical"
+CANONICAL_PREDICTION_EVIDENCE_GRADE = "prediction"
+
+CANONICAL_AGENTS_EVIDENCE_GRADES = frozenset(
+    {
+        "A++",
+        "A",
+        "A-negative",
+        "B",
+        "empirical",
+        "derivation",
+        "prediction",
+        "external",
+        "invalid",
+    }
+)
+
+PLANNING_EVIDENCE_GRADES = frozenset(
+    {
+        CANONICAL_RESEARCH_EVIDENCE_GRADE,
+        CANONICAL_PREDICTION_EVIDENCE_GRADE,
+    }
+)
+
+RESEARCH_SIGNAL_BLOCK_REASON = (
+    "CPU/MPS/prediction planning signal only; exact CUDA promotion gates are unsatisfied."
+)
 
 
 class ArchitectureSweepRecommendationError(ValueError):
@@ -304,7 +330,7 @@ def _base_row(
         "curve_id": curve_id,
         "variant_id": variant_id,
         "device_family": device_family,
-        "evidence_grade": evidence_grade,
+        "evidence_grade": _planning_evidence_grade(evidence_grade),
         "evidence_semantics": evidence_semantics,
         "metric_name": metric_name,
         "metric_value": metric_value,
@@ -320,6 +346,7 @@ def _base_row(
         "dispatchable": False,
         "research_signal_only": True,
         "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+        "dispatch_block_reason": RESEARCH_SIGNAL_BLOCK_REASON,
         "dispatch_blockers": blockers,
     }
 
@@ -535,6 +562,7 @@ def _curve_summaries(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
                 "ready_for_exact_eval_dispatch": False,
                 "dispatchable": False,
                 "dispatch_blockers": list(RESEARCH_SIGNAL_BLOCKERS),
+                "dispatch_block_reason": RESEARCH_SIGNAL_BLOCK_REASON,
                 "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
                 "interpretation": "candidate_generation_prior_only",
             }
@@ -544,14 +572,19 @@ def _curve_summaries(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
 
 def _arch_shrink_active_jobs(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
     for row in rows:
         lane_id = str(row.get("lane_id") or "")
         job_name = str(row.get("job_name") or "")
-        if "arch_shrink" not in lane_id and "arch-shrink" not in job_name and "arch_shrink" not in job_name:
+        if not _is_arch_shrink_identifier(lane_id, job_name):
             continue
         terminal = row.get("terminal_status")
         if terminal is not None:
             continue
+        key = _normalized_dispatch_key(lane_id, job_name)
+        if key in seen:
+            continue
+        seen.add(key)
         out.append(
             {
                 "lane_id": lane_id,
@@ -573,6 +606,7 @@ def _arch_shrink_active_jobs(rows: Sequence[Mapping[str, Any]]) -> list[dict[str
 def _arch_shrink_claims(text: str) -> list[dict[str, Any]]:
     claims: list[dict[str, Any]] = []
     closed_keys: set[tuple[str, str]] = set()
+    seen_active_keys: set[tuple[str, str]] = set()
     for line in text.splitlines():
         stripped = line.strip()
         if not stripped.startswith("|"):
@@ -584,13 +618,14 @@ def _arch_shrink_claims(text: str) -> list[dict[str, Any]]:
         instance_job_id = parts[4]
         if not _is_arch_shrink_identifier(lane_id, instance_job_id):
             continue
-        key = (lane_id, instance_job_id)
+        key = _normalized_dispatch_key(lane_id, instance_job_id)
         status = parts[6]
         if _is_terminal_status(status):
             closed_keys.add(key)
             continue
-        if key in closed_keys:
+        if key in closed_keys or key in seen_active_keys:
             continue
+        seen_active_keys.add(key)
         claims.append(
             {
                 "timestamp_utc": parts[0],
@@ -624,6 +659,7 @@ def _recommendations(
                 "rank_or_kill_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
                 "dispatchable": False,
+                "dispatch_block_reason": RESEARCH_SIGNAL_BLOCK_REASON,
                 "dispatch_blockers": list(RESEARCH_SIGNAL_BLOCKERS),
             }
         )
@@ -645,7 +681,10 @@ def _recommendations(
         recommendations.append(
             {
                 "recommendation": "use_top_research_curves_for_local_build_order_only",
-                "reason": "Cheapest normalized curves can choose CPU/MPS follow-up order, not score rank or GPU dispatch.",
+                "reason": (
+                    "Cheapest normalized curves can choose CPU/MPS follow-up order, "
+                    "not score rank or GPU dispatch."
+                ),
                 "candidate_generation_curve_ids": [
                     {
                         "family": curve.get("family"),
@@ -656,11 +695,13 @@ def _recommendations(
                             else None
                         ),
                         "candidate_generation_only": True,
+                        "reason": "Local build-order signal only; exact CUDA promotion gates have not been satisfied.",
                         "score_claim": False,
                         "promotion_eligible": False,
                         "rank_or_kill_eligible": False,
                         "ready_for_exact_eval_dispatch": False,
                         "dispatchable": False,
+                        "dispatch_block_reason": RESEARCH_SIGNAL_BLOCK_REASON,
                         "dispatch_blockers": list(RESEARCH_SIGNAL_BLOCKERS),
                     }
                     for curve in best_curves
@@ -670,6 +711,7 @@ def _recommendations(
                 "rank_or_kill_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
                 "dispatchable": False,
+                "dispatch_block_reason": RESEARCH_SIGNAL_BLOCK_REASON,
                 "dispatch_blockers": list(RESEARCH_SIGNAL_BLOCKERS),
             }
         )
@@ -677,13 +719,17 @@ def _recommendations(
         recommendations.append(
             {
                 "recommendation": "preserve_exact_cuda_promotion_gates",
-                "reason": "Every normalized row is CPU/MPS or prediction evidence and must pass archive, compliance, lane-claim, and full CUDA auth-eval gates before score use.",
+                "reason": (
+                    "Every normalized row is CPU/MPS or prediction evidence and must pass archive, "
+                    "compliance, lane-claim, and full CUDA auth-eval gates before score use."
+                ),
                 "gates": list(EXACT_CUDA_PROMOTION_GATES),
                 "score_claim": False,
                 "promotion_eligible": False,
                 "rank_or_kill_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
                 "dispatchable": False,
+                "dispatch_block_reason": RESEARCH_SIGNAL_BLOCK_REASON,
                 "dispatch_blockers": list(RESEARCH_SIGNAL_BLOCKERS),
             }
         )
@@ -731,11 +777,16 @@ def _best_row(rows: Sequence[Mapping[str, Any]], metric_name: str) -> dict[str, 
         "archive_bytes": best.get("archive_bytes"),
         "payload_bytes": best.get("payload_bytes"),
         "candidate_generation_only": True,
+        "reason": (
+            "Best local research-signal row only; exact CUDA promotion gates have not "
+            "been satisfied."
+        ),
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "dispatchable": False,
+        "dispatch_block_reason": RESEARCH_SIGNAL_BLOCK_REASON,
         "dispatch_blockers": list(RESEARCH_SIGNAL_BLOCKERS),
     }
 
@@ -835,9 +886,29 @@ def _is_terminal_status(status: str) -> bool:
 
 def _is_arch_shrink_identifier(*values: str) -> bool:
     return any(
-        "arch_shrink" in value or "arch-shrink" in value
+        "arch_shrink" in _normalized_identifier(value)
         for value in values
     )
+
+
+def _normalized_dispatch_key(lane_id: str, instance_job_id: str) -> tuple[str, str]:
+    return (_normalized_identifier(lane_id), _normalized_identifier(instance_job_id))
+
+
+def _normalized_identifier(value: str) -> str:
+    return value.strip().lower().replace("-", "_")
+
+
+def _planning_evidence_grade(value: str) -> str:
+    text = str(value).strip()
+    lowered = text.lower()
+    if text in PLANNING_EVIDENCE_GRADES:
+        return text
+    if "prediction" in lowered or "forecast" in lowered or "expected" in lowered:
+        return CANONICAL_PREDICTION_EVIDENCE_GRADE
+    if text in CANONICAL_AGENTS_EVIDENCE_GRADES:
+        return CANONICAL_RESEARCH_EVIDENCE_GRADE
+    return CANONICAL_RESEARCH_EVIDENCE_GRADE
 
 
 __all__ = [
