@@ -55,20 +55,28 @@ import json
 import sys
 from pathlib import Path
 
-import brotli
 import numpy as np
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 sys.path.insert(0, str(REPO_ROOT / "tools"))
 
+from tac.codec.cost_curves import (  # noqa: E402
+    DEFAULT_K_RANGE,
+    precompute_per_tensor_K_curves,
+)
+from tac.optimization.lagrangian_per_tensor_allocation import (  # noqa: E402
+    LagrangianPerTensorAllocator,
+)
 from tac.pr101_split_brotli_codec import (  # noqa: E402
     FIXED_STATE_SCHEMA,
     N_QUANT,
     _quantize_tensor,
 )
 
-# Reuse subagent D's machinery
+# Reuse subagent D's joint encoder; the per-tensor K-curve precompute and
+# Lagrangian λ-bisection now delegate to tac.codec.cost_curves and
+# tac.optimization.lagrangian_per_tensor_allocation respectively.
 from pr101_lossy_coarsening_analytical import (  # noqa: E402
     TensorBlob,
     find_best_K_for_tensor,
@@ -90,38 +98,19 @@ EVIDENCE_GRADE = (
     "(historical name: ADMM × continuous lossy_coarsening)]"
 )
 
-K_RANGE = list(range(1, 65))
+K_RANGE = list(DEFAULT_K_RANGE)
+# precompute_per_tensor_K_curves re-exported from tac.codec.cost_curves;
+# canonical implementation is identical (same K range, same brotli params).
 
 
-def precompute_per_tensor_K_curves(tensors: list[TensorBlob]) -> list[list[dict]]:
-    """For each tensor, compute (K, achieved_rel_err, per_tensor_byte_proxy)
-    for K ∈ K_RANGE. byte_proxy = brotli(rounded_int8) of THIS tensor alone
-    (an over-estimate of joint contribution but monotone in K)."""
-    curves: list[list[dict]] = []
-    for tb in tensors:
-        rows = []
-        abs_sum = float(np.abs(tb.raw).astype(np.float64).sum()) + 1e-12
-        for K in K_RANGE:
-            rounded = np.round(tb.raw / K) * K
-            err = float(np.abs(rounded - tb.raw).astype(np.float64).sum())
-            re = err / abs_sum
-            rounded_i8 = rounded.clip(-127, 127).astype(np.int8)
-            byte_proxy = len(brotli.compress(rounded_i8.tobytes(), quality=11, lgwin=16, lgblock=19))
-            rows.append({"K": K, "rel_err": re, "byte_proxy": byte_proxy})
-        curves.append(rows)
-    return curves
-
-
-def lagrangian_select_Ks(curves: list[list[dict]], lam: float) -> tuple[list[int], list[float]]:
-    """For Lagrangian λ, each tensor picks K minimizing
-    (byte_proxy + λ * rel_err^2)."""
-    Ks: list[int] = []
-    rel_errs: list[float] = []
-    for tensor_curve in curves:
-        cost = [r["byte_proxy"] + lam * r["rel_err"] ** 2 for r in tensor_curve]
-        idx = int(np.argmin(cost))
-        Ks.append(tensor_curve[idx]["K"])
-        rel_errs.append(tensor_curve[idx]["rel_err"])
+def lagrangian_select_Ks(
+    curves: list[list[dict]], lam: float
+) -> tuple[list[int], list[float]]:
+    """For Lagrangian λ each tensor picks K minimizing
+    ``byte_proxy + λ · rel_err²`` (delegates to tac.optimization)."""
+    res = LagrangianPerTensorAllocator().allocate(curves, lam)
+    Ks = [int(s["K"]) for s in res.selections]
+    rel_errs = list(res.per_tensor_rel_errs)
     return Ks, rel_errs
 
 
@@ -130,41 +119,35 @@ def bisect_admm_for_global_rms(
     curves: list[list[dict]],
     rms_target: float,
 ) -> dict:
-    """Bisect λ to satisfy global RMS rel_err target (joint-encoded).
+    """Bisect λ to satisfy the joint-encoded global RMS rel_err target.
 
-    REVIEW-ENG S2 optimization (2026-05-08): the Ks vector chosen by
-    λ-bisection often repeats across iterations (the discrete K-grid means
-    many λ values map to the same Ks). Memoize encode_with_per_tensor_K by
-    Ks-tuple to amortize brotli encode cost. Empirically reduces bisect
-    wall-clock by ~3x without affecting determinism (encode is a pure
-    function of (tensors, Ks); tensors are loop-invariant).
+    Delegates to :class:`LagrangianPerTensorAllocator` with a joint encoder
+    hook that wraps ``encode_with_per_tensor_K``. Memoization of the
+    selection vector (REVIEW-ENG S2 optimization, ~3× speedup on K-grid)
+    is provided by the canonical allocator.
+
+    Returns the historical key shape used by the manifest writer.
     """
-    cache: dict[tuple[int, ...], dict] = {}
 
-    def _encode_memo(Ks: list[int]) -> dict:
-        key = tuple(Ks)
-        cached = cache.get(key)
-        if cached is not None:
-            return cached
+    def _joint_encoder(selections: list[dict]) -> dict:
+        Ks = [int(s["K"]) for s in selections]
         result = encode_with_per_tensor_K(tensors, Ks)
-        cache[key] = result
-        return result
+        return {
+            "total_bytes": int(result["archive_bytes"]),
+            "rel_err": float(result["rel_err"]),
+            **{k: v for k, v in result.items() if k not in {"archive_bytes", "rel_err"}},
+        }
 
-    lo, hi = 0.0, 1e15
-    last_admm = None
-    for _ in range(80):
-        mid = (lo + hi) / 2 if hi < 1e15 else lo * 10 + 1
-        Ks, rel_errs = lagrangian_select_Ks(curves, mid)
-        result = _encode_memo(Ks)
-        rms = result["rel_err"]  # joint achieved RMS
-        last_admm = {"lambda": mid, **result, "rms_rel_err": rms}
-        if rms <= rms_target:
-            hi = mid
-        else:
-            lo = mid
-        if hi == lo or abs(hi - lo) < 1e-12:
-            break
-    return last_admm
+    res = LagrangianPerTensorAllocator(joint_encoder=_joint_encoder).bisect_for_rms_target(
+        curves, rms_target, max_iter=80, lam_hi=1e15
+    )
+    return {
+        "lambda": res.lam,
+        "rms_rel_err": res.rel_err,
+        "rel_err": res.rel_err,
+        "archive_bytes": res.total_bytes,
+        **res.joint_extras,
+    }
 
 
 def greedy_uniform_per_tensor_budget(
