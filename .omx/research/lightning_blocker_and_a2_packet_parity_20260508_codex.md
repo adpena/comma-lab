@@ -121,6 +121,44 @@ map with a certified scorer/component sensitivity artifact, then rebuild this
 same packet ladder and run paired exact CPU/CUDA eval only after a fresh lane
 claim.
 
+## 2026-05-08 Arch Shrink Harvest Attempt
+
+Existing paid lane:
+
+- Lane: `arch_shrink_x0.4_lightning`
+- Job: `arch-shrink-x0-4-lightning-20260508T024304Z`
+- Source manifest:
+  `experiments/results/lightning_batch/arch-shrink-x0-4-lightning-20260508T024304Z/source_manifest.json`
+- SDK status at harvest: `stopped`
+
+Single-shot harvest command:
+
+```bash
+.venv/bin/python experiments/arch_shrink_x0.4_lightning_harvest.py \
+  --job-name arch-shrink-x0-4-lightning-20260508T024304Z \
+  --ssh-target lightning-pact \
+  --remote-pact /teamspace/studios/this_studio/pact \
+  --teamspace comma-lab \
+  --user adpena \
+  --once
+```
+
+Result:
+
+- Terminal claim recorded in ignored dispatch state:
+  `failed_artifact_rsync_rc_255`
+- Both artifact roots refused SSH with `Permission denied (publickey)`.
+- No `archive.zip`, `contest_auth_eval.json`, or score was harvested.
+- Evidence status: `run abort / artifact-harvest blocker`, not a method result.
+
+Reactivation criteria:
+
+1. Restore Lightning SSH auth for `lightning-pact`.
+2. Re-run the same harvester command with `--force-harvest` only if SDK status
+   remains unreachable while the job is known terminal.
+3. Promote only after `contest_auth_eval.json` parses and archive custody
+   passes the harvester's strict evidence emission path.
+
 ## Verification
 
 Commands run:
@@ -146,4 +184,3 @@ Results:
 - A2 focused tests: `13 passed`
 - A2 packet ladder: `inflate-parity ladder: PASS`
 - A2 closure audit: `passed=true`, `violations=[]`
-
