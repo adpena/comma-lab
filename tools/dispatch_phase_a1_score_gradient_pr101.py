@@ -47,6 +47,17 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(REPO_ROOT / "src"))
 
+from tac.deploy.lightning.batch_jobs import (  # noqa: E402
+    LightningBatchJobsClient,
+    LightningBatchJobSpec,
+)
+from tac.deploy.lightning.defaults import (  # noqa: E402
+    DEFAULT_LIGHTNING_REMOTE_PACT,
+    default_studio,
+    default_teamspace,
+    default_user,
+)
+
 
 # ---------------------------------------------------------------------------
 # Cost gates
@@ -278,6 +289,183 @@ def dispatch_lightning(
 
 
 # ---------------------------------------------------------------------------
+# Lightning Batch Jobs dispatch (CPU-only Studio fallback / GPU-on-demand)
+# ---------------------------------------------------------------------------
+
+def build_batch_command(args: argparse.Namespace, instance_job_id: str) -> str:
+    """Return a single shell script the Lightning Batch worker can run.
+
+    Mirrors the canonical pattern in
+    ``tools/lightning_dispatch_pr106_yshift_score_table.py::build_batch_command``:
+    switch to the pact repo, create OUT_DIR, set WORKSPACE/TAC_UPSTREAM_DIR/
+    PYTHONPATH, run a CUDA preflight that fails-loud if torch.cuda is missing,
+    execute the canonical remote script, then harvest contest_auth_eval.json.
+    """
+    pr101_archive_rel = args.pr101_archive_rel
+    pr101_source_rel = args.pr101_source_rel
+    video_path_rel = args.video_path_rel
+    lane_id = args.lane_id
+
+    env_exports = [
+        f"export PYBIN={args.python_bin}",
+        "export PYTHONUNBUFFERED=1",
+        f"export LANE_ID={lane_id}",
+        f"export PR101_ARCHIVE_PATH={pr101_archive_rel}",
+        f"export PR101_SOURCE_DIR={pr101_source_rel}",
+        f"export VIDEO_PATH={video_path_rel}",
+        f"export EPOCHS={args.epochs}",
+        f"export PRED_LOW={args.predicted_low}",
+        f"export PRED_HIGH={args.predicted_high}",
+    ]
+    return "\n".join(
+        [
+            "set -euo pipefail",
+            (
+                f"if [ -d pact ] && [ -f pact/pyproject.toml ]; then cd pact; "
+                f"elif [ -d {args.remote_pact} ]; then cd {args.remote_pact}; "
+                "else echo FATAL: pact repo not found >&2; exit 2; fi"
+            ),
+            f'export OUT_DIR="$PWD/experiments/results/lightning_batch/{instance_job_id}"',
+            'mkdir -p "$OUT_DIR"',
+            'export WORKSPACE="$PWD"',
+            'export TAC_UPSTREAM_DIR="$PWD/upstream"',
+            'export PYTHONPATH="$PWD/src:$PWD/upstream:$PWD"',
+            f'export LOG_DIR="$OUT_DIR"',
+            *env_exports,
+            (
+                f"{args.python_bin} - <<'PY' > \"$OUT_DIR/lightning_runner_preflight.json\"\n"
+                "import subprocess\n"
+                "import torch\n"
+                "from tac.repo_io import json_text\n"
+                "gpu = subprocess.run(['nvidia-smi', '--query-gpu=name', '--format=csv,noheader'], "
+                "text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)\n"
+                "payload = {\n"
+                "  'cuda_available': bool(torch.cuda.is_available()),\n"
+                "  'device_count': int(torch.cuda.device_count()),\n"
+                "  'torch_version': torch.__version__,\n"
+                "  'torch_cuda': getattr(torch.version, 'cuda', None),\n"
+                "  'nvidia_smi_returncode': gpu.returncode,\n"
+                "  'gpu_names': gpu.stdout.strip().splitlines(),\n"
+                "}\n"
+                "if not payload['cuda_available']:\n"
+                "    raise SystemExit(json_text({'LIGHTNING_RUNNER_CUDA_PREFLIGHT_OK': False, **payload}))\n"
+                "print(json_text({'LIGHTNING_RUNNER_CUDA_PREFLIGHT_OK': True, **payload}), end='')\n"
+                "PY"
+            ),
+            (
+                "bash scripts/remote_track1_phase_a1_score_gradient_pr101.sh "
+                '2>&1 | tee "$OUT_DIR/batch_run.log"'
+            ),
+            (
+                f"{args.python_bin} - <<'PY'\n"
+                "import os, pathlib, shutil\n"
+                "from tac.repo_io import write_json\n"
+                "out = pathlib.Path(os.environ['OUT_DIR'])\n"
+                "lane_dir = out\n"
+                "candidate_eval_dirs = [lane_dir / 'eval_work', lane_dir]\n"
+                "score_json = None\n"
+                "for d in candidate_eval_dirs:\n"
+                "    candidate = d / 'contest_auth_eval.json'\n"
+                "    if candidate.is_file():\n"
+                "        score_json = candidate\n"
+                "        break\n"
+                "summary = {\n"
+                "  'score_claim': False,\n"
+                "  'promotion_requires_adjudication': True,\n"
+                "  'lane_dir': str(lane_dir),\n"
+                "  'contest_auth_eval_json': str(score_json) if score_json else None,\n"
+                "  'contest_auth_eval_json_exists': bool(score_json and score_json.is_file()),\n"
+                "}\n"
+                "if score_json and score_json.is_file() and score_json.parent != lane_dir:\n"
+                "    shutil.copy2(score_json, lane_dir / 'contest_auth_eval.json')\n"
+                "    summary['copied_contest_auth_eval_json'] = True\n"
+                "write_json(lane_dir / 'track1_phase_a1_batch_summary.json', summary)\n"
+                "if not (score_json and score_json.is_file()):\n"
+                "    raise SystemExit('FATAL: phase A1 batch did not produce contest_auth_eval.json')\n"
+                "PY"
+            ),
+        ]
+    )
+
+
+def build_batch_spec(args: argparse.Namespace, instance_job_id: str) -> LightningBatchJobSpec:
+    """Build the LightningBatchJobSpec for the A1 lane."""
+    output_dir = (
+        f"{args.remote_pact}/experiments/results/lightning_batch/{instance_job_id}"
+    )
+    return LightningBatchJobSpec(
+        name=instance_job_id,
+        machine=args.machine,
+        command=build_batch_command(args, instance_job_id),
+        studio=args.studio or None,
+        teamspace=args.teamspace or None,
+        user=args.user or None,
+        cloud_account=args.cloud_account or None,
+        max_runtime=args.max_runtime_seconds,
+        reuse_snapshot=False,
+        role="track1_phase_a1_score_gradient_cuda",
+        local_artifact_dir=f"experiments/results/lightning_batch/{instance_job_id}",
+        remote_output_dir=output_dir,
+        queue_metadata={
+            "lane": args.lane_id,
+            "predicted_band": [args.predicted_low, args.predicted_high],
+            "score_claim": "false",
+            "promotion_gate": "requires contest_auth_eval_json adjudication",
+            "council_decision": "A1 — score-gradient supervision (UNANIMOUS HIGHEST PRIORITY)",
+        },
+    )
+
+
+def submit_batch(
+    args: argparse.Namespace,
+    *,
+    lane_id: str,
+    instance_job_id: str,
+    predicted_eta_utc: str,
+) -> tuple[bool, str | None]:
+    """Submit the A1 lane via Lightning Batch Jobs.
+
+    Returns ``(fired_ok, batch_record_str_or_None)``. On exception, closes the
+    open lane claim with status ``failed_batch_submit`` so re-fire is unblocked.
+    """
+    spec = build_batch_spec(args, instance_job_id)
+    if args.print_only:
+        print("=== batch spec ===")
+        print(json.dumps(spec.asdict(), indent=2, default=str))
+        return False, None
+    try:
+        record = LightningBatchJobsClient().submit(spec, dry_run=args.dry_run_batch)
+    except Exception as exc:
+        print(f"[submit-batch] FAILED: {exc!r}", file=sys.stderr)
+        claim_lane(
+            lane_id=lane_id,
+            platform="lightning",
+            instance_job_id=instance_job_id,
+            predicted_eta_utc=predicted_eta_utc,
+            notes=(
+                f"Phase A1 Lightning Batch Job submit failed: {type(exc).__name__}"
+            ),
+            status="failed_batch_submit",
+            force=True,
+        )
+        return False, None
+    if args.dry_run_batch:
+        # Close the lane claim terminally for dry-run so it does not block re-fire.
+        claim_lane(
+            lane_id=lane_id,
+            platform="lightning",
+            instance_job_id=instance_job_id,
+            predicted_eta_utc=predicted_eta_utc,
+            notes=(
+                "Phase A1 Lightning Batch dry-run only; no CUDA work dispatched"
+            ),
+            status="completed_dry_run",
+            force=True,
+        )
+    return True, json.dumps(record, default=str, indent=2)
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -313,6 +501,32 @@ def main(argv: list[str] | None = None) -> int:
                    help="Pass --force to lane claim (only for explicit conflict resolution)")
     p.add_argument("--output-root", type=Path,
                    default=REPO_ROOT / "experiments" / "results")
+    # Lightning Batch Jobs mode (CPU-only Studio fallback / GPU-on-demand).
+    p.add_argument("--submit-batch", action="store_true",
+                   help="Switch from Studio-SSH dispatch to Lightning Batch Job submission. "
+                        "The batch worker requests its own GPU at job-runtime so the "
+                        "currently-attached Studio machine does not need a GPU.")
+    p.add_argument("--machine", default="g4dn.2xlarge",
+                   help="Lightning machine identifier (T4 = g4dn.2xlarge); only used with --submit-batch")
+    p.add_argument("--studio", default=default_studio(),
+                   help="Lightning Studio name (env LIGHTNING_STUDIO); only used with --submit-batch")
+    p.add_argument("--teamspace", default=default_teamspace(),
+                   help="Lightning teamspace (env LIGHTNING_TEAMSPACE); only used with --submit-batch")
+    p.add_argument("--user", default=default_user(),
+                   help="Lightning user (env LIGHTNING_USER); only used with --submit-batch")
+    p.add_argument("--cloud-account", default=None,
+                   help="Lightning cloud account override; only used with --submit-batch")
+    p.add_argument("--max-runtime-seconds", type=int, default=4 * 60 * 60,
+                   help="Wall-clock cap inside the Batch Job (default 4h); only used with --submit-batch")
+    p.add_argument("--dry-run-batch", action="store_true",
+                   help="Submit the batch spec via LightningBatchJobsClient.submit(dry_run=True). "
+                        "Records a DRY_RUN row in .omx/state/lightning_batch_jobs.json and does not "
+                        "request a GPU.")
+    p.add_argument("--remote-pact", default=DEFAULT_LIGHTNING_REMOTE_PACT,
+                   help="Remote pact repo path on the Lightning Batch worker; "
+                        "only used with --submit-batch")
+    p.add_argument("--python-bin", default=".venv/bin/python",
+                   help="Python interpreter on the Lightning Batch worker; only used with --submit-batch")
     args = p.parse_args(argv)
 
     # Path resolution.
@@ -351,6 +565,11 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError:
         print(f"FATAL: --pr101-source-dir must be inside repo root: {pr101_source_dir}", file=sys.stderr)
         return 2
+
+    # Stash repo-relative posix path strings on args for build_batch_command.
+    args.pr101_archive_rel = pr101_archive.relative_to(REPO_ROOT).as_posix()
+    args.pr101_source_rel = pr101_source_dir.relative_to(REPO_ROOT).as_posix()
+    args.video_path_rel = video_path.relative_to(REPO_ROOT).as_posix()
 
     # Cost gate.
     cost = estimated_cost_usd(args.provider, args.gpu_tier, args.timeout_hours)
@@ -399,21 +618,30 @@ def main(argv: list[str] | None = None) -> int:
             predicted_eta_utc=predicted_eta_utc,
             args_dict={k: str(v) for k, v in vars(args).items()},
         )
-        # Still print the invocation for audit.
-        dispatch_lightning(
-            lane_id=args.lane_id,
-            instance_job_id=instance_job_id,
-            pr101_archive=pr101_archive,
-            video_path=video_path,
-            pr101_source_dir=pr101_source_dir,
-            epochs=args.epochs,
-            predicted_low=args.predicted_low,
-            predicted_high=args.predicted_high,
-            estimated_cost_usd=cost,
-            gpu_tier=args.gpu_tier,
-            allow_gpu_mismatch=args.allow_gpu_mismatch,
-            print_only=True,
-        )
+        if args.submit_batch:
+            # Print the resolved batch spec (validates the heredocs locally).
+            submit_batch(
+                args,
+                lane_id=args.lane_id,
+                instance_job_id=instance_job_id,
+                predicted_eta_utc=predicted_eta_utc,
+            )
+        else:
+            # Still print the invocation for audit.
+            dispatch_lightning(
+                lane_id=args.lane_id,
+                instance_job_id=instance_job_id,
+                pr101_archive=pr101_archive,
+                video_path=video_path,
+                pr101_source_dir=pr101_source_dir,
+                epochs=args.epochs,
+                predicted_low=args.predicted_low,
+                predicted_high=args.predicted_high,
+                estimated_cost_usd=cost,
+                gpu_tier=args.gpu_tier,
+                allow_gpu_mismatch=args.allow_gpu_mismatch,
+                print_only=True,
+            )
         return 0
 
     if args.provider != "lightning":
@@ -443,20 +671,35 @@ def main(argv: list[str] | None = None) -> int:
         return 4
 
     # Submit dispatch.
-    session_id, dispatch_ok = dispatch_lightning(
-        lane_id=args.lane_id,
-        instance_job_id=instance_job_id,
-        pr101_archive=pr101_archive,
-        video_path=video_path,
-        pr101_source_dir=pr101_source_dir,
-        epochs=args.epochs,
-        predicted_low=args.predicted_low,
-        predicted_high=args.predicted_high,
-        estimated_cost_usd=cost,
-        gpu_tier=args.gpu_tier,
-        allow_gpu_mismatch=args.allow_gpu_mismatch,
-        print_only=False,
-    )
+    if args.submit_batch:
+        fired_ok, batch_record_str = submit_batch(
+            args,
+            lane_id=args.lane_id,
+            instance_job_id=instance_job_id,
+            predicted_eta_utc=predicted_eta_utc,
+        )
+        # Lightning Batch Jobs do not expose a tmux session_id; the
+        # instance_job_id IS the canonical handle for status/harvest.
+        session_id = instance_job_id if fired_ok else None
+        dispatch_ok = fired_ok
+        if fired_ok and batch_record_str:
+            print("[submit-batch] record:")
+            print(batch_record_str)
+    else:
+        session_id, dispatch_ok = dispatch_lightning(
+            lane_id=args.lane_id,
+            instance_job_id=instance_job_id,
+            pr101_archive=pr101_archive,
+            video_path=video_path,
+            pr101_source_dir=pr101_source_dir,
+            epochs=args.epochs,
+            predicted_low=args.predicted_low,
+            predicted_high=args.predicted_high,
+            estimated_cost_usd=cost,
+            gpu_tier=args.gpu_tier,
+            allow_gpu_mismatch=args.allow_gpu_mismatch,
+            print_only=False,
+        )
     if not dispatch_ok:
         claim_lane(
             lane_id=args.lane_id,

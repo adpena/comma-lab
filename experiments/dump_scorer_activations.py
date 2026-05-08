@@ -25,6 +25,11 @@ scorer architecture, not a candidate submission's payload. ``--archive`` is
 accepted as documentation/metadata only (the SHA-256 is recorded in the
 introspection metadata so the operator can later cross-reference which
 candidate was being analyzed).
+
+For CPU/CUDA xray work, prefer ``--shared-input-tensor`` with an artifact
+written by ``tools/probe_eval_loader_drift.py --save-shared-input-dir``. That
+path loads already-decoded RGB bytes with custody and avoids the invalid
+``AVVideoDataset(device='cuda')`` trap.
 """
 
 from __future__ import annotations
@@ -44,6 +49,17 @@ SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
+SHARED_INPUT_TENSOR_SCHEMA = "eval_loader_shared_input_tensor.v1"
+SHARED_INPUT_TENSOR_ROLE = "raw_rgb_uint8_before_posenet_segnet"
+NON_PROMOTABLE_FIELDS = (
+    "score_claim",
+    "score_claim_valid",
+    "promotion_eligible",
+    "rank_or_kill_eligible",
+    "ready_for_exact_eval_dispatch",
+    "dispatch_attempted",
+)
+
 from tac.diagnostics.scorer_introspection import (  # noqa: E402
     ScorerIntrospector,
     list_attention_like_layers,
@@ -51,9 +67,67 @@ from tac.diagnostics.scorer_introspection import (  # noqa: E402
 from tac.scorer import load_scorers  # noqa: E402
 
 
+def _tensor_sha256(tensor: torch.Tensor) -> str:
+    cpu = tensor.detach().to(device="cpu").contiguous()
+    return hashlib.sha256(cpu.numpy().tobytes()).hexdigest()
+
+
+def _torch_load_tensor_artifact(path: Path) -> Any:
+    try:
+        return torch.load(path, map_location="cpu", weights_only=True)
+    except TypeError:  # pragma: no cover - older torch without weights_only
+        return torch.load(path, map_location="cpu")
+
+
+def _load_shared_input_tensor(
+    path: Path, device: torch.device
+) -> tuple[torch.Tensor, dict[str, Any]]:
+    """Load a non-promotable shared RGB input tensor with strict custody."""
+    payload = _torch_load_tensor_artifact(path)
+    if not isinstance(payload, dict):
+        raise ValueError("shared input tensor artifact must be a dict")
+    if payload.get("schema") != SHARED_INPUT_TENSOR_SCHEMA:
+        raise ValueError(
+            "shared input tensor artifact schema must be "
+            f"{SHARED_INPUT_TENSOR_SCHEMA}"
+        )
+    if payload.get("tensor_role") != SHARED_INPUT_TENSOR_ROLE:
+        raise ValueError(
+            "shared input tensor artifact tensor_role must be "
+            f"{SHARED_INPUT_TENSOR_ROLE}"
+        )
+    for field in NON_PROMOTABLE_FIELDS:
+        if payload.get(field) is not False:
+            raise ValueError(f"shared input tensor artifact requires {field}=false")
+    tensor = payload.get("tensor")
+    if not isinstance(tensor, torch.Tensor):
+        raise ValueError("shared input tensor artifact missing tensor")
+    if tensor.ndim != 5 or tensor.shape[-1] != 3 or tensor.shape[1] < 2:
+        raise ValueError(
+            "shared input tensor must have shape (B, T>=2, H, W, 3); got "
+            f"{list(tensor.shape)}"
+        )
+    custody = payload.get("tensor_custody")
+    if not isinstance(custody, dict):
+        raise ValueError("shared input tensor artifact missing tensor_custody")
+    actual_sha = _tensor_sha256(tensor)
+    if custody.get("sha256") != actual_sha:
+        raise ValueError("shared input tensor custody sha256 mismatch")
+    if custody.get("dtype") != str(tensor.detach().to(device="cpu").dtype):
+        raise ValueError("shared input tensor custody dtype mismatch")
+    if custody.get("shape") != list(tensor.shape):
+        raise ValueError("shared input tensor custody shape mismatch")
+    metadata = {key: value for key, value in payload.items() if key != "tensor"}
+    metadata["artifact_path"] = str(path)
+    metadata["artifact_sha256"] = _archive_sha256(path)
+    metadata["loaded_by"] = "experiments/dump_scorer_activations.py"
+    metadata["shared_input_contract_valid"] = True
+    return tensor.float().to(device), metadata
+
+
 def _gt_video_to_pair_input(
     upstream_dir: Path, frame_pair_idx: int, device: torch.device
-) -> torch.Tensor:
+) -> tuple[torch.Tensor, str]:
     """Load a real (B=1, T=2, H, W, 3) GT frame pair from upstream/videos/0.mkv.
 
     Falls back to a deterministic synthetic pair if the GT video is not
@@ -137,6 +211,16 @@ def main(argv: list[str] | None = None) -> int:
         help="Index of the frame pair to feed through the scorers.",
     )
     parser.add_argument(
+        "--shared-input-tensor",
+        type=Path,
+        default=None,
+        help=(
+            "Optional eval_loader_shared_input_tensor.v1 artifact from "
+            "tools/probe_eval_loader_drift.py. When set, this decoded RGB "
+            "tensor replaces GT video loading for CPU/CUDA shared-input xray."
+        ),
+    )
+    parser.add_argument(
         "--device",
         choices=["cpu", "cuda"],
         default="cpu",
@@ -191,7 +275,16 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     # Load the frame pair.
-    pair, source = _gt_video_to_pair_input(args.upstream_dir, args.frame_pair_idx, device)
+    shared_input_meta: dict[str, Any] | None = None
+    if args.shared_input_tensor is not None:
+        pair, shared_input_meta = _load_shared_input_tensor(
+            args.shared_input_tensor, device
+        )
+        source = f"shared_input_tensor:{args.shared_input_tensor}"
+    else:
+        pair, source = _gt_video_to_pair_input(
+            args.upstream_dir, args.frame_pair_idx, device
+        )
     # pair: (1, 2, H, W, 3) float on device. Reshape to the (B, T, C, H, W)
     # the scorers' preprocess_input expects.
     import einops
@@ -214,11 +307,32 @@ def main(argv: list[str] | None = None) -> int:
         "archive_path": str(args.archive) if args.archive else None,
         "archive_sha256": _archive_sha256(args.archive),
         "upstream_dir": str(args.upstream_dir),
+        "input_source_kind": (
+            "shared_input_tensor"
+            if args.shared_input_tensor is not None
+            else "upstream_gt_video_or_synthetic"
+        ),
+        "shared_input_tensor": shared_input_meta,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
         "timestamp": int(time.time()),
         "torch_version": torch.__version__,
     }
 
-    summary: dict[str, Any] = {"common": common_meta, "scorers": {}}
+    summary: dict[str, Any] = {
+        "common": common_meta,
+        "scorers": {},
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+    }
 
     if args.scorer in ("both", "posenet"):
         attn_layers = list_attention_like_layers(posenet)

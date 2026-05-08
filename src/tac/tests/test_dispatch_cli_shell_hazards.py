@@ -72,6 +72,41 @@ def test_scanner_catches_known_typo_flag(tmp_path: Path) -> None:
     assert hazards[0].kind == "known_typo_flag"
 
 
+def test_scanner_catches_stale_dispatch_authorization_docs(tmp_path: Path) -> None:
+    helper = _load_helper()
+    report = tmp_path / "reports" / "old_dispatch.md"
+    report.parent.mkdir()
+    report.write_text(
+        """
+        **Status:** CUDA dispatch READY-TO-LAUNCH.
+        **Standing instruction**: launch when a GPU appears. No additional approval needed.
+        """.lstrip(),
+        encoding="utf-8",
+    )
+    hazards = helper.scan_paths(tmp_path, scan_paths=("reports",))
+    assert _kinds(hazards) == {"stale_dispatch_authorization_doc"}
+    assert len(hazards) == 3
+
+
+def test_scanner_allows_superseded_dispatch_authorization_docs(tmp_path: Path) -> None:
+    helper = _load_helper()
+    report = tmp_path / "reports" / "superseded_dispatch.md"
+    report.parent.mkdir()
+    report.write_text(
+        """
+        > Superseded: historical READY-TO-LAUNCH memo only.
+        **Standing instruction superseded:** no launch is authorized by this memo.
+        """.lstrip(),
+        encoding="utf-8",
+    )
+    hazards = [
+        hazard
+        for hazard in helper.scan_paths(tmp_path, scan_paths=("reports",))
+        if hazard.kind == "stale_dispatch_authorization_doc"
+    ]
+    assert hazards == []
+
+
 def test_scanner_prunes_excluded_result_trees(tmp_path: Path) -> None:
     helper = _load_helper()
     scripts = tmp_path / "scripts"

@@ -7,7 +7,10 @@
 > SHA-tied distortion model, scorer-basin parity gate, or exact positive CUDA
 > result exists. Current local A++ frontier remains PR106 x-repack at
 > `0.20945123680571204`, which is a byte-identical custody/rate control rather
-> than a new representation advance.
+> than a new representation advance. This snapshot is historical handoff
+> context only; do not dispatch from the commands below without a fresh
+> `tools/claim_lane_dispatch.py claim ...` row, current preflight, and explicit
+> operator authorization.
 
 First operator briefing run with the fixed dashboard (commits dbb0032d +
 b3e07b24). This memo captures the **actual terminal state** of the audit-

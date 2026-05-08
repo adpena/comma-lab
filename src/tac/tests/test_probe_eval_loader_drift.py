@@ -67,11 +67,48 @@ def test_tensor_custody_hashes_shared_input_bytes() -> None:
 
     custody = mod.tensor_custody(tensor)
 
+    assert custody["schema"] == mod.SHARED_INPUT_TENSOR_SCHEMA
+    assert custody["tensor_role"] == mod.SHARED_INPUT_TENSOR_ROLE
     assert custody["shape"] == [3]
     assert custody["dtype"] == "torch.uint8"
+    assert custody["byte_length"] == 3
     assert len(custody["sha256"]) == 64
     assert custody["score_claim"] is False
+    assert custody["score_claim_valid"] is False
     assert custody["promotion_eligible"] is False
+
+
+def test_write_shared_input_tensor_artifact_is_non_promotable(tmp_path: Path) -> None:
+    mod = _load_tool("probe_eval_loader_drift")
+    tensor = torch.arange(1 * 2 * 3 * 4 * 3, dtype=torch.uint8).reshape(1, 2, 3, 4, 3)
+
+    record = mod.write_shared_input_tensor_artifact(
+        output_dir=tmp_path,
+        cell_id="cpu_av",
+        batch_order=7,
+        tensor=tensor,
+        video_path="upstream/videos/0.mkv",
+        sequence_index=11,
+    )
+
+    assert record["schema"] == mod.SHARED_INPUT_TENSOR_SCHEMA
+    assert record["tensor_role"] == mod.SHARED_INPUT_TENSOR_ROLE
+    assert record["cell_id"] == "cpu_av"
+    assert record["score_claim"] is False
+    assert record["score_claim_valid"] is False
+    assert record["promotion_eligible"] is False
+    assert record["rank_or_kill_eligible"] is False
+    assert record["ready_for_exact_eval_dispatch"] is False
+    assert record["dispatch_attempted"] is False
+    assert "tensor" not in record
+    assert record["tensor_custody"]["sha256"]
+    artifact_path = Path(record["artifact_path"])
+    assert artifact_path.exists()
+    loaded = torch.load(artifact_path, map_location="cpu", weights_only=True)
+    assert loaded["schema"] == mod.SHARED_INPUT_TENSOR_SCHEMA
+    assert torch.equal(loaded["tensor"], tensor)
+    assert loaded["tensor_custody"]["sha256"] == record["tensor_custody"]["sha256"]
+    assert len(record["artifact_file_custody"]["sha256"]) == 64
 
 
 def test_next_batch_advances_existing_iterator() -> None:

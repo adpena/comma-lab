@@ -34,11 +34,19 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "src"))
+
+from tac.score_geometry import (  # noqa: E402
+    PlannerAxisMarginals,
+    TargetByteBudget,
+    planner_axis_marginals,
+    target_byte_budget_for_score,
+)
 
 # Canonical lane name → human label mapping.
 LANE_PATTERNS: dict[str, str] = {
@@ -57,6 +65,25 @@ LANE_PATTERNS: dict[str, str] = {
 # PR101 brotli baseline (the byte-anchor most lanes compare against).
 PR101_BROTLI_BYTES = 178_144
 
+# Planning target carried from the 2026-05-08 sub-0.17 solver memo. These are
+# prediction-only floor assumptions, not score evidence.
+SUBTARGET_SCORE = 0.170
+SUBTARGET_CPU_D_SEG_FLOOR = 6.0e-4
+SUBTARGET_CPU_D_POSE_FLOOR = 3.5e-5
+
+# PR107/apogee-ish operating point used only to expose CPU/CUDA planner-axis
+# separation in this summary. The helper reports prediction-only marginals.
+AXIS_ADVISOR_CUDA_D_SEG = 6.88e-4
+AXIS_ADVISOR_CUDA_D_POSE = 1.74e-4
+AXIS_ADVISOR_ARCHIVE_BYTES = 178_392
+
+NONCOMPARABLE_BYTE_BUDGET_LANES = {
+    "A0_mdl_baseline",
+    "A1_score_gradient",
+    "A4_charm_hyperprior_toy",
+    "A4_alt_filler_stc_pose",
+}
+
 
 @dataclass
 class PhaseAEntry:
@@ -73,6 +100,9 @@ class PhaseAEntry:
     timestamp: str | None
     delta_vs_uniform_bytes: int | None = None
     delta_vs_brotli_bytes: int | None = None
+    byte_budget_comparable: bool = False
+    subtarget_gap_bytes: int | None = None
+    meets_subtarget_byte_budget: bool | None = None
     notes: list[str] = field(default_factory=list)
 
 
@@ -217,8 +247,68 @@ def deduplicate_keep_best(entries: list[PhaseAEntry]) -> list[PhaseAEntry]:
     return sorted(by_lane.values(), key=lambda x: x.lane)
 
 
+def build_subtarget_budget() -> TargetByteBudget:
+    """Closed-form byte budget for the Phase A sub-0.17 planning target."""
+    return target_byte_budget_for_score(
+        target_score=SUBTARGET_SCORE,
+        d_seg_floor=SUBTARGET_CPU_D_SEG_FLOOR,
+        d_pose_floor=SUBTARGET_CPU_D_POSE_FLOOR,
+        current_archive_bytes=PR101_BROTLI_BYTES,
+    )
+
+
+def build_axis_advisors() -> tuple[PlannerAxisMarginals, PlannerAxisMarginals]:
+    """Return CUDA-internal and CPU-leaderboard planner-axis marginals."""
+    kwargs = {
+        "cuda_d_seg": AXIS_ADVISOR_CUDA_D_SEG,
+        "cuda_d_pose": AXIS_ADVISOR_CUDA_D_POSE,
+        "archive_bytes": AXIS_ADVISOR_ARCHIVE_BYTES,
+        "archive_class": "hnerv",
+    }
+    return (
+        planner_axis_marginals(target_axis="cuda_internal", **kwargs),
+        planner_axis_marginals(target_axis="cpu_leaderboard", **kwargs),
+    )
+
+
+def annotate_planning_targets(
+    entries: list[PhaseAEntry],
+    *,
+    budget: TargetByteBudget | None = None,
+) -> list[PhaseAEntry]:
+    """Annotate byte-comparable rows with the subtarget byte-budget gap."""
+    target_budget = budget or build_subtarget_budget()
+    max_bytes = target_budget.max_archive_bytes
+    for e in entries:
+        comparable = (
+            e.archive_bytes is not None
+            and e.lane not in NONCOMPARABLE_BYTE_BUDGET_LANES
+            and max_bytes is not None
+        )
+        e.byte_budget_comparable = bool(comparable)
+        if comparable:
+            assert e.archive_bytes is not None
+            assert max_bytes is not None
+            e.subtarget_gap_bytes = e.archive_bytes - max_bytes
+            e.meets_subtarget_byte_budget = e.archive_bytes <= max_bytes
+        else:
+            e.subtarget_gap_bytes = None
+            e.meets_subtarget_byte_budget = None
+    return entries
+
+
+def _format_budget_gap(e: PhaseAEntry) -> str:
+    if e.subtarget_gap_bytes is None:
+        return "n/a"
+    return f"{e.subtarget_gap_bytes:+,}"
+
+
 def render_markdown(entries: list[PhaseAEntry]) -> str:
     """Emit the operator-facing Phase A summary in Markdown."""
+    budget = build_subtarget_budget()
+    cuda_axis, cpu_axis = build_axis_advisors()
+    annotate_planning_targets(entries, budget=budget)
+    feasibility = "true" if budget.feasible_under_floors else "false"
     lines = [
         "# Phase A Cross-Ablation Pareto Summary",
         "",
@@ -226,8 +316,26 @@ def render_markdown(entries: list[PhaseAEntry]) -> str:
         "",
         f"PR101 brotli baseline: **{PR101_BROTLI_BYTES:,} B** (the byte-anchor most lanes target).",
         "",
-        "| Lane | Archive bytes | Δ vs brotli | rel_err | Evidence grade | Dispatch ready | Notes |",
-        "|---|---:|---:|---:|---|---:|---|",
+        "## Solver planning targets",
+        "",
+        f"- Subtarget: **{SUBTARGET_SCORE:.3f}** with CPU-floor assumptions "
+        f"`d_seg={SUBTARGET_CPU_D_SEG_FLOOR:.1e}`, "
+        f"`d_pose={SUBTARGET_CPU_D_POSE_FLOOR:.1e}`. "
+        f"Max archive bytes: **{budget.max_archive_bytes:,} B**; "
+        f"required savings vs PR101 brotli: **{budget.required_savings_bytes:,} B**; "
+        f"floor-feasible: `{feasibility}`. "
+        f"Evidence grade: `{budget.evidence_grade}`.",
+        f"- Axis advisor at `d_seg_cuda={AXIS_ADVISOR_CUDA_D_SEG:.2e}`, "
+        f"`d_pose_cuda={AXIS_ADVISOR_CUDA_D_POSE:.2e}`, "
+        f"`B={AXIS_ADVISOR_ARCHIVE_BYTES:,}`: "
+        f"`target_axis={cuda_axis.target_axis}` priority `{cuda_axis.priority_axis}` "
+        f"(seg={cuda_axis.seg_marginal:.2f}, pose={cuda_axis.pose_marginal:.2f}); "
+        f"`target_axis={cpu_axis.target_axis}` priority `{cpu_axis.priority_axis}` "
+        f"(seg={cpu_axis.seg_marginal:.2f}, pose={cpu_axis.pose_marginal:.2f}). "
+        f"Evidence grade: `{cpu_axis.evidence_grade}`.",
+        "",
+        "| Lane | Archive bytes | Δ vs brotli | Sub-0.17 byte gap | rel_err | Evidence grade | Dispatch ready | Notes |",
+        "|---|---:|---:|---:|---:|---|---:|---|",
     ]
     for e in entries:
         bytes_cell = f"{e.archive_bytes:,}" if e.archive_bytes is not None else "—"
@@ -236,6 +344,7 @@ def render_markdown(entries: list[PhaseAEntry]) -> str:
             if e.delta_vs_brotli_bytes is not None
             else "—"
         )
+        gap_cell = _format_budget_gap(e)
         rel_err_cell = (
             f"{e.rel_err:.4f} ({e.rel_err_form})"
             if isinstance(e.rel_err, (int, float))
@@ -245,7 +354,7 @@ def render_markdown(entries: list[PhaseAEntry]) -> str:
         ready_cell = "✓" if e.ready_for_exact_eval_dispatch else "—"
         notes_cell = "; ".join(e.notes) if e.notes else "—"
         lines.append(
-            f"| {e.lane} | {bytes_cell} | {delta_cell} | {rel_err_cell} | "
+            f"| {e.lane} | {bytes_cell} | {delta_cell} | {gap_cell} | {rel_err_cell} | "
             f"{ev} | {ready_cell} | {notes_cell} |"
         )
     lines.extend([
@@ -285,9 +394,19 @@ def render_markdown(entries: list[PhaseAEntry]) -> str:
 
 def render_json(entries: list[PhaseAEntry]) -> str:
     """Emit machine-readable Pareto summary."""
+    budget = build_subtarget_budget()
+    cuda_axis, cpu_axis = build_axis_advisors()
+    annotate_planning_targets(entries, budget=budget)
     out = {
         "schema_version": "phase_a_pareto_v1",
         "pr101_brotli_baseline_bytes": PR101_BROTLI_BYTES,
+        "planning_targets": {
+            "subtarget_byte_budget": asdict(budget),
+            "axis_advisors": {
+                "cuda_internal": asdict(cuda_axis),
+                "cpu_leaderboard": asdict(cpu_axis),
+            },
+        },
         "lane_count": len(entries),
         "lanes": [],
     }
@@ -303,6 +422,9 @@ def render_json(entries: list[PhaseAEntry]) -> str:
             "ready_for_exact_eval_dispatch": e.ready_for_exact_eval_dispatch,
             "dispatch_blockers": list(e.dispatch_blockers),
             "dispatch_status": e.dispatch_status,
+            "byte_budget_comparable": e.byte_budget_comparable,
+            "subtarget_gap_bytes": e.subtarget_gap_bytes,
+            "meets_subtarget_byte_budget": e.meets_subtarget_byte_budget,
             "timestamp": e.timestamp,
             "manifest_path": str(e.manifest_path.relative_to(REPO_ROOT)),
             "notes": e.notes,
@@ -331,7 +453,7 @@ def main() -> int:
         e = parse_manifest(m)
         if e is not None:
             raw_entries.append(e)
-    entries = deduplicate_keep_best(raw_entries)
+    entries = annotate_planning_targets(deduplicate_keep_best(raw_entries))
 
     md = render_markdown(entries)
     if args.output:

@@ -16,6 +16,9 @@ This guard covers sprint-expensive bug classes:
   that ran on a Lightning Studio runner;
 * remote runner shell scripts whose ``PYTHONPATH`` exports include operator
   paths (``/Users/`` / ``/home/adpena/``).
+* stale docs/reports that still authorize remote launch from prediction-era
+  memos (``READY-TO-LAUNCH``, ``No additional approval needed``, or
+  unsuperseded standing launch instructions).
 
 Historical ledgers and result artifacts are excluded by default. Python
 heredocs inside shell snippets are ignored so ordinary Python variables named
@@ -103,6 +106,22 @@ LAUNCHER_STALE_FLAGS = {
 KNOWN_TYPO_FLAGS = {
     "--rmote": "typo for --remote or --remote-path; grep argparse before dispatch",
 }
+STALE_DISPATCH_AUTHORIZATION_PATTERNS = (
+    (
+        re.compile(r"\bREADY-TO-LAUNCH\b", re.IGNORECASE),
+        "READY-TO-LAUNCH language is stale launch authority; mark the memo "
+        "historical/superseded or require current claim + preflight + explicit approval",
+    ),
+    (
+        re.compile(r"\bNo additional approval needed\b", re.IGNORECASE),
+        "No-additional-approval language bypasses current dispatch-claim and "
+        "operator-authorization gates",
+    ),
+    (
+        re.compile(r"\bStanding instruction\b.*\blaunch\b", re.IGNORECASE),
+        "standing launch instructions are stale unless explicitly superseded",
+    ),
+)
 
 
 @dataclass(frozen=True)
@@ -402,6 +421,22 @@ def _scan_shell_pythonpath_leaks(rel: str, numbered: list[tuple[int, str]]) -> l
     return hazards
 
 
+def _scan_stale_dispatch_authorization(rel: str, numbered: list[tuple[int, str]]) -> list[Hazard]:
+    """Detect old human-facing launch authority in docs/reports."""
+
+    if not (rel.startswith("docs/") or rel.startswith("reports/")):
+        return []
+    hazards: list[Hazard] = []
+    for lineno, line in numbered:
+        lowered = line.lower()
+        if "superseded" in lowered or "historical" in lowered:
+            continue
+        for pattern, message in STALE_DISPATCH_AUTHORIZATION_PATTERNS:
+            if pattern.search(line):
+                hazards.append(Hazard(rel, lineno, "stale_dispatch_authorization_doc", message))
+    return hazards
+
+
 def scan_text(path: Path, text: str, *, root: Path) -> list[Hazard]:
     rel = _repo_rel(path, root)
     hazards: list[Hazard] = []
@@ -438,6 +473,7 @@ def scan_text(path: Path, text: str, *, root: Path) -> list[Hazard]:
                     )
                 )
         hazards.extend(_scan_shell_pythonpath_leaks(rel, numbered))
+        hazards.extend(_scan_stale_dispatch_authorization(rel, numbered))
 
     if path.suffix.lower() == ".py":
         hazards.extend(_scan_python_dispatch_path_leaks(rel, text))

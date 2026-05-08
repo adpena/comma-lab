@@ -73,3 +73,72 @@ def test_success_without_session_id_closes_claim_and_manifest_is_terminal(
 
     captured = capsys.readouterr()
     assert "Lane claim closed as 'fired_no_session_id_verify_manually'" in captured.err
+
+
+def test_submit_batch_print_only_builds_valid_spec(monkeypatch, tmp_path: Path) -> None:
+    """--submit-batch --dry-run-batch --print-only should build a spec that
+    passes LightningBatchJobSpec.validate() without contacting Lightning."""
+    tool = _load_tool()
+    claims: list[dict] = []
+
+    def fake_claim_lane(**kwargs):
+        claims.append(dict(kwargs))
+        return 0
+
+    monkeypatch.setattr(tool, "claim_lane", fake_claim_lane)
+
+    rc = tool.main(
+        [
+            "--submit-batch",
+            "--dry-run-batch",
+            "--print-only",
+            "--pr101-archive",
+            "CLAUDE.md",
+            "--video-path",
+            "CLAUDE.md",
+            "--pr101-source-dir",
+            "src",
+            "--provider",
+            "lightning",
+            "--gpu-tier",
+            "T4",
+            "--output-root",
+            str(tmp_path),
+        ]
+    )
+    assert rc == 0
+    # In --print-only mode no claim_lane should have fired.
+    assert claims == []
+
+
+def test_build_batch_spec_passes_validate(tmp_path: Path) -> None:
+    """The constructed spec must pass LightningBatchJobSpec.validate()."""
+    tool = _load_tool()
+    import argparse
+
+    args = argparse.Namespace(
+        lane_id="track1_phase_a1_score_gradient",
+        pr101_archive_rel="experiments/results/public_pr_intake_full/x/archive.zip",
+        pr101_source_rel="experiments/results/public_pr_intake_full/x/src",
+        video_path_rel="upstream/videos/0.mkv",
+        epochs=200,
+        predicted_low=0.15,
+        predicted_high=0.22,
+        machine="g4dn.2xlarge",
+        studio=None,
+        teamspace=None,
+        user=None,
+        cloud_account=None,
+        max_runtime_seconds=4 * 60 * 60,
+        remote_pact="/teamspace/studios/this_studio/pact",
+        python_bin=".venv/bin/python",
+    )
+    spec = tool.build_batch_spec(args, "track1_phase_a1_score_gradient_test_id")
+    spec.validate()
+    assert spec.role == "track1_phase_a1_score_gradient_cuda"
+    assert spec.queue_metadata["score_claim"] == "false"
+    assert spec.queue_metadata["lane"] == "track1_phase_a1_score_gradient"
+    # Heredocs are validated by spec.validate() above.
+    assert "remote_track1_phase_a1_score_gradient_pr101.sh" in spec.command
+    assert "LIGHTNING_RUNNER_CUDA_PREFLIGHT_OK" in spec.command
+    assert "track1_phase_a1_batch_summary.json" in spec.command

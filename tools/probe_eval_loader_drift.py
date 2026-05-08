@@ -20,6 +20,12 @@ PoseNet/SegNet forward cells on shared input tensors to separate decoder/input
 bytes from network forward/kernel drift. It is diagnostic only and never a
 score claim. If CUDA/DALI is unavailable it still writes a non-promotable plan
 artifact so the exact remote command is auditable.
+
+With ``--save-shared-input-dir`` the decoded RGB tensors are also saved as
+non-promotable ``eval_loader_shared_input_tensor.v1`` artifacts. Those files
+are the explicit bridge into ``experiments/dump_scorer_activations.py
+--shared-input-tensor`` and prevent future CUDA xray work from trying to
+instantiate ``AVVideoDataset(device='cuda')``.
 """
 
 from __future__ import annotations
@@ -42,6 +48,8 @@ COMPARISON_UNAVAILABLE_MISSING_PREREQUISITE = "missing_prerequisite"
 COMPARISON_UNAVAILABLE_PROBE_RUNTIME_ERROR = "probe_runtime_error"
 DIAGNOSTIC_REMOTE_LANE_ID = "eval_loader_drift_2x2_cuda_dali"
 REMOTE_ARTIFACT_PLACEHOLDER = "${ARTIFACT_DIR}/eval_loader_drift_2x2_cuda_dali.json"
+SHARED_INPUT_TENSOR_SCHEMA = "eval_loader_shared_input_tensor.v1"
+SHARED_INPUT_TENSOR_ROLE = "raw_rgb_uint8_before_posenet_segnet"
 
 RAW_DECODER_REQUIRED_ARTIFACTS = (
     "upstream_frame_utils_py",
@@ -280,19 +288,101 @@ def per_channel_compare(a: torch.Tensor, b: torch.Tensor) -> list[dict[str, Any]
     return rows
 
 
-def tensor_custody(tensor: torch.Tensor) -> dict[str, Any]:
+def tensor_custody(
+    tensor: torch.Tensor, *, tensor_role: str = SHARED_INPUT_TENSOR_ROLE
+) -> dict[str, Any]:
     """Return compact custody for a tensor used in the loader-drift matrix."""
     cpu = tensor.detach().to(device="cpu").contiguous()
     return {
+        "schema": SHARED_INPUT_TENSOR_SCHEMA,
+        "tensor_role": tensor_role,
         "shape": list(cpu.shape),
         "dtype": str(cpu.dtype),
         "device_recorded": "cpu",
+        "contiguous": True,
+        "numel": int(cpu.numel()),
+        "element_size_bytes": int(cpu.element_size()),
+        "byte_length": int(cpu.numel() * cpu.element_size()),
         "sha256": hashlib.sha256(cpu.numpy().tobytes()).hexdigest(),
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
     }
+
+
+def _non_promotable_tensor_fields() -> dict[str, bool]:
+    return {
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+    }
+
+
+def _cell_spec(cell_id: str) -> dict[str, Any]:
+    for spec in INTENDED_CELL_SPECS:
+        if spec["cell_id"] == cell_id:
+            return spec
+    raise KeyError(f"unknown loader drift cell_id: {cell_id}")
+
+
+def write_shared_input_tensor_artifact(
+    *,
+    output_dir: Path,
+    cell_id: str,
+    batch_order: int,
+    tensor: torch.Tensor,
+    video_path: str,
+    sequence_index: int,
+) -> dict[str, Any]:
+    """Persist a decoded RGB tensor for shared-input CPU/CUDA introspection.
+
+    The artifact is diagnostic-only by construction. It carries the tensor plus
+    enough metadata for ``dump_scorer_activations.py --shared-input-tensor`` to
+    reject stale, malformed, or promotion-labeled inputs before a scorer
+    forward pass.
+    """
+    spec = _cell_spec(cell_id)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    cpu = tensor.detach().to(device="cpu").contiguous()
+    custody = tensor_custody(cpu)
+    artifact_path = output_dir / (
+        f"batch{batch_order:06d}_{cell_id}_{SHARED_INPUT_TENSOR_ROLE}.pt"
+    )
+    payload: dict[str, Any] = {
+        "schema": SHARED_INPUT_TENSOR_SCHEMA,
+        "created_by": "tools/probe_eval_loader_drift.py",
+        "created_at_utc": datetime.now(UTC).isoformat(timespec="seconds").replace(
+            "+00:00", "Z"
+        ),
+        "cell_id": cell_id,
+        "label": spec["label"],
+        "tensor_role": SHARED_INPUT_TENSOR_ROLE,
+        "loader_class": spec["loader_class"],
+        "decoder_backend": spec["decoder_backend"],
+        "raw_decode_device": spec["raw_decode_device"],
+        "forward_device_intended": spec["forward_device"],
+        "official_evaluator_shape": bool(spec["official_evaluator_shape"]),
+        "shared_input_reference_cell": spec.get("shared_input_reference_cell"),
+        "batch_order": int(batch_order),
+        "source_video_path": str(video_path),
+        "sequence_index": int(sequence_index),
+        "tensor_custody": custody,
+        "score_axis": "diagnostic_loader_drift",
+        "diagnostic_non_promotable": True,
+        **_non_promotable_tensor_fields(),
+        "tensor": cpu,
+    }
+    torch.save(payload, artifact_path)
+    record = {key: value for key, value in payload.items() if key != "tensor"}
+    record["artifact_path"] = str(artifact_path)
+    record["artifact_file_custody"] = _file_custody(artifact_path)
+    return record
 
 
 def compare_numeric_tensors(a: torch.Tensor, b: torch.Tensor) -> dict[str, Any]:
@@ -565,6 +655,50 @@ def future_remote_run_contract(args: argparse.Namespace) -> dict[str, Any]:
             "Future remote execution is a claimed diagnostic run only; it is "
             "not a contest score claim, promotion run, or rank/kill decision."
         ),
+    }
+
+
+def shared_input_artifact_contract(args: argparse.Namespace) -> dict[str, Any]:
+    artifact_dir = str(args.save_shared_input_dir) if args.save_shared_input_dir else None
+    return {
+        "schema": SHARED_INPUT_TENSOR_SCHEMA,
+        "tensor_role": SHARED_INPUT_TENSOR_ROLE,
+        "requested": args.save_shared_input_dir is not None,
+        "artifact_dir": artifact_dir,
+        "producer": "tools/probe_eval_loader_drift.py --save-shared-input-dir",
+        "consumer": "experiments/dump_scorer_activations.py --shared-input-tensor",
+        "consumer_command_template": [
+            ".venv/bin/python",
+            "experiments/dump_scorer_activations.py",
+            "--upstream-dir",
+            "upstream",
+            "--shared-input-tensor",
+            "${SHARED_INPUT_TENSOR_PT}",
+            "--device",
+            "${cpu_or_cuda}",
+            "--output-dir",
+            "${OUTPUT_DIR}",
+            "--capture-mode",
+            "fingerprint",
+        ],
+        "required_artifact_fields": [
+            "schema",
+            "cell_id",
+            "tensor_role",
+            "tensor_custody.sha256",
+            "score_claim",
+            "score_claim_valid",
+            "promotion_eligible",
+            "rank_or_kill_eligible",
+            "ready_for_exact_eval_dispatch",
+            "dispatch_attempted",
+        ],
+        "allowed_source_cell_ids": ["cpu_av", "cuda_dali"],
+        "interpretation": (
+            "Shared-input tensors are decoded RGB bytes for mechanism xray only; "
+            "they are not score rows and cannot promote or rank an archive."
+        ),
+        **_non_promotable_tensor_fields(),
     }
 
 
@@ -926,6 +1060,55 @@ def _next_batch_or_none(iterator: Any) -> tuple[str, int, torch.Tensor] | None:
         return None
 
 
+def _collect_av_shared_input_artifacts(
+    args: argparse.Namespace, artifacts: dict[str, Any]
+) -> tuple[list[dict[str, Any]], str, str | None]:
+    """Save locally available PyAV tensors when CUDA/DALI is not present."""
+    if args.save_shared_input_dir is None:
+        return [], "not_requested", None
+    missing, _missing_codes = _missing_reasons(AV_LOADER_REQUIRED_ARTIFACTS, artifacts)
+    if missing:
+        return [], "unavailable_missing_prerequisite", "; ".join(missing)
+    try:
+        if str(UPSTREAM) not in sys.path:
+            sys.path.insert(0, str(UPSTREAM))
+        from frame_utils import AVVideoDataset  # type: ignore
+
+        video_names = _load_video_names(args.video_names_file, args.video_limit)
+        av = AVVideoDataset(
+            video_names,
+            data_dir=args.data_dir,
+            batch_size=args.batch_size,
+            device=torch.device("cpu"),
+            num_threads=args.num_threads,
+            seed=args.seed,
+            prefetch_queue_depth=args.prefetch_queue_depth,
+        )
+        av.prepare_data()
+        av_iter = iter(_batch_iterator(av))
+        rows = []
+        for batch_idx in range(args.max_batches):
+            av_next = _next_batch_or_none(av_iter)
+            if av_next is None:
+                break
+            av_path, av_seq_idx, av_batch = av_next
+            rows.append(
+                write_shared_input_tensor_artifact(
+                    output_dir=args.save_shared_input_dir,
+                    cell_id="cpu_av",
+                    batch_order=batch_idx,
+                    tensor=av_batch,
+                    video_path=av_path,
+                    sequence_index=av_seq_idx,
+                )
+            )
+    except Exception as exc:  # pragma: no cover - depends on local video stack
+        return [], "runtime_error", f"{type(exc).__name__}: {exc}"
+    if not rows:
+        return [], "runtime_empty", "no PyAV batches emitted"
+    return rows, "written", None
+
+
 def source_file_custody(args: argparse.Namespace, artifacts: dict[str, Any]) -> dict[str, Any]:
     return {
         "upstream_frame_utils": _file_custody(UPSTREAM / "frame_utils.py"),
@@ -1053,6 +1236,12 @@ def build_probe_report(args: argparse.Namespace) -> dict[str, Any]:
         "loader_device_custody": loader_device_custody(),
         "device_axis_custody": device_axis_custody(),
         "future_remote_run_contract": future_remote_run_contract(args),
+        "shared_input_artifact_contract": shared_input_artifact_contract(args),
+        "shared_input_artifacts": [],
+        "shared_input_artifact_status": (
+            "requested_pending" if args.save_shared_input_dir else "not_requested"
+        ),
+        "shared_input_artifact_unavailable_reason": None,
         "custody_labels": {
             "artifact_kind": "diagnostic_loader_forward_drift_probe",
             "score_path": "not_run",
@@ -1082,6 +1271,12 @@ def build_probe_report(args: argparse.Namespace) -> dict[str, Any]:
         ],
     }
     if raw_missing:
+        shared_rows, shared_status, shared_reason = _collect_av_shared_input_artifacts(
+            args, artifacts
+        )
+        report["shared_input_artifacts"] = shared_rows
+        report["shared_input_artifact_status"] = shared_status
+        report["shared_input_artifact_unavailable_reason"] = shared_reason
         _mark_comparison_unavailable(
             report,
             unavailable_class=COMPARISON_UNAVAILABLE_MISSING_PREREQUISITE,
@@ -1091,6 +1286,12 @@ def build_probe_report(args: argparse.Namespace) -> dict[str, Any]:
         return report
 
     if not cuda_ok:
+        shared_rows, shared_status, shared_reason = _collect_av_shared_input_artifacts(
+            args, artifacts
+        )
+        report["shared_input_artifacts"] = shared_rows
+        report["shared_input_artifact_status"] = shared_status
+        report["shared_input_artifact_unavailable_reason"] = shared_reason
         _mark_comparison_unavailable(
             report,
             unavailable_class=COMPARISON_UNAVAILABLE_MISSING_PREREQUISITE,
@@ -1134,6 +1335,7 @@ def build_probe_report(args: argparse.Namespace) -> dict[str, Any]:
 
         rows = []
         forward_rows = []
+        shared_input_artifacts = []
         model_cache: dict[str, torch.nn.Module] = {}
         dali_iter = iter(_batch_iterator(dali))
         av_iter = iter(_batch_iterator(av))
@@ -1154,6 +1356,25 @@ def build_probe_report(args: argparse.Namespace) -> dict[str, Any]:
                 raise RuntimeError(f"unexpected DALI batch shape: {list(dali_cpu.shape)}")
             if list(av_cpu.shape)[1:] != [seq_len, camera_size[1], camera_size[0], 3]:
                 raise RuntimeError(f"unexpected AV batch shape: {list(av_cpu.shape)}")
+            batch_shared_artifacts: dict[str, Any] = {}
+            if args.save_shared_input_dir is not None:
+                batch_shared_artifacts["av_rgb_uint8"] = write_shared_input_tensor_artifact(
+                    output_dir=args.save_shared_input_dir,
+                    cell_id="cpu_av",
+                    batch_order=batch_idx,
+                    tensor=av_cpu,
+                    video_path=av_path,
+                    sequence_index=av_seq_idx,
+                )
+                batch_shared_artifacts["dali_rgb_uint8"] = write_shared_input_tensor_artifact(
+                    output_dir=args.save_shared_input_dir,
+                    cell_id="cuda_dali",
+                    batch_order=batch_idx,
+                    tensor=dali_cpu,
+                    video_path=dali_path,
+                    sequence_index=dali_seq_idx,
+                )
+                shared_input_artifacts.extend(batch_shared_artifacts.values())
             rows.append(
                 {
                     "batch_order": batch_idx,
@@ -1171,6 +1392,7 @@ def build_probe_report(args: argparse.Namespace) -> dict[str, Any]:
                     },
                     "comparison": compare_tensors(dali_cpu, av_cpu),
                     "per_rgb_channel": per_channel_compare(dali_cpu, av_cpu),
+                    "shared_input_artifacts": batch_shared_artifacts,
                 }
             )
             if args.run_forward_cells:
@@ -1194,6 +1416,11 @@ def build_probe_report(args: argparse.Namespace) -> dict[str, Any]:
         return report
 
     report["comparison_rows"] = rows
+    report["shared_input_artifacts"] = shared_input_artifacts
+    report["shared_input_artifact_status"] = (
+        "written" if shared_input_artifacts else report["shared_input_artifact_status"]
+    )
+    report["shared_input_artifact_unavailable_reason"] = None
     report["forward_cell_rows"] = forward_rows
     report["forward_matrix_summary"] = forward_matrix_summary(
         requested=bool(args.run_forward_cells),
@@ -1238,6 +1465,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help=(
             "also run diagnostic PoseNet/SegNet forward cells for the 2x2 "
             "loader/device matrix; still emits no score claims"
+        ),
+    )
+    parser.add_argument(
+        "--save-shared-input-dir",
+        type=Path,
+        default=None,
+        help=(
+            "optional directory for non-promotable decoded RGB tensor artifacts "
+            "consumable by experiments/dump_scorer_activations.py "
+            "--shared-input-tensor"
         ),
     )
     parser.add_argument("--json-out", type=Path)

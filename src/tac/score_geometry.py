@@ -135,6 +135,72 @@ class TargetByteBudget:
         return "distortion_floors_exceed_target_before_rate"
 
 
+@dataclass(frozen=True)
+class PlannerAxisMarginals:
+    """Marginals expressed in the candidate-builder coordinate system.
+
+    ``target_axis="cuda_internal"`` means the candidate delta and the score
+    target are both measured on CUDA. ``target_axis="cpu_leaderboard"`` means
+    the candidate delta is still expressed as a CUDA-side change, but the
+    score response is rebased through the calibrated CPU leaderboard axis via
+    the chain rule. This keeps public-leaderboard planning from silently using
+    raw CUDA priorities.
+    """
+
+    target_axis: Literal["cuda_internal", "cpu_leaderboard"]
+    input_axis: Literal["cuda_candidate_delta"]
+    cuda_d_seg: float
+    cuda_d_pose: float
+    effective_d_seg: float
+    effective_d_pose: float
+    archive_bytes: int
+    seg_marginal: float
+    pose_marginal: float
+    bytes_marginal: float
+    seg_chain_scale: float
+    pose_chain_scale: float
+    priority_axis: Literal["seg", "pose", "bytes"]
+    tied_axes: tuple[str, ...]
+    calibration_class: str
+    evidence_grade: str
+    score_claim: bool = False
+    promotion_eligible: bool = False
+    rank_or_kill_eligible: bool = False
+    ready_for_exact_eval_dispatch: bool = False
+
+
+def _priority_axis_with_ties(
+    *,
+    seg_marginal: float,
+    pose_marginal: float,
+    bytes_marginal: float,
+    archive_bytes: int,
+    tie_rtol: float = 1e-9,
+) -> tuple[Literal["seg", "pose", "bytes"], tuple[str, ...]]:
+    """Return the highest-priority axis plus ties at the current scale.
+
+    Seg and pose marginals are score-points per distortion-unit. The byte
+    marginal is score-points per byte, so it is scaled by current archive
+    bytes to keep the legacy planner's "zero this axis" comparison stable.
+    """
+    if not math.isfinite(pose_marginal):
+        return "pose", ("pose",)
+    scaled_bytes = bytes_marginal * float(archive_bytes)
+    scores: list[tuple[float, Literal["seg", "pose", "bytes"]]] = [
+        (seg_marginal, "seg"),
+        (pose_marginal, "pose"),
+        (scaled_bytes, "bytes"),
+    ]
+    winner_score = max(score for score, _ in scores)
+    tied = tuple(
+        name
+        for score, name in scores
+        if math.isclose(score, winner_score, rel_tol=tie_rtol, abs_tol=tie_rtol)
+    )
+    winner: Literal["seg", "pose", "bytes"] = tied[0]  # type: ignore[assignment]
+    return winner, tied
+
+
 def contest_score(
     d_seg: float,
     d_pose: float,
@@ -473,6 +539,90 @@ def target_byte_budget_for_score(
     )
 
 
+def planner_axis_marginals(
+    *,
+    target_axis: Literal["cuda_internal", "cpu_leaderboard"],
+    cuda_d_seg: float,
+    cuda_d_pose: float,
+    archive_bytes: int,
+    archive_class: str = "hnerv",
+    reference_bytes: int = CONTEST_REFERENCE_BYTES,
+    tie_rtol: float = 1e-9,
+) -> PlannerAxisMarginals:
+    """Return target-axis-aware marginals for solver/planner ranking.
+
+    The public leaderboard's CPU axis is not interchangeable with the CUDA
+    axis. For CPU leaderboard planning, this helper treats input candidate
+    deltas as CUDA-side deltas and applies the calibrated chain-rule scales:
+
+    ``dS_cpu / d(d_seg_cuda) = dS_cpu / d(d_seg_cpu) * (1 / R_seg)``
+    ``dS_cpu / d(d_pose_cuda) = dS_cpu / d(d_pose_cpu) * (1 / R_pose)``
+
+    The result is prediction-only planner metadata. It cannot promote, rank,
+    retire, dispatch, or claim a score without paired exact-eval custody.
+    """
+    if cuda_d_seg < 0.0 or cuda_d_pose < 0.0 or archive_bytes < 0:
+        raise ValueError("planner axis marginal inputs must be non-negative")
+
+    if target_axis == "cuda_internal":
+        grad = score_gradient(cuda_d_seg, cuda_d_pose, reference_bytes=reference_bytes)
+        seg_marginal = grad.d_seg
+        pose_marginal = grad.d_pose
+        bytes_marginal = grad.d_bytes
+        effective_d_seg = cuda_d_seg
+        effective_d_pose = cuda_d_pose
+        seg_scale = 1.0
+        pose_scale = 1.0
+        calibration_class = archive_class
+        evidence_grade = "[prediction; cuda-internal planner marginals]"
+    elif target_axis == "cpu_leaderboard":
+        from tac.optimization.cuda_cpu_axis_calibration import CudaCpuCalibration
+
+        cal = CudaCpuCalibration(architecture_class=archive_class)
+        effective_d_pose = cal.effective_pose_loss_for_cpu(cuda_d_pose)
+        effective_d_seg = max(0.0, cuda_d_seg / cal.r_seg)
+        grad = score_gradient(
+            effective_d_seg,
+            effective_d_pose,
+            reference_bytes=reference_bytes,
+        )
+        seg_scale = 1.0 / cal.r_seg
+        pose_scale = 1.0 / cal.r_pose
+        seg_marginal = grad.d_seg * seg_scale
+        pose_marginal = grad.d_pose * pose_scale
+        bytes_marginal = grad.d_bytes
+        calibration_class = cal.architecture_class
+        evidence_grade = "[prediction; cpu-leaderboard chain-rule planner marginals]"
+    else:
+        raise ValueError(f"unknown target_axis: {target_axis!r}")
+
+    priority_axis, tied_axes = _priority_axis_with_ties(
+        seg_marginal=seg_marginal,
+        pose_marginal=pose_marginal,
+        bytes_marginal=bytes_marginal,
+        archive_bytes=archive_bytes,
+        tie_rtol=tie_rtol,
+    )
+    return PlannerAxisMarginals(
+        target_axis=target_axis,
+        input_axis="cuda_candidate_delta",
+        cuda_d_seg=cuda_d_seg,
+        cuda_d_pose=cuda_d_pose,
+        effective_d_seg=effective_d_seg,
+        effective_d_pose=effective_d_pose,
+        archive_bytes=archive_bytes,
+        seg_marginal=seg_marginal,
+        pose_marginal=pose_marginal,
+        bytes_marginal=bytes_marginal,
+        seg_chain_scale=seg_scale,
+        pose_chain_scale=pose_scale,
+        priority_axis=priority_axis,
+        tied_axes=tied_axes,
+        calibration_class=calibration_class,
+        evidence_grade=evidence_grade,
+    )
+
+
 def predict_cpu_axis_marginals(
     archive_features: dict | None = None,
     *,
@@ -642,39 +792,19 @@ def recommend_dispatch_axis_dual(
     )
     tie_rtol = 1e-9
 
-    def _priority_with_ties(
-        seg_marg: float, pose_marg: float, bytes_marg: float,
-    ) -> tuple[Literal["seg", "pose", "bytes"], tuple[str, ...]]:
-        # Priority is the axis with the highest marginal score-improvement
-        # per unit reduction. d_bytes is in score/byte; d_seg and d_pose are
-        # in score/distortion-unit. We compare them by normalizing to a
-        # common "score-points if axis is fully zeroed" scale.
-        # Returns (deterministic_winner, tied_axes_at_max).
-        if not math.isfinite(pose_marg):
-            return "pose", ("pose",)
-        scaled_bytes = bytes_marg * float(archive_bytes)
-        scores: list[tuple[float, Literal["seg", "pose", "bytes"]]] = [
-            (seg_marg, "seg"),
-            (pose_marg, "pose"),
-            (scaled_bytes, "bytes"),
-        ]
-        winner_score = max(s for s, _ in scores)
-        tied = tuple(
-            name for s, name in scores
-            if math.isclose(s, winner_score, rel_tol=tie_rtol, abs_tol=tie_rtol)
-        )
-        # Deterministic tiebreak preserves the legacy seg-first ordering used
-        # by older callers; new callers should branch on len(tied) > 1.
-        winner: Literal["seg", "pose", "bytes"] = tied[0]  # type: ignore[assignment]
-        return winner, tied
-
-    cuda_priority, cuda_tied = _priority_with_ties(
-        cuda_grad.d_seg, cuda_grad.d_pose, cuda_grad.d_bytes,
+    cuda_priority, cuda_tied = _priority_axis_with_ties(
+        seg_marginal=cuda_grad.d_seg,
+        pose_marginal=cuda_grad.d_pose,
+        bytes_marginal=cuda_grad.d_bytes,
+        archive_bytes=archive_bytes,
+        tie_rtol=tie_rtol,
     )
-    cpu_priority, cpu_tied = _priority_with_ties(
-        float(cpu_view["seg_marginal"]),
-        float(cpu_view["pose_marginal"]),
-        float(cpu_view["bytes_marginal"]),
+    cpu_priority, cpu_tied = _priority_axis_with_ties(
+        seg_marginal=float(cpu_view["seg_marginal"]),
+        pose_marginal=float(cpu_view["pose_marginal"]),
+        bytes_marginal=float(cpu_view["bytes_marginal"]),
+        archive_bytes=archive_bytes,
+        tie_rtol=tie_rtol,
     )
     # Two priorities differ either when their deterministic winner differs OR
     # when one is at a tie and the other is not (parallel-attack vs single-axis).
@@ -765,6 +895,7 @@ __all__ = [
     "SEG_COEFFICIENT",
     "DualAxisDispatchRecommendation",
     "OperatingRegime",
+    "PlannerAxisMarginals",
     "ScoreDecomposition",
     "ScoreGradient",
     "TargetByteBudget",
@@ -776,6 +907,7 @@ __all__ = [
     "marginal_value_per_byte",
     "operating_regime",
     "predict_cpu_axis_marginals",
+    "planner_axis_marginals",
     "project_onto_pareto_envelope",
     "recommend_dispatch_axis_dual",
     "score_decomposition",

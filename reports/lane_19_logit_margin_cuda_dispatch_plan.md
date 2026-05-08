@@ -1,8 +1,15 @@
 # Lane 19 — Contest-CUDA Dispatch Plan (Phase F)
 
+> Supersession note (2026-05-08 signal-loss review): this is a historical
+> pre-Level-2 dispatch memo, not current launch authority. Do not dispatch from
+> the commands below without revalidating against current `main`, opening a
+> fresh `tools/claim_lane_dispatch.py claim ...` row, passing current
+> preflight, and obtaining explicit operator authorization. The bands in this
+> memo are predictions, not achieved score evidence.
+
 **Date:** 2026-04-30
 **Lane:** 19 (SegNet logit-margin boundary loss)
-**Status:** Code-complete + 3-clean adversarial review passed; CUDA dispatch READY-TO-LAUNCH (operator approval per project budget protocol).
+**Status:** Historical plan only; not ready-to-launch without the current gates above.
 
 ## Cost estimate
 
@@ -82,4 +89,4 @@ disown
 
 Per CLAUDE.md project rule: "Cost ≥$10: pre-approval. Estimate $1.50 → proceed with plan memo." This memo IS the proceed-document.
 
-**Standing instruction**: launch when GPU operator next provisions a 4090 slot. No additional approval needed.
+**Standing instruction superseded:** no launch is authorized by this memo.

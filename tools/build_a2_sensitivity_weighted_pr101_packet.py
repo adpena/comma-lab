@@ -1731,6 +1731,7 @@ def main(argv: list[str] | None = None) -> int:
             print("running inflate-parity on each variant…")
             source_archive_resolved = _repo_path(args.source_archive)
             ladder_passed_all = True
+            updated_variants: list[dict[str, Any]] = []
             for variant in manifest.get("variants", []):
                 variant_id = variant["variant_id"]
                 variant_dir = _repo_path(output_dir) / "variants" / variant_id
@@ -1750,6 +1751,11 @@ def main(argv: list[str] | None = None) -> int:
                     manifest_path=variant_manifest_path,
                     parity_record=parity,
                 )
+                updated_variant = read_json(variant_manifest_path)
+                if isinstance(updated_variant, dict):
+                    updated_variants.append(updated_variant)
+                else:
+                    updated_variants.append(variant)
                 status = "PASS" if parity.get("passed") else "FAIL"
                 print(f"  variant={variant_id} inflate_parity={status}")
                 if not parity.get("passed"):
@@ -1759,10 +1765,20 @@ def main(argv: list[str] | None = None) -> int:
                 "passed": ladder_passed_all,
                 "evidence": "per-variant inflate_parity_record entries in candidate_manifest.json",
             }
-            _apply_inflate_parity_to_manifest(
+            ladder_manifest = read_json(ladder_manifest_path)
+            if isinstance(ladder_manifest, dict):
+                ladder_manifest["variants"] = updated_variants
+                ladder_manifest.pop("manifest_sha256_excluding_self", None)
+                ladder_manifest["manifest_sha256_excluding_self"] = _canonical_json_sha256(
+                    ladder_manifest
+                )
+                write_json(ladder_manifest_path, ladder_manifest)
+            final_ladder_manifest = _apply_inflate_parity_to_manifest(
                 manifest_path=ladder_manifest_path,
                 parity_record=ladder_parity,
             )
+            if _repo_path(json_out) != ladder_manifest_path:
+                write_json(_repo_path(json_out), final_ladder_manifest)
             print(f"inflate-parity ladder: {'PASS' if ladder_passed_all else 'FAIL'}")
         return 0
     except PacketClosureBlocked as exc:

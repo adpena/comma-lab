@@ -85,6 +85,16 @@ def test_intended_cells_record_four_labels_and_fail_closed_axes(monkeypatch) -> 
         "tools/claim_lane_dispatch.py",
         "claim",
     ]
+    shared_contract = report["shared_input_artifact_contract"]
+    assert shared_contract["schema"] == mod.SHARED_INPUT_TENSOR_SCHEMA
+    assert shared_contract["requested"] is False
+    assert shared_contract["score_claim"] is False
+    assert shared_contract["score_claim_valid"] is False
+    assert shared_contract["promotion_eligible"] is False
+    assert "experiments/dump_scorer_activations.py" in shared_contract["consumer"]
+    assert "--shared-input-tensor" in shared_contract["consumer_command_template"]
+    assert report["shared_input_artifacts"] == []
+    assert report["shared_input_artifact_status"] == "not_requested"
 
     cells = {cell["cell_id"]: cell for cell in report["intended_cells"]}
     assert list(cells) == [

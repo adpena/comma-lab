@@ -365,6 +365,14 @@ def test_run_inflate_parity_cli_uses_packet_subdir_archive(tmp_path: Path, monke
             output_dir / "variants" / variant_id / "packet" / "archive.zip",
         )
     ]
+    embedded_variant = manifest["variants"][0]
+    variant_manifest = json.loads(
+        (output_dir / "variants" / variant_id / "candidate_manifest.json").read_text()
+    )
+    assert embedded_variant["packet_closure"]["inflate_parity_status"] == "passed"
+    assert variant_manifest["packet_closure"]["inflate_parity_status"] == "passed"
+    assert "packet_local_inflate_parity_not_run" not in embedded_variant["dispatch_blockers"]
+    assert embedded_variant["packet_closure"] == variant_manifest["packet_closure"]
 
 
 def test_inflate_parity_allows_score_affecting_output_byte_differences(tmp_path: Path) -> None:
