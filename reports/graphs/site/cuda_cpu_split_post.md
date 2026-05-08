@@ -149,8 +149,8 @@ Strategic exploitation:
   PR106 frontier — at the leaderboard axis, **SegNet is ~4× more
   marginal than pose**.
 - **Calibrated noise injection**: train with σ ≈ 1.7e-3 per-op-equivalent
-  noise. Tightens R<sub>pose</sub> from ~5 to ~3.5 by training the renderer
-  to be robust to the precision-noise floor.
+  noise as a robustness ablation. This may improve CPU/CUDA transfer if the
+  fitted residual scale is causal, but paired exact eval must decide.
 
 ## How can you verify this yourself?
 

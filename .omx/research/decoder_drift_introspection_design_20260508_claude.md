@@ -15,7 +15,13 @@ The upstream author **explicitly designed AVVideoDataset to byte-match NVDEC** (
 
 **Lipschitz back-of-envelope** (verified by `test_lipschitz_prediction_pr106_pixel_count_dominant`): assuming a conservative 1.5-LSB per-pixel max-abs drift between DALI and AV at 874×1164×3 RGB, and the smallest plausible PoseNet Lipschitz `L≈1e-5` per normalized RGB unit, the **predicted pose-component drift is 4.1e-4 — about 2.9× the observed 1.4e-4 PR106 gap**. Decoder drift CAN ACCOUNT FOR the entire observed pose ratio without invoking ANY FastViT precision compounding.
 
-**Most likely hypothesis**: H1 (decoder-dominant) or H3 (mixed). H2 (network-dominant only) is unlikely given the math — it requires DALI-vs-AV to be byte-identical, which the upstream author warns against in code comments. **Smallest discriminating test**: dispatch a 10-frame DALI dump on Lightning T4, compare to the local AV dump, run quantify_drift. If max-abs is ≤1 LSB and mean-abs ≤0.1 LSB, the byte-match is tight enough that decoder is subdominant; otherwise, decoder is the dominant suspect.
+**Current prior**: H1 (decoder-dominant) or H3 (mixed). H2
+(network-dominant only) remains live until DALI-vs-AV byte drift and
+shared-input scorer drift are measured on the same CUDA host. **Smallest
+discriminating test**: dispatch a 10-frame DALI dump on Lightning T4, compare
+to the local AV dump, run `quantify_drift`, and pair it with shared-input
+PoseNet/SegNet forwards. Only that matrix can turn the prior into mechanism
+evidence.
 
 ---
 
@@ -201,13 +207,13 @@ Tests at `src/tac/tests/test_decoder_drift_introspection.py`:
 
 ## 5. Hypothesis test plan
 
-### H1 (decoder-dominant): >70% of the 0.033 score gap is from decoder-bytes drift
+### H1 (decoder-dominant): most of the 0.033 score gap is from decoder-bytes drift
 **Predicted signature**: max-abs DALI-vs-AV ≥ 2 LSB, mean-abs ≥ 0.5 LSB on > 5% of pixels.
 
-### H2 (network-dominant): <30% from decoder; FastViT precision compounding explains the rest
+### H2 (network-dominant): decoder-byte drift is small; shared-input scorer kernels explain most of the rest
 **Predicted signature**: max-abs DALI-vs-AV ≤ 1 LSB, mean-abs ≤ 0.1 LSB on >95% of pixels.
 
-### H3 (mixed): roughly equal contributions
+### H3 (mixed): decoder and shared-input scorer effects both contribute
 **Predicted signature**: max-abs ~1-2 LSB, mean-abs ~0.2-0.4 LSB.
 
 ### Discriminating tests (each costs ~$0.10-0.30 on Lightning T4; do NOT dispatch in this task)
@@ -241,7 +247,9 @@ Test C is the cheapest (no GPU needed) and discriminates H1/H2 if the curve at d
 ### If H1 (decoder-dominant) holds
 - **Train against AV-decoded bytes**, not DALI-decoded. The renderer's outputs land in a regime where libav's reconstruction differs from NVDEC's by less.
 - **Renderer-output post-processing**: pre-quantize to a uint8 grid that survives both NVDEC and libav YUV→RGB pipelines identically. (Drop the lowest few bits where rounding diverges.)
-- **Score formula re-interpretation**: pose term becomes "decoder-noise rejection" not "FastViT precision compounding". All paper §3.4 claims about FastViT need to flip.
+- **Score formula re-interpretation**: pose term becomes partly a
+  decoder-noise rejection signal, not a pure shared-input scorer-kernel
+  signal. Paper claims should preserve the measured share once it exists.
 - **Submission auth eval discipline**: ALWAYS run the AV path locally + the DALI path on Lightning T4 BEFORE submitting; gap > 0.01 score points means decoder drift is not under control.
 
 ### If H2 (network-dominant) holds
