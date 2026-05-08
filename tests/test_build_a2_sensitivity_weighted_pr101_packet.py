@@ -75,7 +75,9 @@ def _write_runtime(path: Path, *, patchable: bool = True) -> Path:
     )
     if patchable:
         codec.write_text(
-            """DECODER_BLOB_LEN = 4
+            """import torch
+
+DECODER_BLOB_LEN = 4
 LATENT_BLOB_LEN = 2
 N_PAIRS = 1
 LATENT_DIM = 1
@@ -84,11 +86,11 @@ EVAL_SIZE = (1, 1)
 
 
 def decode_decoder_compact(decoder_blob):
-    return {"decoder": decoder_blob}
+    return {"decoder": torch.tensor([decoder_blob[0]], dtype=torch.float32)}
 
 
 def decode_latents_compact(latent_blob):
-    return latent_blob
+    return torch.tensor([[latent_blob[0]]], dtype=torch.float32)
 
 
 def apply_latent_sidecar(latents, sidecar_blob):
@@ -200,7 +202,8 @@ def test_builds_byte_closed_packet_ladder_with_non_promotable_manifest(tmp_path:
     assert variant["packet_closure"]["byte_closed_packet_built"] is True
     assert variant["packet_closure"]["runtime_consumes_changed_archive_bytes"] is True
     assert "no_byte_closed_runtime_packet_built" not in manifest["dispatch_blockers"]
-    assert "packet_local_inflate_parity_not_run" not in manifest["dispatch_blockers"]
+    assert "packet_local_inflate_parity_not_run" in manifest["dispatch_blockers"]
+    assert "packet_local_inflate_parity_not_run" not in manifest["packet_closure"]["cleared_blockers"]
     assert "diagnostic_or_stub_sensitivity_map_not_score_authority" in manifest["dispatch_blockers"]
     assert "diagnostic_or_stub_sensitivity_map_not_score_authority" in variant["dispatch_blockers"]
     assert "is_stub=true" in variant["dispatch_blockers"]
@@ -295,6 +298,60 @@ def test_blocked_manifest_names_missing_runtime_wire_contract(tmp_path: Path, mo
     assert manifest["promotion_eligible"] is False
     assert manifest["rank_or_kill_eligible"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
+def test_run_inflate_parity_cli_uses_packet_subdir_archive(tmp_path: Path, monkeypatch) -> None:
+    tool = _load_tool()
+    _install_tiny_pr101_contract(monkeypatch, tool)
+    _install_fake_encoder(monkeypatch, tool)
+    source_archive = tmp_path / "source" / "archive.zip"
+    _write_zip(source_archive, b"DECO" + b"LA" + b"SIDE")
+    runtime = _write_runtime(tmp_path / "runtime")
+    state_dict = _write_state_dict(tmp_path / "state.pt")
+    a2_manifest = _write_a2_manifest(tmp_path / "a2.json", [2, 1])
+    output_dir = tmp_path / "out"
+    calls: list[tuple[Path, Path]] = []
+
+    def fake_verify_inflate_parity(
+        *,
+        packet_dir,
+        candidate_archive_path,
+        source_archive_path,
+        timeout_seconds,
+    ):
+        del source_archive_path, timeout_seconds
+        calls.append((Path(packet_dir), Path(candidate_archive_path)))
+        return {"passed": True, "cleared_blockers": ["packet_local_inflate_parity_not_run"]}
+
+    monkeypatch.setattr(tool, "verify_inflate_parity", fake_verify_inflate_parity)
+
+    rc = tool.main(
+        [
+            "--a2-manifest",
+            str(a2_manifest),
+            "--state-dict",
+            str(state_dict),
+            "--source-archive",
+            str(source_archive),
+            "--source-runtime-dir",
+            str(runtime),
+            "--output-dir",
+            str(output_dir),
+            "--variant-limit",
+            "1",
+            "--run-inflate-parity",
+        ]
+    )
+
+    assert rc == 0
+    manifest = json.loads((output_dir / "a2_packet_ladder_manifest.json").read_text())
+    variant_id = manifest["variants"][0]["variant_id"]
+    assert calls == [
+        (
+            output_dir / "variants" / variant_id / "packet",
+            output_dir / "variants" / variant_id / "packet" / "archive.zip",
+        )
+    ]
 
 
 def test_refuses_output_directory_overlapping_source_runtime(tmp_path: Path, monkeypatch) -> None:

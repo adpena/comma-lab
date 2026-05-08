@@ -30,7 +30,7 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
-from tac.repo_io import json_text, repo_relative, sha256_file, write_json  # noqa: E402
+from tac.repo_io import json_text, read_json, repo_relative, sha256_file, write_json  # noqa: E402
 
 TOOL_NAME = "tools/probe_a2_packet_runtime_closure.py"
 SCHEMA = "a2_packet_runtime_closure_probe.v1"
@@ -73,6 +73,69 @@ def _sha256_bytes(payload: bytes) -> str:
 
 def _canonical_json_sha256(payload: Any) -> str:
     return hashlib.sha256(json_text(payload).encode("utf-8")).hexdigest()
+
+
+def _tensor_sha256(tensor: torch.Tensor) -> str:
+    cpu = tensor.detach().cpu().contiguous()
+    h = hashlib.sha256()
+    h.update(str(cpu.dtype).encode("utf-8"))
+    h.update(json_text(list(cpu.shape)).encode("utf-8"))
+    h.update(cpu.numpy().tobytes())
+    return h.hexdigest()
+
+
+def _load_candidate_manifest(
+    *,
+    packet_dir: Path,
+    candidate_archive_record: dict[str, Any],
+    candidate_manifest_path: Path | None,
+) -> dict[str, Any]:
+    path = candidate_manifest_path or packet_dir.parent / "candidate_manifest.json"
+    if not path.is_file():
+        return {
+            "present": False,
+            "path": _repo_rel(path),
+            "blockers": ["candidate_manifest_missing_runtime_closure_not_promotable"],
+            "semantic_payload_changed": False,
+            "semantic_payload_changed_source": "manifest_missing",
+        }
+    payload = read_json(path)
+    if not isinstance(payload, dict):
+        raise RuntimeClosureBlocked(
+            f"candidate manifest is not a JSON object: {path}",
+            ["candidate_manifest_not_object"],
+        )
+    archive = payload.get("candidate_archive")
+    if not isinstance(archive, dict):
+        raise RuntimeClosureBlocked(
+            f"candidate manifest missing candidate_archive: {path}",
+            ["candidate_manifest_missing_candidate_archive"],
+        )
+    if archive.get("sha256") != candidate_archive_record["sha256"]:
+        raise RuntimeClosureBlocked(
+            "candidate manifest SHA does not match candidate archive",
+            ["candidate_manifest_archive_sha_mismatch"],
+        )
+    if int(archive.get("bytes", -1)) != int(candidate_archive_record["bytes"]):
+        raise RuntimeClosureBlocked(
+            "candidate manifest byte count does not match candidate archive",
+            ["candidate_manifest_archive_bytes_mismatch"],
+        )
+    blockers = payload.get("dispatch_blockers")
+    return {
+        "present": True,
+        "path": _repo_rel(path),
+        "sha256": sha256_file(path),
+        "blockers": list(blockers) if isinstance(blockers, list) else [],
+        "semantic_payload_changed": bool(payload.get("semantic_payload_changed")),
+        "semantic_payload_changed_source": "candidate_manifest.semantic_payload_changed",
+        "manifest_schema": payload.get("schema"),
+        "manifest_status": payload.get("status"),
+        "false_authority_fields": {
+            key: payload.get(key)
+            for key in FALSE_AUTHORITY_FIELDS
+        },
+    }
 
 
 def _validate_zip_member_name(name: str) -> None:
@@ -212,14 +275,25 @@ def _probe_payload(
                 f"{label}: decoder state entry {name!r} is not a tensor",
                 ["decoder_state_contains_non_tensor"],
             )
+        tensor_hash = _tensor_sha256(tensor)
         tensor_rows.append(
             {
                 "name": name,
                 "shape": list(tensor.shape),
                 "dtype": str(tensor.dtype),
                 "numel": int(tensor.numel()),
+                "sha256": tensor_hash,
             }
         )
+    decoder_state_digest_rows = [
+        {
+            "name": row["name"],
+            "shape": row["shape"],
+            "dtype": row["dtype"],
+            "sha256": row["sha256"],
+        }
+        for row in tensor_rows
+    ]
     return {
         "label": label,
         "member_name": member_name,
@@ -230,9 +304,11 @@ def _probe_payload(
         "unexpected_keys": list(incompatible.unexpected_keys),
         "decoder_tensor_count": len(decoder_sd),
         "decoder_parameter_count": sum(int(tensor.numel()) for tensor in decoder_sd.values()),
+        "decoder_state_sha256": _canonical_json_sha256(decoder_state_digest_rows),
         "latents_type": type(latents).__name__,
         "latents_shape": _shape(latents),
         "latents_dtype": str(getattr(latents, "dtype", "")),
+        "latents_sha256": _tensor_sha256(latents) if torch.is_tensor(latents) else None,
         "meta": {
             "n_pairs": int(meta["n_pairs"]),
             "latent_dim": int(meta["latent_dim"]),
@@ -248,6 +324,7 @@ def probe_runtime_closure(
     packet_dir: Path,
     source_archive: Path,
     candidate_archive: Path,
+    candidate_manifest_path: Path | None = None,
     created_utc: str | None = None,
 ) -> dict[str, Any]:
     packet_dir = _repo_path(packet_dir)
@@ -255,6 +332,15 @@ def probe_runtime_closure(
     candidate_archive = _repo_path(candidate_archive)
     source_record, source_member_name, source_payload = _read_single_member_zip(source_archive)
     candidate_record, candidate_member_name, candidate_payload = _read_single_member_zip(candidate_archive)
+    candidate_manifest = _load_candidate_manifest(
+        packet_dir=packet_dir,
+        candidate_archive_record=candidate_record,
+        candidate_manifest_path=(
+            _repo_path(candidate_manifest_path)
+            if candidate_manifest_path is not None
+            else None
+        ),
+    )
     if source_member_name != candidate_member_name:
         raise RuntimeClosureBlocked(
             f"source/candidate member name mismatch: {source_member_name!r} vs {candidate_member_name!r}",
@@ -290,6 +376,21 @@ def probe_runtime_closure(
     finally:
         _restore_packet_runtime_modules(old_codec, old_model)
 
+    decoded_decoder_state_changed = (
+        source_probe["decoder_state_sha256"] != candidate_probe["decoder_state_sha256"]
+    )
+    semantic_payload_changed = bool(candidate_manifest["semantic_payload_changed"])
+    if semantic_payload_changed and not decoded_decoder_state_changed:
+        raise RuntimeClosureBlocked(
+            "candidate manifest claims semantic payload changed, but decoded decoder tensors match source",
+            ["semantic_payload_changed_but_decoded_decoder_state_unchanged"],
+        )
+    dispatch_blockers = sorted(
+        {
+            *BASE_BLOCKERS,
+            *candidate_manifest["blockers"],
+        }
+    )
     manifest = {
         "schema": SCHEMA,
         "tool": TOOL_NAME,
@@ -303,21 +404,33 @@ def probe_runtime_closure(
         "packet_dir": _repo_rel(packet_dir),
         "source_archive": source_record,
         "candidate_archive": candidate_record,
+        "candidate_manifest": candidate_manifest,
         "runtime_closure": {
             "verified": True,
             "source_stock_fallback_parse_passed": True,
             "candidate_a2_parse_passed": True,
             "strict_model_load_passed": True,
             "source_candidate_member_name_match": True,
-            "cleared_blockers": ["packet_local_inflate_parity_not_run"],
-            "remaining_blockers": BASE_BLOCKERS,
+            "decoded_decoder_state_changed": decoded_decoder_state_changed,
+            "semantic_payload_changed": semantic_payload_changed,
+            "cleared_blockers": [],
+            "cleared_blockers_by_evidence": {},
+            "note": (
+                "This probe proves packet-local parse/model-load closure and "
+                "decoded tensor change only. It does not clear inflate parity, "
+                "score, lane-claim, or inherited candidate-manifest blockers."
+            ),
+            "remaining_blockers": dispatch_blockers,
         },
         "source_probe": source_probe,
         "candidate_probe": candidate_probe,
-        "score_affecting_payload_changed": (
+        "charged_bits_changed": (
             source_record["member"]["sha256"] != candidate_record["member"]["sha256"]
         ),
-        "dispatch_blockers": BASE_BLOCKERS,
+        "score_affecting_payload_changed": semantic_payload_changed,
+        "semantic_payload_changed": semantic_payload_changed,
+        "semantic_payload_changed_source": candidate_manifest["semantic_payload_changed_source"],
+        "dispatch_blockers": dispatch_blockers,
     }
     manifest["manifest_sha256_excluding_self"] = _canonical_json_sha256(manifest)
     return manifest
@@ -357,6 +470,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--packet-dir", required=True, type=Path)
     parser.add_argument("--source-archive", required=True, type=Path)
     parser.add_argument("--candidate-archive", type=Path)
+    parser.add_argument("--candidate-manifest", type=Path)
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--now-utc")
     parser.add_argument("--fail-if-blocked", action="store_true")
@@ -376,6 +490,7 @@ def main(argv: list[str] | None = None) -> int:
             packet_dir=args.packet_dir,
             source_archive=args.source_archive,
             candidate_archive=args.candidate_archive,
+            candidate_manifest_path=args.candidate_manifest,
             created_utc=created_utc,
         )
         write_json(_repo_path(args.json_out), manifest)

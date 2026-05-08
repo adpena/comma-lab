@@ -106,7 +106,8 @@ landing. **Class-level prevention.** PASS.
 ## Cross-references
 
 - Memory file: `feedback_codex_finding_a2_packet_inflate_parity_FIXED_20260508.md`
-- Codex review source: `/tmp/codex_runs/phase_a_codemath_20260508T161501Z/output.txt`
+- Codex review source: transient local review transcript summarized here; no
+  durable temp-directory path is cited per the transient-evidence ban.
 - Sister findings reviews: `codex_finding_1_operator_approval_scoping_recursive_review_20260508.md`,
   `codex_finding_2_public_intake_pristine_recursive_review_20260508.md`,
   `codex_findings_3_4_status_dirtypaths_rebuild_recipe_recursive_review_20260508.md`,
