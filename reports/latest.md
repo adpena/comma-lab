@@ -1,5 +1,104 @@
 # Latest Report - 2026-05-04 PR106 belt_and_suspenders adapter contest-faithful status
 
+## 2026-05-08 — CUDA vs CPU auth eval split: leaderboard ranks by CPU axis
+
+**Headline:** the contest's `upstream/evaluate.py` produces two distinct
+authoritative score axes for the same archive bytes — `--device cuda` and
+`--device cpu` — and the public leaderboard ranks by the **CPU** score, not
+CUDA. We discovered this 2026-05-08, four days after the deadline closed.
+
+**Empirical content** (5 paired bot comments, no new compute):
+
+| | mean | σ | range |
+|---|---:|---:|---|
+| `R_pose = pose_cuda / pose_cpu` | 5.04 | 0.10 | [4.97, 5.21] |
+| `R_seg  = seg_cuda  / seg_cpu`  | 1.17 | 0.01 | [1.16, 1.18] |
+| `Δscore = score_cuda − score_cpu` | 0.0330 | 0.0004 | [0.0325, 0.0335] |
+
+70% of the gap sits in pose, 30% in seg, 0% in rate (rate term bit-identical).
+
+**Mechanism hypothesis (3-axis additive):** (a) decoder split — `DaliVideoDataset`
+for CUDA hardware NVDEC vs `AVVideoDataset` for CPU libavcodec software decode
+produces different RGB uint8 from the same `.mkv`; (b) PoseNet FP32 conv-stack
+noise floor with `σ²_cuda ≈ K · L · ε² · ||x||²`, predicting R_pose ≈ 5.0 at
+medal-band pose<sub>cpu</sub> = 3.5e-5 — numerically perfect match for observed
+5.04; (c) Hydra-head MLP. The original "FastViT TF32-attention compounding"
+hypothesis was falsified on three independent grounds (RepMixer not attention,
+T4 has no TF32 hardware, PyTorch default `allow_tf32=False`).
+
+**Score-formula amplification:** `sqrt(10·d_pose)` softens the 5× pose ratio
+to 2.24× in absolute pose-term contribution, but pose contribution is *larger*
+in absolute score points on CUDA than on CPU (0.0417 vs 0.0187). At PR106's
+operating point the May 4 race postmortem rule "pose 2.71× more marginal than
+seg" *inverts* on the leaderboard substrate — SegNet becomes ~4× more
+leaderboard-marginal than pose.
+
+**Predicted CPU scores for our existing artifacts:**
+
+| Archive | CUDA score | Predicted CPU score | Predicted leaderboard rank |
+|---|---:|---:|---|
+| Our PR #107 apogee | 0.22936 | ~0.196 | silver/bronze band |
+| PR103-on-PR106 AC repack | 0.20898 | ~0.176 | above current top |
+| PR102 hardened replay | 0.22839 | 0.19538 (verified) | bronze (verified) |
+| PR104 hardened replay | 0.23114 | ~0.198 | non-frontier |
+
+**Operational rule (CLAUDE.md non-negotiable):** every shippable archive gets
+dual-eval — authoritative `[contest-CUDA]` and `[contest-CPU]` axes on
+Linux x86_64 hardware that is 1:1 contest-compliant with the GitHub Actions
+CI runner. Apple Silicon CPU eval is `[macOS-CPU advisory only]`, never
+`[contest-CPU]`. Tag distinctness enforced by Check D / B7.
+
+**Strategic exploitation prescriptions:**
+
+1. **Floor-aware Huber pose loss**: clamp `||pose_err||² - τ²` at zero where
+   τ ≈ sqrt(CPU pose floor). Frees bit-budget that would have been spent
+   driving pose<sub>cuda</sub> below R<sub>pose</sub>·ε<sub>cpu</sub>.
+2. **Leaderboard-aware Lagrangian**: `tac.score_geometry target_axis="cpu_leaderboard"`
+   reweights pose marginal × 0.20, seg marginal × 0.86 before ranking
+   dispatch candidates.
+3. **SegNet boundary smoothing in inflate.py**: `F.avg_pool2d(seg_logits,
+   3, 1, 1)` before argmax. Predicted +0.001 CPU-leaderboard score.
+4. **Calibrated noise injection in training**: σ ≈ 1.7e-3 per-op-equivalent.
+   Tightens R<sub>pose</sub> from ~5 to ~3.5.
+
+**Documentation surfaces:**
+
+- OSS findings: `docs/findings/cuda_cpu_auth_eval_split_20260508.md`
+- Internal methodology: `docs/writeup/cuda_cpu_drift_methodology.md`
+- Paper: `docs/paper/00_abstract.md` (4th contribution), `docs/paper/04_results.md` §4.8,
+  `docs/paper/06_related_work.md` §6.8, `docs/paper/07_discussion.md` §7.9
+- Site: `reports/graphs/site/cuda_cpu_split_post.md`,
+  `reports/graphs/site/judges_one_pager.md` (post-deadline section)
+- README addendum: project root `README.md`
+- Memory: `feedback_dual_cpu_cuda_auth_eval_mandatory_20260508.md`,
+  `feedback_cuda_cpu_drift_sweep_research_design_20260508.md`,
+  `feedback_cuda_cpu_pose_drift_mechanism_deep_dive_20260508.md`,
+  `project_pr102_replay_drift_0_228_vs_claimed_0_195_20260508.md`,
+  `feedback_substrate_vs_codec_composition_meta_pattern_20260508.md`,
+  `feedback_representation_integration_gates_landed_20260508.md`
+- Research: `.omx/research/cuda_cpu_drift_sweep_design_20260508_claude.md`,
+  `.omx/research/cuda_cpu_pose_drift_mechanism_deep_dive_20260508_claude.md`,
+  `.omx/research/representation_integration_gap_audit_20260508_codex.md`,
+  `.omx/research/public_replay_drift_hypothesis_20260508_codex.md`
+
+**Operator next-action menu (P0 → P3):**
+
+1. **P0** — Modal CPU smoke replay of any one HNeRV archive (PR102 ideal:
+   verified 0.19538). $0.12, 90 min. Validates the Modal CPU substrate is
+   1:1 with the contest CI's CPU axis.
+2. **P0** — Modal CPU dispatch of our PR #107 apogee archive. Confirms the
+   ~0.196 prediction; we will know our true leaderboard rank.
+3. **P1** — 3-PR cross-family smoke (PR106, PR104, PR91). $1.26, 3-6 hours.
+   Decisive between hypotheses H1/H2/H3/H4 in the sweep design.
+4. **P1** — `tac.score_geometry target_axis="cpu_leaderboard"` flag (1 LOC,
+   $0). Reweights cathedral autopilot for leaderboard-targeted dispatch.
+5. **P2** — Decoder-vs-FP32 discriminator microbench: force
+   `DefaultDatasetClass = AVVideoDataset` while running `--device cuda`.
+   ~$0.25 / 1-hour T4. Decisive between decoder-mismatch and FP32-floor
+   contribution to the gap.
+6. **P3** — Layer-by-layer FastViT-T12 drift profile to falsify / confirm
+   `sqrt(L)·ε` additive-noise model.
+
 ## 2026-05-08 — Evidence-grade drift supersession after PR102/PR104/PR106
 
 - PR102 hardened replay is exact T4 CUDA A++ at `0.22839372989108092`, but it confirms public CPU/leaderboard drift and is not a new archive-byte win or local frontier.
