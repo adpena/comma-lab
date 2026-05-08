@@ -411,7 +411,11 @@ def main(argv: list[str] | None = None) -> int:
         "smoke": smoke,
         "score_claim": False,
         "byte_proxy_only": False,
-        "ready_for_exact_eval_dispatch": True,  # Will be flipped after dispatch ack
+        # CLAUDE.md "Comment-only contracts — FORBIDDEN": this archive build
+        # alone is NOT proof of dispatch-readiness. The remote script's
+        # Stage 4 REPORT writes a separate manifest with the authoritative
+        # CUDA eval result + flips its own flag. This builder MUST set False.
+        "ready_for_exact_eval_dispatch": False,
         "evidence_grade": "[CPU-build proxy; no contest-CUDA eval yet]",
         "dispatch_blockers": ["awaiting_contest_cuda_exact_eval"],
         "tag_discipline": {

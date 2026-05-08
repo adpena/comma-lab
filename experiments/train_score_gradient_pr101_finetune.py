@@ -436,7 +436,9 @@ def load_cuda_scorers(device: torch.device) -> tuple[nn.Module, nn.Module]:
             "Lightning T4 dispatcher must point at the canonical scorer "
             "loader path before --device cuda training."
         ) from exc
-    posenet, segnet = load_differentiable_scorers(device=str(device))
+    posenet, segnet = load_differentiable_scorers(
+        REPO_ROOT / "upstream", device=str(device)
+    )
     posenet.eval()
     segnet.eval()
     for p in posenet.parameters():
@@ -455,22 +457,29 @@ def simulate_eval_roundtrip(
     *,
     noise_std: float = EVAL_ROUNDTRIP_NOISE_STD,
 ) -> torch.Tensor:
-    """Simulate the inflate/eval round-trip with STE noise.
+    """Simulate the inflate/eval round-trip via the canonical implementation.
 
     The contest eval pipeline goes: float frames → uint8 → bilinear up to
-    (874, ?) → uint8 → bilinear down → float. This loses information in
-    ways that cause proxy-auth drift. The fix is to SIMULATE the loss
-    during training so the model learns to be robust to it.
+    (874, 1164) → uint8 → bilinear down → float. This loses information in
+    ways that cause proxy-auth drift; the canonical simulator at
+    ``tac.renderer.simulate_eval_roundtrip`` performs the FULL resize cycle
+    (not just additive noise). Per CLAUDE.md "eval_roundtrip — NON-NEGOTIABLE":
+    "WITHOUT eval_roundtrip, proxy-auth gap is 2-6x on PoseNet. Every training
+    run without it is a WASTED run."
+
+    Input: ``(B, T, C, H, W)`` 5D tensor. The canonical simulator expects
+    ``(N, 3, H, W)``; we collapse the leading B*T axis before delegating and
+    restore the original shape on return.
 
     ``noise_std`` is the additive STE noise (Hotz fix). Default 0.5 per
     Council Round-2 finding (without it the proxy-auth gap reopens).
     """
-    # Quantize to uint8 with STE.
-    x = pair_btchw_float.clamp(0.0, 255.0)
-    x_q = x.detach().round() + (x - x.detach())  # STE
-    if noise_std > 0:
-        x_q = x_q + torch.randn_like(x_q) * noise_std
-    return x_q.clamp(0.0, 255.0)
+    from tac.renderer import simulate_eval_roundtrip as _canonical_roundtrip
+
+    b, t, c, h, w = pair_btchw_float.shape
+    flat = pair_btchw_float.reshape(b * t, c, h, w)
+    rt = _canonical_roundtrip(flat, noise_std=noise_std)
+    return rt.reshape(b, t, c, h, w)
 
 
 # ---------------------------------------------------------------------------
