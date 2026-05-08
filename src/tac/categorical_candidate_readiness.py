@@ -525,6 +525,8 @@ def _decode_reencode_parity_report(
         "byte_exact_reencode": False,
         "reencoded_payload_sha256": "",
         "sidecar_free": False,
+        "hpm1_payload": False,
+        "hpm1_full_decode_600_frames": False,
         "independent_proof": {
             "declared": False,
             "accepted": False,
@@ -1143,6 +1145,7 @@ def _hpm1_semantic_parity_fail_closed_report(
     payload_member: str,
     payload_member_sha256: str,
     candidate_archive_sha256: str,
+    hpm1_payload: bool,
     repo_root: Path,
     manifest_dir: Path | None,
 ) -> tuple[dict[str, Any], list[str]]:
@@ -1158,6 +1161,7 @@ def _hpm1_semantic_parity_fail_closed_report(
         "payload_member": payload_member,
         "payload_member_sha256": payload_member_sha256,
         "candidate_archive_sha256": candidate_archive_sha256,
+        "hpm1_payload": hpm1_payload,
         "divergence_caught_before_exact_eval": False,
         "hpac_model_loaded": False,
         "probability_rows_inventoried": False,
@@ -1178,6 +1182,8 @@ def _hpm1_semantic_parity_fail_closed_report(
         blockers.append("hpm1_semantic_parity_record_not_object")
         summary["blockers"] = blockers
         return summary, blockers
+    if not hpm1_payload:
+        blockers.append("hpm1_semantic_parity_payload_not_hpm1")
 
     if report.get("contract") != HPM1_SEMANTIC_PARITY_FAIL_CLOSED_CONTRACT:
         blockers.append("hpm1_semantic_parity_contract_mismatch")
@@ -2113,6 +2119,7 @@ def audit_categorical_candidate_manifest(
         payload_member=decode_reencode_parity["payload_member"],
         payload_member_sha256=decode_reencode_parity["payload_member_sha256"],
         candidate_archive_sha256=candidate_archive_sha256,
+        hpm1_payload=decode_reencode_parity["hpm1_payload"],
         repo_root=root,
         manifest_dir=manifest_base,
     )
