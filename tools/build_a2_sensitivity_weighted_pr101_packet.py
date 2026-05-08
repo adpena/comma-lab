@@ -15,11 +15,14 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import hashlib
+import json
 import os
 import re
 import shutil
 import stat
+import struct
 import subprocess
+import sys
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -54,6 +57,8 @@ from tac.repo_io import json_text, read_json, repo_relative, sha256_file, write_
 TOOL_NAME = "tools/build_a2_sensitivity_weighted_pr101_packet.py"
 SCHEMA_VERSION = "a2_sensitivity_weighted_pr101_packet_ladder.v1"
 VARIANT_SCHEMA_VERSION = "a2_sensitivity_weighted_pr101_packet_variant.v1"
+A2_SOURCE_SCHEMA = "phase_a2_sensitivity_weighted_lossy_coarsening.v1"
+A2_SOURCE_TOOL = "tools/sensitivity_weighted_lossy_coarsening.py"
 MAGIC = b"A2K1"
 DEFAULT_SOURCE_ARCHIVE = Path(
     "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip"
@@ -69,6 +74,17 @@ DEFAULT_OUTPUT_ROOT = Path("experiments/results/track1_phase_a2_sensitivity_pr10
 EXCLUDED_DIR_NAMES = frozenset({"__pycache__", ".git", ".mypy_cache", ".pytest_cache"})
 EXCLUDED_FILE_NAMES = frozenset({".DS_Store"})
 EXCLUDED_SUFFIXES = (".pyc", ".pyo")
+PACKET_CUSTODY_FILENAMES = frozenset(
+    {
+        "archive.zip",
+        "archive_manifest.json",
+        "candidate_manifest.json",
+        "contest_auth_eval.json",
+        "pre_submission_compliance.json",
+        "pre_submission_compliance.nonfinal.json",
+        "report.txt",
+    }
+)
 BASE_DISPATCH_BLOCKERS = [
     "no_exact_cuda_auth_eval",
     "no_contest_cpu_auth_eval",
@@ -76,12 +92,19 @@ BASE_DISPATCH_BLOCKERS = [
     "operator_score_claim_review_not_done",
     "packet_local_inflate_parity_not_run",
 ]
+CLEARED_BY_PACKET_LADDER = frozenset(
+    {
+        "no_byte_closed_runtime_packet_built",
+        "packet_local_inflate_parity_not_run",
+    }
+)
 FALSE_AUTHORITY_FIELDS = {
     "score_claim": False,
     "promotion_eligible": False,
     "rank_or_kill_eligible": False,
     "ready_for_exact_eval_dispatch": False,
 }
+UPSTREAM_FALSE_AUTHORITY_FIELDS = (*FALSE_AUTHORITY_FIELDS, "dispatch_attempted")
 
 
 class PacketClosureBlocked(ValueError):
@@ -140,6 +163,12 @@ def _should_exclude(path: Path) -> bool:
     if any(part in EXCLUDED_DIR_NAMES for part in path.parts):
         return True
     return path.name in EXCLUDED_FILE_NAMES or path.suffix in EXCLUDED_SUFFIXES
+
+
+def _is_packet_custody_file(path: Path) -> bool:
+    return path.name in PACKET_CUSTODY_FILENAMES or path.name.startswith(
+        "pre_submission_compliance."
+    )
 
 
 def _is_relative_to(child: Path, parent: Path) -> bool:
@@ -285,12 +314,27 @@ def _read_single_member_zip(path: Path) -> tuple[dict[str, Any], str, bytes]:
             )
         info = infos[0]
         _validate_zip_member_name(info.filename)
+        local = _local_header_record(path, info)
+        if local["name"] != info.filename:
+            raise PacketClosureBlocked(
+                (
+                    "ZIP local/central header member-name mismatch: "
+                    f"central={info.filename!r} local={local['name']!r}"
+                ),
+                ["zip_local_header_name_mismatch"],
+            )
+        _validate_zip_member_name(str(local["name"]))
         member = zf.read(info)
         archive_record["members"].append(
             {
                 "bytes": info.file_size,
                 "compress_size": info.compress_size,
+                "compress_type": info.compress_type,
                 "crc": f"{info.CRC:08x}",
+                "date_time": list(info.date_time),
+                "external_attr": info.external_attr,
+                "flag_bits": info.flag_bits,
+                "local_header": local,
                 "name": info.filename,
                 "sha256": _sha256_bytes(member),
             }
@@ -310,10 +354,44 @@ def _write_single_member_zip(path: Path, member_name: str, payload: bytes) -> di
     return archive_record
 
 
+def _decode_zip_name(raw: bytes, flag_bits: int) -> str | None:
+    encoding = "utf-8" if flag_bits & 0x800 else "cp437"
+    try:
+        return raw.decode(encoding, errors="strict")
+    except UnicodeDecodeError:
+        return None
+
+
+def _local_header_record(path: Path, info: zipfile.ZipInfo) -> dict[str, Any]:
+    with path.open("rb") as handle:
+        handle.seek(info.header_offset)
+        header = handle.read(30)
+        if len(header) != 30 or header[:4] != b"PK\x03\x04":
+            raise PacketClosureBlocked(
+                f"bad ZIP local header for member {info.filename!r} in {path}",
+                ["zip_local_header_unreadable"],
+            )
+        flag_bits = struct.unpack_from("<H", header, 6)[0]
+        method = struct.unpack_from("<H", header, 8)[0]
+        name_len, extra_len = struct.unpack_from("<HH", header, 26)
+        raw_name = handle.read(name_len)
+        handle.read(extra_len)
+    return {
+        "name": _decode_zip_name(raw_name, flag_bits),
+        "flag_bits": flag_bits,
+        "compress_type": method,
+        "extra_len": extra_len,
+    }
+
+
 def _validate_zip_member_name(name: str) -> None:
     path = Path(name)
     if (
         not name
+        or "\\" in name
+        or "\x00" in name
+        or any(ord(ch) < 32 for ch in name)
+        or re.match(r"^[A-Za-z]:", name)
         or name.startswith("/")
         or path.is_absolute()
         or any(part in {"", ".", ".."} for part in path.parts)
@@ -396,12 +474,75 @@ def _extract_weighted_schedules(a2_manifest: dict[str, Any], *, variant_limit: i
                 "rms_target": row.get("rms_target"),
                 "reported_total_bytes": row.get("total_bytes"),
                 "reported_rel_err": row.get("rel_err"),
+                "joint_encoder_extras": row.get("joint_encoder_extras")
+                if isinstance(row.get("joint_encoder_extras"), dict)
+                else None,
                 "selected_Ks": selected_ks,
             }
         )
     if variant_limit is not None and variant_limit > 0:
         schedules = schedules[:variant_limit]
     return schedules
+
+
+def _list_strings(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value if isinstance(item, str) and item.strip()]
+
+
+def _active_packet_blockers(*groups: list[str], clear: set[str] | frozenset[str] = frozenset()) -> list[str]:
+    return sorted({item for group in groups for item in group if item not in clear})
+
+
+def _validate_a2_manifest_authority(a2_manifest: dict[str, Any], *, manifest_path: Path) -> dict[str, Any]:
+    blockers: list[str] = []
+    schema = a2_manifest.get("schema")
+    tool = a2_manifest.get("tool")
+    if schema != A2_SOURCE_SCHEMA:
+        blockers.append("a2_manifest_wrong_schema")
+    if tool != A2_SOURCE_TOOL:
+        blockers.append("a2_manifest_wrong_tool")
+    for field in UPSTREAM_FALSE_AUTHORITY_FIELDS:
+        if a2_manifest.get(field) is not False:
+            blockers.append(f"a2_manifest_{field}_not_false")
+    if blockers:
+        raise PacketClosureBlocked(
+            f"A2 manifest failed authority validation: {', '.join(sorted(blockers))}",
+            blockers,
+        )
+
+    manifest_blockers = _list_strings(a2_manifest.get("dispatch_blockers"))
+    sensitivity_artifact = (
+        a2_manifest.get("sensitivity_artifact")
+        if isinstance(a2_manifest.get("sensitivity_artifact"), dict)
+        else {}
+    )
+    metadata_blockers = _list_strings(sensitivity_artifact.get("metadata_blockers"))
+    propagated_blockers = sorted(set(manifest_blockers + metadata_blockers))
+    return {
+        "path": _repo_rel(manifest_path),
+        "sha256": sha256_file(manifest_path),
+        "schema": schema,
+        "tool": tool,
+        "status": a2_manifest.get("status"),
+        "authority_fields": {
+            field: a2_manifest.get(field) for field in UPSTREAM_FALSE_AUTHORITY_FIELDS
+        },
+        "dispatch_blockers": manifest_blockers,
+        "sensitivity_artifact": {
+            "path": sensitivity_artifact.get("path"),
+            "status": sensitivity_artifact.get("status"),
+            "allow_diagnostic_sensitivity": sensitivity_artifact.get(
+                "allow_diagnostic_sensitivity"
+            ),
+            "metadata_blockers": metadata_blockers,
+            "metadata": sensitivity_artifact.get("metadata")
+            if isinstance(sensitivity_artifact.get("metadata"), dict)
+            else {},
+        },
+        "propagated_blockers": propagated_blockers,
+    }
 
 
 def _tensor_payload(q_i8: np.ndarray, scale: float, idx: int) -> bytes:
@@ -640,9 +781,153 @@ def _noop_detection(
     }
 
 
+def _write_packet_report(
+    *,
+    packet_dir: Path,
+    variant_id: str,
+    candidate_archive_record: dict[str, Any],
+    source_archive_record: dict[str, Any],
+    dispatch_blockers: list[str],
+    runtime_tree_sha256: str | None = None,
+) -> dict[str, Any]:
+    report_path = packet_dir / "report.txt"
+    lines = [
+        "A2 sensitivity-weighted PR101 packet",
+        "",
+        f"variant_id: {variant_id}",
+        f"archive_bytes: {candidate_archive_record['bytes']}",
+        f"archive_sha256: {candidate_archive_record['sha256']}",
+        f"source_archive_sha256: {source_archive_record['sha256']}",
+        "score_claim: false",
+        "promotion_eligible: false",
+        "rank_or_kill_eligible: false",
+        "ready_for_exact_eval_dispatch: false",
+        "evidence_grade: empirical",
+    ]
+    if runtime_tree_sha256:
+        lines.append(f"runtime_tree_sha256: {runtime_tree_sha256}")
+    lines.extend(["", "dispatch_blockers:"])
+    lines.extend(f"- {blocker}" for blocker in dispatch_blockers)
+    lines.extend(
+        [
+            "",
+            "This packet is a byte-closed local custody artifact only. It has "
+            "not run exact CUDA auth eval, contest-CPU auth eval, or operator "
+            "score-claim review.",
+            "",
+        ]
+    )
+    report_path.write_text("\n".join(lines), encoding="utf-8")
+    return _file_record(report_path, relpath="report.txt")
+
+
+def _packet_local_parse_smoke(packet_dir: Path, candidate_archive_path: Path) -> dict[str, Any]:
+    script = r'''
+import importlib.util
+import json
+import sys
+import zipfile
+from pathlib import Path
+
+packet_dir = Path(sys.argv[1])
+archive_path = Path(sys.argv[2])
+src_dir = packet_dir / "src"
+sys.path.insert(0, str(src_dir))
+
+def load_module(name, path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot import {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+load_module("model", src_dir / "model.py")
+codec = load_module("codec", src_dir / "codec.py")
+with zipfile.ZipFile(archive_path) as zf:
+    infos = [info for info in zf.infolist() if not info.is_dir()]
+    if len(infos) != 1:
+        raise RuntimeError(f"expected one candidate member, found {len(infos)}")
+    payload = zf.read(infos[0])
+decoder_sd, latents, meta = codec.parse_archive(payload)
+print(json.dumps({
+    "passed": True,
+    "member_name": infos[0].filename,
+    "a2_magic": payload.startswith(b"A2K1"),
+    "decoder_tensor_count": len(decoder_sd),
+    "latents_shape": list(latents.shape) if hasattr(latents, "shape") else None,
+    "latents_dtype": str(getattr(latents, "dtype", "")),
+    "meta": {
+        "n_pairs": int(meta["n_pairs"]),
+        "latent_dim": int(meta["latent_dim"]),
+        "base_channels": int(meta["base_channels"]),
+        "eval_size": list(meta["eval_size"]),
+    },
+}, sort_keys=True))
+'''
+    proc = subprocess.run(
+        [sys.executable, "-c", script, str(packet_dir), str(candidate_archive_path)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        raise PacketClosureBlocked(
+            f"packet-local runtime parse smoke failed: {proc.stderr.strip() or proc.stdout.strip()}",
+            ["packet_local_runtime_parse_smoke_failed"],
+        )
+    try:
+        payload = json.loads(proc.stdout)
+    except json.JSONDecodeError as exc:
+        raise PacketClosureBlocked(
+            f"packet-local runtime parse smoke emitted non-JSON output: {proc.stdout!r}",
+            ["packet_local_runtime_parse_smoke_non_json"],
+        ) from exc
+    payload["command"] = "python -c <packet_local_parse_smoke> packet_dir archive.zip"
+    return payload
+
+
+def _proxy_vs_materialized(
+    schedule: dict[str, Any],
+    candidate_archive_record: dict[str, Any],
+    decoder_blob: bytes,
+) -> dict[str, Any]:
+    extras = schedule.get("joint_encoder_extras")
+    if not isinstance(extras, dict):
+        extras = {}
+    reported_total = schedule.get("reported_total_bytes")
+    actual_archive = int(candidate_archive_record["bytes"])
+    actual_member = int(candidate_archive_record["members"][0]["bytes"])
+    return {
+        "authoritative_bytes_field": "candidate_archive.bytes",
+        "reported_total_bytes": reported_total,
+        "reported_rel_err": schedule.get("reported_rel_err"),
+        "reported_payload_brotli_bytes": extras.get("payload_brotli_bytes"),
+        "reported_side_info_bytes": extras.get("side_info_bytes"),
+        "reported_archive_overhead_bytes": extras.get("archive_overhead_bytes"),
+        "actual_archive_bytes": actual_archive,
+        "actual_member_bytes": actual_member,
+        "actual_decoder_blob_bytes": len(decoder_blob),
+        "delta_reported_total_vs_actual_archive_bytes": (
+            int(reported_total) - actual_archive if isinstance(reported_total, int) else None
+        ),
+        "delta_reported_payload_vs_actual_decoder_bytes": (
+            int(extras["payload_brotli_bytes"]) - len(decoder_blob)
+            if isinstance(extras.get("payload_brotli_bytes"), int)
+            else None
+        ),
+        "note": (
+            "A2 selector bytes are analytical/proxy planning fields. The built "
+            "packet archive bytes are authoritative for any later exact eval."
+        ),
+    }
+
+
 def _build_variant(
     *,
     schedule: dict[str, Any],
+    upstream_a2_manifest: dict[str, Any],
     state_dict_path: Path,
     source_runtime_dir: Path,
     source_archive_record: dict[str, Any],
@@ -679,12 +964,7 @@ def _build_variant(
         source_member_name,
         inner_member,
     )
-    runtime_files_after_patch = [
-        _file_record(path, relpath=path.relative_to(packet_dir).as_posix())
-        for path in sorted(packet_dir.rglob("*"), key=lambda item: item.relative_to(packet_dir).as_posix())
-        if path.is_file() and path.name != "archive.zip" and not _should_exclude(path.relative_to(packet_dir))
-    ]
-    runtime_tree_sha256 = _runtime_tree_sha256(runtime_files_after_patch)
+    parse_smoke = _packet_local_parse_smoke(packet_dir, candidate_archive_path)
 
     source_member_sha = source_archive_record["members"][0]["sha256"]
     candidate_member_sha = candidate_archive_record["members"][0]["sha256"]
@@ -701,7 +981,38 @@ def _build_variant(
         encoding["decoder_blob_sha256"] != _sha256_bytes(source_decoder_blob)
         and not noop["schedule_all_ones"]
     )
-    dispatch_blockers = sorted(set(BASE_DISPATCH_BLOCKERS + noop["reasons"]))
+    dispatch_blockers = _active_packet_blockers(
+        BASE_DISPATCH_BLOCKERS,
+        upstream_a2_manifest["propagated_blockers"],
+        noop["reasons"],
+        clear=CLEARED_BY_PACKET_LADDER,
+    )
+    report_record = _write_packet_report(
+        packet_dir=packet_dir,
+        variant_id=schedule["variant_id"],
+        candidate_archive_record=candidate_archive_record,
+        source_archive_record=source_archive_record,
+        dispatch_blockers=dispatch_blockers,
+    )
+    runtime_files_after_patch = [
+        _file_record(path, relpath=path.relative_to(packet_dir).as_posix())
+        for path in sorted(
+            packet_dir.rglob("*"), key=lambda item: item.relative_to(packet_dir).as_posix()
+        )
+        if path.is_file()
+        and not _is_packet_custody_file(path.relative_to(packet_dir))
+        and not _should_exclude(path.relative_to(packet_dir))
+    ]
+    runtime_tree_sha256 = _runtime_tree_sha256(runtime_files_after_patch)
+    report_record = _write_packet_report(
+        packet_dir=packet_dir,
+        variant_id=schedule["variant_id"],
+        candidate_archive_record=candidate_archive_record,
+        source_archive_record=source_archive_record,
+        dispatch_blockers=dispatch_blockers,
+        runtime_tree_sha256=runtime_tree_sha256,
+    )
+    proxy_vs_materialized = _proxy_vs_materialized(schedule, candidate_archive_record, decoder_blob)
     variant = {
         "schema": VARIANT_SCHEMA_VERSION,
         "tool": TOOL_NAME,
@@ -718,11 +1029,15 @@ def _build_variant(
         "dispatch_blockers": dispatch_blockers,
         "packet_closure": {
             "byte_closed_packet_built": True,
-            "runtime_consumes_changed_archive_bytes": True,
+            "runtime_consumes_changed_archive_bytes": bool(
+                parse_smoke.get("passed") and candidate_member_sha != source_member_sha
+            ),
             "runtime_source_mutated": False,
             "wire_contract": "A2K1 + decoder_len:u32le + PR101 decoder_blob + PR101 latent_blob + sidecar",
             "missing_wire_contracts": [],
+            "cleared_blockers": sorted(CLEARED_BY_PACKET_LADDER),
         },
+        "upstream_a2_manifest": upstream_a2_manifest,
         "schedule": {
             **schedule,
             "selected_Ks_sha256": _canonical_json_sha256(selected_ks),
@@ -766,14 +1081,18 @@ def _build_variant(
                 "copied_file_count": len(runtime_files),
                 "runtime_tree_sha256": runtime_tree_sha256,
                 "runtime_files": runtime_files_after_patch,
+                "excluded_packet_custody_filenames": sorted(PACKET_CUSTODY_FILENAMES),
                 "excluded_dir_names": sorted(EXCLUDED_DIR_NAMES),
                 "excluded_file_names": sorted(EXCLUDED_FILE_NAMES),
                 "excluded_suffixes": list(EXCLUDED_SUFFIXES),
             },
             "runtime_checks": {
                 "inflate_sh_bash_n": _bash_n(packet_dir / "inflate.sh"),
+                "packet_local_parse_smoke": parse_smoke,
             },
+            "report": report_record,
         },
+        "proxy_vs_materialized": proxy_vs_materialized,
         "noop_detection": noop,
         "charged_bits_changed": candidate_member_sha != source_member_sha,
         "score_affecting_payload_changed": semantic_payload_changed,
@@ -832,6 +1151,10 @@ def build_packet_ladder(
             f"A2 manifest is not a JSON object: {a2_manifest_path}",
             ["a2_manifest_not_object"],
         )
+    upstream_a2_manifest = _validate_a2_manifest_authority(
+        a2_manifest,
+        manifest_path=a2_manifest_path,
+    )
     schedules = _extract_weighted_schedules(a2_manifest, variant_limit=variant_limit)
     source_archive_record, source_member_name, source_member_payload = _read_single_member_zip(source_archive)
     source_decoder_blob, source_latent_blob, source_sidecar_blob = _split_pr101_member(source_member_payload)
@@ -847,6 +1170,7 @@ def build_packet_ladder(
         variants.append(
             _build_variant(
                 schedule=schedule,
+                upstream_a2_manifest=upstream_a2_manifest,
                 state_dict_path=state_dict_path,
                 source_runtime_dir=source_runtime_dir,
                 source_archive_record=source_archive_record,
@@ -876,7 +1200,12 @@ def build_packet_ladder(
         "evidence_semantics": "byte_closed_packet_ladder_no_score_no_dispatch",
         "target_modes": ["contest_exact_eval"],
         "deployment_target": "t4_contest_runtime_pending_exact_eval",
-        "dispatch_blockers": sorted(set(BASE_DISPATCH_BLOCKERS)),
+        "dispatch_blockers": _active_packet_blockers(
+            BASE_DISPATCH_BLOCKERS,
+            upstream_a2_manifest["propagated_blockers"],
+            clear=CLEARED_BY_PACKET_LADDER,
+        ),
+        "upstream_a2_manifest": upstream_a2_manifest,
         "inputs": {
             "a2_manifest": _repo_rel(a2_manifest_path),
             "a2_manifest_sha256": sha256_file(a2_manifest_path),
@@ -893,6 +1222,7 @@ def build_packet_ladder(
             "missing_wire_contracts": [],
             "runtime_source_mutated": False,
             "state_dict_reproduces_source_decoder": state_source_closure,
+            "cleared_blockers": sorted(CLEARED_BY_PACKET_LADDER),
         },
         "variants": variants,
         "next_required_actions": [

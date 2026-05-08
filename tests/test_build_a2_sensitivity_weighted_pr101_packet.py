@@ -67,6 +67,12 @@ def _write_runtime(path: Path, *, patchable: bool = True) -> Path:
     (path / "inflate.py").write_text("print('unused in unit test')\n", encoding="utf-8")
     codec = path / "src" / "codec.py"
     codec.parent.mkdir(parents=True, exist_ok=True)
+    (path / "src" / "model.py").write_text(
+        """class HNeRVDecoder:
+    pass
+""",
+        encoding="utf-8",
+    )
     if patchable:
         codec.write_text(
             """DECODER_BLOB_LEN = 4
@@ -127,9 +133,30 @@ def _write_a2_manifest(path: Path, selected_ks: list[int]) -> Path:
         json.dumps(
             {
                 "schema": "phase_a2_sensitivity_weighted_lossy_coarsening.v1",
+                "tool": "tools/sensitivity_weighted_lossy_coarsening.py",
+                "status": "completed_local_diagnostic",
                 "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "dispatch_blockers": [
+                    "diagnostic_or_stub_sensitivity_map_not_score_authority",
+                    "no_exact_cuda_auth_eval",
+                ],
+                "sensitivity_artifact": {
+                    "allow_diagnostic_sensitivity": True,
+                    "metadata_blockers": ["is_stub=true"],
+                    "path": "stub.pt",
+                    "status": "diagnostic_allowed",
+                },
                 "weighted_k_allocations": [
                     {
+                        "joint_encoder_extras": {
+                            "archive_overhead_bytes": 12,
+                            "payload_brotli_bytes": 99,
+                            "side_info_bytes": 2,
+                        },
                         "rms_target": 0.05,
                         "rel_err": 0.0125,
                         "total_bytes": 123,
@@ -172,10 +199,20 @@ def test_builds_byte_closed_packet_ladder_with_non_promotable_manifest(tmp_path:
     assert manifest["packet_closure"]["state_dict_reproduces_source_decoder"]["passed"] is True
     assert variant["packet_closure"]["byte_closed_packet_built"] is True
     assert variant["packet_closure"]["runtime_consumes_changed_archive_bytes"] is True
+    assert "no_byte_closed_runtime_packet_built" not in manifest["dispatch_blockers"]
+    assert "packet_local_inflate_parity_not_run" not in manifest["dispatch_blockers"]
+    assert "diagnostic_or_stub_sensitivity_map_not_score_authority" in manifest["dispatch_blockers"]
+    assert "diagnostic_or_stub_sensitivity_map_not_score_authority" in variant["dispatch_blockers"]
+    assert "is_stub=true" in variant["dispatch_blockers"]
     assert variant["archive_member_manifest"]["layout_magic"] == "A2K1"
     assert variant["archive_member_manifest"]["decoder_len_field_matches_decoder_blob"] is True
     assert variant["runtime_packet"]["runtime_patch"]["codec_parse_archive_supports_a2_length_prefix"] is True
     assert variant["runtime_packet"]["runtime_checks"]["inflate_sh_bash_n"]["passed"] is True
+    assert variant["runtime_packet"]["runtime_checks"]["packet_local_parse_smoke"]["passed"] is True
+    assert variant["runtime_packet"]["report"]["relpath"] == "report.txt"
+    assert (tmp_path / "out" / "variants" / variant["variant_id"] / "packet" / "report.txt").is_file()
+    assert variant["proxy_vs_materialized"]["authoritative_bytes_field"] == "candidate_archive.bytes"
+    assert variant["proxy_vs_materialized"]["reported_total_bytes"] == 123
     assert variant["score_claim"] is False
     assert variant["ready_for_exact_eval_dispatch"] is False
 
@@ -403,3 +440,157 @@ def test_refuses_state_dict_that_does_not_reproduce_source_decoder(tmp_path: Pat
     assert rc == 2
     manifest = json.loads(blocked_json.read_text(encoding="utf-8"))
     assert "state_dict_does_not_reproduce_source_decoder_blob" in manifest["dispatch_blockers"]
+
+
+def test_refuses_wrong_a2_manifest_schema(tmp_path: Path, monkeypatch) -> None:
+    tool = _load_tool()
+    _install_tiny_pr101_contract(monkeypatch, tool)
+    _install_fake_encoder(monkeypatch, tool)
+    source_archive = tmp_path / "source" / "archive.zip"
+    _write_zip(source_archive, b"DECO" + b"LA" + b"SIDE")
+    runtime = _write_runtime(tmp_path / "runtime")
+    state_dict = _write_state_dict(tmp_path / "state.pt")
+    a2_manifest = _write_a2_manifest(tmp_path / "a2.json", [2, 1])
+    payload = json.loads(a2_manifest.read_text(encoding="utf-8"))
+    payload["schema"] = "wrong"
+    a2_manifest.write_text(json.dumps(payload), encoding="utf-8")
+    blocked_json = tmp_path / "blocked.json"
+
+    rc = tool.main(
+        [
+            "--a2-manifest",
+            str(a2_manifest),
+            "--state-dict",
+            str(state_dict),
+            "--source-archive",
+            str(source_archive),
+            "--source-runtime-dir",
+            str(runtime),
+            "--output-dir",
+            str(tmp_path / "out"),
+            "--json-out",
+            str(blocked_json),
+            "--now-utc",
+            "2026-05-08T12:00:00Z",
+        ]
+    )
+
+    assert rc == 2
+    manifest = json.loads(blocked_json.read_text(encoding="utf-8"))
+    assert "a2_manifest_wrong_schema" in manifest["dispatch_blockers"]
+
+
+def test_refuses_authoritative_a2_manifest(tmp_path: Path, monkeypatch) -> None:
+    tool = _load_tool()
+    _install_tiny_pr101_contract(monkeypatch, tool)
+    _install_fake_encoder(monkeypatch, tool)
+    source_archive = tmp_path / "source" / "archive.zip"
+    _write_zip(source_archive, b"DECO" + b"LA" + b"SIDE")
+    runtime = _write_runtime(tmp_path / "runtime")
+    state_dict = _write_state_dict(tmp_path / "state.pt")
+    a2_manifest = _write_a2_manifest(tmp_path / "a2.json", [2, 1])
+    payload = json.loads(a2_manifest.read_text(encoding="utf-8"))
+    payload["score_claim"] = True
+    a2_manifest.write_text(json.dumps(payload), encoding="utf-8")
+    blocked_json = tmp_path / "blocked.json"
+
+    rc = tool.main(
+        [
+            "--a2-manifest",
+            str(a2_manifest),
+            "--state-dict",
+            str(state_dict),
+            "--source-archive",
+            str(source_archive),
+            "--source-runtime-dir",
+            str(runtime),
+            "--output-dir",
+            str(tmp_path / "out"),
+            "--json-out",
+            str(blocked_json),
+            "--now-utc",
+            "2026-05-08T12:00:00Z",
+        ]
+    )
+
+    assert rc == 2
+    manifest = json.loads(blocked_json.read_text(encoding="utf-8"))
+    assert "a2_manifest_score_claim_not_false" in manifest["dispatch_blockers"]
+
+
+def test_refuses_backslash_zip_member_name(tmp_path: Path, monkeypatch) -> None:
+    tool = _load_tool()
+    _install_tiny_pr101_contract(monkeypatch, tool)
+    _install_fake_encoder(monkeypatch, tool)
+    source_archive = tmp_path / "source" / "archive.zip"
+    source_archive.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(source_archive, "w", zipfile.ZIP_STORED) as zf:
+        zf.writestr("bad\\x", b"DECO" + b"LA" + b"SIDE")
+    runtime = _write_runtime(tmp_path / "runtime")
+    state_dict = _write_state_dict(tmp_path / "state.pt")
+    a2_manifest = _write_a2_manifest(tmp_path / "a2.json", [2, 1])
+    blocked_json = tmp_path / "blocked.json"
+
+    rc = tool.main(
+        [
+            "--a2-manifest",
+            str(a2_manifest),
+            "--state-dict",
+            str(state_dict),
+            "--source-archive",
+            str(source_archive),
+            "--source-runtime-dir",
+            str(runtime),
+            "--output-dir",
+            str(tmp_path / "out"),
+            "--json-out",
+            str(blocked_json),
+            "--now-utc",
+            "2026-05-08T12:00:00Z",
+        ]
+    )
+
+    assert rc == 2
+    manifest = json.loads(blocked_json.read_text(encoding="utf-8"))
+    assert "unsafe_zip_member_name" in manifest["dispatch_blockers"]
+
+
+def test_refuses_zip_local_central_header_mismatch(tmp_path: Path, monkeypatch) -> None:
+    tool = _load_tool()
+    _install_tiny_pr101_contract(monkeypatch, tool)
+    _install_fake_encoder(monkeypatch, tool)
+    source_archive = tmp_path / "source" / "archive.zip"
+    _write_zip(source_archive, b"DECO" + b"LA" + b"SIDE")
+    raw = bytearray(source_archive.read_bytes())
+    header = raw.index(b"PK\x03\x04")
+    name_len = int.from_bytes(raw[header + 26 : header + 28], "little")
+    assert name_len == 1
+    raw[header + 30 : header + 31] = b"y"
+    source_archive.write_bytes(raw)
+    runtime = _write_runtime(tmp_path / "runtime")
+    state_dict = _write_state_dict(tmp_path / "state.pt")
+    a2_manifest = _write_a2_manifest(tmp_path / "a2.json", [2, 1])
+    blocked_json = tmp_path / "blocked.json"
+
+    rc = tool.main(
+        [
+            "--a2-manifest",
+            str(a2_manifest),
+            "--state-dict",
+            str(state_dict),
+            "--source-archive",
+            str(source_archive),
+            "--source-runtime-dir",
+            str(runtime),
+            "--output-dir",
+            str(tmp_path / "out"),
+            "--json-out",
+            str(blocked_json),
+            "--now-utc",
+            "2026-05-08T12:00:00Z",
+        ]
+    )
+
+    assert rc == 2
+    manifest = json.loads(blocked_json.read_text(encoding="utf-8"))
+    assert "zip_local_header_name_mismatch" in manifest["dispatch_blockers"]

@@ -126,3 +126,49 @@ Before any A2 packet can be used as score evidence:
 
 Until those are complete, this lane remains an empirical byte-closure actuator
 only.
+
+## Adversarial Review Closure
+
+Follow-up review found five packet-ladder risks and the builder was hardened:
+
+- upstream A2 authority is now validated (`schema`, source tool, false
+  authority fields, and `dispatch_attempted=false`);
+- upstream diagnostic/stub blockers are preserved into packet manifests, while
+  blockers actually cleared by the packet build are listed under
+  `packet_closure.cleared_blockers`;
+- packet-local parser smoke now runs during build and controls
+  `runtime_consumes_changed_archive_bytes`;
+- `proxy_vs_materialized` reconciles analytical selector bytes against actual
+  archive/member/decoder bytes, with `candidate_archive.bytes` as the
+  authoritative byte field;
+- ZIP custody now rejects unsafe names, backslashes, control characters,
+  drive-letter names, and local/central header name mismatch, and records
+  method/flag/header metadata.
+
+Hardened real one-variant build:
+
+- output manifest:
+  `experiments/results/track1_phase_a2_packet_ladder_codex_hardened_20260508T161558Z/a2_packet_ladder_manifest.json`
+- candidate archive bytes: `159491`
+- candidate archive SHA-256:
+  `bfb912ff7dbbd843b3bf6e5d12ff876eeab359e38113204d0ccae4277fd35d27`
+- packet-local parser smoke: passed, `A2K1`, 28 decoder tensors, latents
+  `[600, 28]`
+- selector reported bytes: `159544`
+- materialized authoritative bytes: `159491`
+- proxy-vs-materialized delta: `+53` reported bytes over actual archive bytes
+- cleared blockers: `no_byte_closed_runtime_packet_built`,
+  `packet_local_inflate_parity_not_run`
+- remaining blockers: `cpu_local_allocator_proxy_only`,
+  `diagnostic_or_stub_sensitivity_map_not_score_authority`, `is_stub=true`,
+  `tag contains 'stub'`, `score_sensitivity_artifact_must_be_certified_before_promotion`,
+  no Level-2 lane claim, no exact CUDA auth eval, no contest-CPU auth eval,
+  no operator score-claim review.
+
+Non-final pre-submission compliance on the hardened packet passed all 21/21
+checks:
+
+- compliance JSON:
+  `experiments/results/track1_phase_a2_packet_ladder_codex_hardened_20260508T161558Z/variants/weighted_k_00_rms_0p0386/pre_submission_compliance.nonfinal.json`
+- standalone runtime closure probe:
+  `experiments/results/track1_phase_a2_packet_ladder_codex_hardened_20260508T161558Z/variants/weighted_k_00_rms_0p0386/a2_runtime_closure_probe.json`
