@@ -74,10 +74,20 @@ reactivation criteria documented per memo.
   First empirical anchor at
   `experiments/results/pr101_pose_filler_stc_20260508T194527Z/`.
 - A5 frame-conditional bit budget — best η=2.0 saves -1,278 B on PR101.
+- A6 Selfcomp block-FP × Ballé hyperprior compose (`97fbfef2`) — 26/26
+  unit tests pass. Best compose **B=64, sq=uint8 = 214,035 B**; BEATS
+  blockfp-only (−34,607 B) AND hyperprior-only (−18,356 B); does NOT
+  beat PR101 brotli baseline (+35,891 B). Verdict
+  `incremental_improvement_insufficient` (NOT killed per CLAUDE.md
+  kill-as-last-resort); 5 reactivation criteria documented in
+  `feedback_pr101_a6_selfcomp_blockfp_hyperprior_byte_anchor_landed_20260508.md`
+  (joint-AC over scale stream, learned hyper-decoder MLP, cross-tensor
+  grouping, PR106 substrate, compose-after-lossy_coarsening). Linear σ
+  map cannot match brotli's adaptive context modelling on PR101's
+  near-iid INT8 stream.
 - PHASE 4 INTEGRATION paper harness — landed.
 
-**In flight (subagents):**
-- A6 Selfcomp block-FP × hyperprior compose (`a35933ea306c1a39b`)
+**Phase A in flight:** none. All 7 lanes anchored.
 
 **Inline closure (post-A4-alt push, `0f50b5c5`):**
 After A4-alt landed at `75c99b84`, full-codebase preflight surfaced 2

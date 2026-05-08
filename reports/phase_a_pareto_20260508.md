@@ -25,5 +25,5 @@ PR101 brotli baseline: **178,144 B** (the byte-anchor most lanes target).
 
 - A4-alt (Filler STC pose codec): byte-anchor landed; representative pose-distribution only, not a PR101 monolithic archive rewrite.
 - A5 (frame-conditional bit budget): byte-anchor landed; needs per-pair score marginals + inflate side-info path before dispatch.
-- A6 (Selfcomp block-FP × hyperprior compose): subagent in flight; anchor will land here when build_manifest.json appears under a matching `experiments/results/*selfcomp*hyperprior*` path.
+- A6 (Selfcomp block-FP × hyperprior compose): LANDED at `97fbfef2`. Best compose B=64, sq=uint8 = 214,035 B; BEATS blockfp-only (-34,607 B) AND hyperprior-only (-18,356 B); does NOT beat PR101 brotli baseline (+35,891 B). Verdict `incremental_improvement_insufficient` (NOT killed per CLAUDE.md kill-as-last-resort); 5 reactivation criteria documented in `feedback_pr101_a6_selfcomp_blockfp_hyperprior_byte_anchor_landed_20260508.md` (joint-AC over scale stream, learned hyper-decoder MLP, cross-tensor grouping, PR106 substrate, compose-after-lossy_coarsening).
 

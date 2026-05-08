@@ -1,5 +1,34 @@
 # run log
 
+## 2026-05-08T (evening, latest) — A6 Selfcomp×hyperprior landed; Phase A complete
+
+- A6 subagent (`a35933ea306c1a39b`) completed at SHA `97fbfef2`. A6 ships:
+  `src/tac/codec/a6_selfcomp_blockfp_hyperprior_compose.py` (compose module:
+  pure-CPU, no scorer load, no neural-net weights shipped, deterministic
+  linear σ = floor + α·scale map), `src/tac/tests/test_a6_blockfp_hyperprior_compose_unit.py`
+  (26 unit tests pass in 8.43s), `tools/pr101_a6_blockfp_hyperprior_anchor.py`
+  (anchor sweep), and `feedback_pr101_a6_selfcomp_blockfp_hyperprior_byte_anchor_landed_20260508.md`.
+- Empirical result on real PR101 INT8 stream (228,958 symbols): best compose
+  **B=64, sq=uint8 = 214,035 B**. Compose **BEATS** blockfp-only standalone
+  (-34,607 B) AND hyperprior-only standalone (-18,356 B), but does **NOT**
+  beat PR101 brotli baseline (178,144 B; gap +35,891 B). Hypothesis "per-
+  block scale IS the conditioning σ for the hyperprior" is correct in
+  direction but the linear σ map cannot match brotli's adaptive context
+  modelling on PR101's near-iid substrate.
+- Verdict per CLAUDE.md "KILL is LAST RESORT": `incremental_improvement_insufficient`
+  (NOT killed). Five reactivation criteria documented: joint-AC over scale
+  stream, learned hyper-decoder MLP, cross-tensor grouping, PR106 substrate
+  experiment, compose-after-lossy_coarsening composition.
+- Lane maturity registry: `track1_phase_a6_selfcomp_blockfp_hyperprior` pre-
+  registered at L0, then 4 gates marked → L2 (impl_complete +
+  real_archive_empirical + memory_entry + three_clean_review). 97 lanes
+  validated cleanly.
+- Pareto summary regenerated at `reports/phase_a_pareto_20260508.md`. The
+  A6 manifest sits at `reports/raw/pr101_a6_blockfp_hyperprior_20260508T200027Z/`
+  which is gitignored and outside the Pareto's `experiments/results/`
+  discovery glob; the Pareto footer carries the A6 verdict in prose.
+- Task #433 (A6 Selfcomp) → completed. ALL 7 Phase A ablations now anchored.
+
 ## 2026-05-08T (evening, late) — A4-alt Filler STC landed; auth-eval-everywhere violations closed inline
 
 - A4-alt subagent (`a486e05e919e6e4a3`) completed and committed at `75c99b84`.
