@@ -723,9 +723,56 @@ if __name__ == "__main__":
 
 
 INFLATE_SH_CANONICAL = '''#!/usr/bin/env bash
+# Forked PR101 inflate.sh for unified-winners-stack lane.
+#
+# Implements the canonical contest auth-eval contract:
+#   inflate.sh <data_dir> <output_dir> <file_list>
+#
+# (the previous 2-arg ``inflate.py``-only wrapper would have failed exact
+# eval before producing any ``.raw`` outputs; see codex HIGH finding
+# #1 ``feedback_codex_high_findings_extincted_20260508.md``.)
 set -euo pipefail
-HERE="$(cd "$(dirname "$0")" && pwd)"
-exec python "$HERE/inflate.py" "$1" "$2"
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+DATA_DIR="${1:?data dir required}"
+OUTPUT_DIR="${2:?output dir required}"
+FILE_LIST="${3:?file list required}"
+
+mkdir -p "$OUTPUT_DIR"
+
+# Canonical inflate-time uv ephemeral env (mirrors
+# ``submissions/robust_current/inflate.sh`` lines 74-90 + the
+# lossy_coarsening lane reference at
+# ``experiments/results/lossy_coarsening_20260508T024022Z/submission_dir/inflate.sh``).
+INFLATE_BROTLI_SPEC="${INFLATE_BROTLI_SPEC:-brotli==1.2.0}"
+INFLATE_TORCH_SPEC="${INFLATE_TORCH_SPEC:-torch==2.5.1+cu124}"
+INFLATE_NUMPY_SPEC="${INFLATE_NUMPY_SPEC:-numpy==2.4.4}"
+UV_BIN="${UV_BIN:-$(command -v uv || echo /usr/local/bin/uv)}"
+PYTHON_BIN="${PYTHON_BIN:-$(command -v python || command -v python3 || echo python)}"
+
+PYTHON_RUNNER=("$PYTHON_BIN")
+if [ -x "$UV_BIN" ]; then
+  PYTHON_RUNNER=("$UV_BIN" "run" "--with" "$INFLATE_BROTLI_SPEC" "--with" "$INFLATE_TORCH_SPEC" "--with" "$INFLATE_NUMPY_SPEC" "python")
+  echo "[unified-winners-inflate] uv specs: brotli=$INFLATE_BROTLI_SPEC torch=$INFLATE_TORCH_SPEC numpy=$INFLATE_NUMPY_SPEC" >&2
+else
+  echo "[unified-winners-inflate] uv not on PATH (UV_BIN=$UV_BIN); falling back to host python ($PYTHON_BIN)." >&2
+fi
+
+while IFS= read -r line; do
+  [ -z "$line" ] && continue
+  BASE="${line%.*}"
+  SRC="${DATA_DIR}/x"
+  if [ ! -f "$SRC" ]; then
+    SRC="${DATA_DIR}/${BASE}.bin"
+  fi
+  DST="${OUTPUT_DIR}/${BASE}.raw"
+
+  [ ! -f "$SRC" ] && echo "ERROR: ${SRC} not found" >&2 && exit 1
+
+  printf "Inflating %s ... " "$line"
+  "${PYTHON_RUNNER[@]}" "$HERE/inflate.py" "$SRC" "$DST"
+done < "$FILE_LIST"
 '''
 
 
