@@ -4,6 +4,19 @@
 **Author**: Subagent INTEGRATE
 **Status**: blueprint — requires Phase 2-4 empirical anchors before populating
 **Related task**: #308 PHASE 4 INTEGRATION
+**disclosure_status**: PRIVATE_pending_operator_approval (per Strategic Secrecy Rule)
+**evidence_tag_default**: `[predicted-band, NOT contest-CUDA]` for every score row below
+   unless an inline `[contest-CUDA]` tag with auth-eval JSON cross-reference is present.
+
+> **All score rows in this blueprint carry `[predicted-band, NOT contest-CUDA]`
+> unless explicitly tagged otherwise.** Per CLAUDE.md
+> `forbidden_empirical_claim_without_evidence_tag` and `Strategic Secrecy Rule`,
+> the blueprint structure may be intentional paper harness, but no row may
+> imply a measured score until an exact CUDA auth eval lands. The PR #101 /
+> #103 / #102 / #100 / #106 / #103-on-PR106 / #107 / Quantizr rows in §3 are
+> public claimed scores treated as `[external; not yet exact-replayed]` per
+> "Frontier target" non-negotiable. Local rows are `[predicted-band]` until
+> a contest-CUDA artifact is in custody.
 
 ## 1. Purpose
 
@@ -32,16 +45,16 @@ re-tag as `[predicted-band]` or `[CPU-prep, planning-only]`.
 
 ## 3. Comparison frontier
 
-| System | Score | Archive bytes | Notes |
-|---|---:|---:|---|
-| PR #101 (SajayR — gold) | 0.193 | ~158 KB | Public (4h race window 2026-05-04) |
-| PR #103 (rem2 — silver) | 0.195 | ~155 KB | 241 LOC bolt-on; AC encoder |
-| PR #102 (EthanYangTW — bronze) | 0.195 | ~154 KB | inference-time scale tuning |
-| PR #100 (BradyMeighan — substrate) | 0.1954 | ~157 KB | hnerv_lc_v2; medal-PR substrate |
-| PR #106 (`belt_and_suspenders`) | 0.20946 | 186,080 | Local A++ HNeRV rate anchor (predecessor) |
-| PR103-on-PR106 (active) | 0.20898 | 185,578 | Active local A++ rate anchor 2026-05-08 |
-| PR #107 (`apogee` — our 2026-05-04 entry) | 0.229 | ~196 KB | ~11th place; race-window failure mode |
-| Quantizr (ref) | 0.33 | 299,970 | Architecture lane reference (Selfcomp/Quantizr-class) |
+| System | Score | Archive bytes | Tag | Notes |
+|---|---:|---:|---|---|
+| PR #101 (SajayR — gold) | 0.193 | ~158 KB | `[external; public claim, not yet exact-replayed]` | Public (4h race window 2026-05-04) |
+| PR #103 (rem2 — silver) | 0.195 | ~155 KB | `[external; public claim, not yet exact-replayed]` | 241 LOC bolt-on; AC encoder |
+| PR #102 (EthanYangTW — bronze) | 0.195 | ~154 KB | `[external; public claim, not yet exact-replayed]` | inference-time scale tuning |
+| PR #100 (BradyMeighan — substrate) | 0.1954 | ~157 KB | `[external; public claim, not yet exact-replayed]` | hnerv_lc_v2; medal-PR substrate |
+| PR #106 (`belt_and_suspenders`) | 0.20946 | 186,080 | `[predicted-band, NOT contest-CUDA]` | Local A++ HNeRV rate anchor (predecessor) |
+| PR103-on-PR106 (active) | 0.20898 | 185,578 | `[predicted-band, NOT contest-CUDA]` | Active local A++ rate anchor 2026-05-08 |
+| PR #107 (`apogee` — our 2026-05-04 entry) | 0.229 | ~196 KB | `[external; our public 2026-05-04 PR result]` | ~11th place; race-window failure mode |
+| Quantizr (ref) | 0.33 | 299,970 | `[external; public reference, not auth-replayed locally]` | Architecture lane reference (Selfcomp/Quantizr-class) |
 
 Per `feedback_top3_PRs_are_boltons_on_PR100_substrate_20260507`: medal PRs
 all derive from the PR #100 substrate. Engineering velocity > novel theory at
@@ -75,16 +88,16 @@ SegNet's. The paper harness must report:
 
 For each of δ, ε, ζ, the paper §6 needs:
 
-| Row | δ | ε | ζ | Stage 5 (PD/TTO) | Predicted | Empirical |
-|---|:-:|:-:|:-:|:-:|---:|---:|
-| Baseline (PR106x) | ✗ | ✗ | ✗ | ✓ | — | 0.20935 |
-| +δ alone | ✓ | ✗ | ✗ | ✓ | TBD | NOT YET DISPATCHED |
-| +ε alone | ✗ | ✓ | ✗ | ✓ | TBD | NOT YET DISPATCHED |
-| +ζ alone | ✗ | ✗ | ✓ | ✓ | TBD | NOT YET DISPATCHED |
-| +δ+ε | ✓ | ✓ | ✗ | ✓ | TBD | NOT YET DISPATCHED |
-| +δ+ζ | ✓ | ✗ | ✓ | ✓ | TBD | NOT YET DISPATCHED |
-| +ε+ζ | ✗ | ✓ | ✓ | ✓ | TBD | NOT YET DISPATCHED |
-| +δ+ε+ζ (full stack) | ✓ | ✓ | ✓ | ✓ | 0.155-0.175 | NOT YET DISPATCHED |
+| Row | δ | ε | ζ | Stage 5 (PD/TTO) | Predicted (tag) | Empirical (tag) |
+|---|:-:|:-:|:-:|:-:|---|---|
+| Baseline (PR106x) | ✗ | ✗ | ✗ | ✓ | — | 0.20935 `[predicted-band, NOT contest-CUDA]` |
+| +δ alone | ✓ | ✗ | ✗ | ✓ | TBD `[predicted-band, NOT contest-CUDA]` | NOT YET DISPATCHED |
+| +ε alone | ✗ | ✓ | ✗ | ✓ | TBD `[predicted-band, NOT contest-CUDA]` | NOT YET DISPATCHED |
+| +ζ alone | ✗ | ✗ | ✓ | ✓ | TBD `[predicted-band, NOT contest-CUDA]` | NOT YET DISPATCHED |
+| +δ+ε | ✓ | ✓ | ✗ | ✓ | TBD `[predicted-band, NOT contest-CUDA]` | NOT YET DISPATCHED |
+| +δ+ζ | ✓ | ✗ | ✓ | ✓ | TBD `[predicted-band, NOT contest-CUDA]` | NOT YET DISPATCHED |
+| +ε+ζ | ✗ | ✓ | ✓ | ✓ | TBD `[predicted-band, NOT contest-CUDA]` | NOT YET DISPATCHED |
+| +δ+ε+ζ (full stack) | ✓ | ✓ | ✓ | ✓ | 0.155-0.175 `[predicted-band, NOT contest-CUDA, stretch]` | NOT YET DISPATCHED |
 
 Each row requires a Lightning T4 contest_auth_eval (~$0.30-0.60 per row).
 Total ablation cost: ~$2-5 if reused checkpoint cache; ~$5-15 if each requires
@@ -96,11 +109,11 @@ When XPARADIGM subagent's empirical anchors land at
 `feedback_cross_paradigm_hstack_vstack_empirical_anchors_20260508.md`, the
 harness adds:
 
-| Row | α (mask) | β (poses) | γ (JCSP) | δ | ε | ζ | Predicted |
-|---|:-:|:-:|:-:|:-:|:-:|:-:|---:|
-| α-bakeoff winner alone | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | TBD |
-| α + γ | ✓ | ✗ | ✓ | ✗ | ✗ | ✗ | TBD |
-| α + β + γ + δ + ε + ζ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 0.140-0.160 [stretch] |
+| Row | α (mask) | β (poses) | γ (JCSP) | δ | ε | ζ | Predicted (tag) |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|---|
+| α-bakeoff winner alone | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | TBD `[predicted-band, NOT contest-CUDA]` |
+| α + γ | ✓ | ✗ | ✓ | ✗ | ✗ | ✗ | TBD `[predicted-band, NOT contest-CUDA]` |
+| α + β + γ + δ + ε + ζ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 0.140-0.160 `[predicted-band, NOT contest-CUDA, stretch]` |
 
 ## 5. Code components needed
 
