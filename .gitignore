@@ -149,7 +149,10 @@ src/tac.egg-info/
 .omx/status/
 .omx/research/artifacts/
 .omx/logs/
+# Raw reports include tracked legacy evidence, but new raw/custody artifacts
+# should stay local unless explicitly curated and force-added.
 reports/raw/
+reports/raw/**
 reports/private/
 reports/public/.env
 

@@ -59,12 +59,32 @@ def test_intended_cells_record_four_labels_and_fail_closed_axes(monkeypatch) -> 
     assert called is False
     assert report["comparison_available"] is False
     assert report["score_claim"] is False
+    assert report["dispatch_attempted"] is False
     assert report["custody_labels"]["score_claim_axis"] == "none"
     assert report["custody_labels"]["contest_cpu_axis_claim"] is False
     assert report["custody_labels"]["contest_cuda_axis_claim"] is False
+    assert report["custody_labels"]["dispatch_attempted"] is False
     assert report["device_axis_custody"]["claimed_score_axes"] == []
     assert report["device_axis_custody"]["contest_cpu_axis_claim"] is False
     assert report["device_axis_custody"]["contest_cuda_axis_claim"] is False
+    assert report["device_axis_custody"]["dispatch_attempted"] is False
+    assert report["local_prerequisite_summary"]["local_host_can_run_full_2x2"] is False
+    assert report["local_prerequisite_summary"]["cuda_available"] is False
+    assert report["local_prerequisite_summary"]["dali_available"] is False
+    assert report["local_prerequisite_summary"]["missing_cuda_dali_prerequisite_codes"] == [
+        "cuda_available",
+        "dali_available",
+        "cuda_dali_runtime_available",
+    ]
+    remote_contract = report["future_remote_run_contract"]
+    assert remote_contract["dispatch_attempted"] is False
+    assert remote_contract["requires_dispatch_claim_before_remote_gpu_run"] is True
+    assert remote_contract["score_claim"] is False
+    assert "--run-forward-cells" in remote_contract["diagnostic_command"]
+    assert remote_contract["claim_command_template"][:2] == [
+        "tools/claim_lane_dispatch.py",
+        "claim",
+    ]
 
     cells = {cell["cell_id"]: cell for cell in report["intended_cells"]}
     assert list(cells) == [
@@ -93,6 +113,7 @@ def test_intended_cells_record_four_labels_and_fail_closed_axes(monkeypatch) -> 
         assert cell["promotion_eligible"] is False
         assert cell["rank_or_kill_eligible"] is False
         assert cell["ready_for_exact_eval_dispatch"] is False
+        assert cell["dispatch_attempted"] is False
         assert cell["contest_cpu_axis_claim"] is False
         assert cell["contest_cuda_axis_claim"] is False
 
@@ -185,3 +206,5 @@ def test_cell_discriminator_plan_names_decoder_and_forward_isolation() -> None:
     )
     assert plan["decoder_effect_fixed_cpu_forward"]["score_claim"] is False
     assert plan["decoder_effect_fixed_cuda_forward"]["promotion_eligible"] is False
+    assert all(row["dispatch_attempted"] is False for row in plan.values())
+    assert all(row["ready_for_exact_eval_dispatch"] is False for row in plan.values())

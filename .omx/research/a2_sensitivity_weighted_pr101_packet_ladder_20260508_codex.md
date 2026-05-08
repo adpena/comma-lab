@@ -178,3 +178,29 @@ The generated packet runtime source files remain ignored raw custody under
 `10502` to `10509` source-like files, SHA-256
 `02f1b7e3dbff968e9306c1214224773406e3e60a722f11804ffbde0eac98f09a`, after the
 new A2 packet manifests and ledgers captured the useful signal.
+
+## Dispatch Guard Follow-Up
+
+Codex hardened `tools/audit_a2_packet_ladder_closure.py` so local A2 packet and
+runtime-closure artifacts cannot drop diagnostic sensitivity blockers or clear
+packet blockers with the wrong evidence kind. The guard now checks top-level
+manifests, embedded variants, candidate manifests, and runtime probes for:
+
+- preserved `sensitivity_artifact` provenance on packet artifacts;
+- propagated stub/proxy/uniform sensitivity blockers such as
+  `diagnostic_or_stub_sensitivity_map_not_score_authority`,
+  `score_sensitivity_artifact_must_be_certified_before_promotion`, and
+  metadata blockers like `is_stub=true`;
+- `packet_local_inflate_parity_not_run` cleared only by
+  `inflate_parity_log` with `inflate_parity_record.passed=true`;
+- runtime probes preserving `candidate_manifest` evidence so inherited blockers
+  cannot disappear.
+
+Focused verification:
+
+- `.venv/bin/python -m pytest src/tac/tests/test_audit_a2_packet_ladder_closure.py`
+  passed 5/5.
+- `.venv/bin/python tools/audit_a2_packet_ladder_closure.py --repo-root . --strict`
+  passes after the older ignored local A2 artifacts were updated to preserve
+  stub sensitivity provenance, keep proxy/sensitivity blockers live, and stop
+  clearing inflate parity without an `inflate_parity_log`.

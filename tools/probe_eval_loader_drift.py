@@ -40,6 +40,8 @@ REPO = Path(__file__).resolve().parents[1]
 UPSTREAM = REPO / "upstream"
 COMPARISON_UNAVAILABLE_MISSING_PREREQUISITE = "missing_prerequisite"
 COMPARISON_UNAVAILABLE_PROBE_RUNTIME_ERROR = "probe_runtime_error"
+DIAGNOSTIC_REMOTE_LANE_ID = "eval_loader_drift_2x2_cuda_dali"
+REMOTE_ARTIFACT_PLACEHOLDER = "${ARTIFACT_DIR}/eval_loader_drift_2x2_cuda_dali.json"
 
 RAW_DECODER_REQUIRED_ARTIFACTS = (
     "upstream_frame_utils_py",
@@ -217,6 +219,13 @@ def _file_custody(path: Path, *, include_sha256: bool = True) -> dict[str, Any]:
         "size_bytes": path.stat().st_size if is_file else None,
         "sha256": _sha256_file(path) if include_sha256 and is_file else None,
     }
+
+
+def _repo_display_path(path: Path) -> str:
+    try:
+        return path.resolve().relative_to(REPO).as_posix()
+    except ValueError:
+        return str(path)
 
 
 def tensor_stats(tensor: torch.Tensor) -> dict[str, Any]:
@@ -456,6 +465,94 @@ def _missing_reasons(
     return reasons, codes
 
 
+def local_prerequisite_summary(artifacts: dict[str, Any]) -> dict[str, Any]:
+    cuda_dali_keys = (
+        "cuda_available",
+        "dali_available",
+        "cuda_dali_runtime_available",
+    )
+    missing_reasons, missing_codes = _missing_reasons(cuda_dali_keys, artifacts)
+    return {
+        "local_host_can_run_full_2x2": not missing_reasons,
+        "cuda_available": artifacts.get("cuda_available") is True,
+        "dali_available": artifacts.get("dali_available") is True,
+        "cuda_dali_runtime_available": artifacts.get("cuda_dali_runtime_available"),
+        "cuda_dali_runtime_unavailable_reason": artifacts.get(
+            "cuda_dali_runtime_unavailable_reason"
+        ),
+        "missing_cuda_dali_prerequisite_codes": missing_codes,
+        "missing_cuda_dali_prerequisite_reasons": missing_reasons,
+    }
+
+
+def future_remote_run_contract(args: argparse.Namespace) -> dict[str, Any]:
+    diagnostic_command = [
+        ".venv/bin/python",
+        "tools/probe_eval_loader_drift.py",
+        "--run-forward-cells",
+        "--video-names-file",
+        _repo_display_path(args.video_names_file),
+        "--data-dir",
+        _repo_display_path(args.data_dir),
+        "--batch-size",
+        str(args.batch_size),
+        "--num-threads",
+        str(args.num_threads),
+        "--prefetch-queue-depth",
+        str(args.prefetch_queue_depth),
+        "--seed",
+        str(args.seed),
+        "--video-limit",
+        str(args.video_limit),
+        "--max-batches",
+        str(args.max_batches),
+        "--json-out",
+        REMOTE_ARTIFACT_PLACEHOLDER,
+    ]
+    return {
+        "lane_id": DIAGNOSTIC_REMOTE_LANE_ID,
+        "dispatch_attempted": False,
+        "requires_dispatch_claim_before_remote_gpu_run": True,
+        "required_remote_prerequisite_codes": [
+            "cuda_available",
+            "dali_available",
+            "cuda_dali_runtime_available",
+            "pyav_available",
+            "upstream_frame_utils_py",
+            "upstream_modules_py",
+            "posenet_weights_exist",
+            "segnet_weights_exist",
+        ],
+        "claim_command_template": [
+            "tools/claim_lane_dispatch.py",
+            "claim",
+            "--lane-id",
+            DIAGNOSTIC_REMOTE_LANE_ID,
+            "--platform",
+            "lightning",
+            "--instance-job-id",
+            "${REMOTE_JOB_ID}",
+            "--agent",
+            "${AGENT_ID}",
+            "--status",
+            "diagnostic_eval",
+            "--notes",
+            "DALI/PyAV CPU/CUDA 2x2 loader-drift diagnostic; score_claim=false",
+        ],
+        "diagnostic_command": diagnostic_command,
+        "output_json": REMOTE_ARTIFACT_PLACEHOLDER,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "interpretation": (
+            "Future remote execution is a claimed diagnostic run only; it is "
+            "not a contest score claim, promotion run, or rank/kill decision."
+        ),
+    }
+
+
 def _unique_required_artifacts(*groups: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(dict.fromkeys(item for group in groups for item in group))
 
@@ -526,6 +623,7 @@ def build_intended_cells(
                 "promotion_eligible": False,
                 "rank_or_kill_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
                 "contest_cpu_axis_claim": False,
                 "contest_cuda_axis_claim": False,
                 "custody_label": "diagnostic_non_promotable_loader_forward_cell",
@@ -566,8 +664,11 @@ def build_cell_discriminator_plan(cells: list[dict[str, Any]]) -> list[dict[str,
                 "unavailable_codes": unavailable_codes,
                 "interpretation": spec["interpretation"],
                 "score_claim": False,
+                "score_claim_valid": False,
                 "promotion_eligible": False,
                 "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
             }
         )
     return plan
@@ -648,6 +749,12 @@ def _run_forward_cells_for_batch(
                 "status": "unsupported",
                 "unsupported_reasons": cell.get("unsupported_reasons", []),
                 "unsupported_codes": cell.get("unsupported_codes", []),
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
             }
             continue
         try:
@@ -661,15 +768,22 @@ def _run_forward_cells_for_batch(
                 "status": "runtime_error",
                 "runtime_error": f"{type(exc).__name__}: {exc}",
                 "score_claim": False,
+                "score_claim_valid": False,
                 "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
             }
             continue
         cell_reports[cell_id] = {
             "status": "measured",
             "output_stats": _model_output_stats(outputs[cell_id]),
             "score_claim": False,
+            "score_claim_valid": False,
             "promotion_eligible": False,
             "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
         }
 
     comparisons = []
@@ -687,7 +801,11 @@ def _run_forward_cells_for_batch(
                     "available": True,
                     "comparison": _compare_model_outputs(outputs[cell_a], outputs[cell_b]),
                     "score_claim": False,
+                    "score_claim_valid": False,
                     "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "dispatch_attempted": False,
                 }
             )
         else:
@@ -705,7 +823,11 @@ def _run_forward_cells_for_batch(
                         if cid not in outputs
                     ],
                     "score_claim": False,
+                    "score_claim_valid": False,
                     "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "dispatch_attempted": False,
                 }
             )
     return {
@@ -713,8 +835,11 @@ def _run_forward_cells_for_batch(
         "cells": cell_reports,
         "cell_comparisons": comparisons,
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
     }
 
 
@@ -756,6 +881,7 @@ def loader_device_custody() -> dict[str, Any]:
         "comparison_scope": "raw_evaluator_loader_rgb_before_posenet_segnet",
         "score_path": "not_run",
         "network_forward_device": "not_run",
+        "dispatch_attempted": False,
         "diagnostic_forward_cells": [
             {
                 "cell_id": spec["cell_id"],
@@ -798,6 +924,7 @@ def device_axis_custody() -> dict[str, Any]:
         "promotion_eligible": False,
         "score_claim_valid": False,
         "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
         "compared_ground_truth_loader_axes": ["cpu_loader_path", "cuda_loader_path"],
         "cpu_loader_path": {
             "loader_class": "AVVideoDataset",
@@ -839,6 +966,7 @@ def build_probe_report(args: argparse.Namespace) -> dict[str, Any]:
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
         "evidence_grade": "diagnostic",
         "diagnostic_kind": "loader_drift_probe",
         "repo": str(REPO),
@@ -855,15 +983,19 @@ def build_probe_report(args: argparse.Namespace) -> dict[str, Any]:
         "run_forward_cells": bool(args.run_forward_cells),
         "environment": _device_metadata(),
         "artifact_status": artifacts,
+        "local_prerequisite_summary": local_prerequisite_summary(artifacts),
         "source_file_custody": source_file_custody(args, artifacts),
         "loader_device_custody": loader_device_custody(),
         "device_axis_custody": device_axis_custody(),
+        "future_remote_run_contract": future_remote_run_contract(args),
         "custody_labels": {
             "artifact_kind": "diagnostic_loader_forward_drift_probe",
             "score_path": "not_run",
             "score_claim_axis": "none",
             "contest_cpu_axis_claim": False,
             "contest_cuda_axis_claim": False,
+            "dispatch_attempted": False,
+            "dispatch_claim_required_before_remote_run": True,
             "diagnostic_non_promotable": True,
         },
         "intended_cells": intended_cells,
@@ -873,6 +1005,7 @@ def build_probe_report(args: argparse.Namespace) -> dict[str, Any]:
             "This probe compares decoded evaluator input tensors before PoseNet/SegNet by default.",
             "Optional forward-cell rows are diagnostic PoseNet/SegNet output comparisons only; they are not score rows.",
             "It does not run inflate.sh, evaluate.py scoring, or any contest promotion path.",
+            "dispatch_attempted=false; any future CUDA+DALI remote run must claim the diagnostic lane first.",
             "A nonzero DALI-vs-PyAV raw RGB diff proves loader drift exists, but score impact still requires paired exact eval.",
             "Cell labels such as CPU+AV and CUDA+DALI describe diagnostic mechanisms, not contest_cpu or contest_cuda score axes.",
         ],

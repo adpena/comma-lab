@@ -167,6 +167,27 @@ EVAL_LOADER_DRIFT_REQUIRED_COMPARISON_METRICS = (
     "rms_abs_lsb",
     "nonzero_fraction",
 )
+EVAL_LOADER_DRIFT_EXPECTED_CELL_IDS = (
+    "cpu_av",
+    "cuda_dali",
+    "cuda_av_shared_input",
+    "cpu_dali",
+)
+EVAL_LOADER_DRIFT_EXPECTED_PLAN_IDS = (
+    "raw_decoder_input_byte_drift_pre_network",
+    "forward_kernel_drift_fixed_pyav_input",
+    "forward_kernel_drift_fixed_dali_input",
+    "decoder_effect_fixed_cpu_forward",
+    "decoder_effect_fixed_cuda_forward",
+)
+EVAL_LOADER_DRIFT_FALSE_CUSTODY_FIELDS = (
+    "score_claim",
+    "score_claim_valid",
+    "promotion_eligible",
+    "rank_or_kill_eligible",
+    "ready_for_exact_eval_dispatch",
+    "dispatch_attempted",
+)
 HSTACK_VSTACK_PLAN = REPO / "reports/hstack_vstack_multipass_plan_20260507.json"
 PR91_HPM1_READINESS_ARTIFACT = REPO / "experiments/results/pr91_hpm1_readiness_20260506_codex/readiness.json"
 PR91_HPM1_RUNTIME_CONTRACT_ARTIFACT = (
@@ -777,6 +798,108 @@ def _eval_loader_drift_missing_prereq_pass(payload: dict[str, object]) -> tuple[
     )
 
 
+def _eval_loader_drift_false_field_failures(
+    row: dict[str, object], *, row_label: str
+) -> list[str]:
+    return [
+        f"{row_label}: {field} must be false"
+        for field in EVAL_LOADER_DRIFT_FALSE_CUSTODY_FIELDS
+        if row.get(field) is not False
+    ]
+
+
+def _validate_eval_loader_drift_2x2_plan(payload: dict[str, object]) -> list[str]:
+    failures: list[str] = []
+    cells_raw = payload.get("intended_cells")
+    if not isinstance(cells_raw, list):
+        failures.append("intended_cells must be a list")
+    else:
+        cell_ids: list[str] = []
+        for index, row in enumerate(cells_raw):
+            if not isinstance(row, dict):
+                failures.append(f"intended_cells[{index}] must be an object")
+                continue
+            cell_id = str(row.get("cell_id") or "")
+            cell_ids.append(cell_id)
+            if not isinstance(row.get("available"), bool):
+                failures.append(f"cell {cell_id or index}: available must be boolean")
+            if not isinstance(row.get("unsupported_codes"), list):
+                failures.append(f"cell {cell_id or index}: unsupported_codes must be a list")
+            failures.extend(
+                _eval_loader_drift_false_field_failures(row, row_label=f"cell {cell_id or index}")
+            )
+        if cell_ids != list(EVAL_LOADER_DRIFT_EXPECTED_CELL_IDS):
+            failures.append(
+                "intended_cells must list the CPU/CUDA loader 2x2 cells in order: "
+                + ", ".join(EVAL_LOADER_DRIFT_EXPECTED_CELL_IDS)
+            )
+
+    plan_raw = payload.get("cell_discriminator_plan")
+    if not isinstance(plan_raw, list):
+        failures.append("cell_discriminator_plan must be a list")
+    else:
+        plan_ids: list[str] = []
+        for index, row in enumerate(plan_raw):
+            if not isinstance(row, dict):
+                failures.append(f"cell_discriminator_plan[{index}] must be an object")
+                continue
+            comparison_id = str(row.get("comparison_id") or "")
+            plan_ids.append(comparison_id)
+            if not isinstance(row.get("available"), bool):
+                failures.append(f"comparison {comparison_id or index}: available must be boolean")
+            if not isinstance(row.get("unavailable_codes"), list):
+                failures.append(f"comparison {comparison_id or index}: unavailable_codes must be a list")
+            failures.extend(
+                _eval_loader_drift_false_field_failures(
+                    row, row_label=f"comparison {comparison_id or index}"
+                )
+            )
+        if plan_ids != list(EVAL_LOADER_DRIFT_EXPECTED_PLAN_IDS):
+            failures.append(
+                "cell_discriminator_plan must list the five decoder/forward discriminator rows in order: "
+                + ", ".join(EVAL_LOADER_DRIFT_EXPECTED_PLAN_IDS)
+            )
+
+    contract = payload.get("future_remote_run_contract")
+    if not isinstance(contract, dict):
+        failures.append("future_remote_run_contract must be an object")
+    else:
+        failures.extend(
+            _eval_loader_drift_false_field_failures(contract, row_label="future_remote_run_contract")
+        )
+        if contract.get("requires_dispatch_claim_before_remote_gpu_run") is not True:
+            failures.append(
+                "future_remote_run_contract.requires_dispatch_claim_before_remote_gpu_run must be true"
+            )
+        command = contract.get("diagnostic_command")
+        if not isinstance(command, list) or "--run-forward-cells" not in [str(item) for item in command]:
+            failures.append(
+                "future_remote_run_contract.diagnostic_command must include --run-forward-cells"
+            )
+        claim_template = contract.get("claim_command_template")
+        if not isinstance(claim_template, list) or "claim" not in [str(item) for item in claim_template]:
+            failures.append("future_remote_run_contract.claim_command_template must claim the lane")
+
+    summary = payload.get("local_prerequisite_summary")
+    if not isinstance(summary, dict):
+        failures.append("local_prerequisite_summary must be an object")
+    else:
+        for key in (
+            "cuda_available",
+            "dali_available",
+            "missing_cuda_dali_prerequisite_codes",
+            "missing_cuda_dali_prerequisite_reasons",
+        ):
+            if key not in summary:
+                failures.append(f"local_prerequisite_summary missing {key}")
+        if not isinstance(summary.get("missing_cuda_dali_prerequisite_codes"), list):
+            failures.append(
+                "local_prerequisite_summary.missing_cuda_dali_prerequisite_codes must be a list"
+            )
+
+    return failures
+
+
 def _validate_eval_loader_drift_comparison_rows(rows: object) -> list[str]:
     if not isinstance(rows, list) or not rows:
         return ["comparison was available but emitted no rows"]
@@ -836,19 +959,15 @@ def _run_eval_loader_drift_probe_gate() -> tuple[bool, str]:
             payload = json.loads(output_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
             return False, f"eval loader drift probe emitted invalid JSON: {exc}\n{output}"
-    if payload.get("score_claim") is not False:
-        return False, "eval loader drift probe must never emit score_claim=true"
-    if payload.get("score_claim_valid") is not False:
-        return False, "eval loader drift probe must never emit score_claim_valid=true"
-    if payload.get("promotion_eligible") is not False:
-        return False, "eval loader drift probe must never be promotion eligible"
-    if payload.get("rank_or_kill_eligible") is not False:
-        return False, "eval loader drift probe must never be rank/kill eligible"
-    if payload.get("ready_for_exact_eval_dispatch") is not False:
-        return False, "eval loader drift probe must never be exact-eval dispatch-ready"
+    for field in EVAL_LOADER_DRIFT_FALSE_CUSTODY_FIELDS:
+        if payload.get(field) is not False:
+            return False, f"eval loader drift probe must keep {field}=false"
     score_axis = payload.get("score_axis")
     if score_axis not in {None, "diagnostic_loader_drift"}:
         return False, f"eval loader drift probe must stay on diagnostic_loader_drift axis, got {score_axis!r}"
+    plan_failures = _validate_eval_loader_drift_2x2_plan(payload)
+    if plan_failures:
+        return False, "eval loader drift 2x2 plan schema invalid: " + "; ".join(plan_failures)
     device_axis_custody = payload.get("device_axis_custody")
     if isinstance(device_axis_custody, dict):
         for key in (
@@ -859,6 +978,7 @@ def _run_eval_loader_drift_probe_gate() -> tuple[bool, str]:
             "score_claim_valid",
             "rank_or_kill_eligible",
             "ready_for_exact_eval_dispatch",
+            "dispatch_attempted",
         ):
             if device_axis_custody.get(key) is not False:
                 return False, f"eval loader drift device-axis custody must keep {key}=false"

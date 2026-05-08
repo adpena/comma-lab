@@ -8,6 +8,14 @@ from typing import Any
 
 REPO = Path(__file__).resolve().parents[3]
 ALL_LANES = REPO / "tools" / "all_lanes_preflight.py"
+NON_PROMOTABLE_FIELDS = {
+    "score_claim": False,
+    "score_claim_valid": False,
+    "promotion_eligible": False,
+    "rank_or_kill_eligible": False,
+    "ready_for_exact_eval_dispatch": False,
+    "dispatch_attempted": False,
+}
 
 
 def _load_all_lanes_module() -> Any:
@@ -20,6 +28,69 @@ def _load_all_lanes_module() -> Any:
     return module
 
 
+def _valid_intended_cells() -> list[dict[str, object]]:
+    rows = []
+    for cell_id in (
+        "cpu_av",
+        "cuda_dali",
+        "cuda_av_shared_input",
+        "cpu_dali",
+    ):
+        rows.append(
+            {
+                **NON_PROMOTABLE_FIELDS,
+                "cell_id": cell_id,
+                "available": cell_id == "cpu_av",
+                "unsupported_codes": [] if cell_id == "cpu_av" else ["cuda_available"],
+            }
+        )
+    return rows
+
+
+def _valid_cell_discriminator_plan() -> list[dict[str, object]]:
+    return [
+        {
+            **NON_PROMOTABLE_FIELDS,
+            "comparison_id": comparison_id,
+            "available": False,
+            "unavailable_codes": ["cuda_dali:cuda_available"],
+        }
+        for comparison_id in (
+            "raw_decoder_input_byte_drift_pre_network",
+            "forward_kernel_drift_fixed_pyav_input",
+            "forward_kernel_drift_fixed_dali_input",
+            "decoder_effect_fixed_cpu_forward",
+            "decoder_effect_fixed_cuda_forward",
+        )
+    ]
+
+
+def _probe_contract_fields() -> dict[str, object]:
+    return {
+        **NON_PROMOTABLE_FIELDS,
+        "score_axis": "diagnostic_loader_drift",
+        "intended_cells": _valid_intended_cells(),
+        "cell_discriminator_plan": _valid_cell_discriminator_plan(),
+        "local_prerequisite_summary": {
+            "cuda_available": False,
+            "dali_available": False,
+            "cuda_dali_runtime_available": None,
+            "missing_cuda_dali_prerequisite_codes": ["cuda_available"],
+            "missing_cuda_dali_prerequisite_reasons": ["cuda_available=false"],
+        },
+        "future_remote_run_contract": {
+            **NON_PROMOTABLE_FIELDS,
+            "requires_dispatch_claim_before_remote_gpu_run": True,
+            "diagnostic_command": [
+                ".venv/bin/python",
+                "tools/probe_eval_loader_drift.py",
+                "--run-forward-cells",
+            ],
+            "claim_command_template": ["tools/claim_lane_dispatch.py", "claim"],
+        },
+    }
+
+
 def _probe_payload(
     *,
     unavailable_class: str,
@@ -27,12 +98,7 @@ def _probe_payload(
     unavailable_reason: str,
 ) -> dict[str, object]:
     return {
-        "score_claim": False,
-        "score_claim_valid": False,
-        "promotion_eligible": False,
-        "rank_or_kill_eligible": False,
-        "ready_for_exact_eval_dispatch": False,
-        "score_axis": "diagnostic_loader_drift",
+        **_probe_contract_fields(),
         "comparison_available": False,
         "comparison_unavailable_class": unavailable_class,
         "comparison_unavailable_reason": unavailable_reason,
@@ -93,12 +159,7 @@ def test_eval_loader_drift_gate_accepts_known_missing_prereq_json(monkeypatch) -
 def test_eval_loader_drift_gate_rejects_malformed_comparison_rows(monkeypatch) -> None:
     module = _load_all_lanes_module()
     payload = {
-        "score_claim": False,
-        "score_claim_valid": False,
-        "promotion_eligible": False,
-        "rank_or_kill_eligible": False,
-        "ready_for_exact_eval_dispatch": False,
-        "score_axis": "diagnostic_loader_drift",
+        **_probe_contract_fields(),
         "comparison_available": True,
         "comparison_rows": [42],
     }
@@ -114,12 +175,7 @@ def test_eval_loader_drift_gate_rejects_malformed_comparison_rows(monkeypatch) -
 def test_eval_loader_drift_gate_rejects_sequence_or_shape_mismatch(monkeypatch) -> None:
     module = _load_all_lanes_module()
     payload = {
-        "score_claim": False,
-        "score_claim_valid": False,
-        "promotion_eligible": False,
-        "rank_or_kill_eligible": False,
-        "ready_for_exact_eval_dispatch": False,
-        "score_axis": "diagnostic_loader_drift",
+        **_probe_contract_fields(),
         "comparison_available": True,
         "comparison_rows": [
             {
@@ -148,12 +204,7 @@ def test_eval_loader_drift_gate_rejects_sequence_or_shape_mismatch(monkeypatch) 
 def test_eval_loader_drift_gate_rejects_missing_drift_metrics(monkeypatch) -> None:
     module = _load_all_lanes_module()
     payload = {
-        "score_claim": False,
-        "score_claim_valid": False,
-        "promotion_eligible": False,
-        "rank_or_kill_eligible": False,
-        "ready_for_exact_eval_dispatch": False,
-        "score_axis": "diagnostic_loader_drift",
+        **_probe_contract_fields(),
         "comparison_available": True,
         "comparison_rows": [
             {
@@ -175,12 +226,7 @@ def test_eval_loader_drift_gate_rejects_missing_drift_metrics(monkeypatch) -> No
 def test_eval_loader_drift_gate_rejects_nonfinite_drift_metrics(monkeypatch) -> None:
     module = _load_all_lanes_module()
     payload = {
-        "score_claim": False,
-        "score_claim_valid": False,
-        "promotion_eligible": False,
-        "rank_or_kill_eligible": False,
-        "ready_for_exact_eval_dispatch": False,
-        "score_axis": "diagnostic_loader_drift",
+        **_probe_contract_fields(),
         "comparison_available": True,
         "comparison_rows": [
             {
@@ -208,12 +254,7 @@ def test_eval_loader_drift_gate_rejects_nonfinite_drift_metrics(monkeypatch) -> 
 def test_eval_loader_drift_gate_accepts_complete_comparison_row(monkeypatch) -> None:
     module = _load_all_lanes_module()
     payload = {
-        "score_claim": False,
-        "score_claim_valid": False,
-        "promotion_eligible": False,
-        "rank_or_kill_eligible": False,
-        "ready_for_exact_eval_dispatch": False,
-        "score_axis": "diagnostic_loader_drift",
+        **_probe_contract_fields(),
         "comparison_available": True,
         "comparison_rows": [
             {
@@ -267,7 +308,42 @@ def test_eval_loader_drift_gate_rejects_dispatch_ready_diagnostic_payload(monkey
     passed, output = module._run_eval_loader_drift_probe_gate()
 
     assert passed is False
-    assert "exact-eval dispatch-ready" in output
+    assert "ready_for_exact_eval_dispatch=false" in output
+
+
+def test_eval_loader_drift_gate_rejects_dispatch_attempted_diagnostic_payload(monkeypatch) -> None:
+    module = _load_all_lanes_module()
+    payload = _probe_payload(
+        unavailable_class=module.EVAL_LOADER_DRIFT_MISSING_PREREQ_CLASS,
+        unavailable_codes=["cuda_available"],
+        unavailable_reason="cuda_available=false",
+    )
+    payload["dispatch_attempted"] = True
+    _stub_probe_run(module, monkeypatch, payload, returncode=2)
+
+    passed, output = module._run_eval_loader_drift_probe_gate()
+
+    assert passed is False
+    assert "dispatch_attempted=false" in output
+
+
+def test_eval_loader_drift_gate_rejects_dispatch_attempted_2x2_plan(monkeypatch) -> None:
+    module = _load_all_lanes_module()
+    payload = _probe_payload(
+        unavailable_class=module.EVAL_LOADER_DRIFT_MISSING_PREREQ_CLASS,
+        unavailable_codes=["cuda_available"],
+        unavailable_reason="cuda_available=false",
+    )
+    intended_cells = payload["intended_cells"]
+    assert isinstance(intended_cells, list)
+    intended_cells[0]["dispatch_attempted"] = True
+    _stub_probe_run(module, monkeypatch, payload, returncode=2)
+
+    passed, output = module._run_eval_loader_drift_probe_gate()
+
+    assert passed is False
+    assert "2x2 plan schema invalid" in output
+    assert "cell cpu_av: dispatch_attempted must be false" in output
 
 
 def test_eval_loader_drift_gate_rejects_contest_axis_diagnostic_payload(monkeypatch) -> None:

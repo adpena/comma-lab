@@ -97,6 +97,7 @@ import json
 import shutil
 import struct
 import sys
+import zipfile
 from pathlib import Path
 
 import numpy as np
@@ -220,6 +221,13 @@ def _resolve_output_root(output_root: Path) -> Path:
     if not expanded.is_absolute():
         expanded = REPO_ROOT / expanded
     return expanded.resolve()
+
+
+def _repo_rel_or_abs(path: Path) -> str:
+    try:
+        return path.relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return str(path)
 
 
 def _build_dequantized_substrate_via_admm(
@@ -409,6 +417,108 @@ def _stage_forked_submission_dir(
     inflate_sh.write_text(FORKED_INFLATE_SH, encoding="utf-8")
     inflate_sh.chmod(0o755)
     inflate_py.chmod(0o755)
+
+
+def _archive_member_manifest(archive_path: Path) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    with zipfile.ZipFile(archive_path, "r") as zf:
+        for info in zf.infolist():
+            payload = zf.read(info.filename)
+            rows.append(
+                {
+                    "name": info.filename,
+                    "compress_type": int(info.compress_type),
+                    "file_size": int(info.file_size),
+                    "compress_size": int(info.compress_size),
+                    "crc": int(info.CRC),
+                    "sha256": _sha256(payload),
+                }
+            )
+    return rows
+
+
+def _write_static_release_surface(
+    submission_dir: Path,
+    *,
+    archive_path: Path,
+    archive_sha256: str,
+    archive_bytes: int,
+) -> dict[str, object]:
+    """Stage static packet-custody files next to inflate runtime.
+
+    This deliberately does not write ``contest_auth_eval.json`` or mark the
+    candidate dispatch-ready. It closes only static archive/report custody so
+    pre-submission compliance can fail exclusively on missing exact eval and
+    terminal dispatch-claim evidence.
+    """
+    staged_archive = submission_dir / "archive.zip"
+    shutil.copy2(archive_path, staged_archive)
+    if staged_archive.stat().st_size != archive_bytes:
+        raise SystemExit(
+            f"FATAL: staged archive size mismatch: {staged_archive.stat().st_size} "
+            f"!= {archive_bytes}"
+        )
+    if _sha256(staged_archive.read_bytes()) != archive_sha256:
+        raise SystemExit("FATAL: staged archive SHA mismatch")
+
+    member_manifest = _archive_member_manifest(staged_archive)
+    archive_manifest = {
+        "schema": "cross_paradigm_admm_x_op1_static_archive_manifest.v1",
+        "tool": TOOL_NAME,
+        "lane_id": LANE_ID,
+        "created_at_utc": _utc_now_iso(),
+        "archive_sha256": archive_sha256,
+        "archive_size_bytes": archive_bytes,
+        "archive": {
+            "path": _repo_rel_or_abs(staged_archive),
+            "sha256": archive_sha256,
+            "archive_size_bytes": archive_bytes,
+            "member_count": len(member_manifest),
+            "members": member_manifest,
+        },
+        "evidence_grade": "[CPU-build]",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "dispatch_blockers": list(CPU_BUILD_SCORE_BLOCKERS),
+    }
+    manifest_path = submission_dir / "archive_manifest.json"
+    manifest_path.write_text(
+        json.dumps(archive_manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    report_path = submission_dir / "report.txt"
+    report_path.write_text(
+        "\n".join(
+            [
+                "cross_paradigm_admm_x_op1_finalizer static release surface",
+                f"lane_id: {LANE_ID}",
+                f"archive_sha256: {archive_sha256}",
+                f"archive_size_bytes: {archive_bytes}",
+                "score_claim: false",
+                "evidence_grade: [CPU-build]",
+                "ready_for_exact_eval_dispatch: false",
+                "dispatch_attempted: false",
+                "blockers:",
+                *[f"- {blocker}" for blocker in CPU_BUILD_SCORE_BLOCKERS],
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    return {
+        "archive_zip": _repo_rel_or_abs(staged_archive),
+        "archive_manifest_json": _repo_rel_or_abs(manifest_path),
+        "report_txt": _repo_rel_or_abs(report_path),
+        "archive_sha256": archive_sha256,
+        "archive_size_bytes": archive_bytes,
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -810,8 +920,19 @@ def main(argv: list[str] | None = None) -> int:
     _stage_forked_submission_dir(
         submission_dir, pr101_source_dir=args.pr101_source_dir
     )
+    static_release_surface = _write_static_release_surface(
+        submission_dir,
+        archive_path=archive_path,
+        archive_sha256=archive_sha,
+        archive_bytes=archive_bytes,
+    )
     print(
         f"[cross-paradigm-build] WROTE submission dir: {submission_dir.relative_to(REPO_ROOT)}"
+    )
+    print(
+        "[cross-paradigm-build] WROTE static release surface: "
+        f"{static_release_surface['archive_manifest_json']}, "
+        f"{static_release_surface['report_txt']}"
     )
 
     print("[smoke] running CPU roundtrip ...")
@@ -868,6 +989,7 @@ def main(argv: list[str] | None = None) -> int:
         "archive_bytes": archive_bytes,
         "archive_sha256": archive_sha,
         "submission_dir_relpath": str(submission_dir.relative_to(REPO_ROOT)),
+        "static_release_surface": static_release_surface,
         "input_state_dict": str(args.state_dict),
         "input_frontier_archive": str(args.frontier_archive),
         "input_pr101_source_dir": str(args.pr101_source_dir),

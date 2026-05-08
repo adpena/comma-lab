@@ -110,13 +110,22 @@ def test_unavailable_probe_is_non_promotable(monkeypatch) -> None:
     assert report["promotion_eligible"] is False
     assert report["rank_or_kill_eligible"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["dispatch_attempted"] is False
     assert report["evidence_grade"] == "diagnostic"
     assert report["diagnostic_kind"] == "loader_drift_probe"
     assert report["loader_device_custody"]["score_path"] == "not_run"
     assert report["loader_device_custody"]["network_forward_device"] == "not_run"
+    assert report["loader_device_custody"]["dispatch_attempted"] is False
     assert report["device_axis_custody"]["contest_cuda_claim"] is False
     assert report["device_axis_custody"]["contest_cpu_claim"] is False
     assert report["device_axis_custody"]["score_axis"] == "diagnostic_loader_drift"
+    assert report["device_axis_custody"]["dispatch_attempted"] is False
+    assert report["future_remote_run_contract"]["dispatch_attempted"] is False
+    assert (
+        report["future_remote_run_contract"]["requires_dispatch_claim_before_remote_gpu_run"]
+        is True
+    )
+    assert "--run-forward-cells" in report["future_remote_run_contract"]["diagnostic_command"]
 
 
 def test_missing_pyav_fails_closed_before_cuda_probe(monkeypatch) -> None:
@@ -145,6 +154,7 @@ def test_missing_pyav_fails_closed_before_cuda_probe(monkeypatch) -> None:
     assert report["promotion_eligible"] is False
     assert report["rank_or_kill_eligible"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["dispatch_attempted"] is False
     assert "pyav_available=false" in report["comparison_unavailable_reasons"]
 
 
