@@ -125,6 +125,34 @@ with open('$PROVENANCE', 'w') as f:
 "
 log "provenance written: $PROVENANCE"
 
+# Stage 0b: $PYBIN torch CUDA verification (closes A1 review R1-3 advisory).
+# $PYBIN is the conda-managed Python (separate from the uv-managed inflate
+# env where INFLATE_TORCH_SPEC pins cu124). Lightning Studio conda images
+# *should* ship a CUDA-compatible torch, but if they don't, training would
+# silently run on CPU per CLAUDE.md "Forbidden cu13-vs-cu124 trap" — every
+# score becomes [advisory only] and the dispatch is wasted. Fail fast here
+# so the operator sees the issue at Stage 0b, not after 4 hours of CPU run.
+log "=== Stage 0b: \$PYBIN torch CUDA verification ==="
+"$PYBIN" -c "
+import sys, torch
+ok = torch.cuda.is_available()
+ver = getattr(torch.version, 'cuda', None) or 'unknown'
+print(f'[stage0b] torch={torch.__version__} cuda={ver} cuda_available={ok}', file=sys.stderr)
+if not ok:
+    print('[stage0b] FATAL: \$PYBIN torch reports cuda_available=False; would train on CPU and produce only [advisory only] scores. Fix: rebuild conda env with CUDA-compatible torch wheel; do NOT proceed.', file=sys.stderr)
+    sys.exit(2)
+# Sanity: a concrete CUDA op succeeds (catches torch-built-with-cuda but no driver).
+try:
+    _ = torch.zeros(1, device='cuda') + torch.ones(1, device='cuda')
+except Exception as e:
+    print(f'[stage0b] FATAL: torch.cuda is_available()==True but a 1-element CUDA op failed: {e!r}', file=sys.stderr)
+    sys.exit(2)
+print('[stage0b] OK', file=sys.stderr)
+" || {
+    log "FATAL: \$PYBIN torch CUDA verification failed — see stage0b output above. Aborting before any GPU spend."
+    exit 2
+}
+
 ( while true; do
     GPU=$(nvidia-smi --query-gpu=utilization.gpu,memory.used --format=csv,noheader 2>&1 | tr '\n' ' ')
     echo "[$(date -u +%FT%TZ)] lane=$LANE_ID gpu=$GPU" >> "$HEARTBEAT"
