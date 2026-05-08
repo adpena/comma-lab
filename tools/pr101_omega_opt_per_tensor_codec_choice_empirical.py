@@ -32,7 +32,7 @@ UNTESTED.
 
 | Path B step | Codec axis tested | Net byte savings |
 |---|---|---|
-| 2 (multi-pass IMP) | Pass count | ~0 (avg \|Δ\| 64 B) |
+| 2 (multi-pass IMP) | Pass count | ~0 (avg |Δ| 64 B) |
 | 3 (HStack brotli params) | (q, lgwin, lgblock) per tensor | -40 B net |
 | **4 (this)** | **codec choice {brotli, sparsity@α} per tensor** | **TBD** |
 

@@ -1240,6 +1240,19 @@ def main() -> int:
         action="store_true",
         help="(after a successful train) just build archive from checkpoint",
     )
+    parser.add_argument(
+        "--no-auth-eval-on-best",
+        action="store_true",
+        default=True,
+        help=(
+            "Operator opt-out: this script trains a 50K toy substrate for "
+            "ChARM range coder validation (encode→decode roundtrip + bit-rate "
+            "vs. brotli baseline). It does NOT produce a contest-bound "
+            "renderer; the saved checkpoint is a codec test fixture, not a "
+            "submission archive. Auth eval applies to the downstream lane "
+            "that consumes ChARM as a real codec stage."
+        ),
+    )
     args = parser.parse_args()
 
     if args.output is None:

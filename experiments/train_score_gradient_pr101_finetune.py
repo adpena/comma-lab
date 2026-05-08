@@ -869,6 +869,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-frames", type=int, default=None,
                         help="Cap loaded frames for memory; None = all available")
     parser.add_argument("--seed", type=int, default=20260508)
+    parser.add_argument(
+        "--no-auth-eval-on-best",
+        action="store_true",
+        default=True,
+        help=(
+            "Operator opt-out: this script fine-tunes PR101 latents (not a "
+            "contest-bound renderer); the saved checkpoint is consumed by "
+            "tools/build_pr101_finetuned_archive.py which builds the archive "
+            "and is the path that owns auth_eval. Per CLAUDE.md "
+            "'Auth eval EVERYWHERE': the archive build path is where the "
+            "[contest-CUDA] eval lives; this fine-tune is a precursor."
+        ),
+    )
     args = parser.parse_args()
     assert_no_invented_flag(args)
     return args
