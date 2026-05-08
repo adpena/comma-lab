@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Stage the tac OSS-publish subset into a clean directory tree.
 
-Per CLAUDE.md Strategic Secrecy Rule: this script COPIES the OSS-relevant
-subset of the repo into an out-of-tree staging directory so the operator can
-preview before `gh repo create adpena/tac --public --push`.
+This script COPIES the OSS-relevant subset of the repo into an out-of-tree
+staging directory so the operator can preview before
+`gh repo create adpena/tac --public --push`. The two-step (stage → review →
+publish) workflow keeps internal research state out of the public release.
 
 INCLUDES (OSS-publish surface):
     src/tac/                          — the tac library
@@ -28,7 +29,7 @@ INCLUDES (OSS-publish surface):
     README.md                          — generated from ${TAC_OSS_README}
                                          OR provided via --readme
 
-EXCLUDES (per CLAUDE.md Strategic Secrecy Rule + practical bloat):
+EXCLUDES (internal-only research state + practical bloat):
     .omx/                              — operator state + research notes (PRIVATE)
     .ralph/                            — research log (PRIVATE)
     .claude/                           — Claude Code config (PRIVATE)
@@ -66,8 +67,8 @@ Then publishes:
     git commit -m "Initial public release of tac"
     gh repo create adpena/tac --public --source . --push
 
-Per CLAUDE.md Strategic Secrecy: this script does NOT execute any
-`gh repo create` or push commands. Operator runs those manually after review.
+Note: this script does NOT execute any `gh repo create` or push commands.
+Operator runs those manually after review of the staged tree.
 """
 from __future__ import annotations
 

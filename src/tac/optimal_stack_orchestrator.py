@@ -50,15 +50,15 @@ which paradigm shift contributed which bytes without changing the inflate
 contract. This is critical for the strict-scorer-rule (no scorer at
 inflate) and for reproducing builds exactly.
 
-Strategic Secrecy
------------------
+Manifest stripping
+------------------
 
 The OPTSTACK manifest writes layer-level provenance (which codec, which
 bit-budget, which sensitivity-map sha) into ``optstack_manifest.json``
 inside the archive. That JSON is **NEVER** consumed at decode time. It
 exists for our internal forensics and can be stripped at submission time
-via ``OptimalStackOrchestrator.build(strip_manifest=True)`` to honor the
-Strategic Secrecy Rule (`CLAUDE.md`).
+via ``OptimalStackOrchestrator.build(strip_manifest=True)`` when leaner
+public-facing archives are preferred.
 
 Tagging discipline
 ------------------
@@ -366,12 +366,11 @@ class OptimalStackOrchestrator:
             Destination archive path. Parent directory created if
             missing.
         strip_manifest:
-            If True (Strategic Secrecy mode for public submission),
-            do NOT include ``optstack_manifest.json`` in the archive.
-            Decoder doesn't need it; it exists for internal forensics
-            only. CLAUDE.md "Strategic Secrecy Rule" governs the
-            decision; default is False (manifest IN) for our internal
-            builds.
+            If True, do NOT include ``optstack_manifest.json`` in the
+            archive. Decoder doesn't need it; it exists for internal
+            forensics only. Default is False (manifest IN) for internal
+            builds; pass True when you want a leaner archive without
+            the layer-level provenance JSON.
         provenance_json:
             Optional sidecar provenance file (always written, never
             shipped inside the archive). Mirrors the manifest content
@@ -529,9 +528,10 @@ class OptimalStackOrchestrator:
                 "compliant — manifest is provenance only; decode dispatch is "
                 "magic-byte driven via tac.codec_magic_registry."
             ),
-            "strategic_secrecy_rule": (
-                "manifest_stripped=True is the public-submission mode; "
-                "default False is for internal builds."
+            "manifest_stripping_mode": (
+                "manifest_stripped=True yields a leaner public-shippable "
+                "archive; default False is for internal builds with "
+                "layer-level provenance JSON inside the archive."
             ),
         }
         provenance_json.write_text(json.dumps(prov, indent=2))

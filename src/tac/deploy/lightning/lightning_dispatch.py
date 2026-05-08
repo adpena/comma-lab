@@ -33,9 +33,9 @@ Lane lifecycle on Lightning:
 4. tear_down(session_id): kill the tmux session (Studio stays up; this just
    ends the lane)
 
-Strategic Secrecy (CLAUDE.md): the Studio URL itself is not shared publicly
-until the user approves disclosure. This module never logs or prints the
-Studio URL to stdout — it operates by SSH credentials only.
+Operational hygiene: this module never logs or prints the Studio URL to
+stdout — it operates by SSH credentials only. Keeps the Studio URL out of
+build logs and CI artifacts by default.
 """
 from __future__ import annotations
 

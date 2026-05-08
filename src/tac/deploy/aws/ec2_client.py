@@ -62,8 +62,8 @@ def resolve_default_ami_id(region: str = "us-east-1") -> str:
     or AWS credentials aren't configured. Hardcoded fallbacks are pinned to
     valid AMIs as of 2026-04-25 and may go stale.
 
-    Per CLAUDE.md "Strategic Secrecy": this AWS lane is unused at the moment
-    (Vast.ai is primary). Kept for future scale-out via free-credit programs.
+    This AWS lane is unused at the moment (Vast.ai is primary). Kept for
+    future scale-out via free-credit programs.
 
     Raises:
         RuntimeError: if no AMI can be resolved AND no fallback exists.
