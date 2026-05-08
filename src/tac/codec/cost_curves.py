@@ -36,10 +36,14 @@ from typing import Iterable, Sequence
 import numpy as np
 
 from .per_tensor_codecs import (
+    REL_ERR_FORM_BROTLI_ONLY,
+    REL_ERR_FORM_LOSSY_K,
+    REL_ERR_FORM_SPARSITY,
     encode_brotli_only,
     encode_lossy_K_coarsen,
     encode_sparsity_alpha,
 )
+from .rel_err import REL_ERR_FORM_KEY
 
 
 # ---------------------------------------------------------------------------
@@ -90,10 +94,20 @@ def precompute_per_tensor_sparsity_curves(
             _, syms = entry
         rows: list[dict] = []
         b0, e0 = encode_brotli_only(syms)
-        rows.append({"alpha": 0.0, "bytes": b0, "rel_err": e0})
+        rows.append({
+            "alpha": 0.0,
+            "bytes": b0,
+            "rel_err": e0,
+            REL_ERR_FORM_KEY: REL_ERR_FORM_SPARSITY,
+        })
         for alpha in alphas_list:
             b, e = encode_sparsity_alpha(syms, alpha)
-            rows.append({"alpha": alpha, "bytes": b, "rel_err": e})
+            rows.append({
+                "alpha": alpha,
+                "bytes": b,
+                "rel_err": e,
+                REL_ERR_FORM_KEY: REL_ERR_FORM_SPARSITY,
+            })
         out.append(rows)
     return out
 
@@ -104,7 +118,13 @@ def greedy_uniform_per_tensor_budget_sparsity(
     """For each tensor pick smallest-byte codec with ``rel_err <= budget``.
 
     The aggregate ``rel_err`` is reported as the RMS of per-tensor rel_errs
-    (matching the historical Path-B step-4 implementation).
+    (matching the historical Path-B step-4 implementation). When the input
+    curves were emitted by :func:`precompute_per_tensor_sparsity_curves` the
+    per-tensor inputs are L2 ratios and the RMS aggregate is well-formed
+    (RMS-of-L2-ratios is itself an L2-ratio over the concatenated symbol
+    space). When the input curves are mixed-form, prefer
+    :func:`tac.codec.rel_err.aggregate_rel_err` instead and tag downstream
+    evidence rows with ``rel_err_form`` explicitly.
 
     Args:
         curves: per-tensor sparsity curves.
@@ -156,7 +176,12 @@ def precompute_per_tensor_K_curves(
         rows: list[dict] = []
         for K in K_list:
             byte_proxy, rel_err = encode_lossy_K_coarsen(tb.raw, K)
-            rows.append({"K": int(K), "rel_err": rel_err, "byte_proxy": byte_proxy})
+            rows.append({
+                "K": int(K),
+                "rel_err": rel_err,
+                "byte_proxy": byte_proxy,
+                REL_ERR_FORM_KEY: REL_ERR_FORM_LOSSY_K,
+            })
         curves.append(rows)
     return curves
 

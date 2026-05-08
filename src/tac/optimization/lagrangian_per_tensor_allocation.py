@@ -28,6 +28,38 @@ hook (``UniwardWeightedAllocator``) to bias error away from
 low-variance/smooth tensors. λ is then bisected to satisfy a global RMS
 ``rel_err`` target.
 
+``rel_err`` form contract (2026-05-08 closure)
+----------------------------------------------
+
+The cost function ``cost = bytes + λ · w · rel_err²`` is mathematically a
+**rate-MSE Lagrangian**: the squared penalty corresponds to L2² distortion
+under the Karush-Kuhn-Tucker dual of an MSE constraint. The canonical form
+of ``rel_err`` is therefore RMS (or its scale-equivalent L2 ratio); see
+:mod:`tac.codec.rel_err` for the canonical helper.
+
+The allocator also accepts curves whose ``rel_err`` is global L1 (the form
+emitted by :func:`tac.codec.cost_curves.precompute_per_tensor_K_curves` and
+the PR101 Path-B / PR106 UNIWARD-packet tools). When the curves are L1 the
+Lagrangian dual is mathematically loose (squaring an L1 ratio does not
+recover an inner-product distortion), but the per-tensor allocation still
+produces monotone selections in λ and the bisection converges on the L1
+form. Empirical anchors shipped before this refactor (0.0386 PR101
+lossy_coarsening, 0.0415 ADMM × continuous-K) are L1 and remain valid.
+
+Curves built via the canonical :mod:`tac.codec.cost_curves` precompute
+helpers carry a per-row ``rel_err_form`` tag. The allocator inspects the
+tag at the entry of :meth:`bisect_for_rms_target` and:
+
+1. Asserts uniform form across all curves (raises if mixed).
+2. Records the discovered form in the result's ``joint_extras`` so
+   downstream evidence rows can tag themselves correctly.
+
+Curves built by older tools without form tags still work; the form check
+emits a single ``UserWarning`` per allocator instance via
+``warnings.warn`` and proceeds. The strict-flip is gated on a class-level
+flag and on the corresponding preflight check
+``check_rel_err_definition_canonical``.
+
 Public API
 ----------
 
@@ -50,11 +82,18 @@ reporting numbers.
 """
 from __future__ import annotations
 
+import warnings
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
+
+from tac.codec.rel_err import (
+    REL_ERR_FORM_KEY,
+    RelErrForm,
+    assert_uniform_rel_err_form,
+)
 
 EPS_VARIANCE: float = 1e-12
 """Numerical floor for inverse-variance weight computation."""
@@ -151,14 +190,25 @@ class LagrangianPerTensorAllocator:
             instead of the per-tensor sum + RMS.
     """
 
+    # Class-level switch for promoting the rel_err_form check to strict.
+    # Default False during the bug-class closure tranche; flip True after
+    # ``check_rel_err_definition_canonical`` lands at strict in
+    # ``preflight_all()`` and live violations across tools/ are at zero.
+    strict_rel_err_form: bool = False
+
     def __init__(
         self,
         *,
         weights: Sequence[float] | None = None,
         joint_encoder: JointEncoderHook | None = None,
+        strict_rel_err_form: bool | None = None,
     ) -> None:
         self._weights = list(weights) if weights is not None else None
         self._joint_encoder = joint_encoder
+        if strict_rel_err_form is not None:
+            self.strict_rel_err_form = bool(strict_rel_err_form)
+        self._rel_err_form_warned = False
+        self._observed_rel_err_form: RelErrForm | None = None
 
     # -- core ---------------------------------------------------------------
 
@@ -188,7 +238,7 @@ class LagrangianPerTensorAllocator:
         else:
             bytes_key = "bytes" if "bytes" in selections[0] else "byte_proxy"
             total_bytes = int(sum(int(s[bytes_key]) for s in selections))
-            rel_err = float(np.sqrt(np.mean([e ** 2 for e in rel_errs]))) if rel_errs else 0.0
+            rel_err = float(np.sqrt(np.mean([e ** 2 for e in rel_errs]))) if rel_errs else 0.0  # REL_ERR_NON_CANONICAL_OK: canonical RMS aggregator equivalent to aggregate_rel_err(mode=RMS); kept inline to avoid an indirect call in the bisection inner loop
             joint_extras = {}
 
         return AllocationResult(
@@ -237,6 +287,48 @@ class LagrangianPerTensorAllocator:
             :class:`AllocationResult` corresponding to the chosen ``λ`` (the
             tightest feasible one found).
         """
+        # Form-uniformity check: every curve row should declare the same
+        # ``rel_err_form``. Curves built by tools that predate the
+        # 2026-05-08 canonicalization may lack the tag; we tolerate that
+        # via a one-time warning unless ``strict_rel_err_form`` is set.
+        try:
+            form = assert_uniform_rel_err_form(
+                curves, strict=self.strict_rel_err_form
+            )
+            self._observed_rel_err_form = form
+        except ValueError as e:
+            # Mixed form is always fatal — the allocator math becomes
+            # ill-posed.
+            if "mixed rel_err_form" in str(e):
+                raise
+            # Missing-tag in strict mode: re-raise.
+            if self.strict_rel_err_form:
+                raise
+            # Missing-tag in lax-strict mode: warn once. (When
+            # ``strict_rel_err_form=False`` the helper does NOT raise on
+            # missing tags, so this branch is mostly unreachable; kept as
+            # a defensive path.)
+            form = None
+
+        # Warn-once when curves lacked any form tag in lax mode (no
+        # exception was raised).
+        if form is None and not self.strict_rel_err_form and not self._rel_err_form_warned:
+            # Only warn if at least one row was missing the tag (i.e. not
+            # the empty-curves case).
+            has_any_row = any(rows for rows in curves)
+            if has_any_row:
+                warnings.warn(
+                    "LagrangianPerTensorAllocator: curves lack "
+                    f"'{REL_ERR_FORM_KEY}' tags; the allocator assumes "
+                    "RMS-form rel_err for the squared Lagrangian "
+                    "penalty. Use tac.codec.rel_err.RelErrForm and the "
+                    "canonical precompute helpers in "
+                    "tac.codec.cost_curves to silence this.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+                self._rel_err_form_warned = True
+
         cache: dict[tuple[Any, ...], AllocationResult] = {}
         SENTINEL = lam_hi
         lo, hi = lam_lo, lam_hi
@@ -272,6 +364,13 @@ class LagrangianPerTensorAllocator:
             # No feasible λ found within budget → return the last attempt at
             # the largest λ tried (closest to feasibility).
             best = _alloc(hi if hi != SENTINEL else lo)
+
+        # Forward the discovered form to evidence consumers.
+        if self._observed_rel_err_form is not None:
+            best.joint_extras = {
+                **best.joint_extras,
+                REL_ERR_FORM_KEY: self._observed_rel_err_form.value,
+            }
         return best
 
     # -- helpers ------------------------------------------------------------

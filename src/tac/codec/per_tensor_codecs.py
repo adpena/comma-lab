@@ -9,11 +9,27 @@ Three primitive encoders share the same call contract ``(symbols, ...) ->
 * :func:`encode_lossy_K_coarsen` — K-step uniform quantization over the int
   range, brotli-compressed.
 
-Historically these implementations were duplicated across
-``tools/pr101_omega_opt_*.py`` and the UNIWARD-weighted lane. Centralizing them
-here removes drift risk (the Lagrangian allocator and budget-greedy selectors
-all assume identical encoder semantics) and gives the brotli parameter pin one
-canonical home.
+``rel_err`` semantics
+---------------------
+
+Per the 2026-05-08 council deliberation
+(``.omx/research/rel_err_inconsistency_audit_20260508_claude.md``) two of the
+three encoders historically used DIFFERENT ``rel_err`` definitions:
+
+* :func:`encode_sparsity_alpha` returns an **L2 ratio** (Euclidean).
+* :func:`encode_lossy_K_coarsen` returns an **L1 ratio** (sum of absolutes).
+
+These numerical behaviors are PRESERVED so every shipped empirical anchor
+(0.0386 / 0.0415 PR101 Path-B, 0.0019 et al.) stays comparable to its
+historical evidence row. New callers should use the canonical
+:func:`tac.codec.rel_err.compute_rel_err` directly instead of relying on the
+encoder's reported ``rel_err`` field; the canonical default is RMS.
+
+Centralizing the encoders here removes drift risk (the Lagrangian allocator
+and budget-greedy selectors all assume identical encoder semantics) and gives
+the brotli parameter pin one canonical home. The ``rel_err_form`` tag emitted
+by :mod:`tac.codec.cost_curves` lets the allocator assert form-uniformity at
+its bisection entry.
 
 The brotli parameters ``(quality=11, lgwin=16, lgblock=19)`` are pinned to match
 the PR101 substrate empirically validated on the public frontier; see
@@ -58,8 +74,34 @@ def _brotli_compress(payload: bytes) -> bytes:
     return brotli.compress(payload, **BROTLI_PARAMS)
 
 
+REL_ERR_FORM_BROTLI_ONLY: Final[str] = "rms"
+"""Lossless: ``rel_err == 0`` is form-agnostic; we declare ``rms`` to keep
+curves form-uniform with downstream RMS-aggregating selectors."""
+
+REL_ERR_FORM_SPARSITY: Final[str] = "l2_ratio"
+"""``encode_sparsity_alpha`` returns ``‖diff‖₂ / (‖orig‖₂ + ε)`` — L2 ratio.
+
+This number equals RMS when both numerator and denominator share the same
+``sqrt(N)`` normalization (which they do, elementwise over the same vector).
+We keep the legacy form tag to be explicit that the encoder reports the
+ratio of L2 norms, not the RMS expression directly.
+"""
+
+REL_ERR_FORM_LOSSY_K: Final[str] = "l1_ratio"
+"""``encode_lossy_K_coarsen`` returns ``Σ|diff| / Σ|orig|`` — global L1 ratio.
+
+Preserved verbatim to keep PR101 lossy_coarsening / PR106 UNIWARD-packet
+empirical anchors valid. New callers wanting RMS should pass the encoder's
+intermediate arrays through :func:`tac.codec.rel_err.compute_rel_err` with
+``mode=RelErrForm.RMS`` instead of consuming this field.
+"""
+
+
 def encode_brotli_only(symbols: np.ndarray) -> tuple[int, float]:
     """Brotli-encode int8 symbols losslessly.
+
+    The returned ``rel_err`` is exactly ``0.0`` (lossless); for curve-row
+    tagging the form is canonically ``"rms"`` (form-agnostic at zero).
 
     Args:
         symbols: 1-D ``np.ndarray`` of int-valued symbols in ``[-127, 127]``.
@@ -84,9 +126,11 @@ def encode_sparsity_alpha(symbols: np.ndarray, alpha: float) -> tuple[int, float
             also fall through to lossless.
 
     Returns:
-        ``(bytes_used, rel_err)`` where ``rel_err`` is the L2 relative error
-        between the symbol vector and the sparsified reconstruction.
-    """
+        ``(bytes_used, rel_err)`` where ``rel_err`` is the **L2 relative
+        error** ``‖diff‖₂ / (‖orig‖₂ + ε)`` between the symbol vector and
+        the sparsified reconstruction. The corresponding curve-row tag is
+        :data:`REL_ERR_FORM_SPARSITY`.
+    """  # REL_ERR_NON_CANONICAL_OK: L2 ratio preserved for sparsity-curve anchors
     n = symbols.size
     if alpha <= 0:
         return encode_brotli_only(symbols)
@@ -133,9 +177,13 @@ def encode_lossy_K_coarsen(
         clip_hi: upper clip bound before int8 cast.
 
     Returns:
-        ``(bytes_used, rel_err)`` where ``rel_err`` is the L1 relative error
-        ``sum|round-orig| / sum|orig|``.
-    """
+        ``(bytes_used, rel_err)`` where ``rel_err`` is the **L1 relative
+        error** ``sum|round-orig| / sum|orig|`` (global L1 ratio). The
+        corresponding curve-row tag is :data:`REL_ERR_FORM_LOSSY_K`.
+        New callers wanting the canonical RMS form should call
+        :func:`tac.codec.rel_err.compute_rel_err` with
+        ``mode=RelErrForm.RMS`` on the returned reconstruction directly.
+    """  # REL_ERR_NON_CANONICAL_OK: L1 ratio preserved for PR101 lossy_coarsening / PR106 UNIWARD anchors
     if K < 1:
         raise ValueError(f"K must be >= 1; got {K}")
     rounded = np.round(symbols / K) * K
@@ -151,6 +199,9 @@ def encode_lossy_K_coarsen(
 
 __all__ = [
     "BROTLI_PARAMS",
+    "REL_ERR_FORM_BROTLI_ONLY",
+    "REL_ERR_FORM_LOSSY_K",
+    "REL_ERR_FORM_SPARSITY",
     "encode_brotli_only",
     "encode_sparsity_alpha",
     "encode_lossy_K_coarsen",
