@@ -1,5 +1,13 @@
 # Latest Report - 2026-05-04 PR106 belt_and_suspenders adapter contest-faithful status
 
+## 2026-05-08 — Evidence-grade drift supersession after PR102/PR104/PR106
+
+- PR102 hardened replay is exact T4 CUDA A++ at `0.22839372989108092`, but it confirms public CPU/leaderboard drift and is not a new archive-byte win or local frontier.
+- PR104 is no longer an evidence hole: hardened exact T4 CUDA replay landed at `0.23113446620399658`, non-frontier versus the active PR103-on-PR106 anchor.
+- PR106 UNIWARD-Lagrangian `rms_target=0.05` exact T4 CUDA landed at `0.3371617511972341` and is `A-negative scoped forensic` for that measured runtime packet only: no promotion, no rank-frontier use, no family kill.
+- Treat `0.20454` / `178873` as an unanchored formula projection in older roadmap/autopilot surfaces unless a matching exact CUDA artifact is cited. Prediction, CPU, MPS, proxy, and byte-only rows cannot promote, rank, kill, or dispatch without exact packet custody.
+- Supersession ledger: `.omx/research/evidence_grade_drift_pr102_pr104_pr106_codex_20260508.md`.
+
 ## 2026-05-08 — Path B Ω-OPT 6/8 anchored; cross-paradigm 137,531 B figure RETRACTED to byte_proxy_only_NOT_deployable (REVIEW-ENG C1)
 
 ### Frontier state
@@ -36,7 +44,10 @@ All CPU-prep rows: `score_claim = False`, `promotion_eligible = False`, `ready_f
 
 ### In flight
 
-- **arch_shrink_x0.4 Q-FAITHFUL retrain** Lightning T4 (job `arch-shrink-x0-4-lightning-20260508t010514z`) — ~4h elapsed of 12-18h ETA, ~$9.90 budget. First [contest-CUDA] anchor for the architecture lane.
+- **arch_shrink_x0.4 Q-FAITHFUL retrain** Lightning T4 (active job
+  `arch-shrink-x0-4-lightning-20260508T024304Z`) — still running at
+  `2026-05-08T11:53:01Z`; no terminal `contest_auth_eval.json` yet. First
+  exact CUDA architecture-lane anchor remains pending harvest.
 
 ### Adversarial review gate active
 
@@ -278,7 +289,10 @@ prepared `600` pairs. Both are `build_tensor_prep_only`,
 
 ## Submission Pipeline
 
-The PR100 adapter replay is the current score champion. The PR98 packet is:
+Historical submission-packet context: the PR100 adapter replay was the May 4
+submission packet champion in this section, but it is not the current local
+HNeRV score/rate anchor. Current local HNeRV anchor remains PR103-on-PR106 as
+listed above. The PR98 packet is:
 
 - packet:
   `experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter`
@@ -335,7 +349,7 @@ raw `.omx/state`, local absolute paths, or provider transcripts.
 
 Every public or judge-facing packet should be generated from structured rows with these sections:
 
-1. `frontier_summary` - only Grade `A++`/`A` rows; current default is the PR100 adapter replay, with PR95 stem-permutation repack, PR95 conservative repack, PR95 public exact replay, PR85+STBM/RMB1, PR85, PR84, PR81, and C-067 retained as predecessor rows.
+1. `frontier_summary` - only Grade `A++`/`A` rows; current default is PR103-on-PR106, with PR106, PR104, PR102, PR100 adapter replay, PR95 stem-permutation repack, PR95 conservative repack, PR95 public exact replay, PR85+STBM/RMB1, PR85, PR84, PR81, and C-067 retained as predecessor/context rows.
 2. `public_external_context` - PR96 unresolved or self-reported claims, PR95 body/CPU score, PR91/PR67/PR65/PR63/PR64 anatomy and claimed scores tagged `external`.
 3. `quarantined_exploit_context` - PR68/PR69/PR70-style sidecar or rule-boundary evidence tagged `invalid` or `external_quarantine`.
 4. `exact_artifact_table` - archive path, SHA, bytes, eval JSON, device, samples, component values, recomputed score, evidence tag, allowed use, and `inflate_runtime_manifest.runtime_tree_sha256` for cross-run comparisons.
@@ -366,7 +380,7 @@ Contest deadline: **May 3 11:59 PM AOE = May 4 06:59 AM CDT (May 4 11:59 UTC)**.
 
 ## Internal sub-frontier launch-ready candidate — Lane Ω-W-V3 (post-deadline)
 
-**Lane Ω-W-V3** (water-filling codec v2 → PR106 HNeRV decoder) is fully scaffolded as of 2026-05-04 and ready for ~$0.30 GPU dispatch on Vast.ai 4090 (or T4-equivalent). Council 8/10 GO; predicted band [0.194, 0.204] [contest-CUDA].
+**Lane Ω-W-V3** (water-filling codec v2 → PR106 HNeRV decoder) is fully scaffolded as of 2026-05-04 and ready for ~$0.30 GPU dispatch on Vast.ai 4090 (or T4-equivalent). Council 8/10 GO; predicted band [0.194, 0.204] [prediction, NOT contest-CUDA].
 
 ### Pipeline (5 commits today)
 
@@ -401,7 +415,7 @@ Anchor: `experiments/results/internal_hidden_gem_audit_20260504_claude/revival_p
 
 The Lane #04 ternary-block_fp falsification was revived as a Pareto sweep over signed intN block-FP variants (int4..int8). Verified end-to-end byte-decodable locally (CPU stub mode):
 
-| Variant | Magic | Archive bytes | Rate Δ | Rel err per weight | Risk | Predicted band [contest-CUDA] | Pareto |
+| Variant | Magic | Archive bytes | Rate Δ | Rel err per weight | Risk | Predicted band [prediction, NOT contest-CUDA] | Pareto |
 |---|---|---:|---:|---:|---|---|---|
 | int4 | `0xA4` | 109,996 | −0.0508 | 7.1% | HIGH | [0.155, 0.180] | FRONTIER |
 | **int5** | **`0xA5`** | **154,555** | **−0.0211** | **3.3%** | **MEDIUM** | **[0.180, 0.196] — sweet spot** | FRONTIER |
@@ -517,9 +531,12 @@ apogee_int5 at $0.30 — RECOMMENDED).
 2. Keep PR100 source attribution and the exact T4 custody block with every public/judge-facing score claim.
 3. Run strict public-release hygiene on the exact PR body, notebook, and site bundle before publishing URLs.
 4. Keep PR96, PR91/HPM1, and any public body/CPU scores in external context until exact CUDA replay lands.
-5. **Lane Ω-W-V3 GPU dispatch (~$0.30)** — council 8/10 GO, predicted [0.194, 0.204], LOWEST risk of the sub-0.20 candidates. Operator approval gate per CLAUDE.md "Design decisions — non-negotiable".
-6. **Lane #04 int5 GPU dispatch (~$0.30)** — predicted [0.180, 0.196], MEDIUM risk, sweet spot of the int-N Pareto. Worth running in parallel with Ω-W-V3 since they're orthogonal (different codec families).
-7. **Lane #04 int6 GPU dispatch (~$0.30)** — predicted [0.190, 0.204], LOW risk fallback if int5 distortion exceeds tolerance.
-8. **Lane SJ-KL C067 GPU dispatch (~$0.30)** — uses C067 base archive (not PR106), so dispatchable in parallel with the PR106-stacking lanes. Predicted score band TBD pending first run.
+5. **Lane Ω-W-V3 GPU dispatch (~$0.30)** — council 8/10 GO, predicted [0.194, 0.204] [prediction, NOT contest-CUDA]. Operator approval gate plus fresh dispatch claim and exact artifact custody are required before score use.
+6. **Lane #04 int5 GPU dispatch (~$0.30)** — predicted [0.180, 0.196] [prediction, NOT contest-CUDA], MEDIUM risk, sweet spot of the int-N Pareto. Worth testing only through normal exact-eval gates.
+7. **Lane #04 int6 GPU dispatch (~$0.30)** — predicted [0.190, 0.204] [prediction, NOT contest-CUDA], LOW risk fallback if int5 distortion exceeds tolerance.
+8. **Lane SJ-KL C067 GPU dispatch (~$0.30)** — uses C067 base archive (not PR106), so it is independent from the PR106-stacking lanes. Predicted score band TBD pending first exact run.
 
-**Total dispatch matrix: 4 lanes × ~$0.30 = ~$1.20** for the highest-EV sweep that would land the first contest-CUDA score below PR106's 0.20946.
+**Total dispatch matrix: 4 lanes × ~$0.30 = ~$1.20** for a historical high-EV
+sweep proposal that would test whether any lane can land below PR106's exact
+`0.20945673680571203`. No prediction row counts as contest-CUDA evidence until
+the exact archive/runtime is harvested and reviewed.
