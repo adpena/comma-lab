@@ -1,5 +1,59 @@
 # Latest Report - 2026-05-04 PR106 belt_and_suspenders adapter contest-faithful status
 
+## 2026-05-08 — Path B Ω-OPT 6/8 anchored + cross-paradigm 137,531 B winner identified
+
+### Frontier state
+
+- **Local A++ HNeRV rate anchor (active)**: PR103-on-PR106 = `0.2089810755823297` [contest-CUDA] / `185,578` bytes / SHA256 `ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce`
+- **Public-leaderboard medal band** (May 4 race): 0.193 / 0.195 / 0.195 (PR #101 / #103 / #102)
+- **Phase 4 INTEGRATION predicted band** (commit e8ae721c): 0.155-0.175 [predicted-band, NOT contest-CUDA]; 0.140-0.180 conservative
+- **Theoretical Shannon floor target** (per CLAUDE.md "Frontier target"): keep advancing toward 0.155 and below
+
+### CPU-prep empirical anchors (real PR101 substrate, NOT contest-CUDA)
+
+| Composition | Bytes | vs anchor 185,578 | Source |
+|---|---:|---:|---|
+| **Path_B_step6_ADMM_x_continuous_K_then_Op1 (cross-paradigm winner)** | **137,531** | -47,000 | commit 8d33d5c1 [CPU-prep faithful cross-paradigm test] |
+| Path B step 6 ADMM standalone (byte-closed candidate) | 153,699 | -31,879 | commit 82bfc648 [CPU-prep] (rel_err 4.15%) |
+| Path B step 5 Joint-ADMM Lagrangian | 150,000 | -35,578 | commit b8aa5c43 [CPU-prep] (rel_err 4.36%) |
+| Path B step 4 HStack codec-CHOICE | 156,344 | -29,234 | commit 4f2cfd55 [CPU-prep] (analytical, rel_err 3.86%) |
+| Op2_alone (canonical 8-stack winner) | 161,942 | -23,636 | [CPU-prep, lossless] |
+| Op1_alone | 162,202 | -23,376 | [CPU-prep, lossless] |
+| Op3_int6 → Op1 (substrate-mismatch BALLOONED) | 309,470 | +123,892 | [CPU-prep, mismatch evidence] |
+
+All CPU-prep rows: `score_claim = False`, `promotion_eligible = False`, `ready_for_exact_eval_dispatch = False`. Distortion → score mapping unmeasured for the cross-paradigm winner; pre-finalizer rel_err 4.15%.
+
+### Empirical findings
+
+- **Allocation MECHANISM dominates codec-basis on PR101** — Joint-ADMM Lagrangian (step 5) beats greedy by 12-65 KB at rms_target=0.05; step 6 confirms (continuous-K basis at 152,420 B@4.33% within 2,420 B of step 5)
+- **PR101 codec lane saturated at ~150 KB byte-floor at 4-5% rel_err** — remaining headroom requires CUDA distortion validation, not codec cleverness
+- **Substrate-mismatch in BOTH directions** — Op3 designed for HNeRV/PR106 ballooned PR101 archives by +147K-200K B; PR101 byte-maps yield only -241 B on PR106. Codecs are NOT portable across substrates without retuning.
+- **Composability taxonomy** — STACKABLE: Op3, β (transforms_state_dict=True); SUBSTITUTIONAL: Op1, Op2, γ (independent terminal codec choices)
+
+### CUDA-confirmed negative this cycle
+
+- **lossy_coarsening_analytical** Lightning T4 dispatch = `0.3517 [contest-CUDA A-negative]` at 156,404 archive bytes. The byte-anchor 156,344 B @ 3.86% rel_err did NOT translate to predicted 0.189 score. Status: `measured_config_retired` (per-tensor K budget 0.05). Reactivation requires scorer-aware retrain.
+
+### In flight
+
+- **arch_shrink_x0.4 Q-FAITHFUL retrain** Lightning T4 (job `arch-shrink-x0-4-lightning-20260508t010514z`) — ~4h elapsed of 12-18h ETA, ~$9.90 budget. First [contest-CUDA] anchor for the architecture lane.
+
+### Adversarial review gate active
+
+4 commits pending clearance: 256d6fe1 (Lightning canonical bootstrap fix), 82bfc648 (ADMM byte-closed candidate), e8ae721c (Phase 4 design memo), 8d33d5c1 (cross-paradigm winner anchor).
+
+### Bug class extincted
+
+- `forbidden_remote_bootstrap_inline` re-violation closed by commit 256d6fe1: 7 sequential dep-discovery failures (uv → ensurepip → cu124 → find → brotli → timm) replaced with one canonical `bash scripts/remote_archive_only_eval.sh` invocation. The wrapper installs full dep closure (uv + ffmpeg + scorer deps) and auto-pins INFLATE_TORCH_SPEC by driver version.
+
+### Next dispatches (per `.omx/state/next_experiments.md`)
+
+1. 137,531 B cross-paradigm winner CUDA dispatch — pending decoder wiring + review clearance
+2. 153,699 B ADMM byte-closed candidate CUDA dispatch — pending review clearance
+3. PARADIGM-δεζ Phase 2 GPU implementation — pending arch_shrink result + apogee_int6 [contest-CUDA] precondition
+
+---
+
 ## Cross-PR Lineage Finding — 2026-05-07T16:00Z
 
 **The May 4 medal-band entries are bolt-ons on PR #100's substrate, not bespoke codecs.** Bit-level deconstruction of the gold/silver/bronze archives shows each medal entry inherits PR #100's archive layout (BradyMeighan, hnerv_lc_v2, 0.1954) and adds a small focused delta:
@@ -19,9 +73,27 @@
 
 **Why now**: per user 2026-05-07: "that finding about the PR submission using another submissions stuff is interesting we should mention that in our writeup and everywhere and findings".
 
+## Supersession — 2026-05-08 Monolithic Layout And Active HNeRV Rate Anchor
+
+The PR106x wording in the 2026-05-07 addenda below is historical. Later exact
+eval and layout work promotes PR103-on-PR106 as the active local A++ HNeRV
+rate anchor: strict formula score `0.2089810755823297`, report-reconstructed
+score `0.20898105277982337`, `185578` bytes, SHA-256
+`ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce`.
+PR106/PR106x remains a predecessor substrate/control; rate-only candidates
+must beat `185578` bytes or explicitly stack with a scorer-changing packet.
+
+The monolithic-layout correction also supersedes any member-name-derived
+pose/mask/renderer budget assumption for PR101/PR106-style HNeRV archives.
+Those archives have single ZIP members and parser-proven internal sections;
+there is no separate PR106 pose or mask ZIP member to replace.
+
 ## Track A/B/C/D/E/F/G/H Addendum — 2026-05-07T11:00Z
 
-**Current frontier unchanged at 0.20935 [contest-CUDA]** (PR106x-lowlevel-brotli, 186080 bytes). This addendum records the parallel-dispatch session outputs that prepare the next score-lowering wave.
+**Superseded historical wording**: this addendum originally treated
+`PR106x-lowlevel-brotli` (`0.20935073680571203`, `186080` bytes) as the
+current frontier. It is now a predecessor exact control below the active
+PR103-on-PR106 anchor above.
 
 ### Parallel-track session deliverables
 
@@ -53,7 +125,9 @@ The boundary between safe and catastrophic regimes lies between rel_err 1.55% an
 Per CLAUDE.md race-mode rigor inversion + parallel-dispatch-first non-negotiable: dispatch **{int6, int7}** in parallel via `tools/parallel_dispatch_top_k.py` for double-anchor calibration of the safe regime. Each candidate has its readiness-evidence-json staged; predispatch_sanity ALL 5 GATES PASS (exit 0) for both.
 
 Expected outcomes (from predicted-band, NOT contest-CUDA):
-- int6: [0.190, 0.215] — likely below current 0.20935 frontier
+- int6: [0.190, 0.215] — historical comparison against the superseded 0.20935
+  PR106x frontier; current rate-only anchor is PR103-on-PR106 at
+  `0.2089810755823297`
 - int7: [0.198, 0.208] — control variant (smaller savings, near-lossless distortion)
 
 If both land in their predicted bands, that's two new lossy anchors at rel_err 0.79% and 1.55% — completes the apogee_intN curve calibration in the safe regime (currently only int8 at 0.24% and int4 at 7.09%; the gap between is exactly what int6/int7 fill).
@@ -67,26 +141,33 @@ If both land in their predicted bands, that's two new lossy anchors at rel_err 0
 
 ## Worker D Addendum - 2026-05-07
 
-Current local HNeRV scorecard routing now treats
+Superseded historical scorecard routing treated
 `PR106x-lowlevel-brotli` as the lowest exact CUDA row already in custody:
 score `0.20935073680571203`, bytes `186080`, archive SHA-256
 `b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f`,
 eval artifact
 `experiments/results/lightning_batch/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506/contest_auth_eval.adjudicated.json`.
-This is an existing exact lossless-repack control, not a new family claim.
+This is an existing exact lossless-repack control, not a new family claim, and
+is now below the active PR103-on-PR106 A++ HNeRV rate anchor (`185578` bytes).
 
-The next exact-evaluable score-lowering target closest to that frontier is the
-same archive's `decoder_packed_brotli` section: `170127` charged bytes,
+The historical next exact-evaluable score-lowering target closest to that
+PR106x predecessor frontier was the same archive's `decoder_packed_brotli`
+section: `170127` charged bytes,
 section SHA-256
 `07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c`.
 Next gate is a byte-different archive with old/new section SHA-256 and charged
 byte proof, followed by exact CUDA auth eval only after the Level 2 lane claim.
+Supersession: current rate-only work must compare against the PR103-on-PR106
+`185578`-byte floor.
 No dispatch was attempted for this update. Durable note:
 `.omx/research/hnerv_frontier_hidden_gem_ranking_20260507_worker_d.md`.
 
-## Current Floor — NEW EXACT PUBLIC FRONTIER
+## Superseded May 4 Exact Public Frontier
 
-**Best contest-CUDA artifact in the current claim matrix: PR106 `belt_and_suspenders` adapter replay = `0.20945673680571203` [A++].**
+**Superseded May 4 public-frontier floor**: PR106 `belt_and_suspenders`
+adapter replay = `0.20945673680571203` [A++]. This remains source-substrate
+and predecessor evidence, but the active local HNeRV rate anchor is now
+PR103-on-PR106 at `0.2089810755823297` / `185578` bytes.
 
 - Evidence: `experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json`
 - Adapter: `experiments/results/public_runtime_adapters_20260504_codex/pr106_belt_and_suspenders_adapter/inflate.sh`
@@ -97,7 +178,7 @@ No dispatch was attempted for this update. Durable note:
 
 **Predecessor (now superseded)**: PR100 HNeRV-LC-v2 adapter replay `0.22826947142244708` [A++].
 
-**Score gap unlocked**: PR106 beats PR100 by `0.01881273461673505` and beats PR101 (the earlier exact best at the time of last report) by `0.01689658`. The dominant driver is PoseNet contribution `0.018306` vs PR101's `0.041355` — a ~2.3× pose-distance reduction in exchange for +5,314 archive bytes (rate cost +0.0053). This is the Fridrich square-root-law in action: concentrated bytes purchasing disproportionate pose reduction. PR106 is now the public frontier our internal stack must beat.
+**Score gap unlocked**: PR106 beats PR100 by `0.01881273461673505` and beats PR101 (the earlier exact best at the time of last report) by `0.01689658`. The dominant driver is PoseNet contribution `0.018306` vs PR101's `0.041355` — a ~2.3× pose-distance reduction in exchange for +5,314 archive bytes (rate cost +0.0053). Supersession after the monolithic-layout finding: this is a score-component comparison, not proof of a separate pose ZIP member or member-level pose budget.
 
 ### Cross-validating x-repack confirmation
 
@@ -132,7 +213,7 @@ recovery, and public-release hygiene.
 
 | Entry | Status | Score signal | Evidence use |
 |---|---:|---:|---|
-| PR #98 HNeRV/Muon adapter replay | Public-source adapter exact T4 | Exact T4 `0.22826947142244708`, bytes `178981` | **Active exact frontier; promotion-eligible A++; PR100 source attribution required** |
+| PR #98 HNeRV/Muon adapter replay | Public-source adapter exact T4 | Exact T4 `0.22826947142244708`, bytes `178981` | Superseded exact predecessor; PR100 source attribution required |
 | PR #99 HNeRV/Muon LC adapter replay | Public-source adapter exact T4 | Exact T4 `0.2297226895103603`, bytes `178546` | Superseded exact A++ PR98-family predecessor; PR99 source attribution required |
 | PR95 stem-permutation repack | Internal exact T4 | Exact T4 `0.23089404465634825`, bytes `178277` | Superseded exact predecessor |
 | PR95 conservative repack | Internal exact T4 | Exact T4 `0.23091954465634829`, bytes `178321` | Superseded exact predecessor |
@@ -264,7 +345,7 @@ Every public or judge-facing packet should be generated from structured rows wit
 
 ## Caveats
 
-- PR100 adapter replay is the current exact frontier; PR95 stem-permutation repack, PR95 conservative repack, PR95 public exact replay, PR85+STBM/RMB1, PR85, PR84, PR81, and C-067 are predecessor rows. None is a Shannon-floor attainment claim.
+- Supersession: PR103-on-PR106 is the active local HNeRV rate anchor; PR100 adapter replay, PR95 stem-permutation repack, PR95 conservative repack, PR95 public exact replay, PR85+STBM/RMB1, PR85, PR84, PR81, and C-067 are predecessor rows. None is a Shannon-floor attainment claim.
 - Public PRs and GitHub comments are external design signals unless we have exact archive bytes, SHA, CUDA eval JSON, component recomputation, and custody.
 - PR #70's low reported score is non-comparable under our compliance policy because the public PR text says score-affecting bytes were moved from `archive.zip` into `inflate.py`.
 - C-067 carries an external-source attribution requirement (PR #67 mask segment); the local score claim is A++ evidence for the charged archive bytes, but the mask source remains externally attributed per `docs/paper/EXTERNAL_SOURCE_ATTRIBUTION_C067.md`.
@@ -299,7 +380,7 @@ Contest deadline: **May 3 11:59 PM AOE = May 4 06:59 AM CDT (May 4 11:59 UTC)**.
 
 ### Stub-mode preview (CPU, all-ones sensitivity) [empirical:experiments/results/apogee_v2_repack_20260504_claude/repack_metadata.json]
 
-| Metric | PR106 (current public frontier) | Apogee-v2 stub | Δ |
+| Metric | PR106 (superseded public-frontier replay/control) | Apogee-v2 stub | Δ |
 |---|---:|---:|---:|
 | Archive bytes | 186,239 | 164,087 | **−22,152 (−11.9%)** |
 | Rate-component score | 0.124 | 0.109 | **−0.01475** |
