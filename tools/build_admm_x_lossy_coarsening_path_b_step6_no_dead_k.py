@@ -75,6 +75,13 @@ Usage
     .venv/bin/python tools/build_admm_x_lossy_coarsening_path_b_step6_no_dead_k.py \
         --selected-Ks-json reports/raw/beta_fisher_lossy_coarsening_weights/<run>/manifest.json \
         --selected-Ks-rms-target 0.0386
+
+    # Consume the generic Jacobian/Fisher allocator manifest format.
+    # This reads allocation.selected_by_tensor[].K after matching
+    # allocation.target_distortion to --selected-Ks-rms-target.
+    .venv/bin/python tools/build_admm_x_lossy_coarsening_path_b_step6_no_dead_k.py \
+        --selected-Ks-json reports/raw/jacobian_fisher_importance_allocator/<run>/manifest.json \
+        --selected-Ks-rms-target 0.0386
 """
 from __future__ import annotations
 
@@ -259,6 +266,88 @@ def _validate_Ks(values: list[object], *, source: str) -> list[int]:
     return out
 
 
+def _is_number(value: object) -> bool:
+    return isinstance(value, int | float) and not isinstance(value, bool)
+
+
+def _generic_allocation_selected_Ks(
+    payload: dict[str, object],
+    path: Path,
+    *,
+    rms_target: float,
+) -> tuple[dict[str, object], str] | None:
+    """Read K selections from the generic Jacobian/Fisher allocation schema.
+
+    The generic allocator emits ``allocation.selected_by_tensor`` rather than
+    the PR101-specific ``weighted_k_allocations`` rows.  Accept it only when
+    the manifest was produced for the requested target-distortion row and the
+    row order matches ``FIXED_STATE_SCHEMA``; byte budget allocations are not
+    interchangeable with this builder's RMS target.
+    """
+    schema = payload.get("schema", payload.get("schema_version"))
+    if schema != "jacobian_fisher_importance_allocator.v1":
+        return None
+    allocation = payload.get("allocation")
+    if allocation is None:
+        return None
+    if not isinstance(allocation, dict):
+        raise SystemExit(f"FATAL: {path}: allocation must be a JSON object")
+    objective = allocation.get("objective")
+    if objective != "target_distortion":
+        raise SystemExit(
+            f"FATAL: {path}: generic allocation objective must be "
+            f"'target_distortion' for --selected-Ks-rms-target consumption; "
+            f"got {objective!r}"
+        )
+    target = allocation.get("target_distortion")
+    if not _is_number(target) or abs(float(target) - float(rms_target)) > 1e-12:
+        raise SystemExit(
+            f"FATAL: {path}: allocation.target_distortion={target!r} does not "
+            f"match requested rms_target={rms_target}"
+        )
+    selected_rows = allocation.get("selected_by_tensor")
+    if not isinstance(selected_rows, list):
+        raise SystemExit(
+            f"FATAL: {path}: allocation.selected_by_tensor must be a list"
+        )
+    selected: list[object] = []
+    for idx, row in enumerate(selected_rows):
+        if not isinstance(row, dict):
+            raise SystemExit(
+                f"FATAL: {path}: allocation.selected_by_tensor[{idx}] must be an object"
+            )
+        tensor_index = row.get("tensor_index")
+        if tensor_index != idx:
+            raise SystemExit(
+                f"FATAL: {path}: allocation.selected_by_tensor[{idx}].tensor_index "
+                f"must be {idx}; got {tensor_index!r}"
+            )
+        expected_name = FIXED_STATE_SCHEMA[idx][0]
+        tensor_name = row.get("tensor_name")
+        if tensor_name != expected_name:
+            raise SystemExit(
+                f"FATAL: {path}: allocation.selected_by_tensor[{idx}].tensor_name "
+                f"must be {expected_name!r}; got {tensor_name!r}"
+            )
+        if "K" not in row:
+            raise SystemExit(
+                f"FATAL: {path}: allocation.selected_by_tensor[{idx}] lacks K"
+            )
+        selected.append(row["K"])
+    return (
+        {
+            "rms_target": target,
+            "selected_Ks": selected,
+            "total_bytes": allocation.get("total_bytes"),
+            "rel_err": allocation.get("weighted_rms_error"),
+            "weighted_rms_error": allocation.get("weighted_rms_error"),
+            "unweighted_rms_error": allocation.get("unweighted_rms_error"),
+            "objective": objective,
+        },
+        "allocation.selected_by_tensor[].K",
+    )
+
+
 def _load_selected_Ks_from_manifest(
     path: Path,
     *,
@@ -272,6 +361,7 @@ def _load_selected_Ks_from_manifest(
         raise SystemExit(f"FATAL: {path} must contain a JSON object")
 
     selected_row: dict[str, object] | None = None
+    source_field = "weighted_k_allocations[].selected_Ks"
     rows = payload.get("weighted_k_allocations")
     if isinstance(rows, list):
         for row in rows:
@@ -288,21 +378,32 @@ def _load_selected_Ks_from_manifest(
         # rms_target exactly. Operators wanting a single-row override must add
         # an explicit flag in a future change with a hard dispatch blocker.
 
+    if selected_row is None:
+        generic = _generic_allocation_selected_Ks(
+            payload,
+            path,
+            rms_target=float(rms_target),
+        )
+        if generic is not None:
+            selected_row, source_field = generic
+
     if selected_row is None and isinstance(payload.get("selected_Ks"), list):
         selected_row = {
             "rms_target": rms_target,
             "selected_Ks": payload["selected_Ks"],
         }
+        source_field = "selected_Ks"
 
     if selected_row is None:
         raise SystemExit(
-            f"FATAL: {path} has no weighted_k_allocations row for rms_target={rms_target}"
+            f"FATAL: {path} has no weighted_k_allocations row or generic "
+            f"allocation.selected_by_tensor K vector for rms_target={rms_target}"
         )
     selected = selected_row.get("selected_Ks")
     if not isinstance(selected, list):
         raise SystemExit(f"FATAL: selected row in {path} lacks selected_Ks list")
 
-    source = f"{path}:weighted_k_allocations[].selected_Ks"
+    source = f"{path}:{source_field}"
     Ks = _validate_Ks(selected, source=source)
     metadata = {
         "per_tensor_K_source": "selected_Ks_json",
@@ -312,6 +413,10 @@ def _load_selected_Ks_from_manifest(
         "selected_Ks_row_rms_target": selected_row.get("rms_target"),
         "selected_Ks_row_total_bytes_proxy": selected_row.get("total_bytes"),
         "selected_Ks_row_rel_err_proxy": selected_row.get("rel_err"),
+        "selected_Ks_row_weighted_rms_error": selected_row.get("weighted_rms_error"),
+        "selected_Ks_row_unweighted_rms_error": selected_row.get("unweighted_rms_error"),
+        "selected_Ks_source_field": source_field,
+        "selected_Ks_source_allocation_objective": selected_row.get("objective"),
         "selected_Ks_source_schema": payload.get("schema", payload.get("schema_version")),
         "selected_Ks_source_evidence_semantics": payload.get("evidence_semantics"),
         "selected_Ks_source_dispatch_blockers": payload.get("dispatch_blockers", []),
@@ -794,8 +899,9 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help=(
             "Optional beta-Fisher/Jacobian planning manifest containing "
-            "weighted_k_allocations[].selected_Ks. This changes charged bits "
-            "after the archive is rebuilt, but remains CPU-build evidence only."
+            "weighted_k_allocations[].selected_Ks or generic "
+            "allocation.selected_by_tensor[].K. This changes charged bits after "
+            "the archive is rebuilt, but remains CPU-build evidence only."
         ),
     )
     p.add_argument(

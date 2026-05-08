@@ -448,12 +448,7 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
     distillation_gate_violations = distillation_gate["violations"]
     distillation_gate_triggered = bool(distillation_gate_violations)
 
-    if args.result_copy:
-        result_copy = Path(args.result_copy)
-        result_copy.parent.mkdir(parents=True, exist_ok=True)
-        result_copy.write_text(json_text(payload))
-    else:
-        result_copy = contest_json
+    result_copy = Path(args.result_copy) if args.result_copy else contest_json
 
     predicted_low, predicted_high = args.predicted_band
     regression_threshold, regression_threshold_mode = _regression_threshold(args)
@@ -573,6 +568,72 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
     tmp_path = provenance_path.with_suffix(provenance_path.suffix + ".tmp")
     tmp_path.write_text(json_text(provenance))
     shutil.move(str(tmp_path), str(provenance_path))
+
+    adjudication_summary = {
+        "schema_version": 1,
+        "completed_at_utc": provenance["completed_at_utc"],
+        "lane_status": lane_status,
+        "evidence_grade": evidence_grade,
+        "paper_claim_grade": paper_claim_grade,
+        "allowed_use": allowed_use,
+        "promotion_eligible": promotion_eligible,
+        "score_claim_valid": promotion_eligible,
+        "scientific_score_eligible": scientific_score_eligible,
+        "hardware_promotion_gate_triggered": hardware_promotion_gate_triggered,
+        "contest_equivalent_hardware": contest_equivalent_hardware,
+        "score_delta_vs_baseline": score_delta_vs_baseline,
+        args.delta_key: score_delta_vs_baseline,
+        "regression_threshold": regression_threshold,
+        "regression_threshold_mode": regression_threshold_mode,
+        "regression_triggered": regression_triggered,
+        "regression_scope": "measured_implementation_config_only_pending_review",
+        "sane_score_gate_triggered": sane_score_gate_triggered,
+        "sane_score_gate_violation": sane_score_gate_violation,
+        "component_gates": component_gates,
+        "component_gate_violations": component_gate_violations,
+        "component_gate_triggered": component_gate_triggered,
+        "distillation_policy_active": distillation_gate["active"],
+        "distillation_policy_gate_violations": distillation_gate_violations,
+        "distillation_policy_gate_triggered": distillation_gate_triggered,
+        "contest_cuda_score_source": "contest_auth_eval.json:score_recomputed_from_components",
+        "contest_cuda_archive_sha256": actual_archive_sha256,
+        "contest_cuda_archive_bytes": actual_archive_bytes,
+        "contest_cuda_device": device,
+        "contest_cuda_gpu_t4_match": gpu_t4_match,
+    }
+    result_payload = dict(payload)
+    result_payload.update(
+        {
+            "adjudication": adjudication_summary,
+            "promotion_eligible": promotion_eligible,
+            "score_claim_valid": promotion_eligible,
+            "scientific_score_eligible": scientific_score_eligible,
+            "hardware_promotion_gate_triggered": hardware_promotion_gate_triggered,
+            "contest_equivalent_hardware": contest_equivalent_hardware,
+            "paper_claim_grade": paper_claim_grade,
+            "allowed_use": allowed_use,
+            "lane_status": lane_status,
+            "regression_triggered": regression_triggered,
+            "component_gate_triggered": component_gate_triggered,
+            "sane_score_gate_triggered": sane_score_gate_triggered,
+            "distillation_policy_gate_triggered": distillation_gate_triggered,
+            "score_delta_vs_baseline": score_delta_vs_baseline,
+            args.delta_key: score_delta_vs_baseline,
+            "adjudication_provenance": str(provenance_path),
+        }
+    )
+    if promotion_eligible:
+        result_payload["evidence_grade"] = "A++"
+        result_payload["score_claim"] = True
+    else:
+        result_payload["evidence_grade"] = paper_claim_grade
+        result_payload["score_claim"] = False
+        result_payload["rank_or_kill_eligible"] = False
+    if args.result_copy:
+        result_copy.parent.mkdir(parents=True, exist_ok=True)
+        copy_tmp = result_copy.with_suffix(result_copy.suffix + ".tmp")
+        copy_tmp.write_text(json_text(result_payload))
+        shutil.move(str(copy_tmp), str(result_copy))
 
     return {
         "score_recomputed": score_recomputed,

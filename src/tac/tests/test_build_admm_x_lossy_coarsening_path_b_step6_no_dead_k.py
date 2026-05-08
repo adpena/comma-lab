@@ -155,6 +155,93 @@ def test_no_dead_k_can_load_selected_Ks_from_score_weight_manifest(tmp_path: Pat
     )
 
 
+def test_no_dead_k_can_load_selected_Ks_from_generic_jacobian_fisher_manifest(
+    tmp_path: Path,
+) -> None:
+    """The generic Jacobian/Fisher allocation manifest should be consumable
+    without routing through the PR101-specific beta-Fisher exporter."""
+    import build_admm_x_lossy_coarsening_path_b_step6_no_dead_k as no_k
+
+    selected = [1] * len(no_k.FIXED_STATE_SCHEMA)
+    selected[0] = 3
+    selected[4] = 5
+    expected_names = [name for name, _shape in no_k.FIXED_STATE_SCHEMA]
+    manifest = {
+        "schema": "jacobian_fisher_importance_allocator.v1",
+        "evidence_semantics": (
+            "cpu_mps_proxy_importance_weighted_quantization_allocation_no_score_no_dispatch"
+        ),
+        "dispatch_blockers": [
+            "cpu_mps_proxy_importance_inputs_not_score_authority",
+            "requires_exact_archive_cuda_score_custody_before_rank_promotion_or_kill",
+        ],
+        "allocation": {
+            "objective": "target_distortion",
+            "target_distortion": 0.0386,
+            "total_bytes": 158901,
+            "weighted_rms_error": 0.0325,
+            "unweighted_rms_error": 0.0341,
+            "selected_by_tensor": [
+                {
+                    "tensor_index": idx,
+                    "tensor_name": expected_names[idx],
+                    "K": value,
+                    "allocator_weight": 1.0,
+                    "bytes": 100,
+                    "error": 0.01,
+                }
+                for idx, value in enumerate(selected)
+            ],
+        },
+    }
+    path = tmp_path / "jacobian_fisher_manifest.json"
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    Ks, metadata = no_k._load_selected_Ks_from_manifest(path, rms_target=0.0386)
+
+    assert Ks == selected
+    assert metadata["selected_Ks_source_field"] == "allocation.selected_by_tensor[].K"
+    assert metadata["selected_Ks_source_schema"] == "jacobian_fisher_importance_allocator.v1"
+    assert metadata["selected_Ks_row_total_bytes_proxy"] == 158901
+    assert metadata["selected_Ks_row_weighted_rms_error"] == 0.0325
+    assert metadata["selected_Ks_row_unweighted_rms_error"] == 0.0341
+    assert metadata["selected_Ks_source_allocation_objective"] == "target_distortion"
+
+
+def test_no_dead_k_rejects_generic_jacobian_fisher_order_mismatch(
+    tmp_path: Path,
+) -> None:
+    import build_admm_x_lossy_coarsening_path_b_step6_no_dead_k as no_k
+
+    expected_names = [name for name, _shape in no_k.FIXED_STATE_SCHEMA]
+    rows = [
+        {
+            "tensor_index": idx,
+            "tensor_name": expected_names[idx],
+            "K": 1,
+        }
+        for idx in range(len(expected_names))
+    ]
+    rows[3]["tensor_index"] = 4
+    path = tmp_path / "wrong_order.json"
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "jacobian_fisher_importance_allocator.v1",
+                "allocation": {
+                    "objective": "target_distortion",
+                    "target_distortion": 0.0386,
+                    "selected_by_tensor": rows,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SystemExit, match="tensor_index must be 3"):
+        no_k._load_selected_Ks_from_manifest(path, rms_target=0.0386)
+
+
 def test_no_dead_k_selected_Ks_source_blockers_propagate_to_guards(
     tmp_path: Path,
 ) -> None:
@@ -235,11 +322,39 @@ def test_no_dead_k_rejects_bad_selected_Ks_manifest(tmp_path: Path) -> None:
         no_k._load_selected_Ks_from_manifest(path, rms_target=0.0386)
 
 
+def test_no_dead_k_rejects_generic_jacobian_fisher_wrong_target(
+    tmp_path: Path,
+) -> None:
+    import build_admm_x_lossy_coarsening_path_b_step6_no_dead_k as no_k
+
+    path = tmp_path / "wrong_target.json"
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "jacobian_fisher_importance_allocator.v1",
+                "allocation": {
+                    "objective": "target_distortion",
+                    "target_distortion": 0.05,
+                    "selected_by_tensor": [
+                        {"tensor_name": f"tensor_{idx}.weight", "K": 1}
+                        for idx in range(len(no_k.FIXED_STATE_SCHEMA))
+                    ],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SystemExit, match="does not match requested rms_target"):
+        no_k._load_selected_Ks_from_manifest(path, rms_target=0.0386)
+
+
 def test_no_dead_k_cli_documents_score_weight_manifest_inputs() -> None:
     src = _read_tool_source()
     assert "--selected-Ks-json" in src
     assert "--score-weights-json" in src
     assert "weighted_k_allocations[].selected_Ks" in src
+    assert "allocation.selected_by_tensor[].K" in src
     assert "per_tensor_K_source" in src
 
 

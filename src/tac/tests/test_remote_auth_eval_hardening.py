@@ -22,7 +22,6 @@ from tac.preflight import (
     check_remote_lane_auth_eval_json_adjudication,
 )
 
-
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -215,6 +214,16 @@ def test_adjudicator_writes_forensic_artifacts_on_component_gate_violation(
     assert prov["paper_claim_grade"] == "A-negative scoped forensic"
     assert prov["allowed_use"] == ["forensic", "no_rank_frontier", "no_promotion"]
     assert prov["component_gate_violations"][0]["reason"] == "relative_component_gate"
+    copied = json.loads(result_copy.read_text())
+    assert copied["promotion_eligible"] is False
+    assert copied["score_claim_valid"] is False
+    assert copied["score_claim"] is False
+    assert copied["evidence_grade"] == "A-negative scoped forensic"
+    assert copied["paper_claim_grade"] == "A-negative scoped forensic"
+    assert copied["allowed_use"] == ["forensic", "no_rank_frontier", "no_promotion"]
+    assert copied["lane_status"] == "COMPONENT_GATE_REVIEW_REQUIRED"
+    assert copied["component_gate_triggered"] is True
+    assert copied["adjudication"]["promotion_eligible"] is False
 
 
 def test_adjudicator_writes_forensic_artifacts_on_sane_score_gate_violation(
@@ -273,6 +282,77 @@ def test_adjudicator_writes_forensic_artifacts_on_sane_score_gate_violation(
     assert prov["sane_score_gate_triggered"] is True
     assert prov["sane_score_gate_violation"]["reason"] == "sane_score_gate"
     assert prov["lane_status"] == "REGRESSION_AND_SANE_SCORE_REVIEW_REQUIRED"
+    copied = json.loads(result_copy.read_text())
+    assert copied["promotion_eligible"] is False
+    assert copied["score_claim_valid"] is False
+    assert copied["evidence_grade"] == "A-negative scoped forensic"
+    assert copied["lane_status"] == "REGRESSION_AND_SANE_SCORE_REVIEW_REQUIRED"
+    assert copied["adjudication"]["sane_score_gate_triggered"] is True
+
+
+def test_adjudicator_result_copy_demotes_regressions(tmp_path: Path) -> None:
+    adjudicator = _load_adjudicator()
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive")
+    archive_sha = hashlib.sha256(archive.read_bytes()).hexdigest()
+    contest_json = tmp_path / "contest_auth_eval.json"
+    contest_json.write_text(json.dumps({
+        "final_score": 0.337,
+        "score_recomputed_from_components": 0.3371617511972341,
+        "avg_posenet_dist": 0.0005,
+        "avg_segnet_dist": 0.0006,
+        "archive_size_bytes": archive.stat().st_size,
+        "n_samples": 600,
+        "promotion_eligible": True,
+        "score_claim_valid": True,
+        "evidence_grade": "A++",
+        "provenance": {
+            "archive_sha256": archive_sha,
+            "device": "cuda",
+            "gpu_t4_match": True,
+        },
+    }))
+    provenance = tmp_path / "adjudication_provenance.json"
+    result_copy = tmp_path / "contest_auth_eval.adjudicated.json"
+    args = argparse.Namespace(
+        contest_json=str(contest_json),
+        provenance=str(provenance),
+        archive=str(archive),
+        result_copy=str(result_copy),
+        baseline_score=0.204543,
+        baseline_archive_bytes=186131,
+        predicted_band=[0.20, 0.27],
+        regression_threshold=0.05,
+        delta_key="score_delta_vs_baseline",
+        required_device="cuda",
+        required_samples=600,
+        max_sane_score=1.0,
+        max_posenet_dist=None,
+        max_segnet_dist=None,
+        baseline_posenet_dist=None,
+        baseline_segnet_dist=None,
+        max_posenet_relative=None,
+        max_segnet_relative=None,
+        component_reference_label="frontier",
+    )
+
+    result = adjudicator.adjudicate(args)
+
+    assert result["regression_triggered"] is True
+    assert result["promotion_eligible"] is False
+    prov = json.loads(provenance.read_text())
+    copied = json.loads(result_copy.read_text())
+    assert prov["paper_claim_grade"] == "A-negative scoped forensic"
+    assert copied["promotion_eligible"] is False
+    assert copied["score_claim_valid"] is False
+    assert copied["score_claim"] is False
+    assert copied["rank_or_kill_eligible"] is False
+    assert copied["evidence_grade"] == "A-negative scoped forensic"
+    assert copied["paper_claim_grade"] == "A-negative scoped forensic"
+    assert copied["lane_status"] == "REGRESSION_REVIEW_REQUIRED"
+    assert copied["regression_triggered"] is True
+    assert copied["allowed_use"] == ["forensic", "no_rank_frontier", "no_promotion"]
+    assert copied["adjudication"]["promotion_eligible"] is False
 
 
 def test_adjudicator_cli_component_gate_fails_closed_by_default(tmp_path: Path) -> None:
