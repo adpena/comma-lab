@@ -297,7 +297,7 @@ def preflight_all(
     """
     # 1. Codebase drift check (cheap, always run unless explicitly disabled)
     if check_codebase:
-        check_codebase_drift(strict=True)
+        check_codebase_drift(strict=True, verbose=verbose)
         # 2026-04-30 supply-chain incident: PyPI `lightning` 2.6.2/2.6.3
         # contained Mini Shai-Hulud style credential-stealing malware that
         # executes on import. This repository uses `lightning-sdk`; any
@@ -1632,15 +1632,38 @@ def _scan_bash_text_for_forbidden(path: Path) -> list[str]:
     return violations
 
 
-def check_codebase_drift(strict: bool = True) -> list[str]:
+def _is_codebase_drift_result_artifact(path: Path, repo_root: Path) -> bool:
+    """True for generated experiment-result artifacts outside drift scope."""
+    try:
+        rel_parts = path.relative_to(repo_root).parts
+    except ValueError:
+        return False
+    return len(rel_parts) >= 2 and rel_parts[0] == "experiments" and rel_parts[1] == "results"
+
+
+def check_codebase_drift(
+    strict: bool = True,
+    *,
+    repo_root: str | Path | None = None,
+    verbose: bool = True,
+) -> list[str]:
     """Run the codebase drift check. Raise CodebaseDriftError if strict and violations found."""
+    root = Path(repo_root or REPO_ROOT)
     all_violations: list[str] = []
+    n_python_scanned = 0
+
+    if verbose:
+        print(
+            "  [codebase-drift] scanning source launch surfaces "
+            "(skipping experiments/results artifacts)",
+            flush=True,
+        )
 
     # 1. Forbidden file patterns
     for pattern in FORBIDDEN_FILE_PATTERNS:
-        for found in REPO_ROOT.glob(pattern):
+        for found in root.glob(pattern):
             all_violations.append(
-                f"{found.relative_to(REPO_ROOT)}: forbidden ad-hoc launcher. "
+                f"{found.relative_to(root)}: forbidden ad-hoc launcher. "
                 f"Use scripts/deploy_vastai.py + pipeline.py instead."
             )
 
@@ -1651,10 +1674,10 @@ def check_codebase_drift(strict: bool = True) -> list[str]:
     # gitignored. The drift rule exists to prevent ad-hoc deploy scripts
     # creeping in alongside the canonical pipeline.py + deploy_vastai.py path,
     # which a frozen result-bundle audit trail does not violate.
-    for sh_path in REPO_ROOT.glob("experiments/**/*.sh"):
+    for sh_path in root.glob("experiments/**/*.sh"):
         if sh_path.is_dir():
             continue  # recovered_*.sh is a directory, not a script
-        rel = str(sh_path.relative_to(REPO_ROOT))
+        rel = str(sh_path.relative_to(root))
         if rel.startswith("experiments/results/"):
             continue
         # Round 2 codebase-drift fix (2026-05-06): public_runtime_adapters/
@@ -1699,13 +1722,29 @@ def check_codebase_drift(strict: bool = True) -> list[str]:
                        "src/tac/contrib", "src/tac/deploy",
                        "src/tac/experiments"]
     for d in drift_scan_dirs:
-        d_path = REPO_ROOT / d
+        d_path = root / d
         if not d_path.exists():
             continue
         for py_path in d_path.rglob("*.py"):
+            if _is_codebase_drift_result_artifact(py_path, root):
+                continue
             if _is_oss_export_mirror_path(py_path):
                 continue
+            n_python_scanned += 1
             all_violations.extend(_scan_python_for_forbidden(py_path))
+
+    if verbose:
+        if all_violations:
+            print(
+                f"  [codebase-drift] {len(all_violations)} violation(s) "
+                f"after scanning {n_python_scanned} source Python file(s)",
+                flush=True,
+            )
+        else:
+            print(
+                f"  [codebase-drift] OK: scanned {n_python_scanned} source Python file(s)",
+                flush=True,
+            )
 
     if all_violations and strict:
         msg = (
