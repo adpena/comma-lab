@@ -53,18 +53,21 @@ def test_autopilot_requires_exact_cuda_for_promotable_evidence() -> None:
     cpu = tool.TechniqueEvidence(
         technique="cpu_anchor",
         empirical_archive_bytes=100_000,
-        evidence_grade="[CPU-prep]",
-        evidence_semantics="cpu_substrate_predicted_band",
+        evidence_grade="[contest-CPU]",
+        evidence_semantics="contest_cpu_exact_eval_positive",
+        device_axis="contest_cpu",
+        hardware="ubuntu-24.04 linux x86_64 github-actions",
         score_claim=True,
         promotion_eligible=True,
         rank_or_kill_eligible=True,
         ready_for_exact_eval_dispatch=True,
         dispatch_blockers=[],
-        source="local cpu prep",
+        source="github-actions contest_auth_eval.json",
     )
 
     assert tool._is_explicitly_promotable_evidence(exact) is True
     assert tool._is_explicitly_promotable_evidence(cpu) is False
+    assert tool._is_explicitly_contest_cpu_evidence(cpu) is True
 
 
 def test_exact_negative_supersedes_proxy_byte_anchor() -> None:
@@ -308,6 +311,36 @@ def test_proxy_byte_anchor_cannot_dominate_active_ranking() -> None:
     assert ranked[-1]["predicted_score_delta"] == 0.0
 
 
+def test_build_plan_threads_cpu_rank_axis_into_rankings() -> None:
+    tool = _load_tool_module()
+
+    plan = tool.build_plan(
+        d_seg=0.00067623,
+        d_pose=0.00017198,
+        archive_bytes=178_981,
+        target_score=0.19,
+        include_axis_priorities=False,
+        rank_axis="cpu",
+        current_score_axis="cuda",
+        architecture_class="hnerv_ft_microcodec",
+    )
+
+    assert plan.operator_state["rank_axis"] == "cpu"
+    assert plan.operator_state["architecture_class"] == "hnerv_ft_microcodec"
+    assert all(
+        row["rank_axis"] == "cpu"
+        for row in plan.encoder_technique_ranking + plan.arch_technique_ranking
+    )
+    assert plan.recommended_top_3 == sorted(
+        plan.encoder_technique_ranking + plan.arch_technique_ranking,
+        key=lambda r: (
+            r["active_ranking_blocked"],
+            -r["primary_score_delta"],
+            r["cost_dollars"],
+        ),
+    )[:3]
+
+
 def test_unknown_evidence_techniques_are_reported_not_ranked() -> None:
     tool = _load_tool_module()
     evidence = [
@@ -355,3 +388,132 @@ def test_unknown_evidence_techniques_are_reported_not_ranked() -> None:
     assert "unmodeled_proxy_codec" not in ranked_names
     assert "unmodeled_exact_negative_codec" not in ranked_names
     assert "unknown technique" in " ".join(plan.notes)
+
+
+def test_device_axis_report_requires_paired_archive_runtime_before_priority() -> None:
+    tool = _load_tool_module()
+    evidence = [
+        tool.TechniqueEvidence(
+            technique="apogee_pr107",
+            empirical_score=0.19664189,
+            empirical_d_seg=0.000589,
+            empirical_d_pose=0.0000358,
+            empirical_archive_bytes=178_637,
+            evidence_grade="[macOS-CPU advisory only]",
+            device_axis="macOS-CPU",
+            archive_sha256="abc",
+            runtime_tree_sha256="runtime",
+            substrate_class="hnerv",
+            source="local M5 advisory",
+        )
+    ]
+
+    report = tool.summarize_device_axis_evidence(evidence)
+
+    assert report["priority_status"] == "insufficient_paired_axis_evidence"
+    assert report["paired_comparison_count"] == 0
+    assert report["macos_cpu_advisory_count"] == 1
+    assert report["unpaired_device_axis_evidence"][0]["reason"] == (
+        "macos_cpu_research_proxy_needs_linux_contest_cpu_promotion"
+    )
+    assert "Do not assign CPU-vs-GPU" in report["policy"]
+    assert "PR107 GHA-vs-M5" in report["policy"]
+
+
+def test_device_axis_report_learns_per_substrate_profile_from_paired_axes() -> None:
+    tool = _load_tool_module()
+    evidence = [
+        tool.TechniqueEvidence(
+            technique="pr102",
+            empirical_score=0.1953761765,
+            score_contest_cpu=0.1953761765,
+            empirical_d_seg=0.00057599,
+            empirical_d_pose=0.00003460,
+            empirical_archive_bytes=178_981,
+            evidence_grade="[contest-CPU]",
+            device_axis="contest_cpu",
+            archive_sha256="same-archive",
+            runtime_tree_sha256="same-runtime",
+            substrate_class="hnerv_lc_v2",
+            decoder_pose_ratio_cuda_over_cpu=1.25,
+            network_pose_ratio_cuda_over_cpu=4.0,
+            source="cpu json",
+        ),
+        tool.TechniqueEvidence(
+            technique="pr102",
+            empirical_score=0.2283908312,
+            score_contest_cuda=0.2283908312,
+            empirical_d_seg=0.00067565,
+            empirical_d_pose=0.00017347,
+            empirical_archive_bytes=178_981,
+            evidence_grade="[contest-CUDA]",
+            device_axis="contest_cuda",
+            archive_sha256="same-archive",
+            runtime_tree_sha256="same-runtime",
+            substrate_class="hnerv_lc_v2",
+            source="cuda json",
+        ),
+    ]
+
+    report = tool.summarize_device_axis_evidence(evidence)
+
+    assert report["priority_status"] == "paired_archive_specific_diagnostics_available"
+    assert report["paired_comparison_count"] == 1
+    pair = report["paired_comparisons"][0]
+    assert abs(pair["pose_ratio_cuda_over_cpu"] - 5.013583815) < 1e-6
+    assert abs(pair["seg_ratio_cuda_over_cpu"] - 1.173023837) < 1e-6
+    profiles = report["substrate_class_profiles"]
+    assert profiles[0]["substrate_class"] == "hnerv_lc_v2"
+    assert profiles[0]["posterior_status"] == "needs_more_anchors"
+    assert profiles[0]["decoder_pose_ratio_mean_cuda_over_cpu"] == 1.25
+    assert profiles[0]["network_pose_ratio_mean_cuda_over_cpu"] == 4.0
+
+
+def test_device_axis_report_rejects_conflicting_duplicate_axis_rows() -> None:
+    tool = _load_tool_module()
+    common = {
+        "technique": "pr102",
+        "archive_sha256": "same-archive",
+        "runtime_tree_sha256": "same-runtime",
+        "substrate_class": "hnerv_lc_v2",
+    }
+    evidence = [
+        tool.TechniqueEvidence(
+            **common,
+            empirical_score=0.195,
+            score_contest_cpu=0.195,
+            empirical_d_seg=0.00057,
+            empirical_d_pose=0.000034,
+            evidence_grade="[contest-CPU]",
+            device_axis="contest_cpu",
+            source="cpu json a",
+        ),
+        tool.TechniqueEvidence(
+            **common,
+            empirical_score=0.196,
+            score_contest_cpu=0.196,
+            empirical_d_seg=0.00058,
+            empirical_d_pose=0.000035,
+            evidence_grade="[contest-CPU]",
+            device_axis="contest_cpu",
+            source="cpu json b",
+        ),
+        tool.TechniqueEvidence(
+            **common,
+            empirical_score=0.228,
+            score_contest_cuda=0.228,
+            empirical_d_seg=0.00067,
+            empirical_d_pose=0.00017,
+            evidence_grade="[contest-CUDA]",
+            device_axis="contest_cuda",
+            source="cuda json",
+        ),
+    ]
+
+    report = tool.summarize_device_axis_evidence(evidence)
+
+    assert report["paired_comparison_count"] == 0
+    assert report["priority_status"] == "insufficient_paired_axis_evidence"
+    assert report["unpaired_device_axis_evidence"][0]["reason"] == (
+        "conflicting_duplicate_axis_rows_same_archive_runtime"
+    )

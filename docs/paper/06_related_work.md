@@ -70,7 +70,7 @@ The standard Shannon rate-distortion bound `R_Sh(D)` quantifies the minimum bit-
 
 Define `R_YF(D) = inf_{p(X̂|X)} I(X; X̂)  s.t.  E[d_task(X, X̂)] ≤ D` as the rate-distortion function under the contest's task-aware distortion. We name this bound the **Yousfi-Fridrich floor**, after Yassine Yousfi (the contest's scorer architect, formerly of Fridrich's DDE Lab at Binghamton) and Jessica Fridrich (whose constrained-optimization framework — minimize embedding payload subject to a detectability constraint — maps directly to the contest's structure). The naming honors the steganalysis lineage: UNIWARD's textured-region weighting, Fridrich's square-root law for distortion spread, and Yousfi et al.'s adversarial detector-embedder framework all anticipated that *adversarial compression against a known fixed detector* admits structurally tighter rate bounds than perceptual compression against an unknown human observer.
 
-The YF-floor inequality `R_YF(D) ≤ R_Sh(D)` is strict whenever the scorer's preimage on its output space is non-trivial — i.e., whenever distinct reconstructions `X̂_1 ≠ X̂_2` produce identical scorer outputs `Φ(X̂_1) = Φ(X̂_2)`. For this contest, the inequality is strict because (a) SegNet's stride-2 EfficientNet-B2 stem coarsens spatial detail before any class-discriminative computation, making sub-(256, 192) artifacts invisible, and (b) PoseNet's YUV6 + FastViT-T12 attention coarsens chroma detail. Bytes spent reconstructing input regions inside the joint blind spot are wasted under YF but charged under Shannon.
+The YF-floor inequality `R_YF(D) ≤ R_Sh(D)` is strict whenever the scorer's preimage on its output space is non-trivial — i.e., whenever distinct reconstructions `X̂_1 ≠ X̂_2` produce identical scorer outputs `Φ(X̂_1) = Φ(X̂_2)`. For this contest, the inequality is strict because (a) SegNet's stride-2 EfficientNet-B2 stem coarsens spatial detail before any class-discriminative computation, making sub-(256, 192) artifacts invisible, and (b) PoseNet's YUV6 preprocessing plus FastViT/RepMixer backbone coarsen chroma and local texture detail. Bytes spent reconstructing input regions inside the joint blind spot are wasted under YF but charged under Shannon.
 
 The empirical leaderboard floor at the time of submission is approximately 0.31 (top three contestants in a tight band), against a realistic Shannon floor of ~0.155 derived from explicit per-component R(D) analysis. The YF floor lies strictly below 0.155. The gap between 0.31 and the YF floor reflects practical engineering and contest-deadline dynamics (Section 7.7) rather than a fundamental information limit.
 
@@ -99,19 +99,19 @@ intrinsic to the score-aggregation shape: pose is regression
 in logits). Section 4.8 covers the empirical computation; the OSS
 documentation `docs/findings/cuda_cpu_auth_eval_split_20260508.md` covers
 the mechanism analysis and the strategic-exploitation prescriptions
-(floor-aware pose-Huber loss, leaderboard-aware Lagrangian via
-`tac.score_geometry target_axis="cpu_leaderboard"`, calibrated
-training-time noise injection at σ ≈ 1.7e-3).
+(CPU-axis pose trust-region loss, leaderboard-aware Lagrangian via
+`tac.score_geometry target_axis="cpu_leaderboard"`, and paired
+decoder/network localization probes). A later PR107 GitHub Actions replay
+confirmed the practical impact: PR107 scored `0.1966358879` on Linux
+x86_64 CPU while the earlier CUDA score was `0.22936`.
 
-The closest related work is the literature on FP32 reproducibility across
-matmul backends (Hutter et al., NVIDIA reproducibility whitepaper),
-non-determinism in deep-learning evaluation pipelines (Pham et al. on
-training-stability variance), and the steganalysis literature on
-detector-versus-detector consistency under input perturbations (Yousfi
-et al.'s detector-detector calibration work). The novel observation here
-is not that FP32 backends differ — that's well-known — but that **a
-contest leaderboard's structural choice of CPU as the ranking axis,
-combined with a regression head whose noise floor sits at the CPU axis's
-precision boundary, produces a 5× pose ratio** that competitors who
-optimize against the CUDA score will systematically over-spend bit-budget
-on driving pose<sub>cuda</sub> below the CPU floor.
+The closest related engineering references are PyTorch's numerical accuracy
+notes, which explicitly warn that CPU and GPU results may differ even for
+bitwise-identical inputs; NVIDIA's TF32 documentation, which places TF32 on
+Ampere and later rather than T4/Turing; NVIDIA DALI's video-reader
+documentation; and the FastViT paper's RepMixer design. The novel
+observation here is not that FP32 backends differ — that's well-known — but
+that **a contest leaderboard's structural choice of CPU as the ranking axis,
+combined with a decode-path split and a regression scorer, produces a 5×
+pose ratio** that competitors who optimize against the CUDA score will
+systematically misallocate bit budget.

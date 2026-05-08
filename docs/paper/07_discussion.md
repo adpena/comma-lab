@@ -147,8 +147,10 @@ after the contest deadline closed, we discovered that the contest leaderboard
 ranks by `--device cpu` eval, not `--device cuda` — and that the two axes
 differ by a near-constant 0.033 score points across the medal-band HNeRV
 cluster. Our PR #107 `apogee` archive was scored only on CUDA at 0.22936
-and never got a CPU score; its true leaderboard rank was likely silver/bronze
-band, not 11th place.
+in the original public loop. A later GitHub Actions Linux x86_64 replay
+scored the same archive at `0.1966358879` on the CPU axis, about `0.0013`
+above PR102's `0.19538` CPU row and far closer to the medal cluster than
+the CUDA score suggested.
 
 The empirical content of the discovery is in §4.8. The methodological lesson
 for human-AI research collaboration is that **a measurement axis can be
@@ -168,8 +170,9 @@ and `[contest-CPU]` axes on Linux x86_64 hardware. The Lane Maturity registry
 tracks both axes; a lane reaching Level 2/3 with a `[contest-CUDA]` anchor
 but no `[contest-CPU]` anchor on Linux x86_64 is incomplete for medal-band
 ranking purposes. Apple Silicon CPU eval is `[macOS-CPU advisory only]` —
-the FP32 ARM intrinsics differ from x86_64 in ways that affect SegNet/PoseNet
-output bytes, even with `torch.cuda.is_available() == False`.
+PR107 showed it can be an excellent development proxy for HNeRV-class CPU
+sweeps (`0.19664189` on M5 Max versus `0.1966358879` on Linux x86_64), but
+Linux x86_64 replay remains required for promotion and paper score claims.
 
 The deeper methodological lesson is structural: the OSS preflight pipeline
 should have caught the dual-axis blind spot earlier. A check that scans

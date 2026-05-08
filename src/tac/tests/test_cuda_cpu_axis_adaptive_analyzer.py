@@ -41,7 +41,7 @@ def test_reload_registry_invalidates_cache(tmp_path: Path) -> None:
     p = tmp_path / "registry.json"
     seed = bootstrap_registry_from_hnerv_anchors()
     write_registry(seed, p)
-    reg1 = get_registry(path=p, force_reload=True)
+    get_registry(path=p, force_reload=True)
     reg2 = reload_registry(path=p)
     # Same instance per get_registry's caching contract, but post-reload
     # we should get a fresh dict
@@ -96,6 +96,10 @@ def test_per_class_lagrangian_weights_unknown_class_falls_back_to_hnerv() -> Non
 def test_per_class_lagrangian_weights_passes_evidence_grade() -> None:
     weights = per_class_lagrangian_weights("hnerv_ft_microcodec")
     assert "[CPU-prep planning-only" in weights["evidence_grade"]
+    assert weights["score_claim"] is False
+    assert weights["promotion_eligible"] is False
+    assert weights["rank_or_kill_eligible"] is False
+    assert weights["ready_for_exact_eval_dispatch"] is False
 
 
 # ── theoretical_floor adapter ──────────────────────────────────────────────
@@ -112,15 +116,23 @@ def test_per_class_floor_band_with_custom_cuda_floor() -> None:
         cuda_pose_floor=3.0e-4,
     )
     assert band["cuda_pose_floor"] == pytest.approx(3.0e-4)
+    assert band["score_claim"] is False
+    assert band["promotion_eligible"] is False
+    assert band["rank_or_kill_eligible"] is False
+    assert band["ready_for_exact_eval_dispatch"] is False
 
 
 # ── Decomposition adapter ──────────────────────────────────────────────────
-def test_explain_observed_pose_drift_decomposes_25_75() -> None:
+def test_explain_observed_pose_drift_uses_default_mechanism_prior() -> None:
     result = explain_observed_pose_drift(observed_r_pose=5.04)
     excess = 5.04 - 1.0  # 4.04
-    # 25% decoder + 75% network by default
+    # Default mechanism prior: 25% decoder + 75% network until measured.
     assert abs(result["decoder_contribution"] - 0.25 * excess) < 1e-6
     assert abs(result["network_contribution"] - 0.75 * excess) < 1e-6
+    assert result["score_claim"] is False
+    assert result["promotion_eligible"] is False
+    assert result["rank_or_kill_eligible"] is False
+    assert result["ready_for_exact_eval_dispatch"] is False
 
 
 def test_explain_observed_pose_drift_uses_class_floor_estimate() -> None:

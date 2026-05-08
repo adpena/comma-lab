@@ -6,7 +6,7 @@
   "score_claim": false,
   "promotion_eligible": false,
   "rank_or_kill_eligible": false,
-  "ready_for_exact_eval_dispatch": true,
+  "ready_for_exact_eval_dispatch": false,
   "dispatch_attempted": false,
   "input_archive_path": "/Users/adpena/Projects/pact/experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/archive.zip",
   "input_archive_sha256": "7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb",
@@ -75,7 +75,13 @@
     "exact_cuda_auth_eval_not_yet_harvested",
     "exact_cpu_auth_eval_not_yet_harvested"
   ],
-  "dispatch_blockers": [],
+  "dispatch_blockers": [
+    "cpu_build_rel_err_proxy_not_score_evidence",
+    "runtime_closure_not_yet_verified",
+    "exact_linux_cpu_auth_eval_not_yet_harvested",
+    "exact_cuda_auth_eval_not_yet_harvested",
+    "dispatch_claim_not_created"
+  ],
   "target_modes": [
     "contest_exact_eval"
   ],

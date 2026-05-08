@@ -19,12 +19,11 @@ from tac.optimization.cuda_cpu_axis_calibration import (
     cpu_pose_floor_score_contribution,
     effective_pose_loss_for_cpu,
     is_at_pose_floor,
+    normalize_architecture_class,
     predict_cpu_from_cuda,
-    predict_cuda_from_cpu,
     tag_predicted_band,
 )
 from tac.score_geometry import contest_score
-
 
 # ---------------------------------------------------------------------------
 # Calibration constants
@@ -56,7 +55,7 @@ def test_constant_gap_predict_cpu_from_cuda_subtracts_calibrated_gap() -> None:
     band = cal.predict_cpu_from_cuda(0.20)
     # Constant gap mode at hnerv anchor: point estimate = 0.20 - 0.033.
     assert math.isclose(band.score_point, 0.20 - SCORE_GAP_HNERV_CONSTANT, rel_tol=1e-9)
-    # σ should equal SCORE_GAP_HNERV_STD on hnerv (no inflation).
+    # Sigma should equal SCORE_GAP_HNERV_STD on hnerv (no inflation).
     assert band.sigma == SCORE_GAP_HNERV_STD
     assert band.calibration_quality == "hnerv-anchored"
 
@@ -97,8 +96,9 @@ def test_decomposed_mode_uses_per_axis_rebase() -> None:
         d_seg_cuda=cuda_seg,
         archive_bytes=archive_bytes,
     )
-    # CPU pose should be cuda_pose - floor ≈ 3.1e-5 (positive after floor strip).
-    cpu_pose_expected = max(0.0, cuda_pose - CUDA_POSE_PRECISION_FLOOR)
+    # CPU pose uses the measured per-axis ratio. The floor is an advisory
+    # trust-region marker, not a subtraction term.
+    cpu_pose_expected = cuda_pose / R_POSE_HNERV
     cpu_seg_expected = cuda_seg / R_SEG_HNERV
     expected_cpu_score = contest_score(
         d_seg=cpu_seg_expected, d_pose=cpu_pose_expected, archive_bytes=archive_bytes
@@ -121,10 +121,10 @@ def test_decomposed_mode_inverse_round_trip_via_constant_gap_close() -> None:
         d_seg_cuda=cuda_seg,
         archive_bytes=archive_bytes,
     )
-    # Constant-gap inverse: should recover the original cuda score within
-    # the gap σ.
+    # Constant-gap inverse is not a mathematical inverse of decomposed mode;
+    # it should at least preserve the direction that CUDA score is higher.
     cuda_back = cal.predict_cuda_from_cpu(cpu_band.score_point)
-    assert abs(cuda_back.score_point - cuda_score) < 0.05  # within decomposition residual
+    assert cuda_back.score_point > cpu_band.score_point
 
 
 def test_decomposed_mode_pr106_anchor_pose_dominated_regime() -> None:
@@ -162,16 +162,16 @@ def test_is_at_pose_floor_saturates_at_threshold() -> None:
     assert cal.is_at_pose_floor(CUDA_POSE_PRECISION_FLOOR)
 
 
-def test_effective_pose_loss_strips_floor_above_threshold() -> None:
+def test_effective_pose_loss_uses_ratio_above_threshold() -> None:
     cal = CudaCpuCalibration(architecture_class="hnerv")
-    # Above floor: returns d_pose_cuda - sigma²_floor (the unsaturated part).
+    # Above the advisory floor: still use the measured axis ratio.
     cpu_pose = cal.effective_pose_loss_for_cpu(1e-3)
-    assert cpu_pose == 1e-3 - CUDA_POSE_PRECISION_FLOOR
+    assert math.isclose(cpu_pose, 1e-3 / R_POSE_HNERV, rel_tol=1e-9)
 
 
-def test_effective_pose_loss_saturates_at_floor() -> None:
+def test_effective_pose_loss_uses_ratio_below_floor() -> None:
     cal = CudaCpuCalibration(architecture_class="hnerv")
-    # At/below floor: returns d_pose_cuda / R_pose (conservative upper bound).
+    # At/below the advisory floor: still use the measured axis ratio.
     cpu_pose = cal.effective_pose_loss_for_cpu(1e-5)
     assert math.isclose(cpu_pose, 1e-5 / R_POSE_HNERV, rel_tol=1e-9)
 
@@ -203,7 +203,7 @@ def test_module_level_is_at_pose_floor() -> None:
 
 def test_module_level_effective_pose_loss_for_cpu() -> None:
     cpu_pose = effective_pose_loss_for_cpu(1e-3, archive_class="hnerv")
-    assert cpu_pose == 1e-3 - CUDA_POSE_PRECISION_FLOOR
+    assert math.isclose(cpu_pose, 1e-3 / R_POSE_HNERV, rel_tol=1e-9)
 
 
 # ---------------------------------------------------------------------------
@@ -242,9 +242,18 @@ def test_tag_predicted_band_rejects_invalid_axis() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_invalid_architecture_class_raises() -> None:
-    with pytest.raises(ValueError):
-        CudaCpuCalibration(architecture_class="not-a-real-arch")
+def test_registry_architecture_class_aliases_normalize() -> None:
+    assert normalize_architecture_class("hnerv_ft_microcodec") == "hnerv"
+    assert normalize_architecture_class("hnerv_lc_v2") == "hnerv"
+    assert normalize_architecture_class("qhnerv_ft") == "qhnerv"
+    assert normalize_architecture_class("not-a-real-arch") == "unknown"
+
+
+def test_unknown_architecture_class_falls_back_to_extrapolated_unknown() -> None:
+    cal = CudaCpuCalibration(architecture_class="not-a-real-arch")
+    assert cal.architecture_class == "unknown"
+    assert cal.requested_architecture_class == "not-a-real-arch"
+    assert cal.predict_cpu_from_cuda(0.20).calibration_quality == "extrapolated"
 
 
 def test_negative_score_raises() -> None:
@@ -298,3 +307,7 @@ def test_calibration_band_to_dict_includes_required_keys() -> None:
     assert d["calibration_quality"] == "hnerv-anchored"
     assert d["sigma"] == 0.005
     assert d["notes"] == ["mode=constant_gap"]
+    assert d["score_claim"] is False
+    assert d["promotion_eligible"] is False
+    assert d["rank_or_kill_eligible"] is False
+    assert d["ready_for_exact_eval_dispatch"] is False

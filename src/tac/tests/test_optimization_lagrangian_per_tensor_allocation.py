@@ -345,6 +345,46 @@ def test_cpu_axis_weights_returns_normalized_target_mean() -> None:
     assert abs(mean - 1.0) < 1e-6
 
 
+def test_cpu_axis_weights_accepts_profile_registry_class_names() -> None:
+    pose = [1.0, 0.5, 0.25]
+    seg = [0.25, 0.5, 1.0]
+
+    weights_micro = compute_cpu_axis_weights(
+        scorer_jacobian_pose=pose,
+        scorer_jacobian_seg=seg,
+        architecture_class="hnerv_ft_microcodec",
+    )
+    weights_lc = compute_cpu_axis_weights(
+        scorer_jacobian_pose=pose,
+        scorer_jacobian_seg=seg,
+        architecture_class="hnerv_lc_v2",
+    )
+    weights_q = compute_cpu_axis_weights(
+        scorer_jacobian_pose=pose,
+        scorer_jacobian_seg=seg,
+        architecture_class="qhnerv_ft",
+    )
+
+    assert weights_micro == weights_lc
+    assert len(weights_q) == 3
+
+
+def test_cpu_axis_weights_multi_tensor_order_shifts_toward_seg_axis() -> None:
+    pose = [4.0, 1.0, 0.1]
+    seg = [0.1, 1.0, 4.0]
+
+    weights = compute_cpu_axis_weights(
+        scorer_jacobian_pose=pose,
+        scorer_jacobian_seg=seg,
+        architecture_class="hnerv_ft_microcodec",
+    )
+
+    # The CPU rebase damps pose by R_pose^2 ~= 25 while seg is damped by
+    # R_seg^2 ~= 1.37, so the strong seg tensor should outrank the strong
+    # pose tensor after normalization.
+    assert weights[2] > weights[0]
+
+
 def test_cpu_axis_weights_passes_to_jacobian_weighted_allocator() -> None:
     """The CPU-axis weights flow into a JacobianWeightedAllocator."""
     pose = [1.0, 1.0, 1.0]

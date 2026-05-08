@@ -75,12 +75,12 @@ def _technique_to_candidate(t: dict) -> dict:
 
 
 def run_bridge(plan_json_path: Path, anchors_path: Path) -> dict:
+    from experiments.distortion_proxy_local import make_distortion_proxy
     from tac.optimizer.meta_lagrangian import (
-        MetaLagrangianSearch,
         LagrangianConstraints,
+        MetaLagrangianSearch,
     )
     from tac.predictor.score_band import load_calibration_anchors
-    from experiments.distortion_proxy_local import make_distortion_proxy
 
     if not plan_json_path.is_file():
         raise SystemExit(f"plan json not found: {plan_json_path}")
@@ -141,6 +141,22 @@ def run_bridge(plan_json_path: Path, anchors_path: Path) -> dict:
             "eligible_for_dispatch": ev.eligible_for_dispatch,
             "predicted_score_delta_from_recommender": (
                 cand["_source_row"].get("predicted_score_delta", 0.0)
+            ),
+            "rank_axis_from_recommender": cand["_source_row"].get("rank_axis", "cuda"),
+            "primary_score_delta_from_recommender": (
+                cand["_source_row"].get("primary_score_delta", 0.0)
+            ),
+            "predicted_cuda_score_delta_from_recommender": (
+                cand["_source_row"].get("predicted_cuda_score_delta", 0.0)
+            ),
+            "predicted_cpu_score_delta_from_recommender": (
+                cand["_source_row"].get("predicted_cpu_score_delta", 0.0)
+            ),
+            "predicted_cpu_score_calibration": (
+                cand["_source_row"].get("predicted_cpu_score_calibration", "")
+            ),
+            "current_score_axis_from_recommender": (
+                cand["_source_row"].get("current_score_axis", "")
             ),
         })
 

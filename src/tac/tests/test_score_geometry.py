@@ -242,6 +242,9 @@ def test_predict_cpu_axis_marginals_includes_required_keys() -> None:
     assert "pose_over_seg_marginal_cpu" in out
     assert "cuda_d_pose" in out
     assert "cpu_d_pose" in out
+    assert out["score_claim"] is False
+    assert out["promotion_eligible"] is False
+    assert out["rank_or_kill_eligible"] is False
 
 
 def test_predict_cpu_axis_marginals_seg_marginal_is_constant_100() -> None:

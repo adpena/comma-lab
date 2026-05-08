@@ -20,11 +20,7 @@ import pytest
 from tac.optimization.cuda_cpu_axis_profile_registry import (
     ARCHITECTURE_CLASSES,
     DEFAULT_DECODER_POSE_DRIFT_FRACTION,
-    DEFAULT_DECODER_PROFILE,
-    DEFAULT_POSE_FLOOR_ESTIMATE,
-    LOW_CALIBRATION_ANCHOR_THRESHOLD,
     LOW_CALIBRATION_BAND_WIDENING,
-    OUTLIER_SIGMA_THRESHOLD,
     ArchitectureProfile,
     DecoderProfile,
     bootstrap_registry_from_hnerv_anchors,
@@ -78,10 +74,13 @@ def test_bootstrap_creates_uncalibrated_default_classes() -> None:
         assert registry[cls].confidence_label() == "uncalibrated_default"
 
 
-def test_bootstrap_evidence_anchors_are_promoted() -> None:
+def test_bootstrap_evidence_anchors_are_external_nonpromotable_seeds() -> None:
     registry = bootstrap_registry_from_hnerv_anchors()
     hnerv = registry["hnerv_ft_microcodec"]
-    assert all(a.get("promoted", False) for a in hnerv.evidence_anchors)
+    assert all(a.get("promoted") is False for a in hnerv.evidence_anchors)
+    assert all(a.get("external_comment_seed") is True for a in hnerv.evidence_anchors)
+    assert all(a.get("promotion_eligible") is False for a in hnerv.evidence_anchors)
+    assert all(a.get("score_claim") is False for a in hnerv.evidence_anchors)
     assert all(
         a.get("seeded_at_bootstrap", False)
         for a in hnerv.evidence_anchors
@@ -150,7 +149,7 @@ def test_outlier_anchor_with_3sigma_deviation_is_flagged() -> None:
     mean = hnerv.r_pose_mean
     std = hnerv.r_pose_std
 
-    # Anchor 10× std away → should be flagged
+    # Anchor 10x std away should be flagged.
     outlier_r_pose = mean + 10.0 * std
     anchor = {
         "observed_r_pose": outlier_r_pose,
@@ -282,7 +281,7 @@ def test_low_anchor_class_widens_predicted_band() -> None:
     assert qhnerv_band["confidence_label"] == "uncalibrated_default"
 
     # The qhnerv band uses the prior std (0.001) widened by 1.5 = 0.0015
-    # The hnerv band uses the posterior std × 1.0
+    # The hnerv band uses the posterior std x 1.0
     # qhnerv's band_half should be wider
     assert qhnerv_band["score_gap_band_half"] >= hnerv_band["score_gap_band_half"]
 
@@ -309,7 +308,7 @@ def test_predicted_band_carries_no_score_claim() -> None:
 
 
 # ── 6. Decoder-aware split tests ───────────────────────────────────────────
-def test_decompose_observed_drift_default_25_percent_decoder() -> None:
+def test_decompose_observed_drift_uses_hypothesis_prior_not_score_claim() -> None:
     result = decompose_observed_drift(observed_r_pose=5.04)
     excess = 5.04 - 1.0
     expected_decoder = excess * DEFAULT_DECODER_POSE_DRIFT_FRACTION
@@ -402,9 +401,11 @@ def _adjudicated_payload(
     return {
         "archive_bytes": archive_bytes,
         "archive_sha256": "deadbeef",
+        "runtime_tree_sha256": "runtime-deadbeef",
+        "sample_count": 1200,
         "architecture_class": architecture_class,
-        "cpu": {"pose": cpu_pose, "seg": cpu_seg},
-        "cuda": {"pose": cuda_pose, "seg": cuda_seg},
+        "cpu": {"pose": cpu_pose, "seg": cpu_seg, "hardware": "ubuntu-24.04-x86_64"},
+        "cuda": {"pose": cuda_pose, "seg": cuda_seg, "hardware": "t4-sm75"},
         "source": "test_adjudicated_json",
     }
 
@@ -445,6 +446,24 @@ def test_harvest_returns_none_for_unpaired_payload() -> None:
     }
     update = harvest_new_anchor_and_update(payload, registry=registry)
     assert update is None
+
+
+def test_harvest_returns_none_for_missing_custody_fields() -> None:
+    registry = bootstrap_registry_from_hnerv_anchors()
+    payload = {
+        "archive_bytes": 178_258,
+        "archive_sha256": "deadbeef",
+        "cpu": {"pose": 3.4e-5, "seg": 5.7e-4, "hardware": "ubuntu-24.04-x86_64"},
+        "cuda": {"pose": 1.7e-4, "seg": 6.7e-4, "hardware": "t4-sm75"},
+        # Missing runtime_tree_sha256 and sample_count: not allowed to mutate
+        # the learning registry.
+    }
+    n_before = registry["hnerv_ft_microcodec"].n_anchors
+
+    update = harvest_new_anchor_and_update(payload, registry=registry)
+
+    assert update is None
+    assert registry["hnerv_ft_microcodec"].n_anchors == n_before
 
 
 def test_harvest_auto_instantiates_unknown_class() -> None:

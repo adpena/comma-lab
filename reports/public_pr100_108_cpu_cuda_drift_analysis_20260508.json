@@ -1,0 +1,231 @@
+{
+  "created_at_utc": "2026-05-08T12:46:35Z",
+  "evidence_grade": "external_github_pr_comment_analysis",
+  "input_schema": "public_pr_eval_comment_scorecard.v1",
+  "interpretation": [
+    "Paired public comments support a device-axis drift signal when CPU and CUDA rows exist for the same PR.",
+    "The mechanism is not proven by comments alone; T4-specific TF32 claims are suspect because T4 is not an Ampere TF32 GPU.",
+    "Use this as a CPU-leaderboard reproduction hypothesis until paired Linux CPU and CUDA exact eval JSONs exist.",
+    "Do not use public-comment drift to promote, rank, kill, or retire internal CUDA lanes."
+  ],
+  "mechanism_claim_proven": false,
+  "paired_pr_count": 5,
+  "paired_rows": [
+    {
+      "archive_bytes_cpu": 178981,
+      "archive_bytes_cuda": 178981,
+      "cpu": {
+        "pose": 3.443e-05,
+        "pose_term": 0.018555322686496185,
+        "rate_term": 0.11917610128875936,
+        "score": 0.19538542397525555,
+        "seg": 0.00057654,
+        "seg_term": 0.057654
+      },
+      "cuda": {
+        "pose": 0.00017198,
+        "pose_term": 0.04147047142244708,
+        "rate_term": 0.11917610128875936,
+        "score": 0.22826957271120643,
+        "seg": 0.00067623,
+        "seg_term": 0.067623
+      },
+      "gaps_cuda_minus_cpu": {
+        "pose_gap_share": 0.6968448208877824,
+        "pose_term": 0.022915148735950894,
+        "rate_gap_share": 0.0,
+        "rate_term": 0.0,
+        "score": 0.032884148735950886,
+        "seg_gap_share": 0.30315517911221795,
+        "seg_term": 0.009969000000000006
+      },
+      "pr": 100,
+      "ratios": {
+        "pose_distortion_cuda_over_cpu": 4.995062445541678,
+        "pose_term_cuda_over_cpu": 2.2349636340535115,
+        "seg_distortion_cuda_over_cpu": 1.172910812779686,
+        "seg_term_cuda_over_cpu": 1.172910812779686
+      },
+      "same_archive_bytes": true,
+      "title": "hnerv_lc_v2 submission (0.1954)",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/100"
+    },
+    {
+      "archive_bytes_cpu": 178258,
+      "archive_bytes_cuda": 178258,
+      "cpu": {
+        "pose": 3.286e-05,
+        "pose_term": 0.018127327436773463,
+        "rate_term": 0.11869468526565202,
+        "score": 0.1928450127024255,
+        "seg": 0.00056023,
+        "seg_term": 0.056022999999999996
+      },
+      "cuda": {
+        "pose": 0.00017103,
+        "pose_term": 0.0413557734784395,
+        "rate_term": 0.11869468526565202,
+        "score": 0.22635445874409152,
+        "seg": 0.00066304,
+        "seg_term": 0.066304
+      },
+      "gaps_cuda_minus_cpu": {
+        "pose_gap_share": 0.6931909889761687,
+        "pose_term": 0.02322844604166604,
+        "rate_gap_share": 0.0,
+        "rate_term": 0.0,
+        "score": 0.03350944604166603,
+        "seg_gap_share": 0.3068090110238317,
+        "seg_term": 0.010281000000000005
+      },
+      "pr": 101,
+      "ratios": {
+        "pose_distortion_cuda_over_cpu": 5.204808277541083,
+        "pose_term_cuda_over_cpu": 2.281404891188998,
+        "seg_distortion_cuda_over_cpu": 1.1835139139282083,
+        "seg_term_cuda_over_cpu": 1.1835139139282083
+      },
+      "same_archive_bytes": true,
+      "title": "add hnerv ft microcodec submission",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/101"
+    },
+    {
+      "archive_bytes_cpu": 178981,
+      "archive_bytes_cuda": 178981,
+      "cpu": {
+        "pose": 3.46e-05,
+        "pose_term": 0.018601075237738275,
+        "rate_term": 0.11917610128875936,
+        "score": 0.19537617652649764,
+        "seg": 0.00057599,
+        "seg_term": 0.057599
+      },
+      "cuda": {
+        "pose": 0.00017347,
+        "pose_term": 0.04164972989108093,
+        "rate_term": 0.11917610128875936,
+        "score": 0.22839083117984027,
+        "seg": 0.00067565,
+        "seg_term": 0.067565
+      },
+      "gaps_cuda_minus_cpu": {
+        "pose_gap_share": 0.6981340527519057,
+        "pose_term": 0.023048654653342653,
+        "rate_gap_share": 0.0,
+        "rate_term": 0.0,
+        "score": 0.033014654653342634,
+        "seg_gap_share": 0.301865947248095,
+        "seg_term": 0.009966000000000003
+      },
+      "pr": 102,
+      "ratios": {
+        "pose_distortion_cuda_over_cpu": 5.013583815028902,
+        "pose_term_cuda_over_cpu": 2.239103350680558,
+        "seg_distortion_cuda_over_cpu": 1.1730238372193962,
+        "seg_term_cuda_over_cpu": 1.1730238372193962
+      },
+      "same_archive_bytes": true,
+      "title": "hnerv_lc_v2_scale095_rplus1 submission (0.19538 CPU)",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/102"
+    },
+    {
+      "archive_bytes_cpu": 178223,
+      "archive_bytes_cuda": 178223,
+      "cpu": {
+        "pose": 3.443e-05,
+        "pose_term": 0.018555322686496185,
+        "rate_term": 0.11867138020229274,
+        "score": 0.19488070288878895,
+        "seg": 0.00057654,
+        "seg_term": 0.057654
+      },
+      "cuda": {
+        "pose": 0.00017198,
+        "pose_term": 0.04147047142244708,
+        "rate_term": 0.11867138020229274,
+        "score": 0.2277648516247398,
+        "seg": 0.00067623,
+        "seg_term": 0.067623
+      },
+      "gaps_cuda_minus_cpu": {
+        "pose_gap_share": 0.6968448208877831,
+        "pose_term": 0.022915148735950894,
+        "rate_gap_share": 0.0,
+        "rate_term": 0.0,
+        "score": 0.03288414873595086,
+        "seg_gap_share": 0.3031551791122182,
+        "seg_term": 0.009969000000000006
+      },
+      "pr": 103,
+      "ratios": {
+        "pose_distortion_cuda_over_cpu": 4.995062445541678,
+        "pose_term_cuda_over_cpu": 2.2349636340535115,
+        "seg_distortion_cuda_over_cpu": 1.172910812779686,
+        "seg_term_cuda_over_cpu": 1.172910812779686
+      },
+      "same_archive_bytes": true,
+      "title": "hnerv_lc_ac submission (0.19)",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/103"
+    },
+    {
+      "archive_bytes_cpu": 177857,
+      "archive_bytes_cuda": 177857,
+      "cpu": {
+        "pose": 3.472e-05,
+        "pose_term": 0.018633303518163384,
+        "rate_term": 0.11842767582545002,
+        "score": 0.1979739793436134,
+        "seg": 0.00060913,
+        "seg_term": 0.060913
+      },
+      "cuda": {
+        "pose": 0.00017267,
+        "pose_term": 0.04155357986984996,
+        "rate_term": 0.11842767582545002,
+        "score": 0.2304372556953,
+        "seg": 0.00070456,
+        "seg_term": 0.070456
+      },
+      "gaps_cuda_minus_cpu": {
+        "pose_gap_share": 0.7060370648785667,
+        "pose_term": 0.02292027635168658,
+        "rate_gap_share": 0.0,
+        "rate_term": 0.0,
+        "score": 0.03246327635168658,
+        "seg_gap_share": 0.2939629351214333,
+        "seg_term": 0.009543000000000003
+      },
+      "pr": 105,
+      "ratios": {
+        "pose_distortion_cuda_over_cpu": 4.9732142857142865,
+        "pose_term_cuda_over_cpu": 2.230070466535595,
+        "seg_distortion_cuda_over_cpu": 1.1566660647152496,
+        "seg_term_cuda_over_cpu": 1.1566660647152496
+      },
+      "same_archive_bytes": true,
+      "title": "kitchen_sink (0.19797)",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/105"
+    }
+  ],
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "safe_next_actions": [
+    "Run paired dual-device exact eval plans on Linux x86_64 CPU and T4-equivalent CUDA for PR101, PR102, PR103, and PR105.",
+    "Fit CPU-score predictor only from exact paired JSON artifacts, not macOS CPU or rounded comments.",
+    "If exact pairs confirm a stable CPU pose floor, test a pose-floor/Huber-style loss as CPU-axis research while preserving CUDA promotion gates."
+  ],
+  "schema": "cpu_cuda_eval_drift_analysis.v1",
+  "score_claim": false,
+  "summary": {
+    "mean_pose_distortion_ratio_cuda_over_cpu": 5.036346253873526,
+    "mean_pose_gap_share": 0.6982103496764414,
+    "mean_seg_distortion_ratio_cuda_over_cpu": 1.171805088284445,
+    "mean_seg_gap_share": 0.3017896503235592,
+    "median_cpu_pose_distortion": 3.443e-05,
+    "median_pose_distortion_ratio_cuda_over_cpu": 4.995062445541678,
+    "median_pose_gap_share": 0.6968448208877831,
+    "median_seg_distortion_ratio_cuda_over_cpu": 1.172910812779686,
+    "median_seg_gap_share": 0.30315517911221795,
+    "pose_tau_from_public_cpu_comments": 0.005867708240872241
+  }
+}

@@ -31,6 +31,37 @@ archive on both axes.
 >   `.omx/research/cuda_cpu_pose_drift_mechanism_deep_dive_20260508_claude.md`,
 >   `.omx/research/representation_integration_gap_audit_20260508_codex.md`
 
+## 0. 2026-05-08 rigor update
+
+After the first draft of this note, PR #107 received a Linux x86_64
+`[contest-CPU]` replay through the GitHub Actions evaluator:
+
+- archive bytes: `178,392`
+- archive SHA-256:
+  `7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb`
+- CPU score: `0.1966358879`
+- CPU components: seg `0.00058931`, pose `0.00003580`, rate `0.00475136`
+- workflow: `25556454358`, `ubuntu-24.04`, x86_64
+
+The prior M5 Max CPU replay was `0.19664189`, a `6e-6` score gap from
+Linux x86_64 on the same archive class. That validates macOS CPU as a
+high-throughput development signal for HNeRV-class CPU-axis sweeps, but it
+does not change custody tags: only Linux x86_64/GitHub Actions-equivalent
+CPU rows are `[contest-CPU]`; macOS remains `[macOS-CPU advisory only]`
+until promoted by a Linux replay.
+
+The mechanism section below is also tightened. The old FastViT attention
+and TF32 narrative is false. The current live hypotheses are:
+
+- H1, decoder-dominant: the DALI/NVDEC versus PyAV/libav ground-truth
+  decode split alone can explain the observed pose gap.
+- H2, network-kernel dominant: CPU/GPU numeric differences inside PoseNet
+  dominate after identical input tensors.
+- H3, mixed: both effects contribute, with the share learned from probes.
+
+No document should currently claim a proven 25/75 decoder/network split.
+The split is a measurement target, not a settled fact.
+
 ## 1. The dual-axis discovery
 
 ### 1.1 What `evaluate.py` actually does
@@ -56,13 +87,13 @@ archives.
 
 ### 1.2 What this cost us
 
-Our PR #107 `apogee` archive (CUDA 0.22936, CPU never run) was a 0.196
-candidate on the leaderboard's actual axis. We did not know this. We
+Our PR #107 `apogee` archive (CUDA 0.22936 in the original public loop) was
+later replayed on GitHub Actions Linux x86_64 at `0.1966358879` on the
+leaderboard's actual CPU axis. We did not know this during the race. We
 optimized the renderer, the fine-tune, the codec, the inflate runtime, and
 the meta-Lagrangian search engine against the CUDA score — and shipped a
 single CUDA score in the PR body. The bot's CPU comment never fired (or
-fired silently and was missed). The leaderboard never had us at 0.229
-either; it had us at whatever the silent CPU run produced.
+fired silently and was missed). The leaderboard never had us at 0.229 either.
 
 The third-prize entry, PR #102 by EthanYangTW, has both bot comments: CUDA
 0.22839, CPU **0.19538**. The "0.195" headline that appeared on the public
@@ -121,31 +152,43 @@ point.
 
 ## 3. Three-axis drift mechanism hypothesis
 
-We don't yet have a fully isolated mechanism, but the evidence narrows it
-to three additive sources. The full deep-dive lives at
-`.omx/research/cuda_cpu_pose_drift_mechanism_deep_dive_20260508_claude.md`;
-the highlights:
+We do not yet have a fully isolated mechanism. The evidence currently
+admits decoder-dominant, network-dominant, and mixed explanations. Treat
+the sections below as a falsifiable localization program, not a proof of
+component shares. The current instrumentation is:
 
-### 3.1 Decoder split (~25% of the gap, *confirmed mechanism*)
+- `tools/probe_eval_loader_drift.py`, which compares DALI/NVDEC and
+  PyAV decoded RGB tensors before SegNet/PoseNet.
+- `tools/probe_posenet_layer_drift.py`, which compares PoseNet activations
+  layer by layer on a shared tensor.
+- `reports/posenet_layer_drift_probe_cpu_cuda_plan_20260508.json`, a
+  non-promotable CUDA plan artifact on this macOS host.
+- `reports/posenet_layer_drift_probe_cpu_mps_research_signal_20260508.json`,
+  a fixed-hook CPU/MPS advisory trace.
+
+### 3.1 Decoder split (confirmed code-path split, unmeasured score share)
 
 `evaluate.py` selects a decoder based on `--device`:
 - `--device cuda` → `DaliVideoDataset` (NVIDIA DALI hardware NVDEC pipeline)
 - `--device cpu` → `AVVideoDataset` (PyAV / libavcodec software decode)
 
-Reading the same `.mkv` file through these two paths produces *different
-RGB uint8 bytes* on a per-frame basis. The differences are small per pixel
-but pervasive across all frames. SegNet and PoseNet then receive
-quantitatively different inputs.
+Reading the same `.mkv` file through these two paths may produce different
+RGB uint8 bytes on a per-frame basis. That is the first thing to measure,
+because compressed submissions use raw tensor mmap for `ds_comp` while the
+ground-truth path switches decoder class with `--device`. If this byte
+level split is large enough, it can explain the pose gap without invoking
+FastViT internals.
 
 A direct discriminator microbench is sketched in
 `.omx/research/cuda_cpu_pose_drift_mechanism_deep_dive_20260508_claude.md`
 §9.3: force `DefaultDatasetClass = AVVideoDataset` while running
-`--device cuda`. If the resulting score sits at ~0.220 (between 0.195 and
-0.228), decoder mismatch contributes ~25% of the gap. If at 0.195, decoder
-is 100% of the gap. If at 0.228, decoder is 0% (pure FP32 noise). The
-1-line code change is queued behind GPU-credit availability.
+`--device cuda`. If the score moves near the CPU score, decoder mismatch is
+dominant. If it stays near the CUDA score, network kernels dominate. A
+separate low-cost test perturbs an AV-decoded tensor by 1 to 3 LSB and runs
+PoseNet on T4; if 1.5 LSB produces the observed pose delta, the decoder
+hypothesis becomes the leading explanation.
 
-### 3.2 PoseNet kernel precision (~75% of the gap, *additive-noise model*)
+### 3.2 PoseNet kernel precision (plausible, not localized)
 
 Initial hypothesis was FastViT-T12 attention TF32-compounding. That
 hypothesis is **falsified** on three independent grounds:
@@ -159,7 +202,7 @@ hypothesis is **falsified** on three independent grounds:
 3. PyTorch's default since 1.12 is `cuda.matmul.allow_tf32 = False`, even
    on hardware where TF32 exists.
 
-The replacement model is **additive precision noise** with
+The replacement model to test is **additive precision noise** with
 `σ²_cuda ≈ K · L · ε² · ||x||²`, where L is the number of conv ops in
 forward and ε is per-op RMS precision drift. For L ≈ 50 conv ops and
 ε ≈ 1.7e-3, the model gives `σ²_cuda ≈ 1.4e-4`. At the medal-band
@@ -167,24 +210,39 @@ operating point pose<sub>cpu</sub> ≈ 3.5e-5, the predicted ratio is
 `(3.5e-5 + 1.4e-4) / 3.5e-5 = 5.0` — a numerically perfect match for the
 observed 5.04 ± 0.10.
 
-Why pose 5× and seg 1.17×: PoseNet's terminal head is a pose-regression
+This model is plausible, not proven. PyTorch explicitly warns that CPU and
+GPU results can differ even for bitwise-identical inputs, and T4 has
+Turing tensor cores rather than Ampere TF32. Official references:
+
+- PyTorch numerical accuracy note:
+  <https://docs.pytorch.org/docs/stable/notes/numerical_accuracy.html>
+- NVIDIA TF32 on Ampere:
+  <https://developer.nvidia.com/blog/accelerating-ai-training-with-tf32-tensor-cores/>
+- NVIDIA T4/Turing product page:
+  <https://www.nvidia.com/en-gb/data-center/tesla-t4/>
+- NVIDIA DALI video reader docs:
+  <https://docs.nvidia.com/deeplearning/dali/archives/dali_2_1_0/user-guide/operations/nvidia.dali.fn.experimental.readers.video.html>
+- FastViT/RepMixer paper:
+  <https://arxiv.org/abs/2303.14189>
+
+Why pose 5× and seg 1.17× remains consistent with this model: PoseNet's terminal head is a pose-regression
 MLP (12-dim ResBlock → first-6 used). Regression heads are MSE-sensitive
 to noise quadratically. SegNet's terminal head is a 5-class argmax. Argmax
 is stable under small logit perturbations as long as the perturbation
 doesn't cross a class boundary. LSQ / quantization-error literature
-confirms that regression heads are 5–10× more precision-sensitive than
-classification heads. The asymmetry is intrinsic to the score-aggregation
-shape, not a property of any specific kernel.
+is consistent with regression being more precision-sensitive than
+classification. The asymmetry is intrinsic to the score-aggregation shape,
+but the decoder/network share still has to be measured.
 
 ### 3.3 Hydra-head MLP (the long tail)
 
 The PoseNet final stage is a Hydra-head MLP: vision(2048) → summary(512)
 → ResBlock → 12-dim pose regression. Like any FP32 MLP, its CPU and CUDA
 implementations differ in fma fusion, matmul tiling, and reduction order.
-At the noise-floor σ²<sub>cuda</sub> ≈ 1.4e-4 we estimated above, we
-can't distinguish the Hydra-head's contribution from the conv-stack's
-without isolating each. The deep-dive memo names the layer-by-layer
-microbench as a $0.25 / 1-hour T4 dispatch when GPU credit is available.
+At the observed HNeRV CUDA floor band σ²<sub>cuda</sub> ≈ 1.4e-4, we
+can't distinguish the Hydra-head's contribution from the decoder path or
+conv-stack without isolating each. The layer-by-layer microbench is
+diagnostic only; paired exact eval remains the score evidence.
 
 ## 4. Score-formula amplification
 
@@ -207,22 +265,20 @@ you.
 
 ## 5. Strategic exploitation
 
-### 5.1 Train pose with floor-aware Huber loss
+### 5.1 Train pose with a CPU-axis trust-region Huber loss
 
-If pose<sub>cpu</sub> is approximately
-`max(pose_cuda / R_pose, ε_cpu)` and ε<sub>cpu</sub> is a hardware floor
-in the contest's CPU evaluator, then *driving pose<sub>cuda</sub> below
-R<sub>pose</sub> · ε<sub>cpu</sub> gives zero leaderboard yield* — the
-CPU floor clamps it. We can budget against this directly with a
-floor-aware Huber:
+If pose<sub>cpu</sub> is approximately `pose_cuda / R_pose`, then
+leaderboard-axis pose improvements are smaller than CUDA-axis improvements
+inside this HNeRV band. We can test that by reallocating some pose budget
+through a Huber-style trust-region loss:
 
 ```python
-# τ ≈ sqrt(CPU pose floor); below τ, pose-loss has zero gradient
+# τ ≈ sqrt(observed HNeRV CPU pose band); training ablation only
 huber_pose = torch.clamp(pose_err.pow(2) - tau ** 2, min=0.0)
 ```
 
-The bit-budget that would otherwise have been spent driving pose into the
-CPU-floor band is freed for SegNet boundary precision or rate.
+This is not a proof that lower pose is free. It is a concrete ablation that
+must be judged by paired CPU/CUDA exact eval.
 
 ### 5.2 Reweight the Lagrangian with `target_axis="cpu_leaderboard"`
 
@@ -345,21 +401,19 @@ both axes; a lane reaching Level 2/3 with a `[contest-CUDA]` anchor but
 no `[contest-CPU]` anchor on Linux x86_64 is incomplete for medal-band
 ranking purposes.
 
-### 8.2 Predicted CPU score for our existing archives
+### 8.2 CPU scores and predictions for existing archives
 
 Using the empirical `R_pose ≈ 5.04` and `R_seg ≈ 1.17` to project from
-existing CUDA-only artifacts to predicted CPU scores (pending Modal CPU
-replays):
+existing CUDA-only artifacts to CPU scores:
 
-| Archive | CUDA score | Predicted CPU score | Predicted leaderboard rank |
+| Archive | CUDA score | CPU score | Leaderboard interpretation |
 |---|---:|---:|---|
-| Our PR #107 apogee | 0.22936 | ~0.196 | silver/bronze band |
+| Our PR #107 apogee | 0.22936 | 0.1966358879 (GHA Linux verified) | medal-cluster adjacent |
 | PR103-on-PR106 AC repack | 0.20898 | ~0.176 | above current top |
 | PR102 hardened replay | 0.22839 | 0.19538 (verified) | bronze (verified) |
 
-These are *predictions only* until exact Modal-CPU replay confirms; the
-operator may want to dispatch those CPU replays as the next budget
-allocation.
+Rows marked with `~` are predictions only until exact Linux CPU replay
+confirms; PR107 is now an exact `[contest-CPU]` anchor.
 
 ### 8.3 Reseeding the Lagrangian
 

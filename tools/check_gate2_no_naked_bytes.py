@@ -24,8 +24,6 @@ Detection (static):
     * non-empty ``inflate_consumer`` (path to inflate.sh / inflate.py
       that consumes the bytes)
     * ``parser_section_manifest`` non-empty
-    * ``measured_config_status`` containing ``contest_cuda``
-
   Rows that lack ALL byte-closure proofs but claim score/dispatch are
   Gate 2 violations.
 
@@ -93,10 +91,7 @@ def _row_has_byte_closure(row: dict) -> bool:
     parser_manifest = row.get("parser_section_manifest")
     if isinstance(parser_manifest, (dict, list)) and len(parser_manifest) > 0:
         return True
-    if isinstance(parser_manifest, str) and parser_manifest.strip():
-        return True
-    status = str(row.get("measured_config_status", "")).lower()
-    return bool("contest_cuda" in status or "contest-cuda" in status)
+    return bool(isinstance(parser_manifest, str) and parser_manifest.strip())
 
 
 def scan(repo_root: Path | None = None) -> list[Finding]:
@@ -134,8 +129,8 @@ def scan(repo_root: Path | None = None) -> list[Finding]:
                         "(score_claim=true OR ready_for_exact_eval_dispatch="
                         "true OR positive contest_dispatch_verdict) but "
                         "lacks ALL byte-closure proofs (archive_path+sha256, "
-                        "inflate_consumer, parser_section_manifest, or "
-                        "measured_config_status=contest_cuda*). Gate 2 "
+                        "inflate_consumer, or parser_section_manifest). "
+                        "CUDA status text is not byte closure. Gate 2 "
                         "(no naked bytes)."
                     ),
                 )

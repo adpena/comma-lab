@@ -10,14 +10,11 @@ scores:
   * ``score(cpu) - score(cuda) ≈ -0.033`` (constant gap, dominated by pose
     sqrt term collapse on CPU)
 
-Mechanism (full deep-dive memo:
-``.omx/research/cuda_cpu_pose_drift_mechanism_deep_dive_20260508_claude.md``):
-the FP32 conv2d / Linear reduction order + GELU(tanh) intrinsic differences
-+ NVDEC vs PyAV decode mismatch contribute additive noise variance that
-scales as ``sqrt(L)`` with depth (Welch random walk). The 5× pose ratio is
-a saturated-floor effect at the medal band: ``pose_cuda ≈ pose_cpu +
-sigma²_floor``. SegNet argmax is stable to small logit perturbations, so
-its drift collapses to ~1.17×.
+Mechanism status: the 5× pose ratio is measured; the causal split is still
+under investigation. Current hypotheses include GT loader drift
+(``DaliVideoDataset`` vs ``AVVideoDataset``), CUDA/CPU reduction-order drift,
+and network-internal amplification. Do not use this module as a mechanism
+proof. Its operational estimator is the measured per-axis ratio.
 
 This module exposes:
 
@@ -26,10 +23,10 @@ This module exposes:
   * ``predict_cpu_from_cuda`` — convert a CUDA score to a CPU prediction
     band reflecting σ uncertainty.
   * ``predict_cuda_from_cpu`` — inverse direction.
-  * ``is_at_pose_floor`` — whether CUDA pose has saturated below the
-    precision floor where additional pose accuracy is wasted.
+  * ``is_at_pose_floor`` — whether CUDA pose is inside the empirically observed
+    HNeRV floor band. This is advisory only, not a proof that bytes are wasted.
   * ``effective_pose_loss_for_cpu`` — the effective pose loss seen by the
-    CPU evaluator, given the saturation floor.
+    CPU evaluator, using the measured ratio.
 
 Pure CPU + math. No torch, no scorer load. Safe for solver/recommender hot
 paths.
@@ -56,7 +53,7 @@ R_POSE_HNERV: float = 5.04
 """Empirical mean of d_pose_cuda / d_pose_cpu across HNeRV cluster.
 
 Sources: PR100/101/102/103/105 contest-CPU vs contest-CUDA evals,
-2026-05-08. Stable across this cluster (σ ≈ 0.10).
+2026-05-08. Stable across this cluster (std ≈ 0.10).
 """
 
 R_POSE_HNERV_STD: float = 0.10
@@ -78,15 +75,14 @@ SCORE_GAP_HNERV_STD: float = 0.005
 """Standard deviation of the constant score gap; dominated by per-PR noise
 in the constant-gap regression."""
 
-# Below this CUDA pose value, the CUDA precision floor (σ²_floor ≈ 1.4e-4)
-# dominates the pose distortion and additional pose accuracy on CUDA is
-# invisible to the CPU evaluator. Any CUDA-axis solver that pushes pose
-# below this is wasting bytes — the CPU score sees the saturated floor.
+# Below this CUDA pose value, the HNeRV cluster sits in an empirically observed
+# CPU/CUDA drift band. This is an advisory trust-region marker for solvers, not
+# a hard proof that lower CUDA pose is invisible on the official CPU axis.
 CUDA_POSE_PRECISION_FLOOR: float = 1.4e-4
-"""CUDA pose precision floor (σ²_floor) — below this, CUDA pose is
-dominated by FP32 reduction-order noise, not by the renderer's
-distortion. Empirically derived: pose_cuda - pose_cpu ≈ 1.4e-4 across
-HNeRV cluster.
+"""Advisory HNeRV CUDA pose floor band.
+
+Empirically derived from paired CPU/CUDA HNeRV anchors. It is used as a
+diagnostic marker only; operational CPU prediction uses ``d_pose_cuda/R_pose``.
 """
 
 # Architectures with empirically-different calibration. As the 25-PR sweep
@@ -98,6 +94,44 @@ KNOWN_ARCHITECTURE_CLASSES: tuple[str, ...] = (
     "av1_high_pose",  # PR60 — predicted R_pose ≈ 1.0 at high pose substrate
     "unknown",        # default fallback
 )
+
+ARCHITECTURE_CLASS_ALIASES: dict[str, str] = {
+    "hnerv_ft_microcodec": "hnerv",
+    "hnerv_lc_v2": "hnerv",
+    "hnerv_lc_ac": "hnerv",
+    "hnerv_microcodec": "hnerv",
+    "ff_packed_brotli_hnerv": "hnerv",
+    "qhnerv_ft": "qhnerv",
+    "qhnerv_ft_best": "qhnerv",
+    "h3_av1_grayscale": "h3_grayscale",
+    "h3_grayscale": "h3_grayscale",
+    "raw_av1_yuv": "av1_high_pose",
+}
+
+
+def normalize_architecture_class(architecture_class: str) -> str:
+    """Map registry/public-submission labels into calibration buckets.
+
+    Unknown labels fail closed into the high-uncertainty ``"unknown"`` bucket
+    instead of raising. That keeps solvers usable as new profile-registry names
+    arrive while preserving the ``extrapolated`` calibration label.
+    """
+    key = architecture_class.strip().lower().replace("-", "_")
+    if not key:
+        return "unknown"
+    if key in KNOWN_ARCHITECTURE_CLASSES:
+        return key
+    if key in ARCHITECTURE_CLASS_ALIASES:
+        return ARCHITECTURE_CLASS_ALIASES[key]
+    if key.startswith("hnerv_") or key.startswith("hnerv"):
+        return "hnerv"
+    if key.startswith("qhnerv_") or key.startswith("qhnerv"):
+        return "qhnerv"
+    if key.startswith("h3_") or "h3" in key:
+        return "h3_grayscale"
+    if "av1" in key and "pose" in key:
+        return "av1_high_pose"
+    return "unknown"
 
 # -----------------------------------------------------------------------
 # Calibration class
@@ -132,6 +166,11 @@ class CalibrationBand:
             "calibration_quality": self.calibration_quality,
             "sigma": self.sigma,
             "notes": list(self.notes),
+            "evidence_grade": "[prediction; cuda_cpu_axis_calibration]",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
         }
 
 
@@ -164,12 +203,8 @@ class CudaCpuCalibration:
         score_gap_override: float | None = None,
         sigma_inflation: float = 2.0,
     ) -> None:
-        if architecture_class not in KNOWN_ARCHITECTURE_CLASSES:
-            raise ValueError(
-                f"unknown architecture_class {architecture_class!r}; "
-                f"must be one of {KNOWN_ARCHITECTURE_CLASSES}"
-            )
-        self.architecture_class = architecture_class
+        self.requested_architecture_class = architecture_class
+        self.architecture_class = normalize_architecture_class(architecture_class)
         self.r_pose = r_pose_override if r_pose_override is not None else R_POSE_HNERV
         self.r_seg = r_seg_override if r_seg_override is not None else R_SEG_HNERV
         self.score_gap = (
@@ -318,11 +353,11 @@ class CudaCpuCalibration:
     # -- pose floor saturation --------------------------------------------
 
     def is_at_pose_floor(self, d_pose_cuda: float) -> bool:
-        """Return True iff CUDA pose has saturated below the precision floor.
+        """Return True iff CUDA pose is inside the observed HNeRV floor band.
 
-        Below the floor, additional pose accuracy on CUDA is invisible to
-        the CPU evaluator — the CPU sees the saturated floor regardless.
-        Solvers should NOT spend bytes pushing CUDA pose below this point.
+        This is an advisory marker for trust-region analysis. It is not a
+        promotion/ranking proof and does not imply that additional pose
+        improvement is worthless on the official CPU axis.
         """
         if d_pose_cuda < 0.0:
             raise ValueError("d_pose_cuda must be non-negative")
@@ -331,10 +366,9 @@ class CudaCpuCalibration:
     def effective_pose_loss_for_cpu(self, d_pose_cuda: float) -> float:
         """Return the effective pose loss the CPU evaluator sees.
 
-        At pose values above the floor this is ``d_pose_cuda / R_pose``.
-        At/below the floor this saturates to ``CUDA_POSE_PRECISION_FLOOR /
-        R_pose`` — i.e., the CPU sees the noise-floor distance regardless
-        of how tight CUDA's pose got.
+        Operational estimator: ``d_pose_cuda / R_pose`` for all nonnegative
+        values. The floor constant is advisory and is intentionally not
+        subtracted here.
         """
         if d_pose_cuda < 0.0:
             raise ValueError("d_pose_cuda must be non-negative")
@@ -343,24 +377,9 @@ class CudaCpuCalibration:
     # -- internals --------------------------------------------------------
 
     def _rebase_pose(self, d_pose_cuda: float) -> float:
-        """Rebase CUDA pose to CPU pose using R_pose with floor saturation."""
-        # When d_pose_cuda is well above the floor, CPU pose ≈ CUDA / R_pose.
-        # When d_pose_cuda is at/below the floor, the CPU pose value still
-        # corresponds to the pre-floor distortion (which is what the CPU
-        # evaluator measures). The saturation effect is on the CUDA side,
-        # not the CPU side. We model this by clamping the CUDA value to
-        # max(d_pose_cuda - sigma²_floor, 0) before dividing — this is the
-        # "additive noise" model from the deep-dive memo.
-        # Practical effect: when d_pose_cuda <= floor, CPU pose ≈ 0; when
-        # d_pose_cuda >> floor, CPU pose ≈ d_pose_cuda / R_pose.
-        unsaturated = max(0.0, d_pose_cuda - CUDA_POSE_PRECISION_FLOOR)
-        # If the unsaturated component is non-zero, return it directly as
-        # the CPU pose estimate (CPU sees the renderer's true distortion,
-        # not the noise floor).
-        if unsaturated > 0.0:
-            return unsaturated
-        # Saturated regime: CPU pose is small but not exactly zero. Use
-        # the R_pose-divided value as the conservative upper bound.
+        """Rebase CUDA pose to CPU pose using the empirical R_pose ratio."""
+        if d_pose_cuda < 0.0:
+            raise ValueError("d_pose_cuda must be non-negative")
         return d_pose_cuda / self.r_pose
 
     def _propagate_sigma_decomposed(
@@ -372,26 +391,25 @@ class CudaCpuCalibration:
         d_score / d_R_pose = -0.5 * sqrt(10/d_pose) * (d_pose / R_pose²);
         d_score / d_R_seg = -100 * (d_seg / R_seg²).
         """
-        # Pose σ contribution:
+        # Pose sigma contribution:
         if d_pose_cuda > 0.0:
             d_pose_cpu = self._rebase_pose(d_pose_cuda)
             if d_pose_cpu > 0.0:
-                # ∂score_cpu / ∂R_pose has magnitude
-                # 0.5 * sqrt(10/d_pose_cpu) * (d_pose_cpu / R_pose²)
-                pose_grad = (
-                    0.5 * math.sqrt(10.0 / d_pose_cpu) * d_pose_cpu / (self.r_pose ** 2)
-                )
+                # d_pose_cpu = d_pose_cuda/R. Therefore
+                # |∂ sqrt(10*d_pose_cpu) / ∂R| =
+                # 0.5 * sqrt(10*d_pose_cpu) / R.
+                pose_grad = 0.5 * math.sqrt(10.0 * d_pose_cpu) / self.r_pose
                 pose_sigma_contrib = pose_grad * R_POSE_HNERV_STD
             else:
                 pose_sigma_contrib = 0.0
         else:
             pose_sigma_contrib = 0.0
-        # Seg σ contribution (constant 100 coefficient):
+        # Seg sigma contribution (constant 100 coefficient):
         seg_sigma_contrib = 100.0 * d_seg_cuda / (self.r_seg ** 2) * R_SEG_HNERV_STD
         sigma = math.sqrt(pose_sigma_contrib ** 2 + seg_sigma_contrib ** 2)
         if not self._is_anchored:
             sigma = sigma * self.sigma_inflation
-        # Sigma floor: never report a band tighter than the empirical gap σ.
+        # Sigma floor: never report a band tighter than the empirical gap std.
         return max(sigma, SCORE_GAP_HNERV_STD)
 
 
@@ -478,11 +496,9 @@ def cpu_pose_floor_score_contribution(
 ) -> float:
     """Return the CPU pose-axis floor contribution to the contest score.
 
-    Below the empirical CPU pose floor (~3-4e-5 across HNeRV cluster)
-    additional pose accuracy is wasted because the CPU evaluator can't
-    distinguish it. This helper returns the score contribution at that
-    floor, so the theoretical-floor analysis can subtract it from the
-    achievable target.
+    This is a descriptive helper for reporting the observed HNeRV CPU floor
+    band. It is not a proof that lower pose is unobservable or removable from
+    an achievable target.
 
     Args:
         d_pose_cpu_floor: optional override; default uses the empirical
@@ -543,6 +559,7 @@ __all__ = [
     "cpu_pose_floor_score_contribution",
     "effective_pose_loss_for_cpu",
     "is_at_pose_floor",
+    "normalize_architecture_class",
     "predict_cpu_from_cuda",
     "predict_cuda_from_cpu",
     "tag_predicted_band",

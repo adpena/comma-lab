@@ -1,0 +1,36 @@
+{
+  "batch_size": 4,
+  "comparison_available": false,
+  "comparison_unavailable_reason": "torch.cuda.is_available() is false",
+  "created_at_utc": "2026-05-08T13:00:29Z",
+  "data_dir": "/Users/adpena/Projects/pact/videos",
+  "environment": {
+    "cuda": {
+      "available": false,
+      "cudnn_allow_tf32": true,
+      "matmul_allow_tf32": false
+    },
+    "mps_available": true,
+    "platform": "macOS-26.4-arm64-arm-64bit",
+    "python": "3.12.13",
+    "torch": "2.11.0"
+  },
+  "evidence_grade": "diagnostic_loader_drift_probe",
+  "interpretation_guardrails": [
+    "This probe compares decoded evaluator input tensors before PoseNet/SegNet.",
+    "It does not run inflate.sh, evaluate.py scoring, or any contest promotion path.",
+    "A nonzero DALI-vs-PyAV raw RGB diff proves loader drift exists, but score impact still requires paired exact eval."
+  ],
+  "max_batches": 1,
+  "num_threads": 2,
+  "prefetch_queue_depth": 4,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "repo": "/Users/adpena/Projects/pact",
+  "schema": "eval_loader_device_drift_probe.v1",
+  "score_claim": false,
+  "upstream_evaluate": "/Users/adpena/Projects/pact/upstream/evaluate.py",
+  "upstream_frame_utils": "/Users/adpena/Projects/pact/upstream/frame_utils.py",
+  "video_limit": 1,
+  "video_names_file": "/Users/adpena/Projects/pact/upstream/public_test_video_names.txt"
+}

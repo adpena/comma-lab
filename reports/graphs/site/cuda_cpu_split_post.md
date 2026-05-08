@@ -7,9 +7,9 @@ authoritative score axes for the same archive bytes — `--device cuda` and
 `--device cpu` — and the public leaderboard ranks by the **CPU** score. We
 spent seven months optimizing against the CUDA score. PR #102's third-prize
 0.195 was the CPU number; its CUDA bot comment was 0.228. Our PR #107
-`apogee` archive landed at 0.22936 CUDA (~11th by CUDA ranking) but was
-likely silver/bronze band on the actual leaderboard axis. We will never
-know for sure.
+`apogee` archive landed at 0.22936 CUDA (~11th by CUDA ranking). A later
+Linux x86_64 GitHub Actions replay scored the same submission at
+**0.1966358879** on the CPU axis, just outside the silver/bronze cluster.
 
 ## What happened
 
@@ -70,19 +70,23 @@ PoseNet is a regression head — it outputs a 6-dimensional pose vector and
 the score uses MSE. SegNet is an argmax classification head — it outputs
 a 5-class label per pixel. Regression heads propagate FP32 noise
 quadratically; argmax classification is piecewise-constant in its logits
-unless a class boundary is crossed. The 5× pose ratio is the regression
-head meeting the FP32 noise floor; the 1.17× seg ratio is the argmax head
-mostly resisting it.
+unless a class boundary is crossed. The 5× pose ratio is measured; the
+causal split between decoder bytes, CUDA/CPU kernel numerics, and network
+amplification is still under test. The 1.17× seg ratio is consistent with
+argmax robustness.
 
-Mechanism, three sources, additive:
+Mechanism is not settled. Three sources are live and may be additive:
 
-1. **Decoder split** (~25% of the gap, *confirmed*): `DaliVideoDataset`
+1. **Decoder split** (confirmed code-path split, score share unmeasured):
+   `DaliVideoDataset`
    (NVIDIA DALI hardware NVDEC) vs `AVVideoDataset` (PyAV libavcodec
-   software decode) produce different RGB uint8 bytes from the same `.mkv`
-   file. SegNet and PoseNet then receive quantitatively different inputs.
-2. **PoseNet FP32 noise floor** (~75% of the gap, *additive-noise model*):
-   FastViT-T12 is a 50-layer convolutional backbone (12 stages, 4 blocks
-   per stage, RepMixer not attention). FP32 conv reduction-tree shapes
+   software decode) can produce different RGB uint8 bytes from the same
+   `.mkv` file. A Lipschitz back-of-envelope says decoder drift alone can
+   explain the observed pose gap, so this is now the first hypothesis to
+   test.
+2. **PoseNet FP32 noise floor** (plausible, not localized):
+   FastViT-T12 is a convolutional RepMixer backbone, not an attention model.
+   FP32 conv reduction-tree shapes
    differ between CPU and CUDA backends. The model `σ²_cuda ≈ K · L · ε² ·
    ||x||²` with L = 50, ε = 1.7e-3 gives `σ²_cuda ≈ 1.4e-4`. At medal-band
    pose<sub>cpu</sub> = 3.5e-5, the predicted ratio is `(3.5e-5 + 1.4e-4) /
@@ -102,16 +106,12 @@ caught it.
 
 ## What does this mean for the leaderboard?
 
-Our PR #107 `apogee` archive (CUDA 0.22936, CPU never run) was, in
-expectation, a 0.196 candidate on the actual leaderboard axis. We don't
-know for sure because we never dispatched a CPU eval — but if the
-empirical R<sub>pose</sub> ≈ 5.04 and R<sub>seg</sub> ≈ 1.17 hold for our
-HNeRV-class archive, the predicted CPU score sits in the silver/bronze
-medal band. The full predictions:
+Our PR #107 `apogee` archive is no longer just a prediction. GitHub
+Actions Linux x86_64 replay produced `0.1966358879` [contest-CPU]:
 
-| Archive | CUDA score | Predicted CPU score |
+| Archive | CUDA score | CPU score |
 |---|---:|---:|
-| Our PR #107 apogee | 0.22936 | ~0.196 (predicted) |
+| Our PR #107 apogee | 0.22936 | 0.1966358879 (verified) |
 | PR103-on-PR106 AC repack | 0.20898 | ~0.176 (predicted) |
 | PR102 hardened replay | 0.22839 | 0.19538 (verified) |
 | PR104 hardened replay | 0.23114 | ~0.198 (predicted) |
@@ -125,22 +125,23 @@ landed it before the deadline. We did not land it before the deadline.
 The dual-axis discovery is now a CLAUDE.md non-negotiable. Every shippable
 archive gets both `--device cuda` and `--device cpu` evaluation on
 Linux x86_64 hardware that is 1:1 contest-compliant with the GitHub
-Actions CI runner. Apple Silicon CPU eval is `[macOS-CPU advisory only]` —
-ARM FP32 intrinsics differ from x86_64 enough to shift SegNet argmax
-across class boundaries. We tag every score with one of:
+Actions CI runner. Apple Silicon CPU eval is `[macOS-CPU advisory only]`,
+but PR107 showed it is an excellent development proxy here: M5 Max
+`0.19664189` versus GHA Linux `0.1966358879`, a `6e-6` score gap. We tag
+every score with one of:
 
 - `[contest-CUDA]` — NVIDIA GPU on Linux x86_64
 - `[contest-CPU]` — Linux x86_64 CPU (Modal / Lightning / Vast.ai / GitHub Actions)
-- `[macOS-CPU advisory only]` — Apple Silicon CPU, drifts from x86_64
+- `[macOS-CPU advisory only]` — Apple Silicon CPU, useful for free sweeps,
+  promoted only after Linux x86_64 replay
 - `[MPS-PROXY]` — Apple Silicon GPU, drifts ~23× on PoseNet
 - `[advisory only]` — proxy / partial / unknown
 
 Strategic exploitation:
 
-- **Floor-aware Huber pose loss**: clamp `||pose_err||² - τ²` at zero where
-  τ ≈ sqrt(CPU pose floor). Bit-budget that would have been spent driving
-  pose<sub>cuda</sub> below R<sub>pose</sub>·ε<sub>cpu</sub> is freed for
-  seg/rate.
+- **CPU-axis pose trust-region loss**: ablate a Huber-style pose loss where
+  τ ≈ sqrt(observed HNeRV CPU pose band). This is a training hypothesis, not
+  proof that pose below τ is free; paired CPU/CUDA exact eval decides.
 - **Leaderboard-aware Lagrangian**: `tac.score_geometry target_axis="cpu_leaderboard"`
   reweights pose marginal by 1/R<sub>pose</sub> ≈ 0.20 and seg marginal by
   1/R<sub>seg</sub> ≈ 0.86 before ranking dispatch candidates. This inverts

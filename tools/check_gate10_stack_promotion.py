@@ -215,6 +215,23 @@ def _scan_build_manifests(repo: Path) -> list[Finding]:
                             ),
                         )
                     )
+            elif (
+                manifest.get("score_claim") is not False
+                or manifest.get("ready_for_exact_eval_dispatch") is not False
+            ):
+                findings.append(
+                    Finding(
+                        file_rel=relpath,
+                        line_number=0,
+                        technique=str(manifest.get("lane_id", "<unknown>")),
+                        reason=(
+                            "stack/proxy manifest must explicitly set "
+                            "score_claim=false AND "
+                            "ready_for_exact_eval_dispatch=false. "
+                            "Gate 10 (stack promotion)."
+                        ),
+                    )
+                )
     return findings
 
 

@@ -1,0 +1,628 @@
+{
+  "anchor": {
+    "archive_bytes": 185578,
+    "archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+    "avg_pose_dist": 3.36e-05,
+    "avg_seg_dist": 0.00067082,
+    "label": "PR103-on-PR106 AC repack active local HNeRV rate anchor",
+    "score_basis": "contest_formula_components_for_byte_budget_only",
+    "score_from_supplied_components": 0.2089810755823297,
+    "score_recomputed_from_components": 0.20898105277982337
+  },
+  "byte_budget": {
+    "anchor_quality_score_without_rate": 0.08541230277982337,
+    "protected_nonweight_bytes": 15957,
+    "rate_only_assumption": "avg_pose_dist and avg_seg_dist held fixed for budget math only",
+    "required_archive_savings_bytes": 58543,
+    "target_max_archive_bytes_if_components_hold": 127035,
+    "target_weight_payload_bytes": 111078
+  },
+  "candidate_construction_plans": [
+    {
+      "candidate_id": "svd_stem_blocks01_conservative",
+      "continuous_k_extra_savings_bytes_proxy": 6000,
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "cpu_design_only_no_archive_built",
+        "component_preservation_unproven",
+        "factorized_inflate_runtime_not_built",
+        "exact_cuda_auth_eval_required_before_score_claim"
+      ],
+      "estimated_archive_bytes": 147253,
+      "meets_sub017_byte_budget_if_components_hold": false,
+      "net_saved_bytes_proxy": 38325,
+      "projected_score_if_components_hold": 0.18346203120392246,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "risk": "medium",
+      "runtime_overhead_bytes_proxy": 2192,
+      "score_claim": false,
+      "svd_saved_bytes_proxy": 34517,
+      "target_layers": [
+        {
+          "construction": [
+            "matrixize tensor",
+            "CPU SVD on dequantized fp32 weights",
+            "emit charged int8/fp16 U/V factor streams",
+            "emit optional charged residual stream",
+            "fork inflate runtime to multiply factors before Conv2d use"
+          ],
+          "current_compressed_bytes_proxy": 31872,
+          "estimated_low_rank_bytes": 25781,
+          "estimated_saved_bytes": 6091,
+          "factor_values": 35120,
+          "full_numel": 48384,
+          "matrix_shape": [
+            1728,
+            28
+          ],
+          "name": "stem.weight",
+          "rank": 20,
+          "residual_fraction": 0.08,
+          "role": "stem_projection",
+          "shape": [
+            1728,
+            28
+          ]
+        },
+        {
+          "construction": [
+            "matrixize tensor",
+            "CPU SVD on dequantized fp32 weights",
+            "emit charged int8/fp16 U/V factor streams",
+            "emit optional charged residual stream",
+            "fork inflate runtime to multiply factors before Conv2d use"
+          ],
+          "current_compressed_bytes_proxy": 32544,
+          "estimated_low_rank_bytes": 18370,
+          "estimated_saved_bytes": 14174,
+          "factor_values": 22464,
+          "full_numel": 46656,
+          "matrix_shape": [
+            144,
+            324
+          ],
+          "name": "blocks.0.weight",
+          "rank": 48,
+          "residual_fraction": 0.08,
+          "role": "early_decoder_conv2d",
+          "shape": [
+            144,
+            36,
+            3,
+            3
+          ]
+        },
+        {
+          "construction": [
+            "matrixize tensor",
+            "CPU SVD on dequantized fp32 weights",
+            "emit charged int8/fp16 U/V factor streams",
+            "emit optional charged residual stream",
+            "fork inflate runtime to multiply factors before Conv2d use"
+          ],
+          "current_compressed_bytes_proxy": 32722,
+          "estimated_low_rank_bytes": 18470,
+          "estimated_saved_bytes": 14252,
+          "factor_values": 22464,
+          "full_numel": 46656,
+          "matrix_shape": [
+            144,
+            324
+          ],
+          "name": "blocks.1.weight",
+          "rank": 48,
+          "residual_fraction": 0.08,
+          "role": "early_decoder_conv2d",
+          "shape": [
+            144,
+            36,
+            3,
+            3
+          ]
+        }
+      ],
+      "target_max_archive_bytes": 127035
+    },
+    {
+      "candidate_id": "svd_stem_blocks012_balanced",
+      "continuous_k_extra_savings_bytes_proxy": 8500,
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "cpu_design_only_no_archive_built",
+        "component_preservation_unproven",
+        "factorized_inflate_runtime_not_built",
+        "exact_cuda_auth_eval_required_before_score_claim"
+      ],
+      "estimated_archive_bytes": 111347,
+      "meets_sub017_byte_budget_if_components_hold": true,
+      "net_saved_bytes_proxy": 74231,
+      "projected_score_if_components_hold": 0.15955369963311777,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "risk": "medium_high",
+      "runtime_overhead_bytes_proxy": 2240,
+      "score_claim": false,
+      "svd_saved_bytes_proxy": 67971,
+      "target_layers": [
+        {
+          "construction": [
+            "matrixize tensor",
+            "CPU SVD on dequantized fp32 weights",
+            "emit charged int8/fp16 U/V factor streams",
+            "emit optional charged residual stream",
+            "fork inflate runtime to multiply factors before Conv2d use"
+          ],
+          "current_compressed_bytes_proxy": 31872,
+          "estimated_low_rank_bytes": 20517,
+          "estimated_saved_bytes": 11355,
+          "factor_values": 28096,
+          "full_numel": 48384,
+          "matrix_shape": [
+            1728,
+            28
+          ],
+          "name": "stem.weight",
+          "rank": 16,
+          "residual_fraction": 0.06,
+          "role": "stem_projection",
+          "shape": [
+            1728,
+            28
+          ]
+        },
+        {
+          "construction": [
+            "matrixize tensor",
+            "CPU SVD on dequantized fp32 weights",
+            "emit charged int8/fp16 U/V factor streams",
+            "emit optional charged residual stream",
+            "fork inflate runtime to multiply factors before Conv2d use"
+          ],
+          "current_compressed_bytes_proxy": 32544,
+          "estimated_low_rank_bytes": 12496,
+          "estimated_saved_bytes": 20048,
+          "factor_values": 14976,
+          "full_numel": 46656,
+          "matrix_shape": [
+            144,
+            324
+          ],
+          "name": "blocks.0.weight",
+          "rank": 32,
+          "residual_fraction": 0.06,
+          "role": "early_decoder_conv2d",
+          "shape": [
+            144,
+            36,
+            3,
+            3
+          ]
+        },
+        {
+          "construction": [
+            "matrixize tensor",
+            "CPU SVD on dequantized fp32 weights",
+            "emit charged int8/fp16 U/V factor streams",
+            "emit optional charged residual stream",
+            "fork inflate runtime to multiply factors before Conv2d use"
+          ],
+          "current_compressed_bytes_proxy": 32722,
+          "estimated_low_rank_bytes": 12564,
+          "estimated_saved_bytes": 20158,
+          "factor_values": 14976,
+          "full_numel": 46656,
+          "matrix_shape": [
+            144,
+            324
+          ],
+          "name": "blocks.1.weight",
+          "rank": 32,
+          "residual_fraction": 0.06,
+          "role": "early_decoder_conv2d",
+          "shape": [
+            144,
+            36,
+            3,
+            3
+          ]
+        },
+        {
+          "construction": [
+            "matrixize tensor",
+            "CPU SVD on dequantized fp32 weights",
+            "emit charged int8/fp16 U/V factor streams",
+            "emit optional charged residual stream",
+            "fork inflate runtime to multiply factors before Conv2d use"
+          ],
+          "current_compressed_bytes_proxy": 25643,
+          "estimated_low_rank_bytes": 9233,
+          "estimated_saved_bytes": 16410,
+          "factor_values": 10368,
+          "full_numel": 34992,
+          "matrix_shape": [
+            108,
+            324
+          ],
+          "name": "blocks.2.weight",
+          "rank": 24,
+          "residual_fraction": 0.06,
+          "role": "early_decoder_conv2d",
+          "shape": [
+            108,
+            36,
+            3,
+            3
+          ]
+        }
+      ],
+      "target_max_archive_bytes": 127035
+    },
+    {
+      "candidate_id": "svd_stem_blocks0123_aggressive",
+      "continuous_k_extra_savings_bytes_proxy": 12000,
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "cpu_design_only_no_archive_built",
+        "component_preservation_unproven",
+        "factorized_inflate_runtime_not_built",
+        "exact_cuda_auth_eval_required_before_score_claim"
+      ],
+      "estimated_archive_bytes": 84394,
+      "meets_sub017_byte_budget_if_components_hold": true,
+      "net_saved_bytes_proxy": 101184,
+      "projected_score_if_components_hold": 0.1416068032696159,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "risk": "high",
+      "runtime_overhead_bytes_proxy": 2288,
+      "score_claim": false,
+      "svd_saved_bytes_proxy": 91472,
+      "target_layers": [
+        {
+          "construction": [
+            "matrixize tensor",
+            "CPU SVD on dequantized fp32 weights",
+            "emit charged int8/fp16 U/V factor streams",
+            "emit optional charged residual stream",
+            "fork inflate runtime to multiply factors before Conv2d use"
+          ],
+          "current_compressed_bytes_proxy": 31872,
+          "estimated_low_rank_bytes": 15252,
+          "estimated_saved_bytes": 16620,
+          "factor_values": 21072,
+          "full_numel": 48384,
+          "matrix_shape": [
+            1728,
+            28
+          ],
+          "name": "stem.weight",
+          "rank": 12,
+          "residual_fraction": 0.04,
+          "role": "stem_projection",
+          "shape": [
+            1728,
+            28
+          ]
+        },
+        {
+          "construction": [
+            "matrixize tensor",
+            "CPU SVD on dequantized fp32 weights",
+            "emit charged int8/fp16 U/V factor streams",
+            "emit optional charged residual stream",
+            "fork inflate runtime to multiply factors before Conv2d use"
+          ],
+          "current_compressed_bytes_proxy": 32544,
+          "estimated_low_rank_bytes": 9233,
+          "estimated_saved_bytes": 23311,
+          "factor_values": 11232,
+          "full_numel": 46656,
+          "matrix_shape": [
+            144,
+            324
+          ],
+          "name": "blocks.0.weight",
+          "rank": 24,
+          "residual_fraction": 0.04,
+          "role": "early_decoder_conv2d",
+          "shape": [
+            144,
+            36,
+            3,
+            3
+          ]
+        },
+        {
+          "construction": [
+            "matrixize tensor",
+            "CPU SVD on dequantized fp32 weights",
+            "emit charged int8/fp16 U/V factor streams",
+            "emit optional charged residual stream",
+            "fork inflate runtime to multiply factors before Conv2d use"
+          ],
+          "current_compressed_bytes_proxy": 32722,
+          "estimated_low_rank_bytes": 9283,
+          "estimated_saved_bytes": 23439,
+          "factor_values": 11232,
+          "full_numel": 46656,
+          "matrix_shape": [
+            144,
+            324
+          ],
+          "name": "blocks.1.weight",
+          "rank": 24,
+          "residual_fraction": 0.04,
+          "role": "early_decoder_conv2d",
+          "shape": [
+            144,
+            36,
+            3,
+            3
+          ]
+        },
+        {
+          "construction": [
+            "matrixize tensor",
+            "CPU SVD on dequantized fp32 weights",
+            "emit charged int8/fp16 U/V factor streams",
+            "emit optional charged residual stream",
+            "fork inflate runtime to multiply factors before Conv2d use"
+          ],
+          "current_compressed_bytes_proxy": 25643,
+          "estimated_low_rank_bytes": 6821,
+          "estimated_saved_bytes": 18822,
+          "factor_values": 7776,
+          "full_numel": 34992,
+          "matrix_shape": [
+            108,
+            324
+          ],
+          "name": "blocks.2.weight",
+          "rank": 18,
+          "residual_fraction": 0.04,
+          "role": "early_decoder_conv2d",
+          "shape": [
+            108,
+            36,
+            3,
+            3
+          ]
+        },
+        {
+          "construction": [
+            "matrixize tensor",
+            "CPU SVD on dequantized fp32 weights",
+            "emit charged int8/fp16 U/V factor streams",
+            "emit optional charged residual stream",
+            "fork inflate runtime to multiply factors before Conv2d use"
+          ],
+          "current_compressed_bytes_proxy": 14187,
+          "estimated_low_rank_bytes": 4907,
+          "estimated_saved_bytes": 9280,
+          "factor_values": 5814,
+          "full_numel": 19440,
+          "matrix_shape": [
+            80,
+            243
+          ],
+          "name": "blocks.3.weight",
+          "rank": 18,
+          "residual_fraction": 0.04,
+          "role": "mid_decoder_conv2d",
+          "shape": [
+            80,
+            27,
+            3,
+            3
+          ]
+        }
+      ],
+      "target_max_archive_bytes": 127035
+    }
+  ],
+  "created_at_utc": "2026-05-08T13:12:38Z",
+  "dispatch_attempted": false,
+  "evidence_grade": "[CPU-design]",
+  "global_dispatch_blockers": [
+    "no_archive_built_by_this_tool",
+    "cpu_projection_not_score_evidence",
+    "factorized_hnerv_runtime_not_implemented",
+    "exact_cuda_auth_eval_required_before_score_claim",
+    "remote_dispatch_forbidden_for_this_task"
+  ],
+  "next_local_artifacts": [
+    "layerwise SVD reconstruction manifest for stem.weight and blocks.0-2.weight",
+    "continuous-K allocation manifest over factor/residual streams",
+    "byte-closed forked inflate runtime consuming low-rank factors",
+    "strict no-score compliance report"
+  ],
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "recommended_cpu_candidate": {
+    "candidate_id": "svd_stem_blocks012_balanced",
+    "continuous_k_extra_savings_bytes_proxy": 8500,
+    "dispatch_attempted": false,
+    "dispatch_blockers": [
+      "cpu_design_only_no_archive_built",
+      "component_preservation_unproven",
+      "factorized_inflate_runtime_not_built",
+      "exact_cuda_auth_eval_required_before_score_claim"
+    ],
+    "estimated_archive_bytes": 111347,
+    "meets_sub017_byte_budget_if_components_hold": true,
+    "net_saved_bytes_proxy": 74231,
+    "projected_score_if_components_hold": 0.15955369963311777,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "risk": "medium_high",
+    "runtime_overhead_bytes_proxy": 2240,
+    "score_claim": false,
+    "svd_saved_bytes_proxy": 67971,
+    "target_layers": [
+      {
+        "construction": [
+          "matrixize tensor",
+          "CPU SVD on dequantized fp32 weights",
+          "emit charged int8/fp16 U/V factor streams",
+          "emit optional charged residual stream",
+          "fork inflate runtime to multiply factors before Conv2d use"
+        ],
+        "current_compressed_bytes_proxy": 31872,
+        "estimated_low_rank_bytes": 20517,
+        "estimated_saved_bytes": 11355,
+        "factor_values": 28096,
+        "full_numel": 48384,
+        "matrix_shape": [
+          1728,
+          28
+        ],
+        "name": "stem.weight",
+        "rank": 16,
+        "residual_fraction": 0.06,
+        "role": "stem_projection",
+        "shape": [
+          1728,
+          28
+        ]
+      },
+      {
+        "construction": [
+          "matrixize tensor",
+          "CPU SVD on dequantized fp32 weights",
+          "emit charged int8/fp16 U/V factor streams",
+          "emit optional charged residual stream",
+          "fork inflate runtime to multiply factors before Conv2d use"
+        ],
+        "current_compressed_bytes_proxy": 32544,
+        "estimated_low_rank_bytes": 12496,
+        "estimated_saved_bytes": 20048,
+        "factor_values": 14976,
+        "full_numel": 46656,
+        "matrix_shape": [
+          144,
+          324
+        ],
+        "name": "blocks.0.weight",
+        "rank": 32,
+        "residual_fraction": 0.06,
+        "role": "early_decoder_conv2d",
+        "shape": [
+          144,
+          36,
+          3,
+          3
+        ]
+      },
+      {
+        "construction": [
+          "matrixize tensor",
+          "CPU SVD on dequantized fp32 weights",
+          "emit charged int8/fp16 U/V factor streams",
+          "emit optional charged residual stream",
+          "fork inflate runtime to multiply factors before Conv2d use"
+        ],
+        "current_compressed_bytes_proxy": 32722,
+        "estimated_low_rank_bytes": 12564,
+        "estimated_saved_bytes": 20158,
+        "factor_values": 14976,
+        "full_numel": 46656,
+        "matrix_shape": [
+          144,
+          324
+        ],
+        "name": "blocks.1.weight",
+        "rank": 32,
+        "residual_fraction": 0.06,
+        "role": "early_decoder_conv2d",
+        "shape": [
+          144,
+          36,
+          3,
+          3
+        ]
+      },
+      {
+        "construction": [
+          "matrixize tensor",
+          "CPU SVD on dequantized fp32 weights",
+          "emit charged int8/fp16 U/V factor streams",
+          "emit optional charged residual stream",
+          "fork inflate runtime to multiply factors before Conv2d use"
+        ],
+        "current_compressed_bytes_proxy": 25643,
+        "estimated_low_rank_bytes": 9233,
+        "estimated_saved_bytes": 16410,
+        "factor_values": 10368,
+        "full_numel": 34992,
+        "matrix_shape": [
+          108,
+          324
+        ],
+        "name": "blocks.2.weight",
+        "rank": 24,
+        "residual_fraction": 0.06,
+        "role": "early_decoder_conv2d",
+        "shape": [
+          108,
+          36,
+          3,
+          3
+        ]
+      }
+    ],
+    "target_max_archive_bytes": 127035
+  },
+  "recommended_cpu_candidate_id": "svd_stem_blocks012_balanced",
+  "safe_stacking_order": [
+    {
+      "must_prove": [
+        "CPU reconstruction rel_err per tensor",
+        "charged factor and residual bytes",
+        "runtime consumes factorized tensors"
+      ],
+      "name": "svd_low_rank_stem_and_early_conv2d",
+      "reason": "remove large decoder weight mass before quantization noise is introduced",
+      "step": 1
+    },
+    {
+      "must_prove": [
+        "no dead K side-info bytes",
+        "ordered schema matches runtime decode order",
+        "guarded selected-K caps for scorer-risky layers"
+      ],
+      "name": "continuous_k_allocation",
+      "reason": "choose per-stream K under a global distortion budget after SVD changes tensor spectra",
+      "step": 2
+    },
+    {
+      "must_prove": [
+        "aggregate fp32 smoke rel_err below guard",
+        "per-layer max rel_err below guard",
+        "lossy stream changes charged bytes"
+      ],
+      "name": "analytical_lossy_coarsening",
+      "reason": "coarsen factor and residual streams only after rank selection",
+      "step": 3
+    },
+    {
+      "must_prove": [
+        "old/new archive SHA boundary",
+        "single scored archive closure",
+        "strict compliance before any exact eval claim"
+      ],
+      "name": "entropy_pack_and_noop_guards",
+      "reason": "pack final charged streams and reject no-op or metadata-only wins",
+      "step": 4
+    }
+  ],
+  "schema": "sub017_cpu_frontier_plan.v1",
+  "score_claim": false,
+  "target_score": 0.17,
+  "tool": "tools/plan_sub017_cpu_frontier.py"
+}

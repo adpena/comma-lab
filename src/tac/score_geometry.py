@@ -369,14 +369,13 @@ def predict_cpu_axis_marginals(
     d_pose_cuda: float,
     archive_class: str = "hnerv",
     reference_bytes: int = CONTEST_REFERENCE_BYTES,
-) -> dict[str, float]:
+) -> dict[str, float | bool | str]:
     """Compute CPU-axis marginal sensitivities at the operating point.
 
     Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA": the legacy
-    score-axis marginals computed on CUDA are MISLEADING for the contest
-    leaderboard, which ranks by ``--device cpu`` eval. The pose axis on CPU
-    has a SATURATED operating point (because of the 5× pose collapse), so
-    the same CUDA pose delta translates to a much smaller CPU pose delta.
+    score-axis marginals computed on CUDA can be misleading for CPU-axis
+    exploration. This helper is a predicted calibration view, not a score
+    claim or a promotion artifact.
 
     This helper rebases the operating point from CUDA to CPU using the
     canonical calibration (:mod:`tac.optimization.cuda_cpu_axis_calibration`)
@@ -426,6 +425,11 @@ def predict_cpu_axis_marginals(
         "cuda_d_seg": d_seg_cuda,
         "cpu_d_seg": cpu_d_seg,
         "calibration_class": archive_class,
+        "evidence_grade": "[prediction; cuda_cpu_axis_calibration]",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
     }
 
 

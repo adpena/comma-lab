@@ -287,7 +287,8 @@ and CUDA, same archive bytes).
 The full empirical computation, mechanism analysis, and strategic-exploitation
 prescriptions are in `docs/findings/cuda_cpu_auth_eval_split_20260508.md` and
 `docs/writeup/cuda_cpu_drift_methodology.md`. The mechanism hypothesis is a
-three-axis additive drift: (a) decoder split (`DaliVideoDataset` for CUDA vs
+three-axis localization program, not a settled share estimate: (a) decoder
+split (`DaliVideoDataset` for CUDA vs
 `AVVideoDataset` for CPU produces different RGB uint8 bytes from the same
 `.mkv`), (b) FastViT-T12 conv-stack FP32 noise floor with `σ²_cuda ≈ K·L·ε²`,
 and (c) the Hydra-head MLP. The original "FastViT attention TF32-compounding"
@@ -303,21 +304,23 @@ class boundary is crossed). LSQ / quantization-error literature confirms the
 Operational consequence: every shippable archive from this commit forward
 gets dual-eval — authoritative `[contest-CUDA]` and `[contest-CPU]` axes on
 Linux x86_64 hardware that is 1:1 contest-compliant with the GitHub Actions CI
-runner. Apple Silicon CPU eval is `[macOS-CPU advisory only]`; the FP32
-intrinsics differ from x86_64 in ways that affect SegNet/PoseNet output bytes.
+runner. Apple Silicon CPU eval is `[macOS-CPU advisory only]`; after PR107 it
+is also an empirically validated fast development proxy for this archive
+class (M5 Max `0.19664189` versus GHA Linux x86_64 `0.1966358879`, gap
+`6e-6`), but not a promotion tag.
 
-Predicted CPU scores for our existing CUDA-only artifacts (using the empirical
-ratios; pending Modal CPU replay):
+CPU scores for existing CUDA-only artifacts where available:
 
-| Archive | CUDA score | Predicted CPU score |
+| Archive | CUDA score | CPU score |
 |---|---:|---:|
-| Our PR #107 apogee | 0.22936 | ~0.196 |
+| Our PR #107 apogee | 0.22936 | 0.1966358879 (GHA Linux x86_64 verified) |
 | PR103-on-PR106 AC repack | 0.20898 | ~0.176 |
 | PR102 hardened replay | 0.22839 | 0.19538 (verified) |
 | PR104 hardened replay | 0.23114 | ~0.198 |
 
-PR #107's true leaderboard rank may have been silver/bronze band; we will
-never know for sure without a post-deadline Modal CPU replay.
+PR #107's true CPU-axis score was effectively medal-cluster adjacent, about
+`0.0013` above PR102's `0.19538` CPU row, rather than the apparent `0.229`
+CUDA-only position.
 
 ## 4.9 Postmortem: Why The Gap Remained
 

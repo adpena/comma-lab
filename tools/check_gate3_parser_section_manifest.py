@@ -40,6 +40,7 @@ import json
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT_DEFAULT = Path(__file__).resolve().parents[1]
 
@@ -97,6 +98,73 @@ def _missing_parser_fields(manifest: dict) -> list[str]:
     return [f for f in REQUIRED_PARSER_FIELDS if not manifest.get(f)]
 
 
+def _parser_payload(manifest: dict) -> dict[str, Any]:
+    parser = manifest.get("parser_section_manifest")
+    if isinstance(parser, dict):
+        return parser
+    return manifest
+
+
+def _schema_errors(manifest: dict) -> list[str]:
+    p = _parser_payload(manifest)
+    errors: list[str] = []
+    offsets = p.get("offsets")
+    lengths = p.get("lengths")
+    names = p.get("section_names")
+    hashes = p.get("section_sha256s")
+    entropy = p.get("entropy_estimates")
+    boundaries = p.get("old_new_section_boundaries")
+    arrays = {
+        "offsets": offsets,
+        "lengths": lengths,
+        "section_names": names,
+        "section_sha256s": hashes,
+        "entropy_estimates": entropy,
+    }
+    for field, value in arrays.items():
+        if not isinstance(value, list) or len(value) == 0:
+            errors.append(f"{field} must be a non-empty list")
+    if errors:
+        return errors
+    n = len(names)
+    for field, value in arrays.items():
+        if len(value) != n:
+            errors.append(f"{field} length {len(value)} != section_names length {n}")
+    if any(not isinstance(v, int) or v < 0 for v in offsets):
+        errors.append("offsets must be non-negative integers")
+    if any(not isinstance(v, int) or v <= 0 for v in lengths):
+        errors.append("lengths must be positive integers")
+    if any(not isinstance(v, str) or not v.strip() for v in names):
+        errors.append("section_names must be non-empty strings")
+    if any(not isinstance(v, str) or len(v) != 64 or any(c not in "0123456789abcdefABCDEF" for c in v) for v in hashes):
+        errors.append("section_sha256s must be 64-hex strings")
+    if any(not isinstance(v, int | float) or v < 0 for v in entropy):
+        errors.append("entropy_estimates must be non-negative numbers")
+    if not isinstance(boundaries, dict):
+        errors.append("old_new_section_boundaries must be an object")
+    else:
+        missing_names = [name for name in names if name not in boundaries]
+        if missing_names:
+            errors.append(
+                "old_new_section_boundaries missing sections: "
+                + ",".join(str(v) for v in missing_names)
+            )
+        for name in names:
+            value = boundaries.get(name)
+            if not isinstance(value, dict):
+                continue
+            for key in ("old", "new"):
+                bounds = value.get(key)
+                if (
+                    not isinstance(bounds, list)
+                    or len(bounds) != 2
+                    or not all(isinstance(v, int) and v >= 0 for v in bounds)
+                    or bounds[0] > bounds[1]
+                ):
+                    errors.append(f"old_new_section_boundaries.{name}.{key} must be [start,end]")
+    return errors
+
+
 def scan(repo_root: Path | None = None) -> list[Finding]:
     repo = (repo_root or REPO_ROOT_DEFAULT).resolve()
     findings: list[Finding] = []
@@ -126,8 +194,14 @@ def scan(repo_root: Path | None = None) -> list[Finding]:
             if _has_vendored_waiver(manifest):
                 continue
             missing = _missing_parser_fields(manifest)
-            if not missing:
+            schema_errors = [] if missing else _schema_errors(manifest)
+            if not missing and not schema_errors:
                 continue
+            detail = (
+                f"missing required parser-section fields: {','.join(missing)}"
+                if missing
+                else "invalid parser-section schema: " + "; ".join(schema_errors)
+            )
             findings.append(
                 Finding(
                     manifest_rel=relpath,
@@ -135,8 +209,7 @@ def scan(repo_root: Path | None = None) -> list[Finding]:
                         manifest.get("representation_name", "<unknown>")
                     ),
                     reason=(
-                        f"HNeRV-family monolithic-packet manifest missing "
-                        f"required parser-section fields: {','.join(missing)}. "
+                        f"HNeRV-family monolithic-packet manifest {detail}. "
                         f"Provide parser_section_manifest with offsets, "
                         f"lengths, section_names, section_sha256s, "
                         f"entropy_estimates, old_new_section_boundaries OR "

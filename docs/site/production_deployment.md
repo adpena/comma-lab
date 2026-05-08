@@ -15,3 +15,13 @@ The system has a compute-quality knob. Renderer-only reconstruction (3 seconds, 
 ## Details
 
 For a full analysis --- including comma hardware specs, per-operation latency estimates, cost modeling for fleet-scale deployment, and a discussion of limitations (single-video evaluation, real-time encoding, fleet diversity) --- see [Section 5 of the paper](../paper/05_production.md).
+
+## Evaluation Hardware Caveat
+
+Contest scores are not a single hardware-independent scalar. The same archive
+must be evaluated on both CUDA and CPU paths because `upstream/evaluate.py`
+changes the ground-truth loader and scorer device. For production-facing
+claims, report the archive SHA, runtime-tree SHA, `[contest-CUDA]` score, and
+Linux x86_64 `[contest-CPU]` score. macOS CPU is useful for fast local sweeps
+after PR107 showed a `6e-6` gap from GitHub Actions Linux CPU, but it remains
+an advisory development signal until promoted by a Linux replay.

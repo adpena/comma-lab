@@ -23,6 +23,29 @@ is the public-disclosure version of the same content; the `[contest-CUDA]`
 / `[contest-CPU]` tag mandate and the dual-eval rule are the binding
 operational rules; everything else here is methodology supporting them.
 
+### 0.1 Rigor correction after PR107 Linux CPU replay
+
+The first draft treated PR107's CPU score as a prediction. That is now
+outdated. GitHub Actions Linux x86_64 replay produced a canonical
+`[contest-CPU]` row for PR107:
+
+- score `0.1966358879`
+- seg `0.00058931`
+- pose `0.00003580`
+- rate `0.00475136`
+- archive bytes `178,392`
+- workflow run `25556454358`
+
+The M5 Max replay was `0.19664189`, only `6e-6` higher. This makes macOS
+CPU a validated free development proxy for this archive class, useful for
+parallel sweeps and curve fitting. It remains advisory until a Linux
+x86_64 replay promotes the exact archive/runtime pair.
+
+The original FastViT-attention/TF32 mechanism was also too specific and is
+now rejected. The current mechanism model is deliberately plural:
+decoder-dominant, network-kernel-dominant, and mixed explanations are all
+live until the loader and layer probes isolate them.
+
 ## 1. The empirical R<sub>pose</sub> = 5.04 computation
 
 ### 1.1 Source data
@@ -122,7 +145,7 @@ independent grounds:
 The TF32-attention story makes for a clean narrative but is
 empirically wrong.
 
-### 2.3 Replacement model: additive precision noise
+### 2.3 Replacement model to test: additive precision noise
 
 `σ²_cuda ≈ K · L · ε² · ||x||²` where:
 - K is a constant depending on the variance-aggregation across the
@@ -137,6 +160,12 @@ For L = 50, ε = 1.7e-3, K = 1, ||x|| = 1, this gives
 predicted pose<sub>cuda</sub> from `pose_cuda = pose_cpu + σ²_cuda`
 is `1.75e-4`, giving `R_pose = 5.0` — a numerically perfect match for
 the observed 5.04 ± 0.10.
+
+This is a fit, not a localization proof. A decoder-only perturbation can
+also explain the observed gap if DALI/NVDEC and PyAV differ by roughly 1
+to 2 LSB per pixel and PoseNet's input-output Lipschitz constant is in the
+expected range. The next mechanism claim must come from the discriminator
+tests below.
 
 ### 2.4 Why pose 5× and seg 1.17×
 
@@ -158,20 +187,32 @@ property of any specific kernel. LSQ / quantization-error literature
 confirms the 5–10× ratio between regression-head precision sensitivity
 and classification-head precision sensitivity.
 
-### 2.5 Discriminator microbench
+### 2.5 Discriminator microbench and landed tracers
 
 `.omx/research/cuda_cpu_pose_drift_mechanism_deep_dive_20260508_claude.md`
 §9.3 sketches the 1-line decisive experiment: force
 `DefaultDatasetClass = AVVideoDataset` while running `--device cuda`.
 PyAV decode + CUDA inference. Result discriminates:
 
-- score ~0.220 → decoder mismatch contributes ~25%, FP32 forward ~75%
+- score ~0.220 → decoder mismatch is partial and FP32 forward is partial
 - score ~0.195 → decoder mismatch is 100% of gap (FP32 is bit-exact)
 - score ~0.228 → decoder is 0% of gap (pure FP32 noise)
 
-This is the canonical mechanism discriminator. Worth dispatching when
-GPU credit is available; current ranking is P0 in the operator's
-next-step menu.
+This is the canonical mechanism discriminator. It should be paired with
+two landed tracers:
+
+- `tools/probe_eval_loader_drift.py`: compares DALI/NVDEC and PyAV
+  decoded RGB tensors before scorers. On macOS it writes a non-promotable
+  CUDA/DALI plan; on T4 it emits decoded-RGB LSB statistics.
+- `tools/probe_posenet_layer_drift.py`: runs PoseNet on a shared tensor
+  across two devices and dumps selected activations. The tracer clones
+  forward-hook tensors, so in-place scorer modules cannot corrupt earlier
+  captures.
+
+A third low-cost discriminator avoids a full DALI dump: take the PyAV
+decoded tensor, inject uniform integer noise with amplitude 1, 2, and 3
+LSB, run PoseNet on T4, and compare the induced pose distortion to the
+observed `~1.4e-4` gap.
 
 ### 2.6 Other potential CUDA-CPU splits in the contest pipeline
 
@@ -179,7 +220,7 @@ We checked each pipeline stage for CUDA-CPU divergence:
 
 | Stage | CPU-vs-CUDA divergence? | Notes |
 |---|---|---|
-| GROUND TRUTH video decode | **YES** (DALI vs PyAV) | Confirmed mechanism, ~25% of gap |
+| GROUND TRUTH video decode | **YES** (DALI vs PyAV) | Confirmed code-path split; share of gap unmeasured |
 | Inflated-frame `.raw` decode | NO | Both paths use `TensorVideoDataset` |
 | Arithmetic decoders in PR101/103 inflate | possible, unverified | Most AC implementations are integer-only |
 | BatchNorm running stats | NO | Eval mode, fixed constants |
@@ -223,10 +264,11 @@ leaderboard substrate, the inversion is the operative rule.
 
 ### 4.1 Floor-aware Huber pose loss
 
-Below the CPU pose floor ε<sub>cpu</sub> ≈ 3e-5, *any* CUDA-pose improvement
-is wasted from a leaderboard standpoint. Driving pose<sub>cuda</sub> from
-1.74e-4 to 1e-4 is impressive on the CUDA axis but yields ~0 on the CPU
-axis (because pose<sub>cpu</sub> is already at the floor).
+Below the observed HNeRV CPU pose band ε<sub>cpu</sub> ≈ 3e-5, CUDA-pose
+improvements should be treated as low-confidence marginal value until paired
+CPU/CUDA eval proves otherwise. Driving pose<sub>cuda</sub> from 1.74e-4 to
+1e-4 may be valuable, but the current empirical ratio says the expected
+leaderboard-axis gain is much smaller than the CUDA-axis gain.
 
 Implementation:
 ```python
@@ -236,11 +278,9 @@ pose_huber = torch.clamp(pose_err.pow(2) - tau ** 2, min=0.0)
 loss = seg_loss + pose_huber + rate_loss
 ```
 
-The pose-loss is now zero below τ. Bit-budget that would have been spent
-driving pose<sub>cuda</sub> below R<sub>pose</sub>·ε<sub>cpu</sub> is
-freed for seg/rate. Budget reallocation should yield approximately the
-same CPU score with smaller archive bytes, or smaller CPU score with the
-same archive bytes — both are leaderboard-positive.
+This is a training-time experiment, not a claim that pose below τ is free.
+It should be evaluated as a trust-region ablation: reallocate some pose
+budget to seg/rate, then require paired CPU/CUDA exact eval before promotion.
 
 ### 4.2 `tac.score_geometry target_axis="cpu_leaderboard"`
 
@@ -267,22 +307,22 @@ def predict_marginal(
 This is a planner reweighting; no GPU dispatch needed. Surfaces leaderboard-
 aware Lagrangian for the cathedral autopilot.
 
-### 4.3 SegNet boundary smoothing in inflate.py
+### 4.3 Training-time SegNet boundary robustness
 
 Predicted +0.001 CPU-leaderboard score at -0.008 CUDA score. Net positive
-at the leaderboard substrate.
+at the leaderboard substrate, but only if achieved by changing the renderer
+or training objective. Do **not** import or run SegNet inside `inflate.py`;
+inflate is scorer-free and must remain contest-compliant.
 
 ```python
-# In inflate.py, after segnet forward:
-seg_logits = F.avg_pool2d(seg_logits, kernel_size=3, stride=1, padding=1)
-seg_pred = seg_logits.argmax(dim=1)
+# In training or offline candidate generation only:
+boundary_loss = scorer_aligned_boundary_loss(rendered_frames, targets)
+loss = seg_loss + boundary_loss + pose_loss + rate_loss
 ```
 
-A 3×3 average pool blurs the logits before argmax, smoothing class-boundary
-artifacts. CUDA-axis seg gets slightly worse (-0.0001 d_seg → +0.01 score
-points). CPU-axis seg gets better (the boundary smoothing wins on the
-softer CPU logits where boundary noise matters more) — predicted -0.0001
-d_seg → +0.001 leaderboard score points.
+The compliant version makes the rendered output itself more robust around
+class boundaries. Any scorer-logit smoothing is an analysis/training proxy
+only and must not be part of the submission runtime.
 
 ### 4.4 Calibrated noise injection in training
 
@@ -306,7 +346,7 @@ to the contest organizers post-deadline.
 
 ## 5. The 1:1 contest-compliant hardware constraint
 
-### 5.1 Why Linux x86_64 only
+### 5.1 Linux x86_64 for promotion, macOS CPU for velocity
 
 `evaluate.py --device cpu` runs PyTorch CPU kernels. PyTorch CPU kernels
 on Linux x86_64 use AVX2/AVX-512 with specific reduction-tree shapes,
@@ -318,9 +358,14 @@ level — not catastrophically (no 23× MPS-class drift), but enough to
 shift SegNet argmax across class boundaries on a non-trivial fraction of
 pixels.
 
-Empirical confirmation pending: a side-by-side `--device cpu` run on
-Modal CPU (Ubuntu 24 x86_64) vs M5 Max (macOS ARM64) on PR102's archive
-bytes. Predicted seg<sub>cuda-axis</sub> drift ~5e-6, pose drift ~1e-7.
+Empirical confirmation is now positive on PR107: GHA Linux x86_64 scored
+`0.1966358879`, while M5 Max scored `0.19664189`, a `6e-6` score gap. The
+operational rule is therefore:
+
+- macOS CPU is allowed for free, massively parallel research sweeps,
+  hyperparameter curves, and first-pass CPU-axis discovery.
+- Linux x86_64 `[contest-CPU]` remains required for promotion, ranking,
+  paper score claims, and any archive/runtime pair that affects decisions.
 
 ### 5.2 The four approved CPU substrates
 
@@ -447,15 +492,16 @@ archive that ships in any PR or claims medal-band status.
 
 Using the empirical R<sub>pose</sub> ≈ 5.04 and R<sub>seg</sub> ≈ 1.17:
 
-| Archive | CUDA score | Predicted CPU score | Predicted leaderboard rank |
+| Archive | CUDA score | CPU score | Leaderboard interpretation |
 |---|---:|---:|---|
-| Our PR #107 apogee | 0.22936 | ~0.196 | silver/bronze band |
+| Our PR #107 apogee | 0.22936 | 0.1966358879 (GHA Linux verified) | medal-cluster adjacent |
 | PR103-on-PR106 AC repack | 0.20898 | ~0.176 | above current top |
 | PR102 hardened replay | 0.22839 | 0.19538 (verified) | bronze (verified, R-perfect match) |
 | PR104 hardened replay | 0.23114 | ~0.198 | non-frontier |
 
-These are predictions; verifying requires Modal CPU dispatch. Smallest
-useful dispatch: PR #107 archive on Modal CPU container, ~$0.12 / 90 min.
+PR107 is now verified on Linux x86_64. The other predictions remain
+predictions until their exact archive/runtime pairs receive `[contest-CPU]`
+replays.
 
 ## 9. The 25-PR cross-family sweep design
 
@@ -525,9 +571,9 @@ artifacts that depend on the leaderboard staying CPU-only.
 This is the deepest methodology shift of the project. Every previous
 score in this repository labeled `[contest-CUDA]` was genuinely a CUDA
 score, but the *leaderboard ranking interpretation* of those scores was
-wrong by the 0.033 gap on average. PR #107's true leaderboard rank may
-have been silver/bronze band; we will never know for sure without a
-post-deadline Modal CPU replay.
+wrong by the 0.033 gap on average. PR #107 is now verified at
+`0.1966358879` on the Linux CPU axis, medal-cluster adjacent rather than
+its apparent CUDA-only rank.
 
 Going forward, every shippable archive gets dual-eval. This is the
 canonical operational rule, recorded in CLAUDE.md, AGENTS.md, and the

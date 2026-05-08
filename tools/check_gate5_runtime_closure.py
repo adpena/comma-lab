@@ -71,6 +71,18 @@ RECOGNIZED_FAILURE_CLASSES: tuple[str, ...] = (
 )
 
 
+def _string_path_exists(repo: Path, value: object) -> bool:
+    if not isinstance(value, str) or not value.strip():
+        return False
+    text = value.strip()
+    if text.startswith(("external:", "sha256:", "inline:")):
+        return True
+    path = Path(text)
+    if not path.is_absolute():
+        path = repo / path
+    return path.exists()
+
+
 @dataclass
 class Finding:
     file_rel: str
@@ -87,19 +99,17 @@ def _manifest_claims_dispatch(manifest: dict) -> bool:
     return str(manifest.get("contest_dispatch_verdict", "")).lower() in ("positive", "frontier")
 
 
-def _manifest_has_runtime_closure(manifest: dict) -> bool:
+def _manifest_has_runtime_closure(manifest: dict, repo: Path) -> bool:
     rm = manifest.get("runtime_manifest")
-    if isinstance(rm, str) and rm.strip():
+    if _string_path_exists(repo, rm):
         return True
     if isinstance(rm, (dict, list)) and len(rm) > 0:
         return True
     if manifest.get("runtime_closure_verified") is True and (
-        isinstance(manifest.get("runtime_closure_evidence"), str)
-        and manifest["runtime_closure_evidence"].strip()
+        _string_path_exists(repo, manifest.get("runtime_closure_evidence"))
     ):
         return True
-    log = manifest.get("inflate_smoke_log")
-    return bool(isinstance(log, str) and log.strip())
+    return _string_path_exists(repo, manifest.get("inflate_smoke_log"))
 
 
 def _scan_build_manifests(repo: Path) -> list[Finding]:
@@ -121,7 +131,7 @@ def _scan_build_manifests(repo: Path) -> list[Finding]:
                 continue
             if not _manifest_claims_dispatch(manifest):
                 continue
-            if _manifest_has_runtime_closure(manifest):
+            if _manifest_has_runtime_closure(manifest, repo):
                 continue
             findings.append(
                 Finding(

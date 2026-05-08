@@ -413,22 +413,23 @@ This makes the model **noise-robust** to CUDA's precision-noise floor by trainin
 **Expected CPU score gain: small (model already trained near-CPU-optimal).**
 **Expected CUDA score gain: 0.000-0.005 (modest robustness gain at CUDA inference time).**
 
-### 7.2 SegNet boundary smoothing (engineering cost: 3 LOC, predicted +0.001-0.003 score)
+### 7.2 Training-time SegNet boundary robustness (supersedes earlier inflate-logit smoothing)
 
-Add to inflate-time SegNet output (NOT to scorer):
+**Supersession note, 2026-05-08 Codex review:** the earlier suggestion to
+smooth `seg_logits` in `inflate.py` was noncompliant as written. Submission
+inflate is scorer-free and must not run or modify SegNet logits. The
+compliant experiment is training-time or offline candidate generation:
+change the rendered frames themselves so class boundaries are more robust
+under both CPU and CUDA scorer paths.
 
 ```python
-# In inflate.py, after seg_logits = segnet(x):
-# Apply 3x3 box filter to logits before argmax (decoder-side, NOT scorer-side)
-seg_logits_smoothed = F.avg_pool2d(seg_logits, 3, stride=1, padding=1)
-# argmax operates downstream
+# Training/offline candidate generation only; never in submission inflate.py.
+boundary_loss = scorer_aligned_boundary_loss(rendered_frames, targets)
+loss = seg_loss + boundary_loss + pose_loss + rate_loss
 ```
 
-This reduces per-pixel argmax flip rate by smoothing the boundary. Expected effect: -10% on `seg_cuda` (because some boundary pixels stop flipping). On CPU the effect is smaller because there are fewer flipping pixels to begin with. **Net: ~50% of the CUDA-CPU seg gap closes.**
-
-Score impact: 100 × (6.76e-4 → 6.0e-4) = -0.008 on CUDA, -0.001 on CPU. **Net CPU gain: +0.001.**
-
-**Caveat:** modifies the decoder's mask output, not the scorer. This is **legal under the contest rules** (decoder output is what's scored).
+Any measured gain must be promoted only after paired CPU/CUDA exact eval on
+the byte-closed archive/runtime pair.
 
 ### 7.3 Pose-weight rebalancing (engineering cost: 1 LOC, predicted strict improvement on CPU lederboard)
 

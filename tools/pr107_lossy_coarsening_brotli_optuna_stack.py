@@ -345,7 +345,7 @@ def main(argv: list[str] | None = None) -> int:
             "score_claim": False,
             "promotion_eligible": False,
             "rank_or_kill_eligible": False,
-            "ready_for_exact_eval_dispatch": True,
+            "ready_for_exact_eval_dispatch": False,
             "dispatch_attempted": False,
             "input_archive_path": str(args.archive),
             "input_archive_sha256": hashlib.sha256(args.archive.read_bytes()).hexdigest(),
@@ -390,7 +390,13 @@ def main(argv: list[str] | None = None) -> int:
                 "exact_cuda_auth_eval_not_yet_harvested",
                 "exact_cpu_auth_eval_not_yet_harvested",
             ],
-            "dispatch_blockers": [],  # CPU-prep clean; ready for GHA
+            "dispatch_blockers": [
+                "cpu_build_rel_err_proxy_not_score_evidence",
+                "runtime_closure_not_yet_verified",
+                "exact_linux_cpu_auth_eval_not_yet_harvested",
+                "exact_cuda_auth_eval_not_yet_harvested",
+                "dispatch_claim_not_created",
+            ],
             "target_modes": ["contest_exact_eval"],
             "deployment_target": "linux_x86_64_cpu_and_t4_contest_runtime",
             "stacking_paradigms": [
@@ -447,16 +453,23 @@ def main(argv: list[str] | None = None) -> int:
         ],
         "lane_id": "pr107_apogee_stack_brotli_sweep_cpu_build",
         "predispatch_recommendation": (
-            "Dispatch the b050 candidate (rel_err < 0.04, smallest distortion risk) "
-            "AND the b070 candidate (lower bound 0.171; upper 0.207) for empirical "
-            "CPU score, in parallel via tools/dispatch_cpu_eval_via_github_actions.py."
+            "Do not dispatch directly from this CPU-prep stack manifest. First close "
+            "runtime closure, claim the lane, then run paired Linux CPU and CUDA exact "
+            "eval on selected candidates."
         ),
         "evidence_grade": "[CPU-prep]",
         "evidence_semantics": "cpu_byte_roundtrip_proxy_no_score",
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
-        "ready_for_exact_eval_dispatch": True,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_blockers": [
+            "cpu_build_rel_err_proxy_not_score_evidence",
+            "runtime_closure_not_yet_verified",
+            "exact_linux_cpu_auth_eval_not_yet_harvested",
+            "exact_cuda_auth_eval_not_yet_harvested",
+            "dispatch_claim_not_created",
+        ],
         "target_modes": ["contest_exact_eval"],
         "deployment_target": "linux_x86_64_cpu_and_t4_contest_runtime",
     }

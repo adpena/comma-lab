@@ -19,13 +19,11 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import math
 import sys
 from pathlib import Path
 
-import pytest
-
 from tac.preflight import (
-    PreflightError,
     check_gate1_representation_promotion_card,
     check_gate2_no_naked_bytes,
     check_gate3_parser_section_manifest,
@@ -202,6 +200,22 @@ def test_gate2_score_claim_with_archive_passes(tmp_path: Path) -> None:
     assert findings == []
 
 
+def test_gate2_contest_cuda_status_is_not_byte_closure(tmp_path: Path) -> None:
+    _write_evidence_jsonl(
+        tmp_path,
+        [
+            {
+                "technique": "status_only",
+                "score_claim": True,
+                "measured_config_status": "contest_cuda_positive",
+            }
+        ],
+    )
+    mod = _load_scanner("check_gate2_no_naked_bytes.py")
+    findings = mod.scan(tmp_path)
+    assert any(f.technique == "status_only" for f in findings)
+
+
 # ── Gate 3: parser-section manifest ──────────────────────────────────────
 
 
@@ -262,6 +276,8 @@ def test_gate3_clean_hnerv_passes(tmp_path: Path) -> None:
             "entropy_estimates": [4.5, 2.3, 6.1],
             "old_new_section_boundaries": {
                 "decoder": {"old": [0, 1024], "new": [0, 1024]},
+                "latent": {"old": [1024, 4096], "new": [1024, 4096]},
+                "side": {"old": [4096, 12288], "new": [4096, 12288]},
             },
         },
         name="lane_hnerv_clean",
@@ -269,6 +285,28 @@ def test_gate3_clean_hnerv_passes(tmp_path: Path) -> None:
     mod = _load_scanner("check_gate3_parser_section_manifest.py")
     findings = mod.scan(tmp_path)
     assert findings == []
+
+
+def test_gate3_rejects_malformed_parser_schema(tmp_path: Path) -> None:
+    _write_build_manifest(
+        tmp_path,
+        {
+            "lane_id": "test_hnerv_bad_schema",
+            "packet_family": "hnerv_microcodec",
+            "offsets": [0, -1],
+            "lengths": [1024],
+            "section_names": ["decoder", "latent"],
+            "section_sha256s": ["not_hex", "aa" * 32],
+            "entropy_estimates": [4.5, "bad"],
+            "old_new_section_boundaries": {
+                "decoder": {"old": [0, 1024], "new": [0, 1024]},
+            },
+        },
+        name="lane_hnerv_bad_schema",
+    )
+    mod = _load_scanner("check_gate3_parser_section_manifest.py")
+    findings = mod.scan(tmp_path)
+    assert any("invalid parser-section schema" in f.reason for f in findings)
 
 
 # ── Gate 4: export-first ─────────────────────────────────────────────────
@@ -361,6 +399,41 @@ def test_gate5_dispatch_manifest_no_runtime_closure(tmp_path: Path) -> None:
     assert any("runtime" in f.reason.lower() for f in findings)
 
 
+def test_gate5_nonexistent_runtime_manifest_does_not_close_runtime(tmp_path: Path) -> None:
+    _write_build_manifest(
+        tmp_path,
+        {
+            "lane_id": "test_dispatch_bad_runtime_path",
+            "submission_dir_relpath": "exp/submission",
+            "ready_for_exact_eval_dispatch": True,
+            "runtime_manifest": "does/not/exist.json",
+        },
+        name="lane_bad_runtime_path",
+    )
+    mod = _load_scanner("check_gate5_runtime_closure.py")
+    findings = mod.scan(tmp_path)
+    assert any(f.technique == "test_dispatch_bad_runtime_path" for f in findings)
+
+
+def test_gate5_existing_runtime_manifest_passes(tmp_path: Path) -> None:
+    runtime_manifest = tmp_path / "experiments" / "results" / "lane_runtime" / "runtime.json"
+    runtime_manifest.parent.mkdir(parents=True)
+    runtime_manifest.write_text("{}", encoding="utf-8")
+    _write_build_manifest(
+        tmp_path,
+        {
+            "lane_id": "test_dispatch_runtime_path",
+            "submission_dir_relpath": "exp/submission",
+            "ready_for_exact_eval_dispatch": True,
+            "runtime_manifest": "experiments/results/lane_runtime/runtime.json",
+        },
+        name="lane_runtime",
+    )
+    mod = _load_scanner("check_gate5_runtime_closure.py")
+    findings = mod.scan(tmp_path)
+    assert findings == []
+
+
 def test_gate5_public_pr_negative_no_failure_class(tmp_path: Path) -> None:
     _write_evidence_jsonl(
         tmp_path,
@@ -441,6 +514,22 @@ def test_gate6_proxy_mask_row_passes(tmp_path: Path) -> None:
     assert findings == []
 
 
+def test_gate6_proxy_mask_build_manifest_passes(tmp_path: Path) -> None:
+    _write_build_manifest(
+        tmp_path,
+        {
+            "lane_id": "nerv_mask_proxy_manifest",
+            "representation_name": "nerv_mask_proxy",
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        name="lane_mask_proxy",
+    )
+    mod = _load_scanner("check_gate6_mask_pose_coupling.py")
+    findings = mod.scan(tmp_path)
+    assert findings == []
+
+
 # ── Gate 7: no-op + provenance ───────────────────────────────────────────
 
 
@@ -489,6 +578,23 @@ def test_gate7_byte_repack_with_provenance_passes(tmp_path: Path) -> None:
     assert findings == []
 
 
+def test_gate7_byte_delta_claim_needs_provenance_even_without_token(tmp_path: Path) -> None:
+    _write_evidence_jsonl(
+        tmp_path,
+        [
+            {
+                "technique": "neutral_name",
+                "score_claim": True,
+                "empirical_archive_bytes": 100,
+                "baseline_archive_bytes": 120,
+            }
+        ],
+    )
+    mod = _load_scanner("check_gate7_no_op_provenance.py")
+    findings = mod.scan(tmp_path)
+    assert any(f.technique == "neutral_name" for f in findings)
+
+
 # ── Gate 8: exact evidence ───────────────────────────────────────────────
 
 
@@ -519,23 +625,32 @@ def test_gate8_frontier_row_missing_fields(tmp_path: Path) -> None:
 
 
 def test_gate8_complete_frontier_row_passes(tmp_path: Path) -> None:
+    runtime_manifest = tmp_path / "runtime.json"
+    log_path = tmp_path / "auth_eval.log"
+    runtime_manifest.write_text("{}", encoding="utf-8")
+    log_path.write_text("ok\n", encoding="utf-8")
+    archive_bytes = 178000
+    seg = 0.0006
+    pose = 0.001
+    rate = 25.0 * archive_bytes / 37_545_489
+    score = 100.0 * seg + math.sqrt(10.0 * pose) + rate
     _write_evidence_jsonl(
         tmp_path,
         [
             {
                 "technique": "test_complete",
                 "frontier_status": True,
-                "archive_bytes": 178000,
+                "archive_bytes": archive_bytes,
                 "archive_sha256": "deadbeef" * 8,
-                "runtime_manifest": "exp/runtime.json",
+                "runtime_manifest": str(runtime_manifest),
                 "exact_eval_command": "bash inflate.sh && python evaluate.py",
                 "hardware": "T4",
                 "sample_count": 1199,
-                "seg_distortion": 0.06,
-                "pose_distortion": 0.001,
-                "rate_term": 0.119,
-                "recomputed_score": 0.193,
-                "log_path": "exp/auth_eval.log",
+                "seg_distortion": seg,
+                "pose_distortion": pose,
+                "rate_term": rate,
+                "recomputed_score": score,
+                "log_path": str(log_path),
                 "dispatch_claim_status": "completed",
             }
         ],
@@ -543,6 +658,37 @@ def test_gate8_complete_frontier_row_passes(tmp_path: Path) -> None:
     mod = _load_scanner("check_gate8_exact_evidence.py")
     findings = mod.scan(tmp_path)
     assert findings == []
+
+
+def test_gate8_rejects_bad_paths_and_score_recompute(tmp_path: Path) -> None:
+    archive_bytes = 178000
+    seg = 0.0006
+    pose = 0.001
+    rate = 25.0 * archive_bytes / 37_545_489
+    _write_evidence_jsonl(
+        tmp_path,
+        [
+            {
+                "technique": "test_bad_frontier",
+                "frontier_status": True,
+                "archive_bytes": archive_bytes,
+                "archive_sha256": "deadbeef" * 8,
+                "runtime_manifest": "missing/runtime.json",
+                "exact_eval_command": "bash inflate.sh && python evaluate.py",
+                "hardware": "T4",
+                "sample_count": 1199,
+                "seg_distortion": seg,
+                "pose_distortion": pose,
+                "rate_term": rate,
+                "recomputed_score": 999.0,
+                "log_path": "missing/auth_eval.log",
+                "dispatch_claim_status": "completed",
+            }
+        ],
+    )
+    mod = _load_scanner("check_gate8_exact_evidence.py")
+    findings = mod.scan(tmp_path)
+    assert any("invalid exact CUDA evidence" in f.reason for f in findings)
 
 
 def test_gate8_predicted_row_passes(tmp_path: Path) -> None:
@@ -706,6 +852,19 @@ def test_gate10_proxy_stack_disabled_passes(tmp_path: Path) -> None:
     mod = _load_scanner("check_gate10_stack_promotion.py")
     findings = mod.scan(tmp_path)
     assert findings == []
+
+
+def test_gate10_proxy_stack_manifest_must_explicitly_disable(tmp_path: Path) -> None:
+    _write_build_manifest(
+        tmp_path,
+        {
+            "lane_id": "hstack_proxy_manifest",
+        },
+        name="lane_hstack_proxy",
+    )
+    mod = _load_scanner("check_gate10_stack_promotion.py")
+    findings = mod.scan(tmp_path)
+    assert any("Gate 10" in f.reason for f in findings)
 
 
 def test_gate10_complete_stack_dispatch_passes(tmp_path: Path) -> None:

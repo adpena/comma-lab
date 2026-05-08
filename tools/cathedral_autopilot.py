@@ -651,6 +651,56 @@ def _is_explicitly_promotable_evidence(evidence: TechniqueEvidence) -> bool:
     )
 
 
+def _is_explicitly_contest_cpu_evidence(evidence: TechniqueEvidence) -> bool:
+    """Return true for official Linux/x86 contest-CPU score rows.
+
+    These rows are valid CPU-axis score evidence, but they are intentionally
+    separate from ``_is_explicitly_promotable_evidence`` because they do not
+    replace exact CUDA custody for CUDA promotion, dispatch, or broad
+    retirement decisions.
+    """
+    text = " ".join(
+        part.strip().lower()
+        for part in (
+            evidence.device_axis,
+            evidence.evidence_grade,
+            evidence.evidence_marker,
+            evidence.evidence_semantics,
+            evidence.source,
+            evidence.hardware,
+        )
+        if part
+    )
+    exact_cpu = (
+        "contest-cpu" in text
+        or "contest_cpu" in text
+        or "linux x86_64" in text
+        or "ubuntu-24.04" in text
+        or "github-actions" in text
+    )
+    proxy_marker = any(
+        marker in text
+        for marker in (
+            "macos",
+            "mps",
+            "cpu-prep",
+            "cpu_prep",
+            "proxy",
+            "prediction",
+            "predicted",
+            "research-signal",
+            "research_signal",
+        )
+    )
+    return (
+        evidence.score_claim is True
+        and evidence.rank_or_kill_eligible is True
+        and not evidence.dispatch_blockers
+        and exact_cpu
+        and not proxy_marker
+    )
+
+
 def _is_exact_negative_or_retired_evidence(evidence: TechniqueEvidence) -> bool:
     """Return true for exact CUDA rows that supersede proxy byte anchors.
 
@@ -743,7 +793,12 @@ def _device_axis_for_evidence(evidence: TechniqueEvidence) -> str:
     )
     if "macos-cpu" in text or "macos_cpu" in text or "apple silicon" in text:
         return "macos_cpu_advisory"
-    if "contest-cpu" in text or "contest_cpu" in text:
+    if (
+        "contest-cpu" in text
+        or "contest_cpu" in text
+        or ("linux x86_64" in text and "cpu" in text)
+        or ("ubuntu-24.04" in text and "cpu" in text)
+    ):
         return "contest_cpu"
     if "contest-cuda" in text or "contest_cuda" in text or "exact_cuda" in text:
         return "contest_cuda"
@@ -793,7 +848,7 @@ def summarize_device_axis_evidence(
             score = row.score_contest_cpu if axis == "contest_cpu" else row.score_contest_cuda
             if score is None:
                 score = row.empirical_score
-            bucket["axes"][axis] = {
+            axis_payload = {
                 "score": score,
                 "d_seg": row.empirical_d_seg,
                 "d_pose": row.empirical_d_pose,
@@ -802,6 +857,16 @@ def summarize_device_axis_evidence(
                 "evidence_grade": row.evidence_grade,
                 "source": row.source,
             }
+            existing = bucket["axes"].get(axis)
+            if existing is not None and existing != axis_payload:
+                bucket.setdefault("axis_conflicts", []).append({
+                    "device_axis": axis,
+                    "existing": existing,
+                    "conflicting": axis_payload,
+                    "reason": "conflicting_duplicate_axis_rows_same_archive_runtime",
+                })
+            else:
+                bucket["axes"][axis] = axis_payload
             if row.source:
                 bucket["sources"].append(row.source)
         else:
@@ -824,6 +889,26 @@ def summarize_device_axis_evidence(
     paired: list[dict[str, Any]] = []
     for bucket in groups.values():
         axes = bucket["axes"]
+        if bucket.get("axis_conflicts"):
+            unpaired.append(
+                {
+                    "technique": bucket["technique"],
+                    "device_axis": ",".join(sorted(axes)),
+                    "archive_sha256": bucket["archive_sha256"],
+                    "runtime_tree_sha256": bucket["runtime_tree_sha256"],
+                    "evidence_grade": "; ".join(
+                        sorted({
+                            str(axis_row.get("evidence_grade", ""))
+                            for axis_row in axes.values()
+                            if axis_row.get("evidence_grade")
+                        })
+                    ),
+                    "source": "; ".join(bucket["sources"]),
+                    "reason": "conflicting_duplicate_axis_rows_same_archive_runtime",
+                    "axis_conflicts": bucket["axis_conflicts"],
+                }
+            )
+            continue
         if "contest_cpu" not in axes or "contest_cuda" not in axes:
             unpaired.append(
                 {
@@ -964,8 +1049,11 @@ def summarize_evidence_semantics(
     known_names = _catalog_names(catalogs)
     unknown_by_name: dict[str, dict[str, Any]] = {}
     cataloged_exact_negative: set[str] = set()
+    contest_cpu_score_claim_rows = 0
 
     for row in ev:
+        if _is_explicitly_contest_cpu_evidence(row):
+            contest_cpu_score_claim_rows += 1
         if row.technique in known_names:
             if _is_exact_negative_or_retired_evidence(row):
                 cataloged_exact_negative.add(row.technique)
@@ -1044,6 +1132,7 @@ def summarize_evidence_semantics(
         "unknown_exact_negative_row_count": sum(
             item["exact_negative_rows"] for item in unknown
         ),
+        "contest_cpu_score_claim_row_count": contest_cpu_score_claim_rows,
         "cataloged_exact_negative_techniques": sorted(cataloged_exact_negative),
         "active_ranking_blocked_techniques": [],
     }
@@ -1716,6 +1805,9 @@ def build_plan(
     prior_evidence: list[TechniqueEvidence] | None = None,
     min_score_delta: float = 0.0,
     include_axis_priorities: bool = True,
+    rank_axis: str = "cuda",
+    current_score_axis: str = "cuda",
+    architecture_class: str = "hnerv",
 ) -> AutopilotPlan:
     """Build a complete autopilot plan for the supplied operator state.
 
@@ -1754,6 +1846,9 @@ def build_plan(
         current_score=score,
         target_score=target_score,
         min_score_delta=min_score_delta,
+        rank_axis=rank_axis,
+        current_score_axis=current_score_axis,
+        architecture_class=architecture_class,
     )
     arch_ranked = _rank_techniques(
         arch_catalog,
@@ -1762,13 +1857,16 @@ def build_plan(
         current_score=score,
         target_score=target_score,
         min_score_delta=min_score_delta,
+        rank_axis=rank_axis,
+        current_score_axis=current_score_axis,
+        architecture_class=architecture_class,
     )
     # Combined top-3: best by score-delta across both lists
     combined = sorted(
         encoder_ranked + arch_ranked,
         key=lambda r: (
             r["active_ranking_blocked"],
-            -r["predicted_score_delta"],
+            -r["primary_score_delta"],
             r["cost_dollars"],
         ),
     )
@@ -1812,7 +1910,7 @@ def build_plan(
     elif target_score is not None:
         notes.append(
             f"To reach {target_score:.5f}: need -{score - target_score:.5f} score points. "
-            f"Top-3 techniques rank by predicted score-delta."
+            f"Top-3 techniques rank by {rank_axis}-axis predicted score-delta."
         )
     notes.append(
         "PR101 hand-coded entropy probes are saturated near the 178 KB brotli/AAC band: "
@@ -1863,6 +1961,9 @@ def build_plan(
             "d_pose": d_pose,
             "archive_bytes": archive_bytes,
             "current_score": score,
+            "rank_axis": rank_axis,
+            "current_score_axis": current_score_axis,
+            "architecture_class": architecture_class,
         },
         score_geometry={
             "decomposition": {
@@ -1913,6 +2014,13 @@ def main(argv: list[str] | None = None) -> int:
                         help="JSONL/JSON of TechniqueEvidence rows; updates catalog before ranking")
     p_plan.add_argument("--min-score-delta", type=float, default=0.0,
                         help="High-signal filter: drop techniques predicting <delta score (top-1 always kept)")
+    p_plan.add_argument("--rank-axis", choices=["cuda", "cpu"], default="cuda",
+                        help="Primary ranking axis; both axes remain reported")
+    p_plan.add_argument("--current-score-axis", "--score-axis",
+                        choices=["cuda", "cpu"], default="cuda",
+                        help="Axis of the supplied d_seg/d_pose/current state")
+    p_plan.add_argument("--architecture-class", default="hnerv",
+                        help="CPU/CUDA calibration class or profile label")
 
     p_pareto = sub.add_parser("plan-from-pareto",
                               help="Plan for every candidate in 3-axis Pareto JSON")
@@ -1921,6 +2029,10 @@ def main(argv: list[str] | None = None) -> int:
     p_pareto.add_argument("--output", type=Path, required=True)
     p_pareto.add_argument("--prior-evidence", type=Path, default=None)
     p_pareto.add_argument("--min-score-delta", type=float, default=0.0)
+    p_pareto.add_argument("--rank-axis", choices=["cuda", "cpu"], default="cuda")
+    p_pareto.add_argument("--current-score-axis", "--score-axis",
+                          choices=["cuda", "cpu"], default="cuda")
+    p_pareto.add_argument("--architecture-class", default="hnerv")
 
     p_evid = sub.add_parser("evidence-update",
                             help="Print catalog updated by an evidence file (no plan)")
@@ -1945,6 +2057,9 @@ def main(argv: list[str] | None = None) -> int:
             label=args.label,
             prior_evidence=prior_ev,
             min_score_delta=args.min_score_delta,
+            rank_axis=args.rank_axis,
+            current_score_axis=args.current_score_axis,
+            architecture_class=args.architecture_class,
         )
         payload = asdict(plan)
         text = json.dumps(payload, indent=2, sort_keys=True)
@@ -1973,6 +2088,9 @@ def main(argv: list[str] | None = None) -> int:
                     label=str(c.get("label", "?")),
                     prior_evidence=prior_ev,
                     min_score_delta=args.min_score_delta,
+                    rank_axis=args.rank_axis,
+                    current_score_axis=args.current_score_axis,
+                    architecture_class=args.architecture_class,
                 )
             except (KeyError, ValueError):
                 continue
@@ -1985,6 +2103,9 @@ def main(argv: list[str] | None = None) -> int:
             "n_plans": len(plans),
             "target_score": args.target_score,
             "min_score_delta": args.min_score_delta,
+            "rank_axis": args.rank_axis,
+            "current_score_axis": args.current_score_axis,
+            "architecture_class": args.architecture_class,
             "n_evidence_rows": len(prior_ev) if prior_ev else 0,
             "plans": plans,
         }
@@ -2063,11 +2184,12 @@ def _render_plan_summary(plan: AutopilotPlan) -> str:
                     f"(currently {s['d_pose']:.4e}; factor {f_imp_s})"
                 )
     lines.append("")
-    lines.append("TOP-3 RECOMMENDED ACTIONS (ranked by score-delta then cost):")
+    rank_axis = s.get("rank_axis", "cuda")
+    lines.append(f"TOP-3 RECOMMENDED ACTIONS (ranked by {rank_axis}-axis score-delta then cost):")
     for i, rec in enumerate(plan.recommended_top_3, 1):
         lines.append(
             f"  {i}. {rec['name']:<40s}  "
-            f"Delta={rec['predicted_score_delta']:+.5f}  "
+            f"Delta={rec['primary_score_delta']:+.5f}  "
             f"${rec['cost_dollars']}  ({rec['cost_hours']}h)  "
             f"[{rec['evidence_grade']}]"
         )

@@ -22,21 +22,18 @@ saturation behaviour at the medal-band operating point. A single global ``R``
 is correct only inside the HNeRV cluster; outside it, it produces biased
 predicted-CPU bands.
 
-Reference for the underlying mechanism: ``.omx/research/
-cuda_cpu_pose_drift_mechanism_deep_dive_20260508_claude.md`` (subagent
-a22d581a). Welch's-law random-walk on FP32 conv reductions + GELU(tanh)
-intrinsic + NVDEC vs PyAV decode + AllNorm flat reduction = ~25% each. Of
-the pose drift, ~25% is decoder-side (Source B); the remaining ~75% is
-network-internal precision noise. SegNet is precision-robust because argmax
-is stable to small logit perturbations.
+Mechanism status: the ratios are empirical. The causal split between loader,
+CUDA/CPU kernel numerics, and network-internal amplification remains a
+hypothesis until loader and layer probes isolate it. The default decoder split
+below is a prior for planning, not a proven decomposition.
 
 Components
 ----------
 1. :class:`ArchitectureProfile`: per-class posterior (``r_pose_mean/std``,
    ``r_seg_mean/std``, ``score_gap_mean/std``, ``decoder_drift_fraction``,
    ``pose_floor_estimate``, ``evidence_anchors``).
-2. :class:`DecoderProfile`: per-decoder-pair drift split (default 25% pose
-   from decoder, very small for seg).
+2. :class:`DecoderProfile`: per-decoder-pair drift split (default prior: 25%
+   pose from decoder, very small for seg).
 3. :func:`update_profile_from_anchor`: conjugate Bayesian update with 3-σ
    outlier flagging (per CLAUDE.md "killing as last resort" — flagged
    anchors do NOT auto-promote into the registry).
@@ -71,8 +68,7 @@ from __future__ import annotations
 import json
 import math
 import re
-from collections.abc import Iterable
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -84,6 +80,8 @@ from typing import Any
 try:  # pragma: no cover — import shim is intentionally permissive
     from tac.optimization.cuda_cpu_axis_calibration import (  # type: ignore
         R_POSE_HNERV as _STATIC_R_POSE_HNERV,
+    )
+    from tac.optimization.cuda_cpu_axis_calibration import (
         R_SEG_HNERV as _STATIC_R_SEG_HNERV,
     )
     _STATIC_HELPER_AVAILABLE = True
@@ -162,17 +160,17 @@ _HNERV_CLUSTER_BOOTSTRAP_ANCHORS: list[dict[str, Any]] = [
         "pr_num": 103,
         "title": "hnerv_lc_ac submission (0.19)",
         "author": "rem2",
-        "archive_bytes": 178_730,
-        "archive_sha": "pr103_head_sha_placeholder",
-        "cuda_pose": 0.00017321,
-        "cpu_pose": 0.00003468,
-        "cuda_seg": 0.00067489,
-        "cpu_seg": 0.00057521,
-        "cuda_score": 0.22778500,
-        "cpu_score": 0.19490200,
-        "observed_r_pose": 0.00017321 / 0.00003468,
-        "observed_r_seg": 0.00067489 / 0.00057521,
-        "score_gap": 0.22778500 - 0.19490200,
+        "archive_bytes": 178_223,
+        "archive_sha": "d20270750e603346056f4e867cddd4744272c9d8",
+        "cuda_pose": 0.00017198,
+        "cpu_pose": 0.00003443,
+        "cuda_seg": 0.00067623,
+        "cpu_seg": 0.00057654,
+        "cuda_score": 0.2277648516247398,
+        "cpu_score": 0.19488070288878895,
+        "observed_r_pose": 0.00017198 / 0.00003443,
+        "observed_r_seg": 0.00067623 / 0.00057654,
+        "score_gap": 0.2277648516247398 - 0.19488070288878895,
         "source": (
             "reports/public_pr100_108_eval_comment_scorecard_20260508.json "
             "[external_github_pr_comment]"
@@ -181,18 +179,18 @@ _HNERV_CLUSTER_BOOTSTRAP_ANCHORS: list[dict[str, Any]] = [
     {
         "pr_num": 105,
         "title": "kitchen_sink (0.19797)",
-        "author": "kitchen_sink_team",
+        "author": "valtterivalo",
         "archive_bytes": 177_857,
-        "archive_sha": "597ba0732810eba08cdae619b679d211d398bc02",
-        "cuda_pose": 0.00017210,
-        "cpu_pose": 0.00003460,
-        "cuda_seg": 0.00067200,
-        "cpu_seg": 0.00058080,
-        "cuda_score": 0.23037500,
-        "cpu_score": 0.19797000,
-        "observed_r_pose": 0.00017210 / 0.00003460,
-        "observed_r_seg": 0.00067200 / 0.00058080,
-        "score_gap": 0.23037500 - 0.19797000,
+        "archive_sha": "9376a6f86c76cb576b5f25afd8c789a8a727077f",
+        "cuda_pose": 0.00017267,
+        "cpu_pose": 0.00003472,
+        "cuda_seg": 0.00070456,
+        "cpu_seg": 0.00060913,
+        "cuda_score": 0.2304372556953,
+        "cpu_score": 0.1979739793436134,
+        "observed_r_pose": 0.00017267 / 0.00003472,
+        "observed_r_seg": 0.00070456 / 0.00060913,
+        "score_gap": 0.2304372556953 - 0.1979739793436134,
         "source": (
             "reports/public_pr100_108_eval_comment_scorecard_20260508.json "
             "[external_github_pr_comment]"
@@ -200,18 +198,19 @@ _HNERV_CLUSTER_BOOTSTRAP_ANCHORS: list[dict[str, Any]] = [
     },
 ]
 
-# Default decoder drift fraction from the deep-theory subagent (a22d581a):
-# ~25% of pose drift attributable to NVDEC/DALI vs PyAV chroma upsampling.
-# SegNet is precision-robust → very small decoder-side fraction.
+# Default decoder drift fraction prior from the deep-theory discussion. This
+# is not proven; it is a planning prior until loader and layer probes isolate
+# the split. SegNet is expected to be less sensitive because argmax is more
+# robust than pose regression.
 DEFAULT_DECODER_POSE_DRIFT_FRACTION = 0.25
 DEFAULT_DECODER_SEG_DRIFT_FRACTION = 0.05
 
-# Pose CUDA precision-floor estimate (Welch's-law σ²_floor ≈ 1.4e-4) from
-# the deep-theory dive — at this MSE the CUDA pose noise saturates and
-# R_pose flips from "scaling" to "floor-limited". CPU is below the floor.
+# Pose CUDA floor-band prior from the paired public comments. This is a
+# diagnostic marker, not a proof that the official CPU axis cannot resolve
+# lower pose error.
 DEFAULT_POSE_FLOOR_ESTIMATE = 1.4e-4
 
-# Outlier threshold (3σ) — anchors deviating beyond this from posterior
+# Outlier threshold (3 sigma) - anchors deviating beyond this from posterior
 # mean are flagged ``outlier_candidate`` and DO NOT auto-promote.
 OUTLIER_SIGMA_THRESHOLD = 3.0
 
@@ -250,10 +249,9 @@ HNERV_PACKED_HEADER_PREFIX = b"\xff\xff\xff\xff"
 class DecoderProfile:
     """Drift contribution of a (CPU-decoder, GPU-decoder) pair.
 
-    The deep-theory subagent (a22d581a) attributes ~25% of the HNeRV-cluster
-    pose drift to the NVDEC vs PyAV chroma upsampling kernel mismatch.
-    SegNet is robust — argmax stability bounds seg drift to <5% even when
-    the decoder differs.
+    The 25% default is a hypothesis/prior for planning. Empirical loader and
+    layer probes must replace it before it is used in a paper claim or a
+    rank/kill decision.
 
     Decoders are named by their dataset class name to match
     ``upstream/frame_utils.py``'s routing.
@@ -274,9 +272,8 @@ class DecoderProfile:
         }
 
 
-# Default decoder profile for any HNeRV-class archive: DALI on CUDA + PyAV
-# on CPU. This is the empirically-grounded default; non-HNeRV families may
-# override.
+# Default decoder profile for any HNeRV-class archive: DALI on CUDA + PyAV on
+# CPU. The decoder pair is code-grounded; the fraction is only a hypothesis.
 DEFAULT_DECODER_PROFILE = DecoderProfile(
     decoder_pair=("DaliVideoDataset", "AVVideoDataset"),
     pose_drift_fraction=DEFAULT_DECODER_POSE_DRIFT_FRACTION,
@@ -342,7 +339,7 @@ class ArchitectureProfile:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "ArchitectureProfile":
+    def from_dict(cls, data: dict[str, Any]) -> ArchitectureProfile:
         return cls(
             architecture_class=str(data["architecture_class"]),
             decoder_class=str(data.get("decoder_class", "")),
@@ -406,6 +403,7 @@ class ArchitectureProfile:
             "evidence_grade": "[predicted; learning-layer registry posterior]",
             "score_claim": False,
             "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         }
 
@@ -452,7 +450,7 @@ def bootstrap_registry_from_hnerv_anchors() -> dict[str, ArchitectureProfile]:
         notes=(
             "Bootstrapped from 5 paired (CPU, CUDA) anchors PR100/101/102/103/105. "
             "Posterior derived via _recompute_posterior; outlier check uses "
-            "OUTLIER_SIGMA_THRESHOLD=3.0σ."
+            "OUTLIER_SIGMA_THRESHOLD=3.0 sigma."
         ),
     )
     for anchor in _HNERV_CLUSTER_BOOTSTRAP_ANCHORS:
@@ -461,8 +459,11 @@ def bootstrap_registry_from_hnerv_anchors() -> dict[str, ArchitectureProfile]:
         hnerv.evidence_anchors.append({
             **anchor,
             "outlier_candidate": False,
-            "promoted": True,
+            "promoted": False,
+            "external_comment_seed": True,
             "seeded_at_bootstrap": True,
+            "promotion_eligible": False,
+            "score_claim": False,
         })
     _recompute_posterior_in_place(hnerv)
     registry["hnerv_ft_microcodec"] = hnerv
@@ -477,9 +478,9 @@ def bootstrap_registry_from_hnerv_anchors() -> dict[str, ArchitectureProfile]:
             decoder_class=_default_decoder_class_for(cls_name),
             n_anchors=0,
             notes=(
-                f"Uncalibrated default — no [contest-CPU]×[contest-CUDA] "
-                f"anchors yet. Awaiting 25-PR sweep (subagent ad0875a8) "
-                f"or per-class dispatch."
+                "Uncalibrated default - no [contest-CPU]x[contest-CUDA] "
+                "anchors yet. Awaiting 25-PR sweep (subagent ad0875a8) "
+                "or per-class dispatch."
             ),
         )
 
@@ -610,9 +611,9 @@ def update_profile_from_anchor(
         if z > outlier_sigma_threshold:
             is_outlier = True
             outlier_reason = (
-                f"observed_r_pose={obs_pose:.4f} deviates {z:.2f}σ from "
+                f"observed_r_pose={obs_pose:.4f} deviates {z:.2f} sigma from "
                 f"posterior mean {profile.r_pose_mean:.4f} (threshold "
-                f"{outlier_sigma_threshold:.1f}σ); flagging as "
+                f"{outlier_sigma_threshold:.1f} sigma); flagging as "
                 f"outlier_candidate per CLAUDE.md "
                 f"forbidden_premature_kill_without_research_exhaustion"
             )
@@ -734,10 +735,9 @@ def decompose_observed_drift(
 ) -> dict[str, float]:
     """Split observed pose drift into decoder vs network contributions.
 
-    Per the deep-theory dive, ~25% of pose drift in the HNeRV cluster comes
-    from the GT-side NVDEC vs PyAV mismatch (the inflated-frame side is
-    decoder-uniform). The remaining ~75% is network-internal precision
-    noise (Welch's-law random walk + GELU intrinsic + AllNorm reduction).
+    Uses the decoder-profile fraction as a hypothesis prior. The HNeRV
+    cluster has a confirmed GT-side NVDEC-vs-PyAV split, but its share of
+    the observed pose drift is not proven until loader/layer probes land.
 
     The decomposition is multiplicative on the (R - 1) excess::
 
@@ -746,10 +746,10 @@ def decompose_observed_drift(
         network_contribution = excess * (1 - decoder_profile.pose_drift_fraction)
 
     Different exploits target different axes:
-        - Reducing decoder contribution: contest-faithful would require
-          changing GT path (forbidden — upstream is canonical).
-        - Reducing network contribution: cudnn.deterministic + matched
-          noise injection at training time (operator-only flags).
+        - Decoder contribution: train/render to be robust to the official
+          CPU decode path; do not edit upstream or scorer code.
+        - Network contribution: matched noise injection at training time is
+          a hypothesis, not promotion evidence.
     """
     if observed_r_pose < 0.0:
         raise ValueError("observed_r_pose must be non-negative")
@@ -894,6 +894,48 @@ def _extract_anchor_from_contest_auth_eval(
         cpu_score = contest_score(float(cpu_seg), float(cpu_pose), archive_bytes)
         cuda_score = contest_score(float(cuda_seg), float(cuda_pose), archive_bytes)
 
+    archive_bytes = int(contest_auth_eval_payload.get("archive_bytes", 0))
+    archive_sha = str(
+        contest_auth_eval_payload.get("archive_sha256")
+        or contest_auth_eval_payload.get("archive_sha")
+        or ""
+    )
+    runtime_manifest = contest_auth_eval_payload.get("inflate_runtime_manifest") or {}
+    runtime_tree_sha = str(
+        contest_auth_eval_payload.get("runtime_tree_sha256")
+        or contest_auth_eval_payload.get("inflate_runtime_tree_sha256")
+        or (
+            runtime_manifest.get("runtime_tree_sha256")
+            if isinstance(runtime_manifest, dict) else ""
+        )
+        or ""
+    )
+    sample_count = contest_auth_eval_payload.get("sample_count")
+    if sample_count is None:
+        sample_count = contest_auth_eval_payload.get("n_samples")
+    cpu_hardware = str(
+        cpu.get("hardware")
+        or contest_auth_eval_payload.get("cpu_hardware")
+        or contest_auth_eval_payload.get("hardware_cpu")
+        or ""
+    )
+    cuda_hardware = str(
+        cuda.get("hardware")
+        or contest_auth_eval_payload.get("cuda_hardware")
+        or contest_auth_eval_payload.get("hardware_cuda")
+        or ""
+    )
+    if (
+        archive_bytes <= 0
+        or not archive_sha
+        or not runtime_tree_sha
+        or sample_count is None
+        or int(sample_count) <= 0
+        or not cpu_hardware
+        or not cuda_hardware
+    ):
+        return None
+
     return {
         "observed_r_pose": float(cuda_pose) / float(cpu_pose),
         "observed_r_seg": float(cuda_seg) / float(cpu_seg),
@@ -904,8 +946,12 @@ def _extract_anchor_from_contest_auth_eval(
         "cuda_seg": float(cuda_seg),
         "cpu_score": float(cpu_score),
         "cuda_score": float(cuda_score),
-        "archive_bytes": int(contest_auth_eval_payload.get("archive_bytes", 0)),
-        "archive_sha": str(contest_auth_eval_payload.get("archive_sha256", "")),
+        "archive_bytes": archive_bytes,
+        "archive_sha": archive_sha,
+        "runtime_tree_sha256": runtime_tree_sha,
+        "sample_count": int(sample_count),
+        "cpu_hardware": cpu_hardware,
+        "cuda_hardware": cuda_hardware,
         "source": str(
             contest_auth_eval_payload.get("source", "contest_auth_eval.adjudicated")
         ),
@@ -1028,18 +1074,18 @@ def confidence_aware_score_band(
 
 
 __all__ = [
-    "ArchitectureProfile",
     "ARCHITECTURE_CLASSES",
+    "DEFAULT_AUDIT_LOG_PATH",
     "DEFAULT_DECODER_POSE_DRIFT_FRACTION",
     "DEFAULT_DECODER_PROFILE",
     "DEFAULT_DECODER_SEG_DRIFT_FRACTION",
     "DEFAULT_POSE_FLOOR_ESTIMATE",
     "DEFAULT_REGISTRY_PATH",
-    "DEFAULT_AUDIT_LOG_PATH",
-    "DecoderProfile",
     "LOW_CALIBRATION_ANCHOR_THRESHOLD",
     "LOW_CALIBRATION_BAND_WIDENING",
     "OUTLIER_SIGMA_THRESHOLD",
+    "ArchitectureProfile",
+    "DecoderProfile",
     "ProfileUpdate",
     "bootstrap_registry_from_hnerv_anchors",
     "classify_archive_into_profile",

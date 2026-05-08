@@ -63,6 +63,10 @@ Currently runs:
            (Omega-OPT nested score hypotheses stay fail-closed until 1:1
             archive/eval anchors exist; scans the generated HStack/VStack
             plan artifact too)
+  Gate #22: tools/probe_eval_loader_drift.py
+           (CPU/CUDA eval drift mechanism probe. Writes a non-promotable
+            DALI-vs-PyAV plan locally, and a real decoded-RGB comparison when
+            CUDA+DALI is available. It never promotes/ranks/kills.)
   Lane #1: tools/dispatch_dryrun_apogee_intN.py --all-pareto-frontier
            --allow-forensic-byte-only
            (self-protection check: Apogee intN remains byte-only and blocked
@@ -137,6 +141,7 @@ PR91_HPM1_READINESS_AUDIT = TOOLS / "audit_pr91_hpm1_readiness.py"
 PR91_HPM1_RUNTIME_CONTRACT_AUDIT = TOOLS / "audit_pr91_hpm1_runtime_contract.py"
 FRONTIER_ARCHIVE_LAYOUT_AUDIT = TOOLS / "pr106_archive_decomposition.py"
 OMEGA_OPT_ANCHOR_AUDIT = TOOLS / "check_omega_opt_anchor_discipline.py"
+EVAL_LOADER_DRIFT_PROBE = TOOLS / "probe_eval_loader_drift.py"
 HSTACK_VSTACK_PLAN = REPO / "reports/hstack_vstack_multipass_plan_20260507.json"
 PR91_HPM1_READINESS_ARTIFACT = REPO / "experiments/results/pr91_hpm1_readiness_20260506_codex/readiness.json"
 PR91_HPM1_RUNTIME_CONTRACT_ARTIFACT = (
@@ -711,6 +716,54 @@ def _run_frontier_monolithic_layout_gate() -> tuple[bool, str]:
     )
 
 
+def _run_eval_loader_drift_probe_gate() -> tuple[bool, str]:
+    with tempfile.TemporaryDirectory(prefix="pact_eval_loader_drift_preflight_") as tmp:
+        output_path = Path(tmp) / "eval_loader_drift_probe.json"
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(EVAL_LOADER_DRIFT_PROBE),
+                "--video-limit",
+                "1",
+                "--max-batches",
+                "1",
+                "--json-out",
+                str(output_path),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        output = proc.stdout + proc.stderr
+        # Exit 2 means CUDA/DALI unavailable. That is a valid non-promotable
+        # local plan, not a preflight failure.
+        if proc.returncode not in {0, 2}:
+            return False, output
+        try:
+            payload = json.loads(output_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            return False, f"eval loader drift probe emitted invalid JSON: {exc}\n{output}"
+    if payload.get("score_claim") is not False:
+        return False, "eval loader drift probe must never emit score_claim=true"
+    if payload.get("promotion_eligible") is not False:
+        return False, "eval loader drift probe must never be promotion eligible"
+    if payload.get("rank_or_kill_eligible") is not False:
+        return False, "eval loader drift probe must never be rank/kill eligible"
+    if payload.get("comparison_available") is False:
+        return True, (
+            "eval loader drift probe: PASS "
+            "(CUDA/DALI unavailable here; non-promotable plan artifact validated)"
+        )
+    rows = payload.get("comparison_rows")
+    if not isinstance(rows, list) or not rows:
+        return False, "eval loader drift probe comparison was available but emitted no rows"
+    if any(row.get("path_match") is not True for row in rows if isinstance(row, dict)):
+        return False, "eval loader drift probe compared mismatched video paths"
+    return True, (
+        "eval loader drift probe: PASS "
+        "(DALI-vs-PyAV decoded-RGB comparison emitted; diagnostic only)"
+    )
+
+
 def _cross_paradigm_queue_routing_failures(action_queue: list[object]) -> list[str]:
     """Validate post-anchor first-tranche routing."""
     failures: list[str] = []
@@ -1220,6 +1273,7 @@ def main(argv: list[str] | None = None) -> int:
         PR91_HPM1_RUNTIME_CONTRACT_AUDIT,
         FRONTIER_ARCHIVE_LAYOUT_AUDIT,
         OMEGA_OPT_ANCHOR_AUDIT,
+        EVAL_LOADER_DRIFT_PROBE,
         HSTACK_VSTACK_PLAN,
         PR91_HPM1_READINESS_ARTIFACT,
         PR91_HPM1_RUNTIME_CONTRACT_ARTIFACT,
@@ -1412,6 +1466,14 @@ def main(argv: list[str] | None = None) -> int:
             ),
             "  ✓ Gate #21: Omega-OPT anchor discipline — PASSED",
             "  ✗ Gate #21: Omega-OPT anchor discipline — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            22,
+            "eval loader drift diagnostic",
+            _run_eval_loader_drift_probe_gate,
+            "  ✓ Gate #22: eval loader drift diagnostic — PASSED",
+            "  ✗ Gate #22: eval loader drift diagnostic — FAILED",
         ),
     ]
     lane_steps = [

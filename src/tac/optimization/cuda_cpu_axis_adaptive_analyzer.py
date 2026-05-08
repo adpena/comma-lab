@@ -29,7 +29,6 @@ Public API
 """
 from __future__ import annotations
 
-import math
 import threading
 from pathlib import Path
 from typing import Any
@@ -37,8 +36,6 @@ from typing import Any
 from tac.optimization.cuda_cpu_axis_profile_registry import (
     DEFAULT_DECODER_PROFILE,
     DEFAULT_REGISTRY_PATH,
-    LOW_CALIBRATION_ANCHOR_THRESHOLD,
-    LOW_CALIBRATION_BAND_WIDENING,
     ArchitectureProfile,
     bootstrap_registry_from_hnerv_anchors,
     classify_archive_into_profile,
@@ -71,7 +68,7 @@ def get_registry(
         if (
             _REGISTRY_CACHE is None
             or force_reload
-            or _REGISTRY_CACHE_PATH != target_path
+            or target_path != _REGISTRY_CACHE_PATH
         ):
             if target_path.exists():
                 _REGISTRY_CACHE = read_registry(
@@ -134,9 +131,10 @@ def per_class_lagrangian_weights(
 ) -> dict[str, float]:
     """Return per-axis Lagrangian multipliers calibrated for an architecture class.
 
-    The intuition: for HNeRV at the medal band, CUDA pose is at the
-    precision floor — adding capacity to fight pose distortion is wasted on
-    the CPU leaderboard. The CPU-leaderboard-faithful weighting is::
+    The intuition: for HNeRV at the medal band, paired CPU/CUDA rows show that
+    CUDA-axis pose changes have lower expected marginal value on the CPU axis.
+    This is a planning prior, not proof that pose work is useless. The
+    CPU-axis weighting is::
 
         lambda_pose_eff = base_lambda_pose / R_pose
         lambda_seg_eff  = base_lambda_seg / R_seg
@@ -164,6 +162,10 @@ def per_class_lagrangian_weights(
         "architecture_class_used": profile.architecture_class,
         "confidence_label": profile.confidence_label(),
         "evidence_grade": "[CPU-prep planning-only; per-class Lagrangian]",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
     }
 
 
@@ -176,18 +178,14 @@ def per_class_floor_band(
 ) -> dict[str, Any]:
     """Per-class CPU-axis floor band.
 
-    Different architectures have different precision floors:
-        - HNeRV: σ²_floor ≈ 1.4e-4 (Welch's-law random walk on FP32 conv
-          reductions; 4 noise sources contributing ~25% each)
-        - Balle hyperprior: NOT YET MEASURED — uses HNeRV-default; flagged
-          ``low-calibration-confidence``
-        - AV1 grayscale: predicted DIFFERENT — substrate has no learned
-          neural decoder; floor likely much smaller
+    Different architectures may have different observed CPU/CUDA pose bands.
+    HNeRV currently uses an empirical paired-anchor prior. Balle hyperprior,
+    AV1 grayscale, and other families are not yet measured and therefore carry
+    low-calibration confidence.
 
     Returns ``{"cuda_pose_floor", "cpu_pose_floor_implied", "confidence_label",
     "architecture_class_used"}``. The CPU pose floor is implied via
-    ``cpu_pose_floor = cuda_pose_floor / r_pose_mean`` — at saturation,
-    CPU sees ~1/R times the pose distortion CUDA reports.
+    ``cpu_pose_floor = cuda_pose_floor / r_pose_mean`` as a reporting prior.
     """
     if registry is None:
         registry = get_registry()
@@ -203,6 +201,10 @@ def per_class_floor_band(
         "architecture_class_used": profile.architecture_class,
         "confidence_label": profile.confidence_label(),
         "evidence_grade": "[CPU-prep planning-only; per-class precision floor]",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
     }
 
 
@@ -225,8 +227,8 @@ def explain_observed_pose_drift(
     cls = architecture_class or "hnerv_ft_microcodec"
     profile = query_profile_for_archive_class(cls, registry=registry)
 
-    # Use the profile's decoder fraction (set during calibration) — falls
-    # back to the default 25% when no override is recorded.
+    # Use the profile's decoder fraction as a mechanism prior — it falls back
+    # to the default 25% hypothesis when no measured override is recorded.
     decoder_profile = DEFAULT_DECODER_PROFILE
     if profile.decoder_drift_fraction != DEFAULT_DECODER_PROFILE.pose_drift_fraction:
         # Profile has overridden the default — instantiate a per-class profile
@@ -245,6 +247,10 @@ def explain_observed_pose_drift(
     decomposition["architecture_class_used"] = profile.architecture_class
     decomposition["confidence_label"] = profile.confidence_label()
     decomposition["n_anchors_backing"] = profile.n_anchors
+    decomposition["score_claim"] = False
+    decomposition["promotion_eligible"] = False
+    decomposition["rank_or_kill_eligible"] = False
+    decomposition["ready_for_exact_eval_dispatch"] = False
     return decomposition
 
 

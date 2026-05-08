@@ -93,6 +93,15 @@ def _has_waiver(row: dict) -> bool:
     return row.get("mask_pose_coupling_waived") is True
 
 
+def _claims_dispatch(row: dict) -> bool:
+    if row.get("score_claim") is True:
+        return True
+    if row.get("ready_for_exact_eval_dispatch") is True:
+        return True
+    verdict = str(row.get("contest_dispatch_verdict", "")).lower()
+    return bool("positive" in verdict or "promote" in verdict or "frontier" in verdict)
+
+
 def _missing_fields(row: dict) -> list[str]:
     missing: list[str] = []
     for f in REQUIRED_FIELDS:
@@ -127,6 +136,8 @@ def _scan_build_manifests(repo: Path) -> list[Finding]:
                 continue
             lane_id = str(manifest.get("lane_id", ""))
             if not _is_mask_representation(manifest, lane_id):
+                continue
+            if not _claims_dispatch(manifest):
                 continue
             if _has_waiver(manifest):
                 continue
@@ -177,10 +188,7 @@ def _scan_evidence(repo: Path) -> list[Finding]:
                 continue
             # Only enforce when the row claims dispatch/score; pure
             # planning/proxy rows are exempt.
-            if not (
-                row.get("score_claim") is True
-                or row.get("ready_for_exact_eval_dispatch") is True
-            ):
+            if not _claims_dispatch(row):
                 continue
             missing = _missing_fields(row)
             if not missing:

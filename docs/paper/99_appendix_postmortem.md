@@ -218,4 +218,29 @@ parallel-actuator file that consumes its output.
 - The §7.8 in-paper summary of this postmortem (lighter weight)
 - The OSS extraction `tac` library: <https://github.com/adpena/tac>
 - The empirical incident memo: `feedback_may_4_hnerv_race_postmortem_20260505.md`
+
+## A.7 Dual-axis scorer drift addendum
+
+The race-window table above used the public leaderboard scores, which are
+CPU-axis scores. We did not internalize that fact during the contest. The
+same archive bytes can have materially different `--device cuda` and
+`--device cpu` scores because `upstream/evaluate.py` changes the
+ground-truth video loader and scorer device. PR102, for example, has a
+CUDA comment around `0.22839` and a CPU leaderboard score around `0.19538`.
+
+PR107 now has both axes in our custody:
+
+- `[contest-CUDA]`: `0.2293311147` on Tesla T4 replay.
+- `[contest-CPU]`: `0.1966358879` on GitHub Actions Linux x86_64,
+  workflow `25556454358`.
+- `[macOS-CPU advisory only]`: `0.19664189` on M5 Max, only `6e-6`
+  above the Linux CPU row.
+
+The appendix lesson is not "optimize CPU and ignore CUDA." The durable
+lesson is to score both axes on the same archive/runtime before assigning
+priority, to use macOS CPU for cheap research sweeps when it has been
+calibrated against Linux CPU, and to localize mechanism before claiming
+the source of the gap. The current mechanism hypotheses are decoder
+drift, network-kernel drift, and mixed drift; the landed tracers are
+`tools/probe_eval_loader_drift.py` and `tools/probe_posenet_layer_drift.py`.
   in the parent comma-lab repository's auto-memory store

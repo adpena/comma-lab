@@ -12,8 +12,38 @@
   "decoder_section_bytes": 162523,
   "latent_section_bytes": 15839,
   "archive_payload_bytes": 178371,
+  "archive_payload_sha256": "9c944009abfacee9a52cd05f7f2f48fba36ce61a8382795193642083c5ee705a",
   "archive_zip_bytes": 178479,
-  "archive_sha256": "9c944009abfacee9a52cd05f7f2f48fba36ce61a8382795193642083c5ee705a",
+  "archive_sha256": "039a67aee2dc1ed649b720109d11fb4172a6ae3e54c4ecdcd03a2b6a1b562995",
+  "parser_section_manifest": {
+    "offsets": [
+      0
+    ],
+    "lengths": [
+      178371
+    ],
+    "section_names": [
+      "0.bin"
+    ],
+    "section_sha256s": [
+      "9c944009abfacee9a52cd05f7f2f48fba36ce61a8382795193642083c5ee705a"
+    ],
+    "entropy_estimates": [
+      7.997262
+    ],
+    "old_new_section_boundaries": {
+      "0.bin": {
+        "old": [
+          0,
+          178371
+        ],
+        "new": [
+          0,
+          178371
+        ]
+      }
+    }
+  },
   "brotli_quality": 11,
   "score_claim": false,
   "ready_for_exact_eval_dispatch": false,

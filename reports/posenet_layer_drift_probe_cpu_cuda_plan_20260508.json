@@ -1,0 +1,127 @@
+{
+  "batch_size": 1,
+  "comparison_available": false,
+  "created_at_utc": "2026-05-08T13:00:29Z",
+  "device_a": "cpu",
+  "device_a_available": true,
+  "device_a_unavailable_reason": null,
+  "device_b": "cuda",
+  "device_b_available": false,
+  "device_b_unavailable_reason": "torch.cuda.is_available() is false",
+  "environment": {
+    "cuda": {
+      "available": false,
+      "cudnn_allow_tf32": true,
+      "matmul_allow_tf32": false
+    },
+    "mps_available": true,
+    "platform": "macOS-26.4-arm64-arm-64bit",
+    "python": "3.12.13",
+    "torch": "2.11.0"
+  },
+  "evidence_grade": "diagnostic_device_drift_probe",
+  "input_kind": "posenet",
+  "input_tensor": null,
+  "interpretation_guardrails": [
+    "This probe isolates PoseNet/preprocess layer drift on a shared tensor; it does not score archives.",
+    "A CPU/CUDA auth-eval gap can also arise from DALI-vs-AV video decode before PoseNet.",
+    "Use exact paired auth eval JSONs for score claims; use this tool to localize mechanism only."
+  ],
+  "leaf_only": false,
+  "max_modules": 12,
+  "module_inventory": {
+    "attention_or_softmax_named_modules": [],
+    "module_type_counts": {
+      "AdaptiveAvgPool2d": 1,
+      "AllNorm": 8,
+      "BatchNorm1d": 8,
+      "BatchNorm2d": 28,
+      "BatchNormAct2d": 52,
+      "ClassifierHead": 1,
+      "Conv2d": 78,
+      "ConvMlp": 12,
+      "ConvNormAct": 52,
+      "Dropout": 13,
+      "FastVit": 1,
+      "FastVitStage": 4,
+      "Flatten": 1,
+      "GELUTanh": 19,
+      "Hydra": 1,
+      "Identity": 183,
+      "LayerScale2d": 24,
+      "Linear": 14,
+      "MobileOneBlock": 31,
+      "ModuleDict": 3,
+      "ModuleList": 19,
+      "PatchEmbed": 3,
+      "ReLU": 12,
+      "RepMixer": 12,
+      "RepMixerBlock": 12,
+      "ReparamLargeKernelConv": 3,
+      "ResBlock": 2,
+      "SEModule": 1,
+      "SelectAdaptivePool2d": 1,
+      "Sequential": 15,
+      "Sigmoid": 1
+    }
+  },
+  "module_regex": "^(vision|vision\\.stem|vision\\.stages\\.\\d+|vision\\.stages\\.\\d+\\.blocks\\.\\d+|vision\\.head|summarizer|summarizer\\.\\d+|hydra|hydra\\..*)$",
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "repo": "/Users/adpena/Projects/pact",
+  "rms_abs_threshold": 1e-06,
+  "schema": "posenet_layer_precision_drift_probe.v1",
+  "score_claim": false,
+  "seed": 1234,
+  "selected_modules": [
+    {
+      "name": "vision",
+      "type": "FastVit"
+    },
+    {
+      "name": "vision.stem",
+      "type": "Sequential"
+    },
+    {
+      "name": "vision.stages.0",
+      "type": "FastVitStage"
+    },
+    {
+      "name": "vision.stages.0.blocks.0",
+      "type": "RepMixerBlock"
+    },
+    {
+      "name": "vision.stages.0.blocks.1",
+      "type": "RepMixerBlock"
+    },
+    {
+      "name": "vision.stages.1",
+      "type": "FastVitStage"
+    },
+    {
+      "name": "vision.stages.1.blocks.0",
+      "type": "RepMixerBlock"
+    },
+    {
+      "name": "vision.stages.1.blocks.1",
+      "type": "RepMixerBlock"
+    },
+    {
+      "name": "vision.stages.2",
+      "type": "FastVitStage"
+    },
+    {
+      "name": "vision.stages.2.blocks.0",
+      "type": "RepMixerBlock"
+    },
+    {
+      "name": "vision.stages.2.blocks.1",
+      "type": "RepMixerBlock"
+    },
+    {
+      "name": "vision.stages.2.blocks.2",
+      "type": "RepMixerBlock"
+    }
+  ],
+  "upstream_modules": "/Users/adpena/Projects/pact/upstream/modules.py"
+}

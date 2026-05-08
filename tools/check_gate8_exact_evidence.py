@@ -53,11 +53,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 
 REPO_ROOT_DEFAULT = Path(__file__).resolve().parents[1]
+CONTEST_N_BYTES = 37_545_489
+SCORE_TOLERANCE = 1e-6
 
 EVIDENCE_FILES: tuple[str, ...] = (
     "reports/cathedral_autopilot_evidence.jsonl",
@@ -104,6 +107,38 @@ def _has_component(row: dict, key: str) -> bool:
     return bool(isinstance(components, dict) and components.get(key.split("_")[0]))
 
 
+def _component(row: dict, key: str) -> float | None:
+    value = row.get(key)
+    if isinstance(value, int | float):
+        return float(value)
+    components = row.get("components")
+    if isinstance(components, dict):
+        short = key.split("_")[0]
+        comp = components.get(short)
+        if isinstance(comp, int | float):
+            return float(comp)
+    return None
+
+
+def _archive_bytes(row: dict) -> int | None:
+    value = row.get("archive_bytes", row.get("empirical_archive_bytes"))
+    if isinstance(value, int) and value > 0:
+        return value
+    return None
+
+
+def _path_exists_or_external(repo: Path, value: object) -> bool:
+    if not isinstance(value, str) or not value.strip():
+        return False
+    text = value.strip()
+    if text.startswith(("external:", "sha256:", "inline:")):
+        return True
+    path = Path(text)
+    if not path.is_absolute():
+        path = repo / path
+    return path.exists()
+
+
 def _missing_fields(row: dict) -> list[str]:
     missing: list[str] = []
     if not _has_field(row, "archive_bytes", "empirical_archive_bytes"):
@@ -134,6 +169,37 @@ def _missing_fields(row: dict) -> list[str]:
     return missing
 
 
+def _semantic_errors(row: dict, repo: Path) -> list[str]:
+    errors: list[str] = []
+    if row.get("runtime_manifest") and not _path_exists_or_external(repo, row.get("runtime_manifest")):
+        errors.append("runtime_manifest path does not exist")
+    if row.get("log_path") and not _path_exists_or_external(repo, row.get("log_path")):
+        errors.append("log_path path does not exist")
+    archive_bytes = _archive_bytes(row)
+    seg = _component(row, "seg_distortion")
+    pose = _component(row, "pose_distortion")
+    rate = _component(row, "rate_term")
+    recomputed = row.get("recomputed_score")
+    if (
+        archive_bytes is not None
+        and seg is not None
+        and pose is not None
+        and rate is not None
+        and isinstance(recomputed, int | float)
+    ):
+        expected_rate = 25.0 * archive_bytes / CONTEST_N_BYTES
+        expected = 100.0 * seg + math.sqrt(10.0 * pose) + expected_rate
+        if abs(rate - expected_rate) > SCORE_TOLERANCE:
+            errors.append(
+                f"rate_term {rate:.12g} != 25*bytes/N {expected_rate:.12g}"
+            )
+        if abs(float(recomputed) - expected) > SCORE_TOLERANCE:
+            errors.append(
+                f"recomputed_score {float(recomputed):.12g} != formula {expected:.12g}"
+            )
+    return errors
+
+
 def scan(repo_root: Path | None = None) -> list[Finding]:
     repo = (repo_root or REPO_ROOT_DEFAULT).resolve()
     findings: list[Finding] = []
@@ -158,16 +224,21 @@ def scan(repo_root: Path | None = None) -> list[Finding]:
             if not _claims_frontier(row):
                 continue
             missing = _missing_fields(row)
-            if not missing:
+            semantic_errors = [] if missing else _semantic_errors(row, repo)
+            if not missing and not semantic_errors:
                 continue
+            detail = (
+                f"missing required exact CUDA evidence fields: {','.join(missing)}"
+                if missing
+                else "invalid exact CUDA evidence: " + "; ".join(semantic_errors)
+            )
             findings.append(
                 Finding(
                     file_rel=rel,
                     line_number=lineno,
                     technique=str(row.get("technique", "<unknown>")),
                     reason=(
-                        f"frontier-promotion row missing required exact "
-                        f"CUDA evidence fields: {','.join(missing)}. "
+                        f"frontier-promotion row {detail}. "
                         f"Anything missing requires lowering the evidence "
                         f"grade tag. Gate 8 (exact evidence)."
                     ),

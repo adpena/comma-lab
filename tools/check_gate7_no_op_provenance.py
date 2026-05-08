@@ -73,7 +73,13 @@ class Finding:
 def _is_byte_level_row(row: dict) -> bool:
     transform = str(row.get("transform_kind", "")).lower()
     technique = str(row.get("technique", "")).lower()
-    return any(tok in transform or tok in technique for tok in BYTE_LEVEL_TOKENS)
+    if any(tok in transform or tok in technique for tok in BYTE_LEVEL_TOKENS):
+        return True
+    has_bytes = isinstance(row.get("empirical_archive_bytes"), int) or isinstance(row.get("archive_bytes"), int)
+    has_baseline = isinstance(row.get("baseline_archive_bytes"), int) or isinstance(
+        row.get("baseline_bytes"), int
+    )
+    return has_bytes and has_baseline
 
 
 def _claims_dispatch(row: dict) -> bool:

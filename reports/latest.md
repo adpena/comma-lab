@@ -37,7 +37,7 @@ leaderboard-marginal than pose.
 
 | Archive | CUDA score | Predicted CPU score | Predicted leaderboard rank |
 |---|---:|---:|---|
-| Our PR #107 apogee | 0.22936 | ~0.196 | silver/bronze band |
+| Our PR #107 apogee | 0.22936 | 0.1966358879 (verified Linux x86_64 CPU) | just outside silver/bronze band |
 | PR103-on-PR106 AC repack | 0.20898 | ~0.176 | above current top |
 | PR102 hardened replay | 0.22839 | 0.19538 (verified) | bronze (verified) |
 | PR104 hardened replay | 0.23114 | ~0.198 | non-frontier |
@@ -50,14 +50,15 @@ CI runner. Apple Silicon CPU eval is `[macOS-CPU advisory only]`, never
 
 **Strategic exploitation prescriptions:**
 
-1. **Floor-aware Huber pose loss**: clamp `||pose_err||² - τ²` at zero where
-   τ ≈ sqrt(CPU pose floor). Frees bit-budget that would have been spent
-   driving pose<sub>cuda</sub> below R<sub>pose</sub>·ε<sub>cpu</sub>.
+1. **CPU-axis pose trust-region loss**: ablate a Huber-style pose loss where
+   τ ≈ sqrt(observed HNeRV CPU pose band). This is a training-time hypothesis,
+   not proof that pose below τ is free; paired CPU/CUDA exact eval must decide.
 2. **Leaderboard-aware Lagrangian**: `tac.score_geometry target_axis="cpu_leaderboard"`
    reweights pose marginal × 0.20, seg marginal × 0.86 before ranking
    dispatch candidates.
-3. **SegNet boundary smoothing in inflate.py**: `F.avg_pool2d(seg_logits,
-   3, 1, 1)` before argmax. Predicted +0.001 CPU-leaderboard score.
+3. **Training-time SegNet boundary robustness**: make rendered frames more
+   robust around class boundaries. Do not run SegNet or smooth scorer logits in
+   `inflate.py`; submission inflate remains scorer-free.
 4. **Calibrated noise injection in training**: σ ≈ 1.7e-3 per-op-equivalent.
    Tightens R<sub>pose</sub> from ~5 to ~3.5.
 
@@ -86,8 +87,9 @@ CI runner. Apple Silicon CPU eval is `[macOS-CPU advisory only]`, never
 1. **P0** — Modal CPU smoke replay of any one HNeRV archive (PR102 ideal:
    verified 0.19538). $0.12, 90 min. Validates the Modal CPU substrate is
    1:1 with the contest CI's CPU axis.
-2. **P0** — Modal CPU dispatch of our PR #107 apogee archive. Confirms the
-   ~0.196 prediction; we will know our true leaderboard rank.
+2. **P0** — PR #107 apogee CPU replay is complete via GitHub Actions Linux
+   x86_64: `0.1966358879`. Next work is paired candidate sweeps, not confirming
+   this prediction.
 3. **P1** — 3-PR cross-family smoke (PR106, PR104, PR91). $1.26, 3-6 hours.
    Decisive between hypotheses H1/H2/H3/H4 in the sweep design.
 4. **P1** — `tac.score_geometry target_axis="cpu_leaderboard"` flag (1 LOC,
