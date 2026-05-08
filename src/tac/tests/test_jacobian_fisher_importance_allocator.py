@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -16,6 +17,20 @@ from tac.optimization.jacobian_fisher_importance_allocator import (
 from tac.repo_io import write_json
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+FALSE_CUSTODY_FIELDS = (
+    "score_claim",
+    "promotion_eligible",
+    "rank_or_kill_eligible",
+    "ready_for_exact_eval_dispatch",
+    "dispatch_attempted",
+    "score_affecting_payload_changed",
+    "charged_bits_changed",
+    "family_falsified",
+)
+REQUIRED_CUSTODY_BLOCKERS = (
+    "cpu_mps_proxy_importance_inputs_not_score_authority",
+    "requires_exact_archive_cuda_score_custody_before_rank_promotion_or_kill",
+)
 
 
 def _curves() -> dict[str, list[dict]]:
@@ -44,6 +59,23 @@ def _load_tool():
     sys.modules["jacobian_fisher_importance_allocator_tool"] = module
     spec.loader.exec_module(module)
     return module
+
+
+def _assert_planning_only_custody(section: dict) -> None:
+    for field in FALSE_CUSTODY_FIELDS:
+        assert section[field] is False
+    assert section["planning_only"] is True
+    assert section["proxy_or_diagnostic_evidence"] is True
+    assert section["evidence_device_class"] == "cpu_mps_proxy_planning_only"
+    assert section["score_authority"] == "none"
+    assert section["score_authority_required"] == "exact_cuda_auth_eval_archive_path"
+    assert "A/A++ exact CUDA archive evidence" in section["promotion_requires_evidence_grade"]
+    assert "leaderboard_or_frontier_ranking" in section["disallowed_decision_uses"]
+    assert "candidate_promotion" in section["disallowed_decision_uses"]
+    assert "lane_or_family_kill" in section["disallowed_decision_uses"]
+    for blocker in REQUIRED_CUSTODY_BLOCKERS:
+        assert blocker in section["dispatch_blockers"]
+        assert blocker in section["score_claim_blockers"]
 
 
 def test_target_distortion_allocation_is_monotonic() -> None:
@@ -183,9 +215,26 @@ def test_manifest_metadata_blocks_promotion_and_ranking() -> None:
     assert manifest["rank_or_kill_eligible"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert manifest["allocation"]["metadata"]["score_claim"] is False
+    _assert_planning_only_custody(manifest)
+    _assert_planning_only_custody(manifest["allocation"]["metadata"])
     assert "requires_cuda_pixel_jacobian_or_fisher_pullback" in DEFAULT_DISPATCH_BLOCKERS
     assert "requires_cuda_pixel_jacobian_or_fisher_pullback" in manifest["dispatch_blockers"]
     assert "exact CUDA auth eval" in manifest["integration_point"]["next_archive_builder_requirement"]
+
+
+def test_direct_allocator_plan_metadata_is_not_rank_or_kill_evidence() -> None:
+    plan, _, _ = allocate_importance_weighted_candidates(
+        _curves(),
+        per_tensor_importance={"high.weight": 10.0, "low.weight": 1.0},
+        byte_budget=100,
+    )
+
+    payload = plan.to_dict()
+    _assert_planning_only_custody(payload["metadata"])
+    assert payload["metadata"]["score_affecting_payload_changed"] is False
+    assert payload["metadata"]["charged_bits_changed"] is False
+    assert payload["metadata"]["downstream_selection_can_change_charged_bits"] is True
+    assert "exact_eval_dispatch_readiness" in payload["metadata"]["disallowed_decision_uses"]
 
 
 def test_cli_writes_planning_manifest(tmp_path: Path) -> None:
@@ -222,3 +271,6 @@ def test_cli_writes_planning_manifest(tmp_path: Path) -> None:
     assert '"score_claim": false' in text
     assert '"rank_or_kill_eligible": false' in text
     assert '"selected_by_tensor"' in text
+    payload = json.loads(text)
+    _assert_planning_only_custody(payload)
+    _assert_planning_only_custody(payload["allocation"]["metadata"])

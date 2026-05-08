@@ -5,7 +5,9 @@ The tool is intentionally thin: it reads byte/error candidate curves and an
 importance manifest, calls
 ``tac.optimization.jacobian_fisher_importance_allocator``, and writes a
 planning-only manifest.  It does not load the scorer, build archives, launch
-GPU work, or emit score/rank/promotion evidence.
+GPU work, or emit score/rank/promotion/kill evidence.  CPU/MPS/proxy inputs
+remain allocator priors only until a byte-closed archive returns exact CUDA auth
+eval.
 """
 
 from __future__ import annotations
@@ -146,7 +148,10 @@ def main(argv: list[str] | None = None) -> int:
         f" bytes={int(allocation['total_bytes']):,}"
         f" weighted_rms_error={float(allocation['weighted_rms_error']):.6f}"
     )
-    print("status: planning-only; no score claim, no dispatch, no promotion/rank/kill")
+    print(
+        "status: planning-only; CPU/MPS/proxy evidence is not score/rank/"
+        "promotion/kill evidence"
+    )
     return 0
 
 

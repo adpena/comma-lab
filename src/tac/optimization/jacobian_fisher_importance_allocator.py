@@ -26,17 +26,43 @@ import numpy as np
 
 SCHEMA_VERSION = "jacobian_fisher_importance_allocator.v1"
 MODULE_NAME = "tac.optimization.jacobian_fisher_importance_allocator"
-EVIDENCE_GRADE = "[CPU-planning empirical/prediction jacobian-fisher-importance allocator]"
-EVIDENCE_SEMANTICS = "cpu_importance_weighted_quantization_allocation_no_score_no_dispatch"
+EVIDENCE_GRADE = "[CPU/MPS/proxy-planning empirical/prediction jacobian-fisher-importance allocator]"
+EVIDENCE_SEMANTICS = (
+    "cpu_mps_proxy_importance_weighted_quantization_allocation_no_score_no_dispatch"
+)
 
 DEFAULT_DISPATCH_BLOCKERS = [
     "cpu_planning_allocator_not_score_authority",
+    "cpu_mps_proxy_importance_inputs_not_score_authority",
     "requires_cuda_pixel_jacobian_or_fisher_pullback",
     "requires_importance_artifact_custody_and_calibration",
     "requires_byte_closed_archive_rebuild",
     "requires_static_pre_submission_compliance",
     "requires_exact_cuda_auth_eval_before_score_claim",
+    "requires_exact_archive_cuda_score_custody_before_rank_promotion_or_kill",
 ]
+
+_PLANNING_ONLY_FALSE_FIELDS = (
+    "score_claim",
+    "promotion_eligible",
+    "rank_or_kill_eligible",
+    "ready_for_exact_eval_dispatch",
+    "dispatch_attempted",
+    "score_affecting_payload_changed",
+    "charged_bits_changed",
+    "family_falsified",
+)
+_DISALLOWED_DECISION_USES = [
+    "score_claim",
+    "leaderboard_or_frontier_ranking",
+    "candidate_promotion",
+    "lane_or_family_kill",
+    "exact_eval_dispatch_readiness",
+]
+_REQUIRED_SCORE_CUSTODY_BLOCKERS = (
+    "cpu_mps_proxy_importance_inputs_not_score_authority",
+    "requires_exact_archive_cuda_score_custody_before_rank_promotion_or_kill",
+)
 
 _BYTE_KEYS = ("bytes", "byte_proxy", "rate_bytes")
 _ERROR_KEYS = ("rel_err", "error", "distortion", "rms_error")
@@ -240,6 +266,57 @@ class AllocationPlan:
 
 def _utc_iso() -> str:
     return dt.datetime.now(dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _planning_only_metadata(*, curve_summary: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    blockers = list(DEFAULT_DISPATCH_BLOCKERS)
+    metadata: dict[str, Any] = {
+        "planning_only": True,
+        "proxy_or_diagnostic_evidence": True,
+        "evidence_grade": EVIDENCE_GRADE,
+        "evidence_semantics": EVIDENCE_SEMANTICS,
+        "evidence_device_class": "cpu_mps_proxy_planning_only",
+        "score_authority": "none",
+        "score_authority_required": "exact_cuda_auth_eval_archive_path",
+        "promotion_requires_evidence_grade": "A/A++ exact CUDA archive evidence",
+        "downstream_selection_can_change_charged_bits": True,
+        "falsification_scope": "none_cpu_mps_proxy_allocator_planning_only",
+        "disallowed_decision_uses": list(_DISALLOWED_DECISION_USES),
+        "dispatch_blockers": list(blockers),
+        "score_claim_blockers": list(blockers),
+    }
+    for key in _PLANNING_ONLY_FALSE_FIELDS:
+        metadata[key] = False
+    if curve_summary is not None:
+        metadata["curve_summary"] = dict(curve_summary)
+    return metadata
+
+
+def _assert_planning_only_score_custody(section: Mapping[str, Any], *, label: str) -> None:
+    for key in _PLANNING_ONLY_FALSE_FIELDS:
+        if section.get(key) is not False:
+            raise ImportanceAllocationError(f"{label}.{key} must remain false")
+    if section.get("planning_only") is not True:
+        raise ImportanceAllocationError(f"{label}.planning_only must remain true")
+    if section.get("score_authority") != "none":
+        raise ImportanceAllocationError(f"{label}.score_authority must remain none")
+    disallowed = section.get("disallowed_decision_uses")
+    if not isinstance(disallowed, Sequence) or isinstance(disallowed, (str, bytes)):
+        raise ImportanceAllocationError(f"{label}.disallowed_decision_uses must be a list")
+    for use in _DISALLOWED_DECISION_USES:
+        if use not in disallowed:
+            raise ImportanceAllocationError(
+                f"{label}.disallowed_decision_uses missing {use!r}"
+            )
+    for blocker_key in ("dispatch_blockers", "score_claim_blockers"):
+        blockers = section.get(blocker_key)
+        if not isinstance(blockers, Sequence) or isinstance(blockers, (str, bytes)):
+            raise ImportanceAllocationError(f"{label}.{blocker_key} must be a list")
+        for blocker in _REQUIRED_SCORE_CUSTODY_BLOCKERS:
+            if blocker not in blockers:
+                raise ImportanceAllocationError(
+                    f"{label}.{blocker_key} missing {blocker!r}"
+                )
 
 
 def _finite_float(value: Any, *, label: str) -> float:
@@ -784,18 +861,9 @@ def allocate_importance_weighted_candidates(
         config=config,
     )
     weights = importance_weights.weights
-    metadata = {
-        "schema": "importance_weighted_candidate_allocation_v1",
-        "curve_summary": curve_summary,
-        "score_claim": False,
-        "promotion_eligible": False,
-        "rank_or_kill_eligible": False,
-        "ready_for_exact_eval_dispatch": False,
-        "dispatch_attempted": False,
-        "evidence_grade": EVIDENCE_GRADE,
-        "evidence_semantics": EVIDENCE_SEMANTICS,
-        "dispatch_blockers": list(DEFAULT_DISPATCH_BLOCKERS),
-    }
+    metadata = _planning_only_metadata(curve_summary=curve_summary)
+    metadata["schema"] = "importance_weighted_candidate_allocation_v1"
+    _assert_planning_only_score_custody(metadata, label="allocation.metadata")
 
     if objective == "target_distortion":
         assert target is not None
@@ -996,26 +1064,15 @@ def build_importance_allocation_manifest(
         byte_budget=byte_budget,
         config=config,
     )
-    blockers = list(DEFAULT_DISPATCH_BLOCKERS)
-    return {
+    score_custody = _planning_only_metadata()
+    manifest = {
         "schema": SCHEMA_VERSION,
         "module": MODULE_NAME,
         "tool": producer_tool,
         "created_utc": _utc_iso(),
-        "evidence_grade": EVIDENCE_GRADE,
-        "evidence_semantics": EVIDENCE_SEMANTICS,
-        "score_claim": False,
-        "promotion_eligible": False,
-        "rank_or_kill_eligible": False,
-        "ready_for_exact_eval_dispatch": False,
-        "dispatch_attempted": False,
-        "score_affecting_payload_changed": False,
-        "charged_bits_changed": False,
-        "downstream_selection_can_change_charged_bits": True,
-        "family_falsified": False,
-        "falsification_scope": "none_cpu_allocator_planning_only",
-        "dispatch_blockers": blockers,
-        "score_claim_blockers": blockers,
+        **score_custody,
+        "dispatch_blockers": list(DEFAULT_DISPATCH_BLOCKERS),
+        "score_claim_blockers": list(DEFAULT_DISPATCH_BLOCKERS),
         "inputs": dict(extra_inputs or {}),
         "curve_summary": curve_summary,
         "importance": weights.to_dict(),
@@ -1036,6 +1093,15 @@ def build_importance_allocation_manifest(
             "rebuild charged archive bytes and run exact CUDA auth eval before ranking",
         ],
     }
+    _assert_planning_only_score_custody(manifest, label="manifest")
+    allocation = manifest["allocation"]
+    if not isinstance(allocation, Mapping):
+        raise ImportanceAllocationError("manifest.allocation must be an object")
+    metadata = allocation.get("metadata")
+    if not isinstance(metadata, Mapping):
+        raise ImportanceAllocationError("manifest.allocation.metadata must be an object")
+    _assert_planning_only_score_custody(metadata, label="manifest.allocation.metadata")
+    return manifest
 
 
 __all__ = [
