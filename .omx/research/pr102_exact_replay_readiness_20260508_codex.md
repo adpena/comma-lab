@@ -199,6 +199,38 @@ Harvest command used:
   --expected-archive-size-bytes 178981
 ```
 
+## Hardened Lightning Dispatch - 2026-05-08T10:37Z
+
+The adversarial review found that the 10:15Z job staged the pre-hardening
+adapter. A fresh replay is queued from pushed `origin/main` commit `9a2b2324`
+with deterministic adapter `PYTHONPATH`, ZIP timestamp parity guardrails, and
+matching cu124 torch/torchvision pins.
+
+- Active lane id: `pr102_public_exact_replay_t4_hardened`
+- Active job: `pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z`
+- Lightning target: `adpena` / `comma-lab` / `lossy-compression-challenge`
+- Machine request: `g4dn.2xlarge` (SDK reports job machine label `T4`)
+- Archive SHA-256: `afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641`
+- Archive bytes: `178981`
+- Source manifest:
+  `.omx/state/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z_manifest.json`
+- Remote manifest verification: `OK`, `2187` files, `36600286` bytes
+- Local supply-chain scan: `OK`, `violation_count=0`
+- Launcher record:
+  `.omx/state/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z_lightning_batch_record.json`
+- Initial refreshed status: `Pending` at `2026-05-08T10:38:24Z`
+
+Harvest command when terminal:
+
+```bash
+.venv/bin/python scripts/launch_lightning_batch_job.py harvest-ssh \
+  --job-name pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z \
+  --ssh-target s_01knw7wnzbe79wfq5mqqbx1mbz@ssh.lightning.ai \
+  --expected-archive-sha256 afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641 \
+  --expected-archive-size-bytes 178981 \
+  --require-adjudication
+```
+
 ## Adapter Inflate Script
 
 ```bash
