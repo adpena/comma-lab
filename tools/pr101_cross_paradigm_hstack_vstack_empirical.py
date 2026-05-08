@@ -135,14 +135,35 @@ def _stack3_admm_continuous_k_then_op1(
 
     # Reconstruct the lossy-coarsened state_dict (post-ADMM) so Op1 can
     # re-encode it. K-rounded int8 -> dequantized fp32 via per-tensor scale.
+    #
+    # Substrate-mismatch fix 2026-05-08 (Codex CRITICAL #4.1, FIX-CODEX-FINDINGS):
+    # Earlier code applied an incorrect /N_QUANT (=127) divisor on the
+    # dequantization path here, which DID NOT match the runtime decoder at
+    # ``experiments/results/admm_x_lossy_coarsening_path_b_step6_*/submission_dir/inflate.py``
+    # (which dequantizes as ``q_i8.astype(fp32) * fp16_scale``, no division).
+    # That mismatch produced an Op1 byte-anchor (137,531 B, sha
+    # ea3b23ed4bfedf30de706719d37e04563bfbb08cec22deb579393f2aebaf9023)
+    # encoded against PHANTOM bytes a runtime would never reconstruct. The
+    # corrected reconstruction (matching the runtime decoder + the Path B
+    # step 6 build script's recon path at
+    # ``tools/build_admm_x_lossy_coarsening_path_b_step6.py:302``) yields
+    # 137,469 B (sha c33243a1e367fc64466ff65dc11e267aa140651878abc9008c8dd84abfd61e41).
+    # The relative ordering across canonical stacks is preserved; the
+    # cross-paradigm headline byte-anchor moved by 62 bytes (137531 -> 137469).
+    # ``N_QUANT`` is retained as an audit constant (still imported above) for
+    # reproducibility; it is intentionally NOT used on the dequantization path.
     Ks = list(admm_result["Ks"])
     rebuilt: dict[str, torch.Tensor] = {}
+    dequantization_formula = "rounded.astype(np.float32) * float(np.float16(scale))"
     for (name, scale, shape), tb, K in zip(quant_meta, tensors, Ks, strict=True):
         rounded = (np.round(tb.raw.astype(np.float64) / K) * K).astype(np.int32)
         # clip back to int8 range (matches Path B step 6's encoder)
         rounded = np.clip(rounded, -127, 127).astype(np.int8)
-        # dequantize to fp32: (qint / N_QUANT) * scale
-        deq = (rounded.astype(np.float32) / float(N_QUANT)) * scale
+        # dequantize to fp32: q_i8 * fp16(scale)  -- matches runtime decoder
+        # Path B step 6 inflate.py L122-123 + build script L302 use the
+        # fp16-cast scale (NOT the raw fp32 scale + NOT divided by N_QUANT).
+        scale_fp16 = float(np.float16(scale))
+        deq = rounded.astype(np.float32) * scale_fp16
         rebuilt[name] = torch.from_numpy(deq.reshape(shape))
 
     # Now run Op1 on the rebuilt (lossy-coarsened) substrate.
@@ -158,6 +179,15 @@ def _stack3_admm_continuous_k_then_op1(
         "rms_target": 0.0386,
         "bytes_admm_then_op1": bytes_admm_then_op1,
         "delta_admm_to_op1_finalizer_bytes": bytes_admm_then_op1 - admm_bytes,
+        # Codex Medium 4.2 (FIX-CODEX-FINDINGS): manifest must embed the
+        # exact dequantization formula the encoder used so future readers
+        # can audit substrate parity vs the runtime decoder. MDL: "the
+        # encoded representation must include enough side-info to invert
+        # exactly" (MacKay).
+        "dequantization_formula": dequantization_formula,
+        "dequantization_runtime_match": (
+            "matches admm_x_lossy_coarsening_path_b_step6_20260508T060435Z/submission_dir/inflate.py"
+        ),
     }
 
 
