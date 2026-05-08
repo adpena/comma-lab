@@ -53,15 +53,14 @@ import json
 import struct
 import sys
 import time
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from pathlib import Path
 
 import brotli
 import numpy as np
 import torch
 import torch.nn as nn
-
-from compressai.models import ScaleHyperprior, MeanScaleHyperprior
+from compressai.models import MeanScaleHyperprior, ScaleHyperprior
 from compressai.models.utils import conv, deconv
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -77,6 +76,31 @@ TOOL_NAME = "tools/pr101_compressai_balle_hyperprior_full.py"
 SCHEMA_VERSION = "pr101_compressai_balle_hyperprior_full.v1"
 ARCHIVE_OVERHEAD_BYTES = 16_094  # PR101 wire-format overhead (header, sidecar tables, etc.)
 N_TENSORS = len(FIXED_STATE_SCHEMA)
+EVIDENCE_GRADE = "[MPS-research-signal]"
+EVIDENCE_SEMANTICS = "mps_proxy_full_scale_hyperprior_no_score"
+DISPATCH_BLOCKERS = (
+    "mps_proxy_signal_not_score_evidence",
+    "training_device_not_exact_auth_eval",
+    "no_exact_archive_adjudication",
+    "missing_exact_cuda_auth_eval",
+    "requires_exact_cuda_auth_eval_before_any_score_use",
+)
+
+
+def proxy_evidence_contract() -> dict[str, object]:
+    return {
+        "evidence_grade": EVIDENCE_GRADE,
+        "evidence_marker": EVIDENCE_GRADE,
+        "evidence_semantics": EVIDENCE_SEMANTICS,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "proxy_row": True,
+        "dispatch_blockers": list(DISPATCH_BLOCKERS),
+    }
+
 
 # Pseudo-image dimensions for ScaleHyperprior input.
 # Chosen to be divisible by 16 (4 stride-2 downsamples) with minimal pad.
@@ -367,10 +391,7 @@ def encode_decode_measure(
     abs_orig = np.abs(substrate.raw_symbols).astype(np.float64)
     # Relative error: mean(|err|) / mean(|orig|), clamped at 1.0 on zero-magnitude
     denom = abs_orig.sum()
-    if denom < 1e-9:
-        rel_err = float(abs_err.sum())
-    else:
-        rel_err = float(abs_err.sum() / denom)
+    rel_err = float(abs_err.sum()) if denom < 1e-9 else float(abs_err.sum() / denom)
     mean_abs_err = float(abs_err.mean())
     max_abs_err = int(abs_err.max())
     nonzero_diff_frac = float((abs_err > 0).mean())
@@ -438,6 +459,7 @@ def run_one_config(
         "model_class": model_class_name,
         "N": N,
         "M": M,
+        **proxy_evidence_contract(),
         "n_params": n_params,
         "model_kb_fp16": n_params * 2 / 1024,
         **measurements,
@@ -514,6 +536,7 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as exc:  # surface and continue
             r = {
                 "model_class": cls_name, "N": N, "M": M,
+                **proxy_evidence_contract(),
                 "error": f"{type(exc).__name__}: {exc}",
             }
             print(f"  [balle-full] CONFIG FAILED: {r['error']}")
@@ -522,9 +545,7 @@ def main(argv: list[str] | None = None) -> int:
         partial = {
             "schema": SCHEMA_VERSION,
             "tool": TOOL_NAME,
-            "evidence_grade": "[MPS-research-signal]",
-            "score_claim": False,
-            "promotion_eligible": False,
+            **proxy_evidence_contract(),
             "device": args.device,
             "epochs": args.epochs,
             "rd_lambda": args.rd_lambda,
@@ -570,9 +591,7 @@ def main(argv: list[str] | None = None) -> int:
     manifest = {
         "schema": SCHEMA_VERSION,
         "tool": TOOL_NAME,
-        "evidence_grade": "[MPS-research-signal]",
-        "score_claim": False,
-        "promotion_eligible": False,
+        **proxy_evidence_contract(),
         "device": args.device,
         "epochs": args.epochs,
         "rd_lambda": args.rd_lambda,
@@ -624,6 +643,7 @@ def main(argv: list[str] | None = None) -> int:
         "technique": "compressai_balle_hyperprior",
         "empirical_archive_bytes": best["archive_bytes"],
         "empirical_rel_err": best["rel_err"],
+        **proxy_evidence_contract(),
         "source": (
             f"[MPS-research-signal] {manifest_path} (FULL ScaleHyperprior "
             f"reactivation; best={best['model_class']}:N{best['N']}:M{best['M']}, "

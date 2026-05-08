@@ -2,11 +2,15 @@
 
 > 2026-05-05 correction: the Apogee intN predicted rows in this section are
 > now marked forensic/noncanonical. Exact T4 evaluation of int4 scored
-> `1.4286639424744803`, so the prediction lacked a valid distortion model.
-> PR106 x-repack at `0.20945123680571204` remains our strongest local A++
-> public-archive replay/control, but it is a byte-identical custody/rate
-> control, not a new representation result. The final official leaderboard
-> winner was PR #101 at 0.193.
+> `1.4286639424744803`
+> (`experiments/results/lightning_batch/apogee_int4_postfix_sanity_20260505T172500Z/contest_auth_eval.adjudicated.json`),
+> so the prediction lacked a valid distortion model. These rows are roadmap
+> hypotheses only and cannot rank, promote, or retire a codec family.
+> 2026-05-08 correction: PR103-on-PR106 now supersedes PR106/PR106x as the
+> active local A++ HNeRV rate anchor (`0.2089810755823297`, `185578` bytes).
+> PR106 x-repack at `0.20945123680571204` remains a predecessor
+> custody/rate control, not the current anchor and not a new representation
+> result. The final official leaderboard winner was PR #101 at 0.193.
 
 This section reports only evidence-tagged results. A score row can rank the
 system only when it names exact archive bytes, archive SHA-256, CUDA auth-eval
@@ -16,18 +20,30 @@ our archive-custody path.
 
 ## 4.0 Frontier update (2026-05-04 PM)
 
-Our strongest local public-archive replay/control is **PR106 `belt_and_suspenders` (valtterivalo) at `0.20945673680571203` [contest-CUDA T4 A++]**, superseding the PR100 row that headed §4.1 at writing time. Cross-validating x-repack confirms claimed-byte parity (commit `982f6468`). This is not the final official leaderboard top row; PR #101 finished at 0.193.
+Historical May 4 replay/control: **PR106 `belt_and_suspenders` (valtterivalo)
+at `0.20945673680571203` [contest-CUDA T4 A++]**, superseding the PR100 row
+that headed §4.1 at writing time. Cross-validating x-repack confirms
+claimed-byte parity (commit `982f6468`). Supersession: PR103-on-PR106
+(`0.2089810755823297`, `185578` bytes) is now the active local A++ HNeRV rate
+anchor, backed by exact auth/compliance artifacts:
+`experiments/results/lightning_batch/pr103_pr106_ac_repack_exact_eval_t4_20260507T181300Z/contest_auth_eval.adjudicated.json`
+and
+`experiments/results/pr103_repack_pr106_standalone_20260507/pre_submission_compliance.contest_final.json`.
+This is not the final official leaderboard top row; PR #101 finished at 0.193.
 
-Two forensic planning candidates target this frontier with empirical stub-mode
-previews; neither is score evidence or dispatch-ready without a SHA-tied
-distortion gate, scorer-basin parity report, or exact positive CUDA result:
+Two legacy planning sketches are retained here only as reactivation targets.
+Their numeric projections are not score evidence, not contest-CUDA evidence,
+and not dispatch authorization. They can re-enter score-bearing discussion only
+after a byte-closed archive records old/new SHA-256, static compliance passes,
+a matching dispatch claim exists, and exact T4 CUDA auth eval lands with
+component recomputation:
 
-| Candidate | Archive bytes | rate Δ vs PR106 | Predicted score (if distortion holds) | Distortion risk |
+| Candidate | Modeled archive bytes | rate Δ vs historical PR106 | Legacy projection (non-ranking) | Current evidence status |
 |---|---:|---:|---:|---|
-| Lane Ω-W-V3 (water-fill v2) — stub all-ones sensitivity | 164,087 | −0.01475 | ~0.195 | LOW (per-channel water-fill controls) |
-| Lane #04 int4 (uniform 4-bit signed block-FP) | 109,981 | −0.05078 | ~0.159 | HIGH (~7% relative error per weight) |
-| Lane #04 int5 (signed 5-bit, predicted) | ~120,000 | −0.043 | ~0.166 | MEDIUM (~3.3% relative error) |
-| Lane #04 int6 (signed 6-bit, predicted) | ~135,000 | −0.034 | ~0.176 | LOW (~1.6% relative error) |
+| Lane Ω-W-V3 (water-fill v2) — stub all-ones sensitivity | 164,087 | −0.01475 | ~0.195 | `prediction` / CPU-stub planning only; distortion unknown until real sensitivity map plus exact CUDA |
+| Lane #04 int4 (uniform 4-bit signed block-FP) | 109,981 | −0.05078 | ~0.159 | `A-negative` for this implementation: exact T4 scored `1.4286639424744803` |
+| Lane #04 int5 (signed 5-bit, predicted) | ~120,000 | −0.043 | ~0.166 | `prediction`; reactivation requires a new distortion model calibrated by exact int5 CUDA JSON |
+| Lane #04 int6 (signed 6-bit, predicted) | ~135,000 | −0.034 | ~0.176 | `prediction`; reactivation requires a new distortion model calibrated by exact int6 CUDA JSON |
 
 Lane Ω-W-V3 is local-smoke only in current tooling:
 `tools/dispatch_dryrun_omega_w_v3.py` prints
@@ -37,7 +53,7 @@ for forensics and future repair, but it is not a launch authorization.
 
 Lane #04 sketches at `experiments/block_fp_int4_codec_sketch.py` (`ba969fe0`), full repack at `experiments/repack_pr106_with_int4_block_fp.py` (`6da92ac8`), Pareto sweep at `experiments/block_fp_intN_codec_sketch.py` (`0e8c11c9`).
 
-**Audit-stress-test finding** (commit pending consolidation): of the 8 hidden-gem revival plans generated by subagent ae430d78, 5 were empirically falsified at zero GPU cost via codec-applicability stress tests (#02 arith_qint, #03 QZS3, #04 default ternary, #05 UNIWARD, #06 grayscale-LUT). Only Lane Ω-W-V3 (#01) was schema-agnostic + distribution-handling enough to apply to PR106 unchanged; Lane #04 int4 variant became viable only after a higher-precision codec was sketched. The audit's planning was directionally good but did not validate codec applicability against PR106's specific HNeRV architecture. See memory files `feedback_audit_pr106_revival_plans_consolidated_findings_20260504.md` and siblings.
+**Audit-stress-test finding** (commit pending consolidation): of the 8 hidden-gem revival plans generated by subagent ae430d78, 5 were empirically blocked at zero GPU cost via codec-applicability stress tests (#02 arith_qint, #03 QZS3, #04 default ternary, #05 UNIWARD, #06 grayscale-LUT). "Blocked" is scoped to the named implementation, wrapper, substrate, and artifact state. It does not kill arithmetic coding, QZS3-style range masks, ternary/block-FP quantization, UNIWARD-style allocation, or grayscale-LUT families. Only Lane Ω-W-V3 (#01) was schema-agnostic + distribution-handling enough to apply to PR106 unchanged; Lane #04 int4 variant became reactivatable only after a higher-precision codec was sketched. The audit's planning was directionally good but did not validate codec applicability against PR106's specific HNeRV architecture. See memory files `feedback_audit_pr106_revival_plans_consolidated_findings_20260504.md` and siblings.
 
 ## 4.1 Local Verified Replays And Submitted Packet
 
@@ -58,9 +74,10 @@ The PR100 HNeRV-LC-v2 adapter replay is our exact A++ submitted Apogee packet,
 not the final official leaderboard frontier and not our strongest local
 public-archive replay/control. It supersedes our PR98/PR107 packet by
 `0.0010616432371564621` score points and supersedes PR95 stem-permutation by
-`0.00262457323390117` score points. PR106/PR106x remains our strongest local
-public-archive replay/control at `0.20945673680571203` /
-`0.20945123680571204`. The PR100 win within our packet comes from a better
+`0.00262457323390117` score points. Supersession: PR106/PR106x is now a
+predecessor replay/control at `0.20945673680571203` /
+`0.20945123680571204`; PR103-on-PR106 is the active local A++ HNeRV rate
+anchor at `0.2089810755823297` / `185578` bytes. The PR100 win within our packet comes from a better
 SegNet/PoseNet tradeoff under exact T4 replay, not from a pure byte reduction.
 
 The exact PR100 runtime tree SHA-256 is
@@ -179,6 +196,21 @@ fallback-rescue a failed HPM1 stream.
 | PR70 mask decoder | Author-stated script-side payload movement | `invalid` / `external_quarantine` | Payload-closure lesson |
 | QRGB singleton/randmulti PR85 atoms | Exact T4 negatives or directionally negative | `A-negative` / scoped | Negative training signal only |
 
+Evidence-grade guardrails for paper wording:
+
+- `A++` rows may rank only when the exact archive bytes, archive SHA-256,
+  runtime tree SHA-256, T4/T4-equivalent CUDA auth-eval JSON, sample count,
+  component distances, and recomputed formula are named.
+- `prediction`, `proxy`, `MPS-research-signal`, `CPU-stub`, and byte-only rows
+  may motivate a next experiment, but cannot rank, promote, kill, retire, or
+  anchor paper empirical claims.
+- `A-negative` rows retire only the exact measured archive/runtime/config.
+  Reactivation requires a changed score-affecting payload or runtime contract,
+  old/new SHA-256s, no-op control where applicable, and a fresh exact CUDA JSON.
+- Words such as "killed", "dead", "falsified", and "retired" must name the
+  measured implementation scope and the concrete reactivation criterion; avoid
+  using them for broad method families after a single config.
+
 The new pre-submission compliance gate,
 `scripts/pre_submission_compliance_check.py`, must pass on the exact release
 packet before public upload. It checks required files, ZIP safety, single-member
@@ -203,7 +235,7 @@ The final report/site generator should emit:
 
 | Section | Source rows | Evidence tags |
 |---|---|---|
-| `frontier_summary` | PR106/PR106x public-frontier replay/control plus PR100 submitted packet | `A++` |
+| `frontier_summary` | PR103-on-PR106 active local HNeRV rate anchor plus PR106/PR106x predecessor controls and PR100 submitted packet | `A++` |
 | `exact_artifact_table` | PR100 adapter replay, PR99, PR95 stem-permutation repack, PR95 conservative repack, PR95 public exact, PR85+STBM/RMB1, PR85, PR84, PR81, C-067, scoped negatives | `A++`, `A-negative`, `invalid` |
 | `public_external_context` | PR100/PR96/PR95 body scores, PR91/PR86/PR89/PR87/PR70 public claims | `external`, `external_quarantine` |
 | `source_attribution` | PR100 public HNeRV-LC-v2 material used by the adapter replay | `attribution` |

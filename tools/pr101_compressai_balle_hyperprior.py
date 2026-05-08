@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import argparse
 import datetime as _dt
-import hashlib
 import json
 import struct
 import sys
@@ -46,6 +45,30 @@ SCHEMA_VERSION = "pr101_compressai_balle_hyperprior.v1"
 ARCHIVE_OVERHEAD_BYTES = 16_094
 N_TENSORS = len(FIXED_STATE_SCHEMA)
 N_SYMBOLS = 2 * N_QUANT + 1  # 255
+EVIDENCE_GRADE = "[MPS-research-signal]"
+EVIDENCE_SEMANTICS = "mps_proxy_curve_shape_only_no_score"
+DISPATCH_BLOCKERS = (
+    "mps_proxy_signal_not_score_evidence",
+    "not_exact_cuda_auth_eval",
+    "no_exact_archive_adjudication",
+    "missing_exact_cuda_auth_eval",
+    "requires_exact_cuda_auth_eval_before_any_score_use",
+)
+
+
+def proxy_evidence_contract() -> dict[str, object]:
+    return {
+        "evidence_grade": EVIDENCE_GRADE,
+        "evidence_marker": EVIDENCE_GRADE,
+        "evidence_semantics": EVIDENCE_SEMANTICS,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "proxy_row": True,
+        "dispatch_blockers": list(DISPATCH_BLOCKERS),
+    }
 
 
 class HyperpriorMLP(nn.Module):
@@ -174,10 +197,6 @@ def encode_with_hyperprior(
     total_bits = 0.0
     total_n = 0
     per_tensor: list[dict] = []
-    SCALE_TABLE = np.array([np.exp(0.5 * i - 3.0) for i in range(20)], dtype=np.float64)
-    quant_gauss_factory = constriction.stream.model.QuantizedGaussian(
-        -N_QUANT, N_QUANT, mean=0.0, std=1.0
-    )
     with torch.no_grad():
         for t_idx, syms in enumerate(sym_per_tensor):
             n = syms.size
@@ -186,7 +205,7 @@ def encode_with_hyperprior(
                 per_tensor.append({"tensor_idx": t_idx, "n": 0, "bytes": 0})
                 continue
             t_idx_t = torch.full((n,), t_idx, dtype=torch.long)
-            pos_t = torch.from_numpy((np.arange(n, dtype=np.float32) / max(n - 1, 1)))
+            pos_t = torch.from_numpy(np.arange(n, dtype=np.float32) / max(n - 1, 1))
             mean, log_scale = model(t_idx_t, pos_t)
             mean_np = mean.cpu().numpy().astype(np.float64)
             scale_np = np.exp(log_scale.cpu().numpy().astype(np.float64))
@@ -258,9 +277,7 @@ def run_codec(state_dict_path: Path, *, device: str, epochs: int, batch_size: in
     return {
         "schema": SCHEMA_VERSION,
         "tool": TOOL_NAME,
-        "evidence_grade": "[MPS-research-signal]",
-        "score_claim": False,
-        "promotion_eligible": False,
+        **proxy_evidence_contract(),
         "input_state_dict": str(state_dict_path),
         "device": device,
         "epochs": epochs,
@@ -313,11 +330,11 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"\nmanifest: {args.output_json}")
     print(f"\narchive_bytes: {manifest['archive_bytes']:,} B  [MPS-research-signal]")
-    print(f"  vs cathedral_autopilot prediction: 158,000 B")
+    print("  vs cathedral_autopilot prediction: 158,000 B")
     delta = manifest["archive_bytes"] - 158_000
     verdict = "BEAT" if delta < -1000 else "TIED" if abs(delta) <= 1000 else "MISSED"
     print(f"  delta: {delta:+,} B ({verdict} prediction)")
-    print(f"\n  vs brotli baseline: 178,144 B")
+    print("\n  vs brotli baseline: 178,144 B")
     delta_brotli = manifest["archive_bytes"] - 178_144
     print(f"  delta: {delta_brotli:+,} B "
           f"({'BEAT' if delta_brotli < 0 else 'LOSES'} brotli)")
@@ -329,6 +346,7 @@ def main(argv: list[str] | None = None) -> int:
         evidence_row = {
             "technique": "compressai_balle_hyperprior",
             "empirical_archive_bytes": manifest["archive_bytes"],
+            **proxy_evidence_contract(),
             "source": f"[MPS-research-signal] {args.output_json}",
             "timestamp": _dt.datetime.now(_dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         }

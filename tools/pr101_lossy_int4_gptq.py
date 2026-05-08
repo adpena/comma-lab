@@ -545,11 +545,9 @@ def gptq_quantize_tensor(
 
     # Optional column reordering by descending Hessian diagonal (act-order).
     perm = np.arange(in_features, dtype=np.int64)
-    inv_perm = perm.copy()
     if cfg.actorder:
         diag_h = np.diag(h)
         perm = np.argsort(-diag_h)
-        inv_perm = np.argsort(perm)
         # Permute weight COLUMNS, scales COLUMNS, and Hessian (rows AND cols).
         weight_p = weight[:, perm].astype(np.float64).copy()
         scales_p = scales_matrix[:, perm].copy()

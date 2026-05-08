@@ -73,6 +73,7 @@ PR106_HEADER_MAGIC = 0xFF
 
 DEFAULT_TARGET_MODES = ["contest_exact_eval"]
 DEFAULT_DEPLOYMENT_TARGET = "t4_contest_runtime"
+REPORT_SCHEMA_VERSION = "pr106_archive_substitution_surgery.v2"
 
 
 @dataclass
@@ -116,11 +117,28 @@ class SubstitutionReport:
     sha256_input_latents_sidecar: str
     sha256_output_latents_sidecar: str
 
+    schema_version: str = REPORT_SCHEMA_VERSION
+    evidence_grade: str = "archive_construction_only"
+    score_claim: bool = False
+    ready_for_exact_eval_dispatch: bool = False
+    dispatch_attempted: bool = False
+
+    archive_container_changed: bool = False
+    archive_byte_count_changed: bool = False
+    inner_member_payload_changed: bool = False
+    decoder_payload_changed: bool = False
+    latents_sidecar_payload_changed: bool = False
+    decoder_preserved: bool = False
+    latents_sidecar_preserved: bool = False
+    header_decoder_len_matches_output_decoder: bool = False
+
     # Codex dispatch-gate contract (2026-05-07)
     target_modes: list[str] = field(default_factory=lambda: list(DEFAULT_TARGET_MODES))
     deployment_target: str = DEFAULT_DEPLOYMENT_TARGET
     score_affecting_payload_changed: bool = False
     charged_bits_changed: bool = False
+    charged_byte_count_changed: bool = False
+    exact_eval_blockers: list[str] = field(default_factory=list)
 
     notes: list[str] = field(default_factory=list)
 
@@ -178,6 +196,18 @@ def _build_report(
         != output_packed.latents_and_sidecar_brotli
     )
     payload_changed = decoder_changed or tail_changed
+    input_archive_sha = _sha256(input_archive.read_bytes())
+    output_archive_sha = _sha256(output_archive.read_bytes())
+    input_inner_sha = _sha256(input_inner)
+    output_inner_sha = _sha256(output_inner)
+    archive_byte_count_changed = input_archive.stat().st_size != output_archive.stat().st_size
+    exact_eval_blockers = [
+        "exact_runtime_parity_not_supplied",
+        "matching_lane_dispatch_claim_not_supplied",
+        "contest_cuda_auth_eval_not_run",
+    ]
+    if not payload_changed:
+        exact_eval_blockers.insert(0, "score_affecting_payload_not_changed")
     return SubstitutionReport(
         input_archive=str(input_archive),
         output_archive=str(output_archive),
@@ -199,18 +229,35 @@ def _build_report(
             len(output_packed.latents_and_sidecar_brotli)
             - len(input_packed.latents_and_sidecar_brotli)
         ),
-        sha256_input_archive=_sha256(input_archive.read_bytes()),
-        sha256_output_archive=_sha256(output_archive.read_bytes()),
-        sha256_input_inner_member=_sha256(input_inner),
-        sha256_output_inner_member=_sha256(output_inner),
+        sha256_input_archive=input_archive_sha,
+        sha256_output_archive=output_archive_sha,
+        sha256_input_inner_member=input_inner_sha,
+        sha256_output_inner_member=output_inner_sha,
         sha256_input_decoder=_sha256(input_packed.decoder_packed_brotli),
         sha256_output_decoder=_sha256(output_packed.decoder_packed_brotli),
         sha256_input_latents_sidecar=_sha256(input_packed.latents_and_sidecar_brotli),
         sha256_output_latents_sidecar=_sha256(output_packed.latents_and_sidecar_brotli),
+        archive_container_changed=input_archive_sha != output_archive_sha,
+        archive_byte_count_changed=archive_byte_count_changed,
+        inner_member_payload_changed=input_inner_sha != output_inner_sha,
+        decoder_payload_changed=decoder_changed,
+        latents_sidecar_payload_changed=tail_changed,
+        decoder_preserved=not decoder_changed,
+        latents_sidecar_preserved=not tail_changed,
+        header_decoder_len_matches_output_decoder=(
+            output_inner[:1] == bytes([PR106_HEADER_MAGIC])
+            and int.from_bytes(output_inner[1:4], "little")
+            == len(output_packed.decoder_packed_brotli)
+        ),
         target_modes=list(target_modes),
         deployment_target=deployment_target,
         score_affecting_payload_changed=payload_changed,
+        # Historical field retained for callers that used it as a payload-change
+        # sentinel. Use archive_container_changed / charged_byte_count_changed
+        # for container and rate accounting.
         charged_bits_changed=payload_changed,
+        charged_byte_count_changed=archive_byte_count_changed,
+        exact_eval_blockers=exact_eval_blockers,
         notes=notes,
     )
 

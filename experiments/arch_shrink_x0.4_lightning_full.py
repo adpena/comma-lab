@@ -398,6 +398,7 @@ log "=== Stage 6a: hash-pinned DALI bootstrap ==="
 
 log "=== Stage 6b: contest_auth_eval [contest-CUDA] ==="
 rm -rf "$WORKSPACE/{auth_eval_dir}"
+export UV_PROJECT_ENVIRONMENT="$WORKSPACE/{auth_eval_dir}/uv_project_env"
 "$PYBIN" -u experiments/contest_auth_eval.py \\
     --archive "$ARCHIVE" \\
     --inflate-sh submissions/robust_current/inflate.sh \\
@@ -413,15 +414,15 @@ fi
 
 # Capture the RESULT_JSON line into a structured artifact.
 "$PYBIN" -c "
-import json, re
+import json
 log_path = '{auth_eval_log}'
 out_path = '{auth_eval_result_json}'
-with open(log_path) as f:
-    text = f.read()
-m = re.search(r'RESULT_JSON\\s*(\\{{.*?\\}})', text, re.DOTALL)
-if not m:
-    raise SystemExit('FATAL: no RESULT_JSON in auth_eval log')
-data = json.loads(m.group(1))
+work_json = '$WORKSPACE/{auth_eval_dir}/contest_auth_eval.json'
+try:
+    with open(work_json) as f:
+        data = json.load(f)
+except FileNotFoundError as exc:
+    raise SystemExit(f'FATAL: missing structured contest_auth_eval JSON: {{work_json}}') from exc
 data['archive_path'] = '$ARCHIVE'
 data['archive_bytes'] = int('$ARCHIVE_BYTES')
 data['lane_id'] = '{LANE_ID}'

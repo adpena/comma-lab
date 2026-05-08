@@ -58,7 +58,30 @@ ARCHIVE_OVERHEAD_BYTES = 16_094
 N_SYMBOLS = 2 * N_QUANT + 1  # 255
 SYMBOL_AXIS = np.arange(-N_QUANT, N_QUANT + 1, dtype=np.float64)
 EVIDENCE_GRADE = "[CPU-prep empirical reactivation]"
+EVIDENCE_SEMANTICS = "cpu_kalle_fold_8comp_byte_anchor_no_decoder_no_score"
+DISPATCH_BLOCKERS = (
+    "hierarchical_mixture_decoder_not_wired_into_runtime_packet",
+    "no_archive_substitution_performed",
+    "no_decode_roundtrip_fixture_for_full_packet",
+    "missing_exact_cuda_auth_eval",
+    "requires_exact_cuda_auth_eval_before_any_score_use",
+)
 N_COMPONENTS = 8
+
+
+def proxy_evidence_contract() -> dict[str, object]:
+    return {
+        "evidence_grade": EVIDENCE_GRADE,
+        "evidence_marker": EVIDENCE_GRADE,
+        "evidence_semantics": EVIDENCE_SEMANTICS,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "proxy_row": True,
+        "dispatch_blockers": list(DISPATCH_BLOCKERS),
+    }
 
 
 def empirical_pmf(symbols_i8: np.ndarray) -> np.ndarray:
@@ -91,14 +114,21 @@ def canonical_shapes_8(s1: float, s2: float, b1: float, b2: float, c1: float, c2
     b1, b2 = max(b1, 1e-3), max(b2, 1e-3)
     c1, c2 = max(c1, 1e-3), max(c2, 1e-3)
 
-    g1 = np.exp(-0.5 * (SYMBOL_AXIS / s1) ** 2); g1 /= g1.sum()
-    g2 = np.exp(-0.5 * (SYMBOL_AXIS / s2) ** 2); g2 /= g2.sum()
-    l1 = np.exp(-np.abs(SYMBOL_AXIS) / b1); l1 /= l1.sum()
-    l2 = np.exp(-np.abs(SYMBOL_AXIS) / b2); l2 /= l2.sum()
-    d = np.zeros(N_SYMBOLS, dtype=np.float64); d[N_QUANT] = 1.0
+    g1 = np.exp(-0.5 * (SYMBOL_AXIS / s1) ** 2)
+    g1 /= g1.sum()
+    g2 = np.exp(-0.5 * (SYMBOL_AXIS / s2) ** 2)
+    g2 /= g2.sum()
+    l1 = np.exp(-np.abs(SYMBOL_AXIS) / b1)
+    l1 /= l1.sum()
+    l2 = np.exp(-np.abs(SYMBOL_AXIS) / b2)
+    l2 /= l2.sum()
+    d = np.zeros(N_SYMBOLS, dtype=np.float64)
+    d[N_QUANT] = 1.0
     u = np.full(N_SYMBOLS, 1.0 / N_SYMBOLS)
-    cy1 = 1.0 / (np.pi * c1 * (1.0 + (SYMBOL_AXIS / c1) ** 2)); cy1 /= cy1.sum()
-    cy2 = 1.0 / (np.pi * c2 * (1.0 + (SYMBOL_AXIS / c2) ** 2)); cy2 /= cy2.sum()
+    cy1 = 1.0 / (np.pi * c1 * (1.0 + (SYMBOL_AXIS / c1) ** 2))
+    cy1 /= cy1.sum()
+    cy2 = 1.0 / (np.pi * c2 * (1.0 + (SYMBOL_AXIS / c2) ** 2))
+    cy2 /= cy2.sum()
     return [g1, g2, l1, l2, d, u, cy1, cy2]
 
 
@@ -109,19 +139,25 @@ def mixture_pmf_8(params: np.ndarray) -> np.ndarray:
     params[8:14]  = log-scales for the 6 parametric components (s1,s2,b1,b2,c1,c2)
     """
     w_logits = params[:8]
-    w = np.exp(w_logits - np.max(w_logits)); w /= w.sum()
-    s1 = float(np.exp(params[8])); s2 = float(np.exp(params[9]))
-    b1 = float(np.exp(params[10])); b2 = float(np.exp(params[11]))
-    c1 = float(np.exp(params[12])); c2 = float(np.exp(params[13]))
+    w = np.exp(w_logits - np.max(w_logits))
+    w /= w.sum()
+    s1 = float(np.exp(params[8]))
+    s2 = float(np.exp(params[9]))
+    b1 = float(np.exp(params[10]))
+    b2 = float(np.exp(params[11]))
+    c1 = float(np.exp(params[12]))
+    c2 = float(np.exp(params[13]))
     shapes = canonical_shapes_8(s1, s2, b1, b2, c1, c2)
     pmf = sum(w[i] * shapes[i] for i in range(8))
-    pmf = np.maximum(pmf, 1e-12); pmf /= pmf.sum()
+    pmf = np.maximum(pmf, 1e-12)
+    pmf /= pmf.sum()
     return pmf
 
 
 def fit_mixture_8(target_pmf: np.ndarray) -> tuple[np.ndarray, float]:
     """Fit 8-comp mixture via L-BFGS-B with multiple inits to escape local optima."""
-    target = np.maximum(target_pmf, 1e-12); target /= target.sum()
+    target = np.maximum(target_pmf, 1e-12)
+    target /= target.sum()
 
     def neg_log_lik(params: np.ndarray) -> float:
         pmf = mixture_pmf_8(params)
@@ -199,7 +235,8 @@ def run_codec(state_dict_path: Path) -> dict:
         total_kl_bits += kl_bits * n
         # Resolved mixture weights for forensic
         w_logits = params[:8]
-        w = np.exp(w_logits - np.max(w_logits)); w /= w.sum()
+        w = np.exp(w_logits - np.max(w_logits))
+        w /= w.sum()
         per_tensor.append({
             "name": name,
             "n_elements": n,
@@ -227,9 +264,7 @@ def run_codec(state_dict_path: Path) -> dict:
     return {
         "schema": SCHEMA_VERSION,
         "tool": TOOL_NAME,
-        "evidence_grade": EVIDENCE_GRADE,
-        "score_claim": False,
-        "promotion_eligible": False,
+        **proxy_evidence_contract(),
         "input_state_dict": str(state_dict_path),
         "input_state_dict_sha256": sha256_file(state_dict_path),
         "n_components": N_COMPONENTS,
@@ -273,10 +308,10 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"manifest: {args.output_json}\n")
     print(f"archive_bytes: {manifest['archive_bytes']:,} B")
-    print(f"  vs prior 4-component result: 205,963 B")
+    print("  vs prior 4-component result: 205,963 B")
     delta_4c = manifest["archive_bytes"] - 205_963
     print(f"  delta vs 4-comp: {delta_4c:+,} B")
-    print(f"  vs brotli baseline: 178,144 B")
+    print("  vs brotli baseline: 178,144 B")
     delta_brotli = manifest["archive_bytes"] - 178_144
     print(f"  delta vs brotli: {delta_brotli:+,} B "
           f"({'BEAT' if delta_brotli < 0 else 'TIES' if abs(delta_brotli) < 100 else 'LOSES'} brotli)")
@@ -289,6 +324,7 @@ def main(argv: list[str] | None = None) -> int:
         evidence_row = {
             "technique": "kalle_fold_mixture_canonical_shapes",
             "empirical_archive_bytes": manifest["archive_bytes"],
+            **proxy_evidence_contract(),
             "source": (
                 f"[CPU-prep empirical reactivation] {args.output_json} "
                 f"8-component hierarchical mixture (Gaussian x2 + Laplace x2 + delta + uniform + Cauchy x2)"

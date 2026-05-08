@@ -1,32 +1,35 @@
 #!/usr/bin/env python3
-"""PR101 analytical lossy coarsening — beats both prior CompressAI hyperprior
-attempts AND the brotli baseline at controlled rel_err.
+"""PR101 analytical lossy coarsening — byte/roundtrip proxy against the PR101
+brotli baseline at controlled rel_err.
 
 Finding (2026-05-08)
 --------------------
 A simple per-tensor quantization-step (K) sweep, where each PR101 tensor's
 INT8 symbols are rounded to the nearest multiple of K then brotli-compressed,
-beats the canonical PR101 brotli baseline (178,144 B) by 18-22 KB at rel_err
-under 5%:
+is byte-lower than the canonical PR101 brotli baseline (178,144 B) by 18-22 KB
+at rel_err under 5%:
 
-  budget=0.05: rel_err=0.0386, archive=156,344 B (-21,800 B)  [<<< wins]
+  budget=0.05: rel_err=0.0386, archive=156,344 B (-21,800 B)  [byte proxy]
   budget=0.03: rel_err=0.0149, archive=170,200 B  (-7,944 B)
   budget=0.02: rel_err=0.0019, archive=176,990 B  (-1,154 B)
 
-Both prior CompressAI experiments
+Prior CompressAI smoke experiments
 (``tools/pr101_compressai_balle_hyperprior_full.py`` rel_err 0.98;
 ``tools/pr101_compressai_factorized_prior.py`` rel_err 0.67;
-``tools/pr101_neural_weight_codec_NWC.py`` rel_err 0.92) FAIL to reach
-rel_err < 5% because:
+``tools/pr101_neural_weight_codec_NWC.py`` rel_err 0.92) did not reach
+rel_err < 5% in their measured configs. That is not a family kill; it only
+defines the local R(D) proxy they must beat.
 
 1. Per-tensor scale heterogeneity (each tensor has its own dynamic range) is
    exactly what the per-tensor K naturally exploits — neural codecs need to
    re-learn this per-tensor structure at high model-overhead cost.
-2. PR101 symbols are near-iid by construction (joint-entropy floor 148-162 KB
+2. PR101 symbols appear near-iid in the measured proxy streams (joint-entropy floor 148-162 KB
    per ``feedback_pr101_joint_entropy_floor_subagent_verdict_20260507.md``);
-   neural codecs cannot exploit cross-tensor MI better than brotli already does.
-3. The 178 KB brotli baseline is already 1% above the marginal entropy
-   (186,584 B) — the deployable headroom is in the lossy regime, not lossless.
+   this narrows the measured lossless-coder headroom without proving a
+   neural-codec impossibility.
+3. The lossless brotli baseline is near the measured marginal-entropy proxy;
+   the observed byte headroom here is lossy and must be validated by runtime
+   decode plus exact CUDA auth eval before it can affect score.
 
 This tool is the analytical foundation: it finds the best per-tensor K
 schedule for a given rel_err budget and emits the archive bytes. It serves
@@ -43,14 +46,14 @@ Total: payload + 28 + 16,094
 
 CLAUDE.md compliance: pure-CPU analytical, evidence tagged
 ``[MPS-research-signal]`` per the user mandate (no scorer-load, no score
-claim — just byte + roundtrip-rel_err).
+claim — just byte + roundtrip-rel_err). Any score, promotion, rank, or kill
+requires exact CUDA auth eval on a byte-closed runtime packet.
 """
 from __future__ import annotations
 
 import argparse
 import datetime as _dt
 import json
-import struct
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -73,6 +76,14 @@ SCHEMA_VERSION = "pr101_lossy_coarsening_analytical.v1"
 ARCHIVE_OVERHEAD_BYTES = 16_094
 PR101_BROTLI_BASELINE_BYTES = 178_144
 N_TENSORS = len(FIXED_STATE_SCHEMA)
+DISPATCH_BLOCKERS = [
+    "missing_exact_cuda_auth_eval",
+    "missing_exact_cuda_auth_eval_on_lossy_decoder",
+    "no_runtime_dequantize_path_built",
+    "byte_closed_lossy_coarsening_runtime_packet_missing",
+    "requires_exact_cuda_auth_eval_before_any_score_use",
+    "proxy_rel_err_not_score_evidence",
+]
 
 
 @dataclass
@@ -119,7 +130,7 @@ def encode_with_per_tensor_K(
     abs_orig_total = 0.0
     abs_err_total = 0.0
     rounded_chunks: list[np.ndarray] = []
-    for tb, K in zip(tensors, Ks):
+    for tb, K in zip(tensors, Ks, strict=True):
         rounded = np.round(tb.raw / K) * K
         err = float(np.abs(rounded - tb.raw).astype(np.float64).sum())
         abs_err_total += err
@@ -203,8 +214,16 @@ def main(argv: list[str] | None = None) -> int:
         "schema": SCHEMA_VERSION,
         "tool": TOOL_NAME,
         "evidence_grade": "[MPS-research-signal]",
+        "evidence_semantics": "mps_or_cpu_byte_roundtrip_proxy_no_score",
         "score_claim": False,
         "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "proxy_row": True,
+        "family_falsified": False,
+        "falsification_scope": "none_proxy_anchor_only",
+        "dispatch_blockers": list(DISPATCH_BLOCKERS),
         "input_state_dict": str(args.state_dict),
         "n_real_symbols": n_real,
         "uniform_K_baselines": [],
@@ -213,7 +232,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # Uniform-K baselines (single K applied to all tensors)
     print()
-    print(f"--- uniform-K baselines (single K everywhere) ---")
+    print("--- uniform-K baselines (single K everywhere) ---")
     print(f"{'K':>4} {'rel_err':>9} {'payload_B':>11} {'archive_B':>11} {'delta_baseline':>14}")
     uniform_Ks = [int(x) for x in args.uniform_Ks.split(",") if x.strip()]
     for K in uniform_Ks:
@@ -233,7 +252,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # Per-tensor K (each tensor uses its own K, chosen for given budget)
     print()
-    print(f"--- per-tensor K (each tensor has its own K within rel_err budget) ---")
+    print("--- per-tensor K (each tensor has its own K within rel_err budget) ---")
     print(f"{'budget':>9} {'rel_err':>9} {'payload_B':>11} {'archive_B':>11} {'delta_baseline':>14}")
     budgets = [float(x) for x in args.budgets.split(",") if x.strip()]
     for budget in budgets:
@@ -275,7 +294,7 @@ def main(argv: list[str] | None = None) -> int:
     print("[lossy-coarsen] SUMMARY")
     print("=" * 70)
     if best is not None:
-        print(f"BEST (rel_err < 0.05 AND beats baseline):")
+        print("BEST (rel_err < 0.05 AND byte-lower than baseline):")
         print(f"  kind          : {best_kind}")
         print(f"  config        : {('budget=' + str(best['budget'])) if 'budget' in best else ('K=' + str(best['K']))}")
         print(f"  archive_bytes : {best['archive_bytes']:,} B  [MPS-research-signal]")
@@ -299,34 +318,36 @@ def main(argv: list[str] | None = None) -> int:
     timestamp = _dt.datetime.now(_dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     if best is not None:
         verdict = (
-            f"BEAT-PR101-brotli ({best['delta_baseline']:+,} B) at rel_err "
-            f"{best['rel_err']:.4f}; analytical-lossy-coarsening; "
-            f"REOPEN-FOR-DISPATCH-CONSIDERATION"
+            f"BYTE-LOWER-THAN-PR101-brotli ({best['delta_baseline']:+,} B) "
+            f"at proxy rel_err {best['rel_err']:.4f}; "
+            "requires byte-closed runtime packet and exact CUDA auth eval"
         )
         evidence_row = {
             "technique": "lossy_coarsening_analytical",
             "empirical_archive_bytes": best["archive_bytes"],
             "empirical_rel_err": best["rel_err"],
             "evidence_grade": "[MPS-research-signal]",
+            "evidence_semantics": all_results["evidence_semantics"],
             "score_claim": False,
             "promotion_eligible": False,
             "rank_or_kill_eligible": False,
             "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+            "proxy_row": True,
             "source": (
                 f"[MPS-research-signal] {args.output_dir}/manifest.json "
-                f"(analytical per-tensor K coarsening; CompressAI hyperpriors "
-                f"all FAIL rel_err < 0.05 on PR101 substrate, this analytical "
-                f"baseline succeeds where neural codecs cannot)"
+                f"(analytical per-tensor K coarsening; prior CompressAI smoke "
+                f"configs did not reach rel_err < 0.05 on PR101 substrate; "
+                f"not a neural-codec family kill)"
             ),
             "timestamp": timestamp,
             "contest_dispatch_verdict": verdict,
             "supersedes_prior_DEFERRED_audit": True,
             "score_affecting_payload_changed": True,
             "charged_bits_changed": True,
-            "dispatch_blockers": [
-                "missing_exact_cuda_auth_eval_on_lossy_decoder",
-                "no_runtime_dequantize_path_built",
-            ],
+            "family_falsified": False,
+            "falsification_scope": "none_proxy_anchor_only",
+            "dispatch_blockers": list(DISPATCH_BLOCKERS),
         }
         args.evidence_jsonl.parent.mkdir(parents=True, exist_ok=True)
         with args.evidence_jsonl.open("a", encoding="utf-8") as f:

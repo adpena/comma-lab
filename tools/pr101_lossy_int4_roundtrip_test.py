@@ -187,6 +187,7 @@ def measure_full_roundtrip(state_dict_path: Path, block_size: int) -> dict:
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "dispatch_attempted": False,
+        "proxy_row": True,
         "cuda_eval_worth_testing": cuda_eval_worth_testing,
         "family_falsified": False,
         "falsification_scope": "measured_configuration_only",
@@ -239,7 +240,7 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     print(f"\nmanifest: {args.output_json}\n")
-    print(f"  block_size | weighted_avg_rel_err | max_p99 | max_max | verdict")
+    print("  block_size | weighted_avg_rel_err | max_p99 | max_max | verdict")
     for r in runs:
         print(f"  {r['block_size']:>10} | {r['weighted_avg_rel_err_pct']:>18.4f}% | "
               f"{r['max_p99_rel_err_pct']:>6.3f}% | {r['max_max_rel_err_pct']:>6.3f}% | "
@@ -249,10 +250,10 @@ def main(argv: list[str] | None = None) -> int:
     print(f"PRIMARY VERDICT (block_size={primary['block_size']}): {primary['verdict']}")
     print(f"  reason: {primary['verdict_reason']}")
     if primary["cuda_eval_worth_testing"]:
-        print(f"\nNEXT: build a byte-closed int4 runtime packet before any CUDA auth eval.")
+        print("\nNEXT: build a byte-closed int4 runtime packet before any CUDA auth eval.")
     else:
-        print(f"\nNEXT: do NOT dispatch CUDA. Higher precision int5/int6 may help; "
-              f"or fall back to int8 baseline.")
+        print("\nNEXT: do NOT dispatch CUDA. Higher precision int5/int6 may help; "
+              "or fall back to int8 baseline.")
     return 0
 
 

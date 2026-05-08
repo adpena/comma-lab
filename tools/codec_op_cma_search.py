@@ -115,6 +115,10 @@ class Evaluation:
     shape_mismatch_tensor_keys: list[str] = field(default_factory=list)
     decoded_tensor_keys: list[str] = field(default_factory=list)
     matched_tensor_keys: list[str] = field(default_factory=list)
+    materialized_payload_path: str | None = None
+    materialized_payload_bytes: int | None = None
+    materialized_payload_sha256: str | None = None
+    materialized_payload_contract: str | None = None
     decode_coverage_required: bool = True
     partial_decode_waived: bool = False
     partial_decode_waiver_reason: str | None = None
@@ -174,7 +178,28 @@ class SearchReport:
     partial_decode_waiver_reason: str | None = None
 
 
+def _first_sys_path_module_file(module: str) -> Path | None:
+    rel = Path(*module.split("."))
+    for raw_entry in sys.path:
+        base = Path(raw_entry or ".")
+        module_file = (base / rel).with_suffix(".py")
+        if module_file.is_file():
+            return module_file.resolve()
+        package_init = base / rel / "__init__.py"
+        if package_init.is_file():
+            return package_init.resolve()
+    return None
+
+
 def _import_codec_op(module: str, class_name: str):
+    importlib.invalidate_caches()
+    cached = sys.modules.get(module)
+    expected_file = _first_sys_path_module_file(module)
+    if cached is not None and expected_file is not None:
+        cached_file_raw = getattr(cached, "__file__", None)
+        cached_file = Path(cached_file_raw).resolve() if cached_file_raw else None
+        if cached_file is not None and cached_file != expected_file:
+            del sys.modules[module]
     try:
         mod = importlib.import_module(module)
     except ImportError as exc:
@@ -342,6 +367,8 @@ def _evaluate(
     *,
     require_full_decode: bool = True,
     partial_decode_waiver_reason: str | None = None,
+    materialized_payload_output_dir: Path | None = None,
+    materialized_payload_contract: str | None = None,
 ) -> Evaluation:
     """Run one encode/decode cycle and record fitness."""
     timestamp = _utc_now()
@@ -466,6 +493,13 @@ def _evaluate(
         # error; the codec must roundtrip cleanly to be useful). Lower
         # is better.
         fitness = float(bytes_out) + 1e6 * rms
+        materialized = _maybe_materialize_payload(
+            result.blob,
+            eval_idx=eval_idx,
+            expected_bytes=bytes_out,
+            output_dir=materialized_payload_output_dir,
+            payload_contract=materialized_payload_contract,
+        )
         return Evaluation(
             eval_idx=eval_idx,
             params=dict(params),
@@ -480,6 +514,10 @@ def _evaluate(
             shape_mismatch_tensor_keys=shape_mismatch_keys,
             decoded_tensor_keys=decoded_tensor_keys,
             matched_tensor_keys=matched_keys,
+            materialized_payload_path=materialized.get("path"),
+            materialized_payload_bytes=materialized.get("bytes"),
+            materialized_payload_sha256=materialized.get("sha256"),
+            materialized_payload_contract=materialized.get("contract"),
             decode_coverage_required=require_full_decode,
             partial_decode_waived=partial_decode_waived,
             partial_decode_waiver_reason=partial_decode_waiver_reason,
@@ -503,6 +541,35 @@ def _evaluate(
         )
 
 
+def _maybe_materialize_payload(
+    blob: Any,
+    *,
+    eval_idx: int,
+    expected_bytes: int,
+    output_dir: Path | None,
+    payload_contract: str | None,
+) -> dict[str, Any]:
+    if output_dir is None:
+        return {}
+    if not isinstance(blob, bytes | bytearray):
+        raise ValueError("CodecOp result.blob must be bytes when materializing payloads")
+    payload = bytes(blob)
+    if len(payload) != int(expected_bytes):
+        raise ValueError(
+            f"CodecOp result bytes_out mismatch: bytes_out={expected_bytes} "
+            f"len(blob)={len(payload)}"
+        )
+    output_dir.mkdir(parents=True, exist_ok=True)
+    path = output_dir / f"eval_{eval_idx:05d}.section"
+    path.write_bytes(payload)
+    return {
+        "path": path.as_posix(),
+        "bytes": len(payload),
+        "sha256": hashlib.sha256(payload).hexdigest(),
+        "contract": payload_contract or "raw_codecop_encode_blob",
+    }
+
+
 def random_search(
     op_cls,
     state_dict: dict[str, torch.Tensor],
@@ -512,6 +579,8 @@ def random_search(
     *,
     require_full_decode: bool = True,
     partial_decode_waiver_reason: str | None = None,
+    materialized_payload_output_dir: Path | None = None,
+    materialized_payload_contract: str | None = None,
 ) -> list[Evaluation]:
     """Deterministic random-search fallback.
 
@@ -533,6 +602,8 @@ def random_search(
             0,
             require_full_decode=require_full_decode,
             partial_decode_waiver_reason=partial_decode_waiver_reason,
+            materialized_payload_output_dir=materialized_payload_output_dir,
+            materialized_payload_contract=materialized_payload_contract,
         )
     )
     for i in range(1, max_evals):
@@ -553,6 +624,8 @@ def random_search(
                 i,
                 require_full_decode=require_full_decode,
                 partial_decode_waiver_reason=partial_decode_waiver_reason,
+                materialized_payload_output_dir=materialized_payload_output_dir,
+                materialized_payload_contract=materialized_payload_contract,
             )
         )
     return evaluations
@@ -567,6 +640,8 @@ def cma_es_search(
     *,
     require_full_decode: bool = True,
     partial_decode_waiver_reason: str | None = None,
+    materialized_payload_output_dir: Path | None = None,
+    materialized_payload_contract: str | None = None,
 ) -> list[Evaluation]:
     """CMA-ES search (when ``cmaes`` library is available).
 
@@ -585,6 +660,8 @@ def cma_es_search(
             seed=seed,
             require_full_decode=require_full_decode,
             partial_decode_waiver_reason=partial_decode_waiver_reason,
+            materialized_payload_output_dir=materialized_payload_output_dir,
+            materialized_payload_contract=materialized_payload_contract,
         )
 
     import numpy as np
@@ -606,6 +683,8 @@ def cma_es_search(
             0,
             require_full_decode=require_full_decode,
             partial_decode_waiver_reason=partial_decode_waiver_reason,
+            materialized_payload_output_dir=materialized_payload_output_dir,
+            materialized_payload_contract=materialized_payload_contract,
         )
     ]
     eval_idx = 1
@@ -630,6 +709,8 @@ def cma_es_search(
                 eval_idx,
                 require_full_decode=require_full_decode,
                 partial_decode_waiver_reason=partial_decode_waiver_reason,
+                materialized_payload_output_dir=materialized_payload_output_dir,
+                materialized_payload_contract=materialized_payload_contract,
             )
             evaluations.append(ev)
             objective = (
@@ -830,6 +911,10 @@ def append_atom_ledger_rows(
                 "shape_mismatch_tensor_keys": list(ev.shape_mismatch_tensor_keys),
                 "decoded_tensor_keys": list(ev.decoded_tensor_keys),
                 "matched_tensor_keys": list(ev.matched_tensor_keys),
+                "materialized_payload_path": ev.materialized_payload_path,
+                "materialized_payload_bytes": ev.materialized_payload_bytes,
+                "materialized_payload_sha256": ev.materialized_payload_sha256,
+                "materialized_payload_contract": ev.materialized_payload_contract,
                 "decode_coverage_required": ev.decode_coverage_required,
                 "decode_coverage_status": ev.decode_coverage_status,
                 "partial_decode_waived": ev.partial_decode_waived,
@@ -923,6 +1008,19 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Required custody note when --allow-partial-decode is used.",
     )
+    parser.add_argument(
+        "--materialized-payload-output-dir", type=Path, default=None,
+        help=(
+            "Optional directory where each successful CodecOp result.blob is "
+            "written as eval_<idx>.section for downstream monolithic bridge "
+            "custody. This does not make rows dispatchable."
+        ),
+    )
+    parser.add_argument(
+        "--materialized-payload-contract",
+        default=None,
+        help="Optional contract label attached to materialized payload files.",
+    )
     args = parser.parse_args(argv)
     if args.max_evals < 1:
         raise SystemExit("--max-evals must be >= 1")
@@ -941,12 +1039,16 @@ def main(argv: list[str] | None = None) -> int:
             op_cls, state_dict, specs, args.max_evals, seed=args.seed,
             require_full_decode=require_full_decode,
             partial_decode_waiver_reason=partial_decode_waiver_reason,
+            materialized_payload_output_dir=args.materialized_payload_output_dir,
+            materialized_payload_contract=args.materialized_payload_contract,
         )
     else:
         evaluations = random_search(
             op_cls, state_dict, specs, args.max_evals, seed=args.seed,
             require_full_decode=require_full_decode,
             partial_decode_waiver_reason=partial_decode_waiver_reason,
+            materialized_payload_output_dir=args.materialized_payload_output_dir,
+            materialized_payload_contract=args.materialized_payload_contract,
         )
 
     optimizer_name = (
@@ -999,6 +1101,9 @@ def main(argv: list[str] | None = None) -> int:
             evidence_row = {
                 "technique": args.evidence_technique_name or f"{args.module}.{args.class_name}",
                 "empirical_archive_bytes": int(report.best_eval.bytes_out),
+                "materialized_payload_path": report.best_eval.materialized_payload_path,
+                "materialized_payload_sha256": report.best_eval.materialized_payload_sha256,
+                "materialized_payload_contract": report.best_eval.materialized_payload_contract,
                 "evidence_grade": EVIDENCE_GRADE,
                 "evidence_semantics": EVIDENCE_SEMANTICS,
                 "target_modes": list(TARGET_MODES),

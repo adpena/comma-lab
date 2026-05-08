@@ -18,9 +18,9 @@ Workflow
    poll status with ``--poll-interval-sec``.  ``--once`` returns
    immediately after a single status check.
 3. On terminal status (``completed`` / ``stopped`` / ``failed``):
-   a. rsync ``experiments/results/lightning_batch/<job_name>/`` from the
-      Lightning Studio session via ``--ssh-target`` (the artifacts are
-      written by the Job's bash command into the staged workspace dir).
+   a. rsync ``experiments/results/lightning_batch/<job_name>/`` via
+      ``--ssh-target``.  The harvester tries both the live Studio checkout and
+      the persisted ``/teamspace/jobs/<sdk-job>/artifacts/pact/...`` mirror.
    b. Parse ``contest_auth_eval.json`` (the Job emits it from the
       ``RESULT_JSON`` line in ``auth_eval.log``).
    c. Append a ``[contest-CUDA]`` evidence row to
@@ -79,6 +79,18 @@ from tac.deploy.lightning.harvest_env import (
     require_lightning_harvest_values,
     rsync_progress_args,
 )
+from tac.deploy.lightning.round3_harvest import (
+    auth_eval_archive_size,
+    auth_eval_posenet_distortion,
+    auth_eval_rate,
+    auth_eval_score,
+    auth_eval_segnet_distortion,
+    classify_lightning_no_score_failure,
+    lightning_round3_remote_artifact_dirs,
+    require_contest_cuda_auth_eval,
+    sha256_file,
+    write_no_score_failure_classification,
+)
 
 LANE_ID = "arch_shrink_x0.4_lightning"
 LIGHTNING_ACTIVE_JOBS_PATH = REPO_ROOT / ".omx" / "state" / "lightning_active_jobs.json"
@@ -89,6 +101,13 @@ TERMINAL_STATUSES = {"completed", "succeeded", "failed", "stopped", "cancelled"}
 
 def _utc_now_iso() -> str:
     return dt.datetime.now(tz=dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _display_path(path: Path) -> Path:
+    try:
+        return path.relative_to(REPO_ROOT)
+    except ValueError:
+        return path
 
 
 def _load_active_jobs() -> list[dict[str, object]]:
@@ -177,28 +196,43 @@ def _rsync_artifacts(
     remote_pact: str,
     job_name: str,
 ) -> Path:
-    """rsync the Lightning Studio job's artifact directory back to local."""
+    """rsync live Studio and persisted SDK artifact dirs back to local."""
     if not shutil.which("rsync"):
         sys.exit("FATAL: rsync not on PATH; required for Lightning artifact harvest")
     local_dir = REPO_ROOT / "experiments" / "results" / "lightning_batch" / job_name
     local_dir.mkdir(parents=True, exist_ok=True)
-    remote_path = (
-        f"{ssh_target}:{remote_pact}/experiments/results/lightning_batch/{job_name}/"
-    )
-    cmd = [
-        "rsync",
-        "-az",
-        *rsync_progress_args("rsync"),
-        "-e",
-        "ssh -o ConnectTimeout=30 -o ServerAliveInterval=30",
-        remote_path,
-        str(local_dir) + "/",
-    ]
-    print(f"[harvest] rsync {remote_path} -> {local_dir}/")
-    result = subprocess.run(cmd, cwd=str(REPO_ROOT), check=False)
-    if result.returncode != 0:
+    failures: list[tuple[int, str]] = []
+    successes: list[str] = []
+    for remote_dir in lightning_round3_remote_artifact_dirs(
+        remote_pact=remote_pact,
+        job_name=job_name,
+    ):
+        remote_path = f"{ssh_target}:{remote_dir}"
+        cmd = [
+            "rsync",
+            "-az",
+            *rsync_progress_args("rsync"),
+            "-e",
+            "ssh -o ConnectTimeout=30 -o ServerAliveInterval=30",
+            remote_path,
+            str(local_dir) + "/",
+        ]
+        print(f"[harvest] rsync {remote_path} -> {local_dir}/")
+        result = subprocess.run(cmd, cwd=str(REPO_ROOT), check=False)
+        if result.returncode == 0:
+            successes.append(remote_path)
+            continue
+        failures.append((result.returncode, remote_path))
+        print(
+            f"[harvest] rsync fallback candidate failed rc={result.returncode}: "
+            f"{remote_path}"
+        )
+    if not successes:
+        rc, remote_path = failures[-1] if failures else (1, "<no artifact roots>")
+        if len(failures) > 1:
+            remote_path = "; ".join(path for _rc, path in failures)
         raise LightningHarvestRsyncError(
-            returncode=result.returncode,
+            returncode=rc,
             remote_path=remote_path,
         )
     return local_dir
@@ -218,7 +252,27 @@ def _parse_auth_eval_json(local_dir: Path) -> dict[str, object] | None:
                 print(f"[harvest] WARNING: corrupt {candidate}: {exc}")
                 continue
             if isinstance(data, dict):
+                data["_auth_eval_json_path"] = str(candidate)
                 return data
+    return None
+
+
+def _archive_path_stats(archive_path: Path | None) -> tuple[int | None, str | None]:
+    if archive_path is None or not archive_path.is_file():
+        return None, None
+    return archive_path.stat().st_size, sha256_file(archive_path)
+
+
+def _local_archive_path(local_dir: Path) -> Path | None:
+    candidates = [
+        local_dir / "archive.zip",
+        local_dir / "auth_eval_work" / "archive.zip",
+        *sorted(local_dir.glob("*.zip")),
+        *sorted(local_dir.glob("**/archive.zip")),
+    ]
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
     return None
 
 
@@ -230,34 +284,63 @@ def _emit_evidence_row(
     archive_path: Path | None,
 ) -> dict[str, object]:
     """Append a [contest-CUDA] row to the cathedral_autopilot evidence JSONL."""
-    score = auth_eval.get("score")
-    archive_bytes = auth_eval.get("archive_bytes")
-    if archive_bytes is None and archive_path is not None and archive_path.is_file():
-        archive_bytes = archive_path.stat().st_size
+    score = auth_eval_score(auth_eval)
+    if not isinstance(score, (int, float)):
+        raise SystemExit(
+            "FATAL: refusing [contest-CUDA] evidence row without numeric auth_eval score"
+        )
+    archive_bytes = auth_eval_archive_size(auth_eval)
+    if not isinstance(archive_bytes, int) or archive_bytes <= 0:
+        raise SystemExit(
+            "FATAL: refusing [contest-CUDA] evidence row without positive integer archive_bytes"
+        )
+    if archive_path is None or not archive_path.is_file():
+        raise SystemExit(
+            "FATAL: refusing [contest-CUDA] evidence row without local archive.zip custody"
+        )
+    expected_archive_bytes, expected_archive_sha256 = _archive_path_stats(archive_path)
+    require_contest_cuda_auth_eval(
+        auth_eval,
+        expected_archive_bytes=expected_archive_bytes,
+        expected_archive_sha256=expected_archive_sha256,
+    )
+    provenance = auth_eval.get("provenance") if isinstance(auth_eval.get("provenance"), dict) else {}
+    archive_sha256 = provenance.get("archive_sha256") if isinstance(provenance, dict) else None
+    auth_eval_json_path = auth_eval.get("_auth_eval_json_path")
+    if isinstance(auth_eval_json_path, str) and auth_eval_json_path:
+        auth_eval_json_display = str(_display_path(Path(auth_eval_json_path)))
+    else:
+        auth_eval_json_display = (
+            f"experiments/results/lightning_batch/{job_name}/contest_auth_eval.json"
+        )
     row = {
         "technique": "arch_shrink_x0.4_quantizr_class",
         "lane_id": LANE_ID,
         "job_name": job_name,
         "evidence_grade": "[contest-CUDA]",
+        "score_claim": False,
+        "promotion_eligible": False,
         "contest_dispatch_verdict": "completed",
         "score_contest_cuda": score,
         "empirical_archive_bytes": archive_bytes,
-        "posenet_distortion": auth_eval.get("posenet_distortion")
-        or auth_eval.get("pose_distortion"),
-        "segnet_distortion": auth_eval.get("segnet_distortion")
-        or auth_eval.get("seg_distortion"),
-        "rate": auth_eval.get("rate"),
+        "archive_sha256": archive_sha256,
+        "archive_bytes_match_expected": expected_archive_bytes is not None,
+        "archive_sha256_match_expected": expected_archive_sha256 is not None,
+        "posenet_distortion": auth_eval_posenet_distortion(auth_eval),
+        "segnet_distortion": auth_eval_segnet_distortion(auth_eval),
+        "rate": auth_eval_rate(auth_eval),
+        "archive_path": str(archive_path) if archive_path is not None else None,
         "source": (
             f"[contest-CUDA] Lightning T4 g4dn.2xlarge job={job_name} "
             f"profile=q_faithful_dilated_88k auth_eval_json="
-            f"experiments/results/lightning_batch/{job_name}/contest_auth_eval.json"
+            f"{auth_eval_json_display}"
         ),
         "timestamp": _utc_now_iso(),
     }
     evidence_out.parent.mkdir(parents=True, exist_ok=True)
     with evidence_out.open("a", encoding="utf-8") as f:
         f.write(json.dumps(row) + "\n")
-    print(f"[evidence] appended row to {evidence_out.relative_to(REPO_ROOT)}")
+    print(f"[evidence] appended row to {_display_path(evidence_out)}")
     return row
 
 
@@ -288,9 +371,9 @@ def _terminal_claim(
     print(f"[terminal-claim] status={status} job={job_name}")
     result = subprocess.run(cmd, cwd=str(REPO_ROOT), check=False)
     if result.returncode != 0:
-        print(
-            f"[terminal-claim] WARNING: claim_lane_dispatch.py rc={result.returncode}; "
-            "manual cleanup may be required"
+        raise RuntimeError(
+            f"terminal claim failed for job={job_name} status={status}: "
+            f"claim_lane_dispatch.py rc={result.returncode}"
         )
 
 
@@ -308,6 +391,19 @@ def _mark_row_terminal(
             if score is not None:
                 r["score_contest_cuda"] = score
             break
+
+
+def _close_terminal_failure(
+    *,
+    job_name: str,
+    status: str,
+    notes: str,
+) -> None:
+    _terminal_claim(job_name=job_name, status=status, notes=notes)
+    rows = _load_active_jobs()
+    _mark_row_terminal(rows, job_name=job_name, status_lower=status, score=None)
+    _save_active_jobs(rows)
+    sys.exit(notes)
 
 
 def _harvest_terminal(
@@ -345,33 +441,43 @@ def _harvest_terminal(
 
     auth_eval = _parse_auth_eval_json(local_dir)
     if auth_eval is None:
+        classification = classify_lightning_no_score_failure(local_dir)
+        classification_path = write_no_score_failure_classification(
+            local_dir,
+            classification,
+        )
+        status = str(classification["terminal_status"])
         notes = (
             f"harvest: no contest_auth_eval.json found in {local_dir}; "
-            "Job likely failed before Stage 3"
+            f"failure_class={classification['failure_class']} "
+            f"failure_domain={classification['failure_domain']} "
+            f"classification={_display_path(classification_path)}"
         )
-        _terminal_claim(
-            job_name=job_name, status="failed_no_auth_eval_json", notes=notes
+        _close_terminal_failure(job_name=job_name, status=status, notes=notes)
+
+    archive_path = _local_archive_path(local_dir)
+
+    try:
+        row = _emit_evidence_row(
+            evidence_out=args.evidence_out,
+            auth_eval=auth_eval,
+            job_name=job_name,
+            archive_path=archive_path,
         )
-        rows = _load_active_jobs()
-        _mark_row_terminal(
-            rows, job_name=job_name, status_lower="failed_no_auth_eval_json", score=None
+    except SystemExit as exc:
+        reason = str(exc) or "strict auth-eval custody validation failed"
+        notes = (
+            "harvest: contest_auth_eval.json present but rejected before evidence emission; "
+            f"reason={reason}; artifact=experiments/results/lightning_batch/{job_name}/"
+            "contest_auth_eval.json"
         )
-        _save_active_jobs(rows)
-        sys.exit(notes)
+        _close_terminal_failure(
+            job_name=job_name,
+            status="failed_invalid_auth_eval_custody",
+            notes=notes,
+        )
 
-    archive_path = local_dir / "archive.zip"
-    if not archive_path.is_file():
-        candidates = sorted(local_dir.glob("*.zip"))
-        archive_path = candidates[0] if candidates else None
-
-    row = _emit_evidence_row(
-        evidence_out=args.evidence_out,
-        auth_eval=auth_eval,
-        job_name=job_name,
-        archive_path=archive_path,
-    )
-
-    score = auth_eval.get("score")
+    score = auth_eval_score(auth_eval)
     if isinstance(score, (int, float)):
         score_tag = f"{float(score):.6f}".rstrip("0").rstrip(".")
         terminal_status = f"completed_score_{score_tag}"

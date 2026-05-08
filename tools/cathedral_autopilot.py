@@ -282,6 +282,26 @@ ARCH_TECHNIQUES = [
         },
     },
     {
+        "name": "lossy_coarsening_analytical",
+        "predicted_archive_bytes": 156_344,
+        "cost_hours": 3.0,
+        "cost_dollars": 5.0,
+        "risk": "lossy_high",
+        "evidence_grade": "[MPS-research-signal; requires exact CUDA review]",
+        "description": (
+            "Per-tensor K-step lossy coarsening of PR101 quantized renderer "
+            "symbols; byte proxy only until exact CUDA review clears a measured "
+            "config"
+        ),
+        "model_spec": {
+            "capacity_constraint": "28_uint8_per_tensor_K_values_plus_brotli_payload",
+            "architecture_class": "analytical_per_tensor_K_coarsening",
+            "substrate_constraint": "PR101_1d_quantized_renderer_symbols",
+            "canonical_shape_family": "round_to_nearest_per_tensor_step_size_K",
+            "variant_required": ["per_tensor_K_budget_search"],
+        },
+    },
+    {
         "name": "lossy_int4_quantization",
         "predicted_archive_bytes": 105_440,
         "cost_hours": 6.0,
@@ -325,6 +345,8 @@ class AutopilotPlan:
     target_score_gap_analysis: dict[str, Any] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)
     axis_priorities: list[dict[str, Any]] = field(default_factory=list)
+    evidence_semantics_report: dict[str, Any] = field(default_factory=dict)
+    validation_queue: list[dict[str, Any]] = field(default_factory=list)
 
 
 def _technique_score_after(
@@ -355,10 +377,23 @@ class TechniqueEvidence:
     evidence_marker: str = ""
     evidence_semantics: str = ""
     score_claim: bool | None = None
+    score_contest_cuda: float | None = None
     promotion_eligible: bool | None = None
     rank_or_kill_eligible: bool | None = None
     ready_for_exact_eval_dispatch: bool | None = None
+    contest_dispatch_verdict: str = ""
+    measured_config_status: str = ""
+    family_falsified: bool | None = None
+    method_family_retired: bool | None = None
+    exact_result_review_path: str = ""
+    falsification_scope: str = ""
+    reactivation_criteria: list[str] = field(default_factory=list)
     dispatch_blockers: list[str] = field(default_factory=list)
+    score_affecting_payload_changed: bool | None = None
+    charged_bits_changed: bool | None = None
+    cuda_eval_worth_testing: bool | None = None
+    byte_proxy_only: bool | None = None
+    proxy_row: bool | None = None
     source: str = ""
     timestamp: str = ""
 
@@ -401,6 +436,10 @@ def _load_evidence(path: Path) -> list[TechniqueEvidence]:
             score_claim=(
                 bool(r["score_claim"]) if r.get("score_claim") is not None else None
             ),
+            score_contest_cuda=(
+                float(r["score_contest_cuda"])
+                if r.get("score_contest_cuda") is not None else None
+            ),
             promotion_eligible=(
                 bool(r["promotion_eligible"])
                 if r.get("promotion_eligible") is not None else None
@@ -413,9 +452,47 @@ def _load_evidence(path: Path) -> list[TechniqueEvidence]:
                 bool(r["ready_for_exact_eval_dispatch"])
                 if r.get("ready_for_exact_eval_dispatch") is not None else None
             ),
+            contest_dispatch_verdict=str(r.get("contest_dispatch_verdict", "")),
+            measured_config_status=str(r.get("measured_config_status", "")),
+            family_falsified=(
+                bool(r["family_falsified"])
+                if r.get("family_falsified") is not None else None
+            ),
+            method_family_retired=(
+                bool(r["method_family_retired"])
+                if r.get("method_family_retired") is not None else None
+            ),
+            exact_result_review_path=str(
+                r.get("exact_result_review_path")
+                or r.get("exact_result_review_packet")
+                or ""
+            ),
+            falsification_scope=str(r.get("falsification_scope", "")),
+            reactivation_criteria=[
+                str(item) for item in r.get("reactivation_criteria", [])
+            ] if isinstance(r.get("reactivation_criteria", []), list) else [],
             dispatch_blockers=[
                 str(blocker) for blocker in r.get("dispatch_blockers", [])
             ] if isinstance(r.get("dispatch_blockers", []), list) else [],
+            score_affecting_payload_changed=(
+                bool(r["score_affecting_payload_changed"])
+                if r.get("score_affecting_payload_changed") is not None else None
+            ),
+            charged_bits_changed=(
+                bool(r["charged_bits_changed"])
+                if r.get("charged_bits_changed") is not None else None
+            ),
+            cuda_eval_worth_testing=(
+                bool(r["cuda_eval_worth_testing"])
+                if r.get("cuda_eval_worth_testing") is not None else None
+            ),
+            byte_proxy_only=(
+                bool(r["byte_proxy_only"])
+                if r.get("byte_proxy_only") is not None else None
+            ),
+            proxy_row=(
+                bool(r["proxy_row"]) if r.get("proxy_row") is not None else None
+            ),
             source=str(r.get("source", "")),
             timestamp=str(r.get("timestamp", "")),
         ))
@@ -471,6 +548,196 @@ def _is_explicitly_promotable_evidence(evidence: TechniqueEvidence) -> bool:
     )
 
 
+def _is_exact_negative_or_retired_evidence(evidence: TechniqueEvidence) -> bool:
+    """Return true for exact CUDA rows that supersede proxy byte anchors.
+
+    Exact negative evidence retires the measured config only unless a separate
+    review explicitly proves a broader method/family conclusion. The planner's
+    responsibility here is narrower: do not keep ranking an older CPU/MPS byte
+    anchor as promising after exact CUDA showed the scored archive regressed.
+    """
+    text = " ".join(
+        part.strip().lower()
+        for part in (
+            evidence.evidence_grade,
+            evidence.evidence_marker,
+            evidence.evidence_semantics,
+            evidence.source,
+            evidence.contest_dispatch_verdict,
+            evidence.measured_config_status,
+            evidence.exact_result_review_path,
+        )
+        if part
+    )
+    exact_cuda = (
+        "contest-cuda" in text
+        or "contest_cuda" in text
+        or "exact_cuda_auth_eval" in text
+        or evidence.evidence_grade.strip().lower() in {"a", "a++", "a-negative"}
+    )
+    if not exact_cuda:
+        return False
+    return any(
+        marker in text
+        for marker in (
+            "a-negative",
+            "exact-negative",
+            "exact_negative",
+            "measured_config_retired",
+            "measured-config-retired",
+            "score_negative",
+            "score-negative",
+            "cuda_negative",
+            "cuda-negative",
+        )
+    )
+
+
+def _is_active_ranking_blocked(row: dict[str, Any]) -> bool:
+    """Return true when evidence may inform audit state but not ranking."""
+    return bool(
+        row.get("retired_from_active_ranking")
+        or row.get("active_ranking_blocked")
+        or (
+            row.get("empirical_anchor_promotable") is False
+            and row.get("rank_or_kill_eligible") is False
+        )
+    )
+
+
+def _catalog_names(catalogs: list[list[dict[str, Any]]]) -> set[str]:
+    return {
+        str(row.get("name", ""))
+        for catalog in catalogs
+        for row in catalog
+        if row.get("name")
+    }
+
+
+def _ordered_unique(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for value in values:
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        out.append(value)
+    return out
+
+
+def summarize_evidence_semantics(
+    evidence: list[TechniqueEvidence] | None,
+    catalogs: list[list[dict[str, Any]]],
+) -> dict[str, Any]:
+    """Summarize evidence rows that the catalog cannot safely rank.
+
+    Unknown technique names fail closed: they are visible in reports, but they
+    are never turned into ranked recommendations without a catalog row or an
+    explicit alias/parent mapping.
+    """
+    ev = evidence or []
+    known_names = _catalog_names(catalogs)
+    unknown_by_name: dict[str, dict[str, Any]] = {}
+    cataloged_exact_negative: set[str] = set()
+
+    for row in ev:
+        if row.technique in known_names:
+            if _is_exact_negative_or_retired_evidence(row):
+                cataloged_exact_negative.add(row.technique)
+            continue
+
+        bucket = unknown_by_name.setdefault(
+            row.technique,
+            {
+                "technique": row.technique,
+                "n_rows": 0,
+                "exact_negative_rows": 0,
+                "proxy_or_planning_rows": 0,
+                "sources": [],
+                "dispatch_blockers": [],
+                "evidence_grades": [],
+                "verdicts": [],
+                "empirical_archive_bytes": [],
+                "min_empirical_archive_bytes": None,
+                "latest_timestamp": "",
+                "score_affecting_payload_changed_any": False,
+                "charged_bits_changed_any": False,
+                "cuda_eval_worth_testing_any": False,
+                "cuda_eval_worth_testing_false": False,
+                "byte_proxy_only_any": False,
+                "proxy_row_any": False,
+                "status": "unknown_technique_not_ranked",
+            },
+        )
+        bucket["n_rows"] += 1
+        if _is_exact_negative_or_retired_evidence(row):
+            bucket["exact_negative_rows"] += 1
+        if not _is_explicitly_promotable_evidence(row):
+            bucket["proxy_or_planning_rows"] += 1
+        if row.source and row.source not in bucket["sources"]:
+            bucket["sources"].append(row.source)
+        if row.evidence_grade and row.evidence_grade not in bucket["evidence_grades"]:
+            bucket["evidence_grades"].append(row.evidence_grade)
+        if (
+            row.contest_dispatch_verdict
+            and row.contest_dispatch_verdict not in bucket["verdicts"]
+        ):
+            bucket["verdicts"].append(row.contest_dispatch_verdict)
+        if row.empirical_archive_bytes is not None:
+            bucket["empirical_archive_bytes"].append(row.empirical_archive_bytes)
+            current_min = bucket["min_empirical_archive_bytes"]
+            bucket["min_empirical_archive_bytes"] = (
+                row.empirical_archive_bytes
+                if current_min is None
+                else min(current_min, row.empirical_archive_bytes)
+            )
+        if row.timestamp and row.timestamp > bucket["latest_timestamp"]:
+            bucket["latest_timestamp"] = row.timestamp
+        if row.score_affecting_payload_changed is True:
+            bucket["score_affecting_payload_changed_any"] = True
+        if row.charged_bits_changed is True:
+            bucket["charged_bits_changed_any"] = True
+        if row.cuda_eval_worth_testing is True:
+            bucket["cuda_eval_worth_testing_any"] = True
+        if row.cuda_eval_worth_testing is False:
+            bucket["cuda_eval_worth_testing_false"] = True
+        if row.byte_proxy_only is True:
+            bucket["byte_proxy_only_any"] = True
+        if row.proxy_row is True:
+            bucket["proxy_row_any"] = True
+        for blocker in row.dispatch_blockers:
+            if blocker not in bucket["dispatch_blockers"]:
+                bucket["dispatch_blockers"].append(blocker)
+
+    unknown = sorted(unknown_by_name.values(), key=lambda item: item["technique"])
+    return {
+        "n_evidence_rows": len(ev),
+        "unknown_evidence_row_count": sum(item["n_rows"] for item in unknown),
+        "unknown_evidence_technique_count": len(unknown),
+        "unknown_evidence_techniques": unknown,
+        "unknown_exact_negative_row_count": sum(
+            item["exact_negative_rows"] for item in unknown
+        ),
+        "cataloged_exact_negative_techniques": sorted(cataloged_exact_negative),
+        "active_ranking_blocked_techniques": [],
+    }
+
+
+def attach_active_ranking_summary(
+    report: dict[str, Any],
+    catalogs: list[list[dict[str, Any]]],
+) -> dict[str, Any]:
+    out = dict(report)
+    blocked = sorted({
+        str(row.get("name", ""))
+        for catalog in catalogs
+        for row in catalog
+        if row.get("name") and _is_active_ranking_blocked(row)
+    })
+    out["active_ranking_blocked_techniques"] = blocked
+    return out
+
+
 def detect_evidence_model_spec_mismatch(
     spec: dict[str, Any] | None,
     evidence: TechniqueEvidence,
@@ -500,6 +767,7 @@ def detect_evidence_model_spec_mismatch(
     if not text:
         return []
     reasons: list[str] = []
+    ascii_text = text.replace("\u00d7", "x")
 
     capacity = str(spec.get("capacity_constraint", "")).lower()
     arch_class = str(spec.get("architecture_class", "")).lower()
@@ -508,16 +776,15 @@ def detect_evidence_model_spec_mismatch(
     variants = [str(v).lower() for v in spec.get("variant_required", []) or []]
 
     # tiny_nn capacity mismatch — audit memo §2.
-    if "200" in capacity and "param" in capacity:
-        if (
-            "rank=8" in text or "rank=32" in text or "rank=16" in text
-            or "rank=64" in text or "factorized" in text
-        ):
-            reasons.append(
-                "CAPACITY_MISMATCH: model_spec declares ~200-param MLP, "
-                "evidence source mentions rank-K factorized softmax "
-                "(typically thousands of params)"
-            )
+    if ("200" in capacity and "param" in capacity) and (
+        "rank=8" in text or "rank=32" in text or "rank=16" in text
+        or "rank=64" in text or "factorized" in text
+    ):
+        reasons.append(
+            "CAPACITY_MISMATCH: model_spec declares ~200-param MLP, "
+            "evidence source mentions rank-K factorized softmax "
+            "(typically thousands of params)"
+        )
 
     # ScaleHyperprior substrate mismatch — audit memo §3.
     if "scalehyperprior" in arch_class.replace("_", ""):
@@ -525,7 +792,7 @@ def detect_evidence_model_spec_mismatch(
         if substrate_2d and (
             "1d" in text
             or "pseudo-image" in text
-            or "1×1×" in text
+            or "1x1x" in ascii_text
             or "reshape" in text
         ):
             reasons.append(
@@ -566,16 +833,20 @@ def detect_evidence_model_spec_mismatch(
                 if tok and tok in text:
                     seen.append(variant)
                     break
-        if not seen:
-            if any(
-                tok in text
-                for tok in ("naive_ptq", "ptq", "qat", "gptq", "awq", "lsq")
-            ):
-                reasons.append(
-                    "VARIANT_PARTIAL_EXHAUSTION: model_spec lists "
-                    f"{len(variants)} required variants, evidence row "
-                    "appears to test a single variant only"
-                )
+        has_negated_variant_inventory = (
+            any(phrase in text for phrase in ("not tested", "not exercised", "unexercised"))
+            and any(tok in text for tok in ("qat", "gptq", "awq", "lsq", "mixed-precision", "per-channel"))
+        )
+        if (has_negated_variant_inventory or not seen) and any(
+            tok in text
+            for tok in ("naive_ptq", "ptq", "qat", "gptq", "awq", "lsq", "mixed-precision")
+        ):
+            reasons.append(
+                "VARIANT_PARTIAL_EXHAUSTION: model_spec lists "
+                f"{len(variants)} required variants, evidence row "
+                "contains a partial or explicitly negated variant "
+                "inventory"
+            )
     return reasons
 
 
@@ -607,10 +878,6 @@ def update_catalog_from_evidence(
     out = []
     for t in catalog:
         obs = by_name.get(t["name"], [])
-        empirical_bytes = [
-            e.empirical_archive_bytes for e in obs
-            if e.empirical_archive_bytes is not None
-        ]
         new_t = dict(t)
         # Self-protection: scan every observation against the model_spec.
         spec = t.get("model_spec")
@@ -634,6 +901,89 @@ def update_catalog_from_evidence(
         if per_obs_mismatches:
             new_t["model_spec_mismatch_reasons"] = per_obs_mismatches
             new_t["model_spec_mismatch_count"] = len(per_obs_mismatches)
+        exact_negative_obs = [
+            e for e in obs if _is_exact_negative_or_retired_evidence(e)
+        ]
+        if exact_negative_obs:
+            supporting_non_promotable_obs = [
+                e for e in obs
+                if (
+                    not _is_exact_negative_or_retired_evidence(e)
+                    and not _is_explicitly_promotable_evidence(e)
+                )
+            ]
+            blockers = sorted({
+                blocker
+                for e in obs
+                for blocker in e.dispatch_blockers
+            })
+            blockers.append(
+                "exact_negative_result_requires_reactivation_before_empirical_byte_anchor"
+            )
+            new_t["catalog_prior_bytes"] = t["predicted_archive_bytes"]
+            new_t["exact_negative_evidence_n"] = len(exact_negative_obs)
+            new_t["exact_negative_sources"] = [
+                e.source for e in exact_negative_obs if e.source
+            ]
+            new_t["exact_negative_review_packets"] = [
+                e.exact_result_review_path
+                for e in exact_negative_obs
+                if e.exact_result_review_path
+            ]
+            new_t["exact_negative_falsification_scopes"] = _ordered_unique([
+                e.falsification_scope for e in exact_negative_obs
+            ])
+            new_t["measured_config_statuses"] = _ordered_unique([
+                e.measured_config_status for e in exact_negative_obs
+            ])
+            new_t["reactivation_criteria"] = _ordered_unique([
+                criterion
+                for e in exact_negative_obs
+                for criterion in e.reactivation_criteria
+            ])
+            if supporting_non_promotable_obs:
+                new_t["supporting_non_promotable_evidence_n"] = len(
+                    supporting_non_promotable_obs
+                )
+                new_t["supporting_non_promotable_sources"] = [
+                    e.source for e in supporting_non_promotable_obs if e.source
+                ]
+            new_t["empirical_anchor_promotable"] = False
+            new_t["empirical_anchor_score_claim"] = False
+            new_t["ready_for_exact_eval_dispatch"] = False
+            new_t["rank_or_kill_eligible"] = False
+            new_t["measured_config_retired"] = True
+            new_t["active_ranking_blocked"] = True
+            new_t["active_ranking_block_reason"] = (
+                "exact_negative_measured_config_requires_reactivation"
+            )
+            new_t["family_falsified"] = any(
+                e.family_falsified is True for e in exact_negative_obs
+            )
+            new_t["method_family_retired"] = any(
+                e.method_family_retired is True for e in exact_negative_obs
+            )
+            new_t["measured_config_retired_only"] = (
+                not new_t["family_falsified"]
+                and not new_t["method_family_retired"]
+            )
+            new_t["exact_negative_classification"] = (
+                "measured_config_retired_only"
+                if new_t["measured_config_retired_only"]
+                else "broader_family_or_method_retirement_claimed"
+            )
+            new_t["retired_from_active_ranking"] = True
+            new_t["evidence_grade"] = (
+                f"[exact-negative-N{len(exact_negative_obs)}; "
+                "reactivation-required]"
+            )
+            new_t["dispatch_blockers"] = sorted(set(blockers))
+            out.append(new_t)
+            continue
+        empirical_bytes = [
+            e.empirical_archive_bytes for e in obs
+            if e.empirical_archive_bytes is not None
+        ]
         if empirical_bytes:
             empirical_bytes.sort()
             n = len(empirical_bytes)
@@ -668,6 +1018,10 @@ def update_catalog_from_evidence(
                 new_t["empirical_anchor_score_claim"] = False
                 new_t["ready_for_exact_eval_dispatch"] = False
                 new_t["rank_or_kill_eligible"] = False
+                new_t["active_ranking_blocked"] = True
+                new_t["active_ranking_block_reason"] = (
+                    "non_promotable_empirical_anchor_not_rank_or_kill_evidence"
+                )
                 merged_blockers = list(blockers) if blockers else [
                     "empirical_anchor_not_promotable_without_explicit_exact_eval_custody"
                 ]
@@ -700,7 +1054,9 @@ def _rank_techniques(
     """
     rows: list[dict[str, Any]] = []
     for t in techniques:
-        if t["predicted_archive_bytes"] >= current_archive_bytes:
+        active_ranking_blocked = _is_active_ranking_blocked(t)
+        retired_from_active_ranking = bool(t.get("retired_from_active_ranking"))
+        if active_ranking_blocked or t["predicted_archive_bytes"] >= current_archive_bytes:
             score_after = current_score
             score_delta = 0.0
         else:
@@ -726,13 +1082,192 @@ def _rank_techniques(
             "reaches_target": (
                 gap_to_target is not None and gap_to_target <= 0
             ),
+            "active_ranking_blocked": active_ranking_blocked,
+            "retired_from_active_ranking": retired_from_active_ranking,
         })
-    rows.sort(key=lambda r: (-r["predicted_score_delta"], r["cost_dollars"]))
+    rows.sort(key=lambda r: (
+        r["active_ranking_blocked"],
+        -r["predicted_score_delta"],
+        r["cost_dollars"],
+    ))
     if min_score_delta > 0.0 and rows:
         kept = [r for r in rows if r["predicted_score_delta"] >= min_score_delta]
         if not kept:
             kept = [rows[0]]  # always preserve top-1
         rows = kept
+    return rows
+
+
+def _score_delta_if_validated(
+    *,
+    candidate_archive_bytes: int | None,
+    current_archive_bytes: int,
+    current_score: float,
+    d_seg: float,
+    d_pose: float,
+) -> float:
+    """Rate-only upside if a non-promotable byte anchor is later validated.
+
+    This is explicitly not active ranking evidence. It exists so proxy/MPS/CPU
+    and unknown-catalog signals remain visible while still failing closed for
+    promotion and dispatch.
+    """
+    if candidate_archive_bytes is None:
+        return 0.0
+    if candidate_archive_bytes <= 0:
+        return 0.0
+    if candidate_archive_bytes >= current_archive_bytes:
+        return 0.0
+    return current_score - contest_score(d_seg, d_pose, candidate_archive_bytes)
+
+
+def _validation_status_for_unknown(bucket: dict[str, Any]) -> str:
+    min_bytes = bucket.get("min_empirical_archive_bytes")
+    try:
+        min_bytes_int = int(min_bytes) if min_bytes is not None else None
+    except (TypeError, ValueError):
+        min_bytes_int = None
+    if min_bytes_int is not None and min_bytes_int <= 0:
+        return "unknown_invalid_or_missing_archive_bytes"
+    text = " ".join(
+        str(item).lower()
+        for part in (
+            [bucket.get("status", "")],
+            bucket.get("verdicts", []),
+            bucket.get("dispatch_blockers", []),
+        )
+        for item in part
+        if item
+    )
+    if bucket.get("exact_negative_rows"):
+        return "unknown_exact_negative_or_retired"
+    if bucket.get("byte_proxy_only_any") or "byte_proxy" in text or "retracted" in text:
+        return "unknown_byte_proxy_needs_packetization"
+    if bucket.get("cuda_eval_worth_testing_false"):
+        return "unknown_not_cuda_worth_testing_until_reactivated"
+    if bucket.get("cuda_eval_worth_testing_any"):
+        return "unknown_candidate_needs_catalog_or_alias_before_dispatch"
+    return "unknown_planning_signal_needs_catalog_or_alias"
+
+
+def build_validation_queue(
+    *,
+    ranked_catalogs: list[list[dict[str, Any]]],
+    evidence_report: dict[str, Any],
+    d_seg: float,
+    d_pose: float,
+    current_archive_bytes: int,
+    current_score: float,
+) -> list[dict[str, Any]]:
+    """Preserve blocked/proxy/cross-paradigm signals without ranking them.
+
+    The queue answers "what should we validate next if we want no signal
+    loss?" It never turns non-promotable evidence into a dispatch decision.
+    Active rankings still require promotable exact evidence.
+    """
+    rows: list[dict[str, Any]] = []
+    for catalog in ranked_catalogs:
+        for item in catalog:
+            if not _is_active_ranking_blocked(item):
+                continue
+            candidate_bytes = item.get(
+                "empirical_anchor_bytes",
+                item.get("predicted_archive_bytes"),
+            )
+            try:
+                candidate_bytes_int = (
+                    int(candidate_bytes) if candidate_bytes is not None else None
+                )
+            except (TypeError, ValueError):
+                candidate_bytes_int = None
+            retired = bool(item.get("retired_from_active_ranking"))
+            potential_delta = (
+                0.0 if retired else _score_delta_if_validated(
+                    candidate_archive_bytes=candidate_bytes_int,
+                    current_archive_bytes=current_archive_bytes,
+                    current_score=current_score,
+                    d_seg=d_seg,
+                    d_pose=d_pose,
+                )
+            )
+            rows.append({
+                "technique": item.get("name"),
+                "queue_source": "cataloged_blocked_candidate",
+                "validation_status": (
+                    "reactivation_required_exact_negative"
+                    if retired
+                    else item.get(
+                        "active_ranking_block_reason",
+                        "blocked_pending_exact_custody",
+                    )
+                ),
+                "archive_bytes_if_validated": candidate_bytes_int,
+                "potential_score_delta_if_validated": potential_delta,
+                "evidence_grade": item.get("evidence_grade", ""),
+                "ready_for_exact_eval_dispatch": False,
+                "rank_or_kill_eligible": False,
+                "score_claim": False,
+                "dispatch_blockers": item.get("dispatch_blockers", []),
+                "sources": item.get("empirical_anchor_sources", []),
+            })
+
+    for bucket in evidence_report.get("unknown_evidence_techniques", []):
+        candidate_bytes = bucket.get("min_empirical_archive_bytes")
+        try:
+            candidate_bytes_int = (
+                int(candidate_bytes) if candidate_bytes is not None else None
+            )
+        except (TypeError, ValueError):
+            candidate_bytes_int = None
+        status = _validation_status_for_unknown(bucket)
+        potential_delta = _score_delta_if_validated(
+            candidate_archive_bytes=candidate_bytes_int,
+            current_archive_bytes=current_archive_bytes,
+            current_score=current_score,
+            d_seg=d_seg,
+            d_pose=d_pose,
+        )
+        if status in {
+            "unknown_invalid_or_missing_archive_bytes",
+            "unknown_byte_proxy_needs_packetization",
+            "unknown_exact_negative_or_retired",
+            "unknown_not_cuda_worth_testing_until_reactivated",
+        }:
+            potential_delta = 0.0
+        rows.append({
+            "technique": bucket.get("technique"),
+            "queue_source": "unknown_evidence_candidate",
+            "validation_status": status,
+            "archive_bytes_if_validated": candidate_bytes_int,
+            "potential_score_delta_if_validated": potential_delta,
+            "evidence_grade": "; ".join(bucket.get("evidence_grades", [])),
+            "ready_for_exact_eval_dispatch": False,
+            "rank_or_kill_eligible": False,
+            "score_claim": False,
+            "dispatch_blockers": bucket.get("dispatch_blockers", []),
+            "sources": bucket.get("sources", []),
+            "latest_timestamp": bucket.get("latest_timestamp", ""),
+            "n_rows": bucket.get("n_rows", 0),
+        })
+
+    status_priority = {
+        "non_promotable_empirical_anchor_not_rank_or_kill_evidence": 0,
+        "blocked_pending_exact_custody": 0,
+        "unknown_candidate_needs_catalog_or_alias_before_dispatch": 1,
+        "unknown_planning_signal_needs_catalog_or_alias": 2,
+        "unknown_byte_proxy_needs_packetization": 3,
+        "unknown_not_cuda_worth_testing_until_reactivated": 4,
+        "unknown_invalid_or_missing_archive_bytes": 4,
+        "reactivation_required_exact_negative": 5,
+        "exact_negative_measured_config_requires_reactivation": 5,
+        "unknown_exact_negative_or_retired": 5,
+    }
+    rows.sort(key=lambda row: (
+        status_priority.get(str(row.get("validation_status")), 2),
+        -float(row.get("potential_score_delta_if_validated") or 0.0),
+        int(row.get("archive_bytes_if_validated") or 10**18),
+        str(row.get("technique") or ""),
+    ))
     return rows
 
 
@@ -791,9 +1326,17 @@ def build_plan(
 
     enc_catalog = ENCODER_TECHNIQUES
     arch_catalog = ARCH_TECHNIQUES
+    evidence_report = summarize_evidence_semantics(
+        prior_evidence,
+        [ENCODER_TECHNIQUES, ARCH_TECHNIQUES],
+    )
     if prior_evidence:
         enc_catalog = update_catalog_from_evidence(enc_catalog, prior_evidence)
         arch_catalog = update_catalog_from_evidence(arch_catalog, prior_evidence)
+        evidence_report = attach_active_ranking_summary(
+            evidence_report,
+            [enc_catalog, arch_catalog],
+        )
 
     encoder_ranked = _rank_techniques(
         enc_catalog,
@@ -814,9 +1357,21 @@ def build_plan(
     # Combined top-3: best by score-delta across both lists
     combined = sorted(
         encoder_ranked + arch_ranked,
-        key=lambda r: (-r["predicted_score_delta"], r["cost_dollars"]),
+        key=lambda r: (
+            r["active_ranking_blocked"],
+            -r["predicted_score_delta"],
+            r["cost_dollars"],
+        ),
     )
     top_3 = combined[:3]
+    validation_queue = build_validation_queue(
+        ranked_catalogs=[encoder_ranked, arch_ranked],
+        evidence_report=evidence_report,
+        d_seg=d_seg,
+        d_pose=d_pose,
+        current_archive_bytes=archive_bytes,
+        current_score=score,
+    )
 
     # Target-score gap analysis
     gap = {}
@@ -857,6 +1412,37 @@ def build_plan(
         "sub-178 KB still needs a new charged coder, a shared decoder model, or lower-entropy "
         "weights. Architecture has 5-10x more predicted headroom."
     )
+    unknown_count = int(evidence_report.get("unknown_evidence_technique_count", 0))
+    if unknown_count:
+        unknown_names = [
+            row["technique"]
+            for row in evidence_report.get("unknown_evidence_techniques", [])
+        ][:8]
+        notes.append(
+            "Evidence feed contains "
+            f"{unknown_count} unknown technique name(s) that are reported "
+            f"but not ranked until cataloged or aliased: {', '.join(unknown_names)}"
+        )
+    blocked_names = evidence_report.get("active_ranking_blocked_techniques", [])
+    if blocked_names:
+        notes.append(
+            "Non-promotable, proxy, or exact-negative empirical anchors are "
+            "assigned zero active ranking delta: "
+            f"{', '.join(blocked_names[:8])}"
+        )
+    exact_neg_names = evidence_report.get("cataloged_exact_negative_techniques", [])
+    if exact_neg_names:
+        notes.append(
+            "Exact-negative evidence retires only the measured config unless "
+            "family_falsified/method_family_retired is explicitly true: "
+            f"{', '.join(exact_neg_names[:8])}"
+        )
+    if validation_queue:
+        notes.append(
+            "Validation queue preserves blocked/proxy/cross-paradigm signals "
+            "without promoting them; queue rows are not score claims and cannot "
+            "dispatch until blockers close."
+        )
 
     return AutopilotPlan(
         schema=SCHEMA_VERSION,
@@ -897,6 +1483,8 @@ def build_plan(
             _maybe_axis_priorities(d_seg, d_pose, archive_bytes, target_score)
             if include_axis_priorities else None
         ) or [],
+        evidence_semantics_report=evidence_report,
+        validation_queue=validation_queue,
     )
 
 
@@ -1003,10 +1591,21 @@ def main(argv: list[str] | None = None) -> int:
             "tool": TOOL_NAME,
             "n_evidence_rows": len(ev),
         }
+        updated_catalogs: list[list[dict[str, Any]]] = []
+        report = summarize_evidence_semantics(
+            ev,
+            [ENCODER_TECHNIQUES, ARCH_TECHNIQUES],
+        )
         if args.catalog in ("encoder", "both"):
             out["encoder_catalog"] = update_catalog_from_evidence(ENCODER_TECHNIQUES, ev)
+            updated_catalogs.append(out["encoder_catalog"])
         if args.catalog in ("arch", "both"):
             out["arch_catalog"] = update_catalog_from_evidence(ARCH_TECHNIQUES, ev)
+            updated_catalogs.append(out["arch_catalog"])
+        out["evidence_semantics_report"] = attach_active_ranking_summary(
+            report,
+            updated_catalogs,
+        )
         text = json.dumps(out, indent=2, sort_keys=True)
         if args.output:
             args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -1078,6 +1677,20 @@ def _render_plan_summary(plan: AutopilotPlan) -> str:
             f"  {r['name']:<40s}  bytes={r['predicted_archive_bytes']:,}  "
             f"score={r['predicted_score_after']:.5f}  Delta={r['predicted_score_delta']:+.5f}"
         )
+    if plan.validation_queue:
+        lines.append("")
+        lines.append(
+            "VALIDATION QUEUE (blocked/non-promotable signals; not score claims):"
+        )
+        for r in plan.validation_queue[:5]:
+            candidate_bytes = r.get("archive_bytes_if_validated")
+            candidate_s = f"{candidate_bytes:,}" if candidate_bytes is not None else "?"
+            lines.append(
+                f"  {r['technique']:<48s} "
+                f"bytes_if_valid={candidate_s:<9s} "
+                f"potential_delta={r['potential_score_delta_if_validated']:+.5f} "
+                f"status={r['validation_status']}"
+            )
     lines.append("")
     lines.append("NOTES:")
     for n in plan.notes:

@@ -1,0 +1,170 @@
+{
+  "blockers": [
+    "a_plus_plus_evidence_grade_missing",
+    "archive_bytes_missing_or_invalid",
+    "archive_sha256_missing_or_invalid",
+    "archive_path_missing",
+    "runtime_packet_path_missing",
+    "inflate_path_missing",
+    "exact_cuda_auth_eval_json_missing",
+    "one_to_one_anchor_artifact_missing",
+    "linear_stack_layers_missing_runtime_consumption_proof",
+    "exact_linear_stack_anchor_missing"
+  ],
+  "claim_id": "omega_opt_linear_stack",
+  "dispatchable": false,
+  "evidence": {
+    "contest_auth_eval_json": null,
+    "evidence_grade": "prediction",
+    "evidence_semantics": "omega_opt_linear_stack_packet_scaffold_no_score",
+    "one_to_one_anchor_artifact": null
+  },
+  "linear_stack": [
+    {
+      "charged_byte_delta": null,
+      "input_artifact_sha256": null,
+      "layer_id": "arch_shrink_x0_4",
+      "notes": [
+        "declared_first_tranche_transform_no_score_claim"
+      ],
+      "order_index": 0,
+      "output_artifact_sha256": null,
+      "promotion_eligible": false,
+      "runtime_consumed": false,
+      "score_claim": false,
+      "transform_kind": "architecture_shrink_x0.4"
+    },
+    {
+      "charged_byte_delta": null,
+      "input_artifact_sha256": null,
+      "layer_id": "imp_alpha_0_7",
+      "notes": [
+        "declared_first_tranche_transform_no_score_claim"
+      ],
+      "order_index": 1,
+      "output_artifact_sha256": null,
+      "promotion_eligible": false,
+      "runtime_consumed": false,
+      "score_claim": false,
+      "transform_kind": "iterative_magnitude_pruning_alpha_0.7"
+    },
+    {
+      "charged_byte_delta": null,
+      "input_artifact_sha256": null,
+      "layer_id": "lossy_coarsening",
+      "notes": [
+        "declared_first_tranche_transform_no_score_claim"
+      ],
+      "order_index": 2,
+      "output_artifact_sha256": null,
+      "promotion_eligible": false,
+      "runtime_consumed": false,
+      "score_claim": false,
+      "transform_kind": "lossy_weight_coarsening"
+    },
+    {
+      "charged_byte_delta": null,
+      "input_artifact_sha256": null,
+      "layer_id": "brotli_pack",
+      "notes": [
+        "declared_first_tranche_transform_no_score_claim"
+      ],
+      "order_index": 3,
+      "output_artifact_sha256": null,
+      "promotion_eligible": false,
+      "runtime_consumed": false,
+      "score_claim": false,
+      "transform_kind": "terminal_brotli_pack"
+    }
+  ],
+  "manifest_sha256": "e6f9754cfb581bbd42073ba20b3e9392124b99bfcc2117d7fc446d5978bba383",
+  "packet": {
+    "archive_bytes": null,
+    "archive_path": null,
+    "archive_sha256": null,
+    "charged_bits_changed": false,
+    "inflate_path": null,
+    "runtime_packet_path": null,
+    "score_affecting_payload_changed": false
+  },
+  "predicted_score": 0.13,
+  "promotion_allowed": false,
+  "promotion_eligible": false,
+  "promotion_status": {
+    "blockers": [
+      "a_plus_plus_evidence_grade_missing",
+      "archive_bytes_missing_or_invalid",
+      "archive_sha256_missing_or_invalid",
+      "archive_path_missing",
+      "runtime_packet_path_missing",
+      "inflate_path_missing",
+      "exact_cuda_auth_eval_json_missing",
+      "one_to_one_anchor_artifact_missing",
+      "linear_stack_layers_missing_runtime_consumption_proof",
+      "exact_linear_stack_anchor_missing"
+    ],
+    "claim_id": "omega_opt_linear_stack",
+    "dispatchable": false,
+    "exact_anchor_complete": false,
+    "promotion_allowed": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "tac_omega_opt_linear_stack_packet_status_v1",
+    "score_claim": false
+  },
+  "prototype_id": "omega_opt_linear_stack_pr101_1to1_scaffold",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "requires_exact_linear_stack_anchor": true,
+  "schema": "tac_omega_opt_linear_stack_packet_v1",
+  "score_claim": false,
+  "score_classification": "prediction",
+  "source_claim": {
+    "json_pointer": "/metadata/nested_optimization/score_band_prediction/claims/0",
+    "normalized_claim": {
+      "claim_id": "omega_opt_linear_stack",
+      "current_anchor_status": "cpu_byte_anchor_only_no_score_anchor",
+      "dispatchable": false,
+      "label": "Linear stack",
+      "missing_anchors": [
+        "1:1 composition config manifest for the claimed stack",
+        "runtime packet that consumes the composed payload",
+        "full retrain or faithful no-retrain disclosure for every layer",
+        "full-sample exact CUDA auth eval on exact archive bytes"
+      ],
+      "next_buildable_1to1_test": "Build one PR101 stack archive from the declared arch_shrink, IMP, lossy coarsening, and brotli sequence; record old/new archive SHA-256, then run archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA.",
+      "notes": "The existing post-hoc CPU byte measurement is useful, but the 0.130 score remains unanchored.",
+      "predicted_score": 0.13,
+      "promotion_allowed": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "reactivation_criteria": [
+        "score-affecting payload changed and consumed by inflate",
+        "old/new archive bytes and SHA-256 recorded",
+        "contest_auth_eval.json records full-sample CUDA components"
+      ],
+      "ready_for_exact_eval_dispatch": false,
+      "requires_exact_1to1_anchor": true,
+      "score_claim": false,
+      "score_classification": "prediction"
+    },
+    "parent_evidence_grade": "prediction",
+    "source_claim_sha256": "0a0fb3be93bc9244440e01f04050b6946ffe084983dcd2e23bf38a7293ae8ac8",
+    "source_plan_path": "reports/hstack_vstack_multipass_plan_20260507.json"
+  },
+  "suppressed_positive_intents": {
+    "fields": [
+      "dispatchable",
+      "promotion_allowed",
+      "promotion_eligible",
+      "rank_or_kill_eligible",
+      "ready_for_exact_eval_dispatch",
+      "score_claim"
+    ],
+    "reason": "exact_a_plus_plus_linear_stack_anchor_incomplete"
+  },
+  "target_modes": [
+    "contest_exact_eval"
+  ]
+}

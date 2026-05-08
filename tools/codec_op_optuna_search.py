@@ -99,6 +99,10 @@ class Evaluation:
     shape_mismatch_tensor_keys: list[str] = field(default_factory=list)
     decoded_tensor_keys: list[str] = field(default_factory=list)
     matched_tensor_keys: list[str] = field(default_factory=list)
+    materialized_payload_path: str | None = None
+    materialized_payload_bytes: int | None = None
+    materialized_payload_sha256: str | None = None
+    materialized_payload_contract: str | None = None
     decode_coverage_required: bool = True
     partial_decode_waived: bool = False
     partial_decode_waiver_reason: str | None = None
@@ -160,7 +164,28 @@ class SearchReport:
     partial_decode_waiver_reason: str | None = None
 
 
+def _first_sys_path_module_file(module: str) -> Path | None:
+    rel = Path(*module.split("."))
+    for raw_entry in sys.path:
+        base = Path(raw_entry or ".")
+        module_file = (base / rel).with_suffix(".py")
+        if module_file.is_file():
+            return module_file.resolve()
+        package_init = base / rel / "__init__.py"
+        if package_init.is_file():
+            return package_init.resolve()
+    return None
+
+
 def _import_codec_op(module: str, class_name: str):
+    importlib.invalidate_caches()
+    cached = sys.modules.get(module)
+    expected_file = _first_sys_path_module_file(module)
+    if cached is not None and expected_file is not None:
+        cached_file_raw = getattr(cached, "__file__", None)
+        cached_file = Path(cached_file_raw).resolve() if cached_file_raw else None
+        if cached_file is not None and cached_file != expected_file:
+            del sys.modules[module]
     try:
         mod = importlib.import_module(module)
     except ImportError as exc:
@@ -333,6 +358,8 @@ def _evaluate(
     *,
     require_full_decode: bool = True,
     partial_decode_waiver_reason: str | None = None,
+    materialized_payload_output_dir: Path | None = None,
+    materialized_payload_contract: str | None = None,
 ) -> Evaluation:
     """Instantiate CodecOp with params, encode/decode, return metrics."""
     timestamp = _utc_now()
@@ -455,6 +482,13 @@ def _evaluate(
             )
         rms = math.sqrt(rms_sum / rms_count)
         fitness = float(bytes_out) + 1e6 * rms
+        materialized = _maybe_materialize_payload(
+            result.blob,
+            eval_idx=eval_idx,
+            expected_bytes=bytes_out,
+            output_dir=materialized_payload_output_dir,
+            payload_contract=materialized_payload_contract,
+        )
         return Evaluation(
             eval_idx=eval_idx,
             params=dict(params),
@@ -469,6 +503,10 @@ def _evaluate(
             shape_mismatch_tensor_keys=shape_mismatch_keys,
             decoded_tensor_keys=decoded_tensor_keys,
             matched_tensor_keys=matched_keys,
+            materialized_payload_path=materialized.get("path"),
+            materialized_payload_bytes=materialized.get("bytes"),
+            materialized_payload_sha256=materialized.get("sha256"),
+            materialized_payload_contract=materialized.get("contract"),
             decode_coverage_required=require_full_decode,
             partial_decode_waived=partial_decode_waived,
             partial_decode_waiver_reason=partial_decode_waiver_reason,
@@ -492,6 +530,37 @@ def _evaluate(
         )
 
 
+def _maybe_materialize_payload(
+    blob: Any,
+    *,
+    eval_idx: int,
+    expected_bytes: int,
+    output_dir: Path | None,
+    payload_contract: str | None,
+) -> dict[str, Any]:
+    if output_dir is None:
+        return {}
+    if not isinstance(blob, bytes | bytearray):
+        raise ValueError(
+            "CodecOp result.blob must be bytes when materializing payloads"
+        )
+    payload = bytes(blob)
+    if len(payload) != int(expected_bytes):
+        raise ValueError(
+            f"CodecOp result bytes_out mismatch: bytes_out={expected_bytes} "
+            f"len(blob)={len(payload)}"
+        )
+    output_dir.mkdir(parents=True, exist_ok=True)
+    path = output_dir / f"eval_{eval_idx:05d}.section"
+    path.write_bytes(payload)
+    return {
+        "path": path.as_posix(),
+        "bytes": len(payload),
+        "sha256": hashlib.sha256(payload).hexdigest(),
+        "contract": payload_contract or "raw_codecop_encode_blob",
+    }
+
+
 def optuna_tpe_search(
     op_cls,
     state_dict: dict[str, torch.Tensor],
@@ -501,6 +570,8 @@ def optuna_tpe_search(
     *,
     require_full_decode: bool = True,
     partial_decode_waiver_reason: str | None = None,
+    materialized_payload_output_dir: Path | None = None,
+    materialized_payload_contract: str | None = None,
 ) -> list[Evaluation]:
     """TPE-based Bayesian optimization over CodecOp param space."""
     if max_evals <= 0:
@@ -538,6 +609,8 @@ def optuna_tpe_search(
             idx,
             require_full_decode=require_full_decode,
             partial_decode_waiver_reason=partial_decode_waiver_reason,
+            materialized_payload_output_dir=materialized_payload_output_dir,
+            materialized_payload_contract=materialized_payload_contract,
         )
         evaluations.append(ev)
         return (
@@ -731,6 +804,10 @@ def append_atom_ledger_rows(
                 "shape_mismatch_tensor_keys": list(ev.shape_mismatch_tensor_keys),
                 "decoded_tensor_keys": list(ev.decoded_tensor_keys),
                 "matched_tensor_keys": list(ev.matched_tensor_keys),
+                "materialized_payload_path": ev.materialized_payload_path,
+                "materialized_payload_bytes": ev.materialized_payload_bytes,
+                "materialized_payload_sha256": ev.materialized_payload_sha256,
+                "materialized_payload_contract": ev.materialized_payload_contract,
                 "decode_coverage_required": ev.decode_coverage_required,
                 "decode_coverage_status": ev.decode_coverage_status,
                 "partial_decode_waived": ev.partial_decode_waived,
@@ -811,6 +888,21 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Required custody note when --allow-partial-decode is used.",
     )
+    parser.add_argument(
+        "--materialized-payload-output-dir",
+        type=Path,
+        default=None,
+        help=(
+            "Optional directory where each successful CodecOp result.blob is "
+            "written as eval_<idx>.section for downstream monolithic bridge "
+            "custody. This does not make rows dispatchable."
+        ),
+    )
+    parser.add_argument(
+        "--materialized-payload-contract",
+        default=None,
+        help="Optional contract label attached to materialized payload files.",
+    )
     args = parser.parse_args(argv)
     if args.max_evals < 1:
         raise SystemExit("--max-evals must be >= 1")
@@ -832,6 +924,8 @@ def main(argv: list[str] | None = None) -> int:
         seed=args.seed,
         require_full_decode=require_full_decode,
         partial_decode_waiver_reason=partial_decode_waiver_reason,
+        materialized_payload_output_dir=args.materialized_payload_output_dir,
+        materialized_payload_contract=args.materialized_payload_contract,
     )
     report = _build_search_report(
         evaluations, op_module=args.module, op_class=args.class_name,
@@ -892,6 +986,18 @@ def main(argv: list[str] | None = None) -> int:
                 "exact_cuda_auth_eval": False,
                 "archive_sha256": None,
                 "archive_bytes": None,
+                "materialized_payload_path": (
+                    report.best_eval.materialized_payload_path
+                ),
+                "materialized_payload_bytes": (
+                    report.best_eval.materialized_payload_bytes
+                ),
+                "materialized_payload_sha256": (
+                    report.best_eval.materialized_payload_sha256
+                ),
+                "materialized_payload_contract": (
+                    report.best_eval.materialized_payload_contract
+                ),
                 "promotion_eligible": False,
                 "dispatch_blockers": list(report.dispatch_blockers),
                 "evidence_limitations": [

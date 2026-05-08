@@ -54,7 +54,6 @@ from __future__ import annotations
 import argparse
 import datetime as _dt
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -64,6 +63,31 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 TOOL_NAME = "experiments/arch_shrink_quantizr_class_mps_overnight.py"
 SCHEMA_VERSION = "arch_shrink_quantizr_class_mps_overnight.v1"
+EVIDENCE_GRADE = "[MPS-research-signal]"
+EVIDENCE_SEMANTICS = "mps_proxy_training_loss_byte_anchor_no_score"
+DISPATCH_BLOCKERS = (
+    "mps_research_signal_only_not_contest_cuda",
+    "mps_proxy_signal_not_score_evidence",
+    "no_archive_substitution_performed",
+    "missing_exact_cuda_auth_eval",
+    "requires_exact_cuda_auth_eval_before_any_score_use",
+    "training_loss_proxy_not_actual_score",
+)
+
+
+def proxy_evidence_contract() -> dict[str, object]:
+    return {
+        "evidence_grade": EVIDENCE_GRADE,
+        "evidence_marker": EVIDENCE_GRADE,
+        "evidence_semantics": EVIDENCE_SEMANTICS,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "proxy_row": True,
+        "dispatch_blockers": list(DISPATCH_BLOCKERS),
+    }
 
 
 def write_provenance(output_dir: Path, args: argparse.Namespace) -> None:
@@ -72,16 +96,7 @@ def write_provenance(output_dir: Path, args: argparse.Namespace) -> None:
         "tool": TOOL_NAME,
         "started_at_utc": _dt.datetime.now(_dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "args": vars(args),
-        "evidence_grade": "[MPS-research-signal]",
-        "score_claim": False,
-        "promotion_eligible": False,
-        "ready_for_exact_eval_dispatch": False,
-        "dispatch_blockers": [
-            "mps_research_signal_only_not_contest_cuda",
-            "no_archive_substitution_performed",
-            "missing_exact_cuda_auth_eval",
-            "training_loss_proxy_not_actual_score",
-        ],
+        **proxy_evidence_contract(),
     }
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "provenance.json").write_text(
@@ -122,13 +137,13 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"output_dir: {output_dir}")
     print(f"dispatch command:\n  {' '.join(cmd)}")
-    print(f"\nNOTE: M5 Max MPS overnight training is 12-24 hours.")
-    print(f"      Output evidence will be tagged [MPS-research-signal] and NOT")
-    print(f"      promotion-eligible. Promotion requires CUDA dispatch via")
-    print(f"      tools/parallel_dispatch_top_k.py once byte anchor is acceptable.")
+    print("\nNOTE: M5 Max MPS overnight training is 12-24 hours.")
+    print("      Output evidence will be tagged [MPS-research-signal] and NOT")
+    print("      promotion-eligible. Promotion requires CUDA dispatch via")
+    print("      tools/parallel_dispatch_top_k.py once byte anchor is acceptable.")
 
     if args.dry_run:
-        print(f"\n--dry-run set; not executing.")
+        print("\n--dry-run set; not executing.")
         return 0
 
     print(f"\nStarting training at {_dt.datetime.now(_dt.UTC).strftime('%H:%M:%SZ')}...")
@@ -145,6 +160,7 @@ def main(argv: list[str] | None = None) -> int:
             evidence_row = {
                 "technique": "arch_shrink_x0.4_quantizr_class",
                 "empirical_archive_bytes": archive_bytes,
+                **proxy_evidence_contract(),
                 "source": (
                     f"[MPS-research-signal] {archive_path} "
                     f"(target_elements={args.target_elements}, profile={args.profile}, "

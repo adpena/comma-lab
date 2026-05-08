@@ -12,8 +12,9 @@ U-Net and a 6-DOF ego-motion estimator) produce outputs as close as possible
 to those on the original frames. We treat the contest as **inverse
 steganalysis** — the scorers are detectors. We submitted PR #107 `apogee` at
 **0.2293** (about 11th place). The final official leaderboard winner was PR
-#101 at 0.193; our strongest local public-archive replay/control was PR #106
-at 0.20945.
+#101 at 0.193. Our strongest May 4 public-archive replay/control was PR #106
+at 0.20945; post-deadline PR103-on-PR106 now supersedes it as the active local
+A++ HNeRV rate anchor at 0.20898.
 
 We make three contributions. **(1)** We identify and fix a gradient
 obstruction bug — `@torch.no_grad` on PoseNet's RGB-to-YUV preprocessing

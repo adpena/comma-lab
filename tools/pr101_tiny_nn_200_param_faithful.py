@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""PR101 FAITHFUL 200-param tiny_nn implementation — true to the
-cathedral_autopilot catalog row's prediction.
+"""PR101 200-param tiny_nn implementation - capacity-faithful, PMF-partial.
 
 The 2026-05-08 implementation-vs-model audit found:
 - Prior tool tools/pr101_tiny_nn_predict_pmf.py uses rank-K factorized
@@ -9,11 +8,14 @@ The 2026-05-08 implementation-vs-model audit found:
 - The catalog row predicted: "200-param MLP predicting per-tensor PMF;
   ~400B model + AAC" but no implementation matched that capacity.
 
-This tool builds a TRUE 200-param MLP (28→H=6→2) = 188 params total,
+This tool builds a TRUE 200-param MLP (28->H=6->2) = 188 params total,
 predicting (mean, log_scale) per tensor for a Gaussian conditional
-arithmetic codec. ~400B model size after fp16 quant.
+arithmetic codec. ~400B model size after fp16 quant. This is faithful to
+the catalog row's capacity and overhead constraint, but only a parametric
+Gaussian PMF proxy for the phrase "per-tensor PMF"; it is not a full
+255-bin per-tensor PMF predictor.
 
-Architecture (1:1 with catalog spec):
+Architecture:
   Input:  28-dim one-hot (tensor_id)
   Hidden: 6 units + ReLU
   Output: 2 floats (mean, log_scale)
@@ -63,8 +65,8 @@ SCHEMA_VERSION = "pr101_tiny_nn_200_param_faithful.v1"
 ARCHIVE_OVERHEAD_BYTES = 16_094
 N_TENSORS = len(FIXED_STATE_SCHEMA)
 N_SYMBOLS = 2 * N_QUANT + 1
-EVIDENCE_GRADE = "[CPU-prep faithful 200-param test]"
-EVIDENCE_SEMANTICS = "cpu_faithful_200_param_mlp_byte_anchor_no_score"
+EVIDENCE_GRADE = "[CPU-prep 200-param gaussian-pmf proxy]"
+EVIDENCE_SEMANTICS = "cpu_200_param_gaussian_pmf_proxy_byte_anchor_no_score"
 DISPATCH_BLOCKERS = (
     "no_runtime_decoder_packet_built",
     "missing_exact_cuda_auth_eval",
@@ -225,6 +227,27 @@ def serialize_model(model: TinyNN200, scales: list[float]) -> bytes:
     return bytes(buf)
 
 
+def model_spec_fidelity(n_params: int, model_brotli_bytes: int) -> dict:
+    """Return the precise implementation-vs-catalog fidelity classification."""
+    capacity_match = n_params <= 200
+    overhead_match = model_brotli_bytes <= 800
+    distribution_contract_match = False
+    return {
+        "predicted": "200-param MLP predicting per-tensor PMF; ~400B model + AAC",
+        "actual": "188-param MLP predicting Gaussian(mean, log_scale) per tensor",
+        "actual_params": n_params,
+        "actual_model_brotli_bytes": model_brotli_bytes,
+        "capacity_constraint_match": capacity_match,
+        "model_overhead_match": overhead_match,
+        "distribution_contract_match": distribution_contract_match,
+        "1:1_fidelity": capacity_match and overhead_match and distribution_contract_match,
+        "fidelity_scope": "capacity_and_model_overhead_only",
+        "model_spec_drift": [
+            "parametric_gaussian_two_output_not_full_255_bin_per_tensor_pmf",
+        ],
+    }
+
+
 def run_codec(state_dict_path: Path, *, epochs: int, seed: int) -> dict:
     sym_per_tensor, scales = collect_symbols(state_dict_path)
     n_total = sum(s.size for s in sym_per_tensor)
@@ -258,12 +281,7 @@ def run_codec(state_dict_path: Path, *, epochs: int, seed: int) -> dict:
         "archive_bytes": archive_bytes,
         "n_symbols": n_total,
         "weighted_theoretical_bits_per_element": ac_stats["weighted_theoretical_bits_per_element"],
-        "model_spec_match": {
-            "predicted": "200-param MLP predicting per-tensor PMF; ~400B model + AAC",
-            "actual_params": n_params,
-            "actual_model_brotli_bytes": len(model_brotli),
-            "1:1_fidelity": n_params <= 200 and len(model_brotli) <= 800,
-        },
+        "model_spec_match": model_spec_fidelity(n_params, len(model_brotli)),
     }
 
 
@@ -298,26 +316,29 @@ def main(argv: list[str] | None = None) -> int:
     print(f"model brotli: {manifest['model_blob_brotli_bytes']} B (raw {manifest['model_blob_raw_bytes']} B)")
     print(f"ac payload brotli: {manifest['ac_payload_brotli_bytes']:,} B")
     print(f"\narchive_bytes: {manifest['archive_bytes']:,} B")
-    print(f"  vs catalog prediction: 167,000 B")
+    print("  vs catalog prediction: 167,000 B")
     delta_pred = manifest["archive_bytes"] - 167_000
     print(f"  delta vs prediction: {delta_pred:+,} B")
-    print(f"  vs brotli baseline: 178,144 B")
+    print("  vs brotli baseline: 178,144 B")
     delta_brotli = manifest["archive_bytes"] - 178_144
     verdict = "BEAT" if delta_brotli < 0 else "TIES" if abs(delta_brotli) < 100 else "LOSES"
     print(f"  delta vs brotli: {delta_brotli:+,} B ({verdict} brotli)")
     print(f"\n1:1 fidelity vs catalog model_spec: {manifest['model_spec_match']['1:1_fidelity']}")
+    print(f"fidelity scope: {manifest['model_spec_match']['fidelity_scope']}")
 
     if args.output_evidence:
         evidence_row = {
-            "technique": "tiny_nn_pmf_predictor_200param_faithful",
+            "technique": "tiny_nn_pmf_predictor_200param_gaussian",
             "empirical_archive_bytes": manifest["archive_bytes"],
             "model_total_params": manifest["model_total_params"],
             **proxy_evidence_contract(),
             "source": (
                 f"{EVIDENCE_GRADE} {args.output_json} "
-                f"(faithful 1:1 implementation of catalog spec '200-param MLP'; "
+                f"(capacity-faithful 200-param Gaussian PMF proxy for catalog "
+                f"spec '200-param MLP'; "
                 f"actual params={manifest['model_total_params']}, "
-                f"actual model brotli={manifest['model_blob_brotli_bytes']} B)"
+                f"actual model brotli={manifest['model_blob_brotli_bytes']} B; "
+                "not a full 255-bin per-tensor PMF)"
             ),
             "timestamp": _dt.datetime.now(_dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "model_spec_fidelity_audit": manifest["model_spec_match"],

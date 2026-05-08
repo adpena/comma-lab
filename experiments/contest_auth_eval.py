@@ -833,8 +833,13 @@ def _run_inflate(inflate_sh: Path, archive_dir: Path, inflated_dir: Path,
     print(f"[inflate] cmd: {' '.join(cmd)}")
     print(f"[inflate] timeout: {timeout}s ({timeout / 60:.1f} min)")
     t0 = time.monotonic()
+    env = {**os.environ}
+    env.setdefault(
+        "UV_PROJECT_ENVIRONMENT",
+        str(inflated_dir.parent / "uv_project_env"),
+    )
     try:
-        result = subprocess.run(cmd, timeout=timeout, check=False)
+        result = subprocess.run(cmd, timeout=timeout, check=False, env=env)
     except subprocess.TimeoutExpired as exc:
         raise RuntimeError(
             f"[inflate] TIMED OUT after {timeout}s. Contest budget is "
@@ -997,19 +1002,9 @@ def _run_upstream_evaluate(upstream_dir: Path, submission_dir: Path,
     archive_bytes_actual = (submission_dir / "archive.zip").stat().st_size
 
     if not report_path.exists():
-        # Try to recover from stdout if report.txt is missing.
-        if "Final score:" in result.stdout:
-            print("[evaluate] report.txt missing — recovering from stdout")
-            parsed = _parse_report(
-                result.stdout,
-                archive_size=archive_bytes_actual,
-                source="stdout",
-            )
-            parsed["evaluate_elapsed_seconds"] = elapsed
-            return parsed
         raise RuntimeError(
-            f"[evaluate] no report.txt at {report_path} AND stdout has no "
-            f"'Final score:' line. Run produced no usable measurement."
+            f"[evaluate] no report.txt at {report_path}. Score-grade custody "
+            "requires the evaluator report artifact; stdout is diagnostic only."
         )
 
     parsed_file = _parse_report(report_path, archive_size=archive_bytes_actual,

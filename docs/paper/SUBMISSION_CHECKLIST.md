@@ -69,6 +69,17 @@ points at §4.0 frontier table + §7.4 future work.
 
 - [ ] Run a final pass to ensure no `[contest-CUDA]` claim exists without
       the corresponding archive SHA-256 + JSON path
+- [ ] Run a claims-language pass for `prediction`, `proxy`, `MPS`, `CPU`,
+      `stub`, and byte-only rows. These may appear only as roadmap or
+      diagnostic evidence, never as ranked scores, promoted lanes, family kills,
+      or paper empirical anchors.
+- [ ] Confirm every `A-negative`, `invalid`, `killed`, `dead`, `retired`, or
+      `falsified` phrase names the exact measured archive/runtime/config and a
+      concrete reactivation criterion. Single-config failures must not read as
+      broad method-family claims.
+- [ ] Confirm every Omega/Omega-OPT or intN predicted score is labeled
+      non-ranking unless an exact CUDA `contest_auth_eval*.json` path, archive
+      SHA-256, runtime tree SHA-256, and component recomputation are cited.
 - [ ] Verify no `/tmp/...` paths appear in any persisted artifact
       (per the repository forbidden-pattern catalog)
 - [ ] Confirm all archive SHA-256 values in §4 are reproducible from disk

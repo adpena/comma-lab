@@ -59,6 +59,10 @@ Currently runs:
   Gate #20: tools/pr106_archive_decomposition.py
            (PR101/PR106 frontier archives are treated as single-member
             monolithic packets; logical budgets require internal parser proof)
+  Gate #21: tools/check_omega_opt_anchor_discipline.py --strict
+           (Omega-OPT nested score hypotheses stay fail-closed until 1:1
+            archive/eval anchors exist; scans the generated HStack/VStack
+            plan artifact too)
   Lane #1: tools/dispatch_dryrun_apogee_intN.py --all-pareto-frontier
            --allow-forensic-byte-only
            (self-protection check: Apogee intN remains byte-only and blocked
@@ -132,6 +136,8 @@ CROSS_PARADIGM_FRONTIER_INVENTORY = TOOLS / "build_cross_paradigm_frontier_inven
 PR91_HPM1_READINESS_AUDIT = TOOLS / "audit_pr91_hpm1_readiness.py"
 PR91_HPM1_RUNTIME_CONTRACT_AUDIT = TOOLS / "audit_pr91_hpm1_runtime_contract.py"
 FRONTIER_ARCHIVE_LAYOUT_AUDIT = TOOLS / "pr106_archive_decomposition.py"
+OMEGA_OPT_ANCHOR_AUDIT = TOOLS / "check_omega_opt_anchor_discipline.py"
+HSTACK_VSTACK_PLAN = REPO / "reports/hstack_vstack_multipass_plan_20260507.json"
 PR91_HPM1_READINESS_ARTIFACT = REPO / "experiments/results/pr91_hpm1_readiness_20260506_codex/readiness.json"
 PR91_HPM1_RUNTIME_CONTRACT_ARTIFACT = (
     REPO / "experiments/results/pr91_hpm1_runtime_contract_20260506_codex/runtime_contract.json"
@@ -1148,6 +1154,8 @@ def main(argv: list[str] | None = None) -> int:
         PR91_HPM1_READINESS_AUDIT,
         PR91_HPM1_RUNTIME_CONTRACT_AUDIT,
         FRONTIER_ARCHIVE_LAYOUT_AUDIT,
+        OMEGA_OPT_ANCHOR_AUDIT,
+        HSTACK_VSTACK_PLAN,
         PR91_HPM1_READINESS_ARTIFACT,
         PR91_HPM1_RUNTIME_CONTRACT_ARTIFACT,
         LOCAL_CUSTODY_RELEASE_MANIFEST,
@@ -1327,6 +1335,18 @@ def main(argv: list[str] | None = None) -> int:
             _run_frontier_monolithic_layout_gate,
             "  ✓ Gate #20: frontier monolithic archive layout — PASSED",
             "  ✗ Gate #20: frontier monolithic archive layout — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            21,
+            "Omega-OPT anchor discipline",
+            lambda: _run_gate(
+                "Omega-OPT anchor discipline",
+                OMEGA_OPT_ANCHOR_AUDIT,
+                ["--plan-manifest", str(HSTACK_VSTACK_PLAN)],
+            ),
+            "  ✓ Gate #21: Omega-OPT anchor discipline — PASSED",
+            "  ✗ Gate #21: Omega-OPT anchor discipline — FAILED",
         ),
     ]
     lane_steps = [

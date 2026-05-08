@@ -3,8 +3,8 @@
 audit criterion #2 for the lossy_int4 lane.
 
 Per the 2026-05-07 audit memo (`feedback_adversarial_audit_4_falsifications_DEFERRED_not_killed_20260507.md`):
-- naive PTQ at int4: 37.42% rel_err (FALSIFIED)
-- QAT at int4 (subagent A): 28.48% rel_err (improvement: 9pp; STILL-FALSIFIED at 5% threshold)
+- naive PTQ at int4: 37.42% rel_err (measured config not dispatchable)
+- QAT at int4 (subagent A): 28.48% rel_err (criterion #1 not dispatchable)
 - per-channel scales: NOT TESTED (this tool)
 
 Method:
@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import argparse
 import datetime as _dt
-import hashlib
 import json
 import struct
 import sys
@@ -47,10 +46,12 @@ DEFAULT_STATE_DICT_PATH = (
     REPO_ROOT
     / "experiments/results/pr101_codecop_sweep_20260507_codex/pr101_decoder_state_dict.pt"
 )
-DISPATCH_BLOCKERS_IF_FALSIFIED = [
-    "rel_err_above_5pct_threshold",
+BASE_DISPATCH_BLOCKERS = [
     "no_int4_decoder_runtime_built",
+    "byte_closed_per_channel_runtime_packet_missing",
     "missing_exact_cuda_auth_eval",
+    "requires_exact_cuda_auth_eval_before_any_score_use",
+    "cpu_proxy_rel_err_not_score_evidence",
 ]
 
 
@@ -70,11 +71,12 @@ def per_channel_scales_int4(tensor: np.ndarray) -> tuple[np.ndarray, np.ndarray,
         return (np.array([code], dtype=np.int8),
                 np.array([scale_fp16], dtype=np.float16),
                 np.array([recon], dtype=np.float32))
-    if tensor.ndim == 1:
-        # Treat 1D as one channel each
-        tensor_re = tensor.reshape(tensor.shape[0], 1)
-    else:
-        tensor_re = tensor.reshape(tensor.shape[0], -1)
+    # Treat 1D as one channel per element; higher-dimensional tensors use axis 0.
+    tensor_re = (
+        tensor.reshape(tensor.shape[0], 1)
+        if tensor.ndim == 1
+        else tensor.reshape(tensor.shape[0], -1)
+    )
 
     n_chan = tensor_re.shape[0]
     codes = np.zeros_like(tensor_re, dtype=np.int8)
@@ -176,20 +178,32 @@ def measure_full(state_dict_path: Path) -> dict:
     archive_bytes = len(compressed) + ARCHIVE_OVERHEAD_BYTES
 
     if weighted_avg_rel_err_pct < 2.0 and max_p99 < 10.0:
-        verdict = "DISPATCH-READY"
+        verdict = "CUDA-EVAL-WORTH-TESTING"
+        cuda_eval_worth_testing = True
     elif weighted_avg_rel_err_pct < 5.0:
         verdict = "CONDITIONAL"
+        cuda_eval_worth_testing = True
     else:
-        verdict = "STILL-FALSIFIED"
+        verdict = "MEASURED_CONFIG_NOT_DISPATCHABLE"
+        cuda_eval_worth_testing = False
 
-    ready_for_dispatch = verdict == "DISPATCH-READY"
+    dispatch_blockers = list(BASE_DISPATCH_BLOCKERS)
+    if weighted_avg_rel_err_pct >= 5.0:
+        dispatch_blockers.insert(0, "rel_err_above_5pct_threshold")
     return {
         "schema": SCHEMA_VERSION,
         "tool": TOOL_NAME,
         "evidence_grade": EVIDENCE_GRADE,
+        "evidence_semantics": "cpu_roundtrip_rel_err_and_byte_anchor_no_score",
         "score_claim": False,
         "promotion_eligible": False,
-        "ready_for_exact_eval_dispatch": ready_for_dispatch,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "proxy_row": True,
+        "cuda_eval_worth_testing": cuda_eval_worth_testing,
+        "family_falsified": False,
+        "falsification_scope": "measured_configuration_only",
         "input_state_dict": str(state_dict_path),
         "n_total_elements": total_elements,
         "n_nontrivial_elements": n_nontrivial_total,
@@ -201,7 +215,7 @@ def measure_full(state_dict_path: Path) -> dict:
         "max_p99_rel_err_pct": max_p99,
         "max_max_rel_err_pct": max_max,
         "verdict": verdict,
-        "dispatch_blockers": [] if ready_for_dispatch else DISPATCH_BLOCKERS_IF_FALSIFIED,
+        "dispatch_blockers": dispatch_blockers,
         "per_tensor": per_tensor_stats,
     }
 
@@ -228,16 +242,17 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"manifest: {args.output_json}\n")
     print(f"archive_bytes: {manifest['archive_bytes']:,} B")
-    print(f"  vs naive PTQ block_size=1024: 100,799 B")
+    print("  vs naive PTQ block_size=1024: 100,799 B")
     delta_naive = manifest["archive_bytes"] - 100_799
     print(f"  delta vs naive: {delta_naive:+,} B")
-    print(f"\nrel_err pct:")
+    print("\nrel_err pct:")
     print(f"  weighted_avg: {manifest['weighted_avg_rel_err_pct']:.3f}%")
     print(f"  max_p99:      {manifest['max_p99_rel_err_pct']:.3f}%")
     print(f"  max_max:      {manifest['max_max_rel_err_pct']:.3f}%")
     print(f"\nVERDICT: {manifest['verdict']}")
-    print(f"  prior naive PTQ: 37.42% rel_err (FALSIFIED)")
-    print(f"  prior QAT:       28.48% rel_err (STILL-FALSIFIED)")
+    print(f"  exact-eval ready: {manifest['ready_for_exact_eval_dispatch']}")
+    print("  prior naive PTQ: 37.42% rel_err (measured config not dispatchable)")
+    print("  prior QAT:       28.48% rel_err (criterion #1 not dispatchable)")
     delta_qat = manifest['weighted_avg_rel_err_pct'] - 28.48
     print(f"  delta vs QAT:    {delta_qat:+.3f}pp")
 
@@ -246,6 +261,17 @@ def main(argv: list[str] | None = None) -> int:
             "technique": "lossy_int4_per_channel_scales",
             "empirical_archive_bytes": manifest["archive_bytes"],
             "empirical_distortion_increase_pct": manifest["weighted_avg_rel_err_pct"],
+            "evidence_grade": EVIDENCE_GRADE,
+            "evidence_semantics": manifest["evidence_semantics"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+            "proxy_row": True,
+            "cuda_eval_worth_testing": manifest["cuda_eval_worth_testing"],
+            "family_falsified": False,
+            "falsification_scope": "measured_configuration_only",
             "source": (
                 f"[CPU-prep empirical reactivation] {args.output_json} "
                 f"(per-output-channel fp16 scales; audit criterion #2)"
@@ -259,6 +285,7 @@ def main(argv: list[str] | None = None) -> int:
                 "AWQ_calibration",
             ],
             "supersedes_prior_FALSIFIED_tag": False,  # this is per-channel, not the prior naive/QAT lanes
+            "dispatch_blockers": manifest["dispatch_blockers"],
         }
         args.output_evidence.parent.mkdir(parents=True, exist_ok=True)
         with args.output_evidence.open("a", encoding="utf-8") as f:

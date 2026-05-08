@@ -47,13 +47,30 @@ TOOL_NAME = "tools/pr101_arch_shrink_post_hoc_sweep.py"
 SCHEMA_VERSION = "pr101_arch_shrink_post_hoc_sweep.v1"
 ARCHIVE_OVERHEAD_BYTES = 16_094
 EVIDENCE_GRADE = "[CPU-prep empirical byte-anchor only]"
+EVIDENCE_SEMANTICS = "cpu_post_hoc_arch_shrink_byte_anchor_no_score"
 DISPATCH_BLOCKERS = [
     "post_hoc_arch_truncate_not_retrained",
     "score_impact_unknown_without_contest_cuda",
     "no_archive_substitution_performed",
     "missing_exact_cuda_auth_eval",
+    "requires_exact_cuda_auth_eval_before_any_score_use",
     "channel_truncation_breaks_inference_until_retrained",
 ]
+
+
+def proxy_evidence_contract() -> dict[str, object]:
+    return {
+        "evidence_grade": EVIDENCE_GRADE,
+        "evidence_marker": EVIDENCE_GRADE,
+        "evidence_semantics": EVIDENCE_SEMANTICS,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "proxy_row": True,
+        "dispatch_blockers": list(DISPATCH_BLOCKERS),
+    }
 
 
 def channel_l2_magnitude(tensor: np.ndarray) -> np.ndarray:
@@ -104,7 +121,7 @@ def sweep_arch_shrink(state_dict_path: Path, ratios: list[float]) -> dict:
 
         for name, t_orig in originals:
             n_channels = t_orig.shape[0] if t_orig.ndim >= 1 else 1
-            n_keep = max(1, int(round(n_channels * r)))
+            n_keep = max(1, round(n_channels * r))
             t_trunc = truncate_to_top_channels(t_orig, n_keep)
             truncated_total_elements += t_trunc.size
 
@@ -132,6 +149,7 @@ def sweep_arch_shrink(state_dict_path: Path, ratios: list[float]) -> dict:
         archive_bytes = len(compressed) + ARCHIVE_OVERHEAD_BYTES
         rows.append({
             "shrink_ratio": r,
+            **proxy_evidence_contract(),
             "n_elements_orig": n_total_elements,
             "n_elements_kept": truncated_total_elements,
             "fraction_kept": truncated_total_elements / max(n_total_elements, 1),
@@ -145,13 +163,9 @@ def sweep_arch_shrink(state_dict_path: Path, ratios: list[float]) -> dict:
     return {
         "schema": SCHEMA_VERSION,
         "tool": TOOL_NAME,
-        "evidence_grade": EVIDENCE_GRADE,
-        "score_claim": False,
-        "promotion_eligible": False,
-        "ready_for_exact_eval_dispatch": False,
+        **proxy_evidence_contract(),
         "score_affecting_payload_changed": True,
         "charged_bits_changed": True,
-        "dispatch_blockers": DISPATCH_BLOCKERS,
         "input_state_dict": str(state_dict_path),
         "ratios_swept": ratios,
         "n_total_elements_orig": n_total_elements,
@@ -189,7 +203,7 @@ def main(argv: list[str] | None = None) -> int:
     args.output_json.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
     print(f"\nmanifest: {args.output_json}\n")
-    print(f"  ratio | fraction_kept | archive_bytes")
+    print("  ratio | fraction_kept | archive_bytes")
     for r in sorted(manifest["rows"], key=lambda r: r["shrink_ratio"]):
         print(f"  {r['shrink_ratio']:>5.2f} | {r['fraction_kept']:>13.4f} | {r['archive_bytes']:>14,}")
     print(f"\nbest_ratio: {manifest['best_shrink_ratio']}, archive_bytes: {manifest['best_archive_bytes']:,} B")
@@ -200,6 +214,7 @@ def main(argv: list[str] | None = None) -> int:
         evidence_row = {
             "technique": "arch_shrink_x0.4_quantizr_class",
             "empirical_archive_bytes": r_04_row["archive_bytes"],
+            **proxy_evidence_contract(),
             "source": (
                 f"[CPU-prep empirical byte-anchor only] {args.output_json} "
                 f"(ratio=0.4, post-hoc no retrain; channel L2-truncate)"
@@ -212,9 +227,9 @@ def main(argv: list[str] | None = None) -> int:
             f.write(json.dumps(evidence_row) + "\n")
         print(f"\nevidence row appended: {args.output_evidence}")
 
-    print(f"\nNOTE: byte-anchor only. SCORE impact of post-hoc arch truncation is")
-    print(f"unknown without retraining. Catalog row arch_shrink_x0.4_quantizr_class")
-    print(f"remains DEFERRED for score promotion until [contest-CUDA] eval lands.")
+    print("\nNOTE: byte-anchor only. SCORE impact of post-hoc arch truncation is")
+    print("unknown without retraining. Catalog row arch_shrink_x0.4_quantizr_class")
+    print("remains DEFERRED for score promotion until [contest-CUDA] eval lands.")
     return 0
 
 

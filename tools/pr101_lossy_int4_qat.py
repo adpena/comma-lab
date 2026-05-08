@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PR101 lossy int4 + Quantization-Aware Training (QAT) — research-path
-exhaustion against the naive-PTQ FALSIFICATION (37.42% rel_err).
+reactivation against the naive-PTQ non-dispatchable config (37.42% rel_err).
 
 The naive PTQ baseline (`pr101_lossy_int4_roundtrip_test.py` 2026-05-08)
 produced 37.42% weighted-average relative error → tagged DEFERRED-pending-
@@ -22,7 +22,7 @@ This tool runs FULL QAT (no stubs, no scaffolds):
        feed into `pr101_lossy_int4_block_sweep.encode_tensor` to produce
        the actual archive bytes.
     5. Decode (inverse of encode) and compute roundtrip rel_err vs the
-       ORIGINAL fp32 weights (this is what the contest scorer would see
+       ORIGINAL fp32 weights (this is a proxy for what the renderer would see
        through the renderer). Sub-5% = DISPATCH-CANDIDATE; else
        DEFERRED-with-new-evidence.
     6. Emit manifest + cathedral_autopilot evidence row.
@@ -37,6 +37,8 @@ Compliance (CLAUDE.md non-negotiables):
       byte-closed packet, runtime decoder, dispatch claim, and exact CUDA auth
       eval must flip any dispatch flag.
     * No /tmp paths in any persisted artifact.
+    * This tool only adjudicates the measured QAT config. It does not falsify
+      the lossy-int4 family, GPTQ/AWQ variants, or future byte-closed runtimes.
     * MPS allowed as research-signal source per `feedback_mps_as_research_
       signal_strategic_clarification_20260507.md`; never as a judge.
 """
@@ -78,6 +80,8 @@ LOCAL_QAT_DISPATCH_BLOCKERS = (
     "byte_closed_int4_candidate_packet_missing",
     "no_int4_decoder_runtime_built",
     "missing_exact_cuda_auth_eval",
+    "requires_exact_cuda_auth_eval_before_any_score_use",
+    "mps_or_cpu_proxy_rel_err_not_score_evidence",
 )
 
 
@@ -130,6 +134,7 @@ def local_qat_dispatch_contract(*, cuda_eval_worth_testing: bool) -> dict[str, A
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
         "dispatch_attempted": False,
+        "proxy_row": True,
         "dispatch_blockers": list(LOCAL_QAT_DISPATCH_BLOCKERS),
     }
 
@@ -736,10 +741,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         cuda_eval_worth_testing = True
     else:
-        verdict = "STILL-FALSIFIED"
+        verdict = "MEASURED_CONFIG_NOT_DISPATCHABLE"
         verdict_reason = (
             f"weighted_avg {rel_err_pct:.3f}% >= {DISPATCH_THRESHOLD_PCT}%; "
-            f"QAT did not recover precision. Naive PTQ baseline was "
+            f"this measured QAT config did not recover precision. Naive PTQ baseline was "
             f"{NAIVE_PTQ_REL_ERR_PCT:.2f}%; QAT achieved "
             f"{rel_err_pct:.2f}% (improvement: "
             f"{(NAIVE_PTQ_REL_ERR_PCT - rel_err_pct):.2f} percentage points)"
@@ -778,6 +783,9 @@ def main(argv: list[str] | None = None) -> int:
         "ready_for_exact_eval_dispatch": dispatch_contract["ready_for_exact_eval_dispatch"],
         "cuda_eval_worth_testing": dispatch_contract["cuda_eval_worth_testing"],
         "dispatch_attempted": dispatch_contract["dispatch_attempted"],
+        "proxy_row": True,
+        "family_falsified": False,
+        "falsification_scope": "measured_configuration_only",
         "input_state_dict": repo_relative(args.state_dict),
         "input_state_dict_sha256": sha256_file(args.state_dict),
         "device": str(device),
@@ -811,6 +819,12 @@ def main(argv: list[str] | None = None) -> int:
         "verdict_reason": verdict_reason,
         "dispatch_blockers": dispatch_contract["dispatch_blockers"],
         "supersedes_prior_FALSIFIED_tag": True,
+        "reactivation_criteria_remaining": [
+            "per_channel_scales",
+            "mixed_precision_int4_int6_int8",
+            "GPTQ_calibration",
+            "AWQ_calibration",
+        ],
         "n_total_elements": post_metrics["n_total_elements"],
         "n_nontrivial_elements": post_metrics["n_nontrivial_elements"],
     }
@@ -838,7 +852,10 @@ def main(argv: list[str] | None = None) -> int:
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": dispatch_contract["ready_for_exact_eval_dispatch"],
         "dispatch_attempted": dispatch_contract["dispatch_attempted"],
+        "proxy_row": True,
         "cuda_eval_worth_testing": dispatch_contract["cuda_eval_worth_testing"],
+        "family_falsified": False,
+        "falsification_scope": "measured_configuration_only",
         "score_affecting_payload_changed": True,  # int4 grid != fp32 weights
         "charged_bits_changed": True,  # archive bytes change
         "dispatch_blockers": manifest["dispatch_blockers"],
@@ -850,6 +867,12 @@ def main(argv: list[str] | None = None) -> int:
         ),
         "contest_dispatch_verdict": dispatch_verdict,
         "supersedes_prior_FALSIFIED_tag": True,
+        "reactivation_criteria_remaining": [
+            "per_channel_scales",
+            "mixed_precision_int4_int6_int8",
+            "GPTQ_calibration",
+            "AWQ_calibration",
+        ],
         "timestamp": _dt.datetime.now(_dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
     args.evidence_jsonl.parent.mkdir(parents=True, exist_ok=True)

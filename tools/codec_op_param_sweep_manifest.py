@@ -96,6 +96,10 @@ class SweepCandidate:
     predicted_band: list[float]  # [low, high] = [score, score+ uncertainty]
     score_delta_vs_anchor: float
     rate_delta_vs_anchor: float
+    materialized_payload_path: str | None = None
+    materialized_payload_bytes: int | None = None
+    materialized_payload_sha256: str | None = None
+    materialized_payload_contract: str | None = None
     evidence_semantics: str = "cpu_substrate_predicted_band"
     ready_for_exact_eval_dispatch: bool = False
     score_claim: bool = False
@@ -217,6 +221,8 @@ def build_sweep_candidates(
     baseline_substream_bytes: int,
     label_prefix: str = "codec_op_sweep",
     band_uncertainty_pct: float = 0.005,
+    materialized_payload_output_dir: Path | None = None,
+    materialized_payload_contract: str | None = None,
 ) -> list[SweepCandidate]:
     """Build a list of SweepCandidates by running the CodecOp at each
     parameter setting and computing predicted contest-score impact
@@ -288,6 +294,13 @@ def build_sweep_candidates(
             + "_".join(f"{k}{v}" for k, v in sorted(params.items()))
             or f"{label_prefix}_{i}"
         )
+        materialized = _maybe_materialize_payload(
+            result,
+            candidate_id=candidate_id,
+            output_dir=materialized_payload_output_dir,
+            expected_bytes=candidate_substream_bytes,
+            payload_contract=materialized_payload_contract,
+        )
         candidates.append(SweepCandidate(
             candidate_id=candidate_id,
             op_module=op_module,
@@ -302,8 +315,54 @@ def build_sweep_candidates(
             predicted_band=[predicted_score - half_band, predicted_score + half_band],
             score_delta_vs_anchor=score_delta,
             rate_delta_vs_anchor=rate_delta,
+            materialized_payload_path=materialized.get("path"),
+            materialized_payload_bytes=materialized.get("bytes"),
+            materialized_payload_sha256=materialized.get("sha256"),
+            materialized_payload_contract=materialized.get("contract"),
         ))
     return candidates
+
+
+def _maybe_materialize_payload(
+    result: Any,
+    *,
+    candidate_id: str,
+    output_dir: Path | None,
+    expected_bytes: int,
+    payload_contract: str | None,
+) -> dict[str, Any]:
+    if output_dir is None:
+        return {}
+    if not hasattr(result, "blob"):
+        raise SystemExit(
+            "--materialized-payload-output-dir requires CodecOp encode result.blob"
+        )
+    blob = result.blob
+    if not isinstance(blob, bytes | bytearray):
+        raise SystemExit(
+            "CodecOp encode result.blob must be bytes when materializing payloads"
+        )
+    payload = bytes(blob)
+    if len(payload) != int(expected_bytes):
+        raise SystemExit(
+            f"CodecOp result bytes_out mismatch: bytes_out={expected_bytes} "
+            f"len(blob)={len(payload)}"
+        )
+    output_dir.mkdir(parents=True, exist_ok=True)
+    payload_path = output_dir / f"{_safe_candidate_stem(candidate_id)}.section"
+    payload_path.write_bytes(payload)
+    return {
+        "path": payload_path.as_posix(),
+        "bytes": len(payload),
+        "sha256": hashlib.sha256(payload).hexdigest(),
+        "contract": payload_contract or "raw_codecop_encode_blob",
+    }
+
+
+def _safe_candidate_stem(candidate_id: str) -> str:
+    safe = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in candidate_id)
+    safe = safe.strip("._-")
+    return safe or "codec_op_candidate"
 
 
 def to_meta_lagrangian_candidates(
@@ -466,6 +525,25 @@ def main(argv: list[str] | None = None) -> int:
         "band, op identity, params, and evidence_grade=[CPU-prep]. Closes "
         "the manifest -> ledger -> meta-Lagrangian loop.",
     )
+    parser.add_argument(
+        "--materialized-payload-output-dir", type=Path, default=None,
+        help=(
+            "Optional directory where each CodecOp encode result.blob is written "
+            "as a raw section payload. This is byte custody for downstream "
+            "tools/build_monolithic_codec_op_replacement_manifest.py; it does "
+            "not make candidates dispatchable."
+        ),
+    )
+    parser.add_argument(
+        "--materialized-payload-contract",
+        default=None,
+        help=(
+            "Optional contract label attached to materialized payload files, "
+            "for example raw_codecop_encode_blob, pr106_decoder_packed_brotli, "
+            "or pr101_decoder_blob. The downstream monolithic bridge still "
+            "validates the real section contract."
+        ),
+    )
     args = parser.parse_args(argv)
 
     op_cls = _import_codec_op(args.module, args.class_name)
@@ -526,6 +604,8 @@ def main(argv: list[str] | None = None) -> int:
         baseline_substream_bytes=args.baseline_substream_bytes,
         label_prefix=args.label_prefix,
         band_uncertainty_pct=args.band_uncertainty_pct,
+        materialized_payload_output_dir=args.materialized_payload_output_dir,
+        materialized_payload_contract=args.materialized_payload_contract,
     )
     manifest = emit_manifest(
         candidates,
@@ -603,6 +683,10 @@ def main(argv: list[str] | None = None) -> int:
                 "output_inner_member_sha256": report.sha256_output_inner_member,
                 "input_decoder_blob_sha256": report.sha256_input_decoder_blob,
                 "replacement_decoder_blob_sha256": report.sha256_replacement_decoder_blob,
+                "materialized_payload_path": manifest_row.get("materialized_payload_path"),
+                "materialized_payload_bytes": manifest_row.get("materialized_payload_bytes"),
+                "materialized_payload_sha256": manifest_row.get("materialized_payload_sha256"),
+                "materialized_payload_contract": manifest_row.get("materialized_payload_contract"),
                 "input_latent_blob_sha256": report.sha256_input_latent_blob,
                 "output_latent_blob_sha256": report.sha256_output_latent_blob,
                 "input_sidecar_blob_sha256": report.sha256_input_sidecar_blob,
@@ -703,6 +787,18 @@ def main(argv: list[str] | None = None) -> int:
                     ),
                     "archive_sha256": archive_sha,
                     "archive_path": archive_path,
+                    "materialized_payload_path": (
+                        manifest_row.get("materialized_payload_path")
+                        if manifest_row else None
+                    ),
+                    "materialized_payload_sha256": (
+                        manifest_row.get("materialized_payload_sha256")
+                        if manifest_row else None
+                    ),
+                    "materialized_payload_contract": (
+                        manifest_row.get("materialized_payload_contract")
+                        if manifest_row else None
+                    ),
                     "cathedral_op": (
                         f"{args.module}.{args.class_name}"
                     ),

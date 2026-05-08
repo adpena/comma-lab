@@ -1,0 +1,1845 @@
+{
+  "arch_technique_ranking": [
+    {
+      "active_ranking_blocked": false,
+      "cost_dollars": 20.0,
+      "cost_hours": 18.0,
+      "current_score_baseline": 0.2089810755823297,
+      "description": "Selfcomp/Quantizr-style: renderer is its own decoder",
+      "evidence_grade": "[predicted]",
+      "gain_per_dollar": 0.0031820733510755455,
+      "gain_per_hour": 0.0035356370567506063,
+      "model_spec": {
+        "architecture_class": "self_compressing_neural_codec",
+        "canonical_shape_family": "selfcomp_block_fp_self_decode",
+        "capacity_constraint": "renderer_self_decodes_no_separate_decoder",
+        "substrate_constraint": "renderer_weights_bind_to_decoder",
+        "variant_required": [
+          "self_decode_path_built"
+        ]
+      },
+      "name": "self_compress_neural_codec",
+      "predicted_archive_bytes": 90000,
+      "predicted_gap_to_target": -0.04466039143918121,
+      "predicted_score_after": 0.1453396085608188,
+      "predicted_score_delta": 0.06364146702151091,
+      "reaches_target": true,
+      "retired_from_active_ranking": false,
+      "risk": "architectural"
+    },
+    {
+      "active_ranking_block_reason": "exact_negative_measured_config_requires_reactivation",
+      "active_ranking_blocked": true,
+      "catalog_prior_bytes": 156344,
+      "cost_dollars": 5.0,
+      "cost_hours": 3.0,
+      "current_score_baseline": 0.2089810755823297,
+      "description": "Per-tensor K-step lossy coarsening of PR101 quantized renderer symbols; byte proxy only until exact CUDA review clears a measured config",
+      "dispatch_blockers": [
+        "exact_negative_result_requires_reactivation_before_empirical_byte_anchor",
+        "measured_config_retired_exact_cuda_negative",
+        "missing_exact_cuda_auth_eval_on_lossy_decoder",
+        "no_runtime_dequantize_path_built",
+        "reactivation_required_before_new_dispatch"
+      ],
+      "empirical_anchor_promotable": false,
+      "empirical_anchor_score_claim": false,
+      "evidence_grade": "[exact-negative-N2; reactivation-required]",
+      "exact_negative_classification": "measured_config_retired_only",
+      "exact_negative_evidence_n": 2,
+      "exact_negative_falsification_scopes": [
+        "measured_config_only_per_tensor_K_budget_0.05",
+        "measured_config_only"
+      ],
+      "exact_negative_review_packets": [
+        ".omx/research/lossy_coarsening_exact_cuda_result_review_20260508_codex.json",
+        ".omx/research/lossy_coarsening_exact_cuda_result_review_20260508_codex.json"
+      ],
+      "exact_negative_sources": [
+        "[contest-CUDA A-negative] Lightning T4 exact auth eval job=lossy-coarsening-cuda-20260508T0312-noproject auth_eval_json=experiments/results/lightning_batch/lossy-coarsening-cuda-20260508T0312-noproject/auth_eval_work/contest_auth_eval.json review_packet=.omx/research/lossy_coarsening_exact_cuda_result_review_20260508_codex.json",
+        "experiments/results/lightning_batch/lossy-coarsening-cuda-20260508T0312-noproject/auth_eval_work/contest_auth_eval.json reviewed_by=.omx/research/lossy_coarsening_exact_cuda_result_review_20260508_codex.json"
+      ],
+      "family_falsified": false,
+      "gain_per_dollar": 0.0,
+      "gain_per_hour": 0.0,
+      "measured_config_retired": true,
+      "measured_config_retired_only": true,
+      "measured_config_statuses": [
+        "measured_config_retired"
+      ],
+      "method_family_retired": false,
+      "model_spec": {
+        "architecture_class": "analytical_per_tensor_K_coarsening",
+        "canonical_shape_family": "round_to_nearest_per_tensor_step_size_K",
+        "capacity_constraint": "28_uint8_per_tensor_K_values_plus_brotli_payload",
+        "substrate_constraint": "PR101_1d_quantized_renderer_symbols",
+        "variant_required": [
+          "per_tensor_K_budget_search"
+        ]
+      },
+      "name": "lossy_coarsening_analytical",
+      "predicted_archive_bytes": 156344,
+      "predicted_gap_to_target": 0.0189810755823297,
+      "predicted_score_after": 0.2089810755823297,
+      "predicted_score_delta": 0.0,
+      "rank_or_kill_eligible": false,
+      "reaches_target": false,
+      "reactivation_criteria": [
+        "retrain or jointly optimize the renderer under scorer-aware loss instead of applying post-hoc lossy coarsening",
+        "prove byte-closed runtime packet with component-risk mitigation and exact CUDA score below the active HNeRV anchor",
+        "classify whether the loss is SegNet, PoseNet, or runtime/harness driven before any broader method conclusion"
+      ],
+      "ready_for_exact_eval_dispatch": false,
+      "retired_from_active_ranking": true,
+      "risk": "lossy_high",
+      "supporting_non_promotable_evidence_n": 2,
+      "supporting_non_promotable_sources": [
+        "[MPS-research-signal] /Users/adpena/Projects/pact/reports/raw/pr101_lossy_coarsening_20260508T011743Z/manifest.json (analytical per-tensor K coarsening; CompressAI hyperpriors all FAIL rel_err < 0.05 on PR101 substrate, this analytical baseline succeeds where neural codecs cannot)",
+        "[contest-CUDA] Lightning T4 g4dn.2xlarge job=lossy-coarsening-cuda-20260508T0312-noproject lossy_coarsening_analytical PR101 substrate auth_eval_json=experiments/results/lightning_batch/lossy-coarsening-cuda-20260508T0312-noproject/contest_auth_eval.json"
+      ]
+    },
+    {
+      "active_ranking_block_reason": "non_promotable_empirical_anchor_not_rank_or_kill_evidence",
+      "active_ranking_blocked": true,
+      "catalog_prior_bytes": 105440,
+      "cost_dollars": 8.0,
+      "cost_hours": 6.0,
+      "current_score_baseline": 0.2089810755823297,
+      "description": "n_quant=15 (int4) with QAT/LSQ retuning",
+      "dispatch_blockers": [
+        "empirical_anchor_not_promotable_without_explicit_exact_eval_custody",
+        "model_spec_mismatch_pending_faithful_implementation"
+      ],
+      "empirical_anchor_bytes": 100799,
+      "empirical_anchor_evidence_semantics": [],
+      "empirical_anchor_n": 3,
+      "empirical_anchor_promotable": false,
+      "empirical_anchor_score_claim": false,
+      "empirical_anchor_sources": [
+        "[CPU-prep empirical] reports/raw/pr101_int4_sweep_20260508T001119Z/manifest.json (block_size=1024)",
+        "[CPU-prep precision proxy] reports/raw/pr101_int4_roundtrip_20260508T003449Z/manifest.json (FALSIFIED for dispatch: 37% rel_err >> 2% threshold)",
+        "[CPU-prep empirical] retag-after-adversarial-audit 2026-05-07 \u2014 naive PTQ only; QAT, LSQ, per-channel, mixed-precision, GPTQ/AWQ NOT tested. Cf. CLAUDE.md apogee_int4 anti-pattern"
+      ],
+      "evidence_grade": "[empirical-anchor-N3; planning-only; model_spec_mismatch]",
+      "gain_per_dollar": 0.0,
+      "gain_per_hour": 0.0,
+      "model_spec": {
+        "architecture_class": "low_bit_quantization",
+        "canonical_shape_family": "int4_per_block_or_per_channel_scales",
+        "capacity_constraint": "n_quant=15_int4",
+        "substrate_constraint": "renderer_weights",
+        "variant_required": [
+          "naive_ptq",
+          "qat",
+          "lsq",
+          "per_channel_scales",
+          "mixed_precision_int4_int6_int8",
+          "gptq",
+          "awq"
+        ]
+      },
+      "model_spec_mismatch_count": 1,
+      "model_spec_mismatch_reasons": [
+        {
+          "reasons": [
+            "VARIANT_PARTIAL_EXHAUSTION: model_spec lists 7 required variants, evidence row contains a partial or explicitly negated variant inventory"
+          ],
+          "source": "[CPU-prep empirical] retag-after-adversarial-audit 2026-05-07 \u2014 naive PTQ only; QAT, LSQ, per-channel, mixed-precision, GPTQ/AWQ NOT tested. Cf. CLAUDE.md apogee_int4 anti-pattern",
+          "timestamp": "2026-05-08T00:50:00Z"
+        }
+      ],
+      "name": "lossy_int4_quantization",
+      "predicted_archive_bytes": 100799,
+      "predicted_gap_to_target": 0.0189810755823297,
+      "predicted_score_after": 0.2089810755823297,
+      "predicted_score_delta": 0.0,
+      "rank_or_kill_eligible": false,
+      "reaches_target": false,
+      "ready_for_exact_eval_dispatch": false,
+      "retired_from_active_ranking": false,
+      "risk": "lossy_high"
+    },
+    {
+      "active_ranking_block_reason": "non_promotable_empirical_anchor_not_rank_or_kill_evidence",
+      "active_ranking_blocked": true,
+      "catalog_prior_bytes": 80000,
+      "cost_dollars": 15.0,
+      "cost_hours": 12.0,
+      "current_score_baseline": 0.2089810755823297,
+      "description": "88K-element renderer (Quantizr-class); full retrain",
+      "dispatch_blockers": [
+        "empirical_anchor_not_promotable_without_explicit_exact_eval_custody"
+      ],
+      "empirical_anchor_bytes": 83571,
+      "empirical_anchor_evidence_semantics": [],
+      "empirical_anchor_n": 1,
+      "empirical_anchor_promotable": false,
+      "empirical_anchor_score_claim": false,
+      "empirical_anchor_sources": [
+        "[CPU-prep empirical byte-anchor only] reports/raw/pr101_arch_shrink_20260508T003827Z/manifest.json (ratio=0.4, post-hoc no retrain; channel L2-truncate)"
+      ],
+      "evidence_grade": "[empirical-anchor-N1; planning-only]",
+      "gain_per_dollar": 0.0,
+      "gain_per_hour": 0.0,
+      "model_spec": {
+        "architecture_class": "FiLM_depthwise_separable_CNN",
+        "canonical_shape_family": "quantizr_88k_class",
+        "capacity_constraint": "~88K_params_renderer",
+        "substrate_constraint": "renderer_weights",
+        "variant_required": [
+          "full_retrain"
+        ]
+      },
+      "name": "arch_shrink_x0.4_quantizr_class",
+      "predicted_archive_bytes": 83571,
+      "predicted_gap_to_target": 0.0189810755823297,
+      "predicted_score_after": 0.2089810755823297,
+      "predicted_score_delta": 0.0,
+      "rank_or_kill_eligible": false,
+      "reaches_target": false,
+      "ready_for_exact_eval_dispatch": false,
+      "retired_from_active_ranking": false,
+      "risk": "architectural"
+    },
+    {
+      "active_ranking_block_reason": "non_promotable_empirical_anchor_not_rank_or_kill_evidence",
+      "active_ranking_blocked": true,
+      "catalog_prior_bytes": 65000,
+      "cost_dollars": 25.0,
+      "cost_hours": 24.0,
+      "current_score_baseline": 0.2089810755823297,
+      "description": "70% sparsity via IMP retraining; arch unchanged",
+      "dispatch_blockers": [
+        "empirical_anchor_not_promotable_without_explicit_exact_eval_custody"
+      ],
+      "empirical_anchor_bytes": 94671,
+      "empirical_anchor_evidence_semantics": [],
+      "empirical_anchor_n": 1,
+      "empirical_anchor_promotable": false,
+      "empirical_anchor_score_claim": false,
+      "empirical_anchor_sources": [
+        "[CPU-prep empirical byte-anchor only] reports/raw/pr101_sparsity_sweep_20260508T002611Z/manifest.json (alpha=0.7, post-hoc no retrain)"
+      ],
+      "evidence_grade": "[empirical-anchor-N1; planning-only]",
+      "gain_per_dollar": 0.0,
+      "gain_per_hour": 0.0,
+      "model_spec": {
+        "architecture_class": "iterative_magnitude_pruning",
+        "canonical_shape_family": "sparse_mask_bool_indicator",
+        "capacity_constraint": "70_percent_zero_weights",
+        "substrate_constraint": "renderer_weights",
+        "variant_required": [
+          "imp_retrain_with_finetune"
+        ]
+      },
+      "name": "sparsity_alpha_0.7_imp_retrain",
+      "predicted_archive_bytes": 94671,
+      "predicted_gap_to_target": 0.0189810755823297,
+      "predicted_score_after": 0.2089810755823297,
+      "predicted_score_delta": 0.0,
+      "rank_or_kill_eligible": false,
+      "reaches_target": false,
+      "ready_for_exact_eval_dispatch": false,
+      "retired_from_active_ranking": false,
+      "risk": "training_side"
+    }
+  ],
+  "axis_priorities": [
+    {
+      "estimated_effort_class": "moderate",
+      "marginal_value": 272.7723627949905,
+      "name": "pose",
+      "rationale": "dS/d(d_pose) = 272.77 at this operating point. Improving d_pose by 1e-5 reduces score by ~0.00273 (linear approximation; pose term is sqrt so the actual reduction is slightly larger for the same delta)."
+    },
+    {
+      "estimated_effort_class": "moderate",
+      "marginal_value": 100.0,
+      "name": "seg",
+      "rationale": "dS/d(d_seg) = 100.00 (constant). Improving d_seg by 1e-4 reduces score by 0.01000."
+    },
+    {
+      "estimated_effort_class": "moderate",
+      "marginal_value": 0.0006658589531221714,
+      "name": "bytes",
+      "rationale": "dS/dB = 6.659e-07 per byte (constant 0.00067 per 1000 bytes). Saving 1 KB reduces score by 0.00067."
+    }
+  ],
+  "encoder_technique_ranking": [
+    {
+      "active_ranking_blocked": false,
+      "cost_dollars": 0.0,
+      "cost_hours": 0.5,
+      "current_score_baseline": 0.2089810755823297,
+      "description": "Current best brotli + Optuna q=11/lgwin=16/lgblock=19",
+      "evidence_grade": "[contest-CUDA]",
+      "gain_per_dollar": 0.009899990915020473,
+      "gain_per_hour": 0.009899990915020473,
+      "model_spec": {
+        "architecture_class": "brotli_lossless",
+        "canonical_shape_family": "n/a_lossless",
+        "capacity_constraint": "n/a",
+        "substrate_constraint": "1d_quantized_symbols",
+        "variant_required": [
+          "q=11_lgwin=16_lgblock=19"
+        ]
+      },
+      "name": "brotli_optuna_default",
+      "predicted_archive_bytes": 178144,
+      "predicted_gap_to_target": 0.014031080124819462,
+      "predicted_score_after": 0.20403108012481946,
+      "predicted_score_delta": 0.004949995457510237,
+      "reaches_target": false,
+      "retired_from_active_ranking": false,
+      "risk": "lossless"
+    },
+    {
+      "active_ranking_blocked": false,
+      "cost_dollars": 0.0,
+      "cost_hours": 1.0,
+      "current_score_baseline": 0.2089810755823297,
+      "description": "Adaptive arithmetic coding per-tensor; ties brotli within 37 B",
+      "evidence_grade": "[CPU-prep]",
+      "gain_per_dollar": 0.009850717352489435,
+      "gain_per_hour": 0.004925358676244718,
+      "model_spec": {
+        "architecture_class": "adaptive_arithmetic_coding",
+        "canonical_shape_family": "per_tensor_empirical_pmf",
+        "capacity_constraint": "n/a",
+        "substrate_constraint": "1d_quantized_symbols",
+        "variant_required": [
+          "per_tensor_pmf"
+        ]
+      },
+      "name": "per_tensor_adaptive_aac",
+      "predicted_archive_bytes": 178181,
+      "predicted_gap_to_target": 0.01405571690608498,
+      "predicted_score_after": 0.20405571690608498,
+      "predicted_score_delta": 0.004925358676244718,
+      "reaches_target": false,
+      "retired_from_active_ranking": false,
+      "risk": "lossless"
+    },
+    {
+      "active_ranking_blocked": false,
+      "cost_dollars": 0.0,
+      "cost_hours": 2.0,
+      "current_score_baseline": 0.2089810755823297,
+      "description": "Shared FP16 PMF clusters over PR101 quantized tensors; measured negative",
+      "evidence_grade": "[CPU-prep empirical; planning-only]",
+      "gain_per_dollar": 0.008698781363588093,
+      "gain_per_hour": 0.002174695340897023,
+      "model_spec": {
+        "architecture_class": "shared_pmf_clusters",
+        "canonical_shape_family": "fp16_cluster_centers",
+        "capacity_constraint": "shared_clusters_under_2KB",
+        "substrate_constraint": "1d_quantized_symbols",
+        "variant_required": [
+          "fp16_shared_clusters"
+        ]
+      },
+      "name": "shared_canonical_pmf_clusters",
+      "predicted_archive_bytes": 179046,
+      "predicted_gap_to_target": 0.014631684900535652,
+      "predicted_score_after": 0.20463168490053565,
+      "predicted_score_delta": 0.004349390681794046,
+      "reaches_target": false,
+      "retired_from_active_ranking": false,
+      "risk": "lossless"
+    },
+    {
+      "active_ranking_block_reason": "non_promotable_empirical_anchor_not_rank_or_kill_evidence",
+      "active_ranking_blocked": true,
+      "catalog_prior_bytes": 167000,
+      "cost_dollars": 0.0,
+      "cost_hours": 3.0,
+      "current_score_baseline": 0.2089810755823297,
+      "description": "200-param MLP predicting per-tensor PMF; ~400B model + AAC",
+      "dispatch_blockers": [
+        "cpu_proxy_byte_anchor_not_score_evidence",
+        "missing_exact_cuda_auth_eval",
+        "no_runtime_decoder_packet_built",
+        "requires_exact_cuda_auth_eval_before_any_score_use",
+        "model_spec_mismatch_pending_faithful_implementation"
+      ],
+      "empirical_anchor_bytes": 179276,
+      "empirical_anchor_evidence_semantics": [
+        "cpu_faithful_200_param_mlp_byte_anchor_no_score"
+      ],
+      "empirical_anchor_n": 4,
+      "empirical_anchor_promotable": false,
+      "empirical_anchor_score_claim": false,
+      "empirical_anchor_sources": [
+        "[CPU-prep empirical] reports/raw/pr101_tiny_nn_20260508T001420Z.json (tensor_only variant)",
+        "[CPU-prep MDL smoke final] reports/pr101_tiny_nn_pmf_smoke.json (tensor_only rank=7 epochs=500; loses by +635B vs Brotli+Optuna)",
+        "[CPU-prep empirical] retag-after-adversarial-audit 2026-05-07 \u2014 only rank=8 tested; rank>=32, LSTM/transformer, cross-tensor context NOT tested",
+        "[CPU-prep faithful 200-param test] reports/raw/pr101_tiny_nn_200param_20260508T022927Z/manifest.json (faithful catalog-spec MLP; actual params=188; actual model brotli=435 B; archive 206,370 B)"
+      ],
+      "evidence_grade": "[empirical-anchor-N4; planning-only; model_spec_mismatch]",
+      "gain_per_dollar": 0.0,
+      "gain_per_hour": 0.0,
+      "model_spec": {
+        "architecture_class": "MLP",
+        "canonical_shape_family": "tensor_id_layer_class_features",
+        "capacity_constraint": "<=200_params",
+        "substrate_constraint": "1d_quantized_symbols",
+        "variant_required": [
+          "mlp_under_200_params"
+        ]
+      },
+      "model_spec_mismatch_count": 1,
+      "model_spec_mismatch_reasons": [
+        {
+          "reasons": [
+            "CAPACITY_MISMATCH: model_spec declares ~200-param MLP, evidence source mentions rank-K factorized softmax (typically thousands of params)"
+          ],
+          "source": "[CPU-prep empirical] retag-after-adversarial-audit 2026-05-07 \u2014 only rank=8 tested; rank>=32, LSTM/transformer, cross-tensor context NOT tested",
+          "timestamp": "2026-05-08T00:50:00Z"
+        }
+      ],
+      "name": "tiny_nn_pmf_predictor",
+      "predicted_archive_bytes": 179276,
+      "predicted_gap_to_target": 0.0189810755823297,
+      "predicted_score_after": 0.2089810755823297,
+      "predicted_score_delta": 0.0,
+      "rank_or_kill_eligible": false,
+      "reaches_target": false,
+      "ready_for_exact_eval_dispatch": false,
+      "retired_from_active_ranking": false,
+      "risk": "lossless"
+    },
+    {
+      "active_ranking_block_reason": "non_promotable_empirical_anchor_not_rank_or_kill_evidence",
+      "active_ranking_blocked": true,
+      "catalog_prior_bytes": 173500,
+      "cost_dollars": 0.0,
+      "cost_hours": 2.0,
+      "current_score_baseline": 0.2089810755823297,
+      "description": "4-component mixture (Gaussian+Laplace+sparse+uniform) on PMFs",
+      "dispatch_blockers": [
+        "missing_exact_cuda_auth_eval",
+        "nn_literature_mixture_decoder_not_wired_into_runtime_packet",
+        "no_archive_substitution_performed",
+        "no_decode_roundtrip_fixture_for_full_packet",
+        "requires_exact_cuda_auth_eval_before_any_score_use"
+      ],
+      "empirical_anchor_bytes": 205963,
+      "empirical_anchor_evidence_semantics": [
+        "cpu_kalle_fold_nn_literature_shapes_byte_anchor_no_decoder_no_score"
+      ],
+      "empirical_anchor_n": 3,
+      "empirical_anchor_promotable": false,
+      "empirical_anchor_score_claim": false,
+      "empirical_anchor_sources": [
+        "[CPU-prep empirical] reports/raw/pr101_kalle_fold_20260508T001304Z/manifest.json",
+        "[CPU-prep empirical] retag-after-adversarial-audit 2026-05-07 \u2014 4-comp mixture insufficient capacity; higher comp/hierarchical/sparse-dict NOT tested",
+        "[CPU-prep faithful NN-shape reactivation] reports/raw/pr101_kalle_fold_nn_lit_20260508T024328Z/manifest.json (NN-weight basis: Kaiming, Xavier, Laplace tails, spike-and-slab, truncated-normal outliers, endpoint clip mass; n_components=7; archive 206,260 B)"
+      ],
+      "evidence_grade": "[empirical-anchor-N3; planning-only]",
+      "gain_per_dollar": 0.0,
+      "gain_per_hour": 0.0,
+      "model_spec": {
+        "architecture_class": "mixture_of_canonical_NN_PMF_shapes",
+        "canonical_shape_family": "kaiming+laplace_with_outliers+spike_and_slab+truncated_normal",
+        "capacity_constraint": "<=8_components",
+        "substrate_constraint": "1d_quantized_symbols",
+        "variant_required": [
+          "nn_weight_distribution_basis"
+        ]
+      },
+      "name": "kalle_fold_mixture_canonical_shapes",
+      "predicted_archive_bytes": 205963,
+      "predicted_gap_to_target": 0.0189810755823297,
+      "predicted_score_after": 0.2089810755823297,
+      "predicted_score_delta": 0.0,
+      "rank_or_kill_eligible": false,
+      "reaches_target": false,
+      "ready_for_exact_eval_dispatch": false,
+      "retired_from_active_ranking": false,
+      "risk": "lossless"
+    },
+    {
+      "active_ranking_block_reason": "non_promotable_empirical_anchor_not_rank_or_kill_evidence",
+      "active_ranking_blocked": true,
+      "catalog_prior_bytes": 158000,
+      "cost_dollars": 5.0,
+      "cost_hours": 4.0,
+      "current_score_baseline": 0.2089810755823297,
+      "description": "Balle scale-hyperprior NN; subagent-verdict joint floor",
+      "dispatch_blockers": [
+        "empirical_anchor_not_promotable_without_explicit_exact_eval_custody"
+      ],
+      "empirical_anchor_bytes": 207065,
+      "empirical_anchor_evidence_semantics": [],
+      "empirical_anchor_n": 2,
+      "empirical_anchor_promotable": false,
+      "empirical_anchor_score_claim": false,
+      "empirical_anchor_sources": [
+        "[MPS-research-signal] reports/raw/pr101_balle_hyperprior_20260508T002237Z/manifest.json",
+        "[MPS-research-signal] retag-after-adversarial-audit 2026-05-07 \u2014 only 1.1KB MLP tested; 5-10KB MLP / full ScaleHyperprior / cross-tensor hyperprior NOT tested"
+      ],
+      "evidence_grade": "[empirical-anchor-N2; planning-only]",
+      "gain_per_dollar": 0.0,
+      "gain_per_hour": 0.0,
+      "model_spec": {
+        "architecture_class": "ScaleHyperprior",
+        "canonical_shape_family": "hyperprior_side_info_GDN_nonlinearity",
+        "capacity_constraint": "5KB_to_10KB_compressed_hyperprior",
+        "substrate_constraint": "2d_natural_image",
+        "variant_required": [
+          "scale_hyperprior",
+          "mean_scale_hyperprior"
+        ]
+      },
+      "name": "compressai_balle_hyperprior",
+      "predicted_archive_bytes": 207065,
+      "predicted_gap_to_target": 0.0189810755823297,
+      "predicted_score_after": 0.2089810755823297,
+      "predicted_score_delta": 0.0,
+      "rank_or_kill_eligible": false,
+      "reaches_target": false,
+      "ready_for_exact_eval_dispatch": false,
+      "retired_from_active_ranking": false,
+      "risk": "lossless"
+    }
+  ],
+  "evidence_grade": "[CPU-prep planning-only]",
+  "evidence_semantics_report": {
+    "active_ranking_blocked_techniques": [
+      "arch_shrink_x0.4_quantizr_class",
+      "compressai_balle_hyperprior",
+      "kalle_fold_mixture_canonical_shapes",
+      "lossy_coarsening_analytical",
+      "lossy_int4_quantization",
+      "sparsity_alpha_0.7_imp_retrain",
+      "tiny_nn_pmf_predictor"
+    ],
+    "cataloged_exact_negative_techniques": [
+      "lossy_coarsening_analytical"
+    ],
+    "n_evidence_rows": 41,
+    "unknown_evidence_row_count": 23,
+    "unknown_evidence_technique_count": 20,
+    "unknown_evidence_techniques": [
+      {
+        "byte_proxy_only_any": false,
+        "charged_bits_changed_any": false,
+        "cuda_eval_worth_testing_any": false,
+        "cuda_eval_worth_testing_false": false,
+        "dispatch_blockers": [
+          "mps_proxy_signal_not_score_evidence",
+          "training_device_not_exact_auth_eval",
+          "no_exact_archive_adjudication",
+          "missing_exact_cuda_auth_eval",
+          "requires_exact_cuda_auth_eval_before_any_score_use"
+        ],
+        "empirical_archive_bytes": [
+          221288
+        ],
+        "evidence_grades": [
+          "[MPS-research-signal cross-tensor variant]"
+        ],
+        "exact_negative_rows": 0,
+        "latest_timestamp": "2026-05-08T02:42:01Z",
+        "min_empirical_archive_bytes": 221288,
+        "n_rows": 1,
+        "proxy_or_planning_rows": 1,
+        "proxy_row_any": true,
+        "score_affecting_payload_changed_any": false,
+        "sources": [
+          "[MPS-research-signal cross-tensor variant] /Users/adpena/Projects/pact/reports/raw/pr101_balle_cross_tensor_20260508T024140Z/manifest.json (cross-tensor variant; best=l16:e8:h32, 600 epochs)"
+        ],
+        "status": "unknown_technique_not_ranked",
+        "technique": "compressai_balle_cross_tensor_hyperprior",
+        "verdicts": [
+          "DEFERRED-pending-research (cross-tensor hyperprior lands +43,144 B vs PR101 brotli; rel_err=0.000000. FINAL audit criterion empirically tested; balle_hyperprior lane now 4/4 criteria exhausted)"
+        ]
+      },
+      {
+        "byte_proxy_only_any": false,
+        "charged_bits_changed_any": true,
+        "cuda_eval_worth_testing_any": false,
+        "cuda_eval_worth_testing_false": true,
+        "dispatch_blockers": [
+          "137531_byte_proxy_not_byte_closed_archive",
+          "no_inflate_py_for_cross_paradigm_composition",
+          "byte_proxy_only_no_score_test",
+          "no_real_archive_substrate_for_cuda_replay",
+          "missing_exact_cuda_auth_eval"
+        ],
+        "empirical_archive_bytes": [
+          137531
+        ],
+        "evidence_grades": [
+          "[byte_proxy_only_NOT_deployable]"
+        ],
+        "exact_negative_rows": 0,
+        "latest_timestamp": "2026-05-08T06:06:56Z",
+        "min_empirical_archive_bytes": 137531,
+        "n_rows": 1,
+        "proxy_or_planning_rows": 1,
+        "proxy_row_any": true,
+        "score_affecting_payload_changed_any": true,
+        "sources": [
+          "[byte_proxy_only_NOT_deployable] /Users/adpena/Projects/pact/reports/raw/pr101_cross_paradigm_hstack_vstack_20260508T060656Z/manifest.json (stack=Path_B_step6_ADMM_x_continuous_K_then_Op1; bytes=137,531=len(blob_op1) from CodecPipeline.encode skip_validate=True; this is the Op1 standalone re-encoding of the lossy-rebuilt substrate, NOT a byte-closed archive that includes the K coefficients + scale fp16s + the original PR101 latent_blob + sidecar required at inflate time. WIRE-DECODER subagent task is to build the deployable composition with matching inflate.py.)"
+        ],
+        "status": "unknown_technique_not_ranked",
+        "technique": "cross_paradigm_admm_continuous_k_then_op1_finalizer",
+        "verdicts": [
+          "RETRACTED-byte-proxy-not-deployable"
+        ]
+      },
+      {
+        "byte_proxy_only_any": true,
+        "charged_bits_changed_any": true,
+        "cuda_eval_worth_testing_any": false,
+        "cuda_eval_worth_testing_false": true,
+        "dispatch_blockers": [
+          "byte_proxy_only_no_score_test",
+          "no_real_archive_substrate_for_cuda_replay",
+          "missing_exact_cuda_auth_eval"
+        ],
+        "empirical_archive_bytes": [
+          137469
+        ],
+        "evidence_grades": [
+          "[CPU-prep faithful cross-paradigm test SUBSTRATE-CORRECTED]"
+        ],
+        "exact_negative_rows": 0,
+        "latest_timestamp": "2026-05-08T07:00:00Z",
+        "min_empirical_archive_bytes": 137469,
+        "n_rows": 1,
+        "proxy_or_planning_rows": 1,
+        "proxy_row_any": true,
+        "score_affecting_payload_changed_any": true,
+        "sources": [
+          "[CPU-prep faithful cross-paradigm test SUBSTRATE-CORRECTED] /Users/adpena/Projects/pact/reports/raw/pr101_cross_paradigm_hstack_vstack_corrected_20260508/manifest.json (stack=Path_B_step6_ADMM_x_continuous_K_then_Op1_corrected; bytes=137,469; corrected_sha=c33243a1...; prior_phantom_sha=ea3b23ed... at 137,531; delta_to_phantom=-62 B; vs ADMM-alone=153,639 delta=-16,170; vs Op2_alone=161,942 delta=-24,473; rel_err_pre_finalizer=0.0415)"
+        ],
+        "status": "unknown_technique_not_ranked",
+        "technique": "cross_paradigm_admm_continuous_k_then_op1_finalizer_substrate_corrected",
+        "verdicts": [
+          "DEFERRED-pending-research"
+        ]
+      },
+      {
+        "byte_proxy_only_any": false,
+        "charged_bits_changed_any": true,
+        "cuda_eval_worth_testing_any": false,
+        "cuda_eval_worth_testing_false": true,
+        "dispatch_blockers": [
+          "byte_proxy_only_no_score_test",
+          "missing_exact_cuda_auth_eval"
+        ],
+        "empirical_archive_bytes": [
+          161942
+        ],
+        "evidence_grades": [
+          "[CPU-prep faithful cross-paradigm test]"
+        ],
+        "exact_negative_rows": 0,
+        "latest_timestamp": "2026-05-08T06:06:56Z",
+        "min_empirical_archive_bytes": 161942,
+        "n_rows": 1,
+        "proxy_or_planning_rows": 1,
+        "proxy_row_any": true,
+        "score_affecting_payload_changed_any": true,
+        "sources": [
+          "[CPU-prep faithful cross-paradigm test] /Users/adpena/Projects/pact/reports/raw/pr101_cross_paradigm_hstack_vstack_20260508T060656Z/manifest.json (canonical_winner=Op2_alone bytes=161,942; Op1=162,202; beta+Op1=163,587; gamma=194,867; Op3_int6+Op1=309,470 ballooned; Op3_int7+Op1=362,469 ballooned)"
+        ],
+        "status": "unknown_technique_not_ranked",
+        "technique": "cross_paradigm_canonical_8_stack_matrix_real_pr101_substrate",
+        "verdicts": [
+          "DEFERRED-pending-research"
+        ]
+      },
+      {
+        "byte_proxy_only_any": false,
+        "charged_bits_changed_any": true,
+        "cuda_eval_worth_testing_any": false,
+        "cuda_eval_worth_testing_false": true,
+        "dispatch_blockers": [
+          "byte_savings_only_no_score_test",
+          "lossless_HStack_does_not_change_decoder_output",
+          "no_runtime_built_to_consume_per_tensor_params",
+          "missing_exact_cuda_auth_eval"
+        ],
+        "empirical_archive_bytes": [
+          162339
+        ],
+        "evidence_grades": [
+          "[CPU-prep faithful Path-B-step-3 per-tensor brotli HStack test]"
+        ],
+        "exact_negative_rows": 0,
+        "latest_timestamp": "2026-05-08T03:38:25Z",
+        "min_empirical_archive_bytes": 162339,
+        "n_rows": 1,
+        "proxy_or_planning_rows": 1,
+        "proxy_row_any": true,
+        "score_affecting_payload_changed_any": false,
+        "sources": [
+          "[CPU-prep faithful Path-B-step-3 per-tensor brotli HStack test] /Users/adpena/Projects/pact/reports/raw/pr101_omega_opt_hstack_of_vstacks_20260508T033825Z/manifest.json (per_tensor=162,339B vs joint_best=162,299B; savings=-40B; diverged=26/28)"
+        ],
+        "status": "unknown_technique_not_ranked",
+        "technique": "hstack_of_vstacks_per_tensor_brotli",
+        "verdicts": [
+          "DEFERRED-pending-research"
+        ]
+      },
+      {
+        "byte_proxy_only_any": false,
+        "charged_bits_changed_any": true,
+        "cuda_eval_worth_testing_any": false,
+        "cuda_eval_worth_testing_false": true,
+        "dispatch_blockers": [
+          "byte_rel_err_proxy_only_no_score_test",
+          "sparsity_induces_distortion_score_impact_unknown",
+          "no_runtime_built_to_consume_per_tensor_codec_ids_with_CSR",
+          "missing_exact_cuda_auth_eval"
+        ],
+        "empirical_archive_bytes": [
+          162327,
+          162327
+        ],
+        "evidence_grades": [
+          "[CPU-prep faithful Path-B-step-4 per-tensor codec-CHOICE HStack test]"
+        ],
+        "exact_negative_rows": 0,
+        "latest_timestamp": "2026-05-08T03:43:24Z",
+        "min_empirical_archive_bytes": 162327,
+        "n_rows": 2,
+        "proxy_or_planning_rows": 2,
+        "proxy_row_any": true,
+        "score_affecting_payload_changed_any": true,
+        "sources": [
+          "[CPU-prep faithful Path-B-step-4 per-tensor codec-CHOICE HStack test] /Users/adpena/Projects/pact/reports/raw/pr101_omega_opt_per_tensor_codec_choice_20260508T034248Z/manifest.json (rel_err_budget=0.05; achieved=0.0000; bytes=162,327; savings_vs_lossless=-28; sparsified=0/28)",
+          "[CPU-prep faithful Path-B-step-4 per-tensor codec-CHOICE HStack test] /Users/adpena/Projects/pact/reports/raw/pr101_omega_opt_per_tensor_codec_choice_20260508T034324Z/manifest.json (rel_err_budget=0.05; achieved=0.0000; bytes=162,327; savings_vs_lossless=-28; sparsified=0/28)"
+        ],
+        "status": "unknown_technique_not_ranked",
+        "technique": "hstack_per_tensor_codec_choice_brotli_or_sparsity",
+        "verdicts": [
+          "DEFERRED-pending-research"
+        ]
+      },
+      {
+        "byte_proxy_only_any": false,
+        "charged_bits_changed_any": true,
+        "cuda_eval_worth_testing_any": false,
+        "cuda_eval_worth_testing_false": true,
+        "dispatch_blockers": [
+          "byte_rel_err_proxy_only_no_score_test",
+          "lagrangian_allocation_only_iterative_ADMM_NOT_tested",
+          "discrete_codec_basis_only_continuous_lossy_coarsening_NOT_tested_jointly",
+          "missing_exact_cuda_auth_eval"
+        ],
+        "empirical_archive_bytes": [
+          130032
+        ],
+        "evidence_grades": [
+          "[CPU-prep faithful Path-B-step-5 Joint-ADMM Lagrangian-allocation test]"
+        ],
+        "exact_negative_rows": 0,
+        "latest_timestamp": "2026-05-08T04:06:59Z",
+        "min_empirical_archive_bytes": 130032,
+        "n_rows": 1,
+        "proxy_or_planning_rows": 1,
+        "proxy_row_any": true,
+        "score_affecting_payload_changed_any": true,
+        "sources": [
+          "[CPU-prep faithful Path-B-step-5 Joint-ADMM Lagrangian-allocation test] /Users/adpena/Projects/pact/reports/raw/pr101_omega_opt_joint_admm_allocation_20260508T040659Z/manifest.json (rms_target=0.10; admm_bytes=130,032; vs_greedy=+32,267; best_savings=+65,082@rms=0.3)"
+        ],
+        "status": "unknown_technique_not_ranked",
+        "technique": "joint_admm_lagrangian_allocation",
+        "verdicts": [
+          "DEFERRED-pending-research"
+        ]
+      },
+      {
+        "byte_proxy_only_any": false,
+        "charged_bits_changed_any": true,
+        "cuda_eval_worth_testing_any": false,
+        "cuda_eval_worth_testing_false": true,
+        "dispatch_blockers": [
+          "byte_rel_err_proxy_only_no_score_test",
+          "lagrangian_x_continuous_K_no_iterative_consensus_ADMM",
+          "missing_exact_cuda_auth_eval"
+        ],
+        "empirical_archive_bytes": [
+          153639
+        ],
+        "evidence_grades": [
+          "[CPU-prep faithful Path-B-step-6 ADMM \u00d7 continuous lossy_coarsening test]"
+        ],
+        "exact_negative_rows": 0,
+        "latest_timestamp": "2026-05-08T04:13:03Z",
+        "min_empirical_archive_bytes": 153639,
+        "n_rows": 1,
+        "proxy_or_planning_rows": 1,
+        "proxy_row_any": true,
+        "score_affecting_payload_changed_any": true,
+        "sources": [
+          "[CPU-prep faithful Path-B-step-6 ADMM \u00d7 continuous lossy_coarsening test] /Users/adpena/Projects/pact/reports/raw/pr101_omega_opt_admm_x_lossy_coarsening_20260508T041303Z/manifest.json (rms_target=3.86%; admm_bytes=153,639; vs_greedy=+14,658; best_savings=+14,658@rms=0.0386)"
+        ],
+        "status": "unknown_technique_not_ranked",
+        "technique": "joint_admm_x_continuous_lossy_coarsening",
+        "verdicts": [
+          "DEFERRED-pending-research"
+        ]
+      },
+      {
+        "byte_proxy_only_any": false,
+        "charged_bits_changed_any": false,
+        "cuda_eval_worth_testing_any": false,
+        "cuda_eval_worth_testing_false": false,
+        "dispatch_blockers": [],
+        "empirical_archive_bytes": [
+          187785
+        ],
+        "evidence_grades": [],
+        "exact_negative_rows": 0,
+        "latest_timestamp": "2026-05-08T02:05:20Z",
+        "min_empirical_archive_bytes": 187785,
+        "n_rows": 1,
+        "proxy_or_planning_rows": 1,
+        "proxy_row_any": false,
+        "score_affecting_payload_changed_any": false,
+        "sources": [
+          "[CPU-prep empirical reactivation] /Users/adpena/Projects/pact/reports/raw/pr101_int4_mixed_precision_20260508T020520Z/manifest.json (mixed-precision int4/int6/int8; audit criterion #3; greedy assignment)"
+        ],
+        "status": "unknown_technique_not_ranked",
+        "technique": "lossy_int4_mixed_precision",
+        "verdicts": [
+          "CONDITIONAL"
+        ]
+      },
+      {
+        "byte_proxy_only_any": false,
+        "charged_bits_changed_any": false,
+        "cuda_eval_worth_testing_any": false,
+        "cuda_eval_worth_testing_false": false,
+        "dispatch_blockers": [],
+        "empirical_archive_bytes": [
+          115958
+        ],
+        "evidence_grades": [],
+        "exact_negative_rows": 0,
+        "latest_timestamp": "2026-05-08T01:17:32Z",
+        "min_empirical_archive_bytes": 115958,
+        "n_rows": 1,
+        "proxy_or_planning_rows": 1,
+        "proxy_row_any": false,
+        "score_affecting_payload_changed_any": false,
+        "sources": [
+          "[CPU-prep empirical reactivation] /Users/adpena/Projects/pact/reports/raw/pr101_int4_perchannel_20260508T011732Z/manifest.json (per-output-channel fp16 scales; audit criterion #2)"
+        ],
+        "status": "unknown_technique_not_ranked",
+        "technique": "lossy_int4_per_channel_scales",
+        "verdicts": [
+          "STILL-FALSIFIED"
+        ]
+      },
+      {
+        "byte_proxy_only_any": false,
+        "charged_bits_changed_any": true,
+        "cuda_eval_worth_testing_any": false,
+        "cuda_eval_worth_testing_false": true,
+        "dispatch_blockers": [
+          "local_awq_proxy_signal_not_exact_eval_dispatch_ready",
+          "byte_closed_int4_candidate_packet_missing",
+          "no_int4_decoder_runtime_built",
+          "missing_exact_cuda_auth_eval",
+          "requires_exact_cuda_auth_eval_before_any_score_use",
+          "synthetic_activations_substrate_mismatch_vs_pr106_video_latents",
+          "cpu_proxy_rel_err_not_score_evidence",
+          "awq_inverse_scaling_assumes_linear_runtime_absorption_not_yet_built"
+        ],
+        "empirical_archive_bytes": [
+          100714,
+          100726
+        ],
+        "evidence_grades": [
+          "[CPU-prep faithful audit-criterion-5 test]"
+        ],
+        "exact_negative_rows": 0,
+        "latest_timestamp": "2026-05-08T02:57:25Z",
+        "min_empirical_archive_bytes": 100714,
+        "n_rows": 2,
+        "proxy_or_planning_rows": 2,
+        "proxy_row_any": true,
+        "score_affecting_payload_changed_any": true,
+        "sources": [
+          "[CPU-prep faithful audit-criterion-5 test] reports/raw/pr101_lossy_int4_awq_20260508T024604Z/manifest.json (AWQ samples=64 alphas=11 metric=uniform; rel_err=37.42%)",
+          "[CPU-prep faithful audit-criterion-5 test] reports/raw/pr101_lossy_int4_awq_20260508T025725Z/manifest.json (AWQ samples=8 alphas=3 metric=uniform; rel_err=37.42%)"
+        ],
+        "status": "unknown_technique_not_ranked",
+        "technique": "lossy_int4_quantization_awq",
+        "verdicts": [
+          "DEFERRED-pending-research"
+        ]
+      },
+      {
+        "byte_proxy_only_any": false,
+        "charged_bits_changed_any": true,
+        "cuda_eval_worth_testing_any": false,
+        "cuda_eval_worth_testing_false": true,
+        "dispatch_blockers": [
+          "local_gptq_proxy_signal_not_exact_eval_dispatch_ready",
+          "byte_closed_int4_candidate_packet_missing",
+          "no_int4_decoder_runtime_built",
+          "missing_exact_cuda_auth_eval",
+          "requires_exact_cuda_auth_eval_before_any_score_use",
+          "synthetic_activations_substrate_mismatch_vs_pr106_video_latents",
+          "cpu_proxy_rel_err_not_score_evidence"
+        ],
+        "empirical_archive_bytes": [
+          100844,
+          101106
+        ],
+        "evidence_grades": [
+          "[CPU-prep faithful audit-criterion-4 test]"
+        ],
+        "exact_negative_rows": 0,
+        "latest_timestamp": "2026-05-08T02:57:26Z",
+        "min_empirical_archive_bytes": 100844,
+        "n_rows": 2,
+        "proxy_or_planning_rows": 2,
+        "proxy_row_any": true,
+        "score_affecting_payload_changed_any": true,
+        "sources": [
+          "[CPU-prep faithful audit-criterion-4 test] reports/raw/pr101_lossy_int4_gptq_20260508T024139Z/manifest.json (GPTQ samples=64 damping=0.01 block_size_gptq=128; rel_err=40.11%)",
+          "[CPU-prep faithful audit-criterion-4 test] reports/raw/pr101_lossy_int4_gptq_20260508T025726Z/manifest.json (GPTQ samples=8 damping=0.01 block_size_gptq=64; rel_err=45.70%)"
+        ],
+        "status": "unknown_technique_not_ranked",
+        "technique": "lossy_int4_quantization_gptq",
+        "verdicts": [
+          "DEFERRED-pending-research"
+        ]
+      },
+      {
+        "byte_proxy_only_any": false,
+        "charged_bits_changed_any": true,
+        "cuda_eval_worth_testing_any": false,
+        "cuda_eval_worth_testing_false": false,
+        "dispatch_blockers": [
+          "qat_rel_err_above_5pct_threshold",
+          "no_int4_decoder_runtime_built",
+          "missing_exact_cuda_auth_eval"
+        ],
+        "empirical_archive_bytes": [
+          115641
+        ],
+        "evidence_grades": [
+          "[MPS-research-signal]"
+        ],
+        "exact_negative_rows": 0,
+        "latest_timestamp": "2026-05-08T00:58:42Z",
+        "min_empirical_archive_bytes": 115641,
+        "n_rows": 1,
+        "proxy_or_planning_rows": 1,
+        "proxy_row_any": false,
+        "score_affecting_payload_changed_any": true,
+        "sources": [
+          "[MPS-research-signal] reports/raw/pr101_lossy_int4_qat_20260508T005842Z/manifest.json (qat epochs=500 block_size=1024; naive PTQ baseline rel_err=37.42%, QAT rel_err=28.48%)"
+        ],
+        "status": "unknown_technique_not_ranked",
+        "technique": "lossy_int4_quantization_qat",
+        "verdicts": [
+          "DEFERRED-pending-research"
+        ]
+      },
+      {
+        "byte_proxy_only_any": false,
+        "charged_bits_changed_any": true,
+        "cuda_eval_worth_testing_any": false,
+        "cuda_eval_worth_testing_false": true,
+        "dispatch_blockers": [
+          "post_hoc_no_retrain_substrate_only",
+          "multi_pass_with_retrain_NOT_tested_requires_GPU",
+          "score_impact_unknown_without_contest_cuda",
+          "no_decoder_runtime_built_for_csr_format",
+          "missing_exact_cuda_auth_eval"
+        ],
+        "empirical_archive_bytes": [
+          131967
+        ],
+        "evidence_grades": [
+          "[CPU-prep faithful Path-B-step-2 multi-pass-post-hoc test]"
+        ],
+        "exact_negative_rows": 0,
+        "latest_timestamp": "2026-05-08T03:14:21Z",
+        "min_empirical_archive_bytes": 131967,
+        "n_rows": 1,
+        "proxy_or_planning_rows": 1,
+        "proxy_row_any": true,
+        "score_affecting_payload_changed_any": true,
+        "sources": [
+          "[CPU-prep faithful Path-B-step-2 multi-pass-post-hoc test] /Users/adpena/Projects/pact/reports/raw/pr101_omega_opt_multipass_imp_20260508T031421Z/manifest.json (avg |\u0394 multipass-vs-singlepass| = 64.4 B)"
+        ],
+        "status": "unknown_technique_not_ranked",
+        "technique": "multipass_imp_post_hoc_composition",
+        "verdicts": [
+          "DEFERRED-pending-research"
+        ]
+      },
+      {
+        "byte_proxy_only_any": false,
+        "charged_bits_changed_any": false,
+        "cuda_eval_worth_testing_any": false,
+        "cuda_eval_worth_testing_false": false,
+        "dispatch_blockers": [
+          "post_hoc_composition_no_retrain",
+          "score_impact_unknown_requires_full_retrain_plus_cuda",
+          "no_runtime_decoder_packet_built",
+          "missing_exact_cuda_auth_eval",
+          "requires_exact_cuda_auth_eval_before_any_score_use",
+          "cpu_byte_anchor_not_score_evidence"
+        ],
+        "empirical_archive_bytes": [
+          41303
+        ],
+        "evidence_grades": [
+          "[CPU-prep empirical \u03a9-OPT stack composition byte-anchor]"
+        ],
+        "exact_negative_rows": 0,
+        "latest_timestamp": "2026-05-08T02:41:34Z",
+        "min_empirical_archive_bytes": 41303,
+        "n_rows": 1,
+        "proxy_or_planning_rows": 1,
+        "proxy_row_any": true,
+        "score_affecting_payload_changed_any": false,
+        "sources": [
+          "[CPU-prep empirical \u03a9-OPT stack composition byte-anchor] /Users/adpena/Projects/pact/reports/raw/pr101_omega_opt_linear_stack_20260508T024134Z/manifest.json (arch_shrink_x0.4 \u2192 IMP \u03b1=0.7 \u2192 lossy_coarsening \u2192 brotli; post-hoc composition, no retrain)"
+        ],
+        "status": "unknown_technique_not_ranked",
+        "technique": "omega_opt_linear_stack_post_hoc_composition",
+        "verdicts": []
+      },
+      {
+        "byte_proxy_only_any": false,
+        "charged_bits_changed_any": false,
+        "cuda_eval_worth_testing_any": true,
+        "cuda_eval_worth_testing_false": false,
+        "dispatch_blockers": [],
+        "empirical_archive_bytes": [
+          137531
+        ],
+        "evidence_grades": [
+          "[CPU-build]"
+        ],
+        "exact_negative_rows": 0,
+        "latest_timestamp": "2026-05-08T06:30:35Z",
+        "min_empirical_archive_bytes": 137531,
+        "n_rows": 1,
+        "proxy_or_planning_rows": 1,
+        "proxy_row_any": false,
+        "score_affecting_payload_changed_any": false,
+        "sources": [
+          "[CPU-build empirical] experiments/results/orch_smoke_all_paradigms/build_manifest.json"
+        ],
+        "status": "unknown_technique_not_ranked",
+        "technique": "phase4_orchestrator_alpha=NeRV_beta=uniform_gamma=ADMM-continuous-K_dez=none_finalizer=Op1-PR101-split-brotli_rms=0.0386",
+        "verdicts": []
+      },
+      {
+        "byte_proxy_only_any": false,
+        "charged_bits_changed_any": false,
+        "cuda_eval_worth_testing_any": true,
+        "cuda_eval_worth_testing_false": false,
+        "dispatch_blockers": [],
+        "empirical_archive_bytes": [
+          137531
+        ],
+        "evidence_grades": [
+          "[CPU-build]"
+        ],
+        "exact_negative_rows": 0,
+        "latest_timestamp": "2026-05-08T06:29:24Z",
+        "min_empirical_archive_bytes": 137531,
+        "n_rows": 1,
+        "proxy_or_planning_rows": 1,
+        "proxy_row_any": false,
+        "score_affecting_payload_changed_any": false,
+        "sources": [
+          "[CPU-build empirical] experiments/results/orch_smoke_default_winner/build_manifest.json"
+        ],
+        "status": "unknown_technique_not_ranked",
+        "technique": "phase4_orchestrator_alpha=none_beta=uniform_gamma=ADMM-continuous-K_dez=none_finalizer=Op1-PR101-split-brotli_rms=0.0386",
+        "verdicts": []
+      },
+      {
+        "byte_proxy_only_any": false,
+        "charged_bits_changed_any": false,
+        "cuda_eval_worth_testing_any": true,
+        "cuda_eval_worth_testing_false": false,
+        "dispatch_blockers": [],
+        "empirical_archive_bytes": [
+          0
+        ],
+        "evidence_grades": [
+          "[CPU-build]"
+        ],
+        "exact_negative_rows": 0,
+        "latest_timestamp": "2026-05-08T06:29:53Z",
+        "min_empirical_archive_bytes": 0,
+        "n_rows": 1,
+        "proxy_or_planning_rows": 1,
+        "proxy_row_any": false,
+        "score_affecting_payload_changed_any": false,
+        "sources": [
+          "[CPU-build empirical] experiments/results/orch_smoke_conservative/build_manifest.json"
+        ],
+        "status": "unknown_technique_not_ranked",
+        "technique": "phase4_orchestrator_alpha=none_beta=uniform_gamma=ADMM-continuous-K_dez=none_finalizer=none_rms=0.02",
+        "verdicts": []
+      },
+      {
+        "byte_proxy_only_any": false,
+        "charged_bits_changed_any": false,
+        "cuda_eval_worth_testing_any": true,
+        "cuda_eval_worth_testing_false": false,
+        "dispatch_blockers": [],
+        "empirical_archive_bytes": [
+          161942
+        ],
+        "evidence_grades": [
+          "[CPU-build]"
+        ],
+        "exact_negative_rows": 0,
+        "latest_timestamp": "2026-05-08T06:29:59Z",
+        "min_empirical_archive_bytes": 161942,
+        "n_rows": 1,
+        "proxy_or_planning_rows": 1,
+        "proxy_row_any": false,
+        "score_affecting_payload_changed_any": false,
+        "sources": [
+          "[CPU-build empirical] experiments/results/orch_smoke_aggressive/build_manifest.json"
+        ],
+        "status": "unknown_technique_not_ranked",
+        "technique": "phase4_orchestrator_alpha=none_beta=uniform_gamma=joint-ADMM-Boyd_dez=none_finalizer=Op2-PR103-arith_rms=0.05",
+        "verdicts": []
+      },
+      {
+        "byte_proxy_only_any": false,
+        "charged_bits_changed_any": false,
+        "cuda_eval_worth_testing_any": false,
+        "cuda_eval_worth_testing_false": false,
+        "dispatch_blockers": [
+          "no_runtime_decoder_packet_built",
+          "missing_exact_cuda_auth_eval",
+          "requires_exact_cuda_auth_eval_before_any_score_use",
+          "cpu_proxy_byte_anchor_not_score_evidence"
+        ],
+        "empirical_archive_bytes": [
+          206370
+        ],
+        "evidence_grades": [
+          "[CPU-prep faithful 200-param test]"
+        ],
+        "exact_negative_rows": 0,
+        "latest_timestamp": "2026-05-08T02:29:27Z",
+        "min_empirical_archive_bytes": 206370,
+        "n_rows": 1,
+        "proxy_or_planning_rows": 1,
+        "proxy_row_any": true,
+        "score_affecting_payload_changed_any": false,
+        "sources": [
+          "[CPU-prep faithful 200-param test] /Users/adpena/Projects/pact/reports/raw/pr101_tiny_nn_200param_20260508T022927Z/manifest.json (faithful 1:1 implementation of catalog spec '200-param MLP'; actual params=188, actual model brotli=435 B)"
+        ],
+        "status": "unknown_technique_not_ranked",
+        "technique": "tiny_nn_pmf_predictor_200param_faithful",
+        "verdicts": []
+      }
+    ],
+    "unknown_exact_negative_row_count": 0
+  },
+  "notes": [
+    "Operating regime: pose-dominated regime (d_pose 3.36e-05 < 2.50e-04); prioritize pose-targeted lanes \u2014 they have 2.73x the marginal score-per-byte vs seg lanes here",
+    "Importance flip threshold: d_pose = 2.50e-04",
+    "Score decomposition: seg=0.06708 + pose=0.01833 + rate=0.12357",
+    "To reach 0.19000: need -0.01898 score points. Top-3 techniques rank by predicted score-delta.",
+    "PR101 hand-coded entropy probes are saturated near the 178 KB brotli/AAC band: the best charged Markov-1 table rerun is 200,219 B, so the currently tested table-transmission path loses. This is not a global no-ML impossibility proof; sub-178 KB still needs a new charged coder, a shared decoder model, or lower-entropy weights. Architecture has 5-10x more predicted headroom.",
+    "Evidence feed contains 20 unknown technique name(s) that are reported but not ranked until cataloged or aliased: compressai_balle_cross_tensor_hyperprior, cross_paradigm_admm_continuous_k_then_op1_finalizer, cross_paradigm_admm_continuous_k_then_op1_finalizer_substrate_corrected, cross_paradigm_canonical_8_stack_matrix_real_pr101_substrate, hstack_of_vstacks_per_tensor_brotli, hstack_per_tensor_codec_choice_brotli_or_sparsity, joint_admm_lagrangian_allocation, joint_admm_x_continuous_lossy_coarsening",
+    "Non-promotable, proxy, or exact-negative empirical anchors are assigned zero active ranking delta: arch_shrink_x0.4_quantizr_class, compressai_balle_hyperprior, kalle_fold_mixture_canonical_shapes, lossy_coarsening_analytical, lossy_int4_quantization, sparsity_alpha_0.7_imp_retrain, tiny_nn_pmf_predictor",
+    "Exact-negative evidence retires only the measured config unless family_falsified/method_family_retired is explicitly true: lossy_coarsening_analytical",
+    "Validation queue preserves blocked/proxy/cross-paradigm signals without promoting them; queue rows are not score claims and cannot dispatch until blockers close."
+  ],
+  "operator_state": {
+    "archive_bytes": 185578,
+    "current_score": 0.2089810755823297,
+    "d_pose": 3.36e-05,
+    "d_seg": 0.00067082,
+    "label": "pr103_pr106_ac_repack_exact_cuda"
+  },
+  "recommended_top_3": [
+    {
+      "active_ranking_blocked": false,
+      "cost_dollars": 20.0,
+      "cost_hours": 18.0,
+      "current_score_baseline": 0.2089810755823297,
+      "description": "Selfcomp/Quantizr-style: renderer is its own decoder",
+      "evidence_grade": "[predicted]",
+      "gain_per_dollar": 0.0031820733510755455,
+      "gain_per_hour": 0.0035356370567506063,
+      "model_spec": {
+        "architecture_class": "self_compressing_neural_codec",
+        "canonical_shape_family": "selfcomp_block_fp_self_decode",
+        "capacity_constraint": "renderer_self_decodes_no_separate_decoder",
+        "substrate_constraint": "renderer_weights_bind_to_decoder",
+        "variant_required": [
+          "self_decode_path_built"
+        ]
+      },
+      "name": "self_compress_neural_codec",
+      "predicted_archive_bytes": 90000,
+      "predicted_gap_to_target": -0.04466039143918121,
+      "predicted_score_after": 0.1453396085608188,
+      "predicted_score_delta": 0.06364146702151091,
+      "reaches_target": true,
+      "retired_from_active_ranking": false,
+      "risk": "architectural"
+    },
+    {
+      "active_ranking_blocked": false,
+      "cost_dollars": 0.0,
+      "cost_hours": 0.5,
+      "current_score_baseline": 0.2089810755823297,
+      "description": "Current best brotli + Optuna q=11/lgwin=16/lgblock=19",
+      "evidence_grade": "[contest-CUDA]",
+      "gain_per_dollar": 0.009899990915020473,
+      "gain_per_hour": 0.009899990915020473,
+      "model_spec": {
+        "architecture_class": "brotli_lossless",
+        "canonical_shape_family": "n/a_lossless",
+        "capacity_constraint": "n/a",
+        "substrate_constraint": "1d_quantized_symbols",
+        "variant_required": [
+          "q=11_lgwin=16_lgblock=19"
+        ]
+      },
+      "name": "brotli_optuna_default",
+      "predicted_archive_bytes": 178144,
+      "predicted_gap_to_target": 0.014031080124819462,
+      "predicted_score_after": 0.20403108012481946,
+      "predicted_score_delta": 0.004949995457510237,
+      "reaches_target": false,
+      "retired_from_active_ranking": false,
+      "risk": "lossless"
+    },
+    {
+      "active_ranking_blocked": false,
+      "cost_dollars": 0.0,
+      "cost_hours": 1.0,
+      "current_score_baseline": 0.2089810755823297,
+      "description": "Adaptive arithmetic coding per-tensor; ties brotli within 37 B",
+      "evidence_grade": "[CPU-prep]",
+      "gain_per_dollar": 0.009850717352489435,
+      "gain_per_hour": 0.004925358676244718,
+      "model_spec": {
+        "architecture_class": "adaptive_arithmetic_coding",
+        "canonical_shape_family": "per_tensor_empirical_pmf",
+        "capacity_constraint": "n/a",
+        "substrate_constraint": "1d_quantized_symbols",
+        "variant_required": [
+          "per_tensor_pmf"
+        ]
+      },
+      "name": "per_tensor_adaptive_aac",
+      "predicted_archive_bytes": 178181,
+      "predicted_gap_to_target": 0.01405571690608498,
+      "predicted_score_after": 0.20405571690608498,
+      "predicted_score_delta": 0.004925358676244718,
+      "reaches_target": false,
+      "retired_from_active_ranking": false,
+      "risk": "lossless"
+    }
+  ],
+  "schema": "cathedral_autopilot.v1",
+  "score_geometry": {
+    "decomposition": {
+      "pose_term": 0.01833030277982336,
+      "rate_term": 0.12356877280250632,
+      "seg_term": 0.067082
+    },
+    "flip_threshold": 0.00025,
+    "gradient": {
+      "d_bytes": 6.658589531221714e-07,
+      "d_pose": 272.7723627949905,
+      "d_seg": 100.0
+    },
+    "operating_regime": {
+      "advice": "pose-dominated regime (d_pose 3.36e-05 < 2.50e-04); prioritize pose-targeted lanes \u2014 they have 2.73x the marginal score-per-byte vs seg lanes here",
+      "marginal_ratio_seg_over_pose": 0.3666060555964672,
+      "pose_dominates": true,
+      "seg_dominates": false
+    }
+  },
+  "target_score_gap_analysis": {
+    "bytes_only_feasible": true,
+    "bytes_only_required_archive_bytes": 157071,
+    "bytes_only_savings_required": 28507,
+    "information_floor_at_current_bytes": 0.12356877280250632,
+    "pose_only_feasible": false,
+    "pose_only_required_d_pose": null,
+    "score_gap": 0.0189810755823297,
+    "target_score": 0.19
+  },
+  "tool": "tools/cathedral_autopilot.py",
+  "validation_queue": [
+    {
+      "archive_bytes_if_validated": 83571,
+      "dispatch_blockers": [
+        "empirical_anchor_not_promotable_without_explicit_exact_eval_custody"
+      ],
+      "evidence_grade": "[empirical-anchor-N1; planning-only]",
+      "potential_score_delta_if_validated": 0.06792227423113334,
+      "queue_source": "cataloged_blocked_candidate",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sources": [
+        "[CPU-prep empirical byte-anchor only] reports/raw/pr101_arch_shrink_20260508T003827Z/manifest.json (ratio=0.4, post-hoc no retrain; channel L2-truncate)"
+      ],
+      "technique": "arch_shrink_x0.4_quantizr_class",
+      "validation_status": "non_promotable_empirical_anchor_not_rank_or_kill_evidence"
+    },
+    {
+      "archive_bytes_if_validated": 94671,
+      "dispatch_blockers": [
+        "empirical_anchor_not_promotable_without_explicit_exact_eval_custody"
+      ],
+      "evidence_grade": "[empirical-anchor-N1; planning-only]",
+      "potential_score_delta_if_validated": 0.060531239851477237,
+      "queue_source": "cataloged_blocked_candidate",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sources": [
+        "[CPU-prep empirical byte-anchor only] reports/raw/pr101_sparsity_sweep_20260508T002611Z/manifest.json (alpha=0.7, post-hoc no retrain)"
+      ],
+      "technique": "sparsity_alpha_0.7_imp_retrain",
+      "validation_status": "non_promotable_empirical_anchor_not_rank_or_kill_evidence"
+    },
+    {
+      "archive_bytes_if_validated": 100799,
+      "dispatch_blockers": [
+        "empirical_anchor_not_promotable_without_explicit_exact_eval_custody",
+        "model_spec_mismatch_pending_faithful_implementation"
+      ],
+      "evidence_grade": "[empirical-anchor-N3; planning-only; model_spec_mismatch]",
+      "potential_score_delta_if_validated": 0.056450856186744586,
+      "queue_source": "cataloged_blocked_candidate",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sources": [
+        "[CPU-prep empirical] reports/raw/pr101_int4_sweep_20260508T001119Z/manifest.json (block_size=1024)",
+        "[CPU-prep precision proxy] reports/raw/pr101_int4_roundtrip_20260508T003449Z/manifest.json (FALSIFIED for dispatch: 37% rel_err >> 2% threshold)",
+        "[CPU-prep empirical] retag-after-adversarial-audit 2026-05-07 \u2014 naive PTQ only; QAT, LSQ, per-channel, mixed-precision, GPTQ/AWQ NOT tested. Cf. CLAUDE.md apogee_int4 anti-pattern"
+      ],
+      "technique": "lossy_int4_quantization",
+      "validation_status": "non_promotable_empirical_anchor_not_rank_or_kill_evidence"
+    },
+    {
+      "archive_bytes_if_validated": 179276,
+      "dispatch_blockers": [
+        "cpu_proxy_byte_anchor_not_score_evidence",
+        "missing_exact_cuda_auth_eval",
+        "no_runtime_decoder_packet_built",
+        "requires_exact_cuda_auth_eval_before_any_score_use",
+        "model_spec_mismatch_pending_faithful_implementation"
+      ],
+      "evidence_grade": "[empirical-anchor-N4; planning-only; model_spec_mismatch]",
+      "potential_score_delta_if_validated": 0.004196243122575938,
+      "queue_source": "cataloged_blocked_candidate",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sources": [
+        "[CPU-prep empirical] reports/raw/pr101_tiny_nn_20260508T001420Z.json (tensor_only variant)",
+        "[CPU-prep MDL smoke final] reports/pr101_tiny_nn_pmf_smoke.json (tensor_only rank=7 epochs=500; loses by +635B vs Brotli+Optuna)",
+        "[CPU-prep empirical] retag-after-adversarial-audit 2026-05-07 \u2014 only rank=8 tested; rank>=32, LSTM/transformer, cross-tensor context NOT tested",
+        "[CPU-prep faithful 200-param test] reports/raw/pr101_tiny_nn_200param_20260508T022927Z/manifest.json (faithful catalog-spec MLP; actual params=188; actual model brotli=435 B; archive 206,370 B)"
+      ],
+      "technique": "tiny_nn_pmf_predictor",
+      "validation_status": "non_promotable_empirical_anchor_not_rank_or_kill_evidence"
+    },
+    {
+      "archive_bytes_if_validated": 205963,
+      "dispatch_blockers": [
+        "missing_exact_cuda_auth_eval",
+        "nn_literature_mixture_decoder_not_wired_into_runtime_packet",
+        "no_archive_substitution_performed",
+        "no_decode_roundtrip_fixture_for_full_packet",
+        "requires_exact_cuda_auth_eval_before_any_score_use"
+      ],
+      "evidence_grade": "[empirical-anchor-N3; planning-only]",
+      "potential_score_delta_if_validated": 0.0,
+      "queue_source": "cataloged_blocked_candidate",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sources": [
+        "[CPU-prep empirical] reports/raw/pr101_kalle_fold_20260508T001304Z/manifest.json",
+        "[CPU-prep empirical] retag-after-adversarial-audit 2026-05-07 \u2014 4-comp mixture insufficient capacity; higher comp/hierarchical/sparse-dict NOT tested",
+        "[CPU-prep faithful NN-shape reactivation] reports/raw/pr101_kalle_fold_nn_lit_20260508T024328Z/manifest.json (NN-weight basis: Kaiming, Xavier, Laplace tails, spike-and-slab, truncated-normal outliers, endpoint clip mass; n_components=7; archive 206,260 B)"
+      ],
+      "technique": "kalle_fold_mixture_canonical_shapes",
+      "validation_status": "non_promotable_empirical_anchor_not_rank_or_kill_evidence"
+    },
+    {
+      "archive_bytes_if_validated": 207065,
+      "dispatch_blockers": [
+        "empirical_anchor_not_promotable_without_explicit_exact_eval_custody"
+      ],
+      "evidence_grade": "[empirical-anchor-N2; planning-only]",
+      "potential_score_delta_if_validated": 0.0,
+      "queue_source": "cataloged_blocked_candidate",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sources": [
+        "[MPS-research-signal] reports/raw/pr101_balle_hyperprior_20260508T002237Z/manifest.json",
+        "[MPS-research-signal] retag-after-adversarial-audit 2026-05-07 \u2014 only 1.1KB MLP tested; 5-10KB MLP / full ScaleHyperprior / cross-tensor hyperprior NOT tested"
+      ],
+      "technique": "compressai_balle_hyperprior",
+      "validation_status": "non_promotable_empirical_anchor_not_rank_or_kill_evidence"
+    },
+    {
+      "archive_bytes_if_validated": 137531,
+      "dispatch_blockers": [],
+      "evidence_grade": "[CPU-build]",
+      "latest_timestamp": "2026-05-08T06:30:35Z",
+      "n_rows": 1,
+      "potential_score_delta_if_validated": 0.031992525120660975,
+      "queue_source": "unknown_evidence_candidate",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sources": [
+        "[CPU-build empirical] experiments/results/orch_smoke_all_paradigms/build_manifest.json"
+      ],
+      "technique": "phase4_orchestrator_alpha=NeRV_beta=uniform_gamma=ADMM-continuous-K_dez=none_finalizer=Op1-PR101-split-brotli_rms=0.0386",
+      "validation_status": "unknown_candidate_needs_catalog_or_alias_before_dispatch"
+    },
+    {
+      "archive_bytes_if_validated": 137531,
+      "dispatch_blockers": [],
+      "evidence_grade": "[CPU-build]",
+      "latest_timestamp": "2026-05-08T06:29:24Z",
+      "n_rows": 1,
+      "potential_score_delta_if_validated": 0.031992525120660975,
+      "queue_source": "unknown_evidence_candidate",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sources": [
+        "[CPU-build empirical] experiments/results/orch_smoke_default_winner/build_manifest.json"
+      ],
+      "technique": "phase4_orchestrator_alpha=none_beta=uniform_gamma=ADMM-continuous-K_dez=none_finalizer=Op1-PR101-split-brotli_rms=0.0386",
+      "validation_status": "unknown_candidate_needs_catalog_or_alias_before_dispatch"
+    },
+    {
+      "archive_bytes_if_validated": 161942,
+      "dispatch_blockers": [],
+      "evidence_grade": "[CPU-build]",
+      "latest_timestamp": "2026-05-08T06:29:59Z",
+      "n_rows": 1,
+      "potential_score_delta_if_validated": 0.01573824221599568,
+      "queue_source": "unknown_evidence_candidate",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sources": [
+        "[CPU-build empirical] experiments/results/orch_smoke_aggressive/build_manifest.json"
+      ],
+      "technique": "phase4_orchestrator_alpha=none_beta=uniform_gamma=joint-ADMM-Boyd_dez=none_finalizer=Op2-PR103-arith_rms=0.05",
+      "validation_status": "unknown_candidate_needs_catalog_or_alias_before_dispatch"
+    },
+    {
+      "archive_bytes_if_validated": 41303,
+      "dispatch_blockers": [
+        "post_hoc_composition_no_retrain",
+        "score_impact_unknown_requires_full_retrain_plus_cuda",
+        "no_runtime_decoder_packet_built",
+        "missing_exact_cuda_auth_eval",
+        "requires_exact_cuda_auth_eval_before_any_score_use",
+        "cpu_byte_anchor_not_score_evidence"
+      ],
+      "evidence_grade": "[CPU-prep empirical \u03a9-OPT stack composition byte-anchor]",
+      "latest_timestamp": "2026-05-08T02:41:34Z",
+      "n_rows": 1,
+      "potential_score_delta_if_validated": 0.0960668004617013,
+      "queue_source": "unknown_evidence_candidate",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sources": [
+        "[CPU-prep empirical \u03a9-OPT stack composition byte-anchor] /Users/adpena/Projects/pact/reports/raw/pr101_omega_opt_linear_stack_20260508T024134Z/manifest.json (arch_shrink_x0.4 \u2192 IMP \u03b1=0.7 \u2192 lossy_coarsening \u2192 brotli; post-hoc composition, no retrain)"
+      ],
+      "technique": "omega_opt_linear_stack_post_hoc_composition",
+      "validation_status": "unknown_planning_signal_needs_catalog_or_alias"
+    },
+    {
+      "archive_bytes_if_validated": 115641,
+      "dispatch_blockers": [
+        "qat_rel_err_above_5pct_threshold",
+        "no_int4_decoder_runtime_built",
+        "missing_exact_cuda_auth_eval"
+      ],
+      "evidence_grade": "[MPS-research-signal]",
+      "latest_timestamp": "2026-05-08T00:58:42Z",
+      "n_rows": 1,
+      "potential_score_delta_if_validated": 0.04656817760450532,
+      "queue_source": "unknown_evidence_candidate",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sources": [
+        "[MPS-research-signal] reports/raw/pr101_lossy_int4_qat_20260508T005842Z/manifest.json (qat epochs=500 block_size=1024; naive PTQ baseline rel_err=37.42%, QAT rel_err=28.48%)"
+      ],
+      "technique": "lossy_int4_quantization_qat",
+      "validation_status": "unknown_planning_signal_needs_catalog_or_alias"
+    },
+    {
+      "archive_bytes_if_validated": 115958,
+      "dispatch_blockers": [],
+      "evidence_grade": "",
+      "latest_timestamp": "2026-05-08T01:17:32Z",
+      "n_rows": 1,
+      "potential_score_delta_if_validated": 0.046357100316365585,
+      "queue_source": "unknown_evidence_candidate",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sources": [
+        "[CPU-prep empirical reactivation] /Users/adpena/Projects/pact/reports/raw/pr101_int4_perchannel_20260508T011732Z/manifest.json (per-output-channel fp16 scales; audit criterion #2)"
+      ],
+      "technique": "lossy_int4_per_channel_scales",
+      "validation_status": "unknown_planning_signal_needs_catalog_or_alias"
+    },
+    {
+      "archive_bytes_if_validated": 187785,
+      "dispatch_blockers": [],
+      "evidence_grade": "",
+      "latest_timestamp": "2026-05-08T02:05:20Z",
+      "n_rows": 1,
+      "potential_score_delta_if_validated": 0.0,
+      "queue_source": "unknown_evidence_candidate",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sources": [
+        "[CPU-prep empirical reactivation] /Users/adpena/Projects/pact/reports/raw/pr101_int4_mixed_precision_20260508T020520Z/manifest.json (mixed-precision int4/int6/int8; audit criterion #3; greedy assignment)"
+      ],
+      "technique": "lossy_int4_mixed_precision",
+      "validation_status": "unknown_planning_signal_needs_catalog_or_alias"
+    },
+    {
+      "archive_bytes_if_validated": 206370,
+      "dispatch_blockers": [
+        "no_runtime_decoder_packet_built",
+        "missing_exact_cuda_auth_eval",
+        "requires_exact_cuda_auth_eval_before_any_score_use",
+        "cpu_proxy_byte_anchor_not_score_evidence"
+      ],
+      "evidence_grade": "[CPU-prep faithful 200-param test]",
+      "latest_timestamp": "2026-05-08T02:29:27Z",
+      "n_rows": 1,
+      "potential_score_delta_if_validated": 0.0,
+      "queue_source": "unknown_evidence_candidate",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sources": [
+        "[CPU-prep faithful 200-param test] /Users/adpena/Projects/pact/reports/raw/pr101_tiny_nn_200param_20260508T022927Z/manifest.json (faithful 1:1 implementation of catalog spec '200-param MLP'; actual params=188, actual model brotli=435 B)"
+      ],
+      "technique": "tiny_nn_pmf_predictor_200param_faithful",
+      "validation_status": "unknown_planning_signal_needs_catalog_or_alias"
+    },
+    {
+      "archive_bytes_if_validated": 221288,
+      "dispatch_blockers": [
+        "mps_proxy_signal_not_score_evidence",
+        "training_device_not_exact_auth_eval",
+        "no_exact_archive_adjudication",
+        "missing_exact_cuda_auth_eval",
+        "requires_exact_cuda_auth_eval_before_any_score_use"
+      ],
+      "evidence_grade": "[MPS-research-signal cross-tensor variant]",
+      "latest_timestamp": "2026-05-08T02:42:01Z",
+      "n_rows": 1,
+      "potential_score_delta_if_validated": 0.0,
+      "queue_source": "unknown_evidence_candidate",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sources": [
+        "[MPS-research-signal cross-tensor variant] /Users/adpena/Projects/pact/reports/raw/pr101_balle_cross_tensor_20260508T024140Z/manifest.json (cross-tensor variant; best=l16:e8:h32, 600 epochs)"
+      ],
+      "technique": "compressai_balle_cross_tensor_hyperprior",
+      "validation_status": "unknown_planning_signal_needs_catalog_or_alias"
+    },
+    {
+      "archive_bytes_if_validated": 137469,
+      "dispatch_blockers": [
+        "byte_proxy_only_no_score_test",
+        "no_real_archive_substrate_for_cuda_replay",
+        "missing_exact_cuda_auth_eval"
+      ],
+      "evidence_grade": "[CPU-prep faithful cross-paradigm test SUBSTRATE-CORRECTED]",
+      "latest_timestamp": "2026-05-08T07:00:00Z",
+      "n_rows": 1,
+      "potential_score_delta_if_validated": 0.0,
+      "queue_source": "unknown_evidence_candidate",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sources": [
+        "[CPU-prep faithful cross-paradigm test SUBSTRATE-CORRECTED] /Users/adpena/Projects/pact/reports/raw/pr101_cross_paradigm_hstack_vstack_corrected_20260508/manifest.json (stack=Path_B_step6_ADMM_x_continuous_K_then_Op1_corrected; bytes=137,469; corrected_sha=c33243a1...; prior_phantom_sha=ea3b23ed... at 137,531; delta_to_phantom=-62 B; vs ADMM-alone=153,639 delta=-16,170; vs Op2_alone=161,942 delta=-24,473; rel_err_pre_finalizer=0.0415)"
+      ],
+      "technique": "cross_paradigm_admm_continuous_k_then_op1_finalizer_substrate_corrected",
+      "validation_status": "unknown_byte_proxy_needs_packetization"
+    },
+    {
+      "archive_bytes_if_validated": 137531,
+      "dispatch_blockers": [
+        "137531_byte_proxy_not_byte_closed_archive",
+        "no_inflate_py_for_cross_paradigm_composition",
+        "byte_proxy_only_no_score_test",
+        "no_real_archive_substrate_for_cuda_replay",
+        "missing_exact_cuda_auth_eval"
+      ],
+      "evidence_grade": "[byte_proxy_only_NOT_deployable]",
+      "latest_timestamp": "2026-05-08T06:06:56Z",
+      "n_rows": 1,
+      "potential_score_delta_if_validated": 0.0,
+      "queue_source": "unknown_evidence_candidate",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sources": [
+        "[byte_proxy_only_NOT_deployable] /Users/adpena/Projects/pact/reports/raw/pr101_cross_paradigm_hstack_vstack_20260508T060656Z/manifest.json (stack=Path_B_step6_ADMM_x_continuous_K_then_Op1; bytes=137,531=len(blob_op1) from CodecPipeline.encode skip_validate=True; this is the Op1 standalone re-encoding of the lossy-rebuilt substrate, NOT a byte-closed archive that includes the K coefficients + scale fp16s + the original PR101 latent_blob + sidecar required at inflate time. WIRE-DECODER subagent task is to build the deployable composition with matching inflate.py.)"
+      ],
+      "technique": "cross_paradigm_admm_continuous_k_then_op1_finalizer",
+      "validation_status": "unknown_byte_proxy_needs_packetization"
+    },
+    {
+      "archive_bytes_if_validated": 161942,
+      "dispatch_blockers": [
+        "byte_proxy_only_no_score_test",
+        "missing_exact_cuda_auth_eval"
+      ],
+      "evidence_grade": "[CPU-prep faithful cross-paradigm test]",
+      "latest_timestamp": "2026-05-08T06:06:56Z",
+      "n_rows": 1,
+      "potential_score_delta_if_validated": 0.0,
+      "queue_source": "unknown_evidence_candidate",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sources": [
+        "[CPU-prep faithful cross-paradigm test] /Users/adpena/Projects/pact/reports/raw/pr101_cross_paradigm_hstack_vstack_20260508T060656Z/manifest.json (canonical_winner=Op2_alone bytes=161,942; Op1=162,202; beta+Op1=163,587; gamma=194,867; Op3_int6+Op1=309,470 ballooned; Op3_int7+Op1=362,469 ballooned)"
+      ],
+      "technique": "cross_paradigm_canonical_8_stack_matrix_real_pr101_substrate",
+      "validation_status": "unknown_byte_proxy_needs_packetization"
+    },
+    {
+      "archive_bytes_if_validated": 100714,
+      "dispatch_blockers": [
+        "local_awq_proxy_signal_not_exact_eval_dispatch_ready",
+        "byte_closed_int4_candidate_packet_missing",
+        "no_int4_decoder_runtime_built",
+        "missing_exact_cuda_auth_eval",
+        "requires_exact_cuda_auth_eval_before_any_score_use",
+        "synthetic_activations_substrate_mismatch_vs_pr106_video_latents",
+        "cpu_proxy_rel_err_not_score_evidence",
+        "awq_inverse_scaling_assumes_linear_runtime_absorption_not_yet_built"
+      ],
+      "evidence_grade": "[CPU-prep faithful audit-criterion-5 test]",
+      "latest_timestamp": "2026-05-08T02:57:25Z",
+      "n_rows": 2,
+      "potential_score_delta_if_validated": 0.0,
+      "queue_source": "unknown_evidence_candidate",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sources": [
+        "[CPU-prep faithful audit-criterion-5 test] reports/raw/pr101_lossy_int4_awq_20260508T024604Z/manifest.json (AWQ samples=64 alphas=11 metric=uniform; rel_err=37.42%)",
+        "[CPU-prep faithful audit-criterion-5 test] reports/raw/pr101_lossy_int4_awq_20260508T025725Z/manifest.json (AWQ samples=8 alphas=3 metric=uniform; rel_err=37.42%)"
+      ],
+      "technique": "lossy_int4_quantization_awq",
+      "validation_status": "unknown_not_cuda_worth_testing_until_reactivated"
+    },
+    {
+      "archive_bytes_if_validated": 100844,
+      "dispatch_blockers": [
+        "local_gptq_proxy_signal_not_exact_eval_dispatch_ready",
+        "byte_closed_int4_candidate_packet_missing",
+        "no_int4_decoder_runtime_built",
+        "missing_exact_cuda_auth_eval",
+        "requires_exact_cuda_auth_eval_before_any_score_use",
+        "synthetic_activations_substrate_mismatch_vs_pr106_video_latents",
+        "cpu_proxy_rel_err_not_score_evidence"
+      ],
+      "evidence_grade": "[CPU-prep faithful audit-criterion-4 test]",
+      "latest_timestamp": "2026-05-08T02:57:26Z",
+      "n_rows": 2,
+      "potential_score_delta_if_validated": 0.0,
+      "queue_source": "unknown_evidence_candidate",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sources": [
+        "[CPU-prep faithful audit-criterion-4 test] reports/raw/pr101_lossy_int4_gptq_20260508T024139Z/manifest.json (GPTQ samples=64 damping=0.01 block_size_gptq=128; rel_err=40.11%)",
+        "[CPU-prep faithful audit-criterion-4 test] reports/raw/pr101_lossy_int4_gptq_20260508T025726Z/manifest.json (GPTQ samples=8 damping=0.01 block_size_gptq=64; rel_err=45.70%)"
+      ],
+      "technique": "lossy_int4_quantization_gptq",
+      "validation_status": "unknown_not_cuda_worth_testing_until_reactivated"
+    },
+    {
+      "archive_bytes_if_validated": 130032,
+      "dispatch_blockers": [
+        "byte_rel_err_proxy_only_no_score_test",
+        "lagrangian_allocation_only_iterative_ADMM_NOT_tested",
+        "discrete_codec_basis_only_continuous_lossy_coarsening_NOT_tested_jointly",
+        "missing_exact_cuda_auth_eval"
+      ],
+      "evidence_grade": "[CPU-prep faithful Path-B-step-5 Joint-ADMM Lagrangian-allocation test]",
+      "latest_timestamp": "2026-05-08T04:06:59Z",
+      "n_rows": 1,
+      "potential_score_delta_if_validated": 0.0,
+      "queue_source": "unknown_evidence_candidate",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sources": [
+        "[CPU-prep faithful Path-B-step-5 Joint-ADMM Lagrangian-allocation test] /Users/adpena/Projects/pact/reports/raw/pr101_omega_opt_joint_admm_allocation_20260508T040659Z/manifest.json (rms_target=0.10; admm_bytes=130,032; vs_greedy=+32,267; best_savings=+65,082@rms=0.3)"
+      ],
+      "technique": "joint_admm_lagrangian_allocation",
+      "validation_status": "unknown_not_cuda_worth_testing_until_reactivated"
+    },
+    {
+      "archive_bytes_if_validated": 131967,
+      "dispatch_blockers": [
+        "post_hoc_no_retrain_substrate_only",
+        "multi_pass_with_retrain_NOT_tested_requires_GPU",
+        "score_impact_unknown_without_contest_cuda",
+        "no_decoder_runtime_built_for_csr_format",
+        "missing_exact_cuda_auth_eval"
+      ],
+      "evidence_grade": "[CPU-prep faithful Path-B-step-2 multi-pass-post-hoc test]",
+      "latest_timestamp": "2026-05-08T03:14:21Z",
+      "n_rows": 1,
+      "potential_score_delta_if_validated": 0.0,
+      "queue_source": "unknown_evidence_candidate",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sources": [
+        "[CPU-prep faithful Path-B-step-2 multi-pass-post-hoc test] /Users/adpena/Projects/pact/reports/raw/pr101_omega_opt_multipass_imp_20260508T031421Z/manifest.json (avg |\u0394 multipass-vs-singlepass| = 64.4 B)"
+      ],
+      "technique": "multipass_imp_post_hoc_composition",
+      "validation_status": "unknown_not_cuda_worth_testing_until_reactivated"
+    },
+    {
+      "archive_bytes_if_validated": 153639,
+      "dispatch_blockers": [
+        "byte_rel_err_proxy_only_no_score_test",
+        "lagrangian_x_continuous_K_no_iterative_consensus_ADMM",
+        "missing_exact_cuda_auth_eval"
+      ],
+      "evidence_grade": "[CPU-prep faithful Path-B-step-6 ADMM \u00d7 continuous lossy_coarsening test]",
+      "latest_timestamp": "2026-05-08T04:13:03Z",
+      "n_rows": 1,
+      "potential_score_delta_if_validated": 0.0,
+      "queue_source": "unknown_evidence_candidate",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sources": [
+        "[CPU-prep faithful Path-B-step-6 ADMM \u00d7 continuous lossy_coarsening test] /Users/adpena/Projects/pact/reports/raw/pr101_omega_opt_admm_x_lossy_coarsening_20260508T041303Z/manifest.json (rms_target=3.86%; admm_bytes=153,639; vs_greedy=+14,658; best_savings=+14,658@rms=0.0386)"
+      ],
+      "technique": "joint_admm_x_continuous_lossy_coarsening",
+      "validation_status": "unknown_not_cuda_worth_testing_until_reactivated"
+    },
+    {
+      "archive_bytes_if_validated": 162327,
+      "dispatch_blockers": [
+        "byte_rel_err_proxy_only_no_score_test",
+        "sparsity_induces_distortion_score_impact_unknown",
+        "no_runtime_built_to_consume_per_tensor_codec_ids_with_CSR",
+        "missing_exact_cuda_auth_eval"
+      ],
+      "evidence_grade": "[CPU-prep faithful Path-B-step-4 per-tensor codec-CHOICE HStack test]",
+      "latest_timestamp": "2026-05-08T03:43:24Z",
+      "n_rows": 2,
+      "potential_score_delta_if_validated": 0.0,
+      "queue_source": "unknown_evidence_candidate",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sources": [
+        "[CPU-prep faithful Path-B-step-4 per-tensor codec-CHOICE HStack test] /Users/adpena/Projects/pact/reports/raw/pr101_omega_opt_per_tensor_codec_choice_20260508T034248Z/manifest.json (rel_err_budget=0.05; achieved=0.0000; bytes=162,327; savings_vs_lossless=-28; sparsified=0/28)",
+        "[CPU-prep faithful Path-B-step-4 per-tensor codec-CHOICE HStack test] /Users/adpena/Projects/pact/reports/raw/pr101_omega_opt_per_tensor_codec_choice_20260508T034324Z/manifest.json (rel_err_budget=0.05; achieved=0.0000; bytes=162,327; savings_vs_lossless=-28; sparsified=0/28)"
+      ],
+      "technique": "hstack_per_tensor_codec_choice_brotli_or_sparsity",
+      "validation_status": "unknown_not_cuda_worth_testing_until_reactivated"
+    },
+    {
+      "archive_bytes_if_validated": 162339,
+      "dispatch_blockers": [
+        "byte_savings_only_no_score_test",
+        "lossless_HStack_does_not_change_decoder_output",
+        "no_runtime_built_to_consume_per_tensor_params",
+        "missing_exact_cuda_auth_eval"
+      ],
+      "evidence_grade": "[CPU-prep faithful Path-B-step-3 per-tensor brotli HStack test]",
+      "latest_timestamp": "2026-05-08T03:38:25Z",
+      "n_rows": 1,
+      "potential_score_delta_if_validated": 0.0,
+      "queue_source": "unknown_evidence_candidate",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sources": [
+        "[CPU-prep faithful Path-B-step-3 per-tensor brotli HStack test] /Users/adpena/Projects/pact/reports/raw/pr101_omega_opt_hstack_of_vstacks_20260508T033825Z/manifest.json (per_tensor=162,339B vs joint_best=162,299B; savings=-40B; diverged=26/28)"
+      ],
+      "technique": "hstack_of_vstacks_per_tensor_brotli",
+      "validation_status": "unknown_not_cuda_worth_testing_until_reactivated"
+    },
+    {
+      "archive_bytes_if_validated": 0,
+      "dispatch_blockers": [],
+      "evidence_grade": "[CPU-build]",
+      "latest_timestamp": "2026-05-08T06:29:53Z",
+      "n_rows": 1,
+      "potential_score_delta_if_validated": 0.0,
+      "queue_source": "unknown_evidence_candidate",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sources": [
+        "[CPU-build empirical] experiments/results/orch_smoke_conservative/build_manifest.json"
+      ],
+      "technique": "phase4_orchestrator_alpha=none_beta=uniform_gamma=ADMM-continuous-K_dez=none_finalizer=none_rms=0.02",
+      "validation_status": "unknown_invalid_or_missing_archive_bytes"
+    },
+    {
+      "archive_bytes_if_validated": 156344,
+      "dispatch_blockers": [
+        "exact_negative_result_requires_reactivation_before_empirical_byte_anchor",
+        "measured_config_retired_exact_cuda_negative",
+        "missing_exact_cuda_auth_eval_on_lossy_decoder",
+        "no_runtime_dequantize_path_built",
+        "reactivation_required_before_new_dispatch"
+      ],
+      "evidence_grade": "[exact-negative-N2; reactivation-required]",
+      "potential_score_delta_if_validated": 0.0,
+      "queue_source": "cataloged_blocked_candidate",
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "sources": [],
+      "technique": "lossy_coarsening_analytical",
+      "validation_status": "reactivation_required_exact_negative"
+    }
+  ]
+}

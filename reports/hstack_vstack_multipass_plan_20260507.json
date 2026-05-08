@@ -246,11 +246,13 @@
     },
     {
       "blockers": [
+        "mask_internal_parser_section_missing",
         "mask_charged_byte_ledger_missing",
         "mask_roundtrip_vector_missing"
       ],
       "byte_semantics": {
         "blockers": [
+          "mask_internal_parser_section_missing",
           "mask_charged_byte_ledger_missing",
           "mask_roundtrip_vector_missing"
         ],
@@ -264,7 +266,7 @@
         "model_overhead_bytes": null,
         "promotion_eligible": false,
         "repair_criteria": [
-          "record_mask_bytes_sha256_and_decode_vector"
+          "record_mask_offset_len_sha256_and_decode_vector"
         ],
         "score_affecting_payload_changed": false,
         "score_claim": false
@@ -278,7 +280,7 @@
       "family": "mask_video_stream",
       "notes": [],
       "repair_criteria": [
-        "record_mask_bytes_sha256_and_decode_vector"
+        "record_mask_offset_len_sha256_and_decode_vector"
       ],
       "role": "parallel_stream",
       "runtime_packet_required": true,
@@ -289,11 +291,13 @@
     },
     {
       "blockers": [
+        "pose_internal_parser_section_missing",
         "pose_charged_byte_ledger_missing",
         "pose_roundtrip_vector_missing"
       ],
       "byte_semantics": {
         "blockers": [
+          "pose_internal_parser_section_missing",
           "pose_charged_byte_ledger_missing",
           "pose_roundtrip_vector_missing"
         ],
@@ -307,7 +311,7 @@
         "model_overhead_bytes": null,
         "promotion_eligible": false,
         "repair_criteria": [
-          "record_pose_bytes_sha256_and_decode_vector"
+          "record_pose_offset_len_sha256_and_decode_vector"
         ],
         "score_affecting_payload_changed": false,
         "score_claim": false
@@ -321,7 +325,7 @@
       "family": "pose_stream",
       "notes": [],
       "repair_criteria": [
-        "record_pose_bytes_sha256_and_decode_vector"
+        "record_pose_offset_len_sha256_and_decode_vector"
       ],
       "role": "parallel_stream",
       "runtime_packet_required": true,
@@ -332,11 +336,13 @@
     },
     {
       "blockers": [
+        "residual_internal_parser_section_missing",
         "residual_charged_byte_ledger_missing",
         "residual_roundtrip_vector_missing"
       ],
       "byte_semantics": {
         "blockers": [
+          "residual_internal_parser_section_missing",
           "residual_charged_byte_ledger_missing",
           "residual_roundtrip_vector_missing"
         ],
@@ -350,7 +356,7 @@
         "model_overhead_bytes": null,
         "promotion_eligible": false,
         "repair_criteria": [
-          "record_residual_bytes_sha256_and_decode_vector"
+          "record_residual_offset_len_sha256_and_decode_vector"
         ],
         "score_affecting_payload_changed": false,
         "score_claim": false
@@ -364,7 +370,7 @@
       "family": "residual_correction_stream",
       "notes": [],
       "repair_criteria": [
-        "record_residual_bytes_sha256_and_decode_vector"
+        "record_residual_offset_len_sha256_and_decode_vector"
       ],
       "role": "parallel_stream",
       "runtime_packet_required": true,
@@ -424,20 +430,25 @@
       ]
     }
   ],
-  "manifest_sha256": "35f85fecdd98f3ec88a6303dfd8ebbf2d27b106345c6ec969954e64cccd8e632",
+  "manifest_sha256": "1890bbc93fa241d2982057e2b8718dca939fb9b6d9042411d598b19a3a6ee148",
   "metadata": {
     "archive_layout": {
       "dispatch_requires": [
         "codecop_dag_manifest",
-        "tree_archive_member_order_sha256",
+        "single_member_name_size_sha256",
+        "internal_section_offset_len_sha256",
+        "no_member_level_mask_pose_budget_claim",
         "charged_byte_delta_per_node",
         "decode_roundtrip_per_leaf"
       ],
-      "shape": "dag_of_codecops_with_tree_structured_archive_layout",
-      "status": "planning_contract_only"
+      "logical_stream_budget_requires_internal_parser_proof": true,
+      "member_level_component_budgets_valid": false,
+      "physical_packet_target": "one_stored_zip_member_for_pr101_pr106_style_frontier_archives",
+      "shape": "single_member_monolithic_packet_with_internal_parser_proven_logical_sections",
+      "status": "planning_contract_only_after_frontier_monolith_review"
     },
     "axis_semantics": {
-      "hstack_parallel": "parallel independent archive-component codecs merged into one deterministic packet",
+      "hstack_parallel": "parallel parser-proven logical stream codecs merged into one monolithic packet",
       "multipass": "compress-time repeated planning and training passes only",
       "vstack_serial": "serial representation-to-pack transforms inside one component stream"
     },
@@ -467,10 +478,231 @@
         "per_tensor_hstack_parallel_substreams"
       ],
       "score_band_prediction": {
+        "claim_count": 8,
+        "claims": [
+          {
+            "claim_id": "omega_opt_linear_stack",
+            "current_anchor_status": "cpu_byte_anchor_only_no_score_anchor",
+            "dispatchable": false,
+            "label": "Linear stack",
+            "missing_anchors": [
+              "1:1 composition config manifest for the claimed stack",
+              "runtime packet that consumes the composed payload",
+              "full retrain or faithful no-retrain disclosure for every layer",
+              "full-sample exact CUDA auth eval on exact archive bytes"
+            ],
+            "next_buildable_1to1_test": "Build one PR101 stack archive from the declared arch_shrink, IMP, lossy coarsening, and brotli sequence; record old/new archive SHA-256, then run archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA.",
+            "notes": "The existing post-hoc CPU byte measurement is useful, but the 0.130 score remains unanchored.",
+            "predicted_score": 0.13,
+            "promotion_allowed": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "reactivation_criteria": [
+              "score-affecting payload changed and consumed by inflate",
+              "old/new archive bytes and SHA-256 recorded",
+              "contest_auth_eval.json records full-sample CUDA components"
+            ],
+            "ready_for_exact_eval_dispatch": false,
+            "requires_exact_1to1_anchor": true,
+            "score_claim": false,
+            "score_classification": "prediction"
+          },
+          {
+            "claim_id": "omega_opt_multipass_imp_cycle",
+            "current_anchor_status": "no_matching_config_anchor",
+            "dispatchable": false,
+            "label": "Multi-pass IMP-cycle",
+            "missing_anchors": [
+              "declared Q-FAITHFUL five-stage config",
+              "IMP-cycle archive materialization",
+              "per-pass charged-byte ledger",
+              "full-sample exact CUDA auth eval on the final packet"
+            ],
+            "next_buildable_1to1_test": "Freeze a minimal Q-FAITHFUL plus one IMP-cycle config, emit a single final contest packet, and compare exact CUDA auth eval against the non-IMP anchor.",
+            "notes": "",
+            "predicted_score": 0.115,
+            "promotion_allowed": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "reactivation_criteria": [
+              "matching config committed or manifested",
+              "each pass records input/output payload SHA-256",
+              "final archive has exact CUDA auth-eval artifact"
+            ],
+            "ready_for_exact_eval_dispatch": false,
+            "requires_exact_1to1_anchor": true,
+            "score_claim": false,
+            "score_classification": "prediction"
+          },
+          {
+            "claim_id": "omega_opt_hstack_of_vstacks",
+            "current_anchor_status": "never_built",
+            "dispatchable": false,
+            "label": "HStack-of-VStacks",
+            "missing_anchors": [
+              "parser-proven internal stream map",
+              "serial VStack transform manifests",
+              "parallel HStack merge manifest",
+              "runtime packet closure and CUDA auth eval"
+            ],
+            "next_buildable_1to1_test": "Use the codec-stack planner to materialize one parser-proven component map on PR101 or PR106, then build an identity packet before changing bytes.",
+            "notes": "",
+            "predicted_score": 0.11,
+            "promotion_allowed": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "reactivation_criteria": [
+              "identity packet round-trips byte-for-byte or explains metadata deltas",
+              "non-identity packet records per-stream byte deltas",
+              "exact CUDA eval exists before any score ranking"
+            ],
+            "ready_for_exact_eval_dispatch": false,
+            "requires_exact_1to1_anchor": true,
+            "score_claim": false,
+            "score_classification": "design"
+          },
+          {
+            "claim_id": "omega_opt_joint_admm_cross_component",
+            "current_anchor_status": "engine_exists_no_component_allocation_anchor",
+            "dispatchable": false,
+            "label": "Joint-ADMM cross-component",
+            "missing_anchors": [
+              "CodecOp to StreamProximalCodec allocation adapter",
+              "real component budget ledger",
+              "old/new packet SHA-256 for the ADMM-selected allocation",
+              "full-sample exact CUDA auth eval"
+            ],
+            "next_buildable_1to1_test": "Run the existing Joint-ADMM engine over one real PR101/PR106 component budget with fixed proximal codecs, emit the selected allocation packet, and exact-eval that packet on CUDA.",
+            "notes": "",
+            "predicted_score": 0.105,
+            "promotion_allowed": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "reactivation_criteria": [
+              "ADMM convergence or honest divergence recorded",
+              "allocation affects charged bytes consumed at inflate",
+              "exact CUDA eval validates the selected archive"
+            ],
+            "ready_for_exact_eval_dispatch": false,
+            "requires_exact_1to1_anchor": true,
+            "score_claim": false,
+            "score_classification": "prediction"
+          },
+          {
+            "claim_id": "omega_opt_bilevel_optimization",
+            "current_anchor_status": "scaffold_no_convergence_or_archive_anchor",
+            "dispatchable": false,
+            "label": "Bilevel optimization",
+            "missing_anchors": [
+              "outer training convergence proof",
+              "middle meta-Lagrangian selection artifact",
+              "inner Joint-ADMM allocation artifact",
+              "byte-closed archive and exact CUDA auth eval"
+            ],
+            "next_buildable_1to1_test": "Run a one-phase bilevel slice on a fixed substrate with a locked atom ledger, emit one archive, and require convergence diagnostics plus exact CUDA evaluation.",
+            "notes": "",
+            "predicted_score": 0.1,
+            "promotion_allowed": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "reactivation_criteria": [
+              "training run has deterministic seed/config manifest",
+              "atom ledger links every selected transform to bytes",
+              "exact CUDA eval exists for the emitted archive"
+            ],
+            "ready_for_exact_eval_dispatch": false,
+            "requires_exact_1to1_anchor": true,
+            "score_claim": false,
+            "score_classification": "prediction"
+          },
+          {
+            "claim_id": "omega_opt_score_feedback_meta_pass",
+            "current_anchor_status": "never_run",
+            "dispatchable": false,
+            "label": "Score-feedback meta-pass",
+            "missing_anchors": [
+              "score-feedback loop run log",
+              "dispatch-claim custody for every exact-eval iteration",
+              "archive identity chain across meta-passes",
+              "terminal full-sample exact CUDA auth eval"
+            ],
+            "next_buildable_1to1_test": "Run two score-feedback meta-passes on the same archive family, record the archive identity chain, and treat only the terminal CUDA eval as score evidence.",
+            "notes": "",
+            "predicted_score": 0.095,
+            "promotion_allowed": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "reactivation_criteria": [
+              "each meta-pass has a dispatch claim and terminal status",
+              "all archive SHA-256 transitions are recorded",
+              "terminal exact CUDA eval is full-sample"
+            ],
+            "ready_for_exact_eval_dispatch": false,
+            "requires_exact_1to1_anchor": true,
+            "score_claim": false,
+            "score_classification": "prediction"
+          },
+          {
+            "claim_id": "omega_opt_per_tensor_hstack_of_vstacks",
+            "current_anchor_status": "design_only",
+            "dispatchable": false,
+            "label": "Per-tensor HStack-of-VStacks",
+            "missing_anchors": [
+              "per-tensor stream grammar",
+              "per-tensor HStack grouping manifest",
+              "cross-language conformance vectors",
+              "runtime packet and exact CUDA auth eval"
+            ],
+            "next_buildable_1to1_test": "Select two tensors, emit canonical input/output byte vectors for one serial transform and one parallel grouping, then build a minimal runtime packet that consumes those sections.",
+            "notes": "",
+            "predicted_score": 0.092,
+            "promotion_allowed": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "reactivation_criteria": [
+              "golden vectors include shapes, offsets, lengths, and SHA-256",
+              "runtime consumes all per-tensor side info from archive",
+              "exact CUDA eval follows packet closure"
+            ],
+            "ready_for_exact_eval_dispatch": false,
+            "requires_exact_1to1_anchor": true,
+            "score_claim": false,
+            "score_classification": "design"
+          },
+          {
+            "claim_id": "omega_opt_recursive_residual_gradients",
+            "current_anchor_status": "aspiration_only",
+            "dispatchable": false,
+            "label": "Recursive residual gradients",
+            "missing_anchors": [
+              "implemented recursive residual-gradient transform",
+              "stable convergence or fail-closed divergence criterion",
+              "charged-byte residual packet",
+              "full-sample exact CUDA auth eval"
+            ],
+            "next_buildable_1to1_test": "Prototype one residual-gradient correction stage with fixed iteration count and deterministic payload accounting, then compare exact CUDA auth eval against the unchanged anchor.",
+            "notes": "",
+            "predicted_score": 0.09,
+            "promotion_allowed": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "reactivation_criteria": [
+              "gradient transform is deterministic and scorer-free at inflate",
+              "residual payload has old/new SHA-256 and charged bytes",
+              "exact CUDA eval validates the changed archive"
+            ],
+            "ready_for_exact_eval_dispatch": false,
+            "requires_exact_1to1_anchor": true,
+            "score_claim": false,
+            "score_classification": "prediction"
+          }
+        ],
         "evidence_grade": "prediction",
-        "full_nested_score_feedback_prediction": 0.09,
-        "linear_stack_prediction": 0.13,
         "promotion_allowed": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "tac_omega_opt_nested_claims_v1",
         "score_claim": false
       },
       "status": "design_contract_only_no_score_claim"
@@ -497,11 +729,13 @@
   "parallel_groups": [
     {
       "blockers": [
+        "single_member_internal_section_map_missing",
         "parallel_stream_byte_ledger_missing",
         "cross_stream_budget_reconciliation_missing"
       ],
       "byte_semantics": {
         "blockers": [
+          "single_member_internal_section_map_missing",
           "parallel_stream_byte_ledger_missing",
           "cross_stream_budget_reconciliation_missing"
         ],
@@ -515,7 +749,7 @@
         "model_overhead_bytes": null,
         "promotion_eligible": false,
         "repair_criteria": [
-          "record_per_stream_charged_bytes_and_merge_order_sha256"
+          "record_per_stream_internal_offsets_lengths_sha256_and_merge_order_sha256"
         ],
         "score_affecting_payload_changed": false,
         "score_claim": false
@@ -529,7 +763,7 @@
       "group_id": "hstack_parallel_stream_components",
       "merge_policy": "independent_streams_then_deterministic_packet_merge",
       "repair_criteria": [
-        "record_per_stream_charged_bytes_and_merge_order_sha256"
+        "record_per_stream_internal_offsets_lengths_sha256_and_merge_order_sha256"
       ]
     }
   ],
@@ -806,10 +1040,13 @@
       "static_shared_pmf_k12_negative_plus_793_bytes_requires_repair",
       "terminal_coder_payload_vectors_missing",
       "no_old_new_payload_sha256",
+      "mask_internal_parser_section_missing",
       "mask_charged_byte_ledger_missing",
       "mask_roundtrip_vector_missing",
+      "pose_internal_parser_section_missing",
       "pose_charged_byte_ledger_missing",
       "pose_roundtrip_vector_missing",
+      "residual_internal_parser_section_missing",
       "residual_charged_byte_ledger_missing",
       "residual_roundtrip_vector_missing",
       "runtime_packet_not_built",
@@ -818,6 +1055,7 @@
       "qint_deconstruction_not_proven",
       "arithmetic_payload_identity_vectors_missing",
       "runtime_packet_materialization_missing",
+      "single_member_internal_section_map_missing",
       "parallel_stream_byte_ledger_missing",
       "cross_stream_budget_reconciliation_missing",
       "learned_hyperprior_repair_not_proven",
@@ -837,16 +1075,16 @@
       "record_old_new_archive_sha256_and_charged_byte_delta",
       "run_full_sample_exact_cuda_auth_eval_before_any_score_claim",
       "prove_payload_decode_identity_and_fail_closed_malformed_vectors",
-      "record_mask_bytes_sha256_and_decode_vector",
-      "record_pose_bytes_sha256_and_decode_vector",
-      "record_residual_bytes_sha256_and_decode_vector",
+      "record_mask_offset_len_sha256_and_decode_vector",
+      "record_pose_offset_len_sha256_and_decode_vector",
+      "record_residual_offset_len_sha256_and_decode_vector",
       "archive_zip_contains_all_score_affecting_model_side_info",
       "inflate_sh_consumes_packet_without_external_state_or_network",
       "pre_submission_compliance_check_strict_passes",
       "emit_qint_deconstruction_manifest_with_sha256",
       "prove_arithmetic_payload_roundtrip_and_malformed_fail_closed",
       "prove_runtime_packet_contains_all_score_affecting_bytes",
-      "record_per_stream_charged_bytes_and_merge_order_sha256",
+      "record_per_stream_internal_offsets_lengths_sha256_and_merge_order_sha256",
       "planner_outputs_zero_score_claim",
       "each_score_affecting_transform_has_charged_byte_delta_proof",
       "each_codec_component_has_exact_roundtrip_or_is_marked_non_decoding",
