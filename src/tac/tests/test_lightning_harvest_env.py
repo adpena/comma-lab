@@ -5,6 +5,7 @@ import pytest
 from tac.deploy.lightning.harvest_env import (
     missing_lightning_harvest_values,
     require_lightning_harvest_values,
+    rsync_progress_args_from_help,
 )
 
 
@@ -62,3 +63,12 @@ def test_lightning_harvest_env_accepts_complete_values() -> None:
         require_rsync=True,
         context="full-harvest",
     )
+
+
+def test_rsync_progress_args_support_gnu_and_macos_rsync() -> None:
+    assert rsync_progress_args_from_help("rsync  version 3.2.7\n    --info=FLAGS") == [
+        "--info=progress2"
+    ]
+    assert rsync_progress_args_from_help("rsync  version 2.6.9 protocol version 29") == [
+        "--progress"
+    ]

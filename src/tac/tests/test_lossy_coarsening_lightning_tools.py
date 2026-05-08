@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -162,3 +163,59 @@ def test_lightning_force_harvest_requires_rsync_env_before_artifact_pull(
 
     with pytest.raises(SystemExit, match="missing required Lightning artifact-rsync values"):
         module.main(["--job-name", job_name, "--force-harvest", "--remote-pact", ""])
+
+
+@pytest.mark.parametrize(
+    ("script_path", "lane_id", "job_name"),
+    [
+        (
+            "experiments/lossy_coarsening_lightning_harvest.py",
+            "lossy_coarsening_analytical_cuda",
+            "lossy-test",
+        ),
+        (
+            "experiments/arch_shrink_x0.4_lightning_harvest.py",
+            "arch_shrink_x0.4_lightning",
+            "arch-test",
+        ),
+    ],
+)
+def test_lightning_terminal_harvest_closes_claim_on_rsync_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    script_path: str,
+    lane_id: str,
+    job_name: str,
+) -> None:
+    module = _load_script(script_path)
+    active_rows = [{"lane_id": lane_id, "job_name": job_name, "terminal_status": None}]
+    saved_rows: list[list[dict[str, object]]] = []
+    terminal_claims: list[dict[str, object]] = []
+
+    def fail_rsync(**_kwargs: object) -> Path:
+        raise module.LightningHarvestRsyncError(
+            returncode=23,
+            remote_path="studio:/missing/artifacts/",
+        )
+
+    monkeypatch.setattr(module, "_rsync_artifacts", fail_rsync)
+    monkeypatch.setattr(module, "_load_active_jobs", lambda: [dict(active_rows[0])])
+    monkeypatch.setattr(module, "_save_active_jobs", lambda rows: saved_rows.append(rows))
+    monkeypatch.setattr(
+        module,
+        "_terminal_claim",
+        lambda **kwargs: terminal_claims.append(kwargs),
+    )
+
+    args = SimpleNamespace(
+        ssh_target="studio",
+        remote_pact="/remote/pact",
+        evidence_out=tmp_path / "evidence.jsonl",
+    )
+
+    with pytest.raises(SystemExit, match="artifact rsync failed rc=23"):
+        module._harvest_terminal(target={"job_name": job_name}, args=args)
+
+    assert terminal_claims[0]["status"] == "failed_artifact_rsync_rc_23"
+    assert "studio:/missing/artifacts/" in terminal_claims[0]["notes"]
+    assert saved_rows[0][0]["terminal_status"] == "failed_artifact_rsync_rc_23"

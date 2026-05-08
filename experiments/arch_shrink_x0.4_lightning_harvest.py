@@ -74,7 +74,11 @@ from tac.deploy.lightning.defaults import (
     default_teamspace,
     default_user,
 )
-from tac.deploy.lightning.harvest_env import require_lightning_harvest_values
+from tac.deploy.lightning.harvest_env import (
+    LightningHarvestRsyncError,
+    require_lightning_harvest_values,
+    rsync_progress_args,
+)
 
 LANE_ID = "arch_shrink_x0.4_lightning"
 LIGHTNING_ACTIVE_JOBS_PATH = REPO_ROOT / ".omx" / "state" / "lightning_active_jobs.json"
@@ -184,7 +188,7 @@ def _rsync_artifacts(
     cmd = [
         "rsync",
         "-az",
-        "--info=progress2",
+        *rsync_progress_args("rsync"),
         "-e",
         "ssh -o ConnectTimeout=30 -o ServerAliveInterval=30",
         remote_path,
@@ -193,7 +197,10 @@ def _rsync_artifacts(
     print(f"[harvest] rsync {remote_path} -> {local_dir}/")
     result = subprocess.run(cmd, cwd=str(REPO_ROOT), check=False)
     if result.returncode != 0:
-        sys.exit(f"FATAL: rsync failed (rc={result.returncode})")
+        raise LightningHarvestRsyncError(
+            returncode=result.returncode,
+            remote_path=remote_path,
+        )
     return local_dir
 
 
@@ -318,11 +325,23 @@ def _harvest_terminal(
         context="artifact-rsync",
     )
 
-    local_dir = _rsync_artifacts(
-        ssh_target=args.ssh_target,
-        remote_pact=args.remote_pact,
-        job_name=job_name,
-    )
+    try:
+        local_dir = _rsync_artifacts(
+            ssh_target=args.ssh_target,
+            remote_pact=args.remote_pact,
+            job_name=job_name,
+        )
+    except LightningHarvestRsyncError as exc:
+        status = f"failed_artifact_rsync_rc_{exc.returncode}"
+        notes = (
+            f"harvest: terminal Lightning job but artifact rsync failed rc={exc.returncode}; "
+            f"remote={exc.remote_path}"
+        )
+        _terminal_claim(job_name=job_name, status=status, notes=notes)
+        rows = _load_active_jobs()
+        _mark_row_terminal(rows, job_name=job_name, status_lower=status, score=None)
+        _save_active_jobs(rows)
+        sys.exit(f"FATAL: {notes}")
 
     auth_eval = _parse_auth_eval_json(local_dir)
     if auth_eval is None:

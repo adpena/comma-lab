@@ -2,7 +2,17 @@
 
 from __future__ import annotations
 
+import subprocess
 from collections.abc import Sequence
+
+
+class LightningHarvestRsyncError(RuntimeError):
+    """Raised when terminal-job artifact rsync cannot complete."""
+
+    def __init__(self, *, returncode: int, remote_path: str) -> None:
+        super().__init__(f"Lightning artifact rsync failed rc={returncode}: {remote_path}")
+        self.returncode = returncode
+        self.remote_path = remote_path
 
 
 def _is_missing(value: str | None) -> bool:
@@ -11,6 +21,26 @@ def _is_missing(value: str | None) -> bool:
 
 def _format_missing(items: Sequence[str]) -> str:
     return "\n".join(f"  - {item}" for item in items)
+
+
+def rsync_progress_args_from_help(help_text: str) -> list[str]:
+    """Return progress args supported by the local rsync build."""
+    if "--info=" in help_text or "--info=FLAGS" in help_text:
+        return ["--info=progress2"]
+    return ["--progress"]
+
+
+def rsync_progress_args(rsync_path: str = "rsync") -> list[str]:
+    """Return deterministic progress args for GNU rsync and macOS rsync."""
+    result = subprocess.run(
+        [rsync_path, "--help"],
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+    return rsync_progress_args_from_help(
+        "\n".join(part for part in (result.stdout, result.stderr) if part)
+    )
 
 
 def missing_lightning_harvest_values(
@@ -69,6 +99,9 @@ def require_lightning_harvest_values(
 
 
 __all__ = [
+    "LightningHarvestRsyncError",
     "missing_lightning_harvest_values",
     "require_lightning_harvest_values",
+    "rsync_progress_args",
+    "rsync_progress_args_from_help",
 ]
