@@ -92,12 +92,30 @@ BASE_DISPATCH_BLOCKERS = [
     "operator_score_claim_review_not_done",
     "packet_local_inflate_parity_not_run",
 ]
-CLEARED_BY_PACKET_LADDER = frozenset(
+# Clearance sets are split by *evidence kind* (codex finding 2026-05-08).
+# Parse-smoke is a wire-format / decoder-load check; it does NOT validate
+# end-to-end inflate parity. The packet builder must NOT clear the
+# inflate-parity blocker on parse-smoke alone — it stays in dispatch_blockers
+# until `--run-inflate-parity` runs `inflate.sh` and compares source vs
+# candidate outputs.
+CLEARED_BY_PARSE_SMOKE = frozenset(
     {
         "no_byte_closed_runtime_packet_built",
+    }
+)
+CLEARED_BY_INFLATE_PARITY = frozenset(
+    {
         "packet_local_inflate_parity_not_run",
     }
 )
+# Backward-compat alias: union of the two evidence-kind sets. Use only when
+# both parse-smoke AND inflate-parity have run; otherwise pick the specific
+# set matching the evidence you actually have.
+CLEARED_BY_PACKET_LADDER = CLEARED_BY_PARSE_SMOKE | CLEARED_BY_INFLATE_PARITY
+CLEARED_BLOCKER_EVIDENCE = {
+    "no_byte_closed_runtime_packet_built": "packet_local_parse_smoke",
+    "packet_local_inflate_parity_not_run": "inflate_parity_log",
+}
 FALSE_AUTHORITY_FIELDS = {
     "score_claim": False,
     "promotion_eligible": False,
@@ -788,7 +806,7 @@ def _write_packet_report(
     candidate_archive_record: dict[str, Any],
     source_archive_record: dict[str, Any],
     dispatch_blockers: list[str],
-    runtime_tree_sha256: str | None = None,
+    packet_builder_runtime_file_sha256: str | None = None,
 ) -> dict[str, Any]:
     report_path = packet_dir / "report.txt"
     lines = [
@@ -804,8 +822,14 @@ def _write_packet_report(
         "ready_for_exact_eval_dispatch: false",
         "evidence_grade: empirical",
     ]
-    if runtime_tree_sha256:
-        lines.append(f"runtime_tree_sha256: {runtime_tree_sha256}")
+    if packet_builder_runtime_file_sha256:
+        lines.append(
+            f"packet_builder_runtime_file_sha256: {packet_builder_runtime_file_sha256}"
+        )
+        lines.append(
+            "packet_builder_runtime_file_sha256_basis: packet files excluding "
+            "custody artifacts; not contest_auth_eval runtime_tree_sha256"
+        )
     lines.extend(["", "dispatch_blockers:"])
     lines.extend(f"- {blocker}" for blocker in dispatch_blockers)
     lines.extend(
@@ -821,8 +845,9 @@ def _write_packet_report(
     return _file_record(report_path, relpath="report.txt")
 
 
-def _packet_local_parse_smoke(packet_dir: Path, candidate_archive_path: Path) -> dict[str, Any]:
+def _packet_local_parse_smoke(packet_dir: Path, archive_path: Path, *, label: str) -> dict[str, Any]:
     script = r'''
+import hashlib
 import importlib.util
 import json
 import sys
@@ -851,13 +876,48 @@ with zipfile.ZipFile(archive_path) as zf:
         raise RuntimeError(f"expected one candidate member, found {len(infos)}")
     payload = zf.read(infos[0])
 decoder_sd, latents, meta = codec.parse_archive(payload)
+
+def tensor_sha256(tensor):
+    if not hasattr(tensor, "detach"):
+        return None
+    cpu = tensor.detach().cpu().contiguous()
+    h = hashlib.sha256()
+    h.update(str(cpu.dtype).encode("utf-8"))
+    h.update(json.dumps(list(cpu.shape), sort_keys=True).encode("utf-8"))
+    h.update(cpu.numpy().tobytes())
+    return h.hexdigest()
+
+tensor_rows = []
+non_tensor_decoder_entries = []
+for name, tensor in decoder_sd.items():
+    digest = tensor_sha256(tensor)
+    if digest is None:
+        non_tensor_decoder_entries.append(name)
+    tensor_rows.append({
+        "name": name,
+        "shape": list(tensor.shape) if hasattr(tensor, "shape") else None,
+        "dtype": str(getattr(tensor, "dtype", "")),
+        "numel": int(tensor.numel()) if hasattr(tensor, "numel") else None,
+        "sha256": digest,
+    })
+state_digest_rows = [
+    {"name": row["name"], "shape": row["shape"], "dtype": row["dtype"], "sha256": row["sha256"]}
+    for row in tensor_rows
+]
 print(json.dumps({
     "passed": True,
+    "label": sys.argv[3],
     "member_name": infos[0].filename,
     "a2_magic": payload.startswith(b"A2K1"),
     "decoder_tensor_count": len(decoder_sd),
+    "decoder_state_sha256": hashlib.sha256(
+        json.dumps(state_digest_rows, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest(),
+    "decoder_tensor_rows": tensor_rows,
+    "non_tensor_decoder_entries": non_tensor_decoder_entries,
     "latents_shape": list(latents.shape) if hasattr(latents, "shape") else None,
     "latents_dtype": str(getattr(latents, "dtype", "")),
+    "latents_sha256": tensor_sha256(latents),
     "meta": {
         "n_pairs": int(meta["n_pairs"]),
         "latent_dim": int(meta["latent_dim"]),
@@ -869,7 +929,7 @@ print(json.dumps({
     env = os.environ.copy()
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     proc = subprocess.run(
-        [sys.executable, "-c", script, str(packet_dir), str(candidate_archive_path)],
+        [sys.executable, "-c", script, str(packet_dir), str(archive_path), label],
         capture_output=True,
         env=env,
         text=True,
@@ -887,7 +947,9 @@ print(json.dumps({
             f"packet-local runtime parse smoke emitted non-JSON output: {proc.stdout!r}",
             ["packet_local_runtime_parse_smoke_non_json"],
         ) from exc
-    payload["command"] = "python -c <packet_local_parse_smoke> packet_dir archive.zip"
+    payload["command"] = (
+        "python -c <packet_local_parse_smoke> packet_dir archive.zip label"
+    )
     return payload
 
 
@@ -933,6 +995,7 @@ def _build_variant(
     upstream_a2_manifest: dict[str, Any],
     state_dict_path: Path,
     source_runtime_dir: Path,
+    source_archive_path: Path,
     source_archive_record: dict[str, Any],
     source_member_name: str,
     source_decoder_blob: bytes,
@@ -967,7 +1030,16 @@ def _build_variant(
         source_member_name,
         inner_member,
     )
-    parse_smoke = _packet_local_parse_smoke(packet_dir, candidate_archive_path)
+    source_parse_smoke = _packet_local_parse_smoke(
+        packet_dir,
+        source_archive_path,
+        label="source_stock_fallback",
+    )
+    candidate_parse_smoke = _packet_local_parse_smoke(
+        packet_dir,
+        candidate_archive_path,
+        label="candidate_a2_length_prefix",
+    )
 
     source_member_sha = source_archive_record["members"][0]["sha256"]
     candidate_member_sha = candidate_archive_record["members"][0]["sha256"]
@@ -984,11 +1056,18 @@ def _build_variant(
         encoding["decoder_blob_sha256"] != _sha256_bytes(source_decoder_blob)
         and not noop["schedule_all_ones"]
     )
+    decoded_decoder_state_changed = (
+        source_parse_smoke.get("decoder_state_sha256")
+        != candidate_parse_smoke.get("decoder_state_sha256")
+    )
+    # CODEX FIX 2026-05-08: parse-smoke alone clears only parse-bounded
+    # blockers. Inflate-parity blocker stays until --run-inflate-parity runs
+    # inflate.sh end-to-end. See `verify_inflate_parity` post-build helper.
     dispatch_blockers = _active_packet_blockers(
         BASE_DISPATCH_BLOCKERS,
         upstream_a2_manifest["propagated_blockers"],
         noop["reasons"],
-        clear=CLEARED_BY_PACKET_LADDER,
+        clear=CLEARED_BY_PARSE_SMOKE,
     )
     report_record = _write_packet_report(
         packet_dir=packet_dir,
@@ -1013,7 +1092,7 @@ def _build_variant(
         candidate_archive_record=candidate_archive_record,
         source_archive_record=source_archive_record,
         dispatch_blockers=dispatch_blockers,
-        runtime_tree_sha256=runtime_tree_sha256,
+        packet_builder_runtime_file_sha256=runtime_tree_sha256,
     )
     proxy_vs_materialized = _proxy_vs_materialized(schedule, candidate_archive_record, decoder_blob)
     variant = {
@@ -1033,12 +1112,24 @@ def _build_variant(
         "packet_closure": {
             "byte_closed_packet_built": True,
             "runtime_consumes_changed_archive_bytes": bool(
-                parse_smoke.get("passed") and candidate_member_sha != source_member_sha
+                source_parse_smoke.get("passed")
+                and candidate_parse_smoke.get("passed")
+                and semantic_payload_changed
+                and decoded_decoder_state_changed
             ),
+            "semantic_payload_changed": semantic_payload_changed,
+            "decoded_decoder_state_changed": decoded_decoder_state_changed,
             "runtime_source_mutated": False,
             "wire_contract": "A2K1 + decoder_len:u32le + PR101 decoder_blob + PR101 latent_blob + sidecar",
             "missing_wire_contracts": [],
-            "cleared_blockers": sorted(CLEARED_BY_PACKET_LADDER),
+            # Parse-smoke ran; inflate-parity has NOT (run via
+            # `--run-inflate-parity` post-build to clear that blocker).
+            "cleared_blockers": sorted(CLEARED_BY_PARSE_SMOKE),
+            "cleared_blockers_by_evidence": {
+                blocker: CLEARED_BLOCKER_EVIDENCE[blocker]
+                for blocker in sorted(CLEARED_BY_PARSE_SMOKE)
+            },
+            "inflate_parity_status": "not_run",
         },
         "upstream_a2_manifest": upstream_a2_manifest,
         "schedule": {
@@ -1091,7 +1182,9 @@ def _build_variant(
             },
             "runtime_checks": {
                 "inflate_sh_bash_n": _bash_n(packet_dir / "inflate.sh"),
-                "packet_local_parse_smoke": parse_smoke,
+                "source_packet_local_parse_smoke": source_parse_smoke,
+                "candidate_packet_local_parse_smoke": candidate_parse_smoke,
+                "packet_local_parse_smoke": candidate_parse_smoke,
             },
             "report": report_record,
         },
@@ -1176,6 +1269,7 @@ def build_packet_ladder(
                 upstream_a2_manifest=upstream_a2_manifest,
                 state_dict_path=state_dict_path,
                 source_runtime_dir=source_runtime_dir,
+                source_archive_path=source_archive,
                 source_archive_record=source_archive_record,
                 source_member_name=source_member_name,
                 source_decoder_blob=source_decoder_blob,
@@ -1203,10 +1297,13 @@ def build_packet_ladder(
         "evidence_semantics": "byte_closed_packet_ladder_no_score_no_dispatch",
         "target_modes": ["contest_exact_eval"],
         "deployment_target": "t4_contest_runtime_pending_exact_eval",
+        # CODEX FIX 2026-05-08: parse-smoke is the only post-build evidence
+        # the ladder can claim. Inflate-parity blocker stays until
+        # `--run-inflate-parity` runs `inflate.sh` end-to-end and clears it.
         "dispatch_blockers": _active_packet_blockers(
             BASE_DISPATCH_BLOCKERS,
             upstream_a2_manifest["propagated_blockers"],
-            clear=CLEARED_BY_PACKET_LADDER,
+            clear=CLEARED_BY_PARSE_SMOKE,
         ),
         "upstream_a2_manifest": upstream_a2_manifest,
         "inputs": {
@@ -1225,7 +1322,15 @@ def build_packet_ladder(
             "missing_wire_contracts": [],
             "runtime_source_mutated": False,
             "state_dict_reproduces_source_decoder": state_source_closure,
-            "cleared_blockers": sorted(CLEARED_BY_PACKET_LADDER),
+            # Parse-smoke cleared; inflate-parity NOT yet run on any variant.
+            # Run via `tools/build_a2_sensitivity_weighted_pr101_packet.py
+            # --run-inflate-parity` post-build to advance.
+            "cleared_blockers": sorted(CLEARED_BY_PARSE_SMOKE),
+            "cleared_blockers_by_evidence": {
+                blocker: CLEARED_BLOCKER_EVIDENCE[blocker]
+                for blocker in sorted(CLEARED_BY_PARSE_SMOKE)
+            },
+            "inflate_parity_status": "not_run",
         },
         "variants": variants,
         "next_required_actions": [
@@ -1237,6 +1342,178 @@ def build_packet_ladder(
     }
     manifest["manifest_sha256_excluding_self"] = _canonical_json_sha256(manifest)
     write_json(output_dir / "a2_packet_ladder_manifest.json", manifest)
+    return manifest
+
+
+def verify_inflate_parity(
+    *,
+    packet_dir: Path,
+    candidate_archive_path: Path,
+    source_archive_path: Path,
+    timeout_seconds: int = 600,
+) -> dict[str, Any]:
+    """Run `inflate.sh` on source and candidate archives, compare outputs.
+
+    The packet builder produces parse-smoke evidence at build time, which only
+    validates that the wire format is parseable and the decoder loads. It does
+    NOT validate that decoding produces the same outputs as the source archive.
+
+    This helper closes that gap: it stages a working directory, runs the
+    packet's bundled `inflate.sh` against both archives, and compares
+    deterministic output bytes (or per-file SHA-256 if outputs are large).
+
+    Returns:
+        Dict containing:
+          * `passed`: bool — True iff source and candidate inflate to identical bytes
+          * `command`: invocation string (for reproducibility)
+          * `source_output_sha256`, `candidate_output_sha256`: bytes-of-output digests
+          * `differing_paths`: list of relative paths where source/candidate differ
+          * `cleared_blockers`: CLEARED_BY_INFLATE_PARITY iff passed
+          * `error`: failure reason iff not passed
+
+    The caller patches the existing manifest's `dispatch_blockers` and
+    `packet_closure.cleared_blockers` if `passed`.
+    """
+    import shutil  # local import to avoid surprising the rest of the file
+
+    inflate_sh = packet_dir / "inflate.sh"
+    if not inflate_sh.is_file():
+        return {
+            "passed": False,
+            "error": f"inflate.sh missing at {inflate_sh}",
+            "cleared_blockers": [],
+        }
+
+    work_dir = packet_dir / ".inflate_parity_work"
+    if work_dir.exists():
+        shutil.rmtree(work_dir)
+    work_dir.mkdir(parents=True)
+    source_work = work_dir / "source"
+    candidate_work = work_dir / "candidate"
+    source_work.mkdir()
+    candidate_work.mkdir()
+
+    def _run_inflate(archive: Path, out_dir: Path) -> dict[str, Any]:
+        # Copy archive to a stable path the script expects, then run.
+        target_archive = out_dir / "archive.zip"
+        shutil.copyfile(archive, target_archive)
+        proc = subprocess.run(
+            ["bash", str(inflate_sh.resolve())],
+            cwd=str(out_dir),
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=timeout_seconds,
+        )
+        return {
+            "returncode": proc.returncode,
+            "stdout_tail": proc.stdout[-2000:],
+            "stderr_tail": proc.stderr[-2000:],
+        }
+
+    try:
+        source_result = _run_inflate(source_archive_path, source_work)
+        candidate_result = _run_inflate(candidate_archive_path, candidate_work)
+    except subprocess.TimeoutExpired as exc:
+        return {
+            "passed": False,
+            "error": f"inflate.sh timed out after {timeout_seconds}s: {exc}",
+            "cleared_blockers": [],
+        }
+
+    if source_result["returncode"] != 0 or candidate_result["returncode"] != 0:
+        return {
+            "passed": False,
+            "error": "inflate.sh non-zero exit",
+            "source_inflate": source_result,
+            "candidate_inflate": candidate_result,
+            "cleared_blockers": [],
+        }
+
+    # Compare every emitted file byte-for-byte. Both sides should have produced
+    # identical contents under the runtime contract.
+    def _file_map(root: Path) -> dict[str, str]:
+        result: dict[str, str] = {}
+        for path in sorted(root.rglob("*")):
+            if not path.is_file():
+                continue
+            if path.name == "archive.zip":  # the input we copied in
+                continue
+            rel = path.relative_to(root).as_posix()
+            result[rel] = hashlib.sha256(path.read_bytes()).hexdigest()
+        return result
+
+    source_files = _file_map(source_work)
+    candidate_files = _file_map(candidate_work)
+
+    differing: list[str] = []
+    for rel, sha in source_files.items():
+        if candidate_files.get(rel) != sha:
+            differing.append(rel)
+    for rel in candidate_files:
+        if rel not in source_files:
+            differing.append(rel)
+
+    differing = sorted(set(differing))
+    passed = not differing
+    return {
+        "passed": passed,
+        "command": f"bash {inflate_sh.resolve()} (run on source & candidate; compare outputs)",
+        "source_output_count": len(source_files),
+        "candidate_output_count": len(candidate_files),
+        "source_combined_sha256": hashlib.sha256(
+            json_text(source_files).encode("utf-8")
+        ).hexdigest(),
+        "candidate_combined_sha256": hashlib.sha256(
+            json_text(candidate_files).encode("utf-8")
+        ).hexdigest(),
+        "differing_paths": differing,
+        "cleared_blockers": sorted(CLEARED_BY_INFLATE_PARITY) if passed else [],
+        "source_inflate_returncode": source_result["returncode"],
+        "candidate_inflate_returncode": candidate_result["returncode"],
+    }
+
+
+def _apply_inflate_parity_to_manifest(
+    *,
+    manifest_path: Path,
+    parity_record: dict[str, Any],
+) -> dict[str, Any]:
+    """Patch a built manifest with inflate-parity evidence + clearance.
+
+    Reads the existing manifest, appends the parity record, and (iff passed)
+    extends `cleared_blockers` and removes the parity blocker from
+    `dispatch_blockers`. The manifest_sha256_excluding_self is recomputed.
+    """
+    if not manifest_path.is_file():
+        raise FileNotFoundError(f"manifest not found: {manifest_path}")
+    manifest = read_json(manifest_path)
+    if not isinstance(manifest, dict):
+        raise ValueError(f"manifest is not a JSON object: {manifest_path}")
+
+    closure = manifest.setdefault("packet_closure", {})
+    closure["inflate_parity_record"] = parity_record
+    closure["inflate_parity_status"] = "passed" if parity_record.get("passed") else "failed"
+
+    if parity_record.get("passed"):
+        # Extend cleared_blockers with inflate-parity set; remove from
+        # dispatch_blockers.
+        existing_cleared = set(closure.get("cleared_blockers", []))
+        existing_cleared.update(CLEARED_BY_INFLATE_PARITY)
+        closure["cleared_blockers"] = sorted(existing_cleared)
+        existing_evidence = dict(closure.get("cleared_blockers_by_evidence", {}))
+        for blocker in CLEARED_BY_INFLATE_PARITY:
+            existing_evidence[blocker] = CLEARED_BLOCKER_EVIDENCE[blocker]
+        closure["cleared_blockers_by_evidence"] = existing_evidence
+        manifest["dispatch_blockers"] = [
+            b for b in manifest.get("dispatch_blockers", [])
+            if b not in CLEARED_BY_INFLATE_PARITY
+        ]
+
+    # Recompute manifest_sha256_excluding_self
+    manifest.pop("manifest_sha256_excluding_self", None)
+    manifest["manifest_sha256_excluding_self"] = _canonical_json_sha256(manifest)
+    write_json(manifest_path, manifest)
     return manifest
 
 
@@ -1295,6 +1572,24 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--now-utc")
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--fail-if-blocked", action="store_true")
+    parser.add_argument(
+        "--run-inflate-parity",
+        action="store_true",
+        help=(
+            "After building the packet ladder, run inflate.sh on every variant's "
+            "candidate archive AND the upstream source archive, then compare "
+            "outputs byte-for-byte. Clears the `packet_local_inflate_parity_not_run` "
+            "blocker only on variants where parity passes. Without this flag, the "
+            "blocker remains active because parse-smoke alone does not validate "
+            "end-to-end inflate parity."
+        ),
+    )
+    parser.add_argument(
+        "--inflate-parity-timeout",
+        type=int,
+        default=600,
+        help="Per-variant inflate.sh timeout in seconds (default: 600).",
+    )
     return parser
 
 
@@ -1324,6 +1619,42 @@ def main(argv: list[str] | None = None) -> int:
             write_json(_repo_path(json_out), manifest)
         print(f"manifest: {repo_relative(_repo_path(json_out), REPO_ROOT)}")
         print(f"variants: {len(manifest['variants'])}")
+
+        if args.run_inflate_parity:
+            ladder_manifest_path = _repo_path(output_dir) / "a2_packet_ladder_manifest.json"
+            print("running inflate-parity on each variant…")
+            source_archive_resolved = _repo_path(args.source_archive)
+            ladder_passed_all = True
+            for variant in manifest.get("variants", []):
+                variant_id = variant["variant_id"]
+                variant_dir = _repo_path(output_dir) / "variants" / variant_id
+                packet_dir = variant_dir / "packet"
+                candidate_archive = packet_dir / "archive.zip"
+                variant_manifest_path = variant_dir / "candidate_manifest.json"
+                parity = verify_inflate_parity(
+                    packet_dir=packet_dir,
+                    candidate_archive_path=candidate_archive,
+                    source_archive_path=source_archive_resolved,
+                    timeout_seconds=args.inflate_parity_timeout,
+                )
+                _apply_inflate_parity_to_manifest(
+                    manifest_path=variant_manifest_path,
+                    parity_record=parity,
+                )
+                status = "PASS" if parity.get("passed") else "FAIL"
+                print(f"  variant={variant_id} inflate_parity={status}")
+                if not parity.get("passed"):
+                    ladder_passed_all = False
+            # Patch the ladder-level manifest with aggregate result.
+            ladder_parity = {
+                "passed": ladder_passed_all,
+                "evidence": "per-variant inflate_parity_record entries in candidate_manifest.json",
+            }
+            _apply_inflate_parity_to_manifest(
+                manifest_path=ladder_manifest_path,
+                parity_record=ladder_parity,
+            )
+            print(f"inflate-parity ladder: {'PASS' if ladder_passed_all else 'FAIL'}")
         return 0
     except PacketClosureBlocked as exc:
         manifest = _blocked_manifest(

@@ -456,6 +456,15 @@ def preflight_all(
         # in rebuild recipes. Refuses rebuild_command.txt with hardcoded
         # --now-utc/--operator-approved-* flags absent a HISTORICAL banner.
         check_rebuild_commands_no_baked_runtime_state(strict=True, verbose=verbose)
+        # 2026-05-08 codex finding A2 (catalog #114): packet builder cleared
+        # `packet_local_inflate_parity_not_run` based only on parse-smoke,
+        # while the same manifest also listed inflate parity as a required
+        # next action. This gate enforces evidence-kind separation: every
+        # cleared blocker must be matched by `cleared_blockers_by_evidence`,
+        # and `packet_local_inflate_parity_not_run` may only be cleared with
+        # an actual `inflate_parity_record.passed=true`. Memory:
+        # feedback_codex_finding_a2_packet_inflate_parity_FIXED_20260508.md
+        check_packet_blocker_clearance_evidence_matches(strict=True, verbose=verbose)
         # 2026-05-08 codex META finding (catalog #113): umbrella
         # provenance-vs-state lifecycle gate. Runs all four artifact-kind
         # guards against the registry at .omx/state/artifact_kind_registry.yaml.
@@ -507,6 +516,10 @@ def preflight_all(
         check_no_eval_roundtrip_false(strict=True, verbose=verbose)
         check_no_scorer_load_at_inflate(strict=True, verbose=verbose)
         check_training_scripts_have_auth_eval(strict=True, verbose=verbose)
+        # 2026-05-08 codex Pattern A finding: training scripts must NOT call
+        # synthetic data factories in non-smoke mode. Wired warn-only on
+        # landing; flip to strict=True after the live count drops to 0.
+        check_training_scripts_use_real_data_in_nonsmoke_mode(strict=False, verbose=verbose)
         check_no_disable_eval_roundtrip_flag(strict=True, verbose=verbose)
         check_no_pack_sparse_delta_approved_outside_promotion_tool(strict=True, verbose=verbose)
         check_inflate_sh_handles_br_centrally(strict=True, verbose=verbose)
@@ -6422,6 +6435,136 @@ def _scan_python_for_disable_eval_roundtrip_flag(
                         f"is non-negotiable; the only escape hatch is env var "
                         f"TAC_ALLOW_NO_ROUNDTRIP=1. Remove the flag."
                     )
+    return violations
+
+
+def check_training_scripts_use_real_data_in_nonsmoke_mode(
+    repo_root: Path | None = None,
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """STRICT-pending preflight gate (Catalog #114) — training scripts must NOT
+    call a synthetic data factory in non-smoke mode.
+
+    Rationale: codex Pattern A review 2026-05-08 (HIGH finding) caught
+    ``experiments/train_score_gradient_pr101_finetune.py`` calling
+    ``make_synthetic_pair_batch`` on every training step regardless of
+    whether smoke was set. A non-smoke Lightning T4 dispatch would have
+    burned $8 optimizing PR101 weights against random noise.
+
+    The gate scans ``experiments/train_*.py`` files. For each file that
+    defines BOTH ``make_synthetic_*`` AND a non-smoke ``main()``, it
+    AST-walks every call to ``make_synthetic_*``; the call is allowed
+    only if it is inside a function whose name contains ``smoke``/``synthetic``,
+    or inside an ``if smoke:`` / ``if args.smoke:`` branch, or has a
+    same-line waiver ``# SYNTHETIC_NON_SMOKE_OK:<reason>``.
+
+    Memory: feedback_codex_finding_pr101_synthetic_targets_FIXED_20260508
+    Catalog: CLAUDE.md "Meta-bug class catalog (strict-mode preflight)" #114
+    """
+    import ast as _ast
+
+    if repo_root is None:
+        repo_root = REPO_ROOT
+    train_files = sorted((repo_root / "experiments").glob("train_*.py"))
+    violations: list[str] = []
+
+    for path in train_files:
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        try:
+            tree = _ast.parse(text, filename=str(path))
+        except SyntaxError:
+            continue
+
+        has_synthetic_def = False
+        has_main_def = False
+        for node in _ast.walk(tree):
+            if isinstance(node, _ast.FunctionDef):
+                if node.name.startswith("make_synthetic"):
+                    has_synthetic_def = True
+                if node.name == "main":
+                    has_main_def = True
+        if not (has_synthetic_def and has_main_def):
+            continue
+
+        rel = path.relative_to(repo_root)
+        text_lines = text.splitlines()
+
+        def _has_waiver(lineno: int) -> bool:
+            if 0 < lineno <= len(text_lines):
+                return "SYNTHETIC_NON_SMOKE_OK:" in text_lines[lineno - 1]
+            return False
+
+        # Build parent map.
+        parents: dict[int, _ast.AST] = {}
+        for n in _ast.walk(tree):
+            for c in _ast.iter_child_nodes(n):
+                parents[id(c)] = n
+
+        def _inside_smoke_gate(call: _ast.Call) -> bool:
+            cur: _ast.AST = call
+            while id(cur) in parents:
+                parent = parents[id(cur)]
+                if isinstance(parent, _ast.FunctionDef):
+                    name = parent.name.lower()
+                    if "smoke" in name or "synthetic" in name:
+                        return True
+                if isinstance(parent, _ast.If):
+                    in_body = any(
+                        any(node is call for node in _ast.walk(b))
+                        for b in parent.body
+                    )
+                    if in_body:
+                        test_src = (
+                            _ast.unparse(parent.test)
+                            if hasattr(_ast, "unparse")
+                            else ""
+                        )
+                        if "smoke" in test_src.lower():
+                            return True
+                cur = parent
+            return False
+
+        for call in _ast.walk(tree):
+            if not isinstance(call, _ast.Call):
+                continue
+            target_name = ""
+            if isinstance(call.func, _ast.Name):
+                target_name = call.func.id
+            elif isinstance(call.func, _ast.Attribute):
+                target_name = call.func.attr
+            if not target_name.startswith("make_synthetic"):
+                continue
+            if _has_waiver(call.lineno):
+                continue
+            if _inside_smoke_gate(call):
+                continue
+            violations.append(
+                f"{rel}:{call.lineno}: synthetic-data factory `{target_name}` "
+                f"called outside an `if smoke:` branch (and outside a "
+                f"smoke/synthetic-named function). Non-smoke training MUST "
+                f"use real data per codex Pattern A review 2026-05-08. "
+                f"Refactor to take an explicit batch_source callable + gate "
+                f"synthetic behind --smoke, OR add same-line waiver "
+                f"`# SYNTHETIC_NON_SMOKE_OK:<reason>`."
+            )
+
+    if verbose and violations:
+        print(
+            "[check_training_scripts_use_real_data_in_nonsmoke_mode] "
+            f"violations={len(violations)}"
+        )
+        for v in violations:
+            print("  -", v)
+    if strict and violations:
+        raise PreflightError(
+            "check_training_scripts_use_real_data_in_nonsmoke_mode failed STRICT:\n  "
+            + "\n  ".join(violations)
+        )
     return violations
 
 
@@ -24938,6 +25081,128 @@ def check_rebuild_commands_no_baked_runtime_state(
             )
         else:
             print(f"  [rebuild-recipe-baked-state] OK ({scanned} recipe file(s) scanned)")
+    return violations
+
+
+def check_packet_blocker_clearance_evidence_matches(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Packet blocker clearance must match its evidence kind (CODEX FINDING A2 2026-05-08).
+
+    Codex caught the A2 packet builder clearing
+    ``packet_local_inflate_parity_not_run`` based ONLY on a parse-smoke check
+    while the same manifest also listed inflate parity as a required next
+    action. Parse-smoke validates wire-format / decoder-load only; it does
+    NOT validate inflate-parity.
+
+    This check enforces the split: a manifest's
+    ``packet_closure.cleared_blockers`` MUST list each cleared blocker in
+    ``packet_closure.cleared_blockers_by_evidence`` with a non-empty
+    evidence label, AND a cleared blocker MUST NOT also appear in
+    ``dispatch_blockers``. Specifically:
+
+      * ``no_byte_closed_runtime_packet_built`` may be cleared with evidence
+        ``packet_local_parse_smoke`` (or stronger).
+      * ``packet_local_inflate_parity_not_run`` may be cleared ONLY with
+        evidence ``inflate_parity_log`` (or a synonym), AND the manifest
+        must also include an ``inflate_parity_record`` with ``passed=true``.
+
+    Forbidden pattern: "packet-clearance-without-matching-evidence".
+    Cross-reference CLAUDE.md catalog (next entry after #112).
+    """
+    root = Path(repo_root or REPO_ROOT)
+    results_dir = root / "experiments" / "results"
+    if not results_dir.is_dir():
+        if verbose:
+            print("  [packet-clearance-evidence] OK (no experiments/results)")
+        return []
+
+    valid_evidence_for_blocker = {
+        "no_byte_closed_runtime_packet_built": frozenset(
+            {"packet_local_parse_smoke", "inflate_parity_log"}
+        ),
+        "packet_local_inflate_parity_not_run": frozenset({"inflate_parity_log"}),
+    }
+
+    violations: list[str] = []
+    scanned = 0
+    for path in sorted(results_dir.rglob("*manifest*.json")):
+        rel = path.relative_to(root).as_posix()
+        # Skip the public-pr forensic clones (own gate covers them).
+        if "/public_pr" in rel:
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, dict):
+            continue
+        closure = payload.get("packet_closure")
+        if not isinstance(closure, dict):
+            continue
+        cleared = closure.get("cleared_blockers")
+        if not isinstance(cleared, list):
+            continue
+        scanned += 1
+        active = payload.get("dispatch_blockers")
+        if not isinstance(active, list):
+            active = []
+        evidence_map = closure.get("cleared_blockers_by_evidence")
+        if not isinstance(evidence_map, dict):
+            evidence_map = {}
+
+        for blocker in cleared:
+            # 1. cleared blocker must NOT also be in active dispatch_blockers
+            if blocker in active:
+                violations.append(
+                    f"{rel}: packet-clearance-without-matching-evidence — "
+                    f"blocker {blocker!r} is in BOTH cleared_blockers and "
+                    f"dispatch_blockers (internally inconsistent)"
+                )
+                continue
+            # 2. cleared blocker must have non-empty evidence label
+            evidence_label = evidence_map.get(blocker)
+            if not evidence_label:
+                violations.append(
+                    f"{rel}: packet-clearance-without-matching-evidence — "
+                    f"blocker {blocker!r} cleared without "
+                    f"cleared_blockers_by_evidence[{blocker!r}] entry"
+                )
+                continue
+            # 3. evidence label must match the blocker's accepted set
+            allowed = valid_evidence_for_blocker.get(blocker)
+            if allowed is not None and evidence_label not in allowed:
+                violations.append(
+                    f"{rel}: packet-clearance-without-matching-evidence — "
+                    f"blocker {blocker!r} cleared with unrecognized evidence "
+                    f"{evidence_label!r} (allowed: {sorted(allowed)})"
+                )
+                continue
+            # 4. inflate-parity blocker requires inflate_parity_record passed=true
+            if blocker == "packet_local_inflate_parity_not_run":
+                parity_rec = closure.get("inflate_parity_record")
+                if not isinstance(parity_rec, dict) or not parity_rec.get("passed"):
+                    violations.append(
+                        f"{rel}: packet-clearance-without-matching-evidence — "
+                        f"blocker 'packet_local_inflate_parity_not_run' cleared "
+                        f"but inflate_parity_record is missing or not passed"
+                    )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "PACKET-CLEARANCE-EVIDENCE VIOLATIONS:\n" + "\n".join(violations)
+        )
+    if verbose:
+        if violations:
+            print(
+                f"  [packet-clearance-evidence] {len(violations)} violation(s) "
+                f"across {scanned} manifest(s) scanned"
+            )
+        else:
+            print(f"  [packet-clearance-evidence] OK ({scanned} manifest(s) scanned)")
     return violations
 
 
