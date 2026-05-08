@@ -33,7 +33,7 @@ No row in this table is a score claim. Every numeric is `[byte-anchor]`,
 | **A4** | ChARM 50K toy substrate (Ballé channel-AR prior) | encoded 7,031 B / 46,995 model params (-2.5KB vs uniform); rate term finite, roundtrip exact | smoke_passed | local CPU smoke | `byte-anchor toy substrate; smoke only` | Toy substrate (50K params, NOT PR101's 228,958 elements). Roundtrip-exact + finite-rate is the gate; substrate-scale validation requires GPU dispatch on real PR101 weights. Per Quantizr+Carmack: Decision 1 LOW priority vs Decisions 2/3. |
 | **A4-alt** | Cross-paradigm ADMM × Op1 finalizer (real PR101) | 137,531 B (orch_smoke) / 153,513 B (per-archive zip) | 4.15% | byte-closed candidate; dispatch_blockers={byte_proxy_only, no_real_archive_substrate_for_cuda_replay, missing_exact_cuda_auth_eval} | `[CPU-build]` | Best CPU-built archive in the Phase-A family. Distinct evidence than A4 (real substrate, not toy). `cuda_eval_worth_testing: true`. SHA: `7bbba307...28489489`. |
 | **A5** | Frame-conditional bit budget | archive Δ -1,278 B at η=2.0 (latent Δ -1,503 B, sidechannel +225 B) | byte proxy only | local CPU | `[CPU-prep faithful frame-conditional byte anchor]` | Tooling landed in `tools/pr101_frame_conditional_bit_anchor.py` + `tac.codec.frame_conditional_bit_budget`; per-pair score marginal and inflate schema update are blockers before dispatch. |
-| **A6** | Block-FP × hyperprior (Selfcomp/Ballé hybrid) | not landed | — | NOT RUN | — | Phase A6 deferred — Quantizr's 0.33 used FP4 + per-channel scales + brotli, NO neural codec. Per Quantizr+Carmack: lowest priority among A-staging items. Reactivation requires A1+A2 success first. |
+| **A6** | Block-FP × hyperprior (Selfcomp/Ballé hybrid) | 214,035 B | 0% on int8 proxy stream | local CPU proxy; not dispatch-worthy | `[byte-roundtrip proxy; measured-config negative]` | Current max-abs-scale conditional Gaussian range-coder loses to PR101 brotli by +35,891 B. Not a score claim and not a family kill; real Selfcomp per-channel block-FP, learned ChARM, tensor-aware PMFs, and byte-map-preserving arithmetic rewrites remain open. |
 
 ### A2 packet-ladder (A2 byte-closure in inflate-replayable form)
 
@@ -52,7 +52,7 @@ No row in this table is a score claim. Every numeric is `[byte-anchor]`,
 | A4 | `experiments/results/track1_a4_charm_50k_toy_20260508T183937Z/smoke/smoke_log.json` | rate_finite=true, roundtrip_exact=true, encoded 7,031 B / 46,995 params; toy substrate, NOT PR101 |
 | A4-alt | `experiments/results/cross_paradigm_admm_x_op1_finalizer_20260508T062603Z/build_manifest.json` | archive 153,513 B sha 7bbba307; predicted_band [0.18, 0.22] grade=`predicted`; orch_smoke variant 137,531 B sha ea3b23ed |
 | A5 | `experiments/results/pr101_frame_conditional_bit_codex_20260508Tlocal/build_manifest.json` | best eta=2.0; archive_delta_bytes=-1,278; score_claim=false; dispatch_blocker=`awaiting_per_frame_score_marginal` |
-| A6 | — | not landed |
+| A6 | `experiments/results/pr101_a6_blockfp_hyperprior_codex_20260508Tlocal/build_manifest.json` | best B=64,uint8 is 214,035 B (+35,891 B vs PR101 brotli); current proxy config measured-negative |
 
 ## 3. Council decision verdicts (recap)
 

@@ -12,6 +12,7 @@ PR101 brotli baseline: **178,144 B** (the byte-anchor most lanes target).
 | A3_alt_mallat_wavelet | 156,344 | -21,800 | — | [byte-anchor; sensitivity_proxy=mallat_wavelet] | — | incremental_improvement_insufficient (Mallat > Xavier in 2/4) |
 | A4_alt_filler_stc_pose | 3,960 | — | — | byte-anchor; pose_codec=filler_stc | — | pose-codec byte anchor; not comparable to full PR101 archive bytes |
 | A5_frame_conditional_bits | 176,880 | -1,264 | — | [CPU-prep faithful frame-conditional byte anchor] | — | best frame-conditioned latent delta -1,278 B |
+| A6_selfcomp_blockfp_hyperprior | 214,035 | +35,891 | 0% on int8 proxy stream | [byte-roundtrip proxy; measured-config negative] | no | current max-abs-scale conditional range-coder loses to PR101 brotli; not a score claim |
 | ADMM_lossy_coarsening_baseline | 147,285 | -30,859 | — | [CPU-build] | — | Path B baseline; -28 KB savings at 4-5% rel_err |
 
 ## Class-level findings
@@ -25,5 +26,4 @@ PR101 brotli baseline: **178,144 B** (the byte-anchor most lanes target).
 
 - A4-alt (Filler STC pose codec): byte-anchor landed; representative pose-distribution only, not a PR101 monolithic archive rewrite.
 - A5 (frame-conditional bit budget): byte-anchor landed; needs per-pair score marginals + inflate side-info path before dispatch.
-- A6 (Selfcomp block-FP × hyperprior compose): LANDED at `97fbfef2`. Best compose B=64, sq=uint8 = 214,035 B; BEATS blockfp-only (-34,607 B) AND hyperprior-only (-18,356 B); does NOT beat PR101 brotli baseline (+35,891 B). Verdict `incremental_improvement_insufficient` (NOT killed per CLAUDE.md kill-as-last-resort); 5 reactivation criteria documented in `feedback_pr101_a6_selfcomp_blockfp_hyperprior_byte_anchor_landed_20260508.md` (joint-AC over scale stream, learned hyper-decoder MLP, cross-tensor grouping, PR106 substrate, compose-after-lossy_coarsening).
-
+- A6 (Selfcomp block-FP × hyperprior compose): measured-config negative. Best compose B=64, sq=uint8 = 214,035 B; it beats two weak standalone proxy baselines but loses to the relevant PR101 brotli baseline by +35,891 B. This is not dispatch-worthy and not a score claim. Scope is narrow: current max-abs-scale conditional Gaussian range-coder only; real Selfcomp per-channel block-FP, learned ChARM, tensor-aware PMFs, and byte-map-preserving arithmetic rewrites remain open.

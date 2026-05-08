@@ -74,15 +74,13 @@ reactivation criteria documented per memo.
   First empirical anchor at
   `experiments/results/pr101_pose_filler_stc_20260508T194527Z/`.
 - A5 frame-conditional bit budget — best η=2.0 saves -1,278 B on PR101.
-- A6 Selfcomp block-FP × Ballé hyperprior compose (`97fbfef2`) — 26/26
-  unit tests pass. Best compose **B=64, sq=uint8 = 214,035 B**; BEATS
-  blockfp-only (−34,607 B) AND hyperprior-only (−18,356 B); does NOT
-  beat PR101 brotli baseline (+35,891 B). Verdict
-  `incremental_improvement_insufficient` (NOT killed per CLAUDE.md
-  kill-as-last-resort); 5 reactivation criteria documented in
-  `feedback_pr101_a6_selfcomp_blockfp_hyperprior_byte_anchor_landed_20260508.md`
-  (joint-AC over scale stream, learned hyper-decoder MLP, cross-tensor
-  grouping, PR106 substrate, compose-after-lossy_coarsening). Linear σ
+- A6 Selfcomp block-FP × Ballé hyperprior compose — measured-config
+  negative. Best compose **B=64, sq=uint8 = 214,035 B**, which loses to
+  PR101 brotli by +35,891 B. Treat this as a scoped proxy retirement for
+  the current max-abs-scale conditional Gaussian range-coder, not as a
+  score-lowering lane and not as a family kill. Real Selfcomp per-channel
+  block-FP, learned ChARM, tensor-aware PMFs, and byte-map-preserving
+  arithmetic rewrites remain valid reactivation paths. Linear σ
   map cannot match brotli's adaptive context modelling on PR101's
   near-iid INT8 stream.
 - PHASE 4 INTEGRATION paper harness — landed.
@@ -93,13 +91,12 @@ reactivation criteria documented per memo.
 After A4-alt landed at `75c99b84`, full-codebase preflight surfaced 2
 pre-existing `check_training_scripts_have_auth_eval` violations on the A1
 + A4 training scripts (training scripts that save a checkpoint must invoke
-auth_eval OR define an `--no-auth-eval-on-best` opt-out flag). Closed by
-adding the opt-out to each script with help text naming the downstream
-lane that owns the auth eval (`tools/build_pr101_finetuned_archive.py` for
-A1; downstream codec-stage consumer for A4). Sister fix: SyntaxWarning
-escape `\|Δ\|` removed from
-`tools/pr101_omega_opt_per_tensor_codec_choice_empirical.py:35`. Preflight
-re-run exits clean.
+auth_eval OR define an explicit `--no-auth-eval-on-best` opt-out flag).
+The opt-out is now no longer allowed to be default-on; default-on
+exemptions are treated as guard bypasses, and downstream lanes remain
+responsible for exact auth eval. Sister fix: SyntaxWarning escape
+`\|Δ\|` removed from
+`tools/pr101_omega_opt_per_tensor_codec_choice_empirical.py:35`.
 
 **Awaiting operator:**
 - A1 dispatch ($8 Lightning T4): Lightning GPU attach OR Vast.ai credit topup

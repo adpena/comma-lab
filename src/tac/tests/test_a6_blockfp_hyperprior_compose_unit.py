@@ -380,3 +380,10 @@ def test_baseline_helpers_return_bytes_matching_ledger_total():
     hyper_blob, hyper_ledger = encode_hyperprior_only(symbols)
     assert len(block_blob) == block_ledger["total_bytes"]
     assert len(hyper_blob) == hyper_ledger["total_bytes"]
+
+
+def test_hyperprior_only_accepts_streams_larger_than_uint16():
+    symbols = np.zeros(70_000, dtype=np.int8)
+    blob, ledger = encode_hyperprior_only(symbols)
+    assert len(blob) == ledger["total_bytes"]
+    assert ledger["n_total"] == 70_000

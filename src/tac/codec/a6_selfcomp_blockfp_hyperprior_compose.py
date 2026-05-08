@@ -650,7 +650,7 @@ def encode_hyperprior_only(
         b"HONY"
         + struct.pack("<B", _VERSION)
         + struct.pack("<B", SCALE_QUANT_FP16)
-        + struct.pack("<H", int(flat.size if flat.size else 1))
+        + struct.pack("<H", int(min(max(flat.size, 1), 65_535)))
         + struct.pack("<I", int(flat.size))
     )
     side_info = _quantize_scale(global_scale, mode=SCALE_QUANT_FP16)
