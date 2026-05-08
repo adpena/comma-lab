@@ -299,11 +299,14 @@ def preflight_all(
     """
     if check_codebase and use_fs_cache and not _fs_cache_wrapped:
         from tac.preflight_fs_cache import cached_filesystem
+        from tac.source_index import source_index_context
 
         # Full codebase preflight repeatedly scans the same source files.
-        # Apply the measured cache for library callers too; artifact-only
-        # callers skip this path and still read their inputs live.
-        with cached_filesystem(cache_reads=True):
+        # Apply the measured cache for library callers too, and provide a
+        # normal shared source index for scanners that have been migrated away
+        # from repeated per-check rglob/read/parse loops. Artifact-only callers
+        # skip this path and still read their inputs live.
+        with cached_filesystem(cache_reads=True), source_index_context(REPO_ROOT):
             preflight_all(
                 profile_name=profile_name,
                 profile_arch=profile_arch,
@@ -1262,6 +1265,36 @@ def preflight_all(
         check_pr101_tools_torch_load_allowlist(
             strict=False, verbose=verbose,
         )
+
+        # 2026-05-08 REPRESENTATION-INTEGRATION GATES 1-10 (codex audit
+        # `.omx/research/representation_integration_gap_audit_20260508_codex.md`).
+        # Ten new prevent-recurrence gates closing the representation/
+        # archive-grammar/runtime-closure failure modes documented in the
+        # audit. Memory:
+        # ``feedback_representation_integration_gates_landed_20260508.md``.
+        # Live counts on landing:
+        #   Gate  1 (representation promotion card)             0  → STRICT
+        #   Gate  2 (no naked bytes)                            0  → STRICT
+        #   Gate  3 (parser-section manifest)                   0  → STRICT
+        #   Gate  4 (export-first)                              2  warn
+        #   Gate  5 (runtime closure)                           0  → STRICT
+        #   Gate  6 (mask/pose coupling)                        0  → STRICT
+        #   Gate  7 (no-op + provenance)                        0  → STRICT
+        #   Gate  8 (exact evidence frontier promotion)         0  → STRICT
+        #   Gate  9 (blocker ownership)                         0  → STRICT
+        #   Gate 10 (stack promotion)                           0  → STRICT
+        check_gate1_representation_promotion_card(
+            strict=True, verbose=verbose,
+        )
+        check_gate2_no_naked_bytes(strict=True, verbose=verbose)
+        check_gate3_parser_section_manifest(strict=True, verbose=verbose)
+        check_gate4_export_first(strict=False, verbose=verbose)
+        check_gate5_runtime_closure(strict=True, verbose=verbose)
+        check_gate6_mask_pose_coupling(strict=True, verbose=verbose)
+        check_gate7_no_op_provenance(strict=True, verbose=verbose)
+        check_gate8_exact_evidence(strict=True, verbose=verbose)
+        check_gate9_blocker_ownership(strict=True, verbose=verbose)
+        check_gate10_stack_promotion(strict=True, verbose=verbose)
 
         # PCC9: shell-script runtime references must resolve. Catches the
         # subagent-worktree-lost-helper bug class (e.g. ensure_remote_uv.sh,
@@ -3493,6 +3526,12 @@ def _is_oss_export_mirror_path(p: Path) -> bool:
     rounds of fixes.
     """
     return "comma_lab_public_export" in p.parts
+
+
+def _current_source_index(root: Path):
+    from tac.source_index import get_current_source_index
+
+    return get_current_source_index(root)
 
 
 def check_preflight_scanners_use_oss_mirror_helper(
@@ -6658,15 +6697,18 @@ _EXTERNAL_FILENAMES = {
 }
 
 
-def _extract_artifact_filenames(path: Path) -> set[str]:
+def _extract_artifact_filenames(path: Path, source_index=None) -> set[str]:
     """AST-extract every artifact-suffix string literal from a Python file.
 
     Returns names like {"renderer_fp4.bin", "qat_best_float.pt"}. Skips
     non-artifact strings (URLs, log file names, fixture paths).
     """
     try:
-        tree = ast.parse(path.read_text(), filename=str(path))
-    except (SyntaxError, UnicodeDecodeError):
+        if source_index is not None:
+            tree = source_index.python_ast(path)
+        else:
+            tree = ast.parse(path.read_text(), filename=str(path))
+    except (OSError, SyntaxError, UnicodeDecodeError):
         return set()
     found: set[str] = set()
     for node in ast.walk(tree):
@@ -6695,7 +6737,7 @@ def _extract_artifact_filenames(path: Path) -> set[str]:
     return found
 
 
-def _extract_write_literals(path: Path) -> set[str]:
+def _extract_write_literals(path: Path, source_index=None) -> set[str]:
     """AST-extract artifact filenames that appear in WRITE contexts.
 
     Detects two layers:
@@ -6718,8 +6760,11 @@ def _extract_write_literals(path: Path) -> set[str]:
     Returns just basenames.
     """
     try:
-        tree = ast.parse(path.read_text(), filename=str(path))
-    except (SyntaxError, UnicodeDecodeError):
+        if source_index is not None:
+            tree = source_index.python_ast(path)
+        else:
+            tree = ast.parse(path.read_text(), filename=str(path))
+    except (OSError, SyntaxError, UnicodeDecodeError):
         return set()
     found: set[str] = set()
 
@@ -6999,18 +7044,25 @@ def preflight_filename_contract(
     legitimate refactors.
     """
     root = repo_root or REPO_ROOT
+    source_index = _current_source_index(root)
     consumer_files = consumer_files or LAUNCHER_FILES + [
         "experiments/pipeline.py",  # also a producer (step_export, etc.)
     ]
-    producer_dirs = producer_dirs or ["experiments", "src/tac",
-                                       "submissions/robust_current"]
+    producer_dirs = producer_dirs or [
+        "experiments",
+        "src/tac",
+        "submissions/robust_current",
+    ]
 
     consumer_literals: dict[str, set[str]] = {}
     consumer_paths_resolved: set[Path] = set()
     for cf in consumer_files:
         cp = (root / cf).resolve()
         if cp.exists():
-            consumer_literals[cf] = _extract_artifact_filenames(cp)
+            consumer_literals[cf] = _extract_artifact_filenames(
+                cp,
+                source_index=source_index,
+            )
             consumer_paths_resolved.add(cp)
 
     # Producer scan: every script EXCEPT the consumer files. A consumer that
@@ -7021,34 +7073,45 @@ def preflight_filename_contract(
     producer_literals: set[str] = set(_EXTERNAL_FILENAMES)
     producer_literals.discard("renderer.bin")  # we DO produce this
     n_producer_files = 0
-    for pd in producer_dirs:
-        for py in (root / pd).rglob("*.py"):
-            # Round 15 R15-2 fix: skip OSS-export staging mirror — its
-            # verbatim source-file copies would phantom-add their artifact
-            # filename literals to producer_literals, masking real
-            # consumer-reads-but-no-producer-writes violations.
-            if _is_oss_export_mirror_path(py):
-                continue
-            if py.resolve() in consumer_paths_resolved:
-                continue  # skip consumer files in producer scan
-            n_producer_files += 1
-            producer_literals.update(_extract_artifact_filenames(py))
-        for sh in (root / pd).rglob("*.sh"):
-            if _is_oss_export_mirror_path(sh):
-                continue
-            try:
-                text = sh.read_text()
-                for token in re.findall(
-                    r'[\w./_-]+\.(?:bin|pt|pth|mkv|mp4|raw|zip|tar\.gz|tar|tgz)', text):
-                    producer_literals.add(token.split("/")[-1])
-            except (OSError, UnicodeDecodeError):
-                pass
+    if source_index is not None:
+        producer_py_files = source_index.files(producer_dirs, pattern="*.py")
+        producer_shell_files = source_index.files(producer_dirs, pattern="*.sh")
+    else:
+        producer_py_files = tuple(
+            py for pd in producer_dirs for py in (root / pd).rglob("*.py")
+        )
+        producer_shell_files = tuple(
+            sh for pd in producer_dirs for sh in (root / pd).rglob("*.sh")
+        )
+    for py in producer_py_files:
+        # Round 15 R15-2 fix: skip OSS-export staging mirror — its
+        # verbatim source-file copies would phantom-add their artifact
+        # filename literals to producer_literals, masking real
+        # consumer-reads-but-no-producer-writes violations.
+        if _is_oss_export_mirror_path(py):
+            continue
+        if py.resolve() in consumer_paths_resolved:
+            continue  # skip consumer files in producer scan
+        n_producer_files += 1
+        producer_literals.update(
+            _extract_artifact_filenames(py, source_index=source_index)
+        )
+    for sh in producer_shell_files:
+        if _is_oss_export_mirror_path(sh):
+            continue
+        try:
+            text = source_index.read_text(sh) if source_index is not None else sh.read_text()
+            for token in re.findall(
+                r'[\w./_-]+\.(?:bin|pt|pth|mkv|mp4|raw|zip|tar\.gz|tar|tgz)', text):
+                producer_literals.add(token.split("/")[-1])
+        except (OSError, UnicodeDecodeError):
+            pass
 
     # Also scan consumer files themselves for explicit WRITE-context literals
     # (torch.save target, open(..., "w") arg, .write_bytes/.write_text receiver
     # path with the literal). Those are legitimate self-produced names.
     for cp in consumer_paths_resolved:
-        producer_literals.update(_extract_write_literals(cp))
+        producer_literals.update(_extract_write_literals(cp, source_index=source_index))
 
     violations: list[str] = []
     for consumer, lits in consumer_literals.items():
@@ -7171,7 +7234,7 @@ _SAFE_LOADER_QUALNAMES = frozenset({
 })
 
 
-def _scan_python_for_unsafe_renderer_loader(path: Path) -> list[str]:
+def _scan_python_for_unsafe_renderer_loader(path: Path, source_index=None) -> list[str]:
     """AST-scan a Python file for two related anti-patterns:
 
       1. `def load_renderer(...)` whose body calls `torch.load(...)` directly
@@ -7184,11 +7247,12 @@ def _scan_python_for_unsafe_renderer_loader(path: Path) -> list[str]:
     Returns a list of human-readable violations. Empty if clean.
     """
     try:
-        text = path.read_text()
+        if source_index is not None:
+            tree = source_index.python_ast(path)
+        else:
+            tree = ast.parse(path.read_text(), filename=str(path))
     except (OSError, UnicodeDecodeError):
         return []
-    try:
-        tree = ast.parse(text, filename=str(path))
     except SyntaxError:
         return [f"{path}: SyntaxError (cannot parse)"]
 
@@ -7454,6 +7518,7 @@ def preflight_loader_format_safety(
     LoaderFormatSafetyError.
     """
     root = repo_root or REPO_ROOT
+    source_index = _current_source_index(root)
     scan_dirs = scan_dirs or [
         "experiments",
         "src/tac",
@@ -7462,16 +7527,24 @@ def preflight_loader_format_safety(
 
     all_violations: list[str] = []
     n_scanned = 0
-    for d in scan_dirs:
-        d_path = root / d
-        if not d_path.exists():
-            continue
-        for py_path in d_path.rglob("*.py"):
-            # R14-1: skip OSS-export staging mirror via centralized helper.
-            if _is_oss_export_mirror_path(py_path):
+    if source_index is not None:
+        py_paths = source_index.files(scan_dirs, pattern="*.py")
+    else:
+        fallback_py_paths: list[Path] = []
+        for d in scan_dirs:
+            d_path = root / d
+            if not d_path.exists():
                 continue
-            n_scanned += 1
-            all_violations.extend(_scan_python_for_unsafe_renderer_loader(py_path))
+            fallback_py_paths.extend(d_path.rglob("*.py"))
+        py_paths = tuple(fallback_py_paths)
+    for py_path in py_paths:
+        # R14-1: skip OSS-export staging mirror via centralized helper.
+        if _is_oss_export_mirror_path(py_path):
+            continue
+        n_scanned += 1
+        all_violations.extend(
+            _scan_python_for_unsafe_renderer_loader(py_path, source_index=source_index)
+        )
 
     if verbose:
         if all_violations:
@@ -23081,7 +23154,7 @@ def _run_bugclass_scanner(
 ) -> list[str]:
     """Generic wrapper: load tools/<helper>.py, call scan(), format findings."""
     root = Path(repo_root or REPO_ROOT)
-    helper_path = root / helper_relpath
+    helper_path = REPO_ROOT / helper_relpath
     if not helper_path.is_file():
         msg = f"{label} scanner missing: {helper_path}"
         if strict:
@@ -23353,6 +23426,281 @@ def check_pr101_tools_torch_load_allowlist(
     return _run_bugclass_scanner(
         helper_relpath="tools/check_pr101_tools_torch_load_allowlist.py",
         label="bugclass-b8-pr101-torch-load-allowlist",
+        error_class=PreflightError,
+        repo_root=repo_root,
+        strict=strict,
+        verbose=verbose,
+    )
+
+
+# ─── REPRESENTATION-INTEGRATION GATES 1-10 (2026-05-08): codex audit ──────────
+#
+# Source: ``.omx/research/representation_integration_gap_audit_20260508_codex.md``
+# prevent-recurrence gates 1-10. Each helper wraps a tools/check_gate<N>_*.py
+# scanner and follows the canonical preflight wrapper pattern (same plumbing
+# as B1-B8). All starts at strict=False per the warn-then-flip promotion path.
+#
+# Live counts on landing:
+#   Gate  1 (representation promotion card)              0  → STRICT
+#   Gate  2 (no naked bytes)                             0  → STRICT
+#   Gate  3 (parser-section manifest)                    0  → STRICT
+#   Gate  4 (export-first)                               2  warn (backfill required)
+#   Gate  5 (runtime closure)                            0  → STRICT
+#   Gate  6 (mask/pose coupling)                         0  → STRICT
+#   Gate  7 (no-op + provenance)                         0  → STRICT
+#   Gate  8 (exact-evidence frontier promotion)          0  → STRICT
+#   Gate  9 (blocker ownership)                          0  → STRICT
+#   Gate 10 (stack promotion)                            0  → STRICT
+#
+# Memory ref:
+# ``feedback_representation_integration_gates_landed_20260508.md`` (this PR).
+
+
+def check_gate1_representation_promotion_card(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Gate 1 — representation promotion card schema discipline.
+
+    Required fields: ``representation_name``, ``target_modes``,
+    ``source_artifact``, ``archive_builder``, ``inflate_consumer``,
+    ``runtime_manifest``, ``changed_payload_paths``, ``old_new_sha256s``,
+    ``component_risk_plan``, ``exact_eval_command``, ``owner``,
+    ``next_unblock_action``.
+
+    Detection: any manifest/row that flags itself ``promotion_card=true``
+    (or shaped-like-a-card) MUST set all 12 fields. Live count on landing:
+    0 (no manifests claim card status yet); ships STRICT to extinguish the
+    bug class on day 1 of card adoption.
+    """
+    return _run_bugclass_scanner(
+        helper_relpath="tools/check_gate1_representation_promotion_card.py",
+        label="gate1-representation-promotion-card",
+        error_class=PreflightError,
+        repo_root=repo_root,
+        strict=strict,
+        verbose=verbose,
+    )
+
+
+def check_gate2_no_naked_bytes(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Gate 2 — no naked bytes (byte-closure for score-claiming rows).
+
+    Rule: if a ledger row sets ``score_claim=true`` /
+    ``ready_for_exact_eval_dispatch=true`` / positive
+    ``contest_dispatch_verdict``, it MUST have at least one of:
+    archive_path+sha256, inflate_consumer, parser_section_manifest, or
+    measured_config_status containing ``contest_cuda``.
+
+    Sister gate to B2 (``check_evidence_row_archive_bytes_has_provenance``):
+    B2 catches phantom byte counts; this gate catches phantom score
+    claims that lack archive bytes. Live count: 0 → STRICT.
+    """
+    return _run_bugclass_scanner(
+        helper_relpath="tools/check_gate2_no_naked_bytes.py",
+        label="gate2-no-naked-bytes",
+        error_class=PreflightError,
+        repo_root=repo_root,
+        strict=strict,
+        verbose=verbose,
+    )
+
+
+def check_gate3_parser_section_manifest(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Gate 3 — parser-section manifest required for HNeRV-family packets.
+
+    For monolithic HNeRV-family payloads, a parser manifest with offsets,
+    lengths, section names, section SHA-256s, entropy estimates, and
+    old/new section boundaries is required.
+
+    Vendored public-PR intakes are excluded (they ship read-only). Live
+    count: 0 → STRICT.
+    """
+    return _run_bugclass_scanner(
+        helper_relpath="tools/check_gate3_parser_section_manifest.py",
+        label="gate3-parser-section-manifest",
+        error_class=PreflightError,
+        repo_root=repo_root,
+        strict=strict,
+        verbose=verbose,
+    )
+
+
+def check_gate4_export_first(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Gate 4 — export-first (declare export format before long training).
+
+    Rule: trainable renderer / implicit representation MUST declare its
+    export format BEFORE long training. Non-FP4A / non-int4 variants are
+    research-only until packet exporter exists.
+
+    Live count on landing: 2 (lane_12_nerv_mask_codec, lane_alpha_nerv_mask
+    in .omx/state/lane_registry.json). Ships warn-only; flip to STRICT
+    after backfilling ``research_only=true`` (or
+    ``export_format=research_only_no_export``) on those lanes.
+    """
+    return _run_bugclass_scanner(
+        helper_relpath="tools/check_gate4_export_first.py",
+        label="gate4-export-first",
+        error_class=PreflightError,
+        repo_root=repo_root,
+        strict=strict,
+        verbose=verbose,
+    )
+
+
+def check_gate5_runtime_closure(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Gate 5 — runtime closure (clean-env inflate before dispatch).
+
+    Two complementary scans: build_manifests claiming dispatch must
+    record runtime closure evidence; public-PR replay rows marked
+    negative/retired must classify failure_class (runtime blocker vs
+    method negative). Live count: 0 → STRICT.
+    """
+    return _run_bugclass_scanner(
+        helper_relpath="tools/check_gate5_runtime_closure.py",
+        label="gate5-runtime-closure",
+        error_class=PreflightError,
+        repo_root=repo_root,
+        strict=strict,
+        verbose=verbose,
+    )
+
+
+def check_gate6_mask_pose_coupling(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Gate 6 — mask/pose coupling (mask replacements record pose impact).
+
+    Mask representation replacements MUST record decoded mask SHA-256s,
+    mask disagreement, pose-regeneration status, geometry diagnostics,
+    and component-risk plan. Smaller mask bytes alone are insufficient.
+
+    Enforced only on rows that claim score/dispatch (proxy/planning
+    rows are exempt). Live count: 0 → STRICT.
+    """
+    return _run_bugclass_scanner(
+        helper_relpath="tools/check_gate6_mask_pose_coupling.py",
+        label="gate6-mask-pose-coupling",
+        error_class=PreflightError,
+        repo_root=repo_root,
+        strict=strict,
+        verbose=verbose,
+    )
+
+
+def check_gate7_no_op_provenance(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Gate 7 — no-op + provenance (byte-level claims need proof).
+
+    Byte-level transforms (repack / brotli_q_search / codec_swap)
+    claiming dispatch MUST record old/new archive SHA-256, payload
+    change proof, and runtime consumption proof. Sister gate to B5
+    (inflate-side dead-bytes). Live count: 0 → STRICT.
+    """
+    return _run_bugclass_scanner(
+        helper_relpath="tools/check_gate7_no_op_provenance.py",
+        label="gate7-no-op-provenance",
+        error_class=PreflightError,
+        repo_root=repo_root,
+        strict=strict,
+        verbose=verbose,
+    )
+
+
+def check_gate8_exact_evidence(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Gate 8 — exact-evidence (frontier-promotion contract).
+
+    Promotion to frontier status REQUIRES archive_bytes + sha256, runtime
+    manifest, exact_eval_command, hardware, sample_count >= 600,
+    components (seg/pose/rate), recomputed_score, log_path, and
+    dispatch_claim_status. Anything else must lower its evidence grade
+    tag. Live count: 0 → STRICT.
+    """
+    return _run_bugclass_scanner(
+        helper_relpath="tools/check_gate8_exact_evidence.py",
+        label="gate8-exact-evidence",
+        error_class=PreflightError,
+        repo_root=repo_root,
+        strict=strict,
+        verbose=verbose,
+    )
+
+
+def check_gate9_blocker_ownership(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Gate 9 — blocker ownership (no quietly-blocked learned-codec lanes).
+
+    Blocked learned-codec lanes (NeRV/HNeRV/CoolChic/C3/Ballé/hyperprior)
+    MUST record one of: (active_owner+unblock_experiment),
+    (exact_negative+reactivation_criteria),
+    compliance_impossibility_proof, or terminal_retirement_note. Live
+    count: 0 → STRICT.
+    """
+    return _run_bugclass_scanner(
+        helper_relpath="tools/check_gate9_blocker_ownership.py",
+        label="gate9-blocker-ownership",
+        error_class=PreflightError,
+        repo_root=repo_root,
+        strict=strict,
+        verbose=verbose,
+    )
+
+
+def check_gate10_stack_promotion(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Gate 10 — stack promotion (HStack/VStack/cross-paradigm contract).
+
+    Stack rows claiming dispatch MUST record archive_boundary,
+    side_information, latent_streams, k_scale_tables,
+    decoder_overhead_bytes, runtime_consumer, and exact_eval_plan.
+    Proxy/byte-anchor rows MUST set score_claim=false AND
+    ready_for_exact_eval_dispatch=false. Live count: 0 → STRICT.
+    """
+    return _run_bugclass_scanner(
+        helper_relpath="tools/check_gate10_stack_promotion.py",
+        label="gate10-stack-promotion",
         error_class=PreflightError,
         repo_root=repo_root,
         strict=strict,
