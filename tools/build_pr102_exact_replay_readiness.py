@@ -35,6 +35,9 @@ DEFAULT_MANIFEST = REPO_ROOT / "reverse_engineering/public_pr102_pr108_intake_20
 DEFAULT_ADAPTER_REL_PATH = (
     "experiments/results/public_pr102_exact_replay_adapter_20260508_codex/inflate.sh"
 )
+DEFAULT_LIGHTNING_LANE_ID = "pr102_public_exact_replay_t4"
+DEFAULT_LIGHTNING_JOB_NAME = "pr102-hnerv-lc-v2-scale095-rplus1-exact"
+DEFAULT_LIGHTNING_MACHINE = "g4dn.2xlarge"
 
 NETWORK_OR_INSTALL_RE = re.compile(
     r"\b(pip\b.*\binstall|curl\b|wget\b|urllib\.request|urlopen|requests\.|https?://|git\s+clone)\b",
@@ -354,6 +357,184 @@ def _contest_auth_eval_command_text(tokens: list[str]) -> str:
     return head + continuation + continuation.join(option_pairs)
 
 
+def _command_text(tokens: list[str]) -> str:
+    if not tokens:
+        return ""
+    chunks: list[str] = []
+    current: list[str] = []
+    for token in tokens:
+        if token.startswith("--") and current:
+            chunks.append(" ".join(current))
+            current = [token]
+        else:
+            current.append(token)
+    if current:
+        chunks.append(" ".join(current))
+    return " \\\n  ".join(chunks)
+
+
+def _adapter_planned_artifacts(
+    *,
+    adapter_rel_path: str,
+    runtime: dict[str, Any],
+    adapter_plan: dict[str, Any],
+) -> list[str]:
+    materialized = adapter_plan.get("materialized_files")
+    if isinstance(materialized, list) and all(isinstance(item, str) for item in materialized):
+        return list(materialized)
+
+    adapter_path = PurePosixPath(adapter_rel_path)
+    adapter_dir = adapter_path.parent
+    runtime_source_path = _safe_runtime_source_path(str(runtime.get("runtime_source_path") or ""))
+    planned = [
+        adapter_path.as_posix(),
+        (adapter_dir / "README.md").as_posix(),
+    ]
+    for row in runtime.get("files", []):
+        rel = PurePosixPath(str(row.get("path") or ""))
+        if not rel.as_posix() or rel.is_absolute() or ".." in rel.parts:
+            continue
+        planned.append((adapter_dir / "runtime_source" / runtime_source_path / rel).as_posix())
+    return planned
+
+
+def _readiness_artifact_defaults(adapter_rel_path: str) -> list[str]:
+    adapter_dir = PurePosixPath(adapter_rel_path).parent
+    return [
+        (adapter_dir / "readiness.json").as_posix(),
+        (adapter_dir / "readiness.md").as_posix(),
+    ]
+
+
+def _dedupe(items: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for item in items:
+        if item not in seen:
+            seen.add(item)
+            out.append(item)
+    return out
+
+
+def _build_lightning_exact_eval_runbook(
+    *,
+    archive: dict[str, Any],
+    runtime: dict[str, Any],
+    adapter_plan: dict[str, Any],
+    adapter_rel_path: str,
+) -> dict[str, Any]:
+    """Return a no-dispatch Lightning source-manifest runbook for PR102."""
+    lane_id = DEFAULT_LIGHTNING_LANE_ID
+    job_name = DEFAULT_LIGHTNING_JOB_NAME
+    readiness_artifacts = _readiness_artifact_defaults(adapter_rel_path)
+    adapter_artifacts = _adapter_planned_artifacts(
+        adapter_rel_path=adapter_rel_path,
+        runtime=runtime,
+        adapter_plan=adapter_plan,
+    )
+    source_manifest_expected = _dedupe(
+        [
+            str(archive.get("path") or ""),
+            *adapter_artifacts,
+            *readiness_artifacts,
+        ]
+    )
+    source_manifest_expected = [item for item in source_manifest_expected if item]
+    archive_sha = str(archive.get("sha256") or "")
+    claim_command = [
+        ".venv/bin/python",
+        "tools/claim_lane_dispatch.py",
+        "claim",
+        "--lane-id",
+        lane_id,
+        "--platform",
+        "lightning",
+        "--instance-job-id",
+        job_name,
+        "--agent",
+        "${AGENT_ID}",
+        "--predicted-eta-utc",
+        "${ETA_UTC}",
+        "--status",
+        "eval",
+        "--notes",
+        f"PR102_exact_replay_archive_{archive_sha[:12]}_no_score_claim",
+    ]
+    wrapper_submit_command = [
+        ".venv/bin/python",
+        "scripts/lightning_exact_eval_repro.py",
+        "--job-name",
+        job_name,
+        "--archive",
+        str(archive.get("path") or ""),
+        "--inflate-sh",
+        adapter_rel_path,
+        "--stage-workspace",
+        "--remote",
+        "${LIGHTNING_SSH_TARGET}",
+        "--studio",
+        "${LIGHTNING_STUDIO}",
+        "--teamspace",
+        "${LIGHTNING_TEAMSPACE}",
+        "--sdk-user",
+        "${LIGHTNING_SDK_USER}",
+        "--requirements-mode",
+        "verify-only",
+        "--python-bin",
+        ".venv/bin/python",
+        "--machine",
+        "${LIGHTNING_MACHINE:-" + DEFAULT_LIGHTNING_MACHINE + "}",
+        "--baseline-score",
+        "${EXACT_BASELINE_SCORE}",
+        "--predicted-band",
+        "${PREDICTED_LOW}",
+        "${PREDICTED_HIGH}",
+        "--regression-threshold",
+        "${REGRESSION_THRESHOLD}",
+        "--dispatch-lane-id",
+        lane_id,
+        "--dispatch-claims-path",
+        ".omx/state/active_lane_dispatch_claims.md",
+        "--extra-artifact",
+        readiness_artifacts[0],
+        "--extra-artifact",
+        readiness_artifacts[1],
+        "--queue-metadata",
+        "source_prs=102",
+        "--queue-metadata",
+        f"pr102_readiness={readiness_artifacts[0]}",
+        "--env",
+        "INFLATE_TORCH_SPEC=torch==2.5.1+cu124",
+        "--env",
+        "UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124",
+        "--env",
+        "UV_INDEX_STRATEGY=unsafe-best-match",
+        "--component-trace",
+        "--component-trace-top-k",
+        "96",
+        "--submit",
+    ]
+    return {
+        "lane_id": lane_id,
+        "job_name": job_name,
+        "claim_command": claim_command,
+        "claim_command_text": _command_text(claim_command),
+        "wrapper_submit_command": wrapper_submit_command,
+        "wrapper_submit_command_text": _command_text(wrapper_submit_command),
+        "readiness_artifacts": readiness_artifacts,
+        "adapter_runtime_artifacts": adapter_artifacts,
+        "source_manifest_expected_artifacts": source_manifest_expected,
+        "guardrails": [
+            "claim lane before submit; do not use --allow-missing-dispatch-claim-reason for normal PR102 replay",
+            "submit through scripts/lightning_exact_eval_repro.py with --stage-workspace so source_manifest is created and verified before launch",
+            "do not require CUDA in the interactive Studio staging shell; the Batch runner performs the canonical CUDA preflight",
+            f"use concrete Lightning machine {DEFAULT_LIGHTNING_MACHINE} on comma-lab AWS unless a refreshed machine inventory proves another alias works",
+            "keep --requirements-mode verify-only unless a separate remote environment build is explicitly recorded",
+            "preserve readiness JSON/markdown as explicit extra artifacts in the staged source manifest",
+        ],
+    }
+
+
 def _adapter_script_text(
     *,
     runtime_source_root_rel: str,
@@ -546,6 +727,14 @@ def build_pr102_exact_replay_readiness(
         "public_eval_observations": observations,
         "local_exact_cuda_status": observations.get("local_exact_cuda_status"),
         "adapter_plan": adapter_plan,
+        "lightning_exact_eval_runbook": _build_lightning_exact_eval_runbook(
+            archive=archive,
+            runtime=runtime,
+            adapter_plan=adapter_plan,
+            adapter_rel_path=adapter_rel_path,
+        )
+        if archive and runtime and not blockers
+        else {},
         "next_status_after_this_artifact": "ready_to_materialize_adapter_then_run_exact_cuda_replay"
         if not blockers
         else "blocked_before_adapter_materialization",
@@ -631,6 +820,12 @@ def materialize_adapter_plan(
         *copied_runtime_files,
     ]
     summary["adapter_plan"] = adapter_plan
+    summary["lightning_exact_eval_runbook"] = _build_lightning_exact_eval_runbook(
+        archive=summary["archive"],
+        runtime=summary["runtime_source"],
+        adapter_plan=adapter_plan,
+        adapter_rel_path=str(adapter_plan["adapter_rel_path"]),
+    )
     summary["next_status_after_this_artifact"] = (
         "adapter_materialized_ready_for_exact_cuda_replay_after_dispatch_claim"
     )
@@ -740,6 +935,44 @@ def render_markdown(report: AuditReport) -> str:
         lines.extend(f"- `{path}`" for path in materialized)
     else:
         lines.append("- Not materialized in this report.")
+
+    runbook = summary.get("lightning_exact_eval_runbook") or {}
+    if runbook:
+        lines.extend(
+            [
+                "",
+                "## Lightning Exact Eval Source Manifest Runbook",
+                "",
+                f"- Lane id: `{runbook.get('lane_id')}`",
+                f"- Job name: `{runbook.get('job_name')}`",
+                "- Normal path: claim first, then submit only through the repro wrapper so "
+                "`source_manifest.json` is created, SHA-verified, and forwarded to the launcher.",
+                "",
+                "Source manifest must include:",
+            ]
+        )
+        for path in runbook.get("source_manifest_expected_artifacts", []):
+            lines.append(f"- `{path}`")
+        lines.extend(
+            [
+                "",
+                "Claim before submit:",
+                "",
+                "```bash",
+                str(runbook.get("claim_command_text") or ""),
+                "```",
+                "",
+                "Submit through the wrapper:",
+                "",
+                "```bash",
+                str(runbook.get("wrapper_submit_command_text") or ""),
+                "```",
+                "",
+                "Guardrails:",
+            ]
+        )
+        for guardrail in runbook.get("guardrails", []):
+            lines.append(f"- {guardrail}")
 
     lines.extend(
         [

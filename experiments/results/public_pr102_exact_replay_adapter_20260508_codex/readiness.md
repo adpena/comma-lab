@@ -69,6 +69,79 @@ Run only after ensuring dependencies are preinstalled and a remote dispatch clai
 - `experiments/results/public_pr102_exact_replay_adapter_20260508_codex/runtime_source/submissions/hnerv_lc_v2_scale095_rplus1/schema.py`
 - `experiments/results/public_pr102_exact_replay_adapter_20260508_codex/runtime_source/submissions/hnerv_lc_v2_scale095_rplus1/sidecar.py`
 
+## Lightning Exact Eval Source Manifest Runbook
+
+- Lane id: `pr102_public_exact_replay_t4`
+- Job name: `pr102-hnerv-lc-v2-scale095-rplus1-exact`
+- Normal path: claim first, then submit only through the repro wrapper so `source_manifest.json` is created, SHA-verified, and forwarded to the launcher.
+
+Source manifest must include:
+- `experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/archive.zip`
+- `experiments/results/public_pr102_exact_replay_adapter_20260508_codex/inflate.sh`
+- `experiments/results/public_pr102_exact_replay_adapter_20260508_codex/README.md`
+- `experiments/results/public_pr102_exact_replay_adapter_20260508_codex/runtime_source/submissions/hnerv_lc_v2_scale095_rplus1/README.md`
+- `experiments/results/public_pr102_exact_replay_adapter_20260508_codex/runtime_source/submissions/hnerv_lc_v2_scale095_rplus1/compress.sh`
+- `experiments/results/public_pr102_exact_replay_adapter_20260508_codex/runtime_source/submissions/hnerv_lc_v2_scale095_rplus1/inflate.sh`
+- `experiments/results/public_pr102_exact_replay_adapter_20260508_codex/runtime_source/submissions/hnerv_lc_v2_scale095_rplus1/inflate.py`
+- `experiments/results/public_pr102_exact_replay_adapter_20260508_codex/runtime_source/submissions/hnerv_lc_v2_scale095_rplus1/hnerv_model.py`
+- `experiments/results/public_pr102_exact_replay_adapter_20260508_codex/runtime_source/submissions/hnerv_lc_v2_scale095_rplus1/schema.py`
+- `experiments/results/public_pr102_exact_replay_adapter_20260508_codex/runtime_source/submissions/hnerv_lc_v2_scale095_rplus1/sidecar.py`
+- `experiments/results/public_pr102_exact_replay_adapter_20260508_codex/readiness.json`
+- `experiments/results/public_pr102_exact_replay_adapter_20260508_codex/readiness.md`
+
+Claim before submit:
+
+```bash
+.venv/bin/python tools/claim_lane_dispatch.py claim \
+  --lane-id pr102_public_exact_replay_t4 \
+  --platform lightning \
+  --instance-job-id pr102-hnerv-lc-v2-scale095-rplus1-exact \
+  --agent ${AGENT_ID} \
+  --predicted-eta-utc ${ETA_UTC} \
+  --status eval \
+  --notes PR102_exact_replay_archive_afd53348f503_no_score_claim
+```
+
+Submit through the wrapper:
+
+```bash
+.venv/bin/python scripts/lightning_exact_eval_repro.py \
+  --job-name pr102-hnerv-lc-v2-scale095-rplus1-exact \
+  --archive experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/archive.zip \
+  --inflate-sh experiments/results/public_pr102_exact_replay_adapter_20260508_codex/inflate.sh \
+  --stage-workspace \
+  --remote ${LIGHTNING_SSH_TARGET} \
+  --studio ${LIGHTNING_STUDIO} \
+  --teamspace ${LIGHTNING_TEAMSPACE} \
+  --sdk-user ${LIGHTNING_SDK_USER} \
+  --requirements-mode verify-only \
+  --python-bin .venv/bin/python \
+  --machine ${LIGHTNING_MACHINE:-g4dn.2xlarge} \
+  --baseline-score ${EXACT_BASELINE_SCORE} \
+  --predicted-band ${PREDICTED_LOW} ${PREDICTED_HIGH} \
+  --regression-threshold ${REGRESSION_THRESHOLD} \
+  --dispatch-lane-id pr102_public_exact_replay_t4 \
+  --dispatch-claims-path .omx/state/active_lane_dispatch_claims.md \
+  --extra-artifact experiments/results/public_pr102_exact_replay_adapter_20260508_codex/readiness.json \
+  --extra-artifact experiments/results/public_pr102_exact_replay_adapter_20260508_codex/readiness.md \
+  --queue-metadata source_prs=102 \
+  --queue-metadata pr102_readiness=experiments/results/public_pr102_exact_replay_adapter_20260508_codex/readiness.json \
+  --env INFLATE_TORCH_SPEC=torch==2.5.1+cu124 \
+  --env UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124 \
+  --env UV_INDEX_STRATEGY=unsafe-best-match \
+  --component-trace \
+  --component-trace-top-k 96 \
+  --submit
+```
+
+Guardrails:
+- claim lane before submit; do not use --allow-missing-dispatch-claim-reason for normal PR102 replay
+- submit through scripts/lightning_exact_eval_repro.py with --stage-workspace so source_manifest is created and verified before launch
+- do not require CUDA in the interactive Studio staging shell; the Batch runner performs the canonical CUDA preflight
+- use concrete Lightning machine g4dn.2xlarge on comma-lab AWS unless a refreshed machine inventory proves another alias works
+- keep --requirements-mode verify-only unless a separate remote environment build is explicitly recorded
+- preserve readiness JSON/markdown as explicit extra artifacts in the staged source manifest
+
 ## Adapter Inflate Script
 
 ```bash

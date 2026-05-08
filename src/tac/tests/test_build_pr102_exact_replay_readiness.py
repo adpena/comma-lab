@@ -72,6 +72,28 @@ def test_pr102_readiness_records_custody_risks_and_command(tmp_path: Path) -> No
     assert 'if [ "$#" -ne 3 ]; then' in adapter["inflate_sh_text"]
     assert "required PR102 runtime dependency missing" in adapter["inflate_sh_text"]
 
+    runbook = payload["summary"]["lightning_exact_eval_runbook"]
+    assert runbook["lane_id"] == "pr102_public_exact_replay_t4"
+    assert runbook["job_name"] == "pr102-hnerv-lc-v2-scale095-rplus1-exact"
+    assert runbook["claim_command"][:3] == [
+        ".venv/bin/python",
+        "tools/claim_lane_dispatch.py",
+        "claim",
+    ]
+    assert "--stage-workspace" in runbook["wrapper_submit_command"]
+    assert "--require-stage-cuda" not in runbook["wrapper_submit_command"]
+    assert "${LIGHTNING_MACHINE:-g4dn.2xlarge}" in runbook["wrapper_submit_command"]
+    assert "--source-manifest" not in runbook["wrapper_submit_command"]
+    assert "--submit" in runbook["wrapper_submit_command"]
+    assert "experiments/results/pr102/archive.zip" in runbook["source_manifest_expected_artifacts"]
+    assert "experiments/results/pr102_adapter/inflate.sh" in runbook["source_manifest_expected_artifacts"]
+    assert "experiments/results/pr102_adapter/readiness.json" in runbook["source_manifest_expected_artifacts"]
+    assert "experiments/results/pr102_adapter/readiness.md" in runbook["source_manifest_expected_artifacts"]
+    assert any(
+        "source_manifest" in guardrail
+        for guardrail in runbook["guardrails"]
+    )
+
 
 def test_pr102_readiness_fails_closed_on_archive_hash_mismatch(tmp_path: Path) -> None:
     fixture = _write_pr102_fixture(tmp_path)
@@ -130,6 +152,31 @@ def test_materialize_adapter_plan_writes_source_sized_files(tmp_path: Path) -> N
         materialized.summary["next_status_after_this_artifact"]
         == "adapter_materialized_ready_for_exact_cuda_replay_after_dispatch_claim"
     )
+    source_manifest_artifacts = materialized.summary["lightning_exact_eval_runbook"][
+        "source_manifest_expected_artifacts"
+    ]
+    assert "experiments/results/pr102/archive.zip" in source_manifest_artifacts
+    for path in materialized_files:
+        assert path in source_manifest_artifacts
+
+
+def test_render_markdown_includes_lightning_source_manifest_runbook(tmp_path: Path) -> None:
+    fixture = _write_pr102_fixture(tmp_path)
+    report = tool.build_pr102_exact_replay_readiness(
+        manifest_path=fixture["manifest"],
+        repo_root=tmp_path,
+        adapter_rel_path="experiments/results/pr102_adapter/inflate.sh",
+    )
+
+    markdown = tool.render_markdown(report)
+
+    assert "## Lightning Exact Eval Source Manifest Runbook" in markdown
+    assert "tools/claim_lane_dispatch.py claim" in markdown
+    assert "scripts/lightning_exact_eval_repro.py" in markdown
+    assert "--dispatch-lane-id pr102_public_exact_replay_t4" in markdown
+    assert "g4dn.2xlarge" in markdown
+    assert "--require-stage-cuda" not in markdown
+    assert "source_manifest.json" in markdown
 
 
 def test_materialize_adapter_refuses_omx_state(tmp_path: Path) -> None:
