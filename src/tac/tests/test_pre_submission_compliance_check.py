@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import struct
 import sys
 import zipfile
 from pathlib import Path
@@ -89,9 +90,24 @@ def _failed_check_names(report: dict) -> set[str]:
     return {check["name"] for check in report["checks"] if not check["passed"]}
 
 
+def _write_terminal_claim(path: Path, *, lane_id: str = "lane-a", job_id: str = "job-a") -> None:
+    row = (
+        f"| 2026-05-08T00:00:00Z | codex | {lane_id} | lightning | {job_id} | "
+        "2026-05-08T00:00Z | completed_score=0.209 | A++ |\n"
+    )
+    path.write_text(
+        "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
+        "|---|---|---|---|---|---|---|---|\n"
+        + row,
+        encoding="utf-8",
+    )
+
+
 def test_pre_submission_check_passes_strict_happy_path(tmp_path: Path) -> None:
     mod = _load_module()
     expected = _write_submission(tmp_path / "submission")
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(claims)
     report = mod.build_report(
         mod.build_arg_parser().parse_args(
             [
@@ -108,6 +124,12 @@ def test_pre_submission_check_passes_strict_happy_path(tmp_path: Path) -> None:
                 str(expected["archive_size_bytes"]),
                 "--expected-runtime-tree-sha256",
                 expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
             ]
         )
     )
@@ -185,6 +207,8 @@ def test_pre_submission_check_records_strict_formula_when_report_score_uses_roun
 ) -> None:
     mod = _load_module()
     expected = _write_submission(tmp_path / "submission")
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(claims)
     auth_path = tmp_path / "submission" / "contest_auth_eval.json"
     auth = json.loads(auth_path.read_text(encoding="utf-8"))
     strict_score = auth["score_recomputed_from_components"]
@@ -213,6 +237,12 @@ def test_pre_submission_check_records_strict_formula_when_report_score_uses_roun
                 str(expected["archive_size_bytes"]),
                 "--expected-runtime-tree-sha256",
                 expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
             ]
         )
     )
@@ -240,6 +270,48 @@ def test_pre_submission_check_fails_zip_slip_member(tmp_path: Path) -> None:
     )
     assert not report["passed"]
     assert any(check["name"].startswith("zip_member_safe") for check in report["checks"] if not check["passed"])
+
+
+def test_pre_submission_check_rejects_local_central_method_skew(tmp_path: Path) -> None:
+    mod = _load_module()
+    _write_submission(tmp_path / "submission")
+    archive = tmp_path / "submission" / "archive.zip"
+    data = bytearray(archive.read_bytes())
+    struct.pack_into("<H", data, 8, zipfile.ZIP_DEFLATED)
+    archive.write_bytes(data)
+
+    _record, checks = mod.inspect_archive(archive, expect_single_member="x")
+
+    failed = {check.name for check in checks if not check.passed}
+    assert "zip_local_header_metadata_matches:x" in failed
+
+
+def test_pre_submission_check_contest_final_requires_dispatch_identity(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission")
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--contest-final",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+            ]
+        )
+    )
+
+    assert not report["passed"]
+    failed = _failed_check_names(report)
+    assert "contest_final_expected_lane_id_supplied" in failed
+    assert "contest_final_expected_job_id_supplied" in failed
 
 
 def test_pre_submission_check_rejects_cpu_auth_eval_for_promotion(tmp_path: Path) -> None:
@@ -379,7 +451,8 @@ def test_pre_submission_check_dispatch_claim_linkage_accepts_live_eight_column_s
     claims.write_text(
         "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
         "|---|---|---|---|---|---|---|---|\n"
-        "| 2026-05-04T15:05:13Z | codex | lane-a | lightning | job-a | 2026-05-04T15:05Z | completed_score=0.209 | A++ |\n",
+        "| 2026-05-04T15:05:13Z | codex | lane-a | lightning | job-a | "
+        "2026-05-04T15:05Z | completed_score=0.209 | A++ |\n",
         encoding="utf-8",
     )
     report = mod.build_report(

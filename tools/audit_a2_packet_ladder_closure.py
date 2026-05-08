@@ -35,6 +35,13 @@ A2_PATHSPECS = (
     ":(glob)experiments/results/**/runtime_closure*.json",
 )
 
+LOCAL_A2_GLOBS = (
+    "experiments/results/**/a2_packet_ladder_manifest.json",
+    "experiments/results/**/candidate_manifest.json",
+    "experiments/results/**/a2_runtime_closure*.json",
+    "experiments/results/**/runtime_closure*.json",
+)
+
 
 def _repo_rel(path: Path, repo_root: Path) -> str:
     try:
@@ -63,6 +70,13 @@ def _tracked_manifest_paths(repo_root: Path) -> list[Path]:
             if raw
         }
     )
+
+
+def _local_manifest_paths(repo_root: Path) -> list[Path]:
+    paths: set[Path] = set()
+    for pattern in LOCAL_A2_GLOBS:
+        paths.update(repo_root.glob(pattern))
+    return sorted(path for path in paths if path.is_file())
 
 
 def _read_json(path: Path) -> dict[str, Any] | None:
@@ -121,9 +135,11 @@ def _check_blockers(payload: dict[str, Any], rel: str, violations: list[str]) ->
             )
 
 
-def audit(repo_root: Path = REPO) -> dict[str, Any]:
+def audit(repo_root: Path = REPO, *, tracked_only: bool = False) -> dict[str, Any]:
     repo_root = repo_root.resolve()
     paths = _tracked_manifest_paths(repo_root)
+    if not tracked_only:
+        paths = sorted({*paths, *_local_manifest_paths(repo_root)})
     violations: list[str] = []
     scanned: list[str] = []
     for path in paths:
@@ -148,16 +164,22 @@ def audit(repo_root: Path = REPO) -> dict[str, Any]:
         "passed": not violations,
         "score_claim": False,
         "dispatch_attempted": False,
+        "tracked_only": tracked_only,
     }
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", type=Path, default=REPO)
+    parser.add_argument(
+        "--tracked-only",
+        action="store_true",
+        help="Scan only git-tracked A2 manifests. Default also scans ignored local A2 artifacts.",
+    )
     parser.add_argument("--strict", action="store_true")
     parser.add_argument("--json-out", type=Path)
     args = parser.parse_args(argv)
-    report = audit(args.repo_root)
+    report = audit(args.repo_root, tracked_only=args.tracked_only)
     text = json.dumps(report, indent=2, sort_keys=True) + "\n"
     if args.json_out:
         args.json_out.parent.mkdir(parents=True, exist_ok=True)

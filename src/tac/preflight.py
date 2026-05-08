@@ -3752,6 +3752,8 @@ def _artifact_lifecycle_changed_paths(root: Path, base_ref: str | None) -> set[s
         collect(["diff", "--name-only", "--diff-filter=ACMRTUXB", f"{base_ref}..HEAD"])
     collect(["diff", "--name-only", "--diff-filter=ACMRTUXB", "--cached"])
     collect(["diff", "--name-only", "--diff-filter=ACMRTUXB"])
+    if not paths:
+        collect(["diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"])
     return paths
 
 

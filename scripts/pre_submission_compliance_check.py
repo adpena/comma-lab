@@ -136,17 +136,74 @@ def _decode_zip_name(raw: bytes, flag_bits: int) -> str | None:
         return None
 
 
-def _local_header_name(path: Path, info: zipfile.ZipInfo) -> str | None:
+def _local_header_metadata(path: Path, info: zipfile.ZipInfo) -> dict[str, Any] | None:
     with path.open("rb") as handle:
         handle.seek(info.header_offset)
         header = handle.read(30)
         if len(header) != 30 or header[:4] != b"PK\x03\x04":
             return None
+        version_needed = struct.unpack_from("<H", header, 4)[0]
         flag_bits = struct.unpack_from("<H", header, 6)[0]
+        compress_type = struct.unpack_from("<H", header, 8)[0]
+        mod_time, mod_date = struct.unpack_from("<HH", header, 10)
+        crc32 = struct.unpack_from("<I", header, 14)[0]
+        compress_size = struct.unpack_from("<I", header, 18)[0]
+        file_size = struct.unpack_from("<I", header, 22)[0]
         name_len, extra_len = struct.unpack_from("<HH", header, 26)
         raw_name = handle.read(name_len)
-        handle.read(extra_len)
-    return _decode_zip_name(raw_name, flag_bits)
+        extra = handle.read(extra_len)
+    return {
+        "name": _decode_zip_name(raw_name, flag_bits),
+        "version_needed": version_needed,
+        "flag_bits": flag_bits,
+        "compress_type": compress_type,
+        "mod_time": mod_time,
+        "mod_date": mod_date,
+        "crc32": crc32,
+        "compress_size": compress_size,
+        "file_size": file_size,
+        "extra": extra,
+        "extra_len": extra_len,
+    }
+
+
+def _local_central_header_mismatches(
+    local: dict[str, Any] | None,
+    central: zipfile.ZipInfo,
+) -> list[str]:
+    if local is None:
+        return ["local_header_missing_or_unreadable"]
+    mismatches: list[str] = []
+    local_name = local.get("name")
+    if local_name != central.filename:
+        mismatches.append(f"name:{local_name!r}!={central.filename!r}")
+    local_reason = unsafe_zip_name(str(local_name or ""))
+    if local_reason is not None:
+        mismatches.append(f"local_name_unsafe:{local_reason}")
+    if local.get("flag_bits") != central.flag_bits:
+        mismatches.append(f"flag_bits:{local.get('flag_bits')}!={central.flag_bits}")
+    if local.get("compress_type") != central.compress_type:
+        mismatches.append(
+            f"compress_type:{local.get('compress_type')}!={central.compress_type}"
+        )
+    year, month, day, hour, minute, second = central.date_time
+    central_time = (hour << 11) | (minute << 5) | (second // 2)
+    central_date = ((year - 1980) << 9) | (month << 5) | day
+    if (local.get("mod_time"), local.get("mod_date")) != (central_time, central_date):
+        mismatches.append("date_time_raw_mismatch")
+    if local.get("extra") != central.extra:
+        mismatches.append("extra_field_mismatch")
+    uses_data_descriptor = bool(int(local.get("flag_bits") or 0) & 0x08)
+    if not uses_data_descriptor:
+        if local.get("crc32") != central.CRC:
+            mismatches.append(f"crc32:{local.get('crc32')}!={central.CRC}")
+        if local.get("compress_size") != central.compress_size:
+            mismatches.append(
+                f"compress_size:{local.get('compress_size')}!={central.compress_size}"
+            )
+        if local.get("file_size") != central.file_size:
+            mismatches.append(f"file_size:{local.get('file_size')}!={central.file_size}")
+    return mismatches
 
 
 def inspect_archive(path: Path, *, expect_single_member: str | None = None) -> tuple[dict[str, Any], list[Check]]:
@@ -169,10 +226,12 @@ def inspect_archive(path: Path, *, expect_single_member: str | None = None) -> t
             infos = zf.infolist()
             for info in infos:
                 central = info.filename
-                local = _local_header_name(path, info)
+                local_meta = _local_header_metadata(path, info)
+                local = local_meta.get("name") if local_meta else None
                 names.append(central)
                 reason = unsafe_zip_name(central)
                 local_reason = unsafe_zip_name(local or "")
+                header_mismatches = _local_central_header_mismatches(local_meta, info)
                 try:
                     payload = zf.read(info)
                     member_sha = _bytes_sha256(payload)
@@ -186,6 +245,11 @@ def inspect_archive(path: Path, *, expect_single_member: str | None = None) -> t
                         "compress_size": info.compress_size,
                         "sha256": member_sha,
                         "unsafe_reason": reason,
+                        "local_header": {
+                            key: value
+                            for key, value in (local_meta or {}).items()
+                            if key != "extra"
+                        },
                     }
                 )
                 _add(checks, f"zip_member_safe:{central or '<empty>'}", reason is None, reason or central)
@@ -194,6 +258,12 @@ def inspect_archive(path: Path, *, expect_single_member: str | None = None) -> t
                     f"zip_local_header_matches:{central or '<empty>'}",
                     local == central and local_reason is None,
                     f"central={central!r} local={local!r} local_reason={local_reason}",
+                )
+                _add(
+                    checks,
+                    f"zip_local_header_metadata_matches:{central or '<empty>'}",
+                    not header_mismatches,
+                    ", ".join(header_mismatches) or central,
                 )
                 if central in PACKED_PAYLOAD_MEMBER_NAMES:
                     packed_payload_count += 1
@@ -496,7 +566,11 @@ def _safe_provenance_snapshot(
     }
 
 
-def inspect_auth_eval(path: Path, archive: dict[str, Any], args: argparse.Namespace) -> tuple[dict[str, Any], list[Check]]:
+def inspect_auth_eval(
+    path: Path,
+    archive: dict[str, Any],
+    args: argparse.Namespace,
+) -> tuple[dict[str, Any], list[Check]]:
     checks: list[Check] = []
     exists = path.is_file()
     _add(checks, "auth_eval_exists", exists or not args.require_auth_eval, _rel(path))
@@ -525,7 +599,12 @@ def inspect_auth_eval(path: Path, archive: dict[str, Any], args: argparse.Namesp
     archive_bytes = archive.get("bytes")
     claimed_sha = _candidate_sha(payload)
     claimed_size = _candidate_size(payload)
-    _add(checks, "auth_eval_archive_sha_matches", claimed_sha == archive_sha, f"claimed={claimed_sha} actual={archive_sha}")
+    _add(
+        checks,
+        "auth_eval_archive_sha_matches",
+        claimed_sha == archive_sha,
+        f"claimed={claimed_sha} actual={archive_sha}",
+    )
     _add(
         checks,
         "auth_eval_archive_size_matches",
@@ -533,9 +612,19 @@ def inspect_auth_eval(path: Path, archive: dict[str, Any], args: argparse.Namesp
         f"claimed={claimed_size} actual={archive_bytes}",
     )
     if record is not None:
-        _add(checks, "auth_eval_has_components", record.avg_segnet_dist is not None and record.avg_posenet_dist is not None, "")
+        _add(
+            checks,
+            "auth_eval_has_components",
+            record.avg_segnet_dist is not None
+            and record.avg_posenet_dist is not None,
+            "",
+        )
         strict_formula: dict[str, Any] | None = None
-        if record.avg_segnet_dist is not None and record.avg_posenet_dist is not None and archive_bytes is not None:
+        if (
+            record.avg_segnet_dist is not None
+            and record.avg_posenet_dist is not None
+            and archive_bytes is not None
+        ):
             recomputed = _score(record.avg_segnet_dist, record.avg_posenet_dist, int(archive_bytes))
             score_delta = recomputed - float(record.score)
             strict_formula = {
@@ -554,7 +643,12 @@ def inspect_auth_eval(path: Path, archive: dict[str, Any], args: argparse.Namesp
                     "anchor comparisons"
                 ),
             }
-            _add(checks, "auth_eval_score_recomputes", abs(recomputed - float(record.score)) < 1e-6, f"record={record.score} recomputed={recomputed}")
+            _add(
+                checks,
+                "auth_eval_score_recomputes",
+                abs(recomputed - float(record.score)) < 1e-6,
+                f"record={record.score} recomputed={recomputed}",
+            )
             _add(
                 checks,
                 "auth_eval_strict_formula_score_recorded",
@@ -564,7 +658,12 @@ def inspect_auth_eval(path: Path, archive: dict[str, Any], args: argparse.Namesp
         _add(
             checks,
             "auth_eval_t4_equivalent",
-            (not args.require_t4_equivalent) or (record.device == "cuda" and record.samples == 600 and record.gpu_t4_match),
+            (not args.require_t4_equivalent)
+            or (
+                record.device == "cuda"
+                and record.samples == 600
+                and record.gpu_t4_match
+            ),
             f"device={record.device} samples={record.samples} gpu_t4_match={record.gpu_t4_match}",
         )
         _add(
@@ -624,7 +723,12 @@ def inspect_auth_eval(path: Path, archive: dict[str, Any], args: argparse.Namesp
     }, checks
 
 
-def inspect_archive_manifest(path: Path, archive: dict[str, Any], *, required: bool) -> tuple[dict[str, Any], list[Check]]:
+def inspect_archive_manifest(
+    path: Path,
+    archive: dict[str, Any],
+    *,
+    required: bool,
+) -> tuple[dict[str, Any], list[Check]]:
     checks: list[Check] = []
     exists = path.is_file()
     _add(checks, "archive_manifest_exists", exists or not required, _rel(path))
@@ -647,8 +751,18 @@ def inspect_archive_manifest(path: Path, archive: dict[str, Any], *, required: b
         return {"path": _rel(path), "exists": True}, checks
     claimed_sha = _candidate_sha(payload)
     claimed_size = _candidate_size(payload)
-    _add(checks, "archive_manifest_sha_matches", claimed_sha == archive.get("sha256"), f"claimed={claimed_sha} actual={archive.get('sha256')}")
-    _add(checks, "archive_manifest_size_matches", claimed_size == archive.get("bytes"), f"claimed={claimed_size} actual={archive.get('bytes')}")
+    _add(
+        checks,
+        "archive_manifest_sha_matches",
+        claimed_sha == archive.get("sha256"),
+        f"claimed={claimed_sha} actual={archive.get('sha256')}",
+    )
+    _add(
+        checks,
+        "archive_manifest_size_matches",
+        claimed_size == archive.get("bytes"),
+        f"claimed={claimed_size} actual={archive.get('bytes')}",
+    )
     return {"path": _rel(path), "exists": True}, checks
 
 
@@ -689,7 +803,14 @@ def inspect_dispatch_claims(path: Path, lane_id: str | None, job_id: str | None)
     terminal = False
     rows: list[str] = []
     if exists:
-        rows = [line.strip() for line in path.read_text(encoding="utf-8", errors="ignore").splitlines() if line.strip().startswith("|")]
+        rows = [
+            line.strip()
+            for line in path.read_text(
+                encoding="utf-8",
+                errors="ignore",
+            ).splitlines()
+            if line.strip().startswith("|")
+        ]
         header: list[str] | None = None
         for row in rows:
             cells = [cell.strip() for cell in row.strip("|").split("|")]
@@ -756,7 +877,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--expected-archive-sha256")
     parser.add_argument("--expected-archive-size-bytes", type=int)
     parser.add_argument("--expected-runtime-tree-sha256")
-    parser.add_argument("--dispatch-claims-md", type=Path, default=REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md")
+    parser.add_argument(
+        "--dispatch-claims-md",
+        type=Path,
+        default=REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md",
+    )
     parser.add_argument("--expected-lane-id")
     parser.add_argument("--expected-job-id")
     parser.add_argument("--public-scan-path", type=Path, action="append", default=[])
@@ -787,12 +912,27 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
 
     archive = sections["archive"]
     if args.expected_archive_sha256:
-        _add(checks, "expected_archive_sha256_is_well_formed", bool(SHA256_RE.match(args.expected_archive_sha256)), args.expected_archive_sha256)
-        _add(checks, "expected_archive_sha256_matches", archive.get("sha256") == args.expected_archive_sha256.lower(), f"expected={args.expected_archive_sha256} actual={archive.get('sha256')}")
+        _add(
+            checks,
+            "expected_archive_sha256_is_well_formed",
+            bool(SHA256_RE.match(args.expected_archive_sha256)),
+            args.expected_archive_sha256,
+        )
+        _add(
+            checks,
+            "expected_archive_sha256_matches",
+            archive.get("sha256") == args.expected_archive_sha256.lower(),
+            f"expected={args.expected_archive_sha256} actual={archive.get('sha256')}",
+        )
     elif args.contest_final:
         _add(checks, "expected_archive_sha256_supplied", False, "contest-final requires explicit archive SHA")
     if args.expected_archive_size_bytes is not None:
-        _add(checks, "expected_archive_size_bytes_matches", archive.get("bytes") == args.expected_archive_size_bytes, f"expected={args.expected_archive_size_bytes} actual={archive.get('bytes')}")
+        _add(
+            checks,
+            "expected_archive_size_bytes_matches",
+            archive.get("bytes") == args.expected_archive_size_bytes,
+            f"expected={args.expected_archive_size_bytes} actual={archive.get('bytes')}",
+        )
     elif args.contest_final:
         _add(checks, "expected_archive_size_bytes_supplied", False, "contest-final requires explicit archive bytes")
 
@@ -806,13 +946,38 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
     )
     sections["submission_runtime"] = runtime_record
     checks.extend(runtime_checks)
-    manifest_record, manifest_checks = inspect_archive_manifest(manifest_path, archive, required=args.contest_final or args.archive_manifest_json is not None)
+    manifest_record, manifest_checks = inspect_archive_manifest(
+        manifest_path,
+        archive,
+        required=args.contest_final or args.archive_manifest_json is not None,
+    )
     sections["archive_manifest"] = manifest_record
     checks.extend(manifest_checks)
-    report_record, report_checks = inspect_report(submission_dir / "report.txt", archive, required_link=args.contest_final)
+    report_record, report_checks = inspect_report(
+        submission_dir / "report.txt",
+        archive,
+        required_link=args.contest_final,
+    )
     sections["report"] = report_record
     checks.extend(report_checks)
-    claims_record, claims_checks = inspect_dispatch_claims(args.dispatch_claims_md, args.expected_lane_id, args.expected_job_id)
+    if args.contest_final:
+        _add(
+            checks,
+            "contest_final_expected_lane_id_supplied",
+            bool(args.expected_lane_id),
+            "contest-final requires --expected-lane-id",
+        )
+        _add(
+            checks,
+            "contest_final_expected_job_id_supplied",
+            bool(args.expected_job_id),
+            "contest-final requires --expected-job-id",
+        )
+    claims_record, claims_checks = inspect_dispatch_claims(
+        args.dispatch_claims_md,
+        args.expected_lane_id,
+        args.expected_job_id,
+    )
     sections["dispatch_claims"] = claims_record
     checks.extend(claims_checks)
     if args.public_scan_path:

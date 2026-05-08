@@ -201,6 +201,9 @@ def validate_packet_section_manifest_batch(
         blockers.append("batch_score_claim_not_false")
     if payload.get("dispatch_attempted") is not False:
         blockers.append("batch_dispatch_attempted_not_false")
+    if payload.get("ready_for_exact_eval_dispatch") is not False:
+        blockers.append("batch_ready_for_exact_eval_dispatch_not_false")
+    blockers.extend(_validate_parser_section_gate(payload.get("parser_section_gate"), "batch"))
     records = payload.get("records")
     if not isinstance(records, list) or not records:
         return [*blockers, "batch_records_missing"]
@@ -609,6 +612,7 @@ def _validate_manifest_shape(manifest: Mapping[str, Any]) -> list[str]:
         blockers.append("dispatch_attempted_not_false")
     if manifest.get("ready_for_exact_eval_dispatch") is not False:
         blockers.append("ready_for_exact_eval_dispatch_not_false")
+    blockers.extend(_validate_parser_section_gate(manifest.get("parser_section_gate"), "manifest"))
     archive = manifest.get("archive")
     member = manifest.get("member")
     parser = manifest.get("parser")
@@ -642,6 +646,21 @@ def _validate_manifest_shape(manifest: Mapping[str, Any]) -> list[str]:
     parser_section_manifest = manifest.get("parser_section_manifest")
     if parser_section_manifest is not None:
         blockers.extend(_validate_gate3_parser_section_manifest(parser_section_manifest, sections))
+    return blockers
+
+
+def _validate_parser_section_gate(gate: Any, prefix: str) -> list[str]:
+    blockers: list[str] = []
+    if not isinstance(gate, Mapping):
+        return [f"{prefix}_parser_section_gate_missing"]
+    if gate.get("score_claim") is not False:
+        blockers.append(f"{prefix}_parser_section_gate_score_claim_not_false")
+    if gate.get("dispatch_attempted") is not False:
+        blockers.append(f"{prefix}_parser_section_gate_dispatch_attempted_not_false")
+    if not isinstance(gate.get("ready"), bool):
+        blockers.append(f"{prefix}_parser_section_gate_ready_not_bool")
+    if not isinstance(gate.get("blockers"), list):
+        blockers.append(f"{prefix}_parser_section_gate_blockers_not_list")
     return blockers
 
 

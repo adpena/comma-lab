@@ -4,6 +4,8 @@ import json
 import zipfile
 from pathlib import Path
 
+import brotli
+
 from tac.frontier_archive_layout import (
     A2K1_MAGIC,
     CPLX1_MAGIC,
@@ -117,8 +119,8 @@ def test_cplx1_single_member_has_byte_map_and_op1_sections(tmp_path: Path) -> No
 
 
 def test_pr106_single_member_has_ff_parser_sections(tmp_path: Path) -> None:
-    decoder = b"b" * 17
-    tail = b"t" * 11
+    decoder = brotli.compress(b"decoder-weights")
+    tail = brotli.compress(b"latent-sidecar")
     header = bytes([PR106_HEADER_MAGIC]) + len(decoder).to_bytes(3, "little")
     archive = tmp_path / "pr106.zip"
     _stored_zip(archive, PR106_INNER_MEMBER_NAME, header + decoder + tail)
@@ -137,6 +139,19 @@ def test_pr106_single_member_has_ff_parser_sections(tmp_path: Path) -> None:
     summary = render_frontier_archive_layout_summary(manifest)
     assert "member_level_component_budgets_valid: False" in summary
     assert "logical grammar: pr106_ff_packed_hnerv" in summary
+
+
+def test_pr106_like_invalid_brotli_streams_fail_closed(tmp_path: Path) -> None:
+    decoder = b"not-brotli"
+    tail = b"also-not-brotli"
+    header = bytes([PR106_HEADER_MAGIC]) + len(decoder).to_bytes(3, "little")
+    archive = tmp_path / "invalid_pr106.zip"
+    _stored_zip(archive, PR106_INNER_MEMBER_NAME, header + decoder + tail)
+
+    manifest = inspect_frontier_archive_layout(archive)
+
+    assert manifest["logical_layout"] is None
+    assert any("No known internal grammar was proven" in caution for caution in manifest["cautions"])
 
 
 def test_unknown_single_member_does_not_create_logical_budget(tmp_path: Path) -> None:

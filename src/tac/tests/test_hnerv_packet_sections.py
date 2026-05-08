@@ -23,6 +23,7 @@ from tac.analysis.hnerv_packet_sections import (
     build_packet_section_manifest,
     build_packet_section_manifest_batch,
     validate_packet_section_manifest,
+    validate_packet_section_manifest_batch,
 )
 from tac.hnerv_pr103_lc_ac_schema import PUBLIC_PR103_LAYOUT
 
@@ -262,6 +263,23 @@ def test_batch_manifest_and_cli_emit_and_validate(tmp_path: Path) -> None:
 
     direct = build_packet_section_manifest_batch([("fixture", archive, PARSER_PR106)])
     assert direct["parser_section_gate"]["ready"] is True
+
+
+def test_batch_manifest_validation_rejects_false_authority_fields(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "pr106.zip"
+    decoder = b"abc"
+    payload = bytes([0xFF]) + len(decoder).to_bytes(3, "little") + decoder + b"tail"
+    _stored_zip(archive, "0.bin", payload)
+    batch = build_packet_section_manifest_batch([("fixture", archive, PARSER_PR106)])
+    batch["ready_for_exact_eval_dispatch"] = True
+    batch["parser_section_gate"]["score_claim"] = True
+
+    blockers = validate_packet_section_manifest_batch(batch)
+
+    assert "batch_ready_for_exact_eval_dispatch_not_false" in blockers
+    assert "batch_parser_section_gate_score_claim_not_false" in blockers
 
 
 def _stored_zip(path: Path, name: str, payload: bytes) -> None:

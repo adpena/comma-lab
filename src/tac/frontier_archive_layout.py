@@ -253,12 +253,12 @@ def _inspect_pr106_inner(member_name: str, blob: bytes) -> dict[str, Any] | None
     tail = blob[decoder_end:]
     decoder_valid = _brotli_decompresses(decoder)
     tail_valid = _brotli_decompresses(tail)
+    if not (decoder_valid and tail_valid):
+        return None
     return {
         "grammar": "pr106_ff_packed_hnerv",
         "parser_confidence": "magic_and_24bit_decoder_len",
-        "parser_proof_strength": (
-            "magic_len_and_brotli_streams" if decoder_valid and tail_valid else "magic_len_only"
-        ),
+        "parser_proof_strength": "magic_len_and_brotli_streams",
         "validated_streams": {
             "decoder_packed_brotli": decoder_valid,
             "latents_and_sidecar_brotli": tail_valid,

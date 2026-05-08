@@ -224,6 +224,31 @@ def _cleanup_temp_index(temp_index_path: str) -> None:
         pass
 
 
+def _refresh_real_index_after_temp_commit(files: list[str], repo_root: Path = REPO_ROOT) -> None:
+    """Refresh the caller-visible index for files committed via a temp index.
+
+    Alternate-index commits move ``HEAD`` but intentionally do not update the
+    shared ``.git/index``. Without this refresh, a successful serialized commit
+    can leave the user's real index stale and `git status` may report the just
+    committed paths as still modified/staged. ``git reset -- <files>`` updates
+    only the named index entries to the new ``HEAD`` while preserving the
+    working tree.
+    """
+    if not files:
+        return
+    proc = subprocess.run(
+        ["git", "reset", "-q", "HEAD", "--", *files],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(
+            "git reset real index after temp-index commit failed: "
+            f"rc={proc.returncode} stderr={proc.stderr.strip()}"
+        )
+
+
 def _git_add(files: list[str], env: dict) -> tuple[int, str]:
     """Run `git add -- <files>` against env's GIT_INDEX_FILE."""
     if not files:
@@ -452,6 +477,9 @@ def main() -> int:
                   f"Lock released; next waiter (if any) will proceed.",
                   file=sys.stderr)
             return rc
+
+        if temp_index_path:
+            _refresh_real_index_after_temp_commit(files)
 
         print(f"[subagent-commit-serializer] OK head={head_after} "
               f"label={args.label} files={len(files)} "

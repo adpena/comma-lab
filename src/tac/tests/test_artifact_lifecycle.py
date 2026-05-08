@@ -8,6 +8,7 @@ from tac.artifact_lifecycle import (
     CommittedRangeProvenanceGuard,
     run_meta_lifecycle_audit,
 )
+from tac.preflight import _artifact_lifecycle_changed_paths
 
 
 def _git(repo: Path, *args: str) -> None:
@@ -209,3 +210,19 @@ def test_meta_lifecycle_audit_honors_path_filter(tmp_path: Path) -> None:
 
     assert len(violations) == 1
     assert "reports/raw/current/summary.json" in violations[0]
+
+
+def test_artifact_lifecycle_changed_paths_falls_back_to_head_commit(
+    tmp_path: Path,
+) -> None:
+    _init_repo(tmp_path)
+    first = tmp_path / "first.txt"
+    first.write_text("first\n", encoding="utf-8")
+    _commit_all(tmp_path, "first")
+    second = tmp_path / "second.txt"
+    second.write_text("second\n", encoding="utf-8")
+    _commit_all(tmp_path, "second")
+
+    paths = _artifact_lifecycle_changed_paths(tmp_path, "HEAD")
+
+    assert paths == {"second.txt"}
