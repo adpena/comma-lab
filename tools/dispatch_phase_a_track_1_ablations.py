@@ -552,6 +552,27 @@ def main() -> int:
     output_root.mkdir(parents=True, exist_ok=True)
 
     decisions = list(PHASE_A_DISPATCHES.keys()) if args.decision == "all" else [args.decision]
+    is_staging_all = args.decision == "all"
+
+    # MEDIUM-E (codex 2026-05-08): banner when --decision all is invoked.
+    # The wrapper is a staging PLANNER over each decision's manifest + lane
+    # claim — it does NOT execute the per-decision training/dispatch jobs in
+    # parallel and does NOT enforce dependency gates (A0 -> A2 -> A1 -> A4
+    # -> parallel A3-alt/A4-alt/A5/A6 -> Phase C). Operators must invoke the
+    # underlying training scripts (experiments/train_charm_*, train_score_*,
+    # tools/pr101_sensitivity_*, etc.) themselves AFTER reviewing the staged
+    # manifest. Treat this wrapper's output as plans + lane claims, not as
+    # active concurrent execution.
+    if is_staging_all:
+        print(
+            "\n[STAGING PLANNER MODE] --decision all stages manifests + lane "
+            "claims for each Phase A decision SEQUENTIALLY. This wrapper does "
+            "NOT launch concurrent jobs; it does NOT enforce A0 -> A2 -> A1 "
+            "-> A4 dependency gates; the artifacts produced are dispatch "
+            "intent, not execution. Invoke per-decision training scripts "
+            "directly to actually run the ablations.",
+            file=sys.stderr,
+        )
 
     # Cost gate per CLAUDE.md "Vast.ai create without disk + cuda_vers gate"
     total_cost = sum(
