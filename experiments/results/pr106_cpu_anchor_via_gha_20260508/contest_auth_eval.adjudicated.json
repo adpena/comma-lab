@@ -1,0 +1,71 @@
+{
+  "archive_relpath": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+  "archive_size_bytes": 186239,
+  "archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+  "archive_inner_member": "0.bin",
+  "archive_inner_size_bytes": 186131,
+
+  "canonical_score": null,
+  "avg_segnet_dist": null,
+  "avg_posenet_dist": null,
+  "compression_rate": null,
+  "score_recomputed_from_components": null,
+  "n_samples": null,
+
+  "device": "cpu",
+  "hardware": "github-actions-ubuntu-latest-x86_64",
+  "lane_tag": "[contest-CPU-REFUSED]",
+  "evidence_grade": "refused-dispatch-architecture-incompatible-with-CPU",
+
+  "dispatched_at_utc": "2026-05-08T13:04:34Z",
+  "completed_at_utc": "2026-05-08T13:05:00Z",
+
+  "fork_repo": "adpena/comma_video_compression_challenge",
+  "submission_name": "belt_and_suspenders",
+  "release_tag": "cpu-eval-belt_and_suspenders-20260508T130434Z",
+  "workflow_run_id": 25557146065,
+  "workflow_run_url": "https://github.com/adpena/comma_video_compression_challenge/actions/runs/25557146065",
+
+  "refused_dispatch": true,
+  "refused_dispatch_reason": "architecture_incompatible_with_cpu",
+  "refused_dispatch_evidence": {
+    "primary": "submissions/belt_and_suspenders/inflate.py contains hard guard: 'if not torch.cuda.is_available(): sys.exit(\"inflate requires GPU\")' (line 28)",
+    "author_intent_quoted_from_README": "GPU-only: inflate.py asserts torch.cuda.is_available() so leaderboard auto-routes to T4 instance.",
+    "fork_dispatch_attempt": {
+      "first_attempt_failure": "uniqueness_check_failed (submission_name belt_and_suspenders already in master)",
+      "second_attempt_blocked_by": "would_require_modifying_inflate.py_which_violates_use_exact_public_PR_bytes_constraint"
+    },
+    "t4_runner_unavailable_on_fork": {
+      "fork_self_hosted_runners_count": 0,
+      "linux_nvidia_t4_only_on_commaai_upstream": true
+    }
+  },
+
+  "predicted_cpu_score_from_calibration": {
+    "predicted_value": 0.172,
+    "predicted_from_cuda": 0.20454,
+    "calibration_constant": "R_pose=5.04",
+    "calibration_source_pr_set": ["PR100", "PR101", "PR102", "PR103", "PR105"]
+  },
+
+  "public_cuda_claims": {
+    "scorecard_md_value": 0.20454,
+    "submission_README_md_value": 0.20946,
+    "delta_between_claims": 0.00492,
+    "note": "Independent CUDA measurements differ ~0.005; both sit in 0.20-0.21 band consistent with public claim of ~0.205."
+  },
+
+  "calibration_verdict": "ARCHITECTURE_INCOMPATIBLE_OUTLIER_excluded_from_constant_R_hypothesis_test",
+  "implications_for_25_pr_sweep": "PR #106 must be EXCLUDED from CPU calibration anchor set. Per-architecture profile registry (a5a3ccd1) must record cpu_supported=false for any PR whose inflate.py asserts torch.cuda.is_available(). Other CUDA-only PRs likely exist; pre-flight scan inflate.py for cuda guards before dispatching CPU eval.",
+
+  "report_text": null,
+  "evaluate_py_sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b",
+
+  "lane_dispatch_claim": {
+    "lane_id": "pr106_belt_and_suspenders_cpu_anchor_calibration_validation",
+    "platform": "github-actions",
+    "instance_job_id": "pr106_cpu_eval_via_gha_20260508",
+    "agent": "claude-opus-4-7-1m",
+    "terminal_status": "refused_dispatch_cpu_unsupported_by_PR106_architecture"
+  }
+}
