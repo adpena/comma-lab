@@ -447,6 +447,22 @@ def preflight_all(
         # Forbidden pattern: "operator-approval-leak". Memory ref:
         # `feedback_codex_finding_1_operator_approval_scoping_FIXED_20260508.md`.
         check_operator_approval_must_be_lane_scoped(strict=True, verbose=verbose)
+        # 2026-05-08 codex finding #3 (catalog #110): stale dirty-paths
+        # frozen into committed status JSON. Refuses any *status*.json with
+        # a non-empty top-level `dirty_paths` list. Memory:
+        # feedback_codex_findings_3_4_status_dirtypaths_rebuild_recipe_FIXED_20260508.md
+        check_status_artifacts_no_stale_dirty_paths(strict=True, verbose=verbose)
+        # 2026-05-08 codex finding #4 (catalog #111): baked runtime state
+        # in rebuild recipes. Refuses rebuild_command.txt with hardcoded
+        # --now-utc/--operator-approved-* flags absent a HISTORICAL banner.
+        check_rebuild_commands_no_baked_runtime_state(strict=True, verbose=verbose)
+        # 2026-05-08 codex META finding (catalog #113): umbrella
+        # provenance-vs-state lifecycle gate. Runs all four artifact-kind
+        # guards against the registry at .omx/state/artifact_kind_registry.yaml.
+        # Held warn-only on landing pass; flip to strict after registry is
+        # filled to >= 100 entries and live count is 0. Memory:
+        # feedback_codex_findings_meta_pattern_artifact_lifecycle_FIXED_20260508.md
+        check_artifact_lifecycle_compliance(strict=False, verbose=verbose)
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -1279,6 +1295,16 @@ def preflight_all(
         # of 39 stale `KL_BATCHMEAN_OK` waivers across 8 dirty clones.
         # Memory: feedback_codex_finding_2_public_intake_pristine_FIXED_20260508.md.
         check_public_pr_intake_clones_pristine(
+            strict=True, verbose=verbose,
+        )
+        # Check 110 — recovery_metadata.json MUST be append-only attempts[]
+        # with unique started_at_utc per attempt. Codex 2026-05-08 adversarial
+        # review MEDIUM finding: timestamp-only churn on recovered_42_dead +
+        # recovered_99999_phantom destroyed the original April 30 audit trail.
+        # Lands at 0 live violations after the same-day revert + schema
+        # migration to v2_attempts. Memory:
+        # feedback_codex_finding_5_recovery_metadata_appendonly_FIXED_20260508.md.
+        check_recovery_metadata_append_only(
             strict=True, verbose=verbose,
         )
         check_scores_have_lane_tag_paper_research(
@@ -3628,6 +3654,53 @@ def check_operator_approval_must_be_lane_scoped(
             )
         else:
             print(f"  [operator-approval-scope] OK ({scanned} status file(s) scanned)")
+    return violations
+
+
+def check_artifact_lifecycle_compliance(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Meta gate — provenance-vs-state confusion class (CODEX 2026-05-08 META).
+
+    Umbrella check that runs all four artifact-lifecycle guards
+    (LIVE_STATE / HISTORICAL_PROVENANCE / LIVE_RECIPE / DERIVED_OUTPUT)
+    against every committed artifact pattern in
+    ``.omx/state/artifact_kind_registry.yaml``.
+
+    This catches the META-CLASS that the per-finding sister gates catch
+    one instance at a time:
+    ``check_operator_approval_must_be_lane_scoped``,
+    ``check_public_pr_intake_clones_pristine``,
+    ``check_status_artifacts_no_stale_dirty_paths``,
+    ``check_rebuild_commands_no_baked_runtime_state``,
+    ``check_recovery_metadata_append_only``.
+
+    Forbidden pattern: "transient/global/upstream state being frozen or
+    mutated into committed/forensic artifacts in ways that destroy
+    provenance or leak authorization." See CLAUDE.md catalog #113 +
+    memory ``feedback_codex_findings_meta_pattern_artifact_lifecycle_FIXED_20260508.md``.
+
+    Reactivation criteria: this gate may be relaxed only when EVERY
+    long-lived artifact in the repo is explicitly classified in the
+    registry AND each kind's guard has been hardened.
+    """
+    from tac.artifact_lifecycle import run_meta_lifecycle_audit
+
+    root = Path(repo_root or REPO_ROOT)
+    violations = run_meta_lifecycle_audit(repo_root=root)
+    if violations and strict:
+        raise MetaBugViolation(
+            "ARTIFACT-LIFECYCLE COMPLIANCE VIOLATIONS:\n"
+            + "\n".join(violations)
+        )
+    if verbose:
+        if violations:
+            print(f"  [artifact-lifecycle] {len(violations)} violation(s)")
+        else:
+            print("  [artifact-lifecycle] OK")
     return violations
 
 
@@ -24577,6 +24650,294 @@ def check_solvers_use_dual_axis_ranking(
             "predicted_cpu_score. Add the companion or annotate the row "
             "with '# DUAL_AXIS_RANKING_WAIVED:<reason>'."
         )
+    return violations
+
+
+def check_recovery_metadata_append_only(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Recovery-metadata custody-evidence-corruption gate (CODEX FINDING 2026-05-08).
+
+    ``recovery_metadata.json`` files under
+    ``experiments/results/recovered_*/`` MUST use the append-only
+    ``attempts[]`` schema. Each attempt is keyed by ``started_at_utc``;
+    in-place mutation of timestamps destroys the original recovery-attempt
+    audit trail.
+
+    The check enforces:
+      * Schema is ``{schema_version: "recovery_metadata.v2_attempts",
+        attempts: [...]}`` with ``attempts`` non-empty (legacy single-record
+        files are warned but not refused, for backward-compat during the
+        v1→v2 migration window).
+      * Every attempt has required fields: ``attempt_kind``,
+        ``started_at_utc``, ``completed_at_utc``, ``elapsed_seconds``,
+        ``ssh_reachable``, ``archive_zip``, ``artifacts``.
+      * No two attempts share the same ``started_at_utc`` — that would
+        suggest in-place edit (the failure mode codex caught).
+      * Every attempt past the first ("revisit"/"force-rerun" kinds) MUST
+        carry provenance: either ``command_log_path`` non-null OR
+        ``substantive_change_from_prior_attempt`` non-null. This blocks
+        the "no-op rerun timestamp churn" anti-pattern.
+
+    Forbidden pattern: "recovery-metadata-timestamp-churn" — overwriting
+    historical recovery timestamps in place. The fix lands in
+    ``tools/recover_lane_artifacts.py::_write_report`` with append-only
+    semantics keyed by ``started_at_utc``. Memory:
+    ``feedback_codex_finding_5_recovery_metadata_appendonly_FIXED_20260508.md``.
+
+    Reactivation criteria: the gate may be relaxed only after the writer
+    formally proves a new attempt entry can never displace a closed
+    attempt's timestamps AND a property-based test asserts the invariant
+    across N concurrent writes.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    results_dir = root / "experiments" / "results"
+    if not results_dir.is_dir():
+        if verbose:
+            print("  [recovery-metadata-append-only] OK (no experiments/results)")
+        return []
+
+    violations: list[str] = []
+    scanned = 0
+    REQUIRED_ATTEMPT_FIELDS = (
+        "attempt_kind",
+        "started_at_utc",
+        "completed_at_utc",
+        "elapsed_seconds",
+        "ssh_reachable",
+        "archive_zip",
+        "artifacts",
+    )
+
+    for path in sorted(results_dir.glob("recovered_*/recovery_metadata.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        scanned += 1
+        rel = path.relative_to(root).as_posix()
+
+        attempts = payload.get("attempts") if isinstance(payload, dict) else None
+        if not isinstance(attempts, list):
+            # Legacy v1 single-record schema. Warn-only, do not refuse —
+            # gives a migration window. Strict-flip will require attempts[]
+            # only after a sweep migrates all legacy files.
+            if "started_at_utc" in (payload or {}) and verbose:
+                print(
+                    f"  [recovery-metadata-append-only] WARN: "
+                    f"{rel} uses legacy v1 single-record schema (no `attempts[]`)"
+                )
+            continue
+        if not attempts:
+            violations.append(f"{rel}: empty attempts[] list")
+            continue
+
+        seen_started: dict[str, int] = {}
+        for idx, att in enumerate(attempts):
+            if not isinstance(att, dict):
+                violations.append(f"{rel}: attempts[{idx}] is not an object")
+                continue
+            for field in REQUIRED_ATTEMPT_FIELDS:
+                if field not in att:
+                    violations.append(
+                        f"{rel}: attempts[{idx}] missing required field "
+                        f"{field!r}"
+                    )
+            started = att.get("started_at_utc")
+            if isinstance(started, str) and started:
+                if started in seen_started:
+                    violations.append(
+                        f"{rel}: attempts[{idx}] and attempts["
+                        f"{seen_started[started]}] share started_at_utc="
+                        f"{started!r} — suggests in-place edit"
+                    )
+                else:
+                    seen_started[started] = idx
+            # Provenance for non-initial attempts.
+            if idx > 0:
+                kind = att.get("attempt_kind")
+                if kind in ("revisit", "force-rerun"):
+                    has_log = bool(att.get("command_log_path"))
+                    has_sub = bool(att.get("substantive_change_from_prior_attempt"))
+                    if not (has_log or has_sub):
+                        violations.append(
+                            f"{rel}: attempts[{idx}] kind={kind!r} requires "
+                            f"command_log_path OR "
+                            f"substantive_change_from_prior_attempt — "
+                            f"timestamp-only churn is invalid evidence"
+                        )
+
+    if verbose:
+        if violations:
+            for v in violations[:10]:
+                print(f"  [recovery-metadata-append-only] {v}")
+            if len(violations) > 10:
+                print(
+                    f"  [recovery-metadata-append-only] "
+                    f"... {len(violations) - 10} more"
+                )
+        else:
+            print(
+                f"  [recovery-metadata-append-only] OK "
+                f"({scanned} file(s) scanned)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "RECOVERY-METADATA-APPEND-ONLY violations:\n"
+            + "\n".join(f"  • {v}" for v in violations[:20])
+            + ("\n  • ..." if len(violations) > 20 else "")
+            + "\n\nPer codex 2026-05-08 finding 5: recovery_metadata.json must "
+            "use the append-only attempts[] schema with unique "
+            "started_at_utc and provenance for non-initial attempts."
+        )
+    return violations
+
+
+def check_status_artifacts_no_stale_dirty_paths(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Stale-dirty-paths-in-status-JSON gate (CODEX FINDING #3 2026-05-08).
+
+    Live worktree dirty-state is transient session noise; freezing the
+    ``dirty_paths`` list into a committed ``*status*.json`` poisons downstream
+    operator review with stale paths that no longer reflect reality. Only the
+    ``dirty_path_count`` (a scalar) and per-row ``dirty_path_blockers``
+    (per-row intersections) are stable enough to persist.
+
+    Refuses any ``*status*.json`` under ``experiments/results/`` that
+    contains a top-level ``dirty_paths`` field with a non-empty list.
+
+    Forbidden pattern: "stale-dirty-paths-list-in-committed-status-json".
+    See CLAUDE.md catalog #110.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    results_dir = root / "experiments" / "results"
+    if not results_dir.is_dir():
+        if verbose:
+            print("  [status-stale-dirty-paths] OK (no experiments/results)")
+        return []
+
+    violations: list[str] = []
+    scanned = 0
+    for path in sorted(results_dir.rglob("*status*.json")):
+        rel = path.relative_to(root).as_posix()
+        if "/public_pr" in rel:
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        scanned += 1
+        if not isinstance(payload, dict):
+            continue
+        dirty_paths_value = payload.get("dirty_paths")
+        if isinstance(dirty_paths_value, list) and len(dirty_paths_value) > 0:
+            violations.append(
+                f"{rel}: stale-dirty-paths-in-status — top-level "
+                f"`dirty_paths` field is a non-empty list of {len(dirty_paths_value)} "
+                f"paths; this freezes transient session noise into committed state"
+            )
+    if violations and strict:
+        raise MetaBugViolation(
+            "STATUS-STALE-DIRTY-PATHS VIOLATIONS:\n" + "\n".join(violations)
+        )
+    if verbose:
+        if violations:
+            print(
+                f"  [status-stale-dirty-paths] {len(violations)} violation(s) across {scanned} status file(s)"
+            )
+        else:
+            print(f"  [status-stale-dirty-paths] OK ({scanned} status file(s) scanned)")
+    return violations
+
+
+def check_rebuild_commands_no_baked_runtime_state(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Baked-runtime-state-in-rebuild-recipes gate (CODEX FINDING #4 2026-05-08).
+
+    A ``rebuild_command.txt`` that hardcodes ``--now-utc <ISO_TIMESTAMP>``
+    and/or ``--operator-approved-*`` flags documents a non-reproducible
+    recipe: replaying it later evaluates dispatch claim freshness against an
+    obsolete timestamp and may carry forward an operator-approval context
+    that no longer applies.
+
+    Refuses any ``rebuild_command.txt`` under ``experiments/results/`` with
+    a hardcoded ``--now-utc`` or ``--operator-approved-`` flag UNLESS the
+    file carries an explicit historical-only banner in its first 10 lines
+    (one of: "HISTORICAL ARTIFACT", "DO NOT REPLAY", "frozen historical",
+    "forensic reproduction").
+
+    Forbidden pattern: "baked-runtime-state-in-rebuild-recipe". See
+    CLAUDE.md catalog #111.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    results_dir = root / "experiments" / "results"
+    if not results_dir.is_dir():
+        if verbose:
+            print("  [rebuild-recipe-baked-state] OK (no experiments/results)")
+        return []
+
+    historical_markers = (
+        "HISTORICAL ARTIFACT",
+        "DO NOT REPLAY",
+        "frozen historical",
+        "forensic reproduction",
+    )
+
+    violations: list[str] = []
+    scanned = 0
+    for path in sorted(results_dir.rglob("rebuild_command.txt")):
+        rel = path.relative_to(root).as_posix()
+        if "/public_pr" in rel:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        scanned += 1
+        head = "\n".join(text.splitlines()[:10])
+        has_banner = any(marker in head for marker in historical_markers)
+
+        offending_lines: list[tuple[int, str]] = []
+        for i, line in enumerate(text.splitlines(), start=1):
+            stripped = line.lstrip()
+            if stripped.startswith("#"):
+                continue
+            if re.search(r"--now-utc\s+\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}", line):
+                offending_lines.append((i, line.strip()))
+            elif re.search(r"--operator-approved-[a-z0-9-]+", line):
+                offending_lines.append((i, line.strip()))
+
+        if offending_lines and not has_banner:
+            sample = offending_lines[0]
+            violations.append(
+                f"{rel}: rebuild-recipe-baked-state — hardcoded runtime state "
+                f"on line {sample[0]} ({sample[1][:80]!r}) without "
+                f"HISTORICAL-ARTIFACT banner in first 10 lines; "
+                f"{len(offending_lines)} offending line(s) total"
+            )
+    if violations and strict:
+        raise MetaBugViolation(
+            "REBUILD-RECIPE-BAKED-STATE VIOLATIONS:\n" + "\n".join(violations)
+        )
+    if verbose:
+        if violations:
+            print(
+                f"  [rebuild-recipe-baked-state] {len(violations)} violation(s) across {scanned} recipe file(s)"
+            )
+        else:
+            print(f"  [rebuild-recipe-baked-state] OK ({scanned} recipe file(s) scanned)")
     return violations
 
 

@@ -58,7 +58,10 @@ def test_recovery_dir_is_per_instance(mod):
 def test_recover_artifacts_handles_unresolvable_instance(mod, tmp_path):
     """No SSH details + missing vastai CLI => returns RecoveryReport with note."""
     # Force VASTAI to a non-existent path so _resolve_ssh_details returns None.
-    with patch.object(mod, "VASTAI", tmp_path / "missing_vastai"):
+    # Redirect RECOVERY_BASE to tmp_path so the test does NOT pollute the
+    # repo's real ``experiments/results/recovered_99999_phantom/`` artifact.
+    with patch.object(mod, "VASTAI", tmp_path / "missing_vastai"), \
+         patch.object(mod, "RECOVERY_BASE", tmp_path):
         report = mod.recover_artifacts(
             instance_id=99999, lane_label="phantom",
         )
@@ -70,7 +73,10 @@ def test_recover_artifacts_handles_unresolvable_instance(mod, tmp_path):
     meta = Path(report.recovery_dir) / "recovery_metadata.json"
     assert meta.exists()
     data = json.loads(meta.read_text())
-    assert data["ssh_reachable"] is False
+    # v2 append-only schema: ssh_reachable lives inside attempts[-1].
+    assert data["schema_version"] == "recovery_metadata.v2_attempts"
+    assert isinstance(data["attempts"], list) and len(data["attempts"]) >= 1
+    assert data["attempts"][-1]["ssh_reachable"] is False
 
 
 def test_recover_artifacts_handles_ssh_unreachable(mod, tmp_path):
@@ -82,7 +88,8 @@ def test_recover_artifacts_handles_ssh_unreachable(mod, tmp_path):
         # All ssh probes fail.
         return 255, "", "Connection refused"
 
-    with patch.object(mod, "VASTAI", tmp_path / "vastai"):
+    with patch.object(mod, "VASTAI", tmp_path / "vastai"), \
+         patch.object(mod, "RECOVERY_BASE", tmp_path):
         # Provide explicit host/port to bypass the vastai-CLI probe.
         with patch.object(mod, "_run", side_effect=fake_run):
             report = mod.recover_artifacts(
@@ -91,6 +98,67 @@ def test_recover_artifacts_handles_ssh_unreachable(mod, tmp_path):
             )
     assert report.ssh_reachable is False
     assert any("SSH reachability probe" in n for n in report.notes)
+
+
+def test_write_report_appends_new_attempt_with_audit_log(mod, tmp_path):
+    rec_dir = tmp_path / "recovered_1_lane"
+    first = mod.RecoveryReport(
+        instance_id=1,
+        lane_label="lane",
+        recovery_dir=str(rec_dir),
+        started_at_utc="2026-05-08T00:00:00+00:00",
+        elapsed_seconds=1.0,
+        ssh_reachable=False,
+    )
+    second = mod.RecoveryReport(
+        instance_id=1,
+        lane_label="lane",
+        recovery_dir=str(rec_dir),
+        started_at_utc="2026-05-08T00:01:00+00:00",
+        elapsed_seconds=2.0,
+        ssh_reachable=False,
+    )
+
+    mod._write_report(rec_dir, first)
+    mod._write_report(rec_dir, second)
+
+    payload = json.loads((rec_dir / "recovery_metadata.json").read_text())
+    assert payload["schema_version"] == "recovery_metadata.v2_attempts"
+    assert len(payload["attempts"]) == 2
+    assert payload["attempts"][0]["attempt_kind"] == "initial"
+    assert payload["attempts"][1]["attempt_kind"] == "force-rerun"
+    command_log = payload["attempts"][1]["command_log_path"]
+    assert command_log
+    assert Path(command_log).is_file()
+
+
+def test_write_report_replaces_same_in_progress_attempt(mod, tmp_path):
+    rec_dir = tmp_path / "recovered_1_lane"
+    report = mod.RecoveryReport(
+        instance_id=1,
+        lane_label="lane",
+        recovery_dir=str(rec_dir),
+        started_at_utc="2026-05-08T00:00:00+00:00",
+        elapsed_seconds=1.0,
+        ssh_reachable=False,
+    )
+    updated = mod.RecoveryReport(
+        instance_id=1,
+        lane_label="lane",
+        recovery_dir=str(rec_dir),
+        started_at_utc=report.started_at_utc,
+        elapsed_seconds=3.0,
+        ssh_reachable=True,
+    )
+
+    mod._write_report(rec_dir, report)
+    mod._write_report(rec_dir, updated)
+
+    payload = json.loads((rec_dir / "recovery_metadata.json").read_text())
+    assert len(payload["attempts"]) == 1
+    assert payload["attempts"][0]["attempt_kind"] == "initial"
+    assert payload["attempts"][0]["ssh_reachable"] is True
+    assert payload["attempts"][0]["elapsed_seconds"] == 3.0
 
 
 def test_recover_artifacts_finds_and_scps_artifacts(mod, tmp_path):

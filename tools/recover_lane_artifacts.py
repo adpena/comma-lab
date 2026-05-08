@@ -34,8 +34,9 @@ USAGE (operator CLI):
     python tools/recover_lane_artifacts.py 12345 --no-recover --then-destroy
 
 DESIGN NOTES:
-* Idempotent — re-running just refreshes the recovery dir + metadata. The SCP
-  layer overwrites by mtime; the metadata file is rewritten each run.
+* Append-only metadata — re-running appends a new recovery attempt keyed by
+  started_at_utc. The SCP layer may refresh copied files by mtime, but closed
+  metadata attempts are never overwritten.
 * Best-effort by design — every SSH/SCP call has a tight per-call timeout, and
   a single failure does not abort the whole recovery (we report what we got).
 * Per-instance recovery dir: ``experiments/results/recovered_<instance>_<label>/``.
@@ -416,12 +417,231 @@ def recover_artifacts(
     return report
 
 
+RECOVERY_METADATA_SCHEMA_VERSION = "recovery_metadata.v2_attempts"
+
+
+def _attempt_log_path(rec_dir: Path, started_at_utc: str) -> Path:
+    safe_started = re.sub(r"[^A-Za-z0-9._-]+", "_", started_at_utc).strip("_")
+    return rec_dir / f"attempt_log_{safe_started or 'unknown'}.txt"
+
+
+def _write_attempt_log(rec_dir: Path, report: RecoveryReport) -> str:
+    """Write a stable per-attempt audit log and return its path."""
+    log_path = _attempt_log_path(rec_dir, report.started_at_utc)
+    log_path.write_text(report.summary() + "\n", encoding="utf-8")
+    return str(log_path)
+
+
+def _attempt_kind_for(
+    previous_attempt: dict | None,
+    new_attempt: dict,
+) -> str:
+    """Classify the attempt kind for the append-only schema.
+
+    The ``recover_artifacts`` flow writes the metadata file multiple times
+    within a single call (early-exit paths plus a final write). Each of those
+    intra-call writes is the SAME attempt, identified by ``started_at_utc``.
+    A new ``recover_artifacts`` invocation produces a NEW attempt with a
+    distinct ``started_at_utc`` and is appended.
+
+    Kind taxonomy:
+      * ``initial`` — first attempt against this recovery dir
+      * ``revisit`` — a later attempt that produced new substantive findings
+      * ``force-rerun`` — a later attempt with no new substantive findings
+        (operator-acknowledged churn; allowed only with explicit signal)
+    """
+    if previous_attempt is None:
+        return "initial"
+    return "revisit" if _summarize_attempt_delta(previous_attempt, new_attempt) else "force-rerun"
+
+
+def _attempt_payload(report: RecoveryReport, *, command_log_path: str | None) -> dict:
+    """Render a RecoveryReport as one attempt entry of the v2 schema."""
+    completed = datetime.now(timezone.utc).isoformat()
+    return {
+        "attempt_kind": "revisit",
+        "started_at_utc": report.started_at_utc,
+        "completed_at_utc": completed,
+        "elapsed_seconds": report.elapsed_seconds,
+        "ssh_reachable": report.ssh_reachable,
+        "archive_zip": report.archive_zip,
+        "artifacts": [asdict(a) for a in report.artifacts],
+        "renderer_bin": report.renderer_bin,
+        "masks_mkv": report.masks_mkv,
+        "poses_pt": report.poses_pt,
+        "skipped_patterns": list(report.skipped_patterns),
+        "notes": list(report.notes),
+        "command_log_path": command_log_path,
+        "substantive_change_from_prior_attempt": None,
+    }
+
+
+def _summarize_attempt_delta(previous: dict, current: dict) -> str | None:
+    """Return a concise description of substantive differences, if any."""
+    fields = (
+        "ssh_reachable",
+        "archive_zip",
+        "renderer_bin",
+        "masks_mkv",
+        "poses_pt",
+        "artifacts",
+        "skipped_patterns",
+        "notes",
+    )
+    changes: list[str] = []
+    for field in fields:
+        if previous.get(field) != current.get(field):
+            if field == "artifacts":
+                prev_artifacts = previous.get(field) if isinstance(previous.get(field), list) else []
+                cur_artifacts = current.get(field) if isinstance(current.get(field), list) else []
+                prev_bytes = sum(
+                    int(a.get("size_bytes", 0))
+                    for a in prev_artifacts
+                    if isinstance(a, dict)
+                )
+                cur_bytes = sum(
+                    int(a.get("size_bytes", 0))
+                    for a in cur_artifacts
+                    if isinstance(a, dict)
+                )
+                changes.append(
+                    f"artifacts {len(prev_artifacts)} files/{prev_bytes} bytes -> "
+                    f"{len(cur_artifacts)} files/{cur_bytes} bytes"
+                )
+            else:
+                changes.append(f"{field} changed")
+    if not changes:
+        return None
+    return "; ".join(changes[:8])
+
+
+class RecoveryMetadataAppendOnlyError(RuntimeError):
+    """Raised if the writer would overwrite a closed attempt's timestamps.
+
+    Closed attempts are anything in ``attempts[:-1]`` plus a last entry whose
+    ``started_at_utc`` differs from the in-progress report. This invariant
+    enforces "no in-place timestamp churn" — historical attempts must never
+    be mutated; fresh probes must produce a new appended entry.
+    """
+
+
 def _write_report(rec_dir: Path, report: RecoveryReport) -> None:
+    """Write recovery metadata under the append-only ``attempts[]`` schema.
+
+    The first write to a recovery dir produces a ``v2_attempts`` document
+    with ``attempts=[<initial>]``. Subsequent writes within the SAME
+    ``recover_artifacts`` invocation (identified by matching
+    ``started_at_utc``) REPLACE the last attempt entry — that captures
+    intra-call early-exit-then-final-write progression as a single attempt.
+    A NEW ``recover_artifacts`` invocation has a distinct ``started_at_utc``
+    and is APPENDED as a new attempt.
+
+    This refuses to mutate timestamps on any earlier attempt (i.e.,
+    ``attempts[:-1]``). Any such mutation raises
+    :class:`RecoveryMetadataAppendOnlyError`. This is the structural fix
+    for the codex 2026-05-08 "recovery-metadata-timestamp-churn" finding.
+    """
     rec_dir.mkdir(parents=True, exist_ok=True)
     meta_path = rec_dir / "recovery_metadata.json"
-    payload = asdict(report)
-    payload["completed_at_utc"] = datetime.now(timezone.utc).isoformat()
-    meta_path.write_text(json.dumps(payload, indent=2, sort_keys=True))
+    command_log_path = _write_attempt_log(rec_dir, report)
+    new_attempt = _attempt_payload(report, command_log_path=command_log_path)
+
+    # Read existing payload if present; tolerate either v2 or legacy v1.
+    existing: dict | None = None
+    if meta_path.exists():
+        try:
+            existing = json.loads(meta_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            existing = None
+
+    if existing is None:
+        # Fresh file: write v2 with attempts=[initial].
+        new_attempt["attempt_kind"] = "initial"
+        document = {
+            "schema_version": RECOVERY_METADATA_SCHEMA_VERSION,
+            "instance_id": report.instance_id,
+            "lane_label": report.lane_label,
+            "recovery_dir": report.recovery_dir,
+            "attempts": [new_attempt],
+        }
+        meta_path.write_text(json.dumps(document, indent=2, sort_keys=True))
+        return
+
+    # Existing payload — migrate legacy if needed, then append/replace.
+    if "attempts" not in existing:
+        # Legacy v1 single-record schema. Convert to v2 by wrapping.
+        legacy = dict(existing)
+        legacy_attempt = {
+            "attempt_kind": "initial",
+            "started_at_utc": legacy.get("started_at_utc", ""),
+            "completed_at_utc": legacy.get(
+                "completed_at_utc", legacy.get("started_at_utc", "")
+            ),
+            "elapsed_seconds": legacy.get("elapsed_seconds", 0.0),
+            "ssh_reachable": legacy.get("ssh_reachable", False),
+            "archive_zip": legacy.get("archive_zip"),
+            "artifacts": list(legacy.get("artifacts", [])),
+            "renderer_bin": legacy.get("renderer_bin"),
+            "masks_mkv": legacy.get("masks_mkv"),
+            "poses_pt": legacy.get("poses_pt"),
+            "skipped_patterns": list(legacy.get("skipped_patterns", [])),
+            "notes": list(legacy.get("notes", [])),
+            "command_log_path": None,
+            "substantive_change_from_prior_attempt": None,
+        }
+        existing = {
+            "schema_version": RECOVERY_METADATA_SCHEMA_VERSION,
+            "instance_id": legacy.get("instance_id", report.instance_id),
+            "lane_label": legacy.get("lane_label", report.lane_label),
+            "recovery_dir": legacy.get("recovery_dir", report.recovery_dir),
+            "attempts": [legacy_attempt],
+        }
+
+    attempts = existing.get("attempts", [])
+    if not isinstance(attempts, list) or not attempts:
+        # Defensive: empty attempts list — treat as fresh.
+        new_attempt["attempt_kind"] = "initial"
+        existing["attempts"] = [new_attempt]
+    else:
+        last = attempts[-1]
+        # Refuse to mutate any closed (non-last) attempt's timestamps. We
+        # only ever read here, but assert the invariant defensively so a
+        # future regression surfaces immediately.
+        for closed in attempts[:-1]:
+            if not isinstance(closed, dict):
+                continue
+            # Closed attempts are immutable — we never touch them. Sanity
+            # check: their started_at_utc must NOT match the current write.
+            if closed.get("started_at_utc") == report.started_at_utc:
+                raise RecoveryMetadataAppendOnlyError(
+                    f"refusing to mutate closed attempt with started_at_utc="
+                    f"{report.started_at_utc!r} at {meta_path}; closed "
+                    f"attempts must not be re-opened by a same-timestamp write"
+                )
+        if isinstance(last, dict) and last.get("started_at_utc") == report.started_at_utc:
+            # Same in-progress attempt — replace last entry. Preserve its
+            # original attempt_kind (don't downgrade an "initial" to
+            # "revisit" mid-call).
+            new_attempt["attempt_kind"] = last.get("attempt_kind", "initial")
+            new_attempt["substantive_change_from_prior_attempt"] = last.get(
+                "substantive_change_from_prior_attempt"
+            )
+            attempts[-1] = new_attempt
+        else:
+            # Distinct started_at_utc — append a new attempt.
+            previous = last if isinstance(last, dict) else None
+            delta = (
+                _summarize_attempt_delta(previous, new_attempt)
+                if previous is not None
+                else "previous attempt was not a valid object"
+            )
+            new_attempt["attempt_kind"] = _attempt_kind_for(previous, new_attempt)
+            new_attempt["substantive_change_from_prior_attempt"] = delta
+            existing["attempts"] = list(attempts) + [new_attempt]
+        # Always re-affirm schema_version + identity fields after a write.
+        existing["schema_version"] = RECOVERY_METADATA_SCHEMA_VERSION
+
+    meta_path.write_text(json.dumps(existing, indent=2, sort_keys=True))
 
 
 def recover_before_destroy(
