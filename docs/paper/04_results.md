@@ -248,7 +248,78 @@ Minimum columns for score-bearing rows: `row_id`, `grade`, `allowed_use`,
 `score_recomputed`, `inflate_runtime_manifest.runtime_tree_sha256`,
 `source_ledger`, source-attribution fields, and review status.
 
-## 4.8 Postmortem: Why The Gap Remained
+## 4.8 CUDA vs CPU evaluator divergence as a load-bearing artifact
+
+> 2026-05-08 finding. Until this date, every score in this section labeled
+> `[contest-CUDA]` was correctly tagged for its CUDA axis but was being
+> *interpreted* as if it were the leaderboard rank. The leaderboard ranks by
+> the `--device cpu` axis, not the `--device cuda` axis, and the two axes
+> differ by a near-constant 0.033 score points across the medal-band HNeRV
+> cluster.
+
+The contest's CI bot posts both `--device cuda` and `--device cpu` score
+comments on every PR. The leaderboard ordering uses the CPU score. We
+discovered this on 2026-05-08, four days after the submission deadline closed,
+when the codex worker session
+(`.omx/research/public_replay_drift_hypothesis_20260508_codex.md`) framed the
+PR102 third-prize 0.195 vs our T4 replay 0.22839 as a measurable structural
+fact rather than a measurement artifact.
+
+The five HNeRV-class archives with public paired comments (PR100, 101, 102,
+103, 105) yield:
+
+| PR | Author | seg<sub>cuda</sub> | seg<sub>cpu</sub> | R<sub>seg</sub> | pose<sub>cuda</sub> | pose<sub>cpu</sub> | R<sub>pose</sub> | score<sub>cuda</sub> | score<sub>cpu</sub> | Δscore |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| #100 | BradyMeighan | 6.84e-4 | 5.86e-4 | 1.167 | 1.74e-4 | 3.50e-5 | 4.97 | 0.22839 | 0.19538 | 0.0330 |
+| #101 | SajayR | 6.79e-4 | 5.81e-4 | 1.169 | 1.71e-4 | 3.42e-5 | 5.00 | 0.22624 | 0.19326 | 0.0330 |
+| #102 | EthanYangTW | 6.76e-4 | 5.78e-4 | 1.169 | 1.73e-4 | 3.45e-5 | 5.01 | 0.22839 | 0.19538 | 0.0330 |
+| #103 | rem2 | 6.81e-4 | 5.83e-4 | 1.168 | 1.75e-4 | 3.36e-5 | 5.21 | 0.22773 | 0.19473 | 0.0330 |
+| #105 | valtterivalo | 6.91e-4 | 5.91e-4 | 1.169 | 1.72e-4 | 3.38e-5 | 5.09 | 0.23114 | 0.19814 | 0.0330 |
+| **mean** | | | | **1.17** | | | **5.04** | | | **0.0330** |
+| **σ** | | | | **0.01** | | | **0.10** | | | **0.0004** |
+
+`R_pose = pose_cuda / pose_cpu = 5.04 ± 0.10` and `R_seg = seg_cuda / seg_cpu
+= 1.17 ± 0.01` are remarkably tight across five independently-engineered
+archives. Score-points decomposition of the 0.033 gap: 70% from pose, 30%
+from seg, 0% from rate (rate term `25·B/N` is bit-identical between CPU
+and CUDA, same archive bytes).
+
+The full empirical computation, mechanism analysis, and strategic-exploitation
+prescriptions are in `docs/findings/cuda_cpu_auth_eval_split_20260508.md` and
+`docs/writeup/cuda_cpu_drift_methodology.md`. The mechanism hypothesis is a
+three-axis additive drift: (a) decoder split (`DaliVideoDataset` for CUDA vs
+`AVVideoDataset` for CPU produces different RGB uint8 bytes from the same
+`.mkv`), (b) FastViT-T12 conv-stack FP32 noise floor with `σ²_cuda ≈ K·L·ε²`,
+and (c) the Hydra-head MLP. The original "FastViT attention TF32-compounding"
+hypothesis was falsified on three independent grounds (RepMixer not attention,
+T4 has no TF32 hardware, PyTorch default `allow_tf32=False`).
+
+The pose 5× / seg 1.17× asymmetry is intrinsic to the score-aggregation shape:
+PoseNet's terminal head is regression (MSE-sensitive to noise quadratically),
+SegNet's is argmax classification (piecewise-constant in logits unless a
+class boundary is crossed). LSQ / quantization-error literature confirms the
+5–10× ratio between regression and classification precision sensitivity.
+
+Operational consequence: every shippable archive from this commit forward
+gets dual-eval — authoritative `[contest-CUDA]` and `[contest-CPU]` axes on
+Linux x86_64 hardware that is 1:1 contest-compliant with the GitHub Actions CI
+runner. Apple Silicon CPU eval is `[macOS-CPU advisory only]`; the FP32
+intrinsics differ from x86_64 in ways that affect SegNet/PoseNet output bytes.
+
+Predicted CPU scores for our existing CUDA-only artifacts (using the empirical
+ratios; pending Modal CPU replay):
+
+| Archive | CUDA score | Predicted CPU score |
+|---|---:|---:|
+| Our PR #107 apogee | 0.22936 | ~0.196 |
+| PR103-on-PR106 AC repack | 0.20898 | ~0.176 |
+| PR102 hardened replay | 0.22839 | 0.19538 (verified) |
+| PR104 hardened replay | 0.23114 | ~0.198 |
+
+PR #107's true leaderboard rank may have been silver/bronze band; we will
+never know for sure without a post-deadline Modal CPU replay.
+
+## 4.9 Postmortem: Why The Gap Remained
 
 The uncomfortable but useful lesson is that we were not mainly short on
 concepts. We independently researched or requested most of the winning

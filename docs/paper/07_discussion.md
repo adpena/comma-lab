@@ -139,7 +139,50 @@ The corresponding repository rule is now explicit: when the work calls for paral
 
 The full postmortem with concrete LOC counts per medalist and the pre-staged primitives we had unused is in `feedback_may_4_hnerv_race_postmortem_20260505.md`.
 
-## 7.9 Conclusion
+## 7.9 Dual-axis evaluators and the CPU/CUDA leaderboard discovery
+
+A second instance of the planner-without-actuator failure mode landed
+post-deadline as a measurement-axis blind spot. On 2026-05-08, four days
+after the contest deadline closed, we discovered that the contest leaderboard
+ranks by `--device cpu` eval, not `--device cuda` — and that the two axes
+differ by a near-constant 0.033 score points across the medal-band HNeRV
+cluster. Our PR #107 `apogee` archive was scored only on CUDA at 0.22936
+and never got a CPU score; its true leaderboard rank was likely silver/bronze
+band, not 11th place.
+
+The empirical content of the discovery is in §4.8. The methodological lesson
+for human-AI research collaboration is that **a measurement axis can be
+load-bearing in a way that the agent has no priors about, and the agent
+will not surface it without operator prompting.** Both human-Yousfi reading
+of the contest README and agent reading produced "the leaderboard is the
+score formula on the test video"; neither produced "the leaderboard is the
+score formula on the test video, run on the CPU axis specifically."
+The dual-axis disclosure was implicit in the bot's comment format
+(two score lines per PR comment, one per device flag), but no agent or
+human in our pipeline ever distinguished them as different score
+axes — they were both just "the score."
+
+The dispatchable consequence is the 1:1 contest-compliant dual-eval rule.
+Every shippable archive from this commit forward gets *both* `[contest-CUDA]`
+and `[contest-CPU]` axes on Linux x86_64 hardware. The Lane Maturity registry
+tracks both axes; a lane reaching Level 2/3 with a `[contest-CUDA]` anchor
+but no `[contest-CPU]` anchor on Linux x86_64 is incomplete for medal-band
+ranking purposes. Apple Silicon CPU eval is `[macOS-CPU advisory only]` —
+the FP32 ARM intrinsics differ from x86_64 in ways that affect SegNet/PoseNet
+output bytes, even with `torch.cuda.is_available() == False`.
+
+The deeper methodological lesson is structural: the OSS preflight pipeline
+should have caught the dual-axis blind spot earlier. A check that scans
+`upstream/evaluate.py` for the `--device` flag and asserts every score row
+in the repository is tagged with the matching axis would have flagged the
+gap. We have now landed Check D (`check_scores_have_lane_tag`) and Check B7
+(`check_scores_have_lane_tag_paper_research`) which enforce
+`[contest-CUDA]` / `[contest-CPU]` / `[macOS-CPU advisory only]` /
+`[MPS-PROXY]` / `[advisory only]` distinctness across code, paper, and
+research memos. The bug-class fingerprint is captured; the bug class
+itself can no longer ship without an explicit override.
+
+## 7.10 Conclusion
 
 We presented a system for the comma.ai video compression challenge built around an asymmetric warp renderer, constrained scorer-aware training, and test-time optimization with coupled trajectory loss. The trustworthy promoted floor remains the contest-compliant archive; lower proxy and TTO lanes are useful research evidence only when their archive, inflate path, and authoritative evaluation are reproduced. The single largest methodological improvement came from finding and fixing a gradient obstruction in the upstream scorer code --- a bug that made every prior TTO experiment invalid.
 

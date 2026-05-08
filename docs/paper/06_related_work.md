@@ -75,3 +75,43 @@ The YF-floor inequality `R_YF(D) ≤ R_Sh(D)` is strict whenever the scorer's pr
 The empirical leaderboard floor at the time of submission is approximately 0.31 (top three contestants in a tight band), against a realistic Shannon floor of ~0.155 derived from explicit per-component R(D) analysis. The YF floor lies strictly below 0.155. The gap between 0.31 and the YF floor reflects practical engineering and contest-deadline dynamics (Section 7.7) rather than a fundamental information limit.
 
 The full derivation and bracket appear in the methodology addendum companion document. We claim no priority over the underlying steganalysis ideas, only on the explicit naming and contest-application of the floor concept and on the empirical observation that the contest's leaderboard band is wide above the YF floor. The scorer-Jacobian Karhunen-Loève (SJ-KL) basis primitive (the eigendecomposition of `F = 100·JᵀJ + 10·KᵀK`) is the natural residual-coding primitive that approaches the YF floor in practice.
+
+## 6.8 Dual-axis evaluators and the CPU/CUDA distinction
+
+A subtle methodological feature of this contest is that `upstream/evaluate.py`
+produces *two* distinct authoritative score axes for the same archive bytes —
+`--device cuda` and `--device cpu` — and the public leaderboard ranks by the
+**CPU** axis, not CUDA. Most of the perceptual-codec literature treats device
+choice as a runtime/throughput consideration rather than a scoring axis, but
+in this contest the two axes are structurally different: `evaluate.py`
+selects different decoder backends (`DaliVideoDataset` for CUDA, hardware
+NVDEC; `AVVideoDataset` for CPU, libavcodec software decode), and the
+SegNet/PoseNet kernels run with different FP32 reduction-tree shapes between
+the two device backends.
+
+We measured the gap empirically across the medal-band HNeRV cluster
+(PR100/101/102/103/105) from public CI bot comments and found
+`R_pose = pose_cuda / pose_cpu = 5.04 ± 0.10` and
+`R_seg = seg_cuda / seg_cpu = 1.17 ± 0.01` — a near-constant 0.033
+score-points gap, of which 70% sits in pose and 30% in seg. The asymmetry is
+intrinsic to the score-aggregation shape: pose is regression
+(MSE-quadratic in noise), seg is argmax classification (piecewise-constant
+in logits). Section 4.8 covers the empirical computation; the OSS
+documentation `docs/findings/cuda_cpu_auth_eval_split_20260508.md` covers
+the mechanism analysis and the strategic-exploitation prescriptions
+(floor-aware pose-Huber loss, leaderboard-aware Lagrangian via
+`tac.score_geometry target_axis="cpu_leaderboard"`, calibrated
+training-time noise injection at σ ≈ 1.7e-3).
+
+The closest related work is the literature on FP32 reproducibility across
+matmul backends (Hutter et al., NVIDIA reproducibility whitepaper),
+non-determinism in deep-learning evaluation pipelines (Pham et al. on
+training-stability variance), and the steganalysis literature on
+detector-versus-detector consistency under input perturbations (Yousfi
+et al.'s detector-detector calibration work). The novel observation here
+is not that FP32 backends differ — that's well-known — but that **a
+contest leaderboard's structural choice of CPU as the ranking axis,
+combined with a regression head whose noise floor sits at the CPU axis's
+precision boundary, produces a 5× pose ratio** that competitors who
+optimize against the CUDA score will systematically over-spend bit-budget
+on driving pose<sub>cuda</sub> below the CPU floor.
