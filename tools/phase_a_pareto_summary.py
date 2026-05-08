@@ -268,7 +268,9 @@ def render_markdown(entries: list[PhaseAEntry]) -> str:
         "pose-distribution only, not a PR101 monolithic archive rewrite.",
         "- A5 (frame-conditional bit budget): byte-anchor landed; needs per-pair "
         "score marginals + inflate side-info path before dispatch.",
-        "- A6 (Selfcomp block-FP × hyperprior compose): not started",
+        "- A6 (Selfcomp block-FP × hyperprior compose): subagent in flight; "
+        "anchor will land here when build_manifest.json appears under a "
+        "matching `experiments/results/*selfcomp*hyperprior*` path.",
         "",
     ])
     return "\n".join(lines) + "\n"
