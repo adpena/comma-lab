@@ -190,8 +190,15 @@ def operating_regime(
     d_pose: float,
     *,
     reference_bytes: int = CONTEST_REFERENCE_BYTES,
+    tie_rtol: float = 1e-9,
 ) -> OperatingRegime:
-    """Classify a candidate against the SegNet/PoseNet importance flip."""
+    """Classify a candidate against the SegNet/PoseNet importance flip.
+
+    Three branches: pose-dominated (d_pose < threshold), tied (within
+    ``tie_rtol`` of threshold), and seg-dominated (d_pose > threshold). Both
+    the boolean dominance flags and the advice text use the same comparison
+    semantics so the tie case is explicit, not silently routed to one axis.
+    """
     threshold = importance_flip_threshold()
     if d_pose <= 0.0:
         return OperatingRegime(
@@ -206,7 +213,15 @@ def operating_regime(
     grad = score_gradient(0.0, d_pose, reference_bytes=reference_bytes)
     seg_over_pose = grad.seg_over_pose_marginal
     distance = math.log10(d_pose / threshold)
-    if d_pose < threshold:
+    is_tied = math.isclose(d_pose, threshold, rel_tol=tie_rtol)
+    if is_tied:
+        advice = (
+            f"TIED regime (d_pose {d_pose:.2e} ≈ flip threshold {threshold:.2e} "
+            f"within rtol={tie_rtol:.0e}); seg and pose marginals are equal — "
+            "consider parallel attack on BOTH axes; dispatch should not route "
+            "to a single axis at this operating point"
+        )
+    elif d_pose < threshold:
         advice = (
             f"pose-dominated regime (d_pose {d_pose:.2e} < {threshold:.2e}); "
             f"prioritize pose-targeted lanes — they have {1.0/seg_over_pose:.2f}x the "
@@ -214,15 +229,19 @@ def operating_regime(
         )
     else:
         advice = (
-            f"seg-dominated regime (d_pose {d_pose:.2e} >= {threshold:.2e}); "
+            f"seg-dominated regime (d_pose {d_pose:.2e} > {threshold:.2e}); "
             f"prioritize seg-targeted lanes — they have {seg_over_pose:.2f}x the "
             "marginal score-per-byte vs pose lanes here"
         )
+    # Strict comparison so seg_dominates AND pose_dominates are BOTH False at
+    # the tie. Tied state is the (False, False) configuration; the advice
+    # text and consumers should branch on `seg_dominates == pose_dominates`
+    # to detect ties.
     return OperatingRegime(
         d_pose=d_pose,
         flip_threshold=threshold,
-        seg_dominates=d_pose > threshold,
-        pose_dominates=d_pose < threshold,
+        seg_dominates=(not is_tied) and d_pose > threshold,
+        pose_dominates=(not is_tied) and d_pose < threshold,
         crossover_distance_log10=distance,
         marginal_ratio_seg_over_pose=seg_over_pose,
         advice=advice,
@@ -445,6 +464,13 @@ class DualAxisDispatchRecommendation:
     Cross-ref: ``.omx/research/grand_council_extreme_rigor_track_1_20260508.md``
     Decision 2 (score-gradient) attacks seg+pose; Decision 3 (sensitivity-quant)
     attacks bytes; Decision 1 (co-trained Ballé) attacks bytes via co-design.
+
+    Tie detection: when two or more axes have marginal values that are equal
+    within ``tie_rtol``, ``cuda_tied_axes`` / ``cpu_tied_axes`` lists every
+    axis at the maximum. The single ``cuda_priority_axis`` /
+    ``cpu_priority_axis`` is the deterministic tiebreak (seg-first, then pose,
+    then bytes — kept stable for backward compat); operators should branch on
+    ``len(tied_axes) > 1`` to surface a parallel-attack recommendation.
     """
 
     cuda_d_seg: float
@@ -466,6 +492,9 @@ class DualAxisDispatchRecommendation:
     cpu_score_gap_to_target: float | None
     decision_attack_map: dict[str, list[str]]
     advice: str
+    cuda_tied_axes: tuple[str, ...] = ()
+    cpu_tied_axes: tuple[str, ...] = ()
+    tie_rtol: float = 1e-9
 
     @property
     def evidence_grade(self) -> str:
@@ -519,28 +548,48 @@ def recommend_dispatch_axis_dual(
         archive_class=archive_class,
         reference_bytes=reference_bytes,
     )
+    tie_rtol = 1e-9
 
-    def _priority(seg_marg: float, pose_marg: float, bytes_marg: float) -> Literal["seg", "pose", "bytes"]:
+    def _priority_with_ties(
+        seg_marg: float, pose_marg: float, bytes_marg: float,
+    ) -> tuple[Literal["seg", "pose", "bytes"], tuple[str, ...]]:
         # Priority is the axis with the highest marginal score-improvement
         # per unit reduction. d_bytes is in score/byte; d_seg and d_pose are
         # in score/distortion-unit. We compare them by normalizing to a
         # common "score-points if axis is fully zeroed" scale.
+        # Returns (deterministic_winner, tied_axes_at_max).
         if not math.isfinite(pose_marg):
-            return "pose"
-        candidates: list[tuple[float, Literal["seg", "pose", "bytes"]]] = [
+            return "pose", ("pose",)
+        scaled_bytes = bytes_marg * float(archive_bytes)
+        scores: list[tuple[float, Literal["seg", "pose", "bytes"]]] = [
             (seg_marg, "seg"),
             (pose_marg, "pose"),
-            (bytes_marg * float(archive_bytes), "bytes"),
+            (scaled_bytes, "bytes"),
         ]
-        return max(candidates, key=lambda x: x[0])[1]
+        winner_score = max(s for s, _ in scores)
+        tied = tuple(
+            name for s, name in scores
+            if math.isclose(s, winner_score, rel_tol=tie_rtol, abs_tol=tie_rtol)
+        )
+        # Deterministic tiebreak preserves the legacy seg-first ordering used
+        # by older callers; new callers should branch on len(tied) > 1.
+        winner: Literal["seg", "pose", "bytes"] = tied[0]  # type: ignore[assignment]
+        return winner, tied
 
-    cuda_priority = _priority(cuda_grad.d_seg, cuda_grad.d_pose, cuda_grad.d_bytes)
-    cpu_priority = _priority(
+    cuda_priority, cuda_tied = _priority_with_ties(
+        cuda_grad.d_seg, cuda_grad.d_pose, cuda_grad.d_bytes,
+    )
+    cpu_priority, cpu_tied = _priority_with_ties(
         float(cpu_view["seg_marginal"]),
         float(cpu_view["pose_marginal"]),
         float(cpu_view["bytes_marginal"]),
     )
-    differs = cuda_priority != cpu_priority
+    # Two priorities differ either when their deterministic winner differs OR
+    # when one is at a tie and the other is not (parallel-attack vs single-axis).
+    differs = (
+        cuda_priority != cpu_priority
+        or len(cuda_tied) != len(cpu_tied)
+    )
 
     cpu_score_at_op = contest_score(
         float(cpu_view["cpu_d_seg"]),
@@ -565,7 +614,14 @@ def recommend_dispatch_axis_dual(
         ],
     }
 
-    if differs:
+    if len(cuda_tied) > 1 or len(cpu_tied) > 1:
+        advice = (
+            f"AXIS TIE DETECTED at flip threshold: cuda_tied={cuda_tied!r}, "
+            f"cpu_tied={cpu_tied!r}. Marginals are equal within rtol={tie_rtol:.0e}; "
+            "dispatch should attack ALL tied axes in parallel rather than route "
+            "to a single deterministic-tiebreak winner."
+        )
+    elif differs:
         advice = (
             f"AXIS-PRIORITY DIVERGENCE: CUDA priority is {cuda_priority!r} but "
             f"CPU priority is {cpu_priority!r}. Per leaderboard ranking on the "
@@ -604,6 +660,9 @@ def recommend_dispatch_axis_dual(
         cpu_score_gap_to_target=cpu_gap,
         decision_attack_map=decision_attack_map,
         advice=advice,
+        cuda_tied_axes=cuda_tied,
+        cpu_tied_axes=cpu_tied,
+        tie_rtol=tie_rtol,
     )
 
 

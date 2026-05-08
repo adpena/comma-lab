@@ -338,3 +338,69 @@ def test_dual_axis_negative_inputs_raise() -> None:
         recommend_dispatch_axis_dual(
             cuda_d_seg=1e-4, cuda_d_pose=1e-4, archive_bytes=-1,
         )
+
+
+# ---------------------------------------------------------------------------
+# Tie handling at the importance flip threshold (codex review fix 2026-05-08)
+# ---------------------------------------------------------------------------
+
+
+def test_operating_regime_at_exact_flip_threshold_is_tied() -> None:
+    """At d_pose == 2.5e-4 exactly, neither axis dominates."""
+    threshold = importance_flip_threshold()
+    regime = operating_regime(threshold)
+    # Both False at the tie
+    assert regime.seg_dominates is False
+    assert regime.pose_dominates is False
+    # Advice text says TIED, not "seg-dominated"
+    assert "TIED" in regime.advice
+    assert "parallel" in regime.advice.lower()
+
+
+def test_operating_regime_strictly_above_threshold_seg_dominates() -> None:
+    threshold = importance_flip_threshold()
+    regime = operating_regime(threshold * 1.5)
+    assert regime.seg_dominates is True
+    assert regime.pose_dominates is False
+    assert "seg-dominated" in regime.advice
+
+
+def test_operating_regime_strictly_below_threshold_pose_dominates() -> None:
+    threshold = importance_flip_threshold()
+    regime = operating_regime(threshold * 0.5)
+    assert regime.seg_dominates is False
+    assert regime.pose_dominates is True
+    assert "pose-dominated" in regime.advice
+
+
+def test_dual_axis_at_exact_flip_threshold_detects_seg_pose_tie() -> None:
+    """At d_pose == flip threshold, seg and pose marginals are equal (both 100)."""
+    threshold = importance_flip_threshold()
+    rec = recommend_dispatch_axis_dual(
+        cuda_d_seg=1e-4, cuda_d_pose=threshold, archive_bytes=178392,
+    )
+    # Both axes should be in the tied set on CUDA side
+    assert "seg" in rec.cuda_tied_axes
+    assert "pose" in rec.cuda_tied_axes
+    # Advice surfaces the tie, not silently routes to one axis
+    assert "TIE DETECTED" in rec.advice
+    assert "parallel" in rec.advice.lower()
+
+
+def test_dual_axis_no_tie_when_sufficiently_off_threshold() -> None:
+    """At pose well below threshold, only pose is in cuda_tied_axes (single-element tuple)."""
+    rec = recommend_dispatch_axis_dual(
+        cuda_d_seg=6.88e-4, cuda_d_pose=1.74e-4, archive_bytes=178392,
+    )
+    # Pose dominates at this PR107-frontier operating point
+    assert rec.cuda_priority_axis == "pose"
+    # Single-element tied tuple (the deterministic winner alone)
+    assert rec.cuda_tied_axes == ("pose",)
+    assert "TIE DETECTED" not in rec.advice
+
+
+def test_dual_axis_tie_rtol_is_documented() -> None:
+    rec = recommend_dispatch_axis_dual(
+        cuda_d_seg=1e-4, cuda_d_pose=1e-4, archive_bytes=178392,
+    )
+    assert rec.tie_rtol == 1e-9
