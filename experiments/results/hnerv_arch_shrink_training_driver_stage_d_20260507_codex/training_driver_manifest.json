@@ -1,0 +1,84 @@
+{
+  "dispatch_blockers": [
+    "generated_checkpoint_has_no_trained_distortion_evidence",
+    "generated_schema_runtime_loader_not_integrated_into_submission_packet",
+    "target_codec_export_for_generated_schema_not_implemented",
+    "local_inflate_output_parity_missing",
+    "strict_pre_submission_compliance_missing",
+    "lane_dispatch_claim_missing",
+    "exact_cuda_auth_eval_missing"
+  ],
+  "evidence_grade": "empirical-generated-checkpoint-no-score",
+  "evidence_semantics": "generated_schema_and_overlap_initialized_checkpoint_only_no_runtime_packet_no_cuda_eval",
+  "inputs": {
+    "source_state_dict_path": "experiments/results/cma_pr101_real_substrate_20260507T222605Z/pr101_decoder_state_dict.pt",
+    "source_state_dict_sha256": "b863362aaba1b9cae9b944f5e5b1a43a53ca824b7899ed7b80a2e2146d66f053",
+    "targets_json": null,
+    "targets_json_sha256": null
+  },
+  "operator_next_commands": [
+    ".venv/bin/python tools/run_deltaepszeta_training.py --state-dict experiments/results/hnerv_arch_shrink_training_driver_stage_d_20260507_codex/initial_state_dict.pt --n-epochs 1 --steps-per-epoch 2 --log-dir experiments/results/hnerv_arch_shrink_training_driver_stage_d_20260507_codex/deltaepszeta_cpu_sanity --run-label stage_d_zeta_width_precision_int4",
+    ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id hnerv_arch_shrink_generated_schema_gpu --status planned --notes 'blocked until runtime export packet and local inflate parity exist'"
+  ],
+  "outputs": {
+    "generated_schema_path": "experiments/results/hnerv_arch_shrink_training_driver_stage_d_20260507_codex/generated_schema.json",
+    "generated_schema_sha256": "c285ec586c3567b3e0fc035f81d7e5674826ef348bd00fe9093bdb456665ce81",
+    "initial_state_dict_bytes": 396165,
+    "initial_state_dict_path": "experiments/results/hnerv_arch_shrink_training_driver_stage_d_20260507_codex/initial_state_dict.pt",
+    "initial_state_dict_sha256": "631c0165811021a4fbd0b047eaf4971c9da7768d3fa1bd92866c4c047de53bbd",
+    "output_dir": "experiments/results/hnerv_arch_shrink_training_driver_stage_d_20260507_codex",
+    "training_driver_manifest_path": "experiments/results/hnerv_arch_shrink_training_driver_stage_d_20260507_codex/training_driver_manifest.json",
+    "training_driver_manifest_sha256": "b1e2699122766410f20471cd5280cc1d64369ac4d43fe7430c4a140b20a21680"
+  },
+  "overlap_initialization": {
+    "deterministic": true,
+    "missing_source_tensors": [],
+    "policy": "copy_prefix_slices_zero_fill_missing_or_new_channels"
+  },
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "scenario_name": "stage_d_zeta_width_precision_int4",
+  "schema": "hnerv_arch_shrink_training_driver.v1",
+  "score_claim": false,
+  "source_schema": {
+    "fingerprint": "6f5ffe2644db66dfffce1293d1d30cb63edf38acd66e4e3f6284020a2c8f3cba",
+    "n_state_elements": 228958,
+    "n_tensors": 28
+  },
+  "started_at_utc": "2026-05-08T00:57:05Z",
+  "target_config": {
+    "base_channels": 22,
+    "base_grid": [
+      6,
+      8
+    ],
+    "channel_multipliers": [
+      1.0,
+      1.0,
+      1.0,
+      0.75,
+      0.58,
+      0.5,
+      0.5
+    ],
+    "channels": [
+      22,
+      22,
+      22,
+      16,
+      12,
+      11,
+      11
+    ],
+    "eval_size": [
+      384,
+      512
+    ],
+    "latent_dim": 28,
+    "n_state_elements": 96861,
+    "n_state_tensors": 28,
+    "schema_fingerprint": "4c67e69d5cc4a2324e8429465deaccf13dc4077e490335d1b3756680d76ba220"
+  },
+  "tool": "tools/build_hnerv_arch_shrink_driver.py"
+}

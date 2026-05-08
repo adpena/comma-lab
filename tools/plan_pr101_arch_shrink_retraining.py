@@ -29,6 +29,12 @@ import torch
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
+from tac.hnerv_arch_schema import (  # noqa: E402
+    generate_hnerv_state_schema,
+    schema_fingerprint,
+    schema_numel,
+    select_base_channels_for_element_retention,
+)
 from tac.pr101_split_brotli_codec import (  # noqa: E402
     BASE_CHANNELS,
     EVAL_SIZE,
@@ -276,6 +282,13 @@ def _estimate_scenario(
     reference_archive_bytes: int,
 ) -> dict[str, Any]:
     scenario.validate()
+    target_config = select_base_channels_for_element_retention(
+        element_retention=scenario.element_retention,
+        latent_dim=LATENT_DIM,
+        baseline_base_channels=BASE_CHANNELS,
+        eval_size=EVAL_SIZE,
+    )
+    target_schema = generate_hnerv_state_schema(target_config)
     base_h0_bps = iid_per_tensor_bits / max(1, n_total_symbols)
     post_arch_symbols = math.ceil(n_total_symbols * scenario.element_retention)
     active_symbols = math.ceil(post_arch_symbols * (1.0 - scenario.sparsity))
@@ -320,6 +333,10 @@ def _estimate_scenario(
             "entropy_ratio_to_current_h0": scenario.entropy_ratio,
             "predicted_h0_bits_per_active_symbol": predicted_h0_bps,
             "sparse_mask_mode": scenario.sparse_mask_mode,
+            "generated_hnerv_base_channels": target_config.base_channels,
+            "generated_hnerv_channels": list(target_config.channels),
+            "generated_schema_numel": schema_numel(target_schema),
+            "generated_schema_fingerprint": schema_fingerprint(target_schema),
         },
         "byte_estimate": {
             "predicted_floor_payload_bytes": predicted_floor_payload,
@@ -332,13 +349,22 @@ def _estimate_scenario(
             "delta_archive_bytes_vs_reference": delta_bytes,
             "rate_score_delta_vs_reference": _rate_score_delta(delta_bytes),
         },
-        "training_driver_manifest_fields": _driver_manifest_fields(scenario),
+        "training_driver_manifest_fields": _driver_manifest_fields(
+            scenario,
+            generated_base_channels=target_config.base_channels,
+            generated_schema_fingerprint=schema_fingerprint(target_schema),
+        ),
         "dispatch_blockers": blocker_basis,
         "notes": scenario.notes,
     }
 
 
-def _driver_manifest_fields(scenario: Scenario) -> dict[str, Any]:
+def _driver_manifest_fields(
+    scenario: Scenario,
+    *,
+    generated_base_channels: int,
+    generated_schema_fingerprint: str,
+) -> dict[str, Any]:
     return {
         "schema": "pr101_arch_shrink_retraining_run.v1",
         "score_claim": False,
@@ -353,6 +379,8 @@ def _driver_manifest_fields(scenario: Scenario) -> dict[str, Any]:
         },
         "architecture_target": {
             "element_retention": scenario.element_retention,
+            "generated_base_channels": generated_base_channels,
+            "generated_schema_fingerprint": generated_schema_fingerprint,
             "structured_sparsity": scenario.sparsity,
             "quant_bits": scenario.quant_bits,
             "entropy_ratio_target": scenario.entropy_ratio,
@@ -532,11 +560,16 @@ def operator_next_commands() -> list[str]:
         "--state-dict-path experiments/results/cma_pr101_real_substrate_20260507T222605Z/pr101_decoder_state_dict.pt "
         "--entropy-floor-report reports/pr101_provable_optimal_floor.json "
         "--output-dir experiments/results/pr101_arch_shrink_retraining_plan_20260507_worker_b",
+        ".venv/bin/python tools/build_hnerv_arch_shrink_driver.py "
+        "--source-state-dict experiments/results/cma_pr101_real_substrate_20260507T222605Z/pr101_decoder_state_dict.pt "
+        "--element-retention 0.45 "
+        "--scenario-name stage_d_zeta_width_precision_int4 "
+        "--output-dir experiments/results/hnerv_arch_shrink_training_driver_stage_d_20260507_codex",
         ".venv/bin/python tools/run_deltaepszeta_training.py "
-        "--state-dict experiments/results/cma_pr101_real_substrate_20260507T222605Z/pr101_decoder_state_dict.pt "
+        "--state-dict experiments/results/hnerv_arch_shrink_training_driver_stage_d_20260507_codex/initial_state_dict.pt "
         "--n-epochs 1 --steps-per-epoch 2 "
-        "--log-dir experiments/results/pr101_arch_shrink_retraining_plan_20260507_worker_b/deltaepszeta_cpu_sanity "
-        "--run-label pr101_rate_proxy_sanity",
+        "--log-dir experiments/results/hnerv_arch_shrink_training_driver_stage_d_20260507_codex/deltaepszeta_cpu_sanity "
+        "--run-label stage_d_generated_schema_sanity",
         ".venv/bin/python tools/claim_lane_dispatch.py claim "
         "--lane-id pr101_arch_shrink_deltaepszeta_gpu --status planned "
         "--notes 'blocked until generated HNeRV schema/runtime and CPU roundtrip land'",

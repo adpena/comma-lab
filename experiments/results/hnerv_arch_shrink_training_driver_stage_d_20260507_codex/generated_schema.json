@@ -1,0 +1,251 @@
+{
+  "n_state_elements": 96861,
+  "scenario_name": "stage_d_zeta_width_precision_int4",
+  "schema": "hnerv_generated_state_schema.v1",
+  "schema_fingerprint": "4c67e69d5cc4a2324e8429465deaccf13dc4077e490335d1b3756680d76ba220",
+  "started_at_utc": "2026-05-08T00:57:05Z",
+  "state_schema": [
+    {
+      "name": "stem.weight",
+      "shape": [
+        1056,
+        28
+      ]
+    },
+    {
+      "name": "stem.bias",
+      "shape": [
+        1056
+      ]
+    },
+    {
+      "name": "blocks.0.weight",
+      "shape": [
+        88,
+        22,
+        3,
+        3
+      ]
+    },
+    {
+      "name": "blocks.0.bias",
+      "shape": [
+        88
+      ]
+    },
+    {
+      "name": "blocks.1.weight",
+      "shape": [
+        88,
+        22,
+        3,
+        3
+      ]
+    },
+    {
+      "name": "blocks.1.bias",
+      "shape": [
+        88
+      ]
+    },
+    {
+      "name": "blocks.2.weight",
+      "shape": [
+        64,
+        22,
+        3,
+        3
+      ]
+    },
+    {
+      "name": "blocks.2.bias",
+      "shape": [
+        64
+      ]
+    },
+    {
+      "name": "blocks.3.weight",
+      "shape": [
+        48,
+        16,
+        3,
+        3
+      ]
+    },
+    {
+      "name": "blocks.3.bias",
+      "shape": [
+        48
+      ]
+    },
+    {
+      "name": "blocks.4.weight",
+      "shape": [
+        44,
+        12,
+        3,
+        3
+      ]
+    },
+    {
+      "name": "blocks.4.bias",
+      "shape": [
+        44
+      ]
+    },
+    {
+      "name": "blocks.5.weight",
+      "shape": [
+        44,
+        11,
+        3,
+        3
+      ]
+    },
+    {
+      "name": "blocks.5.bias",
+      "shape": [
+        44
+      ]
+    },
+    {
+      "name": "skips.2.weight",
+      "shape": [
+        16,
+        22,
+        1,
+        1
+      ]
+    },
+    {
+      "name": "skips.2.bias",
+      "shape": [
+        16
+      ]
+    },
+    {
+      "name": "skips.3.weight",
+      "shape": [
+        12,
+        16,
+        1,
+        1
+      ]
+    },
+    {
+      "name": "skips.3.bias",
+      "shape": [
+        12
+      ]
+    },
+    {
+      "name": "skips.4.weight",
+      "shape": [
+        11,
+        12,
+        1,
+        1
+      ]
+    },
+    {
+      "name": "skips.4.bias",
+      "shape": [
+        11
+      ]
+    },
+    {
+      "name": "refine.0.weight",
+      "shape": [
+        5,
+        11,
+        3,
+        3
+      ]
+    },
+    {
+      "name": "refine.0.bias",
+      "shape": [
+        5
+      ]
+    },
+    {
+      "name": "refine.1.weight",
+      "shape": [
+        11,
+        5,
+        3,
+        3
+      ]
+    },
+    {
+      "name": "refine.1.bias",
+      "shape": [
+        11
+      ]
+    },
+    {
+      "name": "rgb_0.weight",
+      "shape": [
+        3,
+        11,
+        3,
+        3
+      ]
+    },
+    {
+      "name": "rgb_0.bias",
+      "shape": [
+        3
+      ]
+    },
+    {
+      "name": "rgb_1.weight",
+      "shape": [
+        3,
+        11,
+        3,
+        3
+      ]
+    },
+    {
+      "name": "rgb_1.bias",
+      "shape": [
+        3
+      ]
+    }
+  ],
+  "target_config": {
+    "base_channels": 22,
+    "base_grid": [
+      6,
+      8
+    ],
+    "channel_multipliers": [
+      1.0,
+      1.0,
+      1.0,
+      0.75,
+      0.58,
+      0.5,
+      0.5
+    ],
+    "channels": [
+      22,
+      22,
+      22,
+      16,
+      12,
+      11,
+      11
+    ],
+    "eval_size": [
+      384,
+      512
+    ],
+    "latent_dim": 28,
+    "n_state_elements": 96861,
+    "n_state_tensors": 28,
+    "schema_fingerprint": "4c67e69d5cc4a2324e8429465deaccf13dc4077e490335d1b3756680d76ba220"
+  },
+  "tool": "tools/build_hnerv_arch_shrink_driver.py"
+}
