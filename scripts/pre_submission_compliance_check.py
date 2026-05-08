@@ -293,6 +293,11 @@ def inspect_archive(path: Path, *, expect_single_member: str | None = None) -> t
 def _candidate_sha(payload: dict[str, Any]) -> str | None:
     provenance = payload.get("provenance") if isinstance(payload.get("provenance"), dict) else {}
     archive = payload.get("archive") if isinstance(payload.get("archive"), dict) else {}
+    candidate_archive = (
+        payload.get("candidate_archive")
+        if isinstance(payload.get("candidate_archive"), dict)
+        else {}
+    )
     for value in (
         provenance.get("archive_sha256"),
         payload.get("candidate_archive_sha256"),
@@ -301,6 +306,9 @@ def _candidate_sha(payload: dict[str, Any]) -> str | None:
         archive.get("candidate_archive_sha256"),
         archive.get("sha256"),
         archive.get("archive_sha256"),
+        candidate_archive.get("candidate_archive_sha256"),
+        candidate_archive.get("sha256"),
+        candidate_archive.get("archive_sha256"),
     ):
         if isinstance(value, str) and SHA256_RE.match(value):
             return value.lower()
@@ -310,6 +318,11 @@ def _candidate_sha(payload: dict[str, Any]) -> str | None:
 def _candidate_size(payload: dict[str, Any]) -> int | None:
     provenance = payload.get("provenance") if isinstance(payload.get("provenance"), dict) else {}
     archive = payload.get("archive") if isinstance(payload.get("archive"), dict) else {}
+    candidate_archive = (
+        payload.get("candidate_archive")
+        if isinstance(payload.get("candidate_archive"), dict)
+        else {}
+    )
     for value in (
         provenance.get("archive_size_bytes"),
         payload.get("candidate_archive_bytes"),
@@ -321,6 +334,11 @@ def _candidate_size(payload: dict[str, Any]) -> int | None:
         archive.get("candidate_archive_size_bytes"),
         archive.get("size_bytes"),
         archive.get("archive_size_bytes"),
+        candidate_archive.get("candidate_archive_bytes"),
+        candidate_archive.get("candidate_archive_size_bytes"),
+        candidate_archive.get("size_bytes"),
+        candidate_archive.get("archive_size_bytes"),
+        candidate_archive.get("bytes"),
     ):
         try:
             return int(value)
@@ -365,6 +383,8 @@ def _member_field_equal(actual: dict[str, Any], claimed: dict[str, Any], field: 
         return False
     if field in {"file_size", "compress_size", "crc"}:
         try:
+            if field == "crc" and isinstance(claimed.get(field), str):
+                return int(actual.get(field)) == int(str(claimed.get(field)), 16)
             return int(actual.get(field)) == int(claimed.get(field))
         except (TypeError, ValueError):
             return False

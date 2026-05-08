@@ -120,6 +120,24 @@
     {
       "classification": "research_untracked",
       "disposition": "track",
+      "note": "track: durable 2026-05-08 A5 runtime readiness closure ledger; no raw provider payload.",
+      "path": ".omx/research/a5_frame_conditional_runtime_readiness_closed_20260508_codex.md"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: A5 per-pair score-marginal manifest builder; small operator tool.",
+      "path": "tools/build_a5_per_pair_score_marginal_manifest.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused A5 per-pair score-marginal manifest tests.",
+      "path": "src/tac/tests/test_a5_per_pair_score_marginal_manifest.py"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
       "note": "track: durable 2026-05-08 research/control-plane ledger; small, non-provider source of truth.",
       "path": ".omx/research/arch_shrink_x0_4_lightning_poll_20260508_codex.md"
     },

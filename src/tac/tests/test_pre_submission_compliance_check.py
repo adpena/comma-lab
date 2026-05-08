@@ -444,6 +444,60 @@ def test_pre_submission_check_accepts_candidate_archive_manifest_identity(tmp_pa
     assert report["passed"], [c for c in report["checks"] if not c["passed"]]
 
 
+def test_pre_submission_check_accepts_nested_candidate_archive_manifest_with_hex_crc(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission")
+    archive = tmp_path / "submission" / "archive.zip"
+    with zipfile.ZipFile(archive) as zf:
+        info = zf.infolist()[0]
+        member = zf.read(info)
+        members = [
+            {
+                "name": info.filename,
+                "bytes": info.file_size,
+                "compress_size": info.compress_size,
+                "crc": f"{info.CRC:08x}",
+                "sha256": mod._bytes_sha256(member),
+            }
+        ]
+    manifest = tmp_path / "a5_candidate_manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "score_claim": False,
+                "charged_bits_changed": True,
+                "candidate_archive": {
+                    "sha256": expected["archive_sha256"],
+                    "bytes": expected["archive_size_bytes"],
+                    "members": members,
+                },
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--archive-manifest-json",
+                str(manifest),
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+            ]
+        )
+    )
+
+    assert report["passed"], [c for c in report["checks"] if not c["passed"]]
+
+
 def test_pre_submission_check_marks_optional_missing_custody_as_warning(
     tmp_path: Path,
 ) -> None:
