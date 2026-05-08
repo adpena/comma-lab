@@ -166,6 +166,10 @@ reports/public/.env
 # Ephemeral .omx/tmp/ scratch (never commit)
 .omx/tmp/
 
+# Root-level scratch files emitted by local audits; useful signal must be
+# promoted into tracked ledgers instead.
+.tmp_unregistered_paths.txt
+
 # Wave 11 — exclude vendored upstream test data from public PR intakes
 experiments/results/public_pr_intake_full/
 experiments/results/public_pr_archive_release_view/

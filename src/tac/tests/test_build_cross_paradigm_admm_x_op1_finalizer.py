@@ -63,6 +63,8 @@ def test_static_release_surface_records_archive_custody(tmp_path: Path) -> None:
     assert manifest["archive_size_bytes"] == archive_bytes
     assert manifest["score_claim"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["custody_status"] == "transient-allowed"
+    assert "auth-eval" in manifest["custody_status_reason"]
     assert manifest["archive"]["members"][0]["name"] == "x"
     assert archive_sha in report
     assert str(archive_bytes) in report

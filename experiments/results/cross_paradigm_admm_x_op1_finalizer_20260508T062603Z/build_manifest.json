@@ -129,5 +129,7 @@
     "cpu_build_rel_err_proxy_not_score_evidence",
     "exact_cuda_auth_eval_not_yet_harvested",
     "requires_contest_auth_eval_json_before_score_promotion_rank_or_kill"
-  ]
+  ],
+  "custody_status": "transient-allowed",
+  "custody_status_reason": "Historical ignored local build artifact annotated after B3 review; archive bytes remain local custody, durable signal is summarized in .omx/research, and exact-score promotion requires rebuilt packet plus contest auth eval."
 }

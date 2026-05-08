@@ -92,7 +92,6 @@ Tests after fixes: **40/40 pass** (33 charm range-coder + 7 rate-math) plus 9 un
 
 ## Findings deferred (Low, low-EV to fix now)
 
-- R1-2: magic constant in tests — cosmetic, no functional impact
 - R3-1: ceiling test missing — guard path is fail-loud-on-violation, not silent
 - R3-3: extra-PMFs-ignored test missing — behavior is documented
 
@@ -109,3 +108,16 @@ The 3-clean-pass gate is NOT satisfied per CLAUDE.md non-negotiable. However, th
 **Operator decision needed before $15 Lightning T4 fires:**
 - Authorize dispatch with explicit acknowledgment of (a) `rate_model_gap_bytes` will be non-zero for tight-distribution channels, (b) the three Low findings are deferred to future cleanup, OR
 - Require another full 3-clean-pass review cycle on the post-fix code before authorizing dispatch.
+
+## Addendum — R1-2 fixed by codex carry-forward
+
+R1-2 is no longer deferred. `src/tac/tests/test_charm_range_coder.py` now uses
+`DEFAULT_ALPHABET_LO` instead of hard-coded `-128` in the Shannon-bit
+indexing checks. Verification rerun:
+
+```bash
+.venv/bin/python -m pytest src/tac/tests/test_charm_range_coder.py \
+  src/tac/tests/test_train_charm_50k_toy_rate_math.py -q
+```
+
+Result: `40 passed, 3 warnings`.

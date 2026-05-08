@@ -169,5 +169,7 @@
     "selected_Ks_source_blocker:requires_importance_artifact_custody_and_calibration",
     "selected_Ks_source_blocker:requires_static_pre_submission_compliance",
     "selected_Ks_source_evidence_semantics:cpu_mps_proxy_importance_weighted_quantization_allocation_no_score_no_dispatch"
-  ]
+  ],
+  "custody_status": "transient-allowed",
+  "custody_status_reason": "Historical ignored local build artifact annotated after B3 review; archive bytes remain local custody, durable signal is summarized in .omx/research, and exact-score promotion requires rebuilt packet plus contest auth eval."
 }

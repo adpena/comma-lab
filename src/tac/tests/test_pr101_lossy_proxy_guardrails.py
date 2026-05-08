@@ -96,4 +96,6 @@ def test_lossy_coarsening_cpu_build_manifest_guard_fields() -> None:
     assert guard["rank_or_kill_eligible"] is False
     assert guard["ready_for_exact_eval_dispatch"] is False
     assert guard["family_falsified"] is False
+    assert guard["custody_status"] == "transient-allowed"
+    assert "auth eval" in guard["custody_status_reason"]
     assert "exact_cuda_auth_eval_not_yet_harvested" in guard["dispatch_blockers"]

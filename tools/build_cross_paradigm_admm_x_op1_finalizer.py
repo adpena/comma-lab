@@ -482,6 +482,12 @@ def _write_static_release_surface(
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "dispatch_attempted": False,
+        "custody_status": "transient-allowed",
+        "custody_status_reason": (
+            "Generated archives live under ignored experiments/results custody; "
+            "durable signal is summarized in .omx/research and exact-score "
+            "promotion requires a rebuilt packet plus auth-eval artifact."
+        ),
         "dispatch_blockers": list(CPU_BUILD_SCORE_BLOCKERS),
     }
     manifest_path = submission_dir / "archive_manifest.json"
@@ -1004,6 +1010,11 @@ def main(argv: list[str] | None = None) -> int:
         "predicted_band": [args.predicted_low, args.predicted_high],
         "predicted_band_grade": "predicted",
         "evidence_grade": "[CPU-build]",
+        "custody_status": "transient-allowed",
+        "custody_status_reason": (
+            "Ignored local CPU-build artifact; rebuild from this tool before "
+            "any exact-eval dispatch and promote only with contest auth eval."
+        ),
         "score_affecting_payload_changed": True,
         "charged_bits_changed": True,
         "wire_format": "CPLX1",

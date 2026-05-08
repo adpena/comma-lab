@@ -34,8 +34,11 @@ from tac.repo_io import json_text  # noqa: E402
 
 ALLOWED_STAGED_OMX_STATE = {
     ".omx/state/active_lane_dispatch_claims.md",
+    ".omx/state/artifact_classification_allowlist.json",
+    ".omx/state/artifact_kind_registry.yaml",
     ".omx/state/current_focus.md",
     ".omx/state/next_experiments.md",
+    ".omx/state/next_catalog_number.txt",
 }
 
 LOCAL_CUSTODY_PREFIXES = (

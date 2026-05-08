@@ -683,6 +683,12 @@ def cpu_build_proxy_guard_fields() -> dict[str, object]:
         "falsification_scope": "pr106_uniward_runtime_packet_only",
         "score_affecting_payload_changed": True,
         "charged_bits_changed": True,
+        "custody_status": "transient-allowed",
+        "custody_status_reason": (
+            "CPU-build archives are ignored local custody artifacts; durable "
+            "signal must be summarized in .omx/research and exact-score "
+            "promotion requires contest auth eval on a rebuilt packet."
+        ),
         "score_claim_blockers": list(CPU_BUILD_SCORE_BLOCKERS),
         "dispatch_blockers": list(CPU_BUILD_SCORE_BLOCKERS),
     }

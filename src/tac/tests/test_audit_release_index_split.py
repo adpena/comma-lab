@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from tools.audit_release_index_split import (
+    ALLOWED_STAGED_OMX_STATE,
     IndexRecord,
     document_local_custody,
     parse_status_porcelain,
@@ -34,6 +35,13 @@ def test_index_record_schema_is_stable() -> None:
 
     assert record.path.endswith("lane_registry.json")
     assert record.severity == "blocker"
+
+
+def test_durable_omx_control_files_are_stageable() -> None:
+    """Protocol state files are committed control-plane inputs, not provider state."""
+    assert ".omx/state/artifact_kind_registry.yaml" in ALLOWED_STAGED_OMX_STATE
+    assert ".omx/state/artifact_classification_allowlist.json" in ALLOWED_STAGED_OMX_STATE
+    assert ".omx/state/next_catalog_number.txt" in ALLOWED_STAGED_OMX_STATE
 
 
 def test_parse_status_porcelain_keeps_gitlink_worktree_status() -> None:

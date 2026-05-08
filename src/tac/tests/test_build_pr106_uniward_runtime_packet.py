@@ -61,6 +61,8 @@ def test_cpu_build_guard_fields_are_fail_closed_for_score_claims() -> None:
     assert fields["ready_for_exact_eval_dispatch"] is False
     assert fields["dispatch_attempted"] is False
     assert fields["cuda_eval_worth_testing"] is True
+    assert fields["custody_status"] == "transient-allowed"
+    assert "auth eval" in fields["custody_status_reason"]
     assert "exact_cuda_auth_eval_not_yet_harvested" in fields["dispatch_blockers"]
 
 

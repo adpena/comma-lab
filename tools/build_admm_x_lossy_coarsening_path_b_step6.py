@@ -188,6 +188,12 @@ def cpu_build_proxy_guard_fields() -> dict[str, object]:
         "cuda_eval_worth_testing": True,
         "family_falsified": False,
         "falsification_scope": "lagrangian_x_continuous_K_only",
+        "custody_status": "transient-allowed",
+        "custody_status_reason": (
+            "CPU-build archives are ignored local custody artifacts; durable "
+            "signal must be summarized in .omx/research and exact-score "
+            "promotion requires contest auth eval on a rebuilt packet."
+        ),
         "score_claim_blockers": list(CPU_BUILD_SCORE_BLOCKERS),
         "dispatch_blockers": list(CPU_BUILD_SCORE_BLOCKERS),
     }

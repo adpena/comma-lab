@@ -27,8 +27,8 @@
       "path_kind": "prefix",
       "runtime_source_baseline": {
         "algorithm": "pact_runtime_source_set_v1",
-        "count": 10509,
-        "sha256": "02f1b7e3dbff968e9306c1214224773406e3e60a722f11804ffbde0eac98f09a"
+        "count": 10527,
+        "sha256": "94a472acd44166552c9987ba7e4ba35768bc1e8a7de8654b1a4930f6e298d445"
       }
     },
     {
@@ -70,6 +70,12 @@
       "path": ".omx/research/cathedral_autopilot_candidate_custody_guard_20260508_codex.md"
     },
     {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 cross-paradigm static surface and B3 custody ledger; raw packet artifacts remain ignored custody.",
+      "path": ".omx/research/cross_paradigm_static_surface_and_b3_custody_20260508_codex.md"
+    },
+    {
       "classification": "source_untracked",
       "disposition": "track",
       "note": "track: reusable exact-CUDA candidate evidence custody contract helper; small source file.",
@@ -86,6 +92,12 @@
       "disposition": "track",
       "note": "track: durable 2026-05-08 research/control-plane ledger; small, non-provider source of truth.",
       "path": ".omx/research/all_lanes_preflight_blockers_20260508_codex.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 A1 dispatch recursive review ledger; no raw provider transcript or payload.",
+      "path": ".omx/research/a1_dispatch_recursive_review_20260508.md"
     },
     {
       "classification": "research_untracked",
