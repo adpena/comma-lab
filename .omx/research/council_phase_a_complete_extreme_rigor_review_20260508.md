@@ -664,3 +664,140 @@ Round-1 clean (this memo). Rounds 2-3 pending.
 - Ballé ✓
 
 10/10 sign-off, Round 1.
+
+---
+
+## §8. Round 2 — code-level adversarial verification (post-Round-1 inline actions)
+
+Per CLAUDE.md "Recursive adversarial review protocol" — Round 2 takes a
+DIFFERENT adversarial perspective: trace actual call sites, grep against
+argparse contracts, mental-execute edge cases, verify comments match
+code. Round 2 checks the LANDED inline actions from Round 1, plus
+re-verifies the highest-EV claims.
+
+### §8.1 A0 closed-form MDL — VERIFIED with caveat
+
+`tools/mdl_lower_bound_calculator.py` line 332 hardcodes
+`n_elements = 228_958` matching memory anchor
+`feedback_pr101_pmf_skew_shannon_floor_finding_20260507.md`. Line 374-375
+records `weights_sha256="synthetic_pr101_proxy_no_path"` and
+`weights_path="<synthetic_pr101_proxy>"`.
+
+**Round 2 finding (Contrarian):** A0's 158,700 B realistic floor / 151,700 B
+aggressive lower bound is computed against a **SYNTHETIC PR101 proxy**,
+not the actual PR101 archive bytes. The CLI help string explicitly says
+"If omitted, uses synthetic PR101 proxy from memory anchors." For a
+structural MDL lower bound this is **acceptable** — the floor is per-
+tensor-shape and per-iid-distribution, not per-actual-weight. But the
+A0 result MUST be tagged `[synthetic-proxy-MDL-lower-bound]` rather than
+`[actual-PR101-MDL-lower-bound]` to prevent a future agent from over-
+generalizing.
+
+**Council action item Round 2:** mark the A0 evidence string in lane
+registry with the `[synthetic-proxy]` qualifier. **30-second action.**
+
+### §8.2 A6 wire-format guards — VERIFIED at code level
+
+Grep `len(blob) != 2/4/1` at lines 162, 166, 170 of
+`src/tac/codec/a6_selfcomp_blockfp_hyperprior_compose.py` confirms
+explicit byte-length checks raise `ValueError` on mismatch:
+- fp16 blob: `len(blob) != 2 → raise ValueError("fp16 scale blob must be 2 bytes, got {len(blob)}")`
+- fp32 blob: `len(blob) != 4 → raise ValueError(...)`
+- uint8 blob: `len(blob) != 1 → raise ValueError(...)`
+
+Grep test coverage in `src/tac/tests/test_a6_blockfp_hyperprior_compose_unit.py`:
+- `test_decompose_rejects_bad_magic` (line 287)
+- `test_decompose_rejects_truncated_blob` (line 293)
+- `test_decompose_rejects_trailing_bytes_non_empty` (line 350)
+- `test_decompose_rejects_trailing_bytes_empty` (line 357)
+- `test_decompose_rejects_tampered_zero_block_size` (line 366)
+
+**Round 2 verdict:** A6 wire-format guards are real and exercised by
+five distinct tampering tests. PASS. The codex hardening pass at
+`8ae8c637` correctly defends against the split-brain wire-contract bug
+class. No additional action.
+
+### §8.3 A1 `load_differentiable_scorers` call site — VERIFIED
+
+`experiments/train_score_gradient_pr101_finetune.py` lines 439-447:
+```
+posenet, segnet = load_differentiable_scorers(
+    REPO_ROOT / "upstream", device=str(device)
+)
+posenet.eval()
+segnet.eval()
+for p in posenet.parameters():
+    p.requires_grad_(False)
+for p in segnet.parameters():
+    p.requires_grad_(False)
+```
+
+Verified: positional `REPO_ROOT / "upstream"`, keyword `device=str(device)`,
+`.eval()` after load, `.requires_grad_(False)` on all scorer params. All
+four pieces of the prior critical fix are in place. The R1-3 advisory
+("$PYBIN torch CUDA verification at remote A1 entry" — task #428) is also
+landed per the import-guard at lines 431-438.
+
+**Round 2 verdict:** A1 dispatch tooling is code-correct. Operator can
+authorize $8 Lightning T4 dispatch with no further code-level concern.
+PASS.
+
+### §8.4 Round 2 cross-cutting — Phase A class-level finding holds
+
+The Round 1 cross-cutting finding ("PR101's near-iid INT8 substrate at
+brotli's adaptive context modeller resists every weight-domain proxy
+and codec composition") is now empirically anchored against A0's MDL
+floor:
+
+| Anchor | Bytes | vs MDL-realistic (158,700) | vs MDL-aggressive (151,700) |
+|---|---:|---:|---:|
+| MDL aggressive lower bound | 151,700 | -7,000 (theoretical only) | 0 (floor) |
+| MDL realistic floor | 158,700 | 0 (floor) | +7,000 |
+| ADMM_lossy_coarsening | 147,285 | **-11,415** (4-5% rel_err) | -4,415 (lossy) |
+| brotli baseline | 178,144 | +19,444 | +26,444 |
+| A6 compose B=64 uint8 | 214,035 | +55,335 | +62,335 |
+
+**Round 2 cross-cutting verdict:** ADMM_lossy_coarsening at -11,415 B
+below realistic floor confirms the Path B anchor is doing real work
+beyond what lossless brotli can. A6's +55,335 B above realistic floor
+confirms the linear-σ map is structurally insufficient on PR101's
+substrate (independently of brotli). The 19,444 B gap between brotli
+and the realistic floor is the LOSSLESS HEADROOM for A1+A4 (the lanes
+that move bytes by changing the WEIGHTS, not the codec).
+
+### §8.5 Round 2 council signatures
+
+- Shannon LEAD ✓ (refined: A0 calibrates the lossless headroom at 19,444 B)
+- Dykstra CO-LEAD ✓ (Pareto frontier intersection now has a hard lower bound)
+- Yousfi ✓ (A1 device-arg + eval-mode confirmed)
+- Fridrich ✓
+- Contrarian ✓ (BUT: A0 must be tagged `[synthetic-proxy]` per §8.1)
+- Quantizr ✓
+- Hotz ✓
+- Selfcomp ✓
+- MacKay ✓ (A0 floor matches Shannon-floor calculator from May 7)
+- Ballé ✓
+
+10/10 Round 2 sign-off, with Contrarian binding caveat: **A0 evidence
+must carry `[synthetic-proxy-MDL-lower-bound]` qualifier in lane
+registry.**
+
+---
+
+## §9. Round 3 — pending
+
+Per CLAUDE.md 3-clean-pass requirement, Round 3 needs a new adversarial
+perspective. Candidates: phase-interaction analysis (Phase A → Phase B
+→ Phase 4 INTEGRATION), default-override scan (changed function
+defaults vs callers), comment-vs-code drift audit. Defer until Round 1
++ Round 2 action items are landed.
+
+Round 1 + Round 2 action items remaining:
+- §8.1 A0 evidence `[synthetic-proxy]` registry tag (Round 2 binding)
+- Action #2 Path B step 4 element-weighted re-aggregate (Round 1)
+- Action #5 FastViT-precision-compounding preflight check (Round 1)
+- Action #6 auth-eval-consumer verification preflight check (Round 1)
+- Action #7 A4 inflate-time T4 benchmark (Round 1, gated on credit)
+
+3/5 of these are inline (~30 min, ~1 hour, ~1 hour). 2/5 are
+operator-gated. Round 3 can proceed once the inline 3 are landed.
