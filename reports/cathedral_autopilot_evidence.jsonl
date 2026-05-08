@@ -1,0 +1,2 @@
+{"technique": "lossy_int4_quantization", "empirical_archive_bytes": 100799, "source": "[CPU-prep empirical] /Users/adpena/Projects/pact/reports/raw/pr101_int4_sweep_20260508T001119Z/manifest.json (block_size=1024)", "timestamp": "2026-05-08T00:11:19Z"}
+{"technique": "kalle_fold_mixture_canonical_shapes", "empirical_archive_bytes": 205963, "source": "[CPU-prep empirical] /Users/adpena/Projects/pact/reports/raw/pr101_kalle_fold_20260508T001304Z/manifest.json", "timestamp": "2026-05-08T00:13:04Z"}
