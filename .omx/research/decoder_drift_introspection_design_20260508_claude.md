@@ -269,7 +269,10 @@ Test C is the cheapest (no GPU needed) and discriminates H1/H2 if the curve at d
 ## 7. Cross-references
 
 - **af945f502** (PoseNet/SegNet network internals introspection): provides forward-hook recorder, per-layer drift comparator. Once available, plug its `compute_layer_drift` into Test C's AV-decoded-with-noise path to see WHICH layer amplifies the noise.
-- **a22d581a** (FastViT precision compounding theory): provides the (1+ε)^L compounding model. Cross-validate against this design's Lipschitz back-of-envelope; if their per-layer ε agrees with our scalar L, we have two-axis convergence.
+- **a22d581a** (PoseNet precision-noise theory): provides the candidate
+  shared-input network model. Cross-validate against this design's Lipschitz
+  back-of-envelope; if shared-input per-layer drift agrees with the scalar
+  decoder sensitivity, we have two-axis convergence.
 - **CLAUDE.md** "Submission auth eval — BOTH CPU AND CUDA, ON 1:1 CONTEST-COMPLIANT HARDWARE" + "MPS auth eval is NOISE": this design respects both rules — no MPS evaluation, no GPU dispatch in this task, and all local outputs tagged advisory.
 - **`reports/raw/lightning_batch/*/auth_eval.log`** — searched for prior DALI dumps; none found. The contest auth-eval pipeline writes `inflated/*.raw` (which is `TensorVideoDataset` input), not DALI's GT decode dump. To get a DALI dump we must dispatch a one-off CUDA script (cost: ~$0.10).
 
