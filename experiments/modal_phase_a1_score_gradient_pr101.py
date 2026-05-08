@@ -550,6 +550,7 @@ def _run_phase_a1_inner(
     max_frames: int,
     aux_kl_weight: float,
     aux_pixel_l1_weight: float,
+    continue_after_nvdec_failure: bool,
     train_timeout_seconds: int,
     build_timeout_seconds: int,
     eval_timeout_seconds: int,
@@ -641,7 +642,13 @@ def _run_phase_a1_inner(
         preflight = _probe_cuda_environment_remote(env)
         _write_json(out_dir / "phase_a1_preflight.json", preflight)
         errors = _preflight_errors_remote(preflight)
-        if errors:
+        nvdec_errors = [
+            err for err in errors
+            if err.startswith("NVDEC/DALI video probe failed")
+        ]
+        fatal_preflight_errors = [err for err in errors if err not in nvdec_errors]
+        skip_cuda_eval_reason: str | None = None
+        if fatal_preflight_errors or (errors and not continue_after_nvdec_failure):
             # NVDEC probe failures on Modal are recoverable (train doesn't need
             # NVDEC; only contest_auth_eval --device cuda does). But we surface
             # a HARD STOP per CLAUDE.md "MPS auth eval is NOISE" — without
@@ -655,6 +662,13 @@ def _run_phase_a1_inner(
                 validation_errors=errors,
                 extra={"preflight": preflight},
             )
+        if nvdec_errors and continue_after_nvdec_failure:
+            skip_cuda_eval_reason = (
+                "Modal T4 compute preflight passed but DALI/NVDEC exact-eval "
+                "probe failed; continuing training/build only with score_claim=false."
+            )
+            preflight["nvdec_failure_training_continues_no_exact_eval"] = True
+            preflight["auth_eval_skip_reason"] = skip_cuda_eval_reason
 
         # --- Stage 1: TRAIN -----------------------------------------------
         stage = "train_score_gradient_pr101"
@@ -749,6 +763,65 @@ def _run_phase_a1_inner(
                 extra={"commands": command_results},
             )
         archive_meta = _file_meta(archive_zip)
+
+        if skip_cuda_eval_reason:
+            build_manifest = {
+                "lane_id": label_safe,
+                "schema_version": "phase_a1_modal_build_manifest_v1",
+                "completed_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "archive_path": str(archive_zip),
+                "archive_bytes": archive_meta["bytes"],
+                "archive_sha256": archive_meta["sha256"],
+                "eval_work_dir": None,
+                "eval_rc": None,
+                "eval_data": None,
+                "evidence_grade": "[cuda-training-build-only]",
+                "score_claim": False,
+                "score_claim_valid": False,
+                "ready_for_exact_eval_dispatch": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "dispatch_blockers": [
+                    "contest_cuda_eval_pending_due_modal_dali_nvdec_preflight_failure",
+                    "contest_cpu_eval_pending",
+                ],
+                "auth_eval_skipped": True,
+                "auth_eval_skip_reason": skip_cuda_eval_reason,
+                "council_memo_ref": ".omx/research/grand_council_extreme_rigor_track_1_20260508.md",
+                "council_decision": "A1 — score-gradient supervision (UNANIMOUS HIGHEST PRIORITY)",
+                "modal_app": APP_NAME,
+                "modal_gpu": "T4",
+                "preflight": preflight,
+                "params": {
+                    "epochs": epochs,
+                    "steps_per_epoch": steps_per_epoch,
+                    "batch_size": batch_size,
+                    "lr": lr,
+                    "max_frames": max_frames,
+                    "aux_kl_weight": aux_kl_weight,
+                    "aux_pixel_l1_weight": aux_pixel_l1_weight,
+                    "continue_after_nvdec_failure": continue_after_nvdec_failure,
+                },
+            }
+            _write_json(out_dir / "build_manifest.json", build_manifest)
+            result = _finish_remote(
+                out_dir,
+                passed=True,
+                returncode=0,
+                stage="completed_training_build_cuda_eval_skipped_nvdec_preflight",
+                validation_errors=[],
+                extra={
+                    "commands": command_results,
+                    "archive_meta": archive_meta,
+                    "build_manifest": build_manifest,
+                    "preflight": preflight,
+                    "auth_eval_skipped": True,
+                    "auth_eval_skip_reason": skip_cuda_eval_reason,
+                },
+                eval_data=None,
+            )
+            result["elapsed_seconds"] = time.monotonic() - t_start
+            return result
 
         # --- Stage 3: contest_auth_eval --device cuda ---------------------
         stage = "contest_auth_eval_cuda"
@@ -881,6 +954,7 @@ def run_phase_a1_t4(
     max_frames: int,
     aux_kl_weight: float,
     aux_pixel_l1_weight: float,
+    continue_after_nvdec_failure: bool,
     train_timeout_seconds: int,
     build_timeout_seconds: int,
     eval_timeout_seconds: int,
@@ -904,6 +978,7 @@ def run_phase_a1_t4(
         max_frames=max_frames,
         aux_kl_weight=aux_kl_weight,
         aux_pixel_l1_weight=aux_pixel_l1_weight,
+        continue_after_nvdec_failure=continue_after_nvdec_failure,
         train_timeout_seconds=train_timeout_seconds,
         build_timeout_seconds=build_timeout_seconds,
         eval_timeout_seconds=eval_timeout_seconds,
@@ -928,6 +1003,7 @@ def _phase_a1_dispatch_command(
     max_frames: int,
     aux_kl_weight: float,
     aux_pixel_l1_weight: float,
+    continue_after_nvdec_failure: bool,
     train_timeout_hours: float,
     build_timeout_minutes: float,
     eval_timeout_minutes: float,
@@ -937,7 +1013,7 @@ def _phase_a1_dispatch_command(
     predicted_high: float,
 ) -> list[str]:
     """Return the audited Modal command a human/operator can dispatch later."""
-    return [
+    command = [
         "PYTHONPATH=src:upstream:$PWD",
         ".venv/bin/modal",
         "run",
@@ -962,6 +1038,9 @@ def _phase_a1_dispatch_command(
         "--predicted-low", str(float(predicted_low)),
         "--predicted-high", str(float(predicted_high)),
     ]
+    if continue_after_nvdec_failure:
+        command.append("--continue-after-nvdec-failure")
+    return command
 
 
 def build_local_plan(
@@ -977,6 +1056,7 @@ def build_local_plan(
     max_frames: int,
     aux_kl_weight: float,
     aux_pixel_l1_weight: float,
+    continue_after_nvdec_failure: bool,
     train_timeout_hours: float,
     build_timeout_minutes: float,
     eval_timeout_minutes: float,
@@ -1067,6 +1147,7 @@ def build_local_plan(
         "max_frames": int(max_frames),
         "aux_kl_weight": float(aux_kl_weight),
         "aux_pixel_l1_weight": float(aux_pixel_l1_weight),
+        "continue_after_nvdec_failure": bool(continue_after_nvdec_failure),
         "train_timeout_hours": float(train_timeout_hours),
         "build_timeout_minutes": float(build_timeout_minutes),
         "eval_timeout_minutes": float(eval_timeout_minutes),
@@ -1085,6 +1166,7 @@ def build_local_plan(
         max_frames=max_frames,
         aux_kl_weight=aux_kl_weight,
         aux_pixel_l1_weight=aux_pixel_l1_weight,
+        continue_after_nvdec_failure=continue_after_nvdec_failure,
         train_timeout_hours=train_timeout_hours,
         build_timeout_minutes=build_timeout_minutes,
         eval_timeout_minutes=eval_timeout_minutes,
@@ -1127,6 +1209,7 @@ def build_local_plan(
         "notes": [
             "Local plan path exists because `modal run --print-only` still creates a Modal app.",
             "No lane claim is required until an actual remote/GPU dispatch is attempted.",
+            "If continue_after_nvdec_failure is true, the run may produce a training/build archive but must not claim a CUDA score.",
             "No score promotion is allowed from this plan artifact.",
         ],
     }
@@ -1150,6 +1233,14 @@ def plan_cli(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-frames", type=int, default=1200)
     parser.add_argument("--aux-kl-weight", type=float, default=1.0)
     parser.add_argument("--aux-pixel-l1-weight", type=float, default=0.01)
+    parser.add_argument(
+        "--continue-after-nvdec-failure",
+        action="store_true",
+        help=(
+            "Plan a training/build-only fallback if Modal T4 compute is healthy "
+            "but DALI/NVDEC exact-eval preflight fails. This never promotes a score."
+        ),
+    )
     parser.add_argument("--train-timeout-hours", type=float, default=3.5)
     parser.add_argument("--build-timeout-minutes", type=float, default=10.0)
     parser.add_argument("--eval-timeout-minutes", type=float, default=30.0)
@@ -1171,6 +1262,7 @@ def plan_cli(argv: list[str] | None = None) -> int:
         max_frames=args.max_frames,
         aux_kl_weight=args.aux_kl_weight,
         aux_pixel_l1_weight=args.aux_pixel_l1_weight,
+        continue_after_nvdec_failure=args.continue_after_nvdec_failure,
         train_timeout_hours=args.train_timeout_hours,
         build_timeout_minutes=args.build_timeout_minutes,
         eval_timeout_minutes=args.eval_timeout_minutes,
@@ -1388,6 +1480,7 @@ def main(
     max_frames: int = 1200,
     aux_kl_weight: float = 1.0,
     aux_pixel_l1_weight: float = 0.01,
+    continue_after_nvdec_failure: bool = False,
     train_timeout_hours: float = 3.5,
     build_timeout_minutes: float = 10.0,
     eval_timeout_minutes: float = 30.0,
@@ -1468,6 +1561,7 @@ def main(
         "max_frames": int(max_frames),
         "aux_kl_weight": float(aux_kl_weight),
         "aux_pixel_l1_weight": float(aux_pixel_l1_weight),
+        "continue_after_nvdec_failure": bool(continue_after_nvdec_failure),
         "train_timeout_seconds": train_timeout_seconds,
         "build_timeout_seconds": build_timeout_seconds,
         "eval_timeout_seconds": eval_timeout_seconds,
@@ -1481,6 +1575,9 @@ def main(
             "estimated_cost_usd": estimated_cost,
             "params": params,
             "predicted_band": [predicted_low, predicted_high],
+            "score_claim": False,
+            "remote_or_gpu_eval_started": False,
+            "continue_after_nvdec_failure": bool(continue_after_nvdec_failure),
             "predicted_eta_utc": predicted_eta_utc,
             "inputs": {
                 "pr101_archive": {"sha256": pr101_archive_sha, "bytes": pr101_archive_size},
@@ -1530,6 +1627,7 @@ def main(
             int(max_frames),
             float(aux_kl_weight),
             float(aux_pixel_l1_weight),
+            bool(continue_after_nvdec_failure),
             int(train_timeout_seconds),
             int(build_timeout_seconds),
             int(eval_timeout_seconds),
