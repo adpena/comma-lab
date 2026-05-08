@@ -1,0 +1,1713 @@
+{
+  "active_archive": {
+    "bytes": 185578,
+    "exists_on_disk": true,
+    "label": "active_pr103_pr106_floor",
+    "packed_payload_candidates": [
+      {
+        "kind": "pr103_ac_decoder_inside_pr106_ff_packed_v1",
+        "member_index": 0,
+        "member_name": "0.bin",
+        "nested_decoder_sections": [
+          {
+            "archive_end": 95,
+            "archive_start": 39,
+            "bytes": 56,
+            "entropy_bits_per_byte": 4.959427,
+            "name": "decoder.scales_fp16",
+            "payload_end": 60,
+            "payload_start": 4,
+            "sha256": "0152d84bd39477ad9a6394107b9cc0c85027a5e33ac50e6ac0023e0f45cd14e8"
+          },
+          {
+            "archive_end": 7287,
+            "archive_start": 95,
+            "bytes": 7192,
+            "entropy_bits_per_byte": 7.974299,
+            "name": "decoder.br",
+            "payload_end": 7252,
+            "payload_start": 60,
+            "sha256": "96c6fb01d0fb5f9f7116fb27e6fd1e831bf772cc272ca562ea61b68d6d4f877c"
+          },
+          {
+            "archive_end": 8276,
+            "archive_start": 7287,
+            "bytes": 989,
+            "entropy_bits_per_byte": 7.789588,
+            "name": "decoder.hists",
+            "payload_end": 8241,
+            "payload_start": 7252,
+            "sha256": "3499b2305afc5fd5e4d048560f5cd2052ee5db0068cca73dbbd98a5122eee5bd"
+          },
+          {
+            "archive_end": 169656,
+            "archive_start": 8276,
+            "bytes": 161380,
+            "entropy_bits_per_byte": 7.998769,
+            "name": "decoder.merged_ac",
+            "payload_end": 169621,
+            "payload_start": 8241,
+            "sha256": "1ad4e883ac8fef97af7f07d24aff790e5fd2d52cb05f5a4ee3a58e4e4b7b315c"
+          },
+          {
+            "archive_end": 169656,
+            "archive_start": 169656,
+            "bytes": 0,
+            "entropy_bits_per_byte": 0.0,
+            "name": "decoder.hi_hist",
+            "payload_end": 169621,
+            "payload_start": 169621,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "archive_end": 169656,
+            "archive_start": 169656,
+            "bytes": 0,
+            "entropy_bits_per_byte": 0.0,
+            "name": "decoder.ac_fallback",
+            "payload_end": 169621,
+            "payload_start": 169621,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "packed_header_decoder_len": 169617,
+        "packed_header_valid": true,
+        "payload_bytes": 185470,
+        "payload_sha256": "3272ec95a2ea5ec68feb1a53fa53f6b14bdae3883fac38ee2261cdadb1b16357",
+        "runtime_closure_blockers": [],
+        "runtime_closure_match": {
+          "ac_fallback_set": [],
+          "decoder_section_bytes_matches": true,
+          "decoder_section_sha256_matches": true,
+          "format": "pr103_ac_decoder_inside_pr106_ff_packed_v1",
+          "latents_section_bytes_matches": true,
+          "latents_section_sha256_matches": true,
+          "section_lengths_sum_matches_decoder": true
+        },
+        "sections": [
+          {
+            "archive_end": 39,
+            "archive_start": 35,
+            "bytes": 4,
+            "entropy_bits_per_byte": 2.0,
+            "name": "packed_header_ff_len24",
+            "payload_end": 4,
+            "payload_start": 0,
+            "sha256": "1e1042fb1a764966cc07425de7fbabc966e578afef8516521540c9115945e87d"
+          },
+          {
+            "archive_end": 169656,
+            "archive_start": 39,
+            "bytes": 169617,
+            "entropy_bits_per_byte": 7.998798,
+            "name": "decoder_pr103_ac_bytes",
+            "payload_end": 169621,
+            "payload_start": 4,
+            "sha256": "854278d7bb049a59b44a0fa85cbb849752ba84f02fbd7d91480c1a1ffcac42e5"
+          },
+          {
+            "archive_end": 185505,
+            "archive_start": 169656,
+            "bytes": 15849,
+            "entropy_bits_per_byte": 7.985386,
+            "name": "latents_pr106_fixed_brotli",
+            "payload_end": 185470,
+            "payload_start": 169621,
+            "sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32"
+          }
+        ]
+      }
+    ],
+    "path": "experiments/results/lightning_batch/pr103_pr106_ac_repack_exact_eval_t4_20260507T181300Z/archive.zip",
+    "sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+    "synthetic_fixture": false,
+    "zip_member_table": [
+      {
+        "central_compress_size": 185470,
+        "central_compress_type": 0,
+        "central_crc32": "a7f6d4af",
+        "central_create_system": 3,
+        "central_create_version": 20,
+        "central_date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "central_external_attr": 25165824,
+        "central_extract_version": 20,
+        "central_file_size": 185470,
+        "central_flag_bits": 0,
+        "compressed_data_end": 185505,
+        "compressed_data_size_from_central": 185470,
+        "compressed_data_start": 35,
+        "index": 0,
+        "is_dir": false,
+        "local_header_bytes": 35,
+        "local_header_compress_type": 0,
+        "local_header_compressed_size": 185470,
+        "local_header_crc32": "a7f6d4af",
+        "local_header_extra_len": 0,
+        "local_header_file_size": 185470,
+        "local_header_filename_len": 5,
+        "local_header_flag_bits": 0,
+        "local_header_mod_date_raw": 33,
+        "local_header_mod_time_raw": 0,
+        "local_header_name": "0.bin",
+        "local_header_name_matches_central": true,
+        "local_header_offset": 0,
+        "local_header_signature": "0x04034b50",
+        "local_header_signature_ok": true,
+        "local_header_version_needed": 20,
+        "name": "0.bin",
+        "payload_sha256": "3272ec95a2ea5ec68feb1a53fa53f6b14bdae3883fac38ee2261cdadb1b16357",
+        "stored_payload_matches_compressed_bytes": true,
+        "unsafe_reason": null,
+        "uses_data_descriptor": false
+      }
+    ],
+    "zip_overhead_vs_compressed_member_data_bytes": 108,
+    "zip_overhead_vs_uncompressed_member_data_bytes": 108,
+    "zip_summary": {
+      "central_directory_bytes": 51,
+      "central_directory_offset": 185505,
+      "directory_member_count": 0,
+      "duplicate_file_names": [],
+      "eocd_bytes": 22,
+      "eocd_offset": 185556,
+      "file_member_count": 1,
+      "unsafe_members": []
+    }
+  },
+  "active_floor_lineage": {
+    "active_archive_bytes": 185578,
+    "active_archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+    "label": "PR103-on-PR106 active floor anatomy",
+    "lineage_score_claim": false,
+    "matching_candidate_manifests": [
+      {
+        "ac_audit": {
+          "0": {
+            "ac_bytes": 31632,
+            "brotli_bytes": 31892,
+            "delta_bytes": -260,
+            "n_symbols": 48384
+          },
+          "10": {
+            "ac_bytes": 10788,
+            "brotli_bytes": 10949,
+            "delta_bytes": -161,
+            "n_symbols": 12960
+          },
+          "12": {
+            "ac_bytes": 7684,
+            "brotli_bytes": 7821,
+            "delta_bytes": -137,
+            "n_symbols": 11664
+          },
+          "2": {
+            "ac_bytes": 34028,
+            "brotli_bytes": 34227,
+            "delta_bytes": -199,
+            "n_symbols": 46656
+          },
+          "21": {
+            "ac_bytes": 12,
+            "brotli_bytes": 13,
+            "delta_bytes": -1,
+            "n_symbols": 9
+          },
+          "4": {
+            "ac_bytes": 34548,
+            "brotli_bytes": 34789,
+            "delta_bytes": -241,
+            "n_symbols": 46656
+          },
+          "6": {
+            "ac_bytes": 27648,
+            "brotli_bytes": 27895,
+            "delta_bytes": -247,
+            "n_symbols": 34992
+          },
+          "8": {
+            "ac_bytes": 15048,
+            "brotli_bytes": 15229,
+            "delta_bytes": -181,
+            "n_symbols": 19440
+          }
+        },
+        "archive_delta_bytes": -661,
+        "compose_with_pr101": false,
+        "decoder_delta_bytes": -661,
+        "output_archive_bytes": 185578,
+        "output_archive_path": "experiments/results/pr103_repack_pr106_standalone_20260507/archive.zip",
+        "output_archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+        "output_decoder_section_bytes": 169617,
+        "output_latents_section_bytes": 15849,
+        "path": "experiments/results/pr103_repack_pr106_standalone_20260507/manifest.json",
+        "runtime_adapter_blockers": [
+          "pr103_arithmetic_codec_runtime_adapter_not_yet_integrated",
+          "pr106_inflate_will_fail_on_pr103_decoder_format",
+          "pr103_decoder_section_has_no_section_length_prefixes_so_runtime_must_carry_hardcoded_lengths_or_a_small_header"
+        ],
+        "runtime_adapter_required": true,
+        "score_claim": false,
+        "score_evidence_grade": "[predicted]",
+        "source_archive_bytes": 186239,
+        "source_archive_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+        "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+        "source_decoder_section_bytes": 170278,
+        "source_latents_section_bytes": 15849,
+        "source_member_name": "0.bin",
+        "source_payload_bytes": 186131,
+        "tool": "experiments.build_pr103_repacked_archive"
+      },
+      {
+        "ac_audit": {
+          "0": {
+            "ac_bytes": 31632,
+            "brotli_bytes": 31892,
+            "delta_bytes": -260,
+            "n_symbols": 48384
+          },
+          "10": {
+            "ac_bytes": 10788,
+            "brotli_bytes": 10949,
+            "delta_bytes": -161,
+            "n_symbols": 12960
+          },
+          "12": {
+            "ac_bytes": 7684,
+            "brotli_bytes": 7821,
+            "delta_bytes": -137,
+            "n_symbols": 11664
+          },
+          "2": {
+            "ac_bytes": 34028,
+            "brotli_bytes": 34227,
+            "delta_bytes": -199,
+            "n_symbols": 46656
+          },
+          "21": {
+            "ac_bytes": 12,
+            "brotli_bytes": 13,
+            "delta_bytes": -1,
+            "n_symbols": 9
+          },
+          "4": {
+            "ac_bytes": 34548,
+            "brotli_bytes": 34789,
+            "delta_bytes": -241,
+            "n_symbols": 46656
+          },
+          "6": {
+            "ac_bytes": 27648,
+            "brotli_bytes": 27895,
+            "delta_bytes": -247,
+            "n_symbols": 34992
+          },
+          "8": {
+            "ac_bytes": 15048,
+            "brotli_bytes": 15229,
+            "delta_bytes": -181,
+            "n_symbols": 19440
+          }
+        },
+        "archive_delta_bytes": -661,
+        "compose_with_pr101": true,
+        "decoder_delta_bytes": -661,
+        "output_archive_bytes": 185578,
+        "output_archive_path": "experiments/results/pr103_repack_pr106_composed_op1_op2_20260507/archive.zip",
+        "output_archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+        "output_decoder_section_bytes": 169617,
+        "output_latents_section_bytes": 15849,
+        "path": "experiments/results/pr103_repack_pr106_composed_op1_op2_20260507/manifest.json",
+        "runtime_adapter_blockers": [
+          "pr103_arithmetic_codec_runtime_adapter_not_yet_integrated",
+          "pr106_inflate_will_fail_on_pr103_decoder_format",
+          "pr103_decoder_section_has_no_section_length_prefixes_so_runtime_must_carry_hardcoded_lengths_or_a_small_header"
+        ],
+        "runtime_adapter_required": true,
+        "score_claim": false,
+        "score_evidence_grade": "[predicted]",
+        "source_archive_bytes": 186239,
+        "source_archive_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+        "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+        "source_decoder_section_bytes": 170278,
+        "source_latents_section_bytes": 15849,
+        "source_member_name": "0.bin",
+        "source_payload_bytes": 186131,
+        "tool": "experiments.build_pr103_repacked_archive"
+      }
+    ],
+    "source_pr_roles": [
+      {
+        "archive_bytes": 178223,
+        "archive_sha256": "31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30",
+        "author": "rem2",
+        "pr_number": 103,
+        "role": "arithmetic_schema_source",
+        "title": "hnerv_lc_ac submission (0.19)"
+      },
+      {
+        "archive_bytes": 186239,
+        "archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+        "author": "valtterivalo",
+        "pr_number": 106,
+        "role": "packed_pr106_envelope_and_latents_source",
+        "title": "belt_and_suspenders (0.20946)"
+      }
+    ]
+  },
+  "auth_eval_custody": {
+    "archive_identity": {
+      "archive_bytes": 185578,
+      "archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+      "matches_active_archive": true
+    },
+    "cuda_custody": {
+      "contest_auth_eval_elapsed_seconds": 62.886833658999876,
+      "cuda_available": true,
+      "cuda_device_count": 1,
+      "cuda_version": "13.0",
+      "device": "cuda",
+      "evaluate_elapsed_seconds": 38.373517383000035,
+      "gpu_model": "Tesla T4",
+      "gpu_t4_match": true,
+      "inflate_elapsed_seconds": 24.51128634600036,
+      "n_samples": 600
+    },
+    "custody_caveats": [
+      "auth_eval_provenance_pact_commit_unavailable"
+    ],
+    "exact_eval_blockers": [],
+    "exact_eval_status": "present_identity_matched_cuda_t4_600_samples",
+    "exists": true,
+    "logs_parsed_for_score": false,
+    "path": "experiments/results/lightning_batch/pr103_pr106_ac_repack_exact_eval_t4_20260507T181300Z/contest_auth_eval.adjudicated.json",
+    "runtime_tree_custody": {
+      "inflate_script_sha256": "ce6b5438bbe9e4bfcedffe69ddce375daccb77da8a458b28c3776b31e806a815",
+      "repo_local_tac_import_manifest": {
+        "discovery": "static_ast_recursive_import_closure",
+        "file_count": 0,
+        "files": [],
+        "module_count": 0,
+        "parse_errors": [],
+        "root_import_modules": [],
+        "runtime_root_name": "pr103_pr106_final_runtime",
+        "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+        "tac_root_relative_path": "src/tac",
+        "unresolved_modules": []
+      },
+      "runtime_file_count": 3,
+      "runtime_files": [
+        {
+          "bytes": 52,
+          "relative_path": "__init__.py",
+          "repo_relative_path": "submissions/pr103_pr106_final_runtime/__init__.py",
+          "sha256": "78c3cd09aab62aed7f4ee12942d858cead5eb14bdd20a17c532eac5aab1a9e89"
+        },
+        {
+          "bytes": 20711,
+          "relative_path": "inflate.py",
+          "repo_relative_path": "submissions/pr103_pr106_final_runtime/inflate.py",
+          "sha256": "62fec760534039e72e6cbf4007f940d49dcdb3a2d867c344cf0dc3f14fb34a6b"
+        },
+        {
+          "bytes": 1367,
+          "relative_path": "inflate.sh",
+          "repo_relative_path": "submissions/pr103_pr106_final_runtime/inflate.sh",
+          "sha256": "ce6b5438bbe9e4bfcedffe69ddce375daccb77da8a458b28c3776b31e806a815"
+        }
+      ],
+      "runtime_tree_sha256": "54db9e5ddee85ae7f486fae900ff3907932efb1c8d3062bc264b0e5c7456d8f6",
+      "upstream_evaluate_py": {
+        "bytes": 6005,
+        "relative_path": "evaluate.py",
+        "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+      }
+    },
+    "score_claim": false,
+    "score_fields_suppressed": [
+      "avg_posenet_dist",
+      "avg_segnet_dist",
+      "canonical_score",
+      "final_score",
+      "rate_unscaled",
+      "reported_final_score_display_rounded",
+      "score_pose_contribution",
+      "score_rate_contribution",
+      "score_recomputed_from_components",
+      "score_reported_rounded_differs_from_canonical",
+      "score_rounding_abs_delta",
+      "score_seg_contribution"
+    ],
+    "score_values_suppressed": true
+  },
+  "blocker_policy": {
+    "missing_or_mismatched_exact_eval_identity_is_a_blocker": true,
+    "score_from_adjudication_suppressed_in_this_anatomy": true,
+    "score_from_logs_forbidden": true
+  },
+  "candidate_manifests": [
+    {
+      "ac_audit": {
+        "0": {
+          "ac_bytes": 31632,
+          "brotli_bytes": 31892,
+          "delta_bytes": -260,
+          "n_symbols": 48384
+        },
+        "10": {
+          "ac_bytes": 10788,
+          "brotli_bytes": 10949,
+          "delta_bytes": -161,
+          "n_symbols": 12960
+        },
+        "12": {
+          "ac_bytes": 7684,
+          "brotli_bytes": 7821,
+          "delta_bytes": -137,
+          "n_symbols": 11664
+        },
+        "2": {
+          "ac_bytes": 34028,
+          "brotli_bytes": 34227,
+          "delta_bytes": -199,
+          "n_symbols": 46656
+        },
+        "21": {
+          "ac_bytes": 12,
+          "brotli_bytes": 13,
+          "delta_bytes": -1,
+          "n_symbols": 9
+        },
+        "4": {
+          "ac_bytes": 34548,
+          "brotli_bytes": 34789,
+          "delta_bytes": -241,
+          "n_symbols": 46656
+        },
+        "6": {
+          "ac_bytes": 27648,
+          "brotli_bytes": 27895,
+          "delta_bytes": -247,
+          "n_symbols": 34992
+        },
+        "8": {
+          "ac_bytes": 15048,
+          "brotli_bytes": 15229,
+          "delta_bytes": -181,
+          "n_symbols": 19440
+        }
+      },
+      "archive_delta_bytes": -661,
+      "compose_with_pr101": false,
+      "decoder_delta_bytes": -661,
+      "output_archive_bytes": 185578,
+      "output_archive_path": "experiments/results/pr103_repack_pr106_standalone_20260507/archive.zip",
+      "output_archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+      "output_decoder_section_bytes": 169617,
+      "output_latents_section_bytes": 15849,
+      "path": "experiments/results/pr103_repack_pr106_standalone_20260507/manifest.json",
+      "runtime_adapter_blockers": [
+        "pr103_arithmetic_codec_runtime_adapter_not_yet_integrated",
+        "pr106_inflate_will_fail_on_pr103_decoder_format",
+        "pr103_decoder_section_has_no_section_length_prefixes_so_runtime_must_carry_hardcoded_lengths_or_a_small_header"
+      ],
+      "runtime_adapter_required": true,
+      "score_claim": false,
+      "score_evidence_grade": "[predicted]",
+      "source_archive_bytes": 186239,
+      "source_archive_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+      "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+      "source_decoder_section_bytes": 170278,
+      "source_latents_section_bytes": 15849,
+      "source_member_name": "0.bin",
+      "source_payload_bytes": 186131,
+      "tool": "experiments.build_pr103_repacked_archive"
+    },
+    {
+      "ac_audit": {
+        "0": {
+          "ac_bytes": 31632,
+          "brotli_bytes": 31892,
+          "delta_bytes": -260,
+          "n_symbols": 48384
+        },
+        "10": {
+          "ac_bytes": 10788,
+          "brotli_bytes": 10949,
+          "delta_bytes": -161,
+          "n_symbols": 12960
+        },
+        "12": {
+          "ac_bytes": 7684,
+          "brotli_bytes": 7821,
+          "delta_bytes": -137,
+          "n_symbols": 11664
+        },
+        "2": {
+          "ac_bytes": 34028,
+          "brotli_bytes": 34227,
+          "delta_bytes": -199,
+          "n_symbols": 46656
+        },
+        "21": {
+          "ac_bytes": 12,
+          "brotli_bytes": 13,
+          "delta_bytes": -1,
+          "n_symbols": 9
+        },
+        "4": {
+          "ac_bytes": 34548,
+          "brotli_bytes": 34789,
+          "delta_bytes": -241,
+          "n_symbols": 46656
+        },
+        "6": {
+          "ac_bytes": 27648,
+          "brotli_bytes": 27895,
+          "delta_bytes": -247,
+          "n_symbols": 34992
+        },
+        "8": {
+          "ac_bytes": 15048,
+          "brotli_bytes": 15229,
+          "delta_bytes": -181,
+          "n_symbols": 19440
+        }
+      },
+      "archive_delta_bytes": -661,
+      "compose_with_pr101": true,
+      "decoder_delta_bytes": -661,
+      "output_archive_bytes": 185578,
+      "output_archive_path": "experiments/results/pr103_repack_pr106_composed_op1_op2_20260507/archive.zip",
+      "output_archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+      "output_decoder_section_bytes": 169617,
+      "output_latents_section_bytes": 15849,
+      "path": "experiments/results/pr103_repack_pr106_composed_op1_op2_20260507/manifest.json",
+      "runtime_adapter_blockers": [
+        "pr103_arithmetic_codec_runtime_adapter_not_yet_integrated",
+        "pr106_inflate_will_fail_on_pr103_decoder_format",
+        "pr103_decoder_section_has_no_section_length_prefixes_so_runtime_must_carry_hardcoded_lengths_or_a_small_header"
+      ],
+      "runtime_adapter_required": true,
+      "score_claim": false,
+      "score_evidence_grade": "[predicted]",
+      "source_archive_bytes": 186239,
+      "source_archive_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+      "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+      "source_decoder_section_bytes": 170278,
+      "source_latents_section_bytes": 15849,
+      "source_member_name": "0.bin",
+      "source_payload_bytes": 186131,
+      "tool": "experiments.build_pr103_repacked_archive"
+    }
+  ],
+  "charged_byte_proof": {
+    "all_available_identity_sources_match": true,
+    "charged_archive_bytes": 185578,
+    "charged_archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+    "contest_original_bytes": 37545489,
+    "identity_sources": [
+      {
+        "archive_bytes": 185578,
+        "archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+        "matches_active": true,
+        "source": "active_archive"
+      },
+      {
+        "archive_bytes": 185578,
+        "archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+        "matches_active": true,
+        "source": "auth_eval_adjudicated_json_identity_only"
+      },
+      {
+        "archive_bytes": 185578,
+        "archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+        "matches_active": true,
+        "source": "experiments/results/pr103_repack_pr106_standalone_20260507/manifest.json"
+      },
+      {
+        "archive_bytes": 185578,
+        "archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+        "matches_active": true,
+        "source": "experiments/results/pr103_repack_pr106_composed_op1_op2_20260507/manifest.json"
+      },
+      {
+        "archive_bytes": 185578,
+        "archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+        "matches_active": true,
+        "source": "runtime_closure_candidate_archive"
+      }
+    ],
+    "rate_term_multiplier": 25,
+    "score_claim": false,
+    "score_recompute_intentionally_omitted": true
+  },
+  "exact_eval_blockers": [],
+  "logs_parsed_for_score": false,
+  "public_pr100_107_inventory": [
+    {
+      "archive_bytes": 178981,
+      "archive_present": true,
+      "archive_provenance": {
+        "archive_sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+        "archive_size_bytes": 178981,
+        "fetched_at_utc": "2026-05-05T22:44:45.603333+00:00",
+        "source_url": null,
+        "status": "exists_skipped"
+      },
+      "archive_sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+      "author": "BradyMeighan",
+      "created_at": "2026-05-04T09:59:47Z",
+      "head_repo": "BradyMeighan/comma_video_compression_challenge",
+      "head_sha": "0a8d343a5dc7f9e93d9d0e6cb8bc15f6c626c050",
+      "intake_dir": "experiments/results/public_pr_intake_full/public_pr100_intake_20260505_auto",
+      "leaderboard_name": "hnerv_lc_v2",
+      "leaderboard_score_external_only": 0.195,
+      "metadata_present": true,
+      "packed_payload_candidates": [
+        {
+          "kind": "opaque_single_payload",
+          "member_index": 0,
+          "member_name": "0.bin",
+          "payload_bytes": 178873,
+          "payload_sha256": "3234f0689164cfc95b7ee9f9cdf38ecf4d082cfb7048058e2b3ff0f54f864e43",
+          "sections": [
+            {
+              "archive_end": 178908,
+              "archive_start": 35,
+              "bytes": 178873,
+              "entropy_bits_per_byte": 7.997101,
+              "name": "opaque_single_payload",
+              "payload_end": 178873,
+              "payload_start": 0,
+              "sha256": "3234f0689164cfc95b7ee9f9cdf38ecf4d082cfb7048058e2b3ff0f54f864e43"
+            }
+          ]
+        }
+      ],
+      "pr_number": 100,
+      "title": "hnerv_lc_v2 submission (0.1954)",
+      "updated_or_closed_at": "2026-05-04T17:51:10Z",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/100",
+      "zip_member_table": [
+        {
+          "central_compress_size": 178873,
+          "central_compress_type": 0,
+          "central_crc32": "99b32852",
+          "central_create_system": 0,
+          "central_create_version": 20,
+          "central_date_time": [
+            2026,
+            5,
+            4,
+            5,
+            52,
+            4
+          ],
+          "central_external_attr": 2176188416,
+          "central_extract_version": 20,
+          "central_file_size": 178873,
+          "central_flag_bits": 0,
+          "compressed_data_end": 178908,
+          "compressed_data_size_from_central": 178873,
+          "compressed_data_start": 35,
+          "index": 0,
+          "is_dir": false,
+          "local_header_bytes": 35,
+          "local_header_compress_type": 0,
+          "local_header_compressed_size": 178873,
+          "local_header_crc32": "99b32852",
+          "local_header_extra_len": 0,
+          "local_header_file_size": 178873,
+          "local_header_filename_len": 5,
+          "local_header_flag_bits": 0,
+          "local_header_mod_date_raw": 23716,
+          "local_header_mod_time_raw": 11906,
+          "local_header_name": "0.bin",
+          "local_header_name_matches_central": true,
+          "local_header_offset": 0,
+          "local_header_signature": "0x04034b50",
+          "local_header_signature_ok": true,
+          "local_header_version_needed": 20,
+          "name": "0.bin",
+          "payload_sha256": "3234f0689164cfc95b7ee9f9cdf38ecf4d082cfb7048058e2b3ff0f54f864e43",
+          "stored_payload_matches_compressed_bytes": true,
+          "unsafe_reason": null,
+          "uses_data_descriptor": false
+        }
+      ],
+      "zip_summary": {
+        "central_directory_bytes": 51,
+        "central_directory_offset": 178908,
+        "directory_member_count": 0,
+        "duplicate_file_names": [],
+        "eocd_bytes": 22,
+        "eocd_offset": 178959,
+        "file_member_count": 1,
+        "unsafe_members": []
+      }
+    },
+    {
+      "archive_bytes": 178258,
+      "archive_present": true,
+      "archive_provenance": {
+        "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+        "archive_size_bytes": 178258,
+        "fetched_at_utc": "2026-05-05T22:44:43.527892+00:00",
+        "source_url": null,
+        "status": "exists_skipped"
+      },
+      "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "author": "SajayR",
+      "created_at": "2026-05-04T11:50:13Z",
+      "head_repo": "SajayR/comma_video_compression_challenge",
+      "head_sha": "ec7e366844fd8cffff33184e7ad92df22e93a908",
+      "intake_dir": "experiments/results/public_pr_intake_full/public_pr101_intake_20260505_auto",
+      "leaderboard_name": "hnerv_ft_microcodec",
+      "leaderboard_score_external_only": 0.193,
+      "metadata_present": true,
+      "packed_payload_candidates": [
+        {
+          "fixed_layout_fits_payload": true,
+          "fixed_section_bytes": 177551,
+          "kind": "pr101_microcodec_or_compatible_fixed_layout",
+          "member_index": 0,
+          "member_name": "x",
+          "payload_bytes": 178158,
+          "payload_sha256": "5f1948f9572e65f71c614d2ff15764ee416522e25cb1b06c8b1299c1306e8aaf",
+          "sections": [
+            {
+              "archive_end": 162195,
+              "archive_start": 31,
+              "bytes": 162164,
+              "entropy_bits_per_byte": 7.998425,
+              "name": "decoder_compact_brotli_streams",
+              "payload_end": 162164,
+              "payload_start": 0,
+              "sha256": "836d1876bffd74f77f30e387a3b4cac1dbb25929cc4d348830d36cfa2a6d48a6"
+            },
+            {
+              "archive_end": 177582,
+              "archive_start": 162195,
+              "bytes": 15387,
+              "entropy_bits_per_byte": 7.988287,
+              "name": "latents_raw_lzma_delta_u8",
+              "payload_end": 177551,
+              "payload_start": 162164,
+              "sha256": "de8a0da594f073efc43849334573ba06438bb37d53f9343ee6367659c0106bbe"
+            },
+            {
+              "archive_end": 178189,
+              "archive_start": 177582,
+              "bytes": 607,
+              "entropy_bits_per_byte": 7.710458,
+              "name": "tail_or_sidecar",
+              "payload_end": 178158,
+              "payload_start": 177551,
+              "sha256": "6c2946e323bbbc6f8d906ef6c68989e8acbd8d60332c87da8fe8147f1ea7b12f"
+            }
+          ]
+        }
+      ],
+      "pr_number": 101,
+      "title": "add hnerv ft microcodec submission",
+      "updated_or_closed_at": "2026-05-04T17:51:16Z",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/101",
+      "zip_member_table": [
+        {
+          "central_compress_size": 178158,
+          "central_compress_type": 0,
+          "central_crc32": "6d2a9081",
+          "central_create_system": 3,
+          "central_create_version": 20,
+          "central_date_time": [
+            2026,
+            5,
+            4,
+            16,
+            48,
+            4
+          ],
+          "central_external_attr": 25165824,
+          "central_extract_version": 20,
+          "central_file_size": 178158,
+          "central_flag_bits": 0,
+          "compressed_data_end": 178189,
+          "compressed_data_size_from_central": 178158,
+          "compressed_data_start": 31,
+          "index": 0,
+          "is_dir": false,
+          "local_header_bytes": 31,
+          "local_header_compress_type": 0,
+          "local_header_compressed_size": 178158,
+          "local_header_crc32": "6d2a9081",
+          "local_header_extra_len": 0,
+          "local_header_file_size": 178158,
+          "local_header_filename_len": 1,
+          "local_header_flag_bits": 0,
+          "local_header_mod_date_raw": 23716,
+          "local_header_mod_time_raw": 34306,
+          "local_header_name": "x",
+          "local_header_name_matches_central": true,
+          "local_header_offset": 0,
+          "local_header_signature": "0x04034b50",
+          "local_header_signature_ok": true,
+          "local_header_version_needed": 20,
+          "name": "x",
+          "payload_sha256": "5f1948f9572e65f71c614d2ff15764ee416522e25cb1b06c8b1299c1306e8aaf",
+          "stored_payload_matches_compressed_bytes": true,
+          "unsafe_reason": null,
+          "uses_data_descriptor": false
+        }
+      ],
+      "zip_summary": {
+        "central_directory_bytes": 47,
+        "central_directory_offset": 178189,
+        "directory_member_count": 0,
+        "duplicate_file_names": [],
+        "eocd_bytes": 22,
+        "eocd_offset": 178236,
+        "file_member_count": 1,
+        "unsafe_members": []
+      }
+    },
+    {
+      "archive_bytes": 276481,
+      "archive_present": true,
+      "archive_provenance": {
+        "archive_sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746",
+        "archive_size_bytes": 276481,
+        "fetched_at_utc": "2026-05-05T22:44:45.122186+00:00",
+        "source_url": null,
+        "status": "downloaded"
+      },
+      "archive_sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746",
+      "author": "EthanYangTW",
+      "created_at": "2026-05-04T11:54:32Z",
+      "head_repo": "EthanYangTW/comma_video_compression_challenge",
+      "head_sha": "1e330ec5633539c48278ce3cc96d2b15ea7a9eac",
+      "intake_dir": "experiments/results/public_pr_intake_full/public_pr102_intake_20260505_auto",
+      "leaderboard_name": "hnerv_lc_v2_scale095_rplus1",
+      "leaderboard_score_external_only": 0.195,
+      "metadata_present": true,
+      "packed_payload_candidates": [
+        {
+          "kind": "opaque_single_payload",
+          "member_index": 0,
+          "member_name": "p",
+          "payload_bytes": 276381,
+          "payload_sha256": "f78c71d3086773e417c672734082a49ceb0ef5a0016cf406a920be7978fff252",
+          "sections": [
+            {
+              "archive_end": 276412,
+              "archive_start": 31,
+              "bytes": 276381,
+              "entropy_bits_per_byte": 7.99915,
+              "name": "opaque_single_payload",
+              "payload_end": 276381,
+              "payload_start": 0,
+              "sha256": "f78c71d3086773e417c672734082a49ceb0ef5a0016cf406a920be7978fff252"
+            }
+          ]
+        }
+      ],
+      "pr_number": 102,
+      "title": "hnerv_lc_v2_scale095_rplus1 submission (0.19538 CPU)",
+      "updated_or_closed_at": "2026-05-04T20:08:31Z",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/102",
+      "zip_member_table": [
+        {
+          "central_compress_size": 276381,
+          "central_compress_type": 0,
+          "central_crc32": "ea40ae68",
+          "central_create_system": 3,
+          "central_create_version": 20,
+          "central_date_time": [
+            2026,
+            5,
+            3,
+            8,
+            40,
+            56
+          ],
+          "central_external_attr": 25165824,
+          "central_extract_version": 20,
+          "central_file_size": 276381,
+          "central_flag_bits": 0,
+          "compressed_data_end": 276412,
+          "compressed_data_size_from_central": 276381,
+          "compressed_data_start": 31,
+          "index": 0,
+          "is_dir": false,
+          "local_header_bytes": 31,
+          "local_header_compress_type": 0,
+          "local_header_compressed_size": 276381,
+          "local_header_crc32": "ea40ae68",
+          "local_header_extra_len": 0,
+          "local_header_file_size": 276381,
+          "local_header_filename_len": 1,
+          "local_header_flag_bits": 0,
+          "local_header_mod_date_raw": 23715,
+          "local_header_mod_time_raw": 17692,
+          "local_header_name": "p",
+          "local_header_name_matches_central": true,
+          "local_header_offset": 0,
+          "local_header_signature": "0x04034b50",
+          "local_header_signature_ok": true,
+          "local_header_version_needed": 20,
+          "name": "p",
+          "payload_sha256": "f78c71d3086773e417c672734082a49ceb0ef5a0016cf406a920be7978fff252",
+          "stored_payload_matches_compressed_bytes": true,
+          "unsafe_reason": null,
+          "uses_data_descriptor": false
+        }
+      ],
+      "zip_summary": {
+        "central_directory_bytes": 47,
+        "central_directory_offset": 276412,
+        "directory_member_count": 0,
+        "duplicate_file_names": [],
+        "eocd_bytes": 22,
+        "eocd_offset": 276459,
+        "file_member_count": 1,
+        "unsafe_members": []
+      }
+    },
+    {
+      "archive_bytes": 178223,
+      "archive_present": true,
+      "archive_provenance": {
+        "archive_sha256": "31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30",
+        "archive_size_bytes": 178223,
+        "fetched_at_utc": "2026-05-05T22:44:44.008072+00:00",
+        "source_url": null,
+        "status": "exists_skipped"
+      },
+      "archive_sha256": "31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30",
+      "author": "rem2",
+      "created_at": "2026-05-04T11:55:56Z",
+      "head_repo": "rem2/comma_video_compression_challenge",
+      "head_sha": "d20270750e603346056f4e867cddd4744272c9d8",
+      "intake_dir": "experiments/results/public_pr_intake_full/public_pr103_intake_20260505_auto",
+      "leaderboard_name": "hnerv_lc_ac",
+      "leaderboard_score_external_only": 0.195,
+      "metadata_present": true,
+      "packed_payload_candidates": [
+        {
+          "fixed_layout_fits_payload": true,
+          "fixed_section_bytes": 177568,
+          "kind": "pr103_lc_ac_or_compatible_fixed_layout",
+          "member_index": 0,
+          "member_name": "x",
+          "payload_bytes": 178123,
+          "payload_sha256": "dd92b065b8fbd2bfe9de837eb110a971c2675ecca4247e2658b4628b464d72ec",
+          "sections": [
+            {
+              "archive_end": 87,
+              "archive_start": 31,
+              "bytes": 56,
+              "entropy_bits_per_byte": 5.022102,
+              "name": "scales_fp16",
+              "payload_end": 56,
+              "payload_start": 0,
+              "sha256": "778f6dc4f27ef44b4fd197a3e22fe8b0bc07acdc72475ec36bed0f218182ce94"
+            },
+            {
+              "archive_end": 7184,
+              "archive_start": 87,
+              "bytes": 7097,
+              "entropy_bits_per_byte": 7.972998,
+              "name": "non_ac_weights_brotli",
+              "payload_end": 7153,
+              "payload_start": 56,
+              "sha256": "1a25a07b4c9e24b6497a193dd80a3c67086bb3a70e14f56b7b2384ae697a7002"
+            },
+            {
+              "archive_end": 8079,
+              "archive_start": 7184,
+              "bytes": 895,
+              "entropy_bits_per_byte": 7.780318,
+              "name": "ac_histograms_brotli",
+              "payload_end": 8048,
+              "payload_start": 7153,
+              "sha256": "ce7c9a404015b19ef1b8e70de61da4aa3dbdb952a78e38e6c25cbaeb32078a95"
+            },
+            {
+              "archive_end": 161935,
+              "archive_start": 8079,
+              "bytes": 153856,
+              "entropy_bits_per_byte": 7.998795,
+              "name": "merged_range_coded_weights_and_hi_latents",
+              "payload_end": 161904,
+              "payload_start": 8048,
+              "sha256": "08f0a219b395e6783c522bacc8239f01dcb3d27d9f7f8d2291a7478d04859de7"
+            },
+            {
+              "archive_end": 162047,
+              "archive_start": 161935,
+              "bytes": 112,
+              "entropy_bits_per_byte": 4.998226,
+              "name": "latent_min_scale_fp16",
+              "payload_end": 162016,
+              "payload_start": 161904,
+              "sha256": "7cf743ec1151536cd6cab55ebf3041dc8311cd08362208fb347b5bdb4b3c40b6"
+            },
+            {
+              "archive_end": 177584,
+              "archive_start": 162047,
+              "bytes": 15537,
+              "entropy_bits_per_byte": 7.986907,
+              "name": "latent_low_bytes_brotli",
+              "payload_end": 177553,
+              "payload_start": 162016,
+              "sha256": "5f33edaf176f52572b0406f8bfd1ef658f731125109b8284e1089b564f1ce896"
+            },
+            {
+              "archive_end": 177599,
+              "archive_start": 177584,
+              "bytes": 15,
+              "entropy_bits_per_byte": 3.773557,
+              "name": "latent_hi_histogram_brotli",
+              "payload_end": 177568,
+              "payload_start": 177553,
+              "sha256": "1bbb4815aa10e8709b9bcce908f498d6bd15cc5274ffb9ce55e293dfe8390a19"
+            },
+            {
+              "archive_end": 178154,
+              "archive_start": 177599,
+              "bytes": 555,
+              "entropy_bits_per_byte": 7.646035,
+              "name": "tail_or_sidecar",
+              "payload_end": 178123,
+              "payload_start": 177568,
+              "sha256": "91d819d805a0640dd706b29228372d0a09d7a03275066b7b5659200c04afc198"
+            }
+          ]
+        }
+      ],
+      "pr_number": 103,
+      "title": "hnerv_lc_ac submission (0.19)",
+      "updated_or_closed_at": "2026-05-04T17:51:27Z",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/103",
+      "zip_member_table": [
+        {
+          "central_compress_size": 178123,
+          "central_compress_type": 0,
+          "central_crc32": "c75b8cb2",
+          "central_create_system": 3,
+          "central_create_version": 30,
+          "central_date_time": [
+            2026,
+            5,
+            4,
+            4,
+            11,
+            56
+          ],
+          "central_external_attr": 2175008768,
+          "central_extract_version": 10,
+          "central_file_size": 178123,
+          "central_flag_bits": 0,
+          "compressed_data_end": 178154,
+          "compressed_data_size_from_central": 178123,
+          "compressed_data_start": 31,
+          "index": 0,
+          "is_dir": false,
+          "local_header_bytes": 31,
+          "local_header_compress_type": 0,
+          "local_header_compressed_size": 178123,
+          "local_header_crc32": "c75b8cb2",
+          "local_header_extra_len": 0,
+          "local_header_file_size": 178123,
+          "local_header_filename_len": 1,
+          "local_header_flag_bits": 0,
+          "local_header_mod_date_raw": 23716,
+          "local_header_mod_time_raw": 8572,
+          "local_header_name": "x",
+          "local_header_name_matches_central": true,
+          "local_header_offset": 0,
+          "local_header_signature": "0x04034b50",
+          "local_header_signature_ok": true,
+          "local_header_version_needed": 10,
+          "name": "x",
+          "payload_sha256": "dd92b065b8fbd2bfe9de837eb110a971c2675ecca4247e2658b4628b464d72ec",
+          "stored_payload_matches_compressed_bytes": true,
+          "unsafe_reason": null,
+          "uses_data_descriptor": false
+        }
+      ],
+      "zip_summary": {
+        "central_directory_bytes": 47,
+        "central_directory_offset": 178154,
+        "directory_member_count": 0,
+        "duplicate_file_names": [],
+        "eocd_bytes": 22,
+        "eocd_offset": 178201,
+        "file_member_count": 1,
+        "unsafe_members": []
+      }
+    },
+    {
+      "archive_bytes": 178637,
+      "archive_present": true,
+      "archive_provenance": {
+        "archive_sha256": "6564c32a9edeeaf08abd7f0ea673ba2fda23444605ca207eb4ba794cc66797b8",
+        "archive_size_bytes": 178637,
+        "fetched_at_utc": "2026-05-05T22:44:49.467816+00:00",
+        "source_url": null,
+        "status": "exists_skipped"
+      },
+      "archive_sha256": "6564c32a9edeeaf08abd7f0ea673ba2fda23444605ca207eb4ba794cc66797b8",
+      "author": "patattzel",
+      "created_at": "2026-05-04T11:56:00Z",
+      "head_repo": "patattzel/comma_video_compression_challenge",
+      "head_sha": "f1c59d895325f2d2835e843ce72be3443983a4b4",
+      "intake_dir": "experiments/results/public_pr_intake_full/public_pr104_intake_20260505_auto",
+      "leaderboard_name": "qhnerv_ft_best",
+      "leaderboard_score_external_only": 0.231,
+      "metadata_present": true,
+      "packed_payload_candidates": [
+        {
+          "kind": "opaque_single_payload",
+          "member_index": 0,
+          "member_name": "0.bin",
+          "payload_bytes": 178529,
+          "payload_sha256": "0a0f2cac1961f3ab5128e70ff10c0287a66949d435b5ee7a4dcf2017917910a3",
+          "sections": [
+            {
+              "archive_end": 178564,
+              "archive_start": 35,
+              "bytes": 178529,
+              "entropy_bits_per_byte": 7.998055,
+              "name": "opaque_single_payload",
+              "payload_end": 178529,
+              "payload_start": 0,
+              "sha256": "0a0f2cac1961f3ab5128e70ff10c0287a66949d435b5ee7a4dcf2017917910a3"
+            }
+          ]
+        }
+      ],
+      "pr_number": 104,
+      "title": "qhnerv_ft_best",
+      "updated_or_closed_at": "2026-05-04T17:51:34Z",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/104",
+      "zip_member_table": [
+        {
+          "central_compress_size": 178529,
+          "central_compress_type": 0,
+          "central_crc32": "d08e0c9e",
+          "central_create_system": 3,
+          "central_create_version": 20,
+          "central_date_time": [
+            2026,
+            5,
+            4,
+            11,
+            48,
+            28
+          ],
+          "central_external_attr": 25165824,
+          "central_extract_version": 20,
+          "central_file_size": 178529,
+          "central_flag_bits": 0,
+          "compressed_data_end": 178564,
+          "compressed_data_size_from_central": 178529,
+          "compressed_data_start": 35,
+          "index": 0,
+          "is_dir": false,
+          "local_header_bytes": 35,
+          "local_header_compress_type": 0,
+          "local_header_compressed_size": 178529,
+          "local_header_crc32": "d08e0c9e",
+          "local_header_extra_len": 0,
+          "local_header_file_size": 178529,
+          "local_header_filename_len": 5,
+          "local_header_flag_bits": 0,
+          "local_header_mod_date_raw": 23716,
+          "local_header_mod_time_raw": 24078,
+          "local_header_name": "0.bin",
+          "local_header_name_matches_central": true,
+          "local_header_offset": 0,
+          "local_header_signature": "0x04034b50",
+          "local_header_signature_ok": true,
+          "local_header_version_needed": 20,
+          "name": "0.bin",
+          "payload_sha256": "0a0f2cac1961f3ab5128e70ff10c0287a66949d435b5ee7a4dcf2017917910a3",
+          "stored_payload_matches_compressed_bytes": true,
+          "unsafe_reason": null,
+          "uses_data_descriptor": false
+        }
+      ],
+      "zip_summary": {
+        "central_directory_bytes": 51,
+        "central_directory_offset": 178564,
+        "directory_member_count": 0,
+        "duplicate_file_names": [],
+        "eocd_bytes": 22,
+        "eocd_offset": 178615,
+        "file_member_count": 1,
+        "unsafe_members": []
+      }
+    },
+    {
+      "archive_bytes": 177857,
+      "archive_present": true,
+      "archive_provenance": {
+        "archive_sha256": "597ba0732810eba08cdae619b679d211d398bc0249b8831898f7096d5beece1d",
+        "archive_size_bytes": 177857,
+        "fetched_at_utc": "2026-05-05T22:44:46.423211+00:00",
+        "source_url": null,
+        "status": "exists_skipped"
+      },
+      "archive_sha256": "597ba0732810eba08cdae619b679d211d398bc0249b8831898f7096d5beece1d",
+      "author": "valtterivalo",
+      "created_at": "2026-05-04T11:56:48Z",
+      "head_repo": "valtterivalo/comma_video_compression_challenge-1",
+      "head_sha": "9376a6f86c76cb576b5f25afd8c789a8a727077f",
+      "intake_dir": "experiments/results/public_pr_intake_full/public_pr105_intake_20260505_auto",
+      "leaderboard_name": "kitchen_sink",
+      "leaderboard_score_external_only": 0.198,
+      "metadata_present": true,
+      "packed_payload_candidates": [
+        {
+          "kind": "pr103_ac_decoder_inside_pr106_ff_packed_v1",
+          "member_index": 0,
+          "member_name": "0.bin",
+          "nested_decoder_sections": [],
+          "packed_header_decoder_len": 161891,
+          "packed_header_valid": true,
+          "payload_bytes": 177749,
+          "payload_sha256": "5f88fa8ed26816cf6e86a00cf3c88915963c2a84f899173fd6820359df29aad0",
+          "runtime_closure_blockers": [
+            "runtime_closure_missing"
+          ],
+          "runtime_closure_match": null,
+          "sections": [
+            {
+              "archive_end": 39,
+              "archive_start": 35,
+              "bytes": 4,
+              "entropy_bits_per_byte": 2.0,
+              "name": "packed_header_ff_len24",
+              "payload_end": 4,
+              "payload_start": 0,
+              "sha256": "837b877d82478a79a5d8cb14387c8f994c1b4e76d606b38c282175e3ad103478"
+            },
+            {
+              "archive_end": 161930,
+              "archive_start": 39,
+              "bytes": 161891,
+              "entropy_bits_per_byte": 7.998095,
+              "name": "decoder_pr103_ac_bytes",
+              "payload_end": 161895,
+              "payload_start": 4,
+              "sha256": "e241db1c2cbfb53aa4dd32a0dc41ccc511259b44223a25666e026ec78aeb0934"
+            },
+            {
+              "archive_end": 177784,
+              "archive_start": 161930,
+              "bytes": 15854,
+              "entropy_bits_per_byte": 7.985312,
+              "name": "latents_pr106_fixed_brotli",
+              "payload_end": 177749,
+              "payload_start": 161895,
+              "sha256": "aeea25a3116b44570dcb74927ba250b68b7ddea524207f8968688ac885f3b286"
+            }
+          ]
+        }
+      ],
+      "pr_number": 105,
+      "title": "kitchen_sink (0.19797)",
+      "updated_or_closed_at": "2026-05-04T20:09:10Z",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/105",
+      "zip_member_table": [
+        {
+          "central_compress_size": 177749,
+          "central_compress_type": 0,
+          "central_crc32": "492094c7",
+          "central_create_system": 3,
+          "central_create_version": 20,
+          "central_date_time": [
+            2026,
+            5,
+            4,
+            8,
+            0,
+            0
+          ],
+          "central_external_attr": 25165824,
+          "central_extract_version": 20,
+          "central_file_size": 177749,
+          "central_flag_bits": 0,
+          "compressed_data_end": 177784,
+          "compressed_data_size_from_central": 177749,
+          "compressed_data_start": 35,
+          "index": 0,
+          "is_dir": false,
+          "local_header_bytes": 35,
+          "local_header_compress_type": 0,
+          "local_header_compressed_size": 177749,
+          "local_header_crc32": "492094c7",
+          "local_header_extra_len": 0,
+          "local_header_file_size": 177749,
+          "local_header_filename_len": 5,
+          "local_header_flag_bits": 0,
+          "local_header_mod_date_raw": 23716,
+          "local_header_mod_time_raw": 16384,
+          "local_header_name": "0.bin",
+          "local_header_name_matches_central": true,
+          "local_header_offset": 0,
+          "local_header_signature": "0x04034b50",
+          "local_header_signature_ok": true,
+          "local_header_version_needed": 20,
+          "name": "0.bin",
+          "payload_sha256": "5f88fa8ed26816cf6e86a00cf3c88915963c2a84f899173fd6820359df29aad0",
+          "stored_payload_matches_compressed_bytes": true,
+          "unsafe_reason": null,
+          "uses_data_descriptor": false
+        }
+      ],
+      "zip_summary": {
+        "central_directory_bytes": 51,
+        "central_directory_offset": 177784,
+        "directory_member_count": 0,
+        "duplicate_file_names": [],
+        "eocd_bytes": 22,
+        "eocd_offset": 177835,
+        "file_member_count": 1,
+        "unsafe_members": []
+      }
+    },
+    {
+      "archive_bytes": 186239,
+      "archive_present": true,
+      "archive_provenance": {
+        "archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+        "archive_size_bytes": 186239,
+        "fetched_at_utc": "2026-05-05T22:44:47.797603+00:00",
+        "source_url": null,
+        "status": "exists_skipped"
+      },
+      "archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+      "author": "valtterivalo",
+      "created_at": "2026-05-04T11:57:01Z",
+      "head_repo": "valtterivalo/comma_video_compression_challenge-1",
+      "head_sha": "339910eb2da2048796c8555cb964c5d8cb5c194e",
+      "intake_dir": "experiments/results/public_pr_intake_full/public_pr106_intake_20260505_auto",
+      "leaderboard_name": "belt_and_suspenders",
+      "leaderboard_score_external_only": 0.209,
+      "metadata_present": true,
+      "packed_payload_candidates": [
+        {
+          "kind": "pr103_ac_decoder_inside_pr106_ff_packed_v1",
+          "member_index": 0,
+          "member_name": "0.bin",
+          "nested_decoder_sections": [],
+          "packed_header_decoder_len": 170278,
+          "packed_header_valid": true,
+          "payload_bytes": 186131,
+          "payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+          "runtime_closure_blockers": [
+            "runtime_closure_missing"
+          ],
+          "runtime_closure_match": null,
+          "sections": [
+            {
+              "archive_end": 39,
+              "archive_start": 35,
+              "bytes": 4,
+              "entropy_bits_per_byte": 2.0,
+              "name": "packed_header_ff_len24",
+              "payload_end": 4,
+              "payload_start": 0,
+              "sha256": "7939f08db7d18dd4176e8e11b1232a9be6b2371db7a4e63c1c0871fb520148b6"
+            },
+            {
+              "archive_end": 170317,
+              "archive_start": 39,
+              "bytes": 170278,
+              "entropy_bits_per_byte": 7.998152,
+              "name": "decoder_pr103_ac_bytes",
+              "payload_end": 170282,
+              "payload_start": 4,
+              "sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004"
+            },
+            {
+              "archive_end": 186166,
+              "archive_start": 170317,
+              "bytes": 15849,
+              "entropy_bits_per_byte": 7.985386,
+              "name": "latents_pr106_fixed_brotli",
+              "payload_end": 186131,
+              "payload_start": 170282,
+              "sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32"
+            }
+          ]
+        }
+      ],
+      "pr_number": 106,
+      "title": "belt_and_suspenders (0.20946)",
+      "updated_or_closed_at": "2026-05-04T20:09:54Z",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/106",
+      "zip_member_table": [
+        {
+          "central_compress_size": 186131,
+          "central_compress_type": 0,
+          "central_crc32": "aab0e853",
+          "central_create_system": 3,
+          "central_create_version": 20,
+          "central_date_time": [
+            2026,
+            5,
+            4,
+            8,
+            0,
+            0
+          ],
+          "central_external_attr": 25165824,
+          "central_extract_version": 20,
+          "central_file_size": 186131,
+          "central_flag_bits": 0,
+          "compressed_data_end": 186166,
+          "compressed_data_size_from_central": 186131,
+          "compressed_data_start": 35,
+          "index": 0,
+          "is_dir": false,
+          "local_header_bytes": 35,
+          "local_header_compress_type": 0,
+          "local_header_compressed_size": 186131,
+          "local_header_crc32": "aab0e853",
+          "local_header_extra_len": 0,
+          "local_header_file_size": 186131,
+          "local_header_filename_len": 5,
+          "local_header_flag_bits": 0,
+          "local_header_mod_date_raw": 23716,
+          "local_header_mod_time_raw": 16384,
+          "local_header_name": "0.bin",
+          "local_header_name_matches_central": true,
+          "local_header_offset": 0,
+          "local_header_signature": "0x04034b50",
+          "local_header_signature_ok": true,
+          "local_header_version_needed": 20,
+          "name": "0.bin",
+          "payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+          "stored_payload_matches_compressed_bytes": true,
+          "unsafe_reason": null,
+          "uses_data_descriptor": false
+        }
+      ],
+      "zip_summary": {
+        "central_directory_bytes": 51,
+        "central_directory_offset": 186166,
+        "directory_member_count": 0,
+        "duplicate_file_names": [],
+        "eocd_bytes": 22,
+        "eocd_offset": 186217,
+        "file_member_count": 1,
+        "unsafe_members": []
+      }
+    },
+    {
+      "archive_bytes": 178392,
+      "archive_present": true,
+      "archive_provenance": {
+        "archive_sha256": "7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb",
+        "archive_size_bytes": 178392,
+        "fetched_at_utc": "2026-05-05T22:44:48.948849+00:00",
+        "source_url": null,
+        "status": "exists_skipped"
+      },
+      "archive_sha256": "7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb",
+      "author": "adpena",
+      "created_at": "2026-05-04T12:10:42Z",
+      "head_repo": "adpena/comma_video_compression_challenge",
+      "head_sha": "20c411b58c9270dfb6ce19742e657fefd1f54829",
+      "intake_dir": "experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto",
+      "leaderboard_name": "apogee",
+      "leaderboard_score_external_only": 0.229,
+      "metadata_present": true,
+      "packed_payload_candidates": [
+        {
+          "kind": "opaque_single_payload",
+          "member_index": 0,
+          "member_name": "0.bin",
+          "payload_bytes": 178284,
+          "payload_sha256": "fce200db2fe087cc6a051945b3fda2c37f5bbb3e19b8f20a1aea7201db0c9f5f",
+          "sections": [
+            {
+              "archive_end": 178319,
+              "archive_start": 35,
+              "bytes": 178284,
+              "entropy_bits_per_byte": 7.99832,
+              "name": "opaque_single_payload",
+              "payload_end": 178284,
+              "payload_start": 0,
+              "sha256": "fce200db2fe087cc6a051945b3fda2c37f5bbb3e19b8f20a1aea7201db0c9f5f"
+            }
+          ]
+        }
+      ],
+      "pr_number": 107,
+      "title": "apogee submission (0.2293)",
+      "updated_or_closed_at": "2026-05-04T17:51:52Z",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/107",
+      "zip_member_table": [
+        {
+          "central_compress_size": 178284,
+          "central_compress_type": 0,
+          "central_crc32": "f4a2e754",
+          "central_create_system": 3,
+          "central_create_version": 20,
+          "central_date_time": [
+            2026,
+            5,
+            4,
+            8,
+            57,
+            4
+          ],
+          "central_external_attr": 25165824,
+          "central_extract_version": 20,
+          "central_file_size": 178284,
+          "central_flag_bits": 0,
+          "compressed_data_end": 178319,
+          "compressed_data_size_from_central": 178284,
+          "compressed_data_start": 35,
+          "index": 0,
+          "is_dir": false,
+          "local_header_bytes": 35,
+          "local_header_compress_type": 0,
+          "local_header_compressed_size": 178284,
+          "local_header_crc32": "f4a2e754",
+          "local_header_extra_len": 0,
+          "local_header_file_size": 178284,
+          "local_header_filename_len": 5,
+          "local_header_flag_bits": 0,
+          "local_header_mod_date_raw": 23716,
+          "local_header_mod_time_raw": 18210,
+          "local_header_name": "0.bin",
+          "local_header_name_matches_central": true,
+          "local_header_offset": 0,
+          "local_header_signature": "0x04034b50",
+          "local_header_signature_ok": true,
+          "local_header_version_needed": 20,
+          "name": "0.bin",
+          "payload_sha256": "fce200db2fe087cc6a051945b3fda2c37f5bbb3e19b8f20a1aea7201db0c9f5f",
+          "stored_payload_matches_compressed_bytes": true,
+          "unsafe_reason": null,
+          "uses_data_descriptor": false
+        }
+      ],
+      "zip_summary": {
+        "central_directory_bytes": 51,
+        "central_directory_offset": 178319,
+        "directory_member_count": 0,
+        "duplicate_file_names": [],
+        "eocd_bytes": 22,
+        "eocd_offset": 178370,
+        "file_member_count": 1,
+        "unsafe_members": []
+      }
+    }
+  ],
+  "runtime_and_inflate_tree_custody_hints": {
+    "decode_proof": {
+      "matches_tac_closure": {
+        "latents_exact": true,
+        "latents_max_abs_diff": 0.0,
+        "max_state_dict_abs_diff": 0.0,
+        "state_dict_exact": true
+      },
+      "runtime_contract": {
+        "latents_shape": [
+          600,
+          28
+        ],
+        "meta": {
+          "base_channels": 36,
+          "eval_size": [
+            384,
+            512
+          ],
+          "latent_dim": 28,
+          "n_pairs": 600
+        },
+        "state_dict_params": 228958,
+        "state_dict_tensors": 28
+      }
+    },
+    "dependency_custody": {
+      "brotli": {
+        "pyproject_hard_dependency": true,
+        "uv_lock_entry": true
+      },
+      "constriction": {
+        "pyproject_hard_dependency": true,
+        "uv_lock_entry": true
+      },
+      "passed": true,
+      "runtime_import_versions": {
+        "brotli": "1.2.0",
+        "constriction": "0.4.2",
+        "numpy": "2.4.4",
+        "torch": "2.11.0"
+      }
+    },
+    "pre_submission_archive": {
+      "bytes": 185578,
+      "members": [
+        {
+          "compress_size": 185470,
+          "file_size": 185470,
+          "local_header_name": "0.bin",
+          "name": "0.bin",
+          "sha256": "3272ec95a2ea5ec68feb1a53fa53f6b14bdae3883fac38ee2261cdadb1b16357",
+          "unsafe_reason": null
+        }
+      ],
+      "path": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/archive.zip",
+      "sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce"
+    },
+    "pre_submission_auth_eval_path": "experiments/results/lightning_batch/pr103_pr106_ac_repack_exact_eval_t4_20260507T181300Z/contest_auth_eval.adjudicated.json",
+    "pre_submission_compliance_present": true,
+    "pre_submission_passed": true,
+    "pre_submission_runtime_tree_candidates": {
+      "provenance.inflate_runtime_manifest.runtime_tree_sha256": "54db9e5ddee85ae7f486fae900ff3907932efb1c8d3062bc264b0e5c7456d8f6"
+    },
+    "runtime_dir": "submissions/pr103_pr106_final_runtime",
+    "runtime_files": {
+      "__init__.py": {
+        "bytes": 52,
+        "exists": true,
+        "sha256": "78c3cd09aab62aed7f4ee12942d858cead5eb14bdd20a17c532eac5aab1a9e89"
+      },
+      "inflate.py": {
+        "bytes": 20711,
+        "exists": true,
+        "sha256": "62fec760534039e72e6cbf4007f940d49dcdb3a2d867c344cf0dc3f14fb34a6b"
+      },
+      "inflate.sh": {
+        "bytes": 1367,
+        "exists": true,
+        "sha256": "ce6b5438bbe9e4bfcedffe69ddce375daccb77da8a458b28c3776b31e806a815"
+      }
+    },
+    "runtime_packet_proof_passed": true,
+    "runtime_packet_proof_present": true,
+    "runtime_packet_score_claim": false,
+    "runtime_static_scan": {
+      "forbidden_markers": [],
+      "passed": true
+    }
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "score_values_suppressed": true,
+  "tool": "tools.analyze_active_pr103_pr106_floor"
+}
