@@ -35,6 +35,7 @@ The output schema matches ``codec_op_cma_search`` so downstream consumers
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib
 import json
 import math
@@ -65,6 +66,12 @@ DISPATCH_BLOCKERS = [
     "missing_exact_cuda_auth_eval",
 ]
 FAILED_FITNESS_PENALTY = 1.0e30
+MAX_EVAL_SEMANTICS = "hard_cap_no_overshoot"
+PARTIAL_DECODE_WAIVER_BLOCKER = "partial_decode_coverage_waived"
+
+
+def _utc_now() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
 @dataclass
@@ -90,6 +97,12 @@ class Evaluation:
     missing_tensor_keys: list[str] = field(default_factory=list)
     non_tensor_decoded_keys: list[str] = field(default_factory=list)
     shape_mismatch_tensor_keys: list[str] = field(default_factory=list)
+    decoded_tensor_keys: list[str] = field(default_factory=list)
+    matched_tensor_keys: list[str] = field(default_factory=list)
+    decode_coverage_required: bool = True
+    partial_decode_waived: bool = False
+    partial_decode_waiver_reason: str | None = None
+    decode_coverage_status: str = "unknown"
     error: str | None = None
     pareto_frontier: bool = False
     pareto_dominated_by: list[int] = field(default_factory=list)
@@ -111,16 +124,40 @@ class SearchReport:
     seed: int = 0
     sampler_kind: str = "TPESampler"
     optuna_version: str | None = None
+    generated_at_utc: str = ""
+    evidence_grade: str = EVIDENCE_GRADE
     evidence_semantics: str = EVIDENCE_SEMANTICS
     target_modes: list[str] = field(default_factory=lambda: list(TARGET_MODES))
     deployment_target: str = DEPLOYMENT_TARGET
     ready_for_exact_eval_dispatch: bool = False
+    field_selection_ready_for_exact_eval_dispatch: bool = False
+    dispatchable: bool = False
+    promotion_eligible: bool = False
     score_claim: bool = False
     dispatch_attempted: bool = False
     score_affecting_payload_changed: bool = False
     charged_bits_changed: bool = False
+    exact_cuda_auth_eval: bool = False
+    cuda_auth_eval_artifact: str | None = None
+    archive_path: str | None = None
+    archive_sha256: str | None = None
+    archive_bytes: int | None = None
     dispatch_blockers: list[str] = field(default_factory=lambda: list(DISPATCH_BLOCKERS))
     parameter_space: list[dict[str, Any]] = field(default_factory=list)
+    requested_max_evals: int | None = None
+    max_eval_semantics: str = MAX_EVAL_SEMANTICS
+    baseline_required: bool = True
+    baseline_eval_idx: int | None = None
+    baseline_params: dict[str, Any] = field(default_factory=dict)
+    baseline_status: str = "not_evaluated"
+    state_dict_path: str | None = None
+    state_dict_sha256: str | None = None
+    state_dict_bytes: int | None = None
+    state_dict_key: str | None = None
+    tensor_contract: list[dict[str, Any]] = field(default_factory=list)
+    decode_coverage_required: bool = True
+    partial_decode_waived: bool = False
+    partial_decode_waiver_reason: str | None = None
 
 
 def _import_codec_op(module: str, class_name: str):
@@ -165,6 +202,30 @@ def _load_state_dict(path: Path, key: str | None) -> dict[str, torch.Tensor]:
             f"(got {type(obj).__name__})"
         )
     return {key: obj}
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as fp:
+        for chunk in iter(lambda: fp.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _tensor_contract(state_dict: dict[str, torch.Tensor]) -> list[dict[str, Any]]:
+    contract: list[dict[str, Any]] = []
+    for key, tensor in state_dict.items():
+        if not isinstance(tensor, torch.Tensor):
+            continue
+        contract.append(
+            {
+                "key": key,
+                "shape": list(tensor.shape),
+                "dtype": str(tensor.dtype),
+                "numel": int(tensor.numel()),
+            }
+        )
+    return contract
 
 
 def _parse_param_spec(spec_json: str) -> list[ParamSpec]:
@@ -236,14 +297,59 @@ def _coerce(value: float, spec: ParamSpec) -> Any:
     return float(clamped)
 
 
+def _init_params(specs: list[ParamSpec]) -> dict[str, Any]:
+    return {spec.name: _coerce(spec.init, spec) for spec in specs}
+
+
+def _validate_partial_decode_waiver(
+    allow_partial_decode: bool,
+    waiver_reason: str | None,
+) -> str | None:
+    normalized = waiver_reason.strip() if waiver_reason else None
+    if allow_partial_decode and not normalized:
+        raise SystemExit(
+            "--partial-decode-waiver-reason is required with "
+            "--allow-partial-decode"
+        )
+    if normalized and not allow_partial_decode:
+        raise SystemExit(
+            "--partial-decode-waiver-reason requires --allow-partial-decode"
+        )
+    return normalized
+
+
+def _dispatch_blockers(partial_decode_waived: bool) -> list[str]:
+    blockers = list(DISPATCH_BLOCKERS)
+    if partial_decode_waived:
+        blockers.append(PARTIAL_DECODE_WAIVER_BLOCKER)
+    return blockers
+
+
 def _evaluate(
     op_cls,
     params: dict[str, Any],
     state_dict: dict[str, torch.Tensor],
     eval_idx: int,
+    *,
+    require_full_decode: bool = True,
+    partial_decode_waiver_reason: str | None = None,
 ) -> Evaluation:
     """Instantiate CodecOp with params, encode/decode, return metrics."""
-    timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    timestamp = _utc_now()
+    partial_decode_waived = not require_full_decode
+    if partial_decode_waived and not partial_decode_waiver_reason:
+        return Evaluation(
+            eval_idx=eval_idx,
+            params=dict(params),
+            bytes_out=-1,
+            reconstruction_rms=None,
+            fitness=None,
+            timestamp_utc=timestamp,
+            decode_coverage_required=require_full_decode,
+            partial_decode_waived=True,
+            decode_coverage_status="waiver_invalid",
+            error="ValueError: partial decode waiver requires a reason",
+        )
     try:
         op = op_cls(**params)
         result = op.encode(state_dict, context={})
@@ -270,6 +376,11 @@ def _evaluate(
         missing_keys: list[str] = []
         non_tensor_keys: list[str] = []
         shape_mismatch_keys: list[str] = []
+        matched_keys: list[str] = []
+        decoded_tensor_keys = [
+            k for k, value in decoded.items()
+            if isinstance(k, str) and isinstance(value, torch.Tensor)
+        ]
         for k, original in state_dict.items():
             if not isinstance(original, torch.Tensor):
                 continue
@@ -286,13 +397,15 @@ def _evaluate(
             diff = (recon.float() - original.float()).flatten()
             rms_sum += float((diff * diff).mean().item())
             rms_count += 1
-        if (
+            matched_keys.append(k)
+        coverage_failed = (
             rms_count == 0
             or missing_keys
             or non_tensor_keys
             or shape_mismatch_keys
             or rms_count != len(expected_keys)
-        ):
+        )
+        if coverage_failed and require_full_decode:
             return Evaluation(
                 eval_idx=eval_idx,
                 params=dict(params),
@@ -305,9 +418,39 @@ def _evaluate(
                 missing_tensor_keys=missing_keys,
                 non_tensor_decoded_keys=non_tensor_keys,
                 shape_mismatch_tensor_keys=shape_mismatch_keys,
+                decoded_tensor_keys=decoded_tensor_keys,
+                matched_tensor_keys=matched_keys,
+                decode_coverage_required=require_full_decode,
+                partial_decode_waived=partial_decode_waived,
+                partial_decode_waiver_reason=partial_decode_waiver_reason,
+                decode_coverage_status="failed",
                 error=(
                     "ValueError: CodecOp decode did not reconstruct every "
                     "input tensor key"
+                ),
+            )
+        if coverage_failed and rms_count == 0:
+            return Evaluation(
+                eval_idx=eval_idx,
+                params=dict(params),
+                bytes_out=bytes_out,
+                reconstruction_rms=None,
+                fitness=None,
+                timestamp_utc=timestamp,
+                expected_tensor_count=len(expected_keys),
+                matched_tensor_count=rms_count,
+                missing_tensor_keys=missing_keys,
+                non_tensor_decoded_keys=non_tensor_keys,
+                shape_mismatch_tensor_keys=shape_mismatch_keys,
+                decoded_tensor_keys=decoded_tensor_keys,
+                matched_tensor_keys=matched_keys,
+                decode_coverage_required=require_full_decode,
+                partial_decode_waived=partial_decode_waived,
+                partial_decode_waiver_reason=partial_decode_waiver_reason,
+                decode_coverage_status="failed",
+                error=(
+                    "ValueError: CodecOp partial decode waiver matched zero "
+                    "input tensor keys"
                 ),
             )
         rms = math.sqrt(rms_sum / rms_count)
@@ -321,6 +464,14 @@ def _evaluate(
             timestamp_utc=timestamp,
             expected_tensor_count=len(expected_keys),
             matched_tensor_count=rms_count,
+            decoded_tensor_keys=decoded_tensor_keys,
+            matched_tensor_keys=matched_keys,
+            decode_coverage_required=require_full_decode,
+            partial_decode_waived=partial_decode_waived,
+            partial_decode_waiver_reason=partial_decode_waiver_reason,
+            decode_coverage_status=(
+                "partial_waived" if coverage_failed else "full"
+            ),
         )
     except Exception as exc:
         return Evaluation(
@@ -330,6 +481,10 @@ def _evaluate(
             reconstruction_rms=None,
             fitness=None,
             timestamp_utc=timestamp,
+            decode_coverage_required=require_full_decode,
+            partial_decode_waived=partial_decode_waived,
+            partial_decode_waiver_reason=partial_decode_waiver_reason,
+            decode_coverage_status="failed",
             error=f"{type(exc).__name__}: {exc}",
         )
 
@@ -340,6 +495,9 @@ def optuna_tpe_search(
     specs: list[ParamSpec],
     max_evals: int,
     seed: int = 0,
+    *,
+    require_full_decode: bool = True,
+    partial_decode_waiver_reason: str | None = None,
 ) -> list[Evaluation]:
     """TPE-based Bayesian optimization over CodecOp param space."""
     if max_evals <= 0:
@@ -370,7 +528,14 @@ def optuna_tpe_search(
             else:
                 raise ValueError(f"unsupported parameter type {spec.type!r}")
             params[spec.name] = v
-        ev = _evaluate(op_cls, params, state_dict, idx)
+        ev = _evaluate(
+            op_cls,
+            params,
+            state_dict,
+            idx,
+            require_full_decode=require_full_decode,
+            partial_decode_waiver_reason=partial_decode_waiver_reason,
+        )
         evaluations.append(ev)
         return (
             float(ev.fitness)
@@ -380,14 +545,25 @@ def optuna_tpe_search(
 
     sampler = optuna.samplers.TPESampler(seed=seed)
     study = optuna.create_study(direction="minimize", sampler=sampler)
-    study.enqueue_trial({
-        spec.name: _coerce(spec.init, spec) for spec in specs
-    })
+    study.enqueue_trial(_init_params(specs))
     study.optimize(objective, n_trials=max_evals)
     return evaluations
 
 
 def _valid_for_pareto(ev: Evaluation) -> bool:
+    full_decode_ok = (
+        ev.expected_tensor_count > 0
+        and ev.matched_tensor_count == ev.expected_tensor_count
+        and not ev.missing_tensor_keys
+        and not ev.non_tensor_decoded_keys
+        and not ev.shape_mismatch_tensor_keys
+    )
+    partial_decode_ok = (
+        not ev.decode_coverage_required
+        and ev.partial_decode_waived
+        and bool(ev.partial_decode_waiver_reason)
+        and ev.matched_tensor_count > 0
+    )
     return (
         ev.error is None
         and ev.bytes_out >= 0
@@ -395,11 +571,7 @@ def _valid_for_pareto(ev: Evaluation) -> bool:
         and math.isfinite(ev.reconstruction_rms)
         and ev.fitness is not None
         and math.isfinite(ev.fitness)
-        and ev.expected_tensor_count > 0
-        and ev.matched_tensor_count == ev.expected_tensor_count
-        and not ev.missing_tensor_keys
-        and not ev.non_tensor_decoded_keys
-        and not ev.shape_mismatch_tensor_keys
+        and (full_decode_ok or partial_decode_ok)
     )
 
 
@@ -452,6 +624,13 @@ def _optuna_version() -> str | None:
         return None
 
 
+def _baseline_status(evaluations: list[Evaluation]) -> str:
+    baseline = next((ev for ev in evaluations if ev.eval_idx == 0), None)
+    if baseline is None:
+        return "not_evaluated"
+    return "failed" if baseline.error else "evaluated"
+
+
 def _build_search_report(
     evaluations: list[Evaluation],
     *,
@@ -459,11 +638,25 @@ def _build_search_report(
     op_class: str,
     seed: int,
     specs: list[ParamSpec],
+    requested_max_evals: int,
+    state_dict_path: Path | None = None,
+    state_dict_key: str | None = None,
+    state_dict: dict[str, torch.Tensor] | None = None,
+    decode_coverage_required: bool = True,
+    partial_decode_waiver_reason: str | None = None,
 ) -> SearchReport:
     annotate_pareto_frontier(evaluations)
     successful = [e for e in evaluations if _valid_for_pareto(e)]
     failed = [e for e in evaluations if not _valid_for_pareto(e)]
     best = min(successful, key=_evaluation_sort_key, default=None)
+    state_dict_bytes = None
+    state_dict_sha256 = None
+    state_dict_path_payload = None
+    if state_dict_path is not None:
+        state_dict_path_payload = str(state_dict_path)
+        state_dict_bytes = state_dict_path.stat().st_size
+        state_dict_sha256 = _sha256_file(state_dict_path)
+    partial_decode_waived = not decode_coverage_required
     return SearchReport(
         schema=REPORT_SCHEMA,
         tool=TOOL_NAME,
@@ -477,8 +670,22 @@ def _build_search_report(
         all_evaluations=evaluations,
         optimizer="optuna_tpe",
         seed=seed,
+        generated_at_utc=_utc_now(),
         optuna_version=_optuna_version(),
+        dispatch_blockers=_dispatch_blockers(partial_decode_waived),
         parameter_space=[asdict(s) for s in specs],
+        requested_max_evals=requested_max_evals,
+        baseline_eval_idx=0 if evaluations else None,
+        baseline_params=_init_params(specs) if evaluations else {},
+        baseline_status=_baseline_status(evaluations),
+        state_dict_path=state_dict_path_payload,
+        state_dict_sha256=state_dict_sha256,
+        state_dict_bytes=state_dict_bytes,
+        state_dict_key=state_dict_key,
+        tensor_contract=_tensor_contract(state_dict) if state_dict is not None else [],
+        decode_coverage_required=decode_coverage_required,
+        partial_decode_waived=partial_decode_waived,
+        partial_decode_waiver_reason=partial_decode_waiver_reason,
     )
 
 
@@ -495,7 +702,7 @@ def append_atom_ledger_rows(
     ledger_path.parent.mkdir(parents=True, exist_ok=True)
     with ledger_path.open("a", encoding="utf-8") as fp:
         for ev in evaluations:
-            blockers = list(DISPATCH_BLOCKERS)
+            blockers = _dispatch_blockers(ev.partial_decode_waived)
             if ev.error is not None:
                 blockers.append("evaluation_failed")
             row = {
@@ -519,6 +726,12 @@ def append_atom_ledger_rows(
                 "missing_tensor_keys": list(ev.missing_tensor_keys),
                 "non_tensor_decoded_keys": list(ev.non_tensor_decoded_keys),
                 "shape_mismatch_tensor_keys": list(ev.shape_mismatch_tensor_keys),
+                "decoded_tensor_keys": list(ev.decoded_tensor_keys),
+                "matched_tensor_keys": list(ev.matched_tensor_keys),
+                "decode_coverage_required": ev.decode_coverage_required,
+                "decode_coverage_status": ev.decode_coverage_status,
+                "partial_decode_waived": ev.partial_decode_waived,
+                "partial_decode_waiver_reason": ev.partial_decode_waiver_reason,
                 "pareto_frontier": ev.pareto_frontier,
                 "pareto_dominated_by": list(ev.pareto_dominated_by),
                 "error": ev.error,
@@ -529,17 +742,25 @@ def append_atom_ledger_rows(
                 "ready_for_exact_eval_dispatch": False,
                 "field_selection_ready_for_exact_eval_dispatch": False,
                 "dispatchable": False,
+                "promotion_eligible": False,
                 "dispatch_attempted": False,
                 "score_claim": False,
                 "score_affecting_payload_changed": False,
                 "charged_bits_changed": False,
+                "exact_cuda_auth_eval": False,
+                "archive_sha256": None,
+                "archive_bytes": None,
                 "dispatch_blockers": blockers,
+                "baseline_role": (
+                    "init_baseline" if ev.eval_idx == 0 else "optimizer_trial"
+                ),
                 "planning_objectives": {
                     "bytes_out": ev.bytes_out,
                     "reconstruction_rms": ev.reconstruction_rms,
                     "fitness": ev.fitness,
                     "matched_tensor_count": ev.matched_tensor_count,
                     "expected_tensor_count": ev.expected_tensor_count,
+                    "decode_coverage_status": ev.decode_coverage_status,
                 },
                 "notes": (
                     "Optuna TPE CodecOp parameter-search trial; CPU-only "
@@ -561,26 +782,63 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-evals", type=int, default=80)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--emit-evidence", type=Path, default=None,
+                        help="If set, append a TechniqueEvidence row for the best eval "
+                             "to this JSONL file (cathedral_autopilot feedback-loop hook)")
+    parser.add_argument("--evidence-technique-name", default=None,
+                        help="Override the technique name in the emitted evidence row "
+                             "(default: '<module>.<class>')")
     parser.add_argument("--atom-ledger-output", type=Path, default=None,
                         help="Optional JSONL path for atom-ledger rows (one per eval)")
     parser.add_argument(
         "--substrate-label", default="optuna_search",
         help="Prefix for atom-ledger substrate_label.",
     )
+    parser.add_argument(
+        "--allow-partial-decode",
+        action="store_true",
+        help=(
+            "Permit CodecOp decode output to cover only a subset of input "
+            "tensor keys. Requires --partial-decode-waiver-reason and keeps "
+            "the report planning-only/non-dispatchable."
+        ),
+    )
+    parser.add_argument(
+        "--partial-decode-waiver-reason",
+        default=None,
+        help="Required custody note when --allow-partial-decode is used.",
+    )
     args = parser.parse_args(argv)
     if args.max_evals < 1:
         raise SystemExit("--max-evals must be >= 1")
+    partial_decode_waiver_reason = _validate_partial_decode_waiver(
+        args.allow_partial_decode,
+        args.partial_decode_waiver_reason,
+    )
+    require_full_decode = not args.allow_partial_decode
 
     op_cls = _import_codec_op(args.module, args.class_name)
     state_dict = _load_state_dict(args.state_dict_path, args.state_dict_key)
     specs = _parse_param_spec(args.param_spec)
 
     evaluations = optuna_tpe_search(
-        op_cls, state_dict, specs, max_evals=args.max_evals, seed=args.seed
+        op_cls,
+        state_dict,
+        specs,
+        max_evals=args.max_evals,
+        seed=args.seed,
+        require_full_decode=require_full_decode,
+        partial_decode_waiver_reason=partial_decode_waiver_reason,
     )
     report = _build_search_report(
         evaluations, op_module=args.module, op_class=args.class_name,
         seed=args.seed, specs=specs,
+        requested_max_evals=args.max_evals,
+        state_dict_path=args.state_dict_path,
+        state_dict_key=args.state_dict_key,
+        state_dict=state_dict,
+        decode_coverage_required=require_full_decode,
+        partial_decode_waiver_reason=partial_decode_waiver_reason,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
@@ -609,6 +867,26 @@ def main(argv: list[str] | None = None) -> int:
             substrate_label=args.substrate_label,
         )
         print(f"appended {len(evaluations)} rows to {args.atom_ledger_output}")
+
+    if args.emit_evidence and report.best_eval is not None:
+        # Append a TechniqueEvidence row to cathedral_autopilot's feed.
+        import datetime as _dt_emit
+        ev_path = args.emit_evidence
+        ev_path.parent.mkdir(parents=True, exist_ok=True)
+        with ev_path.open("a", encoding="utf-8") as f:
+            evidence_row = {
+                "technique": args.evidence_technique_name or f"{args.module}.{args.class_name}",
+                "empirical_archive_bytes": int(report.best_eval.bytes_out),
+                "source": (
+                    f"[CPU-prep optuna best of {report.n_evaluations} evals] {args.output} "
+                    f"params={report.best_eval.params}"
+                ),
+                "timestamp": _dt_emit.datetime.now(_dt_emit.UTC).strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                ),
+            }
+            f.write(json.dumps(evidence_row) + "\n")
+        print(f"emitted evidence row to {ev_path}")
     return 0
 
 

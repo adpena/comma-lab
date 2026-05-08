@@ -207,6 +207,7 @@ class AutopilotPlan:
     recommended_top_3: list[dict[str, Any]] = field(default_factory=list)
     target_score_gap_analysis: dict[str, Any] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)
+    axis_priorities: list[dict[str, Any]] = field(default_factory=list)
 
 
 def _technique_score_after(
@@ -419,6 +420,32 @@ def _rank_techniques(
     return rows
 
 
+def _maybe_axis_priorities(
+    d_seg: float, d_pose: float, archive_bytes: int,
+    target_score: float | None,
+) -> list[dict[str, Any]] | None:
+    """B2 wiring: pull dispatch_advisor's per-axis priority advice.
+
+    Returns None if dispatch_advisor isn't importable from this Python
+    path; otherwise returns a list of axis priority dicts ranked by
+    marginal score-per-unit-effort. The advisor lives in tools/, so this
+    must do a path-flex import (the autopilot can be invoked from anywhere).
+    """
+    try:
+        sys.path.insert(0, str(REPO_ROOT / "tools"))
+        import dispatch_advisor as _adv  # noqa: E402
+        adv = _adv.advise_candidate(
+            label="autopilot_inline",
+            d_seg=d_seg,
+            d_pose=d_pose,
+            archive_bytes=archive_bytes,
+            target_score=target_score,
+        )
+        return [dict(p) for p in adv.axis_priorities]
+    except (ImportError, AttributeError, TypeError):
+        return None
+
+
 def build_plan(
     *,
     d_seg: float,
@@ -428,6 +455,7 @@ def build_plan(
     label: str = "current_candidate",
     prior_evidence: list[TechniqueEvidence] | None = None,
     min_score_delta: float = 0.0,
+    include_axis_priorities: bool = True,
 ) -> AutopilotPlan:
     """Build a complete autopilot plan for the supplied operator state.
 
@@ -549,6 +577,10 @@ def build_plan(
         recommended_top_3=top_3,
         target_score_gap_analysis=gap,
         notes=notes,
+        axis_priorities=(
+            _maybe_axis_priorities(d_seg, d_pose, archive_bytes, target_score)
+            if include_axis_priorities else None
+        ) or [],
     )
 
 
