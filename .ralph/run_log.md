@@ -521,7 +521,7 @@ I declared clean-source STC FALSIFIED based on a local MPS-encoder run that prod
 - "It's just a smoke test" is the same rationalization that produced the 23× PoseNet drift incident on 2026-04-25.
 - The strict-mode check `check_no_mps_fallback_default` covers DEFAULT device selection but does not cover EXPLICIT --device mps in CLI invocations. Consider adding a STRICT check that warns when --device mps is passed to any strategic-measurement script.
 
-## 2026-05-08T01:30:00-05:00 — Path B Ω-OPT 6/8 anchored + cross-paradigm 137,531 B winner + Lightning canonical bootstrap fix
+## 2026-05-08T01:30:00-05:00 — Path B Ω-OPT 6/8 anchored + cross-paradigm 137,531 B [RETRACTED→byte_proxy] + Lightning canonical bootstrap fix
 
 **Session arc.** This shift landed: (1) 6 of 8 Ω-OPT levels empirically anchored on real PR101 substrate, (2) the first cross-paradigm composition that beats every canonical 8-stack matrix entry, (3) the Lightning canonical bootstrap fix that extincts a 7-failure dep-discovery cascade bug class, (4) the Phase 4 INTEGRATION design memo + paper harness blueprint, (5) the ADMM byte-closed candidate archive ready for CUDA dispatch, and (6) the lossy_coarsening_analytical CUDA negative result.
 
@@ -536,9 +536,9 @@ I declared clean-source STC FALSIFIED based on a local MPS-encoder run that prod
 | 5 — Joint-ADMM Lagrangian | b8aa5c43 | `tools/pr101_omega_opt_joint_admm_allocation_empirical.py` | BEATS greedy by 12-65 KB; first Ω-OPT win |
 | 6 — ADMM × continuous-K | 983598d2 | `tools/pr101_omega_opt_admm_x_lossy_coarsening_empirical.py` | +14.6KB savings vs greedy at rms=3.86% |
 
-**Cross-paradigm winner (commit 8d33d5c1, subagent XPARADIGM):**
+**Cross-paradigm 137,531 B figure RETRACTED to byte_proxy_only_NOT_deployable (REVIEW-ENG C1):**
 
-`tools/pr101_cross_paradigm_hstack_vstack_empirical.py` ran the canonical 8-stack composition matrix on the real PR101 substrate AND extended it with Path B step 6 ADMM × continuous-K → Op1 finalizer. Result: **137,531 B [CPU-prep faithful cross-paradigm test]** — beats ADMM-alone 153,639 by -16,108 B and beats canonical winner Op2_alone 161,942 by -24,411 B. **First cross-paradigm composition on real PR101 substrate that beats every canonical 8-stack matrix entry.** Tagged MEASURED_CONFIG_NOT_DISPATCHABLE; score_claim=False; ready_for_exact_eval_dispatch=False.
+`tools/pr101_cross_paradigm_hstack_vstack_empirical.py` ran the canonical 8-stack composition matrix on the real PR101 substrate AND extended it with Path B step 6 ADMM × continuous-K → Op1 finalizer. **The 137,531 B figure originally tagged "DOMINANT cross-paradigm winner" is `len(blob_op1)` from `pipeline_op1.encode(rebuilt, skip_validate=True)` on the dequantized fp32 substrate AFTER ADMM coarsening.** It does NOT include the per-tensor K side-info, fp16 scales, or PR101 latent_blob/sidecar that an actual archive must carry. There is no inflate.py that can read this composition end-to-end. Per REVIEW-ENG C1 (this commit) the row is retagged `byte_proxy_only_NOT_deployable`, `cuda_eval_worth_testing=False`, dispatch_blocker `137531_byte_proxy_not_byte_closed_archive`, contest_dispatch_verdict `RETRACTED-byte-proxy-not-deployable`. WIRE-DECODER subagent (in flight) is building the deployable end-to-end composition with matching inflate.py — that will be the authoritative byte-closed candidate. The 153,639 B ADMM-alone row remains byte-closed and dispatchable (commit 82bfc648).
 
 Substrate-mismatch: Op3 (apogee_intN) is STACKABLE in the type system but ballooned PR101 archives by +147K-200K B (Op3_int6→Op1=309,470; Op3_int7→Op1=362,469). Op3 was designed for HNeRV/PR106 substrate.
 
@@ -556,7 +556,7 @@ Path B step 6 ADMM standalone byte-closed candidate at 153,699 B at 4.15% rel_er
 
 **Lossy_coarsening_analytical CUDA result [contest-CUDA A-negative]:**
 
-Job `lossy-coarsening-cuda-20260508T0312-noproject` Lightning T4 returned score = 0.3517 at 156,404 archive bytes. Per-tensor K budget = 0.05 retired (measured_config_only). The byte-anchor 156,344 B @ 3.86% rel_err did NOT translate to predicted 0.189 score — distortion → score mapping FALSIFIED at this configuration.
+Job `lossy-coarsening-cuda-20260508T0312-noproject` Lightning T4 returned score = 0.3517 [contest-CUDA] [A-negative] at 156,404 archive bytes. Per-tensor K budget = 0.05 retired (measured_config_only). The byte-anchor 156,344 B @ 3.86% rel_err did NOT translate to predicted 0.189 score — distortion → score mapping FALSIFIED at this configuration.
 
 **Lightning T4 in flight:** arch_shrink_x0.4 Q-FAITHFUL retrain (job `arch-shrink-x0-4-lightning-20260508t010514z`) ~4h elapsed of 12-18h ETA, ~$9.90 budget. First [contest-CUDA] anchor for the architecture lane.
 
@@ -572,6 +572,4 @@ Job `lossy-coarsening-cuda-20260508T0312-noproject` Lightning T4 returned score 
 - `project_arch_shrink_x0_4_lightning_DISPATCHED_20260508.md` — arch_shrink in flight
 - `project_phase4_optimal_stack_design_landed_20260508.md` — Phase 4 blueprint
 
-**Strategic state:** PR101 codec lane has saturated (~150 KB byte-floor at 4-5% rel_err); allocation mechanism beats codec basis empirically; remaining headroom requires CUDA distortion validation, not codec cleverness; cross-paradigm 137,531 B winner is the candidate-of-record for next dispatch (pending decoder wiring + review clearance).
-
-
+**Strategic state:** PR101 codec lane has saturated (~150 KB byte-floor at 4-5% rel_err); allocation mechanism beats codec basis empirically; remaining headroom requires CUDA distortion validation, not codec cleverness; the 137,531 B cross-paradigm figure is retracted to byte_proxy (no end-to-end decoder; REVIEW-ENG C1); the 153,639 B Path-B-step-6 ADMM-alone candidate remains the byte-closed dispatch target pending apogee_int6 [contest-CUDA] anchor (REVIEW-ENG C3) and review clearance.

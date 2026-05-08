@@ -52,6 +52,19 @@ the constituent ops' responsibility (already characterized in their own
 empirical anchors). Cross-paradigm score is undetermined until a real-archive
 contest-CUDA replay lands.
 
+## Stack 3 wire-format honesty (REVIEW-ENG C1, 2026-05-08)
+
+Stack 3's ``bytes_admm_then_op1`` figure is ``len(blob_op1)`` from
+``pipeline_op1.encode(rebuilt, skip_validate=True)`` where ``rebuilt`` is the
+ADMM-coarsened *dequantized fp32* state_dict. It is **NOT a byte-closed
+archive** — it lacks the per-tensor K side-info, fp16 scales, and PR101
+latent_blob/sidecar that an inflate-time decoder must consume. There is no
+inflate.py that reads this composition end-to-end. The runtime-deployable
+cross-paradigm composition is the responsibility of the WIRE-DECODER subagent
+(in flight, 2026-05-08); until that lands, every Stack 3 evidence row carries
+``byte_proxy_only_NOT_deployable`` evidence_grade and the explicit
+dispatch_blocker ``137531_byte_proxy_not_byte_closed_archive``.
+
 ## Outputs
 
 Writes ``reports/raw/pr101_cross_paradigm_hstack_vstack_<UTC>/manifest.json``
@@ -285,14 +298,29 @@ def main() -> None:
         (
             "Path_B_step6_ADMM_x_continuous_K_then_Op1",
             stack3["bytes_admm_then_op1"],
-            "cross_paradigm_extension",
+            "cross_paradigm_extension_BYTE_PROXY_NOT_BYTE_CLOSED",
         )
     )
+    # Determine which row is "smallest" but only over byte-CLOSED stacks; the
+    # "_then_Op1" Stack 3 row is a byte-proxy (Op1 re-encode of dequantized fp32
+    # substrate; no inflate.py reads this composition) so it is excluded from
+    # the dominance ranking per REVIEW-ENG C1 (2026-05-08).
+    byte_closed_rows = [
+        r for r in all_rows
+        if "BYTE_PROXY_NOT_BYTE_CLOSED" not in r[2]
+    ]
+    byte_closed_rows.sort(key=lambda r: r[1])
     all_rows.sort(key=lambda r: r[1])
-    smallest = all_rows[0]
+    smallest = byte_closed_rows[0] if byte_closed_rows else all_rows[0]
     print(
-        f"\n[XPARADIGM] DOMINANT (smallest bytes_out): {smallest[0]} "
+        f"\n[XPARADIGM] DOMINANT byte-closed (smallest bytes_out): {smallest[0]} "
         f"= {smallest[1]:,} B  ({smallest[2]})"
+    )
+    print(
+        "[XPARADIGM] note: Stack 3 'ADMM_x_continuous_K_then_Op1' is a byte-proxy "
+        "(Op1 re-encode of dequantized fp32 substrate; no end-to-end inflate.py); "
+        "EXCLUDED from dominance ranking per REVIEW-ENG C1. WIRE-DECODER subagent "
+        "owns the deployable composition."
     )
 
     out_dir = args.output_dir or (
@@ -321,7 +349,23 @@ def main() -> None:
         "fp32_bytes": int(state_dict_bytes),
         "canonical_matrix": canonical["canonical_matrix"],
         "cross_paradigm_extensions": {
-            "Stack_3_ADMM_x_continuous_K_then_Op1_finalizer": stack3,
+            "Stack_3_ADMM_x_continuous_K_then_Op1_finalizer": {
+                **stack3,
+                "byte_closed_archive": False,
+                "deployable_inflate_py_exists": False,
+                "wire_format_honesty_note": (
+                    "bytes_admm_then_op1 is len(blob_op1) from "
+                    "pipeline_op1.encode(rebuilt, skip_validate=True) on the "
+                    "dequantized fp32 substrate AFTER ADMM coarsening; this is "
+                    "a byte-proxy NOT a byte-closed archive. Per REVIEW-ENG C1 "
+                    "(2026-05-08) the row is byte_proxy_only_NOT_deployable; "
+                    "WIRE-DECODER subagent owns the deployable composition."
+                ),
+                "dispatch_blockers": [
+                    "137531_byte_proxy_not_byte_closed_archive",
+                    "no_inflate_py_for_cross_paradigm_composition",
+                ],
+            },
         },
         "all_stacks_sorted_by_bytes": [
             {"stack_name": s, "bytes_out": b, "source": src}
@@ -331,10 +375,17 @@ def main() -> None:
             "name": smallest[0],
             "bytes_out": smallest[1],
             "source": smallest[2],
+            "ranking_excludes_byte_proxy_rows": True,
+            "ranking_note": (
+                "Per REVIEW-ENG C1 (2026-05-08), byte-proxy rows (Stack 3 "
+                "'_then_Op1') are EXCLUDED from dominance ranking because they "
+                "are not byte-closed archives. WIRE-DECODER subagent in flight."
+            ),
         },
         "headline": (
             f"{smallest[0]} dominates at {smallest[1]:,} B "
-            f"across {len(all_rows)} cross-paradigm stacks on real PR101 substrate"
+            f"across {len(byte_closed_rows)} byte-CLOSED cross-paradigm stacks on "
+            f"real PR101 substrate (byte-proxy rows excluded per REVIEW-ENG C1)"
         ),
         "dispatch_blockers": [
             "byte_proxy_only_no_score_test",

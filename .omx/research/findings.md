@@ -1,23 +1,25 @@
 # Findings
 
-## 2026-05-08 [EMPIRICAL] Cross-paradigm winner: ADMM × continuous-K + Op1 finalizer = 137,531 B on real PR101 substrate
+## 2026-05-08 [RETRACTED→byte_proxy_only_NOT_deployable] Cross-paradigm 137,531 B figure was Op1 re-encode of dequantized fp32 substrate, NOT a byte-closed archive
+
+**Status (2026-05-08, REVIEW-ENG C1 closure)**: the 137,531 B figure originally tagged "DOMINANT cross-paradigm winner" is `byte_proxy_only_NOT_deployable`. It is `len(blob_op1)` from `pipeline_op1.encode(rebuilt, skip_validate=True)` in `tools/pr101_cross_paradigm_hstack_vstack_empirical.py:148-153`, where `rebuilt` is the ADMM-coarsened dequantized fp32 state_dict. The figure does NOT include the per-tensor K side-info, fp16 scales, or the PR101 latent_blob/sidecar that an actual archive must carry. There is no inflate.py that can read this composition end-to-end. It was retracted per REVIEW-ENG finding C1 (this commit). Subagent WIRE-DECODER (in flight) is building the deployable end-to-end composition with matching inflate.py; that build (when it lands) will be the authoritative byte-closed candidate. The evidence row in `reports/cathedral_autopilot_evidence.jsonl` was updated with `cuda_eval_worth_testing=False` and the dispatch_blocker `137531_byte_proxy_not_byte_closed_archive`.
 
 **Source**: `Path_B_step6_ADMM_x_continuous_K_then_Op1_finalizer` empirical run, manifest at `reports/raw/pr101_cross_paradigm_hstack_vstack_20260508T060656Z/manifest.json` (commit 8d33d5c1).
 
-**Result** [CPU-prep faithful cross-paradigm test, NOT contest-CUDA]:
+**Composition matrix** [CPU-prep faithful cross-paradigm byte-proxy, NOT byte-closed archives]:
 
 | Composition | Bytes | Δ vs Op2_alone | Δ vs ADMM-alone |
 |---|---:|---:|---:|
-| Op2_alone (canonical 8-stack winner) | 161,942 | — | +8,303 |
-| Op1_alone | 162,202 | +260 | +8,563 |
-| β-identity → Op1 | 163,587 | +1,645 | +9,948 |
-| γ_alone | 194,867 | +32,925 | +41,228 |
-| ADMM-alone (Path B step 6 standalone) | 153,639 | -8,303 | — |
-| **ADMM × continuous-K → Op1 finalizer** | **137,531** | **-24,411** | **-16,108** |
+| Op2_alone (canonical 8-stack winner; byte-closed-replayable) | 161,942 | — | +8,303 |
+| Op1_alone (byte-closed-replayable) | 162,202 | +260 | +8,563 |
+| β-identity → Op1 (byte-closed-replayable) | 163,587 | +1,645 | +9,948 |
+| γ_alone (byte-closed-replayable) | 194,867 | +32,925 | +41,228 |
+| ADMM-alone (Path B step 6 standalone, byte-closed via build_admm_x_lossy_coarsening) | 153,639 | -8,303 | — |
+| **ADMM × continuous-K → Op1 finalizer** [BYTE-PROXY, NOT BYTE-CLOSED — RETRACTED] | **137,531** | n/a | n/a |
 | Op3_int6 → Op1 (substrate-mismatch) | 309,470 | +147,528 | +155,831 |
 | Op3_int7 → Op1 (substrate-mismatch) | 362,469 | +200,527 | +208,830 |
 
-First measured cross-paradigm composition on real PR101 substrate that BEATS standalone Path B step 6 AND beats every canonical 8-stack matrix entry. Tagged `MEASURED_CONFIG_NOT_DISPATCHABLE`; score_claim=False; promotion_eligible=False; ready_for_exact_eval_dispatch=False. Distortion → score impact unmeasured; rel_err pre-finalizer 4.15%.
+The 153,639 B ADMM-alone row IS byte-closed (via `tools/build_admm_x_lossy_coarsening_path_b_step6.py`) and remains the deployable Path-B-step-6 candidate; it has its own dispatch_blocker `apogee_int6_contest_cuda_anchor_required_first` per REVIEW-ENG C3 (4.15% rel_err → score mapping unmeasured). All CPU-prep rows: `score_claim=False`, `promotion_eligible=False`, `ready_for_exact_eval_dispatch=False`.
 
 **Substrate-mismatch corollary**: Op3 (apogee_intN) is STACKABLE in the type system but ballooned PR101 archives by +147K-200K B. Op3 was designed for HNeRV/PR106 substrate; PR101's split-Brotli `auto_select_byte_maps` cannot exploit Op3's block-FP wire format. This refines the substrate-mismatch corollary from 2026-05-07 (PR101 byte-maps yielded only -241 B on PR106): substrate-tied codecs lose decisively in the *wrong* direction too.
 
@@ -47,7 +49,7 @@ First measured cross-paradigm composition on real PR101 substrate that BEATS sta
 **Source**: `experiments/results/lightning_batch/lossy-coarsening-cuda-20260508T0312-noproject/auth_eval_work/contest_auth_eval.json` + adversarial review at `.omx/research/lossy_coarsening_exact_cuda_adversarial_review_20260508_worker_b.md`.
 
 **Result** [contest-CUDA, Lightning T4]:
-- score = 0.351718793322788
+- score = 0.351718793322788 [contest-CUDA] [A-negative]
 - archive_bytes = 156,404 (matches expected); SHA256 verified
 - segnet = 0.00186125 / posenet = 0.00037762 / rate = 0.00416572
 

@@ -1,6 +1,6 @@
 # Latest Report - 2026-05-04 PR106 belt_and_suspenders adapter contest-faithful status
 
-## 2026-05-08 — Path B Ω-OPT 6/8 anchored + cross-paradigm 137,531 B winner identified
+## 2026-05-08 — Path B Ω-OPT 6/8 anchored; cross-paradigm 137,531 B figure RETRACTED to byte_proxy_only_NOT_deployable (REVIEW-ENG C1)
 
 ### Frontier state
 
@@ -13,15 +13,15 @@
 
 | Composition | Bytes | vs anchor 185,578 | Source |
 |---|---:|---:|---|
-| **Path_B_step6_ADMM_x_continuous_K_then_Op1 (cross-paradigm winner)** | **137,531** | -47,000 | commit 8d33d5c1 [CPU-prep faithful cross-paradigm test] |
-| Path B step 6 ADMM standalone (byte-closed candidate) | 153,699 | -31,879 | commit 82bfc648 [CPU-prep] (rel_err 4.15%) |
+| ~~Path_B_step6_ADMM_x_continuous_K_then_Op1 (cross-paradigm)~~ **RETRACTED** | ~~137,531~~ | n/a | commit 8d33d5c1; per REVIEW-ENG C1 this is `len(blob_op1)` byte-proxy of the Op1 re-encode of the dequantized fp32 substrate, NOT a byte-closed archive. `cuda_eval_worth_testing=False`; dispatch_blocker `137531_byte_proxy_not_byte_closed_archive`. WIRE-DECODER subagent owns the deployable composition. |
+| Path B step 6 ADMM standalone (byte-closed candidate) | 153,699 | -31,879 | commit 82bfc648 [CPU-prep] (rel_err 4.15%); dispatch_blocker `apogee_int6_contest_cuda_anchor_required_first` (REVIEW-ENG C3) |
 | Path B step 5 Joint-ADMM Lagrangian | 150,000 | -35,578 | commit b8aa5c43 [CPU-prep] (rel_err 4.36%) |
 | Path B step 4 HStack codec-CHOICE | 156,344 | -29,234 | commit 4f2cfd55 [CPU-prep] (analytical, rel_err 3.86%) |
 | Op2_alone (canonical 8-stack winner) | 161,942 | -23,636 | [CPU-prep, lossless] |
 | Op1_alone | 162,202 | -23,376 | [CPU-prep, lossless] |
 | Op3_int6 → Op1 (substrate-mismatch BALLOONED) | 309,470 | +123,892 | [CPU-prep, mismatch evidence] |
 
-All CPU-prep rows: `score_claim = False`, `promotion_eligible = False`, `ready_for_exact_eval_dispatch = False`. Distortion → score mapping unmeasured for the cross-paradigm winner; pre-finalizer rel_err 4.15%.
+All CPU-prep rows: `score_claim = False`, `promotion_eligible = False`, `ready_for_exact_eval_dispatch = False`. The retracted 137,531 B figure is a byte-proxy of the standalone Op1 re-encode on a dequantized fp32 substrate AFTER ADMM coarsening; it does NOT include the K side-info, fp16 scales, or PR101 latent_blob/sidecar that an actual archive must carry, and there is no inflate.py that can read this composition end-to-end. The 153,699 B Path-B-step-6 standalone IS byte-closed (forked inflate.py + matching encoder); REVIEW-ENG C3 attaches `apogee_int6_contest_cuda_anchor_required_first` to the same row because 4.15% rel_err → score mapping is unmeasured.
 
 ### Empirical findings
 
@@ -48,8 +48,8 @@ All CPU-prep rows: `score_claim = False`, `promotion_eligible = False`, `ready_f
 
 ### Next dispatches (per `.omx/state/next_experiments.md`)
 
-1. 137,531 B cross-paradigm winner CUDA dispatch — pending decoder wiring + review clearance
-2. 153,699 B ADMM byte-closed candidate CUDA dispatch — pending review clearance
+1. ~~137,531 B cross-paradigm winner CUDA dispatch~~ **RETRACTED** (REVIEW-ENG C1); WIRE-DECODER subagent in flight to build deployable composition with matching inflate.py
+2. 153,699 B ADMM byte-closed candidate CUDA dispatch — pending review clearance + apogee_int6 [contest-CUDA] anchor (REVIEW-ENG C3)
 3. PARADIGM-δεζ Phase 2 GPU implementation — pending arch_shrink result + apogee_int6 [contest-CUDA] precondition
 
 ---
