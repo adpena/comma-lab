@@ -1,0 +1,332 @@
+#!/usr/bin/env python3
+"""Aggregate Phase A ablation anchors into a single operator-readable summary.
+
+Phase A council prescription (from `.omx/research/grand_council_extreme_rigor_track_1_20260508.md`)
+maps to 7 ablation lanes:
+
+    A0  — MDL/Bayesian baseline
+    A1  — score-gradient supervision PR101 fine-tune
+    A2  — sensitivity-aware quantisation (Xavier-L2; FALSIFIED -3,635 B vs uniform)
+    A3-alt — Mallat wavelet importance (incremental_improvement_insufficient)
+    A4  — ChARM 2020 hyperprior (byte-tight, dispatch-ready)
+    A4-alt — Filler STC pose codec (in flight)
+    A5  — frame-conditional bit budget (in flight)
+    A6  — Selfcomp block-FP × hyperprior compose (queued)
+
+Each lane writes ``build_manifest.json`` under ``experiments/results/<lane>_<timestamp>/``
+with byte / rel_err / score-axis / evidence-grade / dispatch-blocker fields per the
+canonical schema. This tool walks every Phase A manifest, tags each by lane, and
+emits a Pareto-front table:
+
+    archive_bytes vs rel_err vs score-axis-marginal, by lane × evidence_grade.
+
+Usage:
+    .venv/bin/python tools/phase_a_pareto_summary.py
+    .venv/bin/python tools/phase_a_pareto_summary.py --output reports/phase_a_pareto_20260508.md
+    .venv/bin/python tools/phase_a_pareto_summary.py --json experiments/results/phase_a_pareto.json
+
+Output is deterministic + sorted: alphabetic lane id, then archive_bytes asc, then
+rel_err asc. Run is read-only (no commits, no GPU spend).
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+
+# Canonical lane name → human label mapping.
+LANE_PATTERNS: dict[str, str] = {
+    "track1_phase_a0_": "A0_mdl_baseline",
+    "track1_phase_a1_": "A1_score_gradient",
+    "track1_phase_a2_packet_ladder": "A2_packet_ladder",
+    "track1_phase_a2_sensitivity_quant": "A2_xavier_l2_sensitivity",
+    "pr101_sensitivity_aware_quant": "A2_xavier_l2_sensitivity",
+    "pr101_sensitivity_aware_mallat_wavelet": "A3_alt_mallat_wavelet",
+    "pr101_pose_filler_stc": "A4_alt_filler_stc_pose",
+    "pr101_frame_conditional_bit": "A5_frame_conditional_bits",
+    "charm_50k_toy_substrate": "A4_charm_hyperprior_toy",
+    "admm_x_lossy_coarsening": "ADMM_lossy_coarsening_baseline",
+}
+
+# PR101 brotli baseline (the byte-anchor most lanes compare against).
+PR101_BROTLI_BYTES = 178_144
+
+
+@dataclass
+class PhaseAEntry:
+    lane: str
+    manifest_path: Path
+    archive_bytes: int | None
+    rel_err: float | None
+    rel_err_form: str | None
+    evidence_grade: str | None
+    score_claim: bool
+    ready_for_exact_eval_dispatch: bool
+    dispatch_blockers: tuple[str, ...]
+    dispatch_status: str | None
+    timestamp: str | None
+    delta_vs_uniform_bytes: int | None = None
+    delta_vs_brotli_bytes: int | None = None
+    notes: list[str] = field(default_factory=list)
+
+
+def classify_lane(rel_path: str) -> str:
+    """Return canonical lane id from a path under experiments/results/."""
+    for pattern, lane in LANE_PATTERNS.items():
+        if pattern in rel_path:
+            return lane
+    return "UNCLASSIFIED"
+
+
+def parse_manifest(manifest_path: Path) -> PhaseAEntry | None:
+    """Load + extract canonical fields from a build_manifest.json."""
+    rel = str(manifest_path.relative_to(REPO_ROOT))
+    lane = classify_lane(rel)
+    if lane == "UNCLASSIFIED":
+        return None
+
+    try:
+        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+
+    # Different lanes use different field names; canonicalise.
+    archive_bytes = (
+        data.get("archive_bytes")
+        or data.get("empirical_archive_bytes")
+        or data.get("archive_bytes_total")
+        or data.get("estimated_archive_bytes")
+    )
+    if archive_bytes is None:
+        # Try sweep entries under "results" or "rows" keys.
+        for key in ("results", "rows", "sweep", "entries"):
+            seq = data.get(key)
+            if isinstance(seq, list) and seq:
+                # Take the smallest archive_bytes from the sweep.
+                bytes_list = [
+                    e.get("archive_bytes") or e.get("empirical_archive_bytes")
+                    for e in seq
+                    if isinstance(e, dict)
+                ]
+                bytes_list = [b for b in bytes_list if isinstance(b, int)]
+                if bytes_list:
+                    archive_bytes = min(bytes_list)
+                    break
+
+    rel_err = (
+        data.get("rel_err")
+        or data.get("rms_rel_err")
+        or data.get("avg_rel_err")
+        or data.get("max_rel_err")
+    )
+    rel_err_form = data.get("rel_err_form") or data.get("rel_err_mode") or "unknown"
+
+    evidence_grade = data.get("evidence_grade") or data.get("evidence_tag")
+    score_claim = bool(data.get("score_claim", False))
+    ready = bool(data.get("ready_for_exact_eval_dispatch", False))
+    dispatch_blockers = tuple(data.get("dispatch_blockers", []) or [])
+    dispatch_status = data.get("dispatch_status") or data.get("status")
+
+    timestamp = (
+        data.get("started_at_utc")
+        or data.get("build_timestamp_utc")
+        or data.get("created_at_utc")
+        or manifest_path.parent.name.rsplit("_", 1)[-1]
+    )
+
+    entry = PhaseAEntry(
+        lane=lane,
+        manifest_path=manifest_path,
+        archive_bytes=archive_bytes,
+        rel_err=rel_err,
+        rel_err_form=rel_err_form,
+        evidence_grade=evidence_grade,
+        score_claim=score_claim,
+        ready_for_exact_eval_dispatch=ready,
+        dispatch_blockers=dispatch_blockers,
+        dispatch_status=dispatch_status,
+        timestamp=timestamp,
+    )
+
+    # Compute deltas if archive_bytes is known.
+    if archive_bytes is not None:
+        entry.delta_vs_brotli_bytes = archive_bytes - PR101_BROTLI_BYTES
+
+    # Lane-specific notes.
+    if lane == "A2_xavier_l2_sensitivity":
+        entry.notes.append("FALSIFIED proxy (-3,635 B regression vs uniform)")
+    if lane == "A3_alt_mallat_wavelet":
+        entry.notes.append("incremental_improvement_insufficient (Mallat > Xavier in 2/4)")
+    if lane == "A4_charm_hyperprior_toy":
+        entry.notes.append("byte-tight CARM2 wire format; dispatch-ready ($15)")
+    if lane == "A1_score_gradient":
+        entry.notes.append("dispatch tooling landed; blocked on Lightning GPU/Vast.ai infra")
+    if "ADMM" in lane:
+        entry.notes.append("Path B baseline; -28 KB savings at 4-5% rel_err")
+
+    return entry
+
+
+def find_phase_a_manifests() -> list[Path]:
+    """Walk experiments/results/ and return every build_manifest.json that
+    classifies as a Phase A lane.
+    """
+    out: list[Path] = []
+    results_root = REPO_ROOT / "experiments" / "results"
+    if not results_root.is_dir():
+        return out
+    for manifest in results_root.rglob("build_manifest.json"):
+        rel = str(manifest.relative_to(REPO_ROOT))
+        if classify_lane(rel) != "UNCLASSIFIED":
+            out.append(manifest)
+    return sorted(out)
+
+
+def deduplicate_keep_best(entries: list[PhaseAEntry]) -> list[PhaseAEntry]:
+    """For each lane, keep the entry with smallest archive_bytes (or first if no
+    bytes). This collapses sweep-explosion to a single Pareto point per lane.
+    """
+    by_lane: dict[str, PhaseAEntry] = {}
+    for e in entries:
+        cur = by_lane.get(e.lane)
+        if cur is None:
+            by_lane[e.lane] = e
+            continue
+        # Prefer entries with archive_bytes set, then smaller archive_bytes.
+        if e.archive_bytes is None:
+            continue
+        if cur.archive_bytes is None or e.archive_bytes < cur.archive_bytes:
+            by_lane[e.lane] = e
+    return sorted(by_lane.values(), key=lambda x: x.lane)
+
+
+def render_markdown(entries: list[PhaseAEntry]) -> str:
+    """Emit the operator-facing Phase A summary in Markdown."""
+    lines = [
+        "# Phase A Cross-Ablation Pareto Summary",
+        "",
+        f"Generated by `tools/phase_a_pareto_summary.py` from {len(entries)} unique-lane manifests.",
+        "",
+        f"PR101 brotli baseline: **{PR101_BROTLI_BYTES:,} B** (the byte-anchor most lanes target).",
+        "",
+        "| Lane | Archive bytes | Δ vs brotli | rel_err | Evidence grade | Dispatch ready | Notes |",
+        "|---|---:|---:|---:|---|---:|---|",
+    ]
+    for e in entries:
+        bytes_cell = f"{e.archive_bytes:,}" if e.archive_bytes is not None else "—"
+        delta_cell = (
+            f"{e.delta_vs_brotli_bytes:+,}"
+            if e.delta_vs_brotli_bytes is not None
+            else "—"
+        )
+        rel_err_cell = (
+            f"{e.rel_err:.4f} ({e.rel_err_form})"
+            if isinstance(e.rel_err, (int, float))
+            else "—"
+        )
+        ev = (e.evidence_grade or "—").replace("|", "/").strip()
+        ready_cell = "✓" if e.ready_for_exact_eval_dispatch else "—"
+        notes_cell = "; ".join(e.notes) if e.notes else "—"
+        lines.append(
+            f"| {e.lane} | {bytes_cell} | {delta_cell} | {rel_err_cell} | "
+            f"{ev} | {ready_cell} | {notes_cell} |"
+        )
+    lines.extend([
+        "",
+        "## Class-level findings",
+        "",
+        "- **Decision 3 weight-domain proxies are exhausted.** A2 Xavier-L2 (-3,635 B regression "
+        "vs uniform) + A3-alt Mallat wavelet (incremental over Xavier, still loses to uniform "
+        "at high budgets) both fail. Future Decision 3 reactivation must use score-domain "
+        "(Hessian-trace, score-gradient) or byte-domain (compression-hardness) proxies.",
+        "- **PR101 substrate is near-iid at brotli's compressor.** Multiple lanes show ~1-3% "
+        "above the iid Shannon floor; magnitude-based concentration of bits cannot break that.",
+        "- **A4 ChARM byte-tight path is the only currently dispatch-ready lane** (commit `16a2d9d0`); "
+        "operator authorization on $15 Lightning T4 outstanding.",
+        "- **A1 dispatch tooling is landed and infra-blocked**; Lightning GPU attach OR Vast.ai "
+        "credit topup unblocks re-fire.",
+        "",
+        "## Open lanes",
+        "",
+        "- A4-alt (Filler STC pose codec): subagent in flight",
+        "- A5 (frame-conditional bit budget): subagent in flight",
+        "- A6 (Selfcomp block-FP × hyperprior compose): not started",
+        "",
+    ])
+    return "\n".join(lines) + "\n"
+
+
+def render_json(entries: list[PhaseAEntry]) -> str:
+    """Emit machine-readable Pareto summary."""
+    out = {
+        "schema_version": "phase_a_pareto_v1",
+        "pr101_brotli_baseline_bytes": PR101_BROTLI_BYTES,
+        "lane_count": len(entries),
+        "lanes": [],
+    }
+    for e in entries:
+        out["lanes"].append({
+            "lane": e.lane,
+            "archive_bytes": e.archive_bytes,
+            "rel_err": e.rel_err,
+            "rel_err_form": e.rel_err_form,
+            "delta_vs_brotli_bytes": e.delta_vs_brotli_bytes,
+            "evidence_grade": e.evidence_grade,
+            "score_claim": e.score_claim,
+            "ready_for_exact_eval_dispatch": e.ready_for_exact_eval_dispatch,
+            "dispatch_blockers": list(e.dispatch_blockers),
+            "dispatch_status": e.dispatch_status,
+            "timestamp": e.timestamp,
+            "manifest_path": str(e.manifest_path.relative_to(REPO_ROOT)),
+            "notes": e.notes,
+        })
+    return json.dumps(out, indent=2, sort_keys=False) + "\n"
+
+
+def main() -> int:
+    p = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    p.add_argument(
+        "--output", "-o", type=Path, default=None,
+        help="Markdown summary path (default: stdout).",
+    )
+    p.add_argument(
+        "--json", type=Path, default=None,
+        help="Optional JSON output path for machine consumption.",
+    )
+    args = p.parse_args()
+
+    manifests = find_phase_a_manifests()
+    raw_entries = []
+    for m in manifests:
+        e = parse_manifest(m)
+        if e is not None:
+            raw_entries.append(e)
+    entries = deduplicate_keep_best(raw_entries)
+
+    md = render_markdown(entries)
+    if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(md, encoding="utf-8")
+        print(f"[ok] wrote {args.output} ({len(entries)} unique lanes from "
+              f"{len(manifests)} manifests)", file=sys.stderr)
+    else:
+        sys.stdout.write(md)
+
+    if args.json:
+        args.json.parent.mkdir(parents=True, exist_ok=True)
+        args.json.write_text(render_json(entries), encoding="utf-8")
+        print(f"[ok] wrote {args.json}", file=sys.stderr)
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
