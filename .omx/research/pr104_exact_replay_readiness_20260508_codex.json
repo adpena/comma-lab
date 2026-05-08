@@ -1,0 +1,196 @@
+{
+  "schema": "pr104_exact_replay_readiness_v1",
+  "created_at_utc": "2026-05-08T11:02:18Z",
+  "repo_root": "/Users/adpena/Projects/pact",
+  "branch_required": "main",
+  "score_claim": false,
+  "dispatch_attempted": false,
+  "gpu_dispatch_attempted": false,
+  "ready_for_exact_eval_dispatch": true,
+  "readiness_verdict": "adapter_materialized_ready_for_exact_cuda_replay_after_dispatch_claim",
+  "promotion_status": "not_promotable_until_exact_cuda_auth_eval_returns",
+  "blockers": [],
+  "score_promotion_blockers": [
+    "exact_cuda_auth_eval_not_run_by_design_for_this_task"
+  ],
+  "pr": {
+    "number": 104,
+    "title": "qhnerv_ft_best",
+    "author": "patattzel",
+    "head_repo": "patattzel/comma_video_compression_challenge",
+    "head_sha": "f1c59d895325f2d2835e843ce72be3443983a4b4",
+    "created_at": "2026-05-04T11:56:00Z",
+    "closed_at": "2026-05-04T17:51:34Z",
+    "state": "closed",
+    "leaderboard_name": "qhnerv_ft_best",
+    "leaderboard_score": 0.231
+  },
+  "archive": {
+    "path": "experiments/results/public_pr_intake_full/public_pr104_intake_20260505_auto/source/submissions/qhnerv_ft_best/archive.zip",
+    "bytes": 178637,
+    "sha256": "6564c32a9edeeaf08abd7f0ea673ba2fda23444605ca207eb4ba794cc66797b8",
+    "zip_test": "passed_unzip_t",
+    "members": [
+      {
+        "name": "0.bin",
+        "file_size": 178529,
+        "compress_size": 178529,
+        "crc32": "d08e0c9e",
+        "sha256": "0a0f2cac1961f3ab5128e70ff10c0287a66949d435b5ee7a4dcf2017917910a3"
+      }
+    ],
+    "zip_overhead_bytes": 108,
+    "canonical_archive_member_contract": "upstream file list base 0.mkv maps to extracted 0.bin"
+  },
+  "public_report": {
+    "evidence_grade": "external",
+    "report_path": "experiments/results/public_pr_intake_full/public_pr104_intake_20260505_auto/source/submissions/qhnerv_ft_best/report.txt",
+    "n_samples": 600,
+    "device": "cuda",
+    "avg_posenet_dist": 0.00016895,
+    "avg_segnet_dist": 0.00070710,
+    "archive_size_bytes": 178637,
+    "reported_score_rounded": 0.23,
+    "score_recomputed_from_public_rounded_components": 0.23076057363801453,
+    "score_recomputed_terms": {
+      "seg_term": 0.07071,
+      "pose_term": 0.04110352782912922,
+      "archive_term": 0.11894704580888532
+    },
+    "score_truth_note": "external public report only; CUDA auth eval through this checkout is required before promotion, ranking, or kill decisions"
+  },
+  "runtime_source": {
+    "source_root": "experiments/results/public_pr_intake_full/public_pr104_intake_20260505_auto/source/submissions/qhnerv_ft_best",
+    "runtime_manifest_sha256_from_contest_auth_eval": "55c4358a22974ac3c174d185e81b22db47ee0a97e6b5199d9c36c51686e134c4",
+    "source_tree_sha256_excluding_archive_and_cache": "d28d6a0c7593c1c7cd39194e22ecdde1637e6fe275efc1695c2f8c9be3cd0c07",
+    "runtime_file_count_excluding_archive_cache_and_readme": 21,
+    "dependency_policy": "fail_closed_preinstalled_dependencies_only_no_install_in_inflate",
+    "required_python_modules_for_adapter_preflight": [
+      "brotli",
+      "numpy",
+      "torch"
+    ],
+    "inflate_path_imports": [
+      "torch",
+      "torch.nn.functional",
+      "model.HNeRVDecoder",
+      "codec.parse_archive"
+    ],
+    "public_runtime_requires_external_source_tree": true,
+    "external_runtime_dependency_marked_by_pact_directive": true
+  },
+  "adapter": {
+    "path": "experiments/public_runtime_adapters/pr104_qhnerv_ft_best_adapter/inflate.sh",
+    "readme_path": "experiments/public_runtime_adapters/pr104_qhnerv_ft_best_adapter/README.md",
+    "inflate_sh_sha256": "d82335c30216d49b0c80a31665feb351774236682a05069194910a1a3a8a9ea9",
+    "readme_sha256": "e701ab42d0ef829297fee8ed09c251d945ade3eec3e4faf40d2465b8574d8369",
+    "member_lookup_policy": "prefer_base_bin_else_x_member_fail_on_ambiguous_or_missing",
+    "contest_auth_eval_command": [
+      ".venv/bin/python",
+      "experiments/contest_auth_eval.py",
+      "--archive",
+      "experiments/results/public_pr_intake_full/public_pr104_intake_20260505_auto/source/submissions/qhnerv_ft_best/archive.zip",
+      "--inflate-sh",
+      "experiments/public_runtime_adapters/pr104_qhnerv_ft_best_adapter/inflate.sh",
+      "--upstream-dir",
+      "upstream",
+      "--device",
+      "cuda"
+    ],
+    "contest_auth_eval_command_text": ".venv/bin/python experiments/contest_auth_eval.py --archive experiments/results/public_pr_intake_full/public_pr104_intake_20260505_auto/source/submissions/qhnerv_ft_best/archive.zip --inflate-sh experiments/public_runtime_adapters/pr104_qhnerv_ft_best_adapter/inflate.sh --upstream-dir upstream --device cuda"
+  },
+  "runtime": {
+    "inflate_sh": "experiments/public_runtime_adapters/pr104_qhnerv_ft_best_adapter/inflate.sh",
+    "inflate_sh_sha256": "d82335c30216d49b0c80a31665feb351774236682a05069194910a1a3a8a9ea9",
+    "runtime_manifest": {
+      "schema": "inflate_runtime_manifest_v2",
+      "runtime_tree_sha256": "55c4358a22974ac3c174d185e81b22db47ee0a97e6b5199d9c36c51686e134c4",
+      "runtime_file_count": 1,
+      "external_dependency_roots": [
+        {
+          "repo_relative_root": "experiments/results/public_pr_intake_full/public_pr104_intake_20260505_auto/source/submissions/qhnerv_ft_best",
+          "exists": true,
+          "file_count": 21
+        }
+      ]
+    }
+  },
+  "local_smokes": {
+    "bash_n_adapter": "pass",
+    "unzip_t_archive": "pass",
+    "focused_pytest": {
+      "command": ".venv/bin/python -m pytest src/tac/tests/test_pr104_exact_replay_readiness.py",
+      "status": "pass",
+      "tests": 3
+    },
+    "adapter_missing_member_fail_closed": {
+      "status": "pass",
+      "expected_exit_code": 6,
+      "observed_exit_code": 6
+    },
+    "operator_validated_fail_closed_cases": {
+      "status": "pass",
+      "source": "operator_status_check_2026-05-08",
+      "cases": [
+        "empty_file_list",
+        "missing_payload",
+        "ambiguous_payload"
+      ],
+      "score_claim": false,
+      "promotion_effect": "none"
+    },
+    "contest_auth_eval_runtime_dependency_manifest": {
+      "status": "pass",
+      "runtime_tree_sha256": "55c4358a22974ac3c174d185e81b22db47ee0a97e6b5199d9c36c51686e134c4",
+      "runtime_file_count": 1,
+      "external_root_count": 1,
+      "external_root": "experiments/results/public_pr_intake_full/public_pr104_intake_20260505_auto/source/submissions/qhnerv_ft_best",
+      "external_root_exists": true,
+      "external_root_file_count": 21
+    },
+    "lightning_public_preflight_shape": {
+      "status": "pass",
+      "preflight_path": ".omx/research/pr104_exact_replay_readiness_20260508_codex.json",
+      "inflate_sh": "experiments/public_runtime_adapters/pr104_qhnerv_ft_best_adapter/inflate.sh"
+    },
+    "cpu_safe_archive_parse_and_model_load": {
+      "status": "pass",
+      "torch": "2.11.0",
+      "brotli": "1.2.0",
+      "cuda_available_local": false,
+      "meta": {
+        "base_channels": 36,
+        "eval_size": [
+          384,
+          512
+        ],
+        "latent_dim": 28,
+        "n_pairs": 600
+      },
+      "latents_shape": [
+        600,
+        28
+      ],
+      "decoder_tensor_count": 28,
+      "load_state_dict_missing": [],
+      "load_state_dict_unexpected": []
+    }
+  },
+  "compliance": {
+    "archive_bytes_preserved": true,
+    "adapter_contains_payload_bytes": false,
+    "raw_large_artifacts_committed": false,
+    "no_scorer_loads_in_inflate": true,
+    "no_network_install_in_inflate": true,
+    "hidden_sidecars_required": false,
+    "deterministic_paths": true,
+    "cpu_mps_proxy_used_for_score": false,
+    "negative_result_scope": "none"
+  },
+  "dispatch_guardrails": [
+    "do not dispatch from this readiness artifact without first claiming a lane via tools/claim_lane_dispatch.py",
+    "use CUDA auth eval as score truth; CPU/MPS/proxy output cannot promote, rank, or kill PR104",
+    "preserve the archive SHA and adapter SHA in any queued exact replay metadata",
+    "stage the external runtime dependency root recorded by PACT_RUNTIME_DEPENDENCY_ROOT"
+  ]
+}
