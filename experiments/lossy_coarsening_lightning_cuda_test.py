@@ -755,18 +755,13 @@ print('provenance:', json.dumps(prov))
 HB_PID=$!
 trap 'kill $HB_PID 2>/dev/null || true' EXIT
 
-# Stage 1: lazily install nvidia-dali if absent (matches arch_shrink pattern).
-log "=== Stage 1: nvidia-dali probe ==="
-"$PYBIN" -c "
-import importlib.util, subprocess, sys
-if importlib.util.find_spec('nvidia.dali') is None:
-    print('Installing nvidia-dali-cuda130 lazily...', flush=True)
-    subprocess.run([sys.executable, '-m', 'pip', 'install', '--no-cache-dir',
-                    '--extra-index-url', 'https://pypi.nvidia.com',
-                    'nvidia-dali-cuda130'], check=True)
-import nvidia.dali as dali
-print(f'DALI version: {{dali.__version__}}')
-"
+# Stage 1: hash-pinned DALI bootstrap. Lightning's uv-created .venv can be
+# pip-less, so never assume "$PYBIN -m pip" exists.
+log "=== Stage 1: hash-pinned DALI bootstrap ==="
+"$PYBIN" scripts/bootstrap_dali_hash_pinned.py \\
+    --json-out "$LOG_DIR/lightning_dali_bootstrap.json" \\
+    --requirements-out "$LOG_DIR/lightning_dali_requirements.txt" \\
+    --timeout 900
 
 # Stage 2: contest_auth_eval [contest-CUDA] on the staged lossy archive.
 ARCHIVE="$WORKSPACE/{archive_relpath}"

@@ -19,10 +19,21 @@ Workflow
 1. Pre-flight: ``q_faithful_dilated_88k`` profile resolves; canonical
    inflate.sh exists; lane registry entry created if missing.
 2. Build the runtime payload: a single Lightning Job command (bash) that
+   follows the canonical Q-FAITHFUL pipeline from
+   ``scripts/remote_lane_q_faithful_jointgen.sh`` because
+   ``q_faithful_dilated_88k`` uses ``variant=quantizr_faithful`` (NOT in
+   ``_VARIANTS_BUILD_RENDERER_FP4A_OK``):
+
    - bootstraps cu124 torch (``INFLATE_TORCH_SPEC=torch==2.5.1+cu124``)
+   - builds half-frame masks.mkv seed (``build_baseline_archive.py``)
    - runs ``train_renderer.py --profile q_faithful_dilated_88k``
-   - runs ``pipeline.py compress`` to pack the archive
-   - runs ``contest_auth_eval.py --device cuda`` on the packed archive
+     **with ``--no-auth-eval-on-best`` and
+     ``--qfaithful-training-poses experiments/results/lane_a_landed/optimized_poses.pt``**
+   - manually exports JointFrameGenerator state_dict via
+     ``tac.quantizr_faithful_export.save_qfai`` to ``renderer.bin``
+   - assembles archive (renderer.bin + masks.mkv + optimized_poses.pt)
+     with deterministic ZIP dating
+   - runs ``contest_auth_eval.py --device cuda`` on the EXACT archive
 3. Stage workspace via ``scripts/lightning_repro_workspace.py`` (rsync +
    sha-256 manifest).  Required for the launcher's pre-staged contract.
 4. File a dispatch claim via ``tools/claim_lane_dispatch.py`` so the
@@ -74,7 +85,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from tac.deploy.lightning.defaults import (  # noqa: E402
+from tac.deploy.lightning.defaults import (
     DEFAULT_LIGHTNING_REMOTE_PACT,
     default_remote_pact,
     default_ssh_target,
@@ -114,21 +125,44 @@ def build_remote_command(*, job_name: str, remote_pact: str) -> str:
     """Construct the bash command that runs train→archive→auth-eval on Lightning.
 
     The command is executed on the Lightning Job machine with the staged
-    workspace mounted at ``remote_pact``. We follow the established lane_j_imp
-    pattern: cu124 torch pin, NVDEC probe-light (T4 datacenter card), provenance
-    write, training, archive build, then auth eval with DALI lazy-installed.
+    workspace mounted at ``remote_pact``.
+
+    BUG-FIX 2026-05-08 (prior dispatch arch-shrink-x0-4-lightning-20260508T010514Z
+    FAILED at startup):
+      ``q_faithful_dilated_88k`` profile sets ``variant=quantizr_faithful`` which
+      flows through ``build_quantizr_faithful_renderer()`` → JointFrameGenerator
+      (NOT ``build_renderer()`` / AsymmetricPairGenerator). The
+      ``--auth-eval-on-best`` early-fail gate in train_renderer.py
+      (``_VARIANTS_BUILD_RENDERER_FP4A_OK``) correctly rejects this combination
+      because the standard FP4A export path does not understand the
+      JointFrameGenerator state_dict layout.
+
+    Fix: follow the canonical Q-FAITHFUL pattern from
+    ``scripts/remote_lane_q_faithful_jointgen.sh``:
+      Stage 0: GPU presence + provenance + heartbeat.
+      Stage 1: build masks.mkv seed (build_baseline_archive.py --half-frame
+               matches the q_faithful_dilated_88k profile's
+               mask_half_sim_prob=1.0).
+      Stage 2: ``train_renderer.py --no-auth-eval-on-best
+               --qfaithful-training-poses experiments/results/lane_a_landed/optimized_poses.pt``.
+      Stage 3+4: export QFAI binary (``tac.quantizr_faithful_export.save_qfai``)
+                 from the JointFrameGenerator state_dict.
+      Stage 5: assemble archive (renderer.bin + masks.mkv + optimized_poses.pt)
+               with deterministic ZIP dating.
+      Stage 6: ``contest_auth_eval.py`` against the EXACT archive bytes,
+               emitting ``[contest-CUDA]`` once RESULT_JSON parses.
+
+    This still satisfies the CLAUDE.md ``Auth eval EVERYWHERE`` rule: the run
+    ends with a CUDA auth eval whose RESULT_JSON is captured into
+    ``contest_auth_eval.json``, the same artifact the harvester expects.
     """
     output_subdir = f"experiments/results/lightning_batch/{job_name}"
-    archive_path = f"{output_subdir}/archive.zip"
-    auth_eval_dir = f"{output_subdir}/auth_eval_work"
+    auth_eval_dir = f"{output_subdir}/eval_work"
     auth_eval_log = f"{output_subdir}/auth_eval.log"
     auth_eval_result_json = f"{output_subdir}/contest_auth_eval.json"
     train_output_dir = f"{output_subdir}/train"
     train_tag = f"arch_shrink_x0_4_{job_name}"
 
-    # NOTE: "$PYBIN" not used — Lightning Job machines may not have the venv
-    # at the same path. We use ``python -m uv`` style or rely on the system
-    # python the Lightning runtime provides plus uv-managed envs.
     return f"""set -euo pipefail
 cd {remote_pact}
 
@@ -164,6 +198,17 @@ mem_gb = round(torch.cuda.get_device_properties(0).total_memory / 1e9, 1)
 print(f'OK: GPU={{name}} mem={{mem_gb}}GB cuda_version={{torch.version.cuda}}')
 "
 
+# Required Q-FAITHFUL inputs (per scripts/remote_lane_q_faithful_jointgen.sh).
+ANCHOR_LANE_A_POSES="experiments/results/lane_a_landed/optimized_poses.pt"
+for f in "$ANCHOR_LANE_A_POSES" \\
+         upstream/videos/0.mkv \\
+         upstream/models/segnet.safetensors \\
+         upstream/models/posenet.safetensors \\
+         src/tac/quantizr_faithful_renderer.py \\
+         src/tac/quantizr_faithful_export.py; do
+    [ -f "$f" ] || {{ log "FATAL: missing required input: $f"; exit 1; }}
+done
+
 # Provenance / heartbeat
 PROVENANCE="$LOG_DIR/provenance.json"
 HEARTBEAT="$LOG_DIR/heartbeat.log"
@@ -183,8 +228,10 @@ prov = {{
     'lane_id': '{LANE_ID}',
     'job_name': '{job_name}',
     'profile': '{PROFILE}',
+    'variant': 'quantizr_faithful',
     'target_elements': {TARGET_ELEMENTS},
     'inflate_torch_spec': '{INFLATE_TORCH_SPEC}',
+    'fix_note': 'Q-FAITHFUL eval path; --no-auth-eval-on-best + manual QFAI export + separate contest_auth_eval',
 }}
 with open('$PROVENANCE', 'w') as f:
     json.dump(prov, f, indent=2)
@@ -198,60 +245,158 @@ print('provenance:', json.dumps(prov))
 HB_PID=$!
 trap 'kill $HB_PID 2>/dev/null || true' EXIT
 
-# Stage 1: training on T4 via train_renderer.py with profile q_faithful_dilated_88k
-log "=== Stage 1: train_renderer.py --profile {PROFILE} ==="
+# Stage 1: build masks.mkv seed via build_baseline_archive.py --half-frame
+# (q_faithful_dilated_88k profile uses mask_half_sim_prob=1.0; the renderer
+# is half-frame-aware so the mask seed MUST be half-frame to avoid the
+# score-17.55 catastrophe per feedback_half_frame_breaks_posenet).
+log "=== Stage 1: build half-frame masks.mkv seed ==="
+"$PYBIN" -u experiments/build_baseline_archive.py \\
+    --device cuda --crf 50 --half-frame \\
+    --output "$LOG_DIR/archive_masks_seed.zip" 2>&1 | tee "$LOG_DIR/build_masks.log" | tail -5
+PIPE_RC=("${{PIPESTATUS[@]}}")
+if [ "${{PIPE_RC[0]}}" -ne 0 ]; then
+    log "FATAL: build_baseline_archive failed rc=${{PIPE_RC[0]}}"
+    exit "${{PIPE_RC[0]}}"
+fi
+mkdir -p "$LOG_DIR/extracted"
+( cd "$LOG_DIR/extracted" && unzip -o "$LOG_DIR/archive_masks_seed.zip" 2>&1 | tail -3 )
+[ -f "$LOG_DIR/extracted/masks.mkv" ] || {{ log "FATAL: masks.mkv extract failed"; exit 2; }}
+log "  masks.mkv extracted ($(stat -c '%s' "$LOG_DIR/extracted/masks.mkv" 2>/dev/null || stat -f '%z' "$LOG_DIR/extracted/masks.mkv") bytes)"
+
+# Stage 2: training (Q-FAITHFUL JointFrameGenerator path).
+# --no-auth-eval-on-best is REQUIRED — variant=quantizr_faithful is not in
+# _VARIANTS_BUILD_RENDERER_FP4A_OK; the FP4A export path can't serialise the
+# JointFrameGenerator state_dict. We do the eval manually after Stage 5.
+# --qfaithful-training-poses is REQUIRED — JointFrameGenerator's FiLM head
+# learns pose -> frame mapping; it needs scorer-measured Lane A poses.
+log "=== Stage 2: train_renderer.py --profile {PROFILE} (--no-auth-eval-on-best) ==="
 mkdir -p "$WORKSPACE/{train_output_dir}"
 "$PYBIN" -u src/tac/experiments/train_renderer.py \\
     --profile {PROFILE} \\
-    --tag {train_tag} \\
-    --output-dir "$WORKSPACE/{train_output_dir}" \\
     --device cuda \\
-    --auth-eval-on-best 2>&1 | tee "$LOG_DIR/train.log" | tail -40
-
-# Find the EMA-best fp4 checkpoint emitted by train_renderer.py.
-CHECKPOINT=$(ls -1 "$WORKSPACE/{train_output_dir}"/*BEST*ema*.pt 2>/dev/null | head -1)
-if [ -z "$CHECKPOINT" ]; then
-    CHECKPOINT=$(ls -1 "$WORKSPACE/{train_output_dir}"/*BEST*.pt 2>/dev/null | head -1)
+    --seed 1234 \\
+    --tag {train_tag} \\
+    --qfaithful-training-poses "$ANCHOR_LANE_A_POSES" \\
+    --no-auth-eval-on-best \\
+    --output-dir "$WORKSPACE/{train_output_dir}" 2>&1 | tee "$LOG_DIR/train.log" | tail -50
+PIPE_RC=("${{PIPESTATUS[@]}}")
+if [ "${{PIPE_RC[0]}}" -ne 0 ]; then
+    log "FATAL: train_renderer.py rc=${{PIPE_RC[0]}}"
+    exit "${{PIPE_RC[0]}}"
 fi
-if [ -z "$CHECKPOINT" ]; then
-    log "FATAL: no BEST checkpoint produced by train_renderer.py"
-    exit 3
-fi
-log "  trained checkpoint: $CHECKPOINT"
 
-# Stage 2: build contest archive via experiments/pipeline.py compress
-log "=== Stage 2: pipeline.py compress ==="
-"$PYBIN" -u experiments/pipeline.py compress \\
-    --profile {PROFILE} \\
-    --video upstream/videos/0.mkv \\
-    --checkpoint "$CHECKPOINT" \\
-    --output-dir "$WORKSPACE/{output_subdir}" \\
-    --device cuda 2>&1 | tee "$LOG_DIR/compress.log" | tail -20
+BEST_CKPT=$(ls -t "$WORKSPACE/{train_output_dir}"/*BEST*.pt 2>/dev/null | head -1)
+if [ -z "$BEST_CKPT" ]; then
+    BEST_CKPT=$(ls -t "$WORKSPACE/{train_output_dir}"/*.pt 2>/dev/null | head -1)
+fi
+[ -f "$BEST_CKPT" ] || {{ log "FATAL: train_renderer didn't produce any .pt checkpoint"; exit 3; }}
+log "  best checkpoint: $BEST_CKPT ($(stat -c '%s' "$BEST_CKPT" 2>/dev/null || stat -f '%z' "$BEST_CKPT") bytes)"
+
+# Stage 3+4: export the JointFrameGenerator state_dict to the QFAI binary.
+# QFAI format = [b"QFAI"][header_len][JSON header][torch.save(state_dict)].
+# The contest inflate_renderer.py dispatches QFAI/QZS3 by file magic.
+log "=== Stage 3+4: export QFAI binary from JointFrameGenerator state_dict ==="
+"$PYBIN" -u -c "
+import sys
+sys.path.insert(0, 'src')
+import torch, brotli
+from pathlib import Path
+from tac.quantizr_faithful_renderer import build_quantizr_faithful_renderer
+from tac.quantizr_faithful_export import save_qfai
+
+ckpt = torch.load('$BEST_CKPT', map_location='cpu', weights_only=False)
+sd_raw = ckpt.get('model_state_dict', ckpt.get('state_dict', ckpt))
+sd = {{}}
+for k, v in sd_raw.items():
+    if k.startswith('gen.'):
+        sd[k[len('gen.'):]] = v
+    else:
+        sd[k] = v
+gen = build_quantizr_faithful_renderer()
+gen.load_state_dict(sd, strict=True)
+gen.eval()
+n_params = sum(p.numel() for p in gen.parameters())
+print(f'JointFrameGenerator loaded: {{n_params:,}} params')
+
+# Promotable training_pose_contract is required for save_qfai (per
+# scripts/remote_lane_q_faithful_jointgen.sh:317-318).
+training_pose_contract = None
+for key in ('qfaithful_training_pose_contract', 'training_pose_contract'):
+    value = ckpt.get(key)
+    if isinstance(value, dict):
+        training_pose_contract = value
+        break
+if training_pose_contract is None:
+    meta = ckpt.get('__meta__') or ckpt.get('arch_meta') or {{}}
+    if isinstance(meta, dict):
+        for key in ('qfaithful_training_pose_contract', 'training_pose_contract'):
+            value = meta.get(key)
+            if isinstance(value, dict):
+                training_pose_contract = value
+                break
+if not isinstance(training_pose_contract, dict) or training_pose_contract.get('training_pose_contract_promotable') is not True:
+    raise SystemExit('FATAL: checkpoint missing promotable Q-FAITHFUL training_pose_contract')
+
+qfai_path = Path('$WORKSPACE/{train_output_dir}/renderer.bin')
+n_bytes = save_qfai(gen, qfai_path, extra_meta={{'training_pose_contract': training_pose_contract}})
+print(f'QFAI raw renderer.bin: {{n_bytes:,}} bytes')
+
+raw = qfai_path.read_bytes()
+br = brotli.compress(raw, quality=11)
+br_path = Path('$WORKSPACE/{train_output_dir}/renderer.qfai.bin.br')
+br_path.write_bytes(br)
+print(f'QFAI brotli sidecar q=11: {{len(br):,}} bytes ({{100*len(br)/len(raw):.1f}}% of raw)')
+"
+EXPORT_BIN="$WORKSPACE/{train_output_dir}/renderer.bin"
+[ -f "$EXPORT_BIN" ] || {{ log "FATAL: QFAI export failed"; exit 4; }}
+log "  renderer.bin: $(stat -c '%s' "$EXPORT_BIN" 2>/dev/null || stat -f '%z' "$EXPORT_BIN") bytes"
+
+# Stage 5: assemble archive (renderer.bin + masks.mkv + Lane A poses).
+# Deterministic ZIP per Codex R5-r6 #5 (check_archive_builders_use_deterministic_zip).
+log "=== Stage 5: build Q-FAITHFUL archive ==="
+mkdir -p "$LOG_DIR/iter_0"
+cp "$EXPORT_BIN" "$LOG_DIR/iter_0/renderer.bin"
+cp "$LOG_DIR/extracted/masks.mkv" "$LOG_DIR/iter_0/masks.mkv"
+cp "$ANCHOR_LANE_A_POSES" "$LOG_DIR/iter_0/optimized_poses.pt"
+find "$LOG_DIR/iter_0" -name '._*' -delete 2>/dev/null || true
+find "$LOG_DIR/iter_0" -name '.DS_Store' -delete 2>/dev/null || true
 
 ARCHIVE="$WORKSPACE/{output_subdir}/archive.zip"
-if [ ! -f "$ARCHIVE" ]; then
-    # Fallback: pipeline.py may emit a different filename; locate the .zip.
-    ARCHIVE=$(ls -1 "$WORKSPACE/{output_subdir}"/*.zip 2>/dev/null | head -1)
-fi
-if [ -z "$ARCHIVE" ] || [ ! -f "$ARCHIVE" ]; then
-    log "FATAL: pipeline.py compress did not produce an archive.zip"
-    exit 4
-fi
+"$PYBIN" -c "
+import zipfile, os
+src = '$LOG_DIR/iter_0'
+dst = '$ARCHIVE'
+det_dt = (1980, 1, 1, 0, 0, 0)
+with zipfile.ZipFile(dst, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+    for n in ('renderer.bin', 'masks.mkv', 'optimized_poses.pt'):
+        p = os.path.join(src, n)
+        assert os.path.isfile(p), f'missing {{p}}'
+        info = zipfile.ZipInfo(filename=n, date_time=det_dt)
+        info.compress_type = zipfile.ZIP_DEFLATED
+        info.external_attr = 0o644 << 16
+        info.create_system = 3
+        with open(p, 'rb') as f:
+            z.writestr(info, f.read(), compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
+size = os.path.getsize(dst)
+print(f'archive {{dst}}: {{size}} bytes')
+assert 100_000 < size < 1_500_000, f'archive size {{size}} outside sane band [100K, 1.5M]'
+"
 ARCHIVE_BYTES=$(stat -c '%s' "$ARCHIVE" 2>/dev/null || stat -f '%z' "$ARCHIVE")
 log "  archive: $ARCHIVE bytes=$ARCHIVE_BYTES"
 
-# Stage 3: contest_auth_eval [contest-CUDA] on the packed archive
-log "=== Stage 3: contest_auth_eval [contest-CUDA] ==="
-"$PYBIN" -c "
-import importlib.util, subprocess, sys
-if importlib.util.find_spec('nvidia.dali') is None:
-    print('Installing nvidia-dali-cuda130 lazily...', flush=True)
-    subprocess.run([sys.executable, '-m', 'pip', 'install', '--no-cache-dir',
-                    '--extra-index-url', 'https://pypi.nvidia.com',
-                    'nvidia-dali-cuda130'], check=True)
-import nvidia.dali as dali
-print(f'DALI version: {{dali.__version__}}')
-"
+# Stage 6: contest_auth_eval [contest-CUDA] on the EXACT archive bytes.
+# BUG-FIX 2026-05-08 (companion to lossy_coarsening fix): use the canonical
+# hash-pinned DALI bootstrap helper which auto-detects pipless venvs and
+# runs `python -m ensurepip --upgrade` before any `pip install`. CLAUDE.md
+# memory `feedback_remote_archive_only_eval_self_bootstraps_all_deps_20260501`
+# pins this as the canonical pattern; do NOT copy-paste install commands inline.
+log "=== Stage 6a: hash-pinned DALI bootstrap ==="
+"$PYBIN" scripts/bootstrap_dali_hash_pinned.py \\
+    --json-out "$LOG_DIR/lightning_dali_bootstrap.json" \\
+    --requirements-out "$LOG_DIR/lightning_dali_requirements.txt" \\
+    --timeout 900
+
+log "=== Stage 6b: contest_auth_eval [contest-CUDA] ==="
 rm -rf "$WORKSPACE/{auth_eval_dir}"
 "$PYBIN" -u experiments/contest_auth_eval.py \\
     --archive "$ARCHIVE" \\
@@ -283,6 +428,7 @@ data['lane_id'] = '{LANE_ID}'
 data['job_name'] = '{job_name}'
 data['evidence_grade'] = '[contest-CUDA]'
 data['profile'] = '{PROFILE}'
+data['variant'] = 'quantizr_faithful'
 with open(out_path, 'w') as f:
     json.dump(data, f, indent=2)
 print('contest_auth_eval result:', json.dumps(data))
@@ -615,7 +761,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"max_runtime_sec: {args.max_runtime_sec}")
         print(f"predicted_band: [{args.predicted_low}, {args.predicted_high}]")
         print(f"budget_cap_usd: {args.budget_cap_usd}")
-        print(f"--- remote command preview (first 800 chars) ---")
+        print("--- remote command preview (first 800 chars) ---")
         print(command[:800])
         print(f"--- (full length: {len(command)} chars) ---")
         return 0
