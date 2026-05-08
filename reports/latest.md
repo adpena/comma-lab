@@ -192,12 +192,15 @@ CI runner. Apple Silicon CPU eval is `[macOS-CPU advisory only]`, never
    Decisive between hypotheses H1/H2/H3/H4 in the sweep design.
 4. **P1** — `tac.score_geometry target_axis="cpu_leaderboard"` flag (1 LOC,
    $0). Reweights cathedral autopilot for leaderboard-targeted dispatch.
-5. **P2** — Decoder-vs-FP32 discriminator microbench: force
-   `DefaultDatasetClass = AVVideoDataset` while running `--device cuda`.
+5. **P2** — Decoder-vs-FP32 discriminator microbench: dump PyAV-decoded
+   tensors on CPU, feed those shared tensors through CUDA forward, and compare
+   against CUDA+DALI and CPU+PyAV. Do **not** force `AVVideoDataset` under
+   `--device cuda`; upstream `AVVideoDataset` asserts a non-CUDA device.
    ~$0.25 / 1-hour T4. Decisive between decoder-mismatch and FP32-floor
    contribution to the gap.
-6. **P3** — Layer-by-layer FastViT-T12 drift profile to falsify / confirm
-   `sqrt(L)·ε` additive-noise model.
+6. **P3** — Layer-by-layer PoseNet/Hydra drift profile to falsify / confirm
+   shared-input additive-noise model. This is RepMixer/conv/MLP drift, not a
+   FastViT attention-softmax probe.
 
 ## 2026-05-08 — Evidence-grade drift supersession after PR102/PR104/PR106
 

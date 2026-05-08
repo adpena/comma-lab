@@ -234,18 +234,31 @@ After harvest, fit each hypothesis with:
 
 **Decision rule:** lowest BIC wins; tie-broken by interpretability and number of free parameters.
 
-### Why MSE on first-6 dims of FastViT-T12 output is the load-bearing variable
+### Superseded mechanism note: PoseNet/Hydra shared-input drift, not FastViT attention
 
-The pose distortion is `MSE(out_cuda, out_cpu)` over the first 6 dims of the hydra "pose" head. The drift between devices is in the **scorer's** FastViT-T12 forward pass on identical YUV6 input — the input frames come from `inflate.sh` which is byte-deterministic per archive. So:
+**2026-05-08 supersession:** later code review of PoseNet/FastViT-T12 found
+that the scorer uses RepMixer/conv blocks, not attention blocks, and T4 has no
+TF32 path. Treat the attention-softmax explanation below as historical
+hypothesis only. The current rigorous experiment is the 2x2 loader/kernel
+matrix: CPU+PyAV, CUDA+DALI, CUDA forward on shared PyAV tensors, and CPU
+forward on shared DALI tensors where available.
+
+The pose distortion is `MSE(out_cuda, out_cpu)` over the first 6 dims of the hydra "pose" head. The drift between devices may live in the **scorer's** PoseNet/Hydra forward pass on identical YUV6 input and/or in the device-selected ground-truth loader path. So:
 
 1. The reconstructed frames are byte-identical between CPU and CUDA eval (they're written to disk by inflate.py before evaluate.py reads them).
 2. `rgb_to_yuv6` runs on whatever device evaluate.py is on — its arithmetic is the same FP32 path on both, but reduction order can differ.
-3. **FastViT-T12 attention softmax** is the most likely numerical-divergence source. cuDNN's softmax differs from PyTorch's CPU softmax in summation order and in epsilon handling.
-4. EfficientNet-B2 in SegNet has fewer attention ops (it's pure conv + SE blocks); R_seg ≈ 1.17 vs R_pose ≈ 5 is consistent with this — SegNet has less attention-induced divergence.
+3. **PoseNet/Hydra conv, GELU, normalization, and reduction-order drift** is one plausible numerical-divergence source. It is not yet localized.
+4. EfficientNet-B2 in SegNet is classification/argmax-scored, so small precision or loader perturbations usually matter only near class boundaries; R_seg ≈ 1.17 vs R_pose ≈ 5 is consistent with regression-vs-classification sensitivity, not proof of attention-specific drift.
 
-**This means R is a property of the SCORER, not the submission.** It should be archive-independent EXCEPT to the extent that different reconstructed frames trigger different attention patterns. Since FastViT-T12 attention is dominated by image content (not the codec's signature), R should be ≈ constant across all archives that produce reasonable-looking YUV6 frames. **This is why H1 is the strongest prior.**
+**This means R is a property of the SCORER plus the loader path plus the
+submission's operating point.** It may be stable inside the HNeRV cluster, but
+must not be applied globally to qhnerv, HPAC, AV1, self-compress, or future
+substrates without paired anchors.
 
-The only way H3 or H4 wins is if some reconstructions are "outside the FastViT-T12 attention regime" — e.g., AV1 film-grain creates statistically different attention maps from HNeRV's smooth sinusoidal output. Plausible but not strongly predicted.
+H3 or H4 can win if reconstructions sit in different loader/forward
+sensitivity regimes, e.g. AV1 film grain, chroma upsampling, high-frequency
+texture, or substrate-specific scorer margins. This is now an empirical
+architecture-class calibration problem.
 
 ---
 

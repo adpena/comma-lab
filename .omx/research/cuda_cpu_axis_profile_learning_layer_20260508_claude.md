@@ -36,11 +36,12 @@ distributions**, not constants. Five empirically-confirmed reasons each
 architecture class is likely to have a different profile:
 
 1. **Different decoder paths.** HNeRV cluster uses
-   `DaliVideoDataset → TensorVideoDataset` on CUDA and
-   `AVVideoDataset → TensorVideoDataset` on CPU. The deep-theory subagent
-   measured this contributes ~25% of pose drift. AV1-only families
-   (PR60, PR97 H3) skip the neural decoder entirely; their R_pose may
-   collapse toward 1.0.
+   `DaliVideoDataset -> TensorVideoDataset` on CUDA and
+   `AVVideoDataset -> TensorVideoDataset` on CPU. The deep-theory subagent
+   proposed a ~25% decoder contribution prior; it has not been measured by
+   the 2x2 loader/kernel matrix yet. AV1-only families (PR60, PR97 H3) may
+   have different profiles, but their R_pose must be learned from paired
+   anchors rather than assumed to collapse toward 1.0.
 2. **Different precision-floor magnitudes.** HNeRV's σ²_floor ≈ 1.4e-4
    is set by Welch's-law random walk on ~50 conv ops. A shallower
    network (e.g. PR104 qhnerv_ft if it has a thinner decoder) has a

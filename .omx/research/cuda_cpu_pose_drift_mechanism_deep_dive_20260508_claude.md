@@ -469,13 +469,16 @@ The CUDA noise floor would drop dramatically (deterministic algorithms have tigh
 
 ## 8. Other contest components with hidden CPU-CUDA splits
 
-### 8.1 NVDEC vs PyAV ground-truth decode (CONFIRMED, ~25% of pose drift)
+### 8.1 NVDEC vs PyAV ground-truth decode (code-real, attribution unmeasured)
 
 `upstream/frame_utils.py:185-216` (`AVVideoDataset`) and `:110-157` (`DaliVideoDataset`). PyAV is hand-coded to "match nvdec output" but uses `F.interpolate(mode='bilinear', align_corners=False)` for chroma upsampling. NVDEC uses an internal hardware-accelerated bilinear kernel. These can produce per-pixel uint8 differences of ±1 LSB on chroma.
 
 A 1-LSB chroma difference ⇒ ~1/255 ≈ 0.4% relative pixel error. After `(x - 127.5) / 63.75` normalization in PoseNet preprocess, this becomes 1/63.75 ≈ 0.016 absolute error in normalized space. Across 12-channel YUV6 over 512×384 ≈ 200K pixels, the cumulative input perturbation has L2 norm ~2.3. PoseNet's effective Lipschitz constant on this input space is ~5e-4 (rough estimate from training-time gradient norms), so the resulting pose output drift is ~1e-3 — comparable to the FP32 compounding noise.
 
-**Empirical test (LOCAL, no GPU)**: re-encode a single sample with both DALI's pipeline (would require GPU) and PyAV (CPU-only), compare YUV6 inputs to PoseNet. Measure L2 distance. **Estimated drift contribution: 25-40% of total pose noise.**
+**Empirical test:** dump PyAV-decoded tensors on CPU, dump DALI/NVDEC tensors on
+a CUDA host, hash both tensor batches, then feed shared tensors through CPU and
+CUDA forward paths. Measure component deltas and repeat-run jitter. The 25-40%
+decoder contribution is a prior until that 2x2 matrix lands.
 
 ### 8.2 Inflated-frame `.raw` decode (NO CPU-CUDA split)
 
@@ -501,7 +504,9 @@ PoseNet and SegNet are loaded in `eval()` mode; running statistics are constants
 
 `evaluate.py` has `torch.inference_mode()`. There is no RNG path in either eval. The "seed" arg is for DALI's data shuffling only.
 
-**Summary**: only TWO components have CPU-CUDA splits: (a) the `posenet/segnet` forward pass FP32 computation, and (b) the GROUND TRUTH NVDEC vs PyAV decode. (a) accounts for ~75% of the variance, (b) for ~25%.
+**Summary**: two components are code-real split axes: (a) the `posenet/segnet`
+forward pass FP32 computation, and (b) the ground-truth NVDEC vs PyAV decode.
+The 75/25 attribution is a hypothesis, not a measurement.
 
 ---
 
@@ -525,7 +530,12 @@ These are the questions my mechanism analysis cannot resolve without empirical d
 
 **Predicted by mechanism analysis:** ~25% of pose-noise variance is from GT decode mismatch.
 
-**Test:** sample a CUDA eval that uses PyAV (CPU decoder) but otherwise CUDA inference. PyTorch's flexibility makes this trivial — set DEVICE=cuda but force `DefaultDatasetClass = AVVideoDataset`. The resulting "PyAV-decode + CUDA-inference" score should sit BETWEEN pure CPU (0.195) and pure CUDA (0.228). If it's at ~0.220, the decode contribution is ~25%; if it's at 0.195, decoder is 100% of the gap; if it's at 0.228, decoder contributes 0%.
+**Test:** sample a CUDA eval that uses PyAV-decoded tensors as shared input but
+otherwise runs CUDA inference. Do not instantiate `AVVideoDataset` with a CUDA
+device; upstream asserts non-CUDA for that class. The resulting "PyAV bytes +
+CUDA forward" diagnostic should sit between pure CPU and pure CUDA if decoder
+contributes materially. If it is near CPU, decoder is dominant; if it is near
+CUDA, forward kernels dominate.
 
 This is the **single highest-EV experiment** in the entire mechanism investigation. It's a CPU-side change (1 line), runs on T4 in <60 min, and discriminates the model decisively.
 
