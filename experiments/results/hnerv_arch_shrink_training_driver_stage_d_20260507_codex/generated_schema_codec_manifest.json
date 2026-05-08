@@ -1,0 +1,34 @@
+{
+  "blob_bytes": 76263,
+  "blob_sha256": "fcd7c6f9556f625f107df80ca39f128c3889450d1653ec5b8552aa11c25a01b9",
+  "codec_label": "hnerv_generated_schema_int8_brotli",
+  "decode_manifest": {
+    "blob_bytes": 76263,
+    "blob_sha256": "fcd7c6f9556f625f107df80ca39f128c3889450d1653ec5b8552aa11c25a01b9",
+    "n_state_elements": 96861,
+    "n_tensors": 28,
+    "schema": "hnerv_generated_schema_decode_manifest.v1",
+    "schema_fingerprint": "4c67e69d5cc4a2324e8429465deaccf13dc4077e490335d1b3756680d76ba220",
+    "score_claim": false
+  },
+  "decode_roundtrip_schema_fingerprint": "4c67e69d5cc4a2324e8429465deaccf13dc4077e490335d1b3756680d76ba220",
+  "dispatch_blockers": [
+    "codec_blob_not_integrated_into_submission_runtime_loader",
+    "no_inflate_output_parity",
+    "no_exact_cuda_auth_eval"
+  ],
+  "header_bytes": 7453,
+  "n_state_elements": 96861,
+  "output_blob": "experiments/results/hnerv_arch_shrink_training_driver_stage_d_20260507_codex/generated_schema_codec.hngs",
+  "payload_bytes": 68802,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "hnerv_generated_schema_codec_manifest.v1",
+  "schema_fingerprint": "4c67e69d5cc4a2324e8429465deaccf13dc4077e490335d1b3756680d76ba220",
+  "schema_json": "experiments/results/hnerv_arch_shrink_training_driver_stage_d_20260507_codex/generated_schema.json",
+  "score_claim": false,
+  "source_state_dict": "experiments/results/hnerv_arch_shrink_training_driver_stage_d_20260507_codex/initial_state_dict.pt",
+  "stream_count": 28,
+  "stream_total_brotli_bytes": 68802,
+  "tool": "tools/materialize_hnerv_generated_schema_codec.py"
+}
