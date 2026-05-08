@@ -108,11 +108,24 @@ def test_materialize_adapter_plan_writes_source_sized_files(tmp_path: Path) -> N
     assert inflate_sh.is_file()
     assert readme.is_file()
     assert inflate_sh.stat().st_mode & stat.S_IXUSR
-    assert "pip install" not in inflate_sh.read_text(encoding="utf-8")
-    assert materialized.summary["adapter_plan"]["materialized_files"] == [
+    inflate_text = inflate_sh.read_text(encoding="utf-8")
+    assert "pip install" not in inflate_text
+    assert "experiments/results/pr102_adapter/runtime_source" in inflate_text
+    runtime_inflate = (
+        tmp_path
+        / "experiments/results/pr102_adapter/runtime_source/submissions/"
+        "hnerv_lc_v2_scale095_rplus1/inflate.py"
+    )
+    assert runtime_inflate.is_file()
+    materialized_files = materialized.summary["adapter_plan"]["materialized_files"]
+    assert materialized_files[:2] == [
         "experiments/results/pr102_adapter/inflate.sh",
         "experiments/results/pr102_adapter/README.md",
     ]
+    assert (
+        "experiments/results/pr102_adapter/runtime_source/submissions/"
+        "hnerv_lc_v2_scale095_rplus1/inflate.py"
+    ) in materialized_files
     assert (
         materialized.summary["next_status_after_this_artifact"]
         == "adapter_materialized_ready_for_exact_cuda_replay_after_dispatch_claim"

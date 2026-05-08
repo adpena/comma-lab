@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Source-sized public replay shim for PR102. Do not install packages here.
-# PACT_RUNTIME_DEPENDENCY_ROOT = experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/source/submissions/hnerv_lc_v2_scale095_rplus1
+# PACT_RUNTIME_DEPENDENCY_ROOT = experiments/results/public_pr102_exact_replay_adapter_20260508_codex/runtime_source/submissions/hnerv_lc_v2_scale095_rplus1
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -27,8 +27,8 @@ else
   }
 fi
 PYTHON="${PACT_PYTHON:-$REPO_ROOT/.venv/bin/python}"
-PUBLIC_SOURCE_ROOT="$REPO_ROOT/experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/source"
-RUNTIME_SOURCE_ROOT="$REPO_ROOT/experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/source/submissions/hnerv_lc_v2_scale095_rplus1"
+PUBLIC_SOURCE_ROOT="$REPO_ROOT/experiments/results/public_pr102_exact_replay_adapter_20260508_codex/runtime_source"
+RUNTIME_SOURCE_ROOT="$REPO_ROOT/experiments/results/public_pr102_exact_replay_adapter_20260508_codex/runtime_source/submissions/hnerv_lc_v2_scale095_rplus1"
 
 if [ "$#" -ne 3 ]; then
   echo "ERROR: expected DATA_DIR OUTPUT_DIR FILE_LIST arguments" >&2

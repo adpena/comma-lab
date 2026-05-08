@@ -586,7 +586,29 @@ def materialize_adapter_plan(
     if resolved.exists() and any(resolved.iterdir()) and not overwrite:
         raise ValueError(f"adapter dir is not empty: {adapter_dir}")
     resolved.mkdir(parents=True, exist_ok=True)
-    script_text = str(report.summary["adapter_plan"]["inflate_sh_text"])
+    runtime_checkout = resolved / "runtime_source"
+    runtime_source_rel = _safe_runtime_source_path(
+        str(report.summary["runtime_source"]["runtime_source_path"])
+    )
+    runtime_root = runtime_checkout / Path(runtime_source_rel)
+    copied_runtime_files = _copy_runtime_source_files(
+        report,
+        runtime_root=runtime_root,
+        repo_root=repo_root,
+    )
+    adapter_plan = dict(report.summary["adapter_plan"])
+    required_modules = list(
+        report.summary["dependency_network_risks"].get(
+            "required_python_modules_for_adapter_preflight"
+        )
+        or []
+    )
+    script_text = _adapter_script_text(
+        runtime_source_root_rel=_repo_rel(runtime_root, repo_root),
+        public_checkout_root_rel=_repo_rel(runtime_checkout, repo_root),
+        module_name=str(adapter_plan["module"]),
+        required_modules=required_modules,
+    )
     inflate_sh = resolved / "inflate.sh"
     inflate_sh.write_text(script_text, encoding="utf-8")
     inflate_sh.chmod(inflate_sh.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
@@ -594,21 +616,54 @@ def materialize_adapter_plan(
     readme.write_text(
         "# PR102 Exact Replay Adapter\n\n"
         "Source-sized, fail-closed adapter for later CUDA replay. This directory was "
-        "materialized by `tools/build_pr102_exact_replay_readiness.py` and does not "
+        "materialized by `tools/build_pr102_exact_replay_readiness.py`, includes "
+        "the public PR102 runtime source needed by `inflate.sh`, and does not "
         "contain archive payload bytes.\n",
         encoding="utf-8",
     )
     summary = dict(report.summary)
-    adapter_plan = dict(summary["adapter_plan"])
+    adapter_plan["runtime_dependency_root_directive"] = _repo_rel(runtime_root, repo_root)
+    adapter_plan["inflate_sh_text"] = script_text
+    adapter_plan["inflate_sh_sha256"] = hashlib.sha256(script_text.encode("utf-8")).hexdigest()
     adapter_plan["materialized_files"] = [
         _repo_rel(inflate_sh, repo_root),
         _repo_rel(readme, repo_root),
+        *copied_runtime_files,
     ]
     summary["adapter_plan"] = adapter_plan
     summary["next_status_after_this_artifact"] = (
         "adapter_materialized_ready_for_exact_cuda_replay_after_dispatch_claim"
     )
     return replace(report, summary=summary)
+
+
+def _safe_runtime_source_path(raw: str) -> str:
+    rel = PurePosixPath(raw)
+    if not raw or rel.is_absolute() or ".." in rel.parts:
+        raise ValueError(f"unsafe runtime_source_path: {raw!r}")
+    return rel.as_posix().rstrip("/")
+
+
+def _copy_runtime_source_files(
+    report: AuditReport,
+    *,
+    runtime_root: Path,
+    repo_root: Path,
+) -> list[str]:
+    copied: list[str] = []
+    for row in report.summary["runtime_source"].get("files", []):
+        rel = PurePosixPath(str(row.get("path") or ""))
+        source_rel = str(row.get("repo_relative_path") or "")
+        if not rel.as_posix() or rel.is_absolute() or ".." in rel.parts:
+            raise ValueError(f"unsafe runtime source file path: {rel}")
+        source = repo_root / source_rel
+        if not source.is_file():
+            raise ValueError(f"runtime source file missing during materialization: {source_rel}")
+        target = runtime_root / Path(rel)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(source.read_bytes())
+        copied.append(_repo_rel(target, repo_root))
+    return copied
 
 
 def render_markdown(report: AuditReport) -> str:
