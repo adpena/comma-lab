@@ -72,6 +72,14 @@ reactivation criteria documented per memo.
 - A3-alt Mallat: see Pareto table above.
 
 **Phase A subagents (LANDED):**
+- A1 score-gradient PR101 fine-tune — Modal training/build completed and
+  produced a `205,879 B` archive
+  (`cb9de2b71133929b0c2df00b0e511b9c306939d62438ffb348e947aef719e185`),
+  but exact CUDA eval was skipped by DALI/NVDEC preflight. Local macOS CPU
+  advisory eval after the portable-python runtime fix scored **3.721654**
+  (`pose=0.178464`, `seg=0.022487`). Treat this config as retired, not the
+  family; reactivation needs a constrained fine-tune that preserves the PR101
+  reconstruction basin before any exact CUDA/contest-CPU spend.
 - A4-alt Filler STC pose codec (`75c99b84`) — 559+ LOC + 27 tests pass.
   Δ vs PD-V2 on smooth-walk fixture: **−400 B (−9.17%)**; idle-dominant
   +52% (expected — AC exploits qint=0 dominance). Verdict

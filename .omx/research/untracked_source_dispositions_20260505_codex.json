@@ -27,8 +27,8 @@
       "path_kind": "prefix",
       "runtime_source_baseline": {
         "algorithm": "pact_runtime_source_set_v1",
-        "count": 10529,
-        "sha256": "9420b36d0b66313915a3db3f5ad78d3af08e5869755898ca45bcf35edb641583"
+        "count": 10533,
+        "sha256": "f10bead71fb3eeda33fc5afc2963925b84e5feab84a24db0976340410267b4da"
       }
     },
     {
@@ -1418,6 +1418,12 @@
       "disposition": "ignore_rebuildable",
       "note": "ignore: generated A2 packet-local inflate shell entrypoint is raw rebuildable custody; durable signal is in a2_packet_ladder_paritysync_20260508_codex.md.",
       "path": "experiments/results/track1_phase_a2_packet_ladder_codex_paritysync_20260508T211430Z/variants/weighted_k_00_rms_0p0386/packet/inflate.sh"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable A1 Modal advisory negative ledger; no raw provider transcript or payload.",
+      "path": ".omx/research/phase_a1_score_gradient_modal_advisory_negative_20260508_codex.md"
     }
   ],
   "policy": "Every source-like untracked path must be track, recovery_queue, ignore_private, or ignore_rebuildable with rationale.",

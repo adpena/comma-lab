@@ -11921,6 +11921,17 @@ def _scan_test_file_for_dead_imports(
 
     importorskip_mods = _collect_importorskip_modules(tree)
 
+    # Per-line waiver: inspect the source for `# preflight-test-fixture-import`
+    # comments (within ±2 lines of an ImportFrom). Used by tests that
+    # *intentionally* construct an unresolvable import name to verify mocking
+    # behavior of `tools/profile_preflight_latency.py`'s AST visitor.
+    text_lines = text.splitlines()
+    fixture_waiver_lines: set[int] = set()
+    for i, line in enumerate(text_lines, start=1):
+        if "preflight-test-fixture-import" in line:
+            for offset in range(-8, 9):
+                fixture_waiver_lines.add(i + offset)
+
     violations: list[str] = []
     for node in ast.walk(tree):
         if not isinstance(node, ast.ImportFrom):
@@ -11940,6 +11951,10 @@ def _scan_test_file_for_dead_imports(
         # Honor pytest.importorskip("X") opt-out: skip imports of X or any
         # submodule under X.
         if any(mod == m or mod.startswith(m + ".") for m in importorskip_mods):
+            continue
+        # Honor `# preflight-test-fixture-import: <reason>` waiver within ±2
+        # lines (test file declares this as an intentional unresolvable name).
+        if node.lineno in fixture_waiver_lines:
             continue
         # Resolve module file.
         mod_path = _resolve_module_to_path(mod, repo_root)

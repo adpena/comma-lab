@@ -270,7 +270,7 @@ while IFS= read -r line; do
   [ ! -f "$SRC" ] && echo "ERROR: ${SRC} not found" >&2 && exit 1
 
   printf "Inflating %s ... " "$line"
-  python "$HERE/inflate.py" "$SRC" "$DST"
+  "${PYTHON:-python3}" "$HERE/inflate.py" "$SRC" "$DST"
 done < "$FILE_LIST"
 '''
 

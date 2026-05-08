@@ -97,6 +97,18 @@ def test_resolve_codec_dir_prefers_flat_when_both_present(tmp_path: Path) -> Non
     assert resolved == tmp_path
 
 
+def test_finetuned_inflate_sh_uses_portable_python_fallback() -> None:
+    """Generated A1 runtime must not call bare `python`.
+
+    macOS and several clean Linux images do not provide `python`, while the
+    contest/runtime path can still use `python3`. Local custody evals may bind
+    `PYTHON=.venv/bin/python` when packet dependencies live in the repo venv.
+    """
+    mod = _load_build_module()
+    assert '"${PYTHON:-python3}" "$HERE/inflate.py" "$SRC" "$DST"' in mod.INFLATE_SH_NO_DEAD_K
+    assert 'python "$HERE/inflate.py" "$SRC" "$DST"' not in mod.INFLATE_SH_NO_DEAD_K
+
+
 def test_harvest_modal_calls_handles_none_elapsed_and_stdout_tail() -> None:
     text = _HARVEST_SCRIPT_PATH.read_text()
 

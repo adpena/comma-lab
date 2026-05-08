@@ -163,6 +163,11 @@ def test_profile_preflight_checks_resolves_local_imported_check(monkeypatch) -> 
         events.append(("local", strict, verbose))
 
     def preflight_all() -> None:
+        # preflight-test-fixture-import: `local_check` is provided by the
+        # `fake_runtime_refs` SimpleNamespace below via monkeypatched
+        # `importlib.import_module`. The static `from ... import local_check`
+        # form is REQUIRED so `tools/profile_preflight_latency.py`'s AST visitor
+        # in `_called_preflight_calls` can detect this as a preflight check.
         from tac.preflight_runtime_refs import local_check
 
         local_check(strict=False, verbose=True)
