@@ -1,0 +1,135 @@
+{
+  "evidence_grade": "empirical_archive_layout_cpu_no_score",
+  "global_implication": "frontier HNeRV archives are monolithic physical packets; component budgets must be internal-parser-proven logical slices, not ZIP member-name categories",
+  "runs": [
+    {
+      "archive_bytes": 178258,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip",
+      "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "cautions": [
+        "ZIP-member layout is physical custody only; do not infer mask/pose budgets from member names.",
+        "A single monolithic member falsifies separate ZIP-member budgets, not parser-proven logical sections.",
+        "Score, promotion, and family-retirement claims remain forbidden without exact CUDA auth eval."
+      ],
+      "duplicate_member_names": [],
+      "evidence_grade": "empirical_archive_layout_cpu_no_score",
+      "logical_layout": {
+        "component_budget_implication": "no_zip_member_mask_or_pose_budget; logical edits must target decoder_blob, latent_blob, or sidecar_blob under the PR101 parser",
+        "grammar": "pr101_fixed_offset_hnerv_microcodec",
+        "member_bytes": 178158,
+        "parser_confidence": "exact_member_name_and_fixed_offsets",
+        "sections": [
+          {
+            "len": 162164,
+            "name": "decoder_blob",
+            "offset": 0,
+            "role": "renderer_decoder_weights",
+            "sha256": "836d1876bffd74f77f30e387a3b4cac1dbb25929cc4d348830d36cfa2a6d48a6"
+          },
+          {
+            "len": 15387,
+            "name": "latent_blob",
+            "offset": 162164,
+            "role": "latent_motion_or_frame_conditioning",
+            "sha256": "de8a0da594f073efc43849334573ba06438bb37d53f9343ee6367659c0106bbe"
+          },
+          {
+            "len": 607,
+            "name": "sidecar_blob",
+            "offset": 177551,
+            "role": "latent_sidecar_not_separate_pose_or_mask_member",
+            "sha256": "6c2946e323bbbc6f8d906ef6c68989e8acbd8d60332c87da8fe8147f1ea7b12f"
+          }
+        ],
+        "single_member_name": "x"
+      },
+      "physical_layout": {
+        "archive_member_level_component_budgets_valid": false,
+        "member_level_mask_budget_valid": false,
+        "member_level_pose_budget_valid": false,
+        "members": [
+          {
+            "compress_size": 178158,
+            "compress_type": 0,
+            "file_size": 178158,
+            "index": 0,
+            "name": "x",
+            "payload_share_of_archive": 0.9994390153597594,
+            "sha256": "5f1948f9572e65f71c614d2ff15764ee416522e25cb1b06c8b1299c1306e8aaf"
+          }
+        ],
+        "n_members": 1,
+        "single_member_monolithic_packet": true,
+        "zip_overhead_bytes": 100
+      },
+      "schema": "tac_frontier_archive_layout_v1",
+      "score_claim": false
+    },
+    {
+      "archive_bytes": 186239,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+      "archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+      "cautions": [
+        "ZIP-member layout is physical custody only; do not infer mask/pose budgets from member names.",
+        "A single monolithic member falsifies separate ZIP-member budgets, not parser-proven logical sections.",
+        "Score, promotion, and family-retirement claims remain forbidden without exact CUDA auth eval."
+      ],
+      "duplicate_member_names": [],
+      "evidence_grade": "empirical_archive_layout_cpu_no_score",
+      "logical_layout": {
+        "component_budget_implication": "no_zip_member_mask_or_pose_budget; logical edits must target decoder_packed_brotli or latents_and_sidecar_brotli under the PR106 parser",
+        "decoder_len_field": 170278,
+        "grammar": "pr106_ff_packed_hnerv",
+        "member_bytes": 186131,
+        "parser_confidence": "exact_member_name_magic_and_24bit_decoder_len",
+        "sections": [
+          {
+            "len": 4,
+            "name": "ff_header",
+            "offset": 0,
+            "role": "internal_length_header",
+            "sha256": "7939f08db7d18dd4176e8e11b1232a9be6b2371db7a4e63c1c0871fb520148b6"
+          },
+          {
+            "len": 170278,
+            "name": "decoder_packed_brotli",
+            "offset": 4,
+            "role": "renderer_decoder_weights",
+            "sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004"
+          },
+          {
+            "len": 15849,
+            "name": "latents_and_sidecar_brotli",
+            "offset": 170282,
+            "role": "latent_sidecar_not_separate_pose_or_mask_member",
+            "sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32"
+          }
+        ],
+        "single_member_name": "0.bin"
+      },
+      "physical_layout": {
+        "archive_member_level_component_budgets_valid": false,
+        "member_level_mask_budget_valid": false,
+        "member_level_pose_budget_valid": false,
+        "members": [
+          {
+            "compress_size": 186131,
+            "compress_type": 0,
+            "file_size": 186131,
+            "index": 0,
+            "name": "0.bin",
+            "payload_share_of_archive": 0.9994200999790591,
+            "sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7"
+          }
+        ],
+        "n_members": 1,
+        "single_member_monolithic_packet": true,
+        "zip_overhead_bytes": 108
+      },
+      "schema": "tac_frontier_archive_layout_v1",
+      "score_claim": false
+    }
+  ],
+  "schema": "tac_frontier_archive_layout_batch_v1",
+  "score_claim": false
+}

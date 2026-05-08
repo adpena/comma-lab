@@ -49,6 +49,13 @@ def test_default_plan_is_deterministic_and_scoreless() -> None:
     assert manifest["metadata"]["nested_optimization"]["score_band_prediction"]["score_claim"] is False
     assert manifest["metadata"]["canonical_qat_pipeline"]["passes"] == list(CANONICAL_QAT_PASSES)
     assert manifest["metadata"]["quality_mandate"] == list(QUALITY_MANDATE_11)
+    assert (
+        manifest["metadata"]["archive_layout"]["shape"]
+        == "single_member_monolithic_packet_with_internal_parser_proven_logical_sections"
+    )
+    assert manifest["metadata"]["archive_layout"]["member_level_component_budgets_valid"] is False
+    assert manifest["metadata"]["archive_layout"]["logical_stream_budget_requires_internal_parser_proof"] is True
+    assert "no_member_level_mask_pose_budget_claim" in manifest["metadata"]["archive_layout"]["dispatch_requires"]
     assert manifest["promotion_status"]["score_claim"] is False
     assert manifest["promotion_status"]["dispatchable"] is False
     assert manifest["promotion_status"]["promotion_eligible"] is False

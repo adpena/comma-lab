@@ -51,7 +51,9 @@ score claim:
   parallel substreams;
 - prediction-only nested score band: linear stack `0.130`, full nested
   score-feedback `0.090`, `score_claim=false`, `promotion_allowed=false`;
-- DAG-of-CodecOps / tree-structured archive-layout requirements;
+- DAG-of-CodecOps planning with a single-member monolithic packet target:
+  logical stream budgets require parser-proven internal offsets/lengths/hashes,
+  not ZIP member-name categories;
 - canonical five-pass QAT pipeline: anchor, finetune, joint, QAT, final;
 - 11-point quality mandate: beautiful, elegant, human-readable, composable,
   creative, reusable, expressive, canonical, production-hardened, OSS-ready,
@@ -59,6 +61,26 @@ score claim:
 
 Materialized planner artifact:
 `reports/hstack_vstack_multipass_plan_20260507.json`.
+
+## 2026-05-08 Monolithic Frontier Archive Correction
+
+Follow-up adversarial review verified the public frontier archive shape:
+
+- local PR101 archive: one stored ZIP member `x`, archive `178,258` bytes,
+  inner member `178,158` bytes, split by fixed parser offsets into
+  `decoder_blob` `162,164` bytes, `latent_blob` `15,387` bytes, and
+  `sidecar_blob` `607` bytes;
+- local PR106 archive: one stored ZIP member `0.bin`, archive `186,239`
+  bytes, inner member `186,131` bytes, split by FF grammar into
+  `decoder_packed_brotli` `170,278` bytes and
+  `latents_and_sidecar_brotli` `15,849` bytes.
+
+This falsifies ZIP-member-level mask/pose/renderer budgets for these HNeRV
+frontier substrates. It does **not** prove that logical streams are absent in a
+general architecture; it means any logical budget claim must cite an internal
+parser section, not a file member. The planner metadata now encodes this:
+`member_level_component_budgets_valid=false` and
+`logical_stream_budget_requires_internal_parser_proof=true`.
 
 ## Ballé / Full Learned Hyperprior Gate
 
