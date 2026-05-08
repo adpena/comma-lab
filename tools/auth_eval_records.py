@@ -40,6 +40,8 @@ def _get(payload: dict[str, Any], *keys: str, default: Any = None) -> Any:
 
 def _float(value: Any) -> float | None:
     try:
+        if isinstance(value, bool):
+            return None
         return float(value)
     except (TypeError, ValueError):
         return None
@@ -47,9 +49,15 @@ def _float(value: Any) -> float | None:
 
 def _int(value: Any) -> int | None:
     try:
+        if isinstance(value, bool):
+            return None
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def _strict_bool(value: Any) -> bool:
+    return value is True
 
 
 def _first_float(*values: Any) -> float | None:
@@ -125,17 +133,33 @@ def _platform_is_macos(provenance: dict[str, Any], payload: dict[str, Any]) -> b
     return system == "Darwin" or "macos" in hardware or "apple silicon" in hardware
 
 
-def _score_axis(
+def _device_norm(device: str) -> str:
+    return str(device or "").lower()
+
+
+def _is_contest_cuda_axis(*, device: str, samples: int | None, gpu_t4_match: bool) -> bool:
+    return _device_norm(device) == "cuda" and samples == 600 and gpu_t4_match
+
+
+def _is_contest_cpu_axis(
     *,
     payload: dict[str, Any],
     provenance: dict[str, Any],
     device: str,
     samples: int | None,
-    gpu_t4_match: bool,
-) -> str:
-    explicit = str(payload.get("score_axis") or payload.get("device_axis") or "")
-    if explicit and explicit.lower() not in {"cpu", "cuda", "mps"}:
-        return explicit
+) -> bool:
+    return (
+        _device_norm(device) == "cpu"
+        and samples == 600
+        and _platform_is_linux_x86_64(provenance, payload)
+    )
+
+
+def _declared_contest_axis(payload: dict[str, Any], axis: str) -> bool:
+    wanted = axis.replace("_", "-")
+    explicit = str(payload.get("score_axis") or payload.get("device_axis") or "").lower()
+    if explicit.replace("_", "-") == wanted:
+        return True
     grade_text = " ".join(
         str(value)
         for value in (
@@ -145,17 +169,92 @@ def _score_axis(
         )
         if value
     ).lower()
-    if "contest-cpu" in grade_text or "contest_cpu" in grade_text:
-        return "contest_cpu"
-    if "contest-cuda" in grade_text or "contest_cuda" in grade_text:
-        return "contest_cuda"
-    if device == "cuda" and samples == 600 and gpu_t4_match:
-        return "contest_cuda"
-    if device == "cpu" and samples == 600 and _platform_is_linux_x86_64(provenance, payload):
-        return "contest_cpu"
-    if device == "cpu":
+    return wanted in grade_text or axis in grade_text
+
+
+def _non_contest_axis_for_device(device: str) -> str:
+    device_kind = _device_norm(device)
+    if device_kind == "cpu":
         return "cpu_advisory"
-    return device or "unknown"
+    return device_kind or "unknown"
+
+
+def _score_axis(
+    *,
+    payload: dict[str, Any],
+    provenance: dict[str, Any],
+    device: str,
+    samples: int | None,
+    gpu_t4_match: bool,
+) -> str:
+    explicit = str(payload.get("score_axis") or payload.get("device_axis") or "")
+    explicit_norm = explicit.lower().replace("-", "_")
+    contest_cuda = _is_contest_cuda_axis(
+        device=device,
+        samples=samples,
+        gpu_t4_match=gpu_t4_match,
+    )
+    contest_cpu = _is_contest_cpu_axis(
+        payload=payload,
+        provenance=provenance,
+        device=device,
+        samples=samples,
+    )
+    if explicit_norm == "contest_cuda" or _declared_contest_axis(payload, "contest_cuda"):
+        if contest_cuda:
+            return "contest_cuda"
+        if contest_cpu:
+            return "contest_cpu"
+        return _non_contest_axis_for_device(device)
+    if explicit_norm == "contest_cpu" or _declared_contest_axis(payload, "contest_cpu"):
+        if contest_cpu:
+            return "contest_cpu"
+        if contest_cuda:
+            return "contest_cuda"
+        return _non_contest_axis_for_device(device)
+    if explicit and explicit_norm not in {"cpu", "cuda", "mps"}:
+        return explicit
+    if contest_cuda:
+        return "contest_cuda"
+    if contest_cpu:
+        return "contest_cpu"
+    if _device_norm(device) == "cpu":
+        return "cpu_advisory"
+    return _device_norm(device) or "unknown"
+
+
+def _hardware_compliance_blocker(
+    *,
+    payload: dict[str, Any],
+    provenance: dict[str, Any],
+    device: str,
+    samples: int | None,
+    gpu_t4_match: bool,
+    axis: str,
+) -> str | None:
+    blocker = payload.get("hardware_compliance_blocker")
+    if blocker is not None:
+        return str(blocker)
+    if axis in {"contest_cuda", "contest_cpu"}:
+        return None
+    device_kind = _device_norm(device)
+    if device_kind == "cpu" and (
+        _declared_contest_axis(payload, "contest_cpu")
+        or samples == 600
+        or payload.get("score_axis") == "cpu_advisory"
+    ):
+        if samples != 600:
+            return "contest_cpu_requires_600_samples_linux_x86_64"
+        if not _platform_is_linux_x86_64(provenance, payload):
+            return "contest_cpu_requires_linux_x86_64"
+    if device_kind == "cuda" and (
+        _declared_contest_axis(payload, "contest_cuda") or samples == 600 or gpu_t4_match
+    ):
+        if samples != 600:
+            return "contest_cuda_requires_600_samples_t4"
+        if not gpu_t4_match:
+            return "contest_cuda_requires_t4"
+    return None
 
 
 def parse_auth_eval_payload(payload: dict[str, Any]) -> AuthEvalRecord | None:
@@ -226,9 +325,13 @@ def parse_auth_eval_payload(payload: dict[str, Any]) -> AuthEvalRecord | None:
     )
     device = str(provenance.get("device") or payload.get("device") or "?")
     samples = _first_int(payload.get("n_samples"), payload.get("samples"), report.get("n_samples"))
-    gpu_t4_match = bool(provenance.get("gpu_t4_match") or payload.get("gpu_t4_match"))
-    promotion_eligible = bool(payload.get("promotion_eligible", False))
-    score_claim_valid = bool(payload.get("score_claim_valid", False))
+    gpu_t4_match = _strict_bool(
+        provenance.get("gpu_t4_match")
+        if "gpu_t4_match" in provenance
+        else payload.get("gpu_t4_match")
+    )
+    promotion_eligible = _strict_bool(payload.get("promotion_eligible"))
+    score_claim_valid = _strict_bool(payload.get("score_claim_valid"))
     axis = _score_axis(
         payload=payload,
         provenance=provenance,
@@ -239,29 +342,45 @@ def parse_auth_eval_payload(payload: dict[str, Any]) -> AuthEvalRecord | None:
     if axis == "contest_cuda":
         promotion_eligible = True if "promotion_eligible" not in payload else promotion_eligible
         score_claim_valid = True if "score_claim_valid" not in payload else score_claim_valid
-    cpu_leaderboard_reproduction_eligible = bool(
-        payload.get("cpu_leaderboard_reproduction_eligible", axis == "contest_cpu")
-    )
-    rank_or_kill_eligible = bool(
-        payload.get("rank_or_kill_eligible", promotion_eligible and axis == "contest_cuda")
-    )
+    else:
+        promotion_eligible = False
+        score_claim_valid = False
+    cpu_leaderboard_reproduction_eligible = (
+        _strict_bool(payload.get("cpu_leaderboard_reproduction_eligible"))
+        if "cpu_leaderboard_reproduction_eligible" in payload
+        else axis == "contest_cpu"
+    ) and axis == "contest_cpu"
+    rank_or_kill_eligible = (
+        _strict_bool(payload.get("rank_or_kill_eligible"))
+        if "rank_or_kill_eligible" in payload
+        else promotion_eligible and axis == "contest_cuda"
+    ) and promotion_eligible and axis == "contest_cuda"
     evidence_grade = str(payload.get("evidence_grade") or "")
-    if not evidence_grade:
-        if axis == "contest_cuda":
-            evidence_grade = "A++"
-        elif axis == "contest_cpu":
-            evidence_grade = "contest-CPU"
-        elif axis == "cpu_advisory" and _platform_is_macos(provenance, payload):
-            evidence_grade = "macOS-CPU advisory"
-        elif axis == "cpu_advisory":
-            evidence_grade = "CPU advisory"
-        elif device == "cuda":
-            evidence_grade = "A"
-        else:
-            evidence_grade = "invalid"
-    hardware_compliance_blocker = payload.get("hardware_compliance_blocker")
-    if hardware_compliance_blocker is not None:
-        hardware_compliance_blocker = str(hardware_compliance_blocker)
+    evidence_grade_norm = evidence_grade.lower()
+    if axis == "contest_cuda":
+        evidence_grade = evidence_grade or "A++"
+    elif axis == "contest_cpu":
+        evidence_grade = evidence_grade or "contest-CPU"
+    elif axis == "cpu_advisory":
+        if not evidence_grade or "contest-cpu" in evidence_grade_norm or "contest_cpu" in evidence_grade_norm:
+            evidence_grade = "macOS-CPU advisory" if _platform_is_macos(provenance, payload) else "CPU advisory"
+    elif _device_norm(device) == "cuda" and (
+        not evidence_grade
+        or "contest-cuda" in evidence_grade_norm
+        or "contest_cuda" in evidence_grade_norm
+        or evidence_grade_norm in {"a", "a++"}
+    ):
+        evidence_grade = "A"
+    elif not evidence_grade:
+        evidence_grade = "invalid"
+    hardware_compliance_blocker = _hardware_compliance_blocker(
+        payload=payload,
+        provenance=provenance,
+        device=device,
+        samples=samples,
+        gpu_t4_match=gpu_t4_match,
+        axis=axis,
+    )
 
     return AuthEvalRecord(
         score=score,

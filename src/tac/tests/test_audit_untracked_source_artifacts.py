@@ -146,6 +146,22 @@ def test_generated_source_filesystem_records_include_ignored_runtime_sources(tmp
     assert records[0].classification == "generated_custody_source_untracked"
 
 
+def test_generated_source_filesystem_records_filters_suffixes_and_ignores_dirs(tmp_path) -> None:
+    source_rel = "experiments/results/run/manifest.json"
+    nested_source_rel = "experiments/results/run/source.py/notes.md"
+    binary_rel = "experiments/results/run/blob.pt"
+    (tmp_path / source_rel).parent.mkdir(parents=True)
+    (tmp_path / source_rel).write_text("{}\n", encoding="utf-8")
+    (tmp_path / nested_source_rel).parent.mkdir(parents=True)
+    (tmp_path / nested_source_rel).write_text("notes\n", encoding="utf-8")
+    (tmp_path / binary_rel).write_bytes(b"not source")
+
+    records = _generated_source_filesystem_records(tmp_path, tracked_paths=set())
+
+    assert sorted(record.path for record in records) == [source_rel, nested_source_rel]
+    assert {record.classification for record in records} == {"generated_custody_source_untracked"}
+
+
 def test_runtime_source_under_broad_prefix_requires_exact_entry_or_baseline(tmp_path) -> None:
     dispositions = {
         "experiments/results/": {

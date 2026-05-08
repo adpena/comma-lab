@@ -86,3 +86,45 @@ def test_dashboard_ingests_cpu_and_cuda_as_separate_score_axes(tmp_path: Path) -
     assert "axis_rank" in table
     assert "no global mixed-axis rank" in table
     assert table.index("contest_cuda") < table.index("contest_cpu")
+
+
+def test_dashboard_surfaces_hardware_blockers_for_misdeclared_cpu_axis(tmp_path: Path) -> None:
+    dashboard = _load_dashboard_module()
+    results = tmp_path / "experiments" / "results"
+    macos_dir = results / "macos_cpu_eval"
+    macos_dir.mkdir(parents=True)
+
+    (macos_dir / "contest_auth_eval.adjudicated.json").write_text(
+        json.dumps(
+            {
+                "canonical_score": 0.1966358879,
+                "archive_size_bytes": 178_981,
+                "device": "cpu",
+                "n_samples": 600,
+                "score_axis": "contest_cpu",
+                "evidence_grade": "contest-CPU-1to1",
+                "promotion_eligible": True,
+                "rank_or_kill_eligible": True,
+                "provenance": {
+                    "platform_system": "Darwin",
+                    "platform_machine": "arm64",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rows = dashboard.scan(tmp_path, scan_root=results)
+
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.score_axis == "cpu_advisory"
+    assert row.evidence_grade == "macOS-CPU advisory"
+    assert row.promotion_eligible is False
+    assert row.rank_or_kill_eligible is False
+    assert row.hardware_compliance_blocker == "contest_cpu_requires_linux_x86_64"
+
+    payload = json.loads(dashboard._format_json(rows))
+    assert payload["axis_counts"] == {"cpu_advisory": 1}
+    assert payload["rows"][0]["hardware_compliance_blocker"] == "contest_cpu_requires_linux_x86_64"
+    assert "contest_cpu_requires_linux_x86_64" in dashboard._format_table(rows)

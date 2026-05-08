@@ -42,6 +42,16 @@ workspace/tools/
 # The ones below are known large files that should never be in git.
 experiments/raft_flow.pt
 experiments/results/**/*.pt
+
+# Generated experiment/custody roots are local by default. Preserve signal by
+# promoting compact summaries into .omx/research/, docs/, reports/, or source;
+# use `git add -f` only for intentionally curated exact-evidence artifacts.
+experiments/results/
+outputs/
+
+# Local Claude scheduler locks contain machine/session PIDs and must not churn.
+.claude/*.lock
+
 # Harvest bundles record run_command.sh for traceability — these are
 # audit artifacts, not deploy scripts, and should be exempt from the
 # "shell-script-in-experiments" preflight rule.

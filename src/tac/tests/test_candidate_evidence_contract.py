@@ -246,3 +246,12 @@ def test_non_finite_cuda_score_is_not_promotable() -> None:
 
     assert is_promotable_exact_cuda_evidence(row) is False
     assert "contest_cuda_score_required" in blockers
+
+
+def test_negative_pose_component_fails_closed_instead_of_crashing() -> None:
+    row = _full_exact_cuda_row(pose_distortion=-0.00003)
+
+    blockers = promotable_exact_cuda_evidence_blockers(row)
+
+    assert is_promotable_exact_cuda_evidence(row) is False
+    assert "pose_component_nonnegative_required" in blockers

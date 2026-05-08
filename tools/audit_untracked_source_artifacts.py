@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -313,16 +314,24 @@ def _generated_source_filesystem_records(
         root_path = repo_root / root
         if not root_path.exists():
             continue
-        for path in root_path.rglob("*"):
-            if not path.is_file():
-                continue
-            rel = repo_relative(path, repo_root)
-            posix = rel.replace("\\", "/")
-            if posix in tracked_paths:
-                continue
-            record = classify_untracked_path(posix)
-            if record is not None:
-                records.append(record)
+        stack = [root_path]
+        while stack:
+            current = stack.pop()
+            with os.scandir(current) as entries:
+                for entry in entries:
+                    if entry.is_dir(follow_symlinks=False):
+                        stack.append(Path(entry.path))
+                        continue
+                    if Path(entry.name).suffix.lower() not in SOURCE_SUFFIXES:
+                        continue
+                    if not entry.is_file():
+                        continue
+                    posix = os.path.relpath(entry.path, repo_root).replace(os.sep, "/")
+                    if posix in tracked_paths:
+                        continue
+                    record = classify_untracked_path(posix)
+                    if record is not None:
+                        records.append(record)
     return records
 
 

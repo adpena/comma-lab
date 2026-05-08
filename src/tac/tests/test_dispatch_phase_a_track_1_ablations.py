@@ -50,3 +50,37 @@ def test_lightning_staging_validates_claim_shape_without_opening_active_claim(
     )
     assert "--predicted-eta-utc" in claim
     assert (Path(manifest["lane_dir"]) / "heartbeat.log").is_file()
+
+
+def test_a2_dispatch_invokes_real_tool_locally_without_remote_claim(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool()
+    commands: list[list[str]] = []
+
+    def fake_run(cmd, *, cwd, capture_output, text):
+        commands.append(list(cmd))
+        assert cwd == tool.REPO_ROOT
+        assert capture_output is True
+        assert text is True
+        return SimpleNamespace(returncode=0, stdout="manifest: a2\n", stderr="")
+
+    monkeypatch.setattr(tool.subprocess, "run", fake_run)
+
+    manifest = tool.dispatch_local_cpu(tool.PHASE_A_DISPATCHES["A2"], tmp_path)
+
+    assert manifest["exit_code"] == 0
+    assert manifest["score_claim"] is False
+    assert manifest["promotion_eligible"] is False
+    assert manifest["rank_or_kill_eligible"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["remote_dispatch_allowed"] is False
+    assert manifest["dispatch_attempted"] is False
+    command = commands[0]
+    assert command[:2] == [".venv/bin/python", "tools/sensitivity_weighted_lossy_coarsening.py"]
+    assert "--local-only" in command
+    assert "--allow-diagnostic-sensitivity" in command
+    assert "--output" in command
+    assert "tools/claim_lane_dispatch.py" not in command
+    assert (Path(manifest["lane_dir"]) / "build_manifest.json").is_file()

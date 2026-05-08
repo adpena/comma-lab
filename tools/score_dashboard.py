@@ -65,6 +65,7 @@ class ScoreRow:
     score_claim_valid: bool
     rank_or_kill_eligible: bool
     cpu_leaderboard_reproduction_eligible: bool
+    hardware_compliance_blocker: str | None
     path: str
     mtime_utc: str
     extra: dict[str, Any] = field(default_factory=dict)
@@ -107,6 +108,7 @@ def _parse_one(path: Path, repo_root: Path) -> ScoreRow | None:
         score_claim_valid=record.score_claim_valid,
         rank_or_kill_eligible=record.rank_or_kill_eligible,
         cpu_leaderboard_reproduction_eligible=record.cpu_leaderboard_reproduction_eligible,
+        hardware_compliance_blocker=record.hardware_compliance_blocker,
         path=str(rel),
         mtime_utc=mtime.strftime("%Y-%m-%dT%H:%MZ"),
         extra=data,
@@ -159,6 +161,7 @@ def _parse_log(path: Path, repo_root: Path) -> ScoreRow | None:
         score_claim_valid=record.score_claim_valid,
         rank_or_kill_eligible=record.rank_or_kill_eligible,
         cpu_leaderboard_reproduction_eligible=record.cpu_leaderboard_reproduction_eligible,
+        hardware_compliance_blocker=record.hardware_compliance_blocker,
         path=str(rel),
         mtime_utc=mtime.strftime("%Y-%m-%dT%H:%MZ"),
         extra=data,
@@ -242,7 +245,7 @@ def _format_table(rows: list[ScoreRow], *, top: int | None = None) -> str:
         return "(no scores found)"
     ranked_rows = _rank_rows_by_axis(rows, top=top)
     out_lines: list[str] = []
-    header = f"{'axis_rank':>9}  {'score':>10}  {'bytes':>9}  {'seg_avg':>9}  {'pose_avg':>9}  {'samples':>7}  {'axis':<13}  {'device':<8}  {'mtime':<17}  path"
+    header = f"{'axis_rank':>9}  {'score':>10}  {'bytes':>9}  {'seg_avg':>9}  {'pose_avg':>9}  {'samples':>7}  {'axis':<13}  {'device':<8}  {'mtime':<17}  {'blocker':<39}  path"
     out_lines.append(header)
     out_lines.append("-" * len(header))
     for axis_rank, r in ranked_rows:
@@ -255,9 +258,10 @@ def _format_table(rows: list[ScoreRow], *, top: int | None = None) -> str:
         device_str = r.device
         if r.device != "cuda" and r.device != "?":
             device_str = f"{r.device}*"  # asterisk marks non-CUDA
+        blocker = r.hardware_compliance_blocker or "-"
         out_lines.append(
             f"{axis_rank:>9}  {score_str:>10}  {bytes_str:>9}  {seg_str:>9}  {pose_str:>9}  "
-            f"{samples_str:>7}  {r.score_axis:<13}  {device_str:<8}  {r.mtime_utc:<17}  {r.path}"
+            f"{samples_str:>7}  {r.score_axis:<13}  {device_str:<8}  {r.mtime_utc:<17}  {blocker:<39}  {r.path}"
         )
     out_lines.append("")
     out_lines.append("axis policy: contest_cuda is the strict promotion axis; contest_cpu is Linux x86 public-leaderboard reproduction; cpu_advisory/local CPU is advisory.")
@@ -291,6 +295,7 @@ def _format_json(rows: list[ScoreRow], *, top: int | None = None) -> str:
             "score_claim_valid": r.score_claim_valid,
             "rank_or_kill_eligible": r.rank_or_kill_eligible,
             "cpu_leaderboard_reproduction_eligible": r.cpu_leaderboard_reproduction_eligible,
+            "hardware_compliance_blocker": r.hardware_compliance_blocker,
             "path": r.path,
             "mtime_utc": r.mtime_utc,
         })

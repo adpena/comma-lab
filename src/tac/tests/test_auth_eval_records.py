@@ -73,6 +73,34 @@ def test_parser_marks_macos_cpu_as_advisory_only() -> None:
     assert record.score_claim_valid is False
 
 
+def test_parser_demotes_macos_artifact_that_declares_contest_cpu() -> None:
+    records = _load_records_module()
+
+    record = records.parse_auth_eval_payload(
+        {
+            "canonical_score": 0.19664189,
+            "archive_size_bytes": 178_981,
+            "archive_sha256": "e" * 64,
+            "device": "cpu",
+            "n_samples": 600,
+            "score_axis": "contest_cpu",
+            "evidence_grade": "contest-CPU",
+            "provenance": {
+                "platform_system": "Darwin",
+                "platform_machine": "arm64",
+            },
+        }
+    )
+
+    assert record is not None
+    assert record.score_axis == "cpu_advisory"
+    assert record.evidence_grade == "macOS-CPU advisory"
+    assert record.cpu_leaderboard_reproduction_eligible is False
+    assert record.promotion_eligible is False
+    assert record.rank_or_kill_eligible is False
+    assert record.hardware_compliance_blocker == "contest_cpu_requires_linux_x86_64"
+
+
 def test_parser_marks_t4_cuda_as_strict_promotion_axis() -> None:
     records = _load_records_module()
 
@@ -96,6 +124,31 @@ def test_parser_marks_t4_cuda_as_strict_promotion_axis() -> None:
     assert record.score_claim_valid is True
     assert record.rank_or_kill_eligible is True
     assert record.cpu_leaderboard_reproduction_eligible is False
+
+
+def test_parser_demotes_non_t4_cuda_artifact_that_declares_contest_cuda() -> None:
+    records = _load_records_module()
+
+    record = records.parse_auth_eval_payload(
+        {
+            "score_recomputed_from_components": 0.2283908312,
+            "archive_size_bytes": 178_981,
+            "archive_sha256": "f" * 64,
+            "device": "cuda",
+            "n_samples": 600,
+            "gpu_t4_match": False,
+            "score_axis": "contest_cuda",
+            "evidence_grade": "contest-CUDA",
+        }
+    )
+
+    assert record is not None
+    assert record.score_axis == "cuda"
+    assert record.evidence_grade == "A"
+    assert record.promotion_eligible is False
+    assert record.score_claim_valid is False
+    assert record.rank_or_kill_eligible is False
+    assert record.hardware_compliance_blocker == "contest_cuda_requires_t4"
 
 
 def test_parser_recovers_components_from_gha_report_text_when_fields_are_null() -> None:
@@ -134,3 +187,140 @@ def test_parser_recovers_components_from_gha_report_text_when_fields_are_null() 
     assert record.rate_unscaled == 0.00362424
     assert record.samples == 600
     assert record.score_axis == "contest_cpu"
+
+
+def test_parser_downgrades_explicit_contest_cpu_on_macos() -> None:
+    records = _load_records_module()
+
+    record = records.parse_auth_eval_payload(
+        {
+            "canonical_score": 0.1966358879,
+            "archive_size_bytes": 178_981,
+            "device": "cpu",
+            "n_samples": 600,
+            "score_axis": "contest_cpu",
+            "evidence_grade": "contest-CPU-1to1",
+            "promotion_eligible": True,
+            "score_claim_valid": True,
+            "rank_or_kill_eligible": True,
+            "cpu_leaderboard_reproduction_eligible": True,
+            "provenance": {
+                "platform_system": "Darwin",
+                "platform_machine": "arm64",
+            },
+        }
+    )
+
+    assert record is not None
+    assert record.score_axis == "cpu_advisory"
+    assert record.evidence_grade == "macOS-CPU advisory"
+    assert record.hardware_compliance_blocker == "contest_cpu_requires_linux_x86_64"
+    assert record.cpu_leaderboard_reproduction_eligible is False
+    assert record.promotion_eligible is False
+    assert record.score_claim_valid is False
+    assert record.rank_or_kill_eligible is False
+
+
+def test_parser_keeps_cpu_artifact_out_of_rank_or_kill_even_if_payload_claims_true() -> None:
+    records = _load_records_module()
+
+    record = records.parse_auth_eval_payload(
+        {
+            "score_recomputed_from_components": 0.1966358879,
+            "archive_size_bytes": 178_981,
+            "device": "cpu",
+            "n_samples": 600,
+            "platform_system": "Linux",
+            "platform_machine": "x86_64",
+            "promotion_eligible": True,
+            "score_claim_valid": True,
+            "rank_or_kill_eligible": True,
+            "cpu_leaderboard_reproduction_eligible": True,
+        }
+    )
+
+    assert record is not None
+    assert record.score_axis == "contest_cpu"
+    assert record.cpu_leaderboard_reproduction_eligible is True
+    assert record.promotion_eligible is False
+    assert record.score_claim_valid is False
+    assert record.rank_or_kill_eligible is False
+
+
+def test_parser_downgrades_explicit_contest_cuda_without_t4_match() -> None:
+    records = _load_records_module()
+
+    record = records.parse_auth_eval_payload(
+        {
+            "score_recomputed_from_components": 0.2283908312,
+            "archive_size_bytes": 178_981,
+            "device": "cuda",
+            "n_samples": 600,
+            "score_axis": "contest_cuda",
+            "evidence_grade": "A++",
+            "gpu_t4_match": False,
+            "promotion_eligible": True,
+            "score_claim_valid": True,
+            "rank_or_kill_eligible": True,
+        }
+    )
+
+    assert record is not None
+    assert record.score_axis == "cuda"
+    assert record.evidence_grade == "A"
+    assert record.hardware_compliance_blocker == "contest_cuda_requires_t4"
+    assert record.promotion_eligible is False
+    assert record.score_claim_valid is False
+    assert record.rank_or_kill_eligible is False
+
+
+def test_parser_treats_string_booleans_as_false_for_cuda_promotion() -> None:
+    records = _load_records_module()
+
+    record = records.parse_auth_eval_payload(
+        {
+            "score_recomputed_from_components": 0.2283908312,
+            "archive_size_bytes": 178_981,
+            "device": "cuda",
+            "n_samples": 600,
+            "score_axis": "contest_cuda",
+            "evidence_grade": "A++",
+            "gpu_t4_match": "false",
+            "promotion_eligible": "true",
+            "score_claim_valid": "true",
+            "rank_or_kill_eligible": "true",
+        }
+    )
+
+    assert record is not None
+    assert record.gpu_t4_match is False
+    assert record.score_axis == "cuda"
+    assert record.evidence_grade == "A"
+    assert record.hardware_compliance_blocker == "contest_cuda_requires_t4"
+    assert record.promotion_eligible is False
+    assert record.score_claim_valid is False
+    assert record.rank_or_kill_eligible is False
+
+
+def test_missing_contest_cuda_text_does_not_demote_linux_cpu_axis() -> None:
+    records = _load_records_module()
+
+    record = records.parse_auth_eval_payload(
+        {
+            "score_recomputed_from_components": 0.1966358879,
+            "archive_size_bytes": 178_981,
+            "device": "cpu",
+            "n_samples": 600,
+            "platform_system": "Linux",
+            "platform_machine": "x86_64",
+            "evidence_semantics": "missing_contest_cuda_auth_eval",
+            "dispatch_blockers": ["missing_contest_cuda_auth_eval"],
+        }
+    )
+
+    assert record is not None
+    assert record.score_axis == "contest_cpu"
+    assert record.evidence_grade == "contest-CPU"
+    assert record.cpu_leaderboard_reproduction_eligible is True
+    assert record.promotion_eligible is False
+    assert record.rank_or_kill_eligible is False

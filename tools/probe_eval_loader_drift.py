@@ -286,12 +286,41 @@ def loader_device_custody() -> dict[str, Any]:
     }
 
 
+def device_axis_custody() -> dict[str, Any]:
+    return {
+        "score_axis": "diagnostic_loader_drift",
+        "contest_cuda_claim": False,
+        "contest_cpu_claim": False,
+        "macos_cpu_advisory_claim": False,
+        "rank_or_kill_eligible": False,
+        "promotion_eligible": False,
+        "score_claim_valid": False,
+        "ready_for_exact_eval_dispatch": False,
+        "compared_ground_truth_loader_axes": ["cpu_loader_path", "cuda_loader_path"],
+        "cpu_loader_path": {
+            "loader_class": "AVVideoDataset",
+            "decoder_backend": "PyAV/FFmpeg",
+            "raw_decode_device": "cpu",
+        },
+        "cuda_loader_path": {
+            "loader_class": "DaliVideoDataset",
+            "decoder_backend": "DALI/NVDEC",
+            "raw_decode_device": "cuda",
+        },
+        "compressed_loader_path": {
+            "loader_class": "TensorVideoDataset",
+            "shared_between_score_axes": True,
+        },
+    }
+
+
 def build_probe_report(args: argparse.Namespace) -> dict[str, Any]:
     artifacts = detect_artifacts(args)
     report: dict[str, Any] = {
         "schema": "eval_loader_device_drift_probe.v1",
         "created_at_utc": datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "score_claim": False,
+        "score_axis": "diagnostic_loader_drift",
         "score_claim_valid": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
@@ -312,6 +341,7 @@ def build_probe_report(args: argparse.Namespace) -> dict[str, Any]:
         "artifact_status": artifacts,
         "source_file_custody": source_file_custody(args, artifacts),
         "loader_device_custody": loader_device_custody(),
+        "device_axis_custody": device_axis_custody(),
         "interpretation_guardrails": [
             "This probe compares decoded evaluator input tensors before PoseNet/SegNet.",
             "It does not run inflate.sh, evaluate.py scoring, or any contest promotion path.",

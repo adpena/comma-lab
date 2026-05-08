@@ -365,6 +365,22 @@ def _component_value(row: Mapping[str, Any], component: str) -> float | None:
     return None
 
 
+def _component_domain_blockers(
+    *,
+    seg: float | None,
+    pose: float | None,
+    rate: float | None,
+) -> list[str]:
+    blockers: list[str] = []
+    if seg is not None and seg < 0.0:
+        blockers.append("seg_component_nonnegative_required")
+    if pose is not None and pose < 0.0:
+        blockers.append("pose_component_nonnegative_required")
+    if rate is not None and rate < 0.0:
+        blockers.append("rate_component_nonnegative_required")
+    return blockers
+
+
 def _dispatch_blockers(row: Mapping[str, Any]) -> list[str]:
     value = row.get("dispatch_blockers")
     if value is None:
@@ -491,6 +507,10 @@ def promotable_exact_cuda_evidence_blockers(row: Mapping[str, Any]) -> list[str]
     )
     seg = _component_value(row, "seg")
     pose = _component_value(row, "pose")
+    rate_component = _component_value(row, "rate")
+    blockers.extend(
+        _component_domain_blockers(seg=seg, pose=pose, rate=rate_component)
+    )
     recomputed = _finite_numeric_value(
         row,
         (
@@ -500,7 +520,13 @@ def promotable_exact_cuda_evidence_blockers(row: Mapping[str, Any]) -> list[str]
             "contest_cuda_score_recomputed",
         ),
     )
-    if archive_bytes is not None and seg is not None and pose is not None:
+    if (
+        archive_bytes is not None
+        and seg is not None
+        and pose is not None
+        and seg >= 0.0
+        and pose >= 0.0
+    ):
         expected_rate_term = 25.0 * archive_bytes / CONTEST_UNCOMPRESSED_BYTES
         rate_term = _finite_numeric_value(row, ("rate_term", "score_rate_term"))
         if (

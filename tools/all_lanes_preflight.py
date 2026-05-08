@@ -834,10 +834,30 @@ def _run_eval_loader_drift_probe_gate() -> tuple[bool, str]:
             return False, f"eval loader drift probe emitted invalid JSON: {exc}\n{output}"
     if payload.get("score_claim") is not False:
         return False, "eval loader drift probe must never emit score_claim=true"
+    if payload.get("score_claim_valid") is not False:
+        return False, "eval loader drift probe must never emit score_claim_valid=true"
     if payload.get("promotion_eligible") is not False:
         return False, "eval loader drift probe must never be promotion eligible"
     if payload.get("rank_or_kill_eligible") is not False:
         return False, "eval loader drift probe must never be rank/kill eligible"
+    if payload.get("ready_for_exact_eval_dispatch") is not False:
+        return False, "eval loader drift probe must never be exact-eval dispatch-ready"
+    score_axis = payload.get("score_axis")
+    if score_axis not in {None, "diagnostic_loader_drift"}:
+        return False, f"eval loader drift probe must stay on diagnostic_loader_drift axis, got {score_axis!r}"
+    device_axis_custody = payload.get("device_axis_custody")
+    if isinstance(device_axis_custody, dict):
+        for key in (
+            "contest_cuda_claim",
+            "contest_cpu_claim",
+            "macos_cpu_advisory_claim",
+            "promotion_eligible",
+            "score_claim_valid",
+            "rank_or_kill_eligible",
+            "ready_for_exact_eval_dispatch",
+        ):
+            if device_axis_custody.get(key) is not False:
+                return False, f"eval loader drift device-axis custody must keep {key}=false"
     if payload.get("comparison_available") is False:
         return _eval_loader_drift_missing_prereq_pass(payload)
     failures = _validate_eval_loader_drift_comparison_rows(

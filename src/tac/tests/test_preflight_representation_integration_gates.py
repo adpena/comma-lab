@@ -745,6 +745,81 @@ def test_gate8_rejects_bad_paths_and_score_recompute(tmp_path: Path) -> None:
     assert any("invalid exact CUDA evidence" in f.reason for f in findings)
 
 
+def test_gate8_negative_pose_component_fails_closed(tmp_path: Path) -> None:
+    """Invalid component domains must be findings, not scanner crashes."""
+    runtime_manifest = tmp_path / "runtime.json"
+    log_path = tmp_path / "auth_eval.log"
+    runtime_manifest.write_text("{}", encoding="utf-8")
+    log_path.write_text("ok\n", encoding="utf-8")
+    archive_bytes = 178000
+    rate = 25.0 * archive_bytes / 37_545_489
+    _write_evidence_jsonl(
+        tmp_path,
+        [
+            {
+                "technique": "negative_pose_exact_claim",
+                "frontier_status": True,
+                "archive_bytes": archive_bytes,
+                "archive_sha256": "deadbeef" * 8,
+                "runtime_manifest": str(runtime_manifest),
+                "exact_eval_command": "bash inflate.sh && python evaluate.py",
+                "hardware": "T4",
+                "sample_count": 1199,
+                "seg_distortion": 0.0006,
+                "pose_distortion": -0.001,
+                "rate_term": rate,
+                "recomputed_score": 0.1,
+                "log_path": str(log_path),
+                "dispatch_claim_status": "completed",
+            }
+        ],
+    )
+    mod = _load_scanner("check_gate8_exact_evidence.py")
+
+    findings = mod.scan(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].technique == "negative_pose_exact_claim"
+    assert "pose_distortion must be nonnegative" in findings[0].reason
+
+
+def test_gate8_zero_components_are_present_but_formula_checked(
+    tmp_path: Path,
+) -> None:
+    runtime_manifest = tmp_path / "runtime.json"
+    log_path = tmp_path / "auth_eval.log"
+    runtime_manifest.write_text("{}", encoding="utf-8")
+    log_path.write_text("ok\n", encoding="utf-8")
+    archive_bytes = 178000
+    rate = 25.0 * archive_bytes / 37_545_489
+    _write_evidence_jsonl(
+        tmp_path,
+        [
+            {
+                "technique": "zero_component_exact_claim",
+                "frontier_status": True,
+                "archive_bytes": archive_bytes,
+                "archive_sha256": "deadbeef" * 8,
+                "runtime_manifest": str(runtime_manifest),
+                "exact_eval_command": "bash inflate.sh && python evaluate.py",
+                "hardware": "T4",
+                "sample_count": 1199,
+                "seg_distortion": 0.0,
+                "pose_distortion": 0.0,
+                "rate_term": rate,
+                "recomputed_score": rate,
+                "log_path": str(log_path),
+                "dispatch_claim_status": "completed",
+            }
+        ],
+    )
+    mod = _load_scanner("check_gate8_exact_evidence.py")
+
+    findings = mod.scan(tmp_path)
+
+    assert findings == []
+
+
 def test_gate8_predicted_row_passes(tmp_path: Path) -> None:
     """Tag-only [predicted] row not claiming frontier is exempt."""
     _write_evidence_jsonl(

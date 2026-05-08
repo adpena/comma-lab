@@ -102,6 +102,7 @@ def test_unavailable_probe_is_non_promotable(monkeypatch) -> None:
     report = mod.build_probe_report(args)
 
     assert report["schema"] == "eval_loader_device_drift_probe.v1"
+    assert report["score_axis"] == "diagnostic_loader_drift"
     assert report["comparison_available"] is False
     assert report["comparison_unavailable_reason"] == "no cuda fixture"
     assert report["score_claim"] is False
@@ -113,6 +114,9 @@ def test_unavailable_probe_is_non_promotable(monkeypatch) -> None:
     assert report["diagnostic_kind"] == "loader_drift_probe"
     assert report["loader_device_custody"]["score_path"] == "not_run"
     assert report["loader_device_custody"]["network_forward_device"] == "not_run"
+    assert report["device_axis_custody"]["contest_cuda_claim"] is False
+    assert report["device_axis_custody"]["contest_cpu_claim"] is False
+    assert report["device_axis_custody"]["score_axis"] == "diagnostic_loader_drift"
 
 
 def test_missing_pyav_fails_closed_before_cuda_probe(monkeypatch) -> None:

@@ -112,9 +112,28 @@ PHASE_A_DISPATCHES: dict[str, DispatchSpec] = {
         estimated_cost_usd=0.0,
         lane_id="track1_phase_a2_sensitivity_quant",
         description="Jack-from-skunkworks lane: per-tensor importance-weighted K-search",
-        pre_check_required=["src/tac/optimization/lagrangian_per_tensor_allocation.py"],
+        pre_check_required=[
+            "tools/sensitivity_weighted_lossy_coarsening.py",
+            "src/tac/optimization/lagrangian_per_tensor_allocation.py",
+            "src/tac/optimization/beta_fisher_lossy_weights.py",
+        ],
         output_relpath="experiments/results/track1_phase_a2_sensitivity_pr101",
-        run_args=[],  # placeholder; tool to be implemented as part of A2 (council Round 2 finding 10)
+        run_args=[
+            ".venv/bin/python",
+            "tools/sensitivity_weighted_lossy_coarsening.py",
+            "--substrate",
+            "pr101",
+            "--state-dict",
+            "experiments/results/pr101_codecop_sweep_20260507_codex/pr101_decoder_state_dict.pt",
+            "--sensitivity-map",
+            "experiments/results/sensitivity_map_pr106_20260504_claude/sensitivity_map_stub.pt",
+            "--allow-diagnostic-sensitivity",
+            "--local-only",
+            "--rms-budget",
+            "0.0386",
+            "--max-K",
+            "64",
+        ],
     ),
     "A1": DispatchSpec(
         decision="A1",
@@ -133,7 +152,7 @@ PHASE_A_DISPATCHES: dict[str, DispatchSpec] = {
     ),
     "A3-alt": DispatchSpec(
         decision="A3-alt",
-        name="Mallat wavelet basis × per-tensor importance",
+        name="Mallat wavelet basis x per-tensor importance",
         substrate="pr101",
         target="lightning_t4",
         estimated_duration_hours=2.0,
@@ -185,7 +204,7 @@ PHASE_A_DISPATCHES: dict[str, DispatchSpec] = {
     ),
     "A6": DispatchSpec(
         decision="A6",
-        name="Selfcomp block-FP × hyperprior compose",
+        name="Selfcomp block-FP x hyperprior compose",
         substrate="pr101",
         target="lightning_t4",
         estimated_duration_hours=4.0,
@@ -296,6 +315,8 @@ def dispatch_local_cpu(spec: DispatchSpec, output_root: Path) -> dict[str, Any]:
             "status": "tool_not_yet_implemented",
             "evidence_grade": "stub_pending_build",
             "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
             "ready_for_exact_eval_dispatch": False,
             "council_finding_reference": "Round 2 finding 10",
             "next_action": (
@@ -328,7 +349,12 @@ def dispatch_local_cpu(spec: DispatchSpec, output_root: Path) -> dict[str, Any]:
         "exit_code": proc.returncode,
         "evidence_grade": "byte_proxy_only_deterministic" if proc.returncode == 0 else "failed",
         "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+        "remote_dispatch_allowed": False,
+        "dispatch_attempted": False,
+        "tool_output": str(lane_dir / f"{spec.decision}_result.json"),
         "lane_dir": str(lane_dir),
     }
     (lane_dir / "build_manifest.json").write_text(json.dumps(manifest, indent=2))
@@ -377,6 +403,8 @@ def dispatch_lightning_t4(spec: DispatchSpec, output_root: Path) -> dict[str, An
             "claim_exit_code": claim_status,
             "ready_for_exact_eval_dispatch": False,
             "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
             "evidence_grade": "claim_dry_run_blocked",
             "lane_dir": str(lane_dir),
             "next_action": "Resolve lane-claim syntax/conflict via tools/claim_lane_dispatch.py and retry",
@@ -396,6 +424,8 @@ def dispatch_lightning_t4(spec: DispatchSpec, output_root: Path) -> dict[str, An
         "estimated_cost_usd": spec.estimated_cost_usd,
         "evidence_grade": "staged_no_dispatch",
         "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "active_lane_claim_opened": False,
         "claim_dry_run_validated": True,
@@ -404,9 +434,9 @@ def dispatch_lightning_t4(spec: DispatchSpec, output_root: Path) -> dict[str, An
         "lane_dir": str(lane_dir),
         "checkpoint_contract": {
             "ema_shadow": True,
-            "lambda_R": True if spec.decision in {"A4", "A6"} else False,
-            "lambda_S": True if spec.decision in {"A4", "A6"} else False,
-            "lambda_P": True if spec.decision in {"A4", "A6"} else False,
+            "lambda_R": spec.decision in {"A4", "A6"},
+            "lambda_S": spec.decision in {"A4", "A6"},
+            "lambda_P": spec.decision in {"A4", "A6"},
             "step_number": True,
             "scheduler_state": True,
         },
@@ -449,6 +479,8 @@ def dispatch_one(spec: DispatchSpec, output_root: Path) -> dict[str, Any]:
             "reason": reason,
             "evidence_grade": "blocked",
             "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         }
 
@@ -464,6 +496,8 @@ def dispatch_one(spec: DispatchSpec, output_root: Path) -> dict[str, Any]:
             "reason": f"target={spec.target} not implemented in this wrapper",
             "evidence_grade": "blocked",
             "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         }
 
@@ -474,7 +508,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--decision",
-        choices=list(PHASE_A_DISPATCHES.keys()) + ["all"],
+        choices=[*list(PHASE_A_DISPATCHES.keys()), "all"],
         required=True,
         help="Phase A ablation to dispatch ('all' = parallel-dispatch all 8)",
     )
@@ -517,16 +551,13 @@ def main() -> int:
     output_root = args.output
     output_root.mkdir(parents=True, exist_ok=True)
 
-    if args.decision == "all":
-        decisions = list(PHASE_A_DISPATCHES.keys())
-    else:
-        decisions = [args.decision]
+    decisions = list(PHASE_A_DISPATCHES.keys()) if args.decision == "all" else [args.decision]
 
     # Cost gate per CLAUDE.md "Vast.ai create without disk + cuda_vers gate"
     total_cost = sum(
         PHASE_A_DISPATCHES[d].estimated_cost_usd for d in decisions
     )
-    print(f"\n=== Phase A Dispatch Plan ===")
+    print("\n=== Phase A Dispatch Plan ===")
     print(f"Decisions: {', '.join(decisions)}")
     print(f"Estimated total cost: ${total_cost:.2f} (cap: ${args.total_budget})")
 

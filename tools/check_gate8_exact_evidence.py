@@ -223,7 +223,11 @@ def _has_field(row: dict, *names: str) -> bool:
         v = row.get(n)
         if isinstance(v, str) and v.strip():
             return True
-        if isinstance(v, (int, float)) and v != 0:
+        if (
+            isinstance(v, int | float)
+            and not isinstance(v, bool)
+            and math.isfinite(float(v))
+        ):
             return True
         if isinstance(v, (list, dict)) and len(v) > 0:
             return True
@@ -231,21 +235,26 @@ def _has_field(row: dict, *names: str) -> bool:
 
 
 def _has_component(row: dict, key: str) -> bool:
-    if _has_field(row, key):
-        return True
-    components = row.get("components")
-    return bool(isinstance(components, dict) and components.get(key.split("_")[0]))
+    return _component(row, key) is not None
 
 
 def _component(row: dict, key: str) -> float | None:
     value = row.get(key)
-    if isinstance(value, int | float):
+    if (
+        isinstance(value, int | float)
+        and not isinstance(value, bool)
+        and math.isfinite(float(value))
+    ):
         return float(value)
     components = row.get("components")
     if isinstance(components, dict):
         short = key.split("_")[0]
         comp = components.get(short)
-        if isinstance(comp, int | float):
+        if (
+            isinstance(comp, int | float)
+            and not isinstance(comp, bool)
+            and math.isfinite(float(comp))
+        ):
             return float(comp)
     return None
 
@@ -271,7 +280,7 @@ def _path_exists_or_external(repo: Path, value: object) -> bool:
 
 def _missing_fields(row: dict) -> list[str]:
     missing: list[str] = []
-    if not _has_field(row, "archive_bytes", "empirical_archive_bytes"):
+    if _archive_bytes(row) is None:
         missing.append("archive_bytes")
     if not _has_field(row, "archive_sha256"):
         missing.append("archive_sha256")
@@ -310,11 +319,20 @@ def _semantic_errors(row: dict, repo: Path) -> list[str]:
     pose = _component(row, "pose_distortion")
     rate = _component(row, "rate_term")
     recomputed = row.get("recomputed_score")
+    if seg is not None and seg < 0.0:
+        errors.append("seg_distortion must be nonnegative")
+    if pose is not None and pose < 0.0:
+        errors.append("pose_distortion must be nonnegative")
+    if rate is not None and rate < 0.0:
+        errors.append("rate_term must be nonnegative")
     if (
         archive_bytes is not None
         and seg is not None
         and pose is not None
         and rate is not None
+        and seg >= 0.0
+        and pose >= 0.0
+        and rate >= 0.0
         and isinstance(recomputed, int | float)
     ):
         expected_rate = 25.0 * archive_bytes / CONTEST_N_BYTES
