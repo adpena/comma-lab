@@ -40,6 +40,28 @@ important, not less important. The next allocator should transport pixel or
 boundary importance back through the deterministic decoder instead of trusting
 global tensor RMS.
 
+## Composition review
+
+- Additive signal: this result gives an exact trust-region boundary for PR106
+  lossy K-coarsening. It should calibrate future Jacobian, Fisher, boundary,
+  and UNIWARD allocators even though this archive is not promotable.
+- Antagonism: uniform tensor-space RMS at `0.05` is antagonistic with SegNet
+  fidelity on PR106. Any stack that uses K-coarsening must constrain boundary
+  or scorer-sensitive tensors before reclaiming the 35728-byte rate win.
+- Orthogonality: entropy packer work remains orthogonal after a safe K vector
+  exists. This exact negative says the distortion allocation failed, not that
+  ZIP, brotli, range, or ANS packing failed.
+- VStack rescue path: `score/boundary pullback -> protected K allocation ->
+  no-dead-K pack -> entropy pack` is still open. Smaller targets such as
+  `0.01`, `0.02`, and `0.03` should be considered only after breakeven math
+  and finite-difference calibration.
+- HStack status: PR106 is a monolithic archive, so HStack means logical
+  tensor/section routing inside one packed payload, not separate mask/pose
+  files. Do not assume an external mask budget.
+
+This measured archive/config is regression evidence. It is not a broad family
+kill, and it should remain as a calibration/rescue artifact for stack design.
+
 ## Immediate design consequence
 
 The next PR106 lossy allocator should not spend another exact eval on uniform

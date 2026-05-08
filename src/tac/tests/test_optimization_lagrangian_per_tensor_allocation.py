@@ -13,12 +13,14 @@ from tac.codec.cost_curves import (
 )
 from tac.optimization.lagrangian_per_tensor_allocation import (
     AllocationResult,
+    JacobianWeightedAllocator,
     LagrangianPerTensorAllocator,
     UniwardWeightedAllocator,
+    compute_jacobian_importance_weights,
     compute_local_variance_proxy,
     compute_uniward_weights,
+    normalize_importance_weights,
 )
-
 
 # ---------------------------------------------------------------------------
 # Allocate at fixed λ
@@ -187,6 +189,55 @@ def test_uniward_allocator_exposes_variances() -> None:
     alloc = UniwardWeightedAllocator(syms)
     assert len(alloc.variances) == 2
     assert alloc.variances[0] > alloc.variances[1]
+
+
+# ---------------------------------------------------------------------------
+# Jacobian-pullback weights
+# ---------------------------------------------------------------------------
+
+
+def test_normalize_importance_weights_mean_one() -> None:
+    weights = normalize_importance_weights([10.0, 1.0, 4.0])
+    assert np.mean(weights) == pytest.approx(1.0, rel=1e-12)
+    assert weights[0] > weights[2] > weights[1]
+
+
+def test_compute_jacobian_importance_weights_texture_capacity() -> None:
+    weights = compute_jacobian_importance_weights(
+        [1.0, 1.0],
+        texture_capacity=[100.0, 1.0],
+    )
+    assert np.mean(weights) == pytest.approx(1.0, rel=1e-12)
+    # Higher texture capacity lowers the protection penalty.
+    assert weights[0] < weights[1]
+
+
+def test_compute_jacobian_importance_rejects_all_zero() -> None:
+    with pytest.raises(ValueError, match="at least one positive"):
+        compute_jacobian_importance_weights([0.0, 0.0])
+
+
+def test_normalize_importance_rejects_nonfinite_floor() -> None:
+    with pytest.raises(ValueError, match="floor must be finite"):
+        normalize_importance_weights([1.0, 2.0], floor=float("nan"))
+
+
+def test_jacobian_allocator_protects_high_importance_tensor() -> None:
+    curves = [
+        [
+            {"K": 1, "byte_proxy": 100, "rel_err": 0.0},
+            {"K": 8, "byte_proxy": 50, "rel_err": 0.5},
+        ],
+        [
+            {"K": 1, "byte_proxy": 100, "rel_err": 0.0},
+            {"K": 8, "byte_proxy": 50, "rel_err": 0.5},
+        ],
+    ]
+    alloc = JacobianWeightedAllocator([10.0, 1.0])
+    res = alloc.allocate(curves, lam=160.0)
+    assert np.mean(alloc.importance_weights) == pytest.approx(1.0, rel=1e-12)
+    assert res.selections[0]["K"] == 1
+    assert res.selections[1]["K"] == 8
 
 
 # ---------------------------------------------------------------------------

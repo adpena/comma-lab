@@ -771,6 +771,18 @@ Use these status words precisely:
 
 Every negative result should produce redesign options, not just a verdict.
 
+Returned results must also receive a composition review before any retirement
+language. For every exact positive, exact negative, surprising proxy, or
+byte-only result, record whether it is likely additive, antagonistic,
+orthogonal, or redundant with the current champion and adjacent lanes. Review
+HStack and VStack forms explicitly: parallel component splits, serial
+representation->prediction->quantization->hyperprior->arithmetic->pack stacks,
+multi-pass refinement, per-tensor/per-channel routing, residual rescue, and
+hybrid fallback. A bad standalone score can still be valuable as a component,
+trust-region boundary, sensitivity map, side-info source, or allocator prior.
+Do not call a result exhausted until this stacking/synergy/antagonism analysis
+is preserved in the result ledger or review packet.
+
 ## Scientific And Mathematical Rigor
 
 - Distinguish measurement, derivation, prediction, and external motivation.

@@ -821,6 +821,16 @@ NOT KILLED. The memo filename SHOULD use `_DEFERRED_pending_<reason>_<date>.md`,
 NOT `_killed_*.md`. The verdict line SHOULD say `DEFERRED-pending-research`,
 NOT `VERDICT: KILL`.
 
+Every returned result also needs a composition review before retirement
+language. Preserve whether the result is additive, antagonistic, orthogonal, or
+redundant with current champion components. Check HStack/VStack/multi-pass
+forms, residual rescue, per-tensor/per-channel routing, score-aware allocation,
+hybrid fallback, and whether the result should become a sensitivity prior,
+trust-region boundary, or side-info source. A standalone negative can still be
+an engineering input. Do not mark a lane exhausted unless this
+synergy/antagonism/stacking analysis is written into the ledger or review
+packet.
+
 A KILL verdict that has NOT exhausted research is a forbidden anti-pattern
 (see `forbidden_premature_kill_without_research_exhaustion`).
 

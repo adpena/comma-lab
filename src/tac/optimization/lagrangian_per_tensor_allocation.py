@@ -34,6 +34,8 @@ Public API
 * :class:`LagrangianPerTensorAllocator` — base mechanism. Pluggable encoder
   hook for joint-bytes evaluation (default: per-tensor sum).
 * :class:`UniwardWeightedAllocator` — subclass with inverse-variance weights.
+* :class:`JacobianWeightedAllocator` — subclass for externally certified
+  scorer-pullback or boundary-pullback importance weights.
 
 Both classes return a result ``dict`` with at minimum::
 
@@ -48,14 +50,17 @@ reporting numbers.
 """
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Callable, Sequence
+from typing import Any
 
 import numpy as np
 
-
 EPS_VARIANCE: float = 1e-12
 """Numerical floor for inverse-variance weight computation."""
+
+EPS_JACOBIAN_IMPORTANCE: float = 1e-12
+"""Numerical floor for Jacobian-pullback importance weights."""
 
 
 # ---------------------------------------------------------------------------
@@ -253,10 +258,7 @@ class LagrangianPerTensorAllocator:
             return res
 
         for _ in range(max_iter):
-            if hi == SENTINEL:
-                mid = lo * 10 + 1.0
-            else:
-                mid = 0.5 * (lo + hi)
+            mid = lo * 10 + 1.0 if hi == SENTINEL else 0.5 * (lo + hi)
             res = _alloc(mid)
             if res.rel_err <= rms_target:
                 hi = mid
@@ -324,6 +326,84 @@ def compute_uniward_weights(variances: Sequence[float]) -> list[float]:
     return [1.0 / (float(v) + EPS_VARIANCE) for v in variances]
 
 
+def _as_finite_nonnegative_array(
+    values: Sequence[float],
+    *,
+    label: str,
+) -> np.ndarray:
+    arr = np.asarray([float(v) for v in values], dtype=np.float64)
+    if arr.ndim != 1 or arr.size == 0:
+        raise ValueError(f"{label} must be a non-empty 1-D sequence")
+    if not np.isfinite(arr).all():
+        raise ValueError(f"{label} must contain only finite values")
+    if (arr < 0.0).any():
+        raise ValueError(f"{label} must be non-negative")
+    return arr
+
+
+def normalize_importance_weights(
+    importance: Sequence[float],
+    *,
+    floor: float = EPS_JACOBIAN_IMPORTANCE,
+    target_mean: float = 1.0,
+) -> list[float]:
+    """Normalize non-negative sensitivity weights to a stable mean.
+
+    Higher returned weight means ``LagrangianPerTensorAllocator`` will protect
+    that tensor harder because the cost is
+    ``bytes + lambda * weight * rel_err**2``.
+    """
+    if floor < 0.0 or not np.isfinite(floor):
+        raise ValueError("floor must be finite and non-negative")
+    if target_mean <= 0.0 or not np.isfinite(target_mean):
+        raise ValueError("target_mean must be finite and positive")
+    arr = _as_finite_nonnegative_array(importance, label="importance")
+    if float(arr.max()) <= 0.0:
+        raise ValueError("importance must contain at least one positive value")
+    arr = np.maximum(arr, float(floor))
+    mean = float(arr.mean())
+    if mean <= 0.0 or not np.isfinite(mean):
+        raise ValueError("importance mean is not finite/positive after flooring")
+    return (arr * (float(target_mean) / mean)).tolist()
+
+
+def compute_jacobian_importance_weights(
+    importance: Sequence[float],
+    *,
+    texture_capacity: Sequence[float] | None = None,
+    importance_floor: float = EPS_JACOBIAN_IMPORTANCE,
+    capacity_floor: float = EPS_JACOBIAN_IMPORTANCE,
+    target_mean: float = 1.0,
+) -> list[float]:
+    """Convert scorer-pullback importance into allocator protection weights.
+
+    ``importance[t]`` is expected to be a per-tensor scalar such as
+    ``E[(J_t^T s)^2]`` or a certified component-sensitivity aggregate.
+    Optional ``texture_capacity[t]`` is a UNIWARD-style capacity proxy:
+    larger capacity lowers the protection weight, allowing more error in
+    tensors whose perturbations are empirically easier to hide.
+    """
+    raw = _as_finite_nonnegative_array(importance, label="importance")
+    if texture_capacity is not None:
+        cap = _as_finite_nonnegative_array(
+            texture_capacity,
+            label="texture_capacity",
+        )
+        if cap.size != raw.size:
+            raise ValueError(
+                "texture_capacity length "
+                f"{cap.size} does not match importance length {raw.size}"
+            )
+        if capacity_floor <= 0.0 or not np.isfinite(capacity_floor):
+            raise ValueError("capacity_floor must be finite and positive")
+        raw = raw / np.maximum(cap, float(capacity_floor))
+    return normalize_importance_weights(
+        raw,
+        floor=importance_floor,
+        target_mean=target_mean,
+    )
+
+
 class UniwardWeightedAllocator(LagrangianPerTensorAllocator):
     """Lagrangian allocator with UNIWARD inverse-variance weights.
 
@@ -350,6 +430,36 @@ class UniwardWeightedAllocator(LagrangianPerTensorAllocator):
         return list(self._variances)
 
 
+class JacobianWeightedAllocator(LagrangianPerTensorAllocator):
+    """Lagrangian allocator for externally computed scorer-pullback weights.
+
+    The class does not compute scorer gradients. It consumes a checked
+    per-tensor importance vector produced by CUDA sensitivity/JVP/VJP tools and
+    reuses the canonical λ-bisection allocator.
+    """
+
+    def __init__(
+        self,
+        importance: Sequence[float],
+        *,
+        texture_capacity: Sequence[float] | None = None,
+        joint_encoder: JointEncoderHook | None = None,
+        target_mean: float = 1.0,
+    ) -> None:
+        weights = compute_jacobian_importance_weights(
+            importance,
+            texture_capacity=texture_capacity,
+            target_mean=target_mean,
+        )
+        super().__init__(weights=weights, joint_encoder=joint_encoder)
+        self._importance_weights = weights
+
+    @property
+    def importance_weights(self) -> list[float]:
+        """Protection weights derived from scorer-pullback importance."""
+        return list(self._importance_weights)
+
+
 # ---------------------------------------------------------------------------
 # Selection key (memoization)
 # ---------------------------------------------------------------------------
@@ -365,11 +475,15 @@ def _selection_key(row: dict) -> tuple[Any, ...]:
 
 
 __all__ = [
+    "EPS_JACOBIAN_IMPORTANCE",
     "EPS_VARIANCE",
     "AllocationResult",
+    "JacobianWeightedAllocator",
     "JointEncoderHook",
     "LagrangianPerTensorAllocator",
     "UniwardWeightedAllocator",
+    "compute_jacobian_importance_weights",
     "compute_local_variance_proxy",
     "compute_uniward_weights",
+    "normalize_importance_weights",
 ]
