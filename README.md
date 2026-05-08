@@ -25,6 +25,25 @@ Scoring formula: `S = 100 * seg_distortion + sqrt(10 * pose_distortion) + 25 * r
 | `external` | Community/historical context | Public PR text, leaderboard metadata, or outside papers before local exact replay |
 | `invalid` | Compliance lesson | Proxy, CPU/MPS, stale, sidecar, exploit, malformed, or otherwise non-ranking evidence |
 
+## CUDA vs CPU auth eval split (2026-05-08)
+
+The contest scorer at `upstream/evaluate.py` produces two distinct authoritative
+score axes for the same archive bytes — `--device cuda` and `--device cpu` —
+and the public leaderboard ranks by the **CPU** score, not the CUDA score.
+Across the medal-band HNeRV cluster (PR100/101/102/103/105) we measured a
+remarkably tight `R_pose = pose_cuda / pose_cpu = 5.04 ± 0.10` and
+`R_seg = seg_cuda / seg_cpu = 1.17 ± 0.01`, producing a near-constant
+score-axis gap of `Δscore = 0.0330 ± 0.0004`. PR #102's third-prize 0.195 was
+the CPU score; the CUDA bot comment for the same archive bytes was 0.228.
+
+Operational consequence: every shippable archive now gets dual-eval —
+authoritative `[contest-CUDA]` and `[contest-CPU]` axes on Linux x86_64
+hardware that is 1:1 contest-compliant with the GitHub Actions CI runner.
+Apple Silicon CPU eval is `[macOS-CPU advisory only]`, never `[contest-CPU]`.
+
+Full write-up: [`docs/findings/cuda_cpu_auth_eval_split_20260508.md`](docs/findings/cuda_cpu_auth_eval_split_20260508.md).
+Methodology long-form: [`docs/writeup/cuda_cpu_drift_methodology.md`](docs/writeup/cuda_cpu_drift_methodology.md).
+
 ## Architecture
 
 The renderer is an asymmetric warp pair generator built on CLADE-conditioned U-Net blocks ([arxiv 2012.04644](https://arxiv.org/abs/2012.04644)):
