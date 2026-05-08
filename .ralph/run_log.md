@@ -573,3 +573,47 @@ Job `lossy-coarsening-cuda-20260508T0312-noproject` Lightning T4 returned score 
 - `project_phase4_optimal_stack_design_landed_20260508.md` — Phase 4 blueprint
 
 **Strategic state:** PR101 codec lane has saturated (~150 KB byte-floor at 4-5% rel_err); allocation mechanism beats codec basis empirically; remaining headroom requires CUDA distortion validation, not codec cleverness; the 137,531 B cross-paradigm figure is retracted to byte_proxy (no end-to-end decoder; REVIEW-ENG C1); the 153,639 B Path-B-step-6 ADMM-alone candidate remains the byte-closed dispatch target pending apogee_int6 [contest-CUDA] anchor (REVIEW-ENG C3) and review clearance.
+
+## 2026-05-08 (evening) — Recursive hardening + Phase A ablation pass + Strategic Secrecy retirement
+
+11 STRICT/warn preflight gates landed (Catalog #109 → #119), ~395 violations extincted, META-META commit-machinery (FIX-1/2/3/4) live, Strategic Secrecy Rule retired (contest is over), 4018 long-lived artifacts classified, Phase A ablations A1–A4 + A3-alt anchored, 3 subagents in flight (A4-alt, A5, PHASE 4 INTEGRATION).
+
+**Preflight gates:**
+- `94b8fa8b` — META gate #113 strict-flip (`enumerate_unregistered=True`) at 0 violations
+- `c0efffda` — registry classifies 4018 long-lived artifacts (~75 new patterns, +683 lines)
+- `4695d222` — META-META commit-machinery FIX-1/2/3/4 + 3 new gates (#117/#118/#119)
+
+**Strategic Secrecy retirement (operator directive 2026-05-08 evening):**
+- `e6806fa0` — CLAUDE.md section removed (contest is over)
+- `648b498c` — 4-file code-comment cleanup (`src/tac/deploy/` + `optimal_stack_orchestrator.py` + `tools/oss_publish_staging.py`)
+
+**Auto-fork-PR tooling (closes GHA CPU non-baseline runtime-contract gap):**
+- `406b4211` — `tools/create_fork_pr_for_submission.py` + `--auto-create-fork-pr` flag in dispatch tool
+
+**Phase A ablation anchors:**
+- A1 score-gradient (`8e5e021e`): dispatch tooling landed; 3 CRITICAL fixes at `d09b30f9` (`load_differentiable_scorers` signature, canonical `simulate_eval_roundtrip` resize cycle, stale-claim closure structural fix); 2 Medium + R1-3 advisory at `972a80fb` (`$PYBIN` torch CUDA verification stage). Re-fire ready when Lightning GPU attaches OR Vast.ai topped up.
+- A2 Xavier-L2: FALSIFIED at -3,635 B regression vs uniform (memory anchor).
+- A3-alt Mallat wavelet (`edf5ad08`): incremental_improvement_insufficient. Mallat beats Xavier in 2/4 cells (best -3,183 B at 0.050/eta=1.0) but BOTH weight-domain proxies fail uniform. **Class-level finding: future Decision 3 reactivation MUST use score-domain (Hessian-trace, score-gradient) or byte-domain (compression-hardness) proxies, NOT a third weight-domain proxy.**
+- A4 ChARM (`16a2d9d0`): byte-tight CARM2 wire format with fp16-quantized per-channel sidecar; 4 Medium fixes at `83fb8e6a`; 4 Low fixes at `aaf317f3`. 40/40 tests pass. Dispatch-ready ($15 Lightning T4 awaits operator authorization with documented R1-1 entropy caveat).
+
+**Cross-ablation Pareto summary (`a5fafe8f`):**
+- `tools/phase_a_pareto_summary.py` walks `experiments/results/`, classifies 18 manifests into 5 unique-lane Pareto points
+- Best byte anchor: ADMM_lossy_coarsening at 147,285 B (-30,859 vs brotli) at 4-5% rel_err
+- `reports/phase_a_pareto_20260508.md` is the canonical operator-readable artifact
+
+**Subagents in flight:**
+- `a486e05e919e6e4a3` — A4-alt Filler STC pose codec
+- `ad826bad077a82dc0` — A5 frame-conditional bit budget
+- `ae1a9dbbe6e8b2af3` — PHASE 4 INTEGRATION paper harness + Strategic Secrecy doc audit
+
+**Awaiting operator action:**
+- Lightning Studio GPU attach OR Vast.ai credit topup → unblocks A1 ($8 Lightning T4)
+- A4 ChARM $15 dispatch authorization (byte-tight + reviewed; R1-1 caveat documented)
+- PARADIGM-δεζ (#307) + PHASE 4 INTEGRATION (#308) — major work needing strategic alignment
+
+**Memory anchors landed this session:**
+- `feedback_meta_meta_commit_machinery_protections_20260508.md` (FIX-1/2/3/4 + tests)
+- `feedback_pr101_sensitivity_aware_mallat_wavelet_incremental_improvement_insufficient_20260508.md` (A3-alt)
+- A1 + A4 review log addenda at `.omx/research/`
+
+**Strategic state (after evening pass):** Hardening converged. Phase A weight-domain Decision 3 path is exhausted (Xavier-L2 + Mallat both fail uniform). Score-domain reactivation via A1 score-gradient remains the dominant unblocked path for new evidence. A4 byte-tight is the only currently dispatch-ready GPU lane. Operator strategic alignment needed before PARADIGM-δεζ / PHASE 4 push.
