@@ -154,3 +154,61 @@ The snapshot archive hash and size matched the intended PR104 archive:
 This is a custody guard result only. It proves the replacement job has the
 runtime source closure that the stopped job lacked, but it still does not
 produce score evidence until `contest_auth_eval.adjudicated.json` is harvested.
+
+## 2026-05-08T11:48Z Harvested Exact CUDA Result
+
+The hardened relaunch completed and was harvested over SSH into:
+
+```text
+experiments/results/lightning_batch/pr104-public-exact-replay-rootstaged-g4dn2-20260508T1130Z/
+```
+
+Structured result:
+
+- Result JSON:
+  `experiments/results/lightning_batch/pr104-public-exact-replay-rootstaged-g4dn2-20260508T1130Z/contest_auth_eval.adjudicated.json`.
+- Adjudication provenance:
+  `experiments/results/lightning_batch/pr104-public-exact-replay-rootstaged-g4dn2-20260508T1130Z/adjudication_provenance.json`.
+- Eval provenance:
+  `experiments/results/lightning_batch/pr104-public-exact-replay-rootstaged-g4dn2-20260508T1130Z/eval_provenance.json`.
+- Archive SHA-256:
+  `6564c32a9edeeaf08abd7f0ea673ba2fda23444605ca207eb4ba794cc66797b8`.
+- Archive bytes: `178637`.
+- Device: `cuda`.
+- GPU: `Tesla T4`.
+- Samples: `600`.
+- PoseNet distance: `0.00017237`.
+- SegNet distance: `0.0007067`.
+- Recomputed score: `0.23113446620399658`.
+- Score delta vs public PR104 CUDA-comment baseline `0.231145103318`:
+  `-0.000010637114003425596`.
+- Adjudication lane: `IN_PREDICTED_BAND`.
+- Evidence grade: `A++ contest T4`.
+- Promotion flag in adjudication provenance: `true`.
+- Allowed use in adjudication provenance:
+  `promotion_review`, `rank_frontier_candidate`.
+
+Runtime custody:
+
+- Runtime tree SHA-256:
+  `40e47f8677abc9885179c848a4f44096aa024ac0fb1a937ba8d99e29b49147b9`.
+- `eval_provenance.json` records the external dependency root as existing and
+  byte/SHA enumerated under
+  `experiments/results/public_pr_intake_full/public_pr104_intake_20260505_auto/source/submissions/qhnerv_ft_best`.
+- The recorded root includes `compress.sh`, `inflate.py`, `inflate.sh`,
+  `report.txt`, `src/{codec,data,losses,model,optim,score,train}.py`, and the
+  staged training files under `src/stages/`.
+
+Custody conclusion:
+
+- The earlier first-job runtime-root staging failure is resolved for the
+  rootstaged relaunch.
+- PR104 exact replay is now a harvested structured exact CUDA replay, not just
+  a public/comment or CPU result.
+- This does not beat the current local exact frontier; it closes a public PR
+  reconstruction gap and narrows the auth-eval drift investigation.
+- Follow-up hardening remains desirable: bind `source_manifest_sha256` and the
+  source-manifest byte/SHA closure explicitly into adjudication provenance, not
+  only the queue metadata and eval runtime manifest.
+
+The dispatch lane claim was closed as `completed_exact_cuda_adjudicated`.
