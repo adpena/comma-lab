@@ -144,6 +144,44 @@ def test_external_inflate_runtime_artifacts_include_nested_helpers(tmp_path: Pat
     assert not any("__pycache__" in item for item in plan["artifacts"])
 
 
+def test_declared_pact_runtime_dependency_root_is_staged(tmp_path: Path) -> None:
+    mod = _load_module()
+    archive, baseline = _fixture_repo(tmp_path)
+    adapter = tmp_path / "experiments/public_runtime_adapters/pr104/inflate.sh"
+    adapter.parent.mkdir(parents=True)
+    runtime = tmp_path / "experiments/results/public_pr104/source/submissions/qhnerv_ft_best"
+    (runtime / "src").mkdir(parents=True)
+    adapter.write_text(
+        "#!/usr/bin/env bash\n"
+        "# PACT_RUNTIME_DEPENDENCY_ROOT=experiments/results/public_pr104/source/submissions/qhnerv_ft_best\n"
+    )
+    (runtime / "inflate.py").write_text("from src.model import HNeRVDecoder\n")
+    (runtime / "src" / "model.py").write_text("class HNeRVDecoder: pass\n")
+    (runtime / "src" / "codec.py").write_text("def parse_archive(): pass\n")
+    (runtime / "__pycache__").mkdir()
+    (runtime / "__pycache__" / "inflate.cpython.pyc").write_bytes(b"cache")
+
+    args = mod.build_parser().parse_args(
+        [
+            *_base_args(archive, baseline),
+            "--inflate-sh",
+            str(adapter),
+            "--stage-workspace",
+            "--remote",
+            "lightning-pact",
+        ]
+    )
+
+    plan = mod.build_plan(args, repo_root=tmp_path)
+
+    root_rel = "experiments/results/public_pr104/source/submissions/qhnerv_ft_best"
+    assert plan["inflate_runtime"]["declared_dependency_roots"] == [root_rel]
+    assert f"{root_rel}/inflate.py" in plan["artifacts"]
+    assert f"{root_rel}/src/model.py" in plan["artifacts"]
+    assert f"{root_rel}/src/codec.py" in plan["artifacts"]
+    assert not any("__pycache__" in item for item in plan["artifacts"])
+
+
 def test_baseline_json_populates_adjudication_flags(tmp_path: Path) -> None:
     mod = _load_module()
     archive, baseline = _fixture_repo(tmp_path)
@@ -344,7 +382,7 @@ def test_public_replay_preflight_must_match_current_adapter_sha(tmp_path: Path) 
     inflate.parent.mkdir(parents=True)
     inflate.write_text("#!/usr/bin/env bash\n")
     preflight = tmp_path / "experiments/results/pr106/public_replay_preflight.json"
-    preflight.parent.mkdir(parents=True)
+    preflight.parent.mkdir(parents=True, exist_ok=True)
     preflight.write_text(
         json.dumps(
             {
@@ -372,9 +410,15 @@ def test_public_replay_preflight_requires_external_roots_for_declared_dependency
     archive, baseline = _fixture_repo(tmp_path)
     inflate = tmp_path / "experiments/public_runtime_adapters/pr106/inflate.sh"
     inflate.parent.mkdir(parents=True)
-    inflate.write_text("#!/usr/bin/env bash\nexport PACT_RUNTIME_DEPENDENCY_ROOT=\"$PWD/source\"\n")
+    runtime = tmp_path / "experiments/results/pr106/source"
+    runtime.mkdir(parents=True)
+    (runtime / "inflate.py").write_text("print('runtime')\n")
+    inflate.write_text(
+        "#!/usr/bin/env bash\n"
+        "export PACT_RUNTIME_DEPENDENCY_ROOT=experiments/results/pr106/source\n"
+    )
     preflight = tmp_path / "experiments/results/pr106/public_replay_preflight.json"
-    preflight.parent.mkdir(parents=True)
+    preflight.parent.mkdir(parents=True, exist_ok=True)
     preflight.write_text(
         json.dumps(
             {

@@ -56,3 +56,40 @@ method conclusions and carries:
 
 The next valid action is to retry harvest after the Lightning artifact
 directory exists, then record `contest_auth_eval.adjudicated.json` if present.
+
+## 2026-05-08T11:24Z Custody Addendum
+
+Adversarial review found that the first queued job did not prove custody of the
+external PR104 runtime root. The adapter declares:
+
+```text
+PACT_RUNTIME_DEPENDENCY_ROOT=experiments/results/public_pr_intake_full/public_pr104_intake_20260505_auto/source/submissions/qhnerv_ft_best
+```
+
+The staged source manifest for
+`pr104-public-exact-replay-g4dn2-20260508T111530Z` included only the archive,
+adapter `inflate.sh`, and adapter README. Remote inspection confirmed that the
+Studio copy of the dependency root contained `archive.zip` but not `inflate.py`
+or `src/`. Therefore this job is now forensic only and must not produce a
+promotion result unless a harvested `contest_auth_eval.adjudicated.json`
+independently proves the external dependency-root custody expected by the
+readiness ledger.
+
+A stop request was submitted. `Lightning Job.stop()` initially timed out and
+the SDK reported a nonterminal status regression from `Running` to `Pending`,
+then a refresh at `2026-05-08T11:27:49Z` reported terminal status `Stopped`.
+The lane claim was closed as `stopped_runtime_root_not_staged`; a replacement
+may now be launched only through the hardened source-manifest path.
+
+Hardening landed locally after this finding:
+
+- `scripts/lightning_exact_eval_repro.py` now stages files under literal
+  repo-relative `PACT_RUNTIME_DEPENDENCY_ROOT` directives.
+- `scripts/launch_lightning_batch_job.py exact-eval` now independently requires
+  those dependency-root files in the source manifest before non-dry-run Studio
+  submit.
+- Focused tests cover both plan staging and submit-time manifest rejection.
+
+Patch verification generated a hardened PR104 plan with `25` artifacts,
+including `inflate.py`, `src/model.py`, `src/codec.py`, and all non-cache files
+under the declared runtime root.

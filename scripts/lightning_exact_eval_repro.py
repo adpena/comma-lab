@@ -292,6 +292,28 @@ def _validate_public_replay_preflight(plan: dict[str, Any], *, repo_root: Path) 
                 "exact-eval submit blocked; adapter declares PACT_RUNTIME_DEPENDENCY_ROOT "
                 f"but public preflight has no external_dependency_roots: {preflight_rel}"
             )
+        artifacts = plan.get("artifacts")
+        if not isinstance(artifacts, list):
+            raise ValueError("exact-eval plan missing artifacts list")
+        missing_roots: list[str] = []
+        for root in roots:
+            if not isinstance(root, dict):
+                continue
+            root_rel = root.get("repo_relative_root")
+            if not isinstance(root_rel, str) or not root_rel:
+                continue
+            prefix = root_rel.rstrip("/") + "/"
+            if not any(
+                isinstance(artifact, str)
+                and (artifact == root_rel or artifact.startswith(prefix))
+                for artifact in artifacts
+            ):
+                missing_roots.append(root_rel)
+        if missing_roots:
+            raise ValueError(
+                "exact-eval submit blocked; public replay preflight external runtime "
+                "root is not staged by the plan: " + ", ".join(sorted(missing_roots))
+            )
 
 
 def _validate_staged_manifest_consistency(plan: dict[str, Any], *, repo_root: Path) -> None:
@@ -360,6 +382,50 @@ def _iter_inflate_runtime_files(runtime_dir: Path) -> list[Path]:
     return out
 
 
+def _declared_runtime_dependency_roots(inflate_rel: Path, *, repo_root: Path) -> list[str]:
+    """Return repo-relative PACT_RUNTIME_DEPENDENCY_ROOT literals from an adapter.
+
+    The directive may be in a shell assignment or an adjacent comment. It must
+    be a literal repo path so staging can prove exact source custody before
+    submitting a remote CUDA eval.
+    """
+    inflate_path = repo_root / inflate_rel
+    if not inflate_path.is_file():
+        return []
+    roots: list[str] = []
+    for line in inflate_path.read_text(errors="replace").splitlines():
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            stripped = stripped[1:].strip()
+        if stripped.startswith("export "):
+            stripped = stripped[len("export ") :].strip()
+        if not stripped.startswith("PACT_RUNTIME_DEPENDENCY_ROOT="):
+            continue
+        rhs = stripped.split("=", 1)[1].strip()
+        try:
+            parsed = shlex.split(rhs, comments=True, posix=True)
+        except ValueError as exc:
+            raise ValueError(
+                "invalid PACT_RUNTIME_DEPENDENCY_ROOT shell literal in "
+                f"{inflate_rel}: {exc}"
+            ) from exc
+        if not parsed:
+            raise ValueError(f"empty PACT_RUNTIME_DEPENDENCY_ROOT in {inflate_rel}")
+        raw_root = parsed[0]
+        if "$" in raw_root or "`" in raw_root:
+            raise ValueError(
+                "PACT_RUNTIME_DEPENDENCY_ROOT must be a repo-relative or "
+                f"repo-absolute literal, got {raw_root!r} in {inflate_rel}"
+            )
+        root_rel = _repo_rel(raw_root, repo_root=repo_root).as_posix()
+        if not (repo_root / root_rel).is_dir():
+            raise ValueError(
+                f"PACT_RUNTIME_DEPENDENCY_ROOT does not exist or is not a directory: {root_rel}"
+            )
+        roots.append(root_rel)
+    return _dedupe_preserve(roots)
+
+
 def _inflate_runtime_artifacts(inflate_rel: Path, *, repo_root: Path) -> list[str]:
     rels = [inflate_rel.as_posix()]
     config_rel = inflate_rel.parent / "config.env"
@@ -370,6 +436,9 @@ def _inflate_runtime_artifacts(inflate_rel: Path, *, repo_root: Path) -> list[st
     runtime_dir = repo_root / inflate_rel.parent
     for child in _iter_inflate_runtime_files(runtime_dir):
         rels.append(child.relative_to(repo_root).as_posix())
+    for root_rel in _declared_runtime_dependency_roots(inflate_rel, repo_root=repo_root):
+        for child in _iter_inflate_runtime_files(repo_root / root_rel):
+            rels.append(child.relative_to(repo_root).as_posix())
     return _dedupe_preserve(rels)
 
 
@@ -553,6 +622,7 @@ def build_plan(args: argparse.Namespace, *, repo_root: Path = REPO_ROOT) -> dict
         if missing:
             raise ValueError("exact-eval queue requires " + ", ".join(missing))
 
+    declared_dependency_roots = _declared_runtime_dependency_roots(inflate_rel, repo_root=repo_root)
     inflate_artifact_rels = _inflate_runtime_artifacts(inflate_rel, repo_root=repo_root)
     artifact_rels = [archive_rel.as_posix(), *inflate_artifact_rels]
     for item in args.extra_artifact:
@@ -732,6 +802,7 @@ def build_plan(args: argparse.Namespace, *, repo_root: Path = REPO_ROOT) -> dict
         },
         "inflate_runtime": {
             "inflate_sh": inflate_rel.as_posix(),
+            "declared_dependency_roots": declared_dependency_roots,
             "staged_artifacts": inflate_artifact_rels,
         },
         "baseline": {

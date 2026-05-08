@@ -7,7 +7,6 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parents[3]
 REPRO_SCRIPT = REPO_ROOT / "scripts" / "lightning_exact_eval_repro.py"
 LAUNCH_SCRIPT = REPO_ROOT / "scripts" / "launch_lightning_batch_job.py"
@@ -209,6 +208,87 @@ def test_public_replay_submit_requires_external_inflate_sibling_closure(
     module._validate_exact_eval_submit_inputs(args)
 
 
+def test_public_replay_submit_requires_declared_runtime_dependency_root(
+    tmp_path: Path,
+) -> None:
+    paths = _fixture_repo(tmp_path)
+    runtime_root = tmp_path / "experiments/results/public_pr104/source/submissions/qhnerv_ft_best"
+    (runtime_root / "src").mkdir(parents=True)
+    (runtime_root / "inflate.py").write_text("from src.model import HNeRVDecoder\n")
+    (runtime_root / "src" / "model.py").write_text("class HNeRVDecoder: pass\n")
+    paths["inflate_sh"].write_text(
+        "#!/usr/bin/env bash\n"
+        "# PACT_RUNTIME_DEPENDENCY_ROOT=experiments/results/public_pr104/source/submissions/qhnerv_ft_best\n"
+        "set -euo pipefail\n"
+        'HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"\n'
+        'python "$HERE/inflate.py" "$1" "$2" "$3"\n'
+    )
+    module = _load_script(
+        LAUNCH_SCRIPT,
+        "launch_lightning_batch_job_public_replay_dependency_root_test",
+        repo_root=tmp_path,
+    )
+    manifest = tmp_path / "source_manifest.json"
+    inflate_rel = _repo_rel(tmp_path, paths["inflate_sh"])
+
+    def write_manifest(rels: list[str]) -> None:
+        manifest.write_text(json.dumps({"files": [{"path": rel} for rel in rels]}) + "\n")
+
+    args = module.build_parser().parse_args(
+        [
+            "exact-eval",
+            "--job-name",
+            "public_pr104_t4_replay",
+            "--archive",
+            "/repo/experiments/results/public_pr81/archive.zip",
+            "--repo-dir",
+            "/repo",
+            "--upstream-dir",
+            "/upstream",
+            "--source-manifest",
+            str(manifest),
+            "--inflate-sh",
+            f"/repo/{inflate_rel}",
+            "--studio",
+            "pact",
+            "--machine",
+            "g6e.4xlarge",
+            "--adjudicate",
+            "--baseline-score",
+            "0.314",
+            "--predicted-band",
+            "0.3",
+            "0.6",
+            "--regression-threshold",
+            "1.0",
+            "--expected-archive-sha256",
+            "a" * 64,
+            "--expected-archive-size-bytes",
+            "123",
+        ]
+    )
+
+    sibling_rels = [
+        "experiments/results/public_pr81/archive.zip",
+        inflate_rel,
+        _repo_rel(tmp_path, paths["config_env"]),
+        _repo_rel(tmp_path, paths["inflate_py"]),
+        _repo_rel(tmp_path, paths["range_mask_codec"]),
+    ]
+    write_manifest(sibling_rels)
+    with pytest.raises(SystemExit, match="qhnerv_ft_best/inflate\\.py"):
+        module._validate_exact_eval_submit_inputs(args)
+
+    write_manifest(
+        [
+            *sibling_rels,
+            "experiments/results/public_pr104/source/submissions/qhnerv_ft_best/inflate.py",
+            "experiments/results/public_pr104/source/submissions/qhnerv_ft_best/src/model.py",
+        ]
+    )
+    module._validate_exact_eval_submit_inputs(args)
+
+
 def test_public_replay_submit_allows_external_inflate_without_config_env(
     tmp_path: Path,
 ) -> None:
@@ -335,8 +415,8 @@ def test_public_replay_submit_blocks_source_embedded_payload_loophole(
         module._validate_exact_eval_submit_inputs(args)
 
     waived = module.build_parser().parse_args(
-        base_args
-        + [
+        [
+            *base_args,
             "--allow-source-embedded-payload-runtime-reason",
             "external PR loophole quarantine only",
         ]

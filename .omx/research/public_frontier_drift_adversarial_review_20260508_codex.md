@@ -183,4 +183,37 @@ failure.
 - `jq` over PR102 `contest_auth_eval.json` and `component_trace_status.json`
 - `curl -fsSL` GitHub pulls, README, PR comments for PR100-108, and
   `https://comma.ai/leaderboard`
+
+## 2026-05-08T11:18Z Public PR Watch Addendum
+
+GitHub PR state was refreshed with:
+
+```bash
+gh pr list --repo commaai/comma_video_compression_challenge --state all --limit 120 --json number,title,author,headRefOid,createdAt,updatedAt,url,state,isDraft
+gh pr view 108 --repo commaai/comma_video_compression_challenge --json number,title,author,headRefOid,createdAt,updatedAt,url,state,body,comments,files,reviews
+gh pr diff 108 --repo commaai/comma_video_compression_challenge --name-only
+```
+
+Latest observed PR remains PR108:
+
+- PR: `108`, `andimin01`, author `andrei-minca`.
+- URL:
+  `https://github.com/commaai/comma_video_compression_challenge/pull/108`.
+- Head SHA: `59c1bbd544bb2aa166656d24d7de117ad3e3e62e`.
+- State: `OPEN`, non-draft.
+- Files: `submissions/andimin01/compress.sh`,
+  `submissions/andimin01/inflate.py`, `submissions/andimin01/inflate.sh`,
+  `submissions/andimin01/roi_preprocess.py`.
+- PR body archive URL:
+  `https://github.com/user-attachments/files/27408563/archive.zip`.
+- PR body report is CPU-only over 600 samples with PoseNet `0.65178943`,
+  SegNet `0.00745649`, archive bytes `442979`, and final score `3.59`.
+
+This refresh does not alter the exact frontier. PR108 remains
+`external+empirical-custody`, non-frontier by its own report, and already has
+local custody references in
+`reverse_engineering/public_pr102_pr108_intake_20260508/manifest.json` and
+`.omx/research/public_pr102_pr108_reverse_engineering_intake_20260508_codex.md`.
+Do not spend exact CUDA on PR108 unless it becomes needed for public-watch
+completeness, because it is not a plausible sub-0.19/sub-0.23 candidate.
 - `awk` recomputation for the rounded PR104 public CUDA-comment score

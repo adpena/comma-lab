@@ -513,6 +513,49 @@ def _default_exact_eval_inflate_sh(args: argparse.Namespace) -> str:
     return str(getattr(args, "inflate_sh", None) or "submissions/robust_current/inflate.sh")
 
 
+def _declared_runtime_dependency_roots(inflate_rel: str) -> list[str]:
+    """Resolve repo-relative PACT_RUNTIME_DEPENDENCY_ROOT literals for submit gates."""
+    inflate_path = Path(REPO_ROOT) / inflate_rel
+    if not inflate_path.is_file():
+        return []
+    roots: list[str] = []
+    for line in inflate_path.read_text(errors="replace").splitlines():
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            stripped = stripped[1:].strip()
+        if stripped.startswith("export "):
+            stripped = stripped[len("export ") :].strip()
+        if not stripped.startswith("PACT_RUNTIME_DEPENDENCY_ROOT="):
+            continue
+        rhs = stripped.split("=", 1)[1].strip()
+        try:
+            parsed = shlex.split(rhs, comments=True, posix=True)
+        except ValueError as exc:
+            raise SystemExit(
+                "exact-eval submit blocked; invalid PACT_RUNTIME_DEPENDENCY_ROOT "
+                f"shell literal in {inflate_rel}: {exc}"
+            ) from exc
+        if not parsed:
+            raise SystemExit(
+                f"exact-eval submit blocked; empty PACT_RUNTIME_DEPENDENCY_ROOT in {inflate_rel}"
+            )
+        raw_root = parsed[0]
+        if "$" in raw_root or "`" in raw_root:
+            raise SystemExit(
+                "exact-eval submit blocked; PACT_RUNTIME_DEPENDENCY_ROOT must be a "
+                f"repo-relative or repo-absolute literal, got {raw_root!r} in {inflate_rel}"
+            )
+        root_rel = _repo_rel(raw_root)
+        root_dir = Path(REPO_ROOT) / root_rel
+        if not root_dir.is_dir():
+            raise SystemExit(
+                "exact-eval submit blocked; PACT_RUNTIME_DEPENDENCY_ROOT does not "
+                f"exist or is not a directory: {root_rel}"
+            )
+        roots.append(_safe_remote_repo_rel(root_rel, field="PACT_RUNTIME_DEPENDENCY_ROOT"))
+    return list(dict.fromkeys(roots))
+
+
 def _exact_eval_runtime_requirements(args: argparse.Namespace) -> set[str]:
     required: set[str] = set()
     inflate_rel = _remote_repo_rel(_default_exact_eval_inflate_sh(args), repo_dir=args.repo_dir)
@@ -539,6 +582,23 @@ def _exact_eval_runtime_requirements(args: argparse.Namespace) -> set[str]:
                     _safe_remote_repo_rel(
                         str(PurePosixPath(inflate_rel).parent / PurePosixPath(*rel_parts)),
                         field=f"external inflate runtime file {'/'.join(rel_parts)}",
+                    )
+                )
+        for root_rel in _declared_runtime_dependency_roots(inflate_rel):
+            root_dir = Path(REPO_ROOT) / root_rel
+            for child in sorted(root_dir.rglob("*")):
+                if not child.is_file():
+                    continue
+                rel_parts = child.relative_to(root_dir).parts
+                if any(
+                    part.startswith(".") or part.startswith("._") or part == "__pycache__"
+                    for part in rel_parts
+                ):
+                    continue
+                required.add(
+                    _safe_remote_repo_rel(
+                        str(PurePosixPath(root_rel) / PurePosixPath(*rel_parts)),
+                        field=f"PACT_RUNTIME_DEPENDENCY_ROOT file {'/'.join(rel_parts)}",
                     )
                 )
     return required
