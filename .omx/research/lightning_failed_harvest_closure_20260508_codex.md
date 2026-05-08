@@ -48,3 +48,25 @@ phantom active claim:
   `contest_auth_eval.json` was available.
 - Reactivation criterion: relaunch after correcting the remote job artifact
   creation path and preserving an active dispatch claim before submit.
+
+## SDK Log Root Causes
+
+Follow-up SDK log inspection showed both remote commands did start on T4 and
+reached local logging, but neither produced a harvestable `contest_auth_eval`
+artifact:
+
+- `lossy-coarsening-cuda-20260508T013829Z`
+  - reached Stage 0 GPU check on Tesla T4
+  - failed at DALI bootstrap because the Lightning `.venv/bin/python` had no
+    `pip` module
+  - launcher fix: use `scripts/bootstrap_dali_hash_pinned.py`, which handles
+    pip-less uv environments and records hash-pinned DALI provenance
+- `arch-shrink-x0-4-lightning-20260508T010514Z`
+  - reached Stage 0 GPU check on Tesla T4
+  - failed before training because `train_renderer.py --auth-eval-on-best`
+    rejected `variant=quantizr_faithful` as non-FP4A-exportable
+  - launcher fix: follow the Q-FAITHFUL manual path with
+    `--no-auth-eval-on-best`, `--qfaithful-training-poses`, QFAI export, then
+    separate exact CUDA auth eval
+
+These are launch-command bugs, not method falsifications.

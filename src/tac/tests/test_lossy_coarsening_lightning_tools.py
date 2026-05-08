@@ -48,6 +48,23 @@ def test_lossy_coarsening_remote_command_uses_auth_eval_json_path() -> None:
     assert "--device cuda" in command
     assert "--keep-work-dir" in command
     assert "contest_auth_eval.json" in command
+    assert "scripts/bootstrap_dali_hash_pinned.py" in command
+    assert "-m', 'pip', 'install'" not in command
+
+
+def test_arch_shrink_remote_command_uses_qfaithful_manual_eval_path() -> None:
+    module = _load_script("experiments/arch_shrink_x0.4_lightning_full.py")
+
+    command = module.build_remote_command(
+        job_name="arch-test",
+        remote_pact="/remote/pact",
+    )
+
+    assert "--qfaithful-training-poses" in command
+    assert "--no-auth-eval-on-best" in command
+    assert "save_qfai" in command
+    assert "scripts/bootstrap_dali_hash_pinned.py" in command
+    assert "contest_auth_eval.json" in command
 
 
 def test_lossy_coarsening_harvest_requires_numeric_score_and_archive_bytes(tmp_path: Path) -> None:
