@@ -137,7 +137,7 @@ def _local_central_header_mismatch_blockers(
         blockers.append(f"{name}:central_local_compression_method_mismatch")
     if local_header.flag_bits != central_header.flag_bits:
         blockers.append(f"{name}:central_local_general_purpose_flags_mismatch")
-    if local_header.mod_time != central_header._raw_time:
+    if local_header.mod_time != _dos_time_from_datetime(central_header.date_time):
         blockers.append(f"{name}:central_local_mod_time_mismatch")
     if local_header.mod_date != _dos_date_from_datetime(central_header.date_time):
         blockers.append(f"{name}:central_local_mod_date_mismatch")
@@ -199,6 +199,11 @@ def _local_header(raw: bytes, offset: int) -> _LocalZipHeader | None:
 def _dos_date_from_datetime(date_time: tuple[int, int, int, int, int, int]) -> int:
     year, month, day, _hour, _minute, _second = date_time
     return ((year - 1980) << 9) | (month << 5) | day
+
+
+def _dos_time_from_datetime(date_time: tuple[int, int, int, int, int, int]) -> int:
+    _year, _month, _day, hour, minute, second = date_time
+    return (hour << 11) | (minute << 5) | (second // 2)
 
 
 def _validate_archive_member_name(name: str) -> str:
