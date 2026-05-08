@@ -447,12 +447,12 @@ def preflight_all(
         # Forbidden pattern: "operator-approval-leak". Memory ref:
         # `feedback_codex_finding_1_operator_approval_scoping_FIXED_20260508.md`.
         check_operator_approval_must_be_lane_scoped(strict=True, verbose=verbose)
-        # 2026-05-08 codex finding #3 (catalog #110): stale dirty-paths
+        # 2026-05-08 codex finding #3 (catalog #111): stale dirty-paths
         # frozen into committed status JSON. Refuses any *status*.json with
         # a non-empty top-level `dirty_paths` list. Memory:
         # feedback_codex_findings_3_4_status_dirtypaths_rebuild_recipe_FIXED_20260508.md
         check_status_artifacts_no_stale_dirty_paths(strict=True, verbose=verbose)
-        # 2026-05-08 codex finding #4 (catalog #111): baked runtime state
+        # 2026-05-08 codex finding #4 (catalog #112): baked runtime state
         # in rebuild recipes. Refuses rebuild_command.txt with hardcoded
         # --now-utc/--operator-approved-* flags absent a HISTORICAL banner.
         check_rebuild_commands_no_baked_runtime_state(strict=True, verbose=verbose)
@@ -24815,7 +24815,7 @@ def check_status_artifacts_no_stale_dirty_paths(
     contains a top-level ``dirty_paths`` field with a non-empty list.
 
     Forbidden pattern: "stale-dirty-paths-list-in-committed-status-json".
-    See CLAUDE.md catalog #110.
+    See CLAUDE.md catalog #111.
     """
     root = Path(repo_root or REPO_ROOT)
     results_dir = root / "experiments" / "results"
@@ -24879,7 +24879,7 @@ def check_rebuild_commands_no_baked_runtime_state(
     "forensic reproduction").
 
     Forbidden pattern: "baked-runtime-state-in-rebuild-recipe". See
-    CLAUDE.md catalog #111.
+    CLAUDE.md catalog #112.
     """
     root = Path(repo_root or REPO_ROOT)
     results_dir = root / "experiments" / "results"

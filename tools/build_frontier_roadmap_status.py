@@ -489,7 +489,12 @@ def build_roadmap_status(
         "ready_for_exact_eval_dispatch": False,
         "row_count": len(rows),
         "dirty_path_count": len(live_dirty_paths),
-        "dirty_paths": live_dirty_paths,
+        # NOTE: per CLAUDE.md catalog #111, the persisted artifact MUST NOT
+        # carry the live `dirty_paths` LIST (only the count). The path list
+        # is transient session noise; freezing it into a committed status
+        # JSON poisons downstream operator review with stale state. See the
+        # codex_findings_3_4 fix memo + check_status_artifacts_no_stale_dirty_paths
+        # STRICT preflight gate.
         "dirty_blocked_row_count": dirty_blocked_count,
         "stage_counts": dict(sorted(stage_counts.items())),
         "next_unblocked_keys": next_unblocked,

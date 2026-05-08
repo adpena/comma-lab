@@ -1,2 +1,34 @@
+# HISTORICAL ARTIFACT — DO NOT REPLAY VERBATIM (CLAUDE.md catalog #112)
+#
+# The command below was used to produce this directory's status.json on
+# 2026-05-07T18:37:16Z with operator-approval-exact-cuda context active at
+# that time. It is preserved for reproducibility / forensic audit ONLY.
+#
+# DO NOT execute this verbatim against the live worktree:
+#   - The hardcoded `--now-utc` makes lane-dispatch-claim TTL evaluation
+#     evaluate against an obsolete timestamp (selector uses now_utc for
+#     the 24-hour claim freshness window — see CLAUDE.md FIX-1 catalog #109).
+#   - The hardcoded `--operator-approved-exact-cuda` carries forward an
+#     approval context that may no longer hold; per CLAUDE.md FIX-1 the
+#     approval is now per-manifest, not global, but the flag still seeds
+#     selector context which can mislead downstream tooling.
+#
+# For a LIVE-SAFE rebuild, run:
+#
+#   .venv/bin/python tools/build_frontier_roadmap_status.py \
+#     --repo-root . \
+#     --claims-path .omx/state/active_lane_dispatch_claims.md \
+#     --json-out experiments/results/frontier_roadmap_status_<TIMESTAMP>_codex/status.json
+#
+# Add `--now-utc <FRESH_ISO_UTC>` if you want a deterministic-rebuild
+# timestamp; add `--operator-approved-exact-cuda` ONLY if the operator has
+# explicitly authorized exact-CUDA dispatch for the candidate at runtime.
+#
+# Original (frozen) historical command for forensic reproduction below:
+#
 .venv/bin/python tools/build_frontier_roadmap_status.py \
+  --repo-root . \
+  --claims-path .omx/state/active_lane_dispatch_claims.md \
+  --now-utc 2026-05-07T18:37:16Z \
+  --operator-approved-exact-cuda \
   --json-out experiments/results/frontier_roadmap_status_20260507_codex/status.json

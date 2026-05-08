@@ -1,3 +1,15 @@
+# HISTORICAL ARTIFACT — DO NOT REPLAY VERBATIM (CLAUDE.md catalog #112)
+#
+# The command below was used on 2026-05-07T12:30:00Z. Hardcoded
+# `--now-utc` makes lane-claim TTL evaluate against an obsolete timestamp;
+# `--operator-approved-exact-cuda` is now per-manifest (FIX-1, catalog #109)
+# so the global flag in this command is selector-context-only at replay.
+#
+# For LIVE-SAFE rebuild: run the bare command without `--now-utc` and
+# `--operator-approved-exact-cuda`, then add fresh values explicitly if
+# the operator authorizes them at runtime.
+#
+# Original (frozen) command for forensic reproduction below:
 .venv/bin/python tools/build_field_meta_dispatch_selection.py \
   --manifest experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json \
   --manifest experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/manifest.json \
