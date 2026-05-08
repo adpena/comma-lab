@@ -70,6 +70,7 @@ from tac.deploy.lightning.defaults import (
     default_teamspace,
     default_user,
 )
+from tac.deploy.lightning.harvest_env import require_lightning_harvest_values
 
 LANE_ID = "lossy_coarsening_analytical_cuda"
 LIGHTNING_ACTIVE_JOBS_PATH = REPO_ROOT / ".omx" / "state" / "lightning_active_jobs.json"
@@ -327,6 +328,13 @@ def _harvest_terminal(
 ) -> int:
     job_name = str(target["job_name"])
     print(f"[harvest] Job {job_name} reached terminal status; rsync + parse + emit")
+    require_lightning_harvest_values(
+        ssh_target=args.ssh_target,
+        remote_pact=args.remote_pact,
+        require_provider=False,
+        require_rsync=True,
+        context="artifact-rsync",
+    )
 
     local_dir = _rsync_artifacts(
         ssh_target=args.ssh_target,
@@ -456,6 +464,14 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.force_harvest:
         return _harvest_terminal(target=target, args=args)
+
+    require_lightning_harvest_values(
+        teamspace=args.teamspace,
+        user=args.user,
+        require_provider=True,
+        require_rsync=False,
+        context="provider",
+    )
 
     while True:
         job = _resolve_lightning_job(

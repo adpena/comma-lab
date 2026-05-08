@@ -11,7 +11,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 
 def _load_script(relpath: str):
     path = REPO_ROOT / relpath
-    spec = importlib.util.spec_from_file_location(path.stem, path)
+    spec = importlib.util.spec_from_file_location(path.stem.replace(".", "_"), path)
     assert spec is not None
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -86,3 +86,79 @@ def test_lossy_coarsening_harvest_requires_numeric_score_and_archive_bytes(tmp_p
             target_row=target_row,
             job_name="job-test",
         )
+
+
+@pytest.mark.parametrize(
+    ("script_path", "lane_id", "job_name"),
+    [
+        (
+            "experiments/lossy_coarsening_lightning_harvest.py",
+            "lossy_coarsening_analytical_cuda",
+            "lossy-test",
+        ),
+        (
+            "experiments/arch_shrink_x0.4_lightning_harvest.py",
+            "arch_shrink_x0.4_lightning",
+            "arch-test",
+        ),
+    ],
+)
+def test_lightning_harvest_requires_provider_env_before_sdk(
+    monkeypatch: pytest.MonkeyPatch,
+    script_path: str,
+    lane_id: str,
+    job_name: str,
+) -> None:
+    module = _load_script(script_path)
+
+    monkeypatch.setattr(
+        module,
+        "_load_active_jobs",
+        lambda: [{"lane_id": lane_id, "job_name": job_name, "terminal_status": None}],
+    )
+
+    def fail_if_called(**_kwargs: object) -> object:
+        raise AssertionError("Lightning SDK resolution should not be reached")
+
+    monkeypatch.setattr(module, "_resolve_lightning_job", fail_if_called)
+
+    with pytest.raises(SystemExit, match="missing required Lightning provider values"):
+        module.main(["--job-name", job_name, "--once"])
+
+
+@pytest.mark.parametrize(
+    ("script_path", "lane_id", "job_name"),
+    [
+        (
+            "experiments/lossy_coarsening_lightning_harvest.py",
+            "lossy_coarsening_analytical_cuda",
+            "lossy-test",
+        ),
+        (
+            "experiments/arch_shrink_x0.4_lightning_harvest.py",
+            "arch_shrink_x0.4_lightning",
+            "arch-test",
+        ),
+    ],
+)
+def test_lightning_force_harvest_requires_rsync_env_before_artifact_pull(
+    monkeypatch: pytest.MonkeyPatch,
+    script_path: str,
+    lane_id: str,
+    job_name: str,
+) -> None:
+    module = _load_script(script_path)
+
+    monkeypatch.setattr(
+        module,
+        "_load_active_jobs",
+        lambda: [{"lane_id": lane_id, "job_name": job_name, "terminal_status": None}],
+    )
+
+    def fail_if_called(**_kwargs: object) -> Path:
+        raise AssertionError("rsync should not be reached")
+
+    monkeypatch.setattr(module, "_rsync_artifacts", fail_if_called)
+
+    with pytest.raises(SystemExit, match="missing required Lightning artifact-rsync values"):
+        module.main(["--job-name", job_name, "--force-harvest", "--remote-pact", ""])

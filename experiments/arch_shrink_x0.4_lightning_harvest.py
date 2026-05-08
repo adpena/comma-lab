@@ -66,14 +66,15 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from tac.deploy.lightning.batch_jobs import lightning_sdk_job_name  # noqa: E402
-from tac.deploy.lightning.defaults import (  # noqa: E402
+from tac.deploy.lightning.batch_jobs import lightning_sdk_job_name
+from tac.deploy.lightning.defaults import (
     DEFAULT_LIGHTNING_REMOTE_PACT,
     default_remote_pact,
     default_ssh_target,
     default_teamspace,
     default_user,
 )
+from tac.deploy.lightning.harvest_env import require_lightning_harvest_values
 
 LANE_ID = "arch_shrink_x0.4_lightning"
 LIGHTNING_ACTIVE_JOBS_PATH = REPO_ROOT / ".omx" / "state" / "lightning_active_jobs.json"
@@ -309,6 +310,13 @@ def _harvest_terminal(
 ) -> int:
     job_name = str(target["job_name"])
     print(f"[harvest] Job {job_name} reached terminal status; rsync + parse + emit")
+    require_lightning_harvest_values(
+        ssh_target=args.ssh_target,
+        remote_pact=args.remote_pact,
+        require_provider=False,
+        require_rsync=True,
+        context="artifact-rsync",
+    )
 
     local_dir = _rsync_artifacts(
         ssh_target=args.ssh_target,
@@ -335,10 +343,7 @@ def _harvest_terminal(
     archive_path = local_dir / "archive.zip"
     if not archive_path.is_file():
         candidates = sorted(local_dir.glob("*.zip"))
-        if candidates:
-            archive_path = candidates[0]
-        else:
-            archive_path = None  # type: ignore[assignment]
+        archive_path = candidates[0] if candidates else None
 
     row = _emit_evidence_row(
         evidence_out=args.evidence_out,
@@ -448,6 +453,14 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.force_harvest:
         return _harvest_terminal(target=target, args=args)
+
+    require_lightning_harvest_values(
+        teamspace=args.teamspace,
+        user=args.user,
+        require_provider=True,
+        require_rsync=False,
+        context="provider",
+    )
 
     while True:
         job = _resolve_lightning_job(

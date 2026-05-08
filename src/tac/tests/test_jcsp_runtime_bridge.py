@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -938,3 +939,88 @@ def test_inflate_sh_probes_jcsp_before_branch_dispatch() -> None:
     assert "--video-names-file \"$VIDEO_NAMES_FILE\"" in text
     assert "--manifest-json \"$JCSP_RUNTIME_PROBE_MANIFEST\"" in text
     assert "--parity-manifest-json \"$JCSP_RUNTIME_PARITY_MANIFEST\"" in text
+
+
+def test_inflate_sh_emit_real_jcsp_mode_consumes_then_fails_closed(
+    tmp_path: Path,
+) -> None:
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    ffmpeg = fake_bin / "ffmpeg"
+    ffmpeg.write_text(
+        "#!/bin/sh\n"
+        "printf '%s\\n' 'in_range out_range in_color_matrix in_primaries in_transfer'\n",
+        encoding="utf-8",
+    )
+    ffmpeg.chmod(0o755)
+    uv = fake_bin / "uv"
+    uv.write_text("#!/bin/sh\nexit 127\n", encoding="utf-8")
+    uv.chmod(0o755)
+
+    archive_dir = tmp_path / "archive"
+    archive_dir.mkdir()
+    payload = bytes(range(36))
+    (archive_dir / "jcsp.bin").write_bytes(
+        _real_rawvideo_jcsp_bytes("route/video.raw", payload)
+    )
+    inflated_dir = tmp_path / "inflated"
+    names_file = tmp_path / "names.txt"
+    names_file.write_text("route/video.hevc\n", encoding="utf-8")
+    reference_dir = tmp_path / "reference"
+    reference_path = reference_dir / "route" / "video.raw"
+    reference_path.parent.mkdir(parents=True)
+    reference_path.write_bytes(payload)
+
+    env = os.environ.copy()
+    env.update(
+        {
+            "PATH": f"{fake_bin}{os.pathsep}{env.get('PATH', '')}",
+            "FFMPEG_BIN": "ffmpeg",
+            "UV_BIN": "uv",
+            "PYTHON": sys.executable,
+            "JCSP_RUNTIME_BRIDGE_MODE": "emit-real-raw-outputs",
+            "JCSP_REFERENCE_RAW_DIR": str(reference_dir),
+        }
+    )
+
+    result = subprocess.run(
+        [
+            "/bin/bash",
+            str(INFLATE_SH_PATH),
+            str(archive_dir),
+            str(inflated_dir),
+            str(names_file),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    assert result.returncode == 44
+    assert "real AQ rawvideo preflight remains closed" in result.stderr
+    assert "FATAL: JCSP runtime bridge refused jcsp.bin" in result.stderr
+    assert (inflated_dir / "route" / "video.raw").read_bytes() == payload
+
+    manifest = json.loads(
+        (inflated_dir / "jcsp_runtime_probe_manifest.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert manifest["runtime_action"] == (
+        "emit_real_aq_rawvideo_runtime_preflight_fail_closed"
+    )
+    assert manifest["consumes_required_member"] is True
+    assert manifest["candidate_outputs_from_real_bridge_rawvideo"] is True
+    assert manifest["ready_for_submission_runtime_consumption"] is True
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["dispatch_blockers"] == ["exact_cuda_auth_eval_missing"]
+
+    parity = json.loads(
+        (inflated_dir / "jcsp_runtime_raw_output_parity_manifest.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert parity["candidate_outputs_from_real_bridge_rawvideo"] is True
+    assert parity["byte_exact_raw_output_parity"] is True
+    assert parity["ready_for_submission_runtime_consumption"] is True
