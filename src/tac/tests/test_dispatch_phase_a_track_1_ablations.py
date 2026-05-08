@@ -84,3 +84,31 @@ def test_a2_dispatch_invokes_real_tool_locally_without_remote_claim(
     assert "--output" in command
     assert "tools/claim_lane_dispatch.py" not in command
     assert (Path(manifest["lane_dir"]) / "build_manifest.json").is_file()
+
+
+def test_decision_all_dry_run_emits_staging_planner_banner(
+    monkeypatch,
+    tmp_path: Path,
+    capsys,
+) -> None:
+    tool = _load_tool()
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "dispatch_phase_a_track_1_ablations.py",
+            "--decision",
+            "all",
+            "--dry-run",
+            "--output",
+            str(tmp_path),
+        ],
+    )
+
+    assert tool.main() == 0
+
+    captured = capsys.readouterr()
+    assert "[STAGING PLANNER MODE]" in captured.err
+    assert "does NOT launch concurrent jobs" in captured.err
+    assert "A0" in captured.out
+    assert "A6" in captured.out

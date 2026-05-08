@@ -1,12 +1,13 @@
 """Phase A Track 1 ablations dispatch wrapper.
 
 Per CLAUDE.md "parallel-dispatch is a FIRST-CLASS DELIVERABLE", this wrapper
-fans out the 8 Phase A ablations across local CPU (Phase A0/A2/A4-alt/A5),
+stages the 8 Phase A ablation plans across local CPU (Phase A0/A2/A4-alt/A5),
 Lightning T4 (Phase A1/A3-alt/A4/A6), and free GHA CPU (auth eval harvest).
 
-It is the actuator that turns the council's Phase A staging plan into N
-concurrent dispatches with per-item gating, heartbeat, and harvest. Council
-gating happens BEFORE this wrapper fires; this wrapper is the executor.
+It is a staging planner, not the job executor. It writes per-decision dispatch
+intent manifests and validates lane-claim command shape. The underlying
+training/eval launchers still need to be invoked after reviewing those staged
+artifacts; they must open the real active lane claim immediately before spend.
 
 CLAUDE.md non-negotiable enforcements:
 - Lane claim opened via tools/claim_lane_dispatch.py before any GPU spend
@@ -38,7 +39,7 @@ Usage:
     .venv/bin/python tools/dispatch_phase_a_track_1_ablations.py \\
         --decision A1 --substrate pr101 --duration 3h --budget 8
 
-    # All Phase A in parallel (council recommended):
+    # Stage all Phase A plans (does not launch jobs):
     .venv/bin/python tools/dispatch_phase_a_track_1_ablations.py \\
         --decision all --total-budget 55
 
@@ -504,13 +505,13 @@ def dispatch_one(spec: DispatchSpec, output_root: Path) -> dict[str, Any]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Phase A Track 1 ablations dispatch wrapper (parallel actuator)"
+        description="Phase A Track 1 ablations staging planner"
     )
     parser.add_argument(
         "--decision",
         choices=[*list(PHASE_A_DISPATCHES.keys()), "all"],
         required=True,
-        help="Phase A ablation to dispatch ('all' = parallel-dispatch all 8)",
+        help="Phase A ablation to stage ('all' = stage all 8 decision plans)",
     )
     parser.add_argument(
         "--substrate",
@@ -595,8 +596,8 @@ def main() -> int:
             print(f"  {d}: {spec.name} ({spec.target}, ~{spec.estimated_duration_hours}h, ${spec.estimated_cost_usd})")
         return 0
 
-    # Sequential dispatch (each dispatch is self-contained; subprocess spawning
-    # could parallelize but Lightning T4 staging is operator-gated anyway)
+    # Sequential staging (each staging action is self-contained; the actual
+    # training/eval launchers are operator-gated and run outside this wrapper).
     results: list[dict[str, Any]] = []
     for d in decisions:
         spec = PHASE_A_DISPATCHES[d]
