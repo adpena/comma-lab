@@ -464,6 +464,9 @@ def _evaluate(
             timestamp_utc=timestamp,
             expected_tensor_count=len(expected_keys),
             matched_tensor_count=rms_count,
+            missing_tensor_keys=missing_keys,
+            non_tensor_decoded_keys=non_tensor_keys,
+            shape_mismatch_tensor_keys=shape_mismatch_keys,
             decoded_tensor_keys=decoded_tensor_keys,
             matched_tensor_keys=matched_keys,
             decode_coverage_required=require_full_decode,
@@ -877,6 +880,25 @@ def main(argv: list[str] | None = None) -> int:
             evidence_row = {
                 "technique": args.evidence_technique_name or f"{args.module}.{args.class_name}",
                 "empirical_archive_bytes": int(report.best_eval.bytes_out),
+                "evidence_grade": EVIDENCE_GRADE,
+                "evidence_semantics": EVIDENCE_SEMANTICS,
+                "target_modes": list(TARGET_MODES),
+                "deployment_target": DEPLOYMENT_TARGET,
+                "score_claim": False,
+                "dispatchable": False,
+                "ready_for_exact_eval_dispatch": False,
+                "score_affecting_payload_changed": False,
+                "charged_bits_changed": False,
+                "exact_cuda_auth_eval": False,
+                "archive_sha256": None,
+                "archive_bytes": None,
+                "promotion_eligible": False,
+                "dispatch_blockers": list(report.dispatch_blockers),
+                "evidence_limitations": [
+                    "codec_op_bytes_out_not_archive_bytes",
+                    "cpu_only_planning_signal",
+                    "missing_exact_cuda_auth_eval",
+                ],
                 "source": (
                     f"[CPU-prep optuna best of {report.n_evaluations} evals] {args.output} "
                     f"params={report.best_eval.params}"
