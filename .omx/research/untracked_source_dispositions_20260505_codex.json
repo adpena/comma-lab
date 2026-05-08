@@ -1370,6 +1370,18 @@
       "disposition": "track",
       "note": "track: operator-visible Track 1 MDL lower-bound calculator for co-designed substrate planning.",
       "path": "tools/mdl_lower_bound_calculator.py"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_rebuildable",
+      "note": "ignore: generated A2 packet-local inflate entrypoint is raw rebuildable custody; durable signal is in a2_packet_ladder_paritysync_20260508_codex.md.",
+      "path": "experiments/results/track1_phase_a2_packet_ladder_codex_paritysync_20260508T211430Z/variants/weighted_k_00_rms_0p0386/packet/inflate.py"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_rebuildable",
+      "note": "ignore: generated A2 packet-local inflate shell entrypoint is raw rebuildable custody; durable signal is in a2_packet_ladder_paritysync_20260508_codex.md.",
+      "path": "experiments/results/track1_phase_a2_packet_ladder_codex_paritysync_20260508T211430Z/variants/weighted_k_00_rms_0p0386/packet/inflate.sh"
     }
   ],
   "policy": "Every source-like untracked path must be track, recovery_queue, ignore_private, or ignore_rebuildable with rationale.",

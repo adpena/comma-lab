@@ -244,6 +244,41 @@ def test_runtime_source_baseline_detects_new_submission_inflate(tmp_path) -> Non
     ]
 
 
+def test_runtime_source_exact_disposition_excludes_generated_packet_from_prefix_baseline(tmp_path) -> None:
+    baseline_path = "experiments/results/known_run/submission_dir/inflate.py"
+    generated_packet_path = "experiments/results/new_run/variants/candidate/packet/inflate.py"
+    (tmp_path / baseline_path).parent.mkdir(parents=True)
+    (tmp_path / baseline_path).write_text("print('known')\n")
+    (tmp_path / generated_packet_path).parent.mkdir(parents=True)
+    (tmp_path / generated_packet_path).write_text("print('generated packet')\n")
+    baseline = build_runtime_source_baseline(tmp_path, [baseline_path])
+    dispositions = {
+        "experiments/results/": {
+            "disposition": "ignore_rebuildable",
+            "note": "raw local custody; promote summaries only",
+            "path_kind": "prefix",
+            "runtime_source_baseline": baseline,
+        },
+        generated_packet_path: {
+            "disposition": "ignore_rebuildable",
+            "note": "generated packet-local runtime is raw custody with separate ledger",
+            "path_kind": "exact",
+        },
+    }
+
+    blockers, baselines = find_runtime_source_custody_blockers(
+        dispositions,
+        [baseline_path, generated_packet_path],
+        repo_root=tmp_path,
+    )
+
+    assert blockers == []
+    assert len(baselines) == 1
+    assert baselines[0]["prefix"] == "experiments/results/"
+    assert baselines[0]["status"] == "matched"
+    assert baselines[0]["actual_count"] == 1
+
+
 def test_disposition_entries_remain_valid_after_tracking() -> None:
     dispositions = {
         "experiments/results/": {
