@@ -1,0 +1,1580 @@
+{
+  "allowed_uses": [
+    "local_architecture_sweep_planning",
+    "curve_shape_triage",
+    "candidate_generation_prior",
+    "dispatch_blocker_review"
+  ],
+  "curve_count": 8,
+  "curves": [
+    {
+      "best_research_signal_row": {
+        "archive_bytes": 180000,
+        "candidate_generation_only": true,
+        "dispatch_blockers": [
+          "cpu_mps_research_signal_not_score_evidence",
+          "no_score_claim_from_normalized_manifest",
+          "not_exact_cuda_auth_eval",
+          "no_adjudicated_contest_archive",
+          "not_promotion_eligible"
+        ],
+        "dispatchable": false,
+        "metric_name": "proxy_loss",
+        "metric_value": 0.18,
+        "payload_bytes": null,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "variant_id": "epoch_020"
+      },
+      "byte_range": [
+        100000,
+        180000
+      ],
+      "curve_id": "width_x0_4",
+      "device_family": "mps",
+      "dispatch_blockers": [
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "family": "arch_shrink",
+      "finite_difference_slopes": [
+        {
+          "byte_step": 20000,
+          "from_variant_id": "epoch_000",
+          "metric_delta": -0.35000000000000003,
+          "metric_delta_per_byte": -1.7500000000000002e-05,
+          "to_variant_id": "epoch_010"
+        },
+        {
+          "byte_step": 60000,
+          "from_variant_id": "epoch_010",
+          "metric_delta": -0.020000000000000018,
+          "metric_delta_per_byte": -3.333333333333336e-07,
+          "to_variant_id": "epoch_020"
+        }
+      ],
+      "interpretation": "candidate_generation_prior_only",
+      "metric_direction": "lower_is_better",
+      "metric_name": "proxy_loss",
+      "point_count": 3,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "best_research_signal_row": {
+        "archive_bytes": 102994,
+        "candidate_generation_only": true,
+        "dispatch_blockers": [
+          "cpu_mps_research_signal_not_score_evidence",
+          "no_score_claim_from_normalized_manifest",
+          "not_exact_cuda_auth_eval",
+          "no_adjudicated_contest_archive",
+          "not_promotion_eligible"
+        ],
+        "dispatchable": false,
+        "metric_name": "expected_archive_bytes",
+        "metric_value": 102994,
+        "payload_bytes": null,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "variant_id": "stage_c_width075_int6_qat_dez"
+      },
+      "byte_range": [
+        102994,
+        178258
+      ],
+      "curve_id": "hnerv_arch_shrink_deltaepszeta",
+      "device_family": "cpu",
+      "dispatch_blockers": [
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "family": "hnerv_arch_shrink_deltaepszeta",
+      "finite_difference_slopes": [
+        {
+          "byte_step": 13247,
+          "from_variant_id": "stage_c_width075_int6_qat_dez",
+          "metric_delta": 13247.0,
+          "metric_delta_per_byte": 1.0,
+          "to_variant_id": "stage_b_width080_int8_dez"
+        },
+        {
+          "byte_step": 28836,
+          "from_variant_id": "stage_b_width080_int8_dez",
+          "metric_delta": 28836.0,
+          "metric_delta_per_byte": 1.0,
+          "to_variant_id": "stage_a_width090_int8_rate_shape"
+        },
+        {
+          "byte_step": 33181,
+          "from_variant_id": "stage_a_width090_int8_rate_shape",
+          "metric_delta": 33181.0,
+          "metric_delta_per_byte": 1.0,
+          "to_variant_id": "control_current_pr101_int8"
+        }
+      ],
+      "interpretation": "candidate_generation_prior_only",
+      "metric_direction": "lower_is_better",
+      "metric_name": "expected_archive_bytes",
+      "point_count": 4,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "best_research_signal_row": {
+        "archive_bytes": 63037,
+        "candidate_generation_only": true,
+        "dispatch_blockers": [
+          "cpu_mps_research_signal_not_score_evidence",
+          "no_score_claim_from_normalized_manifest",
+          "not_exact_cuda_auth_eval",
+          "no_adjudicated_contest_archive",
+          "not_promotion_eligible"
+        ],
+        "dispatchable": false,
+        "metric_name": "expected_archive_bytes",
+        "metric_value": 63037,
+        "payload_bytes": null,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "variant_id": "stage_e_high_risk_int4_sparse"
+      },
+      "byte_range": [
+        63037,
+        63037
+      ],
+      "curve_id": "imp_plus_self_compress_hnerv",
+      "device_family": "cpu",
+      "dispatch_blockers": [
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "family": "imp_plus_self_compress_hnerv",
+      "finite_difference_slopes": [],
+      "interpretation": "candidate_generation_prior_only",
+      "metric_direction": "lower_is_better",
+      "metric_name": "expected_archive_bytes",
+      "point_count": 1,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "best_research_signal_row": {
+        "archive_bytes": 49137,
+        "candidate_generation_only": true,
+        "dispatch_blockers": [
+          "cpu_mps_research_signal_not_score_evidence",
+          "no_score_claim_from_normalized_manifest",
+          "not_exact_cuda_auth_eval",
+          "no_adjudicated_contest_archive",
+          "not_promotion_eligible"
+        ],
+        "dispatchable": false,
+        "metric_name": "archive_bytes",
+        "metric_value": 49137,
+        "payload_bytes": null,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "variant_id": "alpha_0_9"
+      },
+      "byte_range": [
+        49137,
+        178874
+      ],
+      "curve_id": "post_hoc_sparsity_alpha",
+      "device_family": "cpu",
+      "dispatch_blockers": [
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "family": "pr101_sparsity",
+      "finite_difference_slopes": [
+        {
+          "byte_step": 24083,
+          "from_variant_id": "alpha_0_9",
+          "metric_delta": 24083.0,
+          "metric_delta_per_byte": 1.0,
+          "to_variant_id": "alpha_0_8"
+        },
+        {
+          "byte_step": 21451,
+          "from_variant_id": "alpha_0_8",
+          "metric_delta": 21451.0,
+          "metric_delta_per_byte": 1.0,
+          "to_variant_id": "alpha_0_7"
+        },
+        {
+          "byte_step": 19867,
+          "from_variant_id": "alpha_0_7",
+          "metric_delta": 19867.0,
+          "metric_delta_per_byte": 1.0,
+          "to_variant_id": "alpha_0_6"
+        },
+        {
+          "byte_step": 17429,
+          "from_variant_id": "alpha_0_6",
+          "metric_delta": 17429.0,
+          "metric_delta_per_byte": 1.0,
+          "to_variant_id": "alpha_0_5"
+        },
+        {
+          "byte_step": 29679,
+          "from_variant_id": "alpha_0_5",
+          "metric_delta": 29679.0,
+          "metric_delta_per_byte": 1.0,
+          "to_variant_id": "alpha_0_3"
+        },
+        {
+          "byte_step": 17228,
+          "from_variant_id": "alpha_0_3",
+          "metric_delta": 17228.0,
+          "metric_delta_per_byte": 1.0,
+          "to_variant_id": "alpha_0"
+        }
+      ],
+      "interpretation": "candidate_generation_prior_only",
+      "metric_direction": "lower_is_better",
+      "metric_name": "archive_bytes",
+      "point_count": 7,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "best_research_signal_row": {
+        "archive_bytes": null,
+        "candidate_generation_only": true,
+        "dispatch_blockers": [
+          "cpu_mps_research_signal_not_score_evidence",
+          "no_score_claim_from_normalized_manifest",
+          "not_exact_cuda_auth_eval",
+          "no_adjudicated_contest_archive",
+          "not_promotion_eligible"
+        ],
+        "dispatchable": false,
+        "metric_name": "payload_bytes",
+        "metric_value": 261806,
+        "payload_bytes": 261806,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "variant_id": "brotli_q11_renderer_bin"
+      },
+      "byte_range": [
+        261806,
+        296776
+      ],
+      "curve_id": "general_compressor_headroom",
+      "device_family": "cpu",
+      "dispatch_blockers": [
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "family": "renderer_bin_recompression",
+      "finite_difference_slopes": [
+        {
+          "byte_step": 34970,
+          "from_variant_id": "brotli_q11_renderer_bin",
+          "metric_delta": 34970.0,
+          "metric_delta_per_byte": 1.0,
+          "to_variant_id": "original_renderer_bin"
+        }
+      ],
+      "interpretation": "candidate_generation_prior_only",
+      "metric_direction": "lower_is_better",
+      "metric_name": "payload_bytes",
+      "point_count": 2,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "best_research_signal_row": {
+        "archive_bytes": null,
+        "candidate_generation_only": true,
+        "dispatch_blockers": [
+          "cpu_mps_research_signal_not_score_evidence",
+          "no_score_claim_from_normalized_manifest",
+          "not_exact_cuda_auth_eval",
+          "no_adjudicated_contest_archive",
+          "not_promotion_eligible"
+        ],
+        "dispatchable": false,
+        "metric_name": "payload_bytes",
+        "metric_value": 16877,
+        "payload_bytes": 16877,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "variant_id": "c3_residual:uniform_i4lz_bytes"
+      },
+      "byte_range": [
+        16877,
+        19921
+      ],
+      "curve_id": "c3_residual",
+      "device_family": "cpu",
+      "dispatch_blockers": [
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "family": "renderer_self_compress",
+      "finite_difference_slopes": [
+        {
+          "byte_step": 3044,
+          "from_variant_id": "c3_residual:uniform_i4lz_bytes",
+          "metric_delta": 3044.0,
+          "metric_delta_per_byte": 1.0,
+          "to_variant_id": "c3_residual:mixed_latents8_bytes"
+        }
+      ],
+      "interpretation": "candidate_generation_prior_only",
+      "metric_direction": "lower_is_better",
+      "metric_name": "payload_bytes",
+      "point_count": 2,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "best_research_signal_row": {
+        "archive_bytes": null,
+        "candidate_generation_only": true,
+        "dispatch_blockers": [
+          "cpu_mps_research_signal_not_score_evidence",
+          "no_score_claim_from_normalized_manifest",
+          "not_exact_cuda_auth_eval",
+          "no_adjudicated_contest_archive",
+          "not_promotion_eligible"
+        ],
+        "dispatchable": false,
+        "metric_name": "payload_bytes",
+        "metric_value": 16509,
+        "payload_bytes": 16509,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "variant_id": "coolchic:uniform_i4lz_bytes"
+      },
+      "byte_range": [
+        16509,
+        20590
+      ],
+      "curve_id": "coolchic",
+      "device_family": "cpu",
+      "dispatch_blockers": [
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "family": "renderer_self_compress",
+      "finite_difference_slopes": [
+        {
+          "byte_step": 4081,
+          "from_variant_id": "coolchic:uniform_i4lz_bytes",
+          "metric_delta": 4081.0,
+          "metric_delta_per_byte": 1.0,
+          "to_variant_id": "coolchic:mixed_latents8_bytes"
+        }
+      ],
+      "interpretation": "candidate_generation_prior_only",
+      "metric_direction": "lower_is_better",
+      "metric_name": "payload_bytes",
+      "point_count": 2,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    },
+    {
+      "best_research_signal_row": {
+        "archive_bytes": 67235,
+        "candidate_generation_only": true,
+        "dispatch_blockers": [
+          "cpu_mps_research_signal_not_score_evidence",
+          "no_score_claim_from_normalized_manifest",
+          "not_exact_cuda_auth_eval",
+          "no_adjudicated_contest_archive",
+          "not_promotion_eligible"
+        ],
+        "dispatchable": false,
+        "metric_name": "expected_archive_bytes",
+        "metric_value": 67235,
+        "payload_bytes": null,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "variant_id": "stage_d_zeta_width_precision_int4"
+      },
+      "byte_range": [
+        67235,
+        67235
+      ],
+      "curve_id": "self_compress_width_precision_hnerv",
+      "device_family": "cpu",
+      "dispatch_blockers": [
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "family": "self_compress_width_precision_hnerv",
+      "finite_difference_slopes": [],
+      "interpretation": "candidate_generation_prior_only",
+      "metric_direction": "lower_is_better",
+      "metric_name": "expected_archive_bytes",
+      "point_count": 1,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false
+    }
+  ],
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "cpu_mps_research_signal_not_score_evidence",
+    "no_score_claim_from_normalized_manifest",
+    "not_exact_cuda_auth_eval",
+    "no_adjudicated_contest_archive",
+    "not_promotion_eligible"
+  ],
+  "dispatch_recommendations": [
+    {
+      "dispatch_blockers": [
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatchable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "reason": "Local Lightning state or claim ledger already has an active arch-shrink lane.",
+      "recommendation": "do_not_duplicate_active_arch_shrink_lightning_dispatch",
+      "score_claim": false
+    },
+    {
+      "candidate_generation_curve_ids": [
+        {
+          "best_variant_id": "coolchic:uniform_i4lz_bytes",
+          "candidate_generation_only": true,
+          "curve_id": "coolchic",
+          "dispatch_blockers": [
+            "cpu_mps_research_signal_not_score_evidence",
+            "no_score_claim_from_normalized_manifest",
+            "not_exact_cuda_auth_eval",
+            "no_adjudicated_contest_archive",
+            "not_promotion_eligible"
+          ],
+          "dispatchable": false,
+          "family": "renderer_self_compress",
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_claim": false
+        },
+        {
+          "best_variant_id": "c3_residual:uniform_i4lz_bytes",
+          "candidate_generation_only": true,
+          "curve_id": "c3_residual",
+          "dispatch_blockers": [
+            "cpu_mps_research_signal_not_score_evidence",
+            "no_score_claim_from_normalized_manifest",
+            "not_exact_cuda_auth_eval",
+            "no_adjudicated_contest_archive",
+            "not_promotion_eligible"
+          ],
+          "dispatchable": false,
+          "family": "renderer_self_compress",
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_claim": false
+        },
+        {
+          "best_variant_id": "alpha_0_9",
+          "candidate_generation_only": true,
+          "curve_id": "post_hoc_sparsity_alpha",
+          "dispatch_blockers": [
+            "cpu_mps_research_signal_not_score_evidence",
+            "no_score_claim_from_normalized_manifest",
+            "not_exact_cuda_auth_eval",
+            "no_adjudicated_contest_archive",
+            "not_promotion_eligible"
+          ],
+          "dispatchable": false,
+          "family": "pr101_sparsity",
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_claim": false
+        }
+      ],
+      "dispatch_blockers": [
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatchable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "reason": "Cheapest normalized curves can choose CPU/MPS follow-up order, not score rank or GPU dispatch.",
+      "recommendation": "use_top_research_curves_for_local_build_order_only",
+      "score_claim": false
+    },
+    {
+      "dispatch_blockers": [
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatchable": false,
+      "gates": [
+        "produce_score_affecting_archive_with_changed_payload_bytes",
+        "record_archive_bytes_sha256_runtime_tree_and_manifest",
+        "run_strict_pre_submission_compliance_check",
+        "claim_lane_dispatch_before_any_gpu_eval",
+        "run_full_sample_contest_cuda_auth_eval",
+        "adjudicate_components_rate_term_and_payload_closure"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "reason": "Every normalized row is CPU/MPS or prediction evidence and must pass archive, compliance, lane-claim, and full CUDA auth-eval gates before score use.",
+      "recommendation": "preserve_exact_cuda_promotion_gates",
+      "score_claim": false
+    }
+  ],
+  "evidence_grade": "empirical",
+  "evidence_semantics": "cpu_mps_curve_shape_and_byte_planning_only",
+  "exact_cuda_promotion_gates": [
+    "produce_score_affecting_archive_with_changed_payload_bytes",
+    "record_archive_bytes_sha256_runtime_tree_and_manifest",
+    "run_strict_pre_submission_compliance_check",
+    "claim_lane_dispatch_before_any_gpu_eval",
+    "run_full_sample_contest_cuda_auth_eval",
+    "adjudicate_components_rate_term_and_payload_closure"
+  ],
+  "forbidden_uses": [
+    "score_claim",
+    "promotion",
+    "rank_frontier_candidate",
+    "method_retirement",
+    "exact_eval_dispatch_authorization"
+  ],
+  "lightning_arch_shrink_state": {
+    "active_claims": [
+      {
+        "agent": "claude_lab",
+        "expires_at": "2026-05-08T20:43:09Z",
+        "instance_job_id": "arch-shrink-x0-4-lightning-20260508T024304Z",
+        "lane_id": "arch_shrink_x0.4_lightning",
+        "notes": "FULL Lightning T4 train+archive+auth-eval via experiments/arch_shrink_x0.4_lightning_full.py 2026-05-08T02:43:09Z; force-claim: round-3 fix: train_renderer ego_flow+pose forward + force-stage optimized_poses.pt past EXCLUDED_PREFIXES; prior dispatch ended terminal failed_artifact_rsync_rc_23",
+        "platform": "lightning",
+        "status": "active_dispatching",
+        "timestamp_utc": "2026-05-08T02:43:09Z"
+      }
+    ],
+    "active_jobs": [
+      {
+        "expected_artifact_dir": "experiments/results/lightning_batch/arch-shrink-x0-4-lightning-20260508T024304Z",
+        "expected_auth_eval_json": "experiments/results/lightning_batch/arch-shrink-x0-4-lightning-20260508T024304Z/contest_auth_eval.json",
+        "job_name": "arch-shrink-x0-4-lightning-20260508T024304Z",
+        "lane_id": "arch_shrink_x0.4_lightning",
+        "machine": "g4dn.2xlarge",
+        "predicted_band": [
+          0.4,
+          0.8
+        ],
+        "profile": "q_faithful_dilated_88k",
+        "submitted_at_utc": "2026-05-08T02:43:10Z",
+        "target_elements": 88000,
+        "terminal_status": null
+      }
+    ],
+    "do_not_duplicate_dispatch": true
+  },
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "row_count": 22,
+  "rows": [
+    {
+      "archive_bytes": 100000,
+      "byte_delta_vs_anchor": -80000,
+      "curve_id": "width_x0_4",
+      "device_family": "mps",
+      "dispatch_blockers": [
+        "mps_proxy_signal_not_score_evidence",
+        "not_cuda_auth_eval",
+        "no_exact_archive_adjudication",
+        "not_promotion_eligible",
+        "requires_exact_cuda_auth_eval_before_any_score_use",
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "evidence_grade": "empirical",
+      "evidence_semantics": "mps_proxy_curve_shape_only",
+      "family": "arch_shrink",
+      "metric_direction": "lower_is_better",
+      "metric_name": "proxy_loss",
+      "metric_value": 0.55,
+      "params": {
+        "epoch": 0,
+        "width_mult": 0.4
+      },
+      "payload_bytes": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_signal_only": true,
+      "score_claim": false,
+      "source_artifact": "experiments/results/mps_research_signal_smoke_20260507_codex/observations.json",
+      "source_path": "experiments/results/mps_research_signal_smoke_20260507_codex/manifest.json",
+      "source_schema": "mps_research_signal_manifest.v1",
+      "variant_id": "epoch_000"
+    },
+    {
+      "archive_bytes": 120000,
+      "byte_delta_vs_anchor": -60000,
+      "curve_id": "width_x0_4",
+      "device_family": "mps",
+      "dispatch_blockers": [
+        "mps_proxy_signal_not_score_evidence",
+        "not_cuda_auth_eval",
+        "no_exact_archive_adjudication",
+        "not_promotion_eligible",
+        "requires_exact_cuda_auth_eval_before_any_score_use",
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "evidence_grade": "empirical",
+      "evidence_semantics": "mps_proxy_curve_shape_only",
+      "family": "arch_shrink",
+      "metric_direction": "lower_is_better",
+      "metric_name": "proxy_loss",
+      "metric_value": 0.2,
+      "params": {
+        "epoch": 10,
+        "width_mult": 0.4
+      },
+      "payload_bytes": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_signal_only": true,
+      "score_claim": false,
+      "source_artifact": "experiments/results/mps_research_signal_smoke_20260507_codex/observations.json",
+      "source_path": "experiments/results/mps_research_signal_smoke_20260507_codex/manifest.json",
+      "source_schema": "mps_research_signal_manifest.v1",
+      "variant_id": "epoch_010"
+    },
+    {
+      "archive_bytes": 180000,
+      "byte_delta_vs_anchor": 0,
+      "curve_id": "width_x0_4",
+      "device_family": "mps",
+      "dispatch_blockers": [
+        "mps_proxy_signal_not_score_evidence",
+        "not_cuda_auth_eval",
+        "no_exact_archive_adjudication",
+        "not_promotion_eligible",
+        "requires_exact_cuda_auth_eval_before_any_score_use",
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "evidence_grade": "empirical",
+      "evidence_semantics": "mps_proxy_curve_shape_only",
+      "family": "arch_shrink",
+      "metric_direction": "lower_is_better",
+      "metric_name": "proxy_loss",
+      "metric_value": 0.18,
+      "params": {
+        "epoch": 20,
+        "width_mult": 0.4
+      },
+      "payload_bytes": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_signal_only": true,
+      "score_claim": false,
+      "source_artifact": "experiments/results/mps_research_signal_smoke_20260507_codex/observations.json",
+      "source_path": "experiments/results/mps_research_signal_smoke_20260507_codex/manifest.json",
+      "source_schema": "mps_research_signal_manifest.v1",
+      "variant_id": "epoch_020"
+    },
+    {
+      "archive_bytes": 63037,
+      "byte_delta_vs_anchor": -115107,
+      "curve_id": "imp_plus_self_compress_hnerv",
+      "device_family": "cpu",
+      "dispatch_blockers": [
+        "no_trained_checkpoint_for_this_architecture",
+        "no_runtime_decoder_schema_manifest_for_shrunk_HNeRV",
+        "no_inflate_output_parity_or_score_delta_classification",
+        "no_exact_cuda_auth_eval",
+        "unstructured_sparsity_mask_overhead_is_prediction_only",
+        "quantized_runtime_export_not_implemented_for_target_bits",
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "evidence_grade": "prediction",
+      "evidence_semantics": "cpu_rate_side_architecture_prediction_no_score",
+      "family": "imp_plus_self_compress_hnerv",
+      "metric_direction": "lower_is_better",
+      "metric_name": "expected_archive_bytes",
+      "metric_value": 63037,
+      "params": {
+        "active_symbols": 72123,
+        "element_retention": 0.42,
+        "entropy_ratio_to_current_h0": 0.86,
+        "post_arch_symbols": 96163,
+        "predicted_h0_bits_per_active_symbol": 4.0,
+        "quant_bits": 4.0,
+        "sparse_mask_mode": "unstructured_bitmask_brotli_estimate",
+        "sparsity": 0.25
+      },
+      "payload_bytes": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_signal_only": true,
+      "score_claim": false,
+      "source_artifact": "",
+      "source_path": "experiments/results/pr101_arch_shrink_retraining_plan_20260507_worker_b/plan.json",
+      "source_schema": "pr101_arch_shrink_retraining_plan.v1",
+      "variant_id": "stage_e_high_risk_int4_sparse"
+    },
+    {
+      "archive_bytes": 67235,
+      "byte_delta_vs_anchor": -110909,
+      "curve_id": "self_compress_width_precision_hnerv",
+      "device_family": "cpu",
+      "dispatch_blockers": [
+        "no_trained_checkpoint_for_this_architecture",
+        "no_runtime_decoder_schema_manifest_for_shrunk_HNeRV",
+        "no_inflate_output_parity_or_score_delta_classification",
+        "no_exact_cuda_auth_eval",
+        "quantized_runtime_export_not_implemented_for_target_bits",
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "evidence_grade": "prediction",
+      "evidence_semantics": "cpu_rate_side_architecture_prediction_no_score",
+      "family": "self_compress_width_precision_hnerv",
+      "metric_direction": "lower_is_better",
+      "metric_name": "expected_archive_bytes",
+      "metric_value": 67235,
+      "params": {
+        "active_symbols": 92729,
+        "element_retention": 0.45,
+        "entropy_ratio_to_current_h0": 0.9,
+        "post_arch_symbols": 103032,
+        "predicted_h0_bits_per_active_symbol": 4.0,
+        "quant_bits": 4.0,
+        "sparse_mask_mode": "structured_channel_manifest",
+        "sparsity": 0.1
+      },
+      "payload_bytes": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_signal_only": true,
+      "score_claim": false,
+      "source_artifact": "",
+      "source_path": "experiments/results/pr101_arch_shrink_retraining_plan_20260507_worker_b/plan.json",
+      "source_schema": "pr101_arch_shrink_retraining_plan.v1",
+      "variant_id": "stage_d_zeta_width_precision_int4"
+    },
+    {
+      "archive_bytes": 102994,
+      "byte_delta_vs_anchor": -75150,
+      "curve_id": "hnerv_arch_shrink_deltaepszeta",
+      "device_family": "cpu",
+      "dispatch_blockers": [
+        "no_trained_checkpoint_for_this_architecture",
+        "no_runtime_decoder_schema_manifest_for_shrunk_HNeRV",
+        "no_inflate_output_parity_or_score_delta_classification",
+        "no_exact_cuda_auth_eval",
+        "quantized_runtime_export_not_implemented_for_target_bits",
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "evidence_grade": "prediction",
+      "evidence_semantics": "cpu_rate_side_architecture_prediction_no_score",
+      "family": "hnerv_arch_shrink_deltaepszeta",
+      "metric_direction": "lower_is_better",
+      "metric_name": "expected_archive_bytes",
+      "metric_value": 102994,
+      "params": {
+        "active_symbols": 128217,
+        "element_retention": 0.56,
+        "entropy_ratio_to_current_h0": 0.94,
+        "post_arch_symbols": 128217,
+        "predicted_h0_bits_per_active_symbol": 5.249258124430237,
+        "quant_bits": 6.0,
+        "sparse_mask_mode": "none",
+        "sparsity": 0.0
+      },
+      "payload_bytes": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_signal_only": true,
+      "score_claim": false,
+      "source_artifact": "",
+      "source_path": "experiments/results/pr101_arch_shrink_retraining_plan_20260507_worker_b/plan.json",
+      "source_schema": "pr101_arch_shrink_retraining_plan.v1",
+      "variant_id": "stage_c_width075_int6_qat_dez"
+    },
+    {
+      "archive_bytes": 116241,
+      "byte_delta_vs_anchor": -61903,
+      "curve_id": "hnerv_arch_shrink_deltaepszeta",
+      "device_family": "cpu",
+      "dispatch_blockers": [
+        "no_trained_checkpoint_for_this_architecture",
+        "no_runtime_decoder_schema_manifest_for_shrunk_HNeRV",
+        "no_inflate_output_parity_or_score_delta_classification",
+        "no_exact_cuda_auth_eval",
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "evidence_grade": "prediction",
+      "evidence_semantics": "cpu_rate_side_architecture_prediction_no_score",
+      "family": "hnerv_arch_shrink_deltaepszeta",
+      "metric_direction": "lower_is_better",
+      "metric_name": "expected_archive_bytes",
+      "metric_value": 116241,
+      "params": {
+        "active_symbols": 146534,
+        "element_retention": 0.64,
+        "entropy_ratio_to_current_h0": 0.96,
+        "post_arch_symbols": 146534,
+        "predicted_h0_bits_per_active_symbol": 5.360944467503221,
+        "quant_bits": 8.0,
+        "sparse_mask_mode": "none",
+        "sparsity": 0.0
+      },
+      "payload_bytes": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_signal_only": true,
+      "score_claim": false,
+      "source_artifact": "",
+      "source_path": "experiments/results/pr101_arch_shrink_retraining_plan_20260507_worker_b/plan.json",
+      "source_schema": "pr101_arch_shrink_retraining_plan.v1",
+      "variant_id": "stage_b_width080_int8_dez"
+    },
+    {
+      "archive_bytes": 145077,
+      "byte_delta_vs_anchor": -33067,
+      "curve_id": "hnerv_arch_shrink_deltaepszeta",
+      "device_family": "cpu",
+      "dispatch_blockers": [
+        "no_trained_checkpoint_for_this_architecture",
+        "no_runtime_decoder_schema_manifest_for_shrunk_HNeRV",
+        "no_inflate_output_parity_or_score_delta_classification",
+        "no_exact_cuda_auth_eval",
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "evidence_grade": "prediction",
+      "evidence_semantics": "cpu_rate_side_architecture_prediction_no_score",
+      "family": "hnerv_arch_shrink_deltaepszeta",
+      "metric_direction": "lower_is_better",
+      "metric_name": "expected_archive_bytes",
+      "metric_value": 145077,
+      "params": {
+        "active_symbols": 185456,
+        "element_retention": 0.81,
+        "entropy_ratio_to_current_h0": 0.98,
+        "post_arch_symbols": 185456,
+        "predicted_h0_bits_per_active_symbol": 5.472630810576205,
+        "quant_bits": 8.0,
+        "sparse_mask_mode": "none",
+        "sparsity": 0.0
+      },
+      "payload_bytes": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_signal_only": true,
+      "score_claim": false,
+      "source_artifact": "",
+      "source_path": "experiments/results/pr101_arch_shrink_retraining_plan_20260507_worker_b/plan.json",
+      "source_schema": "pr101_arch_shrink_retraining_plan.v1",
+      "variant_id": "stage_a_width090_int8_rate_shape"
+    },
+    {
+      "archive_bytes": 178258,
+      "byte_delta_vs_anchor": 114,
+      "curve_id": "hnerv_arch_shrink_deltaepszeta",
+      "device_family": "cpu",
+      "dispatch_blockers": [
+        "no_trained_checkpoint_for_this_architecture",
+        "no_runtime_decoder_schema_manifest_for_shrunk_HNeRV",
+        "no_inflate_output_parity_or_score_delta_classification",
+        "no_exact_cuda_auth_eval",
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "evidence_grade": "prediction",
+      "evidence_semantics": "cpu_rate_side_architecture_prediction_no_score",
+      "family": "hnerv_arch_shrink_deltaepszeta",
+      "metric_direction": "lower_is_better",
+      "metric_name": "expected_archive_bytes",
+      "metric_value": 178258,
+      "params": {
+        "active_symbols": 228958,
+        "element_retention": 1.0,
+        "entropy_ratio_to_current_h0": 1.0,
+        "post_arch_symbols": 228958,
+        "predicted_h0_bits_per_active_symbol": 5.584317153649189,
+        "quant_bits": 8.0,
+        "sparse_mask_mode": "none",
+        "sparsity": 0.0
+      },
+      "payload_bytes": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_signal_only": true,
+      "score_claim": false,
+      "source_artifact": "",
+      "source_path": "experiments/results/pr101_arch_shrink_retraining_plan_20260507_worker_b/plan.json",
+      "source_schema": "pr101_arch_shrink_retraining_plan.v1",
+      "variant_id": "control_current_pr101_int8"
+    },
+    {
+      "archive_bytes": 49137,
+      "byte_delta_vs_anchor": null,
+      "curve_id": "post_hoc_sparsity_alpha",
+      "device_family": "cpu",
+      "dispatch_blockers": [
+        "post_hoc_sparsity_not_retrained",
+        "score_impact_unknown_without_contest_cuda",
+        "no_archive_substitution_performed",
+        "missing_exact_cuda_auth_eval",
+        "no_decoder_packet_built",
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "evidence_grade": "empirical",
+      "evidence_semantics": "post_hoc_byte_anchor_no_retraining_no_score",
+      "family": "pr101_sparsity",
+      "metric_direction": "lower_is_better",
+      "metric_name": "archive_bytes",
+      "metric_value": 49137,
+      "params": {
+        "alpha": 0.9,
+        "fraction_zeroed": 0.899990391250797
+      },
+      "payload_bytes": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_signal_only": true,
+      "score_claim": false,
+      "source_artifact": "",
+      "source_path": "reports/raw/pr101_sparsity_sweep_20260508T002611Z/manifest.json",
+      "source_schema": "pr101_sparsity_block_sweep.v1",
+      "variant_id": "alpha_0_9"
+    },
+    {
+      "archive_bytes": 73220,
+      "byte_delta_vs_anchor": null,
+      "curve_id": "post_hoc_sparsity_alpha",
+      "device_family": "cpu",
+      "dispatch_blockers": [
+        "post_hoc_sparsity_not_retrained",
+        "score_impact_unknown_without_contest_cuda",
+        "no_archive_substitution_performed",
+        "missing_exact_cuda_auth_eval",
+        "no_decoder_packet_built",
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "evidence_grade": "empirical",
+      "evidence_semantics": "post_hoc_byte_anchor_no_retraining_no_score",
+      "family": "pr101_sparsity",
+      "metric_direction": "lower_is_better",
+      "metric_name": "archive_bytes",
+      "metric_value": 73220,
+      "params": {
+        "alpha": 0.8,
+        "fraction_zeroed": 0.7999938853414164
+      },
+      "payload_bytes": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_signal_only": true,
+      "score_claim": false,
+      "source_artifact": "",
+      "source_path": "reports/raw/pr101_sparsity_sweep_20260508T002611Z/manifest.json",
+      "source_schema": "pr101_sparsity_block_sweep.v1",
+      "variant_id": "alpha_0_8"
+    },
+    {
+      "archive_bytes": 94671,
+      "byte_delta_vs_anchor": null,
+      "curve_id": "post_hoc_sparsity_alpha",
+      "device_family": "cpu",
+      "dispatch_blockers": [
+        "post_hoc_sparsity_not_retrained",
+        "score_impact_unknown_without_contest_cuda",
+        "no_archive_substitution_performed",
+        "missing_exact_cuda_auth_eval",
+        "no_decoder_packet_built",
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "evidence_grade": "empirical",
+      "evidence_semantics": "post_hoc_byte_anchor_no_retraining_no_score",
+      "family": "pr101_sparsity",
+      "metric_direction": "lower_is_better",
+      "metric_name": "archive_bytes",
+      "metric_value": 94671,
+      "params": {
+        "alpha": 0.7,
+        "fraction_zeroed": 0.7000017470453096
+      },
+      "payload_bytes": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_signal_only": true,
+      "score_claim": false,
+      "source_artifact": "",
+      "source_path": "reports/raw/pr101_sparsity_sweep_20260508T002611Z/manifest.json",
+      "source_schema": "pr101_sparsity_block_sweep.v1",
+      "variant_id": "alpha_0_7"
+    },
+    {
+      "archive_bytes": 114538,
+      "byte_delta_vs_anchor": null,
+      "curve_id": "post_hoc_sparsity_alpha",
+      "device_family": "cpu",
+      "dispatch_blockers": [
+        "post_hoc_sparsity_not_retrained",
+        "score_impact_unknown_without_contest_cuda",
+        "no_archive_substitution_performed",
+        "missing_exact_cuda_auth_eval",
+        "no_decoder_packet_built",
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "evidence_grade": "empirical",
+      "evidence_semantics": "post_hoc_byte_anchor_no_retraining_no_score",
+      "family": "pr101_sparsity",
+      "metric_direction": "lower_is_better",
+      "metric_name": "archive_bytes",
+      "metric_value": 114538,
+      "params": {
+        "alpha": 0.6,
+        "fraction_zeroed": 0.6000008735226549
+      },
+      "payload_bytes": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_signal_only": true,
+      "score_claim": false,
+      "source_artifact": "",
+      "source_path": "reports/raw/pr101_sparsity_sweep_20260508T002611Z/manifest.json",
+      "source_schema": "pr101_sparsity_block_sweep.v1",
+      "variant_id": "alpha_0_6"
+    },
+    {
+      "archive_bytes": 131967,
+      "byte_delta_vs_anchor": null,
+      "curve_id": "post_hoc_sparsity_alpha",
+      "device_family": "cpu",
+      "dispatch_blockers": [
+        "post_hoc_sparsity_not_retrained",
+        "score_impact_unknown_without_contest_cuda",
+        "no_archive_substitution_performed",
+        "missing_exact_cuda_auth_eval",
+        "no_decoder_packet_built",
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "evidence_grade": "empirical",
+      "evidence_semantics": "post_hoc_byte_anchor_no_retraining_no_score",
+      "family": "pr101_sparsity",
+      "metric_direction": "lower_is_better",
+      "metric_name": "archive_bytes",
+      "metric_value": 131967,
+      "params": {
+        "alpha": 0.5,
+        "fraction_zeroed": 0.49999563238672595
+      },
+      "payload_bytes": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_signal_only": true,
+      "score_claim": false,
+      "source_artifact": "",
+      "source_path": "reports/raw/pr101_sparsity_sweep_20260508T002611Z/manifest.json",
+      "source_schema": "pr101_sparsity_block_sweep.v1",
+      "variant_id": "alpha_0_5"
+    },
+    {
+      "archive_bytes": 161646,
+      "byte_delta_vs_anchor": null,
+      "curve_id": "post_hoc_sparsity_alpha",
+      "device_family": "cpu",
+      "dispatch_blockers": [
+        "post_hoc_sparsity_not_retrained",
+        "score_impact_unknown_without_contest_cuda",
+        "no_archive_substitution_performed",
+        "missing_exact_cuda_auth_eval",
+        "no_decoder_packet_built",
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "evidence_grade": "empirical",
+      "evidence_semantics": "post_hoc_byte_anchor_no_retraining_no_score",
+      "family": "pr101_sparsity",
+      "metric_direction": "lower_is_better",
+      "metric_name": "archive_bytes",
+      "metric_value": 161646,
+      "params": {
+        "alpha": 0.3,
+        "fraction_zeroed": 0.2999982529546904
+      },
+      "payload_bytes": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_signal_only": true,
+      "score_claim": false,
+      "source_artifact": "",
+      "source_path": "reports/raw/pr101_sparsity_sweep_20260508T002611Z/manifest.json",
+      "source_schema": "pr101_sparsity_block_sweep.v1",
+      "variant_id": "alpha_0_3"
+    },
+    {
+      "archive_bytes": 178874,
+      "byte_delta_vs_anchor": null,
+      "curve_id": "post_hoc_sparsity_alpha",
+      "device_family": "cpu",
+      "dispatch_blockers": [
+        "post_hoc_sparsity_not_retrained",
+        "score_impact_unknown_without_contest_cuda",
+        "no_archive_substitution_performed",
+        "missing_exact_cuda_auth_eval",
+        "no_decoder_packet_built",
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "evidence_grade": "empirical",
+      "evidence_semantics": "post_hoc_byte_anchor_no_retraining_no_score",
+      "family": "pr101_sparsity",
+      "metric_direction": "lower_is_better",
+      "metric_name": "archive_bytes",
+      "metric_value": 178874,
+      "params": {
+        "alpha": 0.0,
+        "fraction_zeroed": 0.0
+      },
+      "payload_bytes": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_signal_only": true,
+      "score_claim": false,
+      "source_artifact": "",
+      "source_path": "reports/raw/pr101_sparsity_sweep_20260508T002611Z/manifest.json",
+      "source_schema": "pr101_sparsity_block_sweep.v1",
+      "variant_id": "alpha_0"
+    },
+    {
+      "archive_bytes": null,
+      "byte_delta_vs_anchor": null,
+      "curve_id": "c3_residual",
+      "device_family": "cpu",
+      "dispatch_blockers": [
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "evidence_grade": "empirical",
+      "evidence_semantics": "local_renderer_self_compression_payload_bytes_no_score",
+      "family": "renderer_self_compress",
+      "metric_direction": "lower_is_better",
+      "metric_name": "payload_bytes",
+      "metric_value": 16877,
+      "params": {
+        "codec": "uniform_i4lz_bytes",
+        "param_count": 36492,
+        "state_path": "experiments/results/local_smoke_coolchic_c3_20260425/c3_residual/renderer_local_c3_residual_smoke_20260425_best_fp32.pt"
+      },
+      "payload_bytes": 16877,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_signal_only": true,
+      "score_claim": false,
+      "source_artifact": "experiments/results/local_smoke_coolchic_c3_20260425/c3_residual/renderer_local_c3_residual_smoke_20260425_best_fp32.pt",
+      "source_path": "experiments/results/local_smoke_coolchic_c3_20260425/self_compress/summary.json",
+      "source_schema": "renderer_self_compress_summary.inferred",
+      "variant_id": "c3_residual:uniform_i4lz_bytes"
+    },
+    {
+      "archive_bytes": null,
+      "byte_delta_vs_anchor": null,
+      "curve_id": "c3_residual",
+      "device_family": "cpu",
+      "dispatch_blockers": [
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "evidence_grade": "empirical",
+      "evidence_semantics": "local_renderer_self_compression_payload_bytes_no_score",
+      "family": "renderer_self_compress",
+      "metric_direction": "lower_is_better",
+      "metric_name": "payload_bytes",
+      "metric_value": 19921,
+      "params": {
+        "codec": "mixed_latents8_bytes",
+        "param_count": 36492,
+        "state_path": "experiments/results/local_smoke_coolchic_c3_20260425/c3_residual/renderer_local_c3_residual_smoke_20260425_best_fp32.pt"
+      },
+      "payload_bytes": 19921,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_signal_only": true,
+      "score_claim": false,
+      "source_artifact": "experiments/results/local_smoke_coolchic_c3_20260425/c3_residual/renderer_local_c3_residual_smoke_20260425_best_fp32.pt",
+      "source_path": "experiments/results/local_smoke_coolchic_c3_20260425/self_compress/summary.json",
+      "source_schema": "renderer_self_compress_summary.inferred",
+      "variant_id": "c3_residual:mixed_latents8_bytes"
+    },
+    {
+      "archive_bytes": null,
+      "byte_delta_vs_anchor": null,
+      "curve_id": "coolchic",
+      "device_family": "cpu",
+      "dispatch_blockers": [
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "evidence_grade": "empirical",
+      "evidence_semantics": "local_renderer_self_compression_payload_bytes_no_score",
+      "family": "renderer_self_compress",
+      "metric_direction": "lower_is_better",
+      "metric_name": "payload_bytes",
+      "metric_value": 16509,
+      "params": {
+        "codec": "uniform_i4lz_bytes",
+        "param_count": 37170,
+        "state_path": "experiments/results/local_smoke_coolchic_c3_20260425/coolchic/renderer_local_coolchic_smoke_20260425_best_fp32.pt"
+      },
+      "payload_bytes": 16509,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_signal_only": true,
+      "score_claim": false,
+      "source_artifact": "experiments/results/local_smoke_coolchic_c3_20260425/coolchic/renderer_local_coolchic_smoke_20260425_best_fp32.pt",
+      "source_path": "experiments/results/local_smoke_coolchic_c3_20260425/self_compress/summary.json",
+      "source_schema": "renderer_self_compress_summary.inferred",
+      "variant_id": "coolchic:uniform_i4lz_bytes"
+    },
+    {
+      "archive_bytes": null,
+      "byte_delta_vs_anchor": null,
+      "curve_id": "coolchic",
+      "device_family": "cpu",
+      "dispatch_blockers": [
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "evidence_grade": "empirical",
+      "evidence_semantics": "local_renderer_self_compression_payload_bytes_no_score",
+      "family": "renderer_self_compress",
+      "metric_direction": "lower_is_better",
+      "metric_name": "payload_bytes",
+      "metric_value": 20590,
+      "params": {
+        "codec": "mixed_latents8_bytes",
+        "param_count": 37170,
+        "state_path": "experiments/results/local_smoke_coolchic_c3_20260425/coolchic/renderer_local_coolchic_smoke_20260425_best_fp32.pt"
+      },
+      "payload_bytes": 20590,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_signal_only": true,
+      "score_claim": false,
+      "source_artifact": "experiments/results/local_smoke_coolchic_c3_20260425/coolchic/renderer_local_coolchic_smoke_20260425_best_fp32.pt",
+      "source_path": "experiments/results/local_smoke_coolchic_c3_20260425/self_compress/summary.json",
+      "source_schema": "renderer_self_compress_summary.inferred",
+      "variant_id": "coolchic:mixed_latents8_bytes"
+    },
+    {
+      "archive_bytes": null,
+      "byte_delta_vs_anchor": null,
+      "curve_id": "general_compressor_headroom",
+      "device_family": "cpu",
+      "dispatch_blockers": [
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "evidence_grade": "empirical",
+      "evidence_semantics": "generic_renderer_bin_recompression_probe_no_score",
+      "family": "renderer_bin_recompression",
+      "metric_direction": "lower_is_better",
+      "metric_name": "payload_bytes",
+      "metric_value": 296776,
+      "params": {},
+      "payload_bytes": 296776,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_signal_only": true,
+      "score_claim": false,
+      "source_artifact": "",
+      "source_path": "experiments/results/lane_e_self_compression/results.json",
+      "source_schema": "lane_e_self_compression_results.inferred",
+      "variant_id": "original_renderer_bin"
+    },
+    {
+      "archive_bytes": null,
+      "byte_delta_vs_anchor": null,
+      "curve_id": "general_compressor_headroom",
+      "device_family": "cpu",
+      "dispatch_blockers": [
+        "cpu_mps_research_signal_not_score_evidence",
+        "no_score_claim_from_normalized_manifest",
+        "not_exact_cuda_auth_eval",
+        "no_adjudicated_contest_archive",
+        "not_promotion_eligible"
+      ],
+      "dispatch_recommendation": "do_not_dispatch_from_cpu_mps_research_signal",
+      "dispatchable": false,
+      "evidence_grade": "empirical",
+      "evidence_semantics": "generic_renderer_bin_recompression_probe_no_score",
+      "family": "renderer_bin_recompression",
+      "metric_direction": "lower_is_better",
+      "metric_name": "payload_bytes",
+      "metric_value": 261806,
+      "params": {
+        "rate_savings_brotli": 0.0233
+      },
+      "payload_bytes": 261806,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "research_signal_only": true,
+      "score_claim": false,
+      "source_artifact": "",
+      "source_path": "experiments/results/lane_e_self_compression/results.json",
+      "source_schema": "lane_e_self_compression_results.inferred",
+      "variant_id": "brotli_q11_renderer_bin"
+    }
+  ],
+  "run_id": "architecture_sweep_recommendations_20260508_codex",
+  "schema": "architecture_sweep_recommendations.v1",
+  "score_claim": false,
+  "source_manifests": [
+    {
+      "row_count": 3,
+      "schema": "mps_research_signal_manifest.v1",
+      "source_path": "experiments/results/mps_research_signal_smoke_20260507_codex/manifest.json"
+    },
+    {
+      "row_count": 6,
+      "schema": "pr101_arch_shrink_retraining_plan.v1",
+      "source_path": "experiments/results/pr101_arch_shrink_retraining_plan_20260507_worker_b/plan.json"
+    },
+    {
+      "row_count": 7,
+      "schema": "pr101_sparsity_block_sweep.v1",
+      "source_path": "reports/raw/pr101_sparsity_sweep_20260508T002611Z/manifest.json"
+    },
+    {
+      "row_count": 4,
+      "schema": "renderer_self_compress_summary.inferred",
+      "source_path": "experiments/results/local_smoke_coolchic_c3_20260425/self_compress/summary.json"
+    },
+    {
+      "row_count": 2,
+      "schema": "lane_e_self_compression_results.inferred",
+      "source_path": "experiments/results/lane_e_self_compression/results.json"
+    }
+  ],
+  "tool": "tac.optimization.architecture_sweep_recommendations"
+}
