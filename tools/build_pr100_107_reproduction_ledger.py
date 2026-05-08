@@ -112,6 +112,7 @@ def _extract_result_json_from_log(
         return {
             **_extract_score_payload(payload),
             "source": _rel(path, repo_root),
+            "source_kind": "embedded_result_json_log",
         }
     return None
 
@@ -161,6 +162,18 @@ def _same_archive_structured_json_exact_evals(
     ]
 
 
+def _same_archive_embedded_result_json_exact_evals(
+    *,
+    archive: dict[str, Any],
+    exact_evals: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    return [
+        row
+        for row in _same_archive_exact_evals(archive=archive, exact_evals=exact_evals)
+        if row.get("structured_result_kind") == "embedded_result_json_log"
+    ]
+
+
 def _same_archive_cuda_exact_evals(
     *,
     archive: dict[str, Any],
@@ -198,6 +211,11 @@ def _exact_eval_summary(
     same_archive_json = [
         row for row in same_archive if row.get("json_files")
     ]
+    same_archive_embedded_result_json = [
+        row
+        for row in same_archive
+        if row.get("structured_result_kind") == "embedded_result_json_log"
+    ]
     identities = [_replay_identity(row) for row in same_archive_scored]
     unique_identity_keys = {
         (
@@ -213,6 +231,7 @@ def _exact_eval_summary(
         "same_archive_scored_eval_count": len(same_archive_scored),
         "same_archive_cuda_scored_eval_count": len(same_archive_cuda),
         "same_archive_structured_json_eval_count": len(same_archive_json),
+        "same_archive_embedded_result_json_eval_count": len(same_archive_embedded_result_json),
         "identity_basis": ["archive_sha256", "device", "runtime_tree_sha256"],
         "same_archive_device_runtime_identity_count": len(unique_identity_keys),
         "same_archive_replay_identities": identities,
@@ -581,6 +600,7 @@ def _exact_eval_artifacts(pr: int, repo_root: pathlib.Path) -> list[dict[str, An
             "avg_segnet_dist": None,
             "runtime_tree_sha256": None,
             "structured_result_source": None,
+            "structured_result_kind": None,
         }
         for json_file in json_files:
             try:
@@ -590,6 +610,7 @@ def _exact_eval_artifacts(pr: int, repo_root: pathlib.Path) -> list[dict[str, An
             normalized = _extract_score_payload(payload)
             row.update({k: v for k, v in normalized.items() if v is not None})
             row["structured_result_source"] = _rel(json_file, repo_root)
+            row["structured_result_kind"] = "contest_auth_eval_json_file"
             if row["score"] is not None:
                 break
         if row["score"] is None:
@@ -599,6 +620,7 @@ def _exact_eval_artifacts(pr: int, repo_root: pathlib.Path) -> list[dict[str, An
                     continue
                 row.update({k: v for k, v in normalized.items() if v is not None})
                 row["structured_result_source"] = normalized.get("source")
+                row["structured_result_kind"] = normalized.get("source_kind")
                 if row["score"] is not None:
                     break
         artifacts.append(row)
@@ -748,6 +770,13 @@ def build_ledger(
                 1
                 for row in rows
                 if "same_archive_structured_exact_eval_json_missing" in row["missing_proofs"]
+            ),
+            "same_archive_embedded_result_json_count": sum(
+                row.get("exact_eval_summary", {}).get(
+                    "same_archive_embedded_result_json_eval_count",
+                    0,
+                )
+                for row in rows
             ),
             "missing_decode_reencode_count": sum(
                 1

@@ -171,8 +171,10 @@ def test_exact_eval_artifact_parses_result_json_from_legacy_log(tmp_path: pathli
     assert artifact["score"] == 0.22826947142244708
     assert artifact["score_basis"] == "canonical_score"
     assert artifact["device"] == "cuda"
+    assert artifact["structured_result_kind"] == "embedded_result_json_log"
     assert row["exact_eval_summary"]["same_archive_scored_eval_count"] == 1
     assert row["exact_eval_summary"]["same_archive_structured_json_eval_count"] == 0
+    assert row["exact_eval_summary"]["same_archive_embedded_result_json_eval_count"] == 1
     assert "same_archive_structured_exact_eval_json_missing" in row["missing_proofs"]
     drift = row["leaderboard_replay_drift"]
     assert drift["status"] == "leaderboard_mismatches_same_archive_cuda_replay"
@@ -226,6 +228,7 @@ def test_structured_json_must_match_source_archive(tmp_path: pathlib.Path) -> No
     assert row["exact_eval_summary"]["total_eval_dir_count"] == 2
     assert row["exact_eval_summary"]["same_archive_scored_eval_count"] == 1
     assert row["exact_eval_summary"]["same_archive_structured_json_eval_count"] == 0
+    assert row["exact_eval_summary"]["same_archive_embedded_result_json_eval_count"] == 1
     assert "structured_exact_eval_json_missing" in row["missing_proofs"]
     assert "same_archive_structured_exact_eval_json_missing" in row["missing_proofs"]
 
@@ -283,6 +286,7 @@ def test_build_ledger_and_markdown_are_non_scoring(tmp_path: pathlib.Path) -> No
     assert ledger["summary"]["missing_decode_reencode_count"] == 2
     assert ledger["summary"]["leaderboard_replay_drift_count"] == 0
     assert ledger["summary"]["missing_same_archive_structured_json_count"] == 2
+    assert ledger["summary"]["same_archive_embedded_result_json_count"] == 0
     assert "PR100-PR107 reproduction and deconstruction ledger" in md
     assert "hnerv_fixture" in md
 

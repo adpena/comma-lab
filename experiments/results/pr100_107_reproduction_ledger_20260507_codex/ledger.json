@@ -1,5 +1,5 @@
 {
-  "created_at_utc": "2026-05-08T10:55:00Z",
+  "created_at_utc": "2026-05-08T11:05:00Z",
   "evidence_grade": "[empirical:local-custody-inventory]",
   "pr_range": [
     100,
@@ -70,6 +70,8 @@
           "score": 0.22826947142244708,
           "score_basis": "canonical_score",
           "source": "experiments/results/lightning_batch/exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z/auth_eval.log",
+          "source_kind": "embedded_result_json_log",
+          "structured_result_kind": "embedded_result_json_log",
           "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z/auth_eval.log"
         }
       ],
@@ -81,6 +83,7 @@
         ],
         "same_archive_cuda_scored_eval_count": 1,
         "same_archive_device_runtime_identity_count": 1,
+        "same_archive_embedded_result_json_eval_count": 1,
         "same_archive_eval_dir_count": 1,
         "same_archive_replay_identities": [
           {
@@ -159,6 +162,7 @@
       "research_notes": [
         ".omx/research/pr100_107_public_score_drift_20260507_codex.md",
         ".omx/research/pr100_107_reproduction_deconstruction_ledger_20260507_codex.md",
+        ".omx/research/pr100_107_reproduction_ledger_20260507_codex.md",
         ".omx/research/pr107_post_submission_hardening_pr100_replay_addendum_20260504_codex.md",
         ".omx/research/pr_extended_bit_level_lineage_pr95_pr100_pr101_pr103_20260507_claude.md",
         ".omx/research/public_pr100_hnerv_lc_v2_replay_20260504_codex.md"
@@ -250,6 +254,8 @@
           "score": 0.22635331443973267,
           "score_basis": "canonical_score",
           "source": "experiments/results/lightning_batch/exact_eval_public_pr101_hnerv_ft_microcodec_t4_20260504T1302Z/auth_eval.log",
+          "source_kind": "embedded_result_json_log",
+          "structured_result_kind": "embedded_result_json_log",
           "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr101_hnerv_ft_microcodec_t4_20260504T1302Z/auth_eval.log"
         }
       ],
@@ -261,6 +267,7 @@
         ],
         "same_archive_cuda_scored_eval_count": 1,
         "same_archive_device_runtime_identity_count": 1,
+        "same_archive_embedded_result_json_eval_count": 1,
         "same_archive_eval_dir_count": 1,
         "same_archive_replay_identities": [
           {
@@ -435,6 +442,7 @@
           "runtime_tree_sha256": null,
           "score": null,
           "score_basis": null,
+          "structured_result_kind": null,
           "structured_result_source": null
         },
         {
@@ -461,6 +469,7 @@
           "runtime_tree_sha256": "62560a0411dc341286eebfaf6e8ed79564efeb14fb8da5e3e1be026611e7aba1",
           "score": 0.22839372989108092,
           "score_basis": "canonical_score",
+          "structured_result_kind": "contest_auth_eval_json_file",
           "structured_result_source": "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z/contest_auth_eval.adjudicated.json"
         }
       ],
@@ -472,6 +481,7 @@
         ],
         "same_archive_cuda_scored_eval_count": 1,
         "same_archive_device_runtime_identity_count": 1,
+        "same_archive_embedded_result_json_eval_count": 0,
         "same_archive_eval_dir_count": 2,
         "same_archive_replay_identities": [
           {
@@ -664,6 +674,8 @@
           "score": 0.2277649714224471,
           "score_basis": "canonical_score",
           "source": "experiments/results/lightning_batch/exact_eval_public_pr103_hnerv_lc_ac_t4_20260504T1245Z/auth_eval.log",
+          "source_kind": "embedded_result_json_log",
+          "structured_result_kind": "embedded_result_json_log",
           "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr103_hnerv_lc_ac_t4_20260504T1245Z/auth_eval.log"
         },
         {
@@ -689,6 +701,7 @@
           "runtime_tree_sha256": "54db9e5ddee85ae7f486fae900ff3907932efb1c8d3062bc264b0e5c7456d8f6",
           "score": 0.20898105277982337,
           "score_basis": "canonical_score",
+          "structured_result_kind": "contest_auth_eval_json_file",
           "structured_result_source": "experiments/results/lightning_batch/pr103_pr106_ac_repack_exact_eval_t4_20260507T181300Z/contest_auth_eval.adjudicated.json"
         }
       ],
@@ -700,6 +713,7 @@
         ],
         "same_archive_cuda_scored_eval_count": 1,
         "same_archive_device_runtime_identity_count": 1,
+        "same_archive_embedded_result_json_eval_count": 1,
         "same_archive_eval_dir_count": 1,
         "same_archive_replay_identities": [
           {
@@ -857,6 +871,7 @@
         ],
         "same_archive_cuda_scored_eval_count": 0,
         "same_archive_device_runtime_identity_count": 0,
+        "same_archive_embedded_result_json_eval_count": 0,
         "same_archive_eval_dir_count": 0,
         "same_archive_replay_identities": [],
         "same_archive_scored_eval_count": 0,
@@ -1000,6 +1015,7 @@
           "runtime_tree_sha256": "2ebae7632b279a736f359690eb359a8f030e7f57630ea26152591cbe05021ab6",
           "score": 0.23043732986984997,
           "score_basis": "canonical_score",
+          "structured_result_kind": "contest_auth_eval_json_file",
           "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr105_kitchen_sink_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json"
         },
         {
@@ -1025,6 +1041,7 @@
           "runtime_tree_sha256": "c97211b6deaf0796869e2201a50c3008d26cb5561a77312d539c097bee4aa7e1",
           "score": 0.23043182986984995,
           "score_basis": "canonical_score",
+          "structured_result_kind": "contest_auth_eval_json_file",
           "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr105_kitchen_sink_xrepack_t4_20260504T1342Z/contest_auth_eval.adjudicated.json"
         }
       ],
@@ -1036,6 +1053,7 @@
         ],
         "same_archive_cuda_scored_eval_count": 1,
         "same_archive_device_runtime_identity_count": 1,
+        "same_archive_embedded_result_json_eval_count": 0,
         "same_archive_eval_dir_count": 1,
         "same_archive_replay_identities": [
           {
@@ -1195,6 +1213,7 @@
           "runtime_tree_sha256": null,
           "score": null,
           "score_basis": null,
+          "structured_result_kind": null,
           "structured_result_source": null
         },
         {
@@ -1220,6 +1239,7 @@
           "runtime_tree_sha256": "bb6baee66c61781f285fee5862ab499b8eb1fec93edeea046cb3019289638fd3",
           "score": 0.20935073680571203,
           "score_basis": "canonical_score",
+          "structured_result_kind": "contest_auth_eval_json_file",
           "structured_result_source": "experiments/results/lightning_batch/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506/contest_auth_eval.adjudicated.json"
         },
         {
@@ -1245,6 +1265,7 @@
           "runtime_tree_sha256": "7f4f458f23f5c92d1e94891c27fd429266081ac66b359f40b7ce68ef4acd17dd",
           "score": 0.20945673680571203,
           "score_basis": "canonical_score",
+          "structured_result_kind": "contest_auth_eval_json_file",
           "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json"
         },
         {
@@ -1264,6 +1285,7 @@
           "runtime_tree_sha256": null,
           "score": null,
           "score_basis": null,
+          "structured_result_kind": null,
           "structured_result_source": null
         },
         {
@@ -1289,6 +1311,7 @@
           "runtime_tree_sha256": "02bbb2052ea0f5d123a6143077ce5dcda78363ffca2424214040473ac0bcb2fa",
           "score": 0.20945123680571204,
           "score_basis": "canonical_score",
+          "structured_result_kind": "contest_auth_eval_json_file",
           "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/contest_auth_eval.adjudicated.json"
         },
         {
@@ -1302,6 +1325,7 @@
           "runtime_tree_sha256": null,
           "score": null,
           "score_basis": null,
+          "structured_result_kind": null,
           "structured_result_source": null
         },
         {
@@ -1315,6 +1339,7 @@
           "runtime_tree_sha256": null,
           "score": null,
           "score_basis": null,
+          "structured_result_kind": null,
           "structured_result_source": null
         },
         {
@@ -1328,6 +1353,7 @@
           "runtime_tree_sha256": null,
           "score": null,
           "score_basis": null,
+          "structured_result_kind": null,
           "structured_result_source": null
         },
         {
@@ -1341,6 +1367,7 @@
           "runtime_tree_sha256": null,
           "score": null,
           "score_basis": null,
+          "structured_result_kind": null,
           "structured_result_source": null
         },
         {
@@ -1354,6 +1381,7 @@
           "runtime_tree_sha256": null,
           "score": null,
           "score_basis": null,
+          "structured_result_kind": null,
           "structured_result_source": null
         },
         {
@@ -1367,6 +1395,7 @@
           "runtime_tree_sha256": null,
           "score": null,
           "score_basis": null,
+          "structured_result_kind": null,
           "structured_result_source": null
         },
         {
@@ -1382,6 +1411,7 @@
           "runtime_tree_sha256": null,
           "score": null,
           "score_basis": null,
+          "structured_result_kind": null,
           "structured_result_source": null
         },
         {
@@ -1395,6 +1425,7 @@
           "runtime_tree_sha256": null,
           "score": null,
           "score_basis": null,
+          "structured_result_kind": null,
           "structured_result_source": null
         },
         {
@@ -1408,6 +1439,7 @@
           "runtime_tree_sha256": null,
           "score": null,
           "score_basis": null,
+          "structured_result_kind": null,
           "structured_result_source": null
         },
         {
@@ -1421,6 +1453,7 @@
           "runtime_tree_sha256": null,
           "score": null,
           "score_basis": null,
+          "structured_result_kind": null,
           "structured_result_source": null
         },
         {
@@ -1434,6 +1467,7 @@
           "runtime_tree_sha256": null,
           "score": null,
           "score_basis": null,
+          "structured_result_kind": null,
           "structured_result_source": null
         },
         {
@@ -1447,6 +1481,7 @@
           "runtime_tree_sha256": null,
           "score": null,
           "score_basis": null,
+          "structured_result_kind": null,
           "structured_result_source": null
         },
         {
@@ -1460,6 +1495,7 @@
           "runtime_tree_sha256": null,
           "score": null,
           "score_basis": null,
+          "structured_result_kind": null,
           "structured_result_source": null
         },
         {
@@ -1485,6 +1521,7 @@
           "runtime_tree_sha256": "54db9e5ddee85ae7f486fae900ff3907932efb1c8d3062bc264b0e5c7456d8f6",
           "score": 0.20898105277982337,
           "score_basis": "canonical_score",
+          "structured_result_kind": "contest_auth_eval_json_file",
           "structured_result_source": "experiments/results/lightning_batch/pr103_pr106_ac_repack_exact_eval_t4_20260507T181300Z/contest_auth_eval.adjudicated.json"
         },
         {
@@ -1498,6 +1535,7 @@
           "runtime_tree_sha256": null,
           "score": null,
           "score_basis": null,
+          "structured_result_kind": null,
           "structured_result_source": null
         },
         {
@@ -1511,6 +1549,7 @@
           "runtime_tree_sha256": null,
           "score": null,
           "score_basis": null,
+          "structured_result_kind": null,
           "structured_result_source": null
         },
         {
@@ -1536,6 +1575,7 @@
           "runtime_tree_sha256": "234b720845c25390718eff2f7971657dacddafd3f8e1984bdc2973fab31d8c1b",
           "score": 0.3371617511972341,
           "score_basis": "canonical_score",
+          "structured_result_kind": "contest_auth_eval_json_file",
           "structured_result_source": "experiments/results/lightning_batch/pr106-uniward-rms005-exact-20260508T083555Z/contest_auth_eval.adjudicated.json"
         },
         {
@@ -1549,6 +1589,7 @@
           "runtime_tree_sha256": null,
           "score": null,
           "score_basis": null,
+          "structured_result_kind": null,
           "structured_result_source": null
         },
         {
@@ -1562,6 +1603,7 @@
           "runtime_tree_sha256": null,
           "score": null,
           "score_basis": null,
+          "structured_result_kind": null,
           "structured_result_source": null
         },
         {
@@ -1575,6 +1617,7 @@
           "runtime_tree_sha256": null,
           "score": null,
           "score_basis": null,
+          "structured_result_kind": null,
           "structured_result_source": null
         },
         {
@@ -1588,6 +1631,7 @@
           "runtime_tree_sha256": null,
           "score": null,
           "score_basis": null,
+          "structured_result_kind": null,
           "structured_result_source": null
         }
       ],
@@ -1599,6 +1643,7 @@
         ],
         "same_archive_cuda_scored_eval_count": 1,
         "same_archive_device_runtime_identity_count": 1,
+        "same_archive_embedded_result_json_eval_count": 0,
         "same_archive_eval_dir_count": 2,
         "same_archive_replay_identities": [
           {
@@ -1823,6 +1868,8 @@
           "score": 0.22933111465960354,
           "score_basis": "canonical_score",
           "source": "experiments/results/lightning_batch/exact_eval_public_pr98_hnerv_adapter_t4_20260504T0958Z/auth_eval.log",
+          "source_kind": "embedded_result_json_log",
+          "structured_result_kind": "embedded_result_json_log",
           "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr98_hnerv_adapter_t4_20260504T0958Z/auth_eval.log"
         }
       ],
@@ -1834,6 +1881,7 @@
         ],
         "same_archive_cuda_scored_eval_count": 1,
         "same_archive_device_runtime_identity_count": 1,
+        "same_archive_embedded_result_json_eval_count": 1,
         "same_archive_eval_dir_count": 1,
         "same_archive_replay_identities": [
           {
@@ -1964,7 +2012,8 @@
     "missing_same_archive_structured_json_count": 5,
     "missing_structured_json_count": 5,
     "ready_for_stack_atom_count": 0,
-    "row_count": 8
+    "row_count": 8,
+    "same_archive_embedded_result_json_count": 4
   },
   "tool": "tools/build_pr100_107_reproduction_ledger.py"
 }
