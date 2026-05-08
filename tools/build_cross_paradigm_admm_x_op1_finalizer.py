@@ -7,17 +7,25 @@ Source-of-finding
 (commit 8d33d5c1 of ``tools/pr101_cross_paradigm_hstack_vstack_empirical.py``)
 showed that running Op1 (PR101 split-Brotli with auto_select byte_maps) on
 the *dequantized* post-ADMM substrate yields a CPL1-wrapped Op1 blob of
-**137,531 B** — vs ADMM-alone (continuous-K wire format) at 153,639 B and
-Op1_alone on raw fp32 at 161,942 B.
+**137,531 B** [PHANTOM, pre-fix; corrected to 137,469 B at commit 98d2174b
+per Codex CRITICAL #4.1] — vs ADMM-alone (continuous-K wire format) at 153,639 B
+and Op1_alone on raw fp32 at 161,942 B. NOTE: this builder used a different
+(intentional) dequant formula (``rounded * float(qt.scale)``, raw fp32 scale)
+and produces ``op1_inner_blob_bytes = 137,348`` (see build_manifest.json line
+``op1_inner_blob_bytes``); XPARADIGM + canonical orchestrator use the
+fp16-cast formula (``rounded * float(np.float16(scale))``) matching the Path B
+step 6 runtime decoder and produce 137,469 B. Both are internally consistent
+(builder ships its own forked inflate.py); cross-tool divergence acknowledged.
 
-CRITICAL CAVEAT (Subagent WIRE-DECODER, 2026-05-08): the 137,531 B figure is
+CRITICAL CAVEAT (Subagent WIRE-DECODER, 2026-05-08): the ~137K B figure is
 the *decoder section only*. A deployable archive STILL needs:
 
   - 8 byte CPLX wrapper (4 magic + 4 length)
   - 15,387 byte PR101 latent_blob (passthrough)
   - sidecar_blob (PR101 passthrough; ~707-1,500 B)
 
-**Total deployable archive ≈ 137,531 + 8 + 15,387 + sidecar ≈ 153,633 B.**
+**Total deployable archive (this builder) = 153,513 B** (per build_manifest.json
+of the 2026-05-08T062603Z run; see ``archive_bytes`` field).
 
 This roughly TIES Path B step 6 (153,699 B) once latent + sidecar are added.
 The original "winner" framing was an apples-to-oranges decoder-only comparison.
