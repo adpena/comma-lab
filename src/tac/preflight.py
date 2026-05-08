@@ -399,6 +399,13 @@ def preflight_all(
         # dispatch (commits 999211e5 → cb2ea361). Future commits that add a
         # flag without referencing it will fail this gate.
         check_cross_paradigm_wiring_contract(strict=True, verbose=verbose)
+        # 2026-05-08 implementation-vs-model-gap audit (advisory; strict=False
+        # until live count is driven to 0 by faithful re-tests of the
+        # audited 4 technique classes). Memory ref:
+        # `feedback_implementation_vs_model_gap_audit_20260508.md`.
+        check_evidence_implementation_matches_model_spec(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -2974,6 +2981,93 @@ def check_dispatch_wrapper_stages_implemented(
             print(f"  [wrapper-stages-implemented] {len(violations)} violation(s)")
         else:
             print("  [wrapper-stages-implemented] OK")
+    return violations
+
+
+def check_evidence_implementation_matches_model_spec(
+    *,
+    repo_root: str | Path | None = None,
+    evidence_jsonl: str | Path | None = None,
+    catalog_source: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Implementation-vs-model-gap audit guard (2026-05-08).
+
+    Bug class extincted: every cathedral_autopilot evidence row that claims
+    to test a technique class must match the catalog's declared
+    ``model_spec`` (capacity_constraint, architecture_class,
+    substrate_constraint, canonical_shape_family, variant_required).
+
+    Memory ref: ``feedback_implementation_vs_model_gap_audit_20260508.md``.
+    The audit found 4-of-5 prior "falsifications" had silent
+    implementation-vs-model gaps:
+
+      - kalle_fold tested generic Gaussian/Laplace/Cauchy instead of NN-
+        weight canonical shapes (SHAPE-FAMILY mismatch).
+      - tiny_nn tested rank=8 factorized softmax (~5K params) instead of
+        the predicted ~200-param MLP (CAPACITY mismatch).
+      - compressai_balle ScaleHyperprior tested on 1D-reshaped INT8 weight
+        symbols instead of 2D natural images (SUBSTRATE mismatch).
+      - lossy_int4 tested only NAIVE PTQ instead of the lane-class variant
+        set (QAT, LSQ, GPTQ, AWQ — VARIANT mismatch).
+
+    Promotion plan: starts ``strict=False`` (advisory). Once the live
+    count is driven to 0 by faithful re-tests of the audited 4 cases, the
+    check flips to STRICT in ``preflight_all()`` per the canonical
+    promotion pattern (see e.g. ``check_lane_smoke_signal_nontrivial``).
+    """
+    root = Path(repo_root or REPO_ROOT)
+    helper_path = root / "tools" / "check_evidence_implementation_matches_model_spec.py"
+    if not helper_path.is_file():
+        msg = (
+            f"evidence implementation-vs-model-spec scanner missing: "
+            f"{helper_path}"
+        )
+        if strict:
+            raise MetaBugViolation(msg)
+        return [msg]
+
+    spec = importlib.util.spec_from_file_location(
+        "_pact_evidence_impl_model_match", helper_path
+    )
+    if spec is None or spec.loader is None:
+        msg = (
+            f"cannot import evidence implementation-vs-model-spec scanner: "
+            f"{helper_path}"
+        )
+        if strict:
+            raise MetaBugViolation(msg)
+        return [msg]
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+
+    try:
+        findings = module.scan(
+            repo_root=root,
+            evidence_jsonl=evidence_jsonl,
+            catalog_source=catalog_source,
+        )
+    except Exception as exc:
+        msg = f"evidence implementation-vs-model-spec scan failed: {exc}"
+        if strict:
+            raise MetaBugViolation(msg)
+        return [msg]
+    violations = [f.as_str() for f in findings]
+    if violations and strict:
+        raise MetaBugViolation(
+            "EVIDENCE IMPLEMENTATION-vs-MODEL-SPEC VIOLATIONS:\n"
+            + "\n".join(violations)
+        )
+    if verbose:
+        if violations:
+            print(
+                f"  [evidence-impl-model-match] {len(violations)} "
+                f"violation(s) [advisory; not yet strict]"
+            )
+        else:
+            print("  [evidence-impl-model-match] OK")
     return violations
 
 

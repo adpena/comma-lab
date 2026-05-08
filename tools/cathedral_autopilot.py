@@ -94,6 +94,27 @@ PR101_SUBSTRATE = {
 }
 
 
+# Implementation-vs-model-gap audit (2026-05-08): every catalog row carries
+# a ``model_spec`` declaring the implementation contract that "faithful test"
+# means. The audit at
+# ``feedback_implementation_vs_model_gap_audit_20260508.md`` documented 4
+# falsifications that tested INFERIOR representatives of their technique
+# class (capacity mismatch, substrate mismatch, shape-family mismatch,
+# variant mismatch). The model_spec field structurally extincts that bug
+# class:
+#   - capacity_constraint: e.g., "<=200 params" for tiny_nn
+#   - architecture_class: canonical class name (e.g., "factorized_softmax")
+#   - substrate_constraint: e.g., "1d_quantized_symbols" / "2d_natural_image"
+#   - canonical_shape_family: e.g., "kaiming+laplace+spike-and-slab"
+#   - variant_required: list of variants the lane class subsumes
+#
+# The new preflight check `check_evidence_implementation_matches_model_spec`
+# scans `reports/cathedral_autopilot_evidence.jsonl` and verifies each row's
+# tested implementation matches the corresponding catalog model_spec. The
+# in-process self-protection layer in ``update_catalog_from_evidence`` warns
+# (does not break) when an evidence row's source string indicates a
+# divergent implementation.
+#
 # Encoder-side technique catalog (from grand-council synthesis)
 ENCODER_TECHNIQUES = [
     {
@@ -104,6 +125,13 @@ ENCODER_TECHNIQUES = [
         "risk": "lossless",
         "evidence_grade": "[contest-CUDA]",
         "description": "Current best brotli + Optuna q=11/lgwin=16/lgblock=19",
+        "model_spec": {
+            "capacity_constraint": "n/a",
+            "architecture_class": "brotli_lossless",
+            "substrate_constraint": "1d_quantized_symbols",
+            "canonical_shape_family": "n/a_lossless",
+            "variant_required": ["q=11_lgwin=16_lgblock=19"],
+        },
     },
     {
         "name": "per_tensor_adaptive_aac",
@@ -113,6 +141,13 @@ ENCODER_TECHNIQUES = [
         "risk": "lossless",
         "evidence_grade": "[CPU-prep]",
         "description": "Adaptive arithmetic coding per-tensor; ties brotli within 37 B",
+        "model_spec": {
+            "capacity_constraint": "n/a",
+            "architecture_class": "adaptive_arithmetic_coding",
+            "substrate_constraint": "1d_quantized_symbols",
+            "canonical_shape_family": "per_tensor_empirical_pmf",
+            "variant_required": ["per_tensor_pmf"],
+        },
     },
     {
         "name": "tiny_nn_pmf_predictor",
@@ -122,6 +157,16 @@ ENCODER_TECHNIQUES = [
         "risk": "lossless",
         "evidence_grade": "[predicted]",
         "description": "200-param MLP predicting per-tensor PMF; ~400B model + AAC",
+        "model_spec": {
+            # Implementation-vs-model-gap audit found rank=8 (~5K params)
+            # was tested against the predicted "200-param MLP". Pin the
+            # capacity bound the catalog row actually claims.
+            "capacity_constraint": "<=200_params",
+            "architecture_class": "MLP",
+            "substrate_constraint": "1d_quantized_symbols",
+            "canonical_shape_family": "tensor_id_layer_class_features",
+            "variant_required": ["mlp_under_200_params"],
+        },
     },
     {
         "name": "compressai_balle_hyperprior",
@@ -131,6 +176,19 @@ ENCODER_TECHNIQUES = [
         "risk": "lossless",
         "evidence_grade": "[subagent-predicted]",
         "description": "Balle scale-hyperprior NN; subagent-verdict joint floor",
+        "model_spec": {
+            # Implementation-vs-model-gap audit found ScaleHyperprior tested
+            # on PR101 INT8-reshaped-as-pseudo-2D substrate; the model is
+            # SUBSTRATE-MISMATCHED (ScaleHyperprior expects 2d natural image).
+            "capacity_constraint": "5KB_to_10KB_compressed_hyperprior",
+            "architecture_class": "ScaleHyperprior",
+            "substrate_constraint": "2d_natural_image",
+            "canonical_shape_family": "hyperprior_side_info_GDN_nonlinearity",
+            "variant_required": [
+                "scale_hyperprior",
+                "mean_scale_hyperprior",
+            ],
+        },
     },
     {
         "name": "kalle_fold_mixture_canonical_shapes",
@@ -140,6 +198,19 @@ ENCODER_TECHNIQUES = [
         "risk": "lossless",
         "evidence_grade": "[predicted]",
         "description": "4-component mixture (Gaussian+Laplace+sparse+uniform) on PMFs",
+        "model_spec": {
+            # Implementation-vs-model-gap audit found generic
+            # Gaussian/Laplace/Cauchy mixture tested instead of NN-weight-
+            # distribution canonical shapes (Kaiming/Laplace+outliers/
+            # spike-and-slab). Pin the canonical-shape-family contract.
+            "capacity_constraint": "<=8_components",
+            "architecture_class": "mixture_of_canonical_NN_PMF_shapes",
+            "substrate_constraint": "1d_quantized_symbols",
+            "canonical_shape_family": "kaiming+laplace_with_outliers+spike_and_slab+truncated_normal",
+            "variant_required": [
+                "nn_weight_distribution_basis",
+            ],
+        },
     },
     {
         "name": "shared_canonical_pmf_clusters",
@@ -149,6 +220,13 @@ ENCODER_TECHNIQUES = [
         "risk": "lossless",
         "evidence_grade": "[CPU-prep empirical; planning-only]",
         "description": "Shared FP16 PMF clusters over PR101 quantized tensors; measured negative",
+        "model_spec": {
+            "capacity_constraint": "shared_clusters_under_2KB",
+            "architecture_class": "shared_pmf_clusters",
+            "substrate_constraint": "1d_quantized_symbols",
+            "canonical_shape_family": "fp16_cluster_centers",
+            "variant_required": ["fp16_shared_clusters"],
+        },
     },
 ]
 
@@ -163,6 +241,13 @@ ARCH_TECHNIQUES = [
         "risk": "training_side",
         "evidence_grade": "[predicted]",
         "description": "70% sparsity via IMP retraining; arch unchanged",
+        "model_spec": {
+            "capacity_constraint": "70_percent_zero_weights",
+            "architecture_class": "iterative_magnitude_pruning",
+            "substrate_constraint": "renderer_weights",
+            "canonical_shape_family": "sparse_mask_bool_indicator",
+            "variant_required": ["imp_retrain_with_finetune"],
+        },
     },
     {
         "name": "arch_shrink_x0.4_quantizr_class",
@@ -172,6 +257,13 @@ ARCH_TECHNIQUES = [
         "risk": "architectural",
         "evidence_grade": "[predicted]",
         "description": "88K-element renderer (Quantizr-class); full retrain",
+        "model_spec": {
+            "capacity_constraint": "~88K_params_renderer",
+            "architecture_class": "FiLM_depthwise_separable_CNN",
+            "substrate_constraint": "renderer_weights",
+            "canonical_shape_family": "quantizr_88k_class",
+            "variant_required": ["full_retrain"],
+        },
     },
     {
         "name": "self_compress_neural_codec",
@@ -181,6 +273,13 @@ ARCH_TECHNIQUES = [
         "risk": "architectural",
         "evidence_grade": "[predicted]",
         "description": "Selfcomp/Quantizr-style: renderer is its own decoder",
+        "model_spec": {
+            "capacity_constraint": "renderer_self_decodes_no_separate_decoder",
+            "architecture_class": "self_compressing_neural_codec",
+            "substrate_constraint": "renderer_weights_bind_to_decoder",
+            "canonical_shape_family": "selfcomp_block_fp_self_decode",
+            "variant_required": ["self_decode_path_built"],
+        },
     },
     {
         "name": "lossy_int4_quantization",
@@ -190,6 +289,24 @@ ARCH_TECHNIQUES = [
         "risk": "lossy_high",
         "evidence_grade": "[predicted]",
         "description": "n_quant=15 (int4) with QAT/LSQ retuning",
+        "model_spec": {
+            # Implementation-vs-model-gap audit found NAIVE PTQ tested
+            # against a row that names QAT/LSQ. The lane class subsumes
+            # multiple variants — only some have been faithfully tested.
+            "capacity_constraint": "n_quant=15_int4",
+            "architecture_class": "low_bit_quantization",
+            "substrate_constraint": "renderer_weights",
+            "canonical_shape_family": "int4_per_block_or_per_channel_scales",
+            "variant_required": [
+                "naive_ptq",
+                "qat",
+                "lsq",
+                "per_channel_scales",
+                "mixed_precision_int4_int6_int8",
+                "gptq",
+                "awq",
+            ],
+        },
     },
 ]
 
@@ -354,9 +471,119 @@ def _is_explicitly_promotable_evidence(evidence: TechniqueEvidence) -> bool:
     )
 
 
+def detect_evidence_model_spec_mismatch(
+    spec: dict[str, Any] | None,
+    evidence: TechniqueEvidence,
+) -> list[str]:
+    """Self-protection: flag evidence rows that diverge from declared model_spec.
+
+    Returns a list of human-readable mismatch reasons (empty list = match).
+    Implementation: we conservatively grep the evidence ``source`` /
+    ``evidence_semantics`` strings for known divergent-implementation
+    fingerprints called out in the audit memo. The check is INTENTIONALLY
+    coarse — it flags suspicions, never blocks. The hard preflight check
+    (``check_evidence_implementation_matches_model_spec``) is the one that
+    eventually flips to STRICT once the live count is 0.
+
+    Reference: ``feedback_implementation_vs_model_gap_audit_20260508.md``.
+    """
+    if not spec:
+        return []
+    text = " ".join(
+        part for part in (
+            evidence.source,
+            evidence.evidence_semantics,
+            evidence.evidence_marker,
+            evidence.evidence_grade,
+        ) if part
+    ).lower()
+    if not text:
+        return []
+    reasons: list[str] = []
+
+    capacity = str(spec.get("capacity_constraint", "")).lower()
+    arch_class = str(spec.get("architecture_class", "")).lower()
+    substrate = str(spec.get("substrate_constraint", "")).lower()
+    shape_family = str(spec.get("canonical_shape_family", "")).lower()
+    variants = [str(v).lower() for v in spec.get("variant_required", []) or []]
+
+    # tiny_nn capacity mismatch — audit memo §2.
+    if "200" in capacity and "param" in capacity:
+        if (
+            "rank=8" in text or "rank=32" in text or "rank=16" in text
+            or "rank=64" in text or "factorized" in text
+        ):
+            reasons.append(
+                "CAPACITY_MISMATCH: model_spec declares ~200-param MLP, "
+                "evidence source mentions rank-K factorized softmax "
+                "(typically thousands of params)"
+            )
+
+    # ScaleHyperprior substrate mismatch — audit memo §3.
+    if "scalehyperprior" in arch_class.replace("_", ""):
+        substrate_2d = "2d_natural_image" in substrate
+        if substrate_2d and (
+            "1d" in text
+            or "pseudo-image" in text
+            or "1×1×" in text
+            or "reshape" in text
+        ):
+            reasons.append(
+                "SUBSTRATE_MISMATCH: model_spec declares 2d_natural_image, "
+                "evidence source mentions 1D / pseudo-image reshape"
+            )
+        if substrate_2d and (
+            "weight" in text or "pmf" in text or "symbol" in text
+            or "int8" in text
+        ):
+            reasons.append(
+                "SUBSTRATE_MISMATCH: model_spec declares 2d_natural_image, "
+                "evidence source mentions weight/pmf/symbol substrate"
+            )
+
+    # kalle_fold canonical-shape-family mismatch — audit memo §1.
+    if "spike_and_slab" in shape_family or "kaiming" in shape_family:
+        normalized = text.replace(" ", "")
+        if (
+            "gaussian+laplace+delta+uniform" in normalized
+            or "cauchy" in text
+            or "generic" in text
+            or "intuition" in text
+            or "my own picked" in text
+        ):
+            reasons.append(
+                "SHAPE_FAMILY_MISMATCH: model_spec declares "
+                "kaiming/laplace+outliers/spike-and-slab basis, evidence "
+                "source mentions generic Gaussian/Laplace/Cauchy"
+            )
+
+    # lossy_int4 variant exhaustion — audit memo §4.
+    if variants and len(variants) >= 2:
+        seen: list[str] = []
+        for variant in variants:
+            tokens = [tok for tok in variant.replace("=", "_").split("_") if tok]
+            for tok in tokens:
+                if tok and tok in text:
+                    seen.append(variant)
+                    break
+        if not seen:
+            if any(
+                tok in text
+                for tok in ("naive_ptq", "ptq", "qat", "gptq", "awq", "lsq")
+            ):
+                reasons.append(
+                    "VARIANT_PARTIAL_EXHAUSTION: model_spec lists "
+                    f"{len(variants)} required variants, evidence row "
+                    "appears to test a single variant only"
+                )
+    return reasons
+
+
 def update_catalog_from_evidence(
     catalog: list[dict[str, Any]],
     evidence: list[TechniqueEvidence],
+    *,
+    log_warnings: bool = True,
 ) -> list[dict[str, Any]]:
     """Return a NEW catalog with empirical anchors blended over predictions.
 
@@ -364,6 +591,15 @@ def update_catalog_from_evidence(
     predicted value; evidence_grade is upgraded to ``[empirical-anchor-N]``
     where N is the count of observations. Original predicted value is kept
     in ``catalog_prior_bytes`` for forensic comparison.
+
+    Self-protection layer (added 2026-05-08 per implementation-vs-model
+    gap audit): every incoming evidence row is checked against the catalog
+    row's ``model_spec``. Mismatches produce WARNINGs to stderr (not
+    blocking — the byte-anchor measurement is still real); a
+    ``model_spec_mismatch_reasons`` field is attached to the catalog row,
+    and the row is forced to ``empirical_anchor_promotable=False``. The
+    hard guard is the preflight check
+    ``check_evidence_implementation_matches_model_spec``.
     """
     by_name: dict[str, list[TechniqueEvidence]] = {}
     for e in evidence:
@@ -376,6 +612,28 @@ def update_catalog_from_evidence(
             if e.empirical_archive_bytes is not None
         ]
         new_t = dict(t)
+        # Self-protection: scan every observation against the model_spec.
+        spec = t.get("model_spec")
+        per_obs_mismatches: list[dict[str, Any]] = []
+        for e in obs:
+            reasons = detect_evidence_model_spec_mismatch(spec, e)
+            if reasons:
+                per_obs_mismatches.append({
+                    "source": e.source,
+                    "timestamp": e.timestamp,
+                    "reasons": reasons,
+                })
+                if log_warnings:
+                    print(
+                        f"WARNING [cathedral_autopilot]: technique="
+                        f"{t['name']!r} evidence row diverges from "
+                        f"model_spec — reasons: {reasons}; source="
+                        f"{e.source!r}",
+                        file=sys.stderr,
+                    )
+        if per_obs_mismatches:
+            new_t["model_spec_mismatch_reasons"] = per_obs_mismatches
+            new_t["model_spec_mismatch_count"] = len(per_obs_mismatches)
         if empirical_bytes:
             empirical_bytes.sort()
             n = len(empirical_bytes)
@@ -396,18 +654,31 @@ def update_catalog_from_evidence(
             new_t["empirical_anchor_evidence_semantics"] = sorted({
                 e.evidence_semantics for e in obs if e.evidence_semantics
             })
-            if explicit_promotable:
+            if explicit_promotable and not per_obs_mismatches:
                 new_t["evidence_grade"] = f"[empirical-anchor-N{n}]"
                 new_t["empirical_anchor_promotable"] = True
             else:
-                new_t["evidence_grade"] = f"[empirical-anchor-N{n}; planning-only]"
+                grade_suffix = "; planning-only"
+                if per_obs_mismatches:
+                    grade_suffix = "; planning-only; model_spec_mismatch"
+                new_t["evidence_grade"] = (
+                    f"[empirical-anchor-N{n}{grade_suffix}]"
+                )
                 new_t["empirical_anchor_promotable"] = False
                 new_t["empirical_anchor_score_claim"] = False
                 new_t["ready_for_exact_eval_dispatch"] = False
                 new_t["rank_or_kill_eligible"] = False
-                new_t["dispatch_blockers"] = blockers or [
+                merged_blockers = list(blockers) if blockers else [
                     "empirical_anchor_not_promotable_without_explicit_exact_eval_custody"
                 ]
+                if per_obs_mismatches and (
+                    "model_spec_mismatch_pending_faithful_implementation"
+                    not in merged_blockers
+                ):
+                    merged_blockers.append(
+                        "model_spec_mismatch_pending_faithful_implementation"
+                    )
+                new_t["dispatch_blockers"] = merged_blockers
         out.append(new_t)
     return out
 
