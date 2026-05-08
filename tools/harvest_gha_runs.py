@@ -19,6 +19,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
+import re
 import shutil
 import subprocess
 import sys
@@ -109,16 +111,30 @@ def download_artifact(run_id: int, submission_name: str, repo: str, dest_dir: Pa
 
 def parse_report(report_path: Path) -> dict[str, Any]:
     text = report_path.read_text()
-    parsed = {}
-    for line in text.splitlines():
-        if "=" in line:
-            k, v = line.split("=", 1)
-            k = k.strip()
-            v = v.strip()
-            try:
-                parsed[k] = float(v)
-            except ValueError:
-                parsed[k] = v
+    patterns = {
+        "avg_posenet_dist": r"Average PoseNet Distortion:\s*([0-9.eE+,-]+)",
+        "avg_segnet_dist": r"Average SegNet Distortion:\s*([0-9.eE+,-]+)",
+        "compression_rate": r"Compression Rate:\s*([0-9.eE+,-]+)",
+        "reported_score_display": r"Final score:.*=\s*([0-9.eE+,-]+)",
+        "n_samples": r"Evaluation results over (\d+) samples",
+    }
+    parsed: dict[str, Any] = {"report_text": text}
+    for key, pattern in patterns.items():
+        match = re.search(pattern, text)
+        if not match:
+            sys.stderr.write(f"[fatal] could not parse {key} from report.txt:\n{text}\n")
+            sys.exit(3)
+        raw = match.group(1).replace(",", "")
+        parsed[key] = int(raw) if key == "n_samples" else float(raw)
+
+    recomputed = (
+        100.0 * parsed["avg_segnet_dist"]
+        + math.sqrt(10.0 * parsed["avg_posenet_dist"])
+        + 25.0 * parsed["compression_rate"]
+    )
+    parsed["canonical_score"] = recomputed
+    parsed["canonical_score_recomputed"] = recomputed
+    parsed["score_recomputed_from_components"] = recomputed
     return parsed
 
 
@@ -188,21 +204,14 @@ def main(argv=None):
         "archive_sha256": args.archive_sha,
         "archive_member": member_name,
         "archive_member_sha256": member_sha,
-        "canonical_score": parsed.get("score"),
-        "canonical_score_recomputed": (
-            100 * parsed.get("avg_segnet_dist", 0)
-            + (10 * parsed.get("avg_posenet_dist", 0)) ** 0.5
-            + parsed.get("compression_rate", 0)
-        ),
-        "score_recomputed_from_components": (
-            100 * parsed.get("avg_segnet_dist", 0)
-            + (10 * parsed.get("avg_posenet_dist", 0)) ** 0.5
-            + parsed.get("compression_rate", 0)
-        ),
-        "avg_segnet_dist": parsed.get("avg_segnet_dist"),
-        "avg_posenet_dist": parsed.get("avg_posenet_dist"),
-        "compression_rate": parsed.get("compression_rate"),
-        "n_samples": parsed.get("n_samples"),
+        "canonical_score": parsed["canonical_score"],
+        "canonical_score_recomputed": parsed["canonical_score_recomputed"],
+        "score_recomputed_from_components": parsed["score_recomputed_from_components"],
+        "reported_score_display": parsed["reported_score_display"],
+        "avg_segnet_dist": parsed["avg_segnet_dist"],
+        "avg_posenet_dist": parsed["avg_posenet_dist"],
+        "compression_rate": parsed["compression_rate"],
+        "n_samples": parsed["n_samples"],
         "device": "cpu",
         "hardware": "github-actions-ubuntu-latest-x86_64",
         "runner_os_release": runner_os,
