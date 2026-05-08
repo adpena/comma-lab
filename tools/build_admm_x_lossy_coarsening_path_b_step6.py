@@ -145,6 +145,13 @@ CPU_BUILD_SCORE_BLOCKERS = [
     "cpu_build_rel_err_proxy_not_score_evidence",
     "exact_cuda_auth_eval_not_yet_harvested",
     "requires_contest_auth_eval_json_before_score_promotion_rank_or_kill",
+    # REVIEW-ENG C3 (2026-05-08): the 4.15% rel_err -> score mapping is
+    # unmeasured for low-rel_err lossy weight encodings on PR101 substrate.
+    # The closest empirical anchor (lossy_coarsening_analytical at 3.86%
+    # rel_err) scored 0.3517 [contest-CUDA A-negative] — significantly
+    # worse than the 0.2089 frontier. apogee_int6 must land FIRST to
+    # calibrate the rel_err->score curve before another paid dispatch.
+    "apogee_int6_contest_cuda_anchor_required_first",
 ]
 
 

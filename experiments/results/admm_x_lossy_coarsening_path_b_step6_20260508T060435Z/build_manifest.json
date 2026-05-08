@@ -109,11 +109,18 @@
   "score_claim_blockers": [
     "cpu_build_rel_err_proxy_not_score_evidence",
     "exact_cuda_auth_eval_not_yet_harvested",
-    "requires_contest_auth_eval_json_before_score_promotion_rank_or_kill"
+    "requires_contest_auth_eval_json_before_score_promotion_rank_or_kill",
+    "apogee_int6_contest_cuda_anchor_required_first"
   ],
   "dispatch_blockers": [
     "cpu_build_rel_err_proxy_not_score_evidence",
     "exact_cuda_auth_eval_not_yet_harvested",
-    "requires_contest_auth_eval_json_before_score_promotion_rank_or_kill"
-  ]
+    "requires_contest_auth_eval_json_before_score_promotion_rank_or_kill",
+    "apogee_int6_contest_cuda_anchor_required_first"
+  ],
+  "review_eng_c3_added_2026_05_08": {
+    "finding": "4.15% rel_err -> score mapping UNMEASURED",
+    "rationale": "The Path B step 6 archive is built at rel_err 4.15% with allocation Ks=[2,1,5,1,...]. The relationship between rel_err and contest-CUDA score is unmeasured for this allocation; the closest empirical anchor is lossy_coarsening_analytical at 156,404 B / rel_err 3.86% which scored 0.3517 [contest-CUDA A-negative] (worse than the 0.2089 PR103-on-PR106 frontier anchor). Per CLAUDE.md 'Predispatch sanity ladder' + apogee_int6 mandatory precondition, the apogee_int6 [contest-CUDA] anchor must land FIRST so we have a calibrated rel_err->score curve for low-rel_err lossy weight encodings before paying $9-15 for another dispatch with the same risk class.",
+    "release_criteria": "apogee_int6 [contest-CUDA] eval lands; score recorded; if score <= 0.193, ADMM step 6 dispatch is unblocked; otherwise re-evaluate the Phase 4 stack."
+  }
 }
