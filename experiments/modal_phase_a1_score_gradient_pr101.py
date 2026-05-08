@@ -278,6 +278,8 @@ def _read_dir_as_tarball(directory: Path, label: str) -> tuple[bytes, str, int]:
 
     if not directory.is_dir():
         raise SystemExit(f"FATAL: {label} not found or not a dir: {directory}")
+    if label == "PR101 source dir":
+        _validate_pr101_source_root(directory)
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_STORED) as zf:
         # Sort for determinism.
@@ -291,6 +293,24 @@ def _read_dir_as_tarball(directory: Path, label: str) -> tuple[bytes, str, int]:
             zf.write(path, arcname=arcname)
     data = buf.getvalue()
     return data, _sha256_bytes(data), len(data)
+
+
+def _validate_pr101_source_root(directory: Path) -> None:
+    """Fail closed unless directory is the PR101 runtime source root.
+
+    The build tool expects ``codec.py`` and ``model.py`` at the root. Passing
+    the detached PR checkout's parent ``source/`` directory silently uploaded
+    hundreds of MB and failed only after a full Modal training run.
+    """
+    missing = [name for name in ("codec.py", "model.py") if not (directory / name).is_file()]
+    if not missing:
+        return
+    candidate = directory / "submissions" / "hnerv_ft_microcodec" / "src"
+    hint = f"; did you mean {candidate}?" if (candidate / "codec.py").is_file() else ""
+    raise SystemExit(
+        f"FATAL: PR101 source dir must contain codec.py and model.py at its root; "
+        f"missing {', '.join(missing)} under {directory}{hint}"
+    )
 
 
 # ---------------------------------------------------------------------------

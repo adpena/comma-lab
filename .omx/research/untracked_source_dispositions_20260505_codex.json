@@ -34,6 +34,18 @@
     {
       "classification": "generated_custody_source_untracked",
       "disposition": "ignore_rebuildable",
+      "note": "exact: A5 frame-conditional runtime packet scaffold is raw rebuildable custody; canonical signal is in tools/build_pr101_frame_conditional_runtime_packet.py and .omx/research/a5_frame_conditional_runtime_packet_20260508_codex.md.",
+      "path": "experiments/results/pr101_frame_conditional_runtime_packet_20260508_codex/packet/inflate.py"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_rebuildable",
+      "note": "exact: A5 frame-conditional runtime packet scaffold is raw rebuildable custody; canonical signal is in tools/build_pr101_frame_conditional_runtime_packet.py and .omx/research/a5_frame_conditional_runtime_packet_20260508_codex.md.",
+      "path": "experiments/results/pr101_frame_conditional_runtime_packet_20260508_codex/packet/inflate.sh"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_rebuildable",
       "note": "prefix: local output trees are raw rebuildable custody; canonicalize useful signal into tracked ledgers before cleanup.",
       "path": "outputs/",
       "path_kind": "prefix"
@@ -98,6 +110,12 @@
       "disposition": "track",
       "note": "track: durable 2026-05-08 A1 dispatch recursive review ledger; no raw provider transcript or payload.",
       "path": ".omx/research/a1_dispatch_recursive_review_20260508.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 Modal A1 wrong-source-root failure ledger; no raw provider payload.",
+      "path": ".omx/research/modal_phase_a1_wrong_source_root_failure_20260508_codex.md"
     },
     {
       "classification": "research_untracked",

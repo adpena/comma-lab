@@ -87,6 +87,7 @@ def test_modal_phase_a1_direct_plan_does_not_spawn_or_claim(tmp_path: Path) -> N
     pr101_archive.write_bytes(b"not-a-real-archive-but-custody-bytes")
     source_dir = tmp_path / "src"
     source_dir.mkdir()
+    (source_dir / "codec.py").write_text("VALUE = 0\n")
     (source_dir / "model.py").write_text("VALUE = 1\n")
     video_path = tmp_path / "0.mkv"
     video_path.write_bytes(b"fake-video-bytes")
@@ -132,5 +133,42 @@ def test_modal_phase_a1_direct_plan_does_not_spawn_or_claim(tmp_path: Path) -> N
     assert ".venv/bin/modal" in payload["dispatch_command"]
     assert "--detach" in payload["dispatch_command"]
     assert "--continue-after-nvdec-failure" in payload["dispatch_command"]
+    after_claims = claim_file.read_text() if claim_file.exists() else None
+    assert after_claims == before_claims
+
+
+def test_modal_phase_a1_direct_plan_rejects_parent_pr101_source_dir(tmp_path: Path) -> None:
+    pr101_archive = tmp_path / "archive.zip"
+    pr101_archive.write_bytes(b"archive")
+    parent = tmp_path / "source"
+    nested = parent / "submissions" / "hnerv_ft_microcodec" / "src"
+    nested.mkdir(parents=True)
+    (nested / "codec.py").write_text("VALUE = 1\n")
+    (nested / "model.py").write_text("VALUE = 2\n")
+    video_path = tmp_path / "0.mkv"
+    video_path.write_bytes(b"video")
+    claim_file = REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md"
+    before_claims = claim_file.read_text() if claim_file.exists() else None
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "plan",
+            "--pr101-archive", str(pr101_archive),
+            "--pr101-source-dir", str(parent),
+            "--video-path", str(video_path),
+            "--label", "bad-source-root",
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+
+    assert proc.returncode == 1
+    assert "PR101 source dir must contain codec.py and model.py" in proc.stderr
+    assert str(nested) in proc.stderr
     after_claims = claim_file.read_text() if claim_file.exists() else None
     assert after_claims == before_claims
