@@ -1,0 +1,93 @@
+{
+  "schema_version": "pr107_lossy_coarsening_brotli_optuna_stack.v1.stack",
+  "tool": "tools/pr107_lossy_coarsening_brotli_optuna_stack.py",
+  "built_at_utc": "2026-05-08T13:16:00.326024+00:00",
+  "input_archive": "/Users/adpena/Projects/pact/experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/archive.zip",
+  "input_archive_sha256": "7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb",
+  "candidates": [
+    {
+      "budget": 0.05,
+      "archive_path": "experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b050/archive.zip",
+      "archive_bytes": 156262,
+      "archive_sha256": "c74d79e33abe95f88ffb302a13841d8b2a532fa642ca8b8d953fd58066753f9b",
+      "rel_err": 0.03856566284611934,
+      "delta_zip_vs_baseline": -22130,
+      "predicted_score_band": [
+        0.18194845173277674,
+        0.2012312831558364
+      ],
+      "manifest_path": "experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b050/build_manifest.json",
+      "brotli_lgwin": 16,
+      "brotli_lgblock": 22,
+      "brotli_mode": 0,
+      "brotli_savings_vs_default": 1
+    },
+    {
+      "budget": 0.06,
+      "archive_path": "experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b060/archive.zip",
+      "archive_bytes": 147958,
+      "archive_sha256": "ffc04da006f48af0fec2a6b5d2509a7963fddce438255d47846d06a242c7302d",
+      "rel_err": 0.05340804247699831,
+      "delta_zip_vs_baseline": -30434,
+      "predicted_score_band": [
+        0.1764191589860502,
+        0.2031231802245494
+      ],
+      "manifest_path": "experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b060/build_manifest.json",
+      "brotli_lgwin": 22,
+      "brotli_lgblock": 0,
+      "brotli_mode": 0,
+      "brotli_savings_vs_default": 0
+    },
+    {
+      "budget": 0.07,
+      "archive_path": "experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b070/archive.zip",
+      "archive_bytes": 142128,
+      "archive_sha256": "0f849803d1f404c3b87a3936ce59f18e75318551529ca592dc1438156b156f51",
+      "rel_err": 0.06181099777914732,
+      "delta_zip_vs_baseline": -36264,
+      "predicted_score_band": [
+        0.17253720128934796,
+        0.20344270017892163
+      ],
+      "manifest_path": "experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b070/build_manifest.json",
+      "brotli_lgwin": 20,
+      "brotli_lgblock": 17,
+      "brotli_mode": 2,
+      "brotli_savings_vs_default": 1
+    },
+    {
+      "budget": 0.08,
+      "archive_path": "experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b080/archive.zip",
+      "archive_bytes": 136074,
+      "archive_sha256": "abeb4fc71699e8aa5fa37f0bf1d1975272c95513a726340099c806504c45dd0e",
+      "rel_err": 0.07079697249278862,
+      "delta_zip_vs_baseline": -42318,
+      "predicted_score_band": [
+        0.16850609118714632,
+        0.20390457743354062
+      ],
+      "manifest_path": "experiments/results/pr107_apogee_stack_lossy_brotli_20260508T131530Z/b080/build_manifest.json",
+      "brotli_lgwin": 21,
+      "brotli_lgblock": 17,
+      "brotli_mode": 1,
+      "brotli_savings_vs_default": 61
+    }
+  ],
+  "stacking_paradigms": [
+    "lossy_coarsening_per_tensor_K_search",
+    "brotli_param_optuna_tpe_search"
+  ],
+  "lane_id": "pr107_apogee_stack_brotli_sweep_cpu_build",
+  "predispatch_recommendation": "Dispatch the b050 candidate (rel_err < 0.04, smallest distortion risk) AND the b070 candidate (lower bound 0.171; upper 0.207) for empirical CPU score, in parallel via tools/dispatch_cpu_eval_via_github_actions.py.",
+  "evidence_grade": "[CPU-prep]",
+  "evidence_semantics": "cpu_byte_roundtrip_proxy_no_score",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": true,
+  "target_modes": [
+    "contest_exact_eval"
+  ],
+  "deployment_target": "linux_x86_64_cpu_and_t4_contest_runtime"
+}
