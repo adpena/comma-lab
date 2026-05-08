@@ -6,8 +6,15 @@ import sys
 import zipfile
 from pathlib import Path
 
+import pytest
+
 from tac.analysis.hnerv_packet_sections import (
+    A2K1_MAGIC,
+    CPLX1_MAGIC,
+    HnervPacketSectionManifestError,
     MANIFEST_SCHEMA,
+    PARSER_A2K1,
+    PARSER_CPLX1,
     PARSER_PR101,
     PARSER_PR103,
     PARSER_PR106,
@@ -45,6 +52,114 @@ def test_pr101_manifest_records_archive_member_and_fixed_sections(tmp_path: Path
     assert manifest["sections"][1]["offset"] == PR101_DECODER_BLOB_LEN
     assert manifest["sections"][2]["length"] == 607
     assert validate_packet_section_manifest(manifest) == []
+
+
+def test_a2k1_manifest_records_magic_len_and_pr101_sections(tmp_path: Path) -> None:
+    decoder = b"a2-decoder"
+    latent = b"l" * PR101_LATENT_BLOB_LEN
+    sidecar = b"sidecar"
+    payload = A2K1_MAGIC + len(decoder).to_bytes(4, "little") + decoder + latent + sidecar
+    archive = tmp_path / "a2k1.zip"
+    _stored_zip(archive, "x", payload)
+
+    manifest = build_packet_section_manifest(archive, label="A2K1", parser=PARSER_A2K1)
+
+    assert manifest["parser_section_gate"]["ready"] is True
+    assert manifest["parser"]["name"] == PARSER_A2K1
+    assert [section["name"] for section in manifest["sections"]] == [
+        "a2k1_magic",
+        "decoder_len_u32le",
+        "decoder_blob",
+        "latent_blob",
+        "sidecar_blob",
+    ]
+    assert manifest["sections"][2]["offset"] == 8
+    assert manifest["sections"][3]["offset"] == 8 + len(decoder)
+    assert manifest["sections"][4]["length"] == len(sidecar)
+    gate3 = manifest["parser_section_manifest"]
+    assert gate3["section_names"] == [section["name"] for section in manifest["sections"]]
+    assert gate3["offsets"] == [section["offset"] for section in manifest["sections"]]
+    assert gate3["lengths"] == [section["length"] for section in manifest["sections"]]
+    assert all(length > 0 for length in gate3["lengths"])
+    assert validate_packet_section_manifest(manifest) == []
+
+
+def test_cplx1_manifest_records_byte_map_json_and_op1_sections(tmp_path: Path) -> None:
+    byte_maps = b'{"0":"zig"}'
+    op1 = b"op1-inner"
+    latent = b"l" * PR101_LATENT_BLOB_LEN
+    sidecar = b"sidecar"
+    section_total = 10 + len(byte_maps) + len(op1)
+    payload = (
+        CPLX1_MAGIC
+        + section_total.to_bytes(4, "little")
+        + len(byte_maps).to_bytes(2, "little")
+        + byte_maps
+        + op1
+        + latent
+        + sidecar
+    )
+    archive = tmp_path / "cplx1.zip"
+    _stored_zip(archive, "x", payload)
+
+    manifest = build_packet_section_manifest(archive, label="CPLX1", parser=PARSER_CPLX1)
+
+    assert manifest["parser_section_gate"]["ready"] is True
+    assert manifest["parser"]["name"] == PARSER_CPLX1
+    assert [section["name"] for section in manifest["sections"]] == [
+        "cplx_magic",
+        "decoder_section_len_u32le",
+        "byte_maps_json_len_u16le",
+        "byte_maps_json",
+        "op1_inner_blob",
+        "latent_blob",
+        "sidecar_blob",
+    ]
+    assert manifest["sections"][3]["offset"] == 10
+    assert manifest["sections"][4]["offset"] == 10 + len(byte_maps)
+    assert manifest["sections"][5]["offset"] == section_total
+    gate3 = manifest["parser_section_manifest"]
+    assert set(gate3) >= {
+        "offsets",
+        "lengths",
+        "section_names",
+        "section_sha256s",
+        "entropy_estimates",
+        "old_new_section_boundaries",
+    }
+    assert all(length > 0 for length in gate3["lengths"])
+    assert validate_packet_section_manifest(manifest) == []
+
+
+def test_a2k1_manifest_fails_closed_on_truncated_decoder_length(tmp_path: Path) -> None:
+    payload = A2K1_MAGIC + (128).to_bytes(4, "little") + b"short"
+    archive = tmp_path / "a2k1_truncated.zip"
+    _stored_zip(archive, "x", payload)
+
+    with pytest.raises(HnervPacketSectionManifestError, match="A2K1 payload too short"):
+        build_packet_section_manifest(archive, label="A2K1", parser=PARSER_A2K1)
+
+
+def test_cplx1_manifest_fails_closed_on_invalid_byte_maps_json(tmp_path: Path) -> None:
+    byte_maps = b"{not-json"
+    op1 = b"op1-inner"
+    latent = b"l" * PR101_LATENT_BLOB_LEN
+    sidecar = b"sidecar"
+    section_total = 10 + len(byte_maps) + len(op1)
+    payload = (
+        CPLX1_MAGIC
+        + section_total.to_bytes(4, "little")
+        + len(byte_maps).to_bytes(2, "little")
+        + byte_maps
+        + op1
+        + latent
+        + sidecar
+    )
+    archive = tmp_path / "cplx1_bad_json.zip"
+    _stored_zip(archive, "x", payload)
+
+    with pytest.raises(HnervPacketSectionManifestError, match="byte_maps JSON is invalid"):
+        build_packet_section_manifest(archive, label="CPLX1", parser=PARSER_CPLX1)
 
 
 def test_pr106_manifest_records_len24_sections(tmp_path: Path) -> None:

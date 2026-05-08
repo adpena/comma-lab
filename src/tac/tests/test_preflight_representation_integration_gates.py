@@ -287,6 +287,49 @@ def test_gate3_clean_hnerv_passes(tmp_path: Path) -> None:
     assert findings == []
 
 
+def test_gate3_a2k1_layout_magic_missing_parser_fires(tmp_path: Path) -> None:
+    _write_build_manifest(
+        tmp_path,
+        {
+            "lane_id": "test_a2k1",
+            "archive_member_manifest": {
+                "layout_magic": "A2K1",
+            },
+        },
+        name="lane_a2k1_missing_parser",
+    )
+    mod = _load_scanner("check_gate3_parser_section_manifest.py")
+    findings = mod.scan(tmp_path)
+    assert findings
+    assert any("section_sha256s" in f.reason for f in findings)
+
+
+def test_gate3_cplx1_nested_parser_manifest_passes(tmp_path: Path) -> None:
+    _write_build_manifest(
+        tmp_path,
+        {
+            "lane_id": "test_cplx1",
+            "wire_format": "CPLX1",
+            "parser_section_manifest": {
+                "offsets": [0, 4, 8],
+                "lengths": [4, 4, 12],
+                "section_names": ["cplx_magic", "decoder_section_len", "op1_inner_blob"],
+                "section_sha256s": ["aa" * 32, "bb" * 32, "cc" * 32],
+                "entropy_estimates": [1.0, 2.0, 3.0],
+                "old_new_section_boundaries": {
+                    "cplx_magic": {"old": [0, 4], "new": [0, 4]},
+                    "decoder_section_len": {"old": [4, 8], "new": [4, 8]},
+                    "op1_inner_blob": {"old": [8, 20], "new": [8, 20]},
+                },
+            },
+        },
+        name="lane_cplx1_clean",
+    )
+    mod = _load_scanner("check_gate3_parser_section_manifest.py")
+    findings = mod.scan(tmp_path)
+    assert findings == []
+
+
 def test_gate3_rejects_malformed_parser_schema(tmp_path: Path) -> None:
     _write_build_manifest(
         tmp_path,

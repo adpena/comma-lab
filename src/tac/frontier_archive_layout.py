@@ -29,6 +29,14 @@ PR106_INNER_MEMBER_NAME = "0.bin"
 PR106_HEADER_LEN = 4
 PR106_HEADER_MAGIC = 0xFF
 
+A2K1_MAGIC = b"A2K1"
+A2K1_HEADER_LEN = 8
+
+CPLX1_MAGIC = b"CPLX"
+CPLX1_HEADER_LEN = 8
+CPLX1_BYTE_MAP_LEN_FIELD_LEN = 2
+
+
 def _sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
@@ -120,6 +128,118 @@ def _inspect_hngp_inner(member_name: str, blob: bytes) -> dict[str, Any] | None:
     }
 
 
+def _inspect_a2k1_inner(member_name: str, blob: bytes) -> dict[str, Any] | None:
+    if not blob.startswith(A2K1_MAGIC):
+        return None
+    parsed = _parse_a2k1_blob(blob)
+    if parsed is None:
+        return None
+    decoder_len = parsed["decoder_len"]
+    return {
+        "grammar": "a2k1_variable_decoder_pr101",
+        "parser_confidence": "a2k1_magic_and_u32_decoder_len",
+        "parser_proof_strength": "magic_len_and_pr101_latent_window",
+        "parser_ambiguous": False,
+        "parser_alternatives": ["a2k1_variable_decoder_pr101"],
+        "single_member_name": member_name,
+        "member_bytes": len(blob),
+        "wire_format": "A2K1",
+        "magic": A2K1_MAGIC.decode("ascii"),
+        "decoder_len_field": decoder_len,
+        "sections": [
+            _section("a2k1_magic", offset=0, data=blob[:4], role="wire_format_magic"),
+            _section("decoder_len_u32le", offset=4, data=blob[4:8], role="internal_length_header"),
+            _section(
+                "decoder_blob",
+                offset=parsed["decoder_start"],
+                data=parsed["decoder_blob"],
+                role="renderer_decoder_weights",
+            ),
+            _section(
+                "latent_blob",
+                offset=parsed["latent_start"],
+                data=parsed["latent_blob"],
+                role="latent_motion_or_frame_conditioning",
+            ),
+            _section(
+                "sidecar_blob",
+                offset=parsed["sidecar_start"],
+                data=parsed["sidecar_blob"],
+                role="latent_sidecar_not_separate_pose_or_mask_member",
+            ),
+        ],
+        "component_budget_implication": (
+            "A2K1 byte-closed packet; logical edits must target decoder_blob, "
+            "latent_blob, or sidecar_blob under the A2K1 parser"
+        ),
+    }
+
+
+def _inspect_cplx1_inner(member_name: str, blob: bytes) -> dict[str, Any] | None:
+    if not blob.startswith(CPLX1_MAGIC):
+        return None
+    parsed = _parse_cplx1_blob(blob)
+    if parsed is None:
+        return None
+    return {
+        "grammar": "cplx1_op1_byte_maps",
+        "parser_confidence": "cplx_magic_section_len_and_byte_maps_json",
+        "parser_proof_strength": "magic_len_json_and_pr101_latent_window",
+        "parser_ambiguous": False,
+        "parser_alternatives": ["cplx1_op1_byte_maps"],
+        "single_member_name": member_name,
+        "member_bytes": len(blob),
+        "wire_format": "CPLX1",
+        "magic": CPLX1_MAGIC.decode("ascii"),
+        "decoder_section_total_field": parsed["section_total"],
+        "byte_maps_json_len_field": parsed["byte_maps_json_len"],
+        "byte_maps_entry_count": parsed["byte_maps_entry_count"],
+        "sections": [
+            _section("cplx_magic", offset=0, data=blob[:4], role="wire_format_magic"),
+            _section(
+                "decoder_section_len_u32le",
+                offset=4,
+                data=blob[4:8],
+                role="internal_length_header",
+            ),
+            _section(
+                "byte_maps_json_len_u16le",
+                offset=8,
+                data=blob[8:10],
+                role="internal_length_header",
+            ),
+            _section(
+                "byte_maps_json",
+                offset=parsed["byte_maps_json_start"],
+                data=parsed["byte_maps_json"],
+                role="decoder_byte_map_metadata",
+            ),
+            _section(
+                "op1_inner_blob",
+                offset=parsed["op1_inner_start"],
+                data=parsed["op1_inner_blob"],
+                role="renderer_decoder_weights",
+            ),
+            _section(
+                "latent_blob",
+                offset=parsed["latent_start"],
+                data=parsed["latent_blob"],
+                role="latent_motion_or_frame_conditioning",
+            ),
+            _section(
+                "sidecar_blob",
+                offset=parsed["sidecar_start"],
+                data=parsed["sidecar_blob"],
+                role="latent_sidecar_not_separate_pose_or_mask_member",
+            ),
+        ],
+        "component_budget_implication": (
+            "CPLX1 byte-closed packet; logical edits must target byte_maps_json, "
+            "op1_inner_blob, latent_blob, or sidecar_blob under the CPLX1 parser"
+        ),
+    }
+
+
 def _inspect_pr106_inner(member_name: str, blob: bytes) -> dict[str, Any] | None:
     if len(blob) < PR106_HEADER_LEN or blob[0] != PR106_HEADER_MAGIC:
         return None
@@ -178,11 +298,87 @@ def _brotli_decompresses(data: bytes) -> bool:
     return True
 
 
+def _parse_a2k1_blob(blob: bytes) -> dict[str, Any] | None:
+    if len(blob) < A2K1_HEADER_LEN + PR101_LATENT_BLOB_LEN:
+        return None
+    if blob[:4] != A2K1_MAGIC:
+        return None
+    decoder_len = int.from_bytes(blob[4:8], "little")
+    if decoder_len <= 0:
+        return None
+    decoder_start = A2K1_HEADER_LEN
+    decoder_end = decoder_start + decoder_len
+    latent_start = decoder_end
+    latent_end = latent_start + PR101_LATENT_BLOB_LEN
+    if latent_end >= len(blob):
+        return None
+    return {
+        "decoder_len": decoder_len,
+        "decoder_start": decoder_start,
+        "decoder_blob": blob[decoder_start:decoder_end],
+        "latent_start": latent_start,
+        "latent_blob": blob[latent_start:latent_end],
+        "sidecar_start": latent_end,
+        "sidecar_blob": blob[latent_end:],
+    }
+
+
+def _parse_cplx1_blob(blob: bytes) -> dict[str, Any] | None:
+    minimum = CPLX1_HEADER_LEN + CPLX1_BYTE_MAP_LEN_FIELD_LEN + PR101_LATENT_BLOB_LEN
+    if len(blob) < minimum:
+        return None
+    if blob[:4] != CPLX1_MAGIC:
+        return None
+    section_total = int.from_bytes(blob[4:8], "little")
+    if section_total < CPLX1_HEADER_LEN + CPLX1_BYTE_MAP_LEN_FIELD_LEN:
+        return None
+    if section_total > len(blob) - PR101_LATENT_BLOB_LEN:
+        return None
+    byte_maps_json_len = int.from_bytes(blob[8:10], "little")
+    byte_maps_json_start = 10
+    byte_maps_json_end = byte_maps_json_start + byte_maps_json_len
+    if byte_maps_json_end > section_total:
+        return None
+    op1_inner_start = byte_maps_json_end
+    if op1_inner_start >= section_total:
+        return None
+    byte_maps_json = blob[byte_maps_json_start:byte_maps_json_end]
+    try:
+        byte_maps = json.loads(byte_maps_json.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
+        return None
+    if not isinstance(byte_maps, dict):
+        return None
+    try:
+        {int(key): str(value) for key, value in byte_maps.items()}
+    except (TypeError, ValueError):
+        return None
+    latent_start = section_total
+    latent_end = latent_start + PR101_LATENT_BLOB_LEN
+    if latent_end >= len(blob):
+        return None
+    return {
+        "section_total": section_total,
+        "byte_maps_json_len": byte_maps_json_len,
+        "byte_maps_entry_count": len(byte_maps),
+        "byte_maps_json_start": byte_maps_json_start,
+        "byte_maps_json": byte_maps_json,
+        "op1_inner_start": op1_inner_start,
+        "op1_inner_blob": blob[op1_inner_start:section_total],
+        "latent_start": latent_start,
+        "latent_blob": blob[latent_start:latent_end],
+        "sidecar_start": latent_end,
+        "sidecar_blob": blob[latent_end:],
+    }
+
+
 def _resolve_logical_layout(member_name: str, blob: bytes) -> tuple[dict[str, Any] | None, list[str]]:
     candidates = [
         candidate
         for candidate in (
             _inspect_hngp_inner(member_name, blob),
+            _inspect_a2k1_inner(member_name, blob),
+            _inspect_cplx1_inner(member_name, blob),
             _inspect_pr106_inner(member_name, blob),
             _inspect_pr101_inner(member_name, blob),
         )
@@ -195,6 +391,23 @@ def _resolve_logical_layout(member_name: str, blob: bytes) -> tuple[dict[str, An
         candidate["parser_ambiguous"] = False
         candidate["parser_alternatives"] = [candidate["grammar"]]
         return candidate, []
+
+    explicit_magic = next(
+        (
+            candidate
+            for candidate in candidates
+            if candidate["grammar"]
+            in {"hngp_v1", "a2k1_variable_decoder_pr101", "cplx1_op1_byte_maps"}
+        ),
+        None,
+    )
+    if explicit_magic is not None:
+        explicit_magic["parser_ambiguous"] = False
+        explicit_magic["parser_alternatives"] = [str(candidate["grammar"]) for candidate in candidates]
+        explicit_magic["ambiguity_resolution"] = (
+            "explicit packet magic selected over fixed-offset fallback parser"
+        )
+        return explicit_magic, []
 
     pr106 = next((candidate for candidate in candidates if candidate["grammar"] == "pr106_ff_packed_hnerv"), None)
     if pr106 is not None and pr106.get("parser_proof_strength") == "magic_len_and_brotli_streams":

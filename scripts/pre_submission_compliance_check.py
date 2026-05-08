@@ -501,6 +501,17 @@ def inspect_auth_eval(path: Path, archive: dict[str, Any], args: argparse.Namesp
     exists = path.is_file()
     _add(checks, "auth_eval_exists", exists or not args.require_auth_eval, _rel(path))
     if not exists:
+        if not args.require_auth_eval:
+            _add(
+                checks,
+                "auth_eval_optional_missing",
+                False,
+                (
+                    f"{_rel(path)} missing; nonfinal compliance may pass, but "
+                    "this packet has no auth-eval custody and is not score/rank/promote evidence"
+                ),
+                severity="warning",
+            )
         return {"path": _rel(path), "exists": False}, checks
 
     payload = _load_json(path)
@@ -618,6 +629,17 @@ def inspect_archive_manifest(path: Path, archive: dict[str, Any], *, required: b
     exists = path.is_file()
     _add(checks, "archive_manifest_exists", exists or not required, _rel(path))
     if not exists:
+        if not required:
+            _add(
+                checks,
+                "archive_manifest_optional_missing",
+                False,
+                (
+                    f"{_rel(path)} missing; nonfinal compliance may pass, but "
+                    "archive identity is not manifest-closed"
+                ),
+                severity="warning",
+            )
         return {"path": _rel(path), "exists": False}, checks
     payload = _load_json(path)
     _add(checks, "archive_manifest_json_object", payload is not None, _rel(path))

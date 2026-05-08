@@ -67,6 +67,9 @@ Currently runs:
            (CPU/CUDA eval drift mechanism probe. Writes a non-promotable
             DALI-vs-PyAV plan locally, and a real decoded-RGB comparison when
             CUDA+DALI is available. It never promotes/ranks/kills.)
+  Gate #23: tools/audit_a2_packet_ladder_closure.py --strict
+           (A2 packet/probe artifacts keep no-score authority fields and
+            inherited dispatch blockers alive until exact eval closure)
   Lane #1: tools/dispatch_dryrun_apogee_intN.py --all-pareto-frontier
            --allow-forensic-byte-only
            (self-protection check: Apogee intN remains byte-only and blocked
@@ -143,6 +146,7 @@ PR91_HPM1_RUNTIME_CONTRACT_AUDIT = TOOLS / "audit_pr91_hpm1_runtime_contract.py"
 FRONTIER_ARCHIVE_LAYOUT_AUDIT = TOOLS / "pr106_archive_decomposition.py"
 OMEGA_OPT_ANCHOR_AUDIT = TOOLS / "check_omega_opt_anchor_discipline.py"
 EVAL_LOADER_DRIFT_PROBE = TOOLS / "probe_eval_loader_drift.py"
+A2_PACKET_LADDER_CLOSURE_AUDIT = TOOLS / "audit_a2_packet_ladder_closure.py"
 EVAL_LOADER_DRIFT_MISSING_PREREQ_CLASS = "missing_prerequisite"
 EVAL_LOADER_DRIFT_PROBE_RUNTIME_ERROR_CLASS = "probe_runtime_error"
 EVAL_LOADER_DRIFT_KNOWN_MISSING_PREREQ_CODES = frozenset(
@@ -1440,6 +1444,7 @@ def main(argv: list[str] | None = None) -> int:
         FRONTIER_ARCHIVE_LAYOUT_AUDIT,
         OMEGA_OPT_ANCHOR_AUDIT,
         EVAL_LOADER_DRIFT_PROBE,
+        A2_PACKET_LADDER_CLOSURE_AUDIT,
         HSTACK_VSTACK_PLAN,
         PR91_HPM1_READINESS_ARTIFACT,
         PR91_HPM1_RUNTIME_CONTRACT_ARTIFACT,
@@ -1640,6 +1645,18 @@ def main(argv: list[str] | None = None) -> int:
             _run_eval_loader_drift_probe_gate,
             "  ✓ Gate #22: eval loader drift diagnostic — PASSED",
             "  ✗ Gate #22: eval loader drift diagnostic — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            23,
+            "A2 packet ladder closure",
+            lambda: _run_gate(
+                "A2 packet ladder closure",
+                A2_PACKET_LADDER_CLOSURE_AUDIT,
+                ["--strict"],
+            ),
+            "  ✓ Gate #23: A2 packet ladder closure — PASSED",
+            "  ✗ Gate #23: A2 packet ladder closure — FAILED",
         ),
     ]
     lane_steps = [

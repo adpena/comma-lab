@@ -5,8 +5,9 @@ Source: ``.omx/research/representation_integration_gap_audit_20260508_codex.md``
 prevent-recurrence gate #3.
 
 Rule: for monolithic HNeRV-family payloads (PR101/PR103/PR106-class
-packets that have a single charged ZIP member parsed into internal
-sections), require a parser-section manifest with:
+packets, plus byte-closed A2K1/CPLX1 packet wrappers that have a single
+charged ZIP member parsed into internal sections), require a parser-section
+manifest with:
 
   * ``offsets``    (list of int)
   * ``lengths``    (list of int)
@@ -23,9 +24,16 @@ Detection (static):
     * ``packet_family`` containing ``hnerv``
     * ``archive_layout=monolithic_hnerv``
     * ``representation_name`` containing ``hnerv``/``HNeRV``/``mnerv``
+    * ``wire_format`` / ``layout_magic`` / ``wire_contract`` containing
+      ``A2K1`` or ``CPLX1``
+    * ``archive_member_manifest.layout_magic`` containing ``A2K1`` or ``CPLX1``
+    * ``packet_closure.wire_contract`` containing ``A2K1`` or ``CPLX1``
     * Filename path includes ``hnerv``
 
-  For every such manifest, require ALL six fields above to be non-empty.
+  For every such manifest, require ALL six fields above to be non-empty, or
+  require an in-repo archive path+SHA that reparses through the canonical
+  packet-section parser. The archive reparse compatibility path keeps older
+  CPU-build custody manifests fail-closed without mutating generated artifacts.
 
 Live count on landing: typically 0 for synthetic candidates; existing
 public PR101/103/106 intake manifests are vendored read-only and
@@ -42,7 +50,21 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-REPO_ROOT_DEFAULT = Path(__file__).resolve().parents[1]
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO_ROOT_DEFAULT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT_DEFAULT)
+
+from tac.analysis.hnerv_packet_sections import (  # noqa: E402
+    HnervPacketSectionManifestError,
+    build_packet_section_manifest,
+)
+from tac.hnerv_lowlevel_packer import HnervLowlevelPackError  # noqa: E402
+from tac.hnerv_pr103_lc_ac_schema import HnervPr103LcAcSchemaError  # noqa: E402
+from tac.repo_io import sha256_file  # noqa: E402
 
 REQUIRED_PARSER_FIELDS: tuple[str, ...] = (
     "offsets",
@@ -59,6 +81,10 @@ HNERV_FAMILY_TOKENS = (
     "mnerv",
     "MNeRV",
     "monolithic_hnerv",
+)
+BYTE_CLOSED_WIRE_TOKENS = (
+    "a2k1",
+    "cplx1",
 )
 
 
@@ -79,6 +105,20 @@ def _is_hnerv_family(manifest: dict, manifest_path: Path) -> bool:
     name = str(manifest.get("representation_name", "")).lower()
     if any(tok.lower() in name for tok in HNERV_FAMILY_TOKENS):
         return True
+    for field in ("wire_format", "layout_magic", "wire_contract"):
+        value = str(manifest.get(field, "")).lower()
+        if any(tok in value for tok in BYTE_CLOSED_WIRE_TOKENS):
+            return True
+    member_manifest = manifest.get("archive_member_manifest")
+    if isinstance(member_manifest, dict):
+        value = str(member_manifest.get("layout_magic", "")).lower()
+        if any(tok in value for tok in BYTE_CLOSED_WIRE_TOKENS):
+            return True
+    packet_closure = manifest.get("packet_closure")
+    if isinstance(packet_closure, dict):
+        value = str(packet_closure.get("wire_contract", "")).lower()
+        if any(tok in value for tok in BYTE_CLOSED_WIRE_TOKENS):
+            return True
     parts = manifest_path.as_posix().lower()
     return "hnerv" in parts
 
@@ -165,6 +205,81 @@ def _schema_errors(manifest: dict) -> list[str]:
     return errors
 
 
+def _archive_parser_section_closure_ok(
+    manifest: dict,
+    *,
+    manifest_path: Path,
+    repo_root: Path,
+) -> tuple[bool, str]:
+    archive_path = _archive_path_from_manifest(manifest, repo_root=repo_root)
+    if archive_path is None:
+        return False, "archive path missing for parser reparse"
+    if not archive_path.is_file():
+        return False, f"archive path missing on disk for parser reparse: {archive_path}"
+    expected_sha = _archive_sha_from_manifest(manifest)
+    if not expected_sha:
+        return False, "archive SHA missing for parser reparse"
+    actual_sha = sha256_file(archive_path)
+    if expected_sha.lower() != actual_sha.lower():
+        return False, "archive SHA mismatch for parser reparse"
+    label = str(manifest.get("lane_id") or manifest.get("representation_name") or manifest_path.parent.name)
+    try:
+        reparsed = build_packet_section_manifest(
+            archive_path,
+            label=label,
+            repo_root=repo_root,
+        )
+    except (
+        HnervPacketSectionManifestError,
+        HnervLowlevelPackError,
+        HnervPr103LcAcSchemaError,
+        OSError,
+        ValueError,
+    ) as exc:
+        return False, f"archive parser reparse failed: {exc}"
+    gate = reparsed.get("parser_section_gate")
+    parser_manifest = reparsed.get("parser_section_manifest")
+    if isinstance(gate, dict) and gate.get("ready") is True and isinstance(parser_manifest, dict):
+        missing = _missing_parser_fields({"parser_section_manifest": parser_manifest})
+        schema_errors = [] if missing else _schema_errors({"parser_section_manifest": parser_manifest})
+        if not missing and not schema_errors:
+            return True, ""
+        return False, "archive parser reparse emitted invalid Gate 3 parser_section_manifest"
+    blockers = gate.get("blockers") if isinstance(gate, dict) else None
+    return False, f"archive parser reparse blocked: {blockers}"
+
+
+def _archive_path_from_manifest(manifest: dict, *, repo_root: Path) -> Path | None:
+    for key in ("archive_relpath", "archive_path", "candidate_archive_relpath", "candidate_archive_path"):
+        value = manifest.get(key)
+        if isinstance(value, str) and value:
+            path = Path(value)
+            return path if path.is_absolute() else repo_root / path
+    archive = manifest.get("archive")
+    if isinstance(archive, dict) and isinstance(archive.get("path"), str):
+        path = Path(str(archive["path"]))
+        return path if path.is_absolute() else repo_root / path
+    candidate_archive = manifest.get("candidate_archive")
+    if isinstance(candidate_archive, dict) and isinstance(candidate_archive.get("path"), str):
+        path = Path(str(candidate_archive["path"]))
+        return path if path.is_absolute() else repo_root / path
+    return None
+
+
+def _archive_sha_from_manifest(manifest: dict) -> str | None:
+    for key in ("archive_sha256", "candidate_archive_sha256"):
+        value = manifest.get(key)
+        if isinstance(value, str) and value:
+            return value
+    archive = manifest.get("archive")
+    if isinstance(archive, dict) and isinstance(archive.get("sha256"), str):
+        return str(archive["sha256"])
+    candidate_archive = manifest.get("candidate_archive")
+    if isinstance(candidate_archive, dict) and isinstance(candidate_archive.get("sha256"), str):
+        return str(candidate_archive["sha256"])
+    return None
+
+
 def scan(repo_root: Path | None = None) -> list[Finding]:
     repo = (repo_root or REPO_ROOT_DEFAULT).resolve()
     findings: list[Finding] = []
@@ -197,11 +312,20 @@ def scan(repo_root: Path | None = None) -> list[Finding]:
             schema_errors = [] if missing else _schema_errors(manifest)
             if not missing and not schema_errors:
                 continue
+            archive_closure_ok, archive_closure_reason = _archive_parser_section_closure_ok(
+                manifest,
+                manifest_path=path,
+                repo_root=repo,
+            )
+            if archive_closure_ok:
+                continue
             detail = (
                 f"missing required parser-section fields: {','.join(missing)}"
                 if missing
                 else "invalid parser-section schema: " + "; ".join(schema_errors)
             )
+            if archive_closure_reason:
+                detail = f"{detail}; {archive_closure_reason}"
             findings.append(
                 Finding(
                     manifest_rel=relpath,

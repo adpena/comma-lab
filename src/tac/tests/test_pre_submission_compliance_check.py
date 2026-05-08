@@ -316,6 +316,30 @@ def test_pre_submission_check_accepts_candidate_archive_manifest_identity(tmp_pa
     assert report["passed"], [c for c in report["checks"] if not c["passed"]]
 
 
+def test_pre_submission_check_marks_optional_missing_custody_as_warning(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    _write_submission(tmp_path / "submission")
+    (tmp_path / "submission" / "contest_auth_eval.json").unlink()
+    (tmp_path / "submission" / "archive_manifest.json").unlink()
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            ["--submission-dir", str(tmp_path / "submission")]
+        )
+    )
+
+    assert report["passed"], [c for c in report["checks"] if c["severity"] == "error" and not c["passed"]]
+    warnings = {
+        check["name"]: check
+        for check in report["checks"]
+        if check["severity"] == "warning" and not check["passed"]
+    }
+    assert "auth_eval_optional_missing" in warnings
+    assert "archive_manifest_optional_missing" in warnings
+
+
 def test_pre_submission_check_dispatch_claim_linkage_requires_terminal_row(tmp_path: Path) -> None:
     mod = _load_module()
     expected = _write_submission(tmp_path / "submission")

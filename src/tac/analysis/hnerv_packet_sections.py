@@ -8,7 +8,10 @@ It is custody/audit infrastructure only; it never emits a score claim.
 
 from __future__ import annotations
 
+import json
+import math
 import zipfile
+from collections import Counter
 from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -34,11 +37,25 @@ PARSER_AUTO = "auto"
 PARSER_PR101 = "pr101_microcodec_fixed"
 PARSER_PR103 = "pr103_lc_ac"
 PARSER_PR106 = "pr106_ff_packed_hnerv"
-PARSER_CHOICES = (PARSER_AUTO, PARSER_PR101, PARSER_PR103, PARSER_PR106)
+PARSER_A2K1 = "a2k1_variable_decoder_pr101"
+PARSER_CPLX1 = "cplx1_op1_byte_maps"
+PARSER_CHOICES = (
+    PARSER_AUTO,
+    PARSER_PR101,
+    PARSER_PR103,
+    PARSER_PR106,
+    PARSER_A2K1,
+    PARSER_CPLX1,
+)
 
 PR101_DECODER_BLOB_LEN = 162_164
 PR101_LATENT_BLOB_LEN = 15_387
 PR101_TOTAL_KNOWN_LEN = PR101_DECODER_BLOB_LEN + PR101_LATENT_BLOB_LEN + 607
+A2K1_MAGIC = b"A2K1"
+A2K1_HEADER_LEN = 8
+CPLX1_MAGIC = b"CPLX"
+CPLX1_HEADER_LEN = 8
+CPLX1_BYTE_MAP_LEN_FIELD_LEN = 2
 
 PR101_SECTION_ROLES = {
     "decoder_compact_brotli_streams": "decoder_weight_stream",
@@ -59,6 +76,22 @@ PR106_SECTION_ROLES = {
     "packed_header_ff_len24": "control_or_metadata",
     "decoder_packed_brotli": "decoder_weight_stream",
     "latents_and_sidecar_brotli": "latent_stream",
+}
+A2K1_SECTION_ROLES = {
+    "a2k1_magic": "control_or_metadata",
+    "decoder_len_u32le": "control_or_metadata",
+    "decoder_blob": "decoder_weight_stream",
+    "latent_blob": "latent_stream",
+    "sidecar_blob": "sidecar_or_correction_stream",
+}
+CPLX1_SECTION_ROLES = {
+    "cplx_magic": "control_or_metadata",
+    "decoder_section_len_u32le": "control_or_metadata",
+    "byte_maps_json_len_u16le": "control_or_metadata",
+    "byte_maps_json": "decoder_byte_map_metadata",
+    "op1_inner_blob": "decoder_weight_stream",
+    "latent_blob": "latent_stream",
+    "sidecar_blob": "sidecar_or_correction_stream",
 }
 
 
@@ -262,6 +295,7 @@ def _emit_packet_section_manifest(
             "requested": parser,
             "confidence": _parser_confidence(parser_name),
         },
+        "parser_section_manifest": _gate3_parser_section_manifest(sections),
         "sections": sections,
         "coverage": coverage,
         "parser_section_gate": _gate(_validate_manifest_shape_without_gate(sections, coverage)),
@@ -301,6 +335,14 @@ def _infer_parser(
         return PARSER_PR106
     if "pr103" in text or "hnerv_lc_ac" in text:
         return PARSER_PR103
+    if "a2k1" in text or "a2_lossy" in text or "lossy_coarsening" in text:
+        return PARSER_A2K1
+    if "cplx1" in text or "cplx" in text or "op1_finalizer" in text:
+        return PARSER_CPLX1
+    if payload.startswith(A2K1_MAGIC):
+        return PARSER_A2K1
+    if payload.startswith(CPLX1_MAGIC):
+        return PARSER_CPLX1
     if "pr101" in text or "hnerv_ft_microcodec" in text:
         return PARSER_PR101
     if len(payload) >= 4 and payload[0] == 0xFF:
@@ -319,6 +361,10 @@ def _parse_sections(parser_name: str, payload: bytes) -> list[dict[str, Any]]:
         return _parse_pr103_sections(payload)
     if parser_name == PARSER_PR106:
         return _parse_pr106_sections(payload)
+    if parser_name == PARSER_A2K1:
+        return _parse_a2k1_sections(payload)
+    if parser_name == PARSER_CPLX1:
+        return _parse_cplx1_sections(payload)
     raise HnervPacketSectionManifestError(f"unknown parser {parser_name!r}")
 
 
@@ -382,6 +428,108 @@ def _parse_pr106_sections(payload: bytes) -> list[dict[str, Any]]:
     ]
 
 
+def _parse_a2k1_sections(payload: bytes) -> list[dict[str, Any]]:
+    if len(payload) < A2K1_HEADER_LEN + PR101_LATENT_BLOB_LEN:
+        raise HnervPacketSectionManifestError(
+            f"A2K1 payload too short for header+latent window: got {len(payload)} bytes"
+        )
+    if payload[:4] != A2K1_MAGIC:
+        raise HnervPacketSectionManifestError("A2K1 payload missing magic")
+    decoder_len = int.from_bytes(payload[4:A2K1_HEADER_LEN], "little")
+    if decoder_len <= 0:
+        raise HnervPacketSectionManifestError(f"A2K1 decoder length invalid: {decoder_len}")
+    decoder_start = A2K1_HEADER_LEN
+    decoder_end = decoder_start + decoder_len
+    latent_start = decoder_end
+    latent_end = latent_start + PR101_LATENT_BLOB_LEN
+    if latent_end >= len(payload):
+        raise HnervPacketSectionManifestError(
+            "A2K1 decoder length truncates latent/sidecar window: "
+            f"decoder_len={decoder_len} payload_bytes={len(payload)}"
+        )
+    specs = [
+        ("a2k1_magic", 0, payload[:4]),
+        ("decoder_len_u32le", 4, payload[4:A2K1_HEADER_LEN]),
+        ("decoder_blob", decoder_start, payload[decoder_start:decoder_end]),
+        ("latent_blob", latent_start, payload[latent_start:latent_end]),
+        ("sidecar_blob", latent_end, payload[latent_end:]),
+    ]
+    return [
+        _section_record(
+            index,
+            name=name,
+            offset=offset,
+            data=data,
+            role=A2K1_SECTION_ROLES[name],
+        )
+        for index, (name, offset, data) in enumerate(specs)
+    ]
+
+
+def _parse_cplx1_sections(payload: bytes) -> list[dict[str, Any]]:
+    minimum = CPLX1_HEADER_LEN + CPLX1_BYTE_MAP_LEN_FIELD_LEN + PR101_LATENT_BLOB_LEN
+    if len(payload) < minimum:
+        raise HnervPacketSectionManifestError(
+            f"CPLX1 payload too short for header+latent window: got {len(payload)} bytes"
+        )
+    if payload[:4] != CPLX1_MAGIC:
+        raise HnervPacketSectionManifestError("CPLX1 payload missing CPLX magic")
+    section_total = int.from_bytes(payload[4:CPLX1_HEADER_LEN], "little")
+    if section_total < CPLX1_HEADER_LEN + CPLX1_BYTE_MAP_LEN_FIELD_LEN:
+        raise HnervPacketSectionManifestError(
+            f"CPLX1 decoder section length invalid: {section_total}"
+        )
+    if section_total > len(payload) - PR101_LATENT_BLOB_LEN:
+        raise HnervPacketSectionManifestError(
+            "CPLX1 decoder section length leaves no complete PR101 latent window: "
+            f"section_total={section_total} payload_bytes={len(payload)}"
+        )
+    json_len = int.from_bytes(payload[8:10], "little")
+    json_start = 10
+    json_end = json_start + json_len
+    if json_end > section_total:
+        raise HnervPacketSectionManifestError(
+            f"CPLX1 byte_maps JSON length overflows decoder section: {json_len}"
+        )
+    op1_start = json_end
+    if op1_start >= section_total:
+        raise HnervPacketSectionManifestError("CPLX1 op1_inner_blob is empty")
+    byte_maps_json = payload[json_start:json_end]
+    try:
+        byte_maps = json.loads(byte_maps_json.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+        raise HnervPacketSectionManifestError("CPLX1 byte_maps JSON is invalid") from exc
+    if not isinstance(byte_maps, dict):
+        raise HnervPacketSectionManifestError("CPLX1 byte_maps JSON must be an object")
+    try:
+        {int(key): str(value) for key, value in byte_maps.items()}
+    except (TypeError, ValueError) as exc:
+        raise HnervPacketSectionManifestError("CPLX1 byte_maps JSON keys must be ints") from exc
+    latent_start = section_total
+    latent_end = latent_start + PR101_LATENT_BLOB_LEN
+    if latent_end >= len(payload):
+        raise HnervPacketSectionManifestError("CPLX1 sidecar section is empty")
+    specs = [
+        ("cplx_magic", 0, payload[:4]),
+        ("decoder_section_len_u32le", 4, payload[4:CPLX1_HEADER_LEN]),
+        ("byte_maps_json_len_u16le", 8, payload[8:10]),
+        ("byte_maps_json", json_start, byte_maps_json),
+        ("op1_inner_blob", op1_start, payload[op1_start:section_total]),
+        ("latent_blob", latent_start, payload[latent_start:latent_end]),
+        ("sidecar_blob", latent_end, payload[latent_end:]),
+    ]
+    return [
+        _section_record(
+            index,
+            name=name,
+            offset=offset,
+            data=data,
+            role=CPLX1_SECTION_ROLES[name],
+        )
+        for index, (name, offset, data) in enumerate(specs)
+    ]
+
+
 def _section_record(index: int, *, name: str, offset: int, data: bytes, role: str) -> dict[str, Any]:
     end = offset + len(data)
     return {
@@ -393,8 +541,39 @@ def _section_record(index: int, *, name: str, offset: int, data: bytes, role: st
         "length": len(data),
         "bytes": len(data),
         "sha256": sha256_bytes(data),
+        "entropy_bits_per_byte": _byte_entropy_bits_per_byte(data),
         "optimization_role": role,
         "score_claim": False,
+    }
+
+
+def _byte_entropy_bits_per_byte(data: bytes) -> float:
+    if not data:
+        return 0.0
+    total = len(data)
+    counts = Counter(data)
+    entropy = -sum((count / total) * math.log2(count / total) for count in counts.values())
+    return round(float(entropy), 12)
+
+
+def _gate3_parser_section_manifest(sections: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    names = [str(section["name"]) for section in sections]
+    offsets = [int(section["offset"]) for section in sections]
+    lengths = [int(section["length"]) for section in sections]
+    hashes = [str(section["sha256"]) for section in sections]
+    entropy = [float(section.get("entropy_bits_per_byte", 0.0)) for section in sections]
+    return {
+        "offsets": offsets,
+        "lengths": lengths,
+        "section_names": names,
+        "section_sha256s": hashes,
+        "entropy_estimates": entropy,
+        "old_new_section_boundaries": {
+            name: {"old": [offset, offset + length], "new": [offset, offset + length]}
+            for name, offset, length in zip(names, offsets, lengths, strict=True)
+        },
+        "score_claim": False,
+        "dispatch_attempted": False,
     }
 
 
@@ -460,6 +639,9 @@ def _validate_manifest_shape(manifest: Mapping[str, Any]) -> list[str]:
         blockers.append("coverage_missing")
         coverage = {}
     blockers.extend(_validate_manifest_shape_without_gate(sections, coverage))
+    parser_section_manifest = manifest.get("parser_section_manifest")
+    if parser_section_manifest is not None:
+        blockers.extend(_validate_gate3_parser_section_manifest(parser_section_manifest, sections))
     return blockers
 
 
@@ -517,6 +699,33 @@ def _validate_manifest_shape_without_gate(
     return blockers
 
 
+def _validate_gate3_parser_section_manifest(
+    payload: Any,
+    sections: Sequence[Any],
+) -> list[str]:
+    if not isinstance(payload, Mapping):
+        return ["parser_section_manifest_not_object"]
+    if not sections or not all(isinstance(section, Mapping) for section in sections):
+        return []
+    expected = _gate3_parser_section_manifest(sections)  # type: ignore[arg-type]
+    blockers: list[str] = []
+    for key in (
+        "offsets",
+        "lengths",
+        "section_names",
+        "section_sha256s",
+        "entropy_estimates",
+        "old_new_section_boundaries",
+    ):
+        if payload.get(key) != expected[key]:
+            blockers.append(f"parser_section_manifest_{key}_does_not_match_sections")
+    if payload.get("score_claim") is not False:
+        blockers.append("parser_section_manifest_score_claim_not_false")
+    if payload.get("dispatch_attempted") is not False:
+        blockers.append("parser_section_manifest_dispatch_attempted_not_false")
+    return blockers
+
+
 def _archive_path_from_manifest(
     manifest: Mapping[str, Any],
     *,
@@ -571,6 +780,10 @@ def _parser_confidence(parser_name: str) -> str:
         return "existing PR103 lc_ac parser"
     if parser_name == PARSER_PR106:
         return "0xff header plus 24-bit decoder length"
+    if parser_name == PARSER_A2K1:
+        return "A2K1 magic plus u32 decoder length and PR101 latent window"
+    if parser_name == PARSER_CPLX1:
+        return "CPLX magic plus decoder section length and byte_maps JSON"
     return "unknown"
 
 
@@ -598,8 +811,12 @@ def _is_sha256(value: Any) -> bool:
 __all__ = [
     "BATCH_SCHEMA",
     "MANIFEST_SCHEMA",
+    "A2K1_MAGIC",
+    "CPLX1_MAGIC",
     "PARSER_AUTO",
     "PARSER_CHOICES",
+    "PARSER_A2K1",
+    "PARSER_CPLX1",
     "PARSER_PR101",
     "PARSER_PR103",
     "PARSER_PR106",
