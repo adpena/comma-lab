@@ -165,8 +165,14 @@ Per blueprint §5 + CLAUDE.md "Predispatch sanity for δ/ε/ζ":
 7. **ζ roundtrip weight fidelity**: per-layer MSE < 0.1
 8. **ζ bit-allocation anti-collapse**: ≥ 50% of channels with `b_l > 1.0`
 9. **FiLM protection asserted** in `self_compress_layers` exclusion list
-10. **MSSIM ≥ 0.90** (the gate apogee_int4 lacked, FALSIFIED at 1.4287
-    contest-CUDA — see `feedback_q_faithful_NEVER_reproduced_quantizr_score_*`)
+10. **MSSIM ≥ 0.90** (the gate apogee_int4 lacked at the single config that
+    measured 1.4287 [contest-CUDA T4]; per CLAUDE.md "KILL is LAST RESORT"
+    apogee_int4 status is **DEFERRED-pending-research** [single-config
+    NAIVE-PTQ test only, NOT class-falsified] — see
+    `feedback_adversarial_audit_4_falsifications_DEFERRED_not_killed_20260507`
+    for re-tagging audit; original measurement memo
+    `feedback_q_faithful_NEVER_reproduced_quantizr_score_*` separately
+    documents Q-FAITHFUL profile never landing 0.33.)
 
 ## 4. GPU dispatch budget
 
