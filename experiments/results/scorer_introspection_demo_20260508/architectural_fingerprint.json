@@ -1,0 +1,231 @@
+{
+  "PoseNet": {
+    "kind": "PoseNet",
+    "input_shape": [
+      1,
+      12,
+      192,
+      256
+    ],
+    "num_layers": 397,
+    "top10_module_types": {
+      "Conv2d": 78,
+      "ConvNormAct": 52,
+      "BatchNormAct2d": 52,
+      "MobileOneBlock": 31,
+      "BatchNorm2d": 28,
+      "LayerScale2d": 24,
+      "GELUTanh": 19,
+      "Sequential": 14,
+      "Linear": 14,
+      "RepMixerBlock": 12
+    },
+    "largest_5_layers": [
+      {
+        "name": "vision.stem.0",
+        "type": "MobileOneBlock",
+        "numel": 786432
+      },
+      {
+        "name": "vision.stem.0.conv_kxk.0",
+        "type": "ConvNormAct",
+        "numel": 786432
+      },
+      {
+        "name": "vision.stem.0.conv_kxk.0.conv",
+        "type": "Conv2d",
+        "numel": 786432
+      },
+      {
+        "name": "vision.stem.0.conv_kxk.0.bn",
+        "type": "BatchNormAct2d",
+        "numel": 786432
+      },
+      {
+        "name": "vision.stem.0.conv_scale",
+        "type": "ConvNormAct",
+        "numel": 786432
+      }
+    ],
+    "attention_layers": [
+      {
+        "name": "vision.stages.0.blocks.0",
+        "type": "RepMixerBlock",
+        "mixer_rank_proxy": 2000.7337057593754,
+        "spatial_concentration": 0.007904964499175549
+      },
+      {
+        "name": "vision.stages.0.blocks.1",
+        "type": "RepMixerBlock",
+        "mixer_rank_proxy": 1969.2888389051889,
+        "spatial_concentration": 0.008101087994873524
+      },
+      {
+        "name": "vision.stages.1.blocks.0",
+        "type": "RepMixerBlock",
+        "mixer_rank_proxy": 684.5324938311575,
+        "spatial_concentration": 0.007202765438705683
+      },
+      {
+        "name": "vision.stages.1.blocks.1",
+        "type": "RepMixerBlock",
+        "mixer_rank_proxy": 527.3347874074038,
+        "spatial_concentration": 0.017738111317157745
+      },
+      {
+        "name": "vision.stages.2.blocks.0",
+        "type": "RepMixerBlock",
+        "mixer_rank_proxy": 163.81640184071384,
+        "spatial_concentration": 0.019495312124490738
+      },
+      {
+        "name": "vision.stages.2.blocks.1",
+        "type": "RepMixerBlock",
+        "mixer_rank_proxy": 148.31956136236622,
+        "spatial_concentration": 0.023451384156942368
+      },
+      {
+        "name": "vision.stages.2.blocks.2",
+        "type": "RepMixerBlock",
+        "mixer_rank_proxy": 151.19882544518825,
+        "spatial_concentration": 0.02849728986620903
+      },
+      {
+        "name": "vision.stages.2.blocks.3",
+        "type": "RepMixerBlock",
+        "mixer_rank_proxy": 133.07311373778705,
+        "spatial_concentration": 0.06559886038303375
+      },
+      {
+        "name": "vision.stages.2.blocks.4",
+        "type": "RepMixerBlock",
+        "mixer_rank_proxy": 105.15135127792921,
+        "spatial_concentration": 0.05372392758727074
+      },
+      {
+        "name": "vision.stages.2.blocks.5",
+        "type": "RepMixerBlock",
+        "mixer_rank_proxy": 139.46334932946843,
+        "spatial_concentration": 0.035955335944890976
+      },
+      {
+        "name": "vision.stages.3.blocks.0",
+        "type": "RepMixerBlock",
+        "mixer_rank_proxy": 22.167115885871787,
+        "spatial_concentration": 0.22251872718334198
+      },
+      {
+        "name": "vision.stages.3.blocks.1",
+        "type": "RepMixerBlock",
+        "mixer_rank_proxy": 1.6808327823115154,
+        "spatial_concentration": 0.8951476216316223
+      }
+    ]
+  },
+  "SegNet": {
+    "kind": "SegNet",
+    "input_shape": [
+      1,
+      3,
+      384,
+      512
+    ],
+    "num_layers": 387,
+    "top10_module_types": {
+      "Conv2d": 125,
+      "BatchNormAct2d": 68,
+      "SiLU": 68,
+      "SqueezeExcite": 23,
+      "Sigmoid": 23,
+      "InvertedResidual": 21,
+      "Conv2dReLU": 10,
+      "BatchNorm2d": 10,
+      "ReLU": 10,
+      "Attention": 9
+    },
+    "largest_5_layers": [
+      {
+        "name": "encoder.model.blocks.1.0.conv_pw",
+        "type": "Conv2d",
+        "numel": 4718592
+      },
+      {
+        "name": "encoder.model.blocks.1.0.bn1",
+        "type": "BatchNormAct2d",
+        "numel": 4718592
+      },
+      {
+        "name": "encoder.model.blocks.1.0.bn1.act",
+        "type": "SiLU",
+        "numel": 4718592
+      },
+      {
+        "name": "decoder.blocks.3.attention1",
+        "type": "Attention",
+        "numel": 3932160
+      },
+      {
+        "name": "decoder",
+        "type": "UnetDecoder",
+        "numel": 3145728
+      }
+    ],
+    "attention_layers": [
+      {
+        "name": "decoder.blocks.0.attention1",
+        "type": "Attention",
+        "mixer_rank_proxy": null,
+        "spatial_concentration": null
+      },
+      {
+        "name": "decoder.blocks.0.attention2",
+        "type": "Attention",
+        "mixer_rank_proxy": null,
+        "spatial_concentration": null
+      },
+      {
+        "name": "decoder.blocks.1.attention1",
+        "type": "Attention",
+        "mixer_rank_proxy": null,
+        "spatial_concentration": null
+      },
+      {
+        "name": "decoder.blocks.1.attention2",
+        "type": "Attention",
+        "mixer_rank_proxy": null,
+        "spatial_concentration": null
+      },
+      {
+        "name": "decoder.blocks.2.attention1",
+        "type": "Attention",
+        "mixer_rank_proxy": null,
+        "spatial_concentration": null
+      },
+      {
+        "name": "decoder.blocks.2.attention2",
+        "type": "Attention",
+        "mixer_rank_proxy": null,
+        "spatial_concentration": null
+      },
+      {
+        "name": "decoder.blocks.3.attention1",
+        "type": "Attention",
+        "mixer_rank_proxy": null,
+        "spatial_concentration": null
+      },
+      {
+        "name": "decoder.blocks.3.attention2",
+        "type": "Attention",
+        "mixer_rank_proxy": null,
+        "spatial_concentration": null
+      },
+      {
+        "name": "decoder.blocks.4.attention2",
+        "type": "Attention",
+        "mixer_rank_proxy": null,
+        "spatial_concentration": null
+      }
+    ]
+  },
+  "tag": "[diagnostic-not-score]"
+}

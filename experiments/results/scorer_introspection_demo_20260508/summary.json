@@ -1,0 +1,38 @@
+{
+  "common": {
+    "tag": "[diagnostic-not-score]",
+    "device": "cpu",
+    "frame_pair_idx": 0,
+    "source": "upstream/videos/0.mkv",
+    "capture_mode": "fingerprint",
+    "archive_path": "experiments/results/lightning_batch/pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z/archive.zip",
+    "archive_sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+    "upstream_dir": "upstream",
+    "timestamp": 1778244583,
+    "torch_version": "2.11.0"
+  },
+  "scorers": {
+    "posenet": {
+      "record_path": "experiments/results/scorer_introspection_demo_20260508/posenet_record.pt",
+      "num_layers_recorded": 397,
+      "num_attention_like_layers": 12,
+      "input_shape": [
+        1,
+        12,
+        192,
+        256
+      ]
+    },
+    "segnet": {
+      "record_path": "experiments/results/scorer_introspection_demo_20260508/segnet_record.pt",
+      "num_layers_recorded": 387,
+      "num_attention_like_layers": 10,
+      "input_shape": [
+        1,
+        3,
+        384,
+        512
+      ]
+    }
+  }
+}
