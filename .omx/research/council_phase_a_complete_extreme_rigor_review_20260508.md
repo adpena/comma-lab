@@ -802,6 +802,38 @@ Round 1 + Round 2 action items remaining:
 3/5 of these are inline (~30 min, ~1 hour, ~1 hour). 2/5 are
 operator-gated. Round 3 can proceed once the inline 3 are landed.
 
+### Round 1 action item #2 — re-aggregation results (LANDED inline)
+
+Re-ran the greedy selector on saved per-tensor measurements at
+`reports/raw/pr101_omega_opt_per_tensor_codec_choice_20260508T034324Z/manifest.json`
+with the new element-weighted L2 form. **Bytes column unchanged at every
+budget**; the greedy selector picks the same codec per tensor regardless
+of aggregation form.
+
+| Budget | Bytes | OLD agg (unweighted) | NEW agg (element-weighted L2) | Δ |
+|---:|---:|---:|---:|---:|
+| 0.000 | 162,299 | 0.00000 | 0.00000 | — |
+| 0.050 | 162,299 | 0.00000 | 0.00000 | — |
+| 0.120 | 147,935 | 0.06846 | 0.10964 | +60.2% |
+| 0.150 | 146,503 | 0.07218 | 0.11517 | +59.5% |
+| 0.200 | 146,503 | 0.07218 | 0.11517 | +59.5% |
+| 0.300 | 117,461 | 0.18881 | 0.25553 | +35.3% |
+| 0.500 |  80,484 | 0.34684 | 0.44641 | +28.7% |
+
+**Verdict (Round 4 finding):** Path B step 4's BYTE-savings verdicts
+hold (16-32 KB at the prior tradeoff points). The rel_err magnitudes
+were UNDER-STATED by ~30-60% under the old unweighted mean — small
+tensors (low byte cost, high per-tensor rel_err) over-influenced the
+aggregate. The element-weighted L2 form is the canonical
+information-theoretic aggregate (Shannon, MacKay).
+
+**Implication for Round 3 Phase 4 band shift:** the council Round 3
+verdict (predicted band 0.155-0.175 → 0.165-0.180) holds AND becomes
+slightly more conservative — the new aggregation reveals that the
+"bytes-saved at rel_err X" tradeoff was leaning further into the
+distortion axis than reported. No change to the Round 3 binding
+recommendation; A1+A4 dispatch order unchanged.
+
 ---
 
 ## §10. Round 3 — phase-interaction analysis
