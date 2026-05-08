@@ -16,6 +16,7 @@ emitting a non-promotable JSON artifact and returning exit code 2.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import platform
@@ -68,6 +69,9 @@ FORWARD_COLUMNS = (
             "upstream_modules_py",
             "posenet_weights_exist",
             "segnet_weights_exist",
+            "timm_available",
+            "safetensors_available",
+            "segmentation_models_pytorch_available",
         ),
     },
     {
@@ -77,6 +81,9 @@ FORWARD_COLUMNS = (
             "upstream_modules_py",
             "posenet_weights_exist",
             "segnet_weights_exist",
+            "timm_available",
+            "safetensors_available",
+            "segmentation_models_pytorch_available",
             "cuda_available",
         ),
     },
@@ -93,6 +100,28 @@ def _jsonable(value: Any) -> Any:
     if isinstance(value, (list, tuple)):
         return [_jsonable(v) for v in value]
     return str(value)
+
+
+def _sha256_file(path: Path) -> str | None:
+    if not path.exists() or not path.is_file():
+        return None
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _file_custody(path: Path, *, include_sha256: bool = True) -> dict[str, Any]:
+    exists = path.exists()
+    is_file = path.is_file()
+    return {
+        "path": str(path),
+        "exists": exists,
+        "is_file": is_file,
+        "size_bytes": path.stat().st_size if is_file else None,
+        "sha256": _sha256_file(path) if include_sha256 and is_file else None,
+    }
 
 
 def _find_spec(name: str) -> bool:
@@ -118,6 +147,8 @@ def _device_metadata() -> dict[str, Any]:
         )
     return {
         "platform": platform.platform(),
+        "system": platform.system(),
+        "machine": platform.machine(),
         "python": platform.python_version(),
         "torch": torch.__version__,
         "cuda": cuda,
@@ -166,6 +197,9 @@ def detect_artifacts(args: argparse.Namespace) -> dict[str, Any]:
         "pyav_available": _find_spec("av"),
         "cuda_available": torch.cuda.is_available(),
         "dali_available": _find_spec("nvidia.dali"),
+        "timm_available": _find_spec("timm"),
+        "safetensors_available": _find_spec("safetensors.torch"),
+        "segmentation_models_pytorch_available": _find_spec("segmentation_models_pytorch"),
     }
 
 
@@ -315,6 +349,9 @@ def build_comparison_plan(cells: list[dict[str, Any]], artifacts: dict[str, Any]
         "upstream_modules_py",
         "posenet_weights_exist",
         "cuda_available",
+        "timm_available",
+        "safetensors_available",
+        "segmentation_models_pytorch_available",
     )
     posenet_missing = _missing_reasons(posenet_required, artifacts)
     comparisons.append(
@@ -369,6 +406,50 @@ def build_probe_commands(args: argparse.Namespace) -> dict[str, list[str]]:
     }
 
 
+def source_file_custody(args: argparse.Namespace, artifacts: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "upstream_evaluate": _file_custody(UPSTREAM / "evaluate.py"),
+        "upstream_frame_utils": _file_custody(UPSTREAM / "frame_utils.py"),
+        "upstream_modules": _file_custody(UPSTREAM / "modules.py"),
+        "posenet_weights": _file_custody(UPSTREAM / "models" / "posenet.safetensors"),
+        "segnet_weights": _file_custody(UPSTREAM / "models" / "segnet.safetensors"),
+        "video_names_file": _file_custody(args.video_names_file),
+        "sample_videos": [
+            _file_custody(Path(path), include_sha256=False)
+            for path in artifacts.get("sampled_video_paths", [])
+        ],
+    }
+
+
+def device_axis_custody() -> dict[str, Any]:
+    return {
+        "score_path": "not_run",
+        "score_claim_axis": "none",
+        "contest_cuda_claim": False,
+        "contest_cpu_claim": False,
+        "macos_cpu_advisory_claim": False,
+        "mps_claim": False,
+        "matrix_contract": {
+            "rows": [
+                {
+                    "decoder_source": "pyav_av",
+                    "loader_class": "AVVideoDataset",
+                    "raw_decode_device": "cpu",
+                },
+                {
+                    "decoder_source": "dali_nvdec",
+                    "loader_class": "DaliVideoDataset",
+                    "raw_decode_device": "cuda",
+                },
+            ],
+            "columns": [
+                {"forward_device": "cpu", "network_forward": "DistortionNet"},
+                {"forward_device": "cuda", "network_forward": "DistortionNet"},
+            ],
+        },
+    }
+
+
 def build_probe_report(args: argparse.Namespace) -> dict[str, Any]:
     artifacts = detect_artifacts(args)
     cells = build_matrix_cells(artifacts)
@@ -382,9 +463,12 @@ def build_probe_report(args: argparse.Namespace) -> dict[str, Any]:
         "schema": "eval_drift_matrix_probe.v1",
         "created_at_utc": datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
         "evidence_grade": "diagnostic",
+        "diagnostic_kind": "eval_drift_matrix_probe",
         "repo": str(REPO),
         "upstream_evaluate": str(UPSTREAM / "evaluate.py"),
         "upstream_frame_utils": str(UPSTREAM / "frame_utils.py"),
@@ -396,6 +480,8 @@ def build_probe_report(args: argparse.Namespace) -> dict[str, Any]:
         "max_batches": args.max_batches,
         "environment": _device_metadata(),
         "artifact_status": artifacts,
+        "source_file_custody": source_file_custody(args, artifacts),
+        "device_axis_custody": device_axis_custody(),
         "matrix_rows": [row["decoder_source"] for row in DECODER_ROWS],
         "matrix_columns": [column["forward_device"] for column in FORWARD_COLUMNS],
         "matrix_cells": cells,

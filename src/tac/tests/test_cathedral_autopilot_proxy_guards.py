@@ -41,12 +41,16 @@ def test_autopilot_requires_exact_cuda_for_promotable_evidence() -> None:
     exact = tool.TechniqueEvidence(
         technique="exact_anchor",
         empirical_archive_bytes=100_000,
+        empirical_score=0.18,
+        score_contest_cuda=0.18,
         evidence_grade="[contest-CUDA]",
         evidence_semantics="contest_cuda_exact_eval_positive",
         score_claim=True,
         promotion_eligible=True,
         rank_or_kill_eligible=True,
         ready_for_exact_eval_dispatch=True,
+        archive_sha256="a" * 64,
+        runtime_tree_sha256="b" * 64,
         dispatch_blockers=[],
         source="contest_auth_eval.json",
     )

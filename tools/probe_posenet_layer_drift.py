@@ -15,6 +15,8 @@ does not replace exact auth eval.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import importlib.util
 import json
 import platform
 import re
@@ -50,14 +52,54 @@ def _jsonable(value: Any) -> Any:
     return str(value)
 
 
+def _find_spec(name: str) -> bool:
+    try:
+        return importlib.util.find_spec(name) is not None
+    except (ImportError, AttributeError, ValueError):
+        return False
+
+
+def _sha256_file(path: Path) -> str | None:
+    if not path.exists() or not path.is_file():
+        return None
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _file_custody(path: Path, *, include_sha256: bool = True) -> dict[str, Any]:
+    exists = path.exists()
+    is_file = path.is_file()
+    return {
+        "path": str(path),
+        "exists": exists,
+        "is_file": is_file,
+        "size_bytes": path.stat().st_size if is_file else None,
+        "sha256": _sha256_file(path) if include_sha256 and is_file else None,
+    }
+
+
 def device_available(device: str) -> tuple[bool, str | None]:
-    parsed = torch.device(device)
+    try:
+        parsed = torch.device(device)
+    except (RuntimeError, TypeError) as exc:
+        return False, f"invalid torch device {device!r}: {exc}"
     if parsed.type == "cpu":
         return True, None
     if parsed.type == "cuda":
-        return torch.cuda.is_available(), "torch.cuda.is_available() is false"
+        if not torch.cuda.is_available():
+            return False, "torch.cuda.is_available() is false"
+        index = 0 if parsed.index is None else parsed.index
+        device_count = torch.cuda.device_count()
+        if index < 0 or index >= device_count:
+            return False, f"cuda device index {index} outside available device_count={device_count}"
+        return True, None
     if parsed.type == "mps":
         available = bool(getattr(torch.backends, "mps", None)) and torch.backends.mps.is_available()
+        if parsed.index not in (None, 0):
+            return False, f"mps device index {parsed.index} is unsupported"
         return available, "torch.backends.mps.is_available() is false"
     return False, f"unsupported device type: {parsed.type}"
 
@@ -315,6 +357,8 @@ def _device_metadata() -> dict[str, Any]:
         )
     return {
         "platform": platform.platform(),
+        "system": platform.system(),
+        "machine": platform.machine(),
         "python": platform.python_version(),
         "torch": torch.__version__,
         "cuda": cuda_meta,
@@ -322,15 +366,70 @@ def _device_metadata() -> dict[str, Any]:
     }
 
 
+def detect_artifacts(args: argparse.Namespace) -> dict[str, Any]:
+    input_tensor_exists = True if args.input_tensor is None else args.input_tensor.exists()
+    return {
+        "upstream_modules_py": (UPSTREAM / "modules.py").exists(),
+        "posenet_weights_exist": (UPSTREAM / "models" / "posenet.safetensors").exists(),
+        "timm_available": _find_spec("timm"),
+        "safetensors_available": _find_spec("safetensors.torch"),
+        "segmentation_models_pytorch_available": _find_spec("segmentation_models_pytorch"),
+        "input_tensor_exists": input_tensor_exists,
+    }
+
+
+def _missing_reasons(required_artifacts: tuple[str, ...], artifacts: dict[str, Any]) -> list[str]:
+    return [f"{key}=false" for key in required_artifacts if artifacts.get(key) is not True]
+
+
+def source_file_custody(args: argparse.Namespace) -> dict[str, Any]:
+    return {
+        "upstream_modules": _file_custody(UPSTREAM / "modules.py"),
+        "posenet_weights": _file_custody(UPSTREAM / "models" / "posenet.safetensors"),
+        "input_tensor": (
+            _file_custody(args.input_tensor)
+            if args.input_tensor is not None
+            else None
+        ),
+    }
+
+
+def device_pair_custody(args: argparse.Namespace) -> dict[str, Any]:
+    device_a = torch.device(args.device_a) if device_available(args.device_a)[0] else None
+    device_b = torch.device(args.device_b) if device_available(args.device_b)[0] else None
+    return {
+        "comparison_scope": "posenet_shared_input_preprocess_and_network_forward",
+        "score_path": "not_run",
+        "score_claim_axis": "none",
+        "contest_cuda_claim": False,
+        "contest_cpu_claim": False,
+        "macos_cpu_advisory_claim": False,
+        "mps_claim": False,
+        "device_a": {
+            "requested": args.device_a,
+            "type": device_a.type if device_a is not None else None,
+            "index": device_a.index if device_a is not None else None,
+        },
+        "device_b": {
+            "requested": args.device_b,
+            "type": device_b.type if device_b is not None else None,
+            "index": device_b.index if device_b is not None else None,
+        },
+    }
+
+
 def build_probe_report(args: argparse.Namespace) -> dict[str, Any]:
+    artifacts = detect_artifacts(args)
     available_a, reason_a = device_available(args.device_a)
     available_b, reason_b = device_available(args.device_b)
     report: dict[str, Any] = {
         "schema": "posenet_layer_precision_drift_probe.v1",
         "created_at_utc": datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
         "evidence_grade": "diagnostic",
         "diagnostic_kind": "posenet_layer_drift_probe",
         "repo": str(REPO),
@@ -350,6 +449,9 @@ def build_probe_report(args: argparse.Namespace) -> dict[str, Any]:
         "max_modules": args.max_modules,
         "rms_abs_threshold": args.rms_abs_threshold,
         "environment": _device_metadata(),
+        "artifact_status": artifacts,
+        "source_file_custody": source_file_custody(args),
+        "device_pair_custody": device_pair_custody(args),
         "interpretation_guardrails": [
             "This probe isolates PoseNet/preprocess layer drift on a shared tensor; it does not score archives.",
             "A CPU/CUDA auth-eval gap can also arise from DALI-vs-AV video decode before PoseNet.",
@@ -357,63 +459,93 @@ def build_probe_report(args: argparse.Namespace) -> dict[str, Any]:
             "Use exact paired auth eval JSONs for score claims; use this tool to localize mechanism only.",
         ],
     }
-    if not (available_a and available_b):
+    required = (
+        "upstream_modules_py",
+        "posenet_weights_exist",
+        "timm_available",
+        "safetensors_available",
+        "segmentation_models_pytorch_available",
+        "input_tensor_exists",
+    )
+    missing = _missing_reasons(required, artifacts)
+    if not (available_a and available_b) or missing:
         report["comparison_available"] = False
-        if available_a:
-            model = _load_upstream_posenet(torch.device(args.device_a))
-            selected = select_named_modules(
-                model,
-                module_regex=args.module_regex,
-                leaf_only=args.leaf_only,
-                max_modules=args.max_modules,
-            )
-            report["selected_modules"] = [
-                {"name": name, "type": type(module).__name__}
-                for name, module in selected
-            ]
-            report["module_inventory"] = module_inventory(model)
+        reasons = []
+        if not available_a:
+            reasons.append(f"device_a_unavailable: {reason_a}")
+        if not available_b:
+            reasons.append(f"device_b_unavailable: {reason_b}")
+        reasons.extend(missing)
+        report["comparison_unavailable_reasons"] = reasons
+        report["comparison_unavailable_reason"] = "; ".join(reasons)
+        if available_a and not missing:
+            try:
+                model = _load_upstream_posenet(torch.device(args.device_a))
+                selected = select_named_modules(
+                    model,
+                    module_regex=args.module_regex,
+                    leaf_only=args.leaf_only,
+                    max_modules=args.max_modules,
+                )
+                report["selected_modules"] = [
+                    {"name": name, "type": type(module).__name__}
+                    for name, module in selected
+                ]
+                report["module_inventory"] = module_inventory(model)
+            except Exception as exc:
+                report["module_inventory_unavailable_reason"] = (
+                    f"module_inventory_error: {type(exc).__name__}: {exc}"
+                )
         return report
 
-    device_a = torch.device(args.device_a)
-    device_b = torch.device(args.device_b)
-    model_a = _load_upstream_posenet(device_a)
-    model_b = _load_upstream_posenet(device_b)
-    selected_a = select_named_modules(
-        model_a,
-        module_regex=args.module_regex,
-        leaf_only=args.leaf_only,
-        max_modules=args.max_modules,
-    )
-    selected_b = select_named_modules(
-        model_b,
-        module_regex=args.module_regex,
-        leaf_only=args.leaf_only,
-        max_modules=args.max_modules,
-    )
-    names_a = [name for name, _ in selected_a]
-    names_b = [name for name, _ in selected_b]
-    if names_a != names_b:
-        raise RuntimeError("selected module names differ across devices")
-
-    if args.input_tensor:
-        x_a = _load_input(args.input_tensor, device_a)
-        x_b = _load_input(args.input_tensor, device_b)
-    else:
-        x_a = _make_input(
-            device=device_a,
-            input_kind=args.input_kind,
-            batch_size=args.batch_size,
-            seed=args.seed,
+    try:
+        device_a = torch.device(args.device_a)
+        device_b = torch.device(args.device_b)
+        model_a = _load_upstream_posenet(device_a)
+        model_b = _load_upstream_posenet(device_b)
+        selected_a = select_named_modules(
+            model_a,
+            module_regex=args.module_regex,
+            leaf_only=args.leaf_only,
+            max_modules=args.max_modules,
         )
-        x_b = _make_input(
-            device=device_b,
-            input_kind=args.input_kind,
-            batch_size=args.batch_size,
-            seed=args.seed,
+        selected_b = select_named_modules(
+            model_b,
+            module_regex=args.module_regex,
+            leaf_only=args.leaf_only,
+            max_modules=args.max_modules,
         )
+        names_a = [name for name, _ in selected_a]
+        names_b = [name for name, _ in selected_b]
+        if names_a != names_b:
+            raise RuntimeError("selected module names differ across devices")
 
-    act_a, out_a = _capture_activations(model_a, x_a, input_kind=args.input_kind, selected=selected_a)
-    act_b, out_b = _capture_activations(model_b, x_b, input_kind=args.input_kind, selected=selected_b)
+        if args.input_tensor:
+            x_a = _load_input(args.input_tensor, device_a)
+            x_b = _load_input(args.input_tensor, device_b)
+        else:
+            x_a = _make_input(
+                device=device_a,
+                input_kind=args.input_kind,
+                batch_size=args.batch_size,
+                seed=args.seed,
+            )
+            x_b = _make_input(
+                device=device_b,
+                input_kind=args.input_kind,
+                batch_size=args.batch_size,
+                seed=args.seed,
+            )
+
+        act_a, out_a = _capture_activations(model_a, x_a, input_kind=args.input_kind, selected=selected_a)
+        act_b, out_b = _capture_activations(model_b, x_b, input_kind=args.input_kind, selected=selected_b)
+    except Exception as exc:
+        reason = f"probe_runtime_error: {type(exc).__name__}: {exc}"
+        report["comparison_available"] = False
+        report["comparison_unavailable_reason"] = reason
+        report["comparison_unavailable_reasons"] = [reason]
+        return report
+
     rows: list[dict[str, Any]] = []
     first_exceeding = None
     for idx, key in enumerate(act_a.keys()):

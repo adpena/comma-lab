@@ -61,6 +61,7 @@ GENERATED_ROOTS = (
     ".omx/research/artifacts",
     ".omx/state",
     "experiments/results",
+    "outputs",
     "reports/raw",
     "reports/private",
 )
@@ -81,6 +82,7 @@ VALID_DISPOSITIONS = frozenset(
         "ignore_rebuildable",
     }
 )
+VALID_PATH_KINDS = frozenset({"exact", "prefix"})
 
 
 def parse_git_status_porcelain(text: str) -> list[tuple[str, str]]:
@@ -107,20 +109,43 @@ def parse_git_status_records(text: str) -> list[tuple[str, str]]:
     return records
 
 
+def _is_under_root(posix: str, roots: tuple[str, ...]) -> bool:
+    return any(posix == root or posix.startswith(root + "/") for root in roots)
+
+
+def _has_source_suffix(posix: str) -> bool:
+    return Path(posix).suffix.lower() in SOURCE_SUFFIXES
+
+
+def _is_generated_custody_path(posix: str) -> bool:
+    return _is_under_root(posix, GENERATED_ROOTS)
+
+
 def _is_source_like_path(path: str) -> bool:
     posix = path.replace("\\", "/")
-    if any(posix == root or posix.startswith(root + "/") for root in GENERATED_ROOTS):
+    if not _has_source_suffix(posix):
         return False
-    suffix = Path(posix).suffix.lower()
-    if suffix not in SOURCE_SUFFIXES:
-        return False
-    return any(posix == root or posix.startswith(root + "/") for root in SOURCE_ROOTS)
+    return _is_under_root(posix, SOURCE_ROOTS) or _is_generated_custody_path(posix)
+
+
+def _default_disposition_for_record(record: UntrackedRecord) -> str:
+    if record.classification != "generated_custody_source_untracked":
+        return "track"
+    if record.path.startswith((".omx/state/", "reports/raw/", "reports/private/")):
+        return "ignore_private"
+    return "ignore_rebuildable"
 
 
 def classify_untracked_path(path: str) -> UntrackedRecord | None:
     posix = path.replace("\\", "/")
     if not _is_source_like_path(posix):
         return None
+    if _is_generated_custody_path(posix):
+        return UntrackedRecord(
+            posix,
+            "generated_custody_source_untracked",
+            "generated custody source-like artifact needs explicit disposition before promotion",
+        )
     if posix.startswith(".omx/research/"):
         return UntrackedRecord(posix, "research_untracked", "research markdown/state should be tracked or promoted")
     if posix.startswith("reverse_engineering/"):
@@ -142,8 +167,16 @@ def load_disposition_manifest(path: Path | None) -> dict[str, dict[str, str]]:
         relpath = entry.get("path")
         disposition = entry.get("disposition")
         note = entry.get("note", "")
+        path_kind = entry.get("path_kind", "exact")
         if not isinstance(relpath, str) or not relpath:
             raise ValueError(f"{path}: entries[{index}].path must be a nonempty string")
+        if not isinstance(path_kind, str) or path_kind not in VALID_PATH_KINDS:
+            raise ValueError(
+                f"{path}: entries[{index}].path_kind={path_kind!r}; "
+                f"expected one of {sorted(VALID_PATH_KINDS)}"
+            )
+        if path_kind == "prefix" and not relpath.endswith("/"):
+            raise ValueError(f"{path}: entries[{index}].path must end in '/' when path_kind is prefix")
         if disposition not in VALID_DISPOSITIONS:
             raise ValueError(
                 f"{path}: entries[{index}].disposition={disposition!r}; "
@@ -151,8 +184,17 @@ def load_disposition_manifest(path: Path | None) -> dict[str, dict[str, str]]:
             )
         if not isinstance(note, str) or not note:
             raise ValueError(f"{path}: entries[{index}].note must be a nonempty string")
-        out[relpath] = {"disposition": disposition, "note": note}
+        out[relpath] = {"disposition": disposition, "note": note, "path_kind": path_kind}
     return out
+
+
+def _is_known_audit_prefix(prefix: str) -> bool:
+    stripped = prefix.rstrip("/")
+    roots = SOURCE_ROOTS + GENERATED_ROOTS
+    return any(
+        stripped == root or stripped.startswith(root + "/") or root.startswith(stripped + "/")
+        for root in roots
+    )
 
 
 def _git_status(repo_root: Path) -> str:
@@ -189,7 +231,35 @@ def find_invalid_disposition_paths(
     tracked_source_like_paths: set[str],
 ) -> list[str]:
     valid_paths = live_untracked_paths | tracked_source_like_paths
-    return sorted(set(dispositions) - valid_paths)
+    invalid: list[str] = []
+    for relpath, entry in dispositions.items():
+        path_kind = entry.get("path_kind", "exact")
+        if path_kind == "prefix":
+            if _is_known_audit_prefix(relpath) or any(
+                path.startswith(relpath) for path in valid_paths
+            ):
+                continue
+            invalid.append(relpath)
+            continue
+        if relpath not in valid_paths:
+            invalid.append(relpath)
+    return sorted(invalid)
+
+
+def find_disposition_for_path(
+    dispositions: dict[str, dict[str, str]], relpath: str
+) -> dict[str, str] | None:
+    exact = dispositions.get(relpath)
+    if exact is not None and exact.get("path_kind", "exact") == "exact":
+        return exact
+    prefix_matches = [
+        (prefix, entry)
+        for prefix, entry in dispositions.items()
+        if entry.get("path_kind", "exact") == "prefix" and relpath.startswith(prefix)
+    ]
+    if not prefix_matches:
+        return None
+    return max(prefix_matches, key=lambda item: len(item[0]))[1]
 
 
 def audit_untracked_source_artifacts(
@@ -229,11 +299,12 @@ def audit_untracked_source_artifacts(
     )
     for record in records:
         by_class[record.classification] = by_class.get(record.classification, 0) + 1
-        disposition = dispositions.get(record.path, {}).get("disposition")
+        disposition = find_disposition_for_path(dispositions, record.path)
         if disposition is None:
             undispositioned.append(record)
         else:
-            by_disposition[disposition] = by_disposition.get(disposition, 0) + 1
+            disposition_name = disposition["disposition"]
+            by_disposition[disposition_name] = by_disposition.get(disposition_name, 0) + 1
 
     blockers = tuple(
         [f"{r.path}: {r.classification}: undispositioned source-like artifact" for r in undispositioned]
@@ -248,7 +319,16 @@ def audit_untracked_source_artifacts(
             "by_class": by_class,
             "by_disposition": by_disposition,
             "disposition_manifest": str(disposition_manifest) if disposition_manifest else None,
+            "disposition_exact_entry_count": sum(
+                1 for entry in dispositions.values() if entry.get("path_kind", "exact") == "exact"
+            ),
+            "disposition_prefix_entry_count": sum(
+                1 for entry in dispositions.values() if entry.get("path_kind", "exact") == "prefix"
+            ),
             "dispositioned_count": len(records) - len(undispositioned),
+            "generated_custody_source_like_count": sum(
+                1 for record in records if record.classification == "generated_custody_source_untracked"
+            ),
             "resolved_tracked_disposition_count": len(set(dispositions) & tracked_source_like_paths),
             "shadowed_index_delete_count": len(shadowed_delete_paths),
             "shadowed_index_delete_paths": shadowed_delete_paths[:50],
@@ -278,7 +358,7 @@ def write_disposition_template(repo_root: Path, output_path: Path) -> None:
             {
                 "path": record.path,
                 "classification": record.classification,
-                "disposition": "track",
+                "disposition": _default_disposition_for_record(record),
                 "note": "default template; review before treating as final disposition",
             }
             for record in records

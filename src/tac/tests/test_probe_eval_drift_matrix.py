@@ -32,6 +32,9 @@ def _artifact_status(**overrides):
         "pyav_available": True,
         "cuda_available": True,
         "dali_available": True,
+        "timm_available": True,
+        "safetensors_available": True,
+        "segmentation_models_pytorch_available": True,
     }
     status.update(overrides)
     return status
@@ -46,9 +49,15 @@ def test_matrix_has_four_cells_and_required_nonclaim_fields(monkeypatch) -> None
 
     assert report["schema"] == "eval_drift_matrix_probe.v1"
     assert report["score_claim"] is False
+    assert report["score_claim_valid"] is False
     assert report["promotion_eligible"] is False
     assert report["rank_or_kill_eligible"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
     assert report["evidence_grade"] == "diagnostic"
+    assert report["diagnostic_kind"] == "eval_drift_matrix_probe"
+    assert report["device_axis_custody"]["score_claim_axis"] == "none"
+    assert report["device_axis_custody"]["contest_cuda_claim"] is False
+    assert report["device_axis_custody"]["contest_cpu_claim"] is False
     assert report["matrix_rows"] == ["pyav_av", "dali_nvdec"]
     assert report["matrix_columns"] == ["cpu", "cuda"]
     assert {cell["cell_id"] for cell in report["matrix_cells"]} == {
@@ -76,8 +85,10 @@ def test_missing_cuda_dali_pyav_fail_closed_without_score_claim(monkeypatch) -> 
     report = mod.build_probe_report(args)
 
     assert report["score_claim"] is False
+    assert report["score_claim_valid"] is False
     assert report["promotion_eligible"] is False
     assert report["rank_or_kill_eligible"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
     assert report["evidence_grade"] == "diagnostic"
     assert report["fail_closed"] is True
     assert report["fail_closed_reasons"]
@@ -154,6 +165,27 @@ def test_main_writes_fail_closed_json_and_returns_two(monkeypatch, tmp_path) -> 
     payload = json.loads(json_out.read_text(encoding="utf-8"))
     assert payload["fail_closed"] is True
     assert payload["score_claim"] is False
+    assert payload["score_claim_valid"] is False
     assert payload["promotion_eligible"] is False
     assert payload["rank_or_kill_eligible"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
     assert payload["evidence_grade"] == "diagnostic"
+
+
+def test_missing_posenet_dependency_marks_network_cells_unavailable(monkeypatch) -> None:
+    mod = _load_tool("probe_eval_drift_matrix")
+    monkeypatch.setattr(
+        mod,
+        "detect_artifacts",
+        lambda _args: _artifact_status(timm_available=False),
+    )
+    args = mod.parse_args([])
+
+    report = mod.build_probe_report(args)
+    cells = {cell["cell_id"]: cell for cell in report["matrix_cells"]}
+
+    assert report["fail_closed"] is True
+    assert cells["pyav_av__forward_cpu"]["available"] is False
+    assert "timm_available=false" in cells["pyav_av__forward_cpu"]["unavailable_reasons"]
+    assert cells["dali_nvdec__forward_cuda"]["available"] is False
+    assert any("timm_available=false" in reason for reason in report["fail_closed_reasons"])

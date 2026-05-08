@@ -432,6 +432,32 @@ class TestNoCompromisedLightningSupplyChain:
                 verbose=False,
             )
 
+    def test_cached_bad_pytorch_lightning_sdist_is_caught_nested(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        cache = tmp_path / "uv-cache"
+        _write(cache / "archive-v0" / "a" / "b" / "pytorch_lightning-2.6.2.tar.gz", "placeholder\n")
+
+        with pytest.raises(MetaBugViolation, match=r"cached Lightning 2\.6\.2/2\.6\.3"):
+            check_no_compromised_lightning_supply_chain(
+                repo_root=root,
+                site_packages_roots=[],
+                package_cache_roots=[cache],
+                strict=True,
+                verbose=False,
+            )
+
+    def test_package_json_postinstall_ioc_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / "docs" / "package.json", '{"scripts":{"postinstall":"node setup.mjs"}}\n')
+
+        with pytest.raises(MetaBugViolation, match=r"package\.json postinstall"):
+            check_no_compromised_lightning_supply_chain(
+                repo_root=root,
+                site_packages_roots=[],
+                strict=True,
+                verbose=False,
+            )
+
     def test_reported_lightning_iocs_are_registered(self) -> None:
         assert "d2815d425ae08cc627f1db69009442165f8bbc64b7e9157e2ff9d7aab02094d4" in (
             preflight_mod._MINI_SHAI_HULUD_IOC_SHA256

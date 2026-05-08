@@ -447,6 +447,13 @@ def _profile_all_lanes(*, jobs: int | None) -> SurfaceProfile:
             "slow_step_count": payload.get("slow_step_count"),
             "step_count": payload.get("step_count"),
         })
+        failed_steps = [step for step in steps if step.status != "passed"]
+        if failed_steps:
+            metadata["failed_step_count"] = len(failed_steps)
+            metadata["failed_steps"] = [step.name for step in failed_steps[:12]]
+        error = ""
+        if proc.returncode != 0:
+            error = _failed_step_summary(failed_steps) or _tail(proc.stdout + proc.stderr)
         return SurfaceProfile(
             name=surface,
             status="passed" if proc.returncode == 0 else "failed",
@@ -454,7 +461,7 @@ def _profile_all_lanes(*, jobs: int | None) -> SurfaceProfile:
             steps=steps,
             metadata=metadata,
             error_type="" if proc.returncode == 0 else "CalledProcessError",
-            error="" if proc.returncode == 0 else _tail(proc.stdout + proc.stderr),
+            error=error,
         )
 
 
@@ -469,6 +476,14 @@ def json_loads_path(path: Path) -> dict[str, object]:
 
 def _tail(text: str, *, lines: int = 20) -> str:
     return "\n".join(text.splitlines()[-lines:])
+
+
+def _failed_step_summary(steps: list[StepTiming], *, max_items: int = 8) -> str:
+    if not steps:
+        return ""
+    labels = [f"{step.name} ({step.status})" for step in steps[:max_items]]
+    suffix = f"; ... +{len(steps) - max_items} more" if len(steps) > max_items else ""
+    return "Failed all-lanes step(s): " + "; ".join(labels) + suffix
 
 
 def _build_report(
@@ -519,6 +534,7 @@ def _print_report(report: dict[str, object], *, top: int) -> None:
                 "max_workers",
                 "parallel_speedup_estimate",
                 "slow_step_count",
+                "failed_step_count",
             ):
                 if key in meta:
                     useful.append(f"{key}={meta[key]}")

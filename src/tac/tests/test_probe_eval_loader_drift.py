@@ -17,6 +17,23 @@ def _load_tool(name: str):
     return mod
 
 
+def _artifact_status(**overrides):
+    status = {
+        "upstream_frame_utils_py": True,
+        "video_names_file_exists": True,
+        "data_dir_exists": True,
+        "sampled_video_names": ["0.mkv"],
+        "sampled_video_paths": ["data/0.mkv"],
+        "sample_videos_exist": True,
+        "sample_video_error": None,
+        "pyav_available": True,
+        "cuda_available": True,
+        "dali_available": True,
+    }
+    status.update(overrides)
+    return status
+
+
 def test_compare_tensors_reports_lsb_drift_and_nonzero_fraction() -> None:
     mod = _load_tool("probe_eval_loader_drift")
     a = torch.tensor([[[[[0, 10, 20], [30, 40, 50]]]]], dtype=torch.uint8)
@@ -78,6 +95,7 @@ def test_default_data_dir_matches_upstream_evaluator() -> None:
 
 def test_unavailable_probe_is_non_promotable(monkeypatch) -> None:
     mod = _load_tool("probe_eval_loader_drift")
+    monkeypatch.setattr(mod, "detect_artifacts", lambda _args: _artifact_status())
     monkeypatch.setattr(mod, "_cuda_dali_available", lambda: (False, "no cuda fixture"))
     args = mod.parse_args(["--max-batches", "1"])
 
@@ -87,7 +105,59 @@ def test_unavailable_probe_is_non_promotable(monkeypatch) -> None:
     assert report["comparison_available"] is False
     assert report["comparison_unavailable_reason"] == "no cuda fixture"
     assert report["score_claim"] is False
+    assert report["score_claim_valid"] is False
     assert report["promotion_eligible"] is False
     assert report["rank_or_kill_eligible"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
     assert report["evidence_grade"] == "diagnostic"
     assert report["diagnostic_kind"] == "loader_drift_probe"
+    assert report["loader_device_custody"]["score_path"] == "not_run"
+    assert report["loader_device_custody"]["network_forward_device"] == "not_run"
+
+
+def test_missing_pyav_fails_closed_before_cuda_probe(monkeypatch) -> None:
+    mod = _load_tool("probe_eval_loader_drift")
+    monkeypatch.setattr(
+        mod,
+        "detect_artifacts",
+        lambda _args: _artifact_status(pyav_available=False),
+    )
+    called = False
+
+    def _unexpected_cuda_probe():
+        nonlocal called
+        called = True
+        return True, None
+
+    monkeypatch.setattr(mod, "_cuda_dali_available", _unexpected_cuda_probe)
+    args = mod.parse_args(["--max-batches", "1"])
+
+    report = mod.build_probe_report(args)
+
+    assert called is False
+    assert report["comparison_available"] is False
+    assert report["score_claim"] is False
+    assert report["score_claim_valid"] is False
+    assert report["promotion_eligible"] is False
+    assert report["rank_or_kill_eligible"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert "pyav_available=false" in report["comparison_unavailable_reasons"]
+
+
+def test_missing_sample_video_fails_closed_with_path_reason(monkeypatch) -> None:
+    mod = _load_tool("probe_eval_loader_drift")
+    monkeypatch.setattr(
+        mod,
+        "detect_artifacts",
+        lambda _args: _artifact_status(
+            sample_videos_exist=False,
+            sample_video_error="sample video files missing: data/0.mkv",
+        ),
+    )
+    args = mod.parse_args(["--max-batches", "1"])
+
+    report = mod.build_probe_report(args)
+
+    assert report["comparison_available"] is False
+    assert any("data/0.mkv" in reason for reason in report["comparison_unavailable_reasons"])
+    assert report["score_claim_valid"] is False

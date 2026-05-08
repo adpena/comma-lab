@@ -162,32 +162,46 @@ def test_plan_from_pareto_round_trip(tmp_path: Path) -> None:
 def test_feedback_loop_overrides_predicted_with_empirical(tmp_path: Path) -> None:
     """Median over evidence rows replaces the catalog's predicted bytes."""
     autopilot = _load_autopilot()
+    archive_sha = "a" * 64
+    runtime_sha = "b" * 64
     evidence = [
         autopilot.TechniqueEvidence(
             technique="brotli_optuna_default",
             empirical_archive_bytes=170_000,
+            empirical_score=0.191,
+            score_contest_cuda=0.191,
             score_claim=True,
             promotion_eligible=True,
             rank_or_kill_eligible=True,
             ready_for_exact_eval_dispatch=True,
+            archive_sha256=archive_sha,
+            runtime_tree_sha256=runtime_sha,
             source="[contest-CUDA] reports/run_a.json",
         ),
         autopilot.TechniqueEvidence(
             technique="brotli_optuna_default",
             empirical_archive_bytes=171_000,
+            empirical_score=0.192,
+            score_contest_cuda=0.192,
             score_claim=True,
             promotion_eligible=True,
             rank_or_kill_eligible=True,
             ready_for_exact_eval_dispatch=True,
+            archive_sha256=archive_sha,
+            runtime_tree_sha256=runtime_sha,
             source="[contest-CUDA] reports/run_b.json",
         ),
         autopilot.TechniqueEvidence(
             technique="brotli_optuna_default",
             empirical_archive_bytes=169_500,
+            empirical_score=0.190,
+            score_contest_cuda=0.190,
             score_claim=True,
             promotion_eligible=True,
             rank_or_kill_eligible=True,
             ready_for_exact_eval_dispatch=True,
+            archive_sha256=archive_sha,
+            runtime_tree_sha256=runtime_sha,
             source="[contest-CUDA] reports/run_c.json",
         ),
     ]
@@ -264,6 +278,36 @@ def test_feedback_loop_treats_missing_custody_flags_as_planning_only() -> None:
         "empirical_anchor_not_promotable_without_explicit_exact_eval_custody"
         in row["dispatch_blockers"]
     )
+
+
+def test_exact_cuda_anchor_without_archive_runtime_sha_stays_planning_only() -> None:
+    """Exact-CUDA markers alone are insufficient without archive/runtime custody."""
+    autopilot = _load_autopilot()
+    evidence = [
+        autopilot.TechniqueEvidence(
+            technique="tiny_nn_pmf_predictor",
+            empirical_archive_bytes=166_000,
+            empirical_score=0.180,
+            score_contest_cuda=0.180,
+            evidence_grade="[contest-CUDA]",
+            score_claim=True,
+            promotion_eligible=True,
+            rank_or_kill_eligible=True,
+            ready_for_exact_eval_dispatch=True,
+            source="[contest-CUDA] missing custody row",
+        ),
+    ]
+    updated = autopilot.update_catalog_from_evidence(
+        autopilot.ENCODER_TECHNIQUES,
+        evidence,
+    )
+    row = next(r for r in updated if r["name"] == "tiny_nn_pmf_predictor")
+
+    assert row["predicted_archive_bytes"] == 166_000
+    assert row["empirical_anchor_promotable"] is False
+    assert row["active_ranking_blocked"] is True
+    assert "archive_sha256_required" in row["dispatch_blockers"]
+    assert "runtime_tree_sha256_required" in row["dispatch_blockers"]
 
 
 def test_validation_queue_preserves_blocked_high_upside_signal() -> None:

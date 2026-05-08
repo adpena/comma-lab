@@ -1,6 +1,72 @@
 {
   "entries": [
     {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_rebuildable",
+      "note": "prefix: generated research artifacts under .omx/research/artifacts are raw custody; promote only curated ledgers or manifests.",
+      "path": ".omx/research/artifacts/",
+      "path_kind": "prefix"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_private",
+      "note": "prefix: local dispatch/provider state is private custody; canonical signal must be summarized into .omx/research before promotion.",
+      "path": ".omx/state/",
+      "path_kind": "prefix"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_rebuildable",
+      "note": "prefix: experiment result trees are raw rebuildable custody; track only promoted source, ledgers, or compact manifests outside this root.",
+      "path": "experiments/results/",
+      "path_kind": "prefix"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_rebuildable",
+      "note": "prefix: local output trees are raw rebuildable custody; canonicalize useful signal into tracked ledgers before cleanup.",
+      "path": "outputs/",
+      "path_kind": "prefix"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_private",
+      "note": "prefix: raw reports may contain provider/local custody; promote sanitized summaries into reports or .omx/research only.",
+      "path": "reports/raw/",
+      "path_kind": "prefix"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_private",
+      "note": "prefix: private reports remain local custody; promote sanitized public-safe summaries explicitly.",
+      "path": "reports/private/",
+      "path_kind": "prefix"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 generated-custody source disposition ledger; no raw experiment payloads.",
+      "path": ".omx/research/generated_custody_source_disposition_20260508_codex.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable 2026-05-08 candidate custody guard ledger; no raw provider transcript or payload.",
+      "path": ".omx/research/cathedral_autopilot_candidate_custody_guard_20260508_codex.md"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: reusable exact-CUDA candidate evidence custody contract helper; small source file.",
+      "path": "src/tac/optimization/candidate_evidence_contract.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused regression coverage for candidate evidence custody contract.",
+      "path": "src/tac/tests/test_candidate_evidence_contract.py"
+    },
+    {
       "classification": "research_untracked",
       "disposition": "track",
       "note": "track: durable 2026-05-08 research/control-plane ledger; small, non-provider source of truth.",

@@ -95,3 +95,17 @@ def test_print_report_handles_minimal_report(capsys) -> None:
     assert "Preflight latency profile" in out
     assert "dispatch-hazards" in out
     assert "hazard_count=0" in out
+
+
+def test_failed_step_summary_names_failed_all_lanes_rows() -> None:
+    module = _load_tool()
+    failed = [
+        module.StepTiming("all-lanes", "GATE #10: untracked source inventory", 0.4, "failed"),
+        module.StepTiming("all-lanes", "LANE #3: sidechannels", 0.1, "failed"),
+    ]
+
+    summary = module._failed_step_summary(failed)
+
+    assert "Failed all-lanes step(s):" in summary
+    assert "GATE #10: untracked source inventory (failed)" in summary
+    assert "LANE #3: sidechannels (failed)" in summary

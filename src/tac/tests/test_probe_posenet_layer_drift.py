@@ -128,10 +128,77 @@ def test_probe_report_is_non_promotable_when_cuda_unavailable() -> None:
     report = mod.build_probe_report(args)
 
     assert report["score_claim"] is False
+    assert report["score_claim_valid"] is False
     assert report["promotion_eligible"] is False
     assert report["rank_or_kill_eligible"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
     assert report["evidence_grade"] == "diagnostic"
     assert report["diagnostic_kind"] == "posenet_layer_drift_probe"
     assert report["comparison_available"] is False
+    assert report["device_pair_custody"]["score_claim_axis"] == "none"
+    assert report["device_pair_custody"]["contest_cuda_claim"] is False
+    assert report["device_pair_custody"]["contest_cpu_claim"] is False
     assert "selected_modules" in report
     assert "first exceeding activation" in " ".join(report["interpretation_guardrails"])
+
+
+def test_invalid_device_string_fails_closed() -> None:
+    mod = _load_tool("probe_posenet_layer_drift")
+
+    available, reason = mod.device_available("definitely_not_a_device")
+
+    assert available is False
+    assert "invalid torch device" in reason
+
+
+def test_cuda_index_outside_device_count_fails_closed(monkeypatch) -> None:
+    mod = _load_tool("probe_posenet_layer_drift")
+    monkeypatch.setattr(mod.torch.cuda, "is_available", lambda: True)
+    monkeypatch.setattr(mod.torch.cuda, "device_count", lambda: 1)
+
+    available, reason = mod.device_available("cuda:7")
+
+    assert available is False
+    assert "outside available device_count=1" in reason
+
+
+def test_missing_input_tensor_is_non_promotable(monkeypatch, tmp_path) -> None:
+    mod = _load_tool("probe_posenet_layer_drift")
+    missing = tmp_path / "missing.pt"
+    args = mod.parse_args(["--input-tensor", str(missing), "--device-b", "meta"])
+    monkeypatch.setattr(
+        mod,
+        "detect_artifacts",
+        lambda _args: {
+            "upstream_modules_py": True,
+            "posenet_weights_exist": True,
+            "timm_available": True,
+            "safetensors_available": True,
+            "segmentation_models_pytorch_available": True,
+            "input_tensor_exists": False,
+        },
+    )
+
+    report = mod.build_probe_report(args)
+
+    assert report["comparison_available"] is False
+    assert report["score_claim_valid"] is False
+    assert report["promotion_eligible"] is False
+    assert "input_tensor_exists=false" in report["comparison_unavailable_reasons"]
+
+
+def test_unavailable_comparison_inventory_error_still_emits_json(monkeypatch) -> None:
+    mod = _load_tool("probe_posenet_layer_drift")
+    args = mod.parse_args(["--device-a", "cpu", "--device-b", "meta"])
+
+    def _raise_inventory(_device):
+        raise RuntimeError("inventory fixture failure")
+
+    monkeypatch.setattr(mod, "_load_upstream_posenet", _raise_inventory)
+
+    report = mod.build_probe_report(args)
+
+    assert report["comparison_available"] is False
+    assert report["score_claim_valid"] is False
+    assert report["promotion_eligible"] is False
+    assert "module_inventory_error: RuntimeError" in report["module_inventory_unavailable_reason"]

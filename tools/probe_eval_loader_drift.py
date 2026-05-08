@@ -16,6 +16,8 @@ auditable.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import importlib.util
 import json
 import platform
 import sys
@@ -41,6 +43,35 @@ def _jsonable(value: Any) -> Any:
     if isinstance(value, (list, tuple)):
         return [_jsonable(v) for v in value]
     return str(value)
+
+
+def _find_spec(name: str) -> bool:
+    try:
+        return importlib.util.find_spec(name) is not None
+    except (ImportError, AttributeError, ValueError):
+        return False
+
+
+def _sha256_file(path: Path) -> str | None:
+    if not path.exists() or not path.is_file():
+        return None
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _file_custody(path: Path, *, include_sha256: bool = True) -> dict[str, Any]:
+    exists = path.exists()
+    is_file = path.is_file()
+    return {
+        "path": str(path),
+        "exists": exists,
+        "is_file": is_file,
+        "size_bytes": path.stat().st_size if is_file else None,
+        "sha256": _sha256_file(path) if include_sha256 and is_file else None,
+    }
 
 
 def tensor_stats(tensor: torch.Tensor) -> dict[str, Any]:
@@ -111,6 +142,8 @@ def _device_metadata() -> dict[str, Any]:
         )
     return {
         "platform": platform.platform(),
+        "system": platform.system(),
+        "machine": platform.machine(),
         "python": platform.python_version(),
         "torch": torch.__version__,
         "cuda": cuda,
@@ -123,6 +156,51 @@ def _load_video_names(path: Path, limit: int | None) -> list[str]:
     if limit is not None:
         return names[:limit]
     return names
+
+
+def _sample_video_paths(video_names_file: Path, data_dir: Path, limit: int | None) -> tuple[list[str], list[str], str | None]:
+    if not video_names_file.exists():
+        return [], [], f"video names file missing: {video_names_file}"
+    try:
+        names = _load_video_names(video_names_file, limit)
+    except OSError as exc:
+        return [], [], f"video names file unreadable: {exc}"
+    paths = [str(data_dir / name) for name in names]
+    missing = [path for path in paths if not Path(path).exists()]
+    if not names:
+        return names, paths, "video names file contains no usable names"
+    if missing:
+        return names, paths, "sample video files missing: " + ", ".join(missing[:5])
+    return names, paths, None
+
+
+def detect_artifacts(args: argparse.Namespace) -> dict[str, Any]:
+    sampled_names, sampled_paths, sample_video_error = _sample_video_paths(
+        args.video_names_file,
+        args.data_dir,
+        args.video_limit,
+    )
+    return {
+        "upstream_frame_utils_py": (UPSTREAM / "frame_utils.py").exists(),
+        "video_names_file_exists": args.video_names_file.exists(),
+        "data_dir_exists": args.data_dir.exists(),
+        "sampled_video_names": sampled_names,
+        "sampled_video_paths": sampled_paths,
+        "sample_videos_exist": sample_video_error is None,
+        "sample_video_error": sample_video_error,
+        "pyav_available": _find_spec("av"),
+        "cuda_available": torch.cuda.is_available(),
+        "dali_available": _find_spec("nvidia.dali"),
+    }
+
+
+def _missing_reasons(required_artifacts: tuple[str, ...], artifacts: dict[str, Any]) -> list[str]:
+    reasons = []
+    for key in required_artifacts:
+        if artifacts.get(key) is not True:
+            detail = artifacts.get("sample_video_error") if key == "sample_videos_exist" else None
+            reasons.append(f"{key}=false" + (f" ({detail})" if detail else ""))
+    return reasons
 
 
 def _cuda_dali_available() -> tuple[bool, str | None]:
@@ -153,13 +231,50 @@ def _next_batch_or_none(iterator: Any) -> tuple[str, int, torch.Tensor] | None:
         return None
 
 
+def source_file_custody(args: argparse.Namespace, artifacts: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "upstream_frame_utils": _file_custody(UPSTREAM / "frame_utils.py"),
+        "upstream_evaluate": _file_custody(UPSTREAM / "evaluate.py"),
+        "video_names_file": _file_custody(args.video_names_file),
+        "sample_videos": [
+            _file_custody(Path(path), include_sha256=False)
+            for path in artifacts.get("sampled_video_paths", [])
+        ],
+    }
+
+
+def loader_device_custody() -> dict[str, Any]:
+    return {
+        "comparison_scope": "raw_evaluator_loader_rgb_before_posenet_segnet",
+        "score_path": "not_run",
+        "network_forward_device": "not_run",
+        "loaders": [
+            {
+                "loader_class": "AVVideoDataset",
+                "decoder_backend": "PyAV/FFmpeg",
+                "raw_decode_device": "cpu",
+                "evaluator_axis": "cpu_loader_path",
+            },
+            {
+                "loader_class": "DaliVideoDataset",
+                "decoder_backend": "DALI/NVDEC",
+                "raw_decode_device": "cuda",
+                "evaluator_axis": "cuda_loader_path",
+            },
+        ],
+    }
+
+
 def build_probe_report(args: argparse.Namespace) -> dict[str, Any]:
+    artifacts = detect_artifacts(args)
     report: dict[str, Any] = {
         "schema": "eval_loader_device_drift_probe.v1",
         "created_at_utc": datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
         "evidence_grade": "diagnostic",
         "diagnostic_kind": "loader_drift_probe",
         "repo": str(REPO),
@@ -173,84 +288,119 @@ def build_probe_report(args: argparse.Namespace) -> dict[str, Any]:
         "video_limit": args.video_limit,
         "max_batches": args.max_batches,
         "environment": _device_metadata(),
+        "artifact_status": artifacts,
+        "source_file_custody": source_file_custody(args, artifacts),
+        "loader_device_custody": loader_device_custody(),
         "interpretation_guardrails": [
             "This probe compares decoded evaluator input tensors before PoseNet/SegNet.",
             "It does not run inflate.sh, evaluate.py scoring, or any contest promotion path.",
             "A nonzero DALI-vs-PyAV raw RGB diff proves loader drift exists, but score impact still requires paired exact eval.",
         ],
     }
+    required = (
+        "upstream_frame_utils_py",
+        "pyav_available",
+        "cuda_available",
+        "dali_available",
+        "video_names_file_exists",
+        "data_dir_exists",
+        "sample_videos_exist",
+    )
+    missing = _missing_reasons(required, artifacts)
+    if missing:
+        report["comparison_available"] = False
+        report["comparison_unavailable_reasons"] = missing
+        report["comparison_unavailable_reason"] = "; ".join(missing)
+        return report
+
     cuda_ok, cuda_reason = _cuda_dali_available()
     report["comparison_available"] = cuda_ok
     report["comparison_unavailable_reason"] = cuda_reason
     if not cuda_ok:
+        report["comparison_unavailable_reasons"] = [cuda_reason]
         return report
 
-    if str(UPSTREAM) not in sys.path:
-        sys.path.insert(0, str(UPSTREAM))
-    from frame_utils import AVVideoDataset, DaliVideoDataset, camera_size, seq_len  # type: ignore
+    try:
+        if str(UPSTREAM) not in sys.path:
+            sys.path.insert(0, str(UPSTREAM))
+        from frame_utils import AVVideoDataset, DaliVideoDataset, camera_size, seq_len  # type: ignore
 
-    video_names = _load_video_names(args.video_names_file, args.video_limit)
-    cuda_device = torch.device("cuda", 0)
-    dali = DaliVideoDataset(
-        video_names,
-        data_dir=args.data_dir,
-        batch_size=args.batch_size,
-        device=cuda_device,
-        num_threads=args.num_threads,
-        seed=args.seed,
-        prefetch_queue_depth=args.prefetch_queue_depth,
-    )
-    av = AVVideoDataset(
-        video_names,
-        data_dir=args.data_dir,
-        batch_size=args.batch_size,
-        device=torch.device("cpu"),
-        num_threads=args.num_threads,
-        seed=args.seed,
-        prefetch_queue_depth=args.prefetch_queue_depth,
-    )
-    dali.prepare_data()
-    av.prepare_data()
-
-    rows = []
-    dali_iter = iter(_batch_iterator(dali))
-    av_iter = iter(_batch_iterator(av))
-    incomplete_reason: str | None = None
-    for batch_idx in range(args.max_batches):
-        dali_next = _next_batch_or_none(dali_iter)
-        av_next = _next_batch_or_none(av_iter)
-        if dali_next is None or av_next is None:
-            incomplete_reason = (
-                "dataset_iterator_exhausted_before_requested_max_batches"
-            )
-            break
-        dali_path, dali_seq_idx, dali_batch = dali_next
-        av_path, av_seq_idx, av_batch = av_next
-        dali_cpu = dali_batch.detach().to(device="cpu")
-        av_cpu = av_batch.detach().to(device="cpu")
-        if list(dali_cpu.shape)[1:] != [seq_len, camera_size[1], camera_size[0], 3]:
-            raise RuntimeError(f"unexpected DALI batch shape: {list(dali_cpu.shape)}")
-        if list(av_cpu.shape)[1:] != [seq_len, camera_size[1], camera_size[0], 3]:
-            raise RuntimeError(f"unexpected AV batch shape: {list(av_cpu.shape)}")
-        rows.append(
-            {
-                "batch_order": batch_idx,
-                "dali_path": dali_path,
-                "av_path": av_path,
-                "dali_sequence_index": dali_seq_idx,
-                "av_sequence_index": av_seq_idx,
-                "path_match": dali_path == av_path,
-                "sequence_index_match": dali_seq_idx == av_seq_idx,
-                "dali_stats": tensor_stats(dali_cpu),
-                "av_stats": tensor_stats(av_cpu),
-                "comparison": compare_tensors(dali_cpu, av_cpu),
-                "per_rgb_channel": per_channel_compare(dali_cpu, av_cpu),
-            }
+        video_names = _load_video_names(args.video_names_file, args.video_limit)
+        cuda_device = torch.device("cuda", 0)
+        dali = DaliVideoDataset(
+            video_names,
+            data_dir=args.data_dir,
+            batch_size=args.batch_size,
+            device=cuda_device,
+            num_threads=args.num_threads,
+            seed=args.seed,
+            prefetch_queue_depth=args.prefetch_queue_depth,
         )
+        av = AVVideoDataset(
+            video_names,
+            data_dir=args.data_dir,
+            batch_size=args.batch_size,
+            device=torch.device("cpu"),
+            num_threads=args.num_threads,
+            seed=args.seed,
+            prefetch_queue_depth=args.prefetch_queue_depth,
+        )
+        dali.prepare_data()
+        av.prepare_data()
+
+        rows = []
+        dali_iter = iter(_batch_iterator(dali))
+        av_iter = iter(_batch_iterator(av))
+        incomplete_reason: str | None = None
+        for batch_idx in range(args.max_batches):
+            dali_next = _next_batch_or_none(dali_iter)
+            av_next = _next_batch_or_none(av_iter)
+            if dali_next is None or av_next is None:
+                incomplete_reason = (
+                    "dataset_iterator_exhausted_before_requested_max_batches"
+                )
+                break
+            dali_path, dali_seq_idx, dali_batch = dali_next
+            av_path, av_seq_idx, av_batch = av_next
+            dali_cpu = dali_batch.detach().to(device="cpu")
+            av_cpu = av_batch.detach().to(device="cpu")
+            if list(dali_cpu.shape)[1:] != [seq_len, camera_size[1], camera_size[0], 3]:
+                raise RuntimeError(f"unexpected DALI batch shape: {list(dali_cpu.shape)}")
+            if list(av_cpu.shape)[1:] != [seq_len, camera_size[1], camera_size[0], 3]:
+                raise RuntimeError(f"unexpected AV batch shape: {list(av_cpu.shape)}")
+            rows.append(
+                {
+                    "batch_order": batch_idx,
+                    "dali_path": dali_path,
+                    "av_path": av_path,
+                    "dali_sequence_index": dali_seq_idx,
+                    "av_sequence_index": av_seq_idx,
+                    "path_match": dali_path == av_path,
+                    "sequence_index_match": dali_seq_idx == av_seq_idx,
+                    "dali_stats": tensor_stats(dali_cpu),
+                    "av_stats": tensor_stats(av_cpu),
+                    "comparison": compare_tensors(dali_cpu, av_cpu),
+                    "per_rgb_channel": per_channel_compare(dali_cpu, av_cpu),
+                }
+            )
+    except Exception as exc:
+        reason = f"probe_runtime_error: {type(exc).__name__}: {exc}"
+        report["comparison_available"] = False
+        report["comparison_unavailable_reason"] = reason
+        report["comparison_unavailable_reasons"] = [reason]
+        return report
+
     report["comparison_rows"] = rows
     report["comparison_available"] = bool(rows)
     report["comparison_incomplete"] = incomplete_reason is not None
     report["comparison_incomplete_reason"] = incomplete_reason
+    if not rows:
+        reason = incomplete_reason or "no_comparison_rows_emitted"
+        report["comparison_unavailable_reason"] = reason
+        report["comparison_unavailable_reasons"] = [reason]
+    else:
+        report["comparison_unavailable_reason"] = None
+        report["comparison_unavailable_reasons"] = []
     return report
 
 

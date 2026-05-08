@@ -60,6 +60,9 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
+from tac.optimization.candidate_evidence_contract import (  # noqa: E402
+    promotable_exact_cuda_evidence_blockers,
+)
 from tac.optimization.cuda_cpu_axis_calibration import CudaCpuCalibration  # noqa: E402
 from tac.score_geometry import (  # noqa: E402
     contest_score,
@@ -502,6 +505,7 @@ def _load_evidence(path: Path) -> list[TechniqueEvidence]:
             runtime_tree_sha256=str(
                 r.get("runtime_tree_sha256")
                 or r.get("inflate_runtime_tree_sha256")
+                or r.get("runtime_tree_sha")
                 or ""
             ),
             runtime_manifest=str(
@@ -610,45 +614,13 @@ def _is_explicitly_promotable_evidence(evidence: TechniqueEvidence) -> bool:
     the producer explicitly records score/promotion/dispatch readiness and has
     no dispatch blockers.
     """
-    text = " ".join(
-        part.strip().lower()
-        for part in (
-            evidence.evidence_grade,
-            evidence.evidence_marker,
-            evidence.evidence_semantics,
-            evidence.source,
-        )
-        if part
-    )
-    exact_cuda = (
-        "contest-cuda" in text
-        or "contest_cuda" in text
-        or "exact_cuda_auth_eval" in text
-        or evidence.evidence_grade.strip().lower() in {"a", "a++"}
-    )
-    proxy_marker = any(
-        marker in text
-        for marker in (
-            "mps",
-            "cpu-prep",
-            "cpu_prep",
-            "proxy",
-            "prediction",
-            "predicted",
-            "forensic",
-            "research-signal",
-            "research_signal",
-        )
-    )
-    return (
-        evidence.score_claim is True
-        and evidence.promotion_eligible is True
-        and evidence.rank_or_kill_eligible is True
-        and evidence.ready_for_exact_eval_dispatch is True
-        and not evidence.dispatch_blockers
-        and exact_cuda
-        and not proxy_marker
-    )
+    return not promotable_exact_cuda_evidence_blockers(asdict(evidence))
+
+
+def _promotability_blockers(evidence: TechniqueEvidence) -> list[str]:
+    """Machine-readable blockers for exact-CUDA promotion semantics."""
+
+    return promotable_exact_cuda_evidence_blockers(asdict(evidence))
 
 
 def _is_explicitly_contest_cpu_evidence(evidence: TechniqueEvidence) -> bool:
@@ -1411,6 +1383,12 @@ def update_catalog_from_evidence(
                 for e in obs
                 for blocker in e.dispatch_blockers
             })
+            promotability_blockers = _ordered_unique([
+                blocker
+                for e in obs
+                if not _is_explicitly_promotable_evidence(e)
+                for blocker in _promotability_blockers(e)
+            ])
             new_t["catalog_prior_bytes"] = t["predicted_archive_bytes"]
             new_t["predicted_archive_bytes"] = median
             new_t["empirical_anchor_n"] = n
@@ -1440,6 +1418,9 @@ def update_catalog_from_evidence(
                 merged_blockers = list(blockers) if blockers else [
                     "empirical_anchor_not_promotable_without_explicit_exact_eval_custody"
                 ]
+                for blocker in promotability_blockers:
+                    if blocker not in merged_blockers:
+                        merged_blockers.append(blocker)
                 if per_obs_mismatches and (
                     "model_spec_mismatch_pending_faithful_implementation"
                     not in merged_blockers

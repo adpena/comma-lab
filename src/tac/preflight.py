@@ -4152,10 +4152,21 @@ def _scan_repo_for_mini_shai_hulud_iocs(repo_root: Path) -> list[str]:
                 "treat repository as compromised until reviewed."
             )
 
-    for pkg_json in sorted(repo_root.rglob("package.json")):
-        rel_parts = pkg_json.relative_to(repo_root).parts
-        if any(part in {".git", "node_modules", ".venv", "venv", "workspace"} for part in rel_parts):
-            continue
+    package_json_paths: list[Path] = []
+    named_ioc_paths: list[Path] = []
+    names = {"router_runtime.js", "start.py", "setup.mjs", "__init__.py"}
+    pruned_dirs = {".git", "node_modules", ".venv", "venv", "workspace"}
+    for dirpath, dirnames, filenames in os.walk(repo_root):
+        dirnames[:] = sorted(d for d in dirnames if d not in pruned_dirs)
+        base = Path(dirpath)
+        for filename in sorted(filenames):
+            path = base / filename
+            if filename == "package.json":
+                package_json_paths.append(path)
+            if filename in names:
+                named_ioc_paths.append(path)
+
+    for pkg_json in sorted(package_json_paths):
         text = _read_text_if_possible(pkg_json)
         if _PACKAGE_JSON_POSTINSTALL_SETUP_RE.search(text):
             violations.append(
@@ -4163,9 +4174,8 @@ def _scan_repo_for_mini_shai_hulud_iocs(repo_root: Path) -> list[str]:
                 "references setup.mjs/router_runtime.js, matching worm behavior."
             )
 
-    names = {"router_runtime.js", "start.py", "setup.mjs", "__init__.py"}
-    for path in sorted(repo_root.rglob("*")):
-        if not path.is_file() or path.name not in names:
+    for path in sorted(named_ioc_paths):
+        if not path.is_file():
             continue
         rel = path.relative_to(repo_root)
         if _is_heavy_scan_path(rel):
@@ -4270,22 +4280,16 @@ def _scan_package_caches_for_compromised_lightning(
 ) -> list[str]:
     violations: list[str] = []
     roots = _candidate_package_cache_roots() if package_cache_roots is None else package_cache_roots
-    bad_stems = (
-        "lightning-2.6.2*",
-        "lightning-2.6.3*",
-        "pytorch_lightning-2.6.2*",
-        "pytorch_lightning-2.6.3*",
-        "pytorch-lightning-2.6.2*",
-        "pytorch-lightning-2.6.3*",
-    )
     for root in roots:
         if not root.exists():
             continue
-        for pattern in bad_stems:
-            for path in sorted(root.glob(f"**/{pattern}")):
-                if not path.is_file():
+        for dirpath, dirnames, filenames in os.walk(root):
+            dirnames.sort()
+            for filename in sorted(filenames):
+                if not _LIGHTNING_BAD_CACHE_ARTIFACT_RE.search(filename):
                     continue
-                if not _LIGHTNING_BAD_CACHE_ARTIFACT_RE.search(path.name):
+                path = Path(dirpath) / filename
+                if not path.is_file():
                     continue
                 digest = _sha256_file(path)
                 if digest in _MINI_SHAI_HULUD_IOC_SHA256:
@@ -17598,6 +17602,17 @@ def check_lightning_exact_eval_manifest_runtime_closure(
         spec.loader.exec_module(module)
         with tempfile.TemporaryDirectory() as tmp:
             manifest = Path(tmp) / "manifest.json"
+
+            def manifest_entry(rel: str) -> dict[str, object]:
+                local = root / rel
+                if local.is_file():
+                    return {
+                        "path": rel,
+                        "bytes": local.stat().st_size,
+                        "sha256": _sha256_file(local) or ("0" * 64),
+                    }
+                return {"path": rel, "bytes": 1, "sha256": "0" * 64}
+
             args = argparse.Namespace(
                 dry_run=False,
                 studio="pact",
@@ -17613,7 +17628,9 @@ def check_lightning_exact_eval_manifest_runtime_closure(
             # short-circuits and we actually exercise the manifest closure path
             # we are trying to test here.  L40S manifest closure is now exercised
             # below via machine="g6e.4xlarge" instead.
-            manifest.write_text(json.dumps({"files": [{"path": "archive.zip"}]}) + "\n")
+            manifest.write_text(
+                json.dumps({"files": [manifest_entry("archive.zip")]}) + "\n"
+            )
             try:
                 module._validate_exact_eval_submit_inputs(args)
             except SystemExit as exc:
@@ -17633,9 +17650,9 @@ def check_lightning_exact_eval_manifest_runtime_closure(
                 json.dumps(
                     {
                         "files": [
-                            {"path": "archive.zip"},
-                            {"path": "submissions/robust_current/inflate.sh"},
-                            {"path": "submissions/robust_current/config.env"},
+                            manifest_entry("archive.zip"),
+                            manifest_entry("submissions/robust_current/inflate.sh"),
+                            manifest_entry("submissions/robust_current/config.env"),
                         ]
                     }
                 )
