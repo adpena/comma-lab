@@ -30,6 +30,40 @@ Current top-of-list public state:
 
 Evidence grade: `external / byte_intake_only` for PR108. No rank promotion.
 
+## Public Auth-Eval Comment Refresh
+
+Command:
+
+```bash
+for pr in 101 102 103 105 106 107 108; do
+  gh pr view "$pr" --repo commaai/comma_video_compression_challenge \
+    --json comments \
+    --jq '.comments[] | {author:.author.login, createdAt, body} |
+      select(.body | test("Final score|Average PoseNet|Average SegNet|Submission file size|CPU|cuda|CUDA|Evaluation results"; "i"))'
+done
+```
+
+Recomputed exact scores from public comment components:
+
+| PR | Device | Bytes | seg | pose | recomputed score |
+|---|---|---:|---:|---:|---:|
+| PR101 | cuda | 178,258 | 0.00066304 | 0.00017103 | 0.226354458744 |
+| PR101 | cpu | 178,258 | 0.00056023 | 0.00003286 | 0.192845012702 |
+| PR102 | cuda | 178,981 | 0.00067565 | 0.00017347 | 0.228390831180 |
+| PR102 | cpu | 178,981 | 0.00057599 | 0.00003460 | 0.195376176526 |
+| PR103 | cuda | 178,223 | 0.00067623 | 0.00017198 | 0.227764851625 |
+| PR103 | cpu | 178,223 | 0.00057654 | 0.00003443 | 0.194880702889 |
+| PR105 | cuda | 177,857 | 0.00070456 | 0.00017267 | 0.230437255695 |
+| PR105 | cpu | 177,857 | 0.00060913 | 0.00003472 | 0.197973979344 |
+| PR106 | cuda | 186,239 | 0.00067142 | 0.00003351 | 0.209456642376 |
+| PR107 | cuda | 178,392 | 0.00068841 | 0.00017394 | 0.229331025025 |
+
+PR108 still has no maintainer auth-eval result comment.
+
+Evidence caveat: these are public comment component recomputations. Exact
+archive custody and local adjudicated JSON remain required before using any row
+as a local exact-eval anchor.
+
 ## Arch Shrink Harvest
 
 Existing paid lane `arch_shrink_x0.4_lightning` was checked, not duplicated.
