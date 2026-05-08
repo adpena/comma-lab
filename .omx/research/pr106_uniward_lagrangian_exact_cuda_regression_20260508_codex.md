@@ -10,6 +10,9 @@
 - Exact result: `experiments/results/lightning_batch/pr106-uniward-rms005-exact-20260508T083555Z/contest_auth_eval.adjudicated.json`
 - Adjudication: `experiments/results/lightning_batch/pr106-uniward-rms005-exact-20260508T083555Z/adjudication_provenance.json`
 - Hardware: Tesla T4, CUDA, `n_samples=600`
+- Baseline comparator: PR106 source adapter exact CUDA replay
+  `experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json`
+  at score `0.20945673680571203`.
 
 ## Result
 
@@ -17,8 +20,8 @@ The rms=0.05 PR106 UNIWARD-Lagrangian runtime packet is an exact CUDA
 regression:
 
 - Score: `0.3371617511972341`
-- Baseline score: `0.20454`
-- Delta vs baseline: `+0.13262175119723413`
+- Baseline score: `0.20945673680571203`
+- Delta vs baseline: `+0.12770501439152208`
 - SegNet distance: `0.0019625`
 - PoseNet distance: `0.00016559`
 - Archive delta: `-35728` bytes vs the 186239-byte PR106 source archive
