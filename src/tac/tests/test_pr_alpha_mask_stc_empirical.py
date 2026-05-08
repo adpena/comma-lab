@@ -65,7 +65,11 @@ def test_run_experiment_manifest_carries_custody_flags(tmp_path: Path) -> None:
     # Build a tiny synthetic masks.mkv-equivalent: write directly via the
     # canonical mask-video encoder if available; else the test skips.
     try:
-        from tac.mask_codec import encode_masks_to_video, decode_masks_auto  # noqa: F401
+        # The canonical multi-codec encoder is ``encode_masks_auto`` (av1 /
+        # vvc / entropy / argmax_rle dispatcher). A historical ``encode_masks_to_video``
+        # reference was never landed; use the canonical name and let the test
+        # gracefully skip if the encoder backend is not available locally.
+        from tac.mask_codec import encode_masks_auto, decode_masks_auto  # noqa: F401
     except Exception:
         pytest.skip("tac.mask_codec encode/decode round-trip unavailable")
 
@@ -75,10 +79,12 @@ def test_run_experiment_manifest_carries_custody_flags(tmp_path: Path) -> None:
     masks = rng.integers(0, 5, size=(8, 12, 16), dtype=np.int64)
     masks_path = tmp_path / "masks.mkv"
     try:
-        encode_masks_to_video(masks, str(masks_path))
+        import torch as _torch
+
+        encode_masks_auto(_torch.as_tensor(masks), str(masks_path), codec="av1")
     except Exception:
-        # Encoder might require larger frames; skip gracefully.
-        pytest.skip("encode_masks_to_video rejected synthetic input")
+        # Encoder might require larger frames or ffmpeg; skip gracefully.
+        pytest.skip("encode_masks_auto rejected synthetic input")
 
     if not masks_path.is_file() or masks_path.stat().st_size == 0:
         pytest.skip("synthetic masks.mkv was not produced")
