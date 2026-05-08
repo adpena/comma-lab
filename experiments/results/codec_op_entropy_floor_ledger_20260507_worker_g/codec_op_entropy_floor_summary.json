@@ -1,0 +1,231 @@
+{
+  "atom_count": 26,
+  "best_negative_byte_deltas": [
+    {
+      "atom_id": "codec_op_entropy_floor:pr101_context_transform_floor_probe:delta_mod255:markov2",
+      "baseline_archive_bytes": 178144,
+      "byte_delta": -107115,
+      "dispatchable": false,
+      "family": "codec_op_context_transform_entropy_floor",
+      "label": "delta_mod255:markov2",
+      "planning_only": true,
+      "promotion_eligible": false,
+      "proxy_row": true,
+      "ready_for_exact_eval_dispatch": false,
+      "target_archive_bytes_estimate": 71029,
+      "target_payload_bytes_estimate": 54935
+    },
+    {
+      "atom_id": "codec_op_entropy_floor:pr101_context_transform_floor_probe:identity:markov2",
+      "baseline_archive_bytes": 178144,
+      "byte_delta": -64037,
+      "dispatchable": false,
+      "family": "codec_op_context_transform_entropy_floor",
+      "label": "identity:markov2",
+      "planning_only": true,
+      "promotion_eligible": false,
+      "proxy_row": true,
+      "ready_for_exact_eval_dispatch": false,
+      "target_archive_bytes_estimate": 114107,
+      "target_payload_bytes_estimate": 98013
+    },
+    {
+      "atom_id": "codec_op_entropy_floor:pr101_context_transform_floor_probe:signed_zigzag:markov2",
+      "baseline_archive_bytes": 178144,
+      "byte_delta": -64037,
+      "dispatchable": false,
+      "family": "codec_op_context_transform_entropy_floor",
+      "label": "signed_zigzag:markov2",
+      "planning_only": true,
+      "promotion_eligible": false,
+      "proxy_row": true,
+      "ready_for_exact_eval_dispatch": false,
+      "target_archive_bytes_estimate": 114107,
+      "target_payload_bytes_estimate": 98013
+    },
+    {
+      "atom_id": "codec_op_entropy_floor:pr101_provable_optimal_floor:markov2_per_tensor",
+      "baseline_archive_bytes": 178144,
+      "byte_delta": -64037,
+      "dispatchable": false,
+      "family": "codec_op_provable_entropy_floor",
+      "label": "markov2_per_tensor",
+      "planning_only": true,
+      "promotion_eligible": false,
+      "proxy_row": true,
+      "ready_for_exact_eval_dispatch": false,
+      "target_archive_bytes_estimate": 114107,
+      "target_payload_bytes_estimate": 98013
+    },
+    {
+      "atom_id": "codec_op_entropy_floor:pr101_context_transform_floor_probe:zero_mask_nonzero_value:markov2",
+      "baseline_archive_bytes": 178144,
+      "byte_delta": -62438,
+      "dispatchable": false,
+      "family": "codec_op_context_transform_entropy_floor",
+      "label": "zero_mask_nonzero_value:markov2",
+      "planning_only": true,
+      "promotion_eligible": false,
+      "proxy_row": true,
+      "ready_for_exact_eval_dispatch": false,
+      "target_archive_bytes_estimate": 115706,
+      "target_payload_bytes_estimate": 99612
+    },
+    {
+      "atom_id": "codec_op_entropy_floor:pr101_context_transform_floor_probe:abs_sign_split:markov2",
+      "baseline_archive_bytes": 178144,
+      "byte_delta": -27988,
+      "dispatchable": false,
+      "family": "codec_op_context_transform_entropy_floor",
+      "label": "abs_sign_split:markov2",
+      "planning_only": true,
+      "promotion_eligible": false,
+      "proxy_row": true,
+      "ready_for_exact_eval_dispatch": false,
+      "target_archive_bytes_estimate": 150156,
+      "target_payload_bytes_estimate": 134062
+    },
+    {
+      "atom_id": "codec_op_entropy_floor:pr101_context_transform_floor_probe:identity:markov1",
+      "baseline_archive_bytes": 178144,
+      "byte_delta": -9944,
+      "dispatchable": false,
+      "family": "codec_op_context_transform_entropy_floor",
+      "label": "identity:markov1",
+      "planning_only": true,
+      "promotion_eligible": false,
+      "proxy_row": true,
+      "ready_for_exact_eval_dispatch": false,
+      "target_archive_bytes_estimate": 168200,
+      "target_payload_bytes_estimate": 152106
+    },
+    {
+      "atom_id": "codec_op_entropy_floor:pr101_context_transform_floor_probe:signed_zigzag:markov1",
+      "baseline_archive_bytes": 178144,
+      "byte_delta": -9944,
+      "dispatchable": false,
+      "family": "codec_op_context_transform_entropy_floor",
+      "label": "signed_zigzag:markov1",
+      "planning_only": true,
+      "promotion_eligible": false,
+      "proxy_row": true,
+      "ready_for_exact_eval_dispatch": false,
+      "target_archive_bytes_estimate": 168200,
+      "target_payload_bytes_estimate": 152106
+    },
+    {
+      "atom_id": "codec_op_entropy_floor:pr101_provable_optimal_floor:markov1_per_tensor",
+      "baseline_archive_bytes": 178144,
+      "byte_delta": -9944,
+      "dispatchable": false,
+      "family": "codec_op_provable_entropy_floor",
+      "label": "markov1_per_tensor",
+      "planning_only": true,
+      "promotion_eligible": false,
+      "proxy_row": true,
+      "ready_for_exact_eval_dispatch": false,
+      "target_archive_bytes_estimate": 168200,
+      "target_payload_bytes_estimate": 152106
+    },
+    {
+      "atom_id": "codec_op_entropy_floor:pr101_context_transform_floor_probe:zero_mask_nonzero_value:markov1",
+      "baseline_archive_bytes": 178144,
+      "byte_delta": -9830,
+      "dispatchable": false,
+      "family": "codec_op_context_transform_entropy_floor",
+      "label": "zero_mask_nonzero_value:markov1",
+      "planning_only": true,
+      "promotion_eligible": false,
+      "proxy_row": true,
+      "ready_for_exact_eval_dispatch": false,
+      "target_archive_bytes_estimate": 168314,
+      "target_payload_bytes_estimate": 152220
+    }
+  ],
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "codec_op_entropy_floor_atom_is_planning_only",
+    "entropy_floor_is_model_class_lower_bound_not_candidate_archive",
+    "requires_joint_admm_codecop_materialization",
+    "requires_byte_closed_archive_manifest_before_dispatch",
+    "requires_noop_or_roundtrip_decode_proof",
+    "requires_exact_cuda_auth_eval",
+    "not_promotion_eligible"
+  ],
+  "dispatchable": false,
+  "families": [
+    "codec_op_context_transform_entropy_floor",
+    "codec_op_provable_entropy_floor"
+  ],
+  "generated_at_unix_seconds": 1778200034,
+  "input_paths": [
+    "reports/pr101_provable_optimal_floor.json",
+    "reports/pr101_context_transform_floor_probe.json"
+  ],
+  "input_reports": [
+    {
+      "atom_count": 5,
+      "negative_byte_delta_atom_count": 4,
+      "path": "reports/pr101_provable_optimal_floor.json",
+      "schemas": [
+        "pr101_compression_floor_ladder.v2"
+      ],
+      "sha256": "42e4f458157d26d83e7ce968a49ba462bc109553e04e7ea51ee74b2b84783688"
+    },
+    {
+      "atom_count": 21,
+      "negative_byte_delta_atom_count": 11,
+      "path": "reports/pr101_context_transform_floor_probe.json",
+      "schemas": [
+        "pr101_context_transform_floor_probe.v1"
+      ],
+      "sha256": "7053fdb71aec6e69b0cee8e59123c6462dd8793b71b93bb50dd47fb376744710"
+    }
+  ],
+  "negative_byte_delta_atom_count": 15,
+  "output_path": "experiments/results/codec_op_entropy_floor_ledger_20260507_worker_g/codec_op_entropy_floor_atoms.jsonl",
+  "pareto_scopes": [
+    "pr101_context_transform_entropy_floor:b863362aaba1",
+    "pr101_decoder_entropy_floor:b863362aaba1"
+  ],
+  "planning_only": true,
+  "policy": {
+    "all_rows_non_dispatchable": true,
+    "all_rows_non_promotable": true,
+    "all_rows_non_score_claim": true,
+    "all_rows_not_ready_for_exact_eval_dispatch": true,
+    "all_rows_planning_only": true,
+    "all_rows_proxy": true,
+    "dispatchable_atom_count": 0,
+    "fail_closed": true,
+    "planning_only_atom_count": 26,
+    "promotion_eligible_atom_count": 0,
+    "proxy_row_count": 26,
+    "ready_for_exact_eval_dispatch_atom_count": 0,
+    "row_count": 26,
+    "score_claim_atom_count": 0
+  },
+  "policy_review": {
+    "lane_dispatch_claim_required": false,
+    "remote_gpu_dispatch": "not_applicable_no_training_eval_or_remote_gpu_job_dispatched",
+    "rows_are_dispatch_candidates": false,
+    "rows_are_promotion_candidates": false,
+    "rows_are_score_evidence": false
+  },
+  "promotable": false,
+  "promotion_blockers": [
+    "codec_op_entropy_floor_atom_is_planning_only",
+    "entropy_floor_is_model_class_lower_bound_not_candidate_archive",
+    "requires_joint_admm_codecop_materialization",
+    "requires_byte_closed_archive_manifest_before_dispatch",
+    "requires_noop_or_roundtrip_decode_proof",
+    "requires_exact_cuda_auth_eval",
+    "not_promotion_eligible"
+  ],
+  "promotion_eligible": false,
+  "proxy_rows": true,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "codec_op_entropy_floor_to_ledger.summary.v1",
+  "score_claim": false,
+  "tool": "tools/codec_op_entropy_floor_to_ledger.py"
+}
