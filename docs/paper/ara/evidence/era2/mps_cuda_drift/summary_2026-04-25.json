@@ -22,7 +22,8 @@
       "final_score_ratio": 2.51
     }
   },
-  "likely_root_cause": "FastViT-T12 attention softmax + YUV6 chroma plane numerics differ between MPS and CUDA float16",
+  "likely_root_cause": "superseded: mechanism unlocalized; FastViT-T12 uses RepMixer/conv blocks, not attention. Treat as MPS-vs-CUDA scorer drift evidence only.",
+  "superseded_by": "2026-05-08 CPU/CUDA drift review; preserve measured ratios, do not cite attention-softmax causality",
   "structural_remediation": "preflight Check 1: check_no_mps_fallback_default — STRICT @ 0 violations",
   "retroactive_invalidation": "every Era 1 'auth' number > 1.73 measured on MPS is now [MPS-PROXY] advisory only",
   "_pending_provenance": {
