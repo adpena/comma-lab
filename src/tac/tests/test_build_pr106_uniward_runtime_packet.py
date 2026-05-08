@@ -87,15 +87,18 @@ def test_build_tool_reuses_canonical_primitives() -> None:
     assert "class UniwardWeightedAllocator" not in src
 
 
-def test_build_tool_inflate_sh_uses_pr106_3_arg_contract() -> None:
+def test_build_tool_inflate_sh_uses_self_contained_3_arg_contract() -> None:
     """FIX-CODEX-HIGH commit c83eff00 mandates the contest auth-eval 3-arg
-    contract. The tool must stage PR106's already-compliant inflate.sh
-    rather than synthesizing its own."""
+    contract. PR106's original wrapper is only location-correct when it lives
+    under submissions/<name>, so the packet must synthesize a self-contained
+    shell wrapper that calls the byte-identical PR106 inflate.py by path."""
     src = _read_tool_source()
-    # Tool reuses PR106's inflate.sh by file copy (PR106's source already has
-    # the canonical 3-arg contract per CUDA-PRESTAGE inspection).
     assert 'src_inflate_sh = pr106_source_dir / "inflate.sh"' in src
-    assert "shutil.copy2(src_inflate_sh, dst_inflate_sh)" in src
+    assert "SELF_CONTAINED_INFLATE_SH" in src
+    assert '"$PYTHON_BIN" "$HERE/inflate.py" "$SRC" "$DST"' in src
+    assert "submissions.${SUB_NAME}.inflate" not in src
+    assert "PYTHON_INFLATE" not in src
+    assert "shutil.copy2(src_inflate_sh, dst_inflate_sh)" not in src
 
 
 def test_build_tool_documents_cuda_prestage_advisory_closure() -> None:

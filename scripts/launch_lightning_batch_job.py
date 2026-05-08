@@ -526,13 +526,19 @@ def _exact_eval_runtime_requirements(args: argparse.Namespace) -> set[str]:
     if inflate_rel != "submissions/robust_current/inflate.sh":
         runtime_dir = Path(REPO_ROOT) / str(inflate_path.parent)
         if runtime_dir.is_dir():
-            for child in sorted(runtime_dir.iterdir()):
-                if not child.is_file() or child.name.startswith(".") or child.name.startswith("._"):
+            for child in sorted(runtime_dir.rglob("*")):
+                if not child.is_file():
+                    continue
+                rel_parts = child.relative_to(runtime_dir).parts
+                if any(
+                    part.startswith(".") or part.startswith("._") or part == "__pycache__"
+                    for part in rel_parts
+                ):
                     continue
                 required.add(
                     _safe_remote_repo_rel(
-                        str(inflate_path.parent / child.name),
-                        field=f"external inflate runtime sibling {child.name}",
+                        str(PurePosixPath(inflate_rel).parent / PurePosixPath(*rel_parts)),
+                        field=f"external inflate runtime file {'/'.join(rel_parts)}",
                     )
                 )
     return required

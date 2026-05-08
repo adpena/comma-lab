@@ -27,9 +27,10 @@ This tool closes that gap. It:
    magnitudes, NOT the archive layout.
 5. Writes a single-member ZIP ``0.bin`` containing the full packet and a
    forked ``submission_dir/`` whose ``inflate.py`` / ``model.py`` /
-   ``codec.py`` / ``inflate.sh`` are PR106-byte-identical (no decoder
-   re-design needed; the K-coarsened symbols decode through PR106's existing
-   ``decode_packed_decoder`` path, which dequantizes ``q_int8 * scale_f32``).
+   ``codec.py`` are PR106-byte-identical. ``inflate.sh`` is adapted into a
+   self-contained 3-arg wrapper because PR106's original shell wrapper assumes
+   it lives under ``submissions/<name>/``; the Python decoder code remains
+   byte-identical.
 6. Runs a smoke roundtrip — extract our archive, run PR106's ``parse_archive``
    on it, verify the per-tensor weights match our K-coarsened encoder output
    AND that the decoded latents have ``n_pairs == 600``. (The full
@@ -43,9 +44,10 @@ This tool closes that gap. It:
 The wire-format is byte-identical to PR106's published runtime, so the
 existing PR106 inflate path (vendored from
 ``experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/``)
-is sufficient. The only code path that changes is the encoder (us);
+is sufficient. The only Python code path that changes is the encoder (us);
 inflate-time deserialization is the SAME function that reads the published
-0.20454 archive.
+0.20454 archive. The shell wrapper only fixes runtime location and Python
+interpreter discovery.
 
 CLAUDE.md compliance
 --------------------
@@ -113,7 +115,6 @@ from tac.hnerv_lowlevel_packer import (  # noqa: E402
 from tac.optimization.lagrangian_per_tensor_allocation import (  # noqa: E402
     UniwardWeightedAllocator,
 )
-
 
 LANE_ID = "pr106_uniward_lagrangian_runtime_packet"
 SCHEMA_VERSION = "pr106_uniward_lagrangian_runtime_packet_build.v1"
@@ -394,6 +395,52 @@ def _write_pr106_archive_zip(
         zf.writestr(info, inner_blob, compress_type=zipfile.ZIP_STORED)
 
 
+SELF_CONTAINED_INFLATE_SH = """#!/usr/bin/env bash
+# Self-contained PR106 inflate wrapper for experiments/results runtime packets.
+# The upstream PR106 wrapper assumes submissions/<name>/ package layout; this
+# packet keeps the PR106 Python decoder byte-identical but calls it by path.
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DATA_DIR="${1:?data dir required}"
+OUTPUT_DIR="${2:?output dir required}"
+FILE_LIST="${3:?file list required}"
+
+mkdir -p "$OUTPUT_DIR"
+
+PYTHON_BIN="${PR106_UNIWARD_PYTHON:-${PYTHON:-}}"
+if [[ -z "$PYTHON_BIN" ]]; then
+  for candidate in "$PWD/.venv/bin/python" "$HERE/../../../../.venv/bin/python" python python3; do
+    if [[ "$candidate" == */* ]]; then
+      if [[ -x "$candidate" ]]; then
+        PYTHON_BIN="$candidate"
+        break
+      fi
+    elif command -v "$candidate" >/dev/null 2>&1; then
+      PYTHON_BIN="$candidate"
+      break
+    fi
+  done
+fi
+if [[ -z "$PYTHON_BIN" ]]; then
+  echo "FATAL: no Python interpreter found for PR106 UNIWARD inflate" >&2
+  exit 127
+fi
+
+while IFS= read -r line; do
+  [[ -z "$line" ]] && continue
+  BASE="${line%.*}"
+  SRC="${DATA_DIR}/${BASE}.bin"
+  DST="${OUTPUT_DIR}/${BASE}.raw"
+
+  [[ ! -f "$SRC" ]] && echo "ERROR: ${SRC} not found" >&2 && exit 1
+
+  printf "Inflating %s ... " "$line"
+  "$PYTHON_BIN" "$HERE/inflate.py" "$SRC" "$DST"
+done < "$FILE_LIST"
+"""
+
+
 def _stage_pr106_submission_dir(
     submission_dir: Path,
     *,
@@ -427,12 +474,15 @@ def _stage_pr106_submission_dir(
 
     # FIX-CODEX-HIGH commit c83eff00 mandates inflate.sh implements the 3-arg
     # auth-eval contract (data_dir / output_dir / file_list). PR106's source
-    # inflate.sh already does this — copy it verbatim.
+    # shell wrapper has that arity but assumes submissions/<name>/ package
+    # placement. This packet is staged under experiments/results, so write a
+    # self-contained wrapper that calls the byte-identical PR106 inflate.py by
+    # path and discovers the repo venv before falling back to python/python3.
     src_inflate_sh = pr106_source_dir / "inflate.sh"
     if not src_inflate_sh.is_file():
         raise SystemExit(f"FATAL: PR106 inflate.sh missing: {src_inflate_sh}")
     dst_inflate_sh = submission_dir / "inflate.sh"
-    shutil.copy2(src_inflate_sh, dst_inflate_sh)
+    dst_inflate_sh.write_text(SELF_CONTAINED_INFLATE_SH, encoding="utf-8")
     dst_inflate_sh.chmod(0o755)
     out["inflate.sh"] = _sha256(dst_inflate_sh.read_bytes())
     return out
@@ -518,7 +568,7 @@ def _local_smoke_roundtrip(
     abs_err_total = 0.0
     abs_orig_total = 0.0
     per_tensor: list[dict] = []
-    for idx, (name, shape) in enumerate(PACKED_STATE_SCHEMA):
+    for idx, (name, _shape) in enumerate(PACKED_STATE_SCHEMA):
         scale = struct.unpack_from("<f", expected_scales_f32[idx], 0)[0]
         recovered = decoder_sd[name].cpu().numpy().astype(np.float64).reshape(-1)
         expected_weight = (

@@ -9,17 +9,13 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from typing import ClassVar
 
 import pytest
 import torch
 
+import tac.deploy.lightning.batch_jobs as lightning_batch_jobs
 from tac.deploy.lightning.batch_jobs import (
-    ARTIFACT_DALI_BOOTSTRAP,
-    ARTIFACT_DALI_REQUIREMENTS,
-    ARTIFACT_INFRA_FAILURE,
-    ARTIFACT_INFLATE_RUNTIME_BOOTSTRAP,
-    ARTIFACT_INFLATE_RUNTIME_STATIC_PREFLIGHT,
-    ARTIFACT_METADATA,
     ARTIFACT_COMPONENT_RESPONSE_INPUTS,
     ARTIFACT_COMPONENT_RESPONSE_SUMMARY,
     ARTIFACT_COMPONENT_RESPONSE_VALIDATION,
@@ -27,22 +23,28 @@ from tac.deploy.lightning.batch_jobs import (
     ARTIFACT_COMPONENT_SENSITIVITY_RUN,
     ARTIFACT_COMPONENT_SENSITIVITY_SUMMARY,
     ARTIFACT_COMPONENT_SENSITIVITY_VALIDATION,
-    COMPONENT_SENSITIVITY_CANONICAL_ARTIFACT_FILES,
-    ARTIFACT_VALIDATION,
-    CANONICAL_ARTIFACT_FILES,
-    COMPONENT_SENSITIVITY_HOLDOUT_MAP_FILES,
-    COMPONENT_SENSITIVITY_CURVE_FILES,
-    COMPONENT_SENSITIVITY_MAP_FILES,
-    COMPONENT_RESPONSE_CURVE_FILES,
+    ARTIFACT_DALI_BOOTSTRAP,
+    ARTIFACT_DALI_REQUIREMENTS,
+    ARTIFACT_INFLATE_RUNTIME_BOOTSTRAP,
+    ARTIFACT_INFLATE_RUNTIME_STATIC_PREFLIGHT,
+    ARTIFACT_INFRA_FAILURE,
+    ARTIFACT_METADATA,
     ARTIFACT_RUNNER_PREFLIGHT,
     ARTIFACT_SUPPLY_CHAIN_SCAN,
     ARTIFACT_SUPPLY_CHAIN_SCAN_PRE,
+    ARTIFACT_VALIDATION,
+    CANONICAL_ARTIFACT_FILES,
+    COMPONENT_RESPONSE_CURVE_FILES,
+    COMPONENT_SENSITIVITY_CANONICAL_ARTIFACT_FILES,
+    COMPONENT_SENSITIVITY_CURVE_FILES,
+    COMPONENT_SENSITIVITY_HOLDOUT_MAP_FILES,
+    COMPONENT_SENSITIVITY_MAP_FILES,
+    LIGHTNING_EMPTY_ARTIFACT_INFRA_TERMINAL_CLASS,
+    LIGHTNING_MISSING_EXACT_EVAL_JSON_TERMINAL_CLASS,
     LightningAdjudicationSpec,
     LightningBatchJobsClient,
     LightningBatchJobSpec,
     LightningStudioCloudAccountMismatchError,
-    LIGHTNING_EMPTY_ARTIFACT_INFRA_TERMINAL_CLASS,
-    LIGHTNING_MISSING_EXACT_EVAL_JSON_TERMINAL_CLASS,
     archive_identity,
     default_exact_eval_local_artifact_dir,
     default_exact_eval_output_dir,
@@ -54,17 +56,15 @@ from tac.deploy.lightning.batch_jobs import (
     make_diagnostic_component_sensitivity_spec,
     make_exact_eval_spec,
     make_official_component_response_spec,
-    mirror_local_component_sensitivity_artifact_dir,
     mirror_local_artifact_dir,
+    mirror_local_component_sensitivity_artifact_dir,
     official_component_response_command,
-    validate_local_component_sensitivity_artifact_dir,
-    validate_local_component_response_artifact_dir,
     validate_local_artifact_dir,
+    validate_local_component_response_artifact_dir,
+    validate_local_component_sensitivity_artifact_dir,
     validate_studio_machine_class_pair,
 )
-import tac.deploy.lightning.batch_jobs as lightning_batch_jobs
 from tac.sensitivity_map import save_sensitivity_map
-
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 CLI = REPO_ROOT / "scripts" / "launch_lightning_batch_job.py"
@@ -1213,6 +1213,62 @@ def test_exact_eval_submit_requires_source_manifest_and_archive_closure(tmp_path
     module._validate_exact_eval_submit_inputs(args)
 
 
+def test_exact_eval_submit_requires_nested_external_inflate_runtime(tmp_path: Path) -> None:
+    module = _load_lightning_cli_module(tmp_path)
+    runtime = tmp_path / "experiments/results/candidate/submission_dir"
+    (runtime / "src").mkdir(parents=True)
+    (runtime / "inflate.sh").write_text("#!/usr/bin/env bash\n")
+    (runtime / "inflate.py").write_text("from src.model import X\n")
+    (runtime / "src" / "model.py").write_text("X = 1\n")
+    (runtime / "src" / "codec.py").write_text("Y = 2\n")
+    (runtime / "__pycache__").mkdir()
+    (runtime / "__pycache__" / "inflate.cpython.pyc").write_bytes(b"cache")
+    args = argparse.Namespace(
+        dry_run=False,
+        studio="pact",
+        source_manifest=str(tmp_path / "manifest.json"),
+        archive="/repo/archive.zip",
+        repo_dir="/repo",
+        queue_metadata=[],
+        env=[],
+        machine="g6e.4xlarge",
+        inflate_sh="/repo/experiments/results/candidate/submission_dir/inflate.sh",
+    )
+    manifest = Path(args.source_manifest)
+    manifest.write_text(
+        json.dumps(
+            {
+                "files": [
+                    {"path": "archive.zip"},
+                    {"path": "experiments/results/candidate/submission_dir/inflate.sh"},
+                    {"path": "experiments/results/candidate/submission_dir/inflate.py"},
+                    {"path": "experiments/results/candidate/submission_dir/src/model.py"},
+                ]
+            }
+        )
+        + "\n"
+    )
+
+    with pytest.raises(SystemExit, match="inflate runtime closure"):
+        module._validate_exact_eval_submit_inputs(args)
+
+    manifest.write_text(
+        json.dumps(
+            {
+                "files": [
+                    {"path": "archive.zip"},
+                    {"path": "experiments/results/candidate/submission_dir/inflate.sh"},
+                    {"path": "experiments/results/candidate/submission_dir/inflate.py"},
+                    {"path": "experiments/results/candidate/submission_dir/src/model.py"},
+                    {"path": "experiments/results/candidate/submission_dir/src/codec.py"},
+                ]
+            }
+        )
+        + "\n"
+    )
+    module._validate_exact_eval_submit_inputs(args)
+
+
 def test_exact_eval_manifest_dispatch_gate_blocks_renderer_stack_without_pose_safety(tmp_path: Path) -> None:
     module = _load_lightning_cli_module(tmp_path)
     archive = tmp_path / "experiments/results/candidate/archive.zip"
@@ -1386,7 +1442,7 @@ def test_exact_eval_submit_requires_cdo1_manifest_pair_basis(tmp_path: Path) -> 
         machine="g6e.4xlarge",
     )
 
-    with pytest.raises(SystemExit, match="cdo1_overlay.pair_index_basis"):
+    with pytest.raises(SystemExit, match=r"cdo1_overlay\.pair_index_basis"):
         module._validate_exact_eval_submit_inputs(args)
 
     payload = json.loads(archive_manifest.read_text())
@@ -2075,7 +2131,7 @@ def test_submit_records_official_job_fields(tmp_path: Path) -> None:
         artifact_path = "/teamspace/jobs/submitted/artifacts"
         machine = "T4"
         total_cost = 0.0
-        calls: list[dict] = []
+        calls: ClassVar[list[dict]] = []
 
         @classmethod
         def run(cls, **kwargs):
@@ -4355,7 +4411,7 @@ def test_batch_job_cli_ssh_preflight_reports_identity_guidance(
 def test_batch_job_cli_ssh_preflight_rejects_bare_provider_host(tmp_path: Path) -> None:
     module = _load_lightning_cli_module(tmp_path)
 
-    with pytest.raises(SystemExit, match="bare ssh.lightning.ai"):
+    with pytest.raises(SystemExit, match=r"bare ssh\.lightning\.ai"):
         module._ensure_ssh_auth_ready("ssh.lightning.ai")
 
 

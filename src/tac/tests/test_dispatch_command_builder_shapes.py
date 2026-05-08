@@ -4,6 +4,7 @@ import hashlib
 import importlib.util
 import json
 import sys
+import warnings
 import zipfile
 from pathlib import Path
 
@@ -44,6 +45,18 @@ def _write_archive(path: Path, payload: bytes = b"fixture") -> Path:
     info.external_attr = 0o644 << 16
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as zf:
         zf.writestr(info, payload)
+    return path
+
+
+def _write_archive_with_members(path: Path, names: list[str]) -> Path:
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as zf:
+        for idx, name in enumerate(names):
+            info = zipfile.ZipInfo(name)
+            info.date_time = (1980, 1, 1, 0, 0, 0)
+            info.external_attr = 0o644 << 16
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                zf.writestr(info, f"payload-{idx}".encode("ascii"))
     return path
 
 
@@ -368,6 +381,53 @@ def test_parallel_dispatch_rejects_mismatched_archive_byte_fields(
         raise AssertionError("expected DispatchInputError")
 
     assert "archive_custody:archive_bytes_field_mismatch" in message
+
+
+def test_parallel_dispatch_rejects_zip_slip_archive_member(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    archive = _write_archive_with_members(tmp_path / "zip_slip.zip", ["../escape"])
+    candidate = _ready_custody_candidate(
+        tmp_path,
+        archive_path=archive.as_posix(),
+        archive_size_bytes=archive.stat().st_size,
+        archive_sha256=hashlib.sha256(archive.read_bytes()).hexdigest(),
+    )
+    ranked = _write_ranked_input(tmp_path, [candidate])
+
+    try:
+        tool._load_top_k(ranked, k=None)
+    except tool.DispatchInputError as exc:
+        message = str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected DispatchInputError")
+
+    assert "archive_custody:archive_zip_unsafe_member:" in message
+    assert "zip_slip_member_name" in message
+
+
+def test_parallel_dispatch_rejects_duplicate_archive_members(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    archive = _write_archive_with_members(tmp_path / "duplicate.zip", ["x", "x"])
+    candidate = _ready_custody_candidate(
+        tmp_path,
+        archive_path=archive.as_posix(),
+        archive_size_bytes=archive.stat().st_size,
+        archive_sha256=hashlib.sha256(archive.read_bytes()).hexdigest(),
+    )
+    ranked = _write_ranked_input(tmp_path, [candidate])
+
+    try:
+        tool._load_top_k(ranked, k=None)
+    except tool.DispatchInputError as exc:
+        message = str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected DispatchInputError")
+
+    assert "archive_custody:archive_zip_duplicate_members" in message
 
 
 def test_parallel_dispatch_rejects_production_only_target_for_contest_dispatch(

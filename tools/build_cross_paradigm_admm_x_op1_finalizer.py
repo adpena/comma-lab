@@ -97,10 +97,8 @@ import json
 import shutil
 import struct
 import sys
-import zipfile
 from pathlib import Path
 
-import brotli
 import numpy as np
 import torch
 
@@ -208,6 +206,20 @@ def cpu_build_proxy_guard_fields() -> dict[str, object]:
         "score_claim_blockers": list(CPU_BUILD_SCORE_BLOCKERS),
         "dispatch_blockers": list(CPU_BUILD_SCORE_BLOCKERS),
     }
+
+
+def _resolve_output_root(output_root: Path) -> Path:
+    """Resolve CLI output roots relative to the repo root.
+
+    The builder records repo-relative artifact paths in its manifest. Accepting
+    relative ``--output-root`` values is useful for worker-owned artifact dirs,
+    but the build path must be absolute before ``relative_to(REPO_ROOT)`` is
+    used for custody logging.
+    """
+    expanded = output_root.expanduser()
+    if not expanded.is_absolute():
+        expanded = REPO_ROOT / expanded
+    return expanded.resolve()
 
 
 def _build_dequantized_substrate_via_admm(
@@ -735,8 +747,9 @@ def main(argv: list[str] | None = None) -> int:
         sys.exit(f"FATAL: --pr101-source-dir not found: {args.pr101_source_dir}")
 
     timestamp = dt.datetime.now(tz=dt.UTC).strftime("%Y%m%dT%H%M%SZ")
+    output_root = _resolve_output_root(args.output_root)
     build_dir = (
-        args.output_root
+        output_root
         / f"cross_paradigm_admm_x_op1_finalizer_{timestamp}"
     )
     build_dir.mkdir(parents=True, exist_ok=True)
@@ -895,8 +908,8 @@ def main(argv: list[str] | None = None) -> int:
         f"(archive={archive_bytes:,} B, sha256={archive_sha[:16]}...)"
     )
     print(
-        f"[cross-paradigm-build] DONE. CPU build complete. "
-        f"ready_for_exact_eval_dispatch=False; cuda_eval_worth_testing=True."
+        "[cross-paradigm-build] DONE. CPU build complete. "
+        "ready_for_exact_eval_dispatch=False; cuda_eval_worth_testing=True."
     )
     return 0
 

@@ -43,6 +43,7 @@ fn inspects_stored_single_member_python_oracle_core_fields() {
     assert_eq!(member.local_header_name, "x");
     assert!(member.local_central_name_match);
     assert_eq!(member.header_offset, 0);
+    assert_eq!(member.payload_offset, Some(31));
     assert_eq!(member.compress_type, 0);
     assert_eq!(member.crc32, "6428b674");
     assert_eq!(member.compressed_bytes, 13);
@@ -68,6 +69,7 @@ fn accepts_deflated_metadata_without_payload_inflate() {
     );
     let member = &inspect.members[0];
     assert_eq!(member.compress_type, 8);
+    assert_eq!(member.payload_offset, Some(31));
     assert_eq!(member.compressed_bytes, 15);
     assert_eq!(member.uncompressed_bytes, 13);
     assert_eq!(member.crc32, "6428b674");
@@ -332,6 +334,23 @@ fn encrypted_members_fail_closed() {
     assert_eq!(inspect.members[0].flag_bits, 1);
     assert_eq!(inspect.members[0].blockers, ["encrypted_member"]);
     assert_eq!(inspect.blockers, ["x:encrypted_member"]);
+}
+
+#[test]
+fn data_descriptor_members_fail_closed() {
+    let mut raw = STORED_SINGLE_MEMBER_ZIP.to_vec();
+    raw[6] |= 0x08;
+    raw[52] |= 0x08;
+
+    let inspect = inspect_zip_bytes("fixture/descriptor.zip", &raw);
+
+    assert!(!inspect.zip_strict);
+    assert_eq!(inspect.members[0].flag_bits, 0x08);
+    assert_eq!(
+        inspect.members[0].blockers,
+        ["data_descriptor_member_not_supported"]
+    );
+    assert_eq!(inspect.blockers, ["x:data_descriptor_member_not_supported"]);
 }
 
 #[test]

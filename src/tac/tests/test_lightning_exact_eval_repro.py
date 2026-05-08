@@ -8,7 +8,6 @@ from pathlib import Path
 
 import pytest
 
-
 REPO = Path(__file__).resolve().parents[3]
 SCRIPT = REPO / "scripts" / "lightning_exact_eval_repro.py"
 
@@ -82,14 +81,7 @@ def test_stage_command_uses_operator_supplied_ssh_alias_without_key_material(tmp
     mod = _load_module()
     archive, baseline = _fixture_repo(tmp_path)
     args = mod.build_parser().parse_args(
-        _base_args(archive, baseline)
-        + [
-            "--stage-workspace",
-            "--remote",
-            "lightning-pact",
-            "--extra-artifact",
-            str(tmp_path / "experiments/results/candidate/archive.zip"),
-        ]
+        [*_base_args(archive, baseline), "--stage-workspace", "--remote", "lightning-pact", "--extra-artifact", str(tmp_path / "experiments/results/candidate/archive.zip")]
     )
 
     plan = mod.build_plan(args, repo_root=tmp_path)
@@ -127,6 +119,31 @@ def test_queue_command_is_dry_run_and_uses_writable_remote_workspace_path(tmp_pa
     assert "--device cuda" not in queue_cmd
 
 
+def test_external_inflate_runtime_artifacts_include_nested_helpers(tmp_path: Path) -> None:
+    mod = _load_module()
+    archive, baseline = _fixture_repo(tmp_path)
+    runtime = tmp_path / "experiments/results/candidate/submission_dir"
+    (runtime / "src").mkdir(parents=True)
+    (runtime / "inflate.sh").write_text("#!/usr/bin/env bash\n")
+    (runtime / "inflate.py").write_text("from src.model import X\n")
+    (runtime / "src" / "model.py").write_text("X = 1\n")
+    (runtime / "src" / "codec.py").write_text("Y = 2\n")
+    (runtime / "__pycache__").mkdir()
+    (runtime / "__pycache__" / "inflate.cpython.pyc").write_bytes(b"cache")
+
+    args = mod.build_parser().parse_args(
+        [*_base_args(archive, baseline), "--inflate-sh", str(runtime / "inflate.sh"), "--stage-workspace", "--remote", "lightning-pact"]
+    )
+
+    plan = mod.build_plan(args, repo_root=tmp_path)
+
+    assert "experiments/results/candidate/submission_dir/inflate.sh" in plan["artifacts"]
+    assert "experiments/results/candidate/submission_dir/inflate.py" in plan["artifacts"]
+    assert "experiments/results/candidate/submission_dir/src/model.py" in plan["artifacts"]
+    assert "experiments/results/candidate/submission_dir/src/codec.py" in plan["artifacts"]
+    assert not any("__pycache__" in item for item in plan["artifacts"])
+
+
 def test_baseline_json_populates_adjudication_flags(tmp_path: Path) -> None:
     mod = _load_module()
     archive, baseline = _fixture_repo(tmp_path)
@@ -150,7 +167,7 @@ def test_submit_requires_staging_or_explicit_remote_custody_and_target_backend(t
     mod = _load_module()
     archive, baseline = _fixture_repo(tmp_path)
 
-    no_stage = mod.build_parser().parse_args(_base_args(archive, baseline) + ["--submit"])
+    no_stage = mod.build_parser().parse_args([*_base_args(archive, baseline), "--submit"])
     with pytest.raises(ValueError, match="--stage-workspace or --allow-unstaged-submit"):
         mod.build_plan(no_stage, repo_root=tmp_path)
 
@@ -158,7 +175,7 @@ def test_submit_requires_staging_or_explicit_remote_custody_and_target_backend(t
     studio_idx = no_backend_args.index("--studio")
     del no_backend_args[studio_idx : studio_idx + 2]
     no_backend = mod.build_parser().parse_args(
-        no_backend_args + ["--submit", "--allow-unstaged-submit"]
+        [*no_backend_args, "--submit", "--allow-unstaged-submit"]
     )
     with pytest.raises(ValueError, match="--studio or --image"):
         mod.build_plan(no_backend, repo_root=tmp_path)
@@ -168,11 +185,7 @@ def test_submit_requires_remote_alias_before_forwarding_submit_preflight(tmp_pat
     mod = _load_module()
     archive, baseline = _fixture_repo(tmp_path)
     args = mod.build_parser().parse_args(
-        _base_args(archive, baseline)
-        + [
-            "--submit",
-            "--allow-unstaged-submit",
-        ]
+        [*_base_args(archive, baseline), "--submit", "--allow-unstaged-submit"]
     )
     args.remote = None
 
@@ -184,12 +197,7 @@ def test_stage_workspace_rejects_bare_lightning_ssh_host(tmp_path: Path) -> None
     mod = _load_module()
     archive, baseline = _fixture_repo(tmp_path)
     args = mod.build_parser().parse_args(
-        _base_args(archive, baseline)
-        + [
-            "--stage-workspace",
-            "--remote",
-            "ssh.lightning.ai",
-        ]
+        [*_base_args(archive, baseline), "--stage-workspace", "--remote", "ssh.lightning.ai"]
     )
 
     with pytest.raises(ValueError, match="bare ssh\\.lightning\\.ai"):
@@ -213,17 +221,7 @@ def test_submit_forwards_dispatch_claim_guard_flags(tmp_path: Path) -> None:
     mod = _load_module()
     archive, baseline = _fixture_repo(tmp_path)
     args = mod.build_parser().parse_args(
-        _base_args(archive, baseline)
-        + [
-            "--submit",
-            "--stage-workspace",
-            "--remote",
-            "lightning-pact",
-            "--dispatch-lane-id",
-            "lane_renderer_eval",
-            "--dispatch-claims-path",
-            ".omx/state/active_lane_dispatch_claims.md",
-        ]
+        [*_base_args(archive, baseline), "--submit", "--stage-workspace", "--remote", "lightning-pact", "--dispatch-lane-id", "lane_renderer_eval", "--dispatch-claims-path", ".omx/state/active_lane_dispatch_claims.md"]
     )
 
     plan = mod.build_plan(args, repo_root=tmp_path)
@@ -238,13 +236,7 @@ def test_queue_command_forwards_exact_eval_env_overrides(tmp_path: Path) -> None
     mod = _load_module()
     archive, baseline = _fixture_repo(tmp_path)
     args = mod.build_parser().parse_args(
-        _base_args(archive, baseline)
-        + [
-            "--env",
-            "INFLATE_TORCH_SPEC=torch==2.5.1+cu124",
-            "--env",
-            "UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124",
-        ]
+        [*_base_args(archive, baseline), "--env", "INFLATE_TORCH_SPEC=torch==2.5.1+cu124", "--env", "UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124"]
     )
 
     plan = mod.build_plan(args, repo_root=tmp_path)
@@ -267,12 +259,7 @@ def test_queue_command_can_request_component_trace(tmp_path: Path) -> None:
     mod = _load_module()
     archive, baseline = _fixture_repo(tmp_path)
     args = mod.build_parser().parse_args(
-        _base_args(archive, baseline)
-        + [
-            "--component-trace",
-            "--component-trace-top-k",
-            "96",
-        ]
+        [*_base_args(archive, baseline), "--component-trace", "--component-trace-top-k", "96"]
     )
 
     plan = mod.build_plan(args, repo_root=tmp_path)
@@ -289,15 +276,7 @@ def test_submit_forwards_dispatch_claim_break_glass_reason(tmp_path: Path) -> No
     mod = _load_module()
     archive, baseline = _fixture_repo(tmp_path)
     args = mod.build_parser().parse_args(
-        _base_args(archive, baseline)
-        + [
-            "--submit",
-            "--stage-workspace",
-            "--remote",
-            "lightning-pact",
-            "--allow-missing-dispatch-claim-reason",
-            "operator reviewed emergency rerun",
-        ]
+        [*_base_args(archive, baseline), "--submit", "--stage-workspace", "--remote", "lightning-pact", "--allow-missing-dispatch-claim-reason", "operator reviewed emergency rerun"]
     )
 
     plan = mod.build_plan(args, repo_root=tmp_path)
@@ -312,11 +291,7 @@ def test_read_only_sdk_artifact_view_is_rejected_as_output_dir(tmp_path: Path) -
     mod = _load_module()
     archive, baseline = _fixture_repo(tmp_path)
     args = mod.build_parser().parse_args(
-        _base_args(archive, baseline)
-        + [
-            "--output-dir",
-            "/teamspace/jobs/owv3/artifacts",
-        ]
+        [*_base_args(archive, baseline), "--output-dir", "/teamspace/jobs/owv3/artifacts"]
     )
     with pytest.raises(ValueError, match="read-only artifact view"):
         mod.build_plan(args, repo_root=tmp_path)
@@ -329,7 +304,7 @@ def test_submit_consistency_guard_rejects_file_drift_after_stage_manifest(tmp_pa
     inflate.parent.mkdir(parents=True)
     inflate.write_text("#!/usr/bin/env bash\n")
     args = mod.build_parser().parse_args(
-        _base_args(archive, baseline) + ["--stage-workspace", "--remote", "lightning-pact"]
+        [*_base_args(archive, baseline), "--stage-workspace", "--remote", "lightning-pact"]
     )
     plan = mod.build_plan(args, repo_root=tmp_path)
     manifest_path = tmp_path / plan["paths"]["manifest_out"]
@@ -375,13 +350,7 @@ def test_public_replay_preflight_must_match_current_adapter_sha(tmp_path: Path) 
         + "\n"
     )
     args = mod.build_parser().parse_args(
-        _base_args(archive, baseline)
-        + [
-            "--inflate-sh",
-            str(inflate),
-            "--queue-metadata",
-            "public_preflight=experiments/results/pr106/public_replay_preflight.json",
-        ]
+        [*_base_args(archive, baseline), "--inflate-sh", str(inflate), "--queue-metadata", "public_preflight=experiments/results/pr106/public_replay_preflight.json"]
     )
     plan = mod.build_plan(args, repo_root=tmp_path)
 
@@ -411,13 +380,7 @@ def test_public_replay_preflight_requires_external_roots_for_declared_dependency
         + "\n"
     )
     args = mod.build_parser().parse_args(
-        _base_args(archive, baseline)
-        + [
-            "--inflate-sh",
-            str(inflate),
-            "--queue-metadata",
-            "public_preflight=experiments/results/pr106/public_replay_preflight.json",
-        ]
+        [*_base_args(archive, baseline), "--inflate-sh", str(inflate), "--queue-metadata", "public_preflight=experiments/results/pr106/public_replay_preflight.json"]
     )
     plan = mod.build_plan(args, repo_root=tmp_path)
 

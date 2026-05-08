@@ -2,7 +2,7 @@
   "schema_version": "pr106_uniward_lagrangian_runtime_packet_build.v1",
   "tool": "tools/build_pr106_uniward_runtime_packet.py",
   "lane_id": "pr106_uniward_lagrangian_runtime_packet",
-  "built_at_utc": "2026-05-08T08:06:27Z",
+  "built_at_utc": "2026-05-08T08:33:04Z",
   "input_source_archive": "/Users/adpena/Projects/pact/experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
   "input_pr106_source_dir": "/Users/adpena/Projects/pact/experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders",
   "rms_target": 0.05,
@@ -64,7 +64,7 @@
     "src/codec.py": "404bf6efa5effb0e021bee62374465abfc5210d1bb6aeaa5188d82ef48773c41",
     "src/model.py": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b",
     "inflate.py": "e64529b2ab3fea2dea377629d69288a56afd7258f456e5ae48072c107d05e79a",
-    "inflate.sh": "0cb9c3df78ad870cadd2ac6d46007b6c1aeb6a61c76b7800ae74a00addafb885"
+    "inflate.sh": "c680064d0e8c793c36675532d7e03813312015201de09f71ac4531db40979dbb"
   },
   "smoke_n_tensors_decoded": 28,
   "smoke_n_latent_pairs_decoded": 600,

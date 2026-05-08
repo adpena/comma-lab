@@ -13,6 +13,7 @@ const END_OF_CENTRAL_DIRECTORY_SIG: u32 = 0x0605_4b50;
 const ZIP_STORED: u16 = 0;
 const ZIP_DEFLATED: u16 = 8;
 const FLAG_ENCRYPTED: u16 = 1 << 0;
+const FLAG_DATA_DESCRIPTOR: u16 = 1 << 3;
 const FLAG_UTF8_NAME: u16 = 1 << 11;
 const FORBIDDEN_ARCHIVE_MEMBER_NAMES: [&str; 4] =
     ["__MACOSX", ".DS_Store", "Thumbs.db", "desktop.ini"];
@@ -35,6 +36,7 @@ pub struct MemberInspect {
     pub local_header_name: String,
     pub local_central_name_match: bool,
     pub header_offset: u64,
+    pub payload_offset: Option<u64>,
     pub compress_type: u16,
     pub compressed_bytes: u64,
     pub uncompressed_bytes: u64,
@@ -396,15 +398,20 @@ fn inspect_member(raw_zip: &[u8], entry: CentralDirectoryEntry) -> MemberInspect
     if entry.flags & FLAG_ENCRYPTED != 0 {
         row_blockers.push("encrypted_member".to_string());
     }
+    if entry.flags & FLAG_DATA_DESCRIPTOR != 0 {
+        row_blockers.push("data_descriptor_member_not_supported".to_string());
+    }
     if !matches!(entry.compress_type, ZIP_STORED | ZIP_DEFLATED) {
         row_blockers.push(format!("unsupported_zip_method:{}", entry.compress_type));
     }
 
     let mut local_header = None;
     let mut local_header_name = String::new();
+    let mut payload_offset = None;
     match parse_local_header(raw_zip, entry.header_offset as usize) {
         Ok(header) => {
             local_header_name = header.name.clone();
+            payload_offset = Some(header.data_offset as u64);
             let local_summary = LocalHeaderInspect {
                 flag_bits: header.flags,
                 compress_type: header.compress_type,
@@ -458,6 +465,7 @@ fn inspect_member(raw_zip: &[u8], entry: CentralDirectoryEntry) -> MemberInspect
         local_header_name,
         local_central_name_match,
         header_offset: entry.header_offset as u64,
+        payload_offset,
         compress_type: entry.compress_type,
         compressed_bytes: entry.compressed_bytes as u64,
         uncompressed_bytes: entry.uncompressed_bytes as u64,

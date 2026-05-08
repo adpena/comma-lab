@@ -335,6 +335,31 @@ def _ssh_target_shape_blocker(target: str | None, *, flag: str) -> str | None:
     return None
 
 
+def _iter_inflate_runtime_files(runtime_dir: Path) -> list[Path]:
+    """Return deterministic runtime files under an external inflate directory.
+
+    Public PR replay/runtime packets often carry helpers below ``src/`` next to
+    ``inflate.py``. A direct-sibling scan silently omits those files and lets a
+    Lightning submit pass local closure checks while failing remotely at import
+    time. Keep this recursive but conservative: hidden files and caches are not
+    runtime dependencies.
+    """
+    if not runtime_dir.is_dir():
+        return []
+    out: list[Path] = []
+    for child in sorted(runtime_dir.rglob("*")):
+        if not child.is_file():
+            continue
+        rel_parts = child.relative_to(runtime_dir).parts
+        if any(
+            part.startswith(".") or part.startswith("._") or part == "__pycache__"
+            for part in rel_parts
+        ):
+            continue
+        out.append(child)
+    return out
+
+
 def _inflate_runtime_artifacts(inflate_rel: Path, *, repo_root: Path) -> list[str]:
     rels = [inflate_rel.as_posix()]
     config_rel = inflate_rel.parent / "config.env"
@@ -343,11 +368,8 @@ def _inflate_runtime_artifacts(inflate_rel: Path, *, repo_root: Path) -> list[st
     if inflate_rel.as_posix() == "submissions/robust_current/inflate.sh":
         return _dedupe_preserve(rels)
     runtime_dir = repo_root / inflate_rel.parent
-    if runtime_dir.is_dir():
-        for child in sorted(runtime_dir.iterdir()):
-            if not child.is_file() or child.name.startswith(".") or child.name.startswith("._"):
-                continue
-            rels.append((inflate_rel.parent / child.name).as_posix())
+    for child in _iter_inflate_runtime_files(runtime_dir):
+        rels.append(child.relative_to(repo_root).as_posix())
     return _dedupe_preserve(rels)
 
 

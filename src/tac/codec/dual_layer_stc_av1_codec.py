@@ -81,12 +81,12 @@ from tac.codec.syndrome_trellis_codec import (
     ternary_stc_encode_stream,
 )
 
-
 MAGIC: bytes = b"DLST"
 VERSION: int = 1
 HEADER_STRUCT = struct.Struct("<4sBBII I")  # magic, ver, flags, n_sym, n_nz, layer1_len
 LAYER2_LEN_STRUCT = struct.Struct("<I")
 FLAG_EMPTY_MAGNITUDE: int = 1 << 0
+KNOWN_FLAGS_MASK: int = FLAG_EMPTY_MAGNITUDE
 
 
 def _brotli_compress(payload: bytes) -> bytes:
@@ -243,6 +243,9 @@ def decode_dual_layer(blob: bytes) -> np.ndarray:
         raise ValueError(f"bad magic: expected {MAGIC!r}, got {magic!r}")
     if version != VERSION:
         raise ValueError(f"unsupported version: {version} (expected {VERSION})")
+    unknown_flags = flags & ~KNOWN_FLAGS_MASK
+    if unknown_flags:
+        raise ValueError(f"unsupported flags set: 0x{unknown_flags:02x}")
     pos = HEADER_STRUCT.size
 
     if pos + layer1_len > len(blob):

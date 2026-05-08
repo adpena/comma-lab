@@ -16,17 +16,16 @@ import numpy as np
 import pytest
 
 from tac.codec.dual_layer_stc_av1_codec import (
-    DualLayerStats,
     FLAG_EMPTY_MAGNITUDE,
     HEADER_STRUCT,
     LAYER2_LEN_STRUCT,
     MAGIC,
     VERSION,
+    DualLayerStats,
     decode_dual_layer,
     encode_dual_layer,
     extract_full_mask_deltas,
 )
-
 
 # ---------------------------------------------------------------------------
 # Roundtrip on synthetic streams
@@ -149,6 +148,14 @@ def test_decode_rejects_bad_version() -> None:
         decode_dual_layer(bytes(blob))
 
 
+def test_decode_rejects_unknown_flag_bits() -> None:
+    deltas = np.array([0, 1, -1], dtype=np.int16)
+    blob = bytearray(encode_dual_layer(deltas))
+    blob[5] |= 0b10
+    with pytest.raises(ValueError, match="unsupported flags"):
+        decode_dual_layer(bytes(blob))
+
+
 def test_decode_rejects_truncated_blob() -> None:
     deltas = np.array([0, 1, -1, 0], dtype=np.int16)
     blob = encode_dual_layer(deltas)
@@ -235,11 +242,11 @@ def test_dual_layer_beats_uncompressed_int8_baseline_on_5class_uniform() -> None
     blob = encode_dual_layer(deltas)
     raw_int8_size = 4096
     # Brotli on uniform random ints might NOT beat the raw bytes; we only
-    # require the codec stays within 2× of raw size on this adversarial input
+    # require the codec stays within 2x of raw size on this adversarial input
     # (real mask streams are far more skewed, so the realistic ratio is
     # measured in tools/pr_alpha_mask_dual_layer_stc_empirical.py).
     assert len(blob) <= 2 * raw_int8_size, (
-        f"dual-layer {len(blob)} B exceeded 2× raw int8 {raw_int8_size} B"
+        f"dual-layer {len(blob)} B exceeded 2x raw int8 {raw_int8_size} B"
     )
 
 
