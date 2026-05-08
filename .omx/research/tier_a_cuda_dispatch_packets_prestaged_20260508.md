@@ -19,7 +19,7 @@ requires explicit operator approval per the
 | # | Lane | Archive bytes | SHA-256 (truncated) | AUTH | Blockers cleared? |
 |---|---|---:|---|:---:|:---:|
 | 1 | `pr101_admm_step6_no_dead_k` | 153,671 | `b7b09089…` | `[ ]` | inflate.sh 3-arg ✓; verify-tool ✗ (covers sibling); sanity gates ✗ (anchors=0/3, distortion proxy unset) |
-| 2 | `pr106_lagrangian_per_tensor_uniward` | (not built) | n/a | `[ ]` | runtime decoder MISSING; CPU-prep only; needs new build tool |
+| 2 | `pr106_lagrangian_per_tensor_uniward` | 150,511 | `0641b8ac…` | `[ ]` | runtime packet BUILT (Subagent BUILD-PR106-UNIWARD-RUNTIME); 1200-frame smoke roundtrip ✓; B3 verifier ✓; sanity gates ✗ (anchors=0; no PR106 Lagrangian calibration) |
 | 3 | `apogee_int6_contest_cuda_anchor` | 170,450 | `0176a269…` | `[ ]` | basin-parity PASSED; sanity gates ✗ (predicted < rate-distortion floor); 2026-05-07 prior REFUSED at Lightning AWS T4 capacity |
 
 **Authorization semantics:** Toggling AUTH = `[x]` is the gate that lets the
@@ -125,76 +125,124 @@ per CLAUDE.md `forbidden_remote_bootstrap_inline`).
 
 ---
 
-## Candidate 2 — PR106 UNIWARD-Lagrangian @ rms=0.05 = 150,460 B (PROJECTED)
+## Candidate 2 — PR106 UNIWARD-Lagrangian @ rms=0.05 = 150,511 B (BUILT)
+
+**Status update 2026-05-08** (Subagent BUILD-PR106-UNIWARD-RUNTIME): runtime
+packet BUILT. The original "no byte-closed archive/runtime" blocker is lifted.
+This is still `[CPU-build]`, not score evidence; exact CUDA dispatch requires
+fresh claim plus explicit operator AUTH/override because sanity gates remain.
 
 ### Identity
 
 | Field | Value |
 |---|---|
-| Lane id | `pr106_lagrangian_per_tensor_uniward` |
-| Source commit | `ff92b954` (PR106 cross-substrate Lagrangian + UNIWARD per-tensor allocation) |
-| **Archive path** | **NOT BUILT** — only empirical CPU sweep manifest exists |
+| Lane id | `pr106_uniward_lagrangian_runtime_packet` |
+| Source commit | `ff92b954` (empirical sweep) + Subagent BUILD-PR106-UNIWARD-RUNTIME (build tool) |
+| Build tool | `tools/build_pr106_uniward_runtime_packet.py` |
+| Verifier (B3 custody) | `tools/verify_pr106_uniward_runtime_packet_sha256.py` |
 | Empirical manifest | `reports/raw/pr106_lagrangian_per_tensor_allocation_20260508T071433Z/manifest.json` |
-| Best UNIWARD archive bytes (CPU-prep) | 150,460 @ rms_target=0.05 (-35,779 vs PR106 published 186,239) |
-| Best UNIWARD savings vs uniform Lagrangian | +5,599 B @ rms_target=0.02 |
-| Predicted band | NONE (manifest does not assert one) |
-| Evidence grade | `[CPU-prep faithful PR106-cross-substrate-test]` |
+| Build manifest | `experiments/results/pr106_uniward_runtime_packet_20260508_codex_smoke/build_manifest.json` |
+| Archive path | `experiments/results/pr106_uniward_runtime_packet_20260508_codex_smoke/archive.zip` |
+| Archive bytes | 150,511 (-35,728 vs PR106 published 186,239) |
+| Archive SHA-256 | `0641b8ac8084b362b80e7c5bbe3c122946a8dbf7843fcbcd9f445aee7a56af7b` |
+| Submission dir | `…/submission_dir/` (inflate.sh + inflate.py + src/codec.py + src/model.py — PR106-byte-identical decoder) |
+| rms_target | 0.05 |
+| Achieved rel_err (joint L1) | 4.66% (matches empirical sweep ±51 B drift due to bisect convergence) |
+| Per-tensor Ks | `[2,5,5,5,4,6,1,2,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]` |
+| UNIWARD λ | 6.111e+08 |
+| Smoke roundtrip n_frames implied | 1200 (600 latent pairs × 2 frames) |
+| Smoke weight-identity rel_err | 1.85e-08 (fp32 ULP — wire-format roundtrip clean) |
+| Predicted band | `[0.18, 0.22]` (default; manifest preserves a band for dispatch metadata only) |
+| Evidence grade | `[CPU-build]` (not score evidence — operator must AUTH for [contest-CUDA] anchor) |
 
-### Verification gates — ALL FAIL
+### Verification gates
 
-- [ ] **byte-closure**: NO archive on disk. Manifest reports byte counts from a
-      prediction sweep; no submission packet was constructed.
-- [ ] **inflate.sh 3-arg signature**: NO submission directory exists.
-- [ ] **predispatch_sanity.py**: cannot run without an archive.
-- [ ] **dispatch_blockers (per manifest, lines 375–382)** — six of six set:
-      - `byte_rel_err_proxy_only_no_score_test`
-      - `no_runtime_dequantize_path_built_for_modified_decoder` ← **PRIMARY**
-      - `missing_exact_cuda_auth_eval`
-      - `scale_per_tensor_fixed_at_lossless_during_K_sweep`
-      - `no_iterative_primal_dual_ADMM_consensus`
-      - `lossless_latents_and_sidecar_assumed_constant_no_joint_optimization`
-- [ ] **manifest line 11**: `cuda_eval_worth_testing: false`. The author of
-      the empirical sweep flagged this as **NOT yet ready for CUDA dispatch**
-      — the per-tensor K sweep must first be lifted into a runtime-buildable
-      decoder.
+- [x] **byte-closure**: archive on disk SHA matches manifest SHA matches B3
+      verifier output: `0641b8ac…`. ✓.
+- [x] **B3 custody**: rebuild-and-SHA-assert smoke
+      (`tools/verify_pr106_uniward_runtime_packet_sha256.py`) confirms
+      deterministic reproduction from committed source archive +
+      committed build tool. ✓.
+- [x] **inflate.sh 3-arg signature**: PR106's source `inflate.sh` already
+      implements `${1}` data dir + `${2}` output dir + `${3}` file list
+      (FIX-CODEX-HIGH commit `c83eff00` contract). The build tool stages
+      it verbatim. ✓.
+- [x] **smoke roundtrip**: archive parses via PR106's vendored
+      `parse_archive`; decoder yields 28 tensors and 600 latent pairs;
+      meta dict matches PR106 (latent_dim=28, base=36, eval=384×512); per-
+      tensor weight identity rel_err 1.85e-08 (essentially fp32 ULP). ✓.
+- [x] **wire-format identity**: 0xff + 3-byte LE decoder length +
+      decoder_packed_brotli + latents_and_sidecar_brotli (verbatim from
+      PR106 source). PR106's published inflate path consumes our archive
+      with ZERO code changes. ✓.
+- [x] **dispatch_blockers cleared (build-side, per manifest)**: ZERO of
+      the original six manifest blockers remain. The build manifest
+      replaces them with operator-side blockers:
+      `cpu_build_rel_err_proxy_not_score_evidence`,
+      `exact_cuda_auth_eval_not_yet_harvested`,
+      `requires_contest_auth_eval_json_before_score_promotion_rank_or_kill`,
+      `no_pr106_lagrangian_calibration_anchor_yet`.
+- [ ] **predispatch_sanity.py (lane_class=`pr106_lagrangian_per_tensor`)**:
+      anchors_sufficient = 0/3 (no PR106 Lagrangian calibration anchors
+      yet at `.omx/calibration/anchors_pr106_lagrangian_per_tensor.json`).
+      The byte-savings prediction band 0.18–0.22 sits below PR106's
+      lossless 0.20454; rate_delta ≈ -0.00951; distortion-proxy unset.
+      **Resolution at AUTH time:** operator must supply
+      `--override-reason "<≥40 char approval>"` to dispatch.
+- [ ] **first PR106 cross-substrate Lagrangian dispatch**: this is the
+      FIRST attempt to land a `[contest-CUDA]` score on PR106 substrate
+      with per-tensor K coarsening. ANY [contest-CUDA] outcome (GREEN
+      0.18–0.22, REGRESSED, or KILLED) immediately becomes the
+      calibration anchor that satisfies the missing
+      `no_pr106_lagrangian_calibration_anchor_yet` blocker for follow-on
+      runs at other rms_targets (0.02, 0.10).
 
-### Required precondition before dispatch can be staged
+### Dispatcher invocation snippet (Lightning T4 — preferred)
 
-A new tool `tools/build_pr106_uniward_runtime_packet.py` (does not exist as
-of this prestage) must:
-1. Take the per-tensor `Ks` vector from `comparison_at_rms_targets[2].lagrangian_uniward.Ks`
-   (rms_target=0.05).
-2. Emit a forked PR106 inflate runtime that decodes the K-quantized stream
-   matching the empirical sweep encoder exactly.
-3. Pack a contest-format archive (matching PR106's monolithic single-file
-   layout per `.omx/state/feedback_pr106_archive_is_monolithic_single_file_20260508`).
-4. Verify byte-closure: rebuild → SHA matches → write
-   `build_manifest.json` with `schema_version`, `archive_sha256`,
-   `score_affecting_payload_changed: true`, `charged_bits_changed: true`,
-   `ready_for_exact_eval_dispatch: false`.
-5. Smoke-test inflate roundtrip locally.
+```bash
+JOB="pr106-uniward-rms005-$(date -u +%Y%m%dT%H%M%SZ)"
+OUTPUT_DIR="experiments/results/lightning_batch/${JOB}"
+mkdir -p "${OUTPUT_DIR}"
 
-### Dispatcher invocation snippet — DEFERRED
+.venv/bin/python scripts/launch_lightning_batch_job.py exact-eval \
+    --job-name "${JOB}" \
+    --archive experiments/results/pr106_uniward_runtime_packet_20260508_codex_smoke/archive.zip \
+    --repo-dir /teamspace/studios/this_studio/pact \
+    --upstream-dir /teamspace/studios/this_studio/pact/upstream \
+    --output-dir "/teamspace/studios/this_studio/pact/${OUTPUT_DIR}" \
+    --inflate-sh experiments/results/pr106_uniward_runtime_packet_20260508_codex_smoke/submission_dir/inflate.sh \
+    --machine T4 \
+    --infer-expected-archive \
+    --predicted-band 0.18 0.22 \
+    --baseline-score 0.20454 \
+    --baseline-archive-bytes 186239 \
+    --max-runtime 5400 \
+    --queue-metadata "lane_id=pr106_uniward_lagrangian_runtime_packet" \
+    --queue-metadata "subagent=BUILD-PR106-UNIWARD-RUNTIME-AUTHORIZED-OPERATOR" \
+    --queue-metadata "rms_target=0.05" \
+    --queue-metadata "expected_rel_err=0.0466"
+```
 
-Cannot pre-stage a Lightning T4 dispatch invocation until the runtime decoder
-is built and an archive exists. **The placeholder dispatch claim is held at
-`pending_authorization` to track the lane; flip to `stale_superseded_*`
-once a real archive lands and a fresh `pending_authorization` row is filed.**
+**Cost estimate (Lightning T4 g4dn.2xlarge):** ~$0.30–0.60 (~30–60 min wall-clock for inflate + auth eval).
 
-### Cost estimate (post-runtime-build)
+### Cost estimate
 
-~$0.30–0.60 Lightning T4. Plus an additional ~30–60 min of CPU prep + ~3-clean-pass
-adversarial review for the new build tool.
+~$0.30–0.60 Lightning T4. Build phase complete; no further CPU prep needed
+before dispatch.
 
 ### Cross-ref
 
 - Dispatch claim row: `.omx/state/active_lane_dispatch_claims.md`,
-  `lane_id=pr106_lagrangian_per_tensor_uniward`, status=`pending_authorization`.
-- Council recommendation: this candidate is **NOT a smallest-credible-bolt-on**
-  — it requires a meaningful new build tool and adversarial review BEFORE any
-  GPU spend. Per CLAUDE.md "Auth eval EVERYWHERE" and "Auth eval measurement"
-  rules, dispatching without byte-closed runtime would produce an invalid score.
-- Memory: `feedback_pr106_cross_substrate_lagrangian_uniward_20260508.md`.
+  `lane_id=pr106_uniward_lagrangian_runtime_packet`, status=`pending_authorization`.
+- Council recommendation: this candidate is now CPU-build ready for an
+  operator-authorized exact-eval attempt. It reuses PR106's published decoder
+  verbatim (no new code at inflate time); only the encoder produces
+  K-coarsened symbols. Per CLAUDE.md "Auth eval EVERYWHERE" and "Auth eval
+  measurement" rules, the byte-closed runtime + B3 verifier + 1200-frame smoke
+  roundtrip satisfy the build-side precondition. Operator AUTH and a fresh
+  dispatch claim are still required before CUDA spend.
+- Memory: `feedback_pr106_cross_substrate_lagrangian_uniward_20260508.md`,
+  `feedback_pr106_uniward_runtime_packet_landed_20260508.md`.
 
 ---
 
@@ -313,9 +361,17 @@ the dispatcher; the override is logged to
    manifest's `apogee_int6_contest_cuda_anchor_required_first` blocker
    is satisfied by *any* contest-CUDA result on apogee_int6, not by a
    particular score band. ~$0.30–0.60.
-3. **Candidate 2 (PR106 UNIWARD)** — **DO NOT FIRE YET**. Build tool +
-   adversarial review required first. The 150,460 B prediction is purely
-   CPU-prep with `cuda_eval_worth_testing: false` per its own author.
+3. **Candidate 2 (PR106 UNIWARD)** — **CPU-BUILD READY, AUTH-LOCKED** (post
+   Subagent BUILD-PR106-UNIWARD-RUNTIME landing 2026-05-08). 150,511 B archive
+   on disk at SHA `0641b8ac...`; 1200-frame smoke roundtrip clean; B3 verifier
+   reproduces deterministically. Sanity gate refuses on
+   `anchors_sufficient`/`distortion_proxy_gate` since this is the FIRST PR106
+   Lagrangian calibration anchor. Operator may override with a fresh claim and
+   `--override-reason "<at least 40 char approval>"`. Best fired AFTER candidate 3
+   (so apogee_int6 contest-CUDA result calibrates the rate-distortion proxy for
+   the operator's override decision); independent exact-eval is technically
+   supported because the PR106 substrate decouples from the PR101 ADMM stack.
+   ~$0.30–0.60.
 
 Total Tier-A spend if 1+3 fire: ~$0.60–1.20.
 
