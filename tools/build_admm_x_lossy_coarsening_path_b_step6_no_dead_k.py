@@ -281,8 +281,12 @@ def _load_selected_Ks_from_manifest(
             if isinstance(row_target, int | float) and abs(float(row_target) - rms_target) <= 1e-12:
                 selected_row = row
                 break
-        if selected_row is None and len(rows) == 1 and isinstance(rows[0], dict):
-            selected_row = rows[0]
+        # Codex adversarial review 2026-05-08 HIGH #1: the prior single-row
+        # fallback (``len(rows) == 1`` → accept whatever target it has) silently
+        # built archives at the WRONG distortion target when the manifest had a
+        # stale or wrong single row. Removed: every row must match the requested
+        # rms_target exactly. Operators wanting a single-row override must add
+        # an explicit flag in a future change with a hard dispatch blocker.
 
     if selected_row is None and isinstance(payload.get("selected_Ks"), list):
         selected_row = {

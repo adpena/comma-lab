@@ -751,13 +751,16 @@ INFLATE_NUMPY_SPEC="${INFLATE_NUMPY_SPEC:-numpy==2.4.4}"
 UV_BIN="${UV_BIN:-$(command -v uv || echo /usr/local/bin/uv)}"
 PYTHON_BIN="${PYTHON_BIN:-$(command -v python || command -v python3 || echo python)}"
 
-PYTHON_RUNNER=("$PYTHON_BIN")
-if [ -x "$UV_BIN" ]; then
-  PYTHON_RUNNER=("$UV_BIN" "run" "--with" "$INFLATE_BROTLI_SPEC" "--with" "$INFLATE_TORCH_SPEC" "--with" "$INFLATE_NUMPY_SPEC" "python")
-  echo "[unified-winners-inflate] uv specs: brotli=$INFLATE_BROTLI_SPEC torch=$INFLATE_TORCH_SPEC numpy=$INFLATE_NUMPY_SPEC" >&2
-else
-  echo "[unified-winners-inflate] uv not on PATH (UV_BIN=$UV_BIN); falling back to host python ($PYTHON_BIN)." >&2
+# Codex adversarial review 2026-05-08 HIGH #2: fail closed when uv missing,
+# and pin the uv invocation with --no-project so it cannot pick up host
+# pyproject.toml resolutions (which would make the CUDA score
+# non-reproducible under a degraded evaluator image).
+if [ ! -x "$UV_BIN" ]; then
+  echo "[unified-winners-inflate] FATAL: uv required at $UV_BIN for hermetic inflate runtime; refusing host-python fallback." >&2
+  exit 1
 fi
+PYTHON_RUNNER=("$UV_BIN" "run" "--no-project" "--with" "$INFLATE_BROTLI_SPEC" "--with" "$INFLATE_TORCH_SPEC" "--with" "$INFLATE_NUMPY_SPEC" "python")
+echo "[unified-winners-inflate] uv specs (--no-project): brotli=$INFLATE_BROTLI_SPEC torch=$INFLATE_TORCH_SPEC numpy=$INFLATE_NUMPY_SPEC" >&2
 
 while IFS= read -r line; do
   [ -z "$line" ] && continue
