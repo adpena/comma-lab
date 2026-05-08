@@ -197,6 +197,689 @@
   rationale: "public site sanitized output; regenerated from internal site"
 
 # ---------------------------------------------------------------------------
+# Broad sweep patterns (FIX-4 baseline 2026-05-08): classify the long-lived
+# tracked artifacts that didn't match a narrower pattern above. Per CLAUDE.md
+# meta-class taxonomy:
+#   - immutable forensic records (experiment outputs, research memos, raw
+#     reports, dispatch ledgers) → HISTORICAL_PROVENANCE
+#   - reusable instructions (source code, scripts, configs) → LIVE_RECIPE
+#   - generated dashboards / build outputs → DERIVED_OUTPUT
+# Order matters (first match wins); narrower patterns precede broader ones.
+# ---------------------------------------------------------------------------
+
+# --- experiments/results/** sweeping classification ---
+
+# LIVE_STATE first: lock/pid files anywhere under experiments/results
+- pattern: "experiments/results/**/*.lock"
+  kind: LIVE_STATE
+  rationale: "transient lock file under experiments/results"
+
+- pattern: "experiments/results/**/*.pid"
+  kind: LIVE_STATE
+  rationale: "transient pid file under experiments/results"
+
+# LIVE_RECIPE: source code committed under experiments/results (rare but exists,
+# typically vendored runtime tree like inflate.py / model.py / codec.py)
+- pattern: "experiments/results/**/*.py"
+  kind: LIVE_RECIPE
+  rationale: "vendored runtime / experiment source code; reusable instructions"
+
+- pattern: "experiments/results/**/*.sh"
+  kind: LIVE_RECIPE
+  rationale: "experiment shell script; reusable instructions"
+
+- pattern: "experiments/results/**/SHA256SUMS"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "checksum manifest for experiment artifacts; immutable evidence"
+
+# DERIVED_OUTPUT: binary build products (archives, weights, video masks, plots)
+- pattern: "experiments/results/**/*.zip"
+  kind: DERIVED_OUTPUT
+  rationale: "archive build output; computed from sources, immutable per build"
+
+- pattern: "experiments/results/**/*.bin"
+  kind: DERIVED_OUTPUT
+  rationale: "binary weight/payload output; computed from training pipeline"
+
+- pattern: "experiments/results/**/*.pt"
+  kind: DERIVED_OUTPUT
+  rationale: "PyTorch checkpoint; computed from training pipeline"
+
+- pattern: "experiments/results/**/*.mkv"
+  kind: DERIVED_OUTPUT
+  rationale: "video build output (mask/source codec); computed per build"
+
+- pattern: "experiments/results/**/*.mp4"
+  kind: DERIVED_OUTPUT
+  rationale: "video build output; computed per build"
+
+- pattern: "experiments/results/**/*.png"
+  kind: DERIVED_OUTPUT
+  rationale: "plot/diagnostic image output; regenerated from data"
+
+- pattern: "experiments/results/**/*.jpg"
+  kind: DERIVED_OUTPUT
+  rationale: "plot/diagnostic image output; regenerated from data"
+
+- pattern: "experiments/results/**/*.gif"
+  kind: DERIVED_OUTPUT
+  rationale: "animated diagnostic output; regenerated from frames"
+
+- pattern: "experiments/results/**/*.html"
+  kind: DERIVED_OUTPUT
+  rationale: "rendered html report; regenerable from data"
+
+- pattern: "experiments/results/**/*.xz"
+  kind: DERIVED_OUTPUT
+  rationale: "compressed weight/payload output; computed from sources"
+
+- pattern: "experiments/results/**/*.patch"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "diff applied during recovery/intake; immutable evidence"
+
+- pattern: "experiments/results/**/*.env"
+  kind: LIVE_RECIPE
+  rationale: "experiment config env file; parameterized invocation recipe"
+
+# HISTORICAL_PROVENANCE: result artifacts (JSON/JSONL/MD/log/txt) under
+# experiments/results — these are immutable forensic records once committed
+# per CLAUDE.md "experiment artifacts are forensic audit records"
+- pattern: "experiments/results/**/*.json"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "experiment result/manifest JSON; immutable forensic record"
+  append_fields: []
+
+- pattern: "experiments/results/**/*.jsonl"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "experiment result/atom-ledger JSONL; line-append only"
+  append_fields: []
+
+- pattern: "experiments/results/**/*.md"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "experiment notes/audit/report; immutable forensic record"
+  append_fields: [addendum, follow_up, updates]
+
+- pattern: "experiments/results/**/*.txt"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "experiment report/log txt; immutable forensic record"
+  append_fields: []
+
+- pattern: "experiments/results/**/*.log"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "experiment log file; append-only forensic record"
+  append_fields: []
+
+- pattern: "experiments/results/**/*.stdout"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "captured stdout from experiment run; immutable"
+  append_fields: []
+
+- pattern: "experiments/results/**/*.stderr"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "captured stderr from experiment run; immutable"
+  append_fields: []
+
+- pattern: "experiments/results/**/*.toml"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "captured config snapshot for experiment; immutable"
+  append_fields: []
+
+- pattern: "experiments/results/**/*.yaml"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "captured config snapshot for experiment; immutable"
+  append_fields: []
+
+- pattern: "experiments/results/**/*.csv"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "experiment result table; immutable forensic record"
+  append_fields: []
+
+- pattern: "experiments/results/**/*.out"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "captured stdout/result file; immutable"
+  append_fields: []
+
+- pattern: "experiments/results/**/*.meta"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "metadata sidecar for experiment artifact; immutable"
+  append_fields: []
+
+# Sub-trees that are vendored upstream-PR snapshots (preserved as-is)
+- pattern: "experiments/results/public_pr*_intake_*/source"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "vendored upstream PR source clone reference; immutable"
+  append_fields: []
+
+- pattern: "experiments/results/public_pr*_intake_*/repo"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "vendored upstream PR repo clone reference; immutable"
+  append_fields: []
+
+- pattern: "experiments/results/public_pr*_intake_*/pr*_src/repo"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "vendored upstream PR repo clone reference; immutable"
+  append_fields: []
+
+# --- reports/raw/** — raw experimental records ---
+
+- pattern: "reports/raw/**/*.json"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "raw experiment record JSON; immutable evidence"
+  append_fields: []
+
+- pattern: "reports/raw/**/*.jsonl"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "raw experiment ledger JSONL; line-append only"
+  append_fields: []
+
+- pattern: "reports/raw/**/*.md"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "raw experiment notes/summary; immutable"
+  append_fields: [addendum, follow_up, updates]
+
+- pattern: "reports/raw/**/*.txt"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "raw report/timing/sample txt; immutable evidence"
+  append_fields: []
+
+- pattern: "reports/raw/**/*.log"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "raw experiment run log; append-only forensic record"
+  append_fields: []
+
+- pattern: "reports/raw/**/*.stdout"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "raw captured stdout; immutable"
+  append_fields: []
+
+- pattern: "reports/raw/**/*.stderr"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "raw captured stderr; immutable"
+  append_fields: []
+
+- pattern: "reports/raw/**/*.env"
+  kind: LIVE_RECIPE
+  rationale: "raw experiment config env file; parameterized invocation recipe"
+
+- pattern: "reports/raw/**/*.sh"
+  kind: LIVE_RECIPE
+  rationale: "experiment driver script; reusable instructions"
+
+- pattern: "reports/raw/**/*.py"
+  kind: LIVE_RECIPE
+  rationale: "experiment driver Python script; reusable instructions"
+
+- pattern: "reports/raw/**/*.zip"
+  kind: DERIVED_OUTPUT
+  rationale: "raw archive build output; computed per experiment"
+
+- pattern: "reports/raw/**/*.bin"
+  kind: DERIVED_OUTPUT
+  rationale: "raw binary weight/payload; computed per training run"
+
+- pattern: "reports/raw/**/*.pt"
+  kind: DERIVED_OUTPUT
+  rationale: "raw PyTorch checkpoint; computed per training run"
+
+- pattern: "reports/raw/**/*.mkv"
+  kind: DERIVED_OUTPUT
+  rationale: "raw video build output; computed per experiment"
+
+- pattern: "reports/raw/**/*.tpc"
+  kind: DERIVED_OUTPUT
+  rationale: "raw token-prediction-corpus chunk output; computed per sweep"
+
+- pattern: "reports/raw/**/*.gta"
+  kind: DERIVED_OUTPUT
+  rationale: "raw gpt-arithmetic split output; computed per sweep"
+
+- pattern: "reports/raw/**/*.nfg"
+  kind: DERIVED_OUTPUT
+  rationale: "raw experiment binary output; computed per sweep"
+
+- pattern: "reports/raw/**/*.selfc"
+  kind: DERIVED_OUTPUT
+  rationale: "raw selfcomp binary output; computed per experiment"
+
+- pattern: "reports/raw/**/*.pid"
+  kind: LIVE_STATE
+  rationale: "transient pid file under reports/raw"
+
+- pattern: "reports/raw/**/*.lock"
+  kind: LIVE_STATE
+  rationale: "transient lock file under reports/raw"
+
+# --- reports/graphs/** — generated dashboards / public site bundles ---
+
+- pattern: "reports/graphs/**/*.py"
+  kind: LIVE_RECIPE
+  rationale: "graph/dashboard build script; reusable instructions"
+
+- pattern: "reports/graphs/**/*.json"
+  kind: DERIVED_OUTPUT
+  rationale: "regenerated graph/dashboard data; computed from inputs"
+
+- pattern: "reports/graphs/**/*.md"
+  kind: DERIVED_OUTPUT
+  rationale: "regenerated graph documentation; computed from inputs"
+
+- pattern: "reports/graphs/**/*.html"
+  kind: DERIVED_OUTPUT
+  rationale: "regenerated dashboard html; computed from inputs"
+
+- pattern: "reports/graphs/**/*.png"
+  kind: DERIVED_OUTPUT
+  rationale: "regenerated plot image; computed from data"
+
+- pattern: "reports/graphs/**/*.jpg"
+  kind: DERIVED_OUTPUT
+  rationale: "regenerated plot image; computed from data"
+
+- pattern: "reports/graphs/**/*.gif"
+  kind: DERIVED_OUTPUT
+  rationale: "regenerated animated diagnostic; computed from data"
+
+- pattern: "reports/graphs/**/*.mp4"
+  kind: DERIVED_OUTPUT
+  rationale: "regenerated comparison media; computed from frames"
+
+- pattern: "reports/graphs/**/*.mmd"
+  kind: DERIVED_OUTPUT
+  rationale: "regenerated mermaid diagram source; computed from inputs"
+
+# --- reports/promotion_reviews/** ---
+
+- pattern: "reports/promotion_reviews/*.md"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "promotion review snapshot; immutable per review"
+  append_fields: [addendum, follow_up]
+
+# --- reports/.gitkeep + other top-level reports/ ---
+
+- pattern: "reports/.gitkeep"
+  kind: LIVE_RECIPE
+  rationale: "gitkeep marker, retains directory in git"
+
+# --- docs/** — research memos, runbooks, paper drafts ---
+
+- pattern: "docs/paper/**/*.md"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "paper draft section; immutable forensic record"
+  append_fields: [addendum, revisions]
+
+- pattern: "docs/paper/**/*.json"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "paper evidence JSON; immutable"
+  append_fields: []
+
+- pattern: "docs/runbooks/**/*.md"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "dated runbook snapshot; immutable per date"
+  append_fields: [addendum]
+
+- pattern: "docs/superpowers/**/*.md"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "superpowers plan/spec snapshot; immutable per date"
+  append_fields: [addendum]
+
+- pattern: "docs/findings/**/*.md"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "research findings snapshot; immutable"
+  append_fields: [addendum]
+
+- pattern: "docs/archive/**/*.md"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "archived doc; immutable"
+  append_fields: []
+
+- pattern: "docs/*.md"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "top-level documentation snapshot; immutable forensic record"
+  append_fields: [addendum, follow_up, updates]
+
+- pattern: "docs/**/*.md"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "documentation snapshot; immutable forensic record"
+  append_fields: [addendum, follow_up, updates]
+
+- pattern: "docs/**/*.json"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "documentation evidence JSON; immutable"
+  append_fields: []
+
+- pattern: "docs/**/*.txt"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "documentation text supplement; immutable"
+  append_fields: []
+
+# --- .omx/research/** — research memos, audits, codex prompts/runs ---
+
+- pattern: ".omx/research/**/*.md"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "dated research memo; immutable forensic record"
+  append_fields: [addendum, follow_up, updates]
+
+- pattern: ".omx/research/**/*.json"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "research artifact/evidence JSON; immutable"
+  append_fields: []
+
+- pattern: ".omx/research/**/*.txt"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "research codex prompt/note text; immutable"
+  append_fields: []
+
+- pattern: ".omx/research/**/*.jsonl"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "research ledger JSONL; line-append only"
+  append_fields: []
+
+# --- .omx/state/ remaining tracked files ---
+
+- pattern: ".omx/state/artifact_kind_registry.yaml"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "registry contains pattern strings that legitimately mention /tmp paths for LIVE_STATE classification; treat the registry itself as a versioned committed contract (mutation tracked through git history)"
+  append_fields: []
+
+- pattern: ".omx/state/artifact_classification_allowlist.json"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "per-path allowlist for UNKNOWN classifications; mutation tracked through git history with explicit reasons per entry"
+  append_fields: [allowlisted_paths]
+
+- pattern: ".omx/state/next_catalog_number.txt"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "monotonic catalog claim counter; mutated only via tools/claim_catalog_number.py"
+  append_fields: []
+
+# --- runtime-rs/** — Rust workspace source code ---
+
+- pattern: "runtime-rs/.gitignore"
+  kind: LIVE_RECIPE
+  rationale: "gitignore for Rust workspace; reusable config"
+
+- pattern: "runtime-rs/Cargo.toml"
+  kind: LIVE_RECIPE
+  rationale: "Rust workspace manifest; reusable build config"
+
+- pattern: "runtime-rs/Cargo.lock"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "pinned dependency snapshot; updated via cargo, immutable per resolution"
+  append_fields: []
+
+- pattern: "runtime-rs/README.md"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "Rust workspace readme; documentation snapshot"
+  append_fields: [addendum]
+
+- pattern: "runtime-rs/crates/**/Cargo.toml"
+  kind: LIVE_RECIPE
+  rationale: "Rust crate manifest; reusable build config"
+
+- pattern: "runtime-rs/crates/**/*.rs"
+  kind: LIVE_RECIPE
+  rationale: "Rust source code; reusable implementation"
+
+# --- cuda/** ---
+
+- pattern: "cuda/**/*.cu"
+  kind: LIVE_RECIPE
+  rationale: "CUDA kernel source; reusable implementation"
+
+- pattern: "cuda/**/*.md"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "CUDA documentation snapshot; immutable"
+  append_fields: [addendum]
+
+# --- submissions/robust_current/** ---
+
+- pattern: "submissions/robust_current/*.py"
+  kind: LIVE_RECIPE
+  rationale: "submission inflate/runtime script; reusable instructions"
+
+- pattern: "submissions/robust_current/*.cpp"
+  kind: LIVE_RECIPE
+  rationale: "submission C++ runtime source; reusable implementation"
+
+- pattern: "submissions/robust_current/*.zip"
+  kind: DERIVED_OUTPUT
+  rationale: "submission archive build output; computed from sources"
+
+- pattern: "submissions/robust_current/*.bin"
+  kind: DERIVED_OUTPUT
+  rationale: "submission renderer binary; computed from training"
+
+- pattern: "submissions/robust_current/*.pt"
+  kind: DERIVED_OUTPUT
+  rationale: "submission checkpoint; computed from training"
+
+- pattern: "submissions/robust_current/*.mkv"
+  kind: DERIVED_OUTPUT
+  rationale: "submission mask video; computed per build"
+
+- pattern: "submissions/robust_current/*.json"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "submission state/eval result; immutable evidence"
+  append_fields: []
+
+- pattern: "submissions/robust_current/*.txt"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "submission report txt; immutable"
+  append_fields: []
+
+- pattern: "submissions/robust_current/*.md"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "submission readme; documentation snapshot"
+  append_fields: [addendum]
+
+- pattern: "submissions/robust_current/*.env"
+  kind: LIVE_RECIPE
+  rationale: "submission env config; parameterized invocation recipe"
+
+- pattern: "submissions/robust_current/eval_runs/**/*.lock"
+  kind: LIVE_STATE
+  rationale: "transient lock file under eval runs"
+
+- pattern: "submissions/robust_current/eval_runs/**/*.zip"
+  kind: DERIVED_OUTPUT
+  rationale: "eval run archive; computed per eval"
+
+- pattern: "submissions/robust_current/eval_runs/**/*.mkv"
+  kind: DERIVED_OUTPUT
+  rationale: "eval run video; computed per eval"
+
+- pattern: "submissions/robust_current/eval_runs/**/*.bin"
+  kind: DERIVED_OUTPUT
+  rationale: "eval run renderer binary; computed per eval"
+
+- pattern: "submissions/robust_current/eval_runs/**/*.pt"
+  kind: DERIVED_OUTPUT
+  rationale: "eval run checkpoint; computed per eval"
+
+- pattern: "submissions/robust_current/eval_runs/**/*.json"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "eval run state/report; immutable evidence"
+  append_fields: []
+
+- pattern: "submissions/robust_current/eval_runs/**/*.txt"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "eval run report txt; immutable evidence"
+  append_fields: []
+
+- pattern: "submissions/robust_current/eval_runs/**/*.env"
+  kind: LIVE_RECIPE
+  rationale: "eval run env config; parameterized invocation recipe"
+
+- pattern: "submissions/robust_current/*.sh"
+  kind: LIVE_RECIPE
+  rationale: "submission shell script; reusable instructions"
+
+# --- Final sweep patterns: catch top-level files in long-lived roots ---
+
+# .omx/research/ — top-level files (depth-2)
+- pattern: ".omx/research/*.json"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "top-level research artifact JSON; immutable"
+  append_fields: []
+
+# experiments/results/ — top-level files (depth-2, no subdir)
+- pattern: "experiments/results/*.json"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "top-level experiments/results JSON aggregate; immutable evidence"
+  append_fields: []
+
+- pattern: "experiments/results/*.jsonl"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "top-level experiments/results JSONL ledger; line-append only"
+  append_fields: []
+
+- pattern: "experiments/results/*.md"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "top-level experiments/results notes/audit; immutable"
+  append_fields: [addendum, follow_up]
+
+- pattern: "experiments/results/*.txt"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "top-level experiments/results report txt; immutable"
+  append_fields: []
+
+- pattern: "experiments/results/*.log"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "top-level experiments/results log; append-only"
+  append_fields: []
+
+- pattern: "experiments/results/*.pt"
+  kind: DERIVED_OUTPUT
+  rationale: "top-level experiments/results checkpoint; computed output"
+
+- pattern: "experiments/results/*.bin"
+  kind: DERIVED_OUTPUT
+  rationale: "top-level experiments/results binary; computed output"
+
+# Some experiments/results/ subdirs use unconventional file names
+- pattern: "experiments/results/**/RESULT_JSON"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "Lightning RESULT_JSON capture (no extension); immutable evidence"
+  append_fields: []
+
+- pattern: "experiments/results/**/pid"
+  kind: LIVE_STATE
+  rationale: "transient pid file (no extension); should ideally be gitignored"
+
+# reports/ top-level (no subdir prefix) files
+- pattern: "reports/*.json"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "top-level reports JSON snapshot; immutable evidence"
+  append_fields: []
+
+- pattern: "reports/*.jsonl"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "top-level reports JSONL ledger; line-append only"
+  append_fields: []
+
+- pattern: "reports/*.md"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "top-level reports markdown; immutable forensic record"
+  append_fields: [addendum, follow_up, updates]
+
+- pattern: "reports/*.txt"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "top-level reports text supplement; immutable"
+  append_fields: []
+
+- pattern: "reports/golden_vectors/**/*.json"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "golden conformance vectors; immutable per release"
+  append_fields: []
+
+# reports/raw/ top-level files (depth-2, no date subdir)
+- pattern: "reports/raw/*.json"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "top-level raw report JSON; immutable evidence"
+  append_fields: []
+
+- pattern: "reports/raw/*.txt"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "top-level raw report txt; immutable evidence"
+  append_fields: []
+
+# reports/raw/.../* — dated date-subdir summaries
+- pattern: "reports/raw/**/*-summary.json"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "raw summary JSON; immutable evidence"
+  append_fields: []
+
+- pattern: "reports/raw/**/*-report.txt"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "raw report txt; immutable evidence"
+  append_fields: []
+
+# reports/raw/kaggle_ingest dataset symlink (no extension; vendored corpus)
+- pattern: "reports/raw/kaggle_ingest/**/comma_video_compression_challenge"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "vendored Kaggle ingest corpus reference; immutable per ingest"
+  append_fields: []
+
+# reports/graphs/ — top-level depth-2 files (most already covered, but
+# catch test_*.py and any txt files)
+- pattern: "reports/graphs/test_*.py"
+  kind: LIVE_RECIPE
+  rationale: "graph build test script; reusable instructions"
+
+- pattern: "reports/graphs/*.py"
+  kind: LIVE_RECIPE
+  rationale: "top-level graph/dashboard build script; reusable instructions"
+
+- pattern: "reports/graphs/*.html"
+  kind: DERIVED_OUTPUT
+  rationale: "regenerated dashboard html; computed from inputs"
+
+- pattern: "reports/graphs/*.png"
+  kind: DERIVED_OUTPUT
+  rationale: "regenerated plot image; computed from data"
+
+- pattern: "reports/graphs/*.mmd"
+  kind: DERIVED_OUTPUT
+  rationale: "regenerated mermaid diagram source; computed from inputs"
+
+# cuda/ depth-1 files (shallow paths)
+- pattern: "cuda/*.md"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "CUDA top-level documentation; immutable forensic record"
+  append_fields: [addendum]
+
+- pattern: "cuda/*.cu"
+  kind: LIVE_RECIPE
+  rationale: "CUDA top-level kernel source; reusable implementation"
+
+- pattern: "reports/graphs/site/_headers"
+  kind: DERIVED_OUTPUT
+  rationale: "Cloudflare Pages headers config; regenerated from build pipeline"
+
+- pattern: "reports/graphs/site/_redirects"
+  kind: DERIVED_OUTPUT
+  rationale: "Cloudflare Pages redirects config; regenerated from build pipeline"
+
+# docs/paper/ara/ figures and supplementary
+- pattern: "docs/paper/**/*.csv"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "paper figure data csv; immutable evidence"
+  append_fields: []
+
+- pattern: "docs/paper/**/*.jsonl"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "paper trace ledger JSONL; line-append only"
+  append_fields: []
+
+- pattern: "docs/paper/**/*.yaml"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "paper configuration/exploration tree; immutable evidence"
+  append_fields: []
+
+- pattern: "docs/paper/**/*.png"
+  kind: DERIVED_OUTPUT
+  rationale: "paper figure; regenerated from data sources"
+
+# ---------------------------------------------------------------------------
 # UNKNOWN — explicit not-yet-classified; flagged for human triage
 # ---------------------------------------------------------------------------
 
