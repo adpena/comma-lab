@@ -8,11 +8,13 @@ import pytest
 from tac.component_sensitivity_artifact import (
     ComponentSensitivityArtifactError,
     dumps_component_sensitivity_manifest,
+    has_a2_certified_sensitivity_binding_reference,
     materialize_component_sensitivity_manifest,
+    sha256_file,
+    validate_a2_certified_sensitivity_binding,
     validate_component_sensitivity_manifest,
     write_component_sensitivity_manifest,
 )
-
 
 SHA_A = "a" * 64
 SHA_B = "b" * 64
@@ -192,6 +194,69 @@ def _valid_manifest() -> dict[str, object]:
 
 def test_minimal_valid_manifest_passes() -> None:
     validate_component_sensitivity_manifest(_valid_manifest())
+
+
+def test_a2_certified_binding_requires_combined_component_manifest(tmp_path) -> None:
+    manifest_path = tmp_path / "component_sensitivity_v1.json"
+    write_component_sensitivity_manifest(manifest_path, _valid_manifest())
+    a2_manifest = {
+        "sensitivity_artifact": {
+            "path": "combined_certified_sensitivity_map.pt",
+            "status": "passed",
+            "allow_diagnostic_sensitivity": False,
+            "metadata_blockers": [],
+            "component_sensitivity_manifest": {
+                "path": "component_sensitivity_v1.json",
+                "sha256": sha256_file(manifest_path),
+                "component": "combined",
+            },
+        },
+        "inputs": {
+            "sensitivity_map_sha256": SHA_C,
+        },
+    }
+
+    assert has_a2_certified_sensitivity_binding_reference(a2_manifest)
+    proof = validate_a2_certified_sensitivity_binding(
+        a2_manifest,
+        manifest_root=tmp_path,
+    )
+
+    assert proof["status"] == "passed"
+    assert proof["source"] == "component_sensitivity_v1.combined"
+    assert proof["component_map"]["sha256"] == SHA_C
+    assert proof["a2_sensitivity_map_sha256"] == SHA_C
+
+
+def test_a2_certified_binding_rejects_stub_and_map_sha_mismatch(tmp_path) -> None:
+    manifest_path = tmp_path / "component_sensitivity_v1.json"
+    write_component_sensitivity_manifest(manifest_path, _valid_manifest())
+    a2_manifest = {
+        "sensitivity_artifact": {
+            "path": "combined_certified_sensitivity_map.pt",
+            "status": "passed",
+            "allow_diagnostic_sensitivity": False,
+            "metadata_blockers": [],
+            "component_sensitivity_manifest": {
+                "path": "component_sensitivity_v1.json",
+                "sha256": sha256_file(manifest_path),
+                "component": "combined",
+            },
+        },
+        "inputs": {
+            "sensitivity_map_sha256": SHA_C,
+        },
+    }
+
+    stub = deepcopy(a2_manifest)
+    stub["sensitivity_artifact"]["metadata_blockers"] = ["is_stub=true"]  # type: ignore[index]
+    with pytest.raises(ComponentSensitivityArtifactError, match="metadata_blockers"):
+        validate_a2_certified_sensitivity_binding(stub, manifest_root=tmp_path)
+
+    stale = deepcopy(a2_manifest)
+    stale["inputs"]["sensitivity_map_sha256"] = SHA_A  # type: ignore[index]
+    with pytest.raises(ComponentSensitivityArtifactError, match="does not match certified combined map"):
+        validate_a2_certified_sensitivity_binding(stale, manifest_root=tmp_path)
 
 
 def test_promotion_sample_plan_requires_full_absolute_pair_ids() -> None:

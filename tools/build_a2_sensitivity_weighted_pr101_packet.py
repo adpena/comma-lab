@@ -38,6 +38,13 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from tac.analysis import hnerv_packet_sections  # noqa: E402
+from tac.component_sensitivity_artifact import (  # noqa: E402
+    A2_CERTIFIED_SENSITIVITY_BINDING_FORMAT,
+    ComponentSensitivityArtifactError,
+    has_a2_certified_sensitivity_binding_reference,
+    validate_a2_certified_sensitivity_binding,
+)
 from tac.pr101_split_brotli_codec import (  # noqa: E402
     CONV4_STORAGE_PERMS,
     DECODER_BLOB_LEN,
@@ -52,7 +59,6 @@ from tac.pr101_split_brotli_codec import (  # noqa: E402
     decode_decoder_compact,
     pack_brotli_stream,
 )
-from tac.analysis import hnerv_packet_sections  # noqa: E402
 from tac.repo_io import json_text, read_json, repo_relative, sha256_file, write_json  # noqa: E402
 
 TOOL_NAME = "tools/build_a2_sensitivity_weighted_pr101_packet.py"
@@ -515,6 +521,19 @@ def _active_packet_blockers(*groups: list[str], clear: set[str] | frozenset[str]
 
 
 def _validate_a2_manifest_authority(a2_manifest: dict[str, Any], *, manifest_path: Path) -> dict[str, Any]:
+    return _validate_a2_manifest_contracts(
+        a2_manifest,
+        manifest_path=manifest_path,
+        require_certified_sensitivity=False,
+    )
+
+
+def _validate_a2_manifest_contracts(
+    a2_manifest: dict[str, Any],
+    *,
+    manifest_path: Path,
+    require_certified_sensitivity: bool,
+) -> dict[str, Any]:
     blockers: list[str] = []
     schema = a2_manifest.get("schema")
     tool = a2_manifest.get("tool")
@@ -539,6 +558,25 @@ def _validate_a2_manifest_authority(a2_manifest: dict[str, Any], *, manifest_pat
     )
     metadata_blockers = _list_strings(sensitivity_artifact.get("metadata_blockers"))
     propagated_blockers = sorted(set(manifest_blockers + metadata_blockers))
+    certified_binding = {
+        "format": A2_CERTIFIED_SENSITIVITY_BINDING_FORMAT,
+        "status": "not_checked_missing_reference",
+        "required": bool(require_certified_sensitivity),
+        "component": "combined",
+    }
+    if require_certified_sensitivity or has_a2_certified_sensitivity_binding_reference(a2_manifest):
+        try:
+            certified_binding = validate_a2_certified_sensitivity_binding(
+                a2_manifest,
+                manifest_root=manifest_path.parent,
+                component="combined",
+            )
+        except ComponentSensitivityArtifactError as exc:
+            raise PacketClosureBlocked(
+                f"A2 manifest failed certified sensitivity binding validation: {exc}",
+                ["a2_certified_sensitivity_binding_invalid"],
+            ) from exc
+        certified_binding["required"] = bool(require_certified_sensitivity)
     return {
         "path": _repo_rel(manifest_path),
         "sha256": sha256_file(manifest_path),
@@ -560,6 +598,7 @@ def _validate_a2_manifest_authority(a2_manifest: dict[str, Any], *, manifest_pat
             if isinstance(sensitivity_artifact.get("metadata"), dict)
             else {},
         },
+        "certified_sensitivity_binding": certified_binding,
         "propagated_blockers": propagated_blockers,
     }
 
@@ -1245,6 +1284,7 @@ def build_packet_ladder(
     brotli_quality: int = 11,
     variant_limit: int | None = None,
     force: bool = False,
+    require_certified_sensitivity: bool = False,
 ) -> dict[str, Any]:
     a2_manifest_path = _repo_path(a2_manifest_path)
     state_dict_path = _repo_path(state_dict_path)
@@ -1282,9 +1322,10 @@ def build_packet_ladder(
             f"A2 manifest is not a JSON object: {a2_manifest_path}",
             ["a2_manifest_not_object"],
         )
-    upstream_a2_manifest = _validate_a2_manifest_authority(
+    upstream_a2_manifest = _validate_a2_manifest_contracts(
         a2_manifest,
         manifest_path=a2_manifest_path,
+        require_certified_sensitivity=require_certified_sensitivity,
     )
     schedules = _extract_weighted_schedules(a2_manifest, variant_limit=variant_limit)
     source_archive_record, source_member_name, source_member_payload = _read_single_member_zip(source_archive)
@@ -1655,6 +1696,9 @@ def _blocked_manifest(
             "byte_closed_packet_ladder_built": False,
             "missing_wire_contracts": sorted(set(missing_wire_contracts)),
             "runtime_source_mutated": False,
+            "require_certified_sensitivity": bool(
+                getattr(args, "require_certified_sensitivity", False)
+            ),
         },
         "dispatch_blockers": sorted(
             {*BASE_DISPATCH_BLOCKERS, "packet_closure_blocked", *missing_wire_contracts}
@@ -1691,6 +1735,16 @@ def build_arg_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--require-certified-sensitivity",
+        action="store_true",
+        help=(
+            "Fail closed unless the upstream A2 manifest binds its sensitivity_map "
+            "SHA to the combined map inside a promotion-grade component_sensitivity_v1 "
+            "manifest. This rejects diagnostic/stub/proxy sensitivity before packet "
+            "bytes are emitted."
+        ),
+    )
+    parser.add_argument(
         "--inflate-parity-timeout",
         type=int,
         default=600,
@@ -1720,6 +1774,7 @@ def main(argv: list[str] | None = None) -> int:
             brotli_quality=args.brotli_quality,
             variant_limit=args.variant_limit if args.variant_limit > 0 else None,
             force=args.force,
+            require_certified_sensitivity=args.require_certified_sensitivity,
         )
         if _repo_path(json_out) != _repo_path(output_dir) / "a2_packet_ladder_manifest.json":
             write_json(_repo_path(json_out), manifest)

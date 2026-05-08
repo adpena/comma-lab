@@ -37,6 +37,10 @@ prepend_paths(REPO_ROOT / "tools")
 from pr101_lossy_coarsening_analytical import encode_with_per_tensor_K
 
 from tac.codec.cost_curves import TensorBlob
+from tac.component_sensitivity_artifact import (
+    ComponentSensitivityArtifactError,
+    validate_a2_certified_sensitivity_binding,
+)
 from tac.optimization.beta_fisher_lossy_weights import (
     MODULE_NAME as WEIGHT_MODULE_NAME,
 )
@@ -259,6 +263,58 @@ def build_manifest(args: argparse.Namespace) -> dict[str, Any]:
     if diagnostic_sensitivity:
         blockers.append("diagnostic_or_stub_sensitivity_map_not_score_authority")
 
+    inputs = {
+        "state_dict": repo_relative(args.state_dict, REPO_ROOT),
+        "state_dict_sha256": sha256_file(args.state_dict),
+        "sensitivity_map": repo_relative(args.sensitivity_map, REPO_ROOT),
+        "sensitivity_map_sha256": sha256_file(args.sensitivity_map),
+        "boundary_mass_json": (
+            repo_relative(args.boundary_mass_json, REPO_ROOT)
+            if args.boundary_mass_json is not None
+            else None
+        ),
+        "film_grain_capacity_json": (
+            repo_relative(args.film_grain_capacity_json, REPO_ROOT)
+            if args.film_grain_capacity_json is not None
+            else None
+        ),
+        "rms_targets": rms_targets,
+        "K_range": [k_range[0], k_range[-1]],
+    }
+    sensitivity_artifact = {
+        **sensitivity_status,
+        "metadata": dict(sensitivity_metadata),
+    }
+    if args.component_sensitivity_manifest is not None:
+        component_manifest_path = args.component_sensitivity_manifest
+        sensitivity_artifact["component_sensitivity_manifest"] = {
+            "path": repo_relative(component_manifest_path, REPO_ROOT),
+            "sha256": sha256_file(component_manifest_path),
+            "component": "combined",
+        }
+        try:
+            certified_binding = validate_a2_certified_sensitivity_binding(
+                {
+                    "sensitivity_artifact": sensitivity_artifact,
+                    "inputs": {
+                        "sensitivity_map_sha256": inputs["sensitivity_map_sha256"],
+                    },
+                },
+                manifest_root=REPO_ROOT,
+                component="combined",
+            )
+        except ComponentSensitivityArtifactError as exc:
+            raise ValueError(
+                "component sensitivity manifest does not certify the A2 "
+                f"sensitivity map: {exc}"
+            ) from exc
+        sensitivity_artifact["certified_sensitivity_binding"] = certified_binding
+        blockers = [
+            blocker
+            for blocker in blockers
+            if blocker != "score_sensitivity_artifact_must_be_certified_before_promotion"
+        ]
+
     comparisons: list[dict[str, Any]] = []
     by_target_uniform = {
         float(row["rms_target"]): row for row in uniform_allocations
@@ -322,28 +378,8 @@ def build_manifest(args: argparse.Namespace) -> dict[str, Any]:
             ),
             "authority": "no_score_no_dispatch_until_packet_builder_manifest_and_exact_auth_eval",
         },
-        "inputs": {
-            "state_dict": repo_relative(args.state_dict, REPO_ROOT),
-            "state_dict_sha256": sha256_file(args.state_dict),
-            "sensitivity_map": repo_relative(args.sensitivity_map, REPO_ROOT),
-            "sensitivity_map_sha256": sha256_file(args.sensitivity_map),
-            "boundary_mass_json": (
-                repo_relative(args.boundary_mass_json, REPO_ROOT)
-                if args.boundary_mass_json is not None
-                else None
-            ),
-            "film_grain_capacity_json": (
-                repo_relative(args.film_grain_capacity_json, REPO_ROOT)
-                if args.film_grain_capacity_json is not None
-                else None
-            ),
-            "rms_targets": rms_targets,
-            "K_range": [k_range[0], k_range[-1]],
-        },
-        "sensitivity_artifact": {
-            **sensitivity_status,
-            "metadata": dict(sensitivity_metadata),
-        },
+        "inputs": inputs,
+        "sensitivity_artifact": sensitivity_artifact,
         "baseline_lossless": {
             "archive_bytes": int(baseline_lossless["archive_bytes"]),
             "rel_err": float(baseline_lossless["rel_err"]),
@@ -367,6 +403,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--substrate", default="pr101", choices=["pr101"])
     parser.add_argument("--state-dict", type=Path, default=DEFAULT_STATE_DICT)
     parser.add_argument("--sensitivity-map", type=Path, default=DEFAULT_SENSITIVITY_MAP)
+    parser.add_argument(
+        "--component-sensitivity-manifest",
+        type=Path,
+        help=(
+            "Promotion-grade component_sensitivity_v1 JSON whose combined map "
+            "SHA must match --sensitivity-map. Embeds the certified binding "
+            "contract consumed by the A2 packet builder."
+        ),
+    )
     parser.add_argument("--boundary-mass-json", type=Path)
     parser.add_argument("--film-grain-capacity-json", type=Path)
     parser.add_argument("--allow-diagnostic-sensitivity", action="store_true")

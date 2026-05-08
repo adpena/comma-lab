@@ -239,6 +239,46 @@ def test_builds_byte_closed_packet_ladder_with_non_promotable_manifest(tmp_path:
     assert "A2_LOSSY_COARSENING_MAGIC" in patched_codec.read_text(encoding="utf-8")
 
 
+def test_require_certified_sensitivity_rejects_stub_a2_manifest(tmp_path: Path, monkeypatch) -> None:
+    tool = _load_tool()
+    _install_tiny_pr101_contract(monkeypatch, tool)
+    _install_fake_encoder(monkeypatch, tool)
+    source_archive = tmp_path / "source" / "archive.zip"
+    _write_zip(source_archive, b"DECO" + b"LA" + b"SIDE")
+    runtime = _write_runtime(tmp_path / "runtime")
+    state_dict = _write_state_dict(tmp_path / "state.pt")
+    a2_manifest = _write_a2_manifest(tmp_path / "a2.json", [2, 1])
+    blocked_json = tmp_path / "blocked.json"
+
+    rc = tool.main(
+        [
+            "--a2-manifest",
+            str(a2_manifest),
+            "--state-dict",
+            str(state_dict),
+            "--source-archive",
+            str(source_archive),
+            "--source-runtime-dir",
+            str(runtime),
+            "--output-dir",
+            str(tmp_path / "out"),
+            "--json-out",
+            str(blocked_json),
+            "--require-certified-sensitivity",
+            "--now-utc",
+            "2026-05-08T12:00:00Z",
+        ]
+    )
+
+    assert rc == 2
+    manifest = json.loads(blocked_json.read_text(encoding="utf-8"))
+    assert manifest["status"] == "blocked_fail_closed"
+    assert "a2_certified_sensitivity_binding_invalid" in manifest["dispatch_blockers"]
+    assert "certified sensitivity binding" in manifest["reason"]
+    assert manifest["packet_closure"]["require_certified_sensitivity"] is True
+    assert manifest["score_claim"] is False
+
+
 def test_noop_schedule_is_detected_and_non_promotable(tmp_path: Path, monkeypatch) -> None:
     tool = _load_tool()
     _install_tiny_pr101_contract(monkeypatch, tool)

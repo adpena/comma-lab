@@ -35,6 +35,7 @@ COMPONENT_SENSITIVITY_FORMAT = "component_sensitivity_v1"
 COMPONENT_SENSITIVITY_SCHEMA_VERSION = 1
 CERTIFIED_COMPONENT_MAP_FORMAT = "tac_score_sensitivity_map_v1"
 COMPONENT_MAP_CERTIFICATION_FORMAT = "component_sensitivity_map_certification_v1"
+A2_CERTIFIED_SENSITIVITY_BINDING_FORMAT = "a2_certified_component_sensitivity_binding_v1"
 COMPONENTS = ("posenet", "segnet", "combined")
 REQUIRED_INPUTS = ("checkpoint", "video", "upstream")
 CONTEST_SAMPLE_COUNT = 600
@@ -151,6 +152,27 @@ _RESPONSE_GATE_RESULT_TRUE_KEYS = (
     "signal_present",
     "prediction_error_passed",
     "promotion_gate_passed",
+)
+_A2_COMPONENT_SENSITIVITY_MANIFEST_KEYS = (
+    "component_sensitivity_manifest",
+    "certified_component_sensitivity_manifest",
+    "component_sensitivity_manifest_json",
+)
+_A2_COMPONENT_SENSITIVITY_MANIFEST_PATH_KEYS = (
+    "component_sensitivity_manifest_path",
+    "certified_component_sensitivity_manifest_path",
+    "component_sensitivity_manifest_json_path",
+)
+_A2_COMPONENT_SENSITIVITY_MANIFEST_SHA_KEYS = (
+    "component_sensitivity_manifest_sha256",
+    "certified_component_sensitivity_manifest_sha256",
+    "component_sensitivity_manifest_json_sha256",
+)
+_A2_SENSITIVITY_MAP_SHA_KEYS = (
+    "sensitivity_map_sha256",
+    "score_sensitivity_map_sha256",
+    "combined_sensitivity_map_sha256",
+    "sha256",
 )
 
 
@@ -595,6 +617,200 @@ def validate_component_sensitivity_manifest(
             require=False,
             missing_requirements=(),
         )
+
+
+def has_a2_certified_sensitivity_binding_reference(a2_manifest: Mapping[str, Any]) -> bool:
+    """Return true when an A2 manifest carries a certified sensitivity reference."""
+    if not isinstance(a2_manifest, Mapping):
+        return False
+    artifact = a2_manifest.get("sensitivity_artifact")
+    if not isinstance(artifact, Mapping):
+        return False
+    if any(key in artifact for key in _A2_COMPONENT_SENSITIVITY_MANIFEST_KEYS):
+        return True
+    return any(key in artifact for key in _A2_COMPONENT_SENSITIVITY_MANIFEST_PATH_KEYS)
+
+
+def validate_a2_certified_sensitivity_binding(
+    a2_manifest: Mapping[str, Any],
+    *,
+    manifest_root: str | Path | None = None,
+    component: str = "combined",
+) -> dict[str, Any]:
+    """Validate an A2 allocator manifest against a certified component map.
+
+    The A2 selected-K schedule is score-domain usable only when the sensitivity
+    map that generated it is the combined scorer map from a promotion-grade
+    ``component_sensitivity_v1`` manifest. This JSON-only guard verifies that
+    link without loading tensors or scorer code.
+    """
+    if not isinstance(a2_manifest, Mapping):
+        raise ComponentSensitivityArtifactError(
+            f"A2 manifest must be a mapping, got {type(a2_manifest).__name__}"
+        )
+    component = _normalise_component_target(component)
+    if component not in COMPONENTS:
+        raise ComponentSensitivityArtifactError(
+            f"A2 certified sensitivity component must be one of {COMPONENTS}, got {component!r}"
+        )
+    artifact = _require_mapping(a2_manifest, "sensitivity_artifact")
+    if artifact.get("allow_diagnostic_sensitivity") is True:
+        raise ComponentSensitivityArtifactError(
+            "sensitivity_artifact.allow_diagnostic_sensitivity must be false "
+            "for certified A2 sensitivity bindings"
+        )
+    metadata_blockers = artifact.get("metadata_blockers")
+    if not _is_nonstring_sequence(metadata_blockers) or metadata_blockers:
+        raise ComponentSensitivityArtifactError(
+            "sensitivity_artifact.metadata_blockers must be an explicit empty list "
+            "for certified A2 sensitivity bindings"
+        )
+    _reject_promotional_markers(artifact, path="sensitivity_artifact")
+
+    reference, reference_key = _a2_component_sensitivity_manifest_reference(artifact)
+    path_value = _require_str(
+        reference,
+        "path",
+        context=f"sensitivity_artifact.{reference_key}",
+    )
+    expected_manifest_sha256 = _require_str(
+        reference,
+        "sha256",
+        context=f"sensitivity_artifact.{reference_key}",
+    ).lower()
+    _validate_sha256(
+        expected_manifest_sha256,
+        f"sensitivity_artifact.{reference_key}.sha256",
+    )
+    ref_component = _optional_any(reference, ("component", "scorer_target"))
+    if ref_component is not None:
+        if not isinstance(ref_component, str):
+            raise ComponentSensitivityArtifactError(
+                f"sensitivity_artifact.{reference_key}.component must be a string"
+            )
+        if _normalise_component_target(ref_component) != component:
+            raise ComponentSensitivityArtifactError(
+                f"sensitivity_artifact.{reference_key}.component must be {component!r}, "
+                f"got {ref_component!r}"
+            )
+
+    root = Path(manifest_root) if manifest_root is not None else None
+    manifest_path = _resolve_manifest_path(path_value, root=root)
+    if not manifest_path.is_file():
+        raise ComponentSensitivityArtifactError(
+            f"sensitivity_artifact.{reference_key}.path does not exist: {path_value}"
+        )
+    actual_manifest_sha256 = sha256_file(manifest_path)
+    if actual_manifest_sha256.lower() != expected_manifest_sha256:
+        raise ComponentSensitivityArtifactError(
+            f"sensitivity_artifact.{reference_key}.sha256 mismatch: "
+            f"metadata={expected_manifest_sha256} actual={actual_manifest_sha256}"
+        )
+
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ComponentSensitivityArtifactError(
+            f"{manifest_path}: invalid component_sensitivity_v1 JSON"
+        ) from exc
+    if not isinstance(payload, Mapping):
+        raise ComponentSensitivityArtifactError(
+            f"{manifest_path}: component_sensitivity_v1 manifest must be a mapping"
+        )
+    validate_component_sensitivity_manifest(payload, promotion=True)
+
+    component_maps = _require_mapping(payload, "component_maps")
+    component_map = _require_mapping(component_maps, component, context="component_maps")
+    component_map_sha256 = _require_str(
+        component_map,
+        "sha256",
+        context=f"component_maps.{component}",
+    ).lower()
+    _validate_sha256(component_map_sha256, f"component_maps.{component}.sha256")
+    component_map_bytes = _optional_any(component_map, ("bytes", "size_bytes"))
+    if component_map_bytes is not None:
+        _require_positive_int_value(component_map_bytes, f"component_maps.{component}.bytes")
+    a2_sensitivity_sha256 = _a2_sensitivity_map_sha256(a2_manifest, artifact)
+    if a2_sensitivity_sha256 is None:
+        raise ComponentSensitivityArtifactError(
+            "A2 manifest inputs.sensitivity_map_sha256 or sensitivity_artifact.sha256 "
+            "is required to bind selected_Ks to the certified component map"
+        )
+    a2_sensitivity_sha256 = a2_sensitivity_sha256.lower()
+    _validate_sha256(a2_sensitivity_sha256, "A2 sensitivity map sha256")
+    if a2_sensitivity_sha256 != component_map_sha256:
+        raise ComponentSensitivityArtifactError(
+            f"A2 sensitivity map sha256 does not match certified {component} map: "
+            f"a2={a2_sensitivity_sha256} certified={component_map_sha256}"
+        )
+
+    return {
+        "format": A2_CERTIFIED_SENSITIVITY_BINDING_FORMAT,
+        "status": "passed",
+        "component": component,
+        "source": f"component_sensitivity_v1.{component}",
+        "component_sensitivity_manifest": {
+            "path": path_value,
+            "sha256": actual_manifest_sha256,
+            "reference_key": reference_key,
+        },
+        "component_map": {
+            "path": component_map.get("path"),
+            "bytes": int(component_map_bytes) if component_map_bytes is not None else None,
+            "sha256": component_map_sha256,
+            "map_format": component_map.get("map_format"),
+            "scorer_target": component_map.get("scorer_target"),
+        },
+        "a2_sensitivity_map_sha256": a2_sensitivity_sha256,
+        "promotion_eligible": True,
+    }
+
+
+def _a2_component_sensitivity_manifest_reference(
+    artifact: Mapping[str, Any],
+) -> tuple[Mapping[str, Any], str]:
+    for key in _A2_COMPONENT_SENSITIVITY_MANIFEST_KEYS:
+        value = artifact.get(key)
+        if isinstance(value, Mapping):
+            return value, key
+        if value is not None:
+            raise ComponentSensitivityArtifactError(
+                f"sensitivity_artifact.{key} must be a mapping"
+            )
+
+    path_value = _optional_any(artifact, _A2_COMPONENT_SENSITIVITY_MANIFEST_PATH_KEYS)
+    sha_value = _optional_any(artifact, _A2_COMPONENT_SENSITIVITY_MANIFEST_SHA_KEYS)
+    if path_value is None and sha_value is None:
+        raise ComponentSensitivityArtifactError(
+            "sensitivity_artifact.component_sensitivity_manifest with path and sha256 "
+            "is required for certified A2 sensitivity bindings"
+        )
+    if not isinstance(path_value, str) or not isinstance(sha_value, str):
+        raise ComponentSensitivityArtifactError(
+            "flat component sensitivity manifest references require string path and sha256 fields"
+        )
+    return {
+        "path": path_value,
+        "sha256": sha_value,
+        "component": artifact.get("component", "combined"),
+    }, "component_sensitivity_manifest"
+
+
+def _a2_sensitivity_map_sha256(
+    a2_manifest: Mapping[str, Any],
+    artifact: Mapping[str, Any],
+) -> str | None:
+    for key in _A2_SENSITIVITY_MAP_SHA_KEYS:
+        value = artifact.get(key)
+        if isinstance(value, str):
+            return value
+    inputs = a2_manifest.get("inputs")
+    if isinstance(inputs, Mapping):
+        for key in _A2_SENSITIVITY_MAP_SHA_KEYS:
+            value = inputs.get(key)
+            if isinstance(value, str):
+                return value
+    return None
 
 
 def _validate_inputs(inputs: Mapping[str, Any], *, promotion: bool) -> None:
@@ -1460,6 +1676,7 @@ def _normalise_marker(value: str) -> str:
 
 
 __all__ = [
+    "A2_CERTIFIED_SENSITIVITY_BINDING_FORMAT",
     "COMPONENT_SENSITIVITY_FORMAT",
     "COMPONENT_SENSITIVITY_SCHEMA_VERSION",
     "ComponentSensitivityArtifactError",
@@ -1468,8 +1685,10 @@ __all__ = [
     "custody_metadata",
     "dumps_component_sensitivity_manifest",
     "file_metadata",
+    "has_a2_certified_sensitivity_binding_reference",
     "materialize_component_sensitivity_manifest",
     "sha256_file",
+    "validate_a2_certified_sensitivity_binding",
     "validate_component_sensitivity_manifest",
     "write_component_sensitivity_manifest",
 ]
