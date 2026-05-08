@@ -198,12 +198,20 @@ def trigger_workflow(
     submission_url: str,
     runner: str,
     repo: str,
+    pr_number: str | None = None,
 ) -> int:
     """Trigger the eval.yml workflow_dispatch and return the run ID.
 
     The dispatch endpoint doesn't return the run ID, so we list runs
     immediately afterward and pick the most recent run for this workflow
     that is in_progress or queued.
+
+    pr_number (optional): when provided, the workflow's actions/checkout step
+    will use ``refs/pull/<n>/merge`` instead of master. This is required when
+    the submission directory (e.g. ``submissions/apogee/``) lives on a fork
+    branch that is not yet merged to master — without this the Evaluate step
+    fails with ``inflate.sh not found``. Verified against the fork's
+    ``eval.yml`` workflow inputs (the ``pr_number`` input IS declared upstream).
     """
     pre_runs = run_gh(
         [
@@ -225,21 +233,22 @@ def trigger_workflow(
         if pre_runs_json:
             pre_id = pre_runs_json[0]["databaseId"]
 
-    dispatch = run_gh(
-        [
-            "workflow",
-            "run",
-            EVAL_WORKFLOW_FILE,
-            "-R",
-            repo,
-            "-f",
-            f"submission_name={submission_name}",
-            "-f",
-            f"submission_url={submission_url}",
-            "-f",
-            f"runner={runner}",
-        ]
-    )
+    dispatch_args = [
+        "workflow",
+        "run",
+        EVAL_WORKFLOW_FILE,
+        "-R",
+        repo,
+        "-f",
+        f"submission_name={submission_name}",
+        "-f",
+        f"submission_url={submission_url}",
+        "-f",
+        f"runner={runner}",
+    ]
+    if pr_number:
+        dispatch_args.extend(["-f", f"pr_number={pr_number}"])
+    dispatch = run_gh(dispatch_args)
     if dispatch.returncode != 0:
         sys.stderr.write("[fatal] gh workflow run failed\n")
         sys.exit(4)
@@ -501,6 +510,17 @@ def main() -> int:
         action="store_true",
         help="(diagnostic) only verify archive+upload; don't dispatch workflow",
     )
+    p.add_argument(
+        "--pr-number",
+        type=str,
+        default=None,
+        help=(
+            "optional PR number on the fork; when set the workflow's "
+            "actions/checkout step uses refs/pull/<n>/merge instead of master "
+            "(required when submission code lives on a PR branch). The fork's "
+            "eval.yml exposes pr_number as an optional workflow_dispatch input."
+        ),
+    )
     args = p.parse_args()
 
     archive_size = verify_archive(args.archive_path, args.archive_sha)
@@ -540,6 +560,7 @@ def main() -> int:
         submission_url=asset_url,
         runner=args.runner,
         repo=args.repo,
+        pr_number=args.pr_number,
     )
     run_url = f"https://github.com/{args.repo}/actions/runs/{run_id}"
     print(f"[ok] workflow dispatched: run_id={run_id} url={run_url}", flush=True)
