@@ -120,6 +120,12 @@ def _validate_archive(entry: dict[str, Any], *, repo_root: Path) -> tuple[dict[s
         "canonical_url": archive_meta.get("canonical_url"),
         "expected_bytes": archive_meta.get("bytes"),
         "expected_sha256": archive_meta.get("sha256"),
+        "clean_clone_restore_required": True,
+        "clean_clone_restore_note": (
+            "adapter materialization does not embed archive payload bytes; clean clones must "
+            "restore the archive from canonical_url or a verified source_manifest artifact "
+            "and re-check size/SHA before exact replay"
+        ),
     }
     if not archive_path.is_file():
         blockers.append("archive_local_path_missing")
@@ -169,20 +175,82 @@ def _validate_archive(entry: dict[str, Any], *, repo_root: Path) -> tuple[dict[s
     return observed, sorted(dict.fromkeys(blockers))
 
 
-def _runtime_source_root(entry: dict[str, Any], *, repo_root: Path) -> tuple[Path | None, list[str]]:
+def _materialized_runtime_fallback_root(
+    entry: dict[str, Any],
+    *,
+    repo_root: Path,
+    adapter_rel_path: str,
+) -> tuple[Path | None, dict[str, Any], list[str]]:
+    info: dict[str, Any] = {}
     source_meta = entry.get("source_runtime_artifacts")
     if not isinstance(source_meta, dict):
-        return None, ["missing_source_runtime_artifacts"]
-    raw = source_meta.get("local_source_root")
-    if not isinstance(raw, str) or not raw:
-        return None, ["missing_pr102_local_source_root"]
+        return None, info, ["missing_source_runtime_artifacts"]
+
+    raw_runtime_source_path = source_meta.get("runtime_source_path")
+    if not isinstance(raw_runtime_source_path, str) or not raw_runtime_source_path:
+        return None, info, ["missing_runtime_source_path_for_materialized_fallback"]
     try:
-        root = _path_from_manifest(raw, repo_root=repo_root, label="source_runtime_artifacts.local_source_root")
+        runtime_source_path = _safe_runtime_source_path(raw_runtime_source_path)
     except ValueError as exc:
-        return None, [str(exc)]
-    if not root.is_dir():
-        return root, ["runtime_source_root_missing"]
-    return root, []
+        return None, info, [str(exc)]
+
+    adapter_path = PurePosixPath(adapter_rel_path)
+    if adapter_path.is_absolute() or ".." in adapter_path.parts:
+        return None, info, [f"adapter_rel_path must be safe repo-relative path: {adapter_rel_path!r}"]
+
+    fallback = repo_root / Path(adapter_path.parent) / "runtime_source" / Path(runtime_source_path)
+    info["materialized_fallback_root"] = _repo_rel(fallback, repo_root)
+    return fallback, info, []
+
+
+def _runtime_source_root(
+    entry: dict[str, Any],
+    *,
+    repo_root: Path,
+    adapter_rel_path: str,
+) -> tuple[Path | None, list[str], dict[str, Any]]:
+    source_meta = entry.get("source_runtime_artifacts")
+    if not isinstance(source_meta, dict):
+        return None, ["missing_source_runtime_artifacts"], {"source_resolution": "missing"}
+    raw = source_meta.get("local_source_root")
+    blockers: list[str] = []
+    info: dict[str, Any] = {
+        "source_resolution": "missing",
+        "manifest_source_root": raw if isinstance(raw, str) and raw else None,
+    }
+    root: Path | None = None
+    if isinstance(raw, str) and raw:
+        try:
+            root = _path_from_manifest(
+                raw,
+                repo_root=repo_root,
+                label="source_runtime_artifacts.local_source_root",
+            )
+        except ValueError as exc:
+            return None, [str(exc)], info
+        info["manifest_source_root"] = _repo_rel(root, repo_root)
+        if root.is_dir():
+            info["source_resolution"] = "manifest_local_source_root"
+            return root, [], info
+        blockers.append("runtime_source_root_missing")
+    else:
+        blockers.append("missing_pr102_local_source_root")
+
+    fallback, fallback_info, fallback_blockers = _materialized_runtime_fallback_root(
+        entry,
+        repo_root=repo_root,
+        adapter_rel_path=adapter_rel_path,
+    )
+    info.update(fallback_info)
+    if fallback_blockers:
+        blockers.extend(fallback_blockers)
+    elif fallback is not None and fallback.is_dir():
+        info["source_resolution"] = "materialized_adapter_runtime_fallback"
+        info["source_resolution_note"] = (
+            "manifest local_source_root is unavailable; using committed adapter runtime_source copy"
+        )
+        return fallback, [], info
+    return root, blockers, info
 
 
 def _listed_runtime_files(entry: dict[str, Any]) -> tuple[list[dict[str, Any]], list[str]]:
@@ -215,15 +283,20 @@ def _runtime_file_records(
     entry: dict[str, Any],
     *,
     repo_root: Path,
+    adapter_rel_path: str,
 ) -> tuple[dict[str, Any], list[str]]:
     blockers: list[str] = []
-    root, root_blockers = _runtime_source_root(entry, repo_root=repo_root)
+    root, root_blockers, root_info = _runtime_source_root(
+        entry,
+        repo_root=repo_root,
+        adapter_rel_path=adapter_rel_path,
+    )
     blockers.extend(root_blockers)
     rows, row_blockers = _listed_runtime_files(entry)
     blockers.extend(row_blockers)
 
     if root is None:
-        return {"source_root": None, "files": []}, sorted(dict.fromkeys(blockers))
+        return {"source_root": None, "files": [], **root_info}, sorted(dict.fromkeys(blockers))
 
     file_records: list[dict[str, Any]] = []
     declared_paths: set[str] = set()
@@ -275,6 +348,7 @@ def _runtime_file_records(
     runtime = {
         "runtime_source_path": source_meta.get("runtime_source_path"),
         "source_root": _repo_rel(root, repo_root),
+        **root_info,
         "public_checkout_root": _repo_rel(checkout_root, repo_root),
         "file_count": len(file_records),
         "source_tree_sha256": hashlib.sha256(
@@ -526,6 +600,7 @@ def _build_lightning_exact_eval_runbook(
         "source_manifest_expected_artifacts": source_manifest_expected,
         "guardrails": [
             "claim lane before submit; do not use --allow-missing-dispatch-claim-reason for normal PR102 replay",
+            "clean clones must restore the external archive artifact and verify bytes/SHA before exact replay; the adapter only carries runtime source",
             "submit through scripts/lightning_exact_eval_repro.py with --stage-workspace so source_manifest is created and verified before launch",
             "do not require CUDA in the interactive Studio staging shell; the Batch runner performs the canonical CUDA preflight",
             f"use concrete Lightning machine {DEFAULT_LIGHTNING_MACHINE} on comma-lab AWS unless a refreshed machine inventory proves another alias works",
@@ -607,7 +682,7 @@ PY
 done
 
 mkdir -p "$OUTPUT_DIR"
-export PYTHONPATH="$PUBLIC_SOURCE_ROOT:$RUNTIME_SOURCE_ROOT:${{PYTHONPATH:-}}"
+export PYTHONPATH="$PUBLIC_SOURCE_ROOT:$RUNTIME_SOURCE_ROOT"
 
 while IFS= read -r line; do
   [ -z "$line" ] && continue
@@ -685,7 +760,11 @@ def build_pr102_exact_replay_readiness(
         blockers.append(f"manifest_load_failed:{exc}")
 
     archive, archive_blockers = _validate_archive(entry, repo_root=repo_root) if entry else ({}, [])
-    runtime, runtime_blockers = _runtime_file_records(entry, repo_root=repo_root) if entry else ({}, [])
+    runtime, runtime_blockers = (
+        _runtime_file_records(entry, repo_root=repo_root, adapter_rel_path=adapter_rel_path)
+        if entry
+        else ({}, [])
+    )
     blockers.extend(archive_blockers)
     blockers.extend(runtime_blockers)
 

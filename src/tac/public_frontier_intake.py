@@ -50,6 +50,16 @@ class _ParsedArchive:
     extra: Mapping[str, Any] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class _LocalZipHeader:
+    filename: str
+    flag_bits: int
+    compress_type: int
+    crc32: int
+    compressed_size: int
+    uncompressed_size: int
+
+
 def _json_text(payload: Any) -> str:
     return json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
 
@@ -101,11 +111,13 @@ def _strict_zip_report(raw: bytes, infos: Sequence[zipfile.ZipInfo]) -> dict[str
             blockers.append(f"{name}:{exc}")
         if name.startswith("__MACOSX/") or PurePosixPath(name).name.startswith("._"):
             blockers.append(f"{name}:resource_fork_or_hidden_member")
-        local_name = _local_header_name(raw, info.header_offset)
-        if local_name is None:
+        local_header = _local_header(raw, info.header_offset)
+        if local_header is None:
             blockers.append(f"{name}:missing_or_bad_local_header")
-        elif local_name != name:
-            blockers.append(f"{name}:central_local_name_mismatch")
+        else:
+            if local_header.filename != name:
+                blockers.append(f"{name}:central_local_name_mismatch")
+            blockers.extend(_local_central_header_mismatch_blockers(name, local_header, info))
     return {
         "valid": not blockers,
         "blockers": blockers,
@@ -113,7 +125,34 @@ def _strict_zip_report(raw: bytes, infos: Sequence[zipfile.ZipInfo]) -> dict[str
     }
 
 
-def _local_header_name(raw: bytes, offset: int) -> str | None:
+def _local_central_header_mismatch_blockers(
+    name: str,
+    local_header: _LocalZipHeader,
+    central_header: zipfile.ZipInfo,
+) -> list[str]:
+    blockers: list[str] = []
+    if local_header.compress_type != central_header.compress_type:
+        blockers.append(f"{name}:central_local_compression_method_mismatch")
+    if local_header.flag_bits != central_header.flag_bits:
+        blockers.append(f"{name}:central_local_general_purpose_flags_mismatch")
+    if (local_header.flag_bits | central_header.flag_bits) & 0x08:
+        return blockers
+    if local_header.crc32 != central_header.CRC:
+        blockers.append(f"{name}:central_local_crc32_mismatch")
+    if (
+        local_header.compressed_size != 0xFFFFFFFF
+        and local_header.compressed_size != central_header.compress_size
+    ):
+        blockers.append(f"{name}:central_local_compressed_size_mismatch")
+    if (
+        local_header.uncompressed_size != 0xFFFFFFFF
+        and local_header.uncompressed_size != central_header.file_size
+    ):
+        blockers.append(f"{name}:central_local_uncompressed_size_mismatch")
+    return blockers
+
+
+def _local_header(raw: bytes, offset: int) -> _LocalZipHeader | None:
     if offset < 0 or offset + 30 > len(raw):
         return None
     try:
@@ -121,12 +160,12 @@ def _local_header_name(raw: bytes, offset: int) -> str | None:
             signature,
             _version,
             flag_bits,
-            _method,
+            method,
             _time,
             _date,
-            _crc,
-            _compressed,
-            _uncompressed,
+            crc,
+            compressed,
+            uncompressed,
             name_len,
             extra_len,
         ) = struct.unpack("<IHHHHHIIIHH", raw[offset : offset + 30])
@@ -139,7 +178,14 @@ def _local_header_name(raw: bytes, offset: int) -> str | None:
     extra_end = name_end + extra_len
     if name_end > len(raw) or extra_end > len(raw):
         return None
-    return _decode_zip_name(raw[name_start:name_end], flag_bits)
+    return _LocalZipHeader(
+        filename=_decode_zip_name(raw[name_start:name_end], flag_bits),
+        flag_bits=flag_bits,
+        compress_type=method,
+        crc32=crc,
+        compressed_size=compressed,
+        uncompressed_size=uncompressed,
+    )
 
 
 def _validate_archive_member_name(name: str) -> str:

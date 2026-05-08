@@ -43,6 +43,32 @@ def _write_archive(path: Path, members: list[tuple[str, bytes]]) -> None:
             zf.writestr(info, data)
 
 
+def _patch_first_local_header(
+    path: Path,
+    *,
+    flag_bits: int | None = None,
+    compress_type: int | None = None,
+    crc32: int | None = None,
+    compressed_size: int | None = None,
+    uncompressed_size: int | None = None,
+) -> None:
+    raw = bytearray(path.read_bytes())
+    fields = list(struct.unpack("<IHHHHHIIIHH", raw[:30]))
+    assert fields[0] == 0x04034B50
+    if flag_bits is not None:
+        fields[2] = flag_bits
+    if compress_type is not None:
+        fields[3] = compress_type
+    if crc32 is not None:
+        fields[6] = crc32
+    if compressed_size is not None:
+        fields[7] = compressed_size
+    if uncompressed_size is not None:
+        fields[8] = uncompressed_size
+    raw[:30] = struct.pack("<IHHHHHIIIHH", *fields)
+    path.write_bytes(bytes(raw))
+
+
 def test_profile_detects_charged_side_info_and_baseline_segment_delta(tmp_path: Path) -> None:
     baseline = tmp_path / "baseline.zip"
     candidate = tmp_path / "candidate.zip"
@@ -87,6 +113,31 @@ def test_profile_rejects_central_local_name_mismatch(tmp_path: Path) -> None:
 
     assert report["strict_zip"]["valid"] is False
     assert "x:central_local_name_mismatch" in report["strict_zip"]["blockers"]
+
+
+def test_profile_rejects_local_central_zip_header_field_mismatches(tmp_path: Path) -> None:
+    archive = tmp_path / "header-mismatch.zip"
+    x = pack_pr85_bundle(_segments())
+    _write_archive(archive, [("x", x)])
+
+    _patch_first_local_header(
+        archive,
+        flag_bits=0x0800,
+        compress_type=zipfile.ZIP_DEFLATED,
+        crc32=0,
+        compressed_size=len(x) + 1,
+        uncompressed_size=len(x) + 2,
+    )
+
+    report = profile_public_frontier_archive(archive, label="bad-header")
+
+    assert report["strict_zip"]["valid"] is False
+    blockers = set(report["strict_zip"]["blockers"])
+    assert "x:central_local_compression_method_mismatch" in blockers
+    assert "x:central_local_general_purpose_flags_mismatch" in blockers
+    assert "x:central_local_crc32_mismatch" in blockers
+    assert "x:central_local_compressed_size_mismatch" in blockers
+    assert "x:central_local_uncompressed_size_mismatch" in blockers
 
 
 def test_profile_fails_on_bad_zip_and_writes_outputs(tmp_path: Path) -> None:

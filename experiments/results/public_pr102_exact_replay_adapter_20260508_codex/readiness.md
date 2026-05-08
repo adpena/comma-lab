@@ -136,6 +136,7 @@ Submit through the wrapper:
 
 Guardrails:
 - claim lane before submit; do not use --allow-missing-dispatch-claim-reason for normal PR102 replay
+- clean clones must restore the external archive artifact and verify bytes/SHA before exact replay; the adapter only carries runtime source
 - submit through scripts/lightning_exact_eval_repro.py with --stage-workspace so source_manifest is created and verified before launch
 - do not require CUDA in the interactive Studio staging shell; the Batch runner performs the canonical CUDA preflight
 - use concrete Lightning machine g4dn.2xlarge on comma-lab AWS unless a refreshed machine inventory proves another alias works
@@ -209,7 +210,7 @@ PY
 done
 
 mkdir -p "$OUTPUT_DIR"
-export PYTHONPATH="$PUBLIC_SOURCE_ROOT:$RUNTIME_SOURCE_ROOT:${PYTHONPATH:-}"
+export PYTHONPATH="$PUBLIC_SOURCE_ROOT:$RUNTIME_SOURCE_ROOT"
 
 while IFS= read -r line; do
   [ -z "$line" ] && continue

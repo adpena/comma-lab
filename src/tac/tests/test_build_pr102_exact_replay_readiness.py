@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import shutil
 import stat
 import sys
 from pathlib import Path
@@ -45,6 +46,7 @@ def test_pr102_readiness_records_custody_risks_and_command(tmp_path: Path) -> No
     assert payload["dispatch_attempted"] is False
     assert payload["summary"]["archive"]["sha256"] == fixture["archive_sha256"]
     assert payload["summary"]["archive"]["members"][0]["sha256"] == fixture["member_sha256"]
+    assert payload["summary"]["archive"]["clean_clone_restore_required"] is True
     assert payload["summary"]["runtime_source"]["file_count"] == 7
     assert payload["summary"]["runtime_source"]["source_tree_sha256"]
 
@@ -71,6 +73,8 @@ def test_pr102_readiness_records_custody_risks_and_command(tmp_path: Path) -> No
     assert "PACT_RUNTIME_DEPENDENCY_ROOT" in adapter["inflate_sh_text"]
     assert 'if [ "$#" -ne 3 ]; then' in adapter["inflate_sh_text"]
     assert "required PR102 runtime dependency missing" in adapter["inflate_sh_text"]
+    assert 'export PYTHONPATH="$PUBLIC_SOURCE_ROOT:$RUNTIME_SOURCE_ROOT"' in adapter["inflate_sh_text"]
+    assert "PYTHONPATH:-" not in adapter["inflate_sh_text"]
 
     runbook = payload["summary"]["lightning_exact_eval_runbook"]
     assert runbook["lane_id"] == "pr102_public_exact_replay_t4"
@@ -91,6 +95,10 @@ def test_pr102_readiness_records_custody_risks_and_command(tmp_path: Path) -> No
     assert "experiments/results/pr102_adapter/readiness.md" in runbook["source_manifest_expected_artifacts"]
     assert any(
         "source_manifest" in guardrail
+        for guardrail in runbook["guardrails"]
+    )
+    assert any(
+        "restore the external archive artifact" in guardrail
         for guardrail in runbook["guardrails"]
     )
 
@@ -133,6 +141,8 @@ def test_materialize_adapter_plan_writes_source_sized_files(tmp_path: Path) -> N
     inflate_text = inflate_sh.read_text(encoding="utf-8")
     assert "pip install" not in inflate_text
     assert "experiments/results/pr102_adapter/runtime_source" in inflate_text
+    assert 'export PYTHONPATH="$PUBLIC_SOURCE_ROOT:$RUNTIME_SOURCE_ROOT"' in inflate_text
+    assert "PYTHONPATH:-" not in inflate_text
     runtime_inflate = (
         tmp_path
         / "experiments/results/pr102_adapter/runtime_source/submissions/"
@@ -158,6 +168,45 @@ def test_materialize_adapter_plan_writes_source_sized_files(tmp_path: Path) -> N
     assert "experiments/results/pr102/archive.zip" in source_manifest_artifacts
     for path in materialized_files:
         assert path in source_manifest_artifacts
+
+
+def test_readiness_uses_materialized_runtime_fallback_when_manifest_source_is_missing(
+    tmp_path: Path,
+) -> None:
+    fixture = _write_pr102_fixture(tmp_path)
+    adapter_rel_path = "experiments/results/pr102_adapter/inflate.sh"
+    report = tool.build_pr102_exact_replay_readiness(
+        manifest_path=fixture["manifest"],
+        repo_root=tmp_path,
+        adapter_rel_path=adapter_rel_path,
+    )
+    tool.materialize_adapter_plan(
+        report,
+        adapter_dir=tmp_path / "experiments/results/pr102_adapter",
+        repo_root=tmp_path,
+    )
+
+    shutil.rmtree(tmp_path / "experiments/results/pr102/source")
+
+    fallback_report = tool.build_pr102_exact_replay_readiness(
+        manifest_path=fixture["manifest"],
+        repo_root=tmp_path,
+        adapter_rel_path=adapter_rel_path,
+    )
+
+    payload = fallback_report.to_dict()
+    assert fallback_report.ready is True
+    assert "runtime_source_root_missing" not in payload["blockers"]
+    runtime = payload["summary"]["runtime_source"]
+    assert runtime["source_resolution"] == "materialized_adapter_runtime_fallback"
+    assert runtime["manifest_source_root"] == (
+        "experiments/results/pr102/source/submissions/hnerv_lc_v2_scale095_rplus1"
+    )
+    assert runtime["source_root"] == (
+        "experiments/results/pr102_adapter/runtime_source/"
+        "submissions/hnerv_lc_v2_scale095_rplus1"
+    )
+    assert runtime["public_checkout_root"] == "experiments/results/pr102_adapter/runtime_source"
 
 
 def test_render_markdown_includes_lightning_source_manifest_runbook(tmp_path: Path) -> None:

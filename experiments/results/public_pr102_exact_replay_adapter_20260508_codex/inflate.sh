@@ -62,7 +62,7 @@ PY
 done
 
 mkdir -p "$OUTPUT_DIR"
-export PYTHONPATH="$PUBLIC_SOURCE_ROOT:$RUNTIME_SOURCE_ROOT:${PYTHONPATH:-}"
+export PYTHONPATH="$PUBLIC_SOURCE_ROOT:$RUNTIME_SOURCE_ROOT"
 
 while IFS= read -r line; do
   [ -z "$line" ] && continue

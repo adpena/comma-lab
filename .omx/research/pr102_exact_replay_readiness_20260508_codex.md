@@ -8,6 +8,8 @@ Status: `DISPATCHED`. Score claim: `false`. Dispatch attempted: `true`.
 - Bytes: `178981`
 - SHA-256: `afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641`
 - Canonical URL: `https://github.com/user-attachments/files/27369164/archive.zip`
+- Clean-clone restore: external archive artifact required; current Lightning
+  source manifest staged and verified the exact bytes/SHA before dispatch.
 
 ## Runtime Source Files
 
@@ -136,6 +138,7 @@ Submit through the wrapper:
 
 Guardrails:
 - claim lane before submit; do not use --allow-missing-dispatch-claim-reason for normal PR102 replay
+- clean clones must restore the external archive artifact and verify bytes/SHA before exact replay; the adapter only carries runtime source
 - submit through scripts/lightning_exact_eval_repro.py with --stage-workspace so source_manifest is created and verified before launch
 - do not require CUDA in the interactive Studio staging shell; the Batch runner performs the canonical CUDA preflight
 - use concrete Lightning machine g4dn.2xlarge on comma-lab AWS unless a refreshed machine inventory proves another alias works
@@ -161,6 +164,7 @@ harvested for the exact archive bytes.
 - Launcher record:
   `.omx/state/pr102-public-exact-replay-g4dn2-20260508T101510Z_lightning_batch_record.json`
 - Initial refreshed status: `Pending` at `2026-05-08T10:16:24Z`
+- Latest refreshed status: `Running` at `2026-05-08T10:22:04Z`
 
 Refused pre-submit attempts are preserved in
 `.omx/state/active_lane_dispatch_claims.md`:
@@ -253,7 +257,7 @@ PY
 done
 
 mkdir -p "$OUTPUT_DIR"
-export PYTHONPATH="$PUBLIC_SOURCE_ROOT:$RUNTIME_SOURCE_ROOT:${PYTHONPATH:-}"
+export PYTHONPATH="$PUBLIC_SOURCE_ROOT:$RUNTIME_SOURCE_ROOT"
 
 while IFS= read -r line; do
   [ -z "$line" ] && continue
