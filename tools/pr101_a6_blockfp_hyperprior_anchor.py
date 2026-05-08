@@ -82,6 +82,8 @@ DEFAULT_SCALE_QUANTS = (
 
 
 DISPATCH_BLOCKERS = [
+    "measured_config_above_pr101_brotli_current_proxy",
+    "wire_format_proxy_not_selfcomp_per_channel_block_fp",
     "awaiting_compose_vs_baseline_dispatch_comparison",
     "missing_exact_cuda_auth_eval",
     "no_runtime_dequantize_path_built",
@@ -145,7 +147,9 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(f"state_dict not found: {args.state_dict}")
     if args.output_dir is None:
         ts = _dt.datetime.now(_dt.UTC).strftime("%Y%m%dT%H%M%SZ")
-        args.output_dir = REPO_ROOT / f"reports/raw/pr101_a6_blockfp_hyperprior_{ts}"
+        args.output_dir = (
+            REPO_ROOT / f"experiments/results/pr101_a6_blockfp_hyperprior_{ts}"
+        )
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"[a6-anchor] state_dict      : {args.state_dict}")
@@ -264,8 +268,10 @@ def main(argv: list[str] | None = None) -> int:
             if best_blockfp_only else None
         )
         compose_vs_hyperprior = best["archive_bytes"] - hyperprior_only_row["archive_bytes"]
+        measured_config_negative = best["delta_baseline"] >= 0
     else:
         compose_vs_blockfp = compose_vs_hyperprior = None
+        measured_config_negative = False
 
     # ── manifest.json (research/proxy artifact) ──────────────────────────
     timestamp = _dt.datetime.now(_dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -281,10 +287,16 @@ def main(argv: list[str] | None = None) -> int:
         "ready_for_exact_eval_dispatch": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
+        "cuda_eval_worth_testing": False,
         "dispatch_attempted": False,
         "proxy_row": True,
         "family_falsified": False,
-        "falsification_scope": "none_proxy_anchor_only",
+        "measured_config_negative": measured_config_negative,
+        "falsification_scope": (
+            "current_max_abs_scale_conditional_range_coder_proxy_only"
+            if measured_config_negative
+            else "none_proxy_anchor_only"
+        ),
         "dispatch_blockers": list(DISPATCH_BLOCKERS),
         "input_state_dict": str(args.state_dict),
         "n_real_symbols": n_real,
@@ -311,6 +323,8 @@ def main(argv: list[str] | None = None) -> int:
         "score_claim": False,
         "byte_proxy_only": True,
         "ready_for_exact_eval_dispatch": False,
+        "cuda_eval_worth_testing": False,
+        "measured_config_negative": measured_config_negative,
         "dispatch_blockers": list(DISPATCH_BLOCKERS),
         "cleared_blockers": [],
         "cleared_blockers_by_evidence": {},
@@ -335,9 +349,9 @@ def main(argv: list[str] | None = None) -> int:
     # ── Cathedral autopilot evidence row ─────────────────────────────────
     if best is not None:
         verdict_word = (
-            "byte_anchor_landed_BEATS_pr101_brotli"
+            "byte_proxy_BEATS_pr101_brotli_requires_runtime_packet"
             if best["delta_baseline"] < 0
-            else "byte_anchor_landed_above_pr101_brotli"
+            else "measured_config_negative_above_pr101_brotli"
         )
         if compose_vs_blockfp is not None and compose_vs_blockfp < 0:
             verdict_word += "_AND_BEATS_blockfp_only"
@@ -363,6 +377,7 @@ def main(argv: list[str] | None = None) -> int:
             "promotion_eligible": False,
             "rank_or_kill_eligible": False,
             "ready_for_exact_eval_dispatch": False,
+            "cuda_eval_worth_testing": False,
             "dispatch_attempted": False,
             "proxy_row": True,
             "source": (
@@ -374,10 +389,16 @@ def main(argv: list[str] | None = None) -> int:
             ),
             "timestamp": timestamp,
             "contest_dispatch_verdict": verdict_text,
-            "score_affecting_payload_changed": True,
-            "charged_bits_changed": True,
+            "score_affecting_payload_changed": False,
+            "charged_bits_changed": False,
+            "downstream_selection_can_change_charged_bits": True,
             "family_falsified": False,
-            "falsification_scope": "none_proxy_anchor_only",
+            "measured_config_negative": measured_config_negative,
+            "falsification_scope": (
+                "current_max_abs_scale_conditional_range_coder_proxy_only"
+                if measured_config_negative
+                else "none_proxy_anchor_only"
+            ),
             "dispatch_blockers": list(DISPATCH_BLOCKERS),
             "compose_vs_blockfp_only_delta": compose_vs_blockfp,
             "compose_vs_hyperprior_only_delta": compose_vs_hyperprior,

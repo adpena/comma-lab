@@ -144,9 +144,9 @@ def _quantize_scale(scale: float, *, mode: int) -> bytes:
     if scale < 0.0:
         raise ValueError(f"scale must be >= 0; got {scale}")
     if mode == SCALE_QUANT_FP16:
-        return np.array([scale], dtype=np.float16).tobytes()
+        return np.array([scale], dtype="<f2").tobytes()
     if mode == SCALE_QUANT_FP32:
-        return np.array([scale], dtype=np.float32).tobytes()
+        return np.array([scale], dtype="<f4").tobytes()
     if mode == SCALE_QUANT_UINT8:
         # Map [0, 127] → [0, 255]: the int8 alphabet's max abs is 127, so
         # scale ∈ [0, 127]. Round to nearest, clamp.
@@ -159,12 +159,37 @@ def _quantize_scale(scale: float, *, mode: int) -> bytes:
 def _dequantize_scale(blob: bytes, *, mode: int) -> float:
     """Inverse of ``_quantize_scale``."""
     if mode == SCALE_QUANT_FP16:
-        return float(np.frombuffer(blob, dtype=np.float16)[0])
+        if len(blob) != 2:
+            raise ValueError(f"fp16 scale blob must be 2 bytes, got {len(blob)}")
+        return float(np.frombuffer(blob, dtype="<f2")[0])
     if mode == SCALE_QUANT_FP32:
-        return float(np.frombuffer(blob, dtype=np.float32)[0])
+        if len(blob) != 4:
+            raise ValueError(f"fp32 scale blob must be 4 bytes, got {len(blob)}")
+        return float(np.frombuffer(blob, dtype="<f4")[0])
     if mode == SCALE_QUANT_UINT8:
+        if len(blob) != 1:
+            raise ValueError(f"uint8 scale blob must be 1 byte, got {len(blob)}")
         return float(blob[0]) / 2.0
     raise ValueError(f"unknown scale_quant code {mode}")
+
+
+def _validate_wire_hyperparams(*, sigma_floor: float, alpha: float) -> None:
+    """A6BF v1 stores fixed hyperprior parameters in the codec version.
+
+    Accepting alternate values without serializing them creates a split-brain
+    wire contract: encode and decode can silently use different PMFs. Keep v1
+    fixed until a new header version carries these fields explicitly.
+    """
+    if sigma_floor != SIGMA_FLOOR:
+        raise ValueError(
+            "A6BF v1 does not serialize sigma_floor; use the fixed "
+            f"default {SIGMA_FLOOR} or introduce a new wire version"
+        )
+    if alpha != ALPHA_DEFAULT:
+        raise ValueError(
+            "A6BF v1 does not serialize alpha; use the fixed "
+            f"default {ALPHA_DEFAULT} or introduce a new wire version"
+        )
 
 
 # ── Hyperprior decoder (deterministic, no neural-net weights) ─────────────
@@ -265,7 +290,7 @@ def split_into_blockfp(
         # An all-zero block has scale 0, which the dequantize path treats
         # as σ = sigma_floor (a tight Gaussian centered at zero, the
         # natural choice for a degenerate block).
-        s = float(np.abs(block).max()) if block.size > 0 else 0.0
+        s = float(np.abs(block.astype(np.int16)).max()) if block.size > 0 else 0.0
         scales[b] = s
         blocks.append(block)
     return BlockFPSplit(
@@ -323,6 +348,7 @@ def compose_blockfp_with_hyperprior(
         raise ValueError(f"block_size must be >= 1, got {block_size}")
     if scale_quant not in (SCALE_QUANT_FP16, SCALE_QUANT_FP32, SCALE_QUANT_UINT8):
         raise ValueError(f"unknown scale_quant {scale_quant}")
+    _validate_wire_hyperparams(sigma_floor=sigma_floor, alpha=alpha)
     split = split_into_blockfp(symbols, block_size=block_size)
 
     scale_byte_size = _scale_bytes_per_block(scale_quant)
@@ -451,12 +477,11 @@ def decompose_blockfp_with_hyperprior(
     scale_quant = encoded[5]
     (block_size,) = struct.unpack_from("<H", encoded, 6)
     (n_total,) = struct.unpack_from("<I", encoded, 8)
+    if block_size < 1:
+        raise ValueError(f"decompose: block_size must be >= 1, got {block_size}")
+    _validate_wire_hyperparams(sigma_floor=sigma_floor, alpha=alpha)
 
     cursor = _HEADER_SIZE
-    if n_total == 0:
-        # Empty stream: side-info empty, payload is a header-only ChARM stream.
-        return np.zeros((0,), dtype=np.int8)
-
     n_blocks = (n_total + block_size - 1) // block_size
     scale_byte_size = _scale_bytes_per_block(scale_quant)
     side_info_len = n_blocks * scale_byte_size
@@ -476,6 +501,8 @@ def decompose_blockfp_with_hyperprior(
         raise ValueError("decompose: chunk-count header truncated")
     (n_chunks,) = struct.unpack_from("<I", encoded, cursor)
     cursor += 4
+    if n_total == 0 and n_chunks != 0:
+        raise ValueError(f"decompose: empty stream must have 0 chunks, got {n_chunks}")
 
     out = np.zeros((n_total,), dtype=np.int8)
     block_cursor = 0
@@ -485,6 +512,10 @@ def decompose_blockfp_with_hyperprior(
             raise ValueError("decompose: chunk header truncated")
         (n_blocks_in_chunk,) = struct.unpack_from("<I", encoded, cursor)
         cursor += 4
+        if n_blocks_in_chunk < 1:
+            raise ValueError(
+                f"decompose: chunk block count must be >= 1, got {n_blocks_in_chunk}"
+            )
         (chunk_payload_len,) = struct.unpack_from("<I", encoded, cursor)
         cursor += 4
         if cursor + chunk_payload_len > len(encoded):
@@ -531,6 +562,11 @@ def decompose_blockfp_with_hyperprior(
             f"decompose: symbol count mismatch after chunks "
             f"({sym_cursor} != {n_total})"
         )
+    if cursor != len(encoded):
+        raise ValueError(
+            f"decompose: trailing bytes after chunk section "
+            f"({len(encoded) - cursor} unconsumed)"
+        )
     return out
 
 
@@ -556,11 +592,18 @@ def encode_blockfp_only(
         side_info.extend(_quantize_scale(float(split.scales[b]), mode=scale_quant))
     flat = np.ascontiguousarray(np.asarray(symbols, dtype=np.int8)).reshape(-1)
     payload = flat.tobytes()  # raw int8, 1 byte/symbol
-    total = _HEADER_SIZE + len(side_info) + len(payload)
+    header = (
+        b"BFRO"
+        + struct.pack("<B", _VERSION)
+        + struct.pack("<B", int(scale_quant))
+        + struct.pack("<H", int(block_size))
+        + struct.pack("<I", int(split.n_total))
+    )
+    encoded = bytes(header) + bytes(side_info) + payload
     return (
-        b"BFRO" + b"\x00" * 8,  # header is opaque for this baseline
+        encoded,
         {
-            "total_bytes": total,
+            "total_bytes": len(encoded),
             "header_bytes": _HEADER_SIZE,
             "side_info_bytes": len(side_info),
             "payload_bytes": len(payload),
@@ -583,18 +626,7 @@ def encode_hyperprior_only(
     the global max abs is used for the entire stream. No per-block side-info.
     """
     flat = np.ascontiguousarray(np.asarray(symbols, dtype=np.int8)).reshape(-1)
-    if flat.size == 0:
-        return b"HONLY" + b"\x00" * 7, {
-            "total_bytes": _HEADER_SIZE,
-            "header_bytes": _HEADER_SIZE,
-            "side_info_bytes": 2,
-            "payload_bytes": 0,
-            "n_blocks": 1,
-            "block_size": 0,
-            "n_total": 0,
-            "encoding": "hyperprior_only_global_sigma",
-        }
-    global_scale = float(np.abs(flat).max())
+    global_scale = float(np.abs(flat.astype(np.int16)).max()) if flat.size else 0.0
     sigma = hyperprior_sigma_from_scale(global_scale)
     pmf = gaussian_pmf_int8(
         mu=0.0,
@@ -614,10 +646,23 @@ def encode_hyperprior_only(
             enc.write_symbol(int(sym), pmf)
         chunk_payloads.append(enc.finish())
     payload_total = sum(len(c) for c in chunk_payloads)
-    chunk_section_bytes = 4 + sum(4 + len(c) for c in chunk_payloads)
-    total = _HEADER_SIZE + 2 + chunk_section_bytes  # +2 for the global fp16 scale
-    return b"HONLY" + b"\x00" * 7, {
-        "total_bytes": total,
+    header = (
+        b"HONY"
+        + struct.pack("<B", _VERSION)
+        + struct.pack("<B", SCALE_QUANT_FP16)
+        + struct.pack("<H", int(flat.size if flat.size else 1))
+        + struct.pack("<I", int(flat.size))
+    )
+    side_info = _quantize_scale(global_scale, mode=SCALE_QUANT_FP16)
+    chunk_section = bytearray()
+    chunk_section.extend(struct.pack("<I", len(chunk_payloads)))
+    for chunk in chunk_payloads:
+        chunk_section.extend(struct.pack("<I", len(chunk)))
+        chunk_section.extend(chunk)
+    encoded = bytes(header) + side_info + bytes(chunk_section)
+    chunk_section_bytes = len(chunk_section)
+    return encoded, {
+        "total_bytes": len(encoded),
         "header_bytes": _HEADER_SIZE,
         "side_info_bytes": 2,
         "payload_bytes": chunk_section_bytes,

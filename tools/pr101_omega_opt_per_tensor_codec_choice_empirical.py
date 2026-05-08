@@ -120,12 +120,23 @@ def greedy_select_under_rel_err_budget(
         selections.append({"tensor": row["tensor"], "chosen_codec": best["label"], "bytes": best["bytes"], "rel_err": best["rel_err"], "alpha": best["alpha"]})
         total_bytes += best["bytes"]
 
-    # Total weighted rel_err: L2-aggregate
-    total_rel_err = float(np.sqrt(sum(s["rel_err"] ** 2 for s in selections) / len(selections)))
+    # Element-weighted L2 aggregate. The earlier unweighted mean over tensor
+    # rows over-counted tiny tensors and under-counted large tensors; this
+    # proxy is still not score evidence, but at least matches the symbol mass
+    # represented by each per-tensor rel_err.
+    total_elements = sum(int(row["n_elements"]) for row in per_tensor)
+    weighted_sq = 0.0
+    for row, selection in zip(per_tensor, selections):
+        selection["n_elements"] = int(row["n_elements"])
+        weighted_sq += float(row["n_elements"]) * float(selection["rel_err"]) ** 2
+    total_rel_err = float(np.sqrt(weighted_sq / max(1, total_elements)))
     return {
         "rel_err_budget": global_rel_err_budget,
         "total_bytes": total_bytes,
+        "achieved_total_rel_err_element_weighted_l2": total_rel_err,
         "achieved_total_rel_err_l2_avg": total_rel_err,
+        "rel_err_form": "element_weighted_l2_over_per_tensor_rel_err",
+        "total_elements": int(total_elements),
         "n_tensors_sparsified": sum(1 for s in selections if s["alpha"] > 0),
         "selections": selections,
     }
@@ -174,6 +185,7 @@ def run_experiment(state_dict_path: Path, alphas: list[float], rel_err_budgets: 
         "n_tensors": n_tensors,
         "alphas_swept": alphas,
         "rel_err_budgets_swept": rel_err_budgets,
+        "rel_err_form": "element_weighted_l2_over_per_tensor_rel_err",
         "baseline_lossless_per_tensor_brotli_bytes": baseline_bytes,
         "per_tensor_codec_measurements": per_tensor,
         "frontier_at_rel_err_budgets": frontier,

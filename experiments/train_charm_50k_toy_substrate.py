@@ -1243,7 +1243,6 @@ def main() -> int:
     parser.add_argument(
         "--no-auth-eval-on-best",
         action="store_true",
-        default=True,
         help=(
             "Operator opt-out: this script trains a 50K toy substrate for "
             "ChARM range coder validation (encode→decode roundtrip + bit-rate "

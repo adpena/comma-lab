@@ -1319,6 +1319,20 @@ class TestTrainingScriptsHaveAuthEval:
         v = _scan_training_script_for_auth_eval(script, root)
         assert v == [], v
 
+    def test_default_on_optout_flag_does_not_satisfy(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        script = root / "experiments" / "train_default_on_optout.py"
+        _write(script, """
+            import torch
+            import argparse
+            p = argparse.ArgumentParser()
+            p.add_argument("--no-auth-eval-on-best", action="store_true", default=True)
+            torch.save(model.state_dict(), "renderer_best.pt")
+        """)
+        v = _scan_training_script_for_auth_eval(script, root)
+        assert len(v) == 1, v
+        assert "auth_eval" in v[0]
+
     def test_check_strict_raises(self, tmp_path: Path) -> None:
         root = _stub_repo(tmp_path)
         _write(root / "experiments" / "train_bad.py", """

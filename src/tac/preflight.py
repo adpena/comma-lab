@@ -6373,7 +6373,11 @@ def _call_is_auth_eval_helper(node: ast.Call) -> bool:
 
 def _argparse_defines_no_auth_eval_optout(tree: ast.Module) -> bool:
     """True if the script defines `--no-auth-eval-on-best` argparse flag
-    (operator's explicit opt-out — satisfies the rule)."""
+    (operator's explicit opt-out — satisfies the rule).
+
+    A default-on opt-out is not an explicit operator choice and must not
+    satisfy the guard.
+    """
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
@@ -6383,6 +6387,13 @@ def _argparse_defines_no_auth_eval_optout(tree: ast.Module) -> bool:
         for arg in node.args:
             if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
                 if arg.value == "--no-auth-eval-on-best":
+                    for keyword in node.keywords:
+                        if keyword.arg == "default":
+                            if (
+                                isinstance(keyword.value, ast.Constant)
+                                and keyword.value.value is True
+                            ):
+                                return False
                     return True
     return False
 

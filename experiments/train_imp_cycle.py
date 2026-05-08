@@ -159,7 +159,7 @@ def parse_args() -> argparse.Namespace:
     # decision. CLAUDE.md "Auth eval EVERYWHERE" satisfaction:
     # ``--no-auth-eval-on-best`` is the explicit opt-out the preflight
     # ``check_training_scripts_have_auth_eval`` looks for.
-    p.add_argument("--no-auth-eval-on-best", action="store_true", default=True,
+    p.add_argument("--no-auth-eval-on-best", action="store_true",
                    help="Auth-eval is deferred to the deploy script's Stage 4 "
                         "(runs ONCE on the final 89%%-sparse renderer + "
                         "Lane G v3 anchor masks/poses). Per-cycle auth-eval "

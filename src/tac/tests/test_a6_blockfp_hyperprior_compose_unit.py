@@ -331,3 +331,52 @@ def test_hyperprior_sigma_floor_clamp():
 def test_hyperprior_rejects_negative_scale():
     with pytest.raises(ValueError, match="scale"):
         hyperprior_sigma_from_scale(-1.0)
+
+
+def test_split_into_blockfp_handles_int8_min_without_overflow():
+    symbols = np.array([-128, -2, 3], dtype=np.int8)
+    split = split_into_blockfp(symbols, block_size=3)
+    assert split.scales.tolist() == [128.0]
+
+
+def test_compose_rejects_non_default_wire_hyperparams():
+    symbols = np.array([0, 1, -1], dtype=np.int8)
+    with pytest.raises(ValueError, match="does not serialize alpha"):
+        compose_blockfp_with_hyperprior(symbols, block_size=3, alpha=0.10)
+    with pytest.raises(ValueError, match="does not serialize sigma_floor"):
+        compose_blockfp_with_hyperprior(symbols, block_size=3, sigma_floor=0.25)
+
+
+def test_decompose_rejects_trailing_bytes_non_empty():
+    symbols = np.array([1, -2, 3, -4], dtype=np.int8)
+    encoded, _ = compose_blockfp_with_hyperprior(symbols, block_size=2)
+    with pytest.raises(ValueError, match="trailing bytes"):
+        decompose_blockfp_with_hyperprior(encoded + b"UNCONSUMED")
+
+
+def test_decompose_rejects_trailing_bytes_empty():
+    symbols = np.zeros((0,), dtype=np.int8)
+    encoded, _ = compose_blockfp_with_hyperprior(
+        symbols, block_size=4, verify_roundtrip=False
+    )
+    with pytest.raises(ValueError, match="trailing bytes"):
+        decompose_blockfp_with_hyperprior(encoded + b"UNCONSUMED")
+
+
+def test_decompose_rejects_tampered_zero_block_size():
+    symbols = np.array([1, 2, 3], dtype=np.int8)
+    encoded, _ = compose_blockfp_with_hyperprior(symbols, block_size=3)
+    tampered = bytearray(encoded)
+    tampered[6:8] = b"\x00\x00"
+    with pytest.raises(ValueError, match="block_size"):
+        decompose_blockfp_with_hyperprior(bytes(tampered))
+
+
+def test_baseline_helpers_return_bytes_matching_ledger_total():
+    symbols = np.array([-128, -10, 0, 10, 127], dtype=np.int8)
+    block_blob, block_ledger = encode_blockfp_only(
+        symbols, block_size=2, scale_quant=SCALE_QUANT_FP16
+    )
+    hyper_blob, hyper_ledger = encode_hyperprior_only(symbols)
+    assert len(block_blob) == block_ledger["total_bytes"]
+    assert len(hyper_blob) == hyper_ledger["total_bytes"]

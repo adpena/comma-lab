@@ -872,7 +872,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--no-auth-eval-on-best",
         action="store_true",
-        default=True,
         help=(
             "Operator opt-out: this script fine-tunes PR101 latents (not a "
             "contest-bound renderer); the saved checkpoint is consumed by "
