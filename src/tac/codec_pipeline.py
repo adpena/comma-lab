@@ -361,20 +361,45 @@ class CodecPipeline:
           returns ``passed=False``, encoding aborts (Contrarian gate).
 
     Wire format of the wrapper (deterministic, byte-exact):
-        magic   : 4 bytes  = b"CPL1"  (codec pipeline v1)
-        n_ops   : u32_LE
-        for each op:
-            name_len : u16_LE
-            name     : utf-8 bytes
-            state_json_len : u32_LE
-            state_json     : utf-8 bytes (json-encoded op_state)
-            blob_len : u32_LE
-            blob     : raw bytes
+
+        Version 1 (legacy, retained for forensic compat):
+            magic   : 4 bytes  = b"CPL1"  (codec pipeline v1)
+            n_ops   : u32_LE
+            for each op:
+                name_len : u16_LE
+                name     : utf-8 bytes
+                state_json_len : u32_LE
+                state_json     : utf-8 bytes (json-encoded op_state)
+                blob_len : u32_LE
+                blob     : raw bytes
+
+        Version 2 (canonical, default — landed 2026-05-08 ORCH-SYNC Bug 2):
+            magic   : 4 bytes  = b"CPL2"  (codec pipeline v2)
+            n_ops   : u32_LE
+            for each op:
+                name_len : u16_LE
+                name     : utf-8 bytes
+                state_json_len : u32_LE
+                state_json     : utf-8 bytes (int-key-preserving JSON; see
+                    :func:`_encode_op_state_v2_json` /
+                    :func:`_decode_op_state_v2_json`)
+                blob_len : u32_LE
+                blob     : raw bytes
+
+        Why CPL2: ``json.dumps`` coerces dict-with-int-keys to string keys.
+        WIRE-DECODER (commit 669b5b5f) discovered 100% sign-flip on negzig
+        tensors (e.g. ``blocks.5.bias``) when CPL1's reconstructed
+        ``effective_byte_maps`` had string keys but the decoder did
+        ``idx in effective_byte_maps`` for an integer ``idx``. CPL2's JSON
+        encoder records int keys explicitly via a sentinel ``{"__intkey__":
+        true, "items": [[k, v], ...]}`` envelope so they round-trip exactly.
 
     Strict-scorer-rule: no scorers loaded anywhere.
     """
 
-    MAGIC = b"CPL1"
+    MAGIC = b"CPL1"  # legacy v1 magic (forensic compat)
+    MAGIC_V2 = b"CPL2"  # canonical v2 magic (int-key preserving)
+    DEFAULT_VERSION = 2
 
     def __init__(self, ops: list[CodecOp]) -> None:
         if not ops:
@@ -396,7 +421,22 @@ class CodecPipeline:
         *,
         context: dict[str, Any] | None = None,
         skip_validate: bool = False,
+        version: int | None = None,
     ) -> tuple[bytes, PipelineManifest]:
+        """Encode the pipeline.
+
+        Args:
+            version: 2 (default, CPL2 — int-key preserving) or 1 (legacy
+                CPL1 — forensic compat only; coerces dict-with-int-keys
+                to string keys, which causes the negzig sign-flip bug
+                fixed by CPL2). When ``None``, uses ``DEFAULT_VERSION``.
+        """
+        if version is None:
+            version = self.DEFAULT_VERSION
+        if version not in (1, 2):
+            raise ValueError(
+                f"CodecPipeline.encode: version must be 1 or 2, got {version!r}"
+            )
         ctx = dict(context) if context is not None else {}
         started = time.time()
         results: list[EncodeResult] = []
@@ -421,11 +461,11 @@ class CodecPipeline:
             if bool(getattr(op, "transforms_state_dict", False)):
                 current_state = op.decode(res.blob, op_state=res.op_state, context=ctx)
 
-        # Wrap into the deterministic CPL1 container.
-        import json
+        # Wrap into the deterministic CPL1/CPL2 container.
         import struct
         out = bytearray()
-        out += self.MAGIC
+        magic = self.MAGIC if version == 1 else self.MAGIC_V2
+        out += magic
         out += struct.pack("<I", len(results))
         for res in results:
             name_b = res.op_name.encode("utf-8")
@@ -440,17 +480,22 @@ class CodecPipeline:
             # op_name and key in the error message, operators have to bisect
             # by hand. Catch the TypeError, identify the offending key via a
             # walk over op_state, and re-raise with the op_name + key path.
+            #
+            # CPL2 (default 2026-05-08 ORCH-SYNC Bug 2): use the int-key-
+            # preserving encoder so ``effective_byte_maps`` and other dicts
+            # with integer keys roundtrip exactly. CPL1 retained for forensic
+            # compat (caller must opt in with ``version=1``).
             try:
-                state_b = json.dumps(
-                    res.op_state, sort_keys=True, separators=(",", ":")
-                ).encode("utf-8")
+                state_b = _encode_op_state_to_json_bytes(
+                    res.op_state, version=version
+                )
             except TypeError as exc:
                 offender = _find_non_json_serializable_key(res.op_state)
                 raise TypeError(
                     f"CodecPipeline.encode: op {res.op_name!r} produced an "
                     f"op_state value that is not JSON-serializable at key path "
-                    f"{offender!r}. CPL1 wire format requires op_state to be "
-                    f"JSON-encodable (str/int/float/bool/None/list/dict). "
+                    f"{offender!r}. CPL{version} wire format requires op_state "
+                    f"to be JSON-encodable (str/int/float/bool/None/list/dict). "
                     f"Convert tensors with ``.tolist()`` and numpy types with "
                     f"``int(...)`` / ``float(...)``. Underlying error: {exc}"
                 ) from exc
@@ -479,20 +524,28 @@ class CodecPipeline:
         *,
         context: dict[str, Any] | None = None,
     ) -> tuple[dict[str, torch.Tensor], list[str]]:
-        """Decode the CPL1 wrapper. Returns the reconstructed state_dict from
-        the LAST op (the canonical decoded view); auxiliary state from earlier
-        ops is discarded by default.
+        """Decode the CPL1/CPL2 wrapper. Returns the reconstructed state_dict
+        from the LAST op (the canonical decoded view); auxiliary state from
+        earlier ops is discarded by default.
+
+        Magic is auto-detected: ``CPL1`` (legacy, string-keyed JSON) and
+        ``CPL2`` (canonical, int-key-preserving JSON) are both accepted.
 
         Returns:
             (state_dict, op_names_replayed) — for forensic confirmation.
         """
-        import json
         import struct
 
         ctx = dict(context) if context is not None else {}
-        if blob[:4] != self.MAGIC:
+        magic = blob[:4]
+        if magic == self.MAGIC:
+            wire_version = 1
+        elif magic == self.MAGIC_V2:
+            wire_version = 2
+        else:
             raise ValueError(
-                f"CodecPipeline.decode: bad magic {blob[:4]!r}, expected {self.MAGIC!r}"
+                f"CodecPipeline.decode: bad magic {magic!r}, expected "
+                f"{self.MAGIC!r} (CPL1) or {self.MAGIC_V2!r} (CPL2)"
             )
         cursor = 4
         n_ops = struct.unpack_from("<I", blob, cursor)[0]
@@ -512,8 +565,8 @@ class CodecPipeline:
             cursor += name_len
             state_len = struct.unpack_from("<I", blob, cursor)[0]
             cursor += 4
-            op_state = json.loads(
-                blob[cursor : cursor + state_len].decode("utf-8")
+            op_state = _decode_op_state_from_json_bytes(
+                blob[cursor : cursor + state_len], version=wire_version
             )
             cursor += state_len
             blob_len = struct.unpack_from("<I", blob, cursor)[0]
@@ -728,6 +781,138 @@ class Op2_PR103ArithmeticCodec:
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+#: CPL2 sentinel for envelopes that record int-keyed dicts. The envelope
+#: shape is ``{__intkey__: true, items: [[k, v], [k, v], ...]}`` where each
+#: ``k`` is an int and each ``v`` is a (recursively encoded) JSON value.
+#: A real op_state dict will never contain this sentinel as a literal key
+#: because Python dict keys with the literal string ``"__intkey__"`` are
+#: indistinguishable from the sentinel; encoding rejects any such key with
+#: a clear error.
+_CPL2_INTKEY_SENTINEL = "__intkey__"
+_CPL2_ITEMS_KEY = "items"
+
+
+def _cpl2_envelope_for_int_keyed_dict(d: dict[int, Any]) -> dict[str, Any]:
+    """Wrap an int-keyed dict in the CPL2 envelope.
+
+    Sub-values are recursively encoded so nested int-keyed dicts also
+    roundtrip exactly. Sub-keys that are ints become ints in the items
+    list (preserved by JSON's number type).
+    """
+    return {
+        _CPL2_INTKEY_SENTINEL: True,
+        _CPL2_ITEMS_KEY: [
+            [int(k), _cpl2_recursively_encode(v)] for k, v in sorted(d.items())
+        ],
+    }
+
+
+def _cpl2_recursively_encode(obj: Any) -> Any:
+    """Recursively encode an op_state value for CPL2 wire.
+
+    - Dicts with any int key are wrapped in the int-key envelope.
+    - Mixed-key dicts (some int, some str) are not allowed (would be
+      ambiguous); raise a clear ValueError.
+    - Lists/tuples are recursed element-wise (tuples become lists per JSON).
+    - Scalars passthrough (json.dumps does the heavy lifting).
+    - The literal string key ``__intkey__`` in any input dict is rejected
+      because it would alias the sentinel.
+    """
+    if isinstance(obj, dict):
+        if not obj:
+            return {}
+        # Detect mixed keys + sentinel collision.
+        key_types = {type(k) for k in obj}
+        if any(k == _CPL2_INTKEY_SENTINEL for k in obj if isinstance(k, str)):
+            raise ValueError(
+                f"CPL2 op_state dict cannot contain reserved string key "
+                f"{_CPL2_INTKEY_SENTINEL!r} (collides with int-key sentinel)"
+            )
+        has_int = any(isinstance(k, int) and not isinstance(k, bool) for k in obj)
+        has_str = any(isinstance(k, str) for k in obj)
+        if has_int and has_str:
+            raise ValueError(
+                f"CPL2 op_state dict mixes int and str keys: "
+                f"{sorted({type(k).__name__ for k in obj})}; either-or required "
+                f"for unambiguous int-key preservation"
+            )
+        if has_int:
+            return _cpl2_envelope_for_int_keyed_dict(obj)
+        # All-string-keyed dict: recurse into values (sub-dicts may still be
+        # int-keyed).
+        return {k: _cpl2_recursively_encode(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_cpl2_recursively_encode(v) for v in obj]
+    return obj
+
+
+def _cpl2_recursively_decode(obj: Any) -> Any:
+    """Reverse of :func:`_cpl2_recursively_encode`.
+
+    Detects int-key envelopes and rehydrates them as ``dict[int, Any]``;
+    recursively decodes nested values.
+    """
+    if isinstance(obj, dict):
+        if obj.get(_CPL2_INTKEY_SENTINEL) is True and _CPL2_ITEMS_KEY in obj:
+            items = obj[_CPL2_ITEMS_KEY]
+            if not isinstance(items, list):
+                raise ValueError(
+                    "CPL2 int-key envelope: 'items' must be a list of [k, v] pairs"
+                )
+            return {
+                int(pair[0]): _cpl2_recursively_decode(pair[1])
+                for pair in items
+            }
+        return {k: _cpl2_recursively_decode(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_cpl2_recursively_decode(v) for v in obj]
+    return obj
+
+
+def _encode_op_state_to_json_bytes(
+    op_state: dict[str, Any], *, version: int
+) -> bytes:
+    """Encode op_state to JSON bytes for the chosen CPL wire version.
+
+    Version 1: bare ``json.dumps(..., sort_keys=True, separators=(",", ":"))``.
+        Coerces dict-with-int-keys to string keys (legacy bug; retained for
+        backwards compat with on-disk CPL1 archives).
+    Version 2: int-key-preserving via the CPL2 sentinel envelope. Falls back
+        to legacy formatting only for op_states that contain no int-keyed
+        dicts at any depth, in which case the wire bytes are the same as v1.
+    """
+    import json
+
+    if version == 1:
+        return json.dumps(
+            op_state, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")
+    if version == 2:
+        encoded = _cpl2_recursively_encode(op_state)
+        return json.dumps(
+            encoded, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")
+    raise ValueError(f"unknown CPL wire version {version!r}; supported: 1, 2")
+
+
+def _decode_op_state_from_json_bytes(
+    state_bytes: bytes, *, version: int
+) -> dict[str, Any]:
+    """Decode op_state JSON bytes for the chosen CPL wire version."""
+    import json
+
+    raw = json.loads(state_bytes.decode("utf-8"))
+    if version == 1:
+        # Legacy: int keys are coerced to strings on encode and stay strings
+        # on decode. This is the substrate of the WIRE-DECODER negzig
+        # sign-flip bug; CPL1 callers must rehydrate manually if they need
+        # int keys downstream.
+        return raw
+    if version == 2:
+        return _cpl2_recursively_decode(raw)
+    raise ValueError(f"unknown CPL wire version {version!r}; supported: 1, 2")
+
 
 def _find_non_json_serializable_key(
     obj: Any, path: str = ""

@@ -20,6 +20,7 @@ from tac.eval_roundtrip_gate import enforce_eval_roundtrip
 from tac.preflight import (
     REPO_ROOT,
     MetaBugViolation,
+    PreflightError,
     _scan_doc_for_untagged_scores,
     _scan_for_cpu_fallback_in_subagent_prompts,
     _scan_for_halfframe_without_trained_profile,
@@ -47,6 +48,7 @@ from tac.preflight import (
     _scan_test_file_for_dead_imports,
     _scan_training_script_for_auth_eval,
     check_cmg3a_remote_dispatch_requires_pose_safety,
+    check_evidence_row_has_falsification_scope_when_negative,
     check_halfframe_archive_uses_trained_profile,
     check_inflate_scorer_load_has_runtime_banner,
     check_inflate_sh_handles_br_centrally,
@@ -3546,6 +3548,25 @@ class TestHalfframeArchiveTrainedProfile:
         # PROFILES may or may not import; either way, name has 'half_frame' so passes.
         assert v == [], v
 
+    def test_halfframe_with_module_profile_constant_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        f = root / "experiments" / "arch_like.py"
+        f.write_text(
+            "\n".join([
+                'PROFILE = "q_faithful_dilated_88k"',
+                'cmd = f"""',
+                'python experiments/build_baseline_archive.py \\',
+                '  --device cuda --crf 50 --half-frame \\',
+                '  --output masks.zip',
+                'python src/tac/experiments/train_renderer.py \\',
+                '  --profile {PROFILE} \\',
+                '  --device cuda',
+                '"""',
+            ])
+        )
+        v = _scan_for_halfframe_without_trained_profile(f, root)
+        assert v == [], v
+
     def test_no_halfframe_skipped(self, tmp_path: Path) -> None:
         root = _stub_repo(tmp_path)
         f = root / "scripts" / "ok.sh"
@@ -4204,3 +4225,57 @@ class TestNoSilentAutoDiscoveryWithWarn:
             "qat_finetune.py is being flagged — Bug 1 fix has regressed.\n"
             + "\n".join(f"  • {x}" for x in v)
         )
+
+
+class TestEvidenceFalsificationScopeGuard:
+    def test_positive_cpu_build_family_false_without_scope_passes(
+        self, tmp_path: Path
+    ) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / "reports" / "cathedral_autopilot_evidence.jsonl", """
+            {"technique":"phase4_orchestrator_smoke","evidence_grade":"[CPU-build]","family_falsified":false,"score_claim":false,"ready_for_exact_eval_dispatch":false}
+        """)
+        assert check_evidence_row_has_falsification_scope_when_negative(
+            repo_root=root,
+            strict=True,
+            verbose=False,
+        ) == []
+
+    def test_exact_negative_family_false_without_scope_fails(
+        self, tmp_path: Path
+    ) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / "reports" / "cathedral_autopilot_evidence.jsonl", """
+            {"technique":"lossy_config","evidence_grade":"[contest-CUDA A-negative]","family_falsified":false,"score_claim":false}
+        """)
+        with pytest.raises(PreflightError, match="FALSIFICATION SCOPE"):
+            check_evidence_row_has_falsification_scope_when_negative(
+                repo_root=root,
+                strict=True,
+                verbose=False,
+            )
+
+    def test_exact_negative_family_false_with_scope_passes(
+        self, tmp_path: Path
+    ) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / "reports" / "cathedral_autopilot_evidence.jsonl", """
+            {"technique":"lossy_config","evidence_grade":"[contest-CUDA A-negative]","family_falsified":false,"falsification_scope":"measured_config_only"}
+        """)
+        assert check_evidence_row_has_falsification_scope_when_negative(
+            repo_root=root,
+            strict=True,
+            verbose=False,
+        ) == []
+
+    def test_family_falsified_true_still_fails(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / "reports" / "cathedral_autopilot_evidence.jsonl", """
+            {"technique":"bad_family_kill","evidence_grade":"[CPU-build]","family_falsified":true,"falsification_scope":"family"}
+        """)
+        with pytest.raises(PreflightError, match="FALSIFICATION SCOPE"):
+            check_evidence_row_has_falsification_scope_when_negative(
+                repo_root=root,
+                strict=True,
+                verbose=False,
+            )

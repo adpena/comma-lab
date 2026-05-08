@@ -265,7 +265,7 @@ def test_grayscale_lut_in_codec_pipeline() -> None:
     sd = _synthetic_mask_input()
     pipeline = CodecPipeline([Op_GrayscaleLutMask()])
     blob, manifest = pipeline.encode(sd)
-    assert blob[:4] == b"CPL1"
+    assert blob[:4] in (b"CPL1", b"CPL2")  # CPL2 is canonical default 2026-05-08
     assert manifest.final_bytes == len(blob)
     decoded, replayed = pipeline.decode(blob)
     assert replayed == ["alpha_grayscale_lut_mask"]
@@ -279,7 +279,7 @@ def test_wavelet_in_codec_pipeline_or_skip() -> None:
     if not op_rep.passed:
         pytest.skip(f"alpha-wavelet not ready: {op_rep.findings}")
     blob, manifest = pipeline.encode(sd)
-    assert blob[:4] == b"CPL1"
+    assert blob[:4] in (b"CPL1", b"CPL2")  # CPL2 is canonical default 2026-05-08
     decoded, replayed = pipeline.decode(blob)
     assert replayed == ["alpha_wavelet_mask"]
     assert decoded["masks"].shape == sd["masks"].shape

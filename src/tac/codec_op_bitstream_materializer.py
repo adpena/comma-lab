@@ -323,6 +323,8 @@ def _extract_payload_bytes(
 
     base_dir = source_manifest_path.parent if source_manifest_path is not None else Path.cwd()
     for key in (
+        "materialized_payload_path",
+        "replacement_payload_path",
         "payload_path",
         "blob_path",
         "candidate_substream_path",
@@ -366,6 +368,8 @@ def _verify_expected_payload_custody(
             "payload_bytes",
             "blob_bytes",
             "bytes_out",
+            "materialized_payload_bytes",
+            "replacement_payload_bytes",
             "candidate_substream_bytes",
             "replacement_bytes",
             "expected_payload_bytes",
@@ -380,6 +384,8 @@ def _verify_expected_payload_custody(
         (
             "payload_sha256",
             "blob_sha256",
+            "materialized_payload_sha256",
+            "replacement_payload_sha256",
             "candidate_substream_sha256",
             "replacement_sha256",
             "expected_payload_sha256",

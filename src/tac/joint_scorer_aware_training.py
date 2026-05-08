@@ -502,7 +502,8 @@ class JointScorerAwareLoss(nn.Module):
         # KL(P || Q) where P = softmax(GT/T), Q = softmax(HAT/T) (Hinton).
         log_p_hat = F.log_softmax(seg_logits_hat / T, dim=1)
         p_gt = F.softmax(seg_logits_gt / T, dim=1)
-        loss_seg = F.kl_div(log_p_hat, p_gt, reduction="batchmean") * (T * T)
+        loss_seg = F.kl_div(log_p_hat, p_gt, reduction="none").sum(dim=1).mean()
+        loss_seg = loss_seg * (T * T)
 
         # PoseNet MSE on first-6 dims. PoseNet expects 2-frame YUV6 input;
         # for the CPU smoke we accept any tensor shape and let the scorer
@@ -749,11 +750,8 @@ def train_joint_scorer_aware_renderer(
         if has_params
         else None
     )
-    for step in range(int(smoke_steps or 0)):
-        if callable(frames):
-            x_gt = frames()
-        else:
-            x_gt = frames
+    for _step in range(int(smoke_steps or 0)):
+        x_gt = frames() if callable(frames) else frames
         # Smoke: x_hat is just renderer(x_gt). Real training has a more
         # elaborate compress/inflate roundtrip; CPU smoke validates wiring.
         try:

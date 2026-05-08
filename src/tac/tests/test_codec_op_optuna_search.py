@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import sys
@@ -214,6 +215,10 @@ def test_append_atom_ledger_rows_uses_planning_only_metadata(tmp_path: Path) -> 
             timestamp_utc="2026-05-07T00:00:00Z",
             expected_tensor_count=1,
             matched_tensor_count=1,
+            materialized_payload_path="payloads/eval_00000.section",
+            materialized_payload_bytes=100,
+            materialized_payload_sha256="a" * 64,
+            materialized_payload_contract="pr106_decoder_packed_brotli",
         ),
         tool.Evaluation(
             eval_idx=1,
@@ -261,6 +266,10 @@ def test_append_atom_ledger_rows_uses_planning_only_metadata(tmp_path: Path) -> 
     assert first["byte_delta"] == 0
     assert first["expected_tensor_count"] == 1
     assert first["matched_tensor_count"] == 1
+    assert first["materialized_payload_path"] == "payloads/eval_00000.section"
+    assert first["materialized_payload_bytes"] == 100
+    assert first["materialized_payload_sha256"] == "a" * 64
+    assert first["materialized_payload_contract"] == "pr106_decoder_packed_brotli"
     assert first["pareto_frontier"] is True
     assert dominated["pareto_frontier"] is False
     assert dominated["pareto_dominated_by"] == [0]
@@ -275,7 +284,8 @@ def test_main_writes_strict_report_schema_and_ledger(tmp_path: Path) -> None:
         """
 class Result:
     def __init__(self, bytes_out, op_state):
-        self.blob = b"fixture"
+        repeats = (bytes_out // len(b"fixture")) + 1
+        self.blob = (b"fixture" * repeats)[:bytes_out]
         self.op_state = op_state
         self.bytes_out = bytes_out
 
@@ -300,6 +310,7 @@ class FixtureCodecOp:
     torch.save(_state_dict(), state_path)
     report_path = tmp_path / "report.json"
     ledger_path = tmp_path / "ledger.jsonl"
+    payload_dir = tmp_path / "payloads"
     sys.path.insert(0, str(tmp_path))
     try:
         rc = tool.main(
@@ -332,6 +343,10 @@ class FixtureCodecOp:
                 str(ledger_path),
                 "--substrate-label",
                 "fixture_search",
+                "--materialized-payload-output-dir",
+                str(payload_dir),
+                "--materialized-payload-contract",
+                "pr106_decoder_packed_brotli",
             ]
         )
     finally:
@@ -352,6 +367,28 @@ class FixtureCodecOp:
     assert payload["score_affecting_payload_changed"] is False
     assert payload["charged_bits_changed"] is False
     assert payload["best_eval"]["pareto_frontier"] is True
+    materialized_path = Path(payload["best_eval"]["materialized_payload_path"])
+    materialized_payload = materialized_path.read_bytes()
+    assert materialized_path.is_file()
+    assert payload["best_eval"]["materialized_payload_bytes"] == len(
+        materialized_payload
+    )
+    assert payload["best_eval"]["materialized_payload_sha256"] == hashlib.sha256(
+        materialized_payload
+    ).hexdigest()
+    assert (
+        payload["best_eval"]["materialized_payload_contract"]
+        == "pr106_decoder_packed_brotli"
+    )
     assert payload["optuna_version"] is not None
     assert payload["parameter_space"][0]["name"] == "scale"
-    assert len(ledger_path.read_text(encoding="utf-8").splitlines()) == 3
+    ledger_rows = [
+        json.loads(line)
+        for line in ledger_path.read_text(encoding="utf-8").splitlines()
+    ]
+    assert len(ledger_rows) == 3
+    assert all(row["materialized_payload_path"] for row in ledger_rows)
+    assert all(
+        row["materialized_payload_contract"] == "pr106_decoder_packed_brotli"
+        for row in ledger_rows
+    )

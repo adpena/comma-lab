@@ -65,3 +65,293 @@ def test_autopilot_requires_exact_cuda_for_promotable_evidence() -> None:
 
     assert tool._is_explicitly_promotable_evidence(exact) is True
     assert tool._is_explicitly_promotable_evidence(cpu) is False
+
+
+def test_exact_negative_supersedes_proxy_byte_anchor() -> None:
+    tool = _load_tool_module()
+    catalog = [{
+        "name": "lossy_coarsening_analytical",
+        "predicted_archive_bytes": 180_000,
+        "cost_dollars": 5.0,
+        "cost_hours": 2.0,
+    }]
+    evidence = [
+        tool.TechniqueEvidence(
+            technique="lossy_coarsening_analytical",
+            empirical_archive_bytes=156_344,
+            evidence_grade="[MPS-research-signal]",
+            score_claim=False,
+            promotion_eligible=False,
+            rank_or_kill_eligible=False,
+            ready_for_exact_eval_dispatch=False,
+            dispatch_blockers=["missing_exact_cuda_auth_eval"],
+            source="[MPS-research-signal] byte-only proxy",
+        ),
+        tool.TechniqueEvidence(
+            technique="lossy_coarsening_analytical",
+            empirical_archive_bytes=156_404,
+            empirical_score=0.351718793322788,
+            score_contest_cuda=0.351718793322788,
+            evidence_grade="[contest-CUDA A-negative]",
+            score_claim=False,
+            promotion_eligible=False,
+            rank_or_kill_eligible=False,
+            ready_for_exact_eval_dispatch=False,
+            contest_dispatch_verdict="measured_config_retired_exact_cuda_negative",
+            measured_config_status="measured_config_retired",
+            family_falsified=False,
+            method_family_retired=False,
+            falsification_scope="measured_config_only",
+            reactivation_criteria=[
+                "retrain under scorer-aware loss",
+                "prove byte-closed runtime packet",
+            ],
+            exact_result_review_path=(
+                ".omx/research/"
+                "lossy_coarsening_exact_cuda_result_review_20260508_codex.json"
+            ),
+            dispatch_blockers=["reactivation_required_before_new_dispatch"],
+            source="auth_eval_work/contest_auth_eval.json",
+        ),
+    ]
+
+    updated = tool.update_catalog_from_evidence(
+        catalog,
+        evidence,
+        log_warnings=False,
+    )
+
+    row = updated[0]
+    assert row["predicted_archive_bytes"] == 180_000
+    assert row["exact_negative_evidence_n"] == 1
+    assert row["measured_config_retired"] is True
+    assert row["family_falsified"] is False
+    assert row["method_family_retired"] is False
+    assert row["measured_config_retired_only"] is True
+    assert row["exact_negative_classification"] == "measured_config_retired_only"
+    assert row["exact_negative_falsification_scopes"] == ["measured_config_only"]
+    assert row["reactivation_criteria"] == [
+        "retrain under scorer-aware loss",
+        "prove byte-closed runtime packet",
+    ]
+    assert row["retired_from_active_ranking"] is True
+    assert row["empirical_anchor_promotable"] is False
+    assert row["rank_or_kill_eligible"] is False
+    assert "exact-negative-N1" in row["evidence_grade"]
+    assert (
+        "exact_negative_result_requires_reactivation_before_empirical_byte_anchor"
+        in row["dispatch_blockers"]
+    )
+
+    ranked = tool._rank_techniques(
+        updated,
+        d_seg=0.0,
+        d_pose=0.0,
+        current_archive_bytes=200_000,
+        current_score=1.0,
+        target_score=None,
+    )
+    assert ranked[0]["retired_from_active_ranking"] is True
+    assert ranked[0]["predicted_score_delta"] == 0.0
+
+
+def test_lossy_coarsening_builtin_catalog_classifies_reviewed_negative() -> None:
+    tool = _load_tool_module()
+    evidence = [
+        tool.TechniqueEvidence(
+            technique="lossy_coarsening_analytical",
+            empirical_archive_bytes=156_344,
+            evidence_grade="[MPS-research-signal]",
+            evidence_semantics="mps_or_cpu_byte_roundtrip_proxy_no_score",
+            score_claim=False,
+            promotion_eligible=False,
+            rank_or_kill_eligible=False,
+            ready_for_exact_eval_dispatch=False,
+            dispatch_blockers=[
+                "missing_exact_cuda_auth_eval_on_lossy_decoder",
+                "no_runtime_dequantize_path_built",
+            ],
+            source="[MPS-research-signal] byte proxy manifest",
+        ),
+        tool.TechniqueEvidence(
+            technique="lossy_coarsening_analytical",
+            empirical_archive_bytes=156_404,
+            evidence_grade="[contest-CUDA]",
+            score_claim=False,
+            promotion_eligible=False,
+            rank_or_kill_eligible=False,
+            ready_for_exact_eval_dispatch=False,
+            contest_dispatch_verdict="completed",
+            source="[contest-CUDA] initial harvester row without review semantics",
+        ),
+        tool.TechniqueEvidence(
+            technique="lossy_coarsening_analytical",
+            empirical_archive_bytes=156_404,
+            empirical_score=0.351718793322788,
+            score_contest_cuda=0.351718793322788,
+            evidence_grade="[contest-CUDA A-negative]",
+            score_claim=False,
+            promotion_eligible=False,
+            rank_or_kill_eligible=False,
+            ready_for_exact_eval_dispatch=False,
+            contest_dispatch_verdict="measured_config_retired_exact_cuda_negative",
+            measured_config_status="measured_config_retired",
+            family_falsified=False,
+            method_family_retired=False,
+            falsification_scope="measured_config_only_per_tensor_K_budget_0.05",
+            reactivation_criteria=[
+                "retrain or jointly optimize under scorer-aware loss",
+                "prove byte-closed runtime packet below the active anchor",
+            ],
+            exact_result_review_path=(
+                ".omx/research/"
+                "lossy_coarsening_exact_cuda_result_review_20260508_codex.json"
+            ),
+            dispatch_blockers=[
+                "measured_config_retired_exact_cuda_negative",
+                "reactivation_required_before_new_dispatch",
+            ],
+            source="[contest-CUDA A-negative] reviewed auth eval",
+        ),
+    ]
+
+    plan = tool.build_plan(
+        d_seg=0.0,
+        d_pose=0.0,
+        archive_bytes=200_000,
+        prior_evidence=evidence,
+        include_axis_priorities=False,
+    )
+
+    report = plan.evidence_semantics_report
+    assert "lossy_coarsening_analytical" in report[
+        "cataloged_exact_negative_techniques"
+    ]
+    assert "lossy_coarsening_analytical" in report[
+        "active_ranking_blocked_techniques"
+    ]
+    assert all(
+        row["technique"] != "lossy_coarsening_analytical"
+        for row in report["unknown_evidence_techniques"]
+    )
+
+    row = next(
+        item for item in plan.arch_technique_ranking
+        if item["name"] == "lossy_coarsening_analytical"
+    )
+    assert row["predicted_archive_bytes"] == 156_344
+    assert row["predicted_score_delta"] == 0.0
+    assert row["active_ranking_blocked"] is True
+    assert row["retired_from_active_ranking"] is True
+    assert row["measured_config_retired_only"] is True
+    assert row["exact_negative_classification"] == "measured_config_retired_only"
+    assert row["family_falsified"] is False
+    assert row["method_family_retired"] is False
+    assert row["supporting_non_promotable_evidence_n"] == 2
+    assert row["exact_negative_falsification_scopes"] == [
+        "measured_config_only_per_tensor_K_budget_0.05"
+    ]
+    assert row["reactivation_criteria"] == [
+        "retrain or jointly optimize under scorer-aware loss",
+        "prove byte-closed runtime packet below the active anchor",
+    ]
+
+
+def test_proxy_byte_anchor_cannot_dominate_active_ranking() -> None:
+    tool = _load_tool_module()
+    catalog = [{
+        "name": "byte_only_proxy_lane",
+        "predicted_archive_bytes": 190_000,
+        "cost_dollars": 1.0,
+        "cost_hours": 1.0,
+    }, {
+        "name": "unblocked_zero_delta_lane",
+        "predicted_archive_bytes": 250_000,
+        "cost_dollars": 100.0,
+        "cost_hours": 1.0,
+    }]
+    evidence = [
+        tool.TechniqueEvidence(
+            technique="byte_only_proxy_lane",
+            empirical_archive_bytes=50_000,
+            evidence_grade="[CPU-prep byte-only]",
+            evidence_semantics="cpu_byte_anchor_no_score",
+            score_claim=False,
+            promotion_eligible=False,
+            rank_or_kill_eligible=False,
+            ready_for_exact_eval_dispatch=False,
+            dispatch_blockers=["missing_exact_cuda_auth_eval"],
+            source="[CPU-prep byte-only] local manifest",
+        ),
+    ]
+
+    updated = tool.update_catalog_from_evidence(
+        catalog,
+        evidence,
+        log_warnings=False,
+    )
+    row = next(r for r in updated if r["name"] == "byte_only_proxy_lane")
+    assert row["predicted_archive_bytes"] == 50_000
+    assert row["empirical_anchor_promotable"] is False
+    assert row["active_ranking_blocked"] is True
+
+    ranked = tool._rank_techniques(
+        updated,
+        d_seg=0.0,
+        d_pose=0.0,
+        current_archive_bytes=200_000,
+        current_score=1.0,
+        target_score=None,
+    )
+    assert ranked[-1]["name"] == "byte_only_proxy_lane"
+    assert ranked[-1]["active_ranking_blocked"] is True
+    assert ranked[-1]["predicted_score_delta"] == 0.0
+
+
+def test_unknown_evidence_techniques_are_reported_not_ranked() -> None:
+    tool = _load_tool_module()
+    evidence = [
+        tool.TechniqueEvidence(
+            technique="unmodeled_proxy_codec",
+            empirical_archive_bytes=42_000,
+            evidence_grade="[CPU-prep byte-only]",
+            source="[CPU-prep byte-only] local manifest",
+        ),
+        tool.TechniqueEvidence(
+            technique="unmodeled_exact_negative_codec",
+            empirical_archive_bytes=40_000,
+            evidence_grade="[contest-CUDA A-negative]",
+            contest_dispatch_verdict="measured_config_retired_exact_cuda_negative",
+            measured_config_status="measured_config_retired",
+            source="[contest-CUDA A-negative] auth eval",
+        ),
+    ]
+
+    plan = tool.build_plan(
+        d_seg=0.0,
+        d_pose=0.0,
+        archive_bytes=200_000,
+        prior_evidence=evidence,
+        include_axis_priorities=False,
+    )
+
+    report = plan.evidence_semantics_report
+    assert report["unknown_evidence_row_count"] == 2
+    assert report["unknown_evidence_technique_count"] == 2
+    assert report["unknown_exact_negative_row_count"] == 1
+    unknown_names = {
+        row["technique"] for row in report["unknown_evidence_techniques"]
+    }
+    assert unknown_names == {
+        "unmodeled_proxy_codec",
+        "unmodeled_exact_negative_codec",
+    }
+    ranked_names = {
+        row["name"]
+        for row in (
+            plan.encoder_technique_ranking + plan.arch_technique_ranking
+        )
+    }
+    assert "unmodeled_proxy_codec" not in ranked_names
+    assert "unmodeled_exact_negative_codec" not in ranked_names
+    assert "unknown technique" in " ".join(plan.notes)

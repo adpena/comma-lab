@@ -71,6 +71,67 @@ def test_to_meta_lagrangian_candidates_emits_strict_evaluate_schema() -> None:
     assert set(rows[0]).issubset(accepted)
 
 
+def test_materialized_payload_output_dir_writes_codec_op_blobs(
+    tmp_path: pathlib.Path,
+) -> None:
+    mod = _load_tool_module()
+    payload = b"materialized-section-bytes"
+
+    class FakeEncodeResult:
+        blob = payload
+        bytes_out = len(payload)
+
+    class Op_TestMaterialize:
+        def __init__(self, *, q: int = 1) -> None:
+            self.q = q
+
+        def encode(self, state_dict, context):
+            _ = state_dict, context
+            return FakeEncodeResult()
+
+        def decode(self, blob, context):
+            _ = blob, context
+            return {}
+
+        def validate(self, before, after, context):
+            _ = before, after, context
+            return types.SimpleNamespace(ok=True, metrics={})
+
+    fake_module = types.ModuleType("fake_materialized_codec_op")
+    fake_module.Op_TestMaterialize = Op_TestMaterialize
+    sys.modules[fake_module.__name__] = fake_module
+
+    state_dict_path = tmp_path / "state.pt"
+    torch.save({"dummy": torch.zeros(1)}, state_dict_path)
+    manifest_path = tmp_path / "manifest.json"
+    payload_dir = tmp_path / "payloads"
+
+    rc = mod.main([
+        "--module", fake_module.__name__,
+        "--class", "Op_TestMaterialize",
+        "--state-dict-path", str(state_dict_path),
+        "--param-grid", '{"q": [2]}',
+        "--anchor-d-seg", "0.000671",
+        "--anchor-d-pose", "0.0000336",
+        "--anchor-archive-bytes", "185578",
+        "--baseline-substream-bytes", "30",
+        "--baseline-substream-role", "decoder_packed_brotli",
+        "--label-prefix", "mat_payload",
+        "--output", str(manifest_path),
+        "--materialized-payload-output-dir", str(payload_dir),
+        "--materialized-payload-contract", "pr106_decoder_packed_brotli",
+    ])
+
+    assert rc == 0
+    row = json.loads(manifest_path.read_text(encoding="utf-8"))["candidates"][0]
+    materialized_path = pathlib.Path(row["materialized_payload_path"])
+    assert materialized_path.is_file()
+    assert materialized_path.read_bytes() == payload
+    assert row["materialized_payload_bytes"] == len(payload)
+    assert row["materialized_payload_sha256"]
+    assert row["materialized_payload_contract"] == "pr106_decoder_packed_brotli"
+
+
 def test_pr101_substitution_updates_manifest_and_meta_lagrangian_rows(
     tmp_path: pathlib.Path,
 ) -> None:

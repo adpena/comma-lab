@@ -49,6 +49,15 @@ def test_default_plan_is_deterministic_and_scoreless() -> None:
     assert manifest["metadata"]["nested_optimization"]["levels"] == list(NESTED_OPTIMIZATION_LEVELS)
     assert manifest["metadata"]["nested_optimization"]["score_band_prediction"] == PREDICTED_NESTED_SCORE_BAND
     assert manifest["metadata"]["nested_optimization"]["score_band_prediction"]["score_claim"] is False
+    score_band = manifest["metadata"]["nested_optimization"]["score_band_prediction"]
+    assert score_band["claim_count"] == 8
+    assert len(score_band["claims"]) == 8
+    for row in score_band["claims"]:
+        assert row["score_claim"] is False
+        assert row["promotion_eligible"] is False
+        assert row["rank_or_kill_eligible"] is False
+        assert row["ready_for_exact_eval_dispatch"] is False
+        assert row["requires_exact_1to1_anchor"] is True
     assert manifest["metadata"]["canonical_qat_pipeline"]["passes"] == list(CANONICAL_QAT_PASSES)
     assert manifest["metadata"]["quality_mandate"] == list(QUALITY_MANDATE_11)
     assert (

@@ -13,6 +13,14 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
+import brotli
+
+from tac.hnerv_generated_schema_packet import (
+    HNGP_MAGIC,
+    HNeRVGeneratedSchemaPacketError,
+    inspect_hnerv_generated_schema_packet,
+)
+
 PR101_DECODER_BLOB_LEN = 162_164
 PR101_LATENT_BLOB_LEN = 15_387
 PR101_INNER_MEMBER_NAME = "x"
@@ -79,9 +87,40 @@ def _inspect_pr101_inner(member_name: str, blob: bytes) -> dict[str, Any] | None
     }
 
 
-def _inspect_pr106_inner(member_name: str, blob: bytes) -> dict[str, Any] | None:
-    if member_name != PR106_INNER_MEMBER_NAME:
+def _inspect_hngp_inner(member_name: str, blob: bytes) -> dict[str, Any] | None:
+    if not blob.startswith(HNGP_MAGIC):
         return None
+    try:
+        packet = inspect_hnerv_generated_schema_packet(blob)
+    except HNeRVGeneratedSchemaPacketError:
+        return None
+    return {
+        "grammar": "hngp_v1",
+        "parser_confidence": "hngp_magic_header_and_section_sha256",
+        "parser_proof_strength": "canonical_hngp_parse",
+        "parser_ambiguous": False,
+        "parser_alternatives": ["hngp_v1"],
+        "single_member_name": member_name,
+        "member_bytes": len(blob),
+        "packet_sha256": packet["packet_sha256"],
+        "sections": [
+            {
+                "name": section["name"],
+                "role": section["role"],
+                "offset": int(section["offset"]),
+                "len": int(section["len"]),
+                "sha256": section["sha256"],
+            }
+            for section in packet["sections"]
+        ],
+        "component_budget_implication": (
+            "generated-schema HNGP packet; logical edits must target hngs_decoder, "
+            "latent_blob, or sidecar_blob under the HNGP parser"
+        ),
+    }
+
+
+def _inspect_pr106_inner(member_name: str, blob: bytes) -> dict[str, Any] | None:
     if len(blob) < PR106_HEADER_LEN or blob[0] != PR106_HEADER_MAGIC:
         return None
     decoder_len = int.from_bytes(blob[1:4], "little")
@@ -92,9 +131,18 @@ def _inspect_pr106_inner(member_name: str, blob: bytes) -> dict[str, Any] | None
     header = blob[:PR106_HEADER_LEN]
     decoder = blob[decoder_start:decoder_end]
     tail = blob[decoder_end:]
+    decoder_valid = _brotli_decompresses(decoder)
+    tail_valid = _brotli_decompresses(tail)
     return {
         "grammar": "pr106_ff_packed_hnerv",
-        "parser_confidence": "exact_member_name_magic_and_24bit_decoder_len",
+        "parser_confidence": "magic_and_24bit_decoder_len",
+        "parser_proof_strength": (
+            "magic_len_and_brotli_streams" if decoder_valid and tail_valid else "magic_len_only"
+        ),
+        "validated_streams": {
+            "decoder_packed_brotli": decoder_valid,
+            "latents_and_sidecar_brotli": tail_valid,
+        },
         "single_member_name": member_name,
         "member_bytes": len(blob),
         "decoder_len_field": decoder_len,
@@ -120,6 +168,49 @@ def _inspect_pr106_inner(member_name: str, blob: bytes) -> dict[str, Any] | None
     }
 
 
+def _brotli_decompresses(data: bytes) -> bool:
+    if not data:
+        return False
+    try:
+        brotli.decompress(data)
+    except brotli.error:
+        return False
+    return True
+
+
+def _resolve_logical_layout(member_name: str, blob: bytes) -> tuple[dict[str, Any] | None, list[str]]:
+    candidates = [
+        candidate
+        for candidate in (
+            _inspect_hngp_inner(member_name, blob),
+            _inspect_pr106_inner(member_name, blob),
+            _inspect_pr101_inner(member_name, blob),
+        )
+        if candidate is not None
+    ]
+    if not candidates:
+        return None, ["No known internal grammar was proven; logical stream budgets are unavailable."]
+    if len(candidates) == 1:
+        candidate = candidates[0]
+        candidate["parser_ambiguous"] = False
+        candidate["parser_alternatives"] = [candidate["grammar"]]
+        return candidate, []
+
+    pr106 = next((candidate for candidate in candidates if candidate["grammar"] == "pr106_ff_packed_hnerv"), None)
+    if pr106 is not None and pr106.get("parser_proof_strength") == "magic_len_and_brotli_streams":
+        pr106["parser_ambiguous"] = False
+        pr106["parser_alternatives"] = [str(candidate["grammar"]) for candidate in candidates]
+        pr106["ambiguity_resolution"] = (
+            "PR106 selected over fixed-offset PR101 because both PR106 logical Brotli streams decode"
+        )
+        return pr106, []
+
+    return None, [
+        "Multiple internal grammars matched; logical layout is ambiguous and must fail closed.",
+        "Resolve ambiguity with known source SHA/runtime adapter identity or validated PR106 stream decoding.",
+    ]
+
+
 def inspect_frontier_archive_layout(archive_path: Path) -> dict[str, Any]:
     """Return a deterministic no-score layout manifest for one archive ZIP."""
     archive_path = Path(archive_path)
@@ -133,7 +224,8 @@ def inspect_frontier_archive_layout(archive_path: Path) -> dict[str, Any]:
         names = zf.namelist()
         duplicate_names = sorted({name for name in names if names.count(name) > 1})
         for index, info in enumerate(zf.infolist()):
-            blob = zf.read(info.filename)
+            with zf.open(info, "r") as f:
+                blob = f.read()
             total_compressed += info.compress_size
             member_payloads.append((info.filename, blob))
             members.append(
@@ -153,17 +245,17 @@ def inspect_frontier_archive_layout(archive_path: Path) -> dict[str, Any]:
     zip_overhead = archive_bytes - total_compressed
 
     logical_layout = None
+    logical_cautions: list[str] = []
     if is_single_member:
         member_name, blob = member_payloads[0]
-        logical_layout = _inspect_pr101_inner(member_name, blob) or _inspect_pr106_inner(member_name, blob)
+        logical_layout, logical_cautions = _resolve_logical_layout(member_name, blob)
 
     cautions = [
         "ZIP-member layout is physical custody only; do not infer mask/pose budgets from member names.",
         "A single monolithic member falsifies separate ZIP-member budgets, not parser-proven logical sections.",
         "Score, promotion, and family-retirement claims remain forbidden without exact CUDA auth eval.",
     ]
-    if logical_layout is None:
-        cautions.append("No known internal grammar was proven; logical stream budgets are unavailable.")
+    cautions.extend(logical_cautions)
 
     return {
         "schema": "tac_frontier_archive_layout_v1",

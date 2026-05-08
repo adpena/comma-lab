@@ -229,7 +229,7 @@ def _build_seg_loss(
 
     log_q = torch.log_softmax(seg_logits_quantized, dim=1)
     p_t = torch.softmax(seg_logits_target, dim=1)
-    return torch.nn.functional.kl_div(log_q, p_t, reduction="batchmean")
+    return torch.nn.functional.kl_div(log_q, p_t, reduction="none").sum(dim=1).mean()
 
 
 def _run_scorer(

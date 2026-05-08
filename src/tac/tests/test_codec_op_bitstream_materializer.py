@@ -194,3 +194,34 @@ def test_cli_materializes_payload_path_from_manifest_custody(tmp_path: Path) -> 
     assert parsed["payload"] == payload_path.read_bytes()
     assert manifest["source_payload"]["source"]["kind"] == "explicit_payload_path"
     assert manifest["charged_byte_blob"]["payload_sha256"] == sha256_file(payload_path)
+
+
+def test_materializer_accepts_standardized_materialized_payload_aliases(
+    tmp_path: Path,
+) -> None:
+    payload_path = tmp_path / "materialized.section"
+    payload_path.write_bytes(b"standardized-materialized-payload")
+    source = _source(payload_path.read_bytes())
+    source.pop("blob_base64")
+    source.pop("bytes_out")
+    source.pop("blob_sha256")
+    source.update(
+        {
+            "materialized_payload_path": payload_path.name,
+            "materialized_payload_bytes": payload_path.stat().st_size,
+            "materialized_payload_sha256": sha256_file(payload_path),
+        }
+    )
+    source_json = tmp_path / "source.json"
+    source_json.write_text(json.dumps(source, sort_keys=True), encoding="utf-8")
+
+    manifest = materialize_codec_op_bitstream(
+        source,
+        source_manifest_path=source_json,
+        output_blob=tmp_path / "materialized.cobm",
+    )
+
+    assert manifest["source_payload"]["source"]["kind"] == (
+        "manifest_payload_path:materialized_payload_path"
+    )
+    assert manifest["charged_byte_blob"]["payload_sha256"] == sha256_file(payload_path)

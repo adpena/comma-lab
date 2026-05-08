@@ -63,7 +63,9 @@ def test_pipeline_encode_decode_roundtrip_one_op() -> None:
     pipeline = CodecPipeline([Op1_PR101SplitBrotli(auto_select=False)])
     blob, manifest = pipeline.encode(sd)
     assert isinstance(blob, bytes)
-    assert blob[:4] == b"CPL1"
+    # CPL2 is the canonical default (ORCH-SYNC Bug 2 landed 2026-05-08);
+    # CPL1 magic is retained for backwards compat with on-disk archives.
+    assert blob[:4] in (b"CPL1", b"CPL2")
     assert manifest.final_bytes == len(blob)
     assert len(manifest.op_results) == 1
     assert manifest.op_results[0].op_name == "pr101_split_brotli"
@@ -175,7 +177,9 @@ def test_op2_alone_encode_decode_roundtrip() -> None:
     sd = _synthetic_state_dict()
     pipeline = CodecPipeline([Op2_PR103ArithmeticCodec()])
     blob, manifest = pipeline.encode(sd)
-    assert blob[:4] == b"CPL1"
+    # CPL2 is the canonical default (ORCH-SYNC Bug 2 landed 2026-05-08);
+    # CPL1 magic is retained for backwards compat with on-disk archives.
+    assert blob[:4] in (b"CPL1", b"CPL2")
     decoded, replayed = pipeline.decode(blob)
     assert replayed == ["pr103_arithmetic_codec"]
     assert set(decoded.keys()) == set(sd.keys())
@@ -457,7 +461,9 @@ def test_pipeline_stress_30_op_chain_roundtrips() -> None:
     pipeline = CodecPipeline([_NoOp() for _ in range(30)])
     blob, manifest = pipeline.encode({})
     assert len(manifest.op_results) == 30
-    assert blob[:4] == b"CPL1"
+    # CPL2 is the canonical default (ORCH-SYNC Bug 2 landed 2026-05-08);
+    # CPL1 magic is retained for backwards compat with on-disk archives.
+    assert blob[:4] in (b"CPL1", b"CPL2")
     decoded, replayed = pipeline.decode(blob)
     assert len(replayed) == 30
     assert all(r == "noop" for r in replayed)

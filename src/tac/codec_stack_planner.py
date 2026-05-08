@@ -21,6 +21,11 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
+from tac.omega_opt_claims import (
+    OMEGA_OPT_CLAIM_SCHEMA,
+    omega_opt_claim_rows,
+)
+
 STACK_PLANNER_SCHEMA: str = "tac_hstack_vstack_multipass_plan_v2"
 PROMOTION_POLICY_SCHEMA: str = "tac_codec_stack_fail_closed_promotion_policy_v1"
 
@@ -68,11 +73,15 @@ QUALITY_MANDATE_11: tuple[str, ...] = (
 )
 
 PREDICTED_NESTED_SCORE_BAND: dict[str, Any] = {
-    "linear_stack_prediction": 0.130,
-    "full_nested_score_feedback_prediction": 0.090,
+    "schema": OMEGA_OPT_CLAIM_SCHEMA,
+    "claim_count": 8,
     "evidence_grade": "prediction",
     "score_claim": False,
     "promotion_allowed": False,
+    "promotion_eligible": False,
+    "rank_or_kill_eligible": False,
+    "ready_for_exact_eval_dispatch": False,
+    "claims": omega_opt_claim_rows(),
 }
 
 BALLE_HYPERPRIOR_BLOCKERS: tuple[str, ...] = (

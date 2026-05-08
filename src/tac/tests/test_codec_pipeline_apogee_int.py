@@ -154,7 +154,7 @@ def test_op3_alone_int6_roundtrip_via_pipeline() -> None:
     sd = _synthetic_state_dict()
     pipeline = CodecPipeline([Op3_ApogeeIntN_Substrate(bits=6)])
     blob, manifest = pipeline.encode(sd)
-    assert blob[:4] == b"CPL1"
+    assert blob[:4] in (b"CPL1", b"CPL2")  # CPL2 is canonical default 2026-05-08
     decoded, replayed = pipeline.decode(blob)
     assert replayed == ["apogee_intN_substrate"]
     assert set(decoded.keys()) == set(sd.keys())
@@ -226,7 +226,7 @@ def test_op3_op1_composition_roundtrip() -> None:
         Op1_PR101SplitBrotli(auto_select=False),
     ])
     blob, manifest = pipeline.encode(sd)
-    assert blob[:4] == b"CPL1"
+    assert blob[:4] in (b"CPL1", b"CPL2")  # CPL2 is canonical default 2026-05-08
     decoded, replayed = pipeline.decode(blob)
     assert replayed == ["apogee_intN_substrate", "pr101_split_brotli"]
     assert set(decoded.keys()) == set(sd.keys())

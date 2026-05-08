@@ -74,6 +74,47 @@ def _make_synthetic_repo(
     return tmp_path, catalog_path, evidence_path
 
 
+def _write_balle_full_manifest(
+    repo_root: Path,
+    *,
+    configs_swept: list[str],
+    results: list[dict],
+    substrate_adaptation_choice: str | None = None,
+) -> Path:
+    """Write the structured full Balle manifest the scanner may ingest."""
+    manifest_dir = (
+        repo_root
+        / "reports"
+        / "raw"
+        / "pr101_compressai_balle_full_20260508T005408Z"
+    )
+    manifest_dir.mkdir(parents=True, exist_ok=True)
+    manifest_path = manifest_dir / "manifest.json"
+    manifest = {
+        "schema": "pr101_compressai_balle_hyperprior_full.v1",
+        "tool": "tools/pr101_compressai_balle_hyperprior_full.py",
+        "evidence_grade": "[MPS-research-signal]",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "best_archive_bytes": min(
+            (int(r.get("archive_bytes", 0)) for r in results),
+            default=0,
+        ),
+        "best_rel_err": 0.99,
+        "configs_swept": configs_swept,
+        "results": results,
+        "substrate_adaptation_choice": (
+            substrate_adaptation_choice
+            or (
+                "PR101 INT8 symbols reshaped to 1x1x448x512 pseudo-image; "
+                "symbols [-127,127] / 127 -> fp32 [-1,1]"
+            )
+        ),
+    }
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    return manifest_path
+
+
 def test_baseline_matching_spec_passes(tmp_path: Path) -> None:
     """A faithful evidence row that matches all model_spec dimensions passes."""
     mod = _load_scanner()
@@ -194,7 +235,7 @@ def test_substrate_mismatch_1d_for_scalehyperprior_fails(tmp_path: Path) -> None
                 "source": (
                     "[MPS-research-signal] reports/raw/pr101_balle_"
                     "hyperprior/manifest.json (ScaleHyperprior on PR101 "
-                    "INT8 symbols reshape 1×1×448×512 pseudo-image)"
+                    "INT8 symbols reshape 1x1x448x512 pseudo-image)"
                 ),
                 "timestamp": "2026-05-08T00:22:37Z",
             },
@@ -275,6 +316,220 @@ def test_variant_partial_exhaustion_for_lossy_int4_fails(tmp_path: Path) -> None
     # variants (qat/lsq/gptq/awq/etc.) should be reported as missing.
     assert any("qat" in m or "lsq" in m or "gptq" in m or "awq" in m for m in missing), (
         f"missing variants should include unexercised alternatives, got {missing}"
+    )
+
+
+def test_negated_variant_mentions_do_not_count_as_coverage(tmp_path: Path) -> None:
+    """A source saying variants were NOT tested must not satisfy model_spec."""
+    mod = _load_scanner()
+    repo, cat, ev = _make_synthetic_repo(
+        tmp_path,
+        catalog_rows=[
+            {
+                "_section": "arch",
+                "name": "lossy_int4_quantization",
+                "predicted_archive_bytes": 105_440,
+                "cost_hours": 6.0,
+                "cost_dollars": 8.0,
+                "model_spec": {
+                    "capacity_constraint": "n_quant=15_int4",
+                    "architecture_class": "low_bit_quantization",
+                    "substrate_constraint": "renderer_weights",
+                    "canonical_shape_family": "int4_per_block_or_per_channel_scales",
+                    "variant_required": [
+                        "naive_ptq",
+                        "qat",
+                        "lsq",
+                        "per_channel_scales",
+                        "mixed_precision_int4_int6_int8",
+                        "gptq",
+                        "awq",
+                    ],
+                },
+            },
+        ],
+        evidence_rows=[
+            {
+                "technique": "lossy_int4_quantization",
+                "empirical_archive_bytes": 100_799,
+                "source": (
+                    "naive PTQ only; QAT, LSQ, per-channel, mixed-precision, "
+                    "GPTQ/AWQ NOT tested"
+                ),
+                "timestamp": "2026-05-08T00:50:00Z",
+            },
+        ],
+    )
+    findings = mod.scan(
+        repo_root=repo,
+        evidence_jsonl=ev,
+        catalog_source=cat,
+    )
+    variant_findings = [
+        f for f in findings if f.spec_field == "variant_required"
+    ]
+    assert variant_findings, (
+        f"expected negated variant inventory to fail; got "
+        f"{[f.as_str() for f in findings]}"
+    )
+    missing = set(variant_findings[0].spec_value)
+    assert "naive_ptq" not in missing
+    assert {"qat", "lsq", "gptq", "awq"}.issubset(missing)
+
+
+def test_sibling_lossy_int4_rows_count_positive_variant_coverage(tmp_path: Path) -> None:
+    """QAT/per-channel/mixed rows count for the parent lossy_int4 class."""
+    mod = _load_scanner()
+    repo, cat, ev = _make_synthetic_repo(
+        tmp_path,
+        catalog_rows=[
+            {
+                "_section": "arch",
+                "name": "lossy_int4_quantization",
+                "predicted_archive_bytes": 105_440,
+                "cost_hours": 6.0,
+                "cost_dollars": 8.0,
+                "model_spec": {
+                    "capacity_constraint": "n_quant=15_int4",
+                    "architecture_class": "low_bit_quantization",
+                    "substrate_constraint": "renderer_weights",
+                    "canonical_shape_family": "int4_per_block_or_per_channel_scales",
+                    "variant_required": [
+                        "naive_ptq",
+                        "qat",
+                        "lsq",
+                        "per_channel_scales",
+                        "mixed_precision_int4_int6_int8",
+                        "gptq",
+                        "awq",
+                    ],
+                },
+            },
+        ],
+        evidence_rows=[
+            {
+                "technique": "lossy_int4_quantization",
+                "empirical_archive_bytes": 100_799,
+                "source": "naive PTQ block_size=1024",
+                "timestamp": "2026-05-08T00:11:19Z",
+            },
+            {
+                "technique": "lossy_int4_quantization_qat",
+                "empirical_archive_bytes": 115_641,
+                "source": "QAT with LSQ-style learnable per-block scales",
+                "timestamp": "2026-05-08T00:58:42Z",
+            },
+            {
+                "technique": "lossy_int4_per_channel_scales",
+                "empirical_archive_bytes": 115_958,
+                "reactivation_criteria_tested": ["per_channel_scales"],
+                "source": "per-output-channel fp16 scales",
+                "timestamp": "2026-05-08T01:17:32Z",
+            },
+            {
+                "technique": "lossy_int4_mixed_precision",
+                "empirical_archive_bytes": 187_785,
+                "reactivation_criteria_tested": ["mixed_precision_int4_int6_int8"],
+                "source": "mixed-precision int4/int6/int8 greedy assignment",
+                "timestamp": "2026-05-08T02:05:20Z",
+            },
+        ],
+    )
+    findings = mod.scan(
+        repo_root=repo,
+        evidence_jsonl=ev,
+        catalog_source=cat,
+    )
+    variant_findings = [
+        f for f in findings if f.spec_field == "variant_required"
+    ]
+    assert variant_findings, "GPTQ/AWQ should remain unexercised"
+    assert set(variant_findings[0].spec_value) == {"gptq", "awq"}
+
+
+def test_positive_gptq_awq_rows_close_lossy_int4_variant_gap(tmp_path: Path) -> None:
+    """Only explicit GPTQ/AWQ implementation rows satisfy those variants."""
+    mod = _load_scanner()
+    repo, cat, ev = _make_synthetic_repo(
+        tmp_path,
+        catalog_rows=[
+            {
+                "_section": "arch",
+                "name": "lossy_int4_quantization",
+                "predicted_archive_bytes": 105_440,
+                "cost_hours": 6.0,
+                "cost_dollars": 8.0,
+                "model_spec": {
+                    "capacity_constraint": "n_quant=15_int4",
+                    "architecture_class": "low_bit_quantization",
+                    "substrate_constraint": "renderer_weights",
+                    "canonical_shape_family": "int4_per_block_or_per_channel_scales",
+                    "variant_required": [
+                        "naive_ptq",
+                        "qat",
+                        "lsq",
+                        "per_channel_scales",
+                        "mixed_precision_int4_int6_int8",
+                        "gptq",
+                        "awq",
+                    ],
+                },
+            },
+        ],
+        evidence_rows=[
+            {
+                "technique": "lossy_int4_quantization",
+                "empirical_archive_bytes": 100_799,
+                "source": "naive PTQ block_size=1024",
+                "timestamp": "2026-05-08T00:11:19Z",
+            },
+            {
+                "technique": "lossy_int4_quantization_qat",
+                "empirical_archive_bytes": 115_641,
+                "source": "QAT with LSQ-style learnable per-block scales",
+                "timestamp": "2026-05-08T00:58:42Z",
+            },
+            {
+                "technique": "lossy_int4_per_channel_scales",
+                "empirical_archive_bytes": 115_958,
+                "reactivation_criteria_tested": ["per_channel_scales"],
+                "source": "per-output-channel fp16 scales",
+                "timestamp": "2026-05-08T01:17:32Z",
+            },
+            {
+                "technique": "lossy_int4_mixed_precision",
+                "empirical_archive_bytes": 187_785,
+                "reactivation_criteria_tested": ["mixed_precision_int4_int6_int8"],
+                "source": "mixed-precision int4/int6/int8 greedy assignment",
+                "timestamp": "2026-05-08T02:05:20Z",
+            },
+            {
+                "technique": "lossy_int4_quantization_gptq",
+                "empirical_archive_bytes": 100_844,
+                "reactivation_criteria_tested": ["GPTQ_calibration"],
+                "source": "GPTQ samples=64 damping=0.01 block_size_gptq=128",
+                "timestamp": "2026-05-08T02:41:39Z",
+            },
+            {
+                "technique": "lossy_int4_quantization_awq",
+                "empirical_archive_bytes": 100_714,
+                "reactivation_criteria_tested": ["AWQ_calibration"],
+                "source": "AWQ samples=64 alpha grid activation-aware scaling",
+                "timestamp": "2026-05-08T02:46:04Z",
+            },
+        ],
+    )
+    findings = mod.scan(
+        repo_root=repo,
+        evidence_jsonl=ev,
+        catalog_source=cat,
+    )
+    variant_findings = [
+        f for f in findings if f.spec_field == "variant_required"
+    ]
+    assert not variant_findings, (
+        f"positive GPTQ/AWQ rows should close the variant gap; got "
+        f"{[f.as_str() for f in variant_findings]}"
     )
 
 
@@ -359,7 +614,7 @@ def test_multi_criteria_one_missing_fails(tmp_path: Path) -> None:
                 "empirical_archive_bytes": 200_000,
                 "source": (
                     "subagent built proper 7KB compressed scale_hyperprior "
-                    "on 1D weight symbols reshaped to 1×1×448×512 "
+                    "on 1D weight symbols reshaped to 1x1x448x512 "
                     "pseudo-image (substrate-mismatched)"
                 ),
                 "timestamp": "2026-05-08T05:00:00Z",
@@ -384,6 +639,145 @@ def test_multi_criteria_one_missing_fails(tmp_path: Path) -> None:
         f"capacity should not flag in this case; got "
         f"{[f.as_str() for f in capacity_findings]}"
     )
+
+
+def test_balle_full_manifest_closes_variants_but_fails_capacity_and_substrate(
+    tmp_path: Path,
+) -> None:
+    """Structured full Balle manifest proves variants, not model-spec fidelity."""
+    mod = _load_scanner()
+    repo, cat, ev = _make_synthetic_repo(
+        tmp_path,
+        catalog_rows=[
+            {
+                "name": "compressai_balle_hyperprior",
+                "model_spec": {
+                    "capacity_constraint": "5KB_to_10KB_compressed_hyperprior",
+                    "architecture_class": "ScaleHyperprior",
+                    "substrate_constraint": "2d_natural_image",
+                    "canonical_shape_family": "hyperprior_side_info_GDN_nonlinearity",
+                    "variant_required": [
+                        "scale_hyperprior",
+                        "mean_scale_hyperprior",
+                    ],
+                },
+            },
+        ],
+        evidence_rows=[
+            {
+                "technique": "compressai_balle_hyperprior",
+                "source": (
+                    "only 1.1KB MLP tested; 5-10KB MLP / full "
+                    "ScaleHyperprior / cross-tensor hyperprior NOT tested"
+                ),
+                "timestamp": "2026-05-08T00:50:00Z",
+                "contest_dispatch_verdict": "DEFERRED-pending-research",
+            },
+        ],
+    )
+    manifest_path = _write_balle_full_manifest(
+        repo,
+        configs_swept=[
+            "scale:N8:M4",
+            "scale:N12:M6",
+            "mean_scale:N8:M4",
+        ],
+        results=[
+            {
+                "model_class": "scale",
+                "model_blob_brotli_bytes": 29_477,
+                "archive_bytes": 47_187,
+            },
+            {
+                "model_class": "mean_scale",
+                "model_blob_brotli_bytes": 26_524,
+                "archive_bytes": 44_054,
+            },
+        ],
+    )
+    findings = mod.scan(
+        repo_root=repo,
+        evidence_jsonl=ev,
+        catalog_source=cat,
+    )
+    variant_findings = [
+        f for f in findings if f.spec_field == "variant_required"
+    ]
+    assert not variant_findings, (
+        f"structured manifest should close only variant debt; got "
+        f"{[f.as_str() for f in variant_findings]}"
+    )
+    capacity_findings = [
+        f for f in findings if f.spec_field == "capacity_constraint"
+    ]
+    substrate_findings = [
+        f for f in findings if f.spec_field == "substrate_constraint"
+    ]
+    assert capacity_findings, (
+        f"full manifest is outside the 5KB-10KB capacity band; got "
+        f"{[f.as_str() for f in findings]}"
+    )
+    assert substrate_findings, (
+        f"pseudo-image INT8-symbol substrate must fail closed; got "
+        f"{[f.as_str() for f in findings]}"
+    )
+    assert all(
+        str(manifest_path.relative_to(repo)) in f.evidence_source
+        for f in capacity_findings + substrate_findings
+    )
+    assert all("1.1KB MLP" not in f.evidence_source for f in findings)
+
+
+def test_balle_full_manifest_missing_mean_scale_keeps_variant_gap(
+    tmp_path: Path,
+) -> None:
+    """The supplemental manifest parser must not infer unlisted variants."""
+    mod = _load_scanner()
+    repo, cat, ev = _make_synthetic_repo(
+        tmp_path,
+        catalog_rows=[
+            {
+                "name": "compressai_balle_hyperprior",
+                "model_spec": {
+                    "capacity_constraint": "5KB_to_10KB_compressed_hyperprior",
+                    "architecture_class": "ScaleHyperprior",
+                    "substrate_constraint": "2d_natural_image",
+                    "canonical_shape_family": "hyperprior_side_info_GDN_nonlinearity",
+                    "variant_required": [
+                        "scale_hyperprior",
+                        "mean_scale_hyperprior",
+                    ],
+                },
+            },
+        ],
+        evidence_rows=[],
+    )
+    _write_balle_full_manifest(
+        repo,
+        configs_swept=["scale:N8:M4", "scale:N12:M6"],
+        results=[
+            {
+                "model_class": "scale",
+                "model_blob_brotli_bytes": 29_477,
+                "archive_bytes": 47_187,
+            },
+        ],
+    )
+    findings = mod.scan(
+        repo_root=repo,
+        evidence_jsonl=ev,
+        catalog_source=cat,
+    )
+    variant_findings = [
+        f for f in findings if f.spec_field == "variant_required"
+    ]
+    assert variant_findings, (
+        f"missing mean_scale variant should remain guard debt; got "
+        f"{[f.as_str() for f in findings]}"
+    )
+    missing = set(variant_findings[0].spec_value)
+    assert "scale_hyperprior" not in missing
+    assert "mean_scale_hyperprior" in missing
 
 
 def test_strict_mode_returns_nonzero_when_findings_present(tmp_path: Path) -> None:
@@ -458,11 +852,53 @@ def test_no_model_spec_in_catalog_row_is_flagged(tmp_path: Path) -> None:
     )
 
 
+def test_later_faithful_retest_supersedes_stale_mismatch_row(tmp_path: Path) -> None:
+    """Historical mismatch prose is not current guard debt after a 1:1 re-test."""
+    mod = _load_scanner()
+    repo, cat, ev = _make_synthetic_repo(
+        tmp_path,
+        catalog_rows=[
+            {
+                "name": "tiny_nn_pmf_predictor",
+                "model_spec": {
+                    "capacity_constraint": "<=200_params",
+                    "architecture_class": "MLP",
+                    "substrate_constraint": "1d_quantized_symbols",
+                    "canonical_shape_family": "tensor_id_layer_class_features",
+                    "variant_required": ["mlp_under_200_params"],
+                },
+            },
+        ],
+        evidence_rows=[
+            {
+                "technique": "tiny_nn_pmf_predictor",
+                "source": "rank=8 factorized softmax, 5K params not 200",
+                "timestamp": "2026-05-08T01:00:00Z",
+            },
+            {
+                "technique": "tiny_nn_pmf_predictor",
+                "source": "faithful catalog-spec MLP actual params=188",
+                "timestamp": "2026-05-08T03:00:00Z",
+                "model_spec_fidelity_audit": {
+                    "1:1_fidelity": True,
+                },
+                "supersedes_prior_model_spec_mismatch": True,
+            },
+        ],
+    )
+    findings = mod.scan(
+        repo_root=repo,
+        evidence_jsonl=ev,
+        catalog_source=cat,
+    )
+    assert findings == []
+
+
 def test_self_protection_layer_attaches_warning_metadata(tmp_path: Path) -> None:
     """update_catalog_from_evidence flags mismatches, sets non-promotable."""
     sys.path.insert(0, str(REPO_ROOT / "tools"))
     try:
-        import cathedral_autopilot as ca  # noqa: WPS433
+        import cathedral_autopilot as ca
     finally:
         try:
             sys.path.remove(str(REPO_ROOT / "tools"))
@@ -511,4 +947,63 @@ def test_self_protection_layer_attaches_warning_metadata(tmp_path: Path) -> None
     blockers = row.get("dispatch_blockers") or []
     assert "model_spec_mismatch_pending_faithful_implementation" in blockers, (
         f"expected mismatch blocker; got blockers={blockers}"
+    )
+
+
+def test_self_protection_layer_flags_negated_lossy_int4_inventory() -> None:
+    """cathedral_autopilot must not treat "NOT tested" variants as coverage."""
+    sys.path.insert(0, str(REPO_ROOT / "tools"))
+    try:
+        import cathedral_autopilot as ca
+    finally:
+        try:
+            sys.path.remove(str(REPO_ROOT / "tools"))
+        except ValueError:
+            pass
+
+    catalog = [
+        {
+            "name": "lossy_int4_quantization",
+            "predicted_archive_bytes": 105_440,
+            "cost_hours": 6.0,
+            "cost_dollars": 8.0,
+            "risk": "lossy_high",
+            "evidence_grade": "[predicted]",
+            "description": "n_quant=15 with QAT/LSQ retuning",
+            "model_spec": {
+                "capacity_constraint": "n_quant=15_int4",
+                "architecture_class": "low_bit_quantization",
+                "substrate_constraint": "renderer_weights",
+                "canonical_shape_family": "int4_per_block_or_per_channel_scales",
+                "variant_required": [
+                    "naive_ptq",
+                    "qat",
+                    "lsq",
+                    "per_channel_scales",
+                    "mixed_precision_int4_int6_int8",
+                    "gptq",
+                    "awq",
+                ],
+            },
+        },
+    ]
+    evidence = [
+        ca.TechniqueEvidence(
+            technique="lossy_int4_quantization",
+            empirical_archive_bytes=100_799,
+            source=(
+                "naive PTQ only; QAT, LSQ, per-channel, "
+                "mixed-precision, GPTQ/AWQ NOT tested"
+            ),
+            timestamp="2026-05-08T00:50:00Z",
+        ),
+    ]
+    updated = ca.update_catalog_from_evidence(
+        catalog, evidence, log_warnings=False,
+    )
+    row = updated[0]
+    assert row.get("model_spec_mismatch_count", 0) >= 1
+    assert row.get("empirical_anchor_promotable") is False
+    assert "model_spec_mismatch_pending_faithful_implementation" in row.get(
+        "dispatch_blockers", []
     )

@@ -266,6 +266,130 @@ def test_feedback_loop_treats_missing_custody_flags_as_planning_only() -> None:
     )
 
 
+def test_validation_queue_preserves_blocked_high_upside_signal() -> None:
+    """Blocked CPU/MPS anchors should be visible without driving ranking."""
+    autopilot = _load_autopilot()
+    evidence = [
+        autopilot.TechniqueEvidence(
+            technique="arch_shrink_x0.4_quantizr_class",
+            empirical_archive_bytes=83_571,
+            evidence_grade="[CPU-prep empirical byte-anchor only]",
+            score_claim=False,
+            promotion_eligible=False,
+            rank_or_kill_eligible=False,
+            ready_for_exact_eval_dispatch=False,
+            dispatch_blockers=[
+                "empirical_anchor_not_promotable_without_explicit_exact_eval_custody"
+            ],
+            source="[CPU-prep empirical byte-anchor only] arch shrink post-hoc",
+        ),
+    ]
+    plan = autopilot.build_plan(
+        d_seg=0.00067082,
+        d_pose=0.0000336,
+        archive_bytes=185_578,
+        prior_evidence=evidence,
+        target_score=0.190,
+    )
+
+    arch_row = next(
+        r for r in plan.arch_technique_ranking
+        if r["name"] == "arch_shrink_x0.4_quantizr_class"
+    )
+    assert arch_row["active_ranking_blocked"] is True
+    assert arch_row["predicted_score_delta"] == 0.0
+
+    queued = next(
+        r for r in plan.validation_queue
+        if r["technique"] == "arch_shrink_x0.4_quantizr_class"
+    )
+    assert queued["queue_source"] == "cataloged_blocked_candidate"
+    assert queued["archive_bytes_if_validated"] == 83_571
+    assert queued["potential_score_delta_if_validated"] > 0.06
+    assert queued["score_claim"] is False
+    assert queued["rank_or_kill_eligible"] is False
+
+
+def test_validation_queue_preserves_unknown_cross_paradigm_rows() -> None:
+    """Unknown evidence rows should not be ranked, but they must not vanish."""
+    autopilot = _load_autopilot()
+    evidence = [
+        autopilot.TechniqueEvidence(
+            technique="cross_paradigm_new_stack",
+            empirical_archive_bytes=137_469,
+            evidence_grade="[CPU-prep faithful cross-paradigm test]",
+            score_claim=False,
+            promotion_eligible=False,
+            rank_or_kill_eligible=False,
+            ready_for_exact_eval_dispatch=False,
+            cuda_eval_worth_testing=True,
+            score_affecting_payload_changed=True,
+            charged_bits_changed=True,
+            dispatch_blockers=[
+                "missing_exact_cuda_auth_eval",
+                "needs_catalog_alias",
+            ],
+            source="[CPU-prep faithful cross-paradigm test] manifest.json",
+            timestamp="2026-05-08T07:00:00Z",
+        ),
+    ]
+    plan = autopilot.build_plan(
+        d_seg=0.00067082,
+        d_pose=0.0000336,
+        archive_bytes=185_578,
+        prior_evidence=evidence,
+        target_score=0.190,
+    )
+
+    assert plan.evidence_semantics_report["unknown_evidence_technique_count"] == 1
+    queued = next(
+        r for r in plan.validation_queue
+        if r["technique"] == "cross_paradigm_new_stack"
+    )
+    assert queued["queue_source"] == "unknown_evidence_candidate"
+    assert (
+        queued["validation_status"]
+        == "unknown_candidate_needs_catalog_or_alias_before_dispatch"
+    )
+    assert queued["archive_bytes_if_validated"] == 137_469
+    assert queued["potential_score_delta_if_validated"] > 0.03
+    assert queued["score_claim"] is False
+
+
+def test_validation_queue_does_not_reward_zero_byte_proxy_rows() -> None:
+    """A missing/no-finalizer artifact encoded as 0 bytes is not a rate win."""
+    autopilot = _load_autopilot()
+    evidence = [
+        autopilot.TechniqueEvidence(
+            technique="phase4_orchestrator_no_finalizer",
+            empirical_archive_bytes=0,
+            evidence_grade="[CPU-build]",
+            score_claim=False,
+            promotion_eligible=False,
+            rank_or_kill_eligible=False,
+            ready_for_exact_eval_dispatch=False,
+            cuda_eval_worth_testing=True,
+            dispatch_blockers=["no_final_archive_materialized"],
+            source="[CPU-build] build_manifest.json",
+        ),
+    ]
+    plan = autopilot.build_plan(
+        d_seg=0.00067082,
+        d_pose=0.0000336,
+        archive_bytes=185_578,
+        prior_evidence=evidence,
+        target_score=0.190,
+    )
+
+    queued = next(
+        r for r in plan.validation_queue
+        if r["technique"] == "phase4_orchestrator_no_finalizer"
+    )
+    assert queued["archive_bytes_if_validated"] == 0
+    assert queued["potential_score_delta_if_validated"] == 0.0
+    assert queued["validation_status"] == "unknown_invalid_or_missing_archive_bytes"
+
+
 def test_high_signal_filter_drops_low_delta_techniques() -> None:
     """min_score_delta=0.01 should drop techniques with predicted gain below."""
     autopilot = _load_autopilot()

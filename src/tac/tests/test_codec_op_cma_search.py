@@ -182,6 +182,25 @@ def test_partial_decode_coverage_is_failed_not_ranked() -> None:
     assert ev.pareto_frontier is False
 
 
+def test_materialization_waits_for_decode_coverage(tmp_path: Path) -> None:
+    state_dict = {
+        "x": torch.tensor([1.0]),
+        "y": torch.tensor([2.0]),
+    }
+
+    ev = tool._evaluate(
+        _DroppingCodecOp,
+        {},
+        state_dict,
+        eval_idx=0,
+        materialized_payload_output_dir=tmp_path / "payloads",
+    )
+
+    assert ev.error == "ValueError: CodecOp decode did not reconstruct every input tensor key"
+    assert ev.materialized_payload_path is None
+    assert not (tmp_path / "payloads").exists()
+
+
 def test_append_atom_ledger_rows_uses_planning_only_target_metadata(tmp_path: Path) -> None:
     evaluations = [
         tool.Evaluation(
@@ -327,3 +346,78 @@ class FixtureCodecOp:
     assert payload["best_eval"]["pareto_frontier"] is True
     assert payload["parameter_space"][0]["name"] == "scale"
     assert len(ledger_path.read_text(encoding="utf-8").splitlines()) == 3
+
+
+def test_main_materializes_successful_payloads_for_bridge(tmp_path: Path) -> None:
+    fixture_module = tmp_path / "fixture_materialized_codec_op.py"
+    fixture_module.write_text(
+        """
+class Result:
+    def __init__(self, blob, op_state):
+        self.blob = blob
+        self.op_state = op_state
+        self.bytes_out = len(blob)
+
+
+class FixtureMaterializedCodecOp:
+    def __init__(self, quality=1):
+        self.quality = int(quality)
+
+    def encode(self, state_dict, context):
+        return Result(b"payload-" + bytes([self.quality]), {"x": state_dict["x"]})
+
+    def decode(self, blob, *, op_state, context):
+        return {"x": op_state["x"]}
+""",
+        encoding="utf-8",
+    )
+    state_path = tmp_path / "state.pt"
+    report_path = tmp_path / "report.json"
+    ledger_path = tmp_path / "ledger.jsonl"
+    payload_dir = tmp_path / "payloads"
+    torch.save(_state_dict(), state_path)
+    sys.path.insert(0, str(tmp_path))
+    try:
+        rc = tool.main(
+            [
+                "--module",
+                "fixture_materialized_codec_op",
+                "--class",
+                "FixtureMaterializedCodecOp",
+                "--state-dict-path",
+                str(state_path),
+                "--param-spec",
+                json.dumps({"quality": {"type": "int", "low": 1, "high": 3, "init": 2}}),
+                "--max-evals",
+                "1",
+                "--seed",
+                "5",
+                "--optimizer",
+                "random",
+                "--output",
+                str(report_path),
+                "--atom-ledger-output",
+                str(ledger_path),
+                "--materialized-payload-output-dir",
+                str(payload_dir),
+                "--materialized-payload-contract",
+                "pr106_decoder_packed_brotli",
+            ]
+        )
+    finally:
+        sys.path.remove(str(tmp_path))
+
+    assert rc == 0
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    best = report["best_eval"]
+    materialized_path = Path(best["materialized_payload_path"])
+    assert materialized_path.is_file()
+    assert materialized_path.read_bytes() == b"payload-\x02"
+    assert best["materialized_payload_bytes"] == len(b"payload-\x02")
+    assert best["materialized_payload_sha256"]
+    assert best["materialized_payload_contract"] == "pr106_decoder_packed_brotli"
+
+    row = json.loads(ledger_path.read_text(encoding="utf-8").splitlines()[0])
+    assert row["materialized_payload_path"] == best["materialized_payload_path"]
+    assert row["materialized_payload_sha256"] == best["materialized_payload_sha256"]
+    assert row["ready_for_exact_eval_dispatch"] is False

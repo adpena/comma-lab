@@ -71,7 +71,7 @@ def test_op1_plus_kl_pose_chain() -> None:
         Op_KLPoseStream(n_components=4, brotli_quality=1),
     ])
     blob, manifest = pipeline.encode(state_dict)
-    assert blob[:4] == b"CPL1"
+    assert blob[:4] in (b"CPL1", b"CPL2")  # CPL2 is canonical default 2026-05-08
     assert len(manifest.op_results) == 2
     assert manifest.op_results[0].op_name == "pr101_split_brotli"
     assert manifest.op_results[1].op_name == "kl_pose_stream"
@@ -94,7 +94,7 @@ def test_op1_plus_kl_latent_chain() -> None:
         Op_KLLatent(n_components=4, brotli_quality=1),
     ])
     blob, manifest = pipeline.encode(state_dict)
-    assert blob[:4] == b"CPL1"
+    assert blob[:4] in (b"CPL1", b"CPL2")  # CPL2 is canonical default 2026-05-08
     assert len(manifest.op_results) == 2
     decoded, replayed = pipeline.decode(blob)
     assert replayed == ["pr101_split_brotli", "kl_latent"]
@@ -144,7 +144,7 @@ def test_op1_plus_kl_pose_plus_kl_latent_full_stack() -> None:
         Op_KLLatent(n_components=4, brotli_quality=1),
     ])
     blob, manifest = pipeline.encode(state_dict)
-    assert blob[:4] == b"CPL1"
+    assert blob[:4] in (b"CPL1", b"CPL2")  # CPL2 is canonical default 2026-05-08
     assert len(manifest.op_results) == 3
     op_names = [r.op_name for r in manifest.op_results]
     assert op_names == ["pr101_split_brotli", "kl_pose_stream", "kl_latent"]

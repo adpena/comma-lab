@@ -20,6 +20,7 @@ import json
 import math
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import torch
@@ -38,6 +39,7 @@ DEFAULT_DISPATCH_BLOCKERS = (
     "no_score_affecting_payload_change_proof",
     "missing_exact_cuda_auth_eval",
 )
+DEFAULT_MATERIALIZED_PAYLOAD_CONTRACT = "raw_codecop_encode_blob"
 
 
 class CodecOpADMMAdapterError(ValueError):
@@ -91,6 +93,16 @@ class DecodeValidation:
 
 
 @dataclass(frozen=True)
+class MaterializedPayloadCustody:
+    """Custody metadata for a real payload file tied to the CodecOp blob."""
+
+    path: str
+    bytes: int
+    sha256: str
+    contract: str
+
+
+@dataclass(frozen=True)
 class CodecOpADMMSnapshot:
     """Cached encode/decode custody for one CodecOp operating point."""
 
@@ -112,6 +124,7 @@ class CodecOpADMMSnapshot:
     decode_validation: DecodeValidation
     score_delta: float
     marginal: float
+    materialized_payload: MaterializedPayloadCustody | None = None
     validate_passed: bool | None = None
     validate_findings: list[str] = field(default_factory=list)
 
@@ -119,7 +132,7 @@ class CodecOpADMMSnapshot:
         blockers = list(DEFAULT_DISPATCH_BLOCKERS)
         if not self.decode_validation.full_decode_ok:
             blockers.append("codec_op_full_decode_shape_validation_failed")
-        return {
+        row = {
             "schema": PLANNING_ROW_SCHEMA,
             "family": "joint_admm_codec_op_adapter",
             "family_group": f"joint_admm_codec_op_adapter:{self.op_class}",
@@ -178,6 +191,16 @@ class CodecOpADMMSnapshot:
                 "score claim, or dispatch readiness is implied."
             ),
         }
+        if self.materialized_payload is not None:
+            row.update(
+                {
+                    "materialized_payload_path": self.materialized_payload.path,
+                    "materialized_payload_bytes": self.materialized_payload.bytes,
+                    "materialized_payload_sha256": self.materialized_payload.sha256,
+                    "materialized_payload_contract": self.materialized_payload.contract,
+                }
+            )
+        return row
 
 
 class CodecOpADMMAdapter:
@@ -202,6 +225,8 @@ class CodecOpADMMAdapter:
         op_module: str | None = None,
         op_class: str | None = None,
         require_validate: bool = True,
+        materialized_payload_path: str | Path | None = None,
+        materialized_payload_contract: str | None = None,
     ) -> None:
         self._op = _require_codec_op_like(op)
         self._state_dict = _normalise_state_dict(state_dict)
@@ -215,6 +240,15 @@ class CodecOpADMMAdapter:
         self._stream_name = stream_name or f"codec_op:{self._op_name}"
         self._source_label = source_label
         self._require_validate = bool(require_validate)
+        self._materialized_payload_path = (
+            Path(materialized_payload_path)
+            if materialized_payload_path is not None
+            else None
+        )
+        self._materialized_payload_contract = _normalise_materialized_payload_contract(
+            materialized_payload_contract,
+            has_path=self._materialized_payload_path is not None,
+        )
         self._snapshot: CodecOpADMMSnapshot | None = None
 
     @property
@@ -300,6 +334,11 @@ class CodecOpADMMAdapter:
             )
 
         tensor_contract = build_codec_op_tensor_contract(self._state_dict)
+        materialized_payload = _materialized_payload_custody(
+            self._materialized_payload_path,
+            expected_blob=blob,
+            payload_contract=self._materialized_payload_contract,
+        )
         snapshot = CodecOpADMMSnapshot(
             stream_name=self._stream_name,
             op_module=self._op_module,
@@ -319,6 +358,7 @@ class CodecOpADMMAdapter:
             decode_validation=validation,
             score_delta=self._score_delta,
             marginal=self._marginal,
+            materialized_payload=materialized_payload,
             validate_passed=validate_passed,
             validate_findings=validate_findings,
         )
@@ -337,6 +377,8 @@ def adapt_codec_op_class(
     stream_name: str | None = None,
     source_label: str | None = None,
     require_validate: bool = True,
+    materialized_payload_path: str | Path | None = None,
+    materialized_payload_contract: str | None = None,
 ) -> CodecOpADMMAdapter:
     """Instantiate ``op_cls`` and return a ``StreamProximalCodec`` adapter."""
     params = dict(op_params or {})
@@ -353,6 +395,8 @@ def adapt_codec_op_class(
         op_module=op_cls.__module__,
         op_class=op_cls.__qualname__,
         require_validate=require_validate,
+        materialized_payload_path=materialized_payload_path,
+        materialized_payload_contract=materialized_payload_contract,
     )
 
 
@@ -367,6 +411,8 @@ def codec_op_to_admm_planning_row(
     stream_name: str | None = None,
     source_label: str | None = None,
     require_validate: bool = True,
+    materialized_payload_path: str | Path | None = None,
+    materialized_payload_contract: str | None = None,
 ) -> dict[str, Any]:
     """Evaluate a CodecOp-like instance and emit a fail-closed planning row."""
     return CodecOpADMMAdapter(
@@ -379,6 +425,8 @@ def codec_op_to_admm_planning_row(
         stream_name=stream_name,
         source_label=source_label,
         require_validate=require_validate,
+        materialized_payload_path=materialized_payload_path,
+        materialized_payload_contract=materialized_payload_contract,
     ).to_planning_row()
 
 
@@ -506,6 +554,56 @@ def _require_bytes(value: Any, label: str) -> bytes:
     raise CodecOpADMMAdapterError(f"{label} must be bytes; got {type(value).__name__}")
 
 
+def _normalise_materialized_payload_contract(
+    payload_contract: str | None,
+    *,
+    has_path: bool,
+) -> str | None:
+    if payload_contract is None:
+        return DEFAULT_MATERIALIZED_PAYLOAD_CONTRACT if has_path else None
+    normalised = payload_contract.strip()
+    if not normalised:
+        return DEFAULT_MATERIALIZED_PAYLOAD_CONTRACT if has_path else None
+    if not has_path:
+        raise CodecOpADMMAdapterError(
+            "materialized_payload_contract requires materialized_payload_path"
+        )
+    return normalised
+
+
+def _materialized_payload_custody(
+    path: Path | None,
+    *,
+    expected_blob: bytes,
+    payload_contract: str | None,
+) -> MaterializedPayloadCustody | None:
+    if path is None:
+        return None
+    if not path.is_file():
+        raise CodecOpADMMAdapterError(
+            f"materialized_payload_path must be an existing file: {path}"
+        )
+    payload = path.read_bytes()
+    if len(payload) != len(expected_blob):
+        raise CodecOpADMMAdapterError(
+            "materialized_payload_path bytes do not match CodecOp blob: "
+            f"path_bytes={len(payload)} blob_bytes={len(expected_blob)}"
+        )
+    payload_sha256 = _sha256_bytes(payload)
+    blob_sha256 = _sha256_bytes(expected_blob)
+    if payload_sha256 != blob_sha256:
+        raise CodecOpADMMAdapterError(
+            "materialized_payload_path sha256 does not match CodecOp blob: "
+            f"path_sha256={payload_sha256} blob_sha256={blob_sha256}"
+        )
+    return MaterializedPayloadCustody(
+        path=path.as_posix(),
+        bytes=len(payload),
+        sha256=payload_sha256,
+        contract=payload_contract or DEFAULT_MATERIALIZED_PAYLOAD_CONTRACT,
+    )
+
+
 def _finite_float(value: float, label: str) -> float:
     number = float(value)
     if not math.isfinite(number):
@@ -601,6 +699,7 @@ __all__ = [
     "CodecOpADMMAdapterError",
     "CodecOpADMMSnapshot",
     "DecodeValidation",
+    "MaterializedPayloadCustody",
     "adapt_codec_op_class",
     "build_codec_op_tensor_contract",
     "codec_op_to_admm_planning_row",

@@ -292,7 +292,7 @@ def test_op4_encode_records_matrix_in_op_state_and_decode_within_grid() -> None:
     sd = _synthetic_state_dict()
     pipeline = CodecPipeline([Op4_FullStackOrchestrator()])
     blob, manifest = pipeline.encode(sd)
-    assert blob[:4] == b"CPL1"
+    assert blob[:4] in (b"CPL1", b"CPL2")  # CPL2 is canonical default 2026-05-08
 
     op4_state = manifest.op_results[0].op_state
     assert op4_state["delegate_op_name"] == "pr101_split_brotli"

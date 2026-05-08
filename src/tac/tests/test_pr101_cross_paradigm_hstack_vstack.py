@@ -87,18 +87,20 @@ def test_pipeline_rejects_op_count_mismatch_at_decode() -> None:
 
 
 def test_pipeline_magic_bytes_are_CPL1() -> None:
-    """The pipeline wire-format magic is locked to b'CPL1' — changing this
-    is a forward-incompatible wire format change."""
+    """The pipeline wire-format LEGACY magic constant is locked to b'CPL1'
+    (preserved for backwards compat); the canonical default magic landed
+    2026-05-08 ORCH-SYNC Bug 2 is b'CPL2'."""
     assert CodecPipeline.MAGIC == b"CPL1"
+    assert CodecPipeline.MAGIC_V2 == b"CPL2"
 
 
 def test_pipeline_blob_starts_with_magic_and_op_count() -> None:
-    """First 4 bytes = MAGIC; next 4 = u32_LE op count."""
+    """First 4 bytes = MAGIC (CPL1 or CPL2); next 4 = u32_LE op count."""
     import struct
     sd = _synthetic_state_dict()
     pipeline = CodecPipeline([Op1_PR101SplitBrotli(auto_select=True)])
     blob, _ = pipeline.encode(sd, skip_validate=True)
-    assert blob[:4] == CodecPipeline.MAGIC
+    assert blob[:4] in (CodecPipeline.MAGIC, CodecPipeline.MAGIC_V2)
     n_ops = struct.unpack_from("<I", blob, 4)[0]
     assert n_ops == 1
 

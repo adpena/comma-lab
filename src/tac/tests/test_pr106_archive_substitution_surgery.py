@@ -88,6 +88,46 @@ def test_substitute_decoder_round_trip(tmp_path: Path) -> None:
         inner[out_decoder_offset : out_decoder_offset + out_decoder_len]
         == new_decoder_brotli
     )
+    assert report.schema_version == "pr106_archive_substitution_surgery.v2"
+    assert report.score_claim is False
+    assert report.ready_for_exact_eval_dispatch is False
+    assert report.dispatch_attempted is False
+    assert report.decoder_payload_changed is True
+    assert report.latents_sidecar_payload_changed is False
+    assert report.latents_sidecar_preserved is True
+    assert report.inner_member_payload_changed is True
+    assert report.header_decoder_len_matches_output_decoder is True
+    assert "contest_cuda_auth_eval_not_run" in report.exact_eval_blockers
+
+
+def test_identity_decoder_substitution_is_not_score_affecting(tmp_path: Path) -> None:
+    """Identity section replacement remains a no-op control even if the ZIP rewrites."""
+    surgery = _load_surgery_module()
+    in_archive = tmp_path / "in.zip"
+    out_archive = tmp_path / "out.zip"
+    _build_synthetic_pr106_archive(
+        in_archive,
+        b"decoder_payload" * 100,
+        b"tail_payload" * 50,
+    )
+    input_inner = surgery._read_inner_blob(in_archive)
+    input_packed = surgery.parse_ff_packed_brotli_hnerv(input_inner)
+
+    report = surgery.substitute_decoder(
+        input_archive=in_archive,
+        replacement_decoder=input_packed.decoder_packed_brotli,
+        output_archive=out_archive,
+    )
+
+    assert report.score_affecting_payload_changed is False
+    assert report.charged_bits_changed is False
+    assert report.inner_member_payload_changed is False
+    assert report.decoder_payload_changed is False
+    assert report.latents_sidecar_payload_changed is False
+    assert report.decoder_preserved is True
+    assert report.latents_sidecar_preserved is True
+    assert report.charged_byte_count_changed is False
+    assert "score_affecting_payload_not_changed" in report.exact_eval_blockers
 
 
 def test_substitute_decoder_rejects_non_brotli(tmp_path: Path) -> None:

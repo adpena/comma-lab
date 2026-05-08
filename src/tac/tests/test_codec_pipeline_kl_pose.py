@@ -180,7 +180,7 @@ def test_op_in_codec_pipeline() -> None:
     op = Op_KLPoseStream(n_components=3, brotli_quality=1)
     pipeline = CodecPipeline([op])
     blob, manifest = pipeline.encode({POSE_KEY: poses})
-    assert blob[:4] == b"CPL1"
+    assert blob[:4] in (b"CPL1", b"CPL2")  # CPL2 is canonical default 2026-05-08
     decoded, replayed = pipeline.decode(blob)
     assert replayed == ["kl_pose_stream"]
     assert POSE_KEY in decoded

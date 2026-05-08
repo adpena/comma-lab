@@ -176,7 +176,7 @@ def test_substitutional_pipeline_op_gamma_alone_roundtrip() -> None:
     sd = _small_state_dict()
     pipeline = CodecPipeline([Op_GammaJointADMM(max_admm_iters=2)])
     blob, manifest = pipeline.encode(sd)
-    assert blob[:4] == b"CPL1"
+    assert blob[:4] in (b"CPL1", b"CPL2")  # CPL2 is canonical default 2026-05-08
     assert len(manifest.op_results) == 1
     assert manifest.op_results[0].op_name == "gamma_joint_admm"
     decoded, replayed = pipeline.decode(blob)

@@ -194,7 +194,7 @@ def test_op_composes_with_codec_pipeline() -> None:
     sd = {POSE_KEY: poses}
     pipeline = CodecPipeline([Op_RAFTPoseStream()])
     blob, manifest = pipeline.encode(sd)
-    assert blob.startswith(b"CPL1")
+    assert blob[:4] in (b"CPL1", b"CPL2")  # CPL2 is canonical default 2026-05-08
     assert manifest.final_bytes == len(blob)
     assert manifest.final_blob_sha256
     # Decode round-trip via the pipeline.

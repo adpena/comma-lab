@@ -1,0 +1,146 @@
+from __future__ import annotations
+
+import importlib.util
+import json
+from pathlib import Path
+
+import pytest
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+TOOL_PATH = REPO_ROOT / "tools" / "build_result_review_packet.py"
+
+
+def _load_tool():
+    spec = importlib.util.spec_from_file_location("build_result_review_packet", TOOL_PATH)
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _auth_eval_payload() -> dict:
+    archive_bytes = 156_404
+    seg = 0.00186125
+    pose = 0.00037762
+    score = 100.0 * seg + (10.0 * pose) ** 0.5 + 25.0 * archive_bytes / 37_545_489
+    return {
+        "canonical_score": score,
+        "score_recomputed_from_components": score,
+        "avg_segnet_dist": seg,
+        "avg_posenet_dist": pose,
+        "archive_size_bytes": archive_bytes,
+        "n_samples": 600,
+        "provenance": {
+            "archive_sha256": "a" * 64,
+            "archive_size_bytes": archive_bytes,
+            "device": "cuda",
+            "gpu_model": "Tesla T4",
+            "inflate_script": "/remote/submission/inflate.sh",
+            "sys_argv": ["experiments/contest_auth_eval.py", "--device", "cuda"],
+            "inflate_runtime_manifest": {
+                "runtime_tree_sha256": "b" * 64,
+                "runtime_file_count": 2,
+                "files": [{"relative_path": "inflate.sh"}, {"relative_path": "inflate.py"}],
+                "external_dependency_roots": [],
+            },
+        },
+    }
+
+
+def test_builds_negative_exact_cuda_review_packet(tmp_path: Path) -> None:
+    tool = _load_tool()
+    source = tmp_path / "contest_auth_eval.json"
+    source.write_text(json.dumps(_auth_eval_payload()), encoding="utf-8")
+    claims = tmp_path / "active_lane_dispatch_claims.md"
+    claims.write_text(
+        "\n".join([
+            "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |",
+            "|---|---|---|---|---|---|---|---|",
+            "| 2026-05-08T03:30:36Z | claude_lab | lossy_coarsening_analytical_cuda | lightning | job |  | completed_score_0.351719 | artifact=contest_auth_eval.json |",
+        ]),
+        encoding="utf-8",
+    )
+
+    packet = tool.build_packet(
+        auth_eval_json=source,
+        technique="lossy_coarsening_analytical",
+        lane_id="lossy_coarsening_analytical_cuda",
+        job_id="job",
+        baseline_score=0.20898105277982337,
+        reactivation_criteria=["requires retrain or scorer-aware loss"],
+        reviewer="test",
+        dispatch_claims_path=claims,
+    )
+
+    assert packet["schema"] == "tac_result_review_packet_v1"
+    assert packet["measured_config_status"] == "measured_config_retired"
+    assert packet["family_falsified"] is False
+    assert packet["rank_or_kill_eligible"] is False
+    assert packet["exact_cuda_evidence"] is True
+    assert packet["score_recomputation"]["matches_reported"] is True
+    assert packet["runtime_custody"]["payload_closure_fields_present"] is True
+    assert packet["dispatch_claim_state"]["matching_claim_count"] == 1
+    assert packet["dispatch_claim_state"]["latest_status"] == "completed_score_0.351719"
+    assert packet["dispatch_claim_state"]["terminal_status_recorded"] is True
+
+    row = tool.evidence_row_from_packet(
+        packet,
+        review_packet_path=Path(".omx/research/review.json"),
+        timestamp_utc="2026-05-08T00:00:00Z",
+    )
+    assert row["evidence_grade"] == "[contest-CUDA A-negative]"
+    assert row["contest_dispatch_verdict"] == "measured_config_retired_exact_cuda_negative"
+    assert row["empirical_archive_bytes"] == 156_404
+    assert row["score_contest_cuda"] == packet["canonical_score"]
+    assert row["rate"] == packet["score_recomputation"]["rate_term"]
+    assert row["rate_term"] == packet["score_recomputation"]["rate_term"]
+    assert row["archive_rate_ratio"] == pytest.approx(
+        packet["score_recomputation"]["rate_term"] / 25.0
+    )
+    assert row["family_falsified"] is False
+    assert row["method_family_retired"] is False
+    assert "reactivation_required_before_new_dispatch" in row["dispatch_blockers"]
+    assert row["exact_result_review_packet"] == ".omx/research/review.json"
+
+
+def test_requires_reactivation_criteria_for_negative_exact_cuda(tmp_path: Path) -> None:
+    tool = _load_tool()
+    source = tmp_path / "contest_auth_eval.json"
+    source.write_text(json.dumps(_auth_eval_payload()), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="reactivation criteria"):
+        tool.build_packet(
+            auth_eval_json=source,
+            technique="lossy_coarsening_analytical",
+            lane_id="lossy_coarsening_analytical_cuda",
+            job_id="job",
+            baseline_score=0.20898105277982337,
+            reactivation_criteria=[],
+            reviewer="test",
+            dispatch_claims_path=None,
+        )
+
+
+def test_proxy_or_cpu_packet_stays_non_rankable(tmp_path: Path) -> None:
+    tool = _load_tool()
+    payload = _auth_eval_payload()
+    payload["provenance"]["device"] = "cpu"
+    payload["provenance"]["gpu_model"] = ""
+    source = tmp_path / "contest_auth_eval.json"
+    source.write_text(json.dumps(payload), encoding="utf-8")
+
+    packet = tool.build_packet(
+        auth_eval_json=source,
+        technique="proxy_lane",
+        lane_id="proxy_lane",
+        job_id="local",
+        baseline_score=0.1,
+        reactivation_criteria=[],
+        reviewer="test",
+        dispatch_claims_path=None,
+    )
+
+    assert packet["measured_config_status"] == "proxy_or_non_cuda_review_only"
+    assert packet["exact_cuda_evidence"] is False
+    assert packet["promotion_eligible"] is False
+    assert packet["method_family_retired"] is False

@@ -7,8 +7,10 @@ must never mark rows as score claims or dispatch-ready.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass, field
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
@@ -209,6 +211,70 @@ def test_planning_row_records_deterministic_tensor_contract_and_custody() -> Non
         "b.bias",
     ]
     assert row_a["decode_validation"]["shape_mismatch_tensor_keys"] == []
+    assert "materialized_payload_path" not in row_a
+    assert "materialized_payload_bytes" not in row_a
+    assert "materialized_payload_sha256" not in row_a
+    assert "materialized_payload_contract" not in row_a
+
+
+def test_planning_row_records_real_materialized_payload_file(tmp_path: Path) -> None:
+    state_dict = _state_dict()
+    op = _IdentityCodecOp(quality=2)
+    result = op.encode(state_dict, context={})
+    payload_path = tmp_path / "eval_00000.section"
+    payload_path.write_bytes(result.blob)
+
+    adapter = CodecOpADMMAdapter(
+        op,
+        state_dict,
+        score_delta=0.0,
+        marginal=0.02,
+        op_params={"quality": 2},
+        materialized_payload_path=payload_path,
+        materialized_payload_contract="pr106_decoder_packed_brotli",
+    )
+
+    row = adapter.to_planning_row()
+
+    assert row["materialized_payload_path"] == payload_path.as_posix()
+    assert row["materialized_payload_bytes"] == len(result.blob)
+    assert row["materialized_payload_sha256"] == hashlib.sha256(
+        result.blob
+    ).hexdigest()
+    assert row["materialized_payload_contract"] == "pr106_decoder_packed_brotli"
+    assert row["score_claim"] is False
+    assert row["dispatchable"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert row["promotion_eligible"] is False
+
+
+def test_materialized_payload_path_must_exist() -> None:
+    adapter = CodecOpADMMAdapter(
+        _IdentityCodecOp(),
+        _state_dict(),
+        score_delta=0.0,
+        marginal=0.0,
+        materialized_payload_path=Path("does-not-exist.section"),
+    )
+
+    with pytest.raises(CodecOpADMMAdapterError, match="existing file"):
+        adapter.to_planning_row()
+
+
+def test_materialized_payload_file_must_match_codec_op_blob(tmp_path: Path) -> None:
+    payload_path = tmp_path / "mismatch.section"
+    payload_path.write_bytes(b"not-the-codec-op-blob")
+
+    adapter = CodecOpADMMAdapter(
+        _IdentityCodecOp(),
+        _state_dict(),
+        score_delta=0.0,
+        marginal=0.0,
+        materialized_payload_path=payload_path,
+    )
+
+    with pytest.raises(CodecOpADMMAdapterError, match="do not match CodecOp blob"):
+        adapter.to_planning_row()
 
 
 def test_tensor_contract_helper_is_sorted_and_stable() -> None:
