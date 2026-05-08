@@ -408,11 +408,6 @@ def run_experiment(
             stack_savings_vs_lossless = (
                 baseline_bytes - uniward_res["archive_bytes"]
             )
-            stack_savings_vs_full_substrate_lossless = (
-                # Reference is the r=1.0 lossless if available; we hold off
-                # filling this until we have the r=1.0 row scanned.
-                None
-            )
 
             rows.append(
                 {
