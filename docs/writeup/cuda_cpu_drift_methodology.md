@@ -190,9 +190,11 @@ and classification-head precision sensitivity.
 ### 2.5 Discriminator microbench and landed tracers
 
 `.omx/research/cuda_cpu_pose_drift_mechanism_deep_dive_20260508_claude.md`
-§9.3 sketches the 1-line decisive experiment: force
-`DefaultDatasetClass = AVVideoDataset` while running `--device cuda`.
-PyAV decode + CUDA inference. Result discriminates:
+§9.3 has been superseded on one implementation detail: do not instantiate
+`AVVideoDataset` with a CUDA device, because upstream asserts non-CUDA for
+that class. The decisive experiment is a shared-tensor harness: decode with
+PyAV on CPU, hash/dump the tensors, then feed those tensors through CUDA
+forward. Result discriminates:
 
 - score ~0.220 → decoder mismatch is partial and FP32 forward is partial
 - score ~0.195 → decoder mismatch is 100% of gap (FP32 is bit-exact)
