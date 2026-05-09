@@ -5,6 +5,8 @@ import importlib.util
 from pathlib import Path
 
 import numpy as np
+import pytest
+import torch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -60,3 +62,86 @@ def test_ground_truth_loader_uses_upstream_yuv420_helper() -> None:
     assert "load_upstream_yuv420_to_rgb" in tool_text
     assert "yuv420_to_rgb(f)" in tool_text
     assert "to_ndarray(format=\"rgb24\")" not in tool_text
+
+
+def test_infer_sidecar_choices_preserves_old_unsearched_pairs() -> None:
+    tool = load_tool()
+    base = torch.zeros((tool.N_PAIRS, tool.LATENT_DIM), dtype=torch.float32)
+    old = base.clone()
+    old[0, 3] += 0.04
+    old[10, 27] -= 0.10
+
+    dims, delta_idx = tool.infer_sidecar_choices_from_latents(
+        {
+            "latents_pre_sidecar": base,
+            "latents_with_sidecar_old": old,
+        }
+    )
+
+    assert dims[0] == 3
+    assert tool.SIDECAR_DELTAS_X100[delta_idx[0]] == 4
+    assert dims[10] == 27
+    assert tool.SIDECAR_DELTAS_X100[delta_idx[10]] == -10
+    assert dims[1] == 255
+    assert delta_idx[1] == -1
+
+
+def test_infer_sidecar_rejects_multi_dim_pair_delta() -> None:
+    tool = load_tool()
+    base = torch.zeros((tool.N_PAIRS, tool.LATENT_DIM), dtype=torch.float32)
+    old = base.clone()
+    old[0, 0] += 0.02
+    old[0, 1] += 0.03
+
+    with pytest.raises(ValueError, match="<=1 changed latent dim"):
+        tool.infer_sidecar_choices_from_latents(
+            {
+                "latents_pre_sidecar": base,
+                "latents_with_sidecar_old": old,
+            }
+        )
+
+
+def test_manifest_readiness_fails_closed_without_materialized_archive(tmp_path: Path) -> None:
+    tool = load_tool()
+    manifest = {
+        "dispatch_blockers": [],
+        "new_archive_sha256": "missing",
+        "new_archive_bytes": 123,
+        "ready_for_exact_eval_dispatch": True,
+        "runtime_smoke_checked": True,
+        "smoke_only": False,
+        "no_op_detector": {"sidecar_changed": True},
+    }
+
+    out = tool.enforce_manifest_dispatch_readiness(
+        manifest,
+        archive_path=tmp_path / "submission_dir" / "archive.zip",
+    )
+
+    assert out["ready_for_exact_eval_dispatch"] is False
+    assert any(
+        item.startswith("materialized_archive_missing:")
+        for item in out["dispatch_blockers"]
+    )
+
+
+def test_manifest_readiness_fails_closed_for_smoke_or_no_runtime_smoke(tmp_path: Path) -> None:
+    tool = load_tool()
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive")
+    manifest = {
+        "dispatch_blockers": [],
+        "new_archive_sha256": tool.sha256_of(archive),
+        "new_archive_bytes": archive.stat().st_size,
+        "ready_for_exact_eval_dispatch": True,
+        "runtime_smoke_checked": False,
+        "smoke_only": True,
+        "no_op_detector": {"sidecar_changed": True},
+    }
+
+    out = tool.enforce_manifest_dispatch_readiness(manifest, archive_path=archive)
+
+    assert out["ready_for_exact_eval_dispatch"] is False
+    assert "smoke_only_not_exact_eval_ready" in out["dispatch_blockers"]
+    assert "runtime_smoke_not_checked" in out["dispatch_blockers"]

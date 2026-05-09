@@ -167,6 +167,43 @@ def load_a1_archive_components(archive_path: Path) -> dict[str, Any]:
     }
 
 
+def infer_sidecar_choices_from_latents(components: dict[str, Any]) -> tuple[np.ndarray, np.ndarray]:
+    """Infer ``(dim, delta_idx)`` sidecar choices from old decoded latents.
+
+    This preserves the inherited PR101 sidecar for any pair a partial/smoke
+    search does not revisit. The codec supports several compact sidecar wire
+    layouts, so inferring from ``latents_with_sidecar_old - latents_pre_sidecar``
+    is simpler and harder to desynchronize from the runtime decoder.
+    """
+    diff = (
+        components["latents_with_sidecar_old"]
+        - components["latents_pre_sidecar"]
+    ).detach().cpu().numpy()
+    dims = np.full(N_PAIRS, 255, dtype=np.int64)
+    delta_idx = np.full(N_PAIRS, -1, dtype=np.int64)
+    deltas = SIDECAR_DELTAS_X100.astype(np.float32) / 100.0
+    for k in range(N_PAIRS):
+        nz = np.flatnonzero(np.abs(diff[k]) > 1e-6)
+        if nz.size == 0:
+            continue
+        if nz.size != 1:
+            raise ValueError(
+                f"old sidecar inference expected <=1 changed latent dim per pair; "
+                f"pair={k} changed_dims={nz.tolist()}"
+            )
+        dim = int(nz[0])
+        delta = float(diff[k, dim])
+        matches = np.flatnonzero(np.isclose(deltas, delta, rtol=0.0, atol=1e-4))
+        if matches.size != 1:
+            raise ValueError(
+                f"old sidecar delta {delta:.6f} for pair={k} dim={dim} "
+                "does not match fixed PR99-PR103 delta vocabulary"
+            )
+        dims[k] = dim
+        delta_idx[k] = int(matches[0])
+    return dims, delta_idx
+
+
 def encode_sidecar_huff_enum(dims: np.ndarray, delta_idx: np.ndarray) -> bytes:
     """Encode sidecar in PR101's HUFF_ENUM format (607 bytes for typical mix).
 
@@ -248,13 +285,18 @@ def search_per_pair_proxy_mse(
     n_pairs = components["n_pairs"]
     pair_indices = pair_indices if pair_indices is not None else list(range(n_pairs))
 
-    dims_out = np.full(n_pairs, 255, dtype=np.int64)  # 255 = no-op
-    delta_idx_out = np.full(n_pairs, -1, dtype=np.int64)
+    dims_out, delta_idx_out = infer_sidecar_choices_from_latents(components)
+    if dims_out.shape[0] != n_pairs or delta_idx_out.shape[0] != n_pairs:
+        raise ValueError(
+            f"old sidecar inference shape mismatch: dims={dims_out.shape} "
+            f"delta_idx={delta_idx_out.shape} expected={n_pairs}"
+        )
     deltas = SIDECAR_DELTAS_X100.astype(np.float32) / 100.0
 
     log_lines = []
     t0 = time.time()
     n_done = 0
+    progress_every = max(1, min(25, len(pair_indices)))
     for k in pair_indices:
         # Ground truth uint8 frames for this pair
         gt = ground_truth_frames[k * 2 : k * 2 + 2]  # (2, CAMERA_H, CAMERA_W, 3)
@@ -281,7 +323,7 @@ def search_per_pair_proxy_mse(
         dims_out[k] = best_dim
         delta_idx_out[k] = best_didx
         n_done += 1
-        if n_done % 25 == 0:
+        if n_done % progress_every == 0 or n_done == len(pair_indices):
             elapsed = time.time() - t0
             rate = n_done / elapsed
             eta = (len(pair_indices) - n_done) / rate
@@ -293,10 +335,14 @@ def search_per_pair_proxy_mse(
             print(line, flush=True)
             log_lines.append(line)
     elapsed = time.time() - t0
+    searched_mask = np.zeros(n_pairs, dtype=bool)
+    searched_mask[pair_indices] = True
     n_perturbed = int((dims_out != 255).sum())
+    n_perturbed_searched = int(((dims_out != 255) & searched_mask).sum())
     print(
         f"[done] proxy-mse search: {len(pair_indices)} pairs in {elapsed:.1f}s; "
-        f"{n_perturbed} perturbed",
+        f"{n_perturbed_searched} searched-pair perturbations; "
+        f"{n_perturbed} total perturbations after preserving old sidecar",
         flush=True,
     )
     if log_path:
@@ -305,6 +351,8 @@ def search_per_pair_proxy_mse(
         "search_signal": "proxy_mse",
         "n_pairs_searched": len(pair_indices),
         "n_pairs_perturbed": n_perturbed,
+        "n_pairs_perturbed_searched": n_perturbed_searched,
+        "unsearched_pairs_preserve_old_sidecar": True,
         "elapsed_seconds": elapsed,
     }
 
@@ -376,6 +424,43 @@ def write_resampled_archive(
         zinfo = zipfile.ZipInfo(filename="x", date_time=(2024, 1, 1, 0, 0, 0))
         zinfo.external_attr = 0o644 << 16
         zf.writestr(zinfo, new_inner)
+
+
+def enforce_manifest_dispatch_readiness(
+    manifest: dict[str, Any],
+    *,
+    archive_path: Path,
+) -> dict[str, Any]:
+    """Fail-closed on exact-eval readiness unless custody invariants hold."""
+
+    blockers = list(manifest.get("dispatch_blockers") or [])
+
+    def block(reason: str) -> None:
+        if reason not in blockers:
+            blockers.append(reason)
+
+    if not archive_path.is_file():
+        block(f"materialized_archive_missing:{manifest_path(archive_path)}")
+    else:
+        actual_sha = sha256_of(archive_path)
+        actual_bytes = archive_path.stat().st_size
+        if manifest.get("new_archive_sha256") != actual_sha:
+            block("materialized_archive_sha256_mismatch")
+        if manifest.get("new_archive_bytes") != actual_bytes:
+            block("materialized_archive_size_mismatch")
+
+    if manifest.get("smoke_only") is True:
+        block("smoke_only_not_exact_eval_ready")
+    if manifest.get("runtime_smoke_checked") is not True:
+        block("runtime_smoke_not_checked")
+    no_op = manifest.get("no_op_detector")
+    if not isinstance(no_op, dict) or no_op.get("sidecar_changed") is not True:
+        block("sidecar_no_op_detector_not_changed")
+
+    manifest["dispatch_blockers"] = blockers
+    if blockers:
+        manifest["ready_for_exact_eval_dispatch"] = False
+    return manifest
 
 
 def main() -> int:
@@ -490,9 +575,10 @@ def main() -> int:
     # Build the new submission_dir
     sub_dir = out_dir / "submission_dir"
     sub_dir.mkdir(exist_ok=True)
-    write_resampled_archive(components, new_sidecar, sub_dir / "archive.zip")
-    new_archive_sha = sha256_of(sub_dir / "archive.zip")
-    new_archive_bytes = (sub_dir / "archive.zip").stat().st_size
+    new_archive_path = sub_dir / "archive.zip"
+    write_resampled_archive(components, new_sidecar, new_archive_path)
+    new_archive_sha = sha256_of(new_archive_path)
+    new_archive_bytes = new_archive_path.stat().st_size
     # Copy A1's existing inflate.py, inflate.sh, src/* (the bias correction is
     # PRESERVED — we're only re-searching the latent sidecar, not the bias)
     shutil.copy2(A1_SUBMISSION_DIR / "inflate.py", sub_dir / "inflate.py")
@@ -515,7 +601,7 @@ def main() -> int:
         "old_archive_sha256": A1_EXPECTED_ARCHIVE_SHA,
         "old_archive_bytes": A1_EXPECTED_ARCHIVE_BYTES,
         "old_sidecar_bytes": len(components["sidecar_blob_old"]),
-        "new_archive_path": manifest_path(sub_dir / "archive.zip"),
+        "new_archive_path": manifest_path(new_archive_path),
         "new_archive_sha256": new_archive_sha,
         "new_archive_bytes": new_archive_bytes,
         "new_sidecar_bytes": len(new_sidecar),
@@ -555,6 +641,10 @@ def main() -> int:
             "sidecar_changed": components["sidecar_blob_old"] != new_sidecar,
         },
     }
+    manifest = enforce_manifest_dispatch_readiness(
+        manifest,
+        archive_path=new_archive_path,
+    )
     (out_dir / "sidecar_manifest.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n"
     )

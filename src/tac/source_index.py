@@ -25,7 +25,7 @@ _CURRENT_SOURCE_INDEX: contextvars.ContextVar[SourceIndex | None] = contextvars.
     "tac_current_source_index",
     default=None,
 )
-_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v2"
+_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v3"
 
 
 def _safe_resolve(path: Path) -> Path:
@@ -72,6 +72,7 @@ _DEFAULT_TEXT_FACT_NEEDLES = frozenset(
         "mps",
         "pack_sparse_delta",
         "compliance_status",
+        "reconstruct_poses",
         "torch",
         "torch.load",
     }

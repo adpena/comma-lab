@@ -11666,12 +11666,17 @@ def check_callsite_contracts_satisfied(
     """Verify every caller of a contract-registered helper passes its
     required kwargs. Catches the Lane-GP-style "fix lands in helper but
     not at call site" bug class."""
-    root = repo_root or REPO_ROOT
+    root = Path(repo_root or REPO_ROOT).resolve()
     source_index = _current_source_index(root)
     scan_dirs = ["src/tac", "experiments", "scripts", "submissions"]
     violations: list[str] = []
     if source_index is not None:
-        py_paths = source_index.files(scan_dirs, pattern="*.py")
+        py_paths = source_index.files_containing_substrings(
+            scan_dirs,
+            pattern="*.py",
+            substrings=tuple(CALLSITE_CONTRACTS),
+            require_all=False,
+        )
     else:
         py_paths = tuple(
             py for sd in scan_dirs for py in _iter_python_files(root, [sd])
