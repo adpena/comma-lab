@@ -1,3 +1,7 @@
+# FAKE_LANE_OK_FILE: this test file constructs fake representation-lane
+# fixtures (lane_test_nerv, lane_pose_dc3, lane_c30_xyz, lane_arc3_v2, etc.)
+# to exercise Check #124's classification + field-discovery logic. Per-line
+# waivers would be noise; the file-level marker is appropriate per Check #126.
 """Tests for preflight Catalog #124:
 ``check_representation_lane_has_archive_grammar_at_design_time``.
 

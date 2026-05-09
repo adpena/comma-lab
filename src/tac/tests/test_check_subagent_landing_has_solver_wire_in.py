@@ -46,6 +46,7 @@ from tac.preflight import (
     _landing_memo_date,
     _memo_declares_hook,
     _memo_declares_research_only,
+    _strip_code_spans_and_fences,
     check_subagent_landing_has_solver_wire_in,
 )
 
@@ -454,3 +455,71 @@ def test_constants_are_well_formed() -> None:
         assert isinstance(hook_label, str)
         assert isinstance(aliases, tuple)
         assert len(aliases) >= 1
+
+
+# ── Test 16: code-span / fence stripping & opt-out-in-doc protection ─────
+
+
+def test_strip_code_spans_inline() -> None:
+    """`research_only=true` mentioned inside backticks is stripped before scan."""
+    text = "OR add `research_only=true` somewhere; sample code."
+    stripped = _strip_code_spans_and_fences(text)
+    assert "research_only=true" not in stripped
+
+
+def test_strip_code_spans_fenced() -> None:
+    text = "Sample:\n```\nresearch_only=true\n```\nfollow-up."
+    stripped = _strip_code_spans_and_fences(text)
+    assert "research_only=true" not in stripped
+
+
+def test_strip_code_spans_preserves_outside_text() -> None:
+    text = "Outside `code` rest"
+    stripped = _strip_code_spans_and_fences(text)
+    assert "Outside" in stripped
+    assert "rest" in stripped
+
+
+def test_research_only_in_backticks_is_documentation_not_optout(
+    tmp_path: Path,
+) -> None:
+    """A memo that mentions `research_only=true` in a code span is NOT opting out."""
+    body = (
+        "**OR** add `research_only=true` (with rationale).\n"
+        "But this memo declares all 6 hooks below:\n"
+        "1. Sensitivity-map: present\n"
+        "2. Pareto: present\n"
+        "3. Bit-allocator: present\n"
+        "4. Cathedral autopilot: present\n"
+        "5. Continual-learning: present\n"
+        "6. Probe-disambiguator: present\n"
+    )
+    _make_memo(tmp_path, 20260510, "doc_in_backticks", body)
+    violations = check_subagent_landing_has_solver_wire_in(
+        memory_dir=tmp_path, strict=False, verbose=False,
+    )
+    # Memo should pass because the backticked opt-out is documentation
+    # AND all 6 hooks are declared. So no violation.
+    assert violations == [], f"got: {violations}"
+
+
+def test_explicit_research_only_false_negates_other_optout_mentions(
+    tmp_path: Path,
+) -> None:
+    """If memo declares research_only=false, in-narrative research_only=true is doc."""
+    body = (
+        "research_only=false\n"
+        "Note: the alternative would be `research_only=true` (omitted here).\n"
+        "But because we declare 6/6 N/A below:\n"
+        "1. Sensitivity-map: N/A — preflight infrastructure\n"
+        "2. Pareto: N/A — no constraint\n"
+        "3. Bit-allocator: N/A — no importance\n"
+        "4. Cathedral autopilot: N/A — not deployable\n"
+        "5. Continual-learning: N/A — no anchor\n"
+        "6. Probe-disambiguator: N/A — deterministic\n"
+    )
+    _make_memo(tmp_path, 20260510, "explicit_false", body)
+    violations = check_subagent_landing_has_solver_wire_in(
+        memory_dir=tmp_path, strict=False, verbose=False,
+    )
+    assert violations == [], f"got: {violations}"

@@ -1,3 +1,6 @@
+# FAKE_LANE_OK_FILE: documentation tests for Check #125/#126 use synthetic
+# lane_id fixtures (lane_registered, lane_missing) inside synthetic registries.
+# Per Check #126 file-level waiver semantics.
 """Tests for subagent-coherence preflight checks (#125/#126)."""
 from __future__ import annotations
 

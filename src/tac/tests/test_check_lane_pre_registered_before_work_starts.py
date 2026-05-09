@@ -1,3 +1,6 @@
+# FAKE_LANE_OK_FILE: this test file's purpose is to verify Check #126 by
+# constructing dozens of fake lane_id fixtures inside synthetic git repos.
+# Per-line waivers would be noise and would mask real future violations.
 """Tests for preflight Catalog #126:
 ``check_lane_pre_registered_before_work_starts``.
 
@@ -542,3 +545,63 @@ def test_no_commits_returns_empty(tmp_path: Path) -> None:
     # n_commits=0 yields an empty git-log; the function should return cleanly
     # (empty violation list).
     assert violations == []
+
+
+# ── Test 16: file-level FAKE_LANE_OK_FILE waiver ────────────────────────
+
+
+def test_file_level_fake_waiver_exempts_entire_test_file(tmp_path: Path) -> None:
+    """A `# FAKE_LANE_OK_FILE:<reason>` in first 30 lines exempts whole file."""
+    repo = _init_repo(tmp_path, [{"id": "lane_g_v3", "name": "g v3"}])
+    content = """# FAKE_LANE_OK_FILE: this entire test file constructs many fake lane fixtures
+# Other test logic
+LANE_A = "lane_pretend_a"
+LANE_B = "lane_pretend_b"
+LANE_C = "lane_pretend_c"
+"""
+    _commit_file(
+        repo, "src/tac/tests/test_many_lanes.py",
+        content,
+        "many fake lanes with file-level waiver",
+    )
+    violations = check_lane_pre_registered_before_work_starts(
+        repo_root=repo, n_commits=10, strict=False, verbose=False,
+    )
+    assert violations == [], f"got: {violations}"
+
+
+def test_file_level_waiver_only_works_in_test_paths(tmp_path: Path) -> None:
+    """File-level waiver in a non-test path does NOT exempt."""
+    repo = _init_repo(tmp_path, [{"id": "lane_g_v3", "name": "g v3"}])
+    content = """# FAKE_LANE_OK_FILE: not a test path; should NOT exempt
+LANE_A = "lane_pretend_z"
+"""
+    _commit_file(
+        repo, "src/tac/foo.py",
+        content,
+        "fake lane in non-test file",
+    )
+    violations = check_lane_pre_registered_before_work_starts(
+        repo_root=repo, n_commits=10, strict=False, verbose=False,
+    )
+    assert any("lane_pretend_z" in v for v in violations)
+
+
+def test_file_level_waiver_only_in_first_30_lines(tmp_path: Path) -> None:
+    """A file-level marker beyond line 30 does NOT exempt the whole file."""
+    repo = _init_repo(tmp_path, [{"id": "lane_g_v3", "name": "g v3"}])
+    # Insert 30 filler lines, then the marker, then a fake lane
+    content = (
+        "\n".join(f"# filler line {i}" for i in range(35))
+        + "\n# FAKE_LANE_OK_FILE: too late — beyond 30-line window\n"
+        + 'LANE_A = "lane_pretend_late"\n'
+    )
+    _commit_file(
+        repo, "src/tac/tests/test_late.py",
+        content,
+        "marker too late",
+    )
+    violations = check_lane_pre_registered_before_work_starts(
+        repo_root=repo, n_commits=10, strict=False, verbose=False,
+    )
+    assert any("lane_pretend_late" in v for v in violations)

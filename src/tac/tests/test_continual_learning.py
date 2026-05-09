@@ -1,3 +1,6 @@
+# FAKE_LANE_OK_FILE: continual-learning posterior tests reference example
+# lane_ids (lane_12_v2 etc.) as illustrative source-rho keys, not
+# registered-lane references. Per Check #126 file-level waiver semantics.
 """Tests for tac.continual_learning — posterior orchestration layer.
 
 Covers:
