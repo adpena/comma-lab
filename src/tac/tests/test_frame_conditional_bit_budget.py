@@ -5,14 +5,21 @@ import pytest
 
 from tac.codec.frame_conditional_bit_budget import (
     FRAME_CONDITIONAL_Q_BITS_ENCODING_BINARY_LOW_HIGH_MASK,
+    FRAME_CONDITIONAL_Q_BITS_ENCODING_CHANNEL_RAW3,
     ComplexityComponents,
     allocate_per_frame_bits,
+    apply_frame_conditional_channel_q_bits,
     apply_frame_conditional_q_bits,
+    build_frame_conditional_channel_wire_contract,
     build_frame_conditional_wire_contract,
+    pack_frame_conditional_channel_latent_codes,
+    pack_frame_conditional_channel_q_bits,
     pack_frame_conditional_binary_q_bits,
     pack_frame_conditional_latent_codes,
     pack_frame_conditional_q_bits,
     unpack_frame_conditional_binary_q_bits,
+    unpack_frame_conditional_channel_latent_codes,
+    unpack_frame_conditional_channel_q_bits,
     unpack_frame_conditional_latent_codes,
     unpack_frame_conditional_q_bits,
 )
@@ -117,6 +124,24 @@ def test_binary_q_bits_sideinfo_rejects_three_level_schedule() -> None:
         pack_frame_conditional_binary_q_bits([6, 7, 8])
 
 
+def test_channel_q_bits_sideinfo_roundtrips_pr101_sideinfo_size() -> None:
+    q_bits = np.resize(np.arange(1, 9, dtype=np.uint8), 28)
+
+    packed = pack_frame_conditional_channel_q_bits(q_bits)
+    decoded = unpack_frame_conditional_channel_q_bits(packed, latent_dim=28)
+    contract = build_frame_conditional_channel_wire_contract(
+        q_bits,
+        n_pairs=600,
+    )
+
+    assert len(packed) == 11
+    np.testing.assert_array_equal(decoded, q_bits)
+    assert contract["wire_encoding"]["q_bits_per_channel"] == "channel_raw3"
+    assert contract["q_bits_sideinfo"]["encoding"] == "channel_raw3"
+    assert contract["q_bits_sideinfo"]["bytes"] == 11
+    assert contract["q_bits_roundtrip"]["passed"] is True
+
+
 def test_unpack_frame_conditional_q_bits_fails_closed_on_bad_padding() -> None:
     packed = bytearray(pack_frame_conditional_q_bits([1, 2, 3]))
     packed[-1] |= 1
@@ -152,6 +177,33 @@ def test_frame_conditional_latent_codes_require_sideinfo_for_decode() -> None:
         )
 
 
+def test_channel_latent_codes_require_channel_sideinfo_for_decode() -> None:
+    q = np.array(
+        [
+            [255, 128, 17, 1],
+            [64, 32, 16, 8],
+        ],
+        dtype=np.uint8,
+    )
+    q_bits = np.array([4, 8, 3, 8], dtype=np.uint8)
+
+    packed = pack_frame_conditional_channel_latent_codes(q, q_bits)
+    decoded = unpack_frame_conditional_channel_latent_codes(
+        packed,
+        q_bits,
+        n_pairs=2,
+    )
+    expected = apply_frame_conditional_channel_q_bits(q, q_bits)
+
+    np.testing.assert_array_equal(decoded, expected)
+    with pytest.raises(ValueError, match="channel latent bitstream length"):
+        unpack_frame_conditional_channel_latent_codes(
+            packed,
+            np.array([8, 8, 8, 8], dtype=np.uint8),
+            n_pairs=2,
+        )
+
+
 def test_build_frame_conditional_wire_contract_is_no_score_and_fail_closed() -> None:
     q = np.arange(24, dtype=np.uint8).reshape(3, 8)
     contract = build_frame_conditional_wire_contract(
@@ -174,3 +226,20 @@ def test_build_frame_conditional_wire_contract_is_no_score_and_fail_closed() -> 
         "frame_conditional_packet_runtime_patch_not_built"
         in contract["remaining_blockers"]
     )
+
+
+def test_build_channel_wire_contract_is_no_score_and_fail_closed() -> None:
+    q = np.arange(24, dtype=np.uint8).reshape(3, 8)
+    contract = build_frame_conditional_channel_wire_contract(
+        [2.9, 4.1, 8.0, 7, 6, 5, 4, 3],
+        n_pairs=3,
+        q_pair_first=q,
+    )
+
+    assert contract["score_claim"] is False
+    assert contract["ready_for_exact_eval_dispatch"] is False
+    assert contract["decoder_helper_consumes_sideinfo_bytes"] is True
+    assert contract["q_bits_sideinfo"]["encoding"] == FRAME_CONDITIONAL_Q_BITS_ENCODING_CHANNEL_RAW3
+    assert contract["q_bits_sideinfo"]["bytes"] == 3
+    assert contract["q_bits_roundtrip"]["passed"] is True
+    assert contract["latent_decode_roundtrip"]["passed"] is True

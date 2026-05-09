@@ -1,0 +1,325 @@
+{
+  "all8_qsum": 224,
+  "candidate_id": "a5_channel_qbits_dp_qsum210",
+  "channel_table": [
+    {
+      "channel": 0,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.00012166806031018496,
+      "q_bits": 7,
+      "scale": 0.015838623046875
+    },
+    {
+      "channel": 1,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.0,
+      "q_bits": 8,
+      "scale": 0.0201568603515625
+    },
+    {
+      "channel": 2,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.00018530968149813512,
+      "q_bits": 7,
+      "scale": 0.0200347900390625
+    },
+    {
+      "channel": 3,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.0,
+      "q_bits": 8,
+      "scale": 0.0200958251953125
+    },
+    {
+      "channel": 4,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.00014829407135645548,
+      "q_bits": 7,
+      "scale": 0.0174560546875
+    },
+    {
+      "channel": 5,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.0,
+      "q_bits": 8,
+      "scale": 0.022491455078125
+    },
+    {
+      "channel": 6,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.00013887432093421617,
+      "q_bits": 7,
+      "scale": 0.0165557861328125
+    },
+    {
+      "channel": 7,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.0,
+      "q_bits": 8,
+      "scale": 0.0200958251953125
+    },
+    {
+      "channel": 8,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.0001841465861070901,
+      "q_bits": 7,
+      "scale": 0.0194854736328125
+    },
+    {
+      "channel": 9,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.0,
+      "q_bits": 8,
+      "scale": 0.0237579345703125
+    },
+    {
+      "channel": 10,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.00016791292699053884,
+      "q_bits": 7,
+      "scale": 0.0182647705078125
+    },
+    {
+      "channel": 11,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.0,
+      "q_bits": 8,
+      "scale": 0.0208587646484375
+    },
+    {
+      "channel": 12,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.00017888296395540237,
+      "q_bits": 7,
+      "scale": 0.01837158203125
+    },
+    {
+      "channel": 13,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.0,
+      "q_bits": 8,
+      "scale": 0.0205535888671875
+    },
+    {
+      "channel": 14,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.00017127592815086246,
+      "q_bits": 7,
+      "scale": 0.0183258056640625
+    },
+    {
+      "channel": 15,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.0,
+      "q_bits": 8,
+      "scale": 0.02203369140625
+    },
+    {
+      "channel": 16,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.0,
+      "q_bits": 8,
+      "scale": 0.019683837890625
+    },
+    {
+      "channel": 17,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.0,
+      "q_bits": 8,
+      "scale": 0.0283203125
+    },
+    {
+      "channel": 18,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.00015503214672207832,
+      "q_bits": 7,
+      "scale": 0.017608642578125
+    },
+    {
+      "channel": 19,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.0,
+      "q_bits": 8,
+      "scale": 0.0209808349609375
+    },
+    {
+      "channel": 20,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.00014425367116928102,
+      "q_bits": 7,
+      "scale": 0.016845703125
+    },
+    {
+      "channel": 21,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.00017243685821692148,
+      "q_bits": 7,
+      "scale": 0.0189208984375
+    },
+    {
+      "channel": 22,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.00015378023536565403,
+      "q_bits": 7,
+      "scale": 0.0178680419921875
+    },
+    {
+      "channel": 23,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.0,
+      "q_bits": 8,
+      "scale": 0.022216796875
+    },
+    {
+      "channel": 24,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.0001566071187456449,
+      "q_bits": 7,
+      "scale": 0.01763916015625
+    },
+    {
+      "channel": 25,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.0,
+      "q_bits": 8,
+      "scale": 0.0219268798828125
+    },
+    {
+      "channel": 26,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.00012385671531471112,
+      "q_bits": 7,
+      "scale": 0.0151214599609375
+    },
+    {
+      "channel": 27,
+      "proxy_loss_at_q8": 0.0,
+      "proxy_loss_at_selected_q": 0.0,
+      "q_bits": 8,
+      "scale": 0.01971435546875
+    }
+  ],
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "cpu_prep_schedule_only_no_runtime_packet",
+    "latent_domain_proxy_not_score_domain",
+    "missing_advisory_eval",
+    "missing_exact_contest_cuda",
+    "missing_exact_contest_cpu"
+  ],
+  "evidence_grade": "[CPU-prep channel q-bit schedule; no eval]",
+  "evidence_semantics": "exact discrete dynamic program over per-channel q-bit widths; latent-domain proxy only, no score claim",
+  "latent_dim": 28,
+  "latent_replacement_bytes": {
+    "channel_all8_meta_plus_sideinfo_plus_wire_bytes": 16923,
+    "channel_qbits_meta_plus_sideinfo_plus_wire_bytes": 15873,
+    "estimated_delta_vs_original_lzma_blob_bytes": 486,
+    "original_lzma_blob_bytes": 15387
+  },
+  "latent_wire_payload": {
+    "all8_bytes": 16800,
+    "bytes": 15750,
+    "saved_vs_all8_bytes": 1050,
+    "sha256": "9774ef5e0fbd37d40d37751cd93e8e2896400f006e469ecb8990db5fba7cca3a"
+  },
+  "manifest_sha256_excluding_self": "c3928fe170ceed6f80a88e398d55cc374961231c3546aa7cb392cd20911eabe6",
+  "n_pairs": 600,
+  "per_channel_q_bits": [
+    7,
+    8,
+    7,
+    8,
+    7,
+    8,
+    7,
+    8,
+    7,
+    8,
+    7,
+    8,
+    7,
+    8,
+    7,
+    8,
+    8,
+    8,
+    7,
+    8,
+    7,
+    7,
+    7,
+    8,
+    7,
+    8,
+    7,
+    8
+  ],
+  "promotion_eligible": false,
+  "proxy_objective": {
+    "name": "latent_scale_weighted_truncation_mse",
+    "optimal_for_target_qsum": true,
+    "proxy_loss": 0.002202331284837176,
+    "proxy_loss_per_pair_channel_mean": 7.865468874418486e-05,
+    "score_affecting_payload_changed": true,
+    "source_q_codes_sha256": "4bb8ef403376b73aa1af2d4bca12055a49b1d6cf577a9302433dd8af6fe94b8f",
+    "target_qsum": 210,
+    "truncated_q_codes_sha256": "8d9eb8dcf9bfff424ebca95efe6255d4488c4c8e83a1cc7381c5c14fda01610f"
+  },
+  "q_bits_sideinfo": {
+    "bytes": 11,
+    "encoding": "channel_raw3",
+    "sha256": "2b62e7b06c9bc5f8d6d15a39cfe812249a216d061c4cadaa1f1ab6aa3e4d033f"
+  },
+  "q_bits_summary": {
+    "max": 8,
+    "mean": 7.5,
+    "min": 7,
+    "sha256": "43cfa013c4c12ceb7f4b7d673760fab237b1c665bd38b262e0ebf3005c05151e",
+    "unique_counts": {
+      "7": 14,
+      "8": 14
+    }
+  },
+  "qsum_saved_vs_all8": 14,
+  "rank_or_kill_eligible": false,
+  "reactivation_criteria": [
+    "Build a runtime packet with --q-bits-sideinfo-encoding channel_raw3.",
+    "Run macOS CPU advisory only as a collapse screen after lane claim.",
+    "Promote only after paired contest-CUDA and Linux x86_64 contest-CPU."
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "pr101_a5_channel_qbits_schedule.v1",
+  "score_claim": false,
+  "source_artifacts": {
+    "source_archive": {
+      "bytes": 178258,
+      "path": "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip",
+      "sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e"
+    }
+  },
+  "target_qsum": 210,
+  "tool_run_manifest": {
+    "argv": [
+      "--target-qsum",
+      "210",
+      "--json-out",
+      "reports/a5_channel_qbits_dp_qsum210_20260509.json",
+      "--candidate-id",
+      "a5_channel_qbits_dp_qsum210"
+    ],
+    "canonical_payload_without_tool_manifest_sha256": "30172cb03519a7b17e36c417b59d0967128953140f97a057167d186375f97de6",
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 178258,
+        "path": "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip",
+        "sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e"
+      }
+    ],
+    "output_path": "reports/a5_channel_qbits_dp_qsum210_20260509.json",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "tools/build_a5_channel_qbits_schedule.py"
+  }
+}

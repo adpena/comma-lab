@@ -183,6 +183,86 @@ def test_cli_can_emit_binary_qbits_sideinfo(
     assert proof["candidate_packet_local_parse_smoke"]["passed"] is True
 
 
+def test_cli_can_emit_channel_qbits_sideinfo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    helpers = _load_helpers()
+    tool = helpers._load_tool()
+    helpers._install_tiny_pr101_contract(monkeypatch, tool)
+    q_ordered = np.array(
+        [
+            [255, 128, 17, 1],
+            [64, 32, 16, 8],
+        ],
+        dtype=np.uint8,
+    )
+    source_pair_q_bits = np.array([8, 8], dtype=np.uint8)
+    channel_q_bits = np.array([4, 8, 3, 8], dtype=np.uint8)
+    latent_blob = helpers._encode_tiny_latent_blob(tool, q_ordered)
+    monkeypatch.setattr(tool, "PR101_LATENT_BLOB_LEN", len(latent_blob))
+    source_payload = b"DECO" + latent_blob + b"SIDE"
+    source_archive = tmp_path / "source" / "archive.zip"
+    helpers._write_zip(source_archive, source_payload)
+    runtime = helpers._write_runtime(tmp_path / "runtime", latent_blob_len=len(latent_blob))
+    a5_manifest = helpers._a5_manifest(
+        tmp_path / "a5.json",
+        q_bits=source_pair_q_bits,
+        q_ordered=q_ordered,
+        source_payload=source_payload,
+    )
+    channel_q_bits_json = _write_json(
+        tmp_path / "channel_qbits.json",
+        {
+            "schema": "pr101_a5_channel_qbits_schedule.v1",
+            "score_claim": False,
+            "per_channel_q_bits": channel_q_bits.tolist(),
+        },
+    )
+    output_dir = tmp_path / "out"
+
+    assert (
+        tool.main(
+            [
+                "--a5-manifest",
+                str(a5_manifest),
+                "--source-archive",
+                str(source_archive),
+                "--source-runtime-dir",
+                str(runtime),
+                "--channel-q-bits-json",
+                str(channel_q_bits_json),
+                "--q-bits-sideinfo-encoding",
+                "channel_raw3",
+                "--recompute-wire-contract-for-q-bits",
+                "--output-dir",
+                str(output_dir),
+            ]
+        )
+        == 0
+    )
+
+    manifest = json.loads(
+        (output_dir / "candidate_archive_manifest.json").read_text(encoding="utf-8")
+    )
+    schedule = manifest["q_bits_schedule"]
+    proof = json.loads(
+        (REPO_ROOT / manifest["runtime_consumption_proof"]["path"]).read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert schedule["q_bits_axis"] == "channel"
+    assert schedule["source_key"] == "per_channel_q_bits"
+    assert schedule["q_bits_sideinfo_encoding"] == "channel_raw3"
+    assert schedule["q_bits_sideinfo_bytes"] == 2
+    assert (
+        manifest["frame_conditional_wire_contract"]["q_bits_sideinfo"]["encoding"]
+        == "channel_raw3"
+    )
+    assert proof["ready_for_exact_eval_runtime"] is True
+    assert proof["candidate_packet_local_parse_smoke"]["passed"] is True
+
+
 def test_qbits_override_json_rejects_ambiguous_keys(tmp_path: Path) -> None:
     helpers = _load_helpers()
     tool = helpers._load_tool()

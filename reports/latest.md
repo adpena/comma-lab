@@ -1180,3 +1180,18 @@ apogee_int5 at $0.30 — RECOMMENDED).
 sweep proposal that would test whether any lane can land below PR106's exact
 `0.20945673680571203`. No prediction row counts as contest-CUDA evidence until
 the exact archive/runtime is harvested and reviewed.
+
+## 2026-05-09 A5 Channel-DP Update
+
+A per-channel q-bit deployment path landed for A5: `channel_raw3` side-info,
+per-channel latent packing, packet-builder support, and
+`tools/build_a5_channel_qbits_schedule.py`. The qsum200 exact-DP schedule was
+byte-positive (`178,014 B`, archive SHA
+`efc0466bc38edb9cb57193d5f43e4d4fbf2d993cd41069f2c3700aa4bedbfeae`) and
+runtime-consumed, but macOS CPU advisory scored `0.2016517950045961`
+(`seg=0.00064302`, `pose=0.00003541`), worse than the compact binary A5 point.
+
+Classification: measured-config negative for latent-domain MSE channel
+allocation only; keep the channel-wise compiler primitive for learned or
+score-domain schedules. Ledger:
+`.omx/research/a5_channel_qbits_dp_schedule_negative_20260509_codex.md`.

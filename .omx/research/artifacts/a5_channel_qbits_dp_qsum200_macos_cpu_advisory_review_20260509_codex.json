@@ -1,0 +1,99 @@
+{
+  "baseline_score": 0.19284757743677347,
+  "canonical_score": 0.2016517950045961,
+  "cpu_leaderboard_reproduction_eligible": false,
+  "custody": {
+    "archive_bytes": 178014,
+    "archive_sha256": "efc0466bc38edb9cb57193d5f43e4d4fbf2d993cd41069f2c3700aa4bedbfeae",
+    "command": [
+      "experiments/contest_auth_eval.py",
+      "--archive",
+      "experiments/results/pr101_a5_channel_qbits_dp_qsum200_20260509_codex/packet/archive.zip",
+      "--inflate-sh",
+      "experiments/results/pr101_a5_channel_qbits_dp_qsum200_20260509_codex/packet/inflate.sh",
+      "--upstream-dir",
+      "upstream",
+      "--device",
+      "cpu",
+      "--work-dir",
+      "experiments/results/pr101_a5_channel_qbits_dp_qsum200_macos_cpu_advisory_20260509_codex/work",
+      "--json-out",
+      "experiments/results/pr101_a5_channel_qbits_dp_qsum200_macos_cpu_advisory_20260509_codex/contest_auth_eval.macos_cpu_advisory.json",
+      "--keep-work-dir"
+    ],
+    "device": "cpu",
+    "gpu_model": "<error:FileNotFoundError(2, 'No such file or directory')>",
+    "inflate_script": "/Users/adpena/Projects/pact/experiments/results/pr101_a5_channel_qbits_dp_qsum200_20260509_codex/packet/inflate.sh",
+    "n_samples": 600
+  },
+  "dispatch_claim_state": {
+    "claims_file_present": true,
+    "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+    "latest_claim": {
+      "agent": "codex",
+      "instance_job_id": "local:a5-channel-qbits-dp-qsum200-macos-cpu-20260509T091646Z",
+      "lane_id": "a5_channel_qbits_dp_qsum200_macos_cpu_advisory",
+      "notes": "terminal: macOS CPU advisory score 0.2016517950045961; bytes 178014; seg 0.00064302 pose 0.00003541; byte-positive but worse than A5 binary/local frontier; measured schedule retired only",
+      "platform": "local-macos-cpu",
+      "predicted_eta_utc": "2026-05-09T09:50:00Z",
+      "status": "completed_macos_cpu_advisory_negative",
+      "timestamp_utc": "2026-05-09T09:24:58Z"
+    },
+    "latest_status": "completed_macos_cpu_advisory_negative",
+    "matching_claim_count": 2,
+    "terminal_status_recorded": true
+  },
+  "exact_cpu_evidence": false,
+  "exact_cuda_evidence": false,
+  "failure_class": "non_exact_cuda_evidence",
+  "family_falsified": false,
+  "job_id": "local:a5-channel-qbits-dp-qsum200-macos-cpu-20260509T091646Z",
+  "lane_id": "a5_channel_qbits_dp_qsum200_macos_cpu_advisory",
+  "measured_config_status": "proxy_or_non_cuda_review_only",
+  "method_family_retired": false,
+  "notes": [
+    "This packet can retire only the measured config unless the broader kill discipline is separately satisfied.",
+    "Exact CUDA evidence may update solver trust regions after adversarial review."
+  ],
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "reactivation_criteria": [
+    "replace latent-domain MSE DP with scorer-domain or learned channel schedules; keep channel_raw3 runtime compiler primitive",
+    "exact CUDA/contest-CPU spend only if advisory reaches within 0.001 of A1/PR101 or if stacked with learned score-domain packet change",
+    "do not relaunch qsum200 MSE schedule; qsum grid can reopen only with component sensitivity or training-in-loop evidence"
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "review_requirements": {
+    "contest_compliance_review_required": true,
+    "engineering_review_required": true,
+    "geometry_review_required": true,
+    "math_review_required": true,
+    "optimization_review_required": true
+  },
+  "reviewer": "codex:gpt-5.5",
+  "runtime_custody": {
+    "external_dependency_roots": [],
+    "payload_closure_fields_present": true,
+    "runtime_file_count": 5,
+    "runtime_files_listed": true,
+    "runtime_manifest_present": true,
+    "runtime_tree_sha256": "f4c262b2fe134771a232a5e452d4f73d3236cf1b326a34351972b8d4dc857533"
+  },
+  "schema": "tac_result_review_packet_v1",
+  "score_claim": false,
+  "score_recomputation": {
+    "abs_delta_vs_reported": 3.4318909797326214e-08,
+    "archive_bytes": 178014,
+    "available": true,
+    "avg_posenet_dist": 3.541e-05,
+    "avg_segnet_dist": 0.00064302,
+    "matches_reported": false,
+    "rate_term": 0.11853221568109021,
+    "recomputed_score": 0.2016517606856863,
+    "reported_score": 0.2016517950045961
+  },
+  "source_json_path": "experiments/results/pr101_a5_channel_qbits_dp_qsum200_macos_cpu_advisory_20260509_codex/contest_auth_eval.macos_cpu_advisory.json",
+  "source_json_sha256": "0ddb9deab9733ee0857e41ab0d1eb99b2063cbf82bcde212208f8d2be7feeb64",
+  "technique": "a5_channel_qbits_dp_qsum200",
+  "tool": "tools/build_result_review_packet.py"
+}

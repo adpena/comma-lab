@@ -22,13 +22,13 @@
     {
       "classification": "generated_custody_source_untracked",
       "disposition": "ignore_rebuildable",
-      "note": "prefix: experiment result trees are raw rebuildable custody; track only promoted source, ledgers, or compact manifests outside this root. A1 best-proxy Modal harvested runtime sources are exact-dispositioned below, so the prefix runtime-source baseline remains unchanged.",
+      "note": "prefix: experiment result trees are raw rebuildable custody; track only promoted source, ledgers, or compact manifests outside this root. Runtime-source baseline refreshed after A5 channel-DP and contemporaneous Track4 raw custody; durable signal is summarized in .omx/research ledgers.",
       "path": "experiments/results/",
       "path_kind": "prefix",
       "runtime_source_baseline": {
         "algorithm": "pact_runtime_source_set_v1",
-        "count": 10595,
-        "sha256": "4fe4f0f69e2adae11809a12e96117b5adf75c3caac40e260fd913ae8848ffcb2"
+        "count": 10605,
+        "sha256": "3a0fce54df571d905657fe41f75410a66e5cf0a7670d4af4b761209e6b9d677c"
       }
     },
     {
@@ -1658,6 +1658,54 @@
       "disposition": "ignore_rebuildable",
       "note": "exact: A1 best-proxy Modal harvested runtime source is raw rebuildable custody; canonical signal is in .omx/research/phase_a1_best_proxy_modal_harvest_20260509_codex.md.",
       "path": "experiments/results/track1_phase_a1_score_gradient_bestproxy_lr2e6_20260509_codex/harvested_artifacts/finetuned_archive/submission_dir/src/model.py"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: xhigh adversarial review of the PARADIGM-dezeta Phase 2/3 plan; no score claim, dispatch, or packet edits.",
+      "path": ".omx/research/paradigm_dezeta_phase2_3_plan_review_20260509_codex.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: partner Track4 reactivation options council note; leave content untouched but preserve as durable research signal.",
+      "path": ".omx/research/track4_reactivation_options_for_council_20260509.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable A5 channel q-bit exact-DP schedule review; qsum200 measured-config negative, channel compiler primitive retained.",
+      "path": ".omx/research/a5_channel_qbits_dp_schedule_negative_20260509_codex.md"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "track",
+      "note": "track: machine-readable result-review packet for A5 channel-DP qsum200 macOS CPU advisory negative.",
+      "path": ".omx/research/artifacts/a5_channel_qbits_dp_qsum200_macos_cpu_advisory_review_20260509_codex.json"
+    },
+    {
+      "classification": "report_untracked",
+      "disposition": "track",
+      "note": "track: CPU-prep A5 channel q-bit exact-DP qsum200 schedule; byte-positive but advisory-negative after runtime packet screen.",
+      "path": "reports/a5_channel_qbits_dp_qsum200_20260509.json"
+    },
+    {
+      "classification": "report_untracked",
+      "disposition": "track",
+      "note": "track: CPU-prep A5 channel q-bit exact-DP qsum210 schedule; byte-dominated negative planning anchor.",
+      "path": "reports/a5_channel_qbits_dp_qsum210_20260509.json"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: exact discrete DP builder for A5 per-channel q-bit schedules; emits no-score planning manifests.",
+      "path": "tools/build_a5_channel_qbits_schedule.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused tests for the A5 per-channel q-bit DP schedule builder.",
+      "path": "tests/test_build_a5_channel_qbits_schedule.py"
     }
   ],
   "policy": "Every source-like untracked path must be track, recovery_queue, ignore_private, or ignore_rebuildable with rationale.",

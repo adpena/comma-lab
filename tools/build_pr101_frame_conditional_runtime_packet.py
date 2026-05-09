@@ -45,10 +45,14 @@ ensure_repo_imports(REPO_ROOT)
 from tac.analysis import hnerv_packet_sections  # noqa: E402
 from tac.codec.frame_conditional_bit_budget import (  # noqa: E402
     FRAME_CONDITIONAL_Q_BITS_ENCODING_BINARY_LOW_HIGH_MASK,
+    FRAME_CONDITIONAL_Q_BITS_ENCODING_CHANNEL_RAW3,
     FRAME_CONDITIONAL_Q_BITS_ENCODING_RAW3,
     FRAME_CONDITIONAL_LATENT_WIRE_SCHEMA,
     allocate_per_frame_bits,
+    build_frame_conditional_channel_wire_contract,
     build_frame_conditional_wire_contract,
+    pack_frame_conditional_channel_latent_codes,
+    pack_frame_conditional_channel_q_bits,
     pack_frame_conditional_latent_codes,
     pack_frame_conditional_q_bits_by_encoding,
 )
@@ -69,6 +73,7 @@ A5_ANCHOR_SCHEMA = "pr101_frame_conditional_bit_anchor.v1"
 A5_SCORE_MARGINAL_SCHEMA = "pr101_a5_per_pair_score_marginals.v1"
 A5_SCORE_MARGINAL_QBITS_SCHEDULE_SCHEMA = "pr101_a5_score_marginal_qbits_schedule.v1"
 Q_BITS_OVERRIDE_KEYS = ("per_pair_q_bits", "q_bits_per_pair", "q_bits")
+CHANNEL_Q_BITS_OVERRIDE_KEYS = ("per_channel_q_bits", "q_bits_per_channel")
 
 A5_MAGIC = b"A5FC"
 A5_HEADER_LEN = 20
@@ -130,6 +135,8 @@ def build_frame_conditional_runtime_packet(
     force: bool = False,
     q_bits_override: Sequence[float] | np.ndarray | None = None,
     q_bits_override_source_path: Path | None = None,
+    channel_q_bits_override: Sequence[float] | np.ndarray | None = None,
+    channel_q_bits_override_source_path: Path | None = None,
     q_bits_sideinfo_encoding: str = FRAME_CONDITIONAL_Q_BITS_ENCODING_RAW3,
     allow_q_bits_wire_contract_override: bool = False,
     recorded_at_utc: dt.datetime | None = None,
@@ -147,6 +154,11 @@ def build_frame_conditional_runtime_packet(
         if q_bits_override_source_path is not None
         else None
     )
+    channel_q_bits_override_source_path = (
+        _repo_path(channel_q_bits_override_source_path)
+        if channel_q_bits_override_source_path is not None
+        else None
+    )
 
     _require_file(a5_manifest_path, "a5_manifest")
     _require_file(source_archive, "source_archive")
@@ -156,6 +168,33 @@ def build_frame_conditional_runtime_packet(
             raise FrameConditionalRuntimePacketError(
                 "q_bits_override_source_path requires q_bits_override"
             )
+    if channel_q_bits_override_source_path is not None:
+        _require_file(
+            channel_q_bits_override_source_path,
+            "channel_q_bits_override_source",
+        )
+        if channel_q_bits_override is None:
+            raise FrameConditionalRuntimePacketError(
+                "channel_q_bits_override_source_path requires channel_q_bits_override"
+            )
+    if q_bits_override is not None and channel_q_bits_override is not None:
+        raise FrameConditionalRuntimePacketError(
+            "per-pair and per-channel q-bit overrides are mutually exclusive"
+        )
+    if (
+        q_bits_sideinfo_encoding == FRAME_CONDITIONAL_Q_BITS_ENCODING_CHANNEL_RAW3
+        and channel_q_bits_override is None
+    ):
+        raise FrameConditionalRuntimePacketError(
+            "channel_raw3 q-bit side-info requires --channel-q-bits-json"
+        )
+    if (
+        q_bits_sideinfo_encoding != FRAME_CONDITIONAL_Q_BITS_ENCODING_CHANNEL_RAW3
+        and channel_q_bits_override is not None
+    ):
+        raise FrameConditionalRuntimePacketError(
+            "--channel-q-bits-json requires --q-bits-sideinfo-encoding channel_raw3"
+        )
     if not source_runtime_dir.is_dir():
         raise FrameConditionalRuntimePacketError(
             f"source runtime directory not found: {source_runtime_dir}"
@@ -163,6 +202,8 @@ def build_frame_conditional_runtime_packet(
     inputs = [a5_manifest_path, source_archive, source_runtime_dir]
     if q_bits_override_source_path is not None:
         inputs.append(q_bits_override_source_path)
+    if channel_q_bits_override_source_path is not None:
+        inputs.append(channel_q_bits_override_source_path)
     _assert_output_dir_isolated(
         output_dir=output_dir,
         inputs=inputs,
@@ -184,23 +225,44 @@ def build_frame_conditional_runtime_packet(
     latent_meta_blob, q_pair_first = _extract_storage_ordered_latent_payload(
         source_latent_blob
     )
-    q_bits = _materialize_q_bits(
-        a5_manifest=a5_manifest,
-        best_row=best_row,
-        video_path=video_path,
-        q_bits_override=q_bits_override,
+    q_bits_axis = (
+        "channel"
+        if q_bits_sideinfo_encoding == FRAME_CONDITIONAL_Q_BITS_ENCODING_CHANNEL_RAW3
+        else "pair"
     )
-    q_bits_sideinfo = pack_frame_conditional_q_bits_by_encoding(
-        q_bits,
-        encoding=q_bits_sideinfo_encoding,
-    )
-    latent_wire_payload = pack_frame_conditional_latent_codes(q_pair_first, q_bits)
-    materialized_wire_contract = build_frame_conditional_wire_contract(
-        q_bits,
-        latent_dim=q_pair_first.shape[1],
-        q_pair_first=q_pair_first,
-        q_bits_sideinfo_encoding=q_bits_sideinfo_encoding,
-    )
+    if q_bits_axis == "channel":
+        q_bits = _materialize_channel_q_bits(
+            channel_q_bits_override=channel_q_bits_override,
+            latent_dim=q_pair_first.shape[1],
+        )
+        q_bits_sideinfo = pack_frame_conditional_channel_q_bits(q_bits)
+        latent_wire_payload = pack_frame_conditional_channel_latent_codes(
+            q_pair_first,
+            q_bits,
+        )
+        materialized_wire_contract = build_frame_conditional_channel_wire_contract(
+            q_bits,
+            n_pairs=q_pair_first.shape[0],
+            q_pair_first=q_pair_first,
+        )
+    else:
+        q_bits = _materialize_q_bits(
+            a5_manifest=a5_manifest,
+            best_row=best_row,
+            video_path=video_path,
+            q_bits_override=q_bits_override,
+        )
+        q_bits_sideinfo = pack_frame_conditional_q_bits_by_encoding(
+            q_bits,
+            encoding=q_bits_sideinfo_encoding,
+        )
+        latent_wire_payload = pack_frame_conditional_latent_codes(q_pair_first, q_bits)
+        materialized_wire_contract = build_frame_conditional_wire_contract(
+            q_bits,
+            latent_dim=q_pair_first.shape[1],
+            q_pair_first=q_pair_first,
+            q_bits_sideinfo_encoding=q_bits_sideinfo_encoding,
+        )
     wire_contract_reconciliation = _reconcile_wire_contract(
         source_wire_contract=wire_contract,
         materialized_wire_contract=materialized_wire_contract,
@@ -213,8 +275,11 @@ def build_frame_conditional_runtime_packet(
         q_bits=q_bits,
         q_bits_sideinfo=q_bits_sideinfo,
         q_bits_sideinfo_encoding=q_bits_sideinfo_encoding,
+        q_bits_axis=q_bits_axis,
         q_bits_override=q_bits_override,
         q_bits_override_source_path=q_bits_override_source_path,
+        channel_q_bits_override=channel_q_bits_override,
+        channel_q_bits_override_source_path=channel_q_bits_override_source_path,
         a5_manifest=a5_manifest,
         best_row=best_row,
         video_path=video_path,
@@ -509,21 +574,48 @@ def _materialize_q_bits(
     return q_bits
 
 
+def _materialize_channel_q_bits(
+    *,
+    channel_q_bits_override: Sequence[float] | np.ndarray | None,
+    latent_dim: int,
+) -> np.ndarray:
+    if channel_q_bits_override is None:
+        raise FrameConditionalRuntimePacketError(
+            "per-channel q-bit schedule requires an explicit override"
+        )
+    q_bits = _normalise_q_bits_override_values(channel_q_bits_override)
+    if q_bits.ndim != 1:
+        raise FrameConditionalRuntimePacketError(
+            f"channel q_bits must be 1-D, got {q_bits.shape}"
+        )
+    if q_bits.size != latent_dim:
+        raise FrameConditionalRuntimePacketError(
+            f"channel q_bits length {q_bits.size} != latent_dim {latent_dim}"
+        )
+    return q_bits
+
+
 def _q_bits_schedule_record(
     *,
     q_bits: np.ndarray,
     q_bits_sideinfo: bytes,
     q_bits_sideinfo_encoding: str,
+    q_bits_axis: str,
     q_bits_override: Sequence[float] | np.ndarray | None,
     q_bits_override_source_path: Path | None,
+    channel_q_bits_override: Sequence[float] | np.ndarray | None,
+    channel_q_bits_override_source_path: Path | None,
     a5_manifest: Mapping[str, Any],
     best_row: Mapping[str, Any],
     video_path: Path | None,
 ) -> dict[str, Any]:
     q_bits = np.asarray(q_bits, dtype=np.uint8)
+    if q_bits_axis not in {"pair", "channel"}:
+        raise FrameConditionalRuntimePacketError(f"unknown q_bits_axis={q_bits_axis!r}")
     unique_values, unique_counts = np.unique(q_bits, return_counts=True)
     record: dict[str, Any] = {
         "schema": "pr101_frame_conditional_q_bits_schedule.v1",
+        "q_bits_axis": q_bits_axis,
         "q_bits_count": int(q_bits.size),
         "q_bits_min": int(q_bits.min()),
         "q_bits_max": int(q_bits.max()),
@@ -538,11 +630,34 @@ def _q_bits_schedule_record(
         "q_bits_sideinfo_sha256": sha256_bytes(q_bits_sideinfo),
         "score_marginal_manifest_consumed": False,
     }
-    if q_bits_override is not None:
+    if q_bits_axis == "channel":
+        record["schedule_source"] = "channel_json_override"
+        if channel_q_bits_override_source_path is None:
+            raise FrameConditionalRuntimePacketError(
+                "channel q-bit override requires source path for custody"
+            )
+        source_q_bits, source_info = _load_q_bits_override_json_with_info(
+            channel_q_bits_override_source_path,
+            expected_axis="channel",
+        )
+        if sha256_bytes(source_q_bits.tobytes()) != record["q_bits_sha256"]:
+            raise FrameConditionalRuntimePacketError(
+                "channel q_bits override source does not match materialized q_bits"
+            )
+        record.update(
+            {
+                "source_key": source_info["key"],
+                "source_schema": source_info.get("schema"),
+                "source_artifact": _artifact_ref(channel_q_bits_override_source_path),
+                "score_marginal_manifest_consumed": False,
+            }
+        )
+    elif q_bits_override is not None:
         record["schedule_source"] = "api_override"
         if q_bits_override_source_path is not None:
             source_q_bits, source_info = _load_q_bits_override_json_with_info(
-                q_bits_override_source_path
+                q_bits_override_source_path,
+                expected_axis="pair",
             )
             if sha256_bytes(source_q_bits.tobytes()) != record["q_bits_sha256"]:
                 raise FrameConditionalRuntimePacketError(
@@ -582,28 +697,65 @@ def _q_bits_schedule_record(
 
 
 def _load_q_bits_override_json(path: Path) -> np.ndarray:
-    q_bits, _info = _load_q_bits_override_json_with_info(path)
+    q_bits, _info = _load_q_bits_override_json_with_info(path, expected_axis="pair")
     return q_bits
 
 
-def _load_q_bits_override_json_with_info(path: Path) -> tuple[np.ndarray, dict[str, Any]]:
+def _load_channel_q_bits_override_json(path: Path) -> np.ndarray:
+    q_bits, _info = _load_q_bits_override_json_with_info(path, expected_axis="channel")
+    return q_bits
+
+
+def _load_q_bits_override_json_with_info(
+    path: Path,
+    *,
+    expected_axis: str = "pair",
+) -> tuple[np.ndarray, dict[str, Any]]:
     path = _repo_path(path)
     payload = read_json(path)
-    values, info = _extract_q_bits_override_values(payload)
+    values, info = _extract_q_bits_override_values(payload, expected_axis=expected_axis)
     q_bits = _normalise_q_bits_override_values(values)
+    info["axis"] = expected_axis
     info["path"] = _repo_rel(path)
     info["q_bits_count"] = int(q_bits.size)
     info["q_bits_sha256"] = sha256_bytes(q_bits.tobytes())
     return q_bits, info
 
 
-def _extract_q_bits_override_values(payload: Any) -> tuple[Any, dict[str, Any]]:
+def _extract_q_bits_override_values(
+    payload: Any,
+    *,
+    expected_axis: str = "pair",
+) -> tuple[Any, dict[str, Any]]:
+    if expected_axis not in {"pair", "channel"}:
+        raise FrameConditionalRuntimePacketError(
+            f"expected_axis must be pair or channel, got {expected_axis!r}"
+        )
+    allowed_keys = (
+        Q_BITS_OVERRIDE_KEYS
+        if expected_axis == "pair"
+        else CHANNEL_Q_BITS_OVERRIDE_KEYS
+    )
     if isinstance(payload, Mapping):
-        present = [key for key in Q_BITS_OVERRIDE_KEYS if key in payload]
+        present = [key for key in allowed_keys if key in payload]
+        forbidden_keys = [
+            key
+            for key in (
+                CHANNEL_Q_BITS_OVERRIDE_KEYS
+                if expected_axis == "pair"
+                else Q_BITS_OVERRIDE_KEYS
+            )
+            if key in payload
+        ]
+        if forbidden_keys:
+            raise FrameConditionalRuntimePacketError(
+                f"{expected_axis} q-bits JSON contains wrong-axis key(s): "
+                + ", ".join(forbidden_keys)
+            )
         if len(present) != 1:
             raise FrameConditionalRuntimePacketError(
                 "q-bits JSON object must contain exactly one of "
-                + ", ".join(Q_BITS_OVERRIDE_KEYS)
+                + ", ".join(allowed_keys)
             )
         key = present[0]
         return payload[key], {"key": key, "schema": payload.get("schema")}
@@ -615,6 +767,8 @@ def _extract_q_bits_override_values(payload: Any) -> tuple[Any, dict[str, Any]]:
 
 
 def _normalise_q_bits_override_values(values: Any) -> np.ndarray:
+    if isinstance(values, np.ndarray):
+        values = values.tolist()
     if not isinstance(values, Sequence) or isinstance(values, (bytes, str)):
         raise FrameConditionalRuntimePacketError("q-bits override must be a JSON array")
     out: list[int] = []
@@ -818,6 +972,7 @@ A5_FRAME_CONDITIONAL_HEADER_LEN = 20
 A5_FRAME_CONDITIONAL_WIRE_SCHEMA = "tac_frame_conditional_latent_wire.v1"
 A5_Q_BITS_RAW3_BYTES = (N_PAIRS * 3 + 7) // 8
 A5_Q_BITS_BINARY_LOW_HIGH_MASK_BYTES = 2 + ((N_PAIRS + 7) // 8)
+A5_Q_BITS_CHANNEL_RAW3_BYTES = (LATENT_DIM * 3 + 7) // 8
 
 
 def _a5_sha256(data):
@@ -870,6 +1025,21 @@ def _a5_unpack_q_bits(data):
     return out
 
 
+def _a5_unpack_channel_q_bits(data):
+    if len(data) != A5_Q_BITS_CHANNEL_RAW3_BYTES:
+        raise ValueError(
+            "A5 channel q-bit side-info length "
+            f"{len(data)} != expected {A5_Q_BITS_CHANNEL_RAW3_BYTES}"
+        )
+    out = np.empty(LATENT_DIM, dtype=np.uint8)
+    bit_pos = 0
+    for i in range(LATENT_DIM):
+        code, bit_pos = _a5_read_msb_bits(data, bit_pos, 3)
+        out[i] = code + 1
+    _a5_assert_zero_padding(data, bit_pos)
+    return out
+
+
 def _a5_unpack_latent_codes(data, q_bits):
     expected_bits = int(q_bits.astype(np.uint64).sum()) * LATENT_DIM
     expected_bytes = (expected_bits + 7) // 8
@@ -889,6 +1059,25 @@ def _a5_unpack_latent_codes(data, q_bits):
     return out
 
 
+def _a5_unpack_channel_latent_codes(data, q_bits):
+    expected_bits = int(q_bits.astype(np.uint64).sum()) * N_PAIRS
+    expected_bytes = (expected_bits + 7) // 8
+    if len(data) != expected_bytes:
+        raise ValueError(
+            f"A5 channel latent bitstream length {len(data)} != expected {expected_bytes}"
+        )
+    out = np.empty((N_PAIRS, LATENT_DIM), dtype=np.uint8)
+    bit_pos = 0
+    for pair_idx in range(N_PAIRS):
+        for dim_idx, bits in enumerate(q_bits):
+            bit_count = int(bits)
+            shift = 8 - bit_count
+            code, bit_pos = _a5_read_msb_bits(data, bit_pos, bit_count)
+            out[pair_idx, dim_idx] = (code << shift) & 255
+    _a5_assert_zero_padding(data, bit_pos)
+    return out
+
+
 def decode_latents_frame_conditional(latent_meta_blob, q_bits_sideinfo_blob, latent_wire_blob):
     expected_meta_len = LATENT_DIM * 4
     if len(latent_meta_blob) != expected_meta_len:
@@ -901,8 +1090,12 @@ def decode_latents_frame_conditional(latent_meta_blob, q_bits_sideinfo_blob, lat
     scales = torch.from_numpy(
         np.frombuffer(latent_meta_blob[LATENT_DIM * 2:], dtype=np.float16).copy()
     ).float()
-    q_bits = _a5_unpack_q_bits(q_bits_sideinfo_blob)
-    q_ordered = _a5_unpack_latent_codes(latent_wire_blob, q_bits)
+    if len(q_bits_sideinfo_blob) == A5_Q_BITS_CHANNEL_RAW3_BYTES:
+        q_bits = _a5_unpack_channel_q_bits(q_bits_sideinfo_blob)
+        q_ordered = _a5_unpack_channel_latent_codes(latent_wire_blob, q_bits)
+    else:
+        q_bits = _a5_unpack_q_bits(q_bits_sideinfo_blob)
+        q_ordered = _a5_unpack_latent_codes(latent_wire_blob, q_bits)
     q = np.empty((N_PAIRS, LATENT_DIM), dtype=np.uint8)
     q[:, LATENT_DIM_ORDER] = q_ordered
     return torch.from_numpy(q.astype(np.float32)) * scales.unsqueeze(0) + mins.unsqueeze(0)
@@ -986,6 +1179,7 @@ def parse_archive(archive_bytes):
         "supported_q_bits_sideinfo_encodings": [
             FRAME_CONDITIONAL_Q_BITS_ENCODING_RAW3,
             FRAME_CONDITIONAL_Q_BITS_ENCODING_BINARY_LOW_HIGH_MASK,
+            FRAME_CONDITIONAL_Q_BITS_ENCODING_CHANNEL_RAW3,
         ],
         "magic": A5_MAGIC.decode("ascii"),
         "header_bytes": A5_HEADER_LEN,
@@ -1630,6 +1824,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--channel-q-bits-json",
+        type=Path,
+        help=(
+            "Optional JSON per-channel q-bit override. Requires "
+            "--q-bits-sideinfo-encoding channel_raw3 and exactly one "
+            "per_channel_q_bits/q_bits_per_channel key."
+        ),
+    )
+    parser.add_argument(
         "--recompute-wire-contract-for-q-bits",
         action="store_true",
         help=(
@@ -1642,12 +1845,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         choices=(
             FRAME_CONDITIONAL_Q_BITS_ENCODING_RAW3,
             FRAME_CONDITIONAL_Q_BITS_ENCODING_BINARY_LOW_HIGH_MASK,
+            FRAME_CONDITIONAL_Q_BITS_ENCODING_CHANNEL_RAW3,
         ),
         default=FRAME_CONDITIONAL_Q_BITS_ENCODING_RAW3,
         help=(
             "Encoding for q-bit side-info. raw3 preserves the original 3-bit "
             "per-pair stream; binary_low_high_mask is a compact two-level "
-            "selector mask for one- or two-q-bit schedules."
+            "selector mask for one- or two-q-bit schedules; channel_raw3 "
+            "stores one 3-bit q value per latent dimension."
         ),
     )
     parser.add_argument("--output-dir", type=Path)
@@ -1670,6 +1875,11 @@ def main(argv: list[str] | None = None) -> int:
             if args.q_bits_json is not None
             else None
         )
+        channel_q_bits_override = (
+            _load_channel_q_bits_override_json(args.channel_q_bits_json)
+            if args.channel_q_bits_json is not None
+            else None
+        )
         manifest = build_frame_conditional_runtime_packet(
             a5_manifest_path=args.a5_manifest,
             source_archive=args.source_archive,
@@ -1678,6 +1888,8 @@ def main(argv: list[str] | None = None) -> int:
             video_path=args.video_path,
             q_bits_override=q_bits_override,
             q_bits_override_source_path=args.q_bits_json,
+            channel_q_bits_override=channel_q_bits_override,
+            channel_q_bits_override_source_path=args.channel_q_bits_json,
             q_bits_sideinfo_encoding=args.q_bits_sideinfo_encoding,
             allow_q_bits_wire_contract_override=args.recompute_wire_contract_for_q_bits,
             candidate_id=args.candidate_id,
