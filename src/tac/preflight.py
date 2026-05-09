@@ -5661,7 +5661,7 @@ def check_lightning_ssh_static_policy(
     launchers still own their separate SSH policy and are intentionally not
     inspected by this check.
     """
-    root = repo_root or REPO_ROOT
+    root = Path(repo_root or REPO_ROOT).resolve()
     violations: list[str] = []
     for path in _candidate_lightning_ssh_policy_files(root):
         violations.extend(_scan_lightning_ssh_static_policy(path, root))
@@ -13091,14 +13091,51 @@ def check_profile_keys_have_resolvers(
     # find the actual bug class — keys with ZERO consumers — without
     # producing false positives on widely-used keys.
     resolver_search_dirs = ["src/tac", "experiments"]
+    resolver_source_files = _rg_file_list(
+        root,
+        resolver_search_dirs,
+        ("*.py",),
+        exclude_globs=(
+            "experiments/results/**",
+            "**/__pycache__/**",
+            "**/comma_lab_public_export/**",
+        ),
+    )
+    if resolver_source_files is None:
+        py_paths = tuple(_iter_python_files(root, resolver_search_dirs))
+    else:
+        py_paths = resolver_source_files
+    cache_enabled = os.environ.get("PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE") != "1"
+    cache_name = "profile_resolver_source_success"
+    cache_key = hashlib.sha256(
+        json.dumps(
+            {
+                "keys": sorted(keys),
+                "scanner_version": "profile_resolver_source.v1",
+            },
+            sort_keys=True,
+        ).encode()
+    ).hexdigest()
+    cache_rows = _load_preflight_cache(root, cache_name) if cache_enabled else {}
+    source_fingerprint = _fingerprint_paths(
+        py_paths,
+        root,
+        salt="profile_resolver_source.v1",
+    )
+    cache_row = cache_rows.get(cache_key)
+    if (
+        cache_enabled
+        and isinstance(cache_row, dict)
+        and cache_row.get("source_fingerprint") == source_fingerprint
+    ):
+        if verbose:
+            print(f"  [profile-resolver] OK: cached {len(keys)} profile key(s)")
+        return []
+
     resolved: set[str] = set()
     unresolved = set(keys)
     key_re = _profile_key_pattern(unresolved)
     source_index = _current_source_index(root)
-    if source_index is not None:
-        py_paths = source_index.files(resolver_search_dirs, pattern="*.py")
-    else:
-        py_paths = tuple(_iter_python_files(root, resolver_search_dirs))
     for p in py_paths:
         if not unresolved:
             break
@@ -13131,6 +13168,15 @@ def check_profile_keys_have_resolvers(
             f"the constructor default. Add `cfg.{k} = profile['{k}']` to "
             f"the resolver section."
         )
+    if cache_enabled:
+        if violations:
+            cache_rows.pop(cache_key, None)
+        else:
+            cache_rows[cache_key] = {
+                "source_fingerprint": source_fingerprint,
+                "key_count": len(keys),
+            }
+        _store_preflight_cache(root, cache_name, cache_rows)
     if verbose:
         if violations:
             print(f"  [profile-resolver] {len(violations)} unresolved profile key(s):")
