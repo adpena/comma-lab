@@ -37,6 +37,19 @@ def test_check_67_syntax_error_detected(tmp_path):
     assert "broken.py" in v[0]
 
 
+def test_check_67_incremental_cache_invalidates_changed_file(tmp_path):
+    repo = _py_repo(tmp_path)
+    target = repo / "src" / "tac" / "cached.py"
+    target.write_text("def f(x):\n    return x + 1\n")
+    assert check_python_files_compile(repo_root=repo, strict=False, verbose=False) == []
+    assert (repo / ".omx" / "cache" / "python_compile_success.json").exists()
+
+    target.write_text("def f(x: return x\n# changed size invalidates cache\n")
+    v = check_python_files_compile(repo_root=repo, strict=False, verbose=False)
+    assert len(v) == 1
+    assert "cached.py" in v[0]
+
+
 def test_check_67_strict_raises(tmp_path):
     repo = _py_repo(tmp_path)
     (repo / "src" / "tac" / "broken.py").write_text("def f(x: return x\n")

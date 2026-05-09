@@ -53,6 +53,65 @@ from pathlib import Path
 import torch
 
 DEFAULT_PREFLIGHT_CLI_TIMEOUT_S = 30.0
+_PREFLIGHT_CACHE_SCHEMA = "pact.preflight_cache.v1"
+
+
+def _preflight_cache_path(root: Path, name: str) -> Path:
+    return Path(root).resolve() / ".omx" / "cache" / f"{name}.json"
+
+
+def _load_preflight_cache(root: Path, name: str) -> dict[str, object]:
+    path = _preflight_cache_path(root, name)
+    try:
+        payload = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    if payload.get("schema") != _PREFLIGHT_CACHE_SCHEMA:
+        return {}
+    rows = payload.get("rows")
+    return rows if isinstance(rows, dict) else {}
+
+
+def _store_preflight_cache(root: Path, name: str, rows: dict[str, object]) -> None:
+    path = _preflight_cache_path(root, name)
+    payload = {"schema": _PREFLIGHT_CACHE_SCHEMA, "rows": rows}
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp.write_text(json.dumps(payload, sort_keys=True))
+        tmp.replace(path)
+    except OSError:
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+def _source_cache_row(path: Path, **extra: object) -> dict[str, object]:
+    stat = path.stat()
+    return {
+        "path": str(path.resolve()),
+        "size": stat.st_size,
+        "mtime_ns": stat.st_mtime_ns,
+        **extra,
+    }
+
+
+def _source_cache_row_matches(path: Path, row: object, **extra: object) -> bool:
+    if not isinstance(row, dict):
+        return False
+    try:
+        stat = path.stat()
+    except OSError:
+        return False
+    return (
+        row.get("path") == str(path.resolve())
+        and row.get("size") == stat.st_size
+        and row.get("mtime_ns") == stat.st_mtime_ns
+        and all(row.get(key) == value for key, value in extra.items())
+    )
 
 
 @functools.lru_cache(maxsize=4096)
@@ -16446,13 +16505,19 @@ def check_python_files_compile(
 
     Skips: __pycache__, .venv, .git, .pytest_cache, build/, dist/, node_modules.
     """
-    root = repo_root or REPO_ROOT
+    root = Path(repo_root or REPO_ROOT).resolve()
     skip_parts = {"__pycache__", ".venv", ".git", ".pytest_cache",
                   "build", "dist", "node_modules", ".eggs"}
     source_index = _current_source_index(root)
+    cache_enabled = os.environ.get("PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE") != "1"
+    cache_name = "python_compile_success"
+    compile_cache = _load_preflight_cache(root, cache_name) if cache_enabled else {}
+    cache_dirty = False
+    py_version = ".".join(str(part) for part in sys.version_info[:3])
 
     violations: list[str] = []
     n_compiled = 0
+    n_cached = 0
     if source_index is not None:
         py_paths = source_index.files(scan_dirs, pattern="*.py")
     else:
@@ -16462,6 +16527,16 @@ def check_python_files_compile(
             continue
         if _is_oss_export_mirror_path(py):
             continue
+        cache_key = str(py.resolve())
+        if cache_enabled and _source_cache_row_matches(
+            py,
+            compile_cache.get(cache_key),
+            kind="python_compile_success",
+            py_version=py_version,
+        ):
+            n_compiled += 1
+            n_cached += 1
+            continue
         try:
             if source_index is not None:
                 source = source_index.read_text(py)
@@ -16469,19 +16544,38 @@ def check_python_files_compile(
                 source = py.read_text()
             compile(source, str(py), "exec")
             n_compiled += 1
+            if cache_enabled:
+                compile_cache[cache_key] = _source_cache_row(
+                    py,
+                    kind="python_compile_success",
+                    py_version=py_version,
+                )
+                cache_dirty = True
         except (SyntaxError, IndentationError) as e:
+            if cache_key in compile_cache:
+                del compile_cache[cache_key]
+                cache_dirty = True
             violations.append(
                 f"{py.relative_to(root)}: {type(e).__name__} at "
                 f"line {e.lineno}: {e.msg}"
             )
         except (UnicodeDecodeError, FileNotFoundError, OSError) as e:
+            if cache_key in compile_cache:
+                del compile_cache[cache_key]
+                cache_dirty = True
             violations.append(
                 f"{py.relative_to(root)}: {type(e).__name__}: {e}"
             )
         except Exception as e:  # pragma: no cover  unexpected
+            if cache_key in compile_cache:
+                del compile_cache[cache_key]
+                cache_dirty = True
             violations.append(
                 f"{py.relative_to(root)}: {type(e).__name__}: {e}"
             )
+
+    if cache_enabled and cache_dirty:
+        _store_preflight_cache(root, cache_name, compile_cache)
 
     if verbose:
         if violations:
@@ -16492,7 +16586,8 @@ def check_python_files_compile(
             if len(violations) > 20:
                 print(f"    ... and {len(violations) - 20} more")
         else:
-            print(f"  [python-compile] OK: {n_compiled} files compile clean")
+            suffix = f" ({n_cached} cached)" if n_cached else ""
+            print(f"  [python-compile] OK: {n_compiled} files compile clean{suffix}")
 
     if violations and strict:
         raise MetaBugViolation(
