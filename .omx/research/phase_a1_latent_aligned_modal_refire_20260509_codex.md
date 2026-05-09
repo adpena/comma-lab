@@ -2,7 +2,8 @@
 
 ## Status
 
-Dispatch is in flight. This is not a score claim and is not promotion-eligible.
+This dispatch failed before artifact harvest with a Modal worker import-path
+bug. This is not a score claim and is not promotion-eligible.
 
 ## Why This Refire Exists
 
@@ -24,8 +25,9 @@ rows into `RealPairBatchSource` during non-smoke training.
 - Modal app run: `https://modal.com/apps/adpena/main/ap-88kd5YBTtxSP2ZVmMhnTVK`
 - Dispatched at: `2026-05-09T01:20:01Z`
 - Predicted ETA: `2026-05-09T03:49:59Z`
+- Terminal status: `failed_modal_recover_exception`
 - Estimated cost: `$1.47`
-- Evidence grade: `[advisory only - dispatch in flight]`
+- Evidence grade: `[infrastructure failure - no score claim]`
 - Score claim: `false`
 - Promotion eligible: `false`
 
@@ -78,6 +80,11 @@ The dispatcher recorded an active claim row in the ignored live custody ledger:
 When the run is recovered, append a terminal row through
 `tools/claim_lane_dispatch.py` or the recover tool's built-in terminal claim
 logic.
+
+Terminal update: recovery raised `ModuleNotFoundError: No module named 'tac'`
+from the Modal function result and appended a `failed_modal_recover_exception`
+claim row. See
+`.omx/research/phase_a1_modal_worker_import_path_failure_20260509_codex.md`.
 
 ## Next Review Packet
 

@@ -109,7 +109,7 @@
       "timestamp": "artifacts",
       "manifest_path": "experiments/results/track1_phase_a1_score_gradient_20260508T230020Z_modal/harvested_artifacts/build_manifest.json",
       "notes": [
-        "first Modal config retired on macOS CPU advisory; random-latent training/deploy mismatch fixed; constrained archive-latent Modal refire is in flight"
+        "first Modal config retired on macOS CPU advisory; random-latent training/deploy mismatch fixed; first constrained refire hit worker import-path failure, now fixed"
       ]
     },
     {

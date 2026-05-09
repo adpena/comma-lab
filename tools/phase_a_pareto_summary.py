@@ -221,8 +221,8 @@ def parse_manifest(manifest_path: Path) -> PhaseAEntry | None:
     if lane == "A1_score_gradient":
         entry.notes.append(
             "first Modal config retired on macOS CPU advisory; random-latent "
-            "training/deploy mismatch fixed; constrained archive-latent "
-            "Modal refire is in flight"
+            "training/deploy mismatch fixed; first constrained refire hit "
+            "worker import-path failure, now fixed"
         )
     if lane == "ADMM_lossy_coarsening_baseline":
         entry.notes.append("Path B baseline; -28 KB savings at 4-5% rel_err")
@@ -415,8 +415,9 @@ def render_markdown(entries: list[PhaseAEntry]) -> str:
         "but exact CUDA was skipped by DALI/NVDEC preflight and local macOS CPU advisory "
         "scored 3.721654. A follow-up bug hunt found that non-smoke training used random "
         "latents while the archive builder preserved PR101 latent_blob+sidecar bytes; that "
-        "training/deploy distribution mismatch is now fixed. A constrained archive-latent "
-        "Modal refire is in flight; the retired archive remains non-promotable.",
+        "training/deploy distribution mismatch is now fixed. The first constrained "
+        "archive-latent Modal refire failed before artifacts due a worker import-path "
+        "bug; that bug is fixed and the retired archives remain non-promotable.",
         "- **A5 and Cross-paradigm byte savings are scorer-unsafe at current configs.** "
         "A5 eta=4 complexity allocation and Cross-paradigm ADMM x Op1 both need "
         "changed score-domain or SegNet-boundary-aware allocation before new exact-eval "
@@ -429,8 +430,8 @@ def render_markdown(entries: list[PhaseAEntry]) -> str:
         "",
         "- A1 (score-gradient PR101 fine-tune): first Modal config is retired, "
         "but the root training/deploy latent mismatch is fixed in `tac` + the "
-        "training script. A constrained archive-latent Modal refire is in "
-        "flight; harvest it before any additional A1 dispatch.",
+        "training script. First constrained refire hit a worker import-path "
+        "failure, now fixed; use a fresh label for the next A1 refire.",
         "- A4-alt (Filler STC pose codec): byte-anchor landed; representative "
         "pose-distribution only, not a PR101 monolithic archive rewrite.",
         "- A4 (ChARM/hyperprior): toy and hand-parametric PR101 configs are "

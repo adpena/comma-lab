@@ -123,6 +123,24 @@ DEFAULT_PR101_SOURCE_DIR = (
 DEFAULT_VIDEO_PATH = REPO_ROOT / "upstream/videos/0.mkv"
 
 
+def _ensure_repo_import_paths() -> None:
+    """Make local and Modal-worker repo imports work without shell PYTHONPATH."""
+    for path in (
+        REPO_ROOT / "src",
+        REPO_ROOT / "upstream",
+        REPO_ROOT,
+        REMOTE_REPO / "src",
+        REMOTE_REPO / "upstream",
+        REMOTE_REPO,
+    ):
+        text = str(path)
+        if text not in sys.path:
+            sys.path.insert(0, text)
+
+
+_ensure_repo_import_paths()
+
+
 # ---------------------------------------------------------------------------
 # Modal app + image
 # ---------------------------------------------------------------------------
@@ -1398,6 +1416,25 @@ def _close_modal_expired_claim(
     )
 
 
+def _close_modal_exception_claim(
+    *,
+    instance_job_id: str,
+    call_id: str,
+    exc: BaseException,
+) -> int:
+    return _claim_lane(
+        lane_id="track1_phase_a1_score_gradient",
+        instance_job_id=instance_job_id,
+        predicted_eta_utc=_utc_now_iso(),
+        notes=(
+            f"Phase A1 Modal recover failed before artifact harvest for call_id={call_id}; "
+            f"exception={type(exc).__name__}: {exc}. Terminal failure closes the active claim."
+        ),
+        status="failed_modal_recover_exception",
+        force=True,
+    )
+
+
 def _write_dispatch_metadata(
     *,
     instance_job_id: str,
@@ -1751,6 +1788,14 @@ def recover(label: str) -> int:
         return 4
     except Exception as exc:
         print(f"FATAL: recover failed: {type(exc).__name__}: {exc}", file=sys.stderr)
+        close_rc = _close_modal_exception_claim(
+            instance_job_id=instance_job_id,
+            call_id=call_id,
+            exc=exc,
+        )
+        if close_rc != 0:
+            print(f"FATAL: failed to close exception Modal claim rc={close_rc}", file=sys.stderr)
+            return 6
         return 5
 
     rc = result.get("returncode", "?")

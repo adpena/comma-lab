@@ -8,22 +8,26 @@ regenerated_by: claude:fix-all-bugs-pass
 
 ## 2026-05-09 (night) - A1 latent-aligned Modal refire
 
-**Status:** Active Modal T4 dispatch, no score claim.
+**Status:** First latent-aligned Modal T4 refire failed before artifacts with
+`ModuleNotFoundError: No module named 'tac'`; no score claim.
 
 - Lane: `track1_phase_a1_score_gradient`
 - Job: `track1_phase_a1_score_gradient_latentalign_lr2e6_20260509T011929Z_modal`
 - Modal call id: `fc-01KR553TPH27G73HMHH56MDZH0`
-- Predicted ETA: `2026-05-09T03:49:59Z`
+- Terminal status: `failed_modal_recover_exception`
 - Cost estimate: `$1.47`
-- Recovery: `.venv/bin/python experiments/modal_phase_a1_score_gradient_pr101.py recover --label track1_phase_a1_score_gradient_latentalign_lr2e6_20260509T011929Z_modal`
+- Recovery command used: `.venv/bin/python experiments/modal_phase_a1_score_gradient_pr101.py recover --label track1_phase_a1_score_gradient_latentalign_lr2e6_20260509T011929Z_modal`
 
 This refire follows commit `133f1286`, which fixed A1's training/deploy
 contract by loading PR101 archive-derived latents instead of random latent
 vectors for non-smoke score-gradient training. The run uses a conservative
 `lr=2e-6`, `epochs=40`, `steps_per_epoch=8`, `batch_size=4`, and
-`continue_after_nvdec_failure=true`. If Modal DALI/NVDEC preflight fails again,
-the artifact may still be useful for local advisory collapse screening, but it
-must not be promoted as `[contest-CUDA]`.
+`continue_after_nvdec_failure=true`. The new failure was an operator/tooling
+bug, not a training result: the Modal worker process needed `/workspace/pact/src`
+on `sys.path` before importing `tac.submission_archive.safe_extract_zip`.
+`experiments/modal_phase_a1_score_gradient_pr101.py` now installs local and
+remote repo import roots at import time and closes active claims on recover
+exceptions.
 
 ## 2026-05-08 (evening) — Recursive hardening + Phase A ablation pass
 
