@@ -100,7 +100,7 @@ The PR100 README explicitly: "HNeRV decoder weights and architecture by AaronLes
 - **Hand-tuned per-tensor signed-int byte-map**: `DECODER_BYTE_MAPS = {9:'negzig', 14:'negzig', 20:'twos', 27:'off'}` — tensors 9 and 14 use negated zigzag (sign-flipped to match brotli's frequency bias), tensor 20 uses two's-complement int8, tensor 27 uses simple offset (subtract 128); the rest default to standard zigzag.
 - **Latent codec**: `lzma.FORMAT_RAW` with `{FILTER_LZMA1, dict_size=4096, lc=3, lp=0, pb=0}` (raw LZMA, no XZ envelope, dictionary tuned for this exact 600×28 latent payload). Latents stored DIM-MAJOR via `LATENT_DIM_ORDER = (26, 0, 17, 15, 10, 24, 20, 12, 14, 21, 22, 18, 4, 11, 3, 7, 16, 2, 6, 8, 19, 23, 5, 9, 1, 13, 27, 25)`, with per-dim 1st-order delta + zigzag, then split into hi/lo bytes.
 - **Sidecar fixed delta vocabulary**: `[-10, -8, -6, -5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6, 8, 10] × 0.01` — 16 alternatives per pair. The HUFF_ENUM layout encodes (a) packed dim-positions via base-LATENT_DIM mixed-radix integer, (b) Huffman-coded delta values with the canonical-Huffman-length-vector itself ranked through the Kraft-equality space (`huff_length_vector_count` enumerates valid length vectors with `MIN=2, MAX=8, KRAFT_TOTAL=256`), (c) no-op positions via combinatorial colex ranking.
-- **Inflate-time per-channel Y/V bias correction**: `up[:, 0, 0].sub_(1.0); up[:, 0, 2].sub_(1.0); up[:, 1, 1].sub_(1.0)` — frame 0 R/B channels lose 1, frame 1 G channel loses 1. Attributed to "PR #98's decode-side channel postprocess" in the README. **This costs zero archive bytes and improves seg/pose distortion measurably.**
+- **Inflate-time per-channel Y/V bias correction**: `up[:, 0, 0].sub_(1.0); up[:, 0, 2].sub_(1.0); up[:, 1, 1].sub_(1.0)` — frame 0 R/B channels lose 1, frame 1 G channel loses 1. Attributed to "PR #98's decode-side channel postprocess" in the README. This costs zero archive bytes and is the highest-priority candidate explanation for PR101's distortion edge, but the causal effect still needs a same-archive offset sweep.
 
 [empirical: `experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/source/submissions/hnerv_ft_microcodec/src/codec.py + inflate.py`]
 
@@ -234,12 +234,13 @@ Observations:
 | Public CPU score | 0.19284 | 0.19487 |
 | Public CUDA score | 0.23 | 0.23 |
 
-**PR101 wins by 0.002 over PR103 because of the inflate-time per-channel
-Y/V offsets.** PR103 has marginally smaller archive (-35 bytes) but worse
-distortion (PR101 seg=0.000560 pose=0.000033 vs PR103 seg=0.000577
-pose=0.000034). The codec engineering (PR101's polymorphic codec vs PR103's
-constriction AC) is essentially a wash on archive bytes. The medal-position
-delta is the inflate-time numerical bias correction.
+**PR101's strongest observable distortion-side difference from PR103 is the
+inflate-time per-channel Y/V offsets.** PR103 has marginally smaller archive
+(-35 bytes) but worse distortion (PR101 seg=0.000560 pose=0.000033 vs PR103
+seg=0.000577 pose=0.000034). The codec engineering (PR101's polymorphic codec
+vs PR103's constriction AC) is essentially a wash on archive bytes. The
+medal-position delta should be treated as a high-priority bias-correction
+hypothesis until a same-archive offset ablation isolates causality.
 
 ## §5 PR comments / discussion harvest
 
@@ -302,15 +303,18 @@ No hidden side-channel data discovered. The archives are clean.
 
 ### The PR101-vs-PR103 differential confirms the mechanism prioritization
 
-PR101 won gold over PR103 by 0.002 with **the SAME archive bytes ±35** but
-ADDITIONAL inflate-time per-channel Y/V bias corrections. This proves: at the
-medal-band, the marginal score lever is INFLATE-TIME numerical bias, not
-ARCHIVE-TIME byte savings. Lessons:
+PR101 won gold over PR103 by 0.002 with **the same decoder weights and nearly
+the same archive size** but additional inflate-time per-channel Y/V bias
+corrections. This suggests that, at the medal band, inflate-time numerical
+bias may be a higher-EV marginal lever than more archive-time byte savings.
+It is not yet a controlled proof because PR101 and PR103 also differ in codec
+layout and sidecar coding. Lessons:
 
-- Spend the next 30 minutes optimizing inflate-time constants AFTER your codec.
-- The score gradient w.r.t. inflate-time constants is empirically large enough
-  to ship under deadline pressure (PR102 won 3rd prize on 2 numerical
-  constants over PR100's bytes).
+- Spend the next 30 minutes optimizing inflate-time constants AFTER your codec,
+  but record a same-archive no-op/control sweep before promoting causality.
+- The score gradient w.r.t. inflate-time constants appears large enough to
+  matter under deadline pressure (PR102 won 3rd prize on two runtime constants
+  over PR100's byte-identical archive).
 
 ### Binary-forensics surprises
 
