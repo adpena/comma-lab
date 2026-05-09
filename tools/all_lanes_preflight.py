@@ -73,6 +73,9 @@ Currently runs:
   Gate #24: Phase A post-green custody/discoverability source gate
            (A5 readiness, A6 measured-negative, and Modal A1 recovery
             surfaces remain visible and fail-closed without dispatching)
+  Gate #25: tools/audit_modal_image_build_order.py --strict
+           (Modal image build/env steps must happen before add_local_* mounts,
+            otherwise dispatch fails locally before remote execution)
   Lane #1: tools/dispatch_dryrun_apogee_intN.py --all-pareto-frontier
            --allow-forensic-byte-only
            (self-protection check: Apogee intN remains byte-only and blocked
@@ -152,6 +155,7 @@ EVAL_LOADER_DRIFT_PROBE = TOOLS / "probe_eval_loader_drift.py"
 A2_PACKET_LADDER_CLOSURE_AUDIT = TOOLS / "audit_a2_packet_ladder_closure.py"
 A5_PACKET_READINESS_TOOL = TOOLS / "build_pr101_frame_conditional_packet_readiness.py"
 A6_BLOCKFP_HYPERPRIOR_ANCHOR = TOOLS / "pr101_a6_blockfp_hyperprior_anchor.py"
+MODAL_IMAGE_BUILD_ORDER_AUDIT = TOOLS / "audit_modal_image_build_order.py"
 MODAL_A1_SCORE_GRADIENT_DISPATCHER = REPO / "experiments/modal_phase_a1_score_gradient_pr101.py"
 LIGHTNING_A1_SCORE_GRADIENT_DISPATCHER = TOOLS / "dispatch_phase_a1_score_gradient_pr101.py"
 EVAL_LOADER_DRIFT_MISSING_PREREQ_CLASS = "missing_prerequisite"
@@ -1451,6 +1455,7 @@ def _run_phase_a_post_green_discoverability_gate() -> tuple[bool, str]:
     for path in (
         A5_PACKET_READINESS_TOOL,
         A6_BLOCKFP_HYPERPRIOR_ANCHOR,
+        MODAL_IMAGE_BUILD_ORDER_AUDIT,
         MODAL_A1_SCORE_GRADIENT_DISPATCHER,
     ):
         if path.is_file():
@@ -1930,6 +1935,14 @@ def main(argv: list[str] | None = None) -> int:
             _run_phase_a_post_green_discoverability_gate,
             "  ✓ Gate #24: Phase A post-green custody discoverability — PASSED",
             "  ✗ Gate #24: Phase A post-green custody discoverability — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            25,
+            "Modal image build order",
+            lambda: _run_gate("Modal image build order", MODAL_IMAGE_BUILD_ORDER_AUDIT),
+            "  ✓ Gate #25: Modal image build order — PASSED",
+            "  ✗ Gate #25: Modal image build order — FAILED",
         ),
     ]
     lane_steps = [

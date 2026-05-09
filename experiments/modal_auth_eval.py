@@ -88,6 +88,7 @@ base_image = (
 
 eval_image = (
     base_image
+    .env({"DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE})
     .add_local_dir("src", remote_path=str(REMOTE_REPO / "src"))
     .add_local_dir("upstream", remote_path=str(REMOTE_REPO / "upstream"))
     .add_local_dir(
@@ -104,7 +105,6 @@ eval_image = (
     )
     .add_local_file("pyproject.toml", remote_path=str(REMOTE_REPO / "pyproject.toml"))
     .add_local_file("uv.lock", remote_path=str(REMOTE_REPO / "uv.lock"))
-    .env({"DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE})
 )
 
 

@@ -192,6 +192,14 @@ base_image = (
 
 run_image = (
     base_image
+    .env(
+        {
+            # Modal containers can expose CUDA while denying NVML internals.
+            # DALI's video reader works without NVML when this is set; without
+            # it, the NVDEC probe can fail with nvml error (999) before eval.
+            "DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE,
+        }
+    )
     # Workspace mounts — only the bare minimum needed by the A1 chain.
     # Full src/tac is needed because train_score_gradient_pr101_finetune.py +
     # build_pr101_finetuned_archive.py + contest_auth_eval.py all import from tac.
@@ -235,14 +243,6 @@ run_image = (
     )
     .add_local_file("pyproject.toml", remote_path=str(REMOTE_REPO / "pyproject.toml"))
     .add_local_file("uv.lock", remote_path=str(REMOTE_REPO / "uv.lock"))
-    .env(
-        {
-            # Modal containers can expose CUDA while denying NVML internals.
-            # DALI's video reader works without NVML when this is set; without
-            # it, the NVDEC probe can fail with nvml error (999) before eval.
-            "DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE,
-        }
-    )
 )
 
 

@@ -33,8 +33,8 @@ image = (
         "einops",
         "segmentation-models-pytorch",
     )
-    .add_local_dir(str(REPO_ROOT / "src"), "/root/src")
     .env({"PYTHONPATH": "/root/src"})
+    .add_local_dir(str(REPO_ROOT / "src"), "/root/src")
 )
 
 precomputed_vol = modal.Volume.from_name(PRECOMPUTED_VOL, create_if_missing=True)

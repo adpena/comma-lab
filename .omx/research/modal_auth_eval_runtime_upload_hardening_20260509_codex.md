@@ -43,6 +43,22 @@ Focused coverage checks:
 - Runtime transport ZIP is deterministic and strips `.pyc` / `.DS_Store`.
 - Source contains `DALI_DISABLE_NVML=1`, `safe_extract_zip(...)`, and CUDA-only
   canonical eval wiring.
+- Regression coverage requires Modal `.env(...)` to appear before the first
+  `.add_local_*` mount, matching Modal's image-build ordering contract.
+
+## Modal Ordering Bug Closed
+
+First attempted A1 CUDA refire
+`modal:a1-latentalign-importpathfix-cuda-20260509T022145Z` failed before remote
+execution because `.env(...)` had been appended after `.add_local_*`. Modal
+raises `InvalidError` for this ordering. The claim is terminally closed as
+`failed_modal_image_build_order`; no CUDA eval ran and no score evidence was
+produced.
+
+Both touched Modal CUDA wrappers now place `.env(...)` before local mounts:
+
+- `experiments/modal_auth_eval.py`
+- `experiments/modal_phase_a1_score_gradient_pr101.py`
 
 ## Next Command Shape
 

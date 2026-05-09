@@ -77,6 +77,8 @@ def test_source_uses_literal_cuda_canonical_contest_eval() -> None:
     assert '"--device", "cpu"' not in text
     assert '"/root/submission/inflate_renderer.py"' not in text
     assert "promotion_eligible\": False" in text
+    eval_image = text[text.index("eval_image = ("):text.index("def _sha256_bytes")]
+    assert eval_image.index(".env(") < eval_image.index(".add_local_")
 
 
 def test_submission_dir_transport_zip_is_deterministic_and_filtered(mod, tmp_path):
