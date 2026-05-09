@@ -164,6 +164,7 @@ src/tac.egg-info/
 .omx/state/*.jsonl
 .omx/state/RACE_MODE_ACTIVE.flag
 .omx/status/
+.omx/cache/
 .omx/research/artifacts/
 .omx/logs/
 # Raw reports include tracked legacy evidence, but new raw/custody artifacts

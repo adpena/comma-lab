@@ -67,6 +67,7 @@ from tac.preflight import (
     check_no_raw_zip_extractall,
     check_no_scorer_load_at_inflate,
     check_no_shell_zip_binary,
+    check_no_shadowed_module_import_used_before_local_import,
     check_no_silent_auto_discovery_with_warn,
     check_no_submission_provider_or_cpu_score_leakage,
     check_pmg_remote_dispatch_requires_geometry_escape,
@@ -99,6 +100,70 @@ def _stub_repo(tmp_path: Path) -> Path:
     (tmp_path / "scripts").mkdir(parents=True, exist_ok=True)
     (tmp_path / "tools").mkdir(parents=True, exist_ok=True)
     return tmp_path
+
+
+# ─── Check: shadowed import before use ────────────────────────────────────
+
+
+class TestShadowedImportBeforeUse:
+    def test_direct_shadowed_import_before_use_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / "src" / "tac" / "bad_shadow.py", """
+            from tac.losses import _hwc_to_chw
+
+            def train(frame):
+                out = _hwc_to_chw(frame)
+                from tac.losses import _hwc_to_chw
+                return out
+        """)
+
+        violations = check_no_shadowed_module_import_used_before_local_import(
+            repo_root=root,
+            strict=False,
+            verbose=False,
+        )
+        assert len(violations) == 1
+        assert "bad_shadow.py:5" in violations[0]
+        assert "_hwc_to_chw" in violations[0]
+
+    def test_local_import_before_use_is_clean(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / "src" / "tac" / "good_shadow.py", """
+            from tac.losses import _hwc_to_chw
+
+            def train(frame):
+                from tac.losses import _hwc_to_chw
+                return _hwc_to_chw(frame)
+        """)
+
+        assert check_no_shadowed_module_import_used_before_local_import(
+            repo_root=root,
+            strict=True,
+            verbose=False,
+        ) == []
+
+    def test_nested_function_import_does_not_shadow_outer_scope(
+        self, tmp_path: Path,
+    ) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / "src" / "tac" / "nested_shadow.py", """
+            from tac.losses import _hwc_to_chw
+
+            def outer(frame):
+                out = _hwc_to_chw(frame)
+
+                def inner(x):
+                    from tac.losses import _hwc_to_chw
+                    return _hwc_to_chw(x)
+
+                return inner(out)
+        """)
+
+        assert check_no_shadowed_module_import_used_before_local_import(
+            repo_root=root,
+            strict=True,
+            verbose=False,
+        ) == []
 
 
 # ─── Check: CMG3A Pose-collapse dispatch guard ──────────────────────────────
@@ -3777,6 +3842,29 @@ class TestTestFilesImportsResolve:
         f.write_text("import torch\nfrom torch.nn import Module\nimport pytest\n")
         v = _scan_test_file_for_dead_imports(f, root)
         assert v == [], v
+
+    def test_relative_repo_root_with_source_index_passes(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        root = _stub_repo(tmp_path)
+        mod = root / "src" / "tac" / "real_module.py"
+        mod.parent.mkdir(parents=True, exist_ok=True)
+        mod.write_text("def foo():\n    pass\n")
+        tests_dir = root / "src" / "tac" / "tests"
+        tests_dir.mkdir(parents=True, exist_ok=True)
+        (tests_dir / "test_ok.py").write_text("from tac.real_module import foo\n")
+
+        from tac.source_index import source_index_context
+
+        monkeypatch.chdir(root)
+        with source_index_context(Path(".")):
+            assert check_test_files_imports_resolve(
+                repo_root=Path("."),
+                strict=True,
+                verbose=False,
+            ) == []
 
 
 # ─── Check J: vastai prompts must mention cost cap ──────────────────────

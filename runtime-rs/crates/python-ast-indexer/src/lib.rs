@@ -179,10 +179,7 @@ fn assigned_name(expr: &ast::Expr) -> Option<String> {
 
 fn lineno(source: &str, byte_offset: usize) -> u32 {
     let end = byte_offset.min(source.len());
-    source.as_bytes()[..end]
-        .iter()
-        .filter(|byte| **byte == b'\n')
-        .count() as u32
+    memchr::memchr_iter(b'\n', &source.as_bytes()[..end]).count() as u32
         + 1
 }
 

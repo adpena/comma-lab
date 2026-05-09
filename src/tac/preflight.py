@@ -192,6 +192,13 @@ class _ParallelPreflightRunner:
             self._executor = None
 
 
+def _preflight_parallel_enabled() -> bool:
+    """Return true when independent preflight scanners should run in parallel."""
+
+    value = os.environ.get("PACT_PREFLIGHT_ENABLE_PARALLEL", "0").strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
+
 @contextmanager
 def _preflight_timeout_after(seconds: float | None) -> Iterator[None]:
     """Raise ``PreflightTimeoutError`` when the CLI exceeds ``seconds``.
@@ -523,7 +530,7 @@ def preflight_all(
     # 1. Codebase drift check (cheap, always run unless explicitly disabled)
     if check_codebase:
         _parallel = _ParallelPreflightRunner(
-            enabled=os.environ.get("PACT_PREFLIGHT_ENABLE_PARALLEL") == "1",
+            enabled=_preflight_parallel_enabled(),
             verbose=verbose,
         )
         _parallel.submit(
@@ -1438,18 +1445,69 @@ def preflight_all(
         # anchor refs scanned in <0.1s. Total proactive cost: ~1.3s.
         # Check 69 caught 8 real bugs on first run (Lane F-V5 + Lane J-IMP +
         # Lane J-JBL all referenced non-existent lane_g_v3_landed/iter_0/).
-        check_python_files_compile(strict=True, verbose=verbose)
-        check_shell_scripts_syntax_clean(strict=True, verbose=verbose)
-        check_lane_anchor_files_exist_locally(strict=True, verbose=verbose)
+        _syntax_parallel = _ParallelPreflightRunner(
+            enabled=_preflight_parallel_enabled(),
+            verbose=verbose,
+            max_workers=5,
+        )
+        _syntax_parallel.submit(
+            "check_python_files_compile",
+            lambda: check_python_files_compile(strict=True, verbose=False),
+        )
+        _syntax_parallel.submit(
+            "check_shell_scripts_syntax_clean",
+            lambda: check_shell_scripts_syntax_clean(strict=True, verbose=False),
+        )
+        _syntax_parallel.submit(
+            "check_lane_anchor_files_exist_locally",
+            lambda: check_lane_anchor_files_exist_locally(strict=True, verbose=False),
+        )
+        _syntax_parallel.submit(
+            "check_pytest_collection_clean",
+            lambda: check_pytest_collection_clean(strict=True, verbose=False),
+        )
+        _syntax_parallel.submit(
+            "check_no_shadowed_module_import_used_before_local_import",
+            lambda: check_no_shadowed_module_import_used_before_local_import(
+                strict=True,
+                verbose=False,
+            ),
+        )
+        _syntax_parallel.run(
+            "check_python_files_compile",
+            "[python-compile]",
+            lambda: check_python_files_compile(strict=True, verbose=verbose),
+        )
+        _syntax_parallel.run(
+            "check_shell_scripts_syntax_clean",
+            "[shell-syntax]",
+            lambda: check_shell_scripts_syntax_clean(strict=True, verbose=verbose),
+        )
+        _syntax_parallel.run(
+            "check_lane_anchor_files_exist_locally",
+            "[anchor-exists-locally]",
+            lambda: check_lane_anchor_files_exist_locally(strict=True, verbose=verbose),
+        )
         # Check 70: pytest --collect-only catches missing imports + fixture errors.
         # Runs in ~1.3s for 4306 tests. STRICT @ 0.
-        check_pytest_collection_clean(strict=True, verbose=verbose)
+        _syntax_parallel.run(
+            "check_pytest_collection_clean",
+            "[pytest-collect]",
+            lambda: check_pytest_collection_clean(strict=True, verbose=verbose),
+        )
         # Check 71: shadowed-module-import inside function body (causes
         # UnboundLocalError when the name is used before the inner import).
         # 2026-04-29: train_renderer.py crashed all 4 v4 lanes with this exact
         # bug. py_compile + pytest-collect couldn't catch (legal syntax, only
         # surfaces when the function path is exercised). STRICT @ 0.
-        check_no_shadowed_module_import_used_before_local_import(strict=True, verbose=verbose)
+        _syntax_parallel.run(
+            "check_no_shadowed_module_import_used_before_local_import",
+            "[shadowed-import-before-use]",
+            lambda: check_no_shadowed_module_import_used_before_local_import(
+                strict=True,
+                verbose=verbose,
+            ),
+        )
         # Check 72: Python heredocs embedded in shell scripts must compile.
         # py_compile (Check 67) only sees .py files. bash -n (Check 68) treats
         # heredocs as opaque. R9 batch-patch injected bash code INTO python
@@ -3073,7 +3131,7 @@ def preflight_arity(
 
     Returns list of human-readable violations. Raises ArityViolation if strict.
     """
-    root = repo_root or REPO_ROOT
+    root = Path(repo_root or REPO_ROOT).resolve()
     launcher_files = launcher_files or LAUNCHER_FILES
 
     sigs = _build_target_signatures(root)
@@ -3252,7 +3310,7 @@ def preflight_shell_lane_arity(
 
     Returns list of human-readable violations. Raises ArityViolation if strict.
     """
-    root = repo_root or REPO_ROOT
+    root = Path(repo_root or REPO_ROOT).resolve()
     if shell_files is None:
         shell_files = sorted(
             str(p.relative_to(root))
@@ -12909,9 +12967,23 @@ def _scan_test_file_for_dead_imports(
     try:
         if source_index is not None:
             text = source_index.read_text(path)
-            tree = source_index.python_ast(path)
         else:
             text = path.read_text()
+        if not any(
+            token in text
+            for token in (
+                "from tac",
+                "from experiments",
+                "from comma_lab",
+                "from scripts",
+                "pytest.skip",
+                "importorskip",
+            )
+        ):
+            return []
+        if source_index is not None:
+            tree = source_index.python_ast(path)
+        else:
             tree = ast.parse(text, filename=str(path))
     except (SyntaxError, UnicodeDecodeError, FileNotFoundError, OSError):
         return []
@@ -13017,13 +13089,39 @@ def check_test_files_imports_resolve(
     Per the historical pattern: test files have been silently broken for
     sessions because the existing dead-import scanner skips test dirs.
     """
-    root = repo_root or REPO_ROOT
+    root = Path(repo_root or REPO_ROOT).resolve()
     violations: list[str] = []
     n_scanned = 0
     test_dir = root / "src" / "tac" / "tests"
     if test_dir.exists():
         module_defs_cache: dict[Path, set[str] | None] = {}
         source_index = _current_source_index(root)
+        if os.environ.get("PACT_PREFLIGHT_ENABLE_NATIVE_AST") == "1":
+            try:
+                from tac.python_ast_indexer_bridge import (
+                    index_python_top_level_names_native,
+                )
+
+                native_paths = (
+                    source_index.files(
+                        ["src/tac", "src/comma_lab", "scripts", "experiments"],
+                        pattern="*.py",
+                    )
+                    if source_index is not None
+                    else tuple(
+                        _iter_python_files(
+                            root,
+                            ["src/tac", "src/comma_lab", "scripts", "experiments"],
+                        )
+                    )
+                )
+                native_defs = index_python_top_level_names_native(list(native_paths))
+                for path, names in native_defs.items():
+                    module_defs_cache[path] = names
+            except Exception:
+                # Optional accelerator only. The Python AST path below remains
+                # authoritative and must keep preflight usable without Rust.
+                module_defs_cache.clear()
         if source_index is not None:
             test_paths = source_index.files(["src/tac/tests"], pattern="test_*.py")
         else:
@@ -15899,60 +15997,137 @@ def check_no_shadowed_module_import_used_before_local_import(
     a function body, AND used in that function body before the local
     import line number.
     """
-    import ast
-
     root = repo_root or REPO_ROOT
     skip_parts = {"__pycache__", ".venv", ".git", ".pytest_cache",
-                  "build", "dist", "tests"}
+                  "build", "dist", "tests", "results"}
+    source_index = _current_source_index(root)
+
+    class FunctionScopeUseVisitor(ast.NodeVisitor):
+        """Collect imports/loads in one function scope only.
+
+        Nested functions/classes have their own local namespace, so scanning
+        them as part of the parent function creates false positives and an
+        O(functions * file-size) walk. Each nested function is scanned when the
+        outer loop reaches that function node directly.
+        """
+
+        def __init__(self, module_import_names: set[str]) -> None:
+            self.module_import_names = module_import_names
+            self.local_imports: dict[str, int] = {}
+            self.first_loads: dict[str, int] = {}
+
+        def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+            return
+
+        def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+            return
+
+        def visit_Lambda(self, node: ast.Lambda) -> None:
+            return
+
+        def visit_ClassDef(self, node: ast.ClassDef) -> None:
+            return
+
+        def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+            for alias in node.names:
+                name = alias.asname or alias.name
+                if name in self.module_import_names:
+                    previous = self.local_imports.get(name)
+                    if previous is None or node.lineno < previous:
+                        self.local_imports[name] = node.lineno
+            self.generic_visit(node)
+
+        def visit_Name(self, node: ast.Name) -> None:
+            if not isinstance(node.ctx, ast.Load):
+                return
+            if node.id not in self.module_import_names:
+                return
+            previous = self.first_loads.get(node.id)
+            if previous is None or node.lineno < previous:
+                self.first_loads[node.id] = node.lineno
+
+    from_import_line_re = re.compile(
+        r"(?m)^[ \t]*from\s+[A-Za-z_][\w.]*\s+import\s+([^\n#]+)"
+    )
+
+    def may_have_duplicate_from_import_binding(text: str) -> bool:
+        """Cheap lexical gate before AST parse.
+
+        A violation requires at least two ``from ... import ...`` bindings with
+        the same local name: one module-level and one function-local. Ambiguous
+        multiline import forms fall through to AST for fail-open correctness.
+        """
+
+        if text.count("from ") < 2:
+            return False
+        if "import (" in text or "\\\n" in text or "; from " in text:
+            return True
+        seen: set[str] = set()
+        for match in from_import_line_re.finditer(text):
+            import_part = match.group(1)
+            for raw_alias in import_part.split(","):
+                alias = raw_alias.strip().strip("()")
+                if not alias or alias == "*":
+                    continue
+                if " as " in alias:
+                    local_name = alias.rsplit(" as ", 1)[1].strip()
+                else:
+                    local_name = alias.split(".", 1)[0].strip()
+                if not local_name or not local_name.isidentifier():
+                    return True
+                if local_name in seen:
+                    return True
+                seen.add(local_name)
+        return False
 
     violations: list[str] = []
-    for d in scan_dirs:
-        d_path = root / d
-        if not d_path.exists():
+    if source_index is not None:
+        py_paths = source_index.files(scan_dirs, pattern="*.py")
+    else:
+        py_paths = tuple(_iter_python_files(root, list(scan_dirs)))
+    for py in py_paths:
+        if any(p in skip_parts for p in py.parts):
             continue
-        for py in d_path.rglob("*.py"):
-            if any(p in skip_parts for p in py.parts):
-                continue
-            if _is_oss_export_mirror_path(py):
-                continue
-            try:
-                tree = ast.parse(py.read_text())
-            except SyntaxError:
-                continue
-            # Module-level imports
-            mod_imports: set[str] = set()
-            for node in tree.body:
-                if isinstance(node, ast.ImportFrom):
-                    for n in node.names:
-                        mod_imports.add(n.asname or n.name)
-            # Walk each function/method
-            for node in ast.walk(tree):
-                if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        if _is_oss_export_mirror_path(py):
+            continue
+        try:
+            if source_index is not None:
+                text = source_index.read_text(py)
+                if not may_have_duplicate_from_import_binding(text):
                     continue
-                # Find local re-imports of module-level names + earliest use lines
-                local_imports: dict[str, int] = {}  # name → import lineno
-                first_use: dict[str, int] = {}  # name → first reference lineno
-                for sub in ast.walk(node):
-                    if sub is node:
-                        continue
-                    if isinstance(sub, ast.ImportFrom):
-                        for n in sub.names:
-                            name = n.asname or n.name
-                            if name in mod_imports and name not in local_imports:
-                                local_imports[name] = sub.lineno
-                    elif isinstance(sub, ast.Name):
-                        if sub.id in mod_imports and sub.id not in first_use:
-                            first_use[sub.id] = sub.lineno
-                for name, imp_line in local_imports.items():
-                    use_line = first_use.get(name)
-                    if use_line is not None and use_line < imp_line:
-                        violations.append(
-                            f"{py.relative_to(root)}:{imp_line}: "
-                            f"`from ... import {name}` inside `{node.name}()` "
-                            f"shadows module-level import. {name} is also "
-                            f"used at line {use_line} (BEFORE the local import) "
-                            f"→ UnboundLocalError. Remove the inner import."
-                        )
+                tree = source_index.python_ast(py)
+            else:
+                text = py.read_text()
+                if not may_have_duplicate_from_import_binding(text):
+                    continue
+                tree = ast.parse(text, filename=str(py))
+        except (SyntaxError, UnicodeDecodeError, FileNotFoundError, OSError):
+            continue
+        # Module-level imports
+        mod_imports: set[str] = set()
+        for node in tree.body:
+            if isinstance(node, ast.ImportFrom):
+                for alias in node.names:
+                    mod_imports.add(alias.asname or alias.name)
+        if not mod_imports:
+            continue
+        # Walk each function/method once, but only inspect its own lexical body.
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            visitor = FunctionScopeUseVisitor(mod_imports)
+            for stmt in node.body:
+                visitor.visit(stmt)
+            for name, imp_line in visitor.local_imports.items():
+                use_line = visitor.first_loads.get(name)
+                if use_line is not None and use_line < imp_line:
+                    violations.append(
+                        f"{py.relative_to(root)}:{imp_line}: "
+                        f"`from ... import {name}` inside `{node.name}()` "
+                        f"shadows module-level import. {name} is also "
+                        f"used at line {use_line} (BEFORE the local import) "
+                        f"→ UnboundLocalError. Remove the inner import."
+                    )
 
     if verbose:
         if violations:
@@ -16568,6 +16743,92 @@ def _remote_lane_script_changed_after_cutoff(
     return changed_at > cutoff
 
 
+def _remote_lane_scripts_changed_after_cutoff_batch(
+    scripts: list[Path],
+    repo_root: Path,
+    cutoff: _dt.datetime,
+) -> dict[Path, bool]:
+    """Batch version of ``_remote_lane_script_changed_after_cutoff``.
+
+    The old scanner ran ``git log -1`` once per remote lane script. With 100+
+    scripts that turned a simple text check into a multi-second preflight
+    tax. This uses one status call and one log walk, then falls back to mtime
+    for untracked/temp-repo files.
+    """
+
+    rel_by_path = {sh: sh.relative_to(repo_root).as_posix() for sh in scripts}
+    by_rel = {rel: sh for sh, rel in rel_by_path.items()}
+    dirty: set[str] = set()
+    latest: dict[str, _dt.datetime] = {}
+
+    try:
+        status = subprocess.run(
+            ["git", "-C", str(repo_root), "status", "--porcelain", "--", "scripts"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if status.returncode == 0:
+            for line in status.stdout.splitlines():
+                rel = line[3:].strip()
+                if " -> " in rel:
+                    rel = rel.rsplit(" -> ", 1)[1]
+                if rel in by_rel:
+                    dirty.add(rel)
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+    try:
+        proc = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repo_root),
+                "log",
+                "--format=@@%aI",
+                "--name-only",
+                "--",
+                "scripts",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if proc.returncode == 0:
+            current_date: _dt.datetime | None = None
+            for raw_line in proc.stdout.splitlines():
+                line = raw_line.strip()
+                if not line:
+                    continue
+                if line.startswith("@@"):
+                    current_date = _parse_git_iso_datetime(line[2:])
+                    continue
+                if line in by_rel and line not in latest and current_date is not None:
+                    latest[line] = current_date
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+    changed: dict[Path, bool] = {}
+    for sh, rel in rel_by_path.items():
+        if rel in dirty:
+            changed[sh] = True
+            continue
+        changed_at = latest.get(rel)
+        if changed_at is None:
+            try:
+                changed_at = _dt.datetime.fromtimestamp(
+                    sh.stat().st_mtime,
+                    tz=_dt.timezone.utc,
+                )
+            except FileNotFoundError:
+                changed[sh] = False
+                continue
+        if changed_at.tzinfo is None:
+            changed_at = changed_at.replace(tzinfo=_dt.timezone.utc)
+        changed[sh] = changed_at > cutoff
+    return changed
+
+
 def _scan_remote_lane_scripts_missing_controlled_baseline(
     repo_root: Path,
     cutoff: _dt.datetime = _CONTROLLED_BASELINE_CUTOFF,
@@ -16576,8 +16837,14 @@ def _scan_remote_lane_scripts_missing_controlled_baseline(
     scripts_dir = repo_root / "scripts"
     if not scripts_dir.is_dir():
         return violations
-    for sh in sorted(scripts_dir.glob("remote_lane_*.sh")):
-        if not _remote_lane_script_changed_after_cutoff(sh, repo_root, cutoff):
+    scripts = sorted(scripts_dir.glob("remote_lane_*.sh"))
+    changed_after_cutoff = _remote_lane_scripts_changed_after_cutoff_batch(
+        scripts,
+        repo_root,
+        cutoff,
+    )
+    for sh in scripts:
+        if not changed_after_cutoff.get(sh, False):
             continue
         try:
             text = sh.read_text(errors="ignore")
@@ -18066,7 +18333,12 @@ def check_no_bare_except(
         "/comma_lab_public_export/",
         "/vast_harvest/",
     )
-    for py_path in sorted(root.rglob("*.py")):
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        py_paths = source_index.files(("src/tac", "scripts", "tools", "experiments"), pattern="*.py")
+    else:
+        py_paths = tuple(_iter_python_files(root, ["src/tac", "scripts", "tools", "experiments"]))
+    for py_path in py_paths:
         # Skip the preflight file itself (contains regex patterns like
         # `except:` as string literals that would false-positive).
         if py_path.resolve() == Path(__file__).resolve():
@@ -18083,8 +18355,10 @@ def check_no_bare_except(
         if any(marker in rel_s for marker in _VENDORED_INTAKE_MARKERS):
             continue
         try:
-            text = py_path.read_text()
+            text = source_index.read_text(py_path) if source_index is not None else py_path.read_text()
         except (OSError, UnicodeDecodeError):
+            continue
+        if "except" not in text:
             continue
         n_scanned += 1
         for i, line in enumerate(text.splitlines(), start=1):
@@ -18188,7 +18462,12 @@ def check_subprocess_run_checked(
         "/av1_crf31_bicubic/",
         "/comma_lab_public_export/",
     )
-    for py_path in sorted(root.rglob("*.py")):
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        py_paths = source_index.files(("src/tac", "scripts", "tools", "experiments"), pattern="*.py")
+    else:
+        py_paths = tuple(_iter_python_files(root, ["src/tac", "scripts", "tools", "experiments"]))
+    for py_path in py_paths:
         if py_path.resolve() == Path(__file__).resolve():
             continue
         rel_parts = py_path.relative_to(root).parts
@@ -18201,8 +18480,10 @@ def check_subprocess_run_checked(
         if any(marker in rel_s for marker in _VENDORED_INTAKE_MARKERS):
             continue
         try:
-            text = py_path.read_text()
+            text = source_index.read_text(py_path) if source_index is not None else py_path.read_text()
         except (OSError, UnicodeDecodeError):
+            continue
+        if "subprocess.run(" not in text:
             continue
         n_scanned += 1
         lines = text.splitlines()
