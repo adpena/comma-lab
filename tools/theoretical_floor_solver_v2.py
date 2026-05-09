@@ -42,8 +42,8 @@ Memory pointers:
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
-from typing import Iterable, Sequence
+from dataclasses import dataclass
+from typing import Sequence
 
 # Fixed contest constants (must match upstream/evaluate.py + tac.score_geometry).
 ALPHA_RATE: float = 25.0
@@ -53,8 +53,8 @@ N_REF_VIDEO_BYTES: int = 37_545_489
 
 # A1 latent-aligned anchor (the 2026-05-09 contest-CPU GHA result).
 A1_ARCHIVE_BYTES: int = 178_262
-A1_D_SEG: float = 0.0005602
-A1_D_POSE: float = 3.286e-5
+A1_D_SEG: float = 0.00056023
+A1_D_POSE: float = 0.00003286
 A1_SCORE_CPU: float = 0.19284757743677347
 A1_ARCHIVE_SHA256_PREFIX: str = "87ec7ca5"
 
@@ -288,8 +288,10 @@ def fisher_information_bit_allocation(
     if n == 0:
         return []
     if total_bits < n * floor_bits_per_param:
-        # Insufficient budget — return uniform floor.
-        return [floor_bits_per_param] * n
+        raise ValueError(
+            f"total_bits={total_bits} is smaller than the requested floor "
+            f"{n * floor_bits_per_param} for {n} parameters"
+        )
 
     # Floor allocation.
     bits = [floor_bits_per_param] * n
@@ -354,7 +356,7 @@ class FloorEstimate:
 def theoretical_floor_estimate(
     *,
     decoder_param_count: int = 128_000,
-    include_volterra_correction: bool = True,
+    include_volterra_correction: bool = False,
 ) -> FloorEstimate:
     """Composite Bayesian-aggregated lower bound on contest score.
 

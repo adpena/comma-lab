@@ -61,7 +61,22 @@ The generic Modal CUDA auth-eval wrapper now supports uploaded
 `--submission-dir` runtime trees, extracted fail-closed with
 `safe_extract_zip`, so exact CUDA eval can target candidate-specific
 `inflate.sh` packets like the A1 harvested archive without hard-mounting every
-experiment-result path into the Modal image.
+experiment-result path into the Modal image. Follow-up hardening closed three
+Modal wrapper bug classes permanently: image `.env(...)` after local mounts,
+missing worker `PYTHONPATH`, and temp work-dir custody.
+
+**Paired CUDA eval landed:** `modal:a1-latentalign-importpathfix-cuda-20260509T024114Z`
+completed on Modal T4 (`Tesla T4`, 600 samples):
+
+- `[contest-CUDA]`: `0.2263520234784395`
+- components: SegNet `0.00066299`, PoseNet `0.00017103`, bytes `178,262`
+- archive SHA-256: `87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5`
+- runtime tree SHA-256: `89db4fe14ac2bbffc951f8e89ac2242fa1455e0880bb3fbe963aa48e4890b5eb`
+- artifact dir: `experiments/results/a1_latentalign_importpathfix_modal_cuda_eval_20260509_retry3/`
+
+Classification: exact CUDA anchor, not a CUDA frontier win. It pairs with the
+GHA Linux `[contest-CPU]` score `0.19284757743677347`, giving a CUDA-CPU gap of
+about `0.03350`, consistent with the HNeRV-family drift profile.
 
 ## 2026-05-08 (evening) — Recursive hardening + Phase A ablation pass
 
@@ -104,7 +119,7 @@ rule citation (commit `648b498c`).
 | Lane | Archive bytes | Δ vs brotli (178,144 B) | Verdict |
 |---|---:|---:|---|
 | A0 mdl_baseline | — | — | byte_proxy_only_deterministic |
-| A1 score_gradient | 178,262 | +118 | latent-aligned constrained refire is `[contest-CPU]` positive at 0.192847577437; contest-CUDA pending because Modal DALI/NVDEC preflight failed |
+| A1 score_gradient | 178,262 | +118 | paired exact anchors: `[contest-CPU]` 0.192847577437 and `[contest-CUDA]` 0.226352023478; CPU-positive, CUDA not frontier |
 | A2 xavier_l2 | 156,344 | -21,800 | FALSIFIED proxy (-3,635 B regression vs uniform) |
 | A3-alt mallat_wavelet | 156,344 | -21,800 | incremental_improvement_insufficient (Mallat > Xavier in 2/4 cells; both fail uniform) |
 | A4 charm_hyperprior real PR101 probe | 206,745 | +28,601 | hand-parametric ChARM/range-coder configs retired; learned co-design remains live |

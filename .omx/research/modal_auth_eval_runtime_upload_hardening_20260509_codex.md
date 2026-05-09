@@ -106,6 +106,45 @@ under `/tmp/modal_auth_eval`, but writes the score-custody work directory under
 `/root/modal_auth_eval_work/eval_work`, which is outside `tempfile.gettempdir()`
 and is harvested back into the local output directory.
 
+## A1 CUDA Pair Landed
+
+Fourth attempted A1 CUDA refire
+`modal:a1-latentalign-importpathfix-cuda-20260509T024114Z` completed on Modal
+T4 (`Tesla T4`, driver `580.95.05`) with exact CUDA validation.
+
+Artifact directory:
+`experiments/results/a1_latentalign_importpathfix_modal_cuda_eval_20260509_retry3/`
+
+Custody:
+
+- archive bytes: `178262`
+- archive sha256:
+  `87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5`
+- inflate.sh sha256:
+  `32c487cd1a48a2c80a964e252286971da8edf6f4946a832bc182029be2476af1`
+- runtime tree sha256:
+  `89db4fe14ac2bbffc951f8e89ac2242fa1455e0880bb3fbe963aa48e4890b5eb`
+- samples: `600`
+
+Components:
+
+| axis | value |
+|---|---:|
+| `[contest-CUDA]` canonical score | `0.2263520234784395` |
+| avg SegNet distance | `0.00066299` |
+| avg PoseNet distance | `0.00017103` |
+| rate unscaled | `0.00474789` |
+| rate contribution | `0.11869725` |
+| seg contribution | `0.066299` |
+| pose contribution | `0.0413557734784395` |
+
+Classification: legitimate exact CUDA anchor, not an A1 score-lowering CUDA
+frontier. It pairs with A1's prior `[contest-CPU GHA]` score
+`0.19284757743677347`, giving a CUDA-CPU gap of approximately `0.03350`,
+consistent with the HNeRV-family drift profile. This validates the dual-axis
+mandate and keeps A1 useful as a CPU/public-leaderboard anchor while rejecting
+it as a CUDA-internal frontier improvement.
+
 ## Next Command Shape
 
 After claiming the lane:
