@@ -1,0 +1,206 @@
+{
+  "schema": "unified_solver_integration_audit.v1",
+  "tool": "experiments/results/unified_solver_integration_audit_20260509/audit_table.json",
+  "generated_at_utc": "2026-05-09T00:00:00Z",
+  "generated_from_state_hash": "main@b719386a (T13+T19 wire-in + Lane 12-v2 + T20+T22 + Catalog #124 grammar gate + probe-disambiguator T8-alone verdict)",
+  "doc": "One row per (track, solver_component) pair. Columns: wired/orphan/out_of_scope + rationale. Solver components inventoried from CLAUDE.md 'Meta-Lagrangian/Pareto solver' non-negotiable + repo grep.",
+  "evidence_grade": "audit-from-grep [advisory only]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "tracks": [
+    {
+      "track_id": "T7_fisher_rao",
+      "module": "src/tac/score_geometry_shannon_floor.py + src/tac/score_geometry.py",
+      "kind": "Riemannian distance closed-form on mask probability simplex; convex envelope of IoU gradient",
+      "landed_commit_ref": "pre-existing (Shannon floor module landed prior; Fisher-Rao surrogate keyed off it)"
+    },
+    {
+      "track_id": "T8_sinkhorn_w2",
+      "module": "src/tac/losses.py::sinkhorn_w2_mask_distortion_per_pixel",
+      "kind": "Wasserstein-2 mask surrogate via Sinkhorn (entropic OT)",
+      "landed_commit_ref": "src/tac/losses.py L244 (active)"
+    },
+    {
+      "track_id": "T11_lovasz_hinge",
+      "module": "src/tac/lovasz_hinge.py",
+      "kind": "Convex envelope of IoU/argmax-disagreement (Berman 2018 CVPR §3.2)",
+      "landed_commit_ref": "feedback_t11_t13_t19_free_lateral_leaps_landed_20260509.md"
+    },
+    {
+      "track_id": "T13_joint_source_rd",
+      "module": "src/tac/joint_source_rd_bound.py",
+      "kind": "Fridrich √n undetectable embedding bound; Berger 1971 §4.5 Gauss-Markov rate floor",
+      "landed_commit_ref": "feedback_t11_t13_t19_free_lateral_leaps_landed_20260509.md"
+    },
+    {
+      "track_id": "T19_adaptive_rho",
+      "module": "src/tac/joint_admm_coordinator.py::adaptive_rho_step",
+      "kind": "Boyd 2011 §3.4.1 / He-Yang 2000 adaptive penalty step extracted as standalone helper",
+      "landed_commit_ref": "feedback_t11_t13_t19_free_lateral_leaps_landed_20260509.md"
+    },
+    {
+      "track_id": "T20_kl_pose_distill",
+      "module": "src/tac/kl_pose_distill.py",
+      "kind": "KL-divergence pose-distill loss (Hinton T=2.0 form)",
+      "landed_commit_ref": "a2f4677c"
+    },
+    {
+      "track_id": "T22_temporal_consistency",
+      "module": "src/tac/temporal_consistency_regularizer.py",
+      "kind": "Optical-flow-warped frame-to-frame smoothness regularizer",
+      "landed_commit_ref": "a2f4677c"
+    },
+    {
+      "track_id": "lane_12_v2_nerv_as_renderer",
+      "module": "src/tac/lane_12_v2_nerv_as_renderer.py + src/tac/inflate/lane_12_v2_inflate.py",
+      "kind": "NeRV-class renderer with int8+fp16-scale weight quant + uint8-delta-split latent table",
+      "landed_commit_ref": "cda997d7 (Phase A: design + module + inflate + 39 tests)"
+    },
+    {
+      "track_id": "a1_substrate",
+      "module": "(latent-aligned 178,262 B archive at 0.19284 [contest-CPU GHA Linux x86_64]; sha 87ec7ca5...492b5)",
+      "kind": "Empirical anchor / substrate signal; no code module — referenced by predictor + posterior layers",
+      "landed_commit_ref": "feedback_grand_council_a1_post_cpu_anchor_strategy_20260509.md"
+    }
+  ],
+  "solver_components": [
+    {
+      "component_id": "sensitivity_map",
+      "path": "src/tac/sensitivity_map.py",
+      "consumes": "per-channel score sensitivity Tensor[O]; certified maps + pair manifests"
+    },
+    {
+      "component_id": "meta_lagrangian_search",
+      "path": "src/tac/optimizer/meta_lagrangian.py",
+      "consumes": "(archive_bytes, rel_err_pct, n_layers) candidate tuples; closed-form distortion proxy + Lagrangian penalties"
+    },
+    {
+      "component_id": "joint_admm_coordinator",
+      "path": "src/tac/joint_admm_coordinator.py",
+      "consumes": "stream proximal codecs; budget; adaptive-ρ schedule"
+    },
+    {
+      "component_id": "pareto_3axis",
+      "path": "tools/contest_score_pareto_3axis.py + src/tac/contest_rate_distortion_system.py",
+      "consumes": "(rate, seg, pose) triples + interaction terms"
+    },
+    {
+      "component_id": "cathedral_autopilot",
+      "path": "tools/cathedral_autopilot.py + tools/cathedral_autopilot_meta_lagrangian_bridge.py",
+      "consumes": "candidate techniques + plan rows; emits ranked dispatch queue"
+    },
+    {
+      "component_id": "continual_learning_posterior",
+      "path": "src/tac/optimization/cuda_cpu_axis_profile_registry.py + .omx/state/cuda_cpu_axis_profile_registry.json",
+      "consumes": "[contest-CUDA] / [contest-CPU GHA] anchors; updates per-architecture-class drift profile (R_pose, R_seg, gap)"
+    },
+    {
+      "component_id": "ib_lagrangian_aux_scorer",
+      "path": "src/tac/ib_lagrangian_aux_scorer.py",
+      "consumes": "auxiliary scorer fixtures for Tishby IB Lagrangian"
+    },
+    {
+      "component_id": "field_equation_planner",
+      "path": "src/tac/optimization/field_equation_planner.py",
+      "consumes": "sketched field-equation atoms; emits constraint-feasibility plans"
+    }
+  ],
+  "matrix": [
+    {"track": "T7_fisher_rao", "component": "sensitivity_map", "wired": false, "rationale": "T7 Riemannian distance is consumed by score_geometry_shannon_floor + ib_lagrangian_aux_scorer but NOT registered as a sensitivity-vector source for the per-channel allocator. Wire-in: register `tac.score_geometry.fisher_rao_per_channel_sensitivity()` as a SensitivityKind."},
+    {"track": "T7_fisher_rao", "component": "meta_lagrangian_search", "wired": false, "rationale": "MetaLagrangianSearch uses a generic distortion_proxy callable; T7 should appear as a refinement of `seg` proxy. Wire-in: add optional `t7_fisher_rao_seg_overlay` to LagrangianConstraints with default off (warn-once if used)."},
+    {"track": "T7_fisher_rao", "component": "joint_admm_coordinator", "wired": false, "rationale": "ADMM doesn't currently know about T7. Out-of-scope unless T7 enters as a stream proximal codec."},
+    {"track": "T7_fisher_rao", "component": "pareto_3axis", "wired": false, "rationale": "Pareto axes are (rate, seg, pose); T7 lives inside the seg axis. Wire-in: tag seg-component rows with `seg_geometry_form: 'fisher_rao' | 'argmax_disagreement'` so Pareto frontier is regime-conditional."},
+    {"track": "T7_fisher_rao", "component": "cathedral_autopilot", "wired": false, "rationale": "Plan rows have no `seg_loss_geometry` field. Wire-in: catalog field + plan-row schema bump."},
+    {"track": "T7_fisher_rao", "component": "continual_learning_posterior", "wired": false, "rationale": "No per-architecture-class T7 prior. Wire-in: posterior tracks `t7_seg_correction_factor` per architecture class."},
+    {"track": "T7_fisher_rao", "component": "ib_lagrangian_aux_scorer", "wired": true, "rationale": "score_geometry_shannon_floor consumed; T7 surrogate available."},
+    {"track": "T7_fisher_rao", "component": "field_equation_planner", "wired": false, "rationale": "Field-equation atoms have no T7 entry. Wire-in: register T7 as a closed-form atom (free; no GPU required)."},
+
+    {"track": "T8_sinkhorn_w2", "component": "sensitivity_map", "wired": false, "rationale": "Sinkhorn cost matrix is per-pixel; not aggregated to per-channel. Wire-in deferred (probe disambiguator verdict prefers T8-alone for Phase 1; sensitivity-map use is Phase 2)."},
+    {"track": "T8_sinkhorn_w2", "component": "meta_lagrangian_search", "wired": false, "rationale": "Same as T7. Wire-in: optional `t8_sinkhorn_w2_seg_overlay` with same warn-once default."},
+    {"track": "T8_sinkhorn_w2", "component": "joint_admm_coordinator", "wired": false, "rationale": "Out-of-scope (loss surrogate, not a codec stream)."},
+    {"track": "T8_sinkhorn_w2", "component": "pareto_3axis", "wired": false, "rationale": "Same as T7."},
+    {"track": "T8_sinkhorn_w2", "component": "cathedral_autopilot", "wired": false, "rationale": "Same as T7."},
+    {"track": "T8_sinkhorn_w2", "component": "continual_learning_posterior", "wired": false, "rationale": "Posterior should track `t8_sinkhorn_w2_correction_factor` per regime + per architecture class."},
+    {"track": "T8_sinkhorn_w2", "component": "ib_lagrangian_aux_scorer", "wired": false, "rationale": "Auxiliary scorer fixture should accept Sinkhorn-W2 as a regime."},
+    {"track": "T8_sinkhorn_w2", "component": "field_equation_planner", "wired": false, "rationale": "Wire-in: register as closed-form atom."},
+
+    {"track": "T11_lovasz_hinge", "component": "sensitivity_map", "wired": false, "rationale": "Lovasz subgradient is per-pixel; aggregable to per-channel via Jacobian-vector pull. Wire-in deferred until probe-disambiguator votes KEEP/ENSEMBLE for T11."},
+    {"track": "T11_lovasz_hinge", "component": "meta_lagrangian_search", "wired": false, "rationale": "Same as T7/T8."},
+    {"track": "T11_lovasz_hinge", "component": "joint_admm_coordinator", "wired": false, "rationale": "Out-of-scope."},
+    {"track": "T11_lovasz_hinge", "component": "pareto_3axis", "wired": false, "rationale": "Same as T7/T8."},
+    {"track": "T11_lovasz_hinge", "component": "cathedral_autopilot", "wired": false, "rationale": "Same as T7/T8."},
+    {"track": "T11_lovasz_hinge", "component": "continual_learning_posterior", "wired": false, "rationale": "Posterior should track `t11_lovasz_hinge_correction_factor`."},
+    {"track": "T11_lovasz_hinge", "component": "ib_lagrangian_aux_scorer", "wired": false, "rationale": "Wire-in: aux scorer regime."},
+    {"track": "T11_lovasz_hinge", "component": "field_equation_planner", "wired": false, "rationale": "Wire-in: register as closed-form atom."},
+
+    {"track": "T13_joint_source_rd", "component": "sensitivity_map", "wired": false, "rationale": "Joint-source bound is a rate constraint, not a per-channel sensitivity. Out-of-scope."},
+    {"track": "T13_joint_source_rd", "component": "meta_lagrangian_search", "wired": false, "rationale": "Wire-in: tighten `LagrangianConstraints.rate_unscaled_max` from joint-source floor when source rho > 0; current default is empirical. Refinement: add `tac.joint_source_rd_bound.compute_joint_source_floor` as a constraint provider."},
+    {"track": "T13_joint_source_rd", "component": "joint_admm_coordinator", "wired": true, "rationale": "Already integrated in Phase 1 Ballé hyperprior trainer per commit b719386a (T13 + T19 wire-in)."},
+    {"track": "T13_joint_source_rd", "component": "pareto_3axis", "wired": false, "rationale": "Wire-in: rate-axis lower-bound from T13. Used as a hard 'cannot drop below' Pareto edge."},
+    {"track": "T13_joint_source_rd", "component": "cathedral_autopilot", "wired": false, "rationale": "Wire-in: catalog refuse-row when proposed bytes < T13 floor for given source ρ."},
+    {"track": "T13_joint_source_rd", "component": "continual_learning_posterior", "wired": false, "rationale": "Posterior should track empirically-observed source ρ per video / per substrate; T13 prediction reseeded by anchor."},
+    {"track": "T13_joint_source_rd", "component": "ib_lagrangian_aux_scorer", "wired": true, "rationale": "Already imports + uses joint_source_rd_bound (cross-ref in module docstring)."},
+    {"track": "T13_joint_source_rd", "component": "field_equation_planner", "wired": false, "rationale": "Wire-in: register T13 as Pareto rate-axis lower-bound atom."},
+
+    {"track": "T19_adaptive_rho", "component": "sensitivity_map", "wired": false, "rationale": "Out-of-scope (numerical solver step, not sensitivity)."},
+    {"track": "T19_adaptive_rho", "component": "meta_lagrangian_search", "wired": false, "rationale": "Out-of-scope (search engine doesn't run ADMM)."},
+    {"track": "T19_adaptive_rho", "component": "joint_admm_coordinator", "wired": false, "rationale": "ORPHANED: helper exists at L114 but `run_admm` at L608 has its OWN inline adaptive-ρ logic at L744-783 (Q4B fix + steady-state). Wire-in: replace inline logic with adaptive_rho_step helper call (behind opt-in flag for backward-compat); deferred unless backward-compat regression tests stay green."},
+    {"track": "T19_adaptive_rho", "component": "pareto_3axis", "wired": false, "rationale": "Out-of-scope."},
+    {"track": "T19_adaptive_rho", "component": "cathedral_autopilot", "wired": false, "rationale": "Out-of-scope."},
+    {"track": "T19_adaptive_rho", "component": "continual_learning_posterior", "wired": false, "rationale": "Out-of-scope."},
+    {"track": "T19_adaptive_rho", "component": "ib_lagrangian_aux_scorer", "wired": false, "rationale": "Out-of-scope (aux scorer doesn't run ADMM)."},
+    {"track": "T19_adaptive_rho", "component": "field_equation_planner", "wired": false, "rationale": "Out-of-scope."},
+
+    {"track": "T20_kl_pose_distill", "component": "sensitivity_map", "wired": false, "rationale": "Pose distill is a loss, not a sensitivity per-channel. Out-of-scope."},
+    {"track": "T20_kl_pose_distill", "component": "meta_lagrangian_search", "wired": false, "rationale": "Wire-in: `pose_distortion` proxy can be SHRUNK by T20 use → distortion_proxy parameterized by `t20_kl_pose_distill_active: bool`."},
+    {"track": "T20_kl_pose_distill", "component": "joint_admm_coordinator", "wired": false, "rationale": "Out-of-scope (loss, not codec stream)."},
+    {"track": "T20_kl_pose_distill", "component": "pareto_3axis", "wired": false, "rationale": "Wire-in: pose-axis can shift LEFT under T20."},
+    {"track": "T20_kl_pose_distill", "component": "cathedral_autopilot", "wired": false, "rationale": "Wire-in: T20 is a training-time stack option, register as catalog technique with predicted pose-axis improvement."},
+    {"track": "T20_kl_pose_distill", "component": "continual_learning_posterior", "wired": false, "rationale": "Posterior should track per-arch-class T20 pose-axis improvement empirically."},
+    {"track": "T20_kl_pose_distill", "component": "ib_lagrangian_aux_scorer", "wired": false, "rationale": "Wire-in: T20 is one operationalization of the IB Lagrangian for the pose component."},
+    {"track": "T20_kl_pose_distill", "component": "field_equation_planner", "wired": false, "rationale": "Wire-in: register as closed-form atom (training-time)."},
+
+    {"track": "T22_temporal_consistency", "component": "sensitivity_map", "wired": false, "rationale": "Out-of-scope (frame-pair regularizer)."},
+    {"track": "T22_temporal_consistency", "component": "meta_lagrangian_search", "wired": false, "rationale": "Wire-in: T22 affects pose+seg jointly via temporal smoothness; distortion_proxy parameterized by `t22_temporal_consistency_lambda`."},
+    {"track": "T22_temporal_consistency", "component": "joint_admm_coordinator", "wired": false, "rationale": "Out-of-scope."},
+    {"track": "T22_temporal_consistency", "component": "pareto_3axis", "wired": false, "rationale": "Wire-in: T22 introduces a temporal-smoothness Pareto edge (pose + seg vs frame-flicker)."},
+    {"track": "T22_temporal_consistency", "component": "cathedral_autopilot", "wired": false, "rationale": "Wire-in: catalog technique."},
+    {"track": "T22_temporal_consistency", "component": "continual_learning_posterior", "wired": false, "rationale": "Posterior should track empirical T22 lambda* per architecture class."},
+    {"track": "T22_temporal_consistency", "component": "ib_lagrangian_aux_scorer", "wired": false, "rationale": "Wire-in: aux scorer regime."},
+    {"track": "T22_temporal_consistency", "component": "field_equation_planner", "wired": false, "rationale": "Wire-in: register as Pareto temporal-smoothness atom."},
+
+    {"track": "lane_12_v2_nerv_as_renderer", "component": "sensitivity_map", "wired": false, "rationale": "Lane 12-v2 weights need certified per-channel sensitivity; not yet generated. Wire-in: dispatch path planned in Phase B preconditions."},
+    {"track": "lane_12_v2_nerv_as_renderer", "component": "meta_lagrangian_search", "wired": false, "rationale": "Wire-in: register Lane 12-v2 archive_bytes_target into candidate generator; lane_class='nerv_as_renderer'."},
+    {"track": "lane_12_v2_nerv_as_renderer", "component": "joint_admm_coordinator", "wired": false, "rationale": "Wire-in: register weight-quant + latent-table as 2 separate streams."},
+    {"track": "lane_12_v2_nerv_as_renderer", "component": "pareto_3axis", "wired": false, "rationale": "Wire-in: Lane 12-v2 produces a (rate, seg, pose) triple at archive_bytes_target."},
+    {"track": "lane_12_v2_nerv_as_renderer", "component": "cathedral_autopilot", "wired": false, "rationale": "Wire-in: catalog row + dispatch entry per Catalog #124 archive grammar gate."},
+    {"track": "lane_12_v2_nerv_as_renderer", "component": "continual_learning_posterior", "wired": false, "rationale": "Lane 12-v2 will create a NEW architecture class (nerv-cluster) — posterior must initialize uncalibrated-default."},
+    {"track": "lane_12_v2_nerv_as_renderer", "component": "ib_lagrangian_aux_scorer", "wired": false, "rationale": "Out-of-scope until Lane 12-v2 has a [contest-CUDA] anchor."},
+    {"track": "lane_12_v2_nerv_as_renderer", "component": "field_equation_planner", "wired": false, "rationale": "Wire-in: register Lane 12-v2 as architecture-class atom."},
+
+    {"track": "a1_substrate", "component": "sensitivity_map", "wired": false, "rationale": "A1 substrate has [contest-CPU GHA] anchor at 0.19284; certified maps not yet generated. Wire-in: planned dispatch."},
+    {"track": "a1_substrate", "component": "meta_lagrangian_search", "wired": true, "rationale": "MetaLagrangianSearch consumes A1 anchor via .omx/calibration/anchors_apogee_intN.json calibration anchors."},
+    {"track": "a1_substrate", "component": "joint_admm_coordinator", "wired": false, "rationale": "ADMM coordinator does not consume substrate anchors directly; rho_init seeded from per-stream R(D) curves."},
+    {"track": "a1_substrate", "component": "pareto_3axis", "wired": true, "rationale": "Pareto consumes A1 (rate, seg, pose) triple as a frontier point."},
+    {"track": "a1_substrate", "component": "cathedral_autopilot", "wired": true, "rationale": "Plan rows reference A1 archive bytes + sha as substrate anchor."},
+    {"track": "a1_substrate", "component": "continual_learning_posterior", "wired": false, "rationale": "ORPHANED: A1 [contest-CPU GHA] result is not auto-fed into cuda_cpu_axis_profile_registry. Wire-in: posterior_update entry point + auto-harvest hook."},
+    {"track": "a1_substrate", "component": "ib_lagrangian_aux_scorer", "wired": false, "rationale": "Out-of-scope (substrate anchor, not aux scorer fixture)."},
+    {"track": "a1_substrate", "component": "field_equation_planner", "wired": false, "rationale": "Wire-in: A1 anchor as rate-axis seed atom."}
+  ],
+  "summary": {
+    "total_pairs": 72,
+    "wired_count": 6,
+    "orphan_count_actionable": 41,
+    "orphan_count_out_of_scope": 25,
+    "wire_in_priority_order": [
+      "T19 adaptive_rho_step → joint_admm_coordinator (replace inline logic; opt-in flag)",
+      "Continual-learning posterior_update layer scaffolded as canonical entry point for ALL anchors",
+      "GR-style unified action registers ALL 8 tracks as named Lagrangian fields",
+      "Non-arbitrariness probe primitive for the 4 KEEP/PRUNE/ENSEMBLE/DEFER design tensions surfaced by tracks T7/T8/T11",
+      "Cathedral autopilot catalog rows for T11/T13/T20/T22/Lane-12-v2 (closes orphan; no new GPU spend)",
+      "Pareto 3-axis row tagging by seg_geometry_form (T7/T8/T11) so frontier is regime-conditional",
+      "Sensitivity-map registration of T7/T8/T11 as KIND vectors (deferred per probe-disambiguator T8-alone Phase-1 verdict)"
+    ]
+  }
+}
