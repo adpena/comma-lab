@@ -1099,6 +1099,15 @@ End-to-end pipeline verified locally: prepare → build_residual → 942-byte sj
 bash scripts/remote_lane_sjkl_c067.sh
 ```
 
+Follow-up blended-risk support landed for the same scheduler:
+`--blend-sources boundary,low_margin --blend-mode max`. The q7/q8 low0p85
+boundary+low-margin max-risk packet is byte-closed and runtime-consumed, but
+macOS CPU advisory scored `0.2011544130392937` at `178,243 B`, worse than the
+best scalar SegNet-protected q7/q8 point (`0.201110`) and the low-margin scalar
+point (`0.201122`). The q7/q8 low0p75 blended packet failed the byte gate at
+`178,453 B` and was not eval-spent. Ledger:
+`.omx/research/a5_blended_boundary_lowmargin_scalar_negative_20260509_codex.md`.
+
 ## Strategic findings — late 2026-05-04 dashboard-mining session
 
 After the dashboard log-parser fix (commit dbb0032d, +293 score visibility),

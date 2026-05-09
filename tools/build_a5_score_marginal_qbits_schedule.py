@@ -73,6 +73,23 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "from tools/build_segnet_boundary_marginals.py."
         ),
     )
+    parser.add_argument(
+        "--blend-sources",
+        default=None,
+        help=(
+            "Comma-separated marginal sources to rank as a blended risk vector. "
+            "When set, this overrides --marginal-source. Example: seg,boundary,low_margin."
+        ),
+    )
+    parser.add_argument(
+        "--blend-mode",
+        choices=("max", "mean", "min"),
+        default="max",
+        help=(
+            "How normalized risk ranks are combined for --blend-sources. max is "
+            "the conservative union: a pair is protected if any source marks it risky."
+        ),
+    )
     parser.add_argument("--latent-dim", type=int, default=28)
     return parser.parse_args(argv)
 
@@ -85,22 +102,37 @@ def build_schedule(
     low_q_bits: int = 6,
     low_fraction: float = 0.50,
     marginal_source: str = "score",
+    blend_sources: str | Sequence[str] | None = None,
+    blend_mode: str = "max",
     latent_dim: int = 28,
     repo_root: Path = REPO_ROOT,
 ) -> dict[str, Any]:
     score_marginal_manifest_path = _resolve(score_marginal_manifest_path, repo_root)
     manifest = _load_json_object(score_marginal_manifest_path)
     n_pairs = _positive_int(manifest.get("n_pairs"), "n_pairs")
-    marginal_key = MARGINAL_SOURCE_KEYS.get(marginal_source)
-    if marginal_key is None:
-        raise A5ScoreMarginalQBitsScheduleError(
-            f"unknown marginal_source={marginal_source!r}"
+    blend_source_list = _parse_blend_sources(blend_sources)
+    if blend_source_list:
+        marginals, blend_metadata = _blend_risk_vectors(
+            manifest=manifest,
+            sources=blend_source_list,
+            mode=blend_mode,
+            expected_len=n_pairs,
         )
-    marginals = _finite_vector(
-        manifest.get(marginal_key),
-        marginal_key,
-        expected_len=n_pairs,
-    )
+        marginal_source_effective = "blend"
+        marginal_key = "normalized_rank_blend"
+    else:
+        marginal_key = MARGINAL_SOURCE_KEYS.get(marginal_source)
+        if marginal_key is None:
+            raise A5ScoreMarginalQBitsScheduleError(
+                f"unknown marginal_source={marginal_source!r}"
+            )
+        marginals = _finite_vector(
+            manifest.get(marginal_key),
+            marginal_key,
+            expected_len=n_pairs,
+        )
+        marginal_source_effective = marginal_source
+        blend_metadata = None
     base_q_bits = _q_bit_int(base_q_bits, "base_q_bits")
     low_q_bits = _q_bit_int(low_q_bits, "low_q_bits")
     if low_q_bits > base_q_bits:
@@ -147,8 +179,11 @@ def build_schedule(
         "base_q_bits": base_q_bits,
         "low_q_bits": low_q_bits,
         "low_fraction": float(low_fraction),
-        "marginal_source": marginal_source,
+        "marginal_source": marginal_source_effective,
         "marginal_source_key": marginal_key,
+        "blend_sources": blend_source_list,
+        "blend_mode": blend_mode if blend_source_list else None,
+        "blend_metadata": blend_metadata,
         "low_pair_count": int(low_count),
         "low_pair_indices_sha256": sha256_bytes(
             low_pair_indices.astype("<i4").tobytes()
@@ -264,6 +299,94 @@ def _source_q_bits_or_baseline(
     return source_q_bits, "manifest_per_pair_q_bits"
 
 
+def _parse_blend_sources(value: str | Sequence[str] | None) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        parts = [part.strip() for part in value.split(",")]
+    else:
+        parts = [str(part).strip() for part in value]
+    sources = [part for part in parts if part]
+    unknown = [source for source in sources if source not in MARGINAL_SOURCE_KEYS]
+    if unknown:
+        raise A5ScoreMarginalQBitsScheduleError(
+            f"unknown blend source(s): {unknown}; expected {sorted(MARGINAL_SOURCE_KEYS)}"
+        )
+    if len(set(sources)) != len(sources):
+        raise A5ScoreMarginalQBitsScheduleError("blend sources must be unique")
+    return sources
+
+
+def _risk_vector_for_source(
+    manifest: dict[str, Any],
+    source: str,
+    *,
+    expected_len: int,
+) -> tuple[np.ndarray, str, str]:
+    key = MARGINAL_SOURCE_KEYS[source]
+    values = _finite_vector(manifest.get(key), key, expected_len=expected_len)
+    if source in {"mean_margin", "p10_margin"}:
+        # Lower logit margins are riskier; invert so larger means more protected.
+        return -values, key, "lower_value_is_higher_risk"
+    return values, key, "higher_value_is_higher_risk"
+
+
+def _rank01(values: np.ndarray) -> np.ndarray:
+    values = np.asarray(values, dtype=np.float64)
+    if values.size <= 1:
+        return np.zeros_like(values, dtype=np.float64)
+    order = np.lexsort((np.arange(values.size, dtype=np.int64), values))
+    ranks = np.empty(values.size, dtype=np.float64)
+    ranks[order] = np.arange(values.size, dtype=np.float64)
+    return ranks / float(values.size - 1)
+
+
+def _blend_risk_vectors(
+    *,
+    manifest: dict[str, Any],
+    sources: Sequence[str],
+    mode: str,
+    expected_len: int,
+) -> tuple[np.ndarray, dict[str, Any]]:
+    if mode not in {"max", "mean", "min"}:
+        raise A5ScoreMarginalQBitsScheduleError("blend_mode must be one of max, mean, min")
+    if not sources:
+        raise A5ScoreMarginalQBitsScheduleError("blend_sources must not be empty")
+    ranked: list[np.ndarray] = []
+    components: list[dict[str, str]] = []
+    for source in sources:
+        risk, key, orientation = _risk_vector_for_source(
+            manifest,
+            source,
+            expected_len=expected_len,
+        )
+        ranked.append(_rank01(risk))
+        components.append(
+            {
+                "source": source,
+                "key": key,
+                "orientation": orientation,
+                "rank_semantics": "0=lowest_risk_low_q_candidate, 1=highest_risk_protect",
+            }
+        )
+    stacked = np.stack(ranked, axis=0)
+    if mode == "max":
+        blended = stacked.max(axis=0)
+    elif mode == "min":
+        blended = stacked.min(axis=0)
+    else:
+        blended = stacked.mean(axis=0)
+    return blended, {
+        "sources": list(sources),
+        "mode": mode,
+        "components": components,
+        "semantics": (
+            "blended normalized risk ranks; q-bit schedule assigns low bits "
+            "to lowest blended-risk pairs and keeps high-risk pairs at base bits"
+        ),
+    }
+
+
 def _q_bit_int(value: int, label: str) -> int:
     if not isinstance(value, int) or isinstance(value, bool) or value < 1 or value > 8:
         raise A5ScoreMarginalQBitsScheduleError(f"{label} must be an integer in [1, 8]")
@@ -326,6 +449,8 @@ def main(argv: list[str] | None = None) -> int:
             low_q_bits=args.low_q_bits,
             low_fraction=args.low_fraction,
             marginal_source=args.marginal_source,
+            blend_sources=args.blend_sources,
+            blend_mode=args.blend_mode,
             latent_dim=args.latent_dim,
             repo_root=REPO_ROOT,
         )

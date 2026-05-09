@@ -111,6 +111,30 @@ def test_builds_boundary_ranked_schedule(tmp_path: Path) -> None:
     assert payload["alignment"]["q_bits_vs_boundary_mass_pearson"] > 0.9
 
 
+def test_builds_conservative_blended_risk_schedule(tmp_path: Path) -> None:
+    tool = _load_tool()
+    source = _write_manifest(tmp_path / "boundary_marginals.json")
+
+    payload = tool.build_schedule(
+        score_marginal_manifest_path=source,
+        base_q_bits=8,
+        low_q_bits=6,
+        low_fraction=0.5,
+        blend_sources="seg,boundary",
+        blend_mode="max",
+        latent_dim=4,
+        repo_root=tmp_path,
+    )
+
+    assert payload["marginal_source"] == "blend"
+    assert payload["marginal_source_key"] == "normalized_rank_blend"
+    assert payload["blend_sources"] == ["seg", "boundary"]
+    assert payload["blend_mode"] == "max"
+    assert payload["per_pair_q_bits"] == [8, 8, 6, 6]
+    assert payload["blend_metadata"]["components"][0]["source"] == "seg"
+    assert payload["alignment"]["q_bits_vs_selected_marginal_pearson"] > 0.9
+
+
 def test_boundary_manifest_without_source_qbits_gets_explicit_baseline(
     tmp_path: Path,
 ) -> None:
