@@ -6,8 +6,10 @@ from pathlib import Path
 
 import pytest
 
+import tac.preflight as preflight
 from tac.preflight import (
     MetaBugViolation,
+    PreflightTimeoutError,
     check_lane_anchor_files_exist_locally,
     check_python_files_compile,
     check_shell_scripts_syntax_clean,
@@ -54,6 +56,19 @@ def test_check_67_strict_raises(tmp_path):
     repo = _py_repo(tmp_path)
     (repo / "src" / "tac" / "broken.py").write_text("def f(x: return x\n")
     with pytest.raises(MetaBugViolation, match="FAIL TO COMPILE"):
+        check_python_files_compile(repo_root=repo, strict=True, verbose=False)
+
+
+def test_check_67_timeout_propagates_without_fake_compile_violation(tmp_path, monkeypatch):
+    repo = _py_repo(tmp_path)
+    (repo / "src" / "tac" / "slow.py").write_text("VALUE = 1\n")
+
+    def timeout_compile(*_args, **_kwargs):
+        raise PreflightTimeoutError("budget exhausted")
+
+    monkeypatch.setattr(preflight, "compile", timeout_compile, raising=False)
+
+    with pytest.raises(PreflightTimeoutError, match="budget exhausted"):
         check_python_files_compile(repo_root=repo, strict=True, verbose=False)
 
 
