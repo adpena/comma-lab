@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "tool": "tools/probe_yuv6_differentiability_disambiguator.py",
+  "started_at_utc": "2026-05-09T10:53:40Z",
+  "elapsed_seconds": 0.5246419906616211,
+  "seed": 20260509,
+  "evidence_grade": "[predicted; YUV6 differentiability probe \u2014 non-arbitrariness arbitration]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "probes": [
+    {
+      "mode": "upstream_no_grad_baseline",
+      "available": true,
+      "is_patched_after_call": false,
+      "forward_max_abs_diff_vs_local": 0.0,
+      "grad_l2": 0.0,
+      "grad_max_abs": 0.0,
+      "grad_finite": false,
+      "no_grad_path_detected": true
+    },
+    {
+      "mode": "monkey_patch_global",
+      "available": true,
+      "is_patched_after_call": true,
+      "forward_max_abs_diff_vs_local": 0.0,
+      "grad_l2": 38.03618621826172,
+      "grad_max_abs": 0.39951205253601074,
+      "grad_finite": true
+    },
+    {
+      "mode": "tac_differentiable_routing",
+      "available": true,
+      "is_patched_after_call": false,
+      "forward_max_abs_diff_vs_local": 0.0,
+      "grad_l2": 38.03618621826172,
+      "grad_max_abs": 0.39951205253601074,
+      "grad_finite": true
+    }
+  ],
+  "arbitration": {
+    "recommendation": "monkey_patch_global",
+    "rationale": "Both modes pass parity (grad_l2 ratio=1.000000); recommending MONKEY_PATCH_GLOBAL because it is the empirically verified PR #95 recipe and propagates to every consumer in the process (including any upstream module that imported rgb_to_yuv6 at its own import time). TAC_DIFFERENTIABLE_ROUTING is equivalent in pose-gradient flow when consistently applied.",
+    "monkey_patch_global_passed": true,
+    "tac_differentiable_routing_passed": true
+  },
+  "cross_references": {
+    "claude_md_addition": ".omx/research/CLAUDE_md_addition_eval_roundtrip_inner_loop_yuv6_20260509.md",
+    "binary_forensics": ".omx/research/hnerv_leaderboard_binary_forensics_dossier_20260509.md",
+    "design_tension_principle": "feedback_design_tension_ship_both_interpretations_let_math_arbitrate_20260509",
+    "unified_lagrangian_principle": "feedback_unified_lagrangian_action_principle_GR_style_20260509"
+  }
+}

@@ -153,6 +153,17 @@ from tac.paradigm_delta_epsilon_zeta import (  # noqa: E402
 )
 from tac.training import EMA  # canonical EMA class, decay default 0.997
 
+# PR #95 binary-forensics replication. See
+# `src/tac/differentiable_eval_roundtrip.py` and CLAUDE.md
+# "Eval-roundtrip + autograd-YUV6 in training inner loop".
+from tac.differentiable_eval_roundtrip import (  # noqa: E402
+    Yuv6PatchToken,
+    Yuv6RoutingMode,
+    apply_eval_roundtrip_during_training,
+    patch_upstream_yuv6_globally,
+    unpatch_upstream_yuv6,
+)
+
 
 CONTEST_AUTH_EVAL_RELATIVE = "experiments/contest_auth_eval.py"
 DISPATCH_CLAIMS_RELATIVE = ".omx/state/active_lane_dispatch_claims.md"
@@ -1013,9 +1024,98 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=0.5,
         help="T19 ρ-shrink factor (Boyd canonical 0.5). Must be in (0, 1).",
     )
+    # ----------------------------------------------------------------------
+    # PR #95 binary-forensics replication (Finding A + Finding B)
+    # See `src/tac/differentiable_eval_roundtrip.py`.
+    # ----------------------------------------------------------------------
+    parser.add_argument(
+        "--enable-eval-roundtrip-in-training",
+        dest="enable_eval_roundtrip_in_training",
+        action="store_true",
+        default=True,
+        help=(
+            "[default: True] Apply contest eval roundtrip "
+            "(bicubic-up + bilinear-down + STE-round) inside training "
+            "inner loop, so the proxy gradient matches contest-eval. "
+            "This trainer's eval_roundtrip_pixel_l1 currently uses "
+            "bicubic-down (NOT PR #95 recipe); when this flag is True, "
+            "the canonical apply_eval_roundtrip_during_training is "
+            "available for callers (Phase 2 will route distortion "
+            "through it). Per CLAUDE.md eval_roundtrip non-negotiable."
+        ),
+    )
+    parser.add_argument(
+        "--disable-eval-roundtrip-in-training",
+        dest="enable_eval_roundtrip_in_training",
+        action="store_false",
+        help="Ablation only — see --enable-eval-roundtrip-in-training.",
+    )
+    parser.add_argument(
+        "--enable-differentiable-yuv6",
+        dest="enable_differentiable_yuv6",
+        action="store_true",
+        default=True,
+        help=(
+            "[default: True] Apply autograd-preserving rgb_to_yuv6 "
+            "monkey-patch (PR #95 Finding B). Without it, PoseNet "
+            "gradients are zero through YUV6 op (pose plateau)."
+        ),
+    )
+    parser.add_argument(
+        "--disable-differentiable-yuv6",
+        dest="enable_differentiable_yuv6",
+        action="store_false",
+        help="Ablation only — see --enable-differentiable-yuv6.",
+    )
+    parser.add_argument(
+        "--yuv6-mode",
+        choices=[m.value for m in Yuv6RoutingMode],
+        default=Yuv6RoutingMode.AUTO.value,
+        help=(
+            "Which differentiable-yuv6 routing to use: "
+            "'monkey_patch_global' (PR #95 verified-working recipe), "
+            "'tac_differentiable_routing' (cleaner, requires per-call "
+            "routing), 'auto' (default; runs probe-disambiguator). "
+            "See tools/probe_yuv6_differentiability_disambiguator.py."
+        ),
+    )
     if argv is None:
         return parser.parse_args()
     return parser.parse_args(argv)
+
+
+def _resolve_yuv6_mode_with_probe_t1(requested: str) -> Yuv6RoutingMode:
+    """In-process arbitration for ``--yuv6-mode auto``."""
+    mode = Yuv6RoutingMode(requested)
+    if mode is not Yuv6RoutingMode.AUTO:
+        return mode
+    from tac.differentiable_eval_roundtrip import differentiable_rgb_to_yuv6
+
+    rgb = (torch.rand((1, 3, 32, 32)) * 255.0).requires_grad_(True)
+    out = differentiable_rgb_to_yuv6(rgb)
+    out.sum().backward()
+    if rgb.grad is None or rgb.grad.abs().sum().item() == 0.0:
+        raise RuntimeError(
+            "[t1] yuv6 auto-resolution: tac.differentiable_rgb_to_yuv6 "
+            "produced zero gradient on calibration batch. CRITICAL invariant."
+        )
+    return Yuv6RoutingMode.MONKEY_PATCH_GLOBAL
+
+
+def _activate_yuv6_mode_t1(
+    mode: Yuv6RoutingMode, *, enabled: bool
+) -> Yuv6PatchToken | None:
+    """Activate the chosen YUV6 routing mode."""
+    if not enabled:
+        return None
+    if mode is Yuv6RoutingMode.MONKEY_PATCH_GLOBAL:
+        return patch_upstream_yuv6_globally()
+    return Yuv6PatchToken(
+        frame_utils_orig=None,
+        modules_orig=None,
+        frame_utils_was_patched=False,
+        modules_was_patched=False,
+    )
 
 
 def main() -> int:
@@ -1037,6 +1137,46 @@ def main() -> int:
     started_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     _seed_everything(args.seed)
     device = _resolve_device(args.device)
+
+    # ------------------------------------------------------------------
+    # PR #95 binary-forensics replication: activate autograd-preserving
+    # rgb_to_yuv6 BEFORE any scorer is loaded. See
+    # `src/tac/differentiable_eval_roundtrip.py`.
+    # ------------------------------------------------------------------
+    yuv6_mode = _resolve_yuv6_mode_with_probe_t1(args.yuv6_mode)
+    yuv6_token = _activate_yuv6_mode_t1(
+        yuv6_mode, enabled=args.enable_differentiable_yuv6
+    )
+    print(
+        f"[t1][pr95-replication] enable_eval_roundtrip_in_training="
+        f"{args.enable_eval_roundtrip_in_training} "
+        f"enable_differentiable_yuv6={args.enable_differentiable_yuv6} "
+        f"yuv6_mode={yuv6_mode.value}"
+    )
+    pr95_provenance = {
+        "enable_eval_roundtrip_in_training": args.enable_eval_roundtrip_in_training,
+        "enable_differentiable_yuv6": args.enable_differentiable_yuv6,
+        "yuv6_mode": yuv6_mode.value,
+        "yuv6_monkey_patched": bool(
+            yuv6_token
+            and (yuv6_token.frame_utils_was_patched or yuv6_token.modules_was_patched)
+        ),
+        "evidence_grade": "[predicted; PR #95 eval_roundtrip+yuv6 monkey-patch in training inner loop]",
+        "score_claim": False,
+        "binary_forensics_dossier": ".omx/research/hnerv_leaderboard_binary_forensics_dossier_20260509.md",
+        "note": (
+            "Phase 1 trainer currently uses pixel-L1 distortion (no scorer "
+            "forwards in inner loop), so the YUV6 monkey-patch primarily "
+            "becomes load-bearing once Phase 2 wires real PoseNet/SegNet "
+            "forwards into the inner loop. Activated proactively per "
+            "CLAUDE.md 'Eval-roundtrip + autograd-YUV6 in training inner "
+            "loop' to make pose-gradient flow available to any subagent "
+            "extending the trainer."
+        ),
+    }
+    (args.output_dir / "pr95_replication_provenance.json").write_text(
+        json.dumps(pr95_provenance, indent=2)
+    )
 
     print(f"[t1] scaffold version: {PARADIGM_DELTA_EPS_ZETA_VERSION}")
     print(f"[t1] device: {device}; smoke: {args.smoke}; epochs: {args.epochs}")
@@ -1324,6 +1464,11 @@ def main() -> int:
     (args.output_dir / "auth_eval_summary.json").write_text(
         json.dumps(auth_eval_result or {"skipped": True}, indent=2)
     )
+
+    # Revert global YUV6 monkey-patch on graceful exit so downstream
+    # importers (test harness, adjudication tools) see upstream unchanged.
+    if yuv6_token is not None:
+        unpatch_upstream_yuv6(yuv6_token)
 
     print("[t1] DONE")
     return 0
