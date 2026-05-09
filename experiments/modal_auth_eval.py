@@ -33,6 +33,7 @@ from tac.repo_io import json_text, read_json, sha256_file, write_json
 APP_NAME = "comma-auth-eval"
 REMOTE_REPO = Path("/workspace/pact")
 REMOTE_OUT = Path("/tmp/modal_auth_eval")
+REMOTE_WORK_ROOT = Path("/root/modal_auth_eval_work")
 REQUIRED_SAMPLES = 600
 DALI_DISABLE_NVML_VALUE = "1"
 REMOTE_PYTHONPATH = f"{REMOTE_REPO / 'src'}:{REMOTE_REPO / 'upstream'}:{REMOTE_REPO}"
@@ -278,11 +279,13 @@ def _run_auth_eval_inner(
     import time
 
     out_dir = REMOTE_OUT
-    work_dir = out_dir / "eval_work"
+    work_dir = REMOTE_WORK_ROOT / "eval_work"
     archive_path = out_dir / "archive.zip"
     uv_env = out_dir / "uv_project_env"
     if out_dir.exists():
         shutil.rmtree(out_dir)
+    if REMOTE_WORK_ROOT.exists():
+        shutil.rmtree(REMOTE_WORK_ROOT)
     out_dir.mkdir(parents=True, exist_ok=True)
     work_dir.mkdir(parents=True, exist_ok=True)
 

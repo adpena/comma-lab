@@ -74,6 +74,9 @@ def test_source_uses_literal_cuda_canonical_contest_eval() -> None:
     assert '"DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE' in text
     assert '"PYTHONPATH": REMOTE_PYTHONPATH' in text
     assert 'os.environ["DALI_DISABLE_NVML"] = DALI_DISABLE_NVML_VALUE' in text
+    assert 'REMOTE_WORK_ROOT = Path("/root/modal_auth_eval_work")' in text
+    assert 'work_dir = REMOTE_WORK_ROOT / "eval_work"' in text
+    assert 'work_dir = out_dir / "eval_work"' not in text
     assert "safe_extract_zip(runtime_zip, runtime_root)" in text
     assert "submission_dir_zip_sha256" in text
     assert '"--device", "cpu"' not in text

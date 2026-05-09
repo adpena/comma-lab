@@ -85,6 +85,27 @@ containing `PYTHONPATH`. The guard is wired into
 class across the remaining tracked Modal wrappers, including legacy deploy
 archives and diagnostic Modal utilities.
 
+## Temp Work-Dir Custody Guard Closed
+
+Third attempted A1 CUDA refire
+`modal:a1-latentalign-importpathfix-cuda-20260509T023714Z` reached the remote
+worker and launched `experiments/contest_auth_eval.py`, then failed closed
+before scoring because the wrapper passed:
+
+```text
+--work-dir /tmp/modal_auth_eval/eval_work
+```
+
+`contest_auth_eval.py` correctly rejects temp storage for score-grade evidence
+unless `--allow-temp-work-dir` is explicitly diagnostic-only. The terminal claim
+row is `failed_modal_temp_work_dir_guard`; no `contest_auth_eval.json` and no
+CUDA score were produced.
+
+Permanent fix: `experiments/modal_auth_eval.py` now keeps transient wrapper logs
+under `/tmp/modal_auth_eval`, but writes the score-custody work directory under
+`/root/modal_auth_eval_work/eval_work`, which is outside `tempfile.gettempdir()`
+and is harvested back into the local output directory.
+
 ## Next Command Shape
 
 After claiming the lane:
