@@ -586,20 +586,22 @@ def preflight_all(
         # `tag.startswith("[contest-...")` substring-prefix patterns.
         # Held warn-only initially per directive; live count 0 on landing.
         # Memory: feedback_proactive_custody_concurrency_audit_landed_20260509.md
+        # 2026-05-09 STRICT-FLIP per "fix all yourself" operator approval —
+        # Catalog #130 landed at 0 live violations; ratchet permanently
+        # extincts the broader tag-only-custody META class.
         check_no_tag_only_custody_validation(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # 2026-05-09 proactive META-class custody+concurrency audit (#131):
         # extends catalog #128 (`continual_learning.save_posterior`) to all
-        # shared-state writes. Refuses bare writes to .omx/state/*.json (and
-        # similar shared mutable state) without a canonical fcntl-locked
-        # helper. Held warn-only initially per directive; live count 0 on
-        # landing (6 surfaces fixed in this lane: LIGHTNING_ACTIVE_JOBS_PATH
-        # ×4 callers, LIGHTNING_STATE, vastai_active_instances bypass,
+        # shared-state writes. STRICT-FLIP per "fix all yourself" operator
+        # approval — Catalog #131 landed at 0 live violations after fixing
+        # 6 surfaces in the audit lane (LIGHTNING_ACTIVE_JOBS_PATH ×4 callers,
+        # LIGHTNING_STATE, vastai_active_instances bypass,
         # instance_setup_first_seen). Memory:
         # feedback_proactive_custody_concurrency_audit_landed_20260509.md
         check_no_bare_writes_to_shared_state(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
@@ -27803,32 +27805,40 @@ def check_continual_learning_writes_use_lock(
 # tag-membership predicate must also use one of the validator tokens
 # OR add a `# CUSTODY_VALIDATOR_OK:<reason>` waiver.
 
+# Note: the four `tag.startswith(...)` literals below are DETECTION
+# PATTERNS used by this gate to scan other files. They are NOT bypass
+# code — they are string constants this gate compares against.
+# Same-line `CUSTODY_VALIDATOR_OK` waivers tell catalog #127's
+# `_line_has_authoritative_tag_bypass_pattern` to skip these meta-pattern
+# strings (which would otherwise self-match).
 _TAG_GRADE_BYPASS_PATTERNS: tuple[str, ...] = (
-    "evidence_grade in {",
-    "evidence_grade.lower() in {",
-    "evidence_grade not in {",
-    "evidence_grade.lower() not in {",
-    'tag.startswith("[contest-CUDA")',
-    'tag.startswith("[contest-CPU")',
-    'evidence_tag.startswith("[contest-CUDA")',
-    'evidence_tag.startswith("[contest-CPU")',
+    "evidence_grade in {",  # CUSTODY_VALIDATOR_OK: detection-pattern-string
+    "evidence_grade.lower() in {",  # CUSTODY_VALIDATOR_OK: detection-pattern-string
+    "evidence_grade not in {",  # CUSTODY_VALIDATOR_OK: detection-pattern-string
+    "evidence_grade.lower() not in {",  # CUSTODY_VALIDATOR_OK: detection-pattern-string
+    'tag.startswith("[contest-CUDA")',  # CUSTODY_VALIDATOR_OK: detection-pattern-string
+    'tag.startswith("[contest-CPU")',  # CUSTODY_VALIDATOR_OK: detection-pattern-string
+    'evidence_tag.startswith("[contest-CUDA")',  # CUSTODY_VALIDATOR_OK: detection-pattern-string
+    'evidence_tag.startswith("[contest-CPU")',  # CUSTODY_VALIDATOR_OK: detection-pattern-string
 )
 
-# Files that legitimately implement the joint validators themselves OR are
-# fail-closed blocker accumulators that already check archive_sha256.
+# Files that legitimately implement the joint validators themselves. Other
+# fail-closed callers are accepted only when the tag/grade predicate has a
+# local validator / blocker context in the nearby line window.
 _TAG_GRADE_VALIDATOR_FILES: tuple[str, ...] = (
     "src/tac/continual_learning.py",
     "src/tac/optimization/candidate_evidence_contract.py",
     "tools/predispatch_sanity.py",
-    "tools/meta_lagrangian_atom_ledger_adapter.py",  # fail-closed blockers + archive_sha256 check
-    "src/tac/uniward_delta.py",  # fail-closed blocker accumulation
-    "src/tac/optimization/cross_paradigm_atoms.py",  # fail-closed blocker accumulation
-    "tools/build_pr107_cpu_lossy_candidate_matrix.py",  # fail-closed blockers
-    "tools/lightning_dispatch_pr106_stack.py",  # fail-closed blockers
-    "tools/run_admm_no_dead_k_static_preflight.py",  # fail-closed
-    "experiments/build_pr85_bridge_sparse_action_candidates.py",  # fail-closed + archive_sha256
-    "src/tac/codec_stack_planner.py",  # fail-closed
-    "src/tac/deploy/lightning/batch_jobs.py",  # diagnostic-grade gate inside a longer joint check
+)
+
+_TAG_GRADE_LOCAL_VALIDATOR_TOKENS: tuple[str, ...] = (
+    *_CUSTODY_VALIDATOR_TOKENS,
+    "is_promotable_exact_cuda_evidence",
+    "promotable_exact_cuda_evidence_blockers",
+    "sha256_file(",
+    "archive_sha256",
+    "blockers",
+    "errors",
 )
 
 
@@ -27844,7 +27854,7 @@ def check_no_tag_only_custody_validation(
     (``evidence_grade in {...}``, ``tag.startswith("[contest-CUDA")``, etc.)
     without either:
 
-    1. A whole-file route through a known joint validator
+    1. A local line-window route through a known joint validator
        (``validate_custody`` / ``validate_custody_verdict`` /
        ``posterior_update`` / ``posterior_update_locked`` /
        ``is_promotable_exact_cuda_evidence`` / ``promotable_exact_cuda_evidence_blockers`` /
@@ -27884,19 +27894,6 @@ def check_no_tag_only_custody_validation(
             if not any(pat in text for pat in _TAG_GRADE_BYPASS_PATTERNS):
                 continue
             scanned_files += 1
-            # Whole-file accept: file uses a joint validator or
-            # archive_sha256 check anywhere.
-            if any(tok in text for tok in _CUSTODY_VALIDATOR_TOKENS):
-                continue
-            if "is_promotable_exact_cuda_evidence" in text:
-                continue
-            if "promotable_exact_cuda_evidence_blockers" in text:
-                continue
-            if "sha256_file(" in text:
-                continue
-            # archive_sha256 check (joint validation) accepts the file.
-            if 'archive_sha256' in text and ('blockers' in text or 'errors' in text):
-                continue
             lines = text.splitlines()
             for lineno, line in enumerate(lines):
                 stripped = line.lstrip()
@@ -27905,6 +27902,14 @@ def check_no_tag_only_custody_validation(
                 if not any(pat in line for pat in _TAG_GRADE_BYPASS_PATTERNS):
                     continue
                 if _CUSTODY_WAIVER_MARKER in line:
+                    continue
+                if _line_window_contains_any(
+                    lines,
+                    lineno,
+                    _TAG_GRADE_LOCAL_VALIDATOR_TOKENS,
+                    before=6,
+                    after=6,
+                ):
                     continue
                 rel = py.relative_to(root) if py.is_relative_to(root) else py
                 violations.append(
@@ -28099,15 +28104,13 @@ def check_no_bare_writes_to_shared_state(
     that write to a recognized shared-state path (e.g. `.omx/state/*.json`,
     `vastai_active_instances`, `lightning_active_jobs`, etc.) without:
 
-    1. The whole file referencing one of the canonical fcntl-locked helpers
-       or context managers (``fcntl.flock``, ``LOCK_EX``,
+    1. The local line window referencing one of the canonical fcntl-locked
+       helpers or context managers (``fcntl.flock``, ``LOCK_EX``,
        ``posterior_update_locked``, ``_posterior_lock``,
        ``_lightning_state_lock``, ``_active_jobs_lock``,
        ``update_active_jobs_locked``, ``register_job``, ``register_instance``,
        ``subagent_commit_serializer``, ``claim_catalog_number``), OR
-    2. A 12-line window around the write call ALSO containing one of those
-       lock tokens (single-function locking is acceptable), OR
-    3. A same-line waiver comment ``# BARE_WRITE_OK:<reason>``.
+    2. A same-line waiver comment ``# BARE_WRITE_OK:<reason>``.
 
     Held warn-only initially per the directive — flip to STRICT after live
     count drives to 0 and stability period elapses.
@@ -28156,7 +28159,6 @@ def check_no_bare_writes_to_shared_state(
                 continue
             scanned_files += 1
             shared_vars = _bare_write_collect_shared_vars(text)
-            file_has_lock = any(tok in text for tok in _BARE_WRITE_LOCK_TOKENS)
             lines = text.splitlines()
             for lineno, line in enumerate(lines):
                 stripped = line.lstrip()
@@ -28178,10 +28180,10 @@ def check_no_bare_writes_to_shared_state(
                     continue
                 if not _bare_write_line_targets_shared(line, shared_vars):
                     continue
-                if file_has_lock:
-                    continue
-                # Window-scope check: 12 lines before + 2 after.
-                lo = max(0, lineno - 12)
+                # Window-scope check: 20 lines before + 2 after. A lock token
+                # elsewhere in the file is not sufficient; it must be close
+                # enough to make the specific write visibly serialized.
+                lo = max(0, lineno - 20)
                 hi = min(len(lines), lineno + 3)
                 window = "\n".join(lines[lo:hi])
                 if any(tok in window for tok in _BARE_WRITE_LOCK_TOKENS):
