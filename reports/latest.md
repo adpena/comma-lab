@@ -78,6 +78,26 @@ Classification: exact CUDA anchor, not a CUDA frontier win. It pairs with the
 GHA Linux `[contest-CPU]` score `0.19284757743677347`, giving a CUDA-CPU gap of
 about `0.03350`, consistent with the HNeRV-family drift profile.
 
+**Guarded SegNet-preserving refire dispatched:** after the long `lr=1e-6`
+follow-up regressed to `0.19359165212458496` macOS CPU advisory, a short
+guarded schedule was launched on Modal T4:
+
+- Job: `track1_phase_a1_score_gradient_segguard_kl0p5_l1p02_40e_20260509T052414Z_modal`
+- Modal call id: `fc-01KR5K3V8VT735P73ZV881ZQA2`
+- Claim status: `active_dispatching`
+- Config: `epochs=40`, `steps_per_epoch=8`, `lr=2e-6`,
+  `aux_kl_weight=0.5`, `aux_pixel_l1_weight=0.02`
+- Predicted ETA: `2026-05-09T07:54:39Z`
+- Recover command:
+  `.venv/bin/python experiments/modal_phase_a1_score_gradient_pr101.py recover --label track1_phase_a1_score_gradient_segguard_kl0p5_l1p02_40e_20260509T052414Z_modal`
+- Ledger:
+  `.omx/research/phase_a1_segguard_modal_dispatch_20260509_codex.md`
+
+No score claim exists yet. The Modal temp-evidence fix is in place, so the
+remote eval workdir should no longer be rejected as `/tmp` scratch. If DALI/
+NVDEC still fails, the run is build-only and must be screened locally before
+any exact-eval spend.
+
 ## 2026-05-09 (night) - Track4 UNIWARD/Hessian A1 ladder screen
 
 `tools/build_uniward_stc_hessian_a1_v1.py` now emits complete runtime packets
