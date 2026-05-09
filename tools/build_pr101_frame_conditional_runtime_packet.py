@@ -46,6 +46,7 @@ from tac.analysis import hnerv_packet_sections  # noqa: E402
 from tac.codec.frame_conditional_bit_budget import (  # noqa: E402
     FRAME_CONDITIONAL_LATENT_WIRE_SCHEMA,
     allocate_per_frame_bits,
+    build_frame_conditional_wire_contract,
     pack_frame_conditional_latent_codes,
     pack_frame_conditional_q_bits,
 )
@@ -126,6 +127,7 @@ def build_frame_conditional_runtime_packet(
     force: bool = False,
     q_bits_override: Sequence[float] | np.ndarray | None = None,
     q_bits_override_source_path: Path | None = None,
+    allow_q_bits_wire_contract_override: bool = False,
     recorded_at_utc: dt.datetime | None = None,
 ) -> dict[str, Any]:
     """Build a deterministic local A5 packet scaffold and custody manifests."""
@@ -186,6 +188,19 @@ def build_frame_conditional_runtime_packet(
     )
     q_bits_sideinfo = pack_frame_conditional_q_bits(q_bits)
     latent_wire_payload = pack_frame_conditional_latent_codes(q_pair_first, q_bits)
+    materialized_wire_contract = build_frame_conditional_wire_contract(
+        q_bits,
+        latent_dim=q_pair_first.shape[1],
+        q_pair_first=q_pair_first,
+    )
+    wire_contract_reconciliation = _reconcile_wire_contract(
+        source_wire_contract=wire_contract,
+        materialized_wire_contract=materialized_wire_contract,
+        q_bits_sideinfo=q_bits_sideinfo,
+        latent_wire_payload=latent_wire_payload,
+        allow_q_bits_wire_contract_override=allow_q_bits_wire_contract_override,
+    )
+    wire_contract = wire_contract_reconciliation["selected_wire_contract"]
     q_bits_schedule = _q_bits_schedule_record(
         q_bits=q_bits,
         q_bits_sideinfo=q_bits_sideinfo,
@@ -194,11 +209,6 @@ def build_frame_conditional_runtime_packet(
         a5_manifest=a5_manifest,
         best_row=best_row,
         video_path=video_path,
-    )
-    _assert_wire_contract_matches_materialized_payloads(
-        wire_contract=wire_contract,
-        q_bits_sideinfo=q_bits_sideinfo,
-        latent_wire_payload=latent_wire_payload,
     )
 
     packet_dir = output_dir / "packet"
@@ -365,6 +375,9 @@ def build_frame_conditional_runtime_packet(
             "score_eval_status": "not_run",
         },
         "frame_conditional_wire_contract": wire_contract,
+        "wire_contract_reconciliation": wire_contract_reconciliation[
+            "manifest_record"
+        ],
         "archive_member_manifest": archive_member_manifest,
         "parser_section_manifest": parser_section_custody["parser_section_manifest"],
         "parser_section_gate": parser_section_custody["parser_section_gate"],
@@ -638,6 +651,77 @@ def _assert_wire_contract_matches_materialized_payloads(
             raise FrameConditionalRuntimePacketError(
                 f"materialized {label} mismatch: expected {expected!r}, got {actual!r}"
             )
+
+
+def _reconcile_wire_contract(
+    *,
+    source_wire_contract: Mapping[str, Any],
+    materialized_wire_contract: Mapping[str, Any],
+    q_bits_sideinfo: bytes,
+    latent_wire_payload: bytes,
+    allow_q_bits_wire_contract_override: bool,
+) -> dict[str, Any]:
+    source_check = _wire_contract_match_check(
+        wire_contract=source_wire_contract,
+        q_bits_sideinfo=q_bits_sideinfo,
+        latent_wire_payload=latent_wire_payload,
+    )
+    materialized_check = _wire_contract_match_check(
+        wire_contract=materialized_wire_contract,
+        q_bits_sideinfo=q_bits_sideinfo,
+        latent_wire_payload=latent_wire_payload,
+    )
+    if not materialized_check["matches"]:
+        raise FrameConditionalRuntimePacketError(
+            "materialized q-bits wire contract does not match materialized payloads: "
+            + str(materialized_check["error"])
+        )
+    if source_check["matches"]:
+        selected_wire_contract = source_wire_contract
+        selected_source = "a5_manifest"
+    else:
+        if not allow_q_bits_wire_contract_override:
+            raise FrameConditionalRuntimePacketError(str(source_check["error"]))
+        selected_wire_contract = materialized_wire_contract
+        selected_source = "materialized_q_bits_override"
+    return {
+        "selected_wire_contract": selected_wire_contract,
+        "manifest_record": {
+            "schema": "pr101_frame_conditional_wire_contract_reconciliation.v1",
+            "selected_source": selected_source,
+            "q_bits_wire_contract_override_allowed": bool(
+                allow_q_bits_wire_contract_override
+            ),
+            "source_wire_contract_matches_materialized": bool(source_check["matches"]),
+            "source_wire_contract_mismatch": source_check["error"],
+            "materialized_wire_contract_matches_materialized": bool(
+                materialized_check["matches"]
+            ),
+            "source_wire_contract_sha256": _canonical_json_sha256(
+                source_wire_contract
+            ),
+            "materialized_wire_contract_sha256": _canonical_json_sha256(
+                materialized_wire_contract
+            ),
+        },
+    }
+
+
+def _wire_contract_match_check(
+    *,
+    wire_contract: Mapping[str, Any],
+    q_bits_sideinfo: bytes,
+    latent_wire_payload: bytes,
+) -> dict[str, Any]:
+    try:
+        _assert_wire_contract_matches_materialized_payloads(
+            wire_contract=wire_contract,
+            q_bits_sideinfo=q_bits_sideinfo,
+            latent_wire_payload=latent_wire_payload,
+        )
+    except FrameConditionalRuntimePacketError as exc:
+        return {"matches": False, "error": str(exc)}
+    return {"matches": True, "error": None}
 
 
 def _extract_storage_ordered_latent_payload(latent_blob: bytes) -> tuple[bytes, np.ndarray]:
@@ -1510,6 +1594,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "manifest key per_pair_q_bits, or exactly one q_bits_per_pair/q_bits key."
         ),
     )
+    parser.add_argument(
+        "--recompute-wire-contract-for-q-bits",
+        action="store_true",
+        help=(
+            "Allow --q-bits-json to supersede the source A5 manifest wire-contract "
+            "hashes. The output manifest records the mismatch and selected contract."
+        ),
+    )
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument(
         "--candidate-id",
@@ -1538,6 +1630,7 @@ def main(argv: list[str] | None = None) -> int:
             video_path=args.video_path,
             q_bits_override=q_bits_override,
             q_bits_override_source_path=args.q_bits_json,
+            allow_q_bits_wire_contract_override=args.recompute_wire_contract_for_q_bits,
             candidate_id=args.candidate_id,
             force=args.force,
         )
