@@ -22,6 +22,8 @@ from tac.repo_io import repo_relative, sha256_file
 
 SCHEMA = "pr101_frame_conditional_packet_readiness.v1"
 A5_ANCHOR_SCHEMA = "pr101_frame_conditional_bit_anchor.v1"
+PER_PAIR_SCORE_MARGINAL_SCHEMA = "pr101_a5_per_pair_score_marginals.v1"
+SCORE_MARGINAL_QBITS_SCHEDULE_SCHEMA = "pr101_a5_score_marginal_qbits_schedule.v1"
 
 CANDIDATE_ARCHIVE_MANIFEST = "candidate_archive_manifest"
 PACKET_RUNTIME_PATCH_MANIFEST = "packet_local_runtime_patch_manifest"
@@ -492,6 +494,22 @@ def _validate_score_marginal_manifest(
     ready = payload.get("per_pair_score_marginals_ready") is True or payload.get(
         "marginal_evidence_available"
     ) is True
+    if payload.get("schema") == SCORE_MARGINAL_QBITS_SCHEDULE_SCHEMA:
+        q_bits = payload.get("per_pair_q_bits")
+        if payload.get("source_schema") != PER_PAIR_SCORE_MARGINAL_SCHEMA:
+            blockers.append(f"{PER_PAIR_SCORE_MARGINAL_MANIFEST}:schedule_source_schema_invalid")
+        source_artifact = _nested_mapping(
+            _nested_mapping(payload, "source_artifacts"),
+            "score_marginal_manifest",
+        )
+        if not _is_sha256(_as_str(source_artifact.get("sha256"))):
+            blockers.append(f"{PER_PAIR_SCORE_MARGINAL_MANIFEST}:schedule_source_sha256_missing")
+        if not _is_sha256(_as_str(_nested_mapping(payload, "q_bits_summary").get("sha256"))):
+            blockers.append(f"{PER_PAIR_SCORE_MARGINAL_MANIFEST}:schedule_q_bits_sha256_missing")
+        if not _valid_q_bits(q_bits, expected_n_pairs=expected_n_pairs):
+            blockers.append(f"{PER_PAIR_SCORE_MARGINAL_MANIFEST}:schedule_q_bits_invalid")
+        else:
+            ready = True
     if isinstance(marginals, Sequence) and not isinstance(marginals, (str, bytes)):
         if expected_n_pairs is not None and len(marginals) != expected_n_pairs:
             blockers.append(f"{PER_PAIR_SCORE_MARGINAL_MANIFEST}:marginal_count_mismatch")
@@ -504,6 +522,17 @@ def _validate_score_marginal_manifest(
             f"{PER_PAIR_SCORE_MARGINAL_MANIFEST}:per_pair_score_marginals_not_ready"
         )
     return blockers
+
+
+def _valid_q_bits(value: Any, *, expected_n_pairs: int | None) -> bool:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        return False
+    if expected_n_pairs is not None and len(value) != expected_n_pairs:
+        return False
+    for item in value:
+        if not isinstance(item, int) or isinstance(item, bool) or item < 1 or item > 16:
+            return False
+    return True
 
 
 def _validate_strict_compliance_json(

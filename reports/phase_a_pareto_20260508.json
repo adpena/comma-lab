@@ -238,7 +238,7 @@
       "manifest_path": "experiments/results/pr101_frame_conditional_bit_codex_20260508T211308Z/build_manifest.json",
       "notes": [
         "best frame-conditioned latent delta -4,098 B",
-        "eta=4 complexity runtime packet collapsed on macOS CPU advisory; q6-low50 trust schedule scored 0.213365 advisory, still SegNet-limited"
+        "eta=4 complexity runtime packet collapsed on macOS CPU advisory; q6-low50 trust schedule scored 0.213365 advisory, still SegNet-limited; q6-low25 failed byte gate at 178,978 B"
       ]
     },
     {

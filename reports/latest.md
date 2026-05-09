@@ -104,7 +104,10 @@ reactivation criteria documented per memo.
   (`q6` for the lowest 50% marginal pairs, `q8` otherwise) built a
   `177,928 B` archive (`83e85a...`) and scored **0.213365** on macOS CPU
   advisory; this avoids catastrophic collapse but remains a measured-config
-  advisory negative because SegNet rises to `0.00074546`.
+  advisory negative because SegNet rises to `0.00074546`. The tighter
+  q6-low25 schedule validates the schedule-readiness path but fails the byte
+  gate at `178,978 B` (`3056e676...`), larger than PR101 brotli; no scorer
+  eval was run.
 - Cross-paradigm ADMM × Op1 finalizer — byte-closed `153,513 B` archive
   (`7bbba307...`) now has a local macOS CPU advisory result:
   **0.328444** (`pose=0.00014180`, `seg=0.00188570`). Rate improves, but
