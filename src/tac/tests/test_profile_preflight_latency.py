@@ -47,6 +47,21 @@ def test_called_preflight_check_names_filters_recursive_and_preserves_order() ->
     assert names == ["check_alpha", "preflight_beta"]
 
 
+def test_called_preflight_check_names_omits_self_recursive_gate_call() -> None:
+    module = _load_tool()
+
+    def check_alpha(*, strict: bool) -> None:
+        _ = strict
+
+    def preflight_developer() -> None:
+        preflight_developer()
+        check_alpha(strict=True)
+
+    names = module._called_preflight_check_names(preflight_developer)
+
+    assert names == ["check_alpha"]
+
+
 def test_called_preflight_calls_preserves_constant_strictness() -> None:
     module = _load_tool()
 
@@ -195,6 +210,48 @@ def test_profile_preflight_checks_resolves_local_imported_check(monkeypatch) -> 
     assert profile.status == "passed"
     assert [step.name for step in profile.steps] == ["local_check"]
     assert events == [("local", False, False)]
+
+
+def test_profile_preflight_dev_cli_runs_bounded_developer_gate(monkeypatch) -> None:
+    module = _load_tool()
+    events: list[tuple[str, bool, bool]] = []
+
+    def check_alpha(*, strict: bool, verbose: bool) -> None:
+        events.append(("alpha", strict, verbose))
+
+    fake_preflight = SimpleNamespace(DEFAULT_PREFLIGHT_CLI_TIMEOUT_S=30.0)
+    fake_preflight.check_alpha = check_alpha
+
+    def preflight_developer(**kwargs: object) -> None:
+        assert kwargs["check_codebase"] is True
+        assert kwargs["verbose"] is False
+        assert kwargs["use_fs_cache"] is True
+        fake_preflight.check_alpha(strict=True, verbose=False)
+
+    fake_preflight.preflight_developer = preflight_developer
+    real_import_module = module.importlib.import_module
+    monkeypatch.setattr(
+        module,
+        "_called_preflight_check_names",
+        lambda func: ["check_alpha"] if func is preflight_developer else [],
+    )
+    monkeypatch.setattr(
+        module.importlib,
+        "import_module",
+        lambda name: (
+            fake_preflight
+            if name == "tac.preflight"
+            else real_import_module(name)
+        ),
+    )
+
+    profile = module._profile_preflight_dev_cli(use_fs_cache=True, timeout_s=None)
+
+    assert profile.status == "passed"
+    assert profile.metadata["timeout_s"] == 30.0
+    assert profile.metadata["mirrors_cli_scope"] == "dev"
+    assert [step.name for step in profile.steps] == ["check_alpha"]
+    assert events == [("alpha", True, False)]
 
 
 def test_build_report_sorts_hot_steps_and_keeps_surface_step_count() -> None:

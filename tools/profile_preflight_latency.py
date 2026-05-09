@@ -41,6 +41,7 @@ from tac.repo_io import json_text, repo_relative  # noqa: E402
 
 PROFILE_SCHEMA = "pact.preflight_latency_profile.v1"
 DEFAULT_SURFACES = (
+    "preflight-dev-cli",
     "preflight-all-codebase",
     "dispatch-hazards",
     "review-tracker-scan",
@@ -183,7 +184,7 @@ def _called_preflight_calls(func: Callable[..., object]) -> list[PreflightCall]:
                 name = callee.id
                 import_module = imported_modules.get(name, "")
                 if (
-                    name != "preflight_all"
+                    name not in {"preflight_all", getattr(func, "__name__", "")}
                     and (
                         name.startswith("check_")
                         or name.startswith("preflight_")
@@ -291,6 +292,100 @@ def _profile_preflight_all_codebase(
             "wrapped_check_count": len(originals),
             "use_fs_cache": use_fs_cache,
             "timeout_s": timeout_s if timeout_s is not None else 0,
+        },
+        error_type=error_type,
+        error=error,
+    )
+
+
+def _profile_preflight_dev_cli(
+    *,
+    use_fs_cache: bool,
+    timeout_s: float | None,
+) -> SurfaceProfile:
+    """Profile the normal bounded developer preflight surface.
+
+    This mirrors ``python -m tac.preflight --scope dev`` closely enough for
+    local latency work while still wrapping individual Python checks so the hot
+    path is visible. The default timeout is the CLI contract: 30 seconds.
+    """
+
+    surface = "preflight-dev-cli"
+    started = time.perf_counter()
+    steps: list[StepTiming] = []
+    originals: dict[str, Callable[..., object]] = {}
+    status = "passed"
+    error_type = ""
+    error = ""
+
+    preflight = importlib.import_module("tac.preflight")
+    check_names = _called_preflight_check_names(preflight.preflight_developer)
+    effective_timeout_s = (
+        float(timeout_s)
+        if timeout_s is not None
+        else float(getattr(preflight, "DEFAULT_PREFLIGHT_CLI_TIMEOUT_S", 30.0))
+    )
+
+    def wrap(name: str, func: Callable[..., object]) -> Callable[..., object]:
+        @functools.wraps(func)
+        def wrapper(*args: object, **kwargs: object) -> object:
+            step_started = time.perf_counter()
+            try:
+                result = func(*args, **kwargs)
+            except Exception as exc:
+                steps.append(
+                    StepTiming(
+                        surface=surface,
+                        name=name,
+                        elapsed_s=time.perf_counter() - step_started,
+                        status="failed",
+                        detail=f"{type(exc).__name__}: {exc}",
+                    )
+                )
+                raise
+            steps.append(
+                StepTiming(
+                    surface=surface,
+                    name=name,
+                    elapsed_s=time.perf_counter() - step_started,
+                    status="passed",
+                )
+            )
+            return result
+
+        return wrapper
+
+    for name in check_names:
+        func = getattr(preflight, name, None)
+        if callable(func):
+            originals[name] = func
+            setattr(preflight, name, wrap(name, func))
+
+    try:
+        with _timeout_after(effective_timeout_s, label=surface):
+            preflight.preflight_developer(
+                check_codebase=True,
+                verbose=False,
+                use_fs_cache=use_fs_cache,
+            )
+    except Exception as exc:
+        status = "failed"
+        error_type = type(exc).__name__
+        error = str(exc)
+    finally:
+        for name, func in originals.items():
+            setattr(preflight, name, func)
+
+    return SurfaceProfile(
+        name=surface,
+        status=status,
+        elapsed_s=time.perf_counter() - started,
+        steps=steps,
+        metadata={
+            "wrapped_check_count": len(originals),
+            "use_fs_cache": use_fs_cache,
+            "timeout_s": effective_timeout_s,
+            "mirrors_cli_scope": "dev",
         },
         error_type=error_type,
         error=error,
@@ -822,6 +917,11 @@ def _print_report(report: dict[str, object], *, top: int) -> None:
 
 
 def _run_surface(name: str, args: argparse.Namespace) -> SurfaceProfile:
+    if name == "preflight-dev-cli":
+        return _profile_preflight_dev_cli(
+            use_fs_cache=not args.no_fs_cache,
+            timeout_s=args.preflight_timeout_s,
+        )
     if name == "preflight-all-codebase":
         return _profile_preflight_all_codebase(
             use_fs_cache=not args.no_fs_cache,
@@ -894,8 +994,9 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help=(
             "Stop preflight-all-codebase after this many seconds and still emit "
-            "the partial timing report. Also caps the preflight-checks surface. "
-            "Default: no timeout."
+            "the partial timing report. Also caps the preflight-dev-cli and "
+            "preflight-checks surfaces. Default: no timeout for all-codebase "
+            "and checks; preflight-dev-cli uses the normal 30s CLI budget."
         ),
     )
     parser.add_argument(

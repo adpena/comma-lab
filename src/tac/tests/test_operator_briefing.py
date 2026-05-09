@@ -200,6 +200,7 @@ def test_dispatch_claim_summary_formats_active_claim(monkeypatch):
             "terminal_latest_count": 3,
             "active": [
                 {
+                    # FAKE_LANE_OK: synthetic operator-briefing formatter fixture.
                     "lane_id": "lane_a1_cuda",
                     "instance_job_id": "job-123",
                     "platform": "lightning",
