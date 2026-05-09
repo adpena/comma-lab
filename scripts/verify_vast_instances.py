@@ -30,7 +30,9 @@ Reference memories:
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
+import os
 import subprocess
 import sys
 from dataclasses import dataclass, asdict
@@ -52,6 +54,11 @@ SSH_BASE = [
 ]
 
 
+def _setup_first_seen_lock_path() -> Path:
+    """Sibling lockfile path for fcntl coordination."""
+    return SETUP_FIRST_SEEN_PATH.with_suffix(SETUP_FIRST_SEEN_PATH.suffix + ".lock")
+
+
 def _load_setup_first_seen() -> dict[str, float]:
     """Read the SETUP-first-seen tracker.
 
@@ -70,8 +77,62 @@ def _load_setup_first_seen() -> dict[str, float]:
 
 
 def _save_setup_first_seen(data: dict[str, float]) -> None:
+    """Transactional REPLACE write of the SETUP-first-seen tracker.
+
+    Per CLAUDE.md non-negotiable + catalog #131: every shared-state write
+    must serialize on a sibling fcntl lockfile and use a unique tmp path
+    to prevent concurrent verify_vast_instances.py invocations from
+    silently dropping each other's updates.
+
+    HIGH 1 FIX (codex round 3, catalog #132): the previous version did
+    ``existing = _load_setup_first_seen(); existing.update(data)`` INSIDE
+    the lock, which silently re-introduced any stale ``first_seen`` rows
+    that the caller (``main()``) had pruned because the instance is no
+    longer in the tracker. Stale rows then made ``--auto-destroy-stale``
+    target fresh instances that inherited an old age.
+
+    The contract is now TRANSACTIONAL REPLACE: the caller is the sole
+    source of truth for the post-prune map and we write ``data`` directly.
+    Concurrent writers serialize on the lockfile so each transaction
+    runs atomically; whichever caller wins the lock last wins the file
+    state, and per-instance pruning decisions are preserved instead of
+    being merged-away by a stale ``existing.update(data)``.
+
+    Sister of:
+
+    - ``tac.continual_learning.posterior_update_locked`` (catalog #128)
+    - ``tac.deploy.lightning.active_jobs_state.update_active_jobs_locked``
+      (catalog #131)
+    - ``tac.vastai_tracker._write_records``
+
+    Memory: feedback_codex_round3_findings_fix_landed_20260509.md.
+    """
     SETUP_FIRST_SEEN_PATH.parent.mkdir(parents=True, exist_ok=True)
-    SETUP_FIRST_SEEN_PATH.write_text(json.dumps(data, indent=2, sort_keys=True))
+    lock_path = _setup_first_seen_lock_path()
+    with open(lock_path, "w") as lockfd:
+        fcntl.flock(lockfd.fileno(), fcntl.LOCK_EX)
+        try:
+            # TRANSACTIONAL REPLACE — write the caller's post-prune map
+            # directly. DO NOT reload + .update() here; that re-introduces
+            # stale rows the caller deliberately removed.
+            normalized = {str(k): float(v) for k, v in data.items()}
+            payload = json.dumps(normalized, indent=2, sort_keys=True)
+            tmp = SETUP_FIRST_SEEN_PATH.with_suffix(
+                SETUP_FIRST_SEEN_PATH.suffix + f".tmp.{os.getpid()}"
+            )
+            try:
+                tmp.write_text(payload)
+                with open(tmp, "rb") as f:
+                    os.fsync(f.fileno())
+                os.replace(tmp, SETUP_FIRST_SEEN_PATH)
+            finally:
+                if tmp.exists():
+                    try:
+                        tmp.unlink()
+                    except OSError:
+                        pass
+        finally:
+            fcntl.flock(lockfd.fileno(), fcntl.LOCK_UN)
 
 
 @dataclass
