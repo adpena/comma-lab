@@ -262,6 +262,25 @@ def test_unknown_composition_alternative_raises():
         )
 
 
+def test_cost_fn_must_return_two_tuple_R2_yousfi():
+    """R2-Yousfi: cost_fn returning bad arity must fail loud, not silently crash."""
+    with pytest.raises(ValueError, match="cost_fn must return a 2-tuple"):
+        probe_alternatives(
+            [ProbeAlternative("a"), ProbeAlternative("b")],
+            [_make_constant_regime("r1", 1.0)],
+            cost_fn=lambda alt, fix: 0.5,  # returns scalar, not tuple
+            similarity_fn=lambda a, b: 0.0,
+        )
+
+    with pytest.raises(ValueError, match="cost_fn must return a 2-tuple"):
+        probe_alternatives(
+            [ProbeAlternative("a"), ProbeAlternative("b")],
+            [_make_constant_regime("r1", 1.0)],
+            cost_fn=lambda alt, fix: (0.5, 0.0, 0.0),  # 3-tuple
+            similarity_fn=lambda a, b: 0.0,
+        )
+
+
 # ── Reproducibility + determinism ──────────────────────────────────────────
 
 

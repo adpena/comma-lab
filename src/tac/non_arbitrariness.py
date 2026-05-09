@@ -242,7 +242,17 @@ def probe_alternatives(
             fixture = regime.builder(seed + 7919 * r)
             signals: dict[str, Any] = {}
             for cname in composition_names:
-                _cost, sig = cost_fn(name_to_alt[cname], fixture)
+                cost_result = cost_fn(name_to_alt[cname], fixture)
+                # R2-Yousfi: validate cost_fn returns (cost_scalar, signal); fail
+                # loud rather than crash on tuple-unpack with bad arity.
+                if not isinstance(cost_result, tuple) or len(cost_result) != 2:
+                    raise ValueError(
+                        f"cost_fn must return a 2-tuple (cost_scalar, signal); "
+                        f"got {type(cost_result).__name__} of length "
+                        f"{len(cost_result) if isinstance(cost_result, tuple) else 'N/A'} "
+                        f"for alternative={cname!r} regime={regime.name!r}"
+                    )
+                _cost, sig = cost_result
                 signals[cname] = sig
             # All pairwise cos sims for this fixture.
             for a, b in combinations(composition_names, 2):
