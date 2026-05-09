@@ -33,6 +33,8 @@ def _write_manifest(path: Path) -> Path:
                 "per_pair_score_marginals": [0.1, 0.9, 0.2, 0.8],
                 "per_pair_seg_proxy_raw": [0.9, 0.1, 0.8, 0.2],
                 "per_pair_pose_proxy_raw": [0.1, 0.2, 0.8, 0.9],
+                "per_pair_boundary_mass": [0.05, 0.8, 0.10, 0.7],
+                "per_pair_low_margin_mass": [0.2, 0.7, 0.1, 0.8],
                 "per_pair_q_bits": [2, 8, 3, 8],
             }
         ),
@@ -86,6 +88,53 @@ def test_builds_segnet_component_ranked_schedule(tmp_path: Path) -> None:
     assert payload["per_pair_q_bits"] == [8, 6, 8, 6]
     assert payload["alignment"]["q_bits_vs_selected_marginal_pearson"] > 0.9
     assert payload["alignment"]["q_bits_vs_score_marginal_pearson"] < -0.9
+
+
+def test_builds_boundary_ranked_schedule(tmp_path: Path) -> None:
+    tool = _load_tool()
+    source = _write_manifest(tmp_path / "boundary_marginals.json")
+
+    payload = tool.build_schedule(
+        score_marginal_manifest_path=source,
+        base_q_bits=8,
+        low_q_bits=7,
+        low_fraction=0.5,
+        marginal_source="boundary",
+        latent_dim=4,
+        repo_root=tmp_path,
+    )
+
+    assert payload["marginal_source"] == "boundary"
+    assert payload["marginal_source_key"] == "per_pair_boundary_mass"
+    assert payload["per_pair_q_bits"] == [7, 8, 7, 8]
+    assert payload["alignment"]["q_bits_vs_selected_marginal_pearson"] > 0.9
+    assert payload["alignment"]["q_bits_vs_boundary_mass_pearson"] > 0.9
+
+
+def test_boundary_manifest_without_source_qbits_gets_explicit_baseline(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool()
+    source = _write_manifest(tmp_path / "boundary_marginals.json")
+    payload = json.loads(source.read_text(encoding="utf-8"))
+    payload.pop("per_pair_q_bits")
+    source.write_text(json_text(payload), encoding="utf-8")
+
+    schedule = tool.build_schedule(
+        score_marginal_manifest_path=source,
+        base_q_bits=8,
+        low_q_bits=7,
+        low_fraction=0.5,
+        marginal_source="boundary",
+        latent_dim=4,
+        repo_root=tmp_path,
+    )
+
+    assert schedule["source_q_bits_semantics"] == (
+        "synthetic_all_base_q_bits_missing_source_vector"
+    )
+    assert schedule["source_q_bits_summary"]["unique_counts"] == {"8": 4}
+    assert schedule["per_pair_q_bits"] == [7, 8, 7, 8]
 
 
 def test_cli_writes_tool_run_manifest(tmp_path: Path) -> None:

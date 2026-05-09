@@ -199,6 +199,30 @@ next A5 move needs local boundary-aware allocation or training-time q-bit noise.
 Ledger:
 `.omx/research/a5_q7_seg_protected_scalar_negative_20260509_codex.md`.
 
+## 2026-05-09 (night) - A5 SegNet boundary/margin scalar negatives
+
+`tools/build_segnet_boundary_marginals.py` now builds frozen-SegNet GT-frame
+boundary and logit-margin marginals for all `600` PR101 pairs. Full manifest:
+`reports/a5_segnet_boundary_marginals_pr101_20260509.json` (`60,615 B`,
+SHA-256
+`6263b909ad31de56fb26a56e8bb51fd288885edce0a2974ed6703eb20ce06c2c`).
+
+Two runtime-consumed `q7/q8 low0p85` packets were built and screened on macOS
+CPU advisory:
+
+| schedule | archive bytes | archive SHA-256 | macOS CPU advisory |
+|---|---:|---|---:|
+| boundary mass | `178,243` | `7163499abb7475ee937338e9c79f22d3c326b53c34f7dbaa2b8ed1c872d67190` | `0.20115808226406484` |
+| low-margin mass | `178,243` | `5b1f6e190f9051357d4c24b2e87fb4cf5bc6e2dc88b397d2f3c16972e7476536` | `0.20112208325925268` |
+
+Both are measured-config regressions versus the scalar SegNet-protected
+`0.20111041630821824`. This retires global scalar boundary/margin pair sorting
+for exact-eval spend; A5 reactivation now requires local boundary-aware
+allocation within each pair/channel or training-time q-bit noise.
+
+Ledger:
+`.omx/research/a5_segnet_boundary_margin_scalar_negative_20260509_codex.md`.
+
 ## 2026-05-09 (night) - Delta-epsilon-zeta Phase 1 local scaffold evidence
 
 `tools/build_deltaepszeta_training_targets.py` is now hardened for normal zsh

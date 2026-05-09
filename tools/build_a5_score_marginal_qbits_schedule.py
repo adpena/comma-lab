@@ -30,6 +30,10 @@ DEFAULT_SCORE_MARGINAL_MANIFEST = Path(
     "per_pair_score_marginals.advisory.json"
 )
 MARGINAL_SOURCE_KEYS = {
+    "boundary": "per_pair_boundary_mass",
+    "low_margin": "per_pair_low_margin_mass",
+    "mean_margin": "per_pair_mean_logit_margin",
+    "p10_margin": "per_pair_p10_logit_margin",
     "score": "per_pair_score_marginals",
     "seg": "per_pair_seg_proxy_raw",
     "pose": "per_pair_pose_proxy_raw",
@@ -65,7 +69,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help=(
             "Which per-pair marginal vector to rank. 'score' is the legacy "
             "blended score marginal; 'seg' keeps SegNet-sensitive pairs at "
-            "base q bits."
+            "base q bits; 'boundary' and margin sources consume manifests "
+            "from tools/build_segnet_boundary_marginals.py."
         ),
     )
     parser.add_argument("--latent-dim", type=int, default=28)
@@ -96,12 +101,6 @@ def build_schedule(
         marginal_key,
         expected_len=n_pairs,
     )
-    source_q_bits = _finite_vector(
-        manifest.get("per_pair_q_bits"),
-        "per_pair_q_bits",
-        expected_len=n_pairs,
-    ).astype(np.int64)
-    _validate_q_bits(source_q_bits, "per_pair_q_bits")
     base_q_bits = _q_bit_int(base_q_bits, "base_q_bits")
     low_q_bits = _q_bit_int(low_q_bits, "low_q_bits")
     if low_q_bits > base_q_bits:
@@ -109,6 +108,11 @@ def build_schedule(
     if not np.isfinite(low_fraction) or low_fraction < 0.0 or low_fraction > 1.0:
         raise A5ScoreMarginalQBitsScheduleError("low_fraction must be in [0, 1]")
     latent_dim = _positive_int(latent_dim, "latent_dim")
+    source_q_bits, source_q_bits_semantics = _source_q_bits_or_baseline(
+        manifest=manifest,
+        n_pairs=n_pairs,
+        base_q_bits=base_q_bits,
+    )
 
     low_count = int(np.floor(float(n_pairs) * float(low_fraction)))
     order = np.lexsort((np.arange(n_pairs, dtype=np.int64), marginals))
@@ -155,6 +159,7 @@ def build_schedule(
         },
         "q_bits_summary": _q_bits_summary(q_bits),
         "source_q_bits_summary": _q_bits_summary(source_q_bits.astype(np.uint8)),
+        "source_q_bits_semantics": source_q_bits_semantics,
         "raw_latent_payload_bits": raw_latent_payload_bits,
         "raw_latent_payload_bytes": raw_latent_payload_bytes,
         "per_pair_score_marginal_summary": {
@@ -181,6 +186,12 @@ def build_schedule(
             ),
             "q_bits_vs_pose_marginal_pearson": _optional_pearson(
                 q_bits, manifest, "per_pair_pose_proxy_raw", n_pairs
+            ),
+            "q_bits_vs_boundary_mass_pearson": _optional_pearson(
+                q_bits, manifest, "per_pair_boundary_mass", n_pairs
+            ),
+            "q_bits_vs_low_margin_mass_pearson": _optional_pearson(
+                q_bits, manifest, "per_pair_low_margin_mass", n_pairs
             ),
         },
         "per_pair_q_bits": [int(value) for value in q_bits.tolist()],
@@ -231,6 +242,26 @@ def _validate_q_bits(values: np.ndarray, label: str) -> None:
         raise A5ScoreMarginalQBitsScheduleError(f"{label} values must be in [1, 8]")
     if not np.array_equal(values, np.floor(values)):
         raise A5ScoreMarginalQBitsScheduleError(f"{label} values must be integer")
+
+
+def _source_q_bits_or_baseline(
+    *,
+    manifest: dict[str, Any],
+    n_pairs: int,
+    base_q_bits: int,
+) -> tuple[np.ndarray, str]:
+    if "per_pair_q_bits" not in manifest:
+        return (
+            np.full(n_pairs, base_q_bits, dtype=np.int64),
+            "synthetic_all_base_q_bits_missing_source_vector",
+        )
+    source_q_bits = _finite_vector(
+        manifest.get("per_pair_q_bits"),
+        "per_pair_q_bits",
+        expected_len=n_pairs,
+    ).astype(np.int64)
+    _validate_q_bits(source_q_bits, "per_pair_q_bits")
+    return source_q_bits, "manifest_per_pair_q_bits"
 
 
 def _q_bit_int(value: int, label: str) -> int:
