@@ -1,3 +1,8 @@
+# FAKE_LANE_OK_FILE: this test file constructs many fake lane_id fixtures
+# (lane_a, lane_b, lane_g, lane_m, lane_dup, lane_r1, lane_r2, lane_u, etc.)
+# to exercise the lane-maturity harness CLI behavior. Per Check #126
+# file-level waiver semantics, the entire file is exempt from the
+# registered-lane gate.
 """Regression tests for the Lane Maturity Harness.
 
 Covers:
