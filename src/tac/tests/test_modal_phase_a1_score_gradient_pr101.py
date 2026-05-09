@@ -61,6 +61,15 @@ def test_modal_phase_a1_requires_t4_dali_and_nvdec_preflight() -> None:
     assert "score_claim_valid\": False" in text
 
 
+def test_modal_phase_a1_disables_dali_nvml_on_modal() -> None:
+    text = _source()
+
+    assert 'DALI_DISABLE_NVML_VALUE = "1"' in text
+    assert ".env(" in text
+    assert '"DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE' in text
+    assert 'os.environ["DALI_DISABLE_NVML"] = env["DALI_DISABLE_NVML"]' in text
+
+
 def test_modal_phase_a1_recover_preserves_harvest_command_and_ttl() -> None:
     text = _source()
 

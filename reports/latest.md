@@ -50,6 +50,13 @@ The GHA CPU helper rounded-score bug is fixed: `canonical_score` now comes from
 component recomputation, while the rounded report display (`0.19`) is stored as
 `reported_final_score_display_rounded`.
 
+Follow-up CUDA-path hardening landed locally: the A1 Modal dispatcher now sets
+`DALI_DISABLE_NVML=1` in both the Modal image and runtime subprocess/probe env,
+matching the existing Modal eval workaround for NVML-denied containers. Focused
+coverage: `src/tac/tests/test_modal_phase_a1_score_gradient_pr101.py` and
+`tests/test_modal_phase_a1_recover_paths.py`. The existing CPU-positive archive
+still needs a fresh paired `[contest-CUDA]` eval before internal promotion.
+
 ## 2026-05-08 (evening) — Recursive hardening + Phase A ablation pass
 
 **Headline:** 11 STRICT/warn preflight gates landed, ~395 violations

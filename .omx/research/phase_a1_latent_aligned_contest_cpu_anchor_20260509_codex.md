@@ -101,3 +101,26 @@ from generic non-CUDA proxy evidence:
 3. If dual-axis custody remains green, scale A1 beyond the conservative `40 x 8`
    schedule and test whether longer score-gradient fine-tuning improves the CPU
    public axis without CUDA collapse.
+
+## 2026-05-09 CUDA Path Hardening
+
+The A1 Modal dispatcher now applies the known Modal DALI workaround
+`DALI_DISABLE_NVML=1` at both levels that matter:
+
+- Modal image environment, via `run_image.env(...)`.
+- Runtime subprocess/probe environment, via the env passed into
+  `scripts/probe_nvdec.sh` and `experiments/contest_auth_eval.py`.
+
+It also sets the current worker process environment before the CUDA/DALI
+preflight so the in-process DALI import and pipeline construction see the same
+setting. Regression coverage:
+
+```bash
+.venv/bin/python -m pytest \
+  src/tac/tests/test_modal_phase_a1_score_gradient_pr101.py \
+  tests/test_modal_phase_a1_recover_paths.py -q
+```
+
+This does not retroactively promote the existing A1 archive. It only clears the
+known `nvml error (999)` bug class for the next claimed Modal refire or exact
+CUDA eval attempt.

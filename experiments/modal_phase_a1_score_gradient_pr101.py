@@ -121,6 +121,7 @@ DEFAULT_PR101_SOURCE_DIR = (
     / "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/source/submissions/hnerv_ft_microcodec/src"
 )
 DEFAULT_VIDEO_PATH = REPO_ROOT / "upstream/videos/0.mkv"
+DALI_DISABLE_NVML_VALUE = "1"
 
 
 def _ensure_repo_import_paths() -> None:
@@ -234,6 +235,14 @@ run_image = (
     )
     .add_local_file("pyproject.toml", remote_path=str(REMOTE_REPO / "pyproject.toml"))
     .add_local_file("uv.lock", remote_path=str(REMOTE_REPO / "uv.lock"))
+    .env(
+        {
+            # Modal containers can expose CUDA while denying NVML internals.
+            # DALI's video reader works without NVML when this is set; without
+            # it, the NVDEC probe can fail with nvml error (999) before eval.
+            "DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE,
+        }
+    )
 )
 
 
@@ -632,7 +641,9 @@ def _run_phase_a1_inner(
         "UV_LINK_MODE": "copy",
         "PYTHONHASHSEED": "20",
         "CUBLAS_WORKSPACE_CONFIG": os.environ.get("CUBLAS_WORKSPACE_CONFIG", ":4096:8"),
+        "DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE,
     }
+    os.environ["DALI_DISABLE_NVML"] = env["DALI_DISABLE_NVML"]
 
     t_start = time.monotonic()
     try:
