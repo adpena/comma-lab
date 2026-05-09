@@ -114,6 +114,65 @@ This is the ONE meta-bug that explains 100% of the 2026-04-30 → 2026-05-04 int
 - Council review of any new representation/codec lane MUST cite this section and walk through all 13 lessons.
 - Memory file `feedback_why_leaderboard_hnerv_worked_when_ours_didnt_PERMANENT_KNOWLEDGE_20260509.md` is the canonical retrospective; future agents should re-read it before starting any new representation lane.
 
+## Subagent coherence-by-default — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+**Source:** operator concern (2026-05-09): *"i am concerned we are building intelligent systems but they are not coherent and integrated and maybe duplicate ... the should just work and run in the background for us perhaps as skills or via mcp tools or something i'm not sure how to solve this problem ... or maybe just engineer correctly and then save related knowledge and instructions in claude and agents .md."*
+
+**The answer is the latter**: don't add another orchestration layer (skills, MCP). Engineer the right primitives, save the discipline in CLAUDE.md + AGENTS.md, and EVERY future subagent honors it without an orchestrator. The non-negotiables in this file ARE the orchestration layer — they propagate via every subagent's mandatory pre-read.
+
+### Mandatory pre-flight for every subagent (parent + nested)
+
+Before starting any work, every subagent MUST:
+
+1. **Read CLAUDE.md AND AGENTS.md** — both files. Honor every NON-NEGOTIABLE marker. The "I didn't read it" failure mode is a process bug, not an information gap.
+2. **Check the lane registry** (`.omx/state/lane_registry.json`) for in-flight conflicts. If your lane shares a `lane_id` or `target_modes`/`deployment_target` with an active claim, coordinate via the file's notes column or pick a different lane.
+3. **Check sibling subagents in the same conversation** — when the parent prompt says "running in parallel right now", read the listed sibling subagent IDs and their scopes. Do NOT duplicate their primary deliverable.
+4. **Read latest top-of-MEMORY.md entries** — at least the top 10. Recent landings change the optimal next-step.
+5. **Read all `.omx/research/*_directive_*` files** dated within the last 24 hours — they contain operator-routed inter-subagent directives that supersede the original prompt.
+
+### Mandatory wire-in for every landing (no orphaned signals)
+
+Every landing must wire its outputs into the unified solver stack OR explicitly tag `research_only=true`. Per `feedback_unified_lagrangian_action_principle_GR_style_20260509.md`:
+
+1. **Sensitivity-map contribution** in `tac.sensitivity_map.*` (or sibling)
+2. **Pareto constraint** added to `tac.pareto_*` (or explicitly reasoned why non-binding)
+3. **Bit-allocator hook** registered if per-tensor importance changes
+4. **Cathedral autopilot dispatch hook** registered if archive-deployable
+5. **Continual-learning posterior update** triggered on every empirical anchor
+6. **Probe-disambiguator** built if 2+ defensible interpretations exist (`tools/probe_<track>_disambiguator.py`)
+
+If any of the 6 hooks is N/A, declare it explicitly in the landing memo with rationale. **Silent omission is the orphan-work failure mode.**
+
+### Anti-duplication primitive: the lane registry IS the deduplication layer
+
+Two subagents working on the same lane is a registry failure, not a coordination failure. The fix is:
+
+1. Pre-register every lane (even SKETCH at L0) the moment a name + verdict exists, per CLAUDE.md "Lane maturity registry" non-negotiable lifecycle discipline.
+2. Subagent prompts MUST cite the registered `lane_id` in the prompt body so collisions surface at parent-coordinator review time.
+3. The `tools/lane_maturity.py audit` table is the single source of truth for "what's currently being worked on." Use it.
+
+### Anti-fragmentation primitive: the unified-Lagrangian action
+
+Per `feedback_unified_lagrangian_action_principle_GR_style_20260509.md`, the migration target is `tac.unified_action.S_total(theta, archive_bytes, hardware)` — ONE scalar action, all track-Lagrangians composed via δS/δθ = 0 (GR-style variational principle). Until that lands, individual track wire-ins must explicitly call all 6 integration hooks above.
+
+When the unified action lands, every track plugs in by adding a term to `S_total` — no new orchestration layer. The coherence is structural.
+
+### Anti-arbitrariness primitive: the probe-disambiguator pattern
+
+Per `feedback_design_tension_ship_both_interpretations_let_math_arbitrate_20260509.md`, when a design choice has 2+ defensible interpretations, ship BOTH modes via callable interface + build `tools/probe_<track>_disambiguator.py` that returns the regime-conditional verdict. The probe IS the arbitration; the trainer/codec/solver consumes the verdict.
+
+### Background-execution clarification
+
+The operator floated "skills or MCP tools" as the orchestration mechanism. **Do not pursue this path.** The CLAUDE.md + AGENTS.md non-negotiables ARE the always-on, zero-token orchestration layer. Every subagent loads them by default; every behavior is encoded in inviolable rules. Adding another layer would be the kitchen_sink anti-pattern at the meta level.
+
+If a behavior should be automatic across all sessions, write it as a CLAUDE.md non-negotiable. The skill-vs-rule decision: **skills are user-invocable patterns; rules are agent-binding contracts.** The coherence problem is solved by RULES, not skills.
+
+### Concrete enforcement
+
+- New STRICT preflight check planned: `check_subagent_landing_has_solver_wire_in` — refuses any landing memo that doesn't declare all 6 wire-in hooks (or `research_only=true`).
+- New STRICT preflight check planned: `check_lane_pre_registered_before_work_starts` — refuses subagent commits whose `lane_id` doesn't appear in the registry.
+- The existing Check 90 `check_lane_registry_consistent` partially covers this; the two new checks extend it to subagent-discipline territory.
+
 ## Main branch source of truth — NON-NEGOTIABLE
 
 `main` is the sole source-of-truth branch. Do not do production work, recovery

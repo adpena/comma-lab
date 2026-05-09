@@ -11,6 +11,53 @@ results in the dated `.omx/research/` ledgers and experiment artifact
 directories. This file is for durable protocols, codebase structure, and
 non-negotiable operating rules.
 
+## Subagent Coherence-By-Default — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+**Source:** operator concern (2026-05-09): coherent integration without orchestration layers. Don't add skills/MCP. Engineer correctly + document discipline in CLAUDE.md + AGENTS.md so every subagent honors it via mandatory pre-read.
+
+### Mandatory pre-flight for every subagent
+
+Before starting any work:
+
+1. **Read CLAUDE.md AND AGENTS.md** — both files. Honor every NON-NEGOTIABLE marker.
+2. **Check `.omx/state/lane_registry.json`** for in-flight conflicts (per `tools/claim_lane_dispatch.py`).
+3. **Check sibling subagents** named in the parent prompt's "running in parallel" section. Do NOT duplicate primary deliverables.
+4. **Read top-10 MEMORY.md entries** — recent landings change optimal next-step.
+5. **Read all `.omx/research/*_directive_*` files** dated within last 24 hours — operator-routed inter-subagent directives.
+
+### Mandatory wire-in for every landing (no orphaned signals)
+
+Every landing must wire into the unified solver stack OR explicitly tag `research_only=true`. Per `feedback_unified_lagrangian_action_principle_GR_style_20260509.md` (the GR-style action memo):
+
+1. Sensitivity-map contribution (`tac.sensitivity_map.*`)
+2. Pareto constraint (`tac.pareto_*` or rationale why non-binding)
+3. Bit-allocator hook
+4. Cathedral autopilot dispatch hook
+5. Continual-learning posterior update on every empirical anchor
+6. Probe-disambiguator if 2+ defensible interpretations exist
+
+Silent omission = orphan-work failure mode.
+
+### Anti-duplication: lane registry IS the deduplication layer
+
+Two subagents on the same lane = registry failure. Pre-register every lane (even SKETCH at L0) the moment a name + verdict exists. Subagent prompts MUST cite the registered `lane_id`.
+
+### Anti-fragmentation: unified-Lagrangian action
+
+Migration target: `tac.unified_action.S_total(theta, archive_bytes, hardware)` — ONE scalar action, all track-Lagrangians composed via δS/δθ = 0 (GR-style). Until then: explicit 6-hook wire-in.
+
+### Anti-arbitrariness: probe-disambiguator pattern
+
+When a design choice has 2+ defensible interpretations: ship BOTH modes via callable interface + build `tools/probe_<track>_disambiguator.py`. The probe IS the arbitration. Per `feedback_design_tension_ship_both_interpretations_let_math_arbitrate_20260509.md`.
+
+### Background-execution clarification
+
+Operator floated "skills or MCP tools." **Do not pursue.** CLAUDE.md + AGENTS.md non-negotiables ARE the always-on, zero-token orchestration. Adding another layer = kitchen_sink anti-pattern at meta level.
+
+The skill-vs-rule decision: **skills are user-invocable patterns; rules are agent-binding contracts.** Coherence is solved by RULES, not skills.
+
+Cross-ref `feedback_unified_lagrangian_action_principle_GR_style_20260509.md`, `feedback_design_tension_ship_both_interpretations_let_math_arbitrate_20260509.md`, CLAUDE.md "Subagent coherence-by-default" section.
+
 ## Main-Branch Source Of Truth — NON-NEGOTIABLE
 
 `main` is the sole source of truth for this repository. Do not do production
