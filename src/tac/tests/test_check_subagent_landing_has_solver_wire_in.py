@@ -285,22 +285,22 @@ def test_sensitivity_map_alias_detection(tmp_path: Path, alias: str) -> None:
 # ── Test 9: memo dir missing degrades gracefully ─────────────────────────
 
 
-def test_missing_memory_dir_returns_empty(tmp_path: Path) -> None:
+def test_missing_memory_dir_returns_setup_warning(tmp_path: Path) -> None:
     nonexistent = tmp_path / "not_there"
     violations = check_subagent_landing_has_solver_wire_in(
         memory_dir=nonexistent, strict=False, verbose=False,
     )
-    assert violations == []
+    assert len(violations) == 1
+    assert "memory dir not present" in violations[0]
 
 
-def test_missing_memory_dir_strict_does_not_raise(tmp_path: Path) -> None:
-    """A missing memo dir is a setup gap, not a violation; strict tolerates."""
+def test_missing_memory_dir_strict_raises(tmp_path: Path) -> None:
+    """A missing memo dir is a setup gap that strict mode must surface."""
     nonexistent = tmp_path / "not_there"
-    # Should not raise
-    violations = check_subagent_landing_has_solver_wire_in(
-        memory_dir=nonexistent, strict=True, verbose=False,
-    )
-    assert violations == []
+    with pytest.raises(PreflightError, match="memory dir not present"):
+        check_subagent_landing_has_solver_wire_in(
+            memory_dir=nonexistent, strict=True, verbose=False,
+        )
 
 
 # ── Test 10: empty memo body warns on all 6 ──────────────────────────────
@@ -392,6 +392,20 @@ def test_memo_declares_hook_irrelevant_text_rejected() -> None:
     aliases = ("pareto",)
     text = "Some unrelated paragraph mentioning Pareto in passing somewhere."
     assert not _memo_declares_hook(text, "pareto", aliases)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Sensitivity-map: not wired yet",
+        "Sensitivity-map hook deferred",
+        "Sensitivity-map contribution missing",
+        "Sensitivity-map: TODO after trainer lands",
+    ],
+)
+def test_memo_declares_hook_negative_declarations_rejected(text: str) -> None:
+    aliases = ("sensitivity-map", "sensitivity map", "sensitivity_map")
+    assert not _memo_declares_hook(text, "sensitivity_map", aliases)
 
 
 # ── Test 13: performance — 1000 memo scan ────────────────────────────────

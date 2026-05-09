@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from tac.preflight import CodebaseDriftError, check_codebase_drift
+import tac.preflight as preflight_mod
 
 
 def _write(path: Path, text: str) -> None:
@@ -72,3 +73,29 @@ def test_codebase_drift_verbose_reports_scope_before_scan(
     assert "[codebase-drift] scanning source launch surfaces" in out
     assert "skipping experiments/results artifacts" in out
     assert "[codebase-drift] OK:" in out
+
+
+def test_codebase_drift_prefilter_skips_harmless_python_parse(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = _stub_repo(tmp_path)
+    _write(repo / "experiments/harmless.py", "VALUE = 1\n")
+    original_parse = preflight_mod.ast.parse
+    calls = 0
+
+    def counting_parse(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        return original_parse(*args, **kwargs)
+
+    monkeypatch.setattr(preflight_mod.ast, "parse", counting_parse)
+
+    violations = check_codebase_drift(
+        strict=False,
+        repo_root=repo,
+        verbose=False,
+    )
+
+    assert violations == []
+    assert calls == 0

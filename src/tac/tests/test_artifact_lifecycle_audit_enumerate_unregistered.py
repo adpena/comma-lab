@@ -19,9 +19,14 @@ from pathlib import Path
 from tac.artifact_lifecycle import (
     LONG_LIVED_ARTIFACT_ROOTS,
     ALLOWLIST_RELPATH,
+    ArtifactClassifier,
+    ArtifactKind,
     audit_unregistered_long_lived_artifacts,
     run_meta_lifecycle_audit,
 )
+
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 def _git(repo: Path, *args: str) -> None:
@@ -197,6 +202,14 @@ def test_long_lived_artifact_roots_pinned() -> None:
 
 def test_allowlist_relpath_pinned() -> None:
     assert ALLOWLIST_RELPATH == ".omx/state/artifact_classification_allowlist.json"
+
+
+def test_live_registry_classifies_top_level_omx_research_jsonl() -> None:
+    cls = ArtifactClassifier(REPO_ROOT).classify_path(
+        ".omx/research/cuda_cpu_axis_profile_updates.jsonl"
+    )
+    assert cls.kind == ArtifactKind.HISTORICAL_PROVENANCE
+    assert cls.matched_pattern == ".omx/research/*.jsonl"
 
 
 def test_corrupt_allowlist_treated_as_empty(tmp_path: Path) -> None:

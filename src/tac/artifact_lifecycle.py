@@ -493,7 +493,12 @@ def _is_tracked_by_git(repo_root: Path, relpath: str) -> bool:
         return False
 
 
-def _tracked_paths_matching_pattern(root: Path, pattern: str) -> list[Path]:
+def _tracked_paths_matching_pattern(
+    root: Path,
+    pattern: str,
+    *,
+    tracked_relpaths: tuple[str, ...] | None = None,
+) -> list[Path]:
     """Return tracked repo paths matching ``pattern`` without walking ignored trees.
 
     Historical-provenance patterns intentionally cover large experiment result
@@ -502,21 +507,23 @@ def _tracked_paths_matching_pattern(root: Path, pattern: str) -> list[Path]:
     """
     if pattern.startswith("/"):
         return []
-    try:
-        result = subprocess.run(
-            ["git", "ls-files"],
-            cwd=root,
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
-        return []
-    if result.returncode != 0:
-        return []
+    if tracked_relpaths is None:
+        try:
+            result = subprocess.run(
+                ["git", "ls-files"],
+                cwd=root,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+            return []
+        if result.returncode != 0:
+            return []
+        tracked_relpaths = tuple(result.stdout.splitlines())
     return [
         root / rel
-        for rel in result.stdout.splitlines()
+        for rel in tracked_relpaths
         if fnmatch.fnmatchcase(rel, pattern)
     ]
 
@@ -682,6 +689,22 @@ def run_meta_lifecycle_audit(
 
     violations: list[str] = []
     seen_patterns: set[str] = set()
+    try:
+        tracked_result = subprocess.run(
+            ["git", "ls-files"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        tracked_relpaths: tuple[str, ...] = ()
+    else:
+        tracked_relpaths = (
+            tuple(tracked_result.stdout.splitlines())
+            if tracked_result.returncode == 0
+            else ()
+        )
 
     # For each registry pattern, glob-match the actual files and run the
     # appropriate guard.
@@ -696,7 +719,11 @@ def run_meta_lifecycle_audit(
         # LIVE_RECIPE / DERIVED_OUTPUT rules protect committed surfaces. Using
         # git-ls-files here keeps strict preflight bounded even when broad
         # registry patterns overlap large experiment result trees.
-        paths = _tracked_paths_matching_pattern(root, entry.pattern)
+        paths = _tracked_paths_matching_pattern(
+            root,
+            entry.pattern,
+            tracked_relpaths=tracked_relpaths,
+        )
         for path in paths:
             rel = _rel_path(path, root)
             if path_filter is not None and rel not in path_filter:

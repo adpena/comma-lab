@@ -1,152 +1,160 @@
 {
-  "archive_zip": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_a_landed/archive_lane_a.zip",
-  "artifacts": [
+  "attempts": [
     {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/den_v2_archive/provenance.json",
-      "remote_path": "/workspace/pact/experiments/results/den_v2_archive/provenance.json",
-      "size_bytes": 439
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_a_landed/archive_lane_a.zip",
-      "remote_path": "/workspace/pact/experiments/results/lane_a_landed/archive_lane_a.zip",
-      "size_bytes": 694045
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_a_landed/auth_eval_result.json",
-      "remote_path": "/workspace/pact/experiments/results/lane_a_landed/auth_eval_result.json",
-      "size_bytes": 2285
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_a_landed/eval_work/provenance.json",
-      "remote_path": "/workspace/pact/experiments/results/lane_a_landed/eval_work/provenance.json",
-      "size_bytes": 1781
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_a_landed/extracted/masks.mkv",
-      "remote_path": "/workspace/pact/experiments/results/lane_a_landed/extracted/masks.mkv",
-      "size_bytes": 421483
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_a_landed/iter_0/masks.mkv",
-      "remote_path": "/workspace/pact/experiments/results/lane_a_landed/iter_0/masks.mkv",
-      "size_bytes": 421483
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_a_landed/iter_0/optimized_poses.pt",
-      "remote_path": "/workspace/pact/experiments/results/lane_a_landed/iter_0/optimized_poses.pt",
-      "size_bytes": 15620
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_a_landed/iter_0/renderer.bin",
-      "remote_path": "/workspace/pact/experiments/results/lane_a_landed/iter_0/renderer.bin",
-      "size_bytes": 296776
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_a_landed/optimized_poses.pt",
-      "remote_path": "/workspace/pact/experiments/results/lane_a_landed/optimized_poses.pt",
-      "size_bytes": 15620
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_a_landed/provenance.json",
-      "remote_path": "/workspace/pact/experiments/results/lane_a_landed/provenance.json",
-      "size_bytes": 1660
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_h_crf56/auth_eval/provenance.json",
-      "remote_path": "/workspace/pact/experiments/results/lane_h_crf56/auth_eval/provenance.json",
-      "size_bytes": 1660
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/shiraz_v4_archive/auth_eval_with_poses.json",
-      "remote_path": "/workspace/pact/experiments/results/shiraz_v4_archive/auth_eval_with_poses.json",
-      "size_bytes": 14122
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/submissions/robust_current/auth_eval_renderer_fp4.json",
-      "remote_path": "/workspace/pact/submissions/robust_current/auth_eval_renderer_fp4.json",
-      "size_bytes": 13406
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/submissions/robust_current/eval_runs/verify_136_original/report.txt",
-      "remote_path": "/workspace/pact/submissions/robust_current/eval_runs/verify_136_original/report.txt",
-      "size_bytes": 882
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/submissions/robust_current/eval_runs/verify_correct_ckpt/report.txt",
-      "remote_path": "/workspace/pact/submissions/robust_current/eval_runs/verify_correct_ckpt/report.txt",
-      "size_bytes": 882
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/submissions/robust_current/report.txt",
-      "remote_path": "/workspace/pact/submissions/robust_current/report.txt",
-      "size_bytes": 890
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/.setup_provenance/provenance.json",
-      "remote_path": "/workspace/pact/.setup_provenance/provenance.json",
-      "size_bytes": 2466
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/lane_sz_phase2_results/provenance.json",
-      "remote_path": "/workspace/pact/lane_sz_phase2_results/provenance.json",
-      "size_bytes": 1023
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/lane_sz_phase2_results/run.log",
-      "remote_path": "/workspace/pact/lane_sz_phase2_results/run.log",
-      "size_bytes": 1111
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/lane_sz_phase2_results/heartbeat.log",
-      "remote_path": "/workspace/pact/lane_sz_phase2_results/heartbeat.log",
-      "size_bytes": 16061
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/lane_sz_phase2_results/train/lane_sz_phase2_best.pt",
-      "remote_path": "/workspace/pact/lane_sz_phase2_results/train/lane_sz_phase2_best.pt",
-      "size_bytes": 378764
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/lane_sz_phase2_results/train.log",
-      "remote_path": "/workspace/pact/lane_sz_phase2_results/train.log",
-      "size_bytes": 8969
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/lane_sz_phase2_results/archive_lane_sz.zip",
-      "remote_path": "/workspace/pact/lane_sz_phase2_results/archive_lane_sz.zip",
-      "size_bytes": 3388
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/lane_sz_phase2_results/eval_work/archive.zip",
-      "remote_path": "/workspace/pact/lane_sz_phase2_results/eval_work/archive.zip",
-      "size_bytes": 3388
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/lane_sz_phase2_results/eval_work/provenance.json",
-      "remote_path": "/workspace/pact/lane_sz_phase2_results/eval_work/provenance.json",
-      "size_bytes": 1695
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/lane_sz_phase2_results/eval_work/extracted/renderer.bin",
-      "remote_path": "/workspace/pact/lane_sz_phase2_results/eval_work/extracted/renderer.bin",
-      "size_bytes": 3261
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/setup.log",
-      "remote_path": "/workspace/setup.log",
-      "size_bytes": 3110
+      "archive_zip": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_a_landed/archive_lane_a.zip",
+      "artifacts": [
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/den_v2_archive/provenance.json",
+          "remote_path": "/workspace/pact/experiments/results/den_v2_archive/provenance.json",
+          "size_bytes": 439
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_a_landed/archive_lane_a.zip",
+          "remote_path": "/workspace/pact/experiments/results/lane_a_landed/archive_lane_a.zip",
+          "size_bytes": 694045
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_a_landed/auth_eval_result.json",
+          "remote_path": "/workspace/pact/experiments/results/lane_a_landed/auth_eval_result.json",
+          "size_bytes": 2285
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_a_landed/eval_work/provenance.json",
+          "remote_path": "/workspace/pact/experiments/results/lane_a_landed/eval_work/provenance.json",
+          "size_bytes": 1781
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_a_landed/extracted/masks.mkv",
+          "remote_path": "/workspace/pact/experiments/results/lane_a_landed/extracted/masks.mkv",
+          "size_bytes": 421483
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_a_landed/iter_0/masks.mkv",
+          "remote_path": "/workspace/pact/experiments/results/lane_a_landed/iter_0/masks.mkv",
+          "size_bytes": 421483
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_a_landed/iter_0/optimized_poses.pt",
+          "remote_path": "/workspace/pact/experiments/results/lane_a_landed/iter_0/optimized_poses.pt",
+          "size_bytes": 15620
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_a_landed/iter_0/renderer.bin",
+          "remote_path": "/workspace/pact/experiments/results/lane_a_landed/iter_0/renderer.bin",
+          "size_bytes": 296776
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_a_landed/optimized_poses.pt",
+          "remote_path": "/workspace/pact/experiments/results/lane_a_landed/optimized_poses.pt",
+          "size_bytes": 15620
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_a_landed/provenance.json",
+          "remote_path": "/workspace/pact/experiments/results/lane_a_landed/provenance.json",
+          "size_bytes": 1660
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_h_crf56/auth_eval/provenance.json",
+          "remote_path": "/workspace/pact/experiments/results/lane_h_crf56/auth_eval/provenance.json",
+          "size_bytes": 1660
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/shiraz_v4_archive/auth_eval_with_poses.json",
+          "remote_path": "/workspace/pact/experiments/results/shiraz_v4_archive/auth_eval_with_poses.json",
+          "size_bytes": 14122
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/submissions/robust_current/auth_eval_renderer_fp4.json",
+          "remote_path": "/workspace/pact/submissions/robust_current/auth_eval_renderer_fp4.json",
+          "size_bytes": 13406
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/submissions/robust_current/eval_runs/verify_136_original/report.txt",
+          "remote_path": "/workspace/pact/submissions/robust_current/eval_runs/verify_136_original/report.txt",
+          "size_bytes": 882
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/submissions/robust_current/eval_runs/verify_correct_ckpt/report.txt",
+          "remote_path": "/workspace/pact/submissions/robust_current/eval_runs/verify_correct_ckpt/report.txt",
+          "size_bytes": 882
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/submissions/robust_current/report.txt",
+          "remote_path": "/workspace/pact/submissions/robust_current/report.txt",
+          "size_bytes": 890
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/.setup_provenance/provenance.json",
+          "remote_path": "/workspace/pact/.setup_provenance/provenance.json",
+          "size_bytes": 2466
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/lane_sz_phase2_results/provenance.json",
+          "remote_path": "/workspace/pact/lane_sz_phase2_results/provenance.json",
+          "size_bytes": 1023
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/lane_sz_phase2_results/run.log",
+          "remote_path": "/workspace/pact/lane_sz_phase2_results/run.log",
+          "size_bytes": 1111
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/lane_sz_phase2_results/heartbeat.log",
+          "remote_path": "/workspace/pact/lane_sz_phase2_results/heartbeat.log",
+          "size_bytes": 16061
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/lane_sz_phase2_results/train/lane_sz_phase2_best.pt",
+          "remote_path": "/workspace/pact/lane_sz_phase2_results/train/lane_sz_phase2_best.pt",
+          "size_bytes": 378764
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/lane_sz_phase2_results/train.log",
+          "remote_path": "/workspace/pact/lane_sz_phase2_results/train.log",
+          "size_bytes": 8969
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/lane_sz_phase2_results/archive_lane_sz.zip",
+          "remote_path": "/workspace/pact/lane_sz_phase2_results/archive_lane_sz.zip",
+          "size_bytes": 3388
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/lane_sz_phase2_results/eval_work/archive.zip",
+          "remote_path": "/workspace/pact/lane_sz_phase2_results/eval_work/archive.zip",
+          "size_bytes": 3388
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/lane_sz_phase2_results/eval_work/provenance.json",
+          "remote_path": "/workspace/pact/lane_sz_phase2_results/eval_work/provenance.json",
+          "size_bytes": 1695
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/lane_sz_phase2_results/eval_work/extracted/renderer.bin",
+          "remote_path": "/workspace/pact/lane_sz_phase2_results/eval_work/extracted/renderer.bin",
+          "size_bytes": 3261
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/setup.log",
+          "remote_path": "/workspace/setup.log",
+          "size_bytes": 3110
+        }
+      ],
+      "attempt_kind": "initial",
+      "command_log_path": null,
+      "completed_at_utc": "2026-04-29T07:47:34.655053+00:00",
+      "elapsed_seconds": 49.70044933400641,
+      "masks_mkv": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_a_landed/extracted/masks.mkv",
+      "notes": [],
+      "poses_pt": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_a_landed/iter_0/optimized_poses.pt",
+      "renderer_bin": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_a_landed/iter_0/renderer.bin",
+      "skipped_patterns": [],
+      "ssh_reachable": true,
+      "started_at_utc": "2026-04-29T07:46:44.939407+00:00",
+      "substantive_change_from_prior_attempt": null
     }
   ],
-  "completed_at_utc": "2026-04-29T07:47:34.655053+00:00",
-  "elapsed_seconds": 49.70044933400641,
   "instance_id": 35793092,
   "lane_label": "lane_sz_phase2_c",
-  "masks_mkv": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_a_landed/extracted/masks.mkv",
-  "notes": [],
-  "poses_pt": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_a_landed/iter_0/optimized_poses.pt",
   "recovery_dir": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c",
-  "renderer_bin": "/Users/adpena/Projects/pact/experiments/results/recovered_35793092_lane_sz_phase2_c/workspace/pact/experiments/results/lane_a_landed/iter_0/renderer.bin",
-  "skipped_patterns": [],
-  "ssh_reachable": true,
-  "started_at_utc": "2026-04-29T07:46:44.939407+00:00"
+  "schema_version": "recovery_metadata.v2_attempts"
 }

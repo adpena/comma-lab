@@ -435,6 +435,35 @@ def test_pose_lane_NOT_classified_as_representation() -> None:
     assert not _lane_is_representation_lane(lane)
 
 
+def test_explicit_calibration_lane_class_overrides_hnerv_token() -> None:
+    lane = {
+        "id": "lane_non_hnerv_class_drift_calibration",
+        "name": "Non-HNeRV cluster drift calibrations",
+        "lane_class": "calibration_diagnostic",
+        "notes": "Learns CPU/CUDA drift profiles; emits no representation packet.",
+    }
+    assert not _lane_is_representation_lane(lane)
+
+
+def test_calibration_lane_class_not_forced_to_archive_grammar(tmp_path: Path) -> None:
+    lane = _representation_lane(
+        lid="lane_non_hnerv_class_drift_calibration",
+        name="Non-HNeRV cluster drift calibrations",
+        extra={
+            "lane_class": "calibration_diagnostic",
+            "notes": (
+                "Calibration/control-plane lane. Produces drift posterior rows, "
+                "not an archive grammar or inflate runtime."
+            ),
+        },
+    )
+    repo = _make_repo(tmp_path, [lane])
+    violations = check_representation_lane_has_archive_grammar_at_design_time(
+        repo_root=repo, strict=False, verbose=False,
+    )
+    assert violations == []
+
+
 def test_short_token_word_boundary_does_not_falsely_match_substring() -> None:
     """`c3` as a token must not match `c30` / `dc3` / `arc3` substrings.
 

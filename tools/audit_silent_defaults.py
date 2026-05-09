@@ -147,6 +147,8 @@ def _scan_file(path: Path) -> list[dict]:
     """
     try:
         text = path.read_text()
+        if "add_argument" not in text:
+            return []
         tree = ast.parse(text, filename=str(path))
     except (SyntaxError, UnicodeDecodeError):
         return []
@@ -195,6 +197,12 @@ def collect_records() -> list[dict]:
             continue
         for py in sorted(root.rglob("*.py")):
             if "__pycache__" in py.parts:
+                continue
+            try:
+                rel = py.resolve().relative_to(REPO.resolve())
+            except ValueError:
+                rel = py
+            if rel.parts[:2] == ("experiments", "results"):
                 continue
             out.extend(_scan_file(py))
     return out
@@ -342,6 +350,33 @@ def write_report(records: list[dict], profile_keys: set[str]) -> None:
     REPORT.write_text("\n".join(lines))
     print(f"[audit_silent_defaults] wrote {REPORT} "
           f"({len(critical)} critical, {len(suspicious)} suspicious, {safe_count} safe)")
+
+
+def summarize_records(records: list[dict], profile_keys: set[str]) -> dict[str, int]:
+    """Return the audit counts without writing the markdown report.
+
+    Preflight imports this pure helper so the normal green gate does not fork
+    a subprocess or dirty ``reports/silent_defaults.md`` on every run. The CLI
+    still owns report rendering for operator-facing audits.
+    """
+    critical = 0
+    suspicious = 0
+    safe_count = 0
+    for rec in records:
+        risky = _is_risky_default(rec)
+        if not risky:
+            safe_count += 1
+            continue
+        if rec["key"] in profile_keys:
+            critical += 1
+        else:
+            suspicious += 1
+    return {
+        "critical": critical,
+        "suspicious": suspicious,
+        "safe": safe_count,
+        "total": len(records),
+    }
 
 
 def main() -> int:

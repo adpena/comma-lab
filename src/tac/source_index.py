@@ -11,6 +11,8 @@ from __future__ import annotations
 import ast
 import contextlib
 import contextvars
+import fnmatch
+import os
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -83,12 +85,31 @@ class SourceIndex:
             base = self._resolve_dir(item)
             if not base.exists():
                 continue
-            for path in base.rglob(pattern):
-                if self._should_skip(path):
+            for dirpath, dirnames, filenames in os.walk(base):
+                dirnames[:] = sorted(
+                    name
+                    for name in dirnames
+                    if name not in self.skip_parts
+                )
+                current = Path(dirpath)
+                try:
+                    rel_current = _safe_resolve(current).relative_to(self.root)
+                except ValueError:
+                    rel_current = current
+                if rel_current.parts[:2] == ("experiments", "results"):
+                    dirnames[:] = []
                     continue
-                if not path.is_file():
-                    continue
-                paths[_path_key(path)] = path
+                if rel_current.parts == ("experiments",):
+                    dirnames[:] = [name for name in dirnames if name != "results"]
+                for filename in sorted(filenames):
+                    if not fnmatch.fnmatch(filename, pattern):
+                        continue
+                    path = current / filename
+                    if self._should_skip(path):
+                        continue
+                    if not path.is_file():
+                        continue
+                    paths[_path_key(path)] = path
         out = tuple(paths[key] for key in sorted(paths))
         self._file_cache[key] = out
         return out
@@ -162,7 +183,13 @@ class SourceIndex:
 
     def _should_skip(self, path: Path) -> bool:
         parts = set(path.parts)
-        return any(part in parts for part in self.skip_parts)
+        if any(part in parts for part in self.skip_parts):
+            return True
+        try:
+            rel = _safe_resolve(path).relative_to(self.root)
+        except ValueError:
+            rel = path
+        return rel.parts[:2] == ("experiments", "results")
 
 
 def get_current_source_index(repo_root: str | Path | None = None) -> SourceIndex | None:

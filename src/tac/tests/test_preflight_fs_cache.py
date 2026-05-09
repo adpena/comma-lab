@@ -244,3 +244,19 @@ def test_preflight_all_skips_fs_cache_when_codebase_scan_is_disabled(
     monkeypatch.setattr(fs_cache, "cached_filesystem", forbidden_cached_filesystem)
 
     preflight_mod.preflight_all(check_codebase=False, verbose=False)
+
+
+def test_source_index_skips_experiment_results(tmp_path: Path) -> None:
+    from tac.source_index import SourceIndex
+
+    source = tmp_path / "experiments" / "build_candidate.py"
+    result = tmp_path / "experiments" / "results" / "candidate" / "inflate.py"
+    source.parent.mkdir(parents=True)
+    result.parent.mkdir(parents=True)
+    source.write_text("print('source')\n", encoding="utf-8")
+    result.write_text("print('generated')\n", encoding="utf-8")
+
+    files = SourceIndex(tmp_path).files(["experiments"], pattern="*.py")
+
+    assert source in files
+    assert result not in files

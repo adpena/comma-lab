@@ -43,14 +43,14 @@ def test_module_imports_clean(mod):
 
 
 def test_sanitize_label_strips_unsafe_chars(mod):
-    assert mod._sanitize_label("lane/with spaces!") == "lane_with_spaces"
+    assert mod._sanitize_label("lane/with spaces!") == "lane_with_spaces"  # FAKE_LANE_OK: sanitizer fixture
     assert mod._sanitize_label("") == "unlabeled"
     # Multiple unsafe runs collapse and strip leading/trailing underscores.
     assert mod._sanitize_label("___foo___") == "foo"
 
 
 def test_recovery_dir_is_per_instance(mod):
-    d = mod._recovery_dir_for(12345, "lane_rm_d")
+    d = mod._recovery_dir_for(12345, "lane_rm_d")  # FAKE_LANE_OK: test fixture lane label
     assert d.name == "recovered_12345_lane_rm_d"
     assert d.parent == REPO_ROOT / "experiments" / "results"
 
@@ -161,6 +161,65 @@ def test_write_report_replaces_same_in_progress_attempt(mod, tmp_path):
     assert payload["attempts"][0]["attempt_kind"] == "initial"
     assert payload["attempts"][0]["ssh_reachable"] is True
     assert payload["attempts"][0]["elapsed_seconds"] == 3.0
+
+
+def test_migrate_v1_metadata_to_v2_preserves_legacy_fields(mod, tmp_path):
+    rec_dir = tmp_path / "recovered_7_lane"
+    rec_dir.mkdir()
+    meta = rec_dir / "recovery_metadata.json"
+    meta.write_text(json.dumps({
+        "instance_id": 7,
+        "lane_label": "lane",
+        "recovery_dir": str(rec_dir),
+        "started_at_utc": "2026-05-08T00:00:00+00:00",
+        "completed_at_utc": "2026-05-08T00:00:01+00:00",
+        "elapsed_seconds": 1.0,
+        "ssh_reachable": False,
+        "archive_zip": None,
+        "artifacts": [],
+        "renderer_bin": None,
+        "masks_mkv": None,
+        "poses_pt": None,
+        "skipped_patterns": [],
+        "notes": ["legacy note"],
+        "operator_note": "preserve me",
+    }))
+
+    assert mod.migrate_v1_metadata_to_v2(rec_dir) is True
+    payload = json.loads(meta.read_text())
+    assert payload["schema_version"] == "recovery_metadata.v2_attempts"
+    assert payload["instance_id"] == 7
+    assert len(payload["attempts"]) == 1
+    attempt = payload["attempts"][0]
+    assert attempt["attempt_kind"] == "initial"
+    assert attempt["notes"] == ["legacy note"]
+    assert attempt["legacy_extra_fields"] == {"operator_note": "preserve me"}
+    assert mod.migrate_v1_metadata_to_v2(rec_dir) is False
+
+
+def test_main_migrate_v1_to_v2_does_not_require_instance_id(mod, tmp_path):
+    rec_dir = tmp_path / "recovered_8_lane"
+    rec_dir.mkdir()
+    (rec_dir / "recovery_metadata.json").write_text(json.dumps({
+        "instance_id": 8,
+        "lane_label": "lane",
+        "recovery_dir": str(rec_dir),
+        "started_at_utc": "2026-05-08T00:00:00+00:00",
+        "completed_at_utc": "2026-05-08T00:00:01+00:00",
+        "elapsed_seconds": 1.0,
+        "ssh_reachable": False,
+        "archive_zip": None,
+        "artifacts": [],
+        "renderer_bin": None,
+        "masks_mkv": None,
+        "poses_pt": None,
+        "skipped_patterns": [],
+        "notes": [],
+    }))
+
+    assert mod.main(["--migrate-v1-to-v2", str(rec_dir)]) == 0
+    payload = json.loads((rec_dir / "recovery_metadata.json").read_text())
+    assert payload["schema_version"] == "recovery_metadata.v2_attempts"
 
 
 def test_recover_artifacts_finds_and_scps_artifacts(mod, tmp_path):

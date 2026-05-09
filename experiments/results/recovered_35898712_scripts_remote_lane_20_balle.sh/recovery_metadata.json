@@ -1,247 +1,255 @@
 {
-  "archive_zip": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
-  "artifacts": [
+  "attempts": [
     {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/den_v2_archive/provenance.json",
-      "remote_path": "/workspace/pact/experiments/results/den_v2_archive/provenance.json",
-      "size_bytes": 439
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_a_landed/archive_lane_a.zip",
-      "remote_path": "/workspace/pact/experiments/results/lane_a_landed/archive_lane_a.zip",
-      "size_bytes": 694045
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_a_landed/auth_eval_result.json",
-      "remote_path": "/workspace/pact/experiments/results/lane_a_landed/auth_eval_result.json",
-      "size_bytes": 2285
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_a_landed/eval_work/provenance.json",
-      "remote_path": "/workspace/pact/experiments/results/lane_a_landed/eval_work/provenance.json",
-      "size_bytes": 1781
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_a_landed/extracted/masks.mkv",
-      "remote_path": "/workspace/pact/experiments/results/lane_a_landed/extracted/masks.mkv",
-      "size_bytes": 421483
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_a_landed/iter_0/masks.mkv",
-      "remote_path": "/workspace/pact/experiments/results/lane_a_landed/iter_0/masks.mkv",
-      "size_bytes": 421483
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_a_landed/iter_0/optimized_poses.pt",
-      "remote_path": "/workspace/pact/experiments/results/lane_a_landed/iter_0/optimized_poses.pt",
-      "size_bytes": 15620
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_a_landed/iter_0/renderer.bin",
-      "remote_path": "/workspace/pact/experiments/results/lane_a_landed/iter_0/renderer.bin",
-      "size_bytes": 296776
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_a_landed/optimized_poses.pt",
-      "remote_path": "/workspace/pact/experiments/results/lane_a_landed/optimized_poses.pt",
-      "size_bytes": 15620
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_a_landed/provenance.json",
-      "remote_path": "/workspace/pact/experiments/results/lane_a_landed/provenance.json",
-      "size_bytes": 1660
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
-      "remote_path": "/workspace/pact/experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
-      "size_bytes": 694074
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_g_v3_landed/iter_0/masks.mkv",
-      "remote_path": "/workspace/pact/experiments/results/lane_g_v3_landed/iter_0/masks.mkv",
-      "size_bytes": 421483
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_g_v3_landed/iter_0/optimized_poses.pt",
-      "remote_path": "/workspace/pact/experiments/results/lane_g_v3_landed/iter_0/optimized_poses.pt",
-      "size_bytes": 15620
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_g_v3_landed/iter_0/renderer.bin",
-      "remote_path": "/workspace/pact/experiments/results/lane_g_v3_landed/iter_0/renderer.bin",
-      "size_bytes": 296776
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_g_v3_landed/optimized_poses.pt",
-      "remote_path": "/workspace/pact/experiments/results/lane_g_v3_landed/optimized_poses.pt",
-      "size_bytes": 15620
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_g_v3_omega_w_v2_stack_landed/provenance.json",
-      "remote_path": "/workspace/pact/experiments/results/lane_g_v3_omega_w_v2_stack_landed/provenance.json",
-      "size_bytes": 1501
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_h_crf56/auth_eval/provenance.json",
-      "remote_path": "/workspace/pact/experiments/results/lane_h_crf56/auth_eval/provenance.json",
-      "size_bytes": 1660
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_lane_gp_v2_modal/lane_gp_results/provenance.json",
-      "remote_path": "/workspace/pact/experiments/results/lane_lane_gp_v2_modal/lane_gp_results/provenance.json",
-      "size_bytes": 721
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_lane_gp_v3_modal/lane_gp_results/provenance.json",
-      "remote_path": "/workspace/pact/experiments/results/lane_lane_gp_v3_modal/lane_gp_results/provenance.json",
-      "size_bytes": 721
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_lane_mae_v_modal/lane_mae_v_results/provenance.json",
-      "remote_path": "/workspace/pact/experiments/results/lane_lane_mae_v_modal/lane_mae_v_results/provenance.json",
-      "size_bytes": 794
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_lane_mm_modal/lane_mm_grayscale_lut_results/provenance.json",
-      "remote_path": "/workspace/pact/experiments/results/lane_lane_mm_modal/lane_mm_grayscale_lut_results/provenance.json",
-      "size_bytes": 881
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_lane_mm_v2_modal/lane_mm_grayscale_lut_results/provenance.json",
-      "remote_path": "/workspace/pact/experiments/results/lane_lane_mm_v2_modal/lane_mm_grayscale_lut_results/provenance.json",
-      "size_bytes": 881
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_lane_omega_hessian_modal/lane_omega_results/provenance.json",
-      "remote_path": "/workspace/pact/experiments/results/lane_lane_omega_hessian_modal/lane_omega_results/provenance.json",
-      "size_bytes": 1106
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_lane_sa_v2_modal/lane_sa_segmap_clone_results/provenance.json",
-      "remote_path": "/workspace/pact/experiments/results/lane_lane_sa_v2_modal/lane_sa_segmap_clone_results/provenance.json",
-      "size_bytes": 605
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_lane_sa_v3_modal/lane_sa_segmap_clone_results/provenance.json",
-      "remote_path": "/workspace/pact/experiments/results/lane_lane_sa_v3_modal/lane_sa_segmap_clone_results/provenance.json",
-      "size_bytes": 607
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_lane_uniward_modal/lane_uniward_results/provenance.json",
-      "remote_path": "/workspace/pact/experiments/results/lane_lane_uniward_modal/lane_uniward_results/provenance.json",
-      "size_bytes": 814
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_sc_plus_plus_kl_distill_failed_landed/provenance.json",
-      "remote_path": "/workspace/pact/experiments/results/lane_sc_plus_plus_kl_distill_failed_landed/provenance.json",
-      "size_bytes": 731
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_uniward_v7_modal/lane_uniward_results/provenance.json",
-      "remote_path": "/workspace/pact/experiments/results/lane_uniward_v7_modal/lane_uniward_results/provenance.json",
-      "size_bytes": 814
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_uniward_v8_modal/lane_uniward_results/provenance.json",
-      "remote_path": "/workspace/pact/experiments/results/lane_uniward_v8_modal/lane_uniward_results/provenance.json",
-      "size_bytes": 817
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/shiraz_v4_archive/auth_eval_with_poses.json",
-      "remote_path": "/workspace/pact/experiments/results/shiraz_v4_archive/auth_eval_with_poses.json",
-      "size_bytes": 14122
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/submissions/baseline_dilated_h64_0_90/archive_baseline_0_9001.zip",
-      "remote_path": "/workspace/pact/submissions/baseline_dilated_h64_0_90/archive_baseline_0_9001.zip",
-      "size_bytes": 345802
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/submissions/baseline_dilated_h64_0_90/archive_fullres_crf50.zip",
-      "remote_path": "/workspace/pact/submissions/baseline_dilated_h64_0_90/archive_fullres_crf50.zip",
-      "size_bytes": 693857
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/submissions/baseline_dilated_h64_0_90/auth_eval_2_29.json",
-      "remote_path": "/workspace/pact/submissions/baseline_dilated_h64_0_90/auth_eval_2_29.json",
-      "size_bytes": 2442
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/submissions/baseline_dilated_h64_0_90/masks.mkv",
-      "remote_path": "/workspace/pact/submissions/baseline_dilated_h64_0_90/masks.mkv",
-      "size_bytes": 79071
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/submissions/baseline_dilated_h64_0_90/optimized_poses.pt",
-      "remote_path": "/workspace/pact/submissions/baseline_dilated_h64_0_90/optimized_poses.pt",
-      "size_bytes": 15645
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/submissions/baseline_dilated_h64_0_90/renderer.bin",
-      "remote_path": "/workspace/pact/submissions/baseline_dilated_h64_0_90/renderer.bin",
-      "size_bytes": 296776
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/submissions/robust_current/archive.zip",
-      "remote_path": "/workspace/pact/submissions/robust_current/archive.zip",
-      "size_bytes": 686321
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/submissions/robust_current/auth_eval_renderer_fp4.json",
-      "remote_path": "/workspace/pact/submissions/robust_current/auth_eval_renderer_fp4.json",
-      "size_bytes": 13406
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/submissions/robust_current/eval_runs/verify_136_original/report.txt",
-      "remote_path": "/workspace/pact/submissions/robust_current/eval_runs/verify_136_original/report.txt",
-      "size_bytes": 882
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/submissions/robust_current/eval_runs/verify_correct_ckpt/report.txt",
-      "remote_path": "/workspace/pact/submissions/robust_current/eval_runs/verify_correct_ckpt/report.txt",
-      "size_bytes": 882
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/submissions/robust_current/report.txt",
-      "remote_path": "/workspace/pact/submissions/robust_current/report.txt",
-      "size_bytes": 890
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/.setup_provenance/provenance.json",
-      "remote_path": "/workspace/pact/.setup_provenance/provenance.json",
-      "size_bytes": 2466
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/lane_20_balle_results/provenance.json",
-      "remote_path": "/workspace/pact/lane_20_balle_results/provenance.json",
-      "size_bytes": 883
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/lane_20_balle_results/run.log",
-      "remote_path": "/workspace/pact/lane_20_balle_results/run.log",
-      "size_bytes": 1727
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/lane_20_balle_results/heartbeat.log",
-      "remote_path": "/workspace/pact/lane_20_balle_results/heartbeat.log",
-      "size_bytes": 48
-    },
-    {
-      "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/setup.log",
-      "remote_path": "/workspace/setup.log",
-      "size_bytes": 3110
+      "archive_zip": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
+      "artifacts": [
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/den_v2_archive/provenance.json",
+          "remote_path": "/workspace/pact/experiments/results/den_v2_archive/provenance.json",
+          "size_bytes": 439
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_a_landed/archive_lane_a.zip",
+          "remote_path": "/workspace/pact/experiments/results/lane_a_landed/archive_lane_a.zip",
+          "size_bytes": 694045
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_a_landed/auth_eval_result.json",
+          "remote_path": "/workspace/pact/experiments/results/lane_a_landed/auth_eval_result.json",
+          "size_bytes": 2285
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_a_landed/eval_work/provenance.json",
+          "remote_path": "/workspace/pact/experiments/results/lane_a_landed/eval_work/provenance.json",
+          "size_bytes": 1781
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_a_landed/extracted/masks.mkv",
+          "remote_path": "/workspace/pact/experiments/results/lane_a_landed/extracted/masks.mkv",
+          "size_bytes": 421483
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_a_landed/iter_0/masks.mkv",
+          "remote_path": "/workspace/pact/experiments/results/lane_a_landed/iter_0/masks.mkv",
+          "size_bytes": 421483
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_a_landed/iter_0/optimized_poses.pt",
+          "remote_path": "/workspace/pact/experiments/results/lane_a_landed/iter_0/optimized_poses.pt",
+          "size_bytes": 15620
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_a_landed/iter_0/renderer.bin",
+          "remote_path": "/workspace/pact/experiments/results/lane_a_landed/iter_0/renderer.bin",
+          "size_bytes": 296776
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_a_landed/optimized_poses.pt",
+          "remote_path": "/workspace/pact/experiments/results/lane_a_landed/optimized_poses.pt",
+          "size_bytes": 15620
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_a_landed/provenance.json",
+          "remote_path": "/workspace/pact/experiments/results/lane_a_landed/provenance.json",
+          "size_bytes": 1660
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
+          "remote_path": "/workspace/pact/experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
+          "size_bytes": 694074
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_g_v3_landed/iter_0/masks.mkv",
+          "remote_path": "/workspace/pact/experiments/results/lane_g_v3_landed/iter_0/masks.mkv",
+          "size_bytes": 421483
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_g_v3_landed/iter_0/optimized_poses.pt",
+          "remote_path": "/workspace/pact/experiments/results/lane_g_v3_landed/iter_0/optimized_poses.pt",
+          "size_bytes": 15620
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_g_v3_landed/iter_0/renderer.bin",
+          "remote_path": "/workspace/pact/experiments/results/lane_g_v3_landed/iter_0/renderer.bin",
+          "size_bytes": 296776
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_g_v3_landed/optimized_poses.pt",
+          "remote_path": "/workspace/pact/experiments/results/lane_g_v3_landed/optimized_poses.pt",
+          "size_bytes": 15620
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_g_v3_omega_w_v2_stack_landed/provenance.json",
+          "remote_path": "/workspace/pact/experiments/results/lane_g_v3_omega_w_v2_stack_landed/provenance.json",
+          "size_bytes": 1501
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_h_crf56/auth_eval/provenance.json",
+          "remote_path": "/workspace/pact/experiments/results/lane_h_crf56/auth_eval/provenance.json",
+          "size_bytes": 1660
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_lane_gp_v2_modal/lane_gp_results/provenance.json",
+          "remote_path": "/workspace/pact/experiments/results/lane_lane_gp_v2_modal/lane_gp_results/provenance.json",
+          "size_bytes": 721
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_lane_gp_v3_modal/lane_gp_results/provenance.json",
+          "remote_path": "/workspace/pact/experiments/results/lane_lane_gp_v3_modal/lane_gp_results/provenance.json",
+          "size_bytes": 721
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_lane_mae_v_modal/lane_mae_v_results/provenance.json",
+          "remote_path": "/workspace/pact/experiments/results/lane_lane_mae_v_modal/lane_mae_v_results/provenance.json",
+          "size_bytes": 794
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_lane_mm_modal/lane_mm_grayscale_lut_results/provenance.json",
+          "remote_path": "/workspace/pact/experiments/results/lane_lane_mm_modal/lane_mm_grayscale_lut_results/provenance.json",
+          "size_bytes": 881
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_lane_mm_v2_modal/lane_mm_grayscale_lut_results/provenance.json",
+          "remote_path": "/workspace/pact/experiments/results/lane_lane_mm_v2_modal/lane_mm_grayscale_lut_results/provenance.json",
+          "size_bytes": 881
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_lane_omega_hessian_modal/lane_omega_results/provenance.json",
+          "remote_path": "/workspace/pact/experiments/results/lane_lane_omega_hessian_modal/lane_omega_results/provenance.json",
+          "size_bytes": 1106
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_lane_sa_v2_modal/lane_sa_segmap_clone_results/provenance.json",
+          "remote_path": "/workspace/pact/experiments/results/lane_lane_sa_v2_modal/lane_sa_segmap_clone_results/provenance.json",
+          "size_bytes": 605
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_lane_sa_v3_modal/lane_sa_segmap_clone_results/provenance.json",
+          "remote_path": "/workspace/pact/experiments/results/lane_lane_sa_v3_modal/lane_sa_segmap_clone_results/provenance.json",
+          "size_bytes": 607
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_lane_uniward_modal/lane_uniward_results/provenance.json",
+          "remote_path": "/workspace/pact/experiments/results/lane_lane_uniward_modal/lane_uniward_results/provenance.json",
+          "size_bytes": 814
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_sc_plus_plus_kl_distill_failed_landed/provenance.json",
+          "remote_path": "/workspace/pact/experiments/results/lane_sc_plus_plus_kl_distill_failed_landed/provenance.json",
+          "size_bytes": 731
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_uniward_v7_modal/lane_uniward_results/provenance.json",
+          "remote_path": "/workspace/pact/experiments/results/lane_uniward_v7_modal/lane_uniward_results/provenance.json",
+          "size_bytes": 814
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_uniward_v8_modal/lane_uniward_results/provenance.json",
+          "remote_path": "/workspace/pact/experiments/results/lane_uniward_v8_modal/lane_uniward_results/provenance.json",
+          "size_bytes": 817
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/shiraz_v4_archive/auth_eval_with_poses.json",
+          "remote_path": "/workspace/pact/experiments/results/shiraz_v4_archive/auth_eval_with_poses.json",
+          "size_bytes": 14122
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/submissions/baseline_dilated_h64_0_90/archive_baseline_0_9001.zip",
+          "remote_path": "/workspace/pact/submissions/baseline_dilated_h64_0_90/archive_baseline_0_9001.zip",
+          "size_bytes": 345802
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/submissions/baseline_dilated_h64_0_90/archive_fullres_crf50.zip",
+          "remote_path": "/workspace/pact/submissions/baseline_dilated_h64_0_90/archive_fullres_crf50.zip",
+          "size_bytes": 693857
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/submissions/baseline_dilated_h64_0_90/auth_eval_2_29.json",
+          "remote_path": "/workspace/pact/submissions/baseline_dilated_h64_0_90/auth_eval_2_29.json",
+          "size_bytes": 2442
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/submissions/baseline_dilated_h64_0_90/masks.mkv",
+          "remote_path": "/workspace/pact/submissions/baseline_dilated_h64_0_90/masks.mkv",
+          "size_bytes": 79071
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/submissions/baseline_dilated_h64_0_90/optimized_poses.pt",
+          "remote_path": "/workspace/pact/submissions/baseline_dilated_h64_0_90/optimized_poses.pt",
+          "size_bytes": 15645
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/submissions/baseline_dilated_h64_0_90/renderer.bin",
+          "remote_path": "/workspace/pact/submissions/baseline_dilated_h64_0_90/renderer.bin",
+          "size_bytes": 296776
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/submissions/robust_current/archive.zip",
+          "remote_path": "/workspace/pact/submissions/robust_current/archive.zip",
+          "size_bytes": 686321
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/submissions/robust_current/auth_eval_renderer_fp4.json",
+          "remote_path": "/workspace/pact/submissions/robust_current/auth_eval_renderer_fp4.json",
+          "size_bytes": 13406
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/submissions/robust_current/eval_runs/verify_136_original/report.txt",
+          "remote_path": "/workspace/pact/submissions/robust_current/eval_runs/verify_136_original/report.txt",
+          "size_bytes": 882
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/submissions/robust_current/eval_runs/verify_correct_ckpt/report.txt",
+          "remote_path": "/workspace/pact/submissions/robust_current/eval_runs/verify_correct_ckpt/report.txt",
+          "size_bytes": 882
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/submissions/robust_current/report.txt",
+          "remote_path": "/workspace/pact/submissions/robust_current/report.txt",
+          "size_bytes": 890
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/.setup_provenance/provenance.json",
+          "remote_path": "/workspace/pact/.setup_provenance/provenance.json",
+          "size_bytes": 2466
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/lane_20_balle_results/provenance.json",
+          "remote_path": "/workspace/pact/lane_20_balle_results/provenance.json",
+          "size_bytes": 883
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/lane_20_balle_results/run.log",
+          "remote_path": "/workspace/pact/lane_20_balle_results/run.log",
+          "size_bytes": 1727
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/lane_20_balle_results/heartbeat.log",
+          "remote_path": "/workspace/pact/lane_20_balle_results/heartbeat.log",
+          "size_bytes": 48
+        },
+        {
+          "local_path": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/setup.log",
+          "remote_path": "/workspace/setup.log",
+          "size_bytes": 3110
+        }
+      ],
+      "attempt_kind": "initial",
+      "command_log_path": null,
+      "completed_at_utc": "2026-04-30T12:40:09.121781+00:00",
+      "elapsed_seconds": 30.75027333397884,
+      "masks_mkv": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_a_landed/extracted/masks.mkv",
+      "notes": [],
+      "poses_pt": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/submissions/baseline_dilated_h64_0_90/optimized_poses.pt",
+      "renderer_bin": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_a_landed/iter_0/renderer.bin",
+      "skipped_patterns": [],
+      "ssh_reachable": true,
+      "started_at_utc": "2026-04-30T12:39:38.371539+00:00",
+      "substantive_change_from_prior_attempt": null
     }
   ],
-  "completed_at_utc": "2026-04-30T12:40:09.121781+00:00",
-  "elapsed_seconds": 30.75027333397884,
   "instance_id": 35898712,
   "lane_label": "scripts/remote_lane_20_balle.sh",
-  "masks_mkv": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_a_landed/extracted/masks.mkv",
-  "notes": [],
-  "poses_pt": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/submissions/baseline_dilated_h64_0_90/optimized_poses.pt",
   "recovery_dir": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh",
-  "renderer_bin": "/Users/adpena/Projects/pact/experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/workspace/pact/experiments/results/lane_a_landed/iter_0/renderer.bin",
-  "skipped_patterns": [],
-  "ssh_reachable": true,
-  "started_at_utc": "2026-04-30T12:39:38.371539+00:00"
+  "schema_version": "recovery_metadata.v2_attempts"
 }

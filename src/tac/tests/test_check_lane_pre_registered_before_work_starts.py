@@ -525,13 +525,19 @@ def test_blocklisted_token_not_flagged_in_quote(tmp_path: Path) -> None:
     repo = _init_repo(tmp_path, [{"id": "lane_g_v3", "name": "g v3"}])
     _commit_file(
         repo, "src/tac/foo.py",
-        '''payload = {"lane_id": "lane_g_v3", "lane_class": "renderer"}\n''',
+        (
+            '''payload = {"lane_id": "lane_g_v3", "lane_class": "renderer"}\n'''
+            '''blockers = ["lane_dispatch_claim_missing"]\n'''
+            '''payload["lane_claim_preflight"] = {"active_claim_present": False}\n'''
+            '''payload["lane_dir"] = "experiments/results/lane_g_v3"\n'''
+        ),
         "blocklisted as quoted dict key",
     )
     violations = check_lane_pre_registered_before_work_starts(
         repo_root=repo, n_commits=10, strict=False, verbose=False,
     )
-    # `lane_id`, `lane_class` should be blocklisted. lane_g_v3 is in registry.
+    # Quoted helper keys / blocker labels should be blocklisted. lane_g_v3 is
+    # the only real lane reference here and it is in the registry.
     assert violations == []
 
 
@@ -550,8 +556,8 @@ def test_no_commits_returns_empty(tmp_path: Path) -> None:
 # ── Test 16: file-level FAKE_LANE_OK_FILE waiver ────────────────────────
 
 
-def test_file_level_fake_waiver_exempts_entire_test_file(tmp_path: Path) -> None:
-    """A `# FAKE_LANE_OK_FILE:<reason>` in first 30 lines exempts whole file."""
+def test_file_level_fake_waiver_exempts_only_gate_self_test_file(tmp_path: Path) -> None:
+    """A file waiver is allowed only for Check #126's own fixture-heavy test file."""
     repo = _init_repo(tmp_path, [{"id": "lane_g_v3", "name": "g v3"}])
     content = """# FAKE_LANE_OK_FILE: this entire test file constructs many fake lane fixtures
 # Other test logic
@@ -560,7 +566,7 @@ LANE_B = "lane_pretend_b"
 LANE_C = "lane_pretend_c"
 """
     _commit_file(
-        repo, "src/tac/tests/test_many_lanes.py",
+        repo, "src/tac/tests/test_check_lane_pre_registered_before_work_starts.py",
         content,
         "many fake lanes with file-level waiver",
     )
@@ -568,6 +574,23 @@ LANE_C = "lane_pretend_c"
         repo_root=repo, n_commits=10, strict=False, verbose=False,
     )
     assert violations == [], f"got: {violations}"
+
+
+def test_file_level_waiver_does_not_exempt_other_test_files(tmp_path: Path) -> None:
+    """File-level waiver outside the dedicated self-test does NOT exempt."""
+    repo = _init_repo(tmp_path, [{"id": "lane_g_v3", "name": "g v3"}])
+    content = """# FAKE_LANE_OK_FILE: not the dedicated gate self-test; should NOT exempt
+LANE_A = "lane_pretend_z"
+"""
+    _commit_file(
+        repo, "src/tac/tests/test_other_lane_file.py",
+        content,
+        "fake lane in other test file",
+    )
+    violations = check_lane_pre_registered_before_work_starts(
+        repo_root=repo, n_commits=10, strict=False, verbose=False,
+    )
+    assert any("lane_pretend_z" in v for v in violations)
 
 
 def test_file_level_waiver_only_works_in_test_paths(tmp_path: Path) -> None:
@@ -605,3 +628,17 @@ def test_file_level_waiver_only_in_first_30_lines(tmp_path: Path) -> None:
         repo_root=repo, n_commits=10, strict=False, verbose=False,
     )
     assert any("lane_pretend_late" in v for v in violations)
+
+
+def test_dirty_worktree_unregistered_lane_is_caught_before_commit(tmp_path: Path) -> None:
+    """Current WIP must be scanned so the gate enforces before-work-starts."""
+    repo = _init_repo(tmp_path, [{"id": "lane_g_v3", "name": "g v3"}])
+    path = repo / "tools" / "wip_lane.py"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text('LANE = "lane_unregistered_wip"\n', encoding="utf-8")
+
+    violations = check_lane_pre_registered_before_work_starts(
+        repo_root=repo, n_commits=0, strict=False, verbose=False,
+    )
+
+    assert any("lane_unregistered_wip" in v and "WORKTREE" in v for v in violations)

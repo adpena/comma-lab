@@ -10,7 +10,7 @@ CANONICAL WORKFLOW (this module enforces it):
 
     recovered = recover_artifacts(
         instance_id=12345,
-        lane_label="lane_rm_d",
+        lane_label="rm-d-example",
         ssh_host="ssh.vast.ai", ssh_port=12345,
     )
     if recovered.archive_zip is not None:
@@ -25,10 +25,10 @@ explicit ``--no-recover``, we skip recovery and destroy straight away.
 USAGE (operator CLI):
 
     # Standalone recovery (no destroy):
-    python tools/recover_lane_artifacts.py 12345 --lane-label lane_rm_d
+    python tools/recover_lane_artifacts.py 12345 --lane-label rm-d-example
 
     # Recovery + destroy after:
-    python tools/recover_lane_artifacts.py 12345 --lane-label lane_rm_d --then-destroy
+    python tools/recover_lane_artifacts.py 12345 --lane-label rm-d-example --then-destroy
 
     # Force-skip recovery (instance unreachable):
     python tools/recover_lane_artifacts.py 12345 --no-recover --then-destroy
@@ -651,6 +651,71 @@ def _write_report(rec_dir: Path, report: RecoveryReport) -> None:
     meta_path.write_text(json.dumps(existing, indent=2, sort_keys=True))
 
 
+def migrate_v1_metadata_to_v2(path: Path) -> bool:
+    """Migrate one legacy recovery_metadata.json file to attempts[] schema.
+
+    ``path`` may be either a recovery directory or the metadata file itself.
+    Returns ``True`` when a legacy file was rewritten and ``False`` when the
+    file is already v2 or absent.
+    """
+    meta_path = path / "recovery_metadata.json" if path.is_dir() else path
+    if not meta_path.exists():
+        return False
+    payload = json.loads(meta_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"{meta_path}: expected JSON object")
+    if isinstance(payload.get("attempts"), list):
+        return False
+
+    known = {
+        "archive_zip",
+        "artifacts",
+        "completed_at_utc",
+        "elapsed_seconds",
+        "instance_id",
+        "lane_label",
+        "masks_mkv",
+        "notes",
+        "poses_pt",
+        "recovery_dir",
+        "renderer_bin",
+        "skipped_patterns",
+        "ssh_reachable",
+        "started_at_utc",
+    }
+    extra = {k: v for k, v in payload.items() if k not in known}
+    attempt = {
+        "attempt_kind": "initial",
+        "started_at_utc": payload.get("started_at_utc", ""),
+        "completed_at_utc": payload.get(
+            "completed_at_utc",
+            payload.get("started_at_utc", ""),
+        ),
+        "elapsed_seconds": payload.get("elapsed_seconds", 0.0),
+        "ssh_reachable": payload.get("ssh_reachable", False),
+        "archive_zip": payload.get("archive_zip"),
+        "artifacts": list(payload.get("artifacts", [])),
+        "renderer_bin": payload.get("renderer_bin"),
+        "masks_mkv": payload.get("masks_mkv"),
+        "poses_pt": payload.get("poses_pt"),
+        "skipped_patterns": list(payload.get("skipped_patterns", [])),
+        "notes": list(payload.get("notes", [])),
+        "command_log_path": None,
+        "substantive_change_from_prior_attempt": None,
+    }
+    if extra:
+        attempt["legacy_extra_fields"] = extra
+    document = {
+        "schema_version": RECOVERY_METADATA_SCHEMA_VERSION,
+        "instance_id": payload.get("instance_id"),
+        "lane_label": payload.get("lane_label", meta_path.parent.name),
+        "recovery_dir": payload.get("recovery_dir", str(meta_path.parent)),
+        "attempts": [attempt],
+    }
+    meta_path.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n")
+    return True
+
+
 def recover_before_destroy(
     instance_id: int,
     lane_label: str,
@@ -711,7 +776,17 @@ def main(argv: list[str] | None = None) -> int:
             "BEFORE destroying it. Idempotent. See module docstring."
         )
     )
-    ap.add_argument("instance_id", type=int, help="Vast.ai instance ID")
+    ap.add_argument("instance_id", type=int, nargs="?", help="Vast.ai instance ID")
+    ap.add_argument(
+        "--migrate-v1-to-v2",
+        type=Path,
+        default=None,
+        metavar="RECOVERY_DIR_OR_METADATA_JSON",
+        help=(
+            "Migrate a legacy recovery_metadata.json file or recovery dir to "
+            "the append-only recovery_metadata.v2_attempts schema, then exit."
+        ),
+    )
     ap.add_argument(
         "--lane-label", default="unlabeled",
         help="Human-readable lane label (used in recovery dir name)",
@@ -731,6 +806,15 @@ def main(argv: list[str] | None = None) -> int:
         help="Soft cap on the whole recovery pass (seconds, default 600)",
     )
     args = ap.parse_args(argv)
+
+    if args.migrate_v1_to_v2 is not None:
+        changed = migrate_v1_metadata_to_v2(args.migrate_v1_to_v2)
+        status = "migrated" if changed else "already-v2-or-missing"
+        print(f"[recover_lane_artifacts] {status}: {args.migrate_v1_to_v2}")
+        return 0
+
+    if args.instance_id is None:
+        ap.error("instance_id is required unless --migrate-v1-to-v2 is supplied")
 
     if args.no_recover:
         print("[recover_lane_artifacts] --no-recover; skipping recovery.")

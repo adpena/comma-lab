@@ -796,6 +796,11 @@
   rationale: "top-level research artifact JSON; immutable"
   append_fields: []
 
+- pattern: ".omx/research/*.jsonl"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "top-level research ledger JSONL; line-append only"
+  append_fields: []
+
 # experiments/results/ — top-level files (depth-2, no subdir)
 - pattern: "experiments/results/*.json"
   kind: HISTORICAL_PROVENANCE

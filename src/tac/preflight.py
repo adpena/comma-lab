@@ -27,10 +27,13 @@ Usage:
 from __future__ import annotations
 
 import ast
+import contextvars
 import datetime as _dt
+import fnmatch
 import functools
 import hashlib
 import importlib.util
+import io
 import json
 import os
 import re
@@ -40,6 +43,8 @@ import struct
 import subprocess
 import sys
 import time
+import tokenize
+from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import contextmanager
 from collections.abc import Mapping
 from collections.abc import Iterator
@@ -48,6 +53,17 @@ from pathlib import Path
 import torch
 
 DEFAULT_PREFLIGHT_CLI_TIMEOUT_S = 30.0
+
+
+@functools.lru_cache(maxsize=4096)
+def _cached_python_text(
+    resolved_path: str,
+    mtime_ns: int,
+    size_bytes: int,
+) -> str:
+    """Return cached source text for repeated preflight scans."""
+    del mtime_ns, size_bytes  # cache-key only
+    return Path(resolved_path).read_text()
 
 
 @functools.lru_cache(maxsize=4096)
@@ -63,9 +79,27 @@ def _cached_python_text_and_tree(
     duration of one CLI run; keying by path, mtime, and size preserves
     correctness when a long-lived process edits a file and reruns checks.
     """
-    del mtime_ns, size_bytes  # cache-key only
-    text = Path(resolved_path).read_text()
+    text = _cached_python_text(resolved_path, mtime_ns, size_bytes)
     return text, ast.parse(text, filename=resolved_path)
+
+
+def _read_python_text(
+    path: Path,
+) -> tuple[str | None, BaseException | None]:
+    try:
+        stat = path.stat()
+        resolved = str(path.resolve())
+    except OSError as e:
+        return None, e
+    try:
+        text = _cached_python_text(
+            resolved,
+            stat.st_mtime_ns,
+            stat.st_size,
+        )
+    except (OSError, UnicodeDecodeError) as e:
+        return None, e
+    return text, None
 
 
 def _read_python_text_and_tree(
@@ -95,6 +129,67 @@ class PreflightError(Exception):
 class PreflightTimeoutError(PreflightError):
     """The canonical preflight CLI exceeded its wall-clock budget."""
     pass
+
+
+class _ParallelPreflightRunner:
+    """Run independent preflight checks concurrently while preserving fail sites."""
+
+    def __init__(self, *, enabled: bool, verbose: bool, max_workers: int = 8) -> None:
+        self.enabled = enabled
+        self.verbose = verbose
+        self.max_workers = max_workers
+        self._executor: ThreadPoolExecutor | None = (
+            ThreadPoolExecutor(
+                max_workers=self.max_workers,
+                thread_name_prefix="preflight",
+            )
+            if self.enabled else None
+        )
+        self._futures: dict[str, Future[object]] = {}
+
+    def __enter__(self) -> "_ParallelPreflightRunner":
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        if self._executor is not None:
+            self._executor.shutdown(wait=True, cancel_futures=exc_type is not None)
+
+    def submit(self, name: str, fn) -> None:
+        if self._executor is None:
+            return
+        ctx = contextvars.copy_context()
+        self._futures[name] = self._executor.submit(ctx.run, fn)
+
+    def run(self, name: str, label: str, fn, *, strict: bool = True):
+        future = self._futures.pop(name, None)
+        if future is None:
+            return fn()
+        try:
+            result = future.result()
+        except BaseException:
+            self.close(cancel=True)
+            raise
+        if self.verbose:
+            if isinstance(result, list):
+                if result:
+                    mode = "violation(s)" if strict else "advisory finding(s)"
+                    print(f"  {label} {len(result)} {mode}")
+                    for item in result[:10]:
+                        print(f"    • {str(item)[:240]}")
+                    if len(result) > 10:
+                        print(f"    … and {len(result) - 10} more")
+                else:
+                    print(f"  {label} OK")
+            else:
+                print(f"  {label} OK")
+        if not self._futures:
+            self.close(cancel=False)
+        return result
+
+    def close(self, *, cancel: bool) -> None:
+        if self._executor is not None:
+            self._executor.shutdown(wait=not cancel, cancel_futures=cancel)
+            self._executor = None
 
 
 @contextmanager
@@ -427,12 +522,84 @@ def preflight_all(
 
     # 1. Codebase drift check (cheap, always run unless explicitly disabled)
     if check_codebase:
-        check_codebase_drift(strict=True, verbose=verbose)
+        _parallel = _ParallelPreflightRunner(
+            enabled=os.environ.get("PACT_PREFLIGHT_ENABLE_PARALLEL") == "1",
+            verbose=verbose,
+        )
+        _parallel.submit(
+            "check_codebase_drift",
+            lambda: check_codebase_drift(strict=True, verbose=False),
+        )
+        _parallel.submit(
+            "check_no_compromised_lightning_supply_chain",
+            lambda: check_no_compromised_lightning_supply_chain(
+                strict=True, verbose=False,
+            ),
+        )
+        _parallel.submit(
+            "preflight_arity",
+            lambda: preflight_arity(strict=True, verbose=False),
+        )
+        _parallel.submit(
+            "preflight_shell_lane_arity",
+            lambda: preflight_shell_lane_arity(strict=True, verbose=False),
+        )
+        _parallel.submit(
+            "check_artifact_lifecycle_compliance",
+            lambda: check_artifact_lifecycle_compliance(strict=True, verbose=False),
+        )
+        _parallel.submit(
+            "preflight_dead_resolvers",
+            lambda: preflight_dead_resolvers(strict=True, verbose=False),
+        )
+        _parallel.submit(
+            "preflight_filename_contract",
+            lambda: preflight_filename_contract(strict=True, verbose=False),
+        )
+        _parallel.submit(
+            "preflight_loader_format_safety",
+            lambda: preflight_loader_format_safety(strict=True, verbose=False),
+        )
+        _parallel.submit(
+            "check_silent_default_audit_clean",
+            lambda: check_silent_default_audit_clean(strict=True, verbose=False),
+        )
+        _parallel.submit(
+            "check_callsite_contracts_satisfied",
+            lambda: check_callsite_contracts_satisfied(strict=True, verbose=False),
+        )
+        _parallel.submit(
+            "check_no_proxy_metric_drives_decision",
+            lambda: check_no_proxy_metric_drives_decision(strict=True, verbose=False),
+        )
+        _parallel.submit(
+            "check_archive_builders_use_deterministic_zip",
+            lambda: check_archive_builders_use_deterministic_zip(
+                strict=True, verbose=False,
+            ),
+        )
+        _parallel.submit(
+            "check_eval_roundtrip_gate_called_after_output_dir_resolution",
+            lambda: check_eval_roundtrip_gate_called_after_output_dir_resolution(
+                strict=True, verbose=False,
+            ),
+        )
+        _parallel.run(
+            "check_codebase_drift",
+            "[codebase-drift]",
+            lambda: check_codebase_drift(strict=True, verbose=verbose),
+        )
         # 2026-04-30 supply-chain incident: PyPI `lightning` 2.6.2/2.6.3
         # contained Mini Shai-Hulud style credential-stealing malware that
         # executes on import. This repository uses `lightning-sdk`; any
         # install path for bare `lightning` is a remote-runner compromise risk.
-        check_no_compromised_lightning_supply_chain(strict=True, verbose=verbose)
+        _parallel.run(
+            "check_no_compromised_lightning_supply_chain",
+            "[lightning-supply-chain]",
+            lambda: check_no_compromised_lightning_supply_chain(
+                strict=True, verbose=verbose,
+            ),
+        )
         # Lightning SSH custody must not regress to TOFU-disabled shell snippets
         # or bare provider-host targets. Direct provider targets have already
         # caused confusing auth failures; scripts/runbooks should use an SSH
@@ -485,7 +652,11 @@ def preflight_all(
         # Config checks do not catch helpers already spawned by an editor or
         # previous agent session. Fail closed on live orphaned MCP helpers too.
         check_no_live_mcp_processes(strict=True, verbose=verbose)
-        preflight_arity(strict=True, verbose=verbose)
+        _parallel.run(
+            "preflight_arity",
+            "[arity]",
+            lambda: preflight_arity(strict=True, verbose=verbose),
+        )
         # Check 72 (2026-04-29): close BUG CLASS A — invented CLI flags inside
         # remote_lane_*.sh shell-script invocations of experiments/*.py. The
         # existing preflight_arity walks Python launchers (subprocess.run +
@@ -493,7 +664,11 @@ def preflight_all(
         # Live-codebase scan finds 0 violations across 84 scripts × ~170
         # invocations, so flips straight to STRICT. Memory ref: the 2026-04-29
         # Lane MM/SA-v2/SC++-v2/SO-v2 ~$3 Modal incident.
-        preflight_shell_lane_arity(strict=True, verbose=verbose)
+        _parallel.run(
+            "preflight_shell_lane_arity",
+            "[shell-lane-arity]",
+            lambda: preflight_shell_lane_arity(strict=True, verbose=verbose),
+        )
         # Check 73 (2026-04-29): close BUG CLASS B — unchunked SegMap /
         # renderer training that OOMs T4 (7.03 GiB allocation in 14.56 GiB
         # of VRAM, 11.66 GiB already in use). Lane scripts invoking
@@ -599,7 +774,13 @@ def preflight_all(
         # experiment outputs and can compare a committed range when
         # ARTIFACT_LIFECYCLE_BASE_REF is set.
         # Memory: feedback_codex_findings_meta_pattern_artifact_lifecycle_FIXED_20260508.md
-        check_artifact_lifecycle_compliance(strict=True, verbose=verbose)
+        _parallel.run(
+            "check_artifact_lifecycle_compliance",
+            "[artifact-lifecycle]",
+            lambda: check_artifact_lifecycle_compliance(
+                strict=True, verbose=verbose,
+            ),
+        )
         # 2026-05-08 META-META commit-machinery permanent protection
         # (catalogs #117, #118, #119). Wired warn-only initially because
         # legacy commits (those landed before the auto-append/serializer-
@@ -876,6 +1057,33 @@ def preflight_all(
         check_preflight_cli_default_scope_is_all(
             strict=True, verbose=verbose,
         )
+        # 2026-05-09 codex round 7+8 HIGH 1 (#147): the round-6 fix made
+        # dispatchers register the pending row BEFORE submit, but the
+        # cancel-on-exception logic was too aggressive — `except BaseException`
+        # around `submit_lightning_job(...)` (which includes `Job.run(...)`)
+        # could silently delete the only harvester-visible row for a real
+        # paid Lightning job after an SDK timeout / post-create API error /
+        # KeyboardInterrupt mid-Job.run. Fix: split exception routing
+        # (`_PreNetworkSubmitError` → cancel; `BaseException` →
+        # `mark_pending_failed_unknown_billing_locked`). STRICT-FLIP per
+        # CLAUDE.md "Bugs must be permanently fixed AND self-protected
+        # against" — Catalog #147 lands at 0 live violations.
+        check_lightning_submit_cancel_only_before_network(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-09 codex round 7 HIGH 2 (#148): `tac.vastai_tracker.
+        # _load_records` returned `[]` on malformed JSON. `register_instance`
+        # then silently overwrote the corrupt file with a single new record,
+        # dropping every previously-tracked active instance. Fix: new
+        # `load_active_instances_strict` raises `VastaiTrackerCorruptError`;
+        # `register_instance` / `remove_instance` use it inside the fcntl
+        # lock and quarantine corrupt files to `<path>.corrupt.<utc>`.
+        # Sister of Catalog #138 scoped to `tac.vastai_tracker` specifically.
+        # STRICT-FLIP per the same self-protection mandate — Catalog #148
+        # lands at 0 live violations.
+        check_vastai_tracker_strict_load(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -888,7 +1096,11 @@ def preflight_all(
         # blocks the same silent-default class it was added to prevent.
         # See feedback_dead_resolver_violations_20260427 memory entry +
         # test_preflight_dead_resolvers_strict_passes_on_real_codebase.
-        preflight_dead_resolvers(strict=True, verbose=verbose)
+        _parallel.run(
+            "preflight_dead_resolvers",
+            "[dead-resolvers]",
+            lambda: preflight_dead_resolvers(strict=True, verbose=verbose),
+        )
         # 2026-05-05 hidden-gem recovery: a second-order dead-feature class
         # slipped past dead-resolver checks. `use_variance_noise` resolved
         # cleanly in profiles/argparse, but train_distill raised
@@ -897,8 +1109,16 @@ def preflight_all(
         check_feature_flags_have_live_objective_effect(strict=True, verbose=verbose)
         preflight_profiles(strict=True, verbose=verbose)
         preflight_arch_consistency(strict=True, verbose=verbose)
-        preflight_filename_contract(strict=True, verbose=verbose)
-        preflight_loader_format_safety(strict=True, verbose=verbose)
+        _parallel.run(
+            "preflight_filename_contract",
+            "[filenames]",
+            lambda: preflight_filename_contract(strict=True, verbose=verbose),
+        )
+        _parallel.run(
+            "preflight_loader_format_safety",
+            "[loader-format]",
+            lambda: preflight_loader_format_safety(strict=True, verbose=verbose),
+        )
         preflight_canonical_checkpoints(strict=True, verbose=verbose)
         preflight_build_renderer_signature(strict=True, verbose=verbose)
         preflight_bootstrap_safety(strict=True, verbose=verbose)
@@ -938,9 +1158,21 @@ def preflight_all(
         check_kl_distill_uses_roundtripped_frames(strict=True, verbose=verbose)
         check_train_renderer_kl_aux_explicit_scope(strict=True, verbose=verbose)
         check_distillation_policy_schema_clean(strict=True, verbose=verbose)
-        check_eval_roundtrip_gate_called_after_output_dir_resolution(strict=True, verbose=verbose)
+        _parallel.run(
+            "check_eval_roundtrip_gate_called_after_output_dir_resolution",
+            "[eval-roundtrip-output-dir-resolution]",
+            lambda: check_eval_roundtrip_gate_called_after_output_dir_resolution(
+                strict=True, verbose=verbose,
+            ),
+        )
         check_nvdec_probe_has_error_classification(strict=True, verbose=verbose)
-        check_archive_builders_use_deterministic_zip(strict=True, verbose=verbose)
+        _parallel.run(
+            "check_archive_builders_use_deterministic_zip",
+            "[deterministic-zip-builders]",
+            lambda: check_archive_builders_use_deterministic_zip(
+                strict=True, verbose=verbose,
+            ),
+        )
         check_no_raw_zip_extractall(strict=True, verbose=verbose)
         # 2026-05-02 public Apogee supplement/site hygiene. The repo has
         # legacy private custody/state docs, so the default full-preflight pass
@@ -951,7 +1183,11 @@ def preflight_all(
         # commit 4eeb6452 (246 noisy → 0 actionable); 3 real bugs fixed in
         # commit 256c5e42. Lands STRICT directly at 0 live violations.
         # Memory: feedback_silent_default_bug_class_findings_20260429.md.
-        check_silent_default_audit_clean(strict=True, verbose=verbose)
+        _parallel.run(
+            "check_silent_default_audit_clean",
+            "[silent-default-audit]",
+            lambda: check_silent_default_audit_clean(strict=True, verbose=verbose),
+        )
 
         # 2026-04-29 Round 3 grand-council prescription: 3 active bug
         # classes get STRICT preflight checks. All 3 land at 0 live
@@ -961,8 +1197,20 @@ def preflight_all(
         # because tagging discipline across legacy docs/reports needs a
         # cleanup pass — promote to strict after the 0-count sweep.
         # Memory: feedback_three_active_bug_classes_needing_strict_checks_20260429.md.
-        check_callsite_contracts_satisfied(strict=True, verbose=verbose)
-        check_no_proxy_metric_drives_decision(strict=True, verbose=verbose)
+        _parallel.run(
+            "check_callsite_contracts_satisfied",
+            "[callsite-contracts]",
+            lambda: check_callsite_contracts_satisfied(
+                strict=True, verbose=verbose,
+            ),
+        )
+        _parallel.run(
+            "check_no_proxy_metric_drives_decision",
+            "[no-mps-decision]",
+            lambda: check_no_proxy_metric_drives_decision(
+                strict=True, verbose=verbose,
+            ),
+        )
         # Round 17 R17-2 cascade-extinction gate: every rglob() walking
         # experiments/ or src/tac/ in this very file must call
         # _is_oss_export_mirror_path. Converts the 6-round honor system
@@ -2355,7 +2603,24 @@ def check_codebase_drift(
     # gitignored. The drift rule exists to prevent ad-hoc deploy scripts
     # creeping in alongside the canonical pipeline.py + deploy_vastai.py path,
     # which a frozen result-bundle audit trail does not violate.
-    for sh_path in root.glob("experiments/**/*.sh"):
+    experiments_dir = root / "experiments"
+    sh_paths: list[Path] = []
+    if experiments_dir.exists():
+        for dirpath, dirnames, filenames in os.walk(experiments_dir):
+            dirnames[:] = sorted(d for d in dirnames if d != "__pycache__")
+            base = Path(dirpath)
+            try:
+                rel_base = base.relative_to(root)
+            except ValueError:
+                rel_base = base
+            if rel_base.parts[:2] == ("experiments", "results"):
+                dirnames[:] = []
+                continue
+            if rel_base.parts == ("experiments",):
+                dirnames[:] = [d for d in dirnames if d != "results"]
+            for filename in sorted(f for f in filenames if f.endswith(".sh")):
+                sh_paths.append(base / filename)
+    for sh_path in sh_paths:
         if sh_path.is_dir():
             continue  # recovered_*.sh is a directory, not a script
         rel = str(sh_path.relative_to(root))
@@ -2406,7 +2671,22 @@ def check_codebase_drift(
         d_path = root / d
         if not d_path.exists():
             continue
-        for py_path in d_path.rglob("*.py"):
+        py_paths: list[Path] = []
+        for dirpath, dirnames, filenames in os.walk(d_path):
+            dirnames[:] = sorted(dn for dn in dirnames if dn != "__pycache__")
+            base = Path(dirpath)
+            try:
+                rel_base = base.relative_to(root)
+            except ValueError:
+                rel_base = base
+            if rel_base.parts[:2] == ("experiments", "results"):
+                dirnames[:] = []
+                continue
+            if rel_base.parts == ("experiments",):
+                dirnames[:] = [dn for dn in dirnames if dn != "results"]
+            for filename in sorted(f for f in filenames if f.endswith(".py")):
+                py_paths.append(base / filename)
+        for py_path in py_paths:
             if _is_codebase_drift_result_artifact(py_path, root):
                 continue
             if _is_oss_export_mirror_path(py_path):
@@ -2504,9 +2784,16 @@ def _parse_argparse_signature(path: Path) -> dict[str, dict] | None:
     Returns None if the script has no argparse usage. Skips silently on syntax
     errors (caught by other preflight layers).
     """
+    text, err = _read_python_text(path)
+    if err is not None or text is None:
+        return None
+    if "add_argument" not in text:
+        return None
     try:
-        tree = ast.parse(path.read_text(), filename=str(path))
+        _text, tree, parse_err = _read_python_text_and_tree(path)
     except (SyntaxError, UnicodeDecodeError):
+        return None
+    if parse_err is not None or tree is None:
         return None
 
     flags: dict[str, dict] = {}
@@ -3386,10 +3673,13 @@ def _scan_python_for_dead_resolvers(
     its own args). The getattr form specifically encodes a silent-default
     contract that the bug class exploits.
     """
-    text, tree, err = _read_python_text_and_tree(path)
-    if err is not None or tree is None:
+    text, err = _read_python_text(path)
+    if err is not None or text is None:
         return []
-    if "getattr(args" not in (text or ""):
+    if "getattr(args" not in text:
+        return []
+    _text, tree, err = _read_python_text_and_tree(path)
+    if err is not None or tree is None:
         return []
 
     argparse_attrs = _collect_argparse_namespace_attrs(tree)
@@ -3429,15 +3719,17 @@ def _scan_python_for_dead_resolvers(
     return violations
 
 
-def _module_top_level_names(mod_path: Path) -> set[str]:
-    """Return every name defined or re-exported at module top level.
-
-    Handles: function/class defs, simple assignments, AnnAssign, ImportFrom
-    re-exports, and Import. Does NOT execute the module.
-    """
-    _text, tree, err = _read_python_text_and_tree(mod_path)
+@functools.lru_cache(maxsize=1024)
+def _module_top_level_names_cached(
+    resolved_path: str,
+    mtime_ns: int,
+    size_bytes: int,
+) -> frozenset[str]:
+    """Cached implementation for ``_module_top_level_names``."""
+    del mtime_ns, size_bytes  # cache-key only
+    _text, tree, err = _read_python_text_and_tree(Path(resolved_path))
     if err is not None or tree is None:
-        return set()
+        return frozenset()
     names: set[str] = set()
     for node in tree.body:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
@@ -3456,7 +3748,23 @@ def _module_top_level_names(mod_path: Path) -> set[str]:
         elif isinstance(node, ast.Import):
             for alias in node.names:
                 names.add(alias.asname or alias.name.split(".")[0])
-    return names
+    return frozenset(names)
+
+
+def _module_top_level_names(mod_path: Path) -> set[str]:
+    """Return every name defined or re-exported at module top level.
+
+    Handles: function/class defs, simple assignments, AnnAssign, ImportFrom
+    re-exports, and Import. Does NOT execute the module.
+    """
+    try:
+        stat = mod_path.stat()
+        resolved = str(mod_path.resolve())
+    except OSError:
+        return set()
+    return set(
+        _module_top_level_names_cached(resolved, stat.st_mtime_ns, stat.st_size)
+    )
 
 
 def _resolve_tac_module_path(module: str, repo_root: Path) -> Path | None:
@@ -3526,10 +3834,13 @@ def _scan_python_for_dead_imports(path: Path, repo_root: Path) -> list[str]:
     Catches the segnet_uncertainty_weighted_loss class — runtime
     NameError masked by stale .pyc caches.
     """
-    text, tree, err = _read_python_text_and_tree(path)
-    if err is not None or tree is None:
+    text, err = _read_python_text(path)
+    if err is not None or text is None:
         return []
-    if "from tac." not in (text or ""):
+    if "from tac." not in text:
+        return []
+    _text, tree, err = _read_python_text_and_tree(path)
+    if err is not None or tree is None:
         return []
 
     rel = path.relative_to(repo_root) if path.is_absolute() else path
@@ -4696,23 +5007,28 @@ def _iter_python_files(root: Path, dirs: list[str]) -> list[Path]:
         d_path = root / d
         if not d_path.exists():
             continue
-        for p in d_path.rglob("*.py"):
-            if "__pycache__" in p.parts:
-                continue
-            if _is_oss_export_mirror_path(p):
-                continue
+        for dirpath, dirnames, filenames in os.walk(d_path):
+            dirnames[:] = sorted(dn for dn in dirnames if dn != "__pycache__")
+            base = Path(dirpath)
             try:
-                rel = p.relative_to(root)
+                rel_base = base.relative_to(root)
             except ValueError:
-                rel = p
-            if rel.parts[:2] == ("experiments", "results"):
+                rel_base = base
+            if rel_base.parts[:2] == ("experiments", "results"):
                 # Generated experiment/custody outputs are not source code.
                 # Scanning them made full preflight slow and racy: result
                 # dirs can be deleted while broad source checks are reading.
                 # Artifact-specific checks below still inspect
                 # experiments/results manifests/status files intentionally.
+                dirnames[:] = []
                 continue
-            out.append(p)
+            if rel_base.parts == ("experiments",):
+                dirnames[:] = [dn for dn in dirnames if dn != "results"]
+            for filename in sorted(fn for fn in filenames if fn.endswith(".py")):
+                p = base / filename
+                if _is_oss_export_mirror_path(p):
+                    continue
+                out.append(p)
     return sorted(out)
 
 
@@ -5168,6 +5484,15 @@ def _scan_repo_for_mini_shai_hulud_iocs(repo_root: Path) -> list[str]:
     for dirpath, dirnames, filenames in os.walk(repo_root):
         dirnames[:] = sorted(d for d in dirnames if d not in pruned_dirs)
         base = Path(dirpath)
+        try:
+            rel_base = base.relative_to(repo_root)
+        except ValueError:
+            rel_base = base
+        if rel_base.parts[:2] == ("experiments", "results"):
+            dirnames[:] = []
+            continue
+        if rel_base.parts == ("experiments",):
+            dirnames[:] = [d for d in dirnames if d != "results"]
         for filename in sorted(filenames):
             path = base / filename
             if filename == "package.json":
@@ -7890,7 +8215,7 @@ _EXTERNAL_FILENAMES = {
 
 
 def _extract_artifact_filenames(path: Path, source_index=None) -> set[str]:
-    """AST-extract every artifact-suffix string literal from a Python file.
+    """Extract every artifact-suffix string literal from a Python file.
 
     Returns names like {"renderer_fp4.bin", "qat_best_float.pt"}. Skips
     non-artifact strings (URLs, log file names, fixture paths).
@@ -7902,36 +8227,61 @@ def _extract_artifact_filenames(path: Path, source_index=None) -> set[str]:
             text = path.read_text()
         if not any(suffix in text for suffix in _ARTIFACT_SUFFIXES):
             return set()
-        if source_index is not None:
-            tree = source_index.python_ast(path)
-        else:
-            tree = ast.parse(text, filename=str(path))
-    except (OSError, SyntaxError, UnicodeDecodeError):
+    except (OSError, UnicodeDecodeError):
         return set()
     found: set[str] = set()
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Constant) and isinstance(node.value, str):
-            v = node.value
-            if v.endswith(_ARTIFACT_SUFFIXES):
-                # Take just the basename; we don't care about the directory.
-                base = v.split("/")[-1]
-                # Skip glob patterns and obvious non-literal hints.
-                if "*" in base or "{" in base:
-                    continue
-                # Skip suffix-fragments used in f-string concat
-                # (e.g., `for suffix in ["_int4lzma2.bin", ".bin"]`).
-                # Real basenames have a non-empty stem before the suffix.
-                stem = base
-                for suf in _ARTIFACT_SUFFIXES:
-                    if stem.endswith(suf):
-                        stem = stem[:-len(suf)]
-                        break
-                if not stem or stem.startswith(("_", ".")):
-                    continue
-                # Skip very generic names that are too noisy to validate.
-                if base in _EXTERNAL_FILENAMES:
-                    continue
-                found.add(base)
+    try:
+        tokens = tokenize.generate_tokens(io.StringIO(text).readline)
+        string_tokens = [tok.string for tok in tokens if tok.type == tokenize.STRING]
+    except (tokenize.TokenError, IndentationError):
+        # Keep a correctness fallback for partially-written files and odd
+        # token streams. This path is rare; the hot path avoids AST parsing
+        # hundreds of producer files whose only contract is "literal appears
+        # somewhere in source".
+        try:
+            tree = ast.parse(text, filename=str(path))
+        except (SyntaxError, UnicodeDecodeError):
+            return set()
+        values = [
+            node.value
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Constant) and isinstance(node.value, str)
+        ]
+    else:
+        values = []
+        for token_text in string_tokens:
+            try:
+                value = ast.literal_eval(token_text)
+            except (SyntaxError, ValueError):
+                # f-strings and bytes literals do not reliably literal_eval to
+                # plain artifact names. The old AST path only saw constant
+                # string fragments too, so skipping non-plain tokens preserves
+                # the conservative filename contract without paying parse cost.
+                continue
+            if isinstance(value, str):
+                values.append(value)
+
+    for v in values:
+        if v.endswith(_ARTIFACT_SUFFIXES):
+            # Take just the basename; we don't care about the directory.
+            base = v.split("/")[-1]
+            # Skip glob patterns and obvious non-literal hints.
+            if "*" in base or "{" in base:
+                continue
+            # Skip suffix-fragments used in f-string concat
+            # (e.g., `for suffix in ["_int4lzma2.bin", ".bin"]`).
+            # Real basenames have a non-empty stem before the suffix.
+            stem = base
+            for suf in _ARTIFACT_SUFFIXES:
+                if stem.endswith(suf):
+                    stem = stem[:-len(suf)]
+                    break
+            if not stem or stem.startswith(("_", ".")):
+                continue
+            # Skip very generic names that are too noisy to validate.
+            if base in _EXTERNAL_FILENAMES:
+                continue
+            found.add(base)
     return found
 
 
@@ -9348,6 +9698,12 @@ def check_eval_roundtrip_gate_called_after_output_dir_resolution(
         for p in d.rglob("*.py"):
             if "__pycache__" in p.parts:
                 continue
+            try:
+                rel = p.relative_to(root)
+            except ValueError:
+                rel = p
+            if rel.parts[:2] == ("experiments", "results"):
+                continue
             # Round 2 codebase-drift fix continued (2026-05-06): skip
             # OSS-publication staging mirror — verbatim copy of source files.
             if _is_oss_export_mirror_path(p):
@@ -9520,6 +9876,12 @@ def check_archive_builders_use_deterministic_zip(
     candidates = sorted({p for p in candidates if p.is_file()})
     for p in candidates:
         if "__pycache__" in p.parts:
+            continue
+        try:
+            rel = p.relative_to(root)
+        except ValueError:
+            rel = p
+        if rel.parts[:2] == ("experiments", "results"):
             continue
         # OSS-export staging mirror — see _is_oss_export_mirror_path for
         # cascade-prevention rationale.
@@ -9859,28 +10221,22 @@ def check_silent_default_audit_clean(
                 "not found — skipping check"
             )
         return []
-    # Run audit as subprocess to avoid coupling preflight to its imports.
-    import subprocess
     try:
-        result = subprocess.run(
-            [sys.executable, str(audit_script)],
-            cwd=root, capture_output=True, text=True, timeout=60,
+        from tools.audit_silent_defaults import (
+            _import_profile_keys,
+            collect_records,
+            summarize_records,
         )
-    except (subprocess.TimeoutExpired, OSError) as exc:
-        if verbose:
-            print(f"  [silent-default-audit] WARN: audit failed to run: {exc}")
-        return []
-    output = (result.stdout or "") + (result.stderr or "")
-    # Audit prints e.g. "(0 critical, 0 suspicious, 1189 safe)".
-    m = re.search(r"\((\d+)\s+critical", output)
-    if not m:
+
+        summary = summarize_records(collect_records(), _import_profile_keys())
+        n_critical = int(summary["critical"])
+    except Exception as exc:
         if verbose:
             print(
-                "  [silent-default-audit] WARN: could not parse audit output: "
-                + output[:200]
+                "  [silent-default-audit] WARN: audit failed to run in-process: "
+                + str(exc)
             )
         return []
-    n_critical = int(m.group(1))
     violations: list[str] = []
     if n_critical > 0:
         violations.append(
@@ -9934,7 +10290,7 @@ _CALLSITE_CONTRACT_EXEMPT_FILES: set[str] = {
 
 
 def _scan_python_for_callsite_contract_violations(
-    path: Path, repo_root: Path,
+    path: Path, repo_root: Path, source_index=None,
 ) -> list[str]:
     """AST-scan a Python file for callers of contract-registered helpers
     that omit any of the required kwargs."""
@@ -9942,11 +10298,23 @@ def _scan_python_for_callsite_contract_violations(
     rel_s = str(rel)
     if rel_s in _CALLSITE_CONTRACT_EXEMPT_FILES:
         return []
-    try:
-        text = path.read_text()
-        tree = ast.parse(text, filename=str(path))
-    except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
-        return []
+    if source_index is not None:
+        try:
+            text = source_index.read_text(path)
+        except (OSError, UnicodeDecodeError):
+            return []
+        if not any(name in text for name in CALLSITE_CONTRACTS):
+            return []
+        try:
+            tree = source_index.python_ast(path)
+        except (OSError, SyntaxError, UnicodeDecodeError):
+            return []
+    else:
+        text, tree, err = _read_python_text_and_tree(path)
+        if err is not None or tree is None:
+            return []
+        if text is not None and not any(name in text for name in CALLSITE_CONTRACTS):
+            return []
 
     violations: list[str] = []
     for node in ast.walk(tree):
@@ -9982,19 +10350,21 @@ def check_callsite_contracts_satisfied(
     required kwargs. Catches the Lane-GP-style "fix lands in helper but
     not at call site" bug class."""
     root = repo_root or REPO_ROOT
+    source_index = _current_source_index(root)
     scan_dirs = ["src/tac", "experiments", "scripts", "submissions"]
     violations: list[str] = []
-    for sd in scan_dirs:
-        sd_path = root / sd
-        if not sd_path.is_dir():
-            continue
-        for py in sd_path.rglob("*.py"):
-            # R14-1 helper: skip OSS-export staging mirror.
-            if _is_oss_export_mirror_path(py):
-                continue
-            violations.extend(
-                _scan_python_for_callsite_contract_violations(py, root)
+    if source_index is not None:
+        py_paths = source_index.files(scan_dirs, pattern="*.py")
+    else:
+        py_paths = tuple(
+            py for sd in scan_dirs for py in _iter_python_files(root, [sd])
+        )
+    for py in py_paths:
+        violations.extend(
+            _scan_python_for_callsite_contract_violations(
+                py, root, source_index=source_index,
             )
+        )
     if verbose:
         if violations:
             print(
@@ -10159,16 +10529,31 @@ def check_no_proxy_metric_drives_decision(
             # rel_s against _MPS_DECISION_EXEMPT_PATH_PARTS (which includes
             # "/comma_lab_public_export/") rather than .parts membership; the
             # exemption is enforced in the per-file loop below at line ~8554.
-            files = [
-                f for f in p.rglob("*")
-                if f.is_file() and f.suffix in target_suffixes
-            ]
+            files = []
+            for dirpath, dirnames, filenames in os.walk(p):
+                dirnames[:] = sorted(d for d in dirnames if d != "__pycache__")
+                base = Path(dirpath)
+                try:
+                    rel_base = base.relative_to(root)
+                except ValueError:
+                    rel_base = base
+                if rel_base.parts[:2] == ("experiments", "results"):
+                    dirnames[:] = []
+                    continue
+                if rel_base.parts == ("experiments",):
+                    dirnames[:] = [d for d in dirnames if d != "results"]
+                for filename in sorted(filenames):
+                    f = base / filename
+                    if f.suffix in target_suffixes:
+                        files.append(f)
         else:
             continue
         for f in files:
             try:
                 rel = f.relative_to(root)
             except ValueError:
+                continue
+            if rel.parts[:2] == ("experiments", "results"):
                 continue
             rel_s = str(rel)
             if rel_s in _MPS_DECISION_EXEMPT_FILES:
@@ -10178,6 +10563,10 @@ def check_no_proxy_metric_drives_decision(
             try:
                 text = f.read_text()
             except (UnicodeDecodeError, OSError):
+                continue
+            if not _MPS_DECISION_VERBS.search(text):
+                continue
+            if not _MPS_PROXY_TOKENS.search(text):
                 continue
             violations.extend(_check_mps_decision_in_text(text, rel_s))
     if verbose:
@@ -10372,19 +10761,26 @@ def _scan_file_for_comment_only_contracts(
         return []
     if any(part in rel_s for part in _COMMENT_ONLY_CONTRACT_EXEMPT_PATH_PARTS):
         return []
-    try:
-        text = path.read_text()
-    except (UnicodeDecodeError, OSError):
+    text, err = _read_python_text(path) if path.suffix == ".py" else (None, None)
+    if path.suffix != ".py":
+        try:
+            text = path.read_text()
+        except (UnicodeDecodeError, OSError):
+            return []
+    if err is not None or text is None:
+        return []
+    if not any(pat.search(text) for pat in patterns):
         return []
     lines = text.splitlines()
     # AST is only useful for `.py` files (best-effort for backing-assertion
     # function-body lookup). Shell scripts skip the AST step.
     tree: ast.AST | None = None
     if path.suffix == ".py":
-        try:
-            tree = ast.parse(text, filename=str(path))
-        except (SyntaxError, ValueError):
+        _text, parsed, parse_err = _read_python_text_and_tree(path)
+        if parse_err is not None:
             tree = None
+        else:
+            tree = parsed
 
     findings: list[tuple[str, int, str, bool]] = []
     for i, line in enumerate(lines, start=1):
@@ -10435,15 +10831,28 @@ def check_no_comment_only_contracts(
         sd_path = root / sd
         if not sd_path.is_dir():
             continue
-        for f in sd_path.rglob("*"):
-            if not f.is_file() or f.suffix not in target_suffixes:
+        for dirpath, dirnames, filenames in os.walk(sd_path):
+            dirnames[:] = sorted(dn for dn in dirnames if dn != "__pycache__")
+            base = Path(dirpath)
+            try:
+                rel_base = base.relative_to(root)
+            except ValueError:
+                rel_base = base
+            if rel_base.parts[:2] == ("experiments", "results"):
+                dirnames[:] = []
                 continue
-            # R14-1 helper: skip OSS-export staging mirror.
-            if _is_oss_export_mirror_path(f):
-                continue
-            all_findings.extend(
-                _scan_file_for_comment_only_contracts(f, root, patterns)
-            )
+            if rel_base.parts == ("experiments",):
+                dirnames[:] = [dn for dn in dirnames if dn != "results"]
+            for filename in sorted(filenames):
+                f = base / filename
+                if f.suffix not in target_suffixes:
+                    continue
+                # R14-1 helper: skip OSS-export staging mirror.
+                if _is_oss_export_mirror_path(f):
+                    continue
+                all_findings.extend(
+                    _scan_file_for_comment_only_contracts(f, root, patterns)
+                )
 
     # Audit mode: report ALL findings (backed and unbacked).
     # STRICT mode: violations are unbacked findings only.
@@ -10696,20 +11105,24 @@ def _scan_python_for_bare_round_in_roundtrip(
     # Read-only measurement tools where no gradient is needed.
     if rel_s in _BARE_ROUND_READONLY_FILES:
         return []
-    try:
-        text = path.read_text()
-        tree = ast.parse(text, filename=str(path))
-    except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
+    text, err = _read_python_text(path)
+    if err is not None or text is None:
+        return []
+    if ".round(" not in text or "F.interpolate" not in text or "roundtrip" not in text.lower():
+        return []
+    _text, tree, parse_err = _read_python_text_and_tree(path)
+    if parse_err is not None or tree is None:
         return []
 
     violations: list[str] = []
+    text_lines = text.splitlines()
     for node in ast.walk(tree):
         if not isinstance(node, ast.FunctionDef):
             continue
         # Get the function source body via line range.
         start = node.lineno - 1
         end = node.end_lineno or start + 50
-        body_text = "\n".join(text.splitlines()[start:end])
+        body_text = "\n".join(text_lines[start:end])
         # Heuristic: function is eval-roundtrip-shaped if it calls
         # F.interpolate AND its name or docstring mentions "roundtrip".
         name_or_doc_mentions_roundtrip = (
@@ -10725,7 +11138,7 @@ def _scan_python_for_bare_round_in_roundtrip(
         # `... + (X.round().clamp(...) - Y).detach()`.
         if _BARE_ROUND_RE.search(body_text) and not _UINT8_STE_RE.search(body_text):
             # Find the specific .round() line for the report.
-            for off, line in enumerate(text.splitlines()[start:end]):
+            for off, line in enumerate(text_lines[start:end]):
                 if not _BARE_ROUND_RE.search(line):
                     continue
                 if _UINT8_STE_RE.search(line):
@@ -10752,17 +11165,10 @@ def check_no_bare_round_in_eval_roundtrip(
     root = repo_root or REPO_ROOT
     scan_dirs = ["src/tac", "experiments"]
     violations: list[str] = []
-    for sd in scan_dirs:
-        sd_path = root / sd
-        if not sd_path.is_dir():
-            continue
-        for py in sd_path.rglob("*.py"):
-            # R14-1 helper: skip OSS-export staging mirror.
-            if _is_oss_export_mirror_path(py):
-                continue
-            violations.extend(
-                _scan_python_for_bare_round_in_roundtrip(py, root)
-            )
+    for py in _iter_python_files(root, scan_dirs):
+        violations.extend(
+            _scan_python_for_bare_round_in_roundtrip(py, root)
+        )
     if verbose:
         if violations:
             print(
@@ -12047,7 +12453,19 @@ def _extract_profile_keys() -> set[str] | None:
     return keys - _PROFILE_KEY_EXEMPTIONS
 
 
-def _scan_for_resolver_keys(text: str, candidate_keys: set[str] | None = None) -> set[str]:
+def _profile_key_pattern(candidate_keys: set[str]) -> re.Pattern[str]:
+    """Compile one word-boundary matcher for profile-key presence checks."""
+    body = "|".join(
+        re.escape(key) for key in sorted(candidate_keys, key=len, reverse=True)
+    )
+    return re.compile(rf"\b(?:{body})\b")
+
+
+def _scan_for_resolver_keys(
+    text: str,
+    candidate_keys: set[str] | None = None,
+    candidate_key_re: re.Pattern[str] | None = None,
+) -> set[str]:
     """Pull every `cfg.<KEY> = ...` assignment + `args.<KEY>` read.
 
     Also catches a wide variety of profile-key access patterns so a key
@@ -12103,6 +12521,31 @@ def _scan_for_resolver_keys(text: str, candidate_keys: set[str] | None = None) -
         text,
     ):
         out.add(m.group(1))
+    if candidate_keys is not None and candidate_key_re is not None:
+        # Fast textual coverage for the shapes previously handled by a broad
+        # AST walk over ~1k files: function parameters, keyword arguments,
+        # dataclass/typed fields, and simple local names. This guard only asks
+        # whether a profile key has a source consumer anywhere, so a lexical
+        # name-level proof is sufficient and avoids parsing unrelated files in
+        # every preflight run.
+        for m in re.finditer(
+            r"\b([A-Za-z_][A-Za-z0-9_]*)\s*(?::[^=\n,)]*)?=",
+            text,
+        ):
+            name = m.group(1)
+            if name in candidate_keys:
+                out.add(name)
+        for m in re.finditer(r"^[ \t]*([A-Za-z_][A-Za-z0-9_]*)\s*:", text, re.M):
+            name = m.group(1)
+            if name in candidate_keys:
+                out.add(name)
+        for m in re.finditer(
+            r"\bdef\s+[A-Za-z_][A-Za-z0-9_]*\s*\((.*?)\)",
+            text,
+            re.S,
+        ):
+            for key_match in candidate_key_re.finditer(m.group(1)):
+                out.add(key_match.group(0))
     # Explicit waiver marker for cases the scanner can't reach
     # (e.g. dynamic load via ** spread). Format:
     #   `# PROFILE_KEY_RESOLVED:my_key`  (single key)
@@ -12124,9 +12567,16 @@ def _scan_for_resolver_keys(text: str, candidate_keys: set[str] | None = None) -
     # itself is very large. The regex pass above catches explicit profile-key
     # consumers in large files; skip expensive all-keyword extraction there so
     # the smoke gate cannot exceed pytest's 60s timeout.
-    ast_worthwhile = len(text) <= 250_000
+    ast_worthwhile = (
+        candidate_keys is None
+        or os.environ.get("PACT_PREFLIGHT_PROFILE_RESOLVER_AST") == "1"
+    )
+    ast_worthwhile = ast_worthwhile and len(text) <= 250_000
     if ast_worthwhile and candidate_keys is not None:
-        ast_worthwhile = any(key in text for key in candidate_keys)
+        if candidate_key_re is not None:
+            ast_worthwhile = bool(candidate_key_re.search(text))
+        else:
+            ast_worthwhile = any(key in text for key in candidate_keys)
     if ast_worthwhile:
         try:
             tree = ast.parse(text)
@@ -12199,20 +12649,29 @@ def check_profile_keys_have_resolvers(
     # producing false positives on widely-used keys.
     resolver_search_dirs = ["src/tac", "experiments"]
     resolved: set[str] = set()
-    for d in resolver_search_dirs:
-        d_path = root / d
-        if not d_path.exists():
+    key_re = _profile_key_pattern(keys)
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        py_paths = source_index.files(resolver_search_dirs, pattern="*.py")
+    else:
+        py_paths = tuple(_iter_python_files(root, resolver_search_dirs))
+    for p in py_paths:
+        try:
+            if source_index is not None:
+                text = source_index.read_text(p)
+            else:
+                text = _read_python_text(p)[0]
+        except (OSError, UnicodeDecodeError):
             continue
-        for p in d_path.rglob("*.py"):
-            if "__pycache__" in p.parts:
-                continue
-            if _is_oss_export_mirror_path(p):
-                continue
-            try:
-                text = p.read_text()
-            except (UnicodeDecodeError, FileNotFoundError):
-                continue
-            resolved.update(_scan_for_resolver_keys(text, candidate_keys=keys))
+        if text is None or not key_re.search(text):
+            continue
+        resolved.update(
+            _scan_for_resolver_keys(
+                text,
+                candidate_keys=keys,
+                candidate_key_re=key_re,
+            )
+        )
     resolver_files = ["src/tac/", "experiments/"]  # for error message
     missing = sorted(keys - resolved)
     for k in missing:
@@ -12434,6 +12893,7 @@ def _scan_test_file_for_dead_imports(
     repo_root: Path,
     *,
     module_defs_cache: dict[Path, set[str] | None] | None = None,
+    source_index=None,
 ) -> list[str]:
     """Catch broken test imports. Companion to existing dead-import scanner.
 
@@ -12447,9 +12907,13 @@ def _scan_test_file_for_dead_imports(
     """
     rel = path.relative_to(repo_root) if path.is_absolute() else path
     try:
-        text = path.read_text()
-        tree = ast.parse(text, filename=str(path))
-    except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
+        if source_index is not None:
+            text = source_index.read_text(path)
+            tree = source_index.python_ast(path)
+        else:
+            text = path.read_text()
+            tree = ast.parse(text, filename=str(path))
+    except (SyntaxError, UnicodeDecodeError, FileNotFoundError, OSError):
         return []
 
     if _has_module_level_skip(tree):
@@ -12509,9 +12973,12 @@ def _scan_test_file_for_dead_imports(
             defined = module_defs_cache[cache_key]
         else:
             try:
-                target_text = mod_path.read_text()
-                target_tree = ast.parse(target_text, filename=str(mod_path))
-            except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
+                if source_index is not None:
+                    target_tree = source_index.python_ast(mod_path)
+                else:
+                    target_text = mod_path.read_text()
+                    target_tree = ast.parse(target_text, filename=str(mod_path))
+            except (SyntaxError, UnicodeDecodeError, FileNotFoundError, OSError):
                 defined = None
             else:
                 defined = _collect_module_top_level_names(target_tree)
@@ -12556,7 +13023,12 @@ def check_test_files_imports_resolve(
     test_dir = root / "src" / "tac" / "tests"
     if test_dir.exists():
         module_defs_cache: dict[Path, set[str] | None] = {}
-        for p in test_dir.rglob("test_*.py"):
+        source_index = _current_source_index(root)
+        if source_index is not None:
+            test_paths = source_index.files(["src/tac/tests"], pattern="test_*.py")
+        else:
+            test_paths = tuple(test_dir.rglob("test_*.py"))
+        for p in test_paths:
             if "__pycache__" in p.parts:
                 continue
             n_scanned += 1
@@ -12565,6 +13037,7 @@ def check_test_files_imports_resolve(
                     p,
                     root,
                     module_defs_cache=module_defs_cache,
+                    source_index=source_index,
                 )
             )
     if verbose:
@@ -13017,7 +13490,12 @@ def check_distillation_policy_schema_clean(
 # Check B above.
 
 
-def _scan_python_for_kl_div_batchmean(path: Path, repo_root: Path) -> list[str]:
+def _scan_python_for_kl_div_batchmean(
+    path: Path,
+    repo_root: Path,
+    *,
+    source_index=None,
+) -> list[str]:
     """Detect any `F.kl_div(..., reduction="batchmean")` call without a
     same-line `# KL_BATCHMEAN_OK:<reason>` waiver marker.
 
@@ -13050,9 +13528,14 @@ def _scan_python_for_kl_div_batchmean(path: Path, repo_root: Path) -> list[str]:
     if any(marker in rel_s for marker in _VENDORED_PATH_MARKERS):
         return []
     try:
-        text = path.read_text()
-        tree = ast.parse(text, filename=str(path))
-    except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
+        text = source_index.read_text(path) if source_index is not None else path.read_text()
+    except (UnicodeDecodeError, FileNotFoundError, OSError):
+        return []
+    if "kl_div" not in text or "batchmean" not in text:
+        return []
+    try:
+        tree = source_index.python_ast(path) if source_index is not None else ast.parse(text, filename=str(path))
+    except (SyntaxError, UnicodeDecodeError, FileNotFoundError, OSError):
         return []
     lines = text.splitlines()
     violations: list[str] = []
@@ -13121,20 +13604,27 @@ def check_kl_div_reduction_correct(
     Returns list of violations. Raises MetaBugViolation if strict and any.
     """
     root = repo_root or REPO_ROOT
+    source_index = _current_source_index(root)
     violations: list[str] = []
     n_scanned = 0
     scan_dirs = ["src/tac", "experiments", "scripts", "submissions"]
-    for d in scan_dirs:
-        d_path = root / d
-        if not d_path.exists():
+    if source_index is not None:
+        py_paths = source_index.files(scan_dirs, pattern="*.py")
+    else:
+        py_paths = tuple(_iter_python_files(root, scan_dirs))
+    for p in py_paths:
+        if "__pycache__" in p.parts:
             continue
-        for p in d_path.rglob("*.py"):
-            if "__pycache__" in p.parts:
-                continue
-            if _is_oss_export_mirror_path(p):
-                continue
-            n_scanned += 1
-            violations.extend(_scan_python_for_kl_div_batchmean(p, root))
+        if _is_oss_export_mirror_path(p):
+            continue
+        n_scanned += 1
+        violations.extend(
+            _scan_python_for_kl_div_batchmean(
+                p,
+                root,
+                source_index=source_index,
+            )
+        )
 
     if verbose and violations:
         print(f"  [no-kl-div-batchmean] {len(violations)} violation(s) across {n_scanned} files:")
@@ -13328,7 +13818,12 @@ def _function_warns_then_proceeds(fn_node: ast.AST, lines: list[str]) -> tuple[b
     return (False, 0)
 
 
-def _scan_python_for_silent_auto_discovery(path: Path, repo_root: Path) -> list[str]:
+def _scan_python_for_silent_auto_discovery(
+    path: Path,
+    repo_root: Path,
+    *,
+    source_index=None,
+) -> list[str]:
     """Detect the silent-default-masquerading-as-negative-result pattern.
 
     Looks for functions containing BOTH:
@@ -13346,9 +13841,17 @@ def _scan_python_for_silent_auto_discovery(path: Path, repo_root: Path) -> list[
     if "tests" in rel.parts or rel.name.startswith("test_"):
         return []
     try:
-        text = path.read_text()
-        tree = ast.parse(text, filename=str(path))
-    except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
+        text = source_index.read_text(path) if source_index is not None else path.read_text()
+    except (UnicodeDecodeError, FileNotFoundError, OSError):
+        return []
+    if ".exists" not in text:
+        return []
+    upper_text = text.upper()
+    if "[WARN]" not in upper_text and "WARNING:" not in upper_text and "WARN " not in upper_text:
+        return []
+    try:
+        tree = source_index.python_ast(path) if source_index is not None else ast.parse(text, filename=str(path))
+    except (SyntaxError, UnicodeDecodeError, FileNotFoundError, OSError):
         return []
     lines = text.splitlines()
     violations: list[str] = []
@@ -13435,9 +13938,20 @@ def check_no_silent_auto_discovery_with_warn(
     root = repo_root or REPO_ROOT
     violations: list[str] = []
     n_scanned = 0
-    for py in _iter_python_files(root, _META_PY_SCAN_DIRS):
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        py_paths = source_index.files(_META_PY_SCAN_DIRS, pattern="*.py")
+    else:
+        py_paths = tuple(_iter_python_files(root, _META_PY_SCAN_DIRS))
+    for py in py_paths:
         n_scanned += 1
-        violations.extend(_scan_python_for_silent_auto_discovery(py, root))
+        violations.extend(
+            _scan_python_for_silent_auto_discovery(
+                py,
+                root,
+                source_index=source_index,
+            )
+        )
 
     if verbose and violations:
         print(f"  [no-silent-auto-discovery] {len(violations)} violation(s) across {n_scanned} files:")
@@ -15607,40 +16121,42 @@ def check_python_files_compile(
 
     Skips: __pycache__, .venv, .git, .pytest_cache, build/, dist/, node_modules.
     """
-    import py_compile
-
     root = repo_root or REPO_ROOT
     skip_parts = {"__pycache__", ".venv", ".git", ".pytest_cache",
                   "build", "dist", "node_modules", ".eggs"}
+    source_index = _current_source_index(root)
 
     violations: list[str] = []
     n_compiled = 0
-    for d in scan_dirs:
-        d_path = root / d
-        if not d_path.exists():
+    if source_index is not None:
+        py_paths = source_index.files(scan_dirs, pattern="*.py")
+    else:
+        py_paths = tuple(_iter_python_files(root, list(scan_dirs)))
+    for py in py_paths:
+        if any(p in skip_parts for p in py.parts):
             continue
-        for py in d_path.rglob("*.py"):
-            if any(p in skip_parts for p in py.parts):
-                continue
-            if _is_oss_export_mirror_path(py):
-                continue
-            try:
-                py_compile.compile(str(py), doraise=True)
-                n_compiled += 1
-            except py_compile.PyCompileError as e:
-                violations.append(
-                    f"{py.relative_to(root)}: {type(e).__name__}: "
-                    f"{str(e).strip()[:200]}"
-                )
-            except (SyntaxError, IndentationError) as e:
-                violations.append(
-                    f"{py.relative_to(root)}: {type(e).__name__} at "
-                    f"line {e.lineno}: {e.msg}"
-                )
-            except Exception as e:  # pragma: no cover  unexpected
-                violations.append(
-                    f"{py.relative_to(root)}: {type(e).__name__}: {e}"
-                )
+        if _is_oss_export_mirror_path(py):
+            continue
+        try:
+            if source_index is not None:
+                source = source_index.read_text(py)
+            else:
+                source = py.read_text()
+            compile(source, str(py), "exec")
+            n_compiled += 1
+        except (SyntaxError, IndentationError) as e:
+            violations.append(
+                f"{py.relative_to(root)}: {type(e).__name__} at "
+                f"line {e.lineno}: {e.msg}"
+            )
+        except (UnicodeDecodeError, FileNotFoundError, OSError) as e:
+            violations.append(
+                f"{py.relative_to(root)}: {type(e).__name__}: {e}"
+            )
+        except Exception as e:  # pragma: no cover  unexpected
+            violations.append(
+                f"{py.relative_to(root)}: {type(e).__name__}: {e}"
+            )
 
     if verbose:
         if violations:
@@ -15688,40 +16204,41 @@ def check_shell_scripts_syntax_clean(
     root = repo_root or REPO_ROOT
     skip_parts = {"__pycache__", ".venv", ".git", ".pytest_cache",
                   "build", "dist", "node_modules"}
+    source_index = _current_source_index(root)
 
     violations: list[str] = []
     n_checked = 0
-    for d in scan_dirs:
-        d_path = root / d
-        if not d_path.exists():
+    if source_index is not None:
+        sh_paths = source_index.files(scan_dirs, pattern="*.sh")
+    else:
+        sh_paths = tuple(_iter_shell_files(root, list(scan_dirs)))
+    for sh in sh_paths:
+        if sh.is_dir() or not sh.is_file():
             continue
-        for sh in d_path.rglob("*.sh"):
-            if sh.is_dir() or not sh.is_file():
-                continue
-            if any(p in skip_parts for p in sh.parts):
-                continue
-            if _is_oss_export_mirror_path(sh):
-                continue
-            try:
-                proc = subprocess.run(
-                    [bash, "-n", str(sh)],
-                    capture_output=True, text=True, timeout=10,
-                )
-                n_checked += 1
-                if proc.returncode != 0:
-                    err = proc.stderr.strip().splitlines()
-                    msg = err[0] if err else f"non-zero exit {proc.returncode}"
-                    violations.append(
-                        f"{sh.relative_to(root)}: bash syntax error: {msg[:200]}"
-                    )
-            except subprocess.TimeoutExpired:
+        if any(p in skip_parts for p in sh.parts):
+            continue
+        if _is_oss_export_mirror_path(sh):
+            continue
+        try:
+            proc = subprocess.run(
+                [bash, "-n", str(sh)],
+                capture_output=True, text=True, timeout=10,
+            )
+            n_checked += 1
+            if proc.returncode != 0:
+                err = proc.stderr.strip().splitlines()
+                msg = err[0] if err else f"non-zero exit {proc.returncode}"
                 violations.append(
-                    f"{sh.relative_to(root)}: bash -n timed out (10s)"
+                    f"{sh.relative_to(root)}: bash syntax error: {msg[:200]}"
                 )
-            except Exception as e:  # pragma: no cover
-                violations.append(
-                    f"{sh.relative_to(root)}: {type(e).__name__}: {e}"
-                )
+        except subprocess.TimeoutExpired:
+            violations.append(
+                f"{sh.relative_to(root)}: bash -n timed out (10s)"
+            )
+        except Exception as e:  # pragma: no cover
+            violations.append(
+                f"{sh.relative_to(root)}: {type(e).__name__}: {e}"
+            )
 
     if verbose:
         if violations:
@@ -27073,6 +27590,27 @@ _REPRESENTATION_LANE_DESCRIPTION_TOKENS = (
     "archive grammar",
 )
 
+# Explicit lane_class values override name-token heuristics. This prevents
+# diagnostic/control lanes whose names mention a representation family from
+# being forced into archive-grammar checks, e.g. "Non-HNeRV drift calibration".
+_REPRESENTATION_LANE_CLASSES = frozenset({
+    "representation_codec",
+    "representation_only",
+    "codec_only",
+    "neural_codec",
+})
+_NON_REPRESENTATION_LANE_CLASSES = frozenset({
+    "calibration_diagnostic",
+    "diagnostic",
+    "mechanism_analysis",
+    "xray_diagnostic",
+    "drift_calibration",
+    "profile_calibration",
+    "operator_tooling",
+    "preflight_guard",
+    "autopilot_plumbing",
+})
+
 # Required 8 design-time evidence fields per the HNeRV retrospective §10.
 _REPRESENTATION_LANE_REQUIRED_FIELDS = (
     "archive_grammar",
@@ -27090,6 +27628,9 @@ def _lane_is_representation_lane(lane: dict) -> bool:
     """Return True iff `lane` is a representation/codec lane.
 
     Match heuristic:
+      - Explicit ``lane_class`` wins over token heuristics. Known
+        representation lane classes force True; known diagnostic/tooling
+        classes force False.
       - Short name tokens (≤ 5 chars like `c3`, `nerv`, `siren`) require a
         word-boundary match on the lane id + name (avoids false positives
         like `c3` matching `c30` / `dc3`).
@@ -27102,6 +27643,14 @@ def _lane_is_representation_lane(lane: dict) -> bool:
     lid = (lane.get("id") or "").lower()
     name = (lane.get("name") or "").lower()
     notes = (lane.get("notes") or "").lower()
+    lane_class = (lane.get("lane_class") or "").lower()
+
+    if lane_class in _REPRESENTATION_LANE_CLASSES:
+        return True
+    if lane_class == "substrate_engineering":
+        return False
+    if lane_class in _NON_REPRESENTATION_LANE_CLASSES:
+        return False
 
     haystack_for_name_tokens = lid + " " + name
     # Long tokens — cheap substring
@@ -27215,10 +27764,11 @@ def check_representation_lane_has_archive_grammar_at_design_time(
     """
     root = Path(repo_root or REPO_ROOT)
 
-    # Lazy-import lane_maturity (registry CLI) so the registry-loading rules
-    # live in one place. Mirror Check 90's import pattern.
+    # Lazy-import lane_maturity (registry CLI) from the checked-out tool tree
+    # while still loading the registry from caller-supplied ``repo_root``.
+    # Synthetic test repos intentionally contain only .omx/state data.
     try:
-        tools_root = str(root)
+        tools_root = str(REPO_ROOT)
         if tools_root not in sys.path:
             sys.path.insert(0, tools_root)
         from tools import lane_maturity as lm  # type: ignore[import-untyped]
@@ -28738,6 +29288,39 @@ _BARE_WRITE_LOCK_TOKENS: tuple[str, ...] = (
     "FileLock",
 )
 
+# Canonical helpers whose call-site presence in the lookback window proves
+# the surrounding write is part of a transactional contract owned by the
+# helper. Visible substring match (function-name suffix / receiver shape).
+# Codex round 8 MEDIUM #131 in-place harden: lock-token alone is not
+# sufficient; the helper-call indicates the full transactional contract
+# (load-strict + reload-inside-lock + atomic-replace) is owned elsewhere.
+_BARE_WRITE_CANONICAL_HELPER_CALL_TOKENS: tuple[str, ...] = (
+    "update_active_jobs_locked",
+    "update_active_vms_locked",
+    "register_active_vm_record",
+    "register_instance",
+    "register_pending_job_locked",
+    "update_pending_to_active_locked",
+    "cancel_pending_job_locked",
+    "mark_pending_failed_unknown_billing_locked",
+    "register_job",
+    "upsert_job",
+    "mark_job_terminal",
+    "posterior_update_locked",
+    "posterior_update",
+    "save_posterior",
+    "register_active_vm_record",
+    "update_setup_first_seen_locked",
+    "remove_setup_first_seen_locked",
+    "update_session_locked",
+    "update_sessions_locked",
+    "claim_lane_dispatch",
+    "load_active_instances_strict",
+    "load_active_jobs_strict",
+    "load_active_vms_strict",
+    "load_setup_first_seen_strict",
+)
+
 # Files that legitimately implement canonical fcntl-locked helpers OR are
 # already covered by sister gates (catalog #128 covers continual_learning).
 #
@@ -28805,6 +29388,12 @@ _BARE_OS_REPLACE_RE = re.compile(r"\bos\.replace\s*\(\s*[^,]+,\s*([A-Za-z_][A-Za
 
 # Module-constant assignment binding shared-state path. Caches across files
 # so each file only pays one regex compile per scan.
+#
+# Codex round 8 MEDIUM (2026-05-09, in-place harden of #131): the all-caps
+# regex above missed lowercase shared-state path bindings (e.g.
+# ``state_path = Path('.omx/state/foo.json')``); the AST companion
+# below catches every binding whose RHS contains a shared-state literal,
+# regardless of name casing or attribute path.
 _BARE_WRITE_SHARED_VAR_RE = re.compile(
     r"^\s*([A-Z_][A-Z0-9_]*)\s*[:=][^=].*?(['\"])([^'\"]*(?:" +
     "|".join(re.escape(m) for m in _SHARED_STATE_PATH_MARKERS) +
@@ -28813,8 +29402,113 @@ _BARE_WRITE_SHARED_VAR_RE = re.compile(
 )
 
 
+def _bare_write_string_contains_shared_marker(s: str) -> bool:
+    return any(m in s for m in _SHARED_STATE_PATH_MARKERS)
+
+
+def _bare_write_collect_string_constants(node: ast.AST) -> list[str]:
+    """Collect every str constant inside a node sub-tree.
+
+    Returns the literal values as Python strings. Used by the AST binding
+    collector to detect ``Path('.omx/state/...')``,
+    ``base / 'active.json'``, ``f"{base}/active_jobs.json"`` etc.
+    """
+    constants: list[str] = []
+    for sub in ast.walk(node):
+        if isinstance(sub, ast.Constant) and isinstance(sub.value, str):
+            constants.append(sub.value)
+        elif isinstance(sub, ast.JoinedStr):
+            # f-string: collect literal segments
+            for v in sub.values:
+                if isinstance(v, ast.Constant) and isinstance(v.value, str):
+                    constants.append(v.value)
+    return constants
+
+
+def _bare_write_target_name_from_assign_target(target: ast.AST) -> str | None:
+    """Extract the variable / attribute name that an ``Assign`` target binds.
+
+    Handles:
+
+    - ``ast.Name`` → returns the bare name (e.g. ``state_path``)
+    - ``ast.Attribute`` → returns the dotted path (e.g. ``self.foo_path``)
+    - tuple/list-pack targets → returns None (rare; callers should ignore)
+    """
+    if isinstance(target, ast.Name):
+        return target.id
+    if isinstance(target, ast.Attribute):
+        # Build dotted path; bail if value is not a name chain (e.g. call/sub)
+        parts: list[str] = []
+        cur: ast.AST = target
+        while isinstance(cur, ast.Attribute):
+            parts.append(cur.attr)
+            cur = cur.value
+        if isinstance(cur, ast.Name):
+            parts.append(cur.id)
+            return ".".join(reversed(parts))
+        return None
+    return None
+
+
+def _bare_write_collect_shared_vars_ast(text: str) -> set[str]:
+    """AST-based shared-state binding collector (codex round 8 MEDIUM #131).
+
+    Walks every ``Assign`` / ``AnnAssign`` node and registers the LHS
+    variable / attribute path when the RHS contains any shared-state path
+    marker. Catches:
+
+    - ``state_path = Path('.omx/state/foo.json')`` — lowercase, was missed
+      by the regex collector.
+    - ``self.foo_path = base / 'active_jobs.json'`` — attribute target.
+    - ``base = REPO_ROOT / '.omx' / 'state' / 'foo.json'`` — Path-joined
+      string-tuple where the SHARED marker is a string fragment.
+    - ``cache: Path = Path('.omx/state/...')`` — annotated assignment.
+    - ``foo = f'.omx/state/{name}.json'`` — f-string.
+
+    Both bare names AND attribute names (e.g. ``self.foo_path``) are
+    returned so the line scanner's receiver-match can resolve either.
+    """
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return set()
+    out: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            value = node.value
+            if value is None:
+                continue
+            consts = _bare_write_collect_string_constants(value)
+            if not any(_bare_write_string_contains_shared_marker(c) for c in consts):
+                continue
+            for target in node.targets:
+                name = _bare_write_target_name_from_assign_target(target)
+                if name:
+                    out.add(name)
+        elif isinstance(node, ast.AnnAssign):
+            value = node.value
+            if value is None:
+                continue
+            consts = _bare_write_collect_string_constants(value)
+            if not any(_bare_write_string_contains_shared_marker(c) for c in consts):
+                continue
+            name = _bare_write_target_name_from_assign_target(node.target)
+            if name:
+                out.add(name)
+    return out
+
+
 def _bare_write_collect_shared_vars(text: str) -> set[str]:
-    return set(m.group(1) for m in _BARE_WRITE_SHARED_VAR_RE.finditer(text))
+    """Combined regex-based all-caps + AST-based lowercase/attribute collector.
+
+    Catalog #131 v2 (codex round 8 MEDIUM, 2026-05-09): expands #131's
+    detection to lowercase variables (``state_path``), attribute paths
+    (``self.foo_path``), and Path-joined bindings — all of which were
+    silently invisible to the original all-caps-regex collector.
+    """
+    out = set(m.group(1) for m in _BARE_WRITE_SHARED_VAR_RE.finditer(text))
+    out |= _bare_write_collect_shared_vars_ast(text)
+    return out
 
 
 def _bare_write_line_targets_shared(line: str, shared_vars: set[str]) -> bool:
@@ -28936,23 +29630,92 @@ def check_no_bare_writes_to_shared_state(
                 # helper call after a bare write is NOT proof that the write is
                 # serialized; an actual lock/context token must be visible
                 # before or on the write line.
+                #
+                # Codex round 8 MEDIUM (2026-05-09, in-place harden of #131):
+                # presence of a lock token alone is NOT sufficient to waive
+                # a direct `write_text/write_bytes` on a shared-state path.
+                # The atomic-replace pattern (write to `<path>.tmp` + os.replace)
+                # is also required for partial-read safety. The exempt patterns
+                # are:
+                #   (a) call into a canonical helper (e.g. `update_active_jobs_locked`,
+                #       `register_instance`, `posterior_update_locked`) — whole
+                #       transactional contract owned by the helper
+                #   (b) lock token AND atomic-replace tokens both visible in
+                #       the window (write to .tmp then os.replace)
+                #   (c) `os.replace(...)` call itself (the atomic step;
+                #       the .tmp write is the partial-read-safe staging)
                 lo = max(0, lineno - 20)
                 hi = lineno + 1
                 window = "\n".join(lines[lo:hi])
-                if any(tok in window for tok in _BARE_WRITE_LOCK_TOKENS):
+                # Wider forward window for the atomic-replace pattern check
+                # (the os.replace can come AFTER the bare write but in the
+                # same locked block).
+                hi_forward = min(len(lines), lineno + 10)
+                window_forward = "\n".join(lines[lo:hi_forward])
+
+                has_lock_token = any(
+                    tok in window for tok in _BARE_WRITE_LOCK_TOKENS
+                )
+                # Canonical-helper detection: token must appear as a CALL
+                # (`<helper>(`), not as an import statement. Otherwise an
+                # `from x import register_instance` line in the lookback
+                # would falsely waive an unrelated bare write below.
+                has_canonical_helper = False
+                for w_line in window.splitlines():
+                    stripped_line = w_line.lstrip()
+                    if stripped_line.startswith(("import ", "from ")):
+                        continue
+                    if any(
+                        (tok + "(") in w_line
+                        for tok in _BARE_WRITE_CANONICAL_HELPER_CALL_TOKENS
+                    ):
+                        has_canonical_helper = True
+                        break
+                has_atomic_replace_pattern = (
+                    "os.replace" in window_forward
+                    or ".replace(" in window_forward
+                ) and (
+                    ".tmp" in window_forward
+                    or "tmpfile" in window_forward.lower()
+                    or "with_suffix" in window_forward
+                )
+                # The current line IS the os.replace itself — accept (the
+                # write to the .tmp staging is partial-read safe by construction).
+                line_is_atomic_replace = (
+                    _BARE_OS_REPLACE_RE.search(line) is not None
+                )
+                if has_canonical_helper:
+                    continue
+                if (
+                    has_lock_token
+                    and (has_atomic_replace_pattern or line_is_atomic_replace)
+                ):
                     continue
                 rel = py.relative_to(root) if py.is_relative_to(root) else py
+                # Format error message based on which gap the site has
+                if has_lock_token:
+                    detail = (
+                        "lock token visible but no atomic-replace pattern "
+                        "(`<path>.tmp` write + `os.replace`). Lock alone is "
+                        "insufficient: a partial write is visible to readers "
+                        "even under the same lock, and a process crash mid-write "
+                        "leaves a corrupt file"
+                    )
+                else:
+                    detail = (
+                        "no `fcntl.flock` / canonical locked helper visible "
+                        "in 20-line lookback"
+                    )
                 violations.append(
                     f"[Check 131] {rel}:{lineno + 1}: "
-                    "bare write to shared-state path without `fcntl.flock` / "
-                    "canonical locked helper. Per proactive META-class audit, "
-                    "every shared-state write MUST route through one of: "
-                    "`tac.continual_learning.posterior_update_locked` / "
-                    "`tac.deploy.lightning.active_jobs_state.update_active_jobs_locked` / "
-                    "`tac.deploy.lightning.lightning_dispatch._lightning_state_lock` / "
-                    "`tac.vastai_tracker.register_instance` / "
-                    "`tools/claim_catalog_number.py` / "
-                    "`tools/subagent_commit_serializer.py`. "
+                    f"bare write to shared-state path — {detail}. "
+                    "Per proactive META-class audit + codex round 8 MEDIUM, "
+                    "every shared-state write MUST satisfy ONE of: "
+                    "(a) route through a canonical helper "
+                    "(`update_active_jobs_locked` / `register_instance` / "
+                    "`posterior_update_locked` / etc.); "
+                    "(b) reload-inside-lock + write to `<path>.tmp` + "
+                    "`os.replace(<tmp>, <path>)` while holding `fcntl.flock`. "
                     "Add a `# BARE_WRITE_OK:<reason>` waiver if the site is "
                     "single-writer / serialized externally."
                 )
@@ -31811,6 +32574,422 @@ def check_preflight_cli_default_scope_is_all(
         raise PreflightError(
             "check_preflight_cli_default_scope_is_all found "
             f"{len(violations)} weakened-default(s):\n  "
+            + "\n  ".join(v[:300] for v in violations[:3])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #147 — Lightning submit `cancel_pending_job_locked` only
+# pre-network (codex round 7+8 HIGH 1, 2026-05-09)
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Bug class: the round-6 fix (#143) made dispatchers register the pending
+# row BEFORE submit, but the cancel-on-exception logic was too aggressive:
+# `except BaseException` wrapped the entire `submit_lightning_job(...)`
+# call (which includes `Job.run(...)` — the network call) and
+# unconditionally invoked `cancel_pending_job_locked`. SDK timeouts,
+# post-create API errors, property-access failures, or KeyboardInterrupt
+# during/after `Job.run` could leave a real paid Lightning job while
+# the cancel logic silently deleted the only harvester-visible row.
+#
+# Fix surface: dispatchers split exception routing into two narrow
+# clauses — `except _PreNetworkSubmitError` calls
+# `cancel_pending_job_locked` (safe pre-network), and the residual
+# `except BaseException` calls `mark_pending_failed_unknown_billing_locked`
+# (preserves the row for forensic recovery).
+#
+# This META gate refuses any function in a Lightning dispatcher file
+# (filename contains "lightning") that calls `cancel_pending_job_locked`
+# inside an `except` clause whose body wraps a `submit_lightning_job` /
+# `Job.run` invocation, UNLESS the except clause type-narrows away from
+# `BaseException` (e.g. `except _PreNetworkSubmitError`) OR carries a
+# same-line waiver `# CANCEL_PENDING_PRE_NETWORK_OK:<reason>`.
+
+_LIGHTNING_SUBMIT_AMBIGUOUS_TOKENS = (
+    "submit_lightning_job",
+    "Job.run",
+)
+_LIGHTNING_CANCEL_PENDING_FN_TOKEN = "cancel_pending_job_locked"
+_LIGHTNING_PRE_NETWORK_EXC_TOKENS = (
+    "_PreNetworkSubmitError",
+)
+_LIGHTNING_CANCEL_PRE_NETWORK_WAIVER_MARKER = "CANCEL_PENDING_PRE_NETWORK_OK"
+
+
+def _check_147_is_baseexception_handler(handler: ast.ExceptHandler) -> bool:
+    """True if the except handler catches ``BaseException`` or bare ``except:``."""
+    if handler.type is None:
+        return True
+    if isinstance(handler.type, ast.Name) and handler.type.id == "BaseException":
+        return True
+    if isinstance(handler.type, ast.Tuple):
+        for elt in handler.type.elts:
+            if isinstance(elt, ast.Name) and elt.id == "BaseException":
+                return True
+    return False
+
+
+def _check_147_handler_targets_pre_network_only(
+    handler: ast.ExceptHandler,
+) -> bool:
+    """True if the except handler narrows to a pre-network exception class."""
+    names: list[str] = []
+    if handler.type is None:
+        return False
+    if isinstance(handler.type, ast.Name):
+        names = [handler.type.id]
+    elif isinstance(handler.type, ast.Tuple):
+        for elt in handler.type.elts:
+            if isinstance(elt, ast.Name):
+                names.append(elt.id)
+    if not names:
+        return False
+    return all(n in _LIGHTNING_PRE_NETWORK_EXC_TOKENS for n in names)
+
+
+def _check_147_try_block_contains_ambiguous_submit(
+    try_node: ast.Try,
+) -> bool:
+    """Heuristic: True if the `try:` body invokes `submit_lightning_job(...)` or `Job.run(...)`."""
+    for stmt in try_node.body:
+        for sub in ast.walk(stmt):
+            if isinstance(sub, ast.Call):
+                f = sub.func
+                if isinstance(f, ast.Name) and f.id in _LIGHTNING_SUBMIT_AMBIGUOUS_TOKENS:
+                    return True
+                if isinstance(f, ast.Attribute):
+                    if (
+                        f.attr == "run"
+                        and isinstance(f.value, ast.Name)
+                        and f.value.id == "Job"
+                    ):
+                        return True
+                    if f.attr in _LIGHTNING_SUBMIT_AMBIGUOUS_TOKENS:
+                        return True
+    return False
+
+
+def _check_147_handler_body_calls_cancel(
+    handler: ast.ExceptHandler,
+) -> tuple[bool, int | None]:
+    """True (with line) if the except body calls `cancel_pending_job_locked(...)`."""
+    for stmt in handler.body:
+        for sub in ast.walk(stmt):
+            if isinstance(sub, ast.Call):
+                f = sub.func
+                if (
+                    isinstance(f, ast.Name)
+                    and f.id == _LIGHTNING_CANCEL_PENDING_FN_TOKEN
+                ):
+                    return True, sub.lineno
+                if (
+                    isinstance(f, ast.Attribute)
+                    and f.attr == _LIGHTNING_CANCEL_PENDING_FN_TOKEN
+                ):
+                    return True, sub.lineno
+    return False, None
+
+
+def check_lightning_submit_cancel_only_before_network(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #147 — `cancel_pending_job_locked` only safe pre-network.
+
+    Refuses any Lightning dispatcher file (filename contains "lightning")
+    where a `try:` block invokes `submit_lightning_job(...)` or `Job.run(...)`
+    AND an attached `except` clause:
+
+    1. catches `BaseException` (or is a bare `except:`), AND
+    2. invokes `cancel_pending_job_locked(...)` in its body,
+
+    UNLESS the cancel call carries a same-line waiver
+    `# CANCEL_PENDING_PRE_NETWORK_OK:<reason>` OR the handler type
+    narrows to a pre-network exception class (`_PreNetworkSubmitError`).
+
+    The bug: `except BaseException` around `Job.run` includes the network
+    call. Cancelling on ambiguous-billing failures silently deletes the
+    only harvester-visible row for a real paid job.
+
+    Fix: split exception routing — narrow handler for pre-network failures
+    (cancel safe), residual `BaseException` handler routes to
+    `mark_pending_failed_unknown_billing_locked` (preserve row).
+
+    Bug class: codex round 7+8 HIGH 1 (2026-05-09). Memory:
+    feedback_codex_round78_findings_fix_with_self_protection_landed_20260509.md.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    scan_dirs = [
+        root / "experiments",
+        root / "tools",
+        root / "scripts",
+        root / "src" / "tac",
+    ]
+
+    violations: list[str] = []
+    scanned_files = 0
+    for scan_dir in scan_dirs:
+        if not scan_dir.is_dir():
+            continue
+        for py in scan_dir.rglob("*.py"):
+            if _is_oss_export_mirror_path(py):
+                continue
+            s = str(py)
+            if "/tests/" in s or py.name.startswith("test_"):
+                continue
+            if (
+                "experiments/results/public_pr" in s
+                or "experiments/results/comma_lab_public_export" in s
+                or "_intake_" in s
+            ):
+                continue
+            if "lightning" not in py.name:
+                continue
+            try:
+                text = py.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            if (
+                _LIGHTNING_CANCEL_PENDING_FN_TOKEN not in text
+                or not any(t in text for t in _LIGHTNING_SUBMIT_AMBIGUOUS_TOKENS)
+            ):
+                continue
+            scanned_files += 1
+            try:
+                tree = ast.parse(text)
+            except SyntaxError:
+                continue
+            lines = text.splitlines()
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Try):
+                    continue
+                if not _check_147_try_block_contains_ambiguous_submit(node):
+                    continue
+                for handler in node.handlers:
+                    if not _check_147_is_baseexception_handler(handler):
+                        continue
+                    if _check_147_handler_targets_pre_network_only(handler):
+                        continue
+                    has_cancel, cancel_lineno = (
+                        _check_147_handler_body_calls_cancel(handler)
+                    )
+                    if not has_cancel:
+                        continue
+                    waiver_lines: list[int] = []
+                    if cancel_lineno is not None:
+                        waiver_lines.append(cancel_lineno)
+                    waiver_lines.append(node.lineno)
+                    waiver_lines.append(handler.lineno)
+                    waived = False
+                    for ln in waiver_lines:
+                        idx = ln - 1
+                        if 0 <= idx < len(lines) and (
+                            _LIGHTNING_CANCEL_PRE_NETWORK_WAIVER_MARKER
+                            in lines[idx]
+                        ):
+                            waived = True
+                            break
+                    if waived:
+                        continue
+                    rel = py.relative_to(root) if py.is_relative_to(root) else py
+                    violations.append(
+                        f"[Check 147] {rel}:{handler.lineno}: "
+                        "`except BaseException` around a try-block that "
+                        "invokes `submit_lightning_job(...)` / `Job.run(...)` "
+                        "calls `cancel_pending_job_locked(...)` in its body. "
+                        "Bug class: SDK timeout / post-create API error / "
+                        "KeyboardInterrupt mid-Job.run() leaves a real paid "
+                        "Lightning job while this code silently deletes the "
+                        "pending row → ORPHANED PAID JOB invisible to the "
+                        "harvester. Fix: narrow the cancel handler to "
+                        "`except _PreNetworkSubmitError` (pre-network only); "
+                        "route the residual `except BaseException` to "
+                        "`mark_pending_failed_unknown_billing_locked(...)` "
+                        "to preserve the pending row for forensic recovery. "
+                        "Same-line waiver `# CANCEL_PENDING_PRE_NETWORK_OK:"
+                        "<reason>` on the try / except / cancel line."
+                    )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [lightning-submit-cancel-pre-network] {len(violations)} "
+                f"ambiguous-billing-cancel(s) (scanned: {scanned_files} file(s))"
+            )
+            for v in violations[:5]:
+                print(f"    • {v[:240]}")
+            if len(violations) > 5:
+                print(f"    ... ({len(violations) - 5} more)")
+        else:
+            print(
+                "  [lightning-submit-cancel-pre-network] OK "
+                f"({scanned_files} file(s) scanned; 0 ambiguous-billing-cancel(s))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_lightning_submit_cancel_only_before_network found "
+            f"{len(violations)} ambiguous-billing-cancel call site(s):\n  "
+            + "\n  ".join(v[:300] for v in violations[:3])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #148 — `tac.vastai_tracker` mutating callers must use the strict
+# loader (codex round 7 HIGH 2, 2026-05-09)
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Bug class: `tac.vastai_tracker._load_records` returned `[]` on malformed
+# JSON. `register_instance` then wrote the new single record over the
+# corrupt file, dropping every previously-tracked active instance. The
+# new instance looked successfully registered while every previous
+# instance disappeared from cleanup/verification.
+#
+# Fix surface: a new `tac.vastai_tracker.load_active_instances_strict` that
+# raises `VastaiTrackerCorruptError` on JSON parse failure; the locked
+# writers (`register_instance`, `remove_instance`) call the strict loader
+# inside the lock and quarantine the corrupt file to
+# `<path>.corrupt.<utc>`.
+#
+# This META gate refuses any mutating writer in `tac.vastai_tracker` that
+# performs `_load_records(...)` followed by `_write_records(...)` inside
+# the same fcntl-locked region without routing through
+# `load_active_instances_strict`. Sister of Catalog #138
+# (`check_state_writers_strict_load_for_mutating_path`) but scoped to the
+# vastai_tracker module specifically because the loader name there
+# diverges from the canonical `_load_*` naming convention.
+
+_VASTAI_STRICT_LOADER_TOKEN = "load_active_instances_strict"
+_VASTAI_LOSSY_LOADER_TOKEN = "_load_records"
+_VASTAI_TRACKER_PATH_REL = "src/tac/vastai_tracker.py"
+_VASTAI_STRICT_LOAD_WAIVER_MARKER = "VASTAI_TRACKER_STRICT_LOAD_OK"
+_VASTAI_MUTATING_WRITER_TOKENS = (
+    "_write_records",
+)
+
+
+def check_vastai_tracker_strict_load(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #148 — vastai_tracker mutating writers must use strict load.
+
+    Refuses any function in `src/tac/vastai_tracker.py` whose body calls
+    `_write_records(...)` (mutation) inside a body that also invokes the
+    LOSSY `_load_records(...)` loader, UNLESS:
+
+    1. the body also routes through `load_active_instances_strict(...)`, OR
+    2. the function carries a same-line waiver
+       `# VASTAI_TRACKER_STRICT_LOAD_OK:<reason>` on its `def` line.
+
+    The bug: lossy loader returns [] on malformed JSON; the writer then
+    overwrites the corrupt file with a single new record, dropping every
+    other tracked instance.
+
+    Sister of Catalog #138 (`check_state_writers_strict_load_for_mutating_path`)
+    scoped to the vastai_tracker module specifically; #138's pattern
+    detection requires `_load_*` prefix names which the canonical strict
+    loader does not match.
+
+    Bug class: codex round 7 HIGH 2 (2026-05-09). Memory:
+    feedback_codex_round78_findings_fix_with_self_protection_landed_20260509.md.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    target = root / _VASTAI_TRACKER_PATH_REL
+
+    violations: list[str] = []
+    if not target.is_file():
+        if verbose:
+            print(
+                f"  [vastai-tracker-strict-load] OK "
+                f"(target file not present: {_VASTAI_TRACKER_PATH_REL})"
+            )
+        return violations
+    try:
+        text = target.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        if verbose:
+            print(
+                f"  [vastai-tracker-strict-load] could not read target "
+                f"({_VASTAI_TRACKER_PATH_REL}): {exc!r}"
+            )
+        return violations
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return violations
+    lines = text.splitlines()
+
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        has_write = False
+        has_lossy_load = False
+        has_strict_load = False
+        for stmt in node.body:
+            for sub in ast.walk(stmt):
+                if isinstance(sub, ast.Call):
+                    f = sub.func
+                    fname = (
+                        f.id if isinstance(f, ast.Name)
+                        else f.attr if isinstance(f, ast.Attribute)
+                        else None
+                    )
+                    if fname in _VASTAI_MUTATING_WRITER_TOKENS:
+                        has_write = True
+                    if fname == _VASTAI_LOSSY_LOADER_TOKEN:
+                        has_lossy_load = True
+                    if fname == _VASTAI_STRICT_LOADER_TOKEN:
+                        has_strict_load = True
+        if not has_write:
+            continue
+        if has_strict_load:
+            continue
+        if not has_lossy_load:
+            continue
+        def_line_idx = node.lineno - 1
+        if def_line_idx < len(lines) and (
+            _VASTAI_STRICT_LOAD_WAIVER_MARKER in lines[def_line_idx]
+        ):
+            continue
+        violations.append(
+            f"[Check 148] {_VASTAI_TRACKER_PATH_REL}:{node.lineno}: "
+            f"function {node.name!r} is a mutating writer "
+            "(calls _write_records) but uses only the lossy `_load_records` "
+            "loader. The lossy loader returns [] on malformed JSON; the "
+            "subsequent _write_records would silently overwrite the corrupt "
+            "tracker with a single new record, dropping every other tracked "
+            "instance. Fix: route the load through "
+            "`load_active_instances_strict(...)` inside the fcntl lock and "
+            "quarantine on `VastaiTrackerCorruptError`. Same-line waiver "
+            "`# VASTAI_TRACKER_STRICT_LOAD_OK:<reason>` on the `def` line "
+            "for read-only-with-fallback paths."
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [vastai-tracker-strict-load] {len(violations)} "
+                f"non-strict-loader writer(s)"
+            )
+            for v in violations[:5]:
+                print(f"    • {v[:240]}")
+        else:
+            print(
+                "  [vastai-tracker-strict-load] OK "
+                f"({_VASTAI_TRACKER_PATH_REL} writers all use strict loader)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_vastai_tracker_strict_load found "
+            f"{len(violations)} non-strict-loader writer(s):\n  "
             + "\n  ".join(v[:300] for v in violations[:3])
         )
     return violations

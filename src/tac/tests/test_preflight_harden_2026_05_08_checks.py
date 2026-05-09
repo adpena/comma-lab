@@ -9,6 +9,7 @@ tmp-tree negative check guards the detector itself.
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -19,6 +20,7 @@ from tac.preflight import (
     check_admm_lagrangian_bisection_convergent,
     check_codec_pipeline_op_order_deterministic,
     check_evidence_row_has_falsification_scope_when_negative,
+    check_public_pr_intake_clones_pristine,
     check_per_tensor_K_side_info_matches_decoder_expectation,
 )
 
@@ -189,3 +191,121 @@ def test_137531_candidate_check_passes_on_live_repo() -> None:
 
 def test_137531_candidate_strict_passes_on_live_repo() -> None:
     check_137531_candidate_decoder_path_wired(strict=True, verbose=False)
+
+
+def test_public_pr_pristine_lfs_only_dirty_preserves_status_columns(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """LFS-only pointer/content dirtiness is benign, including the first
+    `git status --short` row where the leading worktree status column is a
+    space. A whole-output `.strip()` used to corrupt that first path.
+    """
+    clone = (
+        tmp_path
+        / "experiments"
+        / "results"
+        / "public_pr90_intake_20260505_auto"
+        / "source"
+    )
+    (clone / ".git").mkdir(parents=True)
+
+    def fake_run(
+        cmd: list[str],
+        *,
+        capture_output: bool,
+        text: bool,
+        timeout: int,
+    ) -> subprocess.CompletedProcess[str]:
+        assert capture_output is True
+        assert text is True
+        assert timeout == 30
+        if cmd[:3] == ["git", "-C", str(clone)]:
+            subcmd = cmd[3:]
+            if subcmd == ["status", "--short"]:
+                return subprocess.CompletedProcess(
+                    cmd,
+                    0,
+                    stdout=(
+                        " M submissions/qrepro/assets/animated_triptych.gif\n"
+                        " M submissions/qrepro/assets/archive_components.png\n"
+                    ),
+                    stderr="",
+                )
+            if subcmd == ["lfs", "status", "--porcelain"]:
+                return subprocess.CompletedProcess(
+                    cmd,
+                    0,
+                    stdout=(
+                        " M submissions/qrepro/assets/animated_triptych.gif\n"
+                        " M submissions/qrepro/assets/archive_components.png\n"
+                    ),
+                    stderr="",
+                )
+            if subcmd == ["diff", "--numstat"]:
+                return subprocess.CompletedProcess(
+                    cmd,
+                    0,
+                    stdout=(
+                        "-\t-\tsubmissions/qrepro/assets/animated_triptych.gif\n"
+                        "-\t-\tsubmissions/qrepro/assets/archive_components.png\n"
+                    ),
+                    stderr="",
+                )
+        return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="unexpected")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    assert (
+        check_public_pr_intake_clones_pristine(
+            repo_root=tmp_path, strict=True, verbose=False
+        )
+        == []
+    )
+
+
+def test_public_pr_pristine_fans_out_clean_status_checks(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Clean clone status checks should run concurrently; dirty clones still
+    take the sequential LFS/diff path.
+    """
+    clones = []
+    for idx in range(3):
+        clone = (
+            tmp_path
+            / "experiments"
+            / "results"
+            / f"public_pr{90 + idx}_intake_20260505_auto"
+            / "source"
+        )
+        (clone / ".git").mkdir(parents=True)
+        clones.append(clone)
+
+    seen_thread_names: set[str] = set()
+
+    def fake_run(
+        cmd: list[str],
+        *,
+        capture_output: bool,
+        text: bool,
+        timeout: int,
+    ) -> subprocess.CompletedProcess[str]:
+        import threading
+
+        assert capture_output is True
+        assert text is True
+        assert timeout == 30
+        if len(cmd) >= 5 and cmd[0] == "git" and cmd[3:] == ["status", "--short"]:
+            seen_thread_names.add(threading.current_thread().name)
+            return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+        return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="unexpected")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    assert (
+        check_public_pr_intake_clones_pristine(
+            repo_root=tmp_path, strict=True, verbose=False
+        )
+        == []
+    )
+    assert len(seen_thread_names) >= 2

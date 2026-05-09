@@ -873,6 +873,54 @@ class TestNoMpsFallbackDefault:
         v = check_no_mps_fallback_default(repo_root=root, strict=False, verbose=False)
         assert len(v) >= 1
 
+    def test_deleted_path_during_scan_is_skipped(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        script = root / "experiments" / "missing.py"
+        assert _scan_python_for_mps_fallback(script, root) == []
+
+    def test_generic_source_iterator_skips_experiment_results(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        source = root / "experiments" / "build_candidate.py"
+        result = root / "experiments" / "results" / "candidate" / "inflate.py"
+        _write(source, "print('source')\n")
+        _write(result, "print('generated')\n")
+
+        paths = preflight_mod._iter_python_files(root, ["experiments"])
+
+        assert source in paths
+        assert result not in paths
+
+    def test_python_ast_cache_reused_across_source_scanners(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        root = _stub_repo(tmp_path)
+        script = root / "experiments" / "train_cache_probe.py"
+        _write(
+            script,
+            """
+            def train(*, eval_roundtrip=True):
+                return "cuda"
+            """,
+        )
+        preflight_mod._cached_python_text_and_tree.cache_clear()
+        original_parse = preflight_mod.ast.parse
+        calls = 0
+
+        def counting_parse(*args, **kwargs):
+            nonlocal calls
+            calls += 1
+            return original_parse(*args, **kwargs)
+
+        monkeypatch.setattr(preflight_mod.ast, "parse", counting_parse)
+
+        assert _scan_python_for_mps_fallback(script, root) == []
+        assert _scan_python_for_eval_roundtrip_false(script, root) == []
+        assert _scan_python_for_disable_eval_roundtrip_flag(script, root) == []
+        assert calls == 1
+        preflight_mod._cached_python_text_and_tree.cache_clear()
+
 
 # ─── Check 2: shell `set -e` required ────────────────────────────────────────
 

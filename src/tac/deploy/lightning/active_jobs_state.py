@@ -518,6 +518,82 @@ def update_pending_to_active_locked(
     return update_active_jobs_locked(_promote, path=path, lock_path=lock_path)
 
 
+FAILED_UNKNOWN_BILLING_STATUS_TOKEN = "failed_unknown_billing"
+
+
+def mark_pending_failed_unknown_billing_locked(
+    job_name: str,
+    *,
+    failure_reason: str,
+    submit_partial_result: dict[str, Any] | None = None,
+    extra_fields: dict[str, Any] | None = None,
+    path: Path | None = None,
+    lock_path: Path | None = None,
+) -> list[dict[str, Any]]:
+    """Codex round 7+8 HIGH 1 (Catalog #147) — mark pending row as
+    ``status=failed_unknown_billing`` when submit raised AT/AFTER the network
+    call.
+
+    The previous Lightning-dispatcher pattern wrapped ``submit_lightning_job``
+    in ``except BaseException`` and unconditionally called
+    ``cancel_pending_job_locked``. That assumed every exception happened
+    BEFORE billing — which is FALSE for the entire ``Job.run(...)`` window.
+    SDK timeouts, post-create API errors, property-access failures, or
+    ``KeyboardInterrupt`` mid-submit can leave a real paid Lightning job
+    while the previous code silently deleted the only harvester-visible
+    breadcrumb.
+
+    The fix splits submit into:
+
+    1. ``cancel_pending_job_locked(...)`` — for KNOWN pre-network failures
+       (import error, missing config, invalid args). The dispatcher catches
+       these from the pre-network preparation step.
+    2. ``mark_pending_failed_unknown_billing_locked(...)`` — for ambiguous
+       failures inside the ``Job.run(...)`` window. The pending row is
+       PRESERVED and re-tagged so the harvester can see it and the operator
+       can manually reconcile against the Lightning dashboard.
+
+    The status token ``failed_unknown_billing`` is intentionally distinct
+    from ``active`` (real billing job) and ``pending`` (pre-submit) so the
+    harvester can surface these for manual review without flipping them
+    into the spend-rollup or the success/failure ledger automatically.
+
+    Raises ``PendingJobNotFoundError`` if no pending row exists.
+    """
+    if not failure_reason:
+        raise ValueError(
+            "mark_pending_failed_unknown_billing_locked: failure_reason "
+            "must be a non-empty string for forensic recovery"
+        )
+
+    def _mark(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        marked = False
+        for row in rows:
+            if (
+                row.get("job_name") == job_name
+                and row.get("status") == PENDING_STATUS_TOKEN
+            ):
+                row["status"] = FAILED_UNKNOWN_BILLING_STATUS_TOKEN
+                row["failure_reason"] = failure_reason
+                row["submit_status_unknown_at_utc"] = _dt.datetime.now(
+                    _dt.timezone.utc,
+                ).isoformat(timespec="seconds")
+                if submit_partial_result is not None:
+                    row["submit_partial_result"] = submit_partial_result
+                if extra_fields:
+                    row.update(extra_fields)
+                marked = True
+                break
+        if not marked:
+            raise PendingJobNotFoundError(
+                f"mark_pending_failed_unknown_billing_locked: no pending row "
+                f"for job_name={job_name!r}; nothing to mark."
+            )
+        return rows
+
+    return update_active_jobs_locked(_mark, path=path, lock_path=lock_path)
+
+
 def cancel_pending_job_locked(
     job_name: str,
     *,
@@ -534,9 +610,9 @@ def cancel_pending_job_locked(
     NOTE: if submit failed but we cannot tell whether billing started
     (e.g., timeout mid-submit), the safer choice is to leave the
     pending row in place AND mark it as ``status=failed_unknown_billing``
-    via ``update_pending_to_active_locked`` rather than cancelling.
-    Cancellation is for the unambiguous "submit raised before any
-    network call to Lightning" case.
+    via :func:`mark_pending_failed_unknown_billing_locked` (Codex round
+    7+8 HIGH 1, Catalog #147). Cancellation is for the unambiguous
+    "submit raised before any network call to Lightning" case ONLY.
     """
 
     def _cancel(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -565,6 +641,7 @@ __all__ = [
     "ACTIVE_JOBS_LOCK",
     "ACTIVE_STATUS_TOKEN",
     "PENDING_STATUS_TOKEN",
+    "FAILED_UNKNOWN_BILLING_STATUS_TOKEN",  # Catalog #147
     "ActiveJobsCorruptError",
     "PendingJobNotFoundError",
     "load_active_jobs",
@@ -576,4 +653,5 @@ __all__ = [
     "register_pending_job_locked",
     "update_pending_to_active_locked",
     "cancel_pending_job_locked",
+    "mark_pending_failed_unknown_billing_locked",  # Catalog #147
 ]
