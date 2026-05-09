@@ -531,12 +531,16 @@ def preflight_all(
         # inflate_runtime_loc_budget, runtime_dep_closure, export_format,
         # score_aware_loss, bolt_on_loc_budget, no_op_detector_planned)
         # OR opt out via lane_class='substrate_engineering' / research_only.
-        # Held warn-only initially per operator approval 2026-05-09; flip
-        # to STRICT after Phase 2 lanes (T1/T6/T10/T15/T17/T18) backfill
-        # the fields. Memory:
+        # 2026-05-09 STRICT-FLIP: adc4c39c backfill landed all 7 flagged
+        # lanes (live count 7→0); operator-approved per "fix all yourself"
+        # directive. Phase 2 lanes (T1/T6/T10/T15/T17/T18) pre-registered
+        # at L0 SKETCH with research_only=true UNTIL Phase 1 lands sub-0.155.
+        # Ratchet protects against future representation lanes promoting to
+        # L1+ without the 8 archive-grammar fields. Memory:
         # feedback_why_leaderboard_hnerv_worked_when_ours_didnt_PERMANENT_KNOWLEDGE_20260509.md
+        # + feedback_representation_lane_8_field_backfill_landed_20260509.md.
         check_representation_lane_has_archive_grammar_at_design_time(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # 2026-05-09 Subagent coherence-by-default (#125): every post-2026-05-09
         # landing memo (feedback_*_landed_<YYYYMMDD>.md) MUST declare ALL 6
@@ -555,6 +559,27 @@ def preflight_all(
         # STRICT after legacy-commit backfill drives live count to 0. Memory:
         # feedback_unified_lagrangian_action_principle_GR_style_20260509.md
         check_lane_pre_registered_before_work_starts(strict=False, verbose=verbose)
+        # 2026-05-09 codex round-2 HIGH 2 fix (#127): authoritative-tag
+        # literals must route through `validate_custody` /
+        # `validate_custody_verdict` (or `posterior_update`/
+        # `posterior_update_locked`). The previous tag-only predicate
+        # accepted CPU tags on non-GHA hardware + axis/tag mismatches.
+        # Held warn-only initially per directive — flip to STRICT after
+        # live count drives to 0. Memory:
+        # feedback_codex_round2_custody_concurrency_fix_landed_20260509.md
+        check_authoritative_tag_requires_custody_metadata(
+            strict=False, verbose=verbose,
+        )
+        # 2026-05-09 codex round-2 MEDIUM fix (#128): bare
+        # `save_posterior(...)` calls under parallel harvest silently drop
+        # concurrent updates because the load→mutate→write cycle is not
+        # atomic. The locked path `posterior_update_locked` does it inside
+        # `fcntl.flock(LOCK_EX)`. Held warn-only initially; flip to STRICT
+        # after live count drives to 0. Memory:
+        # feedback_codex_round2_custody_concurrency_fix_landed_20260509.md
+        check_continual_learning_writes_use_lock(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -26667,9 +26692,45 @@ def _landing_memo_date(path: Path) -> int | None:
         return None
 
 
+def _strip_code_spans_and_fences(text: str) -> str:
+    """Strip backtick-fenced code blocks and inline backtick spans from text.
+
+    Returns the text with code-span bodies removed. Used to ensure that
+    opt-out tokens documented INSIDE code spans are not treated as actual
+    opt-outs by the memo (e.g., "OR add ``research_only=true`` (with
+    rationale) anywhere in the memo body" is documentation, not opt-out).
+
+    Algorithm:
+      1. Remove triple-backtick fenced blocks: ```...```
+      2. Remove single-backtick inline spans: `...`
+    """
+    fenced = re.sub(r"```.*?```", " ", text, flags=re.DOTALL)
+    inline = re.sub(r"`[^`\n]*`", " ", fenced)
+    return inline
+
+
 def _memo_declares_research_only(text: str) -> bool:
-    """Return True iff the memo body opts out as research-only."""
-    lower = text.lower()
+    """Return True iff the memo body opts out as research-only.
+
+    Discipline: the opt-out token must appear OUTSIDE backtick / code-fence
+    contexts. ``research_only=true`` mentioned inside a backtick code span
+    or fenced code block is documentation (e.g., "**OR** add
+    ``research_only=true`` (with rationale) anywhere in the memo body."), NOT
+    an opt-out declaration. This avoids the trivial false-positive where a
+    memo describing the opt-out rule is treated as opting out itself.
+
+    Additionally: if the memo explicitly says ``research_only=false``,
+    treat any other in-narrative opt-out token as documentation rather
+    than an actual opt-out declaration.
+    """
+    stripped = _strip_code_spans_and_fences(text)
+    lower = stripped.lower()
+    if (
+        "research_only=false" in lower
+        or "research_only:false" in lower
+        or "research_only: false" in lower
+    ):
+        return False
     for tok in _RESEARCH_ONLY_OPTOUT_TOKENS:
         if tok in lower:
             return True
@@ -27108,6 +27169,16 @@ _LANE_ID_FAKE_WAIVER_RE = re.compile(
     re.IGNORECASE,
 )
 
+# File-level waiver: a single `# FAKE_LANE_OK_FILE:<reason>` in the first
+# 30 lines exempts the entire test file (used for files like
+# `test_check_lane_pre_registered_before_work_starts.py` whose entire
+# purpose is to test the gate via dozens of fake lane_id fixtures — adding
+# per-line waivers would be noise and would mask real future violations).
+_LANE_ID_FAKE_WAIVER_FILE_RE = re.compile(
+    r"#\s*FAKE_LANE_OK_FILE\s*:\s*[^\n]+",
+    re.IGNORECASE,
+)
+
 
 def _line_or_window_has_fake_waiver(lines: list[str], lineno: int, window: int = 5) -> bool:
     """Return True iff the same line OR within ``window`` lines above carries
@@ -27230,6 +27301,15 @@ def check_lane_pre_registered_before_work_starts(
             lines = text.splitlines()
             scanned_lines += len(lines)
             is_test = _is_test_path(rel)
+            # File-level waiver: a single `# FAKE_LANE_OK_FILE:<reason>` in
+            # the first 30 lines exempts an entire test file. Used for files
+            # whose entire purpose is to test the gate via dozens of fake
+            # lane_id fixtures (per-line waivers would be noise and would
+            # mask real future violations introduced into the same file).
+            if is_test:
+                head = "\n".join(lines[:30])
+                if _LANE_ID_FAKE_WAIVER_FILE_RE.search(head):
+                    continue
             for lineno, line in enumerate(lines):
                 # Quick prefilter — skip lines without "lane_" prefix.
                 if "lane_" not in line:
@@ -27289,6 +27369,289 @@ def check_lane_pre_registered_before_work_starts(
             "`tools/lane_maturity.py add-lane <lane_id> --name <...> "
             "--phase <N>` BEFORE editing code that references the lane. "
             "Test fixtures may add '# FAKE_LANE_OK:<reason>' on the same line."
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #127 — authoritative tag emission must go through validate_custody
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Bug class (codex round-2 HIGH 2, 2026-05-09): direct `.evidence_tag in
+# AUTHORITATIVE_TAGS` checks accept anchors with mismatched axis or non-1:1
+# contest-compliant hardware. The `validate_custody` validator on
+# `tac.continual_learning.ContestResult` checks tag + axis +
+# hardware_substrate jointly. This gate refuses any code site under
+# `src/tac/`, `tools/`, or `experiments/` that bypasses the validator by
+# matching the tag string directly against `AUTHORITATIVE_TAGS` (or the
+# legacy short-form `[contest-CPU]` literal) without an adjacent
+# `validate_custody` / `validate_custody_verdict` call OR a same-line
+# waiver `# CUSTODY_VALIDATOR_OK:<reason>`.
+
+_AUTHORITATIVE_TAG_LITERALS: tuple[str, ...] = (
+    "[contest-CUDA]",
+    "[contest-CPU GHA Linux x86_64]",
+    "[contest-CPU GHA]",
+    "[contest-CPU]",
+)
+
+_CUSTODY_VALIDATOR_TOKENS: tuple[str, ...] = (
+    "validate_custody",
+    "validate_custody_verdict",
+    "posterior_update_locked",
+    "posterior_update(",
+)
+
+_CUSTODY_WAIVER_MARKER = "CUSTODY_VALIDATOR_OK"
+
+
+def check_authoritative_tag_requires_custody_metadata(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #127 — authoritative-tag literals must route through validate_custody.
+
+    Refuses code sites that match an authoritative-tag literal string
+    (``"[contest-CUDA]"``, ``"[contest-CPU GHA Linux x86_64]"``, etc.)
+    against ``AUTHORITATIVE_TAGS`` without either:
+
+    1. An adjacent ``validate_custody`` / ``validate_custody_verdict``
+       call OR a routing-through-``posterior_update`` /
+       ``posterior_update_locked`` invocation in the same function/window,
+       OR
+    2. A same-line waiver comment ``# CUSTODY_VALIDATOR_OK:<reason>``.
+
+    Held warn-only initially per the directive — flip to STRICT after
+    live count drives to 0.
+
+    Bug class: codex round-2 HIGH 2 (2026-05-09). Empirical anchors with
+    a CPU tag on a non-GHA Linux host (or CUDA tag with axis mismatch)
+    were promoted into the posterior because the tag-only predicate
+    `is_authoritative()` did not validate substrate / axis. The custody
+    validator now checks those jointly; this gate prevents the bypass
+    pattern from coming back.
+
+    Memory: feedback_codex_round2_custody_concurrency_fix_landed_20260509.md
+    """
+    root = Path(repo_root or REPO_ROOT)
+    scan_dirs = [root / "src" / "tac", root / "tools", root / "experiments"]
+    # Exclude the canonical implementation file (which legitimately holds the
+    # tag literals + validator definitions) and the test files exercising it.
+    EXCLUDED = {
+        root / "src" / "tac" / "continual_learning.py",
+    }
+
+    violations: list[str] = []
+    scanned_files = 0
+    for scan_dir in scan_dirs:
+        if not scan_dir.is_dir():
+            continue
+        for py in scan_dir.rglob("*.py"):
+            if py in EXCLUDED:
+                continue
+            # Skip tests (they exercise the API legitimately).
+            if "/tests/" in str(py) or py.name.startswith("test_"):
+                continue
+            try:
+                text = py.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            # Quick prefilter: skip files that don't reference AUTHORITATIVE_TAGS
+            # at all. Files that only mention tag literals in docstrings are not
+            # bypass patterns; the bypass requires the membership check.
+            if "AUTHORITATIVE_TAGS" not in text:
+                continue
+            scanned_files += 1
+            lines = text.splitlines()
+            # Whole-file accept: if the file uses any of the canonical
+            # validator/router functions, the AUTHORITATIVE_TAGS reference is
+            # part of the validation pipeline (not a bypass).
+            if any(tok in text for tok in _CUSTODY_VALIDATOR_TOKENS):
+                continue
+            for lineno, line in enumerate(lines):
+                # Skip comment-only lines.
+                stripped = line.lstrip()
+                if stripped.startswith("#"):
+                    continue
+                # The bypass pattern is `something in AUTHORITATIVE_TAGS`
+                # (or `not in AUTHORITATIVE_TAGS`) WITHOUT an adjacent
+                # validator routing. We catch the membership-check token.
+                if "in AUTHORITATIVE_TAGS" not in line:
+                    continue
+                # Same-line waiver?
+                if _CUSTODY_WAIVER_MARKER in line:
+                    continue
+                rel = py.relative_to(root) if py.is_relative_to(root) else py
+                violations.append(
+                    f"[Check 127] {rel}:{lineno + 1}: "
+                    "membership check `in AUTHORITATIVE_TAGS` without an "
+                    "adjacent validate_custody / posterior_update call. "
+                    "Per codex round-2 HIGH 2, every authoritative-tag site MUST "
+                    "route through `tac.continual_learning.ContestResult."
+                    "validate_custody` (or `posterior_update`/`posterior_update_locked`) "
+                    "to verify (tag, axis, hardware_substrate) jointly. Add a "
+                    "`# CUSTODY_VALIDATOR_OK:<reason>` waiver if the site is "
+                    "intentionally tag-only."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [authoritative-tag-validator] {len(violations)} bypass(es) "
+                f"(scanned: {scanned_files} file(s) under src/tac/, tools/, "
+                f"experiments/)"
+            )
+            for v in violations[:5]:
+                print(f"    • {v[:240]}")
+            if len(violations) > 5:
+                print(f"    ... ({len(violations) - 5} more)")
+        else:
+            print(
+                "  [authoritative-tag-validator] OK "
+                f"({scanned_files} file(s) scanned; 0 bypass(es))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_authoritative_tag_requires_custody_metadata: "
+            f"{len(violations)} bypass(es) of the custody validator; first 3:\n  "
+            + "\n  ".join(v[:300] for v in violations[:3])
+            + "\n\nFix: route through `validate_custody`/`posterior_update`."
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #128 — continual_learning posterior writes must use the locked path
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Bug class (codex round-2 MEDIUM, 2026-05-09): direct `save_posterior`
+# calls under parallel harvesters silently drop concurrent updates because
+# the load → mutate → write cycle is not atomic. The locked path
+# `posterior_update_locked` does load → update → save inside an exclusive
+# fcntl lock so concurrent updates of distinct anchors all survive.
+# This gate refuses any caller importing `save_posterior` directly without
+# adjacent `posterior_update_locked`/`_posterior_lock` use OR a same-line
+# waiver `# SAVE_POSTERIOR_LOCKED_OK:<reason>`.
+
+
+_SAVE_POSTERIOR_WAIVER_MARKER = "SAVE_POSTERIOR_LOCKED_OK"
+
+
+def check_continual_learning_writes_use_lock(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #128 — continual_learning writes must go through the locked path.
+
+    Refuses code sites under `src/tac/`, `tools/`, or `experiments/` that
+    import `save_posterior` from `tac.continual_learning` (or call it
+    directly) without:
+
+    1. Also using `posterior_update_locked` / `_posterior_lock` in the
+       same file (i.e., the file is the canonical writer that owns the
+       locking discipline), OR
+    2. A same-line waiver `# SAVE_POSTERIOR_LOCKED_OK:<reason>`.
+
+    Held warn-only initially per the directive — flip to STRICT after live
+    count drives to 0.
+
+    Bug class: codex round-2 MEDIUM (2026-05-09). Bare `save_posterior` +
+    fixed `.tmp` path under parallel harvest silently drops concurrent
+    updates. The locked path uses `fcntl.flock(LOCK_EX)` on
+    `.omx/state/.continual_learning.lock`, reloads inside the lock,
+    re-runs the duplicate check, and writes to a UNIQUE temp file.
+
+    Memory: feedback_codex_round2_custody_concurrency_fix_landed_20260509.md
+    """
+    root = Path(repo_root or REPO_ROOT)
+    scan_dirs = [root / "src" / "tac", root / "tools", root / "experiments"]
+    # The canonical implementation file legitimately defines + uses both
+    # symbols. Tests legitimately exercise both. Skip both.
+    EXCLUDED = {
+        root / "src" / "tac" / "continual_learning.py",
+    }
+
+    violations: list[str] = []
+    scanned_files = 0
+    for scan_dir in scan_dirs:
+        if not scan_dir.is_dir():
+            continue
+        for py in scan_dir.rglob("*.py"):
+            if py in EXCLUDED:
+                continue
+            if "/tests/" in str(py) or py.name.startswith("test_"):
+                continue
+            try:
+                text = py.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            if "save_posterior" not in text:
+                continue
+            scanned_files += 1
+            # Whole-file accept: if the file ALSO uses the locked path or
+            # the lock context manager, treat it as a canonical writer.
+            uses_lock_path = (
+                "posterior_update_locked" in text
+                or "_posterior_lock" in text
+            )
+            lines = text.splitlines()
+            for lineno, line in enumerate(lines):
+                stripped = line.lstrip()
+                if stripped.startswith("#"):
+                    continue
+                # Direct call to save_posterior (not save_posterior_locked,
+                # which doesn't currently exist but reserved as future-compat).
+                # Match the bare call form `save_posterior(...)`. Skip
+                # imports — only the call site is the bug.
+                if "save_posterior(" not in line:
+                    continue
+                if _SAVE_POSTERIOR_WAIVER_MARKER in line:
+                    continue
+                if uses_lock_path:
+                    # Caller co-owns the lock discipline; allow.
+                    continue
+                rel = py.relative_to(root) if py.is_relative_to(root) else py
+                violations.append(
+                    f"[Check 128] {rel}:{lineno + 1}: "
+                    "calls `save_posterior(...)` directly without "
+                    "`posterior_update_locked` / `_posterior_lock` use in the "
+                    "same file. Per codex round-2 MEDIUM, parallel harvesters "
+                    "MUST go through `posterior_update_locked` so the "
+                    "load→update→save cycle is atomic under fcntl. Add a "
+                    "`# SAVE_POSTERIOR_LOCKED_OK:<reason>` waiver if the site "
+                    "is single-writer / serialized externally."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [continual-learning-writes-locked] {len(violations)} "
+                f"unlocked save(s) (scanned: {scanned_files} file(s) under "
+                "src/tac/, tools/, experiments/)"
+            )
+            for v in violations[:5]:
+                print(f"    • {v[:240]}")
+            if len(violations) > 5:
+                print(f"    ... ({len(violations) - 5} more)")
+        else:
+            print(
+                "  [continual-learning-writes-locked] OK "
+                f"({scanned_files} file(s) scanned; 0 unlocked save(s))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_continual_learning_writes_use_lock: "
+            f"{len(violations)} unlocked save(s); first 3:\n  "
+            + "\n  ".join(v[:300] for v in violations[:3])
+            + "\n\nFix: replace bare `save_posterior(...)` with "
+            "`posterior_update_locked(result, ...)` from "
+            "`tac.continual_learning`."
         )
     return violations
 
