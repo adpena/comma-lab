@@ -449,6 +449,14 @@ class JointADMMConfig:
     byte_budget: float = 0.0
     score_budget_per_stream: dict[str, float] | None = None
     verbose: bool = False
+    # T19 migration (2026-05-09): when True (default), the adaptive-ρ logic
+    # in run_admm consumes the canonical ``adaptive_rho_step`` helper instead
+    # of the inline Q4B + steady-state code. Backward-compat OFF mode
+    # preserves bit-for-bit OLD inline behavior for regression verification
+    # against the 14 pre-migration tests. See
+    # ``feedback_t19_migration_and_cathedral_autopilot_catalog_landed_20260509.md``
+    # for migration parity proofs.
+    use_canonical_adaptive_rho: bool = True
 
     def __post_init__(self) -> None:
         if self.byte_budget <= 0:
@@ -741,46 +749,85 @@ def run_admm(
         # stabilise even though discrete oscillation may be present.
         dual_res = rho * float(np.linalg.norm(bytes_arr - bytes_prev))
 
+        # T19 — Adaptive-ρ ADMM step (Boyd §3.4.1; He-Yang 2000).
+        #
+        # Two paths exist for backward compat. ``use_canonical_adaptive_rho``
+        # gates between them and defaults to True (post-migration 2026-05-09).
+        #
+        # Both paths preserve bit-for-bit identical numerical behavior to the
+        # pre-migration inline code on the 14 baseline regression tests. The
+        # canonical path delegates to ``adaptive_rho_step`` (single source of
+        # truth for the Boyd update); the legacy path keeps the literal
+        # inline code below for regression verification.
+        #
         # Q4B FIX (Carmack Option B, Boyd §3.4.1, 2026-04-30 council #271):
-        # Adaptive rho_init refinement on the FIRST iteration only.
+        # Adaptive rho_init refinement on the FIRST iteration only. Fixed
+        # parameters (mu=10, tau_grow=2, tau_shrink=0.5, rho clip [1e-6, 1e6])
+        # — these are NOT the user-configurable cfg.rho_growth/rho_shrink/
+        # rho_imbalance_ratio because the iter-1 rule is a one-shot
+        # "rho_init seed correction" with Boyd's canonical defaults.
         #
-        # Rationale: cfg.rho_init=1.0 (default) is unstable for problems
-        # with low quadratic curvature 2*a < 0.01 because the dual update
-        # rho * budget_gap blows up before bytes_arr can stabilise. Boyd
-        # 2011 §3.4.1 recommends scaling rho to the first-iteration ratio
-        # of primal/dual residuals: if r1 / s1 > 10 (rho too small),
-        # multiply by 2; if s1 / r1 > 10 (rho too large), divide by 2.
-        # Cap at [1e-6, 1e6].
+        # Steady-state (iter > 1, OR iter 1 if Q4B did not fire):
+        #   - mu  = cfg.rho_imbalance_ratio
+        #   - tau = cfg.rho_growth / cfg.rho_shrink
+        #   - rho clip = [cfg.rho_init * 1e-3, cfg.rho_max]
         #
-        # Applied on iter 1 ONLY, and EXCLUSIVE with the steady-state
-        # adaptive rule below: when Q4B fires we skip the steady-state
-        # adjustment for this iteration. This prevents the well-tuned
-        # rho_init configurations (e.g. test_two_stream_convex_converges_to_kkt
-        # with rho_init=0.02) from being double-bumped to instability. No
-        # API change: cfg.rho_init stays as the SEED, the adaptive step
-        # refines it once on iter 1.
-        q4b_fired = False
-        if it == 1:
-            primal_safe = max(primal_res, 1e-12)
-            dual_safe = max(dual_res, 1e-12)
-            ratio = primal_safe / dual_safe
-            if ratio > 10.0:
-                rho = min(max(rho * 2.0, 1e-6), 1e6)
-                q4b_fired = True
-            elif ratio < 0.1:
-                rho = min(max(rho * 0.5, 1e-6), 1e6)
-                q4b_fired = True
-
-        # Adaptive ρ (Boyd §3.4.1). Skip on iter 1 if Q4B already adjusted —
-        # otherwise the same residual ratio drives BOTH rules and rho gets
-        # double-scaled (verified failure mode on test_two_stream_convex_*
+        # Q4B is EXCLUSIVE with the steady-state rule on iter 1. Without
+        # this exclusion the same residual ratio drives BOTH rules and rho
+        # gets double-scaled (verified failure mode on test_two_stream_convex_*
         # with rho_init=0.02: Q4B → 0.04, then steady-state → 0.08 → bytes
         # corner-pin to [0, 29] instead of equilibrating to KKT [167, 133]).
-        if not q4b_fired:
-            if primal_res > cfg.rho_imbalance_ratio * max(dual_res, 1e-12):
-                rho = min(rho * cfg.rho_growth, cfg.rho_max)
-            elif dual_res > cfg.rho_imbalance_ratio * max(primal_res, 1e-12):
-                rho = max(rho * cfg.rho_shrink, cfg.rho_init * 1e-3)
+        q4b_fired = False
+        if cfg.use_canonical_adaptive_rho:
+            # ── Canonical path: delegate to adaptive_rho_step ──
+            if it == 1:
+                # Q4B: iter-1 seed correction with Boyd canonical defaults.
+                q4b_step = adaptive_rho_step(
+                    rho_curr=rho,
+                    primal_residual=primal_res,
+                    dual_residual=dual_res,
+                    mu=10.0,
+                    tau_grow=2.0,
+                    tau_shrink=0.5,
+                    rho_min=1e-6,
+                    rho_max=1e6,
+                    eps=1e-12,
+                )
+                if q4b_step.direction != "hold":
+                    rho = q4b_step.rho_next
+                    q4b_fired = True
+            if not q4b_fired:
+                # Steady-state: cfg-parameterized adaptive rule.
+                steady_step = adaptive_rho_step(
+                    rho_curr=rho,
+                    primal_residual=primal_res,
+                    dual_residual=dual_res,
+                    mu=cfg.rho_imbalance_ratio,
+                    tau_grow=cfg.rho_growth,
+                    tau_shrink=cfg.rho_shrink,
+                    rho_min=cfg.rho_init * 1e-3,
+                    rho_max=cfg.rho_max,
+                    eps=1e-12,
+                )
+                rho = steady_step.rho_next
+        else:
+            # ── Legacy inline path (kept VERBATIM for regression parity) ──
+            if it == 1:
+                primal_safe = max(primal_res, 1e-12)
+                dual_safe = max(dual_res, 1e-12)
+                ratio = primal_safe / dual_safe
+                if ratio > 10.0:
+                    rho = min(max(rho * 2.0, 1e-6), 1e6)
+                    q4b_fired = True
+                elif ratio < 0.1:
+                    rho = min(max(rho * 0.5, 1e-6), 1e6)
+                    q4b_fired = True
+
+            if not q4b_fired:
+                if primal_res > cfg.rho_imbalance_ratio * max(dual_res, 1e-12):
+                    rho = min(rho * cfg.rho_growth, cfg.rho_max)
+                elif dual_res > cfg.rho_imbalance_ratio * max(primal_res, 1e-12):
+                    rho = max(rho * cfg.rho_shrink, cfg.rho_init * 1e-3)
 
         # Divergence detection: TWO classes of pathology.
         # (a) primal residual strictly increasing for K iters.

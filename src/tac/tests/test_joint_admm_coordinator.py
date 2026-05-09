@@ -737,26 +737,37 @@ def test_q4b_adaptive_rho_init_fires_when_too_large():
 
 
 def test_q4b_no_api_change():
-    """[synthetic] Q4B must NOT introduce any new JointADMMConfig field.
-    The prescription explicitly mandates ZERO API change (rho_init stays
-    the seed; Q4B refines on iter 1 internally).
+    """[synthetic] Q4B itself must NOT introduce any new JointADMMConfig field.
 
-    This test verifies by introspection that JointADMMConfig still has
-    the exact same field set as before Q4B, so Q4B did not silently add
-    a config flag.
+    Original Q4B prescription explicitly mandated ZERO API change (rho_init
+    stays the seed; Q4B refines on iter 1 internally). The T19 migration
+    (2026-05-09) DID legitimately add ``use_canonical_adaptive_rho`` to gate
+    between the canonical adaptive_rho_step helper and the legacy inline
+    code path; that flag is documented in
+    ``feedback_t19_migration_and_cathedral_autopilot_catalog_landed_20260509.md``
+    and is the ONLY field added since the original Q4B landing.
+
+    This test pins the exact post-T19-migration field set so any silent
+    future drift triggers a regression. Adding a new field requires updating
+    BOTH the dataclass AND this test (forced council awareness).
     """
     import dataclasses
     fields = {f.name for f in dataclasses.fields(JointADMMConfig)}
-    expected = {
+    expected_q4b_era = {
         "rho_init", "rho_max", "rho_growth", "rho_shrink",
         "rho_imbalance_ratio", "max_iters", "restart_threshold",
         "primal_tol", "dual_tol", "kkt_waterline_tol",
         "byte_budget", "score_budget_per_stream", "verbose",
     }
+    # T19 migration (2026-05-09): one explicit, documented addition.
+    expected_t19_additions = {"use_canonical_adaptive_rho"}
+    expected = expected_q4b_era | expected_t19_additions
     assert fields == expected, (
-        f"JointADMMConfig fields drifted: {fields ^ expected}. Q4B was "
-        f"specified as 'no API change'; if a field was added, the council "
-        f"prescription was violated."
+        f"JointADMMConfig fields drifted: {fields ^ expected}. Adding a new "
+        f"field to JointADMMConfig requires: (1) updating this expected set, "
+        f"(2) documenting the addition in a feedback memory file, "
+        f"(3) wiring backward-compat behavior so existing callers still get "
+        f"identical results."
     )
 
 
