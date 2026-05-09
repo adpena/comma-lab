@@ -5,7 +5,7 @@
   "score_claim": false,
   "promotion_eligible": false,
   "ready_for_exact_eval_dispatch": false,
-  "input_plan_json": "reports/cathedral_autopilot_plan_pr103_pr106_to_019_reconciled_20260508.json",
+  "input_plan_json": "reports/cathedral_autopilot_plan_pr103_pr106_to_0155_reconciled_20260508.json",
   "anchors_path": "/Users/adpena/Projects/pact/.omx/calibration/anchors_apogee_intN.json",
   "n_candidates": 11,
   "n_eligible_for_dispatch": 0,

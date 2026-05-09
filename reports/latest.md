@@ -47,7 +47,7 @@ rule citation (commit `648b498c`).
 | Lane | Archive bytes | Δ vs brotli (178,144 B) | Verdict |
 |---|---:|---:|---|
 | A0 mdl_baseline | — | — | byte_proxy_only_deterministic |
-| A1 score_gradient | (dispatch tooling landed; infra-blocked on Lightning GPU/Vast.ai credit) | — | dispatchable |
+| A1 score_gradient | 205,879 | +27,735 | first Modal config retired on macOS CPU advisory; family reactivation requires constrained fine-tune |
 | A2 xavier_l2 | 156,344 | -21,800 | FALSIFIED proxy (-3,635 B regression vs uniform) |
 | A3-alt mallat_wavelet | 156,344 | -21,800 | incremental_improvement_insufficient (Mallat > Xavier in 2/4 cells; both fail uniform) |
 | A4 charm_hyperprior toy | byte-tight (CARM2 wire format) | — | dispatch-ready ($15 Lightning T4 awaiting authorization) |
@@ -98,6 +98,13 @@ reactivation criteria documented per memo.
   SegNet collapse dominates. Retire this measured config unless formal exact
   negative is needed; reactivation requires scorer-aware/seg-boundary-aware
   allocation or a lower-distortion trust region.
+- Autopilot evidence integration — A1 and cross-paradigm advisory negatives
+  are now in `reports/cathedral_autopilot_evidence.jsonl` with
+  `score_claim=false`, `rank_or_kill_eligible=false`,
+  `cuda_eval_worth_testing=false`, and scoped reactivation criteria. The
+  reconciled 0.190/0.155 autopilot plans and meta-Lagrangian bridge outputs
+  were regenerated so both measured configs sit in the validation queue, not
+  active ranking.
 - A6 Selfcomp block-FP × Ballé hyperprior compose — measured-config
   negative. Best compose **B=64, sq=uint8 = 214,035 B**, which loses to
   PR101 brotli by +35,891 B. Treat this as a scoped proxy retirement for

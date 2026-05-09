@@ -8,7 +8,25 @@
       "cost_hours": 24.0,
       "description": "70% sparsity via IMP retraining; arch unchanged",
       "dispatch_blockers": [
-        "empirical_anchor_not_promotable_without_explicit_exact_eval_custody"
+        "empirical_anchor_not_promotable_without_explicit_exact_eval_custody",
+        "score_claim_true_required",
+        "promotion_eligible_true_required",
+        "rank_or_kill_eligible_true_required",
+        "ready_for_exact_eval_dispatch_true_required",
+        "exact_cuda_evidence_marker_required",
+        "proxy_or_planning_marker_not_promotable",
+        "archive_sha256_required",
+        "runtime_tree_sha256_required",
+        "contest_cuda_score_required",
+        "sample_count_ge_600_required",
+        "seg_component_required",
+        "pose_component_required",
+        "rate_component_required",
+        "recomputed_score_required",
+        "exact_eval_command_required",
+        "hardware_required",
+        "log_path_required",
+        "dispatch_claim_status_required"
       ],
       "empirical_anchor_bytes": 94671,
       "empirical_anchor_evidence_semantics": [],
@@ -42,7 +60,25 @@
       "cost_hours": 12.0,
       "description": "88K-element renderer (Quantizr-class); full retrain",
       "dispatch_blockers": [
-        "empirical_anchor_not_promotable_without_explicit_exact_eval_custody"
+        "empirical_anchor_not_promotable_without_explicit_exact_eval_custody",
+        "score_claim_true_required",
+        "promotion_eligible_true_required",
+        "rank_or_kill_eligible_true_required",
+        "ready_for_exact_eval_dispatch_true_required",
+        "exact_cuda_evidence_marker_required",
+        "proxy_or_planning_marker_not_promotable",
+        "archive_sha256_required",
+        "runtime_tree_sha256_required",
+        "contest_cuda_score_required",
+        "sample_count_ge_600_required",
+        "seg_component_required",
+        "pose_component_required",
+        "rate_component_required",
+        "recomputed_score_required",
+        "exact_eval_command_required",
+        "hardware_required",
+        "log_path_required",
+        "dispatch_claim_status_required"
       ],
       "empirical_anchor_bytes": 83571,
       "empirical_anchor_evidence_semantics": [],
@@ -94,17 +130,21 @@
       "cost_hours": 3.0,
       "description": "Per-tensor K-step lossy coarsening of PR101 quantized renderer symbols; byte proxy only until exact CUDA review clears a measured config",
       "dispatch_blockers": [
+        "byte_closed_lossy_coarsening_runtime_packet_missing",
         "exact_negative_result_requires_reactivation_before_empirical_byte_anchor",
         "measured_config_retired_exact_cuda_negative",
+        "missing_exact_cuda_auth_eval",
         "missing_exact_cuda_auth_eval_on_lossy_decoder",
         "no_runtime_dequantize_path_built",
-        "reactivation_required_before_new_dispatch"
+        "proxy_rel_err_not_score_evidence",
+        "reactivation_required_before_new_dispatch",
+        "requires_exact_cuda_auth_eval_before_any_score_use"
       ],
       "empirical_anchor_promotable": false,
       "empirical_anchor_score_claim": false,
-      "evidence_grade": "[exact-negative-N2; reactivation-required]",
+      "evidence_grade": "[exact-negative-N3; reactivation-required]",
       "exact_negative_classification": "measured_config_retired_only",
-      "exact_negative_evidence_n": 2,
+      "exact_negative_evidence_n": 3,
       "exact_negative_falsification_scopes": [
         "measured_config_only_per_tensor_K_budget_0.05",
         "measured_config_only"
@@ -114,6 +154,7 @@
         ".omx/research/lossy_coarsening_exact_cuda_result_review_20260508_codex.json"
       ],
       "exact_negative_sources": [
+        "[contest-CUDA] Lightning T4 g4dn.2xlarge job=lossy-coarsening-cuda-20260508T0312-noproject lossy_coarsening_analytical PR101 substrate auth_eval_json=experiments/results/lightning_batch/lossy-coarsening-cuda-20260508T0312-noproject/contest_auth_eval.json",
         "[contest-CUDA A-negative] Lightning T4 exact auth eval job=lossy-coarsening-cuda-20260508T0312-noproject auth_eval_json=experiments/results/lightning_batch/lossy-coarsening-cuda-20260508T0312-noproject/auth_eval_work/contest_auth_eval.json review_packet=.omx/research/lossy_coarsening_exact_cuda_result_review_20260508_codex.json",
         "experiments/results/lightning_batch/lossy-coarsening-cuda-20260508T0312-noproject/auth_eval_work/contest_auth_eval.json reviewed_by=.omx/research/lossy_coarsening_exact_cuda_result_review_20260508_codex.json"
       ],
@@ -147,7 +188,7 @@
       "supporting_non_promotable_evidence_n": 2,
       "supporting_non_promotable_sources": [
         "[MPS-research-signal] /Users/adpena/Projects/pact/reports/raw/pr101_lossy_coarsening_20260508T011743Z/manifest.json (analytical per-tensor K coarsening; CompressAI hyperpriors all FAIL rel_err < 0.05 on PR101 substrate, this analytical baseline succeeds where neural codecs cannot)",
-        "[contest-CUDA] Lightning T4 g4dn.2xlarge job=lossy-coarsening-cuda-20260508T0312-noproject lossy_coarsening_analytical PR101 substrate auth_eval_json=experiments/results/lightning_batch/lossy-coarsening-cuda-20260508T0312-noproject/contest_auth_eval.json"
+        "[MPS-research-signal] /Users/adpena/Projects/pact/reports/raw/pr101_lossy_coarsening_20260508T140503Z/manifest.json (analytical per-tensor K coarsening; prior CompressAI smoke configs did not reach rel_err < 0.05 on PR101 substrate; not a neural-codec family kill)"
       ]
     },
     {
@@ -158,11 +199,35 @@
       "cost_hours": 6.0,
       "description": "n_quant=15 (int4) with QAT/LSQ retuning",
       "dispatch_blockers": [
-        "empirical_anchor_not_promotable_without_explicit_exact_eval_custody",
+        "cpu_precision_proxy_not_score_evidence",
+        "missing_exact_cuda_auth_eval",
+        "requires_exact_cuda_auth_eval_before_any_score_use",
+        "score_claim_true_required",
+        "promotion_eligible_true_required",
+        "rank_or_kill_eligible_true_required",
+        "ready_for_exact_eval_dispatch_true_required",
+        "exact_cuda_evidence_marker_required",
+        "proxy_or_planning_marker_not_promotable",
+        "archive_sha256_required",
+        "runtime_tree_sha256_required",
+        "contest_cuda_score_required",
+        "sample_count_ge_600_required",
+        "seg_component_required",
+        "pose_component_required",
+        "rate_component_required",
+        "recomputed_score_required",
+        "exact_eval_command_required",
+        "hardware_required",
+        "log_path_required",
+        "dispatch_claim_status_required",
+        "negative_or_retired_result_not_promotable",
+        "source_dispatch_blockers_present",
         "model_spec_mismatch_pending_faithful_implementation"
       ],
       "empirical_anchor_bytes": 100799,
-      "empirical_anchor_evidence_semantics": [],
+      "empirical_anchor_evidence_semantics": [
+        "cpu_roundtrip_precision_proxy_no_score_measured_config_negative"
+      ],
       "empirical_anchor_n": 3,
       "empirical_anchor_promotable": false,
       "empirical_anchor_score_claim": false,
@@ -253,6 +318,26 @@
         "missing_exact_cuda_auth_eval",
         "no_runtime_decoder_packet_built",
         "requires_exact_cuda_auth_eval_before_any_score_use",
+        "score_claim_true_required",
+        "promotion_eligible_true_required",
+        "rank_or_kill_eligible_true_required",
+        "ready_for_exact_eval_dispatch_true_required",
+        "exact_cuda_evidence_marker_required",
+        "proxy_or_planning_marker_not_promotable",
+        "archive_sha256_required",
+        "runtime_tree_sha256_required",
+        "contest_cuda_score_required",
+        "sample_count_ge_600_required",
+        "seg_component_required",
+        "pose_component_required",
+        "rate_component_required",
+        "recomputed_score_required",
+        "exact_eval_command_required",
+        "hardware_required",
+        "log_path_required",
+        "dispatch_claim_status_required",
+        "negative_or_retired_result_not_promotable",
+        "source_dispatch_blockers_present",
         "model_spec_mismatch_pending_faithful_implementation"
       ],
       "empirical_anchor_bytes": 179276,
@@ -302,7 +387,26 @@
       "cost_hours": 4.0,
       "description": "Balle scale-hyperprior NN; subagent-verdict joint floor",
       "dispatch_blockers": [
-        "empirical_anchor_not_promotable_without_explicit_exact_eval_custody"
+        "empirical_anchor_not_promotable_without_explicit_exact_eval_custody",
+        "score_claim_true_required",
+        "promotion_eligible_true_required",
+        "rank_or_kill_eligible_true_required",
+        "ready_for_exact_eval_dispatch_true_required",
+        "exact_cuda_evidence_marker_required",
+        "proxy_or_planning_marker_not_promotable",
+        "archive_sha256_required",
+        "runtime_tree_sha256_required",
+        "contest_cuda_score_required",
+        "sample_count_ge_600_required",
+        "seg_component_required",
+        "pose_component_required",
+        "rate_component_required",
+        "recomputed_score_required",
+        "exact_eval_command_required",
+        "hardware_required",
+        "log_path_required",
+        "dispatch_claim_status_required",
+        "negative_or_retired_result_not_promotable"
       ],
       "empirical_anchor_bytes": 207065,
       "empirical_anchor_evidence_semantics": [],
@@ -342,7 +446,27 @@
         "nn_literature_mixture_decoder_not_wired_into_runtime_packet",
         "no_archive_substitution_performed",
         "no_decode_roundtrip_fixture_for_full_packet",
-        "requires_exact_cuda_auth_eval_before_any_score_use"
+        "requires_exact_cuda_auth_eval_before_any_score_use",
+        "score_claim_true_required",
+        "promotion_eligible_true_required",
+        "rank_or_kill_eligible_true_required",
+        "ready_for_exact_eval_dispatch_true_required",
+        "exact_cuda_evidence_marker_required",
+        "proxy_or_planning_marker_not_promotable",
+        "archive_sha256_required",
+        "runtime_tree_sha256_required",
+        "contest_cuda_score_required",
+        "sample_count_ge_600_required",
+        "seg_component_required",
+        "pose_component_required",
+        "rate_component_required",
+        "recomputed_score_required",
+        "exact_eval_command_required",
+        "hardware_required",
+        "log_path_required",
+        "dispatch_claim_status_required",
+        "negative_or_retired_result_not_promotable",
+        "source_dispatch_blockers_present"
       ],
       "empirical_anchor_bytes": 205963,
       "empirical_anchor_evidence_semantics": [
@@ -404,10 +528,122 @@
     "cataloged_exact_negative_techniques": [
       "lossy_coarsening_analytical"
     ],
-    "n_evidence_rows": 41,
-    "unknown_evidence_row_count": 23,
-    "unknown_evidence_technique_count": 20,
+    "contest_cpu_score_claim_row_count": 0,
+    "device_axis_report": {
+      "learning_policy": "Treat CPU/CUDA drift as a Bayesian per-substrate-class profile. Update class posteriors only from paired same-archive/runtime anchors; loader and network drift probes are independent optional components of R_total.",
+      "macos_cpu_advisory_count": 2,
+      "paired_comparison_count": 0,
+      "paired_comparisons": [],
+      "policy": "Do not assign CPU-vs-GPU architecture or stack priority until both contest-CPU and contest-CUDA are measured on the same archive SHA and runtime-tree SHA. macOS CPU may accelerate parallel dev sweeps after the PR107 GHA-vs-M5 check, but it remains a research proxy until promoted by Linux x86_64 contest-CPU.",
+      "priority_status": "insufficient_paired_axis_evidence",
+      "substrate_class_profiles": [],
+      "unpaired_device_axis_evidence": [
+        {
+          "archive_sha256": "ab8a8a13c70b3d3bbf2ce3d8a81a77691b776a6e0fb1cbe9ce504dc3f59c1b28",
+          "blockers": [
+            "seg_component_required",
+            "pose_component_required"
+          ],
+          "device_axis": "contest_cuda",
+          "evidence_grade": "[contest-CUDA A-negative]",
+          "reason": "incomplete_device_axis_evidence",
+          "runtime_tree_sha256": "d55ed9a31ab76a2498fdce98ddb5852544c504ad166fd68df1323f341ca4b3e7",
+          "source": "[contest-CUDA] Lightning T4 g4dn.2xlarge job=lossy-coarsening-cuda-20260508T0312-noproject lossy_coarsening_analytical PR101 substrate auth_eval_json=experiments/results/lightning_batch/lossy-coarsening-cuda-20260508T0312-noproject/contest_auth_eval.json",
+          "technique": "lossy_coarsening_analytical"
+        },
+        {
+          "archive_sha256": "ab8a8a13c70b3d3bbf2ce3d8a81a77691b776a6e0fb1cbe9ce504dc3f59c1b28",
+          "blockers": [
+            "seg_component_required",
+            "pose_component_required"
+          ],
+          "device_axis": "contest_cuda",
+          "evidence_grade": "[contest-CUDA A-negative]",
+          "reason": "incomplete_device_axis_evidence",
+          "runtime_tree_sha256": "d55ed9a31ab76a2498fdce98ddb5852544c504ad166fd68df1323f341ca4b3e7",
+          "source": "[contest-CUDA A-negative] Lightning T4 exact auth eval job=lossy-coarsening-cuda-20260508T0312-noproject auth_eval_json=experiments/results/lightning_batch/lossy-coarsening-cuda-20260508T0312-noproject/auth_eval_work/contest_auth_eval.json review_packet=.omx/research/lossy_coarsening_exact_cuda_result_review_20260508_codex.json",
+          "technique": "lossy_coarsening_analytical"
+        },
+        {
+          "archive_sha256": "ab8a8a13c70b3d3bbf2ce3d8a81a77691b776a6e0fb1cbe9ce504dc3f59c1b28",
+          "blockers": [
+            "seg_component_required",
+            "pose_component_required"
+          ],
+          "device_axis": "contest_cuda",
+          "evidence_grade": "[contest-CUDA A-negative]",
+          "reason": "incomplete_device_axis_evidence",
+          "runtime_tree_sha256": "d55ed9a31ab76a2498fdce98ddb5852544c504ad166fd68df1323f341ca4b3e7",
+          "source": "experiments/results/lightning_batch/lossy-coarsening-cuda-20260508T0312-noproject/auth_eval_work/contest_auth_eval.json reviewed_by=.omx/research/lossy_coarsening_exact_cuda_result_review_20260508_codex.json",
+          "technique": "lossy_coarsening_analytical"
+        },
+        {
+          "archive_sha256": "cb9de2b71133929b0c2df00b0e511b9c306939d62438ffb348e947aef719e185",
+          "device_axis": "macos_cpu_advisory",
+          "evidence_grade": "[macOS-CPU advisory negative]",
+          "reason": "macos_cpu_research_proxy_needs_linux_contest_cpu_promotion",
+          "runtime_tree_sha256": "dcdc5b995993fb455989e743bd55eba9987648675a9cb2c5da6e3975c451bc7c",
+          "source": "[macOS-CPU advisory negative] .omx/research/phase_a1_score_gradient_modal_advisory_negative_20260508_codex.md; archive=experiments/results/track1_phase_a1_score_gradient_20260508T230020Z_modal/harvested_artifacts/finetuned_archive/archive.zip; remote Modal trained/built but exact CUDA skipped by DALI/NVDEC preflight",
+          "technique": "phase_a1_score_gradient_pr101_finetune_modal_config_20260508T230020Z"
+        },
+        {
+          "archive_sha256": "7bbba307b1432d8d885e22533fdda9ab5cc87a6025510b2d5098084895284897",
+          "device_axis": "macos_cpu_advisory",
+          "evidence_grade": "[macOS-CPU advisory negative]",
+          "reason": "macos_cpu_research_proxy_needs_linux_contest_cpu_promotion",
+          "runtime_tree_sha256": "4a3fdcb6fbe8aed4263b283da89a96ec6f0dff8dba1efdcd3811fda5228ecdea",
+          "source": "[macOS-CPU advisory negative] .omx/research/cross_paradigm_admm_x_op1_macos_advisory_negative_20260508_codex.md; rate improved but SegNet dominates: 100*seg=0.18857 before pose and rate; rel_err proxy insufficient",
+          "technique": "cross_paradigm_admm_continuous_k_plus_op1_finalizer"
+        }
+      ],
+      "unpaired_device_axis_evidence_count": 5
+    },
+    "evidence_load_diagnostics": [],
+    "n_evidence_rows": 46,
+    "rejected_evidence_row_count": 0,
+    "unknown_evidence_row_count": 27,
+    "unknown_evidence_technique_count": 24,
     "unknown_evidence_techniques": [
+      {
+        "byte_proxy_only_any": false,
+        "charged_bits_changed_any": true,
+        "cuda_eval_worth_testing_any": false,
+        "cuda_eval_worth_testing_false": true,
+        "dispatch_blockers": [
+          "post_hoc_arch_truncate_not_retrained",
+          "score_impact_unknown_without_contest_cuda",
+          "byte_rel_err_proxy_only_no_score_test",
+          "no_runtime_dequantize_path_built",
+          "byte_closed_arch_shrink_runtime_packet_missing",
+          "missing_exact_cuda_auth_eval",
+          "requires_exact_cuda_auth_eval_before_any_score_use",
+          "channel_truncation_breaks_inference_until_retrained",
+          "variance_proxy_substitutes_for_uniward_wavelet_residual",
+          "no_iterative_primal_dual_ADMM_consensus",
+          "composition_assumes_independence_pre_q_arch_post_q_alloc"
+        ],
+        "empirical_archive_bytes": [
+          81109
+        ],
+        "evidence_grades": [
+          "[CPU-prep faithful arch_shrink \u00d7 Lagrangian \u00d7 UNIWARD test]"
+        ],
+        "exact_negative_rows": 0,
+        "latest_timestamp": "2026-05-08T07:59:33Z",
+        "min_empirical_archive_bytes": 81109,
+        "n_rows": 1,
+        "proxy_or_planning_rows": 1,
+        "proxy_row_any": true,
+        "score_affecting_payload_changed_any": true,
+        "sources": [
+          "[CPU-prep faithful arch_shrink \u00d7 Lagrangian \u00d7 UNIWARD test] /Users/adpena/Projects/pact/reports/raw/pr101_arch_shrink_x_lagrangian_x_uniward_20260508T075933Z/manifest.json (arch_shrink ratio=0.4 + Lagrangian \u00d7 UNIWARD rms=0.01; uniward_archive=81,109 B; vs_uniform=+297 B)"
+        ],
+        "status": "unknown_technique_not_ranked",
+        "technique": "arch_shrink_x_lagrangian_x_uniward_post_hoc",
+        "verdicts": [
+          "DEFERRED-pending-research"
+        ]
+      },
       {
         "byte_proxy_only_any": false,
         "charged_bits_changed_any": false,
@@ -440,6 +676,40 @@
         "technique": "compressai_balle_cross_tensor_hyperprior",
         "verdicts": [
           "DEFERRED-pending-research (cross-tensor hyperprior lands +43,144 B vs PR101 brotli; rel_err=0.000000. FINAL audit criterion empirically tested; balle_hyperprior lane now 4/4 criteria exhausted)"
+        ]
+      },
+      {
+        "byte_proxy_only_any": false,
+        "charged_bits_changed_any": true,
+        "cuda_eval_worth_testing_any": false,
+        "cuda_eval_worth_testing_false": true,
+        "dispatch_blockers": [
+          "macos_cpu_advisory_not_contest_cpu",
+          "missing_exact_cuda_auth_eval",
+          "measured_config_retired_macos_cpu_advisory_negative",
+          "reactivation_required_before_new_dispatch",
+          "requires_scorer_aware_or_seg_boundary_aware_allocation_before_exact_eval_spend"
+        ],
+        "empirical_archive_bytes": [
+          153513
+        ],
+        "evidence_grades": [
+          "[macOS-CPU advisory negative]"
+        ],
+        "exact_negative_rows": 0,
+        "latest_timestamp": "2026-05-09T00:01:47Z",
+        "min_empirical_archive_bytes": 153513,
+        "n_rows": 1,
+        "proxy_or_planning_rows": 1,
+        "proxy_row_any": true,
+        "score_affecting_payload_changed_any": true,
+        "sources": [
+          "[macOS-CPU advisory negative] .omx/research/cross_paradigm_admm_x_op1_macos_advisory_negative_20260508_codex.md; rate improved but SegNet dominates: 100*seg=0.18857 before pose and rate; rel_err proxy insufficient"
+        ],
+        "status": "unknown_technique_not_ranked",
+        "technique": "cross_paradigm_admm_continuous_k_plus_op1_finalizer",
+        "verdicts": [
+          "measured_config_retired_macos_cpu_advisory_negative_not_score_evidence"
         ]
       },
       {
@@ -702,18 +972,24 @@
         "byte_proxy_only_any": false,
         "charged_bits_changed_any": false,
         "cuda_eval_worth_testing_any": false,
-        "cuda_eval_worth_testing_false": false,
-        "dispatch_blockers": [],
+        "cuda_eval_worth_testing_false": true,
+        "dispatch_blockers": [
+          "cpu_precision_proxy_not_score_evidence",
+          "missing_exact_cuda_auth_eval",
+          "requires_exact_cuda_auth_eval_before_any_score_use"
+        ],
         "empirical_archive_bytes": [
           115958
         ],
-        "evidence_grades": [],
+        "evidence_grades": [
+          "[CPU-prep per-channel proxy measured-config negative]"
+        ],
         "exact_negative_rows": 0,
         "latest_timestamp": "2026-05-08T01:17:32Z",
         "min_empirical_archive_bytes": 115958,
         "n_rows": 1,
         "proxy_or_planning_rows": 1,
-        "proxy_row_any": false,
+        "proxy_row_any": true,
         "score_affecting_payload_changed_any": false,
         "sources": [
           "[CPU-prep empirical reactivation] /Users/adpena/Projects/pact/reports/raw/pr101_int4_perchannel_20260508T011732Z/manifest.json (per-output-channel fp16 scales; audit criterion #2)"
@@ -721,7 +997,7 @@
         "status": "unknown_technique_not_ranked",
         "technique": "lossy_int4_per_channel_scales",
         "verdicts": [
-          "STILL-FALSIFIED"
+          "DEFERRED-pending-research"
         ]
       },
       {
@@ -1006,6 +1282,76 @@
       },
       {
         "byte_proxy_only_any": false,
+        "charged_bits_changed_any": true,
+        "cuda_eval_worth_testing_any": false,
+        "cuda_eval_worth_testing_false": true,
+        "dispatch_blockers": [
+          "macos_cpu_advisory_not_contest_cpu",
+          "missing_exact_cuda_auth_eval",
+          "modal_exact_cuda_skipped_dali_nvdec_preflight",
+          "measured_config_retired_macos_cpu_advisory_negative",
+          "reactivation_required_before_new_dispatch",
+          "requires_constrained_finetune_before_exact_eval_spend"
+        ],
+        "empirical_archive_bytes": [
+          205879
+        ],
+        "evidence_grades": [
+          "[macOS-CPU advisory negative]"
+        ],
+        "exact_negative_rows": 0,
+        "latest_timestamp": "2026-05-09T00:01:47Z",
+        "min_empirical_archive_bytes": 205879,
+        "n_rows": 1,
+        "proxy_or_planning_rows": 1,
+        "proxy_row_any": true,
+        "score_affecting_payload_changed_any": true,
+        "sources": [
+          "[macOS-CPU advisory negative] .omx/research/phase_a1_score_gradient_modal_advisory_negative_20260508_codex.md; archive=experiments/results/track1_phase_a1_score_gradient_20260508T230020Z_modal/harvested_artifacts/finetuned_archive/archive.zip; remote Modal trained/built but exact CUDA skipped by DALI/NVDEC preflight"
+        ],
+        "status": "unknown_technique_not_ranked",
+        "technique": "phase_a1_score_gradient_pr101_finetune_modal_config_20260508T230020Z",
+        "verdicts": [
+          "measured_config_retired_macos_cpu_advisory_negative_not_score_evidence"
+        ]
+      },
+      {
+        "byte_proxy_only_any": false,
+        "charged_bits_changed_any": true,
+        "cuda_eval_worth_testing_any": false,
+        "cuda_eval_worth_testing_false": true,
+        "dispatch_blockers": [
+          "byte_rel_err_proxy_only_no_score_test",
+          "no_runtime_dequantize_path_built_for_modified_decoder",
+          "missing_exact_cuda_auth_eval",
+          "scale_per_tensor_fixed_at_lossless_during_K_sweep",
+          "no_iterative_primal_dual_ADMM_consensus",
+          "lossless_latents_and_sidecar_assumed_constant_no_joint_optimization"
+        ],
+        "empirical_archive_bytes": [
+          123767
+        ],
+        "evidence_grades": [
+          "[CPU-prep faithful PR106-cross-substrate-test]"
+        ],
+        "exact_negative_rows": 0,
+        "latest_timestamp": "2026-05-08T07:14:33Z",
+        "min_empirical_archive_bytes": 123767,
+        "n_rows": 1,
+        "proxy_or_planning_rows": 1,
+        "proxy_row_any": true,
+        "score_affecting_payload_changed_any": true,
+        "sources": [
+          "[CPU-prep faithful PR106-cross-substrate-test] /Users/adpena/Projects/pact/reports/raw/pr106_lagrangian_per_tensor_allocation_20260508T071433Z/manifest.json (rms_target=0.1; best_kind=lagrangian_uniward; archive_bytes=123,767; vs_pr106_published=-62,472)"
+        ],
+        "status": "unknown_technique_not_ranked",
+        "technique": "pr106_lagrangian_per_tensor_allocation_lagrangian_uniward",
+        "verdicts": [
+          "DEFERRED-pending-research"
+        ]
+      },
+      {
+        "byte_proxy_only_any": false,
         "charged_bits_changed_any": false,
         "cuda_eval_worth_testing_any": false,
         "cuda_eval_worth_testing_false": false,
@@ -1038,7 +1384,7 @@
     ],
     "unknown_exact_negative_row_count": 0
   },
-  "n_evidence_rows": 41,
+  "n_evidence_rows": 46,
   "schema": "cathedral_autopilot.v1",
   "tool": "tools/cathedral_autopilot.py"
 }

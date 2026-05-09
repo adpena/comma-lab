@@ -1430,6 +1430,24 @@
       "disposition": "track",
       "note": "track: durable cross-paradigm ADMM x Op1 advisory negative ledger; no raw provider transcript or payload.",
       "path": ".omx/research/cross_paradigm_admm_x_op1_macos_advisory_negative_20260508_codex.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable autopilot evidence integration ledger for A1 and cross-paradigm advisory negatives.",
+      "path": ".omx/research/autopilot_advisory_negative_integration_20260508_codex.md"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression test ensuring macOS CPU advisory negatives remain validation-queue signals, not score/ranking evidence.",
+      "path": "tests/test_cathedral_autopilot_advisory_negatives.py"
+    },
+    {
+      "classification": "report_untracked",
+      "disposition": "track",
+      "note": "track: 0.155-target meta-Lagrangian bridge output regenerated from updated fail-closed advisory-negative evidence.",
+      "path": "reports/cathedral_meta_lagrangian_ranking_pr103_pr106_to_0155_reconciled_20260508.json"
     }
   ],
   "policy": "Every source-like untracked path must be track, recovery_queue, ignore_private, or ignore_rebuildable with rationale.",
