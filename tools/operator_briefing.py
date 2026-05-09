@@ -527,6 +527,92 @@ def _section(title: str, body: str) -> str:
     return f"\n{bar}\n{title}\n{bar}\n\n{body}"
 
 
+# Phase-6 xray toolkit: surface the diagnostic tools landed 2026-05-09 so
+# operators discover them without having to grep `tools/xray_*`. These are
+# pure-CPU diagnostic tools — no GPU, no dispatch, no score claims.
+XRAY_TOOLKIT = [
+    {
+        "tool": "tools/xray_archive_section_entropy_heatmap.py",
+        "purpose": (
+            "Per-section entropy density vs encoded-bytes — reveals which "
+            "archive sections are saturated vs have recoverable headroom. "
+            "Use BEFORE planning a new entropy-coder lane."
+        ),
+        "example": (
+            ".venv/bin/python tools/xray_archive_section_entropy_heatmap.py \\\n"
+            "  --archive experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip \\\n"
+            "  --label pr101_gold"
+        ),
+    },
+    {
+        "tool": "tools/xray_per_pr_archive_layout_compare.py",
+        "purpose": (
+            "Side-by-side byte-section layout for N archives — surfaces "
+            "SHARED structure vs DIVERGED bytes. Use to understand 'what "
+            "bytes did SajayR/PR101 change vs rem2/PR103?'"
+        ),
+        "example": (
+            ".venv/bin/python tools/xray_per_pr_archive_layout_compare.py \\\n"
+            "  --archive experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip \\\n"
+            "  --archive experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip \\\n"
+            "  --label pr101 --label pr106"
+        ),
+    },
+    {
+        "tool": "tools/xray_per_tensor_saliency_heatmap.py",
+        "purpose": (
+            "Per-tensor saliency-vs-bytes — flags over-allocated tensors as "
+            "next coarsening targets. Consumes a saliency dict from "
+            "tac.score_gradient_param_saliency."
+        ),
+        "example": (
+            ".venv/bin/python tools/xray_per_tensor_saliency_heatmap.py \\\n"
+            "  --saliency-json reports/saliency_a1.json \\\n"
+            "  --byte-map-json reports/per_tensor_bytes_a1.json \\\n"
+            "  --bottom-n-percent 25"
+        ),
+    },
+    {
+        "tool": "tools/xray_inflate_op_cost_profiler.py",
+        "purpose": (
+            "Static AST-based op-cost catalog of inflate.py — finds "
+            "per-channel mutation lines (the PR101→PR103 medal-delta "
+            "pattern). Use BEFORE designing a new sidecar/inflate edit."
+        ),
+        "example": (
+            ".venv/bin/python tools/xray_inflate_op_cost_profiler.py \\\n"
+            "  --inflate-py experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/source/submissions/hnerv_ft_microcodec/inflate.py \\\n"
+            "  --label pr101_canonical"
+        ),
+    },
+    {
+        "tool": "tools/xray_cpu_cuda_drift_per_arch_class.py",
+        "purpose": (
+            "Predict CPU score from CUDA score using per-architecture-class "
+            "drift profile (HNeRV cluster R_pose=5.04). Use to decide "
+            "WHETHER to spend on a [contest-CPU GHA] eval before paying."
+        ),
+        "example": (
+            ".venv/bin/python tools/xray_cpu_cuda_drift_per_arch_class.py \\\n"
+            "  --archive experiments/results/track4_sg_a1_t178000_20260509/archive.zip \\\n"
+            "  --cuda-score 0.22933 --label pr107_apogee"
+        ),
+    },
+]
+
+
+def _format_xray_toolkit() -> str:
+    lines = []
+    for entry in XRAY_TOOLKIT:
+        lines.append(f"• `{entry['tool']}`")
+        lines.append(f"    {entry['purpose']}")
+        lines.append("    Example:")
+        for ln in entry["example"].splitlines():
+            lines.append(f"      {ln}")
+        lines.append("")
+    return "\n".join(lines).rstrip()
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--top", type=int, default=20,
@@ -609,6 +695,10 @@ def main(argv: list[str] | None = None) -> int:
             "Phase 5 — Meta-composition lanes (single-dispatch payoff of multi-sister stacks)",
             _format_composition_lanes(),
         ))
+    parts.append(_section(
+        "Phase 6 — XRAY toolkit (diagnostic tools landed 2026-05-09)",
+        _format_xray_toolkit(),
+    ))
     print("\n".join(parts))
     return 0
 
