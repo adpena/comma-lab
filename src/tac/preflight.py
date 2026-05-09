@@ -580,6 +580,27 @@ def preflight_all(
         check_continual_learning_writes_use_lock(
             strict=True, verbose=verbose,
         )
+        # 2026-05-09 proactive META-class custody+concurrency audit (#130):
+        # extends catalog #127 (`AUTHORITATIVE_TAGS` membership) to also catch
+        # the broader META class — `evidence_grade in {...}` set-membership +
+        # `tag.startswith("[contest-...")` substring-prefix patterns.
+        # Held warn-only initially per directive; live count 0 on landing.
+        # Memory: feedback_proactive_custody_concurrency_audit_landed_20260509.md
+        check_no_tag_only_custody_validation(
+            strict=False, verbose=verbose,
+        )
+        # 2026-05-09 proactive META-class custody+concurrency audit (#131):
+        # extends catalog #128 (`continual_learning.save_posterior`) to all
+        # shared-state writes. Refuses bare writes to .omx/state/*.json (and
+        # similar shared mutable state) without a canonical fcntl-locked
+        # helper. Held warn-only initially per directive; live count 0 on
+        # landing (6 surfaces fixed in this lane: LIGHTNING_ACTIVE_JOBS_PATH
+        # ×4 callers, LIGHTNING_STATE, vastai_active_instances bypass,
+        # instance_setup_first_seen). Memory:
+        # feedback_proactive_custody_concurrency_audit_landed_20260509.md
+        check_no_bare_writes_to_shared_state(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -27704,6 +27725,8 @@ def check_continual_learning_writes_use_lock(
                 # imports and diagnostic/error strings.
                 if not re.search(r"(^|[^\w.])save_posterior\s*\(", line):
                     continue
+                if "`save_posterior" in line:
+                    continue
                 if stripped.startswith(("\"", "'", "f\"", "f'", "r\"", "r'")):
                     continue
                 if _SAVE_POSTERIOR_WAIVER_MARKER in line:
@@ -27751,6 +27774,457 @@ def check_continual_learning_writes_use_lock(
             + "\n\nFix: replace bare `save_posterior(...)` with "
             "`posterior_update_locked(result, ...)` from "
             "`tac.continual_learning`."
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #130 — proactive sweep widening of catalog #127's tag-only check
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Bug class (proactive META-class custody+concurrency audit, 2026-05-09):
+# extends catalog #127 (`AUTHORITATIVE_TAGS` membership) to also catch
+# the broader META class:
+#
+#   - `evidence_grade in {"contest-cuda", ...}` set-membership patterns
+#   - `tag.startswith("[contest-CUDA")` / `tag.startswith("[contest-CPU")`
+#     substring-prefix patterns
+#
+# These are the same META class as catalog #127 — code that classifies
+# custody / promotion eligibility from a tag string WITHOUT joint
+# axis + hardware_substrate + archive_sha256 validation. The proactive
+# sweep audit `.omx/research/proactive_custody_concurrency_audit_20260509.md`
+# verified the live count is 0 because every existing site routes through
+# a joint validator (`validate_custody`, `is_promotable_exact_cuda_evidence`,
+# `predispatch_sanity._validate_non_proxy_readiness_evidence`, or fail-closed
+# blocker accumulation against archive_sha256 checks).
+#
+# This gate prevents regression: any future code that introduces a new
+# tag-membership predicate must also use one of the validator tokens
+# OR add a `# CUSTODY_VALIDATOR_OK:<reason>` waiver.
+
+_TAG_GRADE_BYPASS_PATTERNS: tuple[str, ...] = (
+    "evidence_grade in {",
+    "evidence_grade.lower() in {",
+    "evidence_grade not in {",
+    "evidence_grade.lower() not in {",
+    'tag.startswith("[contest-CUDA")',
+    'tag.startswith("[contest-CPU")',
+    'evidence_tag.startswith("[contest-CUDA")',
+    'evidence_tag.startswith("[contest-CPU")',
+)
+
+# Files that legitimately implement the joint validators themselves OR are
+# fail-closed blocker accumulators that already check archive_sha256.
+_TAG_GRADE_VALIDATOR_FILES: tuple[str, ...] = (
+    "src/tac/continual_learning.py",
+    "src/tac/optimization/candidate_evidence_contract.py",
+    "tools/predispatch_sanity.py",
+    "tools/meta_lagrangian_atom_ledger_adapter.py",  # fail-closed blockers + archive_sha256 check
+    "src/tac/uniward_delta.py",  # fail-closed blocker accumulation
+    "src/tac/optimization/cross_paradigm_atoms.py",  # fail-closed blocker accumulation
+    "tools/build_pr107_cpu_lossy_candidate_matrix.py",  # fail-closed blockers
+    "tools/lightning_dispatch_pr106_stack.py",  # fail-closed blockers
+    "tools/run_admm_no_dead_k_static_preflight.py",  # fail-closed
+    "experiments/build_pr85_bridge_sparse_action_candidates.py",  # fail-closed + archive_sha256
+    "src/tac/codec_stack_planner.py",  # fail-closed
+    "src/tac/deploy/lightning/batch_jobs.py",  # diagnostic-grade gate inside a longer joint check
+)
+
+
+def check_no_tag_only_custody_validation(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #130 — broader tag/grade membership must route through joint validator.
+
+    Refuses code sites that match a tag/grade membership-check pattern
+    (``evidence_grade in {...}``, ``tag.startswith("[contest-CUDA")``, etc.)
+    without either:
+
+    1. A whole-file route through a known joint validator
+       (``validate_custody`` / ``validate_custody_verdict`` /
+       ``posterior_update`` / ``posterior_update_locked`` /
+       ``is_promotable_exact_cuda_evidence`` / ``promotable_exact_cuda_evidence_blockers`` /
+       ``sha256_file`` / ``archive_sha256``), OR
+    2. A same-line waiver comment ``# CUSTODY_VALIDATOR_OK:<reason>``.
+
+    Held warn-only initially per the directive — flip to STRICT after
+    live count drives to 0 and stability period elapses.
+
+    Bug class: proactive META-class sweep (2026-05-09). Sister of catalog #127
+    which only covered the narrower ``AUTHORITATIVE_TAGS`` membership.
+
+    Memory: feedback_proactive_custody_concurrency_audit_landed_20260509.md
+    """
+    root = Path(repo_root or REPO_ROOT)
+    scan_dirs = [root / "src" / "tac", root / "tools", root / "experiments"]
+    excluded_files = {root / p for p in _TAG_GRADE_VALIDATOR_FILES}
+
+    violations: list[str] = []
+    scanned_files = 0
+    for scan_dir in scan_dirs:
+        if not scan_dir.is_dir():
+            continue
+        for py in scan_dir.rglob("*.py"):
+            if py in excluded_files:
+                continue
+            if "/tests/" in str(py) or py.name.startswith("test_"):
+                continue
+            # Skip vendored public-PR intakes per Check 109.
+            if "_intake_" in str(py) or "/comma_lab_public_export/" in str(py):
+                continue
+            try:
+                text = py.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            # Quick prefilter
+            if not any(pat in text for pat in _TAG_GRADE_BYPASS_PATTERNS):
+                continue
+            scanned_files += 1
+            # Whole-file accept: file uses a joint validator or
+            # archive_sha256 check anywhere.
+            if any(tok in text for tok in _CUSTODY_VALIDATOR_TOKENS):
+                continue
+            if "is_promotable_exact_cuda_evidence" in text:
+                continue
+            if "promotable_exact_cuda_evidence_blockers" in text:
+                continue
+            if "sha256_file(" in text:
+                continue
+            # archive_sha256 check (joint validation) accepts the file.
+            if 'archive_sha256' in text and ('blockers' in text or 'errors' in text):
+                continue
+            lines = text.splitlines()
+            for lineno, line in enumerate(lines):
+                stripped = line.lstrip()
+                if stripped.startswith("#"):
+                    continue
+                if not any(pat in line for pat in _TAG_GRADE_BYPASS_PATTERNS):
+                    continue
+                if _CUSTODY_WAIVER_MARKER in line:
+                    continue
+                rel = py.relative_to(root) if py.is_relative_to(root) else py
+                violations.append(
+                    f"[Check 130] {rel}:{lineno + 1}: "
+                    "tag/grade membership predicate without an adjacent joint "
+                    "validator or archive_sha256 check. Per proactive META-class "
+                    "audit, every tag/grade gate MUST route through "
+                    "`validate_custody` / `is_promotable_exact_cuda_evidence` "
+                    "(or accumulate a fail-closed blocker against `archive_sha256`). "
+                    "Add a `# CUSTODY_VALIDATOR_OK:<reason>` waiver if the site "
+                    "is a read-only filter that does not gate promotion."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [tag-grade-validator-broader] {len(violations)} bypass(es) "
+                f"(scanned: {scanned_files} file(s) under src/tac/, tools/, "
+                f"experiments/)"
+            )
+            for v in violations[:5]:
+                print(f"    • {v[:240]}")
+            if len(violations) > 5:
+                print(f"    ... ({len(violations) - 5} more)")
+        else:
+            print(
+                "  [tag-grade-validator-broader] OK "
+                f"({scanned_files} file(s) scanned; 0 bypass(es))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_no_tag_only_custody_validation: "
+            f"{len(violations)} bypass(es) of the joint custody validator; first 3:\n  "
+            + "\n  ".join(v[:300] for v in violations[:3])
+            + "\n\nFix: route tag/grade gate through a joint validator OR accumulate "
+            "a fail-closed blocker against archive_sha256."
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #131 — bare-write-on-shared-state must route through fcntl helpers
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Bug class (proactive META-class custody+concurrency audit, 2026-05-09):
+# code that writes to shared mutable state files (`.omx/state/*.json`,
+# `lane_registry.json`, `recovery_metadata.json`, etc.) MUST serialize on
+# an fcntl lockfile + reload-inside-lock + unique tmp + fsync + os.replace.
+#
+# Without serialization, two concurrent writers loading the same stale
+# state + each appending different rows + each replacing → ONE row's update
+# silently dropped (the same MEDIUM bug class codex round-2 caught in
+# `continual_learning.save_posterior`, catalog #128). The proactive sweep
+# found 6 ADDITIONAL surfaces with the same META class beyond #128's scope:
+#
+#   - LIGHTNING_ACTIVE_JOBS_PATH (4 callers)
+#   - LIGHTNING_STATE (lightning_active_sessions)
+#   - vastai_active_instances.json (one bypass of canonical writer)
+#   - instance_setup_first_seen.json
+#
+# All 6 fixed in this lane via either:
+#   - `tac.deploy.lightning.active_jobs_state.update_active_jobs_locked`
+#     (new canonical helper for LIGHTNING_ACTIVE_JOBS_PATH)
+#   - `tac.deploy.lightning.lightning_dispatch._lightning_state_lock`
+#     (new context manager + atomic _save_state)
+#   - `tac.vastai_tracker.register_instance` (existing canonical writer)
+#   - inline fcntl pattern (verify_vast_instances.py)
+#
+# This gate prevents regression: any future code that introduces a new
+# bare write to a shared-state path must use one of the canonical helpers
+# OR add a `# BARE_WRITE_OK:<reason>` waiver.
+
+_BARE_WRITE_WAIVER_MARKER = "BARE_WRITE_OK"
+
+_SHARED_STATE_PATH_MARKERS: tuple[str, ...] = (
+    ".omx/state/",
+    "vastai_active_instances",
+    "lightning_active_jobs",
+    "lightning_active_sessions",
+    "lightning_batch_jobs",
+    "active_lane_dispatch_claims",
+    "lane_registry.json",
+    "lane_maturity_audit",
+    "next_catalog_number",
+    "continual_learning_posterior",
+    "azure_active_vms",
+    "review_policy",
+    "cuda_cpu_axis_profile_registry",
+    "lane_c_compliance_attestations",
+    ".commit-lock",
+    "commit-serializer",
+)
+
+_BARE_WRITE_LOCK_TOKENS: tuple[str, ...] = (
+    "fcntl.flock",
+    "LOCK_EX",
+    "posterior_update_locked",
+    "_posterior_lock",
+    "_lightning_state_lock",
+    "_active_jobs_lock",
+    "update_active_jobs_locked",
+    "register_job",
+    "upsert_job",
+    "mark_job_terminal",
+    "subagent_commit_serializer",
+    "claim_catalog_number",
+    "tac.vastai_tracker",
+    "register_instance",
+    "tracker_path",
+    "with_lane_claim",
+    "FileLock",
+)
+
+# Files that legitimately implement canonical fcntl-locked helpers OR are
+# already covered by sister gates (catalog #128 covers continual_learning).
+_BARE_WRITE_CANONICAL_HELPERS: tuple[str, ...] = (
+    "src/tac/continual_learning.py",  # catalog #128
+    "src/tac/vastai_tracker.py",  # canonical fcntl helper
+    "src/tac/deploy/lightning/lightning_dispatch.py",  # canonical (this lane)
+    "src/tac/deploy/lightning/active_jobs_state.py",  # canonical (this lane)
+    "src/tac/deploy/azure/azure_dispatch.py",  # already locked
+    "src/tac/deploy/vastai/client.py",  # canonical Vast.ai client
+    "src/tac/preflight.py",  # this gate's own scanning code
+    "src/tac/preflight_fs_cache.py",  # FS cache helper
+    "src/tac/artifact_lifecycle.py",  # registry classifier
+    "tools/claim_catalog_number.py",  # canonical fcntl helper
+    "tools/subagent_commit_serializer.py",  # canonical fcntl helper
+    "tools/claim_lane_dispatch.py",  # canonical lane-claim helper
+    "tools/lane_maturity.py",  # uses lane-claim helper internally
+    # Catalog #131 gate's own implementation file (this file) excluded
+    # via canonical-helpers list to avoid self-detection.
+)
+
+# Compiled regexes for write detection (compile once, reuse across files).
+_BARE_WRITE_OPEN_RE = re.compile(r"\bopen\(\s*([^,)]+),\s*['\"][wxa]b?\+?['\"]")
+_BARE_WRITE_TEXT_RE = re.compile(r"\b([A-Za-z_][A-Za-z0-9_.\[\]\(\)]*)\.write_text\s*\(")
+_BARE_WRITE_BYTES_RE = re.compile(r"\b([A-Za-z_][A-Za-z0-9_.\[\]\(\)]*)\.write_bytes\s*\(")
+_BARE_OS_REPLACE_RE = re.compile(r"\bos\.replace\s*\(\s*[^,]+,\s*([A-Za-z_][A-Za-z0-9_.\[\]\(\)]*)")
+
+# Module-constant assignment binding shared-state path. Caches across files
+# so each file only pays one regex compile per scan.
+_BARE_WRITE_SHARED_VAR_RE = re.compile(
+    r"^\s*([A-Z_][A-Z0-9_]*)\s*[:=][^=].*?(['\"])([^'\"]*(?:" +
+    "|".join(re.escape(m) for m in _SHARED_STATE_PATH_MARKERS) +
+    r")[^'\"]*)\2",
+    re.MULTILINE,
+)
+
+
+def _bare_write_collect_shared_vars(text: str) -> set[str]:
+    return set(m.group(1) for m in _BARE_WRITE_SHARED_VAR_RE.finditer(text))
+
+
+def _bare_write_line_targets_shared(line: str, shared_vars: set[str]) -> bool:
+    """True if the write call's path argument resolves to a shared-state path."""
+    # Direct path-literal in the line
+    if any(m in line for m in _SHARED_STATE_PATH_MARKERS):
+        return True
+    # Receiver matches a shared variable
+    for pat in (_BARE_WRITE_TEXT_RE, _BARE_WRITE_BYTES_RE):
+        m = pat.search(line)
+        if m:
+            recv = m.group(1)
+            base = recv.split(".")[0].split("[")[0].split("(")[0]
+            if base in shared_vars or recv in shared_vars:
+                return True
+    m = _BARE_WRITE_OPEN_RE.search(line)
+    if m:
+        arg = m.group(1).strip()
+        base = arg.split(".")[0].split("[")[0].split("(")[0]
+        if base in shared_vars or arg in shared_vars:
+            return True
+    m = _BARE_OS_REPLACE_RE.search(line)
+    if m:
+        arg = m.group(1).strip()
+        base = arg.split(".")[0].split("[")[0].split("(")[0]
+        if base in shared_vars or arg in shared_vars:
+            return True
+    return False
+
+
+def check_no_bare_writes_to_shared_state(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #131 — shared-state writes must route through fcntl helpers.
+
+    Refuses code sites under `src/tac/`, `tools/`, `experiments/`, `scripts/`
+    that write to a recognized shared-state path (e.g. `.omx/state/*.json`,
+    `vastai_active_instances`, `lightning_active_jobs`, etc.) without:
+
+    1. The whole file referencing one of the canonical fcntl-locked helpers
+       or context managers (``fcntl.flock``, ``LOCK_EX``,
+       ``posterior_update_locked``, ``_posterior_lock``,
+       ``_lightning_state_lock``, ``_active_jobs_lock``,
+       ``update_active_jobs_locked``, ``register_job``, ``register_instance``,
+       ``subagent_commit_serializer``, ``claim_catalog_number``), OR
+    2. A 12-line window around the write call ALSO containing one of those
+       lock tokens (single-function locking is acceptable), OR
+    3. A same-line waiver comment ``# BARE_WRITE_OK:<reason>``.
+
+    Held warn-only initially per the directive — flip to STRICT after live
+    count drives to 0 and stability period elapses.
+
+    Bug class: proactive META-class sweep (2026-05-09). Sister of catalog #128
+    which only covered the narrower `continual_learning.save_posterior` case.
+    The proactive sweep found 6 ADDITIONAL surfaces with the same META class
+    beyond #128's scope; all 6 fixed in this lane.
+
+    Memory: feedback_proactive_custody_concurrency_audit_landed_20260509.md
+    """
+    root = Path(repo_root or REPO_ROOT)
+    scan_dirs = [
+        root / "src" / "tac",
+        root / "tools",
+        root / "experiments",
+        root / "scripts",
+    ]
+    excluded_files = {root / p for p in _BARE_WRITE_CANONICAL_HELPERS}
+
+    violations: list[str] = []
+    scanned_files = 0
+    for scan_dir in scan_dirs:
+        if not scan_dir.is_dir():
+            continue
+        for py in scan_dir.rglob("*.py"):
+            if py in excluded_files:
+                continue
+            # Skip tests
+            if "/tests/" in str(py) or py.name.startswith("test_"):
+                continue
+            # Skip vendored public-PR intakes / hosted exports
+            s = str(py)
+            if (
+                "experiments/results/public_pr" in s
+                or "experiments/results/comma_lab_public_export" in s
+                or "experiments/results/vast_harvest" in s
+            ):
+                continue
+            try:
+                text = py.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            # Quick prefilter — file must reference a shared-state marker.
+            if not any(m in text for m in _SHARED_STATE_PATH_MARKERS):
+                continue
+            scanned_files += 1
+            shared_vars = _bare_write_collect_shared_vars(text)
+            file_has_lock = any(tok in text for tok in _BARE_WRITE_LOCK_TOKENS)
+            lines = text.splitlines()
+            for lineno, line in enumerate(lines):
+                stripped = line.lstrip()
+                if stripped.startswith("#"):
+                    continue
+                # Skip lines inside string literals (rough heuristic).
+                if stripped.startswith('"') or stripped.startswith("'"):
+                    continue
+                # Must be a write call.
+                has_write = (
+                    _BARE_WRITE_OPEN_RE.search(line)
+                    or _BARE_WRITE_TEXT_RE.search(line)
+                    or _BARE_WRITE_BYTES_RE.search(line)
+                    or _BARE_OS_REPLACE_RE.search(line)
+                )
+                if not has_write:
+                    continue
+                if _BARE_WRITE_WAIVER_MARKER in line:
+                    continue
+                if not _bare_write_line_targets_shared(line, shared_vars):
+                    continue
+                if file_has_lock:
+                    continue
+                # Window-scope check: 12 lines before + 2 after.
+                lo = max(0, lineno - 12)
+                hi = min(len(lines), lineno + 3)
+                window = "\n".join(lines[lo:hi])
+                if any(tok in window for tok in _BARE_WRITE_LOCK_TOKENS):
+                    continue
+                rel = py.relative_to(root) if py.is_relative_to(root) else py
+                violations.append(
+                    f"[Check 131] {rel}:{lineno + 1}: "
+                    "bare write to shared-state path without `fcntl.flock` / "
+                    "canonical locked helper. Per proactive META-class audit, "
+                    "every shared-state write MUST route through one of: "
+                    "`tac.continual_learning.posterior_update_locked` / "
+                    "`tac.deploy.lightning.active_jobs_state.update_active_jobs_locked` / "
+                    "`tac.deploy.lightning.lightning_dispatch._lightning_state_lock` / "
+                    "`tac.vastai_tracker.register_instance` / "
+                    "`tools/claim_catalog_number.py` / "
+                    "`tools/subagent_commit_serializer.py`. "
+                    "Add a `# BARE_WRITE_OK:<reason>` waiver if the site is "
+                    "single-writer / serialized externally."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [bare-shared-state-writes] {len(violations)} bare write(s) "
+                f"(scanned: {scanned_files} file(s) referencing shared-state markers)"
+            )
+            for v in violations[:5]:
+                print(f"    • {v[:240]}")
+            if len(violations) > 5:
+                print(f"    ... ({len(violations) - 5} more)")
+        else:
+            print(
+                "  [bare-shared-state-writes] OK "
+                f"({scanned_files} file(s) scanned; 0 bare write(s))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_no_bare_writes_to_shared_state: "
+            f"{len(violations)} bare write(s) to shared state; first 3:\n  "
+            + "\n  ".join(v[:300] for v in violations[:3])
+            + "\n\nFix: route through a canonical fcntl-locked helper "
+            "or add `# BARE_WRITE_OK:<reason>` for single-writer paths."
         )
     return violations
 
