@@ -538,6 +538,23 @@ def preflight_all(
         check_representation_lane_has_archive_grammar_at_design_time(
             strict=False, verbose=verbose,
         )
+        # 2026-05-09 Subagent coherence-by-default (#125): every post-2026-05-09
+        # landing memo (feedback_*_landed_<YYYYMMDD>.md) MUST declare ALL 6
+        # unified-Lagrangian wire-in hooks (sensitivity-map / pareto /
+        # bit-allocator / cathedral-autopilot / continual-learning /
+        # probe-disambiguator) OR opt out via research_only=true OR per-hook
+        # '<Hook>: N/A — <rationale>'. Held warn-only initially; flip to
+        # STRICT after legacy-memo backfill drives live count to 0. Memory:
+        # feedback_unified_lagrangian_action_principle_GR_style_20260509.md
+        check_subagent_landing_has_solver_wire_in(strict=False, verbose=verbose)
+        # 2026-05-09 Subagent coherence-by-default (#126): subagent commits
+        # whose introduced files (src/tac/, tools/, experiments/, scripts/)
+        # reference a lane_<NAME> token must have that lane pre-registered in
+        # .omx/state/lane_registry.json. Test fixtures may carry
+        # '# FAKE_LANE_OK:<reason>' marker. Held warn-only initially; flip to
+        # STRICT after legacy-commit backfill drives live count to 0. Memory:
+        # feedback_unified_lagrangian_action_principle_GR_style_20260509.md
+        check_lane_pre_registered_before_work_starts(strict=False, verbose=verbose)
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -26554,6 +26571,724 @@ def check_representation_lane_has_archive_grammar_at_design_time(
             + ", ".join(_REPRESENTATION_LANE_REQUIRED_FIELDS)
             + "\n\nOpt-outs: set lane_class='substrate_engineering' OR "
             "research_only=true on the lane dict."
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #125 — landing memos must declare 6 unified-Lagrangian wire-ins
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Operationalises CLAUDE.md "Subagent coherence-by-default" non-negotiable
+# (landed 2026-05-09). Every post-cutover landing memo (matching
+# `feedback_*_landed_<YYYYMMDD>.md` with date >= 20260509) MUST declare ALL
+# 6 of the unified-Lagrangian wire-in hooks named in
+# `feedback_unified_lagrangian_action_principle_GR_style_20260509.md`:
+#
+#   1. Sensitivity-map contribution
+#   2. Pareto constraint
+#   3. Bit-allocator hook
+#   4. Cathedral autopilot dispatch hook
+#   5. Continual-learning posterior update
+#   6. Probe-disambiguator (if 2+ defensible interpretations)
+#
+# Opt-outs:
+#   - `research_only=true` declared explicitly with rationale
+#   - per-hook `<Hook>: N/A — <rationale>` declared explicitly
+#
+# Refusing to declare = silent orphan work. The gate is held warn-only on
+# initial landing because legacy memos have not yet backfilled; flip to
+# STRICT after live-count drives to zero.
+
+# Cutover date: the unified-Lagrangian non-negotiable landed 2026-05-09.
+# Memos dated earlier are exempt (they predate the rule).
+_LANDING_MEMO_HOOK_CUTOVER_YYYYMMDD = 20260509
+
+# The 6 wire-in hook labels. Each entry is a (canonical_label, accepted_aliases)
+# tuple. The label appears in the violation message; aliases are accepted
+# spellings inside the memo body. Matching is case-insensitive on the joined
+# alias against the line text.
+_UNIFIED_LAGRANGIAN_WIRE_IN_HOOKS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    # 1. Sensitivity-map: ∂L_track/∂θ contribution to tac.sensitivity_map.*
+    ("sensitivity_map", (
+        "sensitivity-map", "sensitivity map", "sensitivity_map",
+        "sensitivitymap",
+    )),
+    # 2. Pareto constraint: rate / seg / pose / archive bound
+    ("pareto", (
+        "pareto", "pareto-constraint", "pareto constraint",
+        "pareto_constraint", "pareto-frontier", "pareto frontier",
+    )),
+    # 3. Bit-allocator hook: per-tensor importance change
+    ("bit_allocator", (
+        "bit-allocator", "bit allocator", "bit_allocator",
+        "bit-alloc", "bit alloc",
+    )),
+    # 4. Cathedral autopilot dispatch hook: deployable archive variant
+    ("cathedral_autopilot", (
+        "cathedral autopilot", "cathedral-autopilot", "cathedral_autopilot",
+        "autopilot dispatch", "autopilot-dispatch",
+    )),
+    # 5. Continual-learning posterior update: anchor → posterior reseed
+    ("continual_learning", (
+        "continual-learning", "continual learning", "continual_learning",
+        "posterior update", "posterior-update", "posterior_update",
+        "bayesian update", "bayesian-update",
+    )),
+    # 6. Probe-disambiguator (if 2+ defensible interpretations)
+    ("probe_disambiguator", (
+        "probe-disambiguator", "probe disambiguator", "probe_disambiguator",
+        "disambiguator", "non-arbitrariness probe", "non-arbitrariness",
+    )),
+)
+
+# Opt-out tokens: the memo declares it is research-only (no wire-in expected).
+_RESEARCH_ONLY_OPTOUT_TOKENS: tuple[str, ...] = (
+    "research_only=true",
+    "research_only:true",
+    "research_only: true",
+    "research-only=true",
+    "research-only: true",
+)
+
+def _landing_memo_date(path: Path) -> int | None:
+    """Extract the YYYYMMDD date from a landing-memo filename.
+
+    Filename pattern: ``feedback_<topic>_landed_<YYYYMMDD>.md``. Returns
+    None if the pattern does not match (e.g., a non-landing memo).
+    """
+    name = path.name
+    m = re.search(r"_landed_(\d{8})\.md$", name)
+    if m is None:
+        return None
+    try:
+        return int(m.group(1))
+    except ValueError:
+        return None
+
+
+def _memo_declares_research_only(text: str) -> bool:
+    """Return True iff the memo body opts out as research-only."""
+    lower = text.lower()
+    for tok in _RESEARCH_ONLY_OPTOUT_TOKENS:
+        if tok in lower:
+            return True
+    return False
+
+
+def _memo_declares_hook(text: str, hook_label: str, aliases: tuple[str, ...]) -> bool:
+    """Return True iff the memo body declares ``hook_label`` (or N/A with rationale).
+
+    Acceptance rules (any one suffices):
+      1. The body contains ``<alias>:`` followed by some non-empty content
+         (the standard "wire-in declared" pattern). Specifically, look for
+         a line where one of the aliases appears followed by ``:``, ``=``,
+         or "—" / "-" / "wire-in" markers.
+      2. The body contains ``<alias>: N/A — <rationale>`` (per-hook opt-out).
+         The rationale must be non-empty.
+    """
+    # Per-line scan keeps the cost predictable and the matches localized.
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        line_lower = line.lower()
+        # Look for any alias as a substring; if found, evaluate the line.
+        for alias in aliases:
+            alias_lower = alias.lower()
+            if alias_lower not in line_lower:
+                continue
+            # Acceptance form 1: alias appears followed by `:` / `=` / `—` /
+            # `-` / `wire-in` marker. We accept generously — the goal is
+            # that the SUBAGENT acknowledged the hook, not that they used
+            # one specific phrasing.
+            #
+            # Common acceptable patterns observed in landing memos:
+            #   "Sensitivity-map contribution: ..."
+            #   "Pareto constraint: rate ≤ R"
+            #   "Bit-allocator hook: per-tensor importance ..."
+            #   "Cathedral autopilot dispatch: ..."
+            #   "Continual-learning posterior update: ..."
+            #   "Probe-disambiguator: deterministic, no design tension"
+            #   "1. Sensitivity-map: N/A — preflight infrastructure"
+            #
+            # Implementation: after the alias, require ANY of:
+            #   - ':' (the canonical declaration form)
+            #   - '=' (struct-style)
+            #   - 'wire' / 'wired' / 'wiring' (informal acknowledgment)
+            #   - 'hook' (informal — "<hook>: ...")
+            idx = line_lower.find(alias_lower)
+            after = line_lower[idx + len(alias_lower):].lstrip()
+            if not after:
+                # Alias is the entire line tail — reject (likely a header).
+                continue
+            # Look for declaration-form markers in the next ~80 chars.
+            window = after[:120]
+            if (
+                window.startswith(":")
+                or window.startswith("=")
+                or "wire" in window
+                or "wiring" in window
+                or "hook" in window
+                or "contribution" in window
+                or "update" in window
+                or "constraint" in window
+                or "dispatch" in window
+                or "n/a" in window
+                or "na " in window
+                or "na—" in window
+                or "na-" in window
+            ):
+                # Strong signal: the line is genuinely declaring the hook.
+                # If the form is ``<alias>: N/A``, require a non-empty
+                # rationale on the same line.
+                if "n/a" in window or window.lstrip(" :=—-").lower().startswith("na"):
+                    # Look for trailing rationale after "N/A"
+                    na_pos = window.find("n/a")
+                    if na_pos < 0:
+                        na_pos = window.lower().find("na")
+                    rationale_tail = window[na_pos:].lstrip("n/aNA").strip()
+                    rationale_tail = rationale_tail.lstrip(" :=—-,;").strip()
+                    if not rationale_tail:
+                        # N/A with no rationale → reject this line; keep scanning.
+                        continue
+                return True
+    return False
+
+
+def check_subagent_landing_has_solver_wire_in(
+    *,
+    memory_dir: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #125 — every post-cutover landing memo declares 6 wire-in hooks.
+
+    Operationalises CLAUDE.md "Subagent coherence-by-default" (landed
+    2026-05-09). Refuses any landing memo
+    (``feedback_*_landed_<YYYYMMDD>.md`` with ``YYYYMMDD >= 20260509``)
+    that does not declare ALL 6 unified-Lagrangian wire-in hooks named in
+    ``feedback_unified_lagrangian_action_principle_GR_style_20260509.md``:
+
+        1. Sensitivity-map contribution
+        2. Pareto constraint
+        3. Bit-allocator hook
+        4. Cathedral autopilot dispatch hook
+        5. Continual-learning posterior update
+        6. Probe-disambiguator (if 2+ defensible interpretations)
+
+    Opt-outs:
+      - ``research_only=true`` declared anywhere in the memo body.
+      - Per-hook ``<HookAlias>: N/A — <rationale>`` (rationale required).
+
+    Held warn-only on initial landing (2026-05-09); flip to STRICT after
+    backfill drives live count to 0.
+
+    Bug class: pre-rule, lateral-leap landings produced research artifacts
+    that the planner could not see or compose. Wire-in declaration forces
+    the subagent to acknowledge each integration surface explicitly so a
+    missing hook is visible at landing-time, not weeks later when the
+    Pareto solver / autopilot / continual-learning posterior diverges
+    from reality.
+
+    Memory:
+      feedback_unified_lagrangian_action_principle_GR_style_20260509.md
+      feedback_design_tension_ship_both_interpretations_let_math_arbitrate_20260509.md
+    """
+    # Resolve the memory directory. Default to the canonical PACT memory dir.
+    if memory_dir is None:
+        # The PACT memory dir lives outside the repo at
+        # ~/.claude/projects/-Users-adpena-Projects-pact/memory/
+        # Allow override via the env var in case the harness is run on a
+        # different machine.
+        env_dir = os.environ.get("PACT_MEMORY_DIR")
+        if env_dir:
+            memory_dir = Path(env_dir)
+        else:
+            home = Path(os.path.expanduser("~"))
+            memory_dir = (
+                home
+                / ".claude"
+                / "projects"
+                / "-Users-adpena-Projects-pact"
+                / "memory"
+            )
+    memory_dir = Path(memory_dir)
+    if not memory_dir.is_dir():
+        msg = f"memory dir not present: {memory_dir}"
+        if verbose:
+            print(f"  [subagent-landing-wire-in] OK (no memory dir; nothing to scan)")
+        return []  # Don't fail; some hosts may not have the dir mounted.
+
+    violations: list[str] = []
+    scanned_total = 0
+    scanned_post_cutover = 0
+    scanned_optout = 0
+    for path in sorted(memory_dir.glob("feedback_*_landed_*.md")):
+        scanned_total += 1
+        date = _landing_memo_date(path)
+        if date is None:
+            continue
+        if date < _LANDING_MEMO_HOOK_CUTOVER_YYYYMMDD:
+            continue
+        scanned_post_cutover += 1
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as e:
+            violations.append(
+                f"{path.name}: could not read memo body ({e}); declare 6 wire-in hooks"
+            )
+            continue
+        if _memo_declares_research_only(text):
+            scanned_optout += 1
+            continue
+        missing: list[str] = []
+        for hook_label, aliases in _UNIFIED_LAGRANGIAN_WIRE_IN_HOOKS:
+            if not _memo_declares_hook(text, hook_label, aliases):
+                missing.append(hook_label)
+        if missing:
+            violations.append(
+                f"[Check 125] {path.name} ({date}) missing wire-in declaration(s): "
+                f"{', '.join(missing)}. "
+                "Per CLAUDE.md 'Subagent coherence-by-default' non-negotiable, "
+                "every post-2026-05-09 landing memo MUST declare ALL 6 "
+                "unified-Lagrangian wire-ins (sensitivity-map / pareto / "
+                "bit-allocator / cathedral-autopilot / continual-learning / "
+                "probe-disambiguator) OR opt out via research_only=true OR "
+                "per-hook '<Hook>: N/A — <rationale>'."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [subagent-landing-wire-in] {len(violations)} memo(s) missing "
+                f"wire-in declaration(s) (scanned: {scanned_post_cutover} "
+                f"post-cutover memo(s) of {scanned_total} total; "
+                f"{scanned_optout} research-only opt-out)"
+            )
+            for v in violations[:5]:
+                print(f"    • {v[:200]}")
+            if len(violations) > 5:
+                print(f"    ... ({len(violations) - 5} more)")
+        else:
+            print(
+                f"  [subagent-landing-wire-in] OK "
+                f"({scanned_post_cutover} post-cutover memo(s) scanned, "
+                f"{scanned_optout} research-only opt-out, 0 missing)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_subagent_landing_has_solver_wire_in: "
+            f"{len(violations)} landing memo(s) missing 1+ wire-in "
+            "declaration(s); first 3:\n  "
+            + "\n  ".join(v[:300] for v in violations[:3])
+            + "\n\nRequired hooks per CLAUDE.md 'Subagent coherence-by-default':\n    "
+            + ", ".join(h for h, _ in _UNIFIED_LAGRANGIAN_WIRE_IN_HOOKS)
+            + "\n\nOpt-out: declare research_only=true OR per-hook "
+            "'<Hook>: N/A — <rationale>' inside the memo body."
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #126 — referenced lane_ids must be pre-registered in the registry
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Operationalises CLAUDE.md "Lane maturity registry" lifecycle discipline +
+# "Subagent coherence-by-default" anti-duplication primitive. Refuses any
+# subagent commit whose introduced files (under src/tac/, tools/,
+# experiments/, scripts/) reference a `lane_id` that is NOT in
+# `.omx/state/lane_registry.json`.
+#
+# Bug class: parallel subagents claim overlapping lanes silently because
+# nothing prevents two of them from inventing the same fictional lane_id.
+# Pre-registration via `tools/lane_maturity.py add-lane <id> --name <...> --phase <N>`
+# at SKETCH (Level 0) is the coherence primitive — once a lane is in the
+# registry, the second subagent sees it and either contributes to it or
+# coordinates with the operator.
+#
+# Held warn-only on initial landing because legacy commits have not yet
+# backfilled; flip to STRICT after live-count drives to zero.
+
+# Patterns that introduce a `lane_id` reference. The scanner looks for
+# `lane_<NAME>` tokens that appear:
+#   - As a Python string literal (e.g., `"lane_g_v3"`, `'lane_t11_lovasz'`)
+#   - As a dict key/value pair (e.g., `lane_id="lane_g_v3"`)
+#   - As a function argument (e.g., `add_lane("lane_g_v3", ...)`)
+# Matching is intentionally permissive on identifier characters, then the
+# whole `lane_<...>` string is matched against the registry lane_ids.
+
+# Match `lane_<identifier>` ONLY inside a string literal (single/double
+# quotes) OR a path-like context. The bare-identifier form is too noisy
+# (function names, dict keys, parameter names like `lane_class` /
+# `lane_scripts` / `lane_id_normalizer` all share the prefix). Restricting
+# to string-literal context dramatically cuts false positives while keeping
+# real lane_id references (e.g., `lane_id="lane_g_v3"`,
+# `add_lane("lane_t11_lovasz", ...)`, `_LANE_ID = "lane_pose_dc3"`).
+#
+# Two acceptance forms (alternation):
+#   Form 1: inside double-quoted Python string literal
+#   Form 2: inside single-quoted Python string literal
+#
+# In both forms, the captured `lane_<identifier>` must form the ENTIRE
+# string (anchored start/end) so we do not match incidental occurrences
+# like `"lane_id should be lane_g_v3"` (which holds two distinct tokens
+# but only the second is a real lane_id reference).
+_LANE_ID_REFERENCE_RE = re.compile(
+    r'"(lane_[a-zA-Z0-9_]+)"'
+    r"|"
+    r"'(lane_[a-zA-Z0-9_]+)'"
+)
+
+# Tokens that appear inside `lane_<...>` matches but should NOT be treated
+# as lane_id references. These are common Python identifiers / method names
+# that happen to share the prefix.
+_LANE_ID_REFERENCE_BLOCKLIST: frozenset[str] = frozenset({
+    # Common helper / tool / function names
+    "lane_id",
+    "lane_ids",
+    "lane_name",
+    "lane_phase",
+    "lane_class",
+    "lane_dict",
+    "lane_data",
+    "lane_entry",
+    "lane_entries",
+    "lane_evidence",
+    "lane_evidence_value",
+    "lane_evidence_str",
+    "lane_evidence_string",
+    "lane_filter",
+    "lane_filters",
+    "lane_gates",
+    "lane_gate",
+    "lane_index",
+    "lane_info",
+    "lane_iterator",
+    "lane_kind",
+    "lane_label",
+    "lane_level",
+    "lane_levels",
+    "lane_list",
+    "lane_lookup",
+    "lane_lookups",
+    "lane_map",
+    "lane_maturity",
+    "lane_maturity_audit",
+    "lane_message",
+    "lane_meta",
+    "lane_metadata",
+    "lane_node",
+    "lane_notes",
+    "lane_obj",
+    "lane_object",
+    "lane_path",
+    "lane_paths",
+    "lane_payload",
+    "lane_record",
+    "lane_records",
+    "lane_ref",
+    "lane_refs",
+    "lane_registry",
+    "lane_result",
+    "lane_results",
+    "lane_row",
+    "lane_rows",
+    "lane_script",
+    "lane_scripts",
+    "lane_set",
+    "lane_state",
+    "lane_status",
+    "lane_string",
+    "lane_str",
+    "lane_summary",
+    "lane_tag",
+    "lane_tags",
+    "lane_tag_value",
+    "lane_text",
+    "lane_token",
+    "lane_tokens",
+    "lane_value",
+    "lane_values",
+    "lane_var",
+    "lane_claim",
+    "lane_claim_opened",
+    "lane_claim_path",
+    "lane_claim_state",
+    "lane_claim_status",
+    # Test / placeholder names. Real lane_ids should not collide with these.
+    "lane_test",
+    "lane_test_lane",
+    "lane_fixture",
+    "lane_fixture_id",
+    "lane_dummy",
+    "lane_unknown",
+    "lane_x",
+    "lane_xyz",
+    "lane_demo",
+    "lane_example",
+})
+
+
+def _commit_introduced_files(
+    repo_root: Path, n_commits: int, since_sha: str | None = None,
+) -> dict[str, list[str]]:
+    """Return {commit_sha: [paths]} for files added/modified in the last N commits.
+
+    Uses `git log -n <n_commits> --name-only --diff-filter=AM` to capture
+    introduced or modified file paths. Renames are folded onto the new path
+    via diff-filter R (added back via T below).
+    """
+    paths_by_sha: dict[str, list[str]] = {}
+    cmd = [
+        "git", "log",
+        f"-n{n_commits}",
+        "--name-only",
+        "--diff-filter=AMRT",
+        "--pretty=format:%H",
+    ]
+    try:
+        result = subprocess.run(
+            cmd,
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return paths_by_sha
+    if result.returncode != 0:
+        return paths_by_sha
+    cur_sha: str | None = None
+    cur_paths: list[str] = []
+    for raw_line in result.stdout.splitlines():
+        line = raw_line.strip()
+        if not line:
+            if cur_sha is not None:
+                paths_by_sha[cur_sha] = cur_paths
+                cur_sha = None
+                cur_paths = []
+            continue
+        if re.fullmatch(r"[0-9a-f]{40}", line):
+            if cur_sha is not None:
+                paths_by_sha[cur_sha] = cur_paths
+            cur_sha = line
+            cur_paths = []
+        else:
+            if cur_sha is not None:
+                cur_paths.append(line)
+    if cur_sha is not None and cur_sha not in paths_by_sha:
+        paths_by_sha[cur_sha] = cur_paths
+    return paths_by_sha
+
+
+# Path prefixes that are scanned for lane_id references. Per the spec:
+# src/tac/, tools/, experiments/, scripts/.
+_LANE_ID_SCAN_PREFIXES: tuple[str, ...] = (
+    "src/tac/",
+    "tools/",
+    "experiments/",
+    "scripts/",
+)
+
+# File extensions worth scanning. Other extensions (e.g., .json / .md / .yaml)
+# typically carry intentional lane_id references in evidence/manifest form;
+# the gate is intentionally scoped to source-of-truth code surfaces where a
+# lane_id reference creates a binding usage.
+_LANE_ID_SCAN_EXTENSIONS: tuple[str, ...] = (
+    ".py",
+    ".sh",
+)
+
+# Test-fixture marker (per the spec, sister-of FAKE_LANE_OK pattern).
+_LANE_ID_FAKE_WAIVER_RE = re.compile(
+    r"#\s*FAKE_LANE_OK\s*:\s*[^\n]+",
+    re.IGNORECASE,
+)
+
+
+def _line_or_window_has_fake_waiver(lines: list[str], lineno: int, window: int = 5) -> bool:
+    """Return True iff the same line OR within ``window`` lines above carries
+    a `# FAKE_LANE_OK:<reason>` marker.
+    """
+    start = max(0, lineno - window)
+    end = min(len(lines), lineno + 1)
+    for i in range(start, end):
+        if _LANE_ID_FAKE_WAIVER_RE.search(lines[i]):
+            return True
+    return False
+
+
+def _is_test_path(rel: str) -> bool:
+    """Return True iff `rel` is a test-fixture path."""
+    parts = rel.split("/")
+    return any(p == "tests" for p in parts) or any(
+        p.startswith("test_") for p in parts
+    )
+
+
+def check_lane_pre_registered_before_work_starts(
+    *,
+    repo_root: str | Path | None = None,
+    n_commits: int = 50,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #126 — referenced lane_ids must be pre-registered in the registry.
+
+    Refuses subagent commits (last ``n_commits``) whose introduced files
+    under ``src/tac/`` / ``tools/`` / ``experiments/`` / ``scripts/``
+    reference a ``lane_<NAME>`` token that does NOT appear in
+    ``.omx/state/lane_registry.json``.
+
+    Acceptance/exemption rules:
+      - Test fixtures (``*/tests/*`` paths or filenames starting with
+        ``test_``) are exempt iff the line carries (or has within 5 lines
+        above) a ``# FAKE_LANE_OK:<reason>`` marker.
+      - Common helper-name tokens (``lane_id``, ``lane_class``,
+        ``lane_registry``, ``lane_maturity``, etc.) are blocklisted and
+        never treated as lane_id references.
+
+    Bug class: parallel subagents inventing the same fictional lane_id
+    silently. Pre-registration at Level 0 (SKETCH) via
+    ``tools/lane_maturity.py add-lane <id> --name <...> --phase <N>``
+    forces coordination at the moment a lane has a name.
+
+    Held warn-only on initial landing (2026-05-09); flip to STRICT after
+    backfill drives live count to 0.
+
+    Memory:
+      feedback_unified_lagrangian_action_principle_GR_style_20260509.md
+      CLAUDE.md "Lane maturity registry" lifecycle discipline section
+    """
+    root = Path(repo_root or REPO_ROOT)
+    registry_path = root / ".omx" / "state" / "lane_registry.json"
+    if not registry_path.is_file():
+        msg = f"lane registry not found: {registry_path}"
+        if verbose:
+            print(f"  [lane-pre-registered] WARN: {msg}")
+        if strict:
+            raise PreflightError(
+                "check_lane_pre_registered_before_work_starts: " + msg
+            )
+        return [msg]
+
+    try:
+        registry_data = json.loads(registry_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        msg = f"could not parse lane registry: {e}"
+        if verbose:
+            print(f"  [lane-pre-registered] WARN: {msg}")
+        if strict:
+            raise PreflightError(
+                "check_lane_pre_registered_before_work_starts: " + msg
+            )
+        return [msg]
+
+    registered_ids: set[str] = set()
+    for lane in registry_data.get("lanes", []):
+        lid = lane.get("id")
+        if isinstance(lid, str) and lid:
+            registered_ids.add(lid)
+        # Also accept aliases if a lane declares them (forward-compat).
+        for ak in ("aliases", "alias"):
+            for alias in lane.get(ak, []) or []:
+                if isinstance(alias, str) and alias:
+                    registered_ids.add(alias)
+
+    paths_by_sha = _commit_introduced_files(root, n_commits)
+    if not paths_by_sha:
+        if verbose:
+            print(
+                f"  [lane-pre-registered] OK "
+                f"(no commits resolvable in last {n_commits}; "
+                f"git log empty or git unavailable)"
+            )
+        return []
+
+    violations: list[str] = []
+    scanned_files = 0
+    scanned_lines = 0
+    for sha, paths in paths_by_sha.items():
+        for rel in paths:
+            # Filter to scan-prefix-and-extension subset.
+            if not rel.endswith(_LANE_ID_SCAN_EXTENSIONS):
+                continue
+            if not any(rel.startswith(p) for p in _LANE_ID_SCAN_PREFIXES):
+                continue
+            file_path = root / rel
+            if not file_path.is_file():
+                # File may have been deleted in a later commit; skip cleanly.
+                continue
+            try:
+                text = file_path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            scanned_files += 1
+            lines = text.splitlines()
+            scanned_lines += len(lines)
+            is_test = _is_test_path(rel)
+            for lineno, line in enumerate(lines):
+                # Quick prefilter — skip lines without "lane_" prefix.
+                if "lane_" not in line:
+                    continue
+                for m in _LANE_ID_REFERENCE_RE.finditer(line):
+                    # The regex has two capture groups (double / single quote);
+                    # exactly one will be non-None per match.
+                    token = m.group(1) or m.group(2)
+                    if token is None:
+                        continue
+                    if token in _LANE_ID_REFERENCE_BLOCKLIST:
+                        continue
+                    if token in registered_ids:
+                        continue
+                    # Test fixture exemption: tests path AND FAKE_LANE_OK marker.
+                    if is_test and _line_or_window_has_fake_waiver(lines, lineno):
+                        continue
+                    violations.append(
+                        f"[Check 126] {rel}:{lineno + 1} (commit {sha[:8]}): "
+                        f"references unregistered lane_id {token!r}. "
+                        "Pre-register via "
+                        f"`tools/lane_maturity.py add-lane {token} "
+                        "--name <...> --phase <N>` BEFORE work starts. "
+                        "Test fixtures may add "
+                        "'# FAKE_LANE_OK:<reason>' on the same line "
+                        "or within 5 lines above."
+                    )
+                    # Only one violation per (file, lineno) — avoid noise on
+                    # lines that mention the same lane_id multiple times.
+                    break
+
+    if verbose:
+        if violations:
+            print(
+                f"  [lane-pre-registered] {len(violations)} reference(s) to "
+                f"unregistered lane_id(s) (scanned: {scanned_files} file(s), "
+                f"{scanned_lines} line(s) across {len(paths_by_sha)} commit(s))"
+            )
+            for v in violations[:5]:
+                print(f"    • {v[:240]}")
+            if len(violations) > 5:
+                print(f"    ... ({len(violations) - 5} more)")
+        else:
+            print(
+                f"  [lane-pre-registered] OK "
+                f"({scanned_files} file(s) across {len(paths_by_sha)} commit(s) "
+                f"scanned; 0 unregistered lane references)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_lane_pre_registered_before_work_starts: "
+            f"{len(violations)} reference(s) to unregistered lane_id(s); "
+            "first 3:\n  "
+            + "\n  ".join(v[:400] for v in violations[:3])
+            + "\n\nFix: pre-register via "
+            "`tools/lane_maturity.py add-lane <lane_id> --name <...> "
+            "--phase <N>` BEFORE editing code that references the lane. "
+            "Test fixtures may add '# FAKE_LANE_OK:<reason>' on the same line."
         )
     return violations
 

@@ -448,3 +448,216 @@ def test_check_90_warn_only_returns_list(tmp_path, monkeypatch):
     )
     assert violations
     assert any("disagrees with computed" in v for v in violations)
+
+
+# ── set_field mutation surface (Catalog #124 backfill) ───────────────────
+
+
+def test_set_field_top_level_research_only_bool(tmp_path, monkeypatch):
+    repo = _make_repo(tmp_path, [
+        {"id": "lane_x", "name": "X", "phase": 1, "level": 0,
+         "gates": _empty_gates(), "notes": ""}
+    ])
+    monkeypatch.setattr(lm, "REPO_ROOT", repo)
+    data = lm.load_registry()
+    lane = lm.set_field(data, "lane_x", "research_only", True)
+    assert lane["research_only"] is True
+
+
+def test_set_field_top_level_lane_class_string(tmp_path, monkeypatch):
+    repo = _make_repo(tmp_path, [
+        {"id": "lane_x", "name": "X", "phase": 1, "level": 0,
+         "gates": _empty_gates(), "notes": ""}
+    ])
+    monkeypatch.setattr(lm, "REPO_ROOT", repo)
+    data = lm.load_registry()
+    lane = lm.set_field(data, "lane_x", "lane_class", "substrate_engineering")
+    assert lane["lane_class"] == "substrate_engineering"
+
+
+def test_set_field_top_level_reactivation_criteria_list(tmp_path, monkeypatch):
+    repo = _make_repo(tmp_path, [
+        {"id": "lane_x", "name": "X", "phase": 1, "level": 0,
+         "gates": _empty_gates(), "notes": ""}
+    ])
+    monkeypatch.setattr(lm, "REPO_ROOT", repo)
+    data = lm.load_registry()
+    crit = ["criterion_a", "criterion_b"]
+    lane = lm.set_field(data, "lane_x", "reactivation_criteria", crit)
+    assert lane["reactivation_criteria"] == crit
+
+
+def test_set_field_design_evidence_subfield_creates_dict(tmp_path, monkeypatch):
+    repo = _make_repo(tmp_path, [
+        {"id": "lane_x", "name": "X", "phase": 1, "level": 0,
+         "gates": _empty_gates(), "notes": ""}
+    ])
+    monkeypatch.setattr(lm, "REPO_ROOT", repo)
+    data = lm.load_registry()
+    lane = lm.set_field(
+        data, "lane_x",
+        "design_evidence.archive_grammar",
+        "src/tac/foo.py:42_FOO_MAGIC",
+    )
+    assert "design_evidence" in lane
+    assert lane["design_evidence"]["archive_grammar"] == "src/tac/foo.py:42_FOO_MAGIC"
+
+
+def test_set_field_design_evidence_subfield_int(tmp_path, monkeypatch):
+    repo = _make_repo(tmp_path, [
+        {"id": "lane_x", "name": "X", "phase": 1, "level": 0,
+         "gates": _empty_gates(), "notes": ""}
+    ])
+    monkeypatch.setattr(lm, "REPO_ROOT", repo)
+    data = lm.load_registry()
+    lane = lm.set_field(
+        data, "lane_x",
+        "design_evidence.inflate_runtime_loc_budget",
+        100,
+    )
+    assert lane["design_evidence"]["inflate_runtime_loc_budget"] == 100
+
+
+def test_set_field_unknown_lane_raises(tmp_path, monkeypatch):
+    repo = _make_repo(tmp_path, [])
+    monkeypatch.setattr(lm, "REPO_ROOT", repo)
+    data = lm.load_registry()
+    with pytest.raises(ValueError, match="unknown lane id"):
+        lm.set_field(data, "lane_does_not_exist", "research_only", True)
+
+
+def test_set_field_unknown_top_level_field_raises(tmp_path, monkeypatch):
+    repo = _make_repo(tmp_path, [
+        {"id": "lane_x", "name": "X", "phase": 1, "level": 0,
+         "gates": _empty_gates(), "notes": ""}
+    ])
+    monkeypatch.setattr(lm, "REPO_ROOT", repo)
+    data = lm.load_registry()
+    with pytest.raises(ValueError, match="unknown field"):
+        lm.set_field(data, "lane_x", "level", 3)  # 'level' is computed, not settable
+
+
+def test_set_field_unknown_design_evidence_subfield_raises(tmp_path, monkeypatch):
+    repo = _make_repo(tmp_path, [
+        {"id": "lane_x", "name": "X", "phase": 1, "level": 0,
+         "gates": _empty_gates(), "notes": ""}
+    ])
+    monkeypatch.setattr(lm, "REPO_ROOT", repo)
+    data = lm.load_registry()
+    with pytest.raises(ValueError, match="unknown design_evidence sub-field"):
+        lm.set_field(data, "lane_x", "design_evidence.bogus", "x")
+
+
+def test_set_field_empty_value_raises(tmp_path, monkeypatch):
+    repo = _make_repo(tmp_path, [
+        {"id": "lane_x", "name": "X", "phase": 1, "level": 0,
+         "gates": _empty_gates(), "notes": ""}
+    ])
+    monkeypatch.setattr(lm, "REPO_ROOT", repo)
+    data = lm.load_registry()
+    with pytest.raises(ValueError, match="must be non-empty"):
+        lm.set_field(data, "lane_x", "research_only", "")
+
+
+def test_set_field_design_evidence_existing_non_dict_raises(tmp_path, monkeypatch):
+    repo = _make_repo(tmp_path, [
+        {"id": "lane_x", "name": "X", "phase": 1, "level": 0,
+         "gates": _empty_gates(), "notes": "",
+         "design_evidence": "not a dict"}
+    ])
+    monkeypatch.setattr(lm, "REPO_ROOT", repo)
+    data = lm.load_registry()
+    with pytest.raises(ValueError, match="not a dict"):
+        lm.set_field(
+            data, "lane_x",
+            "design_evidence.archive_grammar", "x",
+        )
+
+
+def test_coerce_set_field_value_bool_yes_no():
+    assert lm._coerce_set_field_value("research_only", "yes") is True
+    assert lm._coerce_set_field_value("research_only", "NO") is False
+    assert lm._coerce_set_field_value(
+        "design_evidence.no_op_detector_planned", "true"
+    ) is True
+
+
+def test_coerce_set_field_value_int():
+    assert lm._coerce_set_field_value(
+        "design_evidence.inflate_runtime_loc_budget", "100"
+    ) == 100
+    with pytest.raises(ValueError, match="expects integer"):
+        lm._coerce_set_field_value(
+            "design_evidence.bolt_on_loc_budget", "not_a_number"
+        )
+
+
+def test_coerce_set_field_value_list_csv():
+    assert lm._coerce_set_field_value(
+        "design_evidence.runtime_dep_closure", "torch, brotli, numpy"
+    ) == ["torch", "brotli", "numpy"]
+    assert lm._coerce_set_field_value(
+        "reactivation_criteria", "a,,b,"
+    ) == ["a", "b"]
+
+
+def test_check_124_passes_after_set_field_research_only_optout(tmp_path, monkeypatch):
+    """End-to-end: a representation lane at level >= 1 violates Check 124,
+    then research_only=true via set_field clears the violation."""
+    from tac.preflight import (
+        check_representation_lane_has_archive_grammar_at_design_time,
+    )
+    # Build repo first (creates src/tac/), then seed the fake_module.py
+    # before computing the all-true gates (which assume the file exists).
+    repo = _make_repo(tmp_path, [])
+    gates_true = _all_true_gates(repo)
+    data = json.loads((repo / lm.REGISTRY_REL).read_text())
+    data["lanes"] = [
+        {"id": "lane_nerv_test", "name": "Lane NeRV test", "phase": 1,
+         "level": lm.compute_level(gates_true),
+         "gates": gates_true, "notes": ""}
+    ]
+    (repo / lm.REGISTRY_REL).write_text(json.dumps(data, indent=2))
+
+    monkeypatch.setattr(lm, "REPO_ROOT", repo)
+
+    # Should be flagged before opt-out
+    violations_before = (
+        check_representation_lane_has_archive_grammar_at_design_time(
+            repo_root=repo, strict=False, verbose=False,
+        )
+    )
+    assert any("lane_nerv_test" in v for v in violations_before), violations_before
+
+    # Apply opt-out
+    data = lm.load_registry()
+    lm.set_field(data, "lane_nerv_test", "research_only", True)
+    lm.save_registry(data)
+
+    # Should be clear after opt-out
+    violations_after = (
+        check_representation_lane_has_archive_grammar_at_design_time(
+            repo_root=repo, strict=False, verbose=False,
+        )
+    )
+    assert not any(
+        "lane_nerv_test" in v for v in violations_after
+    ), violations_after
+
+
+def test_set_field_cli_command(tmp_path, monkeypatch):
+    """End-to-end: the `set-field` subcommand persists the field + audit log."""
+    repo = _make_repo(tmp_path, [
+        {"id": "lane_x", "name": "X", "phase": 1, "level": 0,
+         "gates": _empty_gates(), "notes": ""}
+    ])
+    monkeypatch.setattr(lm, "REPO_ROOT", repo)
+    rc = lm.main([
+        "set-field", "lane_x",
+        "--field", "research_only", "--value", "true",
+    ])
+    assert rc == 0
+    data = lm.load_registry()
+    assert data["lanes"][0]["research_only"] is True
+    audit = (repo / lm.AUDIT_LOG_REL).read_text().strip().split("\n")
+    assert any("set-field" in line for line in audit)

@@ -380,6 +380,89 @@ def add_lane(
     return new_lane
 
 
+# Top-level field allowlist for `set_field` mutation surface. These keys are
+# read by preflight checks (Catalog #124, etc.) and council-policy gates; the
+# CLI exposes them so subagents do not need to bare-edit the registry JSON.
+#
+# Per CLAUDE.md "Lane maturity registry — non-negotiable":
+#   "Mutations only via tools/lane_maturity.py mark/unmark/add-lane."
+# `set-field` extends that mutation surface for non-gate top-level metadata
+# (lane_class / research_only / reactivation_criteria) and for the
+# `design_evidence` dict that Check 124 looks for as one of 4 acceptance
+# locations for the 8 representation-lane fields.
+_SET_FIELD_TOP_LEVEL_ALLOWED = (
+    "lane_class",            # Check 124 opt-out: substrate_engineering
+    "research_only",         # Check 124 opt-out: research-only by construction
+    "reactivation_criteria", # forbidden_premature_kill_without_research_exhaustion
+)
+_SET_FIELD_DESIGN_EVIDENCE_ALLOWED = (
+    "archive_grammar",
+    "parser_section_manifest",
+    "inflate_runtime_loc_budget",
+    "runtime_dep_closure",
+    "export_format",
+    "score_aware_loss",
+    "bolt_on_loc_budget",
+    "no_op_detector_planned",
+)
+
+
+def set_field(
+    data: dict[str, Any],
+    lane_id: str,
+    field: str,
+    value: Any,
+) -> dict[str, Any]:
+    """Set a top-level scalar field OR a `design_evidence` sub-field on a lane.
+
+    `field` may be one of:
+      - top-level allowlist: lane_class, research_only, reactivation_criteria
+      - `design_evidence.<sub>` where <sub> is one of the 8 Check-124 fields
+
+    Errors:
+      - lane_id not in registry
+      - field not in either allowlist
+      - value is None or empty-string (use unset semantics via direct edit if
+        ever needed — set-field is for explicit declaration)
+    """
+    lanes = data["lanes"]
+    lane = next((l for l in lanes if l["id"] == lane_id), None)
+    if lane is None:
+        raise ValueError(f"unknown lane id: {lane_id!r}")
+
+    if value in (None, ""):
+        raise ValueError(
+            f"value must be non-empty (got {value!r}); "
+            "set-field is for explicit declaration"
+        )
+
+    if field.startswith("design_evidence."):
+        sub = field.split(".", 1)[1]
+        if sub not in _SET_FIELD_DESIGN_EVIDENCE_ALLOWED:
+            raise ValueError(
+                f"unknown design_evidence sub-field {sub!r}. "
+                f"Allowed: {', '.join(_SET_FIELD_DESIGN_EVIDENCE_ALLOWED)}"
+            )
+        de = lane.setdefault("design_evidence", {})
+        if not isinstance(de, dict):
+            raise ValueError(
+                f"lane {lane_id!r}: existing 'design_evidence' is not a dict "
+                f"(got {type(de).__name__}); manual rescue needed"
+            )
+        de[sub] = value
+        return lane
+
+    if field not in _SET_FIELD_TOP_LEVEL_ALLOWED:
+        raise ValueError(
+            f"unknown field {field!r}. Allowed top-level: "
+            f"{', '.join(_SET_FIELD_TOP_LEVEL_ALLOWED)}; or "
+            f"design_evidence.<sub> where <sub> in "
+            f"{', '.join(_SET_FIELD_DESIGN_EVIDENCE_ALLOWED)}"
+        )
+    lane[field] = value
+    return lane
+
+
 # ── Output (audit / report) ──────────────────────────────────────────────
 
 
@@ -643,6 +726,67 @@ def cmd_add_lane(args: argparse.Namespace) -> int:
     return 0
 
 
+def _coerce_set_field_value(field: str, raw: str) -> Any:
+    """Coerce CLI string input to the appropriate Python type for `field`.
+
+    Bool fields: 'true'/'false'/'1'/'0' (case-insensitive)
+    Int fields: int(raw)
+    List fields (runtime_dep_closure / reactivation_criteria): comma-separated
+    Other: pass-through string.
+    """
+    f = field.split(".", 1)[-1] if "." in field else field
+    bool_fields = {"research_only", "no_op_detector_planned"}
+    int_fields = {"inflate_runtime_loc_budget", "bolt_on_loc_budget"}
+    list_fields = {"runtime_dep_closure", "reactivation_criteria"}
+    if f in bool_fields:
+        low = raw.strip().lower()
+        if low in ("true", "1", "yes", "y"):
+            return True
+        if low in ("false", "0", "no", "n"):
+            return False
+        raise ValueError(f"bool field {field!r} expects true/false, got {raw!r}")
+    if f in int_fields:
+        try:
+            return int(raw)
+        except ValueError as e:
+            raise ValueError(f"int field {field!r} expects integer, got {raw!r}: {e}")
+    if f in list_fields:
+        items = [s.strip() for s in raw.split(",") if s.strip()]
+        return items
+    return raw
+
+
+def cmd_set_field(args: argparse.Namespace) -> int:
+    data = load_registry()
+    before = json.dumps(
+        next((l for l in data["lanes"] if l["id"] == args.lane_id), None),
+        sort_keys=True,
+    )
+    try:
+        coerced = _coerce_set_field_value(args.field, args.value)
+        lane = set_field(data, args.lane_id, args.field, coerced)
+    except ValueError as e:
+        print(_red(f"ERROR: {e}"), file=sys.stderr)
+        return 2
+    save_registry(data)
+    after = json.dumps(lane, sort_keys=True)
+    append_audit_log({
+        "timestamp": _now_iso(),
+        "command": "set-field",
+        "args": {
+            "lane_id": args.lane_id,
+            "field": args.field,
+            "value": coerced,
+        },
+        "before_state": before,
+        "after_state": after,
+    })
+    print(_green(
+        f"OK — {args.lane_id}.{args.field} = {coerced!r}"
+    ))
+    return 0
+
+
 def cmd_report(args: argparse.Namespace) -> int:
     data = load_registry()
     md = render_report_md(data)
@@ -689,6 +833,38 @@ def build_parser() -> argparse.ArgumentParser:
                      help="phase number (1, 1.5, 2, 3)")
     pal.add_argument("--notes", default="", help="optional notes")
     pal.set_defaults(func=cmd_add_lane)
+
+    psf = sub.add_parser(
+        "set-field",
+        help=(
+            "set a top-level scalar field "
+            "(lane_class / research_only / reactivation_criteria) OR a "
+            "design_evidence.<sub> field for Catalog #124"
+        ),
+    )
+    psf.add_argument("lane_id", help="lane id")
+    psf.add_argument(
+        "--field",
+        required=True,
+        help=(
+            "field name. Top-level: lane_class, research_only, "
+            "reactivation_criteria. Or design_evidence.<sub> where <sub> "
+            "in {archive_grammar, parser_section_manifest, "
+            "inflate_runtime_loc_budget, runtime_dep_closure, export_format, "
+            "score_aware_loss, bolt_on_loc_budget, no_op_detector_planned}."
+        ),
+    )
+    psf.add_argument(
+        "--value",
+        required=True,
+        help=(
+            "value (string). Bools accept true/false/1/0/yes/no. "
+            "Ints accept integer literals. Lists "
+            "(runtime_dep_closure / reactivation_criteria) accept "
+            "comma-separated values."
+        ),
+    )
+    psf.set_defaults(func=cmd_set_field)
 
     pr = sub.add_parser("report",
                         help=f"write {REPORT_REL}")
