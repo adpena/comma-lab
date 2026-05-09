@@ -336,6 +336,170 @@ ARCH_TECHNIQUES = [
 ]
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Track-registry-derived catalog rows (T19 follow-on, 2026-05-09).
+#
+# Per ``feedback_unified_solver_integration_landed_20260509.md`` deferred
+# wire-in #2: cathedral autopilot must SEE T20 (KL pose distill loss),
+# T22 (temporal consistency regularizer), and Lane-12-v2 (NeRV-as-renderer)
+# even though they are NOT yet dispatch-eligible (entry conditions list
+# trainer wire-in / Phase B preconditions).
+#
+# Design split:
+#   - LOSS_MODIFIER_TECHNIQUES: training-time loss/regularizer atoms that
+#     do NOT directly emit an archive but modify the trainer's objective.
+#     Visible to the autopilot for dispatch-queue planning even when not
+#     yet promotable.
+#   - REPRESENTATION_LANES: architecture-class atoms (Lane-12-v2 NeRV,
+#     etc.) that DO emit a distinct archive grammar. Filtered out of
+#     ``recommended_top_3`` until ``promotion_eligible == True``.
+#
+# Both lists carry the same schema as ENCODER_TECHNIQUES / ARCH_TECHNIQUES
+# so the existing ``_rank_techniques`` machinery can consume them. The
+# `predicted_archive_bytes` for loss-modifiers defaults to the current
+# baseline (no archive change) so they never rank ahead of a real
+# byte-saving technique unless an empirical anchor lands.
+#
+# These catalogs are SEEDED from ``tac.track_registry.TRACK_REGISTRY`` to
+# preserve single-source-of-truth (CLAUDE.md "Meta-Lagrangian/Pareto solver"
+# non-negotiable) — the registry is the typed-row contract; the autopilot
+# catalogs derive their entries from it and add planner-specific fields
+# (cost_dollars, predicted_archive_bytes, evidence_grade for ranking).
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _seed_loss_modifier_catalog_from_registry() -> list[dict[str, Any]]:
+    """Derive loss-modifier catalog rows from ``tac.track_registry``.
+
+    Loss modifiers (T20, T22) are training-time atoms — they do not change
+    archive bytes directly. The autopilot exposes them in
+    ``loss_modifier_technique_ranking`` so the operator can see they are
+    visible to the planner even before trainer wire-in clears their
+    entry conditions.
+
+    Returns:
+        list of catalog rows (one per loss-modifier track in registry).
+    """
+    try:
+        from tac.track_registry import TRACK_REGISTRY  # noqa: WPS433
+    except ImportError as exc:
+        # Soft-fail if registry import broken — autopilot still works with
+        # the legacy ENCODER/ARCH catalogs, but log loudly so the operator
+        # sees that loss-modifier / representation-lane visibility is gone.
+        print(
+            f"[cathedral_autopilot] WARN: tac.track_registry import failed "
+            f"({exc}); loss-modifier / representation-lane catalogs will be "
+            f"empty. Loss-modifiers (T20/T22) and representation lanes "
+            f"(Lane-12-v2) will NOT be visible to the planner this run.",
+            file=sys.stderr,
+        )
+        return []
+
+    rows: list[dict[str, Any]] = []
+    for track_id, entry in TRACK_REGISTRY.items():
+        # Only include tracks that EXPLICITLY name cathedral_autopilot in
+        # their planner_visibility AND are loss-modifier-shaped (loss_term
+        # OR regularizer phase).
+        if "cathedral_autopilot" not in entry.planner_visibility:
+            continue
+        phase_str = entry.phase.value if hasattr(entry.phase, "value") else str(entry.phase)
+        if phase_str not in ("loss_term", "regularizer"):
+            continue
+        rows.append({
+            "name": track_id,
+            "track_id": track_id,
+            "track_kind": "loss_modifier",
+            "track_phase": phase_str,
+            "track_pareto_axis": (
+                entry.pareto_axis.value
+                if hasattr(entry.pareto_axis, "value") else str(entry.pareto_axis)
+            ),
+            # Loss modifiers don't change archive bytes by themselves —
+            # default to baseline so they never rank ahead of byte-savers
+            # unless empirical evidence lands.
+            "predicted_archive_bytes": 178_144,  # PR101 brotli baseline
+            "cost_hours": 0.0,  # cost is in trainer wire-in, not autopilot dispatch
+            "cost_dollars": 0.0,
+            "risk": "training_side",
+            "evidence_grade": entry.evidence_grade,
+            "description": entry.kind_summary,
+            "module_path": entry.module_path,
+            "entry_conditions": list(entry.entry_conditions),
+            "promotion_eligible": entry.promotion_eligible,
+            "landed_commit_or_memo": entry.landed_commit_or_memo,
+            "model_spec": {
+                "capacity_constraint": "n/a_loss_term",
+                "architecture_class": "loss_modifier",
+                "substrate_constraint": "training_objective",
+                "canonical_shape_family": phase_str,
+                "variant_required": [track_id],
+            },
+        })
+    return rows
+
+
+def _seed_representation_lane_catalog_from_registry() -> list[dict[str, Any]]:
+    """Derive representation-lane catalog rows from ``tac.track_registry``.
+
+    Representation lanes (Lane-12-v2 NeRV-as-renderer) DO emit distinct
+    archive grammars. The autopilot exposes them in
+    ``representation_lane_ranking`` but filters out of
+    ``recommended_top_3`` until ``promotion_eligible == True``.
+
+    Returns:
+        list of catalog rows (one per architecture-phase track in registry
+        that names cathedral_autopilot in planner_visibility).
+    """
+    try:
+        from tac.track_registry import TRACK_REGISTRY  # noqa: WPS433
+    except ImportError:
+        return []
+
+    rows: list[dict[str, Any]] = []
+    for track_id, entry in TRACK_REGISTRY.items():
+        if "cathedral_autopilot" not in entry.planner_visibility:
+            continue
+        phase_str = entry.phase.value if hasattr(entry.phase, "value") else str(entry.phase)
+        if phase_str != "architecture":
+            continue
+        rows.append({
+            "name": track_id,
+            "track_id": track_id,
+            "track_kind": "representation_lane",
+            "track_phase": phase_str,
+            "track_pareto_axis": (
+                entry.pareto_axis.value
+                if hasattr(entry.pareto_axis, "value") else str(entry.pareto_axis)
+            ),
+            # Representation lanes have NOT been measured empirically yet —
+            # use 178,144 as a neutral baseline so the row participates in
+            # ranking without claiming a byte saving until empirical anchor.
+            "predicted_archive_bytes": 178_144,
+            "cost_hours": 24.0,  # NeRV training is multi-hour
+            "cost_dollars": 30.0,  # rough Lightning T4 estimate
+            "risk": "architectural",
+            "evidence_grade": entry.evidence_grade,
+            "description": entry.kind_summary,
+            "module_path": entry.module_path,
+            "entry_conditions": list(entry.entry_conditions),
+            "promotion_eligible": entry.promotion_eligible,
+            "landed_commit_or_memo": entry.landed_commit_or_memo,
+            "model_spec": {
+                "capacity_constraint": "research_only_until_phase_b",
+                "architecture_class": "nerv_class_renderer",
+                "substrate_constraint": "renderer_replacement",
+                "canonical_shape_family": "implicit_neural_representation",
+                "variant_required": [track_id],
+            },
+        })
+    return rows
+
+
+# Pre-computed at import time so build_plan can consume them efficiently.
+LOSS_MODIFIER_TECHNIQUES = _seed_loss_modifier_catalog_from_registry()
+REPRESENTATION_LANES = _seed_representation_lane_catalog_from_registry()
+
+
 @dataclass
 class AutopilotPlan:
     """The autopilot's recommended action plan for a given operator state."""
@@ -346,6 +510,12 @@ class AutopilotPlan:
     score_geometry: dict[str, Any]
     encoder_technique_ranking: list[dict[str, Any]] = field(default_factory=list)
     arch_technique_ranking: list[dict[str, Any]] = field(default_factory=list)
+    # T19 follow-on (2026-05-09): track-registry-derived catalog rankings.
+    # Loss modifiers (T20/T22) and representation lanes (Lane-12-v2) are
+    # SURFACED to the planner even before they are dispatch-eligible so the
+    # operator can see what's queued for trainer wire-in / phase B preconditions.
+    loss_modifier_technique_ranking: list[dict[str, Any]] = field(default_factory=list)
+    representation_lane_ranking: list[dict[str, Any]] = field(default_factory=list)
     recommended_top_3: list[dict[str, Any]] = field(default_factory=list)
     target_score_gap_analysis: dict[str, Any] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)
@@ -2090,16 +2260,38 @@ def build_plan(
 
     enc_catalog = ENCODER_TECHNIQUES
     arch_catalog = ARCH_TECHNIQUES
+    # T19 follow-on (2026-05-09): include track-registry-derived catalogs
+    # so loss modifiers (T20/T22) and representation lanes (Lane-12-v2) are
+    # visible to the planner. Empty lists when registry import fails (soft
+    # degradation per registry contract).
+    loss_modifier_catalog = LOSS_MODIFIER_TECHNIQUES
+    representation_lane_catalog = REPRESENTATION_LANES
     evidence_report = summarize_evidence_semantics(
         prior_evidence,
-        [ENCODER_TECHNIQUES, ARCH_TECHNIQUES],
+        [
+            ENCODER_TECHNIQUES,
+            ARCH_TECHNIQUES,
+            loss_modifier_catalog,
+            representation_lane_catalog,
+        ],
     )
     if prior_evidence:
         enc_catalog = update_catalog_from_evidence(enc_catalog, prior_evidence)
         arch_catalog = update_catalog_from_evidence(arch_catalog, prior_evidence)
+        loss_modifier_catalog = update_catalog_from_evidence(
+            loss_modifier_catalog, prior_evidence
+        )
+        representation_lane_catalog = update_catalog_from_evidence(
+            representation_lane_catalog, prior_evidence
+        )
         evidence_report = attach_active_ranking_summary(
             evidence_report,
-            [enc_catalog, arch_catalog],
+            [
+                enc_catalog,
+                arch_catalog,
+                loss_modifier_catalog,
+                representation_lane_catalog,
+            ],
         )
 
     encoder_ranked = _rank_techniques(
@@ -2124,9 +2316,47 @@ def build_plan(
         current_score_axis=current_score_axis,
         architecture_class=architecture_class,
     )
-    # Combined top-3: best by score-delta across both lists
+    # T19 follow-on (2026-05-09): rank loss-modifier + representation-lane
+    # catalogs through the SAME _rank_techniques machinery so they participate
+    # in the planner's ranking pipeline. Loss modifiers default to baseline
+    # bytes so they never displace a real byte-saver in the top-3 unless an
+    # empirical anchor is supplied.
+    loss_modifier_ranked = _rank_techniques(
+        loss_modifier_catalog,
+        d_seg=d_seg, d_pose=d_pose,
+        current_archive_bytes=archive_bytes,
+        current_score=score,
+        target_score=target_score,
+        min_score_delta=0.0,  # always include loss-modifiers; do not filter
+        rank_axis=rank_axis,
+        current_score_axis=current_score_axis,
+        architecture_class=architecture_class,
+    ) if loss_modifier_catalog else []
+    representation_lane_ranked = _rank_techniques(
+        representation_lane_catalog,
+        d_seg=d_seg, d_pose=d_pose,
+        current_archive_bytes=archive_bytes,
+        current_score=score,
+        target_score=target_score,
+        min_score_delta=0.0,
+        rank_axis=rank_axis,
+        current_score_axis=current_score_axis,
+        architecture_class=architecture_class,
+    ) if representation_lane_catalog else []
+    # Combined top-3: best by score-delta across encoder+arch lists. Loss
+    # modifiers and representation lanes are SURFACED separately and only
+    # rolled into recommended_top_3 when promotion_eligible AND not
+    # active_ranking_blocked (guard against premature promotion).
+    promotable_loss_mods = [
+        r for r in loss_modifier_ranked
+        if r.get("promotion_eligible") and not r["active_ranking_blocked"]
+    ]
+    promotable_repr_lanes = [
+        r for r in representation_lane_ranked
+        if r.get("promotion_eligible") and not r["active_ranking_blocked"]
+    ]
     combined = sorted(
-        encoder_ranked + arch_ranked,
+        encoder_ranked + arch_ranked + promotable_loss_mods + promotable_repr_lanes,
         key=lambda r: (
             r["active_ranking_blocked"],
             -r["primary_score_delta"],
@@ -2213,6 +2443,27 @@ def build_plan(
             "without promoting them; queue rows are not score claims and cannot "
             "dispatch until blockers close."
         )
+    # T19 follow-on (2026-05-09): surface gated track-registry entries.
+    gated_loss_mods = [
+        r["name"] for r in loss_modifier_ranked
+        if not r.get("promotion_eligible")
+    ]
+    gated_repr_lanes = [
+        r["name"] for r in representation_lane_ranked
+        if not r.get("promotion_eligible")
+    ]
+    if gated_loss_mods:
+        notes.append(
+            f"Loss-modifier tracks visible but GATED (entry conditions pending): "
+            f"{', '.join(gated_loss_mods)}. See track_registry.entry_conditions "
+            f"for unblock requirements."
+        )
+    if gated_repr_lanes:
+        notes.append(
+            f"Representation lanes visible but GATED (Phase B preconditions / "
+            f"contest-CUDA anchor pending): {', '.join(gated_repr_lanes)}. See "
+            f"track_registry.entry_conditions for unblock requirements."
+        )
 
     return AutopilotPlan(
         schema=SCHEMA_VERSION,
@@ -2249,6 +2500,8 @@ def build_plan(
         },
         encoder_technique_ranking=encoder_ranked,
         arch_technique_ranking=arch_ranked,
+        loss_modifier_technique_ranking=loss_modifier_ranked,
+        representation_lane_ranking=representation_lane_ranked,
         recommended_top_3=top_3,
         target_score_gap_analysis=gap,
         notes=notes,
