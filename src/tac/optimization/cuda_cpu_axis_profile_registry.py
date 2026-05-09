@@ -335,8 +335,43 @@ class ArchitectureProfile:
 
     notes: str = ""
 
+    # ── Drift-mechanism discriminator fields (extension; 2026-05-09) ─────
+    #
+    # Populated by the AVVideoDataset CUDA-CPU drift mechanism discriminator
+    # (lane_avvideodataset_cuda_path_mechanism_discriminator). Each field is
+    # OPTIONAL — older serialised registries that predate the discriminator
+    # leave them at the defaults below. Once the discriminator returns a
+    # PRIMARY_MECHANISM_IDENTIFIED or MULTI_MECHANISM_PRIMARY verdict for an
+    # architecture class, the corresponding field is filled in.
+    #
+    # ``loader_drift_correction``: scalar correction subtracted from CUDA
+    # pose to estimate the loader-byte-drift component of the gap. ``None``
+    # means uncalibrated.
+    #
+    # ``conv_kernel_determinism_required``: if True, archive builders for
+    # this class SHOULD set ``torch.use_deterministic_algorithms(True)``
+    # and ``torch.backends.cudnn.deterministic = True`` in their inflate.py.
+    #
+    # ``head_quantize_post_inference_dtype``: if non-empty, archive builders
+    # for this class SHOULD pre-quantize inflate output to a coarser grid.
+    # Currently the only canonical value is ``"uint8_round_multiple_of_2"``.
+    #
+    # ``mechanism_discriminator_verdict``: opaque verdict label from the
+    # discriminator; one of "PRIMARY_MECHANISM_IDENTIFIED",
+    # "MULTI_MECHANISM_PRIMARY", "MULTI_MECHANISM_PRIMARY_PLUS_CONTRIBUTING",
+    # "MULTI_MECHANISM_CONTRIBUTING_ONLY", "FOURTH_MECHANISM_HYPOTHESIS",
+    # "INCONCLUSIVE_*", or empty (uncalibrated).
+    #
+    # ``mechanism_discriminator_evidence_path``: relative path to the
+    # ``discriminator_verdict.json`` artifact that produced this update.
+    loader_drift_correction: float | None = None
+    conv_kernel_determinism_required: bool = False
+    head_quantize_post_inference_dtype: str = ""
+    mechanism_discriminator_verdict: str = ""
+    mechanism_discriminator_evidence_path: str = ""
+
     def to_dict(self) -> dict[str, Any]:
-        return {
+        out: dict[str, Any] = {
             "architecture_class": self.architecture_class,
             "decoder_class": self.decoder_class,
             "n_anchors": int(self.n_anchors),
@@ -352,9 +387,31 @@ class ArchitectureProfile:
             "evidence_anchors": list(self.evidence_anchors),
             "notes": str(self.notes),
         }
+        # Discriminator fields are only emitted when populated, so the
+        # serialised registry stays compact for uncalibrated classes.
+        if self.loader_drift_correction is not None:
+            out["loader_drift_correction"] = float(self.loader_drift_correction)
+        if self.conv_kernel_determinism_required:
+            out["conv_kernel_determinism_required"] = bool(
+                self.conv_kernel_determinism_required
+            )
+        if self.head_quantize_post_inference_dtype:
+            out["head_quantize_post_inference_dtype"] = str(
+                self.head_quantize_post_inference_dtype
+            )
+        if self.mechanism_discriminator_verdict:
+            out["mechanism_discriminator_verdict"] = str(
+                self.mechanism_discriminator_verdict
+            )
+        if self.mechanism_discriminator_evidence_path:
+            out["mechanism_discriminator_evidence_path"] = str(
+                self.mechanism_discriminator_evidence_path
+            )
+        return out
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ArchitectureProfile:
+        loader_correction_raw = data.get("loader_drift_correction", None)
         return cls(
             architecture_class=str(data["architecture_class"]),
             decoder_class=str(data.get("decoder_class", "")),
@@ -374,6 +431,22 @@ class ArchitectureProfile:
             last_updated_utc=str(data.get("last_updated_utc", "")),
             evidence_anchors=list(data.get("evidence_anchors", [])),
             notes=str(data.get("notes", "")),
+            loader_drift_correction=(
+                None if loader_correction_raw is None
+                else float(loader_correction_raw)
+            ),
+            conv_kernel_determinism_required=bool(
+                data.get("conv_kernel_determinism_required", False)
+            ),
+            head_quantize_post_inference_dtype=str(
+                data.get("head_quantize_post_inference_dtype", "")
+            ),
+            mechanism_discriminator_verdict=str(
+                data.get("mechanism_discriminator_verdict", "")
+            ),
+            mechanism_discriminator_evidence_path=str(
+                data.get("mechanism_discriminator_evidence_path", "")
+            ),
         )
 
     def confidence_label(self) -> str:
@@ -1108,6 +1181,111 @@ def _append_audit_log(path: Path | str, update: ProfileUpdate) -> None:
         f.write(json.dumps(update.to_dict(), sort_keys=True) + "\n")
 
 
+# ── Discriminator → registry wire-in (2026-05-09) ─────────────────────────
+def apply_discriminator_verdict_to_registry(
+    verdict: dict[str, Any],
+    *,
+    registry: dict[str, ArchitectureProfile],
+    evidence_path: str = "",
+) -> dict[str, Any]:
+    """Apply a discriminator-verdict JSON to the per-class registry.
+
+    The verdict schema is the one emitted by
+    ``tools/analyze_a1_cuda_cpu_drift_discriminator_verdict.py``: it carries
+    a top-level ``verdict`` label, an ``isolation_findings`` list, and a
+    ``registry_update_spec`` block whose
+    ``applies_to_architecture_class`` key names the target class.
+
+    For each isolation finding labelled ``PRIMARY_MECHANISM`` or
+    ``CONTRIBUTING_MECHANISM``, the corresponding field on the architecture
+    profile is set:
+
+      - ``loader_byte_drift``                  → ``loader_drift_correction``
+      - ``conv_kernel_accumulation_drift``    → ``conv_kernel_determinism_required``
+      - ``hydra_head_numerical_sensitivity``  → ``head_quantize_post_inference_dtype``
+
+    The class-level ``mechanism_discriminator_verdict`` and
+    ``mechanism_discriminator_evidence_path`` are also stamped so a future
+    reader can trace back to the artifact that produced the update.
+
+    Returns a diff dict ``{"architecture_class", "before", "after",
+    "fields_changed"}`` so callers can audit / persist.
+
+    Per CLAUDE.md ``forbidden_premature_kill_without_research_exhaustion``:
+    when ``verdict["verdict"] == "FOURTH_MECHANISM_HYPOTHESIS"`` the
+    function records the verdict label and evidence path on the profile but
+    does NOT toggle any of the per-mechanism flags. Operators can then
+    decide whether a 4th hypothesis (not in our 3-way split) needs a new
+    discriminator generation. The discriminator family is NOT killed.
+    """
+    arch_class = str(
+        verdict.get("registry_update_spec", {}).get(
+            "applies_to_architecture_class", ""
+        )
+    )
+    if not arch_class:
+        raise ValueError(
+            "verdict missing registry_update_spec.applies_to_architecture_class; "
+            "cannot apply"
+        )
+    profile = registry.get(arch_class)
+    if profile is None:
+        raise KeyError(
+            f"architecture class {arch_class!r} not in registry; bootstrap "
+            f"or add it before applying a discriminator verdict"
+        )
+    before = profile.to_dict()
+
+    # Always stamp the verdict label + evidence path so the audit trail is
+    # present even on FOURTH_MECHANISM_HYPOTHESIS / INCONCLUSIVE_* outcomes.
+    profile.mechanism_discriminator_verdict = str(verdict.get("verdict", ""))
+    if evidence_path:
+        profile.mechanism_discriminator_evidence_path = evidence_path
+
+    # Per-mechanism field updates only when an isolation finding flagged
+    # PRIMARY_MECHANISM or CONTRIBUTING_MECHANISM.
+    findings = verdict.get("isolation_findings", []) or []
+    fields_changed: list[str] = ["mechanism_discriminator_verdict"]
+    if evidence_path:
+        fields_changed.append("mechanism_discriminator_evidence_path")
+    for f in findings:
+        verdict_label = str(f.get("verdict", ""))
+        hypothesis = str(f.get("mechanism_hypothesis", ""))
+        if verdict_label not in ("PRIMARY_MECHANISM", "CONTRIBUTING_MECHANISM"):
+            continue
+        if hypothesis == "loader_byte_drift":
+            # Use the observed delta R_pose as the scalar correction estimate.
+            delta = f.get("delta_r_pose_vs_baseline")
+            if delta is not None:
+                profile.loader_drift_correction = float(delta)
+                fields_changed.append("loader_drift_correction")
+        elif hypothesis == "conv_kernel_accumulation_drift":
+            profile.conv_kernel_determinism_required = True
+            fields_changed.append("conv_kernel_determinism_required")
+        elif hypothesis == "hydra_head_numerical_sensitivity":
+            profile.head_quantize_post_inference_dtype = "uint8_round_multiple_of_2"
+            fields_changed.append("head_quantize_post_inference_dtype")
+        else:
+            # Unknown mechanism hypothesis from a future discriminator
+            # generation — preserve as a note rather than silently drop.
+            note = (
+                f"unknown discriminator hypothesis {hypothesis!r} "
+                f"flagged {verdict_label} (evidence: {evidence_path})"
+            )
+            profile.notes = (profile.notes + " | " + note).strip(" |")
+            fields_changed.append("notes")
+
+    profile.last_updated_utc = datetime.now(UTC).isoformat()
+    fields_changed.append("last_updated_utc")
+    after = profile.to_dict()
+    return {
+        "architecture_class": arch_class,
+        "before": before,
+        "after": after,
+        "fields_changed": fields_changed,
+    }
+
+
 # ── Adaptive-analyzer query helpers ────────────────────────────────────────
 def query_profile_for_archive_class(
     architecture_class: str,
@@ -1168,6 +1346,7 @@ __all__ = [
     "ArchitectureProfile",
     "DecoderProfile",
     "ProfileUpdate",
+    "apply_discriminator_verdict_to_registry",
     "bootstrap_registry_from_hnerv_anchors",
     "classify_archive_into_profile",
     "confidence_aware_score_band",

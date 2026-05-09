@@ -23,6 +23,7 @@ from tac.optimization.cuda_cpu_axis_profile_registry import (
     LOW_CALIBRATION_BAND_WIDENING,
     ArchitectureProfile,
     DecoderProfile,
+    apply_discriminator_verdict_to_registry,
     bootstrap_registry_from_hnerv_anchors,
     classify_archive_into_profile,
     confidence_aware_score_band,
@@ -634,3 +635,154 @@ def test_score_gap_predicts_within_known_anchor_range() -> None:
         registry=registry,
     )
     assert 0.190 < band["predicted_cpu_score"] < 0.200
+
+
+# ── Discriminator wire-in tests (2026-05-09) ───────────────────────────────
+def _make_verdict(
+    *,
+    overall: str = "PRIMARY_MECHANISM_IDENTIFIED",
+    findings: list[dict] | None = None,
+    arch_class: str = "hnerv_ft_microcodec",
+) -> dict:
+    if findings is None:
+        findings = [
+            {
+                "variant_id": "v_loader_isolated",
+                "mechanism_hypothesis": "loader_byte_drift",
+                "verdict": "PRIMARY_MECHANISM",
+                "delta_r_pose_vs_baseline": 3.5,
+            },
+        ]
+    return {
+        "verdict": overall,
+        "isolation_findings": findings,
+        "registry_update_spec": {
+            "applies_to_architecture_class": arch_class,
+        },
+    }
+
+
+def test_apply_discriminator_verdict_loader_primary_sets_correction() -> None:
+    registry = bootstrap_registry_from_hnerv_anchors()
+    verdict = _make_verdict()
+    diff = apply_discriminator_verdict_to_registry(
+        verdict, registry=registry, evidence_path="path/to/discriminator_verdict.json"
+    )
+    assert diff["architecture_class"] == "hnerv_ft_microcodec"
+    assert "loader_drift_correction" in diff["fields_changed"]
+    profile = registry["hnerv_ft_microcodec"]
+    assert profile.loader_drift_correction == pytest.approx(3.5)
+    assert profile.mechanism_discriminator_verdict == "PRIMARY_MECHANISM_IDENTIFIED"
+    assert (
+        profile.mechanism_discriminator_evidence_path
+        == "path/to/discriminator_verdict.json"
+    )
+
+
+def test_apply_discriminator_verdict_conv_primary_sets_determinism() -> None:
+    registry = bootstrap_registry_from_hnerv_anchors()
+    verdict = _make_verdict(
+        findings=[
+            {
+                "variant_id": "v_conv_isolated",
+                "mechanism_hypothesis": "conv_kernel_accumulation_drift",
+                "verdict": "PRIMARY_MECHANISM",
+            }
+        ],
+    )
+    apply_discriminator_verdict_to_registry(verdict, registry=registry)
+    assert registry["hnerv_ft_microcodec"].conv_kernel_determinism_required is True
+
+
+def test_apply_discriminator_verdict_hydra_primary_sets_quantize_dtype() -> None:
+    registry = bootstrap_registry_from_hnerv_anchors()
+    verdict = _make_verdict(
+        findings=[
+            {
+                "variant_id": "v_hydra_isolated",
+                "mechanism_hypothesis": "hydra_head_numerical_sensitivity",
+                "verdict": "PRIMARY_MECHANISM",
+            }
+        ],
+    )
+    apply_discriminator_verdict_to_registry(verdict, registry=registry)
+    assert (
+        registry["hnerv_ft_microcodec"].head_quantize_post_inference_dtype
+        == "uint8_round_multiple_of_2"
+    )
+
+
+def test_apply_discriminator_verdict_fourth_mechanism_does_not_toggle_flags() -> None:
+    """Per CLAUDE.md kill-as-last-resort: FOURTH_MECHANISM_HYPOTHESIS records
+    the verdict but does NOT modify per-mechanism flags."""
+    registry = bootstrap_registry_from_hnerv_anchors()
+    verdict = _make_verdict(
+        overall="FOURTH_MECHANISM_HYPOTHESIS",
+        findings=[
+            {
+                "variant_id": "v_loader_isolated",
+                "mechanism_hypothesis": "loader_byte_drift",
+                "verdict": "MECHANISM_NOT_DOMINANT",
+            },
+            {
+                "variant_id": "v_conv_isolated",
+                "mechanism_hypothesis": "conv_kernel_accumulation_drift",
+                "verdict": "MECHANISM_NOT_DOMINANT",
+            },
+            {
+                "variant_id": "v_hydra_isolated",
+                "mechanism_hypothesis": "hydra_head_numerical_sensitivity",
+                "verdict": "MECHANISM_NOT_DOMINANT",
+            },
+        ],
+    )
+    apply_discriminator_verdict_to_registry(verdict, registry=registry)
+    profile = registry["hnerv_ft_microcodec"]
+    assert profile.loader_drift_correction is None
+    assert profile.conv_kernel_determinism_required is False
+    assert profile.head_quantize_post_inference_dtype == ""
+    assert profile.mechanism_discriminator_verdict == "FOURTH_MECHANISM_HYPOTHESIS"
+
+
+def test_apply_discriminator_verdict_raises_when_class_missing() -> None:
+    registry = bootstrap_registry_from_hnerv_anchors()
+    verdict = _make_verdict(arch_class="totally_not_a_known_class")
+    with pytest.raises(KeyError):
+        apply_discriminator_verdict_to_registry(verdict, registry=registry)
+
+
+def test_discriminator_fields_round_trip_serialisation() -> None:
+    """When the discriminator fields are populated, write_registry/read_registry
+    must round-trip them."""
+    registry = bootstrap_registry_from_hnerv_anchors()
+    verdict = _make_verdict()
+    apply_discriminator_verdict_to_registry(
+        verdict, registry=registry, evidence_path="some/path.json"
+    )
+    payload = serialize_registry(registry)
+    text = json.dumps(payload)
+    restored = deserialize_registry(json.loads(text))
+    rest_profile = restored["hnerv_ft_microcodec"]
+    assert rest_profile.loader_drift_correction == pytest.approx(3.5)
+    assert (
+        rest_profile.mechanism_discriminator_verdict
+        == "PRIMARY_MECHANISM_IDENTIFIED"
+    )
+    assert rest_profile.mechanism_discriminator_evidence_path == "some/path.json"
+
+
+def test_discriminator_unset_fields_stay_unserialised_for_compactness() -> None:
+    """If no discriminator update has been applied, the new optional fields
+    should NOT appear in the serialised payload (so existing JSON stays compact
+    and backward-compatible)."""
+    registry = bootstrap_registry_from_hnerv_anchors()
+    payload = serialize_registry(registry)
+    profile_dict = payload["profiles"]["hnerv_ft_microcodec"]
+    for key in (
+        "loader_drift_correction",
+        "conv_kernel_determinism_required",
+        "head_quantize_post_inference_dtype",
+        "mechanism_discriminator_verdict",
+        "mechanism_discriminator_evidence_path",
+    ):
+        assert key not in profile_dict
