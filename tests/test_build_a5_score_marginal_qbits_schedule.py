@@ -31,6 +31,8 @@ def _write_manifest(path: Path) -> Path:
                 "score_claim": False,
                 "n_pairs": 4,
                 "per_pair_score_marginals": [0.1, 0.9, 0.2, 0.8],
+                "per_pair_seg_proxy_raw": [0.9, 0.1, 0.8, 0.2],
+                "per_pair_pose_proxy_raw": [0.1, 0.2, 0.8, 0.9],
                 "per_pair_q_bits": [2, 8, 3, 8],
             }
         ),
@@ -55,10 +57,35 @@ def test_builds_low_marginal_trust_region_schedule(tmp_path: Path) -> None:
     assert payload["score_claim"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
     assert payload["low_pair_count"] == 2
+    assert payload["marginal_source"] == "score"
+    assert payload["marginal_source_key"] == "per_pair_score_marginals"
     assert payload["per_pair_q_bits"] == [6, 8, 6, 8]
     assert payload["q_bits_summary"]["unique_counts"] == {"6": 2, "8": 2}
     assert payload["raw_latent_payload_bits"] == 112
+    assert payload["alignment"]["q_bits_vs_selected_marginal_pearson"] > 0.9
     assert payload["alignment"]["q_bits_vs_score_marginal_pearson"] > 0.9
+    assert payload["alignment"]["q_bits_vs_seg_marginal_pearson"] < -0.9
+
+
+def test_builds_segnet_component_ranked_schedule(tmp_path: Path) -> None:
+    tool = _load_tool()
+    source = _write_manifest(tmp_path / "score_marginals.json")
+
+    payload = tool.build_schedule(
+        score_marginal_manifest_path=source,
+        base_q_bits=8,
+        low_q_bits=6,
+        low_fraction=0.5,
+        marginal_source="seg",
+        latent_dim=4,
+        repo_root=tmp_path,
+    )
+
+    assert payload["marginal_source"] == "seg"
+    assert payload["marginal_source_key"] == "per_pair_seg_proxy_raw"
+    assert payload["per_pair_q_bits"] == [8, 6, 8, 6]
+    assert payload["alignment"]["q_bits_vs_selected_marginal_pearson"] > 0.9
+    assert payload["alignment"]["q_bits_vs_score_marginal_pearson"] < -0.9
 
 
 def test_cli_writes_tool_run_manifest(tmp_path: Path) -> None:
@@ -79,6 +106,8 @@ def test_cli_writes_tool_run_manifest(tmp_path: Path) -> None:
                 "6",
                 "--low-fraction",
                 "0.5",
+                "--marginal-source",
+                "seg",
                 "--latent-dim",
                 "4",
             ]
@@ -89,4 +118,5 @@ def test_cli_writes_tool_run_manifest(tmp_path: Path) -> None:
     assert payload["tool_run_manifest"]["tool"] == (
         "tools/build_a5_score_marginal_qbits_schedule.py"
     )
-    assert payload["per_pair_q_bits"] == [6, 8, 6, 8]
+    assert payload["marginal_source"] == "seg"
+    assert payload["per_pair_q_bits"] == [8, 6, 8, 6]

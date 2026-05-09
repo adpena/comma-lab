@@ -118,6 +118,29 @@ the builder for future tensor-localized trust-region probes.
 Ledger:
 `.omx/research/track4_uniward_hessian_a1_ladder_20260509_codex.md`.
 
+## 2026-05-09 (night) - A5 SegNet-ranked q-bit schedule
+
+`tools/build_a5_score_marginal_qbits_schedule.py` now supports component-ranked
+q-bit schedules via `--marginal-source {score,seg,pose,raw_score}`. The first
+SegNet-ranked A5 q6-low45 packet is byte-closed and runtime-consumed:
+
+- Archive bytes: `178,138`
+- Archive SHA-256:
+  `1ffb328240ccb9a067b1203258274c3edfba9f0a98212f1ce1c0a40b3e016501`
+- q-bit schedule: `q6` for the lowest `270 / 600` SegNet-marginal pairs,
+  `q8` otherwise
+- macOS CPU advisory: `0.21066071006845696`
+- components: PoseNet `0.00004059`, SegNet `0.00071899`
+
+Classification: measured-config regression, but a useful diagnostic. It
+improves scalar q6-low45 (`0.21129939214393487`, SegNet `0.00072565`) at the
+same byte count, proving component ranking moves the right direction, but the
+gain is far too small to be promotable. A5 needs richer SegNet-boundary/local
+component features or lower-distortion `q7/q8` geometry before exact eval.
+
+Ledger:
+`.omx/research/a5_trust_q6_low45_seg_ranked_macos_advisory_negative_20260509_codex.md`.
+
 ## 2026-05-09 (night) - Delta-epsilon-zeta Phase 1 local scaffold evidence
 
 `tools/build_deltaepszeta_training_targets.py` is now hardened for normal zsh

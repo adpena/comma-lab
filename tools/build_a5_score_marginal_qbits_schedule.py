@@ -29,6 +29,12 @@ DEFAULT_SCORE_MARGINAL_MANIFEST = Path(
     "experiments/results/pr101_frame_conditional_runtime_packet_20260508_codex/"
     "per_pair_score_marginals.advisory.json"
 )
+MARGINAL_SOURCE_KEYS = {
+    "score": "per_pair_score_marginals",
+    "seg": "per_pair_seg_proxy_raw",
+    "pose": "per_pair_pose_proxy_raw",
+    "raw_score": "per_pair_score_proxy_raw",
+}
 
 
 class A5ScoreMarginalQBitsScheduleError(ValueError):
@@ -52,6 +58,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=0.50,
         help="Fraction of lowest-marginal pairs assigned --low-q-bits.",
     )
+    parser.add_argument(
+        "--marginal-source",
+        choices=sorted(MARGINAL_SOURCE_KEYS),
+        default="score",
+        help=(
+            "Which per-pair marginal vector to rank. 'score' is the legacy "
+            "blended score marginal; 'seg' keeps SegNet-sensitive pairs at "
+            "base q bits."
+        ),
+    )
     parser.add_argument("--latent-dim", type=int, default=28)
     return parser.parse_args(argv)
 
@@ -63,15 +79,21 @@ def build_schedule(
     base_q_bits: int = 8,
     low_q_bits: int = 6,
     low_fraction: float = 0.50,
+    marginal_source: str = "score",
     latent_dim: int = 28,
     repo_root: Path = REPO_ROOT,
 ) -> dict[str, Any]:
     score_marginal_manifest_path = _resolve(score_marginal_manifest_path, repo_root)
     manifest = _load_json_object(score_marginal_manifest_path)
     n_pairs = _positive_int(manifest.get("n_pairs"), "n_pairs")
+    marginal_key = MARGINAL_SOURCE_KEYS.get(marginal_source)
+    if marginal_key is None:
+        raise A5ScoreMarginalQBitsScheduleError(
+            f"unknown marginal_source={marginal_source!r}"
+        )
     marginals = _finite_vector(
-        manifest.get("per_pair_score_marginals"),
-        "per_pair_score_marginals",
+        manifest.get(marginal_key),
+        marginal_key,
         expected_len=n_pairs,
     )
     source_q_bits = _finite_vector(
@@ -121,6 +143,8 @@ def build_schedule(
         "base_q_bits": base_q_bits,
         "low_q_bits": low_q_bits,
         "low_fraction": float(low_fraction),
+        "marginal_source": marginal_source,
+        "marginal_source_key": marginal_key,
         "low_pair_count": int(low_count),
         "low_pair_indices_sha256": sha256_bytes(
             low_pair_indices.astype("<i4").tobytes()
@@ -145,9 +169,18 @@ def build_schedule(
             else None,
         },
         "alignment": {
-            "q_bits_vs_score_marginal_pearson": _pearson(q_bits, marginals),
-            "source_q_bits_vs_score_marginal_pearson": _pearson(
+            "q_bits_vs_selected_marginal_pearson": _pearson(q_bits, marginals),
+            "source_q_bits_vs_selected_marginal_pearson": _pearson(
                 source_q_bits, marginals
+            ),
+            "q_bits_vs_score_marginal_pearson": _optional_pearson(
+                q_bits, manifest, "per_pair_score_marginals", n_pairs
+            ),
+            "q_bits_vs_seg_marginal_pearson": _optional_pearson(
+                q_bits, manifest, "per_pair_seg_proxy_raw", n_pairs
+            ),
+            "q_bits_vs_pose_marginal_pearson": _optional_pearson(
+                q_bits, manifest, "per_pair_pose_proxy_raw", n_pairs
             ),
         },
         "per_pair_q_bits": [int(value) for value in q_bits.tolist()],
@@ -222,6 +255,15 @@ def _pearson(left: np.ndarray, right: np.ndarray) -> float:
     return float(np.corrcoef(left, right)[0, 1])
 
 
+def _optional_pearson(
+    q_bits: np.ndarray, manifest: dict[str, Any], key: str, expected_len: int
+) -> float | None:
+    if key not in manifest:
+        return None
+    values = _finite_vector(manifest.get(key), key, expected_len=expected_len)
+    return _pearson(q_bits, values)
+
+
 def _artifact_ref(path: Path, repo_root: Path) -> dict[str, Any]:
     return {
         "path": repo_relative(path, repo_root),
@@ -252,6 +294,7 @@ def main(argv: list[str] | None = None) -> int:
             base_q_bits=args.base_q_bits,
             low_q_bits=args.low_q_bits,
             low_fraction=args.low_fraction,
+            marginal_source=args.marginal_source,
             latent_dim=args.latent_dim,
             repo_root=REPO_ROOT,
         )
