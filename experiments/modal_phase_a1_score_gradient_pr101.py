@@ -296,6 +296,82 @@ def _tail(value: str | bytes | None, limit: int = 4096) -> str:
     return value[-limit:]
 
 
+def _numeric_or_none(value: Any) -> float | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            return float(value)
+        except ValueError:
+            return None
+    return None
+
+
+def _first_numeric(*values: Any) -> float | None:
+    for value in values:
+        parsed = _numeric_or_none(value)
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def _eval_metric_summary(eval_data: dict[str, Any] | None) -> dict[str, float | None]:
+    """Normalize contest_auth_eval schemas used by Modal harvesters.
+
+    Older wrappers returned ``score_components`` with ``pose``/``seg``/``rate``.
+    The current canonical evaluator emits ``canonical_score``,
+    ``score_recomputed_from_components``, ``avg_posenet_dist``,
+    ``avg_segnet_dist``, and ``score_rate_contribution``. Do not let a harvest
+    hide an exact score just because one schema is absent.
+    """
+    if not eval_data:
+        return {
+            "score": None,
+            "pose_avg": None,
+            "seg_avg": None,
+            "rate": None,
+            "rate_unscaled": None,
+        }
+    sc = eval_data.get("score_components") or {}
+    if not isinstance(sc, dict):
+        sc = {}
+    return {
+        "score": _first_numeric(
+            eval_data.get("canonical_score"),
+            eval_data.get("score_recomputed_from_components"),
+            eval_data.get("score"),
+            eval_data.get("total_score"),
+            eval_data.get("final_score"),
+        ),
+        "pose_avg": _first_numeric(
+            eval_data.get("avg_posenet_dist"),
+            eval_data.get("pose_avg"),
+            sc.get("pose"),
+            sc.get("pose_avg"),
+            sc.get("posenet"),
+        ),
+        "seg_avg": _first_numeric(
+            eval_data.get("avg_segnet_dist"),
+            eval_data.get("seg_avg"),
+            sc.get("seg"),
+            sc.get("seg_avg"),
+            sc.get("segnet"),
+        ),
+        "rate": _first_numeric(
+            eval_data.get("score_rate_contribution"),
+            eval_data.get("rate"),
+            sc.get("rate"),
+            sc.get("rate_term"),
+        ),
+        "rate_unscaled": _first_numeric(
+            eval_data.get("rate_unscaled"),
+            sc.get("rate_unscaled"),
+        ),
+    }
+
+
 def _read_input(path: Path, label: str) -> tuple[bytes, str, int]:
     if not path.is_file():
         raise SystemExit(f"FATAL: {label} not found: {path}")
@@ -559,11 +635,12 @@ def _finish_remote(
     }
     if eval_data:
         summary["eval_data"] = eval_data
-        sc = eval_data.get("score_components") or {}
-        summary["score"] = eval_data.get("score") or eval_data.get("total_score")
-        summary["pose_avg"] = sc.get("pose") or sc.get("pose_avg")
-        summary["seg_avg"] = sc.get("seg") or sc.get("seg_avg")
-        summary["rate"] = sc.get("rate")
+        metrics = _eval_metric_summary(eval_data)
+        summary["score"] = metrics["score"]
+        summary["pose_avg"] = metrics["pose_avg"]
+        summary["seg_avg"] = metrics["seg_avg"]
+        summary["rate"] = metrics["rate"]
+        summary["rate_unscaled"] = metrics["rate_unscaled"]
     if extra:
         summary.update(extra)
     _write_json(out_dir / "phase_a1_summary.json", summary)
@@ -957,11 +1034,12 @@ def _run_phase_a1_inner(
             },
         }
         if eval_data:
-            sc = eval_data.get("score_components") or {}
-            build_manifest["score"] = eval_data.get("score") or eval_data.get("total_score")
-            build_manifest["pose_avg"] = sc.get("pose") or sc.get("pose_avg")
-            build_manifest["seg_avg"] = sc.get("seg") or sc.get("seg_avg")
-            build_manifest["rate"] = sc.get("rate")
+            metrics = _eval_metric_summary(eval_data)
+            build_manifest["score"] = metrics["score"]
+            build_manifest["pose_avg"] = metrics["pose_avg"]
+            build_manifest["seg_avg"] = metrics["seg_avg"]
+            build_manifest["rate"] = metrics["rate"]
+            build_manifest["rate_unscaled"] = metrics["rate_unscaled"]
         _write_json(out_dir / "build_manifest.json", build_manifest)
 
         result = _finish_remote(
@@ -1831,12 +1909,12 @@ def recover(label: str) -> int:
             print(f"[recover] SKIP {relpath}: {exc!r}")
 
     eval_data = result.get("eval_data") or {}
+    metrics = _eval_metric_summary(eval_data)
     if eval_data:
-        score = eval_data.get("score") or eval_data.get("total_score")
-        sc = eval_data.get("score_components") or {}
         print(
-            f"[recover] [contest-CUDA] score={score} pose={sc.get('pose')} "
-            f"seg={sc.get('seg')} rate={sc.get('rate')}"
+            f"[recover] [contest-CUDA] score={metrics['score']} "
+            f"pose={metrics['pose_avg']} seg={metrics['seg_avg']} "
+            f"rate={metrics['rate']}"
         )
 
     summary_path = out_dir / "harvest_summary.json"
@@ -1850,10 +1928,11 @@ def recover(label: str) -> int:
         "stage": summary.get("stage"),
         "passed": summary.get("passed"),
         "validation_errors": summary.get("validation_errors", []),
-        "score": eval_data.get("score") if eval_data else None,
-        "pose_avg": (eval_data.get("score_components") or {}).get("pose") if eval_data else None,
-        "seg_avg": (eval_data.get("score_components") or {}).get("seg") if eval_data else None,
-        "rate": (eval_data.get("score_components") or {}).get("rate") if eval_data else None,
+        "score": metrics["score"],
+        "pose_avg": metrics["pose_avg"],
+        "seg_avg": metrics["seg_avg"],
+        "rate": metrics["rate"],
+        "rate_unscaled": metrics["rate_unscaled"],
         "tag": summary.get("tag"),
     })
     print(f"[recover] summary saved: {summary_path}")

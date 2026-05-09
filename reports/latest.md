@@ -98,6 +98,29 @@ remote eval workdir should no longer be rejected as `/tmp` scratch. If DALI/
 NVDEC still fails, the run is build-only and must be screened locally before
 any exact-eval spend.
 
+**Guarded refire result:** harvested and retired as a measured configuration.
+The run produced a valid Modal T4 `[contest-CUDA]` exact result, but it
+regressed slightly versus the current A1 CUDA anchor:
+
+- Archive bytes: `178,279`
+- Archive SHA-256:
+  `f220be0350675eb06399e38a39d5849f9d57b6b0ebdac1c8295845d32e6cf6ca`
+- `[contest-CUDA]`: `0.22655968711150934`
+- CUDA components: SegNet `0.000665`, PoseNet `0.00017099`
+- macOS CPU advisory: `0.19309483549345535`
+- CPU advisory components: SegNet `0.00056256`, PoseNet `0.00003287`
+
+The current A1 anchor remains better on both axes:
+`0.2263520234784395` `[contest-CUDA]` and `0.19284757743677347`
+`[contest-CPU]`. The guarded `kl=0.5`, `pixel_l1=0.02` schedule is retired;
+future A1 work needs true validation selection or a score-domain/SegNet early
+stopping guard.
+
+The Modal harvester schema bug that hid this result as `score=None` is fixed:
+`experiments/modal_phase_a1_score_gradient_pr101.py` now normalizes both
+canonical `contest_auth_eval` fields and legacy `score_components` fields.
+Focused Modal tests: `12 passed`.
+
 ## 2026-05-09 (night) - Track4 UNIWARD/Hessian A1 ladder screen
 
 `tools/build_uniward_stc_hessian_a1_v1.py` now emits complete runtime packets

@@ -32,3 +32,51 @@ def test_modal_phase_a1_installs_local_and_remote_repo_import_paths() -> None:
         str(module.REMOTE_REPO),
     }
     assert expected.issubset(set(sys.path))
+
+
+def test_modal_phase_a1_normalizes_canonical_auth_eval_schema() -> None:
+    module = _load_modal_phase_a1_module()
+
+    metrics = module._eval_metric_summary(
+        {
+            "canonical_score": 0.22655968711150934,
+            "score_recomputed_from_components": 0.22655968711150934,
+            "final_score": 0.23,
+            "avg_posenet_dist": 0.00017099,
+            "avg_segnet_dist": 0.000665,
+            "score_rate_contribution": 0.11870875,
+            "rate_unscaled": 0.00474835,
+        }
+    )
+
+    assert metrics == {
+        "score": 0.22655968711150934,
+        "pose_avg": 0.00017099,
+        "seg_avg": 0.000665,
+        "rate": 0.11870875,
+        "rate_unscaled": 0.00474835,
+    }
+
+
+def test_modal_phase_a1_normalizes_legacy_score_components_schema() -> None:
+    module = _load_modal_phase_a1_module()
+
+    metrics = module._eval_metric_summary(
+        {
+            "score": "0.31",
+            "score_components": {
+                "pose": "0.0002",
+                "seg": 0.0006,
+                "rate": 0.119,
+                "rate_unscaled": 0.00476,
+            },
+        }
+    )
+
+    assert metrics == {
+        "score": 0.31,
+        "pose_avg": 0.0002,
+        "seg_avg": 0.0006,
+        "rate": 0.119,
+        "rate_unscaled": 0.00476,
+    }

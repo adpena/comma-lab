@@ -1,0 +1,96 @@
+{
+  "baseline_score": 0.19284757743677347,
+  "canonical_score": 0.19309483549345535,
+  "cpu_leaderboard_reproduction_eligible": false,
+  "custody": {
+    "archive_bytes": 178279,
+    "archive_sha256": "f220be0350675eb06399e38a39d5849f9d57b6b0ebdac1c8295845d32e6cf6ca",
+    "command": [
+      "experiments/contest_auth_eval.py",
+      "--archive",
+      "experiments/results/track1_phase_a1_score_gradient_segguard_kl0p5_l1p02_40e_20260509T052414Z_modal/harvested_artifacts/finetuned_archive/archive.zip",
+      "--inflate-sh",
+      "experiments/results/track1_phase_a1_score_gradient_segguard_kl0p5_l1p02_40e_20260509T052414Z_modal/harvested_artifacts/finetuned_archive/submission_dir/inflate.sh",
+      "--upstream-dir",
+      "upstream",
+      "--device",
+      "cpu",
+      "--work-dir",
+      "experiments/results/a1_segguard_kl0p5_l1p02_macos_cpu_advisory_20260509_codex/work",
+      "--keep-work-dir"
+    ],
+    "device": "cpu",
+    "gpu_model": "<error:FileNotFoundError(2, 'No such file or directory')>",
+    "inflate_script": "/Users/adpena/Projects/pact/experiments/results/track1_phase_a1_score_gradient_segguard_kl0p5_l1p02_40e_20260509T052414Z_modal/harvested_artifacts/finetuned_archive/submission_dir/inflate.sh",
+    "n_samples": 600
+  },
+  "dispatch_claim_state": {
+    "claims_file_present": true,
+    "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+    "latest_claim": {
+      "agent": "codex",
+      "instance_job_id": "local:a1-segguard-kl0p5-l1p02-macos-cpu-20260509T0532Z",
+      "lane_id": "a1_segguard_kl0p5_l1p02_macos_cpu_advisory",
+      "notes": "macOS CPU advisory completed: score=0.193094835493 pose=3.287e-05 seg=0.00056256 bytes=178279 sha256=f220be0350675eb06399e38a39d5849f9d57b6b0ebdac1c8295845d32e6cf6ca; worse than current A1 contest-CPU 0.192847577437 and exact CUDA also regressed",
+      "platform": "local",
+      "predicted_eta_utc": "2026-05-09T05:41:00Z",
+      "status": "completed_macos_cpu_advisory_regression",
+      "timestamp_utc": "2026-05-09T05:40:32Z"
+    },
+    "latest_status": "completed_macos_cpu_advisory_regression",
+    "matching_claim_count": 2,
+    "terminal_status_recorded": true
+  },
+  "exact_cpu_evidence": false,
+  "exact_cuda_evidence": false,
+  "failure_class": "non_exact_cuda_evidence",
+  "family_falsified": false,
+  "job_id": "local:a1-segguard-kl0p5-l1p02-macos-cpu-20260509T0532Z",
+  "lane_id": "a1_segguard_kl0p5_l1p02_macos_cpu_advisory",
+  "measured_config_status": "proxy_or_non_cuda_review_only",
+  "method_family_retired": false,
+  "notes": [
+    "This packet can retire only the measured config unless the broader kill discipline is separately satisfied.",
+    "Exact CUDA evidence may update solver trust regions after adversarial review."
+  ],
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "reactivation_criteria": [
+    "do not promote macOS CPU advisory; use it only as local screen before contest-CPU spend",
+    "this guarded schedule is worse than current A1 on macOS CPU advisory and exact CUDA; future A1 work needs validation selection or a different loss schedule"
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "review_requirements": {
+    "contest_compliance_review_required": true,
+    "engineering_review_required": true,
+    "geometry_review_required": true,
+    "math_review_required": true,
+    "optimization_review_required": true
+  },
+  "reviewer": "codex",
+  "runtime_custody": {
+    "external_dependency_roots": [],
+    "payload_closure_fields_present": true,
+    "runtime_file_count": 4,
+    "runtime_files_listed": true,
+    "runtime_manifest_present": true,
+    "runtime_tree_sha256": "a674905a5770a2b6edd709ad1b4a09a13dec34a530e1102786c2a80659a20981"
+  },
+  "schema": "tac_result_review_packet_v1",
+  "score_claim": false,
+  "score_recomputation": {
+    "abs_delta_vs_reported": 8.169633242127716e-08,
+    "archive_bytes": 178279,
+    "available": true,
+    "avg_posenet_dist": 3.287e-05,
+    "avg_segnet_dist": 0.00056256,
+    "matches_reported": false,
+    "rate_term": 0.11870866830366758,
+    "recomputed_score": 0.19309475379712293,
+    "reported_score": 0.19309483549345535
+  },
+  "source_json_path": "experiments/results/a1_segguard_kl0p5_l1p02_macos_cpu_advisory_20260509_codex/work/contest_auth_eval.json",
+  "source_json_sha256": "40cae0b65c28aca8a118c89329f0765d32c249e06ffa02b3fba2c2a39e35f3b3",
+  "technique": "phase_a1_score_gradient_pr101_segguard_kl0p5_l1p02_macos_cpu_advisory",
+  "tool": "tools/build_result_review_packet.py"
+}

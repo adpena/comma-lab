@@ -80,3 +80,12 @@ retain the A1 CPU gain while reducing the SegNet drift seen in longer runs.
   if competitive with the current A1 anchor.
 - If positive, freeze this schedule as the new A1 branch and launch a paired
   schedule-neighborhood sweep around KL/L1 weights.
+
+## Supersession — harvested 2026-05-09
+
+This active-dispatch note is superseded by
+`.omx/research/phase_a1_segguard_result_and_harvest_schema_fix_20260509_codex.md`.
+The run completed exact Modal T4 CUDA eval and local macOS CPU advisory. It
+regressed on both axes (`0.22655968711150934` contest-CUDA and
+`0.19309483549345535` macOS CPU advisory), so the measured configuration is
+retired.

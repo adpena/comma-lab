@@ -1,0 +1,97 @@
+{
+  "baseline_score": 0.2263520234784395,
+  "canonical_score": 0.22655968711150934,
+  "cpu_leaderboard_reproduction_eligible": false,
+  "custody": {
+    "archive_bytes": 178279,
+    "archive_sha256": "f220be0350675eb06399e38a39d5849f9d57b6b0ebdac1c8295845d32e6cf6ca",
+    "command": [
+      "/workspace/pact/experiments/contest_auth_eval.py",
+      "--archive",
+      "/workspace/pact/experiments/results/modal_phase_a1_remote/track1_phase_a1_score_gradient_segguard_kl0p5_l1p02_40e_20260509T052414Z_modal/finetuned_archive/archive.zip",
+      "--inflate-sh",
+      "/workspace/pact/experiments/results/modal_phase_a1_remote/track1_phase_a1_score_gradient_segguard_kl0p5_l1p02_40e_20260509T052414Z_modal/finetuned_archive/submission_dir/inflate.sh",
+      "--upstream-dir",
+      "/workspace/pact/upstream",
+      "--device",
+      "cuda",
+      "--work-dir",
+      "/workspace/pact/experiments/results/modal_phase_a1_remote/track1_phase_a1_score_gradient_segguard_kl0p5_l1p02_40e_20260509T052414Z_modal/eval_work",
+      "--keep-work-dir"
+    ],
+    "device": "cuda",
+    "gpu_model": "Tesla T4",
+    "inflate_script": "/workspace/pact/experiments/results/modal_phase_a1_remote/track1_phase_a1_score_gradient_segguard_kl0p5_l1p02_40e_20260509T052414Z_modal/finetuned_archive/submission_dir/inflate.sh",
+    "n_samples": 600
+  },
+  "dispatch_claim_state": {
+    "claims_file_present": true,
+    "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+    "latest_claim": {
+      "agent": "claude:modal_phase_a1",
+      "instance_job_id": "track1_phase_a1_score_gradient_segguard_kl0p5_l1p02_40e_20260509T052414Z_modal",
+      "lane_id": "track1_phase_a1_score_gradient",
+      "notes": "Phase A1 Modal recover harvested call_id=fc-01KR5K3V8VT735P73ZV881ZQA2; rc=0; stage='completed'; passed=True. Terminal claim row closes the dispatch once cached artifacts are recovered.",
+      "platform": "modal",
+      "predicted_eta_utc": "2026-05-09T05:30:28Z",
+      "status": "completed_modal_recovered",
+      "timestamp_utc": "2026-05-09T05:30:28Z"
+    },
+    "latest_status": "completed_modal_recovered",
+    "matching_claim_count": 2,
+    "terminal_status_recorded": true
+  },
+  "exact_cpu_evidence": false,
+  "exact_cuda_evidence": true,
+  "failure_class": "legitimate_score_regression_or_component_collapse",
+  "family_falsified": false,
+  "job_id": "track1_phase_a1_score_gradient_segguard_kl0p5_l1p02_40e_20260509T052414Z_modal",
+  "lane_id": "track1_phase_a1_score_gradient",
+  "measured_config_status": "measured_config_retired",
+  "method_family_retired": false,
+  "notes": [
+    "This packet can retire only the measured config unless the broader kill discipline is separately satisfied.",
+    "Exact CUDA evidence may update solver trust regions after adversarial review."
+  ],
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "reactivation_criteria": [
+    "do not relaunch this exact KL/L1 schedule; it regresses CUDA versus the A1 latent-aligned importpathfix anchor",
+    "screen macOS CPU advisory before deciding whether the schedule has any public-axis value",
+    "future A1 refires need a true SegNet early-stopping or validation-selection guard, not only stronger auxiliary KL/L1 weights"
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "review_requirements": {
+    "contest_compliance_review_required": true,
+    "engineering_review_required": true,
+    "geometry_review_required": true,
+    "math_review_required": true,
+    "optimization_review_required": true
+  },
+  "reviewer": "codex",
+  "runtime_custody": {
+    "external_dependency_roots": [],
+    "payload_closure_fields_present": true,
+    "runtime_file_count": 4,
+    "runtime_files_listed": true,
+    "runtime_manifest_present": true,
+    "runtime_tree_sha256": "134f9ace728e8c9a32e7e7c0de7f1c0260326939eb00f1194fe159db6775db71"
+  },
+  "schema": "tac_result_review_packet_v1",
+  "score_claim": false,
+  "score_recomputation": {
+    "abs_delta_vs_reported": 8.169633242127716e-08,
+    "archive_bytes": 178279,
+    "available": true,
+    "avg_posenet_dist": 0.00017099,
+    "avg_segnet_dist": 0.000665,
+    "matches_reported": false,
+    "rate_term": 0.11870866830366758,
+    "recomputed_score": 0.22655960541517692,
+    "reported_score": 0.22655968711150934
+  },
+  "source_json_path": "experiments/results/track1_phase_a1_score_gradient_segguard_kl0p5_l1p02_40e_20260509T052414Z_modal/harvested_artifacts/eval_work/contest_auth_eval.json",
+  "source_json_sha256": "a6b292ef9591a1ec7d3d6e03303c3bd8ba45712cfc827f34e8395adc96037a63",
+  "technique": "phase_a1_score_gradient_pr101_segguard_kl0p5_l1p02",
+  "tool": "tools/build_result_review_packet.py"
+}
