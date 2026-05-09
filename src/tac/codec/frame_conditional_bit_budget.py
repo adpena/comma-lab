@@ -70,19 +70,27 @@ import numpy as np
 __all__ = [
     "FRAME_CONDITIONAL_LATENT_WIRE_SCHEMA",
     "FRAME_CONDITIONAL_Q_BITS_PER_PAIR_BITS",
+    "FRAME_CONDITIONAL_Q_BITS_ENCODING_BINARY_LOW_HIGH_MASK",
+    "FRAME_CONDITIONAL_Q_BITS_ENCODING_RAW3",
     "ComplexityComponents",
     "allocate_per_frame_bits",
     "apply_frame_conditional_q_bits",
     "build_frame_conditional_wire_contract",
+    "pack_frame_conditional_binary_q_bits",
     "compute_per_frame_complexity",
     "pack_frame_conditional_latent_codes",
     "pack_frame_conditional_q_bits",
+    "pack_frame_conditional_q_bits_by_encoding",
+    "unpack_frame_conditional_binary_q_bits",
     "unpack_frame_conditional_latent_codes",
     "unpack_frame_conditional_q_bits",
+    "unpack_frame_conditional_q_bits_by_encoding",
 ]
 
 
 FRAME_CONDITIONAL_LATENT_WIRE_SCHEMA = "tac_frame_conditional_latent_wire.v1"
+FRAME_CONDITIONAL_Q_BITS_ENCODING_RAW3 = "raw3"
+FRAME_CONDITIONAL_Q_BITS_ENCODING_BINARY_LOW_HIGH_MASK = "binary_low_high_mask"
 FRAME_CONDITIONAL_Q_BITS_PER_PAIR_BITS = 3
 FRAME_CONDITIONAL_Q_BITS_MIN = 1
 FRAME_CONDITIONAL_Q_BITS_MAX = 8
@@ -242,6 +250,95 @@ def unpack_frame_conditional_q_bits(
     return out
 
 
+def pack_frame_conditional_binary_q_bits(
+    q_bits_per_pair: Sequence[float] | np.ndarray,
+) -> bytes:
+    """Pack one- or two-level q-bit schedules as a binary selector mask.
+
+    The first two bytes store ``low_q_bits - 1`` and ``high_q_bits - 1``.
+    The remaining bytes are a 1-bit MSB-first selector per pair: ``0`` means
+    low, ``1`` means high. For PR101 two-level q7/q8 schedules this reduces
+    q-bit side-info from 225 bytes to 77 bytes without changing decoded
+    latents. Schedules with more than two q-bit levels fail closed.
+    """
+    q_bits = _normalise_q_bits_per_pair(q_bits_per_pair)
+    unique = np.unique(q_bits)
+    if unique.size > 2:
+        raise ValueError(
+            "binary q-bit side-info supports at most two q-bit values; "
+            f"got {unique.tolist()}"
+        )
+    low = int(unique[0])
+    high = int(unique[-1])
+    total_bits = q_bits.size
+    mask = bytearray((total_bits + 7) // 8)
+    bit_pos = 0
+    for value in q_bits:
+        selector = 1 if int(value) == high and high != low else 0
+        bit_pos = _append_msb_bits(mask, bit_pos, selector, 1)
+    return bytes([low - 1, high - 1]) + bytes(mask)
+
+
+def unpack_frame_conditional_binary_q_bits(
+    data: bytes,
+    *,
+    n_pairs: int,
+) -> np.ndarray:
+    """Decode binary-selector q-bit side-info emitted by
+    :func:`pack_frame_conditional_binary_q_bits`.
+    """
+    if n_pairs <= 0:
+        raise ValueError(f"n_pairs must be positive, got {n_pairs}")
+    expected_bytes = 2 + (n_pairs + 7) // 8
+    if len(data) != expected_bytes:
+        raise ValueError(
+            f"binary q-bit side-info length {len(data)} != expected {expected_bytes}"
+        )
+    low = int(data[0]) + 1
+    high = int(data[1]) + 1
+    if (
+        low < FRAME_CONDITIONAL_Q_BITS_MIN
+        or high > FRAME_CONDITIONAL_Q_BITS_MAX
+        or low > high
+    ):
+        raise ValueError(f"invalid binary q-bit range low={low} high={high}")
+    out = np.empty(n_pairs, dtype=np.uint8)
+    bit_pos = 0
+    mask = data[2:]
+    for i in range(n_pairs):
+        selector, bit_pos = _read_msb_bits(mask, bit_pos, 1)
+        out[i] = high if selector else low
+    _assert_zero_padding(mask, bit_pos)
+    return out
+
+
+def pack_frame_conditional_q_bits_by_encoding(
+    q_bits_per_pair: Sequence[float] | np.ndarray,
+    *,
+    encoding: str = FRAME_CONDITIONAL_Q_BITS_ENCODING_RAW3,
+) -> bytes:
+    """Pack q-bit side-info using a named fail-closed encoding."""
+    if encoding == FRAME_CONDITIONAL_Q_BITS_ENCODING_RAW3:
+        return pack_frame_conditional_q_bits(q_bits_per_pair)
+    if encoding == FRAME_CONDITIONAL_Q_BITS_ENCODING_BINARY_LOW_HIGH_MASK:
+        return pack_frame_conditional_binary_q_bits(q_bits_per_pair)
+    raise ValueError(f"unknown q-bit side-info encoding: {encoding!r}")
+
+
+def unpack_frame_conditional_q_bits_by_encoding(
+    data: bytes,
+    *,
+    n_pairs: int,
+    encoding: str = FRAME_CONDITIONAL_Q_BITS_ENCODING_RAW3,
+) -> np.ndarray:
+    """Decode q-bit side-info using a named fail-closed encoding."""
+    if encoding == FRAME_CONDITIONAL_Q_BITS_ENCODING_RAW3:
+        return unpack_frame_conditional_q_bits(data, n_pairs=n_pairs)
+    if encoding == FRAME_CONDITIONAL_Q_BITS_ENCODING_BINARY_LOW_HIGH_MASK:
+        return unpack_frame_conditional_binary_q_bits(data, n_pairs=n_pairs)
+    raise ValueError(f"unknown q-bit side-info encoding: {encoding!r}")
+
+
 def apply_frame_conditional_q_bits(
     q_pair_first: np.ndarray,
     q_bits_per_pair: Sequence[float] | np.ndarray,
@@ -323,6 +420,7 @@ def build_frame_conditional_wire_contract(
     *,
     latent_dim: int,
     q_pair_first: np.ndarray | None = None,
+    q_bits_sideinfo_encoding: str = FRAME_CONDITIONAL_Q_BITS_ENCODING_RAW3,
 ) -> dict[str, object]:
     """Return no-score A5 wire-contract metadata for manifests/guards.
 
@@ -332,8 +430,15 @@ def build_frame_conditional_wire_contract(
     PR101 inflate patch and runtime-consumption proof land.
     """
     q_bits = _normalise_q_bits_per_pair(q_bits_per_pair)
-    sideinfo = pack_frame_conditional_q_bits(q_bits)
-    decoded_q_bits = unpack_frame_conditional_q_bits(sideinfo, n_pairs=q_bits.size)
+    sideinfo = pack_frame_conditional_q_bits_by_encoding(
+        q_bits,
+        encoding=q_bits_sideinfo_encoding,
+    )
+    decoded_q_bits = unpack_frame_conditional_q_bits_by_encoding(
+        sideinfo,
+        n_pairs=q_bits.size,
+        encoding=q_bits_sideinfo_encoding,
+    )
     q_bits_roundtrip_passed = bool(np.array_equal(decoded_q_bits, q_bits))
     record: dict[str, object] = {
         "schema": FRAME_CONDITIONAL_LATENT_WIRE_SCHEMA,
@@ -349,14 +454,19 @@ def build_frame_conditional_wire_contract(
             "unpack_frame_conditional_q_bits"
         ),
         "wire_encoding": {
-            "q_bits_per_pair": "3bit_msb_q_bits_minus_1",
+            "q_bits_per_pair": q_bits_sideinfo_encoding,
             "latent_codes": "per_pair_msb_variable_width_uint8_top_bits",
             "latent_dim": int(latent_dim),
             "n_pairs": int(q_bits.size),
         },
         "q_bits_sideinfo": {
             "bytes": len(sideinfo),
-            "bits_per_pair": FRAME_CONDITIONAL_Q_BITS_PER_PAIR_BITS,
+            "encoding": q_bits_sideinfo_encoding,
+            "bits_per_pair": (
+                FRAME_CONDITIONAL_Q_BITS_PER_PAIR_BITS
+                if q_bits_sideinfo_encoding == FRAME_CONDITIONAL_Q_BITS_ENCODING_RAW3
+                else None
+            ),
             "sha256": _sha256_bytes(sideinfo),
             "q_bits_min": int(q_bits.min()),
             "q_bits_max": int(q_bits.max()),

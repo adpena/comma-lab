@@ -106,6 +106,83 @@ def test_cli_consumes_score_marginal_qbits_override(
         assert zf.namelist() == ["x"]
 
 
+def test_cli_can_emit_binary_qbits_sideinfo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    helpers = _load_helpers()
+    tool = helpers._load_tool()
+    helpers._install_tiny_pr101_contract(monkeypatch, tool)
+    q_ordered = np.array(
+        [
+            [255, 128, 17, 1],
+            [64, 32, 16, 8],
+        ],
+        dtype=np.uint8,
+    )
+    q_bits = np.array([4, 8], dtype=np.uint8)
+    latent_blob = helpers._encode_tiny_latent_blob(tool, q_ordered)
+    monkeypatch.setattr(tool, "PR101_LATENT_BLOB_LEN", len(latent_blob))
+    source_payload = b"DECO" + latent_blob + b"SIDE"
+    source_archive = tmp_path / "source" / "archive.zip"
+    helpers._write_zip(source_archive, source_payload)
+    runtime = helpers._write_runtime(tmp_path / "runtime", latent_blob_len=len(latent_blob))
+    a5_manifest = helpers._a5_manifest(
+        tmp_path / "a5.json",
+        q_bits=q_bits,
+        q_ordered=q_ordered,
+        source_payload=source_payload,
+    )
+    q_bits_json = _write_json(
+        tmp_path / "score_marginals.json",
+        {
+            "schema": tool.A5_SCORE_MARGINAL_QBITS_SCHEDULE_SCHEMA,
+            "score_claim": False,
+            "per_pair_q_bits": [4, 8],
+        },
+    )
+    output_dir = tmp_path / "out"
+
+    assert (
+        tool.main(
+            [
+                "--a5-manifest",
+                str(a5_manifest),
+                "--source-archive",
+                str(source_archive),
+                "--source-runtime-dir",
+                str(runtime),
+                "--q-bits-json",
+                str(q_bits_json),
+                "--q-bits-sideinfo-encoding",
+                "binary_low_high_mask",
+                "--recompute-wire-contract-for-q-bits",
+                "--output-dir",
+                str(output_dir),
+            ]
+        )
+        == 0
+    )
+
+    manifest = json.loads(
+        (output_dir / "candidate_archive_manifest.json").read_text(encoding="utf-8")
+    )
+    schedule = manifest["q_bits_schedule"]
+    proof = json.loads(
+        (REPO_ROOT / manifest["runtime_consumption_proof"]["path"]).read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert schedule["q_bits_sideinfo_encoding"] == "binary_low_high_mask"
+    assert schedule["q_bits_sideinfo_bytes"] == 3
+    assert (
+        manifest["frame_conditional_wire_contract"]["q_bits_sideinfo"]["encoding"]
+        == "binary_low_high_mask"
+    )
+    assert proof["ready_for_exact_eval_runtime"] is True
+    assert proof["candidate_packet_local_parse_smoke"]["passed"] is True
+
+
 def test_qbits_override_json_rejects_ambiguous_keys(tmp_path: Path) -> None:
     helpers = _load_helpers()
     tool = helpers._load_tool()

@@ -44,11 +44,13 @@ ensure_repo_imports(REPO_ROOT)
 
 from tac.analysis import hnerv_packet_sections  # noqa: E402
 from tac.codec.frame_conditional_bit_budget import (  # noqa: E402
+    FRAME_CONDITIONAL_Q_BITS_ENCODING_BINARY_LOW_HIGH_MASK,
+    FRAME_CONDITIONAL_Q_BITS_ENCODING_RAW3,
     FRAME_CONDITIONAL_LATENT_WIRE_SCHEMA,
     allocate_per_frame_bits,
     build_frame_conditional_wire_contract,
     pack_frame_conditional_latent_codes,
-    pack_frame_conditional_q_bits,
+    pack_frame_conditional_q_bits_by_encoding,
 )
 from tac.repo_io import (  # noqa: E402
     json_text,
@@ -128,6 +130,7 @@ def build_frame_conditional_runtime_packet(
     force: bool = False,
     q_bits_override: Sequence[float] | np.ndarray | None = None,
     q_bits_override_source_path: Path | None = None,
+    q_bits_sideinfo_encoding: str = FRAME_CONDITIONAL_Q_BITS_ENCODING_RAW3,
     allow_q_bits_wire_contract_override: bool = False,
     recorded_at_utc: dt.datetime | None = None,
 ) -> dict[str, Any]:
@@ -187,12 +190,16 @@ def build_frame_conditional_runtime_packet(
         video_path=video_path,
         q_bits_override=q_bits_override,
     )
-    q_bits_sideinfo = pack_frame_conditional_q_bits(q_bits)
+    q_bits_sideinfo = pack_frame_conditional_q_bits_by_encoding(
+        q_bits,
+        encoding=q_bits_sideinfo_encoding,
+    )
     latent_wire_payload = pack_frame_conditional_latent_codes(q_pair_first, q_bits)
     materialized_wire_contract = build_frame_conditional_wire_contract(
         q_bits,
         latent_dim=q_pair_first.shape[1],
         q_pair_first=q_pair_first,
+        q_bits_sideinfo_encoding=q_bits_sideinfo_encoding,
     )
     wire_contract_reconciliation = _reconcile_wire_contract(
         source_wire_contract=wire_contract,
@@ -205,6 +212,7 @@ def build_frame_conditional_runtime_packet(
     q_bits_schedule = _q_bits_schedule_record(
         q_bits=q_bits,
         q_bits_sideinfo=q_bits_sideinfo,
+        q_bits_sideinfo_encoding=q_bits_sideinfo_encoding,
         q_bits_override=q_bits_override,
         q_bits_override_source_path=q_bits_override_source_path,
         a5_manifest=a5_manifest,
@@ -505,6 +513,7 @@ def _q_bits_schedule_record(
     *,
     q_bits: np.ndarray,
     q_bits_sideinfo: bytes,
+    q_bits_sideinfo_encoding: str,
     q_bits_override: Sequence[float] | np.ndarray | None,
     q_bits_override_source_path: Path | None,
     a5_manifest: Mapping[str, Any],
@@ -524,6 +533,7 @@ def _q_bits_schedule_record(
             for value, count in zip(unique_values, unique_counts, strict=True)
         },
         "q_bits_sha256": sha256_bytes(q_bits.tobytes()),
+        "q_bits_sideinfo_encoding": q_bits_sideinfo_encoding,
         "q_bits_sideinfo_bytes": len(q_bits_sideinfo),
         "q_bits_sideinfo_sha256": sha256_bytes(q_bits_sideinfo),
         "score_marginal_manifest_consumed": False,
@@ -806,6 +816,8 @@ def _patch_packet_codec(packet_dir: Path) -> dict[str, Any]:
 A5_FRAME_CONDITIONAL_MAGIC = b"A5FC"
 A5_FRAME_CONDITIONAL_HEADER_LEN = 20
 A5_FRAME_CONDITIONAL_WIRE_SCHEMA = "tac_frame_conditional_latent_wire.v1"
+A5_Q_BITS_RAW3_BYTES = (N_PAIRS * 3 + 7) // 8
+A5_Q_BITS_BINARY_LOW_HIGH_MASK_BYTES = 2 + ((N_PAIRS + 7) // 8)
 
 
 def _a5_sha256(data):
@@ -830,10 +842,24 @@ def _a5_assert_zero_padding(data, bit_pos):
 
 
 def _a5_unpack_q_bits(data):
-    expected_bytes = (N_PAIRS * 3 + 7) // 8
-    if len(data) != expected_bytes:
+    if len(data) == A5_Q_BITS_BINARY_LOW_HIGH_MASK_BYTES:
+        low = data[0] + 1
+        high = data[1] + 1
+        if low < 1 or high > 8 or low > high:
+            raise ValueError(f"bad A5 binary q-bit range low={low} high={high}")
+        out = np.empty(N_PAIRS, dtype=np.uint8)
+        mask = data[2:]
+        bit_pos = 0
+        for i in range(N_PAIRS):
+            selector, bit_pos = _a5_read_msb_bits(mask, bit_pos, 1)
+            out[i] = high if selector else low
+        _a5_assert_zero_padding(mask, bit_pos)
+        return out
+    if len(data) != A5_Q_BITS_RAW3_BYTES:
         raise ValueError(
-            f"A5 q-bit side-info length {len(data)} != expected {expected_bytes}"
+            "A5 q-bit side-info length "
+            f"{len(data)} != raw3 {A5_Q_BITS_RAW3_BYTES} "
+            f"or binary {A5_Q_BITS_BINARY_LOW_HIGH_MASK_BYTES}"
         )
     out = np.empty(N_PAIRS, dtype=np.uint8)
     bit_pos = 0
@@ -957,6 +983,10 @@ def parse_archive(archive_bytes):
         "codec_parse_archive_supports_a5fc": True,
         "parse_archive_consumes_q_bits_sideinfo": True,
         "decode_latents_consumes_variable_width_payload": True,
+        "supported_q_bits_sideinfo_encodings": [
+            FRAME_CONDITIONAL_Q_BITS_ENCODING_RAW3,
+            FRAME_CONDITIONAL_Q_BITS_ENCODING_BINARY_LOW_HIGH_MASK,
+        ],
         "magic": A5_MAGIC.decode("ascii"),
         "header_bytes": A5_HEADER_LEN,
         "source_runtime_mutated": False,
@@ -1607,6 +1637,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "hashes. The output manifest records the mismatch and selected contract."
         ),
     )
+    parser.add_argument(
+        "--q-bits-sideinfo-encoding",
+        choices=(
+            FRAME_CONDITIONAL_Q_BITS_ENCODING_RAW3,
+            FRAME_CONDITIONAL_Q_BITS_ENCODING_BINARY_LOW_HIGH_MASK,
+        ),
+        default=FRAME_CONDITIONAL_Q_BITS_ENCODING_RAW3,
+        help=(
+            "Encoding for q-bit side-info. raw3 preserves the original 3-bit "
+            "per-pair stream; binary_low_high_mask is a compact two-level "
+            "selector mask for one- or two-q-bit schedules."
+        ),
+    )
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument(
         "--candidate-id",
@@ -1635,6 +1678,7 @@ def main(argv: list[str] | None = None) -> int:
             video_path=args.video_path,
             q_bits_override=q_bits_override,
             q_bits_override_source_path=args.q_bits_json,
+            q_bits_sideinfo_encoding=args.q_bits_sideinfo_encoding,
             allow_q_bits_wire_contract_override=args.recompute_wire_contract_for_q_bits,
             candidate_id=args.candidate_id,
             force=args.force,

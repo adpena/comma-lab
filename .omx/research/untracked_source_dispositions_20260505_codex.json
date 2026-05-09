@@ -142,6 +142,18 @@
     {
       "classification": "generated_custody_source_untracked",
       "disposition": "ignore_rebuildable",
+      "note": "exact: A5 q7 SegNet-protected binary q-bit side-info packet entrypoint is raw rebuildable custody; canonical signal is in .omx/research/a5_binary_qbits_sideinfo_improvement_20260509_codex.md.",
+      "path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q7_low0p85_seg_binaryq_20260509_codex/packet/inflate.py"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_rebuildable",
+      "note": "exact: A5 q7 SegNet-protected binary q-bit side-info packet entrypoint is raw rebuildable custody; canonical signal is in .omx/research/a5_binary_qbits_sideinfo_improvement_20260509_codex.md.",
+      "path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q7_low0p85_seg_binaryq_20260509_codex/packet/inflate.sh"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_rebuildable",
       "note": "exact: A1 latent-aligned Modal harvested runtime source is raw rebuildable custody; canonical signal is in .omx/research/phase_a1_latent_aligned_contest_cpu_anchor_20260509_codex.md and reports/a1_latentalign_importpathfix_contest_cpu_evidence_row_20260509.json.",
       "path": "experiments/results/track1_phase_a1_score_gradient_latentalign_importpathfix_lr2e6_20260509T012628Z_modal/harvested_artifacts/finetuned_archive/submission_dir/inflate.py"
     },

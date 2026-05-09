@@ -1108,6 +1108,15 @@ point (`0.201122`). The q7/q8 low0p75 blended packet failed the byte gate at
 `178,453 B` and was not eval-spent. Ledger:
 `.omx/research/a5_blended_boundary_lowmargin_scalar_negative_20260509_codex.md`.
 
+A compact q-bit side-info compiler pass also landed for one- and two-level A5
+schedules: `--q-bits-sideinfo-encoding binary_low_high_mask`. Applying it to
+the best SegNet-protected q7/q8 schedule reduced side-info from `225 B` to
+`77 B` and produced a runtime-consumed `178,095 B` packet
+(`dd5da6b636266f89768661c758c96355531d8305b2bbd1bbb7063c48b7297876`).
+macOS CPU advisory scored `0.20101191630821824`, a small A5-local improvement
+over `0.201110`, but still not promotable versus A1/PR101. Ledger:
+`.omx/research/a5_binary_qbits_sideinfo_improvement_20260509_codex.md`.
+
 ## Strategic findings — late 2026-05-04 dashboard-mining session
 
 After the dashboard log-parser fix (commit dbb0032d, +293 score visibility),

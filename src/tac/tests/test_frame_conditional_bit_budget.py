@@ -4,12 +4,15 @@ import numpy as np
 import pytest
 
 from tac.codec.frame_conditional_bit_budget import (
+    FRAME_CONDITIONAL_Q_BITS_ENCODING_BINARY_LOW_HIGH_MASK,
     ComplexityComponents,
     allocate_per_frame_bits,
     apply_frame_conditional_q_bits,
     build_frame_conditional_wire_contract,
+    pack_frame_conditional_binary_q_bits,
     pack_frame_conditional_latent_codes,
     pack_frame_conditional_q_bits,
+    unpack_frame_conditional_binary_q_bits,
     unpack_frame_conditional_latent_codes,
     unpack_frame_conditional_q_bits,
 )
@@ -89,6 +92,29 @@ def test_pack_frame_conditional_q_bits_roundtrips_pr101_sideinfo_size() -> None:
 
     assert len(packed) == 225
     np.testing.assert_array_equal(decoded, q_bits)
+
+
+def test_binary_q_bits_sideinfo_roundtrips_two_level_schedule() -> None:
+    q_bits = np.array([7, 8] * 300, dtype=np.uint8)
+
+    packed = pack_frame_conditional_binary_q_bits(q_bits)
+    decoded = unpack_frame_conditional_binary_q_bits(packed, n_pairs=600)
+    contract = build_frame_conditional_wire_contract(
+        q_bits,
+        latent_dim=28,
+        q_bits_sideinfo_encoding=FRAME_CONDITIONAL_Q_BITS_ENCODING_BINARY_LOW_HIGH_MASK,
+    )
+
+    assert len(packed) == 77
+    np.testing.assert_array_equal(decoded, q_bits)
+    assert contract["q_bits_sideinfo"]["encoding"] == "binary_low_high_mask"
+    assert contract["q_bits_sideinfo"]["bytes"] == 77
+    assert contract["q_bits_roundtrip"]["passed"] is True
+
+
+def test_binary_q_bits_sideinfo_rejects_three_level_schedule() -> None:
+    with pytest.raises(ValueError, match="at most two"):
+        pack_frame_conditional_binary_q_bits([6, 7, 8])
 
 
 def test_unpack_frame_conditional_q_bits_fails_closed_on_bad_padding() -> None:
