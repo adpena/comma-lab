@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 import struct
 import types
@@ -68,12 +69,12 @@ def test_ground_truth_loader_uses_upstream_yuv420_helper() -> None:
     assert "to_ndarray(format=\"rgb24\")" not in tool_text
 
 
-def _write_runtime_fixture(tmp_path: Path) -> tuple[Path, Path]:
+def _write_runtime_fixture(tmp_path: Path, sidecar: bytes = b"sidecar") -> tuple[Path, Path]:
     sub_dir = tmp_path / "submission_dir"
     src_dir = sub_dir / "src"
     src_dir.mkdir(parents=True)
     archive = sub_dir / "archive.zip"
-    inner = struct.pack("<I", 8) + b"abcd" + (b"\x00" * 15387) + b"sidecar"
+    inner = struct.pack("<I", 8) + b"abcd" + (b"\x00" * 15387) + sidecar
     zinfo = zipfile.ZipInfo(filename="x", date_time=(2024, 1, 1, 0, 0, 0))
     zinfo.external_attr = 0o644 << 16
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
@@ -123,6 +124,51 @@ def _runtime_smoke_evidence(tool, archive: Path, custody: dict[str, object]) -> 
         "runtime_tree_sha256": custody["runtime_tree_sha256"],
         "output_digest_sha256": "3" * 64,
     }
+
+
+def _write_choice_state_record(
+    tool,
+    tmp_path: Path,
+    *,
+    dims: np.ndarray | None = None,
+    delta_idx: np.ndarray | None = None,
+    searched_mask: np.ndarray | None = None,
+    old_archive_sha256: str = "a" * 64,
+    old_sidecar_sha256: str = "1" * 64,
+    search_signal: str = "proxy_mse",
+    search_device: str = "cpu",
+    encode_format: str = "packed_661",
+) -> dict[str, object]:
+    dims = (
+        np.full(tool.N_PAIRS, 255, dtype=np.int64)
+        if dims is None
+        else dims.astype(np.int64, copy=True)
+    )
+    delta_idx = (
+        np.full(tool.N_PAIRS, -1, dtype=np.int64)
+        if delta_idx is None
+        else delta_idx.astype(np.int64, copy=True)
+    )
+    searched_mask = (
+        np.ones(tool.N_PAIRS, dtype=bool)
+        if searched_mask is None
+        else searched_mask.astype(bool, copy=True)
+    )
+    state_path = tmp_path / "sidecar_choice_state.json"
+    tool.write_sidecar_choice_state(
+        state_path,
+        dims=dims,
+        delta_idx=delta_idx,
+        searched_mask=searched_mask,
+        old_archive_sha256=old_archive_sha256,
+        old_sidecar_sha256=old_sidecar_sha256,
+        search_signal=search_signal,
+        search_device=search_device,
+        encode_format=encode_format,
+        total_pairs=tool.N_PAIRS,
+        latent_dim=tool.LATENT_DIM,
+    )
+    return tool.sidecar_choice_state_manifest_record(state_path)
 
 
 def test_member_section_proof_records_a1_archive_sections(tmp_path: Path) -> None:
@@ -233,11 +279,22 @@ def test_manifest_readiness_requires_sidecar_lane_and_archive_path(tmp_path: Pat
 
 def test_manifest_readiness_accepts_complete_local_custody(tmp_path: Path) -> None:
     tool = load_tool()
-    sub_dir, archive = _write_runtime_fixture(tmp_path)
+    dims = np.full(tool.N_PAIRS, 255, dtype=np.int64)
+    delta_idx = np.full(tool.N_PAIRS, -1, dtype=np.int64)
+    sidecar = tool.encode_sidecar_huff_enum(dims, delta_idx)
+    sub_dir, archive = _write_runtime_fixture(tmp_path, sidecar=sidecar)
     archive_sha = tool.sha256_of(archive)
     archive_bytes = archive.stat().st_size
     custody = tool.collect_local_runtime_custody(sub_dir, archive_path=archive)
     proof = tool.collect_member_section_proof(archive)
+    choice_state = _write_choice_state_record(
+        tool,
+        tmp_path,
+        dims=dims,
+        delta_idx=delta_idx,
+        old_archive_sha256="a" * 64,
+        old_sidecar_sha256="1" * 64,
+    )
     manifest = {
         "lane_id": tool.SIDECAR_LANE_ID,
         "dispatch_blockers": [],
@@ -251,8 +308,12 @@ def test_manifest_readiness_accepts_complete_local_custody(tmp_path: Path) -> No
         "new_archive_sha256": archive_sha,
         "new_archive_bytes": archive_bytes,
         "new_sidecar_bytes": _proof_sidecar_bytes(proof),
+        "old_archive_sha256": "a" * 64,
         "ready_for_exact_eval_dispatch": True,
         "runtime_smoke_checked": True,
+        "search_signal": "proxy_mse",
+        "search_device": "cpu",
+        "encode_format": "packed_661",
         "smoke_only": False,
         "full_non_smoke_search": True,
         "no_op_detector": _changed_sidecar_no_op(_proof_sidecar_sha(proof)),
@@ -261,6 +322,7 @@ def test_manifest_readiness_accepts_complete_local_custody(tmp_path: Path) -> No
         "runtime_tree_sha256": custody["runtime_tree_sha256"],
         "runtime_smoke_evidence": _runtime_smoke_evidence(tool, archive, custody),
         "member_section_proof": proof,
+        "sidecar_choice_state": choice_state,
     }
 
     out = tool.enforce_manifest_dispatch_readiness(
@@ -587,6 +649,196 @@ def test_ground_truth_pairs_needed_decodes_only_required_prefix() -> None:
         tool.ground_truth_pairs_needed([600], 600)
 
 
+def test_sidecar_choice_state_round_trips_and_refuses_context_drift(
+    tmp_path: Path,
+) -> None:
+    tool = load_tool()
+    dims = np.full(tool.N_PAIRS, 255, dtype=np.int64)
+    delta_idx = np.full(tool.N_PAIRS, -1, dtype=np.int64)
+    searched_mask = np.zeros(tool.N_PAIRS, dtype=bool)
+    dims[3] = 7
+    delta_idx[3] = 12
+    searched_mask[3] = True
+    state_path = tmp_path / "sidecar_choice_state.json"
+
+    payload = tool.write_sidecar_choice_state(
+        state_path,
+        dims=dims,
+        delta_idx=delta_idx,
+        searched_mask=searched_mask,
+        old_archive_sha256="a" * 64,
+        old_sidecar_sha256="b" * 64,
+        search_signal="proxy_mse",
+        search_device="cpu",
+        encode_format="packed_661",
+        total_pairs=tool.N_PAIRS,
+        latent_dim=tool.LATENT_DIM,
+    )
+
+    loaded_dims, loaded_delta_idx, loaded_mask, loaded_payload = (
+        tool.load_sidecar_choice_state(
+            state_path,
+            old_archive_sha256="a" * 64,
+            old_sidecar_sha256="b" * 64,
+            search_signal="proxy_mse",
+            search_device="cpu",
+            encode_format="packed_661",
+            total_pairs=tool.N_PAIRS,
+            latent_dim=tool.LATENT_DIM,
+        )
+    )
+    assert payload == loaded_payload
+    assert np.array_equal(loaded_dims, dims)
+    assert np.array_equal(loaded_delta_idx, delta_idx)
+    assert np.array_equal(loaded_mask, searched_mask)
+
+    with pytest.raises(ValueError, match="context mismatch"):
+        tool.load_sidecar_choice_state(
+            state_path,
+            old_archive_sha256="0" * 64,
+            old_sidecar_sha256="b" * 64,
+            search_signal="proxy_mse",
+            search_device="cpu",
+            encode_format="packed_661",
+            total_pairs=tool.N_PAIRS,
+            latent_dim=tool.LATENT_DIM,
+        )
+
+
+def test_manifest_readiness_rejects_full_search_without_complete_choice_state(
+    tmp_path: Path,
+) -> None:
+    tool = load_tool()
+    dims = np.full(tool.N_PAIRS, 255, dtype=np.int64)
+    delta_idx = np.full(tool.N_PAIRS, -1, dtype=np.int64)
+    sidecar = tool.encode_sidecar_huff_enum(dims, delta_idx)
+    sub_dir, archive = _write_runtime_fixture(tmp_path, sidecar=sidecar)
+    archive_sha = tool.sha256_of(archive)
+    archive_bytes = archive.stat().st_size
+    custody = tool.collect_local_runtime_custody(sub_dir, archive_path=archive)
+    proof = tool.collect_member_section_proof(archive)
+    searched_mask = np.ones(tool.N_PAIRS, dtype=bool)
+    searched_mask[-1] = False
+    choice_state = _write_choice_state_record(
+        tool,
+        tmp_path,
+        dims=dims,
+        delta_idx=delta_idx,
+        searched_mask=searched_mask,
+        old_archive_sha256="a" * 64,
+        old_sidecar_sha256="1" * 64,
+    )
+    manifest = {
+        "lane_id": tool.SIDECAR_LANE_ID,
+        "dispatch_blockers": [],
+        "archive_path": tool.manifest_path(archive),
+        "archive_sha256": archive_sha,
+        "archive_size_bytes": archive_bytes,
+        "new_archive_path": tool.manifest_path(archive),
+        "new_archive_sha256": archive_sha,
+        "new_archive_bytes": archive_bytes,
+        "new_sidecar_bytes": _proof_sidecar_bytes(proof),
+        "old_archive_sha256": "a" * 64,
+        "ready_for_exact_eval_dispatch": True,
+        "runtime_smoke_checked": True,
+        "runtime_smoke_evidence": _runtime_smoke_evidence(tool, archive, custody),
+        "search_signal": "proxy_mse",
+        "search_device": "cpu",
+        "encode_format": "packed_661",
+        "smoke_only": False,
+        "full_non_smoke_search": True,
+        "no_op_detector": _changed_sidecar_no_op(_proof_sidecar_sha(proof)),
+        "local_runtime_custody": custody,
+        "runtime_manifest": custody,
+        "runtime_tree_sha256": custody["runtime_tree_sha256"],
+        "member_section_proof": proof,
+        "sidecar_choice_state": choice_state,
+    }
+
+    out = tool.enforce_manifest_dispatch_readiness(
+        manifest,
+        archive_path=archive,
+        submission_dir=sub_dir,
+    )
+
+    assert out["ready_for_exact_eval_dispatch"] is False
+    assert "sidecar_choice_state_incomplete_for_full_search" in out["dispatch_blockers"]
+
+
+def test_manifest_readiness_rejects_malformed_choice_state_fail_closed(
+    tmp_path: Path,
+) -> None:
+    tool = load_tool()
+    dims = np.full(tool.N_PAIRS, 255, dtype=np.int64)
+    delta_idx = np.full(tool.N_PAIRS, -1, dtype=np.int64)
+    sidecar = tool.encode_sidecar_huff_enum(dims, delta_idx)
+    sub_dir, archive = _write_runtime_fixture(tmp_path, sidecar=sidecar)
+    archive_sha = tool.sha256_of(archive)
+    archive_bytes = archive.stat().st_size
+    custody = tool.collect_local_runtime_custody(sub_dir, archive_path=archive)
+    proof = tool.collect_member_section_proof(archive)
+    state_path = tmp_path / "sidecar_choice_state.json"
+    state_path.write_text(
+        json.dumps(
+            {
+                "schema_version": tool.SIDECAR_CHOICE_STATE_SCHEMA,
+                "total_pairs": tool.N_PAIRS,
+                "latent_dim": tool.LATENT_DIM,
+                "dims": None,
+                "delta_idx": [],
+                "searched_mask": [],
+            }
+        )
+        + "\n"
+    )
+    manifest = {
+        "lane_id": tool.SIDECAR_LANE_ID,
+        "dispatch_blockers": [],
+        "archive_path": tool.manifest_path(archive),
+        "archive_sha256": archive_sha,
+        "archive_size_bytes": archive_bytes,
+        "new_archive_path": tool.manifest_path(archive),
+        "new_archive_sha256": archive_sha,
+        "new_archive_bytes": archive_bytes,
+        "new_sidecar_bytes": _proof_sidecar_bytes(proof),
+        "old_archive_sha256": "a" * 64,
+        "ready_for_exact_eval_dispatch": True,
+        "runtime_smoke_checked": True,
+        "runtime_smoke_evidence": _runtime_smoke_evidence(tool, archive, custody),
+        "search_signal": "proxy_mse",
+        "search_device": "cpu",
+        "encode_format": "packed_661",
+        "smoke_only": False,
+        "full_non_smoke_search": True,
+        "no_op_detector": _changed_sidecar_no_op(_proof_sidecar_sha(proof)),
+        "local_runtime_custody": custody,
+        "runtime_manifest": custody,
+        "runtime_tree_sha256": custody["runtime_tree_sha256"],
+        "member_section_proof": proof,
+        "sidecar_choice_state": {
+            "schema_version": tool.SIDECAR_CHOICE_STATE_SCHEMA,
+            "path": tool.manifest_path(state_path),
+            "sha256": tool.sha256_of(state_path),
+            "n_pairs_completed_total": tool.N_PAIRS,
+            "total_pairs": tool.N_PAIRS,
+            "full_coverage": True,
+            "searched_pair_indices": list(range(tool.N_PAIRS)),
+        },
+    }
+
+    out = tool.enforce_manifest_dispatch_readiness(
+        manifest,
+        archive_path=archive,
+        submission_dir=sub_dir,
+    )
+
+    assert out["ready_for_exact_eval_dispatch"] is False
+    assert any(
+        str(reason).startswith("sidecar_choice_state_unreadable:")
+        for reason in out["dispatch_blockers"]
+    )
+
+
 def test_batched_pair_proxy_search_preserves_best_candidate_semantics() -> None:
     tool = load_tool()
 
@@ -625,6 +877,71 @@ def test_batched_pair_proxy_search_preserves_best_candidate_semantics() -> None:
     assert best_mse == pytest.approx(0.0)
     assert best_dim == 1
     assert best_didx == 1
+
+
+def test_proxy_search_resume_skips_completed_pairs_and_updates_state(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    tool = load_tool()
+
+    class Decoder(torch.nn.Module):
+        def __init__(self, *args, **kwargs) -> None:
+            super().__init__()
+
+        def forward(self, latents: torch.Tensor) -> torch.Tensor:
+            value = latents[:, 0].reshape(-1, 1, 1, 1)
+            return value.repeat(1, 6, 1, 1)
+
+    monkeypatch.setitem(sys.modules, "model", types.SimpleNamespace(HNeRVDecoder=Decoder))
+    base = torch.zeros((tool.N_PAIRS, tool.LATENT_DIM), dtype=torch.float32)
+    initial_dims = np.full(tool.N_PAIRS, 255, dtype=np.int64)
+    initial_delta_idx = np.full(tool.N_PAIRS, -1, dtype=np.int64)
+    initial_mask = np.zeros(tool.N_PAIRS, dtype=bool)
+    initial_dims[0] = 2
+    initial_delta_idx[0] = 3
+    initial_mask[0] = True
+    state_path = tmp_path / "sidecar_choice_state.json"
+    components = {
+        "decoder_sd": {},
+        "latents_pre_sidecar": base,
+        "latents_with_sidecar_old": base.clone(),
+        "eval_size": (1, 1),
+        "latent_dim": tool.LATENT_DIM,
+        "base_channels": 1,
+        "n_pairs": tool.N_PAIRS,
+    }
+    gt_eval = np.ones((4, 1, 1, 3), dtype=np.uint8)
+
+    dims, delta_idx, meta = tool.search_per_pair_proxy_mse(
+        components,
+        gt_eval,
+        pair_indices=[0, 1],
+        candidate_batch_size=4,
+        search_device="cpu",
+        initial_dims=initial_dims,
+        initial_delta_idx=initial_delta_idx,
+        initial_searched_mask=initial_mask,
+        state_path=state_path,
+        state_context={
+            "old_archive_sha256": "a" * 64,
+            "old_sidecar_sha256": "b" * 64,
+            "search_signal": "proxy_mse",
+            "search_device": "cpu",
+            "encode_format": "packed_661",
+            "total_pairs": tool.N_PAIRS,
+            "latent_dim": tool.LATENT_DIM,
+        },
+    )
+
+    assert meta["n_pairs_skipped_already_completed"] == 1
+    assert meta["n_pairs_completed_this_run"] == 1
+    assert meta["n_pairs_completed_total"] == 2
+    assert dims[0] == 2
+    assert delta_idx[0] == 3
+    assert dims[1] == 0
+    state_payload = json.loads(state_path.read_text())
+    assert state_payload["searched_pair_indices"] == [0, 1]
 
 
 def test_proxy_search_explicit_cpu_device_path(monkeypatch) -> None:

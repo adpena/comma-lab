@@ -87,6 +87,7 @@ SIDECAR_LANE_ID = "lane_a1_per_pair_latent_sidecar_resampled"
 LOCAL_RUNTIME_CUSTODY_SCHEMA = "a1_sidecar_local_runtime_custody_v1"
 MEMBER_SECTION_PROOF_SCHEMA = "a1_sidecar_member_section_proof_v1"
 RUNTIME_SMOKE_SCHEMA = "a1_sidecar_runtime_smoke_v1"
+SIDECAR_CHOICE_STATE_SCHEMA = "a1_sidecar_choice_state_v1"
 REQUIRED_RUNTIME_FILES = ("inflate.py", "inflate.sh", "src/codec.py", "src/model.py")
 RUNTIME_TREE_EXCLUDED_FILES = frozenset({"archive.zip"})
 RUNTIME_TREE_EXCLUDED_PARTS = frozenset({"__pycache__"})
@@ -134,6 +135,10 @@ def _mode_string(path: Path) -> str:
 def _canonical_json_sha256(payload: Any) -> str:
     raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
+
+
+def _canonical_json_bytes(payload: Any) -> bytes:
+    return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
 
 def _runtime_file_record(submission_dir: Path, relpath: str) -> dict[str, Any]:
@@ -494,6 +499,105 @@ def _member_section_proof_blockers(
     return blockers
 
 
+def _encode_sidecar_from_state_payload(
+    payload: dict[str, Any],
+    *,
+    encode_format: str,
+) -> bytes:
+    dims, delta_idx, _ = sidecar_choice_arrays_from_payload(payload)
+    if encode_format == "n_pairs_600":
+        return encode_sidecar_n_pairs(dims, delta_idx)
+    if encode_format == "packed_661":
+        return encode_sidecar_huff_enum(dims, delta_idx)
+    raise ValueError(f"unknown encode_format: {encode_format!r}")
+
+
+def _sidecar_choice_state_blockers(manifest: dict[str, Any]) -> list[str]:
+    record = manifest.get("sidecar_choice_state")
+    full_search = manifest.get("full_non_smoke_search") is True
+    if not isinstance(record, dict):
+        return ["sidecar_choice_state_missing_for_full_search"] if full_search else []
+
+    blockers: list[str] = []
+    if record.get("schema_version") != SIDECAR_CHOICE_STATE_SCHEMA:
+        blockers.append("sidecar_choice_state_schema_mismatch")
+    state_path = _resolve_manifest_path(record.get("path"))
+    if state_path is None:
+        blockers.append("sidecar_choice_state_path_missing")
+        return blockers
+    if not state_path.is_file():
+        blockers.append(f"sidecar_choice_state_missing:{manifest_path(state_path)}")
+        return blockers
+    actual_sha = sha256_of(state_path)
+    if record.get("sha256") != actual_sha:
+        blockers.append("sidecar_choice_state_sha256_mismatch")
+    try:
+        payload = _load_sidecar_choice_state_payload(state_path)
+        dims, delta_idx, searched_mask = sidecar_choice_arrays_from_payload(payload)
+    except (FileNotFoundError, ValueError) as exc:
+        blockers.append(f"sidecar_choice_state_unreadable:{exc}")
+        return blockers
+
+    total_pairs = int(manifest.get("total_pairs", N_PAIRS))
+    completed = int(searched_mask.sum())
+    if payload.get("schema_version") != SIDECAR_CHOICE_STATE_SCHEMA:
+        blockers.append("sidecar_choice_state_payload_schema_mismatch")
+    if payload.get("lane_id") != SIDECAR_LANE_ID:
+        blockers.append("sidecar_choice_state_lane_id_mismatch")
+    if payload.get("old_archive_sha256") != manifest.get("old_archive_sha256"):
+        blockers.append("sidecar_choice_state_old_archive_sha256_mismatch")
+    no_op = manifest.get("no_op_detector")
+    if isinstance(no_op, dict) and payload.get("old_sidecar_sha256") != no_op.get(
+        "old_inner_sidecar_sha256"
+    ):
+        blockers.append("sidecar_choice_state_old_sidecar_sha256_mismatch")
+    if payload.get("search_signal") != manifest.get("search_signal"):
+        blockers.append("sidecar_choice_state_search_signal_mismatch")
+    if payload.get("search_device") != manifest.get("search_device"):
+        blockers.append("sidecar_choice_state_search_device_mismatch")
+    if payload.get("encode_format") != manifest.get("encode_format"):
+        blockers.append("sidecar_choice_state_encode_format_mismatch")
+    if payload.get("total_pairs") != total_pairs:
+        blockers.append("sidecar_choice_state_total_pairs_mismatch")
+    if record.get("total_pairs") != payload.get("total_pairs"):
+        blockers.append("sidecar_choice_state_record_total_pairs_mismatch")
+    if record.get("n_pairs_completed_total") != completed:
+        blockers.append("sidecar_choice_state_record_completed_count_mismatch")
+    if payload.get("n_pairs_completed_total") != completed:
+        blockers.append("sidecar_choice_state_payload_completed_count_mismatch")
+    full_coverage = completed == total_pairs
+    if record.get("full_coverage") is not full_coverage:
+        blockers.append("sidecar_choice_state_record_full_coverage_mismatch")
+    if payload.get("full_coverage") is not full_coverage:
+        blockers.append("sidecar_choice_state_payload_full_coverage_mismatch")
+    if full_search and not full_coverage:
+        blockers.append("sidecar_choice_state_incomplete_for_full_search")
+
+    try:
+        encoded_sidecar = _encode_sidecar_from_state_payload(
+            payload,
+            encode_format=str(manifest.get("encode_format")),
+        )
+    except ValueError as exc:
+        blockers.append(f"sidecar_choice_state_encode_failed:{exc}")
+    else:
+        encoded_sha = hashlib.sha256(encoded_sidecar).hexdigest()
+        encoded_bytes = len(encoded_sidecar)
+        if isinstance(no_op, dict) and encoded_sha != no_op.get(
+            "new_inner_sidecar_sha256"
+        ):
+            blockers.append("sidecar_choice_state_encoded_sidecar_sha256_mismatch")
+        if (
+            "new_sidecar_bytes" in manifest
+            and encoded_bytes != manifest.get("new_sidecar_bytes")
+        ):
+            blockers.append("sidecar_choice_state_encoded_sidecar_bytes_mismatch")
+    # Keep locals live for validation readability and to make static checkers
+    # notice that both arrays are parsed even when only the mask drives coverage.
+    _ = (dims, delta_idx)
+    return blockers
+
+
 def run_local_runtime_smoke(
     submission_dir: Path,
     *,
@@ -696,6 +800,204 @@ def infer_sidecar_choices_from_latents(components: dict[str, Any]) -> tuple[np.n
     return dims, delta_idx
 
 
+def _validate_sidecar_choice_arrays(
+    dims: np.ndarray,
+    delta_idx: np.ndarray,
+    searched_mask: np.ndarray | None = None,
+    *,
+    n_pairs: int = N_PAIRS,
+    latent_dim: int = LATENT_DIM,
+) -> None:
+    if dims.shape != (n_pairs,):
+        raise ValueError(f"dims shape mismatch: {dims.shape} != {(n_pairs,)}")
+    if delta_idx.shape != (n_pairs,):
+        raise ValueError(f"delta_idx shape mismatch: {delta_idx.shape} != {(n_pairs,)}")
+    if searched_mask is not None and searched_mask.shape != (n_pairs,):
+        raise ValueError(
+            f"searched_mask shape mismatch: {searched_mask.shape} != {(n_pairs,)}"
+        )
+    for k, (dim, didx) in enumerate(zip(dims, delta_idx, strict=True)):
+        dim_i = int(dim)
+        didx_i = int(didx)
+        if dim_i == 255:
+            if didx_i != -1:
+                raise ValueError(f"pair={k} has no-op dim but delta_idx={didx_i}")
+            continue
+        if not (0 <= dim_i < latent_dim):
+            raise ValueError(f"pair={k} dim out of range: {dim_i}")
+        if not (0 <= didx_i < len(SIDECAR_DELTAS_X100)):
+            raise ValueError(f"pair={k} delta_idx out of range: {didx_i}")
+
+
+def _sidecar_choice_state_payload(
+    *,
+    dims: np.ndarray,
+    delta_idx: np.ndarray,
+    searched_mask: np.ndarray,
+    old_archive_sha256: str,
+    old_sidecar_sha256: str,
+    search_signal: str,
+    search_device: str,
+    encode_format: str,
+    total_pairs: int,
+    latent_dim: int,
+) -> dict[str, Any]:
+    _validate_sidecar_choice_arrays(
+        dims,
+        delta_idx,
+        searched_mask,
+        n_pairs=total_pairs,
+        latent_dim=latent_dim,
+    )
+    searched_pair_indices = [int(i) for i in np.flatnonzero(searched_mask)]
+    return {
+        "schema_version": SIDECAR_CHOICE_STATE_SCHEMA,
+        "lane_id": SIDECAR_LANE_ID,
+        "old_archive_sha256": old_archive_sha256,
+        "old_sidecar_sha256": old_sidecar_sha256,
+        "search_signal": search_signal,
+        "search_device": search_device,
+        "encode_format": encode_format,
+        "total_pairs": int(total_pairs),
+        "latent_dim": int(latent_dim),
+        "delta_vocabulary_x100": [int(x) for x in SIDECAR_DELTAS_X100.tolist()],
+        "dims": [int(x) for x in dims.tolist()],
+        "delta_idx": [int(x) for x in delta_idx.tolist()],
+        "searched_mask": [bool(x) for x in searched_mask.tolist()],
+        "searched_pair_indices": searched_pair_indices,
+        "n_pairs_completed_total": len(searched_pair_indices),
+        "full_coverage": len(searched_pair_indices) == int(total_pairs),
+        "unsearched_pairs_preserve_old_sidecar": True,
+    }
+
+
+def write_sidecar_choice_state(
+    path: Path,
+    *,
+    dims: np.ndarray,
+    delta_idx: np.ndarray,
+    searched_mask: np.ndarray,
+    old_archive_sha256: str,
+    old_sidecar_sha256: str,
+    search_signal: str,
+    search_device: str,
+    encode_format: str,
+    total_pairs: int,
+    latent_dim: int,
+) -> dict[str, Any]:
+    """Write deterministic per-pair sidecar choices for resume and custody."""
+
+    payload = _sidecar_choice_state_payload(
+        dims=dims,
+        delta_idx=delta_idx,
+        searched_mask=searched_mask,
+        old_archive_sha256=old_archive_sha256,
+        old_sidecar_sha256=old_sidecar_sha256,
+        search_signal=search_signal,
+        search_device=search_device,
+        encode_format=encode_format,
+        total_pairs=total_pairs,
+        latent_dim=latent_dim,
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = path.with_name(path.name + ".tmp")
+    tmp_path.write_bytes(_canonical_json_bytes(payload) + b"\n")
+    tmp_path.replace(path)
+    return payload
+
+
+def _load_sidecar_choice_state_payload(path: Path) -> dict[str, Any]:
+    try:
+        payload = json.loads(path.read_text())
+    except FileNotFoundError:
+        raise
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"sidecar choice state is not valid JSON: {path}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError(f"sidecar choice state must be a JSON object: {path}")
+    return payload
+
+
+def sidecar_choice_arrays_from_payload(
+    payload: dict[str, Any],
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    for key in ("dims", "delta_idx", "searched_mask"):
+        if not isinstance(payload.get(key), list):
+            raise ValueError(f"sidecar choice state {key} must be a JSON list")
+    dims = np.asarray(payload["dims"], dtype=np.int64)
+    delta_idx = np.asarray(payload["delta_idx"], dtype=np.int64)
+    searched_mask = np.asarray(payload["searched_mask"], dtype=bool)
+    total_pairs = int(payload.get("total_pairs", N_PAIRS))
+    latent_dim = int(payload.get("latent_dim", LATENT_DIM))
+    _validate_sidecar_choice_arrays(
+        dims,
+        delta_idx,
+        searched_mask,
+        n_pairs=total_pairs,
+        latent_dim=latent_dim,
+    )
+    return dims, delta_idx, searched_mask
+
+
+def load_sidecar_choice_state(
+    path: Path,
+    *,
+    old_archive_sha256: str,
+    old_sidecar_sha256: str,
+    search_signal: str,
+    search_device: str,
+    encode_format: str,
+    total_pairs: int,
+    latent_dim: int,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, dict[str, Any]]:
+    """Load a prior search state, refusing mixed custody/search contexts."""
+
+    payload = _load_sidecar_choice_state_payload(path)
+    expected = {
+        "schema_version": SIDECAR_CHOICE_STATE_SCHEMA,
+        "lane_id": SIDECAR_LANE_ID,
+        "old_archive_sha256": old_archive_sha256,
+        "old_sidecar_sha256": old_sidecar_sha256,
+        "search_signal": search_signal,
+        "search_device": search_device,
+        "encode_format": encode_format,
+        "total_pairs": int(total_pairs),
+        "latent_dim": int(latent_dim),
+        "delta_vocabulary_x100": [int(x) for x in SIDECAR_DELTAS_X100.tolist()],
+    }
+    mismatches = [
+        key
+        for key, expected_value in expected.items()
+        if payload.get(key) != expected_value
+    ]
+    if mismatches:
+        raise ValueError(
+            "sidecar choice state context mismatch: " + ", ".join(sorted(mismatches))
+        )
+    dims, delta_idx, searched_mask = sidecar_choice_arrays_from_payload(payload)
+    completed = [int(i) for i in np.flatnonzero(searched_mask)]
+    if payload.get("searched_pair_indices") != completed:
+        raise ValueError("sidecar choice state searched_pair_indices mismatch")
+    if payload.get("n_pairs_completed_total") != len(completed):
+        raise ValueError("sidecar choice state completed-count mismatch")
+    if payload.get("full_coverage") is not (len(completed) == int(total_pairs)):
+        raise ValueError("sidecar choice state full_coverage mismatch")
+    return dims, delta_idx, searched_mask, payload
+
+
+def sidecar_choice_state_manifest_record(path: Path) -> dict[str, Any]:
+    payload = _load_sidecar_choice_state_payload(path)
+    return {
+        "schema_version": payload.get("schema_version"),
+        "path": manifest_path(path),
+        "sha256": sha256_of(path),
+        "n_pairs_completed_total": payload.get("n_pairs_completed_total"),
+        "total_pairs": payload.get("total_pairs"),
+        "full_coverage": payload.get("full_coverage"),
+        "searched_pair_indices": payload.get("searched_pair_indices"),
+    }
+
+
 def encode_sidecar_huff_enum(dims: np.ndarray, delta_idx: np.ndarray) -> bytes:
     """Encode sidecar in PR101's HUFF_ENUM format (607 bytes for typical mix).
 
@@ -756,10 +1058,18 @@ def search_per_pair_proxy_mse(
     log_path: Path | None = None,
     candidate_batch_size: int = 1,
     search_device: str = "cpu",
+    initial_dims: np.ndarray | None = None,
+    initial_delta_idx: np.ndarray | None = None,
+    initial_searched_mask: np.ndarray | None = None,
+    state_path: Path | None = None,
+    state_context: dict[str, Any] | None = None,
+    max_search_seconds: float | None = None,
 ) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
     """Greedy per-pair single-dim search using pixel MSE (fast proxy)."""
     import torch
 
+    if max_search_seconds is not None and max_search_seconds <= 0:
+        raise ValueError("max_search_seconds must be positive when supplied")
     decoder_sd = components["decoder_sd"]
     latents_base = components["latents_pre_sidecar"].clone()
     eval_h, eval_w = components["eval_size"]
@@ -787,22 +1097,54 @@ def search_per_pair_proxy_mse(
 
     n_pairs = components["n_pairs"]
     pair_indices = pair_indices if pair_indices is not None else list(range(n_pairs))
+    if any(k < 0 or k >= n_pairs for k in pair_indices):
+        raise ValueError(f"pair_indices outside n_pairs={n_pairs}: {pair_indices}")
 
-    dims_out, delta_idx_out = infer_sidecar_choices_from_latents(components)
+    if initial_dims is None or initial_delta_idx is None:
+        dims_out, delta_idx_out = infer_sidecar_choices_from_latents(components)
+    else:
+        dims_out = initial_dims.astype(np.int64, copy=True)
+        delta_idx_out = initial_delta_idx.astype(np.int64, copy=True)
+    if initial_searched_mask is None:
+        searched_mask = np.zeros(n_pairs, dtype=bool)
+    else:
+        searched_mask = initial_searched_mask.astype(bool, copy=True)
     if dims_out.shape[0] != n_pairs or delta_idx_out.shape[0] != n_pairs:
         raise ValueError(
             f"old sidecar inference shape mismatch: dims={dims_out.shape} "
             f"delta_idx={delta_idx_out.shape} expected={n_pairs}"
         )
+    _validate_sidecar_choice_arrays(
+        dims_out,
+        delta_idx_out,
+        searched_mask,
+        n_pairs=n_pairs,
+        latent_dim=components["latent_dim"],
+    )
     deltas = SIDECAR_DELTAS_X100.astype(np.float32) / 100.0
 
     log_lines = []
     t0 = time.time()
-    progress_every = max(1, min(25, len(pair_indices)))
-    for n_done, k in enumerate(pair_indices, start=1):
+    skipped_already_completed = [k for k in pair_indices if searched_mask[k]]
+    work_pair_indices = [k for k in pair_indices if not searched_mask[k]]
+    progress_every = max(1, min(25, len(work_pair_indices) or 1))
+    completed_this_run = 0
+    stopped_for_wall_clock = False
+    for n_done, k in enumerate(work_pair_indices, start=1):
+        if (
+            max_search_seconds is not None
+            and completed_this_run > 0
+            and (time.time() - t0) >= max_search_seconds
+        ):
+            stopped_for_wall_clock = True
+            break
         # Ground truth uint8 frames for this pair
         gt = ground_truth_frames[k * 2 : k * 2 + 2]  # (2, CAMERA_H, CAMERA_W, 3)
-        gt_eval = _resize_uint8_to_eval(gt)  # (2, EVAL_H, EVAL_W, 3) float32
+        gt_eval = _resize_uint8_to_eval(
+            gt,
+            eval_h=eval_h,
+            eval_w=eval_w,
+        )  # (2, EVAL_H, EVAL_W, 3) float32
         base_lat = latents_base[k : k + 1].clone()
         base_mse, best_mse, best_dim, best_didx = _best_pair_proxy_mse_candidate(
             decoder=decoder,
@@ -815,24 +1157,49 @@ def search_per_pair_proxy_mse(
         )
         dims_out[k] = best_dim
         delta_idx_out[k] = best_didx
-        if n_done % progress_every == 0 or n_done == len(pair_indices):
+        searched_mask[k] = True
+        completed_this_run += 1
+        if state_path is not None:
+            if state_context is None:
+                raise ValueError("state_context is required when state_path is supplied")
+            write_sidecar_choice_state(
+                state_path,
+                dims=dims_out,
+                delta_idx=delta_idx_out,
+                searched_mask=searched_mask,
+                **state_context,
+            )
+        if n_done % progress_every == 0 or n_done == len(work_pair_indices):
             elapsed = time.time() - t0
-            rate = n_done / elapsed
-            eta = (len(pair_indices) - n_done) / rate
+            rate = completed_this_run / elapsed if elapsed > 0 else 0.0
+            eta = (
+                (len(work_pair_indices) - completed_this_run) / rate
+                if rate > 0
+                else 0.0
+            )
             line = (
-                f"[{n_done}/{len(pair_indices)}] pair={k} best_dim={best_dim} "
+                f"[{completed_this_run}/{len(work_pair_indices)}] pair={k} "
+                f"best_dim={best_dim} "
                 f"best_didx={best_didx} mse_red={base_mse - best_mse:.4e} "
                 f"rate={rate:.2f}/s eta={eta/60:.1f}min"
             )
             print(line, flush=True)
             log_lines.append(line)
+    if state_path is not None:
+        if state_context is None:
+            raise ValueError("state_context is required when state_path is supplied")
+        write_sidecar_choice_state(
+            state_path,
+            dims=dims_out,
+            delta_idx=delta_idx_out,
+            searched_mask=searched_mask,
+            **state_context,
+        )
     elapsed = time.time() - t0
-    searched_mask = np.zeros(n_pairs, dtype=bool)
-    searched_mask[pair_indices] = True
     n_perturbed = int((dims_out != 255).sum())
     n_perturbed_searched = int(((dims_out != 255) & searched_mask).sum())
     print(
-        f"[done] proxy-mse search: {len(pair_indices)} pairs in {elapsed:.1f}s; "
+        f"[done] proxy-mse search: {completed_this_run} new pairs in {elapsed:.1f}s; "
         f"{n_perturbed_searched} searched-pair perturbations; "
         f"{n_perturbed} total perturbations after preserving old sidecar",
         flush=True,
@@ -841,13 +1208,18 @@ def search_per_pair_proxy_mse(
         log_path.write_text("\n".join(log_lines) + "\n")
     return dims_out, delta_idx_out, {
         "search_signal": "proxy_mse",
-        "n_pairs_searched": len(pair_indices),
+        "n_pair_indices_requested": len(pair_indices),
+        "n_pairs_skipped_already_completed": len(skipped_already_completed),
+        "n_pairs_completed_this_run": completed_this_run,
+        "n_pairs_completed_total": int(searched_mask.sum()),
         "n_pairs_perturbed": n_perturbed,
         "n_pairs_perturbed_searched": n_perturbed_searched,
         "unsearched_pairs_preserve_old_sidecar": True,
         "candidate_batch_size": candidate_batch_size,
         "search_device": device.type,
         "elapsed_seconds": elapsed,
+        "search_stopped_for_wall_clock": stopped_for_wall_clock,
+        "searched_pair_indices": [int(i) for i in np.flatnonzero(searched_mask)],
     }
 
 
@@ -934,7 +1306,12 @@ def _best_pair_proxy_mse_candidate(
     return base_mse, best_mse, best_dim, best_didx
 
 
-def _resize_uint8_to_eval(frames_uint8: np.ndarray) -> np.ndarray:
+def _resize_uint8_to_eval(
+    frames_uint8: np.ndarray,
+    *,
+    eval_h: int = EVAL_H,
+    eval_w: int = EVAL_W,
+) -> np.ndarray:
     """Resize uint8 (B, H, W, 3) ground-truth frames to (B, EVAL_H, EVAL_W, 3)
     float32 using bilinear, matching the *inverse* of the inflate-time bicubic
     upscale. Returns float32 in 0..255."""
@@ -945,7 +1322,7 @@ def _resize_uint8_to_eval(frames_uint8: np.ndarray) -> np.ndarray:
         torch.from_numpy(frames_uint8.astype(np.float32))
         .permute(0, 3, 1, 2)  # B,C,H,W
     )
-    arr = F.interpolate(arr, size=(EVAL_H, EVAL_W), mode="bilinear", align_corners=False)
+    arr = F.interpolate(arr, size=(eval_h, eval_w), mode="bilinear", align_corners=False)
     return arr.permute(0, 2, 3, 1).numpy()  # B,H,W,C
 
 
@@ -1077,6 +1454,8 @@ def enforce_manifest_dispatch_readiness(
             block(reason)
         for reason in _member_section_proof_blockers(manifest, archive_path=archive_path):
             block(reason)
+        for reason in _sidecar_choice_state_blockers(manifest):
+            block(reason)
 
     if manifest.get("smoke_only") is True:
         block("smoke_only_not_exact_eval_ready")
@@ -1176,6 +1555,23 @@ def main() -> int:
         default=1,
         help="pair count for --runtime-smoke; default 1 to avoid full raw output",
     )
+    p.add_argument(
+        "--resume-search-state",
+        action="store_true",
+        help=(
+            "resume from output-dir/sidecar_choice_state.json if present; "
+            "the saved context must match archive/search/device/encoding"
+        ),
+    )
+    p.add_argument(
+        "--max-search-seconds",
+        type=float,
+        default=None,
+        help=(
+            "local wall-clock guard for proxy search; after at least one new pair "
+            "is searched, stop cleanly and emit a fail-closed partial packet"
+        ),
+    )
     args = p.parse_args()
 
     timestamp = dt.datetime.now(dt.UTC).strftime("%Y%m%dT%H%M%SZ")
@@ -1208,6 +1604,32 @@ def main() -> int:
         f"old_sidecar_bytes={len(components['sidecar_blob_old'])}",
         flush=True,
     )
+    old_sidecar_sha = hashlib.sha256(components["sidecar_blob_old"]).hexdigest()
+    state_path = out_dir / "sidecar_choice_state.json"
+    state_context = {
+        "old_archive_sha256": A1_EXPECTED_ARCHIVE_SHA,
+        "old_sidecar_sha256": old_sidecar_sha,
+        "search_signal": args.search_signal,
+        "search_device": args.search_device,
+        "encode_format": args.encode_format,
+        "total_pairs": int(components["n_pairs"]),
+        "latent_dim": int(components["latent_dim"]),
+    }
+    initial_dims = None
+    initial_delta_idx = None
+    initial_searched_mask = None
+    resumed_state = False
+    if args.resume_search_state and state_path.exists():
+        print(f"[ok] resuming sidecar choice state from {state_path}", flush=True)
+        (
+            initial_dims,
+            initial_delta_idx,
+            initial_searched_mask,
+            _state_payload,
+        ) = load_sidecar_choice_state(state_path, **state_context)
+        resumed_state = True
+    elif args.resume_search_state:
+        print(f"[ok] no prior state at {state_path}; starting fresh", flush=True)
 
     n_pairs_to_search = 10 if args.smoke else args.n_pairs
     pair_indices = list(range(min(n_pairs_to_search, components["n_pairs"])))
@@ -1226,6 +1648,12 @@ def main() -> int:
             log_path=log_path,
             candidate_batch_size=args.candidate_batch_size,
             search_device=args.search_device,
+            initial_dims=initial_dims,
+            initial_delta_idx=initial_delta_idx,
+            initial_searched_mask=initial_searched_mask,
+            state_path=state_path,
+            state_context=state_context,
+            max_search_seconds=args.max_search_seconds,
         )
     else:
         sys.stderr.write(
@@ -1320,13 +1748,25 @@ def main() -> int:
             "evidence_path": "experiments/results/a1_latentalign_importpathfix_cpu_eval_gha_20260509/contest_auth_eval.adjudicated.json",
         },
         "no_op_detector": {
-            "old_inner_sidecar_sha256": hashlib.sha256(
-                components["sidecar_blob_old"]
-            ).hexdigest(),
+            "old_inner_sidecar_sha256": old_sidecar_sha,
             "new_inner_sidecar_sha256": hashlib.sha256(new_sidecar).hexdigest(),
             "sidecar_changed": components["sidecar_blob_old"] != new_sidecar,
         },
     }
+    choice_state_record = sidecar_choice_state_manifest_record(state_path)
+    manifest["sidecar_choice_state"] = choice_state_record
+    manifest["choice_state_resumed"] = resumed_state
+    manifest["n_pairs_searched"] = choice_state_record["n_pairs_completed_total"]
+    manifest["n_pairs_completed_this_run"] = search_meta.get("n_pairs_completed_this_run")
+    manifest["n_pairs_skipped_already_completed"] = search_meta.get(
+        "n_pairs_skipped_already_completed"
+    )
+    manifest["search_stopped_for_wall_clock"] = search_meta.get(
+        "search_stopped_for_wall_clock"
+    )
+    manifest["full_non_smoke_search"] = (
+        (not args.smoke) and choice_state_record["full_coverage"] is True
+    )
     local_runtime_custody = collect_local_runtime_custody(
         sub_dir,
         archive_path=new_archive_path,
