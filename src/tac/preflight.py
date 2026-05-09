@@ -350,7 +350,7 @@ class _ParallelPreflightRunner:
 def _preflight_parallel_enabled() -> bool:
     """Return true when independent preflight scanners should run in parallel."""
 
-    value = os.environ.get("PACT_PREFLIGHT_ENABLE_PARALLEL", "0").strip().lower()
+    value = os.environ.get("PACT_PREFLIGHT_ENABLE_PARALLEL", "1").strip().lower()
     return value in {"1", "true", "yes", "on"}
 
 
@@ -783,6 +783,9 @@ def preflight_all(
         # without the inflate runtime config.env, then fail after queue time.
         # T4/g4dn submits must also pin inflate-side Torch for old drivers.
         check_lightning_exact_eval_manifest_runtime_closure(strict=True, verbose=verbose)
+        # Gate 5 is a cheap strict dispatch blocker. Run it early so manifest
+        # custody regressions fail before lower-priority broad source scans.
+        check_gate5_runtime_closure(strict=True, verbose=verbose)
         # Remote archive-only H100/L40S diagnostics are only useful if their
         # score JSON is tied to preserved archive bytes. This catches wrapper
         # regressions before overwritten artifact paths create false evidence.
@@ -2245,7 +2248,6 @@ def preflight_all(
         check_gate2_no_naked_bytes(strict=True, verbose=verbose)
         check_gate3_parser_section_manifest(strict=True, verbose=verbose)
         check_gate4_export_first(strict=False, verbose=verbose)
-        check_gate5_runtime_closure(strict=True, verbose=verbose)
         check_gate6_mask_pose_coupling(strict=True, verbose=verbose)
         check_gate7_no_op_provenance(strict=True, verbose=verbose)
         check_gate8_exact_evidence(strict=True, verbose=verbose)

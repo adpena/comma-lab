@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 from pathlib import Path
 
 import pytest
@@ -70,6 +71,25 @@ def test_check_67_timeout_propagates_without_fake_compile_violation(tmp_path, mo
 
     with pytest.raises(PreflightTimeoutError, match="budget exhausted"):
         check_python_files_compile(repo_root=repo, strict=True, verbose=False)
+
+
+def test_preflight_parallel_runner_enabled_by_default(monkeypatch):
+    monkeypatch.delenv("PACT_PREFLIGHT_ENABLE_PARALLEL", raising=False)
+    assert preflight._preflight_parallel_enabled() is True
+
+
+def test_preflight_parallel_runner_can_be_disabled(monkeypatch):
+    monkeypatch.setenv("PACT_PREFLIGHT_ENABLE_PARALLEL", "0")
+    assert preflight._preflight_parallel_enabled() is False
+
+
+def test_gate5_runtime_closure_runs_in_fast_fail_block():
+    source = inspect.getsource(preflight.preflight_all)
+    gate5 = "check_gate5_runtime_closure(strict=True"
+    assert source.count(gate5) == 1
+    assert source.index(gate5) < source.index(
+        "check_remote_archive_only_eval_custody_closure"
+    )
 
 
 def test_check_67_skip_pycache(tmp_path):
