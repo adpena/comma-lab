@@ -130,6 +130,21 @@ early-stopping test instead of another blind final-epoch refire. Focused tests:
 `18 passed`. Ledger:
 `.omx/research/phase_a1_best_proxy_checkpoint_selection_20260509_codex.md`.
 
+**A1 best-proxy dispatch launched:** one Modal T4 run is active with
+`--checkpoint-selection best_proxy` in the best measured `lr=2e-6`, `kl=0.2`,
+`pixel_l1=0.01`, `40x8` basin.
+
+- Job: `track1_phase_a1_score_gradient_bestproxy_lr2e6_20260509_codex`
+- Modal call id: `fc-01KR5MQ0WYS8TQWDN7HCYBZZ3B`
+- Estimated cost: `$2.36`
+- Predicted ETA: `2026-05-09T09:52:37Z`
+- Recover command:
+  `.venv/bin/python experiments/modal_phase_a1_score_gradient_pr101.py recover --label track1_phase_a1_score_gradient_bestproxy_lr2e6_20260509_codex`
+- Ledger:
+  `.omx/research/phase_a1_best_proxy_modal_dispatch_20260509_codex.md`
+
+No score claim exists yet; this is an active dispatch row only.
+
 ## 2026-05-09 (night) - Track4 UNIWARD/Hessian A1 ladder screen
 
 `tools/build_uniward_stc_hessian_a1_v1.py` now emits complete runtime packets
