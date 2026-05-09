@@ -34,6 +34,12 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${REPO_ROOT}"
+rm -f upstream/videos/._*.mkv
+export PYTHON_INFLATE=renderer
+if [ "${PYTHON_INFLATE}" != "renderer" ]; then
+  echo "FATAL: PYTHON_INFLATE must be renderer for contest auth eval" >&2
+  exit 2
+fi
 
 VARIANTS=(
   "v_baseline"
@@ -56,6 +62,37 @@ SKIP_CUDA="${SKIP_CUDA:-1}"
 SKIP_CPU="${SKIP_CPU:-0}"
 CUDA_PROVIDER="${CUDA_PROVIDER:-lightning}"
 DRY_RUN="${DRY_RUN:-0}"
+RUN_RECORD_DIR="${RUN_RECORD_DIR:-experiments/results/a1_cuda_cpu_drift_discriminator_run_${TS}}"
+PROVENANCE="$RUN_RECORD_DIR/provenance.json"
+HEARTBEAT="$RUN_RECORD_DIR/heartbeat.log"
+RUN_RECORD="$RUN_RECORD_DIR/run_record.json"
+mkdir -p "$RUN_RECORD_DIR"
+cat > "$PROVENANCE" <<EOF
+{
+  "schema_version": "remote_run_provenance.v1",
+  "lane_id": "lane_avvideodataset_cuda_path_mechanism_discriminator",
+  "timestamp_suffix": "${TS}",
+  "script": "scripts/remote_lane_avvideodataset_cuda_path_mechanism_discriminator.sh",
+  "git_head": "$(git rev-parse HEAD 2>/dev/null || echo unknown)",
+  "skip_cpu": "${SKIP_CPU}",
+  "skip_cuda": "${SKIP_CUDA}",
+  "cuda_provider": "${CUDA_PROVIDER}",
+  "dry_run": "${DRY_RUN}",
+  "predicted_band": [0.190, 0.230],
+  "prediction_scope": "mechanism-discriminator variants; no promotion without paired exact CPU/CUDA custody",
+  "score_claim": false
+}
+EOF
+cat > "$RUN_RECORD" <<EOF
+{
+  "schema_version": "remote_run_record.v1",
+  "status": "started",
+  "started_at_utc": "$(date -u +%FT%TZ)",
+  "provenance_json": "${PROVENANCE}",
+  "heartbeat_log": "${HEARTBEAT}"
+}
+EOF
+echo "$(date -u +%FT%TZ) heartbeat stage=start pid=$$" >> "$HEARTBEAT"
 
 run() {
   echo "+ $*"
@@ -63,6 +100,45 @@ run() {
     "$@"
   fi
 }
+
+# Stage 0: NVDEC probe before any opt-in CUDA dispatch path.
+#
+# MEDIUM 1 FIX (codex round 3, 2026-05-09): the probe was previously
+# unconditionally invoked locally whenever SKIP_CUDA=0, including under
+# DRY_RUN=1. The operator workstation / CI host typically does NOT have
+# CUDA / NVDEC / DALI installed; the probe exited 2 before this script
+# could reach the dispatch-decision block. The probe belongs in the
+# REMOTE provider bootstrap (where the GPU actually lives), not in the
+# local dispatch driver.
+#
+# Guard semantics:
+#   - DRY_RUN=1                       → skip probe (planning, not running)
+#   - LOCAL_CUDA_WORKER!=1 (default)  → skip probe (this host is a
+#                                       dispatcher, not the GPU worker)
+#   - LOCAL_CUDA_WORKER=1 (explicit)  → probe runs (operator opted in)
+#   - SKIP_NVDEC_PROBE=1              → skip probe (escape valve)
+#
+# This keeps the dispatch path runnable on macOS / Linux x86_64 CPU /
+# any host without CUDA, while still catching the missing-NVDEC class
+# of bug on hosts that legitimately should have it (a single
+# LOCAL_CUDA_WORKER=1 invocation reproduces the original behaviour).
+#
+# Memory: feedback_codex_round3_findings_fix_landed_20260509.md
+LOCAL_CUDA_WORKER="${LOCAL_CUDA_WORKER:-0}"
+if [ "$SKIP_CUDA" != "1" ] \
+   && [ "${SKIP_NVDEC_PROBE:-0}" != "1" ] \
+   && [ "$DRY_RUN" != "1" ] \
+   && [ "$LOCAL_CUDA_WORKER" = "1" ]; then
+  echo "=== Stage 0: NVDEC probe before CUDA dispatch (LOCAL_CUDA_WORKER=1) ==="
+  bash "${REPO_ROOT}/scripts/probe_nvdec.sh" || {
+    echo "FATAL: NVDEC probe failed; refusing CUDA dispatch on this host" >&2
+    exit 2
+  }
+elif [ "$SKIP_CUDA" != "1" ]; then
+  echo "=== Stage 0: NVDEC probe SKIPPED (DRY_RUN=${DRY_RUN}, LOCAL_CUDA_WORKER=${LOCAL_CUDA_WORKER}, SKIP_NVDEC_PROBE=${SKIP_NVDEC_PROBE:-0}) ==="
+  echo "    NVDEC probing belongs in the remote provider bootstrap."
+  echo "    Set LOCAL_CUDA_WORKER=1 to force-probe the local host."
+fi
 
 # 1. Claim the lane (single claim covers all 4 variants since they are the
 #    same lane_id, dispatched as one sweep).
@@ -178,5 +254,6 @@ EOF
 
 echo ""
 echo "=== runbook complete ==="
-echo "  CPU dispatched: $([ "$SKIP_CPU" != "1" ] && echo "yes" || echo "skipped")"
-echo "  CUDA dispatched: $([ "$SKIP_CUDA" != "1" ] && echo "yes (${CUDA_PROVIDER})" || echo "skipped")"
+echo "  CPU command emitted: $([ "$SKIP_CPU" != "1" ] && echo "yes" || echo "skipped")"
+echo "  CUDA command emitted: $([ "$SKIP_CUDA" != "1" ] && echo "yes (${CUDA_PROVIDER})" || echo "skipped")"
+echo "  CUDA result axis tag when exact CUDA artifacts are harvested: [contest-CUDA]"
