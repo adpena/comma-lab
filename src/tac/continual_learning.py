@@ -284,6 +284,46 @@ def posterior_update(
             f"posterior_update expects ContestResult; got {type(result).__name__}"
         )
 
+    # R1-Quantizr (adversarial): NaN injection corrupts running mean forever.
+    # Reject any non-finite scalar BEFORE it touches Welford state.
+    import math as _math  # local import keeps module top tidy
+
+    def _all_finite(values):
+        return all(_math.isfinite(float(v)) for v in values)
+
+    nonfinite_fields: list[str] = []
+    if not _math.isfinite(float(result.score_value)):
+        nonfinite_fields.append("score_value")
+    for k, v in result.track_correction_observations.items():
+        if not _math.isfinite(float(v)):
+            nonfinite_fields.append(f"track_correction_observations[{k!r}]")
+    if result.source_rho_estimate is not None and not _math.isfinite(float(result.source_rho_estimate)):
+        nonfinite_fields.append("source_rho_estimate")
+    for name, val in (
+        ("cuda_pose", result.cuda_pose), ("cuda_seg", result.cuda_seg),
+        ("cpu_pose", result.cpu_pose), ("cpu_seg", result.cpu_seg),
+    ):
+        if val is not None and not _math.isfinite(float(val)):
+            nonfinite_fields.append(name)
+    if nonfinite_fields:
+        posterior.refused_anchor_count += 1
+        return PosteriorUpdate(
+            accepted=False,
+            refusal_reason=(
+                f"non-finite values in fields {nonfinite_fields}; refused to "
+                "prevent posterior corruption"
+            ),
+            architecture_class=result.architecture_class,
+            axis=result.axis,
+            evidence_tag=result.evidence_tag,
+            archive_sha256=result.archive_sha256,
+            score_value=result.score_value,
+            posterior_n_anchors_after=posterior.accepted_anchor_count,
+            track_correction_factors_updated=[],
+            cuda_cpu_drift_updated=False,
+            notes=["non-finite values refused per Welford-corruption guard"],
+        )
+
     notes: list[str] = []
 
     # Refusal policy 1: non-authoritative evidence tag.

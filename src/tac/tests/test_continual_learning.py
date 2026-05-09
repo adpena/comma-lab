@@ -144,6 +144,48 @@ def test_invalid_result_type_raises():
         posterior_update(posterior, {"not": "a result"})
 
 
+def test_nan_score_value_refused_to_prevent_posterior_corruption():
+    """R1-Quantizr: NaN injection would corrupt running mean forever."""
+    import math
+    posterior = ContinualLearningPosterior()
+    result = _make_authoritative_result()
+    result.score_value = math.nan
+    update = posterior_update(posterior, result)
+    assert update.accepted is False
+    assert "non-finite" in update.refusal_reason
+    assert posterior.refused_anchor_count == 1
+
+
+def test_nan_track_correction_refused():
+    """R1-Quantizr: NaN in track_correction_observations would poison Welford."""
+    import math
+    posterior = ContinualLearningPosterior()
+    result = _make_authoritative_result(track_obs={"t7": math.nan})
+    update = posterior_update(posterior, result)
+    assert update.accepted is False
+    assert "track_correction_observations" in update.refusal_reason
+
+
+def test_inf_source_rho_refused():
+    """R1-Quantizr: inf source_rho would poison SourceRhoPosterior."""
+    import math
+    posterior = ContinualLearningPosterior()
+    result = _make_authoritative_result(rho=math.inf)
+    update = posterior_update(posterior, result)
+    assert update.accepted is False
+
+
+def test_nan_cuda_pose_refused():
+    """R1-Quantizr: NaN in any optional CUDA/CPU component is refused."""
+    import math
+    posterior = ContinualLearningPosterior()
+    result = _make_authoritative_result()
+    result.cuda_pose = math.nan
+    update = posterior_update(posterior, result)
+    assert update.accepted is False
+    assert "cuda_pose" in update.refusal_reason
+
+
 # ── Per-track Welford posterior ────────────────────────────────────────────
 
 
