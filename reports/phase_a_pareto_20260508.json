@@ -1,0 +1,333 @@
+{
+  "schema_version": "phase_a_pareto_v1",
+  "pr101_brotli_baseline_bytes": 178144,
+  "planning_targets": {
+    "subtarget_byte_budget": {
+      "target_score": 0.17,
+      "d_seg_floor": 0.0006,
+      "d_pose_floor": 3.5e-05,
+      "distortion_floor_score": 0.0787082869338697,
+      "rate_term_budget": 0.0912917130661303,
+      "max_archive_bytes": 137103,
+      "current_archive_bytes": 178144,
+      "required_savings_bytes": 41041,
+      "feasible_under_floors": true,
+      "evidence_grade": "[prediction; closed-form target byte budget]",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false
+    },
+    "axis_advisors": {
+      "cuda_internal": {
+        "target_axis": "cuda_internal",
+        "input_axis": "cuda_candidate_delta",
+        "cuda_d_seg": 0.000688,
+        "cuda_d_pose": 0.000174,
+        "effective_d_seg": 0.000688,
+        "effective_d_pose": 0.000174,
+        "archive_bytes": 178392,
+        "seg_marginal": 100.0,
+        "pose_marginal": 119.86582537134603,
+        "bytes_marginal": 6.658589531221714e-07,
+        "seg_chain_scale": 1.0,
+        "pose_chain_scale": 1.0,
+        "priority_axis": "pose",
+        "tied_axes": [
+          "pose"
+        ],
+        "calibration_class": "hnerv",
+        "evidence_grade": "[prediction; cuda-internal planner marginals]",
+        "score_claim": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false
+      },
+      "cpu_leaderboard": {
+        "target_axis": "cpu_leaderboard",
+        "input_axis": "cuda_candidate_delta",
+        "cuda_d_seg": 0.000688,
+        "cuda_d_pose": 0.000174,
+        "effective_d_seg": 0.0005880341880341881,
+        "effective_d_pose": 3.4523809523809526e-05,
+        "archive_bytes": 178392,
+        "seg_marginal": 85.47008547008548,
+        "pose_marginal": 53.39248225267288,
+        "bytes_marginal": 6.658589531221714e-07,
+        "seg_chain_scale": 0.8547008547008548,
+        "pose_chain_scale": 0.1984126984126984,
+        "priority_axis": "seg",
+        "tied_axes": [
+          "seg"
+        ],
+        "calibration_class": "hnerv",
+        "evidence_grade": "[prediction; cpu-leaderboard chain-rule planner marginals]",
+        "score_claim": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false
+      }
+    }
+  },
+  "lane_count": 10,
+  "lanes": [
+    {
+      "lane": "A0_mdl_baseline",
+      "archive_bytes": null,
+      "rel_err": null,
+      "rel_err_form": "unknown",
+      "delta_vs_brotli_bytes": null,
+      "evidence_grade": "byte_proxy_only_deterministic",
+      "score_claim": false,
+      "ready_for_exact_eval_dispatch": false,
+      "dispatch_blockers": [],
+      "dispatch_status": null,
+      "byte_budget_comparable": false,
+      "subtarget_gap_bytes": null,
+      "meets_subtarget_byte_budget": null,
+      "timestamp": "20260508T152337Z",
+      "manifest_path": "experiments/results/phase_a_dispatch/track1_phase_a0_mdl_20260508T152337Z/build_manifest.json",
+      "notes": []
+    },
+    {
+      "lane": "A1_score_gradient",
+      "archive_bytes": 205879,
+      "rel_err": null,
+      "rel_err_form": "unknown",
+      "delta_vs_brotli_bytes": 27735,
+      "evidence_grade": "[cuda-training-build-only]",
+      "score_claim": false,
+      "ready_for_exact_eval_dispatch": false,
+      "dispatch_blockers": [
+        "contest_cuda_eval_pending_due_modal_dali_nvdec_preflight_failure",
+        "contest_cpu_eval_pending"
+      ],
+      "dispatch_status": null,
+      "byte_budget_comparable": false,
+      "subtarget_gap_bytes": null,
+      "meets_subtarget_byte_budget": null,
+      "timestamp": "artifacts",
+      "manifest_path": "experiments/results/track1_phase_a1_score_gradient_20260508T230020Z_modal/harvested_artifacts/build_manifest.json",
+      "notes": [
+        "first Modal config retired on macOS CPU advisory; reactivation needs constrained fine-tune"
+      ]
+    },
+    {
+      "lane": "A2_xavier_l2_sensitivity",
+      "archive_bytes": 156344,
+      "rel_err": null,
+      "rel_err_form": "unknown",
+      "delta_vs_brotli_bytes": -21800,
+      "evidence_grade": "[byte-anchor; sensitivity_proxy=xavier_l2]",
+      "score_claim": false,
+      "ready_for_exact_eval_dispatch": false,
+      "dispatch_blockers": [
+        "missing_exact_cuda_auth_eval",
+        "no_runtime_dequantize_path_built",
+        "byte_closed_lossy_coarsening_runtime_packet_missing",
+        "requires_exact_cuda_auth_eval_before_any_score_use",
+        "proxy_rel_err_not_score_evidence"
+      ],
+      "dispatch_status": null,
+      "byte_budget_comparable": true,
+      "subtarget_gap_bytes": 19241,
+      "meets_subtarget_byte_budget": false,
+      "timestamp": "20260508T153010Z",
+      "manifest_path": "experiments/results/pr101_sensitivity_aware_quant_20260508T153010Z/build_manifest.json",
+      "notes": [
+        "FALSIFIED proxy (-3,635 B regression vs uniform)"
+      ]
+    },
+    {
+      "lane": "A3_alt_mallat_wavelet",
+      "archive_bytes": 156344,
+      "rel_err": null,
+      "rel_err_form": "unknown",
+      "delta_vs_brotli_bytes": -21800,
+      "evidence_grade": "[byte-anchor; sensitivity_proxy=mallat_wavelet]",
+      "score_claim": false,
+      "ready_for_exact_eval_dispatch": false,
+      "dispatch_blockers": [
+        "awaiting_mallat_vs_xavier_vs_uniform_comparison",
+        "missing_exact_cuda_auth_eval",
+        "no_runtime_dequantize_path_built",
+        "byte_closed_lossy_coarsening_runtime_packet_missing",
+        "requires_exact_cuda_auth_eval_before_any_score_use",
+        "proxy_rel_err_not_score_evidence"
+      ],
+      "dispatch_status": null,
+      "byte_budget_comparable": true,
+      "subtarget_gap_bytes": 19241,
+      "meets_subtarget_byte_budget": false,
+      "timestamp": "20260508T193328Z",
+      "manifest_path": "experiments/results/pr101_sensitivity_aware_mallat_wavelet_20260508T193328Z/build_manifest.json",
+      "notes": [
+        "incremental_improvement_insufficient (Mallat > Xavier in 2/4)"
+      ]
+    },
+    {
+      "lane": "A4_alt_filler_stc_pose",
+      "archive_bytes": 3960,
+      "rel_err": null,
+      "rel_err_form": "unknown",
+      "delta_vs_brotli_bytes": null,
+      "evidence_grade": "byte-anchor; pose_codec=filler_stc",
+      "score_claim": false,
+      "ready_for_exact_eval_dispatch": false,
+      "dispatch_blockers": [
+        "awaiting_filler_vs_pd_v2_dispatch_comparison",
+        "substrate_pr101_monolithic_no_separate_pose_payload"
+      ],
+      "dispatch_status": null,
+      "byte_budget_comparable": false,
+      "subtarget_gap_bytes": null,
+      "meets_subtarget_byte_budget": null,
+      "timestamp": "20260508T194527Z",
+      "manifest_path": "experiments/results/pr101_pose_filler_stc_20260508T194527Z/build_manifest.json",
+      "notes": [
+        "pose-codec byte anchor; not comparable to full PR101 archive bytes"
+      ]
+    },
+    {
+      "lane": "A4_charm_real_pr101_probe",
+      "archive_bytes": 206745,
+      "rel_err": null,
+      "rel_err_form": "unknown",
+      "delta_vs_brotli_bytes": 28601,
+      "evidence_grade": "empirical_planning",
+      "score_claim": false,
+      "ready_for_exact_eval_dispatch": false,
+      "dispatch_blockers": [
+        "cpu_planning_probe_only",
+        "range_coder_not_wired_into_inflate_runtime",
+        "no_archive_substitution_performed",
+        "missing_exact_cuda_auth_eval",
+        "reactivation_required_before_new_dispatch"
+      ],
+      "dispatch_status": null,
+      "byte_budget_comparable": false,
+      "subtarget_gap_bytes": null,
+      "meets_subtarget_byte_budget": null,
+      "timestamp": "reports",
+      "manifest_path": "reports/pr101_charm_real_substrate_probe.json",
+      "notes": [
+        "hand-parametric ChARM roundtrips exactly but loses to brotli (+28,601 B)"
+      ]
+    },
+    {
+      "lane": "A5_frame_conditional_bits",
+      "archive_bytes": 174060,
+      "rel_err": null,
+      "rel_err_form": "unknown",
+      "delta_vs_brotli_bytes": -4084,
+      "evidence_grade": "[CPU-prep faithful frame-conditional byte anchor]",
+      "score_claim": false,
+      "ready_for_exact_eval_dispatch": false,
+      "dispatch_blockers": [
+        "awaiting_per_frame_score_marginal",
+        "no_archive_substitution_performed",
+        "missing_exact_cuda_auth_eval",
+        "requires_exact_cuda_auth_eval_before_any_score_use",
+        "per_pair_bit_width_schema_change_requires_inflate_path_update"
+      ],
+      "dispatch_status": null,
+      "byte_budget_comparable": true,
+      "subtarget_gap_bytes": 36957,
+      "meets_subtarget_byte_budget": false,
+      "timestamp": "20260508T211308Z",
+      "manifest_path": "experiments/results/pr101_frame_conditional_bit_codex_20260508T211308Z/build_manifest.json",
+      "notes": [
+        "best frame-conditioned latent delta -4,098 B",
+        "eta=4 complexity runtime packet collapsed on macOS CPU advisory; q-bits-json custody now lands score-marginal schedules fail-closed"
+      ]
+    },
+    {
+      "lane": "A6_selfcomp_blockfp_hyperprior",
+      "archive_bytes": 214035,
+      "rel_err": null,
+      "rel_err_form": "unknown",
+      "delta_vs_brotli_bytes": 35891,
+      "evidence_grade": null,
+      "score_claim": false,
+      "ready_for_exact_eval_dispatch": false,
+      "dispatch_blockers": [
+        "measured_config_above_pr101_brotli_current_proxy",
+        "wire_format_proxy_not_selfcomp_per_channel_block_fp",
+        "awaiting_compose_vs_baseline_dispatch_comparison",
+        "missing_exact_cuda_auth_eval",
+        "no_runtime_dequantize_path_built",
+        "byte_closed_a6_runtime_packet_missing",
+        "requires_exact_cuda_auth_eval_before_any_score_use",
+        "proxy_byte_anchor_not_score_evidence"
+      ],
+      "dispatch_status": null,
+      "byte_budget_comparable": true,
+      "subtarget_gap_bytes": 76932,
+      "meets_subtarget_byte_budget": false,
+      "timestamp": "20260508Tlocal",
+      "manifest_path": "experiments/results/pr101_a6_blockfp_hyperprior_codex_20260508Tlocal/build_manifest.json",
+      "notes": [
+        "measured proxy loses to PR101 brotli (+35,891 B); family not killed"
+      ]
+    },
+    {
+      "lane": "ADMM_lossy_coarsening_baseline",
+      "archive_bytes": 147285,
+      "rel_err": null,
+      "rel_err_form": "unknown",
+      "delta_vs_brotli_bytes": -30859,
+      "evidence_grade": "[CPU-build]",
+      "score_claim": false,
+      "ready_for_exact_eval_dispatch": false,
+      "dispatch_blockers": [
+        "apogee_int6_contest_cuda_anchor_required_first",
+        "cpu_build_rel_err_proxy_not_score_evidence",
+        "exact_cuda_auth_eval_not_yet_harvested",
+        "requires_contest_auth_eval_json_before_score_promotion_rank_or_kill",
+        "selected_Ks_json_cpu_planning_not_score_authority",
+        "selected_Ks_source_blocker:cpu_mps_proxy_importance_inputs_not_score_authority",
+        "selected_Ks_source_blocker:cpu_planning_allocator_not_score_authority",
+        "selected_Ks_source_blocker:requires_byte_closed_archive_rebuild",
+        "selected_Ks_source_blocker:requires_cuda_pixel_jacobian_or_fisher_pullback",
+        "selected_Ks_source_blocker:requires_exact_archive_cuda_score_custody_before_rank_promotion_or_kill",
+        "selected_Ks_source_blocker:requires_exact_cuda_auth_eval_before_score_claim",
+        "selected_Ks_source_blocker:requires_importance_artifact_custody_and_calibration",
+        "selected_Ks_source_blocker:requires_static_pre_submission_compliance",
+        "selected_Ks_source_evidence_semantics:cpu_mps_proxy_importance_weighted_quantization_allocation_no_score_no_dispatch"
+      ],
+      "dispatch_status": null,
+      "byte_budget_comparable": true,
+      "subtarget_gap_bytes": 10182,
+      "meets_subtarget_byte_budget": false,
+      "timestamp": "20260508T115513Z",
+      "manifest_path": "experiments/results/beta_jacobian_fisher_path_b_cpu_20260508T115156Z/admm_x_lossy_coarsening_path_b_step6_no_dead_k_20260508T115513Z/build_manifest.json",
+      "notes": [
+        "Path B baseline; -28 KB savings at 4-5% rel_err"
+      ]
+    },
+    {
+      "lane": "Cross_paradigm_ADMM_x_Op1",
+      "archive_bytes": 153513,
+      "rel_err": null,
+      "rel_err_form": "unknown",
+      "delta_vs_brotli_bytes": -24631,
+      "evidence_grade": "[CPU-build]",
+      "score_claim": false,
+      "ready_for_exact_eval_dispatch": false,
+      "dispatch_blockers": [
+        "cpu_build_rel_err_proxy_not_score_evidence",
+        "exact_cuda_auth_eval_not_yet_harvested",
+        "requires_contest_auth_eval_json_before_score_promotion_rank_or_kill"
+      ],
+      "dispatch_status": null,
+      "byte_budget_comparable": true,
+      "subtarget_gap_bytes": 16410,
+      "meets_subtarget_byte_budget": false,
+      "timestamp": "20260508T062603Z",
+      "manifest_path": "experiments/results/cross_paradigm_admm_x_op1_finalizer_20260508T062603Z/build_manifest.json",
+      "notes": [
+        "advisory score 0.328444: rate improves but SegNet collapse dominates"
+      ]
+    }
+  ]
+}

@@ -63,6 +63,8 @@ SCHEMA_VERSION = "pr101_frame_conditional_runtime_packet.v1"
 RUNTIME_PATCH_SCHEMA = "pr101_frame_conditional_packet_runtime_patch_manifest.v1"
 RUNTIME_PROOF_SCHEMA = "pr101_frame_conditional_runtime_consumption_proof.v1"
 A5_ANCHOR_SCHEMA = "pr101_frame_conditional_bit_anchor.v1"
+A5_SCORE_MARGINAL_SCHEMA = "pr101_a5_per_pair_score_marginals.v1"
+Q_BITS_OVERRIDE_KEYS = ("per_pair_q_bits", "q_bits_per_pair", "q_bits")
 
 A5_MAGIC = b"A5FC"
 A5_HEADER_LEN = 20
@@ -123,6 +125,7 @@ def build_frame_conditional_runtime_packet(
     candidate_id: str = "pr101_a5_frame_conditional_runtime_packet",
     force: bool = False,
     q_bits_override: Sequence[float] | np.ndarray | None = None,
+    q_bits_override_source_path: Path | None = None,
     recorded_at_utc: dt.datetime | None = None,
 ) -> dict[str, Any]:
     """Build a deterministic local A5 packet scaffold and custody manifests."""
@@ -133,16 +136,30 @@ def build_frame_conditional_runtime_packet(
     source_runtime_dir = _repo_path(source_runtime_dir)
     output_dir = _repo_path(output_dir)
     video_path = _repo_path(video_path) if video_path is not None else None
+    q_bits_override_source_path = (
+        _repo_path(q_bits_override_source_path)
+        if q_bits_override_source_path is not None
+        else None
+    )
 
     _require_file(a5_manifest_path, "a5_manifest")
     _require_file(source_archive, "source_archive")
+    if q_bits_override_source_path is not None:
+        _require_file(q_bits_override_source_path, "q_bits_override_source")
+        if q_bits_override is None:
+            raise FrameConditionalRuntimePacketError(
+                "q_bits_override_source_path requires q_bits_override"
+            )
     if not source_runtime_dir.is_dir():
         raise FrameConditionalRuntimePacketError(
             f"source runtime directory not found: {source_runtime_dir}"
         )
+    inputs = [a5_manifest_path, source_archive, source_runtime_dir]
+    if q_bits_override_source_path is not None:
+        inputs.append(q_bits_override_source_path)
     _assert_output_dir_isolated(
         output_dir=output_dir,
-        inputs=[a5_manifest_path, source_archive, source_runtime_dir],
+        inputs=inputs,
     )
     _prepare_empty_dir(output_dir, force=force)
 
@@ -169,6 +186,15 @@ def build_frame_conditional_runtime_packet(
     )
     q_bits_sideinfo = pack_frame_conditional_q_bits(q_bits)
     latent_wire_payload = pack_frame_conditional_latent_codes(q_pair_first, q_bits)
+    q_bits_schedule = _q_bits_schedule_record(
+        q_bits=q_bits,
+        q_bits_sideinfo=q_bits_sideinfo,
+        q_bits_override=q_bits_override,
+        q_bits_override_source_path=q_bits_override_source_path,
+        a5_manifest=a5_manifest,
+        best_row=best_row,
+        video_path=video_path,
+    )
     _assert_wire_contract_matches_materialized_payloads(
         wire_contract=wire_contract,
         q_bits_sideinfo=q_bits_sideinfo,
@@ -235,18 +261,21 @@ def build_frame_conditional_runtime_packet(
     runtime_tree_sha256 = _runtime_tree_sha256(runtime_files_after_patch)
 
     dispatch_blockers = [
-        "per_pair_score_marginal_manifest_missing",
         "strict_pre_submission_compliance_json_missing",
         "no_exact_cuda_auth_eval",
         "no_contest_cpu_auth_eval",
         "requires_level2_dispatch_claim_before_exact_eval",
         "operator_score_claim_review_not_done",
     ]
+    if not q_bits_schedule["score_marginal_manifest_consumed"]:
+        dispatch_blockers.insert(0, "per_pair_score_marginal_manifest_missing")
     cleared_blockers = [
         "candidate_archive_manifest",
         "packet_local_runtime_patch_manifest",
         "frame_conditional_runtime_consumption_proof",
     ]
+    if q_bits_schedule["score_marginal_manifest_consumed"]:
+        cleared_blockers.append("per_pair_score_marginal_manifest_consumed")
     report_record = _write_packet_report(
         packet_dir=packet_dir,
         candidate_id=candidate_id,
@@ -317,6 +346,7 @@ def build_frame_conditional_runtime_packet(
             "wire_schema": wire_contract.get("schema"),
             "score_claim": False,
         },
+        "q_bits_schedule": q_bits_schedule,
         "source_archive": source_archive_record,
         "candidate_archive": candidate_archive_record,
         "candidate_archive_relpath": _repo_rel(candidate_archive_path),
@@ -358,7 +388,11 @@ def build_frame_conditional_runtime_packet(
             "report": report_record,
         },
         "next_required_actions": [
-            "produce per-pair score-marginal evidence for the A5 q-bit schedule",
+            (
+                "produce per-pair score-marginal evidence for the A5 q-bit schedule"
+                if not q_bits_schedule["score_marginal_manifest_consumed"]
+                else "review consumed per-pair score-marginal schedule before exact eval"
+            ),
             "run strict pre-submission compliance on reviewed packet surface",
             "claim Level-2 lane before any exact eval dispatch",
             "run exact CUDA auth eval before any score or promotion claim",
@@ -417,7 +451,10 @@ def _materialize_q_bits(
     q_bits_override: Sequence[float] | np.ndarray | None,
 ) -> np.ndarray:
     if q_bits_override is not None:
-        q_bits = np.floor(np.asarray(q_bits_override, dtype=np.float64)).astype(np.uint8)
+        raw_q_bits = np.asarray(q_bits_override, dtype=np.float64)
+        if not np.isfinite(raw_q_bits).all():
+            raise FrameConditionalRuntimePacketError("q_bits override must be finite")
+        q_bits = np.floor(raw_q_bits).astype(np.uint8)
     else:
         if video_path is None:
             video = _repo_path(Path(str(a5_manifest.get("input_video") or DEFAULT_VIDEO_PATH)))
@@ -448,6 +485,130 @@ def _materialize_q_bits(
     if (q_bits < 1).any() or (q_bits > 8).any():
         raise FrameConditionalRuntimePacketError("q_bits must be in [1, 8]")
     return q_bits
+
+
+def _q_bits_schedule_record(
+    *,
+    q_bits: np.ndarray,
+    q_bits_sideinfo: bytes,
+    q_bits_override: Sequence[float] | np.ndarray | None,
+    q_bits_override_source_path: Path | None,
+    a5_manifest: Mapping[str, Any],
+    best_row: Mapping[str, Any],
+    video_path: Path | None,
+) -> dict[str, Any]:
+    q_bits = np.asarray(q_bits, dtype=np.uint8)
+    unique_values, unique_counts = np.unique(q_bits, return_counts=True)
+    record: dict[str, Any] = {
+        "schema": "pr101_frame_conditional_q_bits_schedule.v1",
+        "q_bits_count": int(q_bits.size),
+        "q_bits_min": int(q_bits.min()),
+        "q_bits_max": int(q_bits.max()),
+        "q_bits_mean": float(np.mean(q_bits)),
+        "q_bits_unique_counts": {
+            str(int(value)): int(count)
+            for value, count in zip(unique_values, unique_counts, strict=True)
+        },
+        "q_bits_sha256": sha256_bytes(q_bits.tobytes()),
+        "q_bits_sideinfo_bytes": len(q_bits_sideinfo),
+        "q_bits_sideinfo_sha256": sha256_bytes(q_bits_sideinfo),
+        "score_marginal_manifest_consumed": False,
+    }
+    if q_bits_override is not None:
+        record["schedule_source"] = "api_override"
+        if q_bits_override_source_path is not None:
+            source_q_bits, source_info = _load_q_bits_override_json_with_info(
+                q_bits_override_source_path
+            )
+            if sha256_bytes(source_q_bits.tobytes()) != record["q_bits_sha256"]:
+                raise FrameConditionalRuntimePacketError(
+                    "q_bits override source does not match materialized q_bits"
+                )
+            source_schema = source_info.get("schema")
+            record.update(
+                {
+                    "schedule_source": "json_override",
+                    "source_key": source_info["key"],
+                    "source_schema": source_schema,
+                    "source_artifact": _artifact_ref(q_bits_override_source_path),
+                    "score_marginal_manifest_consumed": (
+                        source_schema == A5_SCORE_MARGINAL_SCHEMA
+                        and source_info["key"] == "per_pair_q_bits"
+                    ),
+                }
+            )
+    else:
+        record["schedule_source"] = "video_complexity_allocator"
+        record["allocator"] = {
+            "video_path": _repo_rel(
+                video_path
+                if video_path is not None
+                else _repo_path(Path(str(a5_manifest.get("input_video") or DEFAULT_VIDEO_PATH)))
+            ),
+            "eta": float(best_row.get("eta")),
+            "floor": float(best_row.get("floor")),
+            "cap": float(best_row.get("cap")),
+            "total_bit_budget": float(a5_manifest.get("total_bit_budget")),
+        }
+    return record
+
+
+def _load_q_bits_override_json(path: Path) -> np.ndarray:
+    q_bits, _info = _load_q_bits_override_json_with_info(path)
+    return q_bits
+
+
+def _load_q_bits_override_json_with_info(path: Path) -> tuple[np.ndarray, dict[str, Any]]:
+    path = _repo_path(path)
+    payload = read_json(path)
+    values, info = _extract_q_bits_override_values(payload)
+    q_bits = _normalise_q_bits_override_values(values)
+    info["path"] = _repo_rel(path)
+    info["q_bits_count"] = int(q_bits.size)
+    info["q_bits_sha256"] = sha256_bytes(q_bits.tobytes())
+    return q_bits, info
+
+
+def _extract_q_bits_override_values(payload: Any) -> tuple[Any, dict[str, Any]]:
+    if isinstance(payload, Mapping):
+        present = [key for key in Q_BITS_OVERRIDE_KEYS if key in payload]
+        if len(present) != 1:
+            raise FrameConditionalRuntimePacketError(
+                "q-bits JSON object must contain exactly one of "
+                + ", ".join(Q_BITS_OVERRIDE_KEYS)
+            )
+        key = present[0]
+        return payload[key], {"key": key, "schema": payload.get("schema")}
+    if isinstance(payload, list):
+        return payload, {"key": "$root", "schema": None}
+    raise FrameConditionalRuntimePacketError(
+        "q-bits JSON must be an object or an array of integer q-bit widths"
+    )
+
+
+def _normalise_q_bits_override_values(values: Any) -> np.ndarray:
+    if not isinstance(values, Sequence) or isinstance(values, (bytes, str)):
+        raise FrameConditionalRuntimePacketError("q-bits override must be a JSON array")
+    out: list[int] = []
+    for idx, value in enumerate(values):
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise FrameConditionalRuntimePacketError(
+                f"q-bits override value at index {idx} must be numeric"
+            )
+        numeric = float(value)
+        if not np.isfinite(numeric) or not numeric.is_integer():
+            raise FrameConditionalRuntimePacketError(
+                f"q-bits override value at index {idx} must be an integer"
+            )
+        integer = int(numeric)
+        if integer < 1 or integer > 8:
+            raise FrameConditionalRuntimePacketError(
+                f"q-bits override value at index {idx} must be in [1, 8]"
+            )
+        out.append(integer)
+    if not out:
+        raise FrameConditionalRuntimePacketError("q-bits override must be non-empty")
+    return np.asarray(out, dtype=np.uint8)
 
 
 def _assert_wire_contract_matches_materialized_payloads(
@@ -1341,6 +1502,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--source-archive", type=Path, default=DEFAULT_SOURCE_ARCHIVE)
     parser.add_argument("--source-runtime-dir", type=Path, default=DEFAULT_SOURCE_RUNTIME_DIR)
     parser.add_argument("--video-path", type=Path)
+    parser.add_argument(
+        "--q-bits-json",
+        type=Path,
+        help=(
+            "Optional JSON q-bit override. Accepts the A5 score-marginal "
+            "manifest key per_pair_q_bits, or exactly one q_bits_per_pair/q_bits key."
+        ),
+    )
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument(
         "--candidate-id",
@@ -1356,12 +1525,19 @@ def main(argv: list[str] | None = None) -> int:
         f"experiments/results/pr101_frame_conditional_runtime_packet_{_utc_ts()}"
     )
     try:
+        q_bits_override = (
+            _load_q_bits_override_json(args.q_bits_json)
+            if args.q_bits_json is not None
+            else None
+        )
         manifest = build_frame_conditional_runtime_packet(
             a5_manifest_path=args.a5_manifest,
             source_archive=args.source_archive,
             source_runtime_dir=args.source_runtime_dir,
             output_dir=output_dir,
             video_path=args.video_path,
+            q_bits_override=q_bits_override,
+            q_bits_override_source_path=args.q_bits_json,
             candidate_id=args.candidate_id,
             force=args.force,
         )

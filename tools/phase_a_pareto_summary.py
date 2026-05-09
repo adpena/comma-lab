@@ -231,7 +231,8 @@ def parse_manifest(manifest_path: Path) -> PhaseAEntry | None:
         if isinstance(best_delta, int):
             entry.notes.append(f"best frame-conditioned latent delta {best_delta:+,} B")
         entry.notes.append(
-            "eta=4 complexity runtime packet collapsed on macOS CPU advisory; use score-domain allocation next"
+            "eta=4 complexity runtime packet collapsed on macOS CPU advisory; "
+            "q-bits-json custody now lands score-marginal schedules fail-closed"
         )
     if lane == "Cross_paradigm_ADMM_x_Op1":
         entry.notes.append(
@@ -411,8 +412,9 @@ def render_markdown(entries: list[PhaseAEntry]) -> str:
         "but exact CUDA was skipped by DALI/NVDEC preflight and local macOS CPU advisory "
         "scored 3.721654. Reactivation needs constrained fine-tune, not exact eval of this archive.",
         "- **A5 and Cross-paradigm byte savings are scorer-unsafe at current configs.** "
-        "A5 eta=4 complexity allocation and Cross-paradigm ADMM x Op1 both need score-domain "
-        "or SegNet-boundary-aware allocation before new exact-eval spend.",
+        "A5 eta=4 complexity allocation and Cross-paradigm ADMM x Op1 both need "
+        "changed score-domain or SegNet-boundary-aware allocation before new exact-eval "
+        "spend. A5 now has q-bits-json packet custody for the next schedule.",
         "",
         "## Open lanes",
         "",
@@ -423,8 +425,9 @@ def render_markdown(entries: list[PhaseAEntry]) -> str:
         "with the substrate or produce a runtime-consumed packet before exact "
         "eval spend.",
         "- A5 (frame-conditional bit budget): runtime side-info path landed, but "
-        "the eta=4 complexity schedule is retired after advisory collapse. Next "
-        "variant needs score-domain q-bit allocation.",
+        "the eta=4 complexity schedule is retired after advisory collapse. The "
+        "packet builder can now consume a per-pair score-marginal q-bit manifest; "
+        "next variant needs a changed score-domain q-bit allocation.",
         "- Cross-paradigm ADMM x Op1: measured config retired after macOS CPU "
         "advisory SegNet collapse; next variant needs lower-distortion trust region "
         "or scorer-aware allocation.",

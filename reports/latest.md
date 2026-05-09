@@ -97,7 +97,10 @@ reactivation criteria documented per memo.
   the current complexity-only schedule is a measured-config negative:
   macOS CPU advisory score **1.937884** (`pose=0.078646`,
   `seg=0.009361`, `172,615 B`). Reactivate with score-domain q-bit
-  allocation, not the η=4 complexity schedule.
+  allocation, not the η=4 complexity schedule. The packet builder now accepts
+  `--q-bits-json` and records q-bit custody; the score-marginal packet
+  rebuild is locally ready after lane claim, but it reuses the same `cde5...`
+  archive and is not a new score win.
 - Cross-paradigm ADMM × Op1 finalizer — byte-closed `153,513 B` archive
   (`7bbba307...`) now has a local macOS CPU advisory result:
   **0.328444** (`pose=0.00014180`, `seg=0.00188570`). Rate improves, but
