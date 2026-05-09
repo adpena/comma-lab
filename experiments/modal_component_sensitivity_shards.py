@@ -35,6 +35,7 @@ EXPECTED_PFP16_SHA256 = "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1
 EXPECTED_PFP16_BYTES = 686635
 RESULT_ROOT = REPO_ROOT / "experiments/results/modal_component_sensitivity"
 APP_NAME = "comma-component-sensitivity"
+REMOTE_PYTHONPATH = "/workspace/pact/src:/workspace/pact/upstream:/workspace/pact"
 
 app = modal.App(APP_NAME)
 
@@ -61,6 +62,7 @@ image = (
         "segmentation-models-pytorch",
         "timm",
     )
+    .env({"PYTHONPATH": REMOTE_PYTHONPATH})
     .add_local_dir("src", remote_path="/workspace/pact/src")
     .add_local_dir("upstream", remote_path="/workspace/pact/upstream")
     .add_local_dir("scripts", remote_path="/workspace/pact/scripts")

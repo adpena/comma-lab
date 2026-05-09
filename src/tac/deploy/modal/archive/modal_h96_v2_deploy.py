@@ -27,6 +27,7 @@ image = (
         "git clone --depth 1 https://github.com/commaai/comma_video_compression_challenge.git /upstream",
         "cd /upstream && git lfs pull",
     )
+    .env({"PYTHONPATH": "/app/src:/upstream"})
     # Bake tac library + training script into image
     .add_local_dir(str(REPO / "src" / "tac"), "/app/src/tac")
     .add_local_file(str(REPO / "experiments" / "train_tac.py"), "/app/train_tac.py")

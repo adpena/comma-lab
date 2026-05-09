@@ -50,6 +50,7 @@ from tac.repo_io import json_text, read_json, sha256_file, write_json
 
 APP_NAME = "comma-auth-eval-cpu"
 REMOTE_REPO = Path("/workspace/pact")
+REMOTE_PYTHONPATH = f"{REMOTE_REPO / 'src'}:{REMOTE_REPO / 'upstream'}:{REMOTE_REPO}"
 REMOTE_OUT = Path("/tmp/modal_auth_eval_cpu")
 REQUIRED_SAMPLES = 600
 
@@ -113,6 +114,7 @@ base_image = (
 # them at the same relative path the local invocation would use.
 eval_image = (
     base_image
+    .env({"PYTHONPATH": REMOTE_PYTHONPATH})
     .add_local_dir("src", remote_path=str(REMOTE_REPO / "src"))
     .add_local_dir("upstream", remote_path=str(REMOTE_REPO / "upstream"))
     .add_local_dir(
@@ -455,7 +457,7 @@ def _run_auth_eval_inner(
     ]
     env = {
         **os.environ,
-        "PYTHONPATH": f"{REMOTE_REPO / 'src'}:{REMOTE_REPO / 'upstream'}:{REMOTE_REPO}",
+        "PYTHONPATH": REMOTE_PYTHONPATH,
         "FFMPEG_BIN": "/usr/local/bin/ffmpeg-master",
         "UV_BIN": "/usr/local/bin/uv",
         "UV_LINK_MODE": "copy",

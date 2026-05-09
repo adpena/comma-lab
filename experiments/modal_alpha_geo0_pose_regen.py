@@ -37,6 +37,7 @@ import modal
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 REMOTE_REPO = Path("/workspace/pact")
+REMOTE_PYTHONPATH = f"{REMOTE_REPO / 'src'}:{REMOTE_REPO / 'upstream'}:{REMOTE_REPO}"
 REMOTE_OUT_ROOT = Path("/tmp/modal_alpha_geo0_pose_regen")
 RESULT_ROOT = REPO_ROOT / "experiments/results/modal_alpha_geo0_pose_regen"
 APP_NAME = "comma-alpha-geo0-pose-regen"
@@ -107,6 +108,7 @@ base_image = (
 
 run_image = (
     base_image
+    .env({"PYTHONPATH": REMOTE_PYTHONPATH})
     .add_local_dir("src", remote_path=str(REMOTE_REPO / "src"))
     .add_local_dir("upstream/models", remote_path=str(REMOTE_REPO / "upstream/models"))
     .add_local_dir("upstream/videos", remote_path=str(REMOTE_REPO / "upstream/videos"))

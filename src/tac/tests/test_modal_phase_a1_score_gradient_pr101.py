@@ -65,8 +65,10 @@ def test_modal_phase_a1_disables_dali_nvml_on_modal() -> None:
     text = _source()
 
     assert 'DALI_DISABLE_NVML_VALUE = "1"' in text
+    assert "REMOTE_PYTHONPATH =" in text
     assert ".env(" in text
     assert '"DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE' in text
+    assert '"PYTHONPATH": REMOTE_PYTHONPATH' in text
     assert 'os.environ["DALI_DISABLE_NVML"] = env["DALI_DISABLE_NVML"]' in text
     run_image = text[text.index("run_image = ("):text.index("def _json_bytes")]
     assert run_image.index(".env(") < run_image.index(".add_local_")

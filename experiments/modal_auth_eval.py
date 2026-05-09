@@ -35,6 +35,7 @@ REMOTE_REPO = Path("/workspace/pact")
 REMOTE_OUT = Path("/tmp/modal_auth_eval")
 REQUIRED_SAMPLES = 600
 DALI_DISABLE_NVML_VALUE = "1"
+REMOTE_PYTHONPATH = f"{REMOTE_REPO / 'src'}:{REMOTE_REPO / 'upstream'}:{REMOTE_REPO}"
 
 app = modal.App(APP_NAME)
 
@@ -88,7 +89,12 @@ base_image = (
 
 eval_image = (
     base_image
-    .env({"DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE})
+    .env(
+        {
+            "DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE,
+            "PYTHONPATH": REMOTE_PYTHONPATH,
+        }
+    )
     .add_local_dir("src", remote_path=str(REMOTE_REPO / "src"))
     .add_local_dir("upstream", remote_path=str(REMOTE_REPO / "upstream"))
     .add_local_dir(
@@ -431,7 +437,7 @@ def _run_auth_eval_inner(
     ]
     env = {
         **os.environ,
-        "PYTHONPATH": f"{REMOTE_REPO / 'src'}:{REMOTE_REPO / 'upstream'}:{REMOTE_REPO}",
+        "PYTHONPATH": REMOTE_PYTHONPATH,
         "FFMPEG_BIN": "/usr/local/bin/ffmpeg-master",
         "UV_BIN": "/usr/local/bin/uv",
         "UV_LINK_MODE": "copy",

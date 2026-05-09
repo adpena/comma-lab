@@ -39,6 +39,7 @@ import modal
 
 app = modal.App("comma-train-lane")
 RESULTS_VOL = "comma-train-lane-results"
+REMOTE_PYTHONPATH = "/workspace/pact/src:/workspace/pact/upstream:/workspace/pact"
 results_vol = modal.Volume.from_name(RESULTS_VOL, create_if_missing=True)
 
 # Image with all deps. ffmpeg-master (with in_primaries support) is pulled
@@ -96,6 +97,7 @@ image = (
 # convention so lane scripts work without modification).
 training_image = (
     image
+    .env({"PYTHONPATH": REMOTE_PYTHONPATH})
     .add_local_dir("src", remote_path="/workspace/pact/src")
     .add_local_dir("scripts", remote_path="/workspace/pact/scripts")
     # Mount entire submissions/ — lanes anchor on different baselines

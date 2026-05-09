@@ -60,6 +60,31 @@ Both touched Modal CUDA wrappers now place `.env(...)` before local mounts:
 - `experiments/modal_auth_eval.py`
 - `experiments/modal_phase_a1_score_gradient_pr101.py`
 
+## Modal Worker Import Bug Closed
+
+Second attempted A1 CUDA refire
+`modal:a1-latentalign-importpathfix-cuda-20260509T023006Z` reached Modal image
+creation and function creation, then failed before eval when the remote worker
+imported `/root/modal_auth_eval.py` and raised:
+
+```text
+ModuleNotFoundError: No module named 'tac'
+```
+
+Classification: Modal image/runtime dependency failure, no CUDA eval, no score
+evidence. The terminal claim row is `failed_modal_remote_tac_import`.
+
+Root cause: Modal imports the function module before entrypoint code can repair
+`sys.path`. Mounting repo `src` into the image is not enough; images that mount
+repo source must set image-level `PYTHONPATH` before the local-mount phase.
+
+Permanent guard: `tools/audit_modal_image_build_order.py --strict` now also
+fails any tracked Modal image chain that mounts `src` without a prior `.env(...)`
+containing `PYTHONPATH`. The guard is wired into
+`tools/all_lanes_preflight.py` as Gate #25. The audit found and closed this
+class across the remaining tracked Modal wrappers, including legacy deploy
+archives and diagnostic Modal utilities.
+
 ## Next Command Shape
 
 After claiming the lane:

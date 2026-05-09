@@ -26,7 +26,7 @@ import modal
 image = (
     modal.Image.debian_slim()
     .pip_install("torch")
-    .env({"DALI_DISABLE_NVML": "1"})
+    .env({"DALI_DISABLE_NVML": "1", "PYTHONPATH": "/workspace/pact/src"})
     .add_local_dir("src", remote_path="/workspace/src")
     .add_local_file("pyproject.toml", remote_path="/workspace/pyproject.toml")
 )
@@ -48,7 +48,7 @@ import modal
 image = (
     modal.Image.debian_slim()
     .add_local_file("pyproject.toml", remote_path="/workspace/pyproject.toml")
-    .env({"DALI_DISABLE_NVML": "1"})
+    .env({"DALI_DISABLE_NVML": "1", "PYTHONPATH": "/workspace/pact/src"})
     .run_commands("echo late")
 )
 """,
@@ -60,3 +60,24 @@ image = (
     assert payload["violation_count"] == 2
     methods = {row["method"] for row in payload["violations"]}
     assert methods == {"env", "run_commands"}
+
+
+def test_modal_image_build_order_blocks_src_mount_without_pythonpath(tmp_path: Path) -> None:
+    _write_repo(
+        tmp_path,
+        """
+import modal
+
+image = (
+    modal.Image.debian_slim()
+    .env({"DALI_DISABLE_NVML": "1"})
+    .add_local_dir("src", remote_path="/workspace/pact/src")
+)
+""",
+    )
+    _init_git(tmp_path)
+
+    payload = audit_modal_image_build_order(tmp_path)
+
+    assert payload["violation_count"] == 1
+    assert payload["violations"][0]["method"] == "PYTHONPATH"

@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
-"""Audit Modal image method ordering.
+"""Audit Modal image method ordering and repo import path contracts.
 
 Modal local mounts (``Image.add_local_file`` / ``Image.add_local_dir``) must be
 the final phase of an image chain. Build/environment steps after a local mount
 fail at app startup with ``InvalidError`` before any remote work begins.
+
+Images that mount the repo ``src`` tree must also set ``PYTHONPATH`` before the
+mount phase. Modal imports the function module on the worker before user code
+runs; without the image-level import path, top-level ``tac`` imports fail before
+the eval or training entrypoint can repair ``sys.path``.
 """
 from __future__ import annotations
 
@@ -55,11 +60,42 @@ def tracked_python_paths(root: Path) -> list[Path]:
     return paths
 
 
-def _call_chain(node: ast.AST) -> list[tuple[str, int]]:
-    """Return fluent method calls in execution order for a nested Call node."""
+def _call_chain_nodes(node: ast.AST) -> list[tuple[str, int, ast.Call]]:
+    """Return fluent method call nodes in execution order."""
     if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
         return []
-    return [*_call_chain(node.func.value), (node.func.attr, node.lineno)]
+    return [*_call_chain_nodes(node.func.value), (node.func.attr, node.lineno, node)]
+
+
+def _contains_string_literal(node: ast.AST, expected: str) -> bool:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value == expected or node.value.endswith(f"/{expected}")
+    return any(_contains_string_literal(child, expected) for child in ast.iter_child_nodes(node))
+
+
+def _mounts_repo_src(method: str, call: ast.Call) -> bool:
+    if method != "add_local_dir":
+        return False
+    for arg in call.args:
+        if _contains_string_literal(arg, "src"):
+            return True
+    for keyword in call.keywords:
+        if keyword.arg in {None, "local_path", "remote_path"} and _contains_string_literal(
+            keyword.value, "src"
+        ):
+            return True
+    return False
+
+
+def _env_sets_pythonpath(method: str, call: ast.Call) -> bool:
+    if method != "env":
+        return False
+    for arg in call.args:
+        if isinstance(arg, ast.Dict):
+            for key in arg.keys:
+                if isinstance(key, ast.Constant) and key.value == "PYTHONPATH":
+                    return True
+    return any(keyword.arg == "PYTHONPATH" for keyword in call.keywords)
 
 
 def _image_chain_violations(path: Path, root: Path) -> list[ModalImageOrderViolation]:
@@ -81,13 +117,15 @@ def _image_chain_violations(path: Path, root: Path) -> list[ModalImageOrderViola
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
-        chain = _call_chain(node)
-        if not chain or not any(method in LOCAL_MOUNT_METHODS for method, _line in chain):
+        chain = _call_chain_nodes(node)
+        if not chain or not any(method in LOCAL_MOUNT_METHODS for method, _line, _call in chain):
             continue
         first_local = next(
-            index for index, (method, _line) in enumerate(chain) if method in LOCAL_MOUNT_METHODS
+            index
+            for index, (method, _line, _call) in enumerate(chain)
+            if method in LOCAL_MOUNT_METHODS
         )
-        for method, line in chain[first_local + 1:]:
+        for method, line, _call in chain[first_local + 1:]:
             if method in LOCAL_MOUNT_METHODS:
                 continue
             violation = ModalImageOrderViolation(
@@ -101,6 +139,29 @@ def _image_chain_violations(path: Path, root: Path) -> list[ModalImageOrderViola
                 )
             )
             violations_by_key[(rel, line, method)] = violation
+
+        src_mount_indexes = [
+            index for index, (method, _line, call) in enumerate(chain) if _mounts_repo_src(method, call)
+        ]
+        if src_mount_indexes:
+            first_src_mount = src_mount_indexes[0]
+            has_pythonpath = any(
+                _env_sets_pythonpath(method, call)
+                for method, _line, call in chain[:first_src_mount]
+            )
+            if not has_pythonpath:
+                _method, line, _call = chain[first_src_mount]
+                violation = ModalImageOrderViolation(
+                    path=rel,
+                    line=line,
+                    method="PYTHONPATH",
+                    message=(
+                        "Modal image mounts repo src without setting PYTHONPATH before "
+                        "the local-mount phase; worker import of top-level tac modules "
+                        "can fail before entrypoint code runs"
+                    ),
+                )
+                violations_by_key[(rel, line, "PYTHONPATH")] = violation
     return list(violations_by_key.values())
 
 

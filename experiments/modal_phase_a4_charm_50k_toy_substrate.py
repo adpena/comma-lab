@@ -108,6 +108,7 @@ import modal
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 REMOTE_REPO = Path("/workspace/pact")
+REMOTE_PYTHONPATH = f"{REMOTE_REPO / 'src'}:{REMOTE_REPO / 'upstream'}:{REMOTE_REPO}"
 REMOTE_OUT_ROOT = Path("/tmp/modal_phase_a4")
 APP_NAME = "comma-phase-a4-charm-toy"
 RESULT_ROOT = REPO_ROOT / "experiments" / "results"
@@ -169,6 +170,7 @@ base_image = (
 
 run_image = (
     base_image
+    .env({"PYTHONPATH": REMOTE_PYTHONPATH})
     # Workspace mounts — only the minimum needed by the A4 chain.
     # tac/* is required for tac.codec.charm_range_coder + tac.parametrize_strip.
     .add_local_dir("src", remote_path=str(REMOTE_REPO / "src"))
@@ -638,7 +640,7 @@ def _run_phase_a4_inner(
     command_results: list[dict[str, Any]] = []
     env = {
         **os.environ,
-        "PYTHONPATH": f"{REMOTE_REPO / 'src'}:{REMOTE_REPO / 'upstream'}:{REMOTE_REPO}",
+        "PYTHONPATH": REMOTE_PYTHONPATH,
         "TAC_UPSTREAM_DIR": str(REMOTE_REPO / "upstream"),
         "FFMPEG_BIN": "/usr/local/bin/ffmpeg-master",
         "UV_BIN": "/usr/local/bin/uv",

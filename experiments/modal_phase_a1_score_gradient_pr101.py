@@ -122,6 +122,7 @@ DEFAULT_PR101_SOURCE_DIR = (
 )
 DEFAULT_VIDEO_PATH = REPO_ROOT / "upstream/videos/0.mkv"
 DALI_DISABLE_NVML_VALUE = "1"
+REMOTE_PYTHONPATH = f"{REMOTE_REPO / 'src'}:{REMOTE_REPO / 'upstream'}:{REMOTE_REPO}"
 
 
 def _ensure_repo_import_paths() -> None:
@@ -198,6 +199,7 @@ run_image = (
             # DALI's video reader works without NVML when this is set; without
             # it, the NVDEC probe can fail with nvml error (999) before eval.
             "DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE,
+            "PYTHONPATH": REMOTE_PYTHONPATH,
         }
     )
     # Workspace mounts — only the bare minimum needed by the A1 chain.
@@ -634,7 +636,7 @@ def _run_phase_a1_inner(
     command_results: list[dict[str, Any]] = []
     env = {
         **os.environ,
-        "PYTHONPATH": f"{REMOTE_REPO / 'src'}:{REMOTE_REPO / 'upstream'}:{REMOTE_REPO}",
+        "PYTHONPATH": REMOTE_PYTHONPATH,
         "TAC_UPSTREAM_DIR": str(REMOTE_REPO / "upstream"),
         "FFMPEG_BIN": "/usr/local/bin/ffmpeg-master",
         "UV_BIN": "/usr/local/bin/uv",
