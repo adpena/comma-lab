@@ -299,6 +299,76 @@ class Action:
             "metadata": dict(self.metadata),
         }
 
+    def assert_invariants(self) -> None:
+        """Self-check that the action is in a consistent state.
+
+        Raises ``ValueError`` with a clear diagnostic if any invariant fails.
+        Useful as a tripwire at the top of every trainer step or as a sanity
+        gate before serializing ``migration_status()`` into a research
+        ledger.
+
+        Invariants checked:
+
+        1. Every dual variable is finite (no NaN / Inf from a bad
+           ``dual_update`` callable).
+        2. ``lambda_seg`` / ``lambda_pose`` / ``lambda_rate`` are non-negative
+           (refinement-track duals MAY be signed when the council intentionally
+           switches a constraint sense, but baselines must never invert).
+        3. At least one of ``L_seg`` / ``L_pose`` / ``L_rate`` is wired (a
+           degenerate Action with only refinement tracks is a trainer bug —
+           the refinements have nothing to refine).
+        4. ``metadata`` is a plain ``dict`` (frozen via dataclass field
+           default; mutable but type-checked).
+
+        Tagged ``[diagnostic; tac.unified_action.Action.assert_invariants]``
+        per CLAUDE.md "Forbidden score claims" — this is a structural check,
+        not a score claim.
+        """
+        import math
+
+        for name in (
+            "lambda_seg",
+            "lambda_pose",
+            "lambda_rate",
+            "lambda_t7",
+            "lambda_t8",
+            "lambda_t11",
+            "lambda_t13",
+            "lambda_t20",
+            "lambda_t22",
+        ):
+            v = getattr(self.duals, name)
+            if not math.isfinite(float(v)):
+                raise ValueError(
+                    f"Action.assert_invariants: duals.{name} = {v!r} is "
+                    "not finite. A bad dual_update callable produced "
+                    "NaN/Inf. Snapshot the action's migration_status() "
+                    "and inspect the last dual_update step."
+                )
+        for name in ("lambda_seg", "lambda_pose", "lambda_rate"):
+            v = float(getattr(self.duals, name))
+            if v < 0.0:
+                raise ValueError(
+                    f"Action.assert_invariants: duals.{name} = {v} < 0. "
+                    "Baseline track duals must be non-negative; refinement "
+                    "duals may be signed."
+                )
+        if (
+            self.L_seg is None
+            and self.L_pose is None
+            and self.L_rate is None
+        ):
+            raise ValueError(
+                "Action.assert_invariants: no baseline track wired "
+                "(L_seg, L_pose, L_rate all None). Refinement tracks have "
+                "nothing to refine; wire at least one baseline."
+            )
+        if not isinstance(self.metadata, dict):
+            raise ValueError(
+                f"Action.assert_invariants: metadata must be a dict, got "
+                f"{type(self.metadata).__name__}"
+            )
+
 
 def make_action_from_track_callables(
     seg: Callable | None = None,

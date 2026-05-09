@@ -610,6 +610,16 @@ def preflight_all(
         check_subagent_commit_serializer_uses_lock(strict=False, verbose=verbose)
         check_claude_md_catalog_no_duplicate_numbers(strict=True, verbose=verbose)
         check_subagent_commits_have_co_author_trailer(strict=False, verbose=verbose)
+        # 2026-05-09 Catalog #146 — operator decision B: Phase 1 trainer
+        # _write_runtime contest-compliant inflate emission. STRICT @ 0
+        # because the trainer was rewritten in the same commit-batch and the
+        # gate's live count is 0 from the start. Any future regression in
+        # _write_runtime that reintroduces the broken scaffold pattern will
+        # block at preflight. Memory:
+        # feedback_phase1_trainer_write_runtime_fix_landed_20260509.md
+        check_phase1_trainer_runtime_emits_contest_compliant_inflate(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-08 council Round 1 action items #5/#6. These are
         # warn-only on first landing because legacy research ledgers still
         # contain superseded FastViT/attention phrasing, and existing
@@ -2134,7 +2144,6 @@ def _python_forbidden_scan_may_match(text: str) -> bool:
             "nohup",
             "pgrep -f",
             "/tmp/",
-            "_partial",
             "auth_eval",
             "--device mps",
             '"mps"',
@@ -2142,7 +2151,14 @@ def _python_forbidden_scan_may_match(text: str) -> bool:
         )
     ):
         return True
-    return ".pt" in text and ".bin" in text
+    ship_tokens = ("cp ", "mv ", "install", "ln -s", "tar", "zip", "scp", "rsync")
+    if "_partial" in text and any(tok in text for tok in ship_tokens):
+        return True
+    return (
+        ".pt" in text
+        and ".bin" in text
+        and any(tok in text for tok in ("cp ", "mv ", "install", "ln -s"))
+    )
 
 
 def _scan_python_for_forbidden(path: Path) -> list[str]:
@@ -24668,6 +24684,7 @@ def check_public_pr_intake_clones_pristine(
     Lands at 0 live violations (after 2026-05-08 revert). Ships STRICT
     directly per the Lane A pattern.
     """
+    import concurrent.futures
     import subprocess
     root = Path(repo_root) if repo_root is not None else REPO_ROOT
     violations: list[str] = []
@@ -24716,18 +24733,29 @@ def check_public_pr_intake_clones_pristine(
         seen.add(rp)
         unique_clones.append(c)
 
-    for clone in unique_clones:
-        n_scanned += 1
+    def _git_status_short(clone: Path) -> tuple[Path, subprocess.CompletedProcess[str] | None]:
         try:
             result = subprocess.run(
                 ["git", "-C", str(clone), "status", "--short"],
                 capture_output=True, text=True, timeout=30,
             )
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
-            # Clone is unreachable / not a real git repo — skip.
-            n_skipped_not_git += 1
-            continue
+            return clone, None
         if result.returncode != 0:
+            return clone, None
+        return clone, result
+
+    status_by_clone: dict[Path, subprocess.CompletedProcess[str] | None] = {}
+    if unique_clones:
+        max_workers = min(8, len(unique_clones))
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
+            for clone, result in pool.map(_git_status_short, unique_clones):
+                status_by_clone[clone] = result
+
+    for clone in unique_clones:
+        n_scanned += 1
+        result = status_by_clone.get(clone)
+        if result is None:
             n_skipped_not_git += 1
             continue
         status_lines = [ln for ln in result.stdout.splitlines() if ln.strip()]
@@ -25921,6 +25949,222 @@ def check_packet_blocker_clearance_evidence_matches(
             )
         else:
             print(f"  [packet-clearance-evidence] OK ({scanned} manifest(s) scanned)")
+    return violations
+
+
+# ---------------------------------------------------------------------------
+# Catalog #146 — Phase 1 trainer _write_runtime contest-compliant inflate
+# emission (operator decision B 2026-05-09).
+# Bug class: trainer's research_only_no_export scaffold inflate.sh signature
+# `exec uv ... "$HERE/inflate.py" "$@"` (one arg passthrough) was REJECTED by
+# `tac.phase1_packet_compiler` with "missing required positional args $1
+# (archive_dir) $2 (output_dir) $3 (file_list)". Phase 1 GPU dispatch was
+# blocked until the trainer was rewritten to emit the contest-compliant
+# 3-positional-arg inflate.sh + per-video inflate.py loop. THIS gate
+# self-protects against regression — refuses any future change that would
+# re-introduce the broken scaffold pattern.
+# Memory: feedback_phase1_trainer_write_runtime_fix_landed_20260509.md
+# ---------------------------------------------------------------------------
+
+
+def check_phase1_trainer_runtime_emits_contest_compliant_inflate(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #146 — Phase 1 trainer must emit contest-compliant inflate.sh + inflate.py.
+
+    Scans `experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py`'s
+    `_write_runtime` function source for the regression patterns:
+
+    * inflate.sh template missing any of `$1`, `$2`, `$3` (or braced equiv).
+    * inflate.sh template missing `set -euo pipefail` / `set -e`.
+    * inflate.sh template using single-arg passthrough `"$HERE/inflate.py" "$@"`
+      WITHOUT the explicit `$DATA_DIR $OUTPUT_DIR $FILE_LIST` positional handoff.
+    * inflate.py template containing FORBIDDEN_INFLATE_TOKENS
+      (`PoseNet`, `SegNet`, `from upstream.modules`, `rgb_to_yuv6`,
+      `EfficientNet`, `FastViT`).
+    * inflate.py template missing the per-video loop pattern
+      (`for line in file_list.read_text().splitlines()` or equivalent).
+
+    Same-line `# CHECK146_WAIVED:<reason>` waiver honored.
+
+    Live count target: 0 violations on the trainer's `_write_runtime` source.
+    """
+    root = Path(repo_root) if repo_root is not None else REPO_ROOT
+    trainer = root / "experiments" / "train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py"
+    violations: list[str] = []
+    if not trainer.is_file():
+        # Trainer file may have been moved or removed; gate is dormant.
+        if verbose:
+            print(
+                f"  [check_phase1_trainer_runtime] trainer not found: {trainer.relative_to(root)}; "
+                "gate dormant"
+            )
+        return violations
+
+    text = trainer.read_text(encoding="utf-8", errors="replace")
+
+    # Locate the body of `_write_runtime`. We scan from `def _write_runtime`
+    # to the next top-level `def ` line.
+    start_marker = "\ndef _write_runtime("
+    start = text.find(start_marker)
+    if start < 0:
+        violations.append(
+            "trainer:_write_runtime function not found "
+            "(contract regression: function may have been renamed without "
+            "updating Catalog #146 in src/tac/preflight.py)"
+        )
+        if violations and strict:
+            raise MetaBugViolation(
+                "PHASE1_TRAINER_WRITE_RUNTIME_VIOLATIONS:\n" + "\n".join(violations)
+            )
+        return violations
+    rest = text[start + 1:]
+    # Find the next top-level `def ` (column 0). The function body ends
+    # before that line.
+    end_match = re.search(r"\n(def |class )", rest)
+    body = rest if end_match is None else rest[: end_match.start()]
+
+    # Skip lines with the same-line waiver token.
+    body_filtered_lines = [
+        line for line in body.splitlines()
+        if "CHECK146_WAIVED" not in line
+    ]
+    body_filtered = "\n".join(body_filtered_lines)
+
+    # Extract the EMITTED templates, not comments/docstrings around them.
+    # AST literal-eval gives the actual generated shell/python text and
+    # catches escaped forms such as ``\"$@\"`` that raw source regexes miss.
+    inflate_sh_template = ""
+    inflate_py_template = ""
+    try:
+        module = ast.parse(text, filename=str(trainer))
+    except SyntaxError:
+        module = None
+    if module is not None:
+        for top in module.body:
+            if not isinstance(top, ast.FunctionDef) or top.name != "_write_runtime":
+                continue
+            for node in ast.walk(top):
+                if not isinstance(node, ast.Assign):
+                    continue
+                target_names = [
+                    target.id
+                    for target in node.targets
+                    if isinstance(target, ast.Name)
+                    and target.id in {"inflate_sh", "inflate_py"}
+                ]
+                if not target_names:
+                    continue
+                try:
+                    value = ast.literal_eval(node.value)
+                except (ValueError, SyntaxError):
+                    continue
+                if not isinstance(value, str):
+                    continue
+                if "inflate_sh" in target_names:
+                    inflate_sh_template = value
+                if "inflate_py" in target_names:
+                    inflate_py_template = value
+            break
+
+    # Fallback for non-literal future templates. Keep this conservative: it
+    # can still prove obvious token presence, but cannot clear a non-literal
+    # template from the emitted-template checks.
+    if not inflate_sh_template and "inflate_sh" in body_filtered:
+        inflate_sh_template = body_filtered
+    if not inflate_py_template and "inflate_py" in body_filtered:
+        inflate_py_template = body_filtered
+    emitted_blob = "\n".join([inflate_sh_template, inflate_py_template])
+
+    # 1. inflate.sh emission must include $1, $2, $3 (data_dir / output_dir / file_list).
+    # Look for the inflate_sh = (...) string literal block. We scan for the
+    # presence of the positional-arg tokens in the body.
+    has_dollar_1 = ('"$1"' in inflate_sh_template or '${1}' in inflate_sh_template or
+                    '$DATA_DIR' in inflate_sh_template)
+    has_dollar_2 = ('"$2"' in inflate_sh_template or '${2}' in inflate_sh_template or
+                    '$OUTPUT_DIR' in inflate_sh_template)
+    has_dollar_3 = ('"$3"' in inflate_sh_template or '${3}' in inflate_sh_template or
+                    '$FILE_LIST' in inflate_sh_template)
+    if not (has_dollar_1 and has_dollar_2 and has_dollar_3):
+        violations.append(
+            "trainer:_write_runtime inflate.sh template missing one of $1/$2/$3 "
+            "(contest contract requires archive_dir / output_dir / file_list)"
+        )
+
+    # 2. set -e / set -euo pipefail must be present.
+    if "set -euo pipefail" not in inflate_sh_template and "set -e" not in inflate_sh_template:
+        violations.append(
+            "trainer:_write_runtime inflate.sh template missing 'set -e' / "
+            "'set -euo pipefail' (CLAUDE.md check_shell_set_e_present)"
+        )
+
+    # 3. Refuse the single-arg passthrough scaffold pattern. The new
+    # template MUST pass DATA_DIR/OUTPUT_DIR/FILE_LIST explicitly to
+    # inflate.py. The legacy `"$HERE/inflate.py" "$@"` pattern is the
+    # exact scaffold the packet compiler rejects.
+    if 'inflate.py" "$@"' in inflate_sh_template:
+        violations.append(
+            "trainer:_write_runtime inflate.sh template uses '\"$@\"' "
+            "passthrough — contest contract requires explicit positional "
+            "args (\"$DATA_DIR\" \"$OUTPUT_DIR\" \"$FILE_LIST\")"
+        )
+
+    # 4. inflate.py / inflate.sh / src/* TEMPLATE must NOT contain
+    # FORBIDDEN_INFLATE_TOKENS. Mirror the packet compiler's
+    # FORBIDDEN_INFLATE_TOKENS tuple (avoid importing it to keep the gate
+    # self-contained). We scan only the EMITTED string literals (extracted
+    # above), NOT the function's docstring/comments which legitimately
+    # mention the forbidden tokens to document the prohibition.
+    forbidden_inflate_tokens = (
+        "PoseNet", "SegNet", "from upstream.modules",
+        "import upstream.modules", "rgb_to_yuv6",
+        "EfficientNet", "FastViT",
+    )
+    for token in forbidden_inflate_tokens:
+        if token in emitted_blob:
+            violations.append(
+                f"trainer:_write_runtime EMITTED inflate template contains "
+                f"FORBIDDEN_INFLATE_TOKEN {token!r} (CLAUDE.md "
+                "strict-scorer-rule: no scorer load at inflate)"
+            )
+
+    # 5. inflate.py template MUST contain a per-video loop. We accept
+    # several equivalent patterns (`for line in file_list.read_text()`,
+    # `for base in ...`, `while IFS= read -r`, etc.). The contest contract
+    # is: iterate the file_list, produce one .raw per name.
+    per_video_loop_patterns = (
+        "for line in file_list",
+        "file_list.read_text()",
+        "for base in",
+        "while IFS= read",
+        "splitlines()",
+    )
+    if not any(pat in inflate_py_template for pat in per_video_loop_patterns):
+        violations.append(
+            "trainer:_write_runtime inflate.py template missing per-video "
+            "loop (one of: 'for line in file_list', 'splitlines()', "
+            "'while IFS= read'); contest contract requires per-video iteration"
+        )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "PHASE1_TRAINER_WRITE_RUNTIME_VIOLATIONS (Catalog #146):\n"
+            + "\n".join(violations)
+        )
+    if verbose:
+        if violations:
+            print(
+                f"  [check_phase1_trainer_runtime] {len(violations)} violation(s) "
+                f"in {trainer.relative_to(root)}"
+            )
+        else:
+            print(
+                f"  [check_phase1_trainer_runtime] OK "
+                f"({trainer.relative_to(root)})"
+            )
     return violations
 
 

@@ -424,6 +424,93 @@ class ContinualLearningPosterior:
     last_updated_utc: str = ""
     accepted_anchor_history: list[dict[str, Any]] = field(default_factory=list)
 
+    def is_consistent(self) -> tuple[bool, list[str]]:
+        """Self-check that the posterior is in a consistent state.
+
+        Returns ``(ok, problems)`` where ``ok`` is True iff every invariant
+        holds and ``problems`` is a list of human-readable diagnostics.
+        Useful as a tripwire after a posterior update or before serializing
+        the posterior to disk.
+
+        Invariants checked:
+
+        1. Schema string matches the current ``CONTINUAL_LEARNING_SCHEMA_VERSION``.
+        2. ``accepted_anchor_count`` matches the length of
+           ``accepted_anchor_history`` (within ±1 for in-flight updates).
+        3. ``refused_anchor_count`` is non-negative.
+        4. Every ``PerTrackPosterior`` has a non-negative ``n_anchors`` and
+           a finite ``mean_correction`` / ``var_correction``.
+        5. Every ``SourceRhoPosterior`` has a non-negative ``n_anchors`` and
+           a finite ``mean_rho``.
+
+        Tagged ``[diagnostic; tac.continual_learning.ContinualLearningPosterior.is_consistent]``
+        per CLAUDE.md "Forbidden score claims" — this is a structural check.
+        """
+        import math
+
+        problems: list[str] = []
+
+        if self.schema != CONTINUAL_LEARNING_SCHEMA_VERSION:
+            problems.append(
+                f"schema mismatch: posterior.schema={self.schema!r} but "
+                f"CONTINUAL_LEARNING_SCHEMA_VERSION={CONTINUAL_LEARNING_SCHEMA_VERSION!r}"
+            )
+
+        history_len = len(self.accepted_anchor_history)
+        if abs(self.accepted_anchor_count - history_len) > 1:
+            problems.append(
+                f"accepted_anchor_count={self.accepted_anchor_count} but "
+                f"accepted_anchor_history has {history_len} entries "
+                f"(allowed delta: ±1)"
+            )
+
+        if self.refused_anchor_count < 0:
+            problems.append(
+                f"refused_anchor_count={self.refused_anchor_count} is negative"
+            )
+
+        for track_key, p in self.track_correction_posteriors.items():
+            if p.n_observations < 0:
+                problems.append(
+                    f"track_correction_posteriors[{track_key!r}].n_observations="
+                    f"{p.n_observations} is negative"
+                )
+            if not math.isfinite(p.mean_correction):
+                problems.append(
+                    f"track_correction_posteriors[{track_key!r}]."
+                    f"mean_correction={p.mean_correction!r} is not finite"
+                )
+            if not math.isfinite(p.sum_squared_dev):
+                problems.append(
+                    f"track_correction_posteriors[{track_key!r}]."
+                    f"sum_squared_dev={p.sum_squared_dev!r} is not finite"
+                )
+            if p.sum_squared_dev < 0.0:
+                problems.append(
+                    f"track_correction_posteriors[{track_key!r}]."
+                    f"sum_squared_dev={p.sum_squared_dev} is negative "
+                    "(Welford accumulator should never go negative)"
+                )
+
+        for arch_class, p in self.source_rho_posteriors.items():
+            if p.n_observations < 0:
+                problems.append(
+                    f"source_rho_posteriors[{arch_class!r}].n_observations="
+                    f"{p.n_observations} is negative"
+                )
+            if not math.isfinite(p.mean_rho):
+                problems.append(
+                    f"source_rho_posteriors[{arch_class!r}].mean_rho="
+                    f"{p.mean_rho!r} is not finite"
+                )
+            if not (-1.0 < p.mean_rho < 1.0) and p.n_observations > 0:
+                problems.append(
+                    f"source_rho_posteriors[{arch_class!r}].mean_rho="
+                    f"{p.mean_rho} is outside (-1, 1) — invalid correlation"
+                )
+
+        return (not problems), problems
+
 
 # ── Read / write the posterior state ────────────────────────────────────────
 
