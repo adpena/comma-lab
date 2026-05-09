@@ -606,10 +606,15 @@ All CPU-prep rows: `score_claim = False`, `promotion_eligible = False`, `ready_f
 
 ### In flight
 
-- **arch_shrink_x0.4 Q-FAITHFUL retrain** Lightning T4 (active job
-  `arch-shrink-x0-4-lightning-20260508T024304Z`) — still running at
-  `2026-05-08T11:53:01Z`; no terminal `contest_auth_eval.json` yet. First
-  exact CUDA architecture-lane anchor remains pending harvest.
+- **arch_shrink_x0.4 Q-FAITHFUL retrain** Lightning T4 job
+  `arch-shrink-x0-4-lightning-20260508T024304Z` is terminal, but artifact
+  recovery is blocked. A 2026-05-09 single-shot harvest observed SDK status
+  `stopped`, then both canonical rsync paths failed with
+  `Permission denied (publickey)` / rc `255`. Terminal claim status:
+  `failed_artifact_rsync_rc_255`. No `archive.zip`, `contest_auth_eval.json`,
+  or `auth_eval.log` landed locally, so there is no score claim and no model
+  classification. Ledger:
+  `.omx/research/arch_shrink_terminal_rsync_blocker_20260509_codex.md`.
 
 ### Adversarial review gate active
 
