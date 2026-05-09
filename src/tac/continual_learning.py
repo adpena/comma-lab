@@ -36,19 +36,57 @@ CLAUDE.md compliance
 """
 from __future__ import annotations
 
+import contextlib
+import fcntl
 import json
 import os
 import sys
+import uuid
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, Optional
 
 CONTINUAL_LEARNING_SCHEMA_VERSION = "tac_continual_learning_posterior_v1"
 CONTINUAL_LEARNING_EVIDENCE_GRADE = "[continual-learning posterior; non-authoritative]"
 
 DEFAULT_POSTERIOR_PATH = Path(".omx/state/continual_learning_posterior.json")
+DEFAULT_POSTERIOR_LOCK_PATH = Path(".omx/state/.continual_learning.lock")
+
+# ── Custody validator (codex round-2 HIGH 2 fix) ───────────────────────────
+#
+# Tag-only authority is INSUFFICIENT. The custody validator requires the
+# combination of (tag, axis, hardware_substrate) to be internally consistent
+# AND for the substrate to be a 1:1 contest-compliant axis per CLAUDE.md
+# "Submission auth eval — BOTH CPU AND CUDA, ON 1:1 CONTEST-COMPLIANT
+# HARDWARE". Anything else is a custody mismatch and refused.
+
+# Tag → required axis. The short-form `[contest-CPU]` is allowed only with the
+# explicit GHA hardware substrate (codex HIGH 2 fix).
+TAG_AXIS_REQUIREMENT = {
+    "[contest-CUDA]": "cuda",
+    "[contest-CPU GHA Linux x86_64]": "cpu",
+    "[contest-CPU GHA]": "cpu",
+    "[contest-CPU]": "cpu",
+}
+
+# Tag → set of hardware_substrate prefixes that are 1:1 contest-compliant.
+# Codex HIGH 2 fix: short-form `[contest-CPU]` no longer accepts arbitrary
+# Linux-x86_64 hosts — must be explicitly GHA.
+TAG_HARDWARE_REQUIREMENT: dict[str, frozenset[str]] = {
+    "[contest-CUDA]": frozenset({
+        "linux_x86_64_t4",
+        "linux_x86_64_4090",
+        "linux_x86_64_a100",
+        "linux_x86_64_h100",
+        "linux_x86_64_a10g",
+        "linux_x86_64_l40s",
+    }),
+    "[contest-CPU GHA Linux x86_64]": frozenset({"linux_x86_64_gha_cpu"}),
+    "[contest-CPU GHA]": frozenset({"linux_x86_64_gha_cpu"}),
+    "[contest-CPU]": frozenset({"linux_x86_64_gha_cpu"}),  # short form — GHA-only
+}
 
 # Authoritative-axis tags per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA".
 AUTHORITATIVE_TAGS = frozenset({
@@ -69,6 +107,46 @@ NON_PROMOTABLE_TAGS = frozenset({
     "[byte-anchor]",
     "[predicted; unified-action; closed-form weighted-sum]",
 })
+
+
+@dataclass(frozen=True)
+class CustodyVerdict:
+    """Typed verdict from :meth:`ContestResult.validate_custody_verdict`.
+
+    Codex round-2 HIGH 2 directive (2026-05-09). The seven ``refused_class``
+    values catalog every reason the custody validator rejects an anchor —
+    callers may switch on the verdict string for targeted error reporting
+    rather than parsing the human-readable reason.
+
+    Attributes
+    ----------
+    accepted
+        ``True`` iff every custody invariant passes.
+    reason
+        Human-readable reason (empty string when ``accepted=True``).
+    refused_class
+        ``None`` when ``accepted=True``. Otherwise one of:
+
+        - ``"missing_metadata"`` — required field blank/None
+        - ``"advisory_grade"`` — explicitly-non-promotable tag
+        - ``"macos_substrate"`` — macOS substrate (or macOS-tag) refused
+        - ``"cpu_tag_non_gha_linux"`` — CPU tag with substrate not GHA Linux x86_64
+        - ``"cuda_tag_unknown_substrate"`` — CUDA tag with substrate not in known CUDA set
+        - ``"tag_axis_mismatch"`` — tag-axis combination is incoherent
+    """
+
+    accepted: bool
+    reason: str
+    refused_class: Optional[
+        Literal[
+            "tag_axis_mismatch",
+            "cpu_tag_non_gha_linux",
+            "cuda_tag_unknown_substrate",
+            "macos_substrate",
+            "missing_metadata",
+            "advisory_grade",
+        ]
+    ] = None
 
 
 @dataclass
@@ -113,10 +191,153 @@ class ContestResult:
     observed_at_utc: str = ""
 
     def is_authoritative(self) -> bool:
+        """LEGACY: tag-only check (kept for back-compat).
+
+        DEPRECATED: callers should use :meth:`validate_custody` which checks
+        tag + axis + hardware_substrate together (codex round-2 HIGH 2 fix).
+        ``is_authoritative`` returning True does NOT imply the result is
+        promotable; ``posterior_update`` calls ``validate_custody`` before
+        promoting.
+        """
         return self.evidence_tag in AUTHORITATIVE_TAGS
 
     def is_non_promotable(self) -> bool:
         return self.evidence_tag in NON_PROMOTABLE_TAGS
+
+    def validate_custody(self) -> tuple[bool, str]:
+        """Per codex round-2 HIGH 2: validate tag + axis + hardware_substrate together.
+
+        Returns ``(ok, reason)`` for back-compat with existing call sites.
+        For richer typed introspection (``refused_class`` taxonomy) call
+        :meth:`validate_custody_verdict`.
+
+        ``ok=True`` only if every check passes. ``ok=False`` with a specific
+        reason when:
+          - tag is not in AUTHORITATIVE_TAGS
+          - tag's required axis does NOT match self.axis
+          - hardware_substrate is NOT in the tag's allowed prefixes
+        """
+        verdict = self.validate_custody_verdict()
+        return verdict.accepted, verdict.reason
+
+    def validate_custody_verdict(self) -> "CustodyVerdict":
+        """Typed verdict per codex round-2 HIGH 2 directive.
+
+        Returns a :class:`CustodyVerdict` with one of seven ``refused_class``
+        values:
+
+        - ``None`` (when ``accepted=True``)
+        - ``"missing_metadata"`` — required metadata fields blank/None
+        - ``"advisory_grade"`` — explicitly-non-promotable tag
+        - ``"macos_substrate"`` — macOS substrate (advisory regardless of tag)
+        - ``"cpu_tag_non_gha_linux"`` — CPU tag with substrate not GHA Linux x86_64
+        - ``"cuda_tag_unknown_substrate"`` — CUDA tag with substrate not in known CUDA set
+        - ``"tag_axis_mismatch"`` — CPU tag with axis="cuda" or vice versa
+        """
+        # 0. Required metadata — empty/whitespace-only strings are missing.
+        for field_name in ("axis", "hardware_substrate", "evidence_tag", "archive_sha256"):
+            value = getattr(self, field_name, None)
+            if value is None or (isinstance(value, str) and not value.strip()):
+                return CustodyVerdict(
+                    accepted=False,
+                    reason=f"required metadata field {field_name!r} is missing or blank",
+                    refused_class="missing_metadata",
+                )
+
+        # 1. Explicit advisory tags (always refused regardless of substrate).
+        if self.evidence_tag in NON_PROMOTABLE_TAGS:
+            # macOS-CPU advisory/calibrated and MPS-* land here too; bucket them
+            # under the most informative refused_class.
+            if "macOS" in self.evidence_tag or self.evidence_tag.startswith("[macOS"):
+                return CustodyVerdict(
+                    accepted=False,
+                    reason=f"macOS-CPU tag {self.evidence_tag!r} is advisory only; refused",
+                    refused_class="macos_substrate",
+                )
+            return CustodyVerdict(
+                accepted=False,
+                reason=f"non-authoritative (advisory-grade) evidence_tag: {self.evidence_tag!r}",
+                refused_class="advisory_grade",
+            )
+
+        # 2. Tag must be in AUTHORITATIVE_TAGS.
+        if self.evidence_tag not in AUTHORITATIVE_TAGS:
+            return CustodyVerdict(
+                accepted=False,
+                reason=(
+                    f"non-authoritative evidence_tag: {self.evidence_tag!r} "
+                    f"(allowed: {sorted(AUTHORITATIVE_TAGS)})"
+                ),
+                refused_class="advisory_grade",
+            )
+
+        # 3. macOS substrate is forbidden for any authoritative tag.
+        # (CLAUDE.md: macOS is NEVER 1:1 contest-compliant for authoritative axis.)
+        if self.hardware_substrate.startswith("macos"):
+            return CustodyVerdict(
+                accepted=False,
+                reason=(
+                    f"macOS substrate {self.hardware_substrate!r} forbidden as "
+                    f"authoritative axis (tag {self.evidence_tag!r})"
+                ),
+                refused_class="macos_substrate",
+            )
+
+        # 4. Tag → required axis must match.
+        required_axis = TAG_AXIS_REQUIREMENT.get(self.evidence_tag)
+        if required_axis is None:
+            return CustodyVerdict(
+                accepted=False,
+                reason=(
+                    f"evidence_tag {self.evidence_tag!r} not in TAG_AXIS_REQUIREMENT; "
+                    "cannot validate axis custody"
+                ),
+                refused_class="missing_metadata",
+            )
+        if self.axis != required_axis:
+            return CustodyVerdict(
+                accepted=False,
+                reason=(
+                    f"axis mismatch: evidence_tag {self.evidence_tag!r} requires "
+                    f"axis={required_axis!r} but result has axis={self.axis!r}"
+                ),
+                refused_class="tag_axis_mismatch",
+            )
+
+        # 5. Hardware substrate must be in the tag's allowed list.
+        allowed_substrates = TAG_HARDWARE_REQUIREMENT.get(self.evidence_tag)
+        if allowed_substrates is None:
+            return CustodyVerdict(
+                accepted=False,
+                reason=(
+                    f"evidence_tag {self.evidence_tag!r} not in TAG_HARDWARE_REQUIREMENT; "
+                    "cannot validate hardware custody"
+                ),
+                refused_class="missing_metadata",
+            )
+        if self.hardware_substrate not in allowed_substrates:
+            # Refused-class depends on whether this is a CPU or CUDA tag.
+            if required_axis == "cpu":
+                rc: Optional[Literal[
+                    "tag_axis_mismatch",
+                    "cpu_tag_non_gha_linux",
+                    "cuda_tag_unknown_substrate",
+                    "macos_substrate",
+                    "missing_metadata",
+                    "advisory_grade",
+                ]] = "cpu_tag_non_gha_linux"
+            else:
+                rc = "cuda_tag_unknown_substrate"
+            return CustodyVerdict(
+                accepted=False,
+                reason=(
+                    f"hardware substrate {self.hardware_substrate!r} not in 1:1 contest-compliant "
+                    f"set for {self.evidence_tag!r}: {sorted(allowed_substrates)}"
+                ),
+                refused_class=rc,
+            )
+
+        return CustodyVerdict(accepted=True, reason="", refused_class=None)
 
 
 @dataclass
@@ -236,11 +457,8 @@ def load_posterior(path: Path | None = None) -> ContinualLearningPosterior:
     )
 
 
-def save_posterior(posterior: ContinualLearningPosterior, path: Path | None = None) -> None:
-    """Persist the posterior to disk (atomic write)."""
-    p = path or DEFAULT_POSTERIOR_PATH
-    p.parent.mkdir(parents=True, exist_ok=True)
-    payload = {
+def _serialize(posterior: ContinualLearningPosterior) -> dict[str, Any]:
+    return {
         "schema": posterior.schema,
         "evidence_grade": posterior.evidence_grade,
         "track_correction_posteriors": {
@@ -254,9 +472,89 @@ def save_posterior(posterior: ContinualLearningPosterior, path: Path | None = No
         "last_updated_utc": posterior.last_updated_utc,
         "accepted_anchor_history": posterior.accepted_anchor_history,
     }
-    tmp = p.with_suffix(p.suffix + ".tmp")
-    tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    os.replace(tmp, p)
+
+
+def save_posterior(posterior: ContinualLearningPosterior, path: Path | None = None) -> None:
+    """Persist the posterior to disk (atomic write).
+
+    NOTE: this is the BARE write — for parallel-safe writes use
+    :func:`posterior_update_locked` (codex round-2 MEDIUM fix). Calling
+    this directly under parallel harvest risks dropping concurrent updates.
+    """
+    p = path or DEFAULT_POSTERIOR_PATH
+    p.parent.mkdir(parents=True, exist_ok=True)
+    payload = _serialize(posterior)
+    # Use a UNIQUE tmp file (codex round-2 MEDIUM fix): the prior fixed-suffix
+    # `.tmp` could clobber a sibling save in flight.
+    tmp = p.with_suffix(p.suffix + f".tmp.{uuid.uuid4().hex[:12]}")
+    try:
+        tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        # fsync the file before rename so the contents are durable.
+        with open(tmp, "rb") as f:
+            os.fsync(f.fileno())
+        os.replace(tmp, p)
+    finally:
+        # Defensive cleanup if write failed mid-way.
+        if tmp.exists():
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
+
+
+@contextlib.contextmanager
+def _posterior_lock(lock_path: Path | None = None):
+    """Acquire fcntl exclusive lock on the posterior lock file.
+
+    The lock is process-advisory (fcntl.flock LOCK_EX). Multiple processes
+    contending for the same lock_path serialize on this lock; the lock is
+    released automatically on context exit (success or exception).
+    """
+    p = lock_path or DEFAULT_POSTERIOR_LOCK_PATH
+    p.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(str(p), os.O_RDWR | os.O_CREAT, 0o644)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        yield fd
+    finally:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+        finally:
+            os.close(fd)
+
+
+def posterior_update_locked(
+    result: ContestResult,
+    *,
+    posterior_path: Path | None = None,
+    lock_path: Path | None = None,
+    forbid_macos_promotion: bool = True,
+) -> PosteriorUpdate:
+    """Locked transactional update — codex round-2 MEDIUM fix.
+
+    Acquires exclusive fcntl lock on ``lock_path``, then INSIDE the lock:
+      1. reload posterior from disk (sees other harvesters' updates)
+      2. apply ``posterior_update`` (re-runs duplicate checks against fresh state)
+      3. write posterior back via ``save_posterior``
+
+    Multiple parallel harvesters serialize on the lock so updates of distinct
+    anchors all survive. Without this, two harvesters loading the same stale
+    posterior + each updating their distinct anchor + each replacing → ONE
+    anchor's update silently dropped.
+
+    Returns the PosteriorUpdate from the inner posterior_update call.
+    """
+    p_path = posterior_path or DEFAULT_POSTERIOR_PATH
+    l_path = lock_path or DEFAULT_POSTERIOR_LOCK_PATH
+    with _posterior_lock(l_path):
+        posterior = load_posterior(p_path)
+        update = posterior_update(
+            posterior, result, forbid_macos_promotion=forbid_macos_promotion
+        )
+        # Always persist (refused anchors increment refused_anchor_count and
+        # should also be visible to subsequent harvesters).
+        save_posterior(posterior, p_path)
+        return update
 
 
 # ── Posterior update entry point ───────────────────────────────────────────
@@ -326,35 +624,21 @@ def posterior_update(
 
     notes: list[str] = []
 
-    # Refusal policy 1: non-authoritative evidence tag.
-    if not result.is_authoritative():
-        posterior.refused_anchor_count += 1
-        return PosteriorUpdate(
-            accepted=False,
-            refusal_reason=f"non-authoritative evidence_tag: {result.evidence_tag!r}",
-            architecture_class=result.architecture_class,
-            axis=result.axis,
-            evidence_tag=result.evidence_tag,
-            archive_sha256=result.archive_sha256,
-            score_value=result.score_value,
-            posterior_n_anchors_after=posterior.accepted_anchor_count,
-            track_correction_factors_updated=[],
-            cuda_cpu_drift_updated=False,
-            notes=["non-authoritative tag; recorded in refused_anchor_count only"],
-        )
-
-    # Refusal policy 2: macOS substrate.
-    if (
-        forbid_macos_promotion
+    # Codex round-2 HIGH 2 fix: custody validator replaces tag-only check.
+    # Validates (tag, axis, hardware_substrate) jointly + 1:1 contest-compliance.
+    # macOS substrate is refused unless forbid_macos_promotion=False (preserved
+    # for back-compat with the prior macOS-substrate path).
+    custody_ok, custody_reason = result.validate_custody()
+    macos_override_active = (
+        not forbid_macos_promotion
         and result.hardware_substrate.startswith("macos")
-    ):
+        and result.evidence_tag in AUTHORITATIVE_TAGS
+    )
+    if not custody_ok and not macos_override_active:
         posterior.refused_anchor_count += 1
         return PosteriorUpdate(
             accepted=False,
-            refusal_reason=(
-                f"macOS substrate {result.hardware_substrate!r} forbidden as "
-                "authoritative axis per CLAUDE.md 'Submission auth eval — BOTH CPU AND CUDA'"
-            ),
+            refusal_reason=custody_reason,
             architecture_class=result.architecture_class,
             axis=result.axis,
             evidence_tag=result.evidence_tag,
@@ -363,7 +647,12 @@ def posterior_update(
             posterior_n_anchors_after=posterior.accepted_anchor_count,
             track_correction_factors_updated=[],
             cuda_cpu_drift_updated=False,
-            notes=["macOS substrate refused; pass forbid_macos_promotion=False to override"],
+            notes=["custody validation failed; refused per codex round-2 HIGH 2"],
+        )
+    if macos_override_active:
+        notes.append(
+            "macOS substrate accepted via forbid_macos_promotion=False override; "
+            "result is NOT 1:1 contest-compliant"
         )
 
     # Refusal policy 3: duplicate archive_sha256.
@@ -508,9 +797,13 @@ __all__ = [
     "CONTINUAL_LEARNING_SCHEMA_VERSION",
     "CONTINUAL_LEARNING_EVIDENCE_GRADE",
     "DEFAULT_POSTERIOR_PATH",
+    "DEFAULT_POSTERIOR_LOCK_PATH",
     "AUTHORITATIVE_TAGS",
     "NON_PROMOTABLE_TAGS",
+    "TAG_AXIS_REQUIREMENT",
+    "TAG_HARDWARE_REQUIREMENT",
     "ContestResult",
+    "CustodyVerdict",
     "PosteriorUpdate",
     "PerTrackPosterior",
     "SourceRhoPosterior",
@@ -518,6 +811,7 @@ __all__ = [
     "load_posterior",
     "save_posterior",
     "posterior_update",
+    "posterior_update_locked",
     "posterior_query_track_correction",
     "posterior_query_source_rho",
     "harvest_anchors_from_iter",

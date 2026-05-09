@@ -97,7 +97,9 @@ def test_macos_substrate_refused_by_default():
     )
     update = posterior_update(posterior, result)
     assert update.accepted is False
-    assert "macOS" in update.refusal_reason
+    # Custody validator (codex round-2 HIGH 2) flags the macOS substrate.
+    assert "macos_arm64_m5max" in update.refusal_reason
+    assert "macOS" in update.refusal_reason or "1:1 contest-compliant" in update.refusal_reason
 
 
 def test_macos_substrate_accepted_when_explicitly_allowed():
@@ -184,6 +186,185 @@ def test_nan_cuda_pose_refused():
     update = posterior_update(posterior, result)
     assert update.accepted is False
     assert "cuda_pose" in update.refusal_reason
+
+
+# ── Codex round-2 HIGH 2: custody validator (tag + axis + hardware) ────────
+
+
+def test_custody_axis_mismatch_cuda_tag_with_cpu_axis_refused():
+    """[contest-CUDA] tag with axis='cpu' is a custody mismatch."""
+    posterior = ContinualLearningPosterior()
+    result = _make_authoritative_result(
+        tag="[contest-CUDA]",
+        axis="cpu",  # MISMATCH
+        substrate="linux_x86_64_t4",
+    )
+    update = posterior_update(posterior, result)
+    assert update.accepted is False
+    assert "axis mismatch" in update.refusal_reason
+
+
+def test_custody_axis_mismatch_cpu_tag_with_cuda_axis_refused():
+    """[contest-CPU] tag with axis='cuda' is a custody mismatch."""
+    posterior = ContinualLearningPosterior()
+    result = _make_authoritative_result(
+        tag="[contest-CPU GHA Linux x86_64]",
+        axis="cuda",  # MISMATCH
+        substrate="linux_x86_64_gha_cpu",
+    )
+    update = posterior_update(posterior, result)
+    assert update.accepted is False
+    assert "axis mismatch" in update.refusal_reason
+
+
+def test_custody_short_form_contest_cpu_requires_gha_substrate():
+    """The short-form `[contest-CPU]` no longer accepts arbitrary Linux x86_64
+    hosts — must be the GHA substrate (codex round-2 HIGH 2)."""
+    posterior = ContinualLearningPosterior()
+    # Short-form tag on a generic Linux box — refused.
+    result = _make_authoritative_result(
+        tag="[contest-CPU]",
+        axis="cpu",
+        substrate="linux_x86_64_random_vm",  # NOT GHA
+    )
+    update = posterior_update(posterior, result)
+    assert update.accepted is False
+    assert "1:1 contest-compliant" in update.refusal_reason
+
+
+def test_custody_contest_cuda_on_unknown_substrate_refused():
+    """[contest-CUDA] on an unrecognized GPU substrate refused."""
+    posterior = ContinualLearningPosterior()
+    result = _make_authoritative_result(
+        tag="[contest-CUDA]",
+        axis="cuda",
+        substrate="some_cloud_unknown_gpu",  # not in TAG_HARDWARE_REQUIREMENT
+    )
+    update = posterior_update(posterior, result)
+    assert update.accepted is False
+    assert "1:1 contest-compliant" in update.refusal_reason
+
+
+def test_custody_contest_cuda_on_t4_accepted():
+    """T4 is in the canonical CUDA-substrate set."""
+    posterior = ContinualLearningPosterior()
+    result = _make_authoritative_result(
+        tag="[contest-CUDA]",
+        axis="cuda",
+        substrate="linux_x86_64_t4",
+    )
+    update = posterior_update(posterior, result)
+    assert update.accepted is True
+
+
+def test_custody_validate_returns_ok_reason_pair():
+    """validate_custody returns (bool, str) — caller can use both."""
+    result = _make_authoritative_result()
+    ok, reason = result.validate_custody()
+    assert ok is True
+    assert reason == ""
+
+
+def test_custody_validate_returns_failure_reason():
+    result = _make_authoritative_result(
+        tag="[contest-CUDA]", axis="cpu", substrate="linux_x86_64_t4"
+    )
+    ok, reason = result.validate_custody()
+    assert ok is False
+    assert "axis mismatch" in reason
+
+
+# ── Codex round-2 MEDIUM: parallel-safe locked update ──────────────────────
+
+
+def test_posterior_update_locked_basic_path(tmp_path):
+    """posterior_update_locked acquires lock + updates posterior on disk."""
+    from tac.continual_learning import (
+        load_posterior,
+        posterior_update_locked,
+    )
+
+    posterior_path = tmp_path / "posterior.json"
+    lock_path = tmp_path / "posterior.lock"
+    result = _make_authoritative_result(sha="lock_test_" + "a" * 54)
+
+    update = posterior_update_locked(
+        result, posterior_path=posterior_path, lock_path=lock_path
+    )
+    assert update.accepted is True
+
+    # Reload and confirm posterior persisted.
+    loaded = load_posterior(posterior_path)
+    assert loaded.accepted_anchor_count == 1
+
+
+def test_posterior_update_locked_serializes_concurrent_writes(tmp_path):
+    """Two threads contending on the lock both succeed (no lost update).
+
+    Uses threads rather than multiprocessing to avoid pytest+multiprocessing
+    pickling issues. fcntl.flock is per-process so in-process threads will
+    both grab the lock sequentially — but the test still validates
+    reload-inside-lock semantics."""
+    import threading
+    from tac.continual_learning import (
+        ContestResult,
+        load_posterior,
+        posterior_update_locked,
+    )
+
+    posterior_path = tmp_path / "posterior.json"
+    lock_path = tmp_path / "posterior.lock"
+
+    results: list = []
+    results_lock = threading.Lock()
+
+    def worker(sha_seed: int):
+        result = ContestResult(
+            axis="cpu",
+            hardware_substrate="linux_x86_64_gha_cpu",
+            architecture_class="pr106_hnerv_cluster",
+            score_value=0.19284,
+            evidence_tag="[contest-CPU GHA Linux x86_64]",
+            archive_sha256=f"{sha_seed:064x}",
+            archive_bytes=178262,
+        )
+        update = posterior_update_locked(
+            result,
+            posterior_path=posterior_path,
+            lock_path=lock_path,
+        )
+        with results_lock:
+            results.append(update)
+
+    threads = [threading.Thread(target=worker, args=(i,)) for i in range(8)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    accepted = sum(1 for r in results if r.accepted)
+    assert accepted == 8, f"expected 8 accepts under lock; got {accepted}"
+
+    # Critical: the on-disk posterior must contain ALL 8 anchors (no lost
+    # update). Without the reload-inside-lock semantics, two threads could
+    # both load the same stale posterior + both update + the second's save
+    # would clobber the first's.
+    loaded = load_posterior(posterior_path)
+    assert loaded.accepted_anchor_count == 8
+
+
+def test_save_posterior_uses_unique_tmp_file(tmp_path):
+    """save_posterior writes to a UNIQUE .tmp.<uuid> path (codex round-2 MEDIUM).
+    Verified by checking no fixed `.tmp` path lingers after a successful save."""
+    posterior_path = tmp_path / "posterior.json"
+    posterior = ContinualLearningPosterior()
+    posterior_update(posterior, _make_authoritative_result(sha="m" * 64))
+    save_posterior(posterior, posterior_path)
+    # No fixed-suffix .tmp file lingers (the prior bug class).
+    assert not (posterior_path.with_suffix(".json.tmp")).exists()
+    # The UUID-suffixed tmp file is also cleaned up after rename.
+    leftover_tmps = list(tmp_path.glob("*.tmp.*"))
+    assert leftover_tmps == [], f"leftover tmp files: {leftover_tmps}"
 
 
 # ── Per-track Welford posterior ────────────────────────────────────────────
