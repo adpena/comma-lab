@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 REPO = Path(__file__).resolve().parents[3]
 TOOL = REPO / "tools" / "dispatch_cpu_eval_via_github_actions.py"
@@ -125,3 +126,79 @@ def test_gha_cpu_dispatch_argparse_exposes_auto_create_fork_pr_flags() -> None:
     assert "--submission-dir" in out
     assert "--auto-create-fork-pr" in out
     assert "create_fork_pr_for_submission.py" in out
+
+
+def test_gha_cpu_run_log_matching_rejects_concurrent_wrong_submission(monkeypatch) -> None:
+    tool = _load_tool()
+
+    def fake_run(cmd, check, capture_output, text):
+        assert "--log" in cmd
+        return SimpleNamespace(
+            returncode=0,
+            stdout="submission_dir: submissions/other_concurrent_submission\n",
+        )
+
+    monkeypatch.setattr(tool.subprocess, "run", fake_run)
+
+    assert tool.run_log_mentions_submission(
+        123,
+        "example/fork",
+        "wanted_submission",
+    ) is False
+
+
+def test_gha_cpu_run_log_matching_accepts_requested_submission(monkeypatch) -> None:
+    tool = _load_tool()
+
+    def fake_run(cmd, check, capture_output, text):
+        assert "--log" in cmd
+        return SimpleNamespace(
+            returncode=0,
+            stdout="uv run evaluate.sh --submission-dir ./submissions/wanted_submission\n",
+        )
+
+    monkeypatch.setattr(tool.subprocess, "run", fake_run)
+
+    assert tool.run_log_mentions_submission(
+        123,
+        "example/fork",
+        "wanted_submission",
+    ) is True
+
+
+def test_gha_cpu_download_artifact_fallback_selects_matching_report(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    tool = _load_tool()
+    calls: list[list[str]] = []
+
+    def fake_run_gh(args, capture=True):
+        calls.append(args)
+        if "-n" in args:
+            return SimpleNamespace(returncode=1, stdout="", stderr="no artifact")
+        wrong = tmp_path / "eval-wrong"
+        right = tmp_path / "eval-wanted_submission"
+        wrong.mkdir(parents=True, exist_ok=True)
+        right.mkdir(parents=True, exist_ok=True)
+        (wrong / "report.txt").write_text(
+            "submission_dir: submissions/wrong_submission\n",
+            encoding="utf-8",
+        )
+        (right / "report.txt").write_text(
+            "submission_dir: submissions/wanted_submission\n",
+            encoding="utf-8",
+        )
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(tool, "run_gh", fake_run_gh)
+
+    report = tool.download_artifact(
+        123,
+        "wanted_submission",
+        "example/fork",
+        tmp_path,
+    )
+
+    assert report == tmp_path / "eval-wanted_submission" / "report.txt"
+    assert any("-n" in call for call in calls)

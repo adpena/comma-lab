@@ -243,16 +243,15 @@ def trigger_workflow(
             "-w",
             EVAL_WORKFLOW_FILE,
             "-L",
-            "1",
+            "20",
             "--json",
             "databaseId",
         ]
     )
-    pre_id: int | None = None
+    pre_ids: set[int] = set()
     if pre_runs.returncode == 0 and pre_runs.stdout.strip():
         pre_runs_json = json.loads(pre_runs.stdout)
-        if pre_runs_json:
-            pre_id = pre_runs_json[0]["databaseId"]
+        pre_ids = {int(row["databaseId"]) for row in pre_runs_json}
 
     dispatch_args = [
         "workflow",
@@ -274,8 +273,11 @@ def trigger_workflow(
         sys.stderr.write("[fatal] gh workflow run failed\n")
         sys.exit(4)
 
-    # Poll for the new run ID (different from pre_id).
-    deadline = time.monotonic() + 60
+    # Poll for the new run ID. Under concurrent dispatches, "latest run after
+    # workflow_dispatch" is not enough: another agent can dispatch in the same
+    # second. Select the run whose workflow log mentions this submission_name.
+    deadline = time.monotonic() + 300
+    seen_candidates: set[int] = set()
     while time.monotonic() < deadline:
         runs_q = run_gh(
             [
@@ -286,20 +288,45 @@ def trigger_workflow(
                 "-w",
                 EVAL_WORKFLOW_FILE,
                 "-L",
-                "1",
+                "20",
                 "--json",
-                "databaseId,status",
+                "databaseId,status,createdAt",
             ]
         )
         if runs_q.returncode == 0 and runs_q.stdout.strip():
             runs = json.loads(runs_q.stdout)
-            if runs:
-                rid = runs[0]["databaseId"]
-                if rid != pre_id:
+            for row in runs:
+                rid = int(row["databaseId"])
+                if rid in pre_ids:
+                    continue
+                seen_candidates.add(rid)
+                if run_log_mentions_submission(rid, repo, submission_name):
                     return rid
-        time.sleep(2)
-    sys.stderr.write("[fatal] could not detect new workflow run within 60s\n")
+        time.sleep(5)
+    sys.stderr.write(
+        "[fatal] could not identify matching workflow run within 300s; "
+        f"submission_name={submission_name!r}; new_candidate_run_ids="
+        f"{sorted(seen_candidates)}\n"
+    )
     sys.exit(4)
+
+
+def run_log_mentions_submission(run_id: int, repo: str, submission_name: str) -> bool:
+    """Return True iff a run log names the requested submission.
+
+    GitHub's workflow-dispatch API does not return the new run ID. The only
+    reliable same-turn discriminator under concurrent dispatch is the workflow
+    log, whose download/evaluate/comment steps include ``submission_name``.
+    """
+    result = subprocess.run(
+        ["gh", "run", "view", str(run_id), "-R", repo, "--log"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return False
+    return submission_name in result.stdout
 
 
 def poll_run(run_id: int, repo: str) -> dict[str, Any]:
@@ -346,9 +373,7 @@ def poll_run(run_id: int, repo: str) -> dict[str, Any]:
         time.sleep(POLL_INTERVAL_SEC)
 
 
-def download_artifact(
-    run_id: int, submission_name: str, repo: str, dest_dir: Path
-) -> Path:
+def download_artifact(run_id: int, submission_name: str, repo: str, dest_dir: Path) -> Path:
     """Download the eval-<submission_name> artifact; return the path to report.txt."""
     dest_dir.mkdir(parents=True, exist_ok=True)
     artifact_name = f"eval-{submission_name}"
@@ -366,13 +391,35 @@ def download_artifact(
         ]
     )
     if result.returncode != 0:
-        sys.stderr.write("[fatal] gh run download failed\n")
-        sys.exit(4)
-    # Locate report.txt within dest_dir
-    candidates = list(dest_dir.rglob("report.txt"))
+        sys.stderr.write(
+            "[warn] named artifact download failed; downloading all artifacts "
+            "and selecting by report submission_dir\n"
+        )
+        shutil.rmtree(dest_dir, ignore_errors=True)
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        all_result = run_gh(
+            [
+                "run",
+                "download",
+                str(run_id),
+                "-R",
+                repo,
+                "-D",
+                str(dest_dir),
+            ]
+        )
+        if all_result.returncode != 0:
+            sys.stderr.write("[fatal] gh run download failed\n")
+            sys.exit(4)
+    # Locate matching report.txt within dest_dir.
+    candidates = [
+        path for path in dest_dir.rglob("report.txt")
+        if f"submission_dir: submissions/{submission_name}" in path.read_text()
+    ]
     if not candidates:
         sys.stderr.write(
-            f"[fatal] report.txt not found in downloaded artifact at {dest_dir}\n"
+            f"[fatal] matching report.txt for submission_name={submission_name!r} "
+            f"not found in downloaded artifact(s) at {dest_dir}\n"
         )
         sys.exit(3)
     return candidates[0]
