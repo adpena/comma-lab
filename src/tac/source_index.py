@@ -25,7 +25,7 @@ _CURRENT_SOURCE_INDEX: contextvars.ContextVar[SourceIndex | None] = contextvars.
     "tac_current_source_index",
     default=None,
 )
-_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v6"
+_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v7"
 
 
 def _safe_resolve(path: Path) -> Path:
@@ -94,6 +94,8 @@ _DEFAULT_TEXT_FACT_NEEDLES = frozenset(
         "add_argument",
         "[contest-CUDA]",
         "contest-CUDA",
+        "[contest-CPU",
+        "contest-CPU",
         "[MPS-PROXY]",
         "MPS",
         "CPU",
@@ -108,6 +110,8 @@ _DEFAULT_TEXT_FACT_NEEDLES = frozenset(
         "FALSIFICATION",
         "dispatched",
         "blessed",
+        "save_posterior",
+        "_posterior_lock",
     }
 )
 

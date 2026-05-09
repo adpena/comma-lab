@@ -3284,9 +3284,8 @@ def _scan_python_for_forbidden(path: Path) -> list[str]:
     Returns list of human-readable violations.
     """
     violations: list[str] = []
-    try:
-        text = path.read_text()
-    except (OSError, UnicodeDecodeError):
+    text, error = _read_python_text(path)
+    if error is not None or text is None:
         return []
     if not _python_forbidden_scan_may_match(text):
         return []
@@ -3408,20 +3407,24 @@ def check_codebase_drift(
         )
 
     experiments_dir = root / "experiments"
+    source_index = _current_source_index(root)
     if experiments_dir.exists():
-        sh_paths = list(
-            _rg_file_list(
-                root,
-                ["experiments"],
-                ("*.sh",),
-                exclude_globs=(
-                    "experiments/results/**",
-                    "**/__pycache__/**",
-                    "**/comma_lab_public_export/**",
-                ),
+        if source_index is not None:
+            sh_paths = list(source_index.files(["experiments"], pattern="*.sh"))
+        else:
+            sh_paths = list(
+                _rg_file_list(
+                    root,
+                    ["experiments"],
+                    ("*.sh",),
+                    exclude_globs=(
+                        "experiments/results/**",
+                        "**/__pycache__/**",
+                        "**/comma_lab_public_export/**",
+                    ),
+                )
+                or []
             )
-            or []
-        )
         if not sh_paths:
             sh_paths = []
             for dirpath, dirnames, filenames in os.walk(experiments_dir):
@@ -3444,19 +3447,22 @@ def check_codebase_drift(
     drift_scan_dirs = ["scripts", "experiments",
                        "src/tac/contrib", "src/tac/deploy",
                        "src/tac/experiments"]
-    py_paths = list(
-        _rg_file_list(
-            root,
-            drift_scan_dirs,
-            ("*.py",),
-            exclude_globs=(
-                "experiments/results/**",
-                "**/__pycache__/**",
-                "**/comma_lab_public_export/**",
-            ),
+    if source_index is not None:
+        py_paths = list(source_index.files(drift_scan_dirs, pattern="*.py"))
+    else:
+        py_paths = list(
+            _rg_file_list(
+                root,
+                drift_scan_dirs,
+                ("*.py",),
+                exclude_globs=(
+                    "experiments/results/**",
+                    "**/__pycache__/**",
+                    "**/comma_lab_public_export/**",
+                ),
+            )
+            or []
         )
-        or []
-    )
     if not py_paths:
         for d in drift_scan_dirs:
             d_path = root / d
@@ -31424,58 +31430,74 @@ def check_authoritative_tag_requires_custody_metadata(
 
     violations: list[str] = []
     scanned_files = 0
-    for scan_dir in scan_dirs:
-        if not scan_dir.is_dir():
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        candidate_paths = source_index.files_containing_substrings(
+            ["src/tac", "tools", "experiments"],
+            pattern="*.py",
+            substrings=("AUTHORITATIVE_TAGS", "[contest-CUDA]", "[contest-CPU"),
+            require_all=False,
+        )
+    else:
+        candidate_paths = tuple(
+            py
+            for scan_dir in scan_dirs
+            if scan_dir.is_dir()
+            for py in scan_dir.rglob("*.py")
+        )
+    for py in candidate_paths:
+        if _is_oss_export_mirror_path(py):
             continue
-        for py in scan_dir.rglob("*.py"):
-            if _is_oss_export_mirror_path(py):
+        rel_py = py.relative_to(root) if py.is_relative_to(root) else py
+        rel_py_s = str(rel_py)
+        if rel_py_s.startswith("experiments/results/"):
+            continue
+        if py in EXCLUDED:
+            continue
+        # Skip tests (they exercise the API legitimately).
+        if "/tests/" in str(py) or py.name.startswith("test_"):
+            continue
+        try:
+            text = (
+                source_index.read_text(py, encoding="utf-8", errors="replace")
+                if source_index is not None
+                else py.read_text(encoding="utf-8", errors="replace")
+            )
+        except OSError:
+            continue
+        # Quick prefilter: skip files that don't reference the tag set or
+        # literal authoritative tags at all.
+        if "AUTHORITATIVE_TAGS" not in text and not any(
+            tag in text for tag in _AUTHORITATIVE_TAG_LITERALS
+        ):
+            continue
+        scanned_files += 1
+        lines = text.splitlines()
+        for lineno, line in enumerate(lines):
+            # Skip comment-only lines.
+            stripped = line.lstrip()
+            if stripped.startswith("#"):
                 continue
-            rel_py = py.relative_to(root) if py.is_relative_to(root) else py
-            rel_py_s = str(rel_py)
-            if rel_py_s.startswith("experiments/results/"):
+            if not _line_has_authoritative_tag_bypass_pattern(line):
                 continue
-            if py in EXCLUDED:
+            # Same-line waiver?
+            if _CUSTODY_WAIVER_MARKER in line:
                 continue
-            # Skip tests (they exercise the API legitimately).
-            if "/tests/" in str(py) or py.name.startswith("test_"):
-                continue
-            try:
-                text = py.read_text(encoding="utf-8", errors="replace")
-            except OSError:
-                continue
-            # Quick prefilter: skip files that don't reference the tag set or
-            # literal authoritative tags at all.
-            if "AUTHORITATIVE_TAGS" not in text and not any(
-                tag in text for tag in _AUTHORITATIVE_TAG_LITERALS
+            if _line_window_contains_any(
+                lines, lineno, _CUSTODY_VALIDATOR_TOKENS
             ):
                 continue
-            scanned_files += 1
-            lines = text.splitlines()
-            for lineno, line in enumerate(lines):
-                # Skip comment-only lines.
-                stripped = line.lstrip()
-                if stripped.startswith("#"):
-                    continue
-                if not _line_has_authoritative_tag_bypass_pattern(line):
-                    continue
-                # Same-line waiver?
-                if _CUSTODY_WAIVER_MARKER in line:
-                    continue
-                if _line_window_contains_any(
-                    lines, lineno, _CUSTODY_VALIDATOR_TOKENS
-                ):
-                    continue
-                violations.append(
-                    f"[Check 127] {rel_py}:{lineno + 1}: "
-                    "authoritative tag predicate without an adjacent "
-                    "validate_custody / posterior_update call. "
-                    "Per codex round-2 HIGH 2, every authoritative-tag site MUST "
-                    "route through `tac.continual_learning.ContestResult."
-                    "validate_custody` (or `posterior_update`/`posterior_update_locked`) "
-                    "to verify (tag, axis, hardware_substrate) jointly. Add a "
-                    "`# CUSTODY_VALIDATOR_OK:<reason>` waiver on the same line "
-                    "if the site is intentionally tag-only."
-                )
+            violations.append(
+                f"[Check 127] {rel_py}:{lineno + 1}: "
+                "authoritative tag predicate without an adjacent "
+                "validate_custody / posterior_update call. "
+                "Per codex round-2 HIGH 2, every authoritative-tag site MUST "
+                "route through `tac.continual_learning.ContestResult."
+                "validate_custody` (or `posterior_update`/`posterior_update_locked`) "
+                "to verify (tag, axis, hardware_substrate) jointly. Add a "
+                "`# CUSTODY_VALIDATOR_OK:<reason>` waiver on the same line "
+                "if the site is intentionally tag-only."
+            )
 
     if verbose:
         if violations:
@@ -31557,61 +31579,77 @@ def check_continual_learning_writes_use_lock(
 
     violations: list[str] = []
     scanned_files = 0
-    for scan_dir in scan_dirs:
-        if not scan_dir.is_dir():
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        candidate_paths = source_index.files_containing_substrings(
+            ["src/tac", "tools", "experiments"],
+            pattern="*.py",
+            substrings=("save_posterior",),
+            require_all=True,
+        )
+    else:
+        candidate_paths = tuple(
+            py
+            for scan_dir in scan_dirs
+            if scan_dir.is_dir()
+            for py in scan_dir.rglob("*.py")
+        )
+    for py in candidate_paths:
+        if _is_oss_export_mirror_path(py):
             continue
-        for py in scan_dir.rglob("*.py"):
-            if _is_oss_export_mirror_path(py):
+        rel_py = py.relative_to(root) if py.is_relative_to(root) else py
+        rel_py_s = str(rel_py)
+        if rel_py_s.startswith("experiments/results/"):
+            continue
+        if py in EXCLUDED:
+            continue
+        if "/tests/" in str(py) or py.name.startswith("test_"):
+            continue
+        try:
+            text = (
+                source_index.read_text(py, encoding="utf-8", errors="replace")
+                if source_index is not None
+                else py.read_text(encoding="utf-8", errors="replace")
+            )
+        except OSError:
+            continue
+        if "save_posterior" not in text:
+            continue
+        scanned_files += 1
+        lines = text.splitlines()
+        for lineno, line in enumerate(lines):
+            stripped = line.lstrip()
+            if stripped.startswith("#"):
                 continue
-            rel_py = py.relative_to(root) if py.is_relative_to(root) else py
-            rel_py_s = str(rel_py)
-            if rel_py_s.startswith("experiments/results/"):
+            # Direct call to save_posterior (not save_posterior_locked,
+            # which doesn't currently exist but reserved as future-compat).
+            # Match the bare call form `save_posterior(...)`. Skip
+            # imports and diagnostic/error strings.
+            if not re.search(r"(^|[^\w.])save_posterior\s*\(", line):
                 continue
-            if py in EXCLUDED:
+            if "`save_posterior" in line:
                 continue
-            if "/tests/" in str(py) or py.name.startswith("test_"):
+            if stripped.startswith(("\"", "'", "f\"", "f'", "r\"", "r'")):
                 continue
-            try:
-                text = py.read_text(encoding="utf-8", errors="replace")
-            except OSError:
+            if _SAVE_POSTERIOR_WAIVER_MARKER in line:
                 continue
-            if "save_posterior" not in text:
+            if _line_window_contains_any(
+                lines, lineno, ("_posterior_lock",), before=4, after=1
+            ):
+                # The direct write is visibly inside or immediately under
+                # the lock context. A bare posterior_update_locked mention
+                # elsewhere in the file is not sufficient.
                 continue
-            scanned_files += 1
-            lines = text.splitlines()
-            for lineno, line in enumerate(lines):
-                stripped = line.lstrip()
-                if stripped.startswith("#"):
-                    continue
-                # Direct call to save_posterior (not save_posterior_locked,
-                # which doesn't currently exist but reserved as future-compat).
-                # Match the bare call form `save_posterior(...)`. Skip
-                # imports and diagnostic/error strings.
-                if not re.search(r"(^|[^\w.])save_posterior\s*\(", line):
-                    continue
-                if "`save_posterior" in line:
-                    continue
-                if stripped.startswith(("\"", "'", "f\"", "f'", "r\"", "r'")):
-                    continue
-                if _SAVE_POSTERIOR_WAIVER_MARKER in line:
-                    continue
-                if _line_window_contains_any(
-                    lines, lineno, ("_posterior_lock",), before=4, after=1
-                ):
-                    # The direct write is visibly inside or immediately under
-                    # the lock context. A bare posterior_update_locked mention
-                    # elsewhere in the file is not sufficient.
-                    continue
-                violations.append(
-                    f"[Check 128] {rel_py}:{lineno + 1}: "
-                    "calls `save_posterior(...)` directly without "
-                    "`_posterior_lock` context visible in the local line window. "
-                    "Per codex round-2 MEDIUM, parallel harvesters "
-                    "MUST go through `posterior_update_locked` so the "
-                    "load→update→save cycle is atomic under fcntl. Add a "
-                    "`# SAVE_POSTERIOR_LOCKED_OK:<reason>` waiver if the site "
-                    "is single-writer / serialized externally."
-                )
+            violations.append(
+                f"[Check 128] {rel_py}:{lineno + 1}: "
+                "calls `save_posterior(...)` directly without "
+                "`_posterior_lock` context visible in the local line window. "
+                "Per codex round-2 MEDIUM, parallel harvesters "
+                "MUST go through `posterior_update_locked` so the "
+                "load→update→save cycle is atomic under fcntl. Add a "
+                "`# SAVE_POSTERIOR_LOCKED_OK:<reason>` waiver if the site "
+                "is single-writer / serialized externally."
+            )
 
     if verbose:
         if violations:
@@ -31760,55 +31798,71 @@ def check_no_tag_only_custody_validation(
 
     violations: list[str] = []
     scanned_files = 0
-    for scan_dir in scan_dirs:
-        if not scan_dir.is_dir():
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        candidate_paths = source_index.files_containing_substrings(
+            ["src/tac", "tools", "experiments"],
+            pattern="*.py",
+            substrings=_TAG_GRADE_BYPASS_PATTERNS,
+            require_all=False,
+        )
+    else:
+        candidate_paths = tuple(
+            py
+            for scan_dir in scan_dirs
+            if scan_dir.is_dir()
+            for py in scan_dir.rglob("*.py")
+        )
+    for py in candidate_paths:
+        if _is_oss_export_mirror_path(py):
             continue
-        for py in scan_dir.rglob("*.py"):
-            if _is_oss_export_mirror_path(py):
+        if py in excluded_files:
+            continue
+        if "/tests/" in str(py) or py.name.startswith("test_"):
+            continue
+        # Skip vendored public-PR intakes per Check 109.
+        if "_intake_" in str(py) or "/comma_lab_public_export/" in str(py):
+            continue
+        try:
+            text = (
+                source_index.read_text(py, encoding="utf-8", errors="replace")
+                if source_index is not None
+                else py.read_text(encoding="utf-8", errors="replace")
+            )
+        except OSError:
+            continue
+        # Quick prefilter
+        if not any(pat in text for pat in _TAG_GRADE_BYPASS_PATTERNS):
+            continue
+        scanned_files += 1
+        lines = text.splitlines()
+        for lineno, line in enumerate(lines):
+            stripped = line.lstrip()
+            if stripped.startswith("#"):
                 continue
-            if py in excluded_files:
+            if not any(pat in line for pat in _TAG_GRADE_BYPASS_PATTERNS):
                 continue
-            if "/tests/" in str(py) or py.name.startswith("test_"):
+            if _CUSTODY_WAIVER_MARKER in line:
                 continue
-            # Skip vendored public-PR intakes per Check 109.
-            if "_intake_" in str(py) or "/comma_lab_public_export/" in str(py):
+            if _line_window_contains_any(
+                lines,
+                lineno,
+                _TAG_GRADE_LOCAL_VALIDATOR_TOKENS,
+                before=6,
+                after=6,
+            ):
                 continue
-            try:
-                text = py.read_text(encoding="utf-8", errors="replace")
-            except OSError:
-                continue
-            # Quick prefilter
-            if not any(pat in text for pat in _TAG_GRADE_BYPASS_PATTERNS):
-                continue
-            scanned_files += 1
-            lines = text.splitlines()
-            for lineno, line in enumerate(lines):
-                stripped = line.lstrip()
-                if stripped.startswith("#"):
-                    continue
-                if not any(pat in line for pat in _TAG_GRADE_BYPASS_PATTERNS):
-                    continue
-                if _CUSTODY_WAIVER_MARKER in line:
-                    continue
-                if _line_window_contains_any(
-                    lines,
-                    lineno,
-                    _TAG_GRADE_LOCAL_VALIDATOR_TOKENS,
-                    before=6,
-                    after=6,
-                ):
-                    continue
-                rel = py.relative_to(root) if py.is_relative_to(root) else py
-                violations.append(
-                    f"[Check 130] {rel}:{lineno + 1}: "
-                    "tag/grade membership predicate without an adjacent joint "
-                    "validator or archive_sha256 check. Per proactive META-class "
-                    "audit, every tag/grade gate MUST route through "
-                    "`validate_custody` / `is_promotable_exact_cuda_evidence` "
-                    "(or accumulate a fail-closed blocker against `archive_sha256`). "
-                    "Add a `# CUSTODY_VALIDATOR_OK:<reason>` waiver if the site "
-                    "is a read-only filter that does not gate promotion."
-                )
+            rel = py.relative_to(root) if py.is_relative_to(root) else py
+            violations.append(
+                f"[Check 130] {rel}:{lineno + 1}: "
+                "tag/grade membership predicate without an adjacent joint "
+                "validator or archive_sha256 check. Per proactive META-class "
+                "audit, every tag/grade gate MUST route through "
+                "`validate_custody` / `is_promotable_exact_cuda_evidence` "
+                "(or accumulate a fail-closed blocker against `archive_sha256`). "
+                "Add a `# CUSTODY_VALIDATOR_OK:<reason>` waiver if the site "
+                "is a read-only filter that does not gate promotion."
+            )
 
     if verbose:
         if violations:
