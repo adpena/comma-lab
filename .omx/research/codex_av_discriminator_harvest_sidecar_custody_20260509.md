@@ -184,3 +184,128 @@ jq 'map(select((tostring|test("discriminator|a1_cuda_cpu"; "i"))))' \
   .omx/state/lightning_active_jobs.json \
   .omx/state/lightning_batch_jobs.json
 ```
+
+## AV discriminator revalidation addendum
+
+<!-- generated_at: 2026-05-09T23:03:56Z -->
+<!-- evidence_grade: harvest_revalidation; no terminal claim row; no remote dispatch -->
+
+Revalidated the active AVVideoDataset discriminator claim from read-only
+surfaces only. No code was modified and no dispatch/eval command was launched.
+
+Exact status commands run:
+
+```bash
+.venv/bin/python tools/claim_lane_dispatch.py summary
+rg -n "discriminator-sweep-20260509T110211Z|lane_avvideodataset_cuda_path_mechanism_discriminator|subagent_avvideodataset_cuda_path_mechanism_discriminator" .omx/state .omx/research experiments reports scripts tools src --glob '!experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/**'
+find .omx/state .omx/research experiments reports -iname '*discriminator*' -o -iname '*avvideo*' | sort
+gh pr list --repo adpena/comma_video_compression_challenge --state all --limit 100 --search 'discriminator' --json number,title,state,isDraft,updatedAt,url,headRefName
+gh pr view 24 --repo adpena/comma_video_compression_challenge --json number,title,state,isDraft,comments,updatedAt,url,headRefName,headRepositoryOwner,headRefOid
+gh run view 25599944911 --repo adpena/comma_video_compression_challenge --json databaseId,status,conclusion,jobs,url,updatedAt,workflowName,headSha,headBranch,event
+gh run list --repo adpena/comma_video_compression_challenge --workflow eval --limit 50
+gh run view 25599734336 --repo adpena/comma_video_compression_challenge --log
+gh run view 25599734618 --repo adpena/comma_video_compression_challenge --log
+gh run view 25599735583 --repo adpena/comma_video_compression_challenge --log
+gh run view 25599735947 --repo adpena/comma_video_compression_challenge --log
+find experiments/results/a1_cuda_cpu_drift_discriminator_v_*_20260509T110211Z -path '*/gha_dispatch/*' -maxdepth 4 -type f -print | sort
+find experiments/results/a1_cuda_cpu_drift_discriminator_v_*_20260509T110211Z -path '*/cuda_dispatch/*' -maxdepth 4 -type f -print | sort
+rg -n "discriminator|a1_cuda_cpu|AVVideoDataset|20260509T110211Z" .omx/state/lightning_active_jobs.json .omx/state/lightning_batch_jobs.json
+.venv/bin/python - <<'PY'
+from pathlib import Path
+from experiments.contest_auth_eval import _runtime_dependency_manifest
+root = Path('/Users/adpena/Projects/pact')
+upstream = root / 'upstream'
+for d in sorted((root/'experiments/results').glob('a1_cuda_cpu_drift_discriminator_v_*_20260509T110211Z')):
+    manifest = _runtime_dependency_manifest(d/'submission_dir/inflate.sh', upstream, repo_root=root)
+    archive = d/'submission_dir/archive.zip'
+    import hashlib
+    print(d.name, hashlib.sha256(archive.read_bytes()).hexdigest(), archive.stat().st_size, manifest['runtime_tree_sha256'])
+PY
+```
+
+Claim state:
+
+- `tools/claim_lane_dispatch.py summary` still reports exactly one active
+  claim: `lane_avvideodataset_cuda_path_mechanism_discriminator` /
+  `discriminator-sweep-20260509T110211Z`, platform
+  `github_actions+lightning`, status `eval`.
+- No terminal row for this lane/job appears in
+  `.omx/state/active_lane_dispatch_claims.md`.
+
+Rows found:
+
+- One GHA CPU baseline control:
+  - PR: `adpena/comma_video_compression_challenge#24` (open draft)
+  - run: `25599944911`, workflow `eval`, status `completed`, conclusion
+    `success`, event `workflow_dispatch`
+  - variant:
+    `a1_cuda_cpu_drift_discriminator_v_baseline_20260509T110211Z`
+  - device: `cpu`, samples: `600`
+  - PoseNet: `0.00003286`
+  - SegNet: `0.00056023`
+  - archive bytes: `178262`
+  - archive SHA-256:
+    `87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5`
+  - displayed score: `0.19`; same-archive canonical prior GHA adjudication
+    recomputes to `0.19284757743677347`
+
+Rows checked and rejected as non-discriminator:
+
+- GHA runs `25599734336`, `25599734618`, `25599735583`, and `25599735947`
+  are `a1_segnet_boundary_smoothing_*` submissions, not AV discriminator rows.
+- `gh pr list --search 'discriminator'` returns only PR #24 for this lane.
+
+Rows/artifacts missing:
+
+- CPU GHA rows are missing for:
+  - `v_loader_isolated`
+  - `v_conv_isolated`
+  - `v_hydra_isolated`
+- CUDA rows are missing for all four variants:
+  - `v_baseline`
+  - `v_loader_isolated`
+  - `v_conv_isolated`
+  - `v_hydra_isolated`
+- `cuda_dispatch/` files are absent for all variant directories.
+- `experiments/results/a1_cuda_cpu_drift_discriminator_run_20260509T110211Z/`
+  is absent.
+- `.omx/state/lightning_active_jobs.json` and
+  `.omx/state/lightning_batch_jobs.json` contain no
+  `discriminator`, `a1_cuda_cpu`, `AVVideoDataset`, or
+  `20260509T110211Z` rows.
+
+Archive/runtime custody rechecked:
+
+| Variant | archive SHA-256 | bytes | runtime tree SHA-256 |
+|---|---:|---:|---|
+| `v_baseline` | `87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5` | `178262` | `880d786594051958935826f49e7d393243bae358573a507a4ab4960c4e4e9b1a` |
+| `v_loader_isolated` | `87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5` | `178262` | `9d51d1f3f778d35bcf563dc06438c1a2532c264916de6a3390c0c0e7aecbd8d1` |
+| `v_conv_isolated` | `87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5` | `178262` | `d5cdf6e1ff5ffd1cdc04f0d09897b4f134d87148603b6a3cf6653fc5a3643d67` |
+| `v_hydra_isolated` | `87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5` | `178262` | `55da3c3453deea9c5caaaffb657b38731fdc0b595ffc5bfa48d02841de26cc23` |
+
+Classification: **not terminal / active claim cannot be closed**. The only
+terminal evidence is the baseline CPU control. The claimed sweep intended 4
+variants across CPU and CUDA, so the current evidence covers 1 of 8 cells and
+cannot support a discriminator verdict.
+
+Blockers:
+
+1. Three CPU GHA isolation rows are missing.
+2. All four CUDA rows are missing.
+3. No run-record directory or local Lightning state row proves that the CUDA
+   half was ever launched.
+4. `tools/analyze_a1_cuda_cpu_drift_discriminator_verdict.py` must not be used
+   for a final verdict until paired CPU/CUDA rows exist for the baseline and
+   the isolation variants, or until a deliberate partial-abandonment terminal
+   decision is recorded.
+
+Reactivation / closure criteria:
+
+- To close as completed: harvest all missing CPU/CUDA rows, recompute
+  per-variant CPU/CUDA ratios, run the verdict analyzer, record the verdict
+  and registry-update decision, then append a terminal claim row with the same
+  `lane_id` and `instance/job_id`.
+- To close as abandoned/stopped: operator must explicitly choose partial
+  closure, and the terminal row should state that only the baseline CPU control
+  was harvested while the three CPU isolation rows plus all CUDA rows were
+  never recovered.

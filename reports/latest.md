@@ -1,10 +1,49 @@
 <!--
-generated_at: 2026-05-08T23:26:58Z
-from_state_hash: 61c3b8cce4f221ca37988c2a382ff59568df7daa
-regenerated_by: claude:fix-all-bugs-pass
+generated_at: 2026-05-09T23:03:24Z
+from_state_hash: aff267e66c0925296e7e16c85eaae7e9daa528b8
+regenerated_by: codex:roadmap-state-reconciliation
 -->
 
-# Latest Report - 2026-05-04 PR106 belt_and_suspenders adapter contest-faithful status
+# Latest Report - 2026-05-09 A1 Split-Axis Roadmap And Custody Reconciliation
+
+## 2026-05-09 (reconciliation) - Current routing state after `aff267e6`
+
+This section supersedes the stale May 4 title and dispatch queues below. No
+remote, GPU, or exact-eval dispatch was launched for this reconciliation.
+
+- **A1 score-gradient is split-axis evidence, not CUDA-ready frontier.** The
+  same archive `87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5`
+  (`178,262 B`) has `[contest-CPU]` `0.19284757743677347` on GHA Linux
+  x86_64 and `[contest-CUDA]` `0.2263520234784395` on Modal T4. Treat CPU as
+  public-axis evidence and CUDA as non-frontier; do not duplicate the same A1
+  dispatch.
+- **AVVideoDataset discriminator remains active and incomplete.** Current
+  dispatch summary has one active claim:
+  `lane_avvideodataset_cuda_path_mechanism_discriminator` /
+  `discriminator-sweep-20260509T110211Z`, status `eval`. Only the baseline CPU
+  control is harvested; variant CPU rows and CUDA rows are not terminal.
+- **A1 full latent-sidecar search is pending.** The stale sidecar artifact that
+  claimed readiness without `archive.zip` is superseded by the fail-closed
+  builder fix and local smoke/one-pair custody probes. Current status is still
+  `ready_for_exact_eval_dispatch=false`; next score-lowering work must build a
+  full 600-pair byte-different, runtime-consumed packet or a faster
+  score-domain/batched full-search equivalent.
+- **Phase 1 / T1 packet work remains local/blocker-bound.** Phase 1 target
+  generation and A1 EMA smoke are `[empirical_planning; local CPU sanity loop]`
+  only. The packet compiler/runtime guards have improved, but Phase 1 is not a
+  dispatch row until a hermetic, byte-different runtime packet is compiled,
+  smoke-checked, and no-op-proofed.
+
+**Current next queue:**
+
+1. Harvest or explicitly abandon the active AV discriminator claim; do not
+   relaunch a duplicate.
+2. Build the A1 full sidecar candidate locally with full archive/runtime
+   custody, then run local smoke before any GHA or CUDA claim.
+3. Keep Phase 1/T1 and Lane 12-v2 local until they emit runtime-consumed,
+   byte-different packets with exact custody and no-op proof.
+4. Treat the May 4 Omega-W-V3 / int5 / int6 / SJ-KL dispatch matrix as
+   historical only; it is no longer an active queue.
 
 ## 2026-05-09 (night) - A1 latent-aligned Modal refire
 
@@ -506,10 +545,10 @@ responsible for exact auth eval. Sister fix: SyntaxWarning escape
 `\|Δ\|` removed from
 `tools/pr101_omega_opt_per_tensor_codec_choice_empirical.py:35`.
 
-**Awaiting operator:**
-- A1 dispatch ($8 Lightning T4): Lightning GPU attach OR Vast.ai credit topup
-- A4 dispatch ($15 Lightning T4): authorization with documented R1-1 caveat
-- PARADIGM-δεζ (#307) + PHASE 4 INTEGRATION (#308): major work needing strategic alignment
+**Superseded awaiting-operator note:** A1 no longer needs the old Lightning/Vast
+refire listed here; paired CPU/CUDA anchors now exist. A4 and PARADIGM-δεζ
+remain historical planning items until the current reconciliation queue above
+is cleared and a fresh dispatch claim/preflight path exists.
 
 ---
 
@@ -679,7 +718,10 @@ All CPU-prep rows: `score_claim = False`, `promotion_eligible = False`, `ready_f
 
 - `forbidden_remote_bootstrap_inline` re-violation closed by commit 256d6fe1: 7 sequential dep-discovery failures (uv → ensurepip → cu124 → find → brotli → timm) replaced with one canonical `bash scripts/remote_archive_only_eval.sh` invocation. The wrapper installs full dep closure (uv + ffmpeg + scorer deps) and auto-pins INFLATE_TORCH_SPEC by driver version.
 
-### Next dispatches (per `.omx/state/next_experiments.md`)
+### Historical dispatch notes (superseded by 2026-05-09 reconciliation)
+
+The rows below are preserved as May 8 chronology, not the active
+`.omx/state/next_experiments.md` queue.
 
 1. ~~137,531 B cross-paradigm winner CUDA dispatch~~ **RETRACTED** (REVIEW-ENG C1); WIRE-DECODER subagent in flight to build deployable composition with matching inflate.py
 2. 153,699 B ADMM byte-closed candidate CUDA dispatch — pending review clearance + apogee_int6 [contest-CUDA] anchor (REVIEW-ENG C3)
@@ -1165,21 +1207,14 @@ PR106-stacking lanes (`lane_pr106_latent_sidecar` + `lane_pr106_yshift_sidechann
 captures the 4 actionable choices with recommendation (Choice 1: dispatch
 apogee_int5 at $0.30 — RECOMMENDED).
 
-## Updated Next Queue
+## Superseded May 4 Queue
 
-1. Use `experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter` as the release packet unless a newer exact T4 A++ packet is explicitly promoted.
-2. Keep PR100 source attribution and the exact T4 custody block with every public/judge-facing score claim.
-3. Run strict public-release hygiene on the exact PR body, notebook, and site bundle before publishing URLs.
-4. Keep PR96, PR91/HPM1, and any public body/CPU scores in external context until exact CUDA replay lands.
-5. **Lane Ω-W-V3 GPU dispatch (~$0.30)** — council 8/10 GO, predicted [0.194, 0.204] [prediction, NOT contest-CUDA]. Operator approval gate plus fresh dispatch claim and exact artifact custody are required before score use.
-6. **Lane #04 int5 GPU dispatch (~$0.30)** — predicted [0.180, 0.196] [prediction, NOT contest-CUDA], MEDIUM risk, sweet spot of the int-N Pareto. Worth testing only through normal exact-eval gates.
-7. **Lane #04 int6 GPU dispatch (~$0.30)** — predicted [0.190, 0.204] [prediction, NOT contest-CUDA], LOW risk fallback if int5 distortion exceeds tolerance.
-8. **Lane SJ-KL C067 GPU dispatch (~$0.30)** — uses C067 base archive (not PR106), so it is independent from the PR106-stacking lanes. Predicted score band TBD pending first exact run.
-
-**Total dispatch matrix: 4 lanes × ~$0.30 = ~$1.20** for a historical high-EV
-sweep proposal that would test whether any lane can land below PR106's exact
-`0.20945673680571203`. No prediction row counts as contest-CUDA evidence until
-the exact archive/runtime is harvested and reviewed.
+The May 4 Omega-W-V3 / int5 / int6 / SJ-KL dispatch matrix is historical and
+must not be used as the active next queue. Later evidence split A1 into
+distinct `[contest-CPU]` and `[contest-CUDA]` axes, left the AV discriminator
+claim active, and moved A1 sidecar work back to local custody/full-search
+preparation. See the reconciliation queue at the top of this report for current
+routing.
 
 ## 2026-05-09 A5 Channel-DP Update
 
