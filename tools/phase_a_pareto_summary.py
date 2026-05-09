@@ -80,10 +80,12 @@ SUBTARGET_CPU_D_POSE_FLOOR = 3.5e-5
 AXIS_ADVISOR_CUDA_D_SEG = 6.88e-4
 AXIS_ADVISOR_CUDA_D_POSE = 1.74e-4
 AXIS_ADVISOR_ARCHIVE_BYTES = 178_392
+A1_CONTEST_CPU_EVIDENCE_ROW = (
+    REPO_ROOT / "reports" / "a1_latentalign_importpathfix_contest_cpu_evidence_row_20260509.json"
+)
 
 NONCOMPARABLE_BYTE_BUDGET_LANES = {
     "A0_mdl_baseline",
-    "A1_score_gradient",
     "A4_charm_hyperprior_toy",
     "A4_charm_real_pr101_probe",
     "A4_alt_filler_stc_pose",
@@ -117,6 +119,22 @@ def classify_lane(rel_path: str) -> str:
         if pattern in rel_path:
             return lane
     return "UNCLASSIFIED"
+
+
+def _load_a1_contest_cpu_overlay(data: dict[str, Any]) -> dict[str, Any] | None:
+    """Return exact CPU overlay metadata for the A1 latent-aligned packet."""
+
+    if not A1_CONTEST_CPU_EVIDENCE_ROW.is_file():
+        return None
+    try:
+        row = json.loads(A1_CONTEST_CPU_EVIDENCE_ROW.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+    if data.get("archive_sha256") != row.get("archive_sha256"):
+        return None
+    if data.get("archive_bytes") != row.get("empirical_archive_bytes"):
+        return None
+    return row
 
 
 def parse_manifest(manifest_path: Path) -> PhaseAEntry | None:
@@ -176,6 +194,15 @@ def parse_manifest(manifest_path: Path) -> PhaseAEntry | None:
     ready = bool(data.get("ready_for_exact_eval_dispatch", False))
     dispatch_blockers = tuple(data.get("dispatch_blockers", []) or [])
     dispatch_status = data.get("dispatch_status") or data.get("status")
+    if lane == "A1_score_gradient":
+        cpu_overlay = _load_a1_contest_cpu_overlay(data)
+        if cpu_overlay is not None:
+            evidence_grade = "[contest-CPU reviewed; contest-CUDA pending]"
+            dispatch_status = str(
+                cpu_overlay.get("contest_dispatch_verdict")
+                or dispatch_status
+                or ""
+            )
 
     timestamp = (
         data.get("started_at_utc")
@@ -220,9 +247,9 @@ def parse_manifest(manifest_path: Path) -> PhaseAEntry | None:
             entry.notes.append("hand-parametric ChARM probe; no score claim")
     if lane == "A1_score_gradient":
         entry.notes.append(
-            "first Modal config retired on macOS CPU advisory; random-latent "
-            "training/deploy mismatch fixed; first constrained refire hit "
-            "worker import-path failure, now fixed"
+            "latent-aligned constrained refire scored 0.192848 contest-CPU "
+            "on Linux x86_64; contest-CUDA still pending because Modal "
+            "DALI/NVDEC preflight failed"
         )
     if lane == "ADMM_lossy_coarsening_baseline":
         entry.notes.append("Path B baseline; -28 KB savings at 4-5% rel_err")
@@ -412,13 +439,14 @@ def render_markdown(entries: list[PhaseAEntry]) -> str:
         "real-substrate range-coder probe roundtrips exactly, but static/delta/"
         "previous-symbol PMFs are not competitive with PR101 brotli. Learned "
         "co-designed ChARM remains live.",
-        "- **A1 first Modal config is a measured-config negative.** Training/build completed, "
-        "but exact CUDA was skipped by DALI/NVDEC preflight and local macOS CPU advisory "
-        "scored 3.721654. A follow-up bug hunt found that non-smoke training used random "
-        "latents while the archive builder preserved PR101 latent_blob+sidecar bytes; that "
-        "training/deploy distribution mismatch is now fixed. The first constrained "
-        "archive-latent Modal refire failed before artifacts due a worker import-path "
-        "bug; that bug is fixed and the retired archives remain non-promotable.",
+        "- **A1 score-gradient is now a real contest-CPU positive, CUDA pending.** "
+        "The first Modal config remains retired (`3.721654` macOS CPU advisory), "
+        "and the first constrained refire exposed a worker import-path bug. After "
+        "fixing both that bug and the random-latent training/deploy mismatch, the "
+        "latent-aligned constrained refire produced a `178,262 B` archive with "
+        "`0.192847577437` on GitHub Actions Linux x86_64 contest-CPU. Treat this "
+        "as public-axis evidence only until a contest-CUDA eval lands; Modal's "
+        "T4 DALI/NVDEC preflight failed with NVML error 999.",
         "- **A5 and Cross-paradigm byte savings are scorer-unsafe at current configs.** "
         "A5 eta=4 complexity allocation and Cross-paradigm ADMM x Op1 both need "
         "changed score-domain or SegNet-boundary-aware allocation before new exact-eval "
@@ -431,10 +459,10 @@ def render_markdown(entries: list[PhaseAEntry]) -> str:
         "",
         "## Open lanes",
         "",
-        "- A1 (score-gradient PR101 fine-tune): first Modal config is retired, "
-        "but the root training/deploy latent mismatch is fixed in `tac` + the "
-        "training script. First constrained refire hit a worker import-path "
-        "failure, now fixed; use a fresh label for the next A1 refire.",
+        "- A1 (score-gradient PR101 fine-tune): constrained archive-latent refire "
+        "is `[contest-CPU]` positive at `0.192847577437` with `178,262 B`; "
+        "next required step is contest-CUDA exact eval or DALI/NVDEC repair, "
+        "then longer score-gradient schedules if dual-axis custody stays green.",
         "- A4-alt (Filler STC pose codec): byte-anchor landed; representative "
         "pose-distribution only, not a PR101 monolithic archive rewrite.",
         "- A4 (ChARM/hyperprior): toy and hand-parametric PR101 configs are "

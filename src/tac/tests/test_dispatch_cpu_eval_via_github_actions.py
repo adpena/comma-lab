@@ -46,6 +46,11 @@ def test_gha_cpu_dispatch_adjudicated_record_uses_requested_repo(tmp_path: Path)
     tool = _load_tool()
     parsed = {
         "canonical_score": 0.19663589,
+        "canonical_score_recomputed": 0.19663589,
+        "canonical_score_source": "score_recomputed_from_components",
+        "reported_final_score_display_rounded": 0.2,
+        "score_rounding_abs_delta": 0.00336411,
+        "score_reported_rounded_differs_from_canonical": True,
         "avg_segnet_dist": 0.000589,
         "avg_posenet_dist": 0.0000358,
         "compression_rate": 0.00475136,
@@ -74,6 +79,34 @@ def test_gha_cpu_dispatch_adjudicated_record_uses_requested_repo(tmp_path: Path)
 
     record = json.loads(out.read_text(encoding="utf-8"))
     assert record["fork_repo"] == "example/fork"
+
+
+def test_gha_cpu_parse_report_uses_recomputed_score_as_canonical(tmp_path: Path) -> None:
+    tool = _load_tool()
+    report = tmp_path / "report.txt"
+    report.write_text(
+        "\n".join(
+            [
+                "=== Evaluation results over 600 samples ===",
+                "  Average PoseNet Distortion: 0.00003286",
+                "  Average SegNet Distortion: 0.00056023",
+                "  Submission file size: 178,262 bytes",
+                "  Original uncompressed size: 37,545,489 bytes",
+                "  Compression Rate: 0.00474789",
+                "  Final score: 100*segnet_dist + sqrt(10*posenet_dist) + 25*rate = 0.19",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    parsed = tool.parse_report(report)
+
+    assert parsed["reported_final_score_display_rounded"] == 0.19
+    assert parsed["canonical_score_source"] == "score_recomputed_from_components"
+    assert parsed["canonical_score"] == parsed["score_recomputed_from_components"]
+    assert parsed["canonical_score"] == parsed["canonical_score_recomputed"]
+    assert parsed["canonical_score"] > 0.192
+    assert parsed["score_reported_rounded_differs_from_canonical"] is True
 
 
 def test_gha_cpu_dispatch_argparse_exposes_auto_create_fork_pr_flags() -> None:

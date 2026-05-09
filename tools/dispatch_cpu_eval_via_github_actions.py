@@ -30,7 +30,7 @@ This helper:
 Output JSON keys:
   - archive_size_bytes (int)
   - archive_sha256 (str)
-  - canonical_score (float)  — the final scalar
+  - canonical_score (float)  — recomputed from components, not rounded report display
   - avg_segnet_dist (float)
   - avg_posenet_dist (float)
   - compression_rate (float)
@@ -386,7 +386,7 @@ REPORT_PATTERNS = {
         r"Average SegNet Distortion:\s*([0-9.eE+-]+)"
     ),
     "compression_rate": re.compile(r"Compression Rate:\s*([0-9.eE+-]+)"),
-    "canonical_score": re.compile(r"Final score:.*=\s*([0-9.eE+-]+)"),
+    "reported_final_score_display_rounded": re.compile(r"Final score:.*=\s*([0-9.eE+-]+)"),
     "n_samples": re.compile(r"Evaluation results over (\d+) samples"),
 }
 
@@ -412,10 +412,16 @@ def parse_report(report_path: Path) -> dict[str, Any]:
         + 25.0 * parsed["compression_rate"]
     )
     parsed["score_recomputed_from_components"] = recomputed
-    drift = abs(recomputed - parsed["canonical_score"])
+    parsed["canonical_score_recomputed"] = recomputed
+    parsed["canonical_score"] = recomputed
+    parsed["canonical_score_source"] = "score_recomputed_from_components"
+    display_score = parsed["reported_final_score_display_rounded"]
+    drift = abs(recomputed - display_score)
+    parsed["score_rounding_abs_delta"] = drift
+    parsed["score_reported_rounded_differs_from_canonical"] = drift > 1e-12
     if drift > 0.02:  # report.txt rounds to 2 decimals
         sys.stderr.write(
-            f"[warn] score drift {drift:.4f} > 0.02; canonical={parsed['canonical_score']} "
+            f"[warn] score drift {drift:.4f} > 0.02; reported={display_score} "
             f"recomputed={recomputed}\n"
         )
     return parsed
@@ -465,6 +471,15 @@ def write_adjudicated(
         "archive_size_bytes": archive_size,
         "archive_sha256": archive_sha,
         "canonical_score": parsed["canonical_score"],
+        "canonical_score_recomputed": parsed["canonical_score_recomputed"],
+        "canonical_score_source": parsed["canonical_score_source"],
+        "reported_final_score_display_rounded": parsed[
+            "reported_final_score_display_rounded"
+        ],
+        "score_rounding_abs_delta": parsed["score_rounding_abs_delta"],
+        "score_reported_rounded_differs_from_canonical": parsed[
+            "score_reported_rounded_differs_from_canonical"
+        ],
         "avg_segnet_dist": parsed["avg_segnet_dist"],
         "avg_posenet_dist": parsed["avg_posenet_dist"],
         "compression_rate": parsed["compression_rate"],

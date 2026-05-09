@@ -144,3 +144,44 @@ def test_proxy_or_cpu_packet_stays_non_rankable(tmp_path: Path) -> None:
     assert packet["exact_cuda_evidence"] is False
     assert packet["promotion_eligible"] is False
     assert packet["method_family_retired"] is False
+
+
+def test_contest_cpu_packet_is_reviewed_as_public_axis_not_cuda_promotion(tmp_path: Path) -> None:
+    tool = _load_tool()
+    payload = _auth_eval_payload()
+    payload["evidence_grade"] = "contest-CPU-1to1"
+    payload["lane_tag"] = "[contest-CPU]"
+    payload["hardware"] = "github-actions-ubuntu-latest-x86_64"
+    payload["runner_os_release"] = "Image: ubuntu-24.04"
+    payload["provenance"]["device"] = "cpu"
+    payload["provenance"]["gpu_model"] = ""
+    source = tmp_path / "contest_cpu_eval.json"
+    source.write_text(json.dumps(payload), encoding="utf-8")
+
+    packet = tool.build_packet(
+        auth_eval_json=source,
+        technique="a1_score_gradient",
+        lane_id="a1_cpu",
+        job_id="gha",
+        baseline_score=0.2,
+        reactivation_criteria=[],
+        reviewer="test",
+        dispatch_claims_path=None,
+    )
+
+    assert packet["measured_config_status"] == "contest_cpu_result_reviewed"
+    assert packet["exact_cuda_evidence"] is False
+    assert packet["exact_cpu_evidence"] is True
+    assert packet["cpu_leaderboard_reproduction_eligible"] is True
+    assert packet["promotion_eligible"] is False
+
+    row = tool.evidence_row_from_packet(
+        packet,
+        review_packet_path=Path(".omx/research/cpu_review.json"),
+        timestamp_utc="2026-05-09T00:00:00Z",
+    )
+
+    assert row["evidence_grade"] == "[contest-CPU reviewed]"
+    assert row["score_contest_cpu"] == packet["canonical_score"]
+    assert row["score_contest_cuda"] is None
+    assert "contest_cuda_pending_for_internal_promotion" in row["dispatch_blockers"]

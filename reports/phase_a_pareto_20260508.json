@@ -91,25 +91,25 @@
     },
     {
       "lane": "A1_score_gradient",
-      "archive_bytes": 205879,
+      "archive_bytes": 178262,
       "rel_err": null,
       "rel_err_form": "unknown",
-      "delta_vs_brotli_bytes": 27735,
-      "evidence_grade": "[cuda-training-build-only]",
+      "delta_vs_brotli_bytes": 118,
+      "evidence_grade": "[contest-CPU reviewed; contest-CUDA pending]",
       "score_claim": false,
       "ready_for_exact_eval_dispatch": false,
       "dispatch_blockers": [
         "contest_cuda_eval_pending_due_modal_dali_nvdec_preflight_failure",
         "contest_cpu_eval_pending"
       ],
-      "dispatch_status": null,
-      "byte_budget_comparable": false,
-      "subtarget_gap_bytes": null,
-      "meets_subtarget_byte_budget": null,
+      "dispatch_status": "contest_cpu_result_reviewed",
+      "byte_budget_comparable": true,
+      "subtarget_gap_bytes": 41159,
+      "meets_subtarget_byte_budget": false,
       "timestamp": "artifacts",
-      "manifest_path": "experiments/results/track1_phase_a1_score_gradient_20260508T230020Z_modal/harvested_artifacts/build_manifest.json",
+      "manifest_path": "experiments/results/track1_phase_a1_score_gradient_latentalign_importpathfix_lr2e6_20260509T012628Z_modal/harvested_artifacts/build_manifest.json",
       "notes": [
-        "first Modal config retired on macOS CPU advisory; random-latent training/deploy mismatch fixed; first constrained refire hit worker import-path failure, now fixed"
+        "latent-aligned constrained refire scored 0.192848 contest-CPU on Linux x86_64; contest-CUDA still pending because Modal DALI/NVDEC preflight failed"
       ]
     },
     {

@@ -99,6 +99,26 @@ def _is_exact_cuda(payload: dict[str, Any]) -> bool:
     return "cuda" in text or "contest-cuda" in text or "tesla t4" in text
 
 
+def _is_exact_cpu(payload: dict[str, Any]) -> bool:
+    text = " ".join(
+        str(x).lower()
+        for x in (
+            payload.get("evidence_grade"),
+            payload.get("lane_tag"),
+            payload.get("hardware"),
+            payload.get("runner_os_release"),
+            _device(payload),
+        )
+        if x is not None
+    )
+    return (
+        "contest-cpu" in text
+        or "contest_cpu" in text
+        or "github-actions-ubuntu-latest-x86_64" in text
+        or ("ubuntu" in text and "x86_64" in text and _device(payload).lower() == "cpu")
+    )
+
+
 def _score_recompute(payload: dict[str, Any]) -> dict[str, Any]:
     seg = _float_or_none(payload.get("avg_segnet_dist"))
     pose = _float_or_none(payload.get("avg_posenet_dist"))
@@ -237,6 +257,7 @@ def build_packet(
         or _float_or_none(payload.get("final_score"))
     )
     exact_cuda = _is_exact_cuda(payload)
+    exact_cpu = (not exact_cuda) and _is_exact_cpu(payload)
     regression = bool(
         exact_cuda
         and baseline_score is not None
@@ -255,6 +276,9 @@ def build_packet(
     elif exact_cuda and score is not None:
         status = "exact_cuda_result_reviewed"
         failure_class = "not_negative_against_supplied_baseline"
+    elif exact_cpu and score is not None:
+        status = "contest_cpu_result_reviewed"
+        failure_class = "contest_cpu_public_leaderboard_anchor_cuda_pending"
     elif not exact_cuda:
         status = "proxy_or_non_cuda_review_only"
         failure_class = "non_exact_cuda_evidence"
@@ -278,6 +302,8 @@ def build_packet(
         "baseline_score": baseline_score,
         "canonical_score": score,
         "exact_cuda_evidence": exact_cuda,
+        "exact_cpu_evidence": exact_cpu,
+        "cpu_leaderboard_reproduction_eligible": exact_cpu,
         "custody": {
             "archive_bytes": _archive_bytes(payload),
             "archive_sha256": _archive_sha(payload),
@@ -318,6 +344,7 @@ def evidence_row_from_packet(
     """Derive a conservative planner evidence row from a review packet."""
     status = str(packet.get("measured_config_status") or "")
     exact_cuda = bool(packet.get("exact_cuda_evidence"))
+    exact_cpu = bool(packet.get("exact_cpu_evidence"))
     negative = exact_cuda and status == "measured_config_retired"
     custody = packet.get("custody") if isinstance(packet.get("custody"), dict) else {}
     score_recompute = (
@@ -348,6 +375,8 @@ def evidence_row_from_packet(
         ]
     elif not exact_cuda:
         blockers = ["non_exact_cuda_review_packet_not_promotable"]
+    if exact_cpu:
+        blockers = ["contest_cuda_pending_for_internal_promotion"]
 
     source_json_path = str(packet.get("source_json_path") or "")
     review_path = str(review_packet_path or "")
@@ -358,6 +387,7 @@ def evidence_row_from_packet(
         "evidence_grade": (
             "[contest-CUDA A-negative]" if negative
             else "[contest-CUDA reviewed]" if exact_cuda
+            else "[contest-CPU reviewed]" if exact_cpu
             else "[non-CUDA review]"
         ),
         "score_claim": False,
@@ -369,6 +399,7 @@ def evidence_row_from_packet(
         ),
         "measured_config_status": status,
         "score_contest_cuda": packet.get("canonical_score") if exact_cuda else None,
+        "score_contest_cpu": packet.get("canonical_score") if exact_cpu else None,
         "empirical_score": packet.get("canonical_score"),
         "empirical_archive_bytes": archive_bytes,
         "archive_sha256": custody.get("archive_sha256"),

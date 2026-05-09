@@ -29,11 +29,26 @@ on `sys.path` before importing `tac.submission_archive.safe_extract_zip`.
 remote repo import roots at import time and closes active claims on recover
 exceptions.
 
-**Fixed relaunch active:** `track1_phase_a1_score_gradient_latentalign_importpathfix_lr2e6_20260509T012628Z_modal`
-is now running on Modal as call `fc-01KR55GH98QW3J3QDGQB1EG4CR`, with predicted
-ETA `2026-05-09T03:56:54Z`. Immediate recover probe returned `NOT READY`, so it
-did not reproduce the worker import-path failure. Recovery command:
-`.venv/bin/python experiments/modal_phase_a1_score_gradient_pr101.py recover --label track1_phase_a1_score_gradient_latentalign_importpathfix_lr2e6_20260509T012628Z_modal`.
+**Fixed relaunch harvested:** `track1_phase_a1_score_gradient_latentalign_importpathfix_lr2e6_20260509T012628Z_modal`
+completed training/build on Modal as call `fc-01KR55GH98QW3J3QDGQB1EG4CR`.
+CUDA auth eval was skipped because the T4 DALI/NVDEC preflight failed with
+NVML error `999`, so the Modal result remains `cuda-training-build-only` until
+paired CUDA exact eval is repaired.
+
+The rebuilt A1 archive is now a real public-axis CPU anchor:
+
+- Archive bytes: `178,262`
+- Archive SHA-256: `87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5`
+- macOS CPU advisory: `0.19286357743677346`
+- GHA Linux x86_64 `[contest-CPU]`: `0.19284757743677347`
+- GHA workflow run: `25588422622`
+- Fork PR: `#3`
+- Review packet:
+  `.omx/research/artifacts/a1_latentalign_importpathfix_result_review_20260509_codex.json`
+
+The GHA CPU helper rounded-score bug is fixed: `canonical_score` now comes from
+component recomputation, while the rounded report display (`0.19`) is stored as
+`reported_final_score_display_rounded`.
 
 ## 2026-05-08 (evening) — Recursive hardening + Phase A ablation pass
 
@@ -76,7 +91,7 @@ rule citation (commit `648b498c`).
 | Lane | Archive bytes | Δ vs brotli (178,144 B) | Verdict |
 |---|---:|---:|---|
 | A0 mdl_baseline | — | — | byte_proxy_only_deterministic |
-| A1 score_gradient | 205,879 | +27,735 | first Modal config retired on macOS CPU advisory; random-latent training/deploy mismatch fixed; family reactivation requires constrained archive-latent fine-tune |
+| A1 score_gradient | 178,262 | +118 | latent-aligned constrained refire is `[contest-CPU]` positive at 0.192847577437; contest-CUDA pending because Modal DALI/NVDEC preflight failed |
 | A2 xavier_l2 | 156,344 | -21,800 | FALSIFIED proxy (-3,635 B regression vs uniform) |
 | A3-alt mallat_wavelet | 156,344 | -21,800 | incremental_improvement_insufficient (Mallat > Xavier in 2/4 cells; both fail uniform) |
 | A4 charm_hyperprior real PR101 probe | 206,745 | +28,601 | hand-parametric ChARM/range-coder configs retired; learned co-design remains live |
@@ -110,17 +125,15 @@ reactivation criteria documented per memo.
 - A3-alt Mallat: see Pareto table above.
 
 **Phase A subagents (LANDED):**
-- A1 score-gradient PR101 fine-tune — Modal training/build completed and
-  produced a `205,879 B` archive
-  (`cb9de2b71133929b0c2df00b0e511b9c306939d62438ffb348e947aef719e185`),
-  but exact CUDA eval was skipped by DALI/NVDEC preflight. Local macOS CPU
-  advisory eval after the portable-python runtime fix scored **3.721654**
-  (`pose=0.178464`, `seg=0.022487`). Treat this config as retired, not the
-  family; reactivation needs a constrained fine-tune that preserves the PR101
-  reconstruction basin before any exact CUDA/contest-CPU spend. The root
-  training/deploy mismatch has been fixed: non-smoke A1 uses archive-derived
-  PR101 latent rows, and `load_pr101_archive_latents()` is verified against the
-  public PR101 runtime parser.
+- A1 score-gradient PR101 fine-tune — the first Modal config produced a
+  `205,879 B` archive and scored **3.721654** on macOS CPU advisory; that
+  measured config is retired. The root cause was a training/deploy mismatch:
+  non-smoke A1 had used random latent rows while the runtime preserves PR101's
+  `latent_blob + sidecar_blob`. After fixing that plus the Modal worker import
+  path, the constrained latent-aligned refire produced a `178,262 B` archive
+  and scored **0.192847577437** on GHA Linux x86_64 `[contest-CPU]`
+  (`pose=0.00003286`, `seg=0.00056023`). This is public-axis evidence only;
+  contest-CUDA is still pending because Modal DALI/NVDEC preflight failed.
 - A4-alt Filler STC pose codec (`75c99b84`) — 559+ LOC + 27 tests pass.
   Δ vs PD-V2 on smooth-walk fixture: **−400 B (−9.17%)**; idle-dominant
   +52% (expected — AC exploits qint=0 dominance). Verdict
