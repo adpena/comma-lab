@@ -12850,13 +12850,16 @@ def check_profile_keys_have_resolvers(
     # producing false positives on widely-used keys.
     resolver_search_dirs = ["src/tac", "experiments"]
     resolved: set[str] = set()
-    key_re = _profile_key_pattern(keys)
+    unresolved = set(keys)
+    key_re = _profile_key_pattern(unresolved)
     source_index = _current_source_index(root)
     if source_index is not None:
         py_paths = source_index.files(resolver_search_dirs, pattern="*.py")
     else:
         py_paths = tuple(_iter_python_files(root, resolver_search_dirs))
     for p in py_paths:
+        if not unresolved:
+            break
         try:
             if source_index is not None:
                 text = source_index.read_text(p)
@@ -12869,12 +12872,16 @@ def check_profile_keys_have_resolvers(
         resolved.update(
             _scan_for_resolver_keys(
                 text,
-                candidate_keys=keys,
+                candidate_keys=unresolved,
                 candidate_key_re=key_re,
             )
         )
+        unresolved = keys - resolved
+        if not unresolved:
+            break
+        key_re = _profile_key_pattern(unresolved)
     resolver_files = ["src/tac/", "experiments/"]  # for error message
-    missing = sorted(keys - resolved)
+    missing = sorted(unresolved)
     for k in missing:
         violations.append(
             f"profile key {k!r} has no resolver in any of "
