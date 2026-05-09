@@ -163,6 +163,22 @@ candidate.
 Ledger:
 `.omx/research/a5_trust_q7_all_macos_advisory_negative_20260509_codex.md`.
 
+## 2026-05-09 (night) - A5 mixed q6/q7 dominance screen
+
+No eval was dispatched. Mixed `q6/q7` post-hoc A5 schedules were screened in
+`/tmp/pact_a5_q6q7_screen_20260509` for score/seg/pose marginal sources and
+low fractions `0.05` through `0.30`. The best byte row was `177,298 B`, only
+`630 B` below q7-all, worth about `0.00042` score points before distortion.
+
+Since q7-all is already about `0.00979` worse than the A1 Linux CPU anchor and
+adding q6 can only increase post-hoc distortion, this geometry is dominated.
+Retire post-hoc scalar q6/q7 A5 schedules unless the next implementation
+changes the local distortion geometry through SegNet-boundary allocation or
+training-time q-bit noise.
+
+Ledger:
+`.omx/research/a5_q6q7_mixed_trust_screen_dominance_negative_20260509_codex.md`.
+
 ## 2026-05-09 (night) - Delta-epsilon-zeta Phase 1 local scaffold evidence
 
 `tools/build_deltaepszeta_training_targets.py` is now hardened for normal zsh
