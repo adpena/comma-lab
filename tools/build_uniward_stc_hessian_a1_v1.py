@@ -3,8 +3,8 @@
 Hessian-aware bit allocation on the EXISTING A1 latent-aligned archive.
 
 NO retraining. Operates purely on the byte-domain decoder state_dict extracted
-from A1's archive, applies a per-tensor Hessian-weighted lossy coarsening, and
-re-packs via the canonical PR101 split-Brotli codec.
+from A1's archive, applies a per-tensor sensitivity-weighted lossy coarsening,
+and re-packs via the canonical PR101 split-Brotli codec.
 
 Mathematical framework
 ----------------------
@@ -24,12 +24,37 @@ codec; it emits the PR101 split-Brotli wire format after sensitivity-weighted
 coarsening. Any future explicit STC/rANS/FSE stage must prove a changed payload
 and byte win against this baseline before promotion.
 
-Fisher proxy
-------------
-True Fisher = E[(∂L/∂θ)²]. Without retraining, we use the per-tensor diagonal
-Hessian-trace proxy `mean(θ²) * scale²` (parameter-magnitude squared, an
-empirical Bayes prior on saliency). This is the same proxy used by
-`tools/theoretical_floor_solver_v2.py::a1_floor_gap_decomposition`.
+Saliency sources (--saliency-source)
+------------------------------------
+* ``mean_theta_squared`` (default; backward-compatible v1 behavior):
+  ``proxy[name] = mean(theta^2)`` — empirical-Bayes saliency. CORRECT only
+  when the parameter posterior is approximately Gaussian-isotropic; FALSE
+  on score-gradient-trained substrates like A1, where the proxy is
+  anti-correlated with true saliency. Track 4 v1 falsified this on
+  blocks4_7bit (177,903 B → +0.0058 [contest-CPU GHA]).
+  Memory: ``feedback_track_4_uniward_stc_hessian_a1_landed_20260509.md``.
+
+* ``score_gradient`` (Track 4 reactivation Option 1; recommended for A1):
+  ``proxy[name] = E_{(x,y)} [|d(L_score) / d(theta)|^2]`` — true Fisher
+  diagonal computed via autograd through SegNet+PoseNet (KL-distill SegNet
+  surrogate + MSE PoseNet, per the canonical differentiable-score path in
+  ``experiments/train_score_gradient_pr101_finetune.py``). Implementation
+  lives in ``src/tac/score_gradient_param_saliency.py``. Computation cost is
+  one CPU forward+backward over N pairs (~25 min on M5 Max for 600 pairs).
+
+Sanity gate (--allow-cliff-zone)
+--------------------------------
+By default the builder REFUSES to emit any candidate where
+``bytes_saved < 1 KB`` and ``rms > 1e-3``, with a secondary
+``bytes_saved_kb / rms`` ratio floor. This is calibrated empirically from the
+v1 falsification: ``blocks4_7bit`` saved only 359 B at rms ≈ 0.184% and lost
++0.0058 [contest-CPU GHA]. The threshold is conservative — anything inside it
+is high risk of catastrophic regression. ``--allow-cliff-zone`` overrides with
+a runtime banner naming the operator. Memory:
+``feedback_three_lossy_anchors_show_rel_err_squared_objective_falsified_20260508.md``
+(score-naive cliff at rms≥0.04) +
+``feedback_track_4_uniward_stc_hessian_a1_landed_20260509.md`` (score-aware
+cliff at rms≈3.5e-4 — orders of magnitude sharper).
 """
 from __future__ import annotations
 
@@ -116,6 +141,81 @@ class BuildResult:
     council_floor: float
     a1_baseline_cpu: float
     council_predicted_band: tuple[float, float]
+    saliency_source: str
+    cliff_zone_ratio: float
+    cliff_zone_threshold_kb: float
+    cliff_zone_blocked: bool
+    cliff_zone_override_active: bool
+
+
+# Default cliff-zone calibration:
+#   * MIN_BYTES_SAVED_KB: minimum bytes-saved (in KB) below which the
+#     candidate's predicted upside is not worth the substrate-perturbation
+#     risk. v1 ``blocks4_7bit`` saved 0.350 KB ≪ 1.0 KB → cliff.
+#   * MAX_SAFE_RMS_DISTORTION: rms distortion above which the
+#     score-aware substrate (A1) is empirically known to collapse.
+#     1e-3 calibrates to "blocks4_7bit lost +0.0058 at rms ≈ 1.84e-3".
+#   * RATIO_FALLBACK_THRESHOLD: a secondary "bytes-per-rms" cutoff for
+#     diagnostic/external operators. Ratio is reported even when not the
+#     decisive gate.
+#
+# A candidate is in the cliff zone iff
+#     bytes_saved < MIN_BYTES_SAVED_KB * 1024 AND rms_distortion > MAX_SAFE_RMS_DISTORTION
+# (the AND form matches the empirical falsification of v1 blocks4_7bit:
+# 359 B < 1024 B = 1 KB AND rms 1.84e-3 > 1e-3 → IN cliff zone).
+#
+# The ratio is a secondary guard only after RMS crosses the same danger
+# floor; tiny near-lossless probes are reported but not blocked by ratio alone.
+MIN_BYTES_SAVED_KB_DEFAULT = 1.0  # < 1 KB savings is "marginal" per v1 anchor
+MAX_SAFE_RMS_DISTORTION_DEFAULT = 1e-3  # > 1e-3 is "score-aware substrate cliff"
+CLIFF_ZONE_THRESHOLD_KB_PER_RMS_DEFAULT = 1000.0  # diagnostic secondary gate
+# Backward-compatible name for pre-unit-correction callers and tests.
+CLIFF_ZONE_THRESHOLD_KB_RMS_SQ_DEFAULT = CLIFF_ZONE_THRESHOLD_KB_PER_RMS_DEFAULT
+
+
+def evaluate_cliff_zone(
+    *,
+    bytes_saved: int,
+    rms_distortion: float,
+    threshold_kb_per_rms: float = CLIFF_ZONE_THRESHOLD_KB_PER_RMS_DEFAULT,
+    min_bytes_saved_kb: float = MIN_BYTES_SAVED_KB_DEFAULT,
+    max_safe_rms_distortion: float = MAX_SAFE_RMS_DISTORTION_DEFAULT,
+    eps: float = 1e-12,
+) -> tuple[float, bool]:
+    """Return (ratio_kb_per_rms, in_cliff_zone).
+
+    ``ratio = bytes_saved / 1024 / max(rms, eps)`` — units are KB per unit
+    RMS distortion. Larger = more bytes saved per unit distortion, safer.
+    Smaller = high-risk regression class.
+
+    Decision rule (matches v1 blocks4_7bit empirical anchor):
+
+    PRIMARY (AND form — empirical danger zone):
+        in_cliff = (bytes_saved < min_bytes_saved_kb * 1024) AND
+                   (rms_distortion > max_safe_rms_distortion)
+
+    SECONDARY (ratio floor — fires only when rms is past the danger floor;
+    avoids false positives at sub-1e-3 rms where score impact is negligible):
+        in_cliff = (rms_distortion > max_safe_rms_distortion) AND
+                   (ratio_kb_per_rms < threshold_kb_per_rms)
+
+    If EITHER primary OR secondary fires, the candidate is in the cliff zone.
+    Candidates that GAIN bytes are not in the savings cliff zone.
+    """
+    if bytes_saved <= 0:
+        return float("inf"), False
+    rms = max(abs(float(rms_distortion)), eps)
+    ratio_kb_per_rms = (float(bytes_saved) / 1024.0) / rms
+    rms_past_floor = float(rms_distortion) > float(max_safe_rms_distortion)
+    primary_in_cliff = (
+        float(bytes_saved) < float(min_bytes_saved_kb) * 1024.0
+        and rms_past_floor
+    )
+    secondary_in_cliff = (
+        rms_past_floor
+        and ratio_kb_per_rms < float(threshold_kb_per_rms)
+    )
+    return ratio_kb_per_rms, bool(primary_in_cliff or secondary_in_cliff)
 
 
 def _read_a1_inner_blob(archive: Path) -> bytes:
@@ -150,12 +250,56 @@ def compute_fisher_proxy(state_dict: dict[str, torch.Tensor]) -> dict[str, float
     a1_floor_gap_decomposition` uses. Without backprop access, mean(θ²) is the
     canonical no-data approximation to E[(∂L/∂θ)²] when score-gradient covariance
     is unknown (van Trees, "Detection, Estimation, and Modulation Theory" §2.4).
+
+    EMPIRICAL FALSIFICATION: this proxy is anti-correlated with true score
+    saliency on A1's score-gradient-trained substrate (memory
+    ``feedback_track_4_uniward_stc_hessian_a1_landed_20260509.md``). Use
+    ``--saliency-source score_gradient`` instead for A1-class artifacts.
     """
     proxy: dict[str, float] = {}
     for name, t in state_dict.items():
         t_f = t.detach().float()
         proxy[name] = float((t_f * t_f).mean().item())
     return proxy
+
+
+def compute_fisher_proxy_via_score_gradient(
+    state_dict: dict[str, torch.Tensor],
+    *,
+    repo_root: Path,
+    latents: torch.Tensor,
+    device: str = "cpu",
+    n_pairs: int | None = None,
+    forward_batch_size: int = 8,
+    saliency_batch_size: int = 4,
+    progress: bool = False,
+) -> dict[str, float]:
+    """Per-tensor true Fisher diagonal via autograd.
+
+    Wrapper around ``tac.score_gradient_param_saliency.build_score_gradient_saliency_for_a1_archive``.
+    Returns one positive scalar per state-dict tensor: the per-tensor mean
+    of squared parameter gradients accumulated over ``n_pairs`` decoder
+    forward+backward passes through SegNet+PoseNet.
+
+    Tag: the saliency ranking is a per-tensor priority heuristic
+    (``[saliency-prior]``); the downstream archive byte-anchor is independent
+    and gets its own ``[contest-CPU]`` / ``[contest-CUDA]`` tag from the
+    actual auth eval.
+    """
+    from tac.score_gradient_param_saliency import (
+        build_score_gradient_saliency_for_a1_archive,
+    )
+
+    return build_score_gradient_saliency_for_a1_archive(
+        decoder_state_dict=state_dict,
+        latents=latents,
+        repo_root=repo_root,
+        device=device,
+        n_pairs=n_pairs,
+        forward_batch_size=forward_batch_size,
+        saliency_batch_size=saliency_batch_size,
+        progress=progress,
+    )
 
 
 def coarsen_tensor_to_bits(tensor: torch.Tensor, bits: int) -> torch.Tensor:
@@ -292,6 +436,16 @@ def build(
     manual_bit_overrides: dict[str, int] | None = None,
     brotli_quality: int = 11,
     require_sha: bool = True,
+    saliency_source: str = "mean_theta_squared",
+    saliency_device: str = "cpu",
+    saliency_n_pairs: int | None = None,
+    saliency_forward_batch_size: int = 8,
+    saliency_batch_size: int = 4,
+    saliency_progress: bool = False,
+    saliency_override: dict[str, float] | None = None,
+    cliff_zone_threshold_kb_rms_sq: float = CLIFF_ZONE_THRESHOLD_KB_RMS_SQ_DEFAULT,
+    allow_cliff_zone: bool = False,
+    cliff_zone_override_operator: str | None = None,
 ) -> BuildResult:
     """Construct a Track 4 refined archive from A1's latent-aligned A1 archive."""
     src_bytes = src_archive.read_bytes()
@@ -311,7 +465,45 @@ def build(
 
     # Decode A1 decoder state_dict (28 INT8-quantized tensors, dequantized to float32).
     sd_orig = decode_decoder_compact(decoder_blob)
-    fisher_proxy = compute_fisher_proxy(sd_orig)
+    if saliency_override is not None:
+        # Tests / sister callers may inject a precomputed saliency dict; this
+        # avoids the 25-min CPU autograd pass when the caller already has a
+        # ranking they trust.
+        missing = sorted(set(sd_orig) - set(saliency_override))
+        extra = sorted(set(saliency_override) - set(sd_orig))
+        if missing or extra:
+            raise SystemExit(
+                "FATAL: saliency_override must cover EXACTLY the decoder "
+                f"state_dict keys; missing={missing!r}; extra={extra!r}"
+            )
+        fisher_proxy = {k: float(v) for k, v in saliency_override.items()}
+    elif saliency_source == "mean_theta_squared":
+        fisher_proxy = compute_fisher_proxy(sd_orig)
+    elif saliency_source == "score_gradient":
+        # WEIGHT_SALIENCY_OK_ON_SCORE_AWARE: this is the score-gradient branch itself
+        # Decode latents from the A1 archive so we can compute gradients along
+        # the same trajectories the decoder will produce at inflate time.
+        from tac.pr101_split_brotli_codec import (  # noqa: E501  WEIGHT_SALIENCY_OK_ON_SCORE_AWARE: imported for score-gradient branch
+            apply_latent_sidecar,
+            decode_latents_compact,
+        )
+
+        latents = apply_latent_sidecar(decode_latents_compact(latent_blob), sidecar_blob)
+        fisher_proxy = compute_fisher_proxy_via_score_gradient(
+            sd_orig,
+            repo_root=REPO_ROOT,
+            latents=latents,
+            device=saliency_device,
+            n_pairs=saliency_n_pairs,
+            forward_batch_size=saliency_forward_batch_size,
+            saliency_batch_size=saliency_batch_size,
+            progress=saliency_progress,
+        )
+    else:
+        raise SystemExit(
+            f"FATAL: unknown --saliency-source {saliency_source!r}; "
+            "expected one of {mean_theta_squared, score_gradient}"
+        )
     manual_bit_overrides = manual_bit_overrides or {}
     unknown_overrides = sorted(set(manual_bit_overrides) - set(sd_orig))
     if unknown_overrides:
@@ -430,6 +622,37 @@ def build(
     a1_cpu_baseline = 0.192847577437
     council_predicted_band = (0.173, 0.188)  # Track 4 (commit 9b44c2f6)
 
+    # Cliff-zone sanity gate (Track 4 reactivation Option 3).
+    bytes_saved = len(src_bytes) - new_bytes_total
+    cliff_ratio, in_cliff = evaluate_cliff_zone(
+        bytes_saved=bytes_saved,
+        rms_distortion=distortion_l1,
+        threshold_kb_per_rms=cliff_zone_threshold_kb_rms_sq,
+    )
+    cliff_zone_blocked = in_cliff and not allow_cliff_zone
+    if in_cliff and allow_cliff_zone:
+        operator = cliff_zone_override_operator or "<unspecified>"
+        sys.stderr.write(
+            "[track4][cliff-zone] OVERRIDE ACTIVE — operator="
+            + str(operator)
+            + f"; bytes_saved={bytes_saved} B; rms_l1={distortion_l1:.4e}; "
+            + f"ratio={cliff_ratio:.2f} KB/rms < threshold={cliff_zone_threshold_kb_rms_sq:.2f}. "
+            + "This candidate is in the catastrophic-regression cliff zone. "
+            + "Memory: feedback_track_4_uniward_stc_hessian_a1_landed_20260509.md\n"
+        )
+    elif cliff_zone_blocked:
+        raise SystemExit(
+            "FATAL: candidate is in the Track 4 cliff zone "
+            f"(bytes_saved={bytes_saved} B at rms_l1={distortion_l1:.4e}; "
+            f"ratio={cliff_ratio:.2f} KB/rms < threshold "
+            f"{cliff_zone_threshold_kb_rms_sq:.2f}).\n"
+            "  Track 4 v1's `blocks4_7bit` (177,903 B, ratio ≈ 191 KB/rms) "
+            "lost +0.0058 score on contest-CPU GHA.\n"
+            "  Override with --allow-cliff-zone --cliff-zone-override-operator "
+            "<your handle> to ship this candidate anyway.\n"
+            "  Memory: feedback_track_4_uniward_stc_hessian_a1_landed_20260509.md"
+        )
+
     return BuildResult(
         src_archive_bytes=len(src_bytes),
         src_archive_sha256=src_sha,
@@ -456,6 +679,11 @@ def build(
         council_floor=council_floor,
         a1_baseline_cpu=a1_cpu_baseline,
         council_predicted_band=council_predicted_band,
+        saliency_source=saliency_source,
+        cliff_zone_ratio=float(cliff_ratio if math.isfinite(cliff_ratio) else -1.0),
+        cliff_zone_threshold_kb=float(cliff_zone_threshold_kb_rms_sq),
+        cliff_zone_blocked=cliff_zone_blocked,
+        cliff_zone_override_active=in_cliff and allow_cliff_zone,
     )
 
 
@@ -502,7 +730,16 @@ def write_manifest(out_dir: Path, result: BuildResult, *, params: dict) -> Path:
             "manual_bit_overrides" if params.get("manual_bit_overrides") else "target_decoder_bytes"
         ),
         "bit_alloc": [asdict(r) for r in result.bit_alloc],
-        "evidence_grade": "[byte-anchor; Fisher-weighted lossy coarsening; smoke-roundtrip verified]",
+        "evidence_grade": (
+            "[byte-anchor; "
+            + result.saliency_source
+            + "-weighted lossy coarsening; smoke-roundtrip verified]"
+        ),
+        "saliency_source": result.saliency_source,
+        "cliff_zone_ratio_kb_per_rms": result.cliff_zone_ratio,
+        "cliff_zone_threshold_kb_per_rms": result.cliff_zone_threshold_kb,
+        "cliff_zone_blocked": result.cliff_zone_blocked,
+        "cliff_zone_override_active": result.cliff_zone_override_active,
         "score_claim": False,  # advisory only until contest-CPU/CUDA eval lands
         "score_claim_valid": False,
         "promotion_eligible": False,
@@ -510,6 +747,7 @@ def write_manifest(out_dir: Path, result: BuildResult, *, params: dict) -> Path:
             result.runtime_packet_complete
             and result.score_affecting_payload_changed
             and result.codec_roundtrip_max_rel_err < 0.01
+            and not result.cliff_zone_blocked
         ),
         "dispatch_blockers": [
             blocker
@@ -517,6 +755,7 @@ def write_manifest(out_dir: Path, result: BuildResult, *, params: dict) -> Path:
                 ("runtime_packet_missing_submission_dir", not result.runtime_packet_complete),
                 ("no_score_affecting_payload_change", not result.score_affecting_payload_changed),
                 ("codec_roundtrip_max_rel_err_above_0.01", result.codec_roundtrip_max_rel_err >= 0.01),
+                ("cliff_zone_blocked", result.cliff_zone_blocked),
                 ("contest_cpu_eval_pending", True),
                 ("contest_cuda_eval_pending", True),
             )
@@ -561,14 +800,143 @@ def main(argv: list[str] | None = None) -> None:
         action="store_false",
         help="Skip A1 archive SHA verification (NOT recommended)",
     )
+    p.add_argument(
+        "--saliency-source",
+        choices=("mean_theta_squared", "score_gradient"),
+        default="mean_theta_squared",
+        help=(
+            "How to compute per-tensor saliency for bit allocation. "
+            "`mean_theta_squared` (default) is the v1 empirical-Bayes proxy; "
+            "`score_gradient` is the autograd-derived true Fisher diagonal "
+            "(Track 4 reactivation Option 1, recommended for A1 substrate)."
+        ),
+    )
+    p.add_argument(
+        "--saliency-device",
+        default="cpu",
+        help=(
+            "Device for the score-gradient saliency pass. Default cpu (M5 Max "
+            "~25 min for 600 pairs). Use `mps` for ~5-10x faster ranking-only "
+            "signal on Apple Silicon (saliency RANKING is invariant to small "
+            "device-specific drift, so MPS-tagged ranking can drive a CPU/CUDA "
+            "byte-anchor + auth eval). NEVER use the saliency device's score "
+            "to claim contest-CPU or contest-CUDA truth."
+        ),
+    )
+    p.add_argument(
+        "--saliency-n-pairs",
+        type=int,
+        default=None,
+        help=(
+            "How many (frame, frame) pairs to use for the score-gradient "
+            "saliency. Default = min(latents.shape[0], 600). Smaller = faster, "
+            "higher Monte-Carlo variance."
+        ),
+    )
+    p.add_argument(
+        "--saliency-forward-batch-size",
+        type=int,
+        default=8,
+        help="Decoder forward chunk size during the score-gradient saliency pass.",
+    )
+    p.add_argument(
+        "--saliency-batch-size",
+        type=int,
+        default=4,
+        help=(
+            "Pairs-per-backward-pass during the score-gradient saliency pass. "
+            "Smaller = lower memory, slightly higher variance on per-tensor "
+            "gradient mean."
+        ),
+    )
+    p.add_argument(
+        "--saliency-progress",
+        action="store_true",
+        help="Print a per-batch progress line during the score-gradient saliency pass.",
+    )
+    p.add_argument(
+        "--saliency-load-from",
+        type=Path,
+        default=None,
+        help=(
+            "Path to a JSON dict {tensor_name: float} that overrides the "
+            "saliency computation. Useful for sweeping multiple "
+            "--target-bytes candidates against the SAME score-gradient "
+            "saliency without re-running the autograd pass each time."
+        ),
+    )
+    p.add_argument(
+        "--cliff-zone-threshold-kb-per-rms",
+        "--cliff-zone-threshold-kb-rms-sq",
+        dest="cliff_zone_threshold_kb_rms_sq",
+        type=float,
+        default=CLIFF_ZONE_THRESHOLD_KB_RMS_SQ_DEFAULT,
+        help=(
+            "Threshold (KB/rms) below which a candidate is in the "
+            "Track 4 cliff zone and refused unless --allow-cliff-zone is "
+            "passed. Default 1000 KB/rms calibrated to refuse the v1 "
+            "blocks4_7bit candidate (ratio ≈ 191) that lost +0.0058 score. "
+            "The flag name is retained for backward compatibility after the "
+            "unit correction."
+        ),
+    )
+    p.add_argument(
+        "--allow-cliff-zone",
+        action="store_true",
+        help=(
+            "Override the cliff-zone gate. Required for any candidate inside "
+            "the calibrated catastrophic-regression band; prints a runtime "
+            "banner naming the operator. NOT recommended outside explicit "
+            "trust-region probes."
+        ),
+    )
+    p.add_argument(
+        "--cliff-zone-override-operator",
+        default=None,
+        help=(
+            "Operator handle printed in the cliff-zone override banner. "
+            "Required when --allow-cliff-zone is passed."
+        ),
+    )
     args = p.parse_args(argv)
 
     if not args.src_archive.is_file():
         raise SystemExit(f"FATAL: --src-archive not found: {args.src_archive}")
+    if args.allow_cliff_zone and not args.cliff_zone_override_operator:
+        raise SystemExit(
+            "FATAL: --allow-cliff-zone requires "
+            "--cliff-zone-override-operator <handle> for audit trail."
+        )
     try:
         manual_bit_overrides = parse_manual_bit_overrides(args.set_bits)
     except ValueError as exc:
         raise SystemExit(f"FATAL: {exc}") from exc
+
+    saliency_override = None
+    if args.saliency_load_from is not None:
+        if not args.saliency_load_from.is_file():
+            raise SystemExit(
+                f"FATAL: --saliency-load-from path does not exist: "
+                f"{args.saliency_load_from}"
+            )
+        try:
+            saliency_override = json.loads(args.saliency_load_from.read_text())
+        except json.JSONDecodeError as exc:
+            raise SystemExit(
+                f"FATAL: --saliency-load-from is not valid JSON: {exc}"
+            ) from exc
+        if not isinstance(saliency_override, dict):
+            raise SystemExit(
+                "FATAL: --saliency-load-from must contain a JSON object "
+                "{tensor_name: float}"
+            )
+        # cast all values to float defensively
+        try:
+            saliency_override = {str(k): float(v) for k, v in saliency_override.items()}
+        except (TypeError, ValueError) as exc:
+            raise SystemExit(
+                f"FATAL: --saliency-load-from values must be numeric: {exc}"
+            ) from exc
 
     result = build(
         src_archive=args.src_archive,
@@ -580,6 +948,16 @@ def main(argv: list[str] | None = None) -> None:
         manual_bit_overrides=manual_bit_overrides,
         brotli_quality=args.brotli_quality,
         require_sha=args.require_sha,
+        saliency_source=args.saliency_source,
+        saliency_device=args.saliency_device,
+        saliency_n_pairs=args.saliency_n_pairs,
+        saliency_forward_batch_size=args.saliency_forward_batch_size,
+        saliency_batch_size=args.saliency_batch_size,
+        saliency_progress=args.saliency_progress,
+        saliency_override=saliency_override,
+        cliff_zone_threshold_kb_rms_sq=args.cliff_zone_threshold_kb_rms_sq,
+        allow_cliff_zone=args.allow_cliff_zone,
+        cliff_zone_override_operator=args.cliff_zone_override_operator,
     )
     params = {
         "target_bytes": args.target_bytes,
@@ -589,6 +967,14 @@ def main(argv: list[str] | None = None) -> None:
         "require_sha": args.require_sha,
         "source_submission_dir": str(args.source_submission_dir),
         "manual_bit_overrides": manual_bit_overrides,
+        "saliency_source": args.saliency_source,
+        "saliency_device": args.saliency_device,
+        "saliency_n_pairs": args.saliency_n_pairs,
+        "saliency_forward_batch_size": args.saliency_forward_batch_size,
+        "saliency_batch_size": args.saliency_batch_size,
+        "cliff_zone_threshold_kb_per_rms": args.cliff_zone_threshold_kb_rms_sq,
+        "allow_cliff_zone": args.allow_cliff_zone,
+        "cliff_zone_override_operator": args.cliff_zone_override_operator,
     }
     manifest_path = write_manifest(args.out_dir, result, params=params)
     print(f"[track4] wrote {manifest_path}")
