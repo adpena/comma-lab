@@ -63,8 +63,10 @@ import json
 import shutil
 import stat
 import struct
+import subprocess
 import sys
 import time
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -83,6 +85,8 @@ A1_EXPECTED_ARCHIVE_SHA = (
 A1_EXPECTED_ARCHIVE_BYTES = 178262
 SIDECAR_LANE_ID = "lane_a1_per_pair_latent_sidecar_resampled"
 LOCAL_RUNTIME_CUSTODY_SCHEMA = "a1_sidecar_local_runtime_custody_v1"
+MEMBER_SECTION_PROOF_SCHEMA = "a1_sidecar_member_section_proof_v1"
+RUNTIME_SMOKE_SCHEMA = "a1_sidecar_runtime_smoke_v1"
 REQUIRED_RUNTIME_FILES = ("inflate.py", "inflate.sh", "src/codec.py", "src/model.py")
 RUNTIME_TREE_EXCLUDED_FILES = frozenset({"archive.zip"})
 RUNTIME_TREE_EXCLUDED_PARTS = frozenset({"__pycache__"})
@@ -95,6 +99,7 @@ SIDECAR_BASE = 1 + 28 * len(SIDECAR_DELTAS_X100)  # 449
 
 N_PAIRS = 600
 LATENT_DIM = 28
+A1_LATENT_BLOB_LEN = 15_387
 EVAL_H, EVAL_W = 384, 512
 CAMERA_H, CAMERA_W = 874, 1164
 
@@ -176,6 +181,86 @@ def _runtime_tree_sha256(files: list[dict[str, Any]]) -> str:
         for row in sorted(files, key=lambda item: str(item["relative_path"]))
     ]
     return _canonical_json_sha256(basis)
+
+
+def _bytes_record(name: str, payload: bytes, *, offset: int | None = None) -> dict[str, Any]:
+    record: dict[str, Any] = {
+        "name": name,
+        "bytes": len(payload),
+        "sha256": hashlib.sha256(payload).hexdigest(),
+    }
+    if offset is not None:
+        record["offset"] = offset
+    return record
+
+
+def collect_member_section_proof(archive_path: Path) -> dict[str, Any]:
+    """Collect ZIP-member and inner-section proof for an A1 sidecar archive."""
+
+    if not archive_path.is_file():
+        raise FileNotFoundError(f"archive missing: {archive_path}")
+    archive_sha = sha256_of(archive_path)
+    with zipfile.ZipFile(archive_path, "r") as zf:
+        infos = zf.infolist()
+        if len(infos) != 1:
+            raise ValueError(f"A1 sidecar archive must have one member, got {len(infos)}")
+        info = infos[0]
+        if info.filename != "x":
+            raise ValueError(f"A1 sidecar archive member must be x, got {info.filename!r}")
+        inner = zf.read(info.filename)
+
+    if len(inner) < 4:
+        raise ValueError("A1 sidecar inner member too short for decoder section header")
+    section_total = struct.unpack_from("<I", inner, 0)[0]
+    latent_start = section_total
+    latent_end = latent_start + A1_LATENT_BLOB_LEN
+    if section_total < 4 or section_total > len(inner):
+        raise ValueError(f"bad decoder section total: {section_total}")
+    if latent_end > len(inner):
+        raise ValueError(
+            f"bad latent section: latent_end={latent_end} inner_bytes={len(inner)}"
+        )
+
+    decoder_blob = inner[4:section_total]
+    latent_blob = inner[latent_start:latent_end]
+    sidecar_blob = inner[latent_end:]
+    if not decoder_blob:
+        raise ValueError("empty decoder blob in A1 sidecar archive")
+    if len(latent_blob) != A1_LATENT_BLOB_LEN:
+        raise ValueError(
+            f"latent blob length mismatch: {len(latent_blob)} != {A1_LATENT_BLOB_LEN}"
+        )
+
+    return {
+        "schema_version": MEMBER_SECTION_PROOF_SCHEMA,
+        "archive": {
+            "path": manifest_path(archive_path),
+            "bytes": archive_path.stat().st_size,
+            "sha256": archive_sha,
+        },
+        "member_count": len(infos),
+        "single_member_name": info.filename,
+        "members": [
+            {
+                "filename": info.filename,
+                "file_size": info.file_size,
+                "compress_size": info.compress_size,
+                "compress_type": info.compress_type,
+                "crc": f"{info.CRC:08x}",
+                "header_offset": info.header_offset,
+                "date_time": list(info.date_time),
+                "sha256": hashlib.sha256(inner).hexdigest(),
+            }
+        ],
+        "inner_sections": {
+            "total_inner_bytes": len(inner),
+            "total_inner_sha256": hashlib.sha256(inner).hexdigest(),
+            "decoder_section_total": section_total,
+            "decoder_blob": _bytes_record("decoder_blob", decoder_blob, offset=4),
+            "latent_blob": _bytes_record("latent_blob", latent_blob, offset=latent_start),
+            "sidecar_blob": _bytes_record("sidecar_blob", sidecar_blob, offset=latent_end),
+        },
+    }
 
 
 def collect_local_runtime_custody(
@@ -367,6 +452,156 @@ def _runtime_smoke_evidence_blockers(
     return blockers
 
 
+def _member_section_proof_blockers(
+    manifest: dict[str, Any],
+    *,
+    archive_path: Path,
+) -> list[str]:
+    proof = manifest.get("member_section_proof")
+    if not isinstance(proof, dict):
+        return ["member_section_proof_missing"]
+    blockers: list[str] = []
+    if proof.get("schema_version") != MEMBER_SECTION_PROOF_SCHEMA:
+        blockers.append("member_section_proof_schema_mismatch")
+    try:
+        actual = collect_member_section_proof(archive_path)
+    except (FileNotFoundError, ValueError, zipfile.BadZipFile) as exc:
+        return [f"member_section_proof_unreadable:{exc}"]
+
+    if proof.get("archive") != actual["archive"]:
+        blockers.append("member_section_proof_archive_mismatch")
+    if proof.get("member_count") != 1:
+        blockers.append("member_section_proof_member_count_mismatch")
+    if proof.get("single_member_name") != "x":
+        blockers.append("member_section_proof_single_member_name_mismatch")
+    if proof.get("members") != actual["members"]:
+        blockers.append("member_section_proof_members_mismatch")
+    if proof.get("inner_sections") != actual["inner_sections"]:
+        blockers.append("member_section_proof_inner_sections_mismatch")
+
+    no_op = manifest.get("no_op_detector")
+    inner_sections = proof.get("inner_sections")
+    if isinstance(no_op, dict) and isinstance(inner_sections, dict):
+        sidecar_blob = inner_sections.get("sidecar_blob")
+        if isinstance(sidecar_blob, dict):
+            if sidecar_blob.get("sha256") != no_op.get("new_inner_sidecar_sha256"):
+                blockers.append("member_section_proof_sidecar_sha256_mismatch")
+            if (
+                "new_sidecar_bytes" in manifest
+                and sidecar_blob.get("bytes") != manifest.get("new_sidecar_bytes")
+            ):
+                blockers.append("member_section_proof_sidecar_bytes_mismatch")
+    return blockers
+
+
+def run_local_runtime_smoke(
+    submission_dir: Path,
+    *,
+    archive_path: Path,
+    smoke_dir: Path,
+    smoke_pairs: int = 1,
+    runtime_tree_sha256: str,
+) -> dict[str, Any]:
+    """Run a bounded local runtime smoke without emitting a full 600-pair raw.
+
+    The smoke imports the candidate ``inflate.py` and overrides ``N_PAIRS`` in
+    that process only. Exact eval still uses the unmodified default runtime.
+    """
+
+    if smoke_pairs < 1:
+        raise ValueError("smoke_pairs must be >= 1")
+    smoke_dir.mkdir(parents=True, exist_ok=True)
+    data_dir = smoke_dir / "data"
+    out_dir = smoke_dir / "out"
+    data_dir.mkdir(exist_ok=True)
+    out_dir.mkdir(exist_ok=True)
+    src_x = data_dir / "x"
+    raw_out = out_dir / "0.raw"
+    evidence_path = smoke_dir / "runtime_smoke_evidence.json"
+
+    with zipfile.ZipFile(archive_path, "r") as zf:
+        names = zf.namelist()
+        if names != ["x"]:
+            raise ValueError(f"runtime smoke expected single member ['x'], got {names}")
+        src_x.write_bytes(zf.read("x"))
+
+    runner = (
+        "import importlib.util, sys\n"
+        "from pathlib import Path\n"
+        "inflate_py = Path(sys.argv[1]).resolve()\n"
+        "src = sys.argv[2]\n"
+        "dst = sys.argv[3]\n"
+        "n_pairs = int(sys.argv[4])\n"
+        "spec = importlib.util.spec_from_file_location('a1_smoke_inflate', inflate_py)\n"
+        "assert spec is not None and spec.loader is not None\n"
+        "mod = importlib.util.module_from_spec(spec)\n"
+        "spec.loader.exec_module(mod)\n"
+        "mod.N_PAIRS = n_pairs\n"
+        "frames = mod.inflate(src, dst)\n"
+        "expected = n_pairs * 2\n"
+        "if frames != expected:\n"
+        "    raise SystemExit(f'expected {expected} frames, got {frames}')\n"
+    )
+    python_path = Path(sys.executable)
+    command = [
+        manifest_path(python_path),
+        "-c",
+        runner,
+        manifest_path(submission_dir / "inflate.py"),
+        manifest_path(src_x),
+        manifest_path(raw_out),
+        str(smoke_pairs),
+    ]
+    executed = [str(python_path), "-c", runner, str(submission_dir / "inflate.py"), str(src_x), str(raw_out), str(smoke_pairs)]
+    started = dt.datetime.now(dt.UTC)
+    proc = subprocess.run(
+        executed,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    completed = dt.datetime.now(dt.UTC)
+    output_digest = sha256_of(raw_out) if raw_out.is_file() else None
+    output_bytes = raw_out.stat().st_size if raw_out.is_file() else 0
+    expected_bytes = smoke_pairs * 2 * CAMERA_H * CAMERA_W * 3
+    exit_code = proc.returncode
+    blockers: list[str] = []
+    if exit_code != 0:
+        blockers.append("runtime_smoke_subprocess_failed")
+    if output_bytes != expected_bytes:
+        blockers.append("runtime_smoke_output_size_mismatch")
+        exit_code = exit_code or 1
+    evidence = {
+        "schema_version": RUNTIME_SMOKE_SCHEMA,
+        "command": command,
+        "exit_code": exit_code,
+        "stdout": proc.stdout[-4000:],
+        "stderr": proc.stderr[-4000:],
+        "started_at_utc": started.isoformat(),
+        "completed_at_utc": completed.isoformat(),
+        "elapsed_seconds": (completed - started).total_seconds(),
+        "smoke_pairs": smoke_pairs,
+        "expected_frames": smoke_pairs * 2,
+        "archive_sha256": sha256_of(archive_path),
+        "archive_bytes": archive_path.stat().st_size,
+        "runtime_tree_sha256": runtime_tree_sha256,
+        "input_member_path": manifest_path(src_x),
+        "output_raw_path": manifest_path(raw_out),
+        "output_bytes": output_bytes,
+        "expected_output_bytes": expected_bytes,
+        "output_digest_sha256": output_digest,
+        "blockers": blockers,
+        "contract": (
+            "imports candidate inflate.py and overrides N_PAIRS only in the "
+            "smoke process; exact eval uses inflate.sh with default full N_PAIRS"
+        ),
+    }
+    evidence_path.write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n")
+    evidence["evidence_path"] = manifest_path(evidence_path)
+    return evidence
+
+
 def load_upstream_yuv420_to_rgb():
     """Load the upstream CPU-eval RGB conversion helper without patching it."""
     import importlib.util
@@ -520,8 +755,11 @@ def search_per_pair_proxy_mse(
     pair_indices: list[int] | None = None,
     log_path: Path | None = None,
     candidate_batch_size: int = 1,
+    search_device: str = "cpu",
 ) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
     """Greedy per-pair single-dim search using pixel MSE (fast proxy)."""
+    import torch
+
     decoder_sd = components["decoder_sd"]
     latents_base = components["latents_pre_sidecar"].clone()
     eval_h, eval_w = components["eval_size"]
@@ -535,8 +773,17 @@ def search_per_pair_proxy_mse(
         base_channels=components["base_channels"],
         eval_size=(eval_h, eval_w),
     )
+    device = torch.device(search_device)
+    if device.type == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError("--search-device cuda requested but CUDA is not available")
+    if device.type == "mps" and (
+        not hasattr(torch.backends, "mps") or not torch.backends.mps.is_available()
+    ):
+        raise RuntimeError("--search-device mps requested but MPS is not available")
     decoder.load_state_dict(decoder_sd)
+    decoder.to(device)
     decoder.eval()
+    latents_base = latents_base.to(device)
 
     n_pairs = components["n_pairs"]
     pair_indices = pair_indices if pair_indices is not None else list(range(n_pairs))
@@ -599,6 +846,7 @@ def search_per_pair_proxy_mse(
         "n_pairs_perturbed_searched": n_perturbed_searched,
         "unsearched_pairs_preserve_old_sidecar": True,
         "candidate_batch_size": candidate_batch_size,
+        "search_device": device.type,
         "elapsed_seconds": elapsed,
     }
 
@@ -827,9 +1075,13 @@ def enforce_manifest_dispatch_readiness(
             archive_path=archive_path,
         ):
             block(reason)
+        for reason in _member_section_proof_blockers(manifest, archive_path=archive_path):
+            block(reason)
 
     if manifest.get("smoke_only") is True:
         block("smoke_only_not_exact_eval_ready")
+    if manifest.get("full_non_smoke_search") is not True:
+        block("non_full_sidecar_search_not_exact_eval_ready")
     runtime_tree = manifest.get("runtime_tree_sha256")
     if isinstance(runtime_tree, str):
         for reason in _runtime_smoke_evidence_blockers(
@@ -904,6 +1156,26 @@ def main() -> int:
             "preserves fastest measured scalar CPU path, larger values are experimental"
         ),
     )
+    p.add_argument(
+        "--search-device",
+        choices=["cpu", "mps", "cuda"],
+        default="cpu",
+        help=(
+            "device for proxy candidate generation only; default cpu. "
+            "mps/cuda proxy choices are not score evidence"
+        ),
+    )
+    p.add_argument(
+        "--runtime-smoke",
+        action="store_true",
+        help="run a bounded local inflate.py smoke and record output digest evidence",
+    )
+    p.add_argument(
+        "--runtime-smoke-pairs",
+        type=int,
+        default=1,
+        help="pair count for --runtime-smoke; default 1 to avoid full raw output",
+    )
     args = p.parse_args()
 
     timestamp = dt.datetime.now(dt.UTC).strftime("%Y%m%dT%H%M%SZ")
@@ -953,6 +1225,7 @@ def main() -> int:
             pair_indices=pair_indices,
             log_path=log_path,
             candidate_batch_size=args.candidate_batch_size,
+            search_device=args.search_device,
         )
     else:
         sys.stderr.write(
@@ -997,6 +1270,7 @@ def main() -> int:
         "build_timestamp_utc": dt.datetime.now(dt.UTC).isoformat(),
         "submission_name": f"a1_sidecar_resampled_{args.search_signal}_{timestamp}",
         "search_signal": args.search_signal,
+        "search_device": args.search_device,
         "search_meta": search_meta,
         "encode_format": args.encode_format,
         "old_archive_sha256": A1_EXPECTED_ARCHIVE_SHA,
@@ -1032,6 +1306,11 @@ def main() -> int:
             "after_eval": "[contest-CPU GHA Linux x86_64] iff GHA dispatch succeeds",
         },
         "smoke_only": args.smoke,
+        "full_non_smoke_search": (
+            (not args.smoke) and len(pair_indices) == int(components["n_pairs"])
+        ),
+        "requested_n_pairs": args.n_pairs,
+        "total_pairs": int(components["n_pairs"]),
         "runtime_smoke_checked": False,
         "n_pairs_searched": len(pair_indices),
         "n_pairs_perturbed": int((dims != 255).sum()),
@@ -1052,9 +1331,21 @@ def main() -> int:
         sub_dir,
         archive_path=new_archive_path,
     )
+    member_section_proof = collect_member_section_proof(new_archive_path)
     manifest["local_runtime_custody"] = local_runtime_custody
     manifest["runtime_manifest"] = local_runtime_custody
     manifest["runtime_tree_sha256"] = local_runtime_custody["runtime_tree_sha256"]
+    manifest["member_section_proof"] = member_section_proof
+    if args.runtime_smoke:
+        smoke_evidence = run_local_runtime_smoke(
+            sub_dir,
+            archive_path=new_archive_path,
+            smoke_dir=out_dir / "runtime_smoke",
+            smoke_pairs=args.runtime_smoke_pairs,
+            runtime_tree_sha256=local_runtime_custody["runtime_tree_sha256"],
+        )
+        manifest["runtime_smoke_checked"] = smoke_evidence.get("exit_code") == 0
+        manifest["runtime_smoke_evidence"] = smoke_evidence
     manifest = enforce_manifest_dispatch_readiness(
         manifest,
         archive_path=new_archive_path,

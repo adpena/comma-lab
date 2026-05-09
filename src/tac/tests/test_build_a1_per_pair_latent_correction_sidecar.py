@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import importlib.util
+import sys
+import struct
+import types
+import zipfile
 from pathlib import Path
 
 import numpy as np
@@ -69,7 +73,11 @@ def _write_runtime_fixture(tmp_path: Path) -> tuple[Path, Path]:
     src_dir = sub_dir / "src"
     src_dir.mkdir(parents=True)
     archive = sub_dir / "archive.zip"
-    archive.write_bytes(b"archive bytes")
+    inner = struct.pack("<I", 8) + b"abcd" + (b"\x00" * 15387) + b"sidecar"
+    zinfo = zipfile.ZipInfo(filename="x", date_time=(2024, 1, 1, 0, 0, 0))
+    zinfo.external_attr = 0o644 << 16
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr(zinfo, inner)
     (sub_dir / "inflate.py").write_text("print('inflate')\n")
     inflate_sh = sub_dir / "inflate.sh"
     inflate_sh.write_text("#!/bin/sh\npython inflate.py\n")
@@ -79,12 +87,32 @@ def _write_runtime_fixture(tmp_path: Path) -> tuple[Path, Path]:
     return sub_dir, archive
 
 
-def _changed_sidecar_no_op() -> dict[str, object]:
+def _changed_sidecar_no_op(new_sha: str | None = None) -> dict[str, object]:
     return {
         "old_inner_sidecar_sha256": "1" * 64,
-        "new_inner_sidecar_sha256": "2" * 64,
+        "new_inner_sidecar_sha256": new_sha or "2" * 64,
         "sidecar_changed": True,
     }
+
+
+def _proof_sidecar_sha(proof: dict[str, object]) -> str:
+    inner = proof["inner_sections"]
+    assert isinstance(inner, dict)
+    sidecar = inner["sidecar_blob"]
+    assert isinstance(sidecar, dict)
+    value = sidecar["sha256"]
+    assert isinstance(value, str)
+    return value
+
+
+def _proof_sidecar_bytes(proof: dict[str, object]) -> int:
+    inner = proof["inner_sections"]
+    assert isinstance(inner, dict)
+    sidecar = inner["sidecar_blob"]
+    assert isinstance(sidecar, dict)
+    value = sidecar["bytes"]
+    assert isinstance(value, int)
+    return value
 
 
 def _runtime_smoke_evidence(tool, archive: Path, custody: dict[str, object]) -> dict[str, object]:
@@ -95,6 +123,22 @@ def _runtime_smoke_evidence(tool, archive: Path, custody: dict[str, object]) -> 
         "runtime_tree_sha256": custody["runtime_tree_sha256"],
         "output_digest_sha256": "3" * 64,
     }
+
+
+def test_member_section_proof_records_a1_archive_sections(tmp_path: Path) -> None:
+    tool = load_tool()
+    _, archive = _write_runtime_fixture(tmp_path)
+
+    proof = tool.collect_member_section_proof(archive)
+
+    assert proof["schema_version"] == tool.MEMBER_SECTION_PROOF_SCHEMA
+    assert proof["member_count"] == 1
+    assert proof["single_member_name"] == "x"
+    inner = proof["inner_sections"]
+    assert inner["decoder_section_total"] == 8
+    assert inner["decoder_blob"]["bytes"] == 4
+    assert inner["latent_blob"]["bytes"] == tool.A1_LATENT_BLOB_LEN
+    assert inner["sidecar_blob"]["bytes"] == len(b"sidecar")
 
 
 def test_infer_sidecar_choices_preserves_old_unsearched_pairs() -> None:
@@ -193,6 +237,7 @@ def test_manifest_readiness_accepts_complete_local_custody(tmp_path: Path) -> No
     archive_sha = tool.sha256_of(archive)
     archive_bytes = archive.stat().st_size
     custody = tool.collect_local_runtime_custody(sub_dir, archive_path=archive)
+    proof = tool.collect_member_section_proof(archive)
     manifest = {
         "lane_id": tool.SIDECAR_LANE_ID,
         "dispatch_blockers": [],
@@ -205,14 +250,17 @@ def test_manifest_readiness_accepts_complete_local_custody(tmp_path: Path) -> No
         "new_archive_path": tool.manifest_path(archive),
         "new_archive_sha256": archive_sha,
         "new_archive_bytes": archive_bytes,
+        "new_sidecar_bytes": _proof_sidecar_bytes(proof),
         "ready_for_exact_eval_dispatch": True,
         "runtime_smoke_checked": True,
         "smoke_only": False,
-        "no_op_detector": _changed_sidecar_no_op(),
+        "full_non_smoke_search": True,
+        "no_op_detector": _changed_sidecar_no_op(_proof_sidecar_sha(proof)),
         "local_runtime_custody": custody,
         "runtime_manifest": custody,
         "runtime_tree_sha256": custody["runtime_tree_sha256"],
         "runtime_smoke_evidence": _runtime_smoke_evidence(tool, archive, custody),
+        "member_section_proof": proof,
     }
 
     out = tool.enforce_manifest_dispatch_readiness(
@@ -223,6 +271,85 @@ def test_manifest_readiness_accepts_complete_local_custody(tmp_path: Path) -> No
 
     assert out["ready_for_exact_eval_dispatch"] is True
     assert out["dispatch_blockers"] == []
+
+
+def test_manifest_readiness_keeps_smoke_only_blocked_even_with_runtime_smoke(
+    tmp_path: Path,
+) -> None:
+    tool = load_tool()
+    sub_dir, archive = _write_runtime_fixture(tmp_path)
+    archive_sha = tool.sha256_of(archive)
+    archive_bytes = archive.stat().st_size
+    custody = tool.collect_local_runtime_custody(sub_dir, archive_path=archive)
+    proof = tool.collect_member_section_proof(archive)
+    manifest = {
+        "lane_id": tool.SIDECAR_LANE_ID,
+        "dispatch_blockers": [],
+        "archive_path": tool.manifest_path(archive),
+        "archive_sha256": archive_sha,
+        "archive_size_bytes": archive_bytes,
+        "new_archive_path": tool.manifest_path(archive),
+        "new_archive_sha256": archive_sha,
+        "new_archive_bytes": archive_bytes,
+        "new_sidecar_bytes": _proof_sidecar_bytes(proof),
+        "ready_for_exact_eval_dispatch": True,
+        "runtime_smoke_checked": True,
+        "runtime_smoke_evidence": _runtime_smoke_evidence(tool, archive, custody),
+        "smoke_only": True,
+        "full_non_smoke_search": False,
+        "no_op_detector": _changed_sidecar_no_op(_proof_sidecar_sha(proof)),
+        "local_runtime_custody": custody,
+        "runtime_tree_sha256": custody["runtime_tree_sha256"],
+        "member_section_proof": proof,
+    }
+
+    out = tool.enforce_manifest_dispatch_readiness(
+        manifest,
+        archive_path=archive,
+        submission_dir=sub_dir,
+    )
+
+    assert out["ready_for_exact_eval_dispatch"] is False
+    assert "smoke_only_not_exact_eval_ready" in out["dispatch_blockers"]
+    assert "non_full_sidecar_search_not_exact_eval_ready" in out["dispatch_blockers"]
+
+
+def test_manifest_readiness_rejects_partial_non_smoke_search(tmp_path: Path) -> None:
+    tool = load_tool()
+    sub_dir, archive = _write_runtime_fixture(tmp_path)
+    archive_sha = tool.sha256_of(archive)
+    archive_bytes = archive.stat().st_size
+    custody = tool.collect_local_runtime_custody(sub_dir, archive_path=archive)
+    proof = tool.collect_member_section_proof(archive)
+    manifest = {
+        "lane_id": tool.SIDECAR_LANE_ID,
+        "dispatch_blockers": [],
+        "archive_path": tool.manifest_path(archive),
+        "archive_sha256": archive_sha,
+        "archive_size_bytes": archive_bytes,
+        "new_archive_path": tool.manifest_path(archive),
+        "new_archive_sha256": archive_sha,
+        "new_archive_bytes": archive_bytes,
+        "new_sidecar_bytes": _proof_sidecar_bytes(proof),
+        "ready_for_exact_eval_dispatch": True,
+        "runtime_smoke_checked": True,
+        "runtime_smoke_evidence": _runtime_smoke_evidence(tool, archive, custody),
+        "smoke_only": False,
+        "full_non_smoke_search": False,
+        "no_op_detector": _changed_sidecar_no_op(_proof_sidecar_sha(proof)),
+        "local_runtime_custody": custody,
+        "runtime_tree_sha256": custody["runtime_tree_sha256"],
+        "member_section_proof": proof,
+    }
+
+    out = tool.enforce_manifest_dispatch_readiness(
+        manifest,
+        archive_path=archive,
+        submission_dir=sub_dir,
+    )
+
+    assert out["ready_for_exact_eval_dispatch"] is False
+    assert "non_full_sidecar_search_not_exact_eval_ready" in out["dispatch_blockers"]
 
 
 def test_collect_local_runtime_custody_covers_extra_runtime_files(tmp_path: Path) -> None:
@@ -498,3 +625,40 @@ def test_batched_pair_proxy_search_preserves_best_candidate_semantics() -> None:
     assert best_mse == pytest.approx(0.0)
     assert best_dim == 1
     assert best_didx == 1
+
+
+def test_proxy_search_explicit_cpu_device_path(monkeypatch) -> None:
+    tool = load_tool()
+
+    class Decoder(torch.nn.Module):
+        def __init__(self, *args, **kwargs) -> None:
+            super().__init__()
+
+        def forward(self, latents: torch.Tensor) -> torch.Tensor:
+            value = latents[:, 0].reshape(-1, 1, 1, 1)
+            return value.repeat(1, 6, 1, 1)
+
+    monkeypatch.setitem(sys.modules, "model", types.SimpleNamespace(HNeRVDecoder=Decoder))
+    base = torch.zeros((tool.N_PAIRS, tool.LATENT_DIM), dtype=torch.float32)
+    components = {
+        "decoder_sd": {},
+        "latents_pre_sidecar": base,
+        "latents_with_sidecar_old": base.clone(),
+        "eval_size": (1, 1),
+        "latent_dim": tool.LATENT_DIM,
+        "base_channels": 1,
+        "n_pairs": tool.N_PAIRS,
+    }
+    gt_eval = np.ones((2, 1, 1, 3), dtype=np.uint8)
+
+    dims, delta_idx, meta = tool.search_per_pair_proxy_mse(
+        components,
+        gt_eval,
+        pair_indices=[0],
+        candidate_batch_size=4,
+        search_device="cpu",
+    )
+
+    assert meta["search_device"] == "cpu"
+    assert dims[0] == 0
+    assert tool.SIDECAR_DELTAS_X100[delta_idx[0]] == 10

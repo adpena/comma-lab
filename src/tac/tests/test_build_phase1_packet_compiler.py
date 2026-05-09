@@ -411,6 +411,29 @@ def test_fail_closed_on_network_token_in_sh(tmp_path: Path) -> None:
     assert any("http://" in b for b in result.blockers)
 
 
+def test_fail_closed_on_network_token_in_inflate_py(tmp_path: Path) -> None:
+    packet_dir = _write_synthetic_packet(tmp_path)
+    text = (packet_dir / "inflate.py").read_text()
+    text += (
+        "\n# bad: runtime dependency fetch from inflate.py\n"
+        "import subprocess\n"
+        "subprocess.run(['uv', 'pip', 'install', 'brotli'], check=False)\n"
+        "MODEL_URL = 'https://example.invalid/model.pt'\n"
+    )
+    (packet_dir / "inflate.py").write_text(text, encoding="utf-8")
+    out_dir = tmp_path / "out"
+    result = compile_phase1_packet(
+        input_packet=packet_dir,
+        output_dir=out_dir,
+        mode="identity",
+    )
+    assert any(
+        "inflate.py" in b and "'uv', 'pip', 'install'" in b
+        for b in result.blockers
+    )
+    assert any("inflate.py" in b and "https://" in b for b in result.blockers)
+
+
 def test_fail_closed_on_uv_runtime_dependency_fetch_in_sh(tmp_path: Path) -> None:
     packet_dir = _write_synthetic_packet(tmp_path)
     text = (packet_dir / "inflate.sh").read_text()

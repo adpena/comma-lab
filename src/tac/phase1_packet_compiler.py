@@ -169,11 +169,20 @@ FORBIDDEN_NETWORK_TOKENS: tuple[str, ...] = (
     "curl ",
     "http://",
     "https://",
+    "httpx.",
+    "requests.",
+    "urllib.request",
+    "urlopen(",
+    "urlretrieve(",
     "wget ",
     "pip install",
+    "'pip', 'install'",
+    '"pip", "install"',
     " uv run ",
     "uv run --with",
     "uv pip install",
+    "'uv', 'pip', 'install'",
+    '"uv", "pip", "install"',
     "git clone",
 )
 
@@ -480,6 +489,13 @@ def _scan_inflate_sh(inflate_sh: Path) -> tuple[list[str], dict[str, Any]]:
 def _scan_inflate_py(inflate_py: Path) -> list[str]:
     text = inflate_py.read_text(encoding="utf-8", errors="replace")
     blockers: list[str] = []
+    blockers.extend(
+        _scan_text_for_forbidden(
+            text,
+            forbidden_tokens=FORBIDDEN_NETWORK_TOKENS,
+            label="inflate.py",
+        )
+    )
     blockers.extend(
         _scan_text_for_forbidden(
             text,

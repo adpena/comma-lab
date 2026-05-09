@@ -17,8 +17,10 @@ from tac.preflight import (
     check_undeployed_archive_artifact_producers,
     _producer_has_main_entry,
     _producer_is_deployed,
+    _scan_repo_for_archive_artifact_producers,
     _scan_repo_for_artifact_producers,
 )
+from tac.source_index import source_index_context
 
 
 def _setup_fake_repo(root: Path) -> None:
@@ -169,3 +171,44 @@ def test_deploy_registry_counts_as_deployed(tmp_path: Path) -> None:
         repo_root=tmp_path, strict=False, verbose=False,
     )
     assert violations == []
+
+
+def test_archive_artifact_producer_scan_is_single_pass_under_source_index(
+    tmp_path: Path,
+) -> None:
+    """The Check 39 producer discovery should not rescan once per artifact."""
+
+    _setup_fake_repo(tmp_path)
+    first = tmp_path / "experiments" / "make_renderer.py"
+    first.write_text(textwrap.dedent('''\
+        def main():
+            with open("renderer.bin", "wb") as f:
+                f.write(b"data")
+
+        if __name__ == "__main__":
+            main()
+    '''))
+    second = tmp_path / "experiments" / "make_masks.py"
+    second.write_text(textwrap.dedent('''\
+        def main():
+            with open("masks.mkv", "wb") as f:
+                f.write(b"data")
+
+        if __name__ == "__main__":
+            main()
+    '''))
+    irrelevant = tmp_path / "src" / "tac" / "library.py"
+    irrelevant.write_text("VALUE = 'renderer.bin but no write marker'\n")
+
+    with source_index_context(tmp_path) as index:
+        producers = _scan_repo_for_archive_artifact_producers(
+            tmp_path,
+            source_index=index,
+        )
+        stats = index.stats()
+
+    assert producers["renderer.bin"] == (first,)
+    assert producers["masks.mkv"] == (second,)
+    assert producers["optimized_poses.bin"] == ()
+    assert stats["file_list_misses"] == 1
+    assert stats["text_misses"] == 3

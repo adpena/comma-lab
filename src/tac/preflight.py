@@ -3268,7 +3268,6 @@ def check_codebase_drift(
     root = Path(repo_root or REPO_ROOT).resolve()
     all_violations: list[str] = []
     n_python_scanned = 0
-
     if verbose:
         print(
             "  [codebase-drift] scanning source launch surfaces "
@@ -16612,6 +16611,20 @@ _ARCHIVE_ARTIFACT_FILENAMES = frozenset({
     "foveation_params.bin",
 })
 
+_ARCHIVE_ARTIFACT_WRITE_MARKERS = (
+    "open(",
+    "torch.save(",
+    ".write_bytes(",
+    "np.save(",
+    "pickle.dump(",
+    "json.dump(",
+    "zipfile.",
+    "brotli.",
+    "gzip.",
+    ".write(",
+    "np.tofile(",
+)
+
 # Producers we exempt from the "must be deployed" rule. These are either the
 # registry itself, library helpers consumed inline by already-deployed
 # pipelines, canonical entry points referenced through indirection
@@ -16677,10 +16690,12 @@ _DEPLOY_SCANNER_EXEMPT_DIR_PREFIXES = (
 )
 
 
-def _scan_repo_for_artifact_producers(
-    artifact_name: str, repo_root: Path,
-) -> list[Path]:
-    """Find .py files that LIKELY write `artifact_name` to disk.
+def _scan_repo_for_archive_artifact_producers(
+    repo_root: Path,
+    *,
+    source_index=None,
+) -> dict[str, tuple[Path, ...]]:
+    """Find .py files that LIKELY write known archive artifacts to disk.
 
     Heuristic: file mentions the literal filename in source AND has at least
     one of {open(...,"wb"), torch.save, .write_bytes, np.save, pickle.dump,
@@ -16688,35 +16703,61 @@ def _scan_repo_for_artifact_producers(
     docstring/comment) are rare and harmless — the deploy check filters them
     out by requiring __main__ + non-deployment.
     """
-    producers: list[Path] = []
-    write_markers = (
-        "open(", "torch.save(", ".write_bytes(", "np.save(",
-        "pickle.dump(", "json.dump(", "zipfile.", "brotli.", "gzip.",
-        ".write(", "np.tofile(",
-    )
-    quoted_names = (f'"{artifact_name}"', f"'{artifact_name}'")
-    for py in _iter_python_files(repo_root, ["src/tac", "experiments"]):
+    producers: dict[str, list[Path]] = {
+        artifact: [] for artifact in _ARCHIVE_ARTIFACT_FILENAMES
+    }
+    if source_index is not None:
+        py_files = source_index.files(["src/tac", "experiments"], pattern="*.py")
+    else:
+        py_files = tuple(_iter_python_files(repo_root, ["src/tac", "experiments"]))
+    quoted_names_by_artifact = {
+        artifact: (f'"{artifact}"', f"'{artifact}'")
+        for artifact in _ARCHIVE_ARTIFACT_FILENAMES
+    }
+    for py in py_files:
         # Skip tests + caches
         rel = py.relative_to(repo_root) if py.is_absolute() else py
         rel_s = str(rel)
         if "/tests/" in rel_s or "/__pycache__/" in rel_s:
             continue
         try:
-            text = py.read_text(errors="ignore")
+            if source_index is not None:
+                text = source_index.read_text(py, errors="ignore")
+            else:
+                text = py.read_text(errors="ignore")
         except (FileNotFoundError, PermissionError):
             continue
-        if not any(q in text for q in quoted_names):
+        if not any(m in text for m in _ARCHIVE_ARTIFACT_WRITE_MARKERS):
             continue
-        if not any(m in text for m in write_markers):
-            continue
-        producers.append(py)
-    return producers
+        for artifact, quoted_names in quoted_names_by_artifact.items():
+            if any(q in text for q in quoted_names):
+                producers[artifact].append(py)
+    return {
+        artifact: tuple(sorted(paths, key=lambda item: item.as_posix()))
+        for artifact, paths in producers.items()
+    }
 
 
-def _producer_has_main_entry(py: Path) -> bool:
+def _scan_repo_for_artifact_producers(
+    artifact_name: str, repo_root: Path,
+) -> list[Path]:
+    """Find .py files that LIKELY write ``artifact_name`` to disk."""
+
+    return list(
+        _scan_repo_for_archive_artifact_producers(repo_root).get(
+            artifact_name,
+            (),
+        )
+    )
+
+
+def _producer_has_main_entry(py: Path, *, source_index=None) -> bool:
     """True if file is a script (has __main__) — i.e., not a pure library."""
     try:
-        text = py.read_text(errors="ignore")
+        if source_index is not None:
+            text = source_index.read_text(py, errors="ignore")
+        else:
+            text = py.read_text(errors="ignore")
     except (FileNotFoundError, PermissionError):
         return False
     return (
@@ -16725,8 +16766,64 @@ def _producer_has_main_entry(py: Path) -> bool:
     )
 
 
+def _deployment_reference_texts(
+    repo_root: Path,
+    *,
+    source_index=None,
+) -> tuple[str, ...]:
+    """Return deployment-surface source text used by Check 39."""
+
+    texts: list[str] = []
+    scripts_dir = repo_root / "scripts"
+    if scripts_dir.is_dir():
+        if source_index is not None:
+            sh_paths = set(
+                source_index.files(["scripts"], pattern="remote_lane_*.sh")
+            )
+            sh_paths.update(
+                source_index.files(["scripts"], pattern="remote_*_bootstrap.sh")
+            )
+            iterable = tuple(sorted(sh_paths, key=lambda item: item.as_posix()))
+        else:
+            iterable = tuple(
+                sorted(
+                    list(scripts_dir.glob("remote_lane_*.sh"))
+                    + list(scripts_dir.glob("remote_*_bootstrap.sh")),
+                    key=lambda item: item.as_posix(),
+                )
+            )
+        for sh in iterable:
+            try:
+                if source_index is not None:
+                    texts.append(source_index.read_text(sh, errors="ignore"))
+                else:
+                    texts.append(sh.read_text(errors="ignore"))
+            except (FileNotFoundError, PermissionError):
+                continue
+
+    deploy_dir = repo_root / "src" / "tac" / "deploy"
+    if deploy_dir.is_dir():
+        if source_index is not None:
+            py_paths = source_index.files(["src/tac/deploy"], pattern="*.py")
+        else:
+            py_paths = tuple(sorted(deploy_dir.rglob("*.py")))
+        for dp in py_paths:
+            try:
+                if source_index is not None:
+                    texts.append(source_index.read_text(dp, errors="ignore"))
+                else:
+                    texts.append(dp.read_text(errors="ignore"))
+            except (FileNotFoundError, PermissionError):
+                continue
+    return tuple(texts)
+
+
 def _producer_is_deployed(
-    py: Path, artifact: str, repo_root: Path,
+    py: Path,
+    artifact: str,
+    repo_root: Path,
+    *,
+    deployment_texts: tuple[str, ...] | None = None,
 ) -> bool:
     """True if any deployment surface references the producer or its output.
 
@@ -16744,6 +16841,9 @@ def _producer_is_deployed(
 
     def _has_ref(t: str) -> bool:
         return name in t or rel_s in t or artifact in t
+
+    if deployment_texts is not None:
+        return any(_has_ref(text) for text in deployment_texts)
 
     scripts_dir = repo_root / "scripts"
     if scripts_dir.is_dir():
@@ -16789,9 +16889,18 @@ def check_undeployed_archive_artifact_producers(
     root = repo_root or REPO_ROOT
     violations: list[str] = []
     seen_producers: set[Path] = set()
+    source_index = _current_source_index(root)
+    producers_by_artifact = _scan_repo_for_archive_artifact_producers(
+        root,
+        source_index=source_index,
+    )
+    deployment_texts = _deployment_reference_texts(
+        root,
+        source_index=source_index,
+    )
 
     for artifact in sorted(_ARCHIVE_ARTIFACT_FILENAMES):
-        for py in _scan_repo_for_artifact_producers(artifact, root):
+        for py in producers_by_artifact.get(artifact, ()):
             if py in seen_producers:
                 continue
             seen_producers.add(py)
@@ -16800,9 +16909,14 @@ def check_undeployed_archive_artifact_producers(
                 continue
             if any(rel_s.startswith(p) for p in _DEPLOY_SCANNER_EXEMPT_DIR_PREFIXES):
                 continue  # alternative-platform producer (e.g., Kaggle)
-            if not _producer_has_main_entry(py):
+            if not _producer_has_main_entry(py, source_index=source_index):
                 continue  # pure library — OK
-            if _producer_is_deployed(py, artifact, root):
+            if _producer_is_deployed(
+                py,
+                artifact,
+                root,
+                deployment_texts=deployment_texts,
+            ):
                 continue
             violations.append(
                 f"{rel_s}: writes '{artifact}' via __main__ entry but no "
