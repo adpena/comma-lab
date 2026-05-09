@@ -21,10 +21,18 @@ from __future__ import annotations
 
 import datetime as _dt
 import json
+import sys
 from pathlib import Path
 
 import pytest
 import torch
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+for _path in (REPO_ROOT, REPO_ROOT / "src"):
+    if str(_path) in sys.path:
+        sys.path.remove(str(_path))
+    if str(_path) not in sys.path:
+        sys.path.insert(0, str(_path))
 
 from tac.codec_pipeline import (
     CodecOp,

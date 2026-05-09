@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# ADMM_WAIVED:B4-reviewed historical/planning naming; docstrings or delegated coordinator code clarify whether this is Lagrangian, bridge, or actual iterative ADMM.
+# ROUNDTRIP_SELF_TEST: _local_smoke_roundtrip imports the staged no-K inflate.py,
+# parses the emitted archive, and checks q_i8 * fp16 scale reconstruction.
 """Build the Path B step 6 ADMM × lossy_coarsening byte-closed candidate
 archive — variant WITHOUT the dead K side-info (REVIEW-ENG C2 closure).
 

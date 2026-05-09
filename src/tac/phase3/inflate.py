@@ -19,7 +19,8 @@ CLAUDE.md compliance
 --------------------
 
   - NO scorer-at-inflate (auxiliary scorer is TRAINING-ONLY, swapped at eval)
-  - NO MPS-fallback default (CUDA-required; explicit ``--device cpu`` opt-in)
+  - NO MPS-fallback default (CUDA-required; explicit ``--device cpu`` opt-in
+    only when deterministic-bytes acceptable for non-promoting CPU reproduction)
   - eval_roundtrip applied (384→874→uint8→384)
   - Inflate LOC ≤ 200 (this file)
   - All bytes accounted via build_manifest.json (no hidden sidecars)
@@ -58,8 +59,8 @@ def phase3_inflate_design_only(
         # CLAUDE.md non-negotiable: never MPS as authoritative axis.
         raise ValueError(
             "Phase 3 inflate refuses MPS device per CLAUDE.md MPS-NOISE rule. "
-            "Use --device cuda for [contest-CUDA] or --device cpu for "
-            "[contest-CPU] on Linux x86_64 (with explicit caveat banner)."
+            "Use --device cuda for [contest-CUDA] or --device cpu only when "
+            "deterministic-bytes acceptable for [contest-CPU] on Linux x86_64."
         )
 
     archive_path = Path(archive_path)

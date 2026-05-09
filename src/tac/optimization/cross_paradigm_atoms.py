@@ -674,7 +674,7 @@ def atoms_from_foveation_plan(
     atom_suffix = payload_sha[:12] if payload_sha else _slug(str(manifest.get("path") or manifest.get("member") or "params"))
     ok = bool(manifest.get("ok", False))
     evidence_grade = str(manifest.get("evidence_grade") or "empirical_payload_custody")
-    if not ok and evidence_grade.lower() not in {"invalid", "prediction"}:
+    if not ok and evidence_grade.lower() not in {"invalid", "prediction"}:  # CUSTODY_VALIDATOR_OK: fail-closed downgrade, not score promotion
         evidence_grade = "invalid"
     atom = {
         "adapter": "foveation_plan",

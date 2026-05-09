@@ -308,6 +308,36 @@ def test_lovasz_runs_on_simplex_input_without_dtype_error(probe_mod):
     assert torch.isfinite(g.grad_flat).all()
 
 
+def test_surrogate_gradients_decrease_their_own_loss(probe_mod):
+    """Each surrogate gradient must point downhill on a simplex projection step."""
+    import torch
+
+    gen = torch.Generator().manual_seed(321)
+    pred, gt = probe_mod._build_soft_disagreement(gen)
+
+    for surrogate in probe_mod.SURROGATES:
+        before = probe_mod._gradient_wrt_pred(
+            surrogate,
+            pred,
+            gt,
+            sinkhorn_blur=0.05,
+            sinkhorn_iters=20,
+        )
+        updated = pred - 0.01 * before.grad_flat.reshape_as(pred)
+        updated = updated.clamp_min(1e-7)
+        updated = updated / updated.sum(dim=1, keepdim=True)
+        after = probe_mod._gradient_wrt_pred(
+            surrogate,
+            updated,
+            gt,
+            sinkhorn_blur=0.05,
+            sinkhorn_iters=20,
+        )
+        loss_before = before.loss
+        loss_after = after.loss
+        assert loss_after < loss_before, surrogate
+
+
 def test_zero_norm_gradient_returns_nan_not_zero(probe_mod):
     """Hotz R2: zero-norm gradient cosine sim is UNDEFINED, not orthogonal.
 

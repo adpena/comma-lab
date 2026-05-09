@@ -92,7 +92,7 @@ def build_claim_cmd(
 
 
 def run_claim(cmd: list[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    return subprocess.run(cmd, capture_output=True, text=True, timeout=120, check=False)
 
 
 def dispatch_one(

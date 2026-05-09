@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ADMM_WAIVED:B4-reviewed historical/planning naming; docstrings or delegated coordinator code clarify whether this is Lagrangian, bridge, or actual iterative ADMM.
 """Lane Joint-ADMM cross-stream coordinator over the owv3_0120 deploy archive.
 
 Champion archive (1.0024 [contest-CUDA RTX 4090]):

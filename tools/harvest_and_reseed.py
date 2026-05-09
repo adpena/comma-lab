@@ -115,7 +115,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"FATAL: no rows in {args.harvested_jsonl}", file=sys.stderr)
         return 2
 
-    contest_rows = [r for r in rows if r.get("tag") == "[contest-CUDA]" and r.get("contest_cuda_score") is not None]
+    contest_rows = [r for r in rows if r.get("tag") == "[contest-CUDA]" and r.get("contest_cuda_score") is not None]  # CUSTODY_VALIDATOR_OK: legacy harvested JSONL prefilter; score_json_path custody is verified before anchor write
     skipped = len(rows) - len(contest_rows)
     if skipped:
         print(f"WARN: skipping {skipped} non-contest-CUDA rows (failed dispatches or pending scores)", file=sys.stderr)

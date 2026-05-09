@@ -235,8 +235,10 @@ def _surrogate_score_loss(
         F.kl_div(
             F.log_softmax(seg_pred_logits / T, dim=1),
             F.softmax(seg_gt_logits / T, dim=1),
-            reduction="batchmean",
+            reduction="none",
         )
+        .sum(dim=1)
+        .mean()
         * (T * T)
     )
 

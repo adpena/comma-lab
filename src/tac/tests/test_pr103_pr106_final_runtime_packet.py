@@ -4,10 +4,31 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 import zipfile
 from pathlib import Path
 
 import pytest
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+for _path in (REPO_ROOT, REPO_ROOT / "src"):
+    if str(_path) in sys.path:
+        sys.path.remove(str(_path))
+    if str(_path) not in sys.path:
+        sys.path.insert(0, str(_path))
+
+_submissions = sys.modules.get("submissions")
+if _submissions is not None:
+    expected = (REPO_ROOT / "submissions").resolve()
+    package_paths = {
+        Path(path).resolve() for path in getattr(_submissions, "__path__", ())
+    }
+    module_file = getattr(_submissions, "__file__", None)
+    file_ok = module_file is not None and expected in Path(module_file).resolve().parents
+    if expected not in package_paths and not file_ok:
+        for _name in list(sys.modules):
+            if _name == "submissions" or _name.startswith("submissions."):
+                del sys.modules[_name]
 
 from submissions.pr103_pr106_final_runtime import inflate as runtime
 from tac.pr103_pr106_runtime_closure import (
@@ -15,7 +36,6 @@ from tac.pr103_pr106_runtime_closure import (
     parse_pr103_repacked_pr106_payload,
 )
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
 CANDIDATE_ARCHIVE = (
     REPO_ROOT / "experiments/results/pr103_repack_pr106_standalone_20260507/archive.zip"
 )

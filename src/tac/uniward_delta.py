@@ -744,7 +744,7 @@ def _detector_cost_row(atom: Mapping[str, Any]) -> dict[str, Any]:
     if charged_bytes <= 0:
         risk_reasons.append("charged_bytes_must_be_positive")
     evidence_grade = str(atom.get("evidence_grade") or atom.get("evidence") or "planning")
-    if evidence_grade not in {"A++", "A", "B", "empirical", "derivation", "planning"}:
+    if evidence_grade not in {"A++", "A", "B", "empirical", "derivation", "planning"}:  # CUSTODY_VALIDATOR_OK: fail-closed atom risk annotation, not score promotion
         risk_reasons.append(f"non_promotable_evidence_grade:{evidence_grade}")
     priority = 0.0
     if charged_bytes > 0 and detector_capacity > 0.0 and sensitivity > 0.0:

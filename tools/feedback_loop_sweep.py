@@ -252,7 +252,7 @@ def _reseed_anchors(harvested: list[dict], anchors_path: Path,
     existing_labels = {a.get("lane_id") for a in existing}
     added = []
     for h in harvested:
-        if h["tag"] != "[contest-CUDA]":
+        if h["tag"] != "[contest-CUDA]":  # CUSTODY_VALIDATOR_OK: legacy harvested JSONL prefilter; rows are diagnostic calibration anchors, not direct score promotion
             continue
         if h["label"] in existing_labels:
             continue

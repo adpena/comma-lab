@@ -161,6 +161,28 @@ def test_pipe_in_cell_rejected(claims_path):
     assert "VALIDATION_ERROR" in str(exc.value) or "must not contain" in str(exc.value)
 
 
+def test_shell_expanded_dollar_zero_notes_rejected(claims_path):
+    """A double-quoted $0 cost can become /bin/zsh; refuse that signal loss."""
+    with pytest.raises(SystemExit) as exc:
+        cld.main([
+            "claim", "--claims-path", str(claims_path),
+            "--lane-id", "cost_lane", "--platform", "gha", "--instance-job-id", "j",
+            "--agent", "a", "--status", "eval",
+            "--notes", "cost=/bin/zsh.50 GHA after shell expansion",
+        ])
+    assert "shell-expanded $0" in str(exc.value)
+
+
+def test_intentional_shell_path_notes_require_explicit_waiver(claims_path):
+    rc = cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "path_lane", "--platform", "local", "--instance-job-id", "j",
+        "--agent", "a", "--status", "eval",
+        "--notes", "shell=/bin/zsh SHELL_ARGV0_OK:documenting local shell",
+    ])
+    assert rc == 0
+
+
 def test_whitespace_in_lane_id_rejected(claims_path):
     with pytest.raises(SystemExit):
         cld.main([

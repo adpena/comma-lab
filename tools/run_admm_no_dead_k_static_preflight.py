@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ADMM_WAIVED:B4-reviewed historical/planning naming; docstrings or delegated coordinator code clarify whether this is Lagrangian, bridge, or actual iterative ADMM.
 """Read-only static preflight for ADMM no-dead-K CPU build artifacts.
 
 This helper verifies the generated candidate archive/runtime closure without

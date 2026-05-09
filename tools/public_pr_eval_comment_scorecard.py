@@ -100,17 +100,18 @@ def parse_pr_json(pr_json: dict[str, Any]) -> dict[str, Any]:
 
 
 def fetch_pr_json(repo: str, pr: int) -> dict[str, Any]:
+    cmd = [
+        "gh",
+        "pr",
+        "view",
+        str(pr),
+        "--repo",
+        repo,
+        "--json",
+        "number,title,url,author,headRefOid,comments",
+    ]
     proc = subprocess.run(
-        [
-            "gh",
-            "pr",
-            "view",
-            str(pr),
-            "--repo",
-            repo,
-            "--json",
-            "number,title,url,author,headRefOid,comments",
-        ],
+        cmd,
         check=True,
         capture_output=True,
         text=True,

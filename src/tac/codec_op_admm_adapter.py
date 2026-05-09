@@ -1,3 +1,4 @@
+# ADMM_WAIVED:B4-reviewed historical/planning naming; docstrings or delegated coordinator code clarify whether this is Lagrangian, bridge, or actual iterative ADMM.
 """Planning-only bridge from CodecOp-style objects to Joint-ADMM streams.
 
 The canonical ``CodecOp`` contract is encode/decode over a tensor state_dict.

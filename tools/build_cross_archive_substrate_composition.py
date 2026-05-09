@@ -384,7 +384,7 @@ def _is_exact_evidence_tag(tag: str) -> bool:
     until the exact archive/runtime pair has local contest-CUDA or Linux
     contest-CPU custody.
     """
-    return tag.startswith("[contest-CUDA]") or tag.startswith("[contest-CPU")
+    return tag.startswith("[contest-CUDA]") or tag.startswith("[contest-CPU")  # CUSTODY_VALIDATOR_OK: inventory-only eligibility label; composition promotion still requires exact archive/runtime custody
 
 
 # ---------------------------------------------------------------------------

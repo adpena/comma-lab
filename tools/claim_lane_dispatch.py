@@ -74,6 +74,10 @@ TERMINAL_PREFIXES = (
 
 _TABLE_HEADER_RE = re.compile(r"^\|\s*timestamp_utc\s*\|", re.MULTILINE)
 _SEPARATOR_RE = re.compile(r"^\|\s*-+\s*(\|\s*-+\s*)+\|\s*$")
+_SHELL_ARGV0_EXPANSION_RE = re.compile(
+    r"(?<![A-Za-z0-9_.-])/bin/(?:zsh|bash|sh)(?:[./\s]|$)"
+)
+_SHELL_ARGV0_WAIVER = "SHELL_ARGV0_OK:"
 
 
 @dataclass(frozen=True)
@@ -129,6 +133,26 @@ def _validate_cell(name: str, value, *, allow_empty: bool = False, allow_space: 
     return value
 
 
+def _validate_no_shell_argv0_expansion(name: str, value: str) -> None:
+    """Reject notes where unescaped ``$0`` was expanded by the caller shell.
+
+    This protects dispatch ledgers from losing cost signal such as ``$0.50``
+    turning into ``/bin/zsh.50`` when a user passes double-quoted notes.
+    Legitimate shell-path notes can opt in with ``SHELL_ARGV0_OK:<reason>``.
+    """
+
+    if _SHELL_ARGV0_WAIVER in value:
+        return
+    if _SHELL_ARGV0_EXPANSION_RE.search(value):
+        raise SystemExit(
+            "VALIDATION_ERROR: "
+            f"{name} appears to contain shell-expanded $0/argv[0] text "
+            "(for example /bin/zsh from an unescaped dollar-cost note). "
+            "Pass dollar costs in single quotes or escape '$'. "
+            "If this is an intentional shell path, add SHELL_ARGV0_OK:<reason>."
+        )
+
+
 def _validate_claim_inputs(args: argparse.Namespace) -> None:
     _validate_cell("--lane-id", args.lane_id, allow_space=False)
     _validate_cell("--platform", args.platform, allow_space=False)
@@ -138,14 +162,18 @@ def _validate_claim_inputs(args: argparse.Namespace) -> None:
     if args.predicted_eta_utc:
         _validate_cell("--predicted-eta-utc", args.predicted_eta_utc, allow_space=False)
     if args.notes is not None:
-        _validate_cell("--notes", args.notes, allow_empty=True, allow_space=True)
+        notes = _validate_cell("--notes", args.notes, allow_empty=True, allow_space=True)
+        _validate_no_shell_argv0_expansion("--notes", notes)
     if args.allow_parallel:
         if not args.child_of:
             raise SystemExit("REFUSING_DISPATCH: --allow-parallel requires --child-of")
         if not args.parallel_reason:
             raise SystemExit("REFUSING_DISPATCH: --allow-parallel requires --parallel-reason")
         _validate_cell("--child-of", args.child_of, allow_space=False)
-        _validate_cell("--parallel-reason", args.parallel_reason, allow_empty=False, allow_space=True)
+        parallel_reason = _validate_cell(
+            "--parallel-reason", args.parallel_reason, allow_empty=False, allow_space=True
+        )
+        _validate_no_shell_argv0_expansion("--parallel-reason", parallel_reason)
 
 
 def _claim_to_row(claim: Claim) -> str:

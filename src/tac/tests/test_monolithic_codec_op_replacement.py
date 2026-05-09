@@ -92,7 +92,8 @@ def test_pr106_adapter_emits_manifest_consumed_by_monolithic_builder(
             )
         ],
     )
-    assert _read_member(candidate) == _pr106_payload(new_decoder, old_tail)
+    roundtrip_payload = _read_member(candidate)
+    assert roundtrip_payload == _pr106_payload(new_decoder, old_tail)
     assert build_manifest["ready_for_exact_eval_dispatch"] is False
 
 

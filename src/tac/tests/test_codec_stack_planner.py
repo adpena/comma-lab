@@ -10,9 +10,11 @@ from tac.codec_stack_planner import (
     CANONICAL_QAT_PASSES,
     DEFAULT_STATIC_PMF_DELTA_BYTES,
     HSTACK_VSTACK_AXIS_SEMANTICS,
+    MODEL_WEIGHT_BLOCK_FP_STREAMS,
     NESTED_OPTIMIZATION_LEVELS,
     PREDICTED_NESTED_SCORE_BAND,
     QUALITY_MANDATE_11,
+    RENDERER_WEIGHT_BLOCK_FP_STREAMS,
     STACK_PLANNER_SCHEMA,
     ByteEvidenceSemantics,
     CodecComponent,
@@ -96,6 +98,22 @@ def test_balle_hyperprior_family_records_required_blockers_and_repairs() -> None
     )
     for criterion in BALLE_HYPERPRIOR_REPAIR_CRITERIA:
         assert criterion in hyperprior.all_repair_criteria
+
+
+def test_block_fp_weight_streams_always_pair_qint_with_exponents() -> None:
+    plan = build_hstack_vstack_multipass_plan()
+    required_pairs = {
+        "renderer_weights_qint": "renderer_weight_exponents",
+        "model_weight_qint": "model_weight_exponents",
+    }
+
+    assert RENDERER_WEIGHT_BLOCK_FP_STREAMS == ("renderer_weights_qint", "renderer_weight_exponents")
+    assert MODEL_WEIGHT_BLOCK_FP_STREAMS == ("model_weight_qint", "model_weight_exponents")
+    for component in plan.components:
+        streams = set(component.streams)
+        for qint_stream, exp_stream in required_pairs.items():
+            if qint_stream in streams:
+                assert exp_stream in streams, component.component_id
 
 
 def test_plan_models_hstack_vstack_and_multipass_surfaces() -> None:

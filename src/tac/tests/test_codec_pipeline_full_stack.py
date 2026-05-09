@@ -30,9 +30,17 @@ Strict-scorer-rule: pure CPU; tests never load a scorer.
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import torch
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+for _path in (REPO_ROOT, REPO_ROOT / "src"):
+    if str(_path) in sys.path:
+        sys.path.remove(str(_path))
+    if str(_path) not in sys.path:
+        sys.path.insert(0, str(_path))
 
 from tac.codec_pipeline import CodecOp, CodecPipeline
 from tac.codec_pipeline_full_stack import (
@@ -235,6 +243,7 @@ def test_manifest_written_with_empirical_tag(tmp_path: Path) -> None:
     """Manifest must land at ``<output_dir>/composition_matrix.json``
     tagged ``[empirical:<path>]`` with ``score_claim=False`` per CLAUDE.md."""
     sd = _synthetic_state_dict()
+    # FAKE_LANE_OK: tmp_path fixture lane id only; not a dispatchable lane.
     out_dir = tmp_path / "lane_codec_pipeline_full_stack_TEST"
     records = run_composition_matrix(sd, write_manifest=True, output_dir=out_dir)
     manifest_path = out_dir / "composition_matrix.json"
@@ -244,6 +253,7 @@ def test_manifest_written_with_empirical_tag(tmp_path: Path) -> None:
     assert payload["score_claim"] is False
     assert payload["evidence_grade"] == "predicted"
     assert payload["evidence_tag"].startswith("[empirical:")
+    # FAKE_LANE_OK: evidence-tag assertion uses fixture text, not active work.
     assert "lane_codec_pipeline_full_stack" in payload["evidence_tag"]
     # Forbidden score claims discipline: no [contest-CUDA] anywhere.
     raw = manifest_path.read_text()

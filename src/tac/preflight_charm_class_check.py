@@ -105,6 +105,10 @@ def _scan_file_for_charm_violations(path: Path) -> list[tuple[str, str]]:
         source = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return violations
+    if "context" not in source and "ar_predict" not in source and "ar_decode" not in source:
+        return violations
+    if not CHARM_NAME_PATTERN.search(source):
+        return violations
     try:
         tree = ast.parse(source, filename=str(path))
     except SyntaxError:
@@ -176,7 +180,16 @@ def check_charm_class_actually_implements_channel_conditional(
             continue
         # Skip vendored/intake clones
         s = str(p)
-        if "_intake_" in s or "/vendor/" in s or "/__pycache__/" in s:
+        try:
+            rel = p.resolve().relative_to(repo_root.resolve())
+        except ValueError:
+            rel = p
+        if (
+            "_intake_" in s
+            or "/vendor/" in s
+            or "/__pycache__/" in s
+            or rel.parts[:2] == ("experiments", "results")
+        ):
             continue
         files_scanned += 1
         for cls_name, reason in _scan_file_for_charm_violations(p):

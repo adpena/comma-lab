@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import math
 
 import pytest
@@ -75,3 +76,22 @@ def test_phase_1_cost_summary_is_ordered_by_eig_per_dollar() -> None:
 
     assert eigs == sorted(eigs, reverse=True)
     assert math.isclose(summary["total_gpu_cost_usd"], 210.0)
+
+
+def test_cli_help_surface_is_discoverable() -> None:
+    help_text = solver.build_arg_parser().format_help()
+
+    assert "--target-score" in help_text
+    assert "--decoder-class" in help_text
+    assert "--json" in help_text
+
+
+def test_cli_json_payload_is_planning_only(capsys: pytest.CaptureFixture[str]) -> None:
+    rc = solver.main(["--json", "--target-score", "0.17"])
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["schema"] == "theoretical_floor_solver_v2_cli.v1"
+    assert payload["score_claim"] is False
+    assert payload["evidence_grade"] == "planning_math_only"
+    assert payload["byte_target_at_a1_distortion"] == solver.score_to_byte_target(0.17)

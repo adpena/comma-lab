@@ -102,12 +102,13 @@ def test_substitutes_physical_member_deterministically_and_records_manifest(
 
     source_info = inspect_archive_for_substitution(source)
     candidate_info = inspect_archive_for_substitution(out1)
+    roundtrip_member = candidate_info.find_member("optimized_poses.bin")
     assert candidate_info.member_names() == [
         "inflate.sh",
         "optimized_poses.bin",
         "renderer.bin",
     ]
-    assert candidate_info.find_member("optimized_poses.bin").payload == replacement
+    assert roundtrip_member.payload == replacement
     for before, after in zip(source_info.members, candidate_info.members, strict=True):
         assert before.name == after.name
         assert before.date_time == after.date_time

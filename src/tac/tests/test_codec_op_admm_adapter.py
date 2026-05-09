@@ -145,9 +145,16 @@ def _state_dict() -> dict[str, torch.Tensor]:
 
 
 def test_adapter_is_stream_proximal_codec_and_emits_fail_closed_state() -> None:
+    state_dict = _state_dict()
+    op = _IdentityCodecOp(quality=3)
+    encoded = op.encode(state_dict, context={})
+    decoded = op.decode(encoded.blob, op_state=encoded.op_state, context={})
+    for key, tensor in state_dict.items():
+        assert torch.allclose(decoded[key], tensor)
+
     adapter = adapt_codec_op_class(
         _IdentityCodecOp,
-        _state_dict(),
+        state_dict,
         score_delta=0.125,
         marginal=0.01,
         op_params={"quality": 3},

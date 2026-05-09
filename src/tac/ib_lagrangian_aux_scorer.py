@@ -482,9 +482,9 @@ def _kl_distill_loss(
     return torch.nn.functional.kl_div(
         soft_aux,
         soft_real,
-        reduction="batchmean",
+        reduction="none",
         log_target=True,
-    ) * (temperature ** 2)
+    ).sum(dim=1).mean() * (temperature ** 2)
 
 
 def _gt_supervised_loss(

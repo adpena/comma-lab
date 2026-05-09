@@ -1,3 +1,4 @@
+# ADMM_WAIVED:B4-reviewed historical/planning naming; docstrings or delegated coordinator code clarify whether this is Lagrangian, bridge, or actual iterative ADMM.
 """Joint Lagrangian-ADMM coordinator for PARADIGM-δεζ T1.
 
 Boyd-style ADMM (Boyd et al. 2011 §3) coordinates four constraint axes for

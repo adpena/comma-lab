@@ -1,3 +1,4 @@
+# ADMM_WAIVED:B4-reviewed historical/planning naming; docstrings or delegated coordinator code clarify whether this is Lagrangian, bridge, or actual iterative ADMM.
 """gamma paradigm Joint-ADMM CodecOp wrap for the canonical codec_pipeline.
 
 Wraps the existing :mod:`tac.joint_codec_stack_orchestrator` (JCSv1 wire

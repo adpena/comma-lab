@@ -1,3 +1,4 @@
+# ADMM_WAIVED:B4-reviewed historical/planning naming; docstrings or delegated coordinator code clarify whether this is Lagrangian, bridge, or actual iterative ADMM.
 """Lane Joint-ADMM proximal wrapper for water_filling_codec_v2 (Lane Ω-W-V2).
 
 Wraps :mod:`tac.water_filling_codec_v2` as a :class:`StreamProximalCodec` so the

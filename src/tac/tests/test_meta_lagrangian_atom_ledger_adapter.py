@@ -432,6 +432,32 @@ def test_archive_custody_mismatch_blocks_candidate(
     assert "archive_custody_sha256_mismatch" in atom.blockers
 
 
+def test_exact_evidence_grade_without_archive_sha_is_fail_closed(
+    tmp_path: pathlib.Path,
+) -> None:
+    mod = _load_tool_module()
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive-bytes")
+    record = {
+        "phase": 2,
+        "substrate_label": "PR101",
+        "contest_cuda_score": 0.190,
+        "archive_path": str(archive),
+        "archive_bytes": archive.stat().st_size,
+        "archive_sha256": None,
+        "evidence_grade": "[contest-CUDA]",
+        "rel_err_pct": 0.25,
+        "n_layers": 13,
+    }
+
+    atom = mod.record_to_atom(record, idx=0, repo_root=tmp_path)
+
+    assert atom.fail_closed is True
+    assert atom.ready_for_meta_lagrangian_search is False
+    assert "missing_archive_sha256_for_evidence_grade" in atom.blockers
+    assert "missing_archive_custody_sha256" in atom.blockers
+
+
 def test_emit_writes_rows_and_strict_candidates(
     tmp_path: pathlib.Path,
 ) -> None:

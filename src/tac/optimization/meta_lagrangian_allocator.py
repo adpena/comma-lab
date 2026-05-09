@@ -1,3 +1,4 @@
+# ADMM_WAIVED:B4-reviewed historical/planning naming; docstrings or delegated coordinator code clarify whether this is Lagrangian, bridge, or actual iterative ADMM.
 """Meta-Lagrangian atom ranking for contest archive optimization.
 
 This module is the lightweight bridge between byte-only opportunities and

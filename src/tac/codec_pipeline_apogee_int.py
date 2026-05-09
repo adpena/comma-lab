@@ -84,8 +84,31 @@ from tac.codec_pipeline import EncodeResult, ValidationReport
 # only ships the decoder side). Importing from `experiments` requires a
 # repo-root path entry; do that defensively.
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
+for _path in (_REPO_ROOT, _REPO_ROOT / "src"):
+    if str(_path) in sys.path:
+        sys.path.remove(str(_path))
+    sys.path.insert(0, str(_path))
+
+
+def _ensure_repo_submissions_package() -> None:
+    """Evict foreign test-time ``submissions`` packages before runtime imports."""
+
+    module = sys.modules.get("submissions")
+    if module is None:
+        return
+    expected = (_REPO_ROOT / "submissions").resolve()
+    package_paths = getattr(module, "__path__", ())
+    resolved_paths = {Path(path).resolve() for path in package_paths}
+    module_file = getattr(module, "__file__", None)
+    file_ok = module_file is not None and expected in Path(module_file).resolve().parents
+    if expected in resolved_paths or file_ok:
+        return
+    for name in list(sys.modules):
+        if name == "submissions" or name.startswith("submissions."):
+            del sys.modules[name]
+
+
+_ensure_repo_submissions_package()
 
 from experiments.block_fp_intN_codec_sketch import (  # noqa: E402
     encode_intN_block_fp,

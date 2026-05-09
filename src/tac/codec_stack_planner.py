@@ -72,6 +72,15 @@ QUALITY_MANDATE_11: tuple[str, ...] = (
     "paper_ready",
 )
 
+RENDERER_WEIGHT_BLOCK_FP_STREAMS: tuple[str, ...] = (
+    "renderer_weights_qint",
+    "renderer_weight_exponents",
+)
+MODEL_WEIGHT_BLOCK_FP_STREAMS: tuple[str, ...] = (
+    "model_weight_qint",
+    "model_weight_exponents",
+)
+
 PREDICTED_NESTED_SCORE_BAND: dict[str, Any] = {
     "schema": OMEGA_OPT_CLAIM_SCHEMA,
     "claim_count": 8,
@@ -659,7 +668,7 @@ def learned_hyperprior_component(
         family="balle_full_learned_hyperprior",
         role="hyperprior",
         stack_axis="vstack_serial",
-        streams=("renderer_weights_qint", "model_weight_qint"),
+        streams=(*RENDERER_WEIGHT_BLOCK_FP_STREAMS, *MODEL_WEIGHT_BLOCK_FP_STREAMS),
         depends_on=("quantized_symbol_streams",),
         exact_roundtrip_required=True,
         runtime_packet_required=True,
@@ -723,7 +732,13 @@ def build_hstack_vstack_multipass_plan(
         family="qint_symbol_streams",
         role="quantization",
         stack_axis="vstack_serial",
-        streams=("renderer_weights_qint", "mask_qint", "pose_qint", "residual_qint"),
+        streams=(
+            *RENDERER_WEIGHT_BLOCK_FP_STREAMS,
+            *MODEL_WEIGHT_BLOCK_FP_STREAMS,
+            "mask_qint",
+            "pose_qint",
+            "residual_qint",
+        ),
         depends_on=("baseline_packet",),
         byte_semantics=_planning_semantics(
             evidence_semantics="symbol_stream_contract_plan_only",
@@ -738,7 +753,7 @@ def build_hstack_vstack_multipass_plan(
         family="static_shared_pmf",
         role="negative_control",
         stack_axis="vstack_serial",
-        streams=("renderer_weights_qint", "model_weight_qint"),
+        streams=(*RENDERER_WEIGHT_BLOCK_FP_STREAMS, *MODEL_WEIGHT_BLOCK_FP_STREAMS),
         depends_on=("quantized_symbol_streams",),
         exact_roundtrip_required=True,
         runtime_packet_required=True,
@@ -762,7 +777,13 @@ def build_hstack_vstack_multipass_plan(
         family="range_arithmetic_terminal",
         role="arithmetic",
         stack_axis="vstack_serial",
-        streams=("renderer_weights_qint", "model_weight_qint", "mask_qint", "pose_qint", "residual_qint"),
+        streams=(
+            *RENDERER_WEIGHT_BLOCK_FP_STREAMS,
+            *MODEL_WEIGHT_BLOCK_FP_STREAMS,
+            "mask_qint",
+            "pose_qint",
+            "residual_qint",
+        ),
         depends_on=("quantized_symbol_streams",),
         byte_semantics=_planning_semantics(
             evidence_semantics="terminal_entropy_coder_contract_plan_only",

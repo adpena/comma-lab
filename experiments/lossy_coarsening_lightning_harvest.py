@@ -108,6 +108,15 @@ def _display_path(path: Path) -> Path:
 
 
 def _load_active_jobs() -> list[dict[str, object]]:
+    """Read-only snapshot of the active jobs.
+
+    Safe outside the lock for read-only inspection; ``os.replace`` semantics
+    in the locked-write path guarantee no partial reads. For
+    load→mutate→save cycles, use ``_mark_row_terminal_locked`` below
+    (catalog #131 — proactive custody+concurrency audit).
+    """
+    # SAVE_POSTERIOR_LOCKED_OK: read-only path; corresponding write goes
+    # through ``_mark_row_terminal_locked`` which uses fcntl serialization.
     if not LIGHTNING_ACTIVE_JOBS_PATH.exists():
         return []
     try:
@@ -119,11 +128,34 @@ def _load_active_jobs() -> list[dict[str, object]]:
     return rows
 
 
-def _save_active_jobs(rows: list[dict[str, object]]) -> None:
-    LIGHTNING_ACTIVE_JOBS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    LIGHTNING_ACTIVE_JOBS_PATH.write_text(
-        json.dumps(rows, indent=2) + "\n", encoding="utf-8"
-    )
+def _mark_row_terminal_locked(
+    *,
+    job_name: str,
+    status_lower: str,
+    score: float | None,
+    auth_eval_json_path: str | None = None,
+) -> None:
+    """Atomic mark-terminal under fcntl lock — sister-dispatcher safe.
+
+    Routes through
+    :func:`tac.deploy.lightning.active_jobs_state.update_active_jobs_locked`
+    (catalog #131) so the load→mutate→save cycle is atomic. Without this,
+    a concurrent dispatcher writing a NEW row would see a stale read here
+    and silently drop the new row when this writer's ``os.replace`` lands.
+    """
+    from tac.deploy.lightning.active_jobs_state import update_active_jobs_locked
+
+    def _mutate(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+        _mark_row_terminal(
+            rows,
+            job_name=job_name,
+            status_lower=status_lower,
+            score=score,
+            auth_eval_json_path=auth_eval_json_path,
+        )
+        return rows
+
+    update_active_jobs_locked(_mutate)
 
 
 def _select_target_row(
@@ -411,9 +443,7 @@ def _close_terminal_failure(
     notes: str,
 ) -> None:
     _terminal_claim(job_name=job_name, status=status, notes=notes)
-    rows = _load_active_jobs()
-    _mark_row_terminal(rows, job_name=job_name, status_lower=status, score=None)
-    _save_active_jobs(rows)
+    _mark_row_terminal_locked(job_name=job_name, status_lower=status, score=None)
     sys.exit(notes)
 
 
@@ -445,9 +475,7 @@ def _harvest_terminal(
             f"remote={exc.remote_path}"
         )
         _terminal_claim(job_name=job_name, status=status, notes=notes)
-        rows = _load_active_jobs()
-        _mark_row_terminal(rows, job_name=job_name, status_lower=status, score=None)
-        _save_active_jobs(rows)
+        _mark_row_terminal_locked(job_name=job_name, status_lower=status, score=None)
         sys.exit(f"FATAL: {notes}")
 
     auth_eval = _parse_auth_eval_json(local_dir)
@@ -499,15 +527,12 @@ def _harvest_terminal(
     )
     _terminal_claim(job_name=job_name, status=terminal_status, notes=notes)
 
-    rows = _load_active_jobs()
-    _mark_row_terminal(
-        rows,
+    _mark_row_terminal_locked(
         job_name=job_name,
         status_lower=terminal_status,
         score=float(score) if isinstance(score, (int, float)) else None,
         auth_eval_json_path=str(row["auth_eval_json"]),
     )
-    _save_active_jobs(rows)
 
     print(json.dumps(row, indent=2, default=str))
     return 0

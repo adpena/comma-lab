@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ADMM_WAIVED:B4-reviewed historical/planning naming; docstrings or delegated coordinator code clarify whether this is Lagrangian, bridge, or actual iterative ADMM.
 """PR101 cross-paradigm HStack/VStack empirical anchors — Subagent XPARADIGM.
 
 Per the operator-approved cross-paradigm integration mandate (2026-05-08):

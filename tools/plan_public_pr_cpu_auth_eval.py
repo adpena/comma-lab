@@ -266,7 +266,8 @@ def main() -> int:
                 "Run on Linux x86_64 for [contest-CPU], or pass "
                 "--allow-advisory-host to write advisory CPU evidence."
             )
-        return subprocess.run(plan["command"], cwd=args.repo_root).returncode
+        proc = subprocess.run(plan["command"], cwd=args.repo_root, check=False)
+        return proc.returncode
     return 0
 
 

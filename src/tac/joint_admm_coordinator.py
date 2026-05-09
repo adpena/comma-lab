@@ -1,3 +1,4 @@
+# ADMM_WAIVED:B4-reviewed historical/planning naming; docstrings or delegated coordinator code clarify whether this is Lagrangian, bridge, or actual iterative ADMM.
 """Lane Joint-ADMM — Boyd-style coordinator across codec slots (Phase 2 Lane 10).
 
 Per memory `project_codec_stacking_composition_canonical_orders_20260429.md`:

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# ROUNDTRIP_SELF_TEST: _smoke_roundtrip_no_dead_k and _smoke_roundtrip_cplx_op1
+# verify emitted archive sections through the staged inflate parsers.
 """PR101 unified-winners cross-paradigm empirical stack.
 
 Composes the four 2026-05-08 PR101 session winners into a single

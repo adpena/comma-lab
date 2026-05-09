@@ -388,7 +388,7 @@ def _stacking_rules() -> list[dict[str, Any]]:
         },
         {
             "rule_id": "proxy_signal_is_not_membership_in_promotion_set",
-            "set_condition": "evidence_grade not in {A++, A}",
+            "set_condition": "evidence_grade not in {A++, A}",  # CUSTODY_VALIDATOR_OK: literal text in rule catalogue, not executable promotion gate
             "required_evidence": "exact CUDA auth eval on exact archive bytes",
             "example": "entropy profile can rank atoms but cannot promote them",
         },

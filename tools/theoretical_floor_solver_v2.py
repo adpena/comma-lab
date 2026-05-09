@@ -41,8 +41,10 @@ Memory pointers:
 """
 from __future__ import annotations
 
+import argparse
+import json
 import math
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Sequence
 
 # Fixed contest constants (must match upstream/evaluate.py + tac.score_geometry).
@@ -558,8 +560,82 @@ def phase_1_total_cost_estimate() -> dict:
 # ---------------------------------------------------------------------------
 
 
-def main() -> None:
+def _build_cli_payload(*, target_score: float, decoder_class: str) -> dict:
+    """Return the operator-facing solver payload without printing."""
+
+    floor = theoretical_floor_estimate()
+    gap = a1_floor_gap_decomposition(floor=floor)
+    cuda_mean, cuda_std = wasserstein1_cuda_cpu_correction(
+        A1_SCORE_CPU,
+        decoder_class=decoder_class,
+    )
+    try:
+        byte_target = score_to_byte_target(target_score)
+        byte_target_error = None
+    except ValueError as exc:
+        byte_target = None
+        byte_target_error = str(exc)
+    return {
+        "schema": "theoretical_floor_solver_v2_cli.v1",
+        "score_claim": False,
+        "evidence_grade": "planning_math_only",
+        "a1_anchor": {
+            "score_cpu": A1_SCORE_CPU,
+            "archive_bytes": A1_ARCHIVE_BYTES,
+            "archive_sha256_prefix": A1_ARCHIVE_SHA256_PREFIX,
+            "components": score_components(A1_D_SEG, A1_D_POSE, A1_ARCHIVE_BYTES),
+        },
+        "floor": asdict(floor),
+        "gap_decomposition": asdict(gap),
+        "cuda_prediction": {
+            "decoder_class": decoder_class,
+            "mean": cuda_mean,
+            "std": cuda_std,
+            "planning_only": True,
+        },
+        "target_score": target_score,
+        "byte_target_at_a1_distortion": byte_target,
+        "byte_target_error": byte_target_error,
+        "phase_1_cost": phase_1_total_cost_estimate(),
+        "phase_1_tracks": [asdict(t) for t in paradigm_delta_epsilon_zeta_phase_1_tracks()],
+    }
+
+
+def build_arg_parser() -> argparse.ArgumentParser:
+    """Build the CLI parser for operator discoverability."""
+
+    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    parser.add_argument(
+        "--target-score",
+        type=float,
+        default=0.17,
+        help="score target used for the byte-budget inversion",
+    )
+    parser.add_argument(
+        "--decoder-class",
+        default="a1",
+        help="decoder class for CUDA/CPU drift planning band",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="emit machine-readable planning JSON instead of text",
+    )
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
     """Smoke run: print A1 decomposition + floor estimate + Phase 1 plan."""
+    parser = build_arg_parser()
+    args = parser.parse_args(argv)
+    payload = _build_cli_payload(
+        target_score=args.target_score,
+        decoder_class=args.decoder_class,
+    )
+    if args.json:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
+
     print("=" * 72)
     print("Theoretical Floor Solver v2 — Grand Council 2026-05-09")
     print("=" * 72)
@@ -589,13 +665,13 @@ def main() -> None:
     print(f"  predicted CUDA: {cuda_mean:.4f} ± {cuda_std:.4f}")
     print()
 
-    print("Sub-0.17 byte target at A1's distortion levels:")
-    try:
-        b_target = score_to_byte_target(0.17)
+    print(f"Sub-{args.target_score:.3f} byte target at A1's distortion levels:")
+    b_target = payload["byte_target_at_a1_distortion"]
+    if b_target is not None:
         print(f"  required B: {b_target:,} (vs A1's {A1_ARCHIVE_BYTES:,})")
         print(f"  byte savings needed: {A1_ARCHIVE_BYTES - b_target:,} B (-{100*(A1_ARCHIVE_BYTES-b_target)/A1_ARCHIVE_BYTES:.1f}%)")
-    except ValueError as e:
-        print(f"  INFEASIBLE at A1 distortion: {e}")
+    else:
+        print(f"  INFEASIBLE at A1 distortion: {payload['byte_target_error']}")
     print()
 
     print("PARADIGM-δεζ Phase 1 multi-track plan:")
@@ -607,7 +683,8 @@ def main() -> None:
     print(f"  Best predicted: [{summary['best_predicted_score_low']:.3f}, "
           f"{summary['best_predicted_score_high']:.3f}]")
     print(f"  Tracks by EIG/$: {summary['tracks_by_eig_per_dollar']}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

@@ -3,10 +3,31 @@
 from __future__ import annotations
 
 import inspect
+import sys
 from pathlib import Path
 
 import pytest
 import torch
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+for _path in (REPO_ROOT, REPO_ROOT / "src"):
+    if str(_path) in sys.path:
+        sys.path.remove(str(_path))
+    if str(_path) not in sys.path:
+        sys.path.insert(0, str(_path))
+
+_submissions = sys.modules.get("submissions")
+if _submissions is not None:
+    expected = (REPO_ROOT / "submissions").resolve()
+    package_paths = {
+        Path(path).resolve() for path in getattr(_submissions, "__path__", ())
+    }
+    module_file = getattr(_submissions, "__file__", None)
+    file_ok = module_file is not None and expected in Path(module_file).resolve().parents
+    if expected not in package_paths and not file_ok:
+        for _name in list(sys.modules):
+            if _name == "submissions" or _name.startswith("submissions."):
+                del sys.modules[_name]
 
 from submissions.robust_current import inflate_segmap as standard
 from submissions.robust_current import inflate_segmap_arithmetic as arith

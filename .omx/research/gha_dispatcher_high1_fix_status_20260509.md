@@ -45,3 +45,14 @@ re-validate post-fix.
   reports fail closed via `AmbiguousSubmissionMatchError`. Concurrent A1 CPU
   eval harvesters may proceed only after running the focused regression suite
   and preserving report custody fields.
+- 2026-05-09T07:00:00Z — COMPLETE: HIGH 2 (custody validator with
+  `CustodyVerdict` typed taxonomy) + MEDIUM (locked transactional writes via
+  fcntl) also landed alongside HIGH 1. STRICT preflight gates #127
+  (`check_authoritative_tag_requires_custody_metadata`) + #128
+  (`check_continual_learning_writes_use_lock`) are strict in `preflight_all()`
+  at live count 0. Round-2 adversarial hardening removed whole-file validator
+  and lock co-owner accepts; #127 now requires line-local custody routing or an
+  explicit same-line waiver, and #128 now requires a local `_posterior_lock`
+  context for bare `save_posterior(...)`. 21 focused #127/#128 tests pass.
+  Canonical landing memo:
+  `feedback_codex_round2_custody_concurrency_fix_landed_20260509.md`.

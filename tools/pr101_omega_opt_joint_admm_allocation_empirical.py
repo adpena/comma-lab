@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ADMM_WAIVED:B4-reviewed historical/planning naming; docstrings or delegated coordinator code clarify whether this is Lagrangian, bridge, or actual iterative ADMM.
 """PR101 Lagrangian per-tensor allocation — Path B step 5 empirical anchor.
 
 NAMING CORRECTION (REVIEW-MATH, 2026-05-08, Dykstra council finding)

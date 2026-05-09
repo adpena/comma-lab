@@ -3,6 +3,8 @@
 This module ranks local HNeRV entropy/archive candidates by archive bytes while
 keeping exact-CUDA dispatch separate. It is a custody/readiness surface only:
 it never claims a score, writes dispatch state, or authorizes GPU work.
+
+# ROUNDTRIP_NOT_REQUIRED: selector ranks custody manifests; it does not encode/decode bytes.
 """
 
 from __future__ import annotations

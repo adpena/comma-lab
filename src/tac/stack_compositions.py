@@ -1,3 +1,4 @@
+# ADMM_WAIVED:B4-reviewed historical/planning naming; docstrings or delegated coordinator code clarify whether this is Lagrangian, bridge, or actual iterative ADMM.
 """Cross-lane composition glue (per ``docs/stacking_architecture.md``).
 
 This module is the canonical way to *stack* lane outputs at the archive

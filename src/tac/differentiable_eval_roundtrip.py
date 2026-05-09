@@ -91,6 +91,8 @@ from typing import Any, Callable
 import torch
 import torch.nn.functional as F
 
+from tac.quantization import Uint8STE
+
 
 # --------------------------------------------------------------------------- #
 # Constants                                                                    #
@@ -224,9 +226,7 @@ def apply_eval_roundtrip_during_training(
         up = F.interpolate(flat, size=(874, 1164), mode='bicubic', align_corners=False)
         down = F.interpolate(up, size=(384, 512), mode='bilinear', align_corners=False)
         # ...
-        decoded_clamped = decoded_bhwc.clamp(0, 255)
-        decoded_rounded = decoded_clamped.round()
-        decoded_bhwc = decoded_clamped + (decoded_rounded - decoded_clamped).detach()
+        decoded_bhwc = Uint8STE.apply(decoded_bhwc)
 
     Note PR #95 uses bicubic UP and bilinear DOWN (asymmetric), and applies the
     STE round AFTER the resize roundtrip in HWC layout. We replicate the same
@@ -290,13 +290,12 @@ def apply_eval_roundtrip_during_training(
         down = flat
 
     if simulate_uint8:
-        # STE round: forward = clamp + round; backward = identity through round.
-        clamped = down.clamp(0.0, 255.0)
         if ste_round:
-            rounded = clamped.round()
-            out_flat = clamped + (rounded - clamped).detach()
+            # Canonical STE: forward is exact uint8 clamp/round; backward is
+            # identity inside range and zero outside saturation.
+            out_flat = Uint8STE.apply(down)
         else:
-            out_flat = clamped
+            out_flat = down.clamp(0.0, 255.0)
     else:
         out_flat = down
 
