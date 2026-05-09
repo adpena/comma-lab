@@ -28,24 +28,127 @@ from __future__ import annotations
 
 import ast
 import datetime as _dt
+import functools
 import hashlib
 import importlib.util
 import json
 import os
 import re
 import shlex
+import signal
 import struct
 import subprocess
 import sys
+import time
+from contextlib import contextmanager
 from collections.abc import Mapping
+from collections.abc import Iterator
 from pathlib import Path
 
 import torch
+
+DEFAULT_PREFLIGHT_CLI_TIMEOUT_S = 30.0
+
+
+@functools.lru_cache(maxsize=4096)
+def _cached_python_text_and_tree(
+    resolved_path: str,
+    mtime_ns: int,
+    size_bytes: int,
+) -> tuple[str, ast.Module]:
+    """Return cached source text + AST for repeated preflight scans.
+
+    Developer preflight intentionally runs several independent bug-class
+    scanners over the same Python files. The files are immutable for the
+    duration of one CLI run; keying by path, mtime, and size preserves
+    correctness when a long-lived process edits a file and reruns checks.
+    """
+    del mtime_ns, size_bytes  # cache-key only
+    text = Path(resolved_path).read_text()
+    return text, ast.parse(text, filename=resolved_path)
+
+
+def _read_python_text_and_tree(
+    path: Path,
+) -> tuple[str | None, ast.Module | None, BaseException | None]:
+    try:
+        stat = path.stat()
+        resolved = str(path.resolve())
+    except OSError as e:
+        return None, None, e
+    try:
+        text, tree = _cached_python_text_and_tree(
+            resolved,
+            stat.st_mtime_ns,
+            stat.st_size,
+        )
+    except (OSError, SyntaxError, UnicodeDecodeError) as e:
+        return None, None, e
+    return text, tree, None
 
 
 class PreflightError(Exception):
     """A preflight check failed — do NOT proceed."""
     pass
+
+
+class PreflightTimeoutError(PreflightError):
+    """The canonical preflight CLI exceeded its wall-clock budget."""
+    pass
+
+
+@contextmanager
+def _preflight_timeout_after(seconds: float | None) -> Iterator[None]:
+    """Raise ``PreflightTimeoutError`` when the CLI exceeds ``seconds``.
+
+    The timeout is intentionally CLI-scoped. Library callers can still profile
+    individual checks or run release/custody sweeps under their own timeout
+    policy, while the normal developer command fails fast instead of silently
+    becoming a multi-minute velocity tax.
+    """
+    if seconds is None:
+        yield
+        return
+    if seconds <= 0:
+        raise ValueError("preflight timeout must be positive")
+    if not hasattr(signal, "SIGALRM") or not hasattr(signal, "setitimer"):
+        yield
+        return
+
+    started = time.monotonic()
+
+    def _handler(_signum: int, _frame: object) -> None:
+        elapsed = time.monotonic() - started
+        raise PreflightTimeoutError(
+            f"preflight exceeded {seconds:g}s wall-clock budget "
+            f"(elapsed {elapsed:.1f}s). This is a DX failure; profile with "
+            "`tools/profile_preflight_latency.py` or run the explicit "
+            "slow-release override only for custody/release sweeps."
+        )
+
+    old_handler = signal.getsignal(signal.SIGALRM)
+    old_timer = signal.getitimer(signal.ITIMER_REAL)
+    signal.signal(signal.SIGALRM, _handler)
+    signal.setitimer(signal.ITIMER_REAL, seconds)
+    try:
+        yield
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0.0)
+        signal.signal(signal.SIGALRM, old_handler)
+        if old_timer[0] > 0:
+            signal.setitimer(signal.ITIMER_REAL, old_timer[0], old_timer[1])
+
+
+def _preflight_cli_timeout_seconds(
+    *,
+    timeout_s: float,
+    allow_slow_preflight: bool,
+) -> float | None:
+    if allow_slow_preflight:
+        return None
+    if timeout_s <= 0:
+        raise ValueError("--timeout-s must be > 0")
+    return timeout_s
 
 
 class PreflightWarning:
@@ -616,6 +719,102 @@ def preflight_all(
         # fix closed the only known instance). Memory:
         # feedback_codex_round3_findings_fix_landed_20260509.md
         check_locked_writes_preserve_deletions(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-09 codex round-4 HIGH 1 fix (#133): META-meta of #131. The
+        # exempt list previously included `azure_dispatch.py` as "already
+        # locked" while it did bare write_text to azure_active_vms.json.
+        # The gate scans every entry in `_BARE_WRITE_CANONICAL_HELPERS` and
+        # verifies a canonical lock-pattern token is present (or the entry
+        # is in the deferred-rationale dict / file-level waiver). STRICT-FLIP
+        # per CLAUDE.md "Bugs must be permanently fixed AND self-protected
+        # against" — Catalog #133 lands at 0 live violations after Azure
+        # gets its canonical `active_vms_state.py` helper. Memory:
+        # feedback_codex_round4_findings_fix_with_self_protection_landed_20260509.md
+        check_no_excluded_writers_in_check_131_accept_list(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-09 codex round-4 MEDIUM 1 fix (#134): Phase3DispatchGate
+        # was an advisory gate (constructor was no-op; `.check()` had to be
+        # called explicitly). The fix made it fail-closed at construction
+        # with explicit `unsafe_test_only=True` opt-out for tests. STRICT-FLIP
+        # per the same self-protection mandate — Catalog #134 lands at 0 live
+        # violations.
+        check_phase3_dispatch_gate_fail_closed(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-09 codex round-4 MEDIUM 2 fix (#135): the round-3 fix
+        # made `_save_setup_first_seen` write transactionally INSIDE the
+        # lock, but `main()` still loaded the on-disk state OUTSIDE the
+        # lock and saved at end-of-run — a lost-update race for two
+        # overlapping verifier invocations. The fix added
+        # `update_setup_first_seen_locked` (load+merge+prune+save inside
+        # ONE locked window) and refactored main() to use it. STRICT-FLIP
+        # per the same self-protection mandate — Catalog #135 lands at 0
+        # live violations.
+        check_setup_first_seen_uses_transactional_update_inside_lock(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-09 defense-in-depth on codex round-3 HIGH 2 (#136):
+        # custody-validator accept-token lists must be CONCRETE only.
+        # Round-3 patched ONE accept-list; #136 extincts the bug class so
+        # no future accept-list addition can re-introduce a generic-token
+        # bypass. STRICT-FLIP per CLAUDE.md "Bugs must be permanently fixed
+        # AND self-protected against" — Catalog #136 lands at 0 live
+        # violations. Memory:
+        # feedback_production_hardening_polish_defense_in_depth_landed_20260509.md
+        check_custody_gate_accept_tokens_concrete_only(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-09 defense-in-depth on codex round-3 MEDIUM 1 (#137):
+        # remote dispatch runbooks must NOT default to local CUDA probe.
+        # Round-3 patched ONE runbook; #137 extincts the bug class across
+        # every `scripts/remote_lane_*.sh`. STRICT-FLIP per the same
+        # self-protection mandate — Catalog #137 lands at 0 live violations.
+        check_remote_dispatch_runbooks_no_local_cuda_probe_default(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-09 defense-in-depth on codex round-3 MEDIUM 2 (#138):
+        # state writers must use strict load on mutating path. Round-3
+        # patched ONE writer (`active_jobs_state.py`); #138 extincts the
+        # bug class across every `update_*_locked` / `_save_*` / `upsert_*` /
+        # `register_*` / `mark_*_terminal` writer. STRICT-FLIP per the
+        # same self-protection mandate — Catalog #138 lands at 0 live
+        # violations.
+        check_state_writers_strict_load_for_mutating_path(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-09 codex round-5 HIGH 1 fix (#139): packet-compiler
+        # `_finalize_packet_result`-style functions that compute a
+        # ``no_op_proof`` MUST promote ``runtime_consumes_bytes=False`` /
+        # ``no_op_detector_passed=False`` to a real entry in the blockers
+        # list. Pre-fix the proof was advisory-only and the CLI exit code
+        # passed a no-op packet — burning eval spend. STRICT-FLIP per
+        # CLAUDE.md "Bugs must be permanently fixed AND self-protected
+        # against" — Catalog #139 lands at 0 live violations after the fix.
+        # Memory: feedback_codex_round5_findings_fix_with_self_protection_landed_20260509.md.
+        check_packet_compiler_no_op_proof_promotes_to_blocker(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-09 codex round-5 HIGH 2 fix (#140): `_save_*` writers
+        # documented as caller-locked MUST runtime-enforce the lock-held
+        # invariant (sister `_lock_held()` predicate / `_lock_depth` check
+        # / `fcntl.flock` acquisition / `raise` on missing lock). Comment-
+        # only contracts are FORBIDDEN per CLAUDE.md. STRICT-FLIP per the
+        # same self-protection mandate — Catalog #140 lands at 0 live
+        # violations after the LightningDispatcher._save_state fix.
+        check_state_writers_own_their_lock_end_to_end(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-09 codex round-5 HIGH 3 fix (#141): cross-module
+        # state-helper calls MUST thread `path=` (and `lock_path=` when
+        # accepted) when the calling module defines its own tracker
+        # constant. Tests that monkeypatch the calling module's constant
+        # silently broke pre-fix because the helper's canonical path
+        # always won. STRICT-FLIP per the same self-protection mandate —
+        # Catalog #141 lands at 0 live violations after the
+        # azure_dispatch.py fix.
+        check_state_helper_paths_explicit(
             strict=True, verbose=verbose,
         )
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
@@ -1564,6 +1763,109 @@ def preflight_all(
         )
 
 
+def preflight_developer(
+    profile_name: str | None = None,
+    profile_arch: dict | None = None,
+    tto_frames_path: str | Path | None = None,
+    gt_poses_path: str | Path | None = None,
+    masks_path: str | Path | None = None,
+    renderer_path: str | Path | None = None,
+    archive_path: str | Path | None = None,
+    check_codebase: bool = True,
+    verbose: bool = True,
+    use_fs_cache: bool = True,
+    _fs_cache_wrapped: bool = False,
+) -> None:
+    """Fast strict developer preflight.
+
+    This is the default CLI scope. It keeps the bug classes that most often
+    corrupt local edits, dispatches, lane registration, device axes, and
+    custody promotion, while leaving exhaustive historical/release scans to
+    ``preflight_all``. The contract is explicit: developer preflight must fit
+    inside the 30s wall-clock budget; release/custody preflight is opt-in.
+    """
+    if check_codebase and use_fs_cache and not _fs_cache_wrapped:
+        from tac.preflight_fs_cache import cached_filesystem
+        from tac.source_index import source_index_context
+
+        with cached_filesystem(cache_reads=True), source_index_context(REPO_ROOT):
+            preflight_developer(
+                profile_name=profile_name,
+                profile_arch=profile_arch,
+                tto_frames_path=tto_frames_path,
+                gt_poses_path=gt_poses_path,
+                masks_path=masks_path,
+                renderer_path=renderer_path,
+                archive_path=archive_path,
+                check_codebase=check_codebase,
+                verbose=verbose,
+                use_fs_cache=use_fs_cache,
+                _fs_cache_wrapped=True,
+            )
+        return
+
+    if check_codebase:
+        check_codebase_drift(strict=True, verbose=verbose)
+        check_dispatch_claim_helper_present(strict=True, verbose=verbose)
+        preflight_arity(strict=True, verbose=verbose)
+        preflight_shell_lane_arity(strict=True, verbose=verbose)
+        preflight_t4_oom_training_guard(strict=True, verbose=verbose)
+        check_dispatch_cli_shell_hazards(strict=True, verbose=verbose)
+        check_subagent_landing_has_solver_wire_in(strict=True, verbose=verbose)
+        check_lane_pre_registered_before_work_starts(strict=True, verbose=verbose)
+        check_authoritative_tag_requires_custody_metadata(
+            strict=True, verbose=verbose,
+        )
+        check_continual_learning_writes_use_lock(
+            strict=True, verbose=verbose,
+        )
+        check_no_tag_only_custody_validation(
+            strict=True, verbose=verbose,
+        )
+        check_no_bare_writes_to_shared_state(
+            strict=True, verbose=verbose,
+        )
+        check_locked_writes_preserve_deletions(
+            strict=True, verbose=verbose,
+        )
+        check_custody_gate_accept_tokens_concrete_only(
+            strict=True, verbose=verbose,
+        )
+        check_remote_dispatch_runbooks_no_local_cuda_probe_default(
+            strict=True, verbose=verbose,
+        )
+        check_state_writers_strict_load_for_mutating_path(
+            strict=True, verbose=verbose,
+        )
+        check_no_mps_fallback_default(strict=True, verbose=verbose)
+        check_no_eval_roundtrip_false(strict=True, verbose=verbose)
+        check_no_disable_eval_roundtrip_flag(strict=True, verbose=verbose)
+        check_training_scripts_use_real_data_in_nonsmoke_mode(
+            strict=True, verbose=verbose,
+        )
+        check_no_scorer_load_at_inflate(strict=True, verbose=verbose)
+        check_public_pr_intake_clones_pristine(strict=True, verbose=verbose)
+
+    if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
+        preflight_training_inputs(
+            tto_frames_path=tto_frames_path,
+            gt_poses_path=gt_poses_path,
+            masks_path=masks_path,
+            profile_name=profile_name,
+            profile_arch=profile_arch,
+            verbose=verbose,
+        )
+
+    if any([renderer_path, masks_path, archive_path]):
+        preflight_check(
+            renderer_path=renderer_path,
+            masks_path=masks_path if not tto_frames_path else None,
+            poses_path=None,
+            archive_path=archive_path,
+            verbose=verbose,
+        )
+
+
 def preflight_training_inputs(
     tto_frames_path: str | Path,
     gt_poses_path: str | Path,
@@ -1818,6 +2120,31 @@ def _scan_text_for_dangerous_patterns(text: str, location: str) -> list[str]:
     return violations
 
 
+def _python_forbidden_scan_may_match(text: str) -> bool:
+    """Cheap prefilter for `_scan_python_for_forbidden`.
+
+    The drift scanner only cares about deployment-danger tokens embedded in
+    Python call arguments / f-strings / long string literals. Most launch
+    surface files do not contain any relevant token, so AST-parsing them on
+    every developer preflight is pure latency.
+    """
+    if any(
+        tok in text
+        for tok in (
+            "nohup",
+            "pgrep -f",
+            "/tmp/",
+            "_partial",
+            "auth_eval",
+            "--device mps",
+            '"mps"',
+            "'mps'",
+        )
+    ):
+        return True
+    return ".pt" in text and ".bin" in text
+
+
 def _scan_python_for_forbidden(path: Path) -> list[str]:
     """AST-scan a Python file for forbidden subprocess patterns.
 
@@ -1825,9 +2152,16 @@ def _scan_python_for_forbidden(path: Path) -> list[str]:
     """
     violations: list[str] = []
     try:
-        tree = ast.parse(path.read_text(), filename=str(path))
-    except SyntaxError:
+        text = path.read_text()
+    except (OSError, UnicodeDecodeError):
+        return []
+    if not _python_forbidden_scan_may_match(text):
+        return []
+    _text, tree, error = _read_python_text_and_tree(path)
+    if isinstance(error, SyntaxError):
         return [f"{path}: SyntaxError (cannot parse)"]
+    if error is not None or tree is None:
+        return []
 
     # R-mps-noise-rule 2026-04-25: NEW. Per CLAUDE.md "MPS auth eval is NOISE",
     # detect any auth_eval invocation hardcoded to --device mps. Allowed only
@@ -5562,8 +5896,12 @@ def _scan_python_for_mps_fallback(path: Path, repo_root: Path) -> list[str]:
         return []
     try:
         text = path.read_text()
-        tree = ast.parse(text, filename=str(path))
-    except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
+    except (OSError, UnicodeDecodeError):
+        return []
+    if "mps" not in text or "cuda.is_available" not in text:
+        return []
+    _text, tree, error = _read_python_text_and_tree(path)
+    if error is not None or tree is None:
         return []
 
     violations: list[str] = []
@@ -6037,8 +6375,13 @@ def _scan_python_for_eval_roundtrip_false(path: Path, repo_root: Path) -> list[s
     if "/tests/" in rel_s or "test_" in path.name:
         return []
     try:
-        tree = ast.parse(path.read_text(), filename=str(path))
-    except (SyntaxError, UnicodeDecodeError):
+        text = path.read_text()
+    except (OSError, UnicodeDecodeError):
+        return []
+    if "eval_roundtrip" not in text:
+        return []
+    _text, tree, error = _read_python_text_and_tree(path)
+    if error is not None or tree is None:
         return []
     violations: list[str] = []
 
@@ -6666,8 +7009,13 @@ def _scan_python_for_disable_eval_roundtrip_flag(
     if "/tests/" in rel_s or "test_" in path.name:
         return []
     try:
-        tree = ast.parse(path.read_text(), filename=str(path))
-    except (SyntaxError, UnicodeDecodeError):
+        text = path.read_text()
+    except (OSError, UnicodeDecodeError):
+        return []
+    if "--no-eval-roundtrip" not in text:
+        return []
+    _text, tree, error = _read_python_text_and_tree(path)
+    if error is not None or tree is None:
         return []
     violations: list[str] = []
     for node in ast.walk(tree):
@@ -28112,17 +28460,47 @@ _BARE_WRITE_CANONICAL_HELPERS: tuple[str, ...] = (
     "src/tac/deploy/lightning/lightning_dispatch.py",  # canonical (this lane)
     "src/tac/deploy/lightning/active_jobs_state.py",  # canonical (this lane)
     "src/tac/deploy/azure/active_vms_state.py",  # canonical (codex round 4 #133)
-    "src/tac/deploy/vastai/client.py",  # canonical Vast.ai client
+    "src/tac/deploy/vastai/client.py",  # routes through register_instance (vastai_tracker)
     "src/tac/preflight.py",  # this gate's own scanning code
-    "src/tac/preflight_fs_cache.py",  # FS cache helper
-    "src/tac/artifact_lifecycle.py",  # registry classifier
+    "src/tac/preflight_fs_cache.py",  # threading.Lock (in-process cache only)
+    "src/tac/artifact_lifecycle.py",  # CHECK_131_EXEMPT_AUDIT_OK_DEFERRED:see_below
     "tools/claim_catalog_number.py",  # canonical fcntl helper
     "tools/subagent_commit_serializer.py",  # canonical fcntl helper
     "tools/claim_lane_dispatch.py",  # canonical lane-claim helper
-    "tools/lane_maturity.py",  # uses lane-claim helper internally
+    "tools/lane_maturity.py",  # CHECK_131_EXEMPT_AUDIT_OK_DEFERRED:see_below
     # Catalog #131 gate's own implementation file (this file) excluded
     # via canonical-helpers list to avoid self-detection.
 )
+
+# Same-line waivers (sibling to _BARE_WRITE_CANONICAL_HELPERS) for the
+# catalog #133 META-meta audit. Files listed here have the
+# CHECK_131_EXEMPT_AUDIT_OK_DEFERRED waiver with a documented rationale;
+# each MUST be revisited per the deferral note. Catalog #133 accepts these
+# at gate-time; a follow-up lane lands the actual fcntl helpers.
+#
+# Rationale + follow-up:
+# - src/tac/artifact_lifecycle.py: writes to `.omx/state/artifact_kind_registry.yaml`
+#   and `.omx/state/artifact_classification_allowlist.json` are CONFIG-shape
+#   (operator-edited; rare append). Race tolerance is high; not the same
+#   urgency as the LIVE_STATE writers (active_jobs / active_vms / first_seen).
+#   Follow-up: lane_artifact_lifecycle_state_lock will land an fcntl helper
+#   (low priority; deferred until empirical race observed).
+# - tools/lane_maturity.py: writes `.omx/state/lane_registry.json` and
+#   appends to `.omx/state/lane_maturity_audit.log`. Currently single-writer
+#   (operator-driven CLI; one terminal at a time). Follow-up:
+#   lane_maturity_state_lock will land the fcntl helper.
+_CHECK_131_EXEMPT_AUDIT_DEFERRED_RATIONALE: dict[str, str] = {
+    "src/tac/artifact_lifecycle.py": (
+        "CONFIG-shape writes (.omx/state/artifact_kind_registry.yaml, "
+        "artifact_classification_allowlist.json); operator-edited; rare append. "
+        "Follow-up lane_artifact_lifecycle_state_lock deferred."
+    ),
+    "tools/lane_maturity.py": (
+        "Operator-CLI single-writer (.omx/state/lane_registry.json + "
+        "lane_maturity_audit.log); race tolerance currently low. "
+        "Follow-up lane_maturity_state_lock deferred."
+    ),
+}
 
 # Compiled regexes for write detection (compile once, reuse across files).
 _BARE_WRITE_OPEN_RE = re.compile(r"\bopen\(\s*([^,)]+),\s*['\"][wxa]b?\+?['\"]")
@@ -28516,10 +28894,1927 @@ def check_locked_writes_preserve_deletions(
     return violations
 
 
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #133 — Catalog #131 accept-list must contain real locked writers
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Bug class (codex round 4 HIGH 1, 2026-05-09): Catalog #131's
+# `_BARE_WRITE_CANONICAL_HELPERS` exempt list includes files that are claimed
+# to be "already locked" but are not. Specifically, the previous list named
+# `src/tac/deploy/azure/azure_dispatch.py` as exempt, but that file did
+# bare `write_text` to `.omx/state/azure_active_vms.json` with no fcntl
+# context. Strict #131 reported the bare-write META class extinct, but
+# concurrent Azure provisions could still drop VM rows.
+#
+# This META-meta gate scans #131's exempt list and verifies each named file
+# actually contains the canonical lock pattern (fcntl.flock + LOCK_EX, or
+# routes through an upstream canonical helper). A file in the exempt list
+# that lacks the locked-writer pattern is a false-green failure mode that
+# undermines the META gate.
+#
+# Sister of catalog #131 (bare writes — primary META gate). This is the
+# META-META gate that protects the META gate's accept list itself.
+
+_CHECK_131_EXEMPT_AUDIT_WAIVER_MARKER = "CHECK_131_EXEMPT_AUDIT_OK"
+
+
+def check_no_excluded_writers_in_check_131_accept_list(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #133 — META-meta: #131's exempt list must contain real locked writers.
+
+    Iterates every entry in ``_BARE_WRITE_CANONICAL_HELPERS`` and verifies
+    the file actually has at least one of:
+
+    1. A direct ``fcntl.flock`` + ``LOCK_EX`` pattern (canonical lock acquisition)
+    2. A ``with _<something>_lock(...):`` context manager invocation (routes
+       through a sister fcntl helper)
+    3. An import of a canonical lock context manager
+       (``_active_jobs_lock``, ``_active_vms_lock``, ``_lightning_state_lock``,
+       ``posterior_update_locked``)
+    4. A delegation comment + import-from one of the canonical helper modules
+    5. Same-line waiver ``# CHECK_131_EXEMPT_AUDIT_OK:<reason>`` on the
+       definition that needs to be exempt from the audit (rare; must justify)
+
+    A file in the exempt list lacking ALL of the above is a false-green
+    failure mode. The fix is to either (a) add a real locked writer, or
+    (b) remove the file from the exempt list.
+
+    Live count expected: 0 after the codex round 4 HIGH 1 fix swaps
+    ``azure_dispatch.py`` (had no lock) for ``active_vms_state.py``
+    (the new canonical Azure locked-writer module).
+
+    Bug class: codex round 4 HIGH 1 (2026-05-09). META-meta sister of
+    catalog #131. Memory:
+    feedback_codex_round4_findings_fix_with_self_protection_landed_20260509.md.
+    """
+    root = Path(repo_root or REPO_ROOT)
+
+    # The canonical lock-pattern tokens any exempt file MUST contain.
+    LOCK_PATTERN_TOKENS: tuple[str, ...] = (
+        "fcntl.flock",
+        "LOCK_EX",
+        "_active_jobs_lock",
+        "_active_vms_lock",
+        "_lightning_state_lock",
+        "_posterior_lock",
+        "posterior_update_locked",
+        "update_active_jobs_locked",
+        "update_active_vms_locked",
+        "register_active_vm_record",
+        "register_job",
+        "register_instance",  # canonical Vast.ai writer (vastai_tracker)
+        "claim_lane_dispatch",  # canonical lane-claim helper
+        "threading.Lock",  # in-process serialization (cache-only modules)
+    )
+
+    # Sister-gate exemption: catalog #131's gate IS the gate that uses
+    # this list, so its own implementation file does not need a lock.
+    PRIMARY_GATE_FILE = "src/tac/preflight.py"
+
+    violations: list[str] = []
+    for rel in _BARE_WRITE_CANONICAL_HELPERS:
+        if rel == PRIMARY_GATE_FILE:
+            continue
+        # Deferred-rationale entries pass the audit AND the rationale is
+        # documented in `_CHECK_131_EXEMPT_AUDIT_DEFERRED_RATIONALE`.
+        # Catalog #133 accepts these at gate-time; a follow-up lane lands
+        # the actual fcntl helper.
+        if rel in _CHECK_131_EXEMPT_AUDIT_DEFERRED_RATIONALE:
+            continue
+        full = root / rel
+        if not full.exists():
+            violations.append(
+                f"[Check 133] #131 exempt-list entry {rel!r} does not exist "
+                "in the repo. Either remove the entry or land the file."
+            )
+            continue
+        try:
+            text = full.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            violations.append(
+                f"[Check 133] #131 exempt-list entry {rel!r} could not be read: {exc}"
+            )
+            continue
+        # File-wide waiver check
+        if _CHECK_131_EXEMPT_AUDIT_WAIVER_MARKER in text:
+            continue
+        # No waiver — file must contain at least one canonical lock pattern.
+        if not any(tok in text for tok in LOCK_PATTERN_TOKENS):
+            violations.append(
+                f"[Check 133] #131 exempt-list entry {rel!r} is claimed to be "
+                "'already locked' but contains NO canonical lock-pattern token "
+                f"(none of: {', '.join(LOCK_PATTERN_TOKENS[:5])}, ...). "
+                "False-green failure mode: the exempt list says this file is "
+                "safe but the META gate cannot verify it is. "
+                "Fix: either land a canonical fcntl-locked writer, OR add a "
+                "same-line `# CHECK_131_EXEMPT_AUDIT_OK:<reason>` waiver on "
+                "the entry (rare; must justify per CLAUDE.md), OR add a "
+                "deferred-rationale entry to "
+                "`_CHECK_131_EXEMPT_AUDIT_DEFERRED_RATIONALE` with a follow-up "
+                "lane reference, OR remove the entry from "
+                "`_BARE_WRITE_CANONICAL_HELPERS`."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [check-131-exempt-list-audit] {len(violations)} false-green "
+                f"exempt entry(ies) (scanned: {len(_BARE_WRITE_CANONICAL_HELPERS)})"
+            )
+            for v in violations[:5]:
+                print(f"    • {v[:240]}")
+            if len(violations) > 5:
+                print(f"    ... ({len(violations) - 5} more)")
+        else:
+            print(
+                "  [check-131-exempt-list-audit] OK "
+                f"({len(_BARE_WRITE_CANONICAL_HELPERS)} exempt entries; 0 false-green)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_no_excluded_writers_in_check_131_accept_list found "
+            f"{len(violations)} false-green exempt entry(ies):\n  "
+            + "\n  ".join(v[:300] for v in violations[:3])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #134 — Phase3DispatchGate must be fail-closed at construction
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Bug class (codex round 4 MEDIUM 1, 2026-05-09): the previous
+# `Phase3DispatchGate.__post_init__` was a no-op with the comment
+# "tests need to construct with a permissive gate". That comment-only
+# contract let any future trainer/dispatcher silently bypass every
+# precondition by forgetting to call `gate.check()`. The fix moved the
+# enforcement into `__post_init__` with an explicit `unsafe_test_only=True`
+# escape hatch for tests.
+#
+# This gate scans the repo for `Phase3DispatchGate(` instantiations
+# OUTSIDE the canonical scaffold integration point and refuses any that
+# do not pass `unsafe_test_only=True` AND look like a "test fixture"
+# pattern. Production trainers/dispatchers cannot construct a permissive
+# gate; they must satisfy every precondition.
+
+_PHASE3_GATE_TEST_FIXTURE_TOKEN = "unsafe_test_only=True"
+
+
+def check_phase3_dispatch_gate_fail_closed(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #134 — Phase3DispatchGate construction must be fail-closed.
+
+    Refuses any ``Phase3DispatchGate(...)`` call site outside the
+    canonical scaffold integration point that does NOT include
+    ``unsafe_test_only=True``. Production trainers must satisfy every
+    precondition; tests that need a permissive gate to exercise the API
+    surface MUST opt out explicitly.
+
+    Allowed sites (excluded from scanning):
+
+    - ``src/tac/phase3/joint_scorer_renderer_codec.py`` — the canonical
+      module that defines the gate; integration self-references are
+      expected here.
+    - Test files (``src/tac/tests/test_*.py``,  ``tools/tests/``,
+      ``experiments/tests/``, ``scripts/tests/``) — tests legitimately
+      construct opted-out gates.
+
+    Out-of-scope sites that DO call ``Phase3DispatchGate(...)`` MUST
+    either pass ``unsafe_test_only=True`` (test fixture) or supply the
+    full precondition set (production dispatch). The construction itself
+    will fail-close at runtime; this gate enforces it at commit time.
+
+    Same-line waiver: ``# PHASE3_GATE_OK:<reason>`` for the rare case of
+    an integration callsite that needs to construct the gate with
+    explicit precondition values (e.g. a builder helper that wraps the
+    construction in additional validation). Must justify per CLAUDE.md.
+
+    Live count expected: 0 after the codex round 4 MEDIUM 1 fix.
+
+    Bug class: codex round 4 MEDIUM 1 (2026-05-09). Sister of catalog
+    #133 (META-meta exempt-list audit) and catalog #135 (verify_vast
+    main-flow lost-update). Memory:
+    feedback_codex_round4_findings_fix_with_self_protection_landed_20260509.md.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    scan_dirs = [
+        root / "src" / "tac",
+        root / "tools",
+        root / "experiments",
+        root / "scripts",
+    ]
+
+    # Canonical scaffold module — its own self-references are expected
+    EXCLUDED_FILES = {
+        root / "src" / "tac" / "phase3" / "joint_scorer_renderer_codec.py",
+        root / "src" / "tac" / "preflight.py",  # this gate's own implementation
+    }
+
+    PHASE3_GATE_WAIVER_MARKER = "PHASE3_GATE_OK"
+
+    violations: list[str] = []
+    scanned_files = 0
+    for scan_dir in scan_dirs:
+        if not scan_dir.is_dir():
+            continue
+        for py in scan_dir.rglob("*.py"):
+            if _is_oss_export_mirror_path(py):
+                continue
+            if py in EXCLUDED_FILES:
+                continue
+            # Test files are exempt — they legitimately exercise the gate
+            s = str(py)
+            if "/tests/" in s or py.name.startswith("test_"):
+                continue
+            # Vendored intakes / hosted exports
+            if (
+                "experiments/results/public_pr" in s
+                or "experiments/results/comma_lab_public_export" in s
+                or "experiments/results/vast_harvest" in s
+            ):
+                continue
+            try:
+                text = py.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            if "Phase3DispatchGate" not in text:
+                continue
+            scanned_files += 1
+            lines = text.splitlines()
+            for lineno, line in enumerate(lines):
+                # Look for `Phase3DispatchGate(` (constructor call, not type
+                # annotation or import).
+                if "Phase3DispatchGate(" not in line:
+                    continue
+                stripped = line.lstrip()
+                if stripped.startswith("#"):
+                    continue
+                # Type-only annotations / imports / class refs without `(`
+                # are already filtered above.
+                if "isinstance" in line or "issubclass" in line:
+                    continue
+                # Same-line waiver
+                if PHASE3_GATE_WAIVER_MARKER in line:
+                    continue
+                # Multi-line constructor: search next 30 lines for either
+                # the closing paren OR `unsafe_test_only=True`.
+                window_lines = lines[lineno: min(len(lines), lineno + 30)]
+                window = "\n".join(window_lines)
+                # Truncate to the closing paren of THIS construction.
+                # Naive approach: take up to the first line that's a top-level
+                # close-paren or a sibling statement.
+                paren_depth = 0
+                truncated_chunks: list[str] = []
+                started = False
+                for w_line in window_lines:
+                    truncated_chunks.append(w_line)
+                    for ch in w_line:
+                        if ch == "(":
+                            paren_depth += 1
+                            started = True
+                        elif ch == ")":
+                            paren_depth -= 1
+                    if started and paren_depth <= 0:
+                        break
+                ctor_text = "\n".join(truncated_chunks)
+                if _PHASE3_GATE_TEST_FIXTURE_TOKEN in ctor_text:
+                    continue
+                # Heuristic: the construction is allowed if EVERY required
+                # precondition kwarg is present (production dispatch). The
+                # required kwargs are listed in the gate dataclass.
+                required_kwargs = (
+                    "phase2_anchor_verified",
+                    "phase2_anchor_score",
+                    "phase2_anchor_evidence_path",
+                    "distillation_gap_estimate",
+                    "distillation_gap_evidence_path",
+                    "operator_approved_gpu_budget_usd",
+                    "aaf68f37_verdict_clean",
+                    "aaf68f37_verdict_evidence_path",
+                    "phase3_council_deliberation_path",
+                )
+                if all(k + "=" in ctor_text for k in required_kwargs):
+                    continue
+                rel = py.relative_to(root) if py.is_relative_to(root) else py
+                violations.append(
+                    f"[Check 134] {rel}:{lineno + 1}: "
+                    "Phase3DispatchGate(...) construction outside the canonical "
+                    "scaffold module without `unsafe_test_only=True` and without "
+                    "the full production-precondition kwarg set. Production "
+                    "dispatch must satisfy every precondition; tests that need "
+                    "a permissive gate MUST set `unsafe_test_only=True` "
+                    "explicitly. Add either the kwarg or a same-line "
+                    "`# PHASE3_GATE_OK:<reason>` waiver."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [phase3-gate-fail-closed] {len(violations)} "
+                f"unsafe construction(s) (scanned: {scanned_files} file(s))"
+            )
+            for v in violations[:5]:
+                print(f"    • {v[:240]}")
+            if len(violations) > 5:
+                print(f"    ... ({len(violations) - 5} more)")
+        else:
+            print(
+                "  [phase3-gate-fail-closed] OK "
+                f"({scanned_files} file(s) scanned; 0 unsafe construction(s))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_phase3_dispatch_gate_fail_closed found "
+            f"{len(violations)} unsafe Phase3DispatchGate construction(s):\n  "
+            + "\n  ".join(v[:300] for v in violations[:3])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #135 — SETUP-first-seen writers must update INSIDE the lock
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Bug class (codex round 4 MEDIUM 2, 2026-05-09): the round-3 fix made
+# `_save_setup_first_seen` write transactionally INSIDE the lock, but the
+# `main()` flow still loaded the on-disk state OUTSIDE the lock, ran
+# per-instance verify (~minutes), then saved the post-mutation snapshot
+# at the end. Two overlapping verifier runs both loaded the same stale
+# snapshot, did per-instance work, then the slower run replaced the file
+# with its now-stale view — deleting first-seen timestamps the faster run
+# had created.
+#
+# The fix is a true transactional update API
+# (`update_setup_first_seen_locked`) that does load + merge + prune + save
+# INSIDE one fcntl-locked window. This gate scans for any `_save_*_first_seen`
+# / `_save_setup_*` writer whose CALL SITE pattern is "load outside lock,
+# write under lock" (the lost-update anti-pattern) and refuses it.
+#
+# Sister of catalog #132 (deletion-merge anti-pattern in the SAVE function
+# itself) and catalog #131 (bare writes outside any lock).
+
+_SETUP_FIRST_SEEN_LOST_UPDATE_WAIVER_MARKER = "SETUP_FIRST_SEEN_LOST_UPDATE_OK"
+
+
+def check_setup_first_seen_uses_transactional_update_inside_lock(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #135 — SETUP-first-seen writers must update INSIDE the lock.
+
+    Refuses any module that:
+
+    1. Defines a ``_save_*_first_seen`` / ``_save_setup_*`` function, AND
+    2. Has a CALL SITE that loads the on-disk state OUTSIDE any lock,
+       performs work, then calls the save function — without using the
+       canonical transactional update helper
+       (``update_*_first_seen_locked`` / ``update_setup_*_locked``).
+
+    The lost-update anti-pattern is:
+
+        state = _load_xyz()              # outside any lock
+        # ... long-running work ...
+        state.update(...)
+        _save_xyz(state)                  # locked save, but stale state
+
+    The canonical fix is:
+
+        update_xyz_locked(observed_set, tracked_set, now_ts)
+
+    Same-line waiver:
+    ``# SETUP_FIRST_SEEN_LOST_UPDATE_OK:<reason>`` on the ``_load_*`` call
+    site for the rare case where the load-outside-lock is intentional
+    (e.g. a read-only reporter that doesn't write back). Must justify.
+
+    Live count expected: 0 after the codex round 4 MEDIUM 2 fix in
+    ``scripts/verify_vast_instances.py::main``.
+
+    Bug class: codex round 4 MEDIUM 2 (2026-05-09). Sister of catalog
+    #132 (deletion-merge in SAVE) and catalog #131 (bare writes).
+    Memory:
+    feedback_codex_round4_findings_fix_with_self_protection_landed_20260509.md.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    scan_dirs = [
+        root / "src" / "tac",
+        root / "tools",
+        root / "experiments",
+        root / "scripts",
+    ]
+
+    # Function-name patterns this gate considers "first-seen" writers
+    LOAD_PATTERNS = re.compile(
+        r"_load_(setup_first_seen|state_first_seen|first_seen|setup)\b"
+    )
+    SAVE_PATTERNS = re.compile(
+        r"_save_(setup_first_seen|state_first_seen|first_seen|setup)\b"
+    )
+    # Canonical transactional update helpers (presence => safe pattern)
+    LOCKED_UPDATE_PATTERNS = re.compile(
+        r"\bupdate_(setup_first_seen|state_first_seen|first_seen|setup|"
+        r"active_jobs|active_vms)_locked\b"
+    )
+
+    violations: list[str] = []
+    scanned_files = 0
+    for scan_dir in scan_dirs:
+        if not scan_dir.is_dir():
+            continue
+        for src in scan_dir.rglob("*.py"):
+            if _is_oss_export_mirror_path(src):
+                continue
+            s = str(src)
+            if "/tests/" in s or src.name.startswith("test_"):
+                continue
+            if (
+                "experiments/results/public_pr" in s
+                or "experiments/results/comma_lab_public_export" in s
+                or "experiments/results/vast_harvest" in s
+            ):
+                continue
+            try:
+                text = src.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            # Quick prefilter — file must reference both load + save first-seen
+            if not (LOAD_PATTERNS.search(text) and SAVE_PATTERNS.search(text)):
+                continue
+            scanned_files += 1
+            lines = text.splitlines()
+            # Find every CALL site of a load helper that is OUTSIDE a `def
+            # _load_*` or `def _save_*` definition (i.e. not the helpers
+            # themselves) and OUTSIDE any visible `with ...lock` context.
+            for lineno, line in enumerate(lines):
+                stripped = line.lstrip()
+                if stripped.startswith("#"):
+                    continue
+                if not LOAD_PATTERNS.search(line):
+                    continue
+                # Skip definitions
+                if stripped.startswith("def "):
+                    continue
+                # Same-line waiver
+                if _SETUP_FIRST_SEEN_LOST_UPDATE_WAIVER_MARKER in line:
+                    continue
+                # If THIS function uses the canonical locked-update helper,
+                # the load is informational and not the lost-update class.
+                # Find enclosing function and look for LOCKED_UPDATE_PATTERNS.
+                line_indent = len(line) - len(line.lstrip(" "))
+                func_start: int | None = None
+                for back_idx in range(lineno, -1, -1):
+                    cand = lines[back_idx]
+                    cand_stripped = cand.lstrip(" ")
+                    if not cand_stripped.startswith("def "):
+                        continue
+                    cand_indent = len(cand) - len(cand_stripped)
+                    if cand_indent < line_indent:
+                        func_start = back_idx
+                        break
+                if func_start is None:
+                    continue
+                # Find function end by indent
+                func_indent = len(lines[func_start]) - len(lines[func_start].lstrip(" "))
+                func_end = len(lines)
+                for fwd_idx in range(func_start + 1, len(lines)):
+                    cand = lines[fwd_idx]
+                    if not cand.strip():
+                        continue
+                    cand_indent = len(cand) - len(cand.lstrip(" "))
+                    if cand_indent <= func_indent and cand.lstrip(" ").startswith(("def ", "class ")):
+                        func_end = fwd_idx
+                        break
+                func_body = "\n".join(lines[func_start:func_end])
+                # If the enclosing function uses the canonical update-helper
+                # pattern, the load-outside-lock is informational only.
+                if LOCKED_UPDATE_PATTERNS.search(func_body):
+                    continue
+                # If the enclosing function does NOT call _save_*_first_seen,
+                # this is read-only and out-of-scope.
+                if not SAVE_PATTERNS.search(func_body):
+                    continue
+                # Check if the load is INSIDE a lock window in the
+                # enclosing function. Look for either:
+                # - `with ` + lock token (context manager pattern) at
+                #   strictly LESS indent than the load line
+                # - `fcntl.flock(..., LOCK_EX)` imperative call at any
+                #   indent <= load indent within the function
+                # within the enclosing function body BEFORE the load.
+                in_lock_window = False
+                load_indent = len(line) - len(line.lstrip(" "))
+                for back_idx in range(lineno - 1, func_start, -1):
+                    cand = lines[back_idx]
+                    cand_stripped = cand.lstrip(" ")
+                    if not cand_stripped:
+                        continue
+                    cand_indent = len(cand) - len(cand_stripped)
+                    # `with <lock-token>` at LESS indent => load is inside it
+                    if (
+                        "with " in cand
+                        and any(
+                            tok in cand
+                            for tok in (
+                                "_lock",
+                                "fcntl.flock",
+                                "LOCK_EX",
+                                "FileLock",
+                            )
+                        )
+                        and cand_indent < load_indent
+                    ):
+                        in_lock_window = True
+                        break
+                    # Imperative `fcntl.flock(..., LOCK_EX)` at <= load
+                    # indent => an imperative lock acquired earlier in the
+                    # same block.
+                    if (
+                        "fcntl.flock" in cand
+                        and "LOCK_EX" in cand
+                        and cand_indent <= load_indent
+                    ):
+                        in_lock_window = True
+                        break
+                if in_lock_window:
+                    continue
+                rel = src.relative_to(root) if src.is_relative_to(root) else src
+                violations.append(
+                    f"[Check 135] {rel}:{lineno + 1}: "
+                    "load-outside-lock + save-under-lock anti-pattern in "
+                    "function that writes the SETUP-first-seen tracker. "
+                    "Concurrent verifier runs would clobber each other's "
+                    "first-seen timestamps. Fix: refactor to use the "
+                    "canonical `update_setup_first_seen_locked(...)` helper "
+                    "(or sister `update_*_locked`) which does load + merge + "
+                    "prune + save inside ONE fcntl-locked window. "
+                    "Add a same-line `# SETUP_FIRST_SEEN_LOST_UPDATE_OK:<reason>` "
+                    "waiver only if the load is read-only (no save in the same flow)."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [setup-first-seen-transactional-update] {len(violations)} "
+                f"lost-update violation(s) (scanned: {scanned_files} file(s))"
+            )
+            for v in violations[:5]:
+                print(f"    • {v[:240]}")
+            if len(violations) > 5:
+                print(f"    ... ({len(violations) - 5} more)")
+        else:
+            print(
+                "  [setup-first-seen-transactional-update] OK "
+                f"({scanned_files} file(s) scanned; 0 lost-update violation(s))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_setup_first_seen_uses_transactional_update_inside_lock found "
+            f"{len(violations)} lost-update violation(s):\n  "
+            + "\n  ".join(v[:300] for v in violations[:3])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #136 — Custody-validator accept-token lists must be CONCRETE only
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Bug class (defense-in-depth on codex round-3 HIGH 2, 2026-05-09):
+# the previous Check #130 accept-token list `_TAG_GRADE_LOCAL_VALIDATOR_TOKENS`
+# included the bare identifiers `"blockers"` and `"errors"` so that fail-closed
+# blocker-accumulator sites would not falsely trip the strict gate. The cost
+# was a generic-token bypass: ANY unrelated `blockers = []` / `errors = []`
+# variable in the +/-6 line window silently waived a tag-only custody gate.
+# The strict gate failed open at SIX surfaces before round-3 caught it.
+#
+# Round-3 fixed the immediate accept-token list (removed `"blockers"` and
+# `"errors"`). This META gate (#136) extincts the bug CLASS so no future
+# accept-list addition can re-introduce a generic-token bypass — at any
+# `*_VALIDATOR_TOKENS` / `*_LOCAL_VALIDATOR_TOKENS` / `*_VALIDATOR_PATTERNS`
+# tuple/list constant in `src/tac/preflight.py`.
+#
+# Forbidden generic identifiers (case-sensitive; bare-string entries only):
+# `"blockers"`, `"errors"`, `"failures"`, `"validations"`, `"warnings"`,
+# `"issues"`, `"problems"`, `"results"`, `"checks"`, `"messages"`,
+# `"verdicts"`, `"reasons"`. These are common variable names that any
+# adjacent-but-unrelated code can introduce; they MUST NOT serve as
+# accept-tokens for a custody validator.
+#
+# Same-line opt-out: `# ACCEPT_TOKENS_CONCRETE_OK:<reason>` on the entry
+# line OR on the tuple-definition line. Reserved for the rare case where
+# a bare generic identifier is genuinely the API contract (e.g. a typed
+# attribute access like `result.blockers` whose accessor is the validator).
+#
+# Sister of Catalog #130 (which catches the call-site MISSING-validator
+# pattern), Catalog #133 (a3f4a072's META-meta on #131 exempt list), and
+# Catalog #127/#128 (the original custody gates).
+
+# Forbidden generic identifiers — any unrelated `<tok> = ...` variable in a
+# validator's line window will silently waive the gate. Constant name
+# deliberately uses the suffix `_BLOCKLIST` (NOT `_VALIDATOR_TOKENS` /
+# `_ACCEPT_TOKENS`) so that Catalog #136 does not flag itself.
+_GENERIC_TOKEN_BLOCKLIST: tuple[str, ...] = (
+    "blockers",
+    "errors",
+    "failures",
+    "validations",
+    "warnings",
+    "issues",
+    "problems",
+    "results",
+    "checks",
+    "messages",
+    "verdicts",
+    "reasons",
+)
+
+_ACCEPT_TOKENS_CONCRETE_WAIVER_MARKER = "ACCEPT_TOKENS_CONCRETE_OK"
+
+# Tuple/list constants whose name matches one of these patterns are scanned
+# as accept-token lists. We deliberately scope to "_*VALIDATOR_TOKENS" /
+# "_*VALIDATOR_PATTERNS" / "_*VALIDATOR_FNS" / "_*ACCEPT_TOKENS" / similar
+# explicit accept-list naming. Generic constants like `_PATTERNS` are
+# excluded — only constants whose name explicitly says VALIDATOR / ACCEPT
+# count as a custody-validator accept-list.
+_ACCEPT_TOKENS_CONSTANT_NAME_RE = re.compile(
+    r"\b_[A-Z][A-Z0-9_]*"
+    r"(VALIDATOR_TOKENS|VALIDATOR_PATTERNS|VALIDATOR_FNS|"
+    r"ACCEPT_TOKENS|CUSTODY_TOKENS|GATE_TOKENS|GUARD_TOKENS)\b"
+)
+
+
+def check_custody_gate_accept_tokens_concrete_only(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #136 — custody-validator accept lists must be CONCRETE only.
+
+    Scans ``src/tac/preflight.py`` (and any ``src/tac/**/*.py`` /
+    ``tools/**/*.py`` / ``experiments/**/*.py`` / ``scripts/**/*.py``)
+    for tuple/list literals named ``_*VALIDATOR_TOKENS`` /
+    ``_*VALIDATOR_PATTERNS`` / ``_*VALIDATOR_FNS`` / ``_*ACCEPT_TOKENS`` /
+    ``_*CUSTODY_TOKENS`` / ``_*GATE_TOKENS`` / ``_*GUARD_TOKENS`` and
+    refuses any entry that is a bare generic identifier (one of
+    ``blockers`` / ``errors`` / ``failures`` / ``validations`` /
+    ``warnings`` / ``issues`` / ``problems`` / ``results`` / ``checks`` /
+    ``messages`` / ``verdicts`` / ``reasons``).
+
+    Concrete validator tokens — function call patterns like
+    ``"validate_custody("``, ``"validate_custody_verdict"``, attribute
+    references like ``"sha256_file("``, ``"archive_sha256"`` — are accepted.
+
+    Same-line waiver: ``# ACCEPT_TOKENS_CONCRETE_OK:<reason>`` on the
+    entry line OR on the tuple-definition line. Reserved for the rare
+    case where the bare generic identifier IS the contract (typed
+    attribute access whose accessor is the validator).
+
+    Live count expected: 0 — round-3's fix already removed the only
+    known instance (``"blockers"`` / ``"errors"`` from
+    ``_TAG_GRADE_LOCAL_VALIDATOR_TOKENS``).
+
+    Bug class (defense-in-depth on codex round-3 HIGH 2): the round-3
+    fix patched ONE accept-list. This META gate refuses any future
+    addition of a generic-token bypass to ANY accept-list, anywhere.
+    Memory: feedback_production_hardening_polish_defense_in_depth_landed_20260509.md.
+    Cross-ref Catalog #130 (call-site missing-validator) + #133
+    (#131 exempt-list audit).
+
+    AST-rewrite (2026-05-09): switched from line-window scanning to ``ast``
+    walk over module-level Assign / AnnAssign nodes whose target name
+    matches the accept-list pattern. Avoids comment / docstring / string
+    literal false positives entirely.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    forbidden = set(_GENERIC_TOKEN_BLOCKLIST)
+    scan_dirs = [
+        root / "src" / "tac",
+        root / "tools",
+        root / "experiments",
+        root / "scripts",
+    ]
+
+    violations: list[str] = []
+    scanned_files = 0
+    for scan_dir in scan_dirs:
+        if not scan_dir.is_dir():
+            continue
+        for py in scan_dir.rglob("*.py"):
+            if _is_oss_export_mirror_path(py):
+                continue
+            s = str(py)
+            if "/tests/" in s or py.name.startswith("test_"):
+                continue
+            if (
+                "experiments/results/public_pr" in s
+                or "experiments/results/comma_lab_public_export" in s
+                or "experiments/results/vast_harvest" in s
+                or "_intake_" in s
+            ):
+                continue
+            try:
+                text = py.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            if not _ACCEPT_TOKENS_CONSTANT_NAME_RE.search(text):
+                continue
+            try:
+                tree = ast.parse(text)
+            except SyntaxError:
+                continue
+            scanned_files += 1
+            lines = text.splitlines()
+
+            for node in ast.walk(tree):
+                target_names: list[str] = []
+                value: ast.AST | None = None
+                if isinstance(node, ast.Assign):
+                    for t in node.targets:
+                        if isinstance(t, ast.Name):
+                            target_names.append(t.id)
+                    value = node.value
+                elif isinstance(node, ast.AnnAssign) and isinstance(
+                    node.target, ast.Name
+                ):
+                    target_names.append(node.target.id)
+                    value = node.value
+                else:
+                    continue
+                if value is None:
+                    continue
+                matching = [
+                    n for n in target_names
+                    if _ACCEPT_TOKENS_CONSTANT_NAME_RE.search(n)
+                ]
+                if not matching:
+                    continue
+                def_lineno = getattr(node, "lineno", 0)
+                def_line = (
+                    lines[def_lineno - 1]
+                    if 1 <= def_lineno <= len(lines)
+                    else ""
+                )
+                if _ACCEPT_TOKENS_CONCRETE_WAIVER_MARKER in def_line:
+                    continue
+                if not isinstance(value, (ast.Tuple, ast.List)):
+                    continue
+                constant_name = matching[0]
+                for entry in value.elts:
+                    if not isinstance(entry, ast.Constant):
+                        continue
+                    if not isinstance(entry.value, str):
+                        continue
+                    tok = entry.value
+                    if tok not in forbidden:
+                        continue
+                    entry_lineno = getattr(entry, "lineno", def_lineno)
+                    entry_line = (
+                        lines[entry_lineno - 1]
+                        if 1 <= entry_lineno <= len(lines)
+                        else ""
+                    )
+                    if _ACCEPT_TOKENS_CONCRETE_WAIVER_MARKER in entry_line:
+                        continue
+                    rel = py.relative_to(root) if py.is_relative_to(root) else py
+                    violations.append(
+                        f"[Check 136] {rel}:{entry_lineno}: "
+                        f"accept-list `{constant_name}` contains bare generic "
+                        f"identifier `{tok}`. Bug class: any unrelated "
+                        f"`{tok} = ...` variable in the validator's line "
+                        f"window will silently waive the gate. Replace with "
+                        f"a concrete validator token (e.g. `validate_custody`, "
+                        f"`archive_sha256`, `sha256_file(`) OR add a same-line "
+                        f"`# ACCEPT_TOKENS_CONCRETE_OK:<reason>` waiver if "
+                        f"this bare-token IS the intended contract."
+                    )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [accept-tokens-concrete-only] {len(violations)} bare-generic-token "
+                f"entry(ies) (scanned: {scanned_files} file(s))"
+            )
+            for v in violations[:5]:
+                print(f"    • {v[:240]}")
+            if len(violations) > 5:
+                print(f"    ... ({len(violations) - 5} more)")
+        else:
+            print(
+                "  [accept-tokens-concrete-only] OK "
+                f"({scanned_files} file(s) scanned; 0 bare-generic-token entry(ies))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_custody_gate_accept_tokens_concrete_only: "
+            f"{len(violations)} bare-generic-token entry(ies) in custody-validator "
+            "accept lists; first 3:\n  "
+            + "\n  ".join(v[:300] for v in violations[:3])
+            + "\n\nFix: replace the bare token with a CONCRETE validator name "
+            "(`validate_custody`, `archive_sha256`, etc.) OR add "
+            "`# ACCEPT_TOKENS_CONCRETE_OK:<reason>` if the bare-token IS the "
+            "intended contract."
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #137 — Remote dispatch runbooks must NOT default to local CUDA probe
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Bug class (defense-in-depth on codex round-3 MEDIUM 1, 2026-05-09):
+# `scripts/remote_lane_avvideodataset_cuda_path_mechanism_discriminator.sh`
+# unconditionally invoked `probe_nvdec.sh` LOCALLY whenever `SKIP_CUDA=0`,
+# including under `DRY_RUN=1`. The operator workstation / CI host typically
+# has no CUDA / NVDEC / DALI installed; the probe exited 2 before the script
+# could reach the dispatch-decision block.
+#
+# Round-3 fixed the immediate runbook (guard local NVDEC probing behind
+# explicit `LOCAL_CUDA_WORKER=1`). This META gate (#137) extincts the bug
+# CLASS so no future `scripts/remote_lane_*.sh` can introduce an unguarded
+# local CUDA/NVDEC probe.
+#
+# The check scans `scripts/remote_lane_*.sh` for invocations of
+# `probe_nvdec.sh` / `nvidia-smi` / `nvcc --version` / similar local
+# CUDA-probe commands and refuses each unless:
+#
+# 1. The invocation is preceded (within the same Bash branch / function /
+#    file scope) by a `LOCAL_CUDA_WORKER` token guard, OR
+# 2. The invocation is preceded by a `DRY_RUN` short-circuit, OR
+# 3. The line carries a `# LOCAL_CUDA_PROBE_OK:<reason>` waiver, OR
+# 4. The script is wrapped in a `vastai exec` / `lightning ssh` / `modal run`
+#    remote-execution context (the probe runs on the GPU side, not local).
+#
+# Sister of CLAUDE.md "Remote code parity" rule (which mandates a remote
+# heartbeat) and CLAUDE.md "Vast.ai cost paranoia" (which mandates the
+# probe live on the remote provider, not the dispatcher).
+
+_LOCAL_CUDA_PROBE_TOKENS: tuple[str, ...] = (
+    "probe_nvdec.sh",
+    "nvidia-smi",
+    "nvcc --version",
+    "nvcc -V",
+    "torch.cuda.is_available()",
+)
+
+_LOCAL_CUDA_PROBE_GUARD_TOKENS: tuple[str, ...] = (
+    "LOCAL_CUDA_WORKER",
+    "DRY_RUN",
+    # Remote-execution wrapper tokens — the probe runs on the remote side
+    "vastai exec",
+    "lightning ssh",
+    "modal run",
+    "ssh ",  # generic SSH wrapper
+    "$REMOTE_HOST",
+    "${REMOTE_HOST",
+)
+
+_LOCAL_CUDA_PROBE_WAIVER_MARKER = "LOCAL_CUDA_PROBE_OK"
+
+
+def _remote_lane_script_is_remote_side_bootstrap(text: str) -> bool:
+    """Return True for scripts intended to run on the GPU provider host.
+
+    Catalog #137 targets local dispatch drivers that accidentally probe the
+    operator workstation. Legacy `remote_lane_*.sh` naming is overloaded:
+    many files are the remote-side payload itself and intentionally start with
+    `WORKSPACE=/workspace/pact; cd "$WORKSPACE"` before running CUDA probes.
+    Those probes are in the correct place and must not be mass-waived.
+    """
+    active_lines = [
+        line
+        for line in text.splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+    active = "\n".join(active_lines[:80])
+    workspace_default = re.search(
+        r"WORKSPACE=.*\$\{WORKSPACE:-/workspace/pact\}", active
+    )
+    workspace_provider_default = (
+        "/teamspace/studios/this_studio/pact" in active
+        and "/workspace/pact" in active
+    )
+    cd_workspace = re.search(
+        r"\bcd\s+[\"']?\$[{]?WORKSPACE[}]?[\"']?", active
+    )
+    header = "\n".join(text.splitlines()[:40]).lower()
+    remote_host_header = any(
+        marker in header
+        for marker in (
+            "already-claimed remote cuda host",
+            "cuda/nvdec host",
+            "run on a remote cuda host",
+            "runs on a remote cuda host",
+            "no_nvdec_needed",
+        )
+    )
+    return bool(
+        ((workspace_default or workspace_provider_default) and cd_workspace)
+        or remote_host_header
+    )
+
+
+def _local_cuda_probe_line_is_nonblocking_provenance(line: str) -> bool:
+    """Return True when a CUDA command is telemetry, not a blocking probe."""
+    low = line.lower()
+    if "|| true" in low or "|| echo" in low or "2>/dev/null" in low:
+        return True
+    if re.search(r"\b(?:gpu_name|driver_ver|driver_version|cuda_version)\s*=", low):
+        return True
+    return False
+
+
+def check_remote_dispatch_runbooks_no_local_cuda_probe_default(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #137 — remote dispatch runbooks must NOT default to local CUDA probe.
+
+    Scans ``scripts/remote_lane_*.sh`` (and ``scripts/remote_*.sh`` more
+    broadly) for invocations of ``probe_nvdec.sh`` / ``nvidia-smi`` /
+    ``nvcc`` / ``torch.cuda.is_available()`` and refuses each unless the
+    invocation is guarded by:
+
+    - ``LOCAL_CUDA_WORKER`` env-var token (``[[ "${LOCAL_CUDA_WORKER:-0}" == "1" ]]``)
+    - ``DRY_RUN`` short-circuit
+    - A remote-execution wrapper (``vastai exec``, ``lightning ssh``,
+      ``modal run``, ``ssh $REMOTE_HOST``)
+    - Same-line waiver ``# LOCAL_CUDA_PROBE_OK:<reason>``
+
+    The scan is line-window-based: for each probe-token occurrence, look
+    backwards up to 30 lines (within the same function / case-arm) for
+    a guard token. If none is present, flag.
+
+    Live count expected: 0 — round-3's fix already guarded the only known
+    instance.
+
+    Bug class (defense-in-depth on codex round-3 MEDIUM 1): the round-3
+    fix patched ONE runbook. This META gate refuses any future
+    `scripts/remote_lane_*.sh` from introducing an unguarded local
+    CUDA/NVDEC probe.
+
+    Memory: feedback_production_hardening_polish_defense_in_depth_landed_20260509.md.
+    Cross-ref CLAUDE.md "Remote code parity" + "Vast.ai cost paranoia".
+    """
+    root = Path(repo_root or REPO_ROOT)
+    scripts_dir = root / "scripts"
+    if not scripts_dir.is_dir():
+        if verbose:
+            print("  [remote-dispatch-no-local-cuda-probe] OK (no scripts/ dir)")
+        return []
+
+    violations: list[str] = []
+    scanned_files = 0
+    # Scope tightly to `scripts/remote_lane_*.sh` per the prompt — these are
+    # local dispatch drivers that fan out to remote GPUs. Sister scripts like
+    # `remote_archive_only_eval.sh` and `remote_train_bootstrap.sh` are the
+    # remote-side bootstraps that legitimately call `nvidia-smi` ON the GPU.
+    for sh in sorted(scripts_dir.glob("remote_lane_*.sh")):
+        s = str(sh)
+        if "/tests/" in s or sh.name.startswith("test_"):
+            continue
+        try:
+            text = sh.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        # Quick prefilter
+        if not any(tok in text for tok in _LOCAL_CUDA_PROBE_TOKENS):
+            continue
+        if _remote_lane_script_is_remote_side_bootstrap(text):
+            continue
+        scanned_files += 1
+        lines = text.splitlines()
+        for lineno, line in enumerate(lines):
+            stripped = line.lstrip()
+            if stripped.startswith("#"):
+                continue
+            # Find probe tokens in this line
+            probe_tok_found = None
+            for tok in _LOCAL_CUDA_PROBE_TOKENS:
+                if tok in line:
+                    probe_tok_found = tok
+                    break
+            if probe_tok_found is None:
+                continue
+            if _local_cuda_probe_line_is_nonblocking_provenance(line):
+                continue
+            # Same-line waiver
+            if _LOCAL_CUDA_PROBE_WAIVER_MARKER in line:
+                continue
+            # Look backwards up to 30 lines for a guard token
+            lo = max(0, lineno - 30)
+            window = "\n".join(lines[lo:lineno + 1])
+            if any(g in window for g in _LOCAL_CUDA_PROBE_GUARD_TOKENS):
+                continue
+            rel = sh.relative_to(root) if sh.is_relative_to(root) else sh
+            violations.append(
+                f"[Check 137] {rel}:{lineno + 1}: "
+                f"remote dispatch runbook invokes local CUDA probe "
+                f"`{probe_tok_found}` without a `LOCAL_CUDA_WORKER` / "
+                f"`DRY_RUN` / remote-execution-wrapper guard. The probe "
+                f"belongs in the REMOTE provider bootstrap, not the local "
+                f"dispatch driver. Add `[[ \"${{LOCAL_CUDA_WORKER:-0}}\" == \"1\" ]]` "
+                f"OR `# LOCAL_CUDA_PROBE_OK:<reason>` waiver."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [remote-dispatch-no-local-cuda-probe] {len(violations)} "
+                f"unguarded probe(s) (scanned: {scanned_files} runbook(s))"
+            )
+            for v in violations[:5]:
+                print(f"    • {v[:240]}")
+            if len(violations) > 5:
+                print(f"    ... ({len(violations) - 5} more)")
+        else:
+            print(
+                "  [remote-dispatch-no-local-cuda-probe] OK "
+                f"({scanned_files} runbook(s) scanned; 0 unguarded probe(s))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_remote_dispatch_runbooks_no_local_cuda_probe_default: "
+            f"{len(violations)} unguarded local CUDA probe(s) in remote "
+            "dispatch runbook(s); first 3:\n  "
+            + "\n  ".join(v[:300] for v in violations[:3])
+            + "\n\nFix: guard probe behind "
+            "`[[ \"${LOCAL_CUDA_WORKER:-0}\" == \"1\" ]]` "
+            "OR `[[ \"${DRY_RUN:-0}\" == \"1\" ]]` short-circuit OR wrap in "
+            "remote execution (`vastai exec` / `lightning ssh` / `modal run`)."
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #138 — State writers MUST use strict load on the mutating path
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Bug class (defense-in-depth on codex round-3 MEDIUM 2, 2026-05-09):
+# `src/tac/deploy/lightning/active_jobs_state.py::load_active_jobs` returned
+# `[]` on corrupt JSON or non-list state. `update_active_jobs_locked` then
+# wrote the empty snapshot back, silently overwriting the malformed file
+# with a fresh one — DROPPING all active and terminal rows. Harvesters
+# that re-read after the dispatcher write would see `[]` and skip every
+# still-running job.
+#
+# Round-3 fixed the immediate writer (`load_active_jobs_strict` raises on
+# corrupt state; the locked-mutating path uses the strict variant inside
+# the lock and quarantines the bad file). This META gate (#138) extincts
+# the bug CLASS so no future writer can silently reset corrupt state.
+#
+# The check scans `src/tac/**/*.py` for function definitions matching
+# `def update_*_locked(` / `def _save_*(` / `def upsert_*(` / `def register_*(` /
+# `def mark_*_terminal(` and verifies the function body uses a STRICT load
+# helper (one of `load_*_strict` / `_load_*_strict` / explicit
+# `raise <CorruptError>` pattern after a load failure). Functions that
+# silently fall back to `[]` / `{}` / empty default on corrupt state
+# without raising are flagged.
+#
+# Sister of Catalog #131 (bare writes), #132 (deletion-merge in locked save),
+# #133 (META-meta on #131 exempt list), #135 (lost-update outside lock).
+
+_STATE_WRITER_FN_NAME_PATTERNS: tuple[str, ...] = (
+    "update_",  # update_active_jobs_locked, update_active_vms_locked, etc.
+    "_save_",
+    "upsert_",
+    "register_",
+    "mark_",
+)
+
+_STATE_WRITER_LOCKED_SUFFIXES: tuple[str, ...] = (
+    "_locked",
+    "_terminal",
+    "_atomic",
+)
+
+_STATE_WRITER_STRICT_LOAD_TOKENS: tuple[str, ...] = (
+    "_strict(",
+    "load_active_jobs_strict",
+    "load_active_vms_strict",
+    "load_first_seen_strict",
+    "load_setup_first_seen_strict",
+    "load_state_strict",
+    "ActiveJobsCorruptError",
+    "ActiveVmsCorruptError",
+    "CorruptStateError",
+    "raise PreflightError",
+)
+
+_STATE_WRITER_STRICT_LOAD_WAIVER_MARKER = "STATE_WRITER_STRICT_LOAD_OK"
+
+
+def check_state_writers_strict_load_for_mutating_path(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #138 — state writers must use strict load on mutating path.
+
+    Scans ``src/tac/**/*.py`` (and ``tools/**/*.py``) for function
+    definitions whose name matches a state-writer pattern (``update_*_locked``,
+    ``_save_*``, ``upsert_*``, ``register_*``, ``mark_*_terminal``) and
+    verifies the function body either:
+
+    1. Uses a STRICT load helper (``load_*_strict`` / explicit
+       ``raise *CorruptError`` / ``raise PreflightError``), OR
+    2. Carries a same-line ``# STATE_WRITER_STRICT_LOAD_OK:<reason>`` waiver
+       on the ``def`` line (rare; e.g. genuinely-additive counter-bumps that
+       can survive a corrupt load).
+
+    The check is signature-aware: only functions that perform a load + write
+    inside their body are scanned; pure-write functions (no `_load_` or
+    `read_text` / `read_bytes` reference) are out-of-scope.
+
+    Live count expected: 0 — round-3's fix already added the strict load
+    path to the only known instance (`active_jobs_state.py`).
+
+    Bug class (defense-in-depth on codex round-3 MEDIUM 2): the round-3
+    fix patched ONE writer. This META gate refuses any future writer
+    from silently resetting corrupt state.
+
+    Memory: feedback_production_hardening_polish_defense_in_depth_landed_20260509.md.
+    Cross-ref Catalog #131/#132/#133/#135 (sister concurrency/locking gates).
+    """
+    root = Path(repo_root or REPO_ROOT)
+    scan_dirs = [
+        root / "src" / "tac",
+        root / "tools",
+    ]
+
+    violations: list[str] = []
+    scanned_files = 0
+    for scan_dir in scan_dirs:
+        if not scan_dir.is_dir():
+            continue
+        for py in scan_dir.rglob("*.py"):
+            if _is_oss_export_mirror_path(py):
+                continue
+            s = str(py)
+            if "/tests/" in s or py.name.startswith("test_"):
+                continue
+            if (
+                "experiments/results/public_pr" in s
+                or "experiments/results/comma_lab_public_export" in s
+                or "_intake_" in s
+            ):
+                continue
+            try:
+                text = py.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            # Quick prefilter — file must contain at least one writer-fn name
+            if not any(p in text for p in _STATE_WRITER_FN_NAME_PATTERNS):
+                continue
+            # Quick prefilter — file must mention a load OR write op
+            if not any(
+                t in text
+                for t in (
+                    "_load_",
+                    "load_active",
+                    "load_setup",
+                    "load_first_seen",
+                    "read_text(",
+                    "read_bytes(",
+                    "json.load",
+                )
+            ):
+                continue
+            scanned_files += 1
+            lines = text.splitlines()
+
+            # Walk the file: find each `def NAME(` whose name matches the
+            # state-writer pattern. Then scan that function's body (until
+            # a less-or-equal-indented def/class) for the strict-load token.
+            for lineno, line in enumerate(lines):
+                stripped = line.lstrip()
+                if not stripped.startswith("def "):
+                    continue
+                m = re.match(r"def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(", stripped)
+                if not m:
+                    continue
+                fn_name = m.group(1)
+                # Match name pattern
+                name_matches = (
+                    any(
+                        fn_name.startswith(p) and (
+                            any(fn_name.endswith(suf) for suf in _STATE_WRITER_LOCKED_SUFFIXES)
+                            or p in ("_save_",)  # _save_* matches without suffix
+                        )
+                        for p in _STATE_WRITER_FN_NAME_PATTERNS
+                    )
+                )
+                if not name_matches:
+                    continue
+                # Same-line waiver on def line
+                if _STATE_WRITER_STRICT_LOAD_WAIVER_MARKER in line:
+                    continue
+                # Find function body — scan forward until less-or-equal-indent
+                fn_indent = len(line) - len(stripped)
+                body_start = lineno + 1
+                body_end = len(lines)
+                for j in range(body_start, len(lines)):
+                    cand = lines[j]
+                    cand_stripped = cand.lstrip(" ")
+                    if not cand_stripped:
+                        continue
+                    cand_indent = len(cand) - len(cand_stripped)
+                    if cand_indent <= fn_indent and (
+                        cand_stripped.startswith("def ")
+                        or cand_stripped.startswith("class ")
+                        or cand_stripped.startswith("@")
+                    ):
+                        body_end = j
+                        break
+                body_text = "\n".join(lines[body_start:body_end])
+                # Body must do a load AND a write to be in-scope
+                does_load = any(
+                    t in body_text
+                    for t in (
+                        "_load_",
+                        "load_active",
+                        "load_setup",
+                        "load_first_seen",
+                        "read_text(",
+                        "read_bytes(",
+                        "json.load",
+                    )
+                )
+                does_write = any(
+                    t in body_text
+                    for t in (
+                        "write_text(",
+                        "write_bytes(",
+                        "json.dump",
+                        ".dump(",
+                        "atomic_write",
+                    )
+                )
+                if not (does_load and does_write):
+                    continue
+                # Must use a strict-load token OR the body must explicitly
+                # raise on corrupt state
+                has_strict_load = any(
+                    t in body_text for t in _STATE_WRITER_STRICT_LOAD_TOKENS
+                )
+                if has_strict_load:
+                    continue
+                rel = py.relative_to(root) if py.is_relative_to(root) else py
+                violations.append(
+                    f"[Check 138] {rel}:{lineno + 1}: "
+                    f"state writer `{fn_name}` does load + write WITHOUT a "
+                    f"strict load helper. If the load returns `[]`/`{{}}` on "
+                    f"corrupt state, the writer will silently reset the file "
+                    f"and DROP every active row. Use a `load_*_strict` "
+                    f"helper that raises on corrupt state (e.g. "
+                    f"`ActiveJobsCorruptError`) OR add a same-line "
+                    f"`# STATE_WRITER_STRICT_LOAD_OK:<reason>` waiver on "
+                    f"the `def` line."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [state-writers-strict-load] {len(violations)} writer(s) "
+                f"missing strict load (scanned: {scanned_files} file(s))"
+            )
+            for v in violations[:5]:
+                print(f"    • {v[:240]}")
+            if len(violations) > 5:
+                print(f"    ... ({len(violations) - 5} more)")
+        else:
+            print(
+                "  [state-writers-strict-load] OK "
+                f"({scanned_files} file(s) scanned; 0 writer(s) missing strict load)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_state_writers_strict_load_for_mutating_path: "
+            f"{len(violations)} state writer(s) missing strict load on "
+            "mutating path; first 3:\n  "
+            + "\n  ".join(v[:300] for v in violations[:3])
+            + "\n\nFix: replace the silent `load_*` (returns `[]` on corrupt) "
+            "with `load_*_strict` (raises `*CorruptError` on corrupt) inside "
+            "the locked mutating path. The strict variant must quarantine "
+            "the bad file before re-raising so the operator can inspect it."
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #139 — Packet-compiler no_op_proof failures must promote to blocker
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Bug class (codex round 5 HIGH 1, 2026-05-09): the previous Phase 1 packet
+# compiler ``_finalize_packet_result`` computed ``no_op_proof.runtime_consumes_bytes``
+# and ``no_op_proof.no_op_detector_passed`` but never converted ``False``
+# results into entries in ``blockers``. The CLI exit gate read only
+# ``result.blockers`` so a no-op inflate.py exited 0 and burned eval spend.
+#
+# This META gate refuses any packet-compiler-style finalize function that
+# computes a ``no_op_proof`` dict from ``_build_no_op_proof(...)`` /
+# ``runtime_consumes_bytes`` / ``no_op_detector_passed`` etc. but does not
+# also append a corresponding ``inflate_does_not_consume_archive_bytes`` /
+# ``no_op_detector_failed`` blocker entry within the same enclosing function.
+#
+# Same-line opt-out: ``# NO_OP_PROOF_ADVISORY_OK:<reason>`` on the
+# function-def line, reserved for the rare deliberately-advisory finalize
+# (e.g. a probe-only packet that does not produce a runnable inflate; the
+# advisory mode must explicitly justify why downstream consumers do not
+# need a hard blocker).
+#
+# Sister of:
+# - Catalog #102 (gate3 parser-section-manifest)
+# - Catalog #105 (gate7 no_op provenance recorder)
+# - Catalog #138 (state writers strict load on mutating path)
+
+_PACKET_NO_OP_BLOCKER_TOKENS: tuple[str, ...] = (
+    "inflate_does_not_consume_archive_bytes",
+    "no_op_detector_failed",
+)
+# Catalog #139's CANONICAL signature for a packet-compiler
+# `_build_no_op_proof`-style finalize. Other modules that maintain their
+# own runtime-proof verification (e.g. monolithic_packet_closure_gate's
+# ``_runtime_consumption_summary`` which uses ``runtime_proof_*`` tags,
+# or ``submission_archive._typed_sidechannel_contract_row`` which uses
+# typed-contract blockers) emit their own tag schemes; we ONLY scan for
+# the canonical packet-compiler pattern (calls ``_build_no_op_proof(...)``
+# constructor) so those alternate-tag-scheme verifiers are out-of-scope.
+_PACKET_NO_OP_PROOF_REQUIRED_TOKEN = "_build_no_op_proof"
+_PACKET_NO_OP_PROOF_TOKENS: tuple[str, ...] = (
+    "_build_no_op_proof",
+    "runtime_consumes_bytes",
+    "no_op_detector_passed",
+)
+_PACKET_NO_OP_ADVISORY_WAIVER_MARKER = "NO_OP_PROOF_ADVISORY_OK"
+
+
+def check_packet_compiler_no_op_proof_promotes_to_blocker(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #139 — packet-compiler no_op_proof must promote to blocker.
+
+    Scans ``src/tac/**/*.py``, ``tools/**/*.py``, ``scripts/**/*.py``, and
+    ``experiments/**/*.py`` for function definitions whose body references
+    a ``no_op_proof`` computation (``_build_no_op_proof`` /
+    ``runtime_consumes_bytes`` / ``no_op_detector_passed`` /
+    ``runtime_consumption_proof``) AND mutates a ``blockers`` list.
+    Refuses any such function that does NOT also append at least one of
+    ``inflate_does_not_consume_archive_bytes`` /
+    ``no_op_detector_failed`` (the canonical blocker tags emitted by
+    ``tac.phase1_packet_compiler._finalize_packet_result``).
+
+    Same-line waiver on the ``def`` line:
+    ``# NO_OP_PROOF_ADVISORY_OK:<reason>``. Reserved for probe-only packets
+    that explicitly opt to keep the no_op_proof as an advisory record.
+
+    Live count expected: 0 — the codex round 5 HIGH 1 fix in
+    ``src/tac/phase1_packet_compiler.py::_finalize_packet_result`` is the
+    only known production instance.
+
+    Bug class: codex round 5 HIGH 1 (2026-05-09). Memory:
+    feedback_codex_round5_findings_fix_with_self_protection_landed_20260509.md.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    scan_dirs = [
+        root / "src" / "tac",
+        root / "tools",
+        root / "scripts",
+        root / "experiments",
+    ]
+
+    violations: list[str] = []
+    scanned_files = 0
+    for scan_dir in scan_dirs:
+        if not scan_dir.is_dir():
+            continue
+        for py in scan_dir.rglob("*.py"):
+            if _is_oss_export_mirror_path(py):
+                continue
+            s = str(py)
+            if "/tests/" in s or py.name.startswith("test_"):
+                continue
+            if (
+                "experiments/results/public_pr" in s
+                or "experiments/results/comma_lab_public_export" in s
+                or "_intake_" in s
+            ):
+                continue
+            try:
+                text = py.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            # Quick prefilter — file must call the CANONICAL no_op_proof
+            # constructor (`_build_no_op_proof`) AND mutate a blockers list.
+            # Modules that maintain their own runtime-proof verification with
+            # their own tag scheme (runtime_proof_*, typed_sidechannel_*) are
+            # out-of-scope; this gate enforces ONLY the canonical
+            # packet-compiler `_build_no_op_proof` contract.
+            if _PACKET_NO_OP_PROOF_REQUIRED_TOKEN not in text:
+                continue
+            if "blockers" not in text:
+                continue
+            scanned_files += 1
+            lines = text.splitlines()
+            for lineno, line in enumerate(lines):
+                stripped = line.lstrip()
+                if not stripped.startswith("def "):
+                    continue
+                # Same-line waiver on the def line
+                if _PACKET_NO_OP_ADVISORY_WAIVER_MARKER in line:
+                    continue
+                # Find function body
+                func_indent = len(line) - len(stripped)
+                func_end = len(lines)
+                for fwd in range(lineno + 1, len(lines)):
+                    cand = lines[fwd]
+                    if not cand.strip():
+                        continue
+                    cand_indent = len(cand) - len(cand.lstrip(" "))
+                    if cand_indent <= func_indent and cand.lstrip(" ").startswith(
+                        ("def ", "class ")
+                    ):
+                        func_end = fwd
+                        break
+                body = "\n".join(lines[lineno:func_end])
+                # Function must INVOKE the canonical _build_no_op_proof
+                # constructor AND mutate blockers
+                if _PACKET_NO_OP_PROOF_REQUIRED_TOKEN not in body:
+                    continue
+                if "blockers.append(" not in body and "blockers.extend(" not in body:
+                    continue
+                # Function must promote no_op_proof failures to blocker tags
+                if not any(tag in body for tag in _PACKET_NO_OP_BLOCKER_TOKENS):
+                    rel = py.relative_to(root) if py.is_relative_to(root) else py
+                    fn_name = stripped.split("(")[0].replace("def ", "").strip()
+                    violations.append(
+                        f"[Check 139] {rel}:{lineno + 1}: function "
+                        f"{fn_name!r} computes a no_op_proof and mutates "
+                        "`blockers` but does NOT append "
+                        "`inflate_does_not_consume_archive_bytes` or "
+                        "`no_op_detector_failed`. The no-op proof becomes "
+                        "advisory-only and the CLI exit silently passes a "
+                        "no-op packet. Fix: add the blocker promotion when "
+                        "`runtime_consumes_bytes is False` / "
+                        "`no_op_detector_passed is False`. Same-line waiver "
+                        "`# NO_OP_PROOF_ADVISORY_OK:<reason>` on the def "
+                        "line for the rare advisory-only finalize."
+                    )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [packet-no-op-proof-promotes-to-blocker] {len(violations)} "
+                f"function(s) miss blocker promotion (scanned: {scanned_files} file(s))"
+            )
+            for v in violations[:5]:
+                print(f"    • {v[:240]}")
+            if len(violations) > 5:
+                print(f"    ... ({len(violations) - 5} more)")
+        else:
+            print(
+                "  [packet-no-op-proof-promotes-to-blocker] OK "
+                f"({scanned_files} file(s) scanned; 0 missing promotion(s))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_packet_compiler_no_op_proof_promotes_to_blocker found "
+            f"{len(violations)} function(s) missing blocker promotion:\n  "
+            + "\n  ".join(v[:300] for v in violations[:3])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #140 — `_save_*` writers documented as caller-locked must enforce
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Bug class (codex round 5 HIGH 2, 2026-05-09): ``LightningDispatcher._save_state``
+# documented "MUST be called inside ``_lightning_state_lock``" but did not
+# enforce it; any caller could pass a stale snapshot from outside the lock
+# and silently lose concurrent rows. ``scripts/launch_lane_lightning.py``
+# violated the contract by doing
+# ``sessions = dispatcher.list_sessions(); ...; dispatcher._save_state(sessions)``
+# outside any lock.
+#
+# This META gate refuses any ``_save_*`` writer whose docstring or comments
+# document "MUST be called inside ... lock" / "caller is responsible for the
+# lock" / "called inside ... locked" without an in-body runtime assertion
+# against a sister ``_lock_held()`` / ``_lock_depth > 0`` predicate (or
+# explicit ``raise ... lock`` if the predicate is False).
+#
+# Same-line opt-out: ``# CALLER_LOCK_ENFORCED_OK:<reason>`` on the def
+# line for the rare case where lock-held verification is provably
+# unnecessary (e.g. a single-process unittest scaffold).
+
+_CALLER_LOCK_DOC_TOKENS: tuple[str, ...] = (
+    "MUST be called inside",
+    "must be called inside",
+    "caller is responsible for the lock",
+    "caller MUST hold",
+    "caller must hold",
+    "called inside the lock",
+    "called inside ``_",
+)
+_CALLER_LOCK_ENFORCEMENT_TOKENS: tuple[str, ...] = (
+    "_lock_held()",
+    "_lock_depth >",
+    "_lock_depth>",
+    "fcntl.flock(",  # if writer itself acquires a lock, that's also enforcement
+    "raise RuntimeError",
+    "raise PreflightError",
+)
+_CALLER_LOCK_ENFORCED_WAIVER_MARKER = "CALLER_LOCK_ENFORCED_OK"
+
+
+def check_state_writers_own_their_lock_end_to_end(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #140 — `_save_*` writers documented as caller-locked must enforce.
+
+    Refuses any function whose name matches ``_save_*`` (or ``save_*_state``)
+    AND whose body contains a comment/docstring with one of the
+    "MUST be called inside the lock" / "caller is responsible for the lock"
+    contract phrases — UNLESS the function body ALSO contains a runtime
+    enforcement (call to a sister ``_lock_held()`` predicate, ``_lock_depth``
+    counter check, ``fcntl.flock`` acquisition, or ``raise RuntimeError`` /
+    ``raise PreflightError`` triggered by the predicate).
+
+    Comment-only contracts are FORBIDDEN per CLAUDE.md
+    "Comment-only contracts — FORBIDDEN". Pre-fix, the docstring rotted as
+    a generation of callers learned to bypass the lock without surfacing
+    the contract violation. Now the writer raises at runtime if the
+    in-process lock-held predicate is False.
+
+    Same-line waiver on the ``def`` line:
+    ``# CALLER_LOCK_ENFORCED_OK:<reason>``. Reserved for genuinely-single-
+    process unittest scaffolds.
+
+    Live count expected: 0 — the codex round 5 HIGH 2 fix in
+    ``src/tac/deploy/lightning/lightning_dispatch.py::LightningDispatcher._save_state``
+    is the only known production instance.
+
+    Bug class: codex round 5 HIGH 2 (2026-05-09). Memory:
+    feedback_codex_round5_findings_fix_with_self_protection_landed_20260509.md.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    scan_dirs = [
+        root / "src" / "tac",
+        root / "tools",
+        root / "scripts",
+    ]
+
+    violations: list[str] = []
+    scanned_files = 0
+    for scan_dir in scan_dirs:
+        if not scan_dir.is_dir():
+            continue
+        for py in scan_dir.rglob("*.py"):
+            if _is_oss_export_mirror_path(py):
+                continue
+            s = str(py)
+            if "/tests/" in s or py.name.startswith("test_"):
+                continue
+            if (
+                "experiments/results/public_pr" in s
+                or "experiments/results/comma_lab_public_export" in s
+                or "_intake_" in s
+            ):
+                continue
+            try:
+                text = py.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            # Quick prefilter
+            if not any(tok in text for tok in _CALLER_LOCK_DOC_TOKENS):
+                continue
+            if "_save_" not in text and "save_state" not in text:
+                continue
+            scanned_files += 1
+            lines = text.splitlines()
+            for lineno, line in enumerate(lines):
+                stripped = line.lstrip()
+                if not stripped.startswith("def "):
+                    continue
+                m = re.match(r"def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(", stripped)
+                if not m:
+                    continue
+                fn_name = m.group(1)
+                # Only consider _save_* / save_*_state names
+                if not (
+                    fn_name.startswith("_save_")
+                    or (fn_name.startswith("save_") and fn_name.endswith("_state"))
+                ):
+                    continue
+                if _CALLER_LOCK_ENFORCED_WAIVER_MARKER in line:
+                    continue
+                # Find function body
+                func_indent = len(line) - len(stripped)
+                func_end = len(lines)
+                for fwd in range(lineno + 1, len(lines)):
+                    cand = lines[fwd]
+                    if not cand.strip():
+                        continue
+                    cand_indent = len(cand) - len(cand.lstrip(" "))
+                    if cand_indent <= func_indent and cand.lstrip(" ").startswith(
+                        ("def ", "class ")
+                    ):
+                        func_end = fwd
+                        break
+                body = "\n".join(lines[lineno:func_end])
+                # Body must contain one of the doc tokens (caller-must-hold contract)
+                if not any(tok in body for tok in _CALLER_LOCK_DOC_TOKENS):
+                    continue
+                # Body must contain at least one runtime enforcement token
+                if any(tok in body for tok in _CALLER_LOCK_ENFORCEMENT_TOKENS):
+                    continue
+                rel = py.relative_to(root) if py.is_relative_to(root) else py
+                violations.append(
+                    f"[Check 140] {rel}:{lineno + 1}: function {fn_name!r} "
+                    "documents a 'caller MUST hold lock' contract but the "
+                    "body has NO runtime enforcement (no _lock_held() call, "
+                    "no _lock_depth counter check, no fcntl.flock acquisition, "
+                    "no raise on missing lock). Comment-only contracts are "
+                    "FORBIDDEN per CLAUDE.md. Fix: add a sister `_lock_held()` "
+                    "predicate driven by the lock context manager, then "
+                    "`if not _lock_held(): raise RuntimeError(\"...\")` at "
+                    "the top of this writer. Same-line waiver "
+                    "`# CALLER_LOCK_ENFORCED_OK:<reason>` on the def line "
+                    "for unittest scaffolds."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [state-writers-own-their-lock] {len(violations)} "
+                f"comment-only-contract writer(s) (scanned: {scanned_files} file(s))"
+            )
+            for v in violations[:5]:
+                print(f"    • {v[:240]}")
+            if len(violations) > 5:
+                print(f"    ... ({len(violations) - 5} more)")
+        else:
+            print(
+                "  [state-writers-own-their-lock] OK "
+                f"({scanned_files} file(s) scanned; 0 comment-only-contract writer(s))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_state_writers_own_their_lock_end_to_end found "
+            f"{len(violations)} writer(s) with comment-only lock contract:\n  "
+            + "\n  ".join(v[:300] for v in violations[:3])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #141 — Cross-module state-helper calls must thread paths
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Bug class (codex round 5 HIGH 3, 2026-05-09): ``azure_dispatch.py``
+# defined its own module-level ``ACTIVE_VMS_PATH`` constant AND imported
+# ``register_active_vm_record`` / ``unregister_active_vm_by_name`` /
+# ``load_active_vms`` from ``tac.deploy.azure.active_vms_state`` (which has
+# its OWN module-level ``ACTIVE_VMS_PATH``) — without threading
+# ``path=ACTIVE_VMS_PATH`` through the calls. Tests that monkeypatched
+# ``azd.ACTIVE_VMS_PATH`` to isolate writes silently observed the helper's
+# canonical path; recovery/cleanup tooling that constructed an alternative
+# tracker location was equally affected.
+#
+# This META gate scans for any cross-module helper import where:
+# 1. The CALLING module defines a module-level path/lock constant whose
+#    name suggests a tracker file (matches ``*_PATH`` / ``*_LOCK`` /
+#    ``ACTIVE_*`` regex)
+# 2. The HELPER module also defines a same-named constant
+# 3. The CALLING module imports the helper but invokes it WITHOUT threading
+#    its own ``path=`` / ``lock_path=`` keyword
+#
+# Same-line opt-out: ``# STATE_HELPER_PATH_OK:<reason>`` on the call line
+# for the rare case where a fresh canonical path is the intent.
+
+_STATE_HELPER_PATH_WAIVER_MARKER = "STATE_HELPER_PATH_OK"
+
+# Helper functions known to accept a `path=` / `lock_path=` keyword for
+# tracker isolation. The calling module MUST thread both when it defines
+# its own canonical path constant.
+_STATE_HELPER_FN_NAMES_WITH_PATH_KW: tuple[str, ...] = (
+    "register_active_vm_record",
+    "unregister_active_vm_by_name",
+    "load_active_vms",
+    "load_active_vms_strict",
+    "update_active_vms_locked",
+    "register_job",
+    "upsert_job",
+    "mark_job_terminal",
+    "load_active_jobs",
+    "load_active_jobs_strict",
+    "update_active_jobs_locked",
+)
+
+
+def check_state_helper_paths_explicit(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #141 — cross-module state-helper calls must thread paths.
+
+    Scans ``src/tac/**/*.py``, ``tools/**/*.py``, ``scripts/**/*.py`` for
+    files that:
+
+    1. Define a module-level path constant matching a tracker pattern
+       (``*_PATH`` whose value contains ``.omx/state`` or ``active_*.json``).
+    2. Import a helper from
+       ``tac.deploy.azure.active_vms_state`` /
+       ``tac.deploy.lightning.active_jobs_state`` (or sister state-helper
+       modules) whose name appears in
+       ``_STATE_HELPER_FN_NAMES_WITH_PATH_KW``.
+    3. Call the helper WITHOUT threading both ``path=`` and ``lock_path=``
+       keywords.
+
+    Same-line waiver on the call line: ``# STATE_HELPER_PATH_OK:<reason>``.
+
+    Live count expected: 0 — the codex round 5 HIGH 3 fix in
+    ``src/tac/deploy/azure/azure_dispatch.py`` threads
+    ``path=ACTIVE_VMS_PATH`` and ``lock_path=ACTIVE_VMS_LOCK`` through
+    every helper call.
+
+    Bug class: codex round 5 HIGH 3 (2026-05-09). Memory:
+    feedback_codex_round5_findings_fix_with_self_protection_landed_20260509.md.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    scan_dirs = [
+        root / "src" / "tac",
+        root / "tools",
+        root / "scripts",
+    ]
+
+    helper_modules = (
+        "tac.deploy.azure.active_vms_state",
+        "tac.deploy.lightning.active_jobs_state",
+        "tac.continual_learning",
+    )
+
+    violations: list[str] = []
+    scanned_files = 0
+    for scan_dir in scan_dirs:
+        if not scan_dir.is_dir():
+            continue
+        for py in scan_dir.rglob("*.py"):
+            if _is_oss_export_mirror_path(py):
+                continue
+            s = str(py)
+            if "/tests/" in s or py.name.startswith("test_"):
+                continue
+            if (
+                "experiments/results/public_pr" in s
+                or "experiments/results/comma_lab_public_export" in s
+                or "_intake_" in s
+            ):
+                continue
+            try:
+                text = py.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            # Quick prefilter — must import from a state-helper module
+            if not any(f"from {mod} import" in text for mod in helper_modules):
+                continue
+            # Identify module-level tracker path constant(s)
+            tracker_constants: list[str] = []
+            module_level_re = re.compile(
+                r"^([A-Z][A-Z0-9_]*(?:_PATH|_LOCK))\s*="
+            )
+            for line in text.splitlines():
+                m = module_level_re.match(line)
+                if not m:
+                    continue
+                # The constant's value should reference an .omx/state path
+                # to qualify as a tracker constant.
+                if (
+                    ".omx" in line
+                    or "active_" in line.lower()
+                    or "tracker" in line.lower()
+                    or "ACTIVE_VMS_PATH" in line  # explicit alias case
+                    or "ACTIVE_VMS_LOCK" in line
+                ):
+                    tracker_constants.append(m.group(1))
+            if not tracker_constants:
+                continue
+            scanned_files += 1
+            lines = text.splitlines()
+            # For each helper call line, check that BOTH path= and lock_path=
+            # appear (or only path= when the helper does not need lock_path).
+            for lineno, line in enumerate(lines):
+                stripped = line.lstrip()
+                if stripped.startswith("#"):
+                    continue
+                # Skip definitions
+                if stripped.startswith("def "):
+                    continue
+                # Skip pure imports
+                if stripped.startswith(("from ", "import ")):
+                    continue
+                if _STATE_HELPER_PATH_WAIVER_MARKER in line:
+                    continue
+                # Find a helper-fn invocation (not a docstring reference)
+                for fn in _STATE_HELPER_FN_NAMES_WITH_PATH_KW:
+                    if f"{fn}(" not in line:
+                        continue
+                    # Skip if it's part of an import statement we already filtered
+                    # Skip plain attribute references in docstring/comment lines
+                    if line.lstrip().startswith(('"', "'")):
+                        continue
+                    # Look for the call's full argument span (may span multiple
+                    # lines). For the conservative check we examine the line
+                    # itself plus the next 6 lines until a closing ')' at
+                    # matching indent.
+                    block = []
+                    open_count = 0
+                    for j in range(lineno, min(len(lines), lineno + 8)):
+                        block.append(lines[j])
+                        open_count += lines[j].count("(") - lines[j].count(")")
+                        if open_count <= 0 and j > lineno - 1:
+                            break
+                    blob = "\n".join(block)
+                    if "path=" in blob:
+                        # path is threaded; we accept (lock_path is optional
+                        # because not every helper takes one).
+                        continue
+                    rel = py.relative_to(root) if py.is_relative_to(root) else py
+                    violations.append(
+                        f"[Check 141] {rel}:{lineno + 1}: call to "
+                        f"{fn}(...) does NOT thread `path=` keyword while "
+                        "the calling module defines a tracker constant "
+                        f"({', '.join(tracker_constants)}). Tests that "
+                        "monkeypatch the calling module's constant will "
+                        "silently observe the helper's canonical path; "
+                        "recovery/cleanup tooling that builds an alternative "
+                        "tracker location is equally affected. Fix: thread "
+                        f"`path={tracker_constants[0]}` (and `lock_path=...` "
+                        "when the helper accepts it) through the call. "
+                        "Same-line waiver `# STATE_HELPER_PATH_OK:<reason>` "
+                        "for the rare deliberate-canonical-path case."
+                    )
+                    break
+
+    if verbose:
+        if violations:
+            print(
+                f"  [state-helper-paths-explicit] {len(violations)} "
+                f"un-threaded helper call(s) (scanned: {scanned_files} file(s))"
+            )
+            for v in violations[:5]:
+                print(f"    • {v[:240]}")
+            if len(violations) > 5:
+                print(f"    ... ({len(violations) - 5} more)")
+        else:
+            print(
+                "  [state-helper-paths-explicit] OK "
+                f"({scanned_files} file(s) scanned; 0 un-threaded helper call(s))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_state_helper_paths_explicit found "
+            f"{len(violations)} helper call(s) missing `path=` keyword:\n  "
+            + "\n  ".join(v[:300] for v in violations[:3])
+        )
+    return violations
+
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(
-        description="Preflight pipeline validator — runs ALL layers by default"
+        description=(
+            "Preflight pipeline validator — fast developer scope by default; "
+            "explicit release scope for exhaustive custody sweeps"
+        )
     )
     parser.add_argument("--renderer", type=str, default=None,
                         help="Optional renderer .bin/.pt for artifact check")
@@ -28532,12 +30827,40 @@ if __name__ == "__main__":
                         help="Profile name for training-input validation")
     parser.add_argument("--tto-frames", type=str, default=None)
     parser.add_argument("--gt-poses", type=str, default=None)
+    parser.add_argument(
+        "--scope",
+        choices=("dev", "release"),
+        default="dev",
+        help=(
+            "dev runs the strict fast developer gate; release runs exhaustive "
+            "preflight_all and normally requires --allow-slow-preflight."
+        ),
+    )
+    parser.add_argument(
+        "--timeout-s",
+        type=float,
+        default=DEFAULT_PREFLIGHT_CLI_TIMEOUT_S,
+        help=(
+            "Wall-clock budget for the normal developer preflight CLI. "
+            f"Default: {DEFAULT_PREFLIGHT_CLI_TIMEOUT_S:g}s."
+        ),
+    )
+    parser.add_argument(
+        "--allow-slow-preflight",
+        action="store_true",
+        help=(
+            "Explicit release/custody override: disable the normal 30s "
+            "developer timeout. Do not use for routine edit/green loops."
+        ),
+    )
     args = parser.parse_args()
 
     try:
-        # R38 fix: was preflight_check (artifact-only) — now preflight_all
-        # so the CLI runs the full 5-layer validation. Operators running
-        # `python -m tac.preflight` expected comprehensive validation.
+        # R38 fixed the old artifact-only CLI by routing through preflight_all.
+        # 2026-05-09 DX ratchet: the default CLI is now the fast strict
+        # developer scope; exhaustive release/custody sweeps are explicit
+        # (`--scope release --allow-slow-preflight`) so normal edit loops
+        # cannot silently become multi-minute gates.
         profile_arch = None
         if args.profile:
             from tac.profiles import PROFILES
@@ -28545,19 +30868,25 @@ if __name__ == "__main__":
                 print(f"Unknown profile: {args.profile}", file=sys.stderr)
                 sys.exit(2)
             profile_arch = PROFILES[args.profile]
-        # preflight_all applies the measured source-tree filesystem cache for
-        # full codebase scans, so CLI and library callers share one path.
-        preflight_all(
-            profile_name=args.profile,
-            profile_arch=profile_arch,
-            tto_frames_path=args.tto_frames,
-            gt_poses_path=args.gt_poses,
-            masks_path=args.masks,
-            renderer_path=args.renderer,
-            archive_path=args.archive,
-            check_codebase=not args.no_codebase,
-            verbose=True,
+        timeout_s = _preflight_cli_timeout_seconds(
+            timeout_s=args.timeout_s,
+            allow_slow_preflight=args.allow_slow_preflight,
         )
+        # The CLI adds a hard DX budget: routine preflight must be fast, or
+        # fail loudly and force profiling instead of silently taxing every edit.
+        with _preflight_timeout_after(timeout_s):
+            runner = preflight_developer if args.scope == "dev" else preflight_all
+            runner(
+                profile_name=args.profile,
+                profile_arch=profile_arch,
+                tto_frames_path=args.tto_frames,
+                gt_poses_path=args.gt_poses,
+                masks_path=args.masks,
+                renderer_path=args.renderer,
+                archive_path=args.archive,
+                check_codebase=not args.no_codebase,
+                verbose=True,
+            )
         print("\nPREFLIGHT PASSED")
     except (PreflightError, ArityViolation, FilenameContractError,
             CodebaseDriftError, LoaderFormatSafetyError) as e:

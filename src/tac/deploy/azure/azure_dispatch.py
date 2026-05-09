@@ -54,6 +54,19 @@ def _repo_root() -> Path:
 
 REPO_ROOT = _repo_root()
 ACTIVE_VMS_PATH = REPO_ROOT / ".omx" / "state" / "azure_active_vms.json"
+# Codex round 5 HIGH 3 fix (2026-05-09, catalog #141): the helper module
+# ``tac.deploy.azure.active_vms_state`` has its own module-level
+# ``ACTIVE_VMS_PATH`` constant. When tests monkeypatched
+# ``azd.ACTIVE_VMS_PATH`` to isolate writes, the override never reached the
+# helper because the calls below did not thread ``path=ACTIVE_VMS_PATH`` /
+# ``lock_path=ACTIVE_VMS_LOCK``. Tests' tracker round-trip silently observed
+# the canonical file instead of the temp path. The same trap applied to
+# real recovery/cleanup tooling that constructs an alternative tracker
+# location for forensic inspection.
+#
+# Canonical sibling lockfile derived from the dispatch module's
+# ``ACTIVE_VMS_PATH`` (same convention the helper uses internally).
+ACTIVE_VMS_LOCK = ACTIVE_VMS_PATH.with_suffix(ACTIVE_VMS_PATH.suffix + ".lock")
 
 
 # ── Pricing reference ────────────────────────────────────────────────────────
@@ -238,19 +251,21 @@ def _run_az(
 
 
 def _load_active_vms() -> list[dict]:
-    """Read .omx/state/azure_active_vms.json (returns [] if missing/invalid)."""
-    if not ACTIVE_VMS_PATH.exists():
-        return []
-    try:
-        data = json.loads(ACTIVE_VMS_PATH.read_text())
-        return data if isinstance(data, list) else []
-    except (json.JSONDecodeError, OSError):
-        return []
+    """Read .omx/state/azure_active_vms.json (returns [] if missing/invalid).
 
+    Lenient read for non-mutating callers; for mutating callers use
+    ``tac.deploy.azure.active_vms_state.update_active_vms_locked`` (which
+    holds an fcntl lock and uses the strict reload path inside it).
 
-def _save_active_vms(rows: list[dict]) -> None:
-    ACTIVE_VMS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    ACTIVE_VMS_PATH.write_text(json.dumps(rows, indent=2, sort_keys=True))
+    Codex round 5 HIGH 3 fix (catalog #141): threads
+    ``path=ACTIVE_VMS_PATH`` so tests that monkeypatch
+    ``azure_dispatch.ACTIVE_VMS_PATH`` see the override. Pre-fix, the
+    helper's module-level path was always used and tracker-isolation
+    tests broke silently.
+    """
+    from tac.deploy.azure.active_vms_state import load_active_vms
+
+    return load_active_vms(path=ACTIVE_VMS_PATH)
 
 
 def register_active_vm(handle: AzureVMHandle, label: str) -> None:
@@ -259,9 +274,20 @@ def register_active_vm(handle: AzureVMHandle, label: str) -> None:
     This is REQUIRED for every successful provision_spot_vm call so the
     cleanup scripts can detect orphan VMs (analog to the Vast.ai
     .omx/state/vastai_active_instances.json contract).
+
+    Codex round 4 HIGH 1 fix (2026-05-09, catalog #133): writes are now
+    serialized through ``tac.deploy.azure.active_vms_state.register_active_vm_record``
+    which acquires an fcntl exclusive lock + reloads strict + writes atomically.
+    Previously the load+append+write_text path raced with concurrent provisions
+    and silently dropped VM rows. The previous module's listing in catalog
+    #131's exempt list as "already locked" was a false-green; the fix
+    landed the actual locked writer.
+
+    Memory: feedback_codex_round4_findings_fix_with_self_protection_landed_20260509.md.
     """
-    rows = _load_active_vms()
-    rows.append({
+    from tac.deploy.azure.active_vms_state import register_active_vm_record
+
+    record = {
         "vm_name": handle.vm_name,
         "resource_group": handle.resource_group,
         "region": handle.region,
@@ -273,15 +299,28 @@ def register_active_vm(handle: AzureVMHandle, label: str) -> None:
         "estimated_cost_per_hour": handle.estimated_cost_per_hour,
         "label": label,
         "provisioned_at": int(time.time()),
-    })
-    _save_active_vms(rows)
+    }
+    # Codex round 5 HIGH 3 fix (catalog #141): thread `path=` and
+    # `lock_path=` so monkeypatched ``ACTIVE_VMS_PATH`` overrides reach
+    # the helper. Pre-fix the helper's module-level path won; test isolation
+    # silently failed.
+    register_active_vm_record(record, path=ACTIVE_VMS_PATH, lock_path=ACTIVE_VMS_LOCK)
 
 
 def unregister_active_vm(vm_name: str) -> None:
-    """Remove a deprovisioned VM from the active tracker."""
-    rows = _load_active_vms()
-    rows = [r for r in rows if r.get("vm_name") != vm_name]
-    _save_active_vms(rows)
+    """Remove a deprovisioned VM from the active tracker.
+
+    Codex round 4 HIGH 1 fix (2026-05-09, catalog #133): now routed through
+    ``tac.deploy.azure.active_vms_state.unregister_active_vm_by_name`` which
+    holds the fcntl lock for the entire load+remove+write transaction.
+    """
+    from tac.deploy.azure.active_vms_state import unregister_active_vm_by_name
+
+    # Codex round 5 HIGH 3 fix (catalog #141): thread `path=` and
+    # `lock_path=` so monkeypatched ``ACTIVE_VMS_PATH`` overrides reach
+    # the helper. Pre-fix tests' tracker monkeypatch silently observed
+    # the canonical file instead of the temp path.
+    unregister_active_vm_by_name(vm_name, path=ACTIVE_VMS_PATH, lock_path=ACTIVE_VMS_LOCK)
 
 
 # ── Provision / SSH / Run / Harvest / Deprovision ────────────────────────────
