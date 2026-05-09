@@ -8,7 +8,8 @@ maps to 7 ablation lanes:
     A1  — score-gradient supervision PR101 fine-tune
     A2  — sensitivity-aware quantisation (Xavier-L2; FALSIFIED -3,635 B vs uniform)
     A3-alt — Mallat wavelet importance (incremental_improvement_insufficient)
-    A4  — ChARM 2020 hyperprior (byte-tight, dispatch-ready)
+    A4  — ChARM 2020 hyperprior (toy + hand-parametric PR101 configs retired;
+           learned co-design remains live)
     A4-alt — Filler STC pose codec (LANDED at 75c99b84; -400 B vs PD-V2 smooth-walk)
     A5  — frame-conditional bit budget (LANDED; best η=2.0 saves -1,278 B)
     A6  — Selfcomp block-FP × hyperprior compose (LANDED at 97fbfef2;
@@ -59,6 +60,9 @@ LANE_PATTERNS: dict[str, str] = {
     "pr101_pose_filler_stc": "A4_alt_filler_stc_pose",
     "pr101_frame_conditional_bit": "A5_frame_conditional_bits",
     "charm_50k_toy_substrate": "A4_charm_hyperprior_toy",
+    "pr101_charm_real_substrate_probe": "A4_charm_real_pr101_probe",
+    "pr101_a6_blockfp_hyperprior": "A6_selfcomp_blockfp_hyperprior",
+    "cross_paradigm_admm_x_op1_finalizer": "Cross_paradigm_ADMM_x_Op1",
     "admm_x_lossy_coarsening": "ADMM_lossy_coarsening_baseline",
 }
 
@@ -81,6 +85,7 @@ NONCOMPARABLE_BYTE_BUDGET_LANES = {
     "A0_mdl_baseline",
     "A1_score_gradient",
     "A4_charm_hyperprior_toy",
+    "A4_charm_real_pr101_probe",
     "A4_alt_filler_stc_pose",
 }
 
@@ -134,7 +139,11 @@ def parse_manifest(manifest_path: Path) -> PhaseAEntry | None:
         or data.get("estimated_archive_bytes")
         or data.get("archive_bytes_new")
         or data.get("fstc_blob_bytes")
+        or data.get("best_archive_bytes")
     )
+    best_model = data.get("best_model")
+    if archive_bytes is None and isinstance(best_model, dict):
+        archive_bytes = best_model.get("archive_estimate_bytes")
     if archive_bytes is None:
         # Try sweep entries under "results" or "rows" keys.
         for key in ("results", "rows", "sweep", "entries"):
@@ -199,10 +208,21 @@ def parse_manifest(manifest_path: Path) -> PhaseAEntry | None:
     if lane == "A3_alt_mallat_wavelet":
         entry.notes.append("incremental_improvement_insufficient (Mallat > Xavier in 2/4)")
     if lane == "A4_charm_hyperprior_toy":
-        entry.notes.append("byte-tight CARM2 wire format; dispatch-ready ($15)")
+        entry.notes.append("toy config measured negative; learned co-design only")
+    if lane == "A4_charm_real_pr101_probe":
+        best = data.get("best_model", {})
+        delta = best.get("delta_vs_brotli_optuna_bytes") if isinstance(best, dict) else None
+        if isinstance(delta, int):
+            entry.notes.append(
+                f"hand-parametric ChARM roundtrips exactly but loses to brotli ({delta:+,} B)"
+            )
+        else:
+            entry.notes.append("hand-parametric ChARM probe; no score claim")
     if lane == "A1_score_gradient":
-        entry.notes.append("dispatch tooling landed; blocked on Lightning GPU/Vast.ai infra")
-    if "ADMM" in lane:
+        entry.notes.append(
+            "first Modal config retired on macOS CPU advisory; reactivation needs constrained fine-tune"
+        )
+    if lane == "ADMM_lossy_coarsening_baseline":
         entry.notes.append("Path B baseline; -28 KB savings at 4-5% rel_err")
     if lane == "A4_alt_filler_stc_pose":
         entry.notes.append("pose-codec byte anchor; not comparable to full PR101 archive bytes")
@@ -210,6 +230,19 @@ def parse_manifest(manifest_path: Path) -> PhaseAEntry | None:
         best_delta = data.get("best_archive_delta_bytes")
         if isinstance(best_delta, int):
             entry.notes.append(f"best frame-conditioned latent delta {best_delta:+,} B")
+        entry.notes.append(
+            "eta=4 complexity runtime packet collapsed on macOS CPU advisory; use score-domain allocation next"
+        )
+    if lane == "Cross_paradigm_ADMM_x_Op1":
+        entry.notes.append(
+            "advisory score 0.328444: rate improves but SegNet collapse dominates"
+        )
+    if lane == "A6_selfcomp_blockfp_hyperprior":
+        delta = data.get("delta_pr101_brotli_baseline")
+        if isinstance(delta, int):
+            entry.notes.append(
+                f"measured proxy loses to PR101 brotli ({delta:+,} B); family not killed"
+            )
 
     return entry
 
@@ -226,6 +259,9 @@ def find_phase_a_manifests() -> list[Path]:
         rel = str(manifest.relative_to(REPO_ROOT))
         if classify_lane(rel) != "UNCLASSIFIED":
             out.append(manifest)
+    real_charm_report = REPO_ROOT / "reports" / "pr101_charm_real_substrate_probe.json"
+    if real_charm_report.is_file():
+        out.append(real_charm_report)
     return sorted(out)
 
 
@@ -367,17 +403,31 @@ def render_markdown(entries: list[PhaseAEntry]) -> str:
         "(Hessian-trace, score-gradient) or byte-domain (compression-hardness) proxies.",
         "- **PR101 substrate is near-iid at brotli's compressor.** Multiple lanes show ~1-3% "
         "above the iid Shannon floor; magnitude-based concentration of bits cannot break that.",
-        "- **A4 ChARM byte-tight path is the only currently dispatch-ready lane** (commit `16a2d9d0`); "
-        "operator authorization on $15 Lightning T4 outstanding.",
-        "- **A1 dispatch tooling is landed and infra-blocked**; Lightning GPU attach OR Vast.ai "
-        "credit topup unblocks re-fire.",
+        "- **A4 hand-parametric ChARM on real PR101 loses by +28,601 B.** The "
+        "real-substrate range-coder probe roundtrips exactly, but static/delta/"
+        "previous-symbol PMFs are not competitive with PR101 brotli. Learned "
+        "co-designed ChARM remains live.",
+        "- **A1 first Modal config is a measured-config negative.** Training/build completed, "
+        "but exact CUDA was skipped by DALI/NVDEC preflight and local macOS CPU advisory "
+        "scored 3.721654. Reactivation needs constrained fine-tune, not exact eval of this archive.",
+        "- **A5 and Cross-paradigm byte savings are scorer-unsafe at current configs.** "
+        "A5 eta=4 complexity allocation and Cross-paradigm ADMM x Op1 both need score-domain "
+        "or SegNet-boundary-aware allocation before new exact-eval spend.",
         "",
         "## Open lanes",
         "",
         "- A4-alt (Filler STC pose codec): byte-anchor landed; representative "
         "pose-distribution only, not a PR101 monolithic archive rewrite.",
-        "- A5 (frame-conditional bit budget): byte-anchor landed; needs per-pair "
-        "score marginals + inflate side-info path before dispatch.",
+        "- A4 (ChARM/hyperprior): toy and hand-parametric PR101 configs are "
+        "measured-config negatives. Next variant must be learned/co-designed "
+        "with the substrate or produce a runtime-consumed packet before exact "
+        "eval spend.",
+        "- A5 (frame-conditional bit budget): runtime side-info path landed, but "
+        "the eta=4 complexity schedule is retired after advisory collapse. Next "
+        "variant needs score-domain q-bit allocation.",
+        "- Cross-paradigm ADMM x Op1: measured config retired after macOS CPU "
+        "advisory SegNet collapse; next variant needs lower-distortion trust region "
+        "or scorer-aware allocation.",
         "- A6 (Selfcomp block-FP × hyperprior compose): LANDED at `97fbfef2`. "
         "Best compose B=64, sq=uint8 = 214,035 B; BEATS blockfp-only "
         "(-34,607 B) AND hyperprior-only (-18,356 B); does NOT beat PR101 "

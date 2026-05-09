@@ -1448,6 +1448,30 @@
       "disposition": "track",
       "note": "track: 0.155-target meta-Lagrangian bridge output regenerated from updated fail-closed advisory-negative evidence.",
       "path": "reports/cathedral_meta_lagrangian_ranking_pr103_pr106_to_0155_reconciled_20260508.json"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-visible real-PR101 ChARM/range-coder byte probe with fail-closed planning metadata.",
+      "path": "tools/pr101_charm_real_substrate_probe.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: focused regression test for the real-PR101 ChARM probe fail-closed contract and exact quantized-symbol roundtrip.",
+      "path": "tests/test_pr101_charm_real_substrate_probe.py"
+    },
+    {
+      "classification": "report_untracked",
+      "disposition": "track",
+      "note": "track: durable real-PR101 ChARM probe report; contains exact roundtrip planning evidence and no score claim.",
+      "path": "reports/pr101_charm_real_substrate_probe.json"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable A4 real-PR101 hand-parametric ChARM measured-config retirement ledger.",
+      "path": ".omx/research/phase_a4_real_pr101_charm_probe_negative_20260508_codex.md"
     }
   ],
   "policy": "Every source-like untracked path must be track, recovery_queue, ignore_private, or ignore_rebuildable with rationale.",

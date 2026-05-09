@@ -531,7 +531,7 @@
     "contest_cpu_score_claim_row_count": 0,
     "device_axis_report": {
       "learning_policy": "Treat CPU/CUDA drift as a Bayesian per-substrate-class profile. Update class posteriors only from paired same-archive/runtime anchors; loader and network drift probes are independent optional components of R_total.",
-      "macos_cpu_advisory_count": 2,
+      "macos_cpu_advisory_count": 3,
       "paired_comparison_count": 0,
       "paired_comparisons": [],
       "policy": "Do not assign CPU-vs-GPU architecture or stack priority until both contest-CPU and contest-CUDA are measured on the same archive SHA and runtime-tree SHA. macOS CPU may accelerate parallel dev sweeps after the PR107 GHA-vs-M5 check, but it remains a research proxy until promoted by Linux x86_64 contest-CPU.",
@@ -594,15 +594,24 @@
           "runtime_tree_sha256": "4a3fdcb6fbe8aed4263b283da89a96ec6f0dff8dba1efdcd3811fda5228ecdea",
           "source": "[macOS-CPU advisory negative] .omx/research/cross_paradigm_admm_x_op1_macos_advisory_negative_20260508_codex.md; rate improved but SegNet dominates: 100*seg=0.18857 before pose and rate; rel_err proxy insufficient",
           "technique": "cross_paradigm_admm_continuous_k_plus_op1_finalizer"
+        },
+        {
+          "archive_sha256": "",
+          "device_axis": "macos_cpu_advisory",
+          "evidence_grade": "[empirical_planning]",
+          "reason": "macos_cpu_research_proxy_needs_linux_contest_cpu_promotion",
+          "runtime_tree_sha256": "",
+          "source": "[empirical_planning] reports/pr101_charm_real_substrate_probe.json; best hand-parametric ChARM/range-coder model tensor_gaussian=206,745 B (+28,601 vs PR101 brotli), previous_symbol=219,555 B, delta_zero=220,224 B; exact quantized-symbol roundtrip, no runtime packet",
+          "technique": "phase_a4_charm_real_pr101_hand_parametric_probe"
         }
       ],
-      "unpaired_device_axis_evidence_count": 5
+      "unpaired_device_axis_evidence_count": 6
     },
     "evidence_load_diagnostics": [],
-    "n_evidence_rows": 46,
+    "n_evidence_rows": 47,
     "rejected_evidence_row_count": 0,
-    "unknown_evidence_row_count": 27,
-    "unknown_evidence_technique_count": 24,
+    "unknown_evidence_row_count": 28,
+    "unknown_evidence_technique_count": 25,
     "unknown_evidence_techniques": [
       {
         "byte_proxy_only_any": false,
@@ -1317,6 +1326,40 @@
       },
       {
         "byte_proxy_only_any": false,
+        "charged_bits_changed_any": false,
+        "cuda_eval_worth_testing_any": false,
+        "cuda_eval_worth_testing_false": true,
+        "dispatch_blockers": [
+          "cpu_planning_probe_only",
+          "range_coder_not_wired_into_inflate_runtime",
+          "no_archive_substitution_performed",
+          "missing_exact_cuda_auth_eval",
+          "reactivation_required_before_new_dispatch"
+        ],
+        "empirical_archive_bytes": [
+          206745
+        ],
+        "evidence_grades": [
+          "[empirical_planning]"
+        ],
+        "exact_negative_rows": 0,
+        "latest_timestamp": "2026-05-09T00:13:15Z",
+        "min_empirical_archive_bytes": 206745,
+        "n_rows": 1,
+        "proxy_or_planning_rows": 1,
+        "proxy_row_any": true,
+        "score_affecting_payload_changed_any": false,
+        "sources": [
+          "[empirical_planning] reports/pr101_charm_real_substrate_probe.json; best hand-parametric ChARM/range-coder model tensor_gaussian=206,745 B (+28,601 vs PR101 brotli), previous_symbol=219,555 B, delta_zero=220,224 B; exact quantized-symbol roundtrip, no runtime packet"
+        ],
+        "status": "unknown_technique_not_ranked",
+        "technique": "phase_a4_charm_real_pr101_hand_parametric_probe",
+        "verdicts": [
+          "measured_hand_parametric_configs_retired_planning_negative_not_score_evidence"
+        ]
+      },
+      {
+        "byte_proxy_only_any": false,
         "charged_bits_changed_any": true,
         "cuda_eval_worth_testing_any": false,
         "cuda_eval_worth_testing_false": true,
@@ -1384,7 +1427,7 @@
     ],
     "unknown_exact_negative_row_count": 0
   },
-  "n_evidence_rows": 46,
+  "n_evidence_rows": 47,
   "schema": "cathedral_autopilot.v1",
   "tool": "tools/cathedral_autopilot.py"
 }

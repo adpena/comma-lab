@@ -50,7 +50,7 @@ rule citation (commit `648b498c`).
 | A1 score_gradient | 205,879 | +27,735 | first Modal config retired on macOS CPU advisory; family reactivation requires constrained fine-tune |
 | A2 xavier_l2 | 156,344 | -21,800 | FALSIFIED proxy (-3,635 B regression vs uniform) |
 | A3-alt mallat_wavelet | 156,344 | -21,800 | incremental_improvement_insufficient (Mallat > Xavier in 2/4 cells; both fail uniform) |
-| A4 charm_hyperprior toy | byte-tight (CARM2 wire format) | — | dispatch-ready ($15 Lightning T4 awaiting authorization) |
+| A4 charm_hyperprior real PR101 probe | 206,745 | +28,601 | hand-parametric ChARM/range-coder configs retired; learned co-design remains live |
 | ADMM_lossy_coarsening_baseline | 147,285 | -30,859 | Path B baseline; -28 KB savings @ 4-5% rel_err |
 
 **Class-level finding:** TWO weight-domain importance proxies (Xavier-L2 +
@@ -69,6 +69,12 @@ reactivation criteria documented per memo.
 - A4 ChARM range coder: 4 Medium fixes applied (deterministic ZIP, CARM2
   framing docs, dead param), 4 Low findings closed. R1-1 entropy caveat
   documented. NOT a dispatch blocker.
+- A4 real-substrate ChARM probe: `reports/pr101_charm_real_substrate_probe.json`
+  applies the real ChARM/range-coder backend to PR101 quantized symbols. Best
+  hand-parametric model is tensor Gaussian at **206,745 B** (**+28,601 B** vs
+  PR101 brotli), with exact quantized-symbol roundtrip. This retires the
+  static/delta/previous-symbol measured configs only; learned/co-designed
+  ChARM remains live.
 - A3-alt Mallat: see Pareto table above.
 
 **Phase A subagents (LANDED):**

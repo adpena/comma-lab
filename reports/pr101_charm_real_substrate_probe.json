@@ -1,0 +1,949 @@
+{
+  "archive_overhead_bytes": 16094,
+  "best_model": {
+    "archive_estimate_bytes": 206745,
+    "delta_vs_brotli_optuna_bytes": 28601,
+    "model": "tensor_gaussian",
+    "roundtrip_exact": true
+  },
+  "charged_bits_changed": false,
+  "chunk_symbols": 16384,
+  "current_split_brotli_decoder_blob_bytes": 162164,
+  "current_split_brotli_error": null,
+  "dispatch_blockers": [
+    "cpu_planning_probe_only",
+    "range_coder_not_wired_into_inflate_runtime",
+    "no_archive_substitution_performed",
+    "missing_exact_cuda_auth_eval",
+    "reactivation_required_before_new_dispatch"
+  ],
+  "elapsed_seconds": 13.639322280883789,
+  "evidence_grade": "empirical_planning",
+  "evidence_semantics": "cpu_real_pr101_charm_range_coder_probe",
+  "falsification_scope": "measured_real_pr101_hand_parametric_charm_probe_only",
+  "family_falsified": false,
+  "input_state_dict": "experiments/results/cma_pr101_real_substrate_20260507T222605Z/pr101_decoder_state_dict.pt",
+  "input_state_dict_sha256": "b863362aaba1b9cae9b944f5e5b1a43a53ca824b7899ed7b80a2e2146d66f053",
+  "method_family_retired": false,
+  "models": [
+    {
+      "archive_estimate_bytes": 206745,
+      "decoder_delta_vs_current_split_brotli_bytes": 28487,
+      "decoder_delta_vs_pr101_decoder_blob_bytes": 28487,
+      "decoder_payload_bytes": 190651,
+      "delta_vs_brotli_optuna_bytes": 28601,
+      "model": "tensor_gaussian",
+      "per_tensor": [
+        {
+          "coded_stream_bytes": 37891,
+          "encoded_total_bytes": 37897,
+          "mu": 0.13527199074074073,
+          "n_chunks": 3,
+          "n_symbols": 48384,
+          "name": "stem.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 18.33329480336218
+        },
+        {
+          "coded_stream_bytes": 1595,
+          "encoded_total_bytes": 1601,
+          "mu": -0.6666666666666666,
+          "n_chunks": 1,
+          "n_symbols": 1728,
+          "name": "stem.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 38.15004490070655
+        },
+        {
+          "coded_stream_bytes": 38445,
+          "encoded_total_bytes": 38451,
+          "mu": -0.5600565843621399,
+          "n_chunks": 3,
+          "n_symbols": 46656,
+          "name": "blocks.0.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 23.09855415185685
+        },
+        {
+          "coded_stream_bytes": 155,
+          "encoded_total_bytes": 161,
+          "mu": -2.6944444444444446,
+          "n_chunks": 1,
+          "n_symbols": 144,
+          "name": "blocks.0.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 46.80400590906512
+        },
+        {
+          "coded_stream_bytes": 38600,
+          "encoded_total_bytes": 38606,
+          "mu": -0.30911351165980794,
+          "n_chunks": 3,
+          "n_symbols": 46656,
+          "name": "blocks.1.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 23.572516552723098
+        },
+        {
+          "coded_stream_bytes": 154,
+          "encoded_total_bytes": 160,
+          "mu": -10.006944444444445,
+          "n_chunks": 1,
+          "n_symbols": 144,
+          "name": "blocks.1.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 46.02708992897821
+        },
+        {
+          "coded_stream_bytes": 30192,
+          "encoded_total_bytes": 30198,
+          "mu": -0.05112597165066301,
+          "n_chunks": 3,
+          "n_symbols": 34992,
+          "name": "blocks.2.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 28.649509539961343
+        },
+        {
+          "coded_stream_bytes": 123,
+          "encoded_total_bytes": 129,
+          "mu": -2.0833333333333335,
+          "n_chunks": 1,
+          "n_symbols": 108,
+          "name": "blocks.2.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 53.48245212389934
+        },
+        {
+          "coded_stream_bytes": 16613,
+          "encoded_total_bytes": 16619,
+          "mu": 0.24495884773662552,
+          "n_chunks": 2,
+          "n_symbols": 19440,
+          "name": "blocks.3.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 27.307196840359538
+        },
+        {
+          "coded_stream_bytes": 91,
+          "encoded_total_bytes": 97,
+          "mu": -1.325,
+          "n_chunks": 1,
+          "n_symbols": 80,
+          "name": "blocks.3.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 37.574850299102984
+        },
+        {
+          "coded_stream_bytes": 11649,
+          "encoded_total_bytes": 11655,
+          "mu": 0.25123456790123455,
+          "n_chunks": 1,
+          "n_symbols": 12960,
+          "name": "blocks.4.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 35.06787728098695
+        },
+        {
+          "coded_stream_bytes": 87,
+          "encoded_total_bytes": 93,
+          "mu": 1.1111111111111112,
+          "n_chunks": 1,
+          "n_symbols": 72,
+          "name": "blocks.4.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 48.3897818516918
+        },
+        {
+          "coded_stream_bytes": 9335,
+          "encoded_total_bytes": 9341,
+          "mu": -0.1863854595336077,
+          "n_chunks": 1,
+          "n_symbols": 11664,
+          "name": "blocks.5.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 20.203467760977126
+        },
+        {
+          "coded_stream_bytes": 83,
+          "encoded_total_bytes": 89,
+          "mu": 7.152777777777778,
+          "n_chunks": 1,
+          "n_symbols": 72,
+          "name": "blocks.5.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 37.17625426495842
+        },
+        {
+          "coded_stream_bytes": 889,
+          "encoded_total_bytes": 895,
+          "mu": 0.6306584362139918,
+          "n_chunks": 1,
+          "n_symbols": 972,
+          "name": "skips.2.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 34.8054913596198
+        },
+        {
+          "coded_stream_bytes": 44,
+          "encoded_total_bytes": 50,
+          "mu": -2.888888888888889,
+          "n_chunks": 1,
+          "n_symbols": 27,
+          "name": "skips.2.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 53.610621759424674
+        },
+        {
+          "coded_stream_bytes": 523,
+          "encoded_total_bytes": 529,
+          "mu": 0.6314814814814815,
+          "n_chunks": 1,
+          "n_symbols": 540,
+          "name": "skips.3.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 43.40186172860464
+        },
+        {
+          "coded_stream_bytes": 38,
+          "encoded_total_bytes": 44,
+          "mu": -2.55,
+          "n_chunks": 1,
+          "n_symbols": 20,
+          "name": "skips.3.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 55.867231003514036
+        },
+        {
+          "coded_stream_bytes": 360,
+          "encoded_total_bytes": 366,
+          "mu": 1.3333333333333333,
+          "n_chunks": 1,
+          "n_symbols": 360,
+          "name": "skips.4.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 46.65916606389121
+        },
+        {
+          "coded_stream_bytes": 36,
+          "encoded_total_bytes": 42,
+          "mu": 6.611111111111111,
+          "n_chunks": 1,
+          "n_symbols": 18,
+          "name": "skips.4.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 72.22044869617291
+        },
+        {
+          "coded_stream_bytes": 1255,
+          "encoded_total_bytes": 1261,
+          "mu": -1.0301783264746227,
+          "n_chunks": 1,
+          "n_symbols": 1458,
+          "name": "refine.0.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 27.001278638545024
+        },
+        {
+          "coded_stream_bytes": 27,
+          "encoded_total_bytes": 33,
+          "mu": -46.333333333333336,
+          "n_chunks": 1,
+          "n_symbols": 9,
+          "name": "refine.0.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 59.89806155275626
+        },
+        {
+          "coded_stream_bytes": 1320,
+          "encoded_total_bytes": 1326,
+          "mu": 1.1426611796982167,
+          "n_chunks": 1,
+          "n_symbols": 1458,
+          "name": "refine.1.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 34.20143595195983
+        },
+        {
+          "coded_stream_bytes": 36,
+          "encoded_total_bytes": 42,
+          "mu": -17.88888888888889,
+          "n_chunks": 1,
+          "n_symbols": 18,
+          "name": "refine.1.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 67.4972335967177
+        },
+        {
+          "coded_stream_bytes": 448,
+          "encoded_total_bytes": 454,
+          "mu": 0.8930041152263375,
+          "n_chunks": 1,
+          "n_symbols": 486,
+          "name": "rgb_0.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 32.45416001836938
+        },
+        {
+          "coded_stream_bytes": 21,
+          "encoded_total_bytes": 27,
+          "mu": 43.666666666666664,
+          "n_chunks": 1,
+          "n_symbols": 3,
+          "name": "rgb_0.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 59.28649836926523
+        },
+        {
+          "coded_stream_bytes": 452,
+          "encoded_total_bytes": 458,
+          "mu": 4.232510288065844,
+          "n_chunks": 1,
+          "n_symbols": 486,
+          "name": "rgb_1.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 34.11173622112251
+        },
+        {
+          "coded_stream_bytes": 21,
+          "encoded_total_bytes": 27,
+          "mu": -80.66666666666667,
+          "n_chunks": 1,
+          "n_symbols": 3,
+          "name": "rgb_1.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 6,
+          "sigma": 33.48963355361709
+        }
+      ],
+      "roundtrip_exact": true
+    },
+    {
+      "archive_estimate_bytes": 219555,
+      "decoder_delta_vs_current_split_brotli_bytes": 41297,
+      "decoder_delta_vs_pr101_decoder_blob_bytes": 41297,
+      "decoder_payload_bytes": 203461,
+      "delta_vs_brotli_optuna_bytes": 41411,
+      "model": "previous_symbol_gaussian",
+      "per_tensor": [
+        {
+          "coded_stream_bytes": 40796,
+          "encoded_total_bytes": 40800,
+          "n_chunks": 3,
+          "n_symbols": 48384,
+          "name": "stem.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 25.70288229003383
+        },
+        {
+          "coded_stream_bytes": 1630,
+          "encoded_total_bytes": 1634,
+          "n_chunks": 1,
+          "n_symbols": 1728,
+          "name": "stem.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 42.505501408890275
+        },
+        {
+          "coded_stream_bytes": 41285,
+          "encoded_total_bytes": 41289,
+          "n_chunks": 3,
+          "n_symbols": 46656,
+          "name": "blocks.0.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 32.334428908585494
+        },
+        {
+          "coded_stream_bytes": 155,
+          "encoded_total_bytes": 159,
+          "n_chunks": 1,
+          "n_symbols": 144,
+          "name": "blocks.0.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 46.52072450215904
+        },
+        {
+          "coded_stream_bytes": 41308,
+          "encoded_total_bytes": 41312,
+          "n_chunks": 3,
+          "n_symbols": 46656,
+          "name": "blocks.1.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 32.37464121237466
+        },
+        {
+          "coded_stream_bytes": 160,
+          "encoded_total_bytes": 164,
+          "n_chunks": 1,
+          "n_symbols": 144,
+          "name": "blocks.1.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 57.01943100172928
+        },
+        {
+          "coded_stream_bytes": 32165,
+          "encoded_total_bytes": 32169,
+          "n_chunks": 3,
+          "n_symbols": 34992,
+          "name": "blocks.2.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 39.10558791244242
+        },
+        {
+          "coded_stream_bytes": 129,
+          "encoded_total_bytes": 133,
+          "n_chunks": 1,
+          "n_symbols": 108,
+          "name": "blocks.2.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 74.2783395532531
+        },
+        {
+          "coded_stream_bytes": 17559,
+          "encoded_total_bytes": 17563,
+          "n_chunks": 2,
+          "n_symbols": 19440,
+          "name": "blocks.3.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 35.70031039122053
+        },
+        {
+          "coded_stream_bytes": 97,
+          "encoded_total_bytes": 101,
+          "n_chunks": 1,
+          "n_symbols": 80,
+          "name": "blocks.3.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 57.33645712646338
+        },
+        {
+          "coded_stream_bytes": 12267,
+          "encoded_total_bytes": 12271,
+          "n_chunks": 1,
+          "n_symbols": 12960,
+          "name": "blocks.4.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 45.57756923038638
+        },
+        {
+          "coded_stream_bytes": 91,
+          "encoded_total_bytes": 95,
+          "n_chunks": 1,
+          "n_symbols": 72,
+          "name": "blocks.4.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 66.22504657821577
+        },
+        {
+          "coded_stream_bytes": 9918,
+          "encoded_total_bytes": 9922,
+          "n_chunks": 1,
+          "n_symbols": 11664,
+          "name": "blocks.5.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 26.644869238550832
+        },
+        {
+          "coded_stream_bytes": 86,
+          "encoded_total_bytes": 90,
+          "n_chunks": 1,
+          "n_symbols": 72,
+          "name": "blocks.5.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 44.81290427550124
+        },
+        {
+          "coded_stream_bytes": 948,
+          "encoded_total_bytes": 952,
+          "n_chunks": 1,
+          "n_symbols": 972,
+          "name": "skips.2.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 48.71502860701541
+        },
+        {
+          "coded_stream_bytes": 45,
+          "encoded_total_bytes": 49,
+          "n_chunks": 1,
+          "n_symbols": 27,
+          "name": "skips.2.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 59.8308884030698
+        },
+        {
+          "coded_stream_bytes": 549,
+          "encoded_total_bytes": 553,
+          "n_chunks": 1,
+          "n_symbols": 540,
+          "name": "skips.3.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 56.38952828907746
+        },
+        {
+          "coded_stream_bytes": 39,
+          "encoded_total_bytes": 43,
+          "n_chunks": 1,
+          "n_symbols": 20,
+          "name": "skips.3.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 89.0687741994697
+        },
+        {
+          "coded_stream_bytes": 380,
+          "encoded_total_bytes": 384,
+          "n_chunks": 1,
+          "n_symbols": 360,
+          "name": "skips.4.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 63.99873780092402
+        },
+        {
+          "coded_stream_bytes": 37,
+          "encoded_total_bytes": 41,
+          "n_chunks": 1,
+          "n_symbols": 18,
+          "name": "skips.4.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 106.19190045942013
+        },
+        {
+          "coded_stream_bytes": 1309,
+          "encoded_total_bytes": 1313,
+          "n_chunks": 1,
+          "n_symbols": 1458,
+          "name": "refine.0.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 32.53531845626954
+        },
+        {
+          "coded_stream_bytes": 27,
+          "encoded_total_bytes": 31,
+          "n_chunks": 1,
+          "n_symbols": 9,
+          "name": "refine.0.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 71.09500685702196
+        },
+        {
+          "coded_stream_bytes": 1362,
+          "encoded_total_bytes": 1366,
+          "n_chunks": 1,
+          "n_symbols": 1458,
+          "name": "refine.1.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 40.00156276315176
+        },
+        {
+          "coded_stream_bytes": 37,
+          "encoded_total_bytes": 41,
+          "n_chunks": 1,
+          "n_symbols": 18,
+          "name": "refine.1.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 97.78240089032091
+        },
+        {
+          "coded_stream_bytes": 458,
+          "encoded_total_bytes": 462,
+          "n_chunks": 1,
+          "n_symbols": 486,
+          "name": "rgb_0.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 36.9106469637646
+        },
+        {
+          "coded_stream_bytes": 22,
+          "encoded_total_bytes": 26,
+          "n_chunks": 1,
+          "n_symbols": 3,
+          "name": "rgb_0.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 50.5
+        },
+        {
+          "coded_stream_bytes": 468,
+          "encoded_total_bytes": 472,
+          "n_chunks": 1,
+          "n_symbols": 486,
+          "name": "rgb_1.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 41.075372706268524
+        },
+        {
+          "coded_stream_bytes": 22,
+          "encoded_total_bytes": 26,
+          "n_chunks": 1,
+          "n_symbols": 3,
+          "name": "rgb_1.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 47.5
+        }
+      ],
+      "roundtrip_exact": true
+    },
+    {
+      "archive_estimate_bytes": 220224,
+      "decoder_delta_vs_current_split_brotli_bytes": 41966,
+      "decoder_delta_vs_pr101_decoder_blob_bytes": 41966,
+      "decoder_payload_bytes": 204130,
+      "delta_vs_brotli_optuna_bytes": 42080,
+      "model": "delta_zero_gaussian",
+      "per_tensor": [
+        {
+          "coded_stream_bytes": 41021,
+          "encoded_total_bytes": 41025,
+          "n_chunks": 3,
+          "n_symbols": 48384,
+          "name": "stem.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 25.702616675211807
+        },
+        {
+          "coded_stream_bytes": 1634,
+          "encoded_total_bytes": 1638,
+          "n_chunks": 1,
+          "n_symbols": 1728,
+          "name": "stem.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 42.52952140902044
+        },
+        {
+          "coded_stream_bytes": 41394,
+          "encoded_total_bytes": 41398,
+          "n_chunks": 3,
+          "n_symbols": 46656,
+          "name": "blocks.0.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 32.33469521131936
+        },
+        {
+          "coded_stream_bytes": 156,
+          "encoded_total_bytes": 160,
+          "n_chunks": 1,
+          "n_symbols": 144,
+          "name": "blocks.0.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 46.48832437963906
+        },
+        {
+          "coded_stream_bytes": 41431,
+          "encoded_total_bytes": 41435,
+          "n_chunks": 3,
+          "n_symbols": 46656,
+          "name": "blocks.1.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 32.374295584047466
+        },
+        {
+          "coded_stream_bytes": 161,
+          "encoded_total_bytes": 165,
+          "n_chunks": 1,
+          "n_symbols": 144,
+          "name": "blocks.1.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 56.850708335028195
+        },
+        {
+          "coded_stream_bytes": 32236,
+          "encoded_total_bytes": 32240,
+          "n_chunks": 3,
+          "n_symbols": 34992,
+          "name": "blocks.2.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 39.10502912947351
+        },
+        {
+          "coded_stream_bytes": 130,
+          "encoded_total_bytes": 134,
+          "n_chunks": 1,
+          "n_symbols": 108,
+          "name": "blocks.2.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 73.95470648384125
+        },
+        {
+          "coded_stream_bytes": 17603,
+          "encoded_total_bytes": 17607,
+          "n_chunks": 2,
+          "n_symbols": 19440,
+          "name": "blocks.3.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 35.700129967074915
+        },
+        {
+          "coded_stream_bytes": 97,
+          "encoded_total_bytes": 101,
+          "n_chunks": 1,
+          "n_symbols": 80,
+          "name": "blocks.3.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 56.98008286892886
+        },
+        {
+          "coded_stream_bytes": 12295,
+          "encoded_total_bytes": 12299,
+          "n_chunks": 1,
+          "n_symbols": 12960,
+          "name": "blocks.4.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 45.575976593334
+        },
+        {
+          "coded_stream_bytes": 91,
+          "encoded_total_bytes": 95,
+          "n_chunks": 1,
+          "n_symbols": 72,
+          "name": "blocks.4.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 65.87424888882352
+        },
+        {
+          "coded_stream_bytes": 9959,
+          "encoded_total_bytes": 9963,
+          "n_chunks": 1,
+          "n_symbols": 11664,
+          "name": "blocks.5.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 26.64424847057688
+        },
+        {
+          "coded_stream_bytes": 87,
+          "encoded_total_bytes": 91,
+          "n_chunks": 1,
+          "n_symbols": 72,
+          "name": "blocks.5.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 44.51053246142985
+        },
+        {
+          "coded_stream_bytes": 949,
+          "encoded_total_bytes": 953,
+          "n_chunks": 1,
+          "n_symbols": 972,
+          "name": "skips.2.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 48.69174065193835
+        },
+        {
+          "coded_stream_bytes": 45,
+          "encoded_total_bytes": 49,
+          "n_chunks": 1,
+          "n_symbols": 27,
+          "name": "skips.2.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 61.056945692394
+        },
+        {
+          "coded_stream_bytes": 550,
+          "encoded_total_bytes": 554,
+          "n_chunks": 1,
+          "n_symbols": 540,
+          "name": "skips.3.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 56.38899029973245
+        },
+        {
+          "coded_stream_bytes": 40,
+          "encoded_total_bytes": 44,
+          "n_chunks": 1,
+          "n_symbols": 20,
+          "name": "skips.3.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 87.03912913167272
+        },
+        {
+          "coded_stream_bytes": 381,
+          "encoded_total_bytes": 385,
+          "n_chunks": 1,
+          "n_symbols": 360,
+          "name": "skips.4.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 63.931976774701624
+        },
+        {
+          "coded_stream_bytes": 38,
+          "encoded_total_bytes": 42,
+          "n_chunks": 1,
+          "n_symbols": 18,
+          "name": "skips.4.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 104.67598448734583
+        },
+        {
+          "coded_stream_bytes": 1315,
+          "encoded_total_bytes": 1319,
+          "n_chunks": 1,
+          "n_symbols": 1458,
+          "name": "refine.0.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 32.52441955981834
+        },
+        {
+          "coded_stream_bytes": 28,
+          "encoded_total_bytes": 32,
+          "n_chunks": 1,
+          "n_symbols": 9,
+          "name": "refine.0.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 74.2320352794425
+        },
+        {
+          "coded_stream_bytes": 1364,
+          "encoded_total_bytes": 1368,
+          "n_chunks": 1,
+          "n_symbols": 1458,
+          "name": "refine.1.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 39.99364613839776
+        },
+        {
+          "coded_stream_bytes": 38,
+          "encoded_total_bytes": 42,
+          "n_chunks": 1,
+          "n_symbols": 18,
+          "name": "refine.1.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 95.18785844351017
+        },
+        {
+          "coded_stream_bytes": 462,
+          "encoded_total_bytes": 466,
+          "n_chunks": 1,
+          "n_symbols": 486,
+          "name": "rgb_0.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 36.876025014234926
+        },
+        {
+          "coded_stream_bytes": 22,
+          "encoded_total_bytes": 26,
+          "n_chunks": 1,
+          "n_symbols": 3,
+          "name": "rgb_0.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 100.1032799995418
+        },
+        {
+          "coded_stream_bytes": 469,
+          "encoded_total_bytes": 473,
+          "n_chunks": 1,
+          "n_symbols": 486,
+          "name": "rgb_1.weight",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 41.155952355231896
+        },
+        {
+          "coded_stream_bytes": 22,
+          "encoded_total_bytes": 26,
+          "n_chunks": 1,
+          "n_symbols": 3,
+          "name": "rgb_1.bias",
+          "roundtrip_exact": true,
+          "side_info_bytes": 4,
+          "sigma_delta": 83.76554582086042
+        }
+      ],
+      "roundtrip_exact": true
+    }
+  ],
+  "n_symbols_total": 228958,
+  "n_tensors": 28,
+  "pmf_total_bits": 15,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "reactivation_criteria": [
+    "Implement runtime decoder consuming this exact ChARM packet grammar.",
+    "Produce archive.zip whose inflate path consumes the changed bytes.",
+    "Prove byte closure with archive SHA-256, member SHA-256s, runtime tree SHA, and no-op control.",
+    "Run exact contest-CUDA and contest-CPU auth eval before promotion."
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "reference_brotli_optuna_bytes": 178144,
+  "reference_pr101_decoder_blob_bytes": 162164,
+  "schema": "pr101_charm_real_substrate_probe.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "tool": "tools/pr101_charm_real_substrate_probe.py"
+}
