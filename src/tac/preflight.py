@@ -547,10 +547,13 @@ def preflight_all(
         # unified-Lagrangian wire-in hooks (sensitivity-map / pareto /
         # bit-allocator / cathedral-autopilot / continual-learning /
         # probe-disambiguator) OR opt out via research_only=true OR per-hook
-        # '<Hook>: N/A — <rationale>'. Held warn-only initially; flip to
-        # STRICT after legacy-memo backfill drives live count to 0. Memory:
+        # '<Hook>: N/A — <rationale>'. 2026-05-09 STRICT-FLIP: codex backfilled
+        # 19 legacy post-cutover memos with conservative N/A declarations
+        # (live count 19→0), then ratcheted this guard to strict so future
+        # subagent landings cannot skip solver/autopilot/posterior surfaces.
+        # Memory:
         # feedback_unified_lagrangian_action_principle_GR_style_20260509.md
-        check_subagent_landing_has_solver_wire_in(strict=False, verbose=verbose)
+        check_subagent_landing_has_solver_wire_in(strict=True, verbose=verbose)
         # 2026-05-09 Subagent coherence-by-default (#126): subagent commits
         # 2026-05-09 STRICT-FLIP per "fix all yourself" operator approval —
         # 30 → 0 violations after backfilling 8 alias lanes (lane_t11_lovasz +
@@ -601,6 +604,18 @@ def preflight_all(
         # instance_setup_first_seen). Memory:
         # feedback_proactive_custody_concurrency_audit_landed_20260509.md
         check_no_bare_writes_to_shared_state(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-09 codex round-3 HIGH 1 fix (#132): sister of #131 for
+        # the LOCKED-but-DELETION-LOSING META class. A locked-save helper
+        # that takes the caller's full post-prune map but does
+        # `existing.update(data)` inside the lock silently re-introduces
+        # rows the caller deliberately pruned. STRICT-FLIP per "fix all
+        # findings regardless of severity" operator approval — Catalog
+        # #132 landed at 0 live violations (verify_vast_instances HIGH 1
+        # fix closed the only known instance). Memory:
+        # feedback_codex_round3_findings_fix_landed_20260509.md
+        check_locked_writes_preserve_deletions(
             strict=True, verbose=verbose,
         )
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
@@ -2974,7 +2989,7 @@ def _scan_python_for_dead_resolvers(
     """
     try:
         tree = ast.parse(path.read_text(), filename=str(path))
-    except (SyntaxError, UnicodeDecodeError):
+    except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
         return []
 
     argparse_attrs = _collect_argparse_namespace_attrs(tree)
@@ -3114,7 +3129,7 @@ def _scan_python_for_dead_imports(path: Path, repo_root: Path) -> list[str]:
     """
     try:
         tree = ast.parse(path.read_text(), filename=str(path))
-    except (SyntaxError, UnicodeDecodeError):
+    except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
         return []
 
     rel = path.relative_to(repo_root) if path.is_absolute() else path
@@ -4286,6 +4301,17 @@ def _iter_python_files(root: Path, dirs: list[str]) -> list[Path]:
                 continue
             if _is_oss_export_mirror_path(p):
                 continue
+            try:
+                rel = p.relative_to(root)
+            except ValueError:
+                rel = p
+            if rel.parts[:2] == ("experiments", "results"):
+                # Generated experiment/custody outputs are not source code.
+                # Scanning them made full preflight slow and racy: result
+                # dirs can be deleted while broad source checks are reading.
+                # Artifact-specific checks below still inspect
+                # experiments/results manifests/status files intentionally.
+                continue
             out.append(p)
     return sorted(out)
 
@@ -4300,6 +4326,12 @@ def _iter_shell_files(root: Path, dirs: list[str]) -> list[Path]:
             continue
         for p in d_path.rglob("*.sh"):
             if _is_oss_export_mirror_path(p):
+                continue
+            try:
+                rel = p.relative_to(root)
+            except ValueError:
+                rel = p
+            if rel.parts[:2] == ("experiments", "results"):
                 continue
             out.append(p)
     return sorted(out)
@@ -5531,7 +5563,7 @@ def _scan_python_for_mps_fallback(path: Path, repo_root: Path) -> list[str]:
     try:
         text = path.read_text()
         tree = ast.parse(text, filename=str(path))
-    except (SyntaxError, UnicodeDecodeError):
+    except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
         return []
 
     violations: list[str] = []
@@ -18801,6 +18833,8 @@ def check_dispatch_claim_helper_present(
         "TERMINAL_PREFIXES",
         "closed_instance_job_ids",
         "ttl-hours",
+        "_validate_no_shell_argv0_expansion",
+        "SHELL_ARGV0_OK:",
     ):
         if needle not in helper_text:
             violations.append(f"dispatch claim helper missing required guard: {needle}")
@@ -24348,8 +24382,8 @@ def check_public_pr_intake_clones_pristine(
         if result.returncode != 0:
             n_skipped_not_git += 1
             continue
-        dirty = result.stdout.strip()
-        if not dirty:
+        status_lines = [ln for ln in result.stdout.splitlines() if ln.strip()]
+        if not status_lines:
             continue
         # Codex verification HIGH-1 (2026-05-08 evening): the original gate
         # only flagged text edits via `git diff --numstat` and silently let
@@ -24361,7 +24395,21 @@ def check_public_pr_intake_clones_pristine(
         # vs. fully-smudged content) which is provably non-corrupting; we
         # require `git lfs status` to confirm every dirty entry is an
         # LFS-managed pointer ↔ content mismatch and nothing else.
-        all_dirty_lines = [ln for ln in dirty.split("\n") if ln.strip()]
+        all_dirty_lines = status_lines
+
+        def _status_path(ln: str) -> str:
+            # `git status --short` is a fixed two-column status plus a
+            # separator. Do not call `.strip()` on the whole status output:
+            # it removes the leading worktree-status column on the first
+            # line (`" M path"` -> `"M path"`) and corrupts `ln[3:]`.
+            if ln.startswith("?? "):
+                return ln[3:].strip()
+            if len(ln) >= 3 and ln[2] == " ":
+                return ln[3:].strip()
+            # Defensive fallback for porcelain-like rows whose leading
+            # status-space was already stripped by older callers/logs.
+            parts = ln.split(None, 1)
+            return parts[1].strip() if len(parts) == 2 else ""
         # Probe LFS-managed paths via `git lfs status`. If the command
         # exists AND every dirty entry is in its output AND no untracked
         # files (?? prefix) exist, the dirty state is LFS-only and benign.
@@ -24389,7 +24437,7 @@ def check_public_pr_intake_clones_pristine(
                 # Map dirty entries (XY <path>) to paths and verify all are LFS-managed.
                 dirty_paths = []
                 for ln in all_dirty_lines:
-                    p = ln[3:].strip() if len(ln) > 3 else ""
+                    p = _status_path(ln)
                     if p:
                         dirty_paths.append(p)
                 if dirty_paths and all(p in lfs_paths for p in dirty_paths):
@@ -24425,7 +24473,7 @@ def check_public_pr_intake_clones_pristine(
         # Capture any status entries not surfaced by diff (untracked, etc).
         for ln in all_dirty_lines:
             if ln.startswith("??"):
-                untracked_or_other.append(ln[3:].strip())
+                untracked_or_other.append(_status_path(ln))
         rel = clone.relative_to(root) if clone.is_absolute() else clone
         # Build a category-aware violation message. The new gate (HIGH-1)
         # treats untracked + binary as first-class violations alongside text
@@ -27055,6 +27103,7 @@ _LANE_ID_REFERENCE_BLOCKLIST: frozenset[str] = frozenset({
     "lane_phase",
     "lane_class",
     "lane_dict",
+    "lane_dir",
     "lane_data",
     "lane_entry",
     "lane_entries",
@@ -27116,11 +27165,14 @@ _LANE_ID_REFERENCE_BLOCKLIST: frozenset[str] = frozenset({
     "lane_values",
     "lane_var",
     "lane_claim",
+    "lane_dispatch_claim",
     "lane_claim_opened",
     "lane_claim_path",
     "lane_claim_state",
     "lane_claim_status",
+    "lane_claim_preflight",
     # Test / placeholder names. Real lane_ids should not collide with these.
+    "lane_dispatch_claim_missing",
     "lane_test",
     "lane_test_lane",
     "lane_fixture",
@@ -27570,6 +27622,8 @@ def check_authoritative_tag_requires_custody_metadata(
         if not scan_dir.is_dir():
             continue
         for py in scan_dir.rglob("*.py"):
+            if _is_oss_export_mirror_path(py):
+                continue
             rel_py = py.relative_to(root) if py.is_relative_to(root) else py
             rel_py_s = str(rel_py)
             if rel_py_s.startswith("experiments/results/"):
@@ -27701,6 +27755,8 @@ def check_continual_learning_writes_use_lock(
         if not scan_dir.is_dir():
             continue
         for py in scan_dir.rglob("*.py"):
+            if _is_oss_export_mirror_path(py):
+                continue
             rel_py = py.relative_to(root) if py.is_relative_to(root) else py
             rel_py_s = str(rel_py)
             if rel_py_s.startswith("experiments/results/"):
@@ -27831,14 +27887,37 @@ _TAG_GRADE_VALIDATOR_FILES: tuple[str, ...] = (
     "tools/predispatch_sanity.py",
 )
 
+# 2026-05-09 codex round-3 HIGH 2 fix: the previous accept-token list
+# included the bare identifiers `blockers` and `errors`, which are
+# generic enough that ANY unrelated `blockers = []` / `errors = []`
+# variable in the +/-6 line window silently waived a tag-only custody
+# gate. The strict gate failed open. We now require a CONCRETE validator
+# call OR an explicit `archive_sha256` / `sha256_file(` reference OR a
+# same-line `# CUSTODY_VALIDATOR_OK:<reason>` waiver.
+#
+# `*_CUSTODY_VALIDATOR_TOKENS` already covers `validate_custody`,
+# `validate_custody_verdict`, `posterior_update`, and
+# `posterior_update_locked`. The `is_promotable_*` tokens are concrete
+# validator-name prefixes (not bare identifiers). `sha256_file(`
+# requires the call form so a stray "sha256_file" docstring does not
+# silently waive the gate. `archive_sha256` is the canonical promotion
+# field — it is a real evidence-grade signal even when it appears as a
+# `.get("archive_sha256")` dict key, because every promotion path
+# routes through it.
+#
+# DROPPED: the bare tokens `"blockers"` and `"errors"` were unsafe
+# accept-list entries. A function with `blockers = []` somewhere nearby
+# does NOT prove that the tag-membership predicate is gated on custody.
+# Sites that want fail-closed-blocker semantics now route through the
+# joint validator OR carry a `# CUSTODY_VALIDATOR_OK:<reason>` waiver
+# naming the blocker scheme. Memory:
+# feedback_codex_round3_findings_fix_landed_20260509.md.
 _TAG_GRADE_LOCAL_VALIDATOR_TOKENS: tuple[str, ...] = (
     *_CUSTODY_VALIDATOR_TOKENS,
     "is_promotable_exact_cuda_evidence",
     "promotable_exact_cuda_evidence_blockers",
     "sha256_file(",
     "archive_sha256",
-    "blockers",
-    "errors",
 )
 
 
@@ -27879,6 +27958,8 @@ def check_no_tag_only_custody_validation(
         if not scan_dir.is_dir():
             continue
         for py in scan_dir.rglob("*.py"):
+            if _is_oss_export_mirror_path(py):
+                continue
             if py in excluded_files:
                 continue
             if "/tests/" in str(py) or py.name.startswith("test_"):
@@ -28007,31 +28088,30 @@ _SHARED_STATE_PATH_MARKERS: tuple[str, ...] = (
 _BARE_WRITE_LOCK_TOKENS: tuple[str, ...] = (
     "fcntl.flock",
     "LOCK_EX",
-    "posterior_update_locked",
     "_posterior_lock",
     "_lightning_state_lock",
     "_active_jobs_lock",
-    "update_active_jobs_locked",
-    "register_job",
-    "upsert_job",
-    "mark_job_terminal",
-    "subagent_commit_serializer",
-    "claim_catalog_number",
-    "tac.vastai_tracker",
-    "register_instance",
-    "tracker_path",
-    "with_lane_claim",
+    "_active_vms_lock",
     "FileLock",
 )
 
 # Files that legitimately implement canonical fcntl-locked helpers OR are
 # already covered by sister gates (catalog #128 covers continual_learning).
+#
+# Codex round 4 HIGH 1 fix (2026-05-09, catalog #133): the previous entry for
+# ``src/tac/deploy/azure/azure_dispatch.py`` falsely claimed "already locked".
+# The file did bare ``write_text`` to ``azure_active_vms.json`` while the
+# exemption masked the gap. The Azure tracker now routes through the new
+# canonical helper ``src/tac/deploy/azure/active_vms_state.py`` (mirrors the
+# Lightning ``active_jobs_state.py`` pattern). The exemption now correctly
+# names the locked-helper module, and the meta-check #133 prevents the
+# class of false-green exemption regression.
 _BARE_WRITE_CANONICAL_HELPERS: tuple[str, ...] = (
     "src/tac/continual_learning.py",  # catalog #128
     "src/tac/vastai_tracker.py",  # canonical fcntl helper
     "src/tac/deploy/lightning/lightning_dispatch.py",  # canonical (this lane)
     "src/tac/deploy/lightning/active_jobs_state.py",  # canonical (this lane)
-    "src/tac/deploy/azure/azure_dispatch.py",  # already locked
+    "src/tac/deploy/azure/active_vms_state.py",  # canonical (codex round 4 #133)
     "src/tac/deploy/vastai/client.py",  # canonical Vast.ai client
     "src/tac/preflight.py",  # this gate's own scanning code
     "src/tac/preflight_fs_cache.py",  # FS cache helper
@@ -28104,12 +28184,9 @@ def check_no_bare_writes_to_shared_state(
     that write to a recognized shared-state path (e.g. `.omx/state/*.json`,
     `vastai_active_instances`, `lightning_active_jobs`, etc.) without:
 
-    1. The local line window referencing one of the canonical fcntl-locked
-       helpers or context managers (``fcntl.flock``, ``LOCK_EX``,
-       ``posterior_update_locked``, ``_posterior_lock``,
-       ``_lightning_state_lock``, ``_active_jobs_lock``,
-       ``update_active_jobs_locked``, ``register_job``, ``register_instance``,
-       ``subagent_commit_serializer``, ``claim_catalog_number``), OR
+    1. The local preceding line window referencing a real lock/context token
+       (``fcntl.flock``, ``LOCK_EX``, ``_posterior_lock``,
+       ``_lightning_state_lock``, ``_active_jobs_lock``, or ``FileLock``), OR
     2. A same-line waiver comment ``# BARE_WRITE_OK:<reason>``.
 
     Held warn-only initially per the directive — flip to STRICT after live
@@ -28137,6 +28214,8 @@ def check_no_bare_writes_to_shared_state(
         if not scan_dir.is_dir():
             continue
         for py in scan_dir.rglob("*.py"):
+            if _is_oss_export_mirror_path(py):
+                continue
             if py in excluded_files:
                 continue
             # Skip tests
@@ -28180,11 +28259,12 @@ def check_no_bare_writes_to_shared_state(
                     continue
                 if not _bare_write_line_targets_shared(line, shared_vars):
                     continue
-                # Window-scope check: 20 lines before + 2 after. A lock token
-                # elsewhere in the file is not sufficient; it must be close
-                # enough to make the specific write visibly serialized.
+                # Window-scope check: 20 lines before + current line only. A
+                # helper call after a bare write is NOT proof that the write is
+                # serialized; an actual lock/context token must be visible
+                # before or on the write line.
                 lo = max(0, lineno - 20)
-                hi = min(len(lines), lineno + 3)
+                hi = lineno + 1
                 window = "\n".join(lines[lo:hi])
                 if any(tok in window for tok in _BARE_WRITE_LOCK_TOKENS):
                     continue
@@ -28227,6 +28307,211 @@ def check_no_bare_writes_to_shared_state(
             + "\n  ".join(v[:300] for v in violations[:3])
             + "\n\nFix: route through a canonical fcntl-locked helper "
             "or add `# BARE_WRITE_OK:<reason>` for single-writer paths."
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #132 — locked writes must preserve caller deletions
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Bug class (codex round-3 HIGH 1, 2026-05-09): a previous "locked save"
+# helper (`scripts/verify_vast_instances.py::_save_setup_first_seen`)
+# took a caller-supplied map under fcntl lock, then RE-LOADED the on-disk
+# file inside the lock and did `existing.update(data)` before writing.
+# The .update() silently merged-away any keys the caller had pruned —
+# stale `first_seen` rows persisted; `--auto-destroy-stale` then targeted
+# fresh instances that inherited an old age from the merge.
+#
+# The structural fix: locked helpers that take the FULL post-prune map
+# from the caller MUST do TRANSACTIONAL REPLACE inside the lock — not
+# `existing.update(data)`. The caller is the source of truth for
+# deletions; the writer's job is to atomically commit that snapshot.
+#
+# This gate scans for `_save_*_first_seen` / `_save_*_state` /
+# `update_*_locked` style functions and refuses any that contain the
+# `existing.update(data)` anti-pattern (or the variant
+# `<reload>.update(<param>)`) inside an fcntl-locked window. Sister of
+# catalog #131 (which catches BARE writes — this one catches LOCKED but
+# DELETION-LOSING writes).
+
+# Function-name patterns this gate considers "locked save" helpers.
+_LOCKED_WRITE_FUNCTION_NAME_PATTERNS: tuple[str, ...] = (
+    "_save_setup_first_seen",
+    "_save_state_first_seen",
+    "_save_active_state",
+    "_save_lane_state",
+    "_save_dispatch_state",
+    "_save_session_state",
+    "_save_recovery_state",
+    "_save_posterior_state",
+)
+
+# Anti-pattern markers we look for INSIDE a locked-save body.
+# `<var>.update(<arg>)` where <var> was reloaded from the on-disk path is
+# the deletion-merge bug. We approximate by detecting the literal pattern
+# `existing = ... ; existing.update(data)` or `prev = ... ; prev.update(data)`.
+_DELETION_MERGE_PATTERNS: tuple[str, ...] = (
+    "existing.update(",
+    "previous.update(",
+    "prev.update(",
+    "current.update(",
+    "stored.update(",
+    "on_disk.update(",
+    "loaded.update(",
+)
+
+_DELETION_MERGE_WAIVER_MARKER = "DELETION_MERGE_OK"
+
+
+def check_locked_writes_preserve_deletions(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #132 — locked-save helpers must do transactional replace, not merge.
+
+    Refuses any function whose name matches a "locked save" pattern
+    (``_save_*_first_seen`` / ``_save_*_state`` / ``update_*_locked``)
+    that contains a deletion-merging pattern (``existing.update(data)``,
+    ``previous.update(data)``, ``loaded.update(data)``, etc.) inside an
+    fcntl-locked region. The pattern silently re-introduces stale rows
+    the caller deliberately removed; the only safe contract is
+    transactional replace.
+
+    Same-line waiver: ``# DELETION_MERGE_OK:<reason>`` for the rare case
+    where the merge is genuinely additive (e.g. a counter-bump helper
+    that's never used for replacement).
+
+    Live count expected: 0 after the verify_vast_instances HIGH 1 fix.
+
+    Bug class: codex round-3 HIGH 1 (2026-05-09). Sister of catalog #131
+    (bare writes) — that catches the unlocked META class; this catches
+    the LOCKED-but-deletion-losing META class. Memory:
+    feedback_codex_round3_findings_fix_landed_20260509.md.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    scan_dirs = [
+        root / "src" / "tac",
+        root / "tools",
+        root / "experiments",
+        root / "scripts",
+    ]
+
+    violations: list[str] = []
+    scanned_files = 0
+    for scan_dir in scan_dirs:
+        if not scan_dir.is_dir():
+            continue
+        for src in list(scan_dir.rglob("*.py")) + list(scan_dir.rglob("*.sh")):
+            if _is_oss_export_mirror_path(src):
+                continue
+            # Skip tests + vendored intakes / hosted exports
+            s = str(src)
+            if "/tests/" in s or src.name.startswith("test_"):
+                continue
+            if (
+                "experiments/results/public_pr" in s
+                or "experiments/results/comma_lab_public_export" in s
+                or "experiments/results/vast_harvest" in s
+            ):
+                continue
+            try:
+                text = src.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            # Quick prefilter — file must have at least one anti-pattern AND
+            # one fcntl-related token. (We allow 2-line gap; the function
+            # name must also appear nearby.)
+            if not any(pat in text for pat in _DELETION_MERGE_PATTERNS):
+                continue
+            if "fcntl" not in text and "LOCK_EX" not in text:
+                continue
+            scanned_files += 1
+            lines = text.splitlines()
+            for lineno, line in enumerate(lines):
+                stripped = line.lstrip()
+                if stripped.startswith("#"):
+                    continue
+                if not any(pat in line for pat in _DELETION_MERGE_PATTERNS):
+                    continue
+                if _DELETION_MERGE_WAIVER_MARKER in line:
+                    continue
+                # Find the enclosing function definition by scanning
+                # backwards for `def <name>(` with no greater indent.
+                enclosing_func: str | None = None
+                line_indent = len(line) - len(line.lstrip(" "))
+                for back_idx in range(lineno, -1, -1):
+                    cand = lines[back_idx]
+                    cand_stripped = cand.lstrip(" ")
+                    if not cand_stripped.startswith("def "):
+                        continue
+                    cand_indent = len(cand) - len(cand_stripped)
+                    if cand_indent < line_indent:
+                        # Extract function name `def NAME(`
+                        m = re.match(r"def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(", cand_stripped)
+                        if m:
+                            enclosing_func = m.group(1)
+                        break
+                if enclosing_func is None:
+                    continue
+                # Function name must match the locked-save pattern OR the
+                # broader `update_*_locked` pattern.
+                name_match = (
+                    enclosing_func in _LOCKED_WRITE_FUNCTION_NAME_PATTERNS
+                    or enclosing_func.endswith("_locked")
+                    or enclosing_func.startswith("_save_")
+                )
+                if not name_match:
+                    continue
+                # Confirm the surrounding window contains an fcntl-lock
+                # context token (otherwise this is just a normal merge).
+                lo = max(0, lineno - 30)
+                hi = min(len(lines), lineno + 5)
+                window = "\n".join(lines[lo:hi])
+                if not any(
+                    tok in window
+                    for tok in ("fcntl.flock", "LOCK_EX", "_active_jobs_lock", "_posterior_lock")
+                ):
+                    continue
+                rel = src.relative_to(root) if src.is_relative_to(root) else src
+                violations.append(
+                    f"[Check 132] {rel}:{lineno + 1}: "
+                    f"locked-save helper `{enclosing_func}` does "
+                    "`existing.update(data)`-style deletion-MERGE inside fcntl lock. "
+                    "This silently re-introduces stale keys the caller pruned; "
+                    "the only safe contract is TRANSACTIONAL REPLACE. "
+                    "Add a `# DELETION_MERGE_OK:<reason>` waiver if the merge "
+                    "is genuinely additive (e.g. counter-bump helper)."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [locked-writes-preserve-deletions] {len(violations)} "
+                f"deletion-merge violation(s) (scanned: {scanned_files} file(s))"
+            )
+            for v in violations[:5]:
+                print(f"    • {v[:240]}")
+            if len(violations) > 5:
+                print(f"    ... ({len(violations) - 5} more)")
+        else:
+            print(
+                "  [locked-writes-preserve-deletions] OK "
+                f"({scanned_files} file(s) scanned; 0 deletion-merge violation(s))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_locked_writes_preserve_deletions: "
+            f"{len(violations)} deletion-merge violation(s) "
+            "in locked-save helpers; first 3:\n  "
+            + "\n  ".join(v[:300] for v in violations[:3])
+            + "\n\nFix: change `existing.update(data)` to a TRANSACTIONAL "
+            "REPLACE (write the caller's map directly). The caller owns "
+            "the post-prune snapshot; the writer's job is to atomically "
+            "commit it, not merge it."
         )
     return violations
 

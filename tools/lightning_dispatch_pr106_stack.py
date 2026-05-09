@@ -160,7 +160,7 @@ def validate_apogee_dispatch_gate(
     parity_status = str(payload.get("scorer_basin_parity_status", "")).lower()
     exact_positive = payload.get("exact_positive_cuda_evidence") is True
     evidence_grade = str(payload.get("evidence_grade", "")).lower()
-    if "negative" in evidence_grade or evidence_grade in {"invalid", "external", "prediction"}:
+    if "negative" in evidence_grade or evidence_grade in {"invalid", "external", "prediction"}:  # CUSTODY_VALIDATOR_OK: blocker-accumulator with sys.exit on failure; sha256 verified at the top of the same function (line ~138)
         blockers.append(f"non-promotable evidence_grade={payload.get('evidence_grade')!r}")
     if semantics == "contest_faithful_distortion_model" and distortion_status not in APOGEE_DISTORTION_GATE_PASSED:
         blockers.append("contest_faithful_distortion_model requires passing distortion_model_status")

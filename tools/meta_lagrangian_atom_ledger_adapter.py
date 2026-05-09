@@ -360,12 +360,18 @@ def record_to_atom(
         blockers.append("missing_evidence_grade")
         evidence_grade = "[unknown]"
 
+    archive_sha256 = _string_or_none(record.get("archive_sha256"))
+    archive_path = _string_or_none(record.get("archive_path"))
+
     score = _optional_float(record, "contest_cuda_score", "score")
     if (
         evidence_grade.lower() in {"[contest-cuda]", "contest-cuda", "a", "a++"}
         and score is None
     ):
         blockers.append("missing_contest_cuda_score_for_evidence_grade")
+    if evidence_grade.lower() in {"[contest-cuda]", "contest-cuda", "a", "a++"}:
+        if archive_sha256 is None:
+            blockers.append("missing_archive_sha256_for_evidence_grade")
 
     archive_bytes = _require_int(
         record,
@@ -374,8 +380,6 @@ def record_to_atom(
         "archive_bytes",
         "rate_bytes",
     )
-    archive_sha256 = _string_or_none(record.get("archive_sha256"))
-    archive_path = _string_or_none(record.get("archive_path"))
     rel_err_pct = _require_float(
         record,
         "rel_err_pct",
