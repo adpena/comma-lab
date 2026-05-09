@@ -14,7 +14,7 @@ def test_preflight_hook_defaults_to_no_codebase(monkeypatch) -> None:
         "tac.preflight",
         "--no-codebase",
     ]
-    assert preflight_hook._preflight_timeout_seconds() == 90
+    assert preflight_hook._preflight_timeout_seconds() == 30
 
 
 def test_preflight_hook_full_mode_is_explicit(monkeypatch) -> None:
@@ -24,6 +24,9 @@ def test_preflight_hook_full_mode_is_explicit(monkeypatch) -> None:
         ".venv/bin/python",
         "-m",
         "tac.preflight",
+        "--scope",
+        "all",
+        "--allow-slow-preflight",
     ]
     assert preflight_hook._preflight_timeout_seconds() == 600
 
@@ -33,7 +36,7 @@ def test_preflight_hook_timeout_env_is_bounded(monkeypatch) -> None:
     assert preflight_hook._preflight_timeout_seconds() == 12
 
     monkeypatch.setenv("PREFLIGHT_TIMEOUT_SECONDS", "not-an-int")
-    assert preflight_hook._preflight_timeout_seconds() == 90
+    assert preflight_hook._preflight_timeout_seconds() == 30
 
 
 def test_run_preflight_reports_timeout(monkeypatch, capsys) -> None:

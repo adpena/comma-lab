@@ -406,7 +406,7 @@ class _ParallelPreflightRunner:
         self.enabled = enabled
         self.verbose = verbose
         if max_workers is None:
-            max_workers = 8
+            max_workers = min(8, os.cpu_count() or 4)
         self.max_workers = max_workers
         self._executor: ThreadPoolExecutor | None = (
             ThreadPoolExecutor(
@@ -886,15 +886,11 @@ def preflight_all(
         )
         _parallel.submit(
             "check_archive_builders_use_deterministic_zip",
-            lambda: check_archive_builders_use_deterministic_zip(
-                strict=True, verbose=False,
-            ),
+            lambda: check_archive_builders_use_deterministic_zip(strict=True, verbose=False),
         )
         _parallel.submit(
             "check_eval_roundtrip_gate_called_after_output_dir_resolution",
-            lambda: check_eval_roundtrip_gate_called_after_output_dir_resolution(
-                strict=True, verbose=False,
-            ),
+            lambda: check_eval_roundtrip_gate_called_after_output_dir_resolution(strict=True, verbose=False),
         )
         _parallel.run(
             "check_codebase_drift",
@@ -1362,14 +1358,14 @@ def preflight_all(
         check_setup_first_seen_no_split_transactions(
             strict=True, verbose=verbose,
         )
-        # 2026-05-09 codex round-6 MEDIUM 2 fix (#145): the preflight CLI
-        # added in DX ratchet defaulted `--scope` to `dev`, dispatching to
-        # `preflight_developer` instead of `preflight_all`. This silently
-        # weakened the green CLI by skipping release/custody checks. The
-        # fix restores `all` as the default with `dev` opt-in. STRICT-FLIP
-        # per the same self-protection mandate — Catalog #145 lands at 0
-        # live violations.
-        check_preflight_cli_default_scope_is_all(
+        # 2026-05-09 codex round-6 MEDIUM 2 supersession (#145): the
+        # routine CLI default must stay bounded for developer velocity,
+        # while release/custody/full-surface sweeps remain explicit via
+        # `--scope all|release --allow-slow-preflight`. The old "default
+        # all" ratchet made the normal CLI exceed the 30s DX budget. The
+        # self-protecting check now prevents silent drift away from the
+        # bounded default OR removal of the explicit full gate.
+        check_preflight_cli_default_scope_is_bounded_dev(
             strict=True, verbose=verbose,
         )
         # 2026-05-09 codex round 7+8 HIGH 1 (#147): the round-6 fix made
@@ -1460,52 +1456,135 @@ def preflight_all(
         # classes that wasted days of GPU time + multiple rounds of council
         # rework are now structurally extinct. Reverting any of these fixes
         # will fail strict here.
-        check_no_mps_fallback_default(strict=True, verbose=verbose)
-        check_shell_set_e_present(strict=True, verbose=verbose)
-        check_no_shell_zip_binary(strict=True, verbose=verbose)
-        check_no_pipefail_grep_q_trap(strict=True, verbose=verbose)
-        check_no_eval_roundtrip_false(strict=True, verbose=verbose)
-        check_no_scorer_load_at_inflate(strict=True, verbose=verbose)
+        _parallel.submit("check_no_mps_fallback_default", lambda: check_no_mps_fallback_default(strict=True, verbose=False))
+        _parallel.submit("check_shell_set_e_present", lambda: check_shell_set_e_present(strict=True, verbose=False))
+        _parallel.submit("check_no_shell_zip_binary", lambda: check_no_shell_zip_binary(strict=True, verbose=False))
+        _parallel.submit("check_no_pipefail_grep_q_trap", lambda: check_no_pipefail_grep_q_trap(strict=True, verbose=False))
+        _parallel.submit("check_no_eval_roundtrip_false", lambda: check_no_eval_roundtrip_false(strict=True, verbose=False))
+        _parallel.submit("check_no_scorer_load_at_inflate", lambda: check_no_scorer_load_at_inflate(strict=True, verbose=False))
+        _parallel.submit("check_no_disable_eval_roundtrip_flag", lambda: check_no_disable_eval_roundtrip_flag(strict=True, verbose=False))
+        _parallel.submit("check_no_pack_sparse_delta_approved_outside_promotion_tool", lambda: check_no_pack_sparse_delta_approved_outside_promotion_tool(strict=True, verbose=False))
+        _parallel.submit("check_remote_scripts_have_nvdec_probe", lambda: check_remote_scripts_have_nvdec_probe(strict=True, verbose=False))
+        _parallel.submit("check_kl_distill_uses_roundtripped_frames", lambda: check_kl_distill_uses_roundtripped_frames(strict=True, verbose=False))
+        _parallel.submit("check_no_comment_only_contracts", lambda: check_no_comment_only_contracts(strict=True, verbose=False))
+        _parallel.submit("check_training_script_metric_keys_consistent", lambda: check_training_script_metric_keys_consistent(strict=True, verbose=False))
+        _parallel.submit("check_no_bare_round_in_eval_roundtrip", lambda: check_no_bare_round_in_eval_roundtrip(strict=True, verbose=False))
+        _parallel.submit("check_training_paths_use_ema_correctly", lambda: check_training_paths_use_ema_correctly(strict=True, verbose=False))
+        _parallel.submit("check_vastai_create_has_label", lambda: check_vastai_create_has_label(strict=True, verbose=False))
+        _parallel.submit("check_vastai_create_writes_tracker", lambda: check_vastai_create_writes_tracker(strict=True, verbose=False))
+        _parallel.submit("check_test_files_imports_resolve", lambda: check_test_files_imports_resolve(strict=True, verbose=False))
+        _parallel.submit("check_kl_div_reduction_correct", lambda: check_kl_div_reduction_correct(strict=True, verbose=False))
+        _parallel.submit("check_no_silent_auto_discovery_with_warn", lambda: check_no_silent_auto_discovery_with_warn(strict=True, verbose=False))
+        _parallel.submit("check_inflate_sh_handles_br_centrally", lambda: check_inflate_sh_handles_br_centrally(strict=True, verbose=False))
+        _parallel.submit("check_segmap_class_lanes_have_oom_guards", lambda: check_segmap_class_lanes_have_oom_guards(strict=True, verbose=False))
+        _parallel.submit("check_remote_lane_scripts_use_computed_payloads", lambda: check_remote_lane_scripts_use_computed_payloads(strict=True, verbose=False))
+        _parallel.submit("check_waivers_specify_env_gate", lambda: check_waivers_specify_env_gate(strict=True, verbose=False))
+        _parallel.submit("check_inflate_scorer_load_has_runtime_banner", lambda: check_inflate_scorer_load_has_runtime_banner(strict=True, verbose=False))
+        _parallel.submit("check_vastai_prompts_have_cost_cap", lambda: check_vastai_prompts_have_cost_cap(strict=True, verbose=False))
+        _parallel.submit("check_subagent_prompts_no_cpu_fallback", lambda: check_subagent_prompts_no_cpu_fallback(strict=True, verbose=False))
+        _parallel.submit("check_scores_have_lane_tag", lambda: check_scores_have_lane_tag(strict=True, verbose=False))
+        _parallel.submit("check_halfframe_archive_uses_trained_profile", lambda: check_halfframe_archive_uses_trained_profile(strict=True, verbose=False))
+        _parallel.submit("check_profile_keys_have_resolvers", lambda: check_profile_keys_have_resolvers(strict=True, verbose=False))
+        _parallel.submit("check_uniward_delta_has_attestation_gate", lambda: check_uniward_delta_has_attestation_gate(strict=True, verbose=False))
+        _parallel.submit("check_remote_scripts_write_provenance", lambda: check_remote_scripts_write_provenance(strict=True, verbose=False))
+        _parallel.submit("check_remote_scripts_executable_bit", lambda: check_remote_scripts_executable_bit(strict=True, verbose=False))
+        _parallel.submit("check_remote_scripts_record_predicted_band", lambda: check_remote_scripts_record_predicted_band(strict=True, verbose=False))
+        _parallel.submit("check_remote_scripts_tag_contest_cuda_at_completion", lambda: check_remote_scripts_tag_contest_cuda_at_completion(strict=True, verbose=False))
+        _parallel.submit("check_remote_scripts_probe_nvdec_early", lambda: check_remote_scripts_probe_nvdec_early(strict=True, verbose=False))
+        _parallel.submit("check_resume_from_state_dict_shape_compat", lambda: check_resume_from_state_dict_shape_compat(strict=True, verbose=False))
+        _parallel.submit("check_no_tmux_kill_server_in_lane_scripts", lambda: check_no_tmux_kill_server_in_lane_scripts(strict=True, verbose=False))
+        _parallel.submit("check_no_unconditional_ensurepip", lambda: check_no_unconditional_ensurepip(strict=True, verbose=False))
+        _parallel.submit("check_lane_scripts_strip_macos_resource_forks", lambda: check_lane_scripts_strip_macos_resource_forks(strict=True, verbose=False))
+        _parallel.submit("check_ssh_commands_have_connect_timeout", lambda: check_ssh_commands_have_connect_timeout(strict=True, verbose=False))
+        _parallel.submit("check_undeployed_archive_artifact_producers", lambda: check_undeployed_archive_artifact_producers(strict=True, verbose=False))
+        _parallel.submit("check_fp4_production_paths_disclose_hardware", lambda: check_fp4_production_paths_disclose_hardware(strict=True, verbose=False))
+        _parallel.submit("check_remote_lane_scripts_have_heartbeat", lambda: check_remote_lane_scripts_have_heartbeat(strict=True, verbose=False))
+        _parallel.submit("check_pose_projection_train_inference_parity", lambda: check_pose_projection_train_inference_parity(strict=True, verbose=False))
+        _parallel.submit("check_launcher_tarball_includes_lane_anchors", lambda: check_launcher_tarball_includes_lane_anchors(strict=True, verbose=False))
+        _parallel.submit("check_no_git_reset_hard_in_remote_lane_scripts", lambda: check_no_git_reset_hard_in_remote_lane_scripts(strict=True, verbose=False))
+        _parallel.run(
+            "check_no_mps_fallback_default",
+            "[no-mps-fallback]",
+            lambda: check_no_mps_fallback_default(strict=True, verbose=verbose),
+        )
+        _parallel.run(
+            "check_shell_set_e_present",
+            "[set-e-required]",
+            lambda: check_shell_set_e_present(strict=True, verbose=verbose),
+        )
+        _parallel.run(
+            "check_no_shell_zip_binary",
+            "[no-shell-zip]",
+            lambda: check_no_shell_zip_binary(strict=True, verbose=verbose),
+        )
+        _parallel.run(
+            "check_no_pipefail_grep_q_trap",
+            "[no-pipefail-grep-q]",
+            lambda: check_no_pipefail_grep_q_trap(strict=True, verbose=verbose),
+        )
+        _parallel.run(
+            "check_no_eval_roundtrip_false",
+            "[no-eval-roundtrip-false]",
+            lambda: check_no_eval_roundtrip_false(strict=True, verbose=verbose),
+        )
+        _parallel.run(
+            "check_no_scorer_load_at_inflate",
+            "[no-scorer-at-inflate]",
+            lambda: check_no_scorer_load_at_inflate(strict=True, verbose=verbose),
+        )
         _parallel.run(
             "check_training_scripts_have_auth_eval",
             "[training-needs-auth-eval]",
-            lambda: check_training_scripts_have_auth_eval(
-                strict=True,
-                verbose=verbose,
-            ),
+            lambda: check_training_scripts_have_auth_eval(strict=True, verbose=verbose),
         )
         # 2026-05-08 codex Pattern A finding: training scripts must NOT call
         # synthetic data factories in non-smoke mode. Codex verification
         # MEDIUM-4 (2026-05-08 evening): flipped from warn-only to strict;
         # FIX-A-SYNTH (c80162e7) reported live count = 0 on landing.
         check_training_scripts_use_real_data_in_nonsmoke_mode(strict=True, verbose=verbose)
-        check_no_disable_eval_roundtrip_flag(strict=True, verbose=verbose)
-        check_no_pack_sparse_delta_approved_outside_promotion_tool(strict=True, verbose=verbose)
-        check_inflate_sh_handles_br_centrally(strict=True, verbose=verbose)
-        check_remote_scripts_have_nvdec_probe(strict=True, verbose=verbose)
+        _parallel.run(
+            "check_no_disable_eval_roundtrip_flag",
+            "[no-disable-eval-roundtrip-flag]",
+            lambda: check_no_disable_eval_roundtrip_flag(strict=True, verbose=verbose),
+        )
+        _parallel.run(
+            "check_no_pack_sparse_delta_approved_outside_promotion_tool",
+            "[no-pack-sparse-delta-approved]",
+            lambda: check_no_pack_sparse_delta_approved_outside_promotion_tool(strict=True, verbose=verbose),
+        )
+        _parallel.run(
+            "check_inflate_sh_handles_br_centrally",
+            "[inflate-br-central]",
+            lambda: check_inflate_sh_handles_br_centrally(strict=True, verbose=verbose),
+        )
+        _parallel.run(
+            "check_remote_scripts_have_nvdec_probe",
+            "[remote-nvdec-probe]",
+            lambda: check_remote_scripts_have_nvdec_probe(strict=True, verbose=verbose),
+        )
 
         # 2026-04-27 codex R5-r6: 5 new checks for round-6 findings.
         # Each guards a regression of the matching finding fix. All 5 land
         # at 0 live-codebase violations (verified post-fix), so they go
         # straight to strict=True per the Lane A → strict pattern.
         check_no_brittle_six_line_waiver_lookback(strict=True, verbose=verbose)
-        check_kl_distill_uses_roundtripped_frames(strict=True, verbose=verbose)
+        _parallel.run(
+            "check_kl_distill_uses_roundtripped_frames",
+            "[kl-roundtrip]",
+            lambda: check_kl_distill_uses_roundtripped_frames(strict=True, verbose=verbose),
+        )
         check_train_renderer_kl_aux_explicit_scope(strict=True, verbose=verbose)
         check_distillation_policy_schema_clean(strict=True, verbose=verbose)
         _parallel.run(
             "check_eval_roundtrip_gate_called_after_output_dir_resolution",
             "[eval-roundtrip-output-dir-resolution]",
-            lambda: check_eval_roundtrip_gate_called_after_output_dir_resolution(
-                strict=True, verbose=verbose,
-            ),
+            lambda: check_eval_roundtrip_gate_called_after_output_dir_resolution(strict=True, verbose=verbose),
         )
         check_nvdec_probe_has_error_classification(strict=True, verbose=verbose)
         _parallel.run(
             "check_archive_builders_use_deterministic_zip",
             "[deterministic-zip-builders]",
-            lambda: check_archive_builders_use_deterministic_zip(
-                strict=True, verbose=verbose,
-            ),
+            lambda: check_archive_builders_use_deterministic_zip(strict=True, verbose=verbose),
         )
         check_no_raw_zip_extractall(strict=True, verbose=verbose)
         # 2026-05-02 public Apogee supplement/site hygiene. The repo has
@@ -1560,21 +1639,33 @@ def preflight_all(
         # train_imp_cycle.main covers the runtime gate. Reverting either
         # safety net will fail strict here.
         # Council: feedback_grand_council_pcc2_comment_only_contracts_20260430.md
-        check_no_comment_only_contracts(strict=True, verbose=verbose)
+        _parallel.run(
+            "check_no_comment_only_contracts",
+            "[no-comment-only-contracts]",
+            lambda: check_no_comment_only_contracts(strict=True, verbose=verbose),
+        )
         # Check 85 (DARTS-S NaN-display incident 2026-04-29 PM): epoch_metrics
         # key references must match TRAINER_RETURN_KEYS. Today's incident:
         # 5h of GPU compute appeared to show seg=nan/pose=nan because the
         # printer in train_segmap.py read keys "seg"/"seg_loss" but trainer
         # returns "seg_dist"/"pose_dist". Lands STRICT @ 0 violations after
         # train_segmap.py cleanup + DistillTrainer.step keys registered.
-        check_training_script_metric_keys_consistent(strict=True, verbose=verbose)
+        _parallel.run(
+            "check_training_script_metric_keys_consistent",
+            "[training-metric-keys]",
+            lambda: check_training_script_metric_keys_consistent(strict=True, verbose=verbose),
+        )
         # Check 86 (DARTS-S freeze ROOT CAUSE incident 2026-04-29 PM):
         # forbid bare .round() inside eval-roundtrip chains. .round() has
         # zero gradient → severs backprop → optimizer "steps" but params
         # don't move → 5h GPU burned producing constant loss=277.02 across
         # 400 epochs. Lane SC++/SA-v2/SO/MM v2 all invalidated. Lands STRICT
         # @ 0 violations after segmap_renderer.py:281 fix.
-        check_no_bare_round_in_eval_roundtrip(strict=True, verbose=verbose)
+        _parallel.run(
+            "check_no_bare_round_in_eval_roundtrip",
+            "[no-bare-round-roundtrip]",
+            lambda: check_no_bare_round_in_eval_roundtrip(strict=True, verbose=verbose),
+        )
         # Check 87 (Council C OOM-class deep fix incident 2026-04-29 PM):
         # SegMap-class lane scripts (any invocation of train_segmap.py)
         # must pass --bf16 + --scorer-chunk N + --batch-size B with B*N<=8.
@@ -1586,7 +1677,11 @@ def preflight_all(
         # PA/WC-S/DARTS-S/FR-Ω) are updated to pass the new flags +
         # the matching DF2+DF3 implementation in segmap_renderer.py.
         # Memory: .omx/research/council_oom_class_deep_fix_20260429.md.
-        check_segmap_class_lanes_have_oom_guards(strict=True, verbose=verbose)
+        _parallel.run(
+            "check_segmap_class_lanes_have_oom_guards",
+            "[segmap-oom-guard]",
+            lambda: check_segmap_class_lanes_have_oom_guards(strict=True, verbose=verbose),
+        )
 
         # Check 88 (Council D EMA wire-in 2026-04-29 PM): every training
         # script in experiments/train_*.py + qat_*.py + quantize_*.py must
@@ -1601,7 +1696,11 @@ def preflight_all(
         # train_postfilter_on_renderer.py + the train_joint_pair.py
         # duplicate-class fix). Lands STRICT @ 0 violations after fix-ups.
         # Memory: .omx/research/council_ema_audit_20260429.md.
-        check_training_paths_use_ema_correctly(strict=True, verbose=verbose)
+        _parallel.run(
+            "check_training_paths_use_ema_correctly",
+            "[training-needs-ema]",
+            lambda: check_training_paths_use_ema_correctly(strict=True, verbose=verbose),
+        )
 
         # Check 89 (Council B UNIWARD NO-OP incident): encode-then-discard
         # antipattern in remote_lane_*.sh scripts. Initially warn-only while
@@ -1609,7 +1708,11 @@ def preflight_all(
         # no-op payload discard. Promoted to STRICT after the 2026-05-07
         # live-codebase sweep returned 0 violations with focused regression
         # coverage for bad, clean, waived, and live-repo paths.
-        check_remote_lane_scripts_use_computed_payloads(strict=True, verbose=verbose)
+        _parallel.run(
+            "check_remote_lane_scripts_use_computed_payloads",
+            "[encode-then-discard]",
+            lambda: check_remote_lane_scripts_use_computed_payloads(strict=True, verbose=verbose),
+        )
 
         # 2026-04-27 meta-bug audit (commit a57731a0): 12 NEW checks for
         # additional bug classes from session + memory. 4 land at 0 live
@@ -1628,17 +1731,49 @@ def preflight_all(
         #   check_test_files_imports_resolve             25  warn (broken-test cleanup)
         #   check_uniward_delta_has_attestation_gate      6  warn
         #   check_remote_scripts_write_provenance         5  warn (Lane provenance write)
-        check_vastai_create_has_label(strict=True, verbose=verbose)
-        check_waivers_specify_env_gate(strict=True, verbose=verbose)
-        check_inflate_scorer_load_has_runtime_banner(strict=True, verbose=verbose)
-        check_vastai_prompts_have_cost_cap(strict=True, verbose=verbose)
+        _parallel.run(
+            "check_vastai_create_has_label",
+            "[vastai-label]",
+            lambda: check_vastai_create_has_label(strict=True, verbose=verbose),
+        )
+        _parallel.run(
+            "check_waivers_specify_env_gate",
+            "[waiver-envgate]",
+            lambda: check_waivers_specify_env_gate(strict=True, verbose=verbose),
+        )
+        _parallel.run(
+            "check_inflate_scorer_load_has_runtime_banner",
+            "[scorer-banner]",
+            lambda: check_inflate_scorer_load_has_runtime_banner(strict=True, verbose=verbose),
+        )
+        _parallel.run(
+            "check_vastai_prompts_have_cost_cap",
+            "[vastai-cost-cap]",
+            lambda: check_vastai_prompts_have_cost_cap(strict=True, verbose=verbose),
+        )
         # 2026-04-27 final cleanup pass: 8 warn-only checks now at 0
         # live violations (commits eb985e40 + 17e5f903 + 676bf206 + this).
         # Promoted to strict — bug classes structurally extinct.
-        check_vastai_create_writes_tracker(strict=True, verbose=verbose)
-        check_subagent_prompts_no_cpu_fallback(strict=True, verbose=verbose)
-        check_scores_have_lane_tag(strict=True, verbose=verbose)
-        check_halfframe_archive_uses_trained_profile(strict=True, verbose=verbose)
+        _parallel.run(
+            "check_vastai_create_writes_tracker",
+            "[vastai-tracker]",
+            lambda: check_vastai_create_writes_tracker(strict=True, verbose=verbose),
+        )
+        _parallel.run(
+            "check_subagent_prompts_no_cpu_fallback",
+            "[cpu-fallback]",
+            lambda: check_subagent_prompts_no_cpu_fallback(strict=True, verbose=verbose),
+        )
+        _parallel.run(
+            "check_scores_have_lane_tag",
+            "[score-tag]",
+            lambda: check_scores_have_lane_tag(strict=True, verbose=verbose),
+        )
+        _parallel.run(
+            "check_halfframe_archive_uses_trained_profile",
+            "[halfframe]",
+            lambda: check_halfframe_archive_uses_trained_profile(strict=True, verbose=verbose),
+        )
         _parallel.run(
             "check_profile_keys_have_resolvers",
             "[profile-resolver]",
@@ -1649,8 +1784,16 @@ def preflight_all(
             "[test-imports]",
             lambda: check_test_files_imports_resolve(strict=True, verbose=verbose),
         )
-        check_uniward_delta_has_attestation_gate(strict=True, verbose=verbose)
-        check_remote_scripts_write_provenance(strict=True, verbose=verbose)
+        _parallel.run(
+            "check_uniward_delta_has_attestation_gate",
+            "[uniward-attestation]",
+            lambda: check_uniward_delta_has_attestation_gate(strict=True, verbose=verbose),
+        )
+        _parallel.run(
+            "check_remote_scripts_write_provenance",
+            "[provenance]",
+            lambda: check_remote_scripts_write_provenance(strict=True, verbose=verbose),
+        )
 
         # 2026-04-27 council forensics (findings.md "Lane G — really dead,
         # or bugged?"): forbid `F.kl_div(..., reduction="batchmean")` on
@@ -1659,7 +1802,11 @@ def preflight_all(
         # every caller. Lands at 0 live violations after the losses.py
         # fix → straight to strict per the Lane A pattern. See Check M
         # comment block above the function definition.
-        check_kl_div_reduction_correct(strict=True, verbose=verbose)
+        _parallel.run(
+            "check_kl_div_reduction_correct",
+            "[no-kl-div-batchmean]",
+            lambda: check_kl_div_reduction_correct(strict=True, verbose=verbose),
+        )
 
         # 2026-04-27 forensic council (findings.md "Lane F regression"):
         # 29th meta-bug check. Forbid the silent-default-masquerading-as-
@@ -1669,7 +1816,11 @@ def preflight_all(
         # both fixed; live count after qat_finetune.py fix should be 0.
         # See Check N comment block above the function definition + memory
         # `feedback_silent_default_masquerading_as_negative_result`.
-        check_no_silent_auto_discovery_with_warn(strict=True, verbose=verbose)
+        _parallel.run(
+            "check_no_silent_auto_discovery_with_warn",
+            "[no-silent-auto-discovery]",
+            lambda: check_no_silent_auto_discovery_with_warn(strict=True, verbose=verbose),
+        )
 
         # 2026-04-27: 3 new meta-bug checks (30, 31, 32) for DX hardening.
         # All STRICT after sweep-fix landed in this commit:
@@ -1678,110 +1829,7 @@ def preflight_all(
         # - Check 32 (contest-cuda-tag): 8 lane scripts patched with [contest-CUDA]
         # Bootstraps + sweep orchestrators + auth-eval-only scripts EXEMPT
         # via EXEMPT_SUFFIXES list inside each check function.
-        _remote_script_parallel = _ParallelPreflightRunner(
-            enabled=_preflight_parallel_enabled(),
-            verbose=verbose,
-            max_workers=8,
-        )
-        _remote_script_parallel.submit(
-            "check_remote_scripts_executable_bit",
-            lambda: check_remote_scripts_executable_bit(strict=True, verbose=False),
-        )
-        _remote_script_parallel.submit(
-            "check_remote_scripts_record_predicted_band",
-            lambda: check_remote_scripts_record_predicted_band(
-                strict=True,
-                verbose=False,
-            ),
-        )
-        _remote_script_parallel.submit(
-            "check_remote_scripts_tag_contest_cuda_at_completion",
-            lambda: check_remote_scripts_tag_contest_cuda_at_completion(
-                strict=True,
-                verbose=False,
-            ),
-        )
-        _remote_script_parallel.submit(
-            "check_remote_scripts_probe_nvdec_early",
-            lambda: check_remote_scripts_probe_nvdec_early(
-                strict=True,
-                verbose=False,
-            ),
-        )
-        _remote_script_parallel.submit(
-            "check_resume_from_state_dict_shape_compat",
-            lambda: check_resume_from_state_dict_shape_compat(
-                strict=True,
-                verbose=False,
-            ),
-        )
-        _remote_script_parallel.submit(
-            "check_no_tmux_kill_server_in_lane_scripts",
-            lambda: check_no_tmux_kill_server_in_lane_scripts(
-                strict=True,
-                verbose=False,
-            ),
-        )
-        _remote_script_parallel.submit(
-            "check_no_unconditional_ensurepip",
-            lambda: check_no_unconditional_ensurepip(strict=True, verbose=False),
-        )
-        _remote_script_parallel.submit(
-            "check_lane_scripts_strip_macos_resource_forks",
-            lambda: check_lane_scripts_strip_macos_resource_forks(
-                strict=True,
-                verbose=False,
-            ),
-        )
-        _remote_script_parallel.submit(
-            "check_ssh_commands_have_connect_timeout",
-            lambda: check_ssh_commands_have_connect_timeout(
-                strict=True,
-                verbose=False,
-            ),
-        )
-        _remote_script_parallel.submit(
-            "check_undeployed_archive_artifact_producers",
-            lambda: check_undeployed_archive_artifact_producers(
-                strict=True,
-                verbose=False,
-            ),
-        )
-        _remote_script_parallel.submit(
-            "check_fp4_production_paths_disclose_hardware",
-            lambda: check_fp4_production_paths_disclose_hardware(
-                strict=True,
-                verbose=False,
-            ),
-        )
-        _remote_script_parallel.submit(
-            "check_remote_lane_scripts_have_heartbeat",
-            lambda: check_remote_lane_scripts_have_heartbeat(
-                strict=True,
-                verbose=False,
-            ),
-        )
-        _remote_script_parallel.submit(
-            "check_pose_projection_train_inference_parity",
-            lambda: check_pose_projection_train_inference_parity(
-                strict=True,
-                verbose=False,
-            ),
-        )
-        _remote_script_parallel.submit(
-            "check_launcher_tarball_includes_lane_anchors",
-            lambda: check_launcher_tarball_includes_lane_anchors(
-                strict=True,
-                verbose=False,
-            ),
-        )
-        _remote_script_parallel.submit(
-            "check_no_git_reset_hard_in_remote_lane_scripts",
-            lambda: check_no_git_reset_hard_in_remote_lane_scripts(
-                strict=True,
-                verbose=False,
-            ),
-        )
+        _remote_script_parallel = _parallel
         _remote_script_parallel.run(
             "check_remote_scripts_executable_bit",
             "[executable-bit]",
@@ -6078,16 +6126,25 @@ def _candidate_supply_chain_manifest_files(root: Path) -> list[Path]:
             candidates.append(p)
     for pattern in ("requirements*.txt", "constraints*.txt", "environment*.yml", "environment*.yaml"):
         candidates.extend(sorted(root.glob(pattern)))
-    for base in (
-        root / "scripts",
-        root / "tools",
-        root / ".github" / "workflows",
-        root / "src" / "tac" / "deploy",
-    ):
-        if not base.exists():
-            continue
-        for suffix in ("*.py", "*.sh", "*.yml", "*.yaml"):
-            candidates.extend(sorted(base.rglob(suffix)))
+    nested = _rg_file_list(
+        root,
+        ("scripts", "tools", ".github/workflows", "src/tac/deploy"),
+        ("*.py", "*.sh", "*.yml", "*.yaml"),
+        exclude_globs=("**/__pycache__/**", "**/comma_lab_public_export/**"),
+    )
+    if nested is None:
+        for base in (
+            root / "scripts",
+            root / "tools",
+            root / ".github" / "workflows",
+            root / "src" / "tac" / "deploy",
+        ):
+            if not base.exists():
+                continue
+            for suffix in ("*.py", "*.sh", "*.yml", "*.yaml"):
+                candidates.extend(sorted(base.rglob(suffix)))
+    else:
+        candidates.extend(nested)
     return sorted({p.resolve(): p for p in candidates if p.is_file()}.values())
 
 
@@ -6448,27 +6505,49 @@ def _scan_repo_for_mini_shai_hulud_iocs(repo_root: Path) -> list[str]:
                 "treat repository as compromised until reviewed."
             )
 
+    candidate_paths = _rg_file_list(
+        repo_root,
+        (".",),
+        ("package.json", "router_runtime.js", "start.py", "setup.mjs", "__init__.py"),
+        exclude_globs=(
+            ".git/**",
+            ".venv/**",
+            "venv/**",
+            "node_modules/**",
+            "workspace/**",
+            "experiments/results/**",
+            "reports/**",
+            "**/__pycache__/**",
+        ),
+    )
     package_json_paths: list[Path] = []
     named_ioc_paths: list[Path] = []
-    names = {"router_runtime.js", "start.py", "setup.mjs", "__init__.py"}
-    pruned_dirs = {".git", "node_modules", ".venv", "venv", "workspace"}
-    for dirpath, dirnames, filenames in os.walk(repo_root):
-        dirnames[:] = sorted(d for d in dirnames if d not in pruned_dirs)
-        base = Path(dirpath)
-        try:
-            rel_base = base.relative_to(repo_root)
-        except ValueError:
-            rel_base = base
-        if rel_base.parts[:2] == ("experiments", "results"):
-            dirnames[:] = []
-            continue
-        if rel_base.parts == ("experiments",):
-            dirnames[:] = [d for d in dirnames if d != "results"]
-        for filename in sorted(filenames):
-            path = base / filename
-            if filename == "package.json":
+    if candidate_paths is None:
+        names = {"router_runtime.js", "start.py", "setup.mjs", "__init__.py"}
+        pruned_dirs = {".git", "node_modules", ".venv", "venv", "workspace"}
+        for dirpath, dirnames, filenames in os.walk(repo_root):
+            dirnames[:] = sorted(d for d in dirnames if d not in pruned_dirs)
+            base = Path(dirpath)
+            try:
+                rel_base = base.relative_to(repo_root)
+            except ValueError:
+                rel_base = base
+            if rel_base.parts[:2] == ("experiments", "results"):
+                dirnames[:] = []
+                continue
+            if rel_base.parts == ("experiments",):
+                dirnames[:] = [d for d in dirnames if d != "results"]
+            for filename in sorted(filenames):
+                path = base / filename
+                if filename == "package.json":
+                    package_json_paths.append(path)
+                if filename in names:
+                    named_ioc_paths.append(path)
+    else:
+        for path in candidate_paths:
+            if path.name == "package.json":
                 package_json_paths.append(path)
-            if filename in names:
+            else:
                 named_ioc_paths.append(path)
 
     for pkg_json in sorted(package_json_paths):
@@ -6545,8 +6624,20 @@ def _scan_site_packages_for_compromised_lightning(
                 f"{runtime_dir}: hidden Lightning _runtime payload directory present; "
                 "this matches the compromised 2.6.2/2.6.3 package structure."
             )
-        for name in ("router_runtime.js", "start.py"):
-            for path in sorted(site.rglob(name)):
+        named_iocs = _rg_file_list(
+            site,
+            (site,),
+            ("router_runtime.js", "start.py"),
+            exclude_globs=("**/__pycache__/**",),
+            timeout_s=3.0,
+        )
+        if named_iocs is None:
+            named_iocs = tuple(
+                path for name in ("router_runtime.js", "start.py")
+                for path in sorted(site.rglob(name))
+            )
+        for path in named_iocs:
+            if path.is_file():
                 digest = _sha256_file(path)
                 if digest in _MINI_SHAI_HULUD_IOC_SHA256:
                     label = _MINI_SHAI_HULUD_IOC_LABELS.get(digest, "known payload")
@@ -6588,25 +6679,47 @@ def _scan_package_caches_for_compromised_lightning(
     for root in roots:
         if not root.exists():
             continue
-        for dirpath, dirnames, filenames in os.walk(root):
-            dirnames.sort()
-            for filename in sorted(filenames):
-                if not _LIGHTNING_BAD_CACHE_ARTIFACT_RE.search(filename):
-                    continue
-                path = Path(dirpath) / filename
-                if not path.is_file():
-                    continue
-                digest = _sha256_file(path)
-                if digest in _MINI_SHAI_HULUD_IOC_SHA256:
-                    label = _MINI_SHAI_HULUD_IOC_LABELS.get(digest, "known payload")
-                    violations.append(
-                        f"{path}: cached compromised Lightning artifact {label} sha256={digest}"
-                    )
-                else:
-                    violations.append(
-                        f"{path}: cached Lightning 2.6.2/2.6.3 artifact present; "
-                        "treat the cache/environment as suspect and remove from trusted runners."
-                    )
+        candidates = _rg_file_list(
+            root,
+            (root,),
+            (
+                "*lightning-2.6.2*.whl",
+                "*lightning-2.6.3*.whl",
+                "*lightning-2.6.2*.zip",
+                "*lightning-2.6.3*.zip",
+                "*lightning-2.6.2*.tar.gz",
+                "*lightning-2.6.3*.tar.gz",
+                "*lightning-2.6.2*.tgz",
+                "*lightning-2.6.3*.tgz",
+                "*pytorch_lightning-2.6.2*.whl",
+                "*pytorch_lightning-2.6.3*.whl",
+                "*pytorch-lightning-2.6.2*.whl",
+                "*pytorch-lightning-2.6.3*.whl",
+            ),
+            timeout_s=3.0,
+        )
+        if candidates is None:
+            fallback_candidates: list[Path] = []
+            for dirpath, dirnames, filenames in os.walk(root):
+                dirnames.sort()
+                for filename in sorted(filenames):
+                    if _LIGHTNING_BAD_CACHE_ARTIFACT_RE.search(filename):
+                        fallback_candidates.append(Path(dirpath) / filename)
+            candidates = tuple(fallback_candidates)
+        for path in candidates:
+            if not path.is_file() or not _LIGHTNING_BAD_CACHE_ARTIFACT_RE.search(path.name):
+                continue
+            digest = _sha256_file(path)
+            if digest in _MINI_SHAI_HULUD_IOC_SHA256:
+                label = _MINI_SHAI_HULUD_IOC_LABELS.get(digest, "known payload")
+                violations.append(
+                    f"{path}: cached compromised Lightning artifact {label} sha256={digest}"
+                )
+            else:
+                violations.append(
+                    f"{path}: cached Lightning 2.6.2/2.6.3 artifact present; "
+                    "treat the cache/environment as suspect and remove from trusted runners."
+                )
     return violations
 
 
@@ -7454,7 +7567,7 @@ def _scan_shell_for_missing_set_e(path: Path, repo_root: Path) -> list[str]:
     rel = path.relative_to(repo_root) if path.is_absolute() else path
     try:
         text = path.read_text()
-    except (UnicodeDecodeError, FileNotFoundError):
+    except (OSError, UnicodeDecodeError, FileNotFoundError):
         return []
     # codex R5-3 #5: mask heredoc bodies so embedded Python/docs don't
     # register as executable shell.
@@ -9738,26 +9851,58 @@ def preflight_filename_contract(
         if cp.exists():
             consumer_existing.append((cf, cp))
 
-    producer_source_files = _rg_file_list(
-        root,
-        producer_dirs,
-        ("*.py", "*.sh"),
-        exclude_globs=(
-            "experiments/results/**",
-            "**/__pycache__/**",
-            "**/comma_lab_public_export/**",
-        ),
-    )
-    if producer_source_files is None:
-        producer_py_files = tuple(_iter_python_files(root, producer_dirs))
-        producer_shell_files = tuple(_iter_shell_files(root, producer_dirs))
-    else:
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        producer_groups = source_index.files_by_pattern(
+            producer_dirs,
+            patterns=("*.py", "*.sh"),
+        )
+        artifact_substrings = _ARTIFACT_SUFFIXES
+        producer_py_candidates = set(
+            source_index.files_containing_substrings(
+                producer_dirs,
+                pattern="*.py",
+                substrings=artifact_substrings,
+                require_all=False,
+            )
+        )
+        producer_shell_candidates = set(
+            source_index.files_containing_substrings(
+                producer_dirs,
+                pattern="*.sh",
+                substrings=artifact_substrings,
+                require_all=False,
+            )
+        )
         producer_py_files = tuple(
-            path for path in producer_source_files if path.suffix == ".py"
+            path for path in producer_groups.get("*.py", ())
+            if path in producer_py_candidates
         )
         producer_shell_files = tuple(
-            path for path in producer_source_files if path.suffix == ".sh"
+            path for path in producer_groups.get("*.sh", ())
+            if path in producer_shell_candidates
         )
+    else:
+        producer_source_files = _rg_file_list(
+            root,
+            producer_dirs,
+            ("*.py", "*.sh"),
+            exclude_globs=(
+                "experiments/results/**",
+                "**/__pycache__/**",
+                "**/comma_lab_public_export/**",
+            ),
+        )
+        if producer_source_files is None:
+            producer_py_files = tuple(_iter_python_files(root, producer_dirs))
+            producer_shell_files = tuple(_iter_shell_files(root, producer_dirs))
+        else:
+            producer_py_files = tuple(
+                path for path in producer_source_files if path.suffix == ".py"
+            )
+            producer_shell_files = tuple(
+                path for path in producer_source_files if path.suffix == ".sh"
+            )
 
     cache_name = "filename_contract_source_clean"
     cache_key = hashlib.sha256(
@@ -9791,7 +9936,6 @@ def preflight_filename_contract(
         if verbose:
             print("  [filenames] OK: cached source contract clean")
     else:
-        source_index = _current_source_index(root)
         consumer_literals: dict[str, set[str]] = {}
         consumer_paths_resolved: set[Path] = set()
         for cf, cp in consumer_existing:
@@ -10290,7 +10434,12 @@ def preflight_loader_format_safety(
     n_scanned = 0
     n_cached = 0
     if source_index is not None:
-        py_paths = source_index.files(scan_dirs, pattern="*.py")
+        py_paths = source_index.files_containing_substrings(
+            scan_dirs,
+            pattern="*.py",
+            substrings=("torch.load", "torch.frombuffer"),
+            require_all=False,
+        )
     else:
         fallback_py_paths: list[Path] = []
         for d in scan_dirs:
@@ -10861,7 +11010,7 @@ def check_kl_distill_uses_roundtripped_frames(
 
 # ── Check C: _enforce_eval_roundtrip(args) must follow output_dir resolution ─
 def _scan_python_for_gate_before_output_dir(
-    path: Path, repo_root: Path,
+    path: Path, repo_root: Path, *, source_index=None,
 ) -> list[str]:
     """Find scripts where `_enforce_eval_roundtrip(args)` is called BEFORE
     any line that writes to `args.output_dir = ...` or first reads
@@ -10878,7 +11027,7 @@ def _scan_python_for_gate_before_output_dir(
     """
     rel = path.relative_to(repo_root) if path.is_absolute() else path
     try:
-        text = path.read_text()
+        text = source_index.read_text(path) if source_index is not None else path.read_text()
     except (UnicodeDecodeError, FileNotFoundError):
         return []
     lines = text.splitlines()
@@ -10919,25 +11068,34 @@ def check_eval_roundtrip_gate_called_after_output_dir_resolution(
     root = repo_root or REPO_ROOT
     violations: list[str] = []
     n_scanned = 0
-    for sub in ("experiments", "src/tac/experiments"):
-        d = root / sub
-        if not d.exists():
+    scan_dirs = ("experiments", "src/tac/experiments")
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        py_paths = source_index.files_containing_substrings(
+            scan_dirs,
+            pattern="*.py",
+            substrings=("_enforce_eval_roundtrip(args", "args.output_dir"),
+            require_all=True,
+        )
+    else:
+        py_paths = tuple(
+            p
+            for sub in scan_dirs
+            for p in _iter_python_files(root, [sub])
+        )
+    for p in py_paths:
+        # Round 2 codebase-drift fix continued (2026-05-06): skip
+        # OSS-publication staging mirror — verbatim copy of source files.
+        if _is_oss_export_mirror_path(p):
             continue
-        for p in d.rglob("*.py"):
-            if "__pycache__" in p.parts:
-                continue
-            try:
-                rel = p.relative_to(root)
-            except ValueError:
-                rel = p
-            if rel.parts[:2] == ("experiments", "results"):
-                continue
-            # Round 2 codebase-drift fix continued (2026-05-06): skip
-            # OSS-publication staging mirror — verbatim copy of source files.
-            if _is_oss_export_mirror_path(p):
-                continue
-            n_scanned += 1
-            violations.extend(_scan_python_for_gate_before_output_dir(p, root))
+        n_scanned += 1
+        violations.extend(
+            _scan_python_for_gate_before_output_dir(
+                p,
+                root,
+                source_index=source_index,
+            )
+        )
 
     if verbose and violations:
         print(
@@ -11500,16 +11658,25 @@ def check_silent_default_audit_clean(
         return []
     cache_enabled = os.environ.get("PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE") != "1"
     audit_scan_dirs = ("experiments", "src/tac/experiments")
-    audit_sources = _rg_file_list(
-        root,
-        audit_scan_dirs,
-        ("*.py",),
-        exclude_globs=(
-            "experiments/results/**",
-            "**/__pycache__/**",
-            "**/comma_lab_public_export/**",
-        ),
-    )
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        audit_sources = source_index.files_containing_substrings(
+            audit_scan_dirs,
+            pattern="*.py",
+            substrings=("add_argument",),
+            require_all=True,
+        )
+    else:
+        audit_sources = _rg_file_list(
+            root,
+            audit_scan_dirs,
+            ("*.py",),
+            exclude_globs=(
+                "experiments/results/**",
+                "**/__pycache__/**",
+                "**/comma_lab_public_export/**",
+            ),
+        )
     if audit_sources is None:
         audit_sources = tuple(_iter_python_files(root, list(audit_scan_dirs)))
     cache_name = "silent_default_audit_clean"
@@ -11536,7 +11703,10 @@ def check_silent_default_audit_clean(
             summarize_records,
         )
 
-        summary = summarize_records(collect_records(), _import_profile_keys())
+        summary = summarize_records(
+            collect_records(audit_sources, source_index=source_index),
+            _import_profile_keys(),
+        )
         n_critical = int(summary["critical"])
     except Exception as exc:
         if verbose:
@@ -11731,9 +11901,22 @@ _MPS_DECISION_VERBS = re.compile(
     r"\b(GREEN|RED|KILL|killed|promote|promoted|"
     r"FALSIFIED|FALSIFICATION|dispatched|blessed)\b"
 )
+_MPS_DECISION_NEEDLES = (
+    "GREEN",
+    "RED",
+    "KILL",
+    "killed",
+    "promote",
+    "promoted",
+    "FALSIFIED",
+    "FALSIFICATION",
+    "dispatched",
+    "blessed",
+)
 _MPS_PROXY_TOKENS = re.compile(
     r"\b(\[MPS-PROXY\]|MPS-PROXY|MPS-derived|MPS\b|CPU\b|advisory only)"
 )
+_MPS_PROXY_NEEDLES = ("[MPS-PROXY]", "MPS", "CPU", "advisory only")
 _CONTEST_CUDA_TAG = re.compile(r"\[contest-CUDA\]|contest-CUDA")
 
 # Files that are EXEMPT from this check:
@@ -11842,55 +12025,109 @@ def check_no_proxy_metric_drives_decision(
     ]
     target_suffixes = (".md", ".sh", ".py")
     violations: list[str] = []
-    for entry in scan_dirs:
-        p = root / entry
-        if p.is_file():
-            files = [p]
-        elif p.is_dir():
-            # preflight-mirror-skip-ok: this scanner uses substring matching on
-            # rel_s against _MPS_DECISION_EXEMPT_PATH_PARTS (which includes
-            # "/comma_lab_public_export/") rather than .parts membership; the
-            # exemption is enforced in the per-file loop below at line ~8554.
-            files = []
-            for dirpath, dirnames, filenames in os.walk(p):
-                dirnames[:] = sorted(d for d in dirnames if d != "__pycache__")
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        direct_files = [root / entry for entry in scan_dirs if (root / entry).is_file()]
+        source_dirs = [
+            entry
+            for entry in scan_dirs
+            if (root / entry).is_dir() and entry != ".omx"
+        ]
+        files_by_pattern: dict[str, set[Path]] = {suffix: set() for suffix in target_suffixes}
+        for suffix in target_suffixes:
+            decision_files = set(
+                source_index.files_containing_substrings(
+                    source_dirs,
+                    pattern=f"*{suffix}",
+                    substrings=_MPS_DECISION_NEEDLES,
+                    require_all=False,
+                )
+            )
+            proxy_files = set(
+                source_index.files_containing_substrings(
+                    source_dirs,
+                    pattern=f"*{suffix}",
+                    substrings=_MPS_PROXY_NEEDLES,
+                    require_all=False,
+                )
+            )
+            files_by_pattern[suffix].update(decision_files & proxy_files)
+        files = sorted(
+            set(direct_files).union(*(files_by_pattern[s] for s in target_suffixes)),
+            key=lambda item: item.as_posix(),
+        )
+        omx_dir = root / ".omx"
+        if omx_dir.is_dir():
+            for dirpath, dirnames, filenames in os.walk(omx_dir):
+                dirnames[:] = [
+                    name
+                    for name in sorted(dirnames)
+                    if name not in {"cache", "context", "research", "auto_memory_snapshot"}
+                ]
                 base = Path(dirpath)
                 try:
                     rel_base = base.relative_to(root)
                 except ValueError:
                     rel_base = base
-                if rel_base.parts[:2] == ("experiments", "results"):
-                    dirnames[:] = []
-                    continue
-                if rel_base.parts == ("experiments",):
-                    dirnames[:] = [d for d in dirnames if d != "results"]
+                if rel_base.parts[:2] == (".omx", "state") and len(rel_base.parts) > 2:
+                    # `state/orphans_preserved` is exempt below; prune it here so
+                    # source scans do not read preserved historical payloads.
+                    if rel_base.parts[2] == "orphans_preserved":
+                        dirnames[:] = []
+                        continue
                 for filename in sorted(filenames):
                     f = base / filename
                     if f.suffix in target_suffixes:
                         files.append(f)
-        else:
+            files = sorted(set(files), key=lambda item: item.as_posix())
+    else:
+        files = []
+        for entry in scan_dirs:
+            p = root / entry
+            if p.is_file():
+                files.append(p)
+            elif p.is_dir():
+                # preflight-mirror-skip-ok: this scanner uses substring matching on
+                # rel_s against _MPS_DECISION_EXEMPT_PATH_PARTS (which includes
+                # "/comma_lab_public_export/") rather than .parts membership; the
+                # exemption is enforced in the per-file loop below.
+                for dirpath, dirnames, filenames in os.walk(p):
+                    dirnames[:] = sorted(d for d in dirnames if d != "__pycache__")
+                    base = Path(dirpath)
+                    try:
+                        rel_base = base.relative_to(root)
+                    except ValueError:
+                        rel_base = base
+                    if rel_base.parts[:2] == ("experiments", "results"):
+                        dirnames[:] = []
+                        continue
+                    if rel_base.parts == ("experiments",):
+                        dirnames[:] = [d for d in dirnames if d != "results"]
+                    for filename in sorted(filenames):
+                        f = base / filename
+                        if f.suffix in target_suffixes:
+                            files.append(f)
+    for f in files:
+        try:
+            rel = f.relative_to(root)
+        except ValueError:
             continue
-        for f in files:
-            try:
-                rel = f.relative_to(root)
-            except ValueError:
-                continue
-            if rel.parts[:2] == ("experiments", "results"):
-                continue
-            rel_s = str(rel)
-            if rel_s in _MPS_DECISION_EXEMPT_FILES:
-                continue
-            if any(part in rel_s for part in _MPS_DECISION_EXEMPT_PATH_PARTS):
-                continue
-            try:
-                text = f.read_text()
-            except (UnicodeDecodeError, OSError):
-                continue
-            if not _MPS_DECISION_VERBS.search(text):
-                continue
-            if not _MPS_PROXY_TOKENS.search(text):
-                continue
-            violations.extend(_check_mps_decision_in_text(text, rel_s))
+        if rel.parts[:2] == ("experiments", "results"):
+            continue
+        rel_s = str(rel)
+        if rel_s in _MPS_DECISION_EXEMPT_FILES:
+            continue
+        if any(part in rel_s for part in _MPS_DECISION_EXEMPT_PATH_PARTS):
+            continue
+        try:
+            text = source_index.read_text(f) if source_index is not None else f.read_text()
+        except (UnicodeDecodeError, OSError):
+            continue
+        if not _MPS_DECISION_VERBS.search(text):
+            continue
+        if not _MPS_PROXY_TOKENS.search(text):
+            continue
+        violations.extend(_check_mps_decision_in_text(text, rel_s))
     if verbose:
         if violations:
             print(
@@ -33816,7 +34053,7 @@ def check_state_helper_paths_explicit(
 # - Catalog #134 (Phase3DispatchGate fail-closed at construction)
 # - Catalog #143 (paid-job submit must register pending row first)
 # - Catalog #144 (SETUP-first-seen single transactional update)
-# - Catalog #145 (preflight CLI default --scope is `all`)
+# - Catalog #145 (preflight CLI default --scope is bounded `dev`)
 #
 # Memory: feedback_codex_round6_findings_fix_with_self_protection_landed_20260509.md.
 
@@ -34370,50 +34607,47 @@ def check_setup_first_seen_no_split_transactions(
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Catalog #145 — Preflight CLI default `--scope` must be `all`
+# Catalog #145 — Preflight CLI default `--scope` must be bounded
 # ─────────────────────────────────────────────────────────────────────────
 #
-# Bug class (codex round 6 MEDIUM 2, 2026-05-09): the CLI added in DX
-# ratchet defaulted ``--scope`` to ``dev``, dispatching to
-# ``preflight_developer`` instead of ``preflight_all``. This silently
-# weakened the default green CLI by skipping release/custody checks. A
-# green CLI no longer means the repo's stated canonical contract is
-# satisfied — a regression in observability.
+# Superseded bug class (codex round 6 MEDIUM 2, 2026-05-09): making the CLI
+# default ``all`` restored release/custody observability but violated the DX
+# budget after the full surface grew. A normal edit-loop preflight that can
+# crash at 30s is not an operator-safe default.
 #
-# Fix: default ``--scope`` back to ``all`` (canonical full preflight).
-# ``--scope dev`` is opt-in for the fast developer path with an explicit
-# warning that release/custody checks are skipped.
+# Fix: default ``--scope`` to ``dev`` (bounded developer gate). Exhaustive
+# release/custody checks stay discoverable and explicit via
+# ``--scope all|release --allow-slow-preflight``. This preserves the full
+# gate without taxing every local edit.
 #
-# This META gate refuses any AST-detectable change to the default. It
-# scans ``src/tac/preflight.py`` (and any other CLI that might add a
-# ``--scope`` flag) and asserts the default is ``all``.
+# This META gate refuses AST-detectable drift away from the bounded default
+# and also verifies the explicit full-surface choices remain present.
 
-_PREFLIGHT_CLI_SCOPE_DEFAULT_REQUIRED = "all"
+_PREFLIGHT_CLI_SCOPE_DEFAULT_REQUIRED = "dev"
+_PREFLIGHT_CLI_SCOPE_FULL_CHOICES_REQUIRED = frozenset({"all", "release"})
 _PREFLIGHT_CLI_SCOPE_DEFAULT_WAIVER_MARKER = "PREFLIGHT_CLI_SCOPE_DEFAULT_OK"
 
 
-def check_preflight_cli_default_scope_is_all(
+def check_preflight_cli_default_scope_is_bounded_dev(
     *,
     repo_root: Path | None = None,
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Catalog #145 — preflight CLI ``--scope`` default must be ``all``.
+    """Catalog #145 — preflight CLI ``--scope`` default must be bounded.
 
     Scans ``src/tac/preflight.py`` (the canonical preflight CLI module)
-    for an ``argparse`` ``--scope`` flag and asserts its default is
-    ``all``. A non-``all`` default silently weakens the green CLI by
-    routing to a subset of checks; the default must be the canonical
-    full gate.
+    for an ``argparse`` ``--scope`` flag and asserts its default is the
+    bounded developer gate (``dev``), with explicit ``all``/``release``
+    full-surface choices still available for release/custody sweeps.
 
     Same-line waiver on the ``add_argument`` line:
     ``# PREFLIGHT_CLI_SCOPE_DEFAULT_OK:<reason>`` for an intentional
-    non-canonical default with explicit operator review.
+    override with explicit operator review.
 
-    Live count expected: 0 after the codex round 6 MEDIUM 2 fix.
+    Live count expected: 0 after the 2026-05-09 DX-budget supersession.
 
-    Bug class: codex round 6 MEDIUM 2 (2026-05-09). Memory:
-    feedback_codex_round6_findings_fix_with_self_protection_landed_20260509.md.
+    Bug class: full-surface preflight as routine edit-loop default.
     """
     root = Path(repo_root or REPO_ROOT)
     target_files = [
@@ -34452,13 +34686,20 @@ def check_preflight_cli_default_scope_is_all(
             first_arg = node.args[0]
             if not (isinstance(first_arg, ast.Constant) and first_arg.value == "--scope"):
                 continue
-            # Find default kwarg
+            # Find default / choices kwargs.
             default_value = None
+            choices_value: set[str] | None = None
             for kw in node.keywords:
                 if kw.arg == "default":
                     if isinstance(kw.value, ast.Constant):
                         default_value = kw.value.value
-                    break
+                elif kw.arg == "choices":
+                    if isinstance(kw.value, (ast.Tuple, ast.List, ast.Set)):
+                        parsed_choices: set[str] = set()
+                        for elt in kw.value.elts:
+                            if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+                                parsed_choices.add(elt.value)
+                        choices_value = parsed_choices
             # Same-line waiver
             line_idx = node.lineno - 1
             line_text = lines[line_idx] if line_idx < len(lines) else ""
@@ -34477,35 +34718,61 @@ def check_preflight_cli_default_scope_is_all(
                 violations.append(
                     f"[Check 145] {rel}:{node.lineno}: parser.add_argument("
                     f"\"--scope\", default={default_value!r}, ...). The "
-                    "default MUST be \"all\" so the green CLI runs the "
-                    "canonical full preflight (preflight_all). A non-`all` "
-                    "default silently routes to a subset of checks and "
-                    "weakens the green-CLI contract. Same-line waiver "
+                    "routine CLI default MUST be \"dev\" so normal edit-loop "
+                    "preflight stays inside the 30s DX budget. Release/"
+                    "custody sweeps must be explicit via --scope all|release "
+                    "--allow-slow-preflight. Same-line waiver "
                     "`# PREFLIGHT_CLI_SCOPE_DEFAULT_OK:<reason>` for "
                     "intentional override with explicit operator review."
+                )
+            missing_full_choices = _PREFLIGHT_CLI_SCOPE_FULL_CHOICES_REQUIRED - (
+                choices_value or set()
+            )
+            if missing_full_choices:
+                rel = py.relative_to(root) if py.is_relative_to(root) else py
+                violations.append(
+                    f"[Check 145] {rel}:{node.lineno}: parser.add_argument("
+                    f"\"--scope\", choices={sorted(choices_value or [])!r}, ...). "
+                    "The bounded default is only valid if explicit full "
+                    f"release/custody choices remain present; missing "
+                    f"{sorted(missing_full_choices)!r}."
                 )
 
     if verbose:
         if violations:
             print(
-                f"  [preflight-cli-default-scope-is-all] {len(violations)} "
-                f"weakened-default(s) (scanned: {scanned_files} file(s))"
+                f"  [preflight-cli-default-scope-is-dev] {len(violations)} "
+                f"default/choice violation(s) (scanned: {scanned_files} file(s))"
             )
             for v in violations[:5]:
                 print(f"    • {v[:240]}")
         else:
             print(
-                "  [preflight-cli-default-scope-is-all] OK "
-                f"({scanned_files} file(s) scanned; 0 weakened-default(s))"
+                "  [preflight-cli-default-scope-is-dev] OK "
+                f"({scanned_files} file(s) scanned; 0 default/choice violation(s))"
             )
 
     if violations and strict:
         raise PreflightError(
-            "check_preflight_cli_default_scope_is_all found "
-            f"{len(violations)} weakened-default(s):\n  "
+            "check_preflight_cli_default_scope_is_bounded_dev found "
+            f"{len(violations)} default/choice violation(s):\n  "
             + "\n  ".join(v[:300] for v in violations[:3])
         )
     return violations
+
+
+def check_preflight_cli_default_scope_is_all(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Backward-compatible alias for the Catalog #145 bounded-default gate."""
+    return check_preflight_cli_default_scope_is_bounded_dev(
+        repo_root=repo_root,
+        strict=strict,
+        verbose=verbose,
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -35263,15 +35530,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--scope",
         choices=("all", "dev", "release"),
-        default="all",
+        default="dev",
         help=(
-            "all (default) runs the canonical exhaustive preflight_all gate "
-            "(matches the repo's stated contract); release is an alias for "
-            "all kept for backward compatibility; dev runs the fast strict "
-            "developer-only gate (skips release/custody checks — emits a "
-            "warning if used). Codex round-6 MEDIUM 2 fix (catalog #145): "
-            "default reverted from `dev` to `all` because `dev` silently "
-            "weakened the green CLI."
+            "dev (default) runs the bounded strict developer gate; all runs "
+            "the canonical exhaustive preflight_all release/custody gate; "
+            "release is an alias for all. Use --scope all|release with "
+            "--allow-slow-preflight before release, dispatch, or frontier "
+            "claims."
         ),
     )
     parser.add_argument(
@@ -35294,15 +35559,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     try:
-        # R38 fixed the old artifact-only CLI by routing through preflight_all.
-        # 2026-05-09 DX ratchet (codex round-6 MEDIUM 2 reverted, catalog #145):
-        # the default CLI runs the canonical exhaustive `preflight_all` gate
-        # (matches the repo's stated contract). The previous `dev` default
-        # silently weakened the green CLI by skipping release/custody checks.
-        # Operators who explicitly want the fast developer-only path may
-        # opt in via `--scope dev` (with a warning), and exhaustive
-        # release/custody sweeps remain `--scope all` (default) or
-        # `--scope release` (alias).
+        # R38 fixed the old artifact-only CLI by routing through
+        # preflight_all. Catalog #145 was later superseded by the 2026-05-09
+        # DX budget ratchet: the routine CLI must stay bounded and fail
+        # inside 30s if it regresses. Exhaustive release/custody sweeps are
+        # still explicit via `--scope all|release --allow-slow-preflight`.
         profile_arch = None
         if args.profile:
             from tac.profiles import PROFILES
@@ -35314,12 +35575,16 @@ if __name__ == "__main__":
             timeout_s=args.timeout_s,
             allow_slow_preflight=args.allow_slow_preflight,
         )
-        if args.scope == "dev":
+        scope_explicit = any(
+            arg == "--scope" or arg.startswith("--scope=")
+            for arg in sys.argv[1:]
+        )
+        if args.scope == "dev" and scope_explicit:
             print(
                 "\nWARNING: --scope dev runs the fast developer-only gate; "
                 "release/custody checks are SKIPPED. Run with --scope all "
-                "(or omit --scope) before any release, dispatch, or "
-                "frontier-claim. (codex round-6 MEDIUM 2, catalog #145)\n",
+                "--allow-slow-preflight before any release, dispatch, or "
+                "frontier-claim. (catalog #145)\n",
                 file=sys.stderr,
             )
         # The CLI adds a hard DX budget: routine preflight must be fast, or

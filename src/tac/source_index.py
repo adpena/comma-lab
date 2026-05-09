@@ -25,7 +25,7 @@ _CURRENT_SOURCE_INDEX: contextvars.ContextVar[SourceIndex | None] = contextvars.
     "tac_current_source_index",
     default=None,
 )
-_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v3"
+_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v5"
 
 
 def _safe_resolve(path: Path) -> Path:
@@ -61,6 +61,7 @@ _DEFAULT_TEXT_FACT_NEEDLES = frozenset(
         '"instance"',
         "[WARN]",
         "archive.zip",
+        "args.output_dir",
         "batchmean",
         "build_baseline_archive",
         "cuda.is_available",
@@ -68,13 +69,43 @@ _DEFAULT_TEXT_FACT_NEEDLES = frozenset(
         "eval_roundtrip=False",
         "extractall(",
         "kl_div",
+        ".amrc",
+        ".bin",
+        ".mkv",
+        ".mp4",
+        ".pt",
+        ".pth",
+        ".raw",
+        ".tar",
+        ".tar.gz",
+        ".tgz",
+        ".zip",
         "make_synthetic_pair_batch",
         "mps",
         "pack_sparse_delta",
         "compliance_status",
         "reconstruct_poses",
         "torch",
+        "torch.frombuffer",
         "torch.load",
+        "_enforce_eval_roundtrip(args",
+        "add_argument",
+        "[contest-CUDA]",
+        "contest-CUDA",
+        "[MPS-PROXY]",
+        "MPS",
+        "CPU",
+        "advisory only",
+        "GREEN",
+        "RED",
+        "KILL",
+        "killed",
+        "promote",
+        "promoted",
+        "FALSIFIED",
+        "FALSIFICATION",
+        "dispatched",
+        "blessed",
     }
 )
 
@@ -394,7 +425,9 @@ class SourceIndex:
         This is the query shape most broad preflight scans want. Internally it
         builds an inverted substring index once per source-index context, then
         uses set intersection/union rather than re-looping over every facts row
-        in every check.
+        in every check. Needles outside the default fact set are still handled
+        correctly by checking cached source text, so adding a new scanner cannot
+        silently produce an empty candidate set.
         """
 
         group_key = self._files_group_key(dirs, pattern)
@@ -402,6 +435,7 @@ class SourceIndex:
             return self.files(dirs, pattern=pattern)
         facts_rows = self.facts_for_files(dirs, pattern=pattern)
         self._ensure_substring_index_for_group(group_key, facts_rows)
+        unknown_misses: list[str] = []
         candidate_sets: list[frozenset[Path]] = []
         for substring in substrings:
             index_key = (group_key, substring)
@@ -412,12 +446,28 @@ class SourceIndex:
                     candidate_sets.append(cached)
                     continue
                 self._stats["substring_index_misses"] += 1
-            rows = frozenset(
-                facts.path for facts in facts_rows if facts.contains(substring)
-            )
+            if substring in _DEFAULT_TEXT_FACT_NEEDLES:
+                rows = frozenset(
+                    facts.path for facts in facts_rows if facts.contains(substring)
+                )
+            else:
+                unknown_misses.append(substring)
+                continue
             with self._lock:
                 self._substring_index[index_key] = rows
             candidate_sets.append(rows)
+        if unknown_misses:
+            buckets: dict[str, set[Path]] = {substring: set() for substring in unknown_misses}
+            for facts in facts_rows:
+                text = self.read_text(facts.path)
+                for substring in unknown_misses:
+                    if substring in text:
+                        buckets[substring].add(facts.path)
+            with self._lock:
+                for substring, paths in buckets.items():
+                    rows = frozenset(paths)
+                    self._substring_index[(group_key, substring)] = rows
+                    candidate_sets.append(rows)
         if require_all:
             matched = set(candidate_sets[0])
             for rows in candidate_sets[1:]:

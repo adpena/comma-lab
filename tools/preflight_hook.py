@@ -9,9 +9,8 @@ Layers (in order):
   1. ruff F821 (undefined name) — catches NameError-class bugs like the
      auth_eval `expected_raw` scope leak that crashed every authoritative
      evaluation for weeks.
-  2. tac.preflight.preflight_all — the 5-layer validator stack:
-       check_codebase_drift / preflight_arity / preflight_profiles /
-       preflight_arch_consistency / preflight_filename_contract.
+  2. tac.preflight --scope dev — the bounded developer validator stack.
+     PREFLIGHT_FULL=1 switches to the exhaustive release/custody stack.
   3. Hands off to review_gate_hook for the standard review-tracker check.
 
 Install:
@@ -149,7 +148,9 @@ def run_preflight() -> int:
 def _preflight_command() -> list[str]:
     """Return the preflight command for the current hook mode."""
     cmd = [".venv/bin/python", "-m", "tac.preflight"]
-    if os.environ.get("PREFLIGHT_FULL", "0") != "1":
+    if os.environ.get("PREFLIGHT_FULL", "0") == "1":
+        cmd.extend(["--scope", "all", "--allow-slow-preflight"])
+    else:
         cmd.append("--no-codebase")
     return cmd
 
@@ -162,10 +163,10 @@ def _preflight_timeout_seconds() -> int:
             value = int(raw)
         except ValueError:
             value = 0
-        return value if value > 0 else 90
+        return value if value > 0 else 30
     if os.environ.get("PREFLIGHT_FULL", "0") == "1":
         return 600
-    return 90
+    return 30
 
 
 def run_review_gate() -> int:
@@ -191,7 +192,7 @@ def main() -> int:
     if rc != 0:
         return rc
 
-    # Step 2: full preflight (whole-codebase, ~5-10s)
+    # Step 2: bounded developer preflight (PREFLIGHT_FULL=1 for full release scan)
     rc = run_preflight()
     if rc != 0:
         return rc

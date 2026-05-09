@@ -180,6 +180,24 @@ def test_source_index_substring_index_filters_candidates(tmp_path):
     assert stats["substring_index_misses"] == 0
 
 
+def test_source_index_unknown_substring_queries_still_scan_text(tmp_path):
+    _write(tmp_path / "src/tac/a.py", "VALUE = 'custom_runtime_contract'\n")
+    _write(tmp_path / "src/tac/b.py", "VALUE = 'other'\n")
+    index = SourceIndex(tmp_path)
+
+    matched = index.files_containing_substrings(
+        ["src/tac"],
+        pattern="*.py",
+        substrings=("custom_runtime_contract",),
+        require_all=True,
+    )
+
+    assert [index.repo_relative(path) for path in matched] == ["src/tac/a.py"]
+    stats = index.stats()
+    assert stats["text_hits"] >= 1
+    assert stats["substring_index_misses"] >= 1
+
+
 def test_source_index_persistent_text_facts_invalidate_on_mtime_size(tmp_path):
     module = tmp_path / "src/tac/module.py"
     _write(module, "VALUE = 'mps'\n")

@@ -30,6 +30,7 @@ from __future__ import annotations
 import ast
 import sys
 from collections import defaultdict
+from collections.abc import Iterable
 from pathlib import Path
 
 try:
@@ -139,18 +140,18 @@ def _file_has_profile_mechanism(text: str) -> tuple[bool, bool]:
     return has_profile_flag, has_mechanism
 
 
-def _scan_file(path: Path) -> list[dict]:
+def _scan_file(path: Path, *, source_index=None) -> list[dict]:
     """Return one record per `add_argument(...)` call in the file.
 
     Each record carries: file, line, arg_name, default_repr, action_kind,
     has_profile_flag, has_override_mechanism.
     """
     try:
-        text = path.read_text()
+        text = source_index.read_text(path) if source_index is not None else path.read_text()
         if "add_argument" not in text:
             return []
-        tree = ast.parse(text, filename=str(path))
-    except (SyntaxError, UnicodeDecodeError):
+        tree = source_index.python_ast(path) if source_index is not None else ast.parse(text, filename=str(path))
+    except (OSError, SyntaxError, UnicodeDecodeError):
         return []
     has_profile_flag, has_mechanism = _file_has_profile_mechanism(text)
     records: list[dict] = []
@@ -189,22 +190,31 @@ def _scan_file(path: Path) -> list[dict]:
     return records
 
 
-def collect_records() -> list[dict]:
+def collect_records(
+    paths: Iterable[Path] | None = None,
+    *,
+    source_index=None,
+) -> list[dict]:
     """Walk SCAN_DIRS for *.py files and accumulate add_argument records."""
     out: list[dict] = []
-    for root in SCAN_DIRS:
-        if not root.exists():
+    if paths is None:
+        iter_paths: list[Path] = []
+        for root in SCAN_DIRS:
+            if not root.exists():
+                continue
+            iter_paths.extend(sorted(root.rglob("*.py")))
+    else:
+        iter_paths = sorted(Path(path) for path in paths)
+    for py in iter_paths:
+        if "__pycache__" in py.parts:
             continue
-        for py in sorted(root.rglob("*.py")):
-            if "__pycache__" in py.parts:
-                continue
-            try:
-                rel = py.resolve().relative_to(REPO.resolve())
-            except ValueError:
-                rel = py
-            if rel.parts[:2] == ("experiments", "results"):
-                continue
-            out.extend(_scan_file(py))
+        try:
+            rel = py.resolve().relative_to(REPO.resolve())
+        except ValueError:
+            rel = py
+        if rel.parts[:2] == ("experiments", "results"):
+            continue
+        out.extend(_scan_file(py, source_index=source_index))
     return out
 
 
