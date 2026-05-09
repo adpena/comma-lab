@@ -13,7 +13,7 @@ import pytest
 from tac.track_registry import (
     TRACK_REGISTRY,
     TRACK_REGISTRY_SCHEMA_VERSION,
-    PareTodexAxis,
+    ParetoAxis,
     TrackEntry,
     TrackPhase,
     get_track,
@@ -128,31 +128,31 @@ def test_promotable_excludes_t19_and_lane_12_v2():
 
 
 def test_seg_axis_groups_t7_t8_t11():
-    seg_tracks = list_tracks_by_pareto_axis(PareTodexAxis.SEG)
+    seg_tracks = list_tracks_by_pareto_axis(ParetoAxis.SEG)
     seg_ids = {t.track_id for t in seg_tracks}
     assert seg_ids == {"t7_fisher_rao", "t8_sinkhorn_w2", "t11_lovasz_hinge"}
 
 
 def test_rate_axis_groups_t13_only():
-    rate_tracks = list_tracks_by_pareto_axis(PareTodexAxis.RATE)
+    rate_tracks = list_tracks_by_pareto_axis(ParetoAxis.RATE)
     rate_ids = {t.track_id for t in rate_tracks}
     assert rate_ids == {"t13_joint_source_rd"}
 
 
 def test_pose_axis_groups_t20_only():
-    pose_tracks = list_tracks_by_pareto_axis(PareTodexAxis.POSE)
+    pose_tracks = list_tracks_by_pareto_axis(ParetoAxis.POSE)
     pose_ids = {t.track_id for t in pose_tracks}
     assert pose_ids == {"t20_kl_pose_distill"}
 
 
 def test_temporal_axis_groups_t22_only():
-    temporal_tracks = list_tracks_by_pareto_axis(PareTodexAxis.TEMPORAL)
+    temporal_tracks = list_tracks_by_pareto_axis(ParetoAxis.TEMPORAL)
     temporal_ids = {t.track_id for t in temporal_tracks}
     assert temporal_ids == {"t22_temporal_consistency"}
 
 
 def test_multi_axis_groups_lane_12_v2_and_a1():
-    multi_tracks = list_tracks_by_pareto_axis(PareTodexAxis.MULTI)
+    multi_tracks = list_tracks_by_pareto_axis(ParetoAxis.MULTI)
     multi_ids = {t.track_id for t in multi_tracks}
     assert "lane_12_v2_nerv_as_renderer" in multi_ids
     assert "a1_substrate" in multi_ids
@@ -160,7 +160,7 @@ def test_multi_axis_groups_lane_12_v2_and_a1():
 
 def test_none_axis_groups_t19_only():
     """T19 is a numerical-solver step, not a Pareto-axis contributor."""
-    none_tracks = list_tracks_by_pareto_axis(PareTodexAxis.NONE)
+    none_tracks = list_tracks_by_pareto_axis(ParetoAxis.NONE)
     none_ids = {t.track_id for t in none_tracks}
     assert none_ids == {"t19_adaptive_rho"}
 

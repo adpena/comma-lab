@@ -34,7 +34,7 @@ from typing import Any
 TRACK_REGISTRY_SCHEMA_VERSION = "tac_track_registry_v1"
 
 
-class PareTodexAxis(str, Enum):
+class ParetoAxis(str, Enum):
     """Pareto axes a track refines / contributes to."""
 
     SEG = "seg"
@@ -64,7 +64,7 @@ class TrackEntry:
     module_path: str  # repo-relative path to canonical module
     kind_summary: str  # one-line description
     phase: TrackPhase
-    pareto_axis: PareTodexAxis
+    pareto_axis: ParetoAxis
     landed_commit_or_memo: str  # commit SHA or memory file reference
     evidence_grade: str  # one of [empirical:...] / [predicted:...] / [contest-CUDA] / etc.
     planner_visibility: tuple[str, ...]  # solver components that can see this track
@@ -81,7 +81,7 @@ TRACK_REGISTRY: dict[str, TrackEntry] = {
         module_path="src/tac/score_geometry_shannon_floor.py + src/tac/score_geometry.py",
         kind_summary="Riemannian distance closed-form on mask probability simplex; convex envelope of IoU gradient",
         phase=TrackPhase.LOSS_TERM,
-        pareto_axis=PareTodexAxis.SEG,
+        pareto_axis=ParetoAxis.SEG,
         landed_commit_or_memo="prior session (Shannon floor base)",
         evidence_grade="[predicted; closed-form]",
         planner_visibility=(
@@ -97,7 +97,7 @@ TRACK_REGISTRY: dict[str, TrackEntry] = {
         module_path="src/tac/losses.py::sinkhorn_w2_mask_distortion_per_pixel",
         kind_summary="Wasserstein-2 mask surrogate via Sinkhorn (entropic OT)",
         phase=TrackPhase.LOSS_TERM,
-        pareto_axis=PareTodexAxis.SEG,
+        pareto_axis=ParetoAxis.SEG,
         landed_commit_or_memo="src/tac/losses.py L244 (active)",
         evidence_grade="[empirical: probe_seg_loss_surrogate_disambiguator]",
         planner_visibility=(
@@ -113,7 +113,7 @@ TRACK_REGISTRY: dict[str, TrackEntry] = {
         module_path="src/tac/lovasz_hinge.py",
         kind_summary="Convex envelope of IoU/argmax-disagreement (Berman 2018 CVPR §3.2)",
         phase=TrackPhase.LOSS_TERM,
-        pareto_axis=PareTodexAxis.SEG,
+        pareto_axis=ParetoAxis.SEG,
         landed_commit_or_memo="feedback_t11_t13_t19_free_lateral_leaps_landed_20260509.md",
         evidence_grade="[predicted; closed-form]",
         planner_visibility=(
@@ -128,7 +128,7 @@ TRACK_REGISTRY: dict[str, TrackEntry] = {
         module_path="src/tac/joint_source_rd_bound.py",
         kind_summary="Fridrich √n undetectable embedding bound; Berger 1971 §4.5 Gauss-Markov rate floor",
         phase=TrackPhase.RATE_BOUND,
-        pareto_axis=PareTodexAxis.RATE,
+        pareto_axis=ParetoAxis.RATE,
         landed_commit_or_memo="b719386a (T13 + T19 wire-in into Phase 1 Ballé hyperprior trainer)",
         evidence_grade="[empirical: experiments/train_score_gradient_pr101_finetune.py]",
         planner_visibility=(
@@ -148,7 +148,7 @@ TRACK_REGISTRY: dict[str, TrackEntry] = {
         module_path="src/tac/joint_admm_coordinator.py::adaptive_rho_step",
         kind_summary="Boyd 2011 §3.4.1 / He-Yang 2000 adaptive penalty step",
         phase=TrackPhase.NUMERICAL_SOLVER,
-        pareto_axis=PareTodexAxis.NONE,
+        pareto_axis=ParetoAxis.NONE,
         landed_commit_or_memo="feedback_t11_t13_t19_free_lateral_leaps_landed_20260509.md",
         evidence_grade="[empirical: 2-3x ADMM convergence speedup]",
         planner_visibility=("joint_admm_coordinator",),
@@ -163,7 +163,7 @@ TRACK_REGISTRY: dict[str, TrackEntry] = {
         module_path="src/tac/kl_pose_distill.py",
         kind_summary="KL-divergence pose-distill loss (Hinton T=2.0 form)",
         phase=TrackPhase.LOSS_TERM,
-        pareto_axis=PareTodexAxis.POSE,
+        pareto_axis=ParetoAxis.POSE,
         landed_commit_or_memo="a2f4677c",
         evidence_grade="[predicted; Hinton/Vinyals/Dean 2014]",
         planner_visibility=(
@@ -179,7 +179,7 @@ TRACK_REGISTRY: dict[str, TrackEntry] = {
         module_path="src/tac/temporal_consistency_regularizer.py",
         kind_summary="Optical-flow-warped frame-to-frame smoothness regularizer",
         phase=TrackPhase.REGULARIZER,
-        pareto_axis=PareTodexAxis.TEMPORAL,
+        pareto_axis=ParetoAxis.TEMPORAL,
         landed_commit_or_memo="a2f4677c",
         evidence_grade="[predicted; closed-form]",
         planner_visibility=(
@@ -194,7 +194,7 @@ TRACK_REGISTRY: dict[str, TrackEntry] = {
         module_path="src/tac/lane_12_v2_nerv_as_renderer.py + src/tac/inflate/lane_12_v2_inflate.py",
         kind_summary="NeRV-class renderer with int8+fp16-scale weight quant + uint8-delta-split latent table",
         phase=TrackPhase.ARCHITECTURE,
-        pareto_axis=PareTodexAxis.MULTI,
+        pareto_axis=ParetoAxis.MULTI,
         landed_commit_or_memo="cda997d7 (Phase A: design + module + inflate + 39 tests)",
         evidence_grade="[predicted; phase-A scaffold]",
         planner_visibility=(
@@ -216,7 +216,7 @@ TRACK_REGISTRY: dict[str, TrackEntry] = {
         module_path="(latent-aligned 178,262 B archive at 0.19284 [contest-CPU GHA Linux x86_64]; sha 87ec7ca5...492b5)",
         kind_summary="Empirical anchor substrate signal",
         phase=TrackPhase.SUBSTRATE,
-        pareto_axis=PareTodexAxis.MULTI,
+        pareto_axis=ParetoAxis.MULTI,
         landed_commit_or_memo="feedback_grand_council_a1_post_cpu_anchor_strategy_20260509.md",
         evidence_grade="[contest-CPU GHA Linux x86_64]",
         planner_visibility=(
@@ -256,7 +256,7 @@ def list_promotable_tracks() -> list[TrackEntry]:
     return [t for t in TRACK_REGISTRY.values() if t.promotion_eligible]
 
 
-def list_tracks_by_pareto_axis(axis: PareTodexAxis) -> list[TrackEntry]:
+def list_tracks_by_pareto_axis(axis: ParetoAxis) -> list[TrackEntry]:
     """Return every track contributing to a given Pareto axis."""
     return [t for t in TRACK_REGISTRY.values() if t.pareto_axis == axis]
 
@@ -268,7 +268,7 @@ def list_tracks_by_phase(phase: TrackPhase) -> list[TrackEntry]:
 
 __all__ = [
     "TRACK_REGISTRY_SCHEMA_VERSION",
-    "PareTodexAxis",
+    "ParetoAxis",
     "TrackPhase",
     "TrackEntry",
     "TRACK_REGISTRY",
