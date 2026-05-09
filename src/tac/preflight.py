@@ -225,6 +225,12 @@ def _cached_python_text_and_tree(
 def _read_python_text(
     path: Path,
 ) -> tuple[str | None, BaseException | None]:
+    source_index = _current_source_index(REPO_ROOT)
+    if source_index is not None:
+        try:
+            return source_index.read_text(path), None
+        except (OSError, UnicodeDecodeError) as e:
+            return None, e
     try:
         stat = path.stat()
         resolved = str(path.resolve())
@@ -244,6 +250,16 @@ def _read_python_text(
 def _read_python_text_and_tree(
     path: Path,
 ) -> tuple[str | None, ast.Module | None, BaseException | None]:
+    source_index = _current_source_index(REPO_ROOT)
+    if source_index is not None:
+        try:
+            text = source_index.read_text(path)
+            tree = source_index.python_ast(path)
+            if isinstance(tree, ast.Module):
+                return text, tree, None
+            return text, tree, None
+        except (OSError, SyntaxError, UnicodeDecodeError) as e:
+            return None, None, e
     try:
         stat = path.stat()
         resolved = str(path.resolve())
@@ -5522,6 +5538,10 @@ def _iter_python_files(root: Path, dirs: list[str]) -> list[Path]:
     check_no_eval_roundtrip_false, check_no_disable_eval_roundtrip_flag,
     and any future scanner that adopts this helper.
     """
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        return list(source_index.files(dirs, pattern="*.py"))
+
     out: list[Path] = []
     for d in dirs:
         d_path = root / d
@@ -5555,6 +5575,10 @@ def _iter_python_files(root: Path, dirs: list[str]) -> list[Path]:
 def _iter_shell_files(root: Path, dirs: list[str]) -> list[Path]:
     """Collect every .sh file under `dirs` (recursively). Skips the
     comma_lab_public_export OSS staging mirror (Round 12 R12-1)."""
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        return list(source_index.files(dirs, pattern="*.sh"))
+
     out: list[Path] = []
     for d in dirs:
         d_path = root / d
