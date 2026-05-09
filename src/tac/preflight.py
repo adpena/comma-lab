@@ -552,13 +552,13 @@ def preflight_all(
         # feedback_unified_lagrangian_action_principle_GR_style_20260509.md
         check_subagent_landing_has_solver_wire_in(strict=False, verbose=verbose)
         # 2026-05-09 Subagent coherence-by-default (#126): subagent commits
-        # whose introduced files (src/tac/, tools/, experiments/, scripts/)
-        # reference a lane_<NAME> token must have that lane pre-registered in
-        # .omx/state/lane_registry.json. Test fixtures may carry
-        # '# FAKE_LANE_OK:<reason>' marker. Held warn-only initially; flip to
-        # STRICT after legacy-commit backfill drives live count to 0. Memory:
-        # feedback_unified_lagrangian_action_principle_GR_style_20260509.md
-        check_lane_pre_registered_before_work_starts(strict=False, verbose=verbose)
+        # 2026-05-09 STRICT-FLIP per "fix all yourself" operator approval —
+        # 30 → 0 violations after backfilling 8 alias lanes (lane_t11_lovasz +
+        # lane_a1_per_pair_latent_sidecar_resampled + lane_12_v2 +
+        # lane_pose_dc3 + lane_c_compliance_attestations +
+        # lane_d_v3_full_engineering + lane_id_ref + lane_a_landed). Test
+        # fixtures may carry '# FAKE_LANE_OK:<reason>' marker per docstring.
+        check_lane_pre_registered_before_work_starts(strict=True, verbose=verbose)
         # 2026-05-09 codex round-2 HIGH 2 fix (#127): authoritative-tag
         # literals must route through `validate_custody` /
         # `validate_custody_verdict` (or `posterior_update`/
