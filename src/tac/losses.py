@@ -13,7 +13,19 @@ import torch.nn.functional as F
 
 SEGMENTATION_SURROGATE_SOFT_COSINE = "soft_cosine"
 SEGMENTATION_SURROGATE_FISHER_RAO = "fisher_rao"
+SEGMENTATION_SURROGATE_SINKHORN = "sinkhorn"
 DEFAULT_SEGNET_NUM_CLASSES = 5
+
+# T8 — entropic Sinkhorn transport surrogate constants. The default ground-cost
+# matrix is the symmetric "label-distance" matrix `(1 - I)` (off-diagonal=1,
+# diagonal=0). For the 5-class comma SegNet the 5 classes are not numerically
+# ordered, so the uniform off-diagonal cost is the most defensible default;
+# callers wanting a class-confusion-prior cost must supply `cost_matrix`
+# explicitly.
+DEFAULT_SINKHORN_BLUR = 0.05
+DEFAULT_SINKHORN_ITERS = 20
+SINKHORN_MIN_BLUR = 0.01  # below this, low-blur Sinkhorn needs too many iterations
+SINKHORN_MAX_BLUR = 1.0   # above this, surrogate is too blurred to be useful
 
 
 def bhattacharyya_distance(p: torch.Tensor, q: torch.Tensor, dim: int = 1) -> torch.Tensor:
@@ -98,13 +110,93 @@ def _validate_segmentation_surrogate(surrogate: str) -> str:
     if surrogate not in {
         SEGMENTATION_SURROGATE_SOFT_COSINE,
         SEGMENTATION_SURROGATE_FISHER_RAO,
+        SEGMENTATION_SURROGATE_SINKHORN,
     }:
         raise ValueError(
             "segmentation surrogate must be one of "
             f"{SEGMENTATION_SURROGATE_SOFT_COSINE!r}, "
-            f"{SEGMENTATION_SURROGATE_FISHER_RAO!r}; got {surrogate!r}"
+            f"{SEGMENTATION_SURROGATE_FISHER_RAO!r}, "
+            f"{SEGMENTATION_SURROGATE_SINKHORN!r}; got {surrogate!r}"
         )
     return surrogate
+
+
+def _validate_sinkhorn_blur(blur: float) -> float:
+    """Validate Sinkhorn entropic-regularization scale (`blur` in geomloss naming)."""
+    if isinstance(blur, bool):
+        raise ValueError(
+            f"sinkhorn_blur must be a finite number in "
+            f"[{SINKHORN_MIN_BLUR}, {SINKHORN_MAX_BLUR}]"
+        )
+    try:
+        value = float(blur)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            f"sinkhorn_blur must be a finite number in "
+            f"[{SINKHORN_MIN_BLUR}, {SINKHORN_MAX_BLUR}]"
+        ) from exc
+    if (
+        not math.isfinite(value)
+        or value < SINKHORN_MIN_BLUR
+        or value > SINKHORN_MAX_BLUR
+    ):
+        raise ValueError(
+            f"sinkhorn_blur must be a finite number in "
+            f"[{SINKHORN_MIN_BLUR}, {SINKHORN_MAX_BLUR}]; got {blur!r}"
+        )
+    return value
+
+
+def _validate_sinkhorn_iters(n_iters: int) -> int:
+    """Validate Sinkhorn iteration count (must be a positive int 1..1000)."""
+    if isinstance(n_iters, bool):
+        raise ValueError("sinkhorn_n_iters must be a positive int in [1, 1000]")
+    try:
+        value = int(n_iters)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("sinkhorn_n_iters must be a positive int in [1, 1000]") from exc
+    if value < 1 or value > 1000:
+        raise ValueError(
+            f"sinkhorn_n_iters must be a positive int in [1, 1000]; got {n_iters!r}"
+        )
+    return value
+
+
+def _effective_sinkhorn_iters(blur: float, requested_iters: int) -> int:
+    """Return the numerically safe iteration count for the requested blur.
+
+    At ``blur=0.01`` a 5-class soft mass swap can look like zero transport
+    after only 20 iterations because the log-domain potentials have not yet
+    moved off the diagonal. Forty iterations is the smallest calibrated floor
+    that recovers the expected ~0.6 default-cost transport in fp32. Larger
+    blur values keep the caller-requested/default count.
+    """
+    calibrated_floor = int(math.ceil(0.4 / blur))
+    return min(1000, max(requested_iters, DEFAULT_SINKHORN_ITERS, calibrated_floor))
+
+
+def _default_categorical_cost_matrix(
+    num_classes: int,
+    *,
+    device: torch.device,
+    dtype: torch.dtype,
+) -> torch.Tensor:
+    """Default uniform off-diagonal label-distance cost: (1 - I_C).
+
+    For C unordered categorical classes (the comma SegNet has 5 unordered
+    label classes — road, lane, vehicle, …), the canonical ground-cost
+    matrix is the symmetric `1 - I` form: cost 0 for identical-class pairs,
+    cost 1 for any cross-class pair. This makes the Sinkhorn transport cost
+    on the categorical simplex a probability-mass-transport relaxation of the
+    one-hot total-variation distance, which is the differentiable surrogate
+    the prior council called for.
+
+    Callers wanting a class-confusion-prior cost (e.g. road↔lane is
+    "cheaper" than road↔sky because of perceptual similarity) must supply
+    `cost_matrix` explicitly to `sinkhorn_w2_mask_distortion_per_pixel`.
+    """
+    eye = torch.eye(num_classes, device=device, dtype=dtype)
+    return 1.0 - eye
 
 
 def segnet_fisher_rao_per_pixel(
@@ -149,6 +241,181 @@ def segnet_fisher_rao_per_pixel(
     return torch.where(bc >= 1.0 - eps_value, torch.zeros_like(out), out)
 
 
+def sinkhorn_w2_mask_distortion_per_pixel(
+    pred_probs: torch.Tensor,
+    gt_probs: torch.Tensor,
+    *,
+    blur: float = DEFAULT_SINKHORN_BLUR,
+    n_iters: int = DEFAULT_SINKHORN_ITERS,
+    cost_matrix: torch.Tensor | None = None,
+    num_classes: int = DEFAULT_SEGNET_NUM_CLASSES,
+) -> torch.Tensor:
+    """Per-pixel entropic Sinkhorn transport surrogate on SegNet probabilities.
+
+    Implements an entropically-regularized transport cost between two
+    categorical distributions ``p_pred`` and ``p_gt`` over ``num_classes``
+    labels with a user-supplied ground-cost matrix ``C``. For the comma
+    SegNet (5 unordered classes) the default cost is ``1 - I`` (uniform
+    off-diagonal), making the surrogate a differentiable relaxation of the
+    one-hot total-variation distance.
+
+    The Sinkhorn algorithm (Cuturi 2013, "Sinkhorn distances: lightspeed
+    computation of optimal transport") computes:
+
+        W²_ε(p, q) = min_{P ∈ Π(p, q)} ⟨P, C⟩ + ε · KL(P ‖ p ⊗ q)
+
+    via alternating log-domain matrix-vector multiplications. The
+    log-domain (a.k.a. log-sum-exp / log-Sinkhorn) form is numerically
+    stable at small ``blur`` (ε) values where the kernel ``exp(-C/ε)``
+    underflows in float32.
+
+    For categorical distributions on C points, the algorithm is O(C²) per
+    iteration per pixel and converges in ~10-30 iterations. We sweep all
+    pixels in a single batched matrix multiply via ``torch.einsum``.
+
+    Args:
+        pred_probs: ``(B, C, H, W)`` float — predicted softmax probs (must
+            sum to 1 along dim=1; rows are renormalized internally).
+        gt_probs: ``(B, C, H, W)`` float — GT softmax probs (same shape).
+        blur: entropic regularization scale ε (smaller → tighter W₂, less
+            smooth gradient; larger → smoother gradient, blurrier surrogate).
+            Must be in ``[0.01, 1.0]``. Default ``0.05``.
+        n_iters: number of Sinkhorn iterations. 20 is a safe default that
+            converges to <1e-4 relative residual on the 5-class simplex at
+            default blur. At the minimum blur the implementation raises the
+            effective iteration floor to the calibrated stable count.
+        cost_matrix: optional ``(C, C)`` float ground-cost matrix. If
+            ``None``, uses ``1 - I_C`` (uniform off-diagonal label
+            cost). Must be symmetric, non-negative, with zero diagonal
+            (validated).
+        num_classes: expected ``C`` (default 5).
+
+    Returns:
+        ``(B, H, W)`` per-pixel surrogate. Entropic regularization gives a
+        small positive self-cost for non-one-hot identical distributions; the
+        self-cost shrinks as ``blur`` decreases. Disjoint one-hots are
+        approximately 1.0 under the default cost matrix, so the surrogate has
+        the SAME SCALE as the soft-cosine and Fisher-Rao surrogates and can be
+        slot-substituted in the existing loss composition.
+
+    Notes:
+        - This is a TRAINING SURROGATE only. Score claims still require
+          exact CUDA auth eval.
+        - The implementation does NOT depend on the optional ``geomloss``
+          package. It is a fully-batched, differentiable, log-domain
+          Sinkhorn implementation in pure torch.
+        - For backward compatibility, callers must opt-in via
+          ``surrogate="sinkhorn"`` in ``segnet_surrogate_per_pixel``.
+    """
+    blur_value = _validate_sinkhorn_blur(blur)
+    iters_value = _effective_sinkhorn_iters(
+        blur_value,
+        _validate_sinkhorn_iters(n_iters),
+    )
+
+    if pred_probs.shape != gt_probs.shape:
+        raise ValueError(
+            f"pred_probs shape {tuple(pred_probs.shape)} does not match "
+            f"gt_probs shape {tuple(gt_probs.shape)}"
+        )
+    if pred_probs.ndim != 4:
+        raise ValueError(
+            "Sinkhorn-W2 expects BCHW probability tensors; "
+            f"got shape {tuple(pred_probs.shape)}"
+        )
+    if pred_probs.shape[1] != num_classes:
+        raise ValueError(
+            f"Sinkhorn-W2 expects {num_classes} classes, "
+            f"got {pred_probs.shape[1]}"
+        )
+
+    if cost_matrix is None:
+        cost = _default_categorical_cost_matrix(
+            num_classes,
+            device=pred_probs.device,
+            dtype=pred_probs.dtype,
+        )
+    else:
+        cost = cost_matrix.to(pred_probs.device, dtype=pred_probs.dtype)
+        if cost.shape != (num_classes, num_classes):
+            raise ValueError(
+                f"cost_matrix shape {tuple(cost.shape)} does not match "
+                f"({num_classes}, {num_classes})"
+            )
+        # Symmetric + non-negative + zero-diagonal: required for Sinkhorn
+        # to compute a valid Wasserstein-class quantity. (Otherwise the
+        # algorithm returns a transport-cost surrogate, not a metric.)
+        if not torch.allclose(cost, cost.T, atol=1e-6):
+            raise ValueError("cost_matrix must be symmetric")
+        if (cost < 0).any():
+            raise ValueError("cost_matrix must be non-negative")
+        if not torch.allclose(
+            cost.diagonal(),
+            torch.zeros(num_classes, device=cost.device, dtype=cost.dtype),
+            atol=1e-6,
+        ):
+            raise ValueError("cost_matrix must have zero diagonal")
+
+    # Reshape (B, C, H, W) -> (B*H*W, C) so each spatial position is a
+    # single 1-D probability distribution we Sinkhorn-balance against the
+    # corresponding GT row.
+    b, c, h, w = pred_probs.shape
+    p = pred_probs.permute(0, 2, 3, 1).reshape(-1, c)  # (N, C)
+    q = gt_probs.permute(0, 2, 3, 1).reshape(-1, c)    # (N, C)
+
+    # Renormalize defensively (the caller should have done this, but
+    # softmax + numerical drift can leave row sums slightly off 1).
+    p = p / p.sum(dim=1, keepdim=True).clamp_min(1e-12)
+    q = q / q.sum(dim=1, keepdim=True).clamp_min(1e-12)
+
+    # Log-domain Sinkhorn iterations.
+    #
+    # The classical recurrence is:
+    #   K_{ij} = exp(-C_{ij} / ε)
+    #   u_t = p / (K v_{t-1})
+    #   v_t = q / (K^T u_t)
+    #   transport plan: P_{ij} = u_i K_{ij} v_j
+    #
+    # In log-domain (more stable at small ε) we work with f, g potentials:
+    #   f = ε log u,  g = ε log v
+    #   M_{ij} = (-C_{ij} + f_i + g_j) / ε
+    #   f_t = ε ( log p - logsumexp_j ((g_{t-1,j} - C_{ij}) / ε) )
+    #   g_t = ε ( log q - logsumexp_i ((f_{t,i}   - C_{ij}) / ε) )
+    #
+    # Final transport cost: ⟨P, C⟩ = sum_ij P_{ij} C_{ij}
+    #
+    # We implement this fully batched over N spatial positions.
+    log_p = torch.log(p.clamp_min(1e-30))         # (N, C)
+    log_q = torch.log(q.clamp_min(1e-30))         # (N, C)
+    eps = blur_value
+    cost_eps = cost / eps                         # (C, C)
+
+    # Initialize potentials.
+    f = torch.zeros_like(log_p)                   # (N, C)
+    g = torch.zeros_like(log_q)                   # (N, C)
+
+    for _ in range(iters_value):
+        # Update f: f_i = ε ( log_p_i - logsumexp_j (g_j/ε - C_{ij}/ε) )
+        # Broadcast: (N, 1, C) + (C, C) -> (N, C, C); LSE over dim=2 -> (N, C).
+        m = (g.unsqueeze(1) / eps) - cost_eps     # (N, C, C); axis 1 = i, axis 2 = j
+        lse_j = torch.logsumexp(m, dim=2)          # (N, C)
+        f = eps * (log_p - lse_j)                  # (N, C)
+
+        # Update g symmetrically: g_j = ε ( log_q_j - logsumexp_i ((f_i - C_{ij}) / ε) )
+        m = (f.unsqueeze(2) / eps) - cost_eps     # (N, C, C); axis 1 = i, axis 2 = j
+        lse_i = torch.logsumexp(m, dim=1)          # (N, C)
+        g = eps * (log_q - lse_i)                  # (N, C)
+
+    # Reconstruct transport plan in log-domain and compute ⟨P, C⟩.
+    # log P_{ij} = (f_i + g_j - C_{ij}) / ε
+    log_plan = (f.unsqueeze(2) + g.unsqueeze(1) - cost) / eps  # (N, C, C)
+    plan = torch.exp(log_plan)                                 # (N, C, C)
+    transport_cost = (plan * cost).sum(dim=(1, 2))             # (N,)
+
+    # Reshape back to (B, H, W).
+    return transport_cost.reshape(b, h, w)
+
+
 def segnet_surrogate_per_pixel(
     pred_logits: torch.Tensor,
     gt_logits_or_probs: torch.Tensor,
@@ -156,6 +423,9 @@ def segnet_surrogate_per_pixel(
     surrogate: str = SEGMENTATION_SURROGATE_SOFT_COSINE,
     temperature: float = 1.0,
     fisher_rao_eps: float = 1e-6,
+    sinkhorn_blur: float = DEFAULT_SINKHORN_BLUR,
+    sinkhorn_n_iters: int = DEFAULT_SINKHORN_ITERS,
+    sinkhorn_cost_matrix: torch.Tensor | None = None,
     gt_already_probs: bool = False,
     num_classes: int = DEFAULT_SEGNET_NUM_CLASSES,
 ) -> torch.Tensor:
@@ -164,7 +434,9 @@ def segnet_surrogate_per_pixel(
     Defaults to the historical soft-cosine proxy. ``surrogate="fisher_rao"``
     enables the Hilbert/information-geometry path while keeping cached-GT mode
     fail-closed for non-unit temperatures, because cached GT stores only
-    ``softmax(logits)`` at temperature 1.
+    ``softmax(logits)`` at temperature 1. ``surrogate="sinkhorn"`` enables
+    the entropic-regularized Wasserstein-2 (T8) surrogate; same cached-GT
+    rule applies.
     """
     mode = _validate_segmentation_surrogate(surrogate)
     temp = _validate_kl_temperature(temperature, field="segmentation_temperature")
@@ -183,6 +455,15 @@ def segnet_surrogate_per_pixel(
             pred_probs,
             gt_probs,
             eps=fisher_rao_eps,
+            num_classes=num_classes,
+        )
+    if mode == SEGMENTATION_SURROGATE_SINKHORN:
+        return sinkhorn_w2_mask_distortion_per_pixel(
+            pred_probs,
+            gt_probs,
+            blur=sinkhorn_blur,
+            n_iters=sinkhorn_n_iters,
+            cost_matrix=sinkhorn_cost_matrix,
             num_classes=num_classes,
         )
     if pred_probs.shape != gt_probs.shape:

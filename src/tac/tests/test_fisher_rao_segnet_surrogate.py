@@ -8,9 +8,11 @@ import torch.nn.functional as F
 
 from tac.losses import (
     SEGMENTATION_SURROGATE_FISHER_RAO,
+    SEGMENTATION_SURROGATE_SINKHORN,
     SEGMENTATION_SURROGATE_SOFT_COSINE,
     segnet_fisher_rao_per_pixel,
     segnet_surrogate_per_pixel,
+    sinkhorn_w2_mask_distortion_per_pixel,
 )
 
 
@@ -81,6 +83,49 @@ def test_soft_cosine_surrogate_preserves_legacy_formula() -> None:
     )
 
     assert torch.equal(actual, expected)
+
+
+def test_sinkhorn_identical_distributions_are_zero() -> None:
+    probs = torch.rand(2, 5, 3, 4)
+    probs = probs / probs.sum(dim=1, keepdim=True)
+
+    out = sinkhorn_w2_mask_distortion_per_pixel(probs, probs, n_iters=10)
+
+    assert torch.all(out >= -1e-6)
+    assert out.abs().max().item() < 1e-4
+
+
+def test_sinkhorn_surrogate_dispatches_to_sinkhorn_not_soft_cosine() -> None:
+    pred_logits = torch.randn(2, 5, 3, 4)
+    gt_probs = torch.softmax(torch.randn(2, 5, 3, 4), dim=1)
+    pred_probs = torch.softmax(pred_logits, dim=1)
+
+    expected = sinkhorn_w2_mask_distortion_per_pixel(
+        pred_probs,
+        gt_probs,
+        blur=0.1,
+        n_iters=7,
+    )
+    actual = segnet_surrogate_per_pixel(
+        pred_logits,
+        gt_probs,
+        surrogate=SEGMENTATION_SURROGATE_SINKHORN,
+        gt_already_probs=True,
+        sinkhorn_blur=0.1,
+        sinkhorn_n_iters=7,
+    )
+    legacy_soft_cosine = 1.0 - (pred_probs * gt_probs).sum(dim=1)
+
+    assert torch.allclose(actual, expected, atol=1e-6)
+    assert not torch.allclose(actual, legacy_soft_cosine, atol=1e-4)
+
+
+def test_sinkhorn_rejects_invalid_cost_matrix() -> None:
+    probs = torch.full((1, 5, 1, 1), 0.2)
+    bad = torch.ones(5, 5)
+
+    with pytest.raises(ValueError, match="zero diagonal"):
+        sinkhorn_w2_mask_distortion_per_pixel(probs, probs, cost_matrix=bad)
 
 
 def test_cached_segnet_probabilities_reject_non_unit_temperature() -> None:
