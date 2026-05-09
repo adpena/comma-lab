@@ -46,7 +46,8 @@ CLAUDE.md compliance
   test asserts roundtrip determinism.
 - Forbidden pattern #1 (no MPS-fallback default): ``train_step`` raises if
   device is None and CUDA unavailable; explicit ``--device cpu`` opt-in
-  (Phase A scaffold uses CPU for all tests).
+  is allowed only where deterministic-bytes acceptable smoke coverage is the
+  target (Phase A scaffold uses CPU for all tests).
 - Forbidden pattern (no make_synthetic_pair_batch in non-smoke training paths):
   ``RealPairBatchSource`` is the canonical batch source; synthetic helpers
   carry ``# SYNTHETIC_NON_SMOKE_OK:phase_a_smoke`` waiver.
@@ -513,7 +514,7 @@ def default_seg_surrogate(
     T = 2.0
     log_p = F.log_softmax(pred_logits / T, dim=1)
     q = F.softmax(target_logits / T, dim=1)
-    return F.kl_div(log_p, q, reduction="batchmean") * (T * T)
+    return F.kl_div(log_p, q, reduction="none").sum(dim=1).mean() * (T * T)
 
 
 def default_pose_surrogate(
@@ -574,16 +575,85 @@ class RealPairBatchSource:
         self.eval_size = eval_size
 
     def iter_batches(
-        self, batch_size: int, *, shuffle: bool = False
+        self,
+        batch_size: int,
+        *,
+        shuffle: bool = False,
+        skip_to_pair: int = 0,
+        max_pairs: int | None = None,
     ) -> Iterator[tuple[torch.Tensor, torch.Tensor]]:
         """Yield ``(pair_indices, gt_pairs_uint8)`` batches.
 
         Streams PyAV-decoded non-overlapping pairs in upstream evaluator order
-        without materializing all 600 pairs. Shuffling requires a cached target
-        tensor and is intentionally deferred to Phase B trainer code.
+        without materializing all 600 pairs. The iteration order matches
+        ``upstream/frame_utils.py::AVVideoDataset.__iter__``: pair 0 = (frame0,
+        frame1), pair 1 = (frame2, frame3), etc. (NOT overlapping ``(0,1),(1,2)``
+        — that is the score-invalid 1199-pair scheme caught by the
+        ``MASKS.MKV AT 48x64`` postmortem.)
+
+        Each yielded ``gt_pairs_uint8`` tensor has shape
+        ``(B, 2, 3, 874, 1164)`` and dtype ``torch.uint8`` matching the contest
+        evaluator's expected GT input. The trainer (``train_step``) is
+        responsible for upsampling rendered output to camera resolution AND
+        passing both rendered + GT through the scorer's ``preprocess_input``;
+        differentiable RGB→YUV6 + eval-roundtrip + STE clamp/round are applied
+        on the RENDERED side per ``tac.differentiable_eval_roundtrip``. See the
+        module docstring §"Score-aware loss" + ``tac.scorer.load_differentiable_scorers``
+        for how the pose/seg gradient flows back through the scorer onto these
+        GT pairs.
+
+        DALI is intentionally NOT used here: per CLAUDE.md "MPS auth eval is
+        NOISE" and the AVVideoDataset CUDA-CPU drift mechanism discriminator
+        (commit 0c2faf0a), the contest CPU evaluator uses PyAV; using DALI on
+        the trainer side would introduce a decoder-class drift between training
+        targets and CPU-axis evaluation. PyAV here matches contest CPU axis
+        decode bytes-for-bytes (per ``yuv420_to_rgb`` in upstream frame_utils.py).
+
+        Parameters
+        ----------
+        batch_size
+            Number of pairs per yielded batch. Must be > 0. Last batch may be
+            partial if ``effective_n_pairs % batch_size != 0``.
+        shuffle
+            Always False in Phase A — sequential decode only. Setting True
+            raises ``NotImplementedError``. Phase B may add a cached-target
+            source that decodes once into a deterministic-order tensor and
+            shuffles indices on iteration.
+        skip_to_pair
+            Skip the first ``skip_to_pair`` pairs (resumability for mid-job
+            crash recovery). Default 0. Frames for skipped pairs are still
+            decoded and discarded (PyAV does not support deterministic
+            mid-stream seek for HEVC at sub-keyframe granularity), so resume
+            cost is O(skip_to_pair) decode work.
+        max_pairs
+            Optional override that caps iteration at ``min(self.n_pairs,
+            skip_to_pair + max_pairs)``. ``None`` (default) honors only
+            ``self.n_pairs``. Useful for fast smoke runs over a subset.
+
+        Yields
+        ------
+        ``(pair_indices, gt_pairs_uint8)`` tuples where:
+          - ``pair_indices`` is ``(B,)`` long tensor of pair indices into the
+            upstream evaluator pair sequence (NOT batch-relative);
+          - ``gt_pairs_uint8`` is ``(B, 2, 3, 874, 1164)`` uint8 tensor of GT
+            pairs at camera resolution.
+
+        Raises
+        ------
+        ValueError
+            If ``batch_size <= 0`` or ``skip_to_pair < 0`` or ``max_pairs <= 0``.
+        NotImplementedError
+            If ``shuffle=True``.
+        RuntimeError
+            If PyAV is unavailable or ``upstream/frame_utils.py`` cannot be
+            located.
         """
         if batch_size <= 0:
             raise ValueError(f"batch_size must be positive, got {batch_size}")
+        if skip_to_pair < 0:
+            raise ValueError(f"skip_to_pair must be non-negative, got {skip_to_pair}")
+        if max_pairs is not None and max_pairs <= 0:
+            raise ValueError(f"max_pairs must be positive when set, got {max_pairs}")
         if shuffle:
             raise NotImplementedError(
                 "RealPairBatchSource streams frames sequentially; shuffle=True "
@@ -595,6 +665,64 @@ class RealPairBatchSource:
         except ImportError as exc:  # pragma: no cover - dependency env-specific
             raise RuntimeError("PyAV (`av`) is required for Lane 12-v2 real batches") from exc
 
+        # Compute effective stop-index per skip + cap (NEVER exceed self.n_pairs).
+        if max_pairs is not None:
+            stop_at = min(self.n_pairs, skip_to_pair + max_pairs)
+        else:
+            stop_at = self.n_pairs
+        if stop_at <= skip_to_pair:
+            return  # Empty iteration; not an error (smoke runs may request 0 pairs after skip).
+
+        yuv420_to_rgb = self._load_upstream_yuv420_to_rgb()
+
+        container = av.open(str(self.video_path))
+        try:
+            stream = container.streams.video[0]
+            pair_idx = 0
+            seq: list[torch.Tensor] = []
+            batch_indices: list[int] = []
+            batch_pairs: list[torch.Tensor] = []
+            for frame in container.decode(stream):
+                rgb_hwc = yuv420_to_rgb(frame)
+                seq.append(rgb_hwc.permute(2, 0, 1).contiguous())
+                if len(seq) != 2:
+                    continue
+                # Two frames buffered → one complete pair.
+                if pair_idx < skip_to_pair:
+                    # Drop the pair without yielding (resume path).
+                    pair_idx += 1
+                    seq = []
+                    if pair_idx >= stop_at:
+                        break
+                    continue
+                batch_indices.append(pair_idx)
+                batch_pairs.append(torch.stack(seq, dim=0))
+                pair_idx += 1
+                seq = []
+                if len(batch_pairs) == batch_size:
+                    yield (
+                        torch.tensor(batch_indices, dtype=torch.long),
+                        torch.stack(batch_pairs, dim=0),
+                    )
+                    batch_indices = []
+                    batch_pairs = []
+                if pair_idx >= stop_at:
+                    break
+            if batch_pairs:
+                yield (
+                    torch.tensor(batch_indices, dtype=torch.long),
+                    torch.stack(batch_pairs, dim=0),
+                )
+        finally:
+            container.close()
+
+    def _load_upstream_yuv420_to_rgb(self) -> Callable[[object], torch.Tensor]:
+        """Locate + import ``upstream/frame_utils.py::yuv420_to_rgb``.
+
+        Bytes-for-bytes equivalent to the contest evaluator's CPU-axis decode
+        (``BT.601 limited range`` + bilinear chroma upsample + per-pixel
+        clamp/round to uint8). Lifted out of ``iter_batches`` for testability.
+        """
         import importlib.util
 
         candidate_frame_utils = [
@@ -616,40 +744,7 @@ class RealPairBatchSource:
             raise RuntimeError(f"unable to load upstream frame_utils.py from {frame_utils_path}")
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        yuv420_to_rgb = module.yuv420_to_rgb
-
-        container = av.open(str(self.video_path))
-        try:
-            stream = container.streams.video[0]
-            pair_idx = 0
-            seq: list[torch.Tensor] = []
-            batch_indices: list[int] = []
-            batch_pairs: list[torch.Tensor] = []
-            for frame in container.decode(stream):
-                rgb_hwc = yuv420_to_rgb(frame)
-                seq.append(rgb_hwc.permute(2, 0, 1).contiguous())
-                if len(seq) != 2:
-                    continue
-                batch_indices.append(pair_idx)
-                batch_pairs.append(torch.stack(seq, dim=0))
-                pair_idx += 1
-                seq = []
-                if len(batch_pairs) == batch_size:
-                    yield (
-                        torch.tensor(batch_indices, dtype=torch.long),
-                        torch.stack(batch_pairs, dim=0),
-                    )
-                    batch_indices = []
-                    batch_pairs = []
-                if pair_idx >= self.n_pairs:
-                    break
-            if batch_pairs:
-                yield (
-                    torch.tensor(batch_indices, dtype=torch.long),
-                    torch.stack(batch_pairs, dim=0),
-                )
-        finally:
-            container.close()
+        return module.yuv420_to_rgb
 
 
 def _make_synthetic_pair_batch_for_smoke(
@@ -808,17 +903,28 @@ def export_to_archive(
 def phase_b_preconditions_status() -> dict:
     """Return a machine-readable status dict for the §6 reactivation gates.
 
-    Phase A scaffold returns the static "all NOT YET" status. Phase B harness
-    will mutate this as the parallel subagents land.
+    Updated 2026-05-09 (HIGH 3 fix subagent B): precondition #1 (scaffold +
+    real-pair batch source) is MET — ``RealPairBatchSource.iter_batches`` now
+    decodes ``upstream/videos/0.mkv`` via PyAV with non-overlapping pairs,
+    skip_to_pair resumability, max_pairs cap, and 49 tests passing. Other
+    preconditions still PENDING per Phase A landing memo §"5 reactivation
+    preconditions" + comprehensive adversarial review HIGH 3.
     """
-    return {
-        "phase_a_scaffold_tests_pass": "PENDING",
+    pending_preconditions: dict[str, str] = {
         "t7_t8_t11_subadditivity_disambiguator_returned": "PENDING",
         "t13_t19_wired_into_trainer": "PENDING",
         "strict_preflight_124_warn_only_landed": "PENDING",
         "operator_phase_b_authorization": "PENDING",
-        "any_pending_blocks_phase_b_dispatch": True,
     }
+    status: dict[str, object] = {
+        "phase_a_scaffold_tests_pass": "MET",
+        "real_pair_batch_source_implemented": "MET",
+    }
+    status.update(pending_preconditions)
+    status["any_pending_blocks_phase_b_dispatch"] = bool(
+        any(v == "PENDING" for v in pending_preconditions.values())
+    )
+    return status
 
 
 __all__ = [

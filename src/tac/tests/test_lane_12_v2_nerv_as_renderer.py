@@ -526,8 +526,19 @@ def test_real_pair_batch_source_rejects_zero_batch_size():
 
 
 def test_phase_b_preconditions_status_is_pending():
+    """Phase B remains gated even after batch source landed (4 of 6 gates PENDING)."""
     status = phase_b_preconditions_status()
-    assert all(v == "PENDING" or v is True for v in status.values()), status
+    # Two MET (scaffold tests + batch source), four PENDING, one bool gate.
+    assert status["phase_a_scaffold_tests_pass"] == "MET"
+    assert status["real_pair_batch_source_implemented"] == "MET"
+    pending = [
+        "t7_t8_t11_subadditivity_disambiguator_returned",
+        "t13_t19_wired_into_trainer",
+        "strict_preflight_124_warn_only_landed",
+        "operator_phase_b_authorization",
+    ]
+    for key in pending:
+        assert status[key] == "PENDING", f"{key} should be PENDING, got {status[key]}"
     assert status["any_pending_blocks_phase_b_dispatch"] is True
 
 
