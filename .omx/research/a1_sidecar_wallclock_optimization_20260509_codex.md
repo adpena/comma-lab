@@ -69,3 +69,16 @@ Next high-EV speed work should attack true CPU throughput: pair-level
 parallelism, model/runtime reuse across workers, or native deterministic packet
 compiler paths. Do not promote larger decoder-forward chunks without a measured
 wall-clock win on the same smoke contract.
+
+## DX follow-up from this pass
+
+Parallel `review_tracker.py mark-file` invocations hit DuckDB process-lock
+contention during this work. The tracker now retries briefly on lock contention
+instead of failing immediately.
+
+```text
+proof:
+  two concurrent mark-file subprocesses both returned 0
+  source_index.py: 31 entities marked reviewed
+  build_a1_per_pair_latent_correction_sidecar.py: 13 entities marked reviewed
+```

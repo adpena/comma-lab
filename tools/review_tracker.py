@@ -35,6 +35,7 @@ import re
 import subprocess
 import sys
 import textwrap
+import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -56,6 +57,33 @@ SCAN_EXCLUDE_GLOBS = (
 
 # Valid review statuses
 VALID_STATUSES = {"unreviewed", "reviewed", "stale", "needs_fix"}
+
+DB_LOCK_RETRY_SECONDS = float(os.environ.get("REVIEW_TRACKER_DB_LOCK_RETRY_SECONDS", "8.0"))
+DB_LOCK_INITIAL_SLEEP_SECONDS = float(
+    os.environ.get("REVIEW_TRACKER_DB_LOCK_INITIAL_SLEEP_SECONDS", "0.05")
+)
+
+
+def _is_duckdb_lock_error(exc: BaseException) -> bool:
+    message = str(exc)
+    return "Could not set lock" in message or "Conflicting lock" in message
+
+
+def _connect_duckdb(path: Path, *, read_only: bool = False):
+    """Connect to DuckDB, retrying briefly on process-level lock contention."""
+
+    import duckdb
+
+    deadline = time.monotonic() + max(0.0, DB_LOCK_RETRY_SECONDS)
+    sleep_s = max(0.01, DB_LOCK_INITIAL_SLEEP_SECONDS)
+    while True:
+        try:
+            return duckdb.connect(str(path), read_only=read_only)
+        except duckdb.Error as exc:
+            if not _is_duckdb_lock_error(exc) or time.monotonic() >= deadline:
+                raise
+            time.sleep(sleep_s)
+            sleep_s = min(0.5, sleep_s * 1.6)
 
 
 # ---------------------------------------------------------------------------
@@ -324,13 +352,16 @@ _SCHEMA_DDL = [
 
 def _init_db():
     """Initialize DB with sequence first, then tables."""
-    import duckdb
     TRACKER_DB.parent.mkdir(parents=True, exist_ok=True)
     try:
-        con = duckdb.connect(str(TRACKER_DB))
-    except duckdb.Error as e:
-        print(f"DuckDB corrupted: {e}", file=sys.stderr)
-        print("Run: python tools/review_tracker.py rebuild-from-json", file=sys.stderr)
+        con = _connect_duckdb(TRACKER_DB)
+    except Exception as e:
+        if _is_duckdb_lock_error(e):
+            print(f"DuckDB busy after {DB_LOCK_RETRY_SECONDS:.1f}s: {e}", file=sys.stderr)
+            print("Another review_tracker process still holds the DB lock.", file=sys.stderr)
+        else:
+            print(f"DuckDB unavailable: {e}", file=sys.stderr)
+            print("Run: python tools/review_tracker.py rebuild-from-json", file=sys.stderr)
         sys.exit(1)
     for ddl in _SCHEMA_DDL:
         con.execute(ddl)
@@ -1251,11 +1282,14 @@ def cmd_greenup_import(pass_file: str) -> None:
 
 def cmd_query(sql: str) -> None:
     """Run a read-only SQL query against the DuckDB tracker."""
-    import duckdb
     if not TRACKER_DB.exists():
         print("No tracker DB. Run 'scan' first.")
         return
-    con = duckdb.connect(str(TRACKER_DB), read_only=True)
+    try:
+        con = _connect_duckdb(TRACKER_DB, read_only=True)
+    except Exception as e:
+        print(f"DuckDB unavailable: {e}", file=sys.stderr)
+        return
     try:
         rows = con.execute(sql).fetchall()
         if con.description:
