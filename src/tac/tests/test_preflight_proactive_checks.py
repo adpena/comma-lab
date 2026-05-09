@@ -86,6 +86,27 @@ def test_check_68_clean_shell_passes(tmp_path):
     assert v == []
 
 
+def test_check_68_incremental_cache_invalidates_changed_script(tmp_path):
+    repo = _sh_repo(tmp_path)
+    target = repo / "scripts" / "cached.sh"
+    target.write_text("#!/bin/bash\necho hello\n")
+    assert check_shell_scripts_syntax_clean(
+        repo_root=repo,
+        strict=True,
+        verbose=False,
+    ) == []
+    assert (repo / ".omx" / "cache" / "shell_syntax_clean.json").exists()
+
+    target.write_text("#!/bin/bash\nif [ x = y ]; then\necho missing fi\n")
+    v = check_shell_scripts_syntax_clean(
+        repo_root=repo,
+        strict=False,
+        verbose=False,
+    )
+    assert len(v) == 1
+    assert "cached.sh" in v[0]
+
+
 def test_check_68_syntax_error_detected(tmp_path):
     repo = _sh_repo(tmp_path)
     (repo / "scripts" / "broken.sh").write_text(

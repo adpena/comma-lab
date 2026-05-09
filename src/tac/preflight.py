@@ -3355,6 +3355,50 @@ def preflight_arity(
     """
     root = Path(repo_root or REPO_ROOT).resolve()
     launcher_files = launcher_files or LAUNCHER_FILES
+    target_files = tuple(
+        py
+        for target_dir in TARGET_DIRS
+        for py in (root / target_dir).glob("*.py")
+        if py.is_file()
+    )
+    launcher_paths = tuple(
+        (root / launcher_rel).resolve()
+        for launcher_rel in launcher_files
+        if (root / launcher_rel).exists()
+    )
+    cache_enabled = os.environ.get("PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE") != "1"
+    cache_name = "arity_clean"
+    cache_key = hashlib.sha256(
+        json.dumps(
+            {
+                "arch_flags_boolean": sorted(ARCH_FLAGS_BOOLEAN),
+                "arch_flags_required": sorted(ARCH_FLAGS_REQUIRED),
+                "launcher_files": launcher_files,
+                "scanner_version": "preflight_arity.v1",
+                "target_dirs": TARGET_DIRS,
+            },
+            sort_keys=True,
+        ).encode()
+    ).hexdigest()
+    cache_rows = _load_preflight_cache(root, cache_name) if cache_enabled else {}
+    source_fingerprint = _fingerprint_paths(
+        launcher_paths + target_files,
+        root,
+        salt="preflight_arity.v1",
+    )
+    cache_row = cache_rows.get(cache_key)
+    if (
+        cache_enabled
+        and isinstance(cache_row, dict)
+        and cache_row.get("source_fingerprint") == source_fingerprint
+    ):
+        if verbose:
+            n_launchers = sum(1 for f in launcher_files if (root / f).exists())
+            print(
+                f"  [arity] OK: cached {n_launchers} launchers x "
+                f"{cache_row.get('target_count', '?')} targets clean"
+            )
+        return []
 
     sigs = _build_target_signatures(root)
     violations: list[str] = []
@@ -3416,6 +3460,16 @@ def preflight_arity(
                     f"Silent-default risk: target will run with {flag!r}=False even "
                     f"if the profile sets it True. (Boolean-flag SHIRAZ class.)"
                 )
+
+    if cache_enabled:
+        if violations:
+            cache_rows.pop(cache_key, None)
+        else:
+            cache_rows[cache_key] = {
+                "source_fingerprint": source_fingerprint,
+                "target_count": len(sigs),
+            }
+        _store_preflight_cache(root, cache_name, cache_rows)
 
     if verbose and violations:
         print(f"  [arity] {len(violations)} violation(s):")
@@ -10426,14 +10480,30 @@ def check_archive_builders_use_deterministic_zip(
     verbose: bool = True,
 ) -> list[str]:
     """Guard Finding #5: archive-build scripts produce byte-identical zips."""
-    root = repo_root or REPO_ROOT
+    root = Path(repo_root or REPO_ROOT).resolve()
     violations: list[str] = []
     n_scanned = 0
     # Cover experiments/*build*.py + experiments/results/lane_*_*/build*.py
     candidates: list[Path] = []
     if (root / "experiments").exists():
-        candidates.extend(sorted((root / "experiments").rglob("build*.py")))
-        candidates.extend(sorted((root / "experiments").rglob("*build_archive*.py")))
+        experiment_py = _rg_file_list(
+            root,
+            ("experiments",),
+            ("*.py",),
+            exclude_globs=(
+                "experiments/results/**",
+                "**/__pycache__/**",
+                "**/comma_lab_public_export/**",
+            ),
+        )
+        if experiment_py is None:
+            experiment_py = tuple(_iter_python_files(root, ["experiments"]))
+        candidates.extend(
+            path
+            for path in experiment_py
+            if path.name.startswith("build")
+            or "build_archive" in path.name
+        )
     for rel in (
         "scripts/compress_archive.py",
         "submissions/robust_current/compress_archive.py",
@@ -10443,6 +10513,31 @@ def check_archive_builders_use_deterministic_zip(
             candidates.append(candidate)
     # Dedupe
     candidates = sorted({p for p in candidates if p.is_file()})
+    cache_enabled = os.environ.get("PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE") != "1"
+    cache_name = "deterministic_zip_builders_clean"
+    cache_key = "deterministic_zip_builders.v1"
+    cache_rows = _load_preflight_cache(root, cache_name) if cache_enabled else {}
+    compress_sh = root / "submissions" / "robust_current" / "compress.sh"
+    fingerprint_paths = tuple(candidates) + (
+        (compress_sh,) if compress_sh.exists() else ()
+    )
+    source_fingerprint = _fingerprint_paths(
+        fingerprint_paths,
+        root,
+        salt="deterministic_zip_builders.v1",
+    )
+    cache_row = cache_rows.get(cache_key)
+    if (
+        cache_enabled
+        and isinstance(cache_row, dict)
+        and cache_row.get("source_fingerprint") == source_fingerprint
+    ):
+        if verbose:
+            print(
+                "  [det-zip] OK: cached "
+                f"{cache_row.get('candidate_count', '?')} archive-build script(s)"
+            )
+        return []
     for p in candidates:
         if "__pycache__" in p.parts:
             continue
@@ -10464,7 +10559,6 @@ def check_archive_builders_use_deterministic_zip(
         n_scanned += 1
         violations.extend(_scan_python_for_nondeterministic_zip(p, root))
 
-    compress_sh = root / "submissions" / "robust_current" / "compress.sh"
     if compress_sh.exists():
         n_scanned += 1
         text = compress_sh.read_text()
@@ -10479,6 +10573,15 @@ def check_archive_builders_use_deterministic_zip(
                 "ZipFile.write(...) fallback is non-deterministic. Use "
                 "tac.submission_archive.deterministic_zip_directory()."
             )
+    if cache_enabled:
+        if violations:
+            cache_rows.pop(cache_key, None)
+        else:
+            cache_rows[cache_key] = {
+                "source_fingerprint": source_fingerprint,
+                "candidate_count": n_scanned,
+            }
+        _store_preflight_cache(root, cache_name, cache_rows)
 
     if verbose and violations:
         print(
@@ -10781,7 +10884,7 @@ def check_silent_default_audit_clean(
     Live count after today's commits (4eeb6452 audit hardening + 256c5e42
     train_renderer.py fixes): 0 CRITICAL. Lands strict at 0.
     """
-    root = repo_root or REPO_ROOT
+    root = Path(repo_root or REPO_ROOT).resolve()
     audit_script = root / "tools" / "audit_silent_defaults.py"
     if not audit_script.is_file():
         if verbose:
@@ -10789,6 +10892,37 @@ def check_silent_default_audit_clean(
                 "  [silent-default-audit] WARN: tools/audit_silent_defaults.py "
                 "not found — skipping check"
             )
+        return []
+    cache_enabled = os.environ.get("PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE") != "1"
+    audit_scan_dirs = ("experiments", "src/tac/experiments")
+    audit_sources = _rg_file_list(
+        root,
+        audit_scan_dirs,
+        ("*.py",),
+        exclude_globs=(
+            "experiments/results/**",
+            "**/__pycache__/**",
+            "**/comma_lab_public_export/**",
+        ),
+    )
+    if audit_sources is None:
+        audit_sources = tuple(_iter_python_files(root, list(audit_scan_dirs)))
+    cache_name = "silent_default_audit_clean"
+    cache_key = "silent_default_audit.v1"
+    cache_rows = _load_preflight_cache(root, cache_name) if cache_enabled else {}
+    source_fingerprint = _fingerprint_paths(
+        audit_sources,
+        root,
+        salt="silent_default_audit.v1",
+    )
+    cache_row = cache_rows.get(cache_key)
+    if (
+        cache_enabled
+        and isinstance(cache_row, dict)
+        and cache_row.get("source_fingerprint") == source_fingerprint
+    ):
+        if verbose:
+            print("  [silent-default-audit] OK: cached 0 CRITICAL")
         return []
     try:
         from tools.audit_silent_defaults import (
@@ -10814,6 +10948,15 @@ def check_silent_default_audit_clean(
             f"matching profile key silently overrides profile values. Fix: "
             f"change default to None and resolve in body via profile."
         )
+    if cache_enabled:
+        if violations:
+            cache_rows.pop(cache_key, None)
+        else:
+            cache_rows[cache_key] = {
+                "source_fingerprint": source_fingerprint,
+                "critical": 0,
+            }
+        _store_preflight_cache(root, cache_name, cache_rows)
     if verbose:
         if violations:
             print(
@@ -17109,10 +17252,15 @@ def check_shell_scripts_syntax_clean(
             print(f"  [shell-syntax] SKIP: bash not found on PATH")
         return []
 
-    root = repo_root or REPO_ROOT
+    root = Path(repo_root or REPO_ROOT).resolve()
     skip_parts = {"__pycache__", ".venv", ".git", ".pytest_cache",
                   "build", "dist", "node_modules"}
     source_index = _current_source_index(root)
+    cache_enabled = os.environ.get("PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE") != "1"
+    cache_name = "shell_syntax_clean"
+    shell_cache = _load_preflight_cache(root, cache_name) if cache_enabled else {}
+    cache_dirty = False
+    cache_version = "shell_syntax.v1"
 
     violations: list[str] = []
     n_checked = 0
@@ -17127,6 +17275,15 @@ def check_shell_scripts_syntax_clean(
             continue
         if _is_oss_export_mirror_path(sh):
             continue
+        cache_key = str(sh.resolve())
+        if cache_enabled and _source_cache_row_matches(
+            sh,
+            shell_cache.get(cache_key),
+            bash=bash,
+            scanner_version=cache_version,
+        ):
+            n_checked += 1
+            continue
         try:
             proc = subprocess.run(
                 [bash, "-n", str(sh)],
@@ -17134,19 +17291,35 @@ def check_shell_scripts_syntax_clean(
             )
             n_checked += 1
             if proc.returncode != 0:
+                if shell_cache.pop(cache_key, None) is not None:
+                    cache_dirty = True
                 err = proc.stderr.strip().splitlines()
                 msg = err[0] if err else f"non-zero exit {proc.returncode}"
                 violations.append(
                     f"{sh.relative_to(root)}: bash syntax error: {msg[:200]}"
                 )
+            elif cache_enabled:
+                shell_cache[cache_key] = _source_cache_row(
+                    sh,
+                    bash=bash,
+                    scanner_version=cache_version,
+                )
+                cache_dirty = True
         except subprocess.TimeoutExpired:
+            if shell_cache.pop(cache_key, None) is not None:
+                cache_dirty = True
             violations.append(
                 f"{sh.relative_to(root)}: bash -n timed out (10s)"
             )
         except Exception as e:  # pragma: no cover
+            if shell_cache.pop(cache_key, None) is not None:
+                cache_dirty = True
             violations.append(
                 f"{sh.relative_to(root)}: {type(e).__name__}: {e}"
             )
+
+    if cache_enabled and cache_dirty:
+        _store_preflight_cache(root, cache_name, shell_cache)
 
     if verbose:
         if violations:
