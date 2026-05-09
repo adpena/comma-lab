@@ -2774,7 +2774,7 @@ def check_codebase_drift(
     verbose: bool = True,
 ) -> list[str]:
     """Run the codebase drift check. Raise CodebaseDriftError if strict and violations found."""
-    root = Path(repo_root or REPO_ROOT)
+    root = Path(repo_root or REPO_ROOT).resolve()
     all_violations: list[str] = []
     n_python_scanned = 0
 
@@ -2784,6 +2784,118 @@ def check_codebase_drift(
             "(skipping experiments/results artifacts)",
             flush=True,
         )
+
+    experiments_dir = root / "experiments"
+    if experiments_dir.exists():
+        sh_paths = list(
+            _rg_file_list(
+                root,
+                ["experiments"],
+                ("*.sh",),
+                exclude_globs=(
+                    "experiments/results/**",
+                    "**/__pycache__/**",
+                    "**/comma_lab_public_export/**",
+                ),
+            )
+            or []
+        )
+        if not sh_paths:
+            sh_paths = []
+            for dirpath, dirnames, filenames in os.walk(experiments_dir):
+                dirnames[:] = sorted(d for d in dirnames if d != "__pycache__")
+                base = Path(dirpath)
+                try:
+                    rel_base = base.relative_to(root)
+                except ValueError:
+                    rel_base = base
+                if rel_base.parts[:2] == ("experiments", "results"):
+                    dirnames[:] = []
+                    continue
+                if rel_base.parts == ("experiments",):
+                    dirnames[:] = [d for d in dirnames if d != "results"]
+                for filename in sorted(f for f in filenames if f.endswith(".sh")):
+                    sh_paths.append(base / filename)
+    else:
+        sh_paths = []
+
+    drift_scan_dirs = ["scripts", "experiments",
+                       "src/tac/contrib", "src/tac/deploy",
+                       "src/tac/experiments"]
+    py_paths = list(
+        _rg_file_list(
+            root,
+            drift_scan_dirs,
+            ("*.py",),
+            exclude_globs=(
+                "experiments/results/**",
+                "**/__pycache__/**",
+                "**/comma_lab_public_export/**",
+            ),
+        )
+        or []
+    )
+    if not py_paths:
+        for d in drift_scan_dirs:
+            d_path = root / d
+            if not d_path.exists():
+                continue
+            for dirpath, dirnames, filenames in os.walk(d_path):
+                dirnames[:] = sorted(dn for dn in dirnames if dn != "__pycache__")
+                base = Path(dirpath)
+                try:
+                    rel_base = base.relative_to(root)
+                except ValueError:
+                    rel_base = base
+                if rel_base.parts[:2] == ("experiments", "results"):
+                    dirnames[:] = []
+                    continue
+                if rel_base.parts == ("experiments",):
+                    dirnames[:] = [dn for dn in dirnames if dn != "results"]
+                for filename in sorted(f for f in filenames if f.endswith(".py")):
+                    py_paths.append(base / filename)
+
+    scan_paths = tuple(
+        sorted(
+            {
+                path.resolve()
+                for path in sh_paths + py_paths
+                if not _is_oss_export_mirror_path(path)
+                and not _is_codebase_drift_result_artifact(path, root)
+            },
+            key=lambda item: item.as_posix(),
+        )
+    )
+    cache_enabled = os.environ.get("PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE") != "1"
+    cache_name = "codebase_drift_clean"
+    cache_key = hashlib.sha256(
+        json.dumps(
+            {
+                "allowed_bash_paths": sorted(ALLOWED_BASH_PATHS),
+                "forbidden_file_patterns": FORBIDDEN_FILE_PATTERNS,
+                "scanner_version": "codebase_drift.v1",
+            },
+            sort_keys=True,
+        ).encode()
+    ).hexdigest()
+    cache_rows = _load_preflight_cache(root, cache_name) if cache_enabled else {}
+    source_fingerprint = _fingerprint_paths(
+        scan_paths,
+        root,
+        salt="codebase_drift.v1",
+    )
+    cache_row = cache_rows.get(cache_key)
+    if (
+        cache_enabled
+        and isinstance(cache_row, dict)
+        and cache_row.get("source_fingerprint") == source_fingerprint
+    ):
+        if verbose:
+            print(
+                "  [codebase-drift] OK: cached clean source launch surfaces",
+                flush=True,
+            )
+        return []
 
     # 1. Forbidden file patterns
     for pattern in FORBIDDEN_FILE_PATTERNS:
@@ -2800,23 +2912,6 @@ def check_codebase_drift(
     # gitignored. The drift rule exists to prevent ad-hoc deploy scripts
     # creeping in alongside the canonical pipeline.py + deploy_vastai.py path,
     # which a frozen result-bundle audit trail does not violate.
-    experiments_dir = root / "experiments"
-    sh_paths: list[Path] = []
-    if experiments_dir.exists():
-        for dirpath, dirnames, filenames in os.walk(experiments_dir):
-            dirnames[:] = sorted(d for d in dirnames if d != "__pycache__")
-            base = Path(dirpath)
-            try:
-                rel_base = base.relative_to(root)
-            except ValueError:
-                rel_base = base
-            if rel_base.parts[:2] == ("experiments", "results"):
-                dirnames[:] = []
-                continue
-            if rel_base.parts == ("experiments",):
-                dirnames[:] = [d for d in dirnames if d != "results"]
-            for filename in sorted(f for f in filenames if f.endswith(".sh")):
-                sh_paths.append(base / filename)
     for sh_path in sh_paths:
         if sh_path.is_dir():
             continue  # recovered_*.sh is a directory, not a script
@@ -2861,35 +2956,23 @@ def check_codebase_drift(
     # membership (path components never contain `/`). Round 13 R13-1
     # corrected the previous "across all scanners" claim which would
     # mislead a future reviewer into flagging that scanner as a bug.
-    drift_scan_dirs = ["scripts", "experiments",
-                       "src/tac/contrib", "src/tac/deploy",
-                       "src/tac/experiments"]
-    for d in drift_scan_dirs:
-        d_path = root / d
-        if not d_path.exists():
+    for py_path in py_paths:
+        if _is_codebase_drift_result_artifact(py_path, root):
             continue
-        py_paths: list[Path] = []
-        for dirpath, dirnames, filenames in os.walk(d_path):
-            dirnames[:] = sorted(dn for dn in dirnames if dn != "__pycache__")
-            base = Path(dirpath)
-            try:
-                rel_base = base.relative_to(root)
-            except ValueError:
-                rel_base = base
-            if rel_base.parts[:2] == ("experiments", "results"):
-                dirnames[:] = []
-                continue
-            if rel_base.parts == ("experiments",):
-                dirnames[:] = [dn for dn in dirnames if dn != "results"]
-            for filename in sorted(f for f in filenames if f.endswith(".py")):
-                py_paths.append(base / filename)
-        for py_path in py_paths:
-            if _is_codebase_drift_result_artifact(py_path, root):
-                continue
-            if _is_oss_export_mirror_path(py_path):
-                continue
-            n_python_scanned += 1
-            all_violations.extend(_scan_python_for_forbidden(py_path))
+        if _is_oss_export_mirror_path(py_path):
+            continue
+        n_python_scanned += 1
+        all_violations.extend(_scan_python_for_forbidden(py_path))
+
+    if cache_enabled:
+        if all_violations:
+            cache_rows.pop(cache_key, None)
+        else:
+            cache_rows[cache_key] = {
+                "source_fingerprint": source_fingerprint,
+                "scanned_path_count": len(scan_paths),
+            }
+        _store_preflight_cache(root, cache_name, cache_rows)
 
     if verbose:
         if all_violations:
