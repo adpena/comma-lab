@@ -26785,6 +26785,27 @@ def _memo_declares_hook(text: str, hook_label: str, aliases: tuple[str, ...]) ->
                 continue
             # Look for declaration-form markers in the next ~80 chars.
             window = after[:120]
+            is_na_form = (
+                "n/a" in window
+                or window.lstrip(" :=—-").lower().startswith("na")
+            )
+            negative_phrases = (
+                "not wired",
+                "not wire",
+                "not integrated",
+                "not implemented",
+                "not routed",
+                "not connected",
+                "no wire",
+                "no hook",
+                "missing",
+                "unwired",
+                "deferred",
+                "todo",
+            )
+            if not is_na_form and any(p in window for p in negative_phrases):
+                # Acknowledging absence is not a wire-in declaration.
+                continue
             if (
                 window.startswith(":")
                 or window.startswith("=")
@@ -26803,7 +26824,7 @@ def _memo_declares_hook(text: str, hook_label: str, aliases: tuple[str, ...]) ->
                 # Strong signal: the line is genuinely declaring the hook.
                 # If the form is ``<alias>: N/A``, require a non-empty
                 # rationale on the same line.
-                if "n/a" in window or window.lstrip(" :=—-").lower().startswith("na"):
+                if is_na_form:
                     # Look for trailing rationale after "N/A"
                     na_pos = window.find("n/a")
                     if na_pos < 0:
@@ -26856,30 +26877,28 @@ def check_subagent_landing_has_solver_wire_in(
       feedback_unified_lagrangian_action_principle_GR_style_20260509.md
       feedback_design_tension_ship_both_interpretations_let_math_arbitrate_20260509.md
     """
-    # Resolve the memory directory. Default to the canonical PACT memory dir.
+    # Resolve the memory directory. Prefer explicit configuration. The fallback
+    # derives Claude's project slug from the repo path instead of hardcoding an
+    # operator-specific absolute path in reusable tac code.
     if memory_dir is None:
-        # The PACT memory dir lives outside the repo at
-        # ~/.claude/projects/-Users-adpena-Projects-pact/memory/
-        # Allow override via the env var in case the harness is run on a
-        # different machine.
         env_dir = os.environ.get("PACT_MEMORY_DIR")
         if env_dir:
             memory_dir = Path(env_dir)
         else:
-            home = Path(os.path.expanduser("~"))
-            memory_dir = (
-                home
-                / ".claude"
-                / "projects"
-                / "-Users-adpena-Projects-pact"
-                / "memory"
-            )
+            root = Path(REPO_ROOT).resolve()
+            slug_parts = [p.strip("/") for p in root.parts if p.strip("/")]
+            slug = "-" + "-".join(slug_parts)
+            memory_dir = Path(os.path.expanduser("~")) / ".claude" / "projects" / slug / "memory"
     memory_dir = Path(memory_dir)
     if not memory_dir.is_dir():
         msg = f"memory dir not present: {memory_dir}"
         if verbose:
-            print(f"  [subagent-landing-wire-in] OK (no memory dir; nothing to scan)")
-        return []  # Don't fail; some hosts may not have the dir mounted.
+            print(f"  [subagent-landing-wire-in] WARN: {msg}")
+        if strict:
+            raise PreflightError(
+                "check_subagent_landing_has_solver_wire_in: " + msg
+            )
+        return [msg]
 
     violations: list[str] = []
     scanned_total = 0
@@ -27145,6 +27164,34 @@ def _commit_introduced_files(
     return paths_by_sha
 
 
+def _worktree_changed_files(repo_root: Path) -> list[str]:
+    """Return tracked dirty/staged + untracked source paths in the worktree."""
+    paths: set[str] = set()
+    commands = (
+        ["git", "diff", "--name-only", "--diff-filter=AMRT", "HEAD"],
+        ["git", "ls-files", "--others", "--exclude-standard"],
+    )
+    for cmd in commands:
+        try:
+            result = subprocess.run(
+                cmd,
+                cwd=repo_root,
+                capture_output=True,
+                text=True,
+                timeout=15,
+                check=False,
+            )
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+            continue
+        if result.returncode != 0:
+            continue
+        for raw_line in result.stdout.splitlines():
+            rel = raw_line.strip()
+            if rel:
+                paths.add(rel)
+    return sorted(paths)
+
+
 # Path prefixes that are scanned for lane_id references. Per the spec:
 # src/tac/, tools/, experiments/, scripts/.
 _LANE_ID_SCAN_PREFIXES: tuple[str, ...] = (
@@ -27179,6 +27226,21 @@ _LANE_ID_FAKE_WAIVER_FILE_RE = re.compile(
     re.IGNORECASE,
 )
 
+_LANE_ID_FILE_WAIVER_ALLOWED_RELS: frozenset[str] = frozenset({
+    # Test files whose entire purpose is to construct fake lane_id fixtures
+    # to exercise the gate. Per Check #126 file-level waiver semantics —
+    # additions to this allowlist are intentional and require council/operator
+    # justification (the FAKE_LANE_OK_FILE marker on its own is not enough to
+    # avoid abuse; only files in this allowlist OR per-line FAKE_LANE_OK
+    # markers are accepted).
+    "src/tac/tests/test_check_lane_pre_registered_before_work_starts.py",
+    "src/tac/tests/test_check_representation_lane_has_archive_grammar.py",
+    "src/tac/tests/test_check_subagent_landing_has_solver_wire_in.py",
+    "src/tac/tests/test_lane_maturity_harness.py",
+    "src/tac/tests/test_continual_learning.py",
+    "src/tac/tests/test_preflight_subagent_coherence.py",
+})
+
 
 def _line_or_window_has_fake_waiver(lines: list[str], lineno: int, window: int = 5) -> bool:
     """Return True iff the same line OR within ``window`` lines above carries
@@ -27198,6 +27260,14 @@ def _is_test_path(rel: str) -> bool:
     return any(p == "tests" for p in parts) or any(
         p.startswith("test_") for p in parts
     )
+
+
+def _file_level_fake_lane_waiver_applies(rel: str, lines: list[str]) -> bool:
+    """Return True only for the dedicated Check #126 self-test file."""
+    if rel not in _LANE_ID_FILE_WAIVER_ALLOWED_RELS:
+        return False
+    head = "\n".join(lines[:30])
+    return bool(_LANE_ID_FAKE_WAIVER_FILE_RE.search(head))
 
 
 def check_lane_pre_registered_before_work_starts(
@@ -27269,20 +27339,23 @@ def check_lane_pre_registered_before_work_starts(
                 if isinstance(alias, str) and alias:
                     registered_ids.add(alias)
 
-    paths_by_sha = _commit_introduced_files(root, n_commits)
-    if not paths_by_sha:
+    paths_by_source = _commit_introduced_files(root, n_commits)
+    worktree_paths = _worktree_changed_files(root)
+    if worktree_paths:
+        paths_by_source["WORKTREE"] = worktree_paths
+    if not paths_by_source:
         if verbose:
             print(
                 f"  [lane-pre-registered] OK "
-                f"(no commits resolvable in last {n_commits}; "
-                f"git log empty or git unavailable)"
+                f"(no commits or worktree changes resolvable; "
+                f"git log/diff empty or git unavailable)"
             )
         return []
 
     violations: list[str] = []
     scanned_files = 0
     scanned_lines = 0
-    for sha, paths in paths_by_sha.items():
+    for source, paths in paths_by_source.items():
         for rel in paths:
             # Filter to scan-prefix-and-extension subset.
             if not rel.endswith(_LANE_ID_SCAN_EXTENSIONS):
@@ -27301,15 +27374,8 @@ def check_lane_pre_registered_before_work_starts(
             lines = text.splitlines()
             scanned_lines += len(lines)
             is_test = _is_test_path(rel)
-            # File-level waiver: a single `# FAKE_LANE_OK_FILE:<reason>` in
-            # the first 30 lines exempts an entire test file. Used for files
-            # whose entire purpose is to test the gate via dozens of fake
-            # lane_id fixtures (per-line waivers would be noise and would
-            # mask real future violations introduced into the same file).
-            if is_test:
-                head = "\n".join(lines[:30])
-                if _LANE_ID_FAKE_WAIVER_FILE_RE.search(head):
-                    continue
+            if is_test and _file_level_fake_lane_waiver_applies(rel, lines):
+                continue
             for lineno, line in enumerate(lines):
                 # Quick prefilter — skip lines without "lane_" prefix.
                 if "lane_" not in line:
@@ -27328,7 +27394,7 @@ def check_lane_pre_registered_before_work_starts(
                     if is_test and _line_or_window_has_fake_waiver(lines, lineno):
                         continue
                     violations.append(
-                        f"[Check 126] {rel}:{lineno + 1} (commit {sha[:8]}): "
+                        f"[Check 126] {rel}:{lineno + 1} (source {source[:8]}): "
                         f"references unregistered lane_id {token!r}. "
                         "Pre-register via "
                         f"`tools/lane_maturity.py add-lane {token} "
@@ -27346,7 +27412,7 @@ def check_lane_pre_registered_before_work_starts(
             print(
                 f"  [lane-pre-registered] {len(violations)} reference(s) to "
                 f"unregistered lane_id(s) (scanned: {scanned_files} file(s), "
-                f"{scanned_lines} line(s) across {len(paths_by_sha)} commit(s))"
+                f"{scanned_lines} line(s) across {len(paths_by_source)} source(s))"
             )
             for v in violations[:5]:
                 print(f"    • {v[:240]}")
@@ -27355,7 +27421,7 @@ def check_lane_pre_registered_before_work_starts(
         else:
             print(
                 f"  [lane-pre-registered] OK "
-                f"({scanned_files} file(s) across {len(paths_by_sha)} commit(s) "
+                f"({scanned_files} file(s) across {len(paths_by_source)} source(s) "
                 f"scanned; 0 unregistered lane references)"
             )
 
@@ -27405,6 +27471,38 @@ _CUSTODY_VALIDATOR_TOKENS: tuple[str, ...] = (
 _CUSTODY_WAIVER_MARKER = "CUSTODY_VALIDATOR_OK"
 
 
+def _line_window_contains_any(
+    lines: list[str],
+    lineno: int,
+    tokens: tuple[str, ...],
+    *,
+    before: int = 4,
+    after: int = 4,
+) -> bool:
+    start = max(0, lineno - before)
+    end = min(len(lines), lineno + after + 1)
+    window = "\n".join(lines[start:end])
+    return any(tok in window for tok in tokens)
+
+
+def _line_has_authoritative_tag_bypass_pattern(line: str) -> bool:
+    """Return True for tag-only predicates that can promote without custody."""
+    if "`" in line:
+        return False
+    if "AUTHORITATIVE_TAGS" in line and re.search(
+        r"\b(?:not\s+in|in)\s+AUTHORITATIVE_TAGS\b", line
+    ):
+        return True
+    tag_literal = r"['\"]\[contest-(?:CPU|CUDA)[^'\"]*['\"]"
+    if re.search(rf"(?:==|!=)\s*{tag_literal}", line):
+        return True
+    if re.search(rf"{tag_literal}\s*(?:==|!=)", line):
+        return True
+    if re.search(r"\.(?:startswith|endswith)\(\s*['\"]\[contest-(?:CPU|CUDA)", line):
+        return True
+    return False
+
+
 def check_authoritative_tag_requires_custody_metadata(
     *,
     repo_root: Path | None = None,
@@ -27449,6 +27547,10 @@ def check_authoritative_tag_requires_custody_metadata(
         if not scan_dir.is_dir():
             continue
         for py in scan_dir.rglob("*.py"):
+            rel_py = py.relative_to(root) if py.is_relative_to(root) else py
+            rel_py_s = str(rel_py)
+            if rel_py_s.startswith("experiments/results/"):
+                continue
             if py in EXCLUDED:
                 continue
             # Skip tests (they exercise the API legitimately).
@@ -27458,42 +27560,38 @@ def check_authoritative_tag_requires_custody_metadata(
                 text = py.read_text(encoding="utf-8", errors="replace")
             except OSError:
                 continue
-            # Quick prefilter: skip files that don't reference AUTHORITATIVE_TAGS
-            # at all. Files that only mention tag literals in docstrings are not
-            # bypass patterns; the bypass requires the membership check.
-            if "AUTHORITATIVE_TAGS" not in text:
+            # Quick prefilter: skip files that don't reference the tag set or
+            # literal authoritative tags at all.
+            if "AUTHORITATIVE_TAGS" not in text and not any(
+                tag in text for tag in _AUTHORITATIVE_TAG_LITERALS
+            ):
                 continue
             scanned_files += 1
             lines = text.splitlines()
-            # Whole-file accept: if the file uses any of the canonical
-            # validator/router functions, the AUTHORITATIVE_TAGS reference is
-            # part of the validation pipeline (not a bypass).
-            if any(tok in text for tok in _CUSTODY_VALIDATOR_TOKENS):
-                continue
             for lineno, line in enumerate(lines):
                 # Skip comment-only lines.
                 stripped = line.lstrip()
                 if stripped.startswith("#"):
                     continue
-                # The bypass pattern is `something in AUTHORITATIVE_TAGS`
-                # (or `not in AUTHORITATIVE_TAGS`) WITHOUT an adjacent
-                # validator routing. We catch the membership-check token.
-                if "in AUTHORITATIVE_TAGS" not in line:
+                if not _line_has_authoritative_tag_bypass_pattern(line):
                     continue
                 # Same-line waiver?
                 if _CUSTODY_WAIVER_MARKER in line:
                     continue
-                rel = py.relative_to(root) if py.is_relative_to(root) else py
+                if _line_window_contains_any(
+                    lines, lineno, _CUSTODY_VALIDATOR_TOKENS
+                ):
+                    continue
                 violations.append(
-                    f"[Check 127] {rel}:{lineno + 1}: "
-                    "membership check `in AUTHORITATIVE_TAGS` without an "
-                    "adjacent validate_custody / posterior_update call. "
+                    f"[Check 127] {rel_py}:{lineno + 1}: "
+                    "authoritative tag predicate without an adjacent "
+                    "validate_custody / posterior_update call. "
                     "Per codex round-2 HIGH 2, every authoritative-tag site MUST "
                     "route through `tac.continual_learning.ContestResult."
                     "validate_custody` (or `posterior_update`/`posterior_update_locked`) "
                     "to verify (tag, axis, hardware_substrate) jointly. Add a "
-                    "`# CUSTODY_VALIDATOR_OK:<reason>` waiver if the site is "
-                    "intentionally tag-only."
+                    "`# CUSTODY_VALIDATOR_OK:<reason>` waiver on the same line "
+                    "if the site is intentionally tag-only."
                 )
 
     if verbose:
@@ -27532,9 +27630,9 @@ def check_authoritative_tag_requires_custody_metadata(
 # the load → mutate → write cycle is not atomic. The locked path
 # `posterior_update_locked` does load → update → save inside an exclusive
 # fcntl lock so concurrent updates of distinct anchors all survive.
-# This gate refuses any caller importing `save_posterior` directly without
-# adjacent `posterior_update_locked`/`_posterior_lock` use OR a same-line
-# waiver `# SAVE_POSTERIOR_LOCKED_OK:<reason>`.
+# This gate refuses any caller invoking `save_posterior` directly without a
+# local `_posterior_lock` context OR a same-line waiver
+# `# SAVE_POSTERIOR_LOCKED_OK:<reason>`.
 
 
 _SAVE_POSTERIOR_WAIVER_MARKER = "SAVE_POSTERIOR_LOCKED_OK"
@@ -27552,9 +27650,7 @@ def check_continual_learning_writes_use_lock(
     import `save_posterior` from `tac.continual_learning` (or call it
     directly) without:
 
-    1. Also using `posterior_update_locked` / `_posterior_lock` in the
-       same file (i.e., the file is the canonical writer that owns the
-       locking discipline), OR
+    1. A local `_posterior_lock` context visible near the direct write, OR
     2. A same-line waiver `# SAVE_POSTERIOR_LOCKED_OK:<reason>`.
 
     Held warn-only initially per the directive — flip to STRICT after live
@@ -27582,6 +27678,10 @@ def check_continual_learning_writes_use_lock(
         if not scan_dir.is_dir():
             continue
         for py in scan_dir.rglob("*.py"):
+            rel_py = py.relative_to(root) if py.is_relative_to(root) else py
+            rel_py_s = str(rel_py)
+            if rel_py_s.startswith("experiments/results/"):
+                continue
             if py in EXCLUDED:
                 continue
             if "/tests/" in str(py) or py.name.startswith("test_"):
@@ -27593,12 +27693,6 @@ def check_continual_learning_writes_use_lock(
             if "save_posterior" not in text:
                 continue
             scanned_files += 1
-            # Whole-file accept: if the file ALSO uses the locked path or
-            # the lock context manager, treat it as a canonical writer.
-            uses_lock_path = (
-                "posterior_update_locked" in text
-                or "_posterior_lock" in text
-            )
             lines = text.splitlines()
             for lineno, line in enumerate(lines):
                 stripped = line.lstrip()
@@ -27607,20 +27701,25 @@ def check_continual_learning_writes_use_lock(
                 # Direct call to save_posterior (not save_posterior_locked,
                 # which doesn't currently exist but reserved as future-compat).
                 # Match the bare call form `save_posterior(...)`. Skip
-                # imports — only the call site is the bug.
-                if "save_posterior(" not in line:
+                # imports and diagnostic/error strings.
+                if not re.search(r"(^|[^\w.])save_posterior\s*\(", line):
+                    continue
+                if stripped.startswith(("\"", "'", "f\"", "f'", "r\"", "r'")):
                     continue
                 if _SAVE_POSTERIOR_WAIVER_MARKER in line:
                     continue
-                if uses_lock_path:
-                    # Caller co-owns the lock discipline; allow.
+                if _line_window_contains_any(
+                    lines, lineno, ("_posterior_lock",), before=4, after=1
+                ):
+                    # The direct write is visibly inside or immediately under
+                    # the lock context. A bare posterior_update_locked mention
+                    # elsewhere in the file is not sufficient.
                     continue
-                rel = py.relative_to(root) if py.is_relative_to(root) else py
                 violations.append(
-                    f"[Check 128] {rel}:{lineno + 1}: "
+                    f"[Check 128] {rel_py}:{lineno + 1}: "
                     "calls `save_posterior(...)` directly without "
-                    "`posterior_update_locked` / `_posterior_lock` use in the "
-                    "same file. Per codex round-2 MEDIUM, parallel harvesters "
+                    "`_posterior_lock` context visible in the local line window. "
+                    "Per codex round-2 MEDIUM, parallel harvesters "
                     "MUST go through `posterior_update_locked` so the "
                     "load→update→save cycle is atomic under fcntl. Add a "
                     "`# SAVE_POSTERIOR_LOCKED_OK:<reason>` waiver if the site "
