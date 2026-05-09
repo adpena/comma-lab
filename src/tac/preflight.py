@@ -3884,6 +3884,127 @@ def _import_inside_try_handler(tree: ast.Module, target: ast.ImportFrom) -> bool
     return False
 
 
+_SIMPLE_TAC_IMPORT_LINE_RE = re.compile(
+    r"^[ \t]*from[ \t]+(tac(?:\.[A-Za-z_][A-Za-z0-9_]*)*)[ \t]+import[ \t]+([^#\n]+)",
+)
+_GRACEFUL_EXCEPT_LINE_RE = re.compile(
+    r"^except(?:\s*(?::|\([^)]*(?:ImportError|ModuleNotFoundError)[^)]*\)|"
+    r"(?:ImportError|ModuleNotFoundError)\b))"
+)
+
+
+def _graceful_try_body_line_ranges(text: str) -> list[tuple[int, int]] | None:
+    """Return 1-based inclusive line ranges for graceful import fallbacks.
+
+    ``None`` means the shape is complex enough that the AST path should handle
+    it. The fast path only needs to avoid false positives for imports inside a
+    simple ``try: ... except ImportError|ModuleNotFoundError|:`` block.
+    """
+
+    ranges: list[tuple[int, int]] = []
+    lines = text.splitlines()
+    for idx, line in enumerate(lines):
+        stripped = line.lstrip()
+        if not stripped.startswith("try:"):
+            continue
+        if stripped != "try:":
+            return None
+        indent = len(line) - len(stripped)
+        body_start = idx + 2
+        cursor = idx + 1
+        while cursor < len(lines):
+            candidate = lines[cursor]
+            candidate_stripped = candidate.lstrip()
+            if not candidate_stripped:
+                cursor += 1
+                continue
+            candidate_indent = len(candidate) - len(candidate_stripped)
+            if candidate_indent < indent:
+                break
+            if candidate_indent == indent:
+                if candidate_stripped.startswith("except"):
+                    if _GRACEFUL_EXCEPT_LINE_RE.match(candidate_stripped):
+                        ranges.append((body_start, cursor))
+                    break
+                break
+            cursor += 1
+    return ranges
+
+
+def _line_in_ranges(line_number: int, ranges: list[tuple[int, int]]) -> bool:
+    return any(start <= line_number <= end for start, end in ranges)
+
+
+def _parse_simple_import_names(raw_names: str) -> list[str] | None:
+    """Parse a simple comma-separated ImportFrom name list."""
+
+    if ";" in raw_names:
+        return None
+    cleaned = (
+        raw_names.replace("\\", "")
+        .replace("(", " ")
+        .replace(")", " ")
+        .replace("\n", ",")
+    )
+    names: list[str] = []
+    for raw_name in cleaned.split(","):
+        name = raw_name.split("#", 1)[0].strip()
+        if not name:
+            continue
+        if name == "*":
+            continue
+        if " as " in name:
+            name = name.split(" as ", 1)[0].strip()
+        if not name.isidentifier():
+            return None
+        names.append(name)
+    return names
+
+
+def _simple_tac_imports_fast(text: str) -> list[tuple[int, str, list[str]]] | None:
+    """Fast path for ordinary top-level ``from tac.X import Y`` statements.
+
+    ImportFrom AST walking dominates ``preflight_dead_resolvers``. Most files
+    only contain simple imports. Parenthesized and backslash-continued imports
+    are handled here; truly complex syntax returns ``None`` so the
+    authoritative AST path handles it.
+    """
+
+    graceful_try_ranges = _graceful_try_body_line_ranges(text)
+    if graceful_try_ranges is None:
+        return None
+    rows: list[tuple[int, str, list[str]]] = []
+    lines = text.splitlines()
+    line_index = 0
+    while line_index < len(lines):
+        line_number = line_index + 1
+        line = lines[line_index]
+        line_index += 1
+        if graceful_try_ranges and _line_in_ranges(line_number, graceful_try_ranges):
+            continue
+        match = _SIMPLE_TAC_IMPORT_LINE_RE.match(line)
+        if match is None:
+            continue
+        raw_names = match.group(2).strip()
+        while raw_names.rstrip().endswith("\\"):
+            if line_index >= len(lines):
+                return None
+            raw_names = raw_names.rstrip()[:-1] + "\n" + lines[line_index]
+            line_index += 1
+        if "(" in raw_names and ")" not in raw_names:
+            while line_index < len(lines) and ")" not in raw_names:
+                raw_names += "\n" + lines[line_index]
+                line_index += 1
+            if ")" not in raw_names:
+                return None
+        names = _parse_simple_import_names(raw_names)
+        if names is None:
+            return None
+        if names:
+            rows.append((line_number, match.group(1), names))
+    return rows
+
+
 def _scan_python_for_dead_imports(path: Path, repo_root: Path) -> list[str]:
     """Find `from tac.X import Y` where Y is not defined at top level in
     tac.X AND Y is not a resolvable submodule. Skips imports inside
@@ -3897,12 +4018,34 @@ def _scan_python_for_dead_imports(path: Path, repo_root: Path) -> list[str]:
         return []
     if "from tac." not in text:
         return []
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    violations: list[str] = []
+    fast_imports = _simple_tac_imports_fast(text)
+    if fast_imports is not None:
+        for lineno, module, names in fast_imports:
+            mod_path = _resolve_tac_module_path(module, repo_root)
+            if mod_path is None:
+                continue
+            defined = _module_top_level_names(mod_path)
+            for name in names:
+                if name in defined:
+                    continue
+                if _is_resolvable_submodule(module, name, repo_root):
+                    continue
+                violations.append(
+                    f"{rel}:{lineno}: imports {name!r} from "
+                    f"{module} but that name is NOT defined at the top "
+                    f"level of {mod_path.relative_to(repo_root)} and is not a "
+                    f"resolvable submodule. DEAD IMPORT: runtime NameError when "
+                    f".pyc cache is invalidated. "
+                    f"(segnet_uncertainty_weighted_loss bug class.)"
+                )
+        return violations
+
     _text, tree, err = _read_python_text_and_tree(path)
     if err is not None or tree is None:
         return []
 
-    rel = path.relative_to(repo_root) if path.is_absolute() else path
-    violations: list[str] = []
     for node in ast.walk(tree):
         if not isinstance(node, ast.ImportFrom):
             continue

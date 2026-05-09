@@ -360,6 +360,24 @@ def test_dead_import_satisfied_by_real_definition(tmp_path: Path) -> None:
     assert v == [], v
 
 
+def test_dead_import_fast_path_handles_alias_and_multiple_names(tmp_path: Path) -> None:
+    root = _stub_repo(tmp_path)
+    _write(root / "src" / "tac" / "losses.py", """
+        def real_function():
+            return 1
+    """)
+    script = root / "experiments" / "alias_import.py"
+    _write(script, """
+        from tac.losses import real_function as renamed, missing_function
+    """)
+
+    v = _scan_python_for_dead_imports(script, root)
+
+    assert len(v) == 1, v
+    assert "missing_function" in v[0]
+    assert "real_function" not in v[0]
+
+
 def test_dead_import_skips_try_except_importerror(tmp_path: Path) -> None:
     """Imports inside try/except ImportError are intentional graceful
     fallback patterns — should not be flagged."""
