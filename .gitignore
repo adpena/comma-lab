@@ -170,6 +170,10 @@ src/tac.egg-info/
 # should stay local unless explicitly curated and force-added.
 reports/raw/
 reports/raw/**
+# Raw Kaggle/contest checkouts may contain nested `.git` directories; keep
+# them local custody unless a sanitized manifest is promoted.
+reports/raw/kaggle_ingest/
+reports/raw/kaggle_ingest/**
 reports/private/
 reports/public/.env
 

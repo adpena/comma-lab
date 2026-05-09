@@ -22,13 +22,13 @@
     {
       "classification": "generated_custody_source_untracked",
       "disposition": "ignore_rebuildable",
-      "note": "prefix: experiment result trees are raw rebuildable custody; track only promoted source, ledgers, or compact manifests outside this root. Runtime-source baseline refreshed after A5 channel-DP and contemporaneous Track4 raw custody; durable signal is summarized in .omx/research ledgers.",
+      "note": "prefix: experiment result trees are raw rebuildable custody; track only promoted source, ledgers, or compact manifests outside this root. Runtime-source baseline refreshed after A5 channel-DP, Track4, and contemporaneous Phase-2 raw custody; durable signal is summarized in .omx/research ledgers.",
       "path": "experiments/results/",
       "path_kind": "prefix",
       "runtime_source_baseline": {
         "algorithm": "pact_runtime_source_set_v1",
-        "count": 10605,
-        "sha256": "3a0fce54df571d905657fe41f75410a66e5cf0a7670d4af4b761209e6b9d677c"
+        "count": 10637,
+        "sha256": "3fe01f21ef3e5fc5fb9746c61dd24be54bf219c66b7fb94a1c759f38f5ce573e"
       }
     },
     {
