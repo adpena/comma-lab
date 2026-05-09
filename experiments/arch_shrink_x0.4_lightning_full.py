@@ -643,6 +643,45 @@ def claim_lane(*, job_name: str, force_claim: bool, force_claim_reason: str | No
         sys.exit(f"FATAL: claim_lane_dispatch.py failed (rc={result.returncode})")
 
 
+def _build_pending_record(
+    *,
+    job_name: str,
+    machine: str,
+    manifest_path: Path,
+) -> dict[str, object]:
+    """Construct the canonical lightning_active_jobs row (status-agnostic).
+
+    Both ``register_pending_job_locked`` (status=pending) and
+    ``update_pending_to_active_locked`` (status=active) consume this
+    same shape. Splitting the construction out of the submit path keeps
+    the pending row IDENTICAL to the active row except for the status
+    + submit_result fields, so the harvester sees a stable schema.
+    """
+    return {
+        "schema_version": "lightning_active_jobs.v1",
+        "lane_id": LANE_ID,
+        "job_name": job_name,
+        "submitted_at_utc": _utc_now_iso(),
+        "machine": machine,
+        "profile": PROFILE,
+        "target_elements": TARGET_ELEMENTS,
+        "predicted_band": [0.40, 0.80],
+        "evidence_tag_pending": "[contest-CUDA]",
+        "manifest_path": str(manifest_path.relative_to(REPO_ROOT))
+        if manifest_path.is_relative_to(REPO_ROOT)
+        else str(manifest_path),
+        "expected_artifact_dir": (
+            f"experiments/results/lightning_batch/{job_name}"
+        ),
+        "expected_archive_path": (
+            f"experiments/results/lightning_batch/{job_name}/archive.zip"
+        ),
+        "expected_auth_eval_json": (
+            f"experiments/results/lightning_batch/{job_name}/contest_auth_eval.json"
+        ),
+    }
+
+
 def submit_lightning_job(
     *,
     job_name: str,
@@ -659,6 +698,12 @@ def submit_lightning_job(
     The call returns a Job handle exposing ``name`` and ``status``. We persist
     these to ``LIGHTNING_ACTIVE_JOBS_PATH`` so the harvester can poll without
     re-importing the SDK.
+
+    Codex round 6 HIGH 2 (catalog #143): the caller MUST have already
+    called ``register_pending_job_locked(...)`` BEFORE invoking this
+    helper. The submit-helper itself is allowed to call ``Job.run``
+    without an inline pending-register because the pending-row contract
+    is owned by the surrounding ``main()`` flow.
     """
     if dry_run:
         return {
@@ -681,7 +726,7 @@ def submit_lightning_job(
         "UV_EXTRA_INDEX_URL": UV_EXTRA_INDEX_URL,
         "UV_INDEX_STRATEGY": UV_INDEX_STRATEGY,
     }
-    job = Job.run(
+    job = Job.run(  # JOB_RUN_BEFORE_REGISTER_OK:caller-owns-pending-row-contract-#143
         name=job_name,
         machine=machine,
         command=command,
@@ -702,6 +747,37 @@ def submit_lightning_job(
     }
 
 
+def register_pending_active_job(
+    *,
+    job_name: str,
+    machine: str,
+    manifest_path: Path,
+) -> None:
+    """Codex round 6 HIGH 2 (catalog #143): pre-submit pending-row write.
+
+    Writes a ``status=pending`` row to the active-jobs tracker BEFORE
+    the paid Lightning submit. If the tracker is corrupt, the write
+    raises ``ActiveJobsCorruptError`` and the dispatcher refuses to
+    even attempt the submit (no orphan paid job). On success, the
+    pending row is durable; the post-submit promote uses
+    ``update_pending_to_active_locked`` to record the actual submit
+    result. On submit failure (e.g., import error before any network
+    call), use ``cancel_pending_job_locked`` to drop the pending row.
+    """
+    from tac.deploy.lightning.active_jobs_state import (
+        register_pending_job_locked,
+    )
+
+    record = _build_pending_record(
+        job_name=job_name, machine=machine, manifest_path=manifest_path,
+    )
+    register_pending_job_locked(record)
+    print(
+        f"[pending] {LIGHTNING_ACTIVE_JOBS_PATH.relative_to(REPO_ROOT)} "
+        f"job_name={job_name} status=pending (pre-submit)"
+    )
+
+
 def persist_active_job(
     *,
     job_name: str,
@@ -709,45 +785,48 @@ def persist_active_job(
     submit_result: dict[str, object],
     manifest_path: Path,
 ) -> None:
-    """Append a row to .omx/state/lightning_active_jobs.json."""
-    LIGHTNING_ACTIVE_JOBS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    if LIGHTNING_ACTIVE_JOBS_PATH.exists():
-        existing = json.loads(LIGHTNING_ACTIVE_JOBS_PATH.read_text(encoding="utf-8"))
-        if not isinstance(existing, list):
-            existing = []
-    else:
-        existing = []
-    record = {
-        "schema_version": "lightning_active_jobs.v1",
-        "lane_id": LANE_ID,
-        "job_name": job_name,
-        "submitted_at_utc": _utc_now_iso(),
-        "machine": machine,
-        "profile": PROFILE,
-        "target_elements": TARGET_ELEMENTS,
-        "predicted_band": [0.40, 0.80],
-        "evidence_tag_pending": "[contest-CUDA]",
-        "manifest_path": str(manifest_path.relative_to(REPO_ROOT))
-        if manifest_path.is_relative_to(REPO_ROOT)
-        else str(manifest_path),
-        "expected_artifact_dir": (
-            f"experiments/results/lightning_batch/{job_name}"
-        ),
-        "expected_archive_path": (
-            f"experiments/results/lightning_batch/{job_name}/archive.zip"
-        ),
-        "expected_auth_eval_json": (
-            f"experiments/results/lightning_batch/{job_name}/contest_auth_eval.json"
-        ),
-        "submit_result": submit_result,
-    }
-    existing.append(record)
-    LIGHTNING_ACTIVE_JOBS_PATH.write_text(
-        json.dumps(existing, indent=2) + "\n", encoding="utf-8"
+    """Promote the pending row to status=active under fcntl lock.
+
+    Codex round 6 HIGH 2 (catalog #143): this is the POST-submit step
+    of the create-pending-row-before-submit pattern. The pending row
+    must already exist (created by ``register_pending_active_job``
+    BEFORE the paid submit). If the active-jobs tracker became corrupt
+    between pending-register and post-submit, the dispatcher emits an
+    explicit "PAID JOB ORPHANED — RUN HARVESTER MANUALLY" warning AND
+    re-raises so the operator is notified.
+    """
+    from tac.deploy.lightning.active_jobs_state import (
+        ActiveJobsCorruptError,
+        PendingJobNotFoundError,
+        update_pending_to_active_locked,
     )
-    print(
-        f"[persist] {LIGHTNING_ACTIVE_JOBS_PATH.relative_to(REPO_ROOT)} ({len(existing)} active jobs)"
-    )
+
+    try:
+        rows_after = update_pending_to_active_locked(
+            job_name=job_name,
+            submit_result=submit_result,
+        )
+        print(
+            f"[persist] {LIGHTNING_ACTIVE_JOBS_PATH.relative_to(REPO_ROOT)} "
+            f"({len(rows_after)} active jobs); job_name={job_name} promoted to status=active"
+        )
+    except (ActiveJobsCorruptError, PendingJobNotFoundError) as exc:
+        # Paid job is real; tracker write failed AFTER submit.
+        # Print a loud orphan warning so the operator can recover.
+        print(
+            "\n!!! PAID JOB ORPHANED — RUN HARVESTER MANUALLY !!!\n"
+            f"job_name={job_name}\n"
+            f"machine={machine}\n"
+            f"submit_result={submit_result!r}\n"
+            f"manifest_path={manifest_path}\n"
+            f"reason: {type(exc).__name__}: {exc}\n"
+            "Recovery: hand-edit "
+            f"{LIGHTNING_ACTIVE_JOBS_PATH.relative_to(REPO_ROOT)} to add "
+            "an active row keyed by job_name OR run the harvester manually "
+            f"with --job-name {job_name}.\n",
+            file=sys.stderr,
+        )
+        raise
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -932,20 +1011,53 @@ def main(argv: list[str] | None = None) -> int:
         force_claim_reason=args.force_claim_reason,
     )
 
-    # Stage 3: submit Lightning Studio Job.
-    submit_result = submit_lightning_job(
+    # Stage 3a: codex round-6 HIGH 2 (catalog #143) — register pending row
+    # BEFORE the paid submit so a corrupt tracker refuses the paid job.
+    # On dry-run the pending row IS still useful (harvester can find the
+    # staged manifest), so we register-pending unconditionally and let the
+    # post-submit step also handle the dry-run path.
+    register_pending_active_job(
         job_name=job_name,
         machine=args.machine,
-        command=command,
-        teamspace=args.teamspace,
-        studio=args.studio,
-        user=args.user,
-        max_runtime_sec=args.max_runtime_sec,
-        dry_run=args.dry_run,
+        manifest_path=manifest,
     )
 
-    # Stage 4: persist active-jobs row (always — even on dry-run, so harvester
-    # can discover the staged manifest).
+    # Stage 3b: submit Lightning Studio Job.
+    try:
+        submit_result = submit_lightning_job(
+            job_name=job_name,
+            machine=args.machine,
+            command=command,
+            teamspace=args.teamspace,
+            studio=args.studio,
+            user=args.user,
+            max_runtime_sec=args.max_runtime_sec,
+            dry_run=args.dry_run,
+        )
+    except BaseException as submit_exc:
+        # Submit raised before any network call — drop the pending row.
+        # Catalog #143: cancel only when we're SURE billing didn't start.
+        # Import errors / argparse / config errors raise before Job.run()'s
+        # network call.
+        from tac.deploy.lightning.active_jobs_state import (
+            PendingJobNotFoundError,
+            cancel_pending_job_locked,
+        )
+        try:
+            cancel_pending_job_locked(
+                job_name=job_name,
+                failure_reason=f"{type(submit_exc).__name__}: {submit_exc!r}",
+            )
+            print(
+                f"[cancel] dropped pending row for job_name={job_name} "
+                f"(submit raised before billing started: {type(submit_exc).__name__})",
+                file=sys.stderr,
+            )
+        except PendingJobNotFoundError:
+            pass  # already gone — surfaced to operator via raise below
+        raise
+
+    # Stage 4: persist active-jobs row (promote pending → active).
     persist_active_job(
         job_name=job_name,
         machine=args.machine,

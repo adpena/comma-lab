@@ -1055,7 +1055,14 @@ def submit_lightning_job(
     max_runtime_sec: int,
     dry_run: bool,
 ) -> dict[str, object]:
-    """Submit a Lightning Studio Job via lightning_sdk.Job.run."""
+    """Submit a Lightning Studio Job via lightning_sdk.Job.run.
+
+    Codex round 6 HIGH 2 (catalog #143): the caller MUST have already
+    called ``register_pending_job_locked(...)`` BEFORE invoking this
+    helper. The submit-helper itself is allowed to call ``Job.run``
+    without an inline pending-register because the pending-row contract
+    is owned by the surrounding ``main()`` flow.
+    """
     if dry_run:
         return {
             "dry_run": True,
@@ -1077,7 +1084,7 @@ def submit_lightning_job(
         "UV_EXTRA_INDEX_URL": UV_EXTRA_INDEX_URL,
         "UV_INDEX_STRATEGY": UV_INDEX_STRATEGY,
     }
-    job = Job.run(
+    job = Job.run(  # JOB_RUN_BEFORE_REGISTER_OK:caller-owns-pending-row-contract-#143
         name=job_name,
         machine=machine,
         command=command,
@@ -1098,11 +1105,10 @@ def submit_lightning_job(
     }
 
 
-def persist_active_job(
+def _build_pending_record(
     *,
     job_name: str,
     machine: str,
-    submit_result: dict[str, object],
     manifest_path: Path,
     archive_path: Path,
     archive_bytes: int,
@@ -1110,16 +1116,9 @@ def persist_active_job(
     rel_err_actual: float,
     predicted_band: tuple[float, float],
     smoke_roundtrip: dict[str, object] | None,
-) -> None:
-    """Append a row to .omx/state/lightning_active_jobs.json."""
-    LIGHTNING_ACTIVE_JOBS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    if LIGHTNING_ACTIVE_JOBS_PATH.exists():
-        existing = json.loads(LIGHTNING_ACTIVE_JOBS_PATH.read_text(encoding="utf-8"))
-        if not isinstance(existing, list):
-            existing = []
-    else:
-        existing = []
-    record = {
+) -> dict[str, object]:
+    """Construct the canonical lightning_active_jobs row (status-agnostic)."""
+    return {
         "schema_version": "lightning_active_jobs.v1",
         "lane_id": LANE_ID,
         "job_name": job_name,
@@ -1148,15 +1147,99 @@ def persist_active_job(
         "expected_auth_eval_json": (
             f"experiments/results/lightning_batch/{job_name}/contest_auth_eval.json"
         ),
-        "submit_result": submit_result,
     }
-    existing.append(record)
-    LIGHTNING_ACTIVE_JOBS_PATH.write_text(
-        json.dumps(existing, indent=2) + "\n", encoding="utf-8"
+
+
+def register_pending_active_job(
+    *,
+    job_name: str,
+    machine: str,
+    manifest_path: Path,
+    archive_path: Path,
+    archive_bytes: int,
+    rel_err_budget: float,
+    rel_err_actual: float,
+    predicted_band: tuple[float, float],
+    smoke_roundtrip: dict[str, object] | None,
+) -> None:
+    """Codex round 6 HIGH 2 (catalog #143): pre-submit pending-row write."""
+    from tac.deploy.lightning.active_jobs_state import (
+        register_pending_job_locked,
     )
+
+    record = _build_pending_record(
+        job_name=job_name,
+        machine=machine,
+        manifest_path=manifest_path,
+        archive_path=archive_path,
+        archive_bytes=archive_bytes,
+        rel_err_budget=rel_err_budget,
+        rel_err_actual=rel_err_actual,
+        predicted_band=predicted_band,
+        smoke_roundtrip=smoke_roundtrip,
+    )
+    register_pending_job_locked(record)
     print(
-        f"[persist] {LIGHTNING_ACTIVE_JOBS_PATH.relative_to(REPO_ROOT)} ({len(existing)} active jobs)"
+        f"[pending] {LIGHTNING_ACTIVE_JOBS_PATH.relative_to(REPO_ROOT)} "
+        f"job_name={job_name} status=pending (pre-submit)"
     )
+
+
+def persist_active_job(
+    *,
+    job_name: str,
+    machine: str,
+    submit_result: dict[str, object],
+    manifest_path: Path,
+    archive_path: Path,
+    archive_bytes: int,
+    rel_err_budget: float,
+    rel_err_actual: float,
+    predicted_band: tuple[float, float],
+    smoke_roundtrip: dict[str, object] | None,
+) -> None:
+    """Promote pending row to status=active under fcntl lock.
+
+    Codex round 6 HIGH 2 (catalog #143): the POST-submit step of the
+    create-pending-row-before-submit pattern. The pending row must
+    already exist (created by ``register_pending_active_job`` BEFORE
+    the paid submit). If the active-jobs tracker became corrupt
+    between pending-register and post-submit, the dispatcher emits an
+    explicit "PAID JOB ORPHANED — RUN HARVESTER MANUALLY" warning AND
+    re-raises so the operator is notified.
+    """
+    from tac.deploy.lightning.active_jobs_state import (
+        ActiveJobsCorruptError,
+        PendingJobNotFoundError,
+        update_pending_to_active_locked,
+    )
+
+    try:
+        rows_after = update_pending_to_active_locked(
+            job_name=job_name,
+            submit_result=submit_result,
+        )
+        print(
+            f"[persist] {LIGHTNING_ACTIVE_JOBS_PATH.relative_to(REPO_ROOT)} "
+            f"({len(rows_after)} active jobs); job_name={job_name} promoted to status=active"
+        )
+    except (ActiveJobsCorruptError, PendingJobNotFoundError) as exc:
+        print(
+            "\n!!! PAID JOB ORPHANED — RUN HARVESTER MANUALLY !!!\n"
+            f"job_name={job_name}\n"
+            f"machine={machine}\n"
+            f"submit_result={submit_result!r}\n"
+            f"archive_path={archive_path}\n"
+            f"archive_bytes={archive_bytes}\n"
+            f"manifest_path={manifest_path}\n"
+            f"reason: {type(exc).__name__}: {exc}\n"
+            "Recovery: hand-edit "
+            f"{LIGHTNING_ACTIVE_JOBS_PATH.relative_to(REPO_ROOT)} to add "
+            "an active row keyed by job_name OR run the harvester manually "
+            f"with --job-name {job_name}.\n",
+            file=sys.stderr,
+        )
+        raise
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -1505,18 +1588,54 @@ def main(argv: list[str] | None = None) -> int:
         archive_relpath=archive_relpath,
         submission_dir_relpath=submission_relpath,
     )
-    submit_result = submit_lightning_job(
+
+    # ---- Stage B.3a: codex round-6 HIGH 2 (catalog #143) — register
+    # pending row BEFORE the paid submit. A corrupt active-jobs file
+    # raises here and we refuse the paid submit (no orphan).
+    register_pending_active_job(
         job_name=job_name,
         machine=args.machine,
-        command=command,
-        teamspace=args.teamspace,
-        studio=args.studio,
-        user=args.user,
-        max_runtime_sec=args.max_runtime_sec,
-        dry_run=args.dry_run,
+        manifest_path=manifest,
+        archive_path=archive_path,
+        archive_bytes=archive_bytes,
+        rel_err_budget=args.rel_err_budget,
+        rel_err_actual=section["rel_err"],
+        predicted_band=(args.predicted_low, args.predicted_high),
+        smoke_roundtrip=smoke_result,
     )
 
-    # ---- Stage B.4: persist active-jobs row.
+    # ---- Stage B.3b: submit (with cancel-pending on pre-network failure).
+    try:
+        submit_result = submit_lightning_job(
+            job_name=job_name,
+            machine=args.machine,
+            command=command,
+            teamspace=args.teamspace,
+            studio=args.studio,
+            user=args.user,
+            max_runtime_sec=args.max_runtime_sec,
+            dry_run=args.dry_run,
+        )
+    except BaseException as submit_exc:
+        from tac.deploy.lightning.active_jobs_state import (
+            PendingJobNotFoundError,
+            cancel_pending_job_locked,
+        )
+        try:
+            cancel_pending_job_locked(
+                job_name=job_name,
+                failure_reason=f"{type(submit_exc).__name__}: {submit_exc!r}",
+            )
+            print(
+                f"[cancel] dropped pending row for job_name={job_name} "
+                f"(submit raised before billing started: {type(submit_exc).__name__})",
+                file=sys.stderr,
+            )
+        except PendingJobNotFoundError:
+            pass
+        raise
+
+    # ---- Stage B.4: persist active-jobs row (promote pending → active).
     persist_active_job(
         job_name=job_name,
         machine=args.machine,

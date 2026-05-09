@@ -142,11 +142,13 @@ def _save_setup_first_seen(data: dict[str, float]) -> None:
             fcntl.flock(lockfd.fileno(), fcntl.LOCK_UN)
 
 
-def update_setup_first_seen_locked(
+def update_setup_first_seen_locked(  # SETUP_FIRST_SEEN_SINGLE_TXN_OK:canonical-helper-combines-observed-and-left-#144
     *,
     observed_setup_ids: set[str],
     tracked_ids: set[str],
     now_ts: float,
+    left_setup_ids: set[str] | None = None,
+    monotonic_conflict_rule: str = "prefer_observed",
 ) -> dict[str, float]:
     """Locked transactional update of the SETUP-first-seen tracker.
 
@@ -165,26 +167,38 @@ def update_setup_first_seen_locked(
     SETUP age would silently reset for affected instances and
     ``--auto-destroy-stale`` would miss stuck paid instances.
 
-    The new contract performs load + merge + prune + save INSIDE one
-    fcntl-locked window:
+    Codex round 6 MEDIUM 1 fix (2026-05-09, catalog #144): the round-4
+    fix STILL split the mutation into two separate locked transactions
+    (``update_setup_first_seen_locked(observed)`` then
+    ``remove_setup_first_seen_locked(left_setup)``). Two overlapping
+    verifier runs that disagree on the same id (one observes SETUP, the
+    other observes leaving SETUP) can drop first-seen timestamps the
+    other inserted because the two transactions are not atomic together.
+    The fix accepts BOTH ``observed_setup_ids`` AND ``left_setup_ids``
+    in a SINGLE transaction with explicit conflict semantics (default
+    ``prefer_observed`` — if the same id is in BOTH sets, the run that
+    observed SETUP wins because it has direct evidence the instance is
+    SETUP-stuck right now).
+
+    The new contract performs load + merge + remove + prune + save INSIDE
+    one fcntl-locked window:
 
       1. Acquire fcntl exclusive lock on the SETUP tracker lock file
       2. Reload the on-disk state INSIDE the lock (defends against any
          concurrent sister run that committed during our verify loop)
-      3. For each id in ``observed_setup_ids``:
+      3. Resolve same-id conflicts per ``monotonic_conflict_rule``
+      4. For each id in ``observed_setup_ids``:
            - if the id is not yet in the on-disk map, set it to ``now_ts``
            - if already present, KEEP the OLDER timestamp (``min``) so a
              SETUP that has been stuck longer keeps its earliest first-seen
-      4. For each id in the on-disk map: prune if not in ``tracked_ids``
+      5. For each id in ``left_setup_ids``: drop the entry
+      6. For each id in the on-disk map: prune if not in ``tracked_ids``
          (drop entries for instances no longer in the vastai tracker)
-      5. Atomically commit via ``_save_setup_first_seen`` (still inside lock)
+      7. Atomically commit via ``_save_setup_first_seen`` (still inside lock)
 
     The merge-on-min semantics is the correct semantics for "first
     seen" — a SETUP that has been stuck longer should keep its earliest
     timestamp regardless of which verifier run committed last.
-
-    Returns the post-merge / post-prune map (the canonical on-disk view
-    after this transaction).
 
     Args:
         observed_setup_ids: set of instance ids that THIS verifier run
@@ -192,9 +206,51 @@ def update_setup_first_seen_locked(
         tracked_ids: set of instance ids currently in the vastai tracker;
             used to prune entries for destroyed instances.
         now_ts: unix timestamp to use for newly-observed SETUP ids.
+        left_setup_ids: set of instance ids that THIS verifier run
+            observed LEAVING SETUP (now HEALTHY/IDLE/CRASHED). May be
+            ``None`` for a pure-observe call.
+        monotonic_conflict_rule: how to resolve same-id appearing in
+            BOTH observed AND left sets in the same call. ``prefer_observed``
+            (default) wins for the observe path because the run had
+            direct SETUP evidence; ``prefer_left`` wins for the leave
+            path; ``raise`` refuses inconsistent input.
 
-    Memory: feedback_codex_round4_findings_fix_with_self_protection_landed_20260509.md.
+    Memory: feedback_codex_round4_findings_fix_with_self_protection_landed_20260509.md +
+    feedback_codex_round6_findings_fix_with_self_protection_landed_20260509.md.
     """
+    if left_setup_ids is None:
+        left_setup_ids = set()
+    # Resolve same-id conflicts per the explicit conflict rule
+    overlap = {str(i) for i in observed_setup_ids} & {str(i) for i in left_setup_ids}
+    if overlap:
+        if monotonic_conflict_rule == "prefer_observed":
+            left_setup_ids = {i for i in left_setup_ids if str(i) not in overlap}
+            print(
+                f"[setup-first-seen] same-call conflict on {sorted(overlap)}: "
+                "preferring OBSERVED (catalog #144 conflict-resolution)",
+                file=sys.stderr,
+            )
+        elif monotonic_conflict_rule == "prefer_left":
+            observed_setup_ids = {
+                i for i in observed_setup_ids if str(i) not in overlap
+            }
+            print(
+                f"[setup-first-seen] same-call conflict on {sorted(overlap)}: "
+                "preferring LEFT (catalog #144 conflict-resolution)",
+                file=sys.stderr,
+            )
+        elif monotonic_conflict_rule == "raise":
+            raise ValueError(
+                f"update_setup_first_seen_locked: same id in observed AND "
+                f"left: {sorted(overlap)}. Pass monotonic_conflict_rule="
+                "'prefer_observed' or 'prefer_left' to resolve."
+            )
+        else:
+            raise ValueError(
+                f"unknown monotonic_conflict_rule: {monotonic_conflict_rule!r}; "
+                "expected 'prefer_observed' / 'prefer_left' / 'raise'"
+            )
+
     SETUP_FIRST_SEEN_PATH.parent.mkdir(parents=True, exist_ok=True)
     lock_path = _setup_first_seen_lock_path()
     with open(lock_path, "w") as lockfd:
@@ -234,22 +290,15 @@ def update_setup_first_seen_locked(
                 else:
                     current[iid_s] = float(now_ts)
 
-            # ── Step 3: prune entries no longer tracked ──────────────
-            # Drop ids not in the vastai tracker AND not observed in this
-            # run (the latter could be a fresh insert by a sister verifier
-            # we haven't seen yet — but we use ``tracked_ids`` as truth).
+            # ── Step 3: drop ids that left SETUP ──────────────────────
+            for iid in left_setup_ids:
+                current.pop(str(iid), None)
+
+            # ── Step 4: prune entries no longer tracked ──────────────
             tracked_set = {str(t) for t in tracked_ids}
             current = {k: v for k, v in current.items() if k in tracked_set}
 
-            # Also drop ids that ARE tracked but NOT observed in SETUP
-            # by this run AND not in the on-disk state from a prior run.
-            # The merge in Step 2 already added our observations; the
-            # prune in Step 3 removes destroyed instances. Ids that left
-            # SETUP (now HEALTHY/IDLE/CRASHED) are dropped by the caller's
-            # main flow but ONLY for ids THIS run observed leaving SETUP.
-            # See the caller's main() flow for the per-id decision.
-
-            # ── Step 4: atomic commit (still inside the lock) ───────
+            # ── Step 5: atomic commit (still inside the lock) ───────
             payload = json.dumps(current, indent=2, sort_keys=True)
             tmp = SETUP_FIRST_SEEN_PATH.with_suffix(
                 SETUP_FIRST_SEEN_PATH.suffix + f".tmp.{os.getpid()}"
@@ -271,16 +320,30 @@ def update_setup_first_seen_locked(
             fcntl.flock(lockfd.fileno(), fcntl.LOCK_UN)
 
 
-def remove_setup_first_seen_locked(ids_to_remove: set[str]) -> dict[str, float]:
-    """Locked transactional removal of SETUP-first-seen entries.
+def remove_setup_first_seen_locked(ids_to_remove: set[str]) -> dict[str, float]:  # SETUP_FIRST_SEEN_SINGLE_TXN_OK:thin-shim-deprecated-by-#144
+    """DEPRECATED — use ``update_setup_first_seen_locked`` with
+    ``left_setup_ids=`` instead.
 
-    Used by the main() flow to drop ids that are no longer in SETUP
-    state (now HEALTHY / IDLE / CRASHED / GONE) within the same locked
-    window as the sister update helper. Ensures concurrent verifier runs
-    don't see a half-applied transaction.
+    Codex round 6 MEDIUM 1 (catalog #144): retained ONLY as a thin shim
+    for the rare caller that only knows about ids to remove (no observed
+    set + no tracked set). The shim does its own load+remove+save inside
+    a SINGLE locked transaction so cycle-callers that need a pure-removal
+    semantics still serialize correctly. Internally identical structure
+    to the canonical helper but skips the Step-4 prune (which requires
+    a real tracked set to be safe).
 
-    Returns the post-removal map.
+    Future callers SHOULD switch to ``update_setup_first_seen_locked``
+    directly with the real tracked set — the prune step is the only
+    canonical path for dropping destroyed instances.
+
+    The check #144 STRICT preflight refuses any function that calls
+    BOTH this AND ``update_setup_first_seen_locked`` (or
+    ``_save_setup_first_seen``) in the SAME function body — split
+    transactions race. Single-helper callers (this OR
+    update_setup_first_seen_locked, not both) are fine.
     """
+    if not ids_to_remove:
+        return {}
     SETUP_FIRST_SEEN_PATH.parent.mkdir(parents=True, exist_ok=True)
     lock_path = _setup_first_seen_lock_path()
     with open(lock_path, "w") as lockfd:
@@ -532,25 +595,29 @@ def main() -> int:
             setup_age_minutes=setup_age_min,
         ))
 
-    # Codex round 4 MEDIUM 2 (catalog #135): single transactional update
-    # at end-of-run. Reloads INSIDE the lock so concurrent verifier
-    # commits during our verify loop do NOT get clobbered. Merges with
-    # KEEP-OLDER semantics (a SETUP that's been stuck longer keeps its
-    # earliest first-seen across all sister runs).
+    # Codex round 4 MEDIUM 2 (catalog #135) + round 6 MEDIUM 1 (catalog #144):
+    # ONE single transactional update at end-of-run. Reloads INSIDE the
+    # lock so concurrent verifier commits during our verify loop do NOT
+    # get clobbered. Merges with KEEP-OLDER semantics (a SETUP that's
+    # been stuck longer keeps its earliest first-seen across all sister
+    # runs).
     #
-    # First the merge-update for currently-observed SETUPs, then the
-    # explicit removal for instances that left SETUP this run. Both are
-    # locked transactions; ordering is: merge before remove so a flicker
-    # between SETUP and HEALTHY in the same run is handled correctly
-    # (the SETUP observation gets the timestamp, then the leave-SETUP
-    # removal drops it cleanly).
+    # Round 4 split this into two locked transactions (observed-update
+    # + left-removal). Round 6 collapsed both into a single transaction
+    # because two overlapping verifier runs that disagree on the same
+    # id (one observes SETUP, the other observes leaving SETUP) could
+    # drop first-seen timestamps the other inserted across the gap
+    # between the two transactions. The single-transaction API uses
+    # ``monotonic_conflict_rule="prefer_observed"`` to resolve same-id
+    # appearing in BOTH sets in the SAME call (observed wins because it
+    # has direct SETUP evidence; left-set might be stale by then).
     update_setup_first_seen_locked(
         observed_setup_ids=observed_setup_ids,
+        left_setup_ids=left_setup_ids,
         tracked_ids=tracked_ids,
         now_ts=now_ts,
+        monotonic_conflict_rule="prefer_observed",
     )
-    if left_setup_ids:
-        remove_setup_first_seen_locked(left_setup_ids)
 
     # Output
     if args.json:

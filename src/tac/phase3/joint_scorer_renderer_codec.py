@@ -54,12 +54,85 @@ CLAUDE.md compliance
 """
 from __future__ import annotations
 
+import inspect
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 
 class Phase3DispatchGateError(RuntimeError):
     """Raised when Phase 3 dispatch is attempted before all gates clear."""
+
+
+# Codex round 6 HIGH 1 fix (catalog #142): path-source detection for
+# ``unsafe_test_only=True``. The previous round-4 fix made the escape hatch
+# ``unsafe_test_only=True`` available unconditionally, which let any
+# production caller under ``tools/`` / ``experiments/`` / ``scripts/`` bypass
+# every Phase 3 precondition by toggling the kwarg. The runtime guard below
+# inspects the calling frame and refuses ``unsafe_test_only=True`` from
+# non-test paths (production code MUST satisfy every precondition; tests
+# legitimately need a permissive gate).
+_TEST_PATH_TOKENS: tuple[str, ...] = (
+    "/tests/",
+    "/test_",
+    "_test.py",
+)
+
+
+def _caller_path_is_test() -> tuple[bool, str]:
+    """Inspect the call stack and return ``(is_test_path, first_outside_caller)``.
+
+    Walks the call stack OUT OF the joint_scorer_renderer_codec module
+    until it finds the first frame whose filename is in a different
+    module. That frame is the true "construction call site" (the dataclass
+    machinery interposes its own frames between ``__post_init__`` and the
+    user's ``Phase3DispatchGate(...)`` call, so a fixed-depth frames-to-skip
+    walk is brittle).
+
+    Returns ``(True, filename)`` when the first-outside-caller filename
+    matches a recognized test path token (``/tests/``, ``/test_``, or
+    ending in ``_test.py``); ``(False, filename)`` otherwise. Returns
+    ``(False, "<unknown>")`` if the frame cannot be inspected.
+
+    Test path tokens follow the pytest convention used elsewhere in this
+    repo (``check_phase3_dispatch_gate_fail_closed`` excludes the same
+    set of paths from STRICT scanning).
+    """
+    try:
+        this_file = str(Path(__file__).resolve())
+        frame = inspect.currentframe()
+        if frame is None:
+            return (False, "<unknown>")
+        # Walk past THIS helper.
+        frame = frame.f_back
+        # Walk past any frames in THIS file (dataclass-generated
+        # __post_init__, joint scaffold __post_init__, etc.) AND past any
+        # synthesized-source frames (dataclass auto-generated __init__
+        # appears with co_filename like "<string>"). The first frame
+        # whose filename is BOTH on disk AND not this file is the user's
+        # construction site.
+        while frame is not None:
+            raw_fn = frame.f_code.co_filename
+            # Skip dataclass-synthesized __init__ which has co_filename
+            # like "<string>", "<frozen ...>", or any path starting with "<".
+            if raw_fn.startswith("<"):
+                frame = frame.f_back
+                continue
+            try:
+                fn = str(Path(raw_fn).resolve())
+            except (OSError, ValueError):
+                # Path resolution failed (e.g. missing file); fall back to raw
+                fn = raw_fn
+            if fn == this_file:
+                frame = frame.f_back
+                continue
+            # Found first outside-this-file, on-disk frame
+            fn_lower = fn.replace("\\", "/")
+            is_test = any(tok in fn_lower for tok in _TEST_PATH_TOKENS)
+            return (is_test, fn)
+        return (False, "<unknown>")
+    except Exception:  # pragma: no cover - defensive
+        return (False, "<unknown>")
 
 
 @dataclass(frozen=True)
@@ -101,6 +174,14 @@ class Phase3DispatchGate:
     aaf68f37_verdict_evidence_path: str | None = None
     phase3_council_deliberation_path: str | None = None
     unsafe_test_only: bool = False
+    # Codex round 6 HIGH 1 (catalog #142): explicit waiver for the rare
+    # non-test fixture that legitimately needs a permissive gate. Setting
+    # this without explicit operator review is FORBIDDEN; preflight check
+    # #142 STRICT scans for the kwarg AND refuses production callsites
+    # that lack a same-line ``# PHASE3_GATE_UNSAFE_PATH_WAIVED:<reason>``
+    # justification. Defaults to False so the path-audit guard is on by
+    # default.
+    unsafe_test_only_path_audit_waived: bool = False
 
     def __post_init__(self) -> None:
         """Fail-closed: enforce the gate at construction.
@@ -113,13 +194,44 @@ class Phase3DispatchGate:
         hatch for tests that need a permissive gate to exercise the
         API surface.
 
+        Codex round 6 HIGH 1 (2026-05-09, catalog #142): the round-4 fix
+        let any production caller bypass every precondition by toggling
+        ``unsafe_test_only=True``. The runtime guard now detects the
+        calling frame and REFUSES ``unsafe_test_only=True`` from non-test
+        paths. Production code MUST satisfy every precondition; the
+        escape hatch is for tests only. Same-line waiver for the rare
+        legitimate non-test fixture: pass ``unsafe_test_only_path_audit_waived=True``
+        AND set ``unsafe_test_only=True``; this is gated by preflight
+        check #142 STRICT and requires explicit operator review.
+
         The class is frozen, so direct field mutation is impossible
         after construction; the only way to "downgrade" a passing gate
         is to construct a fresh one with worse fields, which would
         again fail-closed.
         """
-        if not self.unsafe_test_only:
-            self.check()
+        if self.unsafe_test_only:
+            # Codex round 6 HIGH 1: refuse the escape hatch from non-test paths.
+            is_test_path, caller_file = _caller_path_is_test()
+            if not is_test_path and not self.unsafe_test_only_path_audit_waived:
+                raise Phase3DispatchGateError(
+                    "Phase 3 dispatch BLOCKED — `unsafe_test_only=True` "
+                    "is only permitted from test paths "
+                    "(``*/tests/*``, ``test_*.py``, ``*_test.py``); "
+                    f"caller is at {caller_file}. "
+                    "Production code MUST satisfy every precondition; "
+                    "see Phase3DispatchGate.check() for the required "
+                    "kwarg set. If this is a legitimate non-test fixture "
+                    "that needs a permissive gate (e.g. an interactive "
+                    "operator REPL session), set BOTH "
+                    "`unsafe_test_only=True` AND "
+                    "`unsafe_test_only_path_audit_waived=True` "
+                    "with explicit operator review per CLAUDE.md "
+                    "FORBIDDEN PATTERNS. Memory: "
+                    "feedback_codex_round6_findings_fix_with_self_protection_landed_20260509.md."
+                )
+            # Test path or explicit operator-waiver: bypass check()
+            return
+        self.check()
 
     def check(self) -> None:
         """Raises ``Phase3DispatchGateError`` if any precondition fails."""
