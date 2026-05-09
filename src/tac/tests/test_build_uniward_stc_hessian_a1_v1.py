@@ -75,3 +75,22 @@ def test_allocate_bits_charges_large_tensors_by_numel() -> None:
     assert bits["small_high.weight"] >= bits["large_low.weight"]
     assert charged_bits <= sum(t.numel() for t in sd.values()) * 8
     assert charged_bits >= sum(t.numel() for t in sd.values()) * 4
+
+
+def test_parse_manual_bit_overrides() -> None:
+    mod = _load_tool()
+
+    assert mod.parse_manual_bit_overrides(["blocks.3.weight=7"]) == {
+        "blocks.3.weight": 7
+    }
+
+
+def test_parse_manual_bit_overrides_rejects_malformed_values() -> None:
+    mod = _load_tool()
+
+    try:
+        mod.parse_manual_bit_overrides(["blocks.3.weight:7"])
+    except ValueError as exc:
+        assert "NAME=BITS" in str(exc)
+    else:  # pragma: no cover - assertion clarity
+        raise AssertionError("malformed override should fail")

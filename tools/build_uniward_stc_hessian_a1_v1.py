@@ -263,6 +263,24 @@ def allocate_bits_per_tensor(
     return bits
 
 
+def parse_manual_bit_overrides(values: list[str] | None) -> dict[str, int]:
+    """Parse ``NAME=BITS`` overrides for one-tensor trust-region probes."""
+    overrides: dict[str, int] = {}
+    for raw in values or []:
+        if "=" not in raw:
+            raise ValueError(f"manual bit override must be NAME=BITS, got {raw!r}")
+        name, bits_s = raw.split("=", 1)
+        name = name.strip()
+        if not name:
+            raise ValueError(f"manual bit override has empty tensor name: {raw!r}")
+        try:
+            bits = int(bits_s)
+        except ValueError as exc:
+            raise ValueError(f"manual bit override has non-integer bits: {raw!r}") from exc
+        overrides[name] = bits
+    return overrides
+
+
 def build(
     *,
     src_archive: Path,
@@ -271,6 +289,7 @@ def build(
     target_bytes: int,
     floor_bits: int,
     ceiling_bits: int,
+    manual_bit_overrides: dict[str, int] | None = None,
     brotli_quality: int = 11,
     require_sha: bool = True,
 ) -> BuildResult:
@@ -293,18 +312,35 @@ def build(
     # Decode A1 decoder state_dict (28 INT8-quantized tensors, dequantized to float32).
     sd_orig = decode_decoder_compact(decoder_blob)
     fisher_proxy = compute_fisher_proxy(sd_orig)
-    target_decoder_bytes = max(
-        1,
-        len(decoder_blob) + (int(target_bytes) - len(src_bytes)),
-    )
-    bits_per_tensor = allocate_bits_per_tensor(
-        sd_orig,
-        fisher_proxy,
-        target_decoder_bytes=target_decoder_bytes,
-        source_decoder_bytes=len(decoder_blob),
-        floor_bits=floor_bits,
-        ceiling_bits=ceiling_bits,
-    )
+    manual_bit_overrides = manual_bit_overrides or {}
+    unknown_overrides = sorted(set(manual_bit_overrides) - set(sd_orig))
+    if unknown_overrides:
+        raise SystemExit(
+            "FATAL: manual bit override references unknown tensor(s): "
+            + ", ".join(unknown_overrides)
+        )
+    for name, bits in manual_bit_overrides.items():
+        if bits < floor_bits or bits > ceiling_bits:
+            raise SystemExit(
+                f"FATAL: manual bit override {name}={bits} outside "
+                f"[{floor_bits}, {ceiling_bits}]"
+            )
+    if manual_bit_overrides:
+        bits_per_tensor = {name: int(ceiling_bits) for name in sd_orig}
+        bits_per_tensor.update(manual_bit_overrides)
+    else:
+        target_decoder_bytes = max(
+            1,
+            len(decoder_blob) + (int(target_bytes) - len(src_bytes)),
+        )
+        bits_per_tensor = allocate_bits_per_tensor(
+            sd_orig,
+            fisher_proxy,
+            target_decoder_bytes=target_decoder_bytes,
+            source_decoder_bytes=len(decoder_blob),
+            floor_bits=floor_bits,
+            ceiling_bits=ceiling_bits,
+        )
 
     # Apply per-tensor lossy coarsening (UNIWARD-weighted distortion).
     sd_coarse: dict[str, torch.Tensor] = {}
@@ -462,6 +498,9 @@ def write_manifest(out_dir: Path, result: BuildResult, *, params: dict) -> Path:
         "advisory_score_tag": result.advisory_score_tag,
         "predicted_band": list(result.predicted_band),
         "params": params,
+        "allocator_mode": (
+            "manual_bit_overrides" if params.get("manual_bit_overrides") else "target_decoder_bytes"
+        ),
         "bit_alloc": [asdict(r) for r in result.bit_alloc],
         "evidence_grade": "[byte-anchor; Fisher-weighted lossy coarsening; smoke-roundtrip verified]",
         "score_claim": False,  # advisory only until contest-CPU/CUDA eval lands
@@ -506,6 +545,17 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--ceiling-bits", type=int, default=8)
     p.add_argument("--brotli-quality", type=int, default=11)
     p.add_argument(
+        "--set-bits",
+        action="append",
+        default=[],
+        metavar="NAME=BITS",
+        help=(
+            "Manual one-tensor override. May be repeated. When supplied, all "
+            "other tensors stay at --ceiling-bits and --target-bytes is "
+            "metadata only."
+        ),
+    )
+    p.add_argument(
         "--no-require-sha",
         dest="require_sha",
         action="store_false",
@@ -515,6 +565,10 @@ def main(argv: list[str] | None = None) -> None:
 
     if not args.src_archive.is_file():
         raise SystemExit(f"FATAL: --src-archive not found: {args.src_archive}")
+    try:
+        manual_bit_overrides = parse_manual_bit_overrides(args.set_bits)
+    except ValueError as exc:
+        raise SystemExit(f"FATAL: {exc}") from exc
 
     result = build(
         src_archive=args.src_archive,
@@ -523,6 +577,7 @@ def main(argv: list[str] | None = None) -> None:
         target_bytes=args.target_bytes,
         floor_bits=args.floor_bits,
         ceiling_bits=args.ceiling_bits,
+        manual_bit_overrides=manual_bit_overrides,
         brotli_quality=args.brotli_quality,
         require_sha=args.require_sha,
     )
@@ -533,6 +588,7 @@ def main(argv: list[str] | None = None) -> None:
         "brotli_quality": args.brotli_quality,
         "require_sha": args.require_sha,
         "source_submission_dir": str(args.source_submission_dir),
+        "manual_bit_overrides": manual_bit_overrides,
     }
     manifest_path = write_manifest(args.out_dir, result, params=params)
     print(f"[track4] wrote {manifest_path}")

@@ -104,6 +104,17 @@ remote-dispatch this magnitude/Hessian ladder as a score candidate. The next
 real score-lowering allocator should use score-domain sensitivity or
 component-response maps, not another no-data weight-domain proxy.
 
+Follow-up one-tensor probes decomposed the `target176000` miss:
+
+| probe | archive bytes | delta vs A1 | macOS CPU advisory |
+|---|---:|---:|---:|
+| `blocks.4.weight=7` | `177903` | `-359` | `0.19870389522684906` |
+| `blocks.3.weight=7` | `178027` | `-235` | `0.2117346720676015` |
+
+Both one-tensor cuts regress, so the current late-block 7-bit trust region is
+exhausted under this proxy. The manual `--set-bits NAME=BITS` mode remains in
+the builder for future tensor-localized trust-region probes.
+
 Ledger:
 `.omx/research/track4_uniward_hessian_a1_ladder_20260509_codex.md`.
 

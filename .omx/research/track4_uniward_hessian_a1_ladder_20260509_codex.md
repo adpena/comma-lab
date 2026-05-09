@@ -199,6 +199,71 @@ Reactivation criteria:
 - require paired `[contest-CPU]` and `[contest-CUDA]` before any score
   promotion.
 
+## Manual One-Tensor Trust-Region Probes
+
+After `target176000` showed that the smallest automatic ladder step changed
+only `blocks.3.weight` and `blocks.4.weight`, the builder gained a manual
+one-tensor override mode (`--set-bits NAME=BITS`) so the pairwise miss could
+be decomposed without inventing a new packet path.
+
+| probe | archive bytes | delta vs A1 | archive SHA-256 | global L1 rel err | macOS CPU advisory |
+|---|---:|---:|---|---:|---:|
+| `blocks.3.weight=7` | `178027` | `-235` | `a5c011c462a2c36f67d0d132efb951601033148087c218ab0bb12e5df80cd419` | `0.0017126258490542776` | `0.2117346720676015` |
+| `blocks.4.weight=7` | `177903` | `-359` | `864f7eecb0825111ed8fd7625ef434f0e216deaab28b11fcdb3295c17d35c754` | `0.000568999377056734` | `0.19870389522684906` |
+
+`blocks.4.weight=7` command:
+
+```bash
+.venv/bin/python experiments/contest_auth_eval.py \
+  --archive experiments/results/track4_uniward_stc_hessian_a1_blocks4_7bit_20260509_codex/archive.zip \
+  --inflate-sh experiments/results/track4_uniward_stc_hessian_a1_blocks4_7bit_20260509_codex/submission_dir/inflate.sh \
+  --upstream-dir upstream \
+  --device cpu \
+  --work-dir experiments/results/track4_uniward_stc_hessian_a1_blocks4_7bit_20260509_codex/macos_cpu_eval_work \
+  --json-out experiments/results/track4_uniward_stc_hessian_a1_blocks4_7bit_20260509_codex/contest_auth_eval_macos_cpu.json \
+  --keep-work-dir
+```
+
+`blocks.4.weight=7` result:
+
+- evidence grade: `[macOS-CPU advisory]`
+- canonical score: `0.19870389522684906`
+- pose distance: `0.00003505`
+- seg distance: `0.00061524`
+- rate contribution: `0.11845825`
+- runtime tree SHA-256:
+  `cea8fdfd3b5ad5defe555031d187814939cdb7b548fe94e1d209b6c0dc039db8`
+
+`blocks.3.weight=7` command:
+
+```bash
+.venv/bin/python experiments/contest_auth_eval.py \
+  --archive experiments/results/track4_uniward_stc_hessian_a1_blocks3_7bit_20260509_codex/archive.zip \
+  --inflate-sh experiments/results/track4_uniward_stc_hessian_a1_blocks3_7bit_20260509_codex/submission_dir/inflate.sh \
+  --upstream-dir upstream \
+  --device cpu \
+  --work-dir experiments/results/track4_uniward_stc_hessian_a1_blocks3_7bit_20260509_codex/macos_cpu_eval_work \
+  --json-out experiments/results/track4_uniward_stc_hessian_a1_blocks3_7bit_20260509_codex/contest_auth_eval_macos_cpu.json \
+  --keep-work-dir
+```
+
+`blocks.3.weight=7` result:
+
+- evidence grade: `[macOS-CPU advisory]`
+- canonical score: `0.2117346720676015`
+- pose distance: `0.00004173`
+- seg distance: `0.00072766`
+- rate contribution: `0.11854075`
+- runtime tree SHA-256:
+  `788b82d63caf02650e636913b04a71192a5c53eb114cb39c26e940f293bb9337`
+
+Classification: measured-config regression for both one-tensor cuts. The
+`blocks.3.weight=7` and `blocks.4.weight=7` configurations are retired on
+macOS CPU advisory. This does not kill Track 4 as a concept, but it does
+retire late-block 7-bit coarsening under the current no-data saliency proxy.
+The next useful version must either choose a different tensor family or consume
+real score-domain sensitivity.
+
 ## In Flight
 
 `track1_phase_a1_score_gradient_long_lr1e6_20260509T030424Z_modal` was
@@ -231,6 +296,13 @@ was intentionally rebaselined to:
 - count: `10573`
 - sha256:
   `8ad89e999311c5e24bf310a92d53f3853097256099ffb2eef78594e94ae4f6d5`
+
+After the manual one-tensor probes, the strict baseline was rebaselined again:
+
+- algorithm: `pact_runtime_source_set_v1`
+- count: `10581`
+- sha256:
+  `f07c72f1c96fc425bb541295c74cab3429c851b0b475241cc15778cce06eedb9`
 
 No raw Track 4 runtime packet, archive, macOS work directory, or generated
 result JSON is promoted to git.
