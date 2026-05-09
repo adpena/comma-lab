@@ -79,6 +79,16 @@ class Phase3DispatchGate:
     engineer substrate jointly with codec ONLY because the auxiliary scorer
     is anchored on contest scorer's distillation. If the gate fires before
     distillation is verified, substrate-engineering is unprincipled.
+
+    Codex round 4 MEDIUM 1 fix (2026-05-09, catalog #134): the gate is now
+    fail-closed at construction. ``__post_init__`` calls ``self.check()``
+    unless the explicit escape hatch ``unsafe_test_only=True`` is set.
+    Tests that need to construct a permissive gate to exercise the API
+    surface MUST set ``unsafe_test_only=True``. Production trainers
+    cannot bypass; the catalog #134 STRICT preflight check refuses any
+    ``Phase3DispatchGate(...)`` call site outside this module that does
+    NOT set ``unsafe_test_only=True``. Memory:
+    feedback_codex_round4_findings_fix_with_self_protection_landed_20260509.md.
     """
 
     phase2_anchor_verified: bool = False
@@ -90,6 +100,26 @@ class Phase3DispatchGate:
     aaf68f37_verdict_clean: bool = False
     aaf68f37_verdict_evidence_path: str | None = None
     phase3_council_deliberation_path: str | None = None
+    unsafe_test_only: bool = False
+
+    def __post_init__(self) -> None:
+        """Fail-closed: enforce the gate at construction.
+
+        Codex round 4 MEDIUM 1 (2026-05-09): the previous behaviour was
+        to construct without enforcing — only ``self.check()`` enforced,
+        and any future trainer/dispatcher that forgot to call it would
+        silently bypass every precondition. Now construction itself
+        enforces, with the explicit ``unsafe_test_only=True`` escape
+        hatch for tests that need a permissive gate to exercise the
+        API surface.
+
+        The class is frozen, so direct field mutation is impossible
+        after construction; the only way to "downgrade" a passing gate
+        is to construct a fresh one with worse fields, which would
+        again fail-closed.
+        """
+        if not self.unsafe_test_only:
+            self.check()
 
     def check(self) -> None:
         """Raises ``Phase3DispatchGateError`` if any precondition fails."""
@@ -233,14 +263,32 @@ class JointScorerRendererCodecScaffold:
     council_memo_path: str = "fields_medal_grand_council_all_phases_design_deliberate_implement_20260509.md"
 
     def __post_init__(self) -> None:
-        # Constructor enforces gate immediately. Scaffold cannot be instantiated
-        # for dispatch unless all preconditions clear. (Test code may construct
-        # with a permissive gate to exercise the scaffold's API surface.)
-        # We do NOT call self.gate.check() here unconditionally because tests
-        # need to be able to instantiate scaffolds for unit-testing without
-        # supplying full-dispatch evidence. Instead, the trainer-side caller
-        # MUST call ``self.gate.check()`` before invoking any train method.
-        pass
+        """Construction-time gate enforcement.
+
+        Codex round 4 MEDIUM 1 fix (2026-05-09, catalog #134): the gate
+        is now enforced at scaffold construction. Previously the scaffold
+        ``__post_init__`` was a no-op with the comment "tests need to
+        construct with a permissive gate". That comment-only contract
+        let any future trainer/dispatcher silently bypass every
+        precondition by forgetting to call ``self.gate.check()``.
+
+        The contract is now: scaffold construction enforces the gate
+        as a defence-in-depth check. The gate ITSELF also fail-closes
+        at its own construction (unless ``unsafe_test_only=True``),
+        so by the time we get here the gate is either already-passing
+        or explicitly opted-out for tests. We re-call ``check()`` to
+        catch the (impossible-by-construction) case where a test
+        injects an opted-out gate but expects scaffold dispatch.
+
+        Tests that need to exercise scaffold API with a permissive gate
+        MUST construct the gate with ``unsafe_test_only=True`` AND
+        accept that ``self.gate.check()`` will then raise on first
+        dispatch attempt; the scaffold's API can still be used for
+        manifest emission etc., because we only re-check when the
+        gate is NOT opted-out.
+        """
+        if not getattr(self.gate, "unsafe_test_only", False):
+            self.gate.check()
 
     def emit_build_manifest_stub(self) -> dict[str, Any]:
         """Emit a build-manifest stub the future trainer will populate.

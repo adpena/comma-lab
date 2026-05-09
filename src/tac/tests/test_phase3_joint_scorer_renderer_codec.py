@@ -147,72 +147,80 @@ def test_config_accepts_cross_paradigm_multi_substrate():
 
 
 def test_gate_default_blocks_dispatch():
+    """Codex round 4 MEDIUM 1 (catalog #134): default construction now
+    fail-closes immediately. Previously construction was a no-op and only
+    explicit ``.check()`` enforced — any future trainer that forgot the
+    explicit call would silently bypass every precondition.
+    """
     with pytest.raises(Phase3DispatchGateError, match="Phase 2 anchor not verified"):
-        Phase3DispatchGate().check()
+        Phase3DispatchGate()
+
+
+def test_gate_default_check_call_also_blocks():
+    """Backward-compat: ``.check()`` still works on a permissive gate."""
+    gate = Phase3DispatchGate(unsafe_test_only=True)
+    with pytest.raises(Phase3DispatchGateError, match="Phase 2 anchor not verified"):
+        gate.check()
 
 
 def test_gate_blocks_when_phase2_anchor_too_high():
-    gate = Phase3DispatchGate(
-        phase2_anchor_verified=True,
-        phase2_anchor_score=0.150,  # > 0.142 target
-        phase2_anchor_evidence_path="experiments/results/phase2_dispatch_xyz/eval.json",
-        distillation_gap_estimate=0.025,
-        distillation_gap_evidence_path="experiments/results/phase3_distill_eval.json",
-        operator_approved_gpu_budget_usd=800.0,
-        aaf68f37_verdict_clean=True,
-        aaf68f37_verdict_evidence_path="aaf_review.md",
-        phase3_council_deliberation_path="phase3_council.md",
-    )
     with pytest.raises(Phase3DispatchGateError, match="0.142"):
-        gate.check()
+        Phase3DispatchGate(
+            phase2_anchor_verified=True,
+            phase2_anchor_score=0.150,  # > 0.142 target
+            phase2_anchor_evidence_path="experiments/results/phase2_dispatch_xyz/eval.json",
+            distillation_gap_estimate=0.025,
+            distillation_gap_evidence_path="experiments/results/phase3_distill_eval.json",
+            operator_approved_gpu_budget_usd=800.0,
+            aaf68f37_verdict_clean=True,
+            aaf68f37_verdict_evidence_path="aaf_review.md",
+            phase3_council_deliberation_path="phase3_council.md",
+        )
 
 
 def test_gate_blocks_when_distillation_gap_too_wide():
-    gate = Phase3DispatchGate(
-        phase2_anchor_verified=True,
-        phase2_anchor_score=0.140,
-        phase2_anchor_evidence_path="ev.json",
-        distillation_gap_estimate=0.050,  # > 3% Hinton target
-        distillation_gap_evidence_path="distill.json",
-        operator_approved_gpu_budget_usd=800.0,
-        aaf68f37_verdict_clean=True,
-        aaf68f37_verdict_evidence_path="aaf.md",
-        phase3_council_deliberation_path="council.md",
-    )
     with pytest.raises(Phase3DispatchGateError, match="3%"):
-        gate.check()
+        Phase3DispatchGate(
+            phase2_anchor_verified=True,
+            phase2_anchor_score=0.140,
+            phase2_anchor_evidence_path="ev.json",
+            distillation_gap_estimate=0.050,  # > 3% Hinton target
+            distillation_gap_evidence_path="distill.json",
+            operator_approved_gpu_budget_usd=800.0,
+            aaf68f37_verdict_clean=True,
+            aaf68f37_verdict_evidence_path="aaf.md",
+            phase3_council_deliberation_path="council.md",
+        )
 
 
 def test_gate_blocks_when_gpu_budget_outside_band():
-    gate = Phase3DispatchGate(
-        phase2_anchor_verified=True,
-        phase2_anchor_score=0.140,
-        phase2_anchor_evidence_path="ev.json",
-        distillation_gap_estimate=0.025,
-        distillation_gap_evidence_path="distill.json",
-        operator_approved_gpu_budget_usd=2000.0,  # > $1200 cap
-        aaf68f37_verdict_clean=True,
-        aaf68f37_verdict_evidence_path="aaf.md",
-        phase3_council_deliberation_path="council.md",
-    )
     with pytest.raises(Phase3DispatchGateError, match=r"\$1200"):
-        gate.check()
+        Phase3DispatchGate(
+            phase2_anchor_verified=True,
+            phase2_anchor_score=0.140,
+            phase2_anchor_evidence_path="ev.json",
+            distillation_gap_estimate=0.025,
+            distillation_gap_evidence_path="distill.json",
+            operator_approved_gpu_budget_usd=2000.0,  # > $1200 cap
+            aaf68f37_verdict_clean=True,
+            aaf68f37_verdict_evidence_path="aaf.md",
+            phase3_council_deliberation_path="council.md",
+        )
 
 
 def test_gate_blocks_when_aaf_verdict_not_clean():
-    gate = Phase3DispatchGate(
-        phase2_anchor_verified=True,
-        phase2_anchor_score=0.140,
-        phase2_anchor_evidence_path="ev.json",
-        distillation_gap_estimate=0.025,
-        distillation_gap_evidence_path="distill.json",
-        operator_approved_gpu_budget_usd=800.0,
-        aaf68f37_verdict_clean=False,  # not clean
-        aaf68f37_verdict_evidence_path="aaf.md",
-        phase3_council_deliberation_path="council.md",
-    )
     with pytest.raises(Phase3DispatchGateError, match="aaf68f37"):
-        gate.check()
+        Phase3DispatchGate(
+            phase2_anchor_verified=True,
+            phase2_anchor_score=0.140,
+            phase2_anchor_evidence_path="ev.json",
+            distillation_gap_estimate=0.025,
+            distillation_gap_evidence_path="distill.json",
+            operator_approved_gpu_budget_usd=800.0,
+            aaf68f37_verdict_clean=False,  # not clean
+            aaf68f37_verdict_evidence_path="aaf.md",
+            phase3_council_deliberation_path="council.md",
+        )
 
 
 def test_gate_passes_when_all_preconditions_clear():
@@ -231,15 +239,66 @@ def test_gate_passes_when_all_preconditions_clear():
     gate.check()
 
 
+def test_gate_unsafe_test_only_escape_works():
+    """Codex round 4 MEDIUM 1 (catalog #134): the explicit
+    ``unsafe_test_only=True`` opt-out is the ONLY supported path to
+    construct a permissive gate without supplying full preconditions.
+    """
+    gate = Phase3DispatchGate(unsafe_test_only=True)  # must not raise
+    assert gate.unsafe_test_only is True
+    # check() is still callable and still enforces the preconditions
+    with pytest.raises(Phase3DispatchGateError):
+        gate.check()
+
+
 # --------------------------------------------------------------------------
 # Scaffold tests
 # --------------------------------------------------------------------------
 
 
-def test_scaffold_can_instantiate_for_unit_testing():
-    """Scaffold construction does NOT enforce gate (so tests can exercise API)."""
+def test_scaffold_construction_enforces_gate_by_default():
+    """Codex round 4 MEDIUM 1 (catalog #134): scaffold construction now
+    re-checks the gate as defence-in-depth. A gate constructed with
+    ``unsafe_test_only=True`` is the only API surface that lets the
+    scaffold construct without satisfying every precondition.
+    """
     cfg = JointScorerRendererCodecConfig()
-    gate = Phase3DispatchGate()  # default — would block dispatch
+    # Default gate is now impossible to construct without unsafe_test_only;
+    # so we exercise scaffold's own enforcement by injecting an opted-out
+    # gate AFTER explicitly toggling — but JointScorerRendererCodecScaffold's
+    # __post_init__ honors unsafe_test_only and SKIPS the re-check.
+    permissive_gate = Phase3DispatchGate(unsafe_test_only=True)
+    scaffold = JointScorerRendererCodecScaffold(config=cfg, gate=permissive_gate)
+    assert scaffold.gate is permissive_gate
+
+
+def test_scaffold_construction_blocks_when_real_gate_fails():
+    """A scaffold constructed with a non-opted-out gate that has missing
+    preconditions must fail-closed at scaffold construction (defence-in-depth)."""
+    cfg = JointScorerRendererCodecConfig()
+    # Manually construct a "real" gate by bypassing __post_init__ — we need
+    # this only because ``Phase3DispatchGate()`` now raises. The scaffold
+    # __post_init__ should re-check and re-raise.
+    gate = Phase3DispatchGate.__new__(Phase3DispatchGate)
+    object.__setattr__(gate, "phase2_anchor_verified", False)
+    object.__setattr__(gate, "phase2_anchor_score", None)
+    object.__setattr__(gate, "phase2_anchor_evidence_path", None)
+    object.__setattr__(gate, "distillation_gap_estimate", None)
+    object.__setattr__(gate, "distillation_gap_evidence_path", None)
+    object.__setattr__(gate, "operator_approved_gpu_budget_usd", None)
+    object.__setattr__(gate, "aaf68f37_verdict_clean", False)
+    object.__setattr__(gate, "aaf68f37_verdict_evidence_path", None)
+    object.__setattr__(gate, "phase3_council_deliberation_path", None)
+    object.__setattr__(gate, "unsafe_test_only", False)  # NOT opted-out
+    with pytest.raises(Phase3DispatchGateError):
+        JointScorerRendererCodecScaffold(config=cfg, gate=gate)
+
+
+def test_scaffold_can_instantiate_for_unit_testing():
+    """Scaffold construction with permissive gate does NOT enforce
+    (so tests can exercise API surface)."""
+    cfg = JointScorerRendererCodecConfig()
+    gate = Phase3DispatchGate(unsafe_test_only=True)
     scaffold = JointScorerRendererCodecScaffold(config=cfg, gate=gate)
     assert scaffold.config == cfg
     assert scaffold.gate == gate
@@ -247,7 +306,7 @@ def test_scaffold_can_instantiate_for_unit_testing():
 
 def test_scaffold_emit_build_manifest_stub_has_required_fields():
     cfg = JointScorerRendererCodecConfig()
-    gate = Phase3DispatchGate()
+    gate = Phase3DispatchGate(unsafe_test_only=True)
     scaffold = JointScorerRendererCodecScaffold(config=cfg, gate=gate)
     stub = scaffold.emit_build_manifest_stub()
 
