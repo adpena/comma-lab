@@ -153,6 +153,7 @@ def test_check_69_strict_raises(tmp_path):
 def test_check_69_env_default_resolved(tmp_path):
     repo = tmp_path / "repo"
     (repo / "scripts").mkdir(parents=True)
+    # FAKE_LANE_OK:test fixture path for anchor-resolution guard.
     (repo / "experiments" / "results" / "lane_a").mkdir(parents=True)
     (repo / "experiments" / "results" / "lane_a" / "x.bin").write_bytes(b"x")
     (repo / "scripts" / "remote_lane_x.sh").write_text(
