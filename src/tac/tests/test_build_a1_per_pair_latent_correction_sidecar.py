@@ -879,6 +879,67 @@ def test_batched_pair_proxy_search_preserves_best_candidate_semantics() -> None:
     assert best_didx == 1
 
 
+def test_candidate_batch_profiler_selects_fastest_semantic_match(monkeypatch) -> None:
+    tool = load_tool()
+
+    def fake_best_pair_proxy_mse_candidate(**kwargs):
+        assert kwargs["candidate_batch_size"] in {1, 4}
+        return 1.0, 0.5, 1, 1
+
+    ticks = iter([0.0, 10.0, 10.0, 12.0])
+    monkeypatch.setattr(
+        tool,
+        "_best_pair_proxy_mse_candidate",
+        fake_best_pair_proxy_mse_candidate,
+    )
+    monkeypatch.setattr(tool.time, "perf_counter", lambda: next(ticks))
+
+    profile = tool.profile_pair_proxy_mse_candidate_batches(
+        decoder=object(),
+        base_lat=torch.zeros((1, 2), dtype=torch.float32),
+        gt_eval=np.ones((2, 1, 1, 3), dtype=np.float32),
+        eval_h=1,
+        eval_w=1,
+        deltas=np.array([-1.0, 1.0], dtype=np.float32),
+        candidate_batch_sizes=[1, 4],
+    )
+
+    assert profile["schema_version"] == "a1_sidecar_candidate_batch_profile_v1"
+    assert profile["selected_candidate_batch_size"] == 4
+    assert profile["selection_reason"] == "fastest_semantic_match"
+    assert all(row["semantic_match_scalar_reference"] for row in profile["records"])
+
+
+def test_candidate_batch_profiler_falls_back_on_semantic_mismatch(monkeypatch) -> None:
+    tool = load_tool()
+
+    def fake_best_pair_proxy_mse_candidate(**kwargs):
+        if kwargs["candidate_batch_size"] == 1:
+            return 1.0, 0.5, 0, 0
+        return 1.0, 0.25, 1, 0
+
+    monkeypatch.setattr(
+        tool,
+        "_best_pair_proxy_mse_candidate",
+        fake_best_pair_proxy_mse_candidate,
+    )
+
+    profile = tool.profile_pair_proxy_mse_candidate_batches(
+        decoder=object(),
+        base_lat=torch.zeros((1, 2), dtype=torch.float32),
+        gt_eval=np.ones((2, 1, 1, 3), dtype=np.float32),
+        eval_h=1,
+        eval_w=1,
+        deltas=np.array([-1.0, 1.0], dtype=np.float32),
+        candidate_batch_sizes=[4, 1],
+    )
+
+    assert profile["profiled_candidate_batch_sizes"] == [1, 4]
+    assert profile["selected_candidate_batch_size"] == 1
+    assert profile["selection_reason"] == "non_scalar_batches_semantic_mismatch"
+    assert profile["records"][1]["semantic_match_scalar_reference"] is False
+
+
 def test_proxy_search_resume_skips_completed_pairs_and_updates_state(
     tmp_path: Path,
     monkeypatch,

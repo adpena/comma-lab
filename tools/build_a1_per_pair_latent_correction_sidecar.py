@@ -1064,12 +1064,18 @@ def search_per_pair_proxy_mse(
     state_path: Path | None = None,
     state_context: dict[str, Any] | None = None,
     max_search_seconds: float | None = None,
+    candidate_batch_profile_sizes: list[int] | None = None,
+    auto_candidate_batch_size: bool = False,
 ) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
     """Greedy per-pair single-dim search using pixel MSE (fast proxy)."""
     import torch
 
     if max_search_seconds is not None and max_search_seconds <= 0:
         raise ValueError("max_search_seconds must be positive when supplied")
+    if auto_candidate_batch_size and not candidate_batch_profile_sizes:
+        raise ValueError(
+            "auto_candidate_batch_size requires candidate_batch_profile_sizes"
+        )
     decoder_sd = components["decoder_sd"]
     latents_base = components["latents_pre_sidecar"].clone()
     eval_h, eval_w = components["eval_size"]
@@ -1130,6 +1136,8 @@ def search_per_pair_proxy_mse(
     progress_every = max(1, min(25, len(work_pair_indices) or 1))
     completed_this_run = 0
     stopped_for_wall_clock = False
+    active_candidate_batch_size = candidate_batch_size
+    candidate_batch_profile: dict[str, Any] | None = None
     for n_done, k in enumerate(work_pair_indices, start=1):
         if (
             max_search_seconds is not None
@@ -1146,6 +1154,27 @@ def search_per_pair_proxy_mse(
             eval_w=eval_w,
         )  # (2, EVAL_H, EVAL_W, 3) float32
         base_lat = latents_base[k : k + 1].clone()
+        if candidate_batch_profile_sizes is not None and candidate_batch_profile is None:
+            candidate_batch_profile = profile_pair_proxy_mse_candidate_batches(
+                decoder=decoder,
+                base_lat=base_lat,
+                gt_eval=gt_eval,
+                eval_h=eval_h,
+                eval_w=eval_w,
+                deltas=deltas,
+                candidate_batch_sizes=candidate_batch_profile_sizes,
+            )
+            if auto_candidate_batch_size:
+                active_candidate_batch_size = int(
+                    candidate_batch_profile["selected_candidate_batch_size"]
+                )
+                print(
+                    "[profile] candidate_batch_size "
+                    f"selected={active_candidate_batch_size} "
+                    f"reference=1 "
+                    f"reason={candidate_batch_profile['selection_reason']}",
+                    flush=True,
+                )
         base_mse, best_mse, best_dim, best_didx = _best_pair_proxy_mse_candidate(
             decoder=decoder,
             base_lat=base_lat,
@@ -1153,7 +1182,7 @@ def search_per_pair_proxy_mse(
             eval_h=eval_h,
             eval_w=eval_w,
             deltas=deltas,
-            candidate_batch_size=candidate_batch_size,
+            candidate_batch_size=active_candidate_batch_size,
         )
         dims_out[k] = best_dim
         delta_idx_out[k] = best_didx
@@ -1215,7 +1244,10 @@ def search_per_pair_proxy_mse(
         "n_pairs_perturbed": n_perturbed,
         "n_pairs_perturbed_searched": n_perturbed_searched,
         "unsearched_pairs_preserve_old_sidecar": True,
-        "candidate_batch_size": candidate_batch_size,
+        "requested_candidate_batch_size": candidate_batch_size,
+        "candidate_batch_size": active_candidate_batch_size,
+        "auto_candidate_batch_size": auto_candidate_batch_size,
+        "candidate_batch_profile": candidate_batch_profile,
         "search_device": device.type,
         "elapsed_seconds": elapsed,
         "search_stopped_for_wall_clock": stopped_for_wall_clock,
@@ -1304,6 +1336,106 @@ def _best_pair_proxy_mse_candidate(
                 flush()
     flush()
     return base_mse, best_mse, best_dim, best_didx
+
+
+def profile_pair_proxy_mse_candidate_batches(
+    *,
+    decoder: Any,
+    base_lat: Any,
+    gt_eval: np.ndarray,
+    eval_h: int,
+    eval_w: int,
+    deltas: np.ndarray,
+    candidate_batch_sizes: list[int],
+) -> dict[str, Any]:
+    """Benchmark candidate chunk sizes against scalar search on one pair.
+
+    The scalar ``candidate_batch_size=1`` result is the semantic reference. A
+    larger chunk is selectable only if it returns the same best choice and
+    numerically equivalent objective values on the profiled pair. This keeps
+    batching opt-in and fail-closed: disagreement is recorded and scalar search
+    remains selected.
+    """
+
+    unique_sizes: list[int] = []
+    for raw_size in candidate_batch_sizes:
+        size = int(raw_size)
+        if size < 1:
+            raise ValueError("candidate batch profile sizes must be >= 1")
+        if size not in unique_sizes:
+            unique_sizes.append(size)
+    if 1 not in unique_sizes:
+        unique_sizes.insert(0, 1)
+    else:
+        unique_sizes = [1] + [size for size in unique_sizes if size != 1]
+
+    records: list[dict[str, Any]] = []
+    reference: tuple[float, float, int, int] | None = None
+    for size in unique_sizes:
+        started = time.perf_counter()
+        base_mse, best_mse, best_dim, best_didx = _best_pair_proxy_mse_candidate(
+            decoder=decoder,
+            base_lat=base_lat,
+            gt_eval=gt_eval,
+            eval_h=eval_h,
+            eval_w=eval_w,
+            deltas=deltas,
+            candidate_batch_size=size,
+        )
+        elapsed = time.perf_counter() - started
+        if reference is None:
+            reference = (base_mse, best_mse, best_dim, best_didx)
+        semantic_match = (
+            best_dim == reference[2]
+            and best_didx == reference[3]
+            and np.isclose(base_mse, reference[0], rtol=0.0, atol=1e-6)
+            and np.isclose(best_mse, reference[1], rtol=0.0, atol=1e-6)
+        )
+        records.append(
+            {
+                "candidate_batch_size": size,
+                "elapsed_seconds": elapsed,
+                "base_mse": base_mse,
+                "best_mse": best_mse,
+                "best_dim": int(best_dim),
+                "best_delta_idx": int(best_didx),
+                "semantic_match_scalar_reference": bool(semantic_match),
+            }
+        )
+
+    selectable = [
+        record for record in records if record["semantic_match_scalar_reference"]
+    ]
+    selected = min(
+        selectable,
+        key=lambda record: (
+            float(record["elapsed_seconds"]),
+            int(record["candidate_batch_size"]),
+        ),
+    )
+    selected_size = int(selected["candidate_batch_size"])
+    if selected_size == 1:
+        mismatched = [
+            int(record["candidate_batch_size"])
+            for record in records
+            if not record["semantic_match_scalar_reference"]
+        ]
+        reason = (
+            "scalar_reference_fastest"
+            if not mismatched
+            else "non_scalar_batches_semantic_mismatch"
+        )
+    else:
+        reason = "fastest_semantic_match"
+
+    return {
+        "schema_version": "a1_sidecar_candidate_batch_profile_v1",
+        "reference_candidate_batch_size": 1,
+        "profiled_candidate_batch_sizes": unique_sizes,
+        "selected_candidate_batch_size": selected_size,
+        "selection_reason": reason,
+        "records": records,
+    }
 
 
 def _resize_uint8_to_eval(
@@ -1536,6 +1668,25 @@ def main() -> int:
         ),
     )
     p.add_argument(
+        "--profile-candidate-batches",
+        type=int,
+        nargs="+",
+        default=None,
+        metavar="N",
+        help=(
+            "benchmark candidate batch sizes on the first searched pair against "
+            "the scalar reference and record the profile in sidecar_manifest.json"
+        ),
+    )
+    p.add_argument(
+        "--auto-candidate-batch-size",
+        action="store_true",
+        help=(
+            "after --profile-candidate-batches, use the fastest profiled batch "
+            "size that matches scalar search semantics on the profiled pair"
+        ),
+    )
+    p.add_argument(
         "--search-device",
         choices=["cpu", "mps", "cuda"],
         default="cpu",
@@ -1573,6 +1724,8 @@ def main() -> int:
         ),
     )
     args = p.parse_args()
+    if args.auto_candidate_batch_size and not args.profile_candidate_batches:
+        args.profile_candidate_batches = [1, 2, 4, 8, 16, 32, 64]
 
     timestamp = dt.datetime.now(dt.UTC).strftime("%Y%m%dT%H%M%SZ")
     out_dir = args.output_dir or (
@@ -1654,6 +1807,8 @@ def main() -> int:
             state_path=state_path,
             state_context=state_context,
             max_search_seconds=args.max_search_seconds,
+            candidate_batch_profile_sizes=args.profile_candidate_batches,
+            auto_candidate_batch_size=args.auto_candidate_batch_size,
         )
     else:
         sys.stderr.write(
