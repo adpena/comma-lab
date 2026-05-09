@@ -134,6 +134,46 @@ Result: passed.
   packet, exact-eval dispatcher preflight, fresh lane claim, and terminal claim
   closure before any GHA/remote/GPU/eval work.
 
+## Codex follow-up local chunk
+
+<!-- generated_at: 2026-05-09T23:35:00Z -->
+<!-- evidence_grade: local_cpu_proxy_partial; no score claim; no remote dispatch -->
+
+After commit `a94650f5`, Codex ran one bounded local resume chunk to advance the
+actual ignored candidate artifact without launching remote/GPU/eval work:
+
+```bash
+/usr/bin/time -p .venv/bin/python tools/build_a1_per_pair_latent_correction_sidecar.py \
+  --n-pairs 5 \
+  --resume-search-state \
+  --max-search-seconds 45 \
+  --runtime-smoke \
+  --runtime-smoke-pairs 1 \
+  --output-dir experiments/results/a1_sidecar_resumable_codex_20260509T_local
+```
+
+Observed:
+
+- resumed `sidecar_choice_state.json`;
+- skipped already-completed pairs `0` and `1`;
+- searched pairs `2`, `3`, and `4`;
+- elapsed `real 48.65`, `user 114.15`, `sys 2.88`;
+- choice-state SHA-256
+  `b4fc7c53a88189c90104c2458cae31bdbe81d170101359920453050079babcc7`;
+- archive SHA-256
+  `e140ad653d865d55b33e88e849c05a885ad02a5af98a79a3c99d3a0cd16eeda4`;
+- archive bytes `178316`;
+- `runtime_smoke_checked=true`;
+- `n_pairs_searched=5`;
+- `n_pairs_completed_this_run=3`;
+- `n_pairs_skipped_already_completed=2`;
+- `full_non_smoke_search=false`;
+- `ready_for_exact_eval_dispatch=false`;
+- blocker remains `non_full_sidecar_search_not_exact_eval_ready`.
+
+The raw artifact directory remains ignored:
+`experiments/results/a1_sidecar_resumable_codex_20260509T_local/`.
+
 ## Solver Wire-In
 
 - Sensitivity-map contribution: N/A - no authoritative empirical anchor.
