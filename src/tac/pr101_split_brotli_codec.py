@@ -38,7 +38,11 @@ dependency. CPU-only, deterministic, byte-faithful round-trip.
 from __future__ import annotations
 
 import logging
+import io
+import lzma
+import math
 from dataclasses import dataclass
+from functools import lru_cache
 
 import brotli
 import numpy as np
@@ -61,6 +65,9 @@ N_PAIRS = 600
 LATENT_DIM = 28
 BASE_CHANNELS = 36
 EVAL_SIZE = (384, 512)
+LATENT_LZMA_FILTERS = [
+    {"id": lzma.FILTER_LZMA1, "dict_size": 4096, "lc": 3, "lp": 0, "pb": 0}
+]
 
 # Storage permutation of tensor indices used for split-brotli ordering. This
 # is the order that minimizes split-stream output bytes on PR101's trained
@@ -105,6 +112,31 @@ DECODER_BYTE_MAPS: dict[int, str] = {
     20: "twos",
     27: "off",
 }
+
+LATENT_DIM_ORDER = (
+    26, 0, 17, 15, 10, 24, 20, 12, 14, 21, 22, 18, 4, 11,
+    3, 7, 16, 2, 6, 8, 19, 23, 5, 9, 1, 13, 27, 25,
+)
+SIDECAR_DELTAS_X100 = np.array(
+    [-10, -8, -6, -5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6, 8, 10],
+    dtype=np.int8,
+)
+SIDECAR_BASE = 1 + LATENT_DIM * len(SIDECAR_DELTAS_X100)
+SIDECAR_PACKED_LEN = 661
+SIDECAR_SPLIT_LEN = 656
+SIDECAR_HUFF_LEN = 614
+SIDECAR_HUFF_ENUM_LEN = 607
+SIDECAR_HUFF_COMB_LEN = 609
+SIDECAR_NOOP_RANK_PREFIX_LEN = 4
+SIDECAR_NOOP_INFER_RANK_LEN = 3
+SIDECAR_NOOP_TABLE_LEN = 7
+SIDECAR_DIM_PACKED_LEN = 359
+SIDECAR_DELTA_HUFF_LENGTHS_LEN = 8
+SIDECAR_DELTA_HUFF3_LENGTHS_LEN = 6
+SIDECAR_DELTA_HUFF_LENGTH_RANK_LEN = 5
+SIDECAR_HUFF_MIN_LEN = 2
+SIDECAR_HUFF_MAX_LEN = 8
+SIDECAR_HUFF_KRAFT_TOTAL = 1 << SIDECAR_HUFF_MAX_LEN
 
 # Quantization range. PR101 uses signed-7-bit (clamp to [-127, 127]) which
 # matches PR106's N_QUANT and keeps zigzag output in u8.
@@ -262,6 +294,354 @@ def decompress_brotli_streams(data: bytes, n_streams: int) -> bytes:
     if pos != len(data):
         raise Pr101SplitBrotliCodecError("trailing compact decoder payload")
     return b"".join(outputs)
+
+
+def unpack_nibbles(data: bytes, n: int) -> np.ndarray:
+    """Unpack PR101 sidecar low/high nibbles into ``n`` uint8 symbols."""
+    arr = np.frombuffer(data, dtype=np.uint8)
+    unpacked = np.empty(arr.size * 2, dtype=np.uint8)
+    unpacked[0::2] = arr & 15
+    unpacked[1::2] = arr >> 4
+    return unpacked[:n]
+
+
+def unpack_3bit_lengths(data: bytes, n: int, offset: int) -> np.ndarray:
+    """Unpack the compact PR101 3-bit Huffman length representation."""
+    out = np.empty(n, dtype=np.uint8)
+    bit_pos = 0
+    for i in range(n):
+        value = 0
+        for _ in range(3):
+            byte = data[bit_pos // 8]
+            value = (value << 1) | ((byte >> (7 - (bit_pos % 8))) & 1)
+            bit_pos += 1
+        out[i] = value + offset
+    return out
+
+
+def decode_canonical_huffman(
+    data: bytes,
+    lengths: np.ndarray,
+    n_symbols: int,
+) -> np.ndarray:
+    """Decode exactly ``n_symbols`` using PR101's canonical Huffman code."""
+    decode: dict[tuple[int, int], int] = {}
+    code = 0
+    prev_len = 0
+    for sym, length in sorted(
+        ((sym, int(length)) for sym, length in enumerate(lengths) if length),
+        key=lambda x: (x[1], x[0]),
+    ):
+        code <<= length - prev_len
+        decode[(length, code)] = sym
+        code += 1
+        prev_len = length
+
+    out = np.empty(n_symbols, dtype=np.uint8)
+    out_pos = 0
+    cur = 0
+    cur_len = 0
+    for byte in data:
+        for shift in range(7, -1, -1):
+            cur = (cur << 1) | ((byte >> shift) & 1)
+            cur_len += 1
+            sym = decode.get((cur_len, cur))
+            if sym is not None:
+                out[out_pos] = sym
+                out_pos += 1
+                if out_pos == n_symbols:
+                    return out
+                cur = 0
+                cur_len = 0
+    raise Pr101SplitBrotliCodecError("truncated Huffman sidecar")
+
+
+def decode_canonical_huffman_all(data: bytes, lengths: np.ndarray) -> np.ndarray:
+    """Decode all bits in a PR101 canonical Huffman sidecar stream."""
+    decode: dict[tuple[int, int], int] = {}
+    code = 0
+    prev_len = 0
+    for sym, length in sorted(
+        ((sym, int(length)) for sym, length in enumerate(lengths) if length),
+        key=lambda x: (x[1], x[0]),
+    ):
+        code <<= length - prev_len
+        decode[(length, code)] = sym
+        code += 1
+        prev_len = length
+
+    out: list[int] = []
+    cur = 0
+    cur_len = 0
+    for byte in data:
+        for shift in range(7, -1, -1):
+            cur = (cur << 1) | ((byte >> shift) & 1)
+            cur_len += 1
+            sym = decode.get((cur_len, cur))
+            if sym is not None:
+                out.append(sym)
+                cur = 0
+                cur_len = 0
+    if cur_len:
+        raise Pr101SplitBrotliCodecError("truncated Huffman sidecar")
+    return np.array(out, dtype=np.uint8)
+
+
+@lru_cache(None)
+def huff_length_vector_count(pos: int, remaining: int) -> int:
+    """Count legal PR101 sidecar Huffman length-vector suffixes."""
+    if pos == len(SIDECAR_DELTAS_X100):
+        return int(remaining == 0)
+    total = 0
+    for length in range(SIDECAR_HUFF_MIN_LEN, SIDECAR_HUFF_MAX_LEN + 1):
+        weight = 1 << (SIDECAR_HUFF_MAX_LEN - length)
+        if remaining >= weight:
+            total += huff_length_vector_count(pos + 1, remaining - weight)
+    return total
+
+
+def decode_huff_length_rank(rank: int) -> np.ndarray:
+    """Decode PR101's ranked canonical-Huffman length vector."""
+    if rank >= huff_length_vector_count(0, SIDECAR_HUFF_KRAFT_TOTAL):
+        raise Pr101SplitBrotliCodecError("bad Huffman length-vector rank")
+    lengths = np.empty(len(SIDECAR_DELTAS_X100), dtype=np.uint8)
+    remaining = SIDECAR_HUFF_KRAFT_TOTAL
+    for pos in range(lengths.size):
+        for length in range(SIDECAR_HUFF_MIN_LEN, SIDECAR_HUFF_MAX_LEN + 1):
+            weight = 1 << (SIDECAR_HUFF_MAX_LEN - length)
+            if remaining < weight:
+                continue
+            block = huff_length_vector_count(pos + 1, remaining - weight)
+            if rank >= block:
+                rank -= block
+            else:
+                lengths[pos] = length
+                remaining -= weight
+                break
+        else:
+            raise Pr101SplitBrotliCodecError("bad Huffman length-vector rank")
+    if remaining or rank:
+        raise Pr101SplitBrotliCodecError("bad Huffman length-vector rank")
+    return lengths
+
+
+def decode_combination_colex(rank: int, n: int, k: int) -> np.ndarray:
+    """Decode a colexicographic combination rank used by PR101 sidecars."""
+    if rank >= math.comb(n, k):
+        raise Pr101SplitBrotliCodecError("bad combination rank")
+    combo = [0] * k
+    x = n
+    for i in range(k, 0, -1):
+        x -= 1
+        while math.comb(x, i) > rank:
+            x -= 1
+        combo[i - 1] = x
+        rank -= math.comb(x, i)
+    if rank:
+        raise Pr101SplitBrotliCodecError("bad combination rank")
+    return np.array(combo, dtype=np.int64)
+
+
+def decode_latents_compact(data: bytes) -> torch.Tensor:
+    """Decode PR101's compact ``latent_blob`` into ``(600, 28)`` float32 latents.
+
+    This is a scorer-free port of PR101 ``hnerv_ft_microcodec/src/codec.py``.
+    The returned rows are aligned with the non-overlapping frame-pair stream
+    ``(0,1), (2,3), ...`` consumed by the public runtime.
+    """
+    try:
+        raw = lzma.decompress(data, format=lzma.FORMAT_RAW, filters=LATENT_LZMA_FILTERS)
+    except lzma.LZMAError as exc:
+        raise Pr101SplitBrotliCodecError(f"bad compact latent payload: {exc}") from exc
+    buf = io.BytesIO(raw)
+    mins = torch.from_numpy(
+        np.frombuffer(buf.read(LATENT_DIM * 2), dtype=np.float16).copy()
+    ).float()
+    scales = torch.from_numpy(
+        np.frombuffer(buf.read(LATENT_DIM * 2), dtype=np.float16).copy()
+    ).float()
+    stored = np.frombuffer(buf.read(N_PAIRS * LATENT_DIM), dtype=np.uint8)
+    if stored.size != N_PAIRS * LATENT_DIM:
+        raise Pr101SplitBrotliCodecError("truncated compact latent payload")
+    if buf.read(1):
+        raise Pr101SplitBrotliCodecError("trailing compact latent payload")
+    delta_ordered = stored.reshape(LATENT_DIM, N_PAIRS)
+    q_ordered = delta_ordered.copy()
+    q_ordered[:, 1:] = np.cumsum(
+        ((delta_ordered[:, 1:].astype(np.int16) - 128) & 255),
+        axis=1,
+        dtype=np.uint16,
+    ).astype(np.uint8) + delta_ordered[:, :1]
+    q_ordered = q_ordered.T.copy()
+    q = np.empty((N_PAIRS, LATENT_DIM), dtype=np.uint8)
+    q[:, LATENT_DIM_ORDER] = q_ordered
+    return torch.from_numpy(q.astype(np.float32)) * scales.unsqueeze(0) + mins.unsqueeze(0)
+
+
+def apply_latent_sidecar(latents: torch.Tensor, data: bytes) -> torch.Tensor:
+    """Apply PR101's optional latent sidecar corrections.
+
+    The sidecar grammar is intentionally broad because public PR101 shipped
+    several equivalent encodings. Unknown encodings fail closed rather than
+    silently training/deploying against the wrong latent rows.
+    """
+    if not data:
+        return latents
+    raw = data
+    if len(raw) not in (
+        SIDECAR_HUFF_ENUM_LEN,
+        SIDECAR_HUFF_COMB_LEN,
+        SIDECAR_HUFF_LEN,
+        SIDECAR_SPLIT_LEN,
+        SIDECAR_PACKED_LEN,
+        N_PAIRS,
+        N_PAIRS * 2,
+    ):
+        try:
+            raw = brotli.decompress(data)
+        except brotli.error as exc:
+            raise Pr101SplitBrotliCodecError(f"bad latent sidecar Brotli payload: {exc}") from exc
+    arr = np.frombuffer(raw, dtype=np.uint8)
+    if arr.size == SIDECAR_HUFF_ENUM_LEN:
+        dim_end = SIDECAR_DIM_PACKED_LEN
+        rank_end = dim_end + SIDECAR_DELTA_HUFF_LENGTH_RANK_LEN
+        length_rank = int.from_bytes(raw[dim_end:rank_end], "little")
+        lengths = decode_huff_length_rank(length_rank)
+
+        noop_rank_start = arr.size - SIDECAR_NOOP_INFER_RANK_LEN
+        delta_valid = decode_canonical_huffman_all(
+            raw[rank_end:noop_rank_start], lengths
+        ).astype(np.int64)
+        n_valid = delta_valid.size
+        noop_count = N_PAIRS - n_valid
+        if noop_count < 0:
+            raise Pr101SplitBrotliCodecError("bad compact Huffman sidecar length")
+
+        noop_rank = int.from_bytes(raw[noop_rank_start:], "little")
+        noop_pos = decode_combination_colex(noop_rank, N_PAIRS, noop_count)
+        valid_mask = np.ones(N_PAIRS, dtype=bool)
+        valid_mask[noop_pos] = False
+        if int(valid_mask.sum()) != n_valid:
+            raise Pr101SplitBrotliCodecError("bad compact Huffman sidecar no-op count")
+
+        value = int.from_bytes(raw[:dim_end], "little")
+        dims_valid = np.empty(n_valid, dtype=np.int64)
+        for i in range(n_valid):
+            value, dims_valid[i] = divmod(value, LATENT_DIM)
+        if value:
+            raise Pr101SplitBrotliCodecError("bad compact Huffman sidecar dimensions")
+
+        dims = np.full(N_PAIRS, 255, dtype=np.int64)
+        codes = np.zeros(N_PAIRS, dtype=np.float32)
+        dims[valid_mask] = dims_valid
+        codes[valid_mask] = SIDECAR_DELTAS_X100[delta_valid].astype(np.float32)
+    elif arr.size == SIDECAR_HUFF_COMB_LEN:
+        noop_count = raw[0]
+        noop_rank = int.from_bytes(raw[1:SIDECAR_NOOP_RANK_PREFIX_LEN], "little")
+        noop_pos = decode_combination_colex(noop_rank, N_PAIRS, noop_count)
+        valid_mask = np.ones(N_PAIRS, dtype=bool)
+        valid_mask[noop_pos] = False
+        n_valid = int(valid_mask.sum())
+
+        dim_start = SIDECAR_NOOP_RANK_PREFIX_LEN
+        dim_end = dim_start + SIDECAR_DIM_PACKED_LEN
+        value = int.from_bytes(raw[dim_start:dim_end], "little")
+        dims_valid = np.empty(n_valid, dtype=np.int64)
+        for i in range(n_valid):
+            value, dims_valid[i] = divmod(value, LATENT_DIM)
+        if value:
+            raise Pr101SplitBrotliCodecError("bad compact Huffman sidecar dimensions")
+
+        len_start = dim_end
+        len_end = len_start + SIDECAR_DELTA_HUFF3_LENGTHS_LEN
+        lengths = unpack_3bit_lengths(
+            raw[len_start:len_end], len(SIDECAR_DELTAS_X100), 2
+        )
+        delta_valid = decode_canonical_huffman(
+            raw[len_end:], lengths, n_valid
+        ).astype(np.int64)
+
+        dims = np.full(N_PAIRS, 255, dtype=np.int64)
+        codes = np.zeros(N_PAIRS, dtype=np.float32)
+        dims[valid_mask] = dims_valid
+        codes[valid_mask] = SIDECAR_DELTAS_X100[delta_valid].astype(np.float32)
+    elif arr.size in (SIDECAR_HUFF_LEN, SIDECAR_SPLIT_LEN):
+        noop_count = raw[0]
+        noop_pos = np.frombuffer(
+            raw[1:1 + 2 * noop_count], dtype="<u2"
+        ).astype(np.int64)
+        if noop_count * 2 + 1 != SIDECAR_NOOP_TABLE_LEN:
+            raise Pr101SplitBrotliCodecError("bad split sidecar no-op table")
+        valid_mask = np.ones(N_PAIRS, dtype=bool)
+        valid_mask[noop_pos] = False
+        n_valid = int(valid_mask.sum())
+
+        dim_start = SIDECAR_NOOP_TABLE_LEN
+        dim_end = dim_start + SIDECAR_DIM_PACKED_LEN
+        value = int.from_bytes(raw[dim_start:dim_end], "little")
+        dims_valid = np.empty(n_valid, dtype=np.int64)
+        for i in range(n_valid):
+            value, dims_valid[i] = divmod(value, LATENT_DIM)
+        if value:
+            raise Pr101SplitBrotliCodecError("bad split sidecar dimensions")
+
+        if arr.size == SIDECAR_HUFF_LEN:
+            len_start = dim_end
+            len_end = len_start + SIDECAR_DELTA_HUFF_LENGTHS_LEN
+            lengths = unpack_nibbles(raw[len_start:len_end], len(SIDECAR_DELTAS_X100))
+            delta_valid = decode_canonical_huffman(
+                raw[len_end:], lengths, n_valid
+            ).astype(np.int64)
+        else:
+            try:
+                packed_delta = brotli.decompress(raw[dim_end:])
+            except brotli.error as exc:
+                raise Pr101SplitBrotliCodecError(
+                    f"bad split latent sidecar delta Brotli payload: {exc}"
+                ) from exc
+            delta_valid = unpack_nibbles(packed_delta, n_valid).astype(np.int64)
+
+        dims = np.full(N_PAIRS, 255, dtype=np.int64)
+        codes = np.zeros(N_PAIRS, dtype=np.float32)
+        dims[valid_mask] = dims_valid
+        codes[valid_mask] = SIDECAR_DELTAS_X100[delta_valid].astype(np.float32)
+    elif arr.size == SIDECAR_PACKED_LEN:
+        value = int.from_bytes(raw, "little")
+        choices = np.empty(N_PAIRS, dtype=np.int64)
+        for i in range(N_PAIRS):
+            value, choices[i] = divmod(value, SIDECAR_BASE)
+        if value:
+            raise Pr101SplitBrotliCodecError("bad packed latent sidecar")
+        valid = choices != 0
+        idx = choices[valid] - 1
+        dims = np.full(N_PAIRS, 255, dtype=np.int64)
+        codes = np.zeros(N_PAIRS, dtype=np.float32)
+        dims[valid] = idx // len(SIDECAR_DELTAS_X100)
+        codes[valid] = SIDECAR_DELTAS_X100[idx % len(SIDECAR_DELTAS_X100)].astype(np.float32)
+    elif arr.size == N_PAIRS:
+        choices = arr.astype(np.int64)
+        valid = choices != 0
+        idx = choices[valid] - 1
+        dims = np.full(N_PAIRS, 255, dtype=np.int64)
+        codes = np.zeros(N_PAIRS, dtype=np.float32)
+        dims[valid] = idx // len(SIDECAR_DELTAS_X100)
+        codes[valid] = SIDECAR_DELTAS_X100[idx % len(SIDECAR_DELTAS_X100)].astype(np.float32)
+    elif arr.size == N_PAIRS * 2:
+        pairs = arr.reshape(N_PAIRS, 2)
+        dims = pairs[:, 0].astype(np.int64)
+        codes = pairs[:, 1].view(np.int8).astype(np.float32)
+    else:
+        raise Pr101SplitBrotliCodecError("bad latent sidecar length")
+    valid = dims != 255
+    if np.any(dims[valid] >= LATENT_DIM):
+        raise Pr101SplitBrotliCodecError("bad latent sidecar dimension")
+    if valid.any():
+        row = torch.from_numpy(np.nonzero(valid)[0])
+        col = torch.from_numpy(dims[valid])
+        delta = torch.from_numpy(codes[valid] / 100.0).to(latents.dtype)
+        latents = latents.clone()
+        latents[row, col] += delta
+    return latents
 
 
 # ---------------------------------------------------------------------------
@@ -864,14 +1244,23 @@ __all__ = [
     "N_PAIRS",
     "N_QUANT",
     "Pr101SplitBrotliCodecError",
+    "apply_latent_sidecar",
     "apply_byte_map_inverse",
     "apply_conv4_perm",
     "auto_select_byte_maps",
+    "decode_canonical_huffman",
+    "decode_canonical_huffman_all",
     "decode_decoder_compact",
+    "decode_latents_compact",
+    "decode_combination_colex",
+    "decode_huff_length_rank",
     "decode_mapped_u8",
     "decompress_brotli_streams",
     "encode_decoder_compact",
     "encode_decoder_compact_with_derivers",
+    "huff_length_vector_count",
     "pack_brotli_stream",
+    "unpack_3bit_lengths",
+    "unpack_nibbles",
     "validate_byte_map_savings",
 ]

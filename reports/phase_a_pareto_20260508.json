@@ -109,7 +109,7 @@
       "timestamp": "artifacts",
       "manifest_path": "experiments/results/track1_phase_a1_score_gradient_20260508T230020Z_modal/harvested_artifacts/build_manifest.json",
       "notes": [
-        "first Modal config retired on macOS CPU advisory; reactivation needs constrained fine-tune"
+        "first Modal config retired on macOS CPU advisory; random-latent training/deploy mismatch fixed; reactivation needs constrained archive-latent fine-tune"
       ]
     },
     {

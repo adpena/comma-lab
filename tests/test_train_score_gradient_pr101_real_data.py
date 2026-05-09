@@ -120,3 +120,43 @@ def test_train_requires_explicit_batch_source() -> None:
             aux_pixel_l1_weight=0.0,
             batch_source=None,
         )
+
+
+def test_real_pair_batch_source_uses_archive_latent_rows() -> None:
+    mod = _load_train_module()
+    frame_pairs = torch.stack(
+        [
+            torch.full((2, 2, 2, 3), float(idx), dtype=torch.float32)
+            for idx in range(6)
+        ],
+        dim=0,
+    )
+    latents = torch.arange(6 * 2, dtype=torch.float32).reshape(6, 2)
+    source = mod.RealPairBatchSource(
+        frame_pairs=frame_pairs,
+        latents=latents,
+        device=torch.device("cpu"),
+        seed=123,
+    )
+
+    z, gt = source.next_batch(5)
+
+    assert z.shape == (5, 2)
+    for row in range(z.shape[0]):
+        idx = int(z[row, 0].item() // 2)
+        assert torch.equal(z[row], latents[idx])
+        assert torch.all(gt[row] == float(idx))
+
+
+def test_real_pair_batch_source_rejects_missing_latent_rows() -> None:
+    mod = _load_train_module()
+    frame_pairs = torch.zeros((4, 2, 2, 2, 3), dtype=torch.float32)
+    latents = torch.zeros((3, 2), dtype=torch.float32)
+
+    with pytest.raises(ValueError, match="latents row count"):
+        mod.RealPairBatchSource(
+            frame_pairs=frame_pairs,
+            latents=latents,
+            device=torch.device("cpu"),
+            seed=1,
+        )

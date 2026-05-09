@@ -314,19 +314,17 @@ def _load_upstream_yuv420_to_rgb() -> Any:
 class RealPairBatchSource:
     """Sample real contest frame pairs each training step.
 
-    Latent ``z`` stays randomly initialized — see codex follow-up note in the
-    docstring header for how PR101 latent_blob extraction would replace this.
-    The ablation's primary concern (per the council EV table) is that
-    SegNet/PoseNet supervision attaches to **real** GT frames so the loss
-    signal corresponds to real scorer behavior, not random noise. That holds
-    here.
+    The latent rows come from the same PR101 ``latent_blob + sidecar_blob``
+    that the downstream archive builder preserves bit-for-bit. This keeps the
+    fine-tuned decoder distribution-aligned with the packet that exact eval
+    will actually inflate.
     """
 
     def __init__(
         self,
         *,
         frame_pairs: torch.Tensor,  # (N_pairs, 2, H, W, 3) float32 on CPU
-        latent_dim: int,
+        latents: torch.Tensor,  # (600, 28) float32 on CPU, PR101 runtime rows
         device: torch.device,
         seed: int,
     ):
@@ -334,25 +332,34 @@ class RealPairBatchSource:
             raise ValueError(
                 f"frame_pairs must be (N_pairs, 2, H, W, 3); got {tuple(frame_pairs.shape)}"
             )
+        if latents.dim() != 2:
+            raise ValueError(f"latents must be (N_pairs, latent_dim); got {tuple(latents.shape)}")
         self._pairs = frame_pairs
-        self._latent_dim = latent_dim
+        self._n_pairs = int(frame_pairs.shape[0])
+        if int(latents.shape[0]) < self._n_pairs:
+            raise ValueError(
+                f"latents row count {int(latents.shape[0])} < frame pair count {self._n_pairs}"
+            )
+        self._latents = latents[: self._n_pairs].contiguous()
+        self._latent_dim = int(self._latents.shape[1])
         self._device = device
         self._rng = torch.Generator(device="cpu").manual_seed(seed)
-        self._n_pairs = frame_pairs.shape[0]
 
     def next_batch(self, batch_size: int) -> tuple[torch.Tensor, torch.Tensor]:
         idx = torch.randint(
             0, self._n_pairs, (batch_size,), generator=self._rng, dtype=torch.long,
         )
         gt = self._pairs[idx].to(self._device)  # (B, 2, H, W, 3)
-        z = torch.randn(
-            (batch_size, self._latent_dim), generator=self._rng, dtype=torch.float32,
-        ).to(self._device)
+        z = self._latents[idx].to(self._device)
         return z, gt
 
     @property
     def n_pairs(self) -> int:
         return self._n_pairs
+
+    @property
+    def latent_dim(self) -> int:
+        return self._latent_dim
 
 
 # ---------------------------------------------------------------------------
@@ -962,6 +969,13 @@ def main() -> int:
         steps_per_epoch = args.steps_per_epoch
         decoder = HNeRVDecoder(latent_dim=args.latent_dim, base_channels=36, eval_size=(frame_h, frame_w))
         pr101_substrate_source = load_pr101_substrate(args.pr101_archive, decoder, smoke=False)
+        from tac.pr101_archive_state_loader import load_pr101_archive_latents
+        latent_source = load_pr101_archive_latents(args.pr101_archive)
+        if int(latent_source.latents.shape[1]) != args.latent_dim:
+            raise RuntimeError(
+                f"PR101 archive latent_dim {int(latent_source.latents.shape[1])} "
+                f"does not match --latent-dim {args.latent_dim}"
+            )
         posenet, segnet = load_cuda_scorers(device)
         LOGGER.info("loading real contest frame pairs from %s", video_path)
         frame_pairs = load_real_frame_pairs(
@@ -973,7 +987,7 @@ def main() -> int:
         LOGGER.info("loaded %d real frame pairs", frame_pairs.shape[0])
         real_source = RealPairBatchSource(
             frame_pairs=frame_pairs,
-            latent_dim=args.latent_dim,
+            latents=latent_source.latents,
             device=device,
             seed=args.seed,
         )
@@ -985,13 +999,15 @@ def main() -> int:
             "not_score_bearing": False,
             "video_path": str(video_path.resolve()),
             "n_pairs": real_source.n_pairs,
+            "latent_dim": real_source.latent_dim,
             "max_frames": args.max_frames,
+            "latent_source": latent_source.metadata,
             "note": (
-                "z latent stays randomly initialized — PR101 latent_blob "
-                "extraction is the next-tier improvement (see "
-                "feedback_codex_finding_pr101_synthetic_targets_FIXED_20260508). "
-                "Real GT frames are sufficient for the council Decision 2 "
-                "ablation goal of ≥10% seg/pose-distortion reduction."
+                "z latent rows are decoded from the same PR101 latent_blob + "
+                "sidecar_blob that the downstream A1 archive builder preserves "
+                "bit-for-bit. This closes the 2026-05-09 training/deploy "
+                "distribution mismatch that used random latents in non-smoke "
+                "mode."
             ),
         }
 

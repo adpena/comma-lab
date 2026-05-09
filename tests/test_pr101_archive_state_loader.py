@@ -15,6 +15,7 @@ if str(REPO_ROOT / "src") not in sys.path:
 
 from tac.pr101_archive_state_loader import (  # noqa: E402
     Pr101ArchiveStateLoaderError,
+    load_pr101_archive_latents,
     load_pr101_archive_state,
 )
 from tac.pr101_split_brotli_codec import (  # noqa: E402
@@ -133,6 +134,37 @@ def test_actual_public_pr101_archive_strict_loads_into_a1_decoder_when_present()
         "missing_keys": [],
         "unexpected_keys": [],
     }
+
+
+def test_actual_public_pr101_archive_latents_match_public_runtime_when_present() -> None:
+    archive = (
+        REPO_ROOT
+        / "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip"
+    )
+    codec_dir = (
+        REPO_ROOT
+        / "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex"
+        / "source/submissions/hnerv_ft_microcodec/src"
+    )
+    if not archive.is_file() or not (codec_dir / "codec.py").is_file():
+        pytest.skip("public PR101 archive/source fixture is not present in this checkout")
+
+    sys.path.insert(0, str(codec_dir))
+    try:
+        public_codec = _load_module(codec_dir / "codec.py", "public_pr101_codec_for_latent_test")
+    finally:
+        sys.path.remove(str(codec_dir))
+    with zipfile.ZipFile(archive) as zf:
+        inner = zf.read("x")
+    _decoder_sd, public_latents, public_meta = public_codec.parse_archive(inner)
+
+    loaded = load_pr101_archive_latents(archive)
+
+    assert loaded.metadata["kind"] == "pr101_archive_runtime_latents"
+    assert loaded.metadata["sidecar_applied"] is True
+    assert loaded.metadata["latent_shape"] == [600, 28]
+    assert public_meta["n_pairs"] == 600
+    assert torch.equal(loaded.latents, public_latents)
 
 
 def test_experiment_cli_materializes_state_dict_and_metadata_when_fixture_present(

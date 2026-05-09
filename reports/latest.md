@@ -47,7 +47,7 @@ rule citation (commit `648b498c`).
 | Lane | Archive bytes | Δ vs brotli (178,144 B) | Verdict |
 |---|---:|---:|---|
 | A0 mdl_baseline | — | — | byte_proxy_only_deterministic |
-| A1 score_gradient | 205,879 | +27,735 | first Modal config retired on macOS CPU advisory; family reactivation requires constrained fine-tune |
+| A1 score_gradient | 205,879 | +27,735 | first Modal config retired on macOS CPU advisory; random-latent training/deploy mismatch fixed; family reactivation requires constrained archive-latent fine-tune |
 | A2 xavier_l2 | 156,344 | -21,800 | FALSIFIED proxy (-3,635 B regression vs uniform) |
 | A3-alt mallat_wavelet | 156,344 | -21,800 | incremental_improvement_insufficient (Mallat > Xavier in 2/4 cells; both fail uniform) |
 | A4 charm_hyperprior real PR101 probe | 206,745 | +28,601 | hand-parametric ChARM/range-coder configs retired; learned co-design remains live |
@@ -64,8 +64,11 @@ reactivation criteria documented per memo.
 **A1 + A4 + A3-alt review verdict:**
 - A1 dispatch tooling: 3 CRITICAL fixes applied (`load_differentiable_scorers`
   signature, canonical `simulate_eval_roundtrip` resize cycle, stale claim
-  closure structural fix), 2 Medium fixes, 1 advisory closed. Re-fire
-  ready when Lightning GPU attached or Vast.ai topped up.
+  closure structural fix), 2 Medium fixes, 1 advisory closed. 2026-05-09
+  follow-up fixed the higher-impact training/deploy mismatch: non-smoke A1 now
+  samples the same PR101 `latent_blob + sidecar_blob` rows that the archive
+  builder preserves at inflate. Re-fire only as a constrained archive-latent
+  fine-tune with collapse screening.
 - A4 ChARM range coder: 4 Medium fixes applied (deterministic ZIP, CARM2
   framing docs, dead param), 4 Low findings closed. R1-1 entropy caveat
   documented. NOT a dispatch blocker.
@@ -85,7 +88,10 @@ reactivation criteria documented per memo.
   advisory eval after the portable-python runtime fix scored **3.721654**
   (`pose=0.178464`, `seg=0.022487`). Treat this config as retired, not the
   family; reactivation needs a constrained fine-tune that preserves the PR101
-  reconstruction basin before any exact CUDA/contest-CPU spend.
+  reconstruction basin before any exact CUDA/contest-CPU spend. The root
+  training/deploy mismatch has been fixed: non-smoke A1 uses archive-derived
+  PR101 latent rows, and `load_pr101_archive_latents()` is verified against the
+  public PR101 runtime parser.
 - A4-alt Filler STC pose codec (`75c99b84`) — 559+ LOC + 27 tests pass.
   Δ vs PD-V2 on smooth-walk fixture: **−400 B (−9.17%)**; idle-dominant
   +52% (expected — AC exploits qint=0 dominance). Verdict

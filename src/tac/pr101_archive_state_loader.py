@@ -26,8 +26,12 @@ from tac.pr101_split_brotli_codec import (
     DECODER_BLOB_LEN,
     FIXED_STATE_SCHEMA,
     LATENT_BLOB_LEN,
+    LATENT_DIM,
+    N_PAIRS,
     Pr101SplitBrotliCodecError,
+    apply_latent_sidecar,
     decode_decoder_compact,
+    decode_latents_compact,
 )
 
 PR101_INNER_MEMBER_NAME = "x"
@@ -47,6 +51,14 @@ class Pr101ArchiveState:
     decoder_blob: bytes = dataclasses.field(repr=False)
     latent_blob: bytes = dataclasses.field(repr=False)
     sidecar_blob: bytes = dataclasses.field(repr=False)
+
+
+@dataclasses.dataclass(frozen=True)
+class Pr101ArchiveLatents:
+    """Decoded PR101 runtime latents plus byte-custody metadata."""
+
+    latents: torch.Tensor
+    metadata: dict[str, Any]
 
 
 def load_pr101_archive_state(
@@ -150,6 +162,58 @@ def load_pr101_archive_state_dict(
 
     loaded = load_pr101_archive_state(archive_path, **kwargs)
     return loaded.state_dict, loaded.metadata
+
+
+def load_pr101_archive_latents(
+    archive_path: str | Path,
+    **kwargs: Any,
+) -> Pr101ArchiveLatents:
+    """Decode the exact PR101 runtime latent rows from ``archive.zip``.
+
+    This helper applies both the fixed ``latent_blob`` decoder and the PR101
+    latent sidecar, so the returned tensor matches what ``inflate.py`` feeds to
+    ``HNeRVDecoder``. A1 score-gradient fine-tuning must use these rows; using
+    random latents trains a decoder that the rebuilt archive cannot reproduce.
+    """
+
+    loaded = load_pr101_archive_state(archive_path, **kwargs)
+    try:
+        base_latents = decode_latents_compact(loaded.latent_blob)
+        latents = apply_latent_sidecar(base_latents, loaded.sidecar_blob)
+    except (Pr101SplitBrotliCodecError, brotli.error, ValueError, RuntimeError) as exc:
+        raise Pr101ArchiveStateLoaderError(
+            "latent_blob/sidecar_blob cannot be decoded as PR101 runtime latents: "
+            f"{exc}"
+        ) from exc
+    if tuple(int(dim) for dim in latents.shape) != (N_PAIRS, LATENT_DIM):
+        raise Pr101ArchiveStateLoaderError(
+            f"decoded PR101 latents shape {tuple(latents.shape)} != "
+            f"({N_PAIRS}, {LATENT_DIM})"
+        )
+    if latents.dtype != torch.float32:
+        raise Pr101ArchiveStateLoaderError(f"decoded PR101 latents dtype {latents.dtype} != torch.float32")
+    metadata = {
+        "kind": "pr101_archive_runtime_latents",
+        "loader": "tac.pr101_archive_state_loader.load_pr101_archive_latents",
+        "source_state_loader": loaded.metadata["loader"],
+        "archive_path": loaded.metadata["archive_path"],
+        "archive_size_bytes": loaded.metadata["archive_size_bytes"],
+        "archive_sha256": loaded.metadata["archive_sha256"],
+        "inner_member_name": loaded.metadata["inner_member_name"],
+        "inner_member_bytes": loaded.metadata["inner_member_bytes"],
+        "inner_member_sha256": loaded.metadata["inner_member_sha256"],
+        "latent_blob_offset": loaded.metadata["latent_blob_offset"],
+        "latent_blob_bytes": loaded.metadata["latent_blob_bytes"],
+        "latent_blob_sha256": loaded.metadata["latent_blob_sha256"],
+        "sidecar_blob_offset": loaded.metadata["sidecar_blob_offset"],
+        "sidecar_blob_bytes": loaded.metadata["sidecar_blob_bytes"],
+        "sidecar_blob_sha256": loaded.metadata["sidecar_blob_sha256"],
+        "sidecar_applied": bool(loaded.sidecar_blob),
+        "latent_shape": [int(dim) for dim in latents.shape],
+        "latent_dtype": str(latents.dtype),
+        "frame_pair_order": "non_overlapping_pairs_0_1_2_3",
+    }
+    return Pr101ArchiveLatents(latents=latents, metadata=metadata)
 
 
 def _read_strict_pr101_inner_blob(
