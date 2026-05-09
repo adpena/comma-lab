@@ -202,3 +202,245 @@ def test_gha_cpu_download_artifact_fallback_selects_matching_report(
 
     assert report == tmp_path / "eval-wanted_submission" / "report.txt"
     assert any("-n" in call for call in calls)
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# HIGH 1 (codex round-2 review, 2026-05-09): exact-identity matching.
+# ──────────────────────────────────────────────────────────────────────────
+
+
+def test_apogee_does_not_cross_match_apogee_stack_b100() -> None:
+    """`apogee` must NOT match a log mentioning `apogee_stack_b100`."""
+    tool = _load_tool()
+    log_text = (
+        "uv run evaluate.sh --submission-dir ./submissions/apogee_stack_b100\n"
+        "submission_dir: submissions/apogee_stack_b100\n"
+    )
+    assert tool._text_mentions_submission_exactly(log_text, "apogee") is False
+
+
+def test_apogee_stack_b100_does_not_cross_match_apogee_stack_b100_v2() -> None:
+    """`apogee_stack_b100` must NOT match a log for `apogee_stack_b100_v2`."""
+    tool = _load_tool()
+    log_text = (
+        "submission_dir: submissions/apogee_stack_b100_v2\n"
+        "uv run evaluate.sh --submission-dir submissions/apogee_stack_b100_v2\n"
+    )
+    assert (
+        tool._text_mentions_submission_exactly(log_text, "apogee_stack_b100")
+        is False
+    )
+
+
+def test_exact_match_still_works() -> None:
+    """Exact identity match continues to succeed."""
+    tool = _load_tool()
+    log_text = (
+        "submission_dir: submissions/apogee_stack_b100\n"
+        "Final score: 100*segnet_dist + sqrt(10*posenet_dist) + 25*rate = 0.19\n"
+    )
+    assert (
+        tool._text_mentions_submission_exactly(log_text, "apogee_stack_b100")
+        is True
+    )
+
+
+def test_exact_match_works_for_multiple_pattern_forms() -> None:
+    """All four canonical pattern forms feed into the same token set."""
+    tool = _load_tool()
+    cases = [
+        "submission_dir: submissions/apogee\n",
+        "uv run evaluate.sh --submission-dir submissions/apogee\n",
+        "uv run evaluate.sh --submission-dir=./submissions/apogee\n",
+        "submission_name=apogee\n",
+    ]
+    for text in cases:
+        assert tool._text_mentions_submission_exactly(text, "apogee") is True
+    # And none of them give a false match for `apo` or `apogee_stack_b100`.
+    for text in cases:
+        assert tool._text_mentions_submission_exactly(text, "apo") is False
+        assert (
+            tool._text_mentions_submission_exactly(text, "apogee_stack_b100")
+            is False
+        )
+
+
+def test_empty_submission_name_rejected() -> None:
+    """Empty submission name MUST raise rather than degenerate-match anything."""
+    import pytest as _pytest
+
+    tool = _load_tool()
+    with _pytest.raises(ValueError, match="non-empty"):
+        tool._validate_submission_name("")
+    with _pytest.raises(ValueError, match="non-empty"):
+        tool._validate_submission_name("   ")
+    with _pytest.raises(ValueError, match="None"):
+        tool._validate_submission_name(None)  # type: ignore[arg-type]
+
+
+def test_path_separator_in_submission_name_rejected() -> None:
+    """A slash-bearing name (e.g., `submissions/apogee`) is rejected up front."""
+    import pytest as _pytest
+
+    tool = _load_tool()
+    with _pytest.raises(ValueError, match="path separators"):
+        tool._validate_submission_name("submissions/apogee")
+    with _pytest.raises(ValueError, match="path separators"):
+        tool._validate_submission_name("a/b")
+
+
+def test_run_log_uses_exact_identity_for_concurrent_dispatch(monkeypatch) -> None:
+    """Concurrent run that mentions `apogee_stack_b100` must NOT attach to `apogee`."""
+    tool = _load_tool()
+
+    def fake_run(cmd, check, capture_output, text):
+        assert "--log" in cmd
+        return SimpleNamespace(
+            returncode=0,
+            stdout=(
+                "uv run evaluate.sh --submission-dir submissions/apogee_stack_b100\n"
+                "Submission file size: 178,981 bytes\n"
+            ),
+        )
+
+    monkeypatch.setattr(tool.subprocess, "run", fake_run)
+
+    # The previous substring matcher returned True here. The exact-identity
+    # matcher must return False.
+    assert tool.run_log_mentions_submission(
+        123,
+        "example/fork",
+        "apogee",
+    ) is False
+
+
+def test_download_artifact_fail_closed_on_ambiguity(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """Two distinct report.txt files each claiming the same submission_name → raise.
+
+    Per HIGH 1 fix policy: never silently pick one when ambiguity is present.
+    """
+    import pytest as _pytest
+
+    tool = _load_tool()
+
+    def fake_run_gh(args, capture=True):
+        if "-n" in args:
+            return SimpleNamespace(returncode=1, stdout="", stderr="no artifact")
+        # Plant two ambiguous reports that BOTH carry "submission_dir:
+        # submissions/apogee" so the ambiguity check fires.
+        a = tmp_path / "eval-apogee-a"
+        b = tmp_path / "eval-apogee-b"
+        a.mkdir(parents=True, exist_ok=True)
+        b.mkdir(parents=True, exist_ok=True)
+        (a / "report.txt").write_text(
+            "submission_dir: submissions/apogee\nFinal score: 0.19\n",
+            encoding="utf-8",
+        )
+        (b / "report.txt").write_text(
+            "submission_dir: submissions/apogee\nFinal score: 0.21\n",
+            encoding="utf-8",
+        )
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(tool, "run_gh", fake_run_gh)
+
+    with _pytest.raises(tool.AmbiguousSubmissionMatchError) as excinfo:
+        tool.download_artifact(
+            123,
+            "apogee",
+            "example/fork",
+            tmp_path,
+        )
+    err = excinfo.value
+    assert err.submission_name == "apogee"
+    assert len(err.candidates) == 2
+    assert "report.txt" in err.candidates[0]
+
+
+def test_download_artifact_does_not_cross_match_prefix(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """`apogee` must NOT pick a report whose canonical token is `apogee_stack_b100`."""
+    tool = _load_tool()
+
+    def fake_run_gh(args, capture=True):
+        if "-n" in args:
+            return SimpleNamespace(returncode=1, stdout="", stderr="no artifact")
+        long_dir = tmp_path / "eval-apogee_stack_b100"
+        long_dir.mkdir(parents=True, exist_ok=True)
+        (long_dir / "report.txt").write_text(
+            "submission_dir: submissions/apogee_stack_b100\n"
+            "Final score: 100*segnet_dist + sqrt(10*posenet_dist) + 25*rate = 0.21\n",
+            encoding="utf-8",
+        )
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(tool, "run_gh", fake_run_gh)
+
+    # Pre-fix, this would have picked the apogee_stack_b100 report. Post-fix
+    # it must exit non-zero (no exact-identity match for `apogee`).
+    import pytest as _pytest
+    with _pytest.raises(SystemExit) as excinfo:
+        tool.download_artifact(
+            123,
+            "apogee",
+            "example/fork",
+            tmp_path,
+        )
+    assert excinfo.value.code == 3
+
+
+def test_extract_submission_dir_tokens_handles_path_suffix() -> None:
+    """A captured group containing path noise must reduce to its basename."""
+    tool = _load_tool()
+    text = "submission_dir: submissions/apogee_stack_b100\n"
+    tokens = tool._extract_submission_dir_tokens(text)
+    assert tokens == {"apogee_stack_b100"}
+
+
+def test_extract_submission_dir_tokens_collects_distinct_names() -> None:
+    """Mixed log lines yield the union of all canonical names present."""
+    tool = _load_tool()
+    text = (
+        "submission_dir: submissions/apogee\n"
+        "submission_dir: submissions/apogee_stack_b100\n"
+        "submission_name=baseline\n"
+    )
+    tokens = tool._extract_submission_dir_tokens(text)
+    assert tokens == {"apogee", "apogee_stack_b100", "baseline"}
+
+
+def test_run_log_accepts_when_log_lists_multiple_subs_including_ours(
+    monkeypatch,
+) -> None:
+    """If the log mentions our submission AND others, we still match."""
+    tool = _load_tool()
+
+    def fake_run(cmd, check, capture_output, text):
+        return SimpleNamespace(
+            returncode=0,
+            stdout=(
+                "submission_dir: submissions/apogee_stack_b100\n"
+                "submission_dir: submissions/apogee\n"
+                "submission_name=baseline\n"
+            ),
+        )
+
+    monkeypatch.setattr(tool.subprocess, "run", fake_run)
+
+    assert tool.run_log_mentions_submission(
+        123, "example/fork", "apogee"
+    ) is True
+    assert tool.run_log_mentions_submission(
+        123, "example/fork", "apogee_stack_b100"
+    ) is True
+    assert tool.run_log_mentions_submission(
+        123, "example/fork", "baseline"
+    ) is True
+    assert tool.run_log_mentions_submission(
+        123, "example/fork", "apogee_stack_b100_v2"
+    ) is False

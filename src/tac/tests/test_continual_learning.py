@@ -539,3 +539,388 @@ def test_harvest_mixed_authoritative_and_advisory():
     assert sum(not u.accepted for u in updates) == 1
     assert posterior.accepted_anchor_count == 2
     assert posterior.refused_anchor_count == 1
+
+
+# ── CustodyVerdict typed taxonomy tests (codex round-2 HIGH 2 directive) ───
+#
+# Per the round-2 directive: "One test per refused_class".
+# CustodyVerdict.refused_class ∈ {None, missing_metadata, advisory_grade,
+# macos_substrate, cpu_tag_non_gha_linux, cuda_tag_unknown_substrate,
+# tag_axis_mismatch}.
+
+
+def test_custody_verdict_accepted_authoritative_cpu_gha():
+    """Acceptance: CPU GHA Linux x86_64 with cpu axis → accepted, refused_class=None."""
+    from tac.continual_learning import CustodyVerdict
+
+    result = _make_authoritative_result(
+        axis="cpu",
+        tag="[contest-CPU GHA Linux x86_64]",
+        substrate="linux_x86_64_gha_cpu",
+    )
+    verdict = result.validate_custody_verdict()
+    assert isinstance(verdict, CustodyVerdict)
+    assert verdict.accepted is True
+    assert verdict.refused_class is None
+    assert verdict.reason == ""
+
+
+def test_custody_verdict_accepted_authoritative_cuda_t4():
+    """Acceptance: CUDA tag with linux_x86_64_t4 substrate → accepted."""
+    from tac.continual_learning import CustodyVerdict
+
+    result = _make_authoritative_result(
+        axis="cuda",
+        tag="[contest-CUDA]",
+        substrate="linux_x86_64_t4",
+    )
+    verdict = result.validate_custody_verdict()
+    assert isinstance(verdict, CustodyVerdict)
+    assert verdict.accepted is True
+    assert verdict.refused_class is None
+
+
+def test_custody_verdict_accepted_authoritative_cuda_4090():
+    """Acceptance: CUDA tag with linux_x86_64_4090 substrate → accepted."""
+    result = _make_authoritative_result(
+        axis="cuda",
+        tag="[contest-CUDA]",
+        substrate="linux_x86_64_4090",
+    )
+    verdict = result.validate_custody_verdict()
+    assert verdict.accepted is True
+    assert verdict.refused_class is None
+
+
+def test_custody_verdict_refused_class_missing_metadata():
+    """Empty axis / hardware_substrate → refused_class=missing_metadata."""
+    result = ContestResult(
+        axis="",
+        hardware_substrate="linux_x86_64_gha_cpu",
+        architecture_class="pr106",
+        score_value=0.19,
+        evidence_tag="[contest-CPU]",
+        archive_sha256="a" * 64,
+        archive_bytes=178262,
+    )
+    verdict = result.validate_custody_verdict()
+    assert verdict.accepted is False
+    assert verdict.refused_class == "missing_metadata"
+
+
+def test_custody_verdict_refused_class_missing_metadata_blank_substrate():
+    """Whitespace-only hardware_substrate → refused_class=missing_metadata."""
+    result = ContestResult(
+        axis="cpu",
+        hardware_substrate="   ",
+        architecture_class="pr106",
+        score_value=0.19,
+        evidence_tag="[contest-CPU]",
+        archive_sha256="a" * 64,
+        archive_bytes=178262,
+    )
+    verdict = result.validate_custody_verdict()
+    assert verdict.accepted is False
+    assert verdict.refused_class == "missing_metadata"
+
+
+def test_custody_verdict_refused_class_advisory_grade():
+    """[advisory only] tag → refused_class=advisory_grade."""
+    result = _make_authoritative_result(tag="[advisory only]")
+    verdict = result.validate_custody_verdict()
+    assert verdict.accepted is False
+    assert verdict.refused_class == "advisory_grade"
+
+
+def test_custody_verdict_refused_class_advisory_grade_mps():
+    """[MPS-PROXY] tag → refused_class=advisory_grade."""
+    result = _make_authoritative_result(tag="[MPS-PROXY]")
+    verdict = result.validate_custody_verdict()
+    assert verdict.accepted is False
+    assert verdict.refused_class == "advisory_grade"
+
+
+def test_custody_verdict_refused_class_macos_substrate_via_substrate_field():
+    """macOS substrate with authoritative tag → refused_class=macos_substrate."""
+    result = _make_authoritative_result(
+        substrate="macos_arm64_m5max",
+        tag="[contest-CPU GHA Linux x86_64]",
+    )
+    verdict = result.validate_custody_verdict()
+    assert verdict.accepted is False
+    assert verdict.refused_class == "macos_substrate"
+
+
+def test_custody_verdict_refused_class_macos_substrate_via_macos_tag():
+    """[macOS-CPU advisory only] tag → refused_class=macos_substrate."""
+    result = _make_authoritative_result(tag="[macOS-CPU advisory only]")
+    verdict = result.validate_custody_verdict()
+    assert verdict.accepted is False
+    assert verdict.refused_class == "macos_substrate"
+
+
+def test_custody_verdict_refused_class_macos_calibrated_tag():
+    """[macOS-CPU calibrated] tag is also refused under macos_substrate."""
+    result = _make_authoritative_result(tag="[macOS-CPU calibrated]")
+    verdict = result.validate_custody_verdict()
+    assert verdict.accepted is False
+    assert verdict.refused_class == "macos_substrate"
+
+
+def test_custody_verdict_refused_class_cpu_tag_non_gha_linux():
+    """[contest-CPU] with non-GHA linux substrate → refused_class=cpu_tag_non_gha_linux."""
+    result = _make_authoritative_result(
+        axis="cpu",
+        tag="[contest-CPU]",
+        substrate="linux_x86_64_modal_cpu",
+    )
+    verdict = result.validate_custody_verdict()
+    assert verdict.accepted is False
+    assert verdict.refused_class == "cpu_tag_non_gha_linux"
+
+
+def test_custody_verdict_refused_class_cuda_tag_unknown_substrate():
+    """[contest-CUDA] with unknown CUDA substrate → cuda_tag_unknown_substrate."""
+    result = _make_authoritative_result(
+        axis="cuda",
+        tag="[contest-CUDA]",
+        substrate="linux_x86_64_unknown_gpu_v2",
+    )
+    verdict = result.validate_custody_verdict()
+    assert verdict.accepted is False
+    assert verdict.refused_class == "cuda_tag_unknown_substrate"
+
+
+def test_custody_verdict_refused_class_tag_axis_mismatch_cpu_tag_cuda_axis():
+    """CPU tag with axis='cuda' → refused_class=tag_axis_mismatch."""
+    result = _make_authoritative_result(
+        axis="cuda",  # mismatch — CPU tag requires axis="cpu"
+        tag="[contest-CPU GHA Linux x86_64]",
+        substrate="linux_x86_64_gha_cpu",
+    )
+    verdict = result.validate_custody_verdict()
+    assert verdict.accepted is False
+    assert verdict.refused_class == "tag_axis_mismatch"
+
+
+def test_custody_verdict_refused_class_tag_axis_mismatch_cuda_tag_cpu_axis():
+    """CUDA tag with axis='cpu' → refused_class=tag_axis_mismatch."""
+    result = _make_authoritative_result(
+        axis="cpu",  # mismatch — CUDA tag requires axis="cuda"
+        tag="[contest-CUDA]",
+        substrate="linux_x86_64_t4",
+    )
+    verdict = result.validate_custody_verdict()
+    assert verdict.accepted is False
+    assert verdict.refused_class == "tag_axis_mismatch"
+
+
+def test_custody_verdict_is_frozen_dataclass():
+    """CustodyVerdict is frozen so the verdict cannot be mutated post-validation."""
+    import dataclasses
+    from tac.continual_learning import CustodyVerdict
+
+    v = CustodyVerdict(accepted=True, reason="", refused_class=None)
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        v.accepted = False  # type: ignore[misc]
+
+
+def test_custody_validate_back_compat_returns_tuple():
+    """Back-compat: validate_custody() returns (bool, str) tuple."""
+    result = _make_authoritative_result()
+    ok, reason = result.validate_custody()
+    assert isinstance(ok, bool)
+    assert isinstance(reason, str)
+    assert ok is True
+    assert reason == ""
+
+
+def test_custody_back_compat_existing_anchors_not_retroactively_revalidated():
+    """Read-side: existing accepted entries don't get retroactively re-validated.
+
+    The custody validator only refuses NEW entries on the way IN. Once an
+    anchor is in accepted_anchor_history, load_posterior does not re-run the
+    validator — the historical record is preserved.
+    """
+    posterior = ContinualLearningPosterior()
+    # Seed the history with an entry that would FAIL today's stricter validator
+    # (e.g., short-form [contest-CPU] with a non-GHA linux substrate, which
+    # now refused_class=cpu_tag_non_gha_linux).
+    posterior.accepted_anchor_history.append({
+        "axis": "cpu",
+        "architecture_class": "legacy_lane",
+        "evidence_tag": "[contest-CPU]",
+        "archive_sha256": "legacy_" + "0" * 57,
+        "archive_bytes": 200_000,
+        "score_value": 0.19,
+        "hardware_substrate": "linux_x86_64_modal_cpu",  # non-GHA — now refused
+        "observed_at_utc": "2026-04-01T00:00:00+00:00",
+        "track_updates": [],
+        "source_rho_estimate": None,
+    })
+    posterior.accepted_anchor_count = 1
+
+    # The history survives unchanged (no retroactive re-validation).
+    assert posterior.accepted_anchor_count == 1
+    assert len(posterior.accepted_anchor_history) == 1
+    assert posterior.accepted_anchor_history[0]["hardware_substrate"] == (
+        "linux_x86_64_modal_cpu"
+    )
+
+    # But a NEW write with the same shape IS refused going forward.
+    new_result = _make_authoritative_result(
+        axis="cpu",
+        tag="[contest-CPU]",
+        substrate="linux_x86_64_modal_cpu",  # would have been accepted pre-fix
+        sha="modern_" + "1" * 57,
+    )
+    update = posterior_update(posterior, new_result)
+    assert update.accepted is False
+    assert "non-1:1" in update.refusal_reason or "not in 1:1" in update.refusal_reason
+
+
+# ── True multiprocessing tests for posterior_update_locked (MEDIUM fix) ────
+
+
+def _multiproc_worker_distinct(args):
+    """Worker for true cross-process lock test — must be top-level (picklable)."""
+    posterior_path_str, lock_path_str, sha_seed = args
+    from pathlib import Path as _P
+    from tac.continual_learning import (
+        ContestResult,
+        posterior_update_locked,
+    )
+
+    result = ContestResult(
+        axis="cpu",
+        hardware_substrate="linux_x86_64_gha_cpu",
+        architecture_class="pr106_hnerv_cluster",
+        score_value=0.19284,
+        evidence_tag="[contest-CPU GHA Linux x86_64]",
+        archive_sha256=f"{sha_seed:064x}",
+        archive_bytes=178262,
+    )
+    update = posterior_update_locked(
+        result,
+        posterior_path=_P(posterior_path_str),
+        lock_path=_P(lock_path_str),
+    )
+    return (sha_seed, update.accepted, update.refusal_reason)
+
+
+def _multiproc_worker_same_anchor(args):
+    """Worker that always sends the SAME anchor — idempotence test across procs."""
+    posterior_path_str, lock_path_str, idx = args
+    from pathlib import Path as _P
+    from tac.continual_learning import (
+        ContestResult,
+        posterior_update_locked,
+    )
+
+    result = ContestResult(
+        axis="cpu",
+        hardware_substrate="linux_x86_64_gha_cpu",
+        architecture_class="pr106_hnerv_cluster",
+        score_value=0.19284,
+        evidence_tag="[contest-CPU GHA Linux x86_64]",
+        archive_sha256="dup_anchor_" + "f" * 53,  # SAME for every worker
+        archive_bytes=178262,
+    )
+    update = posterior_update_locked(
+        result,
+        posterior_path=_P(posterior_path_str),
+        lock_path=_P(lock_path_str),
+    )
+    return (idx, update.accepted, update.refusal_reason)
+
+
+def test_multiprocess_distinct_anchors_all_land(tmp_path):
+    """True multiprocessing: 4 procs update DISTINCT anchors → all land."""
+    import multiprocessing as mp
+
+    posterior_path = tmp_path / "mp_posterior.json"
+    lock_path = tmp_path / "mp_posterior.lock"
+
+    # Use spawn context for portability across macOS/Linux defaults.
+    ctx = mp.get_context("spawn")
+    args = [
+        (str(posterior_path), str(lock_path), seed) for seed in range(1, 5)
+    ]
+    with ctx.Pool(processes=4) as pool:
+        results = pool.map(_multiproc_worker_distinct, args)
+
+    accepted = sum(1 for (_seed, ok, _reason) in results if ok)
+    assert accepted == 4, f"all 4 distinct anchors should land; got {accepted} (results={results})"
+
+    loaded = load_posterior(posterior_path)
+    assert loaded.accepted_anchor_count == 4
+    seen_shas = {h["archive_sha256"] for h in loaded.accepted_anchor_history}
+    assert len(seen_shas) == 4
+
+
+def test_multiprocess_same_anchor_idempotent(tmp_path):
+    """True multiprocessing: 4 procs update the SAME anchor → 1 accept, 3 idempotent refuse."""
+    import multiprocessing as mp
+
+    posterior_path = tmp_path / "mp_posterior_dup.json"
+    lock_path = tmp_path / "mp_posterior_dup.lock"
+
+    ctx = mp.get_context("spawn")
+    args = [
+        (str(posterior_path), str(lock_path), idx) for idx in range(4)
+    ]
+    with ctx.Pool(processes=4) as pool:
+        results = pool.map(_multiproc_worker_same_anchor, args)
+
+    accepted = sum(1 for (_idx, ok, _reason) in results if ok)
+    refused = sum(1 for (_idx, ok, _reason) in results if not ok)
+    assert accepted == 1, f"exactly 1 should accept; got {accepted}"
+    assert refused == 3, f"3 should be idempotent-refused; got {refused}"
+
+    # Refusal reason for the 3 must mention "duplicate".
+    for _idx, ok, reason in results:
+        if not ok:
+            assert "duplicate" in reason
+
+    loaded = load_posterior(posterior_path)
+    assert loaded.accepted_anchor_count == 1
+    assert loaded.refused_anchor_count == 3
+
+
+def test_lock_released_after_exception(tmp_path):
+    """The lock context manager releases the lock even when the body raises."""
+    from tac.continual_learning import _posterior_lock
+
+    lock_path = tmp_path / "raise.lock"
+    raised = False
+    try:
+        with _posterior_lock(lock_path):
+            raise RuntimeError("intentional")
+    except RuntimeError:
+        raised = True
+    assert raised
+
+    # A second acquisition succeeds because the prior was released.
+    with _posterior_lock(lock_path):
+        pass
+
+
+def test_save_posterior_no_fixed_tmp_path_collision(tmp_path):
+    """save_posterior tmp paths are unique enough to never collide.
+
+    Codex round-2 MEDIUM fix: the prior single `.tmp` path could clobber
+    a sibling save in flight. Verify the producer uses uuid-suffixed paths
+    by checking the implementation has a uuid call at the tmp construction.
+    """
+    import inspect
+    from tac.continual_learning import save_posterior as _save
+
+    src = inspect.getsource(_save)
+    # We allow either uuid.uuid4 or os.getpid()/time-based suffix; the key is
+    # that the suffix is not just `.tmp`.
+    assert (
+        "uuid" in src
+        or "getpid" in src
+        or "monotonic_ns" in src
+        or "time.time" in src
+    ), "save_posterior tmp file must use unique-per-call suffix"

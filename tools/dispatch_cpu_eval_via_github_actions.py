@@ -90,6 +90,114 @@ POLL_INTERVAL_SEC = 30
 POLL_TIMEOUT_SEC = 60 * 45  # 45 min wall-clock budget; eval has 30 min internal
 
 
+class AmbiguousSubmissionMatchError(RuntimeError):
+    """Raised when artifact selection cannot uniquely resolve a submission.
+
+    Bug class fixed (2026-05-09 codex round-2 HIGH 1): substring match on
+    ``submission_name`` would silently pick the wrong artifact under
+    concurrent dispatch (e.g. ``apogee`` vs ``apogee_stack_b100``). This
+    exception fails CLOSED rather than mis-attribute a ``[contest-CPU]``
+    score to the wrong archive.
+
+    Carries the resolution context (the requested name + the candidate
+    submission_dir tokens that matched/conflicted) so the operator can
+    diagnose without re-running the workflow.
+    """
+
+    def __init__(
+        self,
+        submission_name: str,
+        candidates: list[str],
+        *,
+        context: str = "",
+    ) -> None:
+        self.submission_name = submission_name
+        self.candidates = list(candidates)
+        self.context = context
+        msg = (
+            f"ambiguous submission match for {submission_name!r}: "
+            f"{len(candidates)} candidate(s) {candidates!r}"
+        )
+        if context:
+            msg += f" (context: {context})"
+        super().__init__(msg)
+
+
+# Patterns used to extract the canonical ``submission_dir`` token from a
+# workflow log or report.txt body. The fork's eval pipeline writes
+# ``submission_dir: submissions/<name>`` and may also surface the same path
+# via ``--submission-dir submissions/<name>`` on the command line.
+#
+# The crucial discipline: we ONLY match the basename (Path(value).name) so
+# substring overlap (``apogee`` vs ``apogee_stack_b100``) cannot cause a
+# cross-attribution. Each match yields exactly one canonical name token.
+_SUBMISSION_DIR_PATTERNS: tuple[re.Pattern[str], ...] = (
+    # ``submission_dir: submissions/<name>`` (with or without trailing /)
+    re.compile(r"submission_dir:\s*submissions/([A-Za-z0-9_.\-]+)/?\b"),
+    # ``--submission-dir submissions/<name>`` and ``--submission-dir=submissions/<name>``
+    re.compile(r"--submission-dir[=\s]+submissions/([A-Za-z0-9_.\-]+)/?\b"),
+    # ``--submission-dir ./submissions/<name>`` (leading ./ tolerated)
+    re.compile(r"--submission-dir[=\s]+\./submissions/([A-Za-z0-9_.\-]+)/?\b"),
+    # ``submission_name=<name>`` literal (workflow_dispatch echo)
+    re.compile(r"submission_name=([A-Za-z0-9_.\-]+)\b"),
+)
+
+
+def _validate_submission_name(submission_name: str) -> str:
+    """Reject empty / whitespace / path-segment names; return the trimmed name.
+
+    HIGH 1 reinforcement: an empty or whitespace name MUST NOT silently
+    match ``submission_dir:`` lines via degenerate regex.
+    """
+    if submission_name is None:
+        raise ValueError("submission_name is required (got None)")
+    s = submission_name.strip()
+    if not s:
+        raise ValueError(
+            f"submission_name must be non-empty / non-whitespace; got {submission_name!r}"
+        )
+    if "/" in s or "\\" in s:
+        raise ValueError(
+            f"submission_name must not contain path separators; got {submission_name!r} "
+            "(use the bare name, not submissions/<name>)"
+        )
+    return s
+
+
+def _extract_submission_dir_tokens(text: str) -> set[str]:
+    """Return the set of distinct canonical submission_dir basenames in text.
+
+    Each match is reduced to ``Path(<captured>).name`` so a path-suffix
+    inside the captured group still yields a single canonical token.
+    """
+    tokens: set[str] = set()
+    for pat in _SUBMISSION_DIR_PATTERNS:
+        for match in pat.finditer(text):
+            captured = match.group(1)
+            if not captured:
+                continue
+            # Defensive: reduce to basename so any nested path stays clean.
+            name = Path(captured).name
+            if name:
+                tokens.add(name)
+    return tokens
+
+
+def _text_mentions_submission_exactly(text: str, submission_name: str) -> bool:
+    """Return True iff text contains an EXACT-identity match for submission_name.
+
+    Exact-identity = at least one ``submission_dir:`` (or equivalent) token
+    decodes to ``submission_name``. If the text contains tokens for multiple
+    distinct submissions, we still accept iff our requested name is among
+    them; the caller (``run_log_mentions_submission``) only needs to know
+    whether the log discusses our submission. Artifact selection remains
+    fail-closed on duplicate matching reports in ``download_artifact``.
+    """
+    submission_name = _validate_submission_name(submission_name)
+    tokens = _extract_submission_dir_tokens(text)
+    return submission_name in tokens
+
+
 def sha256_of(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as f:
@@ -312,12 +420,21 @@ def trigger_workflow(
 
 
 def run_log_mentions_submission(run_id: int, repo: str, submission_name: str) -> bool:
-    """Return True iff a run log names the requested submission.
+    """Return True iff a run log names the requested submission EXACTLY.
 
     GitHub's workflow-dispatch API does not return the new run ID. The only
     reliable same-turn discriminator under concurrent dispatch is the workflow
     log, whose download/evaluate/comment steps include ``submission_name``.
+
+    HIGH 1 fix (codex round-2 review, 2026-05-09): the previous substring
+    match (``submission_name in result.stdout``) was prefix-unsafe.
+    Dispatching ``apogee`` could attach the wrong run from a concurrent
+    ``apogee_stack_b100`` dispatch because the substring ``"apogee"`` was
+    present in any line mentioning the longer name. We now extract
+    canonical ``submission_dir`` basename tokens from the log and compare
+    by exact identity — never by substring.
     """
+    submission_name = _validate_submission_name(submission_name)
     result = subprocess.run(
         ["gh", "run", "view", str(run_id), "-R", repo, "--log"],
         check=False,
@@ -326,7 +443,7 @@ def run_log_mentions_submission(run_id: int, repo: str, submission_name: str) ->
     )
     if result.returncode != 0:
         return False
-    return submission_name in result.stdout
+    return _text_mentions_submission_exactly(result.stdout, submission_name)
 
 
 def poll_run(run_id: int, repo: str) -> dict[str, Any]:
@@ -374,7 +491,25 @@ def poll_run(run_id: int, repo: str) -> dict[str, Any]:
 
 
 def download_artifact(run_id: int, submission_name: str, repo: str, dest_dir: Path) -> Path:
-    """Download the eval-<submission_name> artifact; return the path to report.txt."""
+    """Download the eval-<submission_name> artifact; return the path to report.txt.
+
+    HIGH 1 fix (codex round-2 review, 2026-05-09): the fallback branch (when
+    the named artifact download fails) downloads ALL artifacts then locates a
+    matching ``report.txt`` by substring. Substring matching is prefix-unsafe
+    (``apogee`` matches ``apogee_stack_b100``) and produces silent
+    cross-attribution under concurrent dispatch. We now:
+
+    1. Tokenize each candidate ``report.txt`` to extract its canonical
+       ``submission_dir`` basename(s) via :func:`_extract_submission_dir_tokens`.
+    2. Accept ONLY reports whose token set contains an EXACT match for
+       ``submission_name``.
+    3. If multiple distinct reports each carry the requested name (i.e., the
+       artifact dump contains duplicates), raise
+       :class:`AmbiguousSubmissionMatchError` rather than silently pick one.
+    4. Empty / whitespace ``submission_name`` is rejected up front by
+       :func:`_validate_submission_name`.
+    """
+    submission_name = _validate_submission_name(submission_name)
     dest_dir.mkdir(parents=True, exist_ok=True)
     artifact_name = f"eval-{submission_name}"
     result = run_gh(
@@ -411,17 +546,37 @@ def download_artifact(run_id: int, submission_name: str, repo: str, dest_dir: Pa
         if all_result.returncode != 0:
             sys.stderr.write("[fatal] gh run download failed\n")
             sys.exit(4)
-    # Locate matching report.txt within dest_dir.
-    candidates = [
-        path for path in dest_dir.rglob("report.txt")
-        if f"submission_dir: submissions/{submission_name}" in path.read_text()
-    ]
+    # Locate matching report.txt within dest_dir using EXACT identity match.
+    # We tokenize each candidate report's canonical submission_dir tokens and
+    # accept iff submission_name is in that set. Ambiguity (multiple reports
+    # whose tokens include submission_name) is FAIL CLOSED.
+    candidates: list[Path] = []
+    for path in dest_dir.rglob("report.txt"):
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        tokens = _extract_submission_dir_tokens(text)
+        if submission_name in tokens:
+            candidates.append(path)
     if not candidates:
         sys.stderr.write(
             f"[fatal] matching report.txt for submission_name={submission_name!r} "
             f"not found in downloaded artifact(s) at {dest_dir}\n"
         )
         sys.exit(3)
+    if len(candidates) > 1:
+        # Distinct artifact paths each claiming our submission_name. This is
+        # the FAIL-CLOSED branch — never silently pick one.
+        raise AmbiguousSubmissionMatchError(
+            submission_name,
+            [str(p) for p in candidates],
+            context=(
+                f"download_artifact run_id={run_id} repo={repo}; "
+                "multiple report.txt files in the same artifact bundle each "
+                "carry an exact-identity match for the requested submission_name"
+            ),
+        )
     return candidates[0]
 
 
