@@ -1246,6 +1246,18 @@ def preflight_all(
         check_vastai_tracker_strict_load(
             strict=True, verbose=verbose,
         )
+        # 2026-05-09 Phase B Option C operator decision (Catalog #150):
+        # `phase_b_preconditions_status(auth_memo_path=...)` MUST receive a
+        # committed repo-relative path. ~/.claude, /tmp, and any non-repo
+        # absolute anchor are FORBIDDEN per the AskUserQuestion arbitration
+        # of codex round 8 HIGH 2 vs a6535b1ed. Same-line waiver
+        # `# PHASE_B_AUTH_MEMO_OK:<reason>` for the rare
+        # consult_session_state=True fallback callsite. STRICT-FLIP per
+        # CLAUDE.md "Bugs must be permanently fixed AND self-protected
+        # against" — Catalog #150 lands at 0 live violations.
+        check_phase_b_auth_memo_in_repo(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -17314,6 +17326,8 @@ def check_python_files_compile(
             violations.append(
                 f"{py.relative_to(root)}: {type(e).__name__}: {e}"
             )
+        except PreflightTimeoutError:
+            raise
         except Exception as e:  # pragma: no cover  unexpected
             if cache_key in compile_cache:
                 del compile_cache[cache_key]
@@ -34299,6 +34313,323 @@ def check_vastai_tracker_strict_load(
         raise PreflightError(
             "check_vastai_tracker_strict_load found "
             f"{len(violations)} non-strict-loader writer(s):\n  "
+            + "\n  ".join(v[:300] for v in violations[:3])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #150 — Phase B `auth_memo_path` MUST be repo-relative
+# (Phase B Option C operator decision 2026-05-09)
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Bug class: a6535b1ed (commit `c3ab229e`) intentionally LANDED
+# `phase_b_preconditions_status(consult_session_state=True)` as default,
+# which scans `~/.claude/projects/.../memory` for any `feedback_*.md` body
+# carrying the `operator_phase_b_authorization=true` token. Codex round 8
+# HIGH 2 flagged this as non-hermetic + spoofable + machine-dependent.
+#
+# Per CLAUDE.md "Design decisions — non-negotiable", this is a council-
+# grade design tradeoff (not a clear bug). Operator decision 2026-05-09
+# via AskUserQuestion: **Option C compromise** — keep True default
+# (a6535b1ed back-compat) PLUS add explicit
+# `phase_b_preconditions_status(auth_memo_path=...)` argument that MUST
+# resolve to a path under the git repo root.
+#
+# This META gate refuses any caller that passes an `auth_memo_path=`
+# keyword pointing to a literal under `~/.claude`, `/tmp`, or any other
+# non-repo absolute anchor. The constraint is checked at preflight time
+# so reviewers see violations BEFORE dispatch invocation.
+#
+# Same-line waiver: `# PHASE_B_AUTH_MEMO_OK:<reason>` for the rare
+# `consult_session_state=True` fallback case (i.e., when the caller
+# deliberately wants the legacy `~/.claude` scan instead of the explicit
+# committed path).
+
+_PHASE_B_AUTH_MEMO_KW_TOKEN = "auth_memo_path"
+_PHASE_B_AUTH_MEMO_FUNCTION_TOKEN = "phase_b_preconditions_status"
+_PHASE_B_AUTH_MEMO_WAIVER_MARKER = "PHASE_B_AUTH_MEMO_OK"
+_PHASE_B_AUTH_MEMO_FORBIDDEN_ANCHORS = (
+    "~/.claude",
+    "/tmp/",
+    "/var/tmp/",
+    "/private/tmp/",
+    "/private/var/tmp/",
+)
+# Implementation files are exempt from the call-site gate because they
+# define / proxy the parameter rather than passing literal paths.
+_PHASE_B_AUTH_MEMO_IMPL_FILES = (
+    "src/tac/lane_12_v2_nerv_as_renderer.py",
+    "src/tac/preflight.py",
+)
+
+
+def _check_150_extract_string_literal(node: ast.AST) -> str | None:
+    """Return the string value of a Constant / JoinedStr / BinOp(+) literal,
+    else None.
+
+    Handles the common shapes:
+    - `auth_memo_path="~/.claude/foo.md"` (Constant)
+    - `auth_memo_path=Path("~/.claude/foo.md")` (Call wrapping Constant)
+    - `auth_memo_path=pathlib.Path.home() / ".claude/foo.md"` (BinOp / Call)
+    - `auth_memo_path=f"/tmp/{lane}.md"` (JoinedStr — extract literal parts)
+    """
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.JoinedStr):
+        # Concatenate any literal Str parts; FormattedValue parts are unknown.
+        parts = []
+        for v in node.values:
+            if isinstance(v, ast.Constant) and isinstance(v.value, str):
+                parts.append(v.value)
+            else:
+                parts.append("")
+        return "".join(parts)
+    if isinstance(node, ast.Call):
+        # Path("~/.claude/foo.md") / pathlib.Path("~/.claude/foo.md")
+        for arg in node.args:
+            inner = _check_150_extract_string_literal(arg)
+            if inner is not None:
+                return inner
+        return None
+    if isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Div, ast.Add)):
+        left = _check_150_extract_string_literal(node.left)
+        right = _check_150_extract_string_literal(node.right)
+        if left is not None and right is not None:
+            return left + ("/" + right if isinstance(node.op, ast.Div) else right)
+        # Even one side gives us anchor evidence.
+        return left if left is not None else right
+    if isinstance(node, ast.Attribute):
+        # Path.home() / ".claude" — walk the chain for "home" + ".claude" token
+        # is handled by callers via `Path.home()` BinOp form above.
+        return None
+    return None
+
+
+def _check_150_call_node_kwarg_value(call: ast.Call) -> ast.AST | None:
+    """Return the AST value node for `auth_memo_path=...` keyword on this
+    Call, else None.
+    """
+    for kw in call.keywords:
+        if kw.arg == _PHASE_B_AUTH_MEMO_KW_TOKEN:
+            return kw.value
+    return None
+
+
+def _check_150_call_targets_phase_b_status(call: ast.Call) -> bool:
+    """Return True if the Call invokes `phase_b_preconditions_status(...)`."""
+    f = call.func
+    if isinstance(f, ast.Name) and f.id == _PHASE_B_AUTH_MEMO_FUNCTION_TOKEN:
+        return True
+    if isinstance(f, ast.Attribute) and f.attr == _PHASE_B_AUTH_MEMO_FUNCTION_TOKEN:
+        return True
+    return False
+
+
+def _check_150_value_uses_path_home_dot_claude(node: ast.AST) -> bool:
+    """Detect `Path.home() / ".claude"` (BinOp Div) anchored at the home dir.
+
+    Pattern fragments that count:
+    - BinOp(Path.home(), Div, ".claude/...")
+    - pathlib.Path.home() / ".claude/foo.md"
+    """
+    if not isinstance(node, ast.BinOp) or not isinstance(node.op, ast.Div):
+        return False
+
+    def _is_path_home_call(n: ast.AST) -> bool:
+        if not isinstance(n, ast.Call):
+            return False
+        f = n.func
+        if isinstance(f, ast.Attribute) and f.attr == "home":
+            inner = f.value
+            if isinstance(inner, ast.Name) and inner.id == "Path":
+                return True
+            if isinstance(inner, ast.Attribute) and inner.attr == "Path":
+                return True
+        return False
+
+    # Walk the BinOp tree; if any "home" call appears AND any RHS literal
+    # contains ".claude", flag.
+    has_home = False
+    has_dot_claude = False
+    for sub in ast.walk(node):
+        if _is_path_home_call(sub):
+            has_home = True
+        if isinstance(sub, ast.Constant) and isinstance(sub.value, str):
+            if ".claude" in sub.value:
+                has_dot_claude = True
+    return has_home and has_dot_claude
+
+
+def check_phase_b_auth_memo_in_repo(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #150 — Phase B `auth_memo_path` must be repo-relative.
+
+    Refuses any caller of `phase_b_preconditions_status(...)` that passes
+    `auth_memo_path=` pointing to a literal under `~/.claude`, `/tmp`,
+    `/var/tmp`, `/private/tmp`, OR a `Path.home() / ".claude/..."`
+    BinOp expression.
+
+    Per the **Phase B Option C operator decision 2026-05-09** (CLAUDE.md
+    "Design decisions — non-negotiable" arbitration of codex round 8
+    HIGH 2 vs a6535b1ed): the authorization memo MUST live in a committed
+    repo-relative path so the reviewer audits the same bytes that gate
+    the dispatch. The canonical location is
+    ``.omx/research/operator_authorizations/``.
+
+    Same-line waiver: ``# PHASE_B_AUTH_MEMO_OK:<reason>`` on the kwarg
+    line OR the Call line for the rare `consult_session_state=True`
+    fallback case.
+
+    Implementation files (`src/tac/lane_12_v2_nerv_as_renderer.py` +
+    this module) are exempt by construction — they define / proxy the
+    parameter rather than passing literal paths.
+
+    Bug class: codex round 8 HIGH 2 (2026-05-09). Memory:
+    feedback_phase_b_option_c_landed_20260509.md.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    scan_dirs = [
+        root / "src" / "tac",
+        root / "tools",
+        root / "experiments",
+        root / "scripts",
+    ]
+
+    violations: list[str] = []
+    scanned_files = 0
+    for scan_dir in scan_dirs:
+        if not scan_dir.is_dir():
+            continue
+        for py in scan_dir.rglob("*.py"):
+            if _is_oss_export_mirror_path(py):
+                continue
+            s = str(py)
+            # Skip vendored / intake / tests / results paths — they are not
+            # production callers.
+            if "/tests/" in s or py.name.startswith("test_"):
+                continue
+            if (
+                "experiments/results/public_pr" in s
+                or "experiments/results/comma_lab_public_export" in s
+                or "_intake_" in s
+            ):
+                continue
+            # Exempt the implementation files (they define the parameter).
+            try:
+                rel = py.relative_to(root)
+            except ValueError:
+                rel = py
+            if str(rel).replace("\\", "/") in _PHASE_B_AUTH_MEMO_IMPL_FILES:
+                continue
+            try:
+                text = py.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            # Cheap filter: skip files that don't reference the function
+            # name AT ALL. Both the call and the kw must appear; we still
+            # parse the AST below to confirm.
+            if _PHASE_B_AUTH_MEMO_FUNCTION_TOKEN not in text:
+                continue
+            if _PHASE_B_AUTH_MEMO_KW_TOKEN not in text:
+                continue
+            scanned_files += 1
+            try:
+                tree = ast.parse(text)
+            except SyntaxError:
+                continue
+            lines = text.splitlines()
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Call):
+                    continue
+                if not _check_150_call_targets_phase_b_status(node):
+                    continue
+                value_node = _check_150_call_node_kwarg_value(node)
+                if value_node is None:
+                    continue
+
+                # Extract any visible literal anchor.
+                literal = _check_150_extract_string_literal(value_node)
+                forbidden_anchor: str | None = None
+                if literal is not None:
+                    expanded = literal.replace("$HOME", "~")
+                    for anchor in _PHASE_B_AUTH_MEMO_FORBIDDEN_ANCHORS:
+                        if expanded.startswith(anchor) or (
+                            anchor.rstrip("/") in expanded.split("/")[:4]
+                        ):
+                            forbidden_anchor = anchor
+                            break
+                    # ~/.claude expansion: also catch the literal "~/.claude"
+                    # if path-joined later.
+                    if forbidden_anchor is None and "~/.claude" in expanded:
+                        forbidden_anchor = "~/.claude"
+
+                # AST-shape check: Path.home() / ".claude/..." form.
+                if forbidden_anchor is None:
+                    if _check_150_value_uses_path_home_dot_claude(value_node):
+                        forbidden_anchor = "Path.home()/.claude"
+
+                if forbidden_anchor is None:
+                    continue
+
+                # Waiver lookup: same line as the kwarg value, OR the Call
+                # line, OR the line above the value.
+                waiver_lines = {
+                    getattr(value_node, "lineno", node.lineno),
+                    node.lineno,
+                    node.lineno - 1,
+                }
+                waived = False
+                for ln in waiver_lines:
+                    idx = ln - 1
+                    if 0 <= idx < len(lines) and (
+                        _PHASE_B_AUTH_MEMO_WAIVER_MARKER in lines[idx]
+                    ):
+                        waived = True
+                        break
+                if waived:
+                    continue
+
+                violations.append(
+                    f"[Check 150] {rel}:{node.lineno}: "
+                    f"`phase_b_preconditions_status(auth_memo_path=...)` "
+                    f"references forbidden non-repo anchor "
+                    f"({forbidden_anchor!r}). Per the Phase B Option C "
+                    "operator decision 2026-05-09, the authorization memo "
+                    "MUST be a committed repo-relative path; ~/.claude, "
+                    "/tmp, and any non-repo absolute path are FORBIDDEN. "
+                    "Place the memo under "
+                    ".omx/research/operator_authorizations/ and update the "
+                    "call. Same-line waiver "
+                    "`# PHASE_B_AUTH_MEMO_OK:<reason>` on the kwarg / call "
+                    "line for the rare consult_session_state=True fallback."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [phase-b-auth-memo-in-repo] {len(violations)} "
+                f"non-repo auth_memo_path callsite(s) "
+                f"(scanned: {scanned_files} file(s))"
+            )
+            for v in violations[:5]:
+                print(f"    • {v[:240]}")
+            if len(violations) > 5:
+                print(f"    ... ({len(violations) - 5} more)")
+        else:
+            print(
+                "  [phase-b-auth-memo-in-repo] OK "
+                f"({scanned_files} file(s) scanned; 0 non-repo anchor(s))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_phase_b_auth_memo_in_repo found "
+            f"{len(violations)} non-repo auth_memo_path callsite(s):\n  "
             + "\n  ".join(v[:300] for v in violations[:3])
         )
     return violations

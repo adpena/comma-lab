@@ -587,9 +587,21 @@ def test_phase_b_preconditions_status_detects_memo_evidence(tmp_path, monkeypatc
 def test_phase_b_preconditions_status_detects_operator_authorization_token(
     tmp_path, monkeypatch
 ):
-    """Plant a memo containing the explicit body token; verify MET."""
+    """Plant a properly-named auth memo containing the explicit body token; verify MET.
+
+    Per the hardened ``_check_operator_phase_b_authorization`` (anti-spoofing
+    fix from codex round 8 HIGH 2 hardening), the memo MUST match the name
+    pattern ``feedback_lane_12_v2*phase_b*authoriz*.md`` AND carry the
+    explicit unquoted line-level token. Arbitrary ``feedback_*.md`` files
+    are no longer scanned for the token (descriptive mentions in landing
+    memos are not authorization).
+
+    Note: this test exercises the legacy `~/.claude` scan path (no
+    ``auth_memo_path`` passed). For the Option C path (committed
+    repo-relative auth memo), see test_check_150_phase_b_auth_memo_in_repo.py.
+    """
     monkeypatch.setenv("PACT_MEMORY_DIR", str(tmp_path))
-    (tmp_path / "feedback_random_landed_20260509.md").write_text(
+    (tmp_path / "feedback_lane_12_v2_phase_b_authorization_20260509.md").write_text(
         "operator_phase_b_authorization=true\n"
     )
     status = phase_b_preconditions_status()

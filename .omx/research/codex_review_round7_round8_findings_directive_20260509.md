@@ -40,7 +40,9 @@ This is `check_state_writers_strict_load_for_mutating_path` (#138) recurring on 
 - New canonical helper: `tac.vastai_tracker.load_active_instances_strict` raising `VastaiTrackerCorruptError` on JSON parse failure
 - Apply Catalog #138 to `tac.vastai_tracker` (or extend its scope to cover the helper)
 
-### HIGH 2 (round 8) — Phase B gate trusts mutable local memory state
+### HIGH 2 (round 8) — Phase B gate trusts mutable local memory state — **RESOLVED 2026-05-09 via Option C operator decision**
+
+**Resolution status (2026-05-09)**: ✅ **RESOLVED via Option C** — operator picked Option C via AskUserQuestion. Implementation + STRICT preflight Catalog #150 (`check_phase_b_auth_memo_in_repo`) + 34 dedicated tests + canonical authorization directory `.omx/research/operator_authorizations/` + landing memo `feedback_phase_b_option_c_landed_20260509.md` all landed in same commit-batch. Lane `lane_phase_b_consult_session_state_option_c` at L1 with all 4 declared gates satisfied.
 
 **File**: `src/tac/lane_12_v2_nerv_as_renderer.py:903-1019`
 

@@ -900,7 +900,10 @@ def export_to_archive(
 # ── Phase B precondition helpers (for the harness; not Phase A logic) ────
 
 
-def phase_b_preconditions_status(consult_session_state: bool = True) -> dict:
+def phase_b_preconditions_status(
+    consult_session_state: bool = True,
+    auth_memo_path=None,
+) -> dict:
     """Return a machine-readable status dict for the §6 reactivation gates.
 
     Updated 2026-05-09 (lane_check_125_backfill_and_production_hardening_polish):
@@ -910,6 +913,30 @@ def phase_b_preconditions_status(consult_session_state: bool = True) -> dict:
     deterministic check function defined below (``_check_*``); pass
     ``consult_session_state=False`` to recover the legacy behaviour for
     tests that pin the pre-update snapshot.
+
+    **Option C compromise (operator decision 2026-05-09)**: per CLAUDE.md
+    "Design decisions — non-negotiable" + the AskUserQuestion arbitration
+    of codex round 8 HIGH 2 vs a6535b1ed's intentional True default, this
+    function now accepts an explicit ``auth_memo_path`` argument.
+
+    Resolution semantics:
+
+    - ``auth_memo_path`` provided AND points to an existing committed file
+      under the repo root: the operator-Phase-B-authorization check
+      consults ONLY that path (deterministic + reviewable; no ``~/.claude``
+      dependency). The other three dynamic flags still use the
+      ``consult_session_state`` flag.
+    - ``auth_memo_path`` provided + path outside the git repo root: raises
+      ``ValueError`` (the "repo-relative" Option C constraint). Forbidden
+      anchors include ``~/.claude``, ``/tmp``, and any absolute path that
+      does not resolve under ``REPO_ROOT``.
+    - ``auth_memo_path=None`` AND ``consult_session_state=True``: fall back
+      to the existing ``~/.claude`` memory scan (a6535b1ed behavior
+      preserved for back-compat).
+    - ``auth_memo_path=None`` AND ``consult_session_state=False``: returns
+      ``("PENDING", "no auth memo path provided")`` for the operator
+      authorization gate; the other three flags also remain PENDING per
+      the legacy snapshot.
 
     Empirically verified [empirical: tools/lane_maturity.py audit
     + ls .claude/projects/.../memory] as of 2026-05-09 16:30Z:
@@ -923,8 +950,27 @@ def phase_b_preconditions_status(consult_session_state: bool = True) -> dict:
       beyond warn-only); ``check_representation_lane_has_archive_grammar_at_design_time``
       is wired strict in ``preflight_all()``.
     - ``operator_phase_b_authorization``: PENDING — no operator-authorized
-      memo references Phase B dispatch authorization yet.
+      memo references Phase B dispatch authorization yet (until an
+      ``--phase-b-auth-memo <committed_path>`` is passed).
     """
+    import pathlib
+
+    # Normalise + validate auth_memo_path (Option C: must be repo-relative).
+    auth_memo_path_obj = None
+    if auth_memo_path is not None:
+        auth_memo_path_obj = pathlib.Path(auth_memo_path).expanduser().resolve()
+        _assert_auth_memo_path_repo_relative(auth_memo_path_obj)
+
+    # Compute the operator authorization status.
+    if auth_memo_path_obj is not None:
+        operator_auth_status = _check_operator_phase_b_authorization_from_path(
+            auth_memo_path_obj,
+        )
+    elif consult_session_state:
+        operator_auth_status = _check_operator_phase_b_authorization()
+    else:
+        operator_auth_status = "PENDING"
+
     if consult_session_state:
         pending_preconditions: dict[str, str] = {
             "t7_t8_t11_subadditivity_disambiguator_returned":
@@ -933,26 +979,97 @@ def phase_b_preconditions_status(consult_session_state: bool = True) -> dict:
                 _check_t13_t19_trainer_memo(),
             "strict_preflight_124_warn_only_landed":
                 _check_strict_preflight_124_landed(),
-            "operator_phase_b_authorization":
-                _check_operator_phase_b_authorization(),
+            "operator_phase_b_authorization": operator_auth_status,
         }
     else:
         pending_preconditions = {
             "t7_t8_t11_subadditivity_disambiguator_returned": "PENDING",
             "t13_t19_wired_into_trainer": "PENDING",
             "strict_preflight_124_warn_only_landed": "PENDING",
-            "operator_phase_b_authorization": "PENDING",
+            "operator_phase_b_authorization": operator_auth_status,
         }
     status: dict[str, object] = {
         "phase_a_scaffold_tests_pass": "MET",
         "real_pair_batch_source_implemented": "MET",
         "session_state_consulted": consult_session_state,
+        "auth_memo_path": (
+            str(auth_memo_path_obj) if auth_memo_path_obj is not None else None
+        ),
     }
     status.update(pending_preconditions)
     status["any_pending_blocks_phase_b_dispatch"] = bool(
         any(v == "PENDING" for v in pending_preconditions.values())
     )
     return status
+
+
+def _resolve_repo_root():
+    """Resolve the canonical git repo root.
+
+    Tries ``git rev-parse --show-toplevel`` first; falls back to a static
+    pathlib resolution from this module's location. Returns a
+    ``pathlib.Path``.
+    """
+    import pathlib
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
+        out = (result.stdout or "").strip()
+        if result.returncode == 0 and out:
+            return pathlib.Path(out).resolve()
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        pass
+    # Fallback: src/tac/lane_12_v2_nerv_as_renderer.py → repo root is parent×3
+    return pathlib.Path(__file__).resolve().parent.parent.parent
+
+
+def _assert_auth_memo_path_repo_relative(path) -> None:
+    """Refuse any auth_memo_path that resolves outside the repo root.
+
+    Per the Option C compromise, the authorization memo MUST live in a
+    committed repo-relative path so the reviewer can audit the same bytes
+    that gate the dispatch. Forbidden anchors include ``~/.claude``,
+    ``/tmp``, and any absolute path outside ``REPO_ROOT``.
+    """
+    import pathlib
+
+    repo_root = _resolve_repo_root()
+    resolved = pathlib.Path(path).expanduser().resolve()
+    try:
+        resolved.relative_to(repo_root)
+    except ValueError:
+        raise ValueError(
+            f"auth_memo_path={resolved!s} is outside the git repo root "
+            f"({repo_root!s}). Per the Phase B Option C compromise "
+            "(operator decision 2026-05-09), the authorization memo MUST "
+            "be a committed repo-relative path; ~/.claude, /tmp, and any "
+            "non-repo absolute path are FORBIDDEN. Place the memo under "
+            ".omx/research/operator_authorizations/ and re-run."
+        )
+
+
+def _check_operator_phase_b_authorization_from_path(path) -> str:
+    """MET if the explicit auth_memo_path file exists AND contains the token.
+
+    Bypasses the ``~/.claude`` scan; consults ONLY the named path. The path
+    is expected to have already been validated as repo-relative by
+    ``_assert_auth_memo_path_repo_relative``.
+    """
+    import pathlib
+
+    p = pathlib.Path(path)
+    if not p.exists() or not p.is_file():
+        return "PENDING"
+    if _phase_b_authorization_memo_is_explicit(p):
+        return "MET"
+    return "PENDING"
 
 
 # ── Precondition check helpers (consult actual session state) ────────────
@@ -1005,31 +1122,70 @@ def _check_strict_preflight_124_landed() -> str:
 def _check_operator_phase_b_authorization() -> str:
     """MET if an operator-authorized Phase B dispatch memo exists.
 
-    The canonical evidence is a memo whose name matches
-    ``feedback_lane_12_v2*phase_b*authoriz*.md`` OR contains the explicit
-    string ``operator_phase_b_authorization=true`` in the body.
+    The canonical evidence is a dedicated authorization memo whose name
+    matches ``feedback_lane_12_v2*phase_b*authoriz*.md`` AND whose body
+    contains an unquoted line-level token:
+    ``operator_phase_b_authorization=true``.
+
+    Do not scan arbitrary ``feedback_*.md`` files for the token. Landing
+    memos often mention that literal while describing this gate, and those
+    descriptive mentions are not operator authorization.
     """
     name_pattern = "feedback_lane_12_v2*phase_b*authoriz*.md"
-    if list(_memory_dir().glob(name_pattern)):
-        return "MET"
-    # Also accept body-level explicit authorization token.
-    for memo in _memory_dir().glob("feedback_*.md"):
-        try:
-            text = memo.read_text(errors="ignore")
-        except OSError:
-            continue
-        if "operator_phase_b_authorization=true" in text:
+    for memo in _memory_dir().glob(name_pattern):
+        if _phase_b_authorization_memo_is_explicit(memo):
             return "MET"
     return "PENDING"
+
+
+_PHASE_B_OPERATOR_AUTHORIZATION_TOKEN = "operator_phase_b_authorization=true"
+
+
+def _phase_b_authorization_line_is_explicit(line: str) -> bool:
+    stripped = line.strip()
+    if not stripped:
+        return False
+    if stripped.startswith(">"):
+        return False
+    if stripped.startswith(("- ", "* ")):
+        stripped = stripped[2:].strip()
+    if "`" in stripped:
+        return False
+    stripped = stripped.split("#", 1)[0].strip()
+    return stripped == _PHASE_B_OPERATOR_AUTHORIZATION_TOKEN
+
+
+def _phase_b_authorization_memo_is_explicit(memo) -> bool:
+    """Return True only for an explicit, line-level authorization token."""
+    try:
+        lines = memo.read_text(errors="ignore").splitlines()
+    except OSError:
+        return False
+    in_code_fence = False
+    for line in lines:
+        if line.strip().startswith("```"):
+            in_code_fence = not in_code_fence
+            continue
+        if in_code_fence:
+            continue
+        if _phase_b_authorization_line_is_explicit(line):
+            return True
+    return False
 
 
 def _validate_current_state_cli(argv: list[str] | None = None) -> int:
     """CLI entry point: ``python -m tac.lane_12_v2_nerv_as_renderer
     --validate-current-state`` prints the dynamically-computed status dict
     AND exits 0 if Phase B is unblocked, 1 otherwise.
+
+    Per Option C operator decision 2026-05-09: the
+    ``--phase-b-auth-memo <committed_repo_path>`` flag opts into the
+    deterministic-from-committed-state authorization gate (skips the
+    ``~/.claude`` scan for the operator-auth check).
     """
     import argparse
     import json
+    import pathlib
     parser = argparse.ArgumentParser(
         description=(
             "Validate Phase B precondition status by consulting actual "
@@ -1047,9 +1203,26 @@ def _validate_current_state_cli(argv: list[str] | None = None) -> int:
         "--legacy-snapshot", action="store_true", default=False,
         help="Use static 2026-05-09 snapshot (test-pinning only).",
     )
+    parser.add_argument(
+        "--phase-b-auth-memo",
+        type=str,
+        default=None,
+        help=(
+            "Path to a committed repo-relative authorization memo (Option C "
+            "operator decision 2026-05-09). When provided, the operator-Phase-B-"
+            "authorization gate consults ONLY this file (no ~/.claude scan). "
+            "Path MUST resolve under the git repo root; ~/.claude, /tmp, and "
+            "any non-repo absolute path are REFUSED with ValueError. Canonical "
+            "location: .omx/research/operator_authorizations/."
+        ),
+    )
     args = parser.parse_args(argv)
+    auth_memo_path = (
+        pathlib.Path(args.phase_b_auth_memo) if args.phase_b_auth_memo else None
+    )
     status = phase_b_preconditions_status(
         consult_session_state=not args.legacy_snapshot,
+        auth_memo_path=auth_memo_path,
     )
     print(json.dumps(status, indent=2))
     return 0 if not status["any_pending_blocks_phase_b_dispatch"] else 1
