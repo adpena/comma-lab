@@ -130,20 +130,28 @@ early-stopping test instead of another blind final-epoch refire. Focused tests:
 `18 passed`. Ledger:
 `.omx/research/phase_a1_best_proxy_checkpoint_selection_20260509_codex.md`.
 
-**A1 best-proxy dispatch launched:** one Modal T4 run is active with
+**A1 best-proxy dispatch harvested:** the Modal T4 run with
 `--checkpoint-selection best_proxy` in the best measured `lr=2e-6`, `kl=0.2`,
-`pixel_l1=0.01`, `40x8` basin.
+`pixel_l1=0.01`, `40x8` basin completed and recovered cleanly.
 
 - Job: `track1_phase_a1_score_gradient_bestproxy_lr2e6_20260509_codex`
 - Modal call id: `fc-01KR5MQ0WYS8TQWDN7HCYBZZ3B`
-- Estimated cost: `$2.36`
-- Predicted ETA: `2026-05-09T09:52:37Z`
-- Recover command:
-  `.venv/bin/python experiments/modal_phase_a1_score_gradient_pr101.py recover --label track1_phase_a1_score_gradient_bestproxy_lr2e6_20260509_codex`
+- Recovery: `completed`, `31` artifacts, `335.703398914 s`
+- Exact CUDA: `0.2263520234784395` (`seg=0.00066299`,
+  `pose=0.00017103`, `rate=0.11869725`)
+- Archive: `178,262 B`,
+  SHA-256 `87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5`
+- Runtime tree SHA-256:
+  `6658b5749ccd62adb0d46b70fc02e4e984d3507f463b39f9e95a96971437615c`
+- Best-proxy checkpoint: epoch `29`,
+  `weighted_proxy=2.243459679643235`
 - Ledger:
-  `.omx/research/phase_a1_best_proxy_modal_dispatch_20260509_codex.md`
+  `.omx/research/phase_a1_best_proxy_modal_harvest_20260509_codex.md`
 
-No score claim exists yet; this is an active dispatch row only.
+Classification: duplicate confirmation of the existing paired A1 archive, not
+a new score frontier. The archive SHA and CUDA score match the current A1
+paired anchor, whose Linux x86_64 `[contest-CPU]` score remains
+`0.19284757743677347`. No fresh CPU spend is warranted for this duplicate.
 
 ## 2026-05-09 (night) - Track4 UNIWARD/Hessian A1 ladder screen
 
