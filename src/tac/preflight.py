@@ -46,8 +46,9 @@ import time
 import tokenize
 from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import contextmanager
-from collections.abc import Mapping
 from collections.abc import Iterator
+from collections.abc import Mapping
+from collections.abc import Sequence
 from pathlib import Path
 
 import torch
@@ -133,6 +134,64 @@ def _fingerprint_paths(paths: tuple[Path, ...], root: Path, *, salt: str) -> str
         digest.update(str(stat.st_mtime_ns).encode())
         digest.update(b"\n")
     return digest.hexdigest()
+
+
+def _rg_file_list(
+    root: Path,
+    dirs: Sequence[str | Path],
+    include_globs: Sequence[str],
+    *,
+    exclude_globs: Sequence[str] = (),
+    timeout_s: float = 5.0,
+) -> tuple[Path, ...] | None:
+    """Fast file discovery through ripgrep, with caller-managed fallback.
+
+    `rg --files` uses a parallel directory walker and is materially faster
+    than repeated Python rglob/os.walk scans on this repo. Returning None
+    keeps portability: callers can fall back to the pure-Python walker when
+    ripgrep is unavailable or fails unexpectedly.
+    """
+
+    existing_dirs: list[str] = []
+    for item in dirs:
+        path = Path(item)
+        if path.is_absolute():
+            if path.exists():
+                existing_dirs.append(path.as_posix())
+            continue
+        if (root / path).exists():
+            existing_dirs.append(path.as_posix())
+    if not existing_dirs:
+        return ()
+    cmd = ["rg", "--files"]
+    for glob in include_globs:
+        cmd.extend(["-g", glob])
+    for glob in exclude_globs:
+        cmd.extend(["-g", f"!{glob}"])
+    cmd.extend(existing_dirs)
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=root,
+            capture_output=True,
+            text=True,
+            timeout=timeout_s,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if proc.returncode not in (0, 1):
+        return None
+    paths: dict[str, Path] = {}
+    for raw_line in proc.stdout.splitlines():
+        if not raw_line:
+            continue
+        path = (root / raw_line).resolve()
+        if not path.is_file():
+            continue
+        if _is_oss_export_mirror_path(path):
+            continue
+        paths[path.as_posix()] = path
+    return tuple(paths[key] for key in sorted(paths))
 
 
 @functools.lru_cache(maxsize=4096)
@@ -8878,8 +8937,7 @@ def preflight_filename_contract(
     obvious filename-typo bug class (R33, R34) without false positives on
     legitimate refactors.
     """
-    root = repo_root or REPO_ROOT
-    source_index = _current_source_index(root)
+    root = Path(repo_root or REPO_ROOT).resolve()
     consumer_files = consumer_files or LAUNCHER_FILES + [
         "experiments/pipeline.py",  # also a producer (step_export, etc.)
     ]
@@ -8889,83 +8947,143 @@ def preflight_filename_contract(
         "submissions/robust_current",
     ]
 
-    consumer_literals: dict[str, set[str]] = {}
-    consumer_paths_resolved: set[Path] = set()
+    consumer_existing: list[tuple[str, Path]] = []
     for cf in consumer_files:
         cp = (root / cf).resolve()
         if cp.exists():
+            consumer_existing.append((cf, cp))
+
+    producer_source_files = _rg_file_list(
+        root,
+        producer_dirs,
+        ("*.py", "*.sh"),
+        exclude_globs=(
+            "experiments/results/**",
+            "**/__pycache__/**",
+            "**/comma_lab_public_export/**",
+        ),
+    )
+    if producer_source_files is None:
+        producer_py_files = tuple(_iter_python_files(root, producer_dirs))
+        producer_shell_files = tuple(_iter_shell_files(root, producer_dirs))
+    else:
+        producer_py_files = tuple(
+            path for path in producer_source_files if path.suffix == ".py"
+        )
+        producer_shell_files = tuple(
+            path for path in producer_source_files if path.suffix == ".sh"
+        )
+
+    cache_name = "filename_contract_source_clean"
+    cache_key = hashlib.sha256(
+        json.dumps(
+            {
+                "consumer_files": consumer_files,
+                "producer_dirs": producer_dirs,
+                "scanner_version": "filename_contract_source.v1",
+            },
+            sort_keys=True,
+        ).encode()
+    ).hexdigest()
+    cache_rows = _load_preflight_cache(root, cache_name)
+    source_fingerprint = _fingerprint_paths(
+        tuple([cp for _, cp in consumer_existing])
+        + producer_py_files
+        + producer_shell_files,
+        root,
+        salt="filename_contract_source.v1",
+    )
+    cache_row = cache_rows.get(cache_key)
+    cached_source_clean = (
+        isinstance(cache_row, dict)
+        and cache_row.get("source_fingerprint") == source_fingerprint
+    )
+    violations: list[str] = []
+    n_producer_files = 0
+    producer_literals_count = 0
+
+    if cached_source_clean:
+        if verbose:
+            print("  [filenames] OK: cached source contract clean")
+    else:
+        source_index = _current_source_index(root)
+        consumer_literals: dict[str, set[str]] = {}
+        consumer_paths_resolved: set[Path] = set()
+        for cf, cp in consumer_existing:
             consumer_literals[cf] = _extract_artifact_filenames(
                 cp,
                 source_index=source_index,
             )
             consumer_paths_resolved.add(cp)
 
-    # Producer scan: every script EXCEPT the consumer files. A consumer that
-    # is also a producer (e.g., pipeline.py writes renderer.bin) would
-    # otherwise self-validate every typo. We collect a separate set of
-    # "consumer self-writes" via AST write-context detection; those literals
-    # ARE legitimate (the file produces what it consumes).
-    producer_literals: set[str] = set(_EXTERNAL_FILENAMES)
-    producer_literals.discard("renderer.bin")  # we DO produce this
-    n_producer_files = 0
-    if source_index is not None:
-        producer_py_files = source_index.files(producer_dirs, pattern="*.py")
-        producer_shell_files = source_index.files(producer_dirs, pattern="*.sh")
-    else:
-        producer_py_files = tuple(
-            py for pd in producer_dirs for py in (root / pd).rglob("*.py")
-        )
-        producer_shell_files = tuple(
-            sh for pd in producer_dirs for sh in (root / pd).rglob("*.sh")
-        )
-    for py in producer_py_files:
-        # Round 15 R15-2 fix: skip OSS-export staging mirror — its
-        # verbatim source-file copies would phantom-add their artifact
-        # filename literals to producer_literals, masking real
-        # consumer-reads-but-no-producer-writes violations.
-        if _is_oss_export_mirror_path(py):
-            continue
-        if py.resolve() in consumer_paths_resolved:
-            continue  # skip consumer files in producer scan
-        n_producer_files += 1
-        producer_literals.update(
-            _extract_artifact_filenames(py, source_index=source_index)
-        )
-    for sh in producer_shell_files:
-        if _is_oss_export_mirror_path(sh):
-            continue
-        try:
-            text = source_index.read_text(sh) if source_index is not None else sh.read_text()
-            for token in re.findall(
-                r'[\w./_-]+\.(?:bin|pt|pth|mkv|mp4|raw|zip|tar\.gz|tar|tgz)', text):
-                producer_literals.add(token.split("/")[-1])
-        except (OSError, UnicodeDecodeError):
-            pass
-
-    # Also scan consumer files themselves for explicit WRITE-context literals
-    # (torch.save target, open(..., "w") arg, .write_bytes/.write_text receiver
-    # path with the literal). Those are legitimate self-produced names.
-    for cp in consumer_paths_resolved:
-        producer_literals.update(_extract_write_literals(cp, source_index=source_index))
-
-    violations: list[str] = []
-    for consumer, lits in consumer_literals.items():
-        phantoms = lits - producer_literals
-        for ph in sorted(phantoms):
-            violations.append(
-                f"{consumer}: reads {ph!r} but no producer in "
-                f"{producer_dirs} ever writes that name. "
-                f"R33/R34 bug class — verify the producer's actual output filename."
+        # Producer scan: every script EXCEPT the consumer files. A consumer
+        # that is also a producer (e.g., pipeline.py writes renderer.bin)
+        # would otherwise self-validate every typo. We collect a separate set
+        # of "consumer self-writes" via AST write-context detection; those
+        # literals ARE legitimate (the file produces what it consumes).
+        producer_literals: set[str] = set(_EXTERNAL_FILENAMES)
+        producer_literals.discard("renderer.bin")  # we DO produce this
+        for py in producer_py_files:
+            if py.resolve() in consumer_paths_resolved:
+                continue  # skip consumer files in producer scan
+            n_producer_files += 1
+            producer_literals.update(
+                _extract_artifact_filenames(py, source_index=source_index)
             )
+        for sh in producer_shell_files:
+            try:
+                text = (
+                    source_index.read_text(sh)
+                    if source_index is not None
+                    else sh.read_text()
+                )
+                for token in re.findall(
+                    r"[\w./_-]+\.(?:bin|pt|pth|mkv|mp4|raw|zip|tar\.gz|tar|tgz)",
+                    text,
+                ):
+                    producer_literals.add(token.split("/")[-1])
+            except (OSError, UnicodeDecodeError):
+                pass
+
+        # Also scan consumer files themselves for explicit WRITE-context
+        # literals (torch.save target, open(..., "w") arg,
+        # .write_bytes/.write_text receiver path with the literal). Those are
+        # legitimate self-produced names.
+        for cp in consumer_paths_resolved:
+            producer_literals.update(
+                _extract_write_literals(cp, source_index=source_index)
+            )
+
+        producer_literals_count = len(producer_literals)
+        for consumer, lits in consumer_literals.items():
+            phantoms = lits - producer_literals
+            for ph in sorted(phantoms):
+                violations.append(
+                    f"{consumer}: reads {ph!r} but no producer in "
+                    f"{producer_dirs} ever writes that name. "
+                    f"R33/R34 bug class — verify the producer's actual output filename."
+                )
+
+        if violations:
+            cache_rows.pop(cache_key, None)
+            _store_preflight_cache(root, cache_name, cache_rows)
+        else:
+            cache_rows[cache_key] = {
+                "source_fingerprint": source_fingerprint,
+                "consumer_count": len(consumer_existing),
+                "producer_file_count": n_producer_files,
+                "producer_literal_count": producer_literals_count,
+            }
+            _store_preflight_cache(root, cache_name, cache_rows)
 
     if verbose and violations:
         print(f"  [filenames] {len(violations)} violation(s):")
         for v in violations:
             print(f"    • {v}")
-    elif verbose:
-        n_consumer = sum(1 for cf in consumer_files if (root / cf).exists())
-        print(f"  [filenames] OK: {n_consumer} consumers x {n_producer_files} "
-              f"producer files clean ({len(producer_literals)} known artifacts)")
+    elif verbose and not cached_source_clean:
+        print(f"  [filenames] OK: {len(consumer_existing)} consumers x "
+              f"{n_producer_files} producer files clean "
+              f"({producer_literals_count} known artifacts)")
 
     # ── AMRC mask-file validation hook ──
     # If any archive directory under the repo has a masks.amrc artifact,
@@ -9014,16 +9132,27 @@ def _validate_amrc_artifacts(root: Path) -> list[str]:
             f"argmax_codec not importable ({e}); skipping AMRC validation"
         )
         return findings
-    for d in candidate_dirs:
-        if not d.exists():
-            continue
-        for amrc in d.rglob("*.amrc"):
-            try:
-                validate_amrc_file(amrc)
-            except (ValueError, OSError) as e:
-                findings.append(
-                    f"{amrc}: invalid AMRC header — {e}"
-                )
+    fast_amrc_files = _rg_file_list(
+        root,
+        candidate_dirs,
+        ("*.amrc",),
+        timeout_s=2.0,
+    )
+    if fast_amrc_files is None:
+        amrc_files: list[Path] = []
+        for d in candidate_dirs:
+            if not d.exists():
+                continue
+            amrc_files.extend(d.rglob("*.amrc"))
+    else:
+        amrc_files = list(fast_amrc_files)
+    for amrc in amrc_files:
+        try:
+            validate_amrc_file(amrc)
+        except (ValueError, OSError) as e:
+            findings.append(
+                f"{amrc}: invalid AMRC header — {e}"
+            )
     return findings
 
 

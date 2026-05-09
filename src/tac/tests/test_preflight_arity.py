@@ -1091,6 +1091,42 @@ def test_filename_contract_passes_when_all_consumed_names_are_produced(tmp_path:
     assert violations == []
 
 
+def test_filename_contract_cache_invalidates_changed_consumer(tmp_path: Path) -> None:
+    repo = _stub_repo(tmp_path)
+    consumer = repo / "experiments" / "consumer.py"
+    _write(consumer, '''
+        from pathlib import Path
+        x = Path("output/renderer_qat.bin")
+    ''')
+    _write(repo / "experiments" / "producer.py", '''
+        import torch
+        torch.save({}, "output/renderer_qat.bin")
+    ''')
+    assert preflight_filename_contract(
+        repo_root=repo,
+        consumer_files=["experiments/consumer.py"],
+        producer_dirs=["experiments"],
+        strict=True,
+        verbose=False,
+    ) == []
+    assert (
+        repo / ".omx" / "cache" / "filename_contract_source_clean.json"
+    ).exists()
+
+    _write(consumer, '''
+        from pathlib import Path
+        x = Path("output/renderer_typo.bin")
+    ''')
+    with pytest.raises(FilenameContractError, match="renderer_typo.bin"):
+        preflight_filename_contract(
+            repo_root=repo,
+            consumer_files=["experiments/consumer.py"],
+            producer_dirs=["experiments"],
+            strict=True,
+            verbose=False,
+        )
+
+
 def test_filename_contract_skips_external_filenames(tmp_path: Path) -> None:
     """0.mkv, masks.mkv, archive.zip etc. are contest-external; not validated."""
     repo = _stub_repo(tmp_path)
