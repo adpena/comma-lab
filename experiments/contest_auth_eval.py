@@ -516,13 +516,14 @@ def _record_provenance(work_dir: Path, archive: Path, inflate_sh: Path,
         "evaluate_timeout_seconds": int(args.evaluate_timeout),
         "video_names_file": str(args.video_names_file),
         "sys_argv": sys.argv,
+        "effective_inflate_python": os.environ.get("PYTHON") or sys.executable,
         "env_vars": {k: os.environ.get(k) for k in (
             "PYTHONPATH", "CUDA_VISIBLE_DEVICES", "CUBLAS_WORKSPACE_CONFIG",
             "PYTHONHASHSEED", "PYTORCH_CUDA_ALLOC_CONF", "LD_LIBRARY_PATH",
             "CONFIG_ENV_PATH", "PYTHON_INFLATE", "LANE_MM_SIGMA",
             "INFLATE_BROTLI_SPEC", "INFLATE_AV_SPEC", "INFLATE_TORCH_SPEC",
             "INFLATE_TORCHVISION_SPEC", "INFLATE_NUMPY_SPEC", "UV_BIN",
-            "UV_PROJECT_ENVIRONMENT",
+            "UV_PROJECT_ENVIRONMENT", "PYTHON",
         )},
     }
     # GPU + driver — recorded in provenance for downstream comparison.
@@ -847,6 +848,11 @@ def _run_inflate(inflate_sh: Path, archive_dir: Path, inflated_dir: Path,
         "UV_PROJECT_ENVIRONMENT",
         str(inflated_dir.parent / "uv_project_env"),
     )
+    # Public HNeRV/A1 runtimes commonly invoke `${PYTHON:-python3}`. Use the
+    # evaluator's interpreter by default so local exact-eval screens run in the
+    # repo venv that loaded this tool; callers may still override PYTHON for a
+    # contest container or public replay environment.
+    env.setdefault("PYTHON", sys.executable)
     try:
         result = subprocess.run(cmd, timeout=timeout, check=False, env=env)
     except subprocess.TimeoutExpired as exc:

@@ -78,6 +78,35 @@ Classification: exact CUDA anchor, not a CUDA frontier win. It pairs with the
 GHA Linux `[contest-CPU]` score `0.19284757743677347`, giving a CUDA-CPU gap of
 about `0.03350`, consistent with the HNeRV-family drift profile.
 
+## 2026-05-09 (night) - Track4 UNIWARD/Hessian A1 ladder screen
+
+`tools/build_uniward_stc_hessian_a1_v1.py` now emits complete runtime packets
+from the A1 latent-aligned archive and records score-affecting SHA custody.
+The builder bug where a 28-tensor saliency vector was treated like
+228K per-parameter bit allocations is fixed with parameter-count-weighted
+per-tensor allocation. Focused coverage:
+`src/tac/tests/test_build_uniward_stc_hessian_a1_v1.py` plus
+`src/tac/tests/test_contest_auth_eval.py` (`37 passed`).
+
+Byte-closed ladder candidates were built from the A1 archive
+`87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5`:
+
+| target | archive bytes | delta vs A1 | macOS CPU advisory |
+|---:|---:|---:|---:|
+| `176000` | `177668` | `-594` | `0.21300500575810702` |
+| `174000` | `177624` | `-638` | `0.22729521075217057` |
+| `164000` | `171109` | `-7153` | `0.2605155145868584` |
+
+Classification: measured-config regression, not a family kill. Even the
+least-aggressive `-594 B` changed-payload step raises SegNet/PoseNet enough
+to lose about `+0.02016` score versus the A1 Linux CPU anchor. Do not
+remote-dispatch this magnitude/Hessian ladder as a score candidate. The next
+real score-lowering allocator should use score-domain sensitivity or
+component-response maps, not another no-data weight-domain proxy.
+
+Ledger:
+`.omx/research/track4_uniward_hessian_a1_ladder_20260509_codex.md`.
+
 ## 2026-05-09 (night) - Delta-epsilon-zeta Phase 1 local scaffold evidence
 
 `tools/build_deltaepszeta_training_targets.py` is now hardened for normal zsh

@@ -256,6 +256,7 @@ def test_contest_auth_eval_source_records_inflate_budget_fields() -> None:
     assert "contest_auth_eval_elapsed_seconds" in text
     assert "inflate_runtime_manifest" in text
     assert "runtime_tree_sha256" in text
+    assert "effective_inflate_python" in text
 
 
 def test_evidence_contract_tags_cpu_as_leaderboard_reproduction(cae) -> None:
@@ -403,6 +404,43 @@ def test_record_inflate_runtime_artifacts_captures_packed_payload_summary(cae, t
     assert packed["sha256"] == cae._sha256(summary, prefix=0)
     assert packed["payload"]["members"][0]["name"] == "renderer.bin"
     assert (tmp_path / "provenance.json").is_file()
+
+
+def test_run_inflate_defaults_python_to_current_interpreter(
+    cae,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Local exact-eval must run `${PYTHON:-python3}` inflaters in this venv.
+
+    Public PR101/A1-style packets import dependencies such as brotli from the
+    evaluator environment. If contest_auth_eval is launched with
+    `.venv/bin/python`, the inflate subprocess should inherit that interpreter
+    unless the caller explicitly overrides PYTHON.
+    """
+    captured: dict[str, str] = {}
+    video_names = tmp_path / "names.txt"
+    video_names.write_text("0.mkv\n")
+    inflate_sh = tmp_path / "inflate.sh"
+    inflate_sh.write_text("#!/usr/bin/env bash\n")
+    archive_dir = tmp_path / "archive"
+    inflated_dir = tmp_path / "inflated"
+    archive_dir.mkdir()
+
+    def fake_run(cmd, *, timeout, check, env):
+        captured.update(env)
+        raw_path = Path(cmd[3]) / "0.raw"
+        raw_path.parent.mkdir(parents=True, exist_ok=True)
+        with raw_path.open("wb") as f:
+            f.truncate(1164 * 874 * 1200 * 3)
+        return subprocess.CompletedProcess(args=cmd, returncode=0)
+
+    monkeypatch.delenv("PYTHON", raising=False)
+    monkeypatch.setattr(cae.subprocess, "run", fake_run)
+
+    cae._run_inflate(inflate_sh, archive_dir, inflated_dir, video_names, timeout=5)
+
+    assert captured["PYTHON"] == sys.executable
 
 
 def test_expected_runtime_tree_hash_mismatch_fails_closed(cae) -> None:
