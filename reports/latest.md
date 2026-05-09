@@ -29,6 +29,12 @@ on `sys.path` before importing `tac.submission_archive.safe_extract_zip`.
 remote repo import roots at import time and closes active claims on recover
 exceptions.
 
+**Fixed relaunch active:** `track1_phase_a1_score_gradient_latentalign_importpathfix_lr2e6_20260509T012628Z_modal`
+is now running on Modal as call `fc-01KR55GH98QW3J3QDGQB1EG4CR`, with predicted
+ETA `2026-05-09T03:56:54Z`. Immediate recover probe returned `NOT READY`, so it
+did not reproduce the worker import-path failure. Recovery command:
+`.venv/bin/python experiments/modal_phase_a1_score_gradient_pr101.py recover --label track1_phase_a1_score_gradient_latentalign_importpathfix_lr2e6_20260509T012628Z_modal`.
+
 ## 2026-05-08 (evening) — Recursive hardening + Phase A ablation pass
 
 **Headline:** 11 STRICT/warn preflight gates landed, ~395 violations
