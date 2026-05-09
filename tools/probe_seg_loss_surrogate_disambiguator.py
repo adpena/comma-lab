@@ -510,8 +510,19 @@ def probe(
     sinkhorn_blur: float,
     sinkhorn_iters: int,
     n_repeats: int = 3,
+    substrate: str = "synthetic_default",
 ) -> dict:
-    """Run the full probe across regimes and compositions; return a JSON-serializable report."""
+    """Run the full probe across regimes and compositions; return a JSON-serializable report.
+
+    The ``substrate`` parameter (added 2026-05-09 for cross-substrate-transfer
+    discipline) is recorded into the report's inputs section so consumers
+    can verify the regime-conditional cos-sim verdict was computed against
+    a known substrate. The default ``synthetic_default`` value tags the
+    legacy synthetic-fixture path; any value other than ``synthetic_default``
+    asserts the caller intends to validate cross-substrate transfer
+    (the verdict may not survive substrate change; consult the regime-conditional
+    table). [empirical: src/tac/tests/test_probe_seg_loss_surrogate_disambiguator.py]
+    """
     if n_repeats < 1:
         raise ValueError("n_repeats must be >= 1")
     if sinkhorn_blur <= 0:
@@ -790,6 +801,19 @@ def probe(
             "fixture_hw": DEFAULT_HW,
             "num_classes": NUM_CLASSES,
             "regimes": [r.name for r in REGIMES],
+            "substrate": substrate,
+            "substrate_warning": (
+                "regime-conditional cos-sim verdicts are computed on the "
+                "named substrate; cross-substrate transfer is NOT guaranteed. "
+                "Re-run with --substrate <name> against your real substrate "
+                "before treating verdicts as actionable."
+                if substrate != "synthetic_default"
+                else (
+                    "synthetic-fixture probe — verdicts are screening signals "
+                    "only; re-run --substrate <name> with real fixtures for "
+                    "actionable verdicts."
+                )
+            ),
         },
         "calibration": {
             "R_seg_HNERV": R_SEG_HNERV,
@@ -884,6 +908,18 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Also print a human-readable summary to stdout.",
     )
+    parser.add_argument(
+        "--substrate",
+        type=str,
+        default="synthetic_default",
+        help=(
+            "Substrate name tagged into the report (default: synthetic_default). "
+            "Cross-substrate-transfer discipline: regime-conditional cos-sim "
+            "verdicts may not survive substrate change. Pass a real substrate "
+            "name (e.g. 'pr101_int8' / 'hnerv_lc_v2') to assert intent to "
+            "validate against that substrate."
+        ),
+    )
     args = parser.parse_args(argv)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -893,6 +929,7 @@ def main(argv: list[str] | None = None) -> int:
         sinkhorn_blur=args.sinkhorn_blur,
         sinkhorn_iters=args.sinkhorn_iters,
         n_repeats=args.n_repeats,
+        substrate=args.substrate,
     )
     args.output.write_text(json.dumps(report, indent=2, sort_keys=True))
 

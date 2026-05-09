@@ -368,6 +368,17 @@ ARCH_TECHNIQUES = [
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def _now_utc_iso() -> str:
+    """Return the current UTC time in ISO-8601 (seconds resolution).
+
+    Used to stamp ``last_updated_utc`` on catalog rows so operators can
+    detect stale rows (added 2026-05-09,
+    lane_check_125_backfill_and_production_hardening_polish).
+    """
+    import datetime as _dt
+    return _dt.datetime.now(tz=_dt.timezone.utc).isoformat(timespec="seconds")
+
+
 def _seed_loss_modifier_catalog_from_registry() -> list[dict[str, Any]]:
     """Derive loss-modifier catalog rows from ``tac.track_registry``.
 
@@ -379,6 +390,7 @@ def _seed_loss_modifier_catalog_from_registry() -> list[dict[str, Any]]:
 
     Returns:
         list of catalog rows (one per loss-modifier track in registry).
+        Each row carries ``last_updated_utc`` so stale rows can be detected.
     """
     try:
         from tac.track_registry import TRACK_REGISTRY  # noqa: WPS433
@@ -427,6 +439,7 @@ def _seed_loss_modifier_catalog_from_registry() -> list[dict[str, Any]]:
             "entry_conditions": list(entry.entry_conditions),
             "promotion_eligible": entry.promotion_eligible,
             "landed_commit_or_memo": entry.landed_commit_or_memo,
+            "last_updated_utc": _now_utc_iso(),
             "model_spec": {
                 "capacity_constraint": "n/a_loss_term",
                 "architecture_class": "loss_modifier",
@@ -484,6 +497,7 @@ def _seed_representation_lane_catalog_from_registry() -> list[dict[str, Any]]:
             "entry_conditions": list(entry.entry_conditions),
             "promotion_eligible": entry.promotion_eligible,
             "landed_commit_or_memo": entry.landed_commit_or_memo,
+            "last_updated_utc": _now_utc_iso(),
             "model_spec": {
                 "capacity_constraint": "research_only_until_phase_b",
                 "architecture_class": "nerv_class_renderer",

@@ -613,6 +613,94 @@ def _format_xray_toolkit() -> str:
     return "\n".join(lines).rstrip()
 
 
+# Phase-7: constrained-coord-search status (added 2026-05-09).
+# Surfaces the lane_pr101_bias_constrained_coord_search (sister subagent
+# a8522fca) rollup so operators can see the 64-variant grid status without
+# having to grep experiments/results/.
+def _format_constrained_coord_search_status() -> str:
+    """Locate latest constrained_coord_search rollup; format key metadata."""
+    import datetime as _dt
+    import json as _json
+    glob_root = REPO_ROOT / "experiments" / "results"
+    candidates = sorted(
+        glob_root.glob("constrained_coord_search_pr101_bias_*/rollup.json"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    if not candidates:
+        return ("(no constrained_coord_search rollups found yet — "
+                "sister subagent a8522fca has not landed grid)")
+    latest = candidates[0]
+    try:
+        data = _json.loads(latest.read_text())
+    except Exception as exc:
+        return f"(rollup parse failed: {exc} at {latest.relative_to(REPO_ROOT)})"
+    rel = latest.relative_to(REPO_ROOT)
+    lines = [
+        f"Rollup: {rel}",
+        f"  lane_id:                {data.get('lane_id', '<unknown>')}",
+        f"  n_variants:             {data.get('n_variants', 0)}",
+        f"  n_unique_inflates:      {data.get('n_unique_inflates', 0)}",
+        f"  evidence_grade:         {data.get('evidence_grade', '<unset>')}",
+        f"  build_timestamp_utc:    {data.get('build_timestamp_utc', '<unset>')}",
+    ]
+    anchor = data.get("regression_anchor") or {}
+    if anchor:
+        lines.append(f"  regression_anchor:      {anchor.get('value', '<unset>')} "
+                     f"({anchor.get('tag', '<no-tag>')})")
+        lines.append(f"  regression_delta:       {anchor.get('delta_vs_baseline', '<unset>')}")
+    blockers = data.get("dispatch_blockers") or []
+    if blockers:
+        lines.append(f"  dispatch_blockers ({len(blockers)}):")
+        for b in blockers:
+            lines.append(f"    - {b}")
+    grid_keys = list((data.get("grid") or {}).keys())
+    if grid_keys:
+        lines.append(f"  grid_dims:              {', '.join(grid_keys)}")
+    return "\n".join(lines)
+
+
+# Phase-8: dispatch readiness per phase 1-5+ (added 2026-05-09).
+# Compact roll-up of which phases have actionable next-step output, so the
+# operator can navigate "what should I dispatch next" without re-reading the
+# whole briefing.
+def _format_dispatch_readiness() -> str:
+    """Roll up actionable next-step status across phases."""
+    lines = ["Per-phase dispatch readiness (current session):"]
+    # Phase 1: pre-dispatch frontier — always actionable if PARETO emits rows
+    lines.append("  Phase 1 (pre-dispatch Pareto):              "
+                 "READY — see Phase 1 frontier table above")
+    # Phase 4 / Phase 5: gated lanes — read PHASE_4_GATED_LANES count
+    try:
+        n_gated = len(PHASE_4_GATED_LANES)
+    except NameError:
+        n_gated = 0
+    try:
+        n_comp = len(PHASE_5_COMPOSITION_LANES)
+    except NameError:
+        n_comp = 0
+    lines.append(f"  Phase 4 (gated next-tick):                  "
+                 f"{n_gated} lane(s) gated; check entry conditions before dispatch")
+    lines.append(f"  Phase 5 (meta-composition):                 "
+                 f"{n_comp} compose-stack(s) tracked")
+    # Phase 7: constrained-coord-search
+    glob_root = REPO_ROOT / "experiments" / "results"
+    cc_rollups = sorted(
+        glob_root.glob("constrained_coord_search_pr101_bias_*/rollup.json"),
+        reverse=True,
+    )
+    if cc_rollups:
+        lines.append(f"  Phase 7 (constrained-coord-search):         "
+                     f"READY — {len(cc_rollups)} rollup(s); top-5 to GHA next")
+    else:
+        lines.append("  Phase 7 (constrained-coord-search):         "
+                     "PENDING — sister subagent a8522fca grid not landed")
+    lines.append("")
+    lines.append("Recommendation: prefer M5 Max parallel coarse-rank ($0) before "
+                 "paid GHA promotion; reference Phase 6 xray toolkit for diagnosis.")
+    return "\n".join(lines)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--top", type=int, default=20,
@@ -698,6 +786,14 @@ def main(argv: list[str] | None = None) -> int:
     parts.append(_section(
         "Phase 6 — XRAY toolkit (diagnostic tools landed 2026-05-09)",
         _format_xray_toolkit(),
+    ))
+    parts.append(_section(
+        "Phase 7 — Constrained-coord-search status (sister subagent a8522fca)",
+        _format_constrained_coord_search_status(),
+    ))
+    parts.append(_section(
+        "Phase 8 — Per-phase dispatch readiness (next actionable step)",
+        _format_dispatch_readiness(),
     ))
     print("\n".join(parts))
     return 0

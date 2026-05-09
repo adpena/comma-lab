@@ -526,8 +526,13 @@ def test_real_pair_batch_source_rejects_zero_batch_size():
 
 
 def test_phase_b_preconditions_status_is_pending():
-    """Phase B remains gated even after batch source landed (4 of 6 gates PENDING)."""
-    status = phase_b_preconditions_status()
+    """Legacy snapshot: Phase B remains gated with all 4 PENDING when consulting
+    the static 2026-05-09 snapshot (consult_session_state=False).
+
+    The default behaviour now consults actual session state; tests that need
+    the static snapshot pass ``consult_session_state=False`` explicitly.
+    """
+    status = phase_b_preconditions_status(consult_session_state=False)
     # Two MET (scaffold tests + batch source), four PENDING, one bool gate.
     assert status["phase_a_scaffold_tests_pass"] == "MET"
     assert status["real_pair_batch_source_implemented"] == "MET"
@@ -540,6 +545,55 @@ def test_phase_b_preconditions_status_is_pending():
     for key in pending:
         assert status[key] == "PENDING", f"{key} should be PENDING, got {status[key]}"
     assert status["any_pending_blocks_phase_b_dispatch"] is True
+
+
+def test_phase_b_preconditions_status_consults_session_state_by_default(tmp_path, monkeypatch):
+    """Default: consults memory dir (PACT_MEMORY_DIR override) for landed evidence.
+
+    Use a clean tmp_path memory dir to make the test hermetic — actual
+    session state varies across machines and over time.
+    """
+    monkeypatch.setenv("PACT_MEMORY_DIR", str(tmp_path))
+    # Empty dir: all 4 dynamic flags are PENDING.
+    status = phase_b_preconditions_status()  # default: consult_session_state=True
+    assert status["session_state_consulted"] is True
+    assert status["phase_a_scaffold_tests_pass"] == "MET"
+    assert status["real_pair_batch_source_implemented"] == "MET"
+    assert status["t7_t8_t11_subadditivity_disambiguator_returned"] == "PENDING"
+    assert status["t13_t19_wired_into_trainer"] == "PENDING"
+    assert status["operator_phase_b_authorization"] == "PENDING"
+    # strict_preflight_124_warn_only_landed is import-based; depends on
+    # tac.preflight, which is always present in this test runner.
+    assert status["strict_preflight_124_warn_only_landed"] == "MET"
+    assert status["any_pending_blocks_phase_b_dispatch"] is True
+
+
+def test_phase_b_preconditions_status_detects_memo_evidence(tmp_path, monkeypatch):
+    """Plant 2 evidence memos; verify they flip MET."""
+    monkeypatch.setenv("PACT_MEMORY_DIR", str(tmp_path))
+    (tmp_path / "feedback_t7_t8_t11_sub_additivity_disambiguator_landed_20260509.md").write_text(
+        "scaffold memo body\n"
+    )
+    (tmp_path / "feedback_t13_t19_phase1_trainer_integration_landed_20260509.md").write_text(
+        "scaffold memo body\n"
+    )
+    status = phase_b_preconditions_status()
+    assert status["t7_t8_t11_subadditivity_disambiguator_returned"] == "MET"
+    assert status["t13_t19_wired_into_trainer"] == "MET"
+    # operator authorization still PENDING (no matching name pattern + no body token)
+    assert status["operator_phase_b_authorization"] == "PENDING"
+
+
+def test_phase_b_preconditions_status_detects_operator_authorization_token(
+    tmp_path, monkeypatch
+):
+    """Plant a memo containing the explicit body token; verify MET."""
+    monkeypatch.setenv("PACT_MEMORY_DIR", str(tmp_path))
+    (tmp_path / "feedback_random_landed_20260509.md").write_text(
+        "operator_phase_b_authorization=true\n"
+    )
+    status = phase_b_preconditions_status()
+    assert status["operator_phase_b_authorization"] == "MET"
 
 
 # ── Inflate LOC budget ───────────────────────────────────────────────────

@@ -870,7 +870,80 @@ def build_parser() -> argparse.ArgumentParser:
                         help=f"write {REPORT_REL}")
     pr.set_defaults(func=cmd_report)
 
+    pfr = sub.add_parser(
+        "strict-flip-readiness-report",
+        help=(
+            "audit lanes for missing 8 archive-grammar fields (post-strict-flip "
+            "should be 0); print per-lane missing-field counts."
+        ),
+    )
+    pfr.set_defaults(func=cmd_strict_flip_readiness)
+
     return p
+
+
+def cmd_strict_flip_readiness(args: argparse.Namespace) -> int:
+    """Audit lanes for missing 8 archive-grammar fields (Catalog #124).
+
+    Per CLAUDE.md "Lane maturity registry" + Catalog #124, every L1+
+    representation lane MUST have all 8 design_evidence sub-fields populated
+    OR explicitly opt out via lane_class=substrate_engineering /
+    research_only=true. After Catalog #124's strict-flip, this count should
+    be 0 for representation lanes.
+
+    Output: per-lane missing-field tally + summary. Exit 0 if all clean,
+    1 if any lane is missing fields without an opt-out. Tagged
+    [empirical: tools/lane_maturity.py strict-flip-readiness-report].
+    """
+    data = load_registry()
+    representation_lane_classes = {
+        "representation_codec", "representation_only", "codec_only",
+    }
+    n_lanes = 0
+    n_missing_anywhere = 0
+    rows: list[tuple[str, list[str], str]] = []
+    for lane in data["lanes"]:
+        lane_id = lane["id"]
+        lane_class = lane.get("lane_class", "")
+        research_only = lane.get("research_only", False)
+        if research_only:
+            continue
+        # Skip lanes with substrate_engineering / non-representation lane_class
+        if lane_class and lane_class not in representation_lane_classes:
+            continue
+        n_lanes += 1
+        de = lane.get("design_evidence", {}) or {}
+        missing = [
+            sub for sub in _SET_FIELD_DESIGN_EVIDENCE_ALLOWED
+            if sub not in de or de[sub] in (None, "", [], {})
+        ]
+        if missing:
+            n_missing_anywhere += 1
+            rows.append((lane_id, missing, lane_class or "<unset>"))
+    rows.sort(key=lambda x: (-len(x[1]), x[0]))
+    print("STRICT-FLIP READINESS REPORT (Catalog #124)")
+    print("─" * 70)
+    print(f"Audited lanes: {n_lanes} (excluding research_only=true and "
+          f"non-representation lane_class)")
+    print(f"Lanes with 1+ missing design_evidence sub-field: {n_missing_anywhere}")
+    if rows:
+        print()
+        print(f"{'lane_id':<60} {'lane_class':<25} {'missing'}")
+        print(f"{'-'*60} {'-'*25} {'-'*8}")
+        for lane_id, missing, lane_class in rows:
+            print(f"{lane_id[:60]:<60} {lane_class[:25]:<25} {len(missing)}/8")
+            for sub in missing:
+                print(f"  - {sub}")
+    print()
+    if n_missing_anywhere == 0:
+        print(_green("OK — all representation lanes have all 8 design_evidence "
+                     "sub-fields populated; Catalog #124 strict-flip is held."))
+        return 0
+    print(_yellow(f"WARN — {n_missing_anywhere} lane(s) missing fields. "
+                  "Backfill via `lane_maturity.py set-field <id> --field "
+                  "design_evidence.<sub> --value <v>` before relying on "
+                  "Catalog #124 strict-flip."))
+    return 1
 
 
 def main(argv: list[str] | None = None) -> int:

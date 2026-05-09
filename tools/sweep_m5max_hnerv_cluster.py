@@ -100,8 +100,21 @@ PROMOTION_THRESHOLDS = {
     "log_only_high": 0.200,           # below current frontier band
 }
 
-# Architecture classes that have a calibration anchor (HNeRV cluster only)
-CALIBRATED_CLASSES = {"hnerv"}
+# Architecture classes that have a calibration anchor (extensible).
+# Each entry MUST point to an empirically-anchored ε bound. Adding a new
+# class requires (a) a calibration anchor archive, (b) measured per-archive
+# ε on at least 1 anchor, (c) a memory file documenting the calibration.
+# 2026-05-09 (lane_check_125_backfill_and_production_hardening_polish):
+# polished from a bare set to a documented mapping so per-architecture-class
+# drift detection can be added by appending a row, not editing detection
+# logic.
+CALIBRATED_CLASSES: dict[str, dict[str, object]] = {
+    "hnerv": {
+        "epsilon_bound": 6.0e-6,
+        "anchor_memo": "feedback_macos_x86_64_epsilon_calibrated_tag_20260508",
+        "drift_threshold": 5.0e-5,
+    },
+}
 # Aliases mapped to "hnerv" by tac.optimization.cuda_cpu_axis_calibration
 HNERV_ALIASES = {
     "hnerv", "hnerv_ft_microcodec", "hnerv_lc_v2", "hnerv_lc_ac",
@@ -821,11 +834,36 @@ def main() -> int:
     print(f"[sweep] results: {output_dir / 'results.jsonl'}")
 
     summary = _summarize(results)
-    print(f"\n[sweep] SUMMARY:")
+    print(f"\n[sweep] SUMMARY")
+    print(f"  ─────────────────────────────────────────────────────────────")
     print(f"  evaluated:     {summary['n_evaluated']}")
     print(f"  failed:        {summary['n_failed']}")
     print(f"  by verdict:    {summary['verdict_counts']}")
-    print(f"  AUTO_PROMOTE_GHA queue ({len(summary['auto_promote_gha_queue'])}):")
+    # Per-candidate table with explicit DRIFT-FLAG vs OK column
+    if results:
+        print(f"\n  per-candidate table (sorted by macos_cpu_score asc):")
+        print(f"  {'candidate_id':<48} {'macos_cpu':>11} {'pred_gha':>10} "
+              f"{'drift':>20} {'tag':<25} {'verdict':<22}")
+        print(f"  {'-'*48} {'-'*11} {'-'*10} {'-'*20} {'-'*25} {'-'*22}")
+        sorted_for_table = sorted(
+            results,
+            key=lambda r: (r.macos_cpu_score is None, r.macos_cpu_score or 0.0),
+        )
+        for r in sorted_for_table:
+            macos_str = (f"{r.macos_cpu_score:.8f}"
+                         if r.macos_cpu_score is not None else "FAILED")
+            pred_str = (f"{r.predicted_contest_cpu_gha:.8f}"
+                        if r.predicted_contest_cpu_gha is not None else "-")
+            drift_label = (
+                "OK" if r.drift_flag == "OK"
+                else ("DRIFT-FLAG" if r.drift_flag == "POTENTIAL_NEW_CLASS"
+                      else "NA")
+            )
+            cand_short = r.candidate_id[:48]
+            print(f"  {cand_short:<48} {macos_str:>11} {pred_str:>10} "
+                  f"{drift_label:>20} {r.macos_cpu_calibrated_tag:<25} "
+                  f"{r.promotion_verdict:<22}")
+    print(f"\n  AUTO_PROMOTE_GHA queue ({len(summary['auto_promote_gha_queue'])}):")
     for r in summary["auto_promote_gha_queue"]:
         print(f"    - {r['candidate_id']}: macos={r['macos_cpu_score']:.10f} "
               f"predicted-GHA={r['predicted_contest_cpu_gha']}")
@@ -836,6 +874,9 @@ def main() -> int:
     if summary["drift_flagged_candidates"]:
         print(f"  DRIFT-FLAGGED (POTENTIAL_NEW_CLASS): "
               f"{summary['drift_flagged_candidates']}")
+        print(f"    (per CLAUDE.md: investigate calibration anchor; one of (a) "
+              f"new arch class needing its own ε bound, (b) corrupt archive, "
+              f"(c) prior_anchor stale.)")
     return 0
 
 

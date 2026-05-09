@@ -52,23 +52,26 @@ def test_briefing_runs_all_three_phases():
 
 def test_briefing_skip_pareto_omits_phase1():
     proc = _run("--skip-pareto", "--top", "3")
-    assert "Phase 1" not in proc.stdout
+    # Use the section-header form ("Phase 1 — ...") rather than bare "Phase 1"
+    # because Phase 8 readiness summary (added 2026-05-09) mentions Phase 1
+    # as a navigation breadcrumb, which is intentional.
+    assert "Phase 1 — Pre-dispatch" not in proc.stdout
     assert "Phase 2" in proc.stdout
     assert "Phase 3" in proc.stdout
 
 
 def test_briefing_skip_dashboard_omits_phase2():
     proc = _run("--skip-dashboard", "--top", "3")
-    assert "Phase 1" in proc.stdout
-    assert "Phase 2" not in proc.stdout
+    assert "Phase 1 — Pre-dispatch" in proc.stdout
+    assert "Phase 2 — Post-dispatch" not in proc.stdout
     assert "Phase 3" in proc.stdout
 
 
 def test_briefing_skip_reconciler_omits_phase3():
     proc = _run("--skip-reconciler", "--top", "3")
-    assert "Phase 1" in proc.stdout
+    assert "Phase 1 — Pre-dispatch" in proc.stdout
     assert "Phase 2" in proc.stdout
-    assert "Phase 3" not in proc.stdout
+    assert "Phase 3 — Post-dispatch" not in proc.stdout
 
 
 def test_briefing_json_composite_has_all_three_keys():
