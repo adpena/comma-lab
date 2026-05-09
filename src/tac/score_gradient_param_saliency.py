@@ -59,6 +59,27 @@ import torch.nn.functional as F
 
 LOGGER = logging.getLogger(__name__)
 
+DEFAULT_CPU_POSE_OPERATING_POINT = 3.0e-5
+
+
+def pose_distortion_score_derivative(
+    pose_distortion: float = DEFAULT_CPU_POSE_OPERATING_POINT,
+    *,
+    eps: float = 1.0e-12,
+) -> float:
+    """Return ``d sqrt(10*d_pose) / d d_pose`` at ``pose_distortion``.
+
+    This is the local contest-score marginal for pose distortion. At the
+    medal-band CPU floor (roughly 3e-5), the derivative is about 289, not
+    about 1. Keeping this explicit prevents score-gradient saliency from
+    silently underweighting the pose axis.
+    """
+    d = max(float(pose_distortion), float(eps))
+    return float(np.sqrt(10.0) / (2.0 * np.sqrt(d)))
+
+
+DEFAULT_CPU_POSE_SCORE_WEIGHT = pose_distortion_score_derivative()
+
 
 def _add_repo_paths(repo_root: Path) -> None:
     """Ensure both ``upstream`` and ``src`` are importable.
@@ -238,7 +259,7 @@ def compute_score_gradient_param_saliency(
     saliency_batch_size: int = 4,
     seg_distill_temperature: float = 2.0,
     lambda_seg: float = 100.0,
-    lambda_pose: float = 1.0,
+    lambda_pose: float = DEFAULT_CPU_POSE_SCORE_WEIGHT,
     progress: bool = False,
 ) -> dict[str, float]:
     """Compute per-tensor ``E[|d(score)/d(theta)|^2]`` via autograd.
@@ -275,11 +296,11 @@ def compute_score_gradient_param_saliency(
         Score-axis weights. Default mirrors the contest score:
         ``score = 100 * seg_distort + sqrt(10 * pose_distort) + 25 * rate``.
         Around the A1 operating point (seg_avg ~0.001, pose_avg ~3e-5), the
-        marginal d(score)/d(seg_distort) = 100 dominates, with
-        d(score)/d(pose_distort) = sqrt(10) / (2 * sqrt(pose_distort)) ~ 0.9
-        when pose_distort ~ 3e-5. We keep the seg coefficient = 100 and the
-        pose coefficient = 1 (saliency ranking is invariant to global
-        rescale; the *ratio* matters).
+        marginal d(score)/d(seg_distort) = 100 and
+        d(score)/d(pose_distort) = sqrt(10) / (2 * sqrt(pose_distort)) ≈ 289.
+        The default pose coefficient uses that local derivative. Callers may
+        override it only when they are deliberately measuring a normalized
+        surrogate rather than the local contest-score axis.
     progress
         If True, print a per-batch progress line to stderr.
 

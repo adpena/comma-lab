@@ -524,6 +524,20 @@ def preflight_all(
         check_no_weight_domain_saliency_on_score_gradient_substrate(
             strict=True, verbose=verbose,
         )
+        # 2026-05-09 HNeRV parity discipline (#124): representation/codec
+        # lanes (NeRV / HNeRV / Cool-Chic / C3 / wavelet / VQ-VAE / etc.)
+        # at Lane Maturity Level 1+ MUST declare the 8 design-time evidence
+        # fields (archive_grammar, parser_section_manifest,
+        # inflate_runtime_loc_budget, runtime_dep_closure, export_format,
+        # score_aware_loss, bolt_on_loc_budget, no_op_detector_planned)
+        # OR opt out via lane_class='substrate_engineering' / research_only.
+        # Held warn-only initially per operator approval 2026-05-09; flip
+        # to STRICT after Phase 2 lanes (T1/T6/T10/T15/T17/T18) backfill
+        # the fields. Memory:
+        # feedback_why_leaderboard_hnerv_worked_when_ours_didnt_PERMANENT_KNOWLEDGE_20260509.md
+        check_representation_lane_has_archive_grammar_at_design_time(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -6593,8 +6607,8 @@ def check_training_scripts_use_real_data_in_nonsmoke_mode(
     burned $8 optimizing PR101 weights against random noise.
 
     The gate scans ``experiments/train_*.py`` files. For each file that
-    defines BOTH ``make_synthetic_*`` AND a non-smoke ``main()``, it
-    AST-walks every call to ``make_synthetic_*``; the call is allowed
+    defines BOTH a synthetic/smoke data factory AND a non-smoke ``main()``, it
+    AST-walks every call to ``make_synthetic_*`` / ``make_smoke_*``; the call is allowed
     only if it is inside a function whose name contains ``smoke``/``synthetic``,
     or inside an ``if smoke:`` / ``if args.smoke:`` branch, or has a
     same-line waiver ``# SYNTHETIC_NON_SMOKE_OK:<reason>``.
@@ -6619,11 +6633,14 @@ def check_training_scripts_use_real_data_in_nonsmoke_mode(
         except SyntaxError:
             continue
 
+        def _is_synthetic_factory_name(name: str) -> bool:
+            return name.startswith("make_synthetic") or name.startswith("make_smoke")
+
         has_synthetic_def = False
         has_main_def = False
         for node in _ast.walk(tree):
             if isinstance(node, _ast.FunctionDef):
-                if node.name.startswith("make_synthetic"):
+                if _is_synthetic_factory_name(node.name):
                     has_synthetic_def = True
                 if node.name == "main":
                     has_main_def = True
@@ -6676,7 +6693,7 @@ def check_training_scripts_use_real_data_in_nonsmoke_mode(
                 target_name = call.func.id
             elif isinstance(call.func, _ast.Attribute):
                 target_name = call.func.attr
-            if not target_name.startswith("make_synthetic"):
+            if not _is_synthetic_factory_name(target_name):
                 continue
             if _has_waiver(call.lineno):
                 continue
@@ -26210,6 +26227,327 @@ def check_no_auth_eval_optout_help_text_consumer_unverified(
                 f"({scanned} opt-out-defining file(s) scanned, "
                 f"{len(consumer_files)} unique consumer(s) verified)"
             )
+    return violations
+
+
+# ---------------------------------------------------------------------------
+# Catalog #124 — representation lane archive grammar at design time gate
+# ---------------------------------------------------------------------------
+#
+# Closes the FORBIDDEN PATTERN named in
+# ``feedback_why_leaderboard_hnerv_worked_when_ours_didnt_PERMANENT_KNOWLEDGE_20260509.md``
+# §5 ("forbidden_representation_without_archive_grammar"), §10 (this check spec).
+#
+# A representation lane (NeRV / HNeRV / Cool-Chic / C3 / wavelet / VQ-VAE /
+# grayscale-LUT / SIREN / coordinate-MLP / hyperprior / etc.) MUST declare
+# 8 design-time evidence fields BEFORE entering Lane Maturity Level 1+. The
+# fields force the integration loop closed at design time so the
+# substrate-vs-codec composition meta-pattern (kitchen_sink anti-pattern) does
+# not silently re-enter the pipeline.
+#
+# Two opt-outs (per HNeRV parity discipline lessons 2 + 7):
+#   - lane_class=substrate_engineering → substrate work explicitly DOES NOT
+#     ship a packetized inflate; it engineers the substrate the bolt-ons stack
+#     on. (lesson 7)
+#   - research_only=true → research-only path by construction; not destined
+#     for the contest archive. (lesson 2)
+#
+# Held warn-only initially (per operator approval 2026-05-09); promoted to
+# STRICT after Phase 2 lanes (T1/T6/T10/T15/T17/T18) backfill the fields.
+#
+# Memory: feedback_why_leaderboard_hnerv_worked_when_ours_didnt_PERMANENT_KNOWLEDGE_20260509.md
+
+# Token sets that classify a lane as a "representation lane". Match against
+# both the lane id and the lane name. Short tokens (≤ 5 chars) use a
+# WORD-BOUNDARY regex to avoid false positives like `c3` matching `c30` /
+# `dc3` / `lane_arc3_v2`. Long tokens fall back to case-insensitive
+# substring (cheaper and unambiguous).
+_REPRESENTATION_LANE_NAME_TOKENS = (
+    "nerv",
+    "hnerv",
+    "mnerv",
+    "cool_chic",
+    "coolchic",
+    "cool-chic",
+    "c3",
+    "siren",
+    "coordinate_mlp",
+    "coordinate-mlp",
+    "wavelet",
+    "vqvae",
+    "vq_vae",
+    "vq-vae",
+    "grayscale_lut",
+    "grayscale-lut",
+    "hyperprior",
+    "nonlinear_transform",
+    "time_varying_film",
+    "shared_codebook",
+    "balle",
+    "ballé",
+    "representation_codec",
+    "neural_codec",
+)
+
+# Pre-compile word-boundary regexes for short tokens. Boundary defined as
+# `[^A-Za-z0-9]` (non-identifier character) on either side OR start/end of
+# string. Long tokens use cheap substring `in` test.
+_SHORT_TOKEN_LEN_THRESHOLD = 5
+_REPRESENTATION_LANE_NAME_TOKEN_RES = tuple(
+    re.compile(
+        rf"(?:^|[^A-Za-z0-9])"
+        rf"{re.escape(tok)}"
+        rf"(?:$|[^A-Za-z0-9])",
+        re.IGNORECASE,
+    )
+    for tok in _REPRESENTATION_LANE_NAME_TOKENS
+    if len(tok) <= _SHORT_TOKEN_LEN_THRESHOLD
+)
+_REPRESENTATION_LANE_NAME_LONG_TOKENS = tuple(
+    tok for tok in _REPRESENTATION_LANE_NAME_TOKENS
+    if len(tok) > _SHORT_TOKEN_LEN_THRESHOLD
+)
+
+# Token set that classifies a lane as a representation lane via DESCRIPTION
+# (notes / name) phrasing. Matched case-insensitive substring.
+_REPRESENTATION_LANE_DESCRIPTION_TOKENS = (
+    "representation",
+    "learned codec",
+    "neural compression",
+    "archive grammar",
+)
+
+# Required 8 design-time evidence fields per the HNeRV retrospective §10.
+_REPRESENTATION_LANE_REQUIRED_FIELDS = (
+    "archive_grammar",
+    "parser_section_manifest",
+    "inflate_runtime_loc_budget",
+    "runtime_dep_closure",
+    "export_format",
+    "score_aware_loss",
+    "bolt_on_loc_budget",
+    "no_op_detector_planned",
+)
+
+
+def _lane_is_representation_lane(lane: dict) -> bool:
+    """Return True iff `lane` is a representation/codec lane.
+
+    Match heuristic:
+      - Short name tokens (≤ 5 chars like `c3`, `nerv`, `siren`) require a
+        word-boundary match on the lane id + name (avoids false positives
+        like `c3` matching `c30` / `dc3`).
+      - Long name tokens (`hyperprior`, `vq_vae`, etc.) use cheap
+        case-insensitive substring matching.
+      - Description tokens (`representation`, `learned codec`,
+        `neural compression`, `archive grammar`) match anywhere in name OR
+        notes.
+    """
+    lid = (lane.get("id") or "").lower()
+    name = (lane.get("name") or "").lower()
+    notes = (lane.get("notes") or "").lower()
+
+    haystack_for_name_tokens = lid + " " + name
+    # Long tokens — cheap substring
+    for tok in _REPRESENTATION_LANE_NAME_LONG_TOKENS:
+        if tok in haystack_for_name_tokens:
+            return True
+    # Short tokens — word-boundary regex
+    for token_re in _REPRESENTATION_LANE_NAME_TOKEN_RES:
+        if token_re.search(haystack_for_name_tokens):
+            return True
+
+    haystack_for_desc = name + " " + notes
+    for tok in _REPRESENTATION_LANE_DESCRIPTION_TOKENS:
+        if tok in haystack_for_desc:
+            return True
+
+    return False
+
+
+def _lane_has_field(lane: dict, field: str) -> bool:
+    """Return True iff `field` is declared on the lane.
+
+    Acceptance locations (any one suffices):
+      - lane[field] (top-level)
+      - lane["evidence"][field] (under an 'evidence' dict)
+      - lane["design_evidence"][field] (under a 'design_evidence' dict)
+      - any gate's "evidence" string contains the field name as a token
+        prefix (e.g. ``archive_grammar=monolithic_single_file_0_bin``).
+
+    The third + fourth forms exist so subagents can declare design-time
+    evidence either as structured top-level fields OR as an inline note
+    inside an existing gate's evidence string. Per CLAUDE.md "Beauty,
+    simplicity, and developer experience": accept either ergonomic.
+    """
+    # Top-level
+    if field in lane and lane[field] not in (None, ""):
+        return True
+    # Under 'evidence' dict
+    ev = lane.get("evidence")
+    if isinstance(ev, dict) and field in ev and ev[field] not in (None, ""):
+        return True
+    # Under 'design_evidence' dict
+    dev = lane.get("design_evidence")
+    if isinstance(dev, dict) and field in dev and dev[field] not in (None, ""):
+        return True
+    # Gate evidence-string scan: look for `<field>=` or `<field>:`
+    gates = lane.get("gates", {})
+    if isinstance(gates, dict):
+        for g in gates.values():
+            if not isinstance(g, dict):
+                continue
+            ev_str = g.get("evidence", "")
+            if not isinstance(ev_str, str):
+                continue
+            # Match `archive_grammar=` or `archive_grammar:` as a substring.
+            if (field + "=") in ev_str or (field + ":") in ev_str:
+                return True
+    return False
+
+
+def check_representation_lane_has_archive_grammar_at_design_time(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #124 — representation lanes must declare archive grammar at design.
+
+    Refuses Level 1+ promotion of representation/codec lanes (NeRV / HNeRV /
+    Cool-Chic / C3 / wavelet / VQ-VAE / grayscale-LUT / SIREN / hyperprior /
+    etc.) without 8 declared evidence fields per HNeRV parity discipline
+    forbidden pattern #4:
+
+        archive_grammar
+        parser_section_manifest
+        inflate_runtime_loc_budget
+        runtime_dep_closure
+        export_format
+        score_aware_loss
+        bolt_on_loc_budget
+        no_op_detector_planned
+
+    Opt-outs (per HNeRV parity discipline lessons 2 + 7):
+      - ``lane_class=substrate_engineering`` (top-level on lane dict)
+      - ``research_only=true`` (top-level on lane dict)
+
+    Acceptance locations for the 8 fields (any one suffices per field):
+      - top-level on the lane dict
+      - under ``lane["evidence"][field]``
+      - under ``lane["design_evidence"][field]``
+      - inline inside a gate's evidence string as ``<field>=`` / ``<field>:``
+
+    Bug class: leaderboard HNeRV won not by architectural novelty but by
+    binding ARCHITECTURE + SCORE-AWARE TRAINING + ARCHIVE GRAMMAR + INFLATE
+    RUNTIME + EXACT-EVAL CUSTODY simultaneously, in a single ~600-LOC artifact.
+    Our internal Lane 12 NeRV mask codec scaffold sat behind L2-clearance
+    blockers for ~10 days while PR #95/#100/#101/#103 shipped end-to-end. This
+    gate forces design-time declaration so the integration loop cannot age out.
+
+    Memory:
+      feedback_why_leaderboard_hnerv_worked_when_ours_didnt_PERMANENT_KNOWLEDGE_20260509.md
+      .omx/research/representation_integration_gap_audit_20260508_codex.md
+      feedback_substrate_vs_codec_composition_meta_pattern_20260508.md
+    """
+    root = Path(repo_root or REPO_ROOT)
+
+    # Lazy-import lane_maturity (registry CLI) so the registry-loading rules
+    # live in one place. Mirror Check 90's import pattern.
+    try:
+        tools_root = str(root)
+        if tools_root not in sys.path:
+            sys.path.insert(0, tools_root)
+        from tools import lane_maturity as lm  # type: ignore[import-untyped]
+    except (ImportError, FileNotFoundError) as e:
+        msg = (
+            f"could not import tools.lane_maturity: {e}. "
+            "This is a setup bug — the harness was supposed to land here."
+        )
+        if verbose:
+            print(f"  [representation-lane-archive-grammar] WARN: {msg}")
+        if strict:
+            raise PreflightError(
+                "check_representation_lane_has_archive_grammar_at_design_time: "
+                + msg
+            )
+        return [msg]
+
+    try:
+        data = lm.load_registry(repo_root=root)
+    except (FileNotFoundError, ValueError) as e:
+        msg = f"registry load failed: {e}"
+        if verbose:
+            print(f"  [representation-lane-archive-grammar] WARN: {msg}")
+        if strict:
+            raise PreflightError(
+                "check_representation_lane_has_archive_grammar_at_design_time: "
+                + msg
+            )
+        return [msg]
+
+    violations: list[str] = []
+    scanned_total = 0
+    scanned_representation = 0
+    scanned_optout = 0
+    for lane in data.get("lanes", []):
+        scanned_total += 1
+        level = lane.get("level", 0)
+        if not isinstance(level, int) or level < 1:
+            continue
+        if not _lane_is_representation_lane(lane):
+            continue
+        scanned_representation += 1
+        # Opt-outs (per lessons 2 + 7)
+        if lane.get("lane_class") == "substrate_engineering":
+            scanned_optout += 1
+            continue
+        if lane.get("research_only") is True:
+            scanned_optout += 1
+            continue
+        missing = [
+            f for f in _REPRESENTATION_LANE_REQUIRED_FIELDS
+            if not _lane_has_field(lane, f)
+        ]
+        if missing:
+            violations.append(
+                f"[Check 124] Lane {lane.get('id', '?')} at level {level} "
+                f"missing field(s): {', '.join(missing)}. "
+                "See CLAUDE.md HNeRV parity discipline forbidden pattern #4."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [representation-lane-archive-grammar] "
+                f"{len(violations)} representation lane(s) missing required "
+                f"field(s) (scanned: {scanned_representation} representation "
+                f"of {scanned_total} total; {scanned_optout} opted-out via "
+                f"lane_class=substrate_engineering or research_only=true)"
+            )
+            for v in violations[:5]:
+                print(f"    • {v}")
+            if len(violations) > 5:
+                print(f"    ... ({len(violations) - 5} more)")
+        else:
+            print(
+                f"  [representation-lane-archive-grammar] OK "
+                f"({scanned_representation} representation lane(s) scanned, "
+                f"{scanned_optout} opted out, 0 missing required fields)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_representation_lane_has_archive_grammar_at_design_time: "
+            f"{len(violations)} representation lane(s) at level >= 1 missing "
+            "design-time evidence field(s); first 3:\n  "
+            + "\n  ".join(violations[:3])
+            + "\n\nRequired fields per HNeRV parity discipline forbidden "
+            "pattern #4:\n    "
+            + ", ".join(_REPRESENTATION_LANE_REQUIRED_FIELDS)
+            + "\n\nOpt-outs: set lane_class='substrate_engineering' OR "
+            "research_only=true on the lane dict."
+        )
     return violations
 
 

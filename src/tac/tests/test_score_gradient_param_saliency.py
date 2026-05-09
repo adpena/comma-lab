@@ -125,6 +125,19 @@ def test_compute_score_gradient_saliency_returns_one_scalar_per_param() -> None:
         assert v < float("inf"), k
 
 
+def test_pose_distortion_score_derivative_matches_contest_formula() -> None:
+    from tac.score_gradient_param_saliency import (
+        DEFAULT_CPU_POSE_SCORE_WEIGHT,
+        pose_distortion_score_derivative,
+    )
+
+    # d sqrt(10 * d) / dd = sqrt(10) / (2 * sqrt(d)).
+    assert pose_distortion_score_derivative(3.0e-5) == pytest.approx(288.6751345948129)
+    assert DEFAULT_CPU_POSE_SCORE_WEIGHT == pytest.approx(
+        pose_distortion_score_derivative(3.0e-5)
+    )
+
+
 def test_compute_score_gradient_saliency_rejects_mismatched_shapes() -> None:
     from tac.score_gradient_param_saliency import compute_score_gradient_param_saliency
 
