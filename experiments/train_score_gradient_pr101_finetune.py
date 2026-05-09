@@ -586,15 +586,17 @@ def train_one_step(
     lagrangian: LagrangianState,
     aux_kl_weight: float,
     aux_pixel_l1_weight: float,
+    enable_eval_roundtrip_in_training: bool,
 ) -> dict[str, float]:
     """Single training step. Returns metrics dict."""
     decoder.train()
     optimizer.zero_grad(set_to_none=True)
 
     pred_pair_btchw = decoder(z_batch)
-    pred_pair_btchw = simulate_eval_roundtrip(
-        pred_pair_btchw, noise_std=EVAL_ROUNDTRIP_NOISE_STD
-    )
+    if enable_eval_roundtrip_in_training:
+        pred_pair_btchw = simulate_eval_roundtrip(
+            pred_pair_btchw, noise_std=EVAL_ROUNDTRIP_NOISE_STD
+        )
     # Convert (B, T, C, H, W) → (B, T, H, W, C) for scorer_loss expectation.
     pred_pair_hwc = pred_pair_btchw.permute(0, 1, 3, 4, 2).contiguous()
 
@@ -675,6 +677,7 @@ def train(
     output_dir: Path,
     aux_kl_weight: float,
     aux_pixel_l1_weight: float,
+    enable_eval_roundtrip_in_training: bool,
     batch_source: Any,  # callable(batch_size) → (z, gt_pair_hwc) OR None for synthetic-smoke
     seed: int = 20260508,
 ) -> TrainResult:
@@ -737,6 +740,7 @@ def train(
                     lagrangian=lagrangian,
                     aux_kl_weight=aux_kl_weight,
                     aux_pixel_l1_weight=aux_pixel_l1_weight,
+                    enable_eval_roundtrip_in_training=enable_eval_roundtrip_in_training,
                 )
                 epoch_metrics["step_metrics"].append(metrics)
                 if math.isnan(metrics["loss"]):
@@ -1270,6 +1274,7 @@ def main() -> int:
             output_dir=output_dir,
             aux_kl_weight=args.aux_kl_weight,
             aux_pixel_l1_weight=args.aux_pixel_l1_weight,
+            enable_eval_roundtrip_in_training=args.enable_eval_roundtrip_in_training,
             batch_source=batch_source,
             seed=args.seed,
         )

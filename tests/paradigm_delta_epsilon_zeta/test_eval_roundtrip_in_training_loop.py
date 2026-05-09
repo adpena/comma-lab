@@ -277,14 +277,53 @@ def test_apply_eval_roundtrip_during_training_imports_in_balle_trainer():
 # --------------------------------------------------------------------------- #
 
 
-def test_balle_trainer_eval_roundtrip_pixel_l1_unchanged():
-    """The pre-existing eval_roundtrip_pixel_l1 must still produce the same
-    output (we did not refactor its body, only added optional canonical
-    primitives via the wire-in)."""
+def test_score_gradient_trainer_roundtrip_flag_reaches_train_step_signature():
+    """The argparse flag must not be dead; it reaches train/train_one_step."""
+    import inspect
+
+    mod = importlib.import_module("experiments.train_score_gradient_pr101_finetune")
+    assert "enable_eval_roundtrip_in_training" in inspect.signature(
+        mod.train_one_step
+    ).parameters
+    assert "enable_eval_roundtrip_in_training" in inspect.signature(
+        mod.train
+    ).parameters
+
+
+def test_balle_trainer_eval_roundtrip_default_uses_canonical(monkeypatch):
+    """Default path calls the PR #95-faithful canonical roundtrip primitive."""
     mod = importlib.import_module("experiments.train_paradigm_delta_epsilon_zeta_track1_balle_endtoend")
+    called = {"value": False}
+
+    def fake_roundtrip(x, **_kwargs):
+        called["value"] = True
+        return torch.zeros_like(x)
+
+    monkeypatch.setattr(mod, "apply_eval_roundtrip_during_training", fake_roundtrip)
     torch.manual_seed(0)
     decoded = torch.rand(1, 2, 3, 384, 512) * 255.0
-    target = torch.rand(1, 2, 3, 384, 512) * 255.0
+    target = torch.zeros_like(decoded)
     out = mod.eval_roundtrip_pixel_l1(decoded, target, noise_std=0.5)
+    assert called["value"] is True
     assert out.dim() == 0
     assert torch.isfinite(out).item()
+    assert float(out.item()) == 0.0
+
+
+def test_balle_trainer_disable_roundtrip_skips_canonical(monkeypatch):
+    """Ablation flag is real: disabled path must not call the roundtrip."""
+    mod = importlib.import_module("experiments.train_paradigm_delta_epsilon_zeta_track1_balle_endtoend")
+
+    def forbidden_roundtrip(_x, **_kwargs):  # pragma: no cover - should not run
+        raise AssertionError("roundtrip should be disabled")
+
+    monkeypatch.setattr(mod, "apply_eval_roundtrip_during_training", forbidden_roundtrip)
+    decoded = torch.ones(1, 2, 3, 8, 8)
+    target = torch.zeros_like(decoded)
+    out = mod.eval_roundtrip_pixel_l1(
+        decoded,
+        target,
+        noise_std=0.5,
+        enable_eval_roundtrip_in_training=False,
+    )
+    assert out.item() == 1.0

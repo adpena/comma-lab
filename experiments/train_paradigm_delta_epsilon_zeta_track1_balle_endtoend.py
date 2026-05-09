@@ -177,7 +177,11 @@ EVAL_HW = (384, 512)
 
 
 def eval_roundtrip_pixel_l1(
-    decoded: torch.Tensor, target_pixels: torch.Tensor, *, noise_std: float
+    decoded: torch.Tensor,
+    target_pixels: torch.Tensor,
+    *,
+    noise_std: float,
+    enable_eval_roundtrip_in_training: bool = True,
 ) -> torch.Tensor:
     """Proxy distortion that simulates the inflate roundtrip + uint8 cast.
 
@@ -185,24 +189,28 @@ def eval_roundtrip_pixel_l1(
     target_pixels: same shape, [0, 255]
 
     Per CLAUDE.md "eval_roundtrip — non-negotiable", the proxy MUST simulate
-    the contest's inflate→evaluate path. We:
+    the contest's inflate→evaluate path unless an explicit ablation disables
+    it. When enabled we:
       1. add small noise to mimic the int8 quantisation residual,
-      2. interpolate to camera resolution and back to eval resolution
-         (bicubic up + bicubic down) to mimic the inflate pipeline.
+      2. run the PR #95-faithful roundtrip primitive
+         (bicubic up + bilinear down + STE uint8 round).
     """
+    if not enable_eval_roundtrip_in_training:
+        return F.l1_loss(decoded, target_pixels)
+
     B, P, C, H, W = decoded.shape
     flat = decoded.reshape(B * P, C, H, W)
     if noise_std > 0:
         flat = flat + noise_std * torch.randn_like(flat)
-    up = F.interpolate(
+    down = apply_eval_roundtrip_during_training(
         flat,
-        size=INFLATE_ROUNDTRIP_CAMERA_HW,
-        mode="bicubic",
-        align_corners=False,
+        simulate_uint8=True,
+        simulate_resize=True,
+        ste_round=True,
+        target_h=INFLATE_ROUNDTRIP_CAMERA_HW[0],
+        target_w=INFLATE_ROUNDTRIP_CAMERA_HW[1],
     )
-    # Contest evaluate.py downsamples GT to (384, 512) for SegNet/PoseNet.
-    down = F.interpolate(up, size=EVAL_HW, mode="bicubic", align_corners=False)
-    down = down.clamp(0.0, 255.0).reshape(B, P, C, H, W)
+    down = down.reshape(B, P, C, H, W)
     return F.l1_loss(down, target_pixels)
 
 
@@ -460,6 +468,7 @@ def _eval_ema_proxy(
     latents: torch.Tensor,
     target_pixels: torch.Tensor,
     noise_std: float,
+    enable_eval_roundtrip_in_training: bool,
 ) -> dict[str, float]:
     """Snapshot+restore eval (CLAUDE.md non-negotiable)."""
     decoder_state = {k: v.detach().clone() for k, v in decoder.state_dict().items()}
@@ -473,7 +482,12 @@ def _eval_ema_proxy(
             balle_out = balle(latents)
             decoded = decoder(balle_out["y_hat"])
             pixel_l1 = float(
-                eval_roundtrip_pixel_l1(decoded, target_pixels, noise_std=noise_std)
+                eval_roundtrip_pixel_l1(
+                    decoded,
+                    target_pixels,
+                    noise_std=noise_std,
+                    enable_eval_roundtrip_in_training=enable_eval_roundtrip_in_training,
+                )
             )
             rate_bits = float(balle_out["rate_total_bits"])
         return {
@@ -1036,12 +1050,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help=(
             "[default: True] Apply contest eval roundtrip "
             "(bicubic-up + bilinear-down + STE-round) inside training "
-            "inner loop, so the proxy gradient matches contest-eval. "
-            "This trainer's eval_roundtrip_pixel_l1 currently uses "
-            "bicubic-down (NOT PR #95 recipe); when this flag is True, "
-            "the canonical apply_eval_roundtrip_during_training is "
-            "available for callers (Phase 2 will route distortion "
-            "through it). Per CLAUDE.md eval_roundtrip non-negotiable."
+            "inner loop through apply_eval_roundtrip_during_training, "
+            "so the proxy gradient matches contest-eval. Per CLAUDE.md "
+            "eval_roundtrip non-negotiable."
         ),
     )
     parser.add_argument(
@@ -1334,7 +1345,12 @@ def main() -> int:
 
             balle_out = balle(y)
             decoded = decoder(balle_out["y_hat"])
-            distortion = eval_roundtrip_pixel_l1(decoded, tgt, noise_std=args.noise_std)
+            distortion = eval_roundtrip_pixel_l1(
+                decoded,
+                tgt,
+                noise_std=args.noise_std,
+                enable_eval_roundtrip_in_training=args.enable_eval_roundtrip_in_training,
+            )
             # Per-pair seg/pose targets approximated as constant (Phase 2 will
             # plug real SegNet/PoseNet forwards under no-grad so the
             # Lagrangian sees real signal).
@@ -1372,6 +1388,7 @@ def main() -> int:
                 latents=latents,
                 target_pixels=target_pixels,
                 noise_std=args.noise_std,
+                enable_eval_roundtrip_in_training=args.enable_eval_roundtrip_in_training,
             )
             print(
                 f"[t1] epoch {epoch + 1}/{epochs} loss={avg_loss:.4f} "
