@@ -515,6 +515,15 @@ def preflight_all(
         # promote to strict.
         check_no_fastvit_attention_compounding_claim(strict=False, verbose=verbose)
         check_no_auth_eval_optout_help_text_consumer_unverified(strict=False, verbose=verbose)
+        # 2026-05-09 Track 4 bug-class fix (#123): weight-domain saliency
+        # proxies such as mean(theta^2) are forbidden on score-gradient
+        # substrates unless the file exposes the canonical score-gradient
+        # saliency path or an explicit same-line waiver. This prevents the
+        # blocks4_7bit measured-config regression from re-entering build
+        # tools after the Option 1 saliency repair.
+        check_no_weight_domain_saliency_on_score_gradient_substrate(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -25682,6 +25691,246 @@ def check_subagent_commits_have_co_author_trailer(
         else:
             print(
                 f"  [co-author-trailer] OK ({scanned} commit(s) scanned)"
+            )
+    return violations
+
+
+# ---------------------------------------------------------------------------
+# Catalog #123 — weight-domain saliency on score-aware substrate gate
+# ---------------------------------------------------------------------------
+
+# Tokens that name the canonical "weight-only" saliency proxies. The patterns
+# match expressions that look like Fisher-info / Hessian-trace approximations
+# computed from PARAMETER tensors (NOT from forward-pass output tensors).
+# The detection heuristic discriminates by FUNCTION-NAME context: the proxy
+# must appear inside a function whose name signals saliency / Fisher / Hessian
+# computation (e.g. ``compute_fisher_proxy``, ``compute_saliency``,
+# ``hessian_diag``). Pose-MSE / Seg-MSE forward-pass losses live in different
+# functions and are correctly EXCLUDED.
+_WEIGHT_DOMAIN_SALIENCY_PATTERNS = (
+    # mean(theta**2) / mean(p*p) — magnitude-squared Fisher proxies
+    re.compile(r"\bmean\(\s*[A-Za-z_][A-Za-z_0-9.\[\]'\"]*\s*\*\s*[A-Za-z_][A-Za-z_0-9.\[\]'\"]*\s*\)"),
+    re.compile(r"\bmean\(\s*[A-Za-z_][A-Za-z_0-9.\[\]'\"]*\s*\*\*\s*2\s*\)"),
+    re.compile(r"\.pow\(\s*2\s*\)\.\s*mean\(\)"),
+    re.compile(r"\(\s*[A-Za-z_][A-Za-z_0-9.\[\]'\"]*\s*\*\s*[A-Za-z_][A-Za-z_0-9.\[\]'\"]*\s*\)\.\s*mean\(\)"),
+    re.compile(r"\bvar\(\s*[A-Za-z_][A-Za-z_0-9.\[\]'\"]*\s*\)"),
+    re.compile(r"\babs\(\s*[A-Za-z_][A-Za-z_0-9.\[\]'\"]*\s*\)\.\s*mean\(\)"),
+    re.compile(r"torch\.norm\(\s*[A-Za-z_][A-Za-z_0-9.\[\]'\"]*\s*\)"),
+)
+
+# Function-name tokens that signal "this is a saliency / Fisher / Hessian
+# proxy compute path" (so the weight-domain operand is in fact a parameter
+# tensor). Outside these contexts, the same regex is a forward-pass MSE /
+# loss / score expression and gets ignored.
+_SALIENCY_FUNCTION_NAME_TOKENS = (
+    "fisher_proxy",
+    "fisher_diag",
+    "fisher_information",
+    "hessian_diag",
+    "hessian_trace",
+    "compute_saliency",
+    "weight_saliency",
+    "weight_importance",
+    "param_saliency",
+    "param_importance",
+    "tensor_importance",
+    "uniward",
+    "stc_hessian",
+    "compute_priority",
+)
+
+# Substrates known to be score-aware (gradient-trained against SegNet+PoseNet).
+# Detection logic: if the SAME FILE references any of these tokens AND uses
+# a weight-domain saliency proxy AND lacks a `--saliency-source score_gradient`
+# alternative, that's a Track 4 v1 class regression.
+_SCORE_AWARE_SUBSTRATE_TOKENS = (
+    "score_gradient",
+    "train_score_gradient",
+    "train_score_gradient_pr101_finetune",
+    "score_gradient_param_saliency",
+    # A1 lane references — these archives all came from score-gradient training
+    "track1_phase_a1_score_gradient",
+    "phase_a1_latent",
+    "A1_ARCHIVE",
+    "a1_latent_aligned",
+    "a1_archive",
+)
+
+# Same-line waiver suppressor.
+_WEIGHT_SALIENCY_WAIVER_RE = re.compile(
+    r"#\s*WEIGHT_SALIENCY_OK_ON_SCORE_AWARE\s*:"
+)
+
+# A file is "score-aware-aware" if it offers an opt-in to the score-gradient
+# alternative. Detection: it accepts a `--saliency-source` flag, defines the
+# `saliency_source` parameter, OR imports the canonical helper module. ANY of
+# these signals counts (the file knows it has a choice).
+_SALIENCY_SOURCE_OPT_IN_TOKENS = (
+    "--saliency-source",
+    "saliency_source=",
+    "saliency_source:",
+    "score_gradient_param_saliency",
+    "compute_fisher_proxy_via_score_gradient",
+    "compute_score_gradient_param_saliency",
+)
+
+
+def check_no_weight_domain_saliency_on_score_gradient_substrate(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #123 — weight-domain saliency forbidden on score-aware substrates.
+
+    Bug class fixed: Track 4 v1 (memory
+    ``feedback_track_4_uniward_stc_hessian_a1_landed_20260509.md``,
+    ``feedback_track4_bug_class_fix_self_protect_landed_20260509.md``) used
+    ``mean(theta^2)`` as a Fisher saliency proxy on the A1 archive, which is
+    score-gradient-trained. The proxy is anti-correlated with TRUE score
+    saliency on score-aware substrates: the gradient pushes score-irrelevant
+    parameters TOWARDS zero, so "low mean(theta^2)" tensors are exactly the
+    ones the score-gradient training found to be score-relevant in the
+    orthogonal sense. Track 4 v1's best candidate (blocks4_7bit, 177,903 B,
+    -359 B saved) lost +0.0058 score on contest-CPU GHA because of this.
+
+    The check scans ``tools/build_*.py`` and ``experiments/build_*.py`` for
+    pure-weight-domain saliency proxies (``mean(theta^2)``, ``var(theta)``,
+    ``norm(theta)``, ``abs(theta).mean()``, etc.). If the SAME file references
+    a known score-aware substrate token (A1, score_gradient, etc.) AND it
+    lacks the ``--saliency-source score_gradient`` opt-in alternative,
+    that's a regression of the Track 4 v1 bug class.
+
+    Same-line waiver:
+        # WEIGHT_SALIENCY_OK_ON_SCORE_AWARE:<reason>
+
+    A file that offers a ``--saliency-source score_gradient`` alternative
+    (or wires the canonical helper module) passes — the weight-domain proxy
+    becomes a backward-compat default the operator can override.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    candidate_dirs = (root / "tools", root / "experiments")
+    paths: list[Path] = []
+    for d in candidate_dirs:
+        if not d.is_dir():
+            continue
+        for p in d.glob("build_*.py"):
+            if p.is_file():
+                paths.append(p)
+
+    violations: list[str] = []
+    scanned = 0
+    for path in sorted(paths):
+        scanned += 1
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        # Skip pyc / generated files defensively
+        if not text.strip():
+            continue
+        # Substrate awareness: does this file reference a score-aware
+        # substrate token at all?
+        has_substrate_ref = any(tok in text for tok in _SCORE_AWARE_SUBSTRATE_TOKENS)
+        if not has_substrate_ref:
+            continue
+        # Opt-in alternative: does this file offer --saliency-source / the
+        # canonical helper module?
+        has_opt_in = any(tok in text for tok in _SALIENCY_SOURCE_OPT_IN_TOKENS)
+
+        # AST-based function-context map: for each line, identify the
+        # innermost-enclosing function name. Line is "in saliency context" iff
+        # the enclosing function name contains any token from
+        # ``_SALIENCY_FUNCTION_NAME_TOKENS`` (case-insensitive). This filters
+        # out forward-pass losses that happen to use ``.pow(2).mean()`` on a
+        # NETWORK OUTPUT tensor — those live in different functions.
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            continue
+        func_ranges: list[tuple[int, int, str]] = []  # (start_line, end_line, name)
+
+        class _FuncCollector(ast.NodeVisitor):
+            def visit_FunctionDef(self, node: ast.FunctionDef) -> None:  # type: ignore[override]
+                end = getattr(node, "end_lineno", None) or node.lineno
+                func_ranges.append((node.lineno, end, node.name))
+                self.generic_visit(node)
+
+            def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:  # type: ignore[override]
+                end = getattr(node, "end_lineno", None) or node.lineno
+                func_ranges.append((node.lineno, end, node.name))
+                self.generic_visit(node)
+
+        _FuncCollector().visit(tree)
+
+        def _enclosing_func_name(lineno: int) -> str:
+            """Innermost function (smallest range that contains lineno)."""
+            best: tuple[int, str] | None = None
+            for start, end, name in func_ranges:
+                if start <= lineno <= end:
+                    span = end - start
+                    if best is None or span < best[0]:
+                        best = (span, name)
+            return best[1] if best else ""
+
+        # Walk the file looking for weight-domain saliency proxies.
+        lines = text.splitlines()
+        for lineno, raw in enumerate(lines, start=1):
+            # Skip docstrings / comments superficially: lines that start with
+            # `#` are obviously comments; everything else gets the AST guard.
+            stripped = raw.strip()
+            if stripped.startswith("#"):
+                continue
+            # Function-context filter: only fire INSIDE a function whose name
+            # contains a saliency-token. Outside that, the same regex matches
+            # a forward-pass loss / score expression which is correct.
+            enclosing = _enclosing_func_name(lineno).lower()
+            if not any(tok in enclosing for tok in _SALIENCY_FUNCTION_NAME_TOKENS):
+                continue
+            for pattern in _WEIGHT_DOMAIN_SALIENCY_PATTERNS:
+                m = pattern.search(raw)
+                if not m:
+                    continue
+                # Same-line waiver
+                if _WEIGHT_SALIENCY_WAIVER_RE.search(raw):
+                    break
+                # If the file offers the score-gradient opt-in, the
+                # weight-domain proxy is allowed as the backward-compat
+                # default.
+                if has_opt_in:
+                    break
+                # Otherwise this is a Track 4 v1 class regression.
+                rel = path.relative_to(root).as_posix()
+                violations.append(
+                    f"{rel}:{lineno}: weight-domain saliency proxy "
+                    f"({m.group(0)!r}) inside function {enclosing!r} on "
+                    f"score-aware substrate without a "
+                    f"`--saliency-source score_gradient` alternative. "
+                    f"Memory: feedback_track4_bug_class_fix_self_protect_"
+                    f"landed_20260509.md. Add the opt-in flag, switch to "
+                    f"`tac.score_gradient_param_saliency`, OR add a "
+                    f"`# WEIGHT_SALIENCY_OK_ON_SCORE_AWARE:<reason>` "
+                    f"same-line waiver."
+                )
+                break  # one finding per line is enough
+
+    if violations and strict:
+        msg = (
+            "check_no_weight_domain_saliency_on_score_gradient_substrate: "
+            f"{len(violations)} violation(s):\n  "
+            + "\n  ".join(violations[:5])
+        )
+        raise PreflightError(msg)
+    if verbose:
+        if violations:
+            print(
+                "  [weight-saliency-on-score-aware-substrate] WARN: "
+                f"{len(violations)} violation(s) (strict={strict})"
+            )
+        else:
+            print(
+                f"  [weight-saliency-on-score-aware-substrate] OK "
+                f"({scanned} build script(s) scanned)"
             )
     return violations
 
