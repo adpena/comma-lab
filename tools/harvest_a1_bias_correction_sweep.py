@@ -175,7 +175,7 @@ def select_custodial_report_path(artifact_dir: Path, submission_name: str) -> Pa
     matches: list[Path] = []
     for report_path in artifact_dir.rglob("report.txt"):
         parsed = parse_report(
-            report_path.read_text(),
+            report_path.read_text(encoding="utf-8", errors="replace"),
             expected_submission_name=submission_name,
         )
         if "_error" not in parsed:
@@ -235,7 +235,7 @@ def harvest_one(submission_name: str) -> dict[str, Any]:
                 "artifact_name": found["artifact_name"],
             }
         report_bytes = report_path.read_bytes()
-        report_text = report_bytes.decode()
+        report_text = report_bytes.decode("utf-8", errors="replace")
         report_sha256 = hashlib.sha256(report_bytes).hexdigest()
         parsed = parse_report(report_text, expected_submission_name=submission_name)
         if "_error" in parsed:
