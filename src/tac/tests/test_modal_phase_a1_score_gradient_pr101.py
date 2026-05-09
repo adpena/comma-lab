@@ -74,6 +74,14 @@ def test_modal_phase_a1_disables_dali_nvml_on_modal() -> None:
     assert run_image.index(".env(") < run_image.index(".add_local_")
 
 
+def test_modal_phase_a1_remote_outputs_are_not_temp_score_evidence() -> None:
+    text = _source()
+
+    assert 'REMOTE_OUT_ROOT = Path("/tmp' not in text
+    assert 'REMOTE_OUT_ROOT = REMOTE_REPO / "experiments/results/modal_phase_a1_remote"' in text
+    assert "--allow-temp-work-dir" not in text
+
+
 def test_modal_phase_a1_recover_preserves_harvest_command_and_ttl() -> None:
     text = _source()
 

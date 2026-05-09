@@ -223,6 +223,36 @@ allocation within each pair/channel or training-time q-bit noise.
 Ledger:
 `.omx/research/a5_segnet_boundary_margin_scalar_negative_20260509_codex.md`.
 
+## 2026-05-09 (night) - A1 long lr1e-6 Modal recovery
+
+The active A1 Modal long run
+`track1_phase_a1_score_gradient_long_lr1e6_20260509T030424Z_modal` was
+harvested. Training and archive build completed, but remote CUDA auth eval
+failed before scoring because the Modal runner used a temp workdir rejected by
+`contest_auth_eval.py`'s evidence-custody guard.
+
+The custody bug is fixed: `experiments/modal_phase_a1_score_gradient_pr101.py`
+now writes remote score-bearing output under
+`/workspace/pact/experiments/results/modal_phase_a1_remote/...`, and
+`src/tac/tests/test_modal_phase_a1_score_gradient_pr101.py` forbids temp
+score-evidence output and `--allow-temp-work-dir` in this dispatcher.
+
+The harvested archive was screened locally:
+
+- Archive bytes: `178,276`
+- Archive SHA-256:
+  `55d4a4a0d0ad9915e9b74c679ad8ea31e81f4383f60c132bf017e6df40301111`
+- macOS CPU advisory: `0.19359165212458496`
+- components: PoseNet `0.00003300`, SegNet `0.00056719`
+
+Classification: measured-config regression versus the current A1 Linux
+`[contest-CPU]` anchor `0.19284757743677347`. Preserve as signal; do not
+re-dispatch this exact long `lr=1e-6` schedule without early stopping or a
+SegNet guard.
+
+Ledger:
+`.omx/research/phase_a1_long_lr1e6_modal_failure_and_advisory_20260509_codex.md`.
+
 ## 2026-05-09 (night) - Delta-epsilon-zeta Phase 1 local scaffold evidence
 
 `tools/build_deltaepszeta_training_targets.py` is now hardened for normal zsh

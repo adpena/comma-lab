@@ -101,7 +101,9 @@ import modal
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 REMOTE_REPO = Path("/workspace/pact")
-REMOTE_OUT_ROOT = Path("/tmp/modal_phase_a1")
+# Keep score-bearing eval work outside tempfile roots. contest_auth_eval.py
+# refuses temp evidence unless explicitly downgraded to diagnostic scratch.
+REMOTE_OUT_ROOT = REMOTE_REPO / "experiments/results/modal_phase_a1_remote"
 APP_NAME = "comma-phase-a1-score-gradient"
 RESULT_ROOT = REPO_ROOT / "experiments" / "results"
 
