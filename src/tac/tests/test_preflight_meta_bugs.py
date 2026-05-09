@@ -3904,6 +3904,38 @@ class TestTestFilesImportsResolve:
                 verbose=False,
             ) == []
 
+    def test_incremental_cache_invalidates_changed_test_import(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        root = _stub_repo(tmp_path)
+        mod = root / "src" / "tac" / "real_module.py"
+        mod.parent.mkdir(parents=True, exist_ok=True)
+        mod.write_text("def foo():\n    pass\n")
+        tests_dir = root / "src" / "tac" / "tests"
+        tests_dir.mkdir(parents=True, exist_ok=True)
+        test_file = tests_dir / "test_cached_import.py"
+        test_file.write_text("from tac.real_module import foo\n")
+
+        assert check_test_files_imports_resolve(
+            repo_root=root,
+            strict=True,
+            verbose=False,
+        ) == []
+        assert (
+            root / ".omx" / "cache" / "test_imports_resolve_clean.json"
+        ).exists()
+
+        test_file.write_text("from tac.real_module import bar\n")
+        violations = check_test_files_imports_resolve(
+            repo_root=root,
+            strict=False,
+            verbose=False,
+        )
+        assert len(violations) == 1
+        assert "real_module" in violations[0]
+        assert "bar" in violations[0]
+
 
 # ─── Check J: vastai prompts must mention cost cap ──────────────────────
 

@@ -536,6 +536,44 @@ def test_preflight_dead_resolvers_clean_repo_passes(tmp_path: Path) -> None:
     assert v == []
 
 
+def test_preflight_dead_resolvers_cache_invalidates_changed_target(
+    tmp_path: Path,
+) -> None:
+    root = _stub_repo(tmp_path)
+    script = root / "experiments" / "cached.py"
+    _write(script, """
+        import argparse
+        def main():
+            p = argparse.ArgumentParser()
+            p.add_argument("--profile")
+            args = p.parse_args()
+            return args.profile
+    """)
+    assert preflight_dead_resolvers(
+        repo_root=root,
+        target_dirs=["experiments"],
+        strict=True,
+        verbose=False,
+    ) == []
+    assert (root / ".omx" / "cache" / "dead_resolvers_clean.json").exists()
+
+    _write(script, """
+        import argparse
+        def main():
+            p = argparse.ArgumentParser()
+            args = p.parse_args()
+            return getattr(args, "missing_resolver", 0)
+    """)
+    violations = preflight_dead_resolvers(
+        repo_root=root,
+        target_dirs=["experiments"],
+        strict=False,
+        verbose=False,
+    )
+    assert len(violations) == 1
+    assert "missing_resolver" in violations[0]
+
+
 # ── Real-world regression ─────────────────────────────────────────────────────
 
 

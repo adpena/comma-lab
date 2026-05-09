@@ -4317,20 +4317,63 @@ def preflight_dead_resolvers(
     Returns list of human-readable violations. Raises DeadResolverViolation
     if strict and any are found.
     """
-    root = repo_root or REPO_ROOT
+    root = Path(repo_root or REPO_ROOT).resolve()
     target_dirs = target_dirs or TARGET_DIRS
 
     violations: list[str] = []
     n_scanned = 0
+    target_files: list[Path] = []
 
     for d in target_dirs:
         d_path = root / d
         if not d_path.exists():
             continue
         for py in sorted(d_path.glob("*.py")):
-            n_scanned += 1
-            violations.extend(_scan_python_for_dead_resolvers(py, root))
-            violations.extend(_scan_python_for_dead_imports(py, root))
+            target_files.append(py)
+
+    cache_enabled = os.environ.get("PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE") != "1"
+    cache_name = "dead_resolvers_clean"
+    cache_key = hashlib.sha256(
+        json.dumps(
+            {
+                "scanner_version": "dead_resolvers.v1",
+                "target_dirs": target_dirs,
+            },
+            sort_keys=True,
+        ).encode()
+    ).hexdigest()
+    cache_rows = _load_preflight_cache(root, cache_name) if cache_enabled else {}
+    source_fingerprint = _fingerprint_paths(
+        tuple(target_files),
+        root,
+        salt="dead_resolvers.v1",
+    )
+    cache_row = cache_rows.get(cache_key)
+    if (
+        cache_enabled
+        and isinstance(cache_row, dict)
+        and cache_row.get("source_fingerprint") == source_fingerprint
+    ):
+        if verbose:
+            print(
+                f"  [dead-resolvers] OK: cached {len(target_files)} files scanned"
+            )
+        return []
+
+    for py in target_files:
+        n_scanned += 1
+        violations.extend(_scan_python_for_dead_resolvers(py, root))
+        violations.extend(_scan_python_for_dead_imports(py, root))
+
+    if cache_enabled:
+        if violations:
+            cache_rows.pop(cache_key, None)
+        else:
+            cache_rows[cache_key] = {
+                "source_fingerprint": source_fingerprint,
+                "target_file_count": len(target_files),
+            }
+        _store_preflight_cache(root, cache_name, cache_rows)
 
     if verbose and violations:
         print(f"  [dead-resolvers] {len(violations)} violation(s) across {n_scanned} files:")
@@ -13615,6 +13658,60 @@ def check_test_files_imports_resolve(
     n_scanned = 0
     test_dir = root / "src" / "tac" / "tests"
     if test_dir.exists():
+        cache_enabled = os.environ.get("PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE") != "1"
+        scan_dirs = ["src/tac", "src/comma_lab", "scripts", "experiments"]
+        source_paths = _rg_file_list(
+            root,
+            scan_dirs,
+            ("*.py",),
+            exclude_globs=(
+                "experiments/results/**",
+                "**/__pycache__/**",
+                "**/comma_lab_public_export/**",
+            ),
+        )
+        if source_paths is None:
+            source_paths = tuple(_iter_python_files(root, scan_dirs))
+        resolved_test_dir = test_dir.resolve()
+        test_path_list: list[Path] = []
+        for path in source_paths:
+            if not path.name.startswith("test_"):
+                continue
+            try:
+                path.resolve().relative_to(resolved_test_dir)
+            except ValueError:
+                continue
+            test_path_list.append(path)
+        test_paths = tuple(test_path_list)
+        cache_name = "test_imports_resolve_clean"
+        cache_key = hashlib.sha256(
+            json.dumps(
+                {
+                    "native_ast": os.environ.get(
+                        "PACT_PREFLIGHT_ENABLE_NATIVE_AST",
+                        "1",
+                    ),
+                    "scanner_version": "test_imports_resolve.v1",
+                },
+                sort_keys=True,
+            ).encode()
+        ).hexdigest()
+        cache_rows = _load_preflight_cache(root, cache_name) if cache_enabled else {}
+        source_fingerprint = _fingerprint_paths(
+            source_paths,
+            root,
+            salt="test_imports_resolve.v1",
+        )
+        cache_row = cache_rows.get(cache_key)
+        if (
+            cache_enabled
+            and isinstance(cache_row, dict)
+            and cache_row.get("source_fingerprint") == source_fingerprint
+        ):
+            if verbose:
+                print("  [test-imports] OK: cached clean test import graph")
+            return []
+
         module_defs_cache: dict[Path, set[str] | None] = {}
         source_index = _current_source_index(root)
         if os.environ.get("PACT_PREFLIGHT_ENABLE_NATIVE_AST", "1") != "0":
@@ -13623,30 +13720,13 @@ def check_test_files_imports_resolve(
                     index_python_top_level_names_native,
                 )
 
-                native_paths = (
-                    source_index.files(
-                        ["src/tac", "src/comma_lab", "scripts", "experiments"],
-                        pattern="*.py",
-                    )
-                    if source_index is not None
-                    else tuple(
-                        _iter_python_files(
-                            root,
-                            ["src/tac", "src/comma_lab", "scripts", "experiments"],
-                        )
-                    )
-                )
-                native_defs = index_python_top_level_names_native(list(native_paths))
+                native_defs = index_python_top_level_names_native(list(source_paths))
                 for path, names in native_defs.items():
                     module_defs_cache[path] = names
             except Exception:
                 # Optional accelerator only. The Python AST path below remains
                 # authoritative and must keep preflight usable without Rust.
                 module_defs_cache.clear()
-        if source_index is not None:
-            test_paths = source_index.files(["src/tac/tests"], pattern="test_*.py")
-        else:
-            test_paths = tuple(test_dir.rglob("test_*.py"))
         for p in test_paths:
             if "__pycache__" in p.parts:
                 continue
@@ -13659,6 +13739,15 @@ def check_test_files_imports_resolve(
                     source_index=source_index,
                 )
             )
+        if cache_enabled:
+            if violations:
+                cache_rows.pop(cache_key, None)
+            else:
+                cache_rows[cache_key] = {
+                    "source_fingerprint": source_fingerprint,
+                    "test_file_count": len(test_paths),
+                }
+            _store_preflight_cache(root, cache_name, cache_rows)
     if verbose:
         if violations:
             print(f"  [test-imports] {len(violations)} broken test import(s):")
