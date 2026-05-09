@@ -36,6 +36,8 @@ def _load_briefing_module():
 
 def test_briefing_runs_all_three_phases():
     proc = _run("--top", "3")
+    assert "Dispatch claim coordination" in proc.stdout
+    assert "claim_lane_dispatch.py summary" in proc.stdout
     assert "Phase 1" in proc.stdout
     assert "Phase 2" in proc.stdout
     assert "Phase 3" in proc.stdout
@@ -77,6 +79,7 @@ def test_briefing_skip_reconciler_omits_phase3():
 def test_briefing_json_composite_has_all_three_keys():
     proc = _run("--json", "--top", "3")
     out = json.loads(proc.stdout)
+    assert out["dispatch_claim_summary"]["schema"] == "pact.dispatch_claim_summary.v1"
     assert "pareto" in out
     assert "dashboard" in out
     assert "reconciler" in out
@@ -183,3 +186,34 @@ def test_pr91_readiness_row_surfaces_audit_errors(monkeypatch):
     assert row["ready_for_exact_eval_dispatch"] is False
     assert row["score_claim"] is False
     assert row["audit_errors"] == ["live readiness audit failed"]
+
+
+def test_dispatch_claim_summary_formats_active_claim(monkeypatch):
+    mod = _load_briefing_module()
+    monkeypatch.setattr(
+        mod,
+        "_dispatch_claim_summary",
+        lambda: {
+            "schema": "pact.dispatch_claim_summary.v1",
+            "active_count": 1,
+            "stale_nonterminal_count": 0,
+            "terminal_latest_count": 3,
+            "active": [
+                {
+                    "lane_id": "lane_a1_cuda",
+                    "instance_job_id": "job-123",
+                    "platform": "lightning",
+                    "status": "eval",
+                    "agent": "codex",
+                }
+            ],
+            "stale_nonterminal": [],
+        },
+    )
+
+    text = mod._format_dispatch_claim_summary()
+
+    assert "ACTIVE CONFLICT GUARD" in text
+    assert "lane_id=lane_a1_cuda" in text
+    assert "job=job-123" in text
+    assert "platform=lightning" in text

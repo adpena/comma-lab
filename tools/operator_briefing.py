@@ -32,6 +32,7 @@ TOOLS = REPO_ROOT / "tools"
 PARETO = TOOLS / "apogee_intN_pareto.py"
 DASHBOARD = TOOLS / "score_dashboard.py"
 RECONCILER = TOOLS / "predicted_vs_actual_reconciler.py"
+CLAIM_DISPATCH = TOOLS / "claim_lane_dispatch.py"
 PR91_HPM1_READINESS = TOOLS / "audit_pr91_hpm1_readiness.py"
 PR91_HPM1_RUNTIME_CONTRACT = TOOLS / "audit_pr91_hpm1_runtime_contract.py"
 PR91_HPM1_READINESS_ARTIFACT = (
@@ -483,6 +484,55 @@ def _run_json(script: Path, extra_args: list[str] | None = None) -> dict:
         return {"_error": "non-JSON output", "_stdout": text[:500]}
 
 
+def _dispatch_claim_summary() -> dict[str, object]:
+    """Return the read-only dispatch-claim summary used to prevent duplicate evals."""
+    return _run_json(CLAIM_DISPATCH, ["summary", "--format", "json"])
+
+
+def _format_dispatch_claim_summary() -> str:
+    summary = _dispatch_claim_summary()
+    if summary.get("_error"):
+        return (
+            "Dispatch claim helper failed; refuse remote/eval dispatch until "
+            f"claim state is readable. error={summary.get('_error')}"
+        )
+    active = summary.get("active") if isinstance(summary.get("active"), list) else []
+    stale = (
+        summary.get("stale_nonterminal")
+        if isinstance(summary.get("stale_nonterminal"), list)
+        else []
+    )
+    lines = [
+        "Read-only claim state from tools/claim_lane_dispatch.py summary.",
+        f"  active: {summary.get('active_count', len(active))}",
+        f"  stale_nonterminal: {summary.get('stale_nonterminal_count', len(stale))}",
+        f"  terminal_latest: {summary.get('terminal_latest_count', '<unknown>')}",
+    ]
+    if active:
+        lines.append("  ACTIVE CONFLICT GUARD: do not dispatch duplicate active lanes.")
+        for row in active:
+            lines.append(
+                "    - "
+                f"lane_id={row.get('lane_id', '<missing>')} "
+                f"job={row.get('instance_job_id', '<missing>')} "
+                f"platform={row.get('platform', '<missing>')} "
+                f"status={row.get('status', '<missing>')} "
+                f"agent={row.get('agent', '<missing>')}"
+            )
+    if stale:
+        lines.append("  STALE NONTERMINAL: close/classify before relaunching these lanes.")
+        for row in stale:
+            lines.append(
+                "    - "
+                f"lane_id={row.get('lane_id', '<missing>')} "
+                f"job={row.get('instance_job_id', '<missing>')} "
+                f"status={row.get('status', '<missing>')}"
+            )
+    if not active and not stale:
+        lines.append("  No active or stale nonterminal claims.")
+    return "\n".join(lines)
+
+
 def _load_json_file(path: Path) -> dict[str, object]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -719,15 +769,15 @@ def main(argv: list[str] | None = None) -> int:
                         help="Machine-readable composite JSON output.")
     args = parser.parse_args(argv)
 
-    # Verify all 3 tools exist
-    for tool in (PARETO, DASHBOARD, RECONCILER):
+    # Verify delegated tools exist before building either text or JSON output.
+    for tool in (PARETO, DASHBOARD, RECONCILER, CLAIM_DISPATCH):
         if not tool.is_file():
             print(f"FATAL: missing dependency tool {tool.relative_to(REPO_ROOT)}",
                   file=sys.stderr)
             return 2
 
     if args.json:
-        out = {}
+        out = {"dispatch_claim_summary": _dispatch_claim_summary()}
         if not args.skip_pareto:
             out["pareto"] = _run_json(PARETO, ["--json"])
             out["supplementary_lanes"] = PHASE_1_SUPPLEMENTARY_LANES
@@ -746,6 +796,10 @@ def main(argv: list[str] | None = None) -> int:
 
     # Human-readable composite
     parts: list[str] = ["OPERATOR BRIEFING — dispatch trio"]
+    parts.append(_section(
+        "Dispatch claim coordination — active lane guard",
+        _format_dispatch_claim_summary(),
+    ))
     if not args.skip_pareto:
         parts.append(_section(
             "Phase 1 — Pre-dispatch: apogee_intN Pareto frontier",
