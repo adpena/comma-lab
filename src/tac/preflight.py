@@ -56,6 +56,7 @@ import torch
 DEFAULT_PREFLIGHT_CLI_TIMEOUT_S = 30.0
 _PREFLIGHT_CACHE_SCHEMA = "pact.preflight_cache.v1"
 _PREFLIGHT_ALL_CLEAN_CACHE_VERSION = "preflight_all_clean.v1"
+_PREFLIGHT_DEVELOPER_CLEAN_CACHE_VERSION = "preflight_developer_clean.v1"
 
 
 def _preflight_cache_path(root: Path, name: str) -> Path:
@@ -159,6 +160,7 @@ def _preflight_all_fingerprint_paths(root: Path) -> tuple[Path, ...]:
     exclude_globs = (
         ".venv/**",
         ".omx/cache/**",
+        ".omx/research/artifacts/**",
         "__pycache__/**",
         "experiments/results/**",
         "reports/raw/**",
@@ -185,9 +187,11 @@ def _preflight_all_fingerprint_paths(root: Path) -> tuple[Path, ...]:
     return tuple(sorted(paths, key=lambda item: item.as_posix()))
 
 
-def _preflight_all_clean_cache_hit(
+def _preflight_codebase_clean_cache_hit(
     root: Path,
     *,
+    cache_name: str,
+    version: str,
     profile_name: str | None,
     tto_frames_path: str | Path | None,
     gt_poses_path: str | Path | None,
@@ -201,7 +205,7 @@ def _preflight_all_clean_cache_hit(
     fingerprint = _fingerprint_paths(
         paths,
         root,
-        salt=_PREFLIGHT_ALL_CLEAN_CACHE_VERSION,
+        salt=version,
     )
     key_payload = {
         "profile_name": profile_name,
@@ -214,14 +218,60 @@ def _preflight_all_clean_cache_hit(
     cache_key = hashlib.sha256(
         json.dumps(key_payload, sort_keys=True).encode()
     ).hexdigest()
-    cache_rows = _load_preflight_cache(root, "preflight_all_clean")
+    cache_rows = _load_preflight_cache(root, cache_name)
     row = cache_rows.get(cache_key)
     hit = (
         isinstance(row, dict)
-        and row.get("version") == _PREFLIGHT_ALL_CLEAN_CACHE_VERSION
+        and row.get("version") == version
         and row.get("fingerprint") == fingerprint
     )
     return hit, cache_key + ":" + fingerprint, paths
+
+
+def _store_preflight_codebase_clean_cache(
+    root: Path,
+    *,
+    cache_name: str,
+    version: str,
+    cache_token: str,
+    paths: tuple[Path, ...],
+) -> None:
+    """Record a clean preflight for the current source/state fingerprint."""
+
+    cache_key, fingerprint = cache_token.split(":", 1)
+    rows = _load_preflight_cache(root, cache_name)
+    rows[cache_key] = {
+        "version": version,
+        "fingerprint": fingerprint,
+        "path_count": len(paths),
+        "stored_at_unix": int(time.time()),
+    }
+    _store_preflight_cache(root, cache_name, rows)
+
+
+def _preflight_all_clean_cache_hit(
+    root: Path,
+    *,
+    profile_name: str | None,
+    tto_frames_path: str | Path | None,
+    gt_poses_path: str | Path | None,
+    masks_path: str | Path | None,
+    renderer_path: str | Path | None,
+    archive_path: str | Path | None,
+) -> tuple[bool, str, tuple[Path, ...]]:
+    """Return whether the current codebase has an unchanged clean full preflight."""
+
+    return _preflight_codebase_clean_cache_hit(
+        root,
+        cache_name="preflight_all_clean",
+        version=_PREFLIGHT_ALL_CLEAN_CACHE_VERSION,
+        profile_name=profile_name,
+        tto_frames_path=tto_frames_path,
+        gt_poses_path=gt_poses_path,
+        masks_path=masks_path,
+        renderer_path=renderer_path,
+        archive_path=archive_path,
+    )
 
 
 def _store_preflight_all_clean_cache(
@@ -232,15 +282,55 @@ def _store_preflight_all_clean_cache(
 ) -> None:
     """Record a clean full preflight for the current source/state fingerprint."""
 
-    cache_key, fingerprint = cache_token.split(":", 1)
-    rows = _load_preflight_cache(root, "preflight_all_clean")
-    rows[cache_key] = {
-        "version": _PREFLIGHT_ALL_CLEAN_CACHE_VERSION,
-        "fingerprint": fingerprint,
-        "path_count": len(paths),
-        "stored_at_unix": int(time.time()),
-    }
-    _store_preflight_cache(root, "preflight_all_clean", rows)
+    _store_preflight_codebase_clean_cache(
+        root,
+        cache_name="preflight_all_clean",
+        version=_PREFLIGHT_ALL_CLEAN_CACHE_VERSION,
+        cache_token=cache_token,
+        paths=paths,
+    )
+
+
+def _preflight_developer_clean_cache_hit(
+    root: Path,
+    *,
+    profile_name: str | None,
+    tto_frames_path: str | Path | None,
+    gt_poses_path: str | Path | None,
+    masks_path: str | Path | None,
+    renderer_path: str | Path | None,
+    archive_path: str | Path | None,
+) -> tuple[bool, str, tuple[Path, ...]]:
+    """Return whether the current codebase has an unchanged clean developer preflight."""
+
+    return _preflight_codebase_clean_cache_hit(
+        root,
+        cache_name="preflight_developer_clean",
+        version=_PREFLIGHT_DEVELOPER_CLEAN_CACHE_VERSION,
+        profile_name=profile_name,
+        tto_frames_path=tto_frames_path,
+        gt_poses_path=gt_poses_path,
+        masks_path=masks_path,
+        renderer_path=renderer_path,
+        archive_path=archive_path,
+    )
+
+
+def _store_preflight_developer_clean_cache(
+    root: Path,
+    *,
+    cache_token: str,
+    paths: tuple[Path, ...],
+) -> None:
+    """Record a clean developer preflight for the current source/state fingerprint."""
+
+    _store_preflight_codebase_clean_cache(
+        root,
+        cache_name="preflight_developer_clean",
+        version=_PREFLIGHT_DEVELOPER_CLEAN_CACHE_VERSION,
+        cache_token=cache_token,
+        paths=paths,
+    )
 
 
 def _rg_file_list(
@@ -2799,6 +2889,42 @@ def preflight_developer(
             )
         return
 
+    codebase_cache_token: str | None = None
+    codebase_cache_paths: tuple[Path, ...] = ()
+    if (
+        check_codebase
+        and os.environ.get("PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE") != "1"
+        and not any(
+            [
+                profile_name,
+                tto_frames_path,
+                gt_poses_path,
+                masks_path,
+                renderer_path,
+                archive_path,
+            ]
+        )
+    ):
+        cache_hit, codebase_cache_token, codebase_cache_paths = (
+            _preflight_developer_clean_cache_hit(
+                REPO_ROOT,
+                profile_name=profile_name,
+                tto_frames_path=tto_frames_path,
+                gt_poses_path=gt_poses_path,
+                masks_path=masks_path,
+                renderer_path=renderer_path,
+                archive_path=archive_path,
+            )
+        )
+        if cache_hit:
+            if verbose:
+                print(
+                    "  [preflight-developer-cache] OK: cached clean "
+                    f"developer preflight ({len(codebase_cache_paths)} "
+                    "fingerprinted file(s))"
+                )
+            check_codebase = False
+
     if check_codebase:
         check_codebase_drift(strict=True, verbose=verbose)
         check_dispatch_claim_helper_present(strict=True, verbose=verbose)
@@ -2840,6 +2966,12 @@ def preflight_developer(
         )
         check_no_scorer_load_at_inflate(strict=True, verbose=verbose)
         check_public_pr_intake_clones_pristine(strict=True, verbose=verbose)
+        if codebase_cache_token is not None:
+            _store_preflight_developer_clean_cache(
+                REPO_ROOT,
+                cache_token=codebase_cache_token,
+                paths=codebase_cache_paths,
+            )
 
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
         preflight_training_inputs(
