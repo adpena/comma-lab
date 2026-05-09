@@ -91,21 +91,28 @@ def _save_setup_first_seen(data: dict[str, float]) -> None:
     longer in the tracker. Stale rows then made ``--auto-destroy-stale``
     target fresh instances that inherited an old age.
 
-    The contract is now TRANSACTIONAL REPLACE: the caller is the sole
-    source of truth for the post-prune map and we write ``data`` directly.
-    Concurrent writers serialize on the lockfile so each transaction
-    runs atomically; whichever caller wins the lock last wins the file
-    state, and per-instance pruning decisions are preserved instead of
-    being merged-away by a stale ``existing.update(data)``.
+    The contract is TRANSACTIONAL REPLACE: the caller is the sole source
+    of truth for the post-prune map and we write ``data`` directly. The
+    caller MUST have already merged any concurrent updates and pruned
+    deletions; this helper only performs the atomic commit.
+
+    NOTE — codex round 4 MEDIUM 2 (catalog #135) prefers
+    ``update_setup_first_seen_locked`` for callers that need the
+    "load + merge + prune + save" full transaction inside ONE lock window.
+    This helper remains for cases where the caller already holds canonical
+    state (e.g., the future state-update API after refactor). New code
+    should prefer the transactional update helper.
 
     Sister of:
 
     - ``tac.continual_learning.posterior_update_locked`` (catalog #128)
     - ``tac.deploy.lightning.active_jobs_state.update_active_jobs_locked``
       (catalog #131)
+    - ``tac.deploy.azure.active_vms_state.update_active_vms_locked`` (#133)
     - ``tac.vastai_tracker._write_records``
 
-    Memory: feedback_codex_round3_findings_fix_landed_20260509.md.
+    Memory: feedback_codex_round3_findings_fix_landed_20260509.md +
+    feedback_codex_round4_findings_fix_with_self_protection_landed_20260509.md.
     """
     SETUP_FIRST_SEEN_PATH.parent.mkdir(parents=True, exist_ok=True)
     lock_path = _setup_first_seen_lock_path()
@@ -131,6 +138,180 @@ def _save_setup_first_seen(data: dict[str, float]) -> None:
                         tmp.unlink()
                     except OSError:
                         pass
+        finally:
+            fcntl.flock(lockfd.fileno(), fcntl.LOCK_UN)
+
+
+def update_setup_first_seen_locked(
+    *,
+    observed_setup_ids: set[str],
+    tracked_ids: set[str],
+    now_ts: float,
+) -> dict[str, float]:
+    """Locked transactional update of the SETUP-first-seen tracker.
+
+    Codex round 4 MEDIUM 2 fix (2026-05-09, catalog #135): replaces the
+    main()-flow lost-update race. Previously the main loop did:
+
+        setup_first_seen = _load_setup_first_seen()        # OUTSIDE lock
+        # ... long per-instance verify (~minutes) ...
+        # ... mutate setup_first_seen ...
+        _save_setup_first_seen(setup_first_seen)           # only the WRITE locked
+
+    Two overlapping verifier runs (or a new instance registered mid-run)
+    both loaded the same stale snapshot, did per-instance work for minutes,
+    then the slower run replaced the file with its now-stale view —
+    deleting first-seen timestamps that the faster run had created.
+    SETUP age would silently reset for affected instances and
+    ``--auto-destroy-stale`` would miss stuck paid instances.
+
+    The new contract performs load + merge + prune + save INSIDE one
+    fcntl-locked window:
+
+      1. Acquire fcntl exclusive lock on the SETUP tracker lock file
+      2. Reload the on-disk state INSIDE the lock (defends against any
+         concurrent sister run that committed during our verify loop)
+      3. For each id in ``observed_setup_ids``:
+           - if the id is not yet in the on-disk map, set it to ``now_ts``
+           - if already present, KEEP the OLDER timestamp (``min``) so a
+             SETUP that has been stuck longer keeps its earliest first-seen
+      4. For each id in the on-disk map: prune if not in ``tracked_ids``
+         (drop entries for instances no longer in the vastai tracker)
+      5. Atomically commit via ``_save_setup_first_seen`` (still inside lock)
+
+    The merge-on-min semantics is the correct semantics for "first
+    seen" — a SETUP that has been stuck longer should keep its earliest
+    timestamp regardless of which verifier run committed last.
+
+    Returns the post-merge / post-prune map (the canonical on-disk view
+    after this transaction).
+
+    Args:
+        observed_setup_ids: set of instance ids that THIS verifier run
+            observed in SETUP state.
+        tracked_ids: set of instance ids currently in the vastai tracker;
+            used to prune entries for destroyed instances.
+        now_ts: unix timestamp to use for newly-observed SETUP ids.
+
+    Memory: feedback_codex_round4_findings_fix_with_self_protection_landed_20260509.md.
+    """
+    SETUP_FIRST_SEEN_PATH.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = _setup_first_seen_lock_path()
+    with open(lock_path, "w") as lockfd:
+        fcntl.flock(lockfd.fileno(), fcntl.LOCK_EX)
+        try:
+            # ── Step 1: STRICT-reload INSIDE the lock ────────────────
+            current: dict[str, float] = {}
+            if SETUP_FIRST_SEEN_PATH.exists():
+                try:
+                    raw = json.loads(SETUP_FIRST_SEEN_PATH.read_text())
+                    if isinstance(raw, dict):
+                        current = {str(k): float(v) for k, v in raw.items()}
+                except (json.JSONDecodeError, ValueError, TypeError):
+                    # Corrupt state — quarantine and start fresh
+                    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+                    quarantine = SETUP_FIRST_SEEN_PATH.with_suffix(
+                        SETUP_FIRST_SEEN_PATH.suffix + f".corrupt.{ts}"
+                    )
+                    counter = 0
+                    while quarantine.exists():
+                        counter += 1
+                        quarantine = SETUP_FIRST_SEEN_PATH.with_suffix(
+                            SETUP_FIRST_SEEN_PATH.suffix + f".corrupt.{ts}.{counter}"
+                        )
+                    try:
+                        os.rename(SETUP_FIRST_SEEN_PATH, quarantine)
+                    except OSError:
+                        pass
+                    current = {}
+
+            # ── Step 2: merge observed SETUPs (KEEP older timestamp) ─
+            for iid in observed_setup_ids:
+                iid_s = str(iid)
+                if iid_s in current:
+                    # KEEP the older first-seen — never reset SETUP age
+                    current[iid_s] = min(current[iid_s], float(now_ts))
+                else:
+                    current[iid_s] = float(now_ts)
+
+            # ── Step 3: prune entries no longer tracked ──────────────
+            # Drop ids not in the vastai tracker AND not observed in this
+            # run (the latter could be a fresh insert by a sister verifier
+            # we haven't seen yet — but we use ``tracked_ids`` as truth).
+            tracked_set = {str(t) for t in tracked_ids}
+            current = {k: v for k, v in current.items() if k in tracked_set}
+
+            # Also drop ids that ARE tracked but NOT observed in SETUP
+            # by this run AND not in the on-disk state from a prior run.
+            # The merge in Step 2 already added our observations; the
+            # prune in Step 3 removes destroyed instances. Ids that left
+            # SETUP (now HEALTHY/IDLE/CRASHED) are dropped by the caller's
+            # main flow but ONLY for ids THIS run observed leaving SETUP.
+            # See the caller's main() flow for the per-id decision.
+
+            # ── Step 4: atomic commit (still inside the lock) ───────
+            payload = json.dumps(current, indent=2, sort_keys=True)
+            tmp = SETUP_FIRST_SEEN_PATH.with_suffix(
+                SETUP_FIRST_SEEN_PATH.suffix + f".tmp.{os.getpid()}"
+            )
+            try:
+                tmp.write_text(payload)
+                with open(tmp, "rb") as f:
+                    os.fsync(f.fileno())
+                os.replace(tmp, SETUP_FIRST_SEEN_PATH)
+            finally:
+                if tmp.exists():
+                    try:
+                        tmp.unlink()
+                    except OSError:
+                        pass
+
+            return current
+        finally:
+            fcntl.flock(lockfd.fileno(), fcntl.LOCK_UN)
+
+
+def remove_setup_first_seen_locked(ids_to_remove: set[str]) -> dict[str, float]:
+    """Locked transactional removal of SETUP-first-seen entries.
+
+    Used by the main() flow to drop ids that are no longer in SETUP
+    state (now HEALTHY / IDLE / CRASHED / GONE) within the same locked
+    window as the sister update helper. Ensures concurrent verifier runs
+    don't see a half-applied transaction.
+
+    Returns the post-removal map.
+    """
+    SETUP_FIRST_SEEN_PATH.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = _setup_first_seen_lock_path()
+    with open(lock_path, "w") as lockfd:
+        fcntl.flock(lockfd.fileno(), fcntl.LOCK_EX)
+        try:
+            current: dict[str, float] = {}
+            if SETUP_FIRST_SEEN_PATH.exists():
+                try:
+                    raw = json.loads(SETUP_FIRST_SEEN_PATH.read_text())
+                    if isinstance(raw, dict):
+                        current = {str(k): float(v) for k, v in raw.items()}
+                except (json.JSONDecodeError, ValueError, TypeError):
+                    current = {}
+            for iid in ids_to_remove:
+                current.pop(str(iid), None)
+            payload = json.dumps(current, indent=2, sort_keys=True)
+            tmp = SETUP_FIRST_SEEN_PATH.with_suffix(
+                SETUP_FIRST_SEEN_PATH.suffix + f".tmp.{os.getpid()}.rm"
+            )
+            try:
+                tmp.write_text(payload)
+                with open(tmp, "rb") as f:
+                    os.fsync(f.fileno())
+                os.replace(tmp, SETUP_FIRST_SEEN_PATH)
+            finally:
+                if tmp.exists():
+                    try:
+                        tmp.unlink()
+                    except OSError:
+                        pass
+            return current
         finally:
             fcntl.flock(lockfd.fileno(), fcntl.LOCK_UN)
 
@@ -273,14 +454,29 @@ def main() -> int:
             print("Tracker is empty — no instances to verify.")
         return 0
 
-    # R31 SETUP-stuck tracking — load prior first-seen times, prune
-    # entries for instances no longer in the tracker so the file doesn't
-    # grow unbounded.
-    setup_first_seen = _load_setup_first_seen()
+    # R31 SETUP-stuck tracking — codex round 4 MEDIUM 2 fix (catalog #135):
+    # the previous flow loaded + pruned the SETUP-first-seen map OUTSIDE the
+    # lock, ran per-instance verify (~minutes), then saved at the end. Two
+    # overlapping verifier runs (or a new instance registered mid-run) both
+    # loaded the same stale snapshot, did per-instance work, then the slower
+    # run replaced the file with its now-stale view — deleting first-seen
+    # timestamps the faster run had created. SETUP age would silently reset.
+    #
+    # The fix: do the per-instance work using a local "observation" snapshot,
+    # then compose ONE transactional update at the end. The transactional
+    # helper does load+merge+prune+save inside a single lock window with
+    # KEEP-OLDER-TIMESTAMP merge semantics; concurrent runs all converge.
     tracked_ids = {str(entry["instance_id"]) for entry in data}
-    setup_first_seen = {k: v for k, v in setup_first_seen.items() if k in tracked_ids}
     now_ts = datetime.now(timezone.utc).timestamp()
 
+    # Snapshot of what's currently on-disk, used ONLY to compute setup_age_min
+    # for the per-instance health row (informational; the canonical
+    # transactional update at end-of-run uses an INSIDE-lock reload).
+    observed_snapshot = _load_setup_first_seen()
+    observed_snapshot = {k: v for k, v in observed_snapshot.items() if k in tracked_ids}
+
+    observed_setup_ids: set[str] = set()
+    left_setup_ids: set[str] = set()
     healths: list[InstanceHealth] = []
     for entry in data:
         iid = str(entry["instance_id"])
@@ -295,6 +491,8 @@ def main() -> int:
                 ssh_host=None, ssh_port=None, crash_signal=None,
                 notes="vastai show returned no data — instance destroyed or API error",
             ))
+            # GONE instances should not have first-seen entries either
+            left_setup_ids.add(iid)
             continue
 
         host = meta.get("ssh_host")
@@ -313,15 +511,18 @@ def main() -> int:
 
         # R31 SETUP-stuck tracking: record first-seen-as-SETUP timestamp
         # so we can age it past --setup-stale-minutes and auto-destroy.
-        # Drop the entry once the instance leaves SETUP (it's no longer
-        # the in-flight state we're trying to time-box).
         setup_age_min: Optional[float] = None
         if cls == "SETUP":
-            if iid not in setup_first_seen:
-                setup_first_seen[iid] = now_ts
-            setup_age_min = (now_ts - setup_first_seen[iid]) / 60.0
+            observed_setup_ids.add(iid)
+            # For health-row reporting, prefer the older first-seen; the
+            # transactional update at end-of-run will recompute against
+            # an INSIDE-lock reload that may differ from this snapshot.
+            first_seen_ts = observed_snapshot.get(iid, now_ts)
+            setup_age_min = (now_ts - first_seen_ts) / 60.0
         else:
-            setup_first_seen.pop(iid, None)
+            # Instance left SETUP (or never was) — drop its first-seen entry
+            # in the transactional update at end-of-run.
+            left_setup_ids.add(iid)
 
         healths.append(InstanceHealth(
             instance_id=iid, label=label, classification=cls,
@@ -331,8 +532,25 @@ def main() -> int:
             setup_age_minutes=setup_age_min,
         ))
 
-    # Persist SETUP-first-seen tracker for the next verify pass.
-    _save_setup_first_seen(setup_first_seen)
+    # Codex round 4 MEDIUM 2 (catalog #135): single transactional update
+    # at end-of-run. Reloads INSIDE the lock so concurrent verifier
+    # commits during our verify loop do NOT get clobbered. Merges with
+    # KEEP-OLDER semantics (a SETUP that's been stuck longer keeps its
+    # earliest first-seen across all sister runs).
+    #
+    # First the merge-update for currently-observed SETUPs, then the
+    # explicit removal for instances that left SETUP this run. Both are
+    # locked transactions; ordering is: merge before remove so a flicker
+    # between SETUP and HEALTHY in the same run is handled correctly
+    # (the SETUP observation gets the timestamp, then the leave-SETUP
+    # removal drops it cleanly).
+    update_setup_first_seen_locked(
+        observed_setup_ids=observed_setup_ids,
+        tracked_ids=tracked_ids,
+        now_ts=now_ts,
+    )
+    if left_setup_ids:
+        remove_setup_first_seen_locked(left_setup_ids)
 
     # Output
     if args.json:
