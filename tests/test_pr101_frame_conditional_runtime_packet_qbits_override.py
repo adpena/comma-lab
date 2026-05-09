@@ -148,7 +148,7 @@ def test_changed_qbits_require_explicit_wire_contract_recompute(
     q_bits_json = _write_json(
         tmp_path / "changed_score_marginals.json",
         {
-            "schema": tool.A5_SCORE_MARGINAL_SCHEMA,
+            "schema": tool.A5_SCORE_MARGINAL_QBITS_SCHEDULE_SCHEMA,
             "score_claim": False,
             "per_pair_q_bits": changed_q_bits,
         },

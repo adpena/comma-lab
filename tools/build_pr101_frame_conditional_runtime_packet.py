@@ -65,6 +65,7 @@ RUNTIME_PATCH_SCHEMA = "pr101_frame_conditional_packet_runtime_patch_manifest.v1
 RUNTIME_PROOF_SCHEMA = "pr101_frame_conditional_runtime_consumption_proof.v1"
 A5_ANCHOR_SCHEMA = "pr101_frame_conditional_bit_anchor.v1"
 A5_SCORE_MARGINAL_SCHEMA = "pr101_a5_per_pair_score_marginals.v1"
+A5_SCORE_MARGINAL_QBITS_SCHEDULE_SCHEMA = "pr101_a5_score_marginal_qbits_schedule.v1"
 Q_BITS_OVERRIDE_KEYS = ("per_pair_q_bits", "q_bits_per_pair", "q_bits")
 
 A5_MAGIC = b"A5FC"
@@ -545,7 +546,11 @@ def _q_bits_schedule_record(
                     "source_schema": source_schema,
                     "source_artifact": _artifact_ref(q_bits_override_source_path),
                     "score_marginal_manifest_consumed": (
-                        source_schema == A5_SCORE_MARGINAL_SCHEMA
+                        source_schema
+                        in {
+                            A5_SCORE_MARGINAL_SCHEMA,
+                            A5_SCORE_MARGINAL_QBITS_SCHEDULE_SCHEMA,
+                        }
                         and source_info["key"] == "per_pair_q_bits"
                     ),
                 }

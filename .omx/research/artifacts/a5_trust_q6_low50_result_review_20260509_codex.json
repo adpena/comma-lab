@@ -1,0 +1,101 @@
+{
+  "baseline_score": 0.19663589,
+  "canonical_score": 0.21336553243503031,
+  "custody": {
+    "archive_bytes": 177928,
+    "archive_sha256": "83e85a0918c5db6eba5d824b2c9ab0a9b7a7f47dd7d03fbbbbbb25bcbf99807e",
+    "command": [
+      "experiments/contest_auth_eval.py",
+      "--archive",
+      "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low50_20260509_codex/packet/archive.zip",
+      "--inflate-sh",
+      "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low50_20260509_codex/packet/inflate.sh",
+      "--upstream-dir",
+      "upstream",
+      "--device",
+      "cpu",
+      "--work-dir",
+      "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low50_20260509_codex/macos_cpu_advisory_work",
+      "--json-out",
+      "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low50_20260509_codex/contest_auth_eval.macos_cpu_advisory.json",
+      "--inflate-timeout",
+      "1800",
+      "--evaluate-timeout",
+      "5400",
+      "--keep-work-dir"
+    ],
+    "device": "cpu",
+    "gpu_model": "<error:FileNotFoundError(2, 'No such file or directory')>",
+    "inflate_script": "/Users/adpena/Projects/pact/experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low50_20260509_codex/packet/inflate.sh",
+    "n_samples": 600
+  },
+  "dispatch_claim_state": {
+    "claims_file_present": true,
+    "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+    "latest_claim": {
+      "agent": "codex:gpt-5.5",
+      "instance_job_id": "local:a5-trust-q6-low50-macos-cpu-20260509T0042Z",
+      "lane_id": "a5_trust_q6_low50_macos_cpu_advisory",
+      "notes": "Completed macOS CPU advisory eval. Canonical=0.213365532435, pose=4.139e-05, seg=7.4546e-04, bytes=177928; non-promotable, config retired pending stricter SegNet-aware schedule.",
+      "platform": "macos_cpu_advisory",
+      "predicted_eta_utc": "2026-05-09T01:25:00Z",
+      "status": "completed_advisory_negative",
+      "timestamp_utc": "2026-05-09T00:49:49Z"
+    },
+    "latest_status": "completed_advisory_negative",
+    "matching_claim_count": 2,
+    "terminal_status_recorded": true
+  },
+  "exact_cuda_evidence": false,
+  "failure_class": "non_exact_cuda_evidence",
+  "family_falsified": false,
+  "job_id": "local:a5-trust-q6-low50-macos-cpu-20260509T0042Z",
+  "lane_id": "a5_trust_q6_low50_macos_cpu_advisory",
+  "measured_config_status": "proxy_or_non_cuda_review_only",
+  "method_family_retired": false,
+  "notes": [
+    "This packet can retire only the measured config unless the broader kill discipline is separately satisfied.",
+    "Exact CUDA evidence may update solver trust regions after adversarial review."
+  ],
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "reactivation_criteria": [
+    "tighten q-bit trust region (for example q7 low50 or q6 low25) and require advisory SegNet not to dominate",
+    "replace scalar score marginals with SegNet-boundary or per-pair component marginals before exact eval spend",
+    "run exact contest-CUDA and contest-CPU only after macOS advisory is non-collapsed and lane claim is active"
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "review_requirements": {
+    "contest_compliance_review_required": true,
+    "engineering_review_required": true,
+    "geometry_review_required": true,
+    "math_review_required": true,
+    "optimization_review_required": true
+  },
+  "reviewer": "codex",
+  "runtime_custody": {
+    "external_dependency_roots": [],
+    "payload_closure_fields_present": true,
+    "runtime_file_count": 5,
+    "runtime_files_listed": true,
+    "runtime_manifest_present": true,
+    "runtime_tree_sha256": "7a628cade561ed98d4a5ffe327e00a031847092ba8cd2d4db9c62a4526dec9b9"
+  },
+  "schema": "tac_result_review_packet_v1",
+  "score_claim": false,
+  "score_recomputation": {
+    "abs_delta_vs_reported": 4.8188878304378235e-08,
+    "archive_bytes": 177928,
+    "available": true,
+    "avg_posenet_dist": 4.139e-05,
+    "avg_segnet_dist": 0.00074546,
+    "matches_reported": false,
+    "rate_term": 0.1184749518111217,
+    "recomputed_score": 0.213365484246152,
+    "reported_score": 0.21336553243503031
+  },
+  "source_json_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low50_20260509_codex/contest_auth_eval.macos_cpu_advisory.json",
+  "source_json_sha256": "39ddeac44549ab285d1a7c090303308ad2cf394437963cea30537da0dc160892",
+  "technique": "a5_score_marginal_trust_region_q6_low50",
+  "tool": "tools/build_result_review_packet.py"
+}

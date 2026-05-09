@@ -232,7 +232,7 @@ def parse_manifest(manifest_path: Path) -> PhaseAEntry | None:
             entry.notes.append(f"best frame-conditioned latent delta {best_delta:+,} B")
         entry.notes.append(
             "eta=4 complexity runtime packet collapsed on macOS CPU advisory; "
-            "q-bits-json custody now lands score-marginal schedules fail-closed"
+            "q6-low50 trust schedule scored 0.213365 advisory, still SegNet-limited"
         )
     if lane == "Cross_paradigm_ADMM_x_Op1":
         entry.notes.append(
@@ -414,7 +414,9 @@ def render_markdown(entries: list[PhaseAEntry]) -> str:
         "- **A5 and Cross-paradigm byte savings are scorer-unsafe at current configs.** "
         "A5 eta=4 complexity allocation and Cross-paradigm ADMM x Op1 both need "
         "changed score-domain or SegNet-boundary-aware allocation before new exact-eval "
-        "spend. A5 now has q-bits-json packet custody for the next schedule.",
+        "spend. A5 now has q-bits-json packet custody; q6-low50 improved over "
+        "the catastrophic eta=4 collapse but still scored 0.213365 advisory "
+        "because SegNet rose to 0.00074546.",
         "",
         "## Open lanes",
         "",
@@ -427,7 +429,8 @@ def render_markdown(entries: list[PhaseAEntry]) -> str:
         "- A5 (frame-conditional bit budget): runtime side-info path landed, but "
         "the eta=4 complexity schedule is retired after advisory collapse. The "
         "packet builder can now consume a per-pair score-marginal q-bit manifest; "
-        "next variant needs a changed score-domain q-bit allocation.",
+        "q6-low50 is also retired after advisory score 0.213365. Next variant "
+        "needs a tighter or SegNet-boundary-aware q-bit allocation.",
         "- Cross-paradigm ADMM x Op1: measured config retired after macOS CPU "
         "advisory SegNet collapse; next variant needs lower-distortion trust region "
         "or scorer-aware allocation.",

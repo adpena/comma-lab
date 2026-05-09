@@ -100,7 +100,11 @@ reactivation criteria documented per memo.
   allocation, not the η=4 complexity schedule. The packet builder now accepts
   `--q-bits-json` and records q-bit custody; the score-marginal packet
   rebuild is locally ready after lane claim, but it reuses the same `cde5...`
-  archive and is not a new score win.
+  archive and is not a new score win. A conservative changed schedule
+  (`q6` for the lowest 50% marginal pairs, `q8` otherwise) built a
+  `177,928 B` archive (`83e85a...`) and scored **0.213365** on macOS CPU
+  advisory; this avoids catastrophic collapse but remains a measured-config
+  advisory negative because SegNet rises to `0.00074546`.
 - Cross-paradigm ADMM × Op1 finalizer — byte-closed `153,513 B` archive
   (`7bbba307...`) now has a local macOS CPU advisory result:
   **0.328444** (`pose=0.00014180`, `seg=0.00188570`). Rate improves, but

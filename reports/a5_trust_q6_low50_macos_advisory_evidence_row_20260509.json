@@ -1,0 +1,38 @@
+{
+  "archive_rate_ratio": 0.004738998072444868,
+  "archive_sha256": "83e85a0918c5db6eba5d824b2c9ab0a9b7a7f47dd7d03fbbbbbb25bcbf99807e",
+  "auth_eval_json": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low50_20260509_codex/contest_auth_eval.macos_cpu_advisory.json",
+  "contest_dispatch_verdict": "proxy_or_non_cuda_review_only",
+  "dispatch_blockers": [
+    "non_exact_cuda_review_packet_not_promotable"
+  ],
+  "dispatch_claim_latest_status": "completed_advisory_negative",
+  "dispatch_claim_terminal_status_recorded": true,
+  "empirical_archive_bytes": 177928,
+  "empirical_score": 0.21336553243503031,
+  "evidence_grade": "[non-CUDA review]",
+  "exact_result_review_packet": ".omx/research/artifacts/a5_trust_q6_low50_result_review_20260509_codex.json",
+  "falsification_scope": "none",
+  "family_falsified": false,
+  "job_name": "local:a5-trust-q6-low50-macos-cpu-20260509T0042Z",
+  "lane_id": "a5_trust_q6_low50_macos_cpu_advisory",
+  "measured_config_status": "proxy_or_non_cuda_review_only",
+  "method_family_retired": false,
+  "posenet_distortion": 4.139e-05,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "rate": 0.1184749518111217,
+  "rate_term": 0.1184749518111217,
+  "reactivation_criteria": [
+    "tighten q-bit trust region (for example q7 low50 or q6 low25) and require advisory SegNet not to dominate",
+    "replace scalar score marginals with SegNet-boundary or per-pair component marginals before exact eval spend",
+    "run exact contest-CUDA and contest-CPU only after macOS advisory is non-collapsed and lane claim is active"
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "score_claim": false,
+  "score_contest_cuda": null,
+  "segnet_distortion": 0.00074546,
+  "source": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low50_20260509_codex/contest_auth_eval.macos_cpu_advisory.json reviewed_by=.omx/research/artifacts/a5_trust_q6_low50_result_review_20260509_codex.json",
+  "technique": "a5_score_marginal_trust_region_q6_low50",
+  "timestamp": "2026-05-09T00:50:54Z"
+}

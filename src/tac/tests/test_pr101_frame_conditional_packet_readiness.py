@@ -179,6 +179,76 @@ def test_a5_packet_readiness_accepts_valid_local_prerequisites_but_keeps_dispatc
     ]
 
 
+def test_a5_packet_readiness_uses_candidate_wire_contract_for_recomputed_qbits(
+    tmp_path: Path,
+) -> None:
+    a5_manifest = _a5_manifest(tmp_path / "a5.json")
+    artifacts = {
+        CANDIDATE_ARCHIVE_MANIFEST: _write_json(
+            tmp_path / "candidate_archive.json",
+            {
+                "score_claim": False,
+                "charged_bits_changed": True,
+                "candidate_archive": {
+                    "path": "candidate/archive.zip",
+                    "bytes": 900,
+                    "sha256": "d" * 64,
+                },
+                "frame_conditional_wire_contract": {
+                    "schema": FRAME_CONDITIONAL_LATENT_WIRE_SCHEMA,
+                    "q_bits_sideinfo": {"sha256": "e" * 64},
+                    "latent_wire_payload": {"sha256": "f" * 64},
+                },
+            },
+        ),
+        PACKET_RUNTIME_PATCH_MANIFEST: _write_json(
+            tmp_path / "runtime_patch.json",
+            {
+                "score_claim": False,
+                "packet_local_runtime_patch": {
+                    "consumes_schema": FRAME_CONDITIONAL_LATENT_WIRE_SCHEMA,
+                    "parse_archive_consumes_q_bits_sideinfo": True,
+                    "decode_latents_consumes_variable_width_payload": True,
+                },
+            },
+        ),
+        RUNTIME_CONSUMPTION_PROOF: _write_json(
+            tmp_path / "runtime_proof.json",
+            {
+                "score_claim": False,
+                "ready_for_exact_eval_runtime": True,
+                "consumed_q_bits_sideinfo_sha256": "e" * 64,
+                "consumed_latent_wire_payload_sha256": "f" * 64,
+            },
+        ),
+        PER_PAIR_SCORE_MARGINAL_MANIFEST: _write_json(
+            tmp_path / "marginals.json",
+            {
+                "score_claim": False,
+                "n_pairs": 2,
+                "marginal_evidence_available": True,
+                "per_pair_score_marginals": [0.1, 0.2],
+            },
+        ),
+        STRICT_PRE_SUBMISSION_COMPLIANCE_JSON: _write_json(
+            tmp_path / "strict_compliance.json",
+            {"score_claim": False, "ok": True},
+        ),
+    }
+
+    manifest = build_packet_readiness(
+        a5_manifest_path=a5_manifest,
+        artifact_paths=artifacts,
+        repo_root=tmp_path,
+    )
+
+    assert manifest["wire_contract_context"]["source"] == "candidate_archive_manifest"
+    assert manifest["wire_contract_context"]["q_bits_sideinfo_sha256"] == "e" * 64
+    assert manifest["wire_contract_context"]["latent_wire_payload_sha256"] == "f" * 64
+    assert manifest["readiness_blockers"] == []
+    assert manifest["ready_for_exact_eval_after_lane_claim"] is True
+
+
 def test_a5_packet_readiness_rejects_score_claiming_anchor(tmp_path: Path) -> None:
     path = _a5_manifest(tmp_path / "a5.json")
     payload = json.loads(path.read_text(encoding="utf-8"))

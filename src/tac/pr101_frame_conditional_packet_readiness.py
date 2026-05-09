@@ -99,6 +99,17 @@ def build_packet_readiness(
     )
     sideinfo_sha = a5_summary.get("q_bits_sideinfo_sha256")
     latent_sha = a5_summary.get("latent_wire_payload_sha256")
+    wire_context_source = "a5_manifest"
+    candidate_wire_context = _candidate_manifest_wire_context(
+        artifact_paths.get(CANDIDATE_ARCHIVE_MANIFEST),
+        repo_root=root,
+    )
+    if _is_sha256(_as_str(candidate_wire_context.get("sideinfo_sha"))) and _is_sha256(
+        _as_str(candidate_wire_context.get("latent_sha"))
+    ):
+        sideinfo_sha = candidate_wire_context["sideinfo_sha"]
+        latent_sha = candidate_wire_context["latent_sha"]
+        wire_context_source = "candidate_archive_manifest"
     expected_n_pairs = _as_int(a5_summary.get("n_pairs"))
     source_archive_sha = _as_str(a5_summary.get("input_archive_sha256"))
     source_archive_bytes = _as_int(a5_summary.get("input_archive_bytes"))
@@ -142,6 +153,11 @@ def build_packet_readiness(
         "schema": SCHEMA,
         "tool": "tac.pr101_frame_conditional_packet_readiness",
         "a5_manifest": a5_summary,
+        "wire_contract_context": {
+            "source": wire_context_source,
+            "q_bits_sideinfo_sha256": sideinfo_sha,
+            "latent_wire_payload_sha256": latent_sha,
+        },
         "packet_artifacts": artifact_records,
         "missing_artifacts": missing_artifacts,
         "invalid_artifacts": invalid_artifacts,
@@ -371,6 +387,36 @@ def _validate_candidate_archive_manifest(
     ) is not True:
         blockers.append(f"{CANDIDATE_ARCHIVE_MANIFEST}:charged_bits_changed_not_true")
     return blockers
+
+
+def _candidate_manifest_wire_context(
+    path: Path | None,
+    *,
+    repo_root: Path,
+) -> dict[str, Any]:
+    if path is None:
+        return {}
+    path = Path(path)
+    if not path.is_absolute():
+        path = repo_root / path
+    if not path.is_file():
+        return {}
+    try:
+        payload = _load_json_object(path)
+    except (OSError, json.JSONDecodeError, FrameConditionalPacketReadinessError):
+        return {}
+    wire_contract = _nested_mapping(payload, "frame_conditional_wire_contract")
+    sideinfo = _nested_mapping(wire_contract, "q_bits_sideinfo")
+    latent_payload = _nested_mapping(wire_contract, "latent_wire_payload")
+    sideinfo_sha = _as_str(sideinfo.get("sha256"))
+    latent_sha = _as_str(latent_payload.get("sha256"))
+    if not (_is_sha256(sideinfo_sha) and _is_sha256(latent_sha)):
+        return {}
+    return {
+        "source": "candidate_archive_manifest",
+        "sideinfo_sha": sideinfo_sha,
+        "latent_sha": latent_sha,
+    }
 
 
 def _validate_runtime_patch_manifest(
