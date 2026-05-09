@@ -749,19 +749,70 @@ def register_in_tracker(
     label: str,
     metadata: dict,
 ) -> None:
-    """Append entry to .omx/state/vastai_active_instances.json."""
-    data = json.loads(TRACKER_PATH.read_text()) if TRACKER_PATH.exists() else []
-    if any(str(x.get("instance_id")) == str(instance_id) for x in data):
+    """Append entry to .omx/state/vastai_active_instances.json.
+
+    Routes through the canonical fcntl-locked helper
+    :func:`tac.vastai_tracker.register_instance` (CLAUDE.md non-negotiable
+    "concurrent shared-state writes must serialize on a lock"). The bare
+    load→mutate→write cycle previously here would silently drop concurrent
+    registrations from sibling launchers (see catalog #131 + memory
+    `feedback_proactive_custody_concurrency_audit_landed_20260509.md`).
+    """
+    # Local import keeps the script's import-cost low when only used for
+    # phase2/destroy commands (which never call this function).
+    from tac.vastai_tracker import (
+        VastaiTrackerCorruptError,
+        list_instances as _list_instances,
+        register_instance as _register_instance,
+    )
+
+    # Idempotency: skip if already registered. The canonical helper does NOT
+    # de-duplicate, so we read first under the helper's lock semantics by
+    # reading list_instances() (same lock domain) and only registering when
+    # absent. The narrow race between list+register is acceptable here because
+    # the de-dup is a UX nicety (the tracker tolerates duplicate rows; the
+    # cleanup script keys on instance_id), not a correctness invariant.
+    existing = _list_instances(repo_root=REPO_ROOT)
+    if any(str(x.get("instance_id")) == str(instance_id) for x in existing):
         return  # already registered
-    data.append({
-        "instance_id": str(instance_id),
-        "label": label,
-        "metadata": metadata,
-        "registered_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "registered_by_host": "Primary",
-        "registered_by_pid": 0,
-    })
-    TRACKER_PATH.write_text(json.dumps(data, indent=2))
+    try:
+        _register_instance(
+            instance_id=str(instance_id),
+            label=label,
+            metadata=metadata,
+            repo_root=REPO_ROOT,
+        )
+    except VastaiTrackerCorruptError as exc:
+        # Codex round 7 HIGH 2 (Catalog #148): a corrupt tracker file
+        # historically caused `register_instance` to silently overwrite the
+        # file with a single new record, dropping every previously tracked
+        # active instance (and making `vastai_orphan_cleanup.py` unable to
+        # find them). The strict loader now raises here; the tracker has
+        # been quarantined to <path>.corrupt.<utc>. We MUST loudly surface
+        # the orphan-recovery situation to the operator: the new instance
+        # ($instance_id) is alive on Vast.ai, but the tracker no longer
+        # records the prior set. Operator must consult the quarantine file
+        # and reconcile manually.
+        from tac.vastai_tracker import tracker_path
+        quarantine_hint = tracker_path(repo_root=REPO_ROOT)
+        print(
+            "\n" + "=" * 78 + "\n"
+            f"!! VAST.AI TRACKER CORRUPT — ORPHAN-RECOVERY REQUIRED\n"
+            f"   instance_id={instance_id} label={label}\n"
+            f"   The newly-created Vast.ai instance is ALIVE and BILLING.\n"
+            f"   The previous tracker file has been quarantined to:\n"
+            f"     {quarantine_hint.with_suffix(quarantine_hint.suffix + '.corrupt.<utc>')}\n"
+            f"   Run `vastai show instances` to enumerate every live instance,\n"
+            f"   then re-register survivors via `tac.vastai_tracker.register_instance`\n"
+            f"   so `tools/vastai_orphan_cleanup.py` can see them again.\n"
+            f"   Underlying error: {exc!r}\n"
+            + "=" * 78,
+            file=sys.stderr,
+        )
+        # Re-raise so the caller's exit-status reflects the failure. The
+        # operator MUST manually rebuild the tracker; we do NOT silently
+        # write the new record over the corrupt file (that's the bug).
+        raise
 
 
 def cmd_phase1(args) -> int:

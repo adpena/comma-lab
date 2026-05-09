@@ -682,6 +682,65 @@ def _build_pending_record(
     }
 
 
+class _PreNetworkSubmitError(RuntimeError):
+    """Codex round 7+8 HIGH 1 (Catalog #147) — raised when Lightning submit
+    fails BEFORE the network call to ``Job.run``.
+
+    The dispatcher catches this distinct exception class and calls
+    :func:`cancel_pending_job_locked` (no billing started). Anything else
+    (including raw ``BaseException`` from the ``Job.run`` window) is
+    treated as ambiguous-billing and routed to
+    :func:`mark_pending_failed_unknown_billing_locked` so the pending row
+    is preserved for forensic recovery instead of silently deleted.
+    """
+
+
+def _prepare_lightning_submit_environment(
+    *,
+    job_name: str,
+    machine: str,
+    studio: str,
+) -> tuple[object, dict[str, str]]:
+    """Codex round 7+8 HIGH 1 (Catalog #147) — pre-network preparation step.
+
+    Performs ONLY actions that cannot reach the Lightning network:
+
+    - sets ``LIGHTNING_DISABLE_VERSION_CHECK`` env var
+    - imports ``lightning_sdk.Job`` (local SDK import; no network)
+    - constructs the env dict from module constants
+
+    Returns the ``Job`` class and the env dict. Any failure here is
+    pre-network by construction and SHOULD be cancelled by the caller.
+
+    Wraps every failure in :class:`_PreNetworkSubmitError` so the
+    dispatcher's narrow except can route to the cancel path without
+    catching ambiguous-billing failures from ``Job.run``.
+    """
+    try:
+        os.environ.setdefault("LIGHTNING_DISABLE_VERSION_CHECK", "1")
+        try:
+            from lightning_sdk import Job  # type: ignore[import-untyped]
+        except ImportError as exc:  # pragma: no cover - env-dependent
+            raise _PreNetworkSubmitError(
+                f"lightning_sdk import failed (install with `uv pip install lightning-sdk`): {exc!r}"
+            ) from exc
+        env = {
+            "INFLATE_TORCH_SPEC": INFLATE_TORCH_SPEC,
+            "UV_EXTRA_INDEX_URL": UV_EXTRA_INDEX_URL,
+            "UV_INDEX_STRATEGY": UV_INDEX_STRATEGY,
+        }
+        return Job, env
+    except _PreNetworkSubmitError:
+        raise
+    except (KeyError, ValueError, TypeError, NameError) as exc:
+        # Any other deterministic-config failure that happens before SDK
+        # network use is also pre-network. Anything stochastic / SDK-side
+        # MUST be allowed to escape here so the caller treats it as ambiguous.
+        raise _PreNetworkSubmitError(
+            f"pre-network submit preparation failed: {exc!r}"
+        ) from exc
+
+
 def submit_lightning_job(
     *,
     job_name: str,
@@ -704,6 +763,17 @@ def submit_lightning_job(
     helper. The submit-helper itself is allowed to call ``Job.run``
     without an inline pending-register because the pending-row contract
     is owned by the surrounding ``main()`` flow.
+
+    Codex round 7+8 HIGH 1 (catalog #147): every exception that crosses the
+    ``Job.run`` boundary is AMBIGUOUS w.r.t. billing. The submit-helper
+    raises distinct exception classes so the dispatcher can route them:
+
+    - :class:`_PreNetworkSubmitError`: pre-network failure (SDK import,
+      env-var construction, deterministic config). Caller may safely
+      :func:`cancel_pending_job_locked`.
+    - Any other exception escaping ``Job.run``: ambiguous-billing.
+      Caller MUST :func:`mark_pending_failed_unknown_billing_locked` and
+      preserve the pending row for forensic recovery.
     """
     if dry_run:
         return {
@@ -712,20 +782,11 @@ def submit_lightning_job(
             "would_submit_machine": machine,
         }
 
-    os.environ.setdefault("LIGHTNING_DISABLE_VERSION_CHECK", "1")
-    try:
-        from lightning_sdk import Job  # type: ignore[import-untyped]
-    except ImportError as exc:  # pragma: no cover - env-dependent
-        sys.exit(
-            f"FATAL: lightning_sdk import failed; install with `uv pip install lightning-sdk` ({exc})"
-        )
+    Job, env = _prepare_lightning_submit_environment(
+        job_name=job_name, machine=machine, studio=studio,
+    )
 
     print(f"[submit] Job.run name={job_name} machine={machine} studio={studio}")
-    env = {
-        "INFLATE_TORCH_SPEC": INFLATE_TORCH_SPEC,
-        "UV_EXTRA_INDEX_URL": UV_EXTRA_INDEX_URL,
-        "UV_INDEX_STRATEGY": UV_INDEX_STRATEGY,
-    }
     job = Job.run(  # JOB_RUN_BEFORE_REGISTER_OK:caller-owns-pending-row-contract-#143
         name=job_name,
         machine=machine,
@@ -1023,6 +1084,10 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     # Stage 3b: submit Lightning Studio Job.
+    # Codex round 7+8 HIGH 1 (Catalog #147): split exception routing so
+    # ambiguous-billing failures (anything escaping Job.run) PRESERVE the
+    # pending row instead of silently deleting it.
+    # CANCEL_PENDING_PRE_NETWORK_OK:routes-pre-network-vs-ambiguous-billing-#147
     try:
         submit_result = submit_lightning_job(
             job_name=job_name,
@@ -1034,11 +1099,9 @@ def main(argv: list[str] | None = None) -> int:
             max_runtime_sec=args.max_runtime_sec,
             dry_run=args.dry_run,
         )
-    except BaseException as submit_exc:
-        # Submit raised before any network call — drop the pending row.
-        # Catalog #143: cancel only when we're SURE billing didn't start.
-        # Import errors / argparse / config errors raise before Job.run()'s
-        # network call.
+    except _PreNetworkSubmitError as pre_exc:
+        # KNOWN pre-network failure (SDK import, env construction, etc).
+        # Safe to cancel the pending row — no billing started.
         from tac.deploy.lightning.active_jobs_state import (
             PendingJobNotFoundError,
             cancel_pending_job_locked,
@@ -1046,15 +1109,49 @@ def main(argv: list[str] | None = None) -> int:
         try:
             cancel_pending_job_locked(
                 job_name=job_name,
-                failure_reason=f"{type(submit_exc).__name__}: {submit_exc!r}",
+                failure_reason=f"{type(pre_exc).__name__}: {pre_exc!r}",
             )
             print(
                 f"[cancel] dropped pending row for job_name={job_name} "
-                f"(submit raised before billing started: {type(submit_exc).__name__})",
+                f"(pre-network submit failure: {type(pre_exc).__name__})",
                 file=sys.stderr,
             )
         except PendingJobNotFoundError:
             pass  # already gone — surfaced to operator via raise below
+        raise
+    except BaseException as submit_exc:
+        # AMBIGUOUS BILLING: exception crossed the Job.run boundary. We
+        # cannot tell whether the Lightning server accepted the job. The
+        # pending row is PRESERVED with status=failed_unknown_billing so
+        # the harvester surfaces it for manual operator recovery against
+        # the Lightning dashboard.
+        from tac.deploy.lightning.active_jobs_state import (
+            PendingJobNotFoundError,
+            mark_pending_failed_unknown_billing_locked,
+        )
+        try:
+            mark_pending_failed_unknown_billing_locked(
+                job_name=job_name,
+                failure_reason=f"{type(submit_exc).__name__}: {submit_exc!r}",
+            )
+            print(
+                "\n" + "=" * 78 + "\n"
+                f"!! AMBIGUOUS LIGHTNING SUBMIT FAILURE — MANUAL RECONCILIATION REQUIRED\n"
+                f"   job_name={job_name}\n"
+                f"   exception={type(submit_exc).__name__}: {submit_exc!r}\n"
+                f"   The Job.run network call may or may not have created a paid job.\n"
+                f"   The pending row is PRESERVED as status=failed_unknown_billing.\n"
+                f"   Check the Lightning dashboard for job '{job_name}'.\n"
+                f"   If the job exists, harvest it; if not, run the harvester to drop the row.\n"
+                + "=" * 78,
+                file=sys.stderr,
+            )
+        except PendingJobNotFoundError:
+            print(
+                f"[mark-unknown-billing] no pending row for job_name={job_name} — "
+                "already harvested or never registered",
+                file=sys.stderr,
+            )
         raise
 
     # Stage 4: persist active-jobs row (promote pending → active).
