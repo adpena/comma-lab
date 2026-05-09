@@ -310,6 +310,32 @@ def test_preflight_catches_unsafe_consumer_call_site() -> None:
         assert "torch.load" in "\n".join(violations)
 
 
+def test_preflight_loader_format_cache_invalidates_changed_file() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        experiments = root / "experiments"
+        experiments.mkdir()
+        target = experiments / "cached_loader.py"
+        target.write_text(textwrap.dedent('''
+            import torch
+
+            def helper():
+                return 1
+        ''').lstrip())
+        assert _scan(root) == []
+        assert (root / ".omx" / "cache" / "loader_format_safety_clean.json").exists()
+
+        target.write_text(textwrap.dedent('''
+            import torch
+
+            def load_renderer(renderer_path):
+                return torch.load(renderer_path, weights_only=False)
+        ''').lstrip())
+        violations = _scan(root)
+        assert violations
+        assert "load_renderer" in "\n".join(violations)
+
+
 def test_preflight_ignores_unrelated_torch_load() -> None:
     """A torch.load on a non-renderer variable (e.g., TTO batch checkpoint)
     must NOT be flagged. The DEN-V2 bug is renderer-specific; flagging every

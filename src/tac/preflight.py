@@ -9046,6 +9046,7 @@ _SAFE_LOADER_QUALNAMES = frozenset({
     "load_optimized_poses",
     "load_poses_binary",
 })
+_LOADER_FORMAT_SAFETY_CACHE_VERSION = "20260509_v1"
 
 
 def _scan_python_for_unsafe_renderer_loader(path: Path, source_index=None) -> list[str]:
@@ -9337,7 +9338,7 @@ def preflight_loader_format_safety(
     Returns the list of violations found. If `strict` and non-empty, raises
     LoaderFormatSafetyError.
     """
-    root = repo_root or REPO_ROOT
+    root = Path(repo_root or REPO_ROOT).resolve()
     source_index = _current_source_index(root)
     scan_dirs = scan_dirs or [
         "experiments",
@@ -9345,8 +9346,14 @@ def preflight_loader_format_safety(
         "submissions/robust_current",
     ]
 
+    cache_enabled = os.environ.get("PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE") != "1"
+    cache_name = "loader_format_safety_clean"
+    loader_cache = _load_preflight_cache(root, cache_name) if cache_enabled else {}
+    cache_dirty = False
+
     all_violations: list[str] = []
     n_scanned = 0
+    n_cached = 0
     if source_index is not None:
         py_paths = source_index.files(scan_dirs, pattern="*.py")
     else:
@@ -9362,9 +9369,34 @@ def preflight_loader_format_safety(
         if _is_oss_export_mirror_path(py_path):
             continue
         n_scanned += 1
-        all_violations.extend(
-            _scan_python_for_unsafe_renderer_loader(py_path, source_index=source_index)
+        cache_key = str(py_path.resolve())
+        if cache_enabled and _source_cache_row_matches(
+            py_path,
+            loader_cache.get(cache_key),
+            kind="loader_format_safety_clean",
+            scanner_version=_LOADER_FORMAT_SAFETY_CACHE_VERSION,
+        ):
+            n_cached += 1
+            continue
+        violations = _scan_python_for_unsafe_renderer_loader(
+            py_path,
+            source_index=source_index,
         )
+        if violations:
+            all_violations.extend(violations)
+            if cache_key in loader_cache:
+                del loader_cache[cache_key]
+                cache_dirty = True
+        elif cache_enabled:
+            loader_cache[cache_key] = _source_cache_row(
+                py_path,
+                kind="loader_format_safety_clean",
+                scanner_version=_LOADER_FORMAT_SAFETY_CACHE_VERSION,
+            )
+            cache_dirty = True
+
+    if cache_enabled and cache_dirty:
+        _store_preflight_cache(root, cache_name, loader_cache)
 
     if verbose:
         if all_violations:
@@ -9373,8 +9405,9 @@ def preflight_loader_format_safety(
             for v in all_violations:
                 print(f"    • {v}")
         else:
+            suffix = f" ({n_cached} cached)" if n_cached else ""
             print(f"  [loader-format] OK: {n_scanned} files clean — every "
-                  f"renderer loader is content-detecting")
+                  f"renderer loader is content-detecting{suffix}")
 
     if all_violations and strict:
         raise LoaderFormatSafetyError(
