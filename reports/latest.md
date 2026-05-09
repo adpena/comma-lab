@@ -141,6 +141,28 @@ component features or lower-distortion `q7/q8` geometry before exact eval.
 Ledger:
 `.omx/research/a5_trust_q6_low45_seg_ranked_macos_advisory_negative_20260509_codex.md`.
 
+## 2026-05-09 (night) - A5 q7-all trust-region bracket
+
+A lower-distortion A5 `q7` for all pairs packet is byte-closed and
+runtime-consumed:
+
+- Archive bytes: `177,928`
+- Archive SHA-256:
+  `39dbfd05d4861c6c5ea12e7bfc8fba17e8249dcc761e9c44943eeba8d56c6ade`
+- q-bit schedule: `q7` for all `600 / 600` pairs
+- macOS CPU advisory: `0.2026389105740624`
+- components: PoseNet `0.00003563`, SegNet `0.00065288`
+
+Classification: measured-config regression. This is the best A5 trust-region
+geometry tested so far and it recovers much of the q6 SegNet collapse, but it
+still loses about `0.00979` score points versus the A1 Linux CPU anchor while
+saving only `334 B`. A5 needs local SegNet-boundary allocation or retraining
+with frame-conditional q-bit noise; post-hoc uniform q7 is not an exact-eval
+candidate.
+
+Ledger:
+`.omx/research/a5_trust_q7_all_macos_advisory_negative_20260509_codex.md`.
+
 ## 2026-05-09 (night) - Delta-epsilon-zeta Phase 1 local scaffold evidence
 
 `tools/build_deltaepszeta_training_targets.py` is now hardened for normal zsh
