@@ -6,6 +6,25 @@ regenerated_by: claude:fix-all-bugs-pass
 
 # Latest Report - 2026-05-04 PR106 belt_and_suspenders adapter contest-faithful status
 
+## 2026-05-09 (night) - A1 latent-aligned Modal refire
+
+**Status:** Active Modal T4 dispatch, no score claim.
+
+- Lane: `track1_phase_a1_score_gradient`
+- Job: `track1_phase_a1_score_gradient_latentalign_lr2e6_20260509T011929Z_modal`
+- Modal call id: `fc-01KR553TPH27G73HMHH56MDZH0`
+- Predicted ETA: `2026-05-09T03:49:59Z`
+- Cost estimate: `$1.47`
+- Recovery: `.venv/bin/python experiments/modal_phase_a1_score_gradient_pr101.py recover --label track1_phase_a1_score_gradient_latentalign_lr2e6_20260509T011929Z_modal`
+
+This refire follows commit `133f1286`, which fixed A1's training/deploy
+contract by loading PR101 archive-derived latents instead of random latent
+vectors for non-smoke score-gradient training. The run uses a conservative
+`lr=2e-6`, `epochs=40`, `steps_per_epoch=8`, `batch_size=4`, and
+`continue_after_nvdec_failure=true`. If Modal DALI/NVDEC preflight fails again,
+the artifact may still be useful for local advisory collapse screening, but it
+must not be promoted as `[contest-CUDA]`.
+
 ## 2026-05-08 (evening) — Recursive hardening + Phase A ablation pass
 
 **Headline:** 11 STRICT/warn preflight gates landed, ~395 violations
