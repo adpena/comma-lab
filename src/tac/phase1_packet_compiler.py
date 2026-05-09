@@ -736,6 +736,15 @@ def _verify_runtime_consumes_payload_bytes(
     least one byte-read pattern that points at the archive contents
     (``read_bytes``, ``open(...).read()``, ``zipfile.ZipFile``, etc.). A
     maliciously empty inflate.py would otherwise pass the check.
+
+    Codex round 5 HIGH 1 fix (2026-05-09, catalog #139): the text-pattern
+    detector is necessary but still fails-open against a script that *reads*
+    the archive without using its bytes. The stronger executable smoke is
+    in :func:`_verify_runtime_consumes_payload_bytes_executable` which
+    actually mutates a byte and observes whether downstream output changes;
+    callers that own a real archive should prefer it. The text-pattern
+    helper remains the cheap structural gate and is honored by
+    `_finalize_packet_result` when archive/inflate execution is unavailable.
     """
     relpaths = {row["relpath"] for row in runtime_files}
     if "inflate.sh" not in relpaths or "inflate.py" not in relpaths:
@@ -755,6 +764,187 @@ def _verify_runtime_consumes_payload_bytes(
         "struct.unpack",
     )
     return any(pat in text for pat in byte_read_patterns)
+
+
+# ---------------------------------------------------------------------------
+# Executable byte-mutation smoke (codex round 5 HIGH 1 fix, catalog #139)
+# ---------------------------------------------------------------------------
+
+
+def _verify_runtime_consumes_payload_bytes_executable(
+    *,
+    packet_dir: Path,
+    archive_path: Path,
+) -> tuple[bool, str]:
+    """Executable smoke: mutate one archive byte, observe inflate output change.
+
+    Codex round 5 HIGH 1 fix (2026-05-09, catalog #139): the original
+    text-pattern detector accepts ``open(...)`` and ``read(...)`` tokens
+    without proving the bytes ACTUALLY round-trip into a downstream side-
+    effect. A maliciously / accidentally no-op ``inflate.py`` (e.g., reads
+    the archive and discards the bytes, or writes a constant placeholder
+    output) reports as clean compile and burns evaluation spend.
+
+    This helper:
+
+    1. Reads ``archive.zip`` byte content.
+    2. Computes a SHA-256 reference fingerprint of all FILE outputs of a
+       reference inflate run (best-effort: tries python ``inflate.py`` with
+       the archive piped through a temporary mirrored archive_dir alongside
+       a writable inflated_dir).
+    3. Mutates a single non-trivial byte in a copy of the archive.
+    4. Re-runs the same inflate.py against the mutated archive into a
+       SECOND inflated_dir.
+    5. Compares fingerprints. If they're identical, the runtime did not
+       consume the mutated byte → return ``(False, reason)``.
+    6. Returns ``(True, "byte-mutation-changed-output")`` only when the
+       mutation produced a measurable downstream byte change.
+
+    Returns ``(False, reason_string)`` on any failure mode (missing
+    archive, inflate.py crash, identical fingerprints). Non-fatal: callers
+    use the boolean to decide whether to promote the no-op-proof failure
+    to a blocker.
+
+    Per CLAUDE.md "Forbidden /tmp paths in any persisted artifact", the
+    mutated archive copy and inflated dirs are written into
+    ``packet_dir / "_no_op_smoke"`` (a sibling under the same canonical
+    output_dir), not /tmp. The directory is removed after the smoke; if
+    cleanup fails, a forensic sibling remains for operator inspection.
+    """
+    import shutil
+    import subprocess
+    import sys
+
+    inflate_py = packet_dir / "inflate.py"
+    if not inflate_py.is_file():
+        return False, "inflate_py_missing"
+    if not archive_path.is_file():
+        return False, "archive_missing"
+    try:
+        archive_bytes = archive_path.read_bytes()
+    except OSError as exc:
+        return False, f"archive_read_failed:{exc}"
+    if len(archive_bytes) < 8:
+        return False, f"archive_too_small_for_smoke:{len(archive_bytes)}_bytes"
+
+    smoke_dir = packet_dir / "_no_op_smoke"
+    try:
+        if smoke_dir.exists():
+            shutil.rmtree(smoke_dir, ignore_errors=True)
+        smoke_dir.mkdir(parents=True, exist_ok=False)
+    except OSError as exc:
+        return False, f"smoke_dir_setup_failed:{exc}"
+
+    try:
+        # Reference run: archive_dir contains the original archive.zip.
+        ref_archive_dir = smoke_dir / "ref" / "archive_dir"
+        ref_archive_dir.mkdir(parents=True)
+        (ref_archive_dir / "archive.zip").write_bytes(archive_bytes)
+        ref_inflated = smoke_dir / "ref" / "inflated"
+        ref_inflated.mkdir(parents=True)
+
+        # Mutated run: flip one byte deep in the archive payload (skip the
+        # first 64 bytes to avoid ZIP local-file-header which any sane
+        # inflate would catch with a CRC error before reaching downstream).
+        offset = max(64, len(archive_bytes) // 2)
+        offset = min(offset, len(archive_bytes) - 1)
+        mutated_bytes = bytearray(archive_bytes)
+        mutated_bytes[offset] = (mutated_bytes[offset] ^ 0xFF) & 0xFF
+        mut_archive_dir = smoke_dir / "mut" / "archive_dir"
+        mut_archive_dir.mkdir(parents=True)
+        (mut_archive_dir / "archive.zip").write_bytes(bytes(mutated_bytes))
+        mut_inflated = smoke_dir / "mut" / "inflated"
+        mut_inflated.mkdir(parents=True)
+
+        # Empty video-names file (the contest signature is positional;
+        # inflate.py implementations typically accept zero names by reading
+        # archive contents directly).
+        names_file = smoke_dir / "video_names.txt"
+        names_file.write_text("", encoding="utf-8")
+
+        def _run_inflate(archive_dir: Path, inflated_dir: Path) -> int:
+            try:
+                proc = subprocess.run(
+                    [
+                        sys.executable,
+                        str(inflate_py),
+                        str(archive_dir),
+                        str(inflated_dir),
+                        str(names_file),
+                    ],
+                    capture_output=True,
+                    timeout=120,
+                    cwd=str(packet_dir),
+                )
+                return proc.returncode
+            except (subprocess.TimeoutExpired, OSError):
+                return -1
+
+        rc_ref = _run_inflate(ref_archive_dir, ref_inflated)
+        rc_mut = _run_inflate(mut_archive_dir, mut_inflated)
+
+        # If both runs failed identically (e.g. CLI signature mismatch),
+        # we can't make a claim. Return False — the no-op proof remains
+        # advisory only; the static text scan governs.
+        if rc_ref < 0 and rc_mut < 0:
+            return False, "inflate_py_unexecutable_for_smoke"
+
+        # If both runs failed (non-zero returncode) the smoke is inconclusive
+        # — they may both crash on the same arg signature mismatch with
+        # neither actually reading our archive. Don't downgrade in that case;
+        # the static text scan governs.
+        if rc_ref != 0 and rc_mut != 0:
+            return False, (
+                "inflate_py_failed_in_both_runs_smoke_inconclusive:"
+                f"rc_ref={rc_ref}_rc_mut={rc_mut}"
+            )
+
+        # If the reference run failed but mutated succeeded (or vice-versa)
+        # the script IS reading the bytes (different bytes → different rc).
+        if rc_ref != rc_mut:
+            return True, f"byte_mutation_changed_returncode:{rc_ref}_vs_{rc_mut}"
+
+        # Both succeeded: compare output trees.
+        def _fingerprint(root: Path) -> str:
+            import hashlib
+
+            sha = hashlib.sha256()
+            for p in sorted(root.rglob("*")):
+                if p.is_file():
+                    sha.update(p.relative_to(root).as_posix().encode("utf-8"))
+                    sha.update(b"\x00")
+                    try:
+                        sha.update(p.read_bytes())
+                    except OSError:
+                        sha.update(b"<unreadable>")
+                    sha.update(b"\x00")
+            return sha.hexdigest()
+
+        fp_ref = _fingerprint(ref_inflated)
+        fp_mut = _fingerprint(mut_inflated)
+        # If both inflated dirs are empty (both succeeded with rc=0 but
+        # produced no files), the smoke is also inconclusive — we cannot
+        # distinguish "script silently no-ops" from "script writes outputs
+        # outside the inflated_dir contract". Don't downgrade.
+        empty_sha = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        if fp_ref == fp_mut == empty_sha:
+            return False, (
+                "inflate_py_produced_no_output_in_either_run_smoke_inconclusive"
+            )
+        if fp_ref == fp_mut:
+            return (
+                False,
+                f"byte_mutation_did_not_change_inflated_output:fp={fp_ref[:12]}",
+            )
+        return (
+            True,
+            f"byte_mutation_changed_inflated_output:ref={fp_ref[:12]}:mut={fp_mut[:12]}",
+        )
+    finally:
+        try:
+            shutil.rmtree(smoke_dir, ignore_errors=True)
+        except OSError:
+            pass
 
 
 # ---------------------------------------------------------------------------
@@ -1064,6 +1254,35 @@ def _finalize_packet_result(
         bolt_on_loc_budget=bolt_on_loc_budget,
     )
     runtime_consumes = _verify_runtime_consumes_payload_bytes(runtime_files, output_dir)
+    # Codex round 5 HIGH 1 fix (catalog #139): augment the static text-pattern
+    # detector with the executable byte-mutation smoke. Only attempted when
+    # we have a real archive to mutate AND inflate.py is present; failures
+    # of the smoke itself (timeout, missing entry point) leave runtime_consumes
+    # at the static-detector value (best-effort).
+    no_op_smoke_outcome: dict[str, Any] = {
+        "executable_smoke_attempted": False,
+        "executable_smoke_passed": None,
+        "executable_smoke_reason": "not_attempted",
+    }
+    if out_archive.is_file() and inflate_py.is_file():
+        smoke_passed, smoke_reason = _verify_runtime_consumes_payload_bytes_executable(
+            packet_dir=output_dir,
+            archive_path=out_archive,
+        )
+        no_op_smoke_outcome = {
+            "executable_smoke_attempted": True,
+            "executable_smoke_passed": smoke_passed,
+            "executable_smoke_reason": smoke_reason,
+        }
+        # The executable smoke is AUTHORITATIVE when it returns True (proves
+        # bytes flow). When it returns False we DOWNGRADE runtime_consumes
+        # only if the smoke itself ran successfully (i.e. produced a
+        # decisive negative). Inflate-unexecutable-for-smoke leaves the
+        # static detector's verdict in place.
+        if smoke_passed:
+            runtime_consumes = True
+        elif smoke_reason.startswith("byte_mutation_did_not_change_"):
+            runtime_consumes = False
     no_op_proof = _build_no_op_proof(
         new_archive_sha256=archive_sha,
         new_archive_size=archive_size,
@@ -1072,6 +1291,28 @@ def _finalize_packet_result(
         runtime_consumes_bytes=runtime_consumes,
         score_affecting_payload_changed=score_affecting_payload_changed,
     )
+    no_op_proof["executable_smoke"] = no_op_smoke_outcome
+
+    # Codex round 5 HIGH 1 fix (catalog #139): promote no-op-proof failures
+    # to BLOCKERS. Pre-fix, ``runtime_consumption_proof=False`` and
+    # ``no_op_detector_passed=False`` were RECORDED on no_op_proof.json but
+    # the CLI exit gate read only ``result.blockers`` — so a no-op compile
+    # exited 0 and burned eval spend. The two failure modes are now first-
+    # class blockers; the ``# NO_OP_PROOF_ADVISORY_OK:<reason>`` waiver
+    # exists for the rare deliberately-advisory mode (e.g., a probe-only
+    # packet that does not produce a runnable inflate) — callers OPT IN
+    # via ``allow_no_op_proof_advisory=True`` to suppress promotion.
+    if no_op_proof.get("runtime_consumption_proof") is False:
+        blockers.append(
+            "inflate_does_not_consume_archive_bytes:"
+            f"smoke={no_op_smoke_outcome['executable_smoke_reason']}"
+        )
+    if no_op_proof.get("no_op_detector_passed") is False:
+        blockers.append(
+            "no_op_detector_failed:"
+            f"score_affecting_payload_changed={score_affecting_payload_changed}:"
+            f"sha_changed={no_op_proof.get('sha_changed')}"
+        )
 
     build_manifest = {
         "schema_version": SCHEMA_VERSION,
