@@ -6765,7 +6765,12 @@ def _mask_shell_heredocs(text: str) -> str:
 # ── Check 1: MPS-fallback device default ──────────────────────────────────────
 
 
-def _scan_python_for_mps_fallback(path: Path, repo_root: Path) -> list[str]:
+def _scan_python_for_mps_fallback(
+    path: Path,
+    repo_root: Path,
+    *,
+    source_index=None,
+) -> list[str]:
     """Detect `... else "mps" ...` ternaries triggered when CUDA is missing.
 
     Two layers:
@@ -6806,14 +6811,20 @@ def _scan_python_for_mps_fallback(path: Path, repo_root: Path) -> list[str]:
     if any(marker in rel_s for marker in _VENDORED_PATH_MARKERS):
         return []
     try:
-        text = path.read_text()
+        text = source_index.read_text(path) if source_index is not None else path.read_text()
     except (OSError, UnicodeDecodeError):
         return []
     if "mps" not in text or "cuda.is_available" not in text:
         return []
-    _text, tree, error = _read_python_text_and_tree(path)
-    if error is not None or tree is None:
-        return []
+    if source_index is not None:
+        try:
+            tree = source_index.python_ast(path)
+        except (SyntaxError, UnicodeDecodeError, FileNotFoundError, OSError):
+            return []
+    else:
+        _text, tree, error = _read_python_text_and_tree(path)
+        if error is not None or tree is None:
+            return []
 
     violations: list[str] = []
 
@@ -6945,9 +6956,27 @@ def check_no_mps_fallback_default(
     root = repo_root or REPO_ROOT
     violations: list[str] = []
     n_scanned = 0
-    for py in _iter_python_files(root, _META_PY_SCAN_DIRS):
-        n_scanned += 1
-        violations.extend(_scan_python_for_mps_fallback(py, root))
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        facts_rows = source_index.facts_for_files(_META_PY_SCAN_DIRS, pattern="*.py")
+        n_scanned = len(facts_rows)
+        for path in source_index.files_containing_substrings(
+            _META_PY_SCAN_DIRS,
+            pattern="*.py",
+            substrings=("mps", "cuda.is_available"),
+            require_all=True,
+        ):
+            violations.extend(
+                _scan_python_for_mps_fallback(
+                    path,
+                    root,
+                    source_index=source_index,
+                )
+            )
+    else:
+        for py in _iter_python_files(root, _META_PY_SCAN_DIRS):
+            n_scanned += 1
+            violations.extend(_scan_python_for_mps_fallback(py, root))
 
     if verbose and violations:
         print(f"  [no-mps-fallback] {len(violations)} violation(s) across {n_scanned} files:")
@@ -7274,7 +7303,12 @@ def check_no_pipefail_grep_q_trap(
 # ── Check 5: eval_roundtrip=False anywhere ────────────────────────────────────
 
 
-def _scan_python_for_eval_roundtrip_false(path: Path, repo_root: Path) -> list[str]:
+def _scan_python_for_eval_roundtrip_false(
+    path: Path,
+    repo_root: Path,
+    *,
+    source_index=None,
+) -> list[str]:
     """Detect:
       A. `eval_roundtrip=False` keyword in any call.
       B. `def foo(..., eval_roundtrip: bool = False, ...)` default.
@@ -7286,14 +7320,20 @@ def _scan_python_for_eval_roundtrip_false(path: Path, repo_root: Path) -> list[s
     if "/tests/" in rel_s or "test_" in path.name:
         return []
     try:
-        text = path.read_text()
+        text = source_index.read_text(path) if source_index is not None else path.read_text()
     except (OSError, UnicodeDecodeError):
         return []
     if "eval_roundtrip" not in text:
         return []
-    _text, tree, error = _read_python_text_and_tree(path)
-    if error is not None or tree is None:
-        return []
+    if source_index is not None:
+        try:
+            tree = source_index.python_ast(path)
+        except (SyntaxError, UnicodeDecodeError, FileNotFoundError, OSError):
+            return []
+    else:
+        _text, tree, error = _read_python_text_and_tree(path)
+        if error is not None or tree is None:
+            return []
     violations: list[str] = []
 
     # A. Keyword-arg call sites: foo(..., eval_roundtrip=False, ...)
@@ -7349,9 +7389,27 @@ def check_no_eval_roundtrip_false(
     root = repo_root or REPO_ROOT
     violations: list[str] = []
     n_scanned = 0
-    for py in _iter_python_files(root, _META_PY_SCAN_DIRS):
-        n_scanned += 1
-        violations.extend(_scan_python_for_eval_roundtrip_false(py, root))
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        facts_rows = source_index.facts_for_files(_META_PY_SCAN_DIRS, pattern="*.py")
+        n_scanned = len(facts_rows)
+        for path in source_index.files_containing_substrings(
+            _META_PY_SCAN_DIRS,
+            pattern="*.py",
+            substrings=("eval_roundtrip", "False"),
+            require_all=True,
+        ):
+            violations.extend(
+                _scan_python_for_eval_roundtrip_false(
+                    path,
+                    root,
+                    source_index=source_index,
+                )
+            )
+    else:
+        for py in _iter_python_files(root, _META_PY_SCAN_DIRS):
+            n_scanned += 1
+            violations.extend(_scan_python_for_eval_roundtrip_false(py, root))
 
     if verbose and violations:
         print(f"  [no-eval-roundtrip-false] {len(violations)} violation(s) across {n_scanned} files:")
@@ -7912,7 +7970,10 @@ def check_training_scripts_have_auth_eval(
 
 
 def _scan_python_for_disable_eval_roundtrip_flag(
-    path: Path, repo_root: Path,
+    path: Path,
+    repo_root: Path,
+    *,
+    source_index=None,
 ) -> list[str]:
     """Detect `add_argument("--no-eval-roundtrip"...)` literals."""
     rel = path.relative_to(repo_root) if path.is_absolute() else path
@@ -7920,14 +7981,20 @@ def _scan_python_for_disable_eval_roundtrip_flag(
     if "/tests/" in rel_s or "test_" in path.name:
         return []
     try:
-        text = path.read_text()
+        text = source_index.read_text(path) if source_index is not None else path.read_text()
     except (OSError, UnicodeDecodeError):
         return []
     if "--no-eval-roundtrip" not in text:
         return []
-    _text, tree, error = _read_python_text_and_tree(path)
-    if error is not None or tree is None:
-        return []
+    if source_index is not None:
+        try:
+            tree = source_index.python_ast(path)
+        except (SyntaxError, UnicodeDecodeError, FileNotFoundError, OSError):
+            return []
+    else:
+        _text, tree, error = _read_python_text_and_tree(path)
+        if error is not None or tree is None:
+            return []
     violations: list[str] = []
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
@@ -8095,9 +8162,27 @@ def check_no_disable_eval_roundtrip_flag(
     root = repo_root or REPO_ROOT
     violations: list[str] = []
     n_scanned = 0
-    for py in _iter_python_files(root, _META_PY_SCAN_DIRS):
-        n_scanned += 1
-        violations.extend(_scan_python_for_disable_eval_roundtrip_flag(py, root))
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        facts_rows = source_index.facts_for_files(_META_PY_SCAN_DIRS, pattern="*.py")
+        n_scanned = len(facts_rows)
+        for path in source_index.files_containing_substrings(
+            _META_PY_SCAN_DIRS,
+            pattern="*.py",
+            substrings=("--no-eval-roundtrip",),
+            require_all=True,
+        ):
+            violations.extend(
+                _scan_python_for_disable_eval_roundtrip_flag(
+                    path,
+                    root,
+                    source_index=source_index,
+                )
+            )
+    else:
+        for py in _iter_python_files(root, _META_PY_SCAN_DIRS):
+            n_scanned += 1
+            violations.extend(_scan_python_for_disable_eval_roundtrip_flag(py, root))
 
     if verbose and violations:
         print(f"  [no-disable-eval-roundtrip-flag] {len(violations)} violation(s) across {n_scanned} files:")
@@ -14460,7 +14545,14 @@ def check_kl_div_reduction_correct(
     n_scanned = 0
     scan_dirs = ["src/tac", "experiments", "scripts", "submissions"]
     if source_index is not None:
-        py_paths = source_index.files(scan_dirs, pattern="*.py")
+        facts_rows = source_index.facts_for_files(scan_dirs, pattern="*.py")
+        n_scanned = len(facts_rows)
+        py_paths = source_index.files_containing_substrings(
+            scan_dirs,
+            pattern="*.py",
+            substrings=("kl_div", "batchmean"),
+            require_all=True,
+        )
     else:
         py_paths = tuple(_iter_python_files(root, scan_dirs))
     for p in py_paths:
@@ -14468,7 +14560,8 @@ def check_kl_div_reduction_correct(
             continue
         if _is_oss_export_mirror_path(p):
             continue
-        n_scanned += 1
+        if source_index is None:
+            n_scanned += 1
         violations.extend(
             _scan_python_for_kl_div_batchmean(
                 p,
@@ -17780,8 +17873,13 @@ def check_remote_lane_scripts_have_controlled_baseline(
     if verbose:
         if violations:
             print(f"  [controlled-baseline] {len(violations)} warning(s):")
-            for v in violations:
+            for v in violations[:20]:
                 print(f"    • {v}")
+            if len(violations) > 20:
+                print(
+                    f"    … (+{len(violations) - 20} more; rerun this check "
+                    "directly for the full list)"
+                )
         else:
             print(
                 "  [controlled-baseline] OK: qualifying remote_lane_*.sh "
