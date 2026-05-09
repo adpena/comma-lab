@@ -97,8 +97,12 @@ class JointLagrangianADMMConfig:
     seg_target: float = 7e-4
     pose_target: float = 1.7e-4
     rho_init: float = 1.0
-    rho_min: float = 1e-3
-    rho_max: float = 1e3
+    # Default ρ band kept at the legacy (0.01, 100.0) for backward-compat.
+    # T19's brief recommends a wider (1e-3, 1e3) band for the standalone
+    # helper; opt-in callers (e.g. the trainer's --enable-t19-adaptive-rho
+    # path) override these explicitly.
+    rho_min: float = 0.01
+    rho_max: float = 100.0
     adaptive_rho_window: int = 16
     adaptive_rho_ratio: float = 10.0
     lambda_init: float = 1.0
