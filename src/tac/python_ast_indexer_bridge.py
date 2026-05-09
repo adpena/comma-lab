@@ -36,9 +36,12 @@ def resolve_python_ast_indexer_binary(
     candidates.extend(
         [
             repo_root / "runtime-rs" / "target" / "release" / "python-ast-indexer",
-            repo_root / "runtime-rs" / "target" / "debug" / "python-ast-indexer",
         ]
     )
+    if os.environ.get("TAC_PYTHON_AST_INDEXER_ALLOW_DEBUG") == "1":
+        candidates.append(
+            repo_root / "runtime-rs" / "target" / "debug" / "python-ast-indexer"
+        )
     for candidate in candidates:
         if _is_executable_file(candidate):
             return candidate

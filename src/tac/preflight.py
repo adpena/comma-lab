@@ -13305,7 +13305,7 @@ def check_test_files_imports_resolve(
     if test_dir.exists():
         module_defs_cache: dict[Path, set[str] | None] = {}
         source_index = _current_source_index(root)
-        if os.environ.get("PACT_PREFLIGHT_ENABLE_NATIVE_AST") == "1":
+        if os.environ.get("PACT_PREFLIGHT_ENABLE_NATIVE_AST", "1") != "0":
             try:
                 from tac.python_ast_indexer_bridge import (
                     index_python_top_level_names_native,
