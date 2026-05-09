@@ -3386,9 +3386,10 @@ def _scan_python_for_dead_resolvers(
     its own args). The getattr form specifically encodes a silent-default
     contract that the bug class exploits.
     """
-    try:
-        tree = ast.parse(path.read_text(), filename=str(path))
-    except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
+    text, tree, err = _read_python_text_and_tree(path)
+    if err is not None or tree is None:
+        return []
+    if "getattr(args" not in (text or ""):
         return []
 
     argparse_attrs = _collect_argparse_namespace_attrs(tree)
@@ -3434,9 +3435,8 @@ def _module_top_level_names(mod_path: Path) -> set[str]:
     Handles: function/class defs, simple assignments, AnnAssign, ImportFrom
     re-exports, and Import. Does NOT execute the module.
     """
-    try:
-        tree = ast.parse(mod_path.read_text(), filename=str(mod_path))
-    except (SyntaxError, UnicodeDecodeError):
+    _text, tree, err = _read_python_text_and_tree(mod_path)
+    if err is not None or tree is None:
         return set()
     names: set[str] = set()
     for node in tree.body:
@@ -3526,9 +3526,10 @@ def _scan_python_for_dead_imports(path: Path, repo_root: Path) -> list[str]:
     Catches the segnet_uncertainty_weighted_loss class — runtime
     NameError masked by stale .pyc caches.
     """
-    try:
-        tree = ast.parse(path.read_text(), filename=str(path))
-    except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
+    text, tree, err = _read_python_text_and_tree(path)
+    if err is not None or tree is None:
+        return []
+    if "from tac." not in (text or ""):
         return []
 
     rel = path.relative_to(repo_root) if path.is_absolute() else path
@@ -7373,6 +7374,8 @@ def _scan_python_for_pack_sparse_delta_approved(
         text = path.read_text()
     except (UnicodeDecodeError, FileNotFoundError):
         return []
+    if "pack_sparse_delta" not in text or "compliance_status" not in text:
+        return []
     try:
         tree = ast.parse(text, filename=str(rel))
     except SyntaxError:
@@ -8449,9 +8452,15 @@ def _scan_python_for_unsafe_renderer_loader(path: Path, source_index=None) -> li
     """
     try:
         if source_index is not None:
+            text = source_index.read_text(path)
+        else:
+            text = path.read_text()
+        if "torch.load" not in text and "torch.frombuffer" not in text:
+            return []
+        if source_index is not None:
             tree = source_index.python_ast(path)
         else:
-            tree = ast.parse(path.read_text(), filename=str(path))
+            tree = ast.parse(text, filename=str(path))
     except (OSError, UnicodeDecodeError):
         return []
     except SyntaxError:
@@ -9186,6 +9195,8 @@ def _scan_python_for_kl_distill_raw_pairs(
     rel = path.relative_to(repo_root) if path.is_absolute() else path
     try:
         text = path.read_text()
+        if "kl_distill_segnet_only" not in text:
+            return []
         tree = ast.parse(text, filename=str(path))
     except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
         return []
@@ -9239,16 +9250,7 @@ def check_kl_distill_uses_roundtripped_frames(
     violations: list[str] = []
     n_scanned = 0
     for sub in ("experiments", "src/tac/experiments"):
-        d = root / sub
-        if not d.exists():
-            continue
-        for p in d.rglob("*.py"):
-            # Skip __pycache__, tests live in src/tac/tests not here.
-            if "__pycache__" in p.parts:
-                continue
-            # R14-1: skip OSS-export staging mirror via centralized helper.
-            if _is_oss_export_mirror_path(p):
-                continue
+        for p in _iter_python_files(root, [sub]):
             n_scanned += 1
             violations.extend(_scan_python_for_kl_distill_raw_pairs(p, root))
     # SegMapTrainer is a library-side KL caller, not an experiment script.
@@ -31305,11 +31307,39 @@ def check_unsafe_test_only_restricted_to_test_paths(
 # WITHOUT calling ``register_pending_job_locked(...)`` first. Same-line
 # waiver on the ``Job.run`` line: ``# JOB_RUN_BEFORE_REGISTER_OK:<reason>``.
 
-_PAID_JOB_SUBMIT_TOKENS = ("Job.run(",)
 _PAID_JOB_PENDING_REGISTER_TOKENS = (
     "register_pending_job_locked",
 )
 _PAID_JOB_RUN_WAIVER_MARKER = "JOB_RUN_BEFORE_REGISTER_OK"
+# Catalog #143: scope to filenames that actually look like Lightning
+# dispatch surfaces. The bug class is specifically about
+# ``lightning_sdk.Job.run`` callers that pay for compute; we don't want
+# a false positive on a file that simply has the literal substring
+# ``Job.run(`` in a docstring/comment/error message.
+_PAID_JOB_LIGHTNING_FILENAME_PATTERNS = (
+    "lightning",  # *_lightning_*.py / *_lightning.py (dispatcher convention)
+)
+
+
+def _is_lightning_dispatch_file(py: Path) -> bool:
+    name = py.name.lower()
+    return any(pat in name for pat in _PAID_JOB_LIGHTNING_FILENAME_PATTERNS)
+
+
+def _ast_finds_real_job_run_call(tree: ast.AST) -> list[ast.Call]:
+    """Return a list of AST ``Job.run(...)`` Call nodes.
+
+    Filters out string constants and docstrings — only real Call nodes
+    where ``func.attr == "run"`` and ``func.value.id == "Job"`` are
+    considered.
+    """
+    calls: list[ast.Call] = []
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute):
+            if n.func.attr == "run" and isinstance(n.func.value, ast.Name):
+                if n.func.value.id == "Job":
+                    calls.append(n)
+    return calls
 
 
 def check_paid_job_register_before_submit(
@@ -31320,9 +31350,15 @@ def check_paid_job_register_before_submit(
 ) -> list[str]:
     """Catalog #143 — every ``Job.run(...)`` caller must register pending row first.
 
-    Refuses any function that calls ``Job.run(...)`` (Lightning paid
-    submit) WITHOUT calling ``register_pending_job_locked(...)`` first
-    in the SAME function body.
+    Refuses any function in a Lightning dispatcher file that calls
+    ``Job.run(...)`` (Lightning paid submit) WITHOUT calling
+    ``register_pending_job_locked(...)`` first in the SAME function body.
+
+    Detects ``Job.run`` via AST (so docstrings / comments / error
+    messages that mention ``Job.run`` are NOT counted as real calls).
+    Restricts the scan to files whose name contains ``lightning``
+    (the Lightning dispatcher convention) so non-Lightning files that
+    happen to have a class named ``Job`` are not affected.
 
     Same-line waiver on the ``Job.run`` line:
     ``# JOB_RUN_BEFORE_REGISTER_OK:<reason>``. Reserved for the
@@ -31360,69 +31396,66 @@ def check_paid_job_register_before_submit(
                 or "_intake_" in s
             ):
                 continue
+            # Restrict to Lightning dispatcher files (the bug class)
+            if not _is_lightning_dispatch_file(py):
+                continue
             try:
                 text = py.read_text(encoding="utf-8", errors="replace")
             except OSError:
                 continue
-            if not any(tok in text for tok in _PAID_JOB_SUBMIT_TOKENS):
+            if "Job.run" not in text:
                 continue
             scanned_files += 1
             try:
                 tree = ast.parse(text)
             except SyntaxError:
                 continue
+            real_calls = _ast_finds_real_job_run_call(tree)
+            if not real_calls:
+                continue
             lines = text.splitlines()
+            # Group calls by enclosing function
             for node in ast.walk(tree):
                 if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     continue
-                # Get the function body text
-                fn_start = node.lineno - 1
+                fn_start = node.lineno
                 fn_end = (
                     node.end_lineno if hasattr(node, "end_lineno") else len(lines)
                 )
-                body_lines = lines[fn_start:fn_end]
-                body_text = "\n".join(body_lines)
-                # Does this function call Job.run(?
-                if "Job.run(" not in body_text:
+                # Real Job.run calls inside this function
+                fn_calls = [
+                    c for c in real_calls if fn_start <= c.lineno <= fn_end
+                ]
+                if not fn_calls:
                     continue
-                # Find the Job.run line(s) and check waiver markers
-                job_run_lines: list[int] = []
-                for offset, bl in enumerate(body_lines):
-                    if "Job.run(" in bl:
-                        job_run_lines.append(fn_start + offset)
-                # All Job.run calls in this function must be waived OR the
-                # function must register a pending row first.
-                # If EVERY Job.run line carries the waiver marker, exempt.
+                body_lines = lines[fn_start - 1:fn_end]
+                body_text = "\n".join(body_lines)
+                # All real calls in this function waived?
                 all_waived = all(
-                    _PAID_JOB_RUN_WAIVER_MARKER in lines[ln]
-                    for ln in job_run_lines
+                    _PAID_JOB_RUN_WAIVER_MARKER in (
+                        lines[c.lineno - 1] if c.lineno - 1 < len(lines) else ""
+                    )
+                    for c in fn_calls
                 )
                 if all_waived:
                     continue
-                # Otherwise: require pending-register call before submit
-                # in the function body.
                 has_pending_register = any(
                     tok in body_text for tok in _PAID_JOB_PENDING_REGISTER_TOKENS
                 )
+                first_call_lineno = min(c.lineno for c in fn_calls)
                 if has_pending_register:
-                    # Now check ordering: pending-register must appear before
-                    # the FIRST Job.run line.
-                    first_job_run_offset = None
-                    first_register_offset = None
+                    first_register_lineno = None
                     for offset, bl in enumerate(body_lines):
-                        if first_job_run_offset is None and "Job.run(" in bl:
-                            first_job_run_offset = offset
-                        if first_register_offset is None and any(
+                        if any(
                             tok in bl for tok in _PAID_JOB_PENDING_REGISTER_TOKENS
                         ):
-                            first_register_offset = offset
+                            first_register_lineno = fn_start + offset
+                            break
                     if (
-                        first_register_offset is not None
-                        and first_job_run_offset is not None
-                        and first_register_offset < first_job_run_offset
+                        first_register_lineno is not None
+                        and first_register_lineno < first_call_lineno
                     ):
                         continue
-                    # Has the call but in wrong order
                     rel = py.relative_to(root) if py.is_relative_to(root) else py
                     violations.append(
                         f"[Check 143] {rel}:{node.lineno}: function "
@@ -31580,19 +31613,24 @@ def check_setup_first_seen_no_split_transactions(
                 if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     continue
                 fn_start = node.lineno - 1
-                fn_end = (
-                    node.end_lineno if hasattr(node, "end_lineno") else len(lines)
-                )
-                body_lines = lines[fn_start:fn_end]
-                body_text = "\n".join(body_lines)
                 # Same-line waiver on the def line
                 if _SETUP_FIRST_SEEN_NO_SPLIT_WAIVER_MARKER in lines[fn_start]:
                     continue
+                call_names: set[str] = set()
+                for sub in ast.walk(node):
+                    if not isinstance(sub, ast.Call):
+                        continue
+                    name = _call_name(sub.func) or ""
+                    if not name:
+                        name = _call_func_str(sub)
+                    if name:
+                        call_names.add(name)
+                        call_names.add(name.rsplit(".", 1)[-1])
                 has_observed = any(
-                    tok in body_text for tok in _SETUP_FIRST_SEEN_OBSERVED_HELPER_TOKENS
+                    tok in call_names for tok in _SETUP_FIRST_SEEN_OBSERVED_HELPER_TOKENS
                 )
                 has_left = any(
-                    tok in body_text for tok in _SETUP_FIRST_SEEN_LEFT_HELPER_TOKENS
+                    tok in call_names for tok in _SETUP_FIRST_SEEN_LEFT_HELPER_TOKENS
                 )
                 if not (has_observed and has_left):
                     continue
