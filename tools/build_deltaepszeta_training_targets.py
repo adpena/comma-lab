@@ -29,7 +29,7 @@ loss terms.
 Usage:
     python tools/build_deltaepszeta_training_targets.py \\
         --shannon-json experiments/results/lane_per_tensor_shannon_pr106_*/per_tensor_shannon.json \\
-        --output experiments/results/lane_deltaepszeta_targets_pr106_<UTC>/targets.json
+        --output-dir experiments/results/lane_deltaepszeta_targets_pr106_<UTC>/
 
 Output: ``targets.json`` with per-tensor weights + a markdown table for the writeup.
 
@@ -46,6 +46,7 @@ import json
 import math
 import pathlib
 import sys
+from collections.abc import Sequence
 from typing import Any
 
 ENTROPY_ORDER_TOLERANCE_BITS = 1e-9
@@ -59,8 +60,8 @@ def _utc_iso() -> str:
     return _dt.datetime.now(_dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _resolve_shannon_json(pattern: str) -> pathlib.Path:
-    """Resolve a glob to a single Shannon analysis JSON; pick newest.
+def _resolve_shannon_json(patterns: str | Sequence[str]) -> pathlib.Path:
+    """Resolve one or more path/glob operands to a single Shannon JSON.
 
     Bug-hunter v2 fix 2026-05-07 (MEDIUM): the previous version sorted
     candidates lexicographically and picked the lex-last entry. That works
@@ -78,11 +79,27 @@ def _resolve_shannon_json(pattern: str) -> pathlib.Path:
     with lex-order as a deterministic tiebreaker for builds that produce
     multiple files in the same second. This matches the operator intent
     ("pick the newest analysis") under both naming conventions.
+
+    Bug-hunter v3 fix 2026-05-09 (LOW): the CLI help advertises
+    ``--shannon-json`` as "path or glob", but in zsh an unquoted glob can
+    expand into multiple argv operands before Python sees it. Accepting a
+    sequence here keeps quoted globs, exact paths, and shell-expanded globs
+    equivalent.
     """
-    candidates = glob.glob(pattern)
+    if isinstance(patterns, str):
+        operands = [patterns]
+    else:
+        operands = list(patterns)
+    candidates: list[str] = []
+    for operand in operands:
+        matches = glob.glob(operand)
+        if matches:
+            candidates.extend(matches)
+        elif pathlib.Path(operand).exists():
+            candidates.append(operand)
     if not candidates:
         raise FileNotFoundError(
-            f"no Shannon analysis JSON matched: {pattern}; "
+            f"no Shannon analysis JSON matched: {operands}; "
             f"run tools/per_tensor_shannon_analysis.py first"
         )
     candidates_sorted = sorted(
@@ -263,6 +280,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument(
         "--shannon-json",
         default="experiments/results/lane_per_tensor_shannon_pr106_*/per_tensor_shannon.json",
+        nargs="+",
         help="path or glob to Shannon analysis JSON",
     )
     p.add_argument(

@@ -78,6 +78,38 @@ Classification: exact CUDA anchor, not a CUDA frontier win. It pairs with the
 GHA Linux `[contest-CPU]` score `0.19284757743677347`, giving a CUDA-CPU gap of
 about `0.03350`, consistent with the HNeRV-family drift profile.
 
+## 2026-05-09 (night) - Delta-epsilon-zeta Phase 1 local scaffold evidence
+
+`tools/build_deltaepszeta_training_targets.py` is now hardened for normal zsh
+operator use: `--shannon-json` accepts a quoted glob, exact path, or unquoted
+shell-expanded operands, and the docstring usage now names the real
+`--output-dir` flag. Focused coverage:
+`src/tac/tests/test_build_deltaepszeta_training_targets.py` (`12 passed`).
+`tools/all_lanes_preflight.py` is also hardened for direct shebang execution:
+it re-execs through repo `.venv/bin/python` using `sys.prefix` virtualenv
+detection and propagates stable child `PYTHONPATH`, closing the macOS ambient
+`python3` dependency-loss failure class. The direct entrypoint now passes all
+29 preflight checks.
+
+Local CPU-only artifacts were produced for the next co-design scaffold:
+
+- PR106 conditional-entropy targets:
+  `experiments/results/lane_deltaepszeta_targets_pr106_20260509T_seq_codex/targets.json`
+  (`13,483 B`, SHA-256
+  `bf9b68cd7cb3c0067128c458cd43adffcbf8492b98c657223fb701fc94c116a4`).
+- Planning signal: `78,580 B` H0-H2 conditional-entropy gap, H2/H0 aggregate
+  ratio `0.5310`; top weighted tensors are `blocks.2.weight`,
+  `blocks.1.weight`, and `blocks.0.weight`.
+- A1 EMA sanity loop:
+  `experiments/results/lane_run_deltaepszeta_training_20260509T_seq_codex/run/a1_ema_pr106_targets_smoke_step_log.jsonl`
+  (SHA-256
+  `9dbe0e27c2b18d47540e2d8a43af98ba0d28d9e77478dd8ce4d4fda74e78c90e`);
+  final `rate_bits=6.667497634887695`, `final_lambda=5e-05`.
+
+Classification: `[empirical_planning; local CPU sanity loop]`, no score claim,
+no dispatch, no archive promotion. The durable ledger is
+`.omx/research/deltaepszeta_phase1_targets_and_smoke_20260509_codex.md`.
+
 ## 2026-05-08 (evening) — Recursive hardening + Phase A ablation pass
 
 **Headline:** 11 STRICT/warn preflight gates landed, ~395 violations

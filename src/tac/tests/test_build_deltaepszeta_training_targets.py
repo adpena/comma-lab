@@ -197,6 +197,35 @@ def test_resolve_shannon_json_mtime_beats_lex_order(tmp_path: pathlib.Path) -> N
     )
 
 
+def test_resolve_shannon_json_accepts_shell_expanded_operands(
+    tmp_path: pathlib.Path,
+) -> None:
+    """Unquoted zsh globs may arrive as multiple argv operands.
+
+    The CLI should treat that exactly like a quoted glob and pick the newest
+    candidate instead of failing argparse with "unrecognized arguments".
+    """
+    import os
+    import time
+
+    mod = _load_tool_module()
+    older = tmp_path / "lane_per_tensor_shannon_pr106_20260101T000000Z"
+    newer = tmp_path / "lane_per_tensor_shannon_pr106_20261231T000000Z"
+    older.mkdir()
+    newer.mkdir()
+    older_path = older / "per_tensor_shannon.json"
+    newer_path = newer / "per_tensor_shannon.json"
+    older_path.write_text("{}")
+    newer_path.write_text("{}")
+    now = time.time()
+    os.utime(older_path, (now - 100.0, now - 100.0))
+    os.utime(newer_path, (now, now))
+
+    resolved = mod._resolve_shannon_json([str(older_path), str(newer_path)])
+
+    assert resolved == newer_path
+
+
 def test_render_markdown_contains_score_disclaimer(tmp_path: pathlib.Path) -> None:
     mod = _load_tool_module()
     src = _synthetic_shannon_json(tmp_path)

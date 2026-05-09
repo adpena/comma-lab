@@ -119,6 +119,56 @@ except ModuleNotFoundError:  # pragma: no cover
     from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
 
 REPO = repo_root_from_tool(__file__)
+
+
+def _prepend_pythonpath(*paths: Path) -> None:
+    """Make repo imports stable for child preflight subprocesses."""
+    existing = os.environ.get("PYTHONPATH")
+    ordered: list[str] = []
+    seen: set[str] = set()
+    for path in paths:
+        value = str(path)
+        if value not in seen:
+            ordered.append(value)
+            seen.add(value)
+    if existing:
+        for value in existing.split(os.pathsep):
+            if value and value not in seen:
+                ordered.append(value)
+                seen.add(value)
+    os.environ["PYTHONPATH"] = os.pathsep.join(ordered)
+
+
+def _maybe_reexec_repo_venv() -> None:
+    """Use the repo virtualenv for direct script/shebang invocations.
+
+    The documented command is ``.venv/bin/python tools/all_lanes_preflight.py``,
+    but operators also run ``tools/all_lanes_preflight.py`` directly. The
+    latter resolves through ``/usr/bin/env python3`` on macOS, which can miss
+    package deps such as ``brotli`` and then fail child preflight tools. Re-exec
+    once into the repo venv so both entrypoints exercise the same environment.
+    """
+    if os.environ.get("PACT_ALL_LANES_PREFLIGHT_REEXECED") == "1":
+        return
+    venv_python = REPO / ".venv" / "bin" / "python"
+    if not venv_python.is_file():
+        return
+    try:
+        current_prefix = Path(sys.prefix).resolve()
+        target_prefix = (REPO / ".venv").resolve()
+        target = venv_python
+    except OSError:
+        return
+    if current_prefix == target_prefix:
+        return
+    os.environ["PACT_ALL_LANES_PREFLIGHT_REEXECED"] = "1"
+    os.execv(str(target), [str(target), str(Path(__file__).resolve()), *sys.argv[1:]])
+
+
+if __name__ == "__main__":
+    _maybe_reexec_repo_venv()
+
+_prepend_pythonpath(REPO / "src", REPO)
 ensure_repo_imports(REPO)
 
 from tac.geometry_feedback_readiness import (  # noqa: E402

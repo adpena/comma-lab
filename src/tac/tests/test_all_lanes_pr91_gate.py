@@ -386,3 +386,50 @@ def test_run_lane_passes_verbose_by_default(monkeypatch) -> None:
     assert output == "ok"
     assert calls
     assert calls[0][-1] == "--verbose"
+
+
+def test_all_lanes_reexec_uses_sys_prefix_not_resolved_executable(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    module = _load_all_lanes_module()
+    repo = tmp_path / "repo"
+    venv_python = repo / ".venv" / "bin" / "python"
+    venv_python.parent.mkdir(parents=True)
+    venv_python.write_text("#!/usr/bin/env python\n", encoding="utf-8")
+    calls: list[tuple[str, list[str]]] = []
+
+    def fake_execv(path: str, args: list[str]) -> None:
+        calls.append((path, args))
+        raise SystemExit(77)
+
+    monkeypatch.setattr(module, "REPO", repo)
+    monkeypatch.setattr(module.sys, "prefix", str(tmp_path / "base-python"))
+    monkeypatch.setattr(module.os, "execv", fake_execv)
+    monkeypatch.delenv("PACT_ALL_LANES_PREFLIGHT_REEXECED", raising=False)
+
+    try:
+        module._maybe_reexec_repo_venv()
+    except SystemExit as exc:
+        assert exc.code == 77
+
+    assert calls == [(str(venv_python), [str(venv_python), str(ALL_LANES), *module.sys.argv[1:]])]
+    assert module.os.environ["PACT_ALL_LANES_PREFLIGHT_REEXECED"] == "1"
+
+
+def test_all_lanes_reexec_skips_inside_repo_venv(monkeypatch, tmp_path: Path) -> None:
+    module = _load_all_lanes_module()
+    repo = tmp_path / "repo"
+    venv_python = repo / ".venv" / "bin" / "python"
+    venv_python.parent.mkdir(parents=True)
+    venv_python.write_text("#!/usr/bin/env python\n", encoding="utf-8")
+    calls: list[tuple[str, list[str]]] = []
+
+    monkeypatch.setattr(module, "REPO", repo)
+    monkeypatch.setattr(module.sys, "prefix", str(repo / ".venv"))
+    monkeypatch.setattr(module.os, "execv", lambda path, args: calls.append((path, args)))
+    monkeypatch.delenv("PACT_ALL_LANES_PREFLIGHT_REEXECED", raising=False)
+
+    module._maybe_reexec_repo_venv()
+
+    assert calls == []
