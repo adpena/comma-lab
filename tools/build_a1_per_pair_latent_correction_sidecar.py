@@ -59,7 +59,6 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import hashlib
-import io
 import json
 import shutil
 import struct
@@ -132,13 +131,13 @@ def load_a1_archive_components(archive_path: Path) -> dict[str, Any]:
     sys.path.insert(0, str(A1_SUBMISSION_DIR / "src"))
     # Import A1's codec module
     import importlib
+    import zipfile
 
     if "codec" in sys.modules:
         importlib.reload(sys.modules["codec"])
     if "model" in sys.modules:
         importlib.reload(sys.modules["model"])
     import codec  # type: ignore
-    import zipfile
 
     with zipfile.ZipFile(archive_path, "r") as zf:
         member = zf.namelist()[0]
@@ -262,10 +261,9 @@ def search_per_pair_proxy_mse(
     *,
     pair_indices: list[int] | None = None,
     log_path: Path | None = None,
+    candidate_batch_size: int = 1,
 ) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
     """Greedy per-pair single-dim search using pixel MSE (fast proxy)."""
-    import torch
-
     decoder_sd = components["decoder_sd"]
     latents_base = components["latents_pre_sidecar"].clone()
     eval_h, eval_w = components["eval_size"]
@@ -277,7 +275,7 @@ def search_per_pair_proxy_mse(
     decoder = model_mod.HNeRVDecoder(
         latent_dim=components["latent_dim"],
         base_channels=components["base_channels"],
-        eval_size=tuple(eval_h_w := (eval_h, eval_w)),
+        eval_size=(eval_h, eval_w),
     )
     decoder.load_state_dict(decoder_sd)
     decoder.eval()
@@ -295,34 +293,23 @@ def search_per_pair_proxy_mse(
 
     log_lines = []
     t0 = time.time()
-    n_done = 0
     progress_every = max(1, min(25, len(pair_indices)))
-    for k in pair_indices:
+    for n_done, k in enumerate(pair_indices, start=1):
         # Ground truth uint8 frames for this pair
         gt = ground_truth_frames[k * 2 : k * 2 + 2]  # (2, CAMERA_H, CAMERA_W, 3)
         gt_eval = _resize_uint8_to_eval(gt)  # (2, EVAL_H, EVAL_W, 3) float32
-        # Baseline (no-op) reconstruction
-        with torch.inference_mode():
-            base_lat = latents_base[k : k + 1].clone()
-            base_dec = decoder(base_lat).reshape(2, 3, eval_h, eval_w).numpy()
-        base_mse = _mse_uint8_after_clamp(base_dec, gt_eval)
-        best_mse = base_mse
-        best_dim = 255
-        best_didx = -1
-        for d in range(LATENT_DIM):
-            for di, _delta in enumerate(deltas):
-                cand = base_lat.clone()
-                cand[0, d] += float(_delta)
-                with torch.inference_mode():
-                    cand_dec = decoder(cand).reshape(2, 3, eval_h, eval_w).numpy()
-                mse = _mse_uint8_after_clamp(cand_dec, gt_eval)
-                if mse < best_mse:
-                    best_mse = mse
-                    best_dim = d
-                    best_didx = di
+        base_lat = latents_base[k : k + 1].clone()
+        base_mse, best_mse, best_dim, best_didx = _best_pair_proxy_mse_candidate(
+            decoder=decoder,
+            base_lat=base_lat,
+            gt_eval=gt_eval,
+            eval_h=eval_h,
+            eval_w=eval_w,
+            deltas=deltas,
+            candidate_batch_size=candidate_batch_size,
+        )
         dims_out[k] = best_dim
         delta_idx_out[k] = best_didx
-        n_done += 1
         if n_done % progress_every == 0 or n_done == len(pair_indices):
             elapsed = time.time() - t0
             rate = n_done / elapsed
@@ -353,8 +340,92 @@ def search_per_pair_proxy_mse(
         "n_pairs_perturbed": n_perturbed,
         "n_pairs_perturbed_searched": n_perturbed_searched,
         "unsearched_pairs_preserve_old_sidecar": True,
+        "candidate_batch_size": candidate_batch_size,
         "elapsed_seconds": elapsed,
     }
+
+
+def _best_pair_proxy_mse_candidate(
+    *,
+    decoder: Any,
+    base_lat: Any,
+    gt_eval: np.ndarray,
+    eval_h: int,
+    eval_w: int,
+    deltas: np.ndarray,
+    candidate_batch_size: int,
+) -> tuple[float, float, int, int]:
+    """Return the best single-dim sidecar choice for one pair.
+
+    The old implementation ran one decoder forward per candidate. This keeps
+    identical greedy semantics while optionally evaluating perturbations in
+    chunks. Large CPU chunks regressed the A1 smoke benchmark on 2026-05-09, so
+    callers must opt into batching explicitly.
+    """
+
+    import torch
+
+    if candidate_batch_size < 1:
+        raise ValueError("candidate_batch_size must be >= 1")
+
+    with torch.inference_mode():
+        base_dec = decoder(base_lat).reshape(2, 3, eval_h, eval_w).detach().cpu().numpy()
+    base_mse = _mse_uint8_after_clamp(base_dec, gt_eval)
+    best_mse = base_mse
+    best_dim = 255
+    best_didx = -1
+
+    if candidate_batch_size == 1:
+        latent_dim = int(base_lat.shape[1])
+        for d in range(latent_dim):
+            for di, delta in enumerate(deltas):
+                cand = base_lat.clone()
+                cand[0, d] += float(delta)
+                with torch.inference_mode():
+                    cand_dec = decoder(cand).reshape(2, 3, eval_h, eval_w).detach().cpu().numpy()
+                mse = _mse_uint8_after_clamp(cand_dec, gt_eval)
+                if mse < best_mse:
+                    best_mse = mse
+                    best_dim = d
+                    best_didx = di
+        return base_mse, best_mse, best_dim, best_didx
+
+    chunk: list[Any] = []
+    metas: list[tuple[int, int]] = []
+
+    def flush() -> None:
+        nonlocal best_mse, best_dim, best_didx
+        if not chunk:
+            return
+        batch = torch.cat(chunk, dim=0)
+        with torch.inference_mode():
+            decoded = decoder(batch)
+        decoded_np = (
+            decoded.reshape(len(chunk), 2, 3, eval_h, eval_w)
+            .detach()
+            .cpu()
+            .numpy()
+        )
+        mses = _mse_uint8_batch_after_clamp(decoded_np, gt_eval)
+        for mse, (dim, didx) in zip(mses, metas, strict=True):
+            if float(mse) < best_mse:
+                best_mse = float(mse)
+                best_dim = dim
+                best_didx = didx
+        chunk.clear()
+        metas.clear()
+
+    latent_dim = int(base_lat.shape[1])
+    for d in range(latent_dim):
+        for di, delta in enumerate(deltas):
+            cand = base_lat.clone()
+            cand[0, d] += float(delta)
+            chunk.append(cand)
+            metas.append((d, di))
+            if len(chunk) >= candidate_batch_size:
+                flush()
+    flush()
+    return base_mse, best_mse, best_dim, best_didx
 
 
 def _resize_uint8_to_eval(frames_uint8: np.ndarray) -> np.ndarray:
@@ -376,6 +447,26 @@ def _mse_uint8_after_clamp(decoded: np.ndarray, gt: np.ndarray) -> float:
     """decoded is (2, 3, EVAL_H, EVAL_W); gt is (2, EVAL_H, EVAL_W, 3) float32 0..255."""
     dec = decoded.transpose(0, 2, 3, 1).clip(0, 255)
     return float(np.mean((dec - gt) ** 2))
+
+
+def _mse_uint8_batch_after_clamp(decoded: np.ndarray, gt: np.ndarray) -> np.ndarray:
+    """Vectorized MSE for decoded shape (B, 2, 3, H, W)."""
+
+    dec = decoded.transpose(0, 1, 3, 4, 2).clip(0, 255)
+    return np.mean((dec - gt[None, ...]) ** 2, axis=(1, 2, 3, 4))
+
+
+def ground_truth_pairs_needed(pair_indices: list[int], n_pairs: int) -> int:
+    """Return how many leading pairs must be decoded for ``pair_indices``."""
+
+    if not pair_indices:
+        return 0
+    max_pair = max(pair_indices)
+    if max_pair < 0:
+        raise ValueError("pair indices must be nonnegative")
+    if max_pair >= n_pairs:
+        raise ValueError(f"pair index {max_pair} outside n_pairs={n_pairs}")
+    return max_pair + 1
 
 
 def load_ground_truth_pairs(video_path: Path, n_pairs: int = 600) -> np.ndarray:
@@ -505,6 +596,15 @@ def main() -> int:
         default="packed_661",
         help="sidecar wire format (PACKED is more general; N_PAIRS limited to dim<16)",
     )
+    p.add_argument(
+        "--candidate-batch-size",
+        type=int,
+        default=1,
+        help=(
+            "candidate latent perturbations per decoder forward chunk; default 1 "
+            "preserves fastest measured scalar CPU path, larger values are experimental"
+        ),
+    )
     args = p.parse_args()
 
     timestamp = dt.datetime.now(dt.UTC).strftime("%Y%m%dT%H%M%SZ")
@@ -544,7 +644,8 @@ def main() -> int:
     if args.search_signal == "proxy_mse":
         print(f"[start] proxy-mse search over {len(pair_indices)} pairs", flush=True)
         print(f"[ok] decoding ground-truth video {args.video_path}", flush=True)
-        gt_frames = load_ground_truth_pairs(args.video_path, n_pairs=components["n_pairs"])
+        gt_pair_count = ground_truth_pairs_needed(pair_indices, components["n_pairs"])
+        gt_frames = load_ground_truth_pairs(args.video_path, n_pairs=gt_pair_count)
         print(f"[ok] gt_frames shape={gt_frames.shape}", flush=True)
         log_path = out_dir / "sidecar_search.log"
         dims, delta_idx, search_meta = search_per_pair_proxy_mse(
@@ -552,6 +653,7 @@ def main() -> int:
             gt_frames,
             pair_indices=pair_indices,
             log_path=log_path,
+            candidate_batch_size=args.candidate_batch_size,
         )
     else:
         sys.stderr.write(

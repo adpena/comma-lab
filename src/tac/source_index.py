@@ -16,8 +16,8 @@ import json
 import os
 import subprocess
 import threading
-from concurrent.futures import ThreadPoolExecutor
 from collections.abc import Iterator, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -129,6 +129,9 @@ class SourceIndex:
     root: Path
     skip_parts: frozenset[str] = frozenset({"__pycache__", "comma_lab_public_export"})
     _file_cache: dict[tuple[tuple[str, ...], str], tuple[Path, ...]] = field(default_factory=dict, init=False)
+    _files_by_pattern_cache: dict[
+        tuple[tuple[str, ...], tuple[str, ...]], dict[str, tuple[Path, ...]]
+    ] = field(default_factory=dict, init=False)
     _facts_group_cache: dict[tuple[tuple[str, ...], str], tuple[SourceTextFacts, ...]] = field(
         default_factory=dict,
         init=False,
@@ -148,6 +151,8 @@ class SourceIndex:
         default_factory=lambda: {
             "file_list_hits": 0,
             "file_list_misses": 0,
+            "files_by_pattern_hits": 0,
+            "files_by_pattern_misses": 0,
             "facts_group_hits": 0,
             "facts_group_misses": 0,
             "text_hits": 0,
@@ -191,6 +196,48 @@ class SourceIndex:
         with self._lock:
             self._file_cache[key] = out
         return out
+
+    def files_by_pattern(
+        self,
+        dirs: Sequence[str | Path],
+        *,
+        patterns: Sequence[str],
+    ) -> dict[str, tuple[Path, ...]]:
+        """Return sorted matching files for multiple filename patterns.
+
+        This is the source-index contract for cold single-pass inventory work:
+        callers can request related suffix groups such as ``("*.py", "*.sh")``
+        without paying one recursive walk per pattern. Results are grouped by
+        the requested pattern and are intentionally byte-for-byte comparable to
+        calling :meth:`files` for each pattern independently.
+        """
+
+        unique_patterns = tuple(dict.fromkeys(patterns))
+        if not unique_patterns:
+            return {}
+        dir_keys = tuple(self._dir_key(item) for item in dirs)
+        key = (dir_keys, unique_patterns)
+        with self._lock:
+            cached = self._files_by_pattern_cache.get(key)
+            if cached is not None:
+                self._stats["files_by_pattern_hits"] += 1
+                return dict(cached)
+            self._stats["files_by_pattern_misses"] += 1
+
+        paths = self._files_via_rg_many(dirs, unique_patterns)
+        if paths is None:
+            paths = self._files_via_os_walk_many(dirs, unique_patterns)
+        grouped: dict[str, list[Path]] = {pattern: [] for pattern in unique_patterns}
+        for path in (paths[key] for key in sorted(paths)):
+            for pattern in unique_patterns:
+                if fnmatch.fnmatch(path.name, pattern):
+                    grouped[pattern].append(path)
+        out = {pattern: tuple(grouped[pattern]) for pattern in unique_patterns}
+        with self._lock:
+            self._files_by_pattern_cache[key] = out
+            for pattern, paths_for_pattern in out.items():
+                self._file_cache[(dir_keys, pattern)] = paths_for_pattern
+        return dict(out)
 
     def read_text(
         self,
@@ -396,6 +443,7 @@ class SourceIndex:
         return {
             **self._stats,
             "file_list_cache_entries": len(self._file_cache),
+            "files_by_pattern_cache_entries": len(self._files_by_pattern_cache),
             "facts_group_cache_entries": len(self._facts_group_cache),
             "text_cache_entries": len(self._text_cache),
             "ast_cache_entries": len(self._ast_cache),
@@ -478,6 +526,63 @@ class SourceIndex:
             paths[_path_key(path)] = path
         return paths
 
+    def _files_via_rg_many(
+        self,
+        dirs: Sequence[str | Path],
+        patterns: Sequence[str],
+    ) -> dict[str, Path] | None:
+        """Return files matching any pattern through one ripgrep invocation."""
+
+        roots: list[str] = []
+        for item in dirs:
+            path = Path(item)
+            if path.is_absolute():
+                resolved = _safe_resolve(path)
+                try:
+                    rel = resolved.relative_to(self.root)
+                except ValueError:
+                    return None
+                if resolved.exists():
+                    roots.append(rel.as_posix())
+                continue
+            resolved = self.root / path
+            if resolved.exists():
+                roots.append(path.as_posix())
+        if not roots:
+            return {}
+
+        cmd = ["rg", "--files"]
+        for pattern in patterns:
+            cmd.extend(["-g", pattern])
+        for part in sorted(self.skip_parts):
+            cmd.extend(["-g", f"!**/{part}/**"])
+        cmd.extend(["-g", "!experiments/results/**"])
+        cmd.extend(roots)
+        try:
+            proc = subprocess.run(
+                cmd,
+                cwd=self.root,
+                capture_output=True,
+                text=True,
+                timeout=5.0,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+        if proc.returncode not in (0, 1):
+            return None
+
+        paths: dict[str, Path] = {}
+        for raw_line in proc.stdout.splitlines():
+            if not raw_line:
+                continue
+            path = self.root / raw_line
+            if self._should_skip(path):
+                continue
+            if not path.is_file():
+                continue
+            paths[_path_key(path)] = path
+        return paths
+
     def _files_via_os_walk(
         self,
         dirs: Sequence[str | Path],
@@ -506,6 +611,43 @@ class SourceIndex:
                     dirnames[:] = [name for name in dirnames if name != "results"]
                 for filename in sorted(filenames):
                     if not fnmatch.fnmatch(filename, pattern):
+                        continue
+                    path = current / filename
+                    if self._should_skip(path):
+                        continue
+                    if not path.is_file():
+                        continue
+                    paths[_path_key(path)] = path
+        return paths
+
+    def _files_via_os_walk_many(
+        self,
+        dirs: Sequence[str | Path],
+        patterns: Sequence[str],
+    ) -> dict[str, Path]:
+        paths: dict[str, Path] = {}
+        for item in dirs:
+            base = self._resolve_dir(item)
+            if not base.exists():
+                continue
+            for dirpath, dirnames, filenames in os.walk(base):
+                dirnames[:] = sorted(
+                    name
+                    for name in dirnames
+                    if name not in self.skip_parts
+                )
+                current = Path(dirpath)
+                try:
+                    rel_current = _safe_resolve(current).relative_to(self.root)
+                except ValueError:
+                    rel_current = current
+                if rel_current.parts[:2] == ("experiments", "results"):
+                    dirnames[:] = []
+                    continue
+                if rel_current.parts == ("experiments",):
+                    dirnames[:] = [name for name in dirnames if name != "results"]
+                for filename in sorted(filenames):
+                    if not any(fnmatch.fnmatch(filename, pattern) for pattern in patterns):
                         continue
                     path = current / filename
                     if self._should_skip(path):

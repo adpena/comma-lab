@@ -1,4 +1,5 @@
 """Tests for the A1 per-pair latent sidecar resampling helper."""
+
 from __future__ import annotations
 
 import importlib.util
@@ -7,7 +8,6 @@ from pathlib import Path
 import numpy as np
 import pytest
 import torch
-
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL_PATH = REPO_ROOT / "tools" / "build_a1_per_pair_latent_correction_sidecar.py"
@@ -145,3 +145,52 @@ def test_manifest_readiness_fails_closed_for_smoke_or_no_runtime_smoke(tmp_path:
     assert out["ready_for_exact_eval_dispatch"] is False
     assert "smoke_only_not_exact_eval_ready" in out["dispatch_blockers"]
     assert "runtime_smoke_not_checked" in out["dispatch_blockers"]
+
+
+def test_ground_truth_pairs_needed_decodes_only_required_prefix() -> None:
+    tool = load_tool()
+
+    assert tool.ground_truth_pairs_needed([0, 1, 9], 600) == 10
+    assert tool.ground_truth_pairs_needed([], 600) == 0
+    with pytest.raises(ValueError, match="outside n_pairs"):
+        tool.ground_truth_pairs_needed([600], 600)
+
+
+def test_batched_pair_proxy_search_preserves_best_candidate_semantics() -> None:
+    tool = load_tool()
+
+    class Decoder(torch.nn.Module):
+        def forward(self, latents: torch.Tensor) -> torch.Tensor:
+            value = latents[:, 1].reshape(-1, 1, 1, 1)
+            return value.repeat(1, 6, 1, 1)
+
+    decoder = Decoder()
+    base_lat = torch.zeros((1, 2), dtype=torch.float32)
+    gt_eval = np.ones((2, 1, 1, 3), dtype=np.float32)
+    deltas = np.array([-1.0, 1.0], dtype=np.float32)
+
+    scalar = tool._best_pair_proxy_mse_candidate(
+        decoder=decoder,
+        base_lat=base_lat,
+        gt_eval=gt_eval,
+        eval_h=1,
+        eval_w=1,
+        deltas=deltas,
+        candidate_batch_size=1,
+    )
+    batched = tool._best_pair_proxy_mse_candidate(
+        decoder=decoder,
+        base_lat=base_lat,
+        gt_eval=gt_eval,
+        eval_h=1,
+        eval_w=1,
+        deltas=deltas,
+        candidate_batch_size=4,
+    )
+
+    assert scalar == batched
+    base_mse, best_mse, best_dim, best_didx = batched
+    assert base_mse == pytest.approx(1.0)
+    assert best_mse == pytest.approx(0.0)
+    assert best_dim == 1
+    assert best_didx == 1

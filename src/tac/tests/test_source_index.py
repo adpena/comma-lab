@@ -29,6 +29,70 @@ def test_source_index_discovers_sorted_source_files_and_skips_mirrors(tmp_path):
     assert index.stats()["file_list_hits"] == 2
 
 
+def test_source_index_files_by_pattern_matches_individual_file_lists(tmp_path):
+    _write(tmp_path / "scripts/b.sh", "#!/usr/bin/env bash\n")
+    _write(tmp_path / "scripts/a.py", "A = 1\n")
+    _write(tmp_path / "src/tac/c.py", "C = 1\n")
+    _write(tmp_path / "src/tac/d.sh", "#!/usr/bin/env bash\n")
+    _write(tmp_path / "src/tac/ignored.md", "ignored\n")
+    _write(tmp_path / "experiments/results/generated.py", "GENERATED = 1\n")
+    _write(tmp_path / "src/tac/__pycache__/cached.py", "CACHED = 1\n")
+
+    index = SourceIndex(tmp_path)
+
+    grouped = index.files_by_pattern(
+        ["scripts", "src/tac", "experiments"],
+        patterns=("*.py", "*.sh"),
+    )
+
+    assert grouped["*.py"] == index.files(
+        ["scripts", "src/tac", "experiments"],
+        pattern="*.py",
+    )
+    assert grouped["*.sh"] == index.files(
+        ["scripts", "src/tac", "experiments"],
+        pattern="*.sh",
+    )
+    assert [index.repo_relative(path) for path in grouped["*.py"]] == [
+        "scripts/a.py",
+        "src/tac/c.py",
+    ]
+    assert [index.repo_relative(path) for path in grouped["*.sh"]] == [
+        "scripts/b.sh",
+        "src/tac/d.sh",
+    ]
+    stats = index.stats()
+    assert stats["files_by_pattern_misses"] == 1
+    assert stats["file_list_hits"] == 2
+    assert stats["file_list_misses"] == 0
+
+
+def test_source_index_files_by_pattern_is_deterministic_and_cached(tmp_path):
+    _write(tmp_path / "scripts/z.sh", "#!/usr/bin/env bash\n")
+    _write(tmp_path / "scripts/a.sh", "#!/usr/bin/env bash\n")
+    _write(tmp_path / "scripts/m.py", "M = 1\n")
+    _write(tmp_path / "scripts/a.py", "A = 1\n")
+    index = SourceIndex(tmp_path)
+
+    first = index.files_by_pattern(["scripts"], patterns=("*.sh", "*.py"))
+    second = index.files_by_pattern(["scripts"], patterns=("*.sh", "*.py"))
+
+    assert first == second
+    assert [index.repo_relative(path) for path in first["*.sh"]] == [
+        "scripts/a.sh",
+        "scripts/z.sh",
+    ]
+    assert [index.repo_relative(path) for path in first["*.py"]] == [
+        "scripts/a.py",
+        "scripts/m.py",
+    ]
+    stats = index.stats()
+    assert stats["files_by_pattern_misses"] == 1
+    assert stats["files_by_pattern_hits"] == 1
+    assert stats["files_by_pattern_cache_entries"] == 1
+    assert stats["file_list_misses"] == 0
+
+
 def test_source_index_caches_text_and_ast_within_one_scan(tmp_path):
     module = tmp_path / "src/tac/module.py"
     _write(module, "VALUE = 'first.bin'\n")
