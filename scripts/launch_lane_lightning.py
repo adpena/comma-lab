@@ -125,13 +125,19 @@ def cmd_dispatch(args) -> int:
         return 1
 
     # Augment the on-disk session record with predicted-band + cost.
-    sessions = dispatcher.list_sessions()
-    for s in sessions:
-        if s.get("session_id") == info.session_id:
-            s["predicted_band"] = list(args.predicted_band)
-            s["estimated_cost_usd"] = float(args.estimated_cost or 0.0)
-            s["kill_criteria"] = args.kill_criteria
-    dispatcher._save_state(sessions)
+    # Codex round 5 HIGH 2 fix (catalog #140): pre-fix did
+    # `dispatcher.list_sessions()` then `dispatcher._save_state(sessions)`
+    # OUTSIDE any lock — concurrent register/remove rows landed between the
+    # two and were silently dropped. The new ``update_session_locked``
+    # API owns the full lock-load-mutate-save cycle so the augment
+    # is now atomic against parallel dispatch traffic.
+    def _augment(row):
+        row["predicted_band"] = list(args.predicted_band)
+        row["estimated_cost_usd"] = float(args.estimated_cost or 0.0)
+        row["kill_criteria"] = args.kill_criteria
+        return row
+
+    LightningDispatcher.update_session_locked(info.session_id, _augment)
 
     _print_json(
         {

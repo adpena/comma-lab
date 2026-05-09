@@ -39,18 +39,91 @@ build logs and CI artifacts by default.
 """
 from __future__ import annotations
 
+import contextlib
 import dataclasses
+import fcntl
 import json
 import os
 import shlex
 import subprocess
 import time
+import uuid
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 LIGHTNING_STATE = REPO_ROOT / ".omx/state/lightning_active_sessions.json"
+LIGHTNING_STATE_LOCK = LIGHTNING_STATE.with_suffix(LIGHTNING_STATE.suffix + ".lock")
+
+
+# Codex round 5 HIGH 2 fix (2026-05-09, catalog #140): track whether the
+# CURRENT process holds the lightning state lock. The lock is process-
+# advisory (``fcntl.flock`` ``LOCK_EX``); a second ``flock(LOCK_EX)`` from
+# the same process would block forever (single fd) or silently re-enter
+# (different fd) without surfacing the contract violation. We pair the
+# fcntl acquisition with an in-process counter so ``_save_state`` can
+# assert "caller holds the lock" at runtime, not just in docstrings.
+_lightning_state_lock_depth: int = 0
+
+
+def _lightning_state_lock_held() -> bool:
+    """Return True if THIS process is currently inside ``_lightning_state_lock``.
+
+    Used by ``LightningDispatcher._save_state`` to refuse writes that
+    bypass the canonical locked path. Comment-only contracts ("MUST be
+    called inside the lock") are forbidden per CLAUDE.md
+    "Comment-only contracts — FORBIDDEN".
+    """
+    return _lightning_state_lock_depth > 0
+
+
+@contextlib.contextmanager
+def _lightning_state_lock():
+    """fcntl-locked exclusive access to LIGHTNING_STATE.
+
+    Per CLAUDE.md non-negotiable + catalog #131: every shared-state write
+    must serialize on a sibling lockfile to prevent concurrent dispatchers
+    from silently dropping each other's updates. The lock is process-
+    advisory; readers under the same lock see consistent state.
+
+    Sister of `tac.continual_learning._posterior_lock` (catalog #128) and
+    `tac.vastai_tracker.register_instance` (sibling fcntl pattern).
+
+    Codex round 5 HIGH 2 fix (catalog #140): the context manager increments
+    ``_lightning_state_lock_depth`` while held so ``_save_state`` can assert
+    the caller is INSIDE this manager. Re-entry within the same process is
+    counted (depth > 1) so nested ``update_session_locked`` calls from
+    ``register_session`` / ``remove_session`` are safe; the fcntl lock is
+    only re-acquired when depth transitions 0→1 to avoid same-process
+    deadlock.
+    """
+    global _lightning_state_lock_depth
+
+    LIGHTNING_STATE_LOCK.parent.mkdir(parents=True, exist_ok=True)
+    if _lightning_state_lock_depth > 0:
+        # Already inside the lock in this process: re-enter without
+        # re-acquiring fcntl. Required so ``update_session_locked`` can
+        # be safely composed from inside ``register_session`` etc.
+        _lightning_state_lock_depth += 1
+        try:
+            yield None
+        finally:
+            _lightning_state_lock_depth -= 1
+        return
+    fd = os.open(str(LIGHTNING_STATE_LOCK), os.O_RDWR | os.O_CREAT, 0o644)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        _lightning_state_lock_depth += 1
+        try:
+            yield fd
+        finally:
+            _lightning_state_lock_depth -= 1
+    finally:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+        finally:
+            os.close(fd)
 
 
 @dataclasses.dataclass
@@ -216,14 +289,55 @@ class LightningDispatcher:
 
     @classmethod
     def _save_state(cls, sessions: list[dict[str, Any]]) -> None:
+        """Atomic write — unique tmp + fsync + os.replace.
+
+        Codex round 5 HIGH 2 fix (catalog #140): runtime-asserts the caller
+        holds ``_lightning_state_lock``. Pre-fix, this method documented
+        "MUST be called inside the lock" but did not enforce it; comment-
+        only contracts are FORBIDDEN per CLAUDE.md. ``scripts/launch_lane_lightning.py``
+        called ``list_sessions()`` then ``_save_state(sessions)`` outside
+        any lock and could silently drop concurrent register/remove writes.
+
+        Callers MUST either (a) wrap the load+mutate+save trio in
+        ``_lightning_state_lock()`` themselves OR (b) use the canonical
+        ``update_session_locked`` / ``update_sessions_locked`` API which
+        owns the full lock-load-mutate-save cycle.
+        """
+        if not _lightning_state_lock_held():
+            raise RuntimeError(
+                "LightningDispatcher._save_state called WITHOUT holding "
+                "_lightning_state_lock. This is a CONCURRENCY BUG: concurrent "
+                "register_session / remove_session calls can silently drop "
+                "rows. Use LightningDispatcher.update_session_locked(...) or "
+                "LightningDispatcher.update_sessions_locked(...) for the "
+                "load→mutate→save cycle, or wrap the call in "
+                "`with _lightning_state_lock(): ...` if a custom mutation "
+                "is required. See codex round 5 HIGH 2 fix (catalog #140)."
+            )
         LIGHTNING_STATE.parent.mkdir(parents=True, exist_ok=True)
-        LIGHTNING_STATE.write_text(json.dumps(sessions, indent=2, sort_keys=True))
+        payload = json.dumps(sessions, indent=2, sort_keys=True)
+        tmp = LIGHTNING_STATE.with_suffix(
+            LIGHTNING_STATE.suffix + f".tmp.{uuid.uuid4().hex[:12]}"
+        )
+        try:
+            tmp.write_text(payload)
+            with open(tmp, "rb") as f:
+                os.fsync(f.fileno())
+            os.replace(tmp, LIGHTNING_STATE)
+        finally:
+            if tmp.exists():
+                try:
+                    tmp.unlink()
+                except OSError:
+                    pass
 
     @classmethod
     def register_session(cls, session_meta: dict[str, Any]) -> None:
-        sessions = cls._load_state()
-        sessions.append(session_meta)
-        cls._save_state(sessions)
+        """Append session under fcntl lock — load→mutate→save is atomic."""
+        with _lightning_state_lock():
+            sessions = cls._load_state()
+            sessions.append(session_meta)
+            cls._save_state(sessions)
 
     @classmethod
     def list_sessions(cls) -> list[dict[str, Any]]:
@@ -231,12 +345,76 @@ class LightningDispatcher:
 
     @classmethod
     def remove_session(cls, session_id: str) -> bool:
-        sessions = cls._load_state()
-        new = [s for s in sessions if s.get("session_id") != session_id]
-        if len(new) == len(sessions):
-            return False
-        cls._save_state(new)
-        return True
+        """Remove session under fcntl lock — load→mutate→save is atomic."""
+        with _lightning_state_lock():
+            sessions = cls._load_state()
+            new = [s for s in sessions if s.get("session_id") != session_id]
+            if len(new) == len(sessions):
+                return False
+            cls._save_state(new)
+            return True
+
+    # ------------------------------------------------------------------
+    # Codex round 5 HIGH 2 fix (catalog #140): canonical
+    # load→mutate→save API that owns the full lock cycle.
+    # ------------------------------------------------------------------
+    @classmethod
+    def update_session_locked(
+        cls,
+        session_id: str,
+        mutator: Callable[[dict[str, Any]], dict[str, Any] | None],
+    ) -> bool:
+        """Atomically mutate ONE session under fcntl lock.
+
+        ``mutator(session_dict)`` is called INSIDE the lock with the
+        current session row; it may mutate the dict in-place AND/OR
+        return a new dict to replace the row. Returning ``None`` is
+        equivalent to returning the (possibly mutated) input dict.
+        Returning the sentinel ``False`` is reserved (use the
+        ``update_sessions_locked`` form for removals or multi-row work).
+
+        Returns ``True`` if the session_id was found and updated;
+        ``False`` if no row matched.
+
+        Closes the round-5 HIGH 2 race: pre-fix callers like
+        ``scripts/launch_lane_lightning.py`` did
+        ``sessions = dispatcher.list_sessions(); ...; dispatcher._save_state(sessions)``
+        — load and save were both outside the lock; concurrent register/remove
+        rows landed between the two and were silently dropped.
+        """
+        with _lightning_state_lock():
+            sessions = cls._load_state()
+            updated = False
+            for i, row in enumerate(sessions):
+                if row.get("session_id") == session_id:
+                    new_row = mutator(row)
+                    if new_row is not None:
+                        sessions[i] = new_row
+                    updated = True
+                    break
+            if updated:
+                cls._save_state(sessions)
+            return updated
+
+    @classmethod
+    def update_sessions_locked(
+        cls,
+        mutator: Callable[[list[dict[str, Any]]], list[dict[str, Any]]],
+    ) -> list[dict[str, Any]]:
+        """Atomically mutate the FULL session list under fcntl lock.
+
+        ``mutator(sessions)`` is called INSIDE the lock with the current
+        snapshot; it returns the new list to commit. Use this form for
+        multi-row updates, removals coordinated with adds, or any pattern
+        where ``update_session_locked`` is too narrow.
+
+        Returns the new list as committed.
+        """
+        with _lightning_state_lock():
+            sessions = cls._load_state()
+            new_sessions = mutator(sessions)
+            cls._save_state(new_sessions)
+            return new_sessions
 
     # ------------------------------------------------------------------
     # Dispatch

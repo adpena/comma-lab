@@ -92,19 +92,50 @@ class ActiveJobsCorruptError(RuntimeError):
     """
 
 
+# Codex round 5 HIGH 2 fix sister landing (catalog #140): in-process
+# lock-held depth counter. Pairs with ``_active_jobs_lock_held()`` so
+# ``_save_active_jobs`` can runtime-assert "caller holds the lock"
+# instead of relying on a comment-only contract.
+_active_jobs_lock_depth: int = 0
+
+
+def _active_jobs_lock_held() -> bool:
+    """Return True if THIS process is currently inside ``_active_jobs_lock``."""
+    return _active_jobs_lock_depth > 0
+
+
 @contextlib.contextmanager
 def _active_jobs_lock(lock_path: Path | None = None):
     """Acquire fcntl exclusive lock on the active-jobs lock file.
 
     Lock is process-advisory (``fcntl.flock`` ``LOCK_EX``); multiple
     processes contending serialize on the lock file.
+
+    Codex round 5 HIGH 2 fix sister landing (catalog #140): tracks an
+    in-process depth counter so ``_save_active_jobs`` can refuse writes
+    that bypass the canonical locked path. Re-entry within the same
+    process is counted (depth > 1); fcntl is only re-acquired on the
+    0→1 transition to avoid same-process deadlock.
     """
+    global _active_jobs_lock_depth
+
     p = lock_path or ACTIVE_JOBS_LOCK
     p.parent.mkdir(parents=True, exist_ok=True)
+    if _active_jobs_lock_depth > 0:
+        _active_jobs_lock_depth += 1
+        try:
+            yield None
+        finally:
+            _active_jobs_lock_depth -= 1
+        return
     fd = os.open(str(p), os.O_RDWR | os.O_CREAT, 0o644)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX)
-        yield fd
+        _active_jobs_lock_depth += 1
+        try:
+            yield fd
+        finally:
+            _active_jobs_lock_depth -= 1
     finally:
         try:
             fcntl.flock(fd, fcntl.LOCK_UN)
@@ -202,9 +233,20 @@ def load_active_jobs_strict(path: Path | None = None) -> list[dict[str, Any]]:
 def _save_active_jobs(rows: list[dict[str, Any]], path: Path | None = None) -> None:
     """Atomic write — unique tmp + fsync + os.replace.
 
-    MUST be called inside ``_active_jobs_lock``. The CALLER is responsible
-    for the lock; this method enforces only the unique-tmp + fsync invariants.
+    Codex round 5 HIGH 2 fix sister landing (catalog #140): runtime-asserts
+    the caller holds ``_active_jobs_lock``. Pre-fix this method documented
+    "MUST be called inside the lock" but did not enforce it; comment-only
+    contracts are FORBIDDEN per CLAUDE.md.
     """
+    if not _active_jobs_lock_held():
+        raise RuntimeError(
+            "_save_active_jobs called WITHOUT holding _active_jobs_lock. "
+            "This is a CONCURRENCY BUG: concurrent register/upsert/mark "
+            "calls can silently drop rows. Use update_active_jobs_locked / "
+            "register_job / upsert_job / mark_job_terminal which own the "
+            "full lock-load-mutate-save cycle. See codex round 5 HIGH 2 "
+            "fix (catalog #140)."
+        )
     p = path or ACTIVE_JOBS_PATH
     p.parent.mkdir(parents=True, exist_ok=True)
     payload = json.dumps(rows, indent=2) + "\n"
@@ -344,14 +386,194 @@ def mark_job_terminal(
     return update_active_jobs_locked(_mark, path=path, lock_path=lock_path)
 
 
+# ─────────────────────────────────────────────────────────────────────────
+# Codex round 6 HIGH 2 fix (catalog #143): create-pending-row-before-submit
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Lightning dispatchers previously called ``Job.run(...)`` (which CREATES
+# the paid job + bills the operator) THEN persisted the active-jobs row.
+# With round-3's strict ``register_job``, a corrupt active-jobs file →
+# paid job created but tracker write fails → invisible orphan paid job
+# (the harvester never knows).
+#
+# The canonical fix is the create-pending-row-before-submit pattern:
+#
+#   1. ``register_pending_job_locked(metadata)`` — writes a "pending" row
+#      to the tracker BEFORE submit. If the tracker is corrupt, dispatcher
+#      refuses to even attempt the paid submit.
+#   2. ``Job.run(...)`` — actually submit; bill starts here.
+#   3. ``update_pending_to_active_locked(job_name, ...)`` — promote the
+#      pending row to active with the submit result.
+#   4. On submit failure: ``cancel_pending_job_locked(job_name)`` to drop
+#      the pending row.
+#
+# A "pending" row is identical schema to an "active" row but carries
+# ``status="pending"`` and a sentinel ``submit_result={"status":"pending"}``
+# so the harvester can distinguish pending-but-never-submitted from
+# truly active jobs.
+
+PENDING_STATUS_TOKEN = "pending"
+ACTIVE_STATUS_TOKEN = "active"
+
+
+class PendingJobNotFoundError(RuntimeError):
+    """Raised when ``update_pending_to_active_locked`` or
+    ``cancel_pending_job_locked`` is asked to operate on a job_name with
+    no matching ``status=pending`` row. Defensive: catches a refactor
+    that drops the pending-row precondition.
+    """
+
+
+def register_pending_job_locked(
+    record: dict[str, Any],
+    *,
+    path: Path | None = None,
+    lock_path: Path | None = None,
+) -> list[dict[str, Any]]:
+    """Append a ``status=pending`` row BEFORE the paid submit.
+
+    Use this immediately before any paid ``Job.run(...)``. If the
+    active-jobs tracker is corrupt, this call raises
+    ``ActiveJobsCorruptError`` and the dispatcher refuses to attempt
+    the submit at all. If it succeeds, the pending row is durable
+    (fsync + atomic replace) so even a process crash mid-submit
+    leaves a forensic record the operator can inspect.
+
+    The caller MUST set a unique ``record["job_name"]`` (the
+    dispatcher's job_name); the row is keyed by it for the
+    ``update_pending_to_active_locked`` / ``cancel_pending_job_locked``
+    follow-ups.
+
+    Idempotency: if a row with the same ``job_name`` AND
+    ``status=pending`` already exists, this is a no-op (returns the
+    current state). If a row with the same ``job_name`` exists but
+    is NOT pending, this raises ``ValueError`` to refuse silently
+    overwriting a real active row.
+    """
+    job_name = record.get("job_name")
+    if not job_name:
+        raise ValueError("register_pending_job_locked: record must include 'job_name'")
+    pending_record = {**record}
+    pending_record.setdefault("status", PENDING_STATUS_TOKEN)
+    pending_record["submit_result"] = {"status": PENDING_STATUS_TOKEN}
+
+    def _append_pending(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        for r in rows:
+            if r.get("job_name") == job_name:
+                if r.get("status") == PENDING_STATUS_TOKEN:
+                    return rows  # idempotent
+                raise ValueError(
+                    f"register_pending_job_locked: refusing to overwrite "
+                    f"existing non-pending row for job_name={job_name!r} "
+                    f"(status={r.get('status')!r}). The dispatcher must "
+                    "use a unique job_name per submit attempt."
+                )
+        rows.append(pending_record)
+        return rows
+
+    return update_active_jobs_locked(_append_pending, path=path, lock_path=lock_path)
+
+
+def update_pending_to_active_locked(
+    job_name: str,
+    *,
+    submit_result: dict[str, Any],
+    extra_fields: dict[str, Any] | None = None,
+    path: Path | None = None,
+    lock_path: Path | None = None,
+) -> list[dict[str, Any]]:
+    """Promote a pending row to active after successful submit.
+
+    Replaces the pending row (matched by ``job_name``) with an active
+    row that records the actual submit_result. Raises
+    ``PendingJobNotFoundError`` if no pending row exists for ``job_name``
+    (which would indicate a refactor regression — every submit must
+    have a pending precursor).
+    """
+
+    def _promote(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        promoted = False
+        for row in rows:
+            if (
+                row.get("job_name") == job_name
+                and row.get("status") == PENDING_STATUS_TOKEN
+            ):
+                row["status"] = ACTIVE_STATUS_TOKEN
+                row["submit_result"] = submit_result
+                if extra_fields:
+                    row.update(extra_fields)
+                promoted = True
+                break
+        if not promoted:
+            raise PendingJobNotFoundError(
+                f"update_pending_to_active_locked: no pending row for "
+                f"job_name={job_name!r}. Dispatcher MUST call "
+                "`register_pending_job_locked(...)` BEFORE any paid "
+                "submit (catalog #143). If you reach here from a "
+                "refactor, the create-pending-row-before-submit pattern "
+                "was bypassed."
+            )
+        return rows
+
+    return update_active_jobs_locked(_promote, path=path, lock_path=lock_path)
+
+
+def cancel_pending_job_locked(
+    job_name: str,
+    *,
+    failure_reason: str | None = None,
+    path: Path | None = None,
+    lock_path: Path | None = None,
+) -> list[dict[str, Any]]:
+    """Drop a pending row when submit fails BEFORE billing starts.
+
+    Raises ``PendingJobNotFoundError`` if no pending row exists for
+    ``job_name`` (defensive: a cancel without a matching pending is a
+    refactor regression).
+
+    NOTE: if submit failed but we cannot tell whether billing started
+    (e.g., timeout mid-submit), the safer choice is to leave the
+    pending row in place AND mark it as ``status=failed_unknown_billing``
+    via ``update_pending_to_active_locked`` rather than cancelling.
+    Cancellation is for the unambiguous "submit raised before any
+    network call to Lightning" case.
+    """
+
+    def _cancel(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        new_rows: list[dict[str, Any]] = []
+        cancelled = False
+        for row in rows:
+            if (
+                row.get("job_name") == job_name
+                and row.get("status") == PENDING_STATUS_TOKEN
+            ):
+                cancelled = True
+                continue  # drop
+            new_rows.append(row)
+        if not cancelled:
+            raise PendingJobNotFoundError(
+                f"cancel_pending_job_locked: no pending row for "
+                f"job_name={job_name!r}; nothing to cancel."
+            )
+        return new_rows
+
+    return update_active_jobs_locked(_cancel, path=path, lock_path=lock_path)
+
+
 __all__ = [
     "ACTIVE_JOBS_PATH",
     "ACTIVE_JOBS_LOCK",
+    "ACTIVE_STATUS_TOKEN",
+    "PENDING_STATUS_TOKEN",
     "ActiveJobsCorruptError",
+    "PendingJobNotFoundError",
     "load_active_jobs",
     "load_active_jobs_strict",
     "update_active_jobs_locked",
     "register_job",
     "upsert_job",
     "mark_job_terminal",
+    "register_pending_job_locked",
+    "update_pending_to_active_locked",
+    "cancel_pending_job_locked",
 ]
