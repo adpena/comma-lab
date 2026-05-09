@@ -174,6 +174,41 @@ Observed:
 The raw artifact directory remains ignored:
 `experiments/results/a1_sidecar_resumable_codex_20260509T_local/`.
 
+## Codex follow-up local chunk 2
+
+<!-- generated_at: 2026-05-09T23:55:00Z -->
+<!-- evidence_grade: local_cpu_proxy_partial; no score claim; no remote dispatch -->
+
+Codex resumed the same ignored local artifact for another bounded chunk:
+
+```bash
+/usr/bin/time -p .venv/bin/python tools/build_a1_per_pair_latent_correction_sidecar.py \
+  --n-pairs 8 \
+  --resume-search-state \
+  --max-search-seconds 60 \
+  --runtime-smoke \
+  --runtime-smoke-pairs 1 \
+  --output-dir experiments/results/a1_sidecar_resumable_codex_20260509T_local
+```
+
+Observed:
+
+- skipped already-completed pairs `0` through `4`;
+- searched pairs `5`, `6`, and `7`;
+- elapsed `real 47.54`, `user 112.27`, `sys 2.89`;
+- choice-state SHA-256
+  `54e87167376b1be3b7a7c9d904e5cebeb0966f9a6f9026f90c8c1e1a9a5ecd74`;
+- archive SHA-256
+  `d051054806799ddd6b0715f53c7ef4d147c72736972b75a9e8c7268ebe9ebdd8`;
+- archive bytes `178316`;
+- `runtime_smoke_checked=true`;
+- `n_pairs_searched=8`;
+- `n_pairs_completed_this_run=3`;
+- `n_pairs_skipped_already_completed=5`;
+- `full_non_smoke_search=false`;
+- `ready_for_exact_eval_dispatch=false`;
+- blocker remains `non_full_sidecar_search_not_exact_eval_ready`.
+
 ## Solver Wire-In
 
 - Sensitivity-map contribution: N/A - no authoritative empirical anchor.
