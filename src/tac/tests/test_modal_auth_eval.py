@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import importlib.util
 import sys
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -58,6 +59,8 @@ def test_run_auth_eval_function_signature(mod):
     assert "archive_bytes" in sig.parameters
     assert "archive_sha256" in sig.parameters
     assert "archive_size_bytes" in sig.parameters
+    assert "submission_dir_zip_bytes" in sig.parameters
+    assert "submission_dir_zip_sha256" in sig.parameters
 
 
 def test_source_uses_literal_cuda_canonical_contest_eval() -> None:
@@ -66,9 +69,35 @@ def test_source_uses_literal_cuda_canonical_contest_eval() -> None:
     assert "experiments/contest_auth_eval.py" in text
     assert '"--device",' in text
     assert '"cuda",' in text
+    assert 'DALI_DISABLE_NVML_VALUE = "1"' in text
+    assert '"DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE' in text
+    assert 'os.environ["DALI_DISABLE_NVML"] = DALI_DISABLE_NVML_VALUE' in text
+    assert "safe_extract_zip(runtime_zip, runtime_root)" in text
+    assert "submission_dir_zip_sha256" in text
     assert '"--device", "cpu"' not in text
     assert '"/root/submission/inflate_renderer.py"' not in text
     assert "promotion_eligible\": False" in text
+
+
+def test_submission_dir_transport_zip_is_deterministic_and_filtered(mod, tmp_path):
+    submission_dir = tmp_path / "submission_dir"
+    submission_dir.mkdir()
+    (submission_dir / "inflate.sh").write_text("#!/usr/bin/env bash\npython inflate.py\n")
+    (submission_dir / "inflate.py").write_text("print('ok')\n")
+    pycache = submission_dir / "__pycache__"
+    pycache.mkdir()
+    (pycache / "inflate.cpython-311.pyc").write_bytes(b"pyc")
+    (submission_dir / ".DS_Store").write_bytes(b"junk")
+
+    first = mod._submission_dir_zip_bytes(submission_dir)
+    second = mod._submission_dir_zip_bytes(submission_dir)
+
+    assert first == second
+    zip_path = tmp_path / "transport.zip"
+    zip_path.write_bytes(first)
+    with zipfile.ZipFile(zip_path) as zf:
+        assert sorted(zf.namelist()) == ["inflate.py", "inflate.sh"]
+        assert zf.getinfo("inflate.sh").date_time == (1980, 1, 1, 0, 0, 0)
 
 
 def test_validate_contest_result_rejects_non_cuda(mod):
@@ -145,4 +174,5 @@ def test_local_request_metadata_is_non_promotable_shape(mod, tmp_path, monkeypat
     assert request["score_claim"] is False
     assert request["promotion_eligible"] is False
     assert request["adjudication_required"] is True
+    assert request["submission_dir"] is None
     assert result["promotion_eligible"] is False

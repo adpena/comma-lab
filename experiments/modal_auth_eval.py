@@ -18,9 +18,11 @@ Usage:
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import math
 import re
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -32,6 +34,7 @@ APP_NAME = "comma-auth-eval"
 REMOTE_REPO = Path("/workspace/pact")
 REMOTE_OUT = Path("/tmp/modal_auth_eval")
 REQUIRED_SAMPLES = 600
+DALI_DISABLE_NVML_VALUE = "1"
 
 app = modal.App(APP_NAME)
 
@@ -101,6 +104,7 @@ eval_image = (
     )
     .add_local_file("pyproject.toml", remote_path=str(REMOTE_REPO / "pyproject.toml"))
     .add_local_file("uv.lock", remote_path=str(REMOTE_REPO / "uv.lock"))
+    .env({"DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE})
 )
 
 
@@ -118,6 +122,25 @@ def _json_bytes(payload: dict[str, Any]) -> bytes:
 def _safe_label(value: str) -> str:
     label = re.sub(r"[^A-Za-z0-9_.-]+", "_", value).strip("._")
     return label or "archive"
+
+
+def _submission_dir_zip_bytes(submission_dir: Path) -> bytes:
+    """Return a deterministic transport zip for an uploaded runtime tree."""
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
+        for path in sorted(p for p in submission_dir.rglob("*") if p.is_file()):
+            rel = path.relative_to(submission_dir).as_posix()
+            if (
+                rel == ".DS_Store"
+                or rel.endswith(".pyc")
+                or rel.startswith("__pycache__/")
+                or "/__pycache__/" in rel
+            ):
+                continue
+            info = zipfile.ZipInfo(rel, date_time=(1980, 1, 1, 0, 0, 0))
+            info.external_attr = 0o644 << 16
+            zf.writestr(info, path.read_bytes(), compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
+    return buffer.getvalue()
 
 
 def _probe_cuda_environment() -> dict[str, Any]:
@@ -237,6 +260,8 @@ def _run_auth_eval_inner(
     archive_sha256: str,
     archive_size_bytes: int,
     inflate_sh_rel: str,
+    submission_dir_zip_bytes: bytes | None,
+    submission_dir_zip_sha256: str | None,
     inflate_timeout: int,
     evaluate_timeout: int,
 ) -> dict[str, Any]:
@@ -255,12 +280,14 @@ def _run_auth_eval_inner(
     out_dir.mkdir(parents=True, exist_ok=True)
     work_dir.mkdir(parents=True, exist_ok=True)
 
+    os.environ["DALI_DISABLE_NVML"] = DALI_DISABLE_NVML_VALUE
     preflight = _probe_cuda_environment()
     preflight.update(
         {
             "archive_sha256": archive_sha256,
             "archive_size_bytes": archive_size_bytes,
             "inflate_sh_rel": inflate_sh_rel,
+            "submission_dir_zip_sha256": submission_dir_zip_sha256,
             "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
         }
     )
@@ -318,14 +345,51 @@ def _run_auth_eval_inner(
             "artifacts": _collect_artifacts(out_dir, work_dir),
         }
 
-    inflate_sh_path = (REMOTE_REPO / inflate_sh_rel).resolve()
-    remote_repo = REMOTE_REPO.resolve()
-    if not str(inflate_sh_path).startswith(str(remote_repo) + "/"):
+    if submission_dir_zip_bytes is not None:
+        if not submission_dir_zip_sha256:
+            validation = {
+                "schema_version": 1,
+                "passed": False,
+                "returncode": 8,
+                "error": "submission_dir_zip_sha256 missing for uploaded runtime tree",
+                "score_claim": False,
+                "promotion_eligible": False,
+            }
+            (out_dir / "modal_cuda_auth_eval_validation.json").write_bytes(_json_bytes(validation))
+            return {**validation, "artifacts": _collect_artifacts(out_dir, work_dir)}
+        runtime_zip = out_dir / "submission_dir.zip"
+        runtime_root = out_dir / "submission_dir"
+        runtime_zip.write_bytes(submission_dir_zip_bytes)
+        observed_runtime_sha = _sha256_path(runtime_zip)
+        if observed_runtime_sha != submission_dir_zip_sha256:
+            validation = {
+                "schema_version": 1,
+                "passed": False,
+                "returncode": 9,
+                "error": "uploaded submission_dir.zip custody mismatch",
+                "expected_submission_dir_zip_sha256": submission_dir_zip_sha256,
+                "observed_submission_dir_zip_sha256": observed_runtime_sha,
+                "score_claim": False,
+                "promotion_eligible": False,
+            }
+            (out_dir / "modal_cuda_auth_eval_validation.json").write_bytes(_json_bytes(validation))
+            return {**validation, "artifacts": _collect_artifacts(out_dir, work_dir)}
+        from tac.submission_archive import safe_extract_zip
+
+        safe_extract_zip(runtime_zip, runtime_root)
+        inflate_sh_path = (runtime_root / inflate_sh_rel).resolve()
+        runtime_base = runtime_root.resolve()
+        runtime_base_name = "uploaded submission_dir"
+    else:
+        inflate_sh_path = (REMOTE_REPO / inflate_sh_rel).resolve()
+        runtime_base = REMOTE_REPO.resolve()
+        runtime_base_name = "remote repo"
+    if not str(inflate_sh_path).startswith(str(runtime_base) + "/") and inflate_sh_path != runtime_base:
         validation = {
             "schema_version": 1,
             "passed": False,
             "returncode": 6,
-            "error": f"inflate_sh path escapes remote repo: {inflate_sh_rel}",
+            "error": f"inflate_sh path escapes {runtime_base_name}: {inflate_sh_rel}",
             "score_claim": False,
             "promotion_eligible": False,
         }
@@ -373,6 +437,7 @@ def _run_auth_eval_inner(
         "UV_LINK_MODE": "copy",
         "UV_PROJECT_ENVIRONMENT": str(uv_env),
         "CUBLAS_WORKSPACE_CONFIG": os.environ.get("CUBLAS_WORKSPACE_CONFIG", ":4096:8"),
+        "DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE,
     }
 
     started = time.monotonic()
@@ -452,6 +517,7 @@ def _run_auth_eval_inner(
         "expected_archive_sha256": archive_sha256,
         "expected_archive_size_bytes": archive_size_bytes,
         "inflate_sh_rel": inflate_sh_rel,
+        "submission_dir_zip_sha256": submission_dir_zip_sha256,
         "validation_errors": validation_errors,
         "score_claim": bool(passed),
         "promotion_eligible": False,
@@ -502,6 +568,8 @@ def run_auth_eval(
     archive_sha256: str,
     archive_size_bytes: int,
     inflate_sh_rel: str = "submissions/robust_current/inflate.sh",
+    submission_dir_zip_bytes: bytes | None = None,
+    submission_dir_zip_sha256: str | None = None,
     inflate_timeout: int = 1800,
     evaluate_timeout: int = 1800,
 ) -> dict[str, Any]:
@@ -512,6 +580,8 @@ def run_auth_eval(
         archive_sha256=archive_sha256,
         archive_size_bytes=archive_size_bytes,
         inflate_sh_rel=inflate_sh_rel,
+        submission_dir_zip_bytes=submission_dir_zip_bytes,
+        submission_dir_zip_sha256=submission_dir_zip_sha256,
         inflate_timeout=inflate_timeout,
         evaluate_timeout=evaluate_timeout,
     )
@@ -527,6 +597,8 @@ def run_auth_eval_a100(
     archive_sha256: str,
     archive_size_bytes: int,
     inflate_sh_rel: str = "submissions/robust_current/inflate.sh",
+    submission_dir_zip_bytes: bytes | None = None,
+    submission_dir_zip_sha256: str | None = None,
     inflate_timeout: int = 1800,
     evaluate_timeout: int = 1800,
 ) -> dict[str, Any]:
@@ -537,6 +609,8 @@ def run_auth_eval_a100(
         archive_sha256=archive_sha256,
         archive_size_bytes=archive_size_bytes,
         inflate_sh_rel=inflate_sh_rel,
+        submission_dir_zip_bytes=submission_dir_zip_bytes,
+        submission_dir_zip_sha256=submission_dir_zip_sha256,
         inflate_timeout=inflate_timeout,
         evaluate_timeout=evaluate_timeout,
     )
@@ -552,6 +626,8 @@ def run_auth_eval_h100(
     archive_sha256: str,
     archive_size_bytes: int,
     inflate_sh_rel: str = "submissions/robust_current/inflate.sh",
+    submission_dir_zip_bytes: bytes | None = None,
+    submission_dir_zip_sha256: str | None = None,
     inflate_timeout: int = 1800,
     evaluate_timeout: int = 1800,
 ) -> dict[str, Any]:
@@ -562,6 +638,8 @@ def run_auth_eval_h100(
         archive_sha256=archive_sha256,
         archive_size_bytes=archive_size_bytes,
         inflate_sh_rel=inflate_sh_rel,
+        submission_dir_zip_bytes=submission_dir_zip_bytes,
+        submission_dir_zip_sha256=submission_dir_zip_sha256,
         inflate_timeout=inflate_timeout,
         evaluate_timeout=evaluate_timeout,
     )
@@ -572,6 +650,7 @@ def main(
     archive: str = "/tmp/modal_submission/archive.zip",
     output_dir: str = "",
     inflate_sh: str = "submissions/robust_current/inflate.sh",
+    submission_dir: str = "",
     gpu: str = "T4",
     inflate_timeout: int = 1800,
     evaluate_timeout: int = 1800,
@@ -585,18 +664,44 @@ def main(
     archive_bytes = archive_path.read_bytes()
     archive_sha256 = _sha256_bytes(archive_bytes)
     archive_size_bytes = len(archive_bytes)
+    submission_dir_zip: bytes | None = None
+    submission_dir_zip_sha256: str | None = None
+    submission_dir_path = Path(submission_dir).resolve() if submission_dir else None
     inflate_sh_path = Path(inflate_sh)
-    if inflate_sh_path.is_absolute():
-        try:
-            inflate_sh_rel = str(inflate_sh_path.resolve().relative_to(Path.cwd().resolve()))
-        except ValueError as exc:
+    if submission_dir_path is not None:
+        if not submission_dir_path.is_dir():
+            raise SystemExit(f"FATAL: --submission-dir is not a directory: {submission_dir_path}")
+        if inflate_sh_path.is_absolute():
+            try:
+                inflate_sh_rel = str(inflate_sh_path.resolve().relative_to(submission_dir_path))
+            except ValueError as exc:
+                raise SystemExit(
+                    "FATAL: absolute --inflate-sh must be inside --submission-dir "
+                    f"when uploading a runtime tree: {inflate_sh_path}"
+                ) from exc
+        else:
+            inflate_sh_rel = str(inflate_sh_path)
+        if ".." in Path(inflate_sh_rel).parts:
+            raise SystemExit(f"FATAL: --inflate-sh must not contain parent traversal: {inflate_sh_rel}")
+        if not (submission_dir_path / inflate_sh_rel).is_file():
             raise SystemExit(
-                f"FATAL: --inflate-sh must be relative to repo root or inside it: {inflate_sh_path}"
-            ) from exc
+                f"FATAL: --inflate-sh {inflate_sh_rel!r} not found under --submission-dir "
+                f"{submission_dir_path}"
+            )
+        submission_dir_zip = _submission_dir_zip_bytes(submission_dir_path)
+        submission_dir_zip_sha256 = _sha256_bytes(submission_dir_zip)
     else:
-        inflate_sh_rel = str(inflate_sh_path)
-    if ".." in Path(inflate_sh_rel).parts:
-        raise SystemExit(f"FATAL: --inflate-sh must not contain parent traversal: {inflate_sh_rel}")
+        if inflate_sh_path.is_absolute():
+            try:
+                inflate_sh_rel = str(inflate_sh_path.resolve().relative_to(Path.cwd().resolve()))
+            except ValueError as exc:
+                raise SystemExit(
+                    f"FATAL: --inflate-sh must be relative to repo root or inside it: {inflate_sh_path}"
+                ) from exc
+        else:
+            inflate_sh_rel = str(inflate_sh_path)
+        if ".." in Path(inflate_sh_rel).parts:
+            raise SystemExit(f"FATAL: --inflate-sh must not contain parent traversal: {inflate_sh_rel}")
     label = _safe_label(archive_path.stem)
     out_dir = (
         Path(output_dir).resolve()
@@ -613,6 +718,8 @@ def main(
         "archive_sha256": archive_sha256,
         "archive_size_bytes": archive_size_bytes,
         "inflate_sh": inflate_sh_rel,
+        "submission_dir": str(submission_dir_path) if submission_dir_path else None,
+        "submission_dir_zip_sha256": submission_dir_zip_sha256,
         "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
         "score_claim": False,
         "promotion_eligible": False,
@@ -639,6 +746,8 @@ def main(
         archive_sha256,
         archive_size_bytes,
         inflate_sh_rel,
+        submission_dir_zip,
+        submission_dir_zip_sha256,
         int(inflate_timeout),
         int(evaluate_timeout),
     )

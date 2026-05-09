@@ -57,6 +57,12 @@ coverage: `src/tac/tests/test_modal_phase_a1_score_gradient_pr101.py` and
 `tests/test_modal_phase_a1_recover_paths.py`. The existing CPU-positive archive
 still needs a fresh paired `[contest-CUDA]` eval before internal promotion.
 
+The generic Modal CUDA auth-eval wrapper now supports uploaded
+`--submission-dir` runtime trees, extracted fail-closed with
+`safe_extract_zip`, so exact CUDA eval can target candidate-specific
+`inflate.sh` packets like the A1 harvested archive without hard-mounting every
+experiment-result path into the Modal image.
+
 ## 2026-05-08 (evening) — Recursive hardening + Phase A ablation pass
 
 **Headline:** 11 STRICT/warn preflight gates landed, ~395 violations
