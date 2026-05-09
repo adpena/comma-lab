@@ -26372,13 +26372,14 @@ def _lane_has_field(lane: dict, field: str) -> bool:
       - lane[field] (top-level)
       - lane["evidence"][field] (under an 'evidence' dict)
       - lane["design_evidence"][field] (under a 'design_evidence' dict)
-      - any gate's "evidence" string contains the field name as a token
-        prefix (e.g. ``archive_grammar=monolithic_single_file_0_bin``).
+      - any gate's "evidence" string contains ``<field>=`` or ``<field>:``
+      - lane["notes"] string contains ``<field>=`` or ``<field>:``
 
-    The third + fourth forms exist so subagents can declare design-time
-    evidence either as structured top-level fields OR as an inline note
-    inside an existing gate's evidence string. Per CLAUDE.md "Beauty,
-    simplicity, and developer experience": accept either ergonomic.
+    The latter forms exist so subagents can declare design-time evidence
+    either as structured top-level fields OR as an inline note inside an
+    existing gate's evidence string OR inside the lane's notes blob. Per
+    CLAUDE.md "Beauty, simplicity, and developer experience": accept either
+    ergonomic.
     """
     # Top-level
     if field in lane and lane[field] not in (None, ""):
@@ -26391,6 +26392,11 @@ def _lane_has_field(lane: dict, field: str) -> bool:
     dev = lane.get("design_evidence")
     if isinstance(dev, dict) and field in dev and dev[field] not in (None, ""):
         return True
+    # Inline-string declaration in notes (sister of gate-evidence scan)
+    notes = lane.get("notes", "")
+    if isinstance(notes, str):
+        if (field + "=") in notes or (field + ":") in notes:
+            return True
     # Gate evidence-string scan: look for `<field>=` or `<field>:`
     gates = lane.get("gates", {})
     if isinstance(gates, dict):
@@ -26437,6 +26443,7 @@ def check_representation_lane_has_archive_grammar_at_design_time(
       - under ``lane["evidence"][field]``
       - under ``lane["design_evidence"][field]``
       - inline inside a gate's evidence string as ``<field>=`` / ``<field>:``
+      - inline inside the lane's ``notes`` string as ``<field>=`` / ``<field>:``
 
     Bug class: leaderboard HNeRV won not by architectural novelty but by
     binding ARCHITECTURE + SCORE-AWARE TRAINING + ARCHIVE GRAMMAR + INFLATE
