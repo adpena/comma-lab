@@ -142,7 +142,10 @@ reactivation criteria documented per memo.
   advisory negative because SegNet rises to `0.00074546`. The tighter
   q6-low25 schedule validates the schedule-readiness path but fails the byte
   gate at `178,978 B` (`3056e676...`), larger than PR101 brotli; no scorer
-  eval was run.
+  eval was run. The tightened q6-low45 boundary is the first tested q6 scalar
+  trust split that beats the byte gate (`178,138 B`, `dd725682...`) and improves
+  the advisory score to **0.211299** (`pose=0.00004048`, `seg=0.00072565`), but
+  it remains SegNet-limited and non-promotable.
 - Cross-paradigm ADMM × Op1 finalizer — byte-closed `153,513 B` archive
   (`7bbba307...`) now has a local macOS CPU advisory result:
   **0.328444** (`pose=0.00014180`, `seg=0.00188570`). Rate improves, but

@@ -46,6 +46,78 @@
     {
       "classification": "generated_custody_source_untracked",
       "disposition": "ignore_rebuildable",
+      "note": "exact: A5 q6 trust-region packet entrypoint is raw rebuildable custody; canonical signal is in reports/a5_score_marginal_trust_region_q6_low0p35_20260509.json and .omx/research/a5_trust_q6_low45_macos_advisory_negative_20260509_codex.md.",
+      "path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p35_20260509_codex/packet/inflate.py"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_rebuildable",
+      "note": "exact: A5 q6 trust-region packet entrypoint is raw rebuildable custody; canonical signal is in reports/a5_score_marginal_trust_region_q6_low0p35_20260509.json and .omx/research/a5_trust_q6_low45_macos_advisory_negative_20260509_codex.md.",
+      "path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p35_20260509_codex/packet/inflate.sh"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_rebuildable",
+      "note": "exact: A5 q6 trust-region packet entrypoint is raw rebuildable custody; canonical signal is in reports/a5_score_marginal_trust_region_q6_low0p40_20260509.json and .omx/research/a5_trust_q6_low45_macos_advisory_negative_20260509_codex.md.",
+      "path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p40_20260509_codex/packet/inflate.py"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_rebuildable",
+      "note": "exact: A5 q6 trust-region packet entrypoint is raw rebuildable custody; canonical signal is in reports/a5_score_marginal_trust_region_q6_low0p40_20260509.json and .omx/research/a5_trust_q6_low45_macos_advisory_negative_20260509_codex.md.",
+      "path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p40_20260509_codex/packet/inflate.sh"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_rebuildable",
+      "note": "exact: A5 q6 trust-region packet entrypoint is raw rebuildable custody; canonical signal is in reports/a5_score_marginal_trust_region_q6_low0p4467_20260509.json and .omx/research/a5_trust_q6_low45_macos_advisory_negative_20260509_codex.md.",
+      "path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p4467_20260509_codex/packet/inflate.py"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_rebuildable",
+      "note": "exact: A5 q6 trust-region packet entrypoint is raw rebuildable custody; canonical signal is in reports/a5_score_marginal_trust_region_q6_low0p4467_20260509.json and .omx/research/a5_trust_q6_low45_macos_advisory_negative_20260509_codex.md.",
+      "path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p4467_20260509_codex/packet/inflate.sh"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_rebuildable",
+      "note": "exact: A5 q6 trust-region packet entrypoint is raw rebuildable custody; canonical signal is in reports/a5_score_marginal_trust_region_q6_low0p4484_20260509.json and .omx/research/a5_trust_q6_low45_macos_advisory_negative_20260509_codex.md.",
+      "path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p4484_20260509_codex/packet/inflate.py"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_rebuildable",
+      "note": "exact: A5 q6 trust-region packet entrypoint is raw rebuildable custody; canonical signal is in reports/a5_score_marginal_trust_region_q6_low0p4484_20260509.json and .omx/research/a5_trust_q6_low45_macos_advisory_negative_20260509_codex.md.",
+      "path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p4484_20260509_codex/packet/inflate.sh"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_rebuildable",
+      "note": "exact: A5 q6 trust-region packet entrypoint is raw rebuildable custody; canonical signal is in reports/a5_score_marginal_trust_region_q6_low0p45_20260509.json and .omx/research/a5_trust_q6_low45_macos_advisory_negative_20260509_codex.md.",
+      "path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p45_20260509_codex/packet/inflate.py"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_rebuildable",
+      "note": "exact: A5 q6 trust-region packet entrypoint is raw rebuildable custody; canonical signal is in reports/a5_score_marginal_trust_region_q6_low0p45_20260509.json and .omx/research/a5_trust_q6_low45_macos_advisory_negative_20260509_codex.md.",
+      "path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p45_20260509_codex/packet/inflate.sh"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_rebuildable",
+      "note": "exact: A5 q6 trust-region packet entrypoint is raw rebuildable custody; canonical signal is in reports/a5_score_marginal_trust_region_q6_low0p47_20260509.json and .omx/research/a5_trust_q6_low45_macos_advisory_negative_20260509_codex.md.",
+      "path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p47_20260509_codex/packet/inflate.py"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_rebuildable",
+      "note": "exact: A5 q6 trust-region packet entrypoint is raw rebuildable custody; canonical signal is in reports/a5_score_marginal_trust_region_q6_low0p47_20260509.json and .omx/research/a5_trust_q6_low45_macos_advisory_negative_20260509_codex.md.",
+      "path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p47_20260509_codex/packet/inflate.sh"
+    },
+    {
+      "classification": "generated_custody_source_untracked",
+      "disposition": "ignore_rebuildable",
       "note": "prefix: local output trees are raw rebuildable custody; canonicalize useful signal into tracked ledgers before cleanup.",
       "path": "outputs/",
       "path_kind": "prefix"

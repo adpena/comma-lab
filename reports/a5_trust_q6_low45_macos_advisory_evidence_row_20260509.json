@@ -1,0 +1,37 @@
+{
+  "archive_rate_ratio": 0.004744591287651094,
+  "archive_sha256": "dd725682e8dca781c908f826c117395c39cdffeba4ec2525f7799839eda3bfde",
+  "auth_eval_json": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p45_20260509_codex/contest_auth_eval.macos_cpu_advisory.json",
+  "contest_dispatch_verdict": "proxy_or_non_cuda_review_only",
+  "dispatch_blockers": [
+    "non_exact_cuda_review_packet_not_promotable"
+  ],
+  "dispatch_claim_latest_status": "completed_advisory_negative",
+  "dispatch_claim_terminal_status_recorded": true,
+  "empirical_archive_bytes": 178138,
+  "empirical_score": 0.21129939214393487,
+  "evidence_grade": "[non-CUDA review]",
+  "exact_result_review_packet": ".omx/research/artifacts/a5_trust_q6_low45_result_review_20260509_codex.json",
+  "falsification_scope": "none",
+  "family_falsified": false,
+  "job_name": "local:a5-trust-q6-low45-macos-cpu-20260509T013140Z",
+  "lane_id": "a5_trust_q6_low45_macos_cpu_advisory",
+  "measured_config_status": "proxy_or_non_cuda_review_only",
+  "method_family_retired": false,
+  "posenet_distortion": 4.048e-05,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "rate": 0.11861478219127736,
+  "rate_term": 0.11861478219127736,
+  "reactivation_criteria": [
+    "tighten q-bit trust region with SegNet-boundary or component marginal evidence; q6-low45 improves q6-low50 but still raises SegNet",
+    "run exact contest-CUDA and contest-CPU only after advisory score is competitive with PR101/PR107 anchors and a lane claim is active"
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "score_claim": false,
+  "score_contest_cuda": null,
+  "segnet_distortion": 0.00072565,
+  "source": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p45_20260509_codex/contest_auth_eval.macos_cpu_advisory.json reviewed_by=.omx/research/artifacts/a5_trust_q6_low45_result_review_20260509_codex.json",
+  "technique": "a5_score_marginal_trust_region_q6_low45",
+  "timestamp": "2026-05-09T01:40:00Z"
+}

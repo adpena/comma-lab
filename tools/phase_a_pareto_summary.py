@@ -235,6 +235,7 @@ def parse_manifest(manifest_path: Path) -> PhaseAEntry | None:
         entry.notes.append(
             "eta=4 complexity runtime packet collapsed on macOS CPU advisory; "
             "q6-low50 trust schedule scored 0.213365 advisory, still SegNet-limited; "
+            "q6-low45 improved to 0.211299 advisory but remains SegNet-limited; "
             "q6-low25 failed byte gate at 178,978 B"
         )
     if lane == "Cross_paradigm_ADMM_x_Op1":
@@ -423,8 +424,10 @@ def render_markdown(entries: list[PhaseAEntry]) -> str:
         "changed score-domain or SegNet-boundary-aware allocation before new exact-eval "
         "spend. A5 now has q-bits-json packet custody; q6-low50 improved over "
         "the catastrophic eta=4 collapse but still scored 0.213365 advisory "
-        "because SegNet rose to 0.00074546; q6-low25 then failed the byte gate "
-        "at 178,978 B, so the current scalar trust schedules bracket a dead zone.",
+        "because SegNet rose to 0.00074546. q6-low45 is the first tested byte-gate "
+        "pass at 178,138 B and improves to 0.211299 advisory, but still remains "
+        "SegNet-limited; q6-low25 then failed the byte gate at 178,978 B, so the "
+        "current scalar trust schedules bracket a dead zone.",
         "",
         "## Open lanes",
         "",
@@ -441,9 +444,9 @@ def render_markdown(entries: list[PhaseAEntry]) -> str:
         "- A5 (frame-conditional bit budget): runtime side-info path landed, but "
         "the eta=4 complexity schedule is retired after advisory collapse. The "
         "packet builder can now consume a per-pair score-marginal q-bit manifest; "
-        "q6-low50 is retired after advisory score 0.213365 and q6-low25 is "
-        "retired because it is byte-larger than PR101 brotli. Next variant needs "
-        "a SegNet-boundary-aware q-bit allocation, not another scalar trust split.",
+        "q6-low45 is the current scalar trust boundary (178,138 B, advisory "
+        "0.211299) but remains worse than PR101/PR107. Next variant needs a "
+        "SegNet-boundary-aware q-bit allocation, not another scalar trust split.",
         "- Cross-paradigm ADMM x Op1: measured config retired after macOS CPU "
         "advisory SegNet collapse; next variant needs lower-distortion trust region "
         "or scorer-aware allocation.",
