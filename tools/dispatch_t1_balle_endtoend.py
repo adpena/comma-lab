@@ -8,8 +8,9 @@ parallel actuator that consumes its output. T1's actuator is THIS file.
 Pipeline
 --------
 
-1. Dry-run planning for the Phase 1 scaffold. Real provider launch is refused
-   until Phase 2 lands a contest-hermetic runtime/export contract.
+1. Dry-run scaffold planning only. Real provider launch is refused until Phase
+   2 lands scorer-domain training plus a contest-hermetic runtime/export
+   contract.
 2. Cost gate: $80 hard cap (operator-allocated for T1 per Phase 2 council
    memo §1 EIG/$ ranking).
 3. Choose provider:
@@ -41,7 +42,7 @@ CLAUDE.md compliance
 Exit codes
 ----------
 
-0 = dry-run plan written; no provider job was created.
+0 = scaffold plan written; no provider job was created.
 1 = pre-dispatch validation failed (cost cap, claim refused, etc.).
 2 = non-dry-run refused; no GPU spend incurred and no lane claim written.
 """
@@ -60,6 +61,12 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 LANE_ID = "t1_balle_128k_endtoend"
 SCAFFOLD_VERSION_REL = "src/tac/paradigm_delta_epsilon_zeta/__init__.py"
+DEFAULT_VASTAI_DISK_GB = 60
+SCAFFOLD_PLAN_STATUS = "refused_dispatch_phase1_scaffold_only"
+SCAFFOLD_PLAN_REASON = (
+    "phase1_scaffold_only_no_provider_job_no_gpu_work_no_auth_eval; "
+    "blocked_by_noop_scorer_loss_synthetic_smoke_and_non_hermetic_runtime"
+)
 
 
 HOURLY_RATES = {
@@ -95,6 +102,7 @@ class DispatchPlan:
     estimated_cost_usd: float
     output_dir: Path
     epochs: int
+    vastai_disk_gb: int
 
 
 def hourly_rate(provider: str, gpu_tier: str) -> float:
@@ -132,8 +140,11 @@ def claim_lane(
         "--platform", provider,
         "--instance-job-id", instance_or_job_id,
         "--agent", agent,
-        "--status", "active_dispatching",
-        "--notes", "T1 Phase 1 end-to-end Balle hyperprior + 128K decoder",
+        "--status", SCAFFOLD_PLAN_STATUS,
+        "--notes", (
+            "T1 Phase 1 scaffold plan only; no provider job created; "
+            "no GPU work; no score claim"
+        ),
     ]
     if dry_run:
         cmd.append("--dry-run")
@@ -153,11 +164,18 @@ def write_dispatch_metadata(plan: DispatchPlan, *, extra: dict) -> Path:
         "cost_cap_usd": plan.cost_cap_usd,
         "estimated_cost_usd": plan.estimated_cost_usd,
         "epochs": plan.epochs,
-        "dispatched_at_utc": utc_stamp(),
-        "score_band": "[predicted; Phase 1 scaffold; not yet empirical]",
+        "planned_at_utc": utc_stamp(),
+        "dispatched_at_utc": None,
+        "dispatch_status": SCAFFOLD_PLAN_STATUS,
+        "dispatch_reason": SCAFFOLD_PLAN_REASON,
+        "provider_job_created": False,
+        "gpu_work_created": False,
+        "auth_eval_created": False,
+        "score_claim": False,
+        "score_band": "[scaffold-plan only; Phase 1 not empirical]",
         **extra,
     }
-    path = plan.output_dir / f"{plan.provider}_metadata.json"
+    path = plan.output_dir / f"{plan.provider}_scaffold_plan.json"
     path.write_text(json.dumps(meta, indent=2))
     print(f"[t1-dispatch] wrote {path}")
     return path
@@ -178,25 +196,25 @@ def build_remote_command(plan: DispatchPlan) -> list[str]:
 
 
 def dispatch_modal(plan: DispatchPlan, *, dry_run: bool) -> int:
-    """Modal .spawn() dispatcher (writes modal_metadata.json + queues harvest).
+    """Modal scaffold-plan writer; never spawns a provider job in Phase 1.
 
     Phase 1 NOTE: this is the build-only scaffold. The Modal app definition
-    lives elsewhere (existing infra under ``experiments/modal_*.py``); this
-    dispatcher only writes the metadata file the harvester needs.
+    lives elsewhere (existing infra under ``experiments/modal_*.py``). This
+    dispatcher deliberately writes a *_scaffold_plan.json file, not
+    modal_metadata.json, so harvesters do not treat it as real GPU work.
     """
     metadata_extra = {
         "modal_app_name": "comma-t1-balle-endtoend",
-        "modal_dispatch_command": shlex.join(build_remote_command(plan)),
-        "harvester_path": "tools/harvest_modal_calls.py",
-        "harvester_invocation": (
-            "python tools/harvest_modal_calls.py "
-            f"--metadata {plan.output_dir}/modal_metadata.json"
-        ),
+        "modal_spawn_status": SCAFFOLD_PLAN_STATUS,
+        "modal_call_id": None,
+        "remote_command_template_only": shlex.join(build_remote_command(plan)),
+        "harvester_path": None,
+        "harvester_invocation": None,
     }
     if not dry_run:
         print("[t1-dispatch] FATAL: non-dry-run Modal dispatch should have been refused")
         return 2
-    metadata_extra["call_id"] = "PENDING_MODAL_SPAWN" if not dry_run else "DRY_RUN"
+    metadata_extra["call_id"] = None
     write_dispatch_metadata(plan, extra=metadata_extra)
     return 0
 
@@ -204,7 +222,7 @@ def dispatch_modal(plan: DispatchPlan, *, dry_run: bool) -> int:
 def dispatch_vastai(plan: DispatchPlan, *, dry_run: bool) -> int:
     """Vast.ai dry-run metadata writer.
 
-    Phase 1 NOTE: actual ``vastai create instance`` requires the operator's
+    Phase 1 NOTE: actual ``vastai create instance --disk 60`` requires the operator's
     API key + active credit. Per AGENTS.md "Never invent CLI flags", this
     scaffold does not print a provider command unless that command has been
     inspected and wired in a future non-dry-run implementation.
@@ -212,18 +230,20 @@ def dispatch_vastai(plan: DispatchPlan, *, dry_run: bool) -> int:
     label = f"t1_balle_endtoend_{utc_compact_stamp()}"
     metadata_extra = {
         "vastai_label": label,
+        "vastai_required_disk_gb": int(plan.vastai_disk_gb),
+        "vastai_required_create_flags": ["--disk", str(int(plan.vastai_disk_gb)), "--label", label],
         "vastai_create_command": None,
         "vastai_create_command_status": (
-            "not_emitted_phase1_dry_run; inspect current Vast.ai CLI help "
-            "before adding a non-dry-run actuator"
+            "refused_phase1_scaffold_only; inspect current Vast.ai CLI help "
+            "only after scorer/runtime blockers close"
         ),
-        "vastai_remote_command": shlex.join(build_remote_command(plan)),
+        "vastai_remote_command_template_only": shlex.join(build_remote_command(plan)),
         "active_instances_path": ".omx/state/vastai_active_instances.json",
     }
     if not dry_run:
         print("[t1-dispatch] FATAL: non-dry-run Vast.ai dispatch should have been refused")
         return 2
-    metadata_extra["instance_id"] = "DRY_RUN"
+    metadata_extra["instance_id"] = None
     write_dispatch_metadata(plan, extra=metadata_extra)
     return 0
 
@@ -258,9 +278,19 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--vastai-disk-gb",
+        type=int,
+        default=DEFAULT_VASTAI_DISK_GB,
+        help=(
+            "Required Vast.ai disk allocation for any future non-dry-run actuator. "
+            "Values below 60 fail closed because chain evals have exceeded the "
+            "provider default disk size."
+        ),
+    )
+    parser.add_argument(
         "--output-dir", type=Path,
-        default=REPO_ROOT / "experiments" / "results" / "t1_balle_endtoend_dispatched",
-        help="Where to write dispatch metadata (modal_metadata.json etc).",
+        default=REPO_ROOT / "experiments" / "results" / "t1_balle_endtoend_scaffold_plan",
+        help="Where to write scaffold-plan metadata. No provider job is created.",
     )
     parser.add_argument(
         "--agent", default=os.environ.get("SUBAGENT_LABEL", "claude-opus-4.7-1m"),
@@ -296,26 +326,34 @@ def main() -> int:
         estimated_cost_usd=est,
         output_dir=args.output_dir,
         epochs=args.epochs,
+        vastai_disk_gb=args.vastai_disk_gb,
     )
     print(f"[t1-dispatch] estimated cost: ${est:.2f} (cap: ${args.cost_cap_usd:.2f})")
     if est > args.cost_cap_usd:
         print(f"[t1-dispatch] FATAL: estimated cost ${est:.2f} > cap ${args.cost_cap_usd:.2f}")
         return 1
+    if args.provider == "vastai" and args.vastai_disk_gb < DEFAULT_VASTAI_DISK_GB:
+        print(
+            "[t1-dispatch] FATAL: Vast.ai dispatch requires "
+            f"--vastai-disk-gb >= {DEFAULT_VASTAI_DISK_GB}; "
+            "the provider default disk has failed chain evals."
+        )
+        return 1
 
     if not args.dry_run:
         print(
-            "[t1-dispatch] FATAL: T1 Phase 1 is research_only_no_export. "
-            "This dispatcher is dry-run only until Phase 2 closes archive "
-            "grammar, hermetic inflate, and exact-eval custody. No lane claim "
-            "was written."
+            "[t1-dispatch] FATAL: T1 Phase 1 is scaffold-only. This "
+            "dispatcher writes dry-run scaffold plans only until Phase 2 "
+            "closes scorer loss, hermetic inflate, and exact-eval custody. "
+            "No lane claim or provider job was created."
         )
         return 2
 
-    # Dry-run claim preview only. Real dispatch must claim with the actual
-    # provider job id after provider creation succeeds.
+    # Dry-run refused-dispatch preview only. Real dispatch must claim with the
+    # actual provider job id after the scaffold graduates from Phase 1.
     if not args.skip_claim:
         instance_or_job_id = (
-            f"{args.provider}_pending_{utc_compact_stamp()}"
+            f"{args.provider}_scaffold_plan_{utc_compact_stamp()}"
         )
         rc = claim_lane(
             provider=args.provider,

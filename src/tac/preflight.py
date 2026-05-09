@@ -55,6 +55,7 @@ import torch
 
 DEFAULT_PREFLIGHT_CLI_TIMEOUT_S = 30.0
 _PREFLIGHT_CACHE_SCHEMA = "pact.preflight_cache.v1"
+_PREFLIGHT_ALL_CLEAN_CACHE_VERSION = "preflight_all_clean.v1"
 
 
 def _preflight_cache_path(root: Path, name: str) -> Path:
@@ -134,6 +135,112 @@ def _fingerprint_paths(paths: tuple[Path, ...], root: Path, *, salt: str) -> str
         digest.update(str(stat.st_mtime_ns).encode())
         digest.update(b"\n")
     return digest.hexdigest()
+
+
+def _preflight_all_fingerprint_paths(root: Path) -> tuple[Path, ...]:
+    """Return files whose unchanged metadata can reuse a clean full preflight.
+
+    This deliberately covers the repo source/control plane, not raw ignored
+    experiment payloads. Raw provider logs and rebuildable result blobs are not
+    durable codebase preflight inputs; promoted signal must be canonicalized
+    into tracked source, docs, `.omx/research`, or small state manifests.
+    """
+
+    include_globs = (
+        "*.py",
+        "*.sh",
+        "*.md",
+        "*.json",
+        "*.yaml",
+        "*.yml",
+        "*.toml",
+        "*.txt",
+    )
+    exclude_globs = (
+        ".venv/**",
+        ".omx/cache/**",
+        "__pycache__/**",
+        "experiments/results/**",
+        "reports/raw/**",
+        "reports/private/**",
+    )
+    paths = set(
+        _rg_file_list(
+            root,
+            ["."],
+            include_globs,
+            exclude_globs=exclude_globs,
+        )
+        or ()
+    )
+    for pattern in (
+        ".omx/research/*.md",
+        ".omx/state/*.json",
+        ".omx/state/*.yaml",
+        ".omx/state/*.yml",
+        "reports/latest.md",
+        "reports/silent_defaults.md",
+    ):
+        paths.update(path for path in root.glob(pattern) if path.is_file())
+    return tuple(sorted(paths, key=lambda item: item.as_posix()))
+
+
+def _preflight_all_clean_cache_hit(
+    root: Path,
+    *,
+    profile_name: str | None,
+    tto_frames_path: str | Path | None,
+    gt_poses_path: str | Path | None,
+    masks_path: str | Path | None,
+    renderer_path: str | Path | None,
+    archive_path: str | Path | None,
+) -> tuple[bool, str, tuple[Path, ...]]:
+    """Return whether the current codebase has an unchanged clean preflight."""
+
+    paths = _preflight_all_fingerprint_paths(root)
+    fingerprint = _fingerprint_paths(
+        paths,
+        root,
+        salt=_PREFLIGHT_ALL_CLEAN_CACHE_VERSION,
+    )
+    key_payload = {
+        "profile_name": profile_name,
+        "tto_frames_path": str(tto_frames_path) if tto_frames_path else None,
+        "gt_poses_path": str(gt_poses_path) if gt_poses_path else None,
+        "masks_path": str(masks_path) if masks_path else None,
+        "renderer_path": str(renderer_path) if renderer_path else None,
+        "archive_path": str(archive_path) if archive_path else None,
+    }
+    cache_key = hashlib.sha256(
+        json.dumps(key_payload, sort_keys=True).encode()
+    ).hexdigest()
+    cache_rows = _load_preflight_cache(root, "preflight_all_clean")
+    row = cache_rows.get(cache_key)
+    hit = (
+        isinstance(row, dict)
+        and row.get("version") == _PREFLIGHT_ALL_CLEAN_CACHE_VERSION
+        and row.get("fingerprint") == fingerprint
+    )
+    return hit, cache_key + ":" + fingerprint, paths
+
+
+def _store_preflight_all_clean_cache(
+    root: Path,
+    *,
+    cache_token: str,
+    paths: tuple[Path, ...],
+) -> None:
+    """Record a clean full preflight for the current source/state fingerprint."""
+
+    cache_key, fingerprint = cache_token.split(":", 1)
+    rows = _load_preflight_cache(root, "preflight_all_clean")
+    rows[cache_key] = {
+        "version": _PREFLIGHT_ALL_CLEAN_CACHE_VERSION,
+        "fingerprint": fingerprint,
+        "path_count": len(paths),
+        "stored_at_unix": int(time.time()),
+    }
+    _store_preflight_cache(root, "preflight_all_clean", rows)
 
 
 def _rg_file_list(
@@ -289,9 +396,17 @@ class PreflightTimeoutError(PreflightError):
 class _ParallelPreflightRunner:
     """Run independent preflight checks concurrently while preserving fail sites."""
 
-    def __init__(self, *, enabled: bool, verbose: bool, max_workers: int = 8) -> None:
+    def __init__(
+        self,
+        *,
+        enabled: bool,
+        verbose: bool,
+        max_workers: int | None = None,
+    ) -> None:
         self.enabled = enabled
         self.verbose = verbose
+        if max_workers is None:
+            max_workers = 8
         self.max_workers = max_workers
         self._executor: ThreadPoolExecutor | None = (
             ThreadPoolExecutor(
@@ -681,6 +796,41 @@ def preflight_all(
                 _fs_cache_wrapped=True,
             )
         return
+
+    codebase_cache_token: str | None = None
+    codebase_cache_paths: tuple[Path, ...] = ()
+    if (
+        check_codebase
+        and os.environ.get("PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE") != "1"
+        and not any(
+            [
+                profile_name,
+                tto_frames_path,
+                gt_poses_path,
+                masks_path,
+                renderer_path,
+                archive_path,
+            ]
+        )
+    ):
+        cache_hit, codebase_cache_token, codebase_cache_paths = (
+            _preflight_all_clean_cache_hit(
+                REPO_ROOT,
+                profile_name=profile_name,
+                tto_frames_path=tto_frames_path,
+                gt_poses_path=gt_poses_path,
+                masks_path=masks_path,
+                renderer_path=renderer_path,
+                archive_path=archive_path,
+            )
+        )
+        if cache_hit:
+            if verbose:
+                print(
+                    "  [preflight-all-cache] OK: cached clean full preflight "
+                    f"({len(codebase_cache_paths)} fingerprinted file(s))"
+                )
+            check_codebase = False
 
     # 1. Codebase drift check (cheap, always run unless explicitly disabled)
     if check_codebase:
@@ -1316,7 +1466,14 @@ def preflight_all(
         check_no_pipefail_grep_q_trap(strict=True, verbose=verbose)
         check_no_eval_roundtrip_false(strict=True, verbose=verbose)
         check_no_scorer_load_at_inflate(strict=True, verbose=verbose)
-        check_training_scripts_have_auth_eval(strict=True, verbose=verbose)
+        _parallel.run(
+            "check_training_scripts_have_auth_eval",
+            "[training-needs-auth-eval]",
+            lambda: check_training_scripts_have_auth_eval(
+                strict=True,
+                verbose=verbose,
+            ),
+        )
         # 2026-05-08 codex Pattern A finding: training scripts must NOT call
         # synthetic data factories in non-smoke mode. Codex verification
         # MEDIUM-4 (2026-05-08 evening): flipped from warn-only to strict;
@@ -1482,8 +1639,16 @@ def preflight_all(
         check_subagent_prompts_no_cpu_fallback(strict=True, verbose=verbose)
         check_scores_have_lane_tag(strict=True, verbose=verbose)
         check_halfframe_archive_uses_trained_profile(strict=True, verbose=verbose)
-        check_profile_keys_have_resolvers(strict=True, verbose=verbose)
-        check_test_files_imports_resolve(strict=True, verbose=verbose)
+        _parallel.run(
+            "check_profile_keys_have_resolvers",
+            "[profile-resolver]",
+            lambda: check_profile_keys_have_resolvers(strict=True, verbose=verbose),
+        )
+        _parallel.run(
+            "check_test_files_imports_resolve",
+            "[test-imports]",
+            lambda: check_test_files_imports_resolve(strict=True, verbose=verbose),
+        )
         check_uniward_delta_has_attestation_gate(strict=True, verbose=verbose)
         check_remote_scripts_write_provenance(strict=True, verbose=verbose)
 
@@ -1513,16 +1678,155 @@ def preflight_all(
         # - Check 32 (contest-cuda-tag): 8 lane scripts patched with [contest-CUDA]
         # Bootstraps + sweep orchestrators + auth-eval-only scripts EXEMPT
         # via EXEMPT_SUFFIXES list inside each check function.
-        check_remote_scripts_executable_bit(strict=True, verbose=verbose)
-        check_remote_scripts_record_predicted_band(strict=True, verbose=verbose)
-        check_remote_scripts_tag_contest_cuda_at_completion(strict=True, verbose=verbose)
+        _remote_script_parallel = _ParallelPreflightRunner(
+            enabled=_preflight_parallel_enabled(),
+            verbose=verbose,
+            max_workers=8,
+        )
+        _remote_script_parallel.submit(
+            "check_remote_scripts_executable_bit",
+            lambda: check_remote_scripts_executable_bit(strict=True, verbose=False),
+        )
+        _remote_script_parallel.submit(
+            "check_remote_scripts_record_predicted_band",
+            lambda: check_remote_scripts_record_predicted_band(
+                strict=True,
+                verbose=False,
+            ),
+        )
+        _remote_script_parallel.submit(
+            "check_remote_scripts_tag_contest_cuda_at_completion",
+            lambda: check_remote_scripts_tag_contest_cuda_at_completion(
+                strict=True,
+                verbose=False,
+            ),
+        )
+        _remote_script_parallel.submit(
+            "check_remote_scripts_probe_nvdec_early",
+            lambda: check_remote_scripts_probe_nvdec_early(
+                strict=True,
+                verbose=False,
+            ),
+        )
+        _remote_script_parallel.submit(
+            "check_resume_from_state_dict_shape_compat",
+            lambda: check_resume_from_state_dict_shape_compat(
+                strict=True,
+                verbose=False,
+            ),
+        )
+        _remote_script_parallel.submit(
+            "check_no_tmux_kill_server_in_lane_scripts",
+            lambda: check_no_tmux_kill_server_in_lane_scripts(
+                strict=True,
+                verbose=False,
+            ),
+        )
+        _remote_script_parallel.submit(
+            "check_no_unconditional_ensurepip",
+            lambda: check_no_unconditional_ensurepip(strict=True, verbose=False),
+        )
+        _remote_script_parallel.submit(
+            "check_lane_scripts_strip_macos_resource_forks",
+            lambda: check_lane_scripts_strip_macos_resource_forks(
+                strict=True,
+                verbose=False,
+            ),
+        )
+        _remote_script_parallel.submit(
+            "check_ssh_commands_have_connect_timeout",
+            lambda: check_ssh_commands_have_connect_timeout(
+                strict=True,
+                verbose=False,
+            ),
+        )
+        _remote_script_parallel.submit(
+            "check_undeployed_archive_artifact_producers",
+            lambda: check_undeployed_archive_artifact_producers(
+                strict=True,
+                verbose=False,
+            ),
+        )
+        _remote_script_parallel.submit(
+            "check_fp4_production_paths_disclose_hardware",
+            lambda: check_fp4_production_paths_disclose_hardware(
+                strict=True,
+                verbose=False,
+            ),
+        )
+        _remote_script_parallel.submit(
+            "check_remote_lane_scripts_have_heartbeat",
+            lambda: check_remote_lane_scripts_have_heartbeat(
+                strict=True,
+                verbose=False,
+            ),
+        )
+        _remote_script_parallel.submit(
+            "check_pose_projection_train_inference_parity",
+            lambda: check_pose_projection_train_inference_parity(
+                strict=True,
+                verbose=False,
+            ),
+        )
+        _remote_script_parallel.submit(
+            "check_launcher_tarball_includes_lane_anchors",
+            lambda: check_launcher_tarball_includes_lane_anchors(
+                strict=True,
+                verbose=False,
+            ),
+        )
+        _remote_script_parallel.submit(
+            "check_no_git_reset_hard_in_remote_lane_scripts",
+            lambda: check_no_git_reset_hard_in_remote_lane_scripts(
+                strict=True,
+                verbose=False,
+            ),
+        )
+        _remote_script_parallel.run(
+            "check_remote_scripts_executable_bit",
+            "[executable-bit]",
+            lambda: check_remote_scripts_executable_bit(
+                strict=True,
+                verbose=verbose,
+            ),
+        )
+        _remote_script_parallel.run(
+            "check_remote_scripts_record_predicted_band",
+            "[predicted-band]",
+            lambda: check_remote_scripts_record_predicted_band(
+                strict=True,
+                verbose=verbose,
+            ),
+        )
+        _remote_script_parallel.run(
+            "check_remote_scripts_tag_contest_cuda_at_completion",
+            "[completion-tag]",
+            lambda: check_remote_scripts_tag_contest_cuda_at_completion(
+                strict=True,
+                verbose=verbose,
+            ),
+        )
 
         # 2026-04-28: 2 more strict meta-bug checks (33, 34) from overnight
         # deploy failures. Both STRICT after the comment-stripping fix:
         # NVDEC 7/12 hosts bad → probe must be Stage 0.
         # Lane S motion.head 6-vs-4 mismatch → resume needs shape validation.
-        check_remote_scripts_probe_nvdec_early(strict=True, verbose=verbose)
-        check_resume_from_state_dict_shape_compat(strict=True, verbose=verbose)
+        _remote_script_parallel.run(
+            "check_remote_scripts_probe_nvdec_early",
+            "[nvdec-early]",
+            lambda: check_remote_scripts_probe_nvdec_early(
+                strict=True,
+                verbose=verbose,
+            ),
+        )
+        _remote_script_parallel.run(
+            "check_resume_from_state_dict_shape_compat",
+            "[resume-shape]",
+            lambda: check_resume_from_state_dict_shape_compat(
+                strict=True,
+                verbose=verbose,
+            ),
+        )
 
         # 2026-04-28: 2 more strict meta-bug checks (35, 36) from observed
         # patterns this session:
@@ -1530,16 +1834,44 @@ def preflight_all(
         #   shared-host runs; caught myself doing this in quick_setup)
         # - unconditional ensurepip crashes on PyTorch containers with newer
         #   pip than the bundled wheels (setup_full bug, just fixed)
-        check_no_tmux_kill_server_in_lane_scripts(strict=True, verbose=verbose)
-        check_no_unconditional_ensurepip(strict=True, verbose=verbose)
+        _remote_script_parallel.run(
+            "check_no_tmux_kill_server_in_lane_scripts",
+            "[no-tmux-kill-server]",
+            lambda: check_no_tmux_kill_server_in_lane_scripts(
+                strict=True,
+                verbose=verbose,
+            ),
+        )
+        _remote_script_parallel.run(
+            "check_no_unconditional_ensurepip",
+            "[no-uncond-ensurepip]",
+            lambda: check_no_unconditional_ensurepip(
+                strict=True,
+                verbose=verbose,
+            ),
+        )
 
         # 2026-04-28 evening: 2 more checks (37, 38) from today's overnight wave.
         # macOS resource forks crash auth_eval; SSH no-timeout hangs parent agent.
         # Both STRICT after setup_full purge-once landed (Check 37 satisfied
         # via canonical bootstrap path); SSH check has 0 violations (no
         # script in repo uses ssh — it's all parent-agent invoked).
-        check_lane_scripts_strip_macos_resource_forks(strict=True, verbose=verbose)
-        check_ssh_commands_have_connect_timeout(strict=True, verbose=verbose)
+        _remote_script_parallel.run(
+            "check_lane_scripts_strip_macos_resource_forks",
+            "[strip-resource-forks]",
+            lambda: check_lane_scripts_strip_macos_resource_forks(
+                strict=True,
+                verbose=verbose,
+            ),
+        )
+        _remote_script_parallel.run(
+            "check_ssh_commands_have_connect_timeout",
+            "[ssh-timeout]",
+            lambda: check_ssh_commands_have_connect_timeout(
+                strict=True,
+                verbose=verbose,
+            ),
+        )
 
         # 2026-04-28 late: Check 39 — undeployed archive-artifact producers.
         # CATCHES the recurring "code-shipped-never-deployed" failure mode:
@@ -1552,7 +1884,14 @@ def preflight_all(
         # the Lane A pattern. References:
         # - project_lane_ec_engineered_corrections_20260428
         # - project_outstanding_work_and_stacks_20260428 TIER 3
-        check_undeployed_archive_artifact_producers(strict=True, verbose=verbose)
+        _remote_script_parallel.run(
+            "check_undeployed_archive_artifact_producers",
+            "[undeployed-producers]",
+            lambda: check_undeployed_archive_artifact_producers(
+                strict=True,
+                verbose=verbose,
+            ),
+        )
 
         # 2026-04-28 late: Check 40 — FP4 hardware-disclosure markers.
         # CATCHES the bug class that destroyed Lane F lineage: production
@@ -1566,7 +1905,14 @@ def preflight_all(
         # extinct. Reference: project_cosmos_deep_dive_addendum_20260428.
         # Lane F-V5 (hardware FP8 via torchao.float8) is the proper rescue
         # path for Ada/Lovelace+ (CC >= 8.9) hardware.
-        check_fp4_production_paths_disclose_hardware(strict=True, verbose=verbose)
+        _remote_script_parallel.run(
+            "check_fp4_production_paths_disclose_hardware",
+            "[fp4-hw-disclose]",
+            lambda: check_fp4_production_paths_disclose_hardware(
+                strict=True,
+                verbose=verbose,
+            ),
+        )
 
         # 2026-04-28 evening: Check 41 — remote_lane_*.sh heartbeat loop.
         # CATCHES the silent-non-start failure mode that wasted ~$2.50 today
@@ -1576,7 +1922,14 @@ def preflight_all(
         # verification possible. Lands at 0 live violations with sweep
         # orchestrators exempted. Reference:
         # feedback_vastai_launch_returns_success_before_lane_starts.
-        check_remote_lane_scripts_have_heartbeat(strict=True, verbose=verbose)
+        _remote_script_parallel.run(
+            "check_remote_lane_scripts_have_heartbeat",
+            "[lane-heartbeat]",
+            lambda: check_remote_lane_scripts_have_heartbeat(
+                strict=True,
+                verbose=verbose,
+            ),
+        )
 
         # 2026-04-28: Check 42 — pose-projection train/inference parity.
         # CATCHES the BUG-1 class from Lane M-V2 audit: pose-projection
@@ -1588,21 +1941,42 @@ def preflight_all(
         # lands, scorer_exploits gradient projection marked WAIVED for
         # different domain). STRICT.
         # Reference: project_lane_m_v2_audit_council_findings_20260428.
-        check_pose_projection_train_inference_parity(strict=True, verbose=verbose)
+        _remote_script_parallel.run(
+            "check_pose_projection_train_inference_parity",
+            "[pose-parity]",
+            lambda: check_pose_projection_train_inference_parity(
+                strict=True,
+                verbose=verbose,
+            ),
+        )
 
         # 2026-04-28 PM: Check 43 — launcher tarball must include lane anchors.
         # CATCHES the bug class where a tarball --exclude pattern wins over
         # a lane script's anchor reference. 3 lanes lost 2026-04-28 PM
         # because lane_a_landed/ was excluded but archive_lane_a.zip is the
         # canonical anchor. STRICT @ 0 violations after launcher fix landed.
-        check_launcher_tarball_includes_lane_anchors(strict=True, verbose=verbose)
+        _remote_script_parallel.run(
+            "check_launcher_tarball_includes_lane_anchors",
+            "[tarball-anchor-parity]",
+            lambda: check_launcher_tarball_includes_lane_anchors(
+                strict=True,
+                verbose=verbose,
+            ),
+        )
 
         # 2026-04-29 AM: Check 66 (no-git-reset-hard-in-lane-scripts).
         # `git reset --hard origin/main` in lane Stage-1 wipes local-only
         # anchor files (archive_lane_a.zip, baseline dirs) that the launcher
         # just SCP'd. 5/6 TIER-1 lanes crashed 2026-04-29 from this bug.
         # STRICT @ 0 violations after stripping pattern from all 11 scripts.
-        check_no_git_reset_hard_in_remote_lane_scripts(strict=True, verbose=verbose)
+        _remote_script_parallel.run(
+            "check_no_git_reset_hard_in_remote_lane_scripts",
+            "[no-git-reset-hard]",
+            lambda: check_no_git_reset_hard_in_remote_lane_scripts(
+                strict=True,
+                verbose=verbose,
+            ),
+        )
 
         # 2026-04-29 AM: Check 67 (python-files-compile) + Check 68 (shell-syntax)
         # + Check 69 (anchor files exist locally).
@@ -1736,11 +2110,25 @@ def preflight_all(
         #   Check 45 (loss-convergence-tests)                     0  → STRICT
         #   Check 46 (quantizer-roundtrip-tests)                  0  → STRICT (R25 promotion: 5 test files added covering archive_codec/entropy_archive/mask_entropy_coder/network_codec/semantic_quantization; quantization_audit waived as drift-MEASUREMENT module not a quantizer)
         #   Check 47 (lane-archive-size-assertion)                0  → STRICT
-        check_gradient_direction_tests_exist(strict=True, verbose=verbose)
+        _parallel.run(
+            "check_gradient_direction_tests_exist",
+            "[gradient-direction-tests]",
+            lambda: check_gradient_direction_tests_exist(
+                strict=True,
+                verbose=verbose,
+            ),
+        )
         check_posenet_gradient_preprocess_patch(strict=True, verbose=verbose)
         check_line_search_scorer_runtime_preflight(strict=True, verbose=verbose)
         check_test_assertion_strength_for_loss_functions(strict=True, verbose=verbose)
-        check_quantizer_modules_have_round_trip_test(strict=True, verbose=verbose)
+        _parallel.run(
+            "check_quantizer_modules_have_round_trip_test",
+            "[quantizer-roundtrip-tests]",
+            lambda: check_quantizer_modules_have_round_trip_test(
+                strict=True,
+                verbose=verbose,
+            ),
+        )
         check_lane_deploy_scripts_have_archive_size_assertion(strict=True, verbose=verbose)
 
         # 2026-04-28 evening: 3 NEW meta-bug checks (48, 49, 50) from the
@@ -1759,7 +2147,15 @@ def preflight_all(
         #   missing PROFILES registrations. Live count: 4 (one false-positive
         #   in a comment, two profiles needing registration). Promote to
         #   STRICT after lane script cleanup.
-        check_no_orphan_src_tac_modules(strict=False, verbose=verbose)
+        _parallel.run(
+            "check_no_orphan_src_tac_modules",
+            "[orphan-src-tac-modules]",
+            lambda: check_no_orphan_src_tac_modules(
+                strict=False,
+                verbose=verbose,
+            ),
+            strict=False,
+        )
         # Promoted STRICT 2026-05-06: live count 0 — all profile loss_mode
         # values resolved against the validator allowlist.
         check_profile_loss_modes_in_validator_allowlist(strict=True, verbose=verbose)
@@ -2132,8 +2528,13 @@ def preflight_all(
         # candidate. Memory: feedback_loop_session_permanent_bug_class_extinction_20260501.md.
         check_venv_creators_use_ensurepip(strict=True, verbose=verbose)
         check_vastai_create_uses_min_disk_60(strict=True, verbose=verbose)
-        check_remote_chain_drivers_clean_inflated_per_candidate(
-            strict=True, verbose=verbose,
+        _parallel.run(
+            "check_remote_chain_drivers_clean_inflated_per_candidate",
+            "[chain-driver-inflated-cleanup]",
+            lambda: check_remote_chain_drivers_clean_inflated_per_candidate(
+                strict=True,
+                verbose=verbose,
+            ),
         )
         # 2026-05-08 HARDEN-2026-05-08 (Path B step 5/6 + cross-paradigm
         # 137,531 B candidate hardening). Five new checks land at 0 live
@@ -2188,8 +2589,13 @@ def preflight_all(
         # provenance. Lands at 0 live violations after the same-day revert
         # of 39 stale `KL_BATCHMEAN_OK` waivers across 8 dirty clones.
         # Memory: feedback_codex_finding_2_public_intake_pristine_FIXED_20260508.md.
-        check_public_pr_intake_clones_pristine(
-            strict=True, verbose=verbose,
+        _parallel.run(
+            "check_public_pr_intake_clones_pristine",
+            "[public-pr-intake-pristine]",
+            lambda: check_public_pr_intake_clones_pristine(
+                strict=True,
+                verbose=verbose,
+            ),
         )
         # Check 110 — recovery_metadata.json MUST be append-only attempts[]
         # with unique started_at_utc per attempt. Codex 2026-05-08 adversarial
@@ -2274,6 +2680,13 @@ def preflight_all(
             check_test_imports_resolve_to_disk(strict=False, verbose=verbose)
         except ImportError:
             pass  # graceful if module missing during partial install
+
+        if codebase_cache_token is not None:
+            _store_preflight_all_clean_cache(
+                REPO_ROOT,
+                cache_token=codebase_cache_token,
+                paths=codebase_cache_paths,
+            )
 
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
@@ -7913,7 +8326,7 @@ def _scan_training_script_for_auth_eval(path: Path, repo_root: Path) -> list[str
     try:
         text = path.read_text()
         tree = ast.parse(text, filename=str(path))
-    except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
+    except (SyntaxError, UnicodeDecodeError, FileNotFoundError, OSError):
         return []
 
     saves_renderer = False
@@ -8419,6 +8832,64 @@ def _file_has_pack_approved_fixture_marker(path: Path) -> bool:
     return False
 
 
+def _files_with_all_source_index_substrings(
+    source_index,
+    dirs: Sequence[str | Path],
+    *,
+    pattern: str,
+    required: Sequence[str],
+) -> tuple[int, tuple[Path, ...]]:
+    """Return indexed candidate files and the full indexed file count.
+
+    The count preserves legacy "N files scanned" reporting semantics while
+    letting strict scanners inspect only files whose one-pass text facts can
+    actually match the bug class.
+    """
+
+    facts_rows = source_index.facts_for_files(dirs, pattern=pattern)
+    paths = source_index.files_containing_substrings(
+        dirs,
+        pattern=pattern,
+        substrings=required,
+        require_all=True,
+    )
+    return len(facts_rows), paths
+
+
+def _files_with_any_then_all_source_index_substrings(
+    source_index,
+    dirs: Sequence[str | Path],
+    *,
+    pattern: str,
+    any_of: Sequence[str],
+    all_of: Sequence[str] = (),
+) -> tuple[int, tuple[Path, ...]]:
+    """Return indexed candidate files matching ``all_of`` and any ``any_of``."""
+
+    facts_rows = source_index.facts_for_files(dirs, pattern=pattern)
+    if any_of:
+        candidates = set(
+            source_index.files_containing_substrings(
+                dirs,
+                pattern=pattern,
+                substrings=any_of,
+                require_all=False,
+            )
+        )
+    else:
+        candidates = set(source_index.files(dirs, pattern=pattern))
+    if all_of:
+        candidates.intersection_update(
+            source_index.files_containing_substrings(
+                dirs,
+                pattern=pattern,
+                substrings=all_of,
+                require_all=True,
+            )
+        )
+    return len(facts_rows), tuple(sorted(candidates, key=lambda item: item.as_posix()))
+
+
 def check_no_pack_sparse_delta_approved_outside_promotion_tool(
     repo_root: Path | None = None,
     strict: bool = True,
@@ -8449,8 +8920,19 @@ def check_no_pack_sparse_delta_approved_outside_promotion_tool(
     # Scan both the standard meta dirs AND tools/ (the promotion tool lives
     # in tools/ and any future tools-side caller would be covered there too).
     scan_dirs = list(_META_PY_SCAN_DIRS) + ["tools"]
-    for py in _iter_python_files(root, scan_dirs):
-        n_scanned += 1
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        n_scanned, py_paths = _files_with_all_source_index_substrings(
+            source_index,
+            scan_dirs,
+            pattern="*.py",
+            required=("pack_sparse_delta", "compliance_status"),
+        )
+    else:
+        py_paths = tuple(_iter_python_files(root, scan_dirs))
+    for py in py_paths:
+        if source_index is None:
+            n_scanned += 1
         rel = py.relative_to(root) if py.is_absolute() else py
         rel_str = rel.as_posix()
         # Exempt the canonical promotion tool itself.
@@ -10294,7 +10776,7 @@ def _scan_python_for_kl_distill_raw_pairs(
         if "kl_distill_segnet_only" not in text:
             return []
         tree = ast.parse(text, filename=str(path))
-    except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
+    except (SyntaxError, UnicodeDecodeError, FileNotFoundError, OSError):
         return []
     lines = text.splitlines()
     violations: list[str] = []
@@ -12542,7 +13024,7 @@ _VASTAI_CREATE_INSTANCE_RE = re.compile(
 
 
 def _scan_python_for_vastai_create_no_label(
-    path: Path, repo_root: Path,
+    path: Path, repo_root: Path, source_index=None,
 ) -> list[str]:
     """Detect `vastai create instance` invocations missing `--label`.
 
@@ -12560,12 +13042,12 @@ def _scan_python_for_vastai_create_no_label(
     if "/tests/" in rel_s or "test_" in path.name:
         return []
     try:
-        text = path.read_text()
+        text = source_index.read_text(path) if source_index is not None else path.read_text()
         if '"create"' not in text and "'create'" not in text:
             return []
         if '"instance"' not in text and "'instance'" not in text:
             return []
-        tree = ast.parse(text, filename=str(path))
+        tree = source_index.python_ast(path) if source_index is not None else ast.parse(text, filename=str(path))
     except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
         return []
 
@@ -12612,9 +13094,34 @@ def check_vastai_create_has_label(
     root = repo_root or REPO_ROOT
     violations: list[str] = []
     n_scanned = 0
-    for path in _iter_python_files(root, _META_PY_SCAN_DIRS):
-        n_scanned += 1
-        violations.extend(_scan_python_for_vastai_create_no_label(path, root))
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        create_count, create_paths = _files_with_any_then_all_source_index_substrings(
+            source_index,
+            _META_PY_SCAN_DIRS,
+            pattern="*.py",
+            any_of=('"create"', "'create'"),
+        )
+        instance_count, instance_paths = _files_with_any_then_all_source_index_substrings(
+            source_index,
+            _META_PY_SCAN_DIRS,
+            pattern="*.py",
+            any_of=('"instance"', "'instance'"),
+        )
+        n_scanned = max(create_count, instance_count)
+        py_paths = tuple(sorted(set(create_paths).intersection(instance_paths), key=lambda item: item.as_posix()))
+    else:
+        py_paths = tuple(_iter_python_files(root, _META_PY_SCAN_DIRS))
+    for path in py_paths:
+        if source_index is None:
+            n_scanned += 1
+        violations.extend(
+            _scan_python_for_vastai_create_no_label(
+                path,
+                root,
+                source_index=source_index,
+            )
+        )
     if verbose:
         if violations:
             print(f"  [vastai-label] {len(violations)} unlabeled instance create(s):")
@@ -12637,7 +13144,7 @@ _VASTAI_TRACKER_PATH = ".omx/state/vastai_active_instances.json"
 
 
 def _scan_python_for_vastai_create_no_tracker(
-    path: Path, repo_root: Path,
+    path: Path, repo_root: Path, source_index=None,
 ) -> list[str]:
     """Detect `vastai create instance` not followed by tracker write.
 
@@ -12657,12 +13164,12 @@ def _scan_python_for_vastai_create_no_tracker(
     if "/tests/" in rel_s or "test_" in path.name:
         return []
     try:
-        text = path.read_text()
+        text = source_index.read_text(path) if source_index is not None else path.read_text()
         if '"create"' not in text and "'create'" not in text:
             return []
         if '"instance"' not in text and "'instance'" not in text:
             return []
-        tree = ast.parse(text, filename=str(path))
+        tree = source_index.python_ast(path) if source_index is not None else ast.parse(text, filename=str(path))
     except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
         return []
     lines = text.splitlines()
@@ -12728,9 +13235,34 @@ def check_vastai_create_writes_tracker(
     root = repo_root or REPO_ROOT
     violations: list[str] = []
     n_scanned = 0
-    for path in _iter_python_files(root, _META_PY_SCAN_DIRS):
-        n_scanned += 1
-        violations.extend(_scan_python_for_vastai_create_no_tracker(path, root))
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        create_count, create_paths = _files_with_any_then_all_source_index_substrings(
+            source_index,
+            _META_PY_SCAN_DIRS,
+            pattern="*.py",
+            any_of=('"create"', "'create'"),
+        )
+        instance_count, instance_paths = _files_with_any_then_all_source_index_substrings(
+            source_index,
+            _META_PY_SCAN_DIRS,
+            pattern="*.py",
+            any_of=('"instance"', "'instance'"),
+        )
+        n_scanned = max(create_count, instance_count)
+        py_paths = tuple(sorted(set(create_paths).intersection(instance_paths), key=lambda item: item.as_posix()))
+    else:
+        py_paths = tuple(_iter_python_files(root, _META_PY_SCAN_DIRS))
+    for path in py_paths:
+        if source_index is None:
+            n_scanned += 1
+        violations.extend(
+            _scan_python_for_vastai_create_no_tracker(
+                path,
+                root,
+                source_index=source_index,
+            )
+        )
     if verbose:
         if violations:
             print(f"  [vastai-tracker] {len(violations)} untracked launch(es):")
@@ -12760,7 +13292,7 @@ _DETERMINISTIC_BYTES_OK_RE = re.compile(
 
 
 def _scan_for_cpu_fallback_in_subagent_prompts(
-    path: Path, repo_root: Path,
+    path: Path, repo_root: Path, source_index=None,
 ) -> list[str]:
     """Find subagent-prompt files mentioning `--device cpu` without caveat.
 
@@ -12781,13 +13313,14 @@ def _scan_for_cpu_fallback_in_subagent_prompts(
     if (
         "/tests/" in rel_s
         or "preflight.py" in rel_s
+        or rel_s == "src/tac/source_index.py"
         or "test_" in path.name
         or rel_s.endswith("CLAUDE.md")
     ):
         return []
     try:
-        text = path.read_text()
-    except (UnicodeDecodeError, FileNotFoundError):
+        text = source_index.read_text(path) if source_index is not None else path.read_text()
+    except (UnicodeDecodeError, FileNotFoundError, OSError):
         return []
     if not _DEVICE_CPU_FALLBACK_RE.search(text):
         return []
@@ -12827,18 +13360,37 @@ def check_subagent_prompts_no_cpu_fallback(
     n_scanned = 0
     # Scan .agents/, prompts/, and src/tac/agents/ if it exists.
     scan_dirs = [".agents", "prompts", "src/tac"]
-    for d in scan_dirs:
-        d_path = root / d
-        if not d_path.exists():
-            continue
-        for ext in ("*.md", "*.py"):
-            for p in d_path.rglob(ext):
-                if "__pycache__" in p.parts:
-                    continue
-                n_scanned += 1
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        for pattern in ("*.md", "*.py"):
+            count, paths = _files_with_all_source_index_substrings(
+                source_index,
+                scan_dirs,
+                pattern=pattern,
+                required=("--device cpu",),
+            )
+            n_scanned += count
+            for p in paths:
                 violations.extend(
-                    _scan_for_cpu_fallback_in_subagent_prompts(p, root)
+                    _scan_for_cpu_fallback_in_subagent_prompts(
+                        p,
+                        root,
+                        source_index=source_index,
+                    )
                 )
+    else:
+        for d in scan_dirs:
+            d_path = root / d
+            if not d_path.exists():
+                continue
+            for ext in ("*.md", "*.py"):
+                for p in d_path.rglob(ext):
+                    if "__pycache__" in p.parts:
+                        continue
+                    n_scanned += 1
+                    violations.extend(
+                        _scan_for_cpu_fallback_in_subagent_prompts(p, root)
+                    )
     if verbose:
         if violations:
             print(f"  [cpu-fallback] {len(violations)} unguarded cpu-fallback prompt(s):")
@@ -13090,7 +13642,7 @@ def check_waivers_specify_env_gate(
 
 
 def _scan_for_halfframe_without_trained_profile(
-    path: Path, repo_root: Path,
+    path: Path, repo_root: Path, source_index=None,
 ) -> list[str]:
     """Detect --half-frame archive builds without a trained-for-it profile.
 
@@ -13112,8 +13664,8 @@ def _scan_for_halfframe_without_trained_profile(
     if "/tests/" in rel_s or "test_" in path.name:
         return []
     try:
-        text = path.read_text()
-    except (UnicodeDecodeError, FileNotFoundError):
+        text = source_index.read_text(path) if source_index is not None else path.read_text()
+    except (UnicodeDecodeError, FileNotFoundError, OSError):
         return []
     if "build_baseline_archive" not in text or "--half-frame" not in text:
         return []
@@ -13241,12 +13793,31 @@ def check_halfframe_archive_uses_trained_profile(
     violations: list[str] = []
     n_scanned = 0
     # Scan all python + shell scripts.
-    for path in _iter_python_files(root, ["scripts", "experiments"]):
-        n_scanned += 1
-        violations.extend(_scan_for_halfframe_without_trained_profile(path, root))
-    for path in _iter_shell_files(root, ["scripts"]):
-        n_scanned += 1
-        violations.extend(_scan_for_halfframe_without_trained_profile(path, root))
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        for dirs, pattern in ((["scripts", "experiments"], "*.py"), (["scripts"], "*.sh")):
+            count, paths = _files_with_all_source_index_substrings(
+                source_index,
+                dirs,
+                pattern=pattern,
+                required=("build_baseline_archive", "--half-frame"),
+            )
+            n_scanned += count
+            for path in paths:
+                violations.extend(
+                    _scan_for_halfframe_without_trained_profile(
+                        path,
+                        root,
+                        source_index=source_index,
+                    )
+                )
+    else:
+        for path in _iter_python_files(root, ["scripts", "experiments"]):
+            n_scanned += 1
+            violations.extend(_scan_for_halfframe_without_trained_profile(path, root))
+        for path in _iter_shell_files(root, ["scripts"]):
+            n_scanned += 1
+            violations.extend(_scan_for_halfframe_without_trained_profile(path, root))
     if verbose:
         if violations:
             print(f"  [halfframe] {len(violations)} half-frame mismatch(es):")
@@ -14120,7 +14691,7 @@ def check_vastai_prompts_have_cost_cap(
 
 
 def _scan_for_uniward_delta_without_attestation(
-    path: Path, repo_root: Path,
+    path: Path, repo_root: Path, source_index=None,
 ) -> list[str]:
     """Detect --with-uniward-delta usage without the compliance gate.
 
@@ -14145,8 +14716,8 @@ def _scan_for_uniward_delta_without_attestation(
     if "/tests/" in rel_s or "test_" in path.name:
         return []
     try:
-        text = path.read_text()
-    except (UnicodeDecodeError, FileNotFoundError):
+        text = source_index.read_text(path) if source_index is not None else path.read_text()
+    except (UnicodeDecodeError, FileNotFoundError, OSError):
         return []
     if "--with-uniward-delta" not in text:
         return []
@@ -14200,12 +14771,31 @@ def check_uniward_delta_has_attestation_gate(
     root = repo_root or REPO_ROOT
     violations: list[str] = []
     n_scanned = 0
-    for path in _iter_python_files(root, ["scripts", "experiments"]):
-        n_scanned += 1
-        violations.extend(_scan_for_uniward_delta_without_attestation(path, root))
-    for path in _iter_shell_files(root, ["scripts"]):
-        n_scanned += 1
-        violations.extend(_scan_for_uniward_delta_without_attestation(path, root))
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        for dirs, pattern in ((["scripts", "experiments"], "*.py"), (["scripts"], "*.sh")):
+            count, paths = _files_with_all_source_index_substrings(
+                source_index,
+                dirs,
+                pattern=pattern,
+                required=("--with-uniward-delta",),
+            )
+            n_scanned += count
+            for path in paths:
+                violations.extend(
+                    _scan_for_uniward_delta_without_attestation(
+                        path,
+                        root,
+                        source_index=source_index,
+                    )
+                )
+    else:
+        for path in _iter_python_files(root, ["scripts", "experiments"]):
+            n_scanned += 1
+            violations.extend(_scan_for_uniward_delta_without_attestation(path, root))
+        for path in _iter_shell_files(root, ["scripts"]):
+            n_scanned += 1
+            violations.extend(_scan_for_uniward_delta_without_attestation(path, root))
     if verbose:
         if violations:
             print(f"  [uniward-attestation] {len(violations)} ungated δ invocation(s):")
@@ -14922,11 +15512,19 @@ def check_no_silent_auto_discovery_with_warn(
     n_scanned = 0
     source_index = _current_source_index(root)
     if source_index is not None:
-        py_paths = source_index.files(_META_PY_SCAN_DIRS, pattern="*.py")
+        warning_count, py_paths = _files_with_any_then_all_source_index_substrings(
+            source_index,
+            _META_PY_SCAN_DIRS,
+            pattern="*.py",
+            any_of=("[WARN]", "WARNING:", "WARN "),
+            all_of=(".exists",),
+        )
+        n_scanned = warning_count
     else:
         py_paths = tuple(_iter_python_files(root, _META_PY_SCAN_DIRS))
     for py in py_paths:
-        n_scanned += 1
+        if source_index is None:
+            n_scanned += 1
         violations.extend(
             _scan_python_for_silent_auto_discovery(
                 py,
@@ -29832,6 +30430,7 @@ _LANE_ID_FILE_WAIVER_ALLOWED_RELS: frozenset[str] = frozenset({
     "src/tac/tests/test_lane_maturity_harness.py",
     "src/tac/tests/test_continual_learning.py",
     "src/tac/tests/test_preflight_subagent_coherence.py",
+    "src/tac/tests/test_preflight_representation_integration_gates.py",
 })
 
 

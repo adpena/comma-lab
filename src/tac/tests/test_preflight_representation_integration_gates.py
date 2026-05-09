@@ -1,3 +1,4 @@
+# FAKE_LANE_OK_FILE: this test file constructs fake lane_id fixtures for gate scanners
 """Tests for representation-integration gates 1-10 (codex audit, 2026-05-08).
 
 Source: ``.omx/research/representation_integration_gap_audit_20260508_codex.md``
@@ -20,6 +21,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import math
+import subprocess
 import sys
 from pathlib import Path
 
@@ -70,6 +72,18 @@ def _write_build_manifest(
     p = d / "build_manifest.json"
     p.write_text(json.dumps(manifest))
     return p
+
+
+def _git(cwd: Path, *args: str) -> str:
+    result = subprocess.run(
+        ["git", *args],
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=30,
+    )
+    return result.stdout
 
 
 # ── Gate 1: representation promotion card ────────────────────────────────
@@ -477,6 +491,48 @@ def test_gate5_existing_runtime_manifest_passes(tmp_path: Path) -> None:
     assert findings == []
 
 
+def test_gate5_nested_auth_eval_runtime_manifest_passes(tmp_path: Path) -> None:
+    _write_build_manifest(
+        tmp_path,
+        {
+            "lane_id": "test_dispatch_nested_runtime_manifest",
+            "submission_dir_relpath": "exp/submission",
+            "score_claim": True,
+            "eval_data": {
+                "provenance": {
+                    "inflate_runtime_manifest": {
+                        "runtime_tree_sha256": "a" * 64,
+                        "runtime_file_count": 2,
+                    }
+                }
+            },
+        },
+        name="lane_nested_runtime_manifest",
+    )
+    mod = _load_scanner("check_gate5_runtime_closure.py")
+    findings = mod.scan(tmp_path)
+    assert findings == []
+
+
+def test_gate5_ignored_local_result_manifest_skipped_by_default(tmp_path: Path) -> None:
+    _git(tmp_path, "init")
+    (tmp_path / ".gitignore").write_text("experiments/results/\n", encoding="utf-8")
+    _write_build_manifest(
+        tmp_path,
+        {
+            "lane_id": "test_ignored_scratch_manifest",
+            "submission_dir_relpath": "exp/submission",
+            "ready_for_exact_eval_dispatch": True,
+        },
+        name="ignored_scratch",
+    )
+    mod = _load_scanner("check_gate5_runtime_closure.py")
+
+    assert mod.scan(tmp_path) == []
+    findings = mod.scan(tmp_path, include_ignored_results=True)
+    assert any(f.technique == "test_ignored_scratch_manifest" for f in findings)
+
+
 def test_gate5_public_pr_negative_no_failure_class(tmp_path: Path) -> None:
     _write_evidence_jsonl(
         tmp_path,
@@ -749,6 +805,115 @@ def test_gate8_complete_frontier_row_passes(tmp_path: Path) -> None:
                 "recomputed_score": score,
                 "log_path": str(log_path),
                 "dispatch_claim_status": "completed",
+            }
+        ],
+    )
+    mod = _load_scanner("check_gate8_exact_evidence.py")
+    findings = mod.scan(tmp_path)
+    assert findings == []
+
+
+def test_gate8_accepts_posenet_segnet_component_aliases(tmp_path: Path) -> None:
+    runtime_manifest = tmp_path / "runtime.json"
+    log_path = tmp_path / "auth_eval.log"
+    runtime_manifest.write_text("{}", encoding="utf-8")
+    log_path.write_text("ok\n", encoding="utf-8")
+    archive_bytes = 178000
+    seg = 0.0006
+    pose = 0.001
+    rate = 25.0 * archive_bytes / 37_545_489
+    score = 100.0 * seg + math.sqrt(10.0 * pose) + rate
+    _write_evidence_jsonl(
+        tmp_path,
+        [
+            {
+                "technique": "test_alias_components",
+                "evidence_grade": "[contest-CUDA A-negative]",
+                "archive_bytes": archive_bytes,
+                "archive_sha256": "deadbeef" * 8,
+                "runtime_tree_sha256": "a" * 64,
+                "exact_eval_command": "python experiments/contest_auth_eval.py",
+                "hardware": "Tesla T4",
+                "sample_count": 600,
+                "segnet_distortion": seg,
+                "posenet_distortion": pose,
+                "rate": rate,
+                "recomputed_score": score,
+                "log_path": str(log_path),
+                "dispatch_claim_status": "completed",
+            }
+        ],
+    )
+    mod = _load_scanner("check_gate8_exact_evidence.py")
+    findings = mod.scan(tmp_path)
+    assert findings == []
+
+
+def test_gate8_auth_eval_json_supplies_exact_custody_fields(tmp_path: Path) -> None:
+    auth_eval = tmp_path / "auth_eval.json"
+    report = tmp_path / "report.txt"
+    report.write_text("ok\n", encoding="utf-8")
+    archive_bytes = 178000
+    seg = 0.0006
+    pose = 0.001
+    rate = 25.0 * archive_bytes / 37_545_489
+    score = 100.0 * seg + math.sqrt(10.0 * pose) + rate
+    auth_eval.write_text(
+        json.dumps(
+            {
+                "archive_size_bytes": archive_bytes,
+                "n_samples": 600,
+                "avg_segnet_dist": seg,
+                "avg_posenet_dist": pose,
+                "score_rate_contribution": rate,
+                "score_recomputed_from_components": score,
+                "report_path": str(report),
+                "provenance": {
+                    "gpu_model": "Tesla T4",
+                    "sys_argv": ["python", "experiments/contest_auth_eval.py"],
+                    "inflate_runtime_manifest": {
+                        "runtime_tree_sha256": "a" * 64,
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    _write_evidence_jsonl(
+        tmp_path,
+        [
+            {
+                "technique": "test_auth_eval_pointer",
+                "evidence_grade": "[contest-CUDA A-negative]",
+                "archive_sha256": "deadbeef" * 8,
+                "empirical_archive_bytes": archive_bytes,
+                "auth_eval_json": str(auth_eval),
+                "dispatch_claim_status": "completed",
+                "score_contest_cuda": score,
+            }
+        ],
+    )
+    mod = _load_scanner("check_gate8_exact_evidence.py")
+    findings = mod.scan(tmp_path)
+    assert findings == []
+
+
+def test_gate8_lower_grade_retired_nonclaim_passes(tmp_path: Path) -> None:
+    _write_evidence_jsonl(
+        tmp_path,
+        [
+            {
+                "technique": "macos_advisory_retired",
+                "evidence_grade": "[macOS-CPU advisory negative]",
+                "contest_dispatch_verdict": (
+                    "measured_config_retired_macos_cpu_advisory_negative_"
+                    "not_score_evidence"
+                ),
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "empirical_score": 0.5,
+                "empirical_archive_bytes": 178000,
             }
         ],
     )

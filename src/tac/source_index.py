@@ -25,7 +25,7 @@ _CURRENT_SOURCE_INDEX: contextvars.ContextVar[SourceIndex | None] = contextvars.
     "tac_current_source_index",
     default=None,
 )
-_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v1"
+_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v2"
 
 
 def _safe_resolve(path: Path) -> Path:
@@ -44,13 +44,25 @@ _DEFAULT_TEXT_FACT_NEEDLES = frozenset(
         "--disable-eval-roundtrip",
         "--device mps",
         "--no-eval-roundtrip",
+        "--device cpu",
+        "--half-frame",
+        "--with-uniward-delta",
+        ".exists",
         "AUTHORITATIVE_TAGS",
         "COMPLIANCE_APPROVED",
         "False",
         "KLDivLoss",
+        "WARN ",
+        "WARNING:",
         "ZipFile",
+        "'create'",
+        "'instance'",
+        '"create"',
+        '"instance"',
+        "[WARN]",
         "archive.zip",
         "batchmean",
+        "build_baseline_archive",
         "cuda.is_available",
         "eval_roundtrip",
         "eval_roundtrip=False",
@@ -59,6 +71,7 @@ _DEFAULT_TEXT_FACT_NEEDLES = frozenset(
         "make_synthetic_pair_batch",
         "mps",
         "pack_sparse_delta",
+        "compliance_status",
         "torch",
         "torch.load",
     }

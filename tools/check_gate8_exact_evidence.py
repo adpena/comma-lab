@@ -105,7 +105,6 @@ SCORE_CLAIM_FIELDS: tuple[str, ...] = (
     "exact_cuda_score",
     "score_cuda",
     "auth_eval_score",
-    "empirical_score",
 )
 
 TEXT_CLAIM_FIELDS: tuple[str, ...] = (
@@ -182,9 +181,114 @@ def _has_score_claim_value(value: object) -> bool:
     return False
 
 
+def _set_if_missing(row: dict, key: str, value: object) -> None:
+    if row.get(key) is None and value is not None:
+        row[key] = value
+
+
+def _load_json_path(repo: Path, value: object) -> dict | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    path = Path(value.strip())
+    if not path.is_absolute():
+        path = repo / path
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _enrich_from_auth_eval_json(row: dict, repo: Path) -> dict:
+    """Fill canonical Gate-8 fields from a contest_auth_eval JSON artifact.
+
+    Evidence rows often point at the structured auth-eval JSON instead of
+    duplicating every custody field inline. The JSON is an acceptable evidence
+    source only when it exists locally and contains the canonical provenance
+    fields produced by ``experiments/contest_auth_eval.py``.
+    """
+    enriched = dict(row)
+    payload = _load_json_path(repo, row.get("auth_eval_json"))
+    if not payload:
+        return enriched
+    provenance = payload.get("provenance")
+    if not isinstance(provenance, dict):
+        provenance = {}
+    runtime_manifest = provenance.get("inflate_runtime_manifest")
+    if isinstance(runtime_manifest, dict):
+        _set_if_missing(
+            enriched,
+            "runtime_tree_sha256",
+            runtime_manifest.get("runtime_tree_sha256"),
+        )
+    sys_argv = provenance.get("sys_argv")
+    if isinstance(sys_argv, list) and sys_argv:
+        _set_if_missing(enriched, "exact_eval_command", " ".join(map(str, sys_argv)))
+    _set_if_missing(enriched, "hardware", provenance.get("gpu_model"))
+    _set_if_missing(enriched, "sample_count", payload.get("n_samples"))
+    _set_if_missing(enriched, "segnet_distortion", payload.get("avg_segnet_dist"))
+    _set_if_missing(enriched, "posenet_distortion", payload.get("avg_posenet_dist"))
+    _set_if_missing(enriched, "rate_term", payload.get("score_rate_contribution"))
+    _set_if_missing(
+        enriched,
+        "recomputed_score",
+        payload.get("score_recomputed_from_components"),
+    )
+    report_path = payload.get("report_path")
+    if _path_exists_or_external(repo, report_path):
+        _set_if_missing(enriched, "log_path", report_path)
+    else:
+        _set_if_missing(enriched, "log_path", row.get("auth_eval_json"))
+    return enriched
+
+
 def _has_exact_cuda_marker(value: object) -> bool:
     text = _normalized_text(value)
     return "contest cuda" in text or "exact cuda" in text
+
+
+def _row_has_exact_cuda_marker(row: dict) -> bool:
+    return any(_has_exact_cuda_marker(row.get(field)) for field in EXACT_CUDA_MARKER_FIELDS)
+
+
+def _explicit_lower_grade_nonclaim(row: dict) -> bool:
+    """Return True for rows explicitly labeled as non-authoritative evidence.
+
+    Rows such as ``[macOS-CPU advisory negative]`` or
+    ``[non-CUDA review]`` may contain empirical scores and "retired"
+    wording, but they are intentionally not exact CUDA promotion/falsification
+    claims. Gate 8 should force exact custody on authoritative rows, not
+    relabel lower-grade diagnostics as exact-custody failures.
+    """
+    if _row_has_exact_cuda_marker(row):
+        return False
+    text = " ".join(
+        _normalized_text(row.get(field))
+        for field in (
+            "evidence_grade",
+            "evidence_marker",
+            "evidence_semantics",
+            "device_axis",
+            "hardware",
+            "contest_dispatch_verdict",
+            "measured_config_status",
+        )
+    )
+    lower_markers = (
+        "advisory",
+        "macos",
+        "non cuda",
+        "cpu prep",
+        "planning",
+        "predicted",
+        "byte anchor",
+        "mps",
+        "proxy",
+        "no score claim",
+        "not score evidence",
+        "dispatch in flight",
+    )
+    return any(marker in text for marker in lower_markers)
 
 
 def _has_text_claim_marker(value: object) -> bool:
@@ -206,11 +310,30 @@ def _has_text_claim_marker(value: object) -> bool:
 
 
 def _claims_frontier(row: dict) -> bool:
+    if _explicit_lower_grade_nonclaim(row) and not any(
+        _truthy_claim_marker(row.get(field))
+        for field in (
+            "frontier_status",
+            "frontier_promoted",
+            "frontier_eligible",
+            "promotion_eligible",
+            "rank_or_kill_eligible",
+            "rank_eligible",
+            "ranking_eligible",
+            "kill_eligible",
+            "falsification_eligible",
+            "kill_claim",
+            "falsification_claim",
+            "family_falsified",
+            "method_family_retired",
+        )
+    ):
+        return False
     if any(_truthy_claim_marker(row.get(field)) for field in CLAIM_BOOLEAN_FIELDS):
         return True
     if any(_has_score_claim_value(row.get(field)) for field in SCORE_CLAIM_FIELDS):
         return True
-    if any(_has_exact_cuda_marker(row.get(field)) for field in EXACT_CUDA_MARKER_FIELDS):
+    if _row_has_exact_cuda_marker(row):
         return True
     if any(_has_text_claim_marker(row.get(field)) for field in TEXT_CLAIM_FIELDS):
         return True
@@ -239,13 +362,19 @@ def _has_component(row: dict, key: str) -> bool:
 
 
 def _component(row: dict, key: str) -> float | None:
-    value = row.get(key)
-    if (
-        isinstance(value, int | float)
-        and not isinstance(value, bool)
-        and math.isfinite(float(value))
-    ):
-        return float(value)
+    aliases = {
+        "seg_distortion": ("seg_distortion", "segnet_distortion", "empirical_d_seg"),
+        "pose_distortion": ("pose_distortion", "posenet_distortion", "empirical_d_pose"),
+        "rate_term": ("rate_term", "rate", "archive_rate_ratio"),
+    }.get(key, (key,))
+    for alias in aliases:
+        value = row.get(alias)
+        if (
+            isinstance(value, int | float)
+            and not isinstance(value, bool)
+            and math.isfinite(float(value))
+        ):
+            return float(value)
     components = row.get("components")
     if isinstance(components, dict):
         short = key.split("_")[0]
@@ -303,7 +432,7 @@ def _missing_fields(row: dict) -> list[str]:
         missing.append("recomputed_score")
     if not _has_field(row, "log_path"):
         missing.append("log_path")
-    if not _has_field(row, "dispatch_claim_status"):
+    if not _has_field(row, "dispatch_claim_status", "dispatch_claim_latest_status"):
         missing.append("dispatch_claim_status")
     return missing
 
@@ -369,6 +498,7 @@ def scan(repo_root: Path | None = None) -> list[Finding]:
                 continue
             if not isinstance(row, dict):
                 continue
+            row = _enrich_from_auth_eval_json(row, repo)
             if not _claims_frontier(row):
                 continue
             missing = _missing_fields(row)

@@ -19,6 +19,9 @@
 # This script is scaffold/build verification only. It MUST NOT print a
 # [contest-CUDA] completion tag until Phase 2 lands a hermetic inflate
 # contract and exact contest_auth_eval custody.
+# Default behavior is fail-closed: set T1_ALLOW_REMOTE_SCAFFOLD_SMOKE=1 only
+# for an explicit manual scaffold-smoke probe. Provider dispatchers must not
+# set it while Phase 1 still uses synthetic targets / no-op scorer losses.
 #
 # Heartbeat: every 5 min per CLAUDE.md "Remote code parity — non-negotiable".
 set -euo pipefail
@@ -29,9 +32,19 @@ LANE_ID="t1_balle_128k_endtoend"
 TAG="${TAG:-t1_balle_endtoend}"
 LOG_DIR="${LOG_DIR:-$WORKSPACE/lane_t1_balle_endtoend_results}"
 OUTPUT_DIR="${OUTPUT_DIR:-$LOG_DIR/output}"
+PROVENANCE="$LOG_DIR/provenance.json"
+RUN_RECORD="$LOG_DIR/run_record.json"
+ALLOW_REMOTE_SCAFFOLD_SMOKE="${T1_ALLOW_REMOTE_SCAFFOLD_SMOKE:-0}"
+
+if [ "$ALLOW_REMOTE_SCAFFOLD_SMOKE" != "1" ]; then
+    echo "[lane-t1] FATAL: remote T1 scaffold path refused by default. Phase 1 uses synthetic smoke targets / no-op scorer losses and is not a real remote GPU or auth-eval dispatch. Set T1_ALLOW_REMOTE_SCAFFOLD_SMOKE=1 only for explicit manual smoke verification." >&2
+    exit 20
+fi
+
 mkdir -p "$LOG_DIR" "$OUTPUT_DIR"
 
 cd "$WORKSPACE"
+rm -f upstream/videos/._*.mkv
 export PYTHONHASHSEED=20
 export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}$WORKSPACE/src:$WORKSPACE/upstream:$WORKSPACE"
 export TAC_UPSTREAM_DIR="${TAC_UPSTREAM_DIR:-$WORKSPACE/upstream}"
@@ -75,6 +88,33 @@ LOCAL_BRANCH="$(git -C "$WORKSPACE" branch --show-current 2>/dev/null || echo un
 LOCAL_HEAD="$(git -C "$WORKSPACE" rev-parse HEAD 2>/dev/null || echo unknown)"
 log "local branch: $LOCAL_BRANCH"
 log "local HEAD: $LOCAL_HEAD"
+cat > "$PROVENANCE" <<EOF
+{
+  "schema_version": "remote_run_provenance.v1",
+  "lane_id": "${LANE_ID}",
+  "tag": "${TAG}",
+  "script": "scripts/remote_lane_t1_balle_endtoend.sh",
+  "workspace": "${WORKSPACE}",
+  "log_dir": "${LOG_DIR}",
+  "output_dir": "${OUTPUT_DIR}",
+  "git_branch": "${LOCAL_BRANCH}",
+  "git_head": "${LOCAL_HEAD}",
+  "pythonhashseed": "${PYTHONHASHSEED}",
+  "allow_remote_scaffold_smoke_env": "${ALLOW_REMOTE_SCAFFOLD_SMOKE}",
+  "predicted_band": [0.155, 0.180],
+  "prediction_scope": "Phase 2 co-trained substrate target; this Phase 1 script runs scaffold smoke only",
+  "score_claim": false
+}
+EOF
+cat > "$RUN_RECORD" <<EOF
+{
+  "schema_version": "remote_run_record.v1",
+  "status": "started",
+  "started_at_utc": "$(date -u +%FT%TZ)",
+  "provenance_json": "${PROVENANCE}",
+  "heartbeat_log": "${LOG_DIR}/heartbeat.log"
+}
+EOF
 if [ "$LOCAL_BRANCH" != "main" ]; then
     log "FATAL: refusing T1 remote work outside main (branch=$LOCAL_BRANCH)"
     exit 10
@@ -106,6 +146,10 @@ uv pip install --system compressai==1.2.8 \
 
 # Stage 3: NVDEC probe (per CLAUDE.md remote_scripts_have_nvdec_probe rule).
 log "Stage 3: NVDEC probe"
+bash "$WORKSPACE/scripts/probe_nvdec.sh" || {
+    log "FATAL: probe_nvdec.sh failed; refusing CUDA training on this host"
+    exit 13
+}
 "$PYBIN" -c "import torch; print('cuda:', torch.cuda.is_available()); print('device:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'cpu')" \
     | tee "$LOG_DIR/nvdec_probe.log"
 if ! grep -q "cuda: True" "$LOG_DIR/nvdec_probe.log"; then
@@ -125,9 +169,9 @@ HEARTBEAT_PID=$!
 log "Stage 4: heartbeat started (pid=$HEARTBEAT_PID)"
 trap "kill $HEARTBEAT_PID 2>/dev/null || true" EXIT
 
-# Stage 5: Run trainer in scaffold-smoke mode. Full training requires real
-# frame targets and a closed export contract; auth-eval is deliberately
-# refused by the trainer in Phase 1.
+# Stage 5: Run trainer in scaffold-smoke mode only. Full/non-smoke training
+# and auth-eval are deliberately refused by the trainer in Phase 1 while the
+# scorer loss remains a no-op scaffold.
 log "Stage 5: scaffold smoke training (epochs=1)"
 "$PYBIN" -u "$WORKSPACE/experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py" \
     --output-dir "$OUTPUT_DIR" \
@@ -162,6 +206,6 @@ fi
 ARCHIVE_BYTES=$(stat -f%z "$ARCHIVE" 2>/dev/null || stat -c%s "$ARCHIVE")
 ARCHIVE_SHA=$(sha256sum "$ARCHIVE" 2>/dev/null | cut -d' ' -f1 || shasum -a 256 "$ARCHIVE" | cut -d' ' -f1)
 log "ARCHIVE bytes=$ARCHIVE_BYTES sha=$ARCHIVE_SHA"
-log "AUTH_EVAL_JSON=not_applicable_phase1_research_only_no_export"
-echo "[lane-t1] LANE_T1_SCAFFOLD_SMOKE_DONE [predicted; Phase 1 scaffold; not yet empirical]"
+log "AUTH_EVAL_JSON=not_applicable_phase1_scaffold_smoke_no_score_claim"
+echo "[lane-t1] LANE_T1_LOCAL_SCAFFOLD_SMOKE_DONE [scaffold-smoke only; no provider score/eval claim]"
 log "===== Remote lane T1 DONE ====="

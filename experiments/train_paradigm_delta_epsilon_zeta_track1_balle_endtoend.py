@@ -69,7 +69,7 @@ CLI surface (DO NOT INVENT FLAGS — verified by tests)
   --pose-target        1.7e-4 default
   --rho-init           1.0 default
   --eval-every-epochs  100 default
-  --auth-eval          refused in Phase 1 until runtime export closes
+  --auth-eval          refused in Phase 1 while scorer loss/runtime are scaffold-only
   --video-path         real contest video for non-smoke target pixels
   --target-pixels-path optional pre-extracted real target tensor
   --max-target-pairs   optional real-target pair cap for local debug
@@ -167,6 +167,30 @@ CONTEST_AUTH_EVAL_RELATIVE = "experiments/contest_auth_eval.py"
 DISPATCH_CLAIMS_RELATIVE = ".omx/state/active_lane_dispatch_claims.md"
 INFLATE_ROUNDTRIP_CAMERA_HW = (874, 1164)
 EVAL_HW = (384, 512)
+PHASE1_SCAFFOLD_ONLY = True
+PHASE1_SCAFFOLD_BLOCKERS = (
+    "seg_pose_loss_is_constant_noop",
+    "make_smoke_target_is_synthetic_and_smoke_only",
+    "runtime_depends_on_repo_local_tac_modules",
+    "no_scorer_domain_training_or_exact_eval_custody",
+)
+
+
+def phase1_scaffold_blockers() -> list[str]:
+    """Return the hard blockers that keep this trainer scaffold-only."""
+    return list(PHASE1_SCAFFOLD_BLOCKERS)
+
+
+def refuse_phase1_scaffold_path(path_name: str) -> None:
+    """Fail closed for Phase 1 paths that can be mistaken for score work."""
+    blockers = ", ".join(phase1_scaffold_blockers())
+    raise SystemExit(
+        f"[t1] {path_name} refused: T1/Ballé Phase 1 is scaffold-only and "
+        f"not dispatch/eval/promotable yet. blockers={blockers}. Use --smoke "
+        "only for local build verification; Phase 2 must wire real scorer "
+        "losses and a hermetic contest runtime before non-smoke/auth-eval/remote "
+        "work is allowed."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -653,6 +677,12 @@ def _serialise_balle_strings(strings: object) -> bytes:
             f"unexpected balle.compress() return type {type(strings)!r}; "
             "expected dict[str, Any]"
         )
+
+    def pack_u32_count(name: str, value: int) -> bytes:
+        if value < 0 or value > 0xFFFF_FFFF:
+            raise RuntimeError(f"{name}={value} does not fit uint32")
+        return struct.pack("<I", value)
+
     y_strings = strings.get("y_strings")
     z_strings = strings.get("z_strings")
     z_shape = strings.get("z_shape")
@@ -665,24 +695,29 @@ def _serialise_balle_strings(strings: object) -> bytes:
             raise RuntimeError(
                 f"balle.compress() field {name!r} has type "
                 f"{type(val).__name__!r}; expected {expected.__name__}"
-            )
+    )
     parts: list[bytes] = []
     for stream_name, byte_list in (("y_strings", y_strings), ("z_strings", z_strings)):
-        parts.append(struct.pack("<I", len(byte_list)))
+        parts.append(pack_u32_count(f"{stream_name}.count", len(byte_list)))
         for blob in byte_list:
             if not isinstance(blob, (bytes, bytearray)):
                 raise RuntimeError(
                     f"balle.compress()[{stream_name!r}] element type "
                     f"{type(blob).__name__!r}; expected bytes"
                 )
-            parts.append(struct.pack("<I", len(blob)))
+            parts.append(pack_u32_count(f"{stream_name}.blob_len", len(blob)))
             parts.append(bytes(blob))
-    parts.append(struct.pack("<I", len(z_shape)))
+    parts.append(pack_u32_count("z_shape.count", len(z_shape)))
     for dim in z_shape:
         if not isinstance(dim, int):
             raise RuntimeError(
                 f"balle.compress()['z_shape'] element type "
                 f"{type(dim).__name__!r}; expected int"
+            )
+        if dim < 0 or dim > 0x7FFF_FFFF:
+            raise RuntimeError(
+                f"balle.compress()['z_shape'] dim {dim} does not fit "
+                "nonnegative int32"
             )
         parts.append(struct.pack("<i", dim))
     return b"".join(parts)
@@ -968,19 +1003,15 @@ def maybe_run_auth_eval(
 ) -> dict | None:
     if not enabled:
         return None
-    # Operator decision B 2026-05-09: the trainer's _write_runtime now emits a
-    # contest-compliant inflate.sh + inflate.py per the Phase 1 packet
-    # compiler's contract. The historical SystemExit refusal is removed; the
-    # auth-eval dispatch path is now byte-closed. Memo:
-    # feedback_phase1_trainer_write_runtime_fix_landed_20260509.md
+    if PHASE1_SCAFFOLD_ONLY:
+        refuse_phase1_scaffold_path("--auth-eval")
     require_active_dispatch_claim(
         lane_id=dispatch_lane_id,
         claims_path=dispatch_claims_path,
     )
     auth_script = REPO_ROOT / CONTEST_AUTH_EVAL_RELATIVE
     if not auth_script.exists():
-        print(f"[t1] auth-eval skipped: {auth_script} not found")
-        return None
+        raise SystemExit(f"[t1] auth eval failed: {auth_script} not found")
     work_dir = output_dir / "auth_eval_work"
     work_dir.mkdir(exist_ok=True)
     cmd = [
@@ -1313,10 +1344,9 @@ def _activate_yuv6_mode_t1(
 def main() -> int:
     args = parse_args()
     if args.auth_eval:
-        print(
-            "[t1] --auth-eval requested; dispatch claim custody will be "
-            "checked immediately before exact eval."
-        )
+        refuse_phase1_scaffold_path("--auth-eval")
+    if not args.smoke and PHASE1_SCAFFOLD_ONLY:
+        refuse_phase1_scaffold_path("non-smoke training")
     if args.allow_missing_canonical_a1 and not args.smoke:
         raise SystemExit(
             "[t1] --allow-missing-canonical-a1 is smoke-only. Non-smoke "

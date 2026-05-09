@@ -47,6 +47,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -83,6 +84,49 @@ def _string_path_exists(repo: Path, value: object) -> bool:
     return path.exists()
 
 
+def _nested_get(mapping: dict, *keys: str) -> object:
+    cur: object = mapping
+    for key in keys:
+        if not isinstance(cur, dict):
+            return None
+        cur = cur.get(key)
+    return cur
+
+
+def _has_symlink_parent(repo: Path, path: Path) -> bool:
+    try:
+        rel = path.relative_to(repo)
+    except ValueError:
+        return False
+    cur = repo
+    for part in rel.parts[:-1]:
+        cur = cur / part
+        if cur.is_symlink():
+            return True
+    return False
+
+
+def _git_ignored_relpaths(repo: Path, relpaths: list[str]) -> set[str]:
+    """Return relpaths ignored by git, excluding tracked force-added files."""
+    if not relpaths or not (repo / ".git").exists():
+        return set()
+    try:
+        result = subprocess.run(
+            ["git", "check-ignore", "--stdin"],
+            cwd=repo,
+            input="\n".join(relpaths) + "\n",
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return set()
+    if result.returncode not in (0, 1):
+        return set()
+    return {line.strip() for line in result.stdout.splitlines() if line.strip()}
+
+
 @dataclass
 class Finding:
     file_rel: str
@@ -105,6 +149,13 @@ def _manifest_has_runtime_closure(manifest: dict, repo: Path) -> bool:
         return True
     if isinstance(rm, (dict, list)) and len(rm) > 0:
         return True
+    for nested_manifest in (
+        _nested_get(manifest, "provenance", "inflate_runtime_manifest"),
+        _nested_get(manifest, "eval_data", "provenance", "inflate_runtime_manifest"),
+        manifest.get("inflate_runtime_manifest"),
+    ):
+        if isinstance(nested_manifest, (dict, list)) and len(nested_manifest) > 0:
+            return True
     if manifest.get("runtime_closure_verified") is True and (
         _string_path_exists(repo, manifest.get("runtime_closure_evidence"))
     ):
@@ -112,47 +163,64 @@ def _manifest_has_runtime_closure(manifest: dict, repo: Path) -> bool:
     return _string_path_exists(repo, manifest.get("inflate_smoke_log"))
 
 
-def _scan_build_manifests(repo: Path) -> list[Finding]:
+def _scan_build_manifests(
+    repo: Path,
+    *,
+    include_ignored_results: bool = False,
+) -> list[Finding]:
     findings: list[Finding] = []
     patterns = (
         "experiments/results/*/build_manifest.json",
         "experiments/results/*/*/build_manifest.json",
     )
+    paths: list[Path] = []
     for pattern in patterns:
-        for path in repo.glob(pattern):
-            relpath = path.relative_to(repo).as_posix()
-            if "public_pr" in relpath and "intake" in relpath:
-                continue
-            try:
-                manifest = json.loads(path.read_text(encoding="utf-8"))
-            except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-                continue
-            if not isinstance(manifest, dict):
-                continue
-            if not _manifest_claims_dispatch(manifest):
-                continue
-            if _manifest_has_runtime_closure(manifest, repo):
-                continue
-            findings.append(
-                Finding(
-                    file_rel=relpath,
-                    line_number=0,
-                    technique=str(
-                        manifest.get(
-                            "lane_id", manifest.get("technique", "<unknown>")
-                        )
-                    ),
-                    reason=(
-                        "build_manifest claims dispatch readiness "
-                        "(ready_for_exact_eval_dispatch=true OR "
-                        "score_claim=true OR positive verdict) but "
-                        "lacks runtime_manifest, "
-                        "runtime_closure_verified+evidence, or "
-                        "inflate_smoke_log. Run inflate in clean env "
-                        "BEFORE dispatch. Gate 5 (runtime closure)."
-                    ),
-                )
+        paths.extend(repo.glob(pattern))
+    relpaths_by_path = {
+        path: path.relative_to(repo).as_posix()
+        for path in paths
+        if not _has_symlink_parent(repo, path)
+    }
+    ignored = (
+        set()
+        if include_ignored_results
+        else _git_ignored_relpaths(repo, list(relpaths_by_path.values()))
+    )
+    for path, relpath in relpaths_by_path.items():
+        if relpath in ignored:
+            continue
+        if "public_pr" in relpath and "intake" in relpath:
+            continue
+        try:
+            manifest = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            continue
+        if not isinstance(manifest, dict):
+            continue
+        if not _manifest_claims_dispatch(manifest):
+            continue
+        if _manifest_has_runtime_closure(manifest, repo):
+            continue
+        findings.append(
+            Finding(
+                file_rel=relpath,
+                line_number=0,
+                technique=str(
+                    manifest.get(
+                        "lane_id", manifest.get("technique", "<unknown>")
+                    )
+                ),
+                reason=(
+                    "build_manifest claims dispatch readiness "
+                    "(ready_for_exact_eval_dispatch=true OR "
+                    "score_claim=true OR positive verdict) but "
+                    "lacks runtime_manifest, "
+                    "runtime_closure_verified+evidence, or "
+                    "inflate_smoke_log. Run inflate in clean env "
+                    "BEFORE dispatch. Gate 5 (runtime closure)."
+                ),
             )
+        )
     return findings
 
 
@@ -206,10 +274,16 @@ def _scan_evidence_for_public_pr_negatives(repo: Path) -> list[Finding]:
     return findings
 
 
-def scan(repo_root: Path | None = None) -> list[Finding]:
+def scan(
+    repo_root: Path | None = None,
+    *,
+    include_ignored_results: bool = False,
+) -> list[Finding]:
     repo = (repo_root or REPO_ROOT_DEFAULT).resolve()
     findings: list[Finding] = []
-    findings.extend(_scan_build_manifests(repo))
+    findings.extend(
+        _scan_build_manifests(repo, include_ignored_results=include_ignored_results)
+    )
     findings.extend(_scan_evidence_for_public_pr_negatives(repo))
     return findings
 
@@ -218,9 +292,17 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", default=str(REPO_ROOT_DEFAULT))
     parser.add_argument("--strict", action="store_true")
+    parser.add_argument(
+        "--include-ignored-results",
+        action="store_true",
+        help=(
+            "also scan git-ignored experiments/results build manifests; "
+            "default preflight scans durable committed/unignored custody surfaces"
+        ),
+    )
     args = parser.parse_args(argv)
     repo = Path(args.repo_root).resolve()
-    findings = scan(repo)
+    findings = scan(repo, include_ignored_results=args.include_ignored_results)
     if findings:
         print(
             f"[gate5-runtime-closure] {len(findings)} violation(s):",

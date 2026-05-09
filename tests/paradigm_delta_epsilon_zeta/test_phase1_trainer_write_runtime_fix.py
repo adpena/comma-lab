@@ -342,6 +342,12 @@ def test_serialise_balle_strings_rejects_non_int_shape(trainer):
         trainer._serialise_balle_strings(bad)
 
 
+def test_serialise_balle_strings_rejects_negative_shape_dim(trainer):
+    bad = {"y_strings": [], "z_strings": [], "z_shape": [1, -1, 4, 1]}
+    with pytest.raises(RuntimeError, match="nonnegative int32"):
+        trainer._serialise_balle_strings(bad)
+
+
 # ---------------------------------------------------------------------------
 # Catalog #146 preflight gate live count + strict behavior
 # ---------------------------------------------------------------------------
