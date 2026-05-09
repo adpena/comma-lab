@@ -564,21 +564,21 @@ def preflight_all(
         # `validate_custody_verdict` (or `posterior_update`/
         # `posterior_update_locked`). The previous tag-only predicate
         # accepted CPU tags on non-GHA hardware + axis/tag mismatches.
-        # Held warn-only initially per directive — flip to STRICT after
-        # live count drives to 0. Memory:
+        # 2026-05-09 STRICT-FLIP per "fix all yourself" operator approval —
+        # Catalog #127 landed at 0 live violations; ratchet protects future
+        # callers from skipping the custody validator. Memory:
         # feedback_codex_round2_custody_concurrency_fix_landed_20260509.md
         check_authoritative_tag_requires_custody_metadata(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # 2026-05-09 codex round-2 MEDIUM fix (#128): bare
         # `save_posterior(...)` calls under parallel harvest silently drop
         # concurrent updates because the load→mutate→write cycle is not
         # atomic. The locked path `posterior_update_locked` does it inside
-        # `fcntl.flock(LOCK_EX)`. Held warn-only initially; flip to STRICT
-        # after live count drives to 0. Memory:
-        # feedback_codex_round2_custody_concurrency_fix_landed_20260509.md
+        # `fcntl.flock(LOCK_EX)`. STRICT-FLIP per "fix all yourself" operator
+        # approval — Catalog #128 landed at 0 live violations.
         check_continual_learning_writes_use_lock(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
