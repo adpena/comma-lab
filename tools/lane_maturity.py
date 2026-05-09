@@ -470,7 +470,20 @@ def render_report_md(data: dict[str, Any]) -> str:
     for lane in lanes:
         by_level[lane.get("level", 0)] += 1
 
+    # DerivedOutputGuard regen header (Catalog #113 META gate). Must appear in
+    # the first 4KB. The HTML-comment form is recognized by the regex
+    # `(generated_at|generated_utc).*?(from_state_hash|source_state_hash|input_sha)`.
+    import hashlib as _hashlib
+    state_payload = json.dumps(data, sort_keys=True).encode("utf-8")
+    from_state_hash = _hashlib.sha256(state_payload).hexdigest()
+    generated_at = data.get("updated_at", "")
+
     lines: list[str] = []
+    lines.append(
+        f"<!-- generated_at: {generated_at} from_state_hash: {from_state_hash} "
+        f"regenerated_by: tools/lane_maturity.py report -->"
+    )
+    lines.append("")
     lines.append("# Lane Maturity Report")
     lines.append("")
     lines.append(
@@ -478,7 +491,7 @@ def render_report_md(data: dict[str, Any]) -> str:
         "Do not hand-edit — re-run the command to refresh.*"
     )
     lines.append("")
-    lines.append(f"- Updated: `{data.get('updated_at', '?')}`")
+    lines.append(f"- Updated: `{generated_at or '?'}`")
     lines.append(f"- Total lanes: **{len(lanes)}**")
     lines.append(f"- Level 3 (FULL PRODUCTION HARDENED): **{by_level[3]}**")
     lines.append(f"- Level 2 (INTEGRATION):              **{by_level[2]}**")

@@ -480,9 +480,21 @@ def build_roadmap_status(
         rows,
         field_meta_candidate_packet_selection=field_meta_candidate_packet_selection,
     )
+    # DerivedOutputGuard regen header (Catalog #113 META gate). The payload
+    # ITSELF carries `generated_at` (the run's now_utc) + `from_state_hash`
+    # (sha256 of the inventory snapshot) so consumers can verify regeneration
+    # provenance from within the first 4KB of the JSON body. This satisfies
+    # the META gate `(generated_at|generated_utc).*?(from_state_hash|...)` regex.
+    import hashlib as _hashlib
+    import json as _json
+    inventory_payload = _json.dumps(inventory.get("rows", []), sort_keys=True).encode("utf-8")
+    from_state_hash = _hashlib.sha256(inventory_payload).hexdigest()
+
     return {
         "schema_version": SCHEMA_VERSION,
         "tool": "tools/build_frontier_roadmap_status.py",
+        "generated_at": now_utc or "",
+        "from_state_hash": from_state_hash,
         "inventory_tool": inventory["tool"],
         "score_claim": False,
         "dispatch_attempted": False,

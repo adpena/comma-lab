@@ -54,6 +54,23 @@ outputs/
 # Local Claude scheduler locks contain machine/session PIDs and must not churn.
 .claude/*.lock
 
+# LIVE_STATE pid/lock files (Catalog #113 META gate). Per
+# artifact_kind_registry.yaml LiveStateGuard rule: pid/lock files are
+# transient session state and MUST NOT be committed. The 3-file fix on
+# 2026-05-09 (catalog #113 strict-flip cleanup) untracked stale committed
+# pid/lock under experiments/results, reports/raw, submissions/. Scoped to
+# long-lived-artifact roots so dependency-lock files (uv.lock,
+# runtime-rs/Cargo.lock) and intentional configs are NOT touched.
+experiments/results/**/*.pid
+experiments/results/**/.lock
+experiments/results/**/*.lock
+reports/raw/**/*.pid
+reports/raw/**/.lock
+reports/raw/**/*.lock
+submissions/**/*.pid
+submissions/**/.lock
+submissions/**/eval_runs/**/.lock
+
 # Harvest bundles record run_command.sh for traceability — these are
 # audit artifacts, not deploy scripts, and should be exempt from the
 # "shell-script-in-experiments" preflight rule.

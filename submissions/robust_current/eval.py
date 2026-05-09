@@ -203,7 +203,7 @@ def _parse_report_txt(report_path: Path) -> dict:
 @click.option(
     "--work-dir",
     default=None,
-    help="Working directory (default: /tmp/tac_eval_XXXXX).",
+    help="Working directory (default: a fresh tac_eval_XXXXX dir under the system temp root).",
 )
 @click.option("--skip-compress", is_flag=True, help="Skip compression.")
 @click.option("--skip-inflate", is_flag=True, help="Skip inflation.")

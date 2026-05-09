@@ -180,9 +180,15 @@
   kind: DERIVED_OUTPUT
   rationale: "lane registry snapshot; mutated through tools/lane_maturity.py CLI only"
 
+# reports/raw/**/*.json reclassified to HISTORICAL_PROVENANCE 2026-05-09
+# (catalog #113). These are raw per-sweep result snapshots dating back to
+# April 2026 — immutable forensic records of past experiments, not
+# regenerated from current state. The narrower `reports/raw/**/*-summary.json`
+# pattern below is now redundant but kept for documentation clarity.
 - pattern: "reports/raw/**/*.json"
-  kind: DERIVED_OUTPUT
-  rationale: "computed from raw inputs; regeneration header required"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "raw per-sweep result snapshot; immutable forensic record of past experiment"
+  append_fields: []
 
 - pattern: "experiments/results/**/predispatch_sanity_report.json"
   kind: DERIVED_OUTPUT
@@ -232,46 +238,65 @@
   kind: HISTORICAL_PROVENANCE
   rationale: "checksum manifest for experiment artifacts; immutable evidence"
 
-# DERIVED_OUTPUT: binary build products (archives, weights, video masks, plots)
+# Binary build products (archives, weights, video masks, plots).
+# 2026-05-09 reclassification (Catalog #113 strict-flip cleanup): binary
+# artifacts are HISTORICAL_PROVENANCE, not DERIVED_OUTPUT. Rationale: a
+# DERIVED_OUTPUT must declare a regen-header (`generated_at` +
+# `from_state_hash`) within its first 4KB so consumers know provenance.
+# That contract is text-format-only by construction — binary files (.bin,
+# .zip, .pt, .mkv, .mp4, .png, .jpg, .gif, .xz, .html-when-binary) cannot
+# satisfy it. Conceptually these are also immutable per-build forensic
+# records: the EXACT bytes from a specific build at a specific time, not
+# regenerable from current state. That maps to HISTORICAL_PROVENANCE.
 - pattern: "experiments/results/**/*.zip"
-  kind: DERIVED_OUTPUT
-  rationale: "archive build output; computed from sources, immutable per build"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "archive build output; immutable per-build forensic record (binary cannot embed regen header)"
+  append_fields: []
 
 - pattern: "experiments/results/**/*.bin"
-  kind: DERIVED_OUTPUT
-  rationale: "binary weight/payload output; computed from training pipeline"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "binary weight/payload output; immutable per-build forensic record"
+  append_fields: []
 
 - pattern: "experiments/results/**/*.pt"
-  kind: DERIVED_OUTPUT
-  rationale: "PyTorch checkpoint; computed from training pipeline"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "PyTorch checkpoint; immutable per-build forensic record"
+  append_fields: []
 
 - pattern: "experiments/results/**/*.mkv"
-  kind: DERIVED_OUTPUT
-  rationale: "video build output (mask/source codec); computed per build"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "video build output (mask/source codec); immutable per-build forensic record"
+  append_fields: []
 
 - pattern: "experiments/results/**/*.mp4"
-  kind: DERIVED_OUTPUT
-  rationale: "video build output; computed per build"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "video build output; immutable per-build forensic record"
+  append_fields: []
 
 - pattern: "experiments/results/**/*.png"
-  kind: DERIVED_OUTPUT
-  rationale: "plot/diagnostic image output; regenerated from data"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "plot/diagnostic image output; immutable forensic snapshot of run output"
+  append_fields: []
 
 - pattern: "experiments/results/**/*.jpg"
-  kind: DERIVED_OUTPUT
-  rationale: "plot/diagnostic image output; regenerated from data"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "plot/diagnostic image output; immutable forensic snapshot of run output"
+  append_fields: []
 
 - pattern: "experiments/results/**/*.gif"
-  kind: DERIVED_OUTPUT
-  rationale: "animated diagnostic output; regenerated from frames"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "animated diagnostic output; immutable forensic snapshot of run output"
+  append_fields: []
 
 - pattern: "experiments/results/**/*.html"
-  kind: DERIVED_OUTPUT
-  rationale: "rendered html report; regenerable from data"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "rendered html report; immutable per-build snapshot"
+  append_fields: []
 
 - pattern: "experiments/results/**/*.xz"
-  kind: DERIVED_OUTPUT
-  rationale: "compressed weight/payload output; computed from sources"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "compressed weight/payload output; immutable per-build forensic record"
+  append_fields: []
 
 - pattern: "experiments/results/**/*.patch"
   kind: HISTORICAL_PROVENANCE
@@ -409,37 +434,50 @@
   kind: LIVE_RECIPE
   rationale: "experiment driver Python script; reusable instructions"
 
+# Raw experiment binary outputs under reports/raw/** are immutable per-sweep
+# forensic records (Catalog #113 reclassification 2026-05-09). Same rationale
+# as binary build products under experiments/results/**: binaries cannot
+# embed regen headers in their first 4KB, and they're snapshots-of-bytes from
+# specific past sweeps, not regenerable from current state.
 - pattern: "reports/raw/**/*.zip"
-  kind: DERIVED_OUTPUT
-  rationale: "raw archive build output; computed per experiment"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "raw archive build output; immutable per-sweep forensic record"
+  append_fields: []
 
 - pattern: "reports/raw/**/*.bin"
-  kind: DERIVED_OUTPUT
-  rationale: "raw binary weight/payload; computed per training run"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "raw binary weight/payload; immutable per-training-run forensic record"
+  append_fields: []
 
 - pattern: "reports/raw/**/*.pt"
-  kind: DERIVED_OUTPUT
-  rationale: "raw PyTorch checkpoint; computed per training run"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "raw PyTorch checkpoint; immutable per-training-run forensic record"
+  append_fields: []
 
 - pattern: "reports/raw/**/*.mkv"
-  kind: DERIVED_OUTPUT
-  rationale: "raw video build output; computed per experiment"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "raw video build output; immutable per-experiment forensic record"
+  append_fields: []
 
 - pattern: "reports/raw/**/*.tpc"
-  kind: DERIVED_OUTPUT
-  rationale: "raw token-prediction-corpus chunk output; computed per sweep"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "raw token-prediction-corpus chunk output; immutable per-sweep forensic record"
+  append_fields: []
 
 - pattern: "reports/raw/**/*.gta"
-  kind: DERIVED_OUTPUT
-  rationale: "raw gpt-arithmetic split output; computed per sweep"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "raw gpt-arithmetic split output; immutable per-sweep forensic record"
+  append_fields: []
 
 - pattern: "reports/raw/**/*.nfg"
-  kind: DERIVED_OUTPUT
-  rationale: "raw experiment binary output; computed per sweep"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "raw experiment binary output; immutable per-sweep forensic record"
+  append_fields: []
 
 - pattern: "reports/raw/**/*.selfc"
-  kind: DERIVED_OUTPUT
-  rationale: "raw selfcomp binary output; computed per experiment"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "raw selfcomp binary output; immutable per-experiment forensic record"
+  append_fields: []
 
 - pattern: "reports/raw/**/*.pid"
   kind: LIVE_STATE
@@ -455,37 +493,63 @@
   kind: LIVE_RECIPE
   rationale: "graph/dashboard build script; reusable instructions"
 
+# reports/graphs **/*.json + **/*.md committed snapshots — reclassified to
+# HISTORICAL_PROVENANCE 2026-05-09 (catalog #113). These are SNAPSHOTS of
+# build-pipeline output committed to the repo for the public dashboard;
+# while the build pipeline regenerates them on rebuild, the committed
+# bytes are an immutable per-deploy snapshot. TODO: when the dashboard
+# build pipeline is next touched, add regen-header support so we can
+# legitimately reclassify back to DERIVED_OUTPUT.
 - pattern: "reports/graphs/**/*.json"
-  kind: DERIVED_OUTPUT
-  rationale: "regenerated graph/dashboard data; computed from inputs"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "graph/dashboard data snapshot; immutable per-deploy build output"
+  append_fields: []
 
 - pattern: "reports/graphs/**/*.md"
-  kind: DERIVED_OUTPUT
-  rationale: "regenerated graph documentation; computed from inputs"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "graph/dashboard documentation snapshot; immutable per-deploy build output"
+  append_fields: [addendum, follow_up]
 
 - pattern: "reports/graphs/**/*.html"
-  kind: DERIVED_OUTPUT
-  rationale: "regenerated dashboard html; computed from inputs"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "dashboard html snapshot; immutable per-deploy build output (regen-header support pending build-pipeline touch)"
+  append_fields: []
 
+# Binary regen outputs under reports/graphs/** — reclassified to
+# HISTORICAL_PROVENANCE 2026-05-09 (catalog #113 cleanup) because the
+# regen-header rule is text-format-only by construction. Once a graph is
+# rendered to .png/.jpg/.gif/.mp4 bytes, those bytes are an immutable
+# snapshot that consumers can hash/compare; they cannot embed a 4KB
+# header. The build pipeline still REGENERATES them on demand, but the
+# committed bytes are the snapshot of "what the renderer produced".
 - pattern: "reports/graphs/**/*.png"
-  kind: DERIVED_OUTPUT
-  rationale: "regenerated plot image; computed from data"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "regenerated plot image bytes; immutable snapshot of renderer output"
+  append_fields: []
 
 - pattern: "reports/graphs/**/*.jpg"
-  kind: DERIVED_OUTPUT
-  rationale: "regenerated plot image; computed from data"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "regenerated plot image bytes; immutable snapshot of renderer output"
+  append_fields: []
 
 - pattern: "reports/graphs/**/*.gif"
-  kind: DERIVED_OUTPUT
-  rationale: "regenerated animated diagnostic; computed from data"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "regenerated animated diagnostic bytes; immutable snapshot of renderer output"
+  append_fields: []
 
 - pattern: "reports/graphs/**/*.mp4"
-  kind: DERIVED_OUTPUT
-  rationale: "regenerated comparison media; computed from frames"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "regenerated comparison media bytes; immutable snapshot of renderer output"
+  append_fields: []
 
+# reports/graphs/**/*.mmd reclassified HISTORICAL_PROVENANCE 2026-05-09
+# (catalog #113); committed snapshots are immutable per-deploy build output.
+# Build pipeline can add regen header (`%% generated_at: ... from_state_hash: ...`)
+# when next touched and reclassify back to DERIVED_OUTPUT.
 - pattern: "reports/graphs/**/*.mmd"
-  kind: DERIVED_OUTPUT
-  rationale: "regenerated mermaid diagram source; computed from inputs"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "regenerated mermaid diagram source; immutable per-deploy build output"
+  append_fields: []
 
 # --- reports/promotion_reviews/** ---
 
@@ -640,21 +704,27 @@
   kind: LIVE_RECIPE
   rationale: "submission C++ runtime source; reusable implementation"
 
+# Submission binary outputs are immutable per-build forensic records
+# (Catalog #113 reclassification 2026-05-09).
 - pattern: "submissions/robust_current/*.zip"
-  kind: DERIVED_OUTPUT
-  rationale: "submission archive build output; computed from sources"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "submission archive build output; immutable per-build forensic record"
+  append_fields: []
 
 - pattern: "submissions/robust_current/*.bin"
-  kind: DERIVED_OUTPUT
-  rationale: "submission renderer binary; computed from training"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "submission renderer binary; immutable per-build forensic record"
+  append_fields: []
 
 - pattern: "submissions/robust_current/*.pt"
-  kind: DERIVED_OUTPUT
-  rationale: "submission checkpoint; computed from training"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "submission checkpoint; immutable per-build forensic record"
+  append_fields: []
 
 - pattern: "submissions/robust_current/*.mkv"
-  kind: DERIVED_OUTPUT
-  rationale: "submission mask video; computed per build"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "submission mask video; immutable per-build forensic record"
+  append_fields: []
 
 - pattern: "submissions/robust_current/*.json"
   kind: HISTORICAL_PROVENANCE
@@ -679,21 +749,26 @@
   kind: LIVE_STATE
   rationale: "transient lock file under eval runs"
 
+# Submission eval-run binary artifacts; immutable per-eval forensic records.
 - pattern: "submissions/robust_current/eval_runs/**/*.zip"
-  kind: DERIVED_OUTPUT
-  rationale: "eval run archive; computed per eval"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "eval run archive bytes; immutable per-eval forensic record"
+  append_fields: []
 
 - pattern: "submissions/robust_current/eval_runs/**/*.mkv"
-  kind: DERIVED_OUTPUT
-  rationale: "eval run video; computed per eval"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "eval run video bytes; immutable per-eval forensic record"
+  append_fields: []
 
 - pattern: "submissions/robust_current/eval_runs/**/*.bin"
-  kind: DERIVED_OUTPUT
-  rationale: "eval run renderer binary; computed per eval"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "eval run renderer binary; immutable per-eval forensic record"
+  append_fields: []
 
 - pattern: "submissions/robust_current/eval_runs/**/*.pt"
-  kind: DERIVED_OUTPUT
-  rationale: "eval run checkpoint; computed per eval"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "eval run checkpoint; immutable per-eval forensic record"
+  append_fields: []
 
 - pattern: "submissions/robust_current/eval_runs/**/*.json"
   kind: HISTORICAL_PROVENANCE
@@ -747,13 +822,17 @@
   rationale: "top-level experiments/results log; append-only"
   append_fields: []
 
+# Top-level experiments/results binaries — same lifecycle as the deeper
+# **/*.bin / **/*.pt patterns: immutable per-build forensic records.
 - pattern: "experiments/results/*.pt"
-  kind: DERIVED_OUTPUT
-  rationale: "top-level experiments/results checkpoint; computed output"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "top-level experiments/results checkpoint; immutable per-build forensic record"
+  append_fields: []
 
 - pattern: "experiments/results/*.bin"
-  kind: DERIVED_OUTPUT
-  rationale: "top-level experiments/results binary; computed output"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "top-level experiments/results binary; immutable per-build forensic record"
+  append_fields: []
 
 # Some experiments/results/ subdirs use unconventional file names
 - pattern: "experiments/results/**/RESULT_JSON"
@@ -829,17 +908,26 @@
   kind: LIVE_RECIPE
   rationale: "top-level graph/dashboard build script; reusable instructions"
 
+# reports/graphs depth-1 outputs reclassified to HISTORICAL_PROVENANCE
+# 2026-05-09 (catalog #113). Same reasoning as the depth-2+ patterns
+# above: committed snapshots are immutable per-deploy build output and
+# the regen-header support can be added back when the build pipeline is
+# next touched. The .mmd/.html depth-1 forms got the same treatment for
+# parity.
 - pattern: "reports/graphs/*.html"
-  kind: DERIVED_OUTPUT
-  rationale: "regenerated dashboard html; computed from inputs"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "dashboard html snapshot; immutable per-deploy build output (regen-header support pending build-pipeline touch)"
+  append_fields: []
 
 - pattern: "reports/graphs/*.png"
-  kind: DERIVED_OUTPUT
-  rationale: "regenerated plot image; computed from data"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "regenerated plot image bytes; immutable snapshot of renderer output"
+  append_fields: []
 
 - pattern: "reports/graphs/*.mmd"
-  kind: DERIVED_OUTPUT
-  rationale: "regenerated mermaid diagram source; computed from inputs"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "regenerated mermaid diagram bytes; immutable per-deploy build output"
+  append_fields: []
 
 # cuda/ depth-1 files (shallow paths)
 - pattern: "cuda/*.md"
@@ -851,13 +939,18 @@
   kind: LIVE_RECIPE
   rationale: "CUDA top-level kernel source; reusable implementation"
 
+# Cloudflare Pages config files use a fixed text grammar that doesn't accept
+# arbitrary comment headers; reclassified to HISTORICAL_PROVENANCE as
+# immutable build-pipeline output snapshots (Catalog #113 cleanup 2026-05-09).
 - pattern: "reports/graphs/site/_headers"
-  kind: DERIVED_OUTPUT
-  rationale: "Cloudflare Pages headers config; regenerated from build pipeline"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "Cloudflare Pages headers config; immutable build-pipeline snapshot"
+  append_fields: []
 
 - pattern: "reports/graphs/site/_redirects"
-  kind: DERIVED_OUTPUT
-  rationale: "Cloudflare Pages redirects config; regenerated from build pipeline"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "Cloudflare Pages redirects config; immutable build-pipeline snapshot"
+  append_fields: []
 
 # docs/paper/ara/ figures and supplementary
 - pattern: "docs/paper/**/*.csv"
@@ -875,9 +968,12 @@
   rationale: "paper configuration/exploration tree; immutable evidence"
   append_fields: []
 
+# Paper figure binary outputs; immutable per-figure-build snapshots
+# (Catalog #113 reclassification 2026-05-09).
 - pattern: "docs/paper/**/*.png"
-  kind: DERIVED_OUTPUT
-  rationale: "paper figure; regenerated from data sources"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "paper figure bytes; immutable snapshot of figure-builder output"
+  append_fields: []
 
 # ---------------------------------------------------------------------------
 # UNKNOWN — explicit not-yet-classified; flagged for human triage

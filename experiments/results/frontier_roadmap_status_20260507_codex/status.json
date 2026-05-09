@@ -1,4 +1,7 @@
 {
+  "generated_at": "2026-05-07T18:37:16Z",
+  "from_state_hash": "ea7272ed22c8bec08e2998330b87c14c9a1290f3286a2fd8fab2afa19746703b",
+  "backfilled_by": "catalog_113_strict_flip_cleanup_20260509",
   "dirty_blocked_row_count": 13,
   "dirty_path_count": 9,
   "dispatch_attempted": false,

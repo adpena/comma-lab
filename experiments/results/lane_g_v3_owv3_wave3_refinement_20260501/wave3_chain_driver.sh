@@ -1,4 +1,11 @@
 #!/bin/bash
+# HISTORICAL_RECIPE_ONLY — frozen wave3 chain driver from 2026-05-01.
+# This is a HISTORICAL ARTIFACT preserved for forensic reproduction of the
+# wave3_chain_eval sweep that landed in lane_g_v3_owv3_wave3_refinement.
+# DO NOT REPLAY VERBATIM on a live Vast.ai instance — the /tmp scratch
+# paths and chain-id assumptions are specific to the 2026-05-01 setup.
+# For new chain runs, use scripts/remote_archive_only_eval.sh directly.
+#
 # Wave-3 OWV3 chain-eval driver — runs on Vast.ai instance after SCP'd archives land.
 # Orchestrates 6 sequential remote_archive_only_eval.sh invocations under the
 # wave3_chain_eval label. Outputs land at /workspace/pact/owv3_wave3_<id>_results/

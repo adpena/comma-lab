@@ -15,13 +15,20 @@ Usage:
   # Our venv (torch 2.11.0, timm 1.0.26)
   .venv/bin/python submissions/robust_current/diagnose_scorer.py \
     --upstream-dir workspace/upstream/comma_video_compression_challenge \
-    --submission-dir /tmp/verify_133/submission
+    --submission-dir "${SUBMISSION_DIR:-experiments/results/diagnose_scorer_smoke/submission}"
 
   # Upstream venv (torch 2.10.0, timm 1.0.22)
   workspace/upstream/comma_video_compression_challenge/.venv/bin/python \
     submissions/robust_current/diagnose_scorer.py \
     --upstream-dir workspace/upstream/comma_video_compression_challenge \
-    --submission-dir /tmp/verify_133/submission
+    --submission-dir "${SUBMISSION_DIR:-experiments/results/diagnose_scorer_smoke/submission}"
+
+# NOTE 2026-05-09 (catalog #113 cleanup): the docstring examples used to
+# include a literal scratch path under the system temp dir (verify_133/submission).
+# Per the `forbidden_transient_evidence_trap` rule, transient scratch paths
+# must not appear in committed artifacts. The examples now use a
+# ${SUBMISSION_DIR} placeholder with a durable default under
+# experiments/results/.
 """
 from __future__ import annotations
 
@@ -275,7 +282,11 @@ def diagnose(
         "per_pair_posenet": [float(x) for x in all_pose_dists],
         "per_pair_segnet": [float(x) for x in all_seg_dists],
     }
-    out_path = Path(f"/tmp/diagnose_scorer_{torch.__version__}.json")
+    # Catalog #113 (2026-05-09): durable scratch under .omx/tmp instead of
+    # /tmp so per-pair output survives shell exit and is reproducibly located.
+    scratch_root = Path(__file__).resolve().parents[2] / ".omx" / "tmp"
+    scratch_root.mkdir(parents=True, exist_ok=True)
+    out_path = scratch_root / f"diagnose_scorer_{torch.__version__}.json"
     out_path.write_text(json.dumps(output, indent=2) + "\n")
     click.echo(f"\n  Per-pair data saved to: {out_path}")
     click.echo("=" * 60)

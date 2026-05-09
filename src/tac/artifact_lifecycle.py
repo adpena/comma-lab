@@ -272,12 +272,16 @@ class ProvenanceGuard:
     def check(self, path: Path | str, append_fields: tuple[str, ...] = ()) -> GuardResult:
         rel = _rel_path(path, self.repo_root)
         violations: list[str] = []
+        # Catalog #113 (2026-05-09): use text=False so binary HISTORICAL_PROVENANCE
+        # files (.bin/.pt/.zip/.mkv/etc.) don't crash subprocess on UnicodeDecodeError.
+        # We try to decode-and-JSON-parse below; binary content fails JSON parse
+        # cleanly and exits the guard early.
         try:
             head = subprocess.run(
                 ["git", "show", f"HEAD:{rel}"],
                 cwd=self.repo_root,
                 capture_output=True,
-                text=True,
+                text=False,
                 timeout=10,
             )
         except (subprocess.TimeoutExpired, FileNotFoundError):
@@ -292,9 +296,10 @@ class ProvenanceGuard:
                 path=rel, kind=ArtifactKind.HISTORICAL_PROVENANCE, violations=[]
             )
         try:
-            head_payload = json.loads(head.stdout)
+            head_text = head.stdout.decode("utf-8")
+            head_payload = json.loads(head_text)
             wt_payload = json.loads(abs_path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
+        except (json.JSONDecodeError, OSError, UnicodeDecodeError):
             return GuardResult(
                 path=rel, kind=ArtifactKind.HISTORICAL_PROVENANCE, violations=[]
             )
@@ -395,11 +400,22 @@ class RecipeGuard:
             text = abs_path.read_text(encoding="utf-8", errors="replace")
         except OSError:
             return GuardResult(path=rel, kind=ArtifactKind.LIVE_RECIPE, violations=[])
-        # Permit explicit historical-only annotation
-        if (
-            "HISTORICAL_RECIPE_ONLY" in text
-            or "historical-recipe-only" in text.lower()
-        ):
+        # Permit explicit historical-only annotation. Sister gate #112
+        # (`check_rebuild_commands_no_baked_runtime_state`) accepts a broader
+        # set of phrases — keep them aligned for cross-gate consistency.
+        # Otherwise the META gate flags files the per-finding gate accepts,
+        # which produces silent noise / false positives. 2026-05-09 alignment
+        # under catalog #113 strict-flip cleanup.
+        text_lower = text.lower()
+        historical_markers = (
+            "historical_recipe_only",
+            "historical-recipe-only",
+            "historical artifact",
+            "do not replay",
+            "frozen historical",
+            "forensic reproduction",
+        )
+        if any(marker in text_lower for marker in historical_markers):
             return GuardResult(path=rel, kind=ArtifactKind.LIVE_RECIPE, violations=[])
         for pat, label in _TRANSIENT_BAKE_PATTERNS:
             for match in re.finditer(pat, text):
@@ -506,12 +522,16 @@ def _tracked_paths_matching_pattern(root: Path, pattern: str) -> list[Path]:
 
 
 def _git_show_json(repo_root: Path, ref: str, relpath: str) -> Any | None:
+    # Catalog #113 (2026-05-09): use text=False so binary
+    # HISTORICAL_PROVENANCE files don't crash on UnicodeDecodeError; decode
+    # and JSON-parse explicitly inside the try/except so binary content
+    # exits the guard early.
     try:
         result = subprocess.run(
             ["git", "show", f"{ref}:{relpath}"],
             cwd=repo_root,
             capture_output=True,
-            text=True,
+            text=False,
             timeout=10,
         )
     except (subprocess.TimeoutExpired, FileNotFoundError):
@@ -519,8 +539,8 @@ def _git_show_json(repo_root: Path, ref: str, relpath: str) -> Any | None:
     if result.returncode != 0:
         return None
     try:
-        return json.loads(result.stdout)
-    except json.JSONDecodeError:
+        return json.loads(result.stdout.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
         return None
 
 
