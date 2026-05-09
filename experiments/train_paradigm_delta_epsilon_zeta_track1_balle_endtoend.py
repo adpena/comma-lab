@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """PARADIGM-δεζ Track 1 — Ballé hyperprior + 128K decoder end-to-end trainer.
 
-This is the **build-only Phase 1 trainer** for T1. It takes the frozen A1
+This is the Phase 1 trainer for T1. It takes the frozen A1
 latent table as input, trains:
 
   - a fresh 128K-parameter Quantizr-class FiLM decoder (
@@ -11,19 +11,18 @@ latent table as input, trains:
   - jointly under a Boyd-style adaptive-ρ Lagrangian-ADMM coordinator (
     :class:`tac.paradigm_delta_epsilon_zeta.JointLagrangianADMM`)
 
-against the Phase 1 pixel proxy. Phase 2 wires real scorer-domain objectives
-and exact eval dispatch once the runtime is byte-closed.
-
-Phase 1 NOTE: the emitted archive/runtime is a **build-verification scaffold**,
-not a contest-submission format. ``research_only=true`` until Phase 2 replaces
-pickle/state-dict payloads with a deterministic byte-optimised wire format.
+against the Phase 1 pixel proxy. The emitted archive/runtime is now
+contest-contract-shaped and byte-closed, but score promotion still requires
+the normal dispatch-claim, exact-eval custody, and CUDA/CPU evidence gates.
+Phase 2 wires real scorer-domain objectives and replaces the interim
+state-dict payloads with a deterministic byte-optimised wire format.
 
 REPRESENTATION_ARCHIVE_GRAMMAR_BLUEPRINT:
-  archive_grammar: single ZIP member ``x`` with scaffold sections
-  parser_section_manifest: section lengths are emitted in provenance only
-  inflate_runtime_loc_budget: scaffold runtime exceeds packet budget
+  archive_grammar: three ZIP members ``x`` / ``decoder.bin`` / ``balle.bin``
+  parser_section_manifest: member names, SHA-256s, and byte sizes
+  inflate_runtime_loc_budget: contest-shaped runtime, budget checked by packet compiler
   runtime_dep_closure: PACT_RUNTIME_DEPENDENCY_ROOT declares repo tac dependency
-  export_format: research_only_no_export
+  export_format: phase1_contest_contract
   score_aware_loss: Phase 1 real-pixel eval-roundtrip proxy; Phase 2 scorer loss
   bolt_on_loc_budget: substrate_engineering
   no_op_detector_planned: exact old/new archive SHA plus inflate consumption
@@ -40,10 +39,9 @@ CLAUDE.md non-negotiables — wired through this file
   decoder output to approximate the int8 cast.
 - **NEVER MPS authoritative** — the trainer raises on ``--device mps`` and
   refuses to write ``[contest-CUDA]`` tags from any non-CUDA forward pass.
-- **Auth eval is fail-closed for Phase 1** — the emitted runtime is
-  ``research_only_no_export`` until Phase 2 replaces the scaffold pickle
-  format with a contest-hermetic inflate contract. ``--auth-eval`` is refused
-  before training so no scaffold archive can be promoted accidentally.
+- **Auth eval is fail-closed through dispatch custody** — ``--auth-eval``
+  requires an active lane dispatch claim and still cannot promote without
+  exact CUDA/CPU evidence, archive SHA-256, runtime custody, and logs.
 - **Predicted scores tagged** — the run manifest carries ``score_band:
   "[predicted; Phase 1 scaffold; not yet empirical]"`` until a
   contest-CUDA result lands.
@@ -543,17 +541,26 @@ def build_archive_from_ema(
 ) -> Path:
     """Materialise an archive.zip + submission_dir for contest_auth_eval.
 
-    Phase 1 NOTE: this is the **scaffold-quality** archive layout. The
-    runtime side (inflate.py + codec.py) is generated procedurally from the
-    trained module state dicts. Phase 2 will replace this with a fully
-    optimised wire format.
+    Phase 1 contest-compliant emission (operator decision B 2026-05-09):
 
-    The archive layout (single ZIP member 'x'):
-        uint32 LE: balle_strings_section_total_bytes (D)
-        bytes (D - 4): pickled balle.compress(latents) output
-        bytes : pickled decoder EMA state dict (torch.save format)
-        bytes : pickled balle EMA state dict
+    Archive layout — three named ZIP members (parser_section_manifest input):
+        ``x``           — Brotli-compressed Ballé latent strings, with a
+                          ``<I:n_strings><I:len><bytes>...<I:len><bytes>``
+                          length-prefixed binary preamble (NOT pickle; per
+                          Q1 council Contrarian dissent honored).
+        ``decoder.bin`` — torch.save() of EMA decoder state-dict, brotli q11.
+        ``balle.bin``   — torch.save() of EMA balle state-dict, brotli q11.
+
+    HNeRV parity discipline lesson 3 substrate-engineering exception: 3
+    members (not monolithic single-file) is justified by ``lane_class=
+    substrate_engineering`` + parser_section_manifest legibility. Recorded
+    in build_manifest.json::hnerv_parity_manifest::archive_grammar=
+    ``Phase1-monolithic-x-decoder-balle``.
     """
+    import brotli
+    import io
+    import zipfile
+
     submission_dir = output_dir / "submission_dir"
     submission_dir.mkdir(exist_ok=True)
     src_dir = submission_dir / "src"
@@ -574,31 +581,35 @@ def build_archive_from_ema(
         with torch.no_grad():
             strings = balle.compress(latents_dev)
 
-        # Build the wire-format inner blob (Phase 1 scaffold layout).
-        import io
-        import pickle
+        # Q1 consensus: length-prefixed binary serialisation of the Ballé
+        # strings list, then brotli q11 wrap. compressai's ``balle.compress``
+        # returns ``list[list[bytes]]`` (one per string-stream level); we
+        # serialise outer-then-inner length prefixes deterministically.
+        x_payload_bytes = _serialise_balle_strings(strings)
+        x_member_bytes = brotli.compress(x_payload_bytes, quality=11)
 
-        strings_blob = pickle.dumps(strings)
-        decoder_blob = pickle.dumps(ema_decoder.state_dict())
-        balle_blob = pickle.dumps(ema_balle.state_dict())
+        # Decoder + Balle state-dicts via torch.save into an in-memory buffer,
+        # then brotli q11 wrap.
+        dec_buf = io.BytesIO()
+        torch.save(ema_decoder.state_dict(), dec_buf)
+        decoder_member_bytes = brotli.compress(dec_buf.getvalue(), quality=11)
 
-        section_total_bytes = 4 + len(strings_blob)
-        body = (
-            struct.pack("<I", section_total_bytes)
-            + strings_blob
-            + struct.pack("<I", len(decoder_blob))
-            + decoder_blob
-            + struct.pack("<I", len(balle_blob))
-            + balle_blob
-        )
+        balle_buf = io.BytesIO()
+        torch.save(ema_balle.state_dict(), balle_buf)
+        balle_member_bytes = brotli.compress(balle_buf.getvalue(), quality=11)
 
         archive_path = output_dir / "archive.zip"
-        import zipfile
-
         with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_STORED) as zf:
-            info = zipfile.ZipInfo("x", date_time=(1980, 1, 1, 0, 0, 0))
-            info.compress_type = zipfile.ZIP_STORED
-            zf.writestr(info, body)
+            for name, payload in (
+                ("x", x_member_bytes),
+                ("decoder.bin", decoder_member_bytes),
+                ("balle.bin", balle_member_bytes),
+            ):
+                info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+                info.compress_type = zipfile.ZIP_STORED
+                # Per packet compiler: NON_EXECUTABLE_MODE = 0o644.
+                info.external_attr = (0o100000 | 0o644) << 16
+                zf.writestr(info, payload)
 
         # Write inflate.py / inflate.sh / codec.py / model.py.
         _write_runtime(
@@ -606,6 +617,12 @@ def build_archive_from_ema(
             decoder_config=decoder_config,
             balle_config=balle_config,
         )
+
+        # Place a copy of archive.zip alongside the submission_dir runtime
+        # tree so contest_auth_eval can find it via the submission_dir's
+        # parent (the canonical contest layout).
+        sub_archive = submission_dir / "archive.zip"
+        sub_archive.write_bytes(archive_path.read_bytes())
     finally:
         decoder.load_state_dict(decoder_state)
         _restore_state_dict_with_loose_buffers(balle, balle_state)
@@ -614,39 +631,150 @@ def build_archive_from_ema(
     return archive_path
 
 
+def _serialise_balle_strings(strings: object) -> bytes:
+    """Serialise BalleHyperpriorWrapper.compress(...) output deterministically.
+
+    The wrapper returns ``dict[str, Any]`` with three fields:
+        ``y_strings`` — ``list[bytes]`` (per-batch-element AC payload)
+        ``z_strings`` — ``list[bytes]`` (per-batch-element hyperprior payload)
+        ``z_shape``   — ``list[int]`` (4-D shape of the discretised z buffer)
+
+    Wire format (little-endian uint32 length prefixes throughout):
+
+        <I:n_y> [ <I:blen> <bytes> ]_n_y
+        <I:n_z> [ <I:blen> <bytes> ]_n_z
+        <I:n_shape> [ <i:int> ]_n_shape   # z_shape ints (signed for safety)
+
+    The reader in inflate.py deserialises bit-exact via the inverse of this
+    format and reconstructs the dict the wrapper's decompress() expects.
+    """
+    if not isinstance(strings, dict):
+        raise RuntimeError(
+            f"unexpected balle.compress() return type {type(strings)!r}; "
+            "expected dict[str, Any]"
+        )
+    y_strings = strings.get("y_strings")
+    z_strings = strings.get("z_strings")
+    z_shape = strings.get("z_shape")
+    for name, val, expected in (
+        ("y_strings", y_strings, list),
+        ("z_strings", z_strings, list),
+        ("z_shape", z_shape, list),
+    ):
+        if not isinstance(val, expected):
+            raise RuntimeError(
+                f"balle.compress() field {name!r} has type "
+                f"{type(val).__name__!r}; expected {expected.__name__}"
+            )
+    parts: list[bytes] = []
+    for stream_name, byte_list in (("y_strings", y_strings), ("z_strings", z_strings)):
+        parts.append(struct.pack("<I", len(byte_list)))
+        for blob in byte_list:
+            if not isinstance(blob, (bytes, bytearray)):
+                raise RuntimeError(
+                    f"balle.compress()[{stream_name!r}] element type "
+                    f"{type(blob).__name__!r}; expected bytes"
+                )
+            parts.append(struct.pack("<I", len(blob)))
+            parts.append(bytes(blob))
+    parts.append(struct.pack("<I", len(z_shape)))
+    for dim in z_shape:
+        if not isinstance(dim, int):
+            raise RuntimeError(
+                f"balle.compress()['z_shape'] element type "
+                f"{type(dim).__name__!r}; expected int"
+            )
+        parts.append(struct.pack("<i", dim))
+    return b"".join(parts)
+
+
 def _write_runtime(
     *,
     submission_dir: Path,
     decoder_config: Decoder128KConfig,
     balle_config: BalleHyperpriorConfig,
 ) -> None:
-    """Emit a Phase 1 scaffold inflate.sh + inflate.py + src/{codec,model}.py.
+    """Emit contest-compliant inflate.sh + inflate.py + src/{codec,model}.py.
 
-    Phase 1 NOTE: this runtime is **build-verification only**; the wire
-    format (pickle blobs) exceeds Phase 2's byte budget. Phase 2 will
-    replace pickle with the trained Ballé wire format + a deterministic
-    decoder serialiser.
+    Operator decision B 2026-05-09 — replaces the prior research-only-no-export
+    scaffold with a byte-closed contest-compliant runtime tree per the Phase 1
+    packet compiler's contract (`tac.phase1_packet_compiler.compile_phase1_packet`).
+
+    Council Q1-Q6 consensus (memo
+    `feedback_phase1_trainer_write_runtime_fix_landed_20260509.md`):
+
+    * Q1 — Ballé strings are length-prefixed binary (NOT pickle), then
+      brotli q11 wrapped, stored as ZIP member ``x``.
+    * Q2 — 3 named ZIP members (``x`` + ``decoder.bin`` + ``balle.bin``) per
+      lane_class=substrate_engineering exception to HNeRV parity lesson 3.
+    * Q3 — per-video ``<base>.raw`` output at camera-resolution (874, 1164)
+      uint8 RGB per the contest contract (see upstream/submissions/baseline_fast/inflate.sh).
+    * Q4 — runtime_dep_closure = (torch, brotli, compressai); 3 deps; ≤100
+      LOC inflate.sh enforced by packet compiler.
+    * Q5 — trainer is mode-agnostic; emits ONE canonical contest packet.
+    * Q6 — inflate.py imports ZERO scorer code (no PoseNet/SegNet/rgb_to_yuv6).
+
+    6-hook wire-in declaration (per CLAUDE.md "Subagent coherence-by-default"):
+
+    1. Sensitivity-map: 3-member ZIP layout is the encoder-side dual of the
+       packet compiler's parser_section_manifest. Sensitivity-driven
+       allocations land as per-section byte sizes.
+    2. Pareto frontier: enforces Pareto constraints implicitly (rate via
+       brotli q11, archive size via per-section bytes).
+    3. Bit-allocator hook: DIRECT — 3-member archive layout IS the bit
+       allocator's encoder-side output.
+    4. Cathedral autopilot: every Phase 1 trainer dispatch flows into
+       ``compile_phase1_packet(mode="optimize")`` for byte-closure verification.
+    5. Continual-learning posterior: empirical CUDA + CPU evals on the
+       Phase 1 packet trigger per-architecture drift posterior updates.
+    6. Probe-disambiguator: trainer is mode-agnostic; the packet compiler's
+       identity/canonicalize/optimize modes are the disambiguator downstream.
     """
     src = submission_dir / "src"
     src.mkdir(exist_ok=True)
 
+    # Per Q3+Q4: 3-positional-arg inflate.sh per upstream/submissions/baseline_fast/inflate.sh.
+    # Per Q1: brotli + compressai declared in --with so the runtime closure
+    # is hermetic. Per CLAUDE.md `check_shell_set_e_present`: set -euo pipefail.
+    # Per CLAUDE.md FORBIDDEN_NETWORK_TOKENS: no curl/wget/pip-install at
+    # inflate time (uv resolves from pre-warmed wheel cache).
     inflate_sh = (
-        "#!/bin/bash\n"
-        "# PACT_RUNTIME_DEPENDENCY_ROOT = src/tac\n"
+        "#!/usr/bin/env bash\n"
+        "# Phase 1 contest-compliant inflate (operator decision B 2026-05-09).\n"
+        "# Contract: $1=archive_dir $2=output_dir $3=file_list (newline-separated\n"
+        "# video file basenames; one .raw output per name at camera resolution).\n"
         "set -euo pipefail\n"
         "HERE=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"\n"
-        "exec uv run --with torch==2.5.1+cu124 --extra-index-url "
-        "https://download.pytorch.org/whl/cu124 --index-strategy unsafe-best-match "
-        "--with compressai==1.2.8 \"$HERE/inflate.py\" \"$@\"\n"
+        "DATA_DIR=\"$1\"\n"
+        "OUTPUT_DIR=\"$2\"\n"
+        "FILE_LIST=\"$3\"\n"
+        "mkdir -p \"$OUTPUT_DIR\"\n"
+        "exec uv run "
+        "--with torch==2.5.1+cu124 "
+        "--with brotli==1.1.0 "
+        "--with compressai==1.2.8 "
+        "--extra-index-url https://download.pytorch.org/whl/cu124 "
+        "--index-strategy unsafe-best-match "
+        "\"$HERE/inflate.py\" \"$DATA_DIR\" \"$OUTPUT_DIR\" \"$FILE_LIST\"\n"
     )
     (submission_dir / "inflate.sh").write_text(inflate_sh)
     (submission_dir / "inflate.sh").chmod(0o755)
 
+    # Per Q3+Q6: per-video loop, camera-resolution uint8 RGB output, no scorer
+    # code imports. Per Q1: deserialise length-prefixed binary then call
+    # balle.decompress(strings_list). Per Q2: read 3 ZIP members.
+    # Aspirational ≤100 LOC per HNeRV parity discipline lesson 4.
     inflate_py = (
         "#!/usr/bin/env python\n"
-        "\"\"\"Phase 1 scaffold inflate (NOT byte-optimised).\"\"\"\n"
-        "import pickle, struct, sys\n"
+        "\"\"\"Phase 1 contest-compliant inflate runtime.\n"
+        "\n"
+        "Reads archive.zip (3 members: x, decoder.bin, balle.bin), reconstructs the\n"
+        "Balle decompressor + 128K decoder once, loops over file_list, writes one\n"
+        "<base>.raw per name at camera-resolution uint8 RGB. No scorer imports.\n"
+        "\"\"\"\n"
+        "import io, struct, sys, zipfile\n"
         "from pathlib import Path\n"
+        "import brotli\n"
         "import torch\n"
         "import torch.nn.functional as F\n"
         "HERE = Path(__file__).resolve().parent\n"
@@ -654,58 +782,103 @@ def _write_runtime(
         "from model import Decoder128KRuntime, BalleRuntime\n"
         "CAMERA_H, CAMERA_W = 874, 1164\n"
         "EVAL_H, EVAL_W = 384, 512\n"
-        "N_PAIRS = 600\n"
         "\n"
-        "def inflate(src_bin: str, dst_raw: str) -> int:\n"
-        "    body = Path(src_bin).read_bytes()\n"
-        "    section_total = struct.unpack_from('<I', body, 0)[0]\n"
-        "    offset = 4\n"
-        "    strings = pickle.loads(body[offset:section_total])\n"
-        "    offset = section_total\n"
-        "    dec_len = struct.unpack_from('<I', body, offset)[0]\n"
-        "    offset += 4\n"
-        "    decoder_sd = pickle.loads(body[offset:offset + dec_len])\n"
-        "    offset += dec_len\n"
-        "    balle_len = struct.unpack_from('<I', body, offset)[0]\n"
-        "    offset += 4\n"
-        "    balle_sd = pickle.loads(body[offset:offset + balle_len])\n"
-        "    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')\n"
+        "def _deserialise_strings(payload: bytes):\n"
+        "    off = 0\n"
+        "    def _read_byte_list(off):\n"
+        "        n = struct.unpack_from('<I', payload, off)[0]; off += 4\n"
+        "        items = []\n"
+        "        for _ in range(n):\n"
+        "            blen = struct.unpack_from('<I', payload, off)[0]; off += 4\n"
+        "            items.append(payload[off:off + blen]); off += blen\n"
+        "        return items, off\n"
+        "    y_strings, off = _read_byte_list(off)\n"
+        "    z_strings, off = _read_byte_list(off)\n"
+        "    n_shape = struct.unpack_from('<I', payload, off)[0]; off += 4\n"
+        "    z_shape = []\n"
+        "    for _ in range(n_shape):\n"
+        "        z_shape.append(struct.unpack_from('<i', payload, off)[0]); off += 4\n"
+        "    return {'y_strings': y_strings, 'z_strings': z_strings, 'z_shape': z_shape}\n"
+        "\n"
+        "def _load_models(archive_zip: Path, device):\n"
+        "    with zipfile.ZipFile(archive_zip, 'r') as zf:\n"
+        "        x_bytes = zf.read('x')\n"
+        "        dec_bytes = zf.read('decoder.bin')\n"
+        "        balle_bytes = zf.read('balle.bin')\n"
+        "    strings = _deserialise_strings(brotli.decompress(x_bytes))\n"
+        "    decoder_sd = torch.load(io.BytesIO(brotli.decompress(dec_bytes)),\n"
+        "                            map_location=device, weights_only=True)\n"
+        "    balle_sd = torch.load(io.BytesIO(brotli.decompress(balle_bytes)),\n"
+        "                          map_location=device, weights_only=False)\n"
         "    balle = BalleRuntime().to(device)\n"
         "    balle.load_state_dict(balle_sd)\n"
-        "    balle.eval()\n"
-        "    balle.update(force=True)\n"
+        "    balle.eval(); balle.update(force=True)\n"
         "    decoder = Decoder128KRuntime().to(device)\n"
         "    decoder.load_state_dict(decoder_sd)\n"
         "    decoder.eval()\n"
+        "    return strings, decoder, balle\n"
+        "\n"
+        "def _decode_to_raw(decoder, balle, strings, dst: Path) -> int:\n"
+        "    device = next(decoder.parameters()).device\n"
         "    with torch.no_grad():\n"
         "        latents = balle.decompress(strings).to(device)\n"
         "    n = 0\n"
-        "    with torch.no_grad(), open(dst_raw, 'wb') as fout:\n"
-        "        for i in range(0, N_PAIRS, 16):\n"
-        "            j = min(i + 16, N_PAIRS)\n"
+        "    with torch.no_grad(), open(dst, 'wb') as fout:\n"
+        "        for i in range(0, latents.shape[0], 16):\n"
+        "            j = min(i + 16, latents.shape[0])\n"
         "            decoded = decoder(latents[i:j])\n"
-        "            up = F.interpolate(\n"
-        "                decoded.reshape(-1, 3, EVAL_H, EVAL_W),\n"
-        "                size=(CAMERA_H, CAMERA_W),\n"
-        "                mode='bicubic', align_corners=False,\n"
-        "            ).clamp(0, 255).round().to(torch.uint8).cpu().numpy()\n"
+        "            up = F.interpolate(decoded.reshape(-1, 3, EVAL_H, EVAL_W),\n"
+        "                               size=(CAMERA_H, CAMERA_W),\n"
+        "                               mode='bicubic', align_corners=False)\n"
+        "            up = up.clamp(0, 255).round().to(torch.uint8)\n"
+        "            up = up.permute(0, 2, 3, 1).contiguous().cpu().numpy()\n"
         "            fout.write(up.tobytes())\n"
         "            n += up.shape[0]\n"
-        "    print(f'saved {n} frames')\n"
         "    return n\n"
         "\n"
+        "def main():\n"
+        "    if len(sys.argv) != 4:\n"
+        "        sys.exit('Usage: inflate.py <archive_dir> <output_dir> <file_list>')\n"
+        "    archive_dir = Path(sys.argv[1])\n"
+        "    output_dir = Path(sys.argv[2])\n"
+        "    file_list = Path(sys.argv[3])\n"
+        "    output_dir.mkdir(parents=True, exist_ok=True)\n"
+        "    archive_zip = archive_dir / 'archive.zip'\n"
+        "    if not archive_zip.is_file():\n"
+        "        archive_zip = HERE / 'archive.zip'\n"
+        "    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')\n"
+        "    strings, decoder, balle = _load_models(archive_zip, device)\n"
+        "    for line in file_list.read_text().splitlines():\n"
+        "        line = line.strip()\n"
+        "        if not line:\n"
+        "            continue\n"
+        "        base = line.rsplit('.', 1)[0]\n"
+        "        dst = output_dir / f'{base}.raw'\n"
+        "        n = _decode_to_raw(decoder, balle, strings, dst)\n"
+        "        print(f'saved {n} frames -> {dst}')\n"
+        "\n"
         "if __name__ == '__main__':\n"
-        "    if len(sys.argv) != 3:\n"
-        "        sys.exit('Usage: inflate.py <src.bin> <dst.raw>')\n"
-        "    inflate(sys.argv[1], sys.argv[2])\n"
+        "    main()\n"
     )
     (submission_dir / "inflate.py").write_text(inflate_py)
 
-    codec_stub = (
-        "# Phase 1 scaffold codec stub. Phase 2 replaces pickle with a\n"
-        "# byte-optimised wire format derived from the trained Balle CDFs.\n"
+    # codec.py: thin shim explaining the wire format. The deserialiser lives
+    # inside inflate.py (per Q4 ≤100 LOC inflate budget); codec.py is here
+    # for documentation + future Phase 2 evolution.
+    codec_py = (
+        "\"\"\"Phase 1 wire-format documentation (deserialiser lives in inflate.py).\n"
+        "\n"
+        "Archive layout (3 ZIP members):\n"
+        "    'x'           : brotli(serialise(balle.compress(latents)))\n"
+        "                    where serialise = <I:n_outer>[<I:n_inner>[<I:blen><bytes>]]\n"
+        "    'decoder.bin' : brotli(torch.save(decoder_state_dict))\n"
+        "    'balle.bin'   : brotli(torch.save(balle_state_dict))\n"
+        "\n"
+        "Phase 2 will replace the brotli-of-torch-save with a deterministic\n"
+        "FP4/INT8 quantised wire format + custom CDF tables.\n"
+        "\"\"\"\n"
     )
-    (src / "codec.py").write_text(codec_stub)
+    (src / "codec.py").write_text(codec_py)
 
     # The runtime model file embeds the same Decoder128K + Balle configs the
     # trainer used so the runtime can re-instantiate identically.
@@ -795,13 +968,11 @@ def maybe_run_auth_eval(
 ) -> dict | None:
     if not enabled:
         return None
-    raise SystemExit(
-        "[t1] --auth-eval refused: Phase 1 emits a research_only_no_export "
-        "runtime scaffold whose inflate.py signature is not the contest "
-        "archive_dir -> inflated_dir -> video_names contract. Land the Phase "
-        "2 deterministic wire format + hermetic inflate runtime before exact "
-        "CUDA/CPU eval."
-    )
+    # Operator decision B 2026-05-09: the trainer's _write_runtime now emits a
+    # contest-compliant inflate.sh + inflate.py per the Phase 1 packet
+    # compiler's contract. The historical SystemExit refusal is removed; the
+    # auth-eval dispatch path is now byte-closed. Memo:
+    # feedback_phase1_trainer_write_runtime_fix_landed_20260509.md
     require_active_dispatch_claim(
         lane_id=dispatch_lane_id,
         claims_path=dispatch_claims_path,
@@ -825,7 +996,7 @@ def maybe_run_auth_eval(
     ]
     print(f"[t1] dispatching auth eval: {' '.join(cmd)}")
     rc = subprocess.run(cmd, check=False).returncode
-    auth_json = work_dir / "contest_auth_eval.json"
+    auth_json = output_dir / "contest_auth_eval.json"
     if rc != 0:
         raise SystemExit(f"[t1] auth eval failed rc={rc}; see {work_dir}")
     if not auth_json.exists():
@@ -946,6 +1117,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--eval-every-epochs", type=int, default=100)
     parser.add_argument("--auth-eval", action="store_true", default=False)
     parser.add_argument("--no-auth-eval", dest="auth_eval", action="store_false")
+    parser.add_argument(
+        "--no-auth-eval-on-best",
+        dest="auth_eval",
+        action="store_false",
+        help=(
+            "Explicit Phase 1 auth-eval opt-out. The Phase 1 runtime is "
+            "contest-contract-shaped, but promotion still requires dispatch "
+            "claim custody plus exact CUDA/CPU evidence."
+        ),
+    )
     parser.add_argument("--smoke", action="store_true", help="1 epoch, 1 pair build verification")
     parser.add_argument("--seed", type=int, default=20)
     parser.add_argument(
@@ -1132,10 +1313,9 @@ def _activate_yuv6_mode_t1(
 def main() -> int:
     args = parse_args()
     if args.auth_eval:
-        raise SystemExit(
-            "[t1] --auth-eval refused before training: Phase 1 archive/runtime "
-            "is research_only_no_export. This avoids false [contest-CUDA] "
-            "promotion from a non-hermetic scaffold."
+        print(
+            "[t1] --auth-eval requested; dispatch claim custody will be "
+            "checked immediately before exact eval."
         )
     if args.allow_missing_canonical_a1 and not args.smoke:
         raise SystemExit(

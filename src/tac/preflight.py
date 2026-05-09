@@ -827,6 +827,55 @@ def preflight_all(
         check_state_helper_paths_explicit(
             strict=True, verbose=verbose,
         )
+        # 2026-05-09 codex round-6 HIGH 1 fix (#142): the round-4 fix
+        # added `unsafe_test_only=True` as the test-fixture escape hatch
+        # for Phase3DispatchGate, but any production caller could simply
+        # toggle the kwarg to bypass every Phase 3 dispatch precondition.
+        # The runtime guard now refuses `unsafe_test_only=True` from non-
+        # test paths; this STRICT preflight check enforces the same at
+        # commit time. STRICT-FLIP per CLAUDE.md "Bugs must be permanently
+        # fixed AND self-protected against" — Catalog #142 lands at 0
+        # live violations.
+        check_unsafe_test_only_restricted_to_test_paths(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-09 codex round-6 HIGH 2 fix (#143): Lightning dispatchers
+        # called `Job.run(...)` (paid submit) BEFORE persisting the
+        # active-jobs row. With round-3's strict register_job, a corrupt
+        # tracker file → paid job created but tracker write fails →
+        # invisible orphan paid job. The fix is the create-pending-row-
+        # before-submit pattern (`register_pending_job_locked` BEFORE
+        # `Job.run`, then `update_pending_to_active_locked` AFTER).
+        # STRICT-FLIP per the same self-protection mandate — Catalog #143
+        # lands at 0 live violations after both Lightning dispatchers
+        # adopt the canonical pattern.
+        check_paid_job_register_before_submit(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-09 codex round-6 MEDIUM 1 fix (#144): the round-4 fix
+        # split the SETUP-first-seen mutation into TWO separate locked
+        # transactions. Two overlapping verifier runs that disagree on
+        # the same id can drop first-seen timestamps inserted by the
+        # other run because the two transactions are not atomic together.
+        # The fix is the single-transaction API
+        # `update_setup_first_seen_locked(observed_setup_ids,
+        # left_setup_ids, tracked_ids, now_ts)` that does load + merge +
+        # remove + save inside ONE locked window. STRICT-FLIP per the
+        # same self-protection mandate — Catalog #144 lands at 0 live
+        # violations.
+        check_setup_first_seen_no_split_transactions(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-09 codex round-6 MEDIUM 2 fix (#145): the preflight CLI
+        # added in DX ratchet defaulted `--scope` to `dev`, dispatching to
+        # `preflight_developer` instead of `preflight_all`. This silently
+        # weakened the green CLI by skipping release/custody checks. The
+        # fix restores `all` as the default with `dev` opt-in. STRICT-FLIP
+        # per the same self-protection mandate — Catalog #145 lands at 0
+        # live violations.
+        check_preflight_cli_default_scope_is_all(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -31052,6 +31101,683 @@ def check_state_helper_paths_explicit(
     return violations
 
 
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #142 — `unsafe_test_only=True` restricted to test paths
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Bug class (codex round 6 HIGH 1, 2026-05-09): the round-4 fix added
+# ``unsafe_test_only=True`` as an escape hatch for tests that need a
+# permissive Phase3DispatchGate. Any production caller under ``tools/``
+# / ``experiments/`` / ``scripts/`` / ``src/tac/`` could simply toggle
+# the kwarg to bypass every Phase 3 dispatch precondition silently.
+# Catalog #134 already prevented production callsites from constructing
+# the gate at all, but #134's structural check accepted the
+# ``unsafe_test_only=True`` token regardless of caller path.
+#
+# This META gate refuses ``Phase3DispatchGate(...)`` callsites that pass
+# ``unsafe_test_only=True`` from non-test paths. Tests legitimately need
+# it; production code MUST satisfy every precondition.
+#
+# Sister of:
+# - Catalog #134 (Phase3DispatchGate fail-closed at construction)
+# - Catalog #143 (paid-job submit must register pending row first)
+# - Catalog #144 (SETUP-first-seen single transactional update)
+# - Catalog #145 (preflight CLI default --scope is `all`)
+#
+# Memory: feedback_codex_round6_findings_fix_with_self_protection_landed_20260509.md.
+
+_PHASE3_GATE_UNSAFE_TEST_ONLY_TOKEN = "unsafe_test_only=True"
+_PHASE3_GATE_UNSAFE_PATH_AUDIT_WAIVED_TOKEN = "unsafe_test_only_path_audit_waived=True"
+_PHASE3_GATE_UNSAFE_PATH_WAIVER_MARKER = "PHASE3_GATE_UNSAFE_PATH_WAIVED"
+
+
+def check_unsafe_test_only_restricted_to_test_paths(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #142 — `unsafe_test_only=True` only allowed from test paths.
+
+    Refuses any ``Phase3DispatchGate(...)`` constructor callsite outside
+    a recognized test path that passes ``unsafe_test_only=True`` without
+    ALSO passing ``unsafe_test_only_path_audit_waived=True`` OR carrying
+    a same-line ``# PHASE3_GATE_UNSAFE_PATH_WAIVED:<reason>`` waiver.
+
+    Test paths follow the pytest convention: ``*/tests/*``, ``test_*.py``,
+    ``*_test.py``. The canonical scaffold module
+    (``src/tac/phase3/joint_scorer_renderer_codec.py``) is also exempt
+    because it defines the gate.
+
+    Live count expected: 0 after the codex round 6 HIGH 1 fix.
+
+    Bug class: codex round 6 HIGH 1 (2026-05-09). Memory:
+    feedback_codex_round6_findings_fix_with_self_protection_landed_20260509.md.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    scan_dirs = [
+        root / "src" / "tac",
+        root / "tools",
+        root / "experiments",
+        root / "scripts",
+    ]
+
+    EXCLUDED_FILES = {
+        root / "src" / "tac" / "phase3" / "joint_scorer_renderer_codec.py",
+        root / "src" / "tac" / "preflight.py",
+    }
+
+    violations: list[str] = []
+    scanned_files = 0
+    for scan_dir in scan_dirs:
+        if not scan_dir.is_dir():
+            continue
+        for py in scan_dir.rglob("*.py"):
+            if _is_oss_export_mirror_path(py):
+                continue
+            if py in EXCLUDED_FILES:
+                continue
+            s = str(py)
+            # Test paths exempt — they legitimately need a permissive gate
+            if "/tests/" in s or py.name.startswith("test_") or py.name.endswith("_test.py"):
+                continue
+            # Vendored intakes / hosted exports
+            if (
+                "experiments/results/public_pr" in s
+                or "experiments/results/comma_lab_public_export" in s
+                or "experiments/results/vast_harvest" in s
+                or "_intake_" in s
+            ):
+                continue
+            try:
+                text = py.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            if "Phase3DispatchGate" not in text:
+                continue
+            if _PHASE3_GATE_UNSAFE_TEST_ONLY_TOKEN not in text:
+                continue
+            scanned_files += 1
+            lines = text.splitlines()
+            for lineno, line in enumerate(lines):
+                if "Phase3DispatchGate(" not in line:
+                    continue
+                stripped = line.lstrip()
+                if stripped.startswith("#"):
+                    continue
+                if "isinstance" in line or "issubclass" in line:
+                    continue
+                # Find the multi-line constructor
+                window_lines = lines[lineno: min(len(lines), lineno + 30)]
+                paren_depth = 0
+                truncated_chunks: list[str] = []
+                started = False
+                end_lineno = lineno
+                for offset, w_line in enumerate(window_lines):
+                    truncated_chunks.append(w_line)
+                    for ch in w_line:
+                        if ch == "(":
+                            paren_depth += 1
+                            started = True
+                        elif ch == ")":
+                            paren_depth -= 1
+                    if started and paren_depth <= 0:
+                        end_lineno = lineno + offset
+                        break
+                ctor_text = "\n".join(truncated_chunks)
+                # Only care if THIS construction passes unsafe_test_only=True
+                if _PHASE3_GATE_UNSAFE_TEST_ONLY_TOKEN not in ctor_text:
+                    continue
+                # Allowed if explicit double-opt-in is also set
+                if _PHASE3_GATE_UNSAFE_PATH_AUDIT_WAIVED_TOKEN in ctor_text:
+                    continue
+                # Allowed via same-line waiver on any line of the construction
+                ctor_lines = lines[lineno: end_lineno + 1]
+                if any(
+                    _PHASE3_GATE_UNSAFE_PATH_WAIVER_MARKER in cl for cl in ctor_lines
+                ):
+                    continue
+                rel = py.relative_to(root) if py.is_relative_to(root) else py
+                violations.append(
+                    f"[Check 142] {rel}:{lineno + 1}: "
+                    "Phase3DispatchGate(unsafe_test_only=True) construction "
+                    "outside a recognized test path "
+                    "(``*/tests/*``, ``test_*.py``, ``*_test.py``). "
+                    "Production code MUST satisfy every precondition; the "
+                    "escape hatch is for tests only. If this is a "
+                    "legitimate non-test fixture, set BOTH "
+                    "`unsafe_test_only=True` AND "
+                    "`unsafe_test_only_path_audit_waived=True`, OR add "
+                    "`# PHASE3_GATE_UNSAFE_PATH_WAIVED:<reason>` waiver "
+                    "on a constructor line."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [unsafe-test-only-restricted-to-test-paths] {len(violations)} "
+                f"unsafe construction(s) (scanned: {scanned_files} file(s))"
+            )
+            for v in violations[:5]:
+                print(f"    • {v[:240]}")
+            if len(violations) > 5:
+                print(f"    ... ({len(violations) - 5} more)")
+        else:
+            print(
+                "  [unsafe-test-only-restricted-to-test-paths] OK "
+                f"({scanned_files} file(s) scanned; 0 unsafe construction(s))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_unsafe_test_only_restricted_to_test_paths found "
+            f"{len(violations)} unsafe Phase3DispatchGate construction(s) "
+            "outside test paths:\n  "
+            + "\n  ".join(v[:300] for v in violations[:3])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #143 — Paid-job submit must register pending row first
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Bug class (codex round 6 HIGH 2, 2026-05-09): Lightning dispatchers
+# called ``Job.run(...)`` (which CREATES the paid job + bills the
+# operator) THEN persisted the active-jobs row. With round-3's strict
+# ``register_job`` (which raises on corrupt active-jobs state), a
+# corrupt tracker file → paid job created but tracker write fails →
+# invisible orphan job. The harvester never knows about it; the operator
+# pays for an instance no one is watching.
+#
+# The canonical fix is the create-pending-row-before-submit pattern:
+#
+#   1. ``register_pending_job_locked(metadata)`` — writes a "pending"
+#      row to the tracker BEFORE submit. If the tracker is corrupt,
+#      the dispatcher refuses to even attempt the paid submit.
+#   2. ``Job.run(...)`` — actually submit; bill starts here.
+#   3. ``update_pending_to_active_locked(job_id, ...)`` — promote the
+#      pending row to active with the submit result.
+#   4. On submit failure: ``cancel_pending_job_locked(job_id)`` to drop
+#      the pending row.
+#
+# This META gate scans for any function that calls ``Job.run(...)``
+# WITHOUT calling ``register_pending_job_locked(...)`` first. Same-line
+# waiver on the ``Job.run`` line: ``# JOB_RUN_BEFORE_REGISTER_OK:<reason>``.
+
+_PAID_JOB_SUBMIT_TOKENS = ("Job.run(",)
+_PAID_JOB_PENDING_REGISTER_TOKENS = (
+    "register_pending_job_locked",
+)
+_PAID_JOB_RUN_WAIVER_MARKER = "JOB_RUN_BEFORE_REGISTER_OK"
+
+
+def check_paid_job_register_before_submit(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #143 — every ``Job.run(...)`` caller must register pending row first.
+
+    Refuses any function that calls ``Job.run(...)`` (Lightning paid
+    submit) WITHOUT calling ``register_pending_job_locked(...)`` first
+    in the SAME function body.
+
+    Same-line waiver on the ``Job.run`` line:
+    ``# JOB_RUN_BEFORE_REGISTER_OK:<reason>``. Reserved for the
+    submit-helper itself (which is called BY a higher-level function
+    that owns the pending-row contract); the submit helper documents
+    the contract and the higher-level function satisfies it.
+
+    Live count expected: 0 after the codex round 6 HIGH 2 fix.
+
+    Bug class: codex round 6 HIGH 2 (2026-05-09). Memory:
+    feedback_codex_round6_findings_fix_with_self_protection_landed_20260509.md.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    scan_dirs = [
+        root / "experiments",
+        root / "tools",
+        root / "scripts",
+        root / "src" / "tac",
+    ]
+
+    violations: list[str] = []
+    scanned_files = 0
+    for scan_dir in scan_dirs:
+        if not scan_dir.is_dir():
+            continue
+        for py in scan_dir.rglob("*.py"):
+            if _is_oss_export_mirror_path(py):
+                continue
+            s = str(py)
+            if "/tests/" in s or py.name.startswith("test_"):
+                continue
+            if (
+                "experiments/results/public_pr" in s
+                or "experiments/results/comma_lab_public_export" in s
+                or "_intake_" in s
+            ):
+                continue
+            try:
+                text = py.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            if not any(tok in text for tok in _PAID_JOB_SUBMIT_TOKENS):
+                continue
+            scanned_files += 1
+            try:
+                tree = ast.parse(text)
+            except SyntaxError:
+                continue
+            lines = text.splitlines()
+            for node in ast.walk(tree):
+                if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    continue
+                # Get the function body text
+                fn_start = node.lineno - 1
+                fn_end = (
+                    node.end_lineno if hasattr(node, "end_lineno") else len(lines)
+                )
+                body_lines = lines[fn_start:fn_end]
+                body_text = "\n".join(body_lines)
+                # Does this function call Job.run(?
+                if "Job.run(" not in body_text:
+                    continue
+                # Find the Job.run line(s) and check waiver markers
+                job_run_lines: list[int] = []
+                for offset, bl in enumerate(body_lines):
+                    if "Job.run(" in bl:
+                        job_run_lines.append(fn_start + offset)
+                # All Job.run calls in this function must be waived OR the
+                # function must register a pending row first.
+                # If EVERY Job.run line carries the waiver marker, exempt.
+                all_waived = all(
+                    _PAID_JOB_RUN_WAIVER_MARKER in lines[ln]
+                    for ln in job_run_lines
+                )
+                if all_waived:
+                    continue
+                # Otherwise: require pending-register call before submit
+                # in the function body.
+                has_pending_register = any(
+                    tok in body_text for tok in _PAID_JOB_PENDING_REGISTER_TOKENS
+                )
+                if has_pending_register:
+                    # Now check ordering: pending-register must appear before
+                    # the FIRST Job.run line.
+                    first_job_run_offset = None
+                    first_register_offset = None
+                    for offset, bl in enumerate(body_lines):
+                        if first_job_run_offset is None and "Job.run(" in bl:
+                            first_job_run_offset = offset
+                        if first_register_offset is None and any(
+                            tok in bl for tok in _PAID_JOB_PENDING_REGISTER_TOKENS
+                        ):
+                            first_register_offset = offset
+                    if (
+                        first_register_offset is not None
+                        and first_job_run_offset is not None
+                        and first_register_offset < first_job_run_offset
+                    ):
+                        continue
+                    # Has the call but in wrong order
+                    rel = py.relative_to(root) if py.is_relative_to(root) else py
+                    violations.append(
+                        f"[Check 143] {rel}:{node.lineno}: function "
+                        f"{node.name!r} calls Job.run(...) BEFORE "
+                        "register_pending_job_locked(...). Paid submit "
+                        "must be registered FIRST so a corrupt-tracker "
+                        "failure refuses the paid job entirely (no orphan)."
+                    )
+                    continue
+                rel = py.relative_to(root) if py.is_relative_to(root) else py
+                violations.append(
+                    f"[Check 143] {rel}:{node.lineno}: function "
+                    f"{node.name!r} calls Job.run(...) (paid Lightning "
+                    "submit) WITHOUT calling register_pending_job_locked(...) "
+                    "first. Bug class: a corrupt active-jobs file → paid "
+                    "submit succeeds → tracker write fails → ORPHANED PAID "
+                    "JOB. Fix: call `register_pending_job_locked(metadata)` "
+                    "before `Job.run(...)`, then "
+                    "`update_pending_to_active_locked(job_id, ...)` after. "
+                    "Same-line waiver `# JOB_RUN_BEFORE_REGISTER_OK:<reason>` "
+                    "on the Job.run line for submit-helper definitions whose "
+                    "callers own the pending-row contract."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [paid-job-register-before-submit] {len(violations)} "
+                f"orphan-prone caller(s) (scanned: {scanned_files} file(s))"
+            )
+            for v in violations[:5]:
+                print(f"    • {v[:240]}")
+            if len(violations) > 5:
+                print(f"    ... ({len(violations) - 5} more)")
+        else:
+            print(
+                "  [paid-job-register-before-submit] OK "
+                f"({scanned_files} file(s) scanned; 0 orphan-prone caller(s))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_paid_job_register_before_submit found "
+            f"{len(violations)} caller(s) that submit paid jobs "
+            "without registering a pending row first:\n  "
+            + "\n  ".join(v[:300] for v in violations[:3])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #144 — SETUP-first-seen helpers must use single transactional update
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Bug class (codex round 6 MEDIUM 1, 2026-05-09): the round-4 fix split
+# the SETUP-first-seen mutation into two SEPARATE locked transactions:
+# ``update_setup_first_seen_locked(observed)`` then
+# ``remove_setup_first_seen_locked(left_setup)``. Two overlapping verifier
+# runs disagree on the same id (one observes SETUP, the other observes
+# leaving SETUP). The runs serialize against each other but the SECOND
+# transaction can drop a first-seen timestamp the FIRST inserted because
+# the two transactions are not atomic together.
+#
+# Fix: a single API
+# ``update_setup_first_seen_locked(observed_setup_ids, left_setup_ids,
+# tracked_ids, now_ts)`` that does load + merge + remove + save inside ONE
+# fcntl-locked window with explicit conflict semantics.
+#
+# This META gate refuses any function that calls BOTH a "save / update
+# observed first-seen" helper AND a "remove / drop left first-seen" helper
+# in separate locks within the same body. The single-transaction API
+# is preferred.
+
+_SETUP_FIRST_SEEN_OBSERVED_HELPER_TOKENS = (
+    "update_setup_first_seen_locked",
+    "_save_setup_first_seen",
+)
+_SETUP_FIRST_SEEN_LEFT_HELPER_TOKENS = (
+    "remove_setup_first_seen_locked",
+)
+_SETUP_FIRST_SEEN_NO_SPLIT_WAIVER_MARKER = "SETUP_FIRST_SEEN_SINGLE_TXN_OK"
+
+
+def check_setup_first_seen_no_split_transactions(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #144 — refuse SETUP-first-seen split transactions.
+
+    Refuses any function that calls BOTH an "observed-insertion" helper
+    (``update_setup_first_seen_locked`` or ``_save_setup_first_seen``)
+    AND a "left-removal" helper (``remove_setup_first_seen_locked``)
+    within the same function body. The two-transaction pattern is
+    racy: overlapping runs that disagree on an id can drop first-seen
+    timestamps.
+
+    Same-line waiver on the function-def line:
+    ``# SETUP_FIRST_SEEN_SINGLE_TXN_OK:<reason>`` for the canonical
+    helper itself (which legitimately combines both inside one lock).
+
+    Live count expected: 0 after the codex round 6 MEDIUM 1 fix.
+
+    Bug class: codex round 6 MEDIUM 1 (2026-05-09). Memory:
+    feedback_codex_round6_findings_fix_with_self_protection_landed_20260509.md.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    scan_dirs = [
+        root / "scripts",
+        root / "tools",
+        root / "experiments",
+        root / "src" / "tac",
+    ]
+
+    EXCLUDED_FILES = {
+        root / "src" / "tac" / "preflight.py",
+    }
+
+    violations: list[str] = []
+    scanned_files = 0
+    for scan_dir in scan_dirs:
+        if not scan_dir.is_dir():
+            continue
+        for py in scan_dir.rglob("*.py"):
+            if _is_oss_export_mirror_path(py):
+                continue
+            if py in EXCLUDED_FILES:
+                continue
+            s = str(py)
+            if "/tests/" in s or py.name.startswith("test_"):
+                continue
+            if (
+                "experiments/results/public_pr" in s
+                or "experiments/results/comma_lab_public_export" in s
+                or "_intake_" in s
+            ):
+                continue
+            try:
+                text = py.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            # Quick prefilter
+            if not any(tok in text for tok in _SETUP_FIRST_SEEN_OBSERVED_HELPER_TOKENS):
+                continue
+            if not any(tok in text for tok in _SETUP_FIRST_SEEN_LEFT_HELPER_TOKENS):
+                continue
+            scanned_files += 1
+            try:
+                tree = ast.parse(text)
+            except SyntaxError:
+                continue
+            lines = text.splitlines()
+            for node in ast.walk(tree):
+                if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    continue
+                fn_start = node.lineno - 1
+                fn_end = (
+                    node.end_lineno if hasattr(node, "end_lineno") else len(lines)
+                )
+                body_lines = lines[fn_start:fn_end]
+                body_text = "\n".join(body_lines)
+                # Same-line waiver on the def line
+                if _SETUP_FIRST_SEEN_NO_SPLIT_WAIVER_MARKER in lines[fn_start]:
+                    continue
+                has_observed = any(
+                    tok in body_text for tok in _SETUP_FIRST_SEEN_OBSERVED_HELPER_TOKENS
+                )
+                has_left = any(
+                    tok in body_text for tok in _SETUP_FIRST_SEEN_LEFT_HELPER_TOKENS
+                )
+                if not (has_observed and has_left):
+                    continue
+                rel = py.relative_to(root) if py.is_relative_to(root) else py
+                violations.append(
+                    f"[Check 144] {rel}:{node.lineno}: function "
+                    f"{node.name!r} calls BOTH a SETUP observed-insertion "
+                    "helper AND a left-removal helper in separate locked "
+                    "transactions. Two overlapping verifier runs that "
+                    "disagree on the same id can drop first-seen "
+                    "timestamps inserted by the other run. Fix: use the "
+                    "single-transaction API "
+                    "`update_setup_first_seen_locked(observed_setup_ids, "
+                    "left_setup_ids, tracked_ids, now_ts)` that does "
+                    "load + merge + remove + save inside ONE lock window. "
+                    "Same-line waiver on the def line: "
+                    "`# SETUP_FIRST_SEEN_SINGLE_TXN_OK:<reason>` for the "
+                    "canonical helper itself."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [setup-first-seen-no-split-transactions] {len(violations)} "
+                f"split-txn caller(s) (scanned: {scanned_files} file(s))"
+            )
+            for v in violations[:5]:
+                print(f"    • {v[:240]}")
+            if len(violations) > 5:
+                print(f"    ... ({len(violations) - 5} more)")
+        else:
+            print(
+                "  [setup-first-seen-no-split-transactions] OK "
+                f"({scanned_files} file(s) scanned; 0 split-txn caller(s))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_setup_first_seen_no_split_transactions found "
+            f"{len(violations)} function(s) using split SETUP-first-seen "
+            "transactions:\n  "
+            + "\n  ".join(v[:300] for v in violations[:3])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #145 — Preflight CLI default `--scope` must be `all`
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Bug class (codex round 6 MEDIUM 2, 2026-05-09): the CLI added in DX
+# ratchet defaulted ``--scope`` to ``dev``, dispatching to
+# ``preflight_developer`` instead of ``preflight_all``. This silently
+# weakened the default green CLI by skipping release/custody checks. A
+# green CLI no longer means the repo's stated canonical contract is
+# satisfied — a regression in observability.
+#
+# Fix: default ``--scope`` back to ``all`` (canonical full preflight).
+# ``--scope dev`` is opt-in for the fast developer path with an explicit
+# warning that release/custody checks are skipped.
+#
+# This META gate refuses any AST-detectable change to the default. It
+# scans ``src/tac/preflight.py`` (and any other CLI that might add a
+# ``--scope`` flag) and asserts the default is ``all``.
+
+_PREFLIGHT_CLI_SCOPE_DEFAULT_REQUIRED = "all"
+_PREFLIGHT_CLI_SCOPE_DEFAULT_WAIVER_MARKER = "PREFLIGHT_CLI_SCOPE_DEFAULT_OK"
+
+
+def check_preflight_cli_default_scope_is_all(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #145 — preflight CLI ``--scope`` default must be ``all``.
+
+    Scans ``src/tac/preflight.py`` (the canonical preflight CLI module)
+    for an ``argparse`` ``--scope`` flag and asserts its default is
+    ``all``. A non-``all`` default silently weakens the green CLI by
+    routing to a subset of checks; the default must be the canonical
+    full gate.
+
+    Same-line waiver on the ``add_argument`` line:
+    ``# PREFLIGHT_CLI_SCOPE_DEFAULT_OK:<reason>`` for an intentional
+    non-canonical default with explicit operator review.
+
+    Live count expected: 0 after the codex round 6 MEDIUM 2 fix.
+
+    Bug class: codex round 6 MEDIUM 2 (2026-05-09). Memory:
+    feedback_codex_round6_findings_fix_with_self_protection_landed_20260509.md.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    target_files = [
+        root / "src" / "tac" / "preflight.py",
+    ]
+
+    violations: list[str] = []
+    scanned_files = 0
+    for py in target_files:
+        if not py.is_file():
+            continue
+        try:
+            text = py.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if "--scope" not in text:
+            continue
+        scanned_files += 1
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            continue
+        lines = text.splitlines()
+        # Walk the AST for parser.add_argument("--scope", ...) calls
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            if not (
+                isinstance(node.func, ast.Attribute)
+                and node.func.attr == "add_argument"
+            ):
+                continue
+            # First positional arg must be "--scope"
+            if not node.args:
+                continue
+            first_arg = node.args[0]
+            if not (isinstance(first_arg, ast.Constant) and first_arg.value == "--scope"):
+                continue
+            # Find default kwarg
+            default_value = None
+            for kw in node.keywords:
+                if kw.arg == "default":
+                    if isinstance(kw.value, ast.Constant):
+                        default_value = kw.value.value
+                    break
+            # Same-line waiver
+            line_idx = node.lineno - 1
+            line_text = lines[line_idx] if line_idx < len(lines) else ""
+            waiver_present = _PREFLIGHT_CLI_SCOPE_DEFAULT_WAIVER_MARKER in line_text
+            # Also check up to 5 lines after for multi-line add_argument calls
+            for offset in range(1, 6):
+                if line_idx + offset >= len(lines):
+                    break
+                if _PREFLIGHT_CLI_SCOPE_DEFAULT_WAIVER_MARKER in lines[line_idx + offset]:
+                    waiver_present = True
+                    break
+            if waiver_present:
+                continue
+            if default_value != _PREFLIGHT_CLI_SCOPE_DEFAULT_REQUIRED:
+                rel = py.relative_to(root) if py.is_relative_to(root) else py
+                violations.append(
+                    f"[Check 145] {rel}:{node.lineno}: parser.add_argument("
+                    f"\"--scope\", default={default_value!r}, ...). The "
+                    "default MUST be \"all\" so the green CLI runs the "
+                    "canonical full preflight (preflight_all). A non-`all` "
+                    "default silently routes to a subset of checks and "
+                    "weakens the green-CLI contract. Same-line waiver "
+                    "`# PREFLIGHT_CLI_SCOPE_DEFAULT_OK:<reason>` for "
+                    "intentional override with explicit operator review."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [preflight-cli-default-scope-is-all] {len(violations)} "
+                f"weakened-default(s) (scanned: {scanned_files} file(s))"
+            )
+            for v in violations[:5]:
+                print(f"    • {v[:240]}")
+        else:
+            print(
+                "  [preflight-cli-default-scope-is-all] OK "
+                f"({scanned_files} file(s) scanned; 0 weakened-default(s))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_preflight_cli_default_scope_is_all found "
+            f"{len(violations)} weakened-default(s):\n  "
+            + "\n  ".join(v[:300] for v in violations[:3])
+        )
+    return violations
+
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(
@@ -31073,11 +31799,16 @@ if __name__ == "__main__":
     parser.add_argument("--gt-poses", type=str, default=None)
     parser.add_argument(
         "--scope",
-        choices=("dev", "release"),
-        default="dev",
+        choices=("all", "dev", "release"),
+        default="all",
         help=(
-            "dev runs the strict fast developer gate; release runs exhaustive "
-            "preflight_all and normally requires --allow-slow-preflight."
+            "all (default) runs the canonical exhaustive preflight_all gate "
+            "(matches the repo's stated contract); release is an alias for "
+            "all kept for backward compatibility; dev runs the fast strict "
+            "developer-only gate (skips release/custody checks — emits a "
+            "warning if used). Codex round-6 MEDIUM 2 fix (catalog #145): "
+            "default reverted from `dev` to `all` because `dev` silently "
+            "weakened the green CLI."
         ),
     )
     parser.add_argument(
@@ -31101,10 +31832,14 @@ if __name__ == "__main__":
 
     try:
         # R38 fixed the old artifact-only CLI by routing through preflight_all.
-        # 2026-05-09 DX ratchet: the default CLI is now the fast strict
-        # developer scope; exhaustive release/custody sweeps are explicit
-        # (`--scope release --allow-slow-preflight`) so normal edit loops
-        # cannot silently become multi-minute gates.
+        # 2026-05-09 DX ratchet (codex round-6 MEDIUM 2 reverted, catalog #145):
+        # the default CLI runs the canonical exhaustive `preflight_all` gate
+        # (matches the repo's stated contract). The previous `dev` default
+        # silently weakened the green CLI by skipping release/custody checks.
+        # Operators who explicitly want the fast developer-only path may
+        # opt in via `--scope dev` (with a warning), and exhaustive
+        # release/custody sweeps remain `--scope all` (default) or
+        # `--scope release` (alias).
         profile_arch = None
         if args.profile:
             from tac.profiles import PROFILES
@@ -31116,6 +31851,14 @@ if __name__ == "__main__":
             timeout_s=args.timeout_s,
             allow_slow_preflight=args.allow_slow_preflight,
         )
+        if args.scope == "dev":
+            print(
+                "\nWARNING: --scope dev runs the fast developer-only gate; "
+                "release/custody checks are SKIPPED. Run with --scope all "
+                "(or omit --scope) before any release, dispatch, or "
+                "frontier-claim. (codex round-6 MEDIUM 2, catalog #145)\n",
+                file=sys.stderr,
+            )
         # The CLI adds a hard DX budget: routine preflight must be fast, or
         # fail loudly and force profiling instead of silently taxing every edit.
         with _preflight_timeout_after(timeout_s):
