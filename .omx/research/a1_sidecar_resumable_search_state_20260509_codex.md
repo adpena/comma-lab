@@ -254,3 +254,55 @@ Observed:
 - Continual-learning posterior update: not run; no authoritative tag.
 - Probe-disambiguator: N/A - no competing interpretation; state coverage and
   archive-consumed sidecar bytes either match or fail closed.
+
+## Codex follow-up local chunk 4
+
+<!-- generated_at: 2026-05-10T00:32:00Z -->
+<!-- evidence_grade: local_cpu_proxy_partial; no score claim; no remote dispatch -->
+
+After landing the fail-closed candidate-batch profiler in commit `f85c5b7a`,
+Codex resumed the same ignored local artifact for another bounded chunk:
+
+```bash
+/usr/bin/time -p .venv/bin/python tools/build_a1_per_pair_latent_correction_sidecar.py \
+  --n-pairs 16 \
+  --resume-search-state \
+  --max-search-seconds 120 \
+  --profile-candidate-batches 1 4 \
+  --auto-candidate-batch-size \
+  --runtime-smoke \
+  --runtime-smoke-pairs 1 \
+  --output-dir experiments/results/a1_sidecar_resumable_codex_20260509T_local
+```
+
+Observed:
+
+- skipped already-completed pairs `0` through `11`;
+- searched pairs `12`, `13`, `14`, and `15`;
+- elapsed `real 83.20`, `user 243.91`, `sys 5.15`;
+- profiler selected `candidate_batch_size=4`;
+- scalar-reference profile for first searched pair:
+  - batch `1`: `elapsed_seconds=16.860764542012475`,
+    `best_dim=17`, `best_delta_idx=0`, `best_mse=7160.3056640625`,
+    `semantic_match_scalar_reference=true`;
+  - batch `4`: `elapsed_seconds=12.80810704198666`,
+    `best_dim=17`, `best_delta_idx=0`, `best_mse=7160.3056640625`,
+    `semantic_match_scalar_reference=true`;
+- choice-state SHA-256
+  `770261964435c5e8e5511f353772365555c21b45befb7a9a03c73c0311e2c741`;
+- archive SHA-256
+  `1581050bf759b26c608962189094eae36a86c1ee53943593cc6a6ec14721d46b`;
+- archive bytes `178316`;
+- `runtime_smoke_checked=true`;
+- `n_pairs_searched=16`;
+- `n_pairs_completed_this_run=4`;
+- `n_pairs_skipped_already_completed=12`;
+- `full_non_smoke_search=false`;
+- `ready_for_exact_eval_dispatch=false`.
+
+Dispatch blockers in the manifest remain:
+
+- claim lane before any GHA/remote eval dispatch;
+- run exact-eval dispatcher preflight against `submission_dir`;
+- record runtime tree SHA and terminal dispatch claim row;
+- `non_full_sidecar_search_not_exact_eval_ready`.
