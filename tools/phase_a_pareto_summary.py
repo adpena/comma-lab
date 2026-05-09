@@ -83,6 +83,22 @@ AXIS_ADVISOR_ARCHIVE_BYTES = 178_392
 A1_CONTEST_CPU_EVIDENCE_ROW = (
     REPO_ROOT / "reports" / "a1_latentalign_importpathfix_contest_cpu_evidence_row_20260509.json"
 )
+A1_CONTEST_CPU_SCORE = 0.19284757743677347
+A1_CONTEST_CUDA_SCORE = 0.2263520234784395
+A1_CONTEST_CUDA_LEDGER = (
+    REPO_ROOT / ".omx/research/modal_auth_eval_runtime_upload_hardening_20260509_codex.md"
+)
+DELTAEPSZETA_LEDGER = (
+    REPO_ROOT / ".omx/research/deltaepszeta_phase1_targets_and_smoke_20260509_codex.md"
+)
+DELTAEPSZETA_TARGETS_JSON = (
+    REPO_ROOT / "experiments/results/lane_deltaepszeta_targets_pr106_20260509T_seq_codex/targets.json"
+)
+DELTAEPSZETA_TARGETS_SHA256 = "bf9b68cd7cb3c0067128c458cd43adffcbf8492b98c657223fb701fc94c116a4"
+DELTAEPSZETA_STEP_LOG_SHA256 = "9dbe0e27c2b18d47540e2d8a43af98ba0d28d9e77478dd8ce4d4fda74e78c90e"
+DELTAEPSZETA_TOTAL_H0_H2_GAP_BYTES = 78_580
+DELTAEPSZETA_H2_OVER_H0_RATIO = 0.5310
+DELTAEPSZETA_SMOKE_RATE_BITS = 6.667497634887695
 
 NONCOMPARABLE_BYTE_BUDGET_LANES = {
     "A0_mdl_baseline",
@@ -197,7 +213,7 @@ def parse_manifest(manifest_path: Path) -> PhaseAEntry | None:
     if lane == "A1_score_gradient":
         cpu_overlay = _load_a1_contest_cpu_overlay(data)
         if cpu_overlay is not None:
-            evidence_grade = "[contest-CPU reviewed; contest-CUDA pending]"
+            evidence_grade = "[contest-CPU reviewed; contest-CUDA reviewed]"
             dispatch_status = str(
                 cpu_overlay.get("contest_dispatch_verdict")
                 or dispatch_status
@@ -247,9 +263,9 @@ def parse_manifest(manifest_path: Path) -> PhaseAEntry | None:
             entry.notes.append("hand-parametric ChARM probe; no score claim")
     if lane == "A1_score_gradient":
         entry.notes.append(
-            "latent-aligned constrained refire scored 0.192848 contest-CPU "
-            "on Linux x86_64; contest-CUDA still pending because Modal "
-            "DALI/NVDEC preflight failed"
+            "latent-aligned constrained refire scored 0.192847577437 "
+            "contest-CPU on Linux x86_64 and 0.226352023478 contest-CUDA "
+            "on Modal T4; CPU-positive, CUDA not frontier"
         )
     if lane == "ADMM_lossy_coarsening_baseline":
         entry.notes.append("Path B baseline; -28 KB savings at 4-5% rel_err")
@@ -439,14 +455,14 @@ def render_markdown(entries: list[PhaseAEntry]) -> str:
         "real-substrate range-coder probe roundtrips exactly, but static/delta/"
         "previous-symbol PMFs are not competitive with PR101 brotli. Learned "
         "co-designed ChARM remains live.",
-        "- **A1 score-gradient is now a real contest-CPU positive, CUDA pending.** "
-        "The first Modal config remains retired (`3.721654` macOS CPU advisory), "
-        "and the first constrained refire exposed a worker import-path bug. After "
-        "fixing both that bug and the random-latent training/deploy mismatch, the "
-        "latent-aligned constrained refire produced a `178,262 B` archive with "
-        "`0.192847577437` on GitHub Actions Linux x86_64 contest-CPU. Treat this "
-        "as public-axis evidence only until a contest-CUDA eval lands; Modal's "
-        "T4 DALI/NVDEC preflight failed with NVML error 999.",
+        "- **A1 score-gradient now has paired CPU/CUDA exact anchors.** "
+        "The first Modal config remains retired (`3.721654` macOS CPU advisory). "
+        "After fixing the random-latent training/deploy mismatch and the Modal "
+        "wrapper bug classes, the latent-aligned constrained refire produced a "
+        "`178,262 B` archive with `0.192847577437` on GitHub Actions Linux "
+        "x86_64 contest-CPU and `0.226352023478` on Modal T4 contest-CUDA. "
+        "Classification: CPU-positive public-axis anchor, not a CUDA frontier "
+        "win; CUDA-CPU gap is ~0.03350.",
         "- **A5 and Cross-paradigm byte savings are scorer-unsafe at current configs.** "
         "A5 eta=4 complexity allocation and Cross-paradigm ADMM x Op1 both need "
         "changed score-domain or SegNet-boundary-aware allocation before new exact-eval "
@@ -456,13 +472,28 @@ def render_markdown(entries: list[PhaseAEntry]) -> str:
         "pass at 178,138 B and improves to 0.211299 advisory, but still remains "
         "SegNet-limited; q6-low25 then failed the byte gate at 178,978 B, so the "
         "current scalar trust schedules bracket a dead zone.",
+        "- **Delta-epsilon-zeta Phase 1 now has local scaffold evidence.** "
+        "`tools/build_deltaepszeta_training_targets.py` produced PR106 "
+        "conditional-entropy training targets with a `78,580 B` H0-H2 planning "
+        "gap and the A1 EMA checkpoint ran through "
+        "`tools/run_deltaepszeta_training.py` for a two-step local CPU sanity "
+        "loop (`rate_bits=6.667497634887695`). This is "
+        "`[empirical_planning; local CPU sanity loop]` only: no runtime-consumed "
+        "archive, no score claim, and no dispatch. The ledger is "
+        "`.omx/research/deltaepszeta_phase1_targets_and_smoke_20260509_codex.md`.",
         "",
         "## Open lanes",
         "",
         "- A1 (score-gradient PR101 fine-tune): constrained archive-latent refire "
-        "is `[contest-CPU]` positive at `0.192847577437` with `178,262 B`; "
-        "next required step is contest-CUDA exact eval or DALI/NVDEC repair, "
-        "then longer score-gradient schedules if dual-axis custody stays green.",
+        "is `[contest-CPU]` positive at `0.192847577437` and `[contest-CUDA]` "
+        "exact at `0.226352023478` with `178,262 B`; next step is "
+        "longer/score-domain schedules only if they target the dual-axis gap "
+        "explicitly.",
+        "- Delta-epsilon-zeta Phase 1: local target builder and real A1 EMA "
+        "checkpoint smoke are green. Next step is a score-domain or "
+        "SegNet-boundary-aware surrogate plus a runtime-consumed packet/compiler "
+        "path before any exact eval spend; target tables/checkpoints alone are "
+        "not shippable candidates.",
         "- A4-alt (Filler STC pose codec): byte-anchor landed; representative "
         "pose-distribution only, not a PR101 monolithic archive rewrite.",
         "- A4 (ChARM/hyperprior): toy and hand-parametric PR101 configs are "
@@ -506,6 +537,19 @@ def render_json(entries: list[PhaseAEntry]) -> str:
             "axis_advisors": {
                 "cuda_internal": asdict(cuda_axis),
                 "cpu_leaderboard": asdict(cpu_axis),
+            },
+            "delta_epsilon_zeta_phase1": {
+                "evidence_grade": "[empirical_planning; local CPU sanity loop]",
+                "score_claim": False,
+                "dispatch_attempted": False,
+                "runtime_consumed_archive": False,
+                "target_total_h0_h2_gap_bytes": DELTAEPSZETA_TOTAL_H0_H2_GAP_BYTES,
+                "target_h2_over_h0_ratio": DELTAEPSZETA_H2_OVER_H0_RATIO,
+                "smoke_rate_bits": DELTAEPSZETA_SMOKE_RATE_BITS,
+                "targets_json": str(DELTAEPSZETA_TARGETS_JSON.relative_to(REPO_ROOT)),
+                "targets_sha256": DELTAEPSZETA_TARGETS_SHA256,
+                "step_log_sha256": DELTAEPSZETA_STEP_LOG_SHA256,
+                "ledger": str(DELTAEPSZETA_LEDGER.relative_to(REPO_ROOT)),
             },
         },
         "lane_count": len(entries),

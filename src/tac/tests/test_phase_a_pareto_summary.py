@@ -93,6 +93,19 @@ def test_render_markdown_references_existing_a6_ledger() -> None:
     assert "PR106 substrate ranked first" in md
 
 
+def test_render_markdown_keeps_a1_dual_axis_and_deltaepszeta_scaffold() -> None:
+    mod = _load_tool_module()
+
+    md = mod.render_markdown([])
+
+    assert "0.192847577437" in md
+    assert "0.226352023478" in md
+    assert "paired CPU/CUDA exact anchors" in md
+    assert "Delta-epsilon-zeta Phase 1" in md
+    assert "78,580 B" in md
+    assert "no runtime-consumed archive, no score claim, and no dispatch" in md
+
+
 def test_render_json_carries_machine_readable_planning_targets() -> None:
     mod = _load_tool_module()
     entry = _entry(mod, lane="ADMM_lossy_coarsening_baseline", archive_bytes=147_285)
@@ -102,6 +115,14 @@ def test_render_json_carries_machine_readable_planning_targets() -> None:
     budget = payload["planning_targets"]["subtarget_byte_budget"]
     assert budget["max_archive_bytes"] == 137_103
     assert budget["evidence_grade"] == "[prediction; closed-form target byte budget]"
+    deltaepszeta = payload["planning_targets"]["delta_epsilon_zeta_phase1"]
+    assert deltaepszeta["score_claim"] is False
+    assert deltaepszeta["dispatch_attempted"] is False
+    assert deltaepszeta["runtime_consumed_archive"] is False
+    assert deltaepszeta["target_total_h0_h2_gap_bytes"] == 78_580
+    assert deltaepszeta["targets_sha256"] == (
+        "bf9b68cd7cb3c0067128c458cd43adffcbf8492b98c657223fb701fc94c116a4"
+    )
     axes = payload["planning_targets"]["axis_advisors"]
     assert axes["cuda_internal"]["priority_axis"] == "pose"
     assert axes["cpu_leaderboard"]["priority_axis"] == "seg"
