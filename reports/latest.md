@@ -179,6 +179,26 @@ training-time q-bit noise.
 Ledger:
 `.omx/research/a5_q6q7_mixed_trust_screen_dominance_negative_20260509_codex.md`.
 
+## 2026-05-09 (night) - A5 q7/q8 SegNet-protected scalar negative
+
+The strongest scalar A5 schedule tested so far is SegNet-protected `q7/q8`:
+`q7` for the lowest `510 / 600` SegNet-marginal pairs and `q8` for the top
+`90 / 600`.
+
+- Archive bytes: `178,243`
+- Archive SHA-256:
+  `28f4e0ee3ede86f323b484e36711fd01204ad101517f40ef32000417d2e4a896`
+- macOS CPU advisory: `0.20111041630821824`
+- components: PoseNet `0.00003517`, SegNet `0.00063672`
+
+This improves q7-all by about `0.00153`, proving scalar SegNet ranking has real
+signal, but it remains about `0.00826` worse than A1 while saving only `19 B`.
+Scalar post-hoc A5 q-bit schedules are now exhausted for exact-eval spend; the
+next A5 move needs local boundary-aware allocation or training-time q-bit noise.
+
+Ledger:
+`.omx/research/a5_q7_seg_protected_scalar_negative_20260509_codex.md`.
+
 ## 2026-05-09 (night) - Delta-epsilon-zeta Phase 1 local scaffold evidence
 
 `tools/build_deltaepszeta_training_targets.py` is now hardened for normal zsh

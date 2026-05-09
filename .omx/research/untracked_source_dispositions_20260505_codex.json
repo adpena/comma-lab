@@ -22,13 +22,13 @@
     {
       "classification": "generated_custody_source_untracked",
       "disposition": "ignore_rebuildable",
-      "note": "prefix: experiment result trees are raw rebuildable custody; track only promoted source, ledgers, or compact manifests outside this root. Rebaselined after A5 q7-all packet/eval added raw ignored packet runtime sources; canonical signal is in .omx/research/a5_trust_q7_all_macos_advisory_negative_20260509_codex.md and reports/a5_score_marginal_trust_region_q7_all_20260509.json.",
+      "note": "prefix: experiment result trees are raw rebuildable custody; track only promoted source, ledgers, or compact manifests outside this root. Rebaselined after A5 q7/q8 SegNet-protected packet/eval added raw ignored packet runtime sources; canonical signal is in .omx/research/a5_q7_seg_protected_scalar_negative_20260509_codex.md and reports/a5_score_marginal_trust_region_q7_low0p85_seg_20260509.json.",
       "path": "experiments/results/",
       "path_kind": "prefix",
       "runtime_source_baseline": {
         "algorithm": "pact_runtime_source_set_v1",
-        "count": 10585,
-        "sha256": "032778d1eabb5b8960566393fa78dde762cb17391a7dde62c89f82851b2b2d20"
+        "count": 10587,
+        "sha256": "d25e6037c98b49988b8b2c27af5cd8f4d455d10d41eff6dafd3c287af0a85ae0"
       }
     },
     {
