@@ -71,7 +71,7 @@
   },
   {
     "label": "lane_sa_v4",
-    "status": "not_ready",
+    "status": "error_NotFoundError",
     "call_id": "fc-01KQD5WXJXAK8CV82BFSKPJA7V"
   },
   {
@@ -96,7 +96,7 @@
   },
   {
     "label": "lane_sc_plus_plus_v4",
-    "status": "not_ready",
+    "status": "expired",
     "call_id": "fc-01KQD5X0CYES4VGRH3KKB3QAKE"
   },
   {
@@ -111,7 +111,7 @@
   },
   {
     "label": "lane_so_v3",
-    "status": "error_RemoteError",
+    "status": "error_NotFoundError",
     "call_id": "fc-01KQD2AN7CKKHW9H2JEYMZQRKF"
   },
   {
@@ -136,7 +136,7 @@
   },
   {
     "label": "mae_v_v2",
-    "status": "not_ready",
+    "status": "error_NotFoundError",
     "call_id": "fc-01KQCP43HDQZ9SE53HE90N550A"
   },
   {
@@ -151,18 +151,38 @@
   },
   {
     "label": "q_faithful_v3",
-    "status": "not_ready",
+    "status": "error_NotFoundError",
     "call_id": "fc-01KQCQS0XBEXZDFWW574FN0W5G"
   },
   {
     "label": "stc_cuda",
-    "status": "not_ready",
+    "status": "error_NotFoundError",
     "call_id": "fc-01KQDN5G9VKCR4Z2VPD3VD0PE2"
   },
   {
     "label": "sz_phase2_v2",
-    "status": "not_ready",
+    "status": "expired",
     "call_id": "fc-01KQCPZM0D2NMZCTH23RT98SK5"
+  },
+  {
+    "label": "track1_phase_a1_score_gradient_20260508T215443Z_modal",
+    "status": "already_harvested",
+    "call_id": "fc-01KR4SBZ24K5DP3WXAV8M39H0R"
+  },
+  {
+    "label": "track1_phase_a1_score_gradient_20260508T222043Z_modal",
+    "status": "already_harvested",
+    "call_id": "fc-01KR4TVY14SWW0VN07XT1B4Y2Q"
+  },
+  {
+    "label": "track1_phase_a1_score_gradient_20260508T230020Z_modal",
+    "status": "already_harvested",
+    "call_id": "fc-01KR4X449H99NB1MQXJC0QN52S"
+  },
+  {
+    "label": "track1_phase_a4_charm_50k_toy_20260508T220839Z_modal",
+    "status": "already_harvested",
+    "call_id": "fc-01KR4T5E7RYA2MY4487TSY4Q4V"
   },
   {
     "label": "uniward_v2",
