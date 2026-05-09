@@ -138,12 +138,19 @@ def test_write_runtime_inflate_py_has_per_video_loop():
     )
 
 
-def test_write_runtime_declares_brotli_compressai_torch_in_uv_run():
+def test_write_runtime_does_not_fetch_runtime_dependencies():
     body = _read_write_runtime_body()
-    # inflate.sh `uv run --with` declarations cover the runtime_dep_closure.
-    assert "torch==" in body
-    assert "brotli==" in body
-    assert "compressai==" in body
+    emitted = _read_emitted_strings_only()
+    forbidden = (
+        "uv run",
+        "--with ",
+        "--extra-index-url",
+        "--index-url",
+        "https://",
+        "pip install",
+    )
+    for token in forbidden:
+        assert token not in emitted
 
 
 def test_write_runtime_inflate_py_imports_no_pickle():
@@ -246,7 +253,17 @@ def test_emitted_inflate_sh_has_3_positional_arg_handoff(written_runtime):
 
 def test_emitted_inflate_sh_no_curl_wget_pip_install(written_runtime):
     text = (written_runtime / "inflate.sh").read_text()
-    for forbidden in ("curl ", "wget ", "pip install", "git clone"):
+    for forbidden in (
+        "curl ",
+        "wget ",
+        "pip install",
+        "git clone",
+        "uv run",
+        "--with ",
+        "--extra-index-url",
+        "--index-url",
+        "https://",
+    ):
         assert forbidden not in text, f"inflate.sh contains forbidden network token {forbidden!r}"
 
 

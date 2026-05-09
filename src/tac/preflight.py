@@ -4181,7 +4181,7 @@ def preflight_t4_oom_training_guard(
 
     Anything else is a violation.
     """
-    root = repo_root or REPO_ROOT
+    root = Path(repo_root or REPO_ROOT).resolve()
     if shell_files is None:
         shell_files = sorted(
             str(p.relative_to(root))
@@ -5049,7 +5049,7 @@ def check_feature_flags_have_live_objective_effect(
     *, strict: bool = False, verbose: bool = False, repo_root: Path | None = None
 ) -> list[str]:
     """Guard profile flags that resolve but fail to affect the objective."""
-    root = repo_root or REPO_ROOT
+    root = Path(repo_root or REPO_ROOT).resolve()
     checks = [
         (
             root / "src" / "tac" / "experiments" / "train_renderer.py",
@@ -5902,7 +5902,7 @@ def check_preflight_scanners_use_oss_mirror_helper(
     rglob site FAIL preflight at commit time, not at the next adversarial
     review round.
     """
-    root = repo_root or REPO_ROOT
+    root = Path(repo_root or REPO_ROOT).resolve()
     target = root / "src/tac/preflight.py"
     if not target.exists():
         return []
@@ -6470,7 +6470,7 @@ def check_no_submission_provider_or_cpu_score_leakage(
     scorer on CPU. Provider-specific orchestration belongs in private custody
     scripts; submission helpers must be CUDA-scoring or package-only.
     """
-    root = repo_root or REPO_ROOT
+    root = Path(repo_root or REPO_ROOT).resolve()
     violations: list[str] = []
     candidates = _candidate_submission_provider_score_surface_files(root)
     for path in candidates:
@@ -11376,33 +11376,45 @@ def check_no_raw_zip_extractall(
     verbose: bool = True,
 ) -> list[str]:
     """Block raw ZipFile.extractall outside the canonical safe extractor."""
-    root = repo_root or REPO_ROOT
+    root = Path(repo_root or REPO_ROOT).resolve()
     scan_roots = ("src", "tools", "scripts", "experiments", "submissions")
     violations: list[str] = []
     needle = "." + "extractall("
-    for rel_root in scan_roots:
-        base = root / rel_root
-        if not base.exists():
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        candidate_paths = source_index.files_containing_substrings(
+            scan_roots,
+            pattern="*.py",
+            substrings=("extractall(",),
+            require_all=True,
+        )
+    else:
+        candidate_list: list[Path] = []
+        for rel_root in scan_roots:
+            base = root / rel_root
+            if not base.exists():
+                continue
+            candidate_list.extend(sorted(base.rglob("*.py")))
+        candidate_paths = tuple(candidate_list)
+    for path in candidate_paths:
+        # R14-1: skip OSS-export staging mirror via centralized helper.
+        if _is_oss_export_mirror_path(path):
             continue
-        for path in sorted(base.rglob("*.py")):
-            # R14-1: skip OSS-export staging mirror via centralized helper.
-            if _is_oss_export_mirror_path(path):
-                continue
-            rel = path.relative_to(root).as_posix()
-            if rel in _RAW_EXTRACTALL_ALLOWED:
-                continue
-            if any(part in path.parts for part in ("__pycache__", ".pytest_cache", "tests")):
-                continue
-            try:
-                text = path.read_text(encoding="utf-8")
-            except UnicodeDecodeError:
-                continue
-            for lineno, line in enumerate(text.splitlines(), start=1):
-                if needle in line:
-                    violations.append(
-                        f"{rel}:{lineno}: raw ZipFile.extractall is forbidden; "
-                        "use tac.submission_archive.safe_extract_zip"
-                    )
+        rel = path.relative_to(root).as_posix()
+        if rel in _RAW_EXTRACTALL_ALLOWED:
+            continue
+        if any(part in path.parts for part in ("__pycache__", ".pytest_cache", "tests")):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            if needle in line:
+                violations.append(
+                    f"{rel}:{lineno}: raw ZipFile.extractall is forbidden; "
+                    "use tac.submission_archive.safe_extract_zip"
+                )
     if verbose and violations:
         print(f"  [safe-zip-extract] {len(violations)} raw extractall violation(s):")
         for violation in violations:
@@ -12721,10 +12733,20 @@ def check_no_bare_round_in_eval_roundtrip(
     """Forbid `.round()` inside eval-roundtrip chains. .round() has zero
     gradient → severs backprop → silent training freeze. Use Uint8STE.apply
     instead (clamp+round forward, identity backward inside [0,255])."""
-    root = repo_root or REPO_ROOT
+    root = Path(repo_root or REPO_ROOT).resolve()
     scan_dirs = ["src/tac", "experiments"]
     violations: list[str] = []
-    for py in _iter_python_files(root, scan_dirs):
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        candidate_paths = source_index.files_containing_substrings(
+            scan_dirs,
+            pattern="*.py",
+            substrings=(".round(", "F.interpolate"),
+            require_all=True,
+        )
+    else:
+        candidate_paths = tuple(_iter_python_files(root, scan_dirs))
+    for py in candidate_paths:
         violations.extend(
             _scan_python_for_bare_round_in_roundtrip(py, root)
         )
@@ -14619,6 +14641,10 @@ def _scan_test_file_for_dead_imports(
                 "from experiments",
                 "from comma_lab",
                 "from scripts",
+                "import tac",
+                "import experiments",
+                "import comma_lab",
+                "import scripts",
                 "pytest.skip",
                 "importorskip",
             )
@@ -14651,6 +14677,32 @@ def _scan_test_file_for_dead_imports(
 
     violations: list[str] = []
     for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                mod = alias.name
+                if not (
+                    mod == "tac"
+                    or mod.startswith("tac.")
+                    or mod == "experiments"
+                    or mod.startswith("experiments.")
+                    or mod == "comma_lab"
+                    or mod.startswith("comma_lab.")
+                    or mod == "scripts"
+                    or mod.startswith("scripts.")
+                ):
+                    continue
+                if any(mod == m or mod.startswith(m + ".") for m in importorskip_mods):
+                    continue
+                if node.lineno in fixture_waiver_lines:
+                    continue
+                mod_path = _resolve_module_to_path(mod, repo_root)
+                if mod_path is None or not mod_path.exists():
+                    violations.append(
+                        f"{rel}:{node.lineno}: imports module {mod!r} which does not "
+                        f"resolve to a file. Either delete the test or fix the "
+                        f"import (test has been silently broken)."
+                    )
+            continue
         if not isinstance(node, ast.ImportFrom):
             continue
         if node.module is None:
@@ -14722,6 +14774,111 @@ def _scan_test_file_for_dead_imports(
     return violations
 
 
+def _test_import_target_module_paths(
+    path: Path,
+    repo_root: Path,
+    *,
+    source_index=None,
+) -> set[Path]:
+    """Return existing project modules whose top-level names this test may need.
+
+    ``check_test_files_imports_resolve`` only needs top-level definitions from
+    modules actually imported by tests. Indexing the whole repo made the native
+    AST accelerator dominate full preflight latency while contributing no
+    additional correctness for this check.
+    """
+
+    try:
+        if source_index is not None:
+            text = source_index.read_text(path)
+        else:
+            text = path.read_text()
+        if not any(
+            token in text
+            for token in (
+                "from tac",
+                "from experiments",
+                "from comma_lab",
+                "from scripts",
+                "import tac",
+                "import experiments",
+                "import comma_lab",
+                "import scripts",
+                "pytest.skip",
+                "importorskip",
+            )
+        ):
+            return set()
+        if source_index is not None:
+            tree = source_index.python_ast(path)
+        else:
+            tree = ast.parse(text, filename=str(path))
+    except (SyntaxError, UnicodeDecodeError, FileNotFoundError, OSError):
+        return set()
+
+    if _has_module_level_skip(tree):
+        return set()
+
+    importorskip_mods = _collect_importorskip_modules(tree)
+    text_lines = text.splitlines()
+    fixture_waiver_lines: set[int] = set()
+    for i, line in enumerate(text_lines, start=1):
+        if "preflight-test-fixture-import" in line:
+            for offset in range(-8, 9):
+                fixture_waiver_lines.add(i + offset)
+
+    out: set[Path] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                mod = alias.name
+                if not (
+                    mod == "tac"
+                    or mod.startswith("tac.")
+                    or mod == "experiments"
+                    or mod.startswith("experiments.")
+                    or mod == "comma_lab"
+                    or mod.startswith("comma_lab.")
+                    or mod == "scripts"
+                    or mod.startswith("scripts.")
+                ):
+                    continue
+                if any(mod == m or mod.startswith(m + ".") for m in importorskip_mods):
+                    continue
+                if node.lineno in fixture_waiver_lines:
+                    continue
+                mod_path = _resolve_module_to_path(mod, repo_root)
+                if mod_path is not None and mod_path.exists():
+                    out.add(mod_path.resolve())
+            continue
+        if not isinstance(node, ast.ImportFrom):
+            continue
+        if node.module is None:
+            continue
+        mod = node.module
+        if not (
+            mod.startswith("tac")
+            or mod.startswith("experiments")
+            or mod.startswith("comma_lab")
+            or mod.startswith("scripts")
+        ):
+            continue
+        if any(mod == m or mod.startswith(m + ".") for m in importorskip_mods):
+            continue
+        if node.lineno in fixture_waiver_lines:
+            continue
+        mod_path = _resolve_module_to_path(mod, repo_root)
+        if mod_path is not None and mod_path.exists():
+            out.add(mod_path.resolve())
+        for alias in node.names:
+            if alias.name == "*":
+                continue
+            sub_path = _resolve_module_to_path(f"{mod}.{alias.name}", repo_root)
+            if sub_path is not None and sub_path.exists():
+                out.add(sub_path.resolve())
+    return out
+
+
 def check_test_files_imports_resolve(
     repo_root: Path | None = None,
     strict: bool = False,
@@ -14735,33 +14892,51 @@ def check_test_files_imports_resolve(
     root = Path(repo_root or REPO_ROOT).resolve()
     violations: list[str] = []
     n_scanned = 0
-    test_dir = root / "src" / "tac" / "tests"
-    if test_dir.exists():
+    test_scan_dirs = [
+        rel
+        for rel in ("src/tac/tests", "tests")
+        if (root / rel).is_dir()
+    ]
+    if test_scan_dirs:
         cache_enabled = os.environ.get("PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE") != "1"
-        scan_dirs = ["src/tac", "src/comma_lab", "scripts", "experiments"]
-        source_paths = _rg_file_list(
-            root,
-            scan_dirs,
-            ("*.py",),
-            exclude_globs=(
-                "experiments/results/**",
-                "**/__pycache__/**",
-                "**/comma_lab_public_export/**",
-            ),
+        source_index = _current_source_index(root)
+        if source_index is not None:
+            test_paths = source_index.files(test_scan_dirs, pattern="test_*.py")
+        else:
+            found_tests = _rg_file_list(
+                root,
+                test_scan_dirs,
+                ("test_*.py",),
+                exclude_globs=(
+                    "**/__pycache__/**",
+                    "**/comma_lab_public_export/**",
+                ),
+            )
+            if found_tests is None:
+                found_tests = tuple(
+                    p
+                    for p in _iter_python_files(root, test_scan_dirs)
+                    if p.name.startswith("test_")
+                )
+            test_paths = tuple(found_tests)
+        module_target_paths: set[Path] = set()
+        for p in test_paths:
+            if "__pycache__" in p.parts:
+                continue
+            module_target_paths.update(
+                _test_import_target_module_paths(
+                    p,
+                    root,
+                    source_index=source_index,
+                )
+            )
+        indexed_paths = tuple(sorted(module_target_paths, key=lambda item: item.as_posix()))
+        fingerprint_paths = tuple(
+            sorted(
+                {p.resolve() for p in test_paths}.union(module_target_paths),
+                key=lambda item: item.as_posix(),
+            )
         )
-        if source_paths is None:
-            source_paths = tuple(_iter_python_files(root, scan_dirs))
-        resolved_test_dir = test_dir.resolve()
-        test_path_list: list[Path] = []
-        for path in source_paths:
-            if not path.name.startswith("test_"):
-                continue
-            try:
-                path.resolve().relative_to(resolved_test_dir)
-            except ValueError:
-                continue
-            test_path_list.append(path)
-        test_paths = tuple(test_path_list)
         cache_name = "test_imports_resolve_clean"
         cache_key = hashlib.sha256(
             json.dumps(
@@ -14770,16 +14945,16 @@ def check_test_files_imports_resolve(
                         "PACT_PREFLIGHT_ENABLE_NATIVE_AST",
                         "1",
                     ),
-                    "scanner_version": "test_imports_resolve.v1",
+                    "scanner_version": "test_imports_resolve.v2",
                 },
                 sort_keys=True,
             ).encode()
         ).hexdigest()
         cache_rows = _load_preflight_cache(root, cache_name) if cache_enabled else {}
         source_fingerprint = _fingerprint_paths(
-            source_paths,
+            fingerprint_paths,
             root,
-            salt="test_imports_resolve.v1",
+            salt="test_imports_resolve.v2",
         )
         cache_row = cache_rows.get(cache_key)
         if (
@@ -14792,14 +14967,13 @@ def check_test_files_imports_resolve(
             return []
 
         module_defs_cache: dict[Path, set[str] | None] = {}
-        source_index = _current_source_index(root)
         if os.environ.get("PACT_PREFLIGHT_ENABLE_NATIVE_AST", "1") != "0":
             try:
                 from tac.python_ast_indexer_bridge import (
                     index_python_top_level_names_native,
                 )
 
-                native_defs = index_python_top_level_names_native(list(source_paths))
+                native_defs = index_python_top_level_names_native(list(indexed_paths))
                 for path, names in native_defs.items():
                     module_defs_cache[path] = names
             except Exception:
@@ -28715,6 +28889,8 @@ def check_phase1_trainer_runtime_emits_contest_compliant_inflate(
     * inflate.sh template missing `set -euo pipefail` / `set -e`.
     * inflate.sh template using single-arg passthrough `"$HERE/inflate.py" "$@"`
       WITHOUT the explicit `$DATA_DIR $OUTPUT_DIR $FILE_LIST` positional handoff.
+    * inflate.sh template fetching runtime dependencies (`uv run --with`,
+      alternate package indexes, URL fetches, pip installs).
     * inflate.py template containing FORBIDDEN_INFLATE_TOKENS
       (`PoseNet`, `SegNet`, `from upstream.modules`, `rgb_to_yuv6`,
       `EfficientNet`, `FastViT`).
@@ -28845,7 +29021,32 @@ def check_phase1_trainer_runtime_emits_contest_compliant_inflate(
             "args (\"$DATA_DIR\" \"$OUTPUT_DIR\" \"$FILE_LIST\")"
         )
 
-    # 4. inflate.py / inflate.sh / src/* TEMPLATE must NOT contain
+    # 4. inflate.sh TEMPLATE must not fetch runtime dependencies. The packet
+    # compiler is the authoritative guard; this trainer-level gate catches the
+    # bug before a packet is even built.
+    forbidden_network_tokens = (
+        "--extra-index-url",
+        "--find-links",
+        "--index-url",
+        "curl ",
+        "http://",
+        "https://",
+        "wget ",
+        "pip install",
+        " uv run ",
+        "uv run --with",
+        "uv pip install",
+        "git clone",
+    )
+    for token in forbidden_network_tokens:
+        if token in inflate_sh_template:
+            violations.append(
+                f"trainer:_write_runtime EMITTED inflate.sh template contains "
+                f"FORBIDDEN_NETWORK_TOKEN {token!r} (runtime must be hermetic; "
+                "no dependency fetch at inflate)"
+            )
+
+    # 5. inflate.py / inflate.sh / src/* TEMPLATE must NOT contain
     # FORBIDDEN_INFLATE_TOKENS. Mirror the packet compiler's
     # FORBIDDEN_INFLATE_TOKENS tuple (avoid importing it to keep the gate
     # self-contained). We scan only the EMITTED string literals (extracted
@@ -28864,7 +29065,7 @@ def check_phase1_trainer_runtime_emits_contest_compliant_inflate(
                 "strict-scorer-rule: no scorer load at inflate)"
             )
 
-    # 5. inflate.py template MUST contain a per-video loop. We accept
+    # 6. inflate.py template MUST contain a per-video loop. We accept
     # several equivalent patterns (`for line in file_list.read_text()`,
     # `for base in ...`, `while IFS= read -r`, etc.). The contest contract
     # is: iterate the file_list, produce one .raw per name.

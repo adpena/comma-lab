@@ -59,3 +59,14 @@ Regenerate the sidecar candidate with:
 - local runtime smoke;
 - exact CPU GHA only after custody passes;
 - CUDA dispatch only after CPU-positive evidence and a fresh lane claim.
+
+## Supersession note (2026-05-09)
+
+The local artifact directory was rebuilt by Codex after the builder was
+hardened. The original missing-archive custody failure is superseded by
+`.omx/research/a1_sidecar_custody_fail_closed_fix_20260509_codex.md`.
+
+Current status remains **not dispatch-ready**: the rebuilt artifact is a
+10-pair smoke/custody probe with `ready_for_exact_eval_dispatch=false`,
+archive bytes/SHA and local runtime custody recorded, and blockers for
+`smoke_only_not_exact_eval_ready` plus `runtime_smoke_not_checked`.

@@ -769,10 +769,10 @@ def _write_runtime(
     src.mkdir(exist_ok=True)
 
     # Per Q3+Q4: 3-positional-arg inflate.sh per upstream/submissions/baseline_fast/inflate.sh.
-    # Per Q1: brotli + compressai declared in --with so the runtime closure
-    # is hermetic. Per CLAUDE.md `check_shell_set_e_present`: set -euo pipefail.
-    # Per CLAUDE.md FORBIDDEN_NETWORK_TOKENS: no curl/wget/pip-install at
-    # inflate time (uv resolves from pre-warmed wheel cache).
+    # Per CLAUDE.md `check_shell_set_e_present`: set -euo pipefail.
+    # Per the packet compiler hermetic-runtime gate: no uv/pip/network
+    # dependency resolution at inflate time; the runtime must use the contest
+    # environment's already-installed interpreter and packaged sources.
     inflate_sh = (
         "#!/usr/bin/env bash\n"
         "# Phase 1 contest-compliant inflate (operator decision B 2026-05-09).\n"
@@ -784,12 +784,7 @@ def _write_runtime(
         "OUTPUT_DIR=\"$2\"\n"
         "FILE_LIST=\"$3\"\n"
         "mkdir -p \"$OUTPUT_DIR\"\n"
-        "exec uv run "
-        "--with torch==2.5.1+cu124 "
-        "--with brotli==1.1.0 "
-        "--with compressai==1.2.8 "
-        "--extra-index-url https://download.pytorch.org/whl/cu124 "
-        "--index-strategy unsafe-best-match "
+        "exec \"${PYTHON:-python3}\" "
         "\"$HERE/inflate.py\" \"$DATA_DIR\" \"$OUTPUT_DIR\" \"$FILE_LIST\"\n"
     )
     (submission_dir / "inflate.sh").write_text(inflate_sh)

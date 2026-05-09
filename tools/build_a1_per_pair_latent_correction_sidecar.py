@@ -61,6 +61,7 @@ import datetime as dt
 import hashlib
 import json
 import shutil
+import stat
 import struct
 import sys
 import time
@@ -80,6 +81,11 @@ A1_EXPECTED_ARCHIVE_SHA = (
     "87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5"
 )
 A1_EXPECTED_ARCHIVE_BYTES = 178262
+SIDECAR_LANE_ID = "lane_a1_per_pair_latent_sidecar_resampled"
+LOCAL_RUNTIME_CUSTODY_SCHEMA = "a1_sidecar_local_runtime_custody_v1"
+REQUIRED_RUNTIME_FILES = ("inflate.py", "inflate.sh", "src/codec.py", "src/model.py")
+RUNTIME_TREE_EXCLUDED_FILES = frozenset({"archive.zip"})
+RUNTIME_TREE_EXCLUDED_PARTS = frozenset({"__pycache__"})
 
 # Sidecar fixed delta vocabulary (PR99-PR103 lineage)
 SIDECAR_DELTAS_X100 = np.array(
@@ -107,6 +113,258 @@ def manifest_path(path: Path) -> str:
         return str(path.relative_to(REPO_ROOT))
     except ValueError:
         return str(path)
+
+
+def _is_sha256(value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    text = value.strip().lower()
+    return len(text) == 64 and all(ch in "0123456789abcdef" for ch in text)
+
+
+def _mode_string(path: Path) -> str:
+    return oct(path.stat().st_mode & 0o777)
+
+
+def _canonical_json_sha256(payload: Any) -> str:
+    raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
+
+
+def _runtime_file_record(submission_dir: Path, relpath: str) -> dict[str, Any]:
+    path = submission_dir / relpath
+    if not path.is_file():
+        raise FileNotFoundError(f"required runtime file missing: {relpath}")
+    if path.is_symlink():
+        raise FileNotFoundError(f"runtime file is a symlink: {relpath}")
+    st = path.stat()
+    return {
+        "relative_path": relpath,
+        "path": manifest_path(path),
+        "bytes": st.st_size,
+        "sha256": sha256_of(path),
+        "mode": _mode_string(path),
+        "executable": bool(st.st_mode & stat.S_IXUSR),
+    }
+
+
+def _runtime_tree_relpaths(submission_dir: Path) -> list[str]:
+    relpaths: list[str] = []
+    for path in sorted(submission_dir.rglob("*")):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(submission_dir).as_posix()
+        if rel in RUNTIME_TREE_EXCLUDED_FILES:
+            continue
+        if any(part in RUNTIME_TREE_EXCLUDED_PARTS for part in path.relative_to(submission_dir).parts):
+            continue
+        if path.name.endswith((".pyc", ".pyo")):
+            continue
+        relpaths.append(rel)
+    return relpaths
+
+
+def _runtime_tree_sha256(files: list[dict[str, Any]]) -> str:
+    basis = [
+        {
+            "relative_path": row["relative_path"],
+            "bytes": row["bytes"],
+            "sha256": row["sha256"],
+            "mode": row["mode"],
+            "executable": row["executable"],
+        }
+        for row in sorted(files, key=lambda item: str(item["relative_path"]))
+    ]
+    return _canonical_json_sha256(basis)
+
+
+def collect_local_runtime_custody(
+    submission_dir: Path,
+    *,
+    archive_path: Path,
+) -> dict[str, Any]:
+    """Collect local runtime custody for the submission tree.
+
+    The archive bytes/SHA are recorded separately from the runtime tree hash
+    because archive bytes are the scored payload, while the runtime tree is the
+    local inflate surface that consumes those bytes.
+    """
+
+    if not archive_path.is_file():
+        raise FileNotFoundError(f"archive missing: {archive_path}")
+    missing_required = [
+        rel for rel in REQUIRED_RUNTIME_FILES if not (submission_dir / rel).is_file()
+    ]
+    if missing_required:
+        raise FileNotFoundError(
+            "required runtime file missing: " + ", ".join(missing_required)
+        )
+    relpaths = _runtime_tree_relpaths(submission_dir)
+    files = [_runtime_file_record(submission_dir, rel) for rel in relpaths]
+    archive_record = {
+        "relative_path": "archive.zip",
+        "path": manifest_path(archive_path),
+        "bytes": archive_path.stat().st_size,
+        "sha256": sha256_of(archive_path),
+    }
+    return {
+        "schema_version": LOCAL_RUNTIME_CUSTODY_SCHEMA,
+        "submission_dir": manifest_path(submission_dir),
+        "archive": archive_record,
+        "files": files,
+        "file_count": len(files),
+        "required_runtime_files": list(REQUIRED_RUNTIME_FILES),
+        "excluded_files": sorted(RUNTIME_TREE_EXCLUDED_FILES),
+        "excluded_parts": sorted(RUNTIME_TREE_EXCLUDED_PARTS),
+        "runtime_tree_sha256": _runtime_tree_sha256(files),
+    }
+
+
+def _manifest_archive_path_value(manifest: dict[str, Any]) -> object:
+    for key in ("archive_path", "candidate_archive_path", "new_archive_path"):
+        value = manifest.get(key)
+        if value:
+            return value
+    return None
+
+
+def _resolve_manifest_path(value: object) -> Path | None:
+    if isinstance(value, Path):
+        path = value
+    elif isinstance(value, str) and value.strip():
+        path = Path(value)
+    else:
+        return None
+    return path if path.is_absolute() else REPO_ROOT / path
+
+
+def _runtime_custody_blockers(
+    manifest: dict[str, Any],
+    *,
+    submission_dir: Path,
+    archive_path: Path,
+) -> list[str]:
+    blockers: list[str] = []
+    runtime_manifest = manifest.get("local_runtime_custody")
+    if runtime_manifest is None:
+        runtime_manifest = manifest.get("runtime_manifest")
+    if not isinstance(runtime_manifest, dict):
+        return ["local_runtime_custody_missing"]
+    if runtime_manifest.get("schema_version") != LOCAL_RUNTIME_CUSTODY_SCHEMA:
+        blockers.append("local_runtime_custody_schema_mismatch")
+    if runtime_manifest.get("submission_dir") != manifest_path(submission_dir):
+        blockers.append("local_runtime_custody_submission_dir_mismatch")
+
+    archive_record = runtime_manifest.get("archive")
+    if not isinstance(archive_record, dict):
+        blockers.append("local_runtime_custody_archive_record_missing")
+    else:
+        expected_archive = {
+            "path": manifest_path(archive_path),
+            "bytes": archive_path.stat().st_size if archive_path.is_file() else None,
+            "sha256": sha256_of(archive_path) if archive_path.is_file() else None,
+        }
+        for key, expected in expected_archive.items():
+            if archive_record.get(key) != expected:
+                blockers.append(f"local_runtime_custody_archive_{key}_mismatch")
+
+    try:
+        actual = collect_local_runtime_custody(submission_dir, archive_path=archive_path)
+    except FileNotFoundError as exc:
+        blockers.append(f"local_runtime_custody_file_missing:{exc}")
+        return blockers
+
+    actual_files = {row["relative_path"]: row for row in actual["files"]}
+    manifest_files = runtime_manifest.get("files")
+    if not isinstance(manifest_files, list):
+        blockers.append("local_runtime_custody_files_missing")
+        manifest_files_by_rel: dict[str, dict[str, Any]] = {}
+    else:
+        manifest_files_by_rel = {
+            str(row.get("relative_path")): row
+            for row in manifest_files
+            if isinstance(row, dict)
+        }
+
+    actual_relpaths = set(actual_files)
+    manifest_relpaths = set(manifest_files_by_rel)
+    for rel in sorted(actual_relpaths - manifest_relpaths):
+        blockers.append(f"local_runtime_custody_file_record_missing:{rel}")
+    for rel in sorted(manifest_relpaths - actual_relpaths):
+        blockers.append(f"local_runtime_custody_file_record_stale:{rel}")
+    if runtime_manifest.get("file_count") != len(actual_files):
+        blockers.append("local_runtime_custody_file_count_mismatch")
+
+    for rel in sorted(actual_relpaths):
+        expected = actual_files[rel]
+        observed = manifest_files_by_rel.get(rel)
+        if observed is None:
+            continue
+        for key in ("path", "bytes", "sha256", "mode", "executable"):
+            if observed.get(key) != expected[key]:
+                blockers.append(f"local_runtime_custody_{rel}_{key}_mismatch")
+    for rel in REQUIRED_RUNTIME_FILES:
+        if rel not in actual_files:
+            blockers.append(f"local_runtime_custody_required_file_missing:{rel}")
+    inflate_sh_record = manifest_files_by_rel.get("inflate.sh")
+    if isinstance(inflate_sh_record, dict) and inflate_sh_record.get("executable") is not True:
+        blockers.append("local_runtime_custody_inflate_sh_not_executable")
+
+    expected_tree = actual["runtime_tree_sha256"]
+    manifest_tree = runtime_manifest.get("runtime_tree_sha256")
+    if manifest_tree != expected_tree:
+        blockers.append("local_runtime_custody_runtime_tree_sha256_mismatch")
+    top_level_tree = manifest.get("runtime_tree_sha256")
+    if top_level_tree != expected_tree:
+        blockers.append("runtime_tree_sha256_missing_or_mismatch")
+    if not _is_sha256(manifest_tree):
+        blockers.append("local_runtime_custody_runtime_tree_sha256_invalid")
+    return blockers
+
+
+def _no_op_detector_blockers(manifest: dict[str, Any]) -> list[str]:
+    no_op = manifest.get("no_op_detector")
+    if not isinstance(no_op, dict):
+        return ["sidecar_no_op_detector_missing"]
+    blockers: list[str] = []
+    old_sha = no_op.get("old_inner_sidecar_sha256")
+    new_sha = no_op.get("new_inner_sidecar_sha256")
+    if not _is_sha256(old_sha):
+        blockers.append("sidecar_no_op_old_sha256_missing_or_invalid")
+    if not _is_sha256(new_sha):
+        blockers.append("sidecar_no_op_new_sha256_missing_or_invalid")
+    if _is_sha256(old_sha) and _is_sha256(new_sha) and old_sha == new_sha:
+        blockers.append("sidecar_no_op_hashes_equal")
+    if no_op.get("sidecar_changed") is not True:
+        blockers.append("sidecar_no_op_detector_not_changed")
+    return blockers
+
+
+def _runtime_smoke_evidence_blockers(
+    manifest: dict[str, Any],
+    *,
+    archive_path: Path,
+    runtime_tree_sha256: str,
+) -> list[str]:
+    if manifest.get("runtime_smoke_checked") is not True:
+        return ["runtime_smoke_not_checked"]
+    evidence = manifest.get("runtime_smoke_evidence")
+    if not isinstance(evidence, dict):
+        return ["runtime_smoke_evidence_missing"]
+    blockers: list[str] = []
+    command = evidence.get("command")
+    if not isinstance(command, (str, list)) or not command:
+        blockers.append("runtime_smoke_evidence_command_missing")
+    if evidence.get("exit_code") != 0:
+        blockers.append("runtime_smoke_evidence_exit_code_nonzero")
+    if evidence.get("archive_sha256") != sha256_of(archive_path):
+        blockers.append("runtime_smoke_evidence_archive_sha256_mismatch")
+    if evidence.get("runtime_tree_sha256") != runtime_tree_sha256:
+        blockers.append("runtime_smoke_evidence_runtime_tree_sha256_mismatch")
+    output_digest = evidence.get("output_digest_sha256")
+    if output_digest is not None and not _is_sha256(output_digest):
+        blockers.append("runtime_smoke_evidence_output_digest_invalid")
+    return blockers
 
 
 def load_upstream_yuv420_to_rgb():
@@ -521,32 +779,73 @@ def enforce_manifest_dispatch_readiness(
     manifest: dict[str, Any],
     *,
     archive_path: Path,
+    submission_dir: Path | None = None,
 ) -> dict[str, Any]:
     """Fail-closed on exact-eval readiness unless custody invariants hold."""
 
     blockers = list(manifest.get("dispatch_blockers") or [])
+    submission_dir = submission_dir or archive_path.parent
 
     def block(reason: str) -> None:
         if reason not in blockers:
             blockers.append(reason)
+
+    if manifest.get("lane_id") != SIDECAR_LANE_ID:
+        block("sidecar_lane_id_missing_or_mismatch")
+
+    manifest_archive_value = _manifest_archive_path_value(manifest)
+    manifest_archive_path = _resolve_manifest_path(manifest_archive_value)
+    if manifest_archive_path is None:
+        block("archive_path_missing")
+    elif manifest_archive_path.resolve() != archive_path.resolve():
+        block("archive_path_mismatch")
 
     if not archive_path.is_file():
         block(f"materialized_archive_missing:{manifest_path(archive_path)}")
     else:
         actual_sha = sha256_of(archive_path)
         actual_bytes = archive_path.stat().st_size
+        for key in ("new_archive_sha256", "archive_sha256", "candidate_archive_sha256"):
+            value = manifest.get(key)
+            if value is not None and value != actual_sha:
+                block(f"{key}_mismatch")
+        for key in ("new_archive_bytes", "archive_size_bytes", "candidate_archive_bytes"):
+            value = manifest.get(key)
+            if value is not None and value != actual_bytes:
+                block(f"{key}_mismatch")
+        if not any(manifest.get(key) == actual_sha for key in ("new_archive_sha256", "archive_sha256", "candidate_archive_sha256")):
+            block("archive_sha256_missing_or_mismatch")
+        if not any(manifest.get(key) == actual_bytes for key in ("new_archive_bytes", "archive_size_bytes", "candidate_archive_bytes")):
+            block("archive_bytes_missing_or_mismatch")
         if manifest.get("new_archive_sha256") != actual_sha:
             block("materialized_archive_sha256_mismatch")
         if manifest.get("new_archive_bytes") != actual_bytes:
             block("materialized_archive_size_mismatch")
+        for reason in _runtime_custody_blockers(
+            manifest,
+            submission_dir=submission_dir,
+            archive_path=archive_path,
+        ):
+            block(reason)
 
     if manifest.get("smoke_only") is True:
         block("smoke_only_not_exact_eval_ready")
-    if manifest.get("runtime_smoke_checked") is not True:
-        block("runtime_smoke_not_checked")
-    no_op = manifest.get("no_op_detector")
-    if not isinstance(no_op, dict) or no_op.get("sidecar_changed") is not True:
-        block("sidecar_no_op_detector_not_changed")
+    runtime_tree = manifest.get("runtime_tree_sha256")
+    if isinstance(runtime_tree, str):
+        for reason in _runtime_smoke_evidence_blockers(
+            manifest,
+            archive_path=archive_path,
+            runtime_tree_sha256=runtime_tree,
+        ):
+            block(reason)
+    else:
+        block("runtime_tree_sha256_missing_or_mismatch")
+        if manifest.get("runtime_smoke_checked") is True:
+            block("runtime_smoke_evidence_runtime_tree_sha256_mismatch")
+        else:
+            block("runtime_smoke_not_checked")
+    for reason in _no_op_detector_blockers(manifest):
+        block(reason)
 
     manifest["dispatch_blockers"] = blockers
     if blockers:
@@ -693,7 +992,7 @@ def main() -> int:
         shutil.copy2(A1_SUBMISSION_DIR / "src" / fname, src_target / fname)
 
     manifest = {
-        "lane_id": "lane_a1_per_pair_latent_sidecar_resampled",
+        "lane_id": SIDECAR_LANE_ID,
         "schema_version": "a1_per_pair_latent_sidecar_resampled_v1",
         "build_timestamp_utc": dt.datetime.now(dt.UTC).isoformat(),
         "submission_name": f"a1_sidecar_resampled_{args.search_signal}_{timestamp}",
@@ -703,6 +1002,12 @@ def main() -> int:
         "old_archive_sha256": A1_EXPECTED_ARCHIVE_SHA,
         "old_archive_bytes": A1_EXPECTED_ARCHIVE_BYTES,
         "old_sidecar_bytes": len(components["sidecar_blob_old"]),
+        "archive_path": manifest_path(new_archive_path),
+        "archive_sha256": new_archive_sha,
+        "archive_size_bytes": new_archive_bytes,
+        "candidate_archive_path": manifest_path(new_archive_path),
+        "candidate_archive_sha256": new_archive_sha,
+        "candidate_archive_bytes": new_archive_bytes,
         "new_archive_path": manifest_path(new_archive_path),
         "new_archive_sha256": new_archive_sha,
         "new_archive_bytes": new_archive_bytes,
@@ -743,9 +1048,17 @@ def main() -> int:
             "sidecar_changed": components["sidecar_blob_old"] != new_sidecar,
         },
     }
+    local_runtime_custody = collect_local_runtime_custody(
+        sub_dir,
+        archive_path=new_archive_path,
+    )
+    manifest["local_runtime_custody"] = local_runtime_custody
+    manifest["runtime_manifest"] = local_runtime_custody
+    manifest["runtime_tree_sha256"] = local_runtime_custody["runtime_tree_sha256"]
     manifest = enforce_manifest_dispatch_readiness(
         manifest,
         archive_path=new_archive_path,
+        submission_dir=sub_dir,
     )
     (out_dir / "sidecar_manifest.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n"

@@ -160,12 +160,19 @@ FORBIDDEN_EXTERNAL_STATE_PATTERNS: tuple[str, ...] = (
 )
 
 #: Network-fetch tokens forbidden in ``inflate.sh``. The packet must inflate
-#: hermetically on the contest runner; no curl/wget/pip-install at inflate
-#: time.
+#: hermetically on the contest runner; no curl/wget/pip/uv dependency fetches
+#: or alternate package indexes at inflate time.
 FORBIDDEN_NETWORK_TOKENS: tuple[str, ...] = (
+    "--extra-index-url",
+    "--find-links",
+    "--index-url",
     "curl ",
+    "http://",
+    "https://",
     "wget ",
     "pip install",
+    " uv run ",
+    "uv run --with",
     "uv pip install",
     "git clone",
 )

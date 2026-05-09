@@ -64,6 +64,39 @@ def test_ground_truth_loader_uses_upstream_yuv420_helper() -> None:
     assert "to_ndarray(format=\"rgb24\")" not in tool_text
 
 
+def _write_runtime_fixture(tmp_path: Path) -> tuple[Path, Path]:
+    sub_dir = tmp_path / "submission_dir"
+    src_dir = sub_dir / "src"
+    src_dir.mkdir(parents=True)
+    archive = sub_dir / "archive.zip"
+    archive.write_bytes(b"archive bytes")
+    (sub_dir / "inflate.py").write_text("print('inflate')\n")
+    inflate_sh = sub_dir / "inflate.sh"
+    inflate_sh.write_text("#!/bin/sh\npython inflate.py\n")
+    inflate_sh.chmod(0o755)
+    (src_dir / "codec.py").write_text("LATENT_DIM = 28\n")
+    (src_dir / "model.py").write_text("class HNeRVDecoder: pass\n")
+    return sub_dir, archive
+
+
+def _changed_sidecar_no_op() -> dict[str, object]:
+    return {
+        "old_inner_sidecar_sha256": "1" * 64,
+        "new_inner_sidecar_sha256": "2" * 64,
+        "sidecar_changed": True,
+    }
+
+
+def _runtime_smoke_evidence(tool, archive: Path, custody: dict[str, object]) -> dict[str, object]:
+    return {
+        "command": ["./inflate.sh", "archive_dir", "out", "file_list.txt"],
+        "exit_code": 0,
+        "archive_sha256": tool.sha256_of(archive),
+        "runtime_tree_sha256": custody["runtime_tree_sha256"],
+        "output_digest_sha256": "3" * 64,
+    }
+
+
 def test_infer_sidecar_choices_preserves_old_unsearched_pairs() -> None:
     tool = load_tool()
     base = torch.zeros((tool.N_PAIRS, tool.LATENT_DIM), dtype=torch.float32)
@@ -126,21 +159,292 @@ def test_manifest_readiness_fails_closed_without_materialized_archive(tmp_path: 
     )
 
 
-def test_manifest_readiness_fails_closed_for_smoke_or_no_runtime_smoke(tmp_path: Path) -> None:
+def test_manifest_readiness_requires_sidecar_lane_and_archive_path(tmp_path: Path) -> None:
     tool = load_tool()
-    archive = tmp_path / "archive.zip"
-    archive.write_bytes(b"archive")
+    sub_dir, archive = _write_runtime_fixture(tmp_path)
+    custody = tool.collect_local_runtime_custody(sub_dir, archive_path=archive)
     manifest = {
+        "lane_id": "lane_a1_inflate_time_bias_correction_sweep",
         "dispatch_blockers": [],
         "new_archive_sha256": tool.sha256_of(archive),
         "new_archive_bytes": archive.stat().st_size,
         "ready_for_exact_eval_dispatch": True,
+        "runtime_smoke_checked": True,
+        "smoke_only": False,
+        "no_op_detector": {"sidecar_changed": True},
+        "local_runtime_custody": custody,
+        "runtime_tree_sha256": custody["runtime_tree_sha256"],
+    }
+
+    out = tool.enforce_manifest_dispatch_readiness(
+        manifest,
+        archive_path=archive,
+        submission_dir=sub_dir,
+    )
+
+    assert out["ready_for_exact_eval_dispatch"] is False
+    assert "sidecar_lane_id_missing_or_mismatch" in out["dispatch_blockers"]
+    assert "archive_path_missing" in out["dispatch_blockers"]
+
+
+def test_manifest_readiness_accepts_complete_local_custody(tmp_path: Path) -> None:
+    tool = load_tool()
+    sub_dir, archive = _write_runtime_fixture(tmp_path)
+    archive_sha = tool.sha256_of(archive)
+    archive_bytes = archive.stat().st_size
+    custody = tool.collect_local_runtime_custody(sub_dir, archive_path=archive)
+    manifest = {
+        "lane_id": tool.SIDECAR_LANE_ID,
+        "dispatch_blockers": [],
+        "archive_path": tool.manifest_path(archive),
+        "archive_sha256": archive_sha,
+        "archive_size_bytes": archive_bytes,
+        "candidate_archive_path": tool.manifest_path(archive),
+        "candidate_archive_sha256": archive_sha,
+        "candidate_archive_bytes": archive_bytes,
+        "new_archive_path": tool.manifest_path(archive),
+        "new_archive_sha256": archive_sha,
+        "new_archive_bytes": archive_bytes,
+        "ready_for_exact_eval_dispatch": True,
+        "runtime_smoke_checked": True,
+        "smoke_only": False,
+        "no_op_detector": _changed_sidecar_no_op(),
+        "local_runtime_custody": custody,
+        "runtime_manifest": custody,
+        "runtime_tree_sha256": custody["runtime_tree_sha256"],
+        "runtime_smoke_evidence": _runtime_smoke_evidence(tool, archive, custody),
+    }
+
+    out = tool.enforce_manifest_dispatch_readiness(
+        manifest,
+        archive_path=archive,
+        submission_dir=sub_dir,
+    )
+
+    assert out["ready_for_exact_eval_dispatch"] is True
+    assert out["dispatch_blockers"] == []
+
+
+def test_collect_local_runtime_custody_covers_extra_runtime_files(tmp_path: Path) -> None:
+    tool = load_tool()
+    sub_dir, archive = _write_runtime_fixture(tmp_path)
+    (sub_dir / "src" / "helper.py").write_text("HELPER = 1\n")
+    (sub_dir / "weights.pt").write_bytes(b"runtime sidecar")
+
+    custody = tool.collect_local_runtime_custody(sub_dir, archive_path=archive)
+
+    rels = {row["relative_path"] for row in custody["files"]}
+    assert "src/helper.py" in rels
+    assert "weights.pt" in rels
+
+
+def test_manifest_readiness_rejects_extra_runtime_file_drift(tmp_path: Path) -> None:
+    tool = load_tool()
+    sub_dir, archive = _write_runtime_fixture(tmp_path)
+    archive_sha = tool.sha256_of(archive)
+    archive_bytes = archive.stat().st_size
+    custody = tool.collect_local_runtime_custody(sub_dir, archive_path=archive)
+    (sub_dir / "src" / "helper.py").write_text("HELPER = 1\n")
+    manifest = {
+        "lane_id": tool.SIDECAR_LANE_ID,
+        "dispatch_blockers": [],
+        "archive_path": tool.manifest_path(archive),
+        "archive_sha256": archive_sha,
+        "archive_size_bytes": archive_bytes,
+        "new_archive_path": tool.manifest_path(archive),
+        "new_archive_sha256": archive_sha,
+        "new_archive_bytes": archive_bytes,
+        "ready_for_exact_eval_dispatch": True,
+        "runtime_smoke_checked": True,
+        "runtime_smoke_evidence": _runtime_smoke_evidence(tool, archive, custody),
+        "smoke_only": False,
+        "no_op_detector": _changed_sidecar_no_op(),
+        "local_runtime_custody": custody,
+        "runtime_tree_sha256": custody["runtime_tree_sha256"],
+    }
+
+    out = tool.enforce_manifest_dispatch_readiness(
+        manifest,
+        archive_path=archive,
+        submission_dir=sub_dir,
+    )
+
+    assert out["ready_for_exact_eval_dispatch"] is False
+    blockers = out["dispatch_blockers"]
+    assert "local_runtime_custody_file_record_missing:src/helper.py" in blockers
+    assert "local_runtime_custody_file_count_mismatch" in blockers
+    assert "local_runtime_custody_runtime_tree_sha256_mismatch" in blockers
+
+
+def test_manifest_readiness_rejects_no_op_hash_without_sidecar_delta(tmp_path: Path) -> None:
+    tool = load_tool()
+    sub_dir, archive = _write_runtime_fixture(tmp_path)
+    archive_sha = tool.sha256_of(archive)
+    archive_bytes = archive.stat().st_size
+    custody = tool.collect_local_runtime_custody(sub_dir, archive_path=archive)
+    manifest = {
+        "lane_id": tool.SIDECAR_LANE_ID,
+        "dispatch_blockers": [],
+        "archive_path": tool.manifest_path(archive),
+        "archive_sha256": archive_sha,
+        "archive_size_bytes": archive_bytes,
+        "new_archive_path": tool.manifest_path(archive),
+        "new_archive_sha256": archive_sha,
+        "new_archive_bytes": archive_bytes,
+        "ready_for_exact_eval_dispatch": True,
+        "runtime_smoke_checked": True,
+        "runtime_smoke_evidence": _runtime_smoke_evidence(tool, archive, custody),
+        "smoke_only": False,
+        "no_op_detector": {
+            "old_inner_sidecar_sha256": "a" * 64,
+            "new_inner_sidecar_sha256": "a" * 64,
+            "sidecar_changed": True,
+        },
+        "local_runtime_custody": custody,
+        "runtime_manifest": custody,
+        "runtime_tree_sha256": custody["runtime_tree_sha256"],
+    }
+
+    out = tool.enforce_manifest_dispatch_readiness(
+        manifest,
+        archive_path=archive,
+        submission_dir=sub_dir,
+    )
+
+    assert out["ready_for_exact_eval_dispatch"] is False
+    assert "sidecar_no_op_hashes_equal" in out["dispatch_blockers"]
+
+
+def test_manifest_readiness_rejects_bare_runtime_smoke_boolean(tmp_path: Path) -> None:
+    tool = load_tool()
+    sub_dir, archive = _write_runtime_fixture(tmp_path)
+    archive_sha = tool.sha256_of(archive)
+    archive_bytes = archive.stat().st_size
+    custody = tool.collect_local_runtime_custody(sub_dir, archive_path=archive)
+    manifest = {
+        "lane_id": tool.SIDECAR_LANE_ID,
+        "dispatch_blockers": [],
+        "archive_path": tool.manifest_path(archive),
+        "archive_sha256": archive_sha,
+        "archive_size_bytes": archive_bytes,
+        "new_archive_path": tool.manifest_path(archive),
+        "new_archive_sha256": archive_sha,
+        "new_archive_bytes": archive_bytes,
+        "ready_for_exact_eval_dispatch": True,
+        "runtime_smoke_checked": True,
+        "smoke_only": False,
+        "no_op_detector": _changed_sidecar_no_op(),
+        "local_runtime_custody": custody,
+        "runtime_manifest": custody,
+        "runtime_tree_sha256": custody["runtime_tree_sha256"],
+    }
+
+    out = tool.enforce_manifest_dispatch_readiness(
+        manifest,
+        archive_path=archive,
+        submission_dir=sub_dir,
+    )
+
+    assert out["ready_for_exact_eval_dispatch"] is False
+    assert "runtime_smoke_evidence_missing" in out["dispatch_blockers"]
+
+
+def test_manifest_readiness_rejects_runtime_custody_drift(tmp_path: Path) -> None:
+    tool = load_tool()
+    sub_dir, archive = _write_runtime_fixture(tmp_path)
+    archive_sha = tool.sha256_of(archive)
+    archive_bytes = archive.stat().st_size
+    custody = tool.collect_local_runtime_custody(sub_dir, archive_path=archive)
+    (sub_dir / "inflate.py").write_text("print('mutated')\n")
+    manifest = {
+        "lane_id": tool.SIDECAR_LANE_ID,
+        "dispatch_blockers": [],
+        "archive_path": tool.manifest_path(archive),
+        "archive_sha256": archive_sha,
+        "archive_size_bytes": archive_bytes,
+        "new_archive_path": tool.manifest_path(archive),
+        "new_archive_sha256": archive_sha,
+        "new_archive_bytes": archive_bytes,
+        "ready_for_exact_eval_dispatch": True,
+        "runtime_smoke_checked": True,
+        "smoke_only": False,
+        "no_op_detector": {"sidecar_changed": True},
+        "local_runtime_custody": custody,
+        "runtime_tree_sha256": custody["runtime_tree_sha256"],
+    }
+
+    out = tool.enforce_manifest_dispatch_readiness(
+        manifest,
+        archive_path=archive,
+        submission_dir=sub_dir,
+    )
+
+    assert out["ready_for_exact_eval_dispatch"] is False
+    blockers = out["dispatch_blockers"]
+    assert "local_runtime_custody_inflate.py_sha256_mismatch" in blockers
+    assert "local_runtime_custody_runtime_tree_sha256_mismatch" in blockers
+
+
+def test_manifest_readiness_rejects_archive_sha_and_byte_drift(tmp_path: Path) -> None:
+    tool = load_tool()
+    sub_dir, archive = _write_runtime_fixture(tmp_path)
+    custody = tool.collect_local_runtime_custody(sub_dir, archive_path=archive)
+    manifest = {
+        "lane_id": tool.SIDECAR_LANE_ID,
+        "dispatch_blockers": [],
+        "archive_path": tool.manifest_path(archive),
+        "archive_sha256": "0" * 64,
+        "archive_size_bytes": archive.stat().st_size + 1,
+        "new_archive_path": tool.manifest_path(archive),
+        "new_archive_sha256": "0" * 64,
+        "new_archive_bytes": archive.stat().st_size + 1,
+        "ready_for_exact_eval_dispatch": True,
+        "runtime_smoke_checked": True,
+        "smoke_only": False,
+        "no_op_detector": {"sidecar_changed": True},
+        "local_runtime_custody": custody,
+        "runtime_tree_sha256": custody["runtime_tree_sha256"],
+    }
+
+    out = tool.enforce_manifest_dispatch_readiness(
+        manifest,
+        archive_path=archive,
+        submission_dir=sub_dir,
+    )
+
+    assert out["ready_for_exact_eval_dispatch"] is False
+    blockers = out["dispatch_blockers"]
+    assert "new_archive_sha256_mismatch" in blockers
+    assert "new_archive_bytes_mismatch" in blockers
+    assert "materialized_archive_sha256_mismatch" in blockers
+    assert "materialized_archive_size_mismatch" in blockers
+
+
+def test_manifest_readiness_fails_closed_for_smoke_or_no_runtime_smoke(tmp_path: Path) -> None:
+    tool = load_tool()
+    sub_dir, archive = _write_runtime_fixture(tmp_path)
+    archive_sha = tool.sha256_of(archive)
+    archive_bytes = archive.stat().st_size
+    custody = tool.collect_local_runtime_custody(sub_dir, archive_path=archive)
+    manifest = {
+        "lane_id": tool.SIDECAR_LANE_ID,
+        "dispatch_blockers": [],
+        "new_archive_path": tool.manifest_path(archive),
+        "new_archive_sha256": archive_sha,
+        "new_archive_bytes": archive_bytes,
+        "ready_for_exact_eval_dispatch": True,
         "runtime_smoke_checked": False,
         "smoke_only": True,
         "no_op_detector": {"sidecar_changed": True},
+        "local_runtime_custody": custody,
+        "runtime_tree_sha256": custody["runtime_tree_sha256"],
     }
 
-    out = tool.enforce_manifest_dispatch_readiness(manifest, archive_path=archive)
+    out = tool.enforce_manifest_dispatch_readiness(
+        manifest,
+        archive_path=archive,
+        submission_dir=sub_dir,
+    )
 
     assert out["ready_for_exact_eval_dispatch"] is False
     assert "smoke_only_not_exact_eval_ready" in out["dispatch_blockers"]

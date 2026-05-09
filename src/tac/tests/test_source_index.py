@@ -157,6 +157,15 @@ def test_source_index_substring_index_filters_candidates(tmp_path):
     _write(tmp_path / "src/tac/a.py", "VALUE = 'kl_div batchmean'\n")
     _write(tmp_path / "src/tac/b.py", "VALUE = 'kl_div only'\n")
     _write(tmp_path / "scripts/c.py", "VALUE = 'batchmean only'\n")
+    _write(
+        tmp_path / "experiments/roundtrip.py",
+        """
+        import torch.nn.functional as F
+
+        def eval_roundtrip(x):
+            return F.interpolate(x, size=(384, 512)).round()
+        """,
+    )
     index = SourceIndex(tmp_path)
 
     matched = index.files_containing_substrings(
@@ -173,6 +182,15 @@ def test_source_index_substring_index_filters_candidates(tmp_path):
     )
 
     assert [index.repo_relative(path) for path in matched] == ["src/tac/a.py"]
+    roundtrip_matched = index.files_containing_substrings(
+        ["experiments", "scripts", "src/tac"],
+        pattern="*.py",
+        substrings=(".round(", "F.interpolate"),
+        require_all=True,
+    )
+    assert [index.repo_relative(path) for path in roundtrip_matched] == [
+        "experiments/roundtrip.py"
+    ]
     assert matched_again == matched
     stats = index.stats()
     assert stats["substring_index_entries"] >= 2

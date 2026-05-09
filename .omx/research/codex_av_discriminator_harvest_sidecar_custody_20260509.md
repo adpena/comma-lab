@@ -119,3 +119,68 @@ ignored. No `.gitignore` change was required for this harvest.
    `[contest-CUDA]` anchor, not a CUDA-ready score promotion.
 4. Do not duplicate active discriminator dispatches; use
    `tools/claim_lane_dispatch.py summary` before any new remote/eval action.
+
+## AV discriminator claim hygiene addendum
+
+<!-- generated_at: 2026-05-09T21:53:06Z -->
+<!-- evidence_grade: harvest_hygiene; no terminal claim row; no remote dispatch -->
+
+Reviewed the active dispatch claim again. Current status:
+
+- `tools/claim_lane_dispatch.py summary` reports exactly one active claim:
+  `lane_avvideodataset_cuda_path_mechanism_discriminator` /
+  `discriminator-sweep-20260509T110211Z`, platform
+  `github_actions+lightning`, status `eval`.
+- `gh pr list` filtered for discriminator/A1 CUDA-CPU branches returns only
+  PR #24, the baseline CPU eval PR:
+  `add submissions/a1_cuda_cpu_drift_discriminator_v_baseline_20260509T110211Z/ for GHA CPU eval`.
+- `gh run view 25599944911` is terminal-success and belongs to the baseline
+  CPU control. The report records device `cpu`, 600 samples, PoseNet
+  `0.00003286`, SegNet `0.00056023`, archive bytes `178262`, rounded score
+  `0.19`, artifact ID `6895314985`, and local archive SHA-256
+  `87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5`.
+- The nearby 2026-05-09 11:13 UTC GHA runs
+  `25599734336`, `25599734618`, `25599735583`, and `25599735947` are NOT
+  this lane; their logs identify `a1_segnet_boundary_smoothing_*` submissions.
+- Local discriminator artifact dirs exist for all four variants, but only
+  `v_baseline` has a non-empty `gha_dispatch/` artifact directory. The
+  `v_loader_isolated`, `v_conv_isolated`, and `v_hydra_isolated`
+  `gha_dispatch/` directories are empty.
+- All four variant `archive.zip` files are byte-identical to A1:
+  `87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5`.
+- Local runtime-tree SHA-256s computed with
+  `experiments.contest_auth_eval._runtime_dependency_manifest`:
+  - `v_baseline`: `880d786594051958935826f49e7d393243bae358573a507a4ab4960c4e4e9b1a`
+  - `v_loader_isolated`: `9d51d1f3f778d35bcf563dc06438c1a2532c264916de6a3390c0c0e7aecbd8d1`
+  - `v_conv_isolated`: `d5cdf6e1ff5ffd1cdc04f0d09897b4f134d87148603b6a3cf6653fc5a3643d67`
+  - `v_hydra_isolated`: `55da3c3453deea9c5caaaffb657b38731fdc0b595ffc5bfa48d02841de26cc23`
+- No Lightning CLI binary is installed (`lightning`, `lightning-cloud`, and
+  `lit` are absent). The venv can import `lightning_sdk`, but local Lightning
+  state is the only safe non-dispatch source inspected here.
+- `.omx/state/lightning_active_jobs.json` and
+  `.omx/state/lightning_batch_jobs.json` contain no discriminator/A1 CUDA-CPU
+  rows. There is no
+  `experiments/results/a1_cuda_cpu_drift_discriminator_run_20260509T110211Z/`
+  run-record directory.
+- The checked-in runbook defaults `SKIP_CUDA=1`; its CUDA path prints
+  operator-decision text rather than selecting a Lightning wrapper. There is
+  no local evidence that the CUDA half of the claimed sweep was launched.
+
+Classification: **not terminal / not closable**. The baseline CPU GHA artifact
+is terminal and harvested, but it is only 1 of the 8 intended paired CPU/CUDA
+cells. The combined dispatch claim must not receive a terminal claim row until
+the missing variant CPU rows and CUDA rows are harvested, or the operator
+explicitly chooses to close the partially executed sweep as abandoned.
+
+Next safe non-dispatch status command:
+
+```bash
+tools/claim_lane_dispatch.py summary
+gh pr view 24 --repo adpena/comma_video_compression_challenge \
+  --json number,title,state,isDraft,comments,updatedAt,url
+gh run view 25599944911 --repo adpena/comma_video_compression_challenge \
+  --json databaseId,status,conclusion,jobs,url,updatedAt
+jq 'map(select((tostring|test("discriminator|a1_cuda_cpu"; "i"))))' \
+  .omx/state/lightning_active_jobs.json \
+  .omx/state/lightning_batch_jobs.json
+```

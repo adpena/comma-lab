@@ -3433,6 +3433,15 @@ class TestArchiveBuildersUseDeterministicZip:
         _write(root / "submissions" / "robust_current" / "runner.py", bad_source)
         v = check_no_raw_zip_extractall(repo_root=root, strict=False, verbose=False)
         assert any("runner.py" in s for s in v), v
+        from tac.source_index import source_index_context
+
+        with source_index_context(root):
+            indexed = check_no_raw_zip_extractall(
+                repo_root=root,
+                strict=False,
+                verbose=False,
+            )
+        assert indexed == v
 
     def test_check_allows_canonical_safe_zip_extractor(self, tmp_path: Path) -> None:
         root = _stub_repo(tmp_path)
@@ -3848,6 +3857,16 @@ class TestTestFilesImportsResolve:
         assert len(v) == 1, v
         assert "does not resolve" in v[0]
 
+    def test_import_statement_from_nonexistent_module_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        (root / "src" / "tac" / "tests").mkdir(parents=True, exist_ok=True)
+        f = root / "src" / "tac" / "tests" / "test_broken_import.py"
+        f.write_text("import tac.does_not_exist as missing\n")
+        v = _scan_test_file_for_dead_imports(f, root)
+        assert len(v) == 1, v
+        assert "imports module" in v[0]
+        assert "does_not_exist" in v[0]
+
     def test_import_undefined_symbol_caught(self, tmp_path: Path) -> None:
         root = _stub_repo(tmp_path)
         # Create a real module with limited names.
@@ -3872,6 +3891,21 @@ class TestTestFilesImportsResolve:
         f.write_text("from tac.real_module import foo\n")
         v = _scan_test_file_for_dead_imports(f, root)
         assert v == [], v
+
+    def test_top_level_tests_dir_is_scanned(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        tests_dir = root / "tests"
+        tests_dir.mkdir(parents=True, exist_ok=True)
+        (tests_dir / "test_broken_top_level.py").write_text(
+            "from tac.does_not_exist import frobnicate\n"
+        )
+        violations = check_test_files_imports_resolve(
+            repo_root=root,
+            strict=False,
+            verbose=False,
+        )
+        assert len(violations) == 1
+        assert "test_broken_top_level.py" in violations[0]
 
     def test_third_party_import_skipped(self, tmp_path: Path) -> None:
         root = _stub_repo(tmp_path)

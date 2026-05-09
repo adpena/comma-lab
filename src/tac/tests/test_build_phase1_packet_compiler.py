@@ -408,6 +408,26 @@ def test_fail_closed_on_network_token_in_sh(tmp_path: Path) -> None:
         mode="identity",
     )
     assert any("curl " in b for b in result.blockers)
+    assert any("http://" in b for b in result.blockers)
+
+
+def test_fail_closed_on_uv_runtime_dependency_fetch_in_sh(tmp_path: Path) -> None:
+    packet_dir = _write_synthetic_packet(tmp_path)
+    text = (packet_dir / "inflate.sh").read_text()
+    text += (
+        'exec uv run --with brotli==1.1.0 --with torch==2.5.1+cu124 '
+        '--extra-index-url https://download.pytorch.org/whl/cu124 '
+        '"$HERE/inflate.py" "$@"\n'
+    )
+    (packet_dir / "inflate.sh").write_text(text, encoding="utf-8")
+    out_dir = tmp_path / "out"
+    result = compile_phase1_packet(
+        input_packet=packet_dir,
+        output_dir=out_dir,
+        mode="identity",
+    )
+    for token in ("uv run --with", "--extra-index-url", "https://"):
+        assert any(token in b for b in result.blockers)
 
 
 def test_fail_closed_on_external_state_path_in_sh(tmp_path: Path) -> None:
@@ -916,6 +936,9 @@ def test_forbidden_inflate_tokens_includes_scorer_classes() -> None:
 def test_forbidden_network_tokens_includes_curl_wget() -> None:
     assert "curl " in FORBIDDEN_NETWORK_TOKENS
     assert "wget " in FORBIDDEN_NETWORK_TOKENS
+    assert "uv run --with" in FORBIDDEN_NETWORK_TOKENS
+    assert "--extra-index-url" in FORBIDDEN_NETWORK_TOKENS
+    assert "https://" in FORBIDDEN_NETWORK_TOKENS
 
 
 def test_a1_canonical_constants_match_designation() -> None:
@@ -1281,6 +1304,8 @@ def test_compiler_rejects_trainer_scaffold_inflate_sh_signature(tmp_path: Path) 
     # The trainer scaffold's inflate.sh fetches from a network URL AND lacks
     # the contest's positional args. Both should be blockers.
     assert any("missing required positional args" in b for b in result.blockers)
+    for token in ("uv run --with", "--extra-index-url", "https://"):
+        assert any(token in b for b in result.blockers)
 
 
 def test_six_hook_wire_in_declared_in_module_docstring() -> None:
