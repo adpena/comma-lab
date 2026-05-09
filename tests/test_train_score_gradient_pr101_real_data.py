@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 import types
 from pathlib import Path
@@ -120,6 +121,56 @@ def test_train_requires_explicit_batch_source() -> None:
             aux_pixel_l1_weight=0.0,
             batch_source=None,
         )
+
+
+def test_train_saves_best_proxy_checkpoint(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mod = _load_train_module()
+
+    class TinyDecoder(torch.nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.proj = torch.nn.Linear(2, 2 * 3 * 8 * 8)
+
+        def forward(self, z: torch.Tensor) -> torch.Tensor:
+            return torch.sigmoid(self.proj(z)).reshape(z.shape[0], 2, 3, 8, 8) * 255.0
+
+    monkeypatch.setattr(mod, "simulate_eval_roundtrip", lambda x, *, noise_std: x)
+    decoder = TinyDecoder()
+    posenet, segnet = mod.load_smoke_scorers(torch.device("cpu"))
+
+    def batch_source(batch_size: int) -> tuple[torch.Tensor, torch.Tensor]:
+        z = torch.zeros((batch_size, 2), dtype=torch.float32)
+        gt = torch.full((batch_size, 2, 8, 8, 3), 127.0, dtype=torch.float32)
+        return z, gt
+
+    result = mod.train(
+        decoder=decoder,
+        posenet=posenet,
+        segnet=segnet,
+        epochs=1,
+        steps_per_epoch=1,
+        batch_size=1,
+        latent_dim=2,
+        frame_h=8,
+        frame_w=8,
+        lr=1e-4,
+        device=torch.device("cpu"),
+        output_dir=tmp_path,
+        aux_kl_weight=0.0,
+        aux_pixel_l1_weight=0.0,
+        batch_source=batch_source,
+    )
+
+    assert (tmp_path / mod.FINAL_EMA_CHECKPOINT).is_file()
+    assert (tmp_path / mod.BEST_PROXY_CHECKPOINT).is_file()
+    manifest = json.loads((tmp_path / mod.BEST_PROXY_MANIFEST).read_text())
+    assert manifest["selection_objective"] == "min_epoch_last_step_weighted_proxy"
+    assert manifest["selected_epoch"] == 0
+    assert result.best_proxy_epoch == 0
+    assert result.best_proxy_value is not None
 
 
 def test_real_pair_batch_source_uses_archive_latent_rows() -> None:

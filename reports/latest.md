@@ -121,6 +121,15 @@ The Modal harvester schema bug that hid this result as `score=None` is fixed:
 canonical `contest_auth_eval` fields and legacy `score_components` fields.
 Focused Modal tests: `12 passed`.
 
+**A1 best-proxy checkpoint selection landed:** the training script now saves
+both the historical final EMA checkpoint and a `checkpoint_best_proxy.pt` EMA
+snapshot at the lowest epoch-end `weighted_proxy`. The Modal A1 wrapper exposes
+`--checkpoint-selection {final_ema,best_proxy}`, defaulting to `final_ema` for
+backward compatibility. This turns the next A1 dispatch into a validation/
+early-stopping test instead of another blind final-epoch refire. Focused tests:
+`18 passed`. Ledger:
+`.omx/research/phase_a1_best_proxy_checkpoint_selection_20260509_codex.md`.
+
 ## 2026-05-09 (night) - Track4 UNIWARD/Hessian A1 ladder screen
 
 `tools/build_uniward_stc_hessian_a1_v1.py` now emits complete runtime packets

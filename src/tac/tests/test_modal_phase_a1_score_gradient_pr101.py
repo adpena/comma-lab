@@ -126,6 +126,7 @@ def test_modal_phase_a1_direct_plan_does_not_spawn_or_claim(tmp_path: Path) -> N
             "--video-path", str(video_path),
             "--label", "unit-test-plan",
             "--epochs", "3",
+            "--checkpoint-selection", "best_proxy",
             "--continue-after-nvdec-failure",
             "--json-out", str(json_out),
         ],
@@ -150,9 +151,12 @@ def test_modal_phase_a1_direct_plan_does_not_spawn_or_claim(tmp_path: Path) -> N
     assert payload["ready_for_modal_dispatch_command"] is True
     assert payload["validation_errors"] == []
     assert payload["params"]["epochs"] == 3
+    assert payload["params"]["checkpoint_selection"] == "best_proxy"
     assert payload["params"]["continue_after_nvdec_failure"] is True
     assert ".venv/bin/modal" in payload["dispatch_command"]
     assert "--detach" in payload["dispatch_command"]
+    assert "--checkpoint-selection" in payload["dispatch_command"]
+    assert "best_proxy" in payload["dispatch_command"]
     assert "--continue-after-nvdec-failure" in payload["dispatch_command"]
     after_claims = claim_file.read_text() if claim_file.exists() else None
     assert after_claims == before_claims

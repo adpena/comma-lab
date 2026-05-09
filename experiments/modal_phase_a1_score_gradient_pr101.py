@@ -124,6 +124,10 @@ DEFAULT_PR101_SOURCE_DIR = (
 )
 DEFAULT_VIDEO_PATH = REPO_ROOT / "upstream/videos/0.mkv"
 DALI_DISABLE_NVML_VALUE = "1"
+CHECKPOINT_SELECTIONS = {
+    "final_ema": "checkpoint_ema.pt",
+    "best_proxy": "checkpoint_best_proxy.pt",
+}
 REMOTE_PYTHONPATH = f"{REMOTE_REPO / 'src'}:{REMOTE_REPO / 'upstream'}:{REMOTE_REPO}"
 
 
@@ -370,6 +374,16 @@ def _eval_metric_summary(eval_data: dict[str, Any] | None) -> dict[str, float | 
             sc.get("rate_unscaled"),
         ),
     }
+
+
+def _selected_checkpoint_path(train_output: Path, checkpoint_selection: str) -> Path:
+    checkpoint_name = CHECKPOINT_SELECTIONS.get(checkpoint_selection)
+    if checkpoint_name is None:
+        raise ValueError(
+            f"unknown checkpoint_selection={checkpoint_selection!r}; "
+            f"expected one of {sorted(CHECKPOINT_SELECTIONS)}"
+        )
+    return train_output / checkpoint_name
 
 
 def _read_input(path: Path, label: str) -> tuple[bytes, str, int]:
@@ -678,6 +692,7 @@ def _run_phase_a1_inner(
     max_frames: int,
     aux_kl_weight: float,
     aux_pixel_l1_weight: float,
+    checkpoint_selection: str,
     continue_after_nvdec_failure: bool,
     train_timeout_seconds: int,
     build_timeout_seconds: int,
@@ -755,6 +770,7 @@ def _run_phase_a1_inner(
                 "max_frames": max_frames,
                 "aux_kl_weight": aux_kl_weight,
                 "aux_pixel_l1_weight": aux_pixel_l1_weight,
+                "checkpoint_selection": checkpoint_selection,
             },
             "score_claim": False,
             "promotion_eligible": False,
@@ -839,14 +855,16 @@ def _run_phase_a1_inner(
                 validation_errors=[f"training failed rc={run['returncode']}"],
                 extra={"commands": command_results},
             )
-        checkpoint_path = train_output / "checkpoint_ema.pt"
+        checkpoint_path = _selected_checkpoint_path(train_output, checkpoint_selection)
         if not checkpoint_path.is_file():
             return _finish_remote(
                 out_dir,
                 passed=False,
                 returncode=4,
                 stage=stage,
-                validation_errors=[f"checkpoint_ema.pt missing at {checkpoint_path}"],
+                validation_errors=[
+                    f"selected checkpoint {checkpoint_selection!r} missing at {checkpoint_path}"
+                ],
                 extra={"commands": command_results},
             )
 
@@ -904,6 +922,8 @@ def _run_phase_a1_inner(
                 "archive_path": str(archive_zip),
                 "archive_bytes": archive_meta["bytes"],
                 "archive_sha256": archive_meta["sha256"],
+                "checkpoint_selection": checkpoint_selection,
+                "checkpoint_path": str(checkpoint_path),
                 "eval_work_dir": None,
                 "eval_rc": None,
                 "eval_data": None,
@@ -932,6 +952,7 @@ def _run_phase_a1_inner(
                     "max_frames": max_frames,
                     "aux_kl_weight": aux_kl_weight,
                     "aux_pixel_l1_weight": aux_pixel_l1_weight,
+                    "checkpoint_selection": checkpoint_selection,
                     "continue_after_nvdec_failure": continue_after_nvdec_failure,
                 },
             }
@@ -1006,6 +1027,8 @@ def _run_phase_a1_inner(
             "archive_path": str(archive_zip),
             "archive_bytes": archive_meta["bytes"],
             "archive_sha256": archive_meta["sha256"],
+            "checkpoint_selection": checkpoint_selection,
+            "checkpoint_path": str(checkpoint_path),
             "eval_work_dir": str(eval_work),
             "eval_rc": eval_rc,
             "eval_data": eval_data,
@@ -1031,6 +1054,7 @@ def _run_phase_a1_inner(
                 "max_frames": max_frames,
                 "aux_kl_weight": aux_kl_weight,
                 "aux_pixel_l1_weight": aux_pixel_l1_weight,
+                "checkpoint_selection": checkpoint_selection,
             },
         }
         if eval_data:
@@ -1087,6 +1111,7 @@ def run_phase_a1_t4(
     max_frames: int,
     aux_kl_weight: float,
     aux_pixel_l1_weight: float,
+    checkpoint_selection: str,
     continue_after_nvdec_failure: bool,
     train_timeout_seconds: int,
     build_timeout_seconds: int,
@@ -1111,6 +1136,7 @@ def run_phase_a1_t4(
         max_frames=max_frames,
         aux_kl_weight=aux_kl_weight,
         aux_pixel_l1_weight=aux_pixel_l1_weight,
+        checkpoint_selection=checkpoint_selection,
         continue_after_nvdec_failure=continue_after_nvdec_failure,
         train_timeout_seconds=train_timeout_seconds,
         build_timeout_seconds=build_timeout_seconds,
@@ -1136,6 +1162,7 @@ def _phase_a1_dispatch_command(
     max_frames: int,
     aux_kl_weight: float,
     aux_pixel_l1_weight: float,
+    checkpoint_selection: str,
     continue_after_nvdec_failure: bool,
     train_timeout_hours: float,
     build_timeout_minutes: float,
@@ -1163,6 +1190,7 @@ def _phase_a1_dispatch_command(
         "--max-frames", str(int(max_frames)),
         "--aux-kl-weight", str(float(aux_kl_weight)),
         "--aux-pixel-l1-weight", str(float(aux_pixel_l1_weight)),
+        "--checkpoint-selection", checkpoint_selection,
         "--train-timeout-hours", str(float(train_timeout_hours)),
         "--build-timeout-minutes", str(float(build_timeout_minutes)),
         "--eval-timeout-minutes", str(float(eval_timeout_minutes)),
@@ -1189,6 +1217,7 @@ def build_local_plan(
     max_frames: int,
     aux_kl_weight: float,
     aux_pixel_l1_weight: float,
+    checkpoint_selection: str,
     continue_after_nvdec_failure: bool,
     train_timeout_hours: float,
     build_timeout_minutes: float,
@@ -1280,6 +1309,7 @@ def build_local_plan(
         "max_frames": int(max_frames),
         "aux_kl_weight": float(aux_kl_weight),
         "aux_pixel_l1_weight": float(aux_pixel_l1_weight),
+        "checkpoint_selection": checkpoint_selection,
         "continue_after_nvdec_failure": bool(continue_after_nvdec_failure),
         "train_timeout_hours": float(train_timeout_hours),
         "build_timeout_minutes": float(build_timeout_minutes),
@@ -1299,6 +1329,7 @@ def build_local_plan(
         max_frames=max_frames,
         aux_kl_weight=aux_kl_weight,
         aux_pixel_l1_weight=aux_pixel_l1_weight,
+        checkpoint_selection=checkpoint_selection,
         continue_after_nvdec_failure=continue_after_nvdec_failure,
         train_timeout_hours=train_timeout_hours,
         build_timeout_minutes=build_timeout_minutes,
@@ -1367,6 +1398,16 @@ def plan_cli(argv: list[str] | None = None) -> int:
     parser.add_argument("--aux-kl-weight", type=float, default=1.0)
     parser.add_argument("--aux-pixel-l1-weight", type=float, default=0.01)
     parser.add_argument(
+        "--checkpoint-selection",
+        choices=sorted(CHECKPOINT_SELECTIONS),
+        default="final_ema",
+        help=(
+            "Which training checkpoint to build into the archive. final_ema "
+            "preserves historical behavior; best_proxy uses the EMA snapshot "
+            "from the lowest training weighted_proxy epoch."
+        ),
+    )
+    parser.add_argument(
         "--continue-after-nvdec-failure",
         action="store_true",
         help=(
@@ -1395,6 +1436,7 @@ def plan_cli(argv: list[str] | None = None) -> int:
         max_frames=args.max_frames,
         aux_kl_weight=args.aux_kl_weight,
         aux_pixel_l1_weight=args.aux_pixel_l1_weight,
+        checkpoint_selection=args.checkpoint_selection,
         continue_after_nvdec_failure=args.continue_after_nvdec_failure,
         train_timeout_hours=args.train_timeout_hours,
         build_timeout_minutes=args.build_timeout_minutes,
@@ -1632,6 +1674,7 @@ def main(
     max_frames: int = 1200,
     aux_kl_weight: float = 1.0,
     aux_pixel_l1_weight: float = 0.01,
+    checkpoint_selection: str = "final_ema",
     continue_after_nvdec_failure: bool = False,
     train_timeout_hours: float = 3.5,
     build_timeout_minutes: float = 10.0,
@@ -1667,6 +1710,11 @@ def main(
     if estimated_cost > cost_cap_usd:
         raise SystemExit(
             f"FATAL: estimated cost ${estimated_cost:.2f} exceeds cap ${cost_cap_usd:.2f}; abort"
+        )
+    if checkpoint_selection not in CHECKPOINT_SELECTIONS:
+        raise SystemExit(
+            f"FATAL: checkpoint_selection={checkpoint_selection!r}; "
+            f"expected one of {sorted(CHECKPOINT_SELECTIONS)}"
         )
 
     # ---- Read inputs (verifies sha + size) -------------------------------
@@ -1713,6 +1761,7 @@ def main(
         "max_frames": int(max_frames),
         "aux_kl_weight": float(aux_kl_weight),
         "aux_pixel_l1_weight": float(aux_pixel_l1_weight),
+        "checkpoint_selection": checkpoint_selection,
         "continue_after_nvdec_failure": bool(continue_after_nvdec_failure),
         "train_timeout_seconds": train_timeout_seconds,
         "build_timeout_seconds": build_timeout_seconds,
@@ -1779,6 +1828,7 @@ def main(
             int(max_frames),
             float(aux_kl_weight),
             float(aux_pixel_l1_weight),
+            str(checkpoint_selection),
             bool(continue_after_nvdec_failure),
             int(train_timeout_seconds),
             int(build_timeout_seconds),

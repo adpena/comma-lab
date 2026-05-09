@@ -104,6 +104,9 @@ PIXEL_L1_WEIGHT: float = 0.0  # OFF by default — scorer_loss already supervise
 DEFAULT_BATCH_SIZE: int = 4
 DEFAULT_LR: float = 5e-4
 DEFAULT_LR_FINETUNE: float = 1e-4  # 0.1x base (per CLAUDE.md QAT pipeline rule)
+FINAL_EMA_CHECKPOINT = "checkpoint_ema.pt"
+BEST_PROXY_CHECKPOINT = "checkpoint_best_proxy.pt"
+BEST_PROXY_MANIFEST = "checkpoint_best_proxy_manifest.json"
 
 
 # ---------------------------------------------------------------------------
@@ -542,6 +545,20 @@ class TrainResult:
     initial_pose: float
     nan_observed: bool
     epoch_log: list[dict[str, Any]]
+    best_proxy_epoch: int | None
+    best_proxy_value: float | None
+    best_proxy_metrics: dict[str, float] | None
+
+
+def save_ema_checkpoint(decoder: nn.Module, ema: EMA, path: Path) -> None:
+    """Save an EMA snapshot without leaving EMA weights installed."""
+    orig_state = {k: v.detach().clone() for k, v in decoder.state_dict().items()}
+    ema.apply(decoder)
+    try:
+        torch.save(decoder.state_dict(), path)
+    finally:
+        decoder.load_state_dict(orig_state)
+        decoder.train()
 
 
 def train_one_step(
@@ -681,6 +698,9 @@ def train(
     initial_seg = math.nan
     initial_pose = math.nan
     nan_observed = False
+    best_proxy_epoch: int | None = None
+    best_proxy_value: float | None = None
+    best_proxy_metrics: dict[str, float] | None = None
 
     with log_path.open("w") as log_f:
         for epoch in range(epochs):
@@ -716,6 +736,38 @@ def train(
             epoch_log.append(epoch_metrics)
             if epoch_metrics["step_metrics"]:
                 m = epoch_metrics["step_metrics"][-1]
+                proxy_value = float(m["weighted_proxy"])
+                if math.isfinite(proxy_value) and (
+                    best_proxy_value is None or proxy_value < best_proxy_value
+                ):
+                    best_proxy_epoch = int(epoch)
+                    best_proxy_value = proxy_value
+                    best_proxy_metrics = {
+                        key: float(value)
+                        for key, value in m.items()
+                        if isinstance(value, (int, float)) and not isinstance(value, bool)
+                    }
+                    save_ema_checkpoint(
+                        decoder,
+                        ema,
+                        output_dir / BEST_PROXY_CHECKPOINT,
+                    )
+                    (output_dir / BEST_PROXY_MANIFEST).write_text(
+                        json.dumps(
+                            {
+                                "schema": "phase_a1_best_proxy_checkpoint.v1",
+                                "checkpoint": BEST_PROXY_CHECKPOINT,
+                                "selection_objective": "min_epoch_last_step_weighted_proxy",
+                                "selected_epoch": best_proxy_epoch,
+                                "selected_weighted_proxy": best_proxy_value,
+                                "selected_metrics": best_proxy_metrics,
+                                "score_claim": False,
+                                "evidence_grade": "[training-proxy checkpoint selector]",
+                            },
+                            indent=2,
+                            sort_keys=True,
+                        )
+                    )
                 LOGGER.info(
                     "epoch=%d loss=%.4f pose=%.6e seg=%.6e lambda_R=%.4f",
                     epoch, m["loss"], m["pose_dist"], m["seg_dist"], m["lambda_R"],
@@ -732,14 +784,30 @@ def train(
         else math.nan
     )
 
-    # Save EMA checkpoint (not the live model — CLAUDE.md NON-NEGOTIABLE).
-    orig_state = {k: v.detach().clone() for k, v in decoder.state_dict().items()}
-    ema.apply(decoder)
-    try:
-        torch.save(decoder.state_dict(), output_dir / "checkpoint_ema.pt")
-    finally:
-        decoder.load_state_dict(orig_state)
-        decoder.train()
+    # Save final EMA checkpoint (not the live model — CLAUDE.md NON-NEGOTIABLE).
+    save_ema_checkpoint(decoder, ema, output_dir / FINAL_EMA_CHECKPOINT)
+    if not (output_dir / BEST_PROXY_CHECKPOINT).is_file():
+        # Defensive fallback for degenerate all-NaN/all-non-finite proxy runs.
+        save_ema_checkpoint(decoder, ema, output_dir / BEST_PROXY_CHECKPOINT)
+        best_proxy_epoch = (epochs - 1) if epochs > 0 else None
+        best_proxy_value = None
+        best_proxy_metrics = None
+        (output_dir / BEST_PROXY_MANIFEST).write_text(
+            json.dumps(
+                {
+                    "schema": "phase_a1_best_proxy_checkpoint.v1",
+                    "checkpoint": BEST_PROXY_CHECKPOINT,
+                    "selection_objective": "fallback_final_ema_no_finite_proxy",
+                    "selected_epoch": best_proxy_epoch,
+                    "selected_weighted_proxy": None,
+                    "selected_metrics": None,
+                    "score_claim": False,
+                    "evidence_grade": "[training-proxy checkpoint selector]",
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
 
     return TrainResult(
         final_seg=final_seg,
@@ -748,6 +816,9 @@ def train(
         initial_pose=initial_pose,
         nan_observed=nan_observed,
         epoch_log=epoch_log,
+        best_proxy_epoch=best_proxy_epoch,
+        best_proxy_value=best_proxy_value,
+        best_proxy_metrics=best_proxy_metrics,
     )
 
 
@@ -830,6 +901,21 @@ def write_build_manifest(
             "pose_delta_pct": pose_delta_pct,
             "seg_delta_pct": seg_delta_pct,
             "nan_observed": result.nan_observed,
+        },
+        "checkpoint_selection": {
+            "final_ema_checkpoint": FINAL_EMA_CHECKPOINT,
+            "best_proxy_checkpoint": BEST_PROXY_CHECKPOINT,
+            "best_proxy_manifest": BEST_PROXY_MANIFEST,
+            "best_proxy_selection_objective": "min_epoch_last_step_weighted_proxy",
+            "best_proxy_epoch": result.best_proxy_epoch,
+            "best_proxy_value": result.best_proxy_value,
+            "best_proxy_metrics": result.best_proxy_metrics,
+            "score_claim": False,
+            "evidence_grade": "[training-proxy checkpoint selector]",
+            "note": (
+                "Downstream packet builders may choose either checkpoint, but "
+                "auth-eval custody still belongs to the archive/eval lane."
+            ),
         },
         "falsification_threshold": "min(seg_delta_pct, pose_delta_pct) < 5% → retire-config",
         "promotion_threshold": "max(seg_delta_pct, pose_delta_pct) >= 10% → promote",
