@@ -306,3 +306,52 @@ Dispatch blockers in the manifest remain:
 - run exact-eval dispatcher preflight against `submission_dir`;
 - record runtime tree SHA and terminal dispatch claim row;
 - `non_full_sidecar_search_not_exact_eval_ready`.
+
+## Codex follow-up local chunk 5
+
+<!-- generated_at: 2026-05-10T01:05:00Z -->
+<!-- evidence_grade: local_cpu_proxy_partial; no score claim; no remote dispatch -->
+
+Codex resumed the same ignored local artifact for another bounded chunk:
+
+```bash
+/usr/bin/time -p .venv/bin/python tools/build_a1_per_pair_latent_correction_sidecar.py \
+  --n-pairs 20 \
+  --resume-search-state \
+  --max-search-seconds 120 \
+  --profile-candidate-batches 1 4 \
+  --auto-candidate-batch-size \
+  --runtime-smoke \
+  --runtime-smoke-pairs 1 \
+  --output-dir experiments/results/a1_sidecar_resumable_codex_20260509T_local
+```
+
+Observed:
+
+- skipped already-completed pairs `0` through `15`;
+- searched pairs `16`, `17`, `18`, and `19`;
+- elapsed `real 92.68`, `user 225.48`, `sys 6.14`;
+- profiler selected `candidate_batch_size=1`;
+- fail-closed reason: `non_scalar_batches_semantic_mismatch`;
+- scalar-reference profile for first searched pair:
+  - batch `1`: `elapsed_seconds=15.847406500019133`,
+    `best_dim=18`, `best_delta_idx=0`, `best_mse=7178.86474609375`,
+    `semantic_match_scalar_reference=true`;
+  - batch `4`: `elapsed_seconds=12.309741540928371`,
+    `best_dim=18`, `best_delta_idx=0`, `best_mse=7178.8642578125`,
+    `semantic_match_scalar_reference=false`;
+- choice-state SHA-256
+  `06b6c68cc2b24bc5cfa3390553a783d948c36d200cb057774f168fb7d9826977`;
+- archive SHA-256
+  `4de28160c6d253c68e29353d32c86185164a0c15d085d77e37027385988882ec`;
+- archive bytes `178316`;
+- `runtime_smoke_checked=true`;
+- `n_pairs_searched=20`;
+- `n_pairs_completed_this_run=4`;
+- `n_pairs_skipped_already_completed=16`;
+- `full_non_smoke_search=false`;
+- `ready_for_exact_eval_dispatch=false`.
+
+The batch-profile mismatch is a positive guard result, not a method negative:
+the profiler refused the faster batch because `best_mse` differed from the
+scalar reference by `0.00048828125`, preserving scalar custody for this chunk.
