@@ -114,6 +114,27 @@ def _source_cache_row_matches(path: Path, row: object, **extra: object) -> bool:
     )
 
 
+def _fingerprint_paths(paths: tuple[Path, ...], root: Path, *, salt: str) -> str:
+    digest = hashlib.sha256()
+    digest.update(salt.encode())
+    for path in sorted(paths, key=lambda item: item.as_posix()):
+        try:
+            stat = path.stat()
+        except OSError:
+            continue
+        try:
+            rel = path.resolve().relative_to(root).as_posix()
+        except ValueError:
+            rel = path.resolve().as_posix()
+        digest.update(rel.encode())
+        digest.update(b"\0")
+        digest.update(str(stat.st_size).encode())
+        digest.update(b":")
+        digest.update(str(stat.st_mtime_ns).encode())
+        digest.update(b"\n")
+    return digest.hexdigest()
+
+
 @functools.lru_cache(maxsize=4096)
 def _cached_python_text(
     resolved_path: str,
@@ -16239,10 +16260,14 @@ def check_no_shadowed_module_import_used_before_local_import(
     a function body, AND used in that function body before the local
     import line number.
     """
-    root = repo_root or REPO_ROOT
+    root = Path(repo_root or REPO_ROOT).resolve()
     skip_parts = {"__pycache__", ".venv", ".git", ".pytest_cache",
                   "build", "dist", "tests", "results"}
     source_index = _current_source_index(root)
+    cache_name = "shadowed_import_before_use_clean"
+    scanner_version = "shadowed_import_before_use.v2"
+    clean_cache = _load_preflight_cache(root, cache_name)
+    cache_dirty = False
 
     class FunctionScopeUseVisitor(ast.NodeVisitor):
         """Collect imports/loads in one function scope only.
@@ -16332,18 +16357,38 @@ def check_no_shadowed_module_import_used_before_local_import(
             continue
         if _is_oss_export_mirror_path(py):
             continue
+        cache_key = str(py.resolve())
+        if _source_cache_row_matches(
+            py,
+            clean_cache.get(cache_key),
+            scanner_version=scanner_version,
+        ):
+            continue
+        file_violations: list[str] = []
         try:
             if source_index is not None:
                 text = source_index.read_text(py)
                 if not may_have_duplicate_from_import_binding(text):
+                    clean_cache[cache_key] = _source_cache_row(
+                        py,
+                        scanner_version=scanner_version,
+                    )
+                    cache_dirty = True
                     continue
                 tree = source_index.python_ast(py)
             else:
                 text = py.read_text()
                 if not may_have_duplicate_from_import_binding(text):
+                    clean_cache[cache_key] = _source_cache_row(
+                        py,
+                        scanner_version=scanner_version,
+                    )
+                    cache_dirty = True
                     continue
                 tree = ast.parse(text, filename=str(py))
         except (SyntaxError, UnicodeDecodeError, FileNotFoundError, OSError):
+            if clean_cache.pop(cache_key, None) is not None:
+                cache_dirty = True
             continue
         # Module-level imports
         mod_imports: set[str] = set()
@@ -16363,13 +16408,26 @@ def check_no_shadowed_module_import_used_before_local_import(
             for name, imp_line in visitor.local_imports.items():
                 use_line = visitor.first_loads.get(name)
                 if use_line is not None and use_line < imp_line:
-                    violations.append(
+                    file_violations.append(
                         f"{py.relative_to(root)}:{imp_line}: "
                         f"`from ... import {name}` inside `{node.name}()` "
                         f"shadows module-level import. {name} is also "
                         f"used at line {use_line} (BEFORE the local import) "
                         f"→ UnboundLocalError. Remove the inner import."
                     )
+        if file_violations:
+            violations.extend(file_violations)
+            if clean_cache.pop(cache_key, None) is not None:
+                cache_dirty = True
+        else:
+            clean_cache[cache_key] = _source_cache_row(
+                py,
+                scanner_version=scanner_version,
+            )
+            cache_dirty = True
+
+    if cache_dirty:
+        _store_preflight_cache(root, cache_name, clean_cache)
 
     if verbose:
         if violations:
@@ -16404,15 +16462,54 @@ def check_pytest_collection_clean(
     """
     import subprocess
 
-    root = repo_root or REPO_ROOT
+    root = Path(repo_root or REPO_ROOT).resolve()
     violations: list[str] = []
+    python_bin = root / ".venv" / "bin" / "python"
+    if not python_bin.exists():
+        if verbose:
+            print(f"  [pytest-collect] SKIP: .venv/bin/python missing")
+        return []
+
+    cache_name = "pytest_collection_success"
+    cache_key = "\n".join(test_dirs)
+    cache_rows = _load_preflight_cache(root, cache_name)
+    fingerprint_sources = _iter_python_files(
+        root,
+        ["src/tac", "experiments", "tools"],
+    )
+    for config_name in (
+        "pyproject.toml",
+        "pytest.ini",
+        "setup.cfg",
+        "tox.ini",
+        "conftest.py",
+    ):
+        config_path = root / config_name
+        if config_path.exists():
+            fingerprint_sources.append(config_path)
+    tree_fingerprint = _fingerprint_paths(
+        tuple(fingerprint_sources),
+        root,
+        salt="pytest_collection.v2",
+    )
+    cache_row = cache_rows.get(cache_key)
+    if (
+        isinstance(cache_row, dict)
+        and cache_row.get("tree_fingerprint") == tree_fingerprint
+        and cache_row.get("python") == sys.version
+        and cache_row.get("test_dirs") == list(test_dirs)
+    ):
+        if verbose:
+            print(f"  [pytest-collect] OK: cached clean collection")
+        return []
+
     for d in test_dirs:
         d_path = root / d
         if not d_path.exists():
             continue
         try:
             proc = subprocess.run(
-                [".venv/bin/python", "-m", "pytest", "--collect-only", "-q",
+                [str(python_bin), "-m", "pytest", "--collect-only", "-q",
                  str(d_path)],
                 cwd=root, capture_output=True, text=True, timeout=timeout,
             )
@@ -16435,6 +16532,17 @@ def check_pytest_collection_clean(
             if verbose:
                 print(f"  [pytest-collect] SKIP: .venv/bin/python missing")
             return []
+
+    if violations:
+        cache_rows.pop(cache_key, None)
+        _store_preflight_cache(root, cache_name, cache_rows)
+    else:
+        cache_rows[cache_key] = {
+            "tree_fingerprint": tree_fingerprint,
+            "python": sys.version,
+            "test_dirs": list(test_dirs),
+        }
+        _store_preflight_cache(root, cache_name, cache_rows)
 
     if verbose:
         if violations:

@@ -165,6 +165,44 @@ class TestShadowedImportBeforeUse:
             verbose=False,
         ) == []
 
+    def test_incremental_cache_invalidates_changed_file(
+        self, tmp_path: Path,
+    ) -> None:
+        root = _stub_repo(tmp_path)
+        target = root / "src" / "tac" / "cached_shadow.py"
+        _write(target, """
+            from tac.losses import _hwc_to_chw
+
+            def train(frame):
+                return _hwc_to_chw(frame)
+        """)
+
+        assert check_no_shadowed_module_import_used_before_local_import(
+            repo_root=root,
+            strict=True,
+            verbose=False,
+        ) == []
+        assert (
+            root / ".omx" / "cache" / "shadowed_import_before_use_clean.json"
+        ).exists()
+
+        _write(target, """
+            from tac.losses import _hwc_to_chw
+
+            def train(frame):
+                out = _hwc_to_chw(frame)
+                from tac.losses import _hwc_to_chw
+                return out
+        """)
+
+        violations = check_no_shadowed_module_import_used_before_local_import(
+            repo_root=root,
+            strict=False,
+            verbose=False,
+        )
+        assert len(violations) == 1
+        assert "cached_shadow.py" in violations[0]
+
 
 # ─── Check: CMG3A Pose-collapse dispatch guard ──────────────────────────────
 
