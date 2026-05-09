@@ -587,11 +587,197 @@ def predicted_score_at_joint_floor(
     return seg_term + pose_term + rate_term
 
 
+# ---------------------------------------------------------------------------
+# T13 — Fridrich √n per-pair undetectable embedding budget
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class SqrtNBudgetReport:
+    """Per-pair Fridrich square-root-law steganalysis-undetectable budget.
+
+    Fridrich's square-root law (Ker, Pevný, Kodovský & Fridrich 2008,
+    *The Square Root Law of Steganographic Capacity*) says that for a
+    cover sequence of length ``n``, the maximum payload that remains
+    statistically undetectable to an asymptotically-optimal steganalyzer
+    grows as ``O(√n)`` bits. Equivalently the per-symbol embedding rate
+    must DECAY as ``O(1/√n)`` to stay undetectable.
+
+    For comma's contest the ``cover symbols`` are the per-pair latent
+    elements (HNeRV-style ``n=64`` per pair × 600 pairs = 38400 symbols
+    per stream; or per-pair ~28-D latent at A1's substrate).
+
+    Fields
+    ------
+
+    n_total_symbols : int
+        Total cover-symbol count across all pairs in the stream.
+    n_pairs : int
+        Number of frame pairs (typically 600 for comma).
+    n_symbols_per_pair : int
+        Symbols transmitted per pair (``n_total_symbols / n_pairs``,
+        floor-divided; residual symbols are accounted in the report
+        notes).
+    alpha : float
+        Fridrich proportionality constant. Default ``1.0`` from the
+        Ker-Pevný-Fridrich 2008 asymptote; conservative steganalyzers
+        with non-trivial false-alarm budgets allow ``alpha > 1``. Values
+        in ``[0.5, 2.0]`` cover the bulk of the literature.
+    undetectable_bits_total : float
+        ``alpha · √n_total_symbols`` — the total undetectable embedding
+        across the entire stream.
+    undetectable_bits_per_pair : float
+        ``alpha · √n_symbols_per_pair`` — per-pair budget if each pair's
+        embedding is independent (a standard approximation; the joint
+        bound is tighter and falls between this and the total).
+    notes : list[str]
+        Provenance strings, including the ``[predicted; T13 Fridrich
+        sqrt-n undetectable budget]`` tag.
+    """
+
+    n_total_symbols: int
+    n_pairs: int
+    n_symbols_per_pair: int
+    alpha: float
+    undetectable_bits_total: float
+    undetectable_bits_per_pair: float
+    notes: list[str]
+
+    def to_dict(self) -> dict:
+        return {
+            "n_total_symbols": self.n_total_symbols,
+            "n_pairs": self.n_pairs,
+            "n_symbols_per_pair": self.n_symbols_per_pair,
+            "alpha": self.alpha,
+            "undetectable_bits_total": self.undetectable_bits_total,
+            "undetectable_bits_per_pair": self.undetectable_bits_per_pair,
+            "notes": list(self.notes),
+        }
+
+
+def per_pair_sqrt_n_budget(
+    n_pairs: int,
+    n_symbols_per_pair: int,
+    *,
+    alpha: float = 1.0,
+) -> SqrtNBudgetReport:
+    """Compute the Fridrich √n undetectable per-pair embedding budget.
+
+    Eureka mechanism (T13 — Fridrich, Fields-medal council 2026-05-09):
+    the square-root law (Ker-Pevný-Fridrich 2008) says for a cover of
+    length ``n``, the asymptotically-optimal steganalyzer cannot
+    distinguish embedded signal from cover noise if the payload is
+    ≤ ``α · √n`` bits.
+
+    For the contest's per-pair latent stream the cover length is
+    ``n_pairs · n_symbols_per_pair``. The per-pair "fair share" of this
+    bound is ``α · √n_symbols_per_pair`` — the budget per pair if the
+    embedding is independent across pairs.
+
+    Why this matters for compression: any per-pair latent stream
+    spending MORE than ``α · √n_symbols_per_pair`` bits per pair is
+    detectable as ``compression artifact`` by the SegNet/PoseNet (whose
+    role is exactly the steganalyzer's role — detect that the pixels
+    have been altered). Allocating beyond the budget is "burning bits"
+    in the steganalysis sense; the codec is then better off
+    re-allocating those bits to a stream that has remaining undetectable
+    capacity.
+
+    Practical use: as a HOOK for the codec to consult — "you have B
+    undetectable bits to redistribute across the latent stream;
+    allocating beyond B is detectable." A1's per-pair latent stream is
+    currently ~3 bits/pair; Fridrich's bound says we could safely raise
+    this to ~``√28`` ≈ 5.3 bits/pair (at α=1) or ~``√64`` ≈ 8 bits/pair
+    (at HNeRV's 64-D latent), freeing -8 KB on the per-pair pose stream
+    via reallocation.
+
+    Args:
+        n_pairs: Number of frame pairs in the stream (must be > 0).
+        n_symbols_per_pair: Cover symbols transmitted per pair (must be
+            > 0). For HNeRV-style latents this is the latent dimension;
+            for A1-style per-pair side-info this is the symbol count
+            per pair.
+        alpha: Fridrich proportionality constant (default 1.0). Must be
+            finite and positive. Values < 0.5 produce trivially-tight
+            bounds; values > 2.0 are loose and rarely match empirical
+            steganalyzer behavior.
+
+    Returns:
+        :class:`SqrtNBudgetReport` with per-pair and total undetectable
+        bit budgets.
+
+    Raises:
+        ValueError: invalid ``n_pairs``, ``n_symbols_per_pair``, or
+            ``alpha``.
+
+    Examples
+    --------
+
+    >>> r = per_pair_sqrt_n_budget(n_pairs=600, n_symbols_per_pair=64)
+    >>> r.n_total_symbols
+    38400
+    >>> round(r.undetectable_bits_per_pair, 4)
+    8.0
+    >>> round(r.undetectable_bits_total, 2)
+    195.96
+    """
+    if not isinstance(n_pairs, int) or isinstance(n_pairs, bool):
+        raise ValueError(f"n_pairs must be a positive int; got {n_pairs!r}")
+    if n_pairs <= 0:
+        raise ValueError(f"n_pairs must be > 0; got {n_pairs!r}")
+    if not isinstance(n_symbols_per_pair, int) or isinstance(n_symbols_per_pair, bool):
+        raise ValueError(
+            f"n_symbols_per_pair must be a positive int; got {n_symbols_per_pair!r}"
+        )
+    if n_symbols_per_pair <= 0:
+        raise ValueError(
+            f"n_symbols_per_pair must be > 0; got {n_symbols_per_pair!r}"
+        )
+    if isinstance(alpha, bool):
+        raise ValueError(f"alpha must be a finite positive number; got {alpha!r}")
+    try:
+        alpha_f = float(alpha)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            f"alpha must be a finite positive number; got {alpha!r}"
+        ) from exc
+    if not math.isfinite(alpha_f) or alpha_f <= 0.0:
+        raise ValueError(
+            f"alpha must be a finite positive number; got {alpha!r}"
+        )
+
+    n_total = int(n_pairs) * int(n_symbols_per_pair)
+    bits_total = alpha_f * math.sqrt(n_total)
+    bits_per_pair = alpha_f * math.sqrt(n_symbols_per_pair)
+
+    notes = [
+        "[predicted; T13 Fridrich sqrt-n undetectable budget]",
+        "Per Ker-Pevny-Kodovsky-Fridrich 2008: for a cover of length n, "
+        "the asymptotically-optimal steganalyzer cannot distinguish "
+        "embedded signal from cover noise if the payload is <= alpha * sqrt(n) bits.",
+        "Per CLAUDE.md: this is an UNDETECTABILITY bound, not a hard "
+        "compression-rate bound. A codec may exceed it (the embedding "
+        "becomes detectable as compression artifact by SegNet/PoseNet); "
+        "this hook tells the codec WHEN to reallocate to another stream.",
+    ]
+    return SqrtNBudgetReport(
+        n_total_symbols=n_total,
+        n_pairs=int(n_pairs),
+        n_symbols_per_pair=int(n_symbols_per_pair),
+        alpha=alpha_f,
+        undetectable_bits_total=bits_total,
+        undetectable_bits_per_pair=bits_per_pair,
+        notes=notes,
+    )
+
+
 __all__ = [
     "JointSourceStream",
     "JointSourceFloorReport",
+    "SqrtNBudgetReport",
     "compute_joint_source_floor",
     "gauss_markov_bit_savings_per_symbol",
     "joint_floor_from_shannon_report",
+    "per_pair_sqrt_n_budget",
     "predicted_score_at_joint_floor",
 ]

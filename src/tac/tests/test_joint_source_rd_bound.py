@@ -15,9 +15,11 @@ import pytest
 from tac.joint_source_rd_bound import (
     JointSourceFloorReport,
     JointSourceStream,
+    SqrtNBudgetReport,
     compute_joint_source_floor,
     gauss_markov_bit_savings_per_symbol,
     joint_floor_from_shannon_report,
+    per_pair_sqrt_n_budget,
     predicted_score_at_joint_floor,
 )
 from tac.score_geometry import (
@@ -755,3 +757,129 @@ def test_joint_floor_at_a1_overhead_predicts_below_iid_score() -> None:
         / CONTEST_REFERENCE_BYTES
     )
     assert (s_iid - s_joint) == pytest.approx(rate_gap, rel=1e-12)
+
+
+# ---------------------------------------------------------------------------
+# T13 — Fridrich √n per-pair undetectable embedding budget
+# ---------------------------------------------------------------------------
+
+
+def test_sqrt_n_basic_closed_form() -> None:
+    # 600 pairs × 64 symbols/pair = 38400 total → √38400 ≈ 195.96.
+    # Per-pair: √64 = 8.0.
+    r = per_pair_sqrt_n_budget(n_pairs=600, n_symbols_per_pair=64)
+    assert r.n_total_symbols == 38400
+    assert r.n_pairs == 600
+    assert r.n_symbols_per_pair == 64
+    assert r.alpha == 1.0
+    assert r.undetectable_bits_per_pair == pytest.approx(8.0, rel=1e-9)
+    assert r.undetectable_bits_total == pytest.approx(math.sqrt(38400), rel=1e-9)
+
+
+def test_sqrt_n_alpha_scales_linearly() -> None:
+    base = per_pair_sqrt_n_budget(n_pairs=600, n_symbols_per_pair=64)
+    doubled = per_pair_sqrt_n_budget(n_pairs=600, n_symbols_per_pair=64, alpha=2.0)
+    assert doubled.undetectable_bits_per_pair == pytest.approx(
+        2.0 * base.undetectable_bits_per_pair, rel=1e-12
+    )
+    assert doubled.undetectable_bits_total == pytest.approx(
+        2.0 * base.undetectable_bits_total, rel=1e-12
+    )
+
+
+def test_sqrt_n_a1_substrate_28d_per_pair() -> None:
+    # A1's per-pair latent stream — 28-D × 600 pairs.
+    r = per_pair_sqrt_n_budget(n_pairs=600, n_symbols_per_pair=28)
+    # Per-pair budget √28 ≈ 5.29; total √16800 ≈ 129.6.
+    assert r.undetectable_bits_per_pair == pytest.approx(math.sqrt(28), rel=1e-9)
+    assert r.undetectable_bits_total == pytest.approx(math.sqrt(16800), rel=1e-9)
+
+
+def test_sqrt_n_rejects_zero_pairs() -> None:
+    with pytest.raises(ValueError, match="n_pairs"):
+        per_pair_sqrt_n_budget(n_pairs=0, n_symbols_per_pair=64)
+
+
+def test_sqrt_n_rejects_negative_pairs() -> None:
+    with pytest.raises(ValueError, match="n_pairs"):
+        per_pair_sqrt_n_budget(n_pairs=-1, n_symbols_per_pair=64)
+
+
+def test_sqrt_n_rejects_zero_symbols() -> None:
+    with pytest.raises(ValueError, match="n_symbols_per_pair"):
+        per_pair_sqrt_n_budget(n_pairs=600, n_symbols_per_pair=0)
+
+
+def test_sqrt_n_rejects_non_int_pairs() -> None:
+    # Floats not accepted to keep symbol counting unambiguous.
+    with pytest.raises(ValueError, match="n_pairs"):
+        per_pair_sqrt_n_budget(n_pairs=600.5, n_symbols_per_pair=64)  # type: ignore[arg-type]
+
+
+def test_sqrt_n_rejects_bool_pairs() -> None:
+    # bool subclasses int in Python; explicitly rejected to prevent True/False
+    # being silently coerced to 1/0.
+    with pytest.raises(ValueError, match="n_pairs"):
+        per_pair_sqrt_n_budget(n_pairs=True, n_symbols_per_pair=64)  # type: ignore[arg-type]
+
+
+def test_sqrt_n_rejects_invalid_alpha() -> None:
+    with pytest.raises(ValueError, match="alpha"):
+        per_pair_sqrt_n_budget(n_pairs=600, n_symbols_per_pair=64, alpha=0.0)
+    with pytest.raises(ValueError, match="alpha"):
+        per_pair_sqrt_n_budget(
+            n_pairs=600, n_symbols_per_pair=64, alpha=float("nan")
+        )
+    with pytest.raises(ValueError, match="alpha"):
+        per_pair_sqrt_n_budget(
+            n_pairs=600, n_symbols_per_pair=64, alpha=float("inf")
+        )
+    with pytest.raises(ValueError, match="alpha"):
+        per_pair_sqrt_n_budget(
+            n_pairs=600, n_symbols_per_pair=64, alpha=-1.0
+        )
+
+
+def test_sqrt_n_to_dict_round_trips_fields() -> None:
+    r = per_pair_sqrt_n_budget(n_pairs=600, n_symbols_per_pair=64, alpha=1.5)
+    d = r.to_dict()
+    assert d["n_total_symbols"] == 38400
+    assert d["n_pairs"] == 600
+    assert d["n_symbols_per_pair"] == 64
+    assert d["alpha"] == 1.5
+    assert d["undetectable_bits_per_pair"] == pytest.approx(1.5 * 8.0, rel=1e-9)
+    # Notes propagate the [predicted; T13 ...] tag.
+    assert any("T13" in s for s in d["notes"])
+    assert any("Fridrich" in s for s in d["notes"])
+
+
+def test_sqrt_n_per_pair_lt_total_per_pair_average() -> None:
+    """Sanity: the per-pair fair-share is the per-pair sqrt; the total is
+    sqrt of the joint length. With 600 independent pairs each of size n_p,
+    total_bits / n_pairs < bits_per_pair (independent embeddings concentrate
+    less than per-pair embeddings — Fridrich's law on joint vs marginal)."""
+    r = per_pair_sqrt_n_budget(n_pairs=600, n_symbols_per_pair=64)
+    avg_total_per_pair = r.undetectable_bits_total / r.n_pairs
+    # √(600·64)/600 = √64/√600 ≈ 8/24.5 ≈ 0.327; per-pair = 8.
+    assert avg_total_per_pair < r.undetectable_bits_per_pair
+
+
+def test_sqrt_n_dataclass_is_frozen() -> None:
+    r = per_pair_sqrt_n_budget(n_pairs=600, n_symbols_per_pair=64)
+    with pytest.raises(Exception):  # FrozenInstanceError
+        r.alpha = 2.0  # type: ignore[misc]
+
+
+def test_sqrt_n_a1_substrate_realloc_envelope() -> None:
+    """A1's per-pair latent is currently ~3 bits/pair (per Fridrich council
+    note). Bound says we could safely raise to ~√28 ≈ 5.3 bits/pair (28-D
+    A1 substrate) or ~√64 ≈ 8 bits/pair (HNeRV 64-D). Verify the
+    reallocation envelope matches the council-memo prediction."""
+    r28 = per_pair_sqrt_n_budget(n_pairs=600, n_symbols_per_pair=28)
+    r64 = per_pair_sqrt_n_budget(n_pairs=600, n_symbols_per_pair=64)
+    assert 5.0 < r28.undetectable_bits_per_pair < 5.5
+    assert 7.5 < r64.undetectable_bits_per_pair < 8.5
+    # Headroom over A1's current 3 bits/pair.
+    a1_current = 3.0
+    assert r28.undetectable_bits_per_pair - a1_current > 2.0
+    assert r64.undetectable_bits_per_pair - a1_current > 4.5
