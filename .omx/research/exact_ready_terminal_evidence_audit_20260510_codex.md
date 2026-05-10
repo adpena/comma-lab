@@ -20,6 +20,11 @@ evidence lands.
 - `tools/operator_briefing.py` now exposes the exact-ready queue audit in both
   human and JSON output so stale rows are visible from the normal operator
   flow.
+- `src/tac/optimizer/exact_ready_audit.py` now also recomputes live archive
+  SHA-256 and runtime-tree SHA-256 for ready rows that declare
+  `archive_path`/`candidate_archive_path` and `submission_dir`. A ready row is
+  blocked when its persisted metadata no longer matches the bytes that would
+  actually dispatch.
 
 The audit reuses `tac.optimizer.exact_readiness.terminal_claim_result_conflicts`
 so stale persisted queues and newly generated promotions share the same
@@ -52,11 +57,18 @@ Command:
 Result:
 
 - `queue_count=5`
-- `stale_ready_row_count=3`
+- `stale_ready_row_count=4`
 - `passed=false`
 
 Stale exact-ready rows:
 
+- `pr101_proxy_sweep/exact_eval_promotion/exact_ready_queue.json`
+  - lane `pr101_kaggle_proxy_runtime_packet_exact_eval`
+  - archive `b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e`
+  - declared runtime `748b99d3bb63372eeff8f784cd0b9589a3b05c781e3517cd426810dfe48a5382`
+  - live runtime `84afb14b741a7250046e6956b00710be02615b8cc500551f77576546245dfaf2`
+  - blocker:
+    `ready_row_runtime_tree_sha_mismatch:84afb14b741a7250046e6956b00710be02615b8cc500551f77576546245dfaf2!=748b99d3bb63372eeff8f784cd0b9589a3b05c781e3517cd426810dfe48a5382`
 - `pr101_bias_refine_exact_ready_queue.json`
   - lane `pr101_kaggle_proxy_runtime_packet_exact_eval`
   - archive `b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e`
@@ -73,13 +85,14 @@ Stale exact-ready rows:
 
 Non-stale same-archive rows:
 
-- `pr101_proxy_sweep/exact_eval_promotion/exact_ready_queue.json`
 - `pr101_kaggle_proxy_exact_ready_queue.json`
 
-Those rows share the PR101 archive SHA but have different score-affecting
-runtime trees than the terminal PR101 bias-refine exact-CUDA run. They remain
-eligible only as runtime-patch candidates with fresh dispatch claims; their
-proxy score is not a score claim.
+The non-stale PR101 row shares the PR101 archive SHA but has a different
+score-affecting runtime tree than the terminal PR101 bias-refine exact-CUDA
+run and matches the live `submission_dir` runtime tree. It remains eligible
+only as a runtime-patch candidate with a fresh dispatch claim; its proxy score
+is not a score claim. The older duplicate promotion row is blocked because its
+persisted runtime SHA is stale relative to the live packet directory.
 
 ## Operator-briefing effect
 
@@ -106,9 +119,9 @@ Do not redispatch PR101 bias-refine, PR103 hidden-gem, or PR106 q10 for the
 same archive and runtime identity. PR106 q10 remains a useful
 grammar-preserving recode anchor; PR103 hidden-gem remains a catastrophic
 range-stream perturbation negative; PR101 bias-refine remains a CUDA-drift
-anchor. Same-archive PR101 runtime-patch rows require fresh runtime-tree
-custody and their own exact CUDA dispatch before any promotion. The next queue
-should move to:
+anchor. Same-archive PR101 runtime-patch rows require fresh live runtime-tree
+custody and their own exact CUDA dispatch before any promotion; stale metadata
+must not enter the dispatch queue. The next queue should move to:
 
 1. harvest/classify active T1 Ballé Modal run;
 2. grammar-preserving HNeRV custom-codec packet compiler work with raw/tensor

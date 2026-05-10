@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -7,6 +8,7 @@ from tac.optimizer.exact_ready_audit import (
     audit_exact_ready_queues,
     discover_exact_ready_queues,
 )
+from tac.optimizer.exact_readiness import runtime_dependency_manifest
 
 
 def _write_json(path: Path, payload: object) -> Path:
@@ -214,6 +216,92 @@ def test_audit_blocks_runtime_changed_row_after_same_runtime_terminal(
         blocker.startswith("same_lane_terminal_negative_for_same_archive")
         for blocker in blockers
     )
+
+
+def _add_live_runtime_fields(
+    queue: Path,
+    *,
+    repo_root: Path,
+    runtime_sha_override: str | None = None,
+) -> str:
+    submission = repo_root / "packet"
+    submission.mkdir(parents=True)
+    archive_bytes = b"archive-bytes"
+    (submission / "archive.zip").write_bytes(archive_bytes)
+    archive_sha = hashlib.sha256(archive_bytes).hexdigest()
+    (submission / "inflate.sh").write_text(
+        "#!/usr/bin/env bash\nset -euo pipefail\nexit 0\n",
+        encoding="utf-8",
+    )
+    actual_runtime_sha = runtime_dependency_manifest(submission, repo_root)[
+        "runtime_tree_sha256"
+    ]
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    row = payload["dispatch_ready"][0]
+    row["archive_path"] = "packet/archive.zip"
+    row["candidate_archive_sha256"] = archive_sha
+    row["archive_sha256"] = archive_sha
+    row["submission_dir"] = "packet"
+    row["runtime_tree_sha256"] = runtime_sha_override or actual_runtime_sha
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return actual_runtime_sha
+
+
+def test_audit_flags_ready_row_with_stale_runtime_tree_sha(tmp_path: Path) -> None:
+    archive_sha = "7" * 64
+    queue = _ready_queue(
+        tmp_path / "experiments/results/fixture/exact_ready_queue.json",
+        lane_id="lane_runtime_patch",  # FAKE_LANE_OK: synthetic runtime fixture.
+        archive_sha=archive_sha,
+    )
+    actual_runtime_sha = _add_live_runtime_fields(
+        queue,
+        repo_root=tmp_path,
+        runtime_sha_override="8" * 64,
+    )
+    claims = _write_claims(
+        tmp_path / ".omx/state/active_lane_dispatch_claims.md",
+        [],
+    )
+
+    payload = audit_exact_ready_queues(
+        [queue],
+        repo_root=tmp_path,
+        dispatch_claims_path=claims,
+    )
+
+    assert payload["passed"] is False
+    row = payload["queues"][0]["stale_ready_rows"][0]
+    assert row["live_custody"]["actual_runtime_tree_sha256"] == actual_runtime_sha
+    assert any(
+        blocker.startswith("ready_row_runtime_tree_sha_mismatch")
+        for blocker in row["blockers"]
+    )
+
+
+def test_audit_allows_ready_row_with_current_live_runtime_tree_sha(
+    tmp_path: Path,
+) -> None:
+    archive_sha = "9" * 64
+    queue = _ready_queue(
+        tmp_path / "experiments/results/fixture/exact_ready_queue.json",
+        lane_id="lane_runtime_patch",  # FAKE_LANE_OK: synthetic runtime fixture.
+        archive_sha=archive_sha,
+    )
+    _add_live_runtime_fields(queue, repo_root=tmp_path)
+    claims = _write_claims(
+        tmp_path / ".omx/state/active_lane_dispatch_claims.md",
+        [],
+    )
+
+    payload = audit_exact_ready_queues(
+        [queue],
+        repo_root=tmp_path,
+        dispatch_claims_path=claims,
+    )
+
+    assert payload["passed"] is True
+    assert payload["stale_ready_row_count"] == 0
 
 
 def test_audit_allows_ready_queue_after_infra_failure_same_archive(

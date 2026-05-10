@@ -12,6 +12,9 @@ from tac.optimizer.exact_readiness import (
     is_sha256,
     read_json,
     repo_rel,
+    resolve_path,
+    runtime_dependency_manifest,
+    sha256_file,
     terminal_claim_result_conflicts,
     utc_now,
 )
@@ -38,6 +41,68 @@ def _row_runtime_tree_sha(row: Mapping[str, Any]) -> str | None:
         if is_sha256(value):
             return str(value).lower()
     return None
+
+
+def _row_archive_path(row: Mapping[str, Any], *, repo_root: Path, queue_dir: Path) -> Path | None:
+    for key in ("candidate_archive_path", "archive_path"):
+        path = resolve_path(row.get(key), repo_root=repo_root, queue_dir=queue_dir)
+        if path is not None:
+            return path
+    return None
+
+
+def _row_submission_dir(row: Mapping[str, Any], *, repo_root: Path, queue_dir: Path) -> Path | None:
+    return resolve_path(row.get("submission_dir"), repo_root=repo_root, queue_dir=queue_dir)
+
+
+def _ready_row_live_custody_blockers(
+    row: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    queue_dir: Path,
+    archive_sha: str | None,
+    runtime_tree_sha: str | None,
+) -> tuple[list[str], dict[str, Any]]:
+    blockers: list[str] = []
+    facts: dict[str, Any] = {}
+
+    archive_path = _row_archive_path(row, repo_root=repo_root, queue_dir=queue_dir)
+    if archive_path is not None:
+        facts["archive_path"] = repo_rel(archive_path, repo_root)
+        if not archive_path.is_file():
+            blockers.append("ready_row_archive_file_missing")
+        else:
+            actual_archive_sha = sha256_file(archive_path)
+            facts["actual_archive_sha256"] = actual_archive_sha
+            if archive_sha is not None and actual_archive_sha != archive_sha:
+                blockers.append(
+                    "ready_row_archive_sha_mismatch:"
+                    f"{actual_archive_sha}!={archive_sha}"
+                )
+
+    submission_dir = _row_submission_dir(row, repo_root=repo_root, queue_dir=queue_dir)
+    if submission_dir is not None:
+        facts["submission_dir"] = repo_rel(submission_dir, repo_root)
+        if not submission_dir.is_dir():
+            blockers.append("ready_row_submission_dir_missing")
+        else:
+            try:
+                runtime_manifest = runtime_dependency_manifest(submission_dir, repo_root)
+            except (OSError, ValueError, RuntimeError, SyntaxError) as exc:
+                blockers.append(f"ready_row_runtime_manifest_error:{type(exc).__name__}")
+                facts["runtime_manifest_error"] = str(exc)
+            else:
+                actual_runtime_sha = runtime_manifest.get("runtime_tree_sha256")
+                facts["actual_runtime_tree_sha256"] = actual_runtime_sha
+                if runtime_tree_sha is None:
+                    blockers.append("ready_row_runtime_tree_sha256_missing_or_invalid")
+                elif actual_runtime_sha != runtime_tree_sha:
+                    blockers.append(
+                        "ready_row_runtime_tree_sha_mismatch:"
+                        f"{actual_runtime_sha}!={runtime_tree_sha}"
+                    )
+
+    return blockers, facts
 
 
 def _queue_rows(payload: Mapping[str, Any]) -> Iterable[Mapping[str, Any]]:
@@ -80,32 +145,38 @@ def audit_exact_ready_queue(
         tuple[str | None, str | None, str | None, str | None, tuple[str, ...]]
     ] = set()
     row_count = 0
+    queue_dir = queue_path.parent
     for row in _queue_rows(payload):
         row_count += 1
         if row.get("ready_for_exact_eval_dispatch") is not True:
             continue
         lane_id = row.get("lane_id")
         archive_sha = _row_archive_sha(row)
+        runtime_tree_sha = _row_runtime_tree_sha(row)
+        runtime_changed = as_bool(row.get("score_affecting_runtime_changed"))
+        custody_blockers, custody_facts = _ready_row_live_custody_blockers(
+            row,
+            repo_root=repo_root,
+            queue_dir=queue_dir,
+            archive_sha=archive_sha,
+            runtime_tree_sha=runtime_tree_sha,
+        )
         if not isinstance(lane_id, str) or not lane_id.strip():
             blockers = ["lane_id_missing"]
         elif archive_sha is None:
             blockers = ["archive_sha256_missing_or_invalid"]
         else:
-            blockers = terminal_claim_result_conflicts(
+            blockers = custody_blockers + terminal_claim_result_conflicts(
                 lane_id,
                 archive_sha,
                 dispatch_claims_path=dispatch_claims_path,
                 active_floor_score=active_floor_score,
-                runtime_tree_sha256=_row_runtime_tree_sha(row),
-                score_affecting_runtime_changed=as_bool(
-                    row.get("score_affecting_runtime_changed")
-                ),
+                runtime_tree_sha256=runtime_tree_sha,
+                score_affecting_runtime_changed=runtime_changed,
             )
         if not blockers:
             continue
         candidate_id = row.get("candidate_id")
-        runtime_tree_sha = _row_runtime_tree_sha(row)
-        runtime_changed = as_bool(row.get("score_affecting_runtime_changed"))
         key = (
             str(candidate_id) if candidate_id is not None else None,
             lane_id if isinstance(lane_id, str) else None,
@@ -123,6 +194,7 @@ def audit_exact_ready_queue(
                 "archive_sha256": archive_sha,
                 "runtime_tree_sha256": runtime_tree_sha,
                 "score_affecting_runtime_changed": runtime_changed,
+                "live_custody": custody_facts,
                 "ready_for_exact_eval_dispatch": True,
                 "blockers": blockers,
             }
