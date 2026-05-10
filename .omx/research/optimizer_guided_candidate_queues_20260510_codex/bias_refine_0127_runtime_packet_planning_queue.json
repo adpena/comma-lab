@@ -1,0 +1,183 @@
+{
+  "dispatch_ready": [],
+  "dispatch_ready_count": 0,
+  "evidence_boundary": {
+    "next_gate": "materialize byte-closed archive/runtime custody, then exact eval readiness gate",
+    "planning_only_by_default": true,
+    "proxy_or_macos_cpu_rows_must_not_promote_score": true,
+    "ready_for_exact_eval_dispatch_default": false
+  },
+  "generated_at_utc": "2026-05-10T21:04:45Z",
+  "n_candidates": 1,
+  "schema": "optimizer_candidate_queue_v1",
+  "source_schemas": [
+    {
+      "path": "experiments/results/optimizer_guided_pr101_bias_refine_0127_packet_20260510_codex/proxy_runtime_packet/runtime_packet_manifest.json",
+      "schema": "pr101_kaggle_proxy_runtime_packet_v1"
+    }
+  ],
+  "tool": "tools/build_optimizer_candidate_queue.py",
+  "top_k": [
+    {
+      "archive_bytes": 178258,
+      "archive_path": "experiments/results/optimizer_guided_pr101_bias_refine_0127_packet_20260510_codex/proxy_runtime_packet/archive.zip",
+      "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "archive_size_bytes": 178258,
+      "archive_unchanged_from_source": true,
+      "candidate_archive_bytes": 178258,
+      "candidate_archive_path": "experiments/results/optimizer_guided_pr101_bias_refine_0127_packet_20260510_codex/proxy_runtime_packet/archive.zip",
+      "candidate_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "candidate_family": "pr101_inflate_time_bias_runtime_packet",
+      "candidate_id": "bias_refine_cmaes_style_stdlib_0127_pr101_proxy_runtime_packet",
+      "candidate_params": {
+        "bias_b": -0.99816723921,
+        "bias_g": -1.00035431724,
+        "bias_r": -0.997347966104
+      },
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "evidence_grade": "[byte-closed-runtime-packet-no-score]",
+      "evidence_semantics": "byte_closed_proxy_runtime_packet_pending_exact_eval",
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "lane_class": "pr101_kaggle_proxy_runtime_packet",
+      "lane_id": "pr101_kaggle_proxy_runtime_packet_exact_eval",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "runtime_consumption_proof_path": "experiments/results/optimizer_guided_pr101_bias_refine_0127_packet_20260510_codex/proxy_runtime_packet/runtime_consumption_proof.json",
+      "runtime_consumption_proof_required": true,
+      "runtime_consumption_proof_status": "present",
+      "runtime_manifest_path": "experiments/results/optimizer_guided_pr101_bias_refine_0127_packet_20260510_codex/proxy_runtime_packet/runtime_packet_manifest.json",
+      "runtime_patch": {
+        "patched_file": "inflate.py",
+        "runtime_consumed_params": [
+          {
+            "param": "bias_r",
+            "replacement": "up[:, 0, 0].add_(-0.997347966104)",
+            "slot": "up[:, 0, 0]",
+            "value": -0.997347966104
+          },
+          {
+            "param": "bias_b",
+            "replacement": "up[:, 0, 2].add_(-0.99816723921)",
+            "slot": "up[:, 0, 2]",
+            "value": -0.99816723921
+          },
+          {
+            "param": "bias_g",
+            "replacement": "up[:, 1, 1].add_(-1.00035431724)",
+            "slot": "up[:, 1, 1]",
+            "value": -1.00035431724
+          }
+        ]
+      },
+      "runtime_tree_sha256": "612b2405112b64489450767d598210be359343de150a27cb937e3c268c89476d",
+      "score_affecting_payload_changed": false,
+      "score_affecting_runtime_changed": true,
+      "score_claim": false,
+      "source_archive_bytes": 178258,
+      "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "source_candidate_id": "bias_refine_cmaes_style_stdlib_0127",
+      "source_manifest_path": "experiments/results/optimizer_guided_pr101_bias_refine_0127_packet_20260510_codex/proxy_runtime_packet/runtime_packet_manifest.json",
+      "source_paths": [
+        "experiments/results/optimizer_guided_pr101_bias_refine_0127_packet_20260510_codex/proxy_runtime_packet/runtime_packet_manifest.json"
+      ],
+      "submission_dir": "experiments/results/optimizer_guided_pr101_bias_refine_0127_packet_20260510_codex/proxy_runtime_packet",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    }
+  ],
+  "top_k_count": 1,
+  "top_k_forensic": [
+    {
+      "archive_bytes": 178258,
+      "archive_path": "experiments/results/optimizer_guided_pr101_bias_refine_0127_packet_20260510_codex/proxy_runtime_packet/archive.zip",
+      "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "archive_size_bytes": 178258,
+      "archive_unchanged_from_source": true,
+      "candidate_archive_bytes": 178258,
+      "candidate_archive_path": "experiments/results/optimizer_guided_pr101_bias_refine_0127_packet_20260510_codex/proxy_runtime_packet/archive.zip",
+      "candidate_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "candidate_family": "pr101_inflate_time_bias_runtime_packet",
+      "candidate_id": "bias_refine_cmaes_style_stdlib_0127_pr101_proxy_runtime_packet",
+      "candidate_params": {
+        "bias_b": -0.99816723921,
+        "bias_g": -1.00035431724,
+        "bias_r": -0.997347966104
+      },
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "evidence_grade": "[byte-closed-runtime-packet-no-score]",
+      "evidence_semantics": "byte_closed_proxy_runtime_packet_pending_exact_eval",
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "lane_class": "pr101_kaggle_proxy_runtime_packet",
+      "lane_id": "pr101_kaggle_proxy_runtime_packet_exact_eval",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "runtime_consumption_proof_path": "experiments/results/optimizer_guided_pr101_bias_refine_0127_packet_20260510_codex/proxy_runtime_packet/runtime_consumption_proof.json",
+      "runtime_consumption_proof_required": true,
+      "runtime_consumption_proof_status": "present",
+      "runtime_manifest_path": "experiments/results/optimizer_guided_pr101_bias_refine_0127_packet_20260510_codex/proxy_runtime_packet/runtime_packet_manifest.json",
+      "runtime_patch": {
+        "patched_file": "inflate.py",
+        "runtime_consumed_params": [
+          {
+            "param": "bias_r",
+            "replacement": "up[:, 0, 0].add_(-0.997347966104)",
+            "slot": "up[:, 0, 0]",
+            "value": -0.997347966104
+          },
+          {
+            "param": "bias_b",
+            "replacement": "up[:, 0, 2].add_(-0.99816723921)",
+            "slot": "up[:, 0, 2]",
+            "value": -0.99816723921
+          },
+          {
+            "param": "bias_g",
+            "replacement": "up[:, 1, 1].add_(-1.00035431724)",
+            "slot": "up[:, 1, 1]",
+            "value": -1.00035431724
+          }
+        ]
+      },
+      "runtime_tree_sha256": "612b2405112b64489450767d598210be359343de150a27cb937e3c268c89476d",
+      "score_affecting_payload_changed": false,
+      "score_affecting_runtime_changed": true,
+      "score_claim": false,
+      "source_archive_bytes": 178258,
+      "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "source_candidate_id": "bias_refine_cmaes_style_stdlib_0127",
+      "source_manifest_path": "experiments/results/optimizer_guided_pr101_bias_refine_0127_packet_20260510_codex/proxy_runtime_packet/runtime_packet_manifest.json",
+      "source_paths": [
+        "experiments/results/optimizer_guided_pr101_bias_refine_0127_packet_20260510_codex/proxy_runtime_packet/runtime_packet_manifest.json"
+      ],
+      "submission_dir": "experiments/results/optimizer_guided_pr101_bias_refine_0127_packet_20260510_codex/proxy_runtime_packet",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    }
+  ]
+}

@@ -30,6 +30,21 @@ HANDOFF_SCHEMA = "pr101_kaggle_proxy_candidate_archive_builder_handoff_v1"
 PARAM_SCHEMA = "pr101_kaggle_proxy_candidate_params_v1"
 BIAS_RUNTIME_PARAM_SCHEMA = "pr101_kaggle_proxy_bias_runtime_params_v1"
 EXPECTED_EVIDENCE_SEMANTICS = "kaggle_gpu_proxy_config_search_only_not_exact_auth_eval"
+OPTIMIZER_GUIDED_EVIDENCE_SEMANTICS = "offline_optimizer_guided_proxy_queue_not_exact_auth_eval"
+ALLOWED_EVIDENCE_SEMANTICS = frozenset(
+    {
+        EXPECTED_EVIDENCE_SEMANTICS,
+        OPTIMIZER_GUIDED_EVIDENCE_SEMANTICS,
+        "a1_runtime_variant_planning_only",
+        "macos_cpu_calibrated_ranking_not_dispatch_evidence",
+    }
+)
+OPTIMIZER_QUEUE_SCHEMAS = frozenset(
+    {
+        "optimizer_candidate_queue_v1",
+        "optimizer_guided_candidate_queue_v1",
+    }
+)
 DEFAULT_INPUT_CANDIDATE = Path(
     "experiments/results/kaggle_pr101_proxy_sweep_20260510_codex/"
     "pr101_proxy_sweep/best_proxy_candidate.json"
@@ -63,6 +78,12 @@ FALSE_AUTHORITY_FLAGS = {
     "score_claim_valid": False,
     "ready_for_exact_eval_dispatch": False,
     "proxy_only": True,
+}
+QUEUE_FALSE_AUTHORITY_FLAGS = {
+    "score_claim": False,
+    "ready_for_exact_eval_dispatch": False,
+    "promotion_eligible": False,
+    "rank_or_kill_eligible": False,
 }
 DISPATCH_BLOCKERS = [
     "proxy_substrate_not_contest_exact_eval",
@@ -112,10 +133,10 @@ def validate_candidate(candidate: Mapping[str, Any]) -> dict[str, Any]:
         raise MaterializationError("candidate_id must be a non-empty string")
 
     evidence_semantics = candidate.get("evidence_semantics")
-    if evidence_semantics != EXPECTED_EVIDENCE_SEMANTICS:
+    if evidence_semantics not in ALLOWED_EVIDENCE_SEMANTICS:
         raise MaterializationError(
-            "candidate evidence_semantics must be "
-            f"{EXPECTED_EVIDENCE_SEMANTICS!r}"
+            "candidate evidence_semantics must be one of "
+            f"{sorted(ALLOWED_EVIDENCE_SEMANTICS)!r}"
         )
 
     for flag, expected in FALSE_AUTHORITY_FLAGS.items():
@@ -179,6 +200,103 @@ def _file_record(path: Path) -> dict[str, Any]:
 def _source_sweep_manifest(candidate_path: Path) -> Path | None:
     sibling = candidate_path.parent / "proxy_sweep_manifest.json"
     return sibling if sibling.is_file() else None
+
+
+def _queue_rows(queue: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    if queue.get("schema") not in OPTIMIZER_QUEUE_SCHEMAS:
+        raise MaterializationError(
+            "candidate queue schema must be one of "
+            f"{sorted(OPTIMIZER_QUEUE_SCHEMAS)!r}"
+        )
+    rows = queue.get("top_k_forensic")
+    if not isinstance(rows, list):
+        rows = queue.get("top_k")
+    if not isinstance(rows, list):
+        raise MaterializationError("candidate queue must contain top_k or top_k_forensic rows")
+    return [row for row in rows if isinstance(row, Mapping)]
+
+
+def _queue_row_params(row: Mapping[str, Any]) -> Mapping[str, Any]:
+    params = row.get("candidate_params") or row.get("op_params")
+    if not isinstance(params, Mapping):
+        raise MaterializationError("candidate queue row must contain candidate_params or op_params")
+    return params
+
+
+def _queue_row_is_bias_only(row: Mapping[str, Any]) -> bool:
+    try:
+        params = _queue_row_params(row)
+    except MaterializationError:
+        return False
+    return set(params) == set(BIAS_RUNTIME_PARAM_KEYS)
+
+
+def candidate_from_optimizer_queue(
+    queue: Mapping[str, Any],
+    *,
+    candidate_id: str | None = None,
+    queue_index: int | None = None,
+) -> dict[str, Any]:
+    """Return a bias-only candidate payload from a fail-closed optimizer queue."""
+
+    rows = _queue_rows(queue)
+    if queue_index is not None and candidate_id is not None:
+        raise MaterializationError("choose either candidate_id or queue_index, not both")
+    if queue_index is not None:
+        if queue_index < 0 or queue_index >= len(rows):
+            raise MaterializationError(f"queue_index out of range: {queue_index}")
+        selected = rows[queue_index]
+    elif candidate_id is not None:
+        matches = [row for row in rows if row.get("candidate_id") == candidate_id]
+        if len(matches) != 1:
+            raise MaterializationError(
+                f"candidate_id must match exactly one queue row: {candidate_id!r}"
+            )
+        selected = matches[0]
+    else:
+        selected = next((row for row in rows if _queue_row_is_bias_only(row)), None)
+        if selected is None:
+            raise MaterializationError("candidate queue has no bias-only row to materialize")
+
+    selected_id = str(selected.get("candidate_id") or "")
+    if not selected_id:
+        raise MaterializationError("candidate queue row candidate_id must be non-empty")
+    for field, expected in QUEUE_FALSE_AUTHORITY_FLAGS.items():
+        if selected.get(field) is not expected:
+            raise MaterializationError(f"{selected_id}: {field} must be {expected!r}")
+
+    params_raw = _queue_row_params(selected)
+    if set(params_raw) != set(BIAS_RUNTIME_PARAM_KEYS):
+        raise MaterializationError(
+            f"{selected_id}: optimizer queue materialization only supports bias-only "
+            f"params {list(BIAS_RUNTIME_PARAM_KEYS)}"
+        )
+    params = {
+        key: _require_finite_number(params_raw.get(key), f"{selected_id}.{key}")
+        for key in BIAS_RUNTIME_PARAM_KEYS
+    }
+    proxy_components_raw = selected.get("proxy_components")
+    proxy_components = (
+        dict(proxy_components_raw)
+        if isinstance(proxy_components_raw, Mapping)
+        else {"rank_score": selected.get("rank_score")}
+    )
+    return {
+        "candidate_id": selected_id,
+        "evidence_semantics": selected.get("evidence_semantics")
+        or OPTIMIZER_GUIDED_EVIDENCE_SEMANTICS,
+        "optimizer": selected.get("optimizer") or queue.get("optimizer"),
+        "optimizer_status": selected.get("optimizer_status") or queue.get("optimizer_status"),
+        "param_schema": BIAS_RUNTIME_PARAM_SCHEMA,
+        "params": params,
+        "proxy_components": proxy_components,
+        "proxy_objective": selected.get("proxy_objective") or selected.get("rank_score"),
+        "proxy_only": True,
+        "ready_for_exact_eval_dispatch": False,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "trial_index": selected.get("trial_index"),
+    }
 
 
 def _prepare_output_dir(output_dir: Path, *, force: bool) -> None:
@@ -327,9 +445,95 @@ def materialize_candidate(
     return manifest
 
 
+def materialize_optimizer_queue_candidate(
+    *,
+    queue_path: Path,
+    output_dir: Path,
+    candidate_id: str | None = None,
+    queue_index: int | None = None,
+    force: bool = False,
+) -> dict[str, Any]:
+    queue_path = _repo_path(queue_path)
+    output_dir = _repo_path(output_dir)
+    if not queue_path.is_file():
+        raise FileNotFoundError(f"candidate queue JSON not found: {queue_path}")
+    _prepare_output_dir(output_dir, force=force)
+
+    queue_raw = read_json(queue_path)
+    queue = _require_mapping(queue_raw, "candidate_queue")
+    candidate = candidate_from_optimizer_queue(
+        queue,
+        candidate_id=candidate_id,
+        queue_index=queue_index,
+    )
+    source_record = _file_record(queue_path)
+    source_record["canonical_payload_sha256"] = _canonical_json_sha256(queue)
+    source_record["source_kind"] = "optimizer_candidate_queue"
+
+    handoff = build_handoff(candidate, source_record)
+    handoff_path = output_dir / HANDOFF_NAME
+    write_json(handoff_path, handoff)
+
+    outputs = [_file_record(handoff_path)]
+    manifest: dict[str, Any] = {
+        "schema": SCHEMA,
+        "tool": TOOL_NAME,
+        "candidate_id": handoff["candidate_id"],
+        "input_files": [source_record],
+        "output_files": outputs,
+        "handoff_artifact": _repo_rel(handoff_path),
+        "candidate_params": handoff["params"],
+        "param_schema": handoff["param_schema"],
+        "proxy_only": True,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "exact_auth_eval_performed": False,
+        "contest_cuda_auth_eval": False,
+        "mps_auth_eval": False,
+        "archive_zip_emitted": False,
+        "inflate_runtime_emitted": False,
+        "evidence_semantics": handoff["proxy_evidence"]["evidence_semantics"],
+        "dispatch_blockers": list(DISPATCH_BLOCKERS),
+        "archive_builder_handoff_contract": handoff["archive_builder_handoff_contract"],
+        "source_queue_selection": {
+            "candidate_id": candidate_id,
+            "queue_index": queue_index,
+            "selected_candidate_id": handoff["candidate_id"],
+        },
+    }
+    manifest["manifest_sha256_excluding_self"] = _canonical_json_sha256(manifest)
+    manifest_path = output_dir / MANIFEST_NAME
+    write_json(manifest_path, manifest)
+    return manifest
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--candidate", type=Path, default=DEFAULT_INPUT_CANDIDATE)
+    parser.add_argument(
+        "--candidate-queue",
+        type=Path,
+        default=None,
+        help=(
+            "optimizer_candidate_queue_v1 or optimizer_guided_candidate_queue_v1; "
+            "materializes a bias-only row into the existing archive-builder handoff"
+        ),
+    )
+    parser.add_argument(
+        "--candidate-id",
+        default=None,
+        help="candidate_id to select from --candidate-queue; default is first bias-only row",
+    )
+    parser.add_argument(
+        "--queue-index",
+        type=int,
+        default=None,
+        help="zero-based row index to select from --candidate-queue",
+    )
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--force", action="store_true")
     return parser.parse_args(argv)
@@ -337,11 +541,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    manifest = materialize_candidate(
-        candidate_path=args.candidate,
-        output_dir=args.output_dir,
-        force=args.force,
-    )
+    if args.candidate_queue is not None:
+        manifest = materialize_optimizer_queue_candidate(
+            queue_path=args.candidate_queue,
+            candidate_id=args.candidate_id,
+            queue_index=args.queue_index,
+            output_dir=args.output_dir,
+            force=args.force,
+        )
+    else:
+        if args.candidate_id is not None or args.queue_index is not None:
+            raise MaterializationError("--candidate-id/--queue-index require --candidate-queue")
+        manifest = materialize_candidate(
+            candidate_path=args.candidate,
+            output_dir=args.output_dir,
+            force=args.force,
+        )
     print(json_text({
         "schema": "pr101_kaggle_proxy_candidate_materialization_stdout_v1",
         "manifest": _repo_rel(_repo_path(args.output_dir) / MANIFEST_NAME),

@@ -379,6 +379,7 @@ def _codec_param_manifest_candidates(
                 "exact_cuda_auth_eval_missing",
             ],
         )
+        row = apply_proxy_evidence_boundary(row)
         rows.append(row)
     return rows
 
@@ -416,6 +417,67 @@ def _meta_lagrangian_candidates(
             }
         )
         _add_blockers(row, ["proxy_score_is_not_score_evidence", "candidate_archive_missing"])
+        row = apply_proxy_evidence_boundary(row)
+        rows.append(row)
+    return rows
+
+
+def _optimizer_guided_queue_candidates(
+    payload: Mapping[str, Any], *, source_path: Path, repo_root: Path
+) -> list[dict[str, Any]]:
+    source_rows = payload.get("top_k_forensic")
+    if not isinstance(source_rows, list):
+        source_rows = payload.get("top_k")
+    if not isinstance(source_rows, list):
+        return []
+
+    rows: list[dict[str, Any]] = []
+    source_profile = str(payload.get("profile") or "")
+    source_optimizer = str(payload.get("optimizer") or "")
+    source_optimizer_status = str(payload.get("optimizer_status") or "")
+    source_contract = payload.get("profile_contract")
+    profile_contract = source_contract if isinstance(source_contract, Mapping) else {}
+    profile_blockers = [
+        str(item)
+        for item in profile_contract.get("dispatch_blockers", [])
+        if str(item)
+    ]
+    for cand in source_rows:
+        if not isinstance(cand, Mapping):
+            continue
+        candidate_id = str(cand.get("candidate_id") or "")
+        if not candidate_id:
+            continue
+        candidate_params = cand.get("candidate_params") or cand.get("op_params") or {}
+        if not isinstance(candidate_params, Mapping):
+            candidate_params = {}
+
+        row = dict(cand)
+        row.update(
+            {
+                "candidate_id": candidate_id,
+                "source_paths": [_repo_rel(source_path, repo_root)],
+                "profile": cand.get("profile") or source_profile,
+                "optimizer": cand.get("optimizer") or source_optimizer,
+                "optimizer_status": cand.get("optimizer_status") or source_optimizer_status,
+                "optimizer_tool": payload.get("tool") or "tools/build_optimizer_guided_candidate_queue.py",
+                "candidate_params": dict(candidate_params),
+                "op_params": dict(cand.get("op_params") or candidate_params),
+                "rank_score": _as_float(cand.get("rank_score") or cand.get("proxy_objective")),
+                "rank_score_field": cand.get("rank_score_field") or "proxy_objective_not_score",
+                "evidence_semantics": cand.get("evidence_semantics")
+                or "offline_optimizer_guided_proxy_queue_not_exact_auth_eval",
+                "evidence_grade": cand.get("evidence_grade") or "[offline-proxy-planning-only]",
+            }
+        )
+        row = apply_proxy_evidence_boundary(
+            row,
+            dispatch_blockers=[
+                *profile_blockers,
+                "optimizer_guided_queue_requires_archive_materialization",
+                "optimizer_guided_row_has_no_runtime_consumption_proof",
+            ],
+        )
         rows.append(row)
     return rows
 
@@ -703,6 +765,12 @@ def extract_candidates_from_source(path: Path, *, repo_root: Path) -> tuple[str,
         return schema, _codec_param_manifest_candidates(payload, source_path=path, repo_root=repo_root)
     if schema == "meta_lagrangian_search_v1":
         return schema, _meta_lagrangian_candidates(payload, source_path=path, repo_root=repo_root)
+    if schema == "optimizer_guided_candidate_queue_v1":
+        return schema, _optimizer_guided_queue_candidates(
+            payload,
+            source_path=path,
+            repo_root=repo_root,
+        )
     if schema == "pr101_kaggle_proxy_sweep_v1":
         return schema, _kaggle_proxy_sweep_candidates(payload, source_path=path, repo_root=repo_root)
     if schema == "pr101_kaggle_proxy_runtime_packet_v1":

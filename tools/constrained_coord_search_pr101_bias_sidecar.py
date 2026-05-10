@@ -77,6 +77,8 @@ import datetime as dt
 import hashlib
 import itertools
 import json
+import math
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -121,6 +123,24 @@ DEFAULT_REFINED_OFFSETS = (-0.15, -0.10, -0.05, 0.0, 0.05, 0.10, 0.15)
 DEFAULT_REFINED_STEP = 0.05  # the step IMPLICIT in DEFAULT_REFINED_OFFSETS;
 # kept as a named constant for callers that want to inspect or override.
 DEFAULT_SIDECAR_GRID = (-0.5, -0.25, 0.0, 0.25, 0.5)
+QUEUE_SCHEMAS = frozenset(
+    {
+        "optimizer_candidate_queue_v1",
+        "optimizer_guided_candidate_queue_v1",
+    }
+)
+QUEUE_FALSE_AUTHORITY_FIELDS = (
+    "ready_for_exact_eval_dispatch",
+    "score_claim",
+    "promotion_eligible",
+    "rank_or_kill_eligible",
+)
+QUEUE_PARAM_TO_COORD = {
+    "bias_r": "c0_0",
+    "bias_b": "c0_2",
+    "bias_g": "c1_1",
+    "sidecar_f1_r": "sidecar_c2_0",
+}
 
 
 def sha256_of(path: Path) -> str:
@@ -146,6 +166,101 @@ def _format_coord(c: float) -> str:
     int_part = int(abs_val)
     frac_part = int(round((abs_val - int_part) * 100))
     return f"{sign}{int_part}_{frac_part:02d}"
+
+
+def _finite_float(value: Any, field: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise RuntimeError(f"{field} must be a finite number")
+    out = float(value)
+    if not math.isfinite(out):
+        raise RuntimeError(f"{field} must be finite")
+    return out
+
+
+def _queue_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    schema = payload.get("schema")
+    if schema not in QUEUE_SCHEMAS:
+        raise RuntimeError(f"candidate queue schema must be one of {sorted(QUEUE_SCHEMAS)}")
+    rows = payload.get("top_k_forensic")
+    if not isinstance(rows, list):
+        rows = payload.get("top_k")
+    if not isinstance(rows, list):
+        raise RuntimeError("candidate queue must contain top_k or top_k_forensic rows")
+    return [row for row in rows if isinstance(row, dict)]
+
+
+def _safe_queue_variant_id(candidate_id: str) -> str:
+    if not candidate_id:
+        raise RuntimeError("queue row candidate_id must be non-empty")
+    safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", candidate_id).strip("._-")
+    if not safe:
+        raise RuntimeError(f"candidate_id cannot be mapped to safe variant id: {candidate_id!r}")
+    return f"q_{safe}"
+
+
+def variants_from_candidate_queue(
+    queue_path: Path,
+    *,
+    top_k: int | None = None,
+) -> list[tuple[str, dict[str, float], dict[str, Any]]]:
+    """Convert an optimizer planning queue into concrete variant coordinates."""
+
+    payload = json.loads(queue_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise RuntimeError("candidate queue must be a JSON object")
+    rows = _queue_rows(payload)
+    if top_k is not None:
+        if top_k < 1:
+            raise RuntimeError("--queue-top-k must be >= 1")
+        rows = rows[:top_k]
+
+    variants: list[tuple[str, dict[str, float], dict[str, Any]]] = []
+    seen_ids: set[str] = set()
+    for idx, row in enumerate(rows):
+        candidate_id = str(row.get("candidate_id") or "")
+        for field in QUEUE_FALSE_AUTHORITY_FIELDS:
+            if row.get(field) is not False:
+                raise RuntimeError(
+                    f"{candidate_id or '<missing>'}: queue field {field} must be false"
+                )
+        params = row.get("candidate_params") or row.get("op_params")
+        if not isinstance(params, dict):
+            raise RuntimeError(f"{candidate_id}: candidate_params/op_params must be an object")
+        coords = {
+            coord: _finite_float(params[param], f"{candidate_id}.candidate_params.{param}")
+            for param, coord in QUEUE_PARAM_TO_COORD.items()
+            if param in params
+        }
+        missing = sorted({"c0_0", "c0_2", "c1_1"} - set(coords))
+        if missing:
+            raise RuntimeError(f"{candidate_id}: missing required coordinate(s): {missing}")
+        extra_params = sorted(
+            set(params)
+            - set(QUEUE_PARAM_TO_COORD)
+        )
+        if extra_params:
+            raise RuntimeError(f"{candidate_id}: unsupported queue params: {extra_params}")
+        variant_id = _safe_queue_variant_id(candidate_id)
+        if variant_id in seen_ids:
+            variant_id = f"{variant_id}_{idx:04d}"
+        seen_ids.add(variant_id)
+        variants.append(
+            (
+                variant_id,
+                coords,
+                {
+                    "candidate_id": candidate_id,
+                    "rank": row.get("rank"),
+                    "rank_score": row.get("rank_score"),
+                    "rank_score_field": row.get("rank_score_field"),
+                    "optimizer": row.get("optimizer"),
+                    "optimizer_status": row.get("optimizer_status"),
+                    "profile": row.get("profile"),
+                    "source_queue_path": manifest_path(queue_path),
+                },
+            )
+        )
+    return variants
 
 
 def build_bias_lines(c0_0: float, c0_2: float, c1_1: float, sidecar_c2_0: float | None = None) -> list[str]:
@@ -393,6 +508,22 @@ def main() -> int:
         help="subset of variant_ids to build (default: all enumerated)",
     )
     p.add_argument(
+        "--candidate-queue",
+        type=Path,
+        default=None,
+        help=(
+            "consume an optimizer_candidate_queue_v1 or "
+            "optimizer_guided_candidate_queue_v1 top_k queue and materialize "
+            "its bias/sidecar coordinates instead of enumerating a grid"
+        ),
+    )
+    p.add_argument(
+        "--queue-top-k",
+        type=int,
+        default=None,
+        help="when --candidate-queue is supplied, only materialize the first K queue rows",
+    )
+    p.add_argument(
         "--list-variants",
         action="store_true",
         help="print the candidate variant grid and exit (no files written)",
@@ -428,8 +559,23 @@ def main() -> int:
     template_path = A1_SUBMISSION_DIR / "inflate.py"
     template_text = template_path.read_text()
 
-    # Pick the grid.
-    if args.refined:
+    queue_source: Path | None = None
+    queue_source_rows: list[dict[str, Any]] = []
+    if args.candidate_queue is not None:
+        queue_source = args.candidate_queue if args.candidate_queue.is_absolute() else REPO_ROOT / args.candidate_queue
+        if not queue_source.is_file():
+            sys.stderr.write(f"[fatal] candidate queue missing: {queue_source}\n")
+            return 2
+        try:
+            queue_variants = variants_from_candidate_queue(queue_source, top_k=args.queue_top_k)
+        except (OSError, json.JSONDecodeError, RuntimeError) as exc:
+            sys.stderr.write(f"[fatal] invalid candidate queue: {exc}\n")
+            return 2
+        variants = [(vid, coords) for vid, coords, _row in queue_variants]
+        queue_source_rows = [row for _vid, _coords, row in queue_variants]
+        grid: tuple[float, ...] = ()
+        grid_sidecar = None
+    elif args.refined:
         if args.center_coord is None:
             sys.stderr.write(
                 "[fatal] --refined requires --center-coord (e.g. --center-coord -1.0)\n"
@@ -444,14 +590,14 @@ def main() -> int:
         # Default = coarse.
         grid = DEFAULT_COARSE_GRID
 
-    grid_sidecar = DEFAULT_SIDECAR_GRID if args.with_sidecar else None
-
-    variants = enumerate_variants(
-        grid_c0_0=grid,
-        grid_c0_2=grid,
-        grid_c1_1=grid,
-        grid_sidecar=grid_sidecar,
-    )
+    if args.candidate_queue is None:
+        grid_sidecar = DEFAULT_SIDECAR_GRID if args.with_sidecar else None
+        variants = enumerate_variants(
+            grid_c0_0=grid,
+            grid_c0_2=grid,
+            grid_c1_1=grid,
+            grid_sidecar=grid_sidecar,
+        )
 
     if args.variants is not None:
         wanted = set(args.variants)
@@ -485,6 +631,8 @@ def main() -> int:
         REPO_ROOT
         / f"experiments/results/constrained_coord_search_pr101_bias_{timestamp}"
     )
+    if not out_root.is_absolute():
+        out_root = REPO_ROOT / out_root
 
     if args.dry_run:
         print(f"[dry-run] would write {len(variants)} variants under {out_root}:")
@@ -498,6 +646,10 @@ def main() -> int:
     rollup: list[dict[str, Any]] = []
     seen_inflate_sha: dict[str, str] = {}
 
+    source_by_variant = {
+        vid: row
+        for (vid, _coords), row in zip(variants, queue_source_rows, strict=False)
+    }
     for vid, coords in variants:
         bias_lines = build_bias_lines(
             c0_0=coords["c0_0"],
@@ -528,6 +680,7 @@ def main() -> int:
         rollup.append({
             "variant_id": vid,
             "coords": coords,
+            "source_queue_row": source_by_variant.get(vid),
             "submission_name": vid,
             "out_dir": str(out_root.relative_to(REPO_ROOT) / vid),
             "build_manifest_relpath": str(
@@ -545,6 +698,7 @@ def main() -> int:
         "build_timestamp_utc": dt.datetime.now(dt.UTC).isoformat(),
         "n_variants": len(rollup),
         "n_unique_inflates": len(seen_inflate_sha),
+        "source_candidate_queue": manifest_path(queue_source) if queue_source is not None else None,
         "grid": {
             "c0_0": list(grid),
             "c0_2": list(grid),

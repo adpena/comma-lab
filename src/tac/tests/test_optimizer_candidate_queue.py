@@ -168,6 +168,11 @@ def test_predicted_param_sweep_manifest_is_forced_non_dispatchable(
                     "predicted_score": 0.1,
                     "ready_for_exact_eval_dispatch": True,
                     "score_claim": True,
+                    "rank_or_kill_eligible": True,
+                    "exact_cuda_auth_eval": True,
+                    "contest_cuda_auth_eval": True,
+                    "field_selection_ready_for_exact_eval_dispatch": True,
+                    "charged_bits_changed": True,
                     "op_params": {"q": 11},
                 }
             ],
@@ -180,8 +185,70 @@ def test_predicted_param_sweep_manifest_is_forced_non_dispatchable(
     assert row["ready_for_exact_eval_dispatch"] is False
     assert row["score_claim"] is False
     assert row["promotion_eligible"] is False
+    assert row["rank_or_kill_eligible"] is False
+    assert row["exact_cuda_auth_eval"] is False
+    assert row["contest_cuda_auth_eval"] is False
+    assert row["field_selection_ready_for_exact_eval_dispatch"] is False
+    assert row["charged_bits_changed"] is False
     assert row["evidence_semantics"] == "cpu_substrate_predicted_band"
     assert "predicted_score_is_not_score_evidence" in row["dispatch_blockers"]
+    assert validate_proxy_candidate(row) == []
+
+
+def test_optimizer_guided_queue_schema_is_adapted_as_proxy_only(
+    tmp_path: Path,
+) -> None:
+    queue_path = _write_json(
+        tmp_path / "optimizer_guided_queue.json",
+        {
+            "schema": "optimizer_guided_candidate_queue_v1",
+            "tool": "tools/build_optimizer_guided_candidate_queue.py",
+            "profile": "pr101_bias_sidecar",
+            "optimizer": "cmaes",
+            "optimizer_status": "cmaes_style_stdlib",
+            "profile_contract": {
+                "dispatch_blockers": [
+                    "sidecar_param_requires_archive_builder_support",
+                    "runtime_consumption_proof_required",
+                ]
+            },
+            "top_k": [
+                {
+                    "candidate_id": "bias_sidecar_cmaes_style_stdlib_anchor",
+                    "lane_id": "offline_pr101_bias_sidecar_candidate_generation",
+                    "lane_class": "a1_pr101_bias_sidecar_prefilter",
+                    "candidate_family": "a1_pr101_runtime_bias_plus_sidecar_probe",
+                    "candidate_params": {
+                        "bias_b": -1.0,
+                        "bias_g": -1.0,
+                        "bias_r": -1.0,
+                        "sidecar_f1_r": 0.0,
+                    },
+                    "proxy_objective": 0.19285,
+                    "rank_score": 0.19285,
+                    "score_claim": True,
+                    "ready_for_exact_eval_dispatch": True,
+                    "rank_or_kill_eligible": True,
+                    "contest_cuda_auth_eval": True,
+                    "charged_bits_changed": True,
+                }
+            ],
+        },
+    )
+
+    queue = build_candidate_queue([queue_path], repo_root=tmp_path)
+    row = queue["top_k"][0]
+
+    assert queue["dispatch_ready_count"] == 0
+    assert row["candidate_id"] == "bias_sidecar_cmaes_style_stdlib_anchor"
+    assert row["profile"] == "pr101_bias_sidecar"
+    assert row["optimizer_status"] == "cmaes_style_stdlib"
+    assert row["op_params"] == row["candidate_params"]
+    assert row["rank_score_field"] == "proxy_objective_not_score"
+    assert "sidecar_param_requires_archive_builder_support" in row["dispatch_blockers"]
+    assert "optimizer_guided_queue_requires_archive_materialization" in row["dispatch_blockers"]
+    assert "optimizer_guided_row_has_no_runtime_consumption_proof" in row["dispatch_blockers"]
+    assert validate_proxy_candidate(row) == []
 
 
 def test_kaggle_proxy_manifest_becomes_canonical_non_dispatchable_queue_row(
@@ -407,6 +474,9 @@ def test_queue_sanitizes_non_finite_legacy_telemetry(tmp_path: Path) -> None:
                     "archive_bytes": 159973,
                     "proxy_score": 0.1927,
                     "rank_key": float("inf"),
+                    "rank_or_kill_eligible": True,
+                    "contest_cuda_auth_eval": True,
+                    "charged_bits_changed": True,
                 }
             ],
         },
@@ -415,6 +485,7 @@ def test_queue_sanitizes_non_finite_legacy_telemetry(tmp_path: Path) -> None:
     queue = build_candidate_queue([report], repo_root=tmp_path)
 
     assert queue["top_k"][0]["rank_key"] is None
+    assert validate_proxy_candidate(queue["top_k"][0]) == []
     json.dumps(queue, allow_nan=False)
 
 

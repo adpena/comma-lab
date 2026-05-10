@@ -19,6 +19,7 @@ Coverage:
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -151,6 +152,92 @@ def test_variant_id_with_sidecar_includes_4th_dim(tool):
         "c1_1": -1.0,
         "sidecar_c2_0": 0.25,
     }
+
+
+def test_optimizer_candidate_queue_maps_to_sidecar_variant(tool, tmp_path):
+    queue_path = tmp_path / "queue.json"
+    queue_path.write_text(
+        json.dumps(
+            {
+                "schema": "optimizer_candidate_queue_v1",
+                "top_k": [
+                    {
+                        "candidate_id": "bias_sidecar_cmaes_style_stdlib_anchor",
+                        "rank": 1,
+                        "rank_score": 0.19285,
+                        "rank_score_field": "proxy_objective_not_score",
+                        "optimizer": "cmaes",
+                        "optimizer_status": "cmaes_style_stdlib",
+                        "profile": "pr101_bias_sidecar",
+                        "candidate_params": {
+                            "bias_b": -0.99,
+                            "bias_g": -1.01,
+                            "bias_r": -1.02,
+                            "sidecar_f1_r": 0.125,
+                        },
+                        "ready_for_exact_eval_dispatch": False,
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "rank_or_kill_eligible": False,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    variants = tool.variants_from_candidate_queue(queue_path, top_k=1)
+
+    assert variants == [
+        (
+            "q_bias_sidecar_cmaes_style_stdlib_anchor",
+            {
+                "c0_0": -1.02,
+                "c0_2": -0.99,
+                "c1_1": -1.01,
+                "sidecar_c2_0": 0.125,
+            },
+            {
+                "candidate_id": "bias_sidecar_cmaes_style_stdlib_anchor",
+                "optimizer": "cmaes",
+                "optimizer_status": "cmaes_style_stdlib",
+                "profile": "pr101_bias_sidecar",
+                "rank": 1,
+                "rank_score": 0.19285,
+                "rank_score_field": "proxy_objective_not_score",
+                "source_queue_path": str(queue_path),
+            },
+        )
+    ]
+
+
+def test_optimizer_candidate_queue_refuses_authority_leak(tool, tmp_path):
+    queue_path = tmp_path / "queue.json"
+    queue_path.write_text(
+        json.dumps(
+            {
+                "schema": "optimizer_candidate_queue_v1",
+                "top_k": [
+                    {
+                        "candidate_id": "unsafe",
+                        "candidate_params": {
+                            "bias_b": -1.0,
+                            "bias_g": -1.0,
+                            "bias_r": -1.0,
+                        },
+                        "ready_for_exact_eval_dispatch": True,
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "rank_or_kill_eligible": False,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(RuntimeError, match="ready_for_exact_eval_dispatch must be false"):
+        tool.variants_from_candidate_queue(queue_path)
 
 
 # ---------------------------------------------------------------------------

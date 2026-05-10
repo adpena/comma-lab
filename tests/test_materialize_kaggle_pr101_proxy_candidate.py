@@ -147,6 +147,140 @@ def test_materializes_bias_only_candidate_without_legacy_ignored_params(
     assert "delta_scale" not in json.dumps(handoff)
 
 
+def test_materializes_first_bias_only_optimizer_queue_row(tmp_path: Path) -> None:
+    tool = load_tool()
+    queue_path = tmp_path / "queue.json"
+    output_dir = tmp_path / "out"
+    _write_json(
+        queue_path,
+        {
+            "schema": "optimizer_candidate_queue_v1",
+            "top_k": [
+                {
+                    "candidate_id": "sidecar_blocked",
+                    "candidate_params": {
+                        "bias_b": -1.0,
+                        "bias_g": -1.0,
+                        "bias_r": -1.0,
+                        "sidecar_f1_r": 0.0,
+                    },
+                    "rank_score": 0.19285,
+                    "ready_for_exact_eval_dispatch": False,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                },
+                {
+                    "candidate_id": "bias_refine_cmaes_style_stdlib_0127",
+                    "candidate_params": {
+                        "bias_b": -0.99816723921,
+                        "bias_g": -1.00035431724,
+                        "bias_r": -0.997347966104,
+                    },
+                    "rank_score": 0.19285003,
+                    "rank_score_field": "proxy_objective_not_score",
+                    "optimizer": "cmaes",
+                    "optimizer_status": "cmaes_style_stdlib",
+                    "ready_for_exact_eval_dispatch": False,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                },
+            ],
+        },
+    )
+
+    manifest = tool.materialize_optimizer_queue_candidate(
+        queue_path=queue_path,
+        output_dir=output_dir,
+    )
+
+    handoff = json.loads((output_dir / "archive_builder_handoff.json").read_text())
+
+    assert manifest["candidate_id"] == "bias_refine_cmaes_style_stdlib_0127"
+    assert manifest["param_schema"] == "pr101_kaggle_proxy_bias_runtime_params_v1"
+    assert manifest["candidate_params"] == {
+        "bias_b": -0.99816723921,
+        "bias_g": -1.00035431724,
+        "bias_r": -0.997347966104,
+    }
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["score_claim"] is False
+    assert handoff["proxy_evidence"]["evidence_semantics"] == (
+        "offline_optimizer_guided_proxy_queue_not_exact_auth_eval"
+    )
+    assert handoff["source_candidate"]["source_kind"] == "optimizer_candidate_queue"
+    assert set(handoff["params"]) == {"bias_b", "bias_g", "bias_r"}
+
+
+def test_optimizer_queue_materialization_refuses_sidecar_when_explicitly_selected(
+    tmp_path: Path,
+) -> None:
+    tool = load_tool()
+    queue_path = tmp_path / "queue.json"
+    _write_json(
+        queue_path,
+        {
+            "schema": "optimizer_candidate_queue_v1",
+            "top_k": [
+                {
+                    "candidate_id": "sidecar_blocked",
+                    "candidate_params": {
+                        "bias_b": -1.0,
+                        "bias_g": -1.0,
+                        "bias_r": -1.0,
+                        "sidecar_f1_r": 0.125,
+                    },
+                    "rank_score": 0.19285,
+                    "ready_for_exact_eval_dispatch": False,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                }
+            ],
+        },
+    )
+
+    with pytest.raises(tool.MaterializationError, match="only supports bias-only"):
+        tool.materialize_optimizer_queue_candidate(
+            queue_path=queue_path,
+            output_dir=tmp_path / "out",
+            candidate_id="sidecar_blocked",
+        )
+
+
+def test_optimizer_queue_materialization_refuses_authority_leak(tmp_path: Path) -> None:
+    tool = load_tool()
+    queue_path = tmp_path / "queue.json"
+    _write_json(
+        queue_path,
+        {
+            "schema": "optimizer_candidate_queue_v1",
+            "top_k": [
+                {
+                    "candidate_id": "unsafe",
+                    "candidate_params": {
+                        "bias_b": -1.0,
+                        "bias_g": -1.0,
+                        "bias_r": -1.0,
+                    },
+                    "rank_score": 0.19285,
+                    "ready_for_exact_eval_dispatch": True,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                }
+            ],
+        },
+    )
+
+    with pytest.raises(tool.MaterializationError, match="ready_for_exact_eval_dispatch"):
+        tool.materialize_optimizer_queue_candidate(
+            queue_path=queue_path,
+            output_dir=tmp_path / "out",
+        )
+
+
 def test_materialization_is_deterministic_for_same_input(tmp_path: Path) -> None:
     tool = load_tool()
     candidate_path = tmp_path / "best_proxy_candidate.json"
