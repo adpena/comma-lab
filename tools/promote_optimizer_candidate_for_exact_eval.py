@@ -328,6 +328,9 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if promoted_queue is None:
+        if args.report_output is not None:
+            args.report_output.parent.mkdir(parents=True, exist_ok=True)
+            args.report_output.write_text(json_dumps(report), encoding="utf-8")
         print(
             "FATAL: candidate is not exact-eval dispatch ready:\n  - "
             + "\n  - ".join(report["blockers"][:40]),

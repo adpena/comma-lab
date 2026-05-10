@@ -559,3 +559,23 @@ def test_discover_exact_ready_queues_includes_prefixed_filenames(tmp_path: Path)
     )
 
     assert found == [exact_name, prefixed]
+
+
+def test_discover_exact_ready_queues_scans_multiple_roots(tmp_path: Path) -> None:
+    experiment_queue = _ready_queue(
+        tmp_path / "experiments/results/a/exact_ready_queue.json",
+        lane_id="lane_a",  # FAKE_LANE_OK: synthetic discovery fixture.
+        archive_sha="e" * 64,
+    )
+    research_queue = _ready_queue(
+        tmp_path / ".omx/research/a/research_exact_ready_queue.json",
+        lane_id="lane_b",  # FAKE_LANE_OK: synthetic discovery fixture.
+        archive_sha="f" * 64,
+    )
+
+    found = discover_exact_ready_queues(
+        repo_root=tmp_path,
+        scan_root=(Path("experiments/results"), Path(".omx/research")),
+    )
+
+    assert found == [research_queue, experiment_queue]

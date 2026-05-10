@@ -47,7 +47,10 @@ PR91_HPM1_RUNTIME_CONTRACT_ARTIFACT = (
     REPO_ROOT / "experiments/results/pr91_hpm1_runtime_contract_20260506_codex/runtime_contract.json"
 )
 DISPATCH_CLAIMS = REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md"
-EXACT_READY_SCAN_ROOT = REPO_ROOT / "experiments" / "results"
+EXACT_READY_SCAN_ROOTS = (
+    REPO_ROOT / "experiments" / "results",
+    REPO_ROOT / ".omx" / "research",
+)
 EXACT_READY_SUPPRESSION_MANIFEST = (
     REPO_ROOT / ".omx/research/exact_ready_queue_retraction_manifest_20260510_codex.json"
 )
@@ -413,7 +416,7 @@ def _format_exact_eval_packets() -> str:
 def _exact_ready_queue_audit() -> dict[str, object]:
     queues = discover_exact_ready_queues(
         repo_root=REPO_ROOT,
-        scan_root=EXACT_READY_SCAN_ROOT,
+        scan_root=EXACT_READY_SCAN_ROOTS,
     )
     payload = audit_exact_ready_queues(
         queues,

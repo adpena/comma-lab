@@ -366,18 +366,24 @@ def audit_exact_ready_queue(
 def discover_exact_ready_queues(
     *,
     repo_root: Path,
-    scan_root: Path,
+    scan_root: Path | str | Iterable[Path | str],
     patterns: Iterable[str] = (
         "**/exact_ready_queue.json",
         "**/*exact_ready_queue.json",
     ),
 ) -> list[Path]:
-    root = scan_root if scan_root.is_absolute() else repo_root / scan_root
     found: dict[str, Path] = {}
-    for pattern in patterns:
-        for path in root.glob(pattern):
-            if path.is_file():
-                found[path.resolve().as_posix()] = path
+    if isinstance(scan_root, (str, Path)):
+        scan_roots: Iterable[Path | str] = (scan_root,)
+    else:
+        scan_roots = scan_root
+    for root_item in scan_roots:
+        root_path = Path(root_item)
+        root = root_path if root_path.is_absolute() else repo_root / root_path
+        for pattern in patterns:
+            for path in root.glob(pattern):
+                if path.is_file():
+                    found[path.resolve().as_posix()] = path
     return [found[key] for key in sorted(found)]
 
 

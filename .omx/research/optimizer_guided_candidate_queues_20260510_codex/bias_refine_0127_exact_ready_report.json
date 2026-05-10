@@ -1,0 +1,27 @@
+{
+  "blockers": [],
+  "candidate_id": "bias_refine_cmaes_style_stdlib_0127_pr101_proxy_runtime_packet",
+  "facts": {
+    "archive_bytes": 178258,
+    "archive_manifest_path": "experiments/results/optimizer_guided_pr101_bias_refine_0127_packet_20260510_codex/proxy_runtime_packet/runtime_packet_manifest.json",
+    "archive_path": "experiments/results/optimizer_guided_pr101_bias_refine_0127_packet_20260510_codex/proxy_runtime_packet/archive.zip",
+    "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+    "inflate_sh": "experiments/results/optimizer_guided_pr101_bias_refine_0127_packet_20260510_codex/proxy_runtime_packet/inflate.sh",
+    "runtime_consumption_proof_path": "experiments/results/optimizer_guided_pr101_bias_refine_0127_packet_20260510_codex/proxy_runtime_packet/runtime_consumption_proof.json",
+    "runtime_consumption_proof_required": true,
+    "runtime_consumption_proof_schema": "pr101_kaggle_proxy_runtime_consumption_proof_v1",
+    "runtime_consumption_proof_sha256": "7b404db7b77b4afc51fe370dbb377be61e5a4601cf28a2b0f12cfbb749e6e4ba",
+    "runtime_consumption_proof_status": "present",
+    "runtime_tree_sha256": "40def9339343b9fcb50bce211fb47a22f19332edd7e3ff7090733b9d15247ff2",
+    "score_affecting_change_proofs": [
+      "score_affecting_runtime_changed=true"
+    ],
+    "source_score_fields_stripped": [],
+    "submission_dir": "experiments/results/optimizer_guided_pr101_bias_refine_0127_packet_20260510_codex/proxy_runtime_packet"
+  },
+  "generated_at_utc": "2026-05-10T21:11:49Z",
+  "ready_for_exact_eval_dispatch": true,
+  "schema": "optimizer_candidate_exact_eval_readiness_report_v1",
+  "source_queue_path": ".omx/research/optimizer_guided_candidate_queues_20260510_codex/bias_refine_0127_runtime_packet_planning_queue.json",
+  "tool": "tools/promote_optimizer_candidate_for_exact_eval.py"
+}

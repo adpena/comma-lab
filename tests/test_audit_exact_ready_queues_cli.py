@@ -117,6 +117,62 @@ def test_cli_warn_only_writes_report_and_exits_zero(tmp_path: Path) -> None:
     assert payload["stale_ready_row_count"] == 1
 
 
+def test_cli_default_scan_includes_experiments_and_omx_research(tmp_path: Path) -> None:
+    for rel, archive_sha in (
+        ("experiments/results/fixture/exact_ready_queue.json", "e" * 64),
+        (".omx/research/fixture/research_exact_ready_queue.json", "f" * 64),
+    ):
+        _write_json(
+            tmp_path / rel,
+            {
+                "schema": "optimizer_candidate_exact_eval_ready_queue_v1",
+                "dispatch_ready": [
+                    {
+                        "candidate_id": rel,
+                        "lane_id": "lane",
+                        "ready_for_exact_eval_dispatch": True,
+                        "candidate_archive_sha256": archive_sha,
+                        "archive_bytes": 123,
+                    }
+                ],
+            },
+        )
+    claims = tmp_path / ".omx/state/active_lane_dispatch_claims.md"
+    claims.parent.mkdir(parents=True)
+    claims.write_text(
+        "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
+        "|---|---|---|---|---|---|---|---|\n",
+        encoding="utf-8",
+    )
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL_PATH),
+            "--repo-root",
+            str(tmp_path),
+            "--dispatch-claims-path",
+            str(claims),
+            "--format",
+            "json",
+            "--warn-only",
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    assert proc.returncode == 0
+    payload = json.loads(proc.stdout)
+    assert payload["queue_count"] == 2
+    assert {
+        queue["queue_path"]
+        for queue in payload["queues"]
+    } == {
+        "experiments/results/fixture/exact_ready_queue.json",
+        ".omx/research/fixture/research_exact_ready_queue.json",
+    }
+
+
 def test_cli_writes_suppression_manifest_and_reports_zero_unresolved(
     tmp_path: Path,
 ) -> None:

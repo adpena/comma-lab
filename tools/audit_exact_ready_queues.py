@@ -20,6 +20,8 @@ from tac.optimizer.exact_ready_audit import (  # noqa: E402
 )
 from tac.optimizer.exact_readiness import ACTIVE_FLOOR_SCORE  # noqa: E402
 
+DEFAULT_SCAN_ROOTS = (Path("experiments/results"), Path(".omx/research"))
+
 
 def _markdown(payload: dict[str, object]) -> str:
     lines = [
@@ -86,8 +88,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--scan-root",
         type=Path,
-        default=Path("experiments/results"),
-        help="Root scanned when --queue is omitted. Default: experiments/results.",
+        action="append",
+        default=None,
+        help=(
+            "Root scanned when --queue is omitted. May be repeated. "
+            "Default: experiments/results and .omx/research."
+        ),
     )
     parser.add_argument(
         "--pattern",
@@ -125,7 +131,7 @@ def main(argv: list[str] | None = None) -> int:
     if not queue_paths:
         queue_paths = discover_exact_ready_queues(
             repo_root=repo_root,
-            scan_root=args.scan_root,
+            scan_root=args.scan_root or DEFAULT_SCAN_ROOTS,
             patterns=args.pattern,
         )
     missing = [path for path in queue_paths if not (path if path.is_absolute() else repo_root / path).is_file()]

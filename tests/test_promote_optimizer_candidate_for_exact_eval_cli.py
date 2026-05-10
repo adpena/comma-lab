@@ -208,3 +208,24 @@ def test_cli_blocks_active_lane_prefix_alias_claims(
     assert proc.returncode == 2
     assert f"same_lane_active_dispatch_claim:{claimed_lane_id}:fixture_job" in proc.stderr
     assert not output.exists()
+
+
+def test_cli_writes_failure_report_outside_submission_tree(tmp_path: Path) -> None:
+    fixture = _make_ready_fixture(tmp_path)
+    payload = json.loads(fixture["queue"].read_text(encoding="utf-8"))
+    row = payload["top_k"][0]
+    row["score_affecting_payload_changed"] = False
+    row["charged_bits_changed"] = False
+    fixture["queue"].write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    output = tmp_path / "out" / "exact_ready_queue.json"
+    report_output = tmp_path / "out" / "exact_ready_report.json"
+
+    proc = _run_tool(fixture, output=output, report_output=report_output)
+
+    assert proc.returncode == 2
+    assert "candidate is not exact-eval dispatch ready" in proc.stderr
+    assert "score_affecting_change_proof_missing" in proc.stderr
+    assert not output.exists()
+    report = json.loads(report_output.read_text(encoding="utf-8"))
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert "score_affecting_change_proof_missing" in report["blockers"]
