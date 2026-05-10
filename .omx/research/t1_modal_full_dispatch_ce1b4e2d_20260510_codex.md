@@ -354,3 +354,35 @@ Next exact command:
 Evidence classification: `score_claim=false`; no score, no promotion, no
 rank/kill verdict. The active claim must remain open until recover reaches a
 terminal result and writes the terminal claim row.
+
+## 2026-05-10T21:14Z active Phase 1 harvest/status poll
+
+Scope: T1 Modal Phase 1 harvest/status only. No duplicate dispatch launched.
+
+Commands run:
+
+```bash
+.venv/bin/python tools/claim_lane_dispatch.py summary --format json
+.venv/bin/python tools/modal_function_status.py fc-01KR955JSYQAVTTYZA48VAV7WJ --get-timeout-s 0
+.venv/bin/python experiments/modal_t1_balle_endtoend.py recover --label t1_balle_modal_phase1_ab2d0f6_20260510T1437Z
+```
+
+Latest status:
+
+- claim summary at `2026-05-10T21:14:35Z`: one active claim, lane
+  `t1_balle_128k_endtoend`, job
+  `t1_balle_modal_phase1_ab2d0f6_20260510T1437Z`, status
+  `active_dispatching`, age `6.611h`, no stale nonterminal rows.
+- Modal status probe: `result_state=pending`; call graph status `pending`;
+  function `run_t1_balle_modal`; input id `in-01KR955JTPGDX1FR81GBGXYJ8K`;
+  dashboard URL `https://modal.com/id/fc-01KR955JSYQAVTTYZA48VAV7WJ`.
+- Recover command returned rc `4` with
+  `NOT READY: call_id=fc-01KR955JSYQAVTTYZA48VAV7WJ still queued or running. Re-run later.`
+
+Blocker: Modal function call is still queued or running. No result dict is
+available, so no artifacts were harvested and no contest-CUDA evidence packet
+exists from this poll.
+
+Evidence classification: `score_claim=false`; no score, no promotion, no
+rank/kill verdict. Keep the active claim open until recover reaches a terminal
+result and writes the terminal claim row.
