@@ -100,6 +100,50 @@ sections. The valid next PR103 arithmetic work is a runtime-adapter prototype
 or a larger multi-coordinate/multi-stream search that can amortize adapter
 overhead and produce a material byte delta.
 
+## Beam-search follow-up: composed coordinate moves
+
+Artifact:
+
+```text
+.omx/research/pr103_arithmetic_transform_plans_20260510_codex/*_beam_probe.json
+.omx/research/pr103_arithmetic_transform_plans_20260510_codex/*_beam_probe.md
+```
+
+Command shape:
+
+```bash
+.venv/bin/python tools/probe_pr103_arithmetic_retarget.py \
+  --schema-manifest experiments/results/hnerv_pr103_lc_ac_schema_refresh_20260510_codex/manifest.json \
+  --target-label stem.weight \
+  --probe-mode beam-search \
+  --top-symbols 16 \
+  --deltas=-2,-1,1,2 \
+  --rounds 3 \
+  --beam-width 8 \
+  --json-out .omx/research/pr103_arithmetic_transform_plans_20260510_codex/stem_weight_beam_probe.json \
+  --md-out .omx/research/pr103_arithmetic_transform_plans_20260510_codex/stem_weight_beam_probe.md
+```
+
+Beam-search results across the same top-5 targets:
+
+| target | evaluated candidates | merged delta | histogram Brotli delta | total member delta | changes | blocker |
+|---|---:|---:|---:|---:|---:|---|
+| `blocks.0.weight` | `968` | `0` | `-9` | `-9` | `3` | `candidate_runtime_adapter_missing` |
+| `blocks.3.weight` | `979` | `0` | `-6` | `-6` | `3` | `candidate_runtime_adapter_missing` |
+| `blocks.2.weight` | `954` | `0` | `-4` | `-4` | `2` | `candidate_runtime_adapter_missing` |
+| `stem.weight` | `960` | `0` | `-3` | `-3` | `3` | `candidate_runtime_adapter_missing` |
+| `blocks.1.weight` | `971` | `0` | `-2` | `-2` | `2` | `candidate_runtime_adapter_missing` |
+
+Interpretation: composed q8 histogram moves improve the local byte signal from
+single-digit `1-2` byte wins to a best observed `9` byte win on
+`blocks.0.weight`, still entirely in the compressed histogram sideband. The
+merged arithmetic stream length did not move in this small beam. This is
+useful evidence that the previous no-op conclusion was too strong, but it is
+not yet enough to justify exact CUDA or a contest packet without runtime
+adapter overhead accounting. The next useful solver step is multi-stream beam
+composition with adapter-overhead accounting, not another one-stream micro
+probe.
+
 ## Adversarial classification
 
 This is not a score candidate. It is the next byte-closed planning artifact
@@ -142,5 +186,5 @@ passes runtime-consumption and strict compliance gates.
 .venv/bin/python -m pytest \
   src/tac/tests/test_pr103_arithmetic_transform_plan.py \
   tests/test_plan_pr103_arithmetic_transform_cli.py -q
-# 7 passed
+# 14 passed
 ```

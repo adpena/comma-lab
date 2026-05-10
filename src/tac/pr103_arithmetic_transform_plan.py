@@ -41,6 +41,7 @@ except ImportError:  # pragma: no cover
 PLAN_SCHEMA = "pr103_arithmetic_transform_plan_v1"
 RETARGET_SCHEMA = "pr103_arithmetic_retarget_probe_v1"
 COORDINATE_SCHEMA = "pr103_arithmetic_histogram_coordinate_probe_v1"
+BEAM_SCHEMA = "pr103_arithmetic_histogram_beam_probe_v1"
 DEFAULT_STRATEGY = "retarget_categorical_model_to_decoded_symbols"
 
 
@@ -390,49 +391,30 @@ def build_pr103_arithmetic_histogram_coordinate_probe(
                 continue
             weights = base_target_weights.copy()
             weights[symbol] = np.uint8(new_weight)
-            model_weights = [np.asarray(item).copy() for item in source_model_weights]
-            model_weights[target_index] = weights
-            merged = encode_pr103_merged_ac_stream(source_symbol_streams, model_weights)
-            changed_histograms = histograms.copy()
-            changed_histograms[target_index] = weights
-            changed_histogram_raw = changed_histograms.astype(np.uint8).tobytes()
-            changed_histogram_blob = brotli.compress(changed_histogram_raw, quality=11)
-            merged_delta = len(merged) - len(source_merged)
-            histogram_delta = len(changed_histogram_blob) - len(source_histogram_blob)
-            total_delta = merged_delta + histogram_delta
             candidate_rows.append(
-                {
-                    "symbol": symbol,
-                    "symbol_count": int(counts[symbol]),
-                    "delta": int(delta),
-                    "old_weight": old_weight,
-                    "new_weight": new_weight,
-                    "merged_ac_bytes": len(merged),
-                    "merged_ac_sha256": sha256_bytes(merged),
-                    "merged_ac_delta": merged_delta,
-                    "histogram_brotli_bytes": len(changed_histogram_blob),
-                    "histogram_brotli_sha256": sha256_bytes(changed_histogram_blob),
-                    "histogram_brotli_delta": histogram_delta,
-                    "histogram_raw_sha256": sha256_bytes(changed_histogram_raw),
-                    "estimated_member_delta_if_runtime_adapter_supported": total_delta,
-                    "estimated_rate_score_delta_if_components_unchanged": (
-                        float(total_delta) * RATE_SCORE_PER_BYTE
-                    ),
-                    "no_op": merged == source_merged and changed_histogram_raw == source_histogram_raw,
-                    "score_claim": False,
-                    "dispatch_attempted": False,
-                    "ready_for_exact_eval_dispatch": False,
-                }
+                _public_candidate_row(
+                    _score_histogram_candidate(
+                        weights=weights,
+                        histograms=histograms,
+                        target_index=target_index,
+                        source_symbol_streams=source_symbol_streams,
+                        source_model_weights=source_model_weights,
+                        source_merged=source_merged,
+                        source_histogram_blob=source_histogram_blob,
+                        moves=[
+                            {
+                                "round": 1,
+                                "symbol": symbol,
+                                "symbol_count": int(counts[symbol]),
+                                "delta": int(delta),
+                                "old_weight": old_weight,
+                                "new_weight": new_weight,
+                            }
+                        ],
+                    )
+                )
             )
-    candidate_rows.sort(
-        key=lambda row: (
-            int(row["estimated_member_delta_if_runtime_adapter_supported"]),
-            int(row["merged_ac_delta"]),
-            int(row["histogram_brotli_delta"]),
-            int(row["symbol"]),
-            int(row["delta"]),
-        )
-    )
+    candidate_rows.sort(key=_candidate_sort_key)
     best = candidate_rows[0] if candidate_rows else {}
     proof_blockers = []
     if context["decoder_maybe_exhausted"] is not True:
@@ -514,6 +496,220 @@ def build_pr103_arithmetic_histogram_coordinate_probe(
         "readiness_blockers": blockers,
         "dispatch_blockers": [
             "pr103_arithmetic_histogram_coordinate_probe_is_not_dispatch_authorization",
+            *blockers,
+        ],
+    }
+
+
+def build_pr103_arithmetic_histogram_beam_probe(
+    *,
+    schema_manifest: str | Path | Mapping[str, Any],
+    source_archive: str | Path | None = None,
+    target_label: str | None = None,
+    target_rank: int | None = None,
+    top_symbols: int = 16,
+    deltas: Sequence[int] = (-2, -1, 1, 2),
+    rounds: int = 3,
+    beam_width: int = 8,
+    repo_root: str | Path | None = None,
+    layout: Pr103LcAcLayout = PUBLIC_PR103_LAYOUT,
+    stream_specs: Sequence[tuple[str, int, int | None]] = AC_STREAM_SPECS,
+    hi_symbol_count: int = HI_SYMBOL_COUNT,
+) -> dict[str, Any]:
+    """Run a deterministic local beam search over q8 histogram coordinates."""
+
+    if rounds <= 0:
+        raise Pr103ArithmeticTransformPlanError("rounds must be positive")
+    if beam_width <= 0:
+        raise Pr103ArithmeticTransformPlanError("beam_width must be positive")
+    if top_symbols <= 0:
+        raise Pr103ArithmeticTransformPlanError("top_symbols must be positive")
+    if not deltas:
+        raise Pr103ArithmeticTransformPlanError("at least one coordinate delta is required")
+    context = _load_pr103_retarget_context(
+        schema_manifest=schema_manifest,
+        source_archive=source_archive,
+        target_label=target_label,
+        target_rank=target_rank,
+        repo_root=repo_root,
+        layout=layout,
+        stream_specs=stream_specs,
+        hi_symbol_count=hi_symbol_count,
+    )
+    repo = context["repo"]
+    manifest = context["manifest"]
+    manifest_record = context["manifest_record"]
+    target = context["target"]
+    archive_path = context["archive_path"]
+    source = context["source"]
+    histograms = context["histograms"]
+    source_merged = context["source_merged"]
+    source_histogram_blob = context["source_histogram_blob"]
+    source_symbol_streams = context["source_symbol_streams"]
+    source_model_weights = context["source_model_weights"]
+    source_roundtrip = context["source_roundtrip"]
+    target_index = context["target_index"]
+    target_record = dict(context["target_record"])
+    expected_symbol_sha = str(context["expected_symbol_sha"])
+    observed_symbol_sha = str(context["observed_symbol_sha"])
+    source_roundtrip_identical = bool(context["source_roundtrip_identical"])
+    manifest_blockers = list(context["manifest_blockers"])
+    if target_index >= len(histograms):
+        raise Pr103ArithmeticTransformPlanError(
+            "latent_hi_bytes beam probe is not supported by the q8 AC histogram probe"
+        )
+
+    base_target_weights = np.asarray(source_model_weights[target_index], dtype=np.uint8)
+    target_symbols = np.asarray(source_symbol_streams[target_index], dtype=np.int64)
+    counts = np.bincount(target_symbols.reshape(-1), minlength=base_target_weights.size)
+    candidate_symbols = [
+        int(symbol)
+        for symbol in sorted(
+            np.nonzero(counts)[0].tolist(),
+            key=lambda symbol: (-int(counts[int(symbol)]), int(symbol)),
+        )[:top_symbols]
+    ]
+
+    base_row = _score_histogram_candidate(
+        weights=base_target_weights,
+        histograms=histograms,
+        target_index=target_index,
+        source_symbol_streams=source_symbol_streams,
+        source_model_weights=source_model_weights,
+        source_merged=source_merged,
+        source_histogram_blob=source_histogram_blob,
+        moves=[],
+    )
+    beam = [base_row]
+    seen = {str(base_row["histogram_raw_sha256"])}
+    all_rows: list[dict[str, Any]] = []
+    for round_index in range(1, rounds + 1):
+        expanded: list[dict[str, Any]] = []
+        for state in beam:
+            state_weights = np.asarray(state["_weights"], dtype=np.uint8)
+            for symbol in candidate_symbols:
+                old_weight = int(state_weights[symbol])
+                for delta in deltas:
+                    new_weight = old_weight + int(delta)
+                    if new_weight < 0 or new_weight > 255 or new_weight == old_weight:
+                        continue
+                    weights = state_weights.copy()
+                    weights[symbol] = np.uint8(new_weight)
+                    row = _score_histogram_candidate(
+                        weights=weights,
+                        histograms=histograms,
+                        target_index=target_index,
+                        source_symbol_streams=source_symbol_streams,
+                        source_model_weights=source_model_weights,
+                        source_merged=source_merged,
+                        source_histogram_blob=source_histogram_blob,
+                        moves=[
+                            *list(state.get("moves") or []),
+                            {
+                                "round": round_index,
+                                "symbol": symbol,
+                                "symbol_count": int(counts[symbol]),
+                                "delta": int(delta),
+                                "old_weight": old_weight,
+                                "new_weight": new_weight,
+                            },
+                        ],
+                    )
+                    key = str(row["histogram_raw_sha256"])
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    expanded.append(row)
+        expanded.sort(key=_candidate_sort_key)
+        all_rows.extend(expanded)
+        beam = expanded[:beam_width]
+        if not beam:
+            break
+    all_rows.sort(key=_candidate_sort_key)
+    best = all_rows[0] if all_rows else {}
+    proof_blockers = []
+    if context["decoder_maybe_exhausted"] is not True:
+        proof_blockers.append("source_merged_range_decoder_not_exhausted")
+    if not source_roundtrip_identical:
+        proof_blockers.append("source_merged_stream_roundtrip_not_byte_identical")
+    if expected_symbol_sha and expected_symbol_sha != observed_symbol_sha:
+        proof_blockers.append("target_decoded_symbols_sha_mismatch")
+    if not all_rows:
+        proof_blockers.append("beam_probe_no_candidates")
+    elif int(best.get("estimated_member_delta_if_runtime_adapter_supported", 0)) >= 0:
+        proof_blockers.append("no_byte_positive_histogram_beam_candidate")
+    blockers = _unique_ordered(
+        [
+            *manifest_blockers,
+            *proof_blockers,
+            "candidate_archive_missing",
+            "candidate_runtime_adapter_missing",
+            "candidate_inflate_output_parity_missing",
+            "strict_pre_submission_compliance_json_missing",
+            "lane_dispatch_claim_missing",
+            "exact_cuda_auth_eval_missing",
+        ]
+    )
+    return {
+        "schema": BEAM_SCHEMA,
+        "proposal_id": _proposal_id(
+            _mapping(manifest.get("source_archive")),
+            target,
+            f"beam_probe:top{top_symbols}:rounds{rounds}:beam{beam_width}",
+        ),
+        "planning_only": True,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "gpu_required": False,
+        "ready_for_archive_preflight": False,
+        "ready_for_exact_eval_dispatch": False,
+        "source_schema_manifest": manifest_record,
+        "source_archive": {
+            "path": repo_relative(archive_path, repo),
+            "bytes": source.archive_bytes,
+            "sha256": source.archive_sha256,
+            "member_name": source.member_name,
+            "member_bytes": source.member_bytes,
+            "member_sha256": sha256_bytes(source.payload),
+        },
+        "target_stream": {
+            **_target_record(target),
+            "decoded_stream_index": target_index,
+            "observed_decoded_symbols_sha256": observed_symbol_sha,
+        },
+        "search_config": {
+            "mode": "beam_search",
+            "top_symbols": int(top_symbols),
+            "deltas": [int(delta) for delta in deltas],
+            "rounds": int(rounds),
+            "beam_width": int(beam_width),
+            "candidate_symbol_count": len(candidate_symbols),
+            "evaluated_candidate_count": len(all_rows),
+            "objective": "minimize_merged_ac_delta_plus_ac_histograms_brotli_delta",
+        },
+        "source_roundtrip": {
+            "merged_ac_bytes": len(source_merged),
+            "merged_ac_sha256": sha256_bytes(source_merged),
+            "reencoded_bytes": len(source_roundtrip),
+            "reencoded_sha256": sha256_bytes(source_roundtrip),
+            "byte_identical": source_roundtrip_identical,
+            "decoder_maybe_exhausted": context["decoder_maybe_exhausted"] is True,
+        },
+        "best_candidate": _public_candidate_row(best),
+        "top_candidates": [_public_candidate_row(row) for row in all_rows[:20]],
+        "byte_accounting": {
+            "estimate_is_score_claim": False,
+            "fixed_layout_requires_runtime_adapter": True,
+            "caveats": [
+                "archive_not_emitted",
+                "runtime_adapter_not_integrated",
+                "fixed_pr103_section_lengths_do_not_accept_changed_merged_ac_bytes",
+                "component_distortion_unknown_until_exact_cuda",
+            ],
+        },
+        "readiness_blockers": blockers,
+        "dispatch_blockers": [
+            "pr103_arithmetic_histogram_beam_probe_is_not_dispatch_authorization",
             *blockers,
         ],
     }
@@ -636,6 +832,64 @@ def render_coordinate_markdown(report: Mapping[str, Any]) -> str:
         "## Blockers",
         "",
     ]
+    for blocker in report.get("readiness_blockers") or []:
+        lines.append(f"- `{blocker}`")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def render_beam_markdown(report: Mapping[str, Any]) -> str:
+    """Render a compact review note for a histogram beam-search probe."""
+
+    target = _mapping(report.get("target_stream"))
+    search = _mapping(report.get("search_config"))
+    best = _mapping(report.get("best_candidate"))
+    moves = best.get("moves") if isinstance(best.get("moves"), Sequence) else []
+    lines = [
+        "# PR103 Arithmetic Histogram Beam Probe",
+        "",
+        f"- proposal_id: `{report.get('proposal_id')}`",
+        f"- score_claim: `{_bool(report.get('score_claim') is True)}`",
+        f"- dispatch_attempted: `{_bool(report.get('dispatch_attempted') is True)}`",
+        f"- ready_for_archive_preflight: `{_bool(report.get('ready_for_archive_preflight') is True)}`",
+        f"- ready_for_exact_eval_dispatch: `{_bool(report.get('ready_for_exact_eval_dispatch') is True)}`",
+        "",
+        "## Target",
+        "",
+        f"- label: `{target.get('label')}`",
+        f"- stream_index: `{target.get('decoded_stream_index')}`",
+        f"- symbols: `{target.get('symbol_count')}`",
+        "",
+        "## Search",
+        "",
+        f"- evaluated_candidate_count: `{search.get('evaluated_candidate_count')}`",
+        f"- candidate_symbol_count: `{search.get('candidate_symbol_count')}`",
+        f"- top_symbols: `{search.get('top_symbols')}`",
+        f"- rounds: `{search.get('rounds')}`",
+        f"- beam_width: `{search.get('beam_width')}`",
+        f"- deltas: `{search.get('deltas')}`",
+        "",
+        "## Best Candidate",
+        "",
+        f"- change_count: `{best.get('change_count')}`",
+        f"- merged_ac_delta: `{best.get('merged_ac_delta')}`",
+        f"- histogram_brotli_delta: `{best.get('histogram_brotli_delta')}`",
+        f"- estimated_member_delta_if_runtime_adapter_supported: `{best.get('estimated_member_delta_if_runtime_adapter_supported')}`",
+        "",
+        "## Moves",
+        "",
+    ]
+    for move in moves:
+        row = _mapping(move)
+        lines.append(
+            "- "
+            f"round `{row.get('round')}` symbol `{row.get('symbol')}` "
+            f"delta `{row.get('delta')}` old `{row.get('old_weight')}` "
+            f"new `{row.get('new_weight')}` count `{row.get('symbol_count')}`"
+        )
+    if not moves:
+        lines.append("- none")
+    lines.extend(["", "## Blockers", ""])
     for blocker in report.get("readiness_blockers") or []:
         lines.append(f"- `{blocker}`")
     lines.append("")
@@ -915,6 +1169,72 @@ def _retarget_weights_for_symbols(
     return np.clip(weights, 0, 255).astype(np.uint8)
 
 
+def _score_histogram_candidate(
+    *,
+    weights: np.ndarray,
+    histograms: np.ndarray,
+    target_index: int,
+    source_symbol_streams: Sequence[np.ndarray],
+    source_model_weights: Sequence[np.ndarray],
+    source_merged: bytes,
+    source_histogram_blob: bytes,
+    moves: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    changed_weights = np.asarray(weights, dtype=np.uint8).copy()
+    model_weights = [np.asarray(item).copy() for item in source_model_weights]
+    model_weights[target_index] = changed_weights
+    merged = encode_pr103_merged_ac_stream(source_symbol_streams, model_weights)
+    changed_histograms = np.asarray(histograms, dtype=np.uint8).copy()
+    changed_histograms[target_index] = changed_weights
+    changed_histogram_raw = changed_histograms.astype(np.uint8).tobytes()
+    changed_histogram_blob = brotli.compress(changed_histogram_raw, quality=11)
+    merged_delta = len(merged) - len(source_merged)
+    histogram_delta = len(changed_histogram_blob) - len(source_histogram_blob)
+    total_delta = merged_delta + histogram_delta
+    move_rows = [dict(move) for move in moves]
+    row: dict[str, Any] = {
+        "moves": move_rows,
+        "change_count": len(move_rows),
+        "merged_ac_bytes": len(merged),
+        "merged_ac_sha256": sha256_bytes(merged),
+        "merged_ac_delta": merged_delta,
+        "histogram_brotli_bytes": len(changed_histogram_blob),
+        "histogram_brotli_sha256": sha256_bytes(changed_histogram_blob),
+        "histogram_brotli_delta": histogram_delta,
+        "histogram_raw_sha256": sha256_bytes(changed_histogram_raw),
+        "estimated_member_delta_if_runtime_adapter_supported": total_delta,
+        "estimated_rate_score_delta_if_components_unchanged": (
+            float(total_delta) * RATE_SCORE_PER_BYTE
+        ),
+        "no_op": merged == source_merged
+        and changed_histogram_raw == np.asarray(histograms, dtype=np.uint8).tobytes(),
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "_weights": changed_weights,
+    }
+    if move_rows:
+        last = move_rows[-1]
+        for key in ("symbol", "symbol_count", "delta", "old_weight", "new_weight"):
+            row[key] = last.get(key)
+    return row
+
+
+def _candidate_sort_key(row: Mapping[str, Any]) -> tuple[int, int, int, int, str]:
+    moves = row.get("moves")
+    return (
+        int(row.get("estimated_member_delta_if_runtime_adapter_supported") or 0),
+        int(row.get("merged_ac_delta") or 0),
+        int(row.get("histogram_brotli_delta") or 0),
+        len(moves) if isinstance(moves, Sequence) else 0,
+        str(row.get("histogram_raw_sha256") or ""),
+    )
+
+
+def _public_candidate_row(row: Mapping[str, Any]) -> dict[str, Any]:
+    return {str(key): value for key, value in row.items() if not str(key).startswith("_")}
+
+
 def _schema_manifest_blockers(
     manifest: Mapping[str, Any],
     merged: Mapping[str, Any],
@@ -983,13 +1303,16 @@ def _bool(value: bool) -> str:
 __all__ = [
     "DEFAULT_STRATEGY",
     "COORDINATE_SCHEMA",
+    "BEAM_SCHEMA",
     "PLAN_SCHEMA",
     "RETARGET_SCHEMA",
     "Pr103ArithmeticTransformPlanError",
     "TransformTargetSelection",
+    "build_pr103_arithmetic_histogram_beam_probe",
     "build_pr103_arithmetic_histogram_coordinate_probe",
     "build_pr103_arithmetic_retarget_probe",
     "build_pr103_arithmetic_transform_plan",
+    "render_beam_markdown",
     "render_coordinate_markdown",
     "render_markdown",
     "render_retarget_markdown",

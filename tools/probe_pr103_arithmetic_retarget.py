@@ -18,8 +18,10 @@ ensure_repo_imports(REPO_ROOT)
 from tac.pr103_arithmetic_transform_plan import (  # noqa: E402
     DEFAULT_STRATEGY,
     Pr103ArithmeticTransformPlanError,
+    build_pr103_arithmetic_histogram_beam_probe,
     build_pr103_arithmetic_histogram_coordinate_probe,
     build_pr103_arithmetic_retarget_probe,
+    render_beam_markdown,
     render_coordinate_markdown,
     render_retarget_markdown,
 )
@@ -41,14 +43,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--strategy", default=DEFAULT_STRATEGY)
     parser.add_argument(
         "--probe-mode",
-        choices=("baseline-retarget", "coordinate-search"),
+        choices=("baseline-retarget", "coordinate-search", "beam-search"),
         default="baseline-retarget",
     )
     parser.add_argument("--top-symbols", type=int, default=32)
+    parser.add_argument("--rounds", type=int, default=3)
+    parser.add_argument("--beam-width", type=int, default=8)
     parser.add_argument(
         "--deltas",
         default="-2,-1,1,2",
-        help="Comma-separated q8 weight deltas for coordinate-search mode.",
+        help="Comma-separated q8 weight deltas for coordinate and beam search modes.",
     )
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--md-out", type=Path)
@@ -68,7 +72,20 @@ def main(argv: list[str] | None = None) -> int:
         *([args.source_archive] if args.source_archive is not None else []),
     ]
     try:
-        if args.probe_mode == "coordinate-search":
+        if args.probe_mode == "beam-search":
+            report = build_pr103_arithmetic_histogram_beam_probe(
+                schema_manifest=args.schema_manifest,
+                source_archive=args.source_archive,
+                target_label=args.target_label,
+                target_rank=args.target_rank,
+                top_symbols=args.top_symbols,
+                deltas=_parse_deltas(args.deltas),
+                rounds=args.rounds,
+                beam_width=args.beam_width,
+                repo_root=REPO_ROOT,
+            )
+            renderer = render_beam_markdown
+        elif args.probe_mode == "coordinate-search":
             report = build_pr103_arithmetic_histogram_coordinate_probe(
                 schema_manifest=args.schema_manifest,
                 source_archive=args.source_archive,

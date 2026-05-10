@@ -1,0 +1,631 @@
+{
+  "failed_count": 0,
+  "hot_steps": [
+    {
+      "elapsed_s": 2.157993,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "tooling consolidation inventory",
+      "number": 8,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 2.026717,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "dispatch CLI/shell hazards",
+      "number": 0,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 1.262242,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "semantic-label contract",
+      "number": 3,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 1.203657,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "untracked source inventory",
+      "number": 10,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.711103,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "PR91 HPM1 fail-closed custody",
+      "number": 19,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.597576,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "release index/worktree split",
+      "number": 15,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.593638,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "eval loader drift diagnostic",
+      "number": 22,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.574187,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "A2 packet ladder closure",
+      "number": 23,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.563198,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "staged public release hygiene",
+      "number": 17,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.561593,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "engineered-correction readiness",
+      "number": 5,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.401681,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "HNeRV low-level repack proof",
+      "number": 7,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.243512,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "Modal image build order",
+      "number": 25,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.20837,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "reverse-engineering release manifest",
+      "number": 14,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.206631,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "reverse-engineering tree curation",
+      "number": 1,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.146637,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "nested gitlink custody",
+      "number": 16,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.146492,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "orphan recovery canonicalization",
+      "number": 11,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.088423,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "hidden-gem registry",
+      "number": 2,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.083239,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "hidden-gem readiness",
+      "number": 4,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.080957,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "HNeRV frontier scorecard",
+      "number": 6,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.058552,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "PR106 sidechannels (latent/yshift/LRL1/stacked)",
+      "number": 3,
+      "passed": true,
+      "section": "LANE"
+    },
+    {
+      "elapsed_s": 0.053917,
+      "forensic_only": true,
+      "local_smoke_only": false,
+      "name": "apogee_intN (PR106 HNeRV signed-intN block-FP; forensic-only)",
+      "number": 1,
+      "passed": true,
+      "section": "LANE"
+    },
+    {
+      "elapsed_s": 0.050708,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "recovery custody snapshots",
+      "number": 13,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.048502,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "recovered remote lane canonicalization",
+      "number": 9,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.043667,
+      "forensic_only": false,
+      "local_smoke_only": true,
+      "name": "Lane \u03a9-W-V3 (water-fill v2 \u2192 PR106 HNeRV decoder)",
+      "number": 2,
+      "passed": true,
+      "section": "LANE"
+    },
+    {
+      "elapsed_s": 0.038189,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "frontier monolithic archive layout",
+      "number": 20,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.03688,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "cross-paradigm frontier inventory",
+      "number": 18,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.034722,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "preserved-orphan canonicalization",
+      "number": 12,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.032242,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "Omega-OPT anchor discipline",
+      "number": 21,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.028938,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "Phase A post-green custody discoverability",
+      "number": 24,
+      "passed": true,
+      "section": "GATE"
+    }
+  ],
+  "max_workers": 8,
+  "parallel_speedup_estimate": 5.474858,
+  "passed_count": 29,
+  "schema": "pact.all_lanes_preflight_timing.v1",
+  "serial_elapsed_s": 12.284164,
+  "slow_step_count": 10,
+  "slow_step_threshold_s": 0.5,
+  "slow_steps": [
+    {
+      "elapsed_s": 2.157993,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "tooling consolidation inventory",
+      "number": 8,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 2.026717,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "dispatch CLI/shell hazards",
+      "number": 0,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 1.262242,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "semantic-label contract",
+      "number": 3,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 1.203657,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "untracked source inventory",
+      "number": 10,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.711103,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "PR91 HPM1 fail-closed custody",
+      "number": 19,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.597576,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "release index/worktree split",
+      "number": 15,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.593638,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "eval loader drift diagnostic",
+      "number": 22,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.574187,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "A2 packet ladder closure",
+      "number": 23,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.563198,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "staged public release hygiene",
+      "number": 17,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.561593,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "engineered-correction readiness",
+      "number": 5,
+      "passed": true,
+      "section": "GATE"
+    }
+  ],
+  "slowest_step_elapsed_s": 2.157993,
+  "step_count": 29,
+  "steps": [
+    {
+      "elapsed_s": 2.026717,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "dispatch CLI/shell hazards",
+      "number": 0,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.206631,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "reverse-engineering tree curation",
+      "number": 1,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.088423,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "hidden-gem registry",
+      "number": 2,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 1.262242,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "semantic-label contract",
+      "number": 3,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.083239,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "hidden-gem readiness",
+      "number": 4,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.561593,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "engineered-correction readiness",
+      "number": 5,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.080957,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "HNeRV frontier scorecard",
+      "number": 6,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.401681,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "HNeRV low-level repack proof",
+      "number": 7,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 2.157993,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "tooling consolidation inventory",
+      "number": 8,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.048502,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "recovered remote lane canonicalization",
+      "number": 9,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 1.203657,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "untracked source inventory",
+      "number": 10,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.146492,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "orphan recovery canonicalization",
+      "number": 11,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.034722,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "preserved-orphan canonicalization",
+      "number": 12,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.050708,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "recovery custody snapshots",
+      "number": 13,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.20837,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "reverse-engineering release manifest",
+      "number": 14,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.597576,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "release index/worktree split",
+      "number": 15,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.146637,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "nested gitlink custody",
+      "number": 16,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.563198,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "staged public release hygiene",
+      "number": 17,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.03688,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "cross-paradigm frontier inventory",
+      "number": 18,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.711103,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "PR91 HPM1 fail-closed custody",
+      "number": 19,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.038189,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "frontier monolithic archive layout",
+      "number": 20,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.032242,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "Omega-OPT anchor discipline",
+      "number": 21,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.593638,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "eval loader drift diagnostic",
+      "number": 22,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.574187,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "A2 packet ladder closure",
+      "number": 23,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.028938,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "Phase A post-green custody discoverability",
+      "number": 24,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.243512,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "Modal image build order",
+      "number": 25,
+      "passed": true,
+      "section": "GATE"
+    },
+    {
+      "elapsed_s": 0.053917,
+      "forensic_only": true,
+      "local_smoke_only": false,
+      "name": "apogee_intN (PR106 HNeRV signed-intN block-FP; forensic-only)",
+      "number": 1,
+      "passed": true,
+      "section": "LANE"
+    },
+    {
+      "elapsed_s": 0.043667,
+      "forensic_only": false,
+      "local_smoke_only": true,
+      "name": "Lane \u03a9-W-V3 (water-fill v2 \u2192 PR106 HNeRV decoder)",
+      "number": 2,
+      "passed": true,
+      "section": "LANE"
+    },
+    {
+      "elapsed_s": 0.058552,
+      "forensic_only": false,
+      "local_smoke_only": false,
+      "name": "PR106 sidechannels (latent/yshift/LRL1/stacked)",
+      "number": 3,
+      "passed": true,
+      "section": "LANE"
+    }
+  ],
+  "wall_elapsed_s": 2.243741
+}

@@ -12,10 +12,12 @@ from tac.hnerv_pr103_lc_ac_schema import (
     encode_pr103_merged_ac_stream,
 )
 from tac.pr103_arithmetic_transform_plan import (
+    BEAM_SCHEMA,
     COORDINATE_SCHEMA,
     PLAN_SCHEMA,
     RETARGET_SCHEMA,
     Pr103ArithmeticTransformPlanError,
+    build_pr103_arithmetic_histogram_beam_probe,
     build_pr103_arithmetic_histogram_coordinate_probe,
     build_pr103_arithmetic_retarget_probe,
     build_pr103_arithmetic_transform_plan,
@@ -161,6 +163,33 @@ def test_pr103_arithmetic_histogram_coordinate_probe_searches_changed_weights(
     assert best["new_weight"] != best["old_weight"]
     assert "merged_ac_delta" in best
     assert "histogram_brotli_delta" in best
+    assert "candidate_runtime_adapter_missing" in report["readiness_blockers"]
+
+
+def test_pr103_arithmetic_histogram_beam_probe_composes_coordinate_changes(
+    tmp_path: Path,
+) -> None:
+    fixture = _probe_fixture(tmp_path)
+
+    report = build_pr103_arithmetic_histogram_beam_probe(
+        schema_manifest=fixture["manifest"],
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+        top_symbols=2,
+        deltas=(-1, 1),
+        rounds=2,
+        beam_width=2,
+    )
+
+    assert report["schema"] == BEAM_SCHEMA
+    assert report["score_claim"] is False
+    assert report["ready_for_archive_preflight"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["search_config"]["evaluated_candidate_count"] > 0
+    assert report["best_candidate"]["change_count"] >= 1
+    assert report["best_candidate"]["moves"]
     assert "candidate_runtime_adapter_missing" in report["readiness_blockers"]
 
 
