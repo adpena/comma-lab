@@ -265,6 +265,73 @@ Wire-in declaration:
 - Probe-disambiguator: N/A - single policy-preserving interpretation; parity
   tests compare SourceIndex and no-index behavior.
 
+## 2026-05-10 all-lanes wall-clock drop: A2 single-walk gate
+
+<!-- generated_at: 2026-05-10T14:19:00Z -->
+<!-- evidence_grade: local_dev_correctness_and_performance; no dispatch; no score claim -->
+
+Scope: reduce all-lanes preflight wall time while a score-bearing T1 Modal job
+is in flight. No archive bytes, scorer code, or dispatch state changed.
+
+Change:
+
+- `tools/audit_a2_packet_ladder_closure.py::_local_manifest_paths()` now scans
+  `experiments/results/` once with `os.walk()` and filename filters instead of
+  four separate recursive `Path.glob()` passes.
+- The later JSON parse, `_looks_a2()`, no-score authority checks, blocker
+  inheritance checks, and exact/ignored artifact coverage are unchanged.
+
+Timing evidence:
+
+```bash
+.venv/bin/python tools/all_lanes_preflight.py --jobs 8 --timings
+# before A2 single-walk patch:
+# wall=3.39s; serial_sum=11.98s; Gate #23 A2 packet ladder closure=2.72s
+
+/usr/bin/time -p .venv/bin/python tools/audit_a2_packet_ladder_closure.py \
+  --strict --json-out /tmp/a2_audit_fast.json
+# standalone A2 audit: real 0.43s
+
+.venv/bin/python tools/all_lanes_preflight.py --jobs 8 --timings
+# after:
+# wall=1.65s; serial_sum=9.51s; Gate #23 A2 packet ladder closure=0.59s
+```
+
+Rejected attempt:
+
+- A threadpool inside `tools/audit_untracked_source_artifacts.py` made the
+  runtime-source baseline slower on this filesystem (`real 1.34s` serial vs
+  `real 1.64s` threaded), so that patch was reverted. This is a useful
+  anti-pattern: not every scan wants internal parallelism when all-lanes
+  already runs gates concurrently and the files are many small local entries.
+
+Verification:
+
+```bash
+.venv/bin/python -m pytest src/tac/tests/test_audit_a2_packet_ladder_closure.py -q
+# 6 passed in 0.17s
+
+.venv/bin/python tools/all_lanes_preflight.py --jobs 8 --timings
+# ALL 29 PREFLIGHT CHECKS PASSED
+```
+
+Residual top bottlenecks:
+
+1. Gate #10 untracked source inventory: ~1.6s, dominated by strict custody
+   hashing and source-like filesystem walk.
+2. Gate #19 PR91/HPM1 readiness/runtime contract: ~1.1s.
+3. Gate #8 tooling consolidation inventory: ~0.9s.
+
+Wire-in declaration:
+
+- Sensitivity-map contribution: N/A - preflight DX only.
+- Pareto constraint: N/A - no archive candidate or rate/distortion bound
+  changed.
+- Bit-allocator hook: N/A.
+- Cathedral autopilot dispatch hook: N/A - faster local gate only.
+- Continual-learning posterior update: N/A - no empirical score anchor.
+ 
+
 ## 2026-05-10 Public-PR and dispatch-hazard hot scan reduction
 
 <!-- generated_at: 2026-05-10T13:45:00Z -->
