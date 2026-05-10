@@ -9,6 +9,7 @@ and runtime custody gate proves that the candidate can enter the canonical
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import math
 import os
@@ -22,6 +23,7 @@ from tac.zipwire_archive import inspect_zip_headers
 
 QUEUE_SCHEMA = "optimizer_candidate_exact_eval_ready_queue_v1"
 TOOL_NAME = "tools/promote_optimizer_candidate_for_exact_eval.py"
+PR101_RUNTIME_CONSUMPTION_PROOF_SCHEMA = "pr101_kaggle_proxy_runtime_consumption_proof_v1"
 ACTIVE_FLOOR_ARCHIVE_BYTES = 185_578
 ACTIVE_FLOOR_SCORE = 0.2089810755823297
 SHA256_HEX = frozenset("0123456789abcdef")
@@ -434,9 +436,20 @@ def active_claim_conflicts(
 
 
 def runtime_dependency_manifest(submission_dir: Path, repo_root: Path) -> dict[str, Any]:
-    from experiments.contest_auth_eval import _runtime_dependency_manifest
+    module_path = repo_root / "experiments" / "contest_auth_eval.py"
+    if not module_path.is_file():
+        module_path = Path(__file__).resolve().parents[3] / "experiments" / "contest_auth_eval.py"
+    spec = importlib.util.spec_from_file_location(
+        "pact_exact_readiness_contest_auth_eval",
+        module_path,
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"could not load contest_auth_eval from {module_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    runtime_manifest_fn = getattr(module, "_runtime_dependency_manifest")
 
-    return _runtime_dependency_manifest(
+    return runtime_manifest_fn(
         submission_dir / "inflate.sh",
         repo_root / "upstream",
         repo_root=repo_root,
@@ -444,11 +457,80 @@ def runtime_dependency_manifest(submission_dir: Path, repo_root: Path) -> dict[s
 
 
 def default_manifest_path(submission_dir: Path) -> Path:
-    for name in ("archive_manifest.json", "manifest.json"):
+    for name in ("archive_manifest.json", "manifest.json", "runtime_packet_manifest.json"):
         candidate = submission_dir / name
         if candidate.is_file():
             return candidate
     return submission_dir / "archive_manifest.json"
+
+
+def validate_runtime_consumption_proof(
+    row: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    queue_dir: Path | None,
+    submission_dir: Path | None,
+    archive_sha256: str | None,
+) -> tuple[list[str], dict[str, Any]]:
+    required = row.get("runtime_consumption_proof_required") is True
+    status = row.get("runtime_consumption_proof_status")
+    proof_ref = row.get("runtime_consumption_proof_path")
+    if not required and status is None and proof_ref is None:
+        return [], {}
+
+    blockers: list[str] = []
+    facts: dict[str, Any] = {
+        "runtime_consumption_proof_required": required,
+        "runtime_consumption_proof_status": status,
+    }
+    if status != "present":
+        blockers.append("runtime_consumption_proof_missing")
+
+    proof_path = resolve_path(proof_ref, repo_root=repo_root, queue_dir=queue_dir)
+    if proof_path is None and submission_dir is not None:
+        proof_path = submission_dir / "runtime_consumption_proof.json"
+    facts["runtime_consumption_proof_path"] = proof_path
+    if proof_path is None or not proof_path.is_file():
+        blockers.append("runtime_consumption_proof_file_missing")
+        return blockers, facts
+
+    try:
+        proof_raw = read_json(proof_path)
+    except (OSError, json.JSONDecodeError) as exc:
+        blockers.append(f"runtime_consumption_proof_json_invalid:{exc}")
+        return blockers, facts
+    if not isinstance(proof_raw, dict):
+        blockers.append("runtime_consumption_proof_not_object")
+        return blockers, facts
+
+    facts["runtime_consumption_proof_schema"] = proof_raw.get("schema")
+    facts["runtime_consumption_proof_sha256"] = sha256_file(proof_path)
+    if proof_raw.get("schema") == PR101_RUNTIME_CONSUMPTION_PROOF_SCHEMA:
+        if proof_raw.get("runtime_consumption_proven_for_supported_bias_params") is not True:
+            blockers.append("runtime_consumption_proof_not_proven")
+        if proof_raw.get("inflate_sh_routes_to_packet_inflate_py") is not True:
+            blockers.append("runtime_consumption_proof_wrapper_route_not_proven")
+        archive_proof = proof_raw.get("archive_unchanged_proof")
+        proof_archive_sha = (
+            archive_proof.get("archive_sha256")
+            if isinstance(archive_proof, Mapping)
+            else None
+        )
+        if archive_sha256 is not None and proof_archive_sha != archive_sha256:
+            blockers.append("runtime_consumption_proof_archive_sha_mismatch")
+        for false_authority_field in (
+            "score_claim",
+            "ready_for_exact_eval_dispatch",
+            "dispatch_attempted",
+        ):
+            if proof_raw.get(false_authority_field) is not False:
+                blockers.append(
+                    f"runtime_consumption_proof_false_authority_violation:{false_authority_field}"
+                )
+    else:
+        blockers.append("runtime_consumption_proof_schema_unsupported")
+
+    return blockers, facts
 
 
 def readiness_blockers(
@@ -615,6 +697,18 @@ def readiness_blockers(
         blockers.append("runtime_tree_sha256_missing")
     facts["runtime_manifest"] = runtime_manifest
 
+    proof_blockers, proof_facts = validate_runtime_consumption_proof(
+        row,
+        repo_root=repo_root,
+        queue_dir=queue_dir,
+        submission_dir=submission_dir,
+        archive_sha256=facts.get("archive_sha256")
+        if isinstance(facts.get("archive_sha256"), str)
+        else None,
+    )
+    blockers.extend(proof_blockers)
+    facts.update(proof_facts)
+
     if (
         active_floor_archive_bytes is not None
         and isinstance(facts.get("archive_bytes"), int)
@@ -698,6 +792,18 @@ def promoted_row(
         "archive_manifest_path": repo_rel(manifest_path, repo_root),
         "runtime_tree_sha256": runtime_manifest["runtime_tree_sha256"],
         "runtime_manifest": runtime_manifest,
+        "runtime_consumption_proof_path": repo_rel(
+            facts["runtime_consumption_proof_path"],
+            repo_root,
+        )
+        if isinstance(facts.get("runtime_consumption_proof_path"), Path)
+        else None,
+        "runtime_consumption_proof_sha256": facts.get(
+            "runtime_consumption_proof_sha256"
+        ),
+        "runtime_consumption_proof_schema": facts.get(
+            "runtime_consumption_proof_schema"
+        ),
         "score_affecting_payload_changed": bool(
             as_bool(source_row.get("score_affecting_payload_changed"))
         ),
@@ -805,6 +911,24 @@ def promote_candidate_for_exact_eval(
             ).get("runtime_tree_sha256")
             if isinstance(facts.get("runtime_manifest"), dict)
             else None,
+            "runtime_consumption_proof_required": facts.get(
+                "runtime_consumption_proof_required"
+            ),
+            "runtime_consumption_proof_status": facts.get(
+                "runtime_consumption_proof_status"
+            ),
+            "runtime_consumption_proof_path": repo_rel(
+                facts["runtime_consumption_proof_path"],
+                repo_root,
+            )
+            if isinstance(facts.get("runtime_consumption_proof_path"), Path)
+            else None,
+            "runtime_consumption_proof_schema": facts.get(
+                "runtime_consumption_proof_schema"
+            ),
+            "runtime_consumption_proof_sha256": facts.get(
+                "runtime_consumption_proof_sha256"
+            ),
             "source_score_fields_stripped": sorted(
                 facts.get("stripped_source_score_fields") or []
             ),

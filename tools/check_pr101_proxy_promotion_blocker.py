@@ -4,7 +4,9 @@
 This checker is deliberately local-only. It joins the PR101 proxy runtime
 packet manifest, the local runtime-consumption proof, the canonical A1 exact
 CUDA anchor, and the inflate op-cost xray. It writes a machine-readable
-checklist and exits nonzero unless the packet has real promotion evidence.
+checklist and exits nonzero by default because a proxy packet is never score
+promotion evidence; at most it can be allowed into the separate exact-readiness
+gate.
 
 No scorers, GPU jobs, remote jobs, or preflight surfaces are invoked.
 """
@@ -58,6 +60,12 @@ REMOVED_UNSUPPORTED_BLOCKERS = (
     "delta_scale_not_runtime_consumed",
     "latent_delta_scale_not_runtime_consumed",
     "smooth_weight_not_runtime_consumed",
+)
+PROMOTION_ONLY_BLOCKERS = frozenset(
+    {
+        "no_candidate_contest_cuda_auth_eval",
+        "proxy_substrate_not_contest_exact_eval",
+    }
 )
 
 
@@ -323,13 +331,19 @@ def build_promotion_blocker_checklist(
     checks.extend(_proxy_contract_checks(manifest, proof))
 
     blockers = [row["blocker"] for row in checks if not row.get("passed") and "blocker" in row]
-    promotable = not blockers
-    verdict = "PROMOTABLE_EXACT_RUNTIME_PACKET" if promotable else "BLOCKED_PROXY_ONLY_NOT_PROMOTABLE"
+    score_promotable = False
+    exact_eval_candidate_allowed_after_readiness_gate = (
+        bool(blockers) and set(blockers).issubset(PROMOTION_ONLY_BLOCKERS)
+    )
+    verdict = "BLOCKED_PROXY_ONLY_NOT_PROMOTABLE"
     checklist: dict[str, Any] = {
         "schema": CHECKLIST_SCHEMA,
         "tool": TOOL_NAME,
         "verdict": verdict,
-        "promotable": promotable,
+        "promotable": score_promotable,
+        "score_promotable": score_promotable,
+        "proxy_packet_exact_readiness_gate_only": exact_eval_candidate_allowed_after_readiness_gate,
+        "exact_eval_candidate_allowed_after_readiness_gate": exact_eval_candidate_allowed_after_readiness_gate,
         "candidate_id": manifest.get("candidate_id", proof.get("candidate_id", "")),
         "score_claim": False,
         "dispatch_attempted": False,
@@ -342,14 +356,17 @@ def build_promotion_blocker_checklist(
         "checks": checks,
         "blockers": blockers,
         "next_exact_eval_candidate": (
-            "none_from_this_proxy_packet"
-            if not promotable
-            else "candidate_requires_claimed_exact_cuda_eval_before_score_claim"
+            "run_optimizer_exact_readiness_gate_then_claim_exact_cuda_eval"
+            if exact_eval_candidate_allowed_after_readiness_gate
+            else "none_from_this_proxy_packet"
         ),
         "blocker_rationale": (
             "A static bias patch plus wrapper-route plus tiny no-scorer runtime-bias "
             "probe is useful runtime-consumption evidence, but it is not scorer-backed "
-            "output validation and not a contest-CUDA auth eval."
+            "output validation and not a contest-CUDA auth eval. This checker blocks "
+            "promotion/score authority; no path in this checker marks a proxy packet "
+            "as score-promotable. The optimizer exact-readiness gate is the separate "
+            "handoff used to prepare a byte-closed packet for claimed exact eval."
         ),
     }
     return checklist

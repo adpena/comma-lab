@@ -88,6 +88,12 @@ class KaggleCheckTests(unittest.TestCase):
         self.assertIn("TIMEOUT", mod.format_status(status))
         self.assertTrue(mod.is_error_status(status))
 
+    def test_pr101_proxy_sweep_is_in_default_status_watchlist(self) -> None:
+        mod = load_module()
+
+        self.assertIn("adpena/pr101-proxy-sweep", mod.KERNEL_SLUGS)
+        self.assertIn("adpena/pr101-bias-refine", mod.KERNEL_SLUGS)
+
 
 if __name__ == "__main__":
     unittest.main()

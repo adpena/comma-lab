@@ -99,6 +99,33 @@ def test_builds_private_gpu_kernel_and_proxy_contract(tmp_path: Path) -> None:
     assert result.claim_dry_run_command == manifest["claim_command_dry_run"]
 
 
+def test_builds_bias_refine_profile_with_runtime_consumed_param_schema(tmp_path: Path) -> None:
+    tool = load_tool()
+    kernel_dir = tmp_path / "bias_kernel"
+
+    result = tool.build_kernel(
+        profile_name="pr101_bias_refine",
+        kernel_dir=kernel_dir,
+        owner="adpena",
+        agent="codex:test",
+    )
+
+    metadata = json.loads((kernel_dir / "kernel-metadata.json").read_text())
+    manifest = json.loads((kernel_dir / "proxy_sweep_build_manifest.json").read_text())
+
+    assert metadata["id"] == "adpena/pr101-bias-refine"
+    assert metadata["code_file"] == "pr101_bias_refine.py"
+    assert result.script_path.name == "pr101_bias_refine.py"
+    assert manifest["profile"] == "pr101_bias_refine"
+    assert manifest["lane_id"] == "kaggle_pr101_bias_refine"
+    assert manifest["lane_class"] == "pr101_kaggle_bias_refine"
+    assert manifest["candidate_family"] == "pr101_runtime_consumed_bias_refinement"
+    assert manifest["param_schema"] == "pr101_kaggle_proxy_bias_runtime_params_v1"
+    assert "all params are runtime-consumed" in manifest["claim_command_text"]
+    assert manifest["score_claim"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
 def test_cli_prints_push_command_without_launching(tmp_path: Path) -> None:
     kernel_dir = tmp_path / "kernel"
 
@@ -177,6 +204,52 @@ def test_generated_kernel_runs_and_writes_no_score_claim_outputs(tmp_path: Path)
     assert all(row["score_claim"] is False for row in rows)
     assert all(row["ready_for_exact_eval_dispatch"] is False for row in rows)
     assert all(row["proxy_only"] is True for row in rows)
+
+
+def test_generated_bias_refine_kernel_emits_only_runtime_consumed_bias_params(
+    tmp_path: Path,
+) -> None:
+    tool = load_tool()
+    kernel_dir = tmp_path / "kernel"
+    output_dir = tmp_path / "run"
+    tool.build_kernel(profile_name="pr101_bias_refine", kernel_dir=kernel_dir)
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(kernel_dir / "pr101_bias_refine.py"),
+            "--optimizer",
+            "random",
+            "--max-trials",
+            "4",
+            "--seed",
+            "11",
+            "--output-dir",
+            str(output_dir),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    stdout_payload = json.loads(proc.stdout)
+    manifest = json.loads((output_dir / "proxy_sweep_manifest.json").read_text())
+    rows = [
+        json.loads(line)
+        for line in (output_dir / "proxy_sweep_results.jsonl").read_text().splitlines()
+    ]
+
+    assert stdout_payload["profile"] == "pr101_bias_refine"
+    assert stdout_payload["param_schema"] == "pr101_kaggle_proxy_bias_runtime_params_v1"
+    assert manifest["profile"] == "pr101_bias_refine"
+    assert manifest["lane_id"] == "kaggle_pr101_bias_refine"
+    assert manifest["param_schema"] == "pr101_kaggle_proxy_bias_runtime_params_v1"
+    assert set(manifest["search_space"]) == {"bias_b", "bias_g", "bias_r"}
+    assert len(rows) == 4
+    assert all(set(row["params"]) == {"bias_b", "bias_g", "bias_r"} for row in rows)
+    assert all(row["param_schema"] == "pr101_kaggle_proxy_bias_runtime_params_v1" for row in rows)
+    assert all(row["score_claim"] is False for row in rows)
+    assert all(row["ready_for_exact_eval_dispatch"] is False for row in rows)
 
 
 def test_generated_kernel_source_has_no_exact_eval_or_mps_auth_path(tmp_path: Path) -> None:

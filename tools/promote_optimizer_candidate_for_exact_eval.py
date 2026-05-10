@@ -25,6 +25,37 @@ from tac.optimizer.exact_readiness import (  # noqa: E402
 )
 
 
+def _resolve_for_guard(path: Path, repo_root: Path) -> Path:
+    return path if path.is_absolute() else repo_root / path
+
+
+def _is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def _refuses_output_inside_submission(
+    output_paths: list[Path],
+    *,
+    submission_dir_text: object,
+    repo_root: Path,
+) -> str | None:
+    if not isinstance(submission_dir_text, str) or not submission_dir_text:
+        return None
+    submission_dir = _resolve_for_guard(Path(submission_dir_text), repo_root)
+    for output_path in output_paths:
+        resolved_output = _resolve_for_guard(output_path, repo_root)
+        if _is_relative_to(resolved_output, submission_dir):
+            return (
+                "output_inside_submission_dir_would_mutate_runtime_tree:"
+                f"{resolved_output}"
+            )
+    return None
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--queue", type=Path, required=True)
@@ -100,9 +131,19 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     report = result["report"]
+    output_paths = [args.output]
     if args.report_output is not None:
-        args.report_output.parent.mkdir(parents=True, exist_ok=True)
-        args.report_output.write_text(json_dumps(report), encoding="utf-8")
+        output_paths.append(args.report_output)
+    output_guard = _refuses_output_inside_submission(
+        output_paths,
+        submission_dir_text=(report.get("facts") or {}).get("submission_dir")
+        if isinstance(report.get("facts"), dict)
+        else None,
+        repo_root=args.repo_root,
+    )
+    if output_guard:
+        print(f"FATAL: {output_guard}", file=sys.stderr)
+        return 2
 
     promoted_queue = result["promoted_queue"]
     if promoted_queue is None:
@@ -112,6 +153,10 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
+
+    if args.report_output is not None:
+        args.report_output.parent.mkdir(parents=True, exist_ok=True)
+        args.report_output.write_text(json_dumps(report), encoding="utf-8")
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json_dumps(promoted_queue), encoding="utf-8")

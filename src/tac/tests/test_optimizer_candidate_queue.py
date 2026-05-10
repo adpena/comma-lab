@@ -230,6 +230,171 @@ def test_kaggle_proxy_manifest_becomes_canonical_non_dispatchable_queue_row(
     assert queue["dispatch_ready_count"] == 0
 
 
+def test_kaggle_proxy_manifest_preserves_profile_lane_class_and_param_schema(
+    tmp_path: Path,
+) -> None:
+    manifest = _write_json(
+        tmp_path / "proxy_sweep_manifest.json",
+        {
+            "schema": "pr101_kaggle_proxy_sweep_v1",
+            "lane_id": "kaggle_pr101_bias_refine",
+            "lane_class": "pr101_kaggle_bias_refine",
+            "candidate_family": "pr101_runtime_consumed_bias_refinement",
+            "param_schema": "pr101_kaggle_proxy_bias_runtime_params_v1",
+            "optimizer": "cmaes",
+            "optimizer_status": "cmaes_style_stdlib",
+            "best_candidate": {
+                "candidate_id": "bias_refine_cmaes_0017",
+                "param_schema": "pr101_kaggle_proxy_bias_runtime_params_v1",
+                "params": {
+                    "bias_b": -0.998,
+                    "bias_g": -1.003,
+                    "bias_r": -0.997,
+                },
+                "proxy_components": {"anchor_proximity": 0.01},
+                "proxy_objective": 0.19285,
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "dispatch_blockers": ["kaggle_proxy_substrate_not_contest_exact_eval"],
+        },
+    )
+
+    queue = build_candidate_queue([manifest], repo_root=tmp_path)
+    row = queue["top_k"][0]
+
+    assert row["lane_id"] == "kaggle_pr101_bias_refine"
+    assert row["lane_class"] == "pr101_kaggle_bias_refine"
+    assert row["candidate_family"] == "pr101_runtime_consumed_bias_refinement"
+    assert row["param_schema"] == "pr101_kaggle_proxy_bias_runtime_params_v1"
+    assert set(row["op_params"]) == {"bias_b", "bias_g", "bias_r"}
+    assert row["proxy_only"] is True
+    assert queue["dispatch_ready_count"] == 0
+
+
+def test_pr101_kaggle_proxy_runtime_packet_becomes_byte_closed_planning_row(
+    tmp_path: Path,
+) -> None:
+    packet_dir = tmp_path / "experiments/results/kaggle/packet"
+    packet_dir.mkdir(parents=True)
+    archive = packet_dir / "archive.zip"
+    archive.write_bytes(b"PK\x05\x06" + b"\x00" * 18)
+    manifest = _write_json(
+        packet_dir / "runtime_packet_manifest.json",
+        {
+            "schema": "pr101_kaggle_proxy_runtime_packet_v1",
+            "candidate_id": "proxy_cmaes_0037",
+            "packet_dir": packet_dir.relative_to(tmp_path).as_posix(),
+            "archive_changed": False,
+            "packet_archive": {
+                "relpath": "archive.zip",
+                "bytes": archive.stat().st_size,
+                "sha256": "a" * 64,
+                "members": [],
+            },
+            "source_archive": {
+                "bytes": archive.stat().st_size,
+                "sha256": "a" * 64,
+            },
+            "runtime_custody": {"runtime_tree_sha256": "b" * 64},
+            "runtime_consumed_params": {
+                "bias_r": -1.0,
+                "bias_g": -0.9,
+                "bias_b": -0.8,
+            },
+            "runtime_patch": {"patched_file": "inflate.py"},
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+    queue = build_candidate_queue([manifest], repo_root=tmp_path)
+    row = queue["top_k"][0]
+
+    assert row["candidate_id"] == "proxy_cmaes_0037_pr101_proxy_runtime_packet"
+    assert row["lane_id"] == "pr101_kaggle_proxy_runtime_packet_exact_eval"
+    assert row["candidate_archive_path"].endswith("/archive.zip")
+    assert row["score_affecting_runtime_changed"] is True
+    assert row["score_affecting_payload_changed"] is False
+    assert row["charged_bits_changed"] is False
+    assert row["runtime_consumption_proof_required"] is True
+    assert row["runtime_consumption_proof_status"] == "missing"
+    assert row["runtime_consumption_proof_path"].endswith("/runtime_consumption_proof.json")
+    assert "runtime_consumption_proof_missing" in row["dispatch_blockers"]
+    assert "exact_cuda_auth_eval_missing" in row["dispatch_blockers"]
+    assert "requires_exact_eval_readiness_gate" in row["dispatch_blockers"]
+    assert queue["dispatch_ready_count"] == 0
+
+
+def test_hnerv_q10_release_manifest_becomes_exact_eval_planning_row(
+    tmp_path: Path,
+) -> None:
+    release = tmp_path / "release_surface"
+    release.mkdir()
+    archive = release / "archive.zip"
+    archive.write_bytes(b"PK\x05\x06" + b"\x00" * 18)
+    manifest = _write_json(
+        release / "archive_manifest.json",
+        {
+            "schema": "hnerv_lowlevel_release_surface_manifest_v1",
+            "candidate_id": "pr106_q10_151byte_brotli",
+            "lane_id": "pr106_q10_151byte_brotli",
+            "candidate_archive_sha256": "a" * 64,
+            "candidate_archive_bytes": archive.stat().st_size,
+            "source_archive_sha256": "b" * 64,
+            "source_archive_bytes": archive.stat().st_size + 151,
+            "score_claim": False,
+        },
+    )
+
+    queue = build_candidate_queue([manifest], repo_root=tmp_path)
+    row = queue["top_k"][0]
+
+    assert row["candidate_id"] == "pr106_q10_151byte_brotli"
+    assert row["lane_id"] == "pr106_q10_151byte_brotli"
+    assert row["score_affecting_payload_changed"] is True
+    assert row["charged_bits_changed"] is True
+    assert row["source_archive_bytes"] == archive.stat().st_size + 151
+    assert "exact_cuda_auth_eval_missing" in row["dispatch_blockers"]
+
+
+def test_pr103_hidden_gem_release_manifest_becomes_exact_eval_planning_row(
+    tmp_path: Path,
+) -> None:
+    release = tmp_path / "release_surface"
+    release.mkdir()
+    archive = release / "archive.zip"
+    archive.write_bytes(b"PK\x05\x06" + b"\x00" * 18)
+    manifest = _write_json(
+        release / "archive_manifest.json",
+        {
+            "schema": "pr103_hidden_gem_release_surface_manifest_v1",
+            "candidate_id": "pr103_ac_merged_range_drop_u32_at_160824_20260510_agent",
+            "candidate_archive": {
+                "path": "archive.zip",
+                "archive_sha256": "c" * 64,
+                "archive_bytes": archive.stat().st_size,
+            },
+            "source_archive": {
+                "archive_sha256": "d" * 64,
+                "archive_bytes": archive.stat().st_size + 4,
+            },
+            "section_sha256_proof": {"runtime_consumed_section_changed": True},
+            "runtime_consumption_no_op_proof": {"state_dict_changed_vs_source": True},
+            "score_claim": False,
+        },
+    )
+
+    queue = build_candidate_queue([manifest], repo_root=tmp_path)
+    row = queue["top_k"][0]
+
+    assert row["lane_id"] == "pr103_ac_hidden_gem"
+    assert row["score_affecting_payload_changed"] is True
+    assert row["charged_bits_changed"] is True
+    assert row["runtime_consumed_section_changed"] is True
+    assert row["decoded_state_changed"] is True
+
+
 def test_queue_sanitizes_non_finite_legacy_telemetry(tmp_path: Path) -> None:
     report = _write_json(
         tmp_path / "meta_lagrangian_report.json",

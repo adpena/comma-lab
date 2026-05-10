@@ -36,6 +36,12 @@ HANDOFF_SCHEMA = "pr101_kaggle_proxy_candidate_archive_builder_handoff_v1"
 PACKET_SCHEMA = "pr101_kaggle_proxy_runtime_packet_v1"
 SOURCE_HANDOFF_PARAM_SCHEMA = "pr101_kaggle_proxy_candidate_params_v1"
 CANDIDATE_PARAM_SCHEMA = "pr101_kaggle_proxy_bias_runtime_params_v1"
+ACCEPTED_HANDOFF_PARAM_SCHEMAS = frozenset(
+    {
+        SOURCE_HANDOFF_PARAM_SCHEMA,
+        CANDIDATE_PARAM_SCHEMA,
+    }
+)
 DEFAULT_HANDOFF = Path(
     "experiments/results/kaggle_pr101_proxy_sweep_20260510_codex/"
     "pr101_proxy_sweep/local_materialization/archive_builder_handoff.json"
@@ -80,6 +86,13 @@ BASE_BLOCKERS = [
 EXCLUDED_DIR_NAMES = frozenset({"__pycache__", ".git", ".mypy_cache", ".pytest_cache"})
 EXCLUDED_FILE_NAMES = frozenset({".DS_Store"})
 EXCLUDED_SUFFIXES = (".pyc", ".pyo")
+EXPECTED_PACKET_MANIFEST_SCHEMA = PACKET_SCHEMA
+REBUILDABLE_PACKET_SIDECAR_NAMES = frozenset(
+    {
+        "promotion_blocker_checklist.json",
+        "runtime_consumption_proof.json",
+    }
+)
 
 
 class ProxyRuntimePacketError(ValueError):
@@ -121,6 +134,105 @@ def _should_exclude(relpath: Path) -> bool:
     if any(part in EXCLUDED_DIR_NAMES for part in relpath.parts):
         return True
     return relpath.name in EXCLUDED_FILE_NAMES or relpath.suffix in EXCLUDED_SUFFIXES
+
+
+def _refuse_hidden_runtime_sidecar(relpath: Path) -> None:
+    for part in relpath.parts:
+        if part in EXCLUDED_DIR_NAMES or part in EXCLUDED_FILE_NAMES:
+            continue
+        if part.startswith("."):
+            raise ProxyRuntimePacketError(
+                f"runtime packet refuses hidden/operator sidecar: {relpath.as_posix()}"
+            )
+
+
+def _safe_existing_packet_file_set(packet_dir: Path) -> set[Path]:
+    manifest_path = packet_dir / MANIFEST_NAME
+    if not manifest_path.is_file():
+        raise ProxyRuntimePacketError(
+            "refusing --force because output directory does not contain a prior "
+            f"{MANIFEST_NAME} from this tool"
+        )
+    try:
+        manifest = read_json(manifest_path)
+    except (OSError, ValueError) as exc:
+        raise ProxyRuntimePacketError(
+            f"refusing --force because prior packet manifest is unreadable: {exc}"
+        ) from exc
+    if not isinstance(manifest, Mapping):
+        raise ProxyRuntimePacketError("refusing --force because prior packet manifest is not an object")
+    if manifest.get("schema") != EXPECTED_PACKET_MANIFEST_SCHEMA or manifest.get("tool") != TOOL_NAME:
+        raise ProxyRuntimePacketError(
+            "refusing --force because output directory is not a self-authored "
+            "PR101 proxy runtime packet"
+        )
+
+    allowed = {Path(MANIFEST_NAME)}
+    allowed.update(Path(name) for name in REBUILDABLE_PACKET_SIDECAR_NAMES)
+    runtime_custody = manifest.get("runtime_custody")
+    runtime_files = (
+        runtime_custody.get("runtime_files")
+        if isinstance(runtime_custody, Mapping)
+        else []
+    )
+    packet_archive = manifest.get("packet_archive")
+    report = manifest.get("report")
+    for row in list(runtime_files if isinstance(runtime_files, list) else []):
+        if isinstance(row, Mapping) and isinstance(row.get("relpath"), str):
+            allowed.add(Path(row["relpath"]))
+    for row in (packet_archive, report):
+        if isinstance(row, Mapping) and isinstance(row.get("relpath"), str):
+            allowed.add(Path(row["relpath"]))
+
+    for rel in allowed:
+        if rel.is_absolute() or ".." in rel.parts or str(rel) in {"", "."}:
+            raise ProxyRuntimePacketError(
+                f"refusing --force because prior packet manifest has unsafe relpath: {rel}"
+            )
+    return allowed
+
+
+def _clear_existing_packet_dir(packet_dir: Path) -> None:
+    allowed = _safe_existing_packet_file_set(packet_dir)
+    existing_files: list[Path] = []
+    for path in sorted(packet_dir.rglob("*"), key=lambda item: item.relative_to(packet_dir).as_posix()):
+        rel = path.relative_to(packet_dir)
+        if path.is_dir():
+            continue
+        if path.is_symlink():
+            raise ProxyRuntimePacketError(f"refusing --force because packet contains symlink: {rel}")
+        if rel not in allowed and not _should_exclude(rel):
+            raise ProxyRuntimePacketError(
+                "refusing --force because output directory contains unexpected files: "
+                f"{rel.as_posix()}"
+            )
+        existing_files.append(path)
+
+    missing = sorted(
+        rel.as_posix()
+        for rel in allowed
+        if rel.name not in REBUILDABLE_PACKET_SIDECAR_NAMES
+        and not (packet_dir / rel).is_file()
+    )
+    if missing:
+        raise ProxyRuntimePacketError(
+            "refusing --force because prior packet manifest references missing files: "
+            f"{missing}"
+        )
+
+    for path in existing_files:
+        path.unlink()
+    for path in sorted(
+        (p for p in packet_dir.rglob("*") if p.is_dir()),
+        key=lambda item: len(item.relative_to(packet_dir).parts),
+        reverse=True,
+    ):
+        try:
+            path.rmdir()
+        except OSError as exc:
+            raise ProxyRuntimePacketError(
+                f"refusing --force because output directory still has non-empty directory: {path}"
+            ) from exc
 
 
 def _file_record(path: Path, *, relpath: str | None = None) -> dict[str, Any]:
@@ -175,11 +287,54 @@ def _runtime_tree_sha256(runtime_files: list[dict[str, Any]]) -> str:
     return _canonical_json_sha256(basis)
 
 
+def _write_custody_report(
+    report_path: Path,
+    *,
+    candidate_id: str,
+    params: Mapping[str, float],
+    source_archive_record: Mapping[str, Any],
+    packet_archive_record: Mapping[str, Any],
+) -> None:
+    report_path.write_text(
+        "\n".join(
+            [
+                "PR101 Kaggle proxy runtime packet custody report",
+                f"tool: {TOOL_NAME}",
+                f"candidate_id: {candidate_id}",
+                "score_claim: false",
+                "ready_for_exact_eval_dispatch: false",
+                "exact_auth_eval_performed: false",
+                "contest_cuda_auth_eval: false",
+                f"archive_sha256: {packet_archive_record['sha256']}",
+                f"archive_bytes: {packet_archive_record['bytes']}",
+                f"source_archive_sha256: {source_archive_record['sha256']}",
+                f"source_archive_bytes: {source_archive_record['bytes']}",
+                "score_affecting_payload_changed: false",
+                "charged_bits_changed: false",
+                "score_affecting_runtime_changed: true",
+                "runtime_consumed_params:",
+                *[
+                    f"  {key}: {params[key]}"
+                    for key in CANDIDATE_PARAMS
+                ],
+                "next_gate: optimizer exact-readiness promotion, then claimed exact CUDA auth eval",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    os.chmod(report_path, 0o644)
+
+
 def _validate_handoff(handoff: Mapping[str, Any]) -> dict[str, Any]:
     if handoff.get("schema") != HANDOFF_SCHEMA:
         raise ProxyRuntimePacketError(f"handoff schema must be {HANDOFF_SCHEMA!r}")
-    if handoff.get("param_schema") != SOURCE_HANDOFF_PARAM_SCHEMA:
-        raise ProxyRuntimePacketError(f"param_schema must be {SOURCE_HANDOFF_PARAM_SCHEMA!r}")
+    handoff_param_schema = handoff.get("param_schema")
+    if handoff_param_schema not in ACCEPTED_HANDOFF_PARAM_SCHEMAS:
+        raise ProxyRuntimePacketError(
+            "param_schema must be one of "
+            f"{sorted(ACCEPTED_HANDOFF_PARAM_SCHEMAS)!r}"
+        )
 
     candidate_id = handoff.get("candidate_id")
     if not isinstance(candidate_id, str) or not candidate_id:
@@ -217,6 +372,7 @@ def _validate_handoff(handoff: Mapping[str, Any]) -> dict[str, Any]:
     }
     return {
         "candidate_id": candidate_id,
+        "handoff_param_schema": handoff_param_schema,
         "candidate_params": params,
         "ignored_legacy_handoff_params": ignored_legacy_params,
     }
@@ -234,8 +390,7 @@ def _prepare_packet_dir(packet_dir: Path, *, force: bool) -> None:
         raise ProxyRuntimePacketError(
             f"packet output directory is not empty; pass --force to replace: {packet_dir}"
         )
-    shutil.rmtree(packet_dir)
-    packet_dir.mkdir(parents=True)
+    _clear_existing_packet_dir(packet_dir)
 
 
 def _copy_runtime_tree(source_runtime_dir: Path, packet_dir: Path) -> list[Path]:
@@ -244,6 +399,7 @@ def _copy_runtime_tree(source_runtime_dir: Path, packet_dir: Path) -> list[Path]
         rel = source.relative_to(source_runtime_dir)
         if _should_exclude(rel):
             continue
+        _refuse_hidden_runtime_sidecar(rel)
         if source.is_symlink():
             raise ProxyRuntimePacketError(f"runtime packet refuses symlink: {source}")
         if source.is_dir():
@@ -349,12 +505,23 @@ def build_proxy_runtime_packet(
     if not archive_unchanged:
         raise ProxyRuntimePacketError("copied archive SHA changed unexpectedly")
 
+    report_path = packet_dir / "report.txt"
+    _write_custody_report(
+        report_path,
+        candidate_id=validated["candidate_id"],
+        params=params,
+        source_archive_record=source_archive_record,
+        packet_archive_record=packet_archive_record,
+    )
+    runtime_files.append(_file_record(report_path, relpath="report.txt"))
+    runtime_tree_sha256 = _runtime_tree_sha256(runtime_files)
+
     blockers = list(BASE_BLOCKERS)
     manifest: dict[str, Any] = {
         "schema": PACKET_SCHEMA,
         "tool": TOOL_NAME,
         "candidate_id": validated["candidate_id"],
-        "source_handoff_param_schema": SOURCE_HANDOFF_PARAM_SCHEMA,
+        "source_handoff_param_schema": validated["handoff_param_schema"],
         "candidate_param_schema": CANDIDATE_PARAM_SCHEMA,
         "candidate_params": {
             key: params[key]
@@ -381,6 +548,7 @@ def build_proxy_runtime_packet(
         "archive_unchanged_sha256": packet_archive_record["sha256"],
         "source_archive": source_archive_record,
         "packet_archive": packet_archive_record,
+        "report": _file_record(report_path, relpath="report.txt"),
         "runtime_custody": {
             "copied_file_count": len(runtime_files),
             "runtime_files": runtime_files,

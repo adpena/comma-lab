@@ -28,6 +28,7 @@ TOOL_NAME = "tools/materialize_kaggle_pr101_proxy_candidate.py"
 SCHEMA = "pr101_kaggle_proxy_candidate_materialization_v1"
 HANDOFF_SCHEMA = "pr101_kaggle_proxy_candidate_archive_builder_handoff_v1"
 PARAM_SCHEMA = "pr101_kaggle_proxy_candidate_params_v1"
+BIAS_RUNTIME_PARAM_SCHEMA = "pr101_kaggle_proxy_bias_runtime_params_v1"
 EXPECTED_EVIDENCE_SEMANTICS = "kaggle_gpu_proxy_config_search_only_not_exact_auth_eval"
 DEFAULT_INPUT_CANDIDATE = Path(
     "experiments/results/kaggle_pr101_proxy_sweep_20260510_codex/"
@@ -48,6 +49,15 @@ PARAM_KEYS = (
     "latent_delta_scale",
     "smooth_weight",
 )
+BIAS_RUNTIME_PARAM_KEYS = (
+    "bias_b",
+    "bias_g",
+    "bias_r",
+)
+PARAM_SCHEMAS = {
+    PARAM_SCHEMA: PARAM_KEYS,
+    BIAS_RUNTIME_PARAM_SCHEMA: BIAS_RUNTIME_PARAM_KEYS,
+}
 FALSE_AUTHORITY_FLAGS = {
     "score_claim": False,
     "score_claim_valid": False,
@@ -112,11 +122,18 @@ def validate_candidate(candidate: Mapping[str, Any]) -> dict[str, Any]:
         if candidate.get(flag) is not expected:
             raise MaterializationError(f"{flag} must be {expected!r}")
 
+    param_schema = candidate.get("param_schema") or PARAM_SCHEMA
+    if param_schema not in PARAM_SCHEMAS:
+        raise MaterializationError(
+            f"param_schema must be one of {sorted(PARAM_SCHEMAS)}"
+        )
+    param_keys = PARAM_SCHEMAS[str(param_schema)]
+
     params_raw = _require_mapping(candidate.get("params"), "params")
     params: dict[str, float] = {}
-    for key in PARAM_KEYS:
+    for key in param_keys:
         params[key] = _require_finite_number(params_raw.get(key), f"params.{key}")
-    extra_params = sorted(set(params_raw) - set(PARAM_KEYS))
+    extra_params = sorted(set(params_raw) - set(param_keys))
     if extra_params:
         raise MaterializationError(f"params has unsupported keys: {extra_params}")
 
@@ -135,7 +152,8 @@ def validate_candidate(candidate: Mapping[str, Any]) -> dict[str, Any]:
         "optimizer": candidate.get("optimizer"),
         "optimizer_status": candidate.get("optimizer_status"),
         "params": params,
-        "param_schema": PARAM_SCHEMA,
+        "param_schema": param_schema,
+        "param_keys": list(param_keys),
         "proxy_components": proxy_components,
         "proxy_objective": _require_finite_number(
             candidate.get("proxy_objective"),
@@ -197,7 +215,7 @@ def build_handoff(candidate: Mapping[str, Any], source_record: dict[str, Any]) -
     return {
         "schema": HANDOFF_SCHEMA,
         "candidate_id": validated["candidate_id"],
-        "param_schema": PARAM_SCHEMA,
+        "param_schema": validated["param_schema"],
         "params": validated["params"],
         "proxy_evidence": {
             "evidence_semantics": validated["evidence_semantics"],
@@ -226,8 +244,8 @@ def build_handoff(candidate: Mapping[str, Any], source_record: dict[str, Any]) -
         "archive_builder_handoff_contract": {
             "status": "pending_real_archive_builder",
             "builder_must_consume": {
-                "param_schema": PARAM_SCHEMA,
-                "param_keys": list(PARAM_KEYS),
+                "param_schema": validated["param_schema"],
+                "param_keys": list(validated["param_keys"]),
                 "source_candidate_sha256": source_record["sha256"],
             },
             "builder_must_emit_before_dispatch": [
@@ -286,7 +304,7 @@ def materialize_candidate(
         "output_files": outputs,
         "handoff_artifact": _repo_rel(handoff_path),
         "candidate_params": handoff["params"],
-        "param_schema": PARAM_SCHEMA,
+        "param_schema": handoff["param_schema"],
         "proxy_only": True,
         "score_claim": False,
         "score_claim_valid": False,

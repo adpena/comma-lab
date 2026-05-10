@@ -111,6 +111,23 @@ def _handoff(params: dict[str, float] | None = None) -> dict[str, object]:
     }
 
 
+def _bias_only_handoff() -> dict[str, object]:
+    payload = _handoff(
+        {
+            "bias_b": -0.998,
+            "bias_g": -1.003,
+            "bias_r": -0.997,
+        }
+    )
+    payload["candidate_id"] = "bias_refine_cmaes_0017"
+    payload["param_schema"] = "pr101_kaggle_proxy_bias_runtime_params_v1"
+    payload["archive_builder_handoff_contract"]["builder_must_consume"] = {
+        "param_schema": "pr101_kaggle_proxy_bias_runtime_params_v1",
+        "param_keys": ["bias_b", "bias_g", "bias_r"],
+    }
+    return payload
+
+
 def _write_json(path: Path, payload: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -134,6 +151,7 @@ def test_builds_runtime_packet_with_only_bias_params_consumed(tmp_path: Path) ->
     packet_dir = tmp_path / "packet"
     manifest_on_disk = json.loads((packet_dir / "runtime_packet_manifest.json").read_text())
     patched_inflate = (packet_dir / "inflate.py").read_text(encoding="utf-8")
+    report = (packet_dir / "report.txt").read_text(encoding="utf-8")
 
     assert manifest == manifest_on_disk
     assert (packet_dir / "archive.zip").read_bytes() == source_archive.read_bytes()
@@ -147,6 +165,11 @@ def test_builds_runtime_packet_with_only_bias_params_consumed(tmp_path: Path) ->
     assert manifest["archive_changed"] is False
     assert manifest["archive_unchanged_sha256"] == manifest["source_archive"]["sha256"]
     assert manifest["archive_unchanged_sha256"] == manifest["packet_archive"]["sha256"]
+    assert manifest["report"]["relpath"] == "report.txt"
+    assert "score_claim: false" in report
+    assert "ready_for_exact_eval_dispatch: false" in report
+    assert "score_affecting_runtime_changed: true" in report
+    assert "bias_r: -1.01" in report
 
     assert "up[:, 0, 0].add_(-1.01)" in patched_inflate
     assert "up[:, 0, 2].add_(-0.79)" in patched_inflate
@@ -195,6 +218,147 @@ def test_builds_runtime_packet_with_only_bias_params_consumed(tmp_path: Path) ->
     assert not (packet_dir / "__pycache__").exists()
     assert not (packet_dir / "src/__pycache__").exists()
     assert not (packet_dir / ".DS_Store").exists()
+    assert any(
+        row["relpath"] == "report.txt"
+        for row in manifest["runtime_custody"]["runtime_files"]
+    )
+
+
+def test_refuses_hidden_operator_sidecars_in_runtime_tree(tmp_path: Path) -> None:
+    tool = _load_tool()
+    runtime = _runtime_fixture(tmp_path)
+    _write_file(runtime / ".env", "KAGGLE_KEY=secret\n")
+    _write_file(runtime / ".kaggle" / "kaggle.json", "{}\n")
+    source_archive = tmp_path / "source/archive.zip"
+    handoff_path = tmp_path / "handoff.json"
+    _write_zip(source_archive)
+    _write_json(handoff_path, _handoff())
+
+    with pytest.raises(tool.ProxyRuntimePacketError, match="hidden/operator sidecar"):
+        tool.build_proxy_runtime_packet(
+            handoff_path=handoff_path,
+            source_runtime_dir=runtime,
+            source_archive=source_archive,
+            packet_dir=tmp_path / "packet",
+        )
+
+
+def test_force_refuses_arbitrary_existing_output_dir(tmp_path: Path) -> None:
+    tool = _load_tool()
+    runtime = _runtime_fixture(tmp_path)
+    source_archive = tmp_path / "source/archive.zip"
+    handoff_path = tmp_path / "handoff.json"
+    packet_dir = tmp_path / "custody"
+    packet_dir.mkdir()
+    sentinel = packet_dir / "raw_provider_log.txt"
+    sentinel.write_text("do not delete\n", encoding="utf-8")
+    _write_zip(source_archive)
+    _write_json(handoff_path, _handoff())
+
+    with pytest.raises(tool.ProxyRuntimePacketError, match="prior runtime_packet_manifest"):
+        tool.build_proxy_runtime_packet(
+            handoff_path=handoff_path,
+            source_runtime_dir=runtime,
+            source_archive=source_archive,
+            packet_dir=packet_dir,
+            force=True,
+        )
+    assert sentinel.read_text(encoding="utf-8") == "do not delete\n"
+
+
+def test_force_only_replaces_self_authored_packet_dir(tmp_path: Path) -> None:
+    tool = _load_tool()
+    runtime = _runtime_fixture(tmp_path)
+    source_archive = tmp_path / "source/archive.zip"
+    handoff_path = tmp_path / "handoff.json"
+    packet_dir = tmp_path / "packet"
+    _write_zip(source_archive)
+    _write_json(handoff_path, _handoff())
+
+    first = tool.build_proxy_runtime_packet(
+        handoff_path=handoff_path,
+        source_runtime_dir=runtime,
+        source_archive=source_archive,
+        packet_dir=packet_dir,
+    )
+    _write_file(packet_dir / "__pycache__" / "inflate.cpython-312.pyc", "cache")
+    _write_json(packet_dir / "runtime_consumption_proof.json", {"schema": "fixture"})
+    _write_json(packet_dir / "promotion_blocker_checklist.json", {"schema": "fixture"})
+    second = tool.build_proxy_runtime_packet(
+        handoff_path=handoff_path,
+        source_runtime_dir=runtime,
+        source_archive=source_archive,
+        packet_dir=packet_dir,
+        force=True,
+    )
+
+    assert first["archive_unchanged_sha256"] == second["archive_unchanged_sha256"]
+    assert (packet_dir / "runtime_packet_manifest.json").is_file()
+
+
+def test_force_refuses_self_authored_packet_dir_with_untracked_extra_file(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool()
+    runtime = _runtime_fixture(tmp_path)
+    source_archive = tmp_path / "source/archive.zip"
+    handoff_path = tmp_path / "handoff.json"
+    packet_dir = tmp_path / "packet"
+    _write_zip(source_archive)
+    _write_json(handoff_path, _handoff())
+    tool.build_proxy_runtime_packet(
+        handoff_path=handoff_path,
+        source_runtime_dir=runtime,
+        source_archive=source_archive,
+        packet_dir=packet_dir,
+    )
+    extra = packet_dir / "local_notes.txt"
+    extra.write_text("operator note\n", encoding="utf-8")
+
+    with pytest.raises(tool.ProxyRuntimePacketError, match="unexpected files"):
+        tool.build_proxy_runtime_packet(
+            handoff_path=handoff_path,
+            source_runtime_dir=runtime,
+            source_archive=source_archive,
+            packet_dir=packet_dir,
+            force=True,
+        )
+    assert extra.is_file()
+
+
+def test_builds_runtime_packet_from_bias_only_handoff_without_ignored_params(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool()
+    runtime = _runtime_fixture(tmp_path)
+    source_archive = tmp_path / "source" / "archive.zip"
+    handoff_path = tmp_path / "handoff.json"
+    _write_zip(source_archive, payload=b"original-pr101-bytes")
+    _write_json(handoff_path, _bias_only_handoff())
+
+    manifest = tool.build_proxy_runtime_packet(
+        handoff_path=handoff_path,
+        source_runtime_dir=runtime,
+        source_archive=source_archive,
+        packet_dir=tmp_path / "packet",
+    )
+
+    patched_inflate = (tmp_path / "packet" / "inflate.py").read_text(encoding="utf-8")
+
+    assert manifest["candidate_id"] == "bias_refine_cmaes_0017"
+    assert manifest["source_handoff_param_schema"] == "pr101_kaggle_proxy_bias_runtime_params_v1"
+    assert manifest["candidate_param_schema"] == "pr101_kaggle_proxy_bias_runtime_params_v1"
+    assert manifest["candidate_params"] == {
+        "bias_b": -0.998,
+        "bias_g": -1.003,
+        "bias_r": -0.997,
+    }
+    assert manifest["ignored_legacy_handoff_params"] == {}
+    assert manifest["candidate_contract"]["legacy_handoff_params_ignored"] == []
+    assert "delta_scale" not in json.dumps(manifest)
+    assert "up[:, 0, 0].add_(-0.997)" in patched_inflate
+    assert "up[:, 0, 2].add_(-0.998)" in patched_inflate
+    assert "up[:, 1, 1].add_(-1.003)" in patched_inflate
 
 
 def test_refuses_handoff_that_claims_exact_eval_authority(tmp_path: Path) -> None:
@@ -300,3 +464,4 @@ def test_cli_outputs_manifest_without_dispatch_or_score_claim(tmp_path: Path) ->
     assert len(stdout["archive_unchanged_sha256"]) == 64
     assert "unsupported_proxy_params_not_runtime_consumed" not in stdout["blockers"]
     assert (packet_dir / "runtime_packet_manifest.json").is_file()
+    assert (packet_dir / "report.txt").is_file()

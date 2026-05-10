@@ -98,6 +98,43 @@ def _make_queue(repo: Path, submission: Path, archive_bytes: int, archive_sha: s
     )
 
 
+def _write_pr101_runtime_proof(
+    submission: Path,
+    archive_sha: str,
+    *,
+    proven: bool = True,
+) -> Path:
+    return _write_json(
+        submission / "runtime_consumption_proof.json",
+        {
+            "schema": "pr101_kaggle_proxy_runtime_consumption_proof_v1",
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+            "inflate_sh_routes_to_packet_inflate_py": True,
+            "runtime_consumption_proven_for_supported_bias_params": proven,
+            "archive_unchanged_proof": {"archive_sha256": archive_sha},
+        },
+    )
+
+
+def _add_required_runtime_proof_fields(
+    queue: Path,
+    submission: Path,
+    repo: Path,
+    *,
+    status: str,
+) -> None:
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    row = payload["top_k"][0]
+    row["runtime_consumption_proof_required"] = True
+    row["runtime_consumption_proof_status"] = status
+    row["runtime_consumption_proof_path"] = (
+        submission / "runtime_consumption_proof.json"
+    ).relative_to(repo).as_posix()
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
 def test_promotes_byte_closed_candidate_without_score_claim(tmp_path: Path) -> None:
     submission, archive_bytes, archive_sha = _make_submission(tmp_path)
     queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
@@ -124,6 +161,66 @@ def test_promotes_byte_closed_candidate_without_score_claim(tmp_path: Path) -> N
     assert row["runtime_tree_sha256"]
     assert row["score_affecting_payload_changed"] is True
     assert row["charged_bits_changed"] is True
+
+
+def test_refuses_pr101_runtime_packet_without_runtime_consumption_proof(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    _add_required_runtime_proof_fields(queue, submission, tmp_path, status="missing")
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["promoted_queue"] is None
+    assert "runtime_consumption_proof_missing" in result["report"]["blockers"]
+    assert "runtime_consumption_proof_file_missing" in result["report"]["blockers"]
+
+
+def test_refuses_pr101_runtime_packet_when_runtime_consumption_not_proven(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    _write_pr101_runtime_proof(submission, archive_sha, proven=False)
+    _add_required_runtime_proof_fields(queue, submission, tmp_path, status="present")
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["promoted_queue"] is None
+    assert "runtime_consumption_proof_not_proven" in result["report"]["blockers"]
+
+
+def test_promotes_pr101_runtime_packet_with_runtime_consumption_proof(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    proof_path = _write_pr101_runtime_proof(submission, archive_sha)
+    _add_required_runtime_proof_fields(queue, submission, tmp_path, status="present")
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["report"]["ready_for_exact_eval_dispatch"] is True
+    row = result["promoted_queue"]["dispatch_ready"][0]
+    assert row["runtime_consumption_proof_path"] == proof_path.relative_to(tmp_path).as_posix()
+    assert row["runtime_consumption_proof_sha256"]
+    assert row["runtime_consumption_proof_schema"] == "pr101_kaggle_proxy_runtime_consumption_proof_v1"
 
 
 def test_promoted_queue_passes_existing_dispatcher_readiness_loader(tmp_path: Path) -> None:
@@ -181,6 +278,28 @@ def test_refuses_kaggle_proxy_row_without_archive(tmp_path: Path) -> None:
     assert "source_row_proxy_only" in result["report"]["blockers"]
     assert "archive_path_missing" in result["report"]["blockers"]
     assert "score_affecting_change_proof_missing" in result["report"]["blockers"]
+
+
+def test_exact_readiness_cli_import_does_not_require_repo_root_on_sys_path(
+    tmp_path: Path, monkeypatch
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    original_path = list(sys.path)
+    monkeypatch.setattr(
+        sys,
+        "path",
+        [entry for entry in original_path if entry not in {"", str(REPO_ROOT)}],
+    )
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["report"]["ready_for_exact_eval_dispatch"] is True
 
 
 def test_refuses_archive_sha_mismatch(tmp_path: Path) -> None:

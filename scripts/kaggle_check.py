@@ -24,6 +24,8 @@ BOLD = "\033[1m"
 RESET = "\033[0m"
 
 KERNEL_SLUGS = [
+    "adpena/pr101-bias-refine",
+    "adpena/pr101-proxy-sweep",
     "adpena/comma-lab-asym-warp-base",
     "adpena/comma-lab-asym-warp-raft-only",
     "adpena/comma-lab-asym-warp-supervised",
@@ -165,16 +167,29 @@ def main() -> int:
         default=10,
         help="Per-kernel timeout for `kaggle kernels status`.",
     )
+    parser.add_argument(
+        "--kernel",
+        action="append",
+        default=[],
+        help="Additional Kaggle kernel slug to check. May be repeated.",
+    )
+    parser.add_argument(
+        "--only-kernel",
+        action="append",
+        default=[],
+        help="Check only this Kaggle kernel slug. May be repeated.",
+    )
     args = parser.parse_args()
     kaggle_cmd = _kaggle_cmd()
     download_dir = LOG_DIR if args.download_logs else None
+    slugs = list(dict.fromkeys(args.only_kernel or [*KERNEL_SLUGS, *args.kernel]))
 
     print(f"\n{BOLD}Kaggle Kernel Status Check{RESET}")
     print(f"{'=' * 60}")
     print(f"  Time: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}\n")
 
     error_slugs: list[str] = []
-    for slug in KERNEL_SLUGS:
+    for slug in slugs:
         short = slug.split("/")[-1]
         status = get_kernel_status(kaggle_cmd, slug, timeout_s=args.status_timeout_s)
         status_str = format_status(status)

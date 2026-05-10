@@ -432,8 +432,13 @@ def _kaggle_proxy_sweep_candidates(
     row.update(
         {
             "lane_id": payload.get("lane_id") or "kaggle_pr101_proxy_sweep",
-            "lane_class": "pr101_kaggle_proxy_sweep",
-            "candidate_family": "pr101_proxy_config_search",
+            "lane_class": payload.get("lane_class")
+            or best.get("lane_class")
+            or "pr101_kaggle_proxy_sweep",
+            "candidate_family": payload.get("candidate_family")
+            or best.get("candidate_family")
+            or "pr101_proxy_config_search",
+            "param_schema": payload.get("param_schema") or best.get("param_schema"),
             "optimizer_tool": payload.get("tool") or "tools/build_kaggle_proxy_sweep_kernel.py",
             "optimizer": payload.get("optimizer") or best.get("optimizer"),
             "optimizer_status": payload.get("optimizer_status") or best.get("optimizer_status"),
@@ -465,6 +470,224 @@ def _kaggle_proxy_sweep_candidates(
     return [row]
 
 
+def _pr101_kaggle_proxy_runtime_packet_candidates(
+    payload: Mapping[str, Any], *, source_path: Path, repo_root: Path
+) -> list[dict[str, Any]]:
+    packet_archive = payload.get("packet_archive")
+    runtime_custody = payload.get("runtime_custody")
+    runtime_patch = payload.get("runtime_patch")
+    if not isinstance(packet_archive, Mapping) or not isinstance(runtime_custody, Mapping):
+        return []
+
+    candidate_id = str(payload.get("candidate_id") or "")
+    if not candidate_id:
+        return []
+    packet_dir_value = payload.get("packet_dir")
+    if isinstance(packet_dir_value, str) and packet_dir_value:
+        packet_dir = Path(packet_dir_value)
+        if not packet_dir.is_absolute():
+            packet_dir = repo_root / packet_dir
+    else:
+        packet_dir = source_path.parent
+    archive_rel = str(packet_archive.get("relpath") or "archive.zip")
+    archive_path = packet_dir / archive_rel
+    archive_sha = _shaish(packet_archive.get("sha256"))
+    archive_bytes = _as_int(packet_archive.get("bytes"))
+    source_archive = payload.get("source_archive")
+    source_archive_sha = (
+        _shaish(source_archive.get("sha256"))
+        if isinstance(source_archive, Mapping)
+        else _shaish(payload.get("archive_unchanged_sha256"))
+    )
+    source_archive_bytes = (
+        _as_int(source_archive.get("bytes"))
+        if isinstance(source_archive, Mapping)
+        else None
+    )
+    runtime_tree_sha = _shaish(runtime_custody.get("runtime_tree_sha256"))
+    runtime_consumption_proof_path = source_path.parent / "runtime_consumption_proof.json"
+    runtime_consumption_proof_present = runtime_consumption_proof_path.is_file()
+    row = _base_candidate(
+        f"{candidate_id}_pr101_proxy_runtime_packet",
+        source_path=source_path,
+        repo_root=repo_root,
+    )
+    row.update(
+        {
+            "lane_id": "pr101_kaggle_proxy_runtime_packet_exact_eval",
+            "lane_class": "pr101_kaggle_proxy_runtime_packet",
+            "candidate_family": "pr101_inflate_time_bias_runtime_packet",
+            "source_candidate_id": candidate_id,
+            "submission_dir": _repo_rel(packet_dir, repo_root),
+            "archive_path": _repo_rel(archive_path, repo_root),
+            "candidate_archive_path": _repo_rel(archive_path, repo_root),
+            "archive_sha256": archive_sha,
+            "candidate_archive_sha256": archive_sha,
+            "archive_bytes": archive_bytes,
+            "archive_size_bytes": archive_bytes,
+            "candidate_archive_bytes": archive_bytes,
+            "source_archive_sha256": source_archive_sha,
+            "source_archive_bytes": source_archive_bytes,
+            "archive_unchanged_from_source": bool(payload.get("archive_changed") is False),
+            "runtime_tree_sha256": runtime_tree_sha,
+            "runtime_manifest_path": _repo_rel(source_path, repo_root),
+            "runtime_consumption_proof_required": True,
+            "runtime_consumption_proof_path": _repo_rel(
+                runtime_consumption_proof_path,
+                repo_root,
+            ),
+            "runtime_consumption_proof_status": "present"
+            if runtime_consumption_proof_present
+            else "missing",
+            "candidate_params": dict(payload.get("runtime_consumed_params") or {}),
+            "runtime_patch": dict(runtime_patch) if isinstance(runtime_patch, Mapping) else {},
+            "score_affecting_payload_changed": False,
+            "charged_bits_changed": False,
+            "score_affecting_runtime_changed": True,
+            "evidence_semantics": "byte_closed_proxy_runtime_packet_pending_exact_eval",
+            "evidence_grade": "[byte-closed-runtime-packet-no-score]",
+            "source_manifest_path": _repo_rel(source_path, repo_root),
+        }
+    )
+    _add_blockers(
+        row,
+        [
+            "exact_cuda_auth_eval_missing",
+            "requires_exact_eval_readiness_gate",
+            "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+            *([] if runtime_consumption_proof_present else ["runtime_consumption_proof_missing"]),
+        ],
+    )
+    return [row]
+
+
+def _archive_record_sha(record: Any) -> str | None:
+    if isinstance(record, Mapping):
+        return _shaish(record.get("archive_sha256") or record.get("sha256"))
+    return None
+
+
+def _archive_record_bytes(record: Any) -> int | None:
+    if isinstance(record, Mapping):
+        return _as_int(record.get("archive_bytes") or record.get("bytes"))
+    return None
+
+
+def _hnerv_lowlevel_exact_eval_candidates(
+    payload: Mapping[str, Any], *, source_path: Path, repo_root: Path
+) -> list[dict[str, Any]]:
+    candidate_id = str(payload.get("candidate_id") or "")
+    if not candidate_id:
+        return []
+    lane_id = str(payload.get("lane_id") or candidate_id)
+    release_surface = source_path.parent
+    if source_path.name != "archive_manifest.json":
+        release_surface = source_path.parent / "release_surface"
+    archive_path = release_surface / "archive.zip"
+    source_archive_bytes = _as_int(payload.get("source_archive_bytes"))
+    source_archive_sha = _shaish(payload.get("source_archive_sha256"))
+    row = _base_candidate(candidate_id, source_path=source_path, repo_root=repo_root)
+    archive_sha = _shaish(
+        payload.get("candidate_archive_sha256")
+        or payload.get("archive_sha256")
+        or (payload.get("archive") or {}).get("sha256")
+    )
+    archive_bytes = _as_int(
+        payload.get("candidate_archive_bytes")
+        or payload.get("archive_bytes")
+        or (payload.get("archive") or {}).get("bytes")
+    )
+    row.update(
+        {
+            "lane_id": lane_id,
+            "lane_class": "hnerv_lowlevel_exact_eval_candidate",
+            "candidate_family": "hnerv_lowlevel_byte_repack",
+            "submission_dir": _repo_rel(release_surface, repo_root),
+            "archive_path": _repo_rel(archive_path, repo_root),
+            "candidate_archive_path": _repo_rel(archive_path, repo_root),
+            "archive_sha256": archive_sha,
+            "candidate_archive_sha256": archive_sha,
+            "archive_bytes": archive_bytes,
+            "archive_size_bytes": archive_bytes,
+            "candidate_archive_bytes": archive_bytes,
+            "source_archive_sha256": source_archive_sha,
+            "source_archive_bytes": source_archive_bytes,
+            "score_affecting_payload_changed": True,
+            "charged_bits_changed": True,
+            "evidence_semantics": "byte_closed_hnerv_lowlevel_candidate_pending_exact_eval",
+            "evidence_grade": "[byte-closed-no-score]",
+            "source_manifest_path": _repo_rel(source_path, repo_root),
+        }
+    )
+    _add_blockers(
+        row,
+        [
+            "exact_cuda_auth_eval_missing",
+            "requires_exact_eval_readiness_gate",
+            "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        ],
+    )
+    return [row]
+
+
+def _pr103_hidden_gem_candidates(
+    payload: Mapping[str, Any], *, source_path: Path, repo_root: Path
+) -> list[dict[str, Any]]:
+    candidate_id = str(payload.get("candidate_id") or "")
+    if not candidate_id:
+        return []
+    candidate_archive = payload.get("candidate_archive")
+    source_archive = payload.get("source_archive")
+    release_surface = source_path.parent
+    if source_path.name != "archive_manifest.json":
+        release_surface = source_path.parent / "release_surface"
+    archive_path = release_surface / "archive.zip"
+    row = _base_candidate(candidate_id, source_path=source_path, repo_root=repo_root)
+    archive_sha = _archive_record_sha(candidate_archive)
+    archive_bytes = _archive_record_bytes(candidate_archive)
+    row.update(
+        {
+            "lane_id": str(payload.get("lane_id") or "pr103_ac_hidden_gem"),
+            "lane_class": "pr103_ac_hidden_gem",
+            "candidate_family": "pr103_ac_byte_hidden_gem",
+            "submission_dir": _repo_rel(release_surface, repo_root),
+            "archive_path": _repo_rel(archive_path, repo_root),
+            "candidate_archive_path": _repo_rel(archive_path, repo_root),
+            "archive_sha256": archive_sha,
+            "candidate_archive_sha256": archive_sha,
+            "archive_bytes": archive_bytes,
+            "archive_size_bytes": archive_bytes,
+            "candidate_archive_bytes": archive_bytes,
+            "source_archive_sha256": _archive_record_sha(source_archive),
+            "source_archive_bytes": _archive_record_bytes(source_archive),
+            "score_affecting_payload_changed": True,
+            "charged_bits_changed": True,
+            "runtime_consumed_section_changed": bool(
+                (payload.get("section_sha256_proof") or {}).get(
+                    "runtime_consumed_section_changed"
+                )
+            ),
+            "decoded_state_changed": bool(
+                (payload.get("runtime_consumption_no_op_proof") or {}).get(
+                    "state_dict_changed_vs_source"
+                )
+            ),
+            "evidence_semantics": "byte_closed_pr103_hidden_gem_pending_exact_eval",
+            "evidence_grade": "[byte-closed-no-score]",
+            "source_manifest_path": _repo_rel(source_path, repo_root),
+        }
+    )
+    _add_blockers(
+        row,
+        [
+            "exact_cuda_auth_eval_missing",
+            "requires_exact_eval_readiness_gate",
+            "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        ],
+    )
+    return [row]
+
+
 def extract_candidates_from_source(path: Path, *, repo_root: Path) -> tuple[str, list[dict[str, Any]]]:
     payload = _load_json(path)
     schema = _source_schema(payload)
@@ -482,6 +705,31 @@ def extract_candidates_from_source(path: Path, *, repo_root: Path) -> tuple[str,
         return schema, _meta_lagrangian_candidates(payload, source_path=path, repo_root=repo_root)
     if schema == "pr101_kaggle_proxy_sweep_v1":
         return schema, _kaggle_proxy_sweep_candidates(payload, source_path=path, repo_root=repo_root)
+    if schema == "pr101_kaggle_proxy_runtime_packet_v1":
+        return schema, _pr101_kaggle_proxy_runtime_packet_candidates(
+            payload,
+            source_path=path,
+            repo_root=repo_root,
+        )
+    if schema in {
+        "hnerv_lowlevel_exact_eval_candidate_manifest_v1",
+        "hnerv_lowlevel_exact_eval_operator_packet_v1",
+        "hnerv_lowlevel_release_surface_manifest_v1",
+    }:
+        return schema, _hnerv_lowlevel_exact_eval_candidates(
+            payload,
+            source_path=path,
+            repo_root=repo_root,
+        )
+    if (
+        schema == "pr103_hidden_gem_release_surface_manifest_v1"
+        or payload.get("tool") == "inline_local_materialize_pr103_ac_hidden_gem_candidate"
+    ):
+        return schema, _pr103_hidden_gem_candidates(
+            payload,
+            source_path=path,
+            repo_root=repo_root,
+        )
     if isinstance(payload.get("candidates"), list):
         return schema, _codec_param_manifest_candidates(payload, source_path=path, repo_root=repo_root)
     return schema, []

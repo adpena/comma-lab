@@ -55,6 +55,20 @@ def _candidate() -> dict[str, object]:
     }
 
 
+def _bias_only_candidate() -> dict[str, object]:
+    payload = _candidate()
+    payload["candidate_id"] = "bias_refine_cmaes_0017"
+    payload["param_schema"] = "pr101_kaggle_proxy_bias_runtime_params_v1"
+    payload["lane_class"] = "pr101_kaggle_bias_refine"
+    payload["candidate_family"] = "pr101_runtime_consumed_bias_refinement"
+    payload["params"] = {
+        "bias_b": -0.998,
+        "bias_g": -1.003,
+        "bias_r": -0.997,
+    }
+    return payload
+
+
 def _write_json(path: Path, payload: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -102,6 +116,35 @@ def test_materializes_proxy_candidate_handoff_and_manifest(tmp_path: Path) -> No
     assert contract["builder_must_consume"]["param_keys"] == list(tool.PARAM_KEYS)
     assert "byte_closed_archive_zip" in contract["builder_must_emit_before_dispatch"]
     assert "claim_score_from_this_proxy_artifact" in contract["builder_must_not"]
+
+
+def test_materializes_bias_only_candidate_without_legacy_ignored_params(
+    tmp_path: Path,
+) -> None:
+    tool = load_tool()
+    candidate_path = tmp_path / "run" / "best_proxy_candidate.json"
+    output_dir = tmp_path / "out"
+    _write_json(candidate_path, _bias_only_candidate())
+
+    manifest = tool.materialize_candidate(
+        candidate_path=candidate_path,
+        output_dir=output_dir,
+    )
+
+    handoff = json.loads((output_dir / "archive_builder_handoff.json").read_text())
+    contract = handoff["archive_builder_handoff_contract"]
+
+    assert manifest["candidate_id"] == "bias_refine_cmaes_0017"
+    assert manifest["param_schema"] == "pr101_kaggle_proxy_bias_runtime_params_v1"
+    assert set(manifest["candidate_params"]) == {"bias_b", "bias_g", "bias_r"}
+    assert handoff["param_schema"] == "pr101_kaggle_proxy_bias_runtime_params_v1"
+    assert set(handoff["params"]) == {"bias_b", "bias_g", "bias_r"}
+    assert contract["builder_must_consume"]["param_keys"] == [
+        "bias_b",
+        "bias_g",
+        "bias_r",
+    ]
+    assert "delta_scale" not in json.dumps(handoff)
 
 
 def test_materialization_is_deterministic_for_same_input(tmp_path: Path) -> None:

@@ -139,11 +139,18 @@ def test_blocks_proxy_packet_without_exact_cuda_even_after_runtime_consumption_p
     )
 
     assert checklist["promotable"] is False
+    assert checklist["score_promotable"] is False
+    assert checklist["proxy_packet_exact_readiness_gate_only"] is True
     assert checklist["verdict"] == "BLOCKED_PROXY_ONLY_NOT_PROMOTABLE"
+    assert checklist["exact_eval_candidate_allowed_after_readiness_gate"] is True
+    assert checklist["next_exact_eval_candidate"] == (
+        "run_optimizer_exact_readiness_gate_then_claim_exact_cuda_eval"
+    )
     assert "full_runtime_consumption_not_proven" not in checklist["blockers"]
     assert "proxy_substrate_not_contest_exact_eval" in checklist["blockers"]
     assert "no_candidate_contest_cuda_auth_eval" in checklist["blockers"]
     assert "stale_unsupported_proxy_contract" not in checklist["blockers"]
+    assert "PROMOTABLE_EXACT_RUNTIME_PACKET" not in json.dumps(checklist)
     assert any(row["id"] == "a1_exact_cuda_anchor_available" and row["passed"] for row in checklist["checks"])
     assert any(row["id"] == "xray_op_cost_catalog_available" and row["passed"] for row in checklist["checks"])
 
@@ -162,6 +169,7 @@ def test_blocks_when_runtime_consumption_proof_is_false(tmp_path: Path) -> None:
     )
 
     assert checklist["promotable"] is False
+    assert checklist["exact_eval_candidate_allowed_after_readiness_gate"] is False
     assert "full_runtime_consumption_not_proven" in checklist["blockers"]
 
 
