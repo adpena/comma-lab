@@ -27,6 +27,9 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+SRC_ROOT = REPO_ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
 TOOLS = REPO_ROOT / "tools"
 
 PARETO = TOOLS / "apogee_intN_pareto.py"
@@ -42,6 +45,19 @@ PR91_HPM1_READINESS_ARTIFACT = (
 )
 PR91_HPM1_RUNTIME_CONTRACT_ARTIFACT = (
     REPO_ROOT / "experiments/results/pr91_hpm1_runtime_contract_20260506_codex/runtime_contract.json"
+)
+DISPATCH_CLAIMS = REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md"
+EXACT_READY_SCAN_ROOT = REPO_ROOT / "experiments" / "results"
+
+from tac.optimizer.exact_readiness import (  # noqa: E402
+    ACTIVE_FLOOR_SCORE,
+    as_bool,
+    is_sha256,
+    terminal_claim_result_conflicts,
+)
+from tac.optimizer.exact_ready_audit import (  # noqa: E402
+    audit_exact_ready_queues,
+    discover_exact_ready_queues,
 )
 
 
@@ -200,6 +216,20 @@ def _format_supplementary_lanes() -> str:
     return "\n\n".join(lines) if lines else "  (none)"
 
 
+def _packet_runtime_tree_sha256(packet: dict) -> str | None:
+    for key in ("runtime_tree_sha256", "candidate_runtime_tree_sha256"):
+        value = packet.get(key)
+        if is_sha256(value):
+            return str(value).lower()
+    for key in ("runtime_manifest", "runtime_custody", "inflate_runtime_manifest"):
+        nested = packet.get(key)
+        if isinstance(nested, dict):
+            value = nested.get("runtime_tree_sha256")
+            if is_sha256(value):
+                return str(value).lower()
+    return None
+
+
 def _load_exact_eval_packet(lane: dict) -> dict[str, object]:
     path = REPO_ROOT / str(lane["packet_path"])
     if not path.is_file():
@@ -229,6 +259,22 @@ def _load_exact_eval_packet(lane: dict) -> dict[str, object]:
             "commands": {},
         }
     blockers = list(packet.get("blockers") or packet.get("submit_blockers") or [])
+    archive_sha256 = packet.get("archive_sha256")
+    runtime_tree_sha256 = _packet_runtime_tree_sha256(packet)
+    runtime_changed = as_bool(packet.get("score_affecting_runtime_changed"))
+    terminal_blockers = []
+    if isinstance(archive_sha256, str):
+        terminal_blockers = terminal_claim_result_conflicts(
+            str(lane["lane_id"]),
+            archive_sha256,
+            dispatch_claims_path=DISPATCH_CLAIMS,
+            active_floor_score=ACTIVE_FLOOR_SCORE,
+            runtime_tree_sha256=runtime_tree_sha256,
+            score_affecting_runtime_changed=runtime_changed,
+        )
+        blockers.extend(
+            blocker for blocker in terminal_blockers if blocker not in blockers
+        )
     static_ready = bool(
         packet.get("preflight_ready")
         or packet.get("static_packet_ready")
@@ -257,10 +303,13 @@ def _load_exact_eval_packet(lane: dict) -> dict[str, object]:
         "lane_id": lane["lane_id"],
         "name": lane["name"],
         "packet_path": lane["packet_path"],
-        "ready_for_submit": bool(packet.get("ready_for_submit")),
+        "ready_for_submit": bool(packet.get("ready_for_submit")) and not terminal_blockers,
         "blockers": blockers,
+        "terminal_exact_eval_evidence_blockers": terminal_blockers,
         "missing_env": list(packet.get("missing_env") or []),
-        "archive_sha256": packet.get("archive_sha256"),
+        "archive_sha256": archive_sha256,
+        "runtime_tree_sha256": runtime_tree_sha256,
+        "score_affecting_runtime_changed": runtime_changed,
         "archive_bytes": packet.get("archive_bytes"),
         "preflight_ready": static_ready,
         "compliance_ok": compliance_ok,
@@ -310,6 +359,44 @@ def _format_exact_eval_packets() -> str:
             f"      {step_ids if step_ids else '(missing)'}"
         )
     return "\n\n".join(lines) if lines else "  (none)"
+
+
+def _exact_ready_queue_audit() -> dict[str, object]:
+    queues = discover_exact_ready_queues(
+        repo_root=REPO_ROOT,
+        scan_root=EXACT_READY_SCAN_ROOT,
+    )
+    return audit_exact_ready_queues(
+        queues,
+        repo_root=REPO_ROOT,
+        dispatch_claims_path=DISPATCH_CLAIMS,
+        active_floor_score=ACTIVE_FLOOR_SCORE,
+    )
+
+
+def _format_exact_ready_queue_audit() -> str:
+    payload = _exact_ready_queue_audit()
+    lines = [
+        f"queues_scanned: {payload['queue_count']}",
+        f"passed: {payload['passed']}",
+        f"stale_ready_rows: {payload['stale_ready_row_count']}",
+    ]
+    if payload.get("stale_ready_row_count"):
+        lines.append("blocked rows:")
+        for queue in payload.get("queues", []):
+            if not isinstance(queue, dict):
+                continue
+            for row in queue.get("stale_ready_rows", []):
+                if not isinstance(row, dict):
+                    continue
+                blockers = ", ".join(str(b) for b in row.get("blockers", []))
+                lines.append(
+                    "  - "
+                    f"{queue.get('queue_path')} :: {row.get('candidate_id')} "
+                    f"lane={row.get('lane_id')} runtime={row.get('runtime_tree_sha256')} "
+                    f"blockers={blockers}"
+                )
+    return "\n".join(lines)
 
 
 def _load_pr91_hpm1_readiness_artifact() -> dict[str, object]:
@@ -797,6 +884,14 @@ def _format_dispatch_readiness() -> str:
     # Phase 1: pre-dispatch frontier — always actionable if PARETO emits rows
     lines.append("  Phase 1 (pre-dispatch Pareto):              "
                  "READY — see Phase 1 frontier table above")
+    exact_ready_audit = _exact_ready_queue_audit()
+    stale_rows = int(exact_ready_audit.get("stale_ready_row_count") or 0)
+    if stale_rows:
+        lines.append("  Phase 1 exact-ready queue hygiene:          "
+                     f"BLOCKED — {stale_rows} stale row(s) carry terminal evidence")
+    else:
+        lines.append("  Phase 1 exact-ready queue hygiene:          "
+                     "READY — no terminal-evidence conflicts")
     # Phase 4 / Phase 5: gated lanes — read PHASE_4_GATED_LANES count
     try:
         n_gated = len(PHASE_4_GATED_LANES)
@@ -871,6 +966,7 @@ def main(argv: list[str] | None = None) -> int:
             out["pareto"] = _run_json(PARETO, ["--json"])
             out["supplementary_lanes"] = PHASE_1_SUPPLEMENTARY_LANES
             out["exact_eval_packets"] = _exact_eval_packet_summaries()
+            out["exact_ready_queue_audit"] = _exact_ready_queue_audit()
             out["non_dispatchable_readiness_artifacts"] = _non_dispatchable_readiness_artifacts()
         if not args.skip_dashboard:
             out["dashboard"] = _run_json(DASHBOARD, ["--top", str(args.top), "--json"])
@@ -906,6 +1002,10 @@ def main(argv: list[str] | None = None) -> int:
         parts.append(_section(
             "Phase 1 exact-eval packets — static-clean CUDA candidates",
             _format_exact_eval_packets(),
+        ))
+        parts.append(_section(
+            "Phase 1 exact-ready queues — terminal-evidence audit",
+            _format_exact_ready_queue_audit(),
         ))
         parts.append(_section(
             "Phase 1 blocked readiness artifacts — non-dispatchable public frontier work",

@@ -43,6 +43,7 @@ def test_briefing_runs_all_three_phases():
     assert "Phase 2" in proc.stdout
     assert "Phase 3" in proc.stdout
     assert "Phase 1 exact-eval packets" in proc.stdout
+    assert "Phase 1 exact-ready queues" in proc.stdout
     assert "Phase 1 blocked readiness artifacts" in proc.stdout
     assert "pr91_hpm1_readiness_bundle" in proc.stdout
     assert "wr01_apply_pr106x_half" in proc.stdout
@@ -87,6 +88,10 @@ def test_briefing_json_composite_has_all_three_keys():
     assert "dashboard" in out
     assert "reconciler" in out
     assert "exact_eval_packets" in out
+    assert "exact_ready_queue_audit" in out
+    assert out["exact_ready_queue_audit"]["schema"] == (
+        "optimizer_exact_ready_queue_terminal_evidence_audit_v1"
+    )
     assert "non_dispatchable_readiness_artifacts" in out
     row = out["non_dispatchable_readiness_artifacts"][0]
     assert row["kind"] == "pr91_hpm1_readiness_bundle"
@@ -116,6 +121,12 @@ def test_briefing_json_composite_has_all_three_keys():
     }
     q10 = packet_rows["pr106_q10_151byte_brotli"]
     assert q10["ready_for_submit"] is False
+    assert q10["terminal_exact_eval_evidence_blockers"]
+    assert any(
+        blocker.startswith("same_lane_terminal_negative_for_same_archive")
+        or blocker.startswith("same_lane_terminal_score_not_below_active_floor")
+        for blocker in q10["terminal_exact_eval_evidence_blockers"]
+    )
     assert q10["preflight_ready"] is True
     assert q10["compliance_ok"] is True
     assert q10["payload_diff_ready"] is True

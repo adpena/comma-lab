@@ -92,8 +92,12 @@ TERMINAL_NEGATIVE_STATUS_MARKERS = (
     "retired",
     "component_collapse",
 )
+FLOAT_TEXT_RE = r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?"
 TERMINAL_SCORE_RE = re.compile(
-    r"(?:score_recomputed|score|canonical_score)=([0-9]+(?:\.[0-9]+)?)"
+    rf"(?:score_recomputed|score|canonical_score)=({FLOAT_TEXT_RE})"
+)
+TERMINAL_RUNTIME_TREE_SHA_RE = re.compile(
+    r"(?:runtime_tree_sha256|runtime_tree_sha)=([0-9a-fA-F]{64})"
 )
 TRUE_CHANGE_FIELDS = (
     "score_affecting_payload_changed",
@@ -443,20 +447,42 @@ def active_claim_conflicts(
     return blockers
 
 
-def _latest_claim_rows_by_job(path: Path) -> dict[tuple[str, str], dict[str, str]]:
-    latest_by_job: dict[tuple[str, str], dict[str, str]] = {}
+def _claim_rows_by_job(path: Path) -> dict[tuple[str, str], list[dict[str, str]]]:
+    rows_by_job: dict[tuple[str, str], list[dict[str, str]]] = {}
     for row in parse_claim_rows(path):
         key = (row["lane_id"], row["instance_job_id"])
-        prev = latest_by_job.get(key)
-        row_ts = parse_utc(row["timestamp_utc"])
-        prev_ts = parse_utc(prev["timestamp_utc"]) if prev is not None else None
-        if prev is None or prev_ts is None or (row_ts is not None and row_ts > prev_ts):
-            latest_by_job[key] = row
+        rows_by_job.setdefault(key, []).append(row)
+    return rows_by_job
+
+
+def _latest_claim_rows_by_job(path: Path) -> dict[tuple[str, str], dict[str, str]]:
+    return _latest_claim_rows_from_grouped(_claim_rows_by_job(path))
+
+
+def _latest_claim_rows_from_grouped(
+    rows_by_job: Mapping[tuple[str, str], Iterable[dict[str, str]]],
+) -> dict[tuple[str, str], dict[str, str]]:
+    latest_by_job: dict[tuple[str, str], dict[str, str]] = {}
+    for key, rows in rows_by_job.items():
+        for row in rows:
+            prev = latest_by_job.get(key)
+            row_ts = parse_utc(row["timestamp_utc"])
+            prev_ts = parse_utc(prev["timestamp_utc"]) if prev is not None else None
+            if prev is None or prev_ts is None or (row_ts is not None and row_ts > prev_ts):
+                latest_by_job[key] = row
     return latest_by_job
 
 
-def _terminal_claim_score(row: Mapping[str, str]) -> float | None:
-    match = TERMINAL_SCORE_RE.search(row.get("notes", ""))
+def _claim_job_notes(rows: Iterable[Mapping[str, str]]) -> str:
+    return " ".join(row.get("notes", "") for row in rows)
+
+
+def _terminal_claim_runtime_tree_shas(notes: str) -> set[str]:
+    return {match.lower() for match in TERMINAL_RUNTIME_TREE_SHA_RE.findall(notes)}
+
+
+def _terminal_claim_score(notes: str) -> float | None:
+    match = TERMINAL_SCORE_RE.search(notes)
     if match is None:
         return None
     try:
@@ -471,6 +497,8 @@ def terminal_claim_result_conflicts(
     *,
     dispatch_claims_path: Path | None,
     active_floor_score: float | None = ACTIVE_FLOOR_SCORE,
+    runtime_tree_sha256: str | None = None,
+    score_affecting_runtime_changed: bool | None = None,
 ) -> list[str]:
     """Block stale exact-ready rows after terminal evidence on same archive.
 
@@ -488,28 +516,38 @@ def terminal_claim_result_conflicts(
     ):
         return []
     blockers: list[str] = []
-    for row in _latest_claim_rows_by_job(dispatch_claims_path).values():
+    claim_rows_by_job = _claim_rows_by_job(dispatch_claims_path)
+    latest_rows = _latest_claim_rows_from_grouped(claim_rows_by_job)
+    candidate_runtime_sha = (
+        runtime_tree_sha256.lower() if is_sha256(runtime_tree_sha256) else None
+    )
+    for key, row in latest_rows.items():
         if row["lane_id"] != lane_id or not claim_status_terminal(row["status"]):
             continue
-        notes = row.get("notes", "")
+        notes = _claim_job_notes(claim_rows_by_job.get(key, [row]))
         if archive_sha256 not in notes:
             continue
+        if score_affecting_runtime_changed is True and candidate_runtime_sha is not None:
+            claim_runtime_shas = _terminal_claim_runtime_tree_shas(notes)
+            if not claim_runtime_shas or candidate_runtime_sha not in claim_runtime_shas:
+                continue
         status = row["status"].lower()
         claim_id = f"{row['lane_id']}:{row['instance_job_id']}:{row['status']}"
         if any(marker in status for marker in TERMINAL_NEGATIVE_STATUS_MARKERS):
             blockers.append(f"same_lane_terminal_negative_for_same_archive:{claim_id}")
             continue
-        score = _terminal_claim_score(row)
-        if (
-            status.startswith("completed_contest_cuda_auth_eval")
-            and active_floor_score is not None
-            and score is not None
-            and score >= active_floor_score
-        ):
-            blockers.append(
-                "same_lane_terminal_score_not_below_active_floor_for_same_archive:"
-                f"{score:.12g}>={active_floor_score:.12g}:{claim_id}"
-            )
+        score = _terminal_claim_score(notes)
+        if status.startswith("completed_contest_cuda_auth_eval") and score is not None:
+            if active_floor_score is not None and score >= active_floor_score:
+                blockers.append(
+                    "same_lane_terminal_score_not_below_active_floor_for_same_archive:"
+                    f"{score:.12g}>={active_floor_score:.12g}:{claim_id}"
+                )
+            elif active_floor_score is not None and score < active_floor_score:
+                blockers.append(
+                    "same_lane_terminal_score_already_below_active_floor_for_same_archive:"
+                    f"{score:.12g}<{active_floor_score:.12g}:{claim_id}"
+                )
     return blockers
 
 
@@ -702,18 +740,6 @@ def readiness_blockers(
             if int(zipwire.get("member_count") or 0) < 1:
                 blockers.append("archive_zip_empty")
 
-    if isinstance(effective_lane_id, str) and effective_lane_id.strip():
-        blockers.extend(
-            terminal_claim_result_conflicts(
-                effective_lane_id,
-                facts.get("archive_sha256")
-                if isinstance(facts.get("archive_sha256"), str)
-                else expected_sha,
-                dispatch_claims_path=dispatch_claims_path,
-                active_floor_score=active_floor_score,
-            )
-        )
-
     if submission_dir is None and archive_path is not None:
         submission_dir = archive_path.parent
     if submission_dir is None:
@@ -786,6 +812,29 @@ def readiness_blockers(
     ):
         blockers.append("runtime_tree_sha256_missing")
     facts["runtime_manifest"] = runtime_manifest
+
+    if isinstance(effective_lane_id, str) and effective_lane_id.strip():
+        candidate_runtime_sha = (
+            runtime_manifest.get("runtime_tree_sha256")
+            if isinstance(runtime_manifest, Mapping)
+            else None
+        )
+        blockers.extend(
+            terminal_claim_result_conflicts(
+                effective_lane_id,
+                facts.get("archive_sha256")
+                if isinstance(facts.get("archive_sha256"), str)
+                else expected_sha,
+                dispatch_claims_path=dispatch_claims_path,
+                active_floor_score=active_floor_score,
+                runtime_tree_sha256=candidate_runtime_sha
+                if isinstance(candidate_runtime_sha, str)
+                else None,
+                score_affecting_runtime_changed=as_bool(
+                    row.get("score_affecting_runtime_changed")
+                ),
+            )
+        )
 
     proof_blockers, proof_facts = validate_runtime_consumption_proof(
         row,

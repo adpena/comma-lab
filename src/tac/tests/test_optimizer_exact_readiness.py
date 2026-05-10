@@ -462,6 +462,79 @@ def test_refuses_same_lane_terminal_cuda_score_not_below_floor_for_same_archive(
     )
 
 
+def test_refuses_same_lane_terminal_cuda_score_already_below_floor_for_same_archive(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    claims = tmp_path / ".omx/state/active_lane_dispatch_claims.md"
+    claims.parent.mkdir(parents=True)
+    claims.write_text(
+        "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
+        "|---|---|---|---|---|---|---|---|\n"
+        f"| 2026-05-10T00:00:00Z | test | fixture_lane | modal | job1 |  | completed_contest_cuda_auth_eval | archive_sha={archive_sha}; score_recomputed=1.95e-1 |\n",
+        encoding="utf-8",
+    )
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+        active_floor_score=0.2089810755823297,
+        dispatch_claims_path=claims,
+    )
+
+    assert result["promoted_queue"] is None
+    assert any(
+        blocker.startswith(
+            "same_lane_terminal_score_already_below_active_floor_for_same_archive"
+        )
+        for blocker in result["report"]["blockers"]
+    )
+
+
+def test_allows_runtime_changed_candidate_after_different_runtime_terminal(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    initial = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+    runtime_sha = initial["promoted_queue"]["dispatch_ready"][0]["runtime_tree_sha256"]
+    old_runtime_sha = "0" * 64 if runtime_sha != "0" * 64 else "1" * 64
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    row = payload["top_k"][0]
+    row["score_affecting_payload_changed"] = False
+    row["charged_bits_changed"] = False
+    row["score_affecting_runtime_changed"] = True
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    claims = tmp_path / ".omx/state/active_lane_dispatch_claims.md"
+    claims.parent.mkdir(parents=True)
+    claims.write_text(
+        "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
+        "|---|---|---|---|---|---|---|---|\n"
+        f"| 2026-05-10T00:01:00Z | test | fixture_lane | modal | job1 |  | completed_contest_cuda_auth_eval_negative | archive_sha={archive_sha}; score_recomputed=41.35 |\n"
+        f"| 2026-05-10T00:00:00Z | test | fixture_lane | modal | job1 |  | active_dispatching | archive_sha={archive_sha}; runtime_tree_sha={old_runtime_sha}; score_claim=false_until_modal_validation |\n",
+        encoding="utf-8",
+    )
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+        dispatch_claims_path=claims,
+    )
+
+    assert result["report"]["ready_for_exact_eval_dispatch"] is True
+    assert result["promoted_queue"] is not None
+
+
 def test_allows_same_lane_terminal_infra_failure_for_same_archive(tmp_path: Path) -> None:
     submission, archive_bytes, archive_sha = _make_submission(tmp_path)
     queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
