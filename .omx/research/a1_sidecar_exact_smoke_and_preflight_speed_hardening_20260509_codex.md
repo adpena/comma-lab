@@ -24,11 +24,12 @@ Codex converted recursive adversarial review findings into durable guards:
 - Developer/full preflight clean-cache hits run before filesystem/source-index setup, so clean repeat runs do not pay source-index construction.
 - `check_no_mps_fallback_default` now caches zero-violation candidate scans with a strong stat fingerprint.
 
-## Current A1 sidecar classification
+## Pre-dispatch A1 sidecar classification
 
-The local sidecar archive is **locally packet-ready but not dispatch-ready**:
-all packet, no-op, exact-smoke, and strict pre-submission checks now pass, and
-the only remaining readiness blocker is the required live dispatch claim row.
+Before the claim row was bound, the local sidecar archive was **locally
+packet-ready but not dispatch-ready**: all packet, no-op, exact-smoke, and
+strict pre-submission checks passed, and the only remaining readiness blocker
+was the required live dispatch claim row.
 
 Current byte-different archive:
 
@@ -46,8 +47,42 @@ Current byte-different archive:
   `3497c774d94fe202563bccba2af4a5f90925cb8d9b2e982cf4428d0efbea0190`
 - current blockers: `dispatch_claim_record_missing`
 
-No CUDA/GHA dispatch was launched. No MPS result is promoted; MPS remains
-advisory only for sweeps and configuration discovery.
+No MPS result is promoted; MPS remains advisory only for sweeps and
+configuration discovery.
+
+## Exact CPU dispatch result
+
+After the dispatch-claim gate was satisfied, the packet was evaluated via the
+fork GHA CPU path:
+
+- workflow run:
+  `https://github.com/adpena/comma_video_compression_challenge/actions/runs/25620918686`
+- fork PR supplying runtime files:
+  `https://github.com/adpena/comma_video_compression_challenge/pull/25`
+- result path:
+  `experiments/results/a1_sidecar_resampled_proxy_mse_20260510T053453Z_cpu_eval_gha/contest_auth_eval.adjudicated.json`
+- result SHA-256:
+  `2274dd4b5725667c8a23b8eb4707bae7cdd15b928d4c5ae7328d37a0e0bd55ca`
+- report SHA-256:
+  `4c39903505b9d4ae170a4e6d4bc11080c198bb948a20163115a5cd598dc440e3`
+- exact `[contest-CPU GHA Linux x86_64]` score:
+  `0.20962552129271272`
+- components: `seg=0.00071063`, `pose=0.00003932`, `rate=0.00474933`,
+  `n_samples=600`
+- formula recomputation:
+  `100*0.00071063 + sqrt(10*0.00003932) + 25*0.00474933 =
+  0.20962552129271272`
+- classification: measured implementation regression relative to A1 baseline
+  `0.19284757743677347 [contest-CPU GHA Linux x86_64]`
+- claim closure:
+  `completed_contest_cpu_regression` in
+  `.omx/state/active_lane_dispatch_claims.md`
+
+Adversarial classification: this retires the measured
+`proxy_mse`-selected per-pair latent sidecar configuration only. It does not
+kill the latent-sidecar family; reactivation requires a score-domain sidecar
+search objective or joint SegNet/PoseNet delta resampling that is proven against
+the exact packet before dispatch.
 
 ## Verification
 
@@ -79,10 +114,10 @@ advisory only for sweeps and configuration discovery.
 
 ## Remaining gates
 
-- Claim `lane_a1_per_pair_latent_sidecar_resampled` before any remote/GHA/CUDA
-  dispatch, then bind the live row into `sidecar_manifest.json`.
-- Run exact CPU/GHA eval first; promote only with exact archive/runtime custody
-  and formula recomputation.
-- If CPU-positive, run paired CUDA/T4-equivalent eval before any submission
-  readiness claim.
+- Do not redispatch this exact `proxy_mse` sidecar packet; it is a measured
+  `[contest-CPU]` regression.
+- Reactivate sidecar work only through a score-domain/joint SegNet+PoseNet
+  sidecar search objective with no-op proof and exact packet custody.
+- If a future sidecar packet is CPU-positive, run paired CUDA/T4-equivalent
+  eval before any submission readiness claim.
 - Keep Phase 1/T1 and Lane 12-v2 local until they emit runtime-consumed packets with no-op proof and exact custody.

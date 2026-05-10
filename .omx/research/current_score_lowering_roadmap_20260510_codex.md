@@ -14,13 +14,17 @@
 
 ## P0: local score-lowering and custody
 
-1. Finish A1 per-pair latent sidecar scalar-proven recheck locally.
-   - Current archive candidate: `178316` bytes,
+1. Retire the measured A1 per-pair latent sidecar `proxy_mse` packet.
+   - Archive candidate: `178316` bytes,
      `c7f3d88e1ad23bf8cda987583e702ac57e293b64bc7bfea77902e835d19cea10`.
-   - Must reach 600/600 scalar-equivalent pair records.
-   - Must run exact `inflate.sh` signature smoke with full raw byte count.
-   - Must bind dispatch readiness to a live active claim row plus exact-eval
-     preflight report before GHA/remote dispatch.
+   - Local packet proof completed: 600/600 scalar-equivalent records, exact
+     `inflate.sh` smoke, strict pre-submission compliance, and live claim
+     binding.
+   - Exact `[contest-CPU GHA Linux x86_64]` dispatch result:
+     `0.20962552129271272`, worse than A1 baseline
+     `0.19284757743677347`; measured configuration retired.
+   - Reactivate only with score-domain or joint SegNet/PoseNet sidecar search,
+     not `proxy_mse` pair selection.
 2. Keep A1 bias-coordinate work bounded.
    - Existing broad variants regressed or failed to beat V1.
    - Reopen only with a small reviewed candidate set and CPU-positive evidence.
@@ -54,7 +58,7 @@
   starts; never for auth eval promotion.
 - `[contest-CPU]`, `[contest-CUDA]`, local macOS CPU, and MPS proxy evidence
   must remain separate.
-- A1 sidecar is still local-only until scalar provenance, exact smoke, live
-  claim custody, and exact-eval preflight all pass.
+- A1 sidecar `proxy_mse` packet passed local custody but regressed on exact
+  `[contest-CPU]`; do not redispatch this measured packet.
 - No active dispatch claims remain after closing the AV discriminator CPU-only
-  run as unresolved for CUDA.
+  run as unresolved for CUDA and closing the A1 sidecar regression claim.
