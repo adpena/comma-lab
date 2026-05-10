@@ -138,6 +138,8 @@ def test_builds_runtime_packet_with_only_bias_params_consumed(tmp_path: Path) ->
     assert manifest == manifest_on_disk
     assert (packet_dir / "archive.zip").read_bytes() == source_archive.read_bytes()
     assert manifest["schema"] == "pr101_kaggle_proxy_runtime_packet_v1"
+    assert manifest["source_handoff_param_schema"] == "pr101_kaggle_proxy_candidate_params_v1"
+    assert manifest["candidate_param_schema"] == "pr101_kaggle_proxy_bias_runtime_params_v1"
     assert manifest["score_claim"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert manifest["dispatch_attempted"] is False
@@ -160,16 +162,36 @@ def test_builds_runtime_packet_with_only_bias_params_consumed(tmp_path: Path) ->
         "bias_g": "up[:, 1, 1]",
     }
 
-    assert set(manifest["unsupported_params"]) == {
+    assert manifest["candidate_params"] == consumed
+    assert set(manifest["candidate_contract"]["runtime_routed_params"]) == {
+        "bias_b",
+        "bias_g",
+        "bias_r",
+    }
+    assert "unsupported_params" not in manifest
+    assert set(manifest["ignored_legacy_handoff_params"]) == {
         "delta_scale",
         "latent_delta_scale",
         "smooth_weight",
     }
-    assert all(row["runtime_consumed"] is False for row in manifest["unsupported_params"].values())
-    assert "unsupported_proxy_params_not_runtime_consumed" in manifest["blockers"]
-    assert "delta_scale_not_runtime_consumed" in manifest["blockers"]
-    assert "latent_delta_scale_not_runtime_consumed" in manifest["blockers"]
-    assert "smooth_weight_not_runtime_consumed" in manifest["blockers"]
+    assert all(
+        row["candidate_param"] is False
+        for row in manifest["ignored_legacy_handoff_params"].values()
+    )
+    assert all(
+        row["runtime_consumed"] is False
+        for row in manifest["ignored_legacy_handoff_params"].values()
+    )
+    assert "unsupported_proxy_params_not_runtime_consumed" not in manifest["blockers"]
+    assert "delta_scale_not_runtime_consumed" not in manifest["blockers"]
+    assert "latent_delta_scale_not_runtime_consumed" not in manifest["blockers"]
+    assert "smooth_weight_not_runtime_consumed" not in manifest["blockers"]
+    assert manifest["blockers"] == [
+        "proxy_substrate_not_contest_exact_eval",
+        "no_contest_cuda_auth_eval",
+        "local_inflate_or_runtime_consumption_proof_not_run",
+        "active_level2_lane_dispatch_claim_required_before_exact_eval",
+    ]
     assert not (packet_dir / "__pycache__").exists()
     assert not (packet_dir / "src/__pycache__").exists()
     assert not (packet_dir / ".DS_Store").exists()
@@ -201,10 +223,10 @@ def test_refuses_missing_or_nonfinite_required_params(tmp_path: Path) -> None:
     _write_zip(source_archive)
 
     missing = _handoff()
-    del missing["params"]["smooth_weight"]
+    del missing["params"]["bias_r"]
     missing_path = tmp_path / "missing.json"
     _write_json(missing_path, missing)
-    with pytest.raises(tool.ProxyRuntimePacketError, match="missing required keys"):
+    with pytest.raises(tool.ProxyRuntimePacketError, match="missing required candidate keys"):
         tool.build_proxy_runtime_packet(
             handoff_path=missing_path,
             source_runtime_dir=runtime,
@@ -276,4 +298,5 @@ def test_cli_outputs_manifest_without_dispatch_or_score_claim(tmp_path: Path) ->
     assert stdout["dispatch_attempted"] is False
     assert len(stdout["runtime_tree_sha256"]) == 64
     assert len(stdout["archive_unchanged_sha256"]) == 64
+    assert "unsupported_proxy_params_not_runtime_consumed" not in stdout["blockers"]
     assert (packet_dir / "runtime_packet_manifest.json").is_file()

@@ -17,6 +17,7 @@ import ast
 import subprocess
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Protocol
 
 try:
     from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
@@ -29,6 +30,18 @@ ensure_repo_imports(REPO)
 from tac.repo_io import json_text  # noqa: E402
 
 LOCAL_MOUNT_METHODS = {"add_local_dir", "add_local_file"}
+
+
+class _SourceIndexLike(Protocol):
+    def read_text(
+        self,
+        path: str | Path,
+        *,
+        encoding: str | None = None,
+        errors: str | None = None,
+    ) -> str: ...
+
+    def python_ast(self, path: str | Path) -> ast.AST: ...
 
 
 @dataclass(frozen=True)
@@ -58,6 +71,48 @@ def tracked_python_paths(root: Path) -> list[Path]:
             continue
         paths.append(root / rel)
     return paths
+
+
+def _read_python_source(path: Path, source_index: _SourceIndexLike | None) -> str:
+    if source_index is not None:
+        return source_index.read_text(path, encoding="utf-8")
+    return path.read_text(encoding="utf-8")
+
+
+def _parse_python_source(path: Path, source_index: _SourceIndexLike | None) -> ast.AST:
+    if source_index is not None:
+        return source_index.python_ast(path)
+    return ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+
+
+def modal_image_candidate_paths(
+    root: Path,
+    *,
+    source_index: _SourceIndexLike | None = None,
+) -> tuple[int, list[Path], list[ModalImageOrderViolation]]:
+    paths = tracked_python_paths(root)
+    candidates: list[Path] = []
+    violations: list[ModalImageOrderViolation] = []
+    for path in paths:
+        rel = path.relative_to(root).as_posix()
+        try:
+            text = _read_python_source(path, source_index)
+        except UnicodeDecodeError as exc:
+            violations.append(
+                ModalImageOrderViolation(
+                    path=rel,
+                    line=getattr(exc, "start", 0) + 1,
+                    method="parse",
+                    message=(
+                        "could not decode Python file while auditing Modal image order: "
+                        f"{exc}"
+                    ),
+                )
+            )
+            continue
+        if any(method in text for method in LOCAL_MOUNT_METHODS):
+            candidates.append(path)
+    return len(paths), candidates, violations
 
 
 def _call_chain_nodes(node: ast.AST) -> list[tuple[str, int, ast.Call]]:
@@ -98,9 +153,14 @@ def _env_sets_pythonpath(method: str, call: ast.Call) -> bool:
     return any(keyword.arg == "PYTHONPATH" for keyword in call.keywords)
 
 
-def _image_chain_violations(path: Path, root: Path) -> list[ModalImageOrderViolation]:
+def _image_chain_violations(
+    path: Path,
+    root: Path,
+    *,
+    source_index: _SourceIndexLike | None = None,
+) -> list[ModalImageOrderViolation]:
     try:
-        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        tree = _parse_python_source(path, source_index)
     except (SyntaxError, UnicodeDecodeError) as exc:
         rel = path.relative_to(root).as_posix()
         return [
@@ -165,15 +225,23 @@ def _image_chain_violations(path: Path, root: Path) -> list[ModalImageOrderViola
     return list(violations_by_key.values())
 
 
-def audit_modal_image_build_order(root: Path) -> dict[str, object]:
+def audit_modal_image_build_order(
+    root: Path,
+    *,
+    source_index: _SourceIndexLike | None = None,
+) -> dict[str, object]:
     violations: list[ModalImageOrderViolation] = []
-    scanned = 0
-    for path in tracked_python_paths(root):
-        scanned += 1
-        violations.extend(_image_chain_violations(path, root))
+    checked, candidates, candidate_violations = modal_image_candidate_paths(
+        root,
+        source_index=source_index,
+    )
+    violations.extend(candidate_violations)
+    for path in candidates:
+        violations.extend(_image_chain_violations(path, root, source_index=source_index))
     return {
         "schema": "pact.modal_image_build_order_audit.v1",
-        "scanned_python_files": scanned,
+        "scanned_python_files": checked,
+        "candidate_python_files": len(candidates),
         "violation_count": len(violations),
         "violations": [asdict(v) for v in violations],
     }
@@ -194,7 +262,8 @@ def main(argv: list[str] | None = None) -> int:
         print(
             "modal image build order: FAIL "
             f"({payload['violation_count']} violation(s) across "
-            f"{payload['scanned_python_files']} tracked Python files)"
+            f"{payload['candidate_python_files']} Modal candidate files; "
+            f"{payload['scanned_python_files']} tracked Python files checked)"
         )
         for row in payload["violations"][:30]:
             print(f"  - {row['path']}:{row['line']} {row['message']}")
@@ -204,7 +273,8 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print(
             "modal image build order: PASS "
-            f"({payload['scanned_python_files']} tracked Python files scanned)"
+            f"({payload['candidate_python_files']} Modal candidate files; "
+            f"{payload['scanned_python_files']} tracked Python files checked)"
         )
 
     if args.strict and payload["violation_count"]:

@@ -328,6 +328,12 @@ def test_remote_t1_script_wires_packet_compile_and_contest_cuda_auth_eval() -> N
     assert "from experiments.contest_auth_eval import _runtime_dependency_manifest" in text
     assert "--expected-runtime-tree-sha256 \"$AUTH_EVAL_EXPECTED_RUNTIME_TREE_SHA\"" in text
     assert "--expected-runtime-tree-sha256 \"$RUNTIME_TREE_SHA\"" not in text
+    assert "runtime_tree_sha256 = runtime_manifest.get(\"runtime_tree_sha256\")" in text
+    assert "contest_auth_eval_runtime_tree_sha256_missing_or_invalid" in text
+    assert "contest_auth_eval_runtime_tree_sha256_mismatch_expected" in text
+    assert "\"runtime_tree_sha256\": runtime_tree_sha256" in text
+    assert "\"packet_pre_manifest_runtime_tree_sha256\"" in text
+    assert "\"runtime_tree_sha256\": manifest.get(\"runtime_tree_sha256\")" not in text
     assert "required_contest_cuda_evidence_blockers" in text
     assert "device mps" not in text.lower()
 

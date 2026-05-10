@@ -521,7 +521,7 @@ PY
             exit "$AUTH_EVAL_RC"
         fi
         set +e
-        "$PYBIN" - "$AUTH_EVAL_JSON" "$PACKET_DIR/build_manifest.json" "$PACKET_DIR/archive.zip" "$AUTH_EVAL_ADJUDICATION_JSON" <<'PY'
+        "$PYBIN" - "$AUTH_EVAL_JSON" "$PACKET_DIR/build_manifest.json" "$PACKET_DIR/archive.zip" "$AUTH_EVAL_ADJUDICATION_JSON" "$AUTH_EVAL_EXPECTED_RUNTIME_TREE_SHA" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -532,9 +532,22 @@ auth_json = Path(sys.argv[1])
 manifest_json = Path(sys.argv[2])
 archive_path = Path(sys.argv[3])
 out_json = Path(sys.argv[4])
+expected_runtime_tree_sha256 = sys.argv[5]
+
+
+def _is_sha256(value):
+    return (
+        isinstance(value, str)
+        and len(value) == 64
+        and all(char in "0123456789abcdef" for char in value.lower())
+    )
 
 eval_data = json.loads(auth_json.read_text())
 manifest = json.loads(manifest_json.read_text())
+runtime_manifest = eval_data.get("provenance", {}).get("inflate_runtime_manifest", {})
+if not isinstance(runtime_manifest, dict):
+    runtime_manifest = {}
+runtime_tree_sha256 = runtime_manifest.get("runtime_tree_sha256")
 metrics = eval_metric_summary(eval_data)
 blockers = required_contest_cuda_evidence_blockers(
     eval_data,
@@ -552,6 +565,10 @@ if manifest.get("no_op_proof", {}).get("runtime_consumption_proof") is not True:
     blockers.append("packet_no_op_runtime_consumption_not_proven")
 if manifest.get("blockers"):
     blockers.append("packet_manifest_has_blockers")
+if not _is_sha256(runtime_tree_sha256):
+    blockers.append("contest_auth_eval_runtime_tree_sha256_missing_or_invalid")
+if runtime_tree_sha256 != expected_runtime_tree_sha256:
+    blockers.append("contest_auth_eval_runtime_tree_sha256_mismatch_expected")
 
 payload = {
     "schema_version": "t1_contest_cuda_auth_eval_adjudication.v1",
@@ -560,7 +577,13 @@ payload = {
     "packet_archive": archive_path.as_posix(),
     "packet_archive_sha256": manifest.get("archive_sha256"),
     "packet_archive_size_bytes": manifest.get("archive_size_bytes"),
-    "runtime_tree_sha256": manifest.get("runtime_tree_sha256"),
+    "runtime_tree_sha256": runtime_tree_sha256,
+    "runtime_tree_sha256_source": (
+        "contest_auth_eval.provenance.inflate_runtime_manifest.runtime_tree_sha256"
+    ),
+    "expected_runtime_tree_sha256": expected_runtime_tree_sha256,
+    "packet_manifest_runtime_tree_sha256": manifest.get("runtime_tree_sha256"),
+    "packet_pre_manifest_runtime_tree_sha256": manifest.get("pre_manifest_runtime_tree_sha256"),
     "metrics": metrics,
     "blockers": blockers,
     "score_claim": not blockers,

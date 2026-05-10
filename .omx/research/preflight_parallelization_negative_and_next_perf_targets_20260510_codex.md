@@ -140,3 +140,35 @@ of disappearing as opaque provider failures.
 ## Claim discipline
 
 No score claim or custody claim is made here. This is DX velocity evidence only.
+
+## 2026-05-10 Gate #25 Modal image audit hotspot reduction
+
+`tools/audit_modal_image_build_order.py` was reduced from broad AST parsing of
+every tracked Python file to a two-phase source-index-compatible scan:
+
+1. keep the `git ls-files` tracked-file boundary;
+2. read Python source once and prefilter for literal Modal mount methods
+   `add_local_dir` / `add_local_file`;
+3. AST-parse only the Modal candidate files that can affect the policy.
+
+Verification:
+
+```bash
+.venv/bin/python -m pytest -q \
+  src/tac/tests/test_modal_image_build_order_audit.py \
+  tests/test_preflight_source_index_equivalence.py
+# 8 passed
+
+.venv/bin/python tools/audit_modal_image_build_order.py --strict
+# modal image build order: PASS (20 Modal candidate files; 2520 tracked Python files checked)
+```
+
+Worker timing:
+
+- before: `3 loops, best of 3: 4.1 sec per loop`;
+- after: `10 loops, best of 5: 179 msec per loop`.
+
+Residual risk: the candidate filter is intentionally tied to the literal mount
+method names used by the AST policy surface. Dynamic wrappers that hide those
+method names remain outside this check, matching the previous practical policy
+boundary rather than expanding it silently.

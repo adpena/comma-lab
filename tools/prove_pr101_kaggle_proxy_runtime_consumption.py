@@ -35,6 +35,7 @@ TOOL_NAME = "tools/prove_pr101_kaggle_proxy_runtime_consumption.py"
 PACKET_SCHEMA = "pr101_kaggle_proxy_runtime_packet_v1"
 PROOF_SCHEMA = "pr101_kaggle_proxy_runtime_consumption_proof_v1"
 PROOF_KIND = "static_bias_patch_plus_local_inflate_wrapper_route_no_score_v1"
+CANDIDATE_PARAM_SCHEMA = "pr101_kaggle_proxy_bias_runtime_params_v1"
 DEFAULT_MANIFEST = Path(
     "experiments/results/kaggle_pr101_proxy_sweep_20260510_codex/"
     "pr101_proxy_sweep/proxy_runtime_packet/runtime_packet_manifest.json"
@@ -51,6 +52,12 @@ OLD_PR101_LINES = {
     "bias_g": "up[:, 1, 1].sub_(1.0)",
 }
 UNSUPPORTED_PARAMS = ("delta_scale", "latent_delta_scale", "smooth_weight")
+REMOVED_UNSUPPORTED_BLOCKERS = (
+    "unsupported_proxy_params_not_runtime_consumed",
+    "delta_scale_not_runtime_consumed",
+    "latent_delta_scale_not_runtime_consumed",
+    "smooth_weight_not_runtime_consumed",
+)
 FALSE_AUTHORITY_FIELDS = {
     "score_claim": False,
     "ready_for_exact_eval_dispatch": False,
@@ -379,36 +386,56 @@ def _verify_inflate_wrapper_routes_to_packet_inflate_py(
     }
 
 
-def _verify_unsupported_params_remain_blocked(manifest: Mapping[str, Any]) -> dict[str, Any]:
-    unsupported = _require_mapping(manifest.get("unsupported_params"), "unsupported_params")
+def _verify_bias_only_candidate_contract(manifest: Mapping[str, Any]) -> dict[str, Any]:
     blockers = manifest.get("blockers")
     if not isinstance(blockers, list) or not all(isinstance(row, str) for row in blockers):
         raise RuntimeConsumptionProofError("blockers must be a list of strings")
+    removed_blockers_present = [blocker for blocker in REMOVED_UNSUPPORTED_BLOCKERS if blocker in blockers]
+    if removed_blockers_present:
+        raise RuntimeConsumptionProofError(
+            "runtime packet blockers still advertise removed unsupported proxy params: "
+            f"{removed_blockers_present}"
+        )
+    if "unsupported_params" in manifest:
+        raise RuntimeConsumptionProofError("manifest must not advertise unsupported_params as candidate params")
+
+    if manifest.get("candidate_param_schema") != CANDIDATE_PARAM_SCHEMA:
+        raise RuntimeConsumptionProofError(
+            f"candidate_param_schema must be {CANDIDATE_PARAM_SCHEMA!r}"
+        )
+    candidate_params = _require_mapping(manifest.get("candidate_params"), "candidate_params")
     consumed = _require_mapping(manifest.get("runtime_consumed_params"), "runtime_consumed_params")
+    if set(candidate_params) != set(SUPPORTED_BIAS_SLOTS):
+        raise RuntimeConsumptionProofError("candidate_params must contain only supported bias params")
     if set(consumed) != set(SUPPORTED_BIAS_SLOTS):
         raise RuntimeConsumptionProofError("runtime_consumed_params must contain only supported bias params")
+    if dict(candidate_params) != dict(consumed):
+        raise RuntimeConsumptionProofError("candidate_params must match runtime_consumed_params")
 
-    rows: dict[str, Any] = {}
-    for param in UNSUPPORTED_PARAMS:
-        row = _require_mapping(unsupported.get(param), f"unsupported_params.{param}")
-        blocker = f"{param}_not_runtime_consumed"
+    ignored = _require_mapping(
+        manifest.get("ignored_legacy_handoff_params"),
+        "ignored_legacy_handoff_params",
+    )
+    ignored_rows: dict[str, Any] = {}
+    for param, raw_row in ignored.items():
+        if param not in UNSUPPORTED_PARAMS:
+            raise RuntimeConsumptionProofError(f"unexpected ignored legacy handoff param: {param}")
+        row = _require_mapping(raw_row, f"ignored_legacy_handoff_params.{param}")
+        if row.get("candidate_param") is not False:
+            raise RuntimeConsumptionProofError(
+                f"ignored_legacy_handoff_params.{param}.candidate_param must be false"
+            )
         if row.get("runtime_consumed") is not False:
-            raise RuntimeConsumptionProofError(f"unsupported_params.{param}.runtime_consumed must be false")
-        if row.get("blocker") != blocker:
-            raise RuntimeConsumptionProofError(f"unsupported_params.{param}.blocker must be {blocker}")
-        if blocker not in blockers:
-            raise RuntimeConsumptionProofError(f"missing blocker: {blocker}")
-        if param in consumed:
-            raise RuntimeConsumptionProofError(f"unsupported param consumed by runtime: {param}")
-        rows[param] = dict(row)
-    if "unsupported_proxy_params_not_runtime_consumed" not in blockers:
-        raise RuntimeConsumptionProofError("missing unsupported_proxy_params_not_runtime_consumed blocker")
+            raise RuntimeConsumptionProofError(
+                f"ignored_legacy_handoff_params.{param}.runtime_consumed must be false"
+            )
+        ignored_rows[param] = dict(row)
     return {
-        "unsupported_params": rows,
-        "required_blockers_present": [
-            "unsupported_proxy_params_not_runtime_consumed",
-            *[f"{param}_not_runtime_consumed" for param in UNSUPPORTED_PARAMS],
-        ],
+        "candidate_param_schema": CANDIDATE_PARAM_SCHEMA,
+        "candidate_params": dict(candidate_params),
+        "runtime_consumed_params": dict(consumed),
+        "ignored_legacy_handoff_params": ignored_rows,
+        "removed_unsupported_param_blockers_absent": list(REMOVED_UNSUPPORTED_BLOCKERS),
     }
 
 
@@ -444,7 +471,7 @@ def build_runtime_consumption_proof(
 
     archive_proof = _verify_archive_unchanged(manifest, packet_dir)
     inflate_proof = _verify_inflate_file(manifest, packet_dir)
-    unsupported_proof = _verify_unsupported_params_remain_blocked(manifest)
+    candidate_contract_proof = _verify_bias_only_candidate_contract(manifest)
     wrapper_route_proof = _verify_inflate_wrapper_routes_to_packet_inflate_py(
         manifest,
         packet_dir,
@@ -468,7 +495,7 @@ def build_runtime_consumption_proof(
         "archive_unchanged_proof": archive_proof,
         "inflate_static_bias_patch_proof": inflate_proof,
         "inflate_wrapper_route_proof": wrapper_route_proof,
-        "unsupported_params_blocker_proof": unsupported_proof,
+        "candidate_contract_proof": candidate_contract_proof,
         "supported_bias_params_static_patch_proven": True,
         "inflate_sh_routes_to_packet_inflate_py": True,
         "runtime_consumption_proven_for_supported_bias_params": False,
@@ -477,7 +504,6 @@ def build_runtime_consumption_proof(
             "packet inflate.py wrapper route. It does not run the real inflate.py body "
             "or scorer-backed output validation."
         ),
-        "unsupported_proxy_params_runtime_consumed": False,
         "scorers_invoked": False,
         "gpu_required": False,
         "score_claim": False,
@@ -487,7 +513,6 @@ def build_runtime_consumption_proof(
             "proxy_substrate_not_contest_exact_eval",
             "no_contest_cuda_auth_eval",
             "full_inflate_runtime_not_executed_by_this_probe",
-            "unsupported_proxy_params_not_runtime_consumed",
             "active_level2_lane_dispatch_claim_required_before_exact_eval",
         ],
     }

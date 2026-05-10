@@ -190,7 +190,6 @@ def test_proves_only_supported_bias_params_are_runtime_consumed(
     assert proof["supported_bias_params_static_patch_proven"] is True
     assert proof["inflate_sh_routes_to_packet_inflate_py"] is True
     assert proof["runtime_consumption_proven_for_supported_bias_params"] is False
-    assert proof["unsupported_proxy_params_runtime_consumed"] is False
     assert proof["scorers_invoked"] is False
     assert proof["gpu_required"] is False
     assert proof_sha == _canonical_sha(basis)
@@ -203,13 +202,23 @@ def test_proves_only_supported_bias_params_are_runtime_consumed(
         "up[:, 0, 2].add_(-0.79)",
         "up[:, 1, 1].add_(-0.88)",
     }
-    unsupported = proof["unsupported_params_blocker_proof"]
-    assert unsupported["required_blockers_present"] == [
+    candidate_contract = proof["candidate_contract_proof"]
+    assert candidate_contract["candidate_param_schema"] == "pr101_kaggle_proxy_bias_runtime_params_v1"
+    assert set(candidate_contract["candidate_params"]) == {"bias_b", "bias_g", "bias_r"}
+    assert candidate_contract["candidate_params"] == candidate_contract["runtime_consumed_params"]
+    assert set(candidate_contract["ignored_legacy_handoff_params"]) == {
+        "delta_scale",
+        "latent_delta_scale",
+        "smooth_weight",
+    }
+    assert candidate_contract["removed_unsupported_param_blockers_absent"] == [
         "unsupported_proxy_params_not_runtime_consumed",
         "delta_scale_not_runtime_consumed",
         "latent_delta_scale_not_runtime_consumed",
         "smooth_weight_not_runtime_consumed",
     ]
+    assert "unsupported_params_blocker_proof" not in proof
+    assert "unsupported_proxy_params_not_runtime_consumed" not in proof["dispatch_blockers"]
     route = proof["inflate_wrapper_route_proof"]
     assert route["proof_kind"] == "local_no_scorer_wrapper_route_probe_v1"
     assert route["wrapper_invoked_packet_inflate_py"] is True
@@ -277,7 +286,7 @@ def test_fails_closed_when_inflate_is_tampered(
     assert not (packet_dir / "runtime_consumption_proof.json").exists()
 
 
-def test_fails_closed_when_manifest_unsupported_blocker_is_tampered(
+def test_fails_closed_when_manifest_advertises_removed_unsupported_params(
     tmp_path: Path,
     packet_builder,
     proof_tool,
@@ -285,13 +294,57 @@ def test_fails_closed_when_manifest_unsupported_blocker_is_tampered(
     packet_dir = _build_packet(tmp_path, packet_builder)
     manifest_path = packet_dir / "runtime_packet_manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    manifest["unsupported_params"]["smooth_weight"]["runtime_consumed"] = True
+    manifest["unsupported_params"] = {
+        "smooth_weight": {
+            "value": 0.019,
+            "runtime_consumed": False,
+            "blocker": "smooth_weight_not_runtime_consumed",
+        }
+    }
     basis = dict(manifest)
     basis.pop("manifest_sha256_excluding_self")
     manifest["manifest_sha256_excluding_self"] = _canonical_sha(basis)
     _write_json(manifest_path, manifest)
 
-    with pytest.raises(proof_tool.RuntimeConsumptionProofError, match="smooth_weight.*runtime_consumed"):
+    with pytest.raises(proof_tool.RuntimeConsumptionProofError, match="must not advertise unsupported_params"):
+        proof_tool.build_runtime_consumption_proof(manifest_path=manifest_path)
+    assert not (packet_dir / "runtime_consumption_proof.json").exists()
+
+
+def test_fails_closed_when_manifest_reintroduces_unsupported_param_blocker(
+    tmp_path: Path,
+    packet_builder,
+    proof_tool,
+) -> None:
+    packet_dir = _build_packet(tmp_path, packet_builder)
+    manifest_path = packet_dir / "runtime_packet_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["blockers"].append("unsupported_proxy_params_not_runtime_consumed")
+    basis = dict(manifest)
+    basis.pop("manifest_sha256_excluding_self")
+    manifest["manifest_sha256_excluding_self"] = _canonical_sha(basis)
+    _write_json(manifest_path, manifest)
+
+    with pytest.raises(proof_tool.RuntimeConsumptionProofError, match="removed unsupported proxy params"):
+        proof_tool.build_runtime_consumption_proof(manifest_path=manifest_path)
+    assert not (packet_dir / "runtime_consumption_proof.json").exists()
+
+
+def test_fails_closed_when_unconsumed_legacy_param_is_advertised_as_candidate(
+    tmp_path: Path,
+    packet_builder,
+    proof_tool,
+) -> None:
+    packet_dir = _build_packet(tmp_path, packet_builder)
+    manifest_path = packet_dir / "runtime_packet_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["candidate_params"]["smooth_weight"] = 0.019
+    basis = dict(manifest)
+    basis.pop("manifest_sha256_excluding_self")
+    manifest["manifest_sha256_excluding_self"] = _canonical_sha(basis)
+    _write_json(manifest_path, manifest)
+
+    with pytest.raises(proof_tool.RuntimeConsumptionProofError, match="candidate_params must contain only"):
         proof_tool.build_runtime_consumption_proof(manifest_path=manifest_path)
     assert not (packet_dir / "runtime_consumption_proof.json").exists()
 
@@ -338,5 +391,6 @@ def test_cli_emits_false_authority_fields(tmp_path: Path, packet_builder) -> Non
     assert stdout["dispatch_attempted"] is False
     assert stdout["inflate_sh_routes_to_packet_inflate_py"] is True
     assert stdout["runtime_consumption_proven_for_supported_bias_params"] is False
+    assert "unsupported_proxy_params_not_runtime_consumed" not in stdout["dispatch_blockers"]
     assert len(stdout["proof_sha256_excluding_self"]) == 64
     assert proof_path.is_file()

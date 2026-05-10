@@ -34,7 +34,8 @@ from tac.repo_io import json_text, read_json, repo_relative, sha256_file, write_
 TOOL_NAME = "tools/build_pr101_kaggle_proxy_runtime_packet.py"
 HANDOFF_SCHEMA = "pr101_kaggle_proxy_candidate_archive_builder_handoff_v1"
 PACKET_SCHEMA = "pr101_kaggle_proxy_runtime_packet_v1"
-PARAM_SCHEMA = "pr101_kaggle_proxy_candidate_params_v1"
+SOURCE_HANDOFF_PARAM_SCHEMA = "pr101_kaggle_proxy_candidate_params_v1"
+CANDIDATE_PARAM_SCHEMA = "pr101_kaggle_proxy_bias_runtime_params_v1"
 DEFAULT_HANDOFF = Path(
     "experiments/results/kaggle_pr101_proxy_sweep_20260510_codex/"
     "pr101_proxy_sweep/local_materialization/archive_builder_handoff.json"
@@ -51,20 +52,17 @@ DEFAULT_PACKET_DIR = Path(
     "pr101_proxy_sweep/proxy_runtime_packet"
 )
 MANIFEST_NAME = "runtime_packet_manifest.json"
-REQUIRED_PARAMS = (
+CANDIDATE_PARAMS = (
     "bias_b",
     "bias_g",
     "bias_r",
-    "delta_scale",
-    "latent_delta_scale",
-    "smooth_weight",
 )
 RUNTIME_CONSUMED_PARAM_SLOTS = {
     "bias_r": "up[:, 0, 0]",
     "bias_b": "up[:, 0, 2]",
     "bias_g": "up[:, 1, 1]",
 }
-UNSUPPORTED_PARAMS = ("delta_scale", "latent_delta_scale", "smooth_weight")
+LEGACY_NON_CANDIDATE_PARAMS = ("delta_scale", "latent_delta_scale", "smooth_weight")
 FALSE_AUTHORITY_FIELDS = {
     "score_claim": False,
     "score_claim_valid": False,
@@ -76,7 +74,6 @@ FALSE_AUTHORITY_FIELDS = {
 BASE_BLOCKERS = [
     "proxy_substrate_not_contest_exact_eval",
     "no_contest_cuda_auth_eval",
-    "unsupported_proxy_params_not_runtime_consumed",
     "local_inflate_or_runtime_consumption_proof_not_run",
     "active_level2_lane_dispatch_claim_required_before_exact_eval",
 ]
@@ -181,8 +178,8 @@ def _runtime_tree_sha256(runtime_files: list[dict[str, Any]]) -> str:
 def _validate_handoff(handoff: Mapping[str, Any]) -> dict[str, Any]:
     if handoff.get("schema") != HANDOFF_SCHEMA:
         raise ProxyRuntimePacketError(f"handoff schema must be {HANDOFF_SCHEMA!r}")
-    if handoff.get("param_schema") != PARAM_SCHEMA:
-        raise ProxyRuntimePacketError(f"param_schema must be {PARAM_SCHEMA!r}")
+    if handoff.get("param_schema") != SOURCE_HANDOFF_PARAM_SCHEMA:
+        raise ProxyRuntimePacketError(f"param_schema must be {SOURCE_HANDOFF_PARAM_SCHEMA!r}")
 
     candidate_id = handoff.get("candidate_id")
     if not isinstance(candidate_id, str) or not candidate_id:
@@ -194,20 +191,35 @@ def _validate_handoff(handoff: Mapping[str, Any]) -> dict[str, Any]:
             raise ProxyRuntimePacketError(f"evidence_boundary.{field} must be {expected!r}")
 
     params_raw = _require_mapping(handoff.get("params"), "params")
-    expected_keys = set(REQUIRED_PARAMS)
+    expected_keys = set(CANDIDATE_PARAMS)
+    allowed_legacy_keys = expected_keys | set(LEGACY_NON_CANDIDATE_PARAMS)
     actual_keys = set(params_raw)
     missing = sorted(expected_keys - actual_keys)
-    extra = sorted(actual_keys - expected_keys)
+    extra = sorted(actual_keys - allowed_legacy_keys)
     if missing:
-        raise ProxyRuntimePacketError(f"params missing required keys: {missing}")
+        raise ProxyRuntimePacketError(f"params missing required candidate keys: {missing}")
     if extra:
         raise ProxyRuntimePacketError(f"params has unsupported keys: {extra}")
 
     params = {
         key: _require_finite_number(params_raw[key], f"params.{key}")
-        for key in REQUIRED_PARAMS
+        for key in CANDIDATE_PARAMS
     }
-    return {"candidate_id": candidate_id, "params": params}
+    ignored_legacy_params = {
+        key: {
+            "value": _require_finite_number(params_raw[key], f"params.{key}"),
+            "candidate_param": False,
+            "runtime_consumed": False,
+            "reason": "legacy_proxy_search_param_not_routed_by_pr101_runtime_packet_builder",
+        }
+        for key in LEGACY_NON_CANDIDATE_PARAMS
+        if key in params_raw
+    }
+    return {
+        "candidate_id": candidate_id,
+        "candidate_params": params,
+        "ignored_legacy_handoff_params": ignored_legacy_params,
+    }
 
 
 def _prepare_packet_dir(packet_dir: Path, *, force: bool) -> None:
@@ -312,7 +324,7 @@ def build_proxy_runtime_packet(
 
     handoff_raw = _require_mapping(read_json(handoff_path), "handoff")
     validated = _validate_handoff(handoff_raw)
-    params = validated["params"]
+    params = validated["candidate_params"]
 
     _prepare_packet_dir(packet_dir, force=force)
     copied_rels = _copy_runtime_tree(source_runtime_dir, packet_dir)
@@ -337,19 +349,24 @@ def build_proxy_runtime_packet(
     if not archive_unchanged:
         raise ProxyRuntimePacketError("copied archive SHA changed unexpectedly")
 
-    unsupported_params = {
-        key: {
-            "value": params[key],
-            "runtime_consumed": False,
-            "blocker": f"{key}_not_runtime_consumed",
-        }
-        for key in UNSUPPORTED_PARAMS
-    }
-    blockers = list(BASE_BLOCKERS) + [row["blocker"] for row in unsupported_params.values()]
+    blockers = list(BASE_BLOCKERS)
     manifest: dict[str, Any] = {
         "schema": PACKET_SCHEMA,
         "tool": TOOL_NAME,
         "candidate_id": validated["candidate_id"],
+        "source_handoff_param_schema": SOURCE_HANDOFF_PARAM_SCHEMA,
+        "candidate_param_schema": CANDIDATE_PARAM_SCHEMA,
+        "candidate_params": {
+            key: params[key]
+            for key in CANDIDATE_PARAMS
+        },
+        "candidate_contract": {
+            "scope": "local_pr101_proxy_runtime_packet_bias_params_only",
+            "runtime_routed_params": list(CANDIDATE_PARAMS),
+            "runtime_consumption_status": "static_patch_and_wrapper_route_only_until_exact_cuda",
+            "legacy_handoff_params_ignored": sorted(validated["ignored_legacy_handoff_params"]),
+        },
+        "ignored_legacy_handoff_params": validated["ignored_legacy_handoff_params"],
         "handoff_artifact": _repo_rel(handoff_path),
         "packet_dir": _repo_rel(packet_dir),
         "source_runtime_dir": _repo_rel(source_runtime_dir),
@@ -376,9 +393,8 @@ def build_proxy_runtime_packet(
         "runtime_patch": runtime_patch,
         "runtime_consumed_params": {
             key: params[key]
-            for key in RUNTIME_CONSUMED_PARAM_SLOTS
+            for key in CANDIDATE_PARAMS
         },
-        "unsupported_params": unsupported_params,
         "blockers": blockers,
         "authority_boundary": {
             "proxy_only_input": True,

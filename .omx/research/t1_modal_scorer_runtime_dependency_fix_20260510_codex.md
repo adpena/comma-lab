@@ -107,3 +107,34 @@ reasonable next guard command should use:
 Full T1 runs should use a non-guard label and should only launch after the
 bounded guard passes the import probe, reaches training, emits packet artifacts,
 and proves the packet compiler/auth-eval path.
+
+## 2026-05-10T13Z relaunch and adjudication custody hardening
+
+Relaunched bounded T1 guard from clean mounted commit `1aac11aa`:
+
+- Label: `t1_balle_modal_guard_1aac11aa_20260510T1301Z`
+- Modal call id: `fc-01KR8ZNESYP42EP7928ZK94ZQB`
+- Modal app: `ap-RNwmDecklm1TEfPvNrgYFo`
+- Dispatch claim: `active_dispatching`
+- Recover command:
+  `.venv/bin/python experiments/modal_t1_balle_endtoend.py recover --label t1_balle_modal_guard_1aac11aa_20260510T1301Z`
+
+Read-only red-team found no dispatch-blocking issue, but identified an
+adjudication-custody bug: `auth_eval_adjudication.json` recorded
+`runtime_tree_sha256` from the packet compiler build manifest, whose final
+runtime hash is intentionally blank to avoid a self-referential manifest hash.
+
+Fix:
+
+- `scripts/remote_lane_t1_balle_endtoend.sh` now records adjudication
+  `runtime_tree_sha256` from
+  `contest_auth_eval.provenance.inflate_runtime_manifest.runtime_tree_sha256`;
+- it preserves `packet_pre_manifest_runtime_tree_sha256` separately as compiler
+  custody;
+- it appends blockers if the auth-eval runtime SHA is missing/invalid or does
+  not match the expected runtime dependency hash passed to `contest_auth_eval`;
+- `tests/test_dispatch_t1_balle_endtoend.py` guards against reverting to
+  `manifest.get("runtime_tree_sha256")` for score adjudication.
+
+This is a custody fix only. The active run is still in progress as of this
+entry, and no score claim or promotion claim is made.

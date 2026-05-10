@@ -187,6 +187,39 @@ Promote a candidate only if all are true:
 Retire only a measured configuration, not a family, unless multiple exact
 anchors plus adversarial review prove the family cannot satisfy the target.
 
+## 2026-05-10 PR101 proxy candidate contract shrink
+
+The PR101 Kaggle/local proxy bridge now advertises only the three runtime-routed
+bias parameters as candidate params:
+
+- `bias_b`
+- `bias_g`
+- `bias_r`
+
+Legacy handoff values `delta_scale`, `latent_delta_scale`, and `smooth_weight`
+remain readable for old sweep artifacts but are recorded as ignored,
+non-candidate, non-runtime-consumed metadata. The removed unsupported-param
+blockers are no longer used to make the packet look blocked for the wrong
+reason; the remaining blockers are the real authority blockers:
+
+- proxy substrate is not contest exact eval;
+- no contest-CUDA auth eval;
+- only local wrapper/static proof has run;
+- an active Level-2 dispatch claim is required before exact eval.
+
+Verification:
+
+```bash
+.venv/bin/python -m pytest -q \
+  tests/test_build_pr101_kaggle_proxy_runtime_packet.py \
+  tests/test_prove_pr101_kaggle_proxy_runtime_consumption.py
+# 14 passed
+```
+
+Authority boundary is unchanged: this is still local proxy materialization and
+runtime-route evidence only. It is not a score claim, not a dispatch, and not a
+contest-CUDA result.
+
 ## 2026-05-10T09:35Z supersession
 
 The T1 guard is no longer active. Recover closed it terminally with
