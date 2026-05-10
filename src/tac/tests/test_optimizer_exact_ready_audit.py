@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import zipfile
 from pathlib import Path
 
 from tac.optimizer.exact_ready_audit import (
@@ -150,17 +151,16 @@ def test_audit_flags_promotable_terminal_success_as_already_evaluated(
 def test_audit_allows_runtime_changed_row_after_different_runtime_terminal(
     tmp_path: Path,
 ) -> None:
-    archive_sha = "2" * 64
     old_runtime = "3" * 64
-    new_runtime = "4" * 64
     queue = _ready_queue(
         tmp_path / "experiments/results/fixture/exact_ready_queue.json",
         lane_id="lane_runtime_patch",  # FAKE_LANE_OK: synthetic runtime fixture.
-        archive_sha=archive_sha,
+        archive_sha="2" * 64,
     )
+    new_runtime = _add_live_runtime_fields(queue, repo_root=tmp_path)
     payload = json.loads(queue.read_text(encoding="utf-8"))
     row = payload["dispatch_ready"][0]
-    row["runtime_tree_sha256"] = new_runtime
+    archive_sha = row["archive_sha256"]
     row["score_affecting_runtime_changed"] = True
     queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     claims = _write_claims(
@@ -181,19 +181,48 @@ def test_audit_allows_runtime_changed_row_after_different_runtime_terminal(
     assert payload["stale_ready_row_count"] == 0
 
 
-def test_audit_blocks_runtime_changed_row_after_same_runtime_terminal(
+def test_audit_runtime_sha_disambiguates_terminal_even_if_boolean_missing(
     tmp_path: Path,
 ) -> None:
-    archive_sha = "5" * 64
-    runtime_sha = "6" * 64
+    old_runtime = "4" * 64
     queue = _ready_queue(
         tmp_path / "experiments/results/fixture/exact_ready_queue.json",
         lane_id="lane_runtime_patch",  # FAKE_LANE_OK: synthetic runtime fixture.
-        archive_sha=archive_sha,
+        archive_sha="2" * 64,
     )
+    new_runtime = _add_live_runtime_fields(queue, repo_root=tmp_path)
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    archive_sha = payload["dispatch_ready"][0]["archive_sha256"]
+    claims = _write_claims(
+        tmp_path / ".omx/state/active_lane_dispatch_claims.md",
+        [
+            f"| 2026-05-10T00:01:00Z | test | lane_runtime_patch | modal | job1 |  | completed_contest_cuda_auth_eval_negative | archive_sha={archive_sha}; runtime_tree_sha={old_runtime}; score_recomputed=41.3495 |",
+        ],
+    )
+
+    result = audit_exact_ready_queues(
+        [queue],
+        repo_root=tmp_path,
+        dispatch_claims_path=claims,
+    )
+
+    assert new_runtime != old_runtime
+    assert result["passed"] is True
+    assert result["stale_ready_row_count"] == 0
+
+
+def test_audit_blocks_runtime_changed_row_after_same_runtime_terminal(
+    tmp_path: Path,
+) -> None:
+    queue = _ready_queue(
+        tmp_path / "experiments/results/fixture/exact_ready_queue.json",
+        lane_id="lane_runtime_patch",  # FAKE_LANE_OK: synthetic runtime fixture.
+        archive_sha="5" * 64,
+    )
+    runtime_sha = _add_live_runtime_fields(queue, repo_root=tmp_path)
     payload = json.loads(queue.read_text(encoding="utf-8"))
     row = payload["dispatch_ready"][0]
-    row["runtime_tree_sha256"] = runtime_sha
+    archive_sha = row["archive_sha256"]
     row["score_affecting_runtime_changed"] = True
     queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     claims = _write_claims(
@@ -226,12 +255,25 @@ def _add_live_runtime_fields(
 ) -> str:
     submission = repo_root / "packet"
     submission.mkdir(parents=True)
-    archive_bytes = b"archive-bytes"
-    (submission / "archive.zip").write_bytes(archive_bytes)
+    archive = submission / "archive.zip"
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("0.bin", b"archive-bytes")
+    archive_bytes = archive.read_bytes()
     archive_sha = hashlib.sha256(archive_bytes).hexdigest()
-    (submission / "inflate.sh").write_text(
+    inflate = submission / "inflate.sh"
+    inflate.write_text(
         "#!/usr/bin/env bash\nset -euo pipefail\nexit 0\n",
         encoding="utf-8",
+    )
+    inflate.chmod(0o755)
+    (submission / "report.txt").write_text("custody report\n", encoding="utf-8")
+    _write_json(
+        submission / "archive_manifest.json",
+        {
+            "archive_sha256": archive_sha,
+            "archive_bytes": len(archive_bytes),
+            "members": [{"name": "0.bin"}],
+        },
     )
     actual_runtime_sha = runtime_dependency_manifest(submission, repo_root)[
         "runtime_tree_sha256"
@@ -241,7 +283,10 @@ def _add_live_runtime_fields(
     row["archive_path"] = "packet/archive.zip"
     row["candidate_archive_sha256"] = archive_sha
     row["archive_sha256"] = archive_sha
+    row["archive_bytes"] = len(archive_bytes)
+    row["candidate_archive_bytes"] = len(archive_bytes)
     row["submission_dir"] = "packet"
+    row["inflate_sh_path"] = "packet/inflate.sh"
     row["runtime_tree_sha256"] = runtime_sha_override or actual_runtime_sha
     queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return actual_runtime_sha
@@ -307,12 +352,15 @@ def test_audit_allows_ready_row_with_current_live_runtime_tree_sha(
 def test_audit_allows_ready_queue_after_infra_failure_same_archive(
     tmp_path: Path,
 ) -> None:
-    archive_sha = "c" * 64
     queue = _ready_queue(
         tmp_path / "experiments/results/fixture/exact_ready_queue.json",
         lane_id="lane_pr103",  # FAKE_LANE_OK: synthetic terminal-evidence fixture.
-        archive_sha=archive_sha,
+        archive_sha="c" * 64,
     )
+    _add_live_runtime_fields(queue, repo_root=tmp_path)
+    archive_sha = json.loads(queue.read_text(encoding="utf-8"))["dispatch_ready"][0][
+        "archive_sha256"
+    ]
     claims = _write_claims(
         tmp_path / ".omx/state/active_lane_dispatch_claims.md",
         [
@@ -328,6 +376,92 @@ def test_audit_allows_ready_queue_after_infra_failure_same_archive(
 
     assert payload["passed"] is True
     assert payload["stale_ready_row_count"] == 0
+
+
+def test_audit_fails_closed_when_ready_row_lacks_live_archive_path(
+    tmp_path: Path,
+) -> None:
+    queue = _ready_queue(
+        tmp_path / "experiments/results/fixture/exact_ready_queue.json",
+        lane_id="lane_missing_packet",  # FAKE_LANE_OK: synthetic custody fixture.
+        archive_sha="a" * 64,
+    )
+    claims = _write_claims(
+        tmp_path / ".omx/state/active_lane_dispatch_claims.md",
+        [],
+    )
+
+    payload = audit_exact_ready_queues(
+        [queue],
+        repo_root=tmp_path,
+        dispatch_claims_path=claims,
+    )
+
+    assert payload["passed"] is False
+    blockers = payload["queues"][0]["stale_ready_rows"][0]["blockers"]
+    assert "ready_row_archive_path_missing" in blockers
+
+
+def test_audit_flags_ready_row_with_non_executable_inflate_sh(
+    tmp_path: Path,
+) -> None:
+    queue = _ready_queue(
+        tmp_path / "experiments/results/fixture/exact_ready_queue.json",
+        lane_id="lane_bad_runtime",  # FAKE_LANE_OK: synthetic custody fixture.
+        archive_sha="b" * 64,
+    )
+    _add_live_runtime_fields(queue, repo_root=tmp_path)
+    (tmp_path / "packet" / "inflate.sh").chmod(0o644)
+    claims = _write_claims(
+        tmp_path / ".omx/state/active_lane_dispatch_claims.md",
+        [],
+    )
+
+    payload = audit_exact_ready_queues(
+        [queue],
+        repo_root=tmp_path,
+        dispatch_claims_path=claims,
+    )
+
+    assert payload["passed"] is False
+    blockers = payload["queues"][0]["stale_ready_rows"][0]["blockers"]
+    assert "ready_row_inflate_sh_not_executable" in blockers
+
+
+def test_audit_blocks_old_completed_contest_cuda_score_not_below_floor(
+    tmp_path: Path,
+) -> None:
+    queue = _ready_queue(
+        tmp_path / "experiments/results/fixture/exact_ready_queue.json",
+        lane_id="lane_older_terminal",  # FAKE_LANE_OK: synthetic terminal-evidence fixture.
+        archive_sha="c" * 64,
+    )
+    _add_live_runtime_fields(queue, repo_root=tmp_path)
+    archive_sha = json.loads(queue.read_text(encoding="utf-8"))["dispatch_ready"][0][
+        "archive_sha256"
+    ]
+    claims = _write_claims(
+        tmp_path / ".omx/state/active_lane_dispatch_claims.md",
+        [
+            f"| 2026-05-10T00:00:00Z | test | lane_older_terminal | modal | job1 |  | completed_contest_cuda | archive_sha={archive_sha}; score_recomputed=0.22650343150032118 |"
+        ],
+    )
+
+    payload = audit_exact_ready_queues(
+        [queue],
+        repo_root=tmp_path,
+        dispatch_claims_path=claims,
+        active_floor_score=0.2089810755823297,
+    )
+
+    assert payload["passed"] is False
+    blockers = payload["queues"][0]["stale_ready_rows"][0]["blockers"]
+    assert any(
+        blocker.startswith(
+            "same_lane_terminal_score_not_below_active_floor_for_same_archive"
+        )
+        for blocker in blockers
+    )
 
 
 def test_audit_ignores_non_ready_rows_with_terminal_negative(tmp_path: Path) -> None:

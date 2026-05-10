@@ -25,6 +25,17 @@ evidence lands.
   `archive_path`/`candidate_archive_path` and `submission_dir`. A ready row is
   blocked when its persisted metadata no longer matches the bytes that would
   actually dispatch.
+- Recursive hardening pass after fresh-eyes review: exact-ready audit now
+  fails closed when a ready row lacks a live archive path, validates archive
+  byte fields, strict ZIP status, `inflate.sh` executable bit, `report.txt`,
+  archive manifest SHA/size/member closure, and declared `inflate_sh_path`.
+  Terminal suppression now also recognizes older `completed_contest_cuda`
+  statuses with score evidence, and runtime SHA disambiguation no longer
+  depends solely on the fragile `score_affecting_runtime_changed` boolean when
+  both candidate and terminal runtime SHAs are present.
+- `tools/operator_briefing.py --json --skip-pareto` now still emits
+  `exact_ready_queue_audit`; queue hygiene is an operator/dispatch invariant,
+  not a Pareto-table-only subsection.
 
 The audit reuses `tac.optimizer.exact_readiness.terminal_claim_result_conflicts`
 so stale persisted queues and newly generated promotions share the same
@@ -93,6 +104,12 @@ run and matches the live `submission_dir` runtime tree. It remains eligible
 only as a runtime-patch candidate with a fresh dispatch claim; its proxy score
 is not a score claim. The older duplicate promotion row is blocked because its
 persisted runtime SHA is stale relative to the live packet directory.
+
+Live-custody facts now confirm the four stale rows have valid archive bytes,
+strict ZIPs, executable `inflate.sh`, present reports, archive manifests, and
+runtime manifests; they are stale because of terminal evidence or runtime
+metadata mismatch, not because the audit is unable to inspect them. Any future
+ready row without those live surfaces is now blocked before CUDA spend.
 
 ## Operator-briefing effect
 

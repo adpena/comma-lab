@@ -888,10 +888,10 @@ def _format_dispatch_readiness() -> str:
     stale_rows = int(exact_ready_audit.get("stale_ready_row_count") or 0)
     if stale_rows:
         lines.append("  Phase 1 exact-ready queue hygiene:          "
-                     f"BLOCKED — {stale_rows} stale row(s) carry terminal evidence")
+                     f"BLOCKED — {stale_rows} row(s) carry terminal/live-custody blockers")
     else:
         lines.append("  Phase 1 exact-ready queue hygiene:          "
-                     "READY — no terminal-evidence conflicts")
+                     "READY — no terminal/live-custody blockers")
     # Phase 4 / Phase 5: gated lanes — read PHASE_4_GATED_LANES count
     try:
         n_gated = len(PHASE_4_GATED_LANES)
@@ -962,11 +962,11 @@ def main(argv: list[str] | None = None) -> int:
         out = {"dispatch_claim_summary": _dispatch_claim_summary()}
         if not args.skip_provider_readiness:
             out["provider_readiness"] = _provider_readiness(refresh=args.refresh_provider_readiness)
+        out["exact_ready_queue_audit"] = _exact_ready_queue_audit()
         if not args.skip_pareto:
             out["pareto"] = _run_json(PARETO, ["--json"])
             out["supplementary_lanes"] = PHASE_1_SUPPLEMENTARY_LANES
             out["exact_eval_packets"] = _exact_eval_packet_summaries()
-            out["exact_ready_queue_audit"] = _exact_ready_queue_audit()
             out["non_dispatchable_readiness_artifacts"] = _non_dispatchable_readiness_artifacts()
         if not args.skip_dashboard:
             out["dashboard"] = _run_json(DASHBOARD, ["--top", str(args.top), "--json"])

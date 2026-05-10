@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
@@ -9,7 +10,12 @@ from typing import Any
 from tac.optimizer.exact_readiness import (
     ACTIVE_FLOOR_SCORE,
     as_bool,
+    candidate_archive_byte_values,
+    default_manifest_path,
     is_sha256,
+    manifest_member_names,
+    manifest_sha,
+    manifest_size,
     read_json,
     repo_rel,
     resolve_path,
@@ -18,6 +24,7 @@ from tac.optimizer.exact_readiness import (
     terminal_claim_result_conflicts,
     utc_now,
 )
+from tac.zipwire_archive import inspect_zip_headers
 
 AUDIT_SCHEMA = "optimizer_exact_ready_queue_terminal_evidence_audit_v1"
 
@@ -55,6 +62,17 @@ def _row_submission_dir(row: Mapping[str, Any], *, repo_root: Path, queue_dir: P
     return resolve_path(row.get("submission_dir"), repo_root=repo_root, queue_dir=queue_dir)
 
 
+def _row_inflate_sh_path(row: Mapping[str, Any], *, repo_root: Path, queue_dir: Path) -> Path | None:
+    return resolve_path(row.get("inflate_sh_path"), repo_root=repo_root, queue_dir=queue_dir)
+
+
+def _same_resolved_path(left: Path, right: Path) -> bool:
+    try:
+        return left.resolve() == right.resolve()
+    except OSError:
+        return left.absolute() == right.absolute()
+
+
 def _ready_row_live_custody_blockers(
     row: Mapping[str, Any],
     *,
@@ -67,25 +85,125 @@ def _ready_row_live_custody_blockers(
     facts: dict[str, Any] = {}
 
     archive_path = _row_archive_path(row, repo_root=repo_root, queue_dir=queue_dir)
-    if archive_path is not None:
+    actual_archive_sha: str | None = None
+    actual_archive_bytes: int | None = None
+    zipwire: Mapping[str, Any] | None = None
+    if archive_path is None:
+        blockers.append("ready_row_archive_path_missing")
+    else:
         facts["archive_path"] = repo_rel(archive_path, repo_root)
         if not archive_path.is_file():
             blockers.append("ready_row_archive_file_missing")
         else:
             actual_archive_sha = sha256_file(archive_path)
+            actual_archive_bytes = archive_path.stat().st_size
             facts["actual_archive_sha256"] = actual_archive_sha
+            facts["actual_archive_bytes"] = actual_archive_bytes
             if archive_sha is not None and actual_archive_sha != archive_sha:
                 blockers.append(
                     "ready_row_archive_sha_mismatch:"
                     f"{actual_archive_sha}!={archive_sha}"
                 )
+            byte_values = candidate_archive_byte_values(row)
+            if not byte_values:
+                blockers.append("ready_row_archive_bytes_missing_or_invalid")
+            elif len(set(byte_values.values())) > 1:
+                details = ",".join(
+                    f"{key}={value}" for key, value in sorted(byte_values.items())
+                )
+                blockers.append(f"ready_row_archive_bytes_field_mismatch:{details}")
+            else:
+                expected_bytes = next(iter(byte_values.values()))
+                if actual_archive_bytes != expected_bytes:
+                    blockers.append(
+                        "ready_row_archive_bytes_mismatch:"
+                        f"{actual_archive_bytes}!={expected_bytes}"
+                    )
+            try:
+                zipwire = inspect_zip_headers(archive_path)
+            except (OSError, ValueError) as exc:
+                blockers.append(f"ready_row_archive_zip_unreadable:{type(exc).__name__}")
+                facts["archive_zip_error"] = str(exc)
+            else:
+                facts["archive_zip_strict"] = zipwire.get("zip_strict")
+                facts["archive_zip_member_count"] = zipwire.get("member_count")
+                if zipwire.get("zip_strict") is not True:
+                    blockers.append("ready_row_archive_zip_not_strict")
+                if int(zipwire.get("member_count") or 0) < 1:
+                    blockers.append("ready_row_archive_zip_empty")
 
     submission_dir = _row_submission_dir(row, repo_root=repo_root, queue_dir=queue_dir)
-    if submission_dir is not None:
+    if submission_dir is None and archive_path is not None:
+        submission_dir = archive_path.parent
+    if submission_dir is None:
+        blockers.append("ready_row_submission_dir_missing")
+    else:
         facts["submission_dir"] = repo_rel(submission_dir, repo_root)
         if not submission_dir.is_dir():
             blockers.append("ready_row_submission_dir_missing")
         else:
+            declared_inflate_sh = _row_inflate_sh_path(
+                row, repo_root=repo_root, queue_dir=queue_dir
+            )
+            inflate_sh = submission_dir / "inflate.sh"
+            facts["inflate_sh"] = repo_rel(inflate_sh, repo_root)
+            if declared_inflate_sh is not None:
+                facts["declared_inflate_sh_path"] = repo_rel(
+                    declared_inflate_sh, repo_root
+                )
+                if not _same_resolved_path(declared_inflate_sh, inflate_sh):
+                    blockers.append("ready_row_inflate_sh_path_mismatch")
+            if not inflate_sh.is_file():
+                blockers.append("ready_row_inflate_sh_missing")
+            elif not os.access(inflate_sh, os.X_OK):
+                blockers.append("ready_row_inflate_sh_not_executable")
+
+            report_path = submission_dir / "report.txt"
+            facts["report_path"] = repo_rel(report_path, repo_root)
+            if not report_path.is_file():
+                blockers.append("ready_row_report_txt_missing")
+
+            manifest_path = default_manifest_path(submission_dir)
+            facts["archive_manifest_path"] = repo_rel(manifest_path, repo_root)
+            if not manifest_path.is_file():
+                blockers.append("ready_row_archive_manifest_missing")
+            else:
+                try:
+                    raw_manifest = read_json(manifest_path)
+                except (OSError, ValueError) as exc:
+                    blockers.append(
+                        f"ready_row_archive_manifest_json_invalid:{type(exc).__name__}"
+                    )
+                    facts["archive_manifest_error"] = str(exc)
+                else:
+                    if not isinstance(raw_manifest, Mapping):
+                        blockers.append("ready_row_archive_manifest_not_object")
+                    elif actual_archive_sha is not None:
+                        manifest_archive_sha = manifest_sha(raw_manifest)
+                        manifest_archive_size = manifest_size(raw_manifest)
+                        facts["archive_manifest_sha256"] = manifest_archive_sha
+                        facts["archive_manifest_bytes"] = manifest_archive_size
+                        if manifest_archive_sha != actual_archive_sha:
+                            blockers.append(
+                                "ready_row_archive_manifest_sha_mismatch:"
+                                f"{manifest_archive_sha}!={actual_archive_sha}"
+                            )
+                        if manifest_archive_size != actual_archive_bytes:
+                            blockers.append(
+                                "ready_row_archive_manifest_size_mismatch:"
+                                f"{manifest_archive_size}!={actual_archive_bytes}"
+                            )
+                        if zipwire is not None:
+                            member_names = {
+                                str(member.get("name"))
+                                for member in zipwire.get("members", [])
+                                if isinstance(member, Mapping)
+                            }
+                            for name in manifest_member_names(raw_manifest):
+                                if name not in member_names:
+                                    blockers.append(
+                                        f"ready_row_archive_manifest_member_mismatch:{name}"
+                                    )
             try:
                 runtime_manifest = runtime_dependency_manifest(submission_dir, repo_root)
             except (OSError, ValueError, RuntimeError, SyntaxError) as exc:

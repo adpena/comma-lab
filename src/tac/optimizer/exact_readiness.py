@@ -527,17 +527,19 @@ def terminal_claim_result_conflicts(
         notes = _claim_job_notes(claim_rows_by_job.get(key, [row]))
         if archive_sha256 not in notes:
             continue
-        if score_affecting_runtime_changed is True and candidate_runtime_sha is not None:
-            claim_runtime_shas = _terminal_claim_runtime_tree_shas(notes)
-            if not claim_runtime_shas or candidate_runtime_sha not in claim_runtime_shas:
+        claim_runtime_shas = _terminal_claim_runtime_tree_shas(notes)
+        if candidate_runtime_sha is not None and claim_runtime_shas:
+            if candidate_runtime_sha not in claim_runtime_shas:
                 continue
+        elif score_affecting_runtime_changed is True and candidate_runtime_sha is not None:
+            continue
         status = row["status"].lower()
         claim_id = f"{row['lane_id']}:{row['instance_job_id']}:{row['status']}"
         if any(marker in status for marker in TERMINAL_NEGATIVE_STATUS_MARKERS):
             blockers.append(f"same_lane_terminal_negative_for_same_archive:{claim_id}")
             continue
         score = _terminal_claim_score(notes)
-        if status.startswith("completed_contest_cuda_auth_eval") and score is not None:
+        if status.startswith("completed_contest_cuda") and score is not None:
             if active_floor_score is not None and score >= active_floor_score:
                 blockers.append(
                     "same_lane_terminal_score_not_below_active_floor_for_same_archive:"

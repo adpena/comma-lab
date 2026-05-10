@@ -144,6 +144,18 @@ def test_briefing_json_composite_has_all_three_keys():
     assert lgblock16["operator_next_steps"]["schema"] == "hnerv_lowlevel_operator_next_steps_v1"
 
 
+def test_briefing_json_skip_pareto_still_surfaces_exact_ready_audit():
+    proc = _run("--json", "--skip-pareto", "--top", "3")
+    out = json.loads(proc.stdout)
+
+    assert "pareto" not in out
+    assert "exact_eval_packets" not in out
+    assert "exact_ready_queue_audit" in out
+    assert out["exact_ready_queue_audit"]["schema"] == (
+        "optimizer_exact_ready_queue_terminal_evidence_audit_v1"
+    )
+
+
 def test_briefing_json_each_phase_has_n_total_or_n_configs():
     """Each sub-tool must emit a JSON dict with at least one count field."""
     proc = _run("--json", "--top", "3")
