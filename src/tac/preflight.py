@@ -5391,7 +5391,11 @@ def check_dispatch_cli_shell_hazards(
     spec.loader.exec_module(module)
 
     roots = tuple(scan_paths or module.DEFAULT_SCAN_PATHS)
-    hazards = module.scan_paths(root, scan_paths=roots)
+    source_index = _current_source_index(root)
+    try:
+        hazards = module.scan_paths(root, scan_paths=roots, source_index=source_index)
+    except TypeError:
+        hazards = module.scan_paths(root, scan_paths=roots)
     violations = [
         f"{hazard.path}:{hazard.line}: {hazard.kind}: {hazard.message}"
         for hazard in hazards

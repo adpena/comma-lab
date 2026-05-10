@@ -485,11 +485,34 @@ def scan_paths(
     root: Path,
     scan_paths: tuple[str, ...] = DEFAULT_SCAN_PATHS,
     excludes: tuple[str, ...] = DEFAULT_EXCLUDES,
+    source_index=None,
 ) -> list[Hazard]:
     hazards: list[Hazard] = []
-    for file_path in iter_scan_files(root, scan_paths=scan_paths, excludes=excludes):
+    if source_index is None:
+        files = iter_scan_files(root, scan_paths=scan_paths, excludes=excludes)
+    else:
+        patterns = tuple(f"*{suffix}" for suffix in sorted(TEXT_SUFFIXES))
+        grouped = source_index.files_by_pattern(scan_paths, patterns=patterns)
+        files = sorted(
+            {
+                path
+                for paths_for_pattern in grouped.values()
+                for path in paths_for_pattern
+                if not _is_excluded_rel(_repo_rel(path, root), excludes)
+                and path.is_file()
+            },
+            key=lambda item: item.as_posix(),
+        )
+    for file_path in files:
         try:
-            text = file_path.read_text(encoding="utf-8", errors="ignore")
+            if source_index is None:
+                text = file_path.read_text(encoding="utf-8", errors="ignore")
+            else:
+                text = source_index.read_text(
+                    file_path,
+                    encoding="utf-8",
+                    errors="ignore",
+                )
         except OSError:
             continue
         hazards.extend(scan_text(file_path, text, root=root))

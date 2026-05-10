@@ -5,6 +5,8 @@ import sys
 import textwrap
 from pathlib import Path
 
+from tac.source_index import source_index_context
+
 REPO = Path(__file__).resolve().parents[3]
 HELPER = REPO / "tools" / "check_dispatch_cli_shell_hazards.py"
 
@@ -70,6 +72,22 @@ def test_scanner_catches_known_typo_flag(tmp_path: Path) -> None:
     hazards = helper.scan_paths(tmp_path, scan_paths=("scripts",))
     assert len(hazards) == 1
     assert hazards[0].kind == "known_typo_flag"
+
+
+def test_scanner_uses_source_index_without_changing_hazards(tmp_path: Path) -> None:
+    helper = _load_helper()
+    script = tmp_path / "scripts" / "typo.sh"
+    script.parent.mkdir()
+    script.write_text("python tools/x.py --rmote lightning\n", encoding="utf-8")
+
+    baseline = helper.scan_paths(tmp_path, scan_paths=("scripts",))
+    with source_index_context(tmp_path) as index:
+        indexed = helper.scan_paths(tmp_path, scan_paths=("scripts",), source_index=index)
+        stats = index.stats()
+
+    assert indexed == baseline
+    assert [hazard.kind for hazard in indexed] == ["known_typo_flag"]
+    assert stats["files_by_pattern_misses"] == 1
 
 
 def test_scanner_catches_stale_dispatch_authorization_docs(tmp_path: Path) -> None:

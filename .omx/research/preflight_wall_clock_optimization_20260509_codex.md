@@ -626,3 +626,44 @@ removes a real false-negative class while staying far below the 30s crash
 budget. Next speed target is to move dispatch-shell hazards onto the same
 shared source-index/text-provider contract instead of importing and rescanning
 files through the helper.
+
+## Codex Follow-Up: Dispatch Shell Hazards Shared Source Index
+
+<!-- generated_at: 2026-05-10T02:45:00Z -->
+<!-- evidence_grade: local_dev_performance; no dispatch; no score claim -->
+
+Codex wired `tools/check_dispatch_cli_shell_hazards.py` to accept an optional
+`source_index` and updated `tac.preflight.check_dispatch_cli_shell_hazards()` to
+pass the active shared source index. The helper still scans the same default
+paths and exclusions; the change replaces private `os.walk` + `Path.read_text`
+work with the shared file inventory/text cache when preflight is already inside
+`source_index_context`.
+
+Verification:
+
+```bash
+.venv/bin/python -m py_compile \
+  tools/check_dispatch_cli_shell_hazards.py \
+  src/tac/preflight.py \
+  src/tac/tests/test_dispatch_cli_shell_hazards.py
+.venv/bin/python -m pytest \
+  src/tac/tests/test_dispatch_cli_shell_hazards.py \
+  src/tac/tests/test_preflight_meta_bugs.py::TestNoMpsFallbackDefault \
+  src/tac/tests/test_source_index.py \
+  src/tac/tests/test_a1_sidecar_builder_hardening.py -q
+.venv/bin/python tools/profile_preflight_latency.py \
+  --surface preflight-dev-cli \
+  --json-out .omx/research/artifacts/preflight_dev_profile_20260510_dispatch_hazards_sourceindex.json \
+  --top 20 --fail-on-surface-failure
+```
+
+Observed:
+
+- focused dispatch/MPS/source-index/sidecar tests: `45 passed in 1.06s`;
+- full developer preflight profile: `7.325s PASSED`;
+- dispatch-shell hazards step in that full profile: `0.578s`.
+
+The helper-specific profile is not a useful comparison because it now pays the
+source-index setup cost by itself. The full developer surface is the relevant
+DX target and improved from the prior `7.728s` profile to `7.325s` while
+keeping all hazard semantics covered by the existing fixture set.
