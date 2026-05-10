@@ -13,6 +13,7 @@ import importlib.util
 import json
 import math
 import os
+import re
 import time
 import datetime as dt
 from collections.abc import Iterable, Mapping
@@ -84,6 +85,15 @@ TERMINAL_CLAIM_PREFIXES = (
     "config_retired_",
     "measured_implementation_retired_",
     "stop_attempt_timeout_duplicate_after_primary_negative",
+)
+TERMINAL_NEGATIVE_STATUS_MARKERS = (
+    "negative",
+    "falsified",
+    "retired",
+    "component_collapse",
+)
+TERMINAL_SCORE_RE = re.compile(
+    r"(?:score_recomputed|score|canonical_score)=([0-9]+(?:\.[0-9]+)?)"
 )
 TRUE_CHANGE_FIELDS = (
     "score_affecting_payload_changed",
@@ -414,16 +424,8 @@ def active_claim_conflicts(
     if dispatch_claims_path is None or not dispatch_claims_path.is_file():
         return []
     now = now_utc or dt.datetime.now(tz=dt.UTC).replace(microsecond=0)
-    latest_by_job: dict[tuple[str, str], dict[str, str]] = {}
-    for row in parse_claim_rows(dispatch_claims_path):
-        key = (row["lane_id"], row["instance_job_id"])
-        prev = latest_by_job.get(key)
-        row_ts = parse_utc(row["timestamp_utc"])
-        prev_ts = parse_utc(prev["timestamp_utc"]) if prev is not None else None
-        if prev is None or prev_ts is None or (row_ts is not None and row_ts > prev_ts):
-            latest_by_job[key] = row
     blockers: list[str] = []
-    for row in latest_by_job.values():
+    for row in _latest_claim_rows_by_job(dispatch_claims_path).values():
         if row["lane_id"] != lane_id or claim_status_terminal(row["status"]):
             continue
         ts = parse_utc(row["timestamp_utc"])
@@ -437,6 +439,76 @@ def active_claim_conflicts(
             blockers.append(
                 "same_lane_active_dispatch_claim:"
                 f"{row['lane_id']}:{row['instance_job_id']}:{row['status']}"
+            )
+    return blockers
+
+
+def _latest_claim_rows_by_job(path: Path) -> dict[tuple[str, str], dict[str, str]]:
+    latest_by_job: dict[tuple[str, str], dict[str, str]] = {}
+    for row in parse_claim_rows(path):
+        key = (row["lane_id"], row["instance_job_id"])
+        prev = latest_by_job.get(key)
+        row_ts = parse_utc(row["timestamp_utc"])
+        prev_ts = parse_utc(prev["timestamp_utc"]) if prev is not None else None
+        if prev is None or prev_ts is None or (row_ts is not None and row_ts > prev_ts):
+            latest_by_job[key] = row
+    return latest_by_job
+
+
+def _terminal_claim_score(row: Mapping[str, str]) -> float | None:
+    match = TERMINAL_SCORE_RE.search(row.get("notes", ""))
+    if match is None:
+        return None
+    try:
+        return float(match.group(1))
+    except ValueError:
+        return None
+
+
+def terminal_claim_result_conflicts(
+    lane_id: str,
+    archive_sha256: str | None,
+    *,
+    dispatch_claims_path: Path | None,
+    active_floor_score: float | None = ACTIVE_FLOOR_SCORE,
+) -> list[str]:
+    """Block stale exact-ready rows after terminal evidence on same archive.
+
+    This is intentionally narrow: infrastructure failures such as missing
+    provider dependencies do not block a corrected rerun, while terminal
+    measured negatives and completed exact-CUDA scores that fail to beat the
+    active floor do block silent re-promotion of the same lane/archive row.
+    """
+
+    if (
+        dispatch_claims_path is None
+        or not dispatch_claims_path.is_file()
+        or not isinstance(archive_sha256, str)
+        or not archive_sha256
+    ):
+        return []
+    blockers: list[str] = []
+    for row in _latest_claim_rows_by_job(dispatch_claims_path).values():
+        if row["lane_id"] != lane_id or not claim_status_terminal(row["status"]):
+            continue
+        notes = row.get("notes", "")
+        if archive_sha256 not in notes:
+            continue
+        status = row["status"].lower()
+        claim_id = f"{row['lane_id']}:{row['instance_job_id']}:{row['status']}"
+        if any(marker in status for marker in TERMINAL_NEGATIVE_STATUS_MARKERS):
+            blockers.append(f"same_lane_terminal_negative_for_same_archive:{claim_id}")
+            continue
+        score = _terminal_claim_score(row)
+        if (
+            status.startswith("completed_contest_cuda_auth_eval")
+            and active_floor_score is not None
+            and score is not None
+            and score >= active_floor_score
+        ):
+            blockers.append(
+                "same_lane_terminal_score_not_below_active_floor_for_same_archive:"
+                f"{score:.12g}>={active_floor_score:.12g}:{claim_id}"
             )
     return blockers
 
@@ -629,6 +701,18 @@ def readiness_blockers(
                 blockers.append("archive_zip_not_strict")
             if int(zipwire.get("member_count") or 0) < 1:
                 blockers.append("archive_zip_empty")
+
+    if isinstance(effective_lane_id, str) and effective_lane_id.strip():
+        blockers.extend(
+            terminal_claim_result_conflicts(
+                effective_lane_id,
+                facts.get("archive_sha256")
+                if isinstance(facts.get("archive_sha256"), str)
+                else expected_sha,
+                dispatch_claims_path=dispatch_claims_path,
+                active_floor_score=active_floor_score,
+            )
+        )
 
     if submission_dir is None and archive_path is not None:
         submission_dir = archive_path.parent

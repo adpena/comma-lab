@@ -79,6 +79,11 @@ def test_source_uses_literal_cuda_canonical_contest_eval() -> None:
     assert 'work_dir = out_dir / "eval_work"' not in text
     assert "safe_extract_zip(runtime_zip, runtime_root)" in text
     assert "submission_dir_zip_sha256" in text
+    assert '"experiments/public_runtime_adapters"' in text
+    assert (
+        '"experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source"'
+        in text
+    )
     assert '"--device", "cpu"' not in text
     assert '"/root/submission/inflate_renderer.py"' not in text
     assert "promotion_eligible\": False" in text

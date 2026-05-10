@@ -126,8 +126,19 @@ eval_image = (
         remote_path=str(REMOTE_REPO / "submissions/robust_current"),
     )
     .add_local_dir(
+        "experiments/public_runtime_adapters",
+        remote_path=str(REMOTE_REPO / "experiments/public_runtime_adapters"),
+    )
+    .add_local_dir(
         "experiments/results/public_pr95_intake_20260504_codex",
         remote_path=str(REMOTE_REPO / "experiments/results/public_pr95_intake_20260504_codex"),
+    )
+    .add_local_dir(
+        "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source",
+        remote_path=str(
+            REMOTE_REPO
+            / "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source"
+        ),
     )
     .add_local_file(
         "experiments/contest_auth_eval.py",
