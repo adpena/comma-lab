@@ -13,6 +13,7 @@ from tac.repo_io import write_json
 REPO = Path(__file__).resolve().parents[1]
 SCRIPT = REPO / "tools/plan_pr103_arithmetic_transform.py"
 RETARGET_SCRIPT = REPO / "tools/probe_pr103_arithmetic_retarget.py"
+MATERIALIZE_SCRIPT = REPO / "tools/materialize_pr103_arithmetic_histogram_candidate.py"
 
 
 def test_plan_pr103_arithmetic_transform_cli_writes_json_and_markdown(tmp_path: Path) -> None:
@@ -211,6 +212,56 @@ def test_probe_pr103_arithmetic_beam_search_cli_real_manifest_if_available(
     assert report["best_candidate"]["moves"]
     assert "candidate_runtime_adapter_missing" in report["readiness_blockers"]
     assert "Beam Probe" in md_out.read_text(encoding="utf-8")
+
+
+def test_materialize_pr103_arithmetic_histogram_candidate_cli_real_manifest_if_available(
+    tmp_path: Path,
+) -> None:
+    manifest = (
+        REPO
+        / "experiments/results/hnerv_pr103_lc_ac_schema_refresh_20260510_codex/manifest.json"
+    )
+    beam = (
+        REPO
+        / ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_0_weight_beam_probe.json"
+    )
+    if not manifest.exists() or not beam.exists():
+        pytest.skip("local PR103 schema refresh and beam reports are not present")
+    archive_out = tmp_path / "candidate.zip"
+    json_out = tmp_path / "candidate.json"
+    md_out = tmp_path / "candidate.md"
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(MATERIALIZE_SCRIPT),
+            "--schema-manifest",
+            str(manifest),
+            "--beam-probe-report",
+            str(beam),
+            "--output-archive",
+            str(archive_out),
+            "--json-out",
+            str(json_out),
+            "--md-out",
+            str(md_out),
+        ],
+        cwd=REPO,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    report = json.loads(json_out.read_text(encoding="utf-8"))
+    assert archive_out.is_file()
+    assert report["schema"] == "pr103_arithmetic_histogram_candidate_v1"
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["candidate_archive"]["sha256"]
+    assert report["candidate_archive"]["sha256"] != report["source_archive"]["sha256"]
+    assert "candidate_runtime_adapter_missing" in report["readiness_blockers"]
+    assert "Histogram Candidate" in md_out.read_text(encoding="utf-8")
 
 
 def _manifest() -> dict:

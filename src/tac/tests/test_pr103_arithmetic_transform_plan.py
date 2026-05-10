@@ -13,6 +13,7 @@ from tac.hnerv_pr103_lc_ac_schema import (
 )
 from tac.pr103_arithmetic_transform_plan import (
     BEAM_SCHEMA,
+    CANDIDATE_SCHEMA,
     COORDINATE_SCHEMA,
     PLAN_SCHEMA,
     RETARGET_SCHEMA,
@@ -21,6 +22,7 @@ from tac.pr103_arithmetic_transform_plan import (
     build_pr103_arithmetic_histogram_coordinate_probe,
     build_pr103_arithmetic_retarget_probe,
     build_pr103_arithmetic_transform_plan,
+    materialize_pr103_arithmetic_histogram_candidate,
 )
 from tac.repo_io import sha256_bytes, write_json
 
@@ -193,6 +195,91 @@ def test_pr103_arithmetic_histogram_beam_probe_composes_coordinate_changes(
     assert "candidate_runtime_adapter_missing" in report["readiness_blockers"]
 
 
+def test_pr103_arithmetic_histogram_candidate_materializes_byte_different_archive(
+    tmp_path: Path,
+) -> None:
+    fixture = _probe_fixture(tmp_path)
+    beam0 = build_pr103_arithmetic_histogram_beam_probe(
+        schema_manifest=fixture["manifest"],
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+        target_label="fixture.weight0",
+        top_symbols=2,
+        deltas=(-1, 1),
+        rounds=2,
+        beam_width=2,
+    )
+    beam1 = build_pr103_arithmetic_histogram_beam_probe(
+        schema_manifest=fixture["manifest"],
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+        target_label="fixture.weight1",
+        top_symbols=2,
+        deltas=(-1, 1),
+        rounds=2,
+        beam_width=2,
+    )
+    output_archive = tmp_path / "candidate.zip"
+
+    report = materialize_pr103_arithmetic_histogram_candidate(
+        schema_manifest=fixture["manifest"],
+        beam_probe_reports=(beam0, beam1),
+        output_archive=output_archive,
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+    )
+
+    assert report["schema"] == CANDIDATE_SCHEMA
+    assert output_archive.is_file()
+    assert report["score_claim"] is False
+    assert report["ready_for_archive_preflight"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["candidate_archive"]["sha256"]
+    assert report["candidate_archive"]["member_sha256"] != report["source_archive"]["member_sha256"]
+    assert report["candidate_roundtrip"]["reencoded_byte_identical"] is True
+    assert "candidate_runtime_adapter_missing" in report["readiness_blockers"]
+    changed_sections = {
+        row["name"] for row in report["section_diffs"] if row["changed"] is True
+    }
+    assert "ac_histograms_brotli" in changed_sections
+
+
+def test_pr103_arithmetic_histogram_candidate_rejects_stale_beam_report(
+    tmp_path: Path,
+) -> None:
+    fixture = _probe_fixture(tmp_path)
+    beam = build_pr103_arithmetic_histogram_beam_probe(
+        schema_manifest=fixture["manifest"],
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+        target_label="fixture.weight0",
+        top_symbols=2,
+        deltas=(-1, 1),
+        rounds=1,
+        beam_width=1,
+    )
+    beam["source_archive"]["member_sha256"] = "0" * 64
+
+    with pytest.raises(Pr103ArithmeticTransformPlanError, match="member_sha256 mismatch"):
+        materialize_pr103_arithmetic_histogram_candidate(
+            schema_manifest=fixture["manifest"],
+            beam_probe_reports=(beam,),
+            output_archive=tmp_path / "candidate.zip",
+            repo_root=tmp_path,
+            layout=fixture["layout"],
+            stream_specs=fixture["stream_specs"],
+            hi_symbol_count=fixture["hi_symbol_count"],
+        )
+
+
 def _manifest() -> dict:
     return {
         "planning_only": True,
@@ -314,7 +401,20 @@ def _probe_fixture(tmp_path: Path) -> dict:
                 "observed_entropy_bytes_floor": 1,
                 "model_cross_entropy_bytes_floor": 2,
                 "model_gap_bytes_estimate": 1,
-            }
+            },
+            {
+                "label": "fixture.weight1",
+                "role": "ac_weight_tensor",
+                "schema_index": 1,
+                "symbol_count": 3,
+                "alphabet_size": 256,
+                "decoded_symbols_sha256": sha256_bytes(
+                    symbol_streams[1].astype(np.uint16).tobytes()
+                ),
+                "observed_entropy_bytes_floor": 1,
+                "model_cross_entropy_bytes_floor": 2,
+                "model_gap_bytes_estimate": 1,
+            },
         ],
     }
     return {

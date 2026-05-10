@@ -19,7 +19,10 @@ from typing import Any
 import brotli
 import numpy as np
 
-from tac.hnerv_lowlevel_packer import read_strict_single_member_zip
+from tac.hnerv_lowlevel_packer import (
+    read_strict_single_member_zip,
+    write_stored_single_member_zip,
+)
 from tac.hnerv_pr103_lc_ac_schema import (
     AC_STREAM_SPECS,
     HI_SYMBOL_COUNT,
@@ -27,6 +30,7 @@ from tac.hnerv_pr103_lc_ac_schema import (
     RATE_SCORE_PER_BYTE,
     Pr103LcAcLayout,
     decode_pr103_auxiliary_models,
+    decode_pr103_merged_ac_stream,
     encode_pr103_merged_ac_stream,
     parse_pr103_lc_ac_payload,
 )
@@ -42,6 +46,7 @@ PLAN_SCHEMA = "pr103_arithmetic_transform_plan_v1"
 RETARGET_SCHEMA = "pr103_arithmetic_retarget_probe_v1"
 COORDINATE_SCHEMA = "pr103_arithmetic_histogram_coordinate_probe_v1"
 BEAM_SCHEMA = "pr103_arithmetic_histogram_beam_probe_v1"
+CANDIDATE_SCHEMA = "pr103_arithmetic_histogram_candidate_v1"
 DEFAULT_STRATEGY = "retarget_categorical_model_to_decoded_symbols"
 
 
@@ -715,6 +720,247 @@ def build_pr103_arithmetic_histogram_beam_probe(
     }
 
 
+def materialize_pr103_arithmetic_histogram_candidate(
+    *,
+    schema_manifest: str | Path | Mapping[str, Any],
+    beam_probe_reports: Sequence[str | Path | Mapping[str, Any]],
+    output_archive: str | Path | None = None,
+    source_archive: str | Path | None = None,
+    member_name: str | None = None,
+    repo_root: str | Path | None = None,
+    layout: Pr103LcAcLayout = PUBLIC_PR103_LAYOUT,
+    stream_specs: Sequence[tuple[str, int, int | None]] = AC_STREAM_SPECS,
+    hi_symbol_count: int = HI_SYMBOL_COUNT,
+) -> dict[str, Any]:
+    """Build a byte-different PR103 histogram candidate and runtime plan.
+
+    The emitted archive is not dispatch-ready by itself: PR103's public runtime
+    slices the payload with hard-coded section lengths, so any shorter histogram
+    or merged-AC section also requires a reviewed runtime-constant update.
+    """
+
+    reports = _load_beam_probe_reports(beam_probe_reports)
+    if not reports:
+        raise Pr103ArithmeticTransformPlanError("at least one beam probe report is required")
+    first_target = str(_mapping(reports[0].get("target_stream")).get("label") or "")
+    if not first_target:
+        raise Pr103ArithmeticTransformPlanError("beam report missing target_stream.label")
+    context = _load_pr103_retarget_context(
+        schema_manifest=schema_manifest,
+        source_archive=source_archive,
+        target_label=first_target,
+        target_rank=None,
+        repo_root=repo_root,
+        layout=layout,
+        stream_specs=stream_specs,
+        hi_symbol_count=hi_symbol_count,
+    )
+    repo = context["repo"]
+    source = context["source"]
+    archive_path = context["archive_path"]
+    parsed = parse_pr103_lc_ac_payload(source.payload, layout=layout)
+    histograms = np.asarray(context["histograms"], dtype=np.uint8).copy()
+    source_model_weights = [np.asarray(item).copy() for item in context["source_model_weights"]]
+    source_symbol_streams = [np.asarray(item).copy() for item in context["source_symbol_streams"]]
+    label_to_index = {
+        str(label): index
+        for index, (label, _count, _schema_index) in enumerate(stream_specs)
+    }
+    applied_reports: list[dict[str, Any]] = []
+    for report in reports:
+        _validate_candidate_report_source(report, source)
+        target = _mapping(report.get("target_stream"))
+        label = str(target.get("label") or "")
+        if label not in label_to_index:
+            raise Pr103ArithmeticTransformPlanError(
+                f"beam report target is not a q8 AC stream: {label!r}"
+            )
+        target_index = label_to_index[label]
+        best = _mapping(report.get("best_candidate"))
+        moves = best.get("moves")
+        if not isinstance(moves, Sequence) or isinstance(moves, (str, bytes)) or not moves:
+            raise Pr103ArithmeticTransformPlanError(
+                f"beam report for {label} has no best_candidate.moves"
+            )
+        for move in moves:
+            item = _mapping(move)
+            symbol = int(item.get("symbol"))
+            old_weight = int(item.get("old_weight"))
+            new_weight = int(item.get("new_weight"))
+            if symbol < 0 or symbol >= histograms.shape[1]:
+                raise Pr103ArithmeticTransformPlanError(
+                    f"beam move symbol out of range for {label}: {symbol}"
+                )
+            current = int(histograms[target_index, symbol])
+            if current != old_weight:
+                raise Pr103ArithmeticTransformPlanError(
+                    f"beam move old_weight mismatch for {label}[{symbol}]: "
+                    f"report={old_weight} current={current}"
+                )
+            histograms[target_index, symbol] = np.uint8(new_weight)
+        source_model_weights[target_index] = histograms[target_index].copy()
+        applied_reports.append(
+            {
+                "target_label": label,
+                "move_count": len(moves),
+                "source_probe_total_delta": best.get(
+                    "estimated_member_delta_if_runtime_adapter_supported"
+                ),
+                "source_probe_sha256": report.get("tool_run_manifest", {}).get("output_sha256")
+                if isinstance(report.get("tool_run_manifest"), Mapping)
+                else "",
+            }
+        )
+
+    candidate_histogram_raw = histograms.astype(np.uint8).tobytes()
+    candidate_histogram_blob = brotli.compress(candidate_histogram_raw, quality=11)
+    candidate_merged = encode_pr103_merged_ac_stream(source_symbol_streams, source_model_weights)
+    candidate_layout = dataclasses.replace(
+        layout,
+        ac_histograms_brotli=len(candidate_histogram_blob),
+        merged_range_coded_weights_and_hi_latents=len(candidate_merged),
+    )
+    candidate_payload = b"".join(
+        [
+            parsed.section_bytes("scales_fp16"),
+            parsed.section_bytes("non_ac_weights_brotli"),
+            candidate_histogram_blob,
+            candidate_merged,
+            parsed.section_bytes("latent_min_scale_fp16"),
+            parsed.section_bytes("latent_low_bytes_brotli"),
+            parsed.section_bytes("latent_hi_histogram_brotli"),
+            parsed.section_bytes("sidecar_corrections_brotli"),
+        ]
+    )
+    candidate_parsed = parse_pr103_lc_ac_payload(candidate_payload, layout=candidate_layout)
+    candidate_aux = decode_pr103_auxiliary_models(
+        candidate_parsed,
+        ac_stream_count=len(stream_specs),
+    )
+    candidate_decoded = decode_pr103_merged_ac_stream(
+        candidate_parsed.section_bytes("merged_range_coded_weights_and_hi_latents"),
+        np.asarray(candidate_aux.pop("_histograms_array"), dtype=np.uint8),
+        np.asarray(candidate_aux.pop("_hi_histogram_array")),
+        stream_specs=stream_specs,
+        hi_symbol_count=hi_symbol_count,
+    )
+    output_path = Path(output_archive) if output_archive is not None else None
+    archive_record = {
+        "provided": output_path is not None,
+        "path": repo_relative(output_path, repo) if output_path is not None else "",
+        "bytes": None,
+        "sha256": "",
+        "member_name": member_name or source.member_name,
+        "member_bytes": len(candidate_payload),
+        "member_sha256": sha256_bytes(candidate_payload),
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    if output_path is not None:
+        write_stored_single_member_zip(
+            output_path,
+            member_name=member_name or source.member_name,
+            payload=candidate_payload,
+        )
+        archive_record.update(
+            {
+                "bytes": output_path.stat().st_size,
+                "sha256": sha256_file(output_path),
+            }
+        )
+
+    section_diffs = _candidate_section_diffs(
+        parsed=parse_pr103_lc_ac_payload(source.payload, layout=layout),
+        candidate_parsed=candidate_parsed,
+    )
+    source_archive_bytes = int(source.archive_bytes)
+    candidate_archive_bytes = archive_record["bytes"]
+    archive_delta = (
+        int(candidate_archive_bytes) - source_archive_bytes
+        if candidate_archive_bytes is not None
+        else None
+    )
+    payload_delta = len(candidate_payload) - len(source.payload)
+    blockers = _unique_ordered(
+        [
+            *([] if output_path is not None else ["candidate_archive_missing"]),
+            *([] if candidate_payload != source.payload else ["candidate_payload_noop"]),
+            *(
+                []
+                if archive_delta is not None and archive_delta < 0
+                else ["candidate_archive_not_smaller_than_source"]
+            ),
+            *(
+                []
+                if candidate_decoded.get("reencoded_byte_identical") is True
+                else ["candidate_merged_stream_roundtrip_not_byte_identical"]
+            ),
+            "candidate_runtime_adapter_missing",
+            "candidate_inflate_output_parity_missing",
+            "strict_pre_submission_compliance_json_missing",
+            "lane_dispatch_claim_missing",
+            "exact_cuda_auth_eval_missing",
+        ]
+    )
+    return {
+        "schema": CANDIDATE_SCHEMA,
+        "planning_only": False,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "gpu_required": False,
+        "ready_for_archive_preflight": False,
+        "ready_for_exact_eval_dispatch": False,
+        "source_schema_manifest": context["manifest_record"],
+        "source_archive": {
+            "path": repo_relative(archive_path, repo),
+            "bytes": source.archive_bytes,
+            "sha256": source.archive_sha256,
+            "member_name": source.member_name,
+            "member_bytes": source.member_bytes,
+            "member_sha256": sha256_bytes(source.payload),
+        },
+        "candidate_archive": archive_record,
+        "byte_accounting": {
+            "source_payload_bytes": len(source.payload),
+            "candidate_payload_bytes": len(candidate_payload),
+            "payload_byte_delta": payload_delta,
+            "source_archive_bytes": source_archive_bytes,
+            "candidate_archive_bytes": candidate_archive_bytes,
+            "archive_byte_delta": archive_delta,
+            "estimated_rate_score_delta_if_components_unchanged": (
+                float(payload_delta) * RATE_SCORE_PER_BYTE
+            ),
+            "estimate_is_score_claim": False,
+        },
+        "runtime_adapter_contract": {
+            "public_runtime_constants": _runtime_constants_from_layout(candidate_layout),
+            "source_runtime_constants": _runtime_constants_from_layout(layout),
+            "required_code_changes": [
+                "update HIST_LEN to candidate hists_b length",
+                "update MERGED_AC_LEN to candidate merged_ac length",
+                "preserve section order in parse_archive",
+                "prove inflate consumes candidate archive bytes",
+            ],
+            "runtime_tree_missing": True,
+        },
+        "applied_beam_reports": applied_reports,
+        "section_diffs": section_diffs,
+        "candidate_roundtrip": {
+            "merged_ac_bytes": candidate_decoded.get("source_bytes"),
+            "merged_ac_sha256": candidate_decoded.get("source_sha256"),
+            "reencoded_byte_identical": candidate_decoded.get("reencoded_byte_identical") is True,
+            "decoder_maybe_exhausted": candidate_decoded.get("decoder_maybe_exhausted") is True,
+            "decoded_symbol_count": candidate_decoded.get("decoded_symbol_count"),
+        },
+        "readiness_blockers": blockers,
+        "dispatch_blockers": [
+            "pr103_arithmetic_histogram_candidate_is_not_dispatch_authorization",
+            *blockers,
+        ],
+    }
+
+
 def render_markdown(plan: Mapping[str, Any]) -> str:
     """Render a compact human review note for a PR103 transform plan."""
 
@@ -888,6 +1134,57 @@ def render_beam_markdown(report: Mapping[str, Any]) -> str:
             f"new `{row.get('new_weight')}` count `{row.get('symbol_count')}`"
         )
     if not moves:
+        lines.append("- none")
+    lines.extend(["", "## Blockers", ""])
+    for blocker in report.get("readiness_blockers") or []:
+        lines.append(f"- `{blocker}`")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def render_candidate_markdown(report: Mapping[str, Any]) -> str:
+    """Render a compact review note for a materialized histogram candidate."""
+
+    source = _mapping(report.get("source_archive"))
+    candidate = _mapping(report.get("candidate_archive"))
+    byte_accounting = _mapping(report.get("byte_accounting"))
+    runtime_contract = _mapping(report.get("runtime_adapter_contract"))
+    constants = _mapping(runtime_contract.get("public_runtime_constants"))
+    lines = [
+        "# PR103 Arithmetic Histogram Candidate",
+        "",
+        f"- score_claim: `{_bool(report.get('score_claim') is True)}`",
+        f"- dispatch_attempted: `{_bool(report.get('dispatch_attempted') is True)}`",
+        f"- ready_for_archive_preflight: `{_bool(report.get('ready_for_archive_preflight') is True)}`",
+        f"- ready_for_exact_eval_dispatch: `{_bool(report.get('ready_for_exact_eval_dispatch') is True)}`",
+        "",
+        "## Archive Pair",
+        "",
+        f"- source: `{source.get('path')}` / `{source.get('bytes')}` bytes / `{source.get('sha256')}`",
+        f"- candidate: `{candidate.get('path')}` / `{candidate.get('bytes')}` bytes / `{candidate.get('sha256')}`",
+        f"- payload_byte_delta: `{byte_accounting.get('payload_byte_delta')}`",
+        f"- archive_byte_delta: `{byte_accounting.get('archive_byte_delta')}`",
+        "",
+        "## Runtime Constants To Derive",
+        "",
+    ]
+    for key, value in constants.items():
+        lines.append(f"- `{key}`: `{value}`")
+    lines.extend(["", "## Section Diffs", ""])
+    changed = False
+    for row in report.get("section_diffs") or []:
+        item = _mapping(row)
+        if item.get("changed") is True:
+            changed = True
+            lines.append(
+                "- `{name}`: `{source}` -> `{candidate}` (`{delta}`)".format(
+                    name=item.get("name"),
+                    source=item.get("source_bytes"),
+                    candidate=item.get("candidate_bytes"),
+                    delta=item.get("byte_delta"),
+                )
+            )
+    if not changed:
         lines.append("- none")
     lines.extend(["", "## Blockers", ""])
     for blocker in report.get("readiness_blockers") or []:
@@ -1169,6 +1466,110 @@ def _retarget_weights_for_symbols(
     return np.clip(weights, 0, 255).astype(np.uint8)
 
 
+def _load_beam_probe_reports(
+    sources: Sequence[str | Path | Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    reports: list[dict[str, Any]] = []
+    for source in sources:
+        if isinstance(source, Mapping):
+            report = dict(source)
+        else:
+            payload = read_json(Path(source))
+            if not isinstance(payload, Mapping):
+                raise Pr103ArithmeticTransformPlanError(
+                    f"beam probe report must be a JSON object: {source}"
+                )
+            report = dict(payload)
+        if report.get("schema") != BEAM_SCHEMA:
+            raise Pr103ArithmeticTransformPlanError(
+                f"expected beam report schema {BEAM_SCHEMA}, got {report.get('schema')!r}"
+            )
+        if report.get("score_claim") is True or report.get("dispatch_attempted") is True:
+            raise Pr103ArithmeticTransformPlanError(
+                "beam reports must be local no-score probes"
+            )
+        reports.append(report)
+    return reports
+
+
+def _validate_candidate_report_source(
+    report: Mapping[str, Any],
+    source: Any,
+) -> None:
+    source_record = _mapping(report.get("source_archive"))
+    checks = {
+        "archive_sha256": (
+            str(source_record.get("sha256") or ""),
+            str(source.archive_sha256),
+        ),
+        "archive_bytes": (
+            int(source_record.get("bytes") or -1),
+            int(source.archive_bytes),
+        ),
+        "member_name": (
+            str(source_record.get("member_name") or ""),
+            str(source.member_name),
+        ),
+        "member_bytes": (
+            int(source_record.get("member_bytes") or -1),
+            int(source.member_bytes),
+        ),
+        "member_sha256": (
+            str(source_record.get("member_sha256") or ""),
+            sha256_bytes(source.payload),
+        ),
+    }
+    for label, (observed, expected) in checks.items():
+        if observed != expected:
+            raise Pr103ArithmeticTransformPlanError(
+                f"beam report source {label} mismatch: report={observed!r} source={expected!r}"
+            )
+
+
+def _candidate_section_diffs(
+    *,
+    parsed: Any,
+    candidate_parsed: Any,
+) -> list[dict[str, Any]]:
+    source_rows = {str(row["name"]): row for row in parsed.section_records()}
+    candidate_rows = {str(row["name"]): row for row in candidate_parsed.section_records()}
+    names = sorted(set(source_rows) | set(candidate_rows))
+    diffs: list[dict[str, Any]] = []
+    for name in names:
+        source = _mapping(source_rows.get(name))
+        candidate = _mapping(candidate_rows.get(name))
+        source_bytes = int(source.get("bytes") or 0)
+        candidate_bytes = int(candidate.get("bytes") or 0)
+        source_sha = str(source.get("sha256") or "")
+        candidate_sha = str(candidate.get("sha256") or "")
+        diffs.append(
+            {
+                "name": name,
+                "source_bytes": source_bytes,
+                "candidate_bytes": candidate_bytes,
+                "byte_delta": candidate_bytes - source_bytes,
+                "source_sha256": source_sha,
+                "candidate_sha256": candidate_sha,
+                "changed": source_sha != candidate_sha or source_bytes != candidate_bytes,
+            }
+        )
+    return diffs
+
+
+def _runtime_constants_from_layout(layout: Pr103LcAcLayout) -> dict[str, Any]:
+    return {
+        "SCA_LEN": int(layout.scales_fp16),
+        "BR_LEN": int(layout.non_ac_weights_brotli),
+        "HIST_LEN": int(layout.ac_histograms_brotli),
+        "MERGED_AC_LEN": int(layout.merged_range_coded_weights_and_hi_latents),
+        "LATENT_META_LEN": int(layout.latent_min_scale_fp16),
+        "LO_LEN": int(layout.latent_low_bytes_brotli),
+        "HI_HIST_LEN": int(layout.latent_hi_histogram_brotli),
+        "sidecar_corrections_brotli": "payload_tail",
+        "fixed_bytes_before_tail": int(layout.fixed_bytes),
+    }
+
+
 def _score_histogram_candidate(
     *,
     weights: np.ndarray,
@@ -1304,6 +1705,7 @@ __all__ = [
     "DEFAULT_STRATEGY",
     "COORDINATE_SCHEMA",
     "BEAM_SCHEMA",
+    "CANDIDATE_SCHEMA",
     "PLAN_SCHEMA",
     "RETARGET_SCHEMA",
     "Pr103ArithmeticTransformPlanError",
@@ -1312,7 +1714,9 @@ __all__ = [
     "build_pr103_arithmetic_histogram_coordinate_probe",
     "build_pr103_arithmetic_retarget_probe",
     "build_pr103_arithmetic_transform_plan",
+    "materialize_pr103_arithmetic_histogram_candidate",
     "render_beam_markdown",
+    "render_candidate_markdown",
     "render_coordinate_markdown",
     "render_markdown",
     "render_retarget_markdown",

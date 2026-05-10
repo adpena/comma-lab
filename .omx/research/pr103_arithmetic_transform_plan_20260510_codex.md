@@ -144,6 +144,61 @@ adapter overhead accounting. The next useful solver step is multi-stream beam
 composition with adapter-overhead accounting, not another one-stream micro
 probe.
 
+## Materialized combined-beam candidate
+
+Artifact:
+
+```text
+.omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/archive.zip
+.omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/manifest.json
+.omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/manifest.md
+```
+
+Command:
+
+```bash
+.venv/bin/python tools/materialize_pr103_arithmetic_histogram_candidate.py \
+  --schema-manifest experiments/results/hnerv_pr103_lc_ac_schema_refresh_20260510_codex/manifest.json \
+  --beam-probe-report .omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_0_weight_beam_probe.json \
+  --beam-probe-report .omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_1_weight_beam_probe.json \
+  --beam-probe-report .omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_2_weight_beam_probe.json \
+  --beam-probe-report .omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_3_weight_beam_probe.json \
+  --beam-probe-report .omx/research/pr103_arithmetic_transform_plans_20260510_codex/stem_weight_beam_probe.json \
+  --output-archive .omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/archive.zip \
+  --json-out .omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/manifest.json \
+  --md-out .omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/manifest.md
+```
+
+Result:
+
+| field | value |
+|---|---:|
+| source archive bytes | `178223` |
+| candidate archive bytes | `178215` |
+| archive byte delta | `-8` |
+| payload byte delta | `-8` |
+| changed section | `ac_histograms_brotli: 895 -> 887` |
+| merged AC section | `153856 -> 153856` |
+
+Custody:
+
+- source archive SHA-256:
+  `31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30`
+- candidate archive SHA-256:
+  `2427cbb7f68e8e3bcf1e989eee0cf511bff5994a5e856b500bfca3c95ca181d8`
+- candidate merged AC SHA-256:
+  `bd10827909bf34d746c21cc856f14e24e1a5a8130dde0438ceda213e1fb3c2bf`
+- candidate roundtrip: `decoder_maybe_exhausted=true`,
+  `reencoded_byte_identical=true`, `decoded_symbol_count=237561`
+
+Interpretation: this is a real, reproducible, byte-different archive candidate,
+not a no-op. It is still not score-promotable because public PR103
+`inflate.py` hard-codes `HIST_LEN=895`; the candidate requires a runtime
+adapter with `HIST_LEN=887` and the same section order. Current blockers:
+`candidate_runtime_adapter_missing`, `candidate_inflate_output_parity_missing`,
+`strict_pre_submission_compliance_json_missing`, `lane_dispatch_claim_missing`,
+and `exact_cuda_auth_eval_missing`.
+
 ## Adversarial classification
 
 This is not a score candidate. It is the next byte-closed planning artifact
