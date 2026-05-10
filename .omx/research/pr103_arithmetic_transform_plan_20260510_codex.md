@@ -284,6 +284,42 @@ Result:
 Remaining blockers after local packaging/compliance: `lane_dispatch_claim_missing`
 and `exact_cuda_auth_eval_missing`.
 
+## Exact CUDA dispatch and result
+
+Lane claim:
+
+- lane_id: `pr103_histogram_8b_packet_exact_cuda`
+- instance/job_id: `pr103_histogram_8b_packet_exact_cuda_modal_20260510T221146Z`
+- terminal status: `completed_contest_cuda_auth_eval_negative`
+
+Command:
+
+```bash
+PYTHONPATH=src:upstream:$PWD .venv/bin/modal run experiments/modal_auth_eval.py \
+  --archive .omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/archive.zip \
+  --submission-dir .omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet \
+  --inflate-sh inflate.sh \
+  --output-dir experiments/results/modal_auth_eval/pr103_histogram_8b_packet_exact_cuda_modal_20260510T221146Z \
+  --gpu T4
+```
+
+Result:
+
+| field | value |
+|---|---:|
+| evidence | `[contest-CUDA] Modal T4` |
+| score_recomputed_from_components | `0.22777267708207616` |
+| avg_posenet_dist | `0.00017199` |
+| avg_segnet_dist | `0.00067635` |
+| archive bytes | `178215` |
+| source PR103 replay score | `0.2277649714224471` |
+| score delta vs source PR103 | `+0.00000770565962906` |
+
+Classification: measured exact-CUDA negative. The transform is byte-real and
+runtime-consumed, but the tiny rate gain is outweighed by component drift. Do
+not promote this packet. Preserve the runtime-adapter and packet-builder
+infrastructure for a stronger DP/Lagrangian PR103 histogram optimizer.
+
 ## Adversarial classification
 
 This is not a score candidate. It is the next byte-closed planning artifact
@@ -294,8 +330,8 @@ dispatch claim is opened, and exact CUDA returns.
 
 Current blockers:
 
-- `lane_dispatch_claim_missing`
-- `exact_cuda_auth_eval_missing`
+- none for this measured configuration; it is closed as
+  `completed_contest_cuda_auth_eval_negative`
 
 ## Next implementation target
 
@@ -308,6 +344,10 @@ Promote the candidate from local decode-consumption to exact-eval readiness:
 4. claim a dispatch lane only after the compliance artifact is clean;
 5. run exact CUDA and classify the result as legitimate score movement,
    component drift, runtime bug, or no-op.
+
+This exact candidate completed that path and is retired as a measured negative.
+The next implementation target is a non-arbitrary DP/Lagrangian optimizer over
+histogram/range-code/Brotli sideband tradeoffs.
 
 No GPU dispatch is warranted until that byte-different archive exists and
 passes runtime-consumption and strict compliance gates.
