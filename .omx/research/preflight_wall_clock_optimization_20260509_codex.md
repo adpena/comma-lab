@@ -456,3 +456,46 @@ Observed:
 - total developer preflight: `10.036s`, still below the 30s crash budget;
 - remaining dominant checks: `check_authoritative_tag_requires_custody_metadata`
   (`2.209s`) and `check_no_mps_fallback_default` (`1.264s`).
+
+## Codex Follow-Up: MPS Fallback Structural AST Check
+
+<!-- generated_at: 2026-05-10T03:05:00Z -->
+<!-- evidence_grade: local_dev_performance; no dispatch; no lane claim -->
+
+Codex removed the remaining `ast.unparse()` dependency from
+`_scan_python_for_mps_fallback()` and replaced it with structural AST detection
+of `torch.cuda.is_available()` / `cuda.is_available()`. This keeps the same
+forbidden pattern while avoiding repeated source reconstruction inside the AST
+walk.
+
+Verification:
+
+```bash
+.venv/bin/python -m py_compile \
+  src/tac/preflight.py src/tac/tests/test_preflight_meta_bugs.py
+.venv/bin/python -m pytest \
+  src/tac/tests/test_preflight_meta_bugs.py \
+  src/tac/tests/test_source_index.py -q
+.venv/bin/python tools/profile_preflight_latency.py \
+  --surface preflight-checks \
+  --preflight-check check_no_mps_fallback_default \
+  --json-out .omx/research/artifacts/preflight_mps_profile_20260510_ast_structural.json \
+  --top 20
+PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE=1 \
+  .venv/bin/python tools/profile_preflight_latency.py \
+  --surface preflight-dev-cli \
+  --json-out .omx/research/artifacts/preflight_dev_profile_20260510_mps_ast_cache_disabled.json \
+  --top 20 --fail-on-surface-failure
+```
+
+Observed:
+
+- focused tests: `292 passed in 12.18s`;
+- standalone cold MPS check: `1.627s`;
+- cache-disabled developer preflight: `10.843s`;
+- cache-disabled MPS check: `1.102s`;
+- warm full developer preflight clean-cache path: `2.230s`.
+
+The remaining cold-profile hotspots are now mostly broad shell/eval-roundtrip
+scanners plus public-PR status when cache is disabled. The normal developer
+loop should prefer the clean-cache path unless debugging cache invalidation.

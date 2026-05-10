@@ -7633,6 +7633,20 @@ def _scan_python_for_mps_fallback(
 
     violations: list[str] = []
 
+    def _is_cuda_is_available_func(func: ast.AST) -> bool:
+        if not isinstance(func, ast.Attribute) or func.attr != "is_available":
+            return False
+        value = func.value
+        if isinstance(value, ast.Name) and value.id == "cuda":
+            return True
+        return isinstance(value, ast.Attribute) and value.attr == "cuda"
+
+    def _tree_has_cuda_check(node: ast.AST) -> bool:
+        for sub in ast.walk(node):
+            if isinstance(sub, ast.Call) and _is_cuda_is_available_func(sub.func):
+                return True
+        return False
+
     def _orelse_mentions_mps(node: ast.AST) -> bool:
         for sub in ast.walk(node):
             if isinstance(sub, ast.Constant) and sub.value == "mps":
@@ -7640,8 +7654,7 @@ def _scan_python_for_mps_fallback(
         return False
 
     def _test_checks_cuda(node: ast.AST) -> bool:
-        s = ast.unparse(node) if hasattr(ast, "unparse") else ""
-        return "cuda.is_available" in s or "torch.cuda.is_available" in s
+        return _tree_has_cuda_check(node)
 
     for node in ast.walk(tree):
         if isinstance(node, ast.IfExp):
@@ -7674,14 +7687,6 @@ def _scan_python_for_mps_fallback(
                 yield from _bool_value_leaves(v)
             else:
                 yield v
-
-    def _tree_has_cuda_check(node: ast.AST) -> bool:
-        for sub in ast.walk(node):
-            if isinstance(sub, ast.Call):
-                s = ast.unparse(sub.func) if hasattr(ast, "unparse") else ""
-                if "cuda.is_available" in s:
-                    return True
-        return False
 
     seen_boolop_lines: set[int] = set()
     # Find OUTERMOST BoolOps only (so a nested BoolOp inside another BoolOp
