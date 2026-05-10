@@ -26,6 +26,7 @@ _CURRENT_SOURCE_INDEX: contextvars.ContextVar[SourceIndex | None] = contextvars.
     default=None,
 )
 _TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v19"
+_DEFAULT_FACT_WORKERS = 8
 
 
 def _safe_resolve(path: Path) -> Path:
@@ -37,6 +38,27 @@ def _safe_resolve(path: Path) -> Path:
 
 def _path_key(path: Path) -> str:
     return _safe_resolve(path).as_posix()
+
+
+def _source_index_fact_workers() -> int:
+    """Return the worker budget for one SourceIndex fact extraction group.
+
+    Preflight already runs independent checks concurrently. Letting every
+    broad check also fan out to dozens of text-fact workers oversubscribes the
+    machine and can make wall-clock latency worse than a sequential run. The
+    default keeps intra-file parallelism but bounds nested fan-out; the env var
+    exists for profiling on larger CI hosts.
+    """
+
+    raw = os.environ.get("PACT_SOURCE_INDEX_FACT_WORKERS", "").strip()
+    if raw:
+        try:
+            value = int(raw)
+        except ValueError:
+            value = _DEFAULT_FACT_WORKERS
+    else:
+        value = _DEFAULT_FACT_WORKERS
+    return max(1, min(value, 32))
 
 
 _DEFAULT_TEXT_FACT_NEEDLES = frozenset(
@@ -554,7 +576,7 @@ class SourceIndex:
             elif not parallel or len(paths) < 32:
                 rows = tuple(self.text_facts(path) for path in paths)
             else:
-                workers = min(32, (os.cpu_count() or 1) + 4, len(paths))
+                workers = min(_source_index_fact_workers(), len(paths))
                 with ThreadPoolExecutor(max_workers=workers) as pool:
                     rows = tuple(pool.map(self.text_facts, paths))
             with self._lock:

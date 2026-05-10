@@ -326,6 +326,22 @@ def test_source_index_context_is_root_scoped(tmp_path):
     assert get_current_source_index(tmp_path) is None
 
 
+def test_source_index_fact_worker_budget_is_bounded(monkeypatch):
+    import tac.source_index as source_index
+
+    monkeypatch.delenv("PACT_SOURCE_INDEX_FACT_WORKERS", raising=False)
+    assert source_index._source_index_fact_workers() == 8
+
+    monkeypatch.setenv("PACT_SOURCE_INDEX_FACT_WORKERS", "2")
+    assert source_index._source_index_fact_workers() == 2
+
+    monkeypatch.setenv("PACT_SOURCE_INDEX_FACT_WORKERS", "999")
+    assert source_index._source_index_fact_workers() == 32
+
+    monkeypatch.setenv("PACT_SOURCE_INDEX_FACT_WORKERS", "not-an-int")
+    assert source_index._source_index_fact_workers() == 8
+
+
 def test_preflight_scanners_share_source_index_ast_cache(tmp_path):
     _write(
         tmp_path / "scripts/consumer.py",

@@ -734,7 +734,7 @@ class _ParallelPreflightRunner:
         self.enabled = enabled
         self.verbose = verbose
         if max_workers is None:
-            max_workers = min(8, os.cpu_count() or 4)
+            max_workers = _preflight_parallel_worker_count()
         self.max_workers = max_workers
         self._executor: ThreadPoolExecutor | None = (
             ThreadPoolExecutor(
@@ -795,6 +795,25 @@ def _preflight_parallel_enabled() -> bool:
 
     value = os.environ.get("PACT_PREFLIGHT_ENABLE_PARALLEL", "1").strip().lower()
     return value in {"1", "true", "yes", "on"}
+
+
+def _preflight_parallel_worker_count() -> int:
+    """Return the bounded worker budget for parallel developer checks.
+
+    Broad preflight checks share a SourceIndex and several still parse or scan
+    overlapping candidate files. Unbounded fan-out increases lock contention
+    and I/O pressure, so the default is deliberately smaller than CPU count.
+    """
+
+    raw = os.environ.get("PACT_PREFLIGHT_PARALLEL_WORKERS", "").strip()
+    if raw:
+        try:
+            value = int(raw)
+        except ValueError:
+            value = 2
+    else:
+        value = 2
+    return max(1, min(value, 16))
 
 
 def _preflight_source_index_prewarm_enabled() -> bool:
