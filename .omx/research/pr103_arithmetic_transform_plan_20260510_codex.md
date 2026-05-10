@@ -379,6 +379,17 @@ over `3,662,409,600` rendered bytes). It is **not** a score claim and not
 exact-eval dispatch authorization; the remaining blockers are a fresh lane
 claim and exact CUDA on the packet.
 
+The fresh exact CUDA pair has now landed and is positive under same-runtime
+comparison:
+
+- source PR103 Modal T4 same-runtime score: `0.22777817708207615`
+- global-combo candidate Modal T4 score: `0.22777017708207614`
+- delta: `-0.000008000000000008`, exactly the `-12B` rate movement with
+  identical SegNet/PoseNet components
+
+See
+`.omx/research/pr103_global_combo_12b_same_runtime_cuda_positive_20260510_codex.md`.
+
 ## Next implementation target
 
 The greedy `-8B` candidate completed the runtime-adapter, packet, compliance,

@@ -6,6 +6,13 @@
 `measured exact-CUDA negative` lane verdict to a narrower
 `packet-specific exact-CUDA regression; method verdict indeterminate`.
 
+2026-05-10 later same-runtime follow-up supersedes the broad negative even
+more strongly: the `global_combo_candidate` (`-12B`) passed full CPU frame
+parity and then beat the PR103 source packet under paired Modal T4 exact CUDA
+by `-0.000008000000000008`. Treat the earlier `-8B` result as a
+non-apples-to-apples comparison artifact unless re-evaluated against a
+same-runtime source baseline.
+
 The Modal T4 score below is a real exact CUDA result for the rebuilt candidate
 packet, but the earlier interpretation overreached: decoded state/latent parity
 does not prove full-frame inflate output parity, and this packet was not scored

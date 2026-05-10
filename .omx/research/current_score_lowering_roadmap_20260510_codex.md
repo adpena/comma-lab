@@ -206,9 +206,12 @@
 - The next PR103 blocker is now only a fresh lane claim plus exact CUDA on the
   packet. This is the lowest-cost byte-closed score-lowering dispatch candidate
   currently in hand.
-- Score-lowering priority order now: harvest T1; then, if no higher-priority
-  terminal T1 artifact needs immediate handling, claim and run exact CUDA for
-  the `-12B` PR103 global-combo packet.
+- Exact same-runtime Modal T4 pair is now complete and positive:
+  source `0.22777817708207615`, global-combo candidate `0.22777017708207614`,
+  delta `-0.000008000000000008` with identical SegNet/PoseNet components.
+- Score-lowering priority order now: harvest active T1; then generalize the
+  PR103 global-combo optimizer beyond q8 histogram sideband changes while
+  preserving full frame parity and same-runtime CUDA pair review.
 
 ## 2026-05-10T09:55Z supersession addendum
 
