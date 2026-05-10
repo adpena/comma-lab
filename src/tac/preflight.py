@@ -279,7 +279,11 @@ def _public_pr_clone_fingerprint_paths(root: Path) -> tuple[Path, ...]:
     return tuple(sorted(paths, key=lambda item: item.as_posix()))
 
 
-def _preflight_all_fingerprint_paths(root: Path) -> tuple[Path, ...]:
+def _preflight_all_fingerprint_paths(
+    root: Path,
+    *,
+    include_result_artifacts: bool = True,
+) -> tuple[Path, ...]:
     """Return files whose unchanged metadata can reuse a clean full preflight.
 
     This deliberately covers the repo source/control plane, not raw ignored
@@ -327,7 +331,7 @@ def _preflight_all_fingerprint_paths(root: Path) -> tuple[Path, ...]:
         paths.update(path for path in root.glob(pattern) if path.is_file())
     paths.update(_public_pr_clone_fingerprint_paths(root))
     results_dir = root / "experiments" / "results"
-    if results_dir.is_dir():
+    if include_result_artifacts and results_dir.is_dir():
         for pattern in ("*status*.json", "*manifest*.json", "rebuild_command.txt"):
             for path in results_dir.rglob(pattern):
                 if not path.is_file():
@@ -353,7 +357,10 @@ def _preflight_codebase_clean_cache_hit(
 ) -> tuple[bool, str, tuple[Path, ...]]:
     """Return whether the current codebase has an unchanged clean preflight."""
 
-    paths = _preflight_all_fingerprint_paths(root)
+    paths = _preflight_all_fingerprint_paths(
+        root,
+        include_result_artifacts=cache_name == "preflight_all_clean",
+    )
     fingerprint = _fingerprint_paths(
         paths,
         root,

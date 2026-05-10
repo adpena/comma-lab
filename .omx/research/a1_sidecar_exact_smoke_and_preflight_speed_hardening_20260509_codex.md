@@ -16,6 +16,9 @@ Codex converted recursive adversarial review findings into durable guards:
   narrow result artifacts guarded by status/manifest/rebuild checks, and the
   MPS fallback scanner catches formatted `torch.cuda \ .is_available()` through
   the SourceIndex path.
+- Developer/full clean-cache fingerprints are split: full preflight includes
+  guarded result status/manifest/rebuild artifacts, while developer preflight
+  ignores those full-only surfaces to preserve local edit velocity.
 - A1 sidecar dispatch blockers are recomputed from structured facts instead of preserving stale provisional text blockers forever.
 - Recheck telemetry distinguishes planned unproven rechecks from pairs actually rechecked this run, with a remaining-unproven counter.
 - Developer/full preflight clean-cache hits run before filesystem/source-index setup, so clean repeat runs do not pay source-index construction.
@@ -52,6 +55,14 @@ advisory only for sweeps and configuration discovery.
   - 57 passed
   - `python -m pytest src/tac/tests/test_source_index.py src/tac/tests/test_profile_preflight_latency.py src/tac/tests/test_build_phase1_packet_compiler.py -q`
   - 99 passed
+- Cache split follow-up:
+  - `python -m pytest src/tac/tests/test_preflight_all_clean_cache.py src/tac/tests/test_preflight_meta_bugs.py::TestNoMpsFallbackDefault -q`
+  - 23 passed
+  - `python -m pytest src/tac/tests/test_build_a1_per_pair_latent_correction_sidecar.py src/tac/tests/test_source_index.py src/tac/tests/test_profile_preflight_latency.py -q`
+  - 61 passed
+  - `python tools/profile_preflight_latency.py --surface preflight-dev-cli --top 20 --fail-on-surface-failure`
+  - populate run: 9.799s
+  - clean-cache repeat: 2.035s
 - `python tools/profile_preflight_latency.py --surface preflight-dev-cli --top 20 --fail-on-surface-failure`
   - passed, 10.556s while the worktree was dirty
 - Post-commit repeat measurement:
