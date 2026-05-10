@@ -32543,6 +32543,8 @@ _LANE_ID_REFERENCE_BLOCKLIST: frozenset[str] = frozenset({
     "lane_claim_state",
     "lane_claim_status",
     "lane_claim_preflight",
+    "lane_id_missing",
+    "lane_dispatch_claim_required_before_gpu_or_remote_eval",
     # Test / placeholder names. Real lane_ids should not collide with these.
     "lane_dispatch_claim_missing",
     "lane_test",
@@ -32855,68 +32857,76 @@ def check_lane_pre_registered_before_work_starts(
             )
         return []
 
+    sources_by_rel: dict[str, list[str]] = {}
+    for source, paths in paths_by_source.items():
+        for rel in paths:
+            sources_by_rel.setdefault(rel, []).append(source)
+
     violations: list[str] = []
     scanned_files = 0
     scanned_lines = 0
-    for source, paths in paths_by_source.items():
-        for rel in paths:
-            # Filter to scan-prefix-and-extension subset.
-            if not rel.endswith(_LANE_ID_SCAN_EXTENSIONS):
+    for rel in sorted(sources_by_rel):
+        sources = tuple(dict.fromkeys(sources_by_rel[rel]))
+        # Filter to scan-prefix-and-extension subset.
+        if not rel.endswith(_LANE_ID_SCAN_EXTENSIONS):
+            continue
+        if not any(rel.startswith(p) for p in _LANE_ID_SCAN_PREFIXES):
+            continue
+        file_path = root / rel
+        if not file_path.is_file():
+            # File may have been deleted in a later commit; skip cleanly.
+            continue
+        try:
+            text = file_path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        scanned_files += 1
+        lines = text.splitlines()
+        scanned_lines += len(lines)
+        tracked_worktree_changed_lines: set[int] | None = None
+        if sources == ("WORKTREE",) and rel in worktree_changed_lines:
+            tracked_worktree_changed_lines = worktree_changed_lines[rel]
+        source_label = ",".join(source[:8] for source in sources[:4])
+        if len(sources) > 4:
+            source_label += f",+{len(sources) - 4}"
+        is_test = _is_test_path(rel)
+        if is_test and _file_level_fake_lane_waiver_applies(rel, lines):
+            continue
+        for lineno, line in enumerate(lines):
+            if (
+                tracked_worktree_changed_lines is not None
+                and (lineno + 1) not in tracked_worktree_changed_lines
+            ):
                 continue
-            if not any(rel.startswith(p) for p in _LANE_ID_SCAN_PREFIXES):
+            # Quick prefilter — skip lines without "lane_" prefix.
+            if "lane_" not in line:
                 continue
-            file_path = root / rel
-            if not file_path.is_file():
-                # File may have been deleted in a later commit; skip cleanly.
-                continue
-            try:
-                text = file_path.read_text(encoding="utf-8", errors="replace")
-            except OSError:
-                continue
-            scanned_files += 1
-            lines = text.splitlines()
-            scanned_lines += len(lines)
-            tracked_worktree_changed_lines: set[int] | None = None
-            if source == "WORKTREE" and rel in worktree_changed_lines:
-                tracked_worktree_changed_lines = worktree_changed_lines[rel]
-            is_test = _is_test_path(rel)
-            if is_test and _file_level_fake_lane_waiver_applies(rel, lines):
-                continue
-            for lineno, line in enumerate(lines):
-                if (
-                    tracked_worktree_changed_lines is not None
-                    and (lineno + 1) not in tracked_worktree_changed_lines
-                ):
+            for m in _LANE_ID_REFERENCE_RE.finditer(line):
+                # The regex has two capture groups (double / single quote);
+                # exactly one will be non-None per match.
+                token = m.group(1) or m.group(2)
+                if token is None:
                     continue
-                # Quick prefilter — skip lines without "lane_" prefix.
-                if "lane_" not in line:
+                if token in _LANE_ID_REFERENCE_BLOCKLIST:
                     continue
-                for m in _LANE_ID_REFERENCE_RE.finditer(line):
-                    # The regex has two capture groups (double / single quote);
-                    # exactly one will be non-None per match.
-                    token = m.group(1) or m.group(2)
-                    if token is None:
-                        continue
-                    if token in _LANE_ID_REFERENCE_BLOCKLIST:
-                        continue
-                    if token in registered_ids:
-                        continue
-                    # Test fixture exemption: tests path AND FAKE_LANE_OK marker.
-                    if is_test and _line_or_window_has_fake_waiver(lines, lineno):
-                        continue
-                    violations.append(
-                        f"[Check 126] {rel}:{lineno + 1} (source {source[:8]}): "
-                        f"references unregistered lane_id {token!r}. "
-                        "Pre-register via "
-                        f"`tools/lane_maturity.py add-lane {token} "
-                        "--name <...> --phase <N>` BEFORE work starts. "
-                        "Test fixtures may add "
-                        "'# FAKE_LANE_OK:<reason>' on the same line "
-                        "or within 5 lines above."
-                    )
-                    # Only one violation per (file, lineno) — avoid noise on
-                    # lines that mention the same lane_id multiple times.
-                    break
+                if token in registered_ids:
+                    continue
+                # Test fixture exemption: tests path AND FAKE_LANE_OK marker.
+                if is_test and _line_or_window_has_fake_waiver(lines, lineno):
+                    continue
+                violations.append(
+                    f"[Check 126] {rel}:{lineno + 1} (source {source_label}): "
+                    f"references unregistered lane_id {token!r}. "
+                    "Pre-register via "
+                    f"`tools/lane_maturity.py add-lane {token} "
+                    "--name <...> --phase <N>` BEFORE work starts. "
+                    "Test fixtures may add "
+                    "'# FAKE_LANE_OK:<reason>' on the same line "
+                    "or within 5 lines above."
+                )
+                # Only one violation per (file, lineno) — avoid noise on
+                # lines that mention the same lane_id multiple times.
+                break
 
     if verbose:
         if violations:
