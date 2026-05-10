@@ -113,15 +113,38 @@ def _write_source_tree(root: Path) -> Path:
     )
     (root / "src" / "train.py").write_text("# train\n", encoding="utf-8")
     (root / "src" / "__pycache__" / "model.cpython-312.pyc").write_bytes(b"bytecode")
-    (root / "src" / "stages" / "stage1.py").write_text(
-        '"""stage one doc"""\n'
-        'name="stage1"\n'
-        "def run(epochs: int = 7, muon_weight_decay: float = 0.02):\n"
-        "    train(adamw_lr=1e-3, muon_lr=2e-3, cat_lambda=0.4, cat_sigma=1.5, "
-        "use_qat=True, use_muon=True)\n"
-        "    ce_seg_loss()\n",
-        encoding="utf-8",
-    )
+    stage_defs = [
+        ("stage1_v328_ce", 3000, "ce_seg_loss()", "1e-3", "0.0", "0.2", False, False, "2e-4", "0.0"),
+        ("stage2_v331_softplus", 5650, "tau_softplus_seg_loss()", "1e-3", "0.0", "0.2", False, False, "2e-4", "0.0"),
+        ("stage3_v332_smooth", 1500, "smooth_disagreement_seg_loss()", "1e-4", "0.0", "0.2", False, False, "2e-4", "0.0"),
+        ("stage4_v332_qat", 500, "smooth_disagreement_seg_loss()", "1e-4", "0.0", "0.2", True, False, "2e-4", "0.0"),
+        ("stage5_c1a_l7", 9000, "l7_softplus_seg_loss()", "3e-5", "0.01", "0.2", True, False, "2e-4", "0.0"),
+        ("stage6_lambda_sweep", 2000, "l7_softplus_seg_loss()", "3e-5", "0.02", "0.2", True, False, "2e-4", "0.0"),
+        ("stage7_sigma_sweep", 3000, "l7_softplus_seg_loss()", "3e-5", "0.02", "0.1", True, False, "2e-4", "0.0"),
+        ("stage8_muon_finetune", 5000, "l7_softplus_seg_loss()", "1e-5", "0.02", "0.1", True, True, "2e-4", "5e-4"),
+    ]
+    for index, (
+        name,
+        epochs,
+        loss_call,
+        adamw_lr,
+        cat_lambda,
+        cat_sigma,
+        use_qat,
+        use_muon,
+        muon_lr,
+        muon_weight_decay,
+    ) in enumerate(stage_defs, start=1):
+        (root / "src" / "stages" / f"stage{index}.py").write_text(
+            f'"""stage {index} doc"""\n'
+            f'name="{name}"\n'
+            f"def run(epochs: int = {epochs}, muon_weight_decay: float = {muon_weight_decay}):\n"
+            f"    train(adamw_lr={adamw_lr}, muon_lr={muon_lr}, "
+            f"cat_lambda={cat_lambda}, cat_sigma={cat_sigma}, "
+            f"use_qat={use_qat}, use_muon={use_muon})\n"
+            f"    {loss_call}\n",
+            encoding="utf-8",
+        )
     return root
 
 
@@ -158,9 +181,16 @@ def test_profile_pr95_hnerv_muon_intake_static_archive_and_source(tmp_path: Path
     assert profile["hnerv_muon_blob"]["decoder"]["tensor_count"] == 3
     assert profile["hnerv_muon_blob"]["decoder"]["muon_partition_params"] == 6
     assert profile["hnerv_muon_blob"]["latents"]["n_frame_pairs"] == 3
-    assert profile["source_intake"]["source_file_count"] == 7
+    assert profile["source_intake"]["source_file_count"] == 14
     assert profile["source_intake"]["model_defaults"]["latent_dim"] == 2
-    assert profile["source_intake"]["training_stages"][0]["uses_muon"] is True
+    assert profile["source_intake"]["training_stages"][0]["name"] == "stage1_v328_ce"
+    assert profile["source_intake"]["training_stages"][-1]["uses_muon"] is True
+    parity = profile["trainer_parity_contract"]
+    assert parity["schema"] == "pr95_hnerv_muon_t1_trainer_parity_v1"
+    assert parity["preflight_contract"]["local_trainer_parity_preflight_passed"] is True
+    assert parity["preflight_contract"]["ready_for_score_bearing_t1_hnerv_parity_dispatch"] is False
+    assert parity["t1_trainer_config"]["required_flags"]["--enable-scorer-domain-loss"] is True
+    assert parity["t1_trainer_config"]["required_flags"]["--yuv6-mode"] == "monkey_patch_global"
     assert profile["immediate_improvement_hypotheses"][0]["hook"] == "RAFT/ego-motion/foveation latent bases"
 
 

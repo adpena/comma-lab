@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -25,6 +26,79 @@ def test_phase1_trainer_auth_eval_refuses_scaffold_before_training() -> None:
     blockers = module.phase1_scaffold_blockers()
     assert "auth_eval_custody_not_wired" in blockers
     assert "exact_cuda_score_not_run" in blockers
+
+
+def test_phase1_trainer_loads_pr95_parity_profile_contract(tmp_path: Path) -> None:
+    module = _load_trainer_module()
+    profile = tmp_path / "profile_pr95_hnerv_muon_intake.json"
+    profile.write_text(
+        json.dumps(
+            {
+                "schema": "pr95_hnerv_muon_static_intake_profile_v1",
+                "trainer_parity_contract": {
+                    "schema": module.PR95_TRAINER_PARITY_SCHEMA,
+                    "source_tree_sha256": "abc123",
+                    "stage_schedule_digest": "def456",
+                    "stage_schedule": [{"order": 1, "name": "stage1_v328_ce"}],
+                    "t1_trainer_config": {
+                        "required_flags": {
+                            "--enable-scorer-domain-loss": True,
+                            "--yuv6-mode": "monkey_patch_global",
+                        }
+                    },
+                    "preflight_contract": {
+                        "local_trainer_parity_preflight_passed": True,
+                        "source_stage_count": 8,
+                        "stage_order_matches_release_view": True,
+                        "ready_for_score_bearing_t1_hnerv_parity_dispatch": False,
+                        "score_bearing_dispatch_blockers": [
+                            "active_dispatch_claim_and_provider_job_not_started_no_gpu_or_remote_per_scope"
+                        ],
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    loaded = module.load_pr95_trainer_parity_contract(profile)
+
+    assert loaded["status"] == "loaded"
+    assert loaded["score_claim"] is False
+    assert loaded["contract_schema_matches_expected"] is True
+    assert loaded["local_trainer_parity_preflight_passed"] is True
+    assert loaded["source_stage_count"] == 8
+    assert loaded["t1_trainer_config"]["required_flags"]["--yuv6-mode"] == "monkey_patch_global"
+
+
+def test_phase1_trainer_default_pr95_parity_profile_is_tracked_and_loadable() -> None:
+    module = _load_trainer_module()
+
+    assert ".omx/research" in module.DEFAULT_PR95_PARITY_PROFILE.as_posix()
+    assert module.DEFAULT_PR95_PARITY_PROFILE.is_file()
+
+    loaded = module.load_pr95_trainer_parity_contract(module.DEFAULT_PR95_PARITY_PROFILE)
+
+    assert loaded["status"] == "loaded"
+    assert loaded["contract_schema_matches_expected"] is True
+    assert loaded["local_trainer_parity_preflight_passed"] is True
+    assert loaded["source_stage_count"] == 8
+
+
+def test_phase1_trainer_missing_pr95_parity_profile_is_non_promotable(
+    tmp_path: Path,
+) -> None:
+    module = _load_trainer_module()
+
+    loaded = module.load_pr95_trainer_parity_contract(tmp_path / "missing.json")
+
+    assert loaded["status"] == "missing"
+    assert loaded["score_claim"] is False
+    assert loaded["local_trainer_parity_preflight_passed"] is False
+    assert loaded["ready_for_score_bearing_t1_hnerv_parity_dispatch"] is False
+    assert loaded["score_bearing_dispatch_blockers"] == [
+        "pr95_parity_profile_missing_run_experiments_profile_pr95_hnerv_muon_intake"
+    ]
 
 
 def test_phase1_trainer_auth_eval_cli_exits_nonzero_for_smoke_scaffold(

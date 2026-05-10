@@ -64,3 +64,40 @@ recover command above, then classify the result as one of:
   without valid score evidence;
 - `failed_t1_modal_recovered_no_score_claim` with the exact blocker if the
   remote script fails.
+
+## 2026-05-10T13:38Z harvest result: full-run batch-16 T4 OOM
+
+Recover closed the dispatch terminally as
+`failed_t1_modal_recovered_no_score_claim`.
+
+What worked:
+
+- Modal scorer import probe passed;
+- NVDEC probe passed on `Tesla T4`;
+- mounted-code custody was clean at commit `ce1b4e2d`;
+- full-run auth eval was correctly requested (`max_target_pairs=None`).
+
+What failed:
+
+```text
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 58.00 MiB.
+GPU 0 has a total capacity of 14.56 GiB of which 57.81 MiB is free.
+Process 1 has 14.50 GiB memory in use.
+```
+
+The OOM happened inside SegNet during score-domain training before checkpoint,
+packet compile, or auth eval. Classification: `t1_full_batch16_t4_scorer_oom`.
+This is not a model-family negative and not score evidence.
+
+Hardening follow-up:
+
+- `experiments/modal_t1_balle_endtoend.py` now rejects full 600-pair Modal T4
+  score-domain plans with `batch_size > 1` until gradient accumulation or
+  activation checkpointing exists;
+- the default Modal T1 batch size is now `1`;
+- duplicate same-lane active dispatches still fail closed via the claims
+  summary check.
+
+Next valid T1 score-path probe is a full 600-pair, batch-1 full-path smoke
+(`epochs=1`, no `max_target_pairs`) to validate memory, export, packet compile,
+and exact auth-eval plumbing before any long training run.

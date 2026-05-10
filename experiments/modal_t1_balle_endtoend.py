@@ -54,6 +54,7 @@ MODAL_SPAWN_SUBMISSION_UNKNOWN_STATUS = "ambiguous_modal_spawn_submission_recove
 HOURLY_RATE_T4_USD = 0.59
 DEFAULT_TIMEOUT_HOURS = 24.0
 DEFAULT_TRAIN_TIMEOUT_HOURS = 22.5
+DEFAULT_T4_SCORE_DOMAIN_BATCH_SIZE = 1
 REMOTE_POST_TRAIN_EVAL_BUFFER_HOURS = 1.0
 REMOTE_ARTIFACT_COLLECTION_BUFFER_HOURS = 0.25
 DEFAULT_COST_CAP_USD = 80.0
@@ -78,11 +79,18 @@ MOUNTED_CODE_PATHS = (
     "scripts/remote_lane_t1_balle_endtoend.sh",
     "scripts/remote_archive_only_eval.sh",
     "scripts/probe_nvdec.sh",
+    ".omx/research/pr95_hnerv_muon_trainer_parity_profile_20260510.json",
 )
 A1_CANONICAL_LOCAL_PATH = REPO_ROOT / "experiments/results/A1_canonical"
 A1_DESIGNATION_LOCAL_PATH = REPO_ROOT / ".omx/state/canonical_a1_designation.md"
 A1_CANONICAL_REMOTE_PATH = REMOTE_REPO / "experiments/results/A1_canonical"
 A1_DESIGNATION_REMOTE_PATH = REMOTE_REPO / ".omx/state/canonical_a1_designation.md"
+PR95_PARITY_PROFILE_LOCAL_PATH = (
+    REPO_ROOT / ".omx/research/pr95_hnerv_muon_trainer_parity_profile_20260510.json"
+)
+PR95_PARITY_PROFILE_REMOTE_PATH = (
+    REMOTE_REPO / ".omx/research/pr95_hnerv_muon_trainer_parity_profile_20260510.json"
+)
 
 
 def _ensure_repo_import_paths() -> None:
@@ -183,6 +191,11 @@ if A1_DESIGNATION_LOCAL_PATH.is_file():
     run_image = run_image.add_local_file(
         str(A1_DESIGNATION_LOCAL_PATH),
         remote_path=str(A1_DESIGNATION_REMOTE_PATH),
+    )
+if PR95_PARITY_PROFILE_LOCAL_PATH.is_file():
+    run_image = run_image.add_local_file(
+        str(PR95_PARITY_PROFILE_LOCAL_PATH),
+        remote_path=str(PR95_PARITY_PROFILE_REMOTE_PATH),
     )
 
 
@@ -632,6 +645,11 @@ def build_local_plan(
     if int(sinkhorn_max_positions_per_chunk) <= 0:
         validation_errors.append("sinkhorn_max_positions_per_chunk_must_be_positive")
     contest_auth_eval_requested = _contest_auth_eval_requested(max_target_pairs)
+    if contest_auth_eval_requested and int(batch_size) > DEFAULT_T4_SCORE_DOMAIN_BATCH_SIZE:
+        validation_errors.append(
+            "full_600_pair_t4_scorer_domain_requires_batch_size_lte_1:"
+            f"batch_size={int(batch_size)}"
+        )
     canonical_a1_payload = _canonical_a1_payload_snapshot()
     validation_errors.extend(
         f"canonical_a1_payload_{err}"
@@ -737,7 +755,7 @@ def plan_cli(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--label", default=None)
     parser.add_argument("--epochs", type=int, default=3000)
-    parser.add_argument("--batch-size", type=int, default=16)
+    parser.add_argument("--batch-size", type=int, default=DEFAULT_T4_SCORE_DOMAIN_BATCH_SIZE)
     parser.add_argument("--timeout-hours", type=float, default=DEFAULT_TIMEOUT_HOURS)
     parser.add_argument("--cost-cap-usd", type=float, default=DEFAULT_COST_CAP_USD)
     parser.add_argument("--train-timeout-hours", type=float, default=DEFAULT_TRAIN_TIMEOUT_HOURS)
@@ -1169,7 +1187,7 @@ def _mark_modal_spawn_submission_unknown(
 def main(
     label: str | None = None,
     epochs: int = 3000,
-    batch_size: int = 16,
+    batch_size: int = DEFAULT_T4_SCORE_DOMAIN_BATCH_SIZE,
     timeout_hours: float = DEFAULT_TIMEOUT_HOURS,
     train_timeout_hours: float = DEFAULT_TRAIN_TIMEOUT_HOURS,
     cost_cap_usd: float = DEFAULT_COST_CAP_USD,

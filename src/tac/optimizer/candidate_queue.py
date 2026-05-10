@@ -1,0 +1,503 @@
+"""Fail-closed candidate queue adapter for optimizer and sweep outputs.
+
+The queue schema here is intentionally smaller than a new optimizer. It turns
+heterogeneous local search artifacts into the ``top_k`` shape already consumed
+by dispatch/eval actuators, while preserving the evidence boundary: local CPU,
+proxy, and forensic rows remain planning candidates until a separate readiness
+gate proves byte-closed archive/runtime custody.
+"""
+
+from __future__ import annotations
+
+import json
+import math
+import time
+from collections.abc import Iterable, Mapping
+from pathlib import Path
+from typing import Any
+
+QUEUE_SCHEMA = "optimizer_candidate_queue_v1"
+TOOL_NAME = "tools/build_optimizer_candidate_queue.py"
+PLANNING_TARGET_MODES = ["contest_exact_eval_planning"]
+PLANNING_DEPLOYMENT_TARGET = "desktop_research"
+BASE_DISPATCH_BLOCKERS = [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+]
+
+
+def _utc_now() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def _repo_rel(path: Path, repo_root: Path) -> str:
+    try:
+        return path.resolve().relative_to(repo_root.resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _load_json(path: Path) -> Any:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _as_float(value: Any) -> float | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if math.isfinite(parsed) else None
+
+
+def _as_int(value: Any) -> int | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    if isinstance(value, str) and value.strip().isdigit():
+        return int(value.strip())
+    return None
+
+
+def _shaish(value: Any) -> str | None:
+    if isinstance(value, str) and len(value.strip()) == 64:
+        text = value.strip().lower()
+        if all(ch in "0123456789abcdef" for ch in text):
+            return text
+    return None
+
+
+def _ordered_unique(values: Iterable[str]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        if value and value not in seen:
+            out.append(value)
+            seen.add(value)
+    return out
+
+
+def _source_schema(payload: Any) -> str:
+    if isinstance(payload, Mapping):
+        schema = payload.get("schema") or payload.get("schema_version")
+        if schema is not None:
+            return str(schema)
+        tool = payload.get("tool")
+        if tool is not None:
+            return str(tool)
+    if isinstance(payload, list):
+        return "json_list"
+    return type(payload).__name__
+
+
+def _base_candidate(candidate_id: str, *, source_path: Path, repo_root: Path) -> dict[str, Any]:
+    return {
+        "candidate_id": candidate_id,
+        "source_paths": [_repo_rel(source_path, repo_root)],
+        "target_modes": list(PLANNING_TARGET_MODES),
+        "deployment_target": PLANNING_DEPLOYMENT_TARGET,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "field_selection_ready_for_exact_eval_dispatch": False,
+        "exact_cuda_auth_eval": False,
+        "score_affecting_payload_changed": False,
+        "charged_bits_changed": False,
+        "dispatch_blockers": list(BASE_DISPATCH_BLOCKERS),
+    }
+
+
+def _add_blockers(row: dict[str, Any], blockers: Iterable[str]) -> None:
+    row["dispatch_blockers"] = _ordered_unique(
+        [*row.get("dispatch_blockers", []), *[str(b) for b in blockers if b]]
+    )
+
+
+def _merge_candidate(existing: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
+    merged = dict(existing)
+    for key, value in incoming.items():
+        if key == "source_paths":
+            merged[key] = _ordered_unique([*merged.get(key, []), *value])
+        elif key == "dispatch_blockers":
+            merged[key] = _ordered_unique([*merged.get(key, []), *value])
+        elif key in {"rank_score", "predicted_contest_cpu_gha", "fitness"}:
+            old = _as_float(merged.get(key))
+            new = _as_float(value)
+            if old is None or (new is not None and new < old):
+                merged[key] = value
+        elif value is not None:
+            if key not in merged or merged.get(key) in (None, "", [], {}):
+                merged[key] = value
+            elif key in {
+                "macos_cpu_score",
+                "rank_score_field",
+                "queue_priority",
+                "ranking_evidence_grade",
+            }:
+                merged[key] = value
+    return merged
+
+
+def _candidate_sort_key(row: Mapping[str, Any]) -> tuple[Any, ...]:
+    priority = str(row.get("queue_priority") or "")
+    if priority == "auto_promote_gha":
+        class_rank = 0
+    elif priority == "operator_decision":
+        class_rank = 1
+    elif row.get("candidate_archive_path") or row.get("submission_dir"):
+        class_rank = 2
+    elif row.get("materialized_payload_path"):
+        class_rank = 3
+    else:
+        class_rank = 4
+    for key in (
+        "predicted_contest_cpu_gha",
+        "rank_score",
+        "fitness",
+        "predicted_score",
+        "proxy_score",
+        "macos_cpu_score",
+    ):
+        value = _as_float(row.get(key))
+        if value is not None:
+            return (class_rank, value, str(row.get("candidate_id") or ""))
+    return (class_rank, str(row.get("candidate_id") or ""))
+
+
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+    if isinstance(value, Mapping):
+        return {str(k): _json_safe(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(v) for v in value]
+    if isinstance(value, tuple):
+        return [_json_safe(v) for v in value]
+    return value
+
+
+def _read_optional_manifest(path_value: Any, repo_root: Path) -> dict[str, Any]:
+    if not isinstance(path_value, str) or not path_value:
+        return {}
+    path = Path(path_value)
+    if not path.is_absolute():
+        path = repo_root / path
+    if not path.is_file():
+        return {}
+    try:
+        payload = _load_json(path)
+    except json.JSONDecodeError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _a1_rollup_candidates(
+    payload: Mapping[str, Any], *, source_path: Path, repo_root: Path
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for variant in payload.get("variants") or []:
+        if not isinstance(variant, Mapping):
+            continue
+        candidate_id = str(variant.get("variant_id") or variant.get("candidate_id") or "")
+        if not candidate_id:
+            continue
+        manifest = _read_optional_manifest(variant.get("build_manifest_relpath"), repo_root)
+        row = _base_candidate(candidate_id, source_path=source_path, repo_root=repo_root)
+        archive_path = manifest.get("archive_path")
+        archive_sha = _shaish(manifest.get("archive_sha256") or variant.get("archive_sha256"))
+        archive_bytes = _as_int(manifest.get("archive_size_bytes"))
+        submission_dir = None
+        if isinstance(archive_path, str) and archive_path:
+            archive = Path(archive_path)
+            submission_dir = archive.parent.as_posix()
+        row.update(
+            {
+                "lane_id": payload.get("lane_id", "lane_pr101_bias_constrained_coord_search"),
+                "lane_class": "a1_pr101_bias_coord_search",
+                "candidate_family": "a1_inflate_time_bias_coordinate_search",
+                "evidence_semantics": "a1_runtime_variant_planning_only",
+                "evidence_grade": payload.get("evidence_grade")
+                or "[predicted; constrained coord search on A1 substrate]",
+                "coords": dict(variant.get("coords") or {}),
+                "submission_name": variant.get("submission_name") or candidate_id,
+                "submission_dir": submission_dir,
+                "archive_path": archive_path,
+                "candidate_archive_path": archive_path,
+                "archive_sha256": archive_sha,
+                "candidate_archive_sha256": archive_sha,
+                "archive_bytes": archive_bytes,
+                "archive_size_bytes": archive_bytes,
+                "candidate_archive_bytes": archive_bytes,
+                "archive_unchanged_from_a1": manifest.get("archive_unchanged_from_a1", True),
+                "inflate_py_sha256": manifest.get("inflate_py_sha256_new")
+                or variant.get("inflate_py_sha256"),
+                "score_affecting_runtime_changed": True,
+                "runtime_smoke_checked": manifest.get("runtime_smoke_checked", False),
+                "source_manifest_path": variant.get("build_manifest_relpath"),
+            }
+        )
+        _add_blockers(
+            row,
+            [
+                "a1_runtime_variant_requires_cpu_or_cuda_eval",
+                "archive_bytes_unchanged_score_depends_on_inflate_runtime",
+                "runtime_tree_sha_required_before_exact_dispatch",
+            ],
+        )
+        rows.append(row)
+    return rows
+
+
+def _m5max_candidates(
+    payload: Mapping[str, Any], *, source_path: Path, repo_root: Path
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    summary = payload.get("summary") if isinstance(payload.get("summary"), Mapping) else {}
+    queues = (
+        ("auto_promote_gha_queue", "auto_promote_gha"),
+        ("operator_decision_queue", "operator_decision"),
+    )
+    for queue_key, priority in queues:
+        for item in summary.get(queue_key) or []:
+            if not isinstance(item, Mapping):
+                continue
+            candidate_id = str(item.get("candidate_id") or "")
+            if not candidate_id:
+                continue
+            rank_score = _as_float(item.get("predicted_contest_cpu_gha"))
+            row = _base_candidate(candidate_id, source_path=source_path, repo_root=repo_root)
+            row.update(
+                {
+                    "lane_class": "a1_pr101_bias_coord_search",
+                    "candidate_family": "a1_inflate_time_bias_coordinate_search",
+                    "queue_priority": priority,
+                    "rank_score": rank_score,
+                    "rank_score_field": "predicted_contest_cpu_gha",
+                    "macos_cpu_score": _as_float(item.get("macos_cpu_score")),
+                    "predicted_contest_cpu_gha": rank_score,
+                    "ranking_evidence_grade": item.get("tag") or "[macOS-CPU calibrated]",
+                    "evidence_semantics": "macos_cpu_calibrated_ranking_not_dispatch_evidence",
+                }
+            )
+            blocker = (
+                "operator_decision_required_before_gha_or_exact_cuda"
+                if priority == "operator_decision"
+                else "gha_eval_required_before_exact_cuda_promotion"
+            )
+            _add_blockers(row, [blocker, "macos_cpu_is_not_contest_cuda_evidence"])
+            rows.append(row)
+    return rows
+
+
+def _codec_search_report_candidates(
+    payload: Mapping[str, Any], *, source_path: Path, repo_root: Path
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    op_class = str(payload.get("op_class") or "codec_op")
+    op_module = str(payload.get("op_module") or "")
+    evidence_semantics = str(payload.get("evidence_semantics") or "cpu_codec_op_search_forensic")
+    evidence_grade = str(payload.get("evidence_grade") or "[CPU-prep]")
+    tool = str(payload.get("tool") or source_path.name)
+    for ev in payload.get("all_evaluations") or []:
+        if not isinstance(ev, Mapping):
+            continue
+        eval_idx = _as_int(ev.get("eval_idx"))
+        if eval_idx is None:
+            continue
+        candidate_id = f"{op_class.lower()}_eval_{eval_idx:05d}"
+        row = _base_candidate(candidate_id, source_path=source_path, repo_root=repo_root)
+        row.update(
+            {
+                "lane_class": op_class.lower(),
+                "candidate_family": "codec_op_param_search",
+                "optimizer_tool": tool,
+                "op_module": op_module,
+                "op_class": op_class,
+                "op_params": dict(ev.get("params") or {}),
+                "eval_idx": eval_idx,
+                "bytes_out": _as_int(ev.get("bytes_out")),
+                "candidate_substream_bytes": _as_int(ev.get("bytes_out")),
+                "reconstruction_rms": _as_float(ev.get("reconstruction_rms")),
+                "fitness": _as_float(ev.get("fitness")),
+                "rank_score": _as_float(ev.get("fitness")),
+                "rank_score_field": "fitness",
+                "pareto_frontier": bool(ev.get("pareto_frontier")),
+                "materialized_payload_path": ev.get("materialized_payload_path"),
+                "materialized_payload_bytes": ev.get("materialized_payload_bytes"),
+                "materialized_payload_sha256": ev.get("materialized_payload_sha256"),
+                "materialized_payload_contract": ev.get("materialized_payload_contract"),
+                "decode_coverage_status": ev.get("decode_coverage_status"),
+                "evidence_semantics": evidence_semantics,
+                "evidence_grade": evidence_grade,
+                "error": ev.get("error"),
+            }
+        )
+        _add_blockers(
+            row,
+            [
+                "codec_op_payload_not_archive_zip",
+                "archive_substitution_surgery_required",
+                "exact_cuda_auth_eval_missing",
+            ],
+        )
+        if ev.get("error"):
+            _add_blockers(row, ["optimizer_eval_failed"])
+        rows.append(row)
+    return rows
+
+
+def _codec_param_manifest_candidates(
+    payload: Mapping[str, Any], *, source_path: Path, repo_root: Path
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for cand in payload.get("candidates") or []:
+        if not isinstance(cand, Mapping):
+            continue
+        candidate_id = str(cand.get("candidate_id") or "")
+        if not candidate_id:
+            continue
+        row = _base_candidate(candidate_id, source_path=source_path, repo_root=repo_root)
+        row.update(dict(cand))
+        row.update(
+            {
+                "target_modes": list(PLANNING_TARGET_MODES),
+                "deployment_target": PLANNING_DEPLOYMENT_TARGET,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_score": _as_float(cand.get("predicted_score")),
+                "rank_score_field": "predicted_score",
+                "evidence_semantics": cand.get("evidence_semantics")
+                or payload.get("evidence_semantics")
+                or "cpu_substrate_predicted_band",
+            }
+        )
+        _add_blockers(
+            row,
+            [
+                "predicted_score_is_not_score_evidence",
+                "archive_substitution_surgery_required",
+                "exact_cuda_auth_eval_missing",
+            ],
+        )
+        rows.append(row)
+    return rows
+
+
+def _meta_lagrangian_candidates(
+    payload: Mapping[str, Any], *, source_path: Path, repo_root: Path
+) -> list[dict[str, Any]]:
+    source_rows = (
+        payload.get("top_k_forensic")
+        or payload.get("engine_top_k_local_only")
+        or payload.get("all_evaluations")
+        or []
+    )
+    rows: list[dict[str, Any]] = []
+    for cand in source_rows:
+        if not isinstance(cand, Mapping):
+            continue
+        candidate_id = str(cand.get("candidate_id") or "")
+        if not candidate_id:
+            continue
+        row = _base_candidate(candidate_id, source_path=source_path, repo_root=repo_root)
+        row.update(dict(cand))
+        row.update(
+            {
+                "target_modes": list(PLANNING_TARGET_MODES),
+                "deployment_target": PLANNING_DEPLOYMENT_TARGET,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_score": _as_float(cand.get("proxy_score") or cand.get("lagrangian")),
+                "rank_score_field": "proxy_score",
+                "evidence_semantics": payload.get("evidence_semantics")
+                or "local_proxy_prediction_forensic",
+            }
+        )
+        _add_blockers(row, ["proxy_score_is_not_score_evidence", "candidate_archive_missing"])
+        rows.append(row)
+    return rows
+
+
+def extract_candidates_from_source(path: Path, *, repo_root: Path) -> tuple[str, list[dict[str, Any]]]:
+    payload = _load_json(path)
+    schema = _source_schema(payload)
+    if not isinstance(payload, Mapping):
+        return schema, []
+    if schema == "constrained_coord_search_rollup_v1":
+        return schema, _a1_rollup_candidates(payload, source_path=path, repo_root=repo_root)
+    if payload.get("tool") == "tools/sweep_m5max_hnerv_cluster.py":
+        return schema, _m5max_candidates(payload, source_path=path, repo_root=repo_root)
+    if schema in {"codec_op_cma_search_report_v1", "codec_op_optuna_search_report_v1"}:
+        return schema, _codec_search_report_candidates(payload, source_path=path, repo_root=repo_root)
+    if schema == "codec_op_param_sweep_manifest.v1":
+        return schema, _codec_param_manifest_candidates(payload, source_path=path, repo_root=repo_root)
+    if schema == "meta_lagrangian_search_v1":
+        return schema, _meta_lagrangian_candidates(payload, source_path=path, repo_root=repo_root)
+    if isinstance(payload.get("candidates"), list):
+        return schema, _codec_param_manifest_candidates(payload, source_path=path, repo_root=repo_root)
+    return schema, []
+
+
+def build_candidate_queue(
+    source_paths: Iterable[Path],
+    *,
+    repo_root: Path,
+    top_k: int | None = None,
+) -> dict[str, Any]:
+    merged: dict[str, dict[str, Any]] = {}
+    source_schemas: list[dict[str, str]] = []
+    for path in source_paths:
+        schema, rows = extract_candidates_from_source(path, repo_root=repo_root)
+        source_schemas.append({"path": _repo_rel(path, repo_root), "schema": schema})
+        for row in rows:
+            cid = str(row.get("candidate_id") or "")
+            if not cid:
+                continue
+            if cid in merged:
+                merged[cid] = _merge_candidate(merged[cid], row)
+            else:
+                merged[cid] = row
+
+    sorted_rows = sorted(merged.values(), key=_candidate_sort_key)
+    if top_k is not None:
+        sorted_rows = sorted_rows[:top_k]
+    dispatch_ready = [
+        row for row in sorted_rows if row.get("ready_for_exact_eval_dispatch") is True
+    ]
+    return _json_safe({
+        "schema": QUEUE_SCHEMA,
+        "tool": TOOL_NAME,
+        "generated_at_utc": _utc_now(),
+        "source_schemas": source_schemas,
+        "n_candidates": len(merged),
+        "top_k_count": len(sorted_rows),
+        "dispatch_ready_count": len(dispatch_ready),
+        "dispatch_ready": dispatch_ready,
+        "top_k": sorted_rows,
+        "top_k_forensic": sorted_rows,
+        "evidence_boundary": {
+            "planning_only_by_default": True,
+            "ready_for_exact_eval_dispatch_default": False,
+            "proxy_or_macos_cpu_rows_must_not_promote_score": True,
+            "next_gate": "materialize byte-closed archive/runtime custody, then exact eval readiness gate",
+        },
+    })
+
+
+__all__ = [
+    "BASE_DISPATCH_BLOCKERS",
+    "QUEUE_SCHEMA",
+    "build_candidate_queue",
+    "extract_candidates_from_source",
+]

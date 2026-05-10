@@ -108,6 +108,8 @@ CLI surface (DO NOT INVENT FLAGS — verified by tests)
                        See memory `feedback_t11_t13_t19_free_lateral_leaps_landed_20260509`.
   --t19-tau-grow       T19 ρ-growth factor (default 2.0; Boyd canonical).
   --t19-tau-shrink     T19 ρ-shrink factor (default 0.5; Boyd canonical).
+  --pr95-parity-profile  PR95 intake profile JSON recorded as T1 parity
+                       evidence for score-domain training.
 
 Lane class
 ----------
@@ -188,6 +190,11 @@ PHASE1_SCAFFOLD_BLOCKERS = (
     "no_op_runtime_consumption_exact_one_video_pending",
     "state_dict_wire_format_not_rate_tightened",
 )
+DEFAULT_PR95_PARITY_PROFILE = (
+    REPO_ROOT
+    / ".omx/research/pr95_hnerv_muon_trainer_parity_profile_20260510.json"
+)
+PR95_TRAINER_PARITY_SCHEMA = "pr95_hnerv_muon_t1_trainer_parity_v1"
 
 
 def phase1_scaffold_blockers() -> list[str]:
@@ -206,6 +213,80 @@ def refuse_phase1_scaffold_path(path_name: str) -> None:
         "claim, but auth-eval and promotion remain blocked until the runtime is "
         "hermetic and exact CUDA custody is wired."
     )
+
+
+def _repo_rel_or_str(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
+
+
+def load_pr95_trainer_parity_contract(profile_path: Path | None) -> dict:
+    """Load the PR95 release-view parity contract for T1 provenance/preflight."""
+    if profile_path is None:
+        return {
+            "status": "missing",
+            "profile_path": None,
+            "score_claim": False,
+            "local_trainer_parity_preflight_passed": False,
+            "ready_for_score_bearing_t1_hnerv_parity_dispatch": False,
+            "score_bearing_dispatch_blockers": ["pr95_parity_profile_path_not_configured"],
+        }
+    resolved = profile_path if profile_path.is_absolute() else REPO_ROOT / profile_path
+    base = {
+        "profile_path": _repo_rel_or_str(resolved),
+        "score_claim": False,
+        "ready_for_score_bearing_t1_hnerv_parity_dispatch": False,
+    }
+    if not resolved.is_file():
+        return {
+            **base,
+            "status": "missing",
+            "local_trainer_parity_preflight_passed": False,
+            "score_bearing_dispatch_blockers": [
+                "pr95_parity_profile_missing_run_experiments_profile_pr95_hnerv_muon_intake",
+            ],
+        }
+    try:
+        payload = json.loads(resolved.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return {
+            **base,
+            "status": "invalid_json",
+            "local_trainer_parity_preflight_passed": False,
+            "error": str(exc),
+            "score_bearing_dispatch_blockers": ["pr95_parity_profile_invalid_json"],
+        }
+    contract = payload.get("trainer_parity_contract")
+    if not isinstance(contract, dict):
+        return {
+            **base,
+            "status": "missing_contract",
+            "profile_schema": payload.get("schema"),
+            "local_trainer_parity_preflight_passed": False,
+            "score_bearing_dispatch_blockers": ["trainer_parity_contract_missing"],
+        }
+    preflight = contract.get("preflight_contract") or {}
+    blockers = list(preflight.get("score_bearing_dispatch_blockers") or [])
+    schema_matches = contract.get("schema") == PR95_TRAINER_PARITY_SCHEMA
+    return {
+        **base,
+        "status": "loaded",
+        "profile_schema": payload.get("schema"),
+        "contract_schema": contract.get("schema"),
+        "contract_schema_matches_expected": schema_matches,
+        "source_tree_sha256": contract.get("source_tree_sha256"),
+        "stage_schedule_digest": contract.get("stage_schedule_digest"),
+        "source_stage_count": preflight.get("source_stage_count"),
+        "stage_order_matches_release_view": preflight.get("stage_order_matches_release_view"),
+        "local_trainer_parity_preflight_passed": bool(
+            preflight.get("local_trainer_parity_preflight_passed") and schema_matches
+        ),
+        "t1_trainer_config": contract.get("t1_trainer_config"),
+        "stage_schedule": contract.get("stage_schedule"),
+        "score_bearing_dispatch_blockers": blockers,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -1047,6 +1128,7 @@ def write_provenance(
     t13_bit_reallocation: dict | None = None,
     t19_adaptive_rho: dict | None = None,
     score_domain_gradcheck: dict[str, float] | None = None,
+    pr95_trainer_parity: dict | None = None,
 ) -> Path:
     p = {
         "schema_version": 1,
@@ -1087,6 +1169,7 @@ def write_provenance(
                 else "pixel-L1 scaffold; seg/pose residuals are constants"
             ),
         },
+        "pr95_hnerv_trainer_parity": pr95_trainer_parity,
         # T13 / T19 wire-in surfaces (memo
         # feedback_t11_t13_t19_free_lateral_leaps_landed_20260509). Both
         # default to None when the corresponding --enable flag is OFF
@@ -1382,6 +1465,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=REPO_ROOT / DISPATCH_CLAIMS_RELATIVE,
         help="Dispatch-claim ledger checked before --auth-eval.",
     )
+    parser.add_argument(
+        "--pr95-parity-profile",
+        type=Path,
+        default=DEFAULT_PR95_PARITY_PROFILE,
+        help=(
+            "PR95 HNeRV/Muon intake profile JSON emitted by "
+            "experiments/profile_pr95_hnerv_muon_intake.py. Non-smoke "
+            "score-domain runs record its eight-stage release-view manifest "
+            "as parity/preflight evidence."
+        ),
+    )
     # T13 — Fridrich √n per-pair latent budget (memo
     # feedback_t11_t13_t19_free_lateral_leaps_landed_20260509)
     parser.add_argument(
@@ -1551,6 +1645,19 @@ def main() -> int:
             "[t1] --enable-scorer-domain-loss requires --epochs > 0 so the "
             "first-batch score-domain gradient reachability guard can run."
         )
+    pr95_trainer_parity = load_pr95_trainer_parity_contract(args.pr95_parity_profile)
+    if (
+        args.enable_scorer_domain_loss
+        and not args.smoke
+        and not pr95_trainer_parity["local_trainer_parity_preflight_passed"]
+    ):
+        raise SystemExit(
+            "[t1] non-smoke score-domain training requires a valid "
+            "--pr95-parity-profile emitted by "
+            "experiments/profile_pr95_hnerv_muon_intake.py; "
+            f"status={pr95_trainer_parity['status']} "
+            f"blockers={pr95_trainer_parity['score_bearing_dispatch_blockers']}"
+        )
     if args.pixel_l1_anchor_weight < 0:
         raise SystemExit("[t1] --pixel-l1-anchor-weight must be non-negative")
     if args.grad_clip_norm < 0:
@@ -1592,6 +1699,7 @@ def main() -> int:
         "evidence_grade": "[predicted; PR #95 eval_roundtrip+yuv6 monkey-patch in training inner loop]",
         "score_claim": False,
         "binary_forensics_dossier": ".omx/research/hnerv_leaderboard_binary_forensics_dossier_20260509.md",
+        "trainer_parity_profile": pr95_trainer_parity,
         "note": (
             "When --enable-scorer-domain-loss is set, Phase 1 forwards "
             "through PoseNet/SegNet in the training inner loop, making the "
@@ -1972,6 +2080,7 @@ def main() -> int:
         t13_bit_reallocation=t13_report,
         t19_adaptive_rho=t19_summary,
         score_domain_gradcheck=score_domain_gradcheck,
+        pr95_trainer_parity=pr95_trainer_parity,
     )
     (args.output_dir / "training_history.json").write_text(json.dumps(history, indent=2))
     (args.output_dir / "auth_eval_summary.json").write_text(

@@ -47,7 +47,7 @@ def test_plan_cli_is_default_safe_and_writes_no_claim(tmp_path: Path) -> None:
             "--epochs",
             "7",
             "--batch-size",
-            "3",
+            "1",
             "--timeout-hours",
             "24",
             "--claims-path",
@@ -383,7 +383,7 @@ def test_modal_t1_full_export_requests_contest_cuda_auth_eval(tmp_path: Path) ->
     payload, rc = module.build_local_plan(
         label="unit-full-run",
         epochs=3000,
-        batch_size=16,
+        batch_size=1,
         timeout_hours=24,
         cost_cap_usd=80,
         train_timeout_hours=module.DEFAULT_TRAIN_TIMEOUT_HOURS,
@@ -394,6 +394,27 @@ def test_modal_t1_full_export_requests_contest_cuda_auth_eval(tmp_path: Path) ->
     assert rc == 0
     assert payload["params"]["contest_cuda_auth_eval_requested"] is True
     assert payload["contest_cuda_auth_eval_requested"] is True
+
+
+def test_modal_t1_full_export_rejects_t4_oom_batch_size(tmp_path: Path) -> None:
+    module = _load_module()
+
+    payload, rc = module.build_local_plan(
+        label="unit-full-run",
+        epochs=3000,
+        batch_size=16,
+        timeout_hours=24,
+        cost_cap_usd=80,
+        train_timeout_hours=module.DEFAULT_TRAIN_TIMEOUT_HOURS,
+        max_target_pairs=None,
+        claims_path=_empty_claims_path(tmp_path),
+    )
+
+    assert rc == 2
+    assert (
+        "full_600_pair_t4_scorer_domain_requires_batch_size_lte_1:batch_size=16"
+        in payload["validation_errors"]
+    )
 
 
 def test_modal_t1_plan_fails_closed_on_active_same_lane_claim(tmp_path: Path) -> None:
@@ -473,7 +494,7 @@ def test_modal_t1_default_train_timeout_leaves_artifact_collection_buffer(tmp_pa
     payload, rc = module.build_local_plan(
         label="unit-full-run",
         epochs=3000,
-        batch_size=16,
+        batch_size=1,
         timeout_hours=24,
         cost_cap_usd=80,
         train_timeout_hours=module.DEFAULT_TRAIN_TIMEOUT_HOURS,
@@ -696,6 +717,8 @@ def test_modal_t1_records_mounted_code_snapshot_for_score_bearing_dispatches() -
     assert "def _mounted_code_snapshot(" in text
     assert '"scripts/remote_lane_t1_balle_endtoend.sh"' in text
     assert '"tools/build_phase1_packet_compiler.py"' in text
+    assert '".omx/research/pr95_hnerv_muon_trainer_parity_profile_20260510.json"' in text
+    assert "PR95_PARITY_PROFILE_LOCAL_PATH.is_file()" in text
     assert '"mounted_code_snapshot": code_snapshot' in text
     assert "mounted_code_worktree.patch" in text
 

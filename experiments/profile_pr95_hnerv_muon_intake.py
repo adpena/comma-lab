@@ -36,6 +36,27 @@ DEFAULT_MARKDOWN_OUT = DEFAULT_INTAKE_DIR / "profile_pr95_hnerv_muon_intake.md"
 CONTEST_ORIGINAL_BYTES = 37_545_489
 SCHEMA = "pr95_hnerv_muon_static_intake_profile_v1"
 TOOL = "experiments/profile_pr95_hnerv_muon_intake.py"
+TRAINER_PARITY_SCHEMA = "pr95_hnerv_muon_t1_trainer_parity_v1"
+EXPECTED_PR95_STAGE_NAMES = (
+    "stage1_v328_ce",
+    "stage2_v331_softplus",
+    "stage3_v332_smooth",
+    "stage4_v332_qat",
+    "stage5_c1a_l7",
+    "stage6_lambda_sweep",
+    "stage7_sigma_sweep",
+    "stage8_muon_finetune",
+)
+PR95_T1_REQUIRED_FLAGS: dict[str, Any] = {
+    "--enable-scorer-domain-loss": True,
+    "--enable-eval-roundtrip-in-training": True,
+    "--enable-differentiable-yuv6": True,
+    "--yuv6-mode": "monkey_patch_global",
+    "--segmentation-surrogate": "sinkhorn",
+    "--pixel-l1-anchor-weight": 0.0,
+    "--grad-clip-norm": 1.0,
+    "--auth-eval": False,
+}
 
 
 def _sha256_bytes(data: bytes) -> str:
@@ -459,11 +480,115 @@ def compute_score_terms(seg: float, pose: float, archive_bytes: int, denominator
     }
 
 
+def build_trainer_parity_contract(
+    source_summary: dict[str, Any],
+    member_profile: dict[str, Any],
+) -> dict[str, Any]:
+    """Convert PR95 release-view curriculum into T1 trainer preflight evidence."""
+    stages = source_summary.get("training_stages", [])
+    stage_names = [stage.get("name") for stage in stages]
+    stage_count_is_8 = len(stages) == len(EXPECTED_PR95_STAGE_NAMES)
+    stage_order_matches = tuple(stage_names) == EXPECTED_PR95_STAGE_NAMES
+    stages_have_epochs = all(stage.get("epochs_default") is not None for stage in stages)
+    local_preflight_passed = bool(
+        stage_count_is_8
+        and stage_order_matches
+        and stages_have_epochs
+        and source_summary.get("source_tree_sha256")
+        and member_profile.get("sections")
+    )
+    section_budget = [
+        {
+            "name": section["name"],
+            "compressed_bytes": section["compressed_bytes"],
+            "uncompressed_bytes": section["uncompressed_bytes"],
+            "sha256": section["sha256"],
+        }
+        for section in member_profile.get("sections", [])
+    ]
+    stage_schedule = [
+        {
+            "order": index,
+            "name": stage["name"],
+            "source_file": stage["file"],
+            "epochs": stage["epochs_default"],
+            "loss_family": stage["loss_family"],
+            "adamw_lr": stage["adamw_lr"],
+            "muon_lr": stage["muon_lr"],
+            "muon_weight_decay_default": stage["muon_weight_decay_default"],
+            "uses_muon": stage["uses_muon"],
+            "uses_qat": stage["uses_qat"],
+            "cat_lambda": stage["cat_lambda"],
+            "cat_sigma": stage["cat_sigma"],
+        }
+        for index, stage in enumerate(stages, start=1)
+    ]
+    score_bearing_blockers = [
+        "active_dispatch_claim_and_provider_job_not_started_no_gpu_or_remote_per_scope",
+        "contest_cuda_exact_eval_not_run_for_t1_hnerv_parity_candidate",
+    ]
+    if not local_preflight_passed:
+        score_bearing_blockers.insert(
+            0,
+            "pr95_release_view_stage_manifest_failed_local_preflight",
+        )
+    return {
+        "schema": TRAINER_PARITY_SCHEMA,
+        "source_tree_sha256": source_summary.get("source_tree_sha256"),
+        "release_view_source_dir": source_summary.get("source_dir"),
+        "archive_member_format": member_profile.get("member_format"),
+        "archive_section_budget": section_budget,
+        "stage_schedule": stage_schedule,
+        "stage_schedule_digest": _sha256_bytes(
+            _json_text(stage_schedule).encode("utf-8")
+        ),
+        "total_release_view_epochs": sum(
+            int(stage["epochs_default"])
+            for stage in stages
+            if stage.get("epochs_default") is not None
+        ),
+        "t1_trainer_config": {
+            "required_flags": PR95_T1_REQUIRED_FLAGS,
+            "score_domain_loss_required": True,
+            "eval_roundtrip_required": True,
+            "differentiable_yuv6_required": True,
+            "manifest_keys_required": [
+                "pr95_hnerv_trainer_parity",
+                "score_domain_loss",
+                "score_domain_gradcheck",
+                "args.enable_eval_roundtrip_in_training",
+                "args.enable_differentiable_yuv6",
+            ],
+            "stage_semantics": (
+                "T1 is a Ballé/ADMM substrate trainer. This contract records "
+                "the PR95 eight-stage HNeRV/Muon discipline as fail-closed "
+                "parity evidence for score-domain runs; it is not an exact "
+                "PR95 architecture replay by itself."
+            ),
+        },
+        "preflight_contract": {
+            "local_trainer_parity_preflight_passed": local_preflight_passed,
+            "source_stage_count": len(stages),
+            "source_stage_count_is_8": stage_count_is_8,
+            "stage_order_matches_release_view": stage_order_matches,
+            "expected_stage_names": list(EXPECTED_PR95_STAGE_NAMES),
+            "observed_stage_names": stage_names,
+            "all_stages_have_epochs": stages_have_epochs,
+            "release_view_eval_roundtrip_required": True,
+            "release_view_differentiable_yuv6_required": True,
+            "score_claim": False,
+            "ready_for_score_bearing_t1_hnerv_parity_dispatch": False,
+            "score_bearing_dispatch_blockers": score_bearing_blockers,
+        },
+    }
+
+
 def build_profile(archive_path: Path, source_dir: Path, static_intake_path: Path | None = None) -> dict[str, Any]:
     archive, payload = read_pr95_archive(archive_path)
     member = parse_hnerv_muon_member(payload)
     source = parse_source_summary(source_dir)
     static_intake = load_static_intake(static_intake_path) if static_intake_path else None
+    trainer_parity = build_trainer_parity_contract(source, member)
 
     score_claims: dict[str, Any] = {
         "score_claim": False,
@@ -504,6 +629,7 @@ def build_profile(archive_path: Path, source_dir: Path, static_intake_path: Path
         "archive_anatomy": archive,
         "hnerv_muon_blob": member,
         "source_intake": source,
+        "trainer_parity_contract": trainer_parity,
         "score_term_math": score_claims,
         "dispatch_readiness": dispatch_readiness(),
         "immediate_improvement_hypotheses": improvement_hypotheses(member),
@@ -602,6 +728,8 @@ def render_markdown(profile: dict[str, Any]) -> str:
     decoder = member["decoder"]
     latents = member["latents"]
     readiness = profile["dispatch_readiness"]
+    parity = profile["trainer_parity_contract"]
+    parity_preflight = parity["preflight_contract"]
     score_terms = profile["score_term_math"]["score_terms_from_static_intake"]
 
     lines = [
@@ -668,6 +796,22 @@ def render_markdown(profile: dict[str, Any]) -> str:
             f"AdamW lr `{stage['adamw_lr']}`, Muon `{stage['uses_muon']}`, QAT `{stage['uses_qat']}`, "
             f"C1a lambda `{stage['cat_lambda']}`, sigma `{stage['cat_sigma']}`"
         )
+    lines.extend(
+        [
+            "",
+            "## T1 Trainer Parity Contract",
+            "",
+            f"- schema: `{parity['schema']}`",
+            f"- source tree sha256: `{parity['source_tree_sha256']}`",
+            f"- stage schedule digest: `{parity['stage_schedule_digest']}`",
+            f"- total release-view epochs: `{parity['total_release_view_epochs']}`",
+            f"- local trainer parity preflight passed: `{parity_preflight['local_trainer_parity_preflight_passed']}`",
+            f"- required T1 flags: `{json.dumps(parity['t1_trainer_config']['required_flags'], sort_keys=True)}`",
+            "- score claim: `False`",
+        ]
+    )
+    for blocker in parity_preflight["score_bearing_dispatch_blockers"]:
+        lines.append(f"- score-bearing dispatch blocker: `{blocker}`")
     lines.extend(
         [
             "",

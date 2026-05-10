@@ -1,0 +1,1090 @@
+{
+  "archive_anatomy": {
+    "archive_bytes": 178417,
+    "archive_sha256": "e976acd5fe565c94fb9a8c62e5200c949919f76150e84599f268d6a58588440a",
+    "member_count": 1,
+    "members": [
+      {
+        "compress_size": 178309,
+        "compress_type": 0,
+        "crc32_hex": "eb685a1a",
+        "date_time": [
+          2026,
+          5,
+          2,
+          17,
+          36,
+          56
+        ],
+        "file_size": 178309,
+        "name": "0.bin",
+        "sha256": "4b8013fb1168e21b12fc7ee6c395e032660d88daded48a0b845085e7d5eb11c4",
+        "zip_stored": true
+      }
+    ],
+    "path": "experiments/results/public_pr95_intake_20260504_codex/archive.zip",
+    "rate_score_component": 0.11880055683919845,
+    "zip_overhead_bytes": 108
+  },
+  "dispatch_readiness": {
+    "blocked_claims": [
+      "Static PR95 public intake is not promotable score evidence.",
+      "README/body score inputs remain external until replayed under our exact CUDA auth eval custody.",
+      "Any HNeRV retrain without checkpoint and manifest custody is non-promotable replay work."
+    ],
+    "fail_closed": true,
+    "ready_for_dispatch": false,
+    "remote_dispatch_requested": false,
+    "required_before_score_claims": [
+      "Replay exact eval through archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA before any PR95 score claim.",
+      "Record contest_auth_eval.json, archive SHA-256, archive bytes, runtime tree hash, hardware, sample count, and recomputed score.",
+      "Owned retraining needs explicit manifest/checkpoint custody for every stage: source SHA, seed, stage config, checkpoint path, checkpoint SHA-256, optimizer state policy, and final archive builder provenance."
+    ]
+  },
+  "evidence_grade": "external_static_intake_only",
+  "hnerv_muon_blob": {
+    "compressed_payload_bytes": 178297,
+    "decoder": {
+      "adamw_decoder_partition_params": 51802,
+      "muon_partition_params": 177156,
+      "parameter_groups": {
+        "blocks": 172988,
+        "refine": 2943,
+        "rgb_0": 489,
+        "rgb_1": 489,
+        "skips": 1937,
+        "stem": 50112
+      },
+      "raw_decoder_table_bytes": 230048,
+      "tensor_count": 28,
+      "tensors": [
+        {
+          "name": "stem.weight",
+          "optimizer_partition": "adamw_decoder_or_bias",
+          "params": 48384,
+          "quantized_bytes": 48384,
+          "scale": 0.012009871192276478,
+          "shape": [
+            1728,
+            28
+          ],
+          "zigzag_byte_max": 253,
+          "zigzag_byte_min": 0
+        },
+        {
+          "name": "stem.bias",
+          "optimizer_partition": "adamw_decoder_or_bias",
+          "params": 1728,
+          "quantized_bytes": 1728,
+          "scale": 0.016600340604782104,
+          "shape": [
+            1728
+          ],
+          "zigzag_byte_max": 254,
+          "zigzag_byte_min": 0
+        },
+        {
+          "name": "blocks.0.weight",
+          "optimizer_partition": "muon_hidden_2d_plus_weight",
+          "params": 46656,
+          "quantized_bytes": 46656,
+          "scale": 0.0047428240068256855,
+          "shape": [
+            144,
+            36,
+            3,
+            3
+          ],
+          "zigzag_byte_max": 253,
+          "zigzag_byte_min": 1
+        },
+        {
+          "name": "blocks.0.bias",
+          "optimizer_partition": "adamw_decoder_or_bias",
+          "params": 144,
+          "quantized_bytes": 144,
+          "scale": 0.0068127308040857315,
+          "shape": [
+            144
+          ],
+          "zigzag_byte_max": 254,
+          "zigzag_byte_min": 0
+        },
+        {
+          "name": "blocks.1.weight",
+          "optimizer_partition": "muon_hidden_2d_plus_weight",
+          "params": 46656,
+          "quantized_bytes": 46656,
+          "scale": 0.00405484065413475,
+          "shape": [
+            144,
+            36,
+            3,
+            3
+          ],
+          "zigzag_byte_max": 253,
+          "zigzag_byte_min": 0
+        },
+        {
+          "name": "blocks.1.bias",
+          "optimizer_partition": "adamw_decoder_or_bias",
+          "params": 144,
+          "quantized_bytes": 144,
+          "scale": 0.006921062245965004,
+          "shape": [
+            144
+          ],
+          "zigzag_byte_max": 253,
+          "zigzag_byte_min": 0
+        },
+        {
+          "name": "blocks.2.weight",
+          "optimizer_partition": "muon_hidden_2d_plus_weight",
+          "params": 34992,
+          "quantized_bytes": 34992,
+          "scale": 0.0032402160577476025,
+          "shape": [
+            108,
+            36,
+            3,
+            3
+          ],
+          "zigzag_byte_max": 253,
+          "zigzag_byte_min": 0
+        },
+        {
+          "name": "blocks.2.bias",
+          "optimizer_partition": "adamw_decoder_or_bias",
+          "params": 108,
+          "quantized_bytes": 108,
+          "scale": 0.006050711032003164,
+          "shape": [
+            108
+          ],
+          "zigzag_byte_max": 253,
+          "zigzag_byte_min": 0
+        },
+        {
+          "name": "blocks.3.weight",
+          "optimizer_partition": "muon_hidden_2d_plus_weight",
+          "params": 19440,
+          "quantized_bytes": 19440,
+          "scale": 0.003186482936143875,
+          "shape": [
+            80,
+            27,
+            3,
+            3
+          ],
+          "zigzag_byte_max": 254,
+          "zigzag_byte_min": 0
+        },
+        {
+          "name": "blocks.3.bias",
+          "optimizer_partition": "adamw_decoder_or_bias",
+          "params": 80,
+          "quantized_bytes": 80,
+          "scale": 0.011563477106392384,
+          "shape": [
+            80
+          ],
+          "zigzag_byte_max": 254,
+          "zigzag_byte_min": 0
+        },
+        {
+          "name": "blocks.4.weight",
+          "optimizer_partition": "muon_hidden_2d_plus_weight",
+          "params": 12960,
+          "quantized_bytes": 12960,
+          "scale": 0.0025837854482233524,
+          "shape": [
+            72,
+            20,
+            3,
+            3
+          ],
+          "zigzag_byte_max": 254,
+          "zigzag_byte_min": 0
+        },
+        {
+          "name": "blocks.4.bias",
+          "optimizer_partition": "adamw_decoder_or_bias",
+          "params": 72,
+          "quantized_bytes": 72,
+          "scale": 0.009590531699359417,
+          "shape": [
+            72
+          ],
+          "zigzag_byte_max": 254,
+          "zigzag_byte_min": 0
+        },
+        {
+          "name": "blocks.5.weight",
+          "optimizer_partition": "muon_hidden_2d_plus_weight",
+          "params": 11664,
+          "quantized_bytes": 11664,
+          "scale": 0.00644119456410408,
+          "shape": [
+            72,
+            18,
+            3,
+            3
+          ],
+          "zigzag_byte_max": 253,
+          "zigzag_byte_min": 1
+        },
+        {
+          "name": "blocks.5.bias",
+          "optimizer_partition": "adamw_decoder_or_bias",
+          "params": 72,
+          "quantized_bytes": 72,
+          "scale": 0.01638069562613964,
+          "shape": [
+            72
+          ],
+          "zigzag_byte_max": 254,
+          "zigzag_byte_min": 4
+        },
+        {
+          "name": "skips.2.weight",
+          "optimizer_partition": "muon_hidden_2d_plus_weight",
+          "params": 972,
+          "quantized_bytes": 972,
+          "scale": 0.003768783761188388,
+          "shape": [
+            27,
+            36,
+            1,
+            1
+          ],
+          "zigzag_byte_max": 254,
+          "zigzag_byte_min": 0
+        },
+        {
+          "name": "skips.2.bias",
+          "optimizer_partition": "adamw_decoder_or_bias",
+          "params": 27,
+          "quantized_bytes": 27,
+          "scale": 0.0054108258336782455,
+          "shape": [
+            27
+          ],
+          "zigzag_byte_max": 253,
+          "zigzag_byte_min": 11
+        },
+        {
+          "name": "skips.3.weight",
+          "optimizer_partition": "muon_hidden_2d_plus_weight",
+          "params": 540,
+          "quantized_bytes": 540,
+          "scale": 0.002995765767991543,
+          "shape": [
+            20,
+            27,
+            1,
+            1
+          ],
+          "zigzag_byte_max": 253,
+          "zigzag_byte_min": 0
+        },
+        {
+          "name": "skips.3.bias",
+          "optimizer_partition": "adamw_decoder_or_bias",
+          "params": 20,
+          "quantized_bytes": 20,
+          "scale": 0.00739592220634222,
+          "shape": [
+            20
+          ],
+          "zigzag_byte_max": 253,
+          "zigzag_byte_min": 10
+        },
+        {
+          "name": "skips.4.weight",
+          "optimizer_partition": "muon_hidden_2d_plus_weight",
+          "params": 360,
+          "quantized_bytes": 360,
+          "scale": 0.0027972040697932243,
+          "shape": [
+            18,
+            20,
+            1,
+            1
+          ],
+          "zigzag_byte_max": 254,
+          "zigzag_byte_min": 0
+        },
+        {
+          "name": "skips.4.bias",
+          "optimizer_partition": "adamw_decoder_or_bias",
+          "params": 18,
+          "quantized_bytes": 18,
+          "scale": 0.006140693556517363,
+          "shape": [
+            18
+          ],
+          "zigzag_byte_max": 254,
+          "zigzag_byte_min": 13
+        },
+        {
+          "name": "refine.0.weight",
+          "optimizer_partition": "muon_hidden_2d_plus_weight",
+          "params": 1458,
+          "quantized_bytes": 1458,
+          "scale": 0.007619318552315235,
+          "shape": [
+            9,
+            18,
+            3,
+            3
+          ],
+          "zigzag_byte_max": 254,
+          "zigzag_byte_min": 1
+        },
+        {
+          "name": "refine.0.bias",
+          "optimizer_partition": "adamw_decoder_or_bias",
+          "params": 9,
+          "quantized_bytes": 9,
+          "scale": 0.007473256904631853,
+          "shape": [
+            9
+          ],
+          "zigzag_byte_max": 253,
+          "zigzag_byte_min": 23
+        },
+        {
+          "name": "refine.1.weight",
+          "optimizer_partition": "muon_hidden_2d_plus_weight",
+          "params": 1458,
+          "quantized_bytes": 1458,
+          "scale": 0.0034957299940288067,
+          "shape": [
+            18,
+            9,
+            3,
+            3
+          ],
+          "zigzag_byte_max": 254,
+          "zigzag_byte_min": 0
+        },
+        {
+          "name": "refine.1.bias",
+          "optimizer_partition": "adamw_decoder_or_bias",
+          "params": 18,
+          "quantized_bytes": 18,
+          "scale": 0.014198793098330498,
+          "shape": [
+            18
+          ],
+          "zigzag_byte_max": 253,
+          "zigzag_byte_min": 4
+        },
+        {
+          "name": "rgb_0.weight",
+          "optimizer_partition": "adamw_decoder_or_bias",
+          "params": 486,
+          "quantized_bytes": 486,
+          "scale": 0.007236362434923649,
+          "shape": [
+            3,
+            18,
+            3,
+            3
+          ],
+          "zigzag_byte_max": 254,
+          "zigzag_byte_min": 0
+        },
+        {
+          "name": "rgb_0.bias",
+          "optimizer_partition": "adamw_decoder_or_bias",
+          "params": 3,
+          "quantized_bytes": 3,
+          "scale": 0.010309222154319286,
+          "shape": [
+            3
+          ],
+          "zigzag_byte_max": 254,
+          "zigzag_byte_min": 11
+        },
+        {
+          "name": "rgb_1.weight",
+          "optimizer_partition": "adamw_decoder_or_bias",
+          "params": 486,
+          "quantized_bytes": 486,
+          "scale": 0.005492666270583868,
+          "shape": [
+            3,
+            18,
+            3,
+            3
+          ],
+          "zigzag_byte_max": 254,
+          "zigzag_byte_min": 0
+        },
+        {
+          "name": "rgb_1.bias",
+          "optimizer_partition": "adamw_decoder_or_bias",
+          "params": 3,
+          "quantized_bytes": 3,
+          "scale": 0.005918166134506464,
+          "shape": [
+            3
+          ],
+          "zigzag_byte_max": 253,
+          "zigzag_byte_min": 97
+        }
+      ],
+      "top_tensors_by_params": [
+        {
+          "name": "stem.weight",
+          "optimizer_partition": "adamw_decoder_or_bias",
+          "params": 48384,
+          "quantized_bytes": 48384,
+          "scale": 0.012009871192276478,
+          "shape": [
+            1728,
+            28
+          ],
+          "zigzag_byte_max": 253,
+          "zigzag_byte_min": 0
+        },
+        {
+          "name": "blocks.0.weight",
+          "optimizer_partition": "muon_hidden_2d_plus_weight",
+          "params": 46656,
+          "quantized_bytes": 46656,
+          "scale": 0.0047428240068256855,
+          "shape": [
+            144,
+            36,
+            3,
+            3
+          ],
+          "zigzag_byte_max": 253,
+          "zigzag_byte_min": 1
+        },
+        {
+          "name": "blocks.1.weight",
+          "optimizer_partition": "muon_hidden_2d_plus_weight",
+          "params": 46656,
+          "quantized_bytes": 46656,
+          "scale": 0.00405484065413475,
+          "shape": [
+            144,
+            36,
+            3,
+            3
+          ],
+          "zigzag_byte_max": 253,
+          "zigzag_byte_min": 0
+        },
+        {
+          "name": "blocks.2.weight",
+          "optimizer_partition": "muon_hidden_2d_plus_weight",
+          "params": 34992,
+          "quantized_bytes": 34992,
+          "scale": 0.0032402160577476025,
+          "shape": [
+            108,
+            36,
+            3,
+            3
+          ],
+          "zigzag_byte_max": 253,
+          "zigzag_byte_min": 0
+        },
+        {
+          "name": "blocks.3.weight",
+          "optimizer_partition": "muon_hidden_2d_plus_weight",
+          "params": 19440,
+          "quantized_bytes": 19440,
+          "scale": 0.003186482936143875,
+          "shape": [
+            80,
+            27,
+            3,
+            3
+          ],
+          "zigzag_byte_max": 254,
+          "zigzag_byte_min": 0
+        },
+        {
+          "name": "blocks.4.weight",
+          "optimizer_partition": "muon_hidden_2d_plus_weight",
+          "params": 12960,
+          "quantized_bytes": 12960,
+          "scale": 0.0025837854482233524,
+          "shape": [
+            72,
+            20,
+            3,
+            3
+          ],
+          "zigzag_byte_max": 254,
+          "zigzag_byte_min": 0
+        },
+        {
+          "name": "blocks.5.weight",
+          "optimizer_partition": "muon_hidden_2d_plus_weight",
+          "params": 11664,
+          "quantized_bytes": 11664,
+          "scale": 0.00644119456410408,
+          "shape": [
+            72,
+            18,
+            3,
+            3
+          ],
+          "zigzag_byte_max": 253,
+          "zigzag_byte_min": 1
+        },
+        {
+          "name": "stem.bias",
+          "optimizer_partition": "adamw_decoder_or_bias",
+          "params": 1728,
+          "quantized_bytes": 1728,
+          "scale": 0.016600340604782104,
+          "shape": [
+            1728
+          ],
+          "zigzag_byte_max": 254,
+          "zigzag_byte_min": 0
+        },
+        {
+          "name": "refine.0.weight",
+          "optimizer_partition": "muon_hidden_2d_plus_weight",
+          "params": 1458,
+          "quantized_bytes": 1458,
+          "scale": 0.007619318552315235,
+          "shape": [
+            9,
+            18,
+            3,
+            3
+          ],
+          "zigzag_byte_max": 254,
+          "zigzag_byte_min": 1
+        },
+        {
+          "name": "refine.1.weight",
+          "optimizer_partition": "muon_hidden_2d_plus_weight",
+          "params": 1458,
+          "quantized_bytes": 1458,
+          "scale": 0.0034957299940288067,
+          "shape": [
+            18,
+            9,
+            3,
+            3
+          ],
+          "zigzag_byte_max": 254,
+          "zigzag_byte_min": 0
+        },
+        {
+          "name": "skips.2.weight",
+          "optimizer_partition": "muon_hidden_2d_plus_weight",
+          "params": 972,
+          "quantized_bytes": 972,
+          "scale": 0.003768783761188388,
+          "shape": [
+            27,
+            36,
+            1,
+            1
+          ],
+          "zigzag_byte_max": 254,
+          "zigzag_byte_min": 0
+        },
+        {
+          "name": "skips.3.weight",
+          "optimizer_partition": "muon_hidden_2d_plus_weight",
+          "params": 540,
+          "quantized_bytes": 540,
+          "scale": 0.002995765767991543,
+          "shape": [
+            20,
+            27,
+            1,
+            1
+          ],
+          "zigzag_byte_max": 253,
+          "zigzag_byte_min": 0
+        }
+      ],
+      "total_params": 228958
+    },
+    "latents": {
+      "header_bytes": 8,
+      "hi_delta_bytes": 16800,
+      "hi_nonzero_count": 73,
+      "hi_nonzero_fraction": 0.004345238095238096,
+      "latent_dim": 28,
+      "latent_values": 16800,
+      "lo_delta_bytes": 16800,
+      "mins_fp16_bytes": 56,
+      "mins_range": [
+        -3.619140625,
+        -1.8349609375
+      ],
+      "n_frame_pairs": 600,
+      "payload_bytes": 33720,
+      "scales_fp16_bytes": 56,
+      "scales_range": [
+        0.01509857177734375,
+        0.0283355712890625
+      ]
+    },
+    "member_bytes": 178309,
+    "member_format": "hnerv_muon_codec_v1",
+    "meta": {
+      "base_channels": 36,
+      "eval_size": [
+        384,
+        512
+      ],
+      "latent_dim": 28,
+      "n_pairs": 600
+    },
+    "meta_brotli_offset": 4,
+    "section_length_prefix_bytes": 12,
+    "sections": [
+      {
+        "compressed_bytes": 80,
+        "length_prefix_offset": 0,
+        "name": "meta_json_brotli",
+        "sha256": "49385dd99c02228dd0ed7649586fe5026940573a5675911ee7cb24ab2e8bdca7",
+        "uncompressed_bytes": 80
+      },
+      {
+        "compressed_bytes": 162349,
+        "length_prefix_offset": 84,
+        "name": "decoder_state_int8_brotli",
+        "sha256": "fbeaf706e9d8c38cf39fd36b7f6c6312b66eae6c9a4f25a99708d8fbb3cdaf2e",
+        "uncompressed_bytes": 230048
+      },
+      {
+        "compressed_bytes": 15868,
+        "length_prefix_offset": 162437,
+        "name": "latents_delta_uint8_brotli",
+        "sha256": "863634aba9a956d13eab8708133239ee861bb797cbad4ff2f39a46939987c709",
+        "uncompressed_bytes": 33720
+      }
+    ]
+  },
+  "immediate_improvement_hypotheses": [
+    {
+      "dispatch_constraint": "basis-guided retrains need exact replay eval first and checkpoint custody before any score claim",
+      "hook": "RAFT/ego-motion/foveation latent bases",
+      "owned_next_artifact": "latent-basis manifest with basis SHA, coefficient bytes, reconstruction parity checks, and exact source archive SHA",
+      "rank": 1,
+      "rationale": "PR95 stores 600x28 free per-frame-pair latents. Replace part of that table with charged coefficients over existing RAFT-like flow, ego-motion, and foveation bases so retraining searches a lower-dimensional, camera-aware latent manifold instead of replaying unconstrained latent memorization."
+    },
+    {
+      "dispatch_constraint": "residual atoms must be charged in archive.zip and validated by exact CUDA auth eval",
+      "hook": "Cool-Chic/C3/wavelet residual bases",
+      "owned_next_artifact": "residual-basis intake probe with atom bytes, affected frames/classes, decode parity, and fail-closed archive manifest",
+      "rank": 2,
+      "rationale": "HNeRV owns the coarse neural reconstruction, but the current archive has no explicit residual basis. Attach a tiny charged residual program over Cool-Chic, C3, or wavelet atoms for systematic SegNet/PoseNet residuals that are too local for global latent movement."
+    },
+    {
+      "dispatch_constraint": "weights derived from proxy or stale traces are planning-only until refreshed under exact CUDA custody",
+      "hook": "Fridrich/Lagrangian hard-pair weighting",
+      "owned_next_artifact": "hard-pair weighting policy JSON with source eval SHA, break-even score math, selected pairs, and planning/promotable status",
+      "rank": 3,
+      "rationale": "The eight-stage curriculum already changes seg losses, C1a strength, sigma, and Muon scheduling. Use exact component traces to drive hard-pair Lagrangian weights, selecting which frame pairs deserve latent movement, residual atoms, or entropy budget instead of uniform stage replay."
+    },
+    {
+      "dispatch_constraint": "pixel corrections are non-promotable until they are consumed by inflate and exact eval confirms component benefit",
+      "hook": "engineered corrections and pixel-diff sparse atoms",
+      "owned_next_artifact": "sparse-atom planner with changed-pixel count, atom payload bytes, no-op detection, and local decode application proof",
+      "rank": 4,
+      "rationale": "HNeRV frame outputs can expose sparse pixel/class disagreements after inflate. Encode deterministic sparse corrections only where pixel-diff atoms clear byte-normalized component benefit, using the HNeRV output as the base representation."
+    },
+    {
+      "dispatch_constraint": "entropy proxy wins require deterministic archive rebuild and exact replay before score claims",
+      "hook": "self-compression entropy objectives",
+      "owned_next_artifact": "entropy-objective report tying tensor/latent histograms to estimated charged bytes and stage checkpoint manifests",
+      "rank": 5,
+      "rationale": "Decoder section is 162,349 compressed bytes and the latent hi-byte nonzero fraction is 0.004345. Extend C1a from a weight-shaping regularizer into a measured coder-aware objective over decoder tensors, latent deltas, and optional residual atoms."
+    },
+    {
+      "dispatch_constraint": "lossless recode still needs archive custody and exact replay before any score claim",
+      "hook": "decoder entropy and section recode",
+      "owned_next_artifact": "lossless decoder-section recode candidate with section SHA map and inflate parity test",
+      "rank": 6,
+      "rationale": "Decoder section is 162,349 compressed bytes; source notes a prior hybrid categorical coder beat pure brotli by about 217 bytes. Generalize that into a deterministic per-tensor coder decision table and keep the inflate dependency surface auditable."
+    }
+  ],
+  "inputs": {
+    "archive": "experiments/results/public_pr95_intake_20260504_codex/archive.zip",
+    "source_dir": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon",
+    "static_intake": null
+  },
+  "schema": "pr95_hnerv_muon_static_intake_profile_v1",
+  "score_term_math": {
+    "denominator_bytes": 37545489,
+    "formula": "score = 100 * seg + sqrt(10 * pose) + 25 * archive_bytes / 37,545,489",
+    "score_claim": false,
+    "score_terms_from_static_intake": null
+  },
+  "source_intake": {
+    "codec_summary": {
+      "decoder_path": "per-tensor symmetric INT8 -> zigzag -> state table -> brotli q11",
+      "latent_path": "per-dim uint8 min/max -> first-order temporal delta -> zigzag uint16 -> lo/hi streams -> brotli q11",
+      "source_notes_hybrid_ac_delta_bytes": 217
+    },
+    "key_files": {
+      "README": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/README.md",
+      "codec": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/codec.py",
+      "model": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/model.py",
+      "optimizer": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/optim.py",
+      "score": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/score.py",
+      "train": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/train.py"
+    },
+    "model_defaults": {
+      "architecture": "linear latent stem + six PixelShuffle upsample blocks + dilated refine + two RGB heads",
+      "base_channels": 36,
+      "base_grid": [
+        6,
+        8
+      ],
+      "eval_size": "384, 512",
+      "latent_dim": 28
+    },
+    "optimizer_summary": {
+      "muon_default_lr": 0.02,
+      "muon_default_momentum": 0.95,
+      "muon_default_weight_decay": 0.0,
+      "muon_newton_schulz_steps_default": 5,
+      "partition_rule": "Muon receives 2D+ weights outside stem/RGB heads; AdamW receives stem, RGB heads, biases, 1D params, and latents."
+    },
+    "readme_summary": {
+      "archive_claim": "178 KB archive containing a 229K-parameter HNeRV decoder + 28-d-per-frame-pair latents that, on inflation, produces a video whose frames activate the official frozen SegNet and PoseNet evaluators almost identically to the original. The pipeline is an 8-stage curriculum (CE \u2192 \u03c4-Softplus \u2192 smooth-disagreement \u2192 +QAT \u2192 +L7+C1a \u2192 \u03bb-sweep \u2192 \u03c3-sweep \u2192 +Muon) ending in INT8 quantization-aware training with the C1a regularizer shaping the weight distribution for compression and the [Muon optimizer](https://github.com/KellerJordan/Muon) running on hidden conv tensors.",
+      "claimed_training_wallclock": "~50 hours on a single GPU from random init.",
+      "curriculum_claim": "8-stage curriculum (CE \u2192 \u03c4-Softplus \u2192 smooth-disagreement \u2192 +QAT \u2192 +L7+C1a \u2192 \u03bb-sweep \u2192 \u03c3-sweep \u2192 +Muon) ending in INT8 quantization-aware training with the C1a regularizer shaping the weight distribution for compression and the [Muon optimizer](https://github.com/KellerJordan/Muon) running on hidden conv tensors.",
+      "external_writeup": "https://aaronleslie.dev/blog/comma-compression",
+      "reproduce_command": "bash submissions/hnerv_muon/compress.sh",
+      "title": "# hnerv_muon"
+    },
+    "score_formula": "Score = 100 \u00b7 seg_distortion + sqrt(10 \u00b7 pose_distortion) + 25 \u00b7 rate",
+    "source_dir": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon",
+    "source_file_count": 21,
+    "source_tree_sha256": "9d0a07d59af59cf3ae794b76d668e890b1b53e29d472c9bd4136203cecc3a1c8",
+    "training_stages": [
+      {
+        "adamw_lr": 0.001,
+        "cat_lambda": 0.0,
+        "cat_sigma": 0.2,
+        "docstring_head": "Stage 1: v3.28 CE phase \u2014 bulk calibration from random init with Cross-Entropy seg loss.",
+        "epochs_default": 3000,
+        "file": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/stages/stage1_v328_ce.py",
+        "loss_family": "ce",
+        "muon_lr": null,
+        "muon_weight_decay_default": null,
+        "name": "stage1_v328_ce",
+        "uses_muon": false,
+        "uses_qat": false
+      },
+      {
+        "adamw_lr": 0.001,
+        "cat_lambda": 0.0,
+        "cat_sigma": 0.2,
+        "docstring_head": "Stage 2: v3.31 Softplus L1 phase \u2014 switch CE \u2192 tau-Softplus seg loss.",
+        "epochs_default": 5650,
+        "file": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/stages/stage2_v331_softplus.py",
+        "loss_family": "tau_softplus",
+        "muon_lr": null,
+        "muon_weight_decay_default": null,
+        "name": "stage2_v331_softplus",
+        "uses_muon": false,
+        "uses_qat": false
+      },
+      {
+        "adamw_lr": 0.0001,
+        "cat_lambda": 0.0,
+        "cat_sigma": 0.2,
+        "docstring_head": "Stage 3: v3.32 smooth disagreement \u2014 switch Softplus \u2192 sigmoid(-margin/tau).",
+        "epochs_default": 1500,
+        "file": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/stages/stage3_v332_smooth.py",
+        "loss_family": "smooth_disagreement",
+        "muon_lr": null,
+        "muon_weight_decay_default": null,
+        "name": "stage3_v332_smooth",
+        "uses_muon": false,
+        "uses_qat": false
+      },
+      {
+        "adamw_lr": 0.0001,
+        "cat_lambda": 0.0,
+        "cat_sigma": 0.2,
+        "docstring_head": "Stage 4: v3.32 + QAT \u2014 same loss as Stage 3, INT8 fake-quant joins in forward.",
+        "epochs_default": 500,
+        "file": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/stages/stage4_v332_qat.py",
+        "loss_family": "smooth_disagreement",
+        "muon_lr": null,
+        "muon_weight_decay_default": null,
+        "name": "stage4_v332_qat",
+        "uses_muon": false,
+        "uses_qat": true
+      },
+      {
+        "adamw_lr": 3e-05,
+        "cat_lambda": 0.01,
+        "cat_sigma": 0.2,
+        "docstring_head": "Stage 5: c1a_l7_combined \u2014 adds L7-weighted Softplus seg + C1a entropy regularizer.",
+        "epochs_default": 9000,
+        "file": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/stages/stage5_c1a_l7.py",
+        "loss_family": "l7_softplus",
+        "muon_lr": null,
+        "muon_weight_decay_default": null,
+        "name": "stage5_c1a_l7",
+        "uses_muon": false,
+        "uses_qat": true
+      },
+      {
+        "adamw_lr": 3e-05,
+        "cat_lambda": 0.02,
+        "cat_sigma": 0.2,
+        "docstring_head": "Stage 6: lambda_sweep \u03bb=0.02 branch \u2014 tightens C1a regularization.",
+        "epochs_default": 2000,
+        "file": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/stages/stage6_lambda_sweep.py",
+        "loss_family": "l7_softplus",
+        "muon_lr": null,
+        "muon_weight_decay_default": null,
+        "name": "stage6_lambda_sweep",
+        "uses_muon": false,
+        "uses_qat": true
+      },
+      {
+        "adamw_lr": 3e-05,
+        "cat_lambda": 0.02,
+        "cat_sigma": 0.1,
+        "docstring_head": "Stage 7: suite_9 exp4_sigma01 \u2014 sharpens C1a sigma 0.2 \u2192 0.1.",
+        "epochs_default": 3000,
+        "file": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/stages/stage7_sigma_sweep.py",
+        "loss_family": "l7_softplus",
+        "muon_lr": null,
+        "muon_weight_decay_default": null,
+        "name": "stage7_sigma_sweep",
+        "uses_muon": false,
+        "uses_qat": true
+      },
+      {
+        "adamw_lr": 1e-05,
+        "cat_lambda": 0.02,
+        "cat_sigma": 0.1,
+        "docstring_head": "Stage 8: muon_finetune \u2014 switches optimizer to Muon (hidden convs) + AdamW (rest).",
+        "epochs_default": 5000,
+        "file": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/stages/stage8_muon_finetune.py",
+        "loss_family": "l7_softplus",
+        "muon_lr": 0.0002,
+        "muon_weight_decay_default": 0.0005,
+        "name": "stage8_muon_finetune",
+        "uses_muon": true,
+        "uses_qat": true
+      }
+    ]
+  },
+  "tool": "experiments/profile_pr95_hnerv_muon_intake.py",
+  "trainer_parity_contract": {
+    "archive_member_format": "hnerv_muon_codec_v1",
+    "archive_section_budget": [
+      {
+        "compressed_bytes": 80,
+        "name": "meta_json_brotli",
+        "sha256": "49385dd99c02228dd0ed7649586fe5026940573a5675911ee7cb24ab2e8bdca7",
+        "uncompressed_bytes": 80
+      },
+      {
+        "compressed_bytes": 162349,
+        "name": "decoder_state_int8_brotli",
+        "sha256": "fbeaf706e9d8c38cf39fd36b7f6c6312b66eae6c9a4f25a99708d8fbb3cdaf2e",
+        "uncompressed_bytes": 230048
+      },
+      {
+        "compressed_bytes": 15868,
+        "name": "latents_delta_uint8_brotli",
+        "sha256": "863634aba9a956d13eab8708133239ee861bb797cbad4ff2f39a46939987c709",
+        "uncompressed_bytes": 33720
+      }
+    ],
+    "preflight_contract": {
+      "all_stages_have_epochs": true,
+      "expected_stage_names": [
+        "stage1_v328_ce",
+        "stage2_v331_softplus",
+        "stage3_v332_smooth",
+        "stage4_v332_qat",
+        "stage5_c1a_l7",
+        "stage6_lambda_sweep",
+        "stage7_sigma_sweep",
+        "stage8_muon_finetune"
+      ],
+      "local_trainer_parity_preflight_passed": true,
+      "observed_stage_names": [
+        "stage1_v328_ce",
+        "stage2_v331_softplus",
+        "stage3_v332_smooth",
+        "stage4_v332_qat",
+        "stage5_c1a_l7",
+        "stage6_lambda_sweep",
+        "stage7_sigma_sweep",
+        "stage8_muon_finetune"
+      ],
+      "ready_for_score_bearing_t1_hnerv_parity_dispatch": false,
+      "release_view_differentiable_yuv6_required": true,
+      "release_view_eval_roundtrip_required": true,
+      "score_bearing_dispatch_blockers": [
+        "active_dispatch_claim_and_provider_job_not_started_no_gpu_or_remote_per_scope",
+        "contest_cuda_exact_eval_not_run_for_t1_hnerv_parity_candidate"
+      ],
+      "score_claim": false,
+      "source_stage_count": 8,
+      "source_stage_count_is_8": true,
+      "stage_order_matches_release_view": true
+    },
+    "release_view_source_dir": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon",
+    "schema": "pr95_hnerv_muon_t1_trainer_parity_v1",
+    "source_tree_sha256": "9d0a07d59af59cf3ae794b76d668e890b1b53e29d472c9bd4136203cecc3a1c8",
+    "stage_schedule": [
+      {
+        "adamw_lr": 0.001,
+        "cat_lambda": 0.0,
+        "cat_sigma": 0.2,
+        "epochs": 3000,
+        "loss_family": "ce",
+        "muon_lr": null,
+        "muon_weight_decay_default": null,
+        "name": "stage1_v328_ce",
+        "order": 1,
+        "source_file": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/stages/stage1_v328_ce.py",
+        "uses_muon": false,
+        "uses_qat": false
+      },
+      {
+        "adamw_lr": 0.001,
+        "cat_lambda": 0.0,
+        "cat_sigma": 0.2,
+        "epochs": 5650,
+        "loss_family": "tau_softplus",
+        "muon_lr": null,
+        "muon_weight_decay_default": null,
+        "name": "stage2_v331_softplus",
+        "order": 2,
+        "source_file": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/stages/stage2_v331_softplus.py",
+        "uses_muon": false,
+        "uses_qat": false
+      },
+      {
+        "adamw_lr": 0.0001,
+        "cat_lambda": 0.0,
+        "cat_sigma": 0.2,
+        "epochs": 1500,
+        "loss_family": "smooth_disagreement",
+        "muon_lr": null,
+        "muon_weight_decay_default": null,
+        "name": "stage3_v332_smooth",
+        "order": 3,
+        "source_file": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/stages/stage3_v332_smooth.py",
+        "uses_muon": false,
+        "uses_qat": false
+      },
+      {
+        "adamw_lr": 0.0001,
+        "cat_lambda": 0.0,
+        "cat_sigma": 0.2,
+        "epochs": 500,
+        "loss_family": "smooth_disagreement",
+        "muon_lr": null,
+        "muon_weight_decay_default": null,
+        "name": "stage4_v332_qat",
+        "order": 4,
+        "source_file": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/stages/stage4_v332_qat.py",
+        "uses_muon": false,
+        "uses_qat": true
+      },
+      {
+        "adamw_lr": 3e-05,
+        "cat_lambda": 0.01,
+        "cat_sigma": 0.2,
+        "epochs": 9000,
+        "loss_family": "l7_softplus",
+        "muon_lr": null,
+        "muon_weight_decay_default": null,
+        "name": "stage5_c1a_l7",
+        "order": 5,
+        "source_file": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/stages/stage5_c1a_l7.py",
+        "uses_muon": false,
+        "uses_qat": true
+      },
+      {
+        "adamw_lr": 3e-05,
+        "cat_lambda": 0.02,
+        "cat_sigma": 0.2,
+        "epochs": 2000,
+        "loss_family": "l7_softplus",
+        "muon_lr": null,
+        "muon_weight_decay_default": null,
+        "name": "stage6_lambda_sweep",
+        "order": 6,
+        "source_file": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/stages/stage6_lambda_sweep.py",
+        "uses_muon": false,
+        "uses_qat": true
+      },
+      {
+        "adamw_lr": 3e-05,
+        "cat_lambda": 0.02,
+        "cat_sigma": 0.1,
+        "epochs": 3000,
+        "loss_family": "l7_softplus",
+        "muon_lr": null,
+        "muon_weight_decay_default": null,
+        "name": "stage7_sigma_sweep",
+        "order": 7,
+        "source_file": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/stages/stage7_sigma_sweep.py",
+        "uses_muon": false,
+        "uses_qat": true
+      },
+      {
+        "adamw_lr": 1e-05,
+        "cat_lambda": 0.02,
+        "cat_sigma": 0.1,
+        "epochs": 5000,
+        "loss_family": "l7_softplus",
+        "muon_lr": 0.0002,
+        "muon_weight_decay_default": 0.0005,
+        "name": "stage8_muon_finetune",
+        "order": 8,
+        "source_file": "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/src/stages/stage8_muon_finetune.py",
+        "uses_muon": true,
+        "uses_qat": true
+      }
+    ],
+    "stage_schedule_digest": "55b95573b34c812b73184a3e0e80734c629bc691d9e60dad0590944e60d34d16",
+    "t1_trainer_config": {
+      "differentiable_yuv6_required": true,
+      "eval_roundtrip_required": true,
+      "manifest_keys_required": [
+        "pr95_hnerv_trainer_parity",
+        "score_domain_loss",
+        "score_domain_gradcheck",
+        "args.enable_eval_roundtrip_in_training",
+        "args.enable_differentiable_yuv6"
+      ],
+      "required_flags": {
+        "--auth-eval": false,
+        "--enable-differentiable-yuv6": true,
+        "--enable-eval-roundtrip-in-training": true,
+        "--enable-scorer-domain-loss": true,
+        "--grad-clip-norm": 1.0,
+        "--pixel-l1-anchor-weight": 0.0,
+        "--segmentation-surrogate": "sinkhorn",
+        "--yuv6-mode": "monkey_patch_global"
+      },
+      "score_domain_loss_required": true,
+      "stage_semantics": "T1 is a Ball\u00e9/ADMM substrate trainer. This contract records the PR95 eight-stage HNeRV/Muon discipline as fail-closed parity evidence for score-domain runs; it is not an exact PR95 architecture replay by itself."
+    },
+    "total_release_view_epochs": 29650
+  }
+}

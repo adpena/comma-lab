@@ -354,6 +354,47 @@ def test_public_pr_pristine_discovers_generic_pr_src_repo_layout(
     assert seen_status is True
 
 
+def test_public_pr_pristine_discovers_nested_public_pr_custody_layout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    clone = (
+        tmp_path
+        / "experiments"
+        / "results"
+        / "public_pr102_hnerv_lc_v2_custody_20260507_codex"
+        / "public_pr102_intake_20260507_auto"
+        / "source"
+    )
+    (clone / ".git").mkdir(parents=True)
+    seen_status = False
+
+    def fake_run(
+        cmd: list[str],
+        *,
+        capture_output: bool,
+        text: bool,
+        timeout: int,
+    ) -> subprocess.CompletedProcess[str]:
+        nonlocal seen_status
+        assert capture_output is True
+        assert text is True
+        assert timeout == 30
+        if cmd[:3] == ["git", "-C", str(clone)] and cmd[3:] == ["status", "--short"]:
+            seen_status = True
+            return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+        return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="unexpected")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    assert (
+        check_public_pr_intake_clones_pristine(
+            repo_root=tmp_path, strict=True, verbose=False
+        )
+        == []
+    )
+    assert seen_status is True
+
+
 def test_public_pr_pristine_caches_clean_status_and_invalidates_untracked(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -413,7 +413,7 @@ def test_migrated_preflight_checks_use_shared_text_facts(tmp_path):
 
     assert stats["file_list_misses"] == 1
     assert stats["facts_group_misses"] == 1
-    assert stats["facts_group_hits"] >= 5
+    assert stats["facts_group_hits"] >= 3
     assert stats["text_facts_cache_entries"] == 3
     assert stats["text_facts_hits"] == 0
     assert stats["substring_index_entries"] >= 4

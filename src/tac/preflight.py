@@ -224,7 +224,28 @@ def _public_pr_intake_clone_roots(root: Path) -> tuple[Path, ...]:
     if not er.is_dir():
         return ()
     candidates: list[Path] = []
-    for child in er.rglob("*_intake_*"):
+    intake_dirs: list[Path] = []
+    try:
+        top_level = sorted(er.iterdir(), key=lambda item: item.name)
+    except OSError:
+        top_level = []
+    for child in top_level:
+        if not child.is_dir():
+            continue
+        if fnmatch.fnmatch(child.name, "public_pr*_intake_*"):
+            intake_dirs.append(child)
+        if child.name.startswith("public_pr"):
+            try:
+                nested = sorted(child.iterdir(), key=lambda item: item.name)
+            except OSError:
+                nested = []
+            intake_dirs.extend(
+                grandchild
+                for grandchild in nested
+                if grandchild.is_dir()
+                and fnmatch.fnmatch(grandchild.name, "public_pr*_intake_*")
+            )
+    for child in intake_dirs:
         if not child.is_dir():
             continue
         for sub in ("source", "repo"):
