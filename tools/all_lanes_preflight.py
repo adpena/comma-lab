@@ -1532,7 +1532,7 @@ def _run_phase_a_post_green_discoverability_gate() -> tuple[bool, str]:
         '"dispatch_attempted": False',
         '"remote_or_gpu_eval_started": False',
         "_close_modal_recovery_claim(",
-        "completed_modal_recovered",
+        "completed_modal_contest_cuda_recovered",
         "failed_modal_recovered",
         "failed_modal_result_cache_expired",
     ):

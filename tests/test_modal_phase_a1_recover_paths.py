@@ -4,6 +4,8 @@ import importlib.util
 import sys
 from pathlib import Path
 
+from tac.deploy.modal import runtime as modal_runtime
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = REPO_ROOT / "experiments/modal_phase_a1_score_gradient_pr101.py"
@@ -32,6 +34,59 @@ def test_modal_phase_a1_installs_local_and_remote_repo_import_paths() -> None:
         str(module.REMOTE_REPO),
     }
     assert expected.issubset(set(sys.path))
+
+
+def test_modal_phase_a1_uses_shared_modal_runtime_for_scorer_deps(monkeypatch) -> None:
+    module = _load_modal_phase_a1_module()
+    calls: list[dict[str, object]] = []
+
+    class FakeImage:
+        def __init__(self) -> None:
+            self.commands: tuple[str, ...] = ()
+
+        def run_commands(self, *commands: str) -> "FakeImage":
+            self.commands = commands
+            return self
+
+    fake_image = FakeImage()
+
+    def fake_build_contest_cuda_base_image(modal_module, **kwargs):
+        calls.append({"modal_module": modal_module, "kwargs": kwargs})
+        return fake_image
+
+    monkeypatch.setattr(
+        module,
+        "build_contest_cuda_base_image",
+        fake_build_contest_cuda_base_image,
+    )
+
+    returned = module._build_phase_a1_base_image("fake-modal")
+
+    assert returned is fake_image
+    assert calls == [
+        {"modal_module": "fake-modal", "kwargs": {"python_version": "3.11"}}
+    ]
+    assert "extra_pip_packages" not in calls[0]["kwargs"]
+    assert fake_image.commands == module.FFMPEG_MASTER_INSTALL_COMMANDS
+
+
+def test_modal_phase_a1_scorer_import_probe_uses_shared_runtime_modules() -> None:
+    module = _load_modal_phase_a1_module()
+
+    assert module.CONTEST_SCORER_IMPORT_PROBE_MODULES is (
+        modal_runtime.CONTEST_SCORER_IMPORT_PROBE_MODULES
+    )
+    assert module.DALI_DISABLE_NVML_VALUE == modal_runtime.DALI_DISABLE_NVML_VALUE
+    assert (
+        module.PYTORCH_CUDA_ALLOC_CONF_VALUE
+        == modal_runtime.PYTORCH_CUDA_ALLOC_CONF_VALUE
+    )
+
+    probe = module._scorer_runtime_import_probe_cmd()
+    probe_source = probe[-1]
+    for dependency in modal_runtime.CONTEST_SCORER_IMPORT_PROBE_MODULES:
+        assert f"import {dependency}" in probe_source
+    assert "from tac.scorer import load_differentiable_scorers" in probe_source
 
 
 def test_modal_phase_a1_normalizes_canonical_auth_eval_schema() -> None:

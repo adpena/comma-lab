@@ -22,13 +22,13 @@
     {
       "classification": "generated_custody_source_untracked",
       "disposition": "ignore_rebuildable",
-      "note": "prefix: experiment result trees are raw rebuildable custody; track only promoted source, ledgers, or compact manifests outside this root. Runtime-source baseline refreshed after A5 channel-DP, Track4, Phase-2 raw custody, A1 bias/drift runtime packets, and contemporaneous AV discriminator raw custody; durable signal is summarized in .omx/research ledgers.",
+      "note": "prefix: experiment result trees are raw rebuildable custody; track only promoted source, ledgers, or compact manifests outside this root. Runtime-source baseline refreshed after A5 channel-DP, Track4, Phase-2 raw custody, A1 bias/drift runtime packets, AV discriminator raw custody, T1 Modal guard harvest, and Kaggle proxy local materialization; durable signal is summarized in .omx/research ledgers.",
       "path": "experiments/results/",
       "path_kind": "prefix",
       "runtime_source_baseline": {
         "algorithm": "pact_runtime_source_set_v1",
-        "count": 10956,
-        "sha256": "218fe34c868f60c656a0b776983360e655591e6f6375e4c8d8053d335b0bead7"
+        "count": 10994,
+        "sha256": "bae69151d7775640d8833fde888918ece255bb417fad92caacce01f06dec3623"
       }
     },
     {

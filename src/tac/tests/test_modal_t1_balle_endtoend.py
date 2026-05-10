@@ -181,6 +181,7 @@ def test_modal_t1_remote_runs_existing_script_with_score_domain_exact_eval_env()
     assert "remote_lane_t1_balle_endtoend.sh" in remote_src
     assert "SEGMENTATION_SURROGATE" in remote_src
     assert "sinkhorn" in remote_src
+    assert '"PYTORCH_CUDA_ALLOC_CONF": PYTORCH_CUDA_ALLOC_CONF_VALUE' in remote_src
 
 
 def test_modal_t1_image_installs_scorer_runtime_dependencies() -> None:
@@ -194,6 +195,8 @@ def test_modal_t1_image_installs_scorer_runtime_dependencies() -> None:
     assert '"einops"' in runtime_src
     assert '"nvidia-dali-cuda120==1.52.0"' in runtime_src
     assert '"compressai==1.2.8"' in text
+    assert 'PYTORCH_CUDA_ALLOC_CONF_VALUE = "expandable_segments:True"' in runtime_src
+    assert '"PYTORCH_CUDA_ALLOC_CONF": PYTORCH_CUDA_ALLOC_CONF_VALUE' in text
 
 
 def test_modal_t1_mounts_packet_compiler_bootstrap_dependency() -> None:

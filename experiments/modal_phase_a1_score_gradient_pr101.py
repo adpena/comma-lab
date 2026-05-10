@@ -124,7 +124,6 @@ DEFAULT_PR101_SOURCE_DIR = (
     / "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/source/submissions/hnerv_ft_microcodec/src"
 )
 DEFAULT_VIDEO_PATH = REPO_ROOT / "upstream/videos/0.mkv"
-DALI_DISABLE_NVML_VALUE = "1"
 CHECKPOINT_SELECTIONS = {
     "final_ema": "checkpoint_ema.pt",
     "best_proxy": "checkpoint_best_proxy.pt",
@@ -166,6 +165,13 @@ def _ensure_repo_import_paths() -> None:
 
 _ensure_repo_import_paths()
 
+from tac.deploy.modal.runtime import (  # noqa: E402
+    CONTEST_SCORER_IMPORT_PROBE_MODULES,
+    DALI_DISABLE_NVML_VALUE,
+    PYTORCH_CUDA_ALLOC_CONF_VALUE,
+    build_contest_cuda_base_image,
+)
+
 
 # ---------------------------------------------------------------------------
 # Modal app + image
@@ -173,47 +179,35 @@ _ensure_repo_import_paths()
 
 app = modal.App(APP_NAME)
 
-# Image with all deps. ffmpeg-master + nvidia-dali-cuda120 + uv mirror the
-# proven recipe from ``experiments/modal_alpha_geo0_pose_regen.py``.
-base_image = (
-    modal.Image.debian_slim(python_version="3.11")
-    .apt_install(
-        "git", "unzip", "wget", "curl", "build-essential",
-        "libgl1", "libglib2.0-0",  # opencv runtime
-    )
-    .pip_install(
-        "torch==2.5.1",
-        "torchvision",
-        "safetensors",
-        "einops",
-        "segmentation-models-pytorch",
-        "av",
-        "brotli",
-        "click",
-        "nvidia-dali-cuda120==1.52.0",
-        "tqdm",
-        "timm",
-        "scipy",
-        "numpy<2.0",
-        "Pillow",
-        "pydantic>=2.0",
-        extra_index_url="https://pypi.nvidia.com",
-    )
-    .run_commands(
-        # ffmpeg-master from BtbN nightly (in_primaries + libsvtav1 — Vast.ai parity).
-        "curl -sL https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz -o /tmp/ffmpeg-master.tar.xz",
-        "cd /opt && tar xf /tmp/ffmpeg-master.tar.xz",
-        "ln -sf /opt/ffmpeg-master-latest-linux64-gpl/bin/ffmpeg /usr/local/bin/ffmpeg-master",
-        "ln -sf /opt/ffmpeg-master-latest-linux64-gpl/bin/ffmpeg /usr/local/bin/ffmpeg-new",
-        "/usr/local/bin/ffmpeg-master -hide_banner -h filter=scale 2>&1 | grep -q in_primaries || (echo FATAL: ffmpeg-master lacks in_primaries; exit 1)",
-        "/usr/local/bin/ffmpeg-master -encoders 2>&1 | grep -qi svtav1 || (echo FATAL: ffmpeg-master lacks libsvtav1; exit 1)",
-        "rm /tmp/ffmpeg-master.tar.xz",
-    )
-    .run_commands(
-        "curl -LsSf https://astral.sh/uv/install.sh | sh",
-        "ln -sf /root/.local/bin/uv /usr/local/bin/uv",
-    )
+FFMPEG_MASTER_INSTALL_COMMANDS = (
+    # ffmpeg-master from BtbN nightly (in_primaries + libsvtav1 — Vast.ai parity).
+    "curl -sL "
+    "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/"
+    "ffmpeg-master-latest-linux64-gpl.tar.xz "
+    "-o /tmp/ffmpeg-master.tar.xz",
+    "cd /opt && tar xf /tmp/ffmpeg-master.tar.xz",
+    "ln -sf /opt/ffmpeg-master-latest-linux64-gpl/bin/ffmpeg "
+    "/usr/local/bin/ffmpeg-master",
+    "ln -sf /opt/ffmpeg-master-latest-linux64-gpl/bin/ffmpeg /usr/local/bin/ffmpeg-new",
+    "/usr/local/bin/ffmpeg-master -hide_banner -h filter=scale 2>&1 "
+    "| grep -q in_primaries "
+    "|| (echo FATAL: ffmpeg-master lacks in_primaries; exit 1)",
+    "/usr/local/bin/ffmpeg-master -encoders 2>&1 "
+    "| grep -qi svtav1 "
+    "|| (echo FATAL: ffmpeg-master lacks libsvtav1; exit 1)",
+    "rm /tmp/ffmpeg-master.tar.xz",
 )
+
+
+def _build_phase_a1_base_image(modal_module: Any):
+    """Build the A1 image from the shared contest-CUDA scorer runtime."""
+    return build_contest_cuda_base_image(
+        modal_module,
+        python_version="3.11",
+    ).run_commands(*FFMPEG_MASTER_INSTALL_COMMANDS)
+
+
+base_image = _build_phase_a1_base_image(modal)
 
 run_image = (
     base_image
@@ -223,6 +217,7 @@ run_image = (
             # DALI's video reader works without NVML when this is set; without
             # it, the NVDEC probe can fail with nvml error (999) before eval.
             "DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE,
+            "PYTORCH_CUDA_ALLOC_CONF": PYTORCH_CUDA_ALLOC_CONF_VALUE,
             "PYTHONPATH": REMOTE_PYTHONPATH,
         }
     )
@@ -735,6 +730,21 @@ def _preflight_errors_remote(preflight: dict[str, Any]) -> list[str]:
     return errors
 
 
+def _scorer_runtime_import_probe_cmd() -> list[str]:
+    imports = "; ".join(
+        f"import {module}" for module in CONTEST_SCORER_IMPORT_PROBE_MODULES
+    )
+    return [
+        sys.executable,
+        "-c",
+        (
+            f"{imports}; "
+            "from tac.scorer import load_differentiable_scorers; "
+            "print('phase a1 modal scorer import probe OK')"
+        ),
+    ]
+
+
 def _run_logged_remote(
     name: str,
     cmd: list[str],
@@ -933,8 +943,10 @@ def _run_phase_a1_inner(
         "PYTHONHASHSEED": "20",
         "CUBLAS_WORKSPACE_CONFIG": os.environ.get("CUBLAS_WORKSPACE_CONFIG", ":4096:8"),
         "DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE,
+        "PYTORCH_CUDA_ALLOC_CONF": PYTORCH_CUDA_ALLOC_CONF_VALUE,
     }
     os.environ["DALI_DISABLE_NVML"] = env["DALI_DISABLE_NVML"]
+    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = env["PYTORCH_CUDA_ALLOC_CONF"]
 
     t_start = time.monotonic()
     try:
@@ -1012,6 +1024,29 @@ def _run_phase_a1_inner(
             )
             preflight["nvdec_failure_training_continues_no_exact_eval"] = True
             preflight["auth_eval_skip_reason"] = skip_cuda_eval_reason
+
+        # --- Stage C: scorer runtime dependency import probe --------------
+        stage = "scorer_runtime_import_probe"
+        import_probe = _run_logged_remote(
+            "stage0_scorer_runtime_import_probe",
+            _scorer_runtime_import_probe_cmd(),
+            cwd=REMOTE_REPO,
+            env=env,
+            log_dir=out_dir / "logs",
+            timeout=180,
+        )
+        command_results.append(import_probe)
+        if import_probe["returncode"] != 0:
+            return _finish_remote(
+                out_dir,
+                passed=False,
+                returncode=import_probe["returncode"],
+                stage="remote_import_probe_failed",
+                validation_errors=[
+                    f"remote_import_probe_rc={import_probe['returncode']}"
+                ],
+                extra={"commands": command_results, "preflight": preflight},
+            )
 
         # --- Stage 1: TRAIN -----------------------------------------------
         stage = "train_score_gradient_pr101"

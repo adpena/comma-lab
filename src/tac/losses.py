@@ -26,6 +26,7 @@ DEFAULT_SINKHORN_BLUR = 0.05
 DEFAULT_SINKHORN_ITERS = 20
 SINKHORN_MIN_BLUR = 0.01  # below this, low-blur Sinkhorn needs too many iterations
 SINKHORN_MAX_BLUR = 1.0   # above this, surrogate is too blurred to be useful
+DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK = 65_536
 
 
 def bhattacharyya_distance(p: torch.Tensor, q: torch.Tensor, dim: int = 1) -> torch.Tensor:
@@ -162,6 +163,20 @@ def _validate_sinkhorn_iters(n_iters: int) -> int:
     return value
 
 
+def _validate_sinkhorn_max_positions_per_chunk(value: int | None) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise ValueError("sinkhorn_max_positions_per_chunk must be a positive int or None")
+    try:
+        result = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("sinkhorn_max_positions_per_chunk must be a positive int or None") from exc
+    if result < 1:
+        raise ValueError("sinkhorn_max_positions_per_chunk must be a positive int or None")
+    return result
+
+
 def _effective_sinkhorn_iters(blur: float, requested_iters: int) -> int:
     """Return the numerically safe iteration count for the requested blur.
 
@@ -197,6 +212,38 @@ def _default_categorical_cost_matrix(
     """
     eye = torch.eye(num_classes, device=device, dtype=dtype)
     return 1.0 - eye
+
+
+def _sinkhorn_w2_rows(
+    p: torch.Tensor,
+    q: torch.Tensor,
+    cost: torch.Tensor,
+    *,
+    eps: float,
+    n_iters: int,
+) -> torch.Tensor:
+    p = p / p.sum(dim=1, keepdim=True).clamp_min(1e-12)
+    q = q / q.sum(dim=1, keepdim=True).clamp_min(1e-12)
+
+    log_p = torch.log(p.clamp_min(1e-30))         # (N, C)
+    log_q = torch.log(q.clamp_min(1e-30))         # (N, C)
+    cost_eps = cost / eps                         # (C, C)
+
+    f = torch.zeros_like(log_p)                   # (N, C)
+    g = torch.zeros_like(log_q)                   # (N, C)
+
+    for _ in range(n_iters):
+        m = (g.unsqueeze(1) / eps) - cost_eps     # (N, C, C); axis 1 = i, axis 2 = j
+        lse_j = torch.logsumexp(m, dim=2)          # (N, C)
+        f = eps * (log_p - lse_j)                  # (N, C)
+
+        m = (f.unsqueeze(2) / eps) - cost_eps     # (N, C, C); axis 1 = i, axis 2 = j
+        lse_i = torch.logsumexp(m, dim=1)          # (N, C)
+        g = eps * (log_q - lse_i)                  # (N, C)
+
+    log_plan = (f.unsqueeze(2) + g.unsqueeze(1) - cost) / eps  # (N, C, C)
+    plan = torch.exp(log_plan)                                 # (N, C, C)
+    return (plan * cost).sum(dim=(1, 2))                        # (N,)
 
 
 def segnet_fisher_rao_per_pixel(
@@ -249,6 +296,7 @@ def sinkhorn_w2_mask_distortion_per_pixel(
     n_iters: int = DEFAULT_SINKHORN_ITERS,
     cost_matrix: torch.Tensor | None = None,
     num_classes: int = DEFAULT_SEGNET_NUM_CLASSES,
+    max_positions_per_chunk: int | None = DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK,
 ) -> torch.Tensor:
     """Per-pixel entropic Sinkhorn transport surrogate on SegNet probabilities.
 
@@ -270,8 +318,9 @@ def sinkhorn_w2_mask_distortion_per_pixel(
     underflows in float32.
 
     For categorical distributions on C points, the algorithm is O(C²) per
-    iteration per pixel and converges in ~10-30 iterations. We sweep all
-    pixels in a single batched matrix multiply via ``torch.einsum``.
+    iteration per pixel and converges in ~10-30 iterations. The implementation
+    chunks over spatial positions by default so large SegNet maps do not build
+    one graph-wide ``(N, C, C)`` tensor for all pixels at once.
 
     Args:
         pred_probs: ``(B, C, H, W)`` float — predicted softmax probs (must
@@ -289,6 +338,8 @@ def sinkhorn_w2_mask_distortion_per_pixel(
             cost). Must be symmetric, non-negative, with zero diagonal
             (validated).
         num_classes: expected ``C`` (default 5).
+        max_positions_per_chunk: maximum flattened spatial rows per
+            log-Sinkhorn chunk. ``None`` restores the old fully batched path.
 
     Returns:
         ``(B, H, W)`` per-pixel surrogate. Entropic regularization gives a
@@ -302,8 +353,8 @@ def sinkhorn_w2_mask_distortion_per_pixel(
         - This is a TRAINING SURROGATE only. Score claims still require
           exact CUDA auth eval.
         - The implementation does NOT depend on the optional ``geomloss``
-          package. It is a fully-batched, differentiable, log-domain
-          Sinkhorn implementation in pure torch.
+          package. It is a chunked, differentiable, log-domain Sinkhorn
+          implementation in pure torch.
         - For backward compatibility, callers must opt-in via
           ``surrogate="sinkhorn"`` in ``segnet_surrogate_per_pixel``.
     """
@@ -312,6 +363,7 @@ def sinkhorn_w2_mask_distortion_per_pixel(
         blur_value,
         _validate_sinkhorn_iters(n_iters),
     )
+    max_rows = _validate_sinkhorn_max_positions_per_chunk(max_positions_per_chunk)
 
     if pred_probs.shape != gt_probs.shape:
         raise ValueError(
@@ -363,11 +415,6 @@ def sinkhorn_w2_mask_distortion_per_pixel(
     p = pred_probs.permute(0, 2, 3, 1).reshape(-1, c)  # (N, C)
     q = gt_probs.permute(0, 2, 3, 1).reshape(-1, c)    # (N, C)
 
-    # Renormalize defensively (the caller should have done this, but
-    # softmax + numerical drift can leave row sums slightly off 1).
-    p = p / p.sum(dim=1, keepdim=True).clamp_min(1e-12)
-    q = q / q.sum(dim=1, keepdim=True).clamp_min(1e-12)
-
     # Log-domain Sinkhorn iterations.
     #
     # The classical recurrence is:
@@ -382,35 +429,21 @@ def sinkhorn_w2_mask_distortion_per_pixel(
     #   f_t = ε ( log p - logsumexp_j ((g_{t-1,j} - C_{ij}) / ε) )
     #   g_t = ε ( log q - logsumexp_i ((f_{t,i}   - C_{ij}) / ε) )
     #
-    # Final transport cost: ⟨P, C⟩ = sum_ij P_{ij} C_{ij}
-    #
-    # We implement this fully batched over N spatial positions.
-    log_p = torch.log(p.clamp_min(1e-30))         # (N, C)
-    log_q = torch.log(q.clamp_min(1e-30))         # (N, C)
     eps = blur_value
-    cost_eps = cost / eps                         # (C, C)
-
-    # Initialize potentials.
-    f = torch.zeros_like(log_p)                   # (N, C)
-    g = torch.zeros_like(log_q)                   # (N, C)
-
-    for _ in range(iters_value):
-        # Update f: f_i = ε ( log_p_i - logsumexp_j (g_j/ε - C_{ij}/ε) )
-        # Broadcast: (N, 1, C) + (C, C) -> (N, C, C); LSE over dim=2 -> (N, C).
-        m = (g.unsqueeze(1) / eps) - cost_eps     # (N, C, C); axis 1 = i, axis 2 = j
-        lse_j = torch.logsumexp(m, dim=2)          # (N, C)
-        f = eps * (log_p - lse_j)                  # (N, C)
-
-        # Update g symmetrically: g_j = ε ( log_q_j - logsumexp_i ((f_i - C_{ij}) / ε) )
-        m = (f.unsqueeze(2) / eps) - cost_eps     # (N, C, C); axis 1 = i, axis 2 = j
-        lse_i = torch.logsumexp(m, dim=1)          # (N, C)
-        g = eps * (log_q - lse_i)                  # (N, C)
-
-    # Reconstruct transport plan in log-domain and compute ⟨P, C⟩.
-    # log P_{ij} = (f_i + g_j - C_{ij}) / ε
-    log_plan = (f.unsqueeze(2) + g.unsqueeze(1) - cost) / eps  # (N, C, C)
-    plan = torch.exp(log_plan)                                 # (N, C, C)
-    transport_cost = (plan * cost).sum(dim=(1, 2))             # (N,)
+    if max_rows is None or p.shape[0] <= max_rows:
+        transport_cost = _sinkhorn_w2_rows(p, q, cost, eps=eps, n_iters=iters_value)
+    else:
+        chunks = [
+            _sinkhorn_w2_rows(
+                p[start:start + max_rows],
+                q[start:start + max_rows],
+                cost,
+                eps=eps,
+                n_iters=iters_value,
+            )
+            for start in range(0, p.shape[0], max_rows)
+        ]
+        transport_cost = torch.cat(chunks, dim=0)
 
     # Reshape back to (B, H, W).
     return transport_cost.reshape(b, h, w)

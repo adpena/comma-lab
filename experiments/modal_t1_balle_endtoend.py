@@ -100,6 +100,7 @@ _ensure_repo_import_paths()
 from tac.deploy.modal.runtime import (  # noqa: E402
     CONTEST_SCORER_IMPORT_PROBE_MODULES,
     DALI_DISABLE_NVML_VALUE,
+    PYTORCH_CUDA_ALLOC_CONF_VALUE,
     build_contest_cuda_base_image,
 )
 
@@ -117,6 +118,7 @@ run_image = (
         {
             "PYTHONPATH": REMOTE_PYTHONPATH,
             "DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE,
+            "PYTORCH_CUDA_ALLOC_CONF": PYTORCH_CUDA_ALLOC_CONF_VALUE,
         }
     )
     .add_local_dir("src", remote_path=str(REMOTE_REPO / "src"))
@@ -801,6 +803,7 @@ def run_t1_balle_modal(
         "PYTHONPATH": REMOTE_PYTHONPATH,
         "TAC_UPSTREAM_DIR": str(REMOTE_REPO / "upstream"),
         "DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE,
+        "PYTORCH_CUDA_ALLOC_CONF": PYTORCH_CUDA_ALLOC_CONF_VALUE,
         "PYTHONHASHSEED": "20",
         "WORKSPACE": str(REMOTE_REPO),
         "LOG_DIR": str(out_dir),

@@ -249,7 +249,7 @@ def test_sinkhorn_gradient_finite_with_extreme_logits() -> None:
 
 
 def test_batched_matches_per_pixel_loop_reference() -> None:
-    """The einsum-batched implementation MUST agree with a hand-rolled
+    """The row-batched implementation MUST agree with a hand-rolled
     per-pixel loop. This guards against accidental broadcasting bugs in
     the (N, C, C) tensor shapes."""
     torch.manual_seed(42)
@@ -269,8 +269,7 @@ def test_batched_matches_per_pixel_loop_reference() -> None:
                 p_ij = pred[bi : bi + 1, :, hi : hi + 1, wi : wi + 1]
                 q_ij = gt[bi : bi + 1, :, hi : hi + 1, wi : wi + 1]
                 # Reuse the same function; with 1 spatial position the
-                # batched and loop paths must be identical (the einsum
-                # collapses to a single (1, C, C) computation).
+                # batched path collapses to a single (1, C, C) computation.
                 expected[bi, hi, wi] = sinkhorn_w2_mask_distortion_per_pixel(
                     p_ij, q_ij, blur=0.05, n_iters=20
                 )[0, 0, 0]
@@ -278,6 +277,32 @@ def test_batched_matches_per_pixel_loop_reference() -> None:
     assert torch.allclose(batched, expected, atol=1e-5), (
         f"batched-vs-loop residual: {(batched - expected).abs().max().item()}"
     )
+
+
+def test_chunked_sinkhorn_matches_unchunked_and_preserves_gradients() -> None:
+    torch.manual_seed(20260510)
+    pred = _renorm(torch.rand(2, 5, 4, 5) + 1e-3).requires_grad_(True)
+    gt = _renorm(torch.rand(2, 5, 4, 5) + 1e-3)
+
+    unchunked = sinkhorn_w2_mask_distortion_per_pixel(
+        pred,
+        gt,
+        blur=0.05,
+        n_iters=20,
+        max_positions_per_chunk=None,
+    )
+    chunked = sinkhorn_w2_mask_distortion_per_pixel(
+        pred,
+        gt,
+        blur=0.05,
+        n_iters=20,
+        max_positions_per_chunk=3,
+    )
+
+    assert torch.allclose(chunked, unchunked, atol=1e-6)
+    chunked.mean().backward()
+    assert pred.grad is not None
+    assert torch.isfinite(pred.grad).all()
 
 
 # -------------------- Surrogate dispatch --------------------

@@ -49,6 +49,7 @@ CONTEST_SCORER_IMPORT_PROBE_MODULES: tuple[str, ...] = (
 )
 
 DALI_DISABLE_NVML_VALUE = "1"
+PYTORCH_CUDA_ALLOC_CONF_VALUE = "expandable_segments:True"
 NVIDIA_DALI_EXTRA_INDEX_URL = "https://pypi.nvidia.com"
 
 

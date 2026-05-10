@@ -260,3 +260,52 @@
   closure, training entry, packet compile, and auth-eval path before any full
   run. In parallel, materialize the Kaggle proxy candidate only as a byte-closed
   candidate artifact with no score claim.
+
+## 2026-05-10T09:30Z Codex guard relaunch and local materialization addendum
+
+- Commit `c4100de4` passed review and was used as the clean mounted code
+  snapshot for a fresh bounded T1 Modal guard:
+  `t1_balle_modal_guard_c4100de4_20260510T0915Z`, call id
+  `fc-01KR8JMK531A9PECP0CV513KQM`, Modal URL
+  `https://modal.com/apps/adpena/main/ap-4EJPBdeQqxzaG7rE2KEriI`.
+- Current active claim remains exactly one row:
+  `lane_id=t1_balle_128k_endtoend`,
+  `job=t1_balle_modal_guard_c4100de4_20260510T0915Z`,
+  `status=active_dispatching`. Recovery still returns `NOT READY`.
+- The run is bounded and non-promotional: `epochs=50`, `batch_size=8`,
+  `max_target_pairs=64`, `train_timeout_hours=2`, `score_claim=false`,
+  `promotion_eligible=false`.
+- The completed Kaggle proxy candidate has been materialized only as local
+  handoff JSON, not as an archive/runtime packet. Handoff SHA-256:
+  `5e3ee3974ece1011790e3604a402811649865563f10b87e2ae87716c18f39251`.
+  Manifest SHA-256:
+  `dc709594374c915ffa9c825b33cccff97a9d1e98cc9bc4a991eea2268f71b804`.
+  It remains `score_claim=false`, `ready_for_exact_eval_dispatch=false`,
+  `archive_zip_emitted=false`, and `inflate_runtime_emitted=false`.
+- PR101 A1 Modal score-gradient actuator now uses the shared Modal
+  contest-CUDA runtime helper in `src/tac/deploy/modal/runtime.py` and runs a
+  fail-closed scorer import probe before training, preserving the provider
+  runtime architecture split.
+- Parallel audit verdict: do not jump to full T1 until the bounded guard
+  packet path clears. If it clears, the next PR101-family packet-producing
+  action is certified A2 sensitivity-weighted PR101 packet work; A2 byte
+  savings remain blocked from exact score dispatch until stub/proxy sensitivity
+  is replaced with certified sensitivity.
+
+## 2026-05-10T09:40Z Codex T1 guard OOM classification addendum
+
+- T1 guard `t1_balle_modal_guard_c4100de4_20260510T0915Z` is now terminal:
+  `failed_t1_modal_recovered_no_score_claim`, claim summary `active=0`.
+- The Modal scorer runtime dependency closure is now proven for this guard:
+  the remote import probe passed, and NVDEC was exposed on Tesla T4.
+- The guard failed in Stage 5 score-domain training with CUDA OOM inside
+  `src/tac/losses.py::sinkhorn_w2_mask_distortion_per_pixel`.
+  Classification: T8 Sinkhorn surrogate memory implementation / guard sizing
+  bug, not a T1 model negative and not score evidence.
+- Fix applied: Sinkhorn-W2 now chunks flattened spatial rows by default instead
+  of allocating one full `(N, C, C)` tensor for all SegNet pixels, preserving
+  unchunked numeric output and gradients in tests. Shared Modal runtimes also
+  set `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`.
+- Next T1 action after this commit is another bounded guard rerun from clean
+  code. Do not escalate to full T1 until the guard proves training entry,
+  packet compile, inflate closure, and exact-CUDA auth-eval schema closure.
