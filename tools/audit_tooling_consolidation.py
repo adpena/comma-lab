@@ -41,6 +41,15 @@ TEXT_SUFFIXES = {".py"}
 
 
 class _SourceIndexLike(Protocol):
+    def files_containing_substrings(
+        self,
+        dirs: tuple[str, ...],
+        *,
+        pattern: str,
+        substrings: tuple[str, ...],
+        require_all: bool = True,
+    ) -> tuple[Path, ...]: ...
+
     def read_text(
         self,
         path: str | Path,
@@ -96,6 +105,13 @@ PATTERNS: tuple[Pattern, ...] = (
         candidate_substrings=("score_claim", "dispatch_attempted"),
     ),
 )
+TOOLING_CANDIDATE_SUBSTRINGS = tuple(
+    dict.fromkeys(
+        needle
+        for pattern in PATTERNS
+        for needle in pattern.candidate_substrings
+    )
+)
 
 
 def _is_excluded(path: Path, root: Path) -> bool:
@@ -143,6 +159,26 @@ def iter_files(repo_root: Path, scan_roots: tuple[str, ...]) -> list[Path]:
     return files
 
 
+def _indexed_files(
+    repo_root: Path,
+    scan_roots: tuple[str, ...],
+    source_index: _SourceIndexLike,
+) -> list[Path]:
+    indexed = source_index.files_containing_substrings(
+        scan_roots,
+        pattern="*.py",
+        substrings=TOOLING_CANDIDATE_SUBSTRINGS,
+        require_all=False,
+    )
+    return [
+        path
+        for path in indexed
+        if path.suffix in TEXT_SUFFIXES
+        and not _is_excluded_rel(repo_relative(path, repo_root))
+        and path.is_file()
+    ]
+
+
 def _candidate_patterns(text: str) -> tuple[Pattern, ...]:
     return tuple(
         pattern
@@ -184,7 +220,11 @@ def audit_tooling(
 ) -> AuditReport:
     occurrences: dict[str, list[dict[str, object]]] = defaultdict(list)
     per_file_counts: dict[str, Counter[str]] = defaultdict(Counter)
-    files = iter_files(repo_root, scan_roots)
+    files = (
+        _indexed_files(repo_root, scan_roots, source_index)
+        if source_index is not None
+        else iter_files(repo_root, scan_roots)
+    )
     for path in files:
         rel = repo_relative(path, repo_root)
         try:

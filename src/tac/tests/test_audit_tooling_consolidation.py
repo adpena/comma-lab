@@ -92,6 +92,63 @@ def test_audit_tooling_source_index_matches_direct_scan(tmp_path: Path) -> None:
     assert indexed == direct
 
 
+def test_audit_tooling_source_index_uses_indexed_file_inventory(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    sample_dir = tmp_path / "tools"
+    sample_dir.mkdir()
+    sample = sample_dir / "sample.py"
+    sample.write_text(
+        "def _sha256_file(path):\n    return 'x'\n",
+        encoding="utf-8",
+    )
+
+    class SpyIndex:
+        def __init__(self) -> None:
+            self.files_containing_substrings_calls = 0
+            self.read_text_calls = 0
+
+        def files_containing_substrings(
+            self,
+            dirs,
+            *,
+            pattern,
+            substrings,
+            require_all=True,
+        ):
+            self.files_containing_substrings_calls += 1
+            assert tuple(dirs) == ("tools",)
+            assert pattern == "*.py"
+            assert "sha256" in tuple(substrings)
+            assert "json.dumps" in tuple(substrings)
+            assert "score_claim" in tuple(substrings)
+            assert require_all is False
+            return (sample,)
+
+        def read_text(self, path, *, encoding=None, errors=None):
+            self.read_text_calls += 1
+            assert path == sample
+            assert encoding == "utf-8"
+            return sample.read_text(encoding=encoding or "utf-8", errors=errors)
+
+    def fail_iter_files(*args, **kwargs):
+        raise AssertionError("SourceIndex-backed audit must not run its own os.walk")
+
+    monkeypatch.setattr(
+        "tools.audit_tooling_consolidation.iter_files",
+        fail_iter_files,
+    )
+
+    spy = SpyIndex()
+    payload = audit_tooling(tmp_path, ("tools",), source_index=spy).to_dict()
+
+    assert spy.files_containing_substrings_calls == 1
+    assert spy.read_text_calls == 1
+    assert payload["summary"]["file_count"] == 1
+    assert payload["summary"]["pattern_counts"]["local_sha256_helper"] == 1
+
+
 def test_audit_tooling_cli_json_contract() -> None:
     proc = subprocess.run(
         [

@@ -25,7 +25,7 @@ _CURRENT_SOURCE_INDEX: contextvars.ContextVar[SourceIndex | None] = contextvars.
     "tac_current_source_index",
     default=None,
 )
-_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v19"
+_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v20"
 _DEFAULT_FACT_WORKERS = 8
 
 
@@ -118,6 +118,7 @@ _DEFAULT_TEXT_FACT_NEEDLES = frozenset(
         "from torch import cuda",
         "getattr(torch",
         "is_available",
+        "json.dumps",
         "kl_div",
         ".amrc",
         ".bin",
@@ -135,11 +136,15 @@ _DEFAULT_TEXT_FACT_NEEDLES = frozenset(
         "make_synthetic",
         "mps",
         "pack_sparse_delta",
+        "Path(__file__).resolve().parents",
         "compliance_status",
         "reconstruct_poses",
+        "score_claim",
+        "sha256",
         "torch",
         "torch.frombuffer",
         "torch.load",
+        "sys.path.insert",
         "tar",
         "_enforce_eval_roundtrip(args",
         "add_argument",

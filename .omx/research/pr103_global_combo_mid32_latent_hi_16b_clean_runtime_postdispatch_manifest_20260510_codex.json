@@ -1,0 +1,55 @@
+{
+  "schema": "pact.pr103_postdispatch_exact_cuda_manifest.v1",
+  "generated_at_utc": "2026-05-10T23:50:00Z",
+  "classification": "exact_source_shell_contract_cuda_positive_rate_only",
+  "score_claim": true,
+  "promotion_eligible": false,
+  "score_axis": "contest_cuda",
+  "evidence_grade": "contest-CUDA",
+  "gpu_model": "Tesla T4",
+  "candidate": {
+    "archive_bytes": 178207,
+    "archive_sha256": "8460014d70855ce9226285f80513d6d743ed23723870a6a38b009cfca40f423e",
+    "evaluated_runtime_tree_sha256": "59c6a80f62b6bd8d7fab1b7252898b4dc19fa8736a91e2b7ecac6f8bb2e23ee2",
+    "packet_build_runtime_tree_sha256": "d0fbc15d09906d241b468be30635057680f9fa94776c52e83bef41dbbdd1d600",
+    "adapter_runtime_tree_sha256": "e5983ddfaebb050528a4c0a842eba6feb41dd41d187ad6c25c3e93f5be054542",
+    "contest_auth_eval_json": "experiments/results/modal_auth_eval/pr103_global_combo_mid32_latent_hi_16b_clean_runtime_exact_cuda_modal_20260510T2346Z/contest_auth_eval.json",
+    "canonical_score": 0.22776742708207615,
+    "archive_rate_contribution": 0.11866075000000001,
+    "seg_contribution": 0.067635,
+    "pose_contribution": 0.04147167708207615,
+    "avg_segnet_dist": 0.00067635,
+    "avg_posenet_dist": 0.00017199
+  },
+  "source_baseline": {
+    "archive_bytes": 178223,
+    "archive_sha256": "31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30",
+    "evaluated_runtime_tree_sha256": "ea25380a6eee64b7f57a30a5e9c745fa6bd8867c728f92a293945cfd6dce5d42",
+    "contest_auth_eval_json": "experiments/results/modal_auth_eval/pr103_source_same_runtime_cuda_baseline_modal_20260510T2300Z/contest_auth_eval.json",
+    "canonical_score": 0.22777817708207615,
+    "archive_rate_contribution": 0.11867150000000001,
+    "seg_contribution": 0.067635,
+    "pose_contribution": 0.04147167708207615,
+    "avg_segnet_dist": 0.00067635,
+    "avg_posenet_dist": 0.00017199
+  },
+  "delta": {
+    "score": -0.00001075,
+    "archive_bytes": -16,
+    "archive_rate_contribution": -0.00001075,
+    "seg_contribution": 0.0,
+    "pose_contribution": 0.0
+  },
+  "shared_eval_contract": {
+    "inflate_sh_contract": "python \"$HERE/inflate.py\" \"$SRC\" \"$DST\"",
+    "same_evaluator_command": true,
+    "same_device_axis": true,
+    "identical_runtime_tree": false,
+    "reason_runtime_tree_differs": "candidate intentionally changes consumed PR103 grammar constants and payload bytes"
+  },
+  "remaining_blockers": [
+    "strict_pre_submission_compliance_check_not_recorded",
+    "paired_contest_cpu_policy_adjudication_not_recorded",
+    "shell_inflate_output_parity_missing"
+  ]
+}
