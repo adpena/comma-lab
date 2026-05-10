@@ -499,3 +499,76 @@ Observed:
 The remaining cold-profile hotspots are now mostly broad shell/eval-roundtrip
 scanners plus public-PR status when cache is disabled. The normal developer
 loop should prefer the clean-cache path unless debugging cache invalidation.
+
+## Codex Follow-Up: MPS Evidence Boundary
+
+<!-- generated_at: 2026-05-10T03:20:00Z -->
+<!-- evidence_grade: protocol_guardrail; no dispatch; no score claim -->
+
+Operator reminder, made explicit for future preflight and score-lowering work:
+MPS is advisory-only. It is useful for cheap sweeps, curve-shape measurement,
+optimal-config identification, training-start sanity, and local implementation
+triage. It is never auth-eval evidence, never promotion evidence, and never a
+substitute for `[contest-CUDA]` or carefully labeled `[contest-CPU]` custody.
+
+This reinforces the `check_no_mps_fallback_default` guard: MPS fallback is a
+DX hazard when it silently replaces CUDA, and MPS-derived sidecar/training
+signals must remain proxy/advisory until reproduced through the exact
+archive/runtime path on the correct evidence axis.
+
+## Codex Follow-Up: Public-PR Custody Fail-Closed + Check 127 Token Hardening
+
+<!-- generated_at: 2026-05-10T03:35:00Z -->
+<!-- evidence_grade: local_dev_correctness_and_performance; no dispatch; no score claim -->
+
+Adversarial review found two preflight correctness hazards while profiling the
+next hotspots:
+
+- Check 109 treated `git status --short` timeout/nonzero results for discovered
+  public-PR git clones as skipped/non-git. This is now fail-closed: a real git
+  clone with unavailable status is a custody violation until git/status access
+  is healthy.
+- Check 109 clone discovery no longer hard-codes `pr91_src/repo`; it covers
+  generic `pr*_src/repo` intake layouts so newer public frontier clones stay
+  under the pristine-custody guard.
+- Check 127's adjacent validator check used raw text, so comments/strings that
+  merely mentioned `posterior_update` or `validate_custody` could whitelist a
+  tag-only authoritative predicate. The check now scans executable tokens in
+  the bounded code window, while preserving valid nearby calls even when the
+  bounded window ends inside an open expression.
+
+Verification:
+
+```bash
+.venv/bin/python -m py_compile \
+  src/tac/preflight.py \
+  src/tac/tests/test_preflight_harden_2026_05_08_checks.py \
+  src/tac/tests/test_preflight_custody_validator_and_locked_writes.py
+.venv/bin/python -m pytest \
+  src/tac/tests/test_preflight_harden_2026_05_08_checks.py \
+  src/tac/tests/test_preflight_custody_validator_and_locked_writes.py \
+  src/tac/tests/test_preflight_meta_bugs.py -q
+.venv/bin/python tools/profile_preflight_latency.py \
+  --surface preflight-checks \
+  --preflight-check check_public_pr_intake_clones_pristine \
+  --preflight-check check_authoritative_tag_requires_custody_metadata \
+  --json-out .omx/research/artifacts/preflight_check109_127_profile_20260510_failclosed_fix1.json \
+  --top 20
+.venv/bin/python tools/profile_preflight_latency.py \
+  --surface preflight-dev-cli \
+  --json-out .omx/research/artifacts/preflight_dev_profile_20260510_failclosed_check109_127.json \
+  --top 20 --fail-on-surface-failure
+```
+
+Observed:
+
+- focused public-PR/custody tests: `61 passed in 3.56s`;
+- public-PR layout/fail-closed slice: `21 passed in 0.92s`;
+- broader changed-check slice: `341 passed in 15.76s`;
+- focused Check 109 + Check 127 profile: `2.948s PASSED`;
+- Check 109 step: `1.592s`;
+- Check 127 step: `0.642s`.
+- full developer preflight after the fail-closed patch: `8.014s PASSED`;
+  largest steps were MPS fallback (`1.255s`), public-PR pristine (`0.819s`),
+  authoritative-tag custody (`0.651s`), bare-writes (`0.648s`), dispatch
+  hazards (`0.580s`), and eval-roundtrip false (`0.412s`).

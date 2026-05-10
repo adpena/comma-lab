@@ -162,8 +162,12 @@ def _public_pr_intake_clone_roots(root: Path) -> tuple[Path, ...]:
     for child in er.rglob("*_intake_*"):
         if not child.is_dir():
             continue
-        for sub in ("source", "repo", "pr91_src/repo"):
+        for sub in ("source", "repo"):
             cand = child / sub
+            if (cand / ".git").exists():
+                candidates.append(cand)
+        for pr_src in child.glob("pr*_src"):
+            cand = pr_src / "repo"
             if (cand / ".git").exists():
                 candidates.append(cand)
         if (child / ".git").exists():
@@ -28080,7 +28084,14 @@ def check_public_pr_intake_clones_pristine(
 
     def _git_status_short(
         clone: Path,
-    ) -> tuple[Path, subprocess.CompletedProcess[str] | None, str, object | None, bool]:
+    ) -> tuple[
+        Path,
+        subprocess.CompletedProcess[str] | None,
+        str,
+        object | None,
+        bool,
+        str,
+    ]:
         cache_key = _clone_cache_key(clone)
         cached = clean_cache.get(cache_key) if cache_enabled else None
         fingerprint: str | None = None
@@ -28103,16 +28114,36 @@ def check_public_pr_intake_clones_pristine(
                     cache_key,
                     None,
                     True,
+                    "",
                 )
         try:
             result = subprocess.run(
                 ["git", "-C", str(clone), "status", "--short"],
                 capture_output=True, text=True, timeout=30,
             )
-        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
-            return clone, None, cache_key, None, False
+        except subprocess.TimeoutExpired as exc:
+            return (
+                clone,
+                None,
+                cache_key,
+                None,
+                False,
+                f"git status --short timed out after {exc.timeout}s",
+            )
+        except FileNotFoundError as exc:
+            return clone, None, cache_key, None, False, f"git executable missing: {exc}"
+        except OSError as exc:
+            return clone, None, cache_key, None, False, f"git status failed: {exc}"
         if result.returncode != 0:
-            return clone, None, cache_key, None, False
+            detail = (result.stderr or result.stdout or "").strip()
+            return (
+                clone,
+                None,
+                cache_key,
+                None,
+                False,
+                f"git status --short returned {result.returncode}: {detail}",
+            )
         status_lines = [ln for ln in result.stdout.splitlines() if ln.strip()]
         if cache_enabled and not status_lines:
             if fingerprint is None:
@@ -28129,17 +28160,28 @@ def check_public_pr_intake_clones_pristine(
                         "stored_at_unix": int(time.time()),
                     },
                     False,
+                    "",
                 )
         if cache_enabled:
-            return clone, result, cache_key, None, False
-        return clone, result, cache_key, None, False
+            return clone, result, cache_key, None, False, ""
+        return clone, result, cache_key, None, False, ""
 
     status_by_clone: dict[Path, subprocess.CompletedProcess[str] | None] = {}
+    status_error_by_clone: dict[Path, str] = {}
     if unique_clones:
         max_workers = min(8, len(unique_clones))
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
-            for clone, result, cache_key, cache_update, from_cache in pool.map(_git_status_short, unique_clones):
+            for (
+                clone,
+                result,
+                cache_key,
+                cache_update,
+                from_cache,
+                status_error,
+            ) in pool.map(_git_status_short, unique_clones):
                 status_by_clone[clone] = result
+                if status_error:
+                    status_error_by_clone[clone] = status_error
                 if from_cache:
                     n_cached_clean += 1
                 elif cache_enabled:
@@ -28156,7 +28198,16 @@ def check_public_pr_intake_clones_pristine(
         n_scanned += 1
         result = status_by_clone.get(clone)
         if result is None:
-            n_skipped_not_git += 1
+            rel = clone.relative_to(root) if clone.is_absolute() else clone
+            status_error = status_error_by_clone.get(clone)
+            if status_error:
+                violations.append(
+                    f"{rel}: git status unavailable for public PR intake clone "
+                    f"({status_error}). Strict custody must fail closed; rerun "
+                    "after git/status access is healthy."
+                )
+            else:
+                n_skipped_not_git += 1
             continue
         status_lines = [ln for ln in result.stdout.splitlines() if ln.strip()]
         if not status_lines:
@@ -31613,6 +31664,47 @@ def _line_window_contains_any(
     return any(tok in window for tok in tokens)
 
 
+def _line_window_code_contains_any(
+    lines: list[str],
+    lineno: int,
+    tokens: tuple[str, ...],
+    *,
+    before: int = 4,
+    after: int = 4,
+) -> bool:
+    """Return true when any token appears in executable code near ``lineno``.
+
+    This is stricter than a raw substring scan: comments and string literals do
+    not prove that a custody validator actually runs.
+    """
+
+    start = max(0, lineno - before)
+    end = min(len(lines), lineno + after + 1)
+    window = "\n".join(lines[start:end])
+    code_parts: list[str] = []
+    try:
+        token_stream = tokenize.generate_tokens(io.StringIO(window).readline)
+        for tok in token_stream:
+            if tok.type in {
+                tokenize.COMMENT,
+                tokenize.STRING,
+                tokenize.NL,
+                tokenize.NEWLINE,
+                tokenize.ENCODING,
+                tokenize.ENDMARKER,
+            }:
+                continue
+            code_parts.append(tok.string)
+    except tokenize.TokenError:
+        # A bounded source window can end inside an open call/block. Keep the
+        # executable tokens already collected; they are still enough to prove
+        # whether the nearby custody validator call exists.
+        pass
+    compact_code = "".join(code_parts)
+    spaced_code = " ".join(code_parts)
+    return any(tok in compact_code or tok in spaced_code for tok in tokens)
+
+
 def _line_has_authoritative_tag_bypass_pattern(line: str) -> bool:
     """Return True for tag-only predicates that can promote without custody."""
     if "`" in line:
@@ -31724,7 +31816,7 @@ def check_authoritative_tag_requires_custody_metadata(
             # Same-line waiver?
             if _CUSTODY_WAIVER_MARKER in line:
                 continue
-            if _line_window_contains_any(
+            if _line_window_code_contains_any(
                 lines, lineno, _CUSTODY_VALIDATOR_TOKENS
             ):
                 continue

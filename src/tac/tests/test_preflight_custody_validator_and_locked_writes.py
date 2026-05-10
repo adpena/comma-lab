@@ -327,6 +327,46 @@ def test_check127_posterior_update_routing_accepted(tmp_path: Path) -> None:
     assert violations == []
 
 
+def test_check127_comment_validator_token_does_not_whitelist(tmp_path: Path) -> None:
+    """A nearby comment mentioning posterior_update is not executable custody."""
+    root = _mkrepo(
+        tmp_path,
+        {
+            "tools/comment_token.py": (
+                "from tac.continual_learning import AUTHORITATIVE_TAGS\n"
+                "# TODO: route this through posterior_update(posterior, result)\n"
+                "if tag in AUTHORITATIVE_TAGS:  # '[contest-CUDA]'\n"
+                "    print(tag)\n"
+            ),
+        },
+    )
+    violations = check_authoritative_tag_requires_custody_metadata(
+        repo_root=root, strict=False, verbose=False
+    )
+    assert len(violations) == 1
+    assert "tools/comment_token.py" in violations[0]
+
+
+def test_check127_string_validator_token_does_not_whitelist(tmp_path: Path) -> None:
+    """A nearby string literal mentioning validate_custody is not custody."""
+    root = _mkrepo(
+        tmp_path,
+        {
+            "tools/string_token.py": (
+                "from tac.continual_learning import AUTHORITATIVE_TAGS\n"
+                "hint = 'call validate_custody before promotion'\n"
+                "if tag in AUTHORITATIVE_TAGS:  # '[contest-CPU]'\n"
+                "    print(tag)\n"
+            ),
+        },
+    )
+    violations = check_authoritative_tag_requires_custody_metadata(
+        repo_root=root, strict=False, verbose=False
+    )
+    assert len(violations) == 1
+    assert "tools/string_token.py" in violations[0]
+
+
 def test_check127_same_line_waiver_accepted(tmp_path: Path) -> None:
     """`# CUSTODY_VALIDATOR_OK:<reason>` waiver → no violation."""
     root = _mkrepo(

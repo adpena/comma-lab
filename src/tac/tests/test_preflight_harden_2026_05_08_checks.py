@@ -15,6 +15,7 @@ from pathlib import Path
 import pytest
 
 from tac.preflight import (
+    MetaBugViolation,
     PreflightError,
     check_137531_candidate_decoder_path_wired,
     check_admm_lagrangian_bisection_convergent,
@@ -311,6 +312,48 @@ def test_public_pr_pristine_fans_out_clean_status_checks(
     assert len(seen_thread_names) >= 2
 
 
+def test_public_pr_pristine_discovers_generic_pr_src_repo_layout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    clone = (
+        tmp_path
+        / "experiments"
+        / "results"
+        / "public_pr_archive_20260505"
+        / "public_pr101_intake_20260505_auto"
+        / "pr101_src"
+        / "repo"
+    )
+    (clone / ".git").mkdir(parents=True)
+    seen_status = False
+
+    def fake_run(
+        cmd: list[str],
+        *,
+        capture_output: bool,
+        text: bool,
+        timeout: int,
+    ) -> subprocess.CompletedProcess[str]:
+        nonlocal seen_status
+        assert capture_output is True
+        assert text is True
+        assert timeout == 30
+        if cmd[:3] == ["git", "-C", str(clone)] and cmd[3:] == ["status", "--short"]:
+            seen_status = True
+            return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+        return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="unexpected")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    assert (
+        check_public_pr_intake_clones_pristine(
+            repo_root=tmp_path, strict=True, verbose=False
+        )
+        == []
+    )
+    assert seen_status is True
+
+
 def test_public_pr_pristine_caches_clean_status_and_invalidates_untracked(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -494,3 +537,79 @@ def test_public_pr_pristine_cache_disable_forces_live_status(
         == []
     )
     assert status_calls == 2
+
+
+def test_public_pr_pristine_git_status_timeout_fails_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    clone = (
+        tmp_path
+        / "experiments"
+        / "results"
+        / "public_pr93_intake_20260505_auto"
+        / "source"
+    )
+    (clone / ".git").mkdir(parents=True)
+
+    def fake_run(
+        cmd: list[str],
+        *,
+        capture_output: bool,
+        text: bool,
+        timeout: int,
+    ) -> subprocess.CompletedProcess[str]:
+        assert capture_output is True
+        assert text is True
+        assert timeout == 30
+        if cmd[:3] == ["git", "-C", str(clone)] and cmd[3:] == ["status", "--short"]:
+            raise subprocess.TimeoutExpired(cmd, timeout)
+        return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="unexpected")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    violations = check_public_pr_intake_clones_pristine(
+        repo_root=tmp_path, strict=False, verbose=False
+    )
+
+    assert len(violations) == 1
+    assert "git status unavailable" in violations[0]
+    assert "timed out" in violations[0]
+    with pytest.raises(MetaBugViolation, match="git status unavailable"):
+        check_public_pr_intake_clones_pristine(
+            repo_root=tmp_path, strict=True, verbose=False
+        )
+
+
+def test_public_pr_pristine_git_status_nonzero_fails_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    clone = (
+        tmp_path
+        / "experiments"
+        / "results"
+        / "public_pr94_intake_20260505_auto"
+        / "source"
+    )
+    (clone / ".git").mkdir(parents=True)
+
+    def fake_run(
+        cmd: list[str],
+        *,
+        capture_output: bool,
+        text: bool,
+        timeout: int,
+    ) -> subprocess.CompletedProcess[str]:
+        assert capture_output is True
+        assert text is True
+        assert timeout == 30
+        if cmd[:3] == ["git", "-C", str(clone)] and cmd[3:] == ["status", "--short"]:
+            return subprocess.CompletedProcess(cmd, 128, stdout="", stderr="fatal: bad gitdir")
+        return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="unexpected")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    violations = check_public_pr_intake_clones_pristine(
+        repo_root=tmp_path, strict=False, verbose=False
+    )
+
+    assert len(violations) == 1
+    assert "returned 128" in violations[0]
+    assert "fatal: bad gitdir" in violations[0]
