@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -141,6 +143,67 @@ def test_all_lanes_budget_failure_reports_hot_steps() -> None:
     assert "GATE #2: slow gate" in message
     assert "GATE #1: fast gate" in message
     assert "--allow-slow-preflight" in message
+
+
+def test_execute_step_marks_subprocess_budget_timeout(monkeypatch) -> None:
+    module = _load_all_lanes_module()
+
+    def fake_run(*_args: object, **kwargs: object) -> subprocess.CompletedProcess:
+        raise subprocess.TimeoutExpired(["slow-tool"], kwargs.get("timeout", 0.01))
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+    step = module.PreflightStep(
+        "GATE",
+        1,
+        "slow subprocess",
+        lambda: (
+            False,
+            module._run_subprocess(["slow-tool"], capture_output=True, text=True).stderr,
+        ),
+        "passed",
+        "failed",
+    )
+    context = module.PreflightRunContext(
+        started_s=time.perf_counter(),
+        deadline_s=time.perf_counter() + 1.0,
+        cancel_event=module.threading.Event(),
+    )
+
+    result = module._execute_step(step, context)
+
+    assert result.passed is False
+    assert result.status == "timeout"
+    assert "TIMEOUT: all-lanes preflight wall-clock budget exhausted" in result.output
+
+
+def test_run_steps_with_budget_cancels_unstarted_serial_work() -> None:
+    module = _load_all_lanes_module()
+    ran: list[str] = []
+
+    def first_runner() -> tuple[bool, str]:
+        ran.append("first")
+        time.sleep(0.03)
+        return True, "first done"
+
+    def second_runner() -> tuple[bool, str]:
+        ran.append("second")
+        return True, "second done"
+
+    steps = [
+        module.PreflightStep("GATE", 1, "first", first_runner, "first passed", "first failed"),
+        module.PreflightStep("GATE", 2, "second", second_runner, "second passed", "second failed"),
+    ]
+
+    results = module._run_steps_with_budget(
+        steps,
+        max_workers=1,
+        wall_clock_budget_s=0.01,
+        run_started=time.perf_counter(),
+    )
+
+    assert ran == ["first"]
+    assert [result.status for result in results] == ["passed", "cancelled"]
+    assert "CANCELLED" in results[1].output
 
 
 def test_write_timing_profile_creates_parent_and_uses_repo_json_style(tmp_path: Path) -> None:

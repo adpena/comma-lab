@@ -108,6 +108,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -334,18 +335,91 @@ class PreflightResult:
     passed: bool
     output: str
     elapsed_s: float
+    status: str = "passed"
+
+
+@dataclass(frozen=True)
+class PreflightRunContext:
+    """Shared wall-clock deadline and cancellation state for one preflight run."""
+
+    started_s: float
+    deadline_s: float | None
+    cancel_event: threading.Event
+
+    def remaining_s(self) -> float | None:
+        if self.deadline_s is None:
+            return None
+        return self.deadline_s - time.perf_counter()
+
+
+_THREAD_CONTEXT = threading.local()
+
+
+def _current_run_context() -> PreflightRunContext | None:
+    context = getattr(_THREAD_CONTEXT, "context", None)
+    return context if isinstance(context, PreflightRunContext) else None
+
+
+def _remaining_wall_budget_s() -> float | None:
+    context = _current_run_context()
+    if context is None:
+        return None
+    return context.remaining_s()
+
+
+def _format_timeout_message(command: object, timeout_s: float) -> str:
+    return (
+        "TIMEOUT: all-lanes preflight wall-clock budget exhausted while running "
+        f"{command!r} (remaining timeout={max(timeout_s, 0.0):.3f}s)"
+    )
+
+
+def _as_text(value: str | bytes | None) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return value
+
+
+def _run_subprocess(*popenargs, **kwargs) -> subprocess.CompletedProcess:
+    """Run a child command with its timeout capped by the remaining wall budget."""
+
+    command = popenargs[0] if popenargs else kwargs.get("args")
+    remaining = _remaining_wall_budget_s()
+    existing_timeout = kwargs.get("timeout")
+    if remaining is not None:
+        if remaining <= 0:
+            return subprocess.CompletedProcess(
+                command,
+                124,
+                stdout="",
+                stderr=_format_timeout_message(command, remaining) + "\n",
+            )
+        kwargs["timeout"] = (
+            remaining
+            if existing_timeout is None
+            else min(float(existing_timeout), max(remaining, 0.001))
+        )
+    try:
+        return subprocess.run(*popenargs, **kwargs)
+    except subprocess.TimeoutExpired as exc:
+        stdout = _as_text(exc.stdout)
+        stderr = _as_text(exc.stderr)
+        stderr += _format_timeout_message(command, float(exc.timeout or 0.0)) + "\n"
+        return subprocess.CompletedProcess(command, 124, stdout=stdout, stderr=stderr)
 
 
 def _run_lane(lane: dict, verbose: bool) -> tuple[bool, str]:
     args = [sys.executable, str(lane["tool"])] + lane["args"]
     if verbose and lane.get("supports_verbose", True):
         args.append("--verbose")
-    proc = subprocess.run(args, capture_output=True, text=True)
+    proc = _run_subprocess(args, capture_output=True, text=True)
     return proc.returncode == 0, proc.stdout + proc.stderr
 
 
 def _run_gate(name: str, tool: Path, extra_args: list[str] | None = None) -> tuple[bool, str]:
-    proc = subprocess.run(
+    proc = _run_subprocess(
         [sys.executable, str(tool), "--repo-root", str(REPO), "--strict", *(extra_args or [])],
         capture_output=True,
         text=True,
@@ -382,7 +456,7 @@ def _run_dispatch_cli_shell_hazards_gate(source_index=None) -> tuple[bool, str]:
 
 
 def _run_hidden_gems_gate() -> tuple[bool, str]:
-    proc = subprocess.run(
+    proc = _run_subprocess(
         [sys.executable, str(HIDDEN_GEMS_REGISTRY), "--format", "json"],
         capture_output=True,
         text=True,
@@ -401,7 +475,7 @@ def _run_hidden_gems_gate() -> tuple[bool, str]:
 
 
 def _run_hidden_gem_readiness_gate() -> tuple[bool, str]:
-    proc = subprocess.run(
+    proc = _run_subprocess(
         [
             sys.executable,
             str(HIDDEN_GEMS_READINESS),
@@ -462,7 +536,7 @@ def _run_semantic_label_contract_gate(source_index=None) -> tuple[bool, str]:
 
 
 def _run_engineered_corrections_gate() -> tuple[bool, str]:
-    proc = subprocess.run(
+    proc = _run_subprocess(
         [
             sys.executable,
             str(ENGINEERED_CORRECTIONS_AUDIT),
@@ -496,7 +570,7 @@ def _run_hnerv_lowlevel_repack_gate() -> tuple[bool, str]:
     with tempfile.TemporaryDirectory(prefix="pact_hnerv_lowlevel_preflight_") as tmp:
         tmpdir = Path(tmp)
         json_out = tmpdir / "manifest.json"
-        proc = subprocess.run(
+        proc = _run_subprocess(
             [
                 sys.executable,
                 str(HNERV_LOWLEVEL_REPACK),
@@ -553,7 +627,7 @@ def _run_untracked_source_gate() -> tuple[bool, str]:
                 str(UNTRACKED_SOURCE_DISPOSITION_MANIFEST),
             ]
         )
-    proc = subprocess.run(
+    proc = _run_subprocess(
         cmd,
         capture_output=True,
         text=True,
@@ -588,7 +662,7 @@ def _run_untracked_source_gate() -> tuple[bool, str]:
 def _run_reverse_engineering_release_gate() -> tuple[bool, str]:
     if not REVERSE_ENGINEERING_RELEASE_MANIFEST.is_file():
         return False, f"missing release manifest: {REVERSE_ENGINEERING_RELEASE_MANIFEST.relative_to(REPO)}"
-    proc = subprocess.run(
+    proc = _run_subprocess(
         [
             sys.executable,
             str(REVERSE_ENGINEERING_AUDIT),
@@ -606,7 +680,7 @@ def _run_reverse_engineering_release_gate() -> tuple[bool, str]:
 
 
 def _run_hnerv_scorecard_gate() -> tuple[bool, str]:
-    proc = subprocess.run([sys.executable, str(HNERV_SCORECARD_AUDIT)], capture_output=True, text=True)
+    proc = _run_subprocess([sys.executable, str(HNERV_SCORECARD_AUDIT)], capture_output=True, text=True)
     return proc.returncode == 0, proc.stdout + proc.stderr
 
 
@@ -627,7 +701,7 @@ def _run_tooling_consolidation_gate(source_index=None) -> tuple[bool, str]:
 
 
 def _run_recovered_remote_lanes_gate() -> tuple[bool, str]:
-    proc = subprocess.run(
+    proc = _run_subprocess(
         [sys.executable, str(RECOVERED_REMOTE_LANES_AUDIT), "--strict"],
         capture_output=True,
         text=True,
@@ -636,7 +710,7 @@ def _run_recovered_remote_lanes_gate() -> tuple[bool, str]:
 
 
 def _run_preserved_orphans_gate() -> tuple[bool, str]:
-    proc = subprocess.run(
+    proc = _run_subprocess(
         [sys.executable, str(PRESERVED_ORPHANS_AUDIT), "--format", "text"],
         capture_output=True,
         text=True,
@@ -645,7 +719,7 @@ def _run_preserved_orphans_gate() -> tuple[bool, str]:
 
 
 def _run_recovery_custody_snapshots_gate() -> tuple[bool, str]:
-    proc = subprocess.run(
+    proc = _run_subprocess(
         [sys.executable, str(RECOVERY_CUSTODY_SNAPSHOTS_AUDIT), "--format", "text"],
         capture_output=True,
         text=True,
@@ -654,7 +728,7 @@ def _run_recovery_custody_snapshots_gate() -> tuple[bool, str]:
 
 
 def _run_release_index_split_gate() -> tuple[bool, str]:
-    proc = subprocess.run(
+    proc = _run_subprocess(
         [
             sys.executable,
             str(RELEASE_INDEX_SPLIT_AUDIT),
@@ -671,7 +745,7 @@ def _run_release_index_split_gate() -> tuple[bool, str]:
 
 
 def _run_nested_gitlink_custody_gate() -> tuple[bool, str]:
-    proc = subprocess.run(
+    proc = _run_subprocess(
         [
             sys.executable,
             str(NESTED_GITLINK_CUSTODY_AUDIT),
@@ -688,7 +762,7 @@ def _run_nested_gitlink_custody_gate() -> tuple[bool, str]:
 
 
 def _run_staged_public_release_hygiene_gate() -> tuple[bool, str]:
-    proc = subprocess.run(
+    proc = _run_subprocess(
         [
             sys.executable,
             str(STAGED_PUBLIC_RELEASE_HYGIENE_AUDIT),
@@ -703,7 +777,7 @@ def _run_staged_public_release_hygiene_gate() -> tuple[bool, str]:
 
 
 def _run_cross_paradigm_frontier_inventory_gate() -> tuple[bool, str]:
-    proc = subprocess.run(
+    proc = _run_subprocess(
         [
             sys.executable,
             str(CROSS_PARADIGM_FRONTIER_INVENTORY),
@@ -844,7 +918,7 @@ def _frontier_monolithic_layout_failures(payload: dict[str, object]) -> list[str
 def _run_frontier_monolithic_layout_gate() -> tuple[bool, str]:
     with tempfile.TemporaryDirectory(prefix="pact_frontier_layout_preflight_") as tmp:
         output_path = Path(tmp) / "frontier_layout.json"
-        proc = subprocess.run(
+        proc = _run_subprocess(
             [
                 sys.executable,
                 str(FRONTIER_ARCHIVE_LAYOUT_AUDIT),
@@ -1105,7 +1179,7 @@ def _validate_eval_loader_drift_comparison_rows(rows: object) -> list[str]:
 def _run_eval_loader_drift_probe_gate() -> tuple[bool, str]:
     with tempfile.TemporaryDirectory(prefix="pact_eval_loader_drift_preflight_") as tmp:
         output_path = Path(tmp) / "eval_loader_drift_probe.json"
-        proc = subprocess.run(
+        proc = _run_subprocess(
             [
                 sys.executable,
                 str(EVAL_LOADER_DRIFT_PROBE),
@@ -1305,7 +1379,7 @@ def _json_tool(tool: Path) -> tuple[bool, dict[str, object], str]:
             return False, {}, f"{tool.name} direct run failed: {type(exc).__name__}: {exc}"
         return True, payload, json_text(payload)
 
-    proc = subprocess.run([sys.executable, str(tool)], capture_output=True, text=True)
+    proc = _run_subprocess([sys.executable, str(tool)], capture_output=True, text=True)
     output = proc.stdout + proc.stderr
     if proc.returncode != 0:
         return False, {}, output
@@ -1648,18 +1722,57 @@ def _run_phase_a_post_green_discoverability_gate() -> tuple[bool, str]:
     )
 
 
-def _execute_step(step: PreflightStep) -> PreflightResult:
+def _cancelled_result(
+    step: PreflightStep,
+    *,
+    elapsed_s: float = 0.0,
+    reason: str = "wall-clock budget exhausted before this step started",
+) -> PreflightResult:
+    return PreflightResult(
+        step=step,
+        passed=False,
+        output=f"CANCELLED: {reason}",
+        elapsed_s=elapsed_s,
+        status="cancelled",
+    )
+
+
+def _execute_step(
+    step: PreflightStep,
+    context: PreflightRunContext | None = None,
+) -> PreflightResult:
+    if context is not None:
+        _THREAD_CONTEXT.context = context
     start = time.perf_counter()
     try:
+        if context is not None:
+            remaining = context.remaining_s()
+            if context.cancel_event.is_set() or (remaining is not None and remaining <= 0):
+                context.cancel_event.set()
+                return _cancelled_result(step)
         passed, output = step.runner()
+        status = (
+            "passed"
+            if passed
+            else (
+                "timeout"
+                if "TIMEOUT: all-lanes preflight wall-clock budget exhausted" in output
+                else "failed"
+            )
+        )
     except Exception as exc:  # pragma: no cover - defensive fail-closed wrapper.
         passed = False
         output = f"{step.section} #{step.number} raised {type(exc).__name__}: {exc}"
+        status = "failed"
+    finally:
+        if context is not None:
+            _THREAD_CONTEXT.context = None
     return PreflightResult(
         step=step,
         passed=passed,
         output=output,
         elapsed_s=time.perf_counter() - start,
+        status=status,
     )
 
 
@@ -1670,6 +1783,7 @@ def _timing_row(result: PreflightResult) -> dict[str, object]:
         "number": step.number,
         "name": step.name,
         "passed": result.passed,
+        "status": result.status,
         "elapsed_s": round(float(result.elapsed_s), 6),
         "forensic_only": step.forensic_only,
         "local_smoke_only": step.local_smoke_only,
@@ -1824,6 +1938,94 @@ def _format_wall_clock_budget_failure(
 def _default_jobs(step_count: int) -> int:
     cpu_count = os.cpu_count() or 2
     return max(1, min(step_count, cpu_count, 8))
+
+
+def _sort_results(results: list[PreflightResult]) -> list[PreflightResult]:
+    return sorted(results, key=lambda item: (item.step.section, item.step.number))
+
+
+def _run_steps_with_budget(
+    steps: list[PreflightStep],
+    *,
+    max_workers: int,
+    wall_clock_budget_s: float | None,
+    run_started: float,
+) -> list[PreflightResult]:
+    deadline_s = (
+        None
+        if wall_clock_budget_s is None
+        else run_started + float(wall_clock_budget_s)
+    )
+    context = PreflightRunContext(
+        started_s=run_started,
+        deadline_s=deadline_s,
+        cancel_event=threading.Event(),
+    )
+    if max_workers == 1:
+        results: list[PreflightResult] = []
+        for step in steps:
+            if context.cancel_event.is_set():
+                results.append(_cancelled_result(step))
+                continue
+            remaining = context.remaining_s()
+            if remaining is not None and remaining <= 0:
+                context.cancel_event.set()
+                results.append(_cancelled_result(step))
+                continue
+            result = _execute_step(step, context)
+            results.append(result)
+            remaining = context.remaining_s()
+            if remaining is not None and remaining <= 0:
+                context.cancel_event.set()
+        return _sort_results(results)
+
+    results_by_step: dict[tuple[str, int], PreflightResult] = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(_execute_step, step, context): step
+            for step in steps
+        }
+        pending = set(futures)
+        while pending:
+            remaining = context.remaining_s()
+            if remaining is not None and remaining <= 0:
+                context.cancel_event.set()
+                break
+            done, pending = concurrent.futures.wait(
+                pending,
+                timeout=remaining,
+                return_when=concurrent.futures.FIRST_COMPLETED,
+            )
+            if not done:
+                context.cancel_event.set()
+                break
+            for future in done:
+                step = futures[future]
+                try:
+                    result = future.result()
+                except concurrent.futures.CancelledError:
+                    result = _cancelled_result(step)
+                results_by_step[(step.section, step.number)] = result
+        if pending:
+            context.cancel_event.set()
+            for future in pending:
+                future.cancel()
+            concurrent.futures.wait(pending)
+            for future in pending:
+                step = futures[future]
+                if (step.section, step.number) in results_by_step:
+                    continue
+                if future.cancelled():
+                    result = _cancelled_result(step)
+                else:
+                    try:
+                        result = future.result()
+                    except concurrent.futures.CancelledError:
+                        result = _cancelled_result(step)
+                results_by_step[(step.section, step.number)] = result
+    for step in steps:
+        results_by_step.setdefault((step.section, step.number), _cancelled_result(step))
+    return _sort_results(list(results_by_step.values()))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -2194,12 +2396,12 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     max_workers = args.jobs or _default_jobs(len(steps))
     run_started = time.perf_counter()
-    if max_workers == 1:
-        results = [_execute_step(step) for step in steps]
-    else:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = [executor.submit(_execute_step, step) for step in steps]
-            results = [future.result() for future in futures]
+    results = _run_steps_with_budget(
+        steps,
+        max_workers=max_workers,
+        wall_clock_budget_s=wall_clock_budget_s,
+        run_started=run_started,
+    )
     source_index.save_persistent_text_facts()
     wall_elapsed_s = time.perf_counter() - run_started
 
