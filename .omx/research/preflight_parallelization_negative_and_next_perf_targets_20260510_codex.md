@@ -172,3 +172,95 @@ Residual risk: the candidate filter is intentionally tied to the literal mount
 method names used by the AST policy surface. Dynamic wrappers that hide those
 method names remain outside this check, matching the previous practical policy
 boundary rather than expanding it silently.
+
+## 2026-05-10 SourceIndex reuse for dev preflight hot scans
+
+Targeted next-cost scans from forced dev timing:
+
+```bash
+PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE=1 .venv/bin/python -m tac.preflight \
+  --scope dev --timeout-s 30 --timings-json /tmp/pact_preflight_dev_before.json
+# PREFLIGHT PASSED
+# timing wall_elapsed_s=7.395472
+# hot: check_codebase_drift=1.120s, check_public_pr_intake_clones_pristine=1.103s,
+#      check_no_mps_fallback_default=0.832s, check_dispatch_cli_shell_hazards=0.770s
+```
+
+Implemented a safe Python SourceIndex speedup rather than native Rust/Zig:
+
+- `check_codebase_drift` now reuses SourceTextFacts for its Python candidate
+  prefilter instead of launching a redundant ripgrep regex scan inside an
+  already-indexed preflight context.
+- The fact prefilter mirrors `_python_forbidden_scan_may_match` and remains
+  conservative around `/tmp/`; the precise AST/text scanner still owns policy.
+- `check_training_scripts_use_real_data_in_nonsmoke_mode` now asks SourceIndex
+  for `train_*.py` files containing `make_synthetic*` or `make_smoke*` before
+  parsing, avoiding the large renderer trainers when they cannot affect the
+  synthetic-data policy.
+- Source facts schema bumped to v18 because the fact needle set changed.
+
+Focused policy checks:
+
+```bash
+.venv/bin/python -m pytest -q tests/test_preflight_source_index_equivalence.py
+# 8 passed in 0.76s
+```
+
+Forced dev preflight after the one-time v18 fact-cache rebuild:
+
+```bash
+PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE=1 .venv/bin/python -m tac.preflight \
+  --scope dev --timeout-s 30 --timings-json /tmp/pact_preflight_dev_after_7.json
+# PREFLIGHT PASSED
+# timing wall_elapsed_s=7.466809
+# codebase_drift scanned 172 source Python files, down from 372
+# hot: check_public_pr_intake_clones_pristine=1.130s,
+#      check_codebase_drift=1.046s,
+#      check_no_mps_fallback_default=0.823s,
+#      check_dispatch_cli_shell_hazards=0.779s
+```
+
+Normal cached dev preflight after storing the clean developer cache:
+
+```bash
+.venv/bin/python -m tac.preflight --scope dev --timeout-s 30 \
+  --timings-json /tmp/pact_preflight_dev_cached_after_2.json
+# PREFLIGHT PASSED
+# cached clean developer preflight
+# shell wall ~=1.72s
+```
+
+Incidental fail-closed hardening: expanding SourceIndex facts surfaced an
+existing tokenization edge in `check_authoritative_tag_requires_custody_metadata`.
+Bounded source windows that start mid-block can raise `IndentationError`; the
+helper now retries a left-stripped token window rather than crashing or trusting
+comments/strings. The same scan was narrowed to ignore `eval_axis ==
+"[contest-CUDA]"` classification branches because they are not authoritative
+evidence-tag promotion predicates.
+
+Residual perf targets:
+
+1. `check_public_pr_intake_clones_pristine` is the current hottest forced-cache
+   dev check (~1.1s). The next safe target is a cheaper clone fingerprint that
+   avoids walking every public PR worktree when `.git/index` and untracked
+   indicators are unchanged.
+2. `check_dispatch_cli_shell_hazards` still opens every docs/reports/tools
+   text file. A future patch should move its tool-local `scan_paths` loop onto
+   SourceIndex fact candidate filtering with fixture parity before changing the
+   policy surface.
+3. `check_no_mps_fallback_default` is already fused with eval-roundtrip checks;
+   further speedup needs AST parse-count reduction or broader reuse of parsed
+   candidate ASTs, not more thread-level parallelism.
+
+Wire-in declaration:
+
+- Sensitivity-map contribution: N/A - preflight DX/cache infrastructure only,
+  no codec sensitivity or scored tensor changed.
+- Pareto constraint: N/A - no archive candidate or rate/distortion bound
+  changed.
+- Bit-allocator hook: N/A - no per-tensor importance changed.
+- Cathedral autopilot dispatch hook: N/A - this only reduces local dev-gate
+  latency; no deployable candidate was produced.
+- Continual-learning posterior update: N/A - no empirical score anchor.
+- Probe-disambiguator: N/A - single policy-preserving interpretation; parity
+  tests compare SourceIndex and no-index behavior.

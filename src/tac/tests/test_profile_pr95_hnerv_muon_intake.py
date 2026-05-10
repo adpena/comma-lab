@@ -82,6 +82,7 @@ def _write_archive(path: Path) -> Path:
 
 def _write_source_tree(root: Path) -> Path:
     (root / "src" / "stages").mkdir(parents=True)
+    (root / "src" / "__pycache__").mkdir(parents=True)
     (root / "README.md").write_text(
         "# HNeRV Muon\n\n"
         "A tiny archive for tests.\n\n"
@@ -111,6 +112,7 @@ def _write_source_tree(root: Path) -> Path:
         encoding="utf-8",
     )
     (root / "src" / "train.py").write_text("# train\n", encoding="utf-8")
+    (root / "src" / "__pycache__" / "model.cpython-312.pyc").write_bytes(b"bytecode")
     (root / "src" / "stages" / "stage1.py").write_text(
         '"""stage one doc"""\n'
         'name="stage1"\n'
@@ -156,6 +158,16 @@ def test_profile_pr95_hnerv_muon_intake_static_archive_and_source(tmp_path: Path
     assert profile["hnerv_muon_blob"]["decoder"]["tensor_count"] == 3
     assert profile["hnerv_muon_blob"]["decoder"]["muon_partition_params"] == 6
     assert profile["hnerv_muon_blob"]["latents"]["n_frame_pairs"] == 3
+    assert profile["source_intake"]["source_file_count"] == 7
     assert profile["source_intake"]["model_defaults"]["latent_dim"] == 2
     assert profile["source_intake"]["training_stages"][0]["uses_muon"] is True
     assert profile["immediate_improvement_hypotheses"][0]["hook"] == "RAFT/ego-motion/foveation latent bases"
+
+
+def test_default_pr95_source_dir_uses_release_view_source_not_pyc_recovery_tree() -> None:
+    module = load_module()
+
+    assert "public_pr_archive_release_view" in module.DEFAULT_SOURCE_DIR.as_posix()
+    assert module.DEFAULT_SOURCE_DIR.as_posix().endswith(
+        "source/submissions/hnerv_muon"
+    )

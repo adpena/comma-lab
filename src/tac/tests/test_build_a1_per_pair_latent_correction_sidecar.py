@@ -667,6 +667,106 @@ def test_dispatch_custody_rejects_terminal_live_claim_row(tmp_path: Path) -> Non
     assert "dispatch_claim_ledger_latest_row_terminal" in blockers
 
 
+def _classification_manifest(tool, *, archive_sha: str = "c" * 64) -> dict[str, object]:
+    return {
+        "lane_id": tool.SIDECAR_LANE_ID,
+        "new_archive_sha256": archive_sha,
+        "new_archive_bytes": 178316,
+        "a1_canonical_baseline": {
+            "score": 0.19284757743677347,
+            "tag": "[contest-CPU GHA Linux x86_64]",
+        },
+        "dispatch_blockers": ["dispatch_claim_ledger_latest_row_terminal"],
+        "ready_for_exact_eval_dispatch": True,
+        "score_claim": True,
+    }
+
+
+def test_exact_eval_classification_retires_measured_cpu_regression() -> None:
+    tool = load_tool()
+    manifest = _classification_manifest(tool)
+    eval_result = {
+        "archive_size_bytes": 178316,
+        "avg_segnet_dist": 0.00071063,
+        "avg_posenet_dist": 0.00003932,
+        "score_recomputed_from_components": 0.20962552129271272,
+        "n_samples": tool.N_PAIRS,
+        "evidence_grade": "contest-CPU-1to1",
+        "hardware": "github-actions-ubuntu-latest-x86_64",
+    }
+
+    classification = tool.classify_exact_eval_result(manifest, eval_result)
+    updated = tool.apply_exact_eval_classification_to_manifest(
+        dict(manifest),
+        classification,
+    )
+
+    assert classification["classification"] == "measured_contest_cpu_regression_retired"
+    assert classification["eval_axis"] == "[contest-CPU]"
+    assert classification["score_claim"] is False
+    assert classification["promotion_claim"] is False
+    assert classification["custody_blockers"] == []
+    assert classification["delta_vs_baseline"] > 0
+    assert "eval_result_missing_archive_sha256" in classification["caveats"][0]
+    assert updated["ready_for_exact_eval_dispatch"] is False
+    assert updated["score_claim"] is False
+    assert updated["dispatch_blockers"] == ["measured_implementation_regression_retired"]
+    assert updated["pre_eval_classification_dispatch_blockers"] == [
+        "dispatch_claim_ledger_latest_row_terminal"
+    ]
+
+
+def test_exact_eval_classification_keeps_cpu_positive_non_claimable() -> None:
+    tool = load_tool()
+    manifest = _classification_manifest(tool)
+    eval_result = {
+        "archive_size_bytes": 178316,
+        "archive_sha256": "c" * 64,
+        "score_recomputed_from_components": 0.18,
+        "n_samples": tool.N_PAIRS,
+        "evidence_grade": "contest-CPU-1to1",
+    }
+
+    classification = tool.classify_exact_eval_result(manifest, eval_result)
+    updated = tool.apply_exact_eval_classification_to_manifest(
+        dict(manifest),
+        classification,
+    )
+
+    assert classification["classification"] == "contest_cpu_positive_requires_contest_cuda"
+    assert classification["eval_axis"] == "[contest-CPU]"
+    assert classification["score_claim"] is False
+    assert updated["ready_for_exact_eval_dispatch"] is False
+    assert updated["dispatch_blockers"] == [
+        "contest_cpu_positive_requires_contest_cuda_before_score_claim"
+    ]
+
+
+def test_exact_eval_classification_indeterminate_on_archive_size_mismatch() -> None:
+    tool = load_tool()
+    manifest = _classification_manifest(tool)
+    eval_result = {
+        "archive_size_bytes": 178317,
+        "archive_sha256": "c" * 64,
+        "score_recomputed_from_components": 0.21,
+        "n_samples": tool.N_PAIRS,
+        "evidence_grade": "contest-CPU-1to1",
+    }
+
+    classification = tool.classify_exact_eval_result(manifest, eval_result)
+    updated = tool.apply_exact_eval_classification_to_manifest(
+        dict(manifest),
+        classification,
+    )
+
+    assert classification["classification"] == "exact_eval_classification_indeterminate"
+    assert "eval_archive_size_mismatch" in classification["custody_blockers"]
+    assert updated["dispatch_blockers"] == [
+        "exact_eval_classification_indeterminate",
+        "eval_archive_size_mismatch",
+    ]
+
+
 def test_manifest_readiness_rejects_import_only_runtime_smoke(tmp_path: Path) -> None:
     tool = load_tool()
     dims = np.full(tool.N_PAIRS, 255, dtype=np.int64)

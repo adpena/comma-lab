@@ -138,3 +138,50 @@ Fix:
 
 This is a custody fix only. The active run is still in progress as of this
 entry, and no score claim or promotion claim is made.
+
+## 2026-05-10T13:12Z relaunch result: subset guard cannot auth-eval
+
+Recover closed `t1_balle_modal_guard_1aac11aa_20260510T1301Z` terminally with
+`failed_t1_modal_recovered_no_score_claim`.
+
+What worked:
+
+- canonical A1 payload was mounted and validated;
+- scorer import probe passed;
+- score-domain training ran on Modal T4 for the bounded guard config
+  (`max_target_pairs=8`);
+- packet compiler emitted a byte-changed three-member packet:
+  archive size `481205`, SHA-256
+  `68e73f5f06c3aa68786918270503592ad6745d0f46ece855ccb8faa7135cd661`;
+- no-op proof passed and runtime consumption was proven for the packet.
+
+What failed:
+
+```text
+RuntimeError: [inflate] WRONG-SIZE .raw file(s): 0.raw=48832128B
+expected 3662409600B (1164x874x1200x3)
+```
+
+Classification: `exact_eval_ineligible_subset_guard_export`, not a model
+score result. The guard trained on 8 frame pairs and its runtime emitted 16
+frames; contest auth eval requires the full 600-pair / 1200-frame video.
+
+Fix:
+
+- `experiments/modal_t1_balle_endtoend.py` now requests
+  `T1_RUN_CONTEST_CUDA_AUTH_EVAL=1` only for full 600-pair exports
+  (`max_target_pairs is None` or `>=600`);
+- subset guard runs request training/export only and are classified as
+  no-score integration probes;
+- recover distinguishes planned training-only success from remote failures by
+  using `completed_t1_training_only_recovered_no_score_claim` when returncode is
+  zero but no exact auth-eval score claim exists.
+
+Next T1 dispatch choices:
+
+1. bounded guard: keep `max_target_pairs<=8`, no contest auth eval, verify
+   training/packet artifacts only;
+2. score-bearing run: full 600-pair export with enough train timeout and then
+   contest-CUDA auth eval.
+
+No score claim or lane promotion is made from this result.

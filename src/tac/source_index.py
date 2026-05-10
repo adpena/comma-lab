@@ -25,7 +25,7 @@ _CURRENT_SOURCE_INDEX: contextvars.ContextVar[SourceIndex | None] = contextvars.
     "tac_current_source_index",
     default=None,
 )
-_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v15"
+_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v18"
 
 
 def _safe_resolve(path: Path) -> Path:
@@ -43,6 +43,7 @@ _DEFAULT_TEXT_FACT_NEEDLES = frozenset(
     {
         "--disable-eval-roundtrip",
         "--device mps",
+        "--device",
         "--no-eval-roundtrip",
         "--device cpu",
         "--half-frame",
@@ -91,6 +92,8 @@ _DEFAULT_TEXT_FACT_NEEDLES = frozenset(
         ".tgz",
         ".zip",
         "make_synthetic_pair_batch",
+        "make_smoke",
+        "make_synthetic",
         "mps",
         "pack_sparse_delta",
         "compliance_status",
@@ -98,6 +101,7 @@ _DEFAULT_TEXT_FACT_NEEDLES = frozenset(
         "torch",
         "torch.frombuffer",
         "torch.load",
+        "tar",
         "_enforce_eval_roundtrip(args",
         "add_argument",
         "[contest-CUDA]",
@@ -116,9 +120,21 @@ _DEFAULT_TEXT_FACT_NEEDLES = frozenset(
         "promoted",
         "FALSIFIED",
         "FALSIFICATION",
+        "/tmp/",
+        "_partial",
+        "auth_eval",
+        "cp ",
         "dispatched",
         "blessed",
+        "install",
+        "ln -s",
+        "mv ",
+        "nohup",
+        "pgrep",
+        "pgrep -f",
+        "rsync",
         "save_posterior",
+        "scp",
         "_posterior_lock",
         ".omx/state/",
         ".commit-lock",
@@ -150,6 +166,7 @@ _DEFAULT_TEXT_FACT_NEEDLES = frozenset(
         "CUSTODY_TOKENS",
         "GATE_TOKENS",
         "GUARD_TOKENS",
+        "zip",
     }
 )
 

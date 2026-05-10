@@ -57,6 +57,7 @@ REMOTE_POST_TRAIN_EVAL_BUFFER_HOURS = 1.0
 REMOTE_ARTIFACT_COLLECTION_BUFFER_HOURS = 0.25
 DEFAULT_COST_CAP_USD = 80.0
 DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK = 2048
+CONTEST_EXPECTED_PAIRS = 600
 REMOTE_PYTHONPATH = f"{REMOTE_REPO / 'src'}:{REMOTE_REPO / 'upstream'}:{REMOTE_REPO}"
 MOUNTED_CODE_PATHS = (
     "src",
@@ -380,6 +381,12 @@ def _estimated_cost(timeout_hours: float) -> float:
     return HOURLY_RATE_T4_USD * float(timeout_hours)
 
 
+def _contest_auth_eval_requested(max_target_pairs: int | None) -> bool:
+    """Return whether this run can emit the full contest video for auth eval."""
+
+    return max_target_pairs is None or int(max_target_pairs) >= CONTEST_EXPECTED_PAIRS
+
+
 def _local_git_head() -> str | None:
     proc = subprocess.run(
         ["git", "rev-parse", "HEAD"],
@@ -561,6 +568,7 @@ def build_local_plan(
         validation_errors.append("max_target_pairs_must_be_positive")
     if int(sinkhorn_max_positions_per_chunk) <= 0:
         validation_errors.append("sinkhorn_max_positions_per_chunk_must_be_positive")
+    contest_auth_eval_requested = _contest_auth_eval_requested(max_target_pairs)
     canonical_a1_payload = _canonical_a1_payload_snapshot()
     validation_errors.extend(
         f"canonical_a1_payload_{err}"
@@ -590,11 +598,18 @@ def build_local_plan(
             "segmentation_surrogate": "sinkhorn",
             "enable_t13_sqrt_n_budget": True,
             "enable_t19_adaptive_rho": True,
+            "contest_cuda_auth_eval_requested": contest_auth_eval_requested,
         },
         "canonical_a1_payload": canonical_a1_payload,
         "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
         "auth_eval_device": "cuda",
         "expected_n_samples": 600,
+        "contest_cuda_auth_eval_requested": contest_auth_eval_requested,
+        "contest_cuda_auth_eval_request_reason": (
+            "full_600_pair_export"
+            if contest_auth_eval_requested
+            else "subset_guard_training_only_max_target_pairs_lt_600"
+        ),
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
@@ -623,6 +638,10 @@ def build_local_plan(
         "notes": [
             "Plan-only path opens no lane claim and creates no Modal app.",
             "Real dispatch must use `modal run ... --execute`.",
+            (
+                "Subset guard runs train and export local artifacts only; exact "
+                "contest-CUDA auth eval is requested only for full 600-pair exports."
+            ),
             "Training-only output is not score evidence; recover accepts only exact contest-CUDA auth eval with zero blockers.",
         ],
     }
@@ -849,6 +868,7 @@ def run_t1_balle_modal(
             },
         )
 
+    contest_auth_eval_requested = _contest_auth_eval_requested(max_target_pairs)
     env = {
         **os.environ,
         "PYTHONPATH": REMOTE_PYTHONPATH,
@@ -860,7 +880,7 @@ def run_t1_balle_modal(
         "LOG_DIR": str(out_dir),
         "OUTPUT_DIR": str(out_dir / "output"),
         "T1_ALLOW_SCORE_DOMAIN_TRAINING": "1",
-        "T1_RUN_CONTEST_CUDA_AUTH_EVAL": "1",
+        "T1_RUN_CONTEST_CUDA_AUTH_EVAL": "1" if contest_auth_eval_requested else "0",
         "LOCAL_CUDA_WORKER": "1",
         "DISPATCH_PLATFORM": "modal",
         "T1_DISPATCH_INSTANCE_JOB_ID": instance_job_id,
@@ -934,6 +954,7 @@ def run_t1_balle_modal(
                 "remote_claims_path": str(claim_path),
                 "mounted_code_git_head": mounted_code_git_head,
                 "mounted_code_git_branch": mounted_code_git_branch,
+                "contest_cuda_auth_eval_requested": contest_auth_eval_requested,
             },
         )
         result["elapsed_seconds"] = time.monotonic() - start
@@ -1315,7 +1336,12 @@ def recover(label: str) -> int:
             "artifacts_dir": str(artifacts_dir),
         },
     )
-    status = "completed_t1_contest_cuda_recovered" if score_claim else "failed_t1_modal_recovered_no_score_claim"
+    if score_claim:
+        status = "completed_t1_contest_cuda_recovered"
+    elif _returncode_is_zero(result.get("returncode")):
+        status = "completed_t1_training_only_recovered_no_score_claim"
+    else:
+        status = "failed_t1_modal_recovered_no_score_claim"
     notes = (
         f"rc={result.get('returncode')!r}; stage={result.get('stage')!r}; "
         f"score_claim={score_claim}; blockers={blockers}; summary={summary_path}"

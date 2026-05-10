@@ -74,3 +74,40 @@ before more cross-archive composition work.
   first-class training guard before any new NeRV/HNeRV/Lane12-v2 dispatch.
 - Independently verify the A1-vs-PR101 byte-identity claim with section SHA
   manifests and a no-op/runtime-framing control.
+
+## 2026-05-10 PR95 source-profile custody refresh
+
+The static PR95 HNeRV/Muon intake profiler was still defaulting to an older
+`public_pr95_intake_20260504_codex/pr95_src/submissions/hnerv_muon` tree that
+contains only recovered bytecode cache files. That made the profile parse the
+archive correctly but miss the actual 8-stage PR95 training source.
+
+Fix:
+
+- `experiments/profile_pr95_hnerv_muon_intake.py` now defaults source intake to
+  the curated release-view source tree:
+  `experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon`.
+- Source tree hashing excludes `__pycache__`, `.pyc`, and `.pyo` artifacts.
+- The refreshed local profile now reports `source_file_count=21` and `8`
+  training stages:
+  `stage1_v328_ce`, `stage2_v331_softplus`, `stage3_v332_smooth`,
+  `stage4_v332_qat`, `stage5_c1a_l7`, `stage6_lambda_sweep`,
+  `stage7_sigma_sweep`, `stage8_muon_finetune`.
+
+Artifacts:
+
+- `experiments/results/public_pr95_intake_20260504_codex/profile_pr95_hnerv_muon_intake.json`
+- `experiments/results/public_pr95_intake_20260504_codex/profile_pr95_hnerv_muon_intake.md`
+
+Verification:
+
+```bash
+.venv/bin/python -m pytest -q src/tac/tests/test_profile_pr95_hnerv_muon_intake.py
+# 2 passed
+
+.venv/bin/python experiments/profile_pr95_hnerv_muon_intake.py --no-write
+# confirms archive e976acd5...88440a, 21 source files, 8 stages, no score claim
+```
+
+Authority boundary: this is source/static-intake evidence only. It sharpens the
+PR95 reproduction target and does not promote any score.

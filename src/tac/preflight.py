@@ -3792,6 +3792,51 @@ def _python_forbidden_scan_may_match(text: str) -> bool:
 _CODEBASE_DRIFT_PY_PREFILTER_RE = (
     r"nohup|pgrep\s+-[A-Za-z]*f|/tmp/|auth_eval|_partial|\.pt|\.bin"
 )
+_CODEBASE_DRIFT_SHIP_TOKENS = (
+    "cp ",
+    "mv ",
+    "install",
+    "ln -s",
+    "tar",
+    "zip",
+    "scp",
+    "rsync",
+)
+_CODEBASE_DRIFT_PT_BIN_SHIP_TOKENS = ("cp ", "mv ", "install", "ln -s")
+
+
+def _codebase_drift_facts_may_match(facts) -> bool:
+    """SourceTextFacts equivalent of _python_forbidden_scan_may_match.
+
+    This is intentionally conservative around /tmp/: the precise scanner
+    rechecks the bash/sh/python command shape after reading the candidate.
+    """
+
+    if facts.contains("nohup") or facts.contains("pgrep -f"):
+        return True
+    if facts.contains("/tmp/"):
+        return True
+    if facts.contains_all(("auth_eval", "--device", "mps")):
+        return True
+    if facts.contains("_partial") and facts.contains_any(_CODEBASE_DRIFT_SHIP_TOKENS):
+        return True
+    return (
+        facts.contains(".pt")
+        and facts.contains(".bin")
+        and facts.contains_any(_CODEBASE_DRIFT_PT_BIN_SHIP_TOKENS)
+    )
+
+
+def _codebase_drift_source_index_python_candidates(
+    source_index,
+    dirs: Sequence[str | Path],
+) -> tuple[Path, ...]:
+    facts_rows = source_index.facts_for_files(dirs, pattern="*.py")
+    return tuple(
+        facts.path
+        for facts in facts_rows
+        if _codebase_drift_facts_may_match(facts)
+    )
 
 
 def _scan_python_for_forbidden(path: Path, *, source_index=None) -> list[str]:
@@ -4015,13 +4060,25 @@ def check_codebase_drift(
 
     all_py_paths = tuple(py_paths)
     py_scan_paths: tuple[Path, ...] = all_py_paths
-    rg_py_candidates = _rg_python_files_matching_regex(
-        root,
-        drift_scan_dirs,
-        _CODEBASE_DRIFT_PY_PREFILTER_RE,
-    )
-    if rg_py_candidates is not None:
-        rg_candidate_set = {path.resolve() for path in rg_py_candidates}
+    rg_candidate_set: set[Path] | None = None
+    if source_index is not None:
+        indexed_candidates = _codebase_drift_source_index_python_candidates(
+            source_index,
+            drift_scan_dirs,
+        )
+        indexed_candidate_set = {path.resolve() for path in indexed_candidates}
+        py_scan_paths = tuple(
+            path for path in all_py_paths if path.resolve() in indexed_candidate_set
+        )
+    else:
+        rg_py_candidates = _rg_python_files_matching_regex(
+            root,
+            drift_scan_dirs,
+            _CODEBASE_DRIFT_PY_PREFILTER_RE,
+        )
+        if rg_py_candidates is not None:
+            rg_candidate_set = {path.resolve() for path in rg_py_candidates}
+    if source_index is None and rg_candidate_set is not None:
         py_scan_paths = tuple(
             path for path in all_py_paths if path.resolve() in rg_candidate_set
         )
@@ -9865,16 +9922,35 @@ def check_training_scripts_use_real_data_in_nonsmoke_mode(
 
     if repo_root is None:
         repo_root = REPO_ROOT
-    train_files = sorted((repo_root / "experiments").glob("train_*.py"))
+    source_index = _current_source_index(repo_root)
+    if source_index is not None:
+        train_files = list(
+            source_index.files_containing_substrings(
+                ["experiments"],
+                pattern="train_*.py",
+                substrings=("make_synthetic", "make_smoke"),
+                require_all=False,
+            )
+        )
+    else:
+        train_files = sorted((repo_root / "experiments").glob("train_*.py"))
     violations: list[str] = []
 
     for path in train_files:
         try:
-            text = path.read_text(encoding="utf-8")
+            text = (
+                source_index.read_text(path, encoding="utf-8")
+                if source_index is not None
+                else path.read_text(encoding="utf-8")
+            )
         except (OSError, UnicodeDecodeError):
             continue
         try:
-            tree = _ast.parse(text, filename=str(path))
+            tree = (
+                source_index.python_ast(path)
+                if source_index is not None
+                else _ast.parse(text, filename=str(path))
+            )
         except SyntaxError:
             continue
 
@@ -32804,8 +32880,9 @@ def _line_window_code_contains_any(
     end = min(len(lines), lineno + after + 1)
     window = "\n".join(lines[start:end])
     code_parts: list[str] = []
-    try:
-        token_stream = tokenize.generate_tokens(io.StringIO(window).readline)
+
+    def _append_code_tokens(text: str) -> None:
+        token_stream = tokenize.generate_tokens(io.StringIO(text).readline)
         for tok in token_stream:
             if tok.type in {
                 tokenize.COMMENT,
@@ -32817,11 +32894,18 @@ def _line_window_code_contains_any(
             }:
                 continue
             code_parts.append(tok.string)
-    except tokenize.TokenError:
+
+    try:
+        _append_code_tokens(window)
+    except (tokenize.TokenError, IndentationError):
         # A bounded source window can end inside an open call/block. Keep the
         # executable tokens already collected; they are still enough to prove
         # whether the nearby custody validator call exists.
-        pass
+        try:
+            stripped_window = "\n".join(line.lstrip() for line in window.splitlines())
+            _append_code_tokens(stripped_window)
+        except (tokenize.TokenError, IndentationError):
+            pass
     compact_code = "".join(code_parts)
     spaced_code = " ".join(code_parts)
     return any(tok in compact_code or tok in spaced_code for tok in tokens)
@@ -32830,6 +32914,10 @@ def _line_window_code_contains_any(
 def _line_has_authoritative_tag_bypass_pattern(line: str) -> bool:
     """Return True for tag-only predicates that can promote without custody."""
     if "`" in line:
+        return False
+    if re.search(r"\beval_axis\s*(?:==|!=)\s*['\"]\[contest-(?:CPU|CUDA)", line):
+        return False
+    if re.search(r"['\"]\[contest-(?:CPU|CUDA)[^'\"]*['\"]\s*(?:==|!=)\s*eval_axis\b", line):
         return False
     if "AUTHORITATIVE_TAGS" in line and re.search(
         r"\b(?:not\s+in|in)\s+AUTHORITATIVE_TAGS\b", line

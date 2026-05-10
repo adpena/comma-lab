@@ -231,7 +231,8 @@ def test_modal_t1_remote_runs_existing_script_with_score_domain_exact_eval_env()
     assert "A1_CANONICAL_REMOTE_PATH" in remote_src
     assert "A1_DESIGNATION_REMOTE_PATH" in remote_src
     assert '"T1_ALLOW_SCORE_DOMAIN_TRAINING": "1"' in remote_src
-    assert '"T1_RUN_CONTEST_CUDA_AUTH_EVAL": "1"' in remote_src
+    assert '"T1_RUN_CONTEST_CUDA_AUTH_EVAL": "1" if contest_auth_eval_requested else "0"' in remote_src
+    assert "_contest_auth_eval_requested(max_target_pairs)" in remote_src
     assert '"LOCAL_CUDA_WORKER": "1"' in remote_src
     assert '"T1_DISPATCH_INSTANCE_JOB_ID": instance_job_id' in remote_src
     assert '"T1_DISPATCH_CLAIMS_PATH": str(claim_path)' in remote_src
@@ -358,6 +359,34 @@ def test_modal_t1_guard_labels_accept_true_bounded_guard_params() -> None:
     assert payload["params"]["epochs"] == 50
     assert payload["params"]["max_target_pairs"] == 8
     assert payload["params"]["sinkhorn_max_positions_per_chunk"] == 2048
+    assert payload["params"]["contest_cuda_auth_eval_requested"] is False
+    assert payload["contest_cuda_auth_eval_requested"] is False
+
+
+def test_modal_t1_full_export_requests_contest_cuda_auth_eval() -> None:
+    module = _load_module()
+
+    payload, rc = module.build_local_plan(
+        label="unit-full-run",
+        epochs=3000,
+        batch_size=16,
+        timeout_hours=24,
+        cost_cap_usd=80,
+        train_timeout_hours=module.DEFAULT_TRAIN_TIMEOUT_HOURS,
+        max_target_pairs=None,
+    )
+
+    assert rc == 0
+    assert payload["params"]["contest_cuda_auth_eval_requested"] is True
+    assert payload["contest_cuda_auth_eval_requested"] is True
+
+
+def test_modal_t1_recover_classifies_training_only_success_without_failed_label() -> None:
+    text = _source()
+    recover_src = text[text.index("def recover("):]
+
+    assert "completed_t1_training_only_recovered_no_score_claim" in recover_src
+    assert "elif _returncode_is_zero(result.get(\"returncode\")):" in recover_src
 
 
 def test_modal_t1_default_train_timeout_leaves_artifact_collection_buffer() -> None:

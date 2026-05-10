@@ -110,3 +110,133 @@ def test_profile_resolver_source_index_matches_no_index(
     assert with_index == no_index
     assert len(with_index) == 1
     assert "beta_key" in with_index[0]
+
+
+def test_codebase_drift_source_index_matches_no_index_for_forbidden_python(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE", "1")
+    _write(
+        tmp_path / "scripts" / "bad_dispatch.py",
+        """import subprocess
+
+def launch() -> None:
+    cmd = "while pgrep -f train_distill > /dev/null; do sleep 1; done; python train_distill.py"
+    subprocess.run(cmd, shell=True)
+
+def tmp_exec() -> None:
+    cmd = "python /tmp/run_remote.py --profile green --padding filler"
+    subprocess.run(cmd, shell=True)
+""",
+    )
+    _write(
+        tmp_path / "scripts" / "safe_dispatch.py",
+        """import subprocess
+
+def launch() -> None:
+    subprocess.run(["python", "experiments/pipeline.py"])
+""",
+    )
+
+    no_index = preflight.check_codebase_drift(
+        repo_root=tmp_path,
+        strict=False,
+        verbose=False,
+    )
+    with_index = _with_source_index(tmp_path, preflight.check_codebase_drift)
+
+    assert with_index == no_index
+    assert len(with_index) == 2
+    assert any("pgrep -f train_distill" in row for row in with_index)
+    assert any("/tmp/*.{" in row for row in with_index)
+
+
+def test_codebase_drift_source_index_candidate_filter_does_not_call_rg(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE", "1")
+    _write(
+        tmp_path / "scripts" / "nohup_dispatch.py",
+        """import subprocess
+
+def launch() -> None:
+    subprocess.run(["nohup", "python", "experiments/pipeline.py"])
+""",
+    )
+
+    def _forbidden_rg_call(*_args, **_kwargs):
+        raise AssertionError("SourceIndex path must not shell out to rg prefilter")
+
+    monkeypatch.setattr(preflight, "_rg_python_files_matching_regex", _forbidden_rg_call)
+
+    with source_index_context(tmp_path):
+        rows = preflight.check_codebase_drift(
+            repo_root=tmp_path,
+            strict=False,
+            verbose=False,
+        )
+
+    assert len(rows) == 1
+    assert "nohup arg" in rows[0]
+
+
+def test_training_synthetic_source_index_matches_no_index(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "experiments" / "train_bad.py",
+        """def make_synthetic_pair_batch():
+    return object()
+
+def main() -> int:
+    batch = make_synthetic_pair_batch()
+    return 0 if batch else 1
+""",
+    )
+    _write(
+        tmp_path / "experiments" / "train_large_safe.py",
+        "\n".join(["def main() -> int:", "    return 0"] + ["# filler"] * 200),
+    )
+
+    no_index = preflight.check_training_scripts_use_real_data_in_nonsmoke_mode(
+        repo_root=tmp_path,
+        strict=False,
+        verbose=False,
+    )
+    with_index = _with_source_index(
+        tmp_path,
+        preflight.check_training_scripts_use_real_data_in_nonsmoke_mode,
+    )
+
+    assert with_index == no_index
+    assert len(with_index) == 1
+    assert "train_bad.py:5" in with_index[0]
+
+
+def test_custody_window_tokenizer_handles_mid_block_indentation() -> None:
+    lines = [
+        "if current_score is not None:",
+        "    is_authoritative = result.evidence_tag in AUTHORITATIVE_TAGS",
+        "elif delta_vs_baseline is not None and delta_vs_baseline > score_tolerance:",
+        "    verdict = result.validate_custody()",
+    ]
+
+    assert preflight._line_window_code_contains_any(
+        lines,
+        1,
+        ("validate_custody",),
+        before=0,
+        after=3,
+    )
+
+
+def test_authoritative_tag_scanner_ignores_eval_axis_classification() -> None:
+    assert not preflight._line_has_authoritative_tag_bypass_pattern(
+        'if eval_axis == "[contest-CUDA]":'
+    )
+    assert not preflight._line_has_authoritative_tag_bypass_pattern(
+        'if "[contest-CPU]" != eval_axis:'
+    )
+    assert preflight._line_has_authoritative_tag_bypass_pattern(
+        'if result.evidence_tag == "[contest-CUDA]":'
+    )

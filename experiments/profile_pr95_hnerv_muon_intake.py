@@ -25,7 +25,11 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_INTAKE_DIR = REPO_ROOT / "experiments/results/public_pr95_intake_20260504_codex"
 DEFAULT_ARCHIVE = DEFAULT_INTAKE_DIR / "archive.zip"
-DEFAULT_SOURCE_DIR = DEFAULT_INTAKE_DIR / "pr95_src/submissions/hnerv_muon"
+DEFAULT_RELEASE_VIEW_DIR = (
+    REPO_ROOT
+    / "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto"
+)
+DEFAULT_SOURCE_DIR = DEFAULT_RELEASE_VIEW_DIR / "source/submissions/hnerv_muon"
 DEFAULT_STATIC_INTAKE = DEFAULT_INTAKE_DIR / "pr95_static_intake.json"
 DEFAULT_JSON_OUT = DEFAULT_INTAKE_DIR / "profile_pr95_hnerv_muon_intake.json"
 DEFAULT_MARKDOWN_OUT = DEFAULT_INTAKE_DIR / "profile_pr95_hnerv_muon_intake.md"
@@ -335,7 +339,7 @@ def parse_source_summary(source_dir: Path) -> dict[str, Any]:
     train_path = source_dir / "src/train.py"
     stage_dir = source_dir / "src/stages"
 
-    source_files = sorted(path for path in source_dir.rglob("*") if path.is_file())
+    source_files = sorted(path for path in source_dir.rglob("*") if _is_source_file(path))
     readme = readme_path.read_text(encoding="utf-8") if readme_path.exists() else ""
     model_text = model_path.read_text(encoding="utf-8") if model_path.exists() else ""
     optim_text = optim_path.read_text(encoding="utf-8") if optim_path.exists() else ""
@@ -427,6 +431,14 @@ def _source_tree_sha256(files: list[Path]) -> str:
         digest.update(_sha256_file(path).encode("ascii"))
         digest.update(b"\0")
     return digest.hexdigest()
+
+
+def _is_source_file(path: Path) -> bool:
+    if "__pycache__" in path.parts:
+        return False
+    if path.suffix in {".pyc", ".pyo"}:
+        return False
+    return path.is_file()
 
 
 def load_static_intake(path: Path) -> dict[str, Any] | None:

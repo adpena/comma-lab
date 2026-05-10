@@ -61,6 +61,7 @@ import atexit
 import datetime as dt
 import hashlib
 import json
+import math
 import os
 import shutil
 import stat
@@ -93,7 +94,10 @@ SIDECAR_CHOICE_STATE_SCHEMA = "a1_sidecar_choice_state_v1"
 SIDECAR_PAIR_SEARCH_RECORDS_SCHEMA = "a1_sidecar_pair_search_records_v1"
 SIDECAR_DISPATCH_CLAIM_SCHEMA = "a1_sidecar_dispatch_claim_v1"
 SIDECAR_EXACT_EVAL_PREFLIGHT_SCHEMA = "a1_sidecar_exact_eval_preflight_v1"
+SIDECAR_EVAL_CLASSIFICATION_SCHEMA = "a1_sidecar_exact_eval_classification_v1"
 DEFAULT_DISPATCH_CLAIMS_PATH = REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md"
+CONTEST_ORIGINAL_BYTES = 37_545_489
+EVAL_FORMULA_SCORE_TOLERANCE = 1e-7
 REQUIRED_RUNTIME_FILES = ("inflate.py", "inflate.sh", "src/codec.py", "src/model.py")
 RUNTIME_TREE_EXCLUDED_FILES = frozenset(
     {"archive.zip", "archive_manifest.json", "contest_auth_eval.json", "report.txt"}
@@ -929,6 +933,234 @@ def _manifest_top_level_dispatch_blockers(manifest: dict[str, Any]) -> list[str]
     if manifest.get("search_device") == "mps":
         blockers.append("mps_search_device_advisory_only_not_exact_eval_ready")
     return blockers
+
+
+def _load_json_object(path: Path) -> dict[str, Any]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"JSON object expected at {manifest_path(path)}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError(f"JSON object expected at {manifest_path(path)}")
+    return payload
+
+
+def _float_or_none(value: object) -> float | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _int_or_none(value: object) -> int | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _eval_result_archive_sha256(eval_result: dict[str, Any]) -> str | None:
+    for key in ("archive_sha256", "candidate_archive_sha256", "new_archive_sha256"):
+        value = eval_result.get(key)
+        if _is_sha256(value):
+            return str(value)
+    provenance = eval_result.get("provenance")
+    if isinstance(provenance, dict):
+        value = provenance.get("archive_sha256")
+        if _is_sha256(value):
+            return str(value)
+    return None
+
+
+def _classify_eval_axis(eval_result: dict[str, Any]) -> str:
+    evidence = str(eval_result.get("evidence_grade") or "").lower()
+    hardware = str(eval_result.get("hardware") or "").lower()
+    device = str(eval_result.get("device") or "").lower()
+    axis = str(eval_result.get("score_axis") or eval_result.get("evaluation_axis") or "").lower()
+    if "contest-cuda" in evidence or axis == "contest_cuda" or device == "cuda":
+        return "[contest-CUDA]"
+    if (
+        "contest-cpu" in evidence
+        or axis == "contest_cpu"
+        or "github-actions" in hardware
+        or device == "cpu"
+    ):
+        return "[contest-CPU]"
+    return "[unknown]"
+
+
+def _score_from_components(
+    *,
+    seg_dist: float | None,
+    pose_dist: float | None,
+    archive_bytes: int | None,
+) -> float | None:
+    if seg_dist is None or pose_dist is None or archive_bytes is None:
+        return None
+    if pose_dist < 0:
+        return None
+    return (
+        100.0 * seg_dist
+        + math.sqrt(10.0 * pose_dist)
+        + 25.0 * float(archive_bytes) / float(CONTEST_ORIGINAL_BYTES)
+    )
+
+
+def classify_exact_eval_result(
+    manifest: dict[str, Any],
+    eval_result: dict[str, Any],
+    *,
+    eval_result_path: Path | None = None,
+    score_tolerance: float = 1e-9,
+) -> dict[str, Any]:
+    """Classify a returned exact-eval artifact without turning it into a claim."""
+
+    baseline = manifest.get("a1_canonical_baseline")
+    baseline_score = (
+        _float_or_none(baseline.get("score")) if isinstance(baseline, dict) else None
+    )
+    if baseline_score is None:
+        baseline_score = 0.19284757743677347
+
+    score = _float_or_none(
+        eval_result.get("score_recomputed_from_components", eval_result.get("score"))
+    )
+    archive_bytes = _int_or_none(
+        eval_result.get("archive_size_bytes", eval_result.get("archive_bytes"))
+    )
+    seg_dist = _float_or_none(
+        eval_result.get("avg_segnet_dist", eval_result.get("seg_dist"))
+    )
+    pose_dist = _float_or_none(
+        eval_result.get("avg_posenet_dist", eval_result.get("pose_dist"))
+    )
+    formula_score = _score_from_components(
+        seg_dist=seg_dist,
+        pose_dist=pose_dist,
+        archive_bytes=archive_bytes,
+    )
+    if score is None:
+        score = formula_score
+
+    expected_archive_sha = manifest.get("new_archive_sha256") or manifest.get(
+        "archive_sha256"
+    )
+    expected_archive_bytes = _int_or_none(
+        manifest.get("new_archive_bytes", manifest.get("archive_size_bytes"))
+    )
+    eval_archive_sha = _eval_result_archive_sha256(eval_result)
+    eval_axis = _classify_eval_axis(eval_result)
+    n_samples = _int_or_none(eval_result.get("n_samples", eval_result.get("sample_count")))
+
+    custody_blockers: list[str] = []
+    caveats: list[str] = []
+    if manifest.get("lane_id") != SIDECAR_LANE_ID:
+        custody_blockers.append("sidecar_lane_id_missing_or_mismatch")
+    if score is None:
+        custody_blockers.append("eval_score_missing")
+    if archive_bytes is None:
+        custody_blockers.append("eval_archive_size_missing")
+    elif expected_archive_bytes is not None and archive_bytes != expected_archive_bytes:
+        custody_blockers.append("eval_archive_size_mismatch")
+    if eval_archive_sha is None:
+        caveats.append(
+            "eval_result_missing_archive_sha256; bound by manifest archive SHA and eval archive size"
+        )
+    elif _is_sha256(expected_archive_sha) and eval_archive_sha != expected_archive_sha:
+        custody_blockers.append("eval_archive_sha256_mismatch")
+    if n_samples != N_PAIRS:
+        custody_blockers.append("eval_sample_count_mismatch")
+    if eval_axis not in {"[contest-CPU]", "[contest-CUDA]"}:
+        custody_blockers.append("eval_axis_not_contest_cpu_or_cuda")
+    if formula_score is not None and score is not None:
+        if abs(formula_score - score) > EVAL_FORMULA_SCORE_TOLERANCE:
+            custody_blockers.append("eval_score_formula_mismatch")
+
+    delta_vs_baseline = score - baseline_score if score is not None else None
+    if custody_blockers:
+        classification = "exact_eval_classification_indeterminate"
+        terminal_blockers = ["exact_eval_classification_indeterminate"]
+    elif delta_vs_baseline is not None and delta_vs_baseline > score_tolerance:
+        classification = (
+            "measured_contest_cuda_regression_retired"
+            if eval_axis == "[contest-CUDA]"
+            else "measured_contest_cpu_regression_retired"
+        )
+        terminal_blockers = ["measured_implementation_regression_retired"]
+    elif delta_vs_baseline is not None and delta_vs_baseline < -score_tolerance:
+        if eval_axis == "[contest-CUDA]":
+            classification = "contest_cuda_positive_requires_operator_review"
+            terminal_blockers = ["contest_cuda_positive_requires_operator_review"]
+        else:
+            classification = "contest_cpu_positive_requires_contest_cuda"
+            terminal_blockers = [
+                "contest_cpu_positive_requires_contest_cuda_before_score_claim"
+            ]
+    else:
+        classification = (
+            "measured_contest_cuda_no_score_lowering_retired"
+            if eval_axis == "[contest-CUDA]"
+            else "measured_contest_cpu_no_score_lowering_retired"
+        )
+        terminal_blockers = ["measured_no_score_lowering_retired"]
+
+    return {
+        "schema_version": SIDECAR_EVAL_CLASSIFICATION_SCHEMA,
+        "created_at_utc": dt.datetime.now(dt.UTC).isoformat(),
+        "lane_id": manifest.get("lane_id"),
+        "classification": classification,
+        "terminal_dispatch_blockers": terminal_blockers,
+        "custody_blockers": custody_blockers,
+        "caveats": caveats,
+        "score_claim": False,
+        "promotion_claim": False,
+        "eval_axis": eval_axis,
+        "eval_result_path": manifest_path(eval_result_path) if eval_result_path else None,
+        "expected_archive_sha256": expected_archive_sha,
+        "eval_archive_sha256": eval_archive_sha,
+        "archive_size_bytes": archive_bytes,
+        "expected_archive_size_bytes": expected_archive_bytes,
+        "n_samples": n_samples,
+        "score_recomputed_from_components": score,
+        "score_formula_recomputed": formula_score,
+        "score_formula_tolerance": EVAL_FORMULA_SCORE_TOLERANCE,
+        "baseline_score": baseline_score,
+        "baseline_tag": baseline.get("tag") if isinstance(baseline, dict) else None,
+        "delta_vs_baseline": delta_vs_baseline,
+        "avg_segnet_dist": seg_dist,
+        "avg_posenet_dist": pose_dist,
+        "evidence_grade": eval_result.get("evidence_grade"),
+        "hardware": eval_result.get("hardware"),
+        "cpu_cuda_discipline": (
+            "contest-CPU classification is not a contest-CUDA score claim; "
+            "CUDA remains unproven unless eval_axis is [contest-CUDA]"
+        ),
+    }
+
+
+def apply_exact_eval_classification_to_manifest(
+    manifest: dict[str, Any],
+    classification: dict[str, Any],
+) -> dict[str, Any]:
+    """Attach terminal eval classification and fail closed for future dispatch."""
+
+    previous = list(manifest.get("dispatch_blockers") or [])
+    if previous:
+        manifest["pre_eval_classification_dispatch_blockers"] = previous
+    blockers = list(classification.get("terminal_dispatch_blockers") or [])
+    blockers.extend(str(item) for item in classification.get("custody_blockers") or [])
+    if not blockers:
+        blockers = ["exact_eval_classification_missing_terminal_blocker"]
+    manifest["exact_eval_classification"] = classification
+    manifest["dispatch_blockers"] = list(dict.fromkeys(blockers))
+    manifest["ready_for_exact_eval_dispatch"] = False
+    manifest["score_claim"] = False
+    manifest["post_eval_status"] = classification.get("classification")
+    return manifest
 
 
 def run_local_runtime_smoke(
@@ -2454,15 +2686,42 @@ def main() -> int:
             "is searched, stop cleanly and emit a fail-closed partial packet"
         ),
     )
+    p.add_argument(
+        "--classify-eval-result",
+        type=Path,
+        default=None,
+        help=(
+            "classify a returned contest_auth_eval/adjudicated JSON against "
+            "output-dir/sidecar_manifest.json without rebuilding or dispatching"
+        ),
+    )
+    p.add_argument(
+        "--classification-output",
+        type=Path,
+        default=None,
+        help=(
+            "optional path for --classify-eval-result output; default is "
+            "output-dir/exact_eval_classification.json"
+        ),
+    )
     args = p.parse_args()
+    if args.classify_eval_result is not None and args.output_dir is None:
+        sys.stderr.write("[fatal] --classify-eval-result requires --output-dir\n")
+        return 2
     if args.auto_candidate_batch_size and not args.profile_candidate_batches:
         args.profile_candidate_batches = [1, 2, 4, 8, 16, 32, 64]
 
     timestamp = dt.datetime.now(dt.UTC).strftime("%Y%m%dT%H%M%SZ")
-    out_dir = args.output_dir or (
-        REPO_ROOT
-        / f"experiments/results/a1_per_pair_latent_sidecar_resampled_{timestamp}"
-    )
+    if args.output_dir is not None:
+        out_dir = args.output_dir
+    else:
+        out_dir = (
+            REPO_ROOT
+            / f"experiments/results/a1_per_pair_latent_sidecar_resampled_{timestamp}"
+        )
+    if args.classify_eval_result is not None and not out_dir.is_dir():
+        sys.stderr.write(f"[fatal] output dir does not exist: {manifest_path(out_dir)}\n")
+        return 2
     out_dir.mkdir(parents=True, exist_ok=True)
     output_lock = SidecarOutputLock(out_dir)
     try:
@@ -2470,6 +2729,55 @@ def main() -> int:
     except RuntimeError as exc:
         sys.stderr.write(f"[fatal] {exc}\n")
         return 2
+
+    if args.classify_eval_result is not None:
+        manifest_file = out_dir / "sidecar_manifest.json"
+        if not manifest_file.is_file():
+            sys.stderr.write(
+                f"[fatal] sidecar manifest missing: {manifest_path(manifest_file)}\n"
+            )
+            return 2
+        manifest = _load_json_object(manifest_file)
+        eval_result = _load_json_object(args.classify_eval_result)
+        classification_path = args.classification_output or (
+            out_dir / "exact_eval_classification.json"
+        )
+        classification_path.parent.mkdir(parents=True, exist_ok=True)
+        classification = classify_exact_eval_result(
+            manifest,
+            eval_result,
+            eval_result_path=args.classify_eval_result,
+        )
+        classification["artifact_path"] = manifest_path(classification_path)
+        classification_path.write_text(
+            json.dumps(classification, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        classification_sha = sha256_of(classification_path)
+        manifest = apply_exact_eval_classification_to_manifest(
+            manifest,
+            classification,
+        )
+        manifest["exact_eval_classification_path"] = manifest_path(
+            classification_path
+        )
+        manifest["exact_eval_classification_sha256"] = classification_sha
+        manifest_file.write_text(
+            json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        print(
+            "[done] exact-eval classification written to "
+            f"{manifest_path(classification_path)}",
+            flush=True,
+        )
+        print(
+            f"  classification = {classification['classification']} "
+            f"axis={classification['eval_axis']} "
+            f"score_claim={classification['score_claim']}",
+            flush=True,
+        )
+        return 0
 
     if args.search_signal == "joint_seg_pose" and not args.accept_cpu_budget:
         sys.stderr.write(
