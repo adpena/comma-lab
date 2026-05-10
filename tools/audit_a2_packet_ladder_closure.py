@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -86,6 +87,12 @@ LOCAL_A2_GLOBS = (
     "experiments/results/**/a2_runtime_closure*.json",
     "experiments/results/**/runtime_closure*.json",
 )
+LOCAL_A2_EXACT_FILENAMES = frozenset(
+    {
+        "a2_packet_ladder_manifest.json",
+        "candidate_manifest.json",
+    }
+)
 
 
 def _repo_rel(path: Path, repo_root: Path) -> str:
@@ -118,9 +125,21 @@ def _tracked_manifest_paths(repo_root: Path) -> list[Path]:
 
 
 def _local_manifest_paths(repo_root: Path) -> list[Path]:
+    results_root = repo_root / "experiments" / "results"
+    if not results_root.exists():
+        return []
     paths: set[Path] = set()
-    for pattern in LOCAL_A2_GLOBS:
-        paths.update(repo_root.glob(pattern))
+    for dirpath, _dirnames, filenames in os.walk(results_root):
+        base = Path(dirpath)
+        for filename in filenames:
+            if filename in LOCAL_A2_EXACT_FILENAMES or (
+                filename.endswith(".json")
+                and (
+                    filename.startswith("a2_runtime_closure")
+                    or filename.startswith("runtime_closure")
+                )
+            ):
+                paths.add(base / filename)
     return sorted(path for path in paths if path.is_file())
 
 
