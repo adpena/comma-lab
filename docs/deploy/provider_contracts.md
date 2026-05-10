@@ -27,9 +27,30 @@ Non-negotiable invariants:
 - MPS auth eval is never score truth.
 - Modal/AWS/Azure/GCP can host CUDA exact-eval only after lane claim, runtime closure, and adjudication over byte-closed artifacts.
 
+Readiness command:
+
+```bash
+.venv/bin/python tools/cloud_provider_readiness.py \
+  --output experiments/results/cloud_provider_readiness_latest.json \
+  --markdown-output experiments/results/cloud_provider_readiness_$(date -u +%Y%m%dT%H%M%SZ).md \
+  --timeout-s 8
+```
+
+Interpretation:
+
+- `score_claim=false` and `ready_for_exact_eval_dispatch=false` mean the file
+  is inventory only.
+- `exact_cuda_evidence_allowed=false` means the provider is not yet a score
+  truth surface, even if the CLI is installed.
+- Kaggle remains proxy-only even when kernels are runnable; winning configs
+  must move to a claimed CUDA provider before score use.
+- Modal CLI readiness is not enough for dispatch. Billing/credits and the CUDA
+  scorer import probe must both pass first.
+
 Current setup blockers:
 
-- Modal: `modal login`, billing context, CUDA image import probe.
+- Modal: `modal login`, billing/credits context, CUDA scorer import probe,
+  active-call harvest before refire.
 - Kaggle: API credentials, uploaded `tac-*.whl` dataset, GPU session quota.
 - AWS: `boto3`, credentials, region DLAMI resolution, SSH key/security group.
 - Azure: `az login`, quota/spot availability, SSH public key, lane tarball wiring.

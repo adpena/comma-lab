@@ -9,6 +9,7 @@ when those files are next touched.
 from __future__ import annotations
 
 import argparse
+import bisect
 import os
 import re
 from collections import Counter, defaultdict
@@ -150,10 +151,29 @@ def _candidate_patterns(text: str) -> tuple[Pattern, ...]:
     )
 
 
-def _pattern_matches(pattern: Pattern, line: str) -> bool:
+def _line_starts(text: str) -> list[int]:
+    starts = [0]
+    starts.extend(match.end() for match in re.finditer("\n", text))
+    return starts
+
+
+def _matching_line_numbers(
+    pattern: Pattern,
+    text: str,
+    lines: list[str],
+    line_starts: list[int],
+) -> list[int]:
     if pattern.key == "manual_audit_score_dispatch_metadata":
-        return "score_claim" in line or "dispatch_attempted" in line
-    return bool(pattern.regex.search(line))
+        return [
+            lineno
+            for lineno, line in enumerate(lines, start=1)
+            if "score_claim" in line or "dispatch_attempted" in line
+        ]
+    matched: set[int] = set()
+    for match in pattern.regex.finditer(text):
+        lineno = bisect.bisect_right(line_starts, match.start())
+        matched.add(lineno)
+    return sorted(matched)
 
 
 def audit_tooling(
@@ -178,18 +198,19 @@ def audit_tooling(
         active_patterns = _candidate_patterns(text)
         if not active_patterns:
             continue
-        for lineno, line in enumerate(text.splitlines(), start=1):
-            for pattern in active_patterns:
-                if _pattern_matches(pattern, line):
-                    per_file_counts[rel][pattern.key] += 1
-                    occurrences[pattern.key].append(
-                        {
-                            "canonical_target": pattern.canonical_target,
-                            "line": lineno,
-                            "path": rel,
-                            "severity": pattern.severity,
-                        }
-                    )
+        lines = text.splitlines()
+        line_starts = _line_starts(text)
+        for pattern in active_patterns:
+            for lineno in _matching_line_numbers(pattern, text, lines, line_starts):
+                per_file_counts[rel][pattern.key] += 1
+                occurrences[pattern.key].append(
+                    {
+                        "canonical_target": pattern.canonical_target,
+                        "line": lineno,
+                        "path": rel,
+                        "severity": pattern.severity,
+                    }
+                )
     summary = {
         "file_count": len(files),
         "pattern_counts": {

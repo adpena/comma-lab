@@ -65,6 +65,20 @@ class CloudProviderReadinessTests(unittest.TestCase):
         self.assertFalse(payload.exact_cuda_evidence_allowed)
         self.assertIn("score_claim=false", " ".join(payload.next_actions))
 
+    def test_probe_modal_cli_ready_still_requires_billing_and_cuda_probe(self) -> None:
+        mod = load_module()
+
+        def fake_runner(command: list[str], _timeout: int):
+            return mod.CommandResult(command=command, returncode=0, stdout="modal client version: 1.4.2\n")
+
+        with mock.patch.object(mod.shutil, "which", return_value="/usr/bin/modal"):
+            payload = mod.probe_modal(runner=fake_runner)
+
+        self.assertEqual(payload.status, "ready_cli_check_runtime_probe_next")
+        self.assertFalse(payload.exact_cuda_evidence_allowed)
+        self.assertIn("modal_billing_not_checked", payload.blockers)
+        self.assertIn("cuda_runtime_import_probe_not_run", payload.blockers)
+
     def test_probe_aws_classifies_expired_session(self) -> None:
         mod = load_module()
 

@@ -168,14 +168,15 @@ def probe_modal(*, runner: Runner = run_command, timeout_s: int = 15) -> Provide
     ok = result.returncode == 0
     return _provider(
         provider="modal",
-        status="ready" if ok else "blocked_cli_error",
+        status="ready_cli_check_runtime_probe_next" if ok else "blocked_cli_error",
         role="primary_short_cuda_dispatch_and_exact_eval_candidate",
-        exact_cuda=ok,
+        exact_cuda=False,
         proxy_only=False,
         result=result,
-        blockers=[] if ok else ["modal_cli_error"],
+        blockers=["modal_billing_not_checked", "cuda_runtime_import_probe_not_run"] if ok else ["modal_cli_error"],
         next_actions=[
             "Harvest active Modal A1 calls before refiring.",
+            "Run the Modal CUDA scorer import probe before any score-lowering job.",
             "Use claim_lane_dispatch.py before every new Modal GPU job.",
         ] if ok else ["Fix Modal CLI authentication or installation."],
     )

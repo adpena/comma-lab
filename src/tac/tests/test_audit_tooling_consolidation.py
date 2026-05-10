@@ -70,7 +70,19 @@ def test_audit_tooling_source_index_matches_direct_scan(tmp_path: Path) -> None:
     sample_dir = tmp_path / "tools"
     sample_dir.mkdir()
     (sample_dir / "sample.py").write_text(
-        "def _sha256_file(path):\n    return 'x'\n",
+        "\n".join(
+            [
+                "import json",
+                "import sys",
+                "from pathlib import Path",
+                "def _sha256_file(path):",
+                "    return 'x'",
+                "DATA = json.dumps({'score_claim': False}, indent=2, sort_keys=True)",
+                "sys.path.insert(0, str(Path(__file__).resolve().parents[1]))",
+                "ROOT = Path(__file__).resolve().parents[2]",
+                "dispatch_attempted = False",
+            ]
+        ),
         encoding="utf-8",
     )
 
