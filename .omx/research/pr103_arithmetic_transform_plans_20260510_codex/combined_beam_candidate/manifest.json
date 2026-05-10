@@ -187,6 +187,68 @@
       "source_sha256": "91d819d805a0640dd706b29228372d0a09d7a03275066b7b5659200c04afc198"
     }
   ],
+  "semantic_stream_parity": {
+    "all_stream_symbol_sha_match": true,
+    "dispatch_attempted": false,
+    "score_claim": false,
+    "stream_count": 9,
+    "streams": [
+      {
+        "candidate_decoded_symbols_sha256": "a0c5e83fa8837d96bdb05b41129a3ae4baf869b47261be98200dc8d1e8996e88",
+        "label": "stem.weight",
+        "match": true,
+        "source_decoded_symbols_sha256": "a0c5e83fa8837d96bdb05b41129a3ae4baf869b47261be98200dc8d1e8996e88"
+      },
+      {
+        "candidate_decoded_symbols_sha256": "7694627f7d05703801d0cc061667cdd84a61cf8bee2d02aab0e41992198b0e17",
+        "label": "blocks.0.weight",
+        "match": true,
+        "source_decoded_symbols_sha256": "7694627f7d05703801d0cc061667cdd84a61cf8bee2d02aab0e41992198b0e17"
+      },
+      {
+        "candidate_decoded_symbols_sha256": "89bea32b764a0f06e7daa71240d85ee48746846ba568110176be15d7ffaa5957",
+        "label": "blocks.1.weight",
+        "match": true,
+        "source_decoded_symbols_sha256": "89bea32b764a0f06e7daa71240d85ee48746846ba568110176be15d7ffaa5957"
+      },
+      {
+        "candidate_decoded_symbols_sha256": "5b03b5dab493f6e9425f86c7c699ca2ab2b3301b0c072a2cb3f2fb56c30a3b41",
+        "label": "blocks.2.weight",
+        "match": true,
+        "source_decoded_symbols_sha256": "5b03b5dab493f6e9425f86c7c699ca2ab2b3301b0c072a2cb3f2fb56c30a3b41"
+      },
+      {
+        "candidate_decoded_symbols_sha256": "f2c0a1d162dac74c94216ca3933c8e6690104a1cfe2c6f1cda84d863d17b484c",
+        "label": "blocks.3.weight",
+        "match": true,
+        "source_decoded_symbols_sha256": "f2c0a1d162dac74c94216ca3933c8e6690104a1cfe2c6f1cda84d863d17b484c"
+      },
+      {
+        "candidate_decoded_symbols_sha256": "8b6760ebc6e46c14706097b82be0e5b739e807da413af9142431a04cb9b86aa3",
+        "label": "blocks.4.weight",
+        "match": true,
+        "source_decoded_symbols_sha256": "8b6760ebc6e46c14706097b82be0e5b739e807da413af9142431a04cb9b86aa3"
+      },
+      {
+        "candidate_decoded_symbols_sha256": "d68936bf2aa0d1680fd74af77b2a7dd3274d791c92ccf50f02a1c4743ee03caf",
+        "label": "blocks.5.weight",
+        "match": true,
+        "source_decoded_symbols_sha256": "d68936bf2aa0d1680fd74af77b2a7dd3274d791c92ccf50f02a1c4743ee03caf"
+      },
+      {
+        "candidate_decoded_symbols_sha256": "ba24b48b2ab99a57f2f85794bdf42c1f1c9f00020be32975b3ec5cd54d421af8",
+        "label": "refine.0.bias",
+        "match": true,
+        "source_decoded_symbols_sha256": "ba24b48b2ab99a57f2f85794bdf42c1f1c9f00020be32975b3ec5cd54d421af8"
+      },
+      {
+        "candidate_decoded_symbols_sha256": "d2510a94e458e3bd6ebbdf5821bbefa342c74fb31b72b069207d97b1059801d4",
+        "label": "latent_hi_bytes",
+        "match": true,
+        "source_decoded_symbols_sha256": "d2510a94e458e3bd6ebbdf5821bbefa342c74fb31b72b069207d97b1059801d4"
+      }
+    ]
+  },
   "source_archive": {
     "bytes": 178223,
     "member_bytes": 178123,
@@ -224,7 +286,7 @@
       "--md-out",
       ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/manifest.md"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "2527eb0b2bfcc6fd04296d91c8881e0c37bbb4b81efad814099a81ef2b74492b",
+    "canonical_payload_without_tool_manifest_sha256": "d5ddb5f2343635fe218a1948a813593c851aafa6199a963306eff0c80de6bcc0",
     "dispatch_attempted": false,
     "input_files": [
       {

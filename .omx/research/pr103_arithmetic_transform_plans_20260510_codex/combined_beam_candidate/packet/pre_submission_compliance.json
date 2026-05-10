@@ -1,0 +1,324 @@
+{
+  "archive": {
+    "bytes": 178215,
+    "exists": true,
+    "members": [
+      {
+        "compress_size": 178115,
+        "crc": 1185453146,
+        "file_size": 178115,
+        "local_header": {
+          "compress_size": 178115,
+          "compress_type": 0,
+          "crc32": 1185453146,
+          "extra_len": 0,
+          "file_size": 178115,
+          "flag_bits": 0,
+          "mod_date": 33,
+          "mod_time": 0,
+          "name": "x",
+          "version_needed": 20
+        },
+        "local_header_name": "x",
+        "name": "x",
+        "sha256": "f8876ea5102e6e3dc968e84fa00c25b4f67f5045cd32cff79d4667928011d58b",
+        "unsafe_reason": null
+      }
+    ],
+    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/archive.zip",
+    "sha256": "2427cbb7f68e8e3bcf1e989eee0cf511bff5994a5e856b500bfca3c95ca181d8"
+  },
+  "archive_manifest": {
+    "exists": true,
+    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/archive_manifest.json"
+  },
+  "auth_eval": {
+    "exists": false,
+    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/contest_auth_eval.json"
+  },
+  "checks": [
+    {
+      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/archive.zip",
+      "name": "required_file_present:archive.zip",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/inflate.sh",
+      "name": "required_file_present:inflate.sh",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/report.txt",
+      "name": "required_file_present:report.txt",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "mode=0o755",
+      "name": "inflate_sh_executable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/archive.zip",
+      "name": "archive_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "x",
+      "name": "zip_member_safe:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "central='x' local='x' local_reason=None",
+      "name": "zip_local_header_matches:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "x",
+      "name": "zip_local_header_metadata_matches:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "x",
+      "name": "zip_member_payload_readable:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=1",
+      "name": "archive_zip_readable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['x']",
+      "name": "zip_no_duplicate_members",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['x']",
+      "name": "zip_expected_single_member",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "packed_payload_count=0",
+      "name": "zip_at_most_one_packed_payload_container",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "2427cbb7f68e8e3bcf1e989eee0cf511bff5994a5e856b500bfca3c95ca181d8",
+      "name": "expected_archive_sha256_is_well_formed",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=2427cbb7f68e8e3bcf1e989eee0cf511bff5994a5e856b500bfca3c95ca181d8 actual=2427cbb7f68e8e3bcf1e989eee0cf511bff5994a5e856b500bfca3c95ca181d8",
+      "name": "expected_archive_sha256_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=178215 actual=178215",
+      "name": "expected_archive_size_bytes_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/contest_auth_eval.json",
+      "name": "auth_eval_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/contest_auth_eval.json missing; nonfinal compliance may pass, but this packet has no auth-eval custody and is not score/rank/promote evidence",
+      "name": "auth_eval_optional_missing",
+      "passed": false,
+      "severity": "warning"
+    },
+    {
+      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/inflate.sh",
+      "name": "submission_runtime_inflate_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "pre_submission_runtime_dependency_manifest_v1",
+      "name": "submission_runtime_manifest_computable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "runtime_tree_sha256=5aaabb921290e30260dd95b721306feb2e3aa3f41327beedddf08b201174aa71",
+      "name": "submission_runtime_tree_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submission=5aaabb921290e30260dd95b721306feb2e3aa3f41327beedddf08b201174aa71 auth_eval_candidates={}",
+      "name": "submission_runtime_tree_matches_auth_eval",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/archive_manifest.json",
+      "name": "archive_manifest_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/archive_manifest.json",
+      "name": "archive_manifest_json_object",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=2427cbb7f68e8e3bcf1e989eee0cf511bff5994a5e856b500bfca3c95ca181d8 actual=2427cbb7f68e8e3bcf1e989eee0cf511bff5994a5e856b500bfca3c95ca181d8",
+      "name": "archive_manifest_sha_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=178215 actual=178215",
+      "name": "archive_manifest_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed_members=1 actual_members=1",
+      "name": "archive_manifest_members_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed_members=1 actual_members=1",
+      "name": "archive_manifest_member_count_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed='x' actual='x'",
+      "name": "archive_manifest_member_0_name_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=178115 actual=178115",
+      "name": "archive_manifest_member_0_file_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=178115 actual=178115",
+      "name": "archive_manifest_member_0_compress_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=1185453146 actual=1185453146",
+      "name": "archive_manifest_member_0_crc_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed='f8876ea5102e6e3dc968e84fa00c25b4f67f5045cd32cff79d4667928011d58b' actual='f8876ea5102e6e3dc968e84fa00c25b4f67f5045cd32cff79d4667928011d58b'",
+      "name": "archive_manifest_member_0_sha256_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/report.txt",
+      "name": "report_exists",
+      "passed": true,
+      "severity": "error"
+    }
+  ],
+  "dispatch_claims": {
+    "required": false
+  },
+  "passed": true,
+  "report": {
+    "exists": true,
+    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/report.txt"
+  },
+  "schema": "pre_submission_compliance_check_v1",
+  "submission_dir": {
+    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet",
+    "required_files": {
+      "archive.zip": {
+        "exists": true,
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/archive.zip"
+      },
+      "inflate.sh": {
+        "exists": true,
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/inflate.sh"
+      },
+      "report.txt": {
+        "exists": true,
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/report.txt"
+      }
+    }
+  },
+  "submission_runtime": {
+    "basis": "contest_auth_eval_runtime_dependency_manifest_v1_without_custody_files",
+    "excluded_custody_filenames": [
+      "archive_manifest.json",
+      "contest_auth_eval.json",
+      "report.txt"
+    ],
+    "excluded_custody_prefixes": [
+      "pre_submission_compliance."
+    ],
+    "external_dependency_roots": [],
+    "files": [
+      {
+        "bytes": 8068,
+        "relative_path": "inflate.py",
+        "repo_relative_path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/inflate.py",
+        "sha256": "96e6ba99affc8ff903bcabc6f834c0ebc142fa051711ba7d5891366f6193f9aa"
+      },
+      {
+        "bytes": 438,
+        "relative_path": "inflate.sh",
+        "repo_relative_path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/inflate.sh",
+        "sha256": "a158107216321609a1cbf9abc073c19579194266c177504a7fa055ed612eca51"
+      },
+      {
+        "bytes": 3311,
+        "relative_path": "packet_manifest.json",
+        "repo_relative_path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/packet_manifest.json",
+        "sha256": "5a2959d1b58f768f05364d35275c02138040c9f9b51ee9f96689f07326520618"
+      }
+    ],
+    "repo_local_tac_import_manifest": {
+      "discovery": "static_ast_recursive_import_closure",
+      "file_count": 0,
+      "files": [],
+      "module_count": 0,
+      "parse_errors": [],
+      "root_import_modules": [],
+      "runtime_root_name": "packet",
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "tac_root_relative_path": "src/tac",
+      "unresolved_modules": []
+    },
+    "runtime_file_count": 3,
+    "runtime_root": "/Users/adpena/Projects/pact/.omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet",
+    "runtime_tree_sha256": "5aaabb921290e30260dd95b721306feb2e3aa3f41327beedddf08b201174aa71",
+    "schema": "pre_submission_runtime_dependency_manifest_v1",
+    "upstream_evaluate_py": {
+      "bytes": 6005,
+      "relative_path": "evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  }
+}

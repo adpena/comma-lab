@@ -1,0 +1,40 @@
+{
+  "candidate_archive": {
+    "bytes": 178215,
+    "members": [
+      {
+        "compress_size": 178115,
+        "crc": 1185453146,
+        "file_size": 178115,
+        "name": "x",
+        "sha256": "f8876ea5102e6e3dc968e84fa00c25b4f67f5045cd32cff79d4667928011d58b"
+      }
+    ],
+    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/archive.zip",
+    "sha256": "2427cbb7f68e8e3bcf1e989eee0cf511bff5994a5e856b500bfca3c95ca181d8"
+  },
+  "decoder_state_parity_proof": {
+    "basis": "source_and_candidate_decode_to_identical_decoder_state_and_latents",
+    "candidate_latents_sha256": "97319245cff323e04aaa4738fb5137364a16da5a2bb725083b8ed8a099c422cc",
+    "candidate_state_dict_sha256": "38976b8970232e89571eed675737a3426764f1b2797649e49c0dde4fcb84548d",
+    "dispatch_attempted": false,
+    "full_frame_inflate_ran": false,
+    "full_frame_output_parity_inferred": true,
+    "latents_sha_match": true,
+    "latents_shape_match": true,
+    "passed": true,
+    "score_claim": false,
+    "source_latents_sha256": "97319245cff323e04aaa4738fb5137364a16da5a2bb725083b8ed8a099c422cc",
+    "source_state_dict_sha256": "38976b8970232e89571eed675737a3426764f1b2797649e49c0dde4fcb84548d",
+    "state_dict_sha_match": true,
+    "state_dict_tensor_records_match": true
+  },
+  "dispatch_attempted": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "pr103_lc_ac_histogram_candidate_archive_manifest_v1",
+  "score_claim": false,
+  "source_runtime_adapter_manifest": {
+    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/runtime_adapter_manifest.json",
+    "sha256": "2eccb29b280dfc1ef9faf03ebf445394e2ac3843e2ec9438b945f4324550eec5"
+  }
+}

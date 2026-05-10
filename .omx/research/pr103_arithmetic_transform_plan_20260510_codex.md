@@ -190,6 +190,8 @@ Custody:
   `bd10827909bf34d746c21cc856f14e24e1a5a8130dde0438ceda213e1fb3c2bf`
 - candidate roundtrip: `decoder_maybe_exhausted=true`,
   `reencoded_byte_identical=true`, `decoded_symbol_count=237561`
+- semantic stream parity: `all_stream_symbol_sha_match=true` across `9`
+  decoded streams
 
 Interpretation: this is a real, reproducible, byte-different archive candidate,
 not a no-op. It is still not score-promotable because public PR103
@@ -199,38 +201,113 @@ adapter with `HIST_LEN=887` and the same section order. Current blockers:
 `strict_pre_submission_compliance_json_missing`, `lane_dispatch_claim_missing`,
 and `exact_cuda_auth_eval_missing`.
 
+## Runtime adapter prototype
+
+Artifact:
+
+```text
+.omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/runtime_adapter/
+.omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/runtime_adapter_manifest.json
+```
+
+Command:
+
+```bash
+.venv/bin/python tools/build_pr103_lc_ac_runtime_adapter.py \
+  --candidate-manifest .omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/manifest.json \
+  --source-runtime-dir experiments/results/public_pr_intake_full/public_pr103_intake_20260505_auto/source/submissions/hnerv_lc_ac \
+  --output-runtime-dir .omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/runtime_adapter \
+  --json-out .omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/runtime_adapter_manifest.json \
+  --force
+```
+
+Result:
+
+| field | value |
+|---|---:|
+| runtime tree SHA-256 | `00d9e4550aa34a865414bff73029f0005f7684008fc5994c3cf5abaf951f775e` |
+| changed runtime constant | `HIST_LEN: 895 -> 887` |
+| shell closure patch | `python` -> `${PYTHON:-python}` |
+| parsed candidate histogram bytes | `887` |
+| parsed merged AC bytes | `153856` |
+| state_dict tensors | `28` |
+| state_dict params | `228958` |
+| latents shape | `[600, 28]` |
+| semantic stream parity | `true across 9 decoded streams` |
+| decoder-state parity | `true; state_dict and latent SHA-256s match source runtime` |
+
+Interpretation: the runtime-adapter blocker is cleared for local
+decode-consumption. This still does **not** run full frame inflate, does not run
+the scorer, and does not authorize dispatch. Decoder-state and latent parity
+imply identical HNeRV frame generation under the same deterministic decoder, but
+exact CUDA remains the only score authority.
+
+## Compliance packet
+
+Artifact:
+
+```text
+.omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/
+.omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet_manifest.json
+.omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/pre_submission_compliance.json
+```
+
+Commands:
+
+```bash
+.venv/bin/python tools/build_pr103_lc_ac_candidate_packet.py \
+  --runtime-adapter-manifest .omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/runtime_adapter_manifest.json \
+  --packet-dir .omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet \
+  --json-out .omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet_manifest.json \
+  --force
+
+.venv/bin/python scripts/pre_submission_compliance_check.py \
+  --submission-dir .omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet \
+  --archive .omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/archive.zip \
+  --archive-manifest-json .omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/archive_manifest.json \
+  --expect-single-member x \
+  --expected-archive-sha256 2427cbb7f68e8e3bcf1e989eee0cf511bff5994a5e856b500bfca3c95ca181d8 \
+  --expected-archive-size-bytes 178215 \
+  --json-out .omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/pre_submission_compliance.json \
+  --strict
+```
+
+Result:
+
+| field | value |
+|---|---:|
+| packet archive SHA-256 | `2427cbb7f68e8e3bcf1e989eee0cf511bff5994a5e856b500bfca3c95ca181d8` |
+| packet archive bytes | `178215` |
+| packet runtime tree SHA-256 | `ba5b935ff18268db692d08428fb3b28bcda7f411a61bf5d13d79e99582410d10` |
+| strict pre-submission compliance | `passed=true` |
+
+Remaining blockers after local packaging/compliance: `lane_dispatch_claim_missing`
+and `exact_cuda_auth_eval_missing`.
+
 ## Adversarial classification
 
 This is not a score candidate. It is the next byte-closed planning artifact
 after the PR103 schema refresh and PacketIR certifier. It explicitly refuses
-archive preflight and exact dispatch until a future runtime adapter consumes a
-changed `ac_histograms_brotli` plus changed
-`merged_range_coded_weights_and_hi_latents`, proves symbol roundtrip, records
-old/new archive SHA-256s, and survives strict submission compliance plus exact
-CUDA.
+archive preflight and exact dispatch until full-frame inflate parity or
+component-delta evidence exists, strict submission compliance passes, a lane
+dispatch claim is opened, and exact CUDA returns.
 
 Current blockers:
 
-- `candidate_archive_missing`
-- `candidate_runtime_adapter_missing`
-- `candidate_symbol_roundtrip_proof_missing`
-- `candidate_inflate_output_parity_missing`
-- `strict_pre_submission_compliance_json_missing`
 - `lane_dispatch_claim_missing`
 - `exact_cuda_auth_eval_missing`
 
 ## Next implementation target
 
-Implement a runtime-adapter prototype for PR103 AC-section changes:
+Promote the candidate from local decode-consumption to exact-eval readiness:
 
-1. decode the source merged AC stream;
-2. accept explicit q8 histogram coordinate changes, not just source-rule
-   reconstruction;
-3. re-encode the merged stream and compressed histogram section;
-4. reject no-op or wrong-stream proposals by symbol SHA and stream count;
-5. account for runtime-adapter overhead before archive materialization;
-6. emit a byte-different candidate archive only if the runtime adapter can
-   parse the new section lengths and consume the changed stream.
+1. package `archive.zip` with the runtime adapter into a contest packet;
+2. run a full `inflate.sh archive_dir output_dir file_list` local smoke and
+   record output byte count/SHA without scorer mutation;
+3. run strict pre-submission compliance on that exact packet;
+4. claim a dispatch lane only after the compliance artifact is clean;
+5. run exact CUDA and classify the result as legitimate score movement,
+   component drift, runtime bug, or no-op.
 
 No GPU dispatch is warranted until that byte-different archive exists and
 passes runtime-consumption and strict compliance gates.

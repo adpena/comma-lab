@@ -844,6 +844,11 @@ def materialize_pr103_arithmetic_histogram_candidate(
         stream_specs=stream_specs,
         hi_symbol_count=hi_symbol_count,
     )
+    semantic_parity = _semantic_stream_parity(
+        source_symbol_streams=source_symbol_streams,
+        candidate_stream_rows=candidate_decoded.get("stream_rows") or (),
+        stream_specs=stream_specs,
+    )
     output_path = Path(output_archive) if output_archive is not None else None
     archive_record = {
         "provided": output_path is not None,
@@ -895,6 +900,11 @@ def materialize_pr103_arithmetic_histogram_candidate(
                 []
                 if candidate_decoded.get("reencoded_byte_identical") is True
                 else ["candidate_merged_stream_roundtrip_not_byte_identical"]
+            ),
+            *(
+                []
+                if semantic_parity["all_stream_symbol_sha_match"] is True
+                else ["candidate_decoded_symbols_do_not_match_source"]
             ),
             "candidate_runtime_adapter_missing",
             "candidate_inflate_output_parity_missing",
@@ -953,6 +963,7 @@ def materialize_pr103_arithmetic_histogram_candidate(
             "decoder_maybe_exhausted": candidate_decoded.get("decoder_maybe_exhausted") is True,
             "decoded_symbol_count": candidate_decoded.get("decoded_symbol_count"),
         },
+        "semantic_stream_parity": semantic_parity,
         "readiness_blockers": blockers,
         "dispatch_blockers": [
             "pr103_arithmetic_histogram_candidate_is_not_dispatch_authorization",
@@ -1150,6 +1161,7 @@ def render_candidate_markdown(report: Mapping[str, Any]) -> str:
     byte_accounting = _mapping(report.get("byte_accounting"))
     runtime_contract = _mapping(report.get("runtime_adapter_contract"))
     constants = _mapping(runtime_contract.get("public_runtime_constants"))
+    semantic = _mapping(report.get("semantic_stream_parity"))
     lines = [
         "# PR103 Arithmetic Histogram Candidate",
         "",
@@ -1164,6 +1176,8 @@ def render_candidate_markdown(report: Mapping[str, Any]) -> str:
         f"- candidate: `{candidate.get('path')}` / `{candidate.get('bytes')}` bytes / `{candidate.get('sha256')}`",
         f"- payload_byte_delta: `{byte_accounting.get('payload_byte_delta')}`",
         f"- archive_byte_delta: `{byte_accounting.get('archive_byte_delta')}`",
+        f"- semantic_stream_parity: `{_bool(semantic.get('all_stream_symbol_sha_match') is True)}`"
+        f" across `{semantic.get('stream_count')}` streams",
         "",
         "## Runtime Constants To Derive",
         "",
@@ -1567,6 +1581,40 @@ def _runtime_constants_from_layout(layout: Pr103LcAcLayout) -> dict[str, Any]:
         "HI_HIST_LEN": int(layout.latent_hi_histogram_brotli),
         "sidecar_corrections_brotli": "payload_tail",
         "fixed_bytes_before_tail": int(layout.fixed_bytes),
+    }
+
+
+def _semantic_stream_parity(
+    *,
+    source_symbol_streams: Sequence[np.ndarray],
+    candidate_stream_rows: Sequence[Any],
+    stream_specs: Sequence[tuple[str, int, int | None]],
+) -> dict[str, Any]:
+    labels = [str(label) for label, _count, _schema_index in stream_specs]
+    labels.append("latent_hi_bytes")
+    candidate_by_label = {
+        str(_mapping(row).get("label") or ""): _mapping(row)
+        for row in candidate_stream_rows
+        if isinstance(row, Mapping)
+    }
+    rows: list[dict[str, Any]] = []
+    for label, symbols in zip(labels, source_symbol_streams, strict=True):
+        source_sha = sha256_bytes(np.asarray(symbols).astype(np.uint16).tobytes())
+        candidate_sha = str(candidate_by_label.get(label, {}).get("decoded_symbols_sha256") or "")
+        rows.append(
+            {
+                "label": label,
+                "source_decoded_symbols_sha256": source_sha,
+                "candidate_decoded_symbols_sha256": candidate_sha,
+                "match": source_sha == candidate_sha,
+            }
+        )
+    return {
+        "all_stream_symbol_sha_match": all(row["match"] for row in rows),
+        "stream_count": len(rows),
+        "streams": rows,
+        "score_claim": False,
+        "dispatch_attempted": False,
     }
 
 

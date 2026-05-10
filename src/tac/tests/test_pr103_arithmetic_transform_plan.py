@@ -243,6 +243,7 @@ def test_pr103_arithmetic_histogram_candidate_materializes_byte_different_archiv
     assert report["candidate_archive"]["sha256"]
     assert report["candidate_archive"]["member_sha256"] != report["source_archive"]["member_sha256"]
     assert report["candidate_roundtrip"]["reencoded_byte_identical"] is True
+    assert report["semantic_stream_parity"]["all_stream_symbol_sha_match"] is True
     assert "candidate_runtime_adapter_missing" in report["readiness_blockers"]
     changed_sections = {
         row["name"] for row in report["section_diffs"] if row["changed"] is True

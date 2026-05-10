@@ -1,0 +1,93 @@
+{
+  "adapter_runtime_tree_sha256": "00d9e4550aa34a865414bff73029f0005f7684008fc5994c3cf5abaf951f775e",
+  "archive": {
+    "bytes": 178215,
+    "mode": "0644",
+    "relpath": "archive.zip",
+    "sha256": "2427cbb7f68e8e3bcf1e989eee0cf511bff5994a5e856b500bfca3c95ca181d8"
+  },
+  "archive_manifest": {
+    "bytes": 1737,
+    "mode": "0644",
+    "relpath": "archive_manifest.json",
+    "sha256": "9084240f5c1e21dd4674b4378859403015062b8d9566044e262801ce9a4d2e8b"
+  },
+  "decoder_state_parity_proof": {
+    "basis": "source_and_candidate_decode_to_identical_decoder_state_and_latents",
+    "candidate_latents_sha256": "97319245cff323e04aaa4738fb5137364a16da5a2bb725083b8ed8a099c422cc",
+    "candidate_state_dict_sha256": "38976b8970232e89571eed675737a3426764f1b2797649e49c0dde4fcb84548d",
+    "dispatch_attempted": false,
+    "full_frame_inflate_ran": false,
+    "full_frame_output_parity_inferred": true,
+    "latents_sha_match": true,
+    "latents_shape_match": true,
+    "passed": true,
+    "score_claim": false,
+    "source_latents_sha256": "97319245cff323e04aaa4738fb5137364a16da5a2bb725083b8ed8a099c422cc",
+    "source_state_dict_sha256": "38976b8970232e89571eed675737a3426764f1b2797649e49c0dde4fcb84548d",
+    "state_dict_sha_match": true,
+    "state_dict_tensor_records_match": true
+  },
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "pr103_candidate_packet_is_not_dispatch_authorization",
+    "lane_dispatch_claim_missing",
+    "exact_cuda_auth_eval_missing"
+  ],
+  "packet_dir": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet",
+  "readiness_blockers": [
+    "lane_dispatch_claim_missing",
+    "exact_cuda_auth_eval_missing"
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "report": {
+    "bytes": 465,
+    "mode": "0644",
+    "relpath": "report.txt",
+    "sha256": "e00f00d752d0e2c466a0453b313bfa53a9dd6e1343941b4944e0b9aa41c4d0ee"
+  },
+  "runtime_adapter_manifest": {
+    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/runtime_adapter_manifest.json",
+    "sha256": "2eccb29b280dfc1ef9faf03ebf445394e2ac3843e2ec9438b945f4324550eec5"
+  },
+  "runtime_files": [
+    {
+      "bytes": 178215,
+      "mode": "0644",
+      "relpath": "archive.zip",
+      "sha256": "2427cbb7f68e8e3bcf1e989eee0cf511bff5994a5e856b500bfca3c95ca181d8"
+    },
+    {
+      "bytes": 1737,
+      "mode": "0644",
+      "relpath": "archive_manifest.json",
+      "sha256": "9084240f5c1e21dd4674b4378859403015062b8d9566044e262801ce9a4d2e8b"
+    },
+    {
+      "bytes": 8068,
+      "mode": "0644",
+      "relpath": "inflate.py",
+      "sha256": "96e6ba99affc8ff903bcabc6f834c0ebc142fa051711ba7d5891366f6193f9aa"
+    },
+    {
+      "bytes": 438,
+      "mode": "0755",
+      "relpath": "inflate.sh",
+      "sha256": "a158107216321609a1cbf9abc073c19579194266c177504a7fa055ed612eca51"
+    },
+    {
+      "bytes": 465,
+      "mode": "0644",
+      "relpath": "report.txt",
+      "sha256": "e00f00d752d0e2c466a0453b313bfa53a9dd6e1343941b4944e0b9aa41c4d0ee"
+    }
+  ],
+  "runtime_files_copied": [
+    "inflate.py",
+    "inflate.sh"
+  ],
+  "runtime_tree_sha256": "ba5b935ff18268db692d08428fb3b28bcda7f411a61bf5d13d79e99582410d10",
+  "schema": "pr103_lc_ac_histogram_candidate_packet_v1",
+  "score_claim": false,
+  "scorers_invoked": false
+}
