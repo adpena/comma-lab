@@ -264,3 +264,106 @@ Wire-in declaration:
 - Continual-learning posterior update: N/A - no empirical score anchor.
 - Probe-disambiguator: N/A - single policy-preserving interpretation; parity
   tests compare SourceIndex and no-index behavior.
+
+## 2026-05-10 Public-PR and dispatch-hazard hot scan reduction
+
+<!-- generated_at: 2026-05-10T13:45:00Z -->
+<!-- evidence_grade: local_dev_correctness_and_performance; no dispatch; no score claim -->
+
+Scope: extreme preflight wall-clock optimization with semantics preserved.
+
+Changes:
+
+- `tools/check_dispatch_cli_shell_hazards.py` now uses SourceIndex text facts
+  as a conservative candidate filter when an active SourceIndex is available.
+  The existing `scan_text(...)` validator still owns every policy decision.
+- `src/tac/source_index.py` text facts schema bumped to v19 with the exact
+  dispatch-hazard tokens needed by that candidate filter.
+- `src/tac/preflight.py::_public_pr_intake_clone_roots` now discovers the
+  documented public-PR intake layouts directly instead of recursively crawling
+  every `experiments/results/**/_intake_*` directory. Live parity check against
+  the previous recursive discovery found the same 62 clone roots.
+- `tools/check_pr101_proxy_promotion_blocker.py` now routes its A1
+  `[contest-CUDA]` anchor acceptance through
+  `tac.continual_learning.ContestResult.validate_custody()` before treating the
+  anchor as available. This fixed a strict Catalog #127 failure surfaced by the
+  forced dev profile; no waiver was added.
+
+Timing evidence:
+
+```bash
+PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE=1 .venv/bin/python \
+  tools/profile_preflight_latency.py --surface preflight-dev-cli \
+  --json-out .omx/research/artifacts/preflight_sourceindex_20260510_before_dev.json \
+  --top 25 --fail-on-surface-failure
+# before: 7.713s; public_pr=1.083s; dispatch_hazards=0.781s
+
+PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE=1 .venv/bin/python \
+  tools/profile_preflight_latency.py --surface preflight-dev-cli \
+  --json-out .omx/research/artifacts/preflight_sourceindex_20260510_after_dev_forced_retry2.json \
+  --top 25 --fail-on-surface-failure
+# after: 7.100s; public_pr=0.496s; dispatch_hazards=0.693s
+
+.venv/bin/python tools/profile_preflight_latency.py --surface preflight-checks \
+  --preflight-check check_public_pr_intake_clones_pristine \
+  --preflight-check check_dispatch_cli_shell_hazards \
+  --json-out .omx/research/artifacts/preflight_sourceindex_20260510_before_named_checks.json \
+  --top 20 --fail-on-surface-failure
+# before named checks: 2.348s; public_pr=1.369s; dispatch_hazards=0.620s
+
+.venv/bin/python tools/profile_preflight_latency.py --surface preflight-checks \
+  --preflight-check check_public_pr_intake_clones_pristine \
+  --preflight-check check_dispatch_cli_shell_hazards \
+  --json-out .omx/research/artifacts/preflight_sourceindex_20260510_after_named_checks_publicpr_fastdisc.json \
+  --top 20 --fail-on-surface-failure
+# after named checks: 1.672s; public_pr=0.743s; dispatch_hazards=0.573s
+
+PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE=1 /usr/bin/time -p \
+  .venv/bin/python -m tac.preflight --scope dev --timeout-s 30 \
+  --timings-json .omx/research/artifacts/preflight_sourceindex_20260510_after_cli_forced.json
+# PREFLIGHT PASSED; real 7.84s
+```
+
+Focused verification:
+
+```bash
+.venv/bin/python -m py_compile \
+  src/tac/preflight.py src/tac/source_index.py \
+  tools/check_dispatch_cli_shell_hazards.py \
+  tools/check_pr101_proxy_promotion_blocker.py \
+  src/tac/tests/test_preflight_harden_2026_05_08_checks.py \
+  src/tac/tests/test_dispatch_cli_shell_hazards.py \
+  src/tac/tests/test_source_index.py
+
+.venv/bin/python -m pytest \
+  src/tac/tests/test_preflight_harden_2026_05_08_checks.py \
+  src/tac/tests/test_dispatch_cli_shell_hazards.py \
+  src/tac/tests/test_source_index.py \
+  tests/test_preflight_source_index_equivalence.py -q
+# 62 passed in 0.91s
+
+.venv/bin/python -m pytest \
+  src/tac/tests/test_preflight_custody_validator_and_locked_writes.py \
+  src/tac/tests/test_preflight_harden_2026_05_08_checks.py -q
+# 63 passed in 2.88s
+```
+
+Residual top bottleneck after this landing:
+
+1. `check_codebase_drift` remains the top forced dev step at about 1.04s.
+2. `check_no_mps_fallback_default` remains second at about 0.80s.
+3. `check_dispatch_cli_shell_hazards` is still a broad text-file surface at
+   about 0.69s in full dev preflight, despite the candidate filter.
+
+Wire-in declaration:
+
+- Sensitivity-map contribution: N/A - preflight DX/cache infrastructure only,
+  no codec sensitivity or scored tensor changed.
+- Pareto constraint: N/A - no archive candidate or rate/distortion bound
+  changed.
+- Bit-allocator hook: N/A - no per-tensor importance changed.
+- Cathedral autopilot dispatch hook: N/A - this only reduces local dev-gate
+  latency; no deployable candidate was produced.
+- Continual-learning posterior update: N/A - no empirical score anchor.
+- Probe-disambiguator: N/A - single policy-preserving interpretation; parity
+  tests compare SourceIndex and no-index behavior.

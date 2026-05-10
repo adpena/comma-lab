@@ -152,7 +152,9 @@ def test_scanner_source_index_candidate_filter_covers_hazard_families(
         )
         stats = index.stats()
 
-    normalize = lambda rows: sorted((h.path, h.line, h.kind, h.message) for h in rows)
+    def normalize(rows):
+        return sorted((h.path, h.line, h.kind, h.message) for h in rows)
+
     assert normalize(indexed) == normalize(baseline)
     assert _kinds(indexed) == {
         "dispatch_local_path_leak",
