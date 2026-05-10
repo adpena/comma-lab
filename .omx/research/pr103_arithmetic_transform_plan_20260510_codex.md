@@ -356,8 +356,8 @@ pending the parity gate above:
 | source probe delta sum | `-13` |
 | non-additivity delta | `1` |
 | candidate archive SHA-256 | `578c8f4e86eafc9dc04eefe61cc0e7f3f3f43e134ef4447cf9ef26fd23a23551` |
-| packet runtime tree SHA-256 | `8b81480b74919295c37707ac5124934571314f30d3bfe0164cbe7b456e589936` |
-| sampled frame parity | `true` for pairs `[0, 1, 127, 599]` |
+| packet runtime tree SHA-256 | `bf43663559e88b89f1bc0a1fa14b5093b7195da64f5aa7ed1cac696cb60caa02` |
+| full frame parity | `true` for all `600` pairs / `3,662,409,600` rendered bytes |
 
 Artifacts:
 
@@ -366,17 +366,18 @@ Artifacts:
 .omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/archive.zip
 .omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet/
 .omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/frame_parity_probe_sampled.json
+.omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/frame_parity_probe_full_cpu.json
 ```
 
 The global-combo search is the first non-greedy recomputation over the full
 merged AC stream plus the Brotli-compressed histogram sideband. It beats the
 greedy materialized packet on rate (`-12B` vs `-8B`) while preserving decoded
-state/latent parity. A sampled same-runtime frame-digest probe also matches
-source output bytes for pairs `[0, 1, 127, 599]`
-(`146892fa4c3b80f4901438b7aa8b004e4ca7ee0a80bb3ae07f4e34f7b3b51044`).
-It is **not** a score claim and not exact-eval dispatch authorization; the
-remaining blocker is full 600-pair frame parity or same-runtime source/candidate
-auth eval.
+state/latent parity. A full same-runtime CPU frame-digest probe also matches
+source output bytes for all 600 pairs / 1,200 frames
+(`074f834f14ba4611f9358bb0a3f8e729bb43e4ea673be23e2acf85e7448dd1e5`
+over `3,662,409,600` rendered bytes). It is **not** a score claim and not
+exact-eval dispatch authorization; the remaining blockers are a fresh lane
+claim and exact CUDA on the packet.
 
 ## Next implementation target
 

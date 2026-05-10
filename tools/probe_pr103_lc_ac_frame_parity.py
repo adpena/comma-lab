@@ -42,6 +42,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Render every pair. This is expensive for PR103 and still not an auth eval.",
     )
     parser.add_argument("--device", default="cpu", choices=["cpu", "cuda"])
+    parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--json-out", type=Path)
     return parser.parse_args(argv)
 
@@ -63,6 +64,7 @@ def main(argv: list[str] | None = None) -> int:
             candidate_archive=args.candidate_archive,
             pair_indices=pair_indices,
             device=args.device,
+            batch_size=args.batch_size,
             repo_root=REPO_ROOT,
         )
     except (OSError, Pr103RuntimeAdapterError) as exc:

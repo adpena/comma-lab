@@ -158,13 +158,13 @@
       "severity": "error"
     },
     {
-      "details": "runtime_tree_sha256=b22616d23b19984388767f5d88aac148c3e72ae7c7abe1c94c23dc6f1e85d946",
+      "details": "runtime_tree_sha256=ce488d8e8d83a2286aa04e923d51f009e19dcbee7a83185d00e0a9105874f101",
       "name": "submission_runtime_tree_recorded",
       "passed": true,
       "severity": "error"
     },
     {
-      "details": "submission=b22616d23b19984388767f5d88aac148c3e72ae7c7abe1c94c23dc6f1e85d946 auth_eval_candidates={}",
+      "details": "submission=ce488d8e8d83a2286aa04e923d51f009e19dcbee7a83185d00e0a9105874f101 auth_eval_candidates={}",
       "name": "submission_runtime_tree_matches_auth_eval",
       "passed": true,
       "severity": "error"
@@ -293,10 +293,10 @@
         "sha256": "a158107216321609a1cbf9abc073c19579194266c177504a7fa055ed612eca51"
       },
       {
-        "bytes": 3661,
+        "bytes": 4200,
         "relative_path": "packet_manifest.json",
         "repo_relative_path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet/packet_manifest.json",
-        "sha256": "12bc34ea848873a17dbef7ee239e4ca8aace28cf7ec174df838bc3c7f3b42b17"
+        "sha256": "e0ad872bd349f609b99499282cfef7bcd1feac8090d0bb3744e78e46caca110a"
       }
     ],
     "repo_local_tac_import_manifest": {
@@ -313,7 +313,7 @@
     },
     "runtime_file_count": 3,
     "runtime_root": "/Users/adpena/Projects/pact/.omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet",
-    "runtime_tree_sha256": "b22616d23b19984388767f5d88aac148c3e72ae7c7abe1c94c23dc6f1e85d946",
+    "runtime_tree_sha256": "ce488d8e8d83a2286aa04e923d51f009e19dcbee7a83185d00e0a9105874f101",
     "schema": "pre_submission_runtime_dependency_manifest_v1",
     "upstream_evaluate_py": {
       "bytes": 6005,

@@ -145,6 +145,22 @@ def test_pr103_candidate_packet_copies_archive_runtime_and_custody(
     assert "lane_dispatch_claim_missing" in packet["readiness_blockers"]
     assert "full_frame_inflate_output_parity_missing" in packet["readiness_blockers"]
 
+    frame_report = tmp_path / "frame_parity.json"
+    write_json(frame_report, _full_frame_parity_report_for(fixture["archive"]))
+    packet_with_frame_parity = build_pr103_lc_ac_candidate_packet(
+        runtime_adapter_manifest=adapter_manifest,
+        frame_parity_report=frame_report,
+        packet_dir=tmp_path / "packet_with_frame_parity",
+        repo_root=tmp_path,
+    )
+    assert "full_frame_inflate_output_parity_missing" not in packet_with_frame_parity[
+        "readiness_blockers"
+    ]
+    assert packet_with_frame_parity["frame_output_parity_proof"]["provided"] is True
+    assert packet_with_frame_parity["frame_output_parity_proof"][
+        "full_frame_output_parity_proven"
+    ] is True
+
 
 def test_pr103_frame_parity_probe_hashes_same_runtime_rendered_pairs(tmp_path: Path) -> None:
     fixture = _frame_fixture(tmp_path)
@@ -391,4 +407,21 @@ def apply_corrections(latents, wrp_b):
         "runtime": runtime,
         "source_archive": source_archive,
         "candidate_archive": candidate_archive,
+    }
+
+
+def _full_frame_parity_report_for(candidate_archive: Path) -> dict[str, object]:
+    archive_record = {
+        "bytes": candidate_archive.stat().st_size,
+        "sha256": sha256_file(candidate_archive),
+    }
+    return {
+        "schema": FRAME_PARITY_SCHEMA,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "frame_output_parity_scope": "full",
+        "sampled_frame_output_parity_proven": True,
+        "full_frame_output_parity_proven": True,
+        "source": {"render": {"output_sha256": "a" * 64, "output_bytes": 10}},
+        "candidate": {"archive": archive_record, "render": {"output_sha256": "a" * 64}},
     }

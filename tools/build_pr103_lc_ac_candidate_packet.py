@@ -26,6 +26,7 @@ from tac.tool_manifest import attach_tool_run_manifest  # noqa: E402
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--runtime-adapter-manifest", required=True, type=Path)
+    parser.add_argument("--frame-parity-report", type=Path)
     parser.add_argument("--packet-dir", required=True, type=Path)
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--force", action="store_true")
@@ -43,6 +44,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         report = build_pr103_lc_ac_candidate_packet(
             runtime_adapter_manifest=args.runtime_adapter_manifest,
+            frame_parity_report=args.frame_parity_report,
             packet_dir=args.packet_dir,
             repo_root=REPO_ROOT,
             force=args.force,
@@ -54,7 +56,11 @@ def main(argv: list[str] | None = None) -> int:
         report,
         tool=Path(__file__).relative_to(REPO_ROOT).as_posix(),
         argv=raw_argv,
-        input_paths=[args.runtime_adapter_manifest],
+        input_paths=[
+            path
+            for path in [args.runtime_adapter_manifest, args.frame_parity_report]
+            if path is not None
+        ],
         repo_root=REPO_ROOT,
         output_path=args.json_out,
     )

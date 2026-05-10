@@ -129,6 +129,7 @@ def build_pr103_lc_ac_candidate_packet(
     *,
     runtime_adapter_manifest: str | Path,
     packet_dir: str | Path,
+    frame_parity_report: str | Path | None = None,
     repo_root: str | Path | None = None,
     force: bool = False,
 ) -> dict[str, Any]:
@@ -142,12 +143,14 @@ def build_pr103_lc_ac_candidate_packet(
     repo = Path(repo_root) if repo_root is not None else Path.cwd()
     manifest_path = _repo_path(Path(runtime_adapter_manifest), repo)
     manifest = _read_adapter_manifest(manifest_path)
+    frame_parity = _read_frame_parity_report(frame_parity_report, repo=repo)
     output_dir = _repo_path(Path(packet_dir), repo)
     candidate_record = _mapping(manifest.get("candidate_archive"))
     source_runtime_dir = _repo_path(Path(str(manifest.get("output_runtime_dir") or "")), repo)
     candidate_archive = _repo_path(Path(str(candidate_record.get("path") or "")), repo)
     _validate_inputs(source_runtime_dir, candidate_archive)
     _validate_candidate_archive_custody(candidate_record, candidate_archive)
+    _validate_frame_parity_report(frame_parity, candidate_record)
     _validate_output_location(source_runtime_dir, output_dir)
     _prepare_output_dir(output_dir, force=force)
 
@@ -167,6 +170,7 @@ def build_pr103_lc_ac_candidate_packet(
                 "sha256": sha256_file(manifest_path),
             },
             "decoder_state_parity_proof": _mapping(manifest.get("decoder_state_parity_proof")),
+            "frame_output_parity_proof": _frame_parity_summary(frame_parity),
         }
     )
     write_json(output_dir / "archive_manifest.json", archive_manifest)
@@ -186,6 +190,7 @@ def build_pr103_lc_ac_candidate_packet(
             *(
                 ["full_frame_inflate_output_parity_missing"]
                 if "full_frame_inflate_output_parity_missing" in adapter_blockers
+                and not _full_frame_parity_passed(frame_parity)
                 else []
             ),
             "lane_dispatch_claim_missing",
@@ -211,6 +216,7 @@ def build_pr103_lc_ac_candidate_packet(
         "runtime_tree_sha256": _runtime_tree_sha256(packet_runtime_files),
         "adapter_runtime_tree_sha256": manifest.get("runtime_tree_sha256"),
         "decoder_state_parity_proof": _mapping(manifest.get("decoder_state_parity_proof")),
+        "frame_output_parity_proof": _frame_parity_summary(frame_parity),
         "readiness_blockers": packet_blockers,
         "dispatch_blockers": [
             "pr103_candidate_packet_is_not_dispatch_authorization",
@@ -229,6 +235,7 @@ def probe_pr103_lc_ac_frame_parity(
     candidate_archive: str | Path,
     pair_indices: list[int],
     device: str = "cpu",
+    batch_size: int = 16,
     repo_root: str | Path | None = None,
 ) -> dict[str, Any]:
     """Hash rendered frame bytes for selected PR103 pair indices.
@@ -251,12 +258,14 @@ def probe_pr103_lc_ac_frame_parity(
         archive_path=source_zip,
         pair_indices=pair_indices,
         device=device,
+        batch_size=batch_size,
     )
     candidate_result = _render_frame_digest(
         runtime_py=candidate_runtime,
         archive_path=candidate_zip,
         pair_indices=pair_indices,
         device=device,
+        batch_size=batch_size,
     )
     pair_hashes_match = source_result["pair_hashes"] == candidate_result["pair_hashes"]
     output_sha_match = source_result["output_sha256"] == candidate_result["output_sha256"]
@@ -279,6 +288,7 @@ def probe_pr103_lc_ac_frame_parity(
         "gpu_required": device != "cpu",
         "ready_for_exact_eval_dispatch": False,
         "device": device,
+        "batch_size": int(batch_size),
         "pair_indices": [int(index) for index in pair_indices],
         "frame_output_parity_scope": "full" if full_scope else "sampled",
         "sampled_frame_output_parity_proven": parity_passed,
@@ -329,6 +339,70 @@ def _read_adapter_manifest(path: Path) -> dict[str, Any]:
     if parity.get("passed") is not True:
         raise Pr103RuntimeAdapterError("runtime adapter manifest missing decoder-state parity proof")
     return payload
+
+
+def _read_frame_parity_report(path: str | Path | None, *, repo: Path) -> dict[str, Any] | None:
+    if path is None:
+        return None
+    report_path = _repo_path(Path(path), repo)
+    payload = read_json(report_path)
+    if not isinstance(payload, dict):
+        raise Pr103RuntimeAdapterError("frame parity report must be a JSON object")
+    if payload.get("schema") != FRAME_PARITY_SCHEMA:
+        raise Pr103RuntimeAdapterError(
+            f"expected frame parity schema {FRAME_PARITY_SCHEMA}, got {payload.get('schema')!r}"
+        )
+    if payload.get("score_claim") is True or payload.get("dispatch_attempted") is True:
+        raise Pr103RuntimeAdapterError("frame parity report must be a no-score local artifact")
+    payload = dict(payload)
+    payload["_report_path"] = repo_relative(report_path, repo)
+    payload["_report_sha256"] = sha256_file(report_path)
+    return payload
+
+
+def _validate_frame_parity_report(
+    report: dict[str, Any] | None,
+    candidate_archive_record: dict[str, Any],
+) -> None:
+    if report is None:
+        return
+    if report.get("full_frame_output_parity_proven") is not True:
+        raise Pr103RuntimeAdapterError("frame parity report does not prove full-frame parity")
+    candidate = _mapping(report.get("candidate"))
+    archive = _mapping(candidate.get("archive"))
+    if archive.get("sha256") != candidate_archive_record.get("sha256"):
+        raise Pr103RuntimeAdapterError(
+            "frame parity candidate archive sha256 does not match packet archive"
+        )
+    if archive.get("bytes") != candidate_archive_record.get("bytes"):
+        raise Pr103RuntimeAdapterError("frame parity candidate archive bytes do not match packet archive")
+
+
+def _full_frame_parity_passed(report: dict[str, Any] | None) -> bool:
+    return bool(report is not None and report.get("full_frame_output_parity_proven") is True)
+
+
+def _frame_parity_summary(report: dict[str, Any] | None) -> dict[str, Any]:
+    if report is None:
+        return {
+            "provided": False,
+            "full_frame_output_parity_proven": False,
+        }
+    return {
+        "provided": True,
+        "path": report.get("_report_path"),
+        "sha256": report.get("_report_sha256"),
+        "frame_output_parity_scope": report.get("frame_output_parity_scope"),
+        "sampled_frame_output_parity_proven": report.get("sampled_frame_output_parity_proven"),
+        "full_frame_output_parity_proven": report.get("full_frame_output_parity_proven"),
+        "source_output_sha256": _mapping(_mapping(report.get("source")).get("render")).get(
+            "output_sha256"
+        ),
+        "candidate_output_sha256": _mapping(_mapping(report.get("candidate")).get("render")).get(
+            "output_sha256"
+        ),
+        "output_bytes": _mapping(_mapping(report.get("source")).get("render")).get("output_bytes"),
+    }
 
 
 def _candidate_runtime_constants(manifest: dict[str, Any]) -> dict[str, int]:
@@ -559,6 +633,7 @@ def _render_frame_digest(
     archive_path: Path,
     pair_indices: list[int],
     device: str,
+    batch_size: int,
 ) -> dict[str, Any]:
     constants = _integer_constant_assignments(runtime_py.read_text(encoding="utf-8"))
     missing = [name for name in REQUIRED_RUNTIME_CONSTANTS if name not in constants]
@@ -590,6 +665,8 @@ def _render_frame_digest(
     runtime.apply_corrections(latents, wrp_b)
     n_pairs = int(latents.shape[0])
     normalized_indices = _normalize_pair_indices(pair_indices, n_pairs=n_pairs)
+    if batch_size <= 0:
+        raise Pr103RuntimeAdapterError("batch_size must be positive")
     torch = runtime.torch
     nn_device = torch.device(device)
     decoder = runtime.HNeRVDecoder(runtime.LATENT_DIM, runtime.BASE_CHANNELS, runtime.EVAL_SIZE).to(
@@ -601,9 +678,11 @@ def _render_frame_digest(
     pair_hashes = []
     chunks: list[bytes] = []
     with torch.inference_mode():
-        for pair_index in normalized_indices:
-            decoded = decoder(latents[pair_index : pair_index + 1])
-            flat = decoded.reshape(2, 3, *runtime.EVAL_SIZE)
+        for start in range(0, len(normalized_indices), batch_size):
+            batch_indices = normalized_indices[start : start + batch_size]
+            index_tensor = torch.tensor(batch_indices, dtype=torch.long, device=nn_device)
+            decoded = decoder(latents.index_select(0, index_tensor))
+            flat = decoded.reshape(len(batch_indices) * 2, 3, *runtime.EVAL_SIZE)
             up = runtime.F.interpolate(
                 flat,
                 size=(runtime.CAMERA_H, runtime.CAMERA_W),
@@ -618,16 +697,18 @@ def _render_frame_digest(
                 .cpu()
                 .numpy()
             )
-            payload = np.ascontiguousarray(frames).tobytes()
-            chunks.append(payload)
-            pair_hashes.append(
-                {
-                    "pair_index": pair_index,
-                    "frame_count": 2,
-                    "bytes": len(payload),
-                    "sha256": sha256_bytes(payload),
-                }
-            )
+            frames_by_pair = frames.reshape(len(batch_indices), 2, runtime.CAMERA_H, runtime.CAMERA_W, 3)
+            for offset, pair_index in enumerate(batch_indices):
+                payload = np.ascontiguousarray(frames_by_pair[offset]).tobytes()
+                chunks.append(payload)
+                pair_hashes.append(
+                    {
+                        "pair_index": pair_index,
+                        "frame_count": 2,
+                        "bytes": len(payload),
+                        "sha256": sha256_bytes(payload),
+                    }
+                )
     output = b"".join(chunks)
     return {
         "member_name": source.member_name,
@@ -713,6 +794,7 @@ def _packet_report_text(
 ) -> str:
     archive = _mapping(archive_manifest.get("candidate_archive"))
     parity = _mapping(runtime_adapter_manifest.get("decoder_state_parity_proof"))
+    frame_parity = _mapping(archive_manifest.get("frame_output_parity_proof"))
     return "\n".join(
         [
             "PR103 LC-AC histogram candidate packet",
@@ -726,6 +808,8 @@ def _packet_report_text(
             f"decoder_state_parity_passed: {parity.get('passed') is True}",
             f"full_frame_output_parity_proven: {parity.get('full_frame_output_parity_proven') is True}",
             f"full_frame_output_parity_required: {parity.get('full_frame_output_parity_required') is True}",
+            f"frame_parity_report_provided: {frame_parity.get('provided') is True}",
+            f"frame_parity_full_output_proven: {frame_parity.get('full_frame_output_parity_proven') is True}",
             "",
             "This packet is a compliance-smoke artifact only. It is not a score claim.",
             "",
