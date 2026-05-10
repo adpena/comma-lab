@@ -13497,6 +13497,17 @@ _COMMENT_ONLY_CONTRACT_EXEMPT_PATH_PARTS: tuple[str, ...] = (
     "src/tac/tests/",       # tests can carry illustrative comment patterns
 )
 
+_COMMENT_ONLY_CONTRACT_STRICT_PREFILTERS: tuple[str, ...] = (
+    "deploy",
+    "wrapper",
+    "overrides this stub",
+)
+_COMMENT_ONLY_CONTRACT_AUDIT_PREFILTERS: tuple[str, ...] = (
+    *_COMMENT_ONLY_CONTRACT_STRICT_PREFILTERS,
+    "caller is responsible",
+    "production",
+)
+
 
 def _find_enclosing_function_body(
     tree: ast.AST, lineno: int,
@@ -13562,6 +13573,8 @@ def _has_backing_assertion(
 def _scan_file_for_comment_only_contracts(
     path: Path, repo_root: Path,
     patterns: tuple[re.Pattern[str], ...],
+    *,
+    source_index=None,
 ) -> list[tuple[str, int, str, bool]]:
     """Scan one file for comment-only-contract patterns.
 
@@ -13578,8 +13591,16 @@ def _scan_file_for_comment_only_contracts(
         return []
     if any(part in rel_s for part in _COMMENT_ONLY_CONTRACT_EXEMPT_PATH_PARTS):
         return []
-    text, err = _read_python_text(path) if path.suffix == ".py" else (None, None)
-    if path.suffix != ".py":
+    if source_index is not None:
+        try:
+            text = source_index.read_text(path)
+            err = None
+        except (UnicodeDecodeError, OSError) as exc:
+            text = None
+            err = exc
+    else:
+        text, err = _read_python_text(path) if path.suffix == ".py" else (None, None)
+    if path.suffix != ".py" and source_index is None:
         try:
             text = path.read_text()
         except (UnicodeDecodeError, OSError):
@@ -13593,11 +13614,18 @@ def _scan_file_for_comment_only_contracts(
     # function-body lookup). Shell scripts skip the AST step.
     tree: ast.AST | None = None
     if path.suffix == ".py":
-        _text, parsed, parse_err = _read_python_text_and_tree(path)
-        if parse_err is not None:
-            tree = None
+        if source_index is not None:
+            try:
+                parsed = source_index.python_ast(path)
+                tree = parsed
+            except (OSError, SyntaxError, UnicodeDecodeError):
+                tree = None
         else:
-            tree = parsed
+            _text, parsed, parse_err = _read_python_text_and_tree(path)
+            if parse_err is not None:
+                tree = None
+            else:
+                tree = parsed
 
     findings: list[tuple[str, int, str, bool]] = []
     for i, line in enumerate(lines, start=1):
@@ -13644,32 +13672,61 @@ def check_no_comment_only_contracts(
     )
 
     all_findings: list[tuple[str, int, str, bool]] = []
-    for sd in scan_dirs:
-        sd_path = root / sd
-        if not sd_path.is_dir():
-            continue
-        for dirpath, dirnames, filenames in os.walk(sd_path):
-            dirnames[:] = sorted(dn for dn in dirnames if dn != "__pycache__")
-            base = Path(dirpath)
-            try:
-                rel_base = base.relative_to(root)
-            except ValueError:
-                rel_base = base
-            if rel_base.parts[:2] == ("experiments", "results"):
-                dirnames[:] = []
-                continue
-            if rel_base.parts == ("experiments",):
-                dirnames[:] = [dn for dn in dirnames if dn != "results"]
-            for filename in sorted(filenames):
-                f = base / filename
-                if f.suffix not in target_suffixes:
-                    continue
-                # R14-1 helper: skip OSS-export staging mirror.
-                if _is_oss_export_mirror_path(f):
-                    continue
-                all_findings.extend(
-                    _scan_file_for_comment_only_contracts(f, root, patterns)
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        prefilters = (
+            _COMMENT_ONLY_CONTRACT_AUDIT_PREFILTERS
+            if audit
+            else _COMMENT_ONLY_CONTRACT_STRICT_PREFILTERS
+        )
+        candidate_paths: set[Path] = set()
+        for pattern in ("*.py", "*.sh"):
+            candidate_paths.update(
+                source_index.files_containing_casefold_substrings(
+                    scan_dirs,
+                    pattern=pattern,
+                    substrings=prefilters,
+                    require_all=False,
                 )
+            )
+        for f in sorted(candidate_paths, key=lambda item: item.as_posix()):
+            if f.suffix not in target_suffixes:
+                continue
+            all_findings.extend(
+                _scan_file_for_comment_only_contracts(
+                    f,
+                    root,
+                    patterns,
+                    source_index=source_index,
+                )
+            )
+    else:
+        for sd in scan_dirs:
+            sd_path = root / sd
+            if not sd_path.is_dir():
+                continue
+            for dirpath, dirnames, filenames in os.walk(sd_path):
+                dirnames[:] = sorted(dn for dn in dirnames if dn != "__pycache__")
+                base = Path(dirpath)
+                try:
+                    rel_base = base.relative_to(root)
+                except ValueError:
+                    rel_base = base
+                if rel_base.parts[:2] == ("experiments", "results"):
+                    dirnames[:] = []
+                    continue
+                if rel_base.parts == ("experiments",):
+                    dirnames[:] = [dn for dn in dirnames if dn != "results"]
+                for filename in sorted(filenames):
+                    f = base / filename
+                    if f.suffix not in target_suffixes:
+                        continue
+                    # R14-1 helper: skip OSS-export staging mirror.
+                    if _is_oss_export_mirror_path(f):
+                        continue
+                    all_findings.extend(
+                        _scan_file_for_comment_only_contracts(f, root, patterns)
+                    )
 
     # Audit mode: report ALL findings (backed and unbacked).
     # STRICT mode: violations are unbacked findings only.
@@ -15578,6 +15635,7 @@ def check_profile_keys_have_resolvers(
         py_paths = tuple(_iter_python_files(root, resolver_search_dirs))
     else:
         py_paths = resolver_source_files
+    source_index = _current_source_index(root)
     cache_enabled = os.environ.get("PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE") != "1"
     cache_name = "profile_resolver_source_success"
     cache_key = hashlib.sha256(
@@ -15608,8 +15666,12 @@ def check_profile_keys_have_resolvers(
     resolved: set[str] = set()
     unresolved = set(keys)
     key_re = _profile_key_pattern(unresolved)
-    source_index = _current_source_index(root)
-    for p in py_paths:
+    scan_paths = (
+        source_index.files(resolver_search_dirs, pattern="*.py")
+        if source_index is not None
+        else py_paths
+    )
+    for p in scan_paths:
         if not unresolved:
             break
         try:

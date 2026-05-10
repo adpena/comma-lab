@@ -444,3 +444,62 @@ Verification:
 Next PR101 proxy step: either compile the three unsupported params into
 runtime-consumed bytes with tests, or shrink the candidate schema to the
 three proven bias params before any Level-2 exact-eval claim can be opened.
+
+## 2026-05-10T13:15Z adversarial review fixes + T1 guard harvest
+
+Red-team review found two HIGH issues and one MEDIUM issue; fixes landed in
+the current tranche:
+
+- Modal `.spawn()` ambiguity no longer terminal-closes the lane claim when the
+  SDK raises after the submission boundary. The claim is left nonterminal as
+  `ambiguous_modal_spawn_submission_recovery_required` with a local recovery
+  record for dashboard/API reconciliation.
+- Remote T1 mounted-code git probes normalize no-git / detached / multiline
+  `HEAD\nunknown` output to `unknown` while preserving fail-closed behavior for
+  real mismatching SHAs.
+- The PR101 proxy proof no longer claims full runtime consumption. It now
+  proves static patched bias lines plus a no-scorer `inflate.sh -> inflate.py`
+  wrapper route; `runtime_consumption_proven_for_supported_bias_params=false`
+  until the real inflate body and scorer-backed output path are exercised.
+
+Updated PR101 proxy proof:
+
+- proof SHA-256 excluding self:
+  `27f3239abc2aad6e791418f7944ae931d648951c9949c4b659a2b000e87f591e`
+- `inflate_sh_routes_to_packet_inflate_py=true`
+- `supported_bias_params_static_patch_proven=true`
+- `runtime_consumption_proven_for_supported_bias_params=false`
+- `score_claim=false`, `ready_for_exact_eval_dispatch=false`,
+  `dispatch_attempted=false`
+
+Strict T1 Modal guard `t1_balle_modal_guard_80b139c9_20260510T1240Z`
+completed as a measured infrastructure/custody negative, not a model result:
+
+- score-domain training entered and completed 50 epochs on T4.
+- packet compiler emitted archive SHA-256
+  `4b8073665aec2193a6f86407663da13f9f83540d5fd770aa65b8f91875d44d53`
+  at 481,704 bytes.
+- exact CUDA auth eval failed before scoring because the remote script passed
+  the packet compiler's runtime-tree hash
+  `133d32db974234bb499182772b5443a353aad61d3e3ce762f4eb44fdcd427a82`
+  as `--expected-runtime-tree-sha256`, while `contest_auth_eval` correctly
+  hashed the final runtime tree as
+  `921a38ada4d82f5263207c230ce239eb6a275485343a62c6c76ed1551d6b9930`.
+- dispatch claim was terminally closed as
+  `failed_t1_modal_recovered_no_score_claim`.
+
+Fix landed: T1 remote dispatch now computes the expected runtime-tree hash
+using `experiments.contest_auth_eval._runtime_dependency_manifest` on the final
+packet runtime immediately before auth eval, not the packet compiler's
+different byte-closure hash. The packet compiler now withholds the
+self-referential final `build_manifest.runtime_tree_sha256` and records its
+pre-manifest byte-closure hash as `pre_manifest_runtime_tree_sha256`.
+
+Preflight/DX status:
+
+- source-index equivalence tests pass for comment-only contracts,
+  bare-round eval-roundtrip, and profile-key resolver scans.
+- full all-lanes preflight remains under the 30s DX budget: 5.07s wall,
+  16.66s serial sum, 3.29x estimated speedup, all 29 checks passed after
+  refreshing the raw `experiments/results/` runtime-source baseline for the
+  newly harvested T1/proxy artifacts.

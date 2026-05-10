@@ -25,7 +25,7 @@ _CURRENT_SOURCE_INDEX: contextvars.ContextVar[SourceIndex | None] = contextvars.
     "tac_current_source_index",
     default=None,
 )
-_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v13"
+_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v15"
 
 
 def _safe_resolve(path: Path) -> Path:
@@ -54,6 +54,11 @@ _DEFAULT_TEXT_FACT_NEEDLES = frozenset(
         "False",
         "F.interpolate",
         "KLDivLoss",
+        "caller is responsible",
+        "deploy",
+        "overrides this stub",
+        "production",
+        "wrapper",
         "WARN ",
         "WARNING:",
         "ZipFile",
@@ -172,6 +177,7 @@ class SourceTextFacts:
     line_count: int
     tokens: frozenset[str]
     substrings: frozenset[str]
+    casefold_substrings: frozenset[str] = frozenset()
 
     def contains(self, needle: str) -> bool:
         """Return true when a known token or substring appears in this file."""
@@ -187,6 +193,11 @@ class SourceTextFacts:
         """Return true when any known token/substr in ``needles`` appears."""
 
         return any(self.contains(needle) for needle in needles)
+
+    def contains_casefold(self, needle: str) -> bool:
+        """Return true when ``needle`` appears case-insensitively."""
+
+        return needle.casefold() in self.casefold_substrings
 
 
 @dataclass
@@ -374,6 +385,7 @@ class SourceIndex:
             return facts
 
         text = self.read_text(target)
+        folded_text = text.casefold()
         facts = SourceTextFacts(
             path=target,
             rel_path=self.repo_relative(target),
@@ -387,6 +399,11 @@ class SourceIndex:
             tokens=frozenset(),
             substrings=frozenset(
                 needle for needle in _DEFAULT_TEXT_FACT_NEEDLES if needle in text
+            ),
+            casefold_substrings=frozenset(
+                needle.casefold()
+                for needle in _DEFAULT_TEXT_FACT_NEEDLES
+                if needle.casefold() in folded_text
             ),
         )
         with self._lock:
@@ -513,6 +530,47 @@ class SourceIndex:
                     rows = frozenset(paths)
                     self._substring_index[(group_key, substring)] = rows
                     candidate_sets.append(rows)
+        if require_all:
+            matched = set(candidate_sets[0])
+            for rows in candidate_sets[1:]:
+                matched.intersection_update(rows)
+        else:
+            matched = set()
+            for rows in candidate_sets:
+                matched.update(rows)
+        return tuple(sorted(matched, key=lambda item: item.as_posix()))
+
+    def files_containing_casefold_substrings(
+        self,
+        dirs: Sequence[str | Path],
+        *,
+        pattern: str,
+        substrings: Sequence[str],
+        require_all: bool = True,
+    ) -> tuple[Path, ...]:
+        """Return files whose text contains all/any substrings ignoring case."""
+
+        if not substrings:
+            return self.files(dirs, pattern=pattern)
+        facts_rows = self.facts_for_files(dirs, pattern=pattern)
+        buckets: dict[str, set[Path]] = {substring.casefold(): set() for substring in substrings}
+        unknown: list[str] = []
+        known_needles = {needle.casefold() for needle in _DEFAULT_TEXT_FACT_NEEDLES}
+        for substring in substrings:
+            folded = substring.casefold()
+            if folded in known_needles:
+                for facts in facts_rows:
+                    if facts.contains_casefold(substring):
+                        buckets[folded].add(facts.path)
+            else:
+                unknown.append(substring)
+        if unknown:
+            for facts in facts_rows:
+                folded_text = self.read_text(facts.path).casefold()
+                for substring in unknown:
+                    if substring.casefold() in folded_text:
+                        buckets[substring.casefold()].add(facts.path)
+        candidate_sets = [frozenset(buckets[substring.casefold()]) for substring in substrings]
         if require_all:
             matched = set(candidate_sets[0])
             for rows in candidate_sets[1:]:
@@ -849,6 +907,11 @@ class SourceIndex:
             substrings=frozenset(
                 str(item) for item in substrings if isinstance(item, str)
             ),
+            casefold_substrings=frozenset(
+                str(item).casefold()
+                for item in row.get("casefold_substrings", substrings)
+                if isinstance(item, str)
+            ),
         )
 
     def _facts_to_persistent_row(self, facts: SourceTextFacts) -> dict[str, object]:
@@ -864,6 +927,7 @@ class SourceIndex:
             "line_count": facts.line_count,
             "tokens": sorted(facts.tokens),
             "substrings": sorted(facts.substrings),
+            "casefold_substrings": sorted(facts.casefold_substrings),
         }
 
 

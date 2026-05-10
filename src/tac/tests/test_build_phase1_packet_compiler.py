@@ -61,6 +61,19 @@ A1_CANONICAL_PACKET_DIR = (
 )
 
 
+def _load_contest_auth_eval_module():
+    path = REPO_ROOT / "experiments" / "contest_auth_eval.py"
+    spec = importlib.util.spec_from_file_location(
+        "contest_auth_eval_for_phase1_tests",
+        path,
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 # ---------------------------------------------------------------------------
 # Synthetic packet fixture builders
 # ---------------------------------------------------------------------------
@@ -184,6 +197,37 @@ def test_identity_writes_build_manifest_and_no_op_proof(tmp_path: Path) -> None:
     assert manifest["score_claim"] is False
     assert manifest["lane_class"] == "substrate_engineering"
     assert manifest["mode"] == "identity"
+
+
+def test_build_manifest_does_not_publish_stale_final_runtime_tree_hash(
+    tmp_path: Path,
+) -> None:
+    packet_dir = _write_synthetic_packet(tmp_path)
+    out_dir = tmp_path / "out"
+    result = compile_phase1_packet(
+        input_packet=packet_dir,
+        output_dir=out_dir,
+        mode="identity",
+    )
+
+    manifest = json.loads((out_dir / "build_manifest.json").read_text())
+    cae = _load_contest_auth_eval_module()
+    auth_runtime = cae._runtime_dependency_manifest(
+        out_dir / "inflate.sh",
+        REPO_ROOT / "upstream",
+        repo_root=REPO_ROOT,
+    )
+    auth_files = {entry["relative_path"] for entry in auth_runtime["files"]}
+
+    assert {"build_manifest.json", "no_op_proof.json"}.issubset(auth_files)
+    assert manifest["runtime_tree_sha256"] == ""
+    assert manifest["runtime_tree_sha256_status"] == (
+        "withheld_self_referential_final_manifest_hash_use_contest_auth_eval"
+    )
+    assert manifest["pre_manifest_runtime_tree_sha256"] == result.runtime_tree_sha256
+    assert manifest["pre_manifest_runtime_tree_sha256"] != auth_runtime[
+        "runtime_tree_sha256"
+    ]
 
 
 @pytest.mark.skipif(

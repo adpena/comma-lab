@@ -323,7 +323,11 @@ def test_remote_t1_script_wires_packet_compile_and_contest_cuda_auth_eval() -> N
     assert "--device cuda" in text
     assert "--work-dir \"$AUTH_EVAL_WORK_DIR\"" in text
     assert "--json-out \"$AUTH_EVAL_JSON\"" in text
-    assert "--expected-runtime-tree-sha256 \"$RUNTIME_TREE_SHA\"" in text
+    assert "PACKET_COMPILER_RUNTIME_TREE_SHA=" in text
+    assert "AUTH_EVAL_EXPECTED_RUNTIME_TREE_SHA=" in text
+    assert "from experiments.contest_auth_eval import _runtime_dependency_manifest" in text
+    assert "--expected-runtime-tree-sha256 \"$AUTH_EVAL_EXPECTED_RUNTIME_TREE_SHA\"" in text
+    assert "--expected-runtime-tree-sha256 \"$RUNTIME_TREE_SHA\"" not in text
     assert "required_contest_cuda_evidence_blockers" in text
     assert "device mps" not in text.lower()
 

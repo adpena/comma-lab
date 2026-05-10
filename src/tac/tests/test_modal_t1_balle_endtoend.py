@@ -9,6 +9,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = REPO_ROOT / "experiments" / "modal_t1_balle_endtoend.py"
+REMOTE_SCRIPT = REPO_ROOT / "scripts" / "remote_lane_t1_balle_endtoend.sh"
 RUNTIME_SCRIPT = REPO_ROOT / "src" / "tac" / "deploy" / "modal" / "runtime.py"
 
 
@@ -163,6 +164,62 @@ def test_modal_t1_claims_before_spawn_and_passes_claim_ledger_to_remote() -> Non
     assert "claim_ledger_bytes=claim_ledger_bytes" in main_src
 
 
+def test_modal_t1_spawn_exception_keeps_claim_nonterminal_for_recovery(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    module = _load_module()
+    monkeypatch.setattr(module, "RESULT_ROOT", tmp_path)
+    claim_calls: list[dict[str, object]] = []
+
+    def fake_claim_lane(**kwargs):
+        claim_calls.append(kwargs)
+        return 0
+
+    monkeypatch.setattr(module, "_claim_lane", fake_claim_lane)
+
+    try:
+        raise RuntimeError("server call may already exist")
+    except RuntimeError as exc:
+        record_path = module._mark_modal_spawn_submission_unknown(
+            instance_job_id="unit-spawn-ambiguous",
+            predicted_eta_utc="2026-05-10T00:00:00Z",
+            exc=exc,
+        )
+
+    assert claim_calls == [
+        {
+            "instance_job_id": "unit-spawn-ambiguous",
+            "predicted_eta_utc": "2026-05-10T00:00:00Z",
+            "notes": claim_calls[0]["notes"],
+            "status": module.MODAL_SPAWN_SUBMISSION_UNKNOWN_STATUS,
+            "force": True,
+        }
+    ]
+    assert not module.MODAL_SPAWN_SUBMISSION_UNKNOWN_STATUS.startswith(
+        ("completed_", "failed_", "refused_dispatch", "stopped_", "stale_")
+    )
+    assert "manual Modal call reconciliation" in str(claim_calls[0]["notes"])
+
+    payload = json.loads(record_path.read_text())
+    assert payload["call_id"] is None
+    assert payload["terminal_claim_closed"] is False
+    assert payload["server_side_call_existence"] == "unknown"
+    assert payload["recovery_required"] is True
+    assert payload["claim_update_rc"] == 0
+
+
+def test_modal_t1_spawn_exception_path_does_not_terminal_close_claim() -> None:
+    text = _source()
+    main_src = text[text.index("@app.local_entrypoint()"):text.index("def _returncode_is_zero")]
+
+    assert "failed_modal_spawn_submission" not in main_src
+    assert "except Exception as exc:" in main_src
+    assert "MODAL_SPAWN_SUBMISSION_UNKNOWN_STATUS" in main_src
+    assert "_mark_modal_spawn_submission_unknown(" in main_src
+    assert "Lane claim left open" in main_src
+
+
 def test_modal_t1_remote_runs_existing_script_with_score_domain_exact_eval_env() -> None:
     text = _source()
     remote_src = text[text.index("def run_t1_balle_modal("):text.index("def _write_dispatch_metadata")]
@@ -184,6 +241,53 @@ def test_modal_t1_remote_runs_existing_script_with_score_domain_exact_eval_env()
     assert '"PYTORCH_CUDA_ALLOC_CONF": PYTORCH_CUDA_ALLOC_CONF_VALUE' in remote_src
     assert '"T1_MOUNTED_CODE_GIT_HEAD": mounted_code_git_head' in remote_src
     assert '"SINKHORN_MAX_POSITIONS_PER_CHUNK": str(int(sinkhorn_max_positions_per_chunk))' in remote_src
+
+
+def _extract_remote_shell_function(name: str) -> str:
+    text = REMOTE_SCRIPT.read_text()
+    start = text.index(f"{name}() {{")
+    end = text.index("\n}\n", start) + 3
+    return text[start:end]
+
+
+def test_remote_t1_git_probe_normalizes_no_git_and_multiline_output() -> None:
+    functions = "\n\n".join(
+        [
+            _extract_remote_shell_function("normalize_git_probe_output"),
+            _extract_remote_shell_function("read_git_probe_value"),
+        ]
+    )
+    valid_head = "0123456789abcdef0123456789abcdef01234567"
+    probe = f"""
+set -euo pipefail
+{functions}
+test "$(normalize_git_probe_output head $'HEAD\\nunknown')" = unknown
+test "$(normalize_git_probe_output branch $'HEAD\\nunknown')" = unknown
+test "$(normalize_git_probe_output head 'not-a-sha')" = unknown
+test "$(normalize_git_probe_output branch HEAD)" = unknown
+test "$(normalize_git_probe_output head '{valid_head}')" = "{valid_head}"
+test "$(normalize_git_probe_output branch main)" = main
+"""
+    result = subprocess.run(
+        ["bash", "-c", probe],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr or result.stdout
+
+
+def test_remote_t1_unknown_local_git_uses_declared_mounted_metadata() -> None:
+    text = REMOTE_SCRIPT.read_text()
+
+    assert 'LOCAL_BRANCH="$(read_git_probe_value branch git -C "$WORKSPACE" branch --show-current)"' in text
+    assert 'LOCAL_HEAD="$(read_git_probe_value head git -C "$WORKSPACE" rev-parse HEAD)"' in text
+    assert 'if [ "$LOCAL_HEAD" != "unknown" ] && [ "$LOCAL_HEAD" != "$DECLARED_MOUNTED_GIT_HEAD" ]; then' in text
+    assert 'if [ "$LOCAL_BRANCH" != "main" ] && [ "$LOCAL_BRANCH" != "unknown" ]; then' in text
+    assert '"declared_mounted_git_branch": "${DECLARED_MOUNTED_GIT_BRANCH}"' in text
+    assert '"declared_mounted_git_head": "${DECLARED_MOUNTED_GIT_HEAD}"' in text
 
 
 def test_modal_t1_image_installs_scorer_runtime_dependencies() -> None:

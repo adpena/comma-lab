@@ -57,7 +57,23 @@ def _write_zip(path: Path, member: str = "x", payload: bytes = b"archive-bytes")
 
 def _runtime_fixture(tmp_path: Path) -> Path:
     runtime = tmp_path / "runtime"
-    _write_file(runtime / "inflate.sh", "#!/usr/bin/env bash\nset -euo pipefail\n", 0o755)
+    _write_file(
+        runtime / "inflate.sh",
+        """#!/usr/bin/env bash
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DATA_DIR="$1"
+OUTPUT_DIR="$2"
+FILE_LIST="$3"
+mkdir -p "$OUTPUT_DIR"
+while IFS= read -r line; do
+  [ -z "$line" ] && continue
+  BASE="${line%.*}"
+  python "$HERE/inflate.py" "$DATA_DIR/x" "$OUTPUT_DIR/${BASE}.raw"
+done < "$FILE_LIST"
+""",
+        0o755,
+    )
     _write_file(
         runtime / "inflate.py",
         """def inflate():
@@ -118,6 +134,38 @@ def _canonical_sha(payload: object) -> str:
     return sha256(text.encode("utf-8")).hexdigest()
 
 
+def _mode_string(path: Path) -> str:
+    return f"{path.stat().st_mode & 0o777:04o}"
+
+
+def _refresh_manifest_runtime_file(manifest_path: Path, relpath: str) -> None:
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    packet_dir = Path(manifest["packet_dir"])
+    target = packet_dir / relpath
+    for row in manifest["runtime_custody"]["runtime_files"]:
+        if row["relpath"] == relpath:
+            row["bytes"] = target.stat().st_size
+            row["mode"] = _mode_string(target)
+            row["sha256"] = sha256(target.read_bytes()).hexdigest()
+            break
+    else:  # pragma: no cover - fixture sanity guard
+        raise AssertionError(f"runtime file not found in manifest: {relpath}")
+    basis = [
+        {
+            "bytes": row["bytes"],
+            "mode": row["mode"],
+            "relpath": row["relpath"],
+            "sha256": row["sha256"],
+        }
+        for row in sorted(manifest["runtime_custody"]["runtime_files"], key=lambda item: item["relpath"])
+    ]
+    manifest["runtime_custody"]["runtime_tree_sha256"] = _canonical_sha(basis)
+    manifest_basis = dict(manifest)
+    manifest_basis.pop("manifest_sha256_excluding_self")
+    manifest["manifest_sha256_excluding_self"] = _canonical_sha(manifest_basis)
+    _write_json(manifest_path, manifest)
+
+
 def test_proves_only_supported_bias_params_are_runtime_consumed(
     tmp_path: Path,
     packet_builder,
@@ -135,15 +183,20 @@ def test_proves_only_supported_bias_params_are_runtime_consumed(
 
     assert proof == proof_on_disk
     assert proof["schema"] == "pr101_kaggle_proxy_runtime_consumption_proof_v1"
+    assert proof["proof_kind"] == "static_bias_patch_plus_local_inflate_wrapper_route_no_score_v1"
     assert proof["score_claim"] is False
     assert proof["ready_for_exact_eval_dispatch"] is False
     assert proof["dispatch_attempted"] is False
-    assert proof["runtime_consumption_proven_for_supported_bias_params"] is True
+    assert proof["supported_bias_params_static_patch_proven"] is True
+    assert proof["inflate_sh_routes_to_packet_inflate_py"] is True
+    assert proof["runtime_consumption_proven_for_supported_bias_params"] is False
     assert proof["unsupported_proxy_params_runtime_consumed"] is False
+    assert proof["scorers_invoked"] is False
+    assert proof["gpu_required"] is False
     assert proof_sha == _canonical_sha(basis)
 
     assert proof["archive_unchanged_proof"]["archive_sha256"] == proof["archive_unchanged_proof"]["manifest_archive_sha256"]
-    consumed = proof["inflate_static_consumption_proof"]["supported_bias_params_consumed"]
+    consumed = proof["inflate_static_bias_patch_proof"]["supported_bias_params_consumed"]
     assert {row["param"] for row in consumed} == {"bias_b", "bias_g", "bias_r"}
     assert {row["replacement"] for row in consumed} == {
         "up[:, 0, 0].add_(-1.01)",
@@ -157,6 +210,49 @@ def test_proves_only_supported_bias_params_are_runtime_consumed(
         "latent_delta_scale_not_runtime_consumed",
         "smooth_weight_not_runtime_consumed",
     ]
+    route = proof["inflate_wrapper_route_proof"]
+    assert route["proof_kind"] == "local_no_scorer_wrapper_route_probe_v1"
+    assert route["wrapper_invoked_packet_inflate_py"] is True
+    assert route["packet_inflate_py_sha256"] == proof["inflate_static_bias_patch_proof"]["inflate_sha256"]
+    assert route["observed_argv_shape"] == ["inflate.py", "src_bin", "dst_raw"]
+    assert route["observed_src_basename"] == "x"
+    assert route["observed_dst_basename"] == "0.raw"
+    assert route["scorers_invoked"] is False
+    assert route["gpu_required"] is False
+
+
+def test_fails_closed_when_noop_inflate_sh_does_not_route_to_packet_inflate_py(
+    tmp_path: Path,
+    packet_builder,
+    proof_tool,
+) -> None:
+    packet_dir = _build_packet(tmp_path, packet_builder)
+    inflate_sh = packet_dir / "inflate.sh"
+    inflate_sh.write_text("#!/usr/bin/env bash\nset -euo pipefail\nexit 0\n", encoding="utf-8")
+    os.chmod(inflate_sh, 0o755)
+    _refresh_manifest_runtime_file(packet_dir / "runtime_packet_manifest.json", "inflate.sh")
+
+    with pytest.raises(proof_tool.RuntimeConsumptionProofError, match="did not invoke packet inflate.py"):
+        proof_tool.build_runtime_consumption_proof(
+            manifest_path=packet_dir / "runtime_packet_manifest.json",
+        )
+    assert not (packet_dir / "runtime_consumption_proof.json").exists()
+
+
+def test_minimal_wrapper_invoking_python_inflate_py_passes_wrapper_route_proof(
+    tmp_path: Path,
+    packet_builder,
+    proof_tool,
+) -> None:
+    packet_dir = _build_packet(tmp_path, packet_builder)
+
+    proof = proof_tool.build_runtime_consumption_proof(
+        manifest_path=packet_dir / "runtime_packet_manifest.json",
+    )
+
+    assert proof["inflate_wrapper_route_proof"]["wrapper_invoked_packet_inflate_py"] is True
+    assert proof["inflate_sh_routes_to_packet_inflate_py"] is True
+    assert proof["runtime_consumption_proven_for_supported_bias_params"] is False
 
 
 def test_fails_closed_when_inflate_is_tampered(
@@ -236,8 +332,11 @@ def test_cli_emits_false_authority_fields(tmp_path: Path, packet_builder) -> Non
 
     stdout = json.loads(proc.stdout)
     assert stdout["candidate_id"] == "proxy_cmaes_0037"
+    assert stdout["proof_kind"] == "static_bias_patch_plus_local_inflate_wrapper_route_no_score_v1"
     assert stdout["score_claim"] is False
     assert stdout["ready_for_exact_eval_dispatch"] is False
     assert stdout["dispatch_attempted"] is False
+    assert stdout["inflate_sh_routes_to_packet_inflate_py"] is True
+    assert stdout["runtime_consumption_proven_for_supported_bias_params"] is False
     assert len(stdout["proof_sha256_excluding_self"]) == 64
     assert proof_path.is_file()

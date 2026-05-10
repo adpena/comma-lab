@@ -49,6 +49,7 @@ REMOTE_OUT_ROOT = REMOTE_REPO / "experiments/results/modal_t1_balle_remote"
 APP_NAME = "comma-t1-balle-endtoend"
 LANE_ID = "t1_balle_128k_endtoend"
 CLAIM_AGENT = "codex:modal_t1_balle_endtoend"
+MODAL_SPAWN_SUBMISSION_UNKNOWN_STATUS = "ambiguous_modal_spawn_submission_recovery_required"
 HOURLY_RATE_T4_USD = 0.59
 DEFAULT_TIMEOUT_HOURS = 24.0
 DEFAULT_TRAIN_TIMEOUT_HOURS = 22.5
@@ -1006,6 +1007,59 @@ def _write_dispatch_metadata(
     return path
 
 
+def _mark_modal_spawn_submission_unknown(
+    *,
+    instance_job_id: str,
+    predicted_eta_utc: str,
+    exc: Exception,
+) -> Path:
+    """Preserve custody when Modal spawn status is ambiguous.
+
+    Once the code enters ``.spawn()``, an exception may occur after Modal has
+    created a server-side call but before the SDK returns the call id. Keep the
+    lane claim nonterminal so paid work remains visible until an operator
+    reconciles Modal state.
+    """
+    out_dir = _result_dir(instance_job_id)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    record_path = out_dir / "modal_spawn_submission_unknown.json"
+    payload = {
+        "schema_version": "t1_modal_spawn_submission_unknown_v1",
+        "app": APP_NAME,
+        "lane_id": LANE_ID,
+        "instance_job_id": instance_job_id,
+        "call_id": None,
+        "status": MODAL_SPAWN_SUBMISSION_UNKNOWN_STATUS,
+        "terminal_claim_closed": False,
+        "server_side_call_existence": "unknown",
+        "recovery_required": True,
+        "recovery_note": (
+            "Modal .spawn() raised after entering the submission boundary. "
+            "A server-side call may exist even though the SDK did not return a "
+            "call id; reconcile Modal dashboard/API state before closing this claim."
+        ),
+        "exception_type": type(exc).__name__,
+        "exception_repr": repr(exc),
+        "traceback_tail": _tail(traceback.format_exc(), limit=8192),
+        "created_at_utc": _utc_now(),
+    }
+    _write_json(record_path, payload)
+    claim_rc = _claim_lane(
+        instance_job_id=instance_job_id,
+        predicted_eta_utc=predicted_eta_utc,
+        notes=(
+            "T1 Modal .spawn() status unknown after submission boundary; "
+            "claim intentionally left nonterminal for manual Modal call "
+            f"reconciliation; exception={type(exc).__name__}; record={record_path}"
+        ),
+        status=MODAL_SPAWN_SUBMISSION_UNKNOWN_STATUS,
+        force=True,
+    )
+    payload["claim_update_rc"] = claim_rc
+    _write_json(record_path, payload)
+    return record_path
+
+
 @app.local_entrypoint()
 def main(
     label: str | None = None,
@@ -1086,14 +1140,16 @@ def main(
             mounted_code_git_branch=mounted_code_git_branch,
         )
     except Exception as exc:
-        _claim_lane(
+        record_path = _mark_modal_spawn_submission_unknown(
             instance_job_id=instance_job_id,
-            predicted_eta_utc=_utc_now(),
-            notes=f"T1 Modal .spawn() failed before remote GPU work: {type(exc).__name__}: {exc!r}",
-            status="failed_modal_spawn_submission",
-            force=True,
+            predicted_eta_utc=predicted_eta_utc,
+            exc=exc,
         )
-        raise SystemExit(f"FATAL: Modal .spawn() failed: {type(exc).__name__}: {exc}") from exc
+        raise SystemExit(
+            "FATAL: Modal .spawn() status is ambiguous after submission boundary: "
+            f"{type(exc).__name__}: {exc}. Lane claim left open as "
+            f"{MODAL_SPAWN_SUBMISSION_UNKNOWN_STATUS}; recovery record={record_path}"
+        ) from exc
 
     metadata_path = _write_dispatch_metadata(
         instance_job_id=instance_job_id,

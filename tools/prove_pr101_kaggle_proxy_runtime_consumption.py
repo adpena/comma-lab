@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Prove local runtime consumption for the PR101 Kaggle proxy packet.
 
-This is a static, local-only proof. It reads the runtime packet manifest emitted
-by ``tools/build_pr101_kaggle_proxy_runtime_packet.py``, verifies the unchanged
+This is a local-only proof. It reads the runtime packet manifest emitted by
+``tools/build_pr101_kaggle_proxy_runtime_packet.py``, verifies the unchanged
 archive custody, verifies that ``inflate.py`` contains only the three supported
-bias-param replacements, and writes ``runtime_consumption_proof.json``.
+bias-param replacements, and runs a no-scorer wrapper-route probe proving that
+``inflate.sh`` invokes the packet-local ``inflate.py`` entrypoint.
 
 It does not run inflate, invoke scorers, dispatch jobs, or claim score.
 """
@@ -12,6 +13,11 @@ It does not run inflate, invoke scorers, dispatch jobs, or claim score.
 from __future__ import annotations
 
 import argparse
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -28,6 +34,7 @@ from tac.repo_io import json_text, read_json, repo_relative, sha256_file, write_
 TOOL_NAME = "tools/prove_pr101_kaggle_proxy_runtime_consumption.py"
 PACKET_SCHEMA = "pr101_kaggle_proxy_runtime_packet_v1"
 PROOF_SCHEMA = "pr101_kaggle_proxy_runtime_consumption_proof_v1"
+PROOF_KIND = "static_bias_patch_plus_local_inflate_wrapper_route_no_score_v1"
 DEFAULT_MANIFEST = Path(
     "experiments/results/kaggle_pr101_proxy_sweep_20260510_codex/"
     "pr101_proxy_sweep/proxy_runtime_packet/runtime_packet_manifest.json"
@@ -49,6 +56,8 @@ FALSE_AUTHORITY_FIELDS = {
     "ready_for_exact_eval_dispatch": False,
     "dispatch_attempted": False,
 }
+ROUTE_PROBE_FILE_LIST_ENTRY = "0.mkv"
+ROUTE_PROBE_TIMEOUT_SECONDS = 10
 
 
 class RuntimeConsumptionProofError(ValueError):
@@ -78,6 +87,12 @@ def _canonical_json_sha256(payload: Any) -> str:
     import hashlib
 
     return hashlib.sha256(json_text(payload).encode("utf-8")).hexdigest()
+
+
+def _sha256_text(text: str) -> str:
+    import hashlib
+
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def _verify_manifest_self_hash(manifest: Mapping[str, Any]) -> None:
@@ -142,6 +157,21 @@ def _runtime_file_record(manifest: Mapping[str, Any], relpath: str) -> Mapping[s
     return matches[0]
 
 
+def _verify_runtime_file_sha(manifest: Mapping[str, Any], packet_dir: Path, relpath: str) -> dict[str, Any]:
+    record = _runtime_file_record(manifest, relpath)
+    path = packet_dir / relpath
+    if not path.is_file():
+        raise RuntimeConsumptionProofError(f"{relpath} missing: {path}")
+    actual_sha = sha256_file(path)
+    if record.get("sha256") != actual_sha:
+        raise RuntimeConsumptionProofError(f"{relpath} SHA does not match runtime custody manifest")
+    return {
+        "path": _repo_rel(path),
+        "sha256": actual_sha,
+        "bytes": path.stat().st_size,
+    }
+
+
 def _verify_inflate_file(manifest: Mapping[str, Any], packet_dir: Path) -> dict[str, Any]:
     patch = _require_mapping(manifest.get("runtime_patch"), "runtime_patch")
     if patch.get("patched_file") != "inflate.py":
@@ -203,6 +233,149 @@ def _verify_inflate_file(manifest: Mapping[str, Any], packet_dir: Path) -> dict[
         "supported_bias_params_consumed": sorted(consumed_rows, key=lambda row: row["param"]),
         "old_pr101_sub_lines_absent": sorted(OLD_PR101_LINES.values()),
         "unsupported_param_names_absent_from_inflate_py": list(UNSUPPORTED_PARAMS),
+    }
+
+
+def _sentinel_inflate_py() -> str:
+    return """#!/usr/bin/env python3
+import json
+import os
+import sys
+from pathlib import Path
+
+sentinel = Path(os.environ["PR101_INFLATE_ROUTE_SENTINEL"])
+sentinel.parent.mkdir(parents=True, exist_ok=True)
+if len(sys.argv) >= 3:
+    Path(sys.argv[2]).parent.mkdir(parents=True, exist_ok=True)
+    Path(sys.argv[2]).write_bytes(b"")
+sentinel.write_text(
+    json.dumps(
+        {
+            "argv": sys.argv,
+            "cwd": os.getcwd(),
+            "probe_kind": "pr101_packet_inflate_py_route_probe_v1",
+        },
+        sort_keys=True,
+    )
+    + "\\n",
+    encoding="utf-8",
+)
+"""
+
+
+def _normalize_probe_path(path_value: str, *, cwd: Path) -> Path:
+    path = Path(path_value)
+    if not path.is_absolute():
+        path = cwd / path
+    return path.resolve()
+
+
+def _verify_inflate_wrapper_routes_to_packet_inflate_py(
+    manifest: Mapping[str, Any],
+    packet_dir: Path,
+    inflate_proof: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Run a no-scorer local probe proving ``inflate.sh`` calls packet ``inflate.py``."""
+
+    wrapper_record = _verify_runtime_file_sha(manifest, packet_dir, "inflate.sh")
+    original_inflate_sha = inflate_proof.get("inflate_sha256")
+    if not isinstance(original_inflate_sha, str) or len(original_inflate_sha) != 64:
+        raise RuntimeConsumptionProofError("inflate static proof missing inflate_sha256")
+
+    with tempfile.TemporaryDirectory(prefix="pr101_inflate_route_probe_") as tmp:
+        root = Path(tmp)
+        probe_packet = root / "packet"
+        probe_packet.mkdir()
+        probe_wrapper = probe_packet / "inflate.sh"
+        probe_inflate = probe_packet / "inflate.py"
+        probe_bin = root / "bin"
+        probe_bin.mkdir()
+        python_shim = probe_bin / "python"
+        try:
+            python_shim.symlink_to(sys.executable)
+        except OSError:
+            shutil.copyfile(sys.executable, python_shim)
+            shutil.copymode(sys.executable, python_shim)
+        shutil.copyfile(packet_dir / "inflate.sh", probe_wrapper)
+        shutil.copymode(packet_dir / "inflate.sh", probe_wrapper)
+        probe_inflate.write_text(_sentinel_inflate_py(), encoding="utf-8")
+        os.chmod(probe_inflate, 0o755)
+
+        data_dir = root / "data"
+        output_dir = root / "out"
+        data_dir.mkdir()
+        output_dir.mkdir()
+        (data_dir / "x").write_bytes(b"route-probe-payload")
+        file_list = root / "file_list.txt"
+        file_list.write_text(f"{ROUTE_PROBE_FILE_LIST_ENTRY}\n", encoding="utf-8")
+        sentinel = root / "sentinel.json"
+
+        env = os.environ.copy()
+        env["PR101_INFLATE_ROUTE_SENTINEL"] = str(sentinel)
+        env["PATH"] = f"{probe_bin}{os.pathsep}{env.get('PATH', '')}"
+        try:
+            proc = subprocess.run(
+                [str(probe_wrapper), str(data_dir), str(output_dir), str(file_list)],
+                cwd=probe_packet,
+                env=env,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=ROUTE_PROBE_TIMEOUT_SECONDS,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeConsumptionProofError("inflate.sh wrapper-route probe timed out") from exc
+        except OSError as exc:
+            raise RuntimeConsumptionProofError(f"inflate.sh wrapper-route probe could not run: {exc}") from exc
+
+        if proc.returncode != 0:
+            raise RuntimeConsumptionProofError(
+                "inflate.sh wrapper-route probe failed "
+                f"(returncode={proc.returncode}, stderr={proc.stderr.strip()!r})"
+            )
+        if not sentinel.is_file():
+            raise RuntimeConsumptionProofError("inflate.sh did not invoke packet inflate.py")
+
+        sentinel_payload = _require_mapping(read_json(sentinel), "inflate route sentinel")
+        argv = sentinel_payload.get("argv")
+        if not isinstance(argv, list) or not all(isinstance(item, str) for item in argv):
+            raise RuntimeConsumptionProofError("inflate route sentinel argv must be a string list")
+        cwd_raw = sentinel_payload.get("cwd")
+        if not isinstance(cwd_raw, str):
+            raise RuntimeConsumptionProofError("inflate route sentinel cwd must be a string")
+        if len(argv) != 3:
+            raise RuntimeConsumptionProofError("inflate.sh invoked packet inflate.py with unexpected argv shape")
+
+        observed_inflate = _normalize_probe_path(argv[0], cwd=Path(cwd_raw))
+        if observed_inflate != probe_inflate.resolve():
+            raise RuntimeConsumptionProofError("inflate.sh did not route to packet-local inflate.py")
+        observed_src = _normalize_probe_path(argv[1], cwd=Path(cwd_raw))
+        observed_dst = _normalize_probe_path(argv[2], cwd=Path(cwd_raw))
+        if observed_src != (data_dir / "x").resolve():
+            raise RuntimeConsumptionProofError("inflate.sh route probe did not pass the packet x payload")
+        if observed_dst != (output_dir / "0.raw").resolve():
+            raise RuntimeConsumptionProofError("inflate.sh route probe did not pass the expected output path")
+
+        stdout = proc.stdout
+        stderr = proc.stderr
+
+    return {
+        "proof_kind": "local_no_scorer_wrapper_route_probe_v1",
+        "inflate_sh_path": wrapper_record["path"],
+        "inflate_sh_sha256": wrapper_record["sha256"],
+        "packet_inflate_py_path": inflate_proof["inflate_path"],
+        "packet_inflate_py_sha256": original_inflate_sha,
+        "wrapper_invoked_packet_inflate_py": True,
+        "probe_entry": ROUTE_PROBE_FILE_LIST_ENTRY,
+        "observed_argv_shape": ["inflate.py", "src_bin", "dst_raw"],
+        "observed_src_basename": "x",
+        "observed_dst_basename": "0.raw",
+        "returncode": 0,
+        "stdout_sha256": _sha256_text(stdout),
+        "stderr_sha256": _sha256_text(stderr),
+        "timeout_seconds": ROUTE_PROBE_TIMEOUT_SECONDS,
+        "scorers_invoked": False,
+        "gpu_required": False,
     }
 
 
@@ -272,6 +445,11 @@ def build_runtime_consumption_proof(
     archive_proof = _verify_archive_unchanged(manifest, packet_dir)
     inflate_proof = _verify_inflate_file(manifest, packet_dir)
     unsupported_proof = _verify_unsupported_params_remain_blocked(manifest)
+    wrapper_route_proof = _verify_inflate_wrapper_routes_to_packet_inflate_py(
+        manifest,
+        packet_dir,
+        inflate_proof,
+    )
 
     if proof_path is None:
         proof_path = packet_dir / PROOF_NAME
@@ -280,6 +458,7 @@ def build_runtime_consumption_proof(
 
     proof: dict[str, Any] = {
         "schema": PROOF_SCHEMA,
+        "proof_kind": PROOF_KIND,
         "tool": TOOL_NAME,
         "candidate_id": manifest.get("candidate_id", ""),
         "manifest_path": _repo_rel(manifest_path),
@@ -287,16 +466,27 @@ def build_runtime_consumption_proof(
         "packet_dir": _repo_rel(packet_dir),
         "proof_path": _repo_rel(proof_path),
         "archive_unchanged_proof": archive_proof,
-        "inflate_static_consumption_proof": inflate_proof,
+        "inflate_static_bias_patch_proof": inflate_proof,
+        "inflate_wrapper_route_proof": wrapper_route_proof,
         "unsupported_params_blocker_proof": unsupported_proof,
-        "runtime_consumption_proven_for_supported_bias_params": True,
+        "supported_bias_params_static_patch_proven": True,
+        "inflate_sh_routes_to_packet_inflate_py": True,
+        "runtime_consumption_proven_for_supported_bias_params": False,
+        "runtime_consumption_boolean_rationale": (
+            "This proof verifies static patched bias lines and a local inflate.sh -> "
+            "packet inflate.py wrapper route. It does not run the real inflate.py body "
+            "or scorer-backed output validation."
+        ),
         "unsupported_proxy_params_runtime_consumed": False,
+        "scorers_invoked": False,
+        "gpu_required": False,
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
         "dispatch_attempted": False,
         "dispatch_blockers": [
             "proxy_substrate_not_contest_exact_eval",
             "no_contest_cuda_auth_eval",
+            "full_inflate_runtime_not_executed_by_this_probe",
             "unsupported_proxy_params_not_runtime_consumed",
             "active_level2_lane_dispatch_claim_required_before_exact_eval",
         ],
@@ -323,7 +513,12 @@ def main(argv: list[str] | None = None) -> int:
         "schema": "pr101_kaggle_proxy_runtime_consumption_proof_stdout_v1",
         "proof": proof["proof_path"],
         "candidate_id": proof["candidate_id"],
+        "proof_kind": proof["proof_kind"],
         **FALSE_AUTHORITY_FIELDS,
+        "inflate_sh_routes_to_packet_inflate_py": proof["inflate_sh_routes_to_packet_inflate_py"],
+        "runtime_consumption_proven_for_supported_bias_params": proof[
+            "runtime_consumption_proven_for_supported_bias_params"
+        ],
         "proof_sha256_excluding_self": proof["proof_sha256_excluding_self"],
         "dispatch_blockers": proof["dispatch_blockers"],
     }), end="")

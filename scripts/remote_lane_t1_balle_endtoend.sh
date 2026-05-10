@@ -204,8 +204,48 @@ log "output_dir: $OUTPUT_DIR"
 
 # Stage 0: Git parity — required before any work per CLAUDE.md
 # "Remote code parity — non-negotiable".
-LOCAL_BRANCH="$(git -C "$WORKSPACE" branch --show-current 2>/dev/null || echo unknown)"
-LOCAL_HEAD="$(git -C "$WORKSPACE" rev-parse HEAD 2>/dev/null || echo unknown)"
+normalize_git_probe_output() {
+    local kind="$1"
+    local raw="${2:-}"
+    local cleaned line_count
+    cleaned="$(printf '%s\n' "$raw" | tr -d '\r' | awk 'NF {print}')"
+    if [ -z "$cleaned" ]; then
+        echo unknown
+        return 0
+    fi
+    line_count="$(printf '%s\n' "$cleaned" | wc -l | tr -d '[:space:]')"
+    if [ "$line_count" != "1" ]; then
+        echo unknown
+        return 0
+    fi
+    if [ "$kind" = "head" ] && ! [[ "$cleaned" =~ ^[0-9a-fA-F]{40}$ ]]; then
+        echo unknown
+        return 0
+    fi
+    if [ "$kind" = "branch" ] && [ "$cleaned" = "HEAD" ]; then
+        echo unknown
+        return 0
+    fi
+    echo "$cleaned"
+}
+
+read_git_probe_value() {
+    local kind="$1"
+    shift
+    local raw rc
+    set +e
+    raw="$("$@" 2>/dev/null)"
+    rc=$?
+    set -e
+    if [ "$rc" -ne 0 ]; then
+        echo unknown
+        return 0
+    fi
+    normalize_git_probe_output "$kind" "$raw"
+}
+
+LOCAL_BRANCH="$(read_git_probe_value branch git -C "$WORKSPACE" branch --show-current)"
+LOCAL_HEAD="$(read_git_probe_value head git -C "$WORKSPACE" rev-parse HEAD)"
 log "local branch: $LOCAL_BRANCH"
 log "local HEAD: $LOCAL_HEAD"
 log "declared mounted git branch: ${DECLARED_MOUNTED_GIT_BRANCH:-unset}"
@@ -433,14 +473,29 @@ if [ "$ALLOW_SCORE_DOMAIN_TRAINING" = "1" ]; then
             close_dispatch_claim "failed_t1_packet_compile_missing_custody" "missing build_manifest/archive.zip/executable inflate.sh after compile"
             exit 16
         fi
-        RUNTIME_TREE_SHA=$("$PYBIN" - "$PACKET_DIR/build_manifest.json" <<'PY'
+        PACKET_COMPILER_RUNTIME_TREE_SHA=$("$PYBIN" - "$PACKET_DIR/build_manifest.json" <<'PY'
 import json
 import sys
 from pathlib import Path
 manifest = json.loads(Path(sys.argv[1]).read_text())
+print(manifest.get("pre_manifest_runtime_tree_sha256") or manifest.get("runtime_tree_sha256") or "")
+PY
+)
+        AUTH_EVAL_EXPECTED_RUNTIME_TREE_SHA=$("$PYBIN" - "$PACKET_DIR/inflate.sh" "$WORKSPACE/upstream" "$WORKSPACE" <<'PY'
+import sys
+from pathlib import Path
+from experiments.contest_auth_eval import _runtime_dependency_manifest
+
+manifest = _runtime_dependency_manifest(
+    Path(sys.argv[1]),
+    Path(sys.argv[2]),
+    repo_root=Path(sys.argv[3]),
+)
 print(manifest["runtime_tree_sha256"])
 PY
 )
+        log "packet compiler runtime tree sha: $PACKET_COMPILER_RUNTIME_TREE_SHA"
+        log "contest auth-eval expected runtime tree sha: $AUTH_EVAL_EXPECTED_RUNTIME_TREE_SHA"
         AUTH_EVAL_JSON="${T1_AUTH_EVAL_JSON:-$LOG_DIR/contest_auth_eval.json}"
         AUTH_EVAL_WORK_DIR="${T1_AUTH_EVAL_WORK_DIR:-$LOG_DIR/auth_eval_work}"
         AUTH_EVAL_ADJUDICATION_JSON="${T1_AUTH_EVAL_ADJUDICATION_JSON:-$LOG_DIR/auth_eval_adjudication.json}"
@@ -453,7 +508,7 @@ PY
             --work-dir "$AUTH_EVAL_WORK_DIR"
             --json-out "$AUTH_EVAL_JSON"
             --keep-work-dir
-            --expected-runtime-tree-sha256 "$RUNTIME_TREE_SHA"
+            --expected-runtime-tree-sha256 "$AUTH_EVAL_EXPECTED_RUNTIME_TREE_SHA"
         )
         log "Stage 6b: contest-CUDA auth eval"
         set +e

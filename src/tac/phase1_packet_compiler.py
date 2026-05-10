@@ -1547,7 +1547,7 @@ def _finalize_packet_result(
                 "runtime_file_mode_mismatch:"
                 f"{row['relpath']}:mode={row['mode']}:expected={row['expected_mode']}"
             )
-    runtime_tree_sha = _runtime_tree_sha256(runtime_files)
+    pre_manifest_runtime_tree_sha = _runtime_tree_sha256(runtime_files)
 
     inflate_sh_info: dict[str, Any] = {}
     if not inflate_sh.is_file():
@@ -1688,7 +1688,21 @@ def _finalize_packet_result(
         "archive_sha256": archive_sha,
         "archive_size_bytes": archive_size,
         "archive_members": archive_members,
-        "runtime_tree_sha256": runtime_tree_sha,
+        # ``contest_auth_eval.py`` hashes every .json file in the runtime
+        # root, including this build_manifest.json and no_op_proof.json. A
+        # final evaluator-visible hash cannot be embedded here without making
+        # the hash self-referential, so keep the expected-hash field falsey.
+        # Callers must use contest_auth_eval's recorded
+        # provenance.inflate_runtime_manifest.runtime_tree_sha256 for the final
+        # tree. The pre-manifest hash remains below for compiler custody.
+        "runtime_tree_sha256": "",
+        "runtime_tree_sha256_status": (
+            "withheld_self_referential_final_manifest_hash_use_contest_auth_eval"
+        ),
+        "pre_manifest_runtime_tree_sha256": pre_manifest_runtime_tree_sha,
+        "runtime_files_scope": (
+            "pre_manifest_runtime_tree_excludes_build_manifest_json_and_no_op_proof_json"
+        ),
         "runtime_files": runtime_files,
         "inflate_sh_info": inflate_sh_info,
         "parser_section_manifest": parser_section_manifest,
@@ -1711,7 +1725,7 @@ def _finalize_packet_result(
         archive_path=(output_dir / "archive.zip").as_posix(),
         archive_sha256=archive_sha,
         archive_size_bytes=archive_size,
-        runtime_tree_sha256=runtime_tree_sha,
+        runtime_tree_sha256=pre_manifest_runtime_tree_sha,
         runtime_files=tuple(runtime_files),
         archive_members=tuple(archive_members),
         parser_section_manifest=parser_section_manifest,
