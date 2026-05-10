@@ -7,9 +7,11 @@ is being modified by a parallel subagent).
 """
 from __future__ import annotations
 
+import concurrent.futures
 import inspect
 import json
 import os
+import time
 import textwrap
 from pathlib import Path
 
@@ -1140,6 +1142,70 @@ class TestNoMpsFallbackDefault:
         assert len(mps) >= 1
         assert len(eval_roundtrip) >= 1
         assert len(disable) >= 1
+        assert calls == {"mps": 1, "eval": 1, "disable": 1}
+
+    def test_source_index_shared_scan_is_single_build_under_parallel_callers(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from tac.source_index import source_index_context
+
+        root = _stub_repo(tmp_path)
+        _write(root / "experiments" / "bad_shared_predicates.py", """
+            import argparse
+            import torch
+
+            device = "cuda" if torch.cuda.is_available() else "mps"
+
+            def train(*, eval_roundtrip=False):
+                return device
+
+            parser = argparse.ArgumentParser()
+            parser.add_argument("--no-eval-roundtrip", action="store_true")
+        """)
+        calls = {"mps": 0, "eval": 0, "disable": 0}
+        original_mps = preflight_mod._scan_python_for_mps_fallback
+        original_eval = preflight_mod._scan_python_for_eval_roundtrip_false
+        original_disable = preflight_mod._scan_python_for_disable_eval_roundtrip_flag
+
+        def counting_mps(*args, **kwargs):
+            calls["mps"] += 1
+            time.sleep(0.02)
+            return original_mps(*args, **kwargs)
+
+        def counting_eval(*args, **kwargs):
+            calls["eval"] += 1
+            time.sleep(0.02)
+            return original_eval(*args, **kwargs)
+
+        def counting_disable(*args, **kwargs):
+            calls["disable"] += 1
+            time.sleep(0.02)
+            return original_disable(*args, **kwargs)
+
+        monkeypatch.setattr(preflight_mod, "_scan_python_for_mps_fallback", counting_mps)
+        monkeypatch.setattr(
+            preflight_mod,
+            "_scan_python_for_eval_roundtrip_false",
+            counting_eval,
+        )
+        monkeypatch.setattr(
+            preflight_mod,
+            "_scan_python_for_disable_eval_roundtrip_flag",
+            counting_disable,
+        )
+
+        with source_index_context(root) as index:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+                results = list(
+                    pool.map(
+                        lambda _i: preflight_mod._meta_python_shared_scan(root, index),
+                        range(3),
+                    )
+                )
+
+        assert len({id(result) for result in results}) == 1
         assert calls == {"mps": 1, "eval": 1, "disable": 1}
 
     def test_rg_candidate_prefilter_catches_formatted_cuda_attr(

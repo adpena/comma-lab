@@ -76,12 +76,64 @@ done < "$FILE_LIST"
     )
     _write_file(
         runtime / "inflate.py",
-        """def inflate():
-    while True:
+        """import sys
+from pathlib import Path
+
+import torch
+import torch.nn.functional as F
+
+def parse_archive(archive_bytes):
+    raise RuntimeError("test fixture expects proof tool to stub parse_archive")
+
+class HNeRVDecoder:
+    def __init__(self, **kwargs):
+        raise RuntimeError("test fixture expects proof tool to stub HNeRVDecoder")
+
+CAMERA_H = 874
+CAMERA_W = 1164
+
+def inflate(src_bin: str, dst_raw: str):
+    with open(src_bin, "rb") as f:
+        archive_bytes = f.read()
+    decoder_sd, latents, meta = parse_archive(archive_bytes)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    decoder = HNeRVDecoder(
+        latent_dim=meta["latent_dim"],
+        base_channels=meta["base_channels"],
+        eval_size=tuple(meta["eval_size"]),
+    ).to(device)
+    decoder.load_state_dict(decoder_sd)
+    decoder.eval()
+    latents = latents.to(device)
+    n_pairs = meta["n_pairs"]
+    eval_h, eval_w = meta["eval_size"]
+    n = 0
+    with torch.inference_mode(), open(dst_raw, "wb") as fout:
+        for i in range(0, n_pairs, 16):
+            j = min(i + 16, n_pairs)
+            batch = j - i
+            decoded = decoder(latents[i:j])
+            flat = decoded.reshape(batch * 2, 3, eval_h, eval_w)
+            up = F.interpolate(flat, size=(CAMERA_H, CAMERA_W), mode="bicubic", align_corners=False)
+            up = up.reshape(batch, 2, 3, CAMERA_H, CAMERA_W)
             up[:, 0, 0].sub_(1.0)
             up[:, 0, 2].sub_(1.0)
             up[:, 1, 1].sub_(1.0)
-        break
+            frames = (
+                up.reshape(batch * 2, 3, CAMERA_H, CAMERA_W)
+                .clamp(0, 255)
+                .permute(0, 2, 3, 1)
+                .round()
+                .to(torch.uint8)
+                .cpu()
+                .numpy()
+            )
+            fout.write(frames.tobytes())
+            n += batch * 2
+    return n
+
+if __name__ == "__main__":
+    inflate(sys.argv[1], sys.argv[2])
 """,
     )
     _write_file(runtime / "src/model.py", "class HNeRVDecoder:\n    pass\n", 0o755)
@@ -183,13 +235,13 @@ def test_proves_only_supported_bias_params_are_runtime_consumed(
 
     assert proof == proof_on_disk
     assert proof["schema"] == "pr101_kaggle_proxy_runtime_consumption_proof_v1"
-    assert proof["proof_kind"] == "static_bias_patch_plus_local_inflate_wrapper_route_no_score_v1"
+    assert proof["proof_kind"] == "static_bias_patch_plus_local_wrapper_route_plus_no_scorer_bias_runtime_v1"
     assert proof["score_claim"] is False
     assert proof["ready_for_exact_eval_dispatch"] is False
     assert proof["dispatch_attempted"] is False
     assert proof["supported_bias_params_static_patch_proven"] is True
     assert proof["inflate_sh_routes_to_packet_inflate_py"] is True
-    assert proof["runtime_consumption_proven_for_supported_bias_params"] is False
+    assert proof["runtime_consumption_proven_for_supported_bias_params"] is True
     assert proof["scorers_invoked"] is False
     assert proof["gpu_required"] is False
     assert proof_sha == _canonical_sha(basis)
@@ -228,6 +280,24 @@ def test_proves_only_supported_bias_params_are_runtime_consumed(
     assert route["observed_dst_basename"] == "0.raw"
     assert route["scorers_invoked"] is False
     assert route["gpu_required"] is False
+    runtime = proof["inflate_runtime_bias_logic_proof"]
+    assert runtime["proof_kind"] == "local_no_scorer_real_inflate_bias_runtime_probe_v1"
+    assert runtime["packet_inflate_function_executed"] is True
+    assert runtime["supported_bias_params_consumed_by_runtime_logic"] is True
+    assert runtime["probe_camera_shape"] == [2, 2]
+    assert runtime["probe_output_bytes"] == 24
+    assert runtime["probe_n_frames"] == 2
+    assert runtime["parse_archive_stubbed"] is True
+    assert runtime["decoder_stubbed"] is True
+    assert runtime["scorers_invoked"] is False
+    assert runtime["gpu_required"] is False
+    assert runtime["blocked_scorer_import_attempts"] == []
+    slot_proofs = {row["param"]: row for row in runtime["supported_bias_slot_proofs"]}
+    assert set(slot_proofs) == {"bias_b", "bias_g", "bias_r"}
+    assert slot_proofs["bias_r"]["expected_delta"] == -1.01
+    assert slot_proofs["bias_b"]["expected_delta"] == -0.79
+    assert slot_proofs["bias_g"]["expected_delta"] == -0.88
+    assert all(row["max_abs_error"] == 0.0 for row in slot_proofs.values())
 
 
 def test_fails_closed_when_noop_inflate_sh_does_not_route_to_packet_inflate_py(
@@ -261,7 +331,49 @@ def test_minimal_wrapper_invoking_python_inflate_py_passes_wrapper_route_proof(
 
     assert proof["inflate_wrapper_route_proof"]["wrapper_invoked_packet_inflate_py"] is True
     assert proof["inflate_sh_routes_to_packet_inflate_py"] is True
-    assert proof["runtime_consumption_proven_for_supported_bias_params"] is False
+    assert proof["runtime_consumption_proven_for_supported_bias_params"] is True
+
+
+def test_fails_closed_when_bias_lines_are_static_but_not_executed_by_inflate(
+    tmp_path: Path,
+    packet_builder,
+    proof_tool,
+) -> None:
+    runtime = _runtime_fixture(tmp_path)
+    _write_file(
+        runtime / "inflate.py",
+        """def unused_bias_patch_surface(up):
+    if True:
+            up[:, 0, 0].sub_(1.0)
+            up[:, 0, 2].sub_(1.0)
+            up[:, 1, 1].sub_(1.0)
+
+def inflate(src_bin: str, dst_raw: str):
+    open(dst_raw, "wb").write(b"noop")
+    return 0
+
+if __name__ == "__main__":
+    import sys
+    inflate(sys.argv[1], sys.argv[2])
+""",
+    )
+    source_archive = tmp_path / "source" / "archive.zip"
+    handoff_path = tmp_path / "handoff.json"
+    packet_dir = tmp_path / "packet"
+    _write_zip(source_archive, payload=b"original-pr101-bytes")
+    _write_json(handoff_path, _handoff())
+    packet_builder.build_proxy_runtime_packet(
+        handoff_path=handoff_path,
+        source_runtime_dir=runtime,
+        source_archive=source_archive,
+        packet_dir=packet_dir,
+    )
+
+    with pytest.raises(proof_tool.RuntimeConsumptionProofError, match="did not exercise F.interpolate"):
+        proof_tool.build_runtime_consumption_proof(
+            manifest_path=packet_dir / "runtime_packet_manifest.json",
+        )
+    assert not (packet_dir / "runtime_consumption_proof.json").exists()
 
 
 def test_fails_closed_when_inflate_is_tampered(
@@ -385,12 +497,14 @@ def test_cli_emits_false_authority_fields(tmp_path: Path, packet_builder) -> Non
 
     stdout = json.loads(proc.stdout)
     assert stdout["candidate_id"] == "proxy_cmaes_0037"
-    assert stdout["proof_kind"] == "static_bias_patch_plus_local_inflate_wrapper_route_no_score_v1"
+    assert stdout["proof_kind"] == "static_bias_patch_plus_local_wrapper_route_plus_no_scorer_bias_runtime_v1"
     assert stdout["score_claim"] is False
     assert stdout["ready_for_exact_eval_dispatch"] is False
     assert stdout["dispatch_attempted"] is False
     assert stdout["inflate_sh_routes_to_packet_inflate_py"] is True
-    assert stdout["runtime_consumption_proven_for_supported_bias_params"] is False
+    assert stdout["runtime_consumption_proven_for_supported_bias_params"] is True
     assert "unsupported_proxy_params_not_runtime_consumed" not in stdout["dispatch_blockers"]
+    assert "full_inflate_runtime_not_executed_by_this_probe" not in stdout["dispatch_blockers"]
+    assert "no_scorer_runtime_probe_not_contest_auth_eval" in stdout["dispatch_blockers"]
     assert len(stdout["proof_sha256_excluding_self"]) == 64
     assert proof_path.is_file()

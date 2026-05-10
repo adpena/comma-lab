@@ -8381,6 +8381,8 @@ class _MetaPythonSharedScanResult:
 
 
 _META_PYTHON_SHARED_SCAN_CACHE_ATTR = "_tac_meta_python_shared_scan_v1"
+_META_PYTHON_SHARED_SCAN_LOCK_ATTR = "_tac_meta_python_shared_scan_v1_lock"
+_META_PYTHON_SHARED_SCAN_LOCK_INIT_LOCK = threading.Lock()
 _EVAL_ROUNDTRIP_FALSE_SHAPE_RE = re.compile(
     r"\beval_roundtrip\b\s*(?::\s*[^=,)]*)?=\s*False\b",
     re.MULTILINE,
@@ -8436,6 +8438,41 @@ def _meta_python_shared_scan(
     """
 
     resolved_root = Path(root).resolve()
+    lock = getattr(source_index, _META_PYTHON_SHARED_SCAN_LOCK_ATTR, None)
+    if lock is None:
+        with _META_PYTHON_SHARED_SCAN_LOCK_INIT_LOCK:
+            lock = getattr(source_index, _META_PYTHON_SHARED_SCAN_LOCK_ATTR, None)
+            if lock is None:
+                lock = threading.Lock()
+                try:
+                    setattr(source_index, _META_PYTHON_SHARED_SCAN_LOCK_ATTR, lock)
+                except AttributeError:
+                    lock = None
+    if lock is not None:
+        with lock:
+            return _meta_python_shared_scan_locked(
+                resolved_root,
+                source_index,
+                facts_rows=facts_rows,
+                mps_candidate_paths=mps_candidate_paths,
+            )
+    return _meta_python_shared_scan_locked(
+        resolved_root,
+        source_index,
+        facts_rows=facts_rows,
+        mps_candidate_paths=mps_candidate_paths,
+    )
+
+
+def _meta_python_shared_scan_locked(
+    resolved_root: Path,
+    source_index,
+    *,
+    facts_rows=None,
+    mps_candidate_paths: set[Path] | None = None,
+) -> _MetaPythonSharedScanResult:
+    """Compute the shared meta scan under the per-source-index build lock."""
+
     cached = getattr(source_index, _META_PYTHON_SHARED_SCAN_CACHE_ATTR, None)
     if (
         isinstance(cached, _MetaPythonSharedScanResult)

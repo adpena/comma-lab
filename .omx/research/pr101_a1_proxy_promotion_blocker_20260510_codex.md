@@ -1,6 +1,6 @@
 # PR101/A1 proxy promotion blocker - 2026-05-10
 
-Generated: `2026-05-10T13:39:24Z`
+Generated: `2026-05-10T13:39:24Z`; updated: `2026-05-10T14:48:25Z`
 
 `research_only=true`; `score_claim=false`; `dispatch_attempted=false`;
 `remote_gpu_jobs_run=false`.
@@ -42,9 +42,8 @@ Current output exits nonzero and reports:
   "promotable": false,
   "candidate_id": "proxy_cmaes_0037",
   "blockers": [
-    "full_runtime_consumption_not_proven",
     "no_candidate_contest_cuda_auth_eval",
-    "stale_unsupported_proxy_contract"
+    "proxy_substrate_not_contest_exact_eval"
   ]
 }
 ```
@@ -54,12 +53,13 @@ Interpretation:
 - The xray/op-cost tool correctly finds the three PR101 per-channel bias
   mutation sites, so the proxy idea is pointed at a real consumed runtime
   surface.
-- The existing packet is stale against the current bias-only contract: its
-  manifest/proof still carry removed unsupported-param blockers for
-  `delta_scale`, `latent_delta_scale`, and `smooth_weight`.
-- Even after regenerating under the current contract, the proxy packet would
-  still be blocked until full runtime execution and exact contest-CUDA auth eval
-  land on the byte-closed archive/runtime packet.
+- The local no-scorer runtime proof now executes the packet `inflate()` body
+  under tiny stubs, blocks scorer/upstream imports, captures only a 24-byte probe
+  output, and proves the three supported bias params mutate the runtime tensor:
+  `runtime_consumption_proven_for_supported_bias_params=true`.
+- The proxy packet remains blocked because the candidate is still proxy-substrate
+  evidence and has no exact contest-CUDA auth eval on the byte-closed
+  archive/runtime packet.
 - The canonical A1 anchor is valid exact CUDA evidence, but it does not promote
   this proxy packet. It is only the baseline/control anchor.
 
@@ -94,9 +94,21 @@ Key fields:
   tests/test_check_pr101_proxy_promotion_blocker.py \
   tests/test_build_pr101_kaggle_proxy_runtime_packet.py \
   tests/test_prove_pr101_kaggle_proxy_runtime_consumption.py
-# 18 passed
+# 20 passed
 
-.venv/bin/python -m py_compile tools/check_pr101_proxy_promotion_blocker.py
+.venv/bin/python -m py_compile \
+  tools/check_pr101_proxy_promotion_blocker.py \
+  tools/build_pr101_kaggle_proxy_runtime_packet.py \
+  tools/prove_pr101_kaggle_proxy_runtime_consumption.py
+
+.venv/bin/python tools/prove_pr101_kaggle_proxy_runtime_consumption.py
+# runtime_consumption_proven_for_supported_bias_params=true
+# proof_kind=static_bias_patch_plus_local_wrapper_route_plus_no_scorer_bias_runtime_v1
+
+.venv/bin/python tools/check_pr101_proxy_promotion_blocker.py --allow-blocked \
+  --output experiments/results/kaggle_pr101_proxy_sweep_20260510_codex/pr101_proxy_sweep/proxy_runtime_packet/promotion_blocker_checklist.json
+# BLOCKED_PROXY_ONLY_NOT_PROMOTABLE:
+# blockers=["no_candidate_contest_cuda_auth_eval", "proxy_substrate_not_contest_exact_eval"]
 ```
 
 ## Next Exact-Eval Candidate Or Blocker
@@ -104,8 +116,10 @@ Key fields:
 No exact-eval candidate should be dispatched from the current PR101 proxy
 packet. The active blocker is now explicit and machine-checkable:
 
-1. Regenerate the proxy packet only if the operator wants a clean local packet
-   artifact under the current bias-only contract.
-2. Do not promote or dispatch until a candidate packet has full runtime
-   execution proof and exact contest-CUDA auth eval under a fresh claim.
-3. Keep the stale existing packet classified as proxy-only / not promotable.
+1. Do not promote or dispatch until this proxy-derived candidate has exact
+   contest-CUDA auth eval under a fresh claim.
+2. Keep the existing packet classified as proxy-only / not promotable despite
+   the local no-scorer runtime-consumption proof.
+3. If the operator wants this to become an exact-eval candidate, first convert it
+   from proxy handoff to a claimed byte-closed candidate packet with scorer-backed
+   output validation and dispatch custody.

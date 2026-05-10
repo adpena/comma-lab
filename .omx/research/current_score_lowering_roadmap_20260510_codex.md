@@ -218,6 +218,57 @@
   exists. Parallel work should stay local/proxy: PR95/PR101 packetization,
   Kaggle/Optuna/CMA-ES advisory sweeps that materialize byte-closed candidates,
   xray candidate selection, and preflight/DX hardening.
+
+## 2026-05-10T14:43Z Codex swarm-continuation addendum
+
+- Current active dispatch claim is `t1_balle_128k_endtoend` on Modal:
+  `t1_balle_modal_phase1_ab2d0f6_20260510T1437Z`, call id
+  `fc-01KR955JSYQAVTTYZA48VAV7WJ`. Immediate status poll returned
+  `result_state=pending`; do not launch any duplicate T1 or same-lane exact
+  CUDA job until recovery writes a terminal claim row.
+- Mounted T1 snapshot for the active run is clean at
+  `ab2d0f6ec1cf7aed05b8424a0b5f5d79b42698bf` with zero-byte worktree/index
+  patches, `epochs=3000`, `batch_size=1`, full target set, and
+  `score_claim=false` until recovered auth-eval schema blockers are zero.
+- Regenerated the optimizer candidate queue from current constrained-coordinate,
+  M5 Max, Optuna/CMA, and codec-op sources:
+  `experiments/results/optimizer_candidate_queue_20260510_codex/next_candidate_queue.json`.
+  The queue has `n_candidates=124`, `top_k_count=30`, and
+  `dispatch_ready_count=0`. This is intentional: every row remains planning-only
+  until a separate exact-readiness gate proves archive/runtime custody.
+- Top queue rows are still A1/PR101 inflate-time bias coordinate variants with
+  predicted GHA CPU rank around `0.19286-0.19370`. These do not beat the A1
+  baseline enough to justify blind spend, and they are not CUDA evidence.
+- PR101 proxy promotion blocker was re-run with `--allow-blocked`. Current
+  verdict remains `BLOCKED_PROXY_ONLY_NOT_PROMOTABLE` for `proxy_cmaes_0037`,
+  with blockers `proxy_substrate_not_contest_exact_eval` and
+  `no_candidate_contest_cuda_auth_eval`. Local no-scorer execution now proves
+  the packet `inflate()` body consumes supported bias params, but that remains
+  runtime-consumption evidence only, not scorer-backed exact eval.
+- Fresh parallel agents were spawned for:
+  1. PR101 proxy runtime-consumption proof hardening without remote jobs;
+  2. preflight/DX speed and scan-architecture hardening without weakening checks;
+  3. read-only score-lowering roadmap audit under the active T1 lock.
+- Immediate local work while T1 runs is therefore:
+  harvest T1 when Modal becomes ready; keep PR101/Kaggle proxy work local until
+  runtime consumption and exact-readiness are real; continue preflight speed
+  improvements only where strict signal is preserved; and keep MPS/macOS/Kaggle
+  outputs advisory rather than promotion evidence.
+- Refreshed local-only HNeRV frontier scorecard into
+  `experiments/results/hnerv_frontier_scorecard_refresh_20260510_codex/`.
+  It contains 8 exact CUDA rows; best refreshed row is `PR103-ac-repack` at
+  score `0.20898105277982337`, followed by `PR106x-lowlevel` at
+  `0.20935073680571203` with `total_byte_delta=-151`.
+- `tools/audit_hnerv_frontier_scorecard.py` correctly fails closed on the
+  refreshed scorecard: `ready_for_hidden_gem_routing=false` because
+  `PR102`, `PR103-ac-repack`, `PR104`, and `PR106x-lowlevel` are missing
+  section manifests. This refresh is therefore planning/xray input only, not a
+  dispatch-ready hidden-gem queue.
+- Preflight/DX hardening in this tranche added a real per-`SourceIndex` build
+  lock around `_meta_python_shared_scan`, so parallel dev-preflight callers
+  share one fused scan rather than racing duplicate MPS / `eval_roundtrip=False`
+  / `--no-eval-roundtrip` passes. The all-lanes surface remains below the 30s
+  crash budget (`2.60s` observed wall-clock).
 - Kaggle proxy lane `kaggle_pr101_proxy_sweep` is also active as of
   `2026-05-10T09:00:22Z`: kernel `adpena/pr101-proxy-sweep`, version `1`,
   URL `https://www.kaggle.com/code/adpena/pr101-proxy-sweep`, status

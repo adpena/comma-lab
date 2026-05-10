@@ -223,6 +223,10 @@ def _proxy_contract_checks(manifest: Mapping[str, Any], proof: Mapping[str, Any]
     runtime_patch = _require_mapping(manifest.get("runtime_patch"), "manifest.runtime_patch")
     patch_rows = runtime_patch.get("runtime_consumed_params")
     patch_params = sorted(row.get("param") for row in patch_rows if isinstance(row, Mapping)) if isinstance(patch_rows, list) else []
+    manifest_blockers = manifest.get("blockers")
+    blockers_list = manifest_blockers if isinstance(manifest_blockers, list) else []
+    proof_blockers = proof.get("dispatch_blockers")
+    proof_blockers_list = proof_blockers if isinstance(proof_blockers, list) else []
     checks.append(
         _check(
             "supported_bias_static_patch_present",
@@ -257,9 +261,26 @@ def _proxy_contract_checks(manifest: Mapping[str, Any], proof: Mapping[str, Any]
             "no_candidate_contest_cuda_auth_eval",
         )
     )
+    authority_boundary = manifest.get("authority_boundary")
+    authority_boundary_map = authority_boundary if isinstance(authority_boundary, Mapping) else {}
+    proxy_marked = (
+        authority_boundary_map.get("proxy_only_input") is True
+        or "proxy_substrate_not_contest_exact_eval" in blockers_list
+        or "proxy_substrate_not_contest_exact_eval" in proof_blockers_list
+    )
+    checks.append(
+        _check(
+            "candidate_not_proxy_substrate",
+            not proxy_marked,
+            (
+                f"authority_boundary.proxy_only_input={authority_boundary_map.get('proxy_only_input')!r} "
+                f"manifest_proxy_blocker={'proxy_substrate_not_contest_exact_eval' in blockers_list!r} "
+                f"proof_proxy_blocker={'proxy_substrate_not_contest_exact_eval' in proof_blockers_list!r}"
+            ),
+            "proxy_substrate_not_contest_exact_eval",
+        )
+    )
 
-    blockers = manifest.get("blockers")
-    blockers_list = blockers if isinstance(blockers, list) else []
     stale_blockers = sorted(blocker for blocker in REMOVED_UNSUPPORTED_BLOCKERS if blocker in blockers_list)
     stale_unsupported_params = "unsupported_params" in manifest or "unsupported_params_blocker_proof" in proof
     checks.append(
@@ -326,8 +347,9 @@ def build_promotion_blocker_checklist(
             else "candidate_requires_claimed_exact_cuda_eval_before_score_claim"
         ),
         "blocker_rationale": (
-            "A static bias patch plus wrapper-route proof is useful runtime evidence, "
-            "but it is not full inflate execution and not a contest-CUDA auth eval."
+            "A static bias patch plus wrapper-route plus tiny no-scorer runtime-bias "
+            "probe is useful runtime-consumption evidence, but it is not scorer-backed "
+            "output validation and not a contest-CUDA auth eval."
         ),
     }
     return checklist

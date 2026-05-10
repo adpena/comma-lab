@@ -13,6 +13,10 @@ It does not run inflate, invoke scorers, dispatch jobs, or claim score.
 from __future__ import annotations
 
 import argparse
+import builtins
+import contextlib
+import importlib.util
+import io
 import os
 import shutil
 import subprocess
@@ -34,7 +38,7 @@ from tac.repo_io import json_text, read_json, repo_relative, sha256_file, write_
 TOOL_NAME = "tools/prove_pr101_kaggle_proxy_runtime_consumption.py"
 PACKET_SCHEMA = "pr101_kaggle_proxy_runtime_packet_v1"
 PROOF_SCHEMA = "pr101_kaggle_proxy_runtime_consumption_proof_v1"
-PROOF_KIND = "static_bias_patch_plus_local_inflate_wrapper_route_no_score_v1"
+PROOF_KIND = "static_bias_patch_plus_local_wrapper_route_plus_no_scorer_bias_runtime_v1"
 CANDIDATE_PARAM_SCHEMA = "pr101_kaggle_proxy_bias_runtime_params_v1"
 DEFAULT_MANIFEST = Path(
     "experiments/results/kaggle_pr101_proxy_sweep_20260510_codex/"
@@ -65,6 +69,15 @@ FALSE_AUTHORITY_FIELDS = {
 }
 ROUTE_PROBE_FILE_LIST_ENTRY = "0.mkv"
 ROUTE_PROBE_TIMEOUT_SECONDS = 10
+BIAS_RUNTIME_PROBE_CAMERA_SHAPE = (2, 2)
+BIAS_RUNTIME_PROBE_BASE_VALUE = 100.0
+FORBIDDEN_RUNTIME_PROBE_IMPORT_MARKERS = (
+    "posenet",
+    "scorer",
+    "segmentation_models_pytorch",
+    "segnet",
+    "upstream",
+)
 
 
 class RuntimeConsumptionProofError(ValueError):
@@ -386,6 +399,218 @@ def _verify_inflate_wrapper_routes_to_packet_inflate_py(
     }
 
 
+def _supported_bias_values(inflate_proof: Mapping[str, Any]) -> dict[str, float]:
+    rows = inflate_proof.get("supported_bias_params_consumed")
+    if not isinstance(rows, list):
+        raise RuntimeConsumptionProofError("inflate static proof missing supported_bias_params_consumed")
+    values: dict[str, float] = {}
+    for raw in rows:
+        row = _require_mapping(raw, "supported_bias_params_consumed[]")
+        param = row.get("param")
+        value = row.get("value")
+        if param not in SUPPORTED_BIAS_SLOTS:
+            raise RuntimeConsumptionProofError(f"unexpected supported bias param in static proof: {param!r}")
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise RuntimeConsumptionProofError(f"supported bias value for {param} must be numeric")
+        values[str(param)] = float(value)
+    if set(values) != set(SUPPORTED_BIAS_SLOTS):
+        raise RuntimeConsumptionProofError("static proof did not include every supported bias value")
+    return values
+
+
+def _guarded_import_factory(blocked_imports: list[str]):
+    real_import = builtins.__import__
+
+    def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):  # type: ignore[no-untyped-def]
+        lowered = str(name).lower()
+        if any(marker in lowered for marker in FORBIDDEN_RUNTIME_PROBE_IMPORT_MARKERS):
+            blocked_imports.append(str(name))
+            raise RuntimeConsumptionProofError(
+                f"runtime bias probe refuses scorer/upstream import: {name}"
+            )
+        return real_import(name, globals, locals, fromlist, level)
+
+    return real_import, guarded_import
+
+
+def _verify_bias_params_execute_in_inflate_logic(
+    manifest: Mapping[str, Any],
+    packet_dir: Path,
+    inflate_proof: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Execute packet ``inflate()`` under tiny stubs and observe bias-slot mutation."""
+
+    import torch
+
+    inflate_record = _verify_runtime_file_sha(manifest, packet_dir, "inflate.py")
+    inflate_path = packet_dir / "inflate.py"
+    expected_biases = _supported_bias_values(inflate_proof)
+    module_name = f"_pr101_bias_runtime_probe_{os.getpid()}_{abs(hash(str(inflate_path)))}"
+    captured: dict[str, Any] = {}
+    blocked_imports: list[str] = []
+    original_sys_path = list(sys.path)
+    saved_modules = {
+        name: sys.modules.pop(name, None)
+        for name in ("codec", "model", module_name)
+    }
+    real_import, guarded_import = _guarded_import_factory(blocked_imports)
+
+    try:
+        builtins.__import__ = guarded_import
+        sys.path.insert(0, str(packet_dir))
+        sys.path.insert(0, str(packet_dir / "src"))
+        spec = importlib.util.spec_from_file_location(module_name, inflate_path)
+        if spec is None or spec.loader is None:
+            raise RuntimeConsumptionProofError(f"could not import packet inflate.py: {inflate_path}")
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+
+        def fake_parse_archive(archive_bytes: bytes):  # type: ignore[no-untyped-def]
+            captured["archive_bytes_read"] = len(archive_bytes)
+            return (
+                {},
+                torch.zeros((1, 1), dtype=torch.float32),
+                {
+                    "latent_dim": 1,
+                    "base_channels": 1,
+                    "eval_size": (1, 1),
+                    "n_pairs": 1,
+                },
+            )
+
+        class FakeDecoder:
+            def __init__(self, **kwargs):  # type: ignore[no-untyped-def]
+                captured["decoder_init_kwargs"] = dict(kwargs)
+
+            def to(self, device):  # type: ignore[no-untyped-def]
+                captured["decoder_device"] = str(device)
+                return self
+
+            def load_state_dict(self, state_dict):  # type: ignore[no-untyped-def]
+                captured["load_state_dict_called"] = state_dict == {}
+
+            def eval(self):  # type: ignore[no-untyped-def]
+                captured["decoder_eval_called"] = True
+
+            def __call__(self, latents):  # type: ignore[no-untyped-def]
+                captured["latents_shape"] = list(latents.shape)
+                batch = int(latents.shape[0])
+                return torch.zeros((batch, 2, 3, 1, 1), dtype=torch.float32, device=latents.device)
+
+        def fake_interpolate(flat, size, mode=None, align_corners=None):  # type: ignore[no-untyped-def]
+            captured["interpolate_size"] = list(size)
+            captured["interpolate_mode"] = mode
+            captured["interpolate_align_corners"] = align_corners
+            probe = torch.full(
+                (int(flat.shape[0]), 3, int(size[0]), int(size[1])),
+                BIAS_RUNTIME_PROBE_BASE_VALUE,
+                dtype=torch.float32,
+                device=flat.device,
+            )
+            captured["interpolate_tensor"] = probe
+            return probe
+
+        module.parse_archive = fake_parse_archive
+        module.HNeRVDecoder = FakeDecoder
+        if not hasattr(module, "F"):
+            module.F = type("_FakeFunctional", (), {})()
+        module.F.interpolate = fake_interpolate
+        module.CAMERA_H, module.CAMERA_W = BIAS_RUNTIME_PROBE_CAMERA_SHAPE
+
+        runtime_stdout = io.StringIO()
+        runtime_stderr = io.StringIO()
+        with tempfile.TemporaryDirectory(prefix="pr101_bias_runtime_probe_") as tmp:
+            root = Path(tmp)
+            src_bin = root / "x"
+            dst_raw = root / "0.raw"
+            src_bin.write_bytes(b"tiny-no-scorer-runtime-probe")
+            with contextlib.redirect_stdout(runtime_stdout), contextlib.redirect_stderr(runtime_stderr):
+                n_frames = module.inflate(str(src_bin), str(dst_raw))
+            output_bytes = dst_raw.stat().st_size if dst_raw.is_file() else 0
+
+        probe_tensor = captured.get("interpolate_tensor")
+        if probe_tensor is None:
+            raise RuntimeConsumptionProofError("runtime bias probe did not exercise F.interpolate path")
+        up = probe_tensor.reshape(1, 2, 3, *BIAS_RUNTIME_PROBE_CAMERA_SHAPE).detach().cpu()
+        slot_indices = {
+            "bias_r": (0, 0),
+            "bias_b": (0, 2),
+            "bias_g": (1, 1),
+        }
+        slot_proofs: list[dict[str, Any]] = []
+        for param, (frame_idx, channel_idx) in slot_indices.items():
+            expected_after = BIAS_RUNTIME_PROBE_BASE_VALUE + expected_biases[param]
+            observed = up[:, frame_idx, channel_idx]
+            max_abs_error = float((observed - expected_after).abs().max().item())
+            if max_abs_error > 1e-6:
+                raise RuntimeConsumptionProofError(
+                    f"runtime bias probe did not consume {param}: max_abs_error={max_abs_error}"
+                )
+            slot_proofs.append(
+                {
+                    "param": param,
+                    "slot": SUPPORTED_BIAS_SLOTS[param],
+                    "expected_delta": expected_biases[param],
+                    "before_value": BIAS_RUNTIME_PROBE_BASE_VALUE,
+                    "observed_after_mean": float(observed.mean().item()),
+                    "max_abs_error": max_abs_error,
+                }
+            )
+
+        unmodified_errors: list[float] = []
+        for frame_idx in range(2):
+            for channel_idx in range(3):
+                if (frame_idx, channel_idx) in set(slot_indices.values()):
+                    continue
+                observed = up[:, frame_idx, channel_idx]
+                unmodified_errors.append(
+                    float((observed - BIAS_RUNTIME_PROBE_BASE_VALUE).abs().max().item())
+                )
+        max_unmodified_abs_error = max(unmodified_errors) if unmodified_errors else 0.0
+        if max_unmodified_abs_error > 1e-6:
+            raise RuntimeConsumptionProofError(
+                "runtime bias probe changed an unexpected frame/channel slot"
+            )
+
+        expected_output_bytes = 2 * BIAS_RUNTIME_PROBE_CAMERA_SHAPE[0] * BIAS_RUNTIME_PROBE_CAMERA_SHAPE[1] * 3
+        if n_frames != 2 or output_bytes != expected_output_bytes:
+            raise RuntimeConsumptionProofError(
+                f"runtime bias probe output shape mismatch: n_frames={n_frames}, bytes={output_bytes}"
+            )
+
+        return {
+            "proof_kind": "local_no_scorer_real_inflate_bias_runtime_probe_v1",
+            "inflate_py_path": inflate_record["path"],
+            "inflate_py_sha256": inflate_record["sha256"],
+            "packet_inflate_function_executed": True,
+            "supported_bias_params_consumed_by_runtime_logic": True,
+            "supported_bias_slot_proofs": sorted(slot_proofs, key=lambda row: row["param"]),
+            "unmodified_slots_max_abs_error": max_unmodified_abs_error,
+            "probe_camera_shape": list(BIAS_RUNTIME_PROBE_CAMERA_SHAPE),
+            "probe_output_bytes": output_bytes,
+            "probe_n_frames": n_frames,
+            "parse_archive_stubbed": True,
+            "decoder_stubbed": True,
+            "interpolate_stubbed_to_tiny_tensor": True,
+            "runtime_stdout_sha256": _sha256_text(runtime_stdout.getvalue()),
+            "runtime_stderr_sha256": _sha256_text(runtime_stderr.getvalue()),
+            "scorer_import_block_markers": list(FORBIDDEN_RUNTIME_PROBE_IMPORT_MARKERS),
+            "blocked_scorer_import_attempts": blocked_imports,
+            "scorers_invoked": False,
+            "gpu_required": False,
+        }
+    finally:
+        builtins.__import__ = real_import
+        sys.path[:] = original_sys_path
+        sys.modules.pop(module_name, None)
+        for name, module in saved_modules.items():
+            if module is None:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = module
+
+
 def _verify_bias_only_candidate_contract(manifest: Mapping[str, Any]) -> dict[str, Any]:
     blockers = manifest.get("blockers")
     if not isinstance(blockers, list) or not all(isinstance(row, str) for row in blockers):
@@ -477,6 +702,11 @@ def build_runtime_consumption_proof(
         packet_dir,
         inflate_proof,
     )
+    bias_runtime_proof = _verify_bias_params_execute_in_inflate_logic(
+        manifest,
+        packet_dir,
+        inflate_proof,
+    )
 
     if proof_path is None:
         proof_path = packet_dir / PROOF_NAME
@@ -495,14 +725,16 @@ def build_runtime_consumption_proof(
         "archive_unchanged_proof": archive_proof,
         "inflate_static_bias_patch_proof": inflate_proof,
         "inflate_wrapper_route_proof": wrapper_route_proof,
+        "inflate_runtime_bias_logic_proof": bias_runtime_proof,
         "candidate_contract_proof": candidate_contract_proof,
         "supported_bias_params_static_patch_proven": True,
         "inflate_sh_routes_to_packet_inflate_py": True,
-        "runtime_consumption_proven_for_supported_bias_params": False,
+        "runtime_consumption_proven_for_supported_bias_params": True,
         "runtime_consumption_boolean_rationale": (
-            "This proof verifies static patched bias lines and a local inflate.sh -> "
-            "packet inflate.py wrapper route. It does not run the real inflate.py body "
-            "or scorer-backed output validation."
+            "This proof verifies static patched bias lines, local inflate.sh -> packet "
+            "inflate.py routing, and real packet inflate() execution under tiny no-scorer "
+            "stubs that observe the supported bias params mutating the runtime tensor. "
+            "It is still not scorer-backed output validation or contest-CUDA auth eval."
         ),
         "scorers_invoked": False,
         "gpu_required": False,
@@ -512,7 +744,7 @@ def build_runtime_consumption_proof(
         "dispatch_blockers": [
             "proxy_substrate_not_contest_exact_eval",
             "no_contest_cuda_auth_eval",
-            "full_inflate_runtime_not_executed_by_this_probe",
+            "no_scorer_runtime_probe_not_contest_auth_eval",
             "active_level2_lane_dispatch_claim_required_before_exact_eval",
         ],
     }

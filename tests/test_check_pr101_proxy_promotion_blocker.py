@@ -52,7 +52,7 @@ def _manifest() -> dict[str, object]:
         "blockers": [
             "proxy_substrate_not_contest_exact_eval",
             "no_contest_cuda_auth_eval",
-            "full_inflate_runtime_not_executed_by_this_probe",
+            "no_scorer_runtime_probe_not_contest_auth_eval",
             "active_level2_lane_dispatch_claim_required_before_exact_eval",
         ],
     }
@@ -72,11 +72,11 @@ def _proof() -> dict[str, object]:
         },
         "supported_bias_params_static_patch_proven": True,
         "inflate_sh_routes_to_packet_inflate_py": True,
-        "runtime_consumption_proven_for_supported_bias_params": False,
+        "runtime_consumption_proven_for_supported_bias_params": True,
         "dispatch_blockers": [
             "proxy_substrate_not_contest_exact_eval",
             "no_contest_cuda_auth_eval",
-            "full_inflate_runtime_not_executed_by_this_probe",
+            "no_scorer_runtime_probe_not_contest_auth_eval",
             "active_level2_lane_dispatch_claim_required_before_exact_eval",
         ],
     }
@@ -127,7 +127,7 @@ def _write_inputs(tmp_path: Path, *, manifest: dict[str, object] | None = None, 
     return paths
 
 
-def test_blocks_proxy_packet_without_full_runtime_consumption_or_exact_cuda(tmp_path: Path) -> None:
+def test_blocks_proxy_packet_without_exact_cuda_even_after_runtime_consumption_proof(tmp_path: Path) -> None:
     tool = _load_tool()
     paths = _write_inputs(tmp_path)
 
@@ -140,11 +140,29 @@ def test_blocks_proxy_packet_without_full_runtime_consumption_or_exact_cuda(tmp_
 
     assert checklist["promotable"] is False
     assert checklist["verdict"] == "BLOCKED_PROXY_ONLY_NOT_PROMOTABLE"
-    assert "full_runtime_consumption_not_proven" in checklist["blockers"]
+    assert "full_runtime_consumption_not_proven" not in checklist["blockers"]
+    assert "proxy_substrate_not_contest_exact_eval" in checklist["blockers"]
     assert "no_candidate_contest_cuda_auth_eval" in checklist["blockers"]
     assert "stale_unsupported_proxy_contract" not in checklist["blockers"]
     assert any(row["id"] == "a1_exact_cuda_anchor_available" and row["passed"] for row in checklist["checks"])
     assert any(row["id"] == "xray_op_cost_catalog_available" and row["passed"] for row in checklist["checks"])
+
+
+def test_blocks_when_runtime_consumption_proof_is_false(tmp_path: Path) -> None:
+    tool = _load_tool()
+    proof = _proof()
+    proof["runtime_consumption_proven_for_supported_bias_params"] = False
+    paths = _write_inputs(tmp_path, proof=proof)
+
+    checklist = tool.build_promotion_blocker_checklist(
+        manifest_path=paths["manifest"],
+        proof_path=paths["proof"],
+        a1_auth_eval_path=paths["a1"],
+        xray_path=paths["xray"],
+    )
+
+    assert checklist["promotable"] is False
+    assert "full_runtime_consumption_not_proven" in checklist["blockers"]
 
 
 def test_blocks_stale_unsupported_proxy_contract(tmp_path: Path) -> None:
