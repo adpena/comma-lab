@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import torch
 
 
 def _load_trainer_module():
@@ -83,6 +84,60 @@ def test_phase1_trainer_default_pr95_parity_profile_is_tracked_and_loadable() ->
     assert loaded["contract_schema_matches_expected"] is True
     assert loaded["local_trainer_parity_preflight_passed"] is True
     assert loaded["source_stage_count"] == 8
+
+
+def test_phase1_ema_proxy_eval_is_chunked_to_avoid_full_table_decoder_oom() -> None:
+    module = _load_trainer_module()
+
+    class _NoopEMA:
+        shadow: dict[str, torch.Tensor] = {}
+
+        def apply(self, target: torch.nn.Module) -> None:
+            del target
+
+    class _ChunkAssertingBalle(torch.nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.calls: list[int] = []
+
+        def forward(self, y: torch.Tensor) -> dict[str, torch.Tensor]:
+            self.calls.append(int(y.shape[0]))
+            return {
+                "y_hat": y,
+                "rate_total_bits": y.new_tensor(float(y.shape[0] * 7)),
+            }
+
+    class _ChunkAssertingDecoder(torch.nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.calls: list[int] = []
+
+        def forward(self, y_hat: torch.Tensor) -> torch.Tensor:
+            batch = int(y_hat.shape[0])
+            self.calls.append(batch)
+            if batch > 2:
+                raise AssertionError(f"proxy eval decoded unchunked batch {batch}")
+            return y_hat[:, :1].view(batch, 1, 1, 1, 1).expand(batch, 2, 3, 1, 1)
+
+    decoder = _ChunkAssertingDecoder()
+    balle = _ChunkAssertingBalle()
+
+    metrics = module._eval_ema_proxy(
+        decoder=decoder,
+        balle=balle,
+        ema_decoder=_NoopEMA(),
+        ema_balle=_NoopEMA(),
+        latents=torch.zeros(5, 2),
+        target_pixels=torch.zeros(5, 2, 3, 1, 1),
+        noise_std=0.0,
+        enable_eval_roundtrip_in_training=True,
+        eval_batch_size=2,
+    )
+
+    assert decoder.calls == [2, 2, 1]
+    assert balle.calls == [2, 2, 1]
+    assert metrics["ema_proxy_pixel_l1"] == 0.0
+    assert metrics["ema_proxy_rate_bits"] == 35.0
 
 
 def test_phase1_trainer_missing_pr95_parity_profile_is_non_promotable(

@@ -255,6 +255,7 @@ def test_modal_t1_remote_runs_existing_script_with_score_domain_exact_eval_env()
     assert '"PYTORCH_CUDA_ALLOC_CONF": PYTORCH_CUDA_ALLOC_CONF_VALUE' in remote_src
     assert '"T1_MOUNTED_CODE_GIT_HEAD": mounted_code_git_head' in remote_src
     assert '"SINKHORN_MAX_POSITIONS_PER_CHUNK": str(int(sinkhorn_max_positions_per_chunk))' in remote_src
+    assert "--eval-batch-size" in REMOTE_SCRIPT.read_text()
 
 
 def _extract_remote_shell_function(name: str) -> str:

@@ -640,8 +640,11 @@ def _eval_ema_proxy(
     target_pixels: torch.Tensor,
     noise_std: float,
     enable_eval_roundtrip_in_training: bool,
+    eval_batch_size: int,
 ) -> dict[str, float]:
     """Snapshot+restore eval (CLAUDE.md non-negotiable)."""
+    if eval_batch_size < 1:
+        raise ValueError(f"eval_batch_size must be >= 1, got {eval_batch_size}")
     decoder_state = {k: v.detach().clone() for k, v in decoder.state_dict().items()}
     balle_state = {k: v.detach().clone() for k, v in balle.state_dict().items()}
     ema_decoder.apply(decoder)
@@ -650,17 +653,26 @@ def _eval_ema_proxy(
     balle.eval()
     try:
         with torch.no_grad():
-            balle_out = balle(latents)
-            decoded = decoder(balle_out["y_hat"])
-            pixel_l1 = float(
-                eval_roundtrip_pixel_l1(
+            rate_bits = 0.0
+            pixel_l1_weighted = 0.0
+            pixel_l1_weight = 0
+            n_pairs = int(latents.shape[0])
+            for start in range(0, n_pairs, int(eval_batch_size)):
+                end = min(start + int(eval_batch_size), n_pairs)
+                balle_out = balle(latents[start:end])
+                decoded = decoder(balle_out["y_hat"])
+                target_chunk = target_pixels[start:end]
+                chunk_pixel_l1 = eval_roundtrip_pixel_l1(
                     decoded,
-                    target_pixels,
+                    target_chunk,
                     noise_std=noise_std,
                     enable_eval_roundtrip_in_training=enable_eval_roundtrip_in_training,
                 )
-            )
-            rate_bits = float(balle_out["rate_total_bits"])
+                weight = int(target_chunk.numel())
+                pixel_l1_weighted += float(chunk_pixel_l1) * float(weight)
+                pixel_l1_weight += weight
+                rate_bits += float(balle_out["rate_total_bits"])
+            pixel_l1 = pixel_l1_weighted / max(pixel_l1_weight, 1)
         return {
             "ema_proxy_pixel_l1": pixel_l1,
             "ema_proxy_rate_bits": rate_bits,
@@ -1409,6 +1421,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument("--eval-every-epochs", type=int, default=100)
+    parser.add_argument(
+        "--eval-batch-size",
+        type=int,
+        default=None,
+        help=(
+            "EMA proxy evaluation chunk size. Defaults to --batch-size. Keep at "
+            "1 for full 600-pair T4 score-domain runs; unchunked eval can OOM "
+            "before archive export."
+        ),
+    )
     parser.add_argument("--auth-eval", action="store_true", default=False)
     parser.add_argument("--no-auth-eval", dest="auth_eval", action="store_false")
     parser.add_argument(
@@ -1876,6 +1898,9 @@ def main() -> int:
     n_pairs = int(latents.shape[0])
     epochs = 1 if args.smoke else args.epochs
     batch_size = 1 if args.smoke else min(args.batch_size, n_pairs)
+    eval_batch_size = batch_size if args.eval_batch_size is None else int(args.eval_batch_size)
+    if eval_batch_size < 1:
+        raise SystemExit(f"[t1] --eval-batch-size must be >= 1, got {eval_batch_size}")
 
     best_proxy = float("inf")
     history = []
@@ -1982,6 +2007,7 @@ def main() -> int:
                 target_pixels=target_pixels,
                 noise_std=args.noise_std,
                 enable_eval_roundtrip_in_training=args.enable_eval_roundtrip_in_training,
+                eval_batch_size=eval_batch_size,
             )
             print(
                 f"[t1] epoch {epoch + 1}/{epochs} loss={avg_loss:.4f} "

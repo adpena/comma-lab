@@ -368,6 +368,7 @@ TRAIN_CMD=(
     --noise-std 0.5
     --grad-clip-norm "${GRAD_CLIP_NORM:-1.0}"
     --eval-every-epochs "${EVAL_EVERY_EPOCHS:-100}"
+    --eval-batch-size "${EVAL_BATCH_SIZE:-${BATCH_SIZE:-16}}"
     --enable-t13-sqrt-n-budget
     --enable-t19-adaptive-rho
     --no-auth-eval
@@ -399,6 +400,7 @@ else
         --rate-target-bytes "${RATE_TARGET_BYTES:-80000}"
         --noise-std 0.5
         --eval-every-epochs "${EVAL_EVERY_EPOCHS:-100}"
+        --eval-batch-size "${EVAL_BATCH_SIZE:-${BATCH_SIZE:-16}}"
         --smoke
         --allow-missing-canonical-a1
         --no-auth-eval

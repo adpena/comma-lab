@@ -130,3 +130,52 @@ Recover:
 This is a full-path plumbing and memory probe. It may produce an exact score,
 but no score claim is valid until recover closes the active dispatch claim and
 auth-eval adjudication reports zero blockers.
+
+## 2026-05-10T14:03Z harvest result: batch-1 EMA proxy eval OOM
+
+Recover closed the batch-1 smoke terminally as
+`failed_t1_modal_recovered_no_score_claim`.
+
+What worked:
+
+- Modal wrapper returned a ready result and recovery harvested artifacts;
+- scorer import probe passed;
+- NVDEC probe passed on `Tesla T4`;
+- mounted-code custody was clean at commit `b82164a7`;
+- training entered the full 600-pair score-domain path with PR95 parity flags:
+  `eval_roundtrip=True`, differentiable YUV6, `yuv6_mode=monkey_patch_global`,
+  T8 Sinkhorn, T13, and T19.
+
+What failed:
+
+```text
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 12.74 GiB
+```
+
+The failure occurred in `_eval_ema_proxy()` after epoch 1. The trainer had
+correctly trained with `--batch-size 1`, but the EMA proxy evaluation decoded
+the entire 600-pair latent table at once:
+
+```text
+balle_out = balle(latents)
+decoded = decoder(balle_out["y_hat"])
+```
+
+Classification: `t1_batch1_fullpath_ema_proxy_eval_oom`. This is a trainer
+memory bug and not evidence against T1/Ballé/HNeRV parity.
+
+Hardening follow-up:
+
+- `_eval_ema_proxy()` now evaluates EMA in bounded chunks and accumulates
+  pixel-L1 and rate over chunks;
+- `--eval-batch-size` was added, defaulting to `--batch-size`;
+- `scripts/remote_lane_t1_balle_endtoend.sh` passes `--eval-batch-size` through
+  explicitly so Modal, Vast, Kaggle, AWS, Azure, and GCP provider wrappers use
+  the same bounded trainer contract;
+- tests cover the exact bug class: proxy eval must not call the decoder with
+  the full latent table.
+
+Next valid T1 score-path probe is the same full 600-pair, batch-1,
+eval-batch-1 Modal T4 smoke from the patched commit. It should progress past
+epoch-1 EMA proxy eval to archive export, packet compile, and exact auth-eval
+or expose the next concrete blocker.
