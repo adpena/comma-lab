@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from tac.auth_eval_schema import (
+    contest_formula_score,
     eval_metric_summary,
     required_contest_cuda_evidence_blockers,
     required_exact_eval_metric_blockers,
@@ -8,26 +9,31 @@ from tac.auth_eval_schema import (
 
 
 def test_eval_metric_summary_prefers_canonical_auth_eval_schema() -> None:
+    score = contest_formula_score(
+        seg_dist=0.000665,
+        pose_dist=0.00017099,
+        archive_bytes=178392,
+    )
     metrics = eval_metric_summary(
         {
-            "canonical_score": 0.22655968711150934,
-            "score_recomputed_from_components": 0.22655968711150934,
+            "canonical_score": score,
+            "score_recomputed_from_components": score,
             "final_score": 0.23,
             "avg_posenet_dist": 0.00017099,
             "avg_segnet_dist": 0.000665,
-            "score_rate_contribution": 0.11870875,
-            "rate_unscaled": 0.00474835,
+            "score_rate_contribution": 25 * 178392 / 37_545_489,
+            "rate_unscaled": 178392 / 37_545_489,
             "archive_size_bytes": 178392,
             "n_samples": 600,
             "canonical_score_source": "score_recomputed_from_components",
         }
     )
 
-    assert metrics["score"] == 0.22655968711150934
+    assert metrics["score"] == score
     assert metrics["pose_avg"] == 0.00017099
     assert metrics["seg_avg"] == 0.000665
-    assert metrics["rate"] == 0.11870875
-    assert metrics["rate_unscaled"] == 0.00474835
+    assert metrics["rate"] == 25 * 178392 / 37_545_489
+    assert metrics["rate_unscaled"] == 178392 / 37_545_489
     assert metrics["archive_size_bytes"] == 178392
     assert metrics["n_samples"] == 600
     assert metrics["canonical_score_source"] == "score_recomputed_from_components"
@@ -82,12 +88,17 @@ def test_required_exact_eval_metric_blockers_fail_closed_on_null_score_fields() 
 
 
 def test_required_exact_eval_metric_blockers_catches_partial_sample_count() -> None:
+    score = contest_formula_score(
+        seg_dist=0.000665,
+        pose_dist=0.00017099,
+        archive_bytes=178392,
+    )
     metrics = eval_metric_summary(
         {
-            "canonical_score": 0.22655968711150934,
+            "canonical_score": score,
             "avg_posenet_dist": 0.00017099,
             "avg_segnet_dist": 0.000665,
-            "rate_unscaled": 0.00474835,
+            "rate_unscaled": 178392 / 37_545_489,
             "archive_size_bytes": 178392,
             "n_samples": 64,
             "canonical_score_source": "score_recomputed_from_components",
@@ -105,7 +116,7 @@ def test_required_exact_eval_metric_blockers_rejects_non_finite_scores() -> None
             "canonical_score": "nan",
             "avg_posenet_dist": "inf",
             "avg_segnet_dist": 0.000665,
-            "rate_unscaled": 0.00474835,
+            "rate_unscaled": 178392 / 37_545_489,
             "archive_size_bytes": 178392,
             "n_samples": 600,
             "canonical_score_source": "score_recomputed_from_components",
@@ -118,14 +129,68 @@ def test_required_exact_eval_metric_blockers_rejects_non_finite_scores() -> None
     assert "pose_avg_missing" in blockers
 
 
+def test_required_exact_eval_metric_blockers_rejects_score_formula_mismatch() -> None:
+    metrics = eval_metric_summary(
+        {
+            "canonical_score": 0.123,
+            "score_recomputed_from_components": 0.123,
+            "avg_posenet_dist": 0.00017099,
+            "avg_segnet_dist": 0.000665,
+            "rate_unscaled": 178392 / 37_545_489,
+            "archive_size_bytes": 178392,
+            "n_samples": 600,
+            "canonical_score_source": "score_recomputed_from_components",
+        }
+    )
+
+    blockers = required_exact_eval_metric_blockers(metrics, expected_n_samples=600)
+
+    assert any(
+        blocker.startswith("score_component_formula_mismatch")
+        for blocker in blockers
+    )
+
+
+def test_required_exact_eval_metric_blockers_rejects_rate_bytes_mismatch() -> None:
+    score = contest_formula_score(
+        seg_dist=0.000665,
+        pose_dist=0.00017099,
+        archive_bytes=178392,
+    )
+    metrics = eval_metric_summary(
+        {
+            "canonical_score": score,
+            "score_recomputed_from_components": score,
+            "avg_posenet_dist": 0.00017099,
+            "avg_segnet_dist": 0.000665,
+            "rate_unscaled": 0.00474835,
+            "archive_size_bytes": 178392,
+            "n_samples": 600,
+            "canonical_score_source": "score_recomputed_from_components",
+        }
+    )
+
+    blockers = required_exact_eval_metric_blockers(metrics, expected_n_samples=600)
+
+    assert any(
+        blocker.startswith("rate_unscaled_archive_bytes_mismatch")
+        for blocker in blockers
+    )
+
+
 def _contest_cuda_payload(**overrides):
+    score = contest_formula_score(
+        seg_dist=0.000665,
+        pose_dist=0.00017099,
+        archive_bytes=178392,
+    )
     payload = {
-        "canonical_score": 0.22655968711150934,
-        "score_recomputed_from_components": 0.22655968711150934,
+        "canonical_score": score,
+        "score_recomputed_from_components": score,
         "avg_posenet_dist": 0.00017099,
         "avg_segnet_dist": 0.000665,
-        "score_rate_contribution": 0.11870875,
-        "rate_unscaled": 0.00474835,
+        "score_rate_contribution": 25 * 178392 / 37_545_489,
+        "rate_unscaled": 178392 / 37_545_489,
         "archive_size_bytes": 178392,
         "n_samples": 600,
         "canonical_score_source": "score_recomputed_from_components",

@@ -52,13 +52,25 @@ def _write_submission(
     auth = {
         "canonical_score": score,
         "score_recomputed_from_components": score,
+        "canonical_score_source": "score_recomputed_from_components",
         "archive_size_bytes": archive_bytes,
+        "rate_unscaled": archive_bytes / 37_545_489,
         "avg_segnet_dist": seg,
         "avg_posenet_dist": pose,
         "n_samples": 600,
-        "promotion_eligible": device == "cuda" and t4,
+        "exact_cuda_eval_complete": device == "cuda" and t4,
+        "score_claim": device == "cuda" and t4,
+        "promotion_eligible": False,
         "score_claim_valid": device == "cuda" and t4,
-        "evidence_grade": "A++" if device == "cuda" and t4 else "invalid",
+        "rank_or_kill_eligible": False,
+        "lane_tag": "[contest-CUDA]" if device == "cuda" and t4 else "[diagnostic-auth-eval]",
+        "score_axis": "contest_cuda" if device == "cuda" and t4 else device,
+        "evidence_semantics": (
+            "contest_cuda_exact_auth_eval"
+            if device == "cuda" and t4
+            else "diagnostic_auth_eval_non_promotable"
+        ),
+        "evidence_grade": "contest-CUDA" if device == "cuda" and t4 else "invalid",
         "provenance": {
             "archive_sha256": archive_sha,
             "archive_size_bytes": archive_bytes,
@@ -181,16 +193,17 @@ def test_pre_submission_check_contest_final_rejects_runtime_tree_mismatch(
     assert "submission_runtime_tree_matches_auth_eval" in _failed_check_names(report)
 
 
-def test_pre_submission_check_contest_final_rejects_inferred_promotion_stamp(
+def test_pre_submission_check_contest_final_rejects_inferred_exact_cuda_stamp(
     tmp_path: Path,
 ) -> None:
     mod = _load_module()
     expected = _write_submission(tmp_path / "submission")
     auth_path = tmp_path / "submission" / "contest_auth_eval.json"
     auth = json.loads(auth_path.read_text(encoding="utf-8"))
-    auth.pop("promotion_eligible")
+    auth.pop("exact_cuda_eval_complete")
+    auth.pop("lane_tag")
+    auth.pop("score_axis")
     auth.pop("score_claim_valid")
-    auth.pop("evidence_grade")
     auth_path.write_text(json.dumps(auth, indent=2) + "\n", encoding="utf-8")
 
     report = mod.build_report(
@@ -210,7 +223,7 @@ def test_pre_submission_check_contest_final_rejects_inferred_promotion_stamp(
     )
 
     assert not report["passed"]
-    assert "auth_eval_explicit_promotable_stamp" in _failed_check_names(report)
+    assert "auth_eval_explicit_exact_cuda_stamp" in _failed_check_names(report)
 
 
 def test_pre_submission_check_records_strict_formula_when_report_score_uses_rounded_rate(
@@ -266,6 +279,39 @@ def test_pre_submission_check_records_strict_formula_when_report_score_uses_roun
         strict_score - rounded_rate_score
     )
     assert report["auth_eval"]["anchor_proof"]["score_basis"]["score"] == strict_score
+
+
+def test_pre_submission_check_rejects_auth_eval_component_score_mismatch(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission")
+    auth_path = tmp_path / "submission" / "contest_auth_eval.json"
+    auth = json.loads(auth_path.read_text(encoding="utf-8"))
+    auth["canonical_score"] = auth["score_recomputed_from_components"] + 0.01
+    auth["score_recomputed_from_components"] = auth["canonical_score"]
+    auth_path.write_text(json.dumps(auth, indent=2) + "\n", encoding="utf-8")
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--auth-eval-json",
+                str(auth_path),
+                "--require-auth-eval",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+            ]
+        )
+    )
+
+    assert not report["passed"]
+    failed = _failed_check_names(report)
+    assert "auth_eval_schema_metric_consistency" in failed
+    assert "auth_eval_score_recomputes" in failed
 
 
 def test_pre_submission_check_fails_zip_slip_member(tmp_path: Path) -> None:
@@ -354,7 +400,7 @@ def test_pre_submission_check_rejects_cpu_auth_eval_for_promotion(tmp_path: Path
     assert not report["passed"]
     failed = _failed_check_names(report)
     assert "auth_eval_t4_equivalent" in failed
-    assert "auth_eval_promotable_stamp" in failed
+    assert "auth_eval_exact_cuda_stamp" in failed
 
 
 def test_pre_submission_check_contest_final_rejects_stale_archive_manifest(tmp_path: Path) -> None:

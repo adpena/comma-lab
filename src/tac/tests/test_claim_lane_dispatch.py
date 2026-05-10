@@ -232,22 +232,65 @@ def test_falsified_and_retired_statuses_close_claims(claims_path):
         assert rc == 0
 
 
-def test_stale_claim_outside_ttl_does_not_block(claims_path, monkeypatch):
-    """A claim older than --ttl-hours is treated as stale and does not conflict."""
+def test_stale_claim_outside_ttl_requires_terminal_stale_closure(claims_path):
+    """A TTL-stale active row must be explicitly closed before same-lane refire."""
     cld.main([
         "claim", "--claims-path", str(claims_path),
         "--lane-id", "X", "--platform", "L", "--instance-job-id", "j_old",
         "--agent", "a", "--status", "training",
         "--now-utc", "2026-01-01T00:00:00Z",
     ])
-    # 48 hours later, the old claim is stale (TTL default 24h)
+    # 48 hours later, the old claim is stale (TTL default 24h), but it still
+    # blocks new custody until a terminal stale_* row is written.
     rc = cld.main([
         "claim", "--claims-path", str(claims_path),
         "--lane-id", "X", "--platform", "L", "--instance-job-id", "j_new",
         "--agent", "a", "--status", "eval",
         "--now-utc", "2026-01-03T00:00:00Z",
     ])
+    assert rc == 3
+
+    rc = cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "X", "--platform", "L", "--instance-job-id", "j_new",
+        "--agent", "a", "--status", "eval",
+        "--now-utc", "2026-01-03T00:00:00Z",
+        "--dry-run",
+    ])
+    assert rc == 3
+
+    rc = cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "X", "--platform", "L", "--instance-job-id", "j_old",
+        "--agent", "a", "--status", "stale_superseded_manual_reconcile",
+        "--notes", "operator verified provider job is gone",
+        "--now-utc", "2026-01-03T00:00:00Z",
+    ])
     assert rc == 0
+
+    rc = cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "X", "--platform", "L", "--instance-job-id", "j_new",
+        "--agent", "a", "--status", "eval",
+        "--now-utc", "2026-01-03T00:01:00Z",
+    ])
+    assert rc == 0
+
+
+def test_completed_status_cannot_silently_close_stale_claim(claims_path):
+    cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "X", "--platform", "L", "--instance-job-id", "j_old",
+        "--agent", "a", "--status", "training",
+        "--now-utc", "2026-01-01T00:00:00Z",
+    ])
+    rc = cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "X", "--platform", "L", "--instance-job-id", "j_old",
+        "--agent", "a", "--status", "completed_exact_cuda_adjudicated",
+        "--now-utc", "2026-01-03T00:00:00Z",
+    ])
+    assert rc == 3
 
 
 def test_newest_first_ordering(claims_path):

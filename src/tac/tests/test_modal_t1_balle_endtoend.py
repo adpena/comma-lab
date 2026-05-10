@@ -74,6 +74,8 @@ def test_plan_cli_is_default_safe_and_writes_no_claim(tmp_path: Path) -> None:
     assert payload["params"]["device"] == "cuda"
     assert payload["params"]["enable_t13_sqrt_n_budget"] is True
     assert payload["params"]["enable_t19_adaptive_rho"] is True
+    assert payload["canonical_a1_payload"]["ready_for_modal_mount"] is True
+    assert "archive" in payload["canonical_a1_payload"]["files"]
     assert claim_file.read_text() == before_claims
 
 
@@ -164,6 +166,9 @@ def test_modal_t1_remote_runs_existing_script_with_score_domain_exact_eval_env()
     text = _source()
     remote_src = text[text.index("def run_t1_balle_modal("):text.index("def _write_dispatch_metadata")]
 
+    assert "missing_canonical_a1_payload" in remote_src
+    assert "A1_CANONICAL_REMOTE_PATH" in remote_src
+    assert "A1_DESIGNATION_REMOTE_PATH" in remote_src
     assert '"T1_ALLOW_SCORE_DOMAIN_TRAINING": "1"' in remote_src
     assert '"T1_RUN_CONTEST_CUDA_AUTH_EVAL": "1"' in remote_src
     assert '"LOCAL_CUDA_WORKER": "1"' in remote_src
@@ -282,6 +287,49 @@ def test_score_claim_helper_requires_adjudicated_packet_custody_fields() -> None
     assert "t1_remote_adjudication_packet_archive_sha256_missing" in blockers
 
 
+def test_score_claim_helper_blocks_adjudicated_promotion_ineligible_result() -> None:
+    module = _load_module()
+
+    score_claim, blockers, metrics = module._contest_cuda_score_claim_from_result(
+        {
+            "returncode": 0,
+            "summary": {"score_claim": True},
+            "auth_eval_adjudication": {
+                "score_claim": True,
+                "packet_archive_sha256": "packet-sha",
+                "packet_archive_size_bytes": 222,
+                "blockers": [],
+                "promotion_eligible": False,
+                "promotion_blockers": ["contest_cpu_eval_pending"],
+            },
+            "eval_data": {
+                "canonical_score": 0.2,
+                "avg_posenet_dist": 0.001,
+                "avg_segnet_dist": 0.001,
+                "score_rate_contribution": 0.01,
+                "rate_unscaled": 0.001,
+                "archive_size_bytes": 222,
+                "n_samples": 600,
+                "canonical_score_source": "score_recomputed_from_components",
+                "lane_tag": "[contest-CUDA]",
+                "score_axis": "contest_cuda",
+                "evidence_semantics": "contest_cuda_exact_auth_eval",
+                "score_claim_valid": True,
+                "provenance": {
+                    "device": "cuda",
+                    "gpu_t4_match": True,
+                    "archive_sha256": "packet-sha",
+                },
+            },
+        }
+    )
+
+    assert score_claim is False
+    assert metrics["score"] == 0.2
+    assert "t1_remote_adjudication_has_promotion_blockers" in blockers
+    assert "t1_remote_adjudication_promotion_eligible_false" in blockers
+
+
 def test_modal_t1_metadata_starts_as_no_score_claim(tmp_path: Path, monkeypatch) -> None:
     module = _load_module()
     monkeypatch.setattr(module, "RESULT_ROOT", tmp_path)
@@ -302,6 +350,7 @@ def test_modal_t1_metadata_starts_as_no_score_claim(tmp_path: Path, monkeypatch)
     assert payload["rank_or_kill_eligible"] is False
     assert payload["expected_n_samples"] == 600
     assert payload["canonical_path"].endswith("upstream/evaluate.py --device cuda")
+    assert payload["canonical_a1_payload"]["ready_for_modal_mount"] is True
     assert payload["mounted_code_snapshot"]["schema_version"] == "mounted_modal_code_snapshot_v1"
     assert "experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py" in payload[
         "mounted_code_snapshot"
@@ -318,3 +367,31 @@ def test_modal_t1_records_mounted_code_snapshot_for_score_bearing_dispatches() -
     assert '"tools/build_phase1_packet_compiler.py"' in text
     assert '"mounted_code_snapshot": code_snapshot' in text
     assert "mounted_code_worktree.patch" in text
+
+
+def test_modal_t1_plan_fails_closed_without_canonical_a1_payload(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    module = _load_module()
+    monkeypatch.setattr(module, "A1_CANONICAL_LOCAL_PATH", tmp_path / "missing_a1")
+    monkeypatch.setattr(module, "A1_DESIGNATION_LOCAL_PATH", tmp_path / "missing_memo.md")
+
+    payload, rc = module.build_local_plan(
+        label="missing-a1",
+        epochs=1,
+        batch_size=1,
+        timeout_hours=24,
+        cost_cap_usd=80,
+        train_timeout_hours=2,
+        max_target_pairs=4,
+    )
+
+    assert rc == 2
+    assert payload["ready_for_modal_dispatch_command"] is False
+    assert payload["canonical_a1_payload"]["ready_for_modal_mount"] is False
+    assert any(
+        item.startswith("canonical_a1_payload_canonical_dir_missing:")
+        for item in payload["validation_errors"]
+    )
+    assert "canonical_a1_payload_archive_missing" in payload["validation_errors"]

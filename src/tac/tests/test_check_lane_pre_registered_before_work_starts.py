@@ -249,6 +249,22 @@ def test_blocklisted_helper_name_not_flagged(
     assert violations == [], f"blocklisted '{blocked}' triggered: {violations}"
 
 
+def test_remote_script_lane_internal_name_metadata_key_not_flagged(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path, [{"id": "lane_g_v3", "name": "g v3"}])
+    _commit_file(
+        repo,
+        "scripts/remote_lane_fixture.sh",
+        "metadata_key='lane_internal_name'\n",
+        "remote metadata key",
+    )
+
+    violations = check_lane_pre_registered_before_work_starts(
+        repo_root=repo, n_commits=10, strict=False, verbose=False,
+    )
+
+    assert violations == []
+
+
 # ── Test 6/7: quoted-form detection ──────────────────────────────────────
 
 

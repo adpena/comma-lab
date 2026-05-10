@@ -150,6 +150,45 @@ def test_prewarm_preflight_source_index_covers_developer_hot_scan_groups(
     assert after - before == len(hot_groups)
 
 
+def test_prewarm_preflight_source_index_reuses_multi_pattern_inventory(
+    tmp_path,
+):
+    for rel in (
+        "docs/ledger.md",
+        "reports/latest.md",
+        "scripts/run_lane.sh",
+        "src/tac/example.py",
+        "experiments/train_example.py",
+        "experiments/run_example.sh",
+        "submissions/robust_current/inflate.sh",
+    ):
+        path = tmp_path / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("# preflight fixture\n")
+
+    from tac.source_index import source_index_context
+
+    broad_dirs = ("docs", "reports", "scripts", "src/tac", "experiments", "submissions")
+    with source_index_context(tmp_path) as index:
+        preflight._prewarm_preflight_source_index(tmp_path)
+        stats = index.stats()
+        assert stats["files_by_pattern_cache_entries"] >= 2
+
+        before_hits = stats["files_by_pattern_hits"]
+        grouped = index.files_by_pattern(
+            broad_dirs,
+            patterns=("*.py", "*.sh", "*.md"),
+        )
+        after_hits = index.stats()["files_by_pattern_hits"]
+
+    assert after_hits == before_hits + 1
+    assert {pattern for pattern, paths in grouped.items() if paths} == {
+        "*.py",
+        "*.sh",
+        "*.md",
+    }
+
+
 def test_preflight_developer_warms_source_index_before_nested_scan(
     tmp_path,
     monkeypatch,
@@ -237,6 +276,37 @@ def test_preflight_all_clean_cache_misses_after_source_change(tmp_path):
     source.write_text("VALUE = 22\n")
 
     hit, _, _ = _preflight_all_clean_cache_hit(
+        tmp_path,
+        profile_name=None,
+        tto_frames_path=None,
+        gt_poses_path=None,
+        masks_path=None,
+        renderer_path=None,
+        archive_path=None,
+    )
+    assert hit is False
+
+
+def test_preflight_developer_clean_cache_misses_after_source_change(tmp_path):
+    (tmp_path / "src" / "tac").mkdir(parents=True)
+    source = tmp_path / "src" / "tac" / "example.py"
+    source.write_text("VALUE = 1\n")
+
+    hit, token, paths = _preflight_developer_clean_cache_hit(
+        tmp_path,
+        profile_name=None,
+        tto_frames_path=None,
+        gt_poses_path=None,
+        masks_path=None,
+        renderer_path=None,
+        archive_path=None,
+    )
+    assert hit is False
+    _store_preflight_developer_clean_cache(tmp_path, cache_token=token, paths=paths)
+
+    source.write_text("VALUE = 22\n")
+
+    hit, _, _ = _preflight_developer_clean_cache_hit(
         tmp_path,
         profile_name=None,
         tto_frames_path=None,

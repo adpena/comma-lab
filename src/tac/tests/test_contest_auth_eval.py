@@ -259,6 +259,46 @@ def test_contest_auth_eval_source_records_inflate_budget_fields() -> None:
     assert "effective_inflate_python" in text
 
 
+def test_cuda_t4_auth_eval_contract_is_exact_eval_not_promotion(cae):
+    contract = cae._auth_eval_evidence_contract(
+        "cuda",
+        600,
+        {
+            "platform_system": "Linux",
+            "platform_machine": "x86_64",
+            "gpu_t4_match": True,
+        },
+    )
+
+    assert contract["lane_tag"] == "[contest-CUDA]"
+    assert contract["score_axis"] == "contest_cuda"
+    assert contract["exact_cuda_eval_complete"] is True
+    assert contract["score_claim_valid"] is True
+    assert contract["score_claim"] is True
+    assert contract["promotion_eligible"] is False
+    assert contract["rank_or_kill_eligible"] is False
+    assert "pre_submission_compliance_check_not_recorded" in contract["promotion_blockers"]
+
+
+def test_linux_cpu_auth_eval_contract_stays_non_promotional(cae):
+    contract = cae._auth_eval_evidence_contract(
+        "cpu",
+        600,
+        {
+            "platform_system": "Linux",
+            "platform_machine": "x86_64",
+            "gpu_t4_match": False,
+        },
+    )
+
+    assert contract["lane_tag"] == "[contest-CPU]"
+    assert contract["score_axis"] == "contest_cpu"
+    assert contract["score_claim"] is False
+    assert contract["score_claim_valid"] is False
+    assert contract["promotion_eligible"] is False
+    assert contract["rank_or_kill_eligible"] is False
+
+
 def test_evidence_contract_tags_cpu_as_leaderboard_reproduction(cae) -> None:
     contract = cae._auth_eval_evidence_contract(
         "cpu",
@@ -288,17 +328,20 @@ def test_evidence_contract_downgrades_macos_cpu_to_advisory(cae) -> None:
     assert contract["hardware_compliance_blocker"] == "contest_cpu_requires_linux_x86_64"
 
 
-def test_evidence_contract_keeps_cuda_t4_as_only_promotion_axis(cae) -> None:
+def test_evidence_contract_keeps_cuda_t4_exact_eval_non_promotional(cae) -> None:
     contract = cae._auth_eval_evidence_contract(
         "cuda",
         600,
         {"gpu_t4_match": True},
     )
 
-    assert contract["evidence_grade"] == "A++"
+    assert contract["evidence_grade"] == "contest-CUDA"
     assert contract["lane_tag"] == "[contest-CUDA]"
     assert contract["score_axis"] == "contest_cuda"
-    assert contract["promotion_eligible"] is True
+    assert contract["exact_cuda_eval_complete"] is True
+    assert contract["score_claim"] is True
+    assert contract["promotion_eligible"] is False
+    assert contract["rank_or_kill_eligible"] is False
     assert contract["score_claim_valid"] is True
 
 

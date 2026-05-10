@@ -5,6 +5,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL_PATH = REPO_ROOT / "tools" / "dispatch_phase_a1_score_gradient_pr101.py"
 REMOTE_SCRIPT = REPO_ROOT / "scripts" / "remote_track1_phase_a1_score_gradient_pr101.sh"
@@ -111,6 +113,47 @@ def test_submit_batch_print_only_builds_valid_spec(monkeypatch, tmp_path: Path) 
     assert rc == 0
     # In --print-only mode no claim_lane should have fired.
     assert claims == []
+
+
+def test_unknown_gpu_tier_cost_estimate_fails_closed() -> None:
+    tool = _load_tool()
+
+    with pytest.raises(ValueError, match="unsupported GPU cost estimate key"):
+        tool.estimated_cost_usd("lightning", "H100", 1.0)
+
+
+def test_unknown_gpu_tier_refuses_before_claim(monkeypatch, tmp_path: Path, capsys) -> None:
+    tool = _load_tool()
+    claims: list[dict] = []
+
+    def fake_claim_lane(**kwargs):
+        claims.append(dict(kwargs))
+        return 0
+
+    monkeypatch.setattr(tool, "claim_lane", fake_claim_lane)
+
+    rc = tool.main(
+        [
+            "--submit-batch",
+            "--dry-run-batch",
+            "--pr101-archive",
+            "CLAUDE.md",
+            "--video-path",
+            "CLAUDE.md",
+            "--pr101-source-dir",
+            "src",
+            "--provider",
+            "lightning",
+            "--gpu-tier",
+            "H100",
+            "--output-root",
+            str(tmp_path),
+        ]
+    )
+
+    assert rc == 3
+    assert claims == []
+    assert "unsupported GPU cost estimate key 'lightning_h100'" in capsys.readouterr().err
 
 
 def test_submit_batch_dry_run_manifest_is_not_fired(monkeypatch, tmp_path: Path) -> None:

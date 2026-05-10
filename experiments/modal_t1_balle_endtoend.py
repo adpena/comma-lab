@@ -71,6 +71,10 @@ MOUNTED_CODE_PATHS = (
     "scripts/remote_archive_only_eval.sh",
     "scripts/probe_nvdec.sh",
 )
+A1_CANONICAL_LOCAL_PATH = REPO_ROOT / "experiments/results/A1_canonical"
+A1_DESIGNATION_LOCAL_PATH = REPO_ROOT / ".omx/state/canonical_a1_designation.md"
+A1_CANONICAL_REMOTE_PATH = REMOTE_REPO / "experiments/results/A1_canonical"
+A1_DESIGNATION_REMOTE_PATH = REMOTE_REPO / ".omx/state/canonical_a1_designation.md"
 
 
 def _ensure_repo_import_paths() -> None:
@@ -179,6 +183,17 @@ run_image = (
     )
 )
 
+if A1_CANONICAL_LOCAL_PATH.exists():
+    run_image = run_image.add_local_dir(
+        str(A1_CANONICAL_LOCAL_PATH.resolve()),
+        remote_path=str(A1_CANONICAL_REMOTE_PATH),
+    )
+if A1_DESIGNATION_LOCAL_PATH.is_file():
+    run_image = run_image.add_local_file(
+        str(A1_DESIGNATION_LOCAL_PATH),
+        remote_path=str(A1_DESIGNATION_REMOTE_PATH),
+    )
+
 
 def _json_bytes(payload: dict[str, Any]) -> bytes:
     return (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode("utf-8")
@@ -199,6 +214,95 @@ def _sha256_path(path: Path) -> str:
 
 def _sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def _first_existing(base: Path, candidates: tuple[str, ...]) -> Path | None:
+    for rel in candidates:
+        path = base / rel
+        if path.exists():
+            return path
+    return None
+
+
+def _canonical_a1_payload_snapshot() -> dict[str, Any]:
+    """Return local canonical A1 payload readiness for Modal mounting."""
+    canonical_dir = A1_CANONICAL_LOCAL_PATH
+    memo_path = A1_DESIGNATION_LOCAL_PATH
+    errors: list[str] = []
+    files: dict[str, dict[str, Any]] = {}
+
+    if not canonical_dir.exists():
+        errors.append(f"canonical_dir_missing:{canonical_dir}")
+    if not memo_path.is_file():
+        errors.append(f"designation_memo_missing:{memo_path}")
+
+    archive_path = (
+        _first_existing(
+            canonical_dir,
+            (
+                "finetuned_archive/archive.zip",
+                "harvested_artifacts/finetuned_archive/archive.zip",
+                "archive.zip",
+            ),
+        )
+        if canonical_dir.exists()
+        else None
+    )
+    checkpoint_path = (
+        _first_existing(
+            canonical_dir,
+            (
+                "train/checkpoint_best_proxy.pt",
+                "harvested_artifacts/train/checkpoint_best_proxy.pt",
+                "checkpoint_best_proxy.pt",
+                "train/checkpoint_ema.pt",
+                "harvested_artifacts/train/checkpoint_ema.pt",
+            ),
+        )
+        if canonical_dir.exists()
+        else None
+    )
+    latents_path = (
+        _first_existing(
+            canonical_dir,
+            (
+                "train/extracted_frozen_latents.pt",
+                "harvested_artifacts/train/extracted_frozen_latents.pt",
+                "harvested_artifacts/extracted_frozen_latents.pt",
+                "extracted_frozen_latents.pt",
+            ),
+        )
+        if canonical_dir.exists()
+        else None
+    )
+    required = {
+        "archive": archive_path,
+        "checkpoint": checkpoint_path,
+        "extracted_latents": latents_path,
+        "designation_memo": memo_path if memo_path.is_file() else None,
+    }
+    for role, path in required.items():
+        if path is None:
+            errors.append(f"{role}_missing")
+            continue
+        rel = str(path.relative_to(REPO_ROOT)) if path.is_relative_to(REPO_ROOT) else str(path)
+        files[role] = {
+            "path": rel,
+            "bytes": path.stat().st_size,
+            "sha256": _sha256_path(path),
+        }
+
+    return {
+        "schema_version": "canonical_a1_payload_snapshot_v1",
+        "ready_for_modal_mount": not errors,
+        "canonical_dir": str(canonical_dir),
+        "canonical_dir_is_symlink": canonical_dir.is_symlink(),
+        "canonical_dir_resolved": str(canonical_dir.resolve()) if canonical_dir.exists() else None,
+        "remote_canonical_dir": str(A1_CANONICAL_REMOTE_PATH),
+        "remote_designation_memo": str(A1_DESIGNATION_REMOTE_PATH),
+        "files": files,
+        "validation_errors": errors,
+    }
 
 
 def _run_git_text(args: list[str]) -> tuple[int, str, str]:
@@ -415,6 +519,11 @@ def build_local_plan(
         validation_errors.append("batch_size_must_be_positive")
     if max_target_pairs is not None and max_target_pairs <= 0:
         validation_errors.append("max_target_pairs_must_be_positive")
+    canonical_a1_payload = _canonical_a1_payload_snapshot()
+    validation_errors.extend(
+        f"canonical_a1_payload_{err}"
+        for err in canonical_a1_payload["validation_errors"]
+    )
 
     payload = {
         "schema_version": "t1_modal_local_plan_v1",
@@ -439,6 +548,7 @@ def build_local_plan(
             "enable_t13_sqrt_n_budget": True,
             "enable_t19_adaptive_rho": True,
         },
+        "canonical_a1_payload": canonical_a1_payload,
         "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
         "auth_eval_device": "cuda",
         "expected_n_samples": 600,
@@ -648,6 +758,28 @@ def run_t1_balle_modal(
     claim_path = REMOTE_REPO / ".omx/state/active_lane_dispatch_claims.md"
     claim_path.write_bytes(claim_ledger_bytes)  # BARE_WRITE_OK: single-writer Modal worker copies immutable local claim snapshot
     _bootstrap_mounted_git_snapshot()
+    start = time.monotonic()
+    missing_payload = [
+        str(path)
+        for path in (A1_CANONICAL_REMOTE_PATH, A1_DESIGNATION_REMOTE_PATH)
+        if not path.exists()
+    ]
+    if missing_payload:
+        return _finish_remote(
+            out_dir,
+            returncode=12,
+            stage="missing_canonical_a1_payload",
+            commands=[],
+            validation_errors=[
+                "missing_canonical_a1_payload:" + ",".join(missing_payload)
+            ],
+            extra={
+                "elapsed_seconds": time.monotonic() - start,
+                "instance_job_id": instance_job_id,
+                "remote_claims_path": str(claim_path),
+                "mounted_workspace_git_snapshot": True,
+            },
+        )
 
     env = {
         **os.environ,
@@ -672,7 +804,6 @@ def run_t1_balle_modal(
     if max_target_pairs is not None:
         env["MAX_TARGET_PAIRS"] = str(int(max_target_pairs))
 
-    start = time.monotonic()
     try:
         run = _run_logged(
             "remote_lane_t1_balle_endtoend",
@@ -719,6 +850,7 @@ def _write_dispatch_metadata(
     out_dir = _result_dir(instance_job_id)
     out_dir.mkdir(parents=True, exist_ok=True)
     code_snapshot = _mounted_code_snapshot(out_dir)
+    canonical_a1_payload = _canonical_a1_payload_snapshot()
     payload = {
         "schema_version": "t1_modal_metadata_v1",
         "app": APP_NAME,
@@ -730,6 +862,7 @@ def _write_dispatch_metadata(
         "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
         "expected_n_samples": 600,
         "mounted_code_snapshot": code_snapshot,
+        "canonical_a1_payload": canonical_a1_payload,
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
@@ -897,6 +1030,14 @@ def _contest_cuda_score_claim_from_result(result: dict[str, Any]) -> tuple[bool,
         blockers.append("t1_remote_adjudication_score_claim_not_true")
     elif adjudication.get("blockers"):
         blockers.append("t1_remote_adjudication_has_blockers")
+    if isinstance(adjudication, dict) and adjudication.get("score_claim") is True:
+        promotion_blockers = adjudication.get("promotion_blockers")
+        if isinstance(promotion_blockers, list) and promotion_blockers:
+            blockers.append("t1_remote_adjudication_has_promotion_blockers")
+        elif promotion_blockers:
+            blockers.append("t1_remote_adjudication_promotion_blockers_not_empty")
+        if adjudication.get("promotion_eligible") is False:
+            blockers.append("t1_remote_adjudication_promotion_eligible_false")
     if isinstance(adjudication, dict) and isinstance(eval_data, dict):
         packet_sha = adjudication.get("packet_archive_sha256")
         eval_sha = eval_data.get("provenance", {}).get("archive_sha256")

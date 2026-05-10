@@ -124,3 +124,75 @@
   budget validation, A1 recover returns nonzero for non-claimable `rc=0`
   harvests, and T1 Modal cost planning is tied to the actual 24h Modal function
   timeout rather than a misleading requested timeout.
+
+## 2026-05-10T09:10Z supersession addendum
+
+- The `2026-05-10T08:03Z` active A1 claim is now terminal. Recovered exact
+  Modal T4 `[contest-CUDA]` evidence for
+  `track1_phase_a1_score_gradient_modal_20260510T0738Z_codex` is a measured
+  regression, not a score-lowering candidate:
+  score `0.5447505505333358`, seg `0.00336345`, pose `0.00050645`,
+  archive bytes `206110`, archive SHA-256
+  `f5d04f22d46bc1c4b863e9e2989c25f9b04e07cb21d54980b5effb654edc127a`,
+  runtime tree SHA-256
+  `fae77695921cd2a6c948cbd85d0e720b9a08d3a6e64c85f4a79f44dd579e6fa2`.
+  See `a1_modal_score_gradient_regression_20260510_codex.md`.
+- Current active claim is now only `t1_balle_128k_endtoend` on Modal,
+  instance/job id `t1_balle_modal_guard_a3311268_20260510T0831Z`, call id
+  `fc-01KR8GACB3NCW5TNG1E9YFPXHM`. Recover with:
+  `.venv/bin/python experiments/modal_t1_balle_endtoend.py recover --label t1_balle_modal_guard_a3311268_20260510T0831Z`.
+- T1 guard is intentionally bounded: `50` epochs, batch size `8`, max target
+  pairs `64`, `score_claim=false`, `promotion_eligible=false`. It may update
+  the Phase 1 trust region, but it cannot promote without exact CUDA auth-eval
+  schema blockers at zero, paired CPU-axis policy, lane-registry promotion
+  clearance, and operator submission policy clearance.
+- Immediate score-lowering priority while T1 runs is not another duplicate GPU
+  dispatch. The next unblocked work is local/proxy candidate generation with
+  explicit boundaries:
+  1. harvest T1 when ready and close the active claim terminally;
+  2. run Kaggle/Optuna/CMA-ES only as proxy configuration search;
+  3. materialize any proxy winner into a byte-closed archive/runtime packet;
+  4. open a fresh lane claim before exact CUDA auth eval;
+  5. promote only from archive/runtime custody, never from MPS/Kaggle/macOS
+     advisory metrics.
+- The A1 score-gradient family is not killed. Reactivation requires
+  exact-eval-in-loop or frequent exact anchors, archive-byte growth caps, pose
+  drift caps, or packet-compiler integration that proves runtime consumption
+  before spend. Re-running the exact regressed configuration is blocked.
+
+## 2026-05-10T09:35Z supersession addendum
+
+- The T1 Modal guard is now terminal, not active. Recover closed the dispatch
+  as `failed_t1_modal_recovered_no_score_claim`; current claim summary is
+  `active=0`, `stale_nonterminal=0`.
+- T1 did not train and produced no archive or score. It failed at Stage 5
+  because `/workspace/pact/experiments/results/A1_canonical` was absent inside
+  the Modal worker:
+  `FrozenA1EncoderError: canonical A1 directory/symlink not found`.
+- This is an actuator/export-custody bug, not a T1 model result. Before any
+  T1 rerun, the Modal actuator must either fail locally before dispatch when
+  the canonical A1 payload cannot be mounted, or explicitly materialize and
+  mount the canonical A1 payload and record its SHA custody in metadata.
+- Immediate score-lowering queue after this result:
+  1. harden raw auth-eval and dispatch-claim overclaim traps from the red-team
+     review;
+  2. fix T1 canonical-A1 payload mounting/designation before re-claiming T1;
+  3. keep Kaggle/Optuna/CMA-ES as proxy-only candidate search;
+  4. promote only byte-closed archives through fresh exact CUDA claims.
+
+## 2026-05-10T09:55Z supersession addendum
+
+- Red-team overclaim traps are now fixed in code. Raw `contest_auth_eval.py`
+  CUDA/T4 JSON is exact-eval evidence but no longer claims promotion or
+  rank/kill eligibility by itself; `auth_eval_schema` recomputes the contest
+  formula; pre-submission compliance consumes schema blockers; stale claims
+  require terminal stale closure; T1 recovery respects promotion blockers; and
+  unsupported GPU-tier cost estimates fail closed.
+- T1 canonical-A1 payload mounting is also fixed in the Modal actuator. Plan
+  metadata now records archive/checkpoint/latent/memo SHA custody and refuses a
+  missing canonical payload before spend.
+- Claim table after the failed T1 guard is clean: `active=0`,
+  `stale_nonterminal=0`.
+- Next score-lowering action is a fresh, short T1 Modal guard rerun only after
+  reviewing this combined hardening patch. It must open a new claim and remains
+  `score_claim=false` unless exact CUDA auth-eval schema blockers are zero.

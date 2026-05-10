@@ -77,8 +77,12 @@ def estimated_cost_usd(provider: str, gpu_tier: str, hours: float) -> float:
     key = f"{provider}_{gpu_tier.lower()}"
     rate = HOURLY_RATES.get(key)
     if rate is None:
-        # Fallback to Lightning T4 rate if unknown.
-        rate = HOURLY_RATES["lightning_t4"]
+        supported = ", ".join(sorted(HOURLY_RATES))
+        raise ValueError(
+            "unsupported GPU cost estimate key "
+            f"{key!r}; refusing to assume a fallback rate. "
+            f"Supported keys: {supported}"
+        )
     return float(rate) * float(hours)
 
 
@@ -552,7 +556,7 @@ def main(argv: list[str] | None = None) -> int:
                    help="Repo-relative path to upstream/videos/0.mkv")
     p.add_argument("--provider", choices=["lightning", "vastai"], default="lightning")
     p.add_argument("--gpu-tier", default="T4",
-                   help="GPU tier (T4/A10G/L40S/A100/H100). Lightning g4dn.2xlarge maps to T4.")
+                   help="GPU tier with an explicit cost table entry (T4/A10G/L40S/A100 for Lightning; 4090/A100 for Vast.ai). Lightning g4dn.2xlarge maps to T4.")
     p.add_argument("--epochs", type=int, default=200)
     p.add_argument("--predicted-low", type=float, default=0.150,
                    help="Predicted score band lower bound [contest-CUDA]")
@@ -646,7 +650,11 @@ def main(argv: list[str] | None = None) -> int:
     args.video_path_rel = video_path.relative_to(REPO_ROOT).as_posix()
 
     # Cost gate.
-    cost = estimated_cost_usd(args.provider, args.gpu_tier, args.timeout_hours)
+    try:
+        cost = estimated_cost_usd(args.provider, args.gpu_tier, args.timeout_hours)
+    except ValueError as exc:
+        print(f"FATAL: {exc}", file=sys.stderr)
+        return 3
     print(f"[cost-gate] estimated ${cost:.2f} for {args.provider} {args.gpu_tier} × {args.timeout_hours}h "
           f"(cap ${args.cost_cap:.2f})")
     if cost > args.cost_cap:

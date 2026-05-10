@@ -792,25 +792,25 @@ def _prewarm_preflight_source_index(root: Path) -> None:
     groups = (
         # Exact developer-hot groups. These keys intentionally match the
         # downstream checks so SourceIndex can reuse one file/fact pass.
-        (("scripts", "experiments", "src/tac/contrib", "src/tac/deploy", "src/tac/experiments"), "*.py"),
-        (("experiments",), "*.sh"),
-        (("src/tac", "tools", "experiments"), "*.py"),
-        (("src/tac", "tools", "experiments", "scripts"), "*.py"),
-        (("src/tac", "experiments", "scripts"), "*.py"),
-        (("scripts", "tools", "submissions/robust_current"), "*.sh"),
-        (("experiments", "src/tac", "submissions/robust_current"), "*.py"),
-        (("experiments", "src/tac", "submissions/robust_current"), "*.sh"),
-        (("src/tac", "experiments", "scripts", "submissions"), "*.py"),
-        (("docs", "reports", "scripts", "src/tac", "experiments", "submissions"), "*.py"),
-        (("docs", "reports", "scripts", "src/tac", "experiments", "submissions"), "*.sh"),
-        (("docs", "reports", "scripts", "src/tac", "experiments", "submissions"), "*.md"),
-        (("src/tac/tests", "tests"), "test_*.py"),
+        (("scripts", "experiments", "src/tac/contrib", "src/tac/deploy", "src/tac/experiments"), ("*.py",)),
+        (("experiments",), ("*.sh",)),
+        (("src/tac", "tools", "experiments"), ("*.py",)),
+        (("src/tac", "tools", "experiments", "scripts"), ("*.py",)),
+        (("src/tac", "experiments", "scripts"), ("*.py",)),
+        (("scripts", "tools", "submissions/robust_current"), ("*.sh",)),
+        (("experiments", "src/tac", "submissions/robust_current"), ("*.py", "*.sh")),
+        (("src/tac", "experiments", "scripts", "submissions"), ("*.py",)),
+        (("docs", "reports", "scripts", "src/tac", "experiments", "submissions"), ("*.py", "*.sh", "*.md")),
+        (("src/tac/tests", "tests"), ("test_*.py",)),
     )
-    for dirs, pattern in groups:
+    for dirs, patterns in groups:
         if not any((root / d).exists() for d in dirs):
             continue
         try:
-            source_index.facts_for_files(dirs, pattern=pattern)
+            if len(patterns) > 1:
+                source_index.files_by_pattern(dirs, patterns=patterns)
+            for pattern in patterns:
+                source_index.facts_for_files(dirs, pattern=pattern)
         except OSError:
             # The owning check will report the real failure if the path matters.
             continue
@@ -32112,6 +32112,7 @@ _LANE_ID_REFERENCE_BLOCKLIST: frozenset[str] = frozenset({
     "lane_gates",
     "lane_gate",
     "lane_index",
+    "lane_internal_name",
     "lane_info",
     "lane_iterator",
     "lane_kind",

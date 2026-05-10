@@ -38,6 +38,10 @@ ensure_repo_imports(REPO_ROOT)
 
 from tools.auth_eval_records import parse_auth_eval_payload  # noqa: E402
 from tools.claim_lane_dispatch import TERMINAL_PREFIXES as CLAIM_TERMINAL_PREFIXES  # noqa: E402
+from tac.auth_eval_schema import (  # noqa: E402
+    eval_metric_summary,
+    required_exact_eval_metric_blockers,
+)
 from tac.preflight import check_public_release_hygiene  # noqa: E402
 from tac.repo_io import json_text, read_json, repo_relative, sha256_file  # noqa: E402
 from experiments.contest_auth_eval import (  # noqa: E402
@@ -680,6 +684,18 @@ def inspect_auth_eval(
         f"claimed={claimed_size} actual={archive_bytes}",
     )
     if record is not None:
+        metrics = eval_metric_summary(payload)
+        metric_blockers = required_exact_eval_metric_blockers(
+            metrics,
+            expected_archive_bytes=int(archive_bytes) if archive_bytes is not None else None,
+            expected_n_samples=600 if args.require_t4_equivalent or args.contest_final else None,
+        )
+        _add(
+            checks,
+            "auth_eval_schema_metric_consistency",
+            not metric_blockers,
+            ", ".join(metric_blockers) or "canonical score/components/formula consistent",
+        )
         _add(
             checks,
             "auth_eval_has_components",
@@ -736,22 +752,35 @@ def inspect_auth_eval(
         )
         _add(
             checks,
-            "auth_eval_promotable_stamp",
+            "auth_eval_exact_cuda_stamp",
             (not args.require_t4_equivalent)
-            or (record.promotion_eligible and record.score_claim_valid and record.evidence_grade == "A++"),
-            f"promotion={record.promotion_eligible} claim={record.score_claim_valid} grade={record.evidence_grade}",
+            or (
+                record.device == "cuda"
+                and record.samples == 600
+                and record.gpu_t4_match
+                and record.score_claim_valid
+                and payload.get("exact_cuda_eval_complete") is True
+            ),
+            (
+                f"device={record.device} samples={record.samples} "
+                f"gpu_t4_match={record.gpu_t4_match} claim={record.score_claim_valid} "
+                f"exact_cuda_eval_complete={payload.get('exact_cuda_eval_complete')}"
+            ),
         )
         _add(
             checks,
-            "auth_eval_explicit_promotable_stamp",
+            "auth_eval_explicit_exact_cuda_stamp",
             (not args.contest_final)
             or (
-                payload.get("promotion_eligible") is True
-                and payload.get("score_claim_valid") is True
-                and payload.get("evidence_grade") == "A++"
+                payload.get("score_claim_valid") is True
+                and payload.get("exact_cuda_eval_complete") is True
+                and payload.get("lane_tag") == "[contest-CUDA]"
+                and payload.get("score_axis") == "contest_cuda"
             ),
-            "contest-final requires explicit promotion_eligible=true, "
-            "score_claim_valid=true, evidence_grade=A++ in the auth-eval JSON",
+            "contest-final requires explicit exact_cuda_eval_complete=true, "
+            "score_claim_valid=true, lane_tag=[contest-CUDA], score_axis=contest_cuda "
+            "in the auth-eval JSON; promotion eligibility is decided by this "
+            "compliance gate, not raw contest_auth_eval.py",
         )
 
     runtime_candidates = _runtime_tree_candidates(payload)

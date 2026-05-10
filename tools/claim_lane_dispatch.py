@@ -234,6 +234,19 @@ def _claim_age_hours(now_utc: dt.datetime, claim: Claim) -> float | None:
     return max((now_utc - ts).total_seconds() / 3600.0, 0.0)
 
 
+def _claim_is_stale_nonterminal(
+    claim: Claim, *, now_utc: dt.datetime, ttl: dt.timedelta
+) -> bool:
+    if _is_terminal(claim.status):
+        return False
+    ts = _parse_utc(claim.timestamp_utc)
+    return ts is None or now_utc - ts > ttl
+
+
+def _is_stale_terminal_status(status: str) -> bool:
+    return _is_terminal(status) and status.startswith("stale_")
+
+
 def _summarize_claims(
     claims: list[Claim], *, now_utc: dt.datetime, ttl_hours: float
 ) -> dict[str, object]:
@@ -363,21 +376,28 @@ def _claim(args: argparse.Namespace) -> int:
         # conflict detection: a (lane_id, instance_job_id) is active iff its MOST
         # RECENT row is non-terminal. A newer terminal row closes the older
         # nonterminal one (spec from CLAUDE.md + active_lane_dispatch_claims.md).
+        #
+        # Stale nonterminal rows still represent unresolved paid-work custody.
+        # They must be explicitly closed with a terminal stale_* row before any
+        # new/dry-run same-lane claim is allowed; ignoring TTL-stale rows was a
+        # dispatch-refire footgun.
         ttl = dt.timedelta(hours=args.ttl_hours)
-        latest_status_by_job: dict[tuple[str, str], Claim] = {}
-        for c in existing:
-            if c.lane_id != args.lane_id:
-                continue
-            ts = _parse_utc(c.timestamp_utc)
-            if ts is None or now_utc - ts > ttl:
-                continue
-            key = (c.lane_id, c.instance_job_id)
-            prev = latest_status_by_job.get(key)
-            if prev is None or _parse_utc(c.timestamp_utc) > _parse_utc(prev.timestamp_utc):
-                latest_status_by_job[key] = c
+        latest_status_by_job = {
+            key: c
+            for key, c in _latest_claims_by_job(existing).items()
+            if key[0] == args.lane_id
+        }
 
+        stale_conflict: list[Claim] = [
+            c
+            for c in latest_status_by_job.values()
+            if _claim_is_stale_nonterminal(c, now_utc=now_utc, ttl=ttl)
+        ]
         conflict: list[Claim] = [
-            c for c in latest_status_by_job.values() if not _is_terminal(c.status)
+            c
+            for c in latest_status_by_job.values()
+            if not _is_terminal(c.status)
+            and not _claim_is_stale_nonterminal(c, now_utc=now_utc, ttl=ttl)
         ]
         closed_instance_job_ids: set[tuple[str, str]] = {
             key for key, c in latest_status_by_job.items() if _is_terminal(c.status)
@@ -395,7 +415,33 @@ def _claim(args: argparse.Namespace) -> int:
         )
 
         is_terminal_new = _is_terminal(args.status)
+        is_stale_terminal_new = _is_stale_terminal_status(args.status)
+        stale_closes_target_job = any(
+            c.instance_job_id == args.instance_job_id for c in stale_conflict
+        )
         parallel_allowed = args.allow_parallel and parent_matches
+
+        if stale_conflict and not (is_stale_terminal_new and stale_closes_target_job):
+            print(
+                f"REFUSING_DISPATCH: stale active claim(s) require explicit "
+                f"terminal stale_* closure before new/dry-run claims for "
+                f"lane_id={args.lane_id}",
+                file=sys.stderr,
+            )
+            for c in stale_conflict:
+                age = _claim_age_hours(now_utc, c)
+                age_text = "unparsable" if age is None else f"{age:.2f}h"
+                print(
+                    f"  {c.timestamp_utc} {c.agent} job={c.instance_job_id} "
+                    f"status={c.status} age={age_text}",
+                    file=sys.stderr,
+                )
+            print(
+                "Close stale work first, e.g. status=stale_superseded_* or "
+                "stale_assumed_dead_* with the same --instance-job-id.",
+                file=sys.stderr,
+            )
+            return 3
 
         if conflict and not is_terminal_new and not args.force and not parallel_allowed:
             print(

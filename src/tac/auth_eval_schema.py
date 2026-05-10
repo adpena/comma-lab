@@ -15,6 +15,8 @@ from typing import Any
 
 FULL_CONTEST_SAMPLE_COUNT = 600
 CONTEST_CUDA_EVIDENCE_TAG = "[contest-CUDA]"
+ORIGINAL_VIDEO_BYTES = 37_545_489
+DEFAULT_FORMULA_ABS_TOL = 1e-6
 
 
 def numeric_or_none(value: Any) -> float | None:
@@ -41,6 +43,21 @@ def int_or_none(value: Any) -> int | None:
     if parsed is None or int(parsed) != parsed:
         return None
     return int(parsed)
+
+
+def contest_formula_score(
+    *,
+    seg_dist: float,
+    pose_dist: float,
+    archive_bytes: int,
+) -> float:
+    """Return the official contest score from component distances and bytes."""
+
+    return (
+        100.0 * seg_dist
+        + math.sqrt(10.0 * pose_dist)
+        + 25.0 * archive_bytes / ORIGINAL_VIDEO_BYTES
+    )
 
 
 def first_numeric(*values: Any) -> float | None:
@@ -122,6 +139,7 @@ def required_exact_eval_metric_blockers(
     *,
     expected_archive_bytes: int | None = None,
     expected_n_samples: int | None = None,
+    formula_abs_tol: float = DEFAULT_FORMULA_ABS_TOL,
 ) -> list[str]:
     """Return blockers that make an eval JSON non-claimable."""
 
@@ -131,6 +149,37 @@ def required_exact_eval_metric_blockers(
             blockers.append(f"{key}_missing")
     if metrics.get("canonical_score_source") != "score_recomputed_from_components":
         blockers.append("canonical_score_source_not_recomputed_from_components")
+    score = metrics.get("score")
+    pose_avg = metrics.get("pose_avg")
+    seg_avg = metrics.get("seg_avg")
+    archive_size_bytes = metrics.get("archive_size_bytes")
+    if (
+        score is not None
+        and pose_avg is not None
+        and seg_avg is not None
+        and archive_size_bytes is not None
+    ):
+        if pose_avg < 0 or seg_avg < 0 or archive_size_bytes < 0:
+            blockers.append("contest_formula_inputs_negative")
+        else:
+            recomputed = contest_formula_score(
+                seg_dist=float(seg_avg),
+                pose_dist=float(pose_avg),
+                archive_bytes=int(archive_size_bytes),
+            )
+            if abs(float(score) - recomputed) > formula_abs_tol:
+                blockers.append(
+                    "score_component_formula_mismatch:"
+                    f"score={float(score):.12g}:recomputed={recomputed:.12g}"
+                )
+    rate_unscaled = metrics.get("rate_unscaled")
+    if rate_unscaled is not None and archive_size_bytes is not None:
+        expected_rate = int(archive_size_bytes) / ORIGINAL_VIDEO_BYTES
+        if abs(float(rate_unscaled) - expected_rate) > formula_abs_tol:
+            blockers.append(
+                "rate_unscaled_archive_bytes_mismatch:"
+                f"rate={float(rate_unscaled):.12g}:expected={expected_rate:.12g}"
+            )
     if (
         expected_archive_bytes is not None
         and metrics.get("archive_size_bytes") is not None
