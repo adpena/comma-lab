@@ -287,6 +287,7 @@ PR106X_ARCHIVE = (
 )
 TIMING_PROFILE_SCHEMA = "pact.all_lanes_preflight_timing.v1"
 SLOW_STEP_THRESHOLD_S = 0.50
+DEFAULT_ALL_LANES_PREFLIGHT_TIMEOUT_S = 30.0
 
 LANES = [
     {
@@ -1682,6 +1683,50 @@ def _print_timing_summary(
             print(_format_timing_row(row))
 
 
+def _all_lanes_preflight_timeout_seconds(
+    *,
+    timeout_s: float | None,
+    allow_slow_preflight: bool,
+) -> float | None:
+    """Return the all-lanes wall-clock budget, or None for explicit slow runs."""
+    if allow_slow_preflight:
+        return None
+    if timeout_s is None:
+        timeout_s = DEFAULT_ALL_LANES_PREFLIGHT_TIMEOUT_S
+    if timeout_s <= 0:
+        raise ValueError("--timeout-s must be positive unless --allow-slow-preflight is set")
+    return float(timeout_s)
+
+
+def _format_wall_clock_budget_failure(
+    results: list[PreflightResult],
+    *,
+    wall_elapsed_s: float,
+    timeout_s: float,
+    max_hot_steps: int = 5,
+) -> str:
+    """Build the fail-closed DX message for slow all-lanes preflight runs."""
+    profile = _build_timing_profile(
+        results,
+        max_workers=0,
+        wall_elapsed_s=wall_elapsed_s,
+    )
+    hot_steps = [row for row in profile["hot_steps"] if isinstance(row, dict)]
+    lines = [
+        (
+            "FATAL: all-lanes preflight exceeded "
+            f"{timeout_s:.2f}s wall-clock DX budget "
+            f"(wall={wall_elapsed_s:.2f}s)."
+        ),
+        "DO NOT DISPATCH from this run; optimize or split the slow gates first.",
+        "Slowest recorded steps:",
+    ]
+    for row in hot_steps[:max_hot_steps]:
+        lines.append(_format_timing_row(row))
+    lines.append("Use --allow-slow-preflight only for intentional profiling/debug runs.")
+    return "\n".join(lines)
+
+
 def _default_jobs(step_count: int) -> int:
     cpu_count = os.cpu_count() or 2
     return max(1, min(step_count, cpu_count, 8))
@@ -1722,7 +1767,32 @@ def main(argv: list[str] | None = None) -> int:
             "and Rust-acceleration planning."
         ),
     )
+    parser.add_argument(
+        "--timeout-s",
+        type=float,
+        default=DEFAULT_ALL_LANES_PREFLIGHT_TIMEOUT_S,
+        help=(
+            "Fail closed when total all-lanes preflight wall-clock exceeds this "
+            "DX budget. Default: 30 seconds."
+        ),
+    )
+    parser.add_argument(
+        "--allow-slow-preflight",
+        action="store_true",
+        help=(
+            "Disable the all-lanes wall-clock budget. Use only for deliberate "
+            "profiling/debug runs, not normal dispatch readiness checks."
+        ),
+    )
     args = parser.parse_args(argv)
+    try:
+        wall_clock_budget_s = _all_lanes_preflight_timeout_seconds(
+            timeout_s=args.timeout_s,
+            allow_slow_preflight=args.allow_slow_preflight,
+        )
+    except ValueError as exc:
+        print(f"FATAL: {exc}", file=sys.stderr)
+        return 2
 
     lanes = [dict(lane) for lane in LANES]
     if args.require_real_omega_sensitivity:
@@ -2068,6 +2138,15 @@ def main(argv: list[str] | None = None) -> int:
         _write_timing_profile(args.timings_json, timing_profile)
         print(f"\nTiming profile JSON: {args.timings_json}")
     print()
+    if wall_clock_budget_s is not None and wall_elapsed_s > wall_clock_budget_s:
+        print(
+            _format_wall_clock_budget_failure(
+                results,
+                wall_elapsed_s=wall_elapsed_s,
+                timeout_s=wall_clock_budget_s,
+            )
+        )
+        return 124
     if n_failed == 0:
         print(f"ALL {n_passed} PREFLIGHT CHECKS PASSED.")
         if n_forensic_only:

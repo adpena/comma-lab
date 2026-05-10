@@ -94,6 +94,12 @@ class UntrackedRecord:
     reason: str
 
 
+@dataclass(frozen=True)
+class _DispositionIndex:
+    exact: dict[str, dict[str, Any]]
+    prefixes_longest_first: tuple[tuple[str, dict[str, Any]], ...]
+
+
 VALID_DISPOSITIONS = frozenset(
     {
         "track",
@@ -134,7 +140,7 @@ def _is_under_root(posix: str, roots: tuple[str, ...]) -> bool:
 
 
 def _has_source_suffix(posix: str) -> bool:
-    return Path(posix).suffix.lower() in SOURCE_SUFFIXES
+    return os.path.splitext(posix)[1].lower() in SOURCE_SUFFIXES
 
 
 def _is_generated_custody_path(posix: str) -> bool:
@@ -173,21 +179,60 @@ def _default_disposition_for_record(record: UntrackedRecord) -> str:
     return "ignore_rebuildable"
 
 
+def _generated_custody_record(posix: str) -> UntrackedRecord:
+    return UntrackedRecord(
+        posix,
+        "generated_custody_source_untracked",
+        "generated custody source-like artifact needs explicit disposition before promotion",
+    )
+
+
 def classify_untracked_path(path: str) -> UntrackedRecord | None:
     posix = path.replace("\\", "/")
     if not _is_source_like_path(posix):
         return None
     if _is_generated_custody_path(posix):
-        return UntrackedRecord(
-            posix,
-            "generated_custody_source_untracked",
-            "generated custody source-like artifact needs explicit disposition before promotion",
-        )
+        return _generated_custody_record(posix)
     if posix.startswith(".omx/research/"):
         return UntrackedRecord(posix, "research_untracked", "research markdown/state should be tracked or promoted")
     if posix.startswith("reverse_engineering/"):
         return UntrackedRecord(posix, "reverse_engineering_untracked", "recovered/deconstruction source needs disposition")
     return UntrackedRecord(posix, "source_untracked", "source-like artifact is untracked")
+
+
+def _build_disposition_index(dispositions: dict[str, dict[str, Any]]) -> _DispositionIndex:
+    exact: dict[str, dict[str, Any]] = {}
+    prefixes: list[tuple[str, dict[str, Any]]] = []
+    for relpath, entry in dispositions.items():
+        if entry.get("path_kind", "exact") == "prefix":
+            prefixes.append((relpath, entry))
+        else:
+            exact[relpath] = entry
+    prefixes.sort(key=lambda item: len(item[0]), reverse=True)
+    return _DispositionIndex(exact=exact, prefixes_longest_first=tuple(prefixes))
+
+
+def _find_disposition_for_path_indexed(
+    index: _DispositionIndex,
+    relpath: str,
+) -> dict[str, Any] | None:
+    exact = index.exact.get(relpath)
+    if exact is not None:
+        return exact
+    for prefix, entry in index.prefixes_longest_first:
+        if relpath.startswith(prefix):
+            return entry
+    return None
+
+
+def _find_prefix_disposition_for_path_indexed(
+    index: _DispositionIndex,
+    relpath: str,
+) -> tuple[str, dict[str, Any]] | None:
+    for prefix, entry in index.prefixes_longest_first:
+        if relpath.startswith(prefix):
+            return prefix, entry
+    return None
 
 
 def _validate_runtime_source_baseline(path: Path, index: int, baseline: Any) -> dict[str, object]:
@@ -314,24 +359,22 @@ def _generated_source_filesystem_records(
         root_path = repo_root / root
         if not root_path.exists():
             continue
-        stack = [root_path]
+        stack = [(root_path, root)]
         while stack:
-            current = stack.pop()
+            current, current_rel = stack.pop()
             with os.scandir(current) as entries:
                 for entry in entries:
                     if entry.is_dir(follow_symlinks=False):
-                        stack.append(Path(entry.path))
+                        stack.append((Path(entry.path), f"{current_rel}/{entry.name}"))
                         continue
-                    if Path(entry.name).suffix.lower() not in SOURCE_SUFFIXES:
+                    if os.path.splitext(entry.name)[1].lower() not in SOURCE_SUFFIXES:
                         continue
                     if not entry.is_file():
                         continue
-                    posix = os.path.relpath(entry.path, repo_root).replace(os.sep, "/")
+                    posix = f"{current_rel}/{entry.name}"
                     if posix in tracked_paths:
                         continue
-                    record = classify_untracked_path(posix)
-                    if record is not None:
-                        records.append(record)
+                    records.append(_generated_custody_record(posix))
     return records
 
 
@@ -360,39 +403,19 @@ def find_invalid_disposition_paths(
 def find_disposition_for_path(
     dispositions: dict[str, dict[str, Any]], relpath: str
 ) -> dict[str, Any] | None:
-    exact = dispositions.get(relpath)
-    if exact is not None and exact.get("path_kind", "exact") == "exact":
-        return exact
-    prefix_matches = [
-        (prefix, entry)
-        for prefix, entry in dispositions.items()
-        if entry.get("path_kind", "exact") == "prefix" and relpath.startswith(prefix)
-    ]
-    if not prefix_matches:
-        return None
-    return max(prefix_matches, key=lambda item: len(item[0]))[1]
+    return _find_disposition_for_path_indexed(_build_disposition_index(dispositions), relpath)
 
 
 def find_exact_disposition_for_path(
     dispositions: dict[str, dict[str, Any]], relpath: str
 ) -> dict[str, Any] | None:
-    exact = dispositions.get(relpath)
-    if exact is not None and exact.get("path_kind", "exact") == "exact":
-        return exact
-    return None
+    return _build_disposition_index(dispositions).exact.get(relpath)
 
 
 def find_prefix_disposition_for_path(
     dispositions: dict[str, dict[str, Any]], relpath: str
 ) -> tuple[str, dict[str, Any]] | None:
-    prefix_matches = [
-        (prefix, entry)
-        for prefix, entry in dispositions.items()
-        if entry.get("path_kind", "exact") == "prefix" and relpath.startswith(prefix)
-    ]
-    if not prefix_matches:
-        return None
-    return max(prefix_matches, key=lambda item: len(item[0]))
+    return _find_prefix_disposition_for_path_indexed(_build_disposition_index(dispositions), relpath)
 
 
 def _runtime_source_file_fingerprint(repo_root: Path, relpath: str) -> str:
@@ -404,10 +427,13 @@ def _runtime_source_file_fingerprint(repo_root: Path, relpath: str) -> str:
     return digest.hexdigest()
 
 
-def build_runtime_source_baseline(repo_root: Path, relpaths: list[str] | tuple[str, ...]) -> dict[str, object]:
+def _build_runtime_source_baseline_for_known_runtime_paths(
+    repo_root: Path,
+    relpaths: list[str] | tuple[str, ...],
+) -> dict[str, object]:
     digest = hashlib.sha256()
     digest.update((RUNTIME_SOURCE_BASELINE_ALGORITHM + "\n").encode())
-    runtime_paths = sorted(path.replace("\\", "/") for path in relpaths if _is_runtime_source_like_path(path))
+    runtime_paths = sorted(path.replace("\\", "/") for path in relpaths)
     for relpath in runtime_paths:
         file_path = repo_root / relpath
         size = file_path.stat().st_size
@@ -420,6 +446,11 @@ def build_runtime_source_baseline(repo_root: Path, relpaths: list[str] | tuple[s
     }
 
 
+def build_runtime_source_baseline(repo_root: Path, relpaths: list[str] | tuple[str, ...]) -> dict[str, object]:
+    runtime_paths = sorted(path.replace("\\", "/") for path in relpaths if _is_runtime_source_like_path(path))
+    return _build_runtime_source_baseline_for_known_runtime_paths(repo_root, runtime_paths)
+
+
 def find_runtime_source_custody_blockers(
     dispositions: dict[str, dict[str, Any]],
     runtime_source_paths: list[str] | tuple[str, ...],
@@ -429,11 +460,12 @@ def find_runtime_source_custody_blockers(
     blockers: list[str] = []
     prefix_runtime_paths: dict[str, list[str]] = {}
     prefix_entries: dict[str, dict[str, Any]] = {}
+    disposition_index = _build_disposition_index(dispositions)
 
     for relpath in sorted(path.replace("\\", "/") for path in runtime_source_paths):
-        if find_exact_disposition_for_path(dispositions, relpath) is not None:
+        if relpath in disposition_index.exact:
             continue
-        prefix_match = find_prefix_disposition_for_path(dispositions, relpath)
+        prefix_match = _find_prefix_disposition_for_path_indexed(disposition_index, relpath)
         if prefix_match is None:
             continue
         prefix, entry = prefix_match
@@ -450,7 +482,7 @@ def find_runtime_source_custody_blockers(
     baseline_summaries: list[dict[str, object]] = []
     for prefix, paths in sorted(prefix_runtime_paths.items()):
         expected = prefix_entries[prefix]["runtime_source_baseline"]
-        actual = build_runtime_source_baseline(repo_root, paths)
+        actual = _build_runtime_source_baseline_for_known_runtime_paths(repo_root, paths)
         status = (
             "matched"
             if expected["count"] == actual["count"] and expected["sha256"] == actual["sha256"]
@@ -481,6 +513,7 @@ def audit_untracked_source_artifacts(
     disposition_manifest: Path | None = None,
 ) -> AuditReport:
     dispositions = load_disposition_manifest(disposition_manifest)
+    disposition_index = _build_disposition_index(dispositions)
     status_text = _git_status(repo_root)
     records: list[UntrackedRecord] = []
     all_status_records = parse_git_status_records(status_text)
@@ -521,7 +554,7 @@ def audit_untracked_source_artifacts(
     )
     for record in records:
         by_class[record.classification] = by_class.get(record.classification, 0) + 1
-        disposition = find_disposition_for_path(dispositions, record.path)
+        disposition = _find_disposition_for_path_indexed(disposition_index, record.path)
         if disposition is None:
             undispositioned.append(record)
         else:
@@ -561,7 +594,7 @@ def audit_untracked_source_artifacts(
             "runtime_source_baseline_blocker_count": len(runtime_source_blockers),
             "runtime_source_baselines": runtime_source_baselines,
             "runtime_source_exact_disposition_count": sum(
-                1 for path in runtime_source_paths if find_exact_disposition_for_path(dispositions, path) is not None
+                1 for path in runtime_source_paths if path in disposition_index.exact
             ),
             "runtime_source_like_count": len(runtime_source_paths),
             "shadowed_index_delete_count": len(shadowed_delete_paths),

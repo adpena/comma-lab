@@ -111,6 +111,48 @@ def test_disposition_manifest_supports_generated_custody_prefixes(tmp_path) -> N
     assert disposition["disposition"] == "ignore_rebuildable"
 
 
+def test_disposition_lookup_preserves_exact_and_longest_prefix_semantics() -> None:
+    dispositions = {
+        "experiments/results/": {
+            "disposition": "ignore_rebuildable",
+            "note": "broad generated custody",
+            "path_kind": "prefix",
+        },
+        "experiments/results/important_run/": {
+            "disposition": "ignore_private",
+            "note": "more specific generated custody",
+            "path_kind": "prefix",
+        },
+        "experiments/results/important_run/submission_dir/inflate.py": {
+            "disposition": "track",
+            "note": "exact runtime source reviewed for promotion",
+            "path_kind": "exact",
+        },
+    }
+
+    assert (
+        find_disposition_for_path(
+            dispositions,
+            "experiments/results/other_run/submission_dir/inflate.py",
+        )["disposition"]
+        == "ignore_rebuildable"
+    )
+    assert (
+        find_disposition_for_path(
+            dispositions,
+            "experiments/results/important_run/manifest.json",
+        )["disposition"]
+        == "ignore_private"
+    )
+    assert (
+        find_disposition_for_path(
+            dispositions,
+            "experiments/results/important_run/submission_dir/inflate.py",
+        )["disposition"]
+        == "track"
+    )
+
+
 def test_disposition_manifest_rejects_prefix_outside_generated_custody(tmp_path) -> None:
     path = tmp_path / "dispositions.json"
     path.write_text(

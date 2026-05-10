@@ -167,6 +167,52 @@ def test_identity_preserves_synthetic_archive_bytes(tmp_path: Path) -> None:
     assert post_archive_sha == pre_archive_sha
 
 
+def test_runtime_fallback_archive_zip_does_not_satisfy_consumption_proof(
+    tmp_path: Path,
+) -> None:
+    packet_dir = _write_synthetic_packet(tmp_path)
+    fallback_py = (
+        "#!/usr/bin/env python3\n"
+        "import sys\n"
+        "from pathlib import Path\n"
+        "archive_dir = Path(sys.argv[1])\n"
+        "output_dir = Path(sys.argv[2])\n"
+        "file_list = Path(sys.argv[3])\n"
+        "data = (Path(__file__).resolve().parent / 'archive.zip').read_bytes()\n"
+        "for line in file_list.read_text().splitlines():\n"
+        "    if not line.strip():\n"
+        "        continue\n"
+        "    dst = output_dir / (line.rsplit('.', 1)[0] + '.raw')\n"
+        "    dst.parent.mkdir(parents=True, exist_ok=True)\n"
+        "    dst.write_bytes(data)\n"
+    )
+    (packet_dir / "inflate.py").write_text(fallback_py, encoding="utf-8")
+    (packet_dir / "inflate.sh").write_text(
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "HERE=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"\n"
+        "DATA_DIR=\"$1\"\n"
+        "OUTPUT_DIR=\"$2\"\n"
+        "FILE_LIST=\"$3\"\n"
+        "mkdir -p \"$OUTPUT_DIR\"\n"
+        "exec \"${PYTHON:-python3}\" "
+        "\"$HERE/inflate.py\" \"$DATA_DIR\" \"$OUTPUT_DIR\" \"$FILE_LIST\"\n",
+        encoding="utf-8",
+    )
+    (packet_dir / "inflate.sh").chmod(0o755)
+
+    result = compile_phase1_packet(
+        input_packet=packet_dir,
+        output_dir=tmp_path / "out",
+        mode="identity",
+    )
+
+    assert any(
+        blocker.startswith("inflate_does_not_consume_archive_bytes:")
+        for blocker in result.blockers
+    )
+
+
 def test_identity_preserves_runtime_tree_files(tmp_path: Path) -> None:
     packet_dir = _write_synthetic_packet(tmp_path)
     out_dir = tmp_path / "out"

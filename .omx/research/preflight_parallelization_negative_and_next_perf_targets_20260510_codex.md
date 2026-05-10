@@ -265,6 +265,77 @@ Wire-in declaration:
 - Probe-disambiguator: N/A - single policy-preserving interpretation; parity
   tests compare SourceIndex and no-index behavior.
 
+## 2026-05-10 all-lanes hard wall-clock budget + runtime-custody speed path
+
+<!-- generated_at: 2026-05-10T14:21:31Z -->
+<!-- evidence_grade: local_dev_correctness_and_performance; no dispatch; no score claim -->
+
+Why this is score-lowering work:
+
+- The all-lanes gate is the final cheap filter before exact-eval or remote GPU
+  claims. If it is slow, agents skip it or batch risky changes; if it is fast,
+  every score-lowering candidate can be checked before spend.
+- The Phase 1/T1 path is currently plumbing-gated, not model-gated. These
+  checks specifically prevent another Modal cycle from producing a packet that
+  ignores evaluator-provided archive bytes.
+
+Changes under review this tranche:
+
+- `tools/all_lanes_preflight.py` now has a default 30s wall-clock DX budget.
+  Exceeding it returns `124` after printing the slowest gates. Slow profiling
+  requires explicit `--allow-slow-preflight`.
+- `src/tac/preflight.py` Catalog #146 now rejects Phase 1 emitted runtimes that
+  fall back to a runtime-local `HERE/archive.zip` instead of consuming the
+  extracted archive directory supplied by `contest_auth_eval.py`.
+- `src/tac/phase1_packet_compiler.py` runtime-consumption smoke now materializes
+  extracted archive members only. A fallback `archive.zip` beside `inflate.py`
+  no longer satisfies no-op/runtime-consumption proof.
+- `tools/audit_untracked_source_artifacts.py` disposition lookup now uses a
+  precomputed exact/prefix index and a faster generated-custody filesystem walk.
+
+Timing evidence:
+
+```bash
+/usr/bin/time -p .venv/bin/python tools/all_lanes_preflight.py \
+  --timings --timings-json reports/preflight_all_lanes_timing_latest.json
+# ALL 29 PREFLIGHT CHECKS PASSED
+# wall=1.687445s; serial_sum=9.768834s; estimated_speedup=5.789126x
+# real 1.72
+```
+
+Hot gates from that run:
+
+1. Gate #10 untracked source inventory: `1.634103s`
+2. Gate #19 PR91 HPM1 fail-closed custody: `1.089390s`
+3. Gate #8 tooling consolidation inventory: `0.913065s`
+4. Gate #3 semantic-label contract: `0.775703s`
+5. Gate #0 dispatch CLI/shell hazards: `0.706077s`
+
+Focused verification:
+
+```bash
+.venv/bin/python -m pytest \
+  src/tac/tests/test_all_lanes_preflight_timing_profile.py \
+  src/tac/tests/test_preflight_cli_timeout.py
+# 15 passed in 0.59s
+
+.venv/bin/python -m pytest \
+  src/tac/tests/test_audit_untracked_source_artifacts.py \
+  src/tac/tests/test_build_phase1_packet_compiler.py \
+  tests/paradigm_delta_epsilon_zeta/test_phase1_trainer_write_runtime_fix.py \
+  src/tac/tests/test_all_lanes_preflight_timing_profile.py
+# 144 passed in 13.69s
+
+.venv/bin/python -m pytest \
+  src/tac/tests/test_preflight_phase1_runtime_guard.py \
+  src/tac/tests/test_build_phase1_packet_compiler.py \
+  tests/paradigm_delta_epsilon_zeta/test_phase1_trainer_write_runtime_fix.py
+# 126 passed in 13.22s
+```
+
+The transient timing JSON was intentionally not kept as a loose report artifact;
+the durable signal is this ledger entry plus the focused tests.
+
 ## 2026-05-10 all-lanes wall-clock drop: A2 single-walk gate
 
 <!-- generated_at: 2026-05-10T14:19:00Z -->

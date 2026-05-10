@@ -30595,6 +30595,8 @@ def check_phase1_trainer_runtime_emits_contest_compliant_inflate(
       `EfficientNet`, `FastViT`).
     * inflate.py template missing the per-video loop pattern
       (`for line in file_list.read_text().splitlines()` or equivalent).
+    * inflate.py template falling back to a runtime-local `HERE/archive.zip`
+      instead of consuming the evaluator-provided archive_dir members.
 
     Same-line `# CHECK146_WAIVED:<reason>` waiver honored.
 
@@ -30780,6 +30782,37 @@ def check_phase1_trainer_runtime_emits_contest_compliant_inflate(
             "trainer:_write_runtime inflate.py template missing per-video "
             "loop (one of: 'for line in file_list', 'splitlines()', "
             "'while IFS= read'); contest contract requires per-video iteration"
+        )
+
+    # 7. The contest runner passes an extracted archive directory as argv[1].
+    # A runtime-local fallback archive.zip beside inflate.py can silently ignore
+    # the evaluator-provided archive bytes and invalidate no-op/custody proofs.
+    runtime_local_archive_fallback_tokens = (
+        "HERE / 'archive.zip'",
+        'HERE / "archive.zip"',
+        "Path(__file__).resolve().parent / 'archive.zip'",
+        'Path(__file__).resolve().parent / "archive.zip"',
+    )
+    for token in runtime_local_archive_fallback_tokens:
+        if token in inflate_py_template:
+            violations.append(
+                "trainer:_write_runtime inflate.py template contains "
+                f"RUNTIME_LOCAL_ARCHIVE_FALLBACK {token!r}; contest inflate "
+                "must consume archive_dir members passed as argv[1]"
+            )
+    if inflate_py_template and not any(
+        token in inflate_py_template
+        for token in (
+            "member = archive_dir / name",
+            "archive_dir / 'x'",
+            'archive_dir / "x"',
+            "archive_dir.joinpath",
+        )
+    ):
+        violations.append(
+            "trainer:_write_runtime inflate.py template does not show direct "
+            "archive_dir member consumption; contest runner passes extracted "
+            "archive members, not a bundled archive.zip fallback"
         )
 
     if violations and strict:

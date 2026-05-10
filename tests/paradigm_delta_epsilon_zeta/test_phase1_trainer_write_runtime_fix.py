@@ -321,6 +321,17 @@ def test_emitted_inflate_py_has_per_video_loop(written_runtime):
     assert "for line in file_list.read_text().splitlines()" in text
 
 
+def test_emitted_inflate_py_reads_members_from_passed_archive_dir(written_runtime):
+    text = (written_runtime / "inflate.py").read_text()
+    assert "HERE / 'archive.zip'" not in text
+    assert "member = archive_dir / name" in text
+    assert "return member.read_bytes()" in text
+    assert "_read_member(archive_dir, 'x')" in text
+    assert "_read_member(archive_dir, 'decoder.bin')" in text
+    assert "_read_member(archive_dir, 'balle.bin')" in text
+    assert "dst.parent.mkdir(parents=True, exist_ok=True)" in text
+
+
 # ---------------------------------------------------------------------------
 # Wire-format roundtrip tests (length-prefixed Ballé strings)
 # ---------------------------------------------------------------------------

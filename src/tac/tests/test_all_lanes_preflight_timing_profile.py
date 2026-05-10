@@ -81,6 +81,65 @@ def test_print_timing_summary_reports_parallelism_and_slow_steps(capsys) -> None
     assert "Remaining steps:" in out
 
 
+def test_all_lanes_preflight_timeout_default_is_thirty_seconds() -> None:
+    module = _load_all_lanes_module()
+
+    assert module.DEFAULT_ALL_LANES_PREFLIGHT_TIMEOUT_S == 30.0
+    assert (
+        module._all_lanes_preflight_timeout_seconds(
+            timeout_s=module.DEFAULT_ALL_LANES_PREFLIGHT_TIMEOUT_S,
+            allow_slow_preflight=False,
+        )
+        == 30.0
+    )
+
+
+def test_all_lanes_preflight_slow_override_is_explicit() -> None:
+    module = _load_all_lanes_module()
+
+    assert (
+        module._all_lanes_preflight_timeout_seconds(
+            timeout_s=30.0,
+            allow_slow_preflight=True,
+        )
+        is None
+    )
+
+
+def test_all_lanes_preflight_timeout_rejects_non_positive_budget() -> None:
+    module = _load_all_lanes_module()
+
+    try:
+        module._all_lanes_preflight_timeout_seconds(
+            timeout_s=0.0,
+            allow_slow_preflight=False,
+        )
+    except ValueError as exc:
+        assert "--timeout-s" in str(exc)
+    else:  # pragma: no cover - assertion guard
+        raise AssertionError("expected ValueError")
+
+
+def test_all_lanes_budget_failure_reports_hot_steps() -> None:
+    module = _load_all_lanes_module()
+    results = [
+        _result(module, "GATE", 1, "fast gate", 0.125, True),
+        _result(module, "GATE", 2, "slow gate", 3.5, True),
+    ]
+
+    message = module._format_wall_clock_budget_failure(
+        results,
+        wall_elapsed_s=30.25,
+        timeout_s=30.0,
+    )
+
+    assert "all-lanes preflight exceeded 30.00s wall-clock DX budget" in message
+    assert "DO NOT DISPATCH" in message
+    assert "GATE #2: slow gate" in message
+    assert "GATE #1: fast gate" in message
+    assert "--allow-slow-preflight" in message
+
+
 def test_write_timing_profile_creates_parent_and_uses_repo_json_style(tmp_path: Path) -> None:
     module = _load_all_lanes_module()
     path = tmp_path / "profiles" / "all_lanes_timing.json"

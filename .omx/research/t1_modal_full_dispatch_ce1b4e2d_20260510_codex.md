@@ -179,3 +179,32 @@ Next valid T1 score-path probe is the same full 600-pair, batch-1,
 eval-batch-1 Modal T4 smoke from the patched commit. It should progress past
 epoch-1 EMA proxy eval to archive export, packet compile, and exact auth-eval
 or expose the next concrete blocker.
+
+## 2026-05-10T14:23Z active e7845e4c smoke classification after runtime-custody hardening
+
+The follow-up Modal call remains pending:
+
+- Label: `t1_balle_modal_fullpath_smoke_e7845e4c_20260510T1410Z`
+- Modal call id: `fc-01KR93KESQB87VSD2WKE4GYZEC`
+- Lane: `t1_balle_128k_endtoend`
+- Status at this addendum: `pending`
+
+Important promotion boundary: this run launched from clean git head `e7845e4c`
+before the extracted-archive runtime hardening landed. It is still useful and
+must be harvested for logs, training behavior, memory behavior, and packet
+compiler/auth-eval failure classification. It must not be promoted as
+contest-compliant score evidence unless the harvested artifacts independently
+prove the exact runtime consumed evaluator-provided extracted archive members
+and auth-eval adjudication has zero blockers.
+
+Current working-tree hardening closes that bug class for future T1 dispatches:
+
+- emitted Phase 1 `inflate.py` reads `x`, `decoder.bin`, and `balle.bin` from
+  the passed `archive_dir`;
+- `tac.phase1_packet_compiler` no-op smoke materializes extracted archive
+  members only, matching `contest_auth_eval.py`;
+- Catalog #146 preflight rejects runtime-local `HERE/archive.zip` fallback.
+
+Next valid score-lowering dispatch after this active claim closes is a patched
+T1 Modal smoke from the post-hardening commit. Do not duplicate the active
+claim while it is pending.

@@ -37,6 +37,9 @@ def _write_runtime():
     inflate_py = (
         "from pathlib import Path\\n"
         "def main(file_list):\\n"
+        "    archive_dir = Path('.')\\n"
+        "    member = archive_dir / 'x'\\n"
+        "    data = member.read_bytes()\\n"
         "    for line in file_list.read_text().splitlines():\\n"
         "        pass\\n"
     )
@@ -101,3 +104,33 @@ def _write_runtime():
 
     assert any("missing one of $1/$2/$3" in item for item in violations)
     assert any('"$@"' in item and "passthrough" in item for item in violations)
+
+
+def test_check146_rejects_runtime_local_archive_zip_fallback(tmp_path: Path) -> None:
+    _write_trainer(
+        tmp_path,
+        '''
+def _write_runtime():
+    inflate_sh = (
+        "#!/usr/bin/env bash\\n"
+        "set -euo pipefail\\n"
+        "DATA_DIR=\\"$1\\"\\n"
+        "OUTPUT_DIR=\\"$2\\"\\n"
+        "FILE_LIST=\\"$3\\"\\n"
+        "exec \\"$HERE/inflate.py\\" \\"$DATA_DIR\\" \\"$OUTPUT_DIR\\" \\"$FILE_LIST\\"\\n"
+    )
+    inflate_py = (
+        "from pathlib import Path\\n"
+        "HERE = Path(__file__).resolve().parent\\n"
+        "def main(archive_dir, output_dir, file_list):\\n"
+        "    archive_zip = HERE / 'archive.zip'\\n"
+        "    for line in file_list.read_text().splitlines():\\n"
+        "        pass\\n"
+    )
+''',
+    )
+
+    with pytest.raises(MetaBugViolation, match="RUNTIME_LOCAL_ARCHIVE_FALLBACK"):
+        check_phase1_trainer_runtime_emits_contest_compliant_inflate(
+            repo_root=tmp_path, strict=True, verbose=False
+        )

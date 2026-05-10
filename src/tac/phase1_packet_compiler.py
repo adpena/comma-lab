@@ -1144,19 +1144,18 @@ def _verify_runtime_consumes_payload_bytes_executable(
         def _materialise_archive_dir(
             archive_dir: Path,
             *,
-            archive_zip_bytes: bytes,
             member_payload_mutation: bool,
         ) -> None:
-            """Write archive.zip plus best-effort extracted member files.
+            """Write best-effort extracted member files into archive_dir.
 
-            Most contest runtimes read ``archive.zip``. A few minimal test
-            fixtures read raw member files from ``archive_dir``. Materialising
-            both surfaces keeps the smoke faithful while still detecting no-op
-            runtimes in simple fixtures.
+            The official contest runner unzips ``archive.zip`` first, then
+            passes that extracted directory as ``$1`` to ``inflate.sh``. The
+            smoke intentionally does not place ``archive.zip`` inside
+            ``archive_dir``; runtimes must consume extracted member bytes, not
+            a bundled fallback copy beside inflate.py.
             """
 
             archive_dir.mkdir(parents=True)
-            (archive_dir / "archive.zip").write_bytes(archive_zip_bytes)
             try:
                 with zipfile.ZipFile(io.BytesIO(archive_bytes), "r") as zf:
                     names = sorted(zf.namelist())
@@ -1171,16 +1170,16 @@ def _verify_runtime_consumes_payload_bytes_executable(
                         dst.parent.mkdir(parents=True, exist_ok=True)
                         dst.write_bytes(bytes(payload))
             except (zipfile.BadZipFile, OSError, RuntimeError):
-                # The archive.zip path remains available; runtimes that use the
-                # canonical ZIP surface will still be tested.
+                # Leave archive_dir empty. Runtimes that do not consume
+                # extracted members must fail this smoke rather than silently
+                # reading a fallback archive.zip outside the contest contract.
                 return
 
-        # Reference run: archive_dir contains the original archive.zip and raw
-        # member files for fixtures that use a direct member surface.
+        # Reference run: archive_dir contains the original extracted archive
+        # members, matching experiments/contest_auth_eval.py and upstream/evaluate.sh.
         ref_archive_dir = smoke_dir / "ref" / "archive_dir"
         _materialise_archive_dir(
             ref_archive_dir,
-            archive_zip_bytes=archive_bytes,
             member_payload_mutation=False,
         )
         ref_inflated = smoke_dir / "ref" / "inflated"
@@ -1196,7 +1195,6 @@ def _verify_runtime_consumes_payload_bytes_executable(
         mut_archive_dir = smoke_dir / "mut" / "archive_dir"
         _materialise_archive_dir(
             mut_archive_dir,
-            archive_zip_bytes=bytes(mutated_bytes),
             member_payload_mutation=True,
         )
         mut_inflated = smoke_dir / "mut" / "inflated"
