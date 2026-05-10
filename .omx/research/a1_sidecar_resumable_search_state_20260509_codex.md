@@ -563,3 +563,53 @@ Dispatch blockers remain unchanged:
 
 Current completion: `144/600` pairs. Continue scalar chunks until `600/600`;
 do not dispatch partial sidecars.
+
+## Codex follow-up local chunk 10
+
+<!-- generated_at: 2026-05-10T02:50:00Z -->
+<!-- evidence_grade: local_cpu_proxy_partial; no score claim; no remote dispatch -->
+
+Codex resumed the same ignored local artifact using the scalar candidate path:
+
+```bash
+/usr/bin/time -p .venv/bin/python tools/build_a1_per_pair_latent_correction_sidecar.py \
+  --n-pairs 192 \
+  --resume-search-state \
+  --max-search-seconds 900 \
+  --candidate-batch-size 1 \
+  --runtime-smoke \
+  --runtime-smoke-pairs 1 \
+  --output-dir experiments/results/a1_sidecar_resumable_codex_20260509T_local
+```
+
+Observed:
+
+- skipped already-completed pairs `0` through `143`;
+- searched pairs `144` through `191`;
+- elapsed `real 741.46`, `user 1809.51`, `sys 39.02`;
+- `candidate_batch_size=1`;
+- choice-state SHA-256
+  `e8b73c1465a35b320dcd3742ee0344c9ec4053f9257cd82ba63b0244003872e8`;
+- manifest SHA-256
+  `141a13d55bf02f4c0d3b4808e4af454ecc9c45cfb3371662ecddbd2b9c5a0be8`;
+- archive SHA-256
+  `aef706d7fea549676c6187d4c173b10c6147eaf81919e8289e602b07c07a1989`;
+- archive bytes `178316`;
+- runtime tree SHA-256
+  `3497c774d94fe202563bccba2af4a5f90925cb8d9b2e982cf4428d0efbea0190`;
+- `runtime_smoke_checked=true`;
+- `n_pairs_searched=192`;
+- `n_pairs_completed_this_run=48`;
+- `n_pairs_skipped_already_completed=144`;
+- `full_non_smoke_search=false`;
+- `ready_for_exact_eval_dispatch=false`.
+
+Dispatch blockers remain unchanged:
+
+- claim lane before any GHA/remote eval dispatch;
+- run exact-eval dispatcher preflight against `submission_dir`;
+- record runtime tree SHA and terminal dispatch claim row;
+- `non_full_sidecar_search_not_exact_eval_ready`.
+
+Current completion: `192/600` pairs. Continue scalar chunks until `600/600`;
+do not dispatch partial sidecars.
