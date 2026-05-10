@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+import subprocess
+import sys
 from pathlib import Path
 
 import brotli
@@ -10,6 +13,8 @@ from tac.packet_section_transform import (
     build_hnerv_packet_ir,
     compile_hnerv_pr106_section_transform_candidate,
 )
+
+REPO = Path(__file__).resolve().parents[3]
 
 
 def test_build_hnerv_packet_ir_records_parser_sections(tmp_path: Path) -> None:
@@ -112,6 +117,53 @@ def test_compile_pr106_transform_blocks_nonmatching_section(tmp_path: Path) -> N
     assert not candidate.exists()
     assert "transform_matched_no_sections" in result["blockers"]
     assert "transform_produced_no_changed_sections" in result["blockers"]
+
+
+def test_packet_section_transform_cli_builds_candidate_manifest(tmp_path: Path) -> None:
+    source = tmp_path / "source.zip"
+    candidate = tmp_path / "candidate.zip"
+    manifest = tmp_path / "candidate.json"
+    payload = _packed_payload(
+        brotli.compress(b"decoder-record-" * 3000, quality=1),
+        brotli.compress(b"latent-record-" * 1000, quality=1),
+    )
+    write_stored_single_member_zip(source, member_name="0.bin", payload=payload)
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "build_hnerv_packet_section_transform_candidate.py"),
+            "--source-archive",
+            str(source),
+            "--output-archive",
+            str(candidate),
+            "--label",
+            "PR106-fixture",
+            "--target-section",
+            "decoder_packed_brotli",
+            "--quality",
+            "11",
+            "--lgwin",
+            "default",
+            "--jobs",
+            "1",
+            "--json-out",
+            str(manifest),
+            "--fail-if-blocked",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    assert proc.stdout == ""
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    assert payload["score_claim"] is False
+    assert payload["dispatch_attempted"] is False
+    assert payload["ready_for_archive_preflight"] is True
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["archive_byte_delta"] < 0
+    assert candidate.exists()
 
 
 def _packed_payload(decoder_brotli: bytes, latents_brotli: bytes) -> bytes:

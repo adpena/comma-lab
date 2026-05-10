@@ -22,10 +22,16 @@ This landing starts that bridge in `src/tac/packet_section_transform.py`.
 - `TransformOutput`: transformed bytes plus metadata and blockers.
 - `BrotliRecodeSectionTransform`: reusable wrapper around the existing
   HNeRV Brotli recode search.
+- `CompositePacketSectionTransform`: one-transform-per-section wrapper for
+  deterministic multi-section compiler calls.
 - `compile_hnerv_pr106_section_transform_candidate`: deterministic PR106
   single-member compiler that updates the `0xff + len24` header, writes a
   stored ZIP, emits source/candidate IR, records old/new section hashes, and
   refuses exact-eval authority.
+- `tools/build_hnerv_packet_section_transform_candidate.py`: operator-facing
+  CLI for PR106 Brotli section recode candidates. It is intentionally
+  `ready_for_archive_preflight` only and always refuses exact-eval dispatch
+  authority.
 
 ## Important correctness detail
 
@@ -47,7 +53,10 @@ and no-op proofs.
   src/tac/tests/test_packet_section_transform.py \
   src/tac/tests/test_hnerv_lowlevel_packer.py \
   src/tac/tests/test_hnerv_packet_sections.py -q
-# 21 passed
+# 22 passed
+
+.venv/bin/python tools/build_hnerv_packet_section_transform_candidate.py --help
+# CLI surface prints the PR106 recode contract.
 ```
 
 ## Limits

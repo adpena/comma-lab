@@ -163,6 +163,34 @@ class PacketSectionTransform(Protocol):
 
 
 @dataclass(frozen=True)
+class CompositePacketSectionTransform:
+    """Apply exactly one matching transform per section."""
+
+    transforms: tuple[PacketSectionTransform, ...]
+    name: str = "composite_packet_section_transform"
+
+    def applies_to(self, section: SectionIR) -> bool:
+        return any(transform.applies_to(section) for transform in self.transforms)
+
+    def transform(self, section: SectionIR, payload: bytes) -> TransformOutput:
+        matching = [transform for transform in self.transforms if transform.applies_to(section)]
+        if not matching:
+            return TransformOutput(
+                section_name=section.name,
+                payload=payload,
+                blockers=(f"transform_matched_no_section:{section.name}",),
+            )
+        if len(matching) > 1:
+            return TransformOutput(
+                section_name=section.name,
+                payload=payload,
+                blockers=(f"multiple_transforms_match_section:{section.name}",),
+                metadata={"matching_transform_count": len(matching)},
+            )
+        return matching[0].transform(section, payload)
+
+
+@dataclass(frozen=True)
 class BrotliRecodeSectionTransform:
     """Grammar-preserving Brotli recode for an existing compressed section."""
 
@@ -454,6 +482,7 @@ def _mapping(value: Any, name: str) -> Mapping[str, Any]:
 
 __all__ = [
     "BrotliRecodeSectionTransform",
+    "CompositePacketSectionTransform",
     "CONTEST_CANDIDATE_BLOCKERS",
     "PacketIR",
     "PacketSectionTransform",
