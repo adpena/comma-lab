@@ -131,6 +131,51 @@ def _runtime_smoke_evidence(tool, archive: Path, custody: dict[str, object]) -> 
     }
 
 
+def test_exact_inflate_sh_smoke_uses_contest_signature(tmp_path: Path) -> None:
+    tool = load_tool()
+    sub_dir = tmp_path / "submission_dir"
+    sub_dir.mkdir()
+    archive = sub_dir / "archive.zip"
+    payload = b"exact-signature-payload"
+    zinfo = zipfile.ZipInfo(filename="x", date_time=(2024, 1, 1, 0, 0, 0))
+    zinfo.external_attr = 0o644 << 16
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr(zinfo, payload)
+    inflate_sh = sub_dir / "inflate.sh"
+    inflate_sh.write_text(
+        "#!/bin/sh\n"
+        "set -eu\n"
+        "DATA_DIR=\"$1\"\n"
+        "OUTPUT_DIR=\"$2\"\n"
+        "FILE_LIST=\"$3\"\n"
+        "mkdir -p \"$OUTPUT_DIR\"\n"
+        "while IFS= read -r line; do\n"
+        "  [ -z \"$line\" ] && continue\n"
+        "  base=\"${line%.*}\"\n"
+        "  cat \"$DATA_DIR/x\" > \"$OUTPUT_DIR/${base}.raw\"\n"
+        "done < \"$FILE_LIST\"\n"
+    )
+    inflate_sh.chmod(0o755)
+
+    evidence = tool.run_exact_inflate_sh_smoke(
+        sub_dir,
+        archive_path=archive,
+        smoke_dir=tmp_path / "exact_smoke",
+        runtime_tree_sha256="a" * 64,
+    )
+
+    assert evidence["runtime_surface"] == "inflate_sh_exact_signature"
+    assert evidence["exit_code"] == 0
+    assert evidence["archive_sha256"] == tool.sha256_of(archive)
+    assert evidence["runtime_tree_sha256"] == "a" * 64
+    assert evidence["output_bytes"] == len(payload)
+    assert evidence["output_digest_sha256"] == tool.hashlib.sha256(payload).hexdigest()
+    assert evidence["command"][0].endswith("inflate.sh")
+    assert evidence["command"][1].endswith("data")
+    assert evidence["command"][2].endswith("out")
+    assert evidence["command"][3].endswith("file_list.txt")
+
+
 def _dispatch_claim_record(tool, archive: Path, custody: dict[str, object]) -> dict[str, object]:
     return {
         "schema_version": tool.SIDECAR_DISPATCH_CLAIM_SCHEMA,
@@ -337,7 +382,10 @@ def test_manifest_readiness_accepts_complete_local_custody(tmp_path: Path) -> No
     )
     manifest = {
         "lane_id": tool.SIDECAR_LANE_ID,
-        "dispatch_blockers": [],
+        "dispatch_blockers": [
+            "claim lane before any GHA/remote eval dispatch",
+            "run exact-eval dispatcher preflight against submission_dir",
+        ],
         "archive_path": tool.manifest_path(archive),
         "archive_sha256": archive_sha,
         "archive_size_bytes": archive_bytes,
@@ -375,6 +423,10 @@ def test_manifest_readiness_accepts_complete_local_custody(tmp_path: Path) -> No
 
     assert out["ready_for_exact_eval_dispatch"] is True
     assert out["dispatch_blockers"] == []
+    assert out["superseded_dispatch_blockers"] == [
+        "claim lane before any GHA/remote eval dispatch",
+        "run exact-eval dispatcher preflight against submission_dir",
+    ]
 
 
 def test_manifest_readiness_requires_structured_dispatch_custody(tmp_path: Path) -> None:
@@ -1203,6 +1255,10 @@ def test_proxy_search_resume_skips_completed_pairs_and_updates_state(
     assert meta["n_pairs_skipped_already_completed"] == 1
     assert meta["n_pairs_completed_this_run"] == 1
     assert meta["n_pairs_completed_total"] == 2
+    assert meta["n_pairs_recheck_unproven_planned"] == 0
+    assert meta["n_pairs_rechecked_unproven_completed_this_run"] == 0
+    assert "n_pairs_rechecked_unproven" not in meta
+    assert meta["remaining_unproven_records_after_run"] >= 1
     assert dims[0] == 2
     assert delta_idx[0] == 3
     assert dims[1] == 0

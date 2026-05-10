@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import tac.preflight as preflight
+
 from tac.preflight import (
     _preflight_all_clean_cache_hit,
     _preflight_developer_clean_cache_hit,
@@ -42,6 +44,35 @@ def test_preflight_all_clean_cache_hits_unchanged_tree(tmp_path):
         archive_path=None,
     )
     assert hit is True
+
+
+def test_preflight_developer_clean_cache_hit_skips_source_index_setup(
+    tmp_path,
+    monkeypatch,
+):
+    (tmp_path / "src" / "tac").mkdir(parents=True)
+    (tmp_path / "src" / "tac" / "example.py").write_text("VALUE = 1\n")
+    hit, token, paths = _preflight_developer_clean_cache_hit(
+        tmp_path,
+        profile_name=None,
+        tto_frames_path=None,
+        gt_poses_path=None,
+        masks_path=None,
+        renderer_path=None,
+        archive_path=None,
+    )
+    assert hit is False
+    _store_preflight_developer_clean_cache(tmp_path, cache_token=token, paths=paths)
+
+    import tac.source_index as source_index
+
+    def fail_source_index_context(*args, **kwargs):
+        raise AssertionError("clean developer cache hit should skip SourceIndex setup")
+
+    monkeypatch.setattr(preflight, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(source_index, "source_index_context", fail_source_index_context)
+
+    preflight.preflight_developer(verbose=False)
 
 
 def test_preflight_all_clean_cache_ignores_rebuildable_research_artifacts(tmp_path):

@@ -58,6 +58,7 @@ _PREFLIGHT_CACHE_SCHEMA = "pact.preflight_cache.v1"
 _PREFLIGHT_ALL_CLEAN_CACHE_VERSION = "preflight_all_clean.v1"
 _PREFLIGHT_DEVELOPER_CLEAN_CACHE_VERSION = "preflight_developer_clean.v1"
 _PUBLIC_PR_PRISTINE_CACHE_VERSION = "public_pr_intake_pristine.v1"
+_NO_MPS_FALLBACK_CLEAN_CACHE_VERSION = "no_mps_fallback_default_clean.v1"
 
 
 def _safe_resolve_path(path: Path) -> Path:
@@ -144,6 +145,67 @@ def _fingerprint_paths(paths: tuple[Path, ...], root: Path, *, salt: str) -> str
         digest.update(str(stat.st_mtime_ns).encode())
         digest.update(b"\n")
     return digest.hexdigest()
+
+
+def _strong_fingerprint_paths(paths: tuple[Path, ...], root: Path, *, salt: str) -> str:
+    digest = hashlib.sha256()
+    digest.update(salt.encode())
+    for path in sorted(paths, key=lambda item: item.as_posix()):
+        try:
+            stat_result = path.stat()
+        except OSError:
+            continue
+        try:
+            rel = path.resolve().relative_to(root).as_posix()
+        except ValueError:
+            rel = path.resolve().as_posix()
+        digest.update(rel.encode())
+        digest.update(b"\0")
+        for value in (
+            stat_result.st_size,
+            stat_result.st_mtime_ns,
+            stat_result.st_ctime_ns,
+            stat_result.st_ino,
+            stat_result.st_dev,
+        ):
+            digest.update(str(value).encode())
+            digest.update(b":")
+        digest.update(b"\n")
+    return digest.hexdigest()
+
+
+def _clean_check_cache_hit(
+    root: Path,
+    *,
+    cache_name: str,
+    version: str,
+    paths: tuple[Path, ...],
+) -> tuple[bool, str]:
+    fingerprint = _strong_fingerprint_paths(paths, root, salt=version)
+    rows = _load_preflight_cache(root, cache_name)
+    row = rows.get("clean")
+    hit = (
+        isinstance(row, dict)
+        and row.get("version") == version
+        and row.get("fingerprint") == fingerprint
+    )
+    return hit, fingerprint
+
+
+def _store_clean_check_cache(
+    root: Path,
+    *,
+    cache_name: str,
+    version: str,
+    fingerprint: str,
+) -> None:
+    rows = _load_preflight_cache(root, cache_name)
+    rows["clean"] = {
+        "version": version,
+        "fingerprint": fingerprint,
+        "stored_at_utc": _dt.datetime.now(_dt.UTC).isoformat(),
+    }
+    _store_preflight_cache(root, cache_name, rows)
 
 
 def _public_pr_intake_clone_roots(root: Path) -> tuple[Path, ...]:
@@ -445,6 +507,61 @@ def _rg_file_list(
         cmd.extend(["-g", glob])
     for glob in exclude_globs:
         cmd.extend(["-g", f"!{glob}"])
+    cmd.extend(existing_dirs)
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=root,
+            capture_output=True,
+            text=True,
+            timeout=timeout_s,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if proc.returncode not in (0, 1):
+        return None
+    paths: dict[str, Path] = {}
+    for raw_line in proc.stdout.splitlines():
+        if not raw_line:
+            continue
+        path = (root / raw_line).resolve()
+        if not path.is_file():
+            continue
+        if _is_oss_export_mirror_path(path):
+            continue
+        paths[path.as_posix()] = path
+    return tuple(paths[key] for key in sorted(paths))
+
+
+def _rg_python_files_matching_regex(
+    root: Path,
+    dirs: Sequence[str | Path],
+    regex: str,
+    *,
+    timeout_s: float = 5.0,
+) -> tuple[Path, ...] | None:
+    """Return Python files matching ``regex`` using one ripgrep pass."""
+
+    existing_dirs: list[str] = []
+    for item in dirs:
+        path = Path(item)
+        if path.is_absolute():
+            if path.exists():
+                existing_dirs.append(path.as_posix())
+            continue
+        if (root / path).exists():
+            existing_dirs.append(path.as_posix())
+    if not existing_dirs:
+        return ()
+    cmd = [
+        "rg",
+        "-l",
+        regex,
+        "-g",
+        "*.py",
+        "-g",
+        "!experiments/results/**",
+    ]
     cmd.extend(existing_dirs)
     try:
         proc = subprocess.run(
@@ -942,31 +1059,6 @@ def preflight_all(
     profile_name + tto_frames_path + gt_poses_path + masks_path. Inflate-time
     preflight needs renderer_path + masks_path + archive_path.
     """
-    if check_codebase and use_fs_cache and not _fs_cache_wrapped:
-        from tac.preflight_fs_cache import cached_filesystem
-        from tac.source_index import source_index_context
-
-        # Full codebase preflight repeatedly scans the same source files.
-        # Apply the measured cache for library callers too, and provide a
-        # normal shared source index for scanners that have been migrated away
-        # from repeated per-check rglob/read/parse loops. Artifact-only callers
-        # skip this path and still read their inputs live.
-        with cached_filesystem(cache_reads=True), source_index_context(REPO_ROOT):
-            preflight_all(
-                profile_name=profile_name,
-                profile_arch=profile_arch,
-                tto_frames_path=tto_frames_path,
-                gt_poses_path=gt_poses_path,
-                masks_path=masks_path,
-                renderer_path=renderer_path,
-                archive_path=archive_path,
-                check_codebase=check_codebase,
-                verbose=verbose,
-                use_fs_cache=use_fs_cache,
-                _fs_cache_wrapped=True,
-            )
-        return
-
     codebase_cache_token: str | None = None
     codebase_cache_paths: tuple[Path, ...] = ()
     if (
@@ -1001,6 +1093,31 @@ def preflight_all(
                     f"({len(codebase_cache_paths)} fingerprinted file(s))"
                 )
             check_codebase = False
+
+    if check_codebase and use_fs_cache and not _fs_cache_wrapped:
+        from tac.preflight_fs_cache import cached_filesystem
+        from tac.source_index import source_index_context
+
+        # Full codebase preflight repeatedly scans the same source files.
+        # Apply the measured cache for library callers too, and provide a
+        # normal shared source index for scanners that have been migrated away
+        # from repeated per-check rglob/read/parse loops. Artifact-only callers
+        # skip this path and still read their inputs live.
+        with cached_filesystem(cache_reads=True), source_index_context(REPO_ROOT):
+            preflight_all(
+                profile_name=profile_name,
+                profile_arch=profile_arch,
+                tto_frames_path=tto_frames_path,
+                gt_poses_path=gt_poses_path,
+                masks_path=masks_path,
+                renderer_path=renderer_path,
+                archive_path=archive_path,
+                check_codebase=check_codebase,
+                verbose=verbose,
+                use_fs_cache=use_fs_cache,
+                _fs_cache_wrapped=True,
+        )
+        return
 
     # 1. Codebase drift check (cheap, always run unless explicitly disabled)
     if check_codebase:
@@ -2949,26 +3066,6 @@ def preflight_developer(
     ``preflight_all``. The contract is explicit: developer preflight must fit
     inside the 30s wall-clock budget; release/custody preflight is opt-in.
     """
-    if check_codebase and use_fs_cache and not _fs_cache_wrapped:
-        from tac.preflight_fs_cache import cached_filesystem
-        from tac.source_index import source_index_context
-
-        with cached_filesystem(cache_reads=True), source_index_context(REPO_ROOT):
-            preflight_developer(
-                profile_name=profile_name,
-                profile_arch=profile_arch,
-                tto_frames_path=tto_frames_path,
-                gt_poses_path=gt_poses_path,
-                masks_path=masks_path,
-                renderer_path=renderer_path,
-                archive_path=archive_path,
-                check_codebase=check_codebase,
-                verbose=verbose,
-                use_fs_cache=use_fs_cache,
-                _fs_cache_wrapped=True,
-            )
-        return
-
     codebase_cache_token: str | None = None
     codebase_cache_paths: tuple[Path, ...] = ()
     if (
@@ -3004,6 +3101,26 @@ def preflight_developer(
                     "fingerprinted file(s))"
                 )
             check_codebase = False
+
+    if check_codebase and use_fs_cache and not _fs_cache_wrapped:
+        from tac.preflight_fs_cache import cached_filesystem
+        from tac.source_index import source_index_context
+
+        with cached_filesystem(cache_reads=True), source_index_context(REPO_ROOT):
+            preflight_developer(
+                profile_name=profile_name,
+                profile_arch=profile_arch,
+                tto_frames_path=tto_frames_path,
+                gt_poses_path=gt_poses_path,
+                masks_path=masks_path,
+                renderer_path=renderer_path,
+                archive_path=archive_path,
+                check_codebase=check_codebase,
+                verbose=verbose,
+                use_fs_cache=use_fs_cache,
+                _fs_cache_wrapped=True,
+        )
+        return
 
     if check_codebase:
         check_codebase_drift(strict=True, verbose=verbose)
@@ -7795,6 +7912,8 @@ def check_no_mps_fallback_default(
     root = repo_root or REPO_ROOT
     violations: list[str] = []
     n_scanned = 0
+    cache_enabled = os.environ.get("PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE") != "1"
+    cache_fingerprint: str | None = None
     source_index = _current_source_index(root)
     if source_index is not None:
         facts_rows = source_index.facts_for_files(_META_PY_SCAN_DIRS, pattern="*.py")
@@ -7816,7 +7935,23 @@ def check_no_mps_fallback_default(
                 or facts.contains("getattr(torch")
             )
         )
-        for path in sorted(candidate_paths, key=lambda item: item.as_posix()):
+        candidate_tuple = tuple(sorted(candidate_paths, key=lambda item: item.as_posix()))
+        if cache_enabled:
+            cache_hit, cache_fingerprint = _clean_check_cache_hit(
+                root,
+                cache_name="check_no_mps_fallback_default",
+                version=_NO_MPS_FALLBACK_CLEAN_CACHE_VERSION,
+                paths=candidate_tuple,
+            )
+            if cache_hit:
+                if verbose:
+                    print(
+                        "  [no-mps-fallback] OK: cached clean "
+                        f"{len(candidate_tuple)} candidate file(s) from "
+                        f"{n_scanned} indexed files"
+                    )
+                return []
+        for path in candidate_tuple:
             violations.extend(
                 _scan_python_for_mps_fallback(
                     path,
@@ -7825,8 +7960,29 @@ def check_no_mps_fallback_default(
                 )
             )
     else:
-        for py in _iter_python_files(root, _META_PY_SCAN_DIRS):
-            n_scanned += 1
+        rg_candidates = _rg_python_files_matching_regex(
+            root,
+            _META_PY_SCAN_DIRS,
+            r"cuda.*is_available|getattr\(torch|from torch import cuda",
+        )
+        candidate_tuple = (
+            rg_candidates
+            if rg_candidates is not None
+            else tuple(_iter_python_files(root, _META_PY_SCAN_DIRS))
+        )
+        n_scanned = len(candidate_tuple)
+        if cache_enabled:
+            cache_hit, cache_fingerprint = _clean_check_cache_hit(
+                root,
+                cache_name="check_no_mps_fallback_default",
+                version=_NO_MPS_FALLBACK_CLEAN_CACHE_VERSION,
+                paths=candidate_tuple,
+            )
+            if cache_hit:
+                if verbose:
+                    print(f"  [no-mps-fallback] OK: cached clean {n_scanned} files scanned")
+                return []
+        for py in candidate_tuple:
             violations.extend(_scan_python_for_mps_fallback(py, root))
 
     if verbose and violations:
@@ -7842,6 +7998,13 @@ def check_no_mps_fallback_default(
             + "\n".join(f"  • {v}" for v in violations)
             + "\n\nMPS auth eval is NOISE — see CLAUDE.md "
             "feedback_default_to_convenience_trap. Default to CUDA-required."
+        )
+    if not violations and cache_enabled and cache_fingerprint is not None:
+        _store_clean_check_cache(
+            root,
+            cache_name="check_no_mps_fallback_default",
+            version=_NO_MPS_FALLBACK_CLEAN_CACHE_VERSION,
+            fingerprint=cache_fingerprint,
         )
     return violations
 

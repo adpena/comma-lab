@@ -1009,6 +1009,28 @@ class TestNoMpsFallbackDefault:
         v = check_no_mps_fallback_default(repo_root=root, strict=False, verbose=False)
         assert len(v) >= 1
 
+    def test_clean_check_cache_skips_mps_rescan(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.delenv("PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE", raising=False)
+        root = _stub_repo(tmp_path)
+        _write(root / "experiments" / "good.py", """
+            import torch
+            def pick():
+                if not torch.cuda.is_available():
+                    raise RuntimeError("CUDA required")
+                return "cuda"
+        """)
+        assert check_no_mps_fallback_default(repo_root=root, strict=True, verbose=False) == []
+
+        def fail_scan(*args, **kwargs):
+            raise AssertionError("clean MPS cache hit should skip rescanning Python ASTs")
+
+        monkeypatch.setattr(preflight_mod, "_scan_python_for_mps_fallback", fail_scan)
+        assert check_no_mps_fallback_default(repo_root=root, strict=True, verbose=False) == []
+
     def test_deleted_path_during_scan_is_skipped(self, tmp_path: Path) -> None:
         root = _stub_repo(tmp_path)
         script = root / "experiments" / "missing.py"

@@ -890,6 +890,121 @@ def run_local_runtime_smoke(
     return evidence
 
 
+def run_exact_inflate_sh_smoke(
+    submission_dir: Path,
+    *,
+    archive_path: Path,
+    smoke_dir: Path,
+    runtime_tree_sha256: str,
+    video_name: str = "0.mkv",
+    timeout_seconds: int | None = None,
+) -> dict[str, Any]:
+    """Run the candidate runtime through the contest ``inflate.sh`` signature.
+
+    This is intentionally separate from :func:`run_local_runtime_smoke`: the
+    local smoke bounds ``N_PAIRS`` by importing ``inflate.py`` directly, while
+    this path invokes ``inflate.sh <data_dir> <output_dir> <file_list>`` exactly.
+    It can be expensive for the real A1 runtime because it decodes the full
+    packet, so callers must opt into it explicitly.
+    """
+
+    smoke_dir.mkdir(parents=True, exist_ok=True)
+    data_dir = smoke_dir / "data"
+    out_dir = smoke_dir / "out"
+    data_dir.mkdir(exist_ok=True)
+    out_dir.mkdir(exist_ok=True)
+    src_x = data_dir / "x"
+    file_list = smoke_dir / "file_list.txt"
+    evidence_path = smoke_dir / "exact_inflate_sh_smoke_evidence.json"
+
+    with zipfile.ZipFile(archive_path, "r") as zf:
+        names = zf.namelist()
+        if names != ["x"]:
+            raise ValueError(f"exact inflate smoke expected single member ['x'], got {names}")
+        src_x.write_bytes(zf.read("x"))
+    file_list.write_text(f"{video_name}\n")
+
+    inflate_sh = submission_dir / "inflate.sh"
+    command = [
+        manifest_path(inflate_sh),
+        manifest_path(data_dir),
+        manifest_path(out_dir),
+        manifest_path(file_list),
+    ]
+    executed = [
+        str(inflate_sh),
+        str(data_dir),
+        str(out_dir),
+        str(file_list),
+    ]
+    env = os.environ.copy()
+    env["PYTHON"] = str(Path(sys.executable))
+    started = dt.datetime.now(dt.UTC)
+    try:
+        proc = subprocess.run(
+            executed,
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=timeout_seconds,
+            env=env,
+        )
+        timed_out = False
+        exit_code = proc.returncode
+        stdout = proc.stdout
+        stderr = proc.stderr
+    except subprocess.TimeoutExpired as exc:
+        timed_out = True
+        exit_code = 124
+        stdout = exc.stdout or ""
+        stderr = exc.stderr or ""
+    completed = dt.datetime.now(dt.UTC)
+
+    base = Path(video_name).stem
+    raw_out = out_dir / f"{base}.raw"
+    output_digest = sha256_of(raw_out) if raw_out.is_file() else None
+    output_bytes = raw_out.stat().st_size if raw_out.is_file() else 0
+    blockers: list[str] = []
+    if timed_out:
+        blockers.append("runtime_smoke_exact_inflate_sh_timed_out")
+    if exit_code != 0:
+        blockers.append("runtime_smoke_exact_inflate_sh_failed")
+    if not raw_out.is_file():
+        blockers.append("runtime_smoke_exact_inflate_sh_output_missing")
+
+    evidence = {
+        "schema_version": RUNTIME_SMOKE_SCHEMA,
+        "runtime_surface": "inflate_sh_exact_signature",
+        "command": command,
+        "exit_code": exit_code,
+        "stdout": stdout[-4000:],
+        "stderr": stderr[-4000:],
+        "started_at_utc": started.isoformat(),
+        "completed_at_utc": completed.isoformat(),
+        "elapsed_seconds": (completed - started).total_seconds(),
+        "timed_out": timed_out,
+        "timeout_seconds": timeout_seconds,
+        "video_name": video_name,
+        "archive_sha256": sha256_of(archive_path),
+        "archive_bytes": archive_path.stat().st_size,
+        "runtime_tree_sha256": runtime_tree_sha256,
+        "input_member_path": manifest_path(src_x),
+        "file_list_path": manifest_path(file_list),
+        "output_raw_path": manifest_path(raw_out),
+        "output_bytes": output_bytes,
+        "output_digest_sha256": output_digest,
+        "blockers": blockers,
+        "contract": (
+            "invokes candidate inflate.sh with archive_dir, output_dir, "
+            "and file_list positional arguments; no N_PAIRS override"
+        ),
+    }
+    evidence_path.write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n")
+    evidence["evidence_path"] = manifest_path(evidence_path)
+    return evidence
+
+
 def collect_runtime_output_change_probe(
     *,
     baseline_submission_dir: Path,
@@ -1514,10 +1629,12 @@ def search_per_pair_proxy_mse(
         recheck_unproven_pairs=recheck_unproven_pairs,
     )
     recheck_pairs = work_plan["recheck_pairs"]
+    recheck_pair_set = {int(i) for i in recheck_pairs}
     skipped_already_completed = work_plan["skipped_already_completed"]
     work_pair_indices = work_plan["work_pair_indices"]
     progress_every = max(1, min(25, len(work_pair_indices) or 1))
     completed_this_run = 0
+    rechecked_unproven_completed_this_run = 0
     stopped_for_wall_clock = False
     active_candidate_batch_size = candidate_batch_size
     candidate_batch_profile: dict[str, Any] | None = None
@@ -1595,6 +1712,8 @@ def search_per_pair_proxy_mse(
             scalar_reference_status=scalar_reference_status,
         )
         completed_this_run += 1
+        if int(k) in recheck_pair_set:
+            rechecked_unproven_completed_this_run += 1
         if state_path is not None:
             if state_context is None:
                 raise ValueError("state_context is required when state_path is supplied")
@@ -1644,6 +1763,9 @@ def search_per_pair_proxy_mse(
     )
     if log_path:
         log_path.write_text("\n".join(log_lines) + "\n")
+    remaining_unproven_after_run = sum(
+        1 for i in np.flatnonzero(searched_mask) if not _is_pair_dispatch_safe(int(i))
+    )
     return dims_out, delta_idx_out, {
         "search_signal": "proxy_mse",
         "n_pair_indices_requested": len(pair_indices),
@@ -1658,7 +1780,11 @@ def search_per_pair_proxy_mse(
         "auto_candidate_batch_size": auto_candidate_batch_size,
         "candidate_batch_profile": candidate_batch_profile,
         "recheck_unproven_pairs": recheck_unproven_pairs,
-        "n_pairs_rechecked_unproven": len(recheck_pairs),
+        "n_pairs_recheck_unproven_planned": len(recheck_pairs),
+        "n_pairs_rechecked_unproven_completed_this_run": (
+            rechecked_unproven_completed_this_run
+        ),
+        "remaining_unproven_records_after_run": remaining_unproven_after_run,
         "n_pairs_dispatch_safe_scalar_equivalent": sum(
             1 for i in np.flatnonzero(searched_mask) if _is_pair_dispatch_safe(int(i))
         ),
@@ -1957,8 +2083,11 @@ def enforce_manifest_dispatch_readiness(
 ) -> dict[str, Any]:
     """Fail-closed on exact-eval readiness unless custody invariants hold."""
 
-    blockers = list(manifest.get("dispatch_blockers") or [])
+    prior_blockers = list(manifest.get("dispatch_blockers") or [])
+    blockers: list[str] = []
     submission_dir = submission_dir or archive_path.parent
+    if prior_blockers:
+        manifest["superseded_dispatch_blockers"] = prior_blockers
 
     def block(reason: str) -> None:
         if reason not in blockers:
@@ -2130,6 +2259,20 @@ def main() -> int:
         type=int,
         default=1,
         help="pair count for --runtime-smoke; default 1 to avoid full raw output",
+    )
+    p.add_argument(
+        "--exact-inflate-sh-smoke",
+        action="store_true",
+        help=(
+            "run the contest inflate.sh archive_dir/output_dir/file_list signature; "
+            "full A1 decode can be expensive and writes a full raw output"
+        ),
+    )
+    p.add_argument(
+        "--exact-inflate-sh-smoke-timeout",
+        type=int,
+        default=None,
+        help="optional timeout in seconds for --exact-inflate-sh-smoke",
     )
     p.add_argument(
         "--resume-search-state",
@@ -2320,9 +2463,11 @@ def main() -> int:
             f"[predicted; per-pair latent sidecar resampled on A1 substrate via "
             f"{args.search_signal}; pre-GHA-dispatch]"
         ),
-        "dispatch_blockers": [
+        "pending_dispatch_actions": [
             "claim lane before any GHA/remote eval dispatch",
             "run exact-eval dispatcher preflight against submission_dir",
+        ],
+        "post_eval_required_actions": [
             "record runtime tree SHA and terminal dispatch claim row",
         ],
         "tag_discipline": {
@@ -2358,6 +2503,15 @@ def main() -> int:
     manifest["n_pairs_completed_this_run"] = search_meta.get("n_pairs_completed_this_run")
     manifest["n_pairs_skipped_already_completed"] = search_meta.get(
         "n_pairs_skipped_already_completed"
+    )
+    manifest["n_pairs_recheck_unproven_planned"] = search_meta.get(
+        "n_pairs_recheck_unproven_planned"
+    )
+    manifest["n_pairs_rechecked_unproven_completed_this_run"] = search_meta.get(
+        "n_pairs_rechecked_unproven_completed_this_run"
+    )
+    manifest["remaining_unproven_records_after_run"] = search_meta.get(
+        "remaining_unproven_records_after_run"
     )
     manifest["search_stopped_for_wall_clock"] = search_meta.get(
         "search_stopped_for_wall_clock"
@@ -2410,6 +2564,20 @@ def main() -> int:
                 ),
             }
         )
+    if args.exact_inflate_sh_smoke:
+        exact_smoke_evidence = run_exact_inflate_sh_smoke(
+            sub_dir,
+            archive_path=new_archive_path,
+            smoke_dir=out_dir / "exact_inflate_sh_smoke",
+            runtime_tree_sha256=local_runtime_custody["runtime_tree_sha256"],
+            timeout_seconds=args.exact_inflate_sh_smoke_timeout,
+        )
+        if "runtime_smoke_evidence" in manifest:
+            manifest["local_import_runtime_smoke_evidence"] = manifest[
+                "runtime_smoke_evidence"
+            ]
+        manifest["runtime_smoke_checked"] = exact_smoke_evidence.get("exit_code") == 0
+        manifest["runtime_smoke_evidence"] = exact_smoke_evidence
     manifest = enforce_manifest_dispatch_readiness(
         manifest,
         archive_path=new_archive_path,
