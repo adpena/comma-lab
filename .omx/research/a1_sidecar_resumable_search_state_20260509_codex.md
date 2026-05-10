@@ -1020,3 +1020,64 @@ run `--recheck-unproven-pairs` to replace legacy `0..335` provenance before
 any exact-eval dispatch. The final candidate also needs exact `inflate.sh`
 signature smoke, runtime-output no-op proof, and structured dispatch/preflight
 records.
+
+## Codex follow-up local chunk 18
+
+<!-- generated_at: 2026-05-10T04:13:50Z -->
+<!-- evidence_grade: local_cpu_proxy_partial; no score claim; no remote dispatch -->
+
+Codex resumed the same ignored local artifact:
+
+```bash
+/usr/bin/time -p .venv/bin/python tools/build_a1_per_pair_latent_correction_sidecar.py \
+  --n-pairs 576 \
+  --resume-search-state \
+  --max-search-seconds 900 \
+  --candidate-batch-size 1 \
+  --runtime-smoke \
+  --runtime-smoke-pairs 1 \
+  --output-dir experiments/results/a1_sidecar_resumable_codex_20260509T_local
+```
+
+Observed:
+
+- skipped already-completed pairs `0` through `527`;
+- searched pairs `528` through `575`;
+- elapsed `real 806.46`, `user 1864.88`, `sys 43.33`;
+- `candidate_batch_size=1`;
+- sidecar encoded bytes `661` (old preserved sidecar was `607`);
+- choice-state SHA-256
+  `ab85ca0f9b58dd90493f570b5b1b264e8640dec6cd6b8bf3c7d10f77ced140ff`;
+- manifest SHA-256
+  `afed23ba31af63085864710478df96fb77cf703d0b6c0cd503bb0029b11c6a98`;
+- archive SHA-256
+  `034fd0b6128d0fd9da64f0aed9efad03ea6ccc04fa961541d7c11d5af5d6927a`;
+- archive bytes `178316`;
+- runtime tree SHA-256
+  `3497c774d94fe202563bccba2af4a5f90925cb8d9b2e982cf4428d0efbea0190`;
+- `runtime_smoke_checked=true`;
+- `n_pairs_searched=576`;
+- `n_pairs_completed_this_run=48`;
+- `n_pairs_skipped_already_completed=528`;
+- `full_non_smoke_search=false`;
+- `ready_for_exact_eval_dispatch=false`;
+- sidecar choice-state provenance: `240` machine-recorded scalar-equivalent
+  pairs, all from post-patch chunks.
+
+Dispatch/readiness blockers under the current strict guard:
+
+- claim lane before any GHA/remote eval dispatch;
+- run exact-eval dispatcher preflight against `submission_dir`;
+- record runtime tree SHA and terminal dispatch claim row;
+- `sidecar_pair_search_records_missing_for_completed_pairs:336`;
+- `non_full_sidecar_search_not_exact_eval_ready`;
+- `runtime_smoke_evidence_not_inflate_sh_exact_signature`;
+- `dispatch_claim_record_missing`;
+- `exact_eval_preflight_record_missing`;
+- `sidecar_no_op_baseline_output_sha256_missing_or_invalid`;
+- `sidecar_no_op_candidate_output_sha256_missing_or_invalid`;
+- `sidecar_no_op_runtime_output_not_proven_changed`.
+
+Current completion: `576/600` pairs. Finish scalar coverage to `600/600`, then
+run `--recheck-unproven-pairs` to replace legacy `0..335` provenance before
+any exact-eval dispatch.
