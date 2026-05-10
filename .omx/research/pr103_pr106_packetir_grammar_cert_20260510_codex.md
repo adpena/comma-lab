@@ -99,16 +99,35 @@ new empirical anchor.
 - Continual-learning posterior update: N/A, no empirical anchor.
 - Probe-disambiguator: N/A, one deterministic certification policy.
 
-## Exact next dispatch gate
+## Dispatch disposition
 
-For `pr106_exhaustive_152byte_brotli`, the next exact gate is:
+Do **not** exact-dispatch `pr106_exhaustive_152byte_brotli` as a standalone
+score-lowering lane. It is useful PacketIR/certifier evidence, but it is
+dominated by the active floor.
 
-1. Operator approves exact CUDA promotion.
-2. Lightning/Modal environment is present and checked.
-3. A non-conflicting `tools/claim_lane_dispatch.py claim` row exists for
-   `pr106_exhaustive_152byte_brotli`.
-4. Static packet/pre-submission compliance is refreshed with the PacketIR cert
-   attached.
-5. Exact CUDA auth eval runs against archive SHA
-   `a0bcd3f2288edd53dc9a7ae7a8e37e7b0384ae8a8dbdae7b2ae978f33bf5b139`
-   and `contest_auth_eval.adjudicated.json` is harvested and formula-reviewed.
+The closest sibling already has terminal Modal T4 exact-CUDA evidence:
+
+- `pr106_q10_151byte_brotli`
+- archive SHA:
+  `626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7`
+- canonical score:
+  `0.20936498680571203`
+- active floor:
+  `0.2089810755823297`
+- gap:
+  `+0.00038391122338233`
+
+This PacketIR candidate saves only one additional byte versus that evaluated
+q10 sibling. The official rate term per byte is approximately
+`25 / 37,545,489 = 0.000000665858`, so even the best rate-only improvement over
+the terminal q10 result leaves a gap of roughly `0.000383245`. Because the
+certifier proves raw-equivalent Brotli recoding, it does not provide a
+component-distortion improvement mechanism. Therefore:
+
+1. keep the cert as a conformance and custom-packet-compiler proof;
+2. do not claim or dispatch `pr106_exhaustive_152byte_brotli` unless it is
+   composed with a byte-different/runtime-different mechanism that can plausibly
+   improve components or remove hundreds more bytes;
+3. move score-lowering effort to T1/T6/HNeRV-parity training, PR101/A1
+   runtime/sidecar mechanisms with real component movement, or larger
+   tensor-level custom-codec transforms.
