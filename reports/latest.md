@@ -587,10 +587,10 @@ leaderboard-marginal than pose.
 
 **Predicted CPU scores for our existing artifacts:**
 
-| Archive | CUDA score | Predicted CPU score | Predicted leaderboard rank |
+| Archive | CUDA score | CPU-axis status | Interpretation |
 |---|---:|---:|---|
 | Our PR #107 apogee | 0.22936 | 0.1966358879 (verified Linux x86_64 CPU) | just outside silver/bronze band |
-| PR103-on-PR106 AC repack | 0.20898 | ~0.176 | above current top |
+| PR103-on-PR106 AC repack | 0.20898 | ~0.176 (model prediction only) | not rankable until exact Linux x86_64 CPU replay of the same archive/runtime |
 | PR102 hardened replay | 0.22839 | 0.19538 (verified) | bronze (verified) |
 | PR104 hardened replay | 0.23114 | ~0.198 | non-frontier |
 
@@ -669,7 +669,7 @@ CI runner. Apple Silicon CPU eval is `[macOS-CPU advisory only]`, never
 ### Frontier state
 
 - **Local A++ HNeRV rate anchor (active)**: PR103-on-PR106 = `0.2089810755823297` [contest-CUDA] / `185,578` bytes / SHA256 `ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce`
-- **Public-leaderboard medal band** (May 4 race): 0.193 / 0.195 / 0.195 (PR #101 / #103 / #102)
+- **Public-leaderboard medal band** `[contest-CPU rounded public bot/leaderboard]` (May 4 race): 0.193 / 0.195 / 0.195 (PR #101 / #103 / #102). These CPU-axis rounded values are not scalar-comparable to local `[contest-CUDA]` anchors without paired eval.
 - **Phase 4 INTEGRATION predicted band** (commit e8ae721c): 0.155-0.175 [predicted-band, NOT contest-CUDA]; 0.140-0.180 conservative
 - **Theoretical Shannon floor target** (per CLAUDE.md "Frontier target"): keep advancing toward 0.155 and below
 
@@ -733,9 +733,9 @@ The rows below are preserved as May 8 chronology, not the active
 
 **The May 4 medal-band entries are bolt-ons on PR #100's substrate, not bespoke codecs.** Bit-level deconstruction of the gold/silver/bronze archives shows each medal entry inherits PR #100's archive layout (BradyMeighan, hnerv_lc_v2, 0.1954) and adds a small focused delta:
 
-- **Gold (PR #101 SajayR, 0.193)**: PR #100 substrate + schema-driven decoder + split-Brotli streams + per-tensor byte-map permutations
-- **Silver (PR #103 rem2, 0.195)**: PR #100 substrate + arithmetic-coding bolt-on (241 LOC in 2 files)
-- **Bronze (PR #102 EthanYangTW, 0.195)**: PR #100 archive bytes + inference-time scale 0.0095 + frame-0 nudges (zero new codec work)
+- **Gold (PR #101 SajayR, 0.193 `[contest-CPU rounded public]`)**: PR #100 substrate + schema-driven decoder + split-Brotli streams + per-tensor byte-map permutations
+- **Silver (PR #103 rem2, 0.195 `[contest-CPU rounded public]`)**: PR #100 substrate + arithmetic-coding bolt-on (241 LOC in 2 files)
+- **Bronze (PR #102 EthanYangTW, 0.195 `[contest-CPU rounded public]`)**: PR #100 archive bytes + inference-time scale 0.0095 + frame-0 nudges (zero new codec work)
 
 **Strategic implication**: at this score band the contest does not reward from-scratch codec design. Once one team makes its inflate/compress code public, every other team can read it and start bolting on. Engineering velocity wins.
 

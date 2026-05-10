@@ -89,7 +89,8 @@ create score authority.
 - PR #102 third-prize: CUDA bot comment 0.22839, CPU bot comment 0.19538.
   Our T4 replay matches the CUDA comment to 3×10⁻⁶ — the gap is structural,
   not a measurement bug.
-- Predicted CPU scores for our top archives (pending Modal CPU dispatch):
+- Predicted CPU scores for our top archives are planning hypotheses only
+  until exact Linux x86_64 CPU auth eval lands on the same archive/runtime:
   PR #107 apogee CUDA 0.22936 → CPU ~0.196 (silver/bronze band);
   PR103-on-PR106 AC repack CUDA 0.20898 → CPU ~0.176.
 - Operational rule: every shippable archive now gets dual-eval — both

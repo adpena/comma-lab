@@ -6,6 +6,15 @@ Evidence grade: A++ contest T4
 
 ## Result
 
+Supersession note, 2026-05-10: this remains an exact CUDA score anchor for
+planning under the delegated runtime used by the eval, but it is not a
+contest-final upload-packet proof for the tracked static wrapper. The later
+runtime-custody hardening memo
+`.omx/research/pr103_static_release_runtime_custody_hardening_20260507_codex.md`
+shows the static wrapper fails `submission_runtime_tree_matches_auth_eval`
+until the wrapper itself is exact-evaluated or a reviewed delegate-root proof is
+encoded and re-evaluated.
+
 The PR103 arithmetic-coded decoder packing was transplanted into the PR106
 frontier envelope and evaluated through the canonical exact CUDA path.
 

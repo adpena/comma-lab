@@ -34,7 +34,7 @@ from tac.hnerv_pr103_lc_ac_schema import (
     encode_pr103_merged_ac_stream,
     parse_pr103_lc_ac_payload,
 )
-from tac.repo_io import read_json, repo_relative, sha256_bytes, sha256_file
+from tac.repo_io import json_text, read_json, repo_relative, sha256_bytes, sha256_file
 
 try:  # pragma: no cover - optional outside the contest venv
     import constriction
@@ -47,6 +47,7 @@ RETARGET_SCHEMA = "pr103_arithmetic_retarget_probe_v1"
 COORDINATE_SCHEMA = "pr103_arithmetic_histogram_coordinate_probe_v1"
 BEAM_SCHEMA = "pr103_arithmetic_histogram_beam_probe_v1"
 CANDIDATE_SCHEMA = "pr103_arithmetic_histogram_candidate_v1"
+GLOBAL_COMBO_SCHEMA = "pr103_arithmetic_histogram_global_combo_probe_v1"
 DEFAULT_STRATEGY = "retarget_categorical_model_to_decoded_symbols"
 
 
@@ -726,6 +727,7 @@ def materialize_pr103_arithmetic_histogram_candidate(
     beam_probe_reports: Sequence[str | Path | Mapping[str, Any]],
     output_archive: str | Path | None = None,
     source_archive: str | Path | None = None,
+    global_combo_report: str | Path | Mapping[str, Any] | None = None,
     member_name: str | None = None,
     repo_root: str | Path | None = None,
     layout: Pr103LcAcLayout = PUBLIC_PR103_LAYOUT,
@@ -740,6 +742,7 @@ def materialize_pr103_arithmetic_histogram_candidate(
     """
 
     reports = _load_beam_probe_reports(beam_probe_reports)
+    global_report = _load_global_combo_report(global_combo_report) if global_combo_report else None
     if not reports:
         raise Pr103ArithmeticTransformPlanError("at least one beam probe report is required")
     first_target = str(_mapping(reports[0].get("target_stream")).get("label") or "")
@@ -767,50 +770,72 @@ def materialize_pr103_arithmetic_histogram_candidate(
         for index, (label, _count, _schema_index) in enumerate(stream_specs)
     }
     applied_reports: list[dict[str, Any]] = []
-    for report in reports:
-        _validate_candidate_report_source(report, source)
-        target = _mapping(report.get("target_stream"))
-        label = str(target.get("label") or "")
-        if label not in label_to_index:
+    source_probe_delta_sum = 0
+    if global_report is not None:
+        _validate_candidate_report_source(global_report, source)
+        best = _mapping(global_report.get("best_candidate"))
+        moves_by_label = _mapping(best.get("moves_by_label"))
+        if not moves_by_label:
             raise Pr103ArithmeticTransformPlanError(
-                f"beam report target is not a q8 AC stream: {label!r}"
+                "global combo report best_candidate.moves_by_label is empty"
             )
-        target_index = label_to_index[label]
-        best = _mapping(report.get("best_candidate"))
-        moves = best.get("moves")
-        if not isinstance(moves, Sequence) or isinstance(moves, (str, bytes)) or not moves:
-            raise Pr103ArithmeticTransformPlanError(
-                f"beam report for {label} has no best_candidate.moves"
+        for label, moves_value in moves_by_label.items():
+            label = str(label)
+            if label not in label_to_index:
+                raise Pr103ArithmeticTransformPlanError(
+                    f"global combo target is not a q8 AC stream: {label!r}"
+                )
+            moves = _moves_sequence(moves_value, label=label)
+            _apply_histogram_moves(
+                histograms,
+                target_index=label_to_index[label],
+                moves=moves,
+                label=label,
             )
-        for move in moves:
-            item = _mapping(move)
-            symbol = int(item.get("symbol"))
-            old_weight = int(item.get("old_weight"))
-            new_weight = int(item.get("new_weight"))
-            if symbol < 0 or symbol >= histograms.shape[1]:
+            source_model_weights[label_to_index[label]] = histograms[label_to_index[label]].copy()
+            applied_reports.append(
+                {
+                    "target_label": label,
+                    "move_count": len(moves),
+                    "source_probe_total_delta": None,
+                    "source_probe_sha256": "",
+                    "selection_source": "global_combo_report",
+                }
+            )
+        source_probe_delta_sum = int(best.get("source_probe_delta_sum") or 0)
+    else:
+        for report in reports:
+            _validate_candidate_report_source(report, source)
+            target = _mapping(report.get("target_stream"))
+            label = str(target.get("label") or "")
+            if label not in label_to_index:
                 raise Pr103ArithmeticTransformPlanError(
-                    f"beam move symbol out of range for {label}: {symbol}"
+                    f"beam report target is not a q8 AC stream: {label!r}"
                 )
-            current = int(histograms[target_index, symbol])
-            if current != old_weight:
-                raise Pr103ArithmeticTransformPlanError(
-                    f"beam move old_weight mismatch for {label}[{symbol}]: "
-                    f"report={old_weight} current={current}"
-                )
-            histograms[target_index, symbol] = np.uint8(new_weight)
-        source_model_weights[target_index] = histograms[target_index].copy()
-        applied_reports.append(
-            {
-                "target_label": label,
-                "move_count": len(moves),
-                "source_probe_total_delta": best.get(
-                    "estimated_member_delta_if_runtime_adapter_supported"
-                ),
-                "source_probe_sha256": report.get("tool_run_manifest", {}).get("output_sha256")
-                if isinstance(report.get("tool_run_manifest"), Mapping)
-                else "",
-            }
-        )
+            target_index = label_to_index[label]
+            best = _mapping(report.get("best_candidate"))
+            moves = _moves_sequence(best.get("moves"), label=label)
+            _apply_histogram_moves(
+                histograms,
+                target_index=target_index,
+                moves=moves,
+                label=label,
+            )
+            source_model_weights[target_index] = histograms[target_index].copy()
+            source_probe_delta = best.get("estimated_member_delta_if_runtime_adapter_supported")
+            if source_probe_delta is not None:
+                source_probe_delta_sum += int(source_probe_delta)
+            applied_reports.append(
+                {
+                    "target_label": label,
+                    "move_count": len(moves),
+                    "source_probe_total_delta": source_probe_delta,
+                    "source_probe_sha256": report.get("tool_run_manifest", {}).get("output_sha256")
+                    if isinstance(report.get("tool_run_manifest"), Mapping)
+                    else "",
+                    "selection_source": "greedy_per_stream_best",
+                }
+            )
 
     candidate_histogram_raw = histograms.astype(np.uint8).tobytes()
     candidate_histogram_blob = brotli.compress(candidate_histogram_raw, quality=11)
@@ -941,6 +966,11 @@ def materialize_pr103_arithmetic_histogram_candidate(
             "estimated_rate_score_delta_if_components_unchanged": (
                 float(payload_delta) * RATE_SCORE_PER_BYTE
             ),
+            "source_probe_delta_sum": source_probe_delta_sum,
+            "non_additivity_delta": payload_delta - source_probe_delta_sum,
+            "selection_mode": (
+                "global_combo_best" if global_report is not None else "greedy_per_stream_best"
+            ),
             "estimate_is_score_claim": False,
         },
         "runtime_adapter_contract": {
@@ -967,6 +997,215 @@ def materialize_pr103_arithmetic_histogram_candidate(
         "readiness_blockers": blockers,
         "dispatch_blockers": [
             "pr103_arithmetic_histogram_candidate_is_not_dispatch_authorization",
+            *blockers,
+        ],
+    }
+
+
+def build_pr103_arithmetic_histogram_global_combo_probe(
+    *,
+    schema_manifest: str | Path | Mapping[str, Any],
+    beam_probe_reports: Sequence[str | Path | Mapping[str, Any]],
+    source_archive: str | Path | None = None,
+    top_per_stream: int = 20,
+    beam_width: int = 128,
+    repo_root: str | Path | None = None,
+    layout: Pr103LcAcLayout = PUBLIC_PR103_LAYOUT,
+    stream_specs: Sequence[tuple[str, int, int | None]] = AC_STREAM_SPECS,
+    hi_symbol_count: int = HI_SYMBOL_COUNT,
+) -> dict[str, Any]:
+    """Globally optimize combinations of per-stream histogram beam candidates.
+
+    Per-stream deltas are not additive once Brotli sees the whole histogram
+    sideband. This probe keeps the per-stream beam search as a proposal source
+    but evaluates combined states against the exact merged-range stream plus
+    exact Brotli-compressed histogram section.
+    """
+
+    if top_per_stream <= 0:
+        raise Pr103ArithmeticTransformPlanError("top_per_stream must be positive")
+    if beam_width <= 0:
+        raise Pr103ArithmeticTransformPlanError("beam_width must be positive")
+    reports = _load_beam_probe_reports(beam_probe_reports)
+    if not reports:
+        raise Pr103ArithmeticTransformPlanError("at least one beam probe report is required")
+    first_target = str(_mapping(reports[0].get("target_stream")).get("label") or "")
+    if not first_target:
+        raise Pr103ArithmeticTransformPlanError("beam report missing target_stream.label")
+    context = _load_pr103_retarget_context(
+        schema_manifest=schema_manifest,
+        source_archive=source_archive,
+        target_label=first_target,
+        target_rank=None,
+        repo_root=repo_root,
+        layout=layout,
+        stream_specs=stream_specs,
+        hi_symbol_count=hi_symbol_count,
+    )
+    repo = context["repo"]
+    manifest_record = context["manifest_record"]
+    source = context["source"]
+    archive_path = context["archive_path"]
+    histograms = np.asarray(context["histograms"], dtype=np.uint8)
+    source_model_weights = [np.asarray(item).copy() for item in context["source_model_weights"]]
+    source_symbol_streams = [np.asarray(item).copy() for item in context["source_symbol_streams"]]
+    source_merged = context["source_merged"]
+    source_histogram_blob = context["source_histogram_blob"]
+    label_to_index = {
+        str(label): index
+        for index, (label, _count, _schema_index) in enumerate(stream_specs)
+    }
+    option_groups: list[dict[str, Any]] = []
+    for report in reports:
+        _validate_candidate_report_source(report, source)
+        target = _mapping(report.get("target_stream"))
+        label = str(target.get("label") or "")
+        if label not in label_to_index:
+            raise Pr103ArithmeticTransformPlanError(
+                f"beam report target is not a q8 AC stream: {label!r}"
+            )
+        target_index = label_to_index[label]
+        options = _combo_options_for_report(
+            report,
+            label=label,
+            target_index=target_index,
+            top_per_stream=top_per_stream,
+        )
+        option_groups.append({"label": label, "target_index": target_index, "options": options})
+
+    states = [
+        {
+            "histograms": histograms.copy(),
+            "moves_by_label": {},
+            "selected_options": [],
+        }
+    ]
+    evaluated_state_count = 0
+    frontier_sizes: list[dict[str, Any]] = []
+    for group in option_groups:
+        expanded = []
+        for state in states:
+            for option in group["options"]:
+                next_histograms = np.asarray(state["histograms"], dtype=np.uint8).copy()
+                if option["moves"]:
+                    _apply_histogram_moves(
+                        next_histograms,
+                        target_index=int(group["target_index"]),
+                        moves=option["moves"],
+                        label=str(group["label"]),
+                    )
+                row = _score_combined_histograms(
+                    histograms=next_histograms,
+                    source_symbol_streams=source_symbol_streams,
+                    source_model_weights=source_model_weights,
+                    source_merged=source_merged,
+                    source_histogram_blob=source_histogram_blob,
+                )
+                selected_options = [*list(state["selected_options"]), option["option_id"]]
+                selected_deltas = [
+                    *list(state.get("selected_option_source_deltas") or []),
+                    option.get("source_probe_delta"),
+                ]
+                source_delta_sum = sum(
+                    int(delta) for delta in selected_deltas if delta is not None
+                )
+                moves_by_label = dict(state["moves_by_label"])
+                if option["moves"]:
+                    moves_by_label[str(group["label"])] = option["moves"]
+                row.update(
+                    {
+                        "histograms": next_histograms,
+                        "selected_options": selected_options,
+                        "selected_option_source_deltas": selected_deltas,
+                        "source_probe_delta_sum": source_delta_sum,
+                        "non_additivity_delta": int(
+                            row["estimated_member_delta_if_runtime_adapter_supported"]
+                        )
+                        - source_delta_sum,
+                        "moves_by_label": moves_by_label,
+                    }
+                )
+                expanded.append(row)
+        evaluated_state_count += len(expanded)
+        expanded = _dedupe_combo_states(expanded)
+        expanded.sort(key=_combo_sort_key)
+        states = expanded[:beam_width]
+        frontier_sizes.append(
+            {
+                "label": group["label"],
+                "option_count": len(group["options"]),
+                "expanded_state_count": len(expanded),
+                "kept_state_count": len(states),
+                "best_total_delta": states[0]["estimated_member_delta_if_runtime_adapter_supported"]
+                if states
+                else None,
+            }
+        )
+        if not states:
+            break
+
+    states.sort(key=_combo_sort_key)
+    best = states[0] if states else {}
+    public_best = _public_combo_row(best)
+    top_rows = [_public_combo_row(row) for row in states[:20]]
+    blockers = _unique_ordered(
+        [
+            *list(context["manifest_blockers"]),
+            *([] if states else ["global_combo_probe_no_states"]),
+            *(
+                []
+                if int(public_best.get("estimated_member_delta_if_runtime_adapter_supported") or 0) < 0
+                else ["no_byte_positive_global_combo_candidate"]
+            ),
+            "candidate_archive_missing",
+            "candidate_runtime_adapter_missing",
+            "candidate_inflate_output_parity_missing",
+            "strict_pre_submission_compliance_json_missing",
+            "lane_dispatch_claim_missing",
+            "exact_cuda_auth_eval_missing",
+        ]
+    )
+    return {
+        "schema": GLOBAL_COMBO_SCHEMA,
+        "planning_only": True,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "gpu_required": False,
+        "ready_for_archive_preflight": False,
+        "ready_for_exact_eval_dispatch": False,
+        "source_schema_manifest": manifest_record,
+        "source_archive": {
+            "path": repo_relative(archive_path, repo),
+            "bytes": source.archive_bytes,
+            "sha256": source.archive_sha256,
+            "member_name": source.member_name,
+            "member_bytes": source.member_bytes,
+            "member_sha256": sha256_bytes(source.payload),
+        },
+        "search_config": {
+            "mode": "global_combo_beam_over_per_stream_frontiers",
+            "top_per_stream": int(top_per_stream),
+            "beam_width": int(beam_width),
+            "stream_count": len(option_groups),
+            "evaluated_state_count": evaluated_state_count,
+            "objective": "minimize_exact_merged_ac_delta_plus_exact_ac_histograms_brotli_delta",
+            "mathematical_guard": (
+                "selected per-stream proposal deltas are retained for audit, "
+                "but ranking uses exact recomputation of the full merged AC "
+                "stream plus the full Brotli-compressed histogram sideband"
+            ),
+            "known_scope_limit": (
+                "q8 AC histogram rows only; latent_hi_histogram_brotli remains a "
+                "separate optimization surface"
+            ),
+            "score_claim": False,
+        },
+        "frontier_sizes": frontier_sizes,
+        "best_candidate": public_best,
+        "top_candidates": top_rows,
+        "readiness_blockers": blockers,
+        "dispatch_blockers": [
+            "pr103_arithmetic_histogram_global_combo_probe_is_not_dispatch_authorization",
             *blockers,
         ],
     }
@@ -1174,8 +1413,11 @@ def render_candidate_markdown(report: Mapping[str, Any]) -> str:
         "",
         f"- source: `{source.get('path')}` / `{source.get('bytes')}` bytes / `{source.get('sha256')}`",
         f"- candidate: `{candidate.get('path')}` / `{candidate.get('bytes')}` bytes / `{candidate.get('sha256')}`",
+        f"- selection_mode: `{byte_accounting.get('selection_mode')}`",
         f"- payload_byte_delta: `{byte_accounting.get('payload_byte_delta')}`",
         f"- archive_byte_delta: `{byte_accounting.get('archive_byte_delta')}`",
+        f"- source_probe_delta_sum: `{byte_accounting.get('source_probe_delta_sum')}`",
+        f"- non_additivity_delta: `{byte_accounting.get('non_additivity_delta')}`",
         f"- semantic_stream_parity: `{_bool(semantic.get('all_stream_symbol_sha_match') is True)}`"
         f" across `{semantic.get('stream_count')}` streams",
         "",
@@ -1202,6 +1444,67 @@ def render_candidate_markdown(report: Mapping[str, Any]) -> str:
         lines.append("- none")
     lines.extend(["", "## Blockers", ""])
     for blocker in report.get("readiness_blockers") or []:
+        lines.append(f"- `{blocker}`")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def render_global_combo_markdown(report: Mapping[str, Any]) -> str:
+    """Render a compact review note for a global histogram-combo probe."""
+
+    search = _mapping(report.get("search_config"))
+    best = _mapping(report.get("best_candidate"))
+    lines = [
+        "# PR103 Arithmetic Histogram Global Combo Probe",
+        "",
+        f"- planning_only: `{_bool(report.get('planning_only') is True)}`",
+        f"- score_claim: `{_bool(report.get('score_claim') is True)}`",
+        f"- dispatch_attempted: `{_bool(report.get('dispatch_attempted') is True)}`",
+        f"- gpu_required: `{_bool(report.get('gpu_required') is True)}`",
+        f"- ready_for_archive_preflight: `{_bool(report.get('ready_for_archive_preflight') is True)}`",
+        f"- ready_for_exact_eval_dispatch: `{_bool(report.get('ready_for_exact_eval_dispatch') is True)}`",
+        "",
+        "## Search",
+        "",
+        f"- stream_count: `{search.get('stream_count')}`",
+        f"- top_per_stream: `{search.get('top_per_stream')}`",
+        f"- beam_width: `{search.get('beam_width')}`",
+        f"- evaluated_state_count: `{search.get('evaluated_state_count')}`",
+        f"- objective: `{search.get('objective')}`",
+        f"- mathematical_guard: `{search.get('mathematical_guard')}`",
+        f"- known_scope_limit: `{search.get('known_scope_limit')}`",
+        "",
+        "## Best Candidate",
+        "",
+        f"- merged_ac_delta: `{best.get('merged_ac_delta')}`",
+        f"- histogram_brotli_delta: `{best.get('histogram_brotli_delta')}`",
+        f"- estimated_member_delta_if_runtime_adapter_supported: `{best.get('estimated_member_delta_if_runtime_adapter_supported')}`",
+        f"- source_probe_delta_sum: `{best.get('source_probe_delta_sum')}`",
+        f"- non_additivity_delta: `{best.get('non_additivity_delta')}`",
+        f"- selected_options: `{best.get('selected_options')}`",
+        "",
+        "## Frontier",
+        "",
+    ]
+    for row in report.get("frontier_sizes") or []:
+        item = _mapping(row)
+        lines.append(
+            "- `{label}`: options `{options}`, expanded `{expanded}`, kept `{kept}`, "
+            "best `{best}`".format(
+                label=item.get("label"),
+                options=item.get("option_count"),
+                expanded=item.get("expanded_state_count"),
+                kept=item.get("kept_state_count"),
+                best=item.get("best_total_delta"),
+            )
+        )
+    if not report.get("frontier_sizes"):
+        lines.append("- none")
+    lines.extend(["", "## Blockers", ""])
+    for blocker in report.get("readiness_blockers") or []:
+        lines.append(f"- `{blocker}`")
+    lines.extend(["", "## Dispatch Blockers", ""])
+    for blocker in report.get("dispatch_blockers") or []:
         lines.append(f"- `{blocker}`")
     lines.append("")
     return "\n".join(lines)
@@ -1506,6 +1809,37 @@ def _load_beam_probe_reports(
     return reports
 
 
+def _load_global_combo_report(
+    source: str | Path | Mapping[str, Any],
+) -> dict[str, Any]:
+    if isinstance(source, Mapping):
+        report = dict(source)
+    else:
+        payload = read_json(Path(source))
+        if not isinstance(payload, Mapping):
+            raise Pr103ArithmeticTransformPlanError(
+                f"global combo report must be a JSON object: {source}"
+            )
+        report = dict(payload)
+    if report.get("schema") != GLOBAL_COMBO_SCHEMA:
+        raise Pr103ArithmeticTransformPlanError(
+            f"expected global combo report schema {GLOBAL_COMBO_SCHEMA}, got {report.get('schema')!r}"
+        )
+    if report.get("score_claim") is True or report.get("dispatch_attempted") is True:
+        raise Pr103ArithmeticTransformPlanError(
+            "global combo report must be a local no-score probe"
+        )
+    return report
+
+
+def _moves_sequence(value: Any, *, label: str) -> list[Mapping[str, Any]]:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)) or not value:
+        raise Pr103ArithmeticTransformPlanError(
+            f"histogram move list for {label} is empty or malformed"
+        )
+    return [_mapping(move) for move in value]
+
+
 def _validate_candidate_report_source(
     report: Mapping[str, Any],
     source: Any,
@@ -1669,6 +2003,145 @@ def _score_histogram_candidate(
     return row
 
 
+def _combo_options_for_report(
+    report: Mapping[str, Any],
+    *,
+    label: str,
+    target_index: int,
+    top_per_stream: int,
+) -> list[dict[str, Any]]:
+    options = [
+        {
+            "option_id": f"{label}:source",
+            "label": label,
+            "target_index": int(target_index),
+            "moves": [],
+            "source_probe_delta": 0,
+        }
+    ]
+    seen = {"[]"}
+    rows = [_mapping(report.get("best_candidate"))]
+    top = report.get("top_candidates")
+    if isinstance(top, Sequence) and not isinstance(top, (str, bytes)):
+        rows.extend(_mapping(row) for row in top if isinstance(row, Mapping))
+    for row in rows:
+        moves = row.get("moves")
+        if not isinstance(moves, Sequence) or isinstance(moves, (str, bytes)) or not moves:
+            continue
+        public_moves = [dict(_mapping(move)) for move in moves]
+        key = json_text(public_moves)
+        if key in seen:
+            continue
+        seen.add(key)
+        options.append(
+            {
+                "option_id": f"{label}:candidate{len(options)}",
+                "label": label,
+                "target_index": int(target_index),
+                "moves": public_moves,
+                "source_probe_delta": row.get(
+                    "estimated_member_delta_if_runtime_adapter_supported"
+                ),
+                "source_probe_move_count": len(public_moves),
+            }
+        )
+        if len(options) >= top_per_stream + 1:
+            break
+    return options
+
+
+def _apply_histogram_moves(
+    histograms: np.ndarray,
+    *,
+    target_index: int,
+    moves: Sequence[Mapping[str, Any]],
+    label: str,
+) -> None:
+    for move in moves:
+        item = _mapping(move)
+        symbol = int(item.get("symbol"))
+        old_weight = int(item.get("old_weight"))
+        new_weight = int(item.get("new_weight"))
+        if symbol < 0 or symbol >= histograms.shape[1]:
+            raise Pr103ArithmeticTransformPlanError(
+                f"combo move symbol out of range for {label}: {symbol}"
+            )
+        current = int(histograms[target_index, symbol])
+        if current != old_weight:
+            raise Pr103ArithmeticTransformPlanError(
+                f"combo move old_weight mismatch for {label}[{symbol}]: "
+                f"move={old_weight} current={current}"
+            )
+        histograms[target_index, symbol] = np.uint8(new_weight)
+
+
+def _score_combined_histograms(
+    *,
+    histograms: np.ndarray,
+    source_symbol_streams: Sequence[np.ndarray],
+    source_model_weights: Sequence[np.ndarray],
+    source_merged: bytes,
+    source_histogram_blob: bytes,
+) -> dict[str, Any]:
+    model_weights = [np.asarray(item).copy() for item in source_model_weights]
+    for index in range(np.asarray(histograms).shape[0]):
+        model_weights[index] = np.asarray(histograms[index], dtype=np.uint8).copy()
+    merged = encode_pr103_merged_ac_stream(source_symbol_streams, model_weights)
+    histogram_raw = np.asarray(histograms, dtype=np.uint8).tobytes()
+    histogram_blob = brotli.compress(histogram_raw, quality=11)
+    merged_delta = len(merged) - len(source_merged)
+    histogram_delta = len(histogram_blob) - len(source_histogram_blob)
+    total_delta = merged_delta + histogram_delta
+    return {
+        "merged_ac_bytes": len(merged),
+        "merged_ac_sha256": sha256_bytes(merged),
+        "merged_ac_delta": merged_delta,
+        "histogram_brotli_bytes": len(histogram_blob),
+        "histogram_brotli_sha256": sha256_bytes(histogram_blob),
+        "histogram_brotli_delta": histogram_delta,
+        "histogram_raw_sha256": sha256_bytes(histogram_raw),
+        "estimated_member_delta_if_runtime_adapter_supported": total_delta,
+        "estimated_rate_score_delta_if_components_unchanged": (
+            float(total_delta) * RATE_SCORE_PER_BYTE
+        ),
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _dedupe_combo_states(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    best_by_key: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        key = str(row.get("histogram_raw_sha256") or "")
+        if not key:
+            continue
+        current = best_by_key.get(key)
+        if current is None or _combo_sort_key(row) < _combo_sort_key(current):
+            best_by_key[key] = dict(row)
+    return list(best_by_key.values())
+
+
+def _combo_sort_key(row: Mapping[str, Any]) -> tuple[int, int, int, int, str]:
+    moves_by_label = row.get("moves_by_label")
+    move_count = 0
+    if isinstance(moves_by_label, Mapping):
+        for moves in moves_by_label.values():
+            if isinstance(moves, Sequence) and not isinstance(moves, (str, bytes)):
+                move_count += len(moves)
+    return (
+        int(row.get("estimated_member_delta_if_runtime_adapter_supported") or 0),
+        int(row.get("merged_ac_delta") or 0),
+        int(row.get("histogram_brotli_delta") or 0),
+        move_count,
+        str(row.get("histogram_raw_sha256") or ""),
+    )
+
+
+def _public_combo_row(row: Mapping[str, Any]) -> dict[str, Any]:
+    return {str(key): value for key, value in row.items() if str(key) != "histograms"}
+
+
 def _candidate_sort_key(row: Mapping[str, Any]) -> tuple[int, int, int, int, str]:
     moves = row.get("moves")
     return (
@@ -1754,18 +2227,21 @@ __all__ = [
     "COORDINATE_SCHEMA",
     "BEAM_SCHEMA",
     "CANDIDATE_SCHEMA",
+    "GLOBAL_COMBO_SCHEMA",
     "PLAN_SCHEMA",
     "RETARGET_SCHEMA",
     "Pr103ArithmeticTransformPlanError",
     "TransformTargetSelection",
     "build_pr103_arithmetic_histogram_beam_probe",
     "build_pr103_arithmetic_histogram_coordinate_probe",
+    "build_pr103_arithmetic_histogram_global_combo_probe",
     "build_pr103_arithmetic_retarget_probe",
     "build_pr103_arithmetic_transform_plan",
     "materialize_pr103_arithmetic_histogram_candidate",
     "render_beam_markdown",
     "render_candidate_markdown",
     "render_coordinate_markdown",
+    "render_global_combo_markdown",
     "render_markdown",
     "render_retarget_markdown",
 ]

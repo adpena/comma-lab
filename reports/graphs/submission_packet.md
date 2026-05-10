@@ -1,5 +1,9 @@
 # submission packet
 
+> Superseded archival note, 2026-05-10: this is a May 4 PR100 packet snapshot,
+> not current upload-packet instruction. Do not treat it as submission-ready
+> without refreshing the complete current evidence chain.
+
 ## notebook surface
 
 - interactive lab notebook: `reports/graphs/lab_notebook.md`

@@ -1,5 +1,10 @@
 # final submission notes
 
+> Superseded archival note, 2026-05-10: this is a May 4 PR100 packet snapshot,
+> not current submission authorization. Refresh archive/runtime custody,
+> strict compliance, exact CUDA, exact CPU if rank/shipment language is used,
+> and operator policy before treating any path below as current.
+
 ## submission posture
 
 - Current score champion is the contest-faithful PR100 HNeRV-LC-v2 adapter exact

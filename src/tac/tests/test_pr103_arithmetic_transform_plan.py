@@ -15,11 +15,13 @@ from tac.pr103_arithmetic_transform_plan import (
     BEAM_SCHEMA,
     CANDIDATE_SCHEMA,
     COORDINATE_SCHEMA,
+    GLOBAL_COMBO_SCHEMA,
     PLAN_SCHEMA,
     RETARGET_SCHEMA,
     Pr103ArithmeticTransformPlanError,
     build_pr103_arithmetic_histogram_beam_probe,
     build_pr103_arithmetic_histogram_coordinate_probe,
+    build_pr103_arithmetic_histogram_global_combo_probe,
     build_pr103_arithmetic_retarget_probe,
     build_pr103_arithmetic_transform_plan,
     materialize_pr103_arithmetic_histogram_candidate,
@@ -242,6 +244,9 @@ def test_pr103_arithmetic_histogram_candidate_materializes_byte_different_archiv
     assert report["ready_for_exact_eval_dispatch"] is False
     assert report["candidate_archive"]["sha256"]
     assert report["candidate_archive"]["member_sha256"] != report["source_archive"]["member_sha256"]
+    assert report["byte_accounting"]["selection_mode"] == "greedy_per_stream_best"
+    assert "source_probe_delta_sum" in report["byte_accounting"]
+    assert "non_additivity_delta" in report["byte_accounting"]
     assert report["candidate_roundtrip"]["reencoded_byte_identical"] is True
     assert report["semantic_stream_parity"]["all_stream_symbol_sha_match"] is True
     assert "candidate_runtime_adapter_missing" in report["readiness_blockers"]
@@ -249,6 +254,124 @@ def test_pr103_arithmetic_histogram_candidate_materializes_byte_different_archiv
         row["name"] for row in report["section_diffs"] if row["changed"] is True
     }
     assert "ac_histograms_brotli" in changed_sections
+
+
+def test_pr103_arithmetic_histogram_global_combo_probe_rescores_full_sideband(
+    tmp_path: Path,
+) -> None:
+    fixture = _probe_fixture(tmp_path)
+    beam0 = build_pr103_arithmetic_histogram_beam_probe(
+        schema_manifest=fixture["manifest"],
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+        target_label="fixture.weight0",
+        top_symbols=2,
+        deltas=(-1, 1),
+        rounds=2,
+        beam_width=3,
+    )
+    beam1 = build_pr103_arithmetic_histogram_beam_probe(
+        schema_manifest=fixture["manifest"],
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+        target_label="fixture.weight1",
+        top_symbols=2,
+        deltas=(-1, 1),
+        rounds=2,
+        beam_width=3,
+    )
+
+    report = build_pr103_arithmetic_histogram_global_combo_probe(
+        schema_manifest=fixture["manifest"],
+        beam_probe_reports=(beam0, beam1),
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+        top_per_stream=3,
+        beam_width=8,
+    )
+
+    assert report["schema"] == GLOBAL_COMBO_SCHEMA
+    assert report["score_claim"] is False
+    assert report["ready_for_archive_preflight"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["search_config"]["stream_count"] == 2
+    assert "exact_merged_ac_delta_plus_exact_ac_histograms_brotli_delta" in report[
+        "search_config"
+    ]["objective"]
+    best = report["best_candidate"]
+    assert "selected_option_source_deltas" in best
+    assert "source_probe_delta_sum" in best
+    assert "non_additivity_delta" in best
+    assert best["estimated_member_delta_if_runtime_adapter_supported"] == (
+        best["source_probe_delta_sum"] + best["non_additivity_delta"]
+    )
+    assert "candidate_runtime_adapter_missing" in report["readiness_blockers"]
+
+
+def test_pr103_arithmetic_histogram_candidate_can_materialize_global_combo(
+    tmp_path: Path,
+) -> None:
+    fixture = _probe_fixture(tmp_path)
+    beam0 = build_pr103_arithmetic_histogram_beam_probe(
+        schema_manifest=fixture["manifest"],
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+        target_label="fixture.weight0",
+        top_symbols=2,
+        deltas=(-1, 1),
+        rounds=2,
+        beam_width=3,
+    )
+    beam1 = build_pr103_arithmetic_histogram_beam_probe(
+        schema_manifest=fixture["manifest"],
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+        target_label="fixture.weight1",
+        top_symbols=2,
+        deltas=(-1, 1),
+        rounds=2,
+        beam_width=3,
+    )
+    combo = build_pr103_arithmetic_histogram_global_combo_probe(
+        schema_manifest=fixture["manifest"],
+        beam_probe_reports=(beam0, beam1),
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+        top_per_stream=3,
+        beam_width=8,
+    )
+    if not combo["best_candidate"].get("moves_by_label"):
+        pytest.skip("fixture global-combo best is source/noop")
+
+    report = materialize_pr103_arithmetic_histogram_candidate(
+        schema_manifest=fixture["manifest"],
+        beam_probe_reports=(beam0, beam1),
+        global_combo_report=combo,
+        output_archive=tmp_path / "global_candidate.zip",
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+    )
+
+    assert report["byte_accounting"]["selection_mode"] == "global_combo_best"
+    assert report["byte_accounting"]["source_probe_delta_sum"] == combo["best_candidate"][
+        "source_probe_delta_sum"
+    ]
+    assert report["candidate_roundtrip"]["reencoded_byte_identical"] is True
+    assert report["semantic_stream_parity"]["all_stream_symbol_sha_match"] is True
 
 
 def test_pr103_arithmetic_histogram_candidate_rejects_stale_beam_report(

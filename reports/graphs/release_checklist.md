@@ -1,5 +1,9 @@
 # release checklist
 
+> Superseded archival note, 2026-05-10: this checklist records the May 4 PR100
+> packet handoff state. It is not a current release checklist until regenerated
+> against the current archive/runtime/eval/compliance evidence.
+
 ## score lane
 
 - [x] current exact frontier recorded: PR100 HNeRV-LC-v2 adapter replay,

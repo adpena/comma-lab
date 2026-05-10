@@ -1,0 +1,2467 @@
+{
+  "best_candidate": {
+    "dispatch_attempted": false,
+    "estimated_member_delta_if_runtime_adapter_supported": -12,
+    "estimated_rate_score_delta_if_components_unchanged": -7.990307437466057e-06,
+    "histogram_brotli_bytes": 883,
+    "histogram_brotli_delta": -12,
+    "histogram_brotli_sha256": "dd08da3a2c7401373c7a69a1501c961ec30d934524243a978b3756713f262bc8",
+    "histogram_raw_sha256": "1f201d0ecd9794fd63e124f9f0ec2289d622459b7797a7f03db6e32db4a83107",
+    "merged_ac_bytes": 153856,
+    "merged_ac_delta": 0,
+    "merged_ac_sha256": "42119ef04434064bbb9512edb7048066960a651f068d637f06a3f12a92092604",
+    "moves_by_label": {
+      "blocks.0.weight": [
+        {
+          "delta": 1,
+          "new_weight": 181,
+          "old_weight": 180,
+          "round": 1,
+          "symbol": 118,
+          "symbol_count": 1538
+        },
+        {
+          "delta": -2,
+          "new_weight": 177,
+          "old_weight": 179,
+          "round": 2,
+          "symbol": 147,
+          "symbol_count": 1536
+        }
+      ],
+      "blocks.1.weight": [
+        {
+          "delta": 1,
+          "new_weight": 181,
+          "old_weight": 180,
+          "round": 1,
+          "symbol": 119,
+          "symbol_count": 1562
+        },
+        {
+          "delta": -1,
+          "new_weight": 183,
+          "old_weight": 184,
+          "round": 2,
+          "symbol": 135,
+          "symbol_count": 1595
+        },
+        {
+          "delta": 2,
+          "new_weight": 208,
+          "old_weight": 206,
+          "round": 3,
+          "symbol": 114,
+          "symbol_count": 1787
+        }
+      ],
+      "blocks.3.weight": [
+        {
+          "delta": -2,
+          "new_weight": 253,
+          "old_weight": 255,
+          "round": 1,
+          "symbol": 132,
+          "symbol_count": 769
+        },
+        {
+          "delta": -2,
+          "new_weight": 192,
+          "old_weight": 194,
+          "round": 2,
+          "symbol": 123,
+          "symbol_count": 584
+        },
+        {
+          "delta": 1,
+          "new_weight": 249,
+          "old_weight": 248,
+          "round": 3,
+          "symbol": 120,
+          "symbol_count": 749
+        }
+      ]
+    },
+    "non_additivity_delta": 1,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false,
+    "selected_option_source_deltas": [
+      -5,
+      -2,
+      0,
+      -6,
+      0
+    ],
+    "selected_options": [
+      "blocks.0.weight:candidate13",
+      "blocks.1.weight:candidate14",
+      "blocks.2.weight:source",
+      "blocks.3.weight:candidate4",
+      "stem.weight:source"
+    ],
+    "source_probe_delta_sum": -13
+  },
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "pr103_arithmetic_histogram_global_combo_probe_is_not_dispatch_authorization",
+    "candidate_archive_missing",
+    "candidate_runtime_adapter_missing",
+    "candidate_inflate_output_parity_missing",
+    "strict_pre_submission_compliance_json_missing",
+    "lane_dispatch_claim_missing",
+    "exact_cuda_auth_eval_missing"
+  ],
+  "frontier_sizes": [
+    {
+      "best_total_delta": -9,
+      "expanded_state_count": 21,
+      "kept_state_count": 21,
+      "label": "blocks.0.weight",
+      "option_count": 21
+    },
+    {
+      "best_total_delta": -11,
+      "expanded_state_count": 441,
+      "kept_state_count": 256,
+      "label": "blocks.1.weight",
+      "option_count": 21
+    },
+    {
+      "best_total_delta": -11,
+      "expanded_state_count": 5376,
+      "kept_state_count": 256,
+      "label": "blocks.2.weight",
+      "option_count": 21
+    },
+    {
+      "best_total_delta": -12,
+      "expanded_state_count": 5376,
+      "kept_state_count": 256,
+      "label": "blocks.3.weight",
+      "option_count": 21
+    },
+    {
+      "best_total_delta": -12,
+      "expanded_state_count": 5376,
+      "kept_state_count": 256,
+      "label": "stem.weight",
+      "option_count": 21
+    }
+  ],
+  "gpu_required": false,
+  "planning_only": true,
+  "readiness_blockers": [
+    "candidate_archive_missing",
+    "candidate_runtime_adapter_missing",
+    "candidate_inflate_output_parity_missing",
+    "strict_pre_submission_compliance_json_missing",
+    "lane_dispatch_claim_missing",
+    "exact_cuda_auth_eval_missing"
+  ],
+  "ready_for_archive_preflight": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "pr103_arithmetic_histogram_global_combo_probe_v1",
+  "score_claim": false,
+  "search_config": {
+    "beam_width": 256,
+    "evaluated_state_count": 16590,
+    "known_scope_limit": "q8 AC histogram rows only; latent_hi_histogram_brotli remains a separate optimization surface",
+    "mathematical_guard": "selected per-stream proposal deltas are retained for audit, but ranking uses exact recomputation of the full merged AC stream plus the full Brotli-compressed histogram sideband",
+    "mode": "global_combo_beam_over_per_stream_frontiers",
+    "objective": "minimize_exact_merged_ac_delta_plus_exact_ac_histograms_brotli_delta",
+    "score_claim": false,
+    "stream_count": 5,
+    "top_per_stream": 20
+  },
+  "source_archive": {
+    "bytes": 178223,
+    "member_bytes": 178123,
+    "member_name": "x",
+    "member_sha256": "dd92b065b8fbd2bfe9de837eb110a971c2675ecca4247e2658b4628b464d72ec",
+    "path": "experiments/results/public_pr_intake_full/public_pr103_intake_20260505_auto/archive.zip",
+    "sha256": "31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30"
+  },
+  "source_schema_manifest": {
+    "bytes": 26522,
+    "dispatch_attempted": false,
+    "path": "experiments/results/hnerv_pr103_lc_ac_schema_refresh_20260510_codex/manifest.json",
+    "provided_inline": false,
+    "score_claim": false,
+    "sha256": "2639e904ced829eeefb885c4f6a8019543277b9a4d19eb85d895c4427b95702f"
+  },
+  "tool_run_manifest": {
+    "argv": [
+      "--schema-manifest",
+      "experiments/results/hnerv_pr103_lc_ac_schema_refresh_20260510_codex/manifest.json",
+      "--probe-mode",
+      "global-combo-search",
+      "--beam-probe-report",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_0_weight_beam_probe.json",
+      "--beam-probe-report",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_1_weight_beam_probe.json",
+      "--beam-probe-report",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_2_weight_beam_probe.json",
+      "--beam-probe-report",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_3_weight_beam_probe.json",
+      "--beam-probe-report",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/stem_weight_beam_probe.json",
+      "--top-per-stream",
+      "20",
+      "--beam-width",
+      "256",
+      "--json-out",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_probe.json",
+      "--md-out",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_probe.md"
+    ],
+    "canonical_payload_without_tool_manifest_sha256": "47dfbb01988570238f40edc404578b5f625980c5ed0b951c844300f73689d004",
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 26522,
+        "path": "experiments/results/hnerv_pr103_lc_ac_schema_refresh_20260510_codex/manifest.json",
+        "sha256": "2639e904ced829eeefb885c4f6a8019543277b9a4d19eb85d895c4427b95702f"
+      },
+      {
+        "bytes": 33995,
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_0_weight_beam_probe.json",
+        "sha256": "346cff09ce24a2ec121cce0851c82ec22537f77886e0353b943b401584264507"
+      },
+      {
+        "bytes": 33680,
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_1_weight_beam_probe.json",
+        "sha256": "ffd7f14b7f9ce508c0f40c7c703177788de1de8b3ec4f842879232a2da8daa4a"
+      },
+      {
+        "bytes": 33986,
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_2_weight_beam_probe.json",
+        "sha256": "80c49f2849ba71c353e365fe927a7b98b942fdfbaf7e7d030559711e6dad53c4"
+      },
+      {
+        "bytes": 33767,
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_3_weight_beam_probe.json",
+        "sha256": "8130035b064a156625472512b9115a7a4689706fd61994c9f3ce165c2c6c9462"
+      },
+      {
+        "bytes": 31485,
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/stem_weight_beam_probe.json",
+        "sha256": "c302252f3219bab9da4cc4d712fdff230537884dd0d9b8c46b1fd4801461aa7d"
+      }
+    ],
+    "output_path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_probe.json",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "tools/probe_pr103_arithmetic_retarget.py"
+  },
+  "top_candidates": [
+    {
+      "dispatch_attempted": false,
+      "estimated_member_delta_if_runtime_adapter_supported": -12,
+      "estimated_rate_score_delta_if_components_unchanged": -7.990307437466057e-06,
+      "histogram_brotli_bytes": 883,
+      "histogram_brotli_delta": -12,
+      "histogram_brotli_sha256": "dd08da3a2c7401373c7a69a1501c961ec30d934524243a978b3756713f262bc8",
+      "histogram_raw_sha256": "1f201d0ecd9794fd63e124f9f0ec2289d622459b7797a7f03db6e32db4a83107",
+      "merged_ac_bytes": 153856,
+      "merged_ac_delta": 0,
+      "merged_ac_sha256": "42119ef04434064bbb9512edb7048066960a651f068d637f06a3f12a92092604",
+      "moves_by_label": {
+        "blocks.0.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 118,
+            "symbol_count": 1538
+          },
+          {
+            "delta": -2,
+            "new_weight": 177,
+            "old_weight": 179,
+            "round": 2,
+            "symbol": 147,
+            "symbol_count": 1536
+          }
+        ],
+        "blocks.1.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 119,
+            "symbol_count": 1562
+          },
+          {
+            "delta": -1,
+            "new_weight": 183,
+            "old_weight": 184,
+            "round": 2,
+            "symbol": 135,
+            "symbol_count": 1595
+          },
+          {
+            "delta": 2,
+            "new_weight": 208,
+            "old_weight": 206,
+            "round": 3,
+            "symbol": 114,
+            "symbol_count": 1787
+          }
+        ],
+        "blocks.3.weight": [
+          {
+            "delta": -2,
+            "new_weight": 253,
+            "old_weight": 255,
+            "round": 1,
+            "symbol": 132,
+            "symbol_count": 769
+          },
+          {
+            "delta": -2,
+            "new_weight": 192,
+            "old_weight": 194,
+            "round": 2,
+            "symbol": 123,
+            "symbol_count": 584
+          },
+          {
+            "delta": 1,
+            "new_weight": 249,
+            "old_weight": 248,
+            "round": 3,
+            "symbol": 120,
+            "symbol_count": 749
+          }
+        ]
+      },
+      "non_additivity_delta": 1,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "selected_option_source_deltas": [
+        -5,
+        -2,
+        0,
+        -6,
+        0
+      ],
+      "selected_options": [
+        "blocks.0.weight:candidate13",
+        "blocks.1.weight:candidate14",
+        "blocks.2.weight:source",
+        "blocks.3.weight:candidate4",
+        "stem.weight:source"
+      ],
+      "source_probe_delta_sum": -13
+    },
+    {
+      "dispatch_attempted": false,
+      "estimated_member_delta_if_runtime_adapter_supported": -12,
+      "estimated_rate_score_delta_if_components_unchanged": -7.990307437466057e-06,
+      "histogram_brotli_bytes": 883,
+      "histogram_brotli_delta": -12,
+      "histogram_brotli_sha256": "ae2aa10cafee4b8f31f5c3412db0bc729aa8fddb1ce0d985f13acac091ea7369",
+      "histogram_raw_sha256": "6534cb8b312301ae683bdd8bbcfab98242f77e319c8c8ce3af80092291312f49",
+      "merged_ac_bytes": 153856,
+      "merged_ac_delta": 0,
+      "merged_ac_sha256": "f2763931cee458379115df2d6a71b9e38bedb34c3a58c503bd21f01b6dcffb76",
+      "moves_by_label": {
+        "blocks.0.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 118,
+            "symbol_count": 1538
+          },
+          {
+            "delta": -2,
+            "new_weight": 177,
+            "old_weight": 179,
+            "round": 2,
+            "symbol": 147,
+            "symbol_count": 1536
+          }
+        ],
+        "blocks.1.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 119,
+            "symbol_count": 1562
+          },
+          {
+            "delta": -1,
+            "new_weight": 183,
+            "old_weight": 184,
+            "round": 2,
+            "symbol": 135,
+            "symbol_count": 1595
+          },
+          {
+            "delta": 1,
+            "new_weight": 207,
+            "old_weight": 206,
+            "round": 3,
+            "symbol": 114,
+            "symbol_count": 1787
+          }
+        ],
+        "blocks.3.weight": [
+          {
+            "delta": -2,
+            "new_weight": 253,
+            "old_weight": 255,
+            "round": 1,
+            "symbol": 132,
+            "symbol_count": 769
+          },
+          {
+            "delta": -2,
+            "new_weight": 192,
+            "old_weight": 194,
+            "round": 2,
+            "symbol": 123,
+            "symbol_count": 584
+          },
+          {
+            "delta": 1,
+            "new_weight": 249,
+            "old_weight": 248,
+            "round": 3,
+            "symbol": 120,
+            "symbol_count": 749
+          }
+        ]
+      },
+      "non_additivity_delta": 1,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "selected_option_source_deltas": [
+        -5,
+        -2,
+        0,
+        -6,
+        0
+      ],
+      "selected_options": [
+        "blocks.0.weight:candidate13",
+        "blocks.1.weight:candidate8",
+        "blocks.2.weight:source",
+        "blocks.3.weight:candidate4",
+        "stem.weight:source"
+      ],
+      "source_probe_delta_sum": -13
+    },
+    {
+      "dispatch_attempted": false,
+      "estimated_member_delta_if_runtime_adapter_supported": -12,
+      "estimated_rate_score_delta_if_components_unchanged": -7.990307437466057e-06,
+      "histogram_brotli_bytes": 883,
+      "histogram_brotli_delta": -12,
+      "histogram_brotli_sha256": "31f0dc7b23804930526895c2ec7b572da80b12ffd947686d441c73de20dc3ef0",
+      "histogram_raw_sha256": "9db713fd0166a9006b268e5fe8e0ffb5973acbab6382ba5f275b27264d13f000",
+      "merged_ac_bytes": 153856,
+      "merged_ac_delta": 0,
+      "merged_ac_sha256": "1c1d44a642652ccdd920f9bf2b1dfad6749735ffe0ba8d05b3432980c8a0541d",
+      "moves_by_label": {
+        "blocks.0.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 118,
+            "symbol_count": 1538
+          },
+          {
+            "delta": -2,
+            "new_weight": 177,
+            "old_weight": 179,
+            "round": 2,
+            "symbol": 147,
+            "symbol_count": 1536
+          }
+        ],
+        "blocks.1.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 119,
+            "symbol_count": 1562
+          },
+          {
+            "delta": -1,
+            "new_weight": 183,
+            "old_weight": 184,
+            "round": 2,
+            "symbol": 135,
+            "symbol_count": 1595
+          },
+          {
+            "delta": 2,
+            "new_weight": 208,
+            "old_weight": 206,
+            "round": 3,
+            "symbol": 114,
+            "symbol_count": 1787
+          }
+        ],
+        "blocks.3.weight": [
+          {
+            "delta": -2,
+            "new_weight": 253,
+            "old_weight": 255,
+            "round": 1,
+            "symbol": 132,
+            "symbol_count": 769
+          },
+          {
+            "delta": -2,
+            "new_weight": 192,
+            "old_weight": 194,
+            "round": 2,
+            "symbol": 123,
+            "symbol_count": 584
+          },
+          {
+            "delta": 2,
+            "new_weight": 250,
+            "old_weight": 248,
+            "round": 3,
+            "symbol": 120,
+            "symbol_count": 749
+          }
+        ]
+      },
+      "non_additivity_delta": 1,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "selected_option_source_deltas": [
+        -5,
+        -2,
+        0,
+        -6,
+        0
+      ],
+      "selected_options": [
+        "blocks.0.weight:candidate13",
+        "blocks.1.weight:candidate14",
+        "blocks.2.weight:source",
+        "blocks.3.weight:candidate1",
+        "stem.weight:source"
+      ],
+      "source_probe_delta_sum": -13
+    },
+    {
+      "dispatch_attempted": false,
+      "estimated_member_delta_if_runtime_adapter_supported": -12,
+      "estimated_rate_score_delta_if_components_unchanged": -7.990307437466057e-06,
+      "histogram_brotli_bytes": 883,
+      "histogram_brotli_delta": -12,
+      "histogram_brotli_sha256": "ab69985d9a0c2baaee685072d0bfecc985a7f7e6fc9562d02cd7f6e0fde0df30",
+      "histogram_raw_sha256": "d2df7ab261f94d1c3d3e76b49b74156e407a6d647c9def69a32848fe3f2241dc",
+      "merged_ac_bytes": 153856,
+      "merged_ac_delta": 0,
+      "merged_ac_sha256": "65fbde93ea1d7971fbb361a55b18dcce9fc158e3adca17ab5dba5792228ca308",
+      "moves_by_label": {
+        "blocks.0.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 118,
+            "symbol_count": 1538
+          },
+          {
+            "delta": -2,
+            "new_weight": 177,
+            "old_weight": 179,
+            "round": 2,
+            "symbol": 147,
+            "symbol_count": 1536
+          }
+        ],
+        "blocks.1.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 119,
+            "symbol_count": 1562
+          },
+          {
+            "delta": -1,
+            "new_weight": 183,
+            "old_weight": 184,
+            "round": 2,
+            "symbol": 135,
+            "symbol_count": 1595
+          },
+          {
+            "delta": 1,
+            "new_weight": 207,
+            "old_weight": 206,
+            "round": 3,
+            "symbol": 114,
+            "symbol_count": 1787
+          }
+        ],
+        "blocks.3.weight": [
+          {
+            "delta": -2,
+            "new_weight": 253,
+            "old_weight": 255,
+            "round": 1,
+            "symbol": 132,
+            "symbol_count": 769
+          },
+          {
+            "delta": -2,
+            "new_weight": 192,
+            "old_weight": 194,
+            "round": 2,
+            "symbol": 123,
+            "symbol_count": 584
+          },
+          {
+            "delta": 2,
+            "new_weight": 250,
+            "old_weight": 248,
+            "round": 3,
+            "symbol": 120,
+            "symbol_count": 749
+          }
+        ]
+      },
+      "non_additivity_delta": 1,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "selected_option_source_deltas": [
+        -5,
+        -2,
+        0,
+        -6,
+        0
+      ],
+      "selected_options": [
+        "blocks.0.weight:candidate13",
+        "blocks.1.weight:candidate8",
+        "blocks.2.weight:source",
+        "blocks.3.weight:candidate1",
+        "stem.weight:source"
+      ],
+      "source_probe_delta_sum": -13
+    },
+    {
+      "dispatch_attempted": false,
+      "estimated_member_delta_if_runtime_adapter_supported": -12,
+      "estimated_rate_score_delta_if_components_unchanged": -7.990307437466057e-06,
+      "histogram_brotli_bytes": 883,
+      "histogram_brotli_delta": -12,
+      "histogram_brotli_sha256": "f2b641a38ae752851d0610c6a9ce3bed2c334d366710c0a204745d3f82b556de",
+      "histogram_raw_sha256": "1c0502cc905d1bb0122dfd58ef31a517f351549094f26d9ce607cb2ca992bd76",
+      "merged_ac_bytes": 153856,
+      "merged_ac_delta": 0,
+      "merged_ac_sha256": "5db856a64636fd63d4ad61a8b9c29decae0d2d8fdfc223bd92e6c6cdf30554ee",
+      "moves_by_label": {
+        "blocks.0.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 118,
+            "symbol_count": 1538
+          },
+          {
+            "delta": -2,
+            "new_weight": 177,
+            "old_weight": 179,
+            "round": 2,
+            "symbol": 147,
+            "symbol_count": 1536
+          },
+          {
+            "delta": 2,
+            "new_weight": 230,
+            "old_weight": 228,
+            "round": 3,
+            "symbol": 115,
+            "symbol_count": 1957
+          }
+        ],
+        "blocks.1.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 119,
+            "symbol_count": 1562
+          },
+          {
+            "delta": -1,
+            "new_weight": 183,
+            "old_weight": 184,
+            "round": 2,
+            "symbol": 135,
+            "symbol_count": 1595
+          },
+          {
+            "delta": 2,
+            "new_weight": 208,
+            "old_weight": 206,
+            "round": 3,
+            "symbol": 114,
+            "symbol_count": 1787
+          }
+        ],
+        "blocks.3.weight": [
+          {
+            "delta": -2,
+            "new_weight": 253,
+            "old_weight": 255,
+            "round": 1,
+            "symbol": 132,
+            "symbol_count": 769
+          },
+          {
+            "delta": -2,
+            "new_weight": 192,
+            "old_weight": 194,
+            "round": 2,
+            "symbol": 123,
+            "symbol_count": 584
+          },
+          {
+            "delta": 2,
+            "new_weight": 250,
+            "old_weight": 248,
+            "round": 3,
+            "symbol": 120,
+            "symbol_count": 749
+          }
+        ]
+      },
+      "non_additivity_delta": 5,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "selected_option_source_deltas": [
+        -9,
+        -2,
+        0,
+        -6,
+        0
+      ],
+      "selected_options": [
+        "blocks.0.weight:candidate1",
+        "blocks.1.weight:candidate14",
+        "blocks.2.weight:source",
+        "blocks.3.weight:candidate1",
+        "stem.weight:source"
+      ],
+      "source_probe_delta_sum": -17
+    },
+    {
+      "dispatch_attempted": false,
+      "estimated_member_delta_if_runtime_adapter_supported": -12,
+      "estimated_rate_score_delta_if_components_unchanged": -7.990307437466057e-06,
+      "histogram_brotli_bytes": 883,
+      "histogram_brotli_delta": -12,
+      "histogram_brotli_sha256": "d6170da475b8ffdb818e3d08a3b9b7b4fc38bb68fd695652920d5d1202315604",
+      "histogram_raw_sha256": "567a32e913cc355d08dbc8d9dda9b826c67eba7b286ffbb047a5120055cecb59",
+      "merged_ac_bytes": 153856,
+      "merged_ac_delta": 0,
+      "merged_ac_sha256": "c67daac96f96de75e6cf619e985f4cbdc203822667311522ddcd9679c6d77da7",
+      "moves_by_label": {
+        "blocks.0.weight": [
+          {
+            "delta": 2,
+            "new_weight": 182,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 118,
+            "symbol_count": 1538
+          },
+          {
+            "delta": 2,
+            "new_weight": 230,
+            "old_weight": 228,
+            "round": 2,
+            "symbol": 115,
+            "symbol_count": 1957
+          },
+          {
+            "delta": -2,
+            "new_weight": 177,
+            "old_weight": 179,
+            "round": 3,
+            "symbol": 147,
+            "symbol_count": 1536
+          }
+        ],
+        "blocks.1.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 119,
+            "symbol_count": 1562
+          },
+          {
+            "delta": -1,
+            "new_weight": 183,
+            "old_weight": 184,
+            "round": 2,
+            "symbol": 135,
+            "symbol_count": 1595
+          },
+          {
+            "delta": 1,
+            "new_weight": 207,
+            "old_weight": 206,
+            "round": 3,
+            "symbol": 114,
+            "symbol_count": 1787
+          }
+        ],
+        "blocks.3.weight": [
+          {
+            "delta": -2,
+            "new_weight": 253,
+            "old_weight": 255,
+            "round": 1,
+            "symbol": 132,
+            "symbol_count": 769
+          },
+          {
+            "delta": -2,
+            "new_weight": 192,
+            "old_weight": 194,
+            "round": 2,
+            "symbol": 123,
+            "symbol_count": 584
+          },
+          {
+            "delta": 2,
+            "new_weight": 250,
+            "old_weight": 248,
+            "round": 3,
+            "symbol": 120,
+            "symbol_count": 749
+          }
+        ]
+      },
+      "non_additivity_delta": 4,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "selected_option_source_deltas": [
+        -8,
+        -2,
+        0,
+        -6,
+        0
+      ],
+      "selected_options": [
+        "blocks.0.weight:candidate2",
+        "blocks.1.weight:candidate8",
+        "blocks.2.weight:source",
+        "blocks.3.weight:candidate1",
+        "stem.weight:source"
+      ],
+      "source_probe_delta_sum": -16
+    },
+    {
+      "dispatch_attempted": false,
+      "estimated_member_delta_if_runtime_adapter_supported": -12,
+      "estimated_rate_score_delta_if_components_unchanged": -7.990307437466057e-06,
+      "histogram_brotli_bytes": 883,
+      "histogram_brotli_delta": -12,
+      "histogram_brotli_sha256": "08411df36fa8d7b13e7927dcaec869aa83da91f266a31ea1d117f5270c4d407e",
+      "histogram_raw_sha256": "6a96a50a41279c26bdcd8985e7378257339ddc302d7f059d8ad5798f15b5abe4",
+      "merged_ac_bytes": 153856,
+      "merged_ac_delta": 0,
+      "merged_ac_sha256": "425d026cedf28b416b66b88b435c4303dc409e0cee3b98b9c1b81442bceb8653",
+      "moves_by_label": {
+        "blocks.0.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 118,
+            "symbol_count": 1538
+          },
+          {
+            "delta": -2,
+            "new_weight": 177,
+            "old_weight": 179,
+            "round": 2,
+            "symbol": 147,
+            "symbol_count": 1536
+          },
+          {
+            "delta": 2,
+            "new_weight": 230,
+            "old_weight": 228,
+            "round": 3,
+            "symbol": 115,
+            "symbol_count": 1957
+          }
+        ],
+        "blocks.1.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 119,
+            "symbol_count": 1562
+          },
+          {
+            "delta": -1,
+            "new_weight": 183,
+            "old_weight": 184,
+            "round": 2,
+            "symbol": 135,
+            "symbol_count": 1595
+          },
+          {
+            "delta": 1,
+            "new_weight": 207,
+            "old_weight": 206,
+            "round": 3,
+            "symbol": 114,
+            "symbol_count": 1787
+          }
+        ],
+        "blocks.3.weight": [
+          {
+            "delta": -2,
+            "new_weight": 253,
+            "old_weight": 255,
+            "round": 1,
+            "symbol": 132,
+            "symbol_count": 769
+          },
+          {
+            "delta": -2,
+            "new_weight": 192,
+            "old_weight": 194,
+            "round": 2,
+            "symbol": 123,
+            "symbol_count": 584
+          },
+          {
+            "delta": 2,
+            "new_weight": 250,
+            "old_weight": 248,
+            "round": 3,
+            "symbol": 120,
+            "symbol_count": 749
+          }
+        ]
+      },
+      "non_additivity_delta": 5,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "selected_option_source_deltas": [
+        -9,
+        -2,
+        0,
+        -6,
+        0
+      ],
+      "selected_options": [
+        "blocks.0.weight:candidate1",
+        "blocks.1.weight:candidate8",
+        "blocks.2.weight:source",
+        "blocks.3.weight:candidate1",
+        "stem.weight:source"
+      ],
+      "source_probe_delta_sum": -17
+    },
+    {
+      "dispatch_attempted": false,
+      "estimated_member_delta_if_runtime_adapter_supported": -12,
+      "estimated_rate_score_delta_if_components_unchanged": -7.990307437466057e-06,
+      "histogram_brotli_bytes": 883,
+      "histogram_brotli_delta": -12,
+      "histogram_brotli_sha256": "9b6b3199ce1160b148447e4bf21de4dbb3455096b94743483ef3674261214711",
+      "histogram_raw_sha256": "7bc308199a70975c7e5fed55dfd5dd313357d124456c4d790f03a078ca2fcd82",
+      "merged_ac_bytes": 153856,
+      "merged_ac_delta": 0,
+      "merged_ac_sha256": "81975650ebd0c208639b1a27a47fecaeb5fc06a8d4a92fd6f5cfbae08993a2fd",
+      "moves_by_label": {
+        "blocks.0.weight": [
+          {
+            "delta": 2,
+            "new_weight": 182,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 118,
+            "symbol_count": 1538
+          },
+          {
+            "delta": 2,
+            "new_weight": 230,
+            "old_weight": 228,
+            "round": 2,
+            "symbol": 115,
+            "symbol_count": 1957
+          },
+          {
+            "delta": -2,
+            "new_weight": 177,
+            "old_weight": 179,
+            "round": 3,
+            "symbol": 147,
+            "symbol_count": 1536
+          }
+        ],
+        "blocks.1.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 119,
+            "symbol_count": 1562
+          },
+          {
+            "delta": -1,
+            "new_weight": 183,
+            "old_weight": 184,
+            "round": 2,
+            "symbol": 135,
+            "symbol_count": 1595
+          },
+          {
+            "delta": 2,
+            "new_weight": 208,
+            "old_weight": 206,
+            "round": 3,
+            "symbol": 114,
+            "symbol_count": 1787
+          }
+        ],
+        "blocks.3.weight": [
+          {
+            "delta": -2,
+            "new_weight": 253,
+            "old_weight": 255,
+            "round": 1,
+            "symbol": 132,
+            "symbol_count": 769
+          },
+          {
+            "delta": -2,
+            "new_weight": 192,
+            "old_weight": 194,
+            "round": 2,
+            "symbol": 123,
+            "symbol_count": 584
+          },
+          {
+            "delta": 2,
+            "new_weight": 250,
+            "old_weight": 248,
+            "round": 3,
+            "symbol": 120,
+            "symbol_count": 749
+          }
+        ]
+      },
+      "non_additivity_delta": 4,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "selected_option_source_deltas": [
+        -8,
+        -2,
+        0,
+        -6,
+        0
+      ],
+      "selected_options": [
+        "blocks.0.weight:candidate2",
+        "blocks.1.weight:candidate14",
+        "blocks.2.weight:source",
+        "blocks.3.weight:candidate1",
+        "stem.weight:source"
+      ],
+      "source_probe_delta_sum": -16
+    },
+    {
+      "dispatch_attempted": false,
+      "estimated_member_delta_if_runtime_adapter_supported": -12,
+      "estimated_rate_score_delta_if_components_unchanged": -7.990307437466057e-06,
+      "histogram_brotli_bytes": 883,
+      "histogram_brotli_delta": -12,
+      "histogram_brotli_sha256": "7b2ef0a225e8518e7f958b060a014ed7653103f2b1d5c7ed1f518af26895a104",
+      "histogram_raw_sha256": "7c9cee1961b60052e74533af3c557cdb7cbc19914a844a2bdfffe1fca0e77d8c",
+      "merged_ac_bytes": 153856,
+      "merged_ac_delta": 0,
+      "merged_ac_sha256": "a0f72be765d5920e370f84311f24072a0a9eb8b266264fb66d84b554ed827955",
+      "moves_by_label": {
+        "blocks.0.weight": [
+          {
+            "delta": 2,
+            "new_weight": 182,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 118,
+            "symbol_count": 1538
+          },
+          {
+            "delta": 2,
+            "new_weight": 230,
+            "old_weight": 228,
+            "round": 2,
+            "symbol": 115,
+            "symbol_count": 1957
+          },
+          {
+            "delta": -2,
+            "new_weight": 177,
+            "old_weight": 179,
+            "round": 3,
+            "symbol": 147,
+            "symbol_count": 1536
+          }
+        ],
+        "blocks.1.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 119,
+            "symbol_count": 1562
+          },
+          {
+            "delta": -1,
+            "new_weight": 183,
+            "old_weight": 184,
+            "round": 2,
+            "symbol": 135,
+            "symbol_count": 1595
+          },
+          {
+            "delta": 2,
+            "new_weight": 208,
+            "old_weight": 206,
+            "round": 3,
+            "symbol": 114,
+            "symbol_count": 1787
+          }
+        ],
+        "blocks.3.weight": [
+          {
+            "delta": -2,
+            "new_weight": 253,
+            "old_weight": 255,
+            "round": 1,
+            "symbol": 132,
+            "symbol_count": 769
+          },
+          {
+            "delta": -2,
+            "new_weight": 192,
+            "old_weight": 194,
+            "round": 2,
+            "symbol": 123,
+            "symbol_count": 584
+          },
+          {
+            "delta": 1,
+            "new_weight": 249,
+            "old_weight": 248,
+            "round": 3,
+            "symbol": 120,
+            "symbol_count": 749
+          }
+        ]
+      },
+      "non_additivity_delta": 4,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "selected_option_source_deltas": [
+        -8,
+        -2,
+        0,
+        -6,
+        0
+      ],
+      "selected_options": [
+        "blocks.0.weight:candidate2",
+        "blocks.1.weight:candidate14",
+        "blocks.2.weight:source",
+        "blocks.3.weight:candidate4",
+        "stem.weight:source"
+      ],
+      "source_probe_delta_sum": -16
+    },
+    {
+      "dispatch_attempted": false,
+      "estimated_member_delta_if_runtime_adapter_supported": -12,
+      "estimated_rate_score_delta_if_components_unchanged": -7.990307437466057e-06,
+      "histogram_brotli_bytes": 883,
+      "histogram_brotli_delta": -12,
+      "histogram_brotli_sha256": "0978887ece3c49a70a97f8879ea27d329f4b4503f1fff8de38375304e8a48531",
+      "histogram_raw_sha256": "7e4467557b1e4be4942a7820597a3d9cdd98ac7adb4c9e37cf263f810872bcfe",
+      "merged_ac_bytes": 153856,
+      "merged_ac_delta": 0,
+      "merged_ac_sha256": "f990c89f61c95a065d079d98f0df7f14dacaa46f6c6666b0d84844c6e777dfb5",
+      "moves_by_label": {
+        "blocks.0.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 118,
+            "symbol_count": 1538
+          },
+          {
+            "delta": -2,
+            "new_weight": 177,
+            "old_weight": 179,
+            "round": 2,
+            "symbol": 147,
+            "symbol_count": 1536
+          },
+          {
+            "delta": 2,
+            "new_weight": 230,
+            "old_weight": 228,
+            "round": 3,
+            "symbol": 115,
+            "symbol_count": 1957
+          }
+        ],
+        "blocks.1.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 119,
+            "symbol_count": 1562
+          },
+          {
+            "delta": -1,
+            "new_weight": 183,
+            "old_weight": 184,
+            "round": 2,
+            "symbol": 135,
+            "symbol_count": 1595
+          },
+          {
+            "delta": 1,
+            "new_weight": 207,
+            "old_weight": 206,
+            "round": 3,
+            "symbol": 114,
+            "symbol_count": 1787
+          }
+        ],
+        "blocks.3.weight": [
+          {
+            "delta": -2,
+            "new_weight": 253,
+            "old_weight": 255,
+            "round": 1,
+            "symbol": 132,
+            "symbol_count": 769
+          },
+          {
+            "delta": -1,
+            "new_weight": 190,
+            "old_weight": 191,
+            "round": 2,
+            "symbol": 135,
+            "symbol_count": 575
+          },
+          {
+            "delta": 1,
+            "new_weight": 249,
+            "old_weight": 248,
+            "round": 3,
+            "symbol": 120,
+            "symbol_count": 749
+          }
+        ]
+      },
+      "non_additivity_delta": 5,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "selected_option_source_deltas": [
+        -9,
+        -2,
+        0,
+        -6,
+        0
+      ],
+      "selected_options": [
+        "blocks.0.weight:candidate1",
+        "blocks.1.weight:candidate8",
+        "blocks.2.weight:source",
+        "blocks.3.weight:candidate3",
+        "stem.weight:source"
+      ],
+      "source_probe_delta_sum": -17
+    },
+    {
+      "dispatch_attempted": false,
+      "estimated_member_delta_if_runtime_adapter_supported": -12,
+      "estimated_rate_score_delta_if_components_unchanged": -7.990307437466057e-06,
+      "histogram_brotli_bytes": 883,
+      "histogram_brotli_delta": -12,
+      "histogram_brotli_sha256": "a2255a35f5366f1ff02eb19d3ad940e14168b964b0a7dc629fa2d8fd0a95d7cf",
+      "histogram_raw_sha256": "94d9a401b54e98830abd5f42b3f28ac19a3193aac02693b901c5b70f9fd3c38f",
+      "merged_ac_bytes": 153856,
+      "merged_ac_delta": 0,
+      "merged_ac_sha256": "c5d94592082275ee6e4ebe275023ac88a95d0326fc8e11873886282d72833da2",
+      "moves_by_label": {
+        "blocks.0.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 118,
+            "symbol_count": 1538
+          },
+          {
+            "delta": -2,
+            "new_weight": 177,
+            "old_weight": 179,
+            "round": 2,
+            "symbol": 147,
+            "symbol_count": 1536
+          },
+          {
+            "delta": 2,
+            "new_weight": 230,
+            "old_weight": 228,
+            "round": 3,
+            "symbol": 115,
+            "symbol_count": 1957
+          }
+        ],
+        "blocks.1.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 119,
+            "symbol_count": 1562
+          },
+          {
+            "delta": -1,
+            "new_weight": 183,
+            "old_weight": 184,
+            "round": 2,
+            "symbol": 135,
+            "symbol_count": 1595
+          },
+          {
+            "delta": 1,
+            "new_weight": 207,
+            "old_weight": 206,
+            "round": 3,
+            "symbol": 114,
+            "symbol_count": 1787
+          }
+        ],
+        "blocks.3.weight": [
+          {
+            "delta": -2,
+            "new_weight": 253,
+            "old_weight": 255,
+            "round": 1,
+            "symbol": 132,
+            "symbol_count": 769
+          },
+          {
+            "delta": -1,
+            "new_weight": 190,
+            "old_weight": 191,
+            "round": 2,
+            "symbol": 135,
+            "symbol_count": 575
+          },
+          {
+            "delta": 2,
+            "new_weight": 250,
+            "old_weight": 248,
+            "round": 3,
+            "symbol": 120,
+            "symbol_count": 749
+          }
+        ]
+      },
+      "non_additivity_delta": 5,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "selected_option_source_deltas": [
+        -9,
+        -2,
+        0,
+        -6,
+        0
+      ],
+      "selected_options": [
+        "blocks.0.weight:candidate1",
+        "blocks.1.weight:candidate8",
+        "blocks.2.weight:source",
+        "blocks.3.weight:candidate2",
+        "stem.weight:source"
+      ],
+      "source_probe_delta_sum": -17
+    },
+    {
+      "dispatch_attempted": false,
+      "estimated_member_delta_if_runtime_adapter_supported": -12,
+      "estimated_rate_score_delta_if_components_unchanged": -7.990307437466057e-06,
+      "histogram_brotli_bytes": 883,
+      "histogram_brotli_delta": -12,
+      "histogram_brotli_sha256": "07fcf7886aada30d0a224f726dfa02c4571cdb51ad2b764e2b2ec0a377ac8a7f",
+      "histogram_raw_sha256": "a4782384521d33d52a728f689e1d3a9ad23a718977d0cfce781e14a6097b3aed",
+      "merged_ac_bytes": 153856,
+      "merged_ac_delta": 0,
+      "merged_ac_sha256": "4d7d4900e4c1bda8835c2e859fab41a34477a7ead8720323f410133b8bd6cbd0",
+      "moves_by_label": {
+        "blocks.0.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 118,
+            "symbol_count": 1538
+          },
+          {
+            "delta": -2,
+            "new_weight": 177,
+            "old_weight": 179,
+            "round": 2,
+            "symbol": 147,
+            "symbol_count": 1536
+          },
+          {
+            "delta": 2,
+            "new_weight": 181,
+            "old_weight": 179,
+            "round": 3,
+            "symbol": 139,
+            "symbol_count": 1531
+          }
+        ],
+        "blocks.1.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 119,
+            "symbol_count": 1562
+          },
+          {
+            "delta": -1,
+            "new_weight": 183,
+            "old_weight": 184,
+            "round": 2,
+            "symbol": 135,
+            "symbol_count": 1595
+          },
+          {
+            "delta": 2,
+            "new_weight": 208,
+            "old_weight": 206,
+            "round": 3,
+            "symbol": 114,
+            "symbol_count": 1787
+          }
+        ],
+        "blocks.3.weight": [
+          {
+            "delta": -2,
+            "new_weight": 253,
+            "old_weight": 255,
+            "round": 1,
+            "symbol": 132,
+            "symbol_count": 769
+          },
+          {
+            "delta": -2,
+            "new_weight": 192,
+            "old_weight": 194,
+            "round": 2,
+            "symbol": 123,
+            "symbol_count": 584
+          },
+          {
+            "delta": 1,
+            "new_weight": 249,
+            "old_weight": 248,
+            "round": 3,
+            "symbol": 120,
+            "symbol_count": 749
+          }
+        ]
+      },
+      "non_additivity_delta": 1,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "selected_option_source_deltas": [
+        -5,
+        -2,
+        0,
+        -6,
+        0
+      ],
+      "selected_options": [
+        "blocks.0.weight:candidate15",
+        "blocks.1.weight:candidate14",
+        "blocks.2.weight:source",
+        "blocks.3.weight:candidate4",
+        "stem.weight:source"
+      ],
+      "source_probe_delta_sum": -13
+    },
+    {
+      "dispatch_attempted": false,
+      "estimated_member_delta_if_runtime_adapter_supported": -12,
+      "estimated_rate_score_delta_if_components_unchanged": -7.990307437466057e-06,
+      "histogram_brotli_bytes": 883,
+      "histogram_brotli_delta": -12,
+      "histogram_brotli_sha256": "0c9848f22f391711b063efc86345a7deb90e5b9cea7fb481e0af8aeb5b65fa6f",
+      "histogram_raw_sha256": "b62faf3dc24cf5d6e00cc0656c9074e57a0a7d6bf64e5954731412824d83dbd2",
+      "merged_ac_bytes": 153856,
+      "merged_ac_delta": 0,
+      "merged_ac_sha256": "5a5ae725a072d408efb2cf5f435eeeed7aebfb500f5cc687616d16d88a389751",
+      "moves_by_label": {
+        "blocks.0.weight": [
+          {
+            "delta": 2,
+            "new_weight": 182,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 118,
+            "symbol_count": 1538
+          },
+          {
+            "delta": 2,
+            "new_weight": 230,
+            "old_weight": 228,
+            "round": 2,
+            "symbol": 115,
+            "symbol_count": 1957
+          },
+          {
+            "delta": -2,
+            "new_weight": 177,
+            "old_weight": 179,
+            "round": 3,
+            "symbol": 147,
+            "symbol_count": 1536
+          }
+        ],
+        "blocks.1.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 119,
+            "symbol_count": 1562
+          },
+          {
+            "delta": -1,
+            "new_weight": 183,
+            "old_weight": 184,
+            "round": 2,
+            "symbol": 135,
+            "symbol_count": 1595
+          },
+          {
+            "delta": 1,
+            "new_weight": 207,
+            "old_weight": 206,
+            "round": 3,
+            "symbol": 114,
+            "symbol_count": 1787
+          }
+        ],
+        "blocks.3.weight": [
+          {
+            "delta": -2,
+            "new_weight": 253,
+            "old_weight": 255,
+            "round": 1,
+            "symbol": 132,
+            "symbol_count": 769
+          },
+          {
+            "delta": -2,
+            "new_weight": 192,
+            "old_weight": 194,
+            "round": 2,
+            "symbol": 123,
+            "symbol_count": 584
+          },
+          {
+            "delta": 1,
+            "new_weight": 249,
+            "old_weight": 248,
+            "round": 3,
+            "symbol": 120,
+            "symbol_count": 749
+          }
+        ]
+      },
+      "non_additivity_delta": 4,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "selected_option_source_deltas": [
+        -8,
+        -2,
+        0,
+        -6,
+        0
+      ],
+      "selected_options": [
+        "blocks.0.weight:candidate2",
+        "blocks.1.weight:candidate8",
+        "blocks.2.weight:source",
+        "blocks.3.weight:candidate4",
+        "stem.weight:source"
+      ],
+      "source_probe_delta_sum": -16
+    },
+    {
+      "dispatch_attempted": false,
+      "estimated_member_delta_if_runtime_adapter_supported": -12,
+      "estimated_rate_score_delta_if_components_unchanged": -7.990307437466057e-06,
+      "histogram_brotli_bytes": 883,
+      "histogram_brotli_delta": -12,
+      "histogram_brotli_sha256": "547919f2051137d233c2c56a9b1378e3456748cbf572119e4a9f283a200bb897",
+      "histogram_raw_sha256": "c8a729409e945ebebb75da9e78bb8556267d4d9f6e9cb8c5ccb2b858e988adcc",
+      "merged_ac_bytes": 153856,
+      "merged_ac_delta": 0,
+      "merged_ac_sha256": "3f51f10c198942db0c74b2d577ad1050d90868112c6c9e633fb8b17ebf49d492",
+      "moves_by_label": {
+        "blocks.0.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 118,
+            "symbol_count": 1538
+          },
+          {
+            "delta": -2,
+            "new_weight": 177,
+            "old_weight": 179,
+            "round": 2,
+            "symbol": 147,
+            "symbol_count": 1536
+          },
+          {
+            "delta": 2,
+            "new_weight": 230,
+            "old_weight": 228,
+            "round": 3,
+            "symbol": 115,
+            "symbol_count": 1957
+          }
+        ],
+        "blocks.1.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 119,
+            "symbol_count": 1562
+          },
+          {
+            "delta": -1,
+            "new_weight": 183,
+            "old_weight": 184,
+            "round": 2,
+            "symbol": 135,
+            "symbol_count": 1595
+          },
+          {
+            "delta": 1,
+            "new_weight": 207,
+            "old_weight": 206,
+            "round": 3,
+            "symbol": 114,
+            "symbol_count": 1787
+          }
+        ],
+        "blocks.3.weight": [
+          {
+            "delta": -2,
+            "new_weight": 253,
+            "old_weight": 255,
+            "round": 1,
+            "symbol": 132,
+            "symbol_count": 769
+          },
+          {
+            "delta": -2,
+            "new_weight": 192,
+            "old_weight": 194,
+            "round": 2,
+            "symbol": 123,
+            "symbol_count": 584
+          },
+          {
+            "delta": 1,
+            "new_weight": 249,
+            "old_weight": 248,
+            "round": 3,
+            "symbol": 120,
+            "symbol_count": 749
+          }
+        ]
+      },
+      "non_additivity_delta": 5,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "selected_option_source_deltas": [
+        -9,
+        -2,
+        0,
+        -6,
+        0
+      ],
+      "selected_options": [
+        "blocks.0.weight:candidate1",
+        "blocks.1.weight:candidate8",
+        "blocks.2.weight:source",
+        "blocks.3.weight:candidate4",
+        "stem.weight:source"
+      ],
+      "source_probe_delta_sum": -17
+    },
+    {
+      "dispatch_attempted": false,
+      "estimated_member_delta_if_runtime_adapter_supported": -12,
+      "estimated_rate_score_delta_if_components_unchanged": -7.990307437466057e-06,
+      "histogram_brotli_bytes": 883,
+      "histogram_brotli_delta": -12,
+      "histogram_brotli_sha256": "fdf61c5db8c8d48a08e11eb73ecbc701ad21fbd4817a4c19907f06d9ff9f463f",
+      "histogram_raw_sha256": "cc506c128c59958978336c3966dd0254663af9a19869c1881441c648449531e4",
+      "merged_ac_bytes": 153856,
+      "merged_ac_delta": 0,
+      "merged_ac_sha256": "4190d01200bd581fa5cf75b4b4fed91ea42b40745d6a0f922a7dbac841cd5c0a",
+      "moves_by_label": {
+        "blocks.0.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 118,
+            "symbol_count": 1538
+          },
+          {
+            "delta": -2,
+            "new_weight": 177,
+            "old_weight": 179,
+            "round": 2,
+            "symbol": 147,
+            "symbol_count": 1536
+          },
+          {
+            "delta": 2,
+            "new_weight": 181,
+            "old_weight": 179,
+            "round": 3,
+            "symbol": 139,
+            "symbol_count": 1531
+          }
+        ],
+        "blocks.1.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 119,
+            "symbol_count": 1562
+          },
+          {
+            "delta": -1,
+            "new_weight": 183,
+            "old_weight": 184,
+            "round": 2,
+            "symbol": 135,
+            "symbol_count": 1595
+          },
+          {
+            "delta": 2,
+            "new_weight": 208,
+            "old_weight": 206,
+            "round": 3,
+            "symbol": 114,
+            "symbol_count": 1787
+          }
+        ],
+        "blocks.3.weight": [
+          {
+            "delta": -2,
+            "new_weight": 253,
+            "old_weight": 255,
+            "round": 1,
+            "symbol": 132,
+            "symbol_count": 769
+          },
+          {
+            "delta": -2,
+            "new_weight": 192,
+            "old_weight": 194,
+            "round": 2,
+            "symbol": 123,
+            "symbol_count": 584
+          },
+          {
+            "delta": 2,
+            "new_weight": 250,
+            "old_weight": 248,
+            "round": 3,
+            "symbol": 120,
+            "symbol_count": 749
+          }
+        ]
+      },
+      "non_additivity_delta": 1,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "selected_option_source_deltas": [
+        -5,
+        -2,
+        0,
+        -6,
+        0
+      ],
+      "selected_options": [
+        "blocks.0.weight:candidate15",
+        "blocks.1.weight:candidate14",
+        "blocks.2.weight:source",
+        "blocks.3.weight:candidate1",
+        "stem.weight:source"
+      ],
+      "source_probe_delta_sum": -13
+    },
+    {
+      "dispatch_attempted": false,
+      "estimated_member_delta_if_runtime_adapter_supported": -12,
+      "estimated_rate_score_delta_if_components_unchanged": -7.990307437466057e-06,
+      "histogram_brotli_bytes": 883,
+      "histogram_brotli_delta": -12,
+      "histogram_brotli_sha256": "1c4d31e0c00acf5472ad93663c3f2b66b4ed79aa4431715d1387e8d05fa2c445",
+      "histogram_raw_sha256": "f2db54ac0847a1f0589b1534518b62eb73a35f88abe60a216bb4f03cc55599dc",
+      "merged_ac_bytes": 153856,
+      "merged_ac_delta": 0,
+      "merged_ac_sha256": "536fdcf6cb1c8cc5061eb29223caf5d451a3f05f715b43190e5735dd9fc6ca4a",
+      "moves_by_label": {
+        "blocks.0.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 118,
+            "symbol_count": 1538
+          },
+          {
+            "delta": -2,
+            "new_weight": 177,
+            "old_weight": 179,
+            "round": 2,
+            "symbol": 147,
+            "symbol_count": 1536
+          },
+          {
+            "delta": 2,
+            "new_weight": 230,
+            "old_weight": 228,
+            "round": 3,
+            "symbol": 115,
+            "symbol_count": 1957
+          }
+        ],
+        "blocks.1.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 119,
+            "symbol_count": 1562
+          },
+          {
+            "delta": -1,
+            "new_weight": 183,
+            "old_weight": 184,
+            "round": 2,
+            "symbol": 135,
+            "symbol_count": 1595
+          },
+          {
+            "delta": 2,
+            "new_weight": 208,
+            "old_weight": 206,
+            "round": 3,
+            "symbol": 114,
+            "symbol_count": 1787
+          }
+        ],
+        "blocks.3.weight": [
+          {
+            "delta": -2,
+            "new_weight": 253,
+            "old_weight": 255,
+            "round": 1,
+            "symbol": 132,
+            "symbol_count": 769
+          },
+          {
+            "delta": -2,
+            "new_weight": 192,
+            "old_weight": 194,
+            "round": 2,
+            "symbol": 123,
+            "symbol_count": 584
+          },
+          {
+            "delta": 1,
+            "new_weight": 249,
+            "old_weight": 248,
+            "round": 3,
+            "symbol": 120,
+            "symbol_count": 749
+          }
+        ]
+      },
+      "non_additivity_delta": 5,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "selected_option_source_deltas": [
+        -9,
+        -2,
+        0,
+        -6,
+        0
+      ],
+      "selected_options": [
+        "blocks.0.weight:candidate1",
+        "blocks.1.weight:candidate14",
+        "blocks.2.weight:source",
+        "blocks.3.weight:candidate4",
+        "stem.weight:source"
+      ],
+      "source_probe_delta_sum": -17
+    },
+    {
+      "dispatch_attempted": false,
+      "estimated_member_delta_if_runtime_adapter_supported": -12,
+      "estimated_rate_score_delta_if_components_unchanged": -7.990307437466057e-06,
+      "histogram_brotli_bytes": 883,
+      "histogram_brotli_delta": -12,
+      "histogram_brotli_sha256": "5a6afc55e668bf0551472dd12764899b107354529c29b6a4b7b94bfc2d119d63",
+      "histogram_raw_sha256": "03249f23e3743953e6ce587e79766e2d730b87f00b734fe82de5e71b9afb96df",
+      "merged_ac_bytes": 153856,
+      "merged_ac_delta": 0,
+      "merged_ac_sha256": "d5efa0e410c2d85a868949c030612cbd75fab9a04b25e965e91e5fbce06d399d",
+      "moves_by_label": {
+        "blocks.0.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 118,
+            "symbol_count": 1538
+          },
+          {
+            "delta": -2,
+            "new_weight": 177,
+            "old_weight": 179,
+            "round": 2,
+            "symbol": 147,
+            "symbol_count": 1536
+          }
+        ],
+        "blocks.1.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 119,
+            "symbol_count": 1562
+          },
+          {
+            "delta": -1,
+            "new_weight": 183,
+            "old_weight": 184,
+            "round": 2,
+            "symbol": 135,
+            "symbol_count": 1595
+          },
+          {
+            "delta": 1,
+            "new_weight": 207,
+            "old_weight": 206,
+            "round": 3,
+            "symbol": 114,
+            "symbol_count": 1787
+          }
+        ],
+        "blocks.2.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 126,
+            "symbol_count": 967
+          },
+          {
+            "delta": 1,
+            "new_weight": 250,
+            "old_weight": 249,
+            "round": 2,
+            "symbol": 123,
+            "symbol_count": 1334
+          }
+        ],
+        "blocks.3.weight": [
+          {
+            "delta": -2,
+            "new_weight": 253,
+            "old_weight": 255,
+            "round": 1,
+            "symbol": 132,
+            "symbol_count": 769
+          },
+          {
+            "delta": -2,
+            "new_weight": 192,
+            "old_weight": 194,
+            "round": 2,
+            "symbol": 123,
+            "symbol_count": 584
+          },
+          {
+            "delta": 1,
+            "new_weight": 249,
+            "old_weight": 248,
+            "round": 3,
+            "symbol": 120,
+            "symbol_count": 749
+          }
+        ]
+      },
+      "non_additivity_delta": 5,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "selected_option_source_deltas": [
+        -5,
+        -2,
+        -4,
+        -6,
+        0
+      ],
+      "selected_options": [
+        "blocks.0.weight:candidate13",
+        "blocks.1.weight:candidate8",
+        "blocks.2.weight:candidate2",
+        "blocks.3.weight:candidate4",
+        "stem.weight:source"
+      ],
+      "source_probe_delta_sum": -17
+    },
+    {
+      "dispatch_attempted": false,
+      "estimated_member_delta_if_runtime_adapter_supported": -12,
+      "estimated_rate_score_delta_if_components_unchanged": -7.990307437466057e-06,
+      "histogram_brotli_bytes": 883,
+      "histogram_brotli_delta": -12,
+      "histogram_brotli_sha256": "df4f4698e1c52322f7842d92c0aa5f050632b94ddb333e7164def0f0e5ab2321",
+      "histogram_raw_sha256": "1441702bf680a4a3ab7324e6d1154ab4b2bbe75c6db64fe7eb7e7dd615f0a57b",
+      "merged_ac_bytes": 153856,
+      "merged_ac_delta": 0,
+      "merged_ac_sha256": "634958d7661cec69d246ca22605b3c0eb4921a9efdb88362e484f1c682a6a006",
+      "moves_by_label": {
+        "blocks.0.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 118,
+            "symbol_count": 1538
+          },
+          {
+            "delta": -2,
+            "new_weight": 177,
+            "old_weight": 179,
+            "round": 2,
+            "symbol": 147,
+            "symbol_count": 1536
+          }
+        ],
+        "blocks.1.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 119,
+            "symbol_count": 1562
+          },
+          {
+            "delta": -1,
+            "new_weight": 183,
+            "old_weight": 184,
+            "round": 2,
+            "symbol": 135,
+            "symbol_count": 1595
+          },
+          {
+            "delta": 1,
+            "new_weight": 207,
+            "old_weight": 206,
+            "round": 3,
+            "symbol": 114,
+            "symbol_count": 1787
+          }
+        ],
+        "blocks.2.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 126,
+            "symbol_count": 967
+          },
+          {
+            "delta": 2,
+            "new_weight": 251,
+            "old_weight": 249,
+            "round": 2,
+            "symbol": 123,
+            "symbol_count": 1334
+          }
+        ],
+        "blocks.3.weight": [
+          {
+            "delta": -2,
+            "new_weight": 253,
+            "old_weight": 255,
+            "round": 1,
+            "symbol": 132,
+            "symbol_count": 769
+          },
+          {
+            "delta": -2,
+            "new_weight": 192,
+            "old_weight": 194,
+            "round": 2,
+            "symbol": 123,
+            "symbol_count": 584
+          },
+          {
+            "delta": 2,
+            "new_weight": 250,
+            "old_weight": 248,
+            "round": 3,
+            "symbol": 120,
+            "symbol_count": 749
+          }
+        ]
+      },
+      "non_additivity_delta": 5,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "selected_option_source_deltas": [
+        -5,
+        -2,
+        -4,
+        -6,
+        0
+      ],
+      "selected_options": [
+        "blocks.0.weight:candidate13",
+        "blocks.1.weight:candidate8",
+        "blocks.2.weight:candidate1",
+        "blocks.3.weight:candidate1",
+        "stem.weight:source"
+      ],
+      "source_probe_delta_sum": -17
+    },
+    {
+      "dispatch_attempted": false,
+      "estimated_member_delta_if_runtime_adapter_supported": -12,
+      "estimated_rate_score_delta_if_components_unchanged": -7.990307437466057e-06,
+      "histogram_brotli_bytes": 883,
+      "histogram_brotli_delta": -12,
+      "histogram_brotli_sha256": "4db53f383e2e9398a4e75849b90e34c414ec101f132184f70f3b6287692c5c50",
+      "histogram_raw_sha256": "3bb32fbf80d92867136ff479d16b43d8037ea86dc5da9ae59f32363940ee1995",
+      "merged_ac_bytes": 153856,
+      "merged_ac_delta": 0,
+      "merged_ac_sha256": "6626f3902c0dd041ab392d87f30c3d23e5f5db5621b3be418ccb4467073e4686",
+      "moves_by_label": {
+        "blocks.0.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 118,
+            "symbol_count": 1538
+          },
+          {
+            "delta": -2,
+            "new_weight": 177,
+            "old_weight": 179,
+            "round": 2,
+            "symbol": 147,
+            "symbol_count": 1536
+          }
+        ],
+        "blocks.1.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 119,
+            "symbol_count": 1562
+          },
+          {
+            "delta": -1,
+            "new_weight": 183,
+            "old_weight": 184,
+            "round": 2,
+            "symbol": 135,
+            "symbol_count": 1595
+          },
+          {
+            "delta": 2,
+            "new_weight": 208,
+            "old_weight": 206,
+            "round": 3,
+            "symbol": 114,
+            "symbol_count": 1787
+          }
+        ],
+        "blocks.2.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 126,
+            "symbol_count": 967
+          },
+          {
+            "delta": 1,
+            "new_weight": 250,
+            "old_weight": 249,
+            "round": 2,
+            "symbol": 123,
+            "symbol_count": 1334
+          }
+        ],
+        "blocks.3.weight": [
+          {
+            "delta": -2,
+            "new_weight": 253,
+            "old_weight": 255,
+            "round": 1,
+            "symbol": 132,
+            "symbol_count": 769
+          },
+          {
+            "delta": -2,
+            "new_weight": 192,
+            "old_weight": 194,
+            "round": 2,
+            "symbol": 123,
+            "symbol_count": 584
+          },
+          {
+            "delta": 1,
+            "new_weight": 249,
+            "old_weight": 248,
+            "round": 3,
+            "symbol": 120,
+            "symbol_count": 749
+          }
+        ]
+      },
+      "non_additivity_delta": 5,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "selected_option_source_deltas": [
+        -5,
+        -2,
+        -4,
+        -6,
+        0
+      ],
+      "selected_options": [
+        "blocks.0.weight:candidate13",
+        "blocks.1.weight:candidate14",
+        "blocks.2.weight:candidate2",
+        "blocks.3.weight:candidate4",
+        "stem.weight:source"
+      ],
+      "source_probe_delta_sum": -17
+    },
+    {
+      "dispatch_attempted": false,
+      "estimated_member_delta_if_runtime_adapter_supported": -12,
+      "estimated_rate_score_delta_if_components_unchanged": -7.990307437466057e-06,
+      "histogram_brotli_bytes": 883,
+      "histogram_brotli_delta": -12,
+      "histogram_brotli_sha256": "6c6f94dab2c0e9037b868ed9190b363cd26b8c5c8efd450f5b6cfe61cc534456",
+      "histogram_raw_sha256": "4f9fb8cb838fecf3fd55bfc9d022653ffeecc304edbfc3e6d794d9eeb286e4c5",
+      "merged_ac_bytes": 153856,
+      "merged_ac_delta": 0,
+      "merged_ac_sha256": "b5ecd89564c7ea5644600582fd95cdf1de0efa14e8003ce6869749982ce78537",
+      "moves_by_label": {
+        "blocks.0.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 118,
+            "symbol_count": 1538
+          },
+          {
+            "delta": -2,
+            "new_weight": 177,
+            "old_weight": 179,
+            "round": 2,
+            "symbol": 147,
+            "symbol_count": 1536
+          }
+        ],
+        "blocks.1.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 119,
+            "symbol_count": 1562
+          },
+          {
+            "delta": -1,
+            "new_weight": 183,
+            "old_weight": 184,
+            "round": 2,
+            "symbol": 135,
+            "symbol_count": 1595
+          },
+          {
+            "delta": 1,
+            "new_weight": 207,
+            "old_weight": 206,
+            "round": 3,
+            "symbol": 114,
+            "symbol_count": 1787
+          }
+        ],
+        "blocks.2.weight": [
+          {
+            "delta": 1,
+            "new_weight": 181,
+            "old_weight": 180,
+            "round": 1,
+            "symbol": 126,
+            "symbol_count": 967
+          },
+          {
+            "delta": 2,
+            "new_weight": 251,
+            "old_weight": 249,
+            "round": 2,
+            "symbol": 123,
+            "symbol_count": 1334
+          }
+        ],
+        "blocks.3.weight": [
+          {
+            "delta": -2,
+            "new_weight": 253,
+            "old_weight": 255,
+            "round": 1,
+            "symbol": 132,
+            "symbol_count": 769
+          },
+          {
+            "delta": -2,
+            "new_weight": 192,
+            "old_weight": 194,
+            "round": 2,
+            "symbol": 123,
+            "symbol_count": 584
+          },
+          {
+            "delta": 1,
+            "new_weight": 249,
+            "old_weight": 248,
+            "round": 3,
+            "symbol": 120,
+            "symbol_count": 749
+          }
+        ]
+      },
+      "non_additivity_delta": 5,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "selected_option_source_deltas": [
+        -5,
+        -2,
+        -4,
+        -6,
+        0
+      ],
+      "selected_options": [
+        "blocks.0.weight:candidate13",
+        "blocks.1.weight:candidate8",
+        "blocks.2.weight:candidate1",
+        "blocks.3.weight:candidate4",
+        "stem.weight:source"
+      ],
+      "source_probe_delta_sum": -17
+    }
+  ]
+}

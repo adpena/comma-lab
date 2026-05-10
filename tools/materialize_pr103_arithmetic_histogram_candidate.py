@@ -32,7 +32,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         required=True,
         action="append",
         type=Path,
-        help="Tracked beam-search JSON report. Repeat to compose streams.",
+        help=(
+            "Tracked beam-search JSON report. Repeat to compose streams. "
+            "Used as greedy source unless --global-combo-report is supplied."
+        ),
+    )
+    parser.add_argument(
+        "--global-combo-report",
+        type=Path,
+        help="Optional global-combo JSON report whose moves_by_label selects candidate moves.",
     )
     parser.add_argument(
         "--source-archive",
@@ -54,7 +62,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     raw_argv = list(sys.argv[1:] if argv is None else argv)
     args = parse_args(argv)
-    input_paths = [args.schema_manifest, *args.beam_probe_report]
+    input_paths = [
+        args.schema_manifest,
+        *args.beam_probe_report,
+        *([args.global_combo_report] if args.global_combo_report is not None else []),
+    ]
     if args.source_archive is not None:
         input_paths.append(args.source_archive)
     try:
@@ -63,6 +75,7 @@ def main(argv: list[str] | None = None) -> int:
             beam_probe_reports=args.beam_probe_report,
             output_archive=args.output_archive,
             source_archive=args.source_archive,
+            global_combo_report=args.global_combo_report,
             member_name=args.member_name,
             repo_root=REPO_ROOT,
         )

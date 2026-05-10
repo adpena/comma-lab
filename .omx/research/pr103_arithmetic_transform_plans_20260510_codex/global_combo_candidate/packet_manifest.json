@@ -1,16 +1,16 @@
 {
-  "adapter_runtime_tree_sha256": "00d9e4550aa34a865414bff73029f0005f7684008fc5994c3cf5abaf951f775e",
+  "adapter_runtime_tree_sha256": "4a8cd569e50037ed786d85a3b930bcef2c425af8d3d71282cb24c76662fe5582",
   "archive": {
-    "bytes": 178215,
+    "bytes": 178211,
     "mode": "0644",
     "relpath": "archive.zip",
-    "sha256": "2427cbb7f68e8e3bcf1e989eee0cf511bff5994a5e856b500bfca3c95ca181d8"
+    "sha256": "578c8f4e86eafc9dc04eefe61cc0e7f3f3f43e134ef4447cf9ef26fd23a23551"
   },
   "archive_manifest": {
-    "bytes": 1993,
+    "bytes": 1990,
     "mode": "0644",
     "relpath": "archive_manifest.json",
-    "sha256": "ec18d9c484d207a7a33a3a773cf2e98047c145a3f47545c5b852bb0cd4045cfe"
+    "sha256": "abb7994ce658be48fe3a3633749f85f50ffa1f2615ff546aaec2d0d65e6969a6"
   },
   "decoder_state_parity_proof": {
     "basis": "source_and_candidate_decode_to_identical_decoder_state_and_latents",
@@ -37,7 +37,7 @@
     "lane_dispatch_claim_missing",
     "exact_cuda_auth_eval_missing"
   ],
-  "packet_dir": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet",
+  "packet_dir": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet",
   "readiness_blockers": [
     "full_frame_inflate_output_parity_missing",
     "lane_dispatch_claim_missing",
@@ -48,30 +48,30 @@
     "bytes": 504,
     "mode": "0644",
     "relpath": "report.txt",
-    "sha256": "b3b89dd25436870ad471e0aa0582cb2491be4013173bb074fb25fbd2ad6e9b27"
+    "sha256": "f5c4dc3336b6bae7f2640b0907f7529880d8ac4d7a4642ce4974bced72bfbe70"
   },
   "runtime_adapter_manifest": {
-    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/runtime_adapter_manifest.json",
-    "sha256": "38d5ffef31033c970db7912290d6285c1778338c3b54632432bc380cb52b8d00"
+    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/runtime_adapter_manifest.json",
+    "sha256": "3c2dc93e62f77ca0781375087d10f40e8bff658eef12ac4e51c101a2c88601f3"
   },
   "runtime_files": [
     {
-      "bytes": 178215,
+      "bytes": 178211,
       "mode": "0644",
       "relpath": "archive.zip",
-      "sha256": "2427cbb7f68e8e3bcf1e989eee0cf511bff5994a5e856b500bfca3c95ca181d8"
+      "sha256": "578c8f4e86eafc9dc04eefe61cc0e7f3f3f43e134ef4447cf9ef26fd23a23551"
     },
     {
-      "bytes": 1993,
+      "bytes": 1990,
       "mode": "0644",
       "relpath": "archive_manifest.json",
-      "sha256": "ec18d9c484d207a7a33a3a773cf2e98047c145a3f47545c5b852bb0cd4045cfe"
+      "sha256": "abb7994ce658be48fe3a3633749f85f50ffa1f2615ff546aaec2d0d65e6969a6"
     },
     {
       "bytes": 8068,
       "mode": "0644",
       "relpath": "inflate.py",
-      "sha256": "96e6ba99affc8ff903bcabc6f834c0ebc142fa051711ba7d5891366f6193f9aa"
+      "sha256": "c18630d39e6e3734b05e2383f5e66d819ef799f92e964b04e5c536a718913a51"
     },
     {
       "bytes": 438,
@@ -83,37 +83,37 @@
       "bytes": 504,
       "mode": "0644",
       "relpath": "report.txt",
-      "sha256": "b3b89dd25436870ad471e0aa0582cb2491be4013173bb074fb25fbd2ad6e9b27"
+      "sha256": "f5c4dc3336b6bae7f2640b0907f7529880d8ac4d7a4642ce4974bced72bfbe70"
     }
   ],
   "runtime_files_copied": [
     "inflate.py",
     "inflate.sh"
   ],
-  "runtime_tree_sha256": "fec00c1db354fdde2929c3512906ea0a5ba7f81461704e8dba2804a36471dab3",
+  "runtime_tree_sha256": "8b81480b74919295c37707ac5124934571314f30d3bfe0164cbe7b456e589936",
   "schema": "pr103_lc_ac_histogram_candidate_packet_v1",
   "score_claim": false,
   "scorers_invoked": false,
   "tool_run_manifest": {
     "argv": [
       "--runtime-adapter-manifest",
-      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/runtime_adapter_manifest.json",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/runtime_adapter_manifest.json",
       "--packet-dir",
-      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet",
       "--json-out",
-      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet_manifest.json",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet_manifest.json",
       "--force"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "e2e21b2433431f8846557e927bc54d815def0997ad56d41f6acd2dd48980e2b6",
+    "canonical_payload_without_tool_manifest_sha256": "12bc34ea848873a17dbef7ee239e4ca8aace28cf7ec174df838bc3c7f3b42b17",
     "dispatch_attempted": false,
     "input_files": [
       {
-        "bytes": 16393,
-        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/runtime_adapter_manifest.json",
-        "sha256": "38d5ffef31033c970db7912290d6285c1778338c3b54632432bc380cb52b8d00"
+        "bytes": 16385,
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/runtime_adapter_manifest.json",
+        "sha256": "3c2dc93e62f77ca0781375087d10f40e8bff658eef12ac4e51c101a2c88601f3"
       }
     ],
-    "output_path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet_manifest.json",
+    "output_path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet_manifest.json",
     "ready_for_exact_eval_dispatch": false,
     "schema_version": 1,
     "score_claim": false,

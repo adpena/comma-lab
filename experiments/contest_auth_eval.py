@@ -557,7 +557,9 @@ def _record_provenance(work_dir: Path, archive: Path, inflate_sh: Path,
                if "svtav1" in ln.lower() or "svt-av1" in ln.lower()]
         prov["libsvtav1_version"] = svt[0] if svt else None
     # git commits — pact + upstream
-    prov["pact_commit"] = _shell(["git", "rev-parse", "HEAD"])
+    source_commit = os.environ.get("PACT_SOURCE_COMMIT", "").strip()
+    prov["pact_commit"] = source_commit or _shell(["git", "rev-parse", "HEAD"])
+    prov["pact_commit_source"] = "PACT_SOURCE_COMMIT" if source_commit else "git_rev_parse"
     if (upstream_dir / ".git").exists() or (upstream_dir.parent / ".git").exists():
         prov["upstream_commit"] = _shell(
             ["git", "-C", str(upstream_dir), "rev-parse", "HEAD"]

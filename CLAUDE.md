@@ -114,6 +114,48 @@ This is the dominant representation-lane integration meta-bug from the 2026-04-3
 - Council review of any new representation/codec lane MUST cite this section and walk through all 13 lessons.
 - Memory file `feedback_why_leaderboard_hnerv_worked_when_ours_didnt_PERMANENT_KNOWLEDGE_20260509.md` is the canonical retrospective; future agents should re-read it before starting any new representation lane.
 
+## Apples-to-apples evidence discipline — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+**Source:** operator correction, 2026-05-10, after PR103 histogram packet review.
+
+Never classify, promote, retire, or submit a HNeRV/public-frontier result from
+an inferred equivalence. Every score conclusion needs an apples-to-apples
+baseline on the same axis and runtime contract.
+
+Hard rules:
+
+1. **Decoded-state parity is not frame parity.** Identical decoded
+   `state_dict` / latents / symbols proves parser consumption only. It does
+   not prove same rendered RGB bytes, scorer components, CUDA numerics, or
+   public-leaderboard behavior. A manifest may say
+   `decoder_state_parity_passed=true`, but it MUST keep
+   `full_frame_inflate_output_parity_missing` until source-vs-candidate
+   `inflate.sh archive_dir output_dir file_list` outputs are compared
+   byte-for-byte or exact same-runtime evals are available for both packets.
+2. **CPU and CUDA are separate evidence spaces.** The HNeRV cluster often
+   scores much better on `[contest-CPU]` than on `[contest-CUDA]`. CPU
+   medal-band proximity is real public-axis evidence, but it is not CUDA
+   readiness, CUDA frontier status, or a conversion shortcut. Never infer one
+   axis from the other; run both when shipment/frontier language is used.
+3. **Source runtime must match the comparison.** For public PR clones, compare
+   original archive + original `inflate.sh` against candidate archive +
+   candidate runtime under the same evaluator path. If the candidate adapter
+   changes `inflate.py`, `inflate.sh`, Python invocation, dependency closure, or
+   section constants, the source replay used as baseline must be the matching
+   source runtime, not a nearby repack or previous Modal/Lightning artifact.
+4. **Negative exact evals need harness review before method verdicts.** If a
+   byte transform preserves decoded tensors but exact eval changes, default to
+   `indeterminate-harness-or-runtime-mismatch` until full-frame output parity,
+   same-runtime source replay, and component recomputation agree. Do not call it
+   a method negative just because a CUDA number returned.
+5. **Generated reports must preserve the axis label.** Phrases like
+   "rounds to gold", "medal-band", "submission-ready", "auto-promote", and
+   "score gap" must include `[contest-CPU]`, `[contest-CUDA]`,
+   `[macOS-CPU advisory]`, or `[proxy]` inline. Missing axis label is a bug.
+
+When in doubt, downgrade the finding, write a supersession ledger, and run the
+apples-to-apples proof before spending another dispatch.
+
 ## Bugs must be permanently fixed AND self-protected against — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
 **Source:** operator directive (2026-05-09): *"such bugs must be permanently fixed and self-protected against."*

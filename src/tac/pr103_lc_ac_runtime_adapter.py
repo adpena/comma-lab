@@ -177,6 +177,20 @@ def build_pr103_lc_ac_candidate_packet(
     report_path.write_text(report_text, encoding="utf-8")
     os.chmod(report_path, 0o644)
     packet_runtime_files = _runtime_file_records(output_dir)
+    adapter_blockers = [
+        str(blocker) for blocker in manifest.get("readiness_blockers") or [] if str(blocker)
+    ]
+    packet_blockers = _unique_ordered(
+        [
+            *(
+                ["full_frame_inflate_output_parity_missing"]
+                if "full_frame_inflate_output_parity_missing" in adapter_blockers
+                else []
+            ),
+            "lane_dispatch_claim_missing",
+            "exact_cuda_auth_eval_missing",
+        ]
+    )
     packet_manifest = {
         "schema": PACKET_SCHEMA,
         "score_claim": False,
@@ -196,14 +210,10 @@ def build_pr103_lc_ac_candidate_packet(
         "runtime_tree_sha256": _runtime_tree_sha256(packet_runtime_files),
         "adapter_runtime_tree_sha256": manifest.get("runtime_tree_sha256"),
         "decoder_state_parity_proof": _mapping(manifest.get("decoder_state_parity_proof")),
-        "readiness_blockers": [
-            "lane_dispatch_claim_missing",
-            "exact_cuda_auth_eval_missing",
-        ],
+        "readiness_blockers": packet_blockers,
         "dispatch_blockers": [
             "pr103_candidate_packet_is_not_dispatch_authorization",
-            "lane_dispatch_claim_missing",
-            "exact_cuda_auth_eval_missing",
+            *packet_blockers,
         ],
     }
     write_json(output_dir / "packet_manifest.json", packet_manifest)
@@ -454,7 +464,6 @@ def _runtime_consumption_probe(
         "latents_sha256": latent_record["sha256"],
         "latents_dtype": latent_record["dtype"],
         "full_frame_inflate_ran": False,
-        "full_frame_output_parity_inferred": False,
         "score_claim": False,
         "dispatch_attempted": False,
     }
@@ -544,7 +553,8 @@ def _packet_report_text(
             f"archive_size_bytes: {archive.get('bytes')}",
             f"runtime_tree_sha256: {runtime_adapter_manifest.get('runtime_tree_sha256')}",
             f"decoder_state_parity_passed: {parity.get('passed') is True}",
-            f"full_frame_output_parity_inferred: {parity.get('full_frame_output_parity_inferred') is True}",
+            f"full_frame_output_parity_proven: {parity.get('full_frame_output_parity_proven') is True}",
+            f"full_frame_output_parity_required: {parity.get('full_frame_output_parity_required') is True}",
             "",
             "This packet is a compliance-smoke artifact only. It is not a score claim.",
             "",
@@ -602,7 +612,13 @@ def _decoder_state_parity_proof(
         "latents_sha_match": latents_sha_match,
         "latents_shape_match": latents_shape_match,
         "full_frame_inflate_ran": False,
-        "full_frame_output_parity_inferred": passed,
+        "full_frame_output_parity_proven": False,
+        "full_frame_output_parity_required": True,
+        "full_frame_output_parity_note": (
+            "decoded state/latent parity is necessary but not sufficient; "
+            "promotion requires source-vs-candidate inflate output parity or exact "
+            "same-runtime auth eval on both packets"
+        ),
         "score_claim": False,
         "dispatch_attempted": False,
     }
@@ -623,6 +639,7 @@ def _runtime_tree_sha256(records: list[dict[str, Any]]) -> str:
 def _blockers_for_probe(probe: dict[str, Any], parity: dict[str, Any]) -> list[str]:
     blockers = [
         "strict_pre_submission_compliance_json_missing",
+        "full_frame_inflate_output_parity_missing",
         "lane_dispatch_claim_missing",
         "exact_cuda_auth_eval_missing",
     ]
@@ -658,6 +675,10 @@ def _path_is_relative_to(path: Path, parent: Path) -> bool:
         return True
     except ValueError:
         return False
+
+
+def _unique_ordered(items: list[str]) -> list[str]:
+    return list(dict.fromkeys(item for item in items if item))
 
 
 def _mapping(value: Any) -> dict[str, Any]:

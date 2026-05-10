@@ -239,8 +239,10 @@ Result:
 Interpretation: the runtime-adapter blocker is cleared for local
 decode-consumption. This still does **not** run full frame inflate, does not run
 the scorer, and does not authorize dispatch. Decoder-state and latent parity
-imply identical HNeRV frame generation under the same deterministic decoder, but
-exact CUDA remains the only score authority.
+are necessary parser-consumption evidence only; they do **not** prove identical
+HNeRV frame generation, scorer components, or CUDA numerics. Frame/eval parity
+requires source-vs-adapter `inflate.sh` output byte parity or exact same-runtime
+evals on both packets. Exact CUDA remains the only CUDA-axis score authority.
 
 ## Compliance packet
 
@@ -278,11 +280,12 @@ Result:
 |---|---:|
 | packet archive SHA-256 | `2427cbb7f68e8e3bcf1e989eee0cf511bff5994a5e856b500bfca3c95ca181d8` |
 | packet archive bytes | `178215` |
-| packet runtime tree SHA-256 | `ba5b935ff18268db692d08428fb3b28bcda7f411a61bf5d13d79e99582410d10` |
+| packet runtime tree SHA-256 | `fec00c1db354fdde2929c3512906ea0a5ba7f81461704e8dba2804a36471dab3` |
 | strict pre-submission compliance | `passed=true` |
 
-Remaining blockers after local packaging/compliance: `lane_dispatch_claim_missing`
-and `exact_cuda_auth_eval_missing`.
+Remaining blockers after local packaging/compliance:
+`full_frame_inflate_output_parity_missing`, `lane_dispatch_claim_missing`, and
+`exact_cuda_auth_eval_missing`.
 
 ## Exact CUDA dispatch and result
 
@@ -315,10 +318,13 @@ Result:
 | source PR103 replay score | `0.2277649714224471` |
 | score delta vs source PR103 | `+0.00000770565962906` |
 
-Classification: measured exact-CUDA negative. The transform is byte-real and
-runtime-consumed, but the tiny rate gain is outweighed by component drift. Do
-not promote this packet. Preserve the runtime-adapter and packet-builder
-infrastructure for a stronger DP/Lagrangian PR103 histogram optimizer.
+Classification after follow-up apples-to-apples review:
+`packet-specific exact-CUDA regression; method verdict indeterminate`. The
+transform is byte-real and runtime-consumed by the rebuilt adapter packet, but
+decoded state/latent parity is not full-frame output parity and the source
+PR103 comparison did not run through the same rebuilt runtime contract. Do not
+promote this packet. Preserve the runtime-adapter and packet-builder
+infrastructure for stronger globally recomputed PR103 histogram optimizers.
 
 ## Adversarial classification
 
@@ -328,26 +334,57 @@ archive preflight and exact dispatch until full-frame inflate parity or
 component-delta evidence exists, strict submission compliance passes, a lane
 dispatch claim is opened, and exact CUDA returns.
 
-Current blockers:
+Current blockers for interpreting this as a method verdict or dispatching a
+successor:
 
-- none for this measured configuration; it is closed as
-  `completed_contest_cuda_auth_eval_negative`
+- `full_frame_inflate_output_parity_missing`
+- same-runtime source replay missing
+- normal lane claim and exact CUDA gates for any successor packet
+
+## Global-combo byte artifact
+
+The next score-lowering artifact is materialized, but remains dispatch-blocked
+pending the parity gate above:
+
+| field | value |
+|---|---:|
+| selection mode | `global_combo_best` |
+| source archive bytes | `178223` |
+| candidate archive bytes | `178211` |
+| archive byte delta | `-12` |
+| payload byte delta | `-12` |
+| source probe delta sum | `-13` |
+| non-additivity delta | `1` |
+| candidate archive SHA-256 | `578c8f4e86eafc9dc04eefe61cc0e7f3f3f43e134ef4447cf9ef26fd23a23551` |
+| packet runtime tree SHA-256 | `8b81480b74919295c37707ac5124934571314f30d3bfe0164cbe7b456e589936` |
+
+Artifacts:
+
+```text
+.omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_probe.json
+.omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/archive.zip
+.omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet/
+```
+
+The global-combo search is the first non-greedy recomputation over the full
+merged AC stream plus the Brotli-compressed histogram sideband. It beats the
+greedy materialized packet on rate (`-12B` vs `-8B`) while preserving decoded
+state/latent parity. It is **not** a score claim and not exact-eval dispatch
+authorization.
 
 ## Next implementation target
 
-Promote the candidate from local decode-consumption to exact-eval readiness:
+The greedy `-8B` candidate completed the runtime-adapter, packet, compliance,
+dispatch claim, and exact CUDA path, but its method verdict is indeterminate
+until same-runtime source replay or full-frame output parity exists. Do not keep
+promoting or widening the greedy per-stream-best packet.
 
-1. package `archive.zip` with the runtime adapter into a contest packet;
-2. run a full `inflate.sh archive_dir output_dir file_list` local smoke and
-   record output byte count/SHA without scorer mutation;
-3. run strict pre-submission compliance on that exact packet;
-4. claim a dispatch lane only after the compliance artifact is clean;
-5. run exact CUDA and classify the result as legitimate score movement,
-   component drift, runtime bug, or no-op.
-
-This exact candidate completed that path and is retired as a measured negative.
 The next implementation target is a non-arbitrary DP/Lagrangian optimizer over
-histogram/range-code/Brotli sideband tradeoffs.
+histogram/range-code/Brotli sideband tradeoffs, with global recomputation of
+the whole merged AC stream and full histogram sideband before any new CUDA
+spend. The same-runtime source/candidate scorer harness comes first because it
+determines whether tiny rate gains are real score-lowering moves or
+runtime-comparison artifacts.
 
 No GPU dispatch is warranted until that byte-different archive exists and
 passes runtime-consumption and strict compliance gates.

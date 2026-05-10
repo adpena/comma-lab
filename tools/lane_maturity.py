@@ -391,6 +391,8 @@ def add_lane(
 # `design_evidence` dict that Check 124 looks for as one of 4 acceptance
 # locations for the 8 representation-lane fields.
 _SET_FIELD_TOP_LEVEL_ALLOWED = (
+    "name",                  # display metadata; avoids bare registry edits
+    "notes",                 # display metadata; avoids bare registry edits
     "lane_class",            # Check 124 opt-out: substrate_engineering
     "research_only",         # Check 124 opt-out: research-only by construction
     "reactivation_criteria", # forbidden_premature_kill_without_research_exhaustion
@@ -416,7 +418,7 @@ def set_field(
     """Set a top-level scalar field OR a `design_evidence` sub-field on a lane.
 
     `field` may be one of:
-      - top-level allowlist: lane_class, research_only, reactivation_criteria
+      - top-level allowlist: name, notes, lane_class, research_only, reactivation_criteria
       - `design_evidence.<sub>` where <sub> is one of the 8 Check-124 fields
 
     Errors:
@@ -838,7 +840,7 @@ def build_parser() -> argparse.ArgumentParser:
         "set-field",
         help=(
             "set a top-level scalar field "
-            "(lane_class / research_only / reactivation_criteria) OR a "
+            "(name / notes / lane_class / research_only / reactivation_criteria) OR a "
             "design_evidence.<sub> field for Catalog #124"
         ),
     )
@@ -848,7 +850,7 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         help=(
             "field name. Top-level: lane_class, research_only, "
-            "reactivation_criteria. Or design_evidence.<sub> where <sub> "
+            "reactivation_criteria, name, notes. Or design_evidence.<sub> where <sub> "
             "in {archive_grammar, parser_section_manifest, "
             "inflate_runtime_loc_budget, runtime_dep_closure, export_format, "
             "score_aware_loss, bolt_on_loc_budget, no_op_detector_planned}."

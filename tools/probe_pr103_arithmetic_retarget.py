@@ -20,9 +20,11 @@ from tac.pr103_arithmetic_transform_plan import (  # noqa: E402
     Pr103ArithmeticTransformPlanError,
     build_pr103_arithmetic_histogram_beam_probe,
     build_pr103_arithmetic_histogram_coordinate_probe,
+    build_pr103_arithmetic_histogram_global_combo_probe,
     build_pr103_arithmetic_retarget_probe,
     render_beam_markdown,
     render_coordinate_markdown,
+    render_global_combo_markdown,
     render_retarget_markdown,
 )
 from tac.repo_io import json_text, write_json  # noqa: E402
@@ -43,12 +45,30 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--strategy", default=DEFAULT_STRATEGY)
     parser.add_argument(
         "--probe-mode",
-        choices=("baseline-retarget", "coordinate-search", "beam-search"),
+        choices=(
+            "baseline-retarget",
+            "coordinate-search",
+            "beam-search",
+            "global-combo-search",
+        ),
         default="baseline-retarget",
     )
     parser.add_argument("--top-symbols", type=int, default=32)
+    parser.add_argument(
+        "--top-per-stream",
+        type=int,
+        default=20,
+        help="Per-stream frontier depth for global-combo-search.",
+    )
     parser.add_argument("--rounds", type=int, default=3)
     parser.add_argument("--beam-width", type=int, default=8)
+    parser.add_argument(
+        "--beam-probe-report",
+        action="append",
+        type=Path,
+        default=[],
+        help="Beam probe JSON input. Required for global-combo-search; may be repeated.",
+    )
     parser.add_argument(
         "--deltas",
         default="-2,-1,1,2",
@@ -70,9 +90,20 @@ def main(argv: list[str] | None = None) -> int:
     input_paths = [
         args.schema_manifest,
         *([args.source_archive] if args.source_archive is not None else []),
+        *args.beam_probe_report,
     ]
     try:
-        if args.probe_mode == "beam-search":
+        if args.probe_mode == "global-combo-search":
+            report = build_pr103_arithmetic_histogram_global_combo_probe(
+                schema_manifest=args.schema_manifest,
+                source_archive=args.source_archive,
+                beam_probe_reports=args.beam_probe_report,
+                top_per_stream=args.top_per_stream,
+                beam_width=args.beam_width,
+                repo_root=REPO_ROOT,
+            )
+            renderer = render_global_combo_markdown
+        elif args.probe_mode == "beam-search":
             report = build_pr103_arithmetic_histogram_beam_probe(
                 schema_manifest=args.schema_manifest,
                 source_archive=args.source_archive,

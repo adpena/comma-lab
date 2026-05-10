@@ -15,6 +15,10 @@ score; the CUDA-axis comment for the same archive bytes was 0.22839. Anyone
 contesting this leaderboard from now on must dual-eval every shippable
 archive on both axes.
 
+This cluster gap is descriptive for these public HNeRV archives only. Do not
+convert CPU to CUDA or CUDA to CPU for promotion, ranking, retirement, or
+submission-readiness decisions; each axis requires its own exact eval artifact.
+
 > **Cross-references.** This document is the canonical OSS-disclosure write-up.
 > Companion surfaces:
 > - Internal methodology long-form: `docs/writeup/cuda_cpu_drift_methodology.md`
@@ -413,7 +417,7 @@ existing CUDA-only artifacts to CPU scores:
 | Archive | CUDA score | CPU score | Leaderboard interpretation |
 |---|---:|---:|---|
 | Our PR #107 apogee | 0.22936 | 0.1966358879 (GHA Linux verified) | medal-cluster adjacent |
-| PR103-on-PR106 AC repack | 0.20898 | ~0.176 | above current top |
+| PR103-on-PR106 AC repack | 0.20898 | ~0.176 | hypothetical CPU-axis estimate; not rankable |
 | PR102 hardened replay | 0.22839 | 0.19538 (verified) | bronze (verified) |
 
 Rows marked with `~` are predictions only until exact Linux CPU replay

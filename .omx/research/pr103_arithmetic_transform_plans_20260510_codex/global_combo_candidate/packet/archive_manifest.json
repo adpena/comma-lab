@@ -1,17 +1,17 @@
 {
   "candidate_archive": {
-    "bytes": 178215,
+    "bytes": 178211,
     "members": [
       {
-        "compress_size": 178115,
-        "crc": 1185453146,
-        "file_size": 178115,
+        "compress_size": 178111,
+        "crc": 853299450,
+        "file_size": 178111,
         "name": "x",
-        "sha256": "f8876ea5102e6e3dc968e84fa00c25b4f67f5045cd32cff79d4667928011d58b"
+        "sha256": "aaf2617f90b998c5ce5453c1d5a2a93c36f067821a4d4286cad8a911f1729912"
       }
     ],
-    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/archive.zip",
-    "sha256": "2427cbb7f68e8e3bcf1e989eee0cf511bff5994a5e856b500bfca3c95ca181d8"
+    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet/archive.zip",
+    "sha256": "578c8f4e86eafc9dc04eefe61cc0e7f3f3f43e134ef4447cf9ef26fd23a23551"
   },
   "decoder_state_parity_proof": {
     "basis": "source_and_candidate_decode_to_identical_decoder_state_and_latents",
@@ -36,7 +36,7 @@
   "schema": "pr103_lc_ac_histogram_candidate_archive_manifest_v1",
   "score_claim": false,
   "source_runtime_adapter_manifest": {
-    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/runtime_adapter_manifest.json",
-    "sha256": "38d5ffef31033c970db7912290d6285c1778338c3b54632432bc380cb52b8d00"
+    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/runtime_adapter_manifest.json",
+    "sha256": "3c2dc93e62f77ca0781375087d10f40e8bff658eef12ac4e51c101a2c88601f3"
   }
 }

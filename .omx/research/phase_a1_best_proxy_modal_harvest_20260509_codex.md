@@ -46,9 +46,11 @@ Selected proxy metrics:
 
 ## Classification
 
-This is a duplicate confirmation of the existing A1 latent-aligned archive,
+This is a duplicate CUDA confirmation of the existing A1 latent-aligned archive,
 not a new frontier or a reason for another CPU spend. The archive SHA-256 and
-exact CUDA score match the current A1 paired-anchor archive:
+exact CUDA score match the current A1 paired-anchor archive. The runtime tree
+SHA recorded here belongs to this Modal CUDA run; the earlier CPU evidence row
+does not by itself prove identical runtime-tree custody.
 
 - Existing paired `[contest-CPU]` Linux x86_64 score:
   `0.19284757743677347`
@@ -56,8 +58,10 @@ exact CUDA score match the current A1 paired-anchor archive:
   `0.2263520234784395`
 
 The selected best-proxy checkpoint converged to the same score-affecting
-packet as the prior A1 anchor. This validates the checkpoint-selection plumbing
-and closes the active dispatch, but it does not improve the score frontier.
+archive as the prior A1 anchor. This validates the checkpoint-selection
+plumbing and closes the active dispatch, but it does not improve the score
+frontier or upgrade A1 to submission-ready without the normal paired-axis and
+policy gates.
 
 ## Decision
 

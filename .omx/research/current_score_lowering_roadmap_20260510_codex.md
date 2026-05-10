@@ -28,8 +28,9 @@
 | Workstream | Status | Exact next action | Evidence and claim gate |
 |---|---|---|---|
 | A1 CUDA readiness | READY as evaluator/custody baseline; BLOCKED as a new score-lowering config | Use the paired A1 CPU/CUDA anchor to sanity-check future archive candidates. Do not spend on another baseline replay unless it validates infrastructure drift. | For any A1-derived candidate: changed archive bytes/SHA, runtime-tree SHA, exact `inflate.sh` closure, `contest_auth_eval.json` with recomputed component score and `n_samples=600`, hardware tag, logs, and terminal dispatch claim. |
+| PR103 global-combo histogram packet | BYTE-CLOSED LOCAL ARTIFACT; BLOCKED for exact dispatch | Use the `-12B` global-combo packet as the current PR103 byte target, then build same-runtime source/candidate frame or auth-eval parity before CUDA spend. | Candidate archive `578c8f4e86eafc9dc04eefe61cc0e7f3f3f43e134ef4447cf9ef26fd23a23551`, `178211` bytes, runtime tree `8b81480b74919295c37707ac5124934571314f30d3bfe0164cbe7b456e589936`; blockers: `full_frame_inflate_output_parity_missing`, lane claim, exact CUDA. |
 | PR101 archive-in-loop A1 training | READY-TO-CLAIM after current WIP/preflight is the code under test | Claim `track1_phase_a1_score_gradient`, run the PR101 source-backed remote driver, build `best_proxy`/`final_ema` archives in-loop, then exact CUDA-eval only byte-closed candidates. | Required artifacts: `archive_builds_manifest.json`, selected archive/inflate path, archive bytes/SHA, PR101 source/archive custody, `canonical_score_source=score_recomputed_from_components`, `avg_posenet_dist`, `avg_segnet_dist`, `rate_unscaled`, `archive_size_bytes`, `n_samples=600`, logs, active then terminal claim. Checkpoint-only non-smoke runs are refused. |
-| T1 Phase 1 Ballé end-to-end | READY for claimed training-only CUDA; BLOCKED for score promotion | If GPU is used, claim lane `t1_balle_128k_endtoend`, copy the claim ledger to remote, set `T1_ALLOW_SCORE_DOMAIN_TRAINING=1`, `LOCAL_CUDA_WORKER=1`, and run `scripts/remote_lane_t1_balle_endtoend.sh`. | Score promotion remains blocked until auth-eval custody is wired, packet-local runtime/export closure is re-proved, rate-tight state-dict format is selected, exact CUDA auth eval exists, and the claim lifecycle closes terminally. Training artifacts alone are `score_claim=false`. |
+| T1 Phase 1 Ballé end-to-end | ACTIVE Modal dispatch; BLOCKED for duplicate launch and score promotion | Monitor Modal call `fc-01KR955JSYQAVTTYZA48VAV7WJ` for lane `t1_balle_128k_endtoend`; do not launch a duplicate. Harvest artifacts when it reaches terminal state. | Score promotion remains blocked until auth-eval custody is wired, packet-local runtime/export closure is re-proved, rate-tight state-dict format is selected, exact CUDA auth eval exists, and the claim lifecycle closes terminally. Training artifacts alone are `score_claim=false`. |
 | HNeRV / PR95 / PR101 parity | READY as a gate; BLOCKED for lanes missing the gate | Apply the 13 HNeRV lessons before any representation dispatch: score-aware substrate, export-first archive grammar, eval-roundtrip/YUV6 differentiability, runtime closure, no-op proof, and exact CUDA anchor. | Every lane must declare the 8 archive-grammar fields, prove consumed bytes changed, and carry lane-specific dispatch claims. PR95/PR101 reproduction is useful only when it produces a packet, not just a checkpoint or proxy curve. |
 | CMA-ES / Optuna PR101 byte search | READY for no-score local materialization; BLOCKED for exact dispatch | Stop broad optimizer churn. First rerun the best known PR101 CodecOp params with `--materialized-payload-output-dir` and a parser-proven payload contract, then substitute only if emitted bytes bind to a PR101/PR106 section. | Existing reports are CPU-prep only: no materialized payload paths, `score_claim=false`, `ready_for_exact_eval_dispatch=false`. Dispatch requires materialized payload path/SHA/contract, byte-closed archive, runtime parity/no-op proof, exact CUDA auth eval, and a fresh lane claim. |
 | Xray / mechanism work | READY diagnostic; BLOCKED for score claims | Use `tools/xray_archive_section_entropy_heatmap.py` and the loader-drift discriminator to choose small, reviewable A1/PR101/PR106 section edits and to separate decode/input drift from forward/kernel drift. | Diagnostics require heatmap/probe JSON, section offsets/SHA, and explicit non-promotable labels. Any candidate generated from this work must graduate through archive bytes/SHA, consumed-byte proof, exact eval, and dispatch claim gates. |
@@ -51,7 +52,14 @@
 2. Keep A1 bias-coordinate work bounded.
    - Existing broad variants regressed or failed to beat V1.
    - Reopen only with a small reviewed candidate set and CPU-positive evidence.
-3. Keep AVVideoDataset CUDA-path discriminator closed as CPU-only unresolved
+3. Promote PR103 global-combo only through same-runtime source/candidate
+   parity first.
+   - Current candidate: `178211` bytes (`-12B` versus PR103 source).
+   - Dispatch blocker is engineering correctness, not lack of byte signal:
+     full-frame inflate output parity or same-runtime source replay is missing.
+   - Next implementation slice is a reusable same-runtime comparator, not a
+     blind CUDA rerun.
+4. Keep AVVideoDataset CUDA-path discriminator closed as CPU-only unresolved
    unless a fresh CUDA-capable claim is filed.
 
 ## P1: substrate recovery and HNeRV parity
@@ -69,10 +77,10 @@
 
 ## P2: high-upside architecture lanes
 
-1. Phase1/T1 stays local until auth-eval custody is wired. It now emits a
-   packet-local three-member runtime with stricter no-op proof; remaining
-   blockers are exact CUDA evidence, dispatch-claim lifecycle, and rate-tight
-   state-dict wire format. No blind GPU dispatch.
+1. Phase1/T1 is active on Modal as of this update. Treat it as one outstanding
+   harvest, not an invitation to launch another provider copy. When terminal,
+   classify artifacts by archive SHA/runtime tree/component fields before any
+   status promotion.
 2. Lane12-v2 stays local until it has hermetic runtime, scorer-preprocess
    gradcheck, PR95/PR100 parity or deviation record, packet builder, and dual
    exact-eval readiness.
@@ -179,6 +187,24 @@
   2. fix T1 canonical-A1 payload mounting/designation before re-claiming T1;
   3. keep Kaggle/Optuna/CMA-ES as proxy-only candidate search;
   4. promote only byte-closed archives through fresh exact CUDA claims.
+
+## 2026-05-10T17:45Z supersession addendum
+
+- Current active remote work is T1 Ballé Phase 1 on Modal, call id
+  `fc-01KR955JSYQAVTTYZA48VAV7WJ`, lane `t1_balle_128k_endtoend`; latest poll
+  returned `pending`. Do not launch duplicate T1 work while this call is live.
+- PR103 arithmetic work produced a better local byte target:
+  `global_combo_candidate` is `178211` bytes (`-12B` versus PR103 source,
+  `-4B` versus the greedy packet), archive SHA-256
+  `578c8f4e86eafc9dc04eefe61cc0e7f3f3f43e134ef4447cf9ef26fd23a23551`, packet
+  runtime tree SHA-256
+  `8b81480b74919295c37707ac5124934571314f30d3bfe0164cbe7b456e589936`.
+- The next PR103 implementation blocker is not another optimizer sweep; it is
+  same-runtime source/candidate frame or auth-eval parity. Without that, tiny
+  CUDA component deltas can be harness/runtime artifacts.
+- Score-lowering priority order now: harvest T1; build PR103 same-runtime
+  comparator; only then decide whether the `-12B` global-combo packet deserves
+  a fresh claimed exact CUDA run.
 
 ## 2026-05-10T09:55Z supersession addendum
 

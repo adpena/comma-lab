@@ -131,6 +131,33 @@ must enter an intake queue immediately with:
 Use detached clones/downloads in experiment artifact directories for public PR
 forensics. Do not `gh pr checkout` into the dirty shared worktree.
 
+## Apples-To-Apples Evidence Discipline — NON-NEGOTIABLE
+
+Do not classify, promote, retire, or submit HNeRV/public-frontier work from an
+inferred equivalence. Score movement must be compared against the matching
+baseline on the same evidence axis and runtime contract.
+
+- Decoded tensor, symbol, `state_dict`, or latent parity is parser-consumption
+  evidence only. It is not full-frame inflate parity and it is not scorer
+  parity. Keep `full_frame_inflate_output_parity_missing` until source and
+  candidate `inflate.sh archive_dir output_dir file_list` outputs are compared
+  byte-for-byte, or until both packets have exact same-runtime eval artifacts.
+- `[contest-CPU]`, `[contest-CUDA]`, `[macOS-CPU advisory]`, MPS, and proxy
+  signals are separate evidence spaces. The public HNeRV leaderboard CPU axis
+  can be materially better than the CUDA/T4 axis. Never convert CPU to CUDA or
+  CUDA to CPU for promotion, ranking, retirement, or submission readiness.
+- Public PR baselines must use the source archive plus the source runtime that
+  actually produced the cited result. If an adapter changes `inflate.py`,
+  `inflate.sh`, section constants, dependency closure, or Python invocation,
+  compare against the matching original runtime under the same evaluator path.
+- A surprising negative from a byte transform that preserves decoded model
+  streams is `indeterminate-harness-or-runtime-mismatch` until full-frame
+  parity, same-runtime source replay, and component recomputation are checked.
+  Do not turn that into a method negative or lane retirement.
+- Generated reports must carry inline axis labels near words like
+  "medal-band", "rounds to", "submission-ready", "auto-promote", "frontier",
+  or "score gap." Missing labels are evidence bugs.
+
 ## Bit-Level Deconstruction And Repack Discipline
 
 For archive/packer work, start from bytes, not prose. Every public or internal

@@ -214,6 +214,64 @@ def test_probe_pr103_arithmetic_beam_search_cli_real_manifest_if_available(
     assert "Beam Probe" in md_out.read_text(encoding="utf-8")
 
 
+def test_probe_pr103_arithmetic_global_combo_cli_real_manifest_if_available(
+    tmp_path: Path,
+) -> None:
+    manifest = (
+        REPO
+        / "experiments/results/hnerv_pr103_lc_ac_schema_refresh_20260510_codex/manifest.json"
+    )
+    beam0 = (
+        REPO
+        / ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_0_weight_beam_probe.json"
+    )
+    beam1 = (
+        REPO
+        / ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_1_weight_beam_probe.json"
+    )
+    if not manifest.exists() or not beam0.exists() or not beam1.exists():
+        pytest.skip("local PR103 schema refresh and beam reports are not present")
+    json_out = tmp_path / "global_combo.json"
+    md_out = tmp_path / "global_combo.md"
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(RETARGET_SCRIPT),
+            "--schema-manifest",
+            str(manifest),
+            "--probe-mode",
+            "global-combo-search",
+            "--beam-probe-report",
+            str(beam0),
+            "--beam-probe-report",
+            str(beam1),
+            "--top-per-stream",
+            "3",
+            "--beam-width",
+            "8",
+            "--json-out",
+            str(json_out),
+            "--md-out",
+            str(md_out),
+        ],
+        cwd=REPO,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    report = json.loads(json_out.read_text(encoding="utf-8"))
+    assert report["schema"] == "pr103_arithmetic_histogram_global_combo_probe_v1"
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert "source_probe_delta_sum" in report["best_candidate"]
+    assert "non_additivity_delta" in report["best_candidate"]
+    assert "candidate_runtime_adapter_missing" in report["readiness_blockers"]
+    assert "Global Combo Probe" in md_out.read_text(encoding="utf-8")
+
+
 def test_materialize_pr103_arithmetic_histogram_candidate_cli_real_manifest_if_available(
     tmp_path: Path,
 ) -> None:

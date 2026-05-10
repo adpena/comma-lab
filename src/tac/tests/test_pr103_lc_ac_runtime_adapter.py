@@ -45,9 +45,10 @@ def test_pr103_runtime_adapter_patches_constants_and_proves_consumption(
     assert report["runtime_consumption_probe"]["state_dict_tensors"] == 1
     assert report["runtime_consumption_probe"]["latents_shape"] == [2, 3]
     assert report["decoder_state_parity_proof"]["passed"] is True
-    assert report["decoder_state_parity_proof"]["full_frame_output_parity_inferred"] is True
+    assert report["decoder_state_parity_proof"]["full_frame_output_parity_proven"] is False
+    assert report["decoder_state_parity_proof"]["full_frame_output_parity_required"] is True
     assert "strict_pre_submission_compliance_json_missing" in report["readiness_blockers"]
-    assert "full_frame_inflate_output_parity_missing" not in report["readiness_blockers"]
+    assert "full_frame_inflate_output_parity_missing" in report["readiness_blockers"]
     assert len(report["runtime_tree_sha256"]) == 64
     adapted_inflate = (tmp_path / "adapted/inflate.py").read_text(encoding="utf-8")
     adapted_shell = (tmp_path / "adapted/inflate.sh").read_text(encoding="utf-8")
@@ -137,7 +138,9 @@ def test_pr103_candidate_packet_copies_archive_runtime_and_custody(
     report_text = packet_dir.joinpath("report.txt").read_text(encoding="utf-8")
     assert packet["archive"]["sha256"] in report_text
     assert str(packet["archive"]["bytes"]) in report_text
+    assert "full_frame_output_parity_required: True" in report_text
     assert "lane_dispatch_claim_missing" in packet["readiness_blockers"]
+    assert "full_frame_inflate_output_parity_missing" in packet["readiness_blockers"]
 
 
 def _fixture(tmp_path: Path) -> dict[str, Path]:

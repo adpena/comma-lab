@@ -1,18 +1,18 @@
 {
   "archive": {
-    "bytes": 178215,
+    "bytes": 178211,
     "exists": true,
     "members": [
       {
-        "compress_size": 178115,
-        "crc": 1185453146,
-        "file_size": 178115,
+        "compress_size": 178111,
+        "crc": 853299450,
+        "file_size": 178111,
         "local_header": {
-          "compress_size": 178115,
+          "compress_size": 178111,
           "compress_type": 0,
-          "crc32": 1185453146,
+          "crc32": 853299450,
           "extra_len": 0,
-          "file_size": 178115,
+          "file_size": 178111,
           "flag_bits": 0,
           "mod_date": 33,
           "mod_time": 0,
@@ -21,36 +21,36 @@
         },
         "local_header_name": "x",
         "name": "x",
-        "sha256": "f8876ea5102e6e3dc968e84fa00c25b4f67f5045cd32cff79d4667928011d58b",
+        "sha256": "aaf2617f90b998c5ce5453c1d5a2a93c36f067821a4d4286cad8a911f1729912",
         "unsafe_reason": null
       }
     ],
-    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/archive.zip",
-    "sha256": "2427cbb7f68e8e3bcf1e989eee0cf511bff5994a5e856b500bfca3c95ca181d8"
+    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet/archive.zip",
+    "sha256": "578c8f4e86eafc9dc04eefe61cc0e7f3f3f43e134ef4447cf9ef26fd23a23551"
   },
   "archive_manifest": {
     "exists": true,
-    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/archive_manifest.json"
+    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet/archive_manifest.json"
   },
   "auth_eval": {
     "exists": false,
-    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/contest_auth_eval.json"
+    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet/contest_auth_eval.json"
   },
   "checks": [
     {
-      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/archive.zip",
+      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet/archive.zip",
       "name": "required_file_present:archive.zip",
       "passed": true,
       "severity": "error"
     },
     {
-      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/inflate.sh",
+      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet/inflate.sh",
       "name": "required_file_present:inflate.sh",
       "passed": true,
       "severity": "error"
     },
     {
-      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/report.txt",
+      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet/report.txt",
       "name": "required_file_present:report.txt",
       "passed": true,
       "severity": "error"
@@ -62,7 +62,7 @@
       "severity": "error"
     },
     {
-      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/archive.zip",
+      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet/archive.zip",
       "name": "archive_exists",
       "passed": true,
       "severity": "error"
@@ -116,37 +116,37 @@
       "severity": "error"
     },
     {
-      "details": "2427cbb7f68e8e3bcf1e989eee0cf511bff5994a5e856b500bfca3c95ca181d8",
+      "details": "578c8f4e86eafc9dc04eefe61cc0e7f3f3f43e134ef4447cf9ef26fd23a23551",
       "name": "expected_archive_sha256_is_well_formed",
       "passed": true,
       "severity": "error"
     },
     {
-      "details": "expected=2427cbb7f68e8e3bcf1e989eee0cf511bff5994a5e856b500bfca3c95ca181d8 actual=2427cbb7f68e8e3bcf1e989eee0cf511bff5994a5e856b500bfca3c95ca181d8",
+      "details": "expected=578c8f4e86eafc9dc04eefe61cc0e7f3f3f43e134ef4447cf9ef26fd23a23551 actual=578c8f4e86eafc9dc04eefe61cc0e7f3f3f43e134ef4447cf9ef26fd23a23551",
       "name": "expected_archive_sha256_matches",
       "passed": true,
       "severity": "error"
     },
     {
-      "details": "expected=178215 actual=178215",
+      "details": "expected=178211 actual=178211",
       "name": "expected_archive_size_bytes_matches",
       "passed": true,
       "severity": "error"
     },
     {
-      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/contest_auth_eval.json",
+      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet/contest_auth_eval.json",
       "name": "auth_eval_exists",
       "passed": true,
       "severity": "error"
     },
     {
-      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/contest_auth_eval.json missing; nonfinal compliance may pass, but this packet has no auth-eval custody and is not score/rank/promote evidence",
+      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet/contest_auth_eval.json missing; nonfinal compliance may pass, but this packet has no auth-eval custody and is not score/rank/promote evidence",
       "name": "auth_eval_optional_missing",
       "passed": false,
       "severity": "warning"
     },
     {
-      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/inflate.sh",
+      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet/inflate.sh",
       "name": "submission_runtime_inflate_exists",
       "passed": true,
       "severity": "error"
@@ -158,37 +158,37 @@
       "severity": "error"
     },
     {
-      "details": "runtime_tree_sha256=a883a924442ca19dd78ae65ada7dad8114b7ad852a8d28bc5884d4c9e950b0cf",
+      "details": "runtime_tree_sha256=b22616d23b19984388767f5d88aac148c3e72ae7c7abe1c94c23dc6f1e85d946",
       "name": "submission_runtime_tree_recorded",
       "passed": true,
       "severity": "error"
     },
     {
-      "details": "submission=a883a924442ca19dd78ae65ada7dad8114b7ad852a8d28bc5884d4c9e950b0cf auth_eval_candidates={}",
+      "details": "submission=b22616d23b19984388767f5d88aac148c3e72ae7c7abe1c94c23dc6f1e85d946 auth_eval_candidates={}",
       "name": "submission_runtime_tree_matches_auth_eval",
       "passed": true,
       "severity": "error"
     },
     {
-      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/archive_manifest.json",
+      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet/archive_manifest.json",
       "name": "archive_manifest_exists",
       "passed": true,
       "severity": "error"
     },
     {
-      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/archive_manifest.json",
+      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet/archive_manifest.json",
       "name": "archive_manifest_json_object",
       "passed": true,
       "severity": "error"
     },
     {
-      "details": "claimed=2427cbb7f68e8e3bcf1e989eee0cf511bff5994a5e856b500bfca3c95ca181d8 actual=2427cbb7f68e8e3bcf1e989eee0cf511bff5994a5e856b500bfca3c95ca181d8",
+      "details": "claimed=578c8f4e86eafc9dc04eefe61cc0e7f3f3f43e134ef4447cf9ef26fd23a23551 actual=578c8f4e86eafc9dc04eefe61cc0e7f3f3f43e134ef4447cf9ef26fd23a23551",
       "name": "archive_manifest_sha_matches",
       "passed": true,
       "severity": "error"
     },
     {
-      "details": "claimed=178215 actual=178215",
+      "details": "claimed=178211 actual=178211",
       "name": "archive_manifest_size_matches",
       "passed": true,
       "severity": "error"
@@ -212,31 +212,31 @@
       "severity": "error"
     },
     {
-      "details": "claimed=178115 actual=178115",
+      "details": "claimed=178111 actual=178111",
       "name": "archive_manifest_member_0_file_size_matches",
       "passed": true,
       "severity": "error"
     },
     {
-      "details": "claimed=178115 actual=178115",
+      "details": "claimed=178111 actual=178111",
       "name": "archive_manifest_member_0_compress_size_matches",
       "passed": true,
       "severity": "error"
     },
     {
-      "details": "claimed=1185453146 actual=1185453146",
+      "details": "claimed=853299450 actual=853299450",
       "name": "archive_manifest_member_0_crc_matches",
       "passed": true,
       "severity": "error"
     },
     {
-      "details": "claimed='f8876ea5102e6e3dc968e84fa00c25b4f67f5045cd32cff79d4667928011d58b' actual='f8876ea5102e6e3dc968e84fa00c25b4f67f5045cd32cff79d4667928011d58b'",
+      "details": "claimed='aaf2617f90b998c5ce5453c1d5a2a93c36f067821a4d4286cad8a911f1729912' actual='aaf2617f90b998c5ce5453c1d5a2a93c36f067821a4d4286cad8a911f1729912'",
       "name": "archive_manifest_member_0_sha256_matches",
       "passed": true,
       "severity": "error"
     },
     {
-      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/report.txt",
+      "details": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet/report.txt",
       "name": "report_exists",
       "passed": true,
       "severity": "error"
@@ -248,23 +248,23 @@
   "passed": true,
   "report": {
     "exists": true,
-    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/report.txt"
+    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet/report.txt"
   },
   "schema": "pre_submission_compliance_check_v1",
   "submission_dir": {
-    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet",
+    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet",
     "required_files": {
       "archive.zip": {
         "exists": true,
-        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/archive.zip"
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet/archive.zip"
       },
       "inflate.sh": {
         "exists": true,
-        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/inflate.sh"
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet/inflate.sh"
       },
       "report.txt": {
         "exists": true,
-        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/report.txt"
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet/report.txt"
       }
     }
   },
@@ -283,20 +283,20 @@
       {
         "bytes": 8068,
         "relative_path": "inflate.py",
-        "repo_relative_path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/inflate.py",
-        "sha256": "96e6ba99affc8ff903bcabc6f834c0ebc142fa051711ba7d5891366f6193f9aa"
+        "repo_relative_path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet/inflate.py",
+        "sha256": "c18630d39e6e3734b05e2383f5e66d819ef799f92e964b04e5c536a718913a51"
       },
       {
         "bytes": 438,
         "relative_path": "inflate.sh",
-        "repo_relative_path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/inflate.sh",
+        "repo_relative_path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet/inflate.sh",
         "sha256": "a158107216321609a1cbf9abc073c19579194266c177504a7fa055ed612eca51"
       },
       {
-        "bytes": 3663,
+        "bytes": 3661,
         "relative_path": "packet_manifest.json",
-        "repo_relative_path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet/packet_manifest.json",
-        "sha256": "e2e21b2433431f8846557e927bc54d815def0997ad56d41f6acd2dd48980e2b6"
+        "repo_relative_path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet/packet_manifest.json",
+        "sha256": "12bc34ea848873a17dbef7ee239e4ca8aace28cf7ec174df838bc3c7f3b42b17"
       }
     ],
     "repo_local_tac_import_manifest": {
@@ -312,8 +312,8 @@
       "unresolved_modules": []
     },
     "runtime_file_count": 3,
-    "runtime_root": "/Users/adpena/Projects/pact/.omx/research/pr103_arithmetic_transform_plans_20260510_codex/combined_beam_candidate/packet",
-    "runtime_tree_sha256": "a883a924442ca19dd78ae65ada7dad8114b7ad852a8d28bc5884d4c9e950b0cf",
+    "runtime_root": "/Users/adpena/Projects/pact/.omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet",
+    "runtime_tree_sha256": "b22616d23b19984388767f5d88aac148c3e72ae7c7abe1c94c23dc6f1e85d946",
     "schema": "pre_submission_runtime_dependency_manifest_v1",
     "upstream_evaluate_py": {
       "bytes": 6005,

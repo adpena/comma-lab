@@ -666,3 +666,24 @@ def test_set_field_cli_command(tmp_path, monkeypatch):
     assert data["lanes"][0]["research_only"] is True
     audit = (repo / lm.AUDIT_LOG_REL).read_text().strip().split("\n")
     assert any("set-field" in line for line in audit)
+
+
+def test_set_field_updates_display_metadata_without_bare_registry_edit(
+    tmp_path, monkeypatch
+):
+    repo = _make_repo(tmp_path, [
+        {"id": "lane_x", "name": "Old", "phase": 1, "level": 0,
+         "gates": _empty_gates(), "notes": "old notes"}
+    ])
+    monkeypatch.setattr(lm, "REPO_ROOT", repo)
+
+    assert lm.main([
+        "set-field", "lane_x", "--field", "name", "--value", "New display name"
+    ]) == 0
+    assert lm.main([
+        "set-field", "lane_x", "--field", "notes", "--value", "new notes"
+    ]) == 0
+
+    data = lm.load_registry()
+    assert data["lanes"][0]["name"] == "New display name"
+    assert data["lanes"][0]["notes"] == "new notes"

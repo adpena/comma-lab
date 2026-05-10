@@ -68,7 +68,7 @@ For each item, columns: A=council verdict / B=bug-class flags / C=prediction val
 
 **Verdict: SHIP-AS-PLANNED** with one verification: confirm `v_loader_isolated`'s `device = torch.device("cpu")` mutation actually fires BEFORE AVVideoDataset construction in `evaluate.py`. If not, the variant is a no-op on the loader-drift axis.
 
-### Item 3 — A1 dual-CUDA dispatch (~$0.80, confirms PR submission readiness)
+### Item 3 — A1 dual-CUDA dispatch (~$0.80, checks paired-axis evidence; not submission readiness)
 
 | Column | Content |
 |---|---|

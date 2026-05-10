@@ -498,7 +498,7 @@ Using the empirical R<sub>pose</sub> ≈ 5.04 and R<sub>seg</sub> ≈ 1.17:
 | Archive | CUDA score | CPU score | Leaderboard interpretation |
 |---|---:|---:|---|
 | Our PR #107 apogee | 0.22936 | 0.1966358879 (GHA Linux verified) | medal-cluster adjacent |
-| PR103-on-PR106 AC repack | 0.20898 | ~0.176 | above current top |
+| PR103-on-PR106 AC repack | 0.20898 | ~0.176 (model prediction only) | not rankable until exact Linux x86_64 CPU replay of the same archive/runtime |
 | PR102 hardened replay | 0.22839 | 0.19538 (verified) | bronze (verified, R-perfect match) |
 | PR104 hardened replay | 0.23114 | ~0.198 | non-frontier |
 

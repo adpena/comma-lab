@@ -323,6 +323,7 @@ def _run_auth_eval_inner(
     inflate_sh_rel: str,
     submission_dir_zip_bytes: bytes | None,
     submission_dir_zip_sha256: str | None,
+    source_repo_commit: str,
     inflate_timeout: int,
     evaluate_timeout: int,
 ) -> dict[str, Any]:
@@ -351,6 +352,7 @@ def _run_auth_eval_inner(
             "archive_size_bytes": archive_size_bytes,
             "inflate_sh_rel": inflate_sh_rel,
             "submission_dir_zip_sha256": submission_dir_zip_sha256,
+            "source_repo_commit": source_repo_commit,
             "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
         }
     )
@@ -501,6 +503,7 @@ def _run_auth_eval_inner(
         "UV_PROJECT_ENVIRONMENT": str(uv_env),
         "CUBLAS_WORKSPACE_CONFIG": os.environ.get("CUBLAS_WORKSPACE_CONFIG", ":4096:8"),
         "DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE,
+        "PACT_SOURCE_COMMIT": source_repo_commit,
     }
 
     started = time.monotonic()
@@ -633,6 +636,7 @@ def run_auth_eval(
     inflate_sh_rel: str = "submissions/robust_current/inflate.sh",
     submission_dir_zip_bytes: bytes | None = None,
     submission_dir_zip_sha256: str | None = None,
+    source_repo_commit: str = "",
     inflate_timeout: int = 1800,
     evaluate_timeout: int = 1800,
 ) -> dict[str, Any]:
@@ -645,6 +649,7 @@ def run_auth_eval(
         inflate_sh_rel=inflate_sh_rel,
         submission_dir_zip_bytes=submission_dir_zip_bytes,
         submission_dir_zip_sha256=submission_dir_zip_sha256,
+        source_repo_commit=source_repo_commit,
         inflate_timeout=inflate_timeout,
         evaluate_timeout=evaluate_timeout,
     )
@@ -662,6 +667,7 @@ def run_auth_eval_a100(
     inflate_sh_rel: str = "submissions/robust_current/inflate.sh",
     submission_dir_zip_bytes: bytes | None = None,
     submission_dir_zip_sha256: str | None = None,
+    source_repo_commit: str = "",
     inflate_timeout: int = 1800,
     evaluate_timeout: int = 1800,
 ) -> dict[str, Any]:
@@ -674,6 +680,7 @@ def run_auth_eval_a100(
         inflate_sh_rel=inflate_sh_rel,
         submission_dir_zip_bytes=submission_dir_zip_bytes,
         submission_dir_zip_sha256=submission_dir_zip_sha256,
+        source_repo_commit=source_repo_commit,
         inflate_timeout=inflate_timeout,
         evaluate_timeout=evaluate_timeout,
     )
@@ -691,6 +698,7 @@ def run_auth_eval_h100(
     inflate_sh_rel: str = "submissions/robust_current/inflate.sh",
     submission_dir_zip_bytes: bytes | None = None,
     submission_dir_zip_sha256: str | None = None,
+    source_repo_commit: str = "",
     inflate_timeout: int = 1800,
     evaluate_timeout: int = 1800,
 ) -> dict[str, Any]:
@@ -703,6 +711,7 @@ def run_auth_eval_h100(
         inflate_sh_rel=inflate_sh_rel,
         submission_dir_zip_bytes=submission_dir_zip_bytes,
         submission_dir_zip_sha256=submission_dir_zip_sha256,
+        source_repo_commit=source_repo_commit,
         inflate_timeout=inflate_timeout,
         evaluate_timeout=evaluate_timeout,
     )
@@ -727,6 +736,7 @@ def main(
     archive_bytes = archive_path.read_bytes()
     archive_sha256 = _sha256_bytes(archive_bytes)
     archive_size_bytes = len(archive_bytes)
+    source_repo_commit = _local_git_commit()
     submission_dir_zip: bytes | None = None
     submission_dir_zip_sha256: str | None = None
     submission_dir_path = Path(submission_dir).resolve() if submission_dir else None
@@ -783,6 +793,7 @@ def main(
         "inflate_sh": inflate_sh_rel,
         "submission_dir": str(submission_dir_path) if submission_dir_path else None,
         "submission_dir_zip_sha256": submission_dir_zip_sha256,
+        "source_repo_commit": source_repo_commit,
         "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
         "score_claim": False,
         "promotion_eligible": False,
@@ -811,6 +822,7 @@ def main(
         inflate_sh_rel,
         submission_dir_zip,
         submission_dir_zip_sha256,
+        source_repo_commit,
         int(inflate_timeout),
         int(evaluate_timeout),
     )
@@ -824,6 +836,7 @@ def main(
     result["archive_sha256"] = archive_sha256
     result["archive_size_bytes"] = archive_size_bytes
     result["inflate_sh"] = inflate_sh_rel
+    result["source_repo_commit"] = source_repo_commit
     write_json(out_dir / "modal_cuda_auth_eval_result.json", result)
 
     print("=" * 60)
@@ -843,3 +856,17 @@ def main(
 
     if not result.get("passed"):
         raise SystemExit(int(result.get("returncode") or 1))
+
+
+def _local_git_commit() -> str:
+    import subprocess
+
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            text=True,
+            stderr=subprocess.STDOUT,
+            timeout=10,
+        ).strip()
+    except Exception as exc:  # pragma: no cover - local diagnostic fallback
+        return f"<error obtaining local git commit: {exc!r}>"

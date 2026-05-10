@@ -116,9 +116,10 @@ Actions Linux x86_64 replay produced `0.1966358879` [contest-CPU]:
 | PR102 hardened replay | 0.22839 | 0.19538 (verified) |
 | PR104 hardened replay | 0.23114 | ~0.198 (predicted) |
 
-PR103-on-PR106 AC repack — our own bolt-on stack — predicts to 0.176 on
-the CPU axis, which would have placed it above the gold medal had we
-landed it before the deadline. We did not land it before the deadline.
+PR103-on-PR106 AC repack — our own bolt-on stack — predicts to roughly 0.176 on
+the CPU axis. That is a hypothesis, not rank evidence: it cannot be called
+above gold/top until exact Linux x86_64 CPU auth eval lands on the same
+archive/runtime pair.
 
 ## What does this mean going forward?
 

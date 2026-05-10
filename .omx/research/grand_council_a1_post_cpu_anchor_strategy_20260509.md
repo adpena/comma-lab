@@ -6,6 +6,14 @@ originSessionId: 9518b12a-1bdd-4f5a-8ed1-c1def0bae30c
 ---
 # Grand Council — A1 Post-CPU-Anchor Strategy
 
+## Supersession note — 2026-05-10
+
+This memo is a historical pre-CUDA council deliberation. It must not be read as
+current submission authorization. Later paired evidence showed the A1 CPU anchor
+remains a CPU-axis medal-band signal, while paired T4 CUDA is materially worse
+(`0.2263520234784395` per the 2026-05-10 dual-axis roadmap). Do not convert the
+CPU score into CUDA readiness, CUDA-frontier status, or submission readiness.
+
 ## Date / Source
 
 - 2026-05-09 ~02:30 UTC, post-A1 latent-aligned constrained refire landing
@@ -195,7 +203,7 @@ What would change my mind: if the CUDA-CPU R_pose=5.04 mechanism turns out to ap
 
 ## What would change my mind (per option, council-aggregated)
 
-- **A (CUDA verify A1) reactivation criteria for skipping:** if Vast.ai/Lightning/alternate-Modal-image all fail and we have a hard deadline within 12h, we must ship the CPU-only A1 archive with explicit `[contest-CPU only — CUDA pending]` evidence-grade labeling. PR102's prize was awarded against CPU; the leaderboard ranks CPU; the legal requirement is CPU. CUDA is internal council promotion gate, not contest-legal requirement.
+- **A (CUDA verify A1) historical skipping criterion:** this pre-CUDA note contemplated a hard-deadline CPU-only packet only with explicit `[contest-CPU only — CUDA pending]` labeling. Superseded 2026-05-10 by paired A1 CUDA evidence: CPU medal-band proximity remains useful ranking signal, but it is not CUDA readiness and is not submission authorization.
 - **B (PHASE 4 INTEGRATION packet) skipping criteria:** even if Shannon/Dykstra/Selfcomp argue for B-second, if A's CUDA verify lands cleanly in gold-band, MacKay/Ballé/Yousfi/Fridrich's C-first argument becomes the strict majority (4 votes vs 3) and B becomes a parallel-not-priority track.
 - **C (PARADIGM-δεζ kickoff) skipping criteria:** if A1's CUDA score reveals a score-gradient-CPU-amplification artifact, PARADIGM-δεζ (which would build on top of A1's mechanism) becomes high-risk. We'd need a Phase A2 ablation before any δεζ work.
 - **D (score-gradient family expansion) reactivation:** Contrarian & Quantizr's path is INCORPORATED as parallel-to-A. If Hotz is wrong and CUDA verify takes >2h wall (Vast.ai instance setup, Lightning queue, Modal image rebuild), the M5 Max CPU sweep will produce evidence about the family's reactivation criteria DURING the wait.

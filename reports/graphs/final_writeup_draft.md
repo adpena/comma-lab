@@ -1,5 +1,9 @@
 # final writeup draft
 
+> Superseded archival note, 2026-05-10: this draft reflects the May 4 PR100
+> packet posture. Refresh all score, packet, compliance, CPU/CUDA-axis, and
+> submission-policy claims before using it as current copy.
+
 ## thesis
 
 This writeup should present Apogee as a contest-faithful archive compiler for a
