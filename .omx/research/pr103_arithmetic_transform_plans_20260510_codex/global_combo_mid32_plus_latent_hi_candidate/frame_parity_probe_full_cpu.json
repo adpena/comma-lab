@@ -3634,6 +3634,7 @@
   "dispatch_attempted": false,
   "dispatch_blockers": [
     "pr103_frame_parity_probe_is_not_dispatch_authorization",
+    "shell_inflate_output_parity_missing",
     "lane_dispatch_claim_missing",
     "exact_cuda_auth_eval_missing"
   ],
@@ -4244,8 +4245,10 @@
     598,
     599
   ],
+  "parity_method": "in_process_runtime_decoder_render",
   "parsed_lengths_match": false,
   "readiness_blockers": [
+    "shell_inflate_output_parity_missing",
     "lane_dispatch_claim_missing",
     "exact_cuda_auth_eval_missing"
   ],
@@ -4253,6 +4256,7 @@
   "sampled_frame_output_parity_proven": true,
   "schema": "pr103_lc_ac_frame_parity_probe_v1",
   "score_claim": false,
+  "shell_inflate_output_parity_proven": false,
   "source": {
     "archive": {
       "bytes": 178223,
@@ -7901,7 +7905,7 @@
       "--json-out",
       ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_mid32_plus_latent_hi_candidate/frame_parity_probe_full_cpu.json"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "382e1fff860afad5ffe47d94e679208214280c521bfac9fd784baf19c73f2ec7",
+    "canonical_payload_without_tool_manifest_sha256": "015a48026018dfd6b69d5edf65ea83d360babbfeddc6c61375f846b2a9f176d3",
     "dispatch_attempted": false,
     "input_files": [
       {

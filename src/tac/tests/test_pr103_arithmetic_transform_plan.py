@@ -304,6 +304,7 @@ def test_pr103_arithmetic_histogram_global_combo_probe_rescores_full_sideband(
     assert "exact_merged_ac_delta_plus_exact_ac_histograms_brotli_delta" in report[
         "search_config"
     ]["objective"]
+    assert "exact_latent_hi_histogram_brotli_delta" in report["search_config"]["objective"]
     best = report["best_candidate"]
     assert "selected_option_source_deltas" in best
     assert "source_probe_delta_sum" in best

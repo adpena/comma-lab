@@ -80,7 +80,7 @@ def build_pr103_lc_ac_runtime_adapter(
     _prepare_output_dir(output_dir, force=force)
     copied_files = _copy_runtime_tree(source_dir, output_dir)
     changes = _patch_inflate_constants(output_dir / "inflate.py", constants)
-    shell_patch = _patch_inflate_shell_python(output_dir / "inflate.sh")
+    shell_contract = _verify_inflate_shell_contract(output_dir / "inflate.sh")
     source_probe = _runtime_consumption_probe(
         source_dir / "inflate.py",
         source_archive,
@@ -110,7 +110,7 @@ def build_pr103_lc_ac_runtime_adapter(
         "output_runtime_dir": repo_relative(output_dir, repo),
         "copied_files": copied_files,
         "constant_changes": changes,
-        "shell_patch": shell_patch,
+        "shell_patch": shell_contract,
         "source_runtime_consumption_probe": _public_probe_record(source_probe),
         "runtime_consumption_probe": probe,
         "decoder_state_parity_proof": parity,
@@ -188,9 +188,17 @@ def build_pr103_lc_ac_candidate_packet(
     packet_blockers = _unique_ordered(
         [
             *(
-                ["full_frame_inflate_output_parity_missing"]
-                if "full_frame_inflate_output_parity_missing" in adapter_blockers
-                and not _full_frame_parity_passed(frame_parity)
+                ["full_frame_render_output_parity_missing"]
+                if not _full_frame_parity_passed(frame_parity)
+                else []
+            ),
+            *(
+                ["shell_inflate_output_parity_missing"]
+                if (
+                    "shell_inflate_output_parity_missing" in adapter_blockers
+                    or "full_frame_inflate_output_parity_missing" in adapter_blockers
+                )
+                and not _shell_inflate_parity_passed(frame_parity)
                 else []
             ),
             "lane_dispatch_claim_missing",
@@ -240,10 +248,11 @@ def probe_pr103_lc_ac_frame_parity(
 ) -> dict[str, Any]:
     """Hash rendered frame bytes for selected PR103 pair indices.
 
-    This is a same-runtime sanity probe, not an auth-eval substitute. A sampled
-    pass is useful for catching adapter/parser mistakes before CUDA spend; only
-    a full-scope pass or same-runtime exact auth eval can clear the full-frame
-    parity blocker.
+    This is an in-process decoder/render sanity probe, not an auth-eval or
+    shell-level ``inflate.sh`` substitute. A sampled pass catches adapter/parser
+    mistakes before CUDA spend. A full-scope pass proves rendered-frame parity
+    for this imported runtime module path, but it still cannot clear the
+    shell-inflate parity blocker by itself.
     """
 
     repo = Path(repo_root) if repo_root is not None else Path.cwd()
@@ -276,7 +285,8 @@ def probe_pr103_lc_ac_frame_parity(
     blockers = _unique_ordered(
         [
             *(["frame_output_parity_mismatch"] if not parity_passed else []),
-            *(["full_frame_inflate_output_parity_missing"] if not full_parity else []),
+            *(["full_frame_render_output_parity_missing"] if not full_parity else []),
+            "shell_inflate_output_parity_missing",
             "lane_dispatch_claim_missing",
             "exact_cuda_auth_eval_missing",
         ]
@@ -289,6 +299,8 @@ def probe_pr103_lc_ac_frame_parity(
         "ready_for_exact_eval_dispatch": False,
         "device": device,
         "batch_size": int(batch_size),
+        "parity_method": "in_process_runtime_decoder_render",
+        "shell_inflate_output_parity_proven": False,
         "pair_indices": [int(index) for index in pair_indices],
         "frame_output_parity_scope": "full" if full_scope else "sampled",
         "sampled_frame_output_parity_proven": parity_passed,
@@ -382,19 +394,27 @@ def _full_frame_parity_passed(report: dict[str, Any] | None) -> bool:
     return bool(report is not None and report.get("full_frame_output_parity_proven") is True)
 
 
+def _shell_inflate_parity_passed(report: dict[str, Any] | None) -> bool:
+    return bool(report is not None and report.get("shell_inflate_output_parity_proven") is True)
+
+
 def _frame_parity_summary(report: dict[str, Any] | None) -> dict[str, Any]:
     if report is None:
         return {
             "provided": False,
             "full_frame_output_parity_proven": False,
+            "shell_inflate_output_parity_proven": False,
         }
     return {
         "provided": True,
         "path": report.get("_report_path"),
         "sha256": report.get("_report_sha256"),
+        "parity_method": report.get("parity_method"),
         "frame_output_parity_scope": report.get("frame_output_parity_scope"),
         "sampled_frame_output_parity_proven": report.get("sampled_frame_output_parity_proven"),
         "full_frame_output_parity_proven": report.get("full_frame_output_parity_proven"),
+        "shell_inflate_output_parity_proven": report.get("shell_inflate_output_parity_proven")
+        is True,
         "source_output_sha256": _mapping(_mapping(report.get("source")).get("render")).get(
             "output_sha256"
         ),
@@ -528,21 +548,18 @@ def _patch_inflate_constants(path: Path, constants: dict[str, int]) -> list[dict
     return changes
 
 
-def _patch_inflate_shell_python(path: Path) -> dict[str, Any]:
+def _verify_inflate_shell_contract(path: Path) -> dict[str, Any]:
     text = path.read_text(encoding="utf-8")
-    old = 'python "$HERE/inflate.py" "$SRC" "$DST"'
-    new = '"${PYTHON:-python}" "$HERE/inflate.py" "$SRC" "$DST"'
-    count = text.count(old)
+    expected = 'python "$HERE/inflate.py" "$SRC" "$DST"'
+    count = text.count(expected)
     if count != 1:
         raise Pr103RuntimeAdapterError(
             f"expected exactly one bare python inflate invocation, found {count}"
         )
-    path.write_text(text.replace(old, new), encoding="utf-8")
     return {
-        "changed": True,
-        "old": old,
-        "new": new,
-        "basis": "allow_managed_interpreter_override_without_changing_default_contest_python",
+        "changed": False,
+        "contract": expected,
+        "basis": "preserve_source_pr103_inflate_shell_interpreter_contract",
         "score_claim": False,
         "dispatch_attempted": False,
     }
@@ -806,10 +823,15 @@ def _packet_report_text(
             f"archive_size_bytes: {archive.get('bytes')}",
             f"runtime_tree_sha256: {runtime_adapter_manifest.get('runtime_tree_sha256')}",
             f"decoder_state_parity_passed: {parity.get('passed') is True}",
-            f"full_frame_output_parity_proven: {parity.get('full_frame_output_parity_proven') is True}",
-            f"full_frame_output_parity_required: {parity.get('full_frame_output_parity_required') is True}",
-            f"frame_parity_report_provided: {frame_parity.get('provided') is True}",
-            f"frame_parity_full_output_proven: {frame_parity.get('full_frame_output_parity_proven') is True}",
+            "decoder_state_full_frame_output_parity_proven: "
+            f"{parity.get('full_frame_output_parity_proven') is True}",
+            "decoder_state_full_frame_output_parity_required: "
+            f"{parity.get('full_frame_output_parity_required') is True}",
+            f"render_frame_parity_report_provided: {frame_parity.get('provided') is True}",
+            "render_frame_parity_full_output_proven: "
+            f"{frame_parity.get('full_frame_output_parity_proven') is True}",
+            "shell_inflate_output_parity_proven: "
+            f"{frame_parity.get('shell_inflate_output_parity_proven') is True}",
             "",
             "This packet is a compliance-smoke artifact only. It is not a score claim.",
             "",
@@ -913,7 +935,8 @@ def _runtime_tree_sha256(records: list[dict[str, Any]]) -> str:
 def _blockers_for_probe(probe: dict[str, Any], parity: dict[str, Any]) -> list[str]:
     blockers = [
         "strict_pre_submission_compliance_json_missing",
-        "full_frame_inflate_output_parity_missing",
+        "full_frame_render_output_parity_missing",
+        "shell_inflate_output_parity_missing",
         "lane_dispatch_claim_missing",
         "exact_cuda_auth_eval_missing",
     ]

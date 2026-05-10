@@ -5,11 +5,12 @@ dispatch_attempted: false
 ready_for_exact_eval_dispatch: false
 archive_sha256: 8460014d70855ce9226285f80513d6d743ed23723870a6a38b009cfca40f423e
 archive_size_bytes: 178207
-runtime_tree_sha256: db3a2ac26718e2b797aca0eee5f026b5f9eb807bd83b3115519c84b6fd28b6fa
+runtime_tree_sha256: e5983ddfaebb050528a4c0a842eba6feb41dd41d187ad6c25c3e93f5be054542
 decoder_state_parity_passed: True
-full_frame_output_parity_proven: False
-full_frame_output_parity_required: True
-frame_parity_report_provided: True
-frame_parity_full_output_proven: True
+decoder_state_full_frame_output_parity_proven: False
+decoder_state_full_frame_output_parity_required: True
+render_frame_parity_report_provided: True
+render_frame_parity_full_output_proven: True
+shell_inflate_output_parity_proven: False
 
 This packet is a compliance-smoke artifact only. It is not a score claim.

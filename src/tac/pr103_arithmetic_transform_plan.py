@@ -1154,11 +1154,15 @@ def build_pr103_arithmetic_histogram_global_combo_probe(
             "beam_width": int(beam_width),
             "stream_count": len(option_groups),
             "evaluated_state_count": evaluated_state_count,
-            "objective": "minimize_exact_merged_ac_delta_plus_exact_ac_histograms_brotli_delta",
+            "objective": (
+                "minimize_exact_merged_ac_delta_plus_exact_ac_histograms_brotli_delta"
+                "_plus_exact_latent_hi_histogram_brotli_delta"
+            ),
             "mathematical_guard": (
                 "selected per-stream proposal deltas are retained for audit, "
                 "but ranking uses exact recomputation of the full merged AC "
-                "stream plus the full Brotli-compressed histogram sideband"
+                "stream, the full Brotli-compressed q8 histogram sideband, "
+                "and the latent-hi histogram sideband"
             ),
             "known_scope_limit": (
                 "supports q8 AC histogram rows and latent_hi_histogram_brotli "

@@ -51,13 +51,15 @@ def test_pr103_runtime_adapter_patches_constants_and_proves_consumption(
     assert report["decoder_state_parity_proof"]["full_frame_output_parity_proven"] is False
     assert report["decoder_state_parity_proof"]["full_frame_output_parity_required"] is True
     assert "strict_pre_submission_compliance_json_missing" in report["readiness_blockers"]
-    assert "full_frame_inflate_output_parity_missing" in report["readiness_blockers"]
+    assert "full_frame_render_output_parity_missing" in report["readiness_blockers"]
+    assert "shell_inflate_output_parity_missing" in report["readiness_blockers"]
     assert len(report["runtime_tree_sha256"]) == 64
     adapted_inflate = (tmp_path / "adapted/inflate.py").read_text(encoding="utf-8")
     adapted_shell = (tmp_path / "adapted/inflate.sh").read_text(encoding="utf-8")
     assert "HIST_LEN = 2" in adapted_inflate
-    assert '"${PYTHON:-python}" "$HERE/inflate.py" "$SRC" "$DST"' in adapted_shell
-    assert report["shell_patch"]["changed"] is True
+    assert 'python "$HERE/inflate.py" "$SRC" "$DST"' in adapted_shell
+    assert '"${PYTHON:-python}"' not in adapted_shell
+    assert report["shell_patch"]["changed"] is False
 
 
 def test_pr103_runtime_adapter_rejects_candidate_archive_custody_mismatch(
@@ -141,9 +143,11 @@ def test_pr103_candidate_packet_copies_archive_runtime_and_custody(
     report_text = packet_dir.joinpath("report.txt").read_text(encoding="utf-8")
     assert packet["archive"]["sha256"] in report_text
     assert str(packet["archive"]["bytes"]) in report_text
-    assert "full_frame_output_parity_required: True" in report_text
+    assert "decoder_state_full_frame_output_parity_required: True" in report_text
+    assert "render_frame_parity_report_provided: False" in report_text
     assert "lane_dispatch_claim_missing" in packet["readiness_blockers"]
-    assert "full_frame_inflate_output_parity_missing" in packet["readiness_blockers"]
+    assert "full_frame_render_output_parity_missing" in packet["readiness_blockers"]
+    assert "shell_inflate_output_parity_missing" in packet["readiness_blockers"]
 
     frame_report = tmp_path / "frame_parity.json"
     write_json(frame_report, _full_frame_parity_report_for(fixture["archive"]))
@@ -153,13 +157,19 @@ def test_pr103_candidate_packet_copies_archive_runtime_and_custody(
         packet_dir=tmp_path / "packet_with_frame_parity",
         repo_root=tmp_path,
     )
-    assert "full_frame_inflate_output_parity_missing" not in packet_with_frame_parity[
+    assert "full_frame_render_output_parity_missing" not in packet_with_frame_parity[
+        "readiness_blockers"
+    ]
+    assert "shell_inflate_output_parity_missing" in packet_with_frame_parity[
         "readiness_blockers"
     ]
     assert packet_with_frame_parity["frame_output_parity_proof"]["provided"] is True
     assert packet_with_frame_parity["frame_output_parity_proof"][
         "full_frame_output_parity_proven"
     ] is True
+    assert packet_with_frame_parity["frame_output_parity_proof"][
+        "shell_inflate_output_parity_proven"
+    ] is False
 
 
 def test_pr103_frame_parity_probe_hashes_same_runtime_rendered_pairs(tmp_path: Path) -> None:
@@ -178,9 +188,12 @@ def test_pr103_frame_parity_probe_hashes_same_runtime_rendered_pairs(tmp_path: P
     assert report["score_claim"] is False
     assert report["sampled_frame_output_parity_proven"] is True
     assert report["full_frame_output_parity_proven"] is False
+    assert report["parity_method"] == "in_process_runtime_decoder_render"
+    assert report["shell_inflate_output_parity_proven"] is False
     assert report["pair_indices"] == [1, 0, 1]
     assert report["source"]["render"]["pair_hashes"] == report["candidate"]["render"]["pair_hashes"]
-    assert "full_frame_inflate_output_parity_missing" in report["readiness_blockers"]
+    assert "full_frame_render_output_parity_missing" in report["readiness_blockers"]
+    assert "shell_inflate_output_parity_missing" in report["readiness_blockers"]
 
 
 def test_pr103_frame_parity_probe_cli_writes_json(tmp_path: Path) -> None:
@@ -420,8 +433,10 @@ def _full_frame_parity_report_for(candidate_archive: Path) -> dict[str, object]:
         "score_claim": False,
         "dispatch_attempted": False,
         "frame_output_parity_scope": "full",
+        "parity_method": "in_process_runtime_decoder_render",
         "sampled_frame_output_parity_proven": True,
         "full_frame_output_parity_proven": True,
+        "shell_inflate_output_parity_proven": False,
         "source": {"render": {"output_sha256": "a" * 64, "output_bytes": 10}},
         "candidate": {"archive": archive_record, "render": {"output_sha256": "a" * 64}},
     }

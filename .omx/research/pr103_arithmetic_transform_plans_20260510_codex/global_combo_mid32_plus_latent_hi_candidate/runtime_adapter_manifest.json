@@ -67,7 +67,8 @@
   "dispatch_blockers": [
     "pr103_runtime_adapter_is_not_dispatch_authorization",
     "strict_pre_submission_compliance_json_missing",
-    "full_frame_inflate_output_parity_missing",
+    "full_frame_render_output_parity_missing",
+    "shell_inflate_output_parity_missing",
     "lane_dispatch_claim_missing",
     "exact_cuda_auth_eval_missing"
   ],
@@ -75,7 +76,8 @@
   "output_runtime_dir": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_mid32_plus_latent_hi_candidate/runtime_adapter",
   "readiness_blockers": [
     "strict_pre_submission_compliance_json_missing",
-    "full_frame_inflate_output_parity_missing",
+    "full_frame_render_output_parity_missing",
+    "shell_inflate_output_parity_missing",
     "lane_dispatch_claim_missing",
     "exact_cuda_auth_eval_missing"
   ],
@@ -379,13 +381,13 @@
       "sha256": "35c3d07d3fd63146f9e5821ec3a8eab27892bdff61bf890588dda92aebc2802d"
     },
     {
-      "bytes": 438,
+      "bytes": 425,
       "mode": "0755",
       "relpath": "inflate.sh",
-      "sha256": "a158107216321609a1cbf9abc073c19579194266c177504a7fa055ed612eca51"
+      "sha256": "95bfd7d06f373ba45a2b4f4199ce0683117f656b514ed8bedd2f99ef61e37fe1"
     }
   ],
-  "runtime_tree_sha256": "db3a2ac26718e2b797aca0eee5f026b5f9eb807bd83b3115519c84b6fd28b6fa",
+  "runtime_tree_sha256": "e5983ddfaebb050528a4c0a842eba6feb41dd41d187ad6c25c3e93f5be054542",
   "schema": "pr103_lc_ac_runtime_adapter_v1",
   "score_claim": false,
   "semantic_stream_parity": {
@@ -451,11 +453,10 @@
     ]
   },
   "shell_patch": {
-    "basis": "allow_managed_interpreter_override_without_changing_default_contest_python",
-    "changed": true,
+    "basis": "preserve_source_pr103_inflate_shell_interpreter_contract",
+    "changed": false,
+    "contract": "python \"$HERE/inflate.py\" \"$SRC\" \"$DST\"",
     "dispatch_attempted": false,
-    "new": "\"${PYTHON:-python}\" \"$HERE/inflate.py\" \"$SRC\" \"$DST\"",
-    "old": "python \"$HERE/inflate.py\" \"$SRC\" \"$DST\"",
     "score_claim": false
   },
   "source_runtime_consumption_probe": {
@@ -496,7 +497,7 @@
       ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_mid32_plus_latent_hi_candidate/runtime_adapter_manifest.json",
       "--force"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "f0775a31df6f68b8c22bf090485b5aa801e56aaa3d364c846f62199f8c1a4635",
+    "canonical_payload_without_tool_manifest_sha256": "e38df47e68121f235f25eb4a6ff5e3f52942f06d0f9bfdce7fcdefc1298fba16",
     "dispatch_attempted": false,
     "input_files": [
       {
