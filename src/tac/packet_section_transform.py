@@ -19,6 +19,7 @@ import brotli
 
 from tac.analysis.hnerv_packet_sections import (
     PARSER_PR106,
+    PARSER_PR103,
     build_packet_section_manifest,
     validate_packet_section_manifest,
 )
@@ -35,6 +36,7 @@ from tac.repo_io import sha256_file
 
 SCHEMA = "packet_section_transform.v1"
 OPPORTUNITY_SCHEMA = "hnerv_brotli_section_recode_opportunities.v1"
+CERTIFICATION_SCHEMA = "hnerv_packet_transform_candidate_cert.v1"
 CONTEST_CANDIDATE_BLOCKERS = (
     "requires_archive_manifest_preflight",
     "requires_lane_dispatch_claim",
@@ -42,6 +44,15 @@ CONTEST_CANDIDATE_BLOCKERS = (
 )
 PR106_RUNTIME_RECODE_SECTIONS = frozenset(
     {"decoder_packed_brotli", "latents_and_sidecar_brotli"}
+)
+PR103_LAST_SECTION_RECODE_SECTIONS = frozenset({"sidecar_corrections_brotli"})
+PR103_FIXED_LAYOUT_RECODE_SECTIONS = frozenset(
+    {
+        "non_ac_weights_brotli",
+        "ac_histograms_brotli",
+        "latent_low_bytes_brotli",
+        "latent_hi_histogram_brotli",
+    }
 )
 
 
@@ -417,6 +428,113 @@ def compile_hnerv_pr106_section_transform_candidate(
     }
 
 
+def certify_hnerv_grammar_preserving_candidate_pair(
+    *,
+    source_archive: str | Path,
+    candidate_archive: str | Path,
+    label: str,
+    parser: str = PARSER_PR106,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Certify a source/candidate pair as grammar-preserving local evidence.
+
+    This is a local PacketIR gate, not a dispatcher.  It proves that section
+    changes are parser-accounted and either raw-equivalent recodes or accepted
+    control-byte updates.  Edits that merely delete entropy-stream bytes or
+    change decompressed Brotli payloads are blocked even if the candidate
+    archive is smaller.
+    """
+
+    source_path = Path(source_archive)
+    candidate_path = Path(candidate_archive)
+    source_ir = build_hnerv_packet_ir(
+        source_path,
+        label=f"{label}_source",
+        parser=parser,
+        repo_root=repo_root,
+    )
+    candidate_ir = build_hnerv_packet_ir(
+        candidate_path,
+        label=f"{label}_candidate",
+        parser=parser,
+        repo_root=repo_root,
+    )
+    source_single = read_strict_single_member_zip(source_path)
+    candidate_single = read_strict_single_member_zip(candidate_path)
+
+    changed_sections = _changed_sections(source_ir, candidate_ir)
+    section_equivalence = _candidate_pair_section_equivalence(
+        parser_name=source_ir.parser_name,
+        source_ir=source_ir,
+        candidate_ir=candidate_ir,
+        source_payload=source_single.payload,
+        candidate_payload=candidate_single.payload,
+    )
+    blockers = _candidate_pair_blockers(
+        source_ir=source_ir,
+        candidate_ir=candidate_ir,
+        changed_sections=changed_sections,
+        section_equivalence=section_equivalence,
+        source_member_name=source_single.member_name,
+        candidate_member_name=candidate_single.member_name,
+    )
+    archive_byte_delta = candidate_ir.archive_bytes - source_ir.archive_bytes
+    payload_byte_delta = candidate_ir.member_bytes - source_ir.member_bytes
+    if archive_byte_delta >= 0:
+        blockers.append("candidate_archive_not_rate_positive")
+    if not changed_sections:
+        blockers.append("candidate_payload_noop")
+
+    readiness_blockers = _unique_ordered(blockers)
+    return {
+        "schema": CERTIFICATION_SCHEMA,
+        "schema_version": 1,
+        "tool": "tac.packet_section_transform.certify_hnerv_grammar_preserving_candidate_pair",
+        "score_claim": False,
+        "score_evidence_grade": "invalid_no_score",
+        "dispatch_attempted": False,
+        "gpu_required": False,
+        "remote_gpu_run": False,
+        "ready_for_archive_preflight": not readiness_blockers,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_blockers": _unique_ordered(
+            [*readiness_blockers, *CONTEST_CANDIDATE_BLOCKERS]
+        ),
+        "readiness_blockers": readiness_blockers,
+        "grammar_preserving": not readiness_blockers,
+        "rate_positive": archive_byte_delta < 0,
+        "score_affecting_payload_changed": source_ir.member_sha256 != candidate_ir.member_sha256,
+        "charged_bits_changed": source_ir.member_sha256 != candidate_ir.member_sha256,
+        "label": label,
+        "parser_name": source_ir.parser_name,
+        "source_packet_ir": source_ir.to_dict(),
+        "candidate_packet_ir": candidate_ir.to_dict(),
+        "source_archive_path": str(source_path),
+        "candidate_archive_path": str(candidate_path),
+        "source_archive_sha256": source_ir.archive_sha256,
+        "candidate_archive_sha256": candidate_ir.archive_sha256,
+        "source_archive_bytes": source_ir.archive_bytes,
+        "candidate_archive_bytes": candidate_ir.archive_bytes,
+        "archive_byte_delta": archive_byte_delta,
+        "source_payload_sha256": source_ir.member_sha256,
+        "candidate_payload_sha256": candidate_ir.member_sha256,
+        "payload_byte_delta": payload_byte_delta,
+        "rate_score_delta_if_components_equal": round(
+            archive_byte_delta * RATE_SCORE_PER_BYTE,
+            12,
+        ),
+        "changed_sections": changed_sections,
+        "section_equivalence": section_equivalence,
+        "exact_next_gate": [
+            "operator approves exact CUDA promotion",
+            "tools/claim_lane_dispatch.py claim creates a non-conflicting lane claim",
+            "strict pre-submission compliance manifest is attached to the packet",
+            "claimed exact CUDA auth eval runs against this archive SHA",
+            "contest_auth_eval.adjudicated.json is harvested and formula-reviewed",
+        ],
+    }
+
+
 def scan_hnerv_brotli_recode_opportunities(
     archives: Sequence[tuple[str, str | Path, str]],
     *,
@@ -531,6 +649,201 @@ def scan_hnerv_brotli_recode_opportunities(
         "ranked_rate_positive": ranked,
         "sections": rows,
     }
+
+
+def _candidate_pair_section_equivalence(
+    *,
+    parser_name: str,
+    source_ir: PacketIR,
+    candidate_ir: PacketIR,
+    source_payload: bytes,
+    candidate_payload: bytes,
+) -> list[dict[str, Any]]:
+    candidate_by_name = {section.name: section for section in candidate_ir.sections}
+    rows: list[dict[str, Any]] = []
+    for source_section in source_ir.sections:
+        candidate_section = candidate_by_name.get(source_section.name)
+        if candidate_section is None:
+            rows.append(
+                {
+                    "section_name": source_section.name,
+                    "status": "candidate_section_missing",
+                    "grammar_equivalent": False,
+                }
+            )
+            continue
+        source_bytes = _section_bytes(source_payload, source_section)
+        candidate_bytes = _section_bytes(candidate_payload, candidate_section)
+        changed = (
+            source_section.sha256 != candidate_section.sha256
+            or source_section.length != candidate_section.length
+            or source_section.offset != candidate_section.offset
+        )
+        row: dict[str, Any] = {
+            "section_name": source_section.name,
+            "optimization_role": source_section.optimization_role,
+            "changed": changed,
+            "content_changed": source_section.sha256 != candidate_section.sha256,
+            "length_changed": source_section.length != candidate_section.length,
+            "offset_changed": source_section.offset != candidate_section.offset,
+            "source_bytes": source_section.length,
+            "candidate_bytes": candidate_section.length,
+            "byte_delta": candidate_section.length - source_section.length,
+            "source_section_sha256": source_section.sha256,
+            "candidate_section_sha256": candidate_section.sha256,
+            "grammar_equivalent": True,
+            "equivalence_kind": "unchanged_or_offset_only",
+            "blockers": [],
+        }
+        if parser_name == PARSER_PR106 and source_section.name == "packed_header_ff_len24":
+            row.update(_pr106_header_equivalence(source_ir, candidate_ir, source_bytes, candidate_bytes))
+        elif _requires_brotli_raw_equivalence(parser_name, source_section.name) and changed:
+            row.update(_brotli_raw_equivalence_record(source_section.name, source_bytes, candidate_bytes))
+        elif changed:
+            row["grammar_equivalent"] = False
+            row["equivalence_kind"] = "runtime_adapter_required"
+            row["blockers"] = [
+                f"runtime_adapter_required:{parser_name}:{source_section.name}"
+            ]
+        rows.append(row)
+    return rows
+
+
+def _candidate_pair_blockers(
+    *,
+    source_ir: PacketIR,
+    candidate_ir: PacketIR,
+    changed_sections: Sequence[Mapping[str, Any]],
+    section_equivalence: Sequence[Mapping[str, Any]],
+    source_member_name: str,
+    candidate_member_name: str,
+) -> list[str]:
+    blockers: list[str] = []
+    if source_ir.parser_name != candidate_ir.parser_name:
+        blockers.append("parser_name_changed")
+    if source_member_name != candidate_member_name:
+        blockers.append("zip_member_name_changed")
+    if source_ir.member_sha256 == candidate_ir.member_sha256:
+        blockers.append("candidate_member_sha256_unchanged")
+    changed_names = {str(row.get("section_name")) for row in changed_sections}
+    for row in section_equivalence:
+        section_name = str(row.get("section_name"))
+        if row.get("grammar_equivalent") is not True and section_name in changed_names:
+            blockers.extend(str(item) for item in row.get("blockers") or [])
+            if not row.get("blockers"):
+                blockers.append(f"section_not_grammar_equivalent:{section_name}")
+    if source_ir.parser_name == PARSER_PR103:
+        blockers.extend(_pr103_fixed_layout_blockers(changed_sections))
+    return _unique_ordered(blockers)
+
+
+def _pr103_fixed_layout_blockers(
+    changed_sections: Sequence[Mapping[str, Any]],
+) -> list[str]:
+    blockers: list[str] = []
+    for row in changed_sections:
+        name = str(row.get("section_name"))
+        if name in PR103_FIXED_LAYOUT_RECODE_SECTIONS and (
+            row.get("length_changed") is True or row.get("offset_changed") is True
+        ):
+            blockers.append(f"fixed_layout_section_length_change_requires_runtime_adapter:{name}")
+        if name == "merged_range_coded_weights_and_hi_latents":
+            blockers.append("range_stream_change_requires_symbol_roundtrip_proof")
+    return blockers
+
+
+def _requires_brotli_raw_equivalence(parser_name: str, section_name: str) -> bool:
+    if parser_name == PARSER_PR106 and section_name in PR106_RUNTIME_RECODE_SECTIONS:
+        return True
+    if parser_name == PARSER_PR103 and (
+        section_name in PR103_FIXED_LAYOUT_RECODE_SECTIONS
+        or section_name in PR103_LAST_SECTION_RECODE_SECTIONS
+    ):
+        return True
+    return False
+
+
+def _brotli_raw_equivalence_record(
+    section_name: str,
+    source_bytes: bytes,
+    candidate_bytes: bytes,
+) -> dict[str, Any]:
+    try:
+        source_raw = brotli.decompress(source_bytes)
+        candidate_raw = brotli.decompress(candidate_bytes)
+    except brotli.error as exc:
+        return {
+            "equivalence_kind": "brotli_raw_equivalence",
+            "grammar_equivalent": False,
+            "raw_equal": False,
+            "blockers": [f"brotli_raw_equivalence_unavailable:{section_name}:{exc}"],
+        }
+    raw_equal = source_raw == candidate_raw
+    return {
+        "equivalence_kind": "brotli_raw_equivalence",
+        "grammar_equivalent": raw_equal,
+        "raw_equal": raw_equal,
+        "raw_bytes": len(source_raw),
+        "source_raw_sha256": sha256_bytes(source_raw),
+        "candidate_raw_sha256": sha256_bytes(candidate_raw),
+        "blockers": [] if raw_equal else [f"brotli_raw_mismatch:{section_name}"],
+    }
+
+
+def _pr106_header_equivalence(
+    source_ir: PacketIR,
+    candidate_ir: PacketIR,
+    source_header: bytes,
+    candidate_header: bytes,
+) -> dict[str, Any]:
+    blockers: list[str] = []
+    source_len = _pr106_header_decoder_len(source_header)
+    candidate_len = _pr106_header_decoder_len(candidate_header)
+    try:
+        source_decoder_len = source_ir.section("decoder_packed_brotli").length
+        candidate_decoder_len = candidate_ir.section("decoder_packed_brotli").length
+    except PacketSectionTransformError as exc:
+        return {
+            "equivalence_kind": "pr106_len24_control",
+            "grammar_equivalent": False,
+            "blockers": [f"pr106_decoder_section_missing:{exc}"],
+        }
+    if source_len != source_decoder_len:
+        blockers.append("source_pr106_len24_mismatches_decoder_section")
+    if candidate_len != candidate_decoder_len:
+        blockers.append("candidate_pr106_len24_mismatches_decoder_section")
+    if len(candidate_header) != 4:
+        blockers.append("candidate_pr106_header_length_changed")
+    return {
+        "equivalence_kind": "pr106_len24_control",
+        "grammar_equivalent": not blockers,
+        "source_decoder_len24": source_len,
+        "candidate_decoder_len24": candidate_len,
+        "source_decoder_section_bytes": source_decoder_len,
+        "candidate_decoder_section_bytes": candidate_decoder_len,
+        "blockers": blockers,
+    }
+
+
+def _pr106_header_decoder_len(header: bytes) -> int:
+    if len(header) != 4 or header[:1] != b"\xff":
+        return -1
+    return int.from_bytes(header[1:4], "little")
+
+
+def _section_bytes(payload: bytes, section: SectionIR) -> bytes:
+    return payload[section.offset : section.offset + section.length]
+
+
+def _unique_ordered(values: Sequence[str]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        out.append(value)
+    return out
 
 
 def _changed_sections(source_ir: PacketIR, candidate_ir: PacketIR | None) -> list[dict[str, Any]]:
@@ -806,6 +1119,7 @@ __all__ = [
     "SectionIR",
     "TransformOutput",
     "build_hnerv_packet_ir",
+    "certify_hnerv_grammar_preserving_candidate_pair",
     "compile_hnerv_pr106_section_transform_candidate",
     "scan_hnerv_brotli_recode_opportunities",
 ]

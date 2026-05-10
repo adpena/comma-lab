@@ -48,6 +48,9 @@ PR91_HPM1_RUNTIME_CONTRACT_ARTIFACT = (
 )
 DISPATCH_CLAIMS = REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md"
 EXACT_READY_SCAN_ROOT = REPO_ROOT / "experiments" / "results"
+EXACT_READY_SUPPRESSION_MANIFEST = (
+    REPO_ROOT / ".omx/research/exact_ready_queue_retraction_manifest_20260510_codex.json"
+)
 
 from tac.optimizer.exact_readiness import (  # noqa: E402
     ACTIVE_FLOOR_SCORE,
@@ -56,8 +59,10 @@ from tac.optimizer.exact_readiness import (  # noqa: E402
     terminal_claim_result_conflicts,
 )
 from tac.optimizer.exact_ready_audit import (  # noqa: E402
+    apply_suppression_manifest,
     audit_exact_ready_queues,
     discover_exact_ready_queues,
+    load_suppression_manifest,
 )
 
 
@@ -299,11 +304,39 @@ def _load_exact_eval_packet(lane: dict) -> dict[str, object]:
         packet.get("dry_run_ready")
         or packet.get("ready_for_exact_eval_dispatch_claim")
     )
+    commands = dict(packet.get("commands") or {})
+    operator_next_steps = dict(packet.get("operator_next_steps") or {})
+    repeat_dispatch_allowed = not terminal_blockers
+    if not repeat_dispatch_allowed:
+        commands = {}
+        operator_next_steps = {
+            "schema": "terminal_exact_eval_evidence_stop_v1",
+            "reason": "terminal exact-eval evidence exists for this lane/archive; do not repeat-dispatch from operator briefing",
+            "terminal_blockers": terminal_blockers,
+            "steps": [
+                {
+                    "id": "review_terminal_cuda_result",
+                    "dispatches_remote_gpu": False,
+                    "purpose": "read the terminal exact-eval ledger and classify the measured candidate before any new dispatch",
+                },
+                {
+                    "id": "choose_byte_different_successor_candidate",
+                    "dispatches_remote_gpu": False,
+                    "purpose": "resume only with a byte-different archive/runtime or a new lane claim that is not blocked by terminal evidence",
+                },
+            ],
+        }
     return {
         "lane_id": lane["lane_id"],
         "name": lane["name"],
         "packet_path": lane["packet_path"],
         "ready_for_submit": bool(packet.get("ready_for_submit")) and not terminal_blockers,
+        "repeat_dispatch_allowed": repeat_dispatch_allowed,
+        "dispatch_action": (
+            "copy_safe_submit_after_gates"
+            if repeat_dispatch_allowed
+            else "terminal_exact_eval_evidence_stop"
+        ),
         "blockers": blockers,
         "terminal_exact_eval_evidence_blockers": terminal_blockers,
         "missing_env": list(packet.get("missing_env") or []),
@@ -315,8 +348,14 @@ def _load_exact_eval_packet(lane: dict) -> dict[str, object]:
         "compliance_ok": compliance_ok,
         "payload_diff_ready": payload_diff_ready,
         "dry_run_ready": dry_run_ready,
-        "commands": dict(packet.get("commands") or {}),
-        "operator_next_steps": dict(packet.get("operator_next_steps") or {}),
+        "commands": commands,
+        "suppressed_commands": dict(packet.get("commands") or {})
+        if not repeat_dispatch_allowed
+        else {},
+        "operator_next_steps": operator_next_steps,
+        "suppressed_operator_next_steps": dict(packet.get("operator_next_steps") or {})
+        if not repeat_dispatch_allowed
+        else {},
     }
 
 
@@ -338,10 +377,20 @@ def _format_exact_eval_packets() -> str:
         blockers = packet.get("blockers") or []
         missing_env = packet.get("missing_env") or []
         state = "READY" if packet.get("ready_for_submit") else "BLOCKED"
+        repeat_dispatch_allowed = bool(packet.get("repeat_dispatch_allowed", True))
+        if not repeat_dispatch_allowed:
+            claim_command = "(suppressed: terminal exact-eval evidence present)"
+            submit_command = "(suppressed: terminal exact-eval evidence present)"
+            harvest_command = "(suppressed: terminal exact-eval evidence present)"
+        else:
+            claim_command = commands.get("claim", "(missing)")
+            submit_command = commands.get("submit", "(missing)")
+            harvest_command = commands.get("harvest", "(missing)")
         lines.append(
             f"  • {packet['lane_id']} — {packet['name']}\n"
             f"    state {state}   bytes {packet.get('archive_bytes')}   "
             f"sha256 {packet.get('archive_sha256')}\n"
+            f"    dispatch_action: {packet.get('dispatch_action', '<unset>')}\n"
             f"    static gates: preflight={packet.get('preflight_ready')} "
             f"compliance={packet.get('compliance_ok')} "
             f"payload_diff={packet.get('payload_diff_ready')} "
@@ -350,11 +399,11 @@ def _format_exact_eval_packets() -> str:
             f"    missing env: {', '.join(missing_env) if missing_env else '(none)'}\n"
             f"    packet: {packet['packet_path']}\n"
             f"    Claim:\n"
-            f"      {commands.get('claim', '(missing)')}\n"
+            f"      {claim_command}\n"
             f"    Submit:\n"
-            f"      {commands.get('submit', '(missing)')}\n"
+            f"      {submit_command}\n"
             f"    Harvest:\n"
-            f"      {commands.get('harvest', '(missing)')}\n"
+            f"      {harvest_command}\n"
             f"    Copy-safe next steps:\n"
             f"      {step_ids if step_ids else '(missing)'}"
         )
@@ -366,12 +415,23 @@ def _exact_ready_queue_audit() -> dict[str, object]:
         repo_root=REPO_ROOT,
         scan_root=EXACT_READY_SCAN_ROOT,
     )
-    return audit_exact_ready_queues(
+    payload = audit_exact_ready_queues(
         queues,
         repo_root=REPO_ROOT,
         dispatch_claims_path=DISPATCH_CLAIMS,
         active_floor_score=ACTIVE_FLOOR_SCORE,
     )
+    if EXACT_READY_SUPPRESSION_MANIFEST.is_file():
+        try:
+            return apply_suppression_manifest(
+                payload,
+                manifest=load_suppression_manifest(EXACT_READY_SUPPRESSION_MANIFEST),
+                manifest_path=EXACT_READY_SUPPRESSION_MANIFEST,
+                repo_root=REPO_ROOT,
+            )
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            payload["suppression_manifest_error"] = str(exc)
+    return payload
 
 
 def _format_exact_ready_queue_audit() -> str:

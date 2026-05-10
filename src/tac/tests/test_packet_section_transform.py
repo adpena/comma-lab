@@ -11,6 +11,7 @@ from tac.hnerv_lowlevel_packer import parse_ff_packed_brotli_hnerv, write_stored
 from tac.packet_section_transform import (
     BrotliRecodeSectionTransform,
     build_hnerv_packet_ir,
+    certify_hnerv_grammar_preserving_candidate_pair,
     compile_hnerv_pr106_section_transform_candidate,
     scan_hnerv_brotli_recode_opportunities,
 )
@@ -267,6 +268,114 @@ def test_scan_brotli_recode_opportunities_cli_writes_json(tmp_path: Path) -> Non
     payload = json.loads(out.read_text(encoding="utf-8"))
     assert payload["schema"] == "hnerv_brotli_section_recode_opportunities.v1"
     assert payload["summary"]["candidate_compilable_by_existing_bridge_count"] >= 1
+
+
+def test_certify_hnerv_grammar_preserving_pr106_pair_accepts_raw_equivalent_recode(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "source.zip"
+    candidate = tmp_path / "candidate.zip"
+    raw_decoder = b"decoder-record-" * 3000
+    raw_latents = b"latent-record-" * 500
+    source_payload = _packed_payload(
+        brotli.compress(raw_decoder, quality=1),
+        brotli.compress(raw_latents, quality=1),
+    )
+    candidate_decoder = brotli.compress(raw_decoder, quality=11)
+    candidate_payload = _packed_payload(
+        candidate_decoder,
+        brotli.compress(raw_latents, quality=1),
+    )
+    write_stored_single_member_zip(source, member_name="0.bin", payload=source_payload)
+    write_stored_single_member_zip(candidate, member_name="0.bin", payload=candidate_payload)
+
+    result = certify_hnerv_grammar_preserving_candidate_pair(
+        source_archive=source,
+        candidate_archive=candidate,
+        label="fixture",
+    )
+
+    assert result["score_claim"] is False
+    assert result["dispatch_attempted"] is False
+    assert result["ready_for_archive_preflight"] is True
+    assert result["ready_for_exact_eval_dispatch"] is False
+    assert result["grammar_preserving"] is True
+    assert result["rate_positive"] is True
+    assert result["readiness_blockers"] == []
+    assert result["archive_byte_delta"] < 0
+    equivalence = {row["section_name"]: row for row in result["section_equivalence"]}
+    assert equivalence["packed_header_ff_len24"]["equivalence_kind"] == "pr106_len24_control"
+    assert equivalence["decoder_packed_brotli"]["raw_equal"] is True
+    assert equivalence["latents_and_sidecar_brotli"]["raw_equal"] is True
+
+
+def test_certify_hnerv_grammar_preserving_pr106_pair_blocks_raw_mismatch(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "source.zip"
+    candidate = tmp_path / "candidate.zip"
+    source_payload = _packed_payload(
+        brotli.compress(b"decoder-record-" * 3000, quality=1),
+        brotli.compress(b"latent-record-" * 500, quality=1),
+    )
+    candidate_payload = _packed_payload(
+        brotli.compress(b"different-decoder-record-" * 500, quality=11),
+        brotli.compress(b"latent-record-" * 500, quality=1),
+    )
+    write_stored_single_member_zip(source, member_name="0.bin", payload=source_payload)
+    write_stored_single_member_zip(candidate, member_name="0.bin", payload=candidate_payload)
+
+    result = certify_hnerv_grammar_preserving_candidate_pair(
+        source_archive=source,
+        candidate_archive=candidate,
+        label="fixture",
+    )
+
+    assert result["ready_for_archive_preflight"] is False
+    assert result["grammar_preserving"] is False
+    assert "brotli_raw_mismatch:decoder_packed_brotli" in result["readiness_blockers"]
+    assert "brotli_raw_mismatch:decoder_packed_brotli" in result["dispatch_blockers"]
+
+
+def test_certify_hnerv_packet_transform_cli_writes_json(tmp_path: Path) -> None:
+    source = tmp_path / "source.zip"
+    candidate = tmp_path / "candidate.zip"
+    out = tmp_path / "cert.json"
+    raw_decoder = b"decoder-record-" * 3000
+    source_payload = _packed_payload(
+        brotli.compress(raw_decoder, quality=1),
+        brotli.compress(b"latent-record-" * 500, quality=1),
+    )
+    candidate_payload = _packed_payload(
+        brotli.compress(raw_decoder, quality=11),
+        brotli.compress(b"latent-record-" * 500, quality=1),
+    )
+    write_stored_single_member_zip(source, member_name="0.bin", payload=source_payload)
+    write_stored_single_member_zip(candidate, member_name="0.bin", payload=candidate_payload)
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "certify_hnerv_packet_transform_candidate.py"),
+            "--source-archive",
+            str(source),
+            "--candidate-archive",
+            str(candidate),
+            "--label",
+            "fixture",
+            "--json-out",
+            str(out),
+            "--fail-if-blocked",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert payload["schema"] == "hnerv_packet_transform_candidate_cert.v1"
+    assert payload["ready_for_archive_preflight"] is True
+    assert payload["ready_for_exact_eval_dispatch"] is False
 
 
 def _packed_payload(decoder_brotli: bytes, latents_brotli: bytes) -> bytes:

@@ -815,6 +815,8 @@ def _prewarm_preflight_source_index(root: Path) -> None:
         # downstream checks so SourceIndex can reuse one file/fact pass.
         (("scripts", "experiments", "src/tac/contrib", "src/tac/deploy", "src/tac/experiments"), ("*.py",)),
         (("experiments",), ("*.sh",)),
+        (("src/tac", "tools"), ("*.py",)),
+        (("src/tac", "tools", "scripts"), ("*.py",)),
         (("src/tac", "tools", "experiments"), ("*.py",)),
         (("src/tac", "tools", "experiments", "scripts"), ("*.py",)),
         (("src/tac", "experiments", "scripts"), ("*.py",)),
@@ -35571,7 +35573,38 @@ def check_state_writers_strict_load_for_mutating_path(
     violations: list[str] = []
     scanned_files = 0
     source_index = _current_source_index(root)
-    for py in _iter_python_files(root, ["src/tac", "tools"]):
+    scan_dirs = ["src/tac", "tools"]
+    if source_index is not None:
+        writer_paths = set(
+            source_index.files_containing_substrings(
+                scan_dirs,
+                pattern="*.py",
+                substrings=_STATE_WRITER_FN_NAME_PATTERNS,
+                require_all=False,
+            )
+        )
+        load_paths = set(
+            source_index.files_containing_substrings(
+                scan_dirs,
+                pattern="*.py",
+                substrings=(
+                    "_load_",
+                    "load_active",
+                    "load_setup",
+                    "load_first_seen",
+                    "read_text(",
+                    "read_bytes(",
+                    "json.load",
+                ),
+                require_all=False,
+            )
+        )
+        py_paths = tuple(
+            sorted(writer_paths & load_paths, key=lambda item: item.as_posix())
+        )
+    else:
+        py_paths = tuple(_iter_python_files(root, scan_dirs))
+    for py in py_paths:
         if _is_oss_export_mirror_path(py):
             continue
         s = str(py)
@@ -36015,7 +36048,31 @@ def check_state_writers_own_their_lock_end_to_end(
     root = Path(repo_root or REPO_ROOT)
     violations: list[str] = []
     scanned_files = 0
-    for py in _iter_python_files(root, ["src/tac", "tools", "scripts"]):
+    scan_dirs = ["src/tac", "tools", "scripts"]
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        doc_paths = set(
+            source_index.files_containing_substrings(
+                scan_dirs,
+                pattern="*.py",
+                substrings=_CALLER_LOCK_DOC_TOKENS,
+                require_all=False,
+            )
+        )
+        save_paths = set(
+            source_index.files_containing_substrings(
+                scan_dirs,
+                pattern="*.py",
+                substrings=("_save_", "save_state"),
+                require_all=False,
+            )
+        )
+        py_paths = tuple(
+            sorted(doc_paths & save_paths, key=lambda item: item.as_posix())
+        )
+    else:
+        py_paths = tuple(_iter_python_files(root, scan_dirs))
+    for py in py_paths:
             if _is_oss_export_mirror_path(py):
                 continue
             s = str(py)
@@ -36028,7 +36085,11 @@ def check_state_writers_own_their_lock_end_to_end(
             ):
                 continue
             try:
-                text = py.read_text(encoding="utf-8", errors="replace")
+                text = (
+                    source_index.read_text(py, encoding="utf-8", errors="replace")
+                    if source_index is not None
+                    else py.read_text(encoding="utf-8", errors="replace")
+                )
             except OSError:
                 continue
             # Quick prefilter
@@ -36199,7 +36260,18 @@ def check_state_helper_paths_explicit(
 
     violations: list[str] = []
     scanned_files = 0
-    for py in _iter_python_files(root, ["src/tac", "tools", "scripts"]):
+    scan_dirs = ["src/tac", "tools", "scripts"]
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        py_paths = source_index.files_containing_substrings(
+            scan_dirs,
+            pattern="*.py",
+            substrings=tuple(f"from {mod} import" for mod in helper_modules),
+            require_all=False,
+        )
+    else:
+        py_paths = tuple(_iter_python_files(root, scan_dirs))
+    for py in py_paths:
             if _is_oss_export_mirror_path(py):
                 continue
             s = str(py)
@@ -36212,7 +36284,11 @@ def check_state_helper_paths_explicit(
             ):
                 continue
             try:
-                text = py.read_text(encoding="utf-8", errors="replace")
+                text = (
+                    source_index.read_text(py, encoding="utf-8", errors="replace")
+                    if source_index is not None
+                    else py.read_text(encoding="utf-8", errors="replace")
+                )
             except OSError:
                 continue
             # Quick prefilter — must import from a state-helper module
@@ -36389,10 +36465,22 @@ def check_unsafe_test_only_restricted_to_test_paths(
 
     violations: list[str] = []
     scanned_files = 0
-    for scan_dir in scan_dirs:
-        if not scan_dir.is_dir():
-            continue
-        for py in scan_dir.rglob("*.py"):
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        candidate_paths = source_index.files_containing_substrings(
+            scan_dirs,
+            pattern="*.py",
+            substrings=("Phase3DispatchGate", _PHASE3_GATE_UNSAFE_TEST_ONLY_TOKEN),
+            require_all=True,
+        )
+    else:
+        candidate_paths = tuple(
+            py
+            for scan_dir in scan_dirs
+            if scan_dir.is_dir()
+            for py in scan_dir.rglob("*.py")
+        )
+    for py in candidate_paths:
             if _is_oss_export_mirror_path(py):
                 continue
             if py in EXCLUDED_FILES:
@@ -36410,7 +36498,11 @@ def check_unsafe_test_only_restricted_to_test_paths(
             ):
                 continue
             try:
-                text = py.read_text(encoding="utf-8", errors="replace")
+                text = (
+                    source_index.read_text(py, encoding="utf-8", errors="replace")
+                    if source_index is not None
+                    else py.read_text(encoding="utf-8", errors="replace")
+                )
             except OSError:
                 continue
             if "Phase3DispatchGate" not in text:
@@ -37682,7 +37774,20 @@ def check_phase_b_auth_memo_in_repo(
     violations: list[str] = []
     scanned_files = 0
     source_index = _current_source_index(root)
-    for py in _iter_python_files(root, ["src/tac", "tools", "experiments", "scripts"]):
+    scan_dirs = ["src/tac", "tools", "experiments", "scripts"]
+    if source_index is not None:
+        candidate_paths = source_index.files_containing_substrings(
+            scan_dirs,
+            pattern="*.py",
+            substrings=(
+                _PHASE_B_AUTH_MEMO_FUNCTION_TOKEN,
+                _PHASE_B_AUTH_MEMO_KW_TOKEN,
+            ),
+            require_all=True,
+        )
+    else:
+        candidate_paths = tuple(_iter_python_files(root, scan_dirs))
+    for py in candidate_paths:
         if _is_oss_export_mirror_path(py):
             continue
         s = str(py)

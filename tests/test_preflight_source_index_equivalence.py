@@ -241,6 +241,62 @@ def update_records_locked(path):
     assert "state_bad.py:3" in with_index[0]
 
 
+def test_state_writer_own_lock_source_index_matches_no_index(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "src" / "tac" / "state_lock_bad.py",
+        '''def _save_state(rows):
+    """MUST be called inside _state_lock."""
+    return rows
+''',
+    )
+
+    no_index = preflight.check_state_writers_own_their_lock_end_to_end(
+        repo_root=tmp_path,
+        strict=False,
+        verbose=False,
+    )
+    with_index = _with_source_index(
+        tmp_path,
+        preflight.check_state_writers_own_their_lock_end_to_end,
+    )
+
+    assert with_index == no_index
+    assert len(with_index) == 1
+    assert "state_lock_bad.py:1" in with_index[0]
+
+
+def test_state_helper_paths_source_index_matches_no_index(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "src" / "tac" / "azure_dispatch_bad.py",
+        """from tac.deploy.azure.active_vms_state import register_active_vm_record
+
+ACTIVE_VMS_PATH = ".omx/state/azure_active_vms.json"
+ACTIVE_VMS_LOCK = ".omx/state/azure_active_vms.lock"
+
+def register(vm):
+    register_active_vm_record(vm)
+""",
+    )
+
+    no_index = preflight.check_state_helper_paths_explicit(
+        repo_root=tmp_path,
+        strict=False,
+        verbose=False,
+    )
+    with_index = _with_source_index(
+        tmp_path,
+        preflight.check_state_helper_paths_explicit,
+    )
+
+    assert with_index == no_index
+    assert len(with_index) == 1
+    assert "azure_dispatch_bad.py:7" in with_index[0]
+
+
 def test_phase_b_auth_memo_source_index_matches_no_index(tmp_path: Path) -> None:
     _write(
         tmp_path / "experiments" / "phase_b_bad.py",
@@ -353,6 +409,36 @@ def test_phase3_dispatch_gate_source_index_matches_no_index(tmp_path: Path) -> N
     assert with_index == no_index
     assert len(with_index) == 1
     assert "phase3_callsite.py:2" in with_index[0]
+
+
+def test_phase3_unsafe_test_only_source_index_matches_no_index(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "experiments" / "unsafe_gate.py",
+        """from tac.phase3.joint_scorer_renderer_codec import Phase3DispatchGate
+
+def build_gate():
+    return Phase3DispatchGate(
+        phase2_anchor_verified=False,
+        unsafe_test_only=True,
+    )
+""",
+    )
+
+    no_index = preflight.check_unsafe_test_only_restricted_to_test_paths(
+        repo_root=tmp_path,
+        strict=False,
+        verbose=False,
+    )
+    with_index = _with_source_index(
+        tmp_path,
+        preflight.check_unsafe_test_only_restricted_to_test_paths,
+    )
+
+    assert with_index == no_index
+    assert len(with_index) == 1
+    assert "unsafe_gate.py:4" in with_index[0]
 
 
 def test_setup_first_seen_transactional_source_index_matches_no_index(

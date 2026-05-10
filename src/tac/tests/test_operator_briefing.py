@@ -92,6 +92,11 @@ def test_briefing_json_composite_has_all_three_keys():
     assert out["exact_ready_queue_audit"]["schema"] == (
         "optimizer_exact_ready_queue_terminal_evidence_audit_v1"
     )
+    assert out["exact_ready_queue_audit"].get("stale_ready_row_count") == 0
+    assert out["exact_ready_queue_audit"].get("suppressed_ready_row_count", 0) >= 1
+    assert str(out["exact_ready_queue_audit"].get("suppression_manifest_path", "")).endswith(
+        ".omx/research/exact_ready_queue_retraction_manifest_20260510_codex.json"
+    )
     assert "non_dispatchable_readiness_artifacts" in out
     row = out["non_dispatchable_readiness_artifacts"][0]
     assert row["kind"] == "pr91_hpm1_readiness_bundle"
@@ -121,6 +126,8 @@ def test_briefing_json_composite_has_all_three_keys():
     }
     q10 = packet_rows["pr106_q10_151byte_brotli"]
     assert q10["ready_for_submit"] is False
+    assert q10["repeat_dispatch_allowed"] is False
+    assert q10["dispatch_action"] == "terminal_exact_eval_evidence_stop"
     assert q10["terminal_exact_eval_evidence_blockers"]
     assert any(
         blocker.startswith("same_lane_terminal_negative_for_same_archive")
@@ -133,7 +140,14 @@ def test_briefing_json_composite_has_all_three_keys():
     assert q10["dry_run_ready"] is True
     assert "missing_active_lane_dispatch_claim" in q10["blockers"]
     assert "missing_lightning_environment" in q10["blockers"]
-    assert q10["operator_next_steps"]["schema"] == "hnerv_lowlevel_operator_next_steps_v1"
+    assert q10["commands"] == {}
+    assert "submit" in q10["suppressed_commands"]
+    assert q10["operator_next_steps"]["schema"] == "terminal_exact_eval_evidence_stop_v1"
+    q10_step_ids = [step["id"] for step in q10["operator_next_steps"]["steps"]]
+    assert q10_step_ids == [
+        "review_terminal_cuda_result",
+        "choose_byte_different_successor_candidate",
+    ]
     lgblock16 = packet_rows["pr106x_lgblock16_1byte_brotli"]
     assert lgblock16["ready_for_submit"] is False
     assert lgblock16["preflight_ready"] is True
@@ -141,7 +155,13 @@ def test_briefing_json_composite_has_all_three_keys():
     assert lgblock16["payload_diff_ready"] is True
     assert lgblock16["dry_run_ready"] is True
     assert "missing_active_lane_dispatch_claim" in lgblock16["blockers"]
-    assert lgblock16["operator_next_steps"]["schema"] == "hnerv_lowlevel_operator_next_steps_v1"
+    if lgblock16["terminal_exact_eval_evidence_blockers"]:
+        assert lgblock16["repeat_dispatch_allowed"] is False
+        assert lgblock16["commands"] == {}
+        assert "submit" in lgblock16["suppressed_commands"]
+        assert lgblock16["operator_next_steps"]["schema"] == "terminal_exact_eval_evidence_stop_v1"
+    else:
+        assert lgblock16["operator_next_steps"]["schema"] == "hnerv_lowlevel_operator_next_steps_v1"
 
 
 def test_briefing_json_skip_pareto_still_surfaces_exact_ready_audit():
@@ -154,6 +174,7 @@ def test_briefing_json_skip_pareto_still_surfaces_exact_ready_audit():
     assert out["exact_ready_queue_audit"]["schema"] == (
         "optimizer_exact_ready_queue_terminal_evidence_audit_v1"
     )
+    assert out["exact_ready_queue_audit"].get("stale_ready_row_count") == 0
 
 
 def test_briefing_json_each_phase_has_n_total_or_n_configs():
@@ -179,8 +200,17 @@ def test_briefing_json_each_phase_has_n_total_or_n_configs():
         for step in packet_rows["pr106x_lgblock16_1byte_brotli"]["operator_next_steps"]["steps"]
     ]
     assert "assert_packet_ready_for_submit" in wr01_step_ids
-    assert "submit_exact_cuda" in q10_step_ids
-    assert "submit_exact_cuda" in lgblock16_step_ids
+    assert q10_step_ids == [
+        "review_terminal_cuda_result",
+        "choose_byte_different_successor_candidate",
+    ]
+    if packet_rows["pr106x_lgblock16_1byte_brotli"]["terminal_exact_eval_evidence_blockers"]:
+        assert lgblock16_step_ids == [
+            "review_terminal_cuda_result",
+            "choose_byte_different_successor_candidate",
+        ]
+    else:
+        assert "submit_exact_cuda" in lgblock16_step_ids
     assert out["non_dispatchable_readiness_artifacts"][0]["score_claim"] is False
 
 
