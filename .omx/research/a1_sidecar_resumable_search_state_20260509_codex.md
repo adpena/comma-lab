@@ -355,3 +355,60 @@ Observed:
 The batch-profile mismatch is a positive guard result, not a method negative:
 the profiler refused the faster batch because `best_mse` differed from the
 scalar reference by `0.00048828125`, preserving scalar custody for this chunk.
+
+## Codex follow-up local chunk 6
+
+<!-- generated_at: 2026-05-10T00:38:04Z -->
+<!-- evidence_grade: local_cpu_proxy_partial; no score claim; no remote dispatch -->
+
+Codex resumed the same ignored local artifact for another bounded local-only
+chunk:
+
+```bash
+/usr/bin/time -p .venv/bin/python tools/build_a1_per_pair_latent_correction_sidecar.py \
+  --n-pairs 24 \
+  --resume-search-state \
+  --max-search-seconds 90 \
+  --profile-candidate-batches 1 4 \
+  --auto-candidate-batch-size \
+  --runtime-smoke \
+  --runtime-smoke-pairs 1 \
+  --output-dir experiments/results/a1_sidecar_resumable_codex_20260509T_local
+```
+
+Observed:
+
+- skipped already-completed pairs `0` through `19`;
+- searched pairs `20`, `21`, `22`, and `23`;
+- elapsed `real 75.19`, `user 223.13`, `sys 4.97`;
+- profiler selected `candidate_batch_size=4`;
+- scalar-reference profile for first searched pair:
+  - batch `1`: `elapsed_seconds=15.244385792058893`,
+    `best_dim=16`, `best_delta_idx=0`, `best_mse=7130.49560546875`,
+    `semantic_match_scalar_reference=true`;
+  - batch `4`: `elapsed_seconds=11.340919040958397`,
+    `best_dim=16`, `best_delta_idx=0`, `best_mse=7130.49560546875`,
+    `semantic_match_scalar_reference=true`;
+- choice-state SHA-256
+  `b2c10b3cb95d2090a692604276e1472c3623b7d36351e4bb7cd2e986d588e772`;
+- archive SHA-256
+  `b3ab792433fd477ac9475b4f7dd3940d089ef41c549b2ad27f414869054aa9e2`;
+- archive bytes `178316`;
+- runtime tree SHA-256
+  `3497c774d94fe202563bccba2af4a5f90925cb8d9b2e982cf4428d0efbea0190`;
+- `runtime_smoke_checked=true`;
+- `n_pairs_searched=24`;
+- `n_pairs_completed_this_run=4`;
+- `n_pairs_skipped_already_completed=20`;
+- `full_non_smoke_search=false`;
+- `ready_for_exact_eval_dispatch=false`.
+
+Dispatch blockers remain:
+
+- claim lane before any GHA/remote eval dispatch;
+- run exact-eval dispatcher preflight against `submission_dir`;
+- record runtime tree SHA and terminal dispatch claim row;
+- `non_full_sidecar_search_not_exact_eval_ready`.
+
+The search remains scalar-custody preserving: batch `4` was used only after
+matching the scalar reference exactly on the profiled pair for this chunk.

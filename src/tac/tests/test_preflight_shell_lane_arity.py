@@ -22,6 +22,7 @@ from pathlib import Path
 
 import pytest
 
+from tac import preflight as preflight_module
 from tac.preflight import (
     ArityViolation,
     _collapse_shell_continuations,
@@ -136,6 +137,38 @@ def test_valid_invocation_passes(tmp_path: Path) -> None:
         verbose=False,
     )
     assert violations == []
+
+
+def test_shell_lane_arity_parses_only_invoked_targets(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Shell-lane arity should not parse unrelated target scripts."""
+    _write_target(tmp_path, "invoked.py", ["--epochs"])
+    _write_target(tmp_path, "uninvoked.py", ["--unused"])
+    _write_shell(
+        tmp_path,
+        "remote_lane_test_valid.sh",
+        '"$PYBIN" -u experiments/invoked.py --epochs 100\n',
+    )
+    parsed: list[str] = []
+    original = preflight_module._parse_argparse_signature
+
+    def wrapped(path: Path):
+        parsed.append(path.relative_to(tmp_path).as_posix())
+        return original(path)
+
+    monkeypatch.setattr(preflight_module, "_parse_argparse_signature", wrapped)
+
+    violations = preflight_shell_lane_arity(
+        repo_root=tmp_path,
+        shell_files=["scripts/remote_lane_test_valid.sh"],
+        strict=True,
+        verbose=False,
+    )
+
+    assert violations == []
+    assert parsed == ["experiments/invoked.py"]
 
 
 # ── Line-continuation test: multiline invocations are parsed ────────────────

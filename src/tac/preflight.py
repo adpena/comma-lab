@@ -3914,12 +3914,24 @@ def _collect_all_flag_literals(tree: ast.Module) -> set[str]:
     return seen
 
 
-def _build_target_signatures(repo_root: Path) -> dict[str, dict[str, dict]]:
-    """Parse every potential target script into {target_path: {flag: spec}}."""
+def _build_target_signatures(
+    repo_root: Path,
+    *,
+    target_filter: set[str] | None = None,
+) -> dict[str, dict[str, dict]]:
+    """Parse target script argparse signatures into {target_path: {flag: spec}}.
+
+    ``target_filter`` lets narrow scanners parse only targets they have already
+    observed at callsites. This preserves fail-closed validation for each
+    invocation while avoiding a full target-dir argparse pass for shell-lane
+    scripts that invoke only a small subset of experiments.
+    """
     sigs: dict[str, dict[str, dict]] = {}
     for d in TARGET_DIRS:
         for py in (repo_root / d).glob("*.py"):
             rel = str(py.relative_to(repo_root))
+            if target_filter is not None and rel not in target_filter:
+                continue
             sig = _parse_argparse_signature(py)
             if sig is not None:
                 sigs[rel] = sig
@@ -4221,16 +4233,24 @@ def preflight_shell_lane_arity(
             for p in (root / "scripts").glob("remote_lane_*.sh")
         )
 
-    sigs = _build_target_signatures(root)
-    violations: list[str] = []
-
+    shell_invocations_by_file: dict[str, list[tuple[int, str, list[str]]]] = {}
+    invoked_targets: set[str] = set()
     n_invocations = 0
     for shell_rel in shell_files:
         shell_path = root / shell_rel
         if not shell_path.exists():
             continue
-        for lineno, target, flags_used in _scan_shell_lane_invocations(shell_path):
-            n_invocations += 1
+        invocations = _scan_shell_lane_invocations(shell_path)
+        shell_invocations_by_file[shell_rel] = invocations
+        n_invocations += len(invocations)
+        for _lineno, target, _flags_used in invocations:
+            invoked_targets.add(target)
+
+    sigs = _build_target_signatures(root, target_filter=invoked_targets)
+    violations: list[str] = []
+
+    for shell_rel, invocations in shell_invocations_by_file.items():
+        for lineno, target, flags_used in invocations:
             target_sig = sigs.get(target)
             if target_sig is None:
                 # Target not parseable or no argparse → skip silently.
