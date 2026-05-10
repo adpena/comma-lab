@@ -1044,6 +1044,12 @@ Contest deadline: **May 3 11:59 PM AOE = May 4 06:59 AM CDT (May 4 11:59 UTC)**.
 
 ## Internal sub-frontier launch-ready candidate — Lane Ω-W-V3 (post-deadline)
 
+> **Historical / DO NOT DISPATCH from this section.** This May 4 queue is
+> superseded by the 2026-05-09 reconciliation at the top of this report. The
+> current active queue is AV discriminator harvest, A1 sidecar local completion
+> plus legacy recheck, and Phase 1 packet custody. Keep the material below only
+> as historical context.
+
 **Lane Ω-W-V3** (water-filling codec v2 → PR106 HNeRV decoder) is fully scaffolded as of 2026-05-04 and ready for ~$0.30 GPU dispatch on Vast.ai 4090 (or T4-equivalent). Council 8/10 GO; predicted band [0.194, 0.204] [prediction, NOT contest-CUDA].
 
 ### Pipeline (5 commits today)
