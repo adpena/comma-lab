@@ -317,3 +317,43 @@ def test_failed_step_summary_names_failed_all_lanes_rows() -> None:
     assert "Failed all-lanes step(s):" in summary
     assert "GATE #10: untracked source inventory (failed)" in summary
     assert "LANE #3: sidechannels (failed)" in summary
+
+
+def test_profile_zig_source_scan_records_native_leaf_metadata(monkeypatch, tmp_path: Path) -> None:
+    module = _load_tool()
+    binary = tmp_path / "source_needle_scan"
+    binary.write_text("#!/bin/sh\n", encoding="utf-8")
+    events: list[str] = []
+
+    def fake_build_zig_source_scanner() -> Path:
+        events.append("build")
+        return binary
+
+    def fake_run_zig_source_scan(**kwargs: object) -> dict[str, object]:
+        events.append("scan")
+        assert kwargs["build"] is False
+        assert Path(kwargs["binary_path"]) == binary
+        assert kwargs["dirs"] == module.ZIG_SOURCE_SCAN_DIRS
+        return {
+            "schema": "pact.zig_source_needle_scan.v1",
+            "file_count": 12,
+            "match_count": 7,
+            "matches": [],
+        }
+
+    fake_tool = SimpleNamespace(
+        build_zig_source_scanner=fake_build_zig_source_scanner,
+        run_zig_source_scan=fake_run_zig_source_scan,
+    )
+    monkeypatch.setattr(module, "_load_tool_module", lambda _path, _name: fake_tool)
+
+    profile = module._profile_zig_source_scan()
+
+    assert profile.status == "passed"
+    assert events == ["build", "scan"]
+    assert [step.name for step in profile.steps] == [
+        "build native scanner",
+        "scan source substrings",
+    ]
+    assert profile.metadata["file_count"] == 12
+    assert profile.metadata["match_count"] == 7

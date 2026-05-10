@@ -47,7 +47,16 @@ DEFAULT_SURFACES = (
     "review-tracker-scan",
     "all-lanes",
 )
-SURFACES = DEFAULT_SURFACES + ("preflight-checks",)
+SURFACES = DEFAULT_SURFACES + ("preflight-checks", "zig-source-scan")
+ZIG_SOURCE_SCAN_DIRS = ("src/tac", "tools", "experiments", "scripts")
+ZIG_SOURCE_SCAN_SUFFIXES = (".py", ".sh")
+ZIG_SOURCE_SCAN_NEEDLES = (
+    "lane_",
+    "eval_roundtrip",
+    "archive.zip",
+    "score_claim",
+    "mps",
+)
 
 
 class SurfaceTimeoutError(TimeoutError):
@@ -823,6 +832,91 @@ def _profile_all_lanes(*, jobs: int | None) -> SurfaceProfile:
         )
 
 
+def _profile_zig_source_scan() -> SurfaceProfile:
+    """Profile the native Zig exact-substring source scanner.
+
+    This is intentionally an opt-in profiler surface. The Zig binary is allowed
+    to accelerate source discovery only after parity tests prove it matches the
+    Python oracle; it does not replace semantic preflight checks by itself.
+    """
+
+    surface = "zig-source-scan"
+    started = time.perf_counter()
+    steps: list[StepTiming] = []
+    metadata: dict[str, object] = {
+        "dirs": list(ZIG_SOURCE_SCAN_DIRS),
+        "suffixes": list(ZIG_SOURCE_SCAN_SUFFIXES),
+        "needles": list(ZIG_SOURCE_SCAN_NEEDLES),
+        "require_all": False,
+    }
+    try:
+        module = _load_tool_module(
+            REPO / "tools" / "zig_source_needle_scan.py",
+            "profile_zig_source_needle_scan",
+        )
+        build_started = time.perf_counter()
+        binary = module.build_zig_source_scanner()
+        steps.append(
+            StepTiming(
+                surface=surface,
+                name="build native scanner",
+                elapsed_s=time.perf_counter() - build_started,
+                status="passed",
+                path=repo_relative(Path(binary), REPO),
+                metadata={"binary": repo_relative(Path(binary), REPO)},
+            )
+        )
+
+        scan_started = time.perf_counter()
+        payload = module.run_zig_source_scan(
+            root=REPO,
+            dirs=ZIG_SOURCE_SCAN_DIRS,
+            suffixes=ZIG_SOURCE_SCAN_SUFFIXES,
+            needles=ZIG_SOURCE_SCAN_NEEDLES,
+            require_all=False,
+            binary_path=Path(binary),
+            build=False,
+        )
+        steps.append(
+            StepTiming(
+                surface=surface,
+                name="scan source substrings",
+                elapsed_s=time.perf_counter() - scan_started,
+                status="passed",
+                metadata={
+                    "file_count": payload.get("file_count", 0),
+                    "match_count": payload.get("match_count", 0),
+                    "schema": payload.get("schema", ""),
+                },
+            )
+        )
+        metadata.update(
+            {
+                "binary": repo_relative(Path(binary), REPO),
+                "file_count": payload.get("file_count", 0),
+                "match_count": payload.get("match_count", 0),
+                "schema": payload.get("schema", ""),
+            }
+        )
+        return SurfaceProfile(
+            name=surface,
+            status="passed",
+            elapsed_s=time.perf_counter() - started,
+            steps=steps,
+            metadata=metadata,
+        )
+    except Exception as exc:
+        return SurfaceProfile(
+            name=surface,
+            status="failed",
+            elapsed_s=time.perf_counter() - started,
+            steps=steps,
+            metadata=metadata,
+            error_type=type(exc).__name__,
+            error=str(exc),
+        )
+
+
 def json_loads_path(path: Path) -> dict[str, object]:
     import json
 
@@ -940,6 +1034,8 @@ def _run_surface(name: str, args: argparse.Namespace) -> SurfaceProfile:
         return _profile_review_tracker_scan()
     if name == "all-lanes":
         return _profile_all_lanes(jobs=args.all_lanes_jobs)
+    if name == "zig-source-scan":
+        return _profile_zig_source_scan()
     raise ValueError(f"unsupported surface: {name}")
 
 
