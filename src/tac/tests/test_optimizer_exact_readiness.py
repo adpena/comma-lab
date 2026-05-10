@@ -161,6 +161,9 @@ def test_promotes_byte_closed_candidate_without_score_claim(tmp_path: Path) -> N
     assert row["runtime_tree_sha256"]
     assert row["score_affecting_payload_changed"] is True
     assert row["charged_bits_changed"] is True
+    assert row["cpu_or_proxy_score_not_cuda_evidence"] is True
+    assert row["cuda_gap_review_required_before_promotion"] is True
+    assert promoted["evidence_boundary"]["cpu_or_proxy_score_not_cuda_evidence"] is True
 
 
 def test_refuses_pr101_runtime_packet_without_runtime_consumption_proof(

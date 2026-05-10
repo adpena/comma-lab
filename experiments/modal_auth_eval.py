@@ -37,6 +37,27 @@ REMOTE_WORK_ROOT = Path("/root/modal_auth_eval_work")
 REQUIRED_SAMPLES = 600
 DALI_DISABLE_NVML_VALUE = "1"
 REMOTE_PYTHONPATH = f"{REMOTE_REPO / 'src'}:{REMOTE_REPO / 'upstream'}:{REMOTE_REPO}"
+SKIPPED_RUNTIME_UPLOAD_FILENAMES = {".DS_Store"}
+SENSITIVE_RUNTIME_UPLOAD_NAMES = {
+    ".env",
+    ".env.local",
+    ".netrc",
+    "authorized_keys",
+    "credentials",
+    "credentials.json",
+    "id_dsa",
+    "id_ecdsa",
+    "id_ed25519",
+    "id_rsa",
+}
+SENSITIVE_RUNTIME_UPLOAD_SUBSTRINGS = (
+    "apikey",
+    "api_key",
+    "credential",
+    "private_key",
+    "secret",
+    "token",
+)
 
 app = modal.App(APP_NAME)
 
@@ -131,19 +152,39 @@ def _safe_label(value: str) -> str:
     return label or "archive"
 
 
+def _runtime_upload_skip_reason(rel: str) -> str | None:
+    path = Path(rel)
+    if path.name in SKIPPED_RUNTIME_UPLOAD_FILENAMES:
+        return "ignored host metadata"
+    if path.suffix == ".pyc" or "__pycache__" in path.parts:
+        return "ignored python bytecode cache"
+    return None
+
+
+def _validate_runtime_upload_file(path: Path, rel: str) -> None:
+    rel_path = Path(rel)
+    if path.is_symlink():
+        raise ValueError(f"refusing symlink in uploaded runtime tree: {rel}")
+    for part in rel_path.parts:
+        if part.startswith("."):
+            raise ValueError(f"refusing hidden file or directory in uploaded runtime tree: {rel}")
+    lowered_parts = {part.lower() for part in rel_path.parts}
+    if lowered_parts & SENSITIVE_RUNTIME_UPLOAD_NAMES:
+        raise ValueError(f"refusing secret-looking file in uploaded runtime tree: {rel}")
+    lowered_rel = rel.lower()
+    if any(marker in lowered_rel for marker in SENSITIVE_RUNTIME_UPLOAD_SUBSTRINGS):
+        raise ValueError(f"refusing secret-looking file in uploaded runtime tree: {rel}")
+
+
 def _submission_dir_zip_bytes(submission_dir: Path) -> bytes:
     """Return a deterministic transport zip for an uploaded runtime tree."""
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
         for path in sorted(p for p in submission_dir.rglob("*") if p.is_file()):
             rel = path.relative_to(submission_dir).as_posix()
-            if (
-                rel == ".DS_Store"
-                or rel.endswith(".pyc")
-                or rel.startswith("__pycache__/")
-                or "/__pycache__/" in rel
-            ):
+            if _runtime_upload_skip_reason(rel):
                 continue
+            _validate_runtime_upload_file(path, rel)
             info = zipfile.ZipInfo(rel, date_time=(1980, 1, 1, 0, 0, 0))
             info.external_attr = 0o644 << 16
             zf.writestr(info, path.read_bytes(), compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)

@@ -37,6 +37,12 @@ PREDICTED_SCORE_FIELDS = frozenset(
         "macos_cpu_score",
         "rank_score",
         "fitness",
+        "proxy_objective",
+        "cpu_score",
+        "contest_cpu_score",
+        "contest_cuda_score",
+        "predicted_contest_cuda",
+        "predicted_contest_cuda_score",
     }
 )
 CLEARABLE_SOURCE_BLOCKERS = frozenset(
@@ -779,6 +785,8 @@ def promoted_row(
         "contest_cuda_auth_eval": False,
         "evidence_semantics": "byte_closed_archive_runtime_ready_for_exact_eval",
         "evidence_grade": "[exact-eval-ready-no-score]",
+        "cpu_or_proxy_score_not_cuda_evidence": True,
+        "cuda_gap_review_required_before_promotion": True,
         "contest_dispatch_verdict": "ready_for_contest_exact_eval_dispatch_after_lane_claim",
         "archive_path": repo_rel(archive_path, repo_root),
         "candidate_archive_path": repo_rel(archive_path, repo_root),
@@ -838,6 +846,8 @@ def build_promoted_queue(row: Mapping[str, Any]) -> dict[str, Any]:
             "exact_cuda_required_before_score_or_rank_claim": True,
             "lane_dispatch_claim_required_before_gpu_or_remote_eval": True,
             "readiness_scope": "local_byte_closed_archive_runtime_custody_only",
+            "cpu_or_proxy_score_not_cuda_evidence": True,
+            "cuda_gap_review_required_before_promotion": True,
         },
     }
 

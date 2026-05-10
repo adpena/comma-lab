@@ -107,6 +107,40 @@ def test_submission_dir_transport_zip_is_deterministic_and_filtered(mod, tmp_pat
         assert zf.getinfo("inflate.sh").date_time == (1980, 1, 1, 0, 0, 0)
 
 
+@pytest.mark.parametrize(
+    "relative_path",
+    [
+        ".env",
+        "secrets/token.txt",
+        "runtime/.hidden",
+        "id_rsa",
+    ],
+)
+def test_submission_dir_transport_zip_rejects_hidden_and_secrets(mod, tmp_path, relative_path):
+    submission_dir = tmp_path / "submission_dir"
+    path = submission_dir / relative_path
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("do-not-upload")
+
+    with pytest.raises(ValueError, match="refusing"):
+        mod._submission_dir_zip_bytes(submission_dir)
+
+
+def test_submission_dir_transport_zip_rejects_symlinks(mod, tmp_path):
+    submission_dir = tmp_path / "submission_dir"
+    submission_dir.mkdir()
+    secret = tmp_path / "outside_secret.txt"
+    secret.write_text("do-not-upload")
+    link = submission_dir / "inflate.py"
+    try:
+        link.symlink_to(secret)
+    except OSError:
+        pytest.skip("symlinks unavailable on this filesystem")
+
+    with pytest.raises(ValueError, match="symlink"):
+        mod._submission_dir_zip_bytes(submission_dir)
+
+
 def test_validate_contest_result_rejects_non_cuda(mod):
     archive_sha = "a" * 64
     payload = {
