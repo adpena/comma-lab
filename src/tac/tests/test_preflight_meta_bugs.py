@@ -1827,9 +1827,19 @@ class TestNoEvalRoundtripFalse:
         with pytest.raises(MetaBugViolation):
             check_no_eval_roundtrip_false(repo_root=root, strict=True, verbose=False)
 
-    def test_shared_meta_scan_parallelizes_large_candidate_sets(self) -> None:
+    def test_shared_meta_scan_parallelizes_large_candidate_sets(self, monkeypatch) -> None:
+        monkeypatch.delenv("PACT_META_PYTHON_SCAN_WORKERS", raising=False)
         assert preflight_mod._meta_python_shared_scan_worker_count(63) == 1
-        assert preflight_mod._meta_python_shared_scan_worker_count(64) > 1
+        assert preflight_mod._meta_python_shared_scan_worker_count(64) == 2
+
+        monkeypatch.setenv("PACT_META_PYTHON_SCAN_WORKERS", "2")
+        assert preflight_mod._meta_python_shared_scan_worker_count(64) == 2
+
+        monkeypatch.setenv("PACT_META_PYTHON_SCAN_WORKERS", "999")
+        assert preflight_mod._meta_python_shared_scan_worker_count(64) == 16
+
+        monkeypatch.setenv("PACT_META_PYTHON_SCAN_WORKERS", "bad")
+        assert preflight_mod._meta_python_shared_scan_worker_count(64) == 2
 
 
 # ─── Check 6: scorer load at inflate ─────────────────────────────────────────

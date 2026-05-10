@@ -16,6 +16,9 @@ This tranche bounds both layers:
 
 - `PACT_PREFLIGHT_PARALLEL_WORKERS` defaults to 2 and clamps to `[1, 16]`.
 - `PACT_SOURCE_INDEX_FACT_WORKERS` defaults to 8 and clamps to `[1, 32]`.
+- Addendum: `PACT_META_PYTHON_SCAN_WORKERS` defaults to 2 and clamps to
+  `[1, 16]`, bounding the fused MPS/eval-roundtrip AST scan that used to fan
+  out to up to 16 workers inside an already-parallel preflight.
 
 The knobs keep profiling flexibility for larger CI hosts while making the
 normal local path deterministic and less prone to oversubscription.
@@ -57,6 +60,11 @@ PACT_PREFLIGHT_PARALLEL_WORKERS=2: wall=6.416-6.500s serial=12.512-12.662s
 PACT_PREFLIGHT_PARALLEL_WORKERS=3: wall=6.529s serial=18.699s
 PACT_PREFLIGHT_PARALLEL_WORKERS=4: wall=6.739s serial=25.374s
 previous max_workers=8: wall=6.974s serial=48.988s
+
+after fused meta-scan worker bound:
+  PACT_META_PYTHON_SCAN_WORKERS=4: wall=6.440s serial=12.526s
+  PACT_META_PYTHON_SCAN_WORKERS=2: wall=6.399s serial=12.472s
+  committed default repeat sample: wall=6.372s serial=12.406s
 ```
 
 ## Score-Lowering Consequence

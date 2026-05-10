@@ -8594,7 +8594,15 @@ def _meta_python_shared_scan_worker_count(n_candidates: int) -> int:
 
     if n_candidates < 64:
         return 1
-    return min(16, (os.cpu_count() or 1) + 4, n_candidates)
+    raw = os.environ.get("PACT_META_PYTHON_SCAN_WORKERS", "").strip()
+    if raw:
+        try:
+            value = int(raw)
+        except ValueError:
+            value = 2
+    else:
+        value = 2
+    return min(max(1, value), 16, n_candidates)
 
 
 def _meta_python_shared_scan(
