@@ -107,6 +107,59 @@ def test_preflight_all_clean_cache_misses_after_source_change(tmp_path):
     assert hit is False
 
 
+def test_preflight_all_clean_cache_misses_after_public_pr_clone_change(tmp_path):
+    (tmp_path / "src" / "tac").mkdir(parents=True)
+    (tmp_path / "src" / "tac" / "example.py").write_text("VALUE = 1\n")
+    clone = (
+        tmp_path
+        / "experiments"
+        / "results"
+        / "public_pr90_intake_20260505_auto"
+        / "source"
+    )
+    git_dir = clone / ".git"
+    git_dir.mkdir(parents=True)
+    (git_dir / "HEAD").write_text("ref: refs/heads/main\n")
+    (git_dir / "index").write_bytes(b"index")
+    (clone / "submission.py").write_text("print('upstream')\n")
+
+    hit, token, paths = _preflight_all_clean_cache_hit(
+        tmp_path,
+        profile_name=None,
+        tto_frames_path=None,
+        gt_poses_path=None,
+        masks_path=None,
+        renderer_path=None,
+        archive_path=None,
+    )
+    assert hit is False
+    assert any("public_pr90_intake_20260505_auto" in path.as_posix() for path in paths)
+    _store_preflight_all_clean_cache(tmp_path, cache_token=token, paths=paths)
+
+    hit, _, _ = _preflight_all_clean_cache_hit(
+        tmp_path,
+        profile_name=None,
+        tto_frames_path=None,
+        gt_poses_path=None,
+        masks_path=None,
+        renderer_path=None,
+        archive_path=None,
+    )
+    assert hit is True
+
+    (clone / "local_waiver.py").write_text("# local waiver must invalidate cache\n")
+    hit, _, _ = _preflight_all_clean_cache_hit(
+        tmp_path,
+        profile_name=None,
+        tto_frames_path=None,
+        gt_poses_path=None,
+        masks_path=None,
+        renderer_path=None,
+        archive_path=None,
+    )
+    assert hit is False
+
+
 def test_preflight_developer_clean_cache_is_separate_and_hits_unchanged_tree(tmp_path):
     (tmp_path / "src" / "tac").mkdir(parents=True)
     (tmp_path / "src" / "tac" / "example.py").write_text("VALUE = 1\n")

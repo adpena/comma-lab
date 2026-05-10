@@ -282,3 +282,71 @@ Next target per read-only red-team:
   `check_public_pr_intake_clones_pristine()`, caching only empty
   `git status --short` results and failing open to live `git status` on any
   fingerprint uncertainty.
+
+## Codex Follow-Up: Public-PR Pristine Clean Cache + Whole-Cache Guard
+
+<!-- generated_at: 2026-05-10T01:55:00Z -->
+<!-- evidence_grade: local_dev_performance; no dispatch; no lane claim -->
+
+Codex implemented the conservative Check 109 cache, but the first red-team pass
+found the important recursive bug class: the whole `preflight_all` /
+`preflight_developer` clean cache could skip Check 109 entirely because its
+fingerprint intentionally excluded `experiments/results/**`.
+
+Permanent fix:
+
+- discover only public-PR intake clone roots under `experiments/results`;
+- include those clone metadata paths in the whole-preflight clean-cache
+  fingerprint, without admitting arbitrary result payloads into the source
+  fingerprint;
+- add a scanner-local cache for empty `git status --short` results only;
+- invalidate scanner-local cache rows on tracked edits, untracked files,
+  deletions, `.git` metadata changes, cache schema mismatch, or
+  `PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE=1`;
+- never cache dirty/nonzero/error outcomes; those continue down the existing
+  LFS/diff classification path.
+
+Verification:
+
+```bash
+.venv/bin/python -m py_compile \
+  src/tac/preflight.py \
+  src/tac/tests/test_preflight_harden_2026_05_08_checks.py \
+  src/tac/tests/test_preflight_all_clean_cache.py
+.venv/bin/python -m pytest \
+  src/tac/tests/test_preflight_harden_2026_05_08_checks.py \
+  src/tac/tests/test_preflight_all_clean_cache.py -q
+.venv/bin/python -m pytest \
+  src/tac/tests/test_preflight_custody_validator_and_locked_writes.py \
+  src/tac/tests/test_preflight_arity.py \
+  src/tac/tests/test_preflight_shell_lane_arity.py -q
+.venv/bin/python tools/profile_preflight_latency.py \
+  --surface preflight-checks \
+  --preflight-check check_public_pr_intake_clones_pristine \
+  --json-out .omx/research/artifacts/preflight_public_pr_pristine_profile_20260509_after_cache_warm.json \
+  --top 20
+.venv/bin/python tools/profile_preflight_latency.py \
+  --surface preflight-dev-cli \
+  --json-out .omx/research/artifacts/preflight_dev_profile_20260509_after_public_pr_cache.json \
+  --top 20
+```
+
+Observed:
+
+- public-PR/cache focused tests: `23 passed in 0.79s`;
+- broader focused preflight tests: `108 passed in 9.75s`;
+- `check_public_pr_intake_clones_pristine` in developer profile improved from
+  `1.289s` to `0.800s` on the cached path;
+- standalone public-PR check after cache: `1.465s` wall-clock;
+- developer profile remains below the 30s crash budget, but cold total stayed
+  noisy at `11.593s` because `check_codebase_drift`,
+  `check_locked_writes_preserve_deletions`, and
+  `check_no_mps_fallback_default` dominated the run.
+
+Next perf targets:
+
+- `check_locked_writes_preserve_deletions`: SourceIndex substring prefilter for
+  `.unlink` / `.replace` / shared-state markers;
+- `check_no_mps_fallback_default`: source-facts candidate narrowing before AST;
+- `check_codebase_drift`: split cheap file inventory from full AST scanners so
+  repeated developer preflight can use one index per opened file.

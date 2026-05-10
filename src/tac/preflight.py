@@ -57,6 +57,14 @@ DEFAULT_PREFLIGHT_CLI_TIMEOUT_S = 30.0
 _PREFLIGHT_CACHE_SCHEMA = "pact.preflight_cache.v1"
 _PREFLIGHT_ALL_CLEAN_CACHE_VERSION = "preflight_all_clean.v1"
 _PREFLIGHT_DEVELOPER_CLEAN_CACHE_VERSION = "preflight_developer_clean.v1"
+_PUBLIC_PR_PRISTINE_CACHE_VERSION = "public_pr_intake_pristine.v1"
+
+
+def _safe_resolve_path(path: Path) -> Path:
+    try:
+        return path.resolve()
+    except OSError:
+        return path.absolute()
 
 
 def _preflight_cache_path(root: Path, name: str) -> Path:
@@ -138,6 +146,73 @@ def _fingerprint_paths(paths: tuple[Path, ...], root: Path, *, salt: str) -> str
     return digest.hexdigest()
 
 
+def _public_pr_intake_clone_roots(root: Path) -> tuple[Path, ...]:
+    """Return public-PR intake clone roots with local git metadata.
+
+    These clones live under ignored ``experiments/results`` custody trees, but
+    Check 109 treats their pristine state as durable preflight input. Keep this
+    discovery narrow so whole-preflight clean caches do not need to fingerprint
+    arbitrary result payloads.
+    """
+
+    er = root / "experiments" / "results"
+    if not er.is_dir():
+        return ()
+    candidates: list[Path] = []
+    for child in er.rglob("*_intake_*"):
+        if not child.is_dir():
+            continue
+        for sub in ("source", "repo", "pr91_src/repo"):
+            cand = child / sub
+            if (cand / ".git").exists():
+                candidates.append(cand)
+        if (child / ".git").exists():
+            candidates.append(child)
+
+    seen: set[Path] = set()
+    out: list[Path] = []
+    for candidate in candidates:
+        resolved = _safe_resolve_path(candidate)
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        out.append(resolved)
+    return tuple(sorted(out, key=lambda item: item.as_posix()))
+
+
+def _public_pr_clone_fingerprint_paths(root: Path) -> tuple[Path, ...]:
+    """Return lightweight metadata inputs for public-PR pristine cache hits."""
+
+    paths: list[Path] = []
+    for clone in _public_pr_intake_clone_roots(root):
+        marker = clone / ".git"
+        if marker.is_file():
+            paths.append(marker)
+        elif marker.is_dir():
+            for name in ("HEAD", "index", "packed-refs"):
+                p = marker / name
+                if p.is_file():
+                    paths.append(p)
+            refs = marker / "refs"
+            if refs.is_dir():
+                for dirpath, dirnames, filenames in os.walk(refs):
+                    dirnames.sort()
+                    for filename in sorted(filenames):
+                        p = Path(dirpath) / filename
+                        if p.is_file():
+                            paths.append(p)
+        for dirpath, dirnames, filenames in os.walk(clone):
+            dirnames[:] = sorted(name for name in dirnames if name != ".git")
+            base = Path(dirpath)
+            for filename in sorted(filenames):
+                if filename == ".git":
+                    continue
+                p = base / filename
+                if p.is_file() or p.is_symlink():
+                    paths.append(p)
+    return tuple(sorted(paths, key=lambda item: item.as_posix()))
+
+
 def _preflight_all_fingerprint_paths(root: Path) -> tuple[Path, ...]:
     """Return files whose unchanged metadata can reuse a clean full preflight.
 
@@ -184,6 +259,7 @@ def _preflight_all_fingerprint_paths(root: Path) -> tuple[Path, ...]:
         "reports/silent_defaults.md",
     ):
         paths.update(path for path in root.glob(pattern) if path.is_file())
+    paths.update(_public_pr_clone_fingerprint_paths(root))
     return tuple(sorted(paths, key=lambda item: item.as_posix()))
 
 
@@ -27891,6 +27967,11 @@ def check_public_pr_intake_clones_pristine(
     violations: list[str] = []
     n_scanned = 0
     n_skipped_not_git = 0
+    n_cached_clean = 0
+    cache_enabled = os.environ.get("PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE") != "1"
+    cache_name = "public_pr_intake_pristine_clean"
+    clean_cache = _load_preflight_cache(root, cache_name) if cache_enabled else {}
+    cache_updates: dict[str, object | None] = {}
 
     # Discovery: every directory matching public_pr*_intake_* under
     # experiments/results/ (recursively, up to 4 levels deep) — covers
@@ -27906,52 +27987,165 @@ def check_public_pr_intake_clones_pristine(
             print(f"  [public-pr-intake-pristine] OK: no experiments/results/ dir")
         return []
 
-    # Find every dir whose path contains _intake_ AND is a git repo
-    # (.git either a directory or a file pointing to gitdir).
-    candidate_clones: list[Path] = []
-    for child in er.rglob("*_intake_*"):
-        if not child.is_dir():
-            continue
-        # Common subdirs are the actual clone roots.
-        for sub in ("source", "repo", "pr91_src/repo"):
-            cand = child / sub
-            git_marker = cand / ".git"
-            if git_marker.exists():
-                candidate_clones.append(cand)
-        # The intake_*_auto layout has the clone root directly at the
-        # intake dir (no source/repo subdir). Detect via .git presence.
-        git_marker_root = child / ".git"
-        if git_marker_root.exists():
-            candidate_clones.append(child)
+    unique_clones = list(_public_pr_intake_clone_roots(root))
 
-    # Deduplicate paths (rglob can hit nested intake dirs twice).
-    seen: set[Path] = set()
-    unique_clones: list[Path] = []
-    for c in candidate_clones:
-        rp = c.resolve()
-        if rp in seen:
-            continue
-        seen.add(rp)
-        unique_clones.append(c)
+    def _git_dir_for_worktree(clone: Path) -> Path | None:
+        marker = clone / ".git"
+        if marker.is_dir():
+            return marker
+        if not marker.is_file():
+            return None
+        try:
+            text = marker.read_text(encoding="utf-8", errors="replace").strip()
+        except OSError:
+            return None
+        prefix = "gitdir:"
+        if not text.lower().startswith(prefix):
+            return None
+        gitdir = Path(text[len(prefix):].strip())
+        if not gitdir.is_absolute():
+            gitdir = marker.parent / gitdir
+        return gitdir
 
-    def _git_status_short(clone: Path) -> tuple[Path, subprocess.CompletedProcess[str] | None]:
+    def _clone_cache_key(clone: Path) -> str:
+        try:
+            return clone.resolve().relative_to(root.resolve()).as_posix()
+        except ValueError:
+            return clone.resolve().as_posix()
+
+    def _clean_clone_fingerprint(clone: Path) -> str | None:
+        """Cheap clean-cache invalidator for a public PR worktree.
+
+        This is deliberately only a cache accelerator. Any error returns
+        ``None`` so the caller runs live ``git status``. The fingerprint walks
+        the full worktree metadata (excluding ``.git``) so untracked files,
+        deletions, tracked edits, and generated waiver files invalidate a prior
+        clean row before it can suppress the custody check.
+        """
+        git_dir = _git_dir_for_worktree(clone)
+        if git_dir is None:
+            return None
+        digest = hashlib.sha256()
+        digest.update(_PUBLIC_PR_PRISTINE_CACHE_VERSION.encode("ascii"))
+        digest.update(b"\0")
+        digest.update(_clone_cache_key(clone).encode("utf-8"))
+        digest.update(b"\0")
+        for name in ("HEAD", "packed-refs", "index"):
+            path = git_dir / name
+            try:
+                stat = path.stat()
+            except OSError:
+                continue
+            digest.update(f"git:{name}:{stat.st_size}:{stat.st_mtime_ns}\n".encode("utf-8"))
+            if name != "index" and stat.st_size <= 1_000_000:
+                try:
+                    digest.update(path.read_bytes())
+                except OSError:
+                    return None
+                digest.update(b"\0")
+        try:
+            walker = os.walk(clone)
+            for dirpath, dirnames, filenames in walker:
+                dirnames[:] = [name for name in dirnames if name != ".git"]
+                base = Path(dirpath)
+                for filename in sorted(filenames):
+                    if filename == ".git":
+                        continue
+                    path = base / filename
+                    try:
+                        stat = path.lstat()
+                    except OSError:
+                        return None
+                    try:
+                        rel = path.relative_to(clone).as_posix()
+                    except ValueError:
+                        return None
+                    digest.update(
+                        f"wt:{rel}:{stat.st_mode}:{stat.st_size}:{stat.st_mtime_ns}\n".encode("utf-8")
+                    )
+                    if path.is_symlink():
+                        try:
+                            digest.update(os.readlink(path).encode("utf-8", errors="surrogateescape"))
+                        except OSError:
+                            return None
+                        digest.update(b"\0")
+        except OSError:
+            return None
+        return digest.hexdigest()
+
+    def _git_status_short(
+        clone: Path,
+    ) -> tuple[Path, subprocess.CompletedProcess[str] | None, str, object | None, bool]:
+        cache_key = _clone_cache_key(clone)
+        cached = clean_cache.get(cache_key) if cache_enabled else None
+        fingerprint: str | None = None
+        if (
+            cache_enabled
+            and isinstance(cached, dict)
+            and cached.get("version") == _PUBLIC_PR_PRISTINE_CACHE_VERSION
+            and cached.get("clean") is True
+        ):
+            fingerprint = _clean_clone_fingerprint(clone)
+            if fingerprint is not None and cached.get("fingerprint") == fingerprint:
+                return (
+                    clone,
+                    subprocess.CompletedProcess(
+                        ["git", "-C", str(clone), "status", "--short"],
+                        0,
+                        stdout="",
+                        stderr="",
+                    ),
+                    cache_key,
+                    None,
+                    True,
+                )
         try:
             result = subprocess.run(
                 ["git", "-C", str(clone), "status", "--short"],
                 capture_output=True, text=True, timeout=30,
             )
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
-            return clone, None
+            return clone, None, cache_key, None, False
         if result.returncode != 0:
-            return clone, None
-        return clone, result
+            return clone, None, cache_key, None, False
+        status_lines = [ln for ln in result.stdout.splitlines() if ln.strip()]
+        if cache_enabled and not status_lines:
+            if fingerprint is None:
+                fingerprint = _clean_clone_fingerprint(clone)
+            if fingerprint is not None:
+                return (
+                    clone,
+                    result,
+                    cache_key,
+                    {
+                        "version": _PUBLIC_PR_PRISTINE_CACHE_VERSION,
+                        "clean": True,
+                        "fingerprint": fingerprint,
+                        "stored_at_unix": int(time.time()),
+                    },
+                    False,
+                )
+        if cache_enabled:
+            return clone, result, cache_key, None, False
+        return clone, result, cache_key, None, False
 
     status_by_clone: dict[Path, subprocess.CompletedProcess[str] | None] = {}
     if unique_clones:
         max_workers = min(8, len(unique_clones))
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
-            for clone, result in pool.map(_git_status_short, unique_clones):
+            for clone, result, cache_key, cache_update, from_cache in pool.map(_git_status_short, unique_clones):
                 status_by_clone[clone] = result
+                if from_cache:
+                    n_cached_clean += 1
+                elif cache_enabled:
+                    cache_updates[cache_key] = cache_update
+    if cache_enabled and cache_updates:
+        for key, row in cache_updates.items():
+            if isinstance(row, dict):
+                clean_cache[key] = row
+            else:
+                clean_cache.pop(key, None)
+        _store_preflight_cache(root, cache_name, clean_cache)
 
     for clone in unique_clones:
         n_scanned += 1
@@ -28100,7 +28294,7 @@ def check_public_pr_intake_clones_pristine(
     elif verbose:
         print(
             f"  [public-pr-intake-pristine] OK: {n_scanned} clone(s) clean "
-            f"({n_skipped_not_git} skipped non-git)"
+            f"({n_skipped_not_git} skipped non-git, {n_cached_clean} cached clean)"
         )
 
     if violations and strict:

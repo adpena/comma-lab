@@ -309,3 +309,188 @@ def test_public_pr_pristine_fans_out_clean_status_checks(
         == []
     )
     assert len(seen_thread_names) >= 2
+
+
+def test_public_pr_pristine_caches_clean_status_and_invalidates_untracked(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    clone = (
+        tmp_path
+        / "experiments"
+        / "results"
+        / "public_pr90_intake_20260505_auto"
+        / "source"
+    )
+    git_dir = clone / ".git"
+    git_dir.mkdir(parents=True)
+    (git_dir / "HEAD").write_text("ref: refs/heads/main\n")
+    (git_dir / "index").write_bytes(b"index")
+    (clone / "submission.py").write_text("print('upstream')\n")
+
+    status_calls = 0
+
+    def fake_run(
+        cmd: list[str],
+        *,
+        capture_output: bool,
+        text: bool,
+        timeout: int,
+    ) -> subprocess.CompletedProcess[str]:
+        nonlocal status_calls
+        assert capture_output is True
+        assert text is True
+        assert timeout == 30
+        if cmd[:3] == ["git", "-C", str(clone)]:
+            subcmd = cmd[3:]
+            if subcmd == ["status", "--short"]:
+                status_calls += 1
+                stdout = "?? local_waiver.py\n" if (clone / "local_waiver.py").exists() else ""
+                return subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr="")
+            if subcmd == ["lfs", "status", "--porcelain"]:
+                return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+            if subcmd == ["diff", "--numstat"]:
+                return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+        return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="unexpected")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    assert (
+        check_public_pr_intake_clones_pristine(
+            repo_root=tmp_path, strict=True, verbose=False
+        )
+        == []
+    )
+    assert status_calls == 1
+
+    assert (
+        check_public_pr_intake_clones_pristine(
+            repo_root=tmp_path, strict=True, verbose=False
+        )
+        == []
+    )
+    assert status_calls == 1
+
+    (clone / "local_waiver.py").write_text("# local waiver must invalidate cache\n")
+    violations = check_public_pr_intake_clones_pristine(
+        repo_root=tmp_path, strict=False, verbose=False
+    )
+    assert status_calls == 2
+    assert any("local_waiver.py" in item for item in violations)
+
+
+def test_public_pr_pristine_clean_cache_invalidates_tracked_edit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    clone = (
+        tmp_path
+        / "experiments"
+        / "results"
+        / "public_pr91_intake_20260505_auto"
+        / "source"
+    )
+    git_dir = clone / ".git"
+    git_dir.mkdir(parents=True)
+    (git_dir / "HEAD").write_text("ref: refs/heads/main\n")
+    (git_dir / "index").write_bytes(b"index")
+    tracked = clone / "submission.py"
+    tracked.write_text("print('upstream')\n")
+
+    status_calls = 0
+
+    def fake_run(
+        cmd: list[str],
+        *,
+        capture_output: bool,
+        text: bool,
+        timeout: int,
+    ) -> subprocess.CompletedProcess[str]:
+        nonlocal status_calls
+        assert capture_output is True
+        assert text is True
+        assert timeout == 30
+        if cmd[:3] == ["git", "-C", str(clone)]:
+            subcmd = cmd[3:]
+            if subcmd == ["status", "--short"]:
+                status_calls += 1
+                stdout = " M submission.py\n" if tracked.read_text() != "print('upstream')\n" else ""
+                return subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr="")
+            if subcmd == ["lfs", "status", "--porcelain"]:
+                return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+            if subcmd == ["diff", "--numstat"]:
+                stdout = "1\t1\tsubmission.py\n" if tracked.read_text() != "print('upstream')\n" else ""
+                return subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr="")
+        return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="unexpected")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    assert (
+        check_public_pr_intake_clones_pristine(
+            repo_root=tmp_path, strict=True, verbose=False
+        )
+        == []
+    )
+    assert (
+        check_public_pr_intake_clones_pristine(
+            repo_root=tmp_path, strict=True, verbose=False
+        )
+        == []
+    )
+    assert status_calls == 1
+
+    tracked.write_text("print('local edit')\n")
+    violations = check_public_pr_intake_clones_pristine(
+        repo_root=tmp_path, strict=False, verbose=False
+    )
+    assert status_calls == 2
+    assert any("submission.py" in item for item in violations)
+
+
+def test_public_pr_pristine_cache_disable_forces_live_status(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    clone = (
+        tmp_path
+        / "experiments"
+        / "results"
+        / "public_pr92_intake_20260505_auto"
+        / "source"
+    )
+    git_dir = clone / ".git"
+    git_dir.mkdir(parents=True)
+    (git_dir / "HEAD").write_text("ref: refs/heads/main\n")
+    (git_dir / "index").write_bytes(b"index")
+    (clone / "submission.py").write_text("print('upstream')\n")
+    status_calls = 0
+
+    def fake_run(
+        cmd: list[str],
+        *,
+        capture_output: bool,
+        text: bool,
+        timeout: int,
+    ) -> subprocess.CompletedProcess[str]:
+        nonlocal status_calls
+        assert capture_output is True
+        assert text is True
+        assert timeout == 30
+        if cmd[:3] == ["git", "-C", str(clone)] and cmd[3:] == ["status", "--short"]:
+            status_calls += 1
+            return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+        return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="unexpected")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    monkeypatch.setenv("PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE", "1")
+
+    assert (
+        check_public_pr_intake_clones_pristine(
+            repo_root=tmp_path, strict=True, verbose=False
+        )
+        == []
+    )
+    assert (
+        check_public_pr_intake_clones_pristine(
+            repo_root=tmp_path, strict=True, verbose=False
+        )
+        == []
+    )
+    assert status_calls == 2
