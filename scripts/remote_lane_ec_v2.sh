@@ -99,6 +99,7 @@ for f in "$BASE_ARCHIVE" "$CHECKPOINT" "$GT_POSES" "$TAC_UPSTREAM_DIR/videos/0.m
 done
 
 log "=== Stage 1: precompute greedy gradient corrections ==="
+set +e
 "$PYBIN" -u experiments/precompute_gradient_corrections.py \
     --checkpoint "$CHECKPOINT" \
     --device cuda \
@@ -113,6 +114,7 @@ log "=== Stage 1: precompute greedy gradient corrections ==="
     --output-dir "$CORR_DIR" \
     2>&1 | tee "$LOG_DIR/precompute_gradient_corrections.log"
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -152,6 +154,7 @@ print(f"archive {dst}: {os.path.getsize(dst)} bytes")
 PY
 
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -161,6 +164,7 @@ rm -rf "$LOG_DIR/eval_work"
     --work-dir "$LOG_DIR/eval_work" \
     2>&1 | tee "$LOG_DIR/auth_eval.log"
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

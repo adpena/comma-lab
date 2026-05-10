@@ -139,6 +139,10 @@ def _write_archive_zip(archive_path: Path, inner_blob: bytes) -> None:
         zf.writestr(info, inner_blob)
 
 
+def _sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
 # ---------------------------------------------------------------------------
 # Forked inflate.py source (no-dead-K wire format)
 # ---------------------------------------------------------------------------
@@ -391,7 +395,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # Read source archive to extract latent_blob + sidecar_blob.
     pr101_inner = _read_pr101_inner_blob(args.source_archive)
-    _orig_decoder, latent_blob, sidecar_blob = _split_pr101_inner_blob(pr101_inner)
+    orig_decoder, latent_blob, sidecar_blob = _split_pr101_inner_blob(pr101_inner)
 
     # Encode fine-tuned decoder.
     decoder_section, encode_stats = _build_no_dead_k_decoder_section(
@@ -416,7 +420,16 @@ def main(argv: list[str] | None = None) -> int:
     # Compute provenance.
     archive_bytes = archive_path.stat().st_size
     archive_sha = hashlib.sha256(archive_path.read_bytes()).hexdigest()
+    source_archive_bytes = args.source_archive.stat().st_size
+    source_archive_sha = hashlib.sha256(args.source_archive.read_bytes()).hexdigest()
     state_dict_sha = hashlib.sha256(args.state_dict.read_bytes()).hexdigest()
+    inner_sha = _sha256_bytes(inner_blob)
+    source_inner_sha = _sha256_bytes(pr101_inner)
+    old_decoder_sha = _sha256_bytes(orig_decoder)
+    new_decoder_section_sha = _sha256_bytes(decoder_section)
+    latent_sha = _sha256_bytes(latent_blob)
+    sidecar_sha = _sha256_bytes(sidecar_blob)
+    score_affecting_payload_changed = inner_sha != source_inner_sha
 
     manifest = {
         "lane_id": args.lane_id,
@@ -426,13 +439,38 @@ def main(argv: list[str] | None = None) -> int:
         "source_state_dict_path": str(args.state_dict),
         "source_state_dict_sha256": state_dict_sha,
         "source_archive_path": str(args.source_archive),
+        "source_archive_bytes": source_archive_bytes,
+        "source_archive_sha256": source_archive_sha,
         "pr101_source_dir": str(args.pr101_source_dir),
         "archive_path": str(archive_path),
         "archive_bytes": archive_bytes,
         "archive_sha256": archive_sha,
+        "archive_inner_sha256": inner_sha,
+        "source_inner_sha256": source_inner_sha,
         "encode_stats": encode_stats,
         "latent_blob_bytes": len(latent_blob),
         "sidecar_blob_bytes": len(sidecar_blob),
+        "old_new_sha_metadata": {
+            "old_fixed_decoder_blob_sha256": old_decoder_sha,
+            "new_variable_decoder_section_sha256": new_decoder_section_sha,
+            "source_latent_blob_sha256": latent_sha,
+            "new_latent_blob_sha256": latent_sha,
+            "source_sidecar_blob_sha256": sidecar_sha,
+            "new_sidecar_blob_sha256": sidecar_sha,
+            "source_archive_sha256": source_archive_sha,
+            "new_archive_sha256": archive_sha,
+            "source_inner_sha256": source_inner_sha,
+            "new_inner_sha256": inner_sha,
+        },
+        "no_op_detector": {
+            "score_affecting_payload_changed": score_affecting_payload_changed,
+            "decoder_payload_changed": old_decoder_sha != new_decoder_section_sha,
+            "latent_payload_preserved": True,
+            "sidecar_payload_preserved": True,
+            "archive_sha_changed": source_archive_sha != archive_sha,
+            "targeted_change": "decoder weights re-encoded from selected A1 checkpoint",
+        },
+        "score_affecting_payload_changed": score_affecting_payload_changed,
         "smoke": smoke,
         "score_claim": False,
         "byte_proxy_only": False,

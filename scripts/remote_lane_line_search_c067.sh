@@ -206,6 +206,7 @@ mkdir -p "$REFINED_DIR"
 REFINED_ARCHIVE="$REFINED_DIR/refined_archive.zip"
 REFINED_METADATA="$REFINED_DIR/refined_metadata.json"
 
+set +e
 "$PYBIN" -u experiments/line_search_pose_refinement.py \
     --archive-path "$SOURCE_ARCHIVE" \
     --metadata-path "$SOURCE_METADATA" \
@@ -220,6 +221,7 @@ REFINED_METADATA="$REFINED_DIR/refined_metadata.json"
     "${SEARCH_ARGS[@]}" \
     --passes "$LS_PASSES" 2>&1 | tee "$LOG_DIR/line_search.log" | tail -60
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: line_search_pose_refinement.py exited rc=${PIPE_RC[0]}" >&2
     exit "${PIPE_RC[0]}"
@@ -238,6 +240,7 @@ log "  refined_archive.zip = ${REFINED_BYTES} bytes, sha=${REFINED_SHA}"
 # Stage 3: contest_auth_eval on refined archive.
 log "=== Stage 3: contest_auth_eval on refined archive [contest-CUDA] ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$REFINED_ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -246,6 +249,7 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -30
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: contest_auth_eval exited rc=${PIPE_RC[0]}" >&2
     exit "${PIPE_RC[0]}"

@@ -313,10 +313,12 @@ assert p.get('mask_half_sim_prob', 0) > 0 or p.get('use_zoom_flow', False), \
     'profile quantizr_replica_88k_halfframe must have mask_half_sim_prob>0 OR use_zoom_flow=True'
 print('halfframe-profile-assertion OK: quantizr_replica_88k_halfframe')
 "
+set +e
 "$PYBIN" experiments/build_baseline_archive.py \
     --device cuda --crf 50 --half-frame \
     --output "$LOG_DIR/archive_halfframe_seed.zip" 2>&1 | tee "$LOG_DIR/build.log" | tail -5
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -329,6 +331,7 @@ cp "$LOG_DIR/extracted/masks.mkv" "$LOG_DIR/iter_0/masks.mkv"
 # baseline poses as warm-start — they're a good prior but the new renderer
 # may want different poses. posetto_noise_std=0.5 matches the profile.
 log "=== Stage 3: pose TTO with the new half-frame renderer (posetto_noise_std=0.5) ==="
+set +e
 "$PYBIN" -u experiments/optimize_poses.py \
     --checkpoint "$LOG_DIR/iter_0/renderer.bin" \
     --masks "$LOG_DIR/iter_0/masks.mkv" \
@@ -340,6 +343,7 @@ log "=== Stage 3: pose TTO with the new half-frame renderer (posetto_noise_std=0
     --posetto-noise-std 0.5 \
     --output-dir "$LOG_DIR" 2>&1 | tee "$LOG_DIR/optimize_poses.log" | tail -30
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -376,6 +380,7 @@ print(f'archive {dst}: {os.path.getsize(dst)} bytes ({len(files)} files)')
 
 log "=== Stage 4: contest_auth_eval on Lane V archive ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -384,6 +389,7 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

@@ -85,6 +85,7 @@ done
 log "=== Stage 2a: seed SegMap.frame_affine_embedding from frozen PoseNet ==="
 INIT_DIR="$LOG_DIR/init"
 mkdir -p "$INIT_DIR"
+set +e
 "$PYBIN" -u experiments/init_segmap_from_posenet.py \
     --gt-video upstream/videos/0.mkv \
     --upstream upstream \
@@ -93,6 +94,7 @@ mkdir -p "$INIT_DIR"
     --max-frame-index 1200 \
     --output-dir "$INIT_DIR" 2>&1 | tee "$LOG_DIR/init.log" | tail -30
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: init_segmap_from_posenet exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
 fi
@@ -113,6 +115,7 @@ mkdir -p "$TRAIN_DIR"
 cp "$SEEDED_INFERENCE" "$TRAIN_DIR/segmap_inference_seeded.pt"
 # Council C OOM-class deep fixes (DF2 + DF3) — see Check 87 STRICT.
 # --bf16 + --scorer-chunk 2 + --batch-size 4 → B*N=8 (RTX 4090 24 GB safe).
+set +e
 "$PYBIN" -u experiments/train_segmap.py \
     --variant kl_distill \
     --hidden 24 --block-hidden 24 --num-blocks 8 \
@@ -130,6 +133,7 @@ cp "$SEEDED_INFERENCE" "$TRAIN_DIR/segmap_inference_seeded.pt"
     --tag "$LANE_ID" \
     --output-dir "$TRAIN_DIR" 2>&1 | tee "$LOG_DIR/train.log" | tail -30
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: train_segmap.py exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
 fi
@@ -231,6 +235,7 @@ EOF
 
 log "=== Stage 5: contest_auth_eval [contest-CUDA] ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 CONFIG_ENV_PATH="$INFLATE_CONFIG" "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -239,6 +244,7 @@ CONFIG_ENV_PATH="$INFLATE_CONFIG" "$PYBIN" -u experiments/contest_auth_eval.py \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: contest_auth_eval exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
 fi

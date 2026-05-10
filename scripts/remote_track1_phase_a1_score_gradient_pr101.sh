@@ -16,6 +16,8 @@
 #   PR101_SOURCE_DIR:       repo-relative path to PR101 source/submissions/hnerv_ft_microcodec/src
 #   VIDEO_PATH:             repo-relative path to upstream/videos/0.mkv
 #   LANE_ID:                track1_phase_a1_score_gradient (or timestamped variant)
+#   DISPATCH_INSTANCE_JOB_ID: active provider job id from claim_lane_dispatch.py
+#   DISPATCH_CLAIMS_PATH:   path to copied active claim ledger on the remote host
 #   PRED_LOW / PRED_HIGH:   predicted score band (recorded for audit)
 #
 # Cost: Lightning T4 ~$0.66/hr × ~3.5h = ~$2.30 (well under $8 cap)
@@ -38,6 +40,9 @@ export PYTHONPATH="$WORKSPACE/src:$WORKSPACE/upstream:$WORKSPACE:${PYTHONPATH:-}
 export TAC_UPSTREAM_DIR="${TAC_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 
 LANE_ID="${LANE_ID:-track1_phase_a1_score_gradient}"
+DISPATCH_INSTANCE_JOB_ID="${T1_A1_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-}}"
+DISPATCH_CLAIMS_PATH="${T1_A1_DISPATCH_CLAIMS_PATH:-${DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_lane_dispatch_claims.md}}"
+DISPATCH_PLATFORM="${DISPATCH_PLATFORM:-lightning}"
 PR101_ARCHIVE_PATH="${PR101_ARCHIVE_PATH:-experiments/results/public_pr_intake_full/public_pr101_intake_20260505_auto/archive.zip}"
 PR101_SOURCE_DIR="${PR101_SOURCE_DIR:-experiments/results/public_pr_intake_full/public_pr101_intake_20260505_auto/source/submissions/hnerv_ft_microcodec/src}"
 VIDEO_PATH="${VIDEO_PATH:-upstream/videos/0.mkv}"
@@ -59,8 +64,95 @@ mkdir -p "$TRAIN_OUTPUT" "$ARCHIVE_OUTPUT" "$EVAL_WORK"
 PROVENANCE="$LOG_DIR/provenance.json"
 HEARTBEAT="$LOG_DIR/heartbeat.log"
 BUILD_MANIFEST="$LOG_DIR/build_manifest.json"
+CLAIM_VERIFIED=0
+TERMINAL_CLAIM_CLOSED=0
+HB_PID=""
 
 log() { echo "[track1-a1] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
+
+require_active_dispatch_claim() {
+    if [ -z "$DISPATCH_INSTANCE_JOB_ID" ]; then
+        log "FATAL: DISPATCH_INSTANCE_JOB_ID is required before PR101 CUDA train/eval dispatch"
+        exit 21
+    fi
+    if [ ! -f "$WORKSPACE/tools/claim_lane_dispatch.py" ]; then
+        log "FATAL: claim helper missing at $WORKSPACE/tools/claim_lane_dispatch.py"
+        exit 21
+    fi
+    if [ ! -f "$DISPATCH_CLAIMS_PATH" ]; then
+        log "FATAL: dispatch-claims ledger missing at $DISPATCH_CLAIMS_PATH; copy the active claim ledger to the remote host before dispatch"
+        exit 21
+    fi
+    "$PYBIN" - "$WORKSPACE" "$LANE_ID" "$DISPATCH_INSTANCE_JOB_ID" "$DISPATCH_CLAIMS_PATH" <<'PY'
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+workspace = Path(sys.argv[1])
+lane_id = sys.argv[2]
+instance_job_id = sys.argv[3]
+claims_path = Path(sys.argv[4])
+cmd = [
+    sys.executable,
+    str(workspace / "tools" / "claim_lane_dispatch.py"),
+    "summary",
+    "--claims-path",
+    str(claims_path),
+    "--format",
+    "json",
+]
+proc = subprocess.run(cmd, check=False, text=True, capture_output=True)
+if proc.returncode != 0:
+    print(proc.stderr or proc.stdout, file=sys.stderr)
+    raise SystemExit(21)
+payload = json.loads(proc.stdout)
+for row in payload.get("active", []):
+    if row.get("lane_id") == lane_id and row.get("instance_job_id") == instance_job_id:
+        raise SystemExit(0)
+print(
+    f"no active dispatch claim for lane_id={lane_id!r} instance_job_id={instance_job_id!r}",
+    file=sys.stderr,
+)
+raise SystemExit(21)
+PY
+}
+
+close_dispatch_claim() {
+    local status="$1"
+    local notes="$2"
+    if [ "$CLAIM_VERIFIED" != "1" ] || [ "$TERMINAL_CLAIM_CLOSED" = "1" ]; then
+        return 0
+    fi
+    if [ -z "$DISPATCH_INSTANCE_JOB_ID" ] || [ ! -f "$WORKSPACE/tools/claim_lane_dispatch.py" ]; then
+        return 0
+    fi
+    "$PYBIN" "$WORKSPACE/tools/claim_lane_dispatch.py" claim \
+        --claims-path "$DISPATCH_CLAIMS_PATH" \
+        --lane-id "$LANE_ID" \
+        --platform "$DISPATCH_PLATFORM" \
+        --instance-job-id "$DISPATCH_INSTANCE_JOB_ID" \
+        --agent "codex:remote_track1_phase_a1_score_gradient_pr101" \
+        --predicted-eta-utc "$(date -u +%FT%TZ)" \
+        --status "$status" \
+        --notes "$notes" \
+        --force >/dev/null 2>>"$LOG_DIR/run.log" || true
+    TERMINAL_CLAIM_CLOSED=1
+}
+
+cleanup() {
+    local rc=$?
+    if [ -n "${HB_PID:-}" ]; then
+        kill "$HB_PID" 2>/dev/null || true
+    fi
+    if [ "$rc" -ne 0 ]; then
+        close_dispatch_claim "failed_remote_script_rc_${rc}" "Phase A1 remote script exited rc=${rc} before terminal stage-specific closure"
+    fi
+}
+trap cleanup EXIT
+
+require_active_dispatch_claim
+CLAIM_VERIFIED=1
 
 GIT_HASH="$(cd "$WORKSPACE" && git rev-parse HEAD 2>/dev/null || echo no-git)"
 GPU_NAME="$(nvidia-smi --query-gpu=name --format=csv,noheader 2>&1 | head -1)"
@@ -159,7 +251,6 @@ print('[stage0b] OK', file=sys.stderr)
     sleep 60
   done ) &
 HB_PID=$!
-trap 'kill $HB_PID 2>/dev/null || true' EXIT
 
 # Stage 1: TRAIN (Phase A1 score-gradient).
 log "=== Stage 1: TRAIN train_score_gradient_pr101_finetune.py ==="
@@ -167,6 +258,7 @@ log "  --epochs $EPOCHS --steps-per-epoch $STEPS_PER_EPOCH --batch-size $BATCH_S
 
 # CLAUDE.md: NEVER use --device mps. NEVER pass --no-eval-roundtrip (default True).
 # eval_roundtrip + EMA + noise_std are ALL training defaults per train_score_gradient_pr101_finetune.py.
+set +e
 "$PYBIN" "$WORKSPACE/experiments/train_score_gradient_pr101_finetune.py" \
     --device cuda \
     --epochs "$EPOCHS" \
@@ -174,25 +266,36 @@ log "  --epochs $EPOCHS --steps-per-epoch $STEPS_PER_EPOCH --batch-size $BATCH_S
     --batch-size "$BATCH_SIZE" \
     --lr "$LR" \
     --pr101-archive "$WORKSPACE/$PR101_ARCHIVE_PATH" \
+    --pr101-source-dir "$WORKSPACE/$PR101_SOURCE_DIR" \
     --video-path "$WORKSPACE/$VIDEO_PATH" \
     --max-frames "$MAX_FRAMES" \
     --output "$TRAIN_OUTPUT" \
     2>&1 | tee "$LOG_DIR/train.log"
 TRAIN_RC=${PIPESTATUS[0]}
+set -e
 if [ "$TRAIN_RC" -ne 0 ]; then
     log "FATAL: training failed rc=$TRAIN_RC; abort before archive build"
     exit 3
 fi
 
-CHECKPOINT_PATH="$TRAIN_OUTPUT/checkpoint_ema.pt"
+BEST_PROXY_CHECKPOINT="$TRAIN_OUTPUT/checkpoint_best_proxy.pt"
+FINAL_EMA_CHECKPOINT="$TRAIN_OUTPUT/checkpoint_ema.pt"
+if [ -f "$BEST_PROXY_CHECKPOINT" ]; then
+    CHECKPOINT_PATH="$BEST_PROXY_CHECKPOINT"
+    CHECKPOINT_KIND="best_proxy"
+else
+    CHECKPOINT_PATH="$FINAL_EMA_CHECKPOINT"
+    CHECKPOINT_KIND="final_ema"
+fi
 if [ ! -f "$CHECKPOINT_PATH" ]; then
-    log "FATAL: checkpoint_ema.pt missing at $CHECKPOINT_PATH"
+    log "FATAL: selected checkpoint missing; checked best_proxy=$BEST_PROXY_CHECKPOINT final_ema=$FINAL_EMA_CHECKPOINT"
     exit 4
 fi
-log "training OK; checkpoint: $CHECKPOINT_PATH ($(stat -c%s "$CHECKPOINT_PATH" 2>/dev/null || stat -f%z "$CHECKPOINT_PATH") B)"
+log "training OK; selected checkpoint_kind=$CHECKPOINT_KIND path=$CHECKPOINT_PATH ($(stat -c%s "$CHECKPOINT_PATH" 2>/dev/null || stat -f%z "$CHECKPOINT_PATH") B)"
 
 # Stage 2: BUILD archive from fine-tuned state_dict.
 log "=== Stage 2: BUILD finetuned PR101 archive ==="
+set +e
 "$PYBIN" "$WORKSPACE/tools/build_pr101_finetuned_archive.py" \
     --state-dict "$CHECKPOINT_PATH" \
     --source-archive "$WORKSPACE/$PR101_ARCHIVE_PATH" \
@@ -201,6 +304,7 @@ log "=== Stage 2: BUILD finetuned PR101 archive ==="
     --lane-id "$LANE_ID" \
     2>&1 | tee "$LOG_DIR/build.log"
 BUILD_RC=${PIPESTATUS[0]}
+set -e
 if [ "$BUILD_RC" -ne 0 ]; then
     log "FATAL: archive build failed rc=$BUILD_RC; abort before eval"
     exit 5
@@ -219,6 +323,7 @@ log "archive built: bytes=$ARCHIVE_BYTES sha=$ARCHIVE_SHA"
 # Stage 3: EVAL (contest_auth_eval.py --device cuda).
 log "=== Stage 3: EVAL contest_auth_eval.py --device cuda ==="
 ensure_scorer_runtime_deps
+set +e
 "$PYBIN" "$WORKSPACE/experiments/contest_auth_eval.py" \
     --archive "$ARCHIVE_PATH" \
     --inflate-sh "$INFLATE_SH_PATH" \
@@ -228,13 +333,16 @@ ensure_scorer_runtime_deps
     --keep-work-dir \
     2>&1 | tee "$LOG_DIR/eval.log"
 EVAL_RC=${PIPESTATUS[0]}
+set -e
 log "eval rc=$EVAL_RC"
 
 # Stage 4: REPORT — write build_manifest.json with score components.
 log "=== Stage 4: REPORT ==="
 EVAL_JSON="$EVAL_WORK/contest_auth_eval.json"
+set +e
 "$PYBIN" -c "
-import json, hashlib, time, os
+import json, time, os, sys
+from tac.auth_eval_schema import eval_metric_summary, required_contest_cuda_evidence_blockers
 manifest = {
     'lane_id': '$LANE_ID',
     'completed_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
@@ -242,6 +350,8 @@ manifest = {
     'archive_bytes': $ARCHIVE_BYTES,
     'archive_sha256': '$ARCHIVE_SHA',
     'predicted_band': [$PRED_LOW, $PRED_HIGH],
+    'checkpoint_kind': '$CHECKPOINT_KIND',
+    'checkpoint_path': '$CHECKPOINT_PATH',
     'train_log_path': '$LOG_DIR/train.log',
     'build_log_path': '$LOG_DIR/build.log',
     'eval_log_path': '$LOG_DIR/eval.log',
@@ -253,28 +363,70 @@ if os.path.isfile(ej):
     with open(ej) as f:
         eval_data = json.load(f)
     manifest['eval_data'] = eval_data
-    sc = eval_data.get('score_components') or {}
-    manifest['score'] = eval_data.get('score') or eval_data.get('total_score')
-    manifest['pose_avg'] = sc.get('pose') or sc.get('pose_avg')
-    manifest['seg_avg'] = sc.get('seg') or sc.get('seg_avg')
-    manifest['rate'] = sc.get('rate')
-    manifest['evidence_grade'] = '[contest-CUDA]' if $EVAL_RC == 0 else '[contest-CUDA failed]'
-    manifest['score_claim'] = $EVAL_RC == 0
-    manifest['ready_for_exact_eval_dispatch'] = True
-    manifest['promotion_eligible'] = False  # Requires CPU dual-eval per CLAUDE.md
-    manifest['rank_or_kill_eligible'] = False  # Requires CPU dual-eval + adversarial review
-    manifest['dispatch_blockers'] = ['contest_cpu_eval_pending'] if $EVAL_RC == 0 else ['eval_failed']
-else:
-    manifest['evidence_grade'] = '[contest-CUDA failed: eval JSON missing]'
-    manifest['score_claim'] = False
+    metrics = eval_metric_summary(eval_data)
+    manifest['score'] = metrics['score']
+    manifest['canonical_score'] = metrics['score']
+    manifest['canonical_score_source'] = metrics['canonical_score_source']
+    manifest['pose_avg'] = metrics['pose_avg']
+    manifest['seg_avg'] = metrics['seg_avg']
+    manifest['rate'] = metrics['rate']
+    manifest['rate_unscaled'] = metrics['rate_unscaled']
+    manifest['eval_archive_size_bytes'] = metrics['archive_size_bytes']
+    manifest['n_samples'] = metrics['n_samples']
+    manifest['score_axis'] = eval_data.get('score_axis')
+    manifest['evidence_semantics'] = eval_data.get('evidence_semantics')
+    manifest['lane_tag'] = eval_data.get('lane_tag')
+    metric_blockers = required_contest_cuda_evidence_blockers(
+        eval_data,
+        metrics,
+        expected_archive_bytes=$ARCHIVE_BYTES,
+        expected_n_samples=600,
+    )
+    score_claim = $EVAL_RC == 0 and not metric_blockers
+    manifest['evidence_grade'] = '[contest-CUDA]' if score_claim else '[exact-eval incomplete]'
+    manifest['score_claim'] = score_claim
+    manifest['score_claim_valid'] = score_claim
     manifest['ready_for_exact_eval_dispatch'] = False
+    manifest['exact_cuda_eval_complete'] = score_claim
+    manifest['promotion_eligible'] = False
+    manifest['rank_or_kill_eligible'] = False
+    if $EVAL_RC == 0:
+        manifest['dispatch_blockers'] = ['contest_cpu_eval_pending'] if score_claim else metric_blockers
+    else:
+        manifest['dispatch_blockers'] = ['eval_failed']
+else:
+    manifest['evidence_grade'] = '[exact-eval failed: eval JSON missing]'
+    manifest['score_claim'] = False
+    manifest['score_claim_valid'] = False
+    manifest['ready_for_exact_eval_dispatch'] = False
+    manifest['exact_cuda_eval_complete'] = False
     manifest['promotion_eligible'] = False
     manifest['rank_or_kill_eligible'] = False
     manifest['dispatch_blockers'] = ['eval_json_missing']
 with open('$BUILD_MANIFEST', 'w') as f:
     json.dump(manifest, f, indent=2)
 print(json.dumps(manifest, indent=2)[:1500])
+if manifest.get('eval_rc') == 0 and manifest.get('score_claim') is not True:
+    print(
+        '[track1-a1] FATAL: eval rc=0 but manifest is not score-claimable: '
+        + ','.join(manifest.get('dispatch_blockers') or []),
+        file=sys.stderr,
+    )
+    raise SystemExit(6)
 "
+REPORT_RC=$?
+set -e
 
-log "=== TRACK1_A1_DONE [contest-CUDA] (rc=$EVAL_RC) ==="
-exit "$EVAL_RC"
+if [ "$REPORT_RC" -ne 0 ]; then
+    close_dispatch_claim "failed_manifest_adjudication_rc_${REPORT_RC}" "Phase A1 manifest adjudication refused score claim; see $BUILD_MANIFEST"
+    log "=== TRACK1_A1_INCOMPLETE exact-eval evidence refused (report_rc=$REPORT_RC eval_rc=$EVAL_RC) ==="
+    exit "$REPORT_RC"
+fi
+if [ "$EVAL_RC" -ne 0 ]; then
+    close_dispatch_claim "failed_exact_eval_rc_${EVAL_RC}" "Phase A1 contest_auth_eval failed rc=${EVAL_RC}; no score claim"
+    log "=== TRACK1_A1_FAILED exact eval rc=$EVAL_RC; no score claim ==="
+    exit "$EVAL_RC"
+fi
+close_dispatch_claim "completed_contest_cuda_exact_eval" "Phase A1 completed with claimable contest-CUDA exact eval; manifest=$BUILD_MANIFEST"
+log "=== TRACK1_A1_DONE [contest-CUDA] (rc=0) ==="
+exit 0

@@ -139,6 +139,7 @@ log "   --kl-distill-temperature 2.0 (Hinton 2015 / Quantizr default)"
 log "   --segnet-class-weights '1,5,5,1,1' (warm-start for the LEARNABLE module)"
 log "   --learnable-segnet-class-weights (V2: softmax + Lagrangian var equalisation)"
 log "   --eval-roundtrip + --posetto-noise-std=0.5 (Fridrich C1 fixes)"
+set +e
 "$PYBIN" -u experiments/optimize_poses.py \
     --checkpoint "$ANCHOR_RENDERER" \
     --masks "$LOG_DIR/extracted/masks.mkv" \
@@ -156,6 +157,7 @@ log "   --eval-roundtrip + --posetto-noise-std=0.5 (Fridrich C1 fixes)"
     --learnable-segnet-class-weights-var-lambda 1.0 \
     --output-dir "$LOG_DIR" 2>&1 | tee "$LOG_DIR/optimize_poses.log" | tail -30
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -197,6 +199,7 @@ print(f'archive {dst}: {os.path.getsize(dst)} bytes')
 
 log "=== Stage 4: contest_auth_eval on Lane PS-V2 archive ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -205,6 +208,7 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -15
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

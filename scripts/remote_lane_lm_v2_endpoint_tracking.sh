@@ -148,6 +148,7 @@ log "=== Stage 2: compute V2 endpoint-tracked poses + verify correlation ==="
 # at 0.017). The build tool ALWAYS writes the .provenance.json calibration
 # report so we can read corr/rmse out-of-band.
 ARCHIVE="$LOG_DIR/archive_lane_lm_v2.zip"
+set +e
 "$PYBIN" -u experiments/build_zero_cost_pose_archive.py \
     --lane-a-archive "$ANCHOR_ARCHIVE" \
     --output "$ARCHIVE" \
@@ -155,6 +156,7 @@ ARCHIVE="$LOG_DIR/archive_lane_lm_v2.zip"
     --min-correlation 0.30 \
     2>&1 | tee "$LOG_DIR/build.log" | tail -30
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -197,6 +199,7 @@ log "=== Stage 4: contest_auth_eval on Lane LM-V2 archive ==="
 # the lane-mark sentinel. Without it the archive falls through to
 # unconditioned rendering (catastrophic).
 rm -rf "$LOG_DIR/eval_work"
+set +e
 INFLATE_ZERO_COST_POSES=1 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -205,6 +208,7 @@ INFLATE_ZERO_COST_POSES=1 "$PYBIN" -u experiments/contest_auth_eval.py \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

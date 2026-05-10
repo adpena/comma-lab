@@ -130,6 +130,23 @@ CHECKPOINT_SELECTIONS = {
     "best_proxy": "checkpoint_best_proxy.pt",
 }
 REMOTE_PYTHONPATH = f"{REMOTE_REPO / 'src'}:{REMOTE_REPO / 'upstream'}:{REMOTE_REPO}"
+MOUNTED_CODE_PATHS = (
+    "src",
+    "upstream/evaluate.py",
+    "upstream/frame_utils.py",
+    "upstream/modules.py",
+    "upstream/public_test_video_names.txt",
+    "upstream/pyproject.toml",
+    "upstream/uv.lock",
+    "experiments/train_score_gradient_pr101_finetune.py",
+    "experiments/contest_auth_eval.py",
+    "scripts/probe_nvdec.sh",
+    "scripts/adjudicate_contest_auth_eval.py",
+    "tools/build_pr101_finetuned_archive.py",
+    "submissions/factorized_hnerv_v1",
+    "pyproject.toml",
+    "uv.lock",
+)
 
 
 def _ensure_repo_import_paths() -> None:
@@ -285,6 +302,63 @@ def _file_meta(path: Path) -> dict[str, Any]:
         "path": str(path),
         "bytes": path.stat().st_size,
         "sha256": _sha256_path(path),
+    }
+
+
+def _run_git_text(args: list[str]) -> tuple[int, str, str]:
+    proc = subprocess.run(
+        ["git", *args],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return proc.returncode, proc.stdout, proc.stderr
+
+
+def _mounted_code_snapshot(out_dir: Path) -> dict[str, Any]:
+    """Record the exact local code state Modal mounted for score-bearing work."""
+    snapshot_dir = out_dir / "code_snapshot"
+    snapshot_dir.mkdir(parents=True, exist_ok=True)
+    mounted_paths = list(MOUNTED_CODE_PATHS)
+    head_rc, head_stdout, head_stderr = _run_git_text(["rev-parse", "HEAD"])
+    status_rc, status_stdout, status_stderr = _run_git_text(
+        ["status", "--short", "--", *mounted_paths]
+    )
+    diff_rc, diff_stdout, diff_stderr = _run_git_text(["diff", "--binary", "--", *mounted_paths])
+    cached_rc, cached_stdout, cached_stderr = _run_git_text(
+        ["diff", "--cached", "--binary", "--", *mounted_paths]
+    )
+    status_path = snapshot_dir / "mounted_code_status.txt"
+    diff_path = snapshot_dir / "mounted_code_worktree.patch"
+    cached_diff_path = snapshot_dir / "mounted_code_index.patch"
+    status_path.write_text(status_stdout)
+    diff_path.write_text(diff_stdout)
+    cached_diff_path.write_text(cached_stdout)
+    return {
+        "schema_version": "mounted_modal_code_snapshot_v1",
+        "git_head": head_stdout.strip() if head_rc == 0 else None,
+        "git_head_error": head_stderr.strip() if head_rc != 0 else None,
+        "mounted_code_paths": mounted_paths,
+        "dirty": bool(status_stdout.strip()),
+        "status_short": status_stdout.splitlines(),
+        "status_rc": status_rc,
+        "status_error": status_stderr.strip() if status_rc != 0 else None,
+        "worktree_diff_bytes": len(diff_stdout.encode("utf-8")),
+        "worktree_diff_sha256": _sha256_bytes(diff_stdout.encode("utf-8")),
+        "worktree_diff_path": str(diff_path),
+        "worktree_diff_rc": diff_rc,
+        "worktree_diff_error": diff_stderr.strip() if diff_rc != 0 else None,
+        "index_diff_bytes": len(cached_stdout.encode("utf-8")),
+        "index_diff_sha256": _sha256_bytes(cached_stdout.encode("utf-8")),
+        "index_diff_path": str(cached_diff_path),
+        "index_diff_rc": cached_rc,
+        "index_diff_error": cached_stderr.strip() if cached_rc != 0 else None,
+        "status_path": str(status_path),
+        "score_promotion_note": (
+            "If dirty=true, this dispatch remains reproducible only with the "
+            "recorded patch artifacts or by rerunning from a clean commit."
+        ),
     }
 
 
@@ -1776,6 +1850,7 @@ def _write_dispatch_metadata(
     """
     out_dir = RESULT_ROOT / instance_job_id
     out_dir.mkdir(parents=True, exist_ok=True)
+    code_snapshot = _mounted_code_snapshot(out_dir)
     payload = {
         "schema_version": 1,
         "app": APP_NAME,
@@ -1786,6 +1861,7 @@ def _write_dispatch_metadata(
         "gpu": "T4",
         "paths": {key: str(path) for key, path in sorted(paths.items())},
         "inputs": metas,
+        "mounted_code_snapshot": code_snapshot,
         "params": params,
         "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
         "score_claim": False,  # Becomes True ONLY after harvest succeeds with eval_data.

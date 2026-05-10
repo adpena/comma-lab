@@ -160,6 +160,7 @@ for i in "${!NAMES[@]}"; do
     log "  Stage 2/$NAME: train SegMap"
     # Council C OOM-class deep fixes (DF2 + DF3) — see Check 87 STRICT.
     # --bf16 + --scorer-chunk 2 + --batch-size 4 → B*N=8 (RTX 4090 24 GB safe).
+    set +e
     "$PYBIN" -u experiments/train_segmap.py \
         --variant kl_distill \
         --kl-distill-weight 0.002 \
@@ -177,6 +178,7 @@ for i in "${!NAMES[@]}"; do
         --tag "${LANE_ID}_${NAME}" \
         --output-dir "$CONFIG_DIR/train" 2>&1 | tee "$CONFIG_DIR/train.log" | tail -20
     PIPE_RC=("${PIPESTATUS[@]}")
+    set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         log "  FATAL: train rc=${PIPE_RC[0]} for config '$NAME' — recording and continuing"
         "$PYBIN" -c "

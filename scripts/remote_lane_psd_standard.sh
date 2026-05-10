@@ -176,6 +176,7 @@ log "  watchdog PID=$WATCHDOG_PID; will SIGTERM at epoch 200 if PoseNet > 0.0045
 
 # Stage 1: train PSD with hard kill thresholds.
 log "=== Stage 1: train_renderer --profile psd_standard_adaptive ==="
+set +e
 "$PYBIN" -u src/tac/experiments/train_renderer.py \
     --profile psd_standard_adaptive \
     --tag "$TAG" \
@@ -185,6 +186,7 @@ log "=== Stage 1: train_renderer --profile psd_standard_adaptive ==="
     --no-auth-eval-on-best \
     2>&1 | tee "$LOG_DIR/train.log" | grep -E "^\[(train|eval|masks|phase|best|arch)\]|epoch|Phase|scorer" | tail -200
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: train_renderer exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
 fi
@@ -249,6 +251,7 @@ ARCHIVE="$LOG_DIR/archive_psd_standard.zip"
 ARCHIVE_BYTES=$(stat -c '%s' "$ARCHIVE" 2>/dev/null || stat -f '%z' "$ARCHIVE")
 log "  archive bytes: $ARCHIVE_BYTES"
 
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -257,6 +260,7 @@ log "  archive bytes: $ARCHIVE_BYTES"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: contest_auth_eval exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
 fi

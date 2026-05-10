@@ -1,6 +1,6 @@
 # Cloud provider readiness
 
-Generated: `2026-05-10T07:47:45Z`
+Generated: `2026-05-10T08:21:13Z`
 
 This is a read-only provider inventory. It is not a dispatch, score claim, or promotion artifact.
 

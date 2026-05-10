@@ -188,10 +188,12 @@ print(f'OK: {len(used)} train_renderer flags all real')
 # pose -> frame mapping during training).
 # ──────────────────────────────────────────────────────────────────────────
 log "=== Stage 1: extract / build masks + reuse Lane A poses ==="
+set +e
 "$PYBIN" experiments/build_baseline_archive.py \
     --device cuda --crf 50 --half-frame \
     --output "$LOG_DIR/archive_masks_seed.zip" 2>&1 | tee "$LOG_DIR/build_masks.log" | tail -5
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -243,6 +245,7 @@ else
 fi
 
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+set +e
 "$PYBIN" -u src/tac/experiments/train_renderer.py \
     --profile q_faithful_dilated_88k \
     --device cuda \
@@ -253,6 +256,7 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
     "${RESUME_ARGS[@]}" \
     --output-dir "$LOG_DIR/train" 2>&1 | tee "$LOG_DIR/train.log" | tail -50
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -375,6 +379,7 @@ assert 100_000 < size < 1_500_000, f'archive size {size} outside sane band [100K
 # ──────────────────────────────────────────────────────────────────────────
 log "=== Stage 6: contest_auth_eval [contest-CUDA] ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -383,6 +388,7 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

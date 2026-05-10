@@ -320,6 +320,7 @@ PREP_NPAIRS_ARGS=""
 if [ -n "${SJKL_N_ANCHOR_PAIRS:-}" ]; then
     PREP_NPAIRS_ARGS="--n-pairs $SJKL_N_ANCHOR_PAIRS"
 fi
+set +e
 "$PYBIN" -u experiments/prepare_sjkl_pair_tensors.py \
     --renderer-output "$RENDERER_TENSOR" \
     --target-frames "$GT_PAIRS" \
@@ -328,6 +329,7 @@ fi
     --seed "${SJKL_SEED:-0}" \
     $PREP_NPAIRS_ARGS 2>&1 | tee "$OUT_DIR/tensor_prep.log"
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     log "FATAL: prepare_sjkl_pair_tensors.py failed rc=${PIPE_RC[0]}"
     exit "${PIPE_RC[0]}"
@@ -338,6 +340,7 @@ require_file "$SJKL_PREP_MANIFEST"
 log "=== Stage 2: CUDA build_sjkl_residual.py ==="
 SJKL_BUILD_OUT="$BUILD_DIR/sjkl_build_workdir"
 mkdir -p "$SJKL_BUILD_OUT"
+set +e
 "$PYBIN" -u experiments/build_sjkl_residual.py \
     --pair-tensor-manifest "$SJKL_PREP_MANIFEST" \
     --output-dir "$SJKL_BUILD_OUT" \
@@ -349,6 +352,7 @@ mkdir -p "$SJKL_BUILD_OUT"
     --device cuda \
     --seed "${SJKL_SEED:-0}" 2>&1 | tee "$OUT_DIR/build_sjkl_residual.log"
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     log "FATAL: build_sjkl_residual.py failed rc=${PIPE_RC[0]}"
     exit "${PIPE_RC[0]}"
@@ -381,6 +385,7 @@ PY
 log "=== Stage 3: deterministic archive packer (adds charged sjkl.bin) ==="
 OUTPUT_ARCHIVE="$PACK_DIR/archive.zip"
 PACK_MANIFEST="$PACK_DIR/sjkl_c067_archive_manifest.json"
+set +e
 "$PYBIN" -u experiments/build_sjkl_c067_archive.py \
     --source-archive "$SOURCE_ARCHIVE_ABS" \
     --sjkl-bin "$SJKL_BIN" \
@@ -388,6 +393,7 @@ PACK_MANIFEST="$PACK_DIR/sjkl_c067_archive_manifest.json"
     --sjkl-member-name sjkl.bin \
     --max-sjkl-bytes "$MAX_SJKL_BYTES" 2>&1 | tee "$OUT_DIR/build_sjkl_c067_archive.log"
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     log "FATAL: build_sjkl_c067_archive.py failed rc=${PIPE_RC[0]}"
     exit "${PIPE_RC[0]}"

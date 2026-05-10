@@ -1,29 +1,31 @@
 #!/usr/bin/env python3
 """Dispatcher for T1 — Ballé hyperprior + 128K decoder end-to-end.
 
-This is the **actuator** for T1 per CLAUDE.md "Race-mode rigor inversion +
-parallel-dispatch first" Rule 1: every ranker / sanity gate must name the
-parallel actuator that consumes its output. T1's actuator is THIS file.
+This is the claim-safe **planning surface** for T1 per CLAUDE.md
+"Race-mode rigor inversion + parallel-dispatch first" Rule 1. The Modal
+provider actuator that actually creates a job id is
+``experiments/modal_t1_balle_endtoend.py``; this tool keeps dry-run provider
+plans and remote-command templates discoverable without accidentally spending
+GPU or opening phantom claims.
 
 Pipeline
 --------
 
-1. Dry-run scaffold planning only. Real provider launch is refused until Phase
-   2 lands scorer-domain training plus a contest-hermetic runtime/export
-   contract.
+1. Dry-run remote-command planning only. Real provider launch is refused until
+   a provider-specific actuator can create the job id that the dispatch-claim
+   ledger requires.
 2. Cost gate: $80 hard cap (operator-allocated for T1 per Phase 2 council
    memo §1 EIG/$ ranking).
 3. Choose provider:
-   - ``--provider modal`` → dry-run metadata only until Phase 2 closes the
-     contest-hermetic runtime/export contract.
+   - ``--provider modal`` → dry-run metadata plus a pointer to the real Modal
+     actuator in ``experiments/modal_t1_balle_endtoend.py``.
    - ``--provider vastai`` → dry-run metadata only. The dispatcher deliberately
      does not emit a provider CLI command until the current Vast.ai argparse
      surface is inspected in the same turn.
-4. Phase-2 non-dry-run work will run
-   ``scripts/remote_lane_t1_balle_endtoend.sh`` on the remote (which delegates
-   bootstrap to ``scripts/remote_archive_only_eval.sh``).
-5. Phase-2 harvest may queue GHA ``[contest-CPU]`` evaluation only after an
-   archive has exact identity/custody; Phase 1 does not launch it.
+4. The remote template runs ``scripts/remote_lane_t1_balle_endtoend.sh`` on the
+   remote (which delegates bootstrap to ``scripts/remote_archive_only_eval.sh``),
+   then compiles the emitted packet and runs contest-CUDA auth eval.
+5. CPU reproduction remains a follow-up after exact CUDA archive/runtime custody.
 
 CLAUDE.md compliance
 --------------------
@@ -42,7 +44,7 @@ CLAUDE.md compliance
 Exit codes
 ----------
 
-0 = scaffold plan written; no provider job was created.
+0 = remote-command plan written; no provider job was created.
 1 = pre-dispatch validation failed (cost cap, claim refused, etc.).
 2 = non-dry-run refused; no GPU spend incurred and no lane claim written.
 """
@@ -62,10 +64,10 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 LANE_ID = "t1_balle_128k_endtoend"
 SCAFFOLD_VERSION_REL = "src/tac/paradigm_delta_epsilon_zeta/__init__.py"
 DEFAULT_VASTAI_DISK_GB = 60
-SCAFFOLD_PLAN_STATUS = "refused_dispatch_phase1_scaffold_only"
+SCAFFOLD_PLAN_STATUS = "refused_dispatch_provider_launch_not_implemented"
 SCAFFOLD_PLAN_REASON = (
-    "phase1_scaffold_only_no_provider_job_no_gpu_work_no_auth_eval; "
-    "blocked_by_noop_scorer_loss_synthetic_smoke_and_non_hermetic_runtime"
+    "dry_run_score_domain_training_plan_no_provider_job_no_gpu_work_no_auth_eval; "
+    "real training/eval path requires claimed remote CUDA executor"
 )
 
 
@@ -142,7 +144,7 @@ def claim_lane(
         "--agent", agent,
         "--status", SCAFFOLD_PLAN_STATUS,
         "--notes", (
-            "T1 Phase 1 scaffold plan only; no provider job created; "
+            "T1 remote training/eval command plan only; no provider job created; "
             "no GPU work; no score claim"
         ),
     ]
@@ -190,21 +192,46 @@ def build_remote_command(plan: DispatchPlan) -> list[str]:
             "cd /workspace/pact",
             "test \"$(git branch --show-current)\" = main",
             "git pull --ff-only origin main",
-            "bash scripts/remote_lane_t1_balle_endtoend.sh",
+            (
+                "T1_ALLOW_SCORE_DOMAIN_TRAINING=1 "
+                "T1_RUN_CONTEST_CUDA_AUTH_EVAL=1 "
+                "LOCAL_CUDA_WORKER=1 "
+                "T1_DISPATCH_INSTANCE_JOB_ID=${T1_DISPATCH_INSTANCE_JOB_ID:?set_active_claim_job_id} "
+                "T1_DISPATCH_CLAIMS_PATH=${T1_DISPATCH_CLAIMS_PATH:?copy_active_claim_ledger_to_remote_and_set_path} "
+                f"EPOCHS={int(plan.epochs)} "
+                "SEGMENTATION_SURROGATE=sinkhorn "
+                "GRAD_CLIP_NORM=1.0 "
+                "bash scripts/remote_lane_t1_balle_endtoend.sh"
+            ),
         ]),
     ]
 
 
 def dispatch_modal(plan: DispatchPlan, *, dry_run: bool) -> int:
-    """Modal scaffold-plan writer; never spawns a provider job in Phase 1.
+    """Modal plan writer; never spawns a provider job from this compatibility tool.
 
-    Phase 1 NOTE: this is the build-only scaffold. The Modal app definition
-    lives elsewhere (existing infra under ``experiments/modal_*.py``). This
-    dispatcher deliberately writes a *_scaffold_plan.json file, not
+    The real Modal app lives in ``experiments/modal_t1_balle_endtoend.py``.
+    This compatibility dispatcher deliberately writes a *_scaffold_plan.json file, not
     modal_metadata.json, so harvesters do not treat it as real GPU work.
     """
+    modal_execute_command = [
+        "PYTHONPATH=src:upstream:$PWD",
+        ".venv/bin/modal",
+        "run",
+        "--detach",
+        "experiments/modal_t1_balle_endtoend.py",
+        "--execute",
+        "--epochs",
+        str(int(plan.epochs)),
+        "--timeout-hours",
+        str(float(plan.estimated_hours)),
+        "--cost-cap-usd",
+        str(float(plan.cost_cap_usd)),
+    ]
     metadata_extra = {
         "modal_app_name": "comma-t1-balle-endtoend",
+        "modal_actuator": "experiments/modal_t1_balle_endtoend.py",
+        "modal_execute_command_template_only": shlex.join(modal_execute_command),
         "modal_spawn_status": SCAFFOLD_PLAN_STATUS,
         "modal_call_id": None,
         "remote_command_template_only": shlex.join(build_remote_command(plan)),
@@ -342,9 +369,9 @@ def main() -> int:
 
     if not args.dry_run:
         print(
-            "[t1-dispatch] FATAL: T1 Phase 1 is scaffold-only. This "
-            "dispatcher writes dry-run scaffold plans only until Phase 2 "
-            "closes scorer loss, hermetic inflate, and exact-eval custody. "
+            "[t1-dispatch] FATAL: T1 provider launch is not implemented. This "
+            "dispatcher writes dry-run remote-command plans only until a "
+            "provider-specific actuator can create the claimed job id. "
             "No lane claim or provider job was created."
         )
         return 2

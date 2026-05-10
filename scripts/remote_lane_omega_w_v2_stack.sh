@@ -137,11 +137,13 @@ log "  Lane G v3 renderer.bin magic = ASYM (expected)"
 log "=== Stage 2: build Lane G v3 + Ω-W-V2 stacked archive (CPU-only, ~1s) ==="
 STACKED_ARCHIVE="$LOG_DIR/archive_lane_g_v3_omega_w_v2.zip"
 BUILD_PROVENANCE="$LOG_DIR/build_provenance.json"
+set +e
 "$PYBIN" -u experiments/build_lane_g_v3_omega_w_v2_stack.py \
     --output "$STACKED_ARCHIVE" \
     --bit-budget-ratio 0.7 \
     --provenance-json "$BUILD_PROVENANCE" 2>&1 | tee "$LOG_DIR/build.log" | tail -20
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: build_lane_g_v3_omega_w_v2_stack.py rc=${PIPE_RC[0]}" >&2
     exit "${PIPE_RC[0]}"
@@ -166,6 +168,7 @@ log "=== Stage 3: contest_auth_eval [contest-CUDA] on Lane G v3 + Ω-W-V2 archiv
 EVAL_LOG="$LOG_DIR/auth_eval.log"
 EVAL_WORK_DIR="$LOG_DIR/eval_work"
 rm -rf "$EVAL_WORK_DIR"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$STACKED_ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -174,6 +177,7 @@ rm -rf "$EVAL_WORK_DIR"
     --keep-work-dir \
     --work-dir "$EVAL_WORK_DIR" 2>&1 | tee "$EVAL_LOG" | tail -30
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: contest_auth_eval rc=${PIPE_RC[0]}" >&2
     exit "${PIPE_RC[0]}"

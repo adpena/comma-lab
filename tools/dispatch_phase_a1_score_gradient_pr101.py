@@ -237,6 +237,8 @@ def dispatch_lightning(
 
     env_args: list[str] = []
     env_args += ["--env", f"LANE_ID={lane_id}"]
+    env_args += ["--env", f"DISPATCH_INSTANCE_JOB_ID={instance_job_id}"]
+    env_args += ["--env", "DISPATCH_CLAIMS_PATH=.omx/state/active_lane_dispatch_claims.md"]
     env_args += ["--env", f"PR101_ARCHIVE_PATH={pr101_archive.relative_to(REPO_ROOT)}"]
     env_args += ["--env", f"PR101_SOURCE_DIR={pr101_source_dir.relative_to(REPO_ROOT)}"]
     env_args += ["--env", f"VIDEO_PATH={video_path.relative_to(REPO_ROOT)}"]
@@ -310,6 +312,8 @@ def build_batch_command(args: argparse.Namespace, instance_job_id: str) -> str:
         f"export PYBIN={args.python_bin}",
         "export PYTHONUNBUFFERED=1",
         f"export LANE_ID={lane_id}",
+        f"export DISPATCH_INSTANCE_JOB_ID={instance_job_id}",
+        'export DISPATCH_CLAIMS_PATH="$PWD/.omx/state/active_lane_dispatch_claims.md"',
         f"export PR101_ARCHIVE_PATH={pr101_archive_rel}",
         f"export PR101_SOURCE_DIR={pr101_source_rel}",
         f"export VIDEO_PATH={video_path_rel}",
@@ -332,6 +336,40 @@ def build_batch_command(args: argparse.Namespace, instance_job_id: str) -> str:
             'export PYTHONPATH="$PWD/src:$PWD/upstream:$PWD"',
             f'export LOG_DIR="$OUT_DIR"',
             *env_exports,
+            "mkdir -p .omx/state",
+            (
+                f"{args.python_bin} tools/claim_lane_dispatch.py claim "
+                f"--lane-id {shlex.quote(lane_id)} "
+                "--platform lightning "
+                f"--instance-job-id {shlex.quote(instance_job_id)} "
+                "--agent codex:remote_track1_phase_a1_score_gradient_pr101 "
+                "--status active_dispatching "
+                "--force "
+                "--notes remote_mirror_of_local_dispatch_claim_for_in-script_verification"
+            ),
+            (
+                "TERMINAL_CLAIM_CLOSED=0\n"
+                "close_remote_claim() {\n"
+                "  local status=\"$1\"\n"
+                "  local notes=\"$2\"\n"
+                "  if [ \"$TERMINAL_CLAIM_CLOSED\" = \"1\" ]; then return 0; fi\n"
+                f"  {args.python_bin} tools/claim_lane_dispatch.py claim "
+                f"--lane-id {shlex.quote(lane_id)} --platform lightning "
+                f"--instance-job-id {shlex.quote(instance_job_id)} "
+                "--agent codex:phase_a1_lightning_batch_worker "
+                "--predicted-eta-utc \"$(date -u +%FT%TZ)\" "
+                "--status \"$status\" --notes \"$notes\" --force >/dev/null || true\n"
+                "  TERMINAL_CLAIM_CLOSED=1\n"
+                "}\n"
+                "cleanup_remote_claim() {\n"
+                "  local rc=$?\n"
+                "  if [ \"$rc\" -ne 0 ]; then\n"
+                "    close_remote_claim \"failed_batch_worker_rc_${rc}\" "
+                "\"Phase A1 batch worker exited rc=${rc}; no score claim unless remote manifest proves otherwise\"\n"
+                "  fi\n"
+                "}\n"
+                "trap cleanup_remote_claim EXIT"
+            ),
             (
                 f"{args.python_bin} - <<'PY' > \"$OUT_DIR/lightning_runner_preflight.json\"\n"
                 "import subprocess\n"
@@ -353,8 +391,12 @@ def build_batch_command(args: argparse.Namespace, instance_job_id: str) -> str:
                 "PY"
             ),
             (
+                "set +e\n"
                 "bash scripts/remote_track1_phase_a1_score_gradient_pr101.sh "
-                '2>&1 | tee "$OUT_DIR/batch_run.log"'
+                "2>&1 | tee \"$OUT_DIR/batch_run.log\"\n"
+                "REMOTE_SCRIPT_RC=${PIPESTATUS[0]}\n"
+                "set -e\n"
+                "export REMOTE_SCRIPT_RC"
             ),
             (
                 f"{args.python_bin} - <<'PY'\n"
@@ -373,6 +415,7 @@ def build_batch_command(args: argparse.Namespace, instance_job_id: str) -> str:
                 "  'score_claim': False,\n"
                 "  'promotion_requires_adjudication': True,\n"
                 "  'lane_dir': str(lane_dir),\n"
+                "  'remote_script_rc': int(os.environ.get('REMOTE_SCRIPT_RC') or 0),\n"
                 "  'contest_auth_eval_json': str(score_json) if score_json else None,\n"
                 "  'contest_auth_eval_json_exists': bool(score_json and score_json.is_file()),\n"
                 "}\n"
@@ -382,6 +425,8 @@ def build_batch_command(args: argparse.Namespace, instance_job_id: str) -> str:
                 "write_json(lane_dir / 'track1_phase_a1_batch_summary.json', summary)\n"
                 "if not (score_json and score_json.is_file()):\n"
                 "    raise SystemExit('FATAL: phase A1 batch did not produce contest_auth_eval.json')\n"
+                "if int(os.environ.get('REMOTE_SCRIPT_RC') or 0) != 0:\n"
+                "    raise SystemExit(f\"FATAL: phase A1 remote script rc={os.environ.get('REMOTE_SCRIPT_RC')}\")\n"
                 "PY"
             ),
         ]
@@ -416,39 +461,62 @@ def build_batch_spec(args: argparse.Namespace, instance_job_id: str) -> Lightnin
     )
 
 
+def _batch_submit_failure_claim(exc: BaseException) -> tuple[str, str]:
+    """Classify Lightning submit exceptions for dispatch-claim hygiene."""
+
+    message = str(exc).lower()
+    terminal_markers = (
+        "couldn't resolve teamspace",
+        "could not resolve teamspace",
+        "lightning_sdk is required",
+    )
+    if any(marker in message for marker in terminal_markers):
+        return (
+            "failed_batch_submit",
+            "Phase A1 Lightning Batch Job submit failed before a provider job "
+            f"handle was returned: {type(exc).__name__}",
+        )
+    return (
+        "submit_status_unknown_reconcile_before_refire",
+        "Phase A1 Lightning Batch Job submit raised "
+        f"{type(exc).__name__}; provider state may be ambiguous after the "
+        "Job.run boundary. Reconcile Lightning Batch Jobs state before re-fire.",
+    )
+
+
 def submit_batch(
     args: argparse.Namespace,
     *,
     lane_id: str,
     instance_job_id: str,
     predicted_eta_utc: str,
-) -> tuple[bool, str | None]:
+) -> tuple[bool, str | None, str]:
     """Submit the A1 lane via Lightning Batch Jobs.
 
-    Returns ``(fired_ok, batch_record_str_or_None)``. On exception, closes the
-    open lane claim with status ``failed_batch_submit`` so re-fire is unblocked.
+    Returns ``(fired_ok, batch_record_str_or_None, dispatch_status)``.
+    Exceptions from the provider submit call are billing-ambiguous, so the lane
+    claim remains non-terminal until an operator reconciles provider state.
     """
     spec = build_batch_spec(args, instance_job_id)
     if args.print_only:
         print("=== batch spec ===")
         print(json.dumps(spec.asdict(), indent=2, default=str))
-        return False, None
+        return False, None, "print_only_no_dispatch"
     try:
         record = LightningBatchJobsClient().submit(spec, dry_run=args.dry_run_batch)
     except Exception as exc:
         print(f"[submit-batch] FAILED: {exc!r}", file=sys.stderr)
+        status, notes = _batch_submit_failure_claim(exc)
         claim_lane(
             lane_id=lane_id,
             platform="lightning",
             instance_job_id=instance_job_id,
             predicted_eta_utc=predicted_eta_utc,
-            notes=(
-                f"Phase A1 Lightning Batch Job submit failed: {type(exc).__name__}"
-            ),
-            status="failed_batch_submit",
+            notes=notes,
+            status=status,
             force=True,
         )
-        return False, None
+        return False, None, status
     if args.dry_run_batch:
         # Close the lane claim terminally for dry-run so it does not block re-fire.
         claim_lane(
@@ -462,7 +530,8 @@ def submit_batch(
             status="completed_dry_run",
             force=True,
         )
-    return True, json.dumps(record, default=str, indent=2)
+        return False, json.dumps(record, default=str, indent=2), "completed_dry_run"
+    return True, json.dumps(record, default=str, indent=2), "fired"
 
 
 # ---------------------------------------------------------------------------
@@ -497,6 +566,11 @@ def main(argv: list[str] | None = None) -> int:
                    help="Allow dispatch even if Lightning Studio's GPU doesn't match")
     p.add_argument("--print-only", action="store_true",
                    help="Print resolved invocation without claiming or dispatching")
+    p.add_argument("--allow-legacy-studio", action="store_true",
+                   help="Allow the legacy Lightning Studio tmux path. Default is "
+                        "fail-closed because that path cannot prove a mirrored "
+                        "remote dispatch claim before CUDA work in all environments; "
+                        "prefer --submit-batch.")
     p.add_argument("--force-claim", action="store_true",
                    help="Pass --force to lane claim (only for explicit conflict resolution)")
     p.add_argument("--output-root", type=Path,
@@ -652,6 +726,16 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 5
 
+    if not args.submit_batch and not args.allow_legacy_studio:
+        print(
+            "FATAL: legacy Lightning Studio dispatch is disabled for A1 readiness. "
+            "Use --submit-batch so the worker mirrors and verifies the dispatch "
+            "claim before CUDA work, or pass --allow-legacy-studio only after "
+            "manually confirming the remote .omx/state claim ledger is current.",
+            file=sys.stderr,
+        )
+        return 7
+
     # Open lane claim BEFORE GPU spend (CLAUDE.md NON-NEGOTIABLE).
     platform_for_claim = "lightning"
     claim_rc = claim_lane(
@@ -671,13 +755,66 @@ def main(argv: list[str] | None = None) -> int:
         return 4
 
     # Submit dispatch.
+    batch_dispatch_status = ""
     if args.submit_batch:
-        fired_ok, batch_record_str = submit_batch(
+        fired_ok, batch_record_str, batch_dispatch_status = submit_batch(
             args,
             lane_id=args.lane_id,
             instance_job_id=instance_job_id,
             predicted_eta_utc=predicted_eta_utc,
         )
+        if args.dry_run_batch:
+            write_heartbeat(lane_dir, "BATCH_DRY_RUN_COMPLETED no GPU work dispatched")
+            manifest_path = write_dispatch_manifest(
+                lane_dir,
+                lane_id=args.lane_id,
+                instance_job_id=instance_job_id,
+                provider=args.provider,
+                gpu_tier=args.gpu_tier,
+                estimated_cost_usd=cost,
+                predicted_low=args.predicted_low,
+                predicted_high=args.predicted_high,
+                pr101_archive=str(pr101_archive),
+                video_path=str(video_path),
+                pr101_source_dir=str(pr101_source_dir),
+                epochs=args.epochs,
+                timeout_hours=args.timeout_hours,
+                session_id=None,
+                dispatch_attempted=False,
+                dispatch_status="dry_run_batch_no_dispatch",
+                started_at_utc=started_at_utc,
+                predicted_eta_utc=predicted_eta_utc,
+                args_dict={k: str(v) for k, v in vars(args).items()},
+            )
+            if batch_record_str:
+                print("[submit-batch] record:")
+                print(batch_record_str)
+            print(f"[dispatch] DRY_RUN completed manifest={manifest_path}")
+            return 0
+        if not fired_ok:
+            write_heartbeat(lane_dir, f"BATCH_SUBMIT_NOT_FIRED status={batch_dispatch_status}")
+            write_dispatch_manifest(
+                lane_dir,
+                lane_id=args.lane_id,
+                instance_job_id=instance_job_id,
+                provider=args.provider,
+                gpu_tier=args.gpu_tier,
+                estimated_cost_usd=cost,
+                predicted_low=args.predicted_low,
+                predicted_high=args.predicted_high,
+                pr101_archive=str(pr101_archive),
+                video_path=str(video_path),
+                pr101_source_dir=str(pr101_source_dir),
+                epochs=args.epochs,
+                timeout_hours=args.timeout_hours,
+                session_id=None,
+                dispatch_attempted=True,
+                dispatch_status=batch_dispatch_status or "failed_batch_submit",
+                started_at_utc=started_at_utc,
+                predicted_eta_utc=predicted_eta_utc,
+                args_dict={k: str(v) for k, v in vars(args).items()},
+            )
+            return 6
         # Lightning Batch Jobs do not expose a tmux session_id; the
         # instance_job_id IS the canonical handle for status/harvest.
         session_id = instance_job_id if fired_ok else None

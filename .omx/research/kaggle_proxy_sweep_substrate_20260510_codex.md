@@ -15,11 +15,21 @@ used as exact auth eval, contest CUDA evidence, or a score claim.
 ## Operator-controlled launch command
 
 ```bash
+.venv/bin/python tools/claim_lane_dispatch.py claim --dry-run --lane-id kaggle_pr101_proxy_sweep --platform kaggle --instance-job-id kaggle:adpena/pr101-proxy-sweep --agent codex:kaggle_proxy_readiness --status active_proxy_dispatch --notes 'Kaggle PR101 proxy sweep only; score_claim=false; exact CUDA promotion required'
+.venv/bin/python tools/claim_lane_dispatch.py claim --lane-id kaggle_pr101_proxy_sweep --platform kaggle --instance-job-id kaggle:adpena/pr101-proxy-sweep --agent codex:kaggle_proxy_readiness --status active_proxy_dispatch --notes 'Kaggle PR101 proxy sweep only; score_claim=false; exact CUDA promotion required'
 uv run --with kaggle kaggle kernels push -p experiments/kaggle_kernels/pr101_proxy_sweep
 ```
 
-The builder prints this command but does not execute it. No Kaggle push,
-provider launch, dispatch claim, or remote job is performed by default.
+The builder prints this claim-safe sequence but does not execute it. No Kaggle
+push, provider launch, dispatch claim, or remote job is performed by default.
+The first command is a dry-run conflict check. The second command records the
+active proxy dispatch claim. The push command is safe only after the active
+claim succeeds.
+
+Terminal claim template is recorded in
+`experiments/kaggle_kernels/pr101_proxy_sweep/proxy_sweep_build_manifest.json`
+as `terminal_claim_command_template_text`; replace the placeholder terminal
+status/notes with the exact Kaggle outcome and artifact path.
 
 ## Evidence contract
 
@@ -76,3 +86,20 @@ promotion path is:
 3. Feed the candidate into a real archive-builder or training dispatch.
 4. Claim a lane before remote exact-eval dispatch.
 5. Promote only after exact CUDA archive/runtime custody is complete.
+
+## 2026-05-10T08:24Z claim-safe operator update
+
+`tools/build_kaggle_proxy_sweep_kernel.py` now writes these manifest fields:
+
+- `dispatch_claim_required=true`
+- `claim_command_dry_run`
+- `claim_command`
+- `safe_push_sequence`
+- `terminal_claim_command_template`
+
+This closes the previous operator-ergonomics gap where the build artifact
+surfaced a bare `kaggle kernels push` command without a colocated
+dispatch-claim sequence. Evidence boundary is unchanged: `research_only=true`,
+`proxy_only=true`, `score_claim=false`, and Kaggle output remains ineligible for
+rank, kill, promotion, or exact-CUDA claims until promoted through a separate
+claimed exact CUDA archive/eval path.

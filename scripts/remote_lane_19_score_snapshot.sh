@@ -158,10 +158,12 @@ assert p.get('mask_half_sim_prob', 0) > 0 or p.get('use_zoom_flow', False), \
 print(f'halfframe-profile-assertion OK: {prof_name}')
 "
 # Profile: --profile lane_19_logit_margin (Check F: profile name within 30 lines of --half-frame).
+set +e
 "$PYBIN" experiments/build_baseline_archive.py \
     --device cuda --crf 50 --half-frame \
     --output "$LOG_DIR/archive_halfframe_seed.zip" 2>&1 | tee "$LOG_DIR/build.log" | tail -5
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
 fi
@@ -171,6 +173,7 @@ cd "$WORKSPACE"
 cp "$LOG_DIR/extracted/masks.mkv" "$LOG_DIR/iter_0/masks.mkv"
 
 log "=== Stage 3: pose TTO with the snapshot logit-margin renderer ==="
+set +e
 "$PYBIN" -u experiments/optimize_poses.py \
     --checkpoint "$LOG_DIR/iter_0/renderer.bin" \
     --masks "$LOG_DIR/iter_0/masks.mkv" \
@@ -182,6 +185,7 @@ log "=== Stage 3: pose TTO with the snapshot logit-margin renderer ==="
     --posetto-noise-std 0.5 \
     --output-dir "$LOG_DIR" 2>&1 | tee "$LOG_DIR/optimize_poses.log" | tail -30
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
 fi
@@ -236,6 +240,7 @@ with open('$LOG_DIR/archive_manifest.json', 'w') as f:
 
 log "=== Stage 4: contest_auth_eval on Lane 19 snapshot archive ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -244,6 +249,7 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
 fi
@@ -259,6 +265,7 @@ fi
 }
 
 log "=== Stage 5: JSON adjudication against current PFP16 frontier gates ==="
+set +e
 "$PYBIN" scripts/adjudicate_contest_auth_eval.py \
     --contest-json "$LOG_DIR/eval_work/contest_auth_eval.json" \
     --provenance "$PROVENANCE" \
@@ -276,6 +283,7 @@ log "=== Stage 5: JSON adjudication against current PFP16 frontier gates ==="
     --required-device cuda \
     --required-samples 600 2>&1 | tee "$LOG_DIR/adjudication.log"
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: JSON adjudication failed rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
 fi

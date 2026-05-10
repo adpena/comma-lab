@@ -151,6 +151,7 @@ log "=== Stage 1b: build script argparse keys verified (manual) ==="
 log "=== Stage 2: build clean-source STC archive (SegNet -> argmax -> STCB) ==="
 ARCHIVE="$LOG_DIR/archive_lane_stc_clean.zip"
 MANIFEST="$LOG_DIR/manifest.json"
+set +e
 "$PYBIN" -u experiments/build_clean_source_stc_archive.py \
     --anchor-archive "$ANCHOR_ARCHIVE" \
     --gt-video "$GT_VIDEO" \
@@ -160,6 +161,7 @@ MANIFEST="$LOG_DIR/manifest.json"
     --batch-size 8 \
     --manifest "$MANIFEST" 2>&1 | tee "$LOG_DIR/build.log"
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: build_clean_source_stc_archive exited rc=${PIPE_RC[0]}" >&2
     exit "${PIPE_RC[0]}"
@@ -191,6 +193,7 @@ log "  clean-source STC archive is SMALLER than anchor by $((ANCHOR_BYTES - ARCH
 # ---------------------------------------------------------------------------
 log "=== Stage 4: contest_auth_eval on clean-source Lane STC archive ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -199,6 +202,7 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -30
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: contest_auth_eval exited rc=${PIPE_RC[0]}" >&2
     exit "${PIPE_RC[0]}"

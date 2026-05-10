@@ -113,6 +113,7 @@ cp "$ANCHOR_MASKS" "$LOG_DIR/extracted/masks.mkv"
 log "  staged $(stat -c '%s' "$LOG_DIR/extracted/masks.mkv") bytes of Lane A masks"
 
 log "=== Stage 2: distill pose-from-embedding MLP (compress-time PoseNet load) ==="
+set +e
 "$PYBIN" -u experiments/distill_pose_from_embedding.py \
     --renderer "$ANCHOR_RENDERER" \
     --target-poses "$ANCHOR_POSES" \
@@ -127,6 +128,7 @@ log "=== Stage 2: distill pose-from-embedding MLP (compress-time PoseNet load) =
     --embedding-dropout-p 0.5 \
     --log-interval 20 2>&1 | tee "$LOG_DIR/distill_full.log" | tail -30
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -213,6 +215,7 @@ log "=== Stage 4: contest_auth_eval on Lane M-V3 archive ==="
 # (no env-gate needed — Lane M-V3 inflate dispatch is self-activating
 # when the sentinel is present and no optimized_poses.pt is in the archive).
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -221,6 +224,7 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

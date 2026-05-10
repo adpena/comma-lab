@@ -95,12 +95,14 @@ done
 
 log "=== Stage 1: build the SHARED Lane MM archive (sigma is decode-time only) ==="
 ARCHIVE="$LOG_DIR/archive_lane_fr_mm.zip"
+set +e
 "$PYBIN" -u experiments/build_lane_mm_archive.py \
     --anchor-archive "$ANCHOR_ARCHIVE" \
     --output "$ARCHIVE" \
     --crf 50 \
     --sigma 15 2>&1 | tee "$LOG_DIR/build.log" | tail -10
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: build_lane_mm_archive exited rc=${PIPE_RC[0]}" >&2
     exit "${PIPE_RC[0]}"

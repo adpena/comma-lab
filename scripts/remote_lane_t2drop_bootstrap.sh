@@ -88,6 +88,7 @@ for f in "$ANCHOR_MASKS" "$ANCHOR_POSES" upstream/videos/0.mkv upstream/models/s
 done
 
 log "=== Stage 2: train with --no-mask-encoder informational-only ablation ==="
+set +e
 "$PYBIN" -u -m tac.experiments.train_renderer \
     --profile proven_baseline \
     --tag t2drop_no_mask_encoder \
@@ -103,6 +104,7 @@ log "=== Stage 2: train with --no-mask-encoder informational-only ablation ==="
     --auth-eval-upstream-dir upstream \
     2>&1 | tee "$LOG_DIR/train.log"
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -124,6 +126,7 @@ PY
 
 log "=== Stage 3: contest-CUDA auth eval (eval_roundtrip preserved) ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -133,6 +136,7 @@ rm -rf "$LOG_DIR/eval_work"
     --work-dir "$LOG_DIR/eval_work" \
     2>&1 | tee "$LOG_DIR/auth_eval.log"
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

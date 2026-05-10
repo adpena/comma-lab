@@ -127,6 +127,7 @@ mkdir -p "$PIPELINE_OUT"
 # Use the canonical pipeline standard with --profile multipass_lane_g_v3.
 # The profile sets multipass=True + max_passes=3 + eps=1e-3. The video, masks,
 # checkpoint, and poses come from the Lane G v3 anchor.
+set +e
 "$PYBIN" -u experiments/pipeline.py compress \
     --profile multipass_lane_g_v3 \
     --video upstream/videos/0.mkv \
@@ -142,6 +143,7 @@ mkdir -p "$PIPELINE_OUT"
     --multipass-eps 1e-3 \
     2>&1 | tee "$LOG_DIR/pipeline.log" | tail -50
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: pipeline compress rc=${PIPE_RC[0]}" >&2
     exit "${PIPE_RC[0]}"
@@ -177,6 +179,7 @@ log "=== Stage 4.5: defense-in-depth canonical contest_auth_eval on FINAL archiv
 EVAL_LOG="$LOG_DIR/auth_eval.log"
 EVAL_WORK_DIR="$LOG_DIR/eval_work"
 rm -rf "$EVAL_WORK_DIR"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$FINAL_ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -185,6 +188,7 @@ rm -rf "$EVAL_WORK_DIR"
     --keep-work-dir \
     --work-dir "$EVAL_WORK_DIR" 2>&1 | tee "$EVAL_LOG" | tail -30
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: redundant contest_auth_eval rc=${PIPE_RC[0]}" >&2
     exit "${PIPE_RC[0]}"

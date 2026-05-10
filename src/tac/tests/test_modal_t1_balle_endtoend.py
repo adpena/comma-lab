@@ -302,3 +302,19 @@ def test_modal_t1_metadata_starts_as_no_score_claim(tmp_path: Path, monkeypatch)
     assert payload["rank_or_kill_eligible"] is False
     assert payload["expected_n_samples"] == 600
     assert payload["canonical_path"].endswith("upstream/evaluate.py --device cuda")
+    assert payload["mounted_code_snapshot"]["schema_version"] == "mounted_modal_code_snapshot_v1"
+    assert "experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py" in payload[
+        "mounted_code_snapshot"
+    ]["mounted_code_paths"]
+    assert (tmp_path / "unit-t1-dispatch" / "code_snapshot" / "mounted_code_status.txt").is_file()
+
+
+def test_modal_t1_records_mounted_code_snapshot_for_score_bearing_dispatches() -> None:
+    text = _source()
+
+    assert "MOUNTED_CODE_PATHS = (" in text
+    assert "def _mounted_code_snapshot(" in text
+    assert '"scripts/remote_lane_t1_balle_endtoend.sh"' in text
+    assert '"tools/build_phase1_packet_compiler.py"' in text
+    assert '"mounted_code_snapshot": code_snapshot' in text
+    assert "mounted_code_worktree.patch" in text

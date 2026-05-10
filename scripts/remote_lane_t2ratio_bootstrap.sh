@@ -94,6 +94,7 @@ for f in "$ANCHOR_MASKS" "$ANCHOR_POSES" upstream/videos/0.mkv upstream/models/s
 done
 
 log "=== Stage 2: sweep run ==="
+set +e
 "$PYBIN" -u experiments/sweep_seg_weight.py \
     --output-dir "$SWEEP_DIR" \
     --epochs 250 \
@@ -108,6 +109,7 @@ log "=== Stage 2: sweep run ==="
     --auth-eval-upstream-dir upstream \
     2>&1 | tee "$LOG_DIR/sweep.log"
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -153,6 +155,7 @@ PY
 
 log "=== Stage 4: contest-CUDA auth eval on best-trial checkpoint/archive ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$BEST_ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -162,6 +165,7 @@ rm -rf "$LOG_DIR/eval_work"
     --work-dir "$LOG_DIR/eval_work" \
     2>&1 | tee "$LOG_DIR/auth_eval_best.log"
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

@@ -15,13 +15,13 @@
 # Cost: $80 hard cap. Vast.ai 4090 ~$0.42/hr × ~24h = ~$10 budget; the rest
 # is reserved for retries, post-eval CPU dispatch, and recovery dispatches.
 #
-# Predicted score band: [predicted; Phase 1 scaffold; not yet empirical].
-# This script is scaffold/build verification only. It MUST NOT print a
-# [contest-CUDA] completion tag until Phase 2 lands a hermetic inflate
-# contract and exact contest_auth_eval custody.
-# Default behavior is fail-closed: set T1_ALLOW_REMOTE_SCAFFOLD_SMOKE=1 only
-# for an explicit manual scaffold-smoke probe. Provider dispatchers must not
-# set it while Phase 1 still uses synthetic targets / no-op scorer losses.
+# Predicted score band: [predicted; Phase 1 scorer-domain training; not yet
+# empirical]. This script may train the real A1 substrate with differentiable
+# PoseNet/SegNet scorer-domain losses, but it MUST NOT print a [contest-CUDA]
+# completion tag until a separate exact contest_auth_eval custody artifact lands.
+# Default behavior is fail-closed: set T1_ALLOW_SCORE_DOMAIN_TRAINING=1 for the
+# real training path, or T1_ALLOW_REMOTE_SCAFFOLD_SMOKE=1 for a synthetic
+# build-only probe.
 #
 # Heartbeat: every 5 min per CLAUDE.md "Remote code parity — non-negotiable".
 set -euo pipefail
@@ -35,15 +35,133 @@ OUTPUT_DIR="${OUTPUT_DIR:-$LOG_DIR/output}"
 PROVENANCE="$LOG_DIR/provenance.json"
 RUN_RECORD="$LOG_DIR/run_record.json"
 ALLOW_REMOTE_SCAFFOLD_SMOKE="${T1_ALLOW_REMOTE_SCAFFOLD_SMOKE:-0}"
+ALLOW_SCORE_DOMAIN_TRAINING="${T1_ALLOW_SCORE_DOMAIN_TRAINING:-0}"
+if [ -z "${T1_RUN_CONTEST_CUDA_AUTH_EVAL+x}" ]; then
+    if [ "$ALLOW_SCORE_DOMAIN_TRAINING" = "1" ]; then
+        RUN_CONTEST_CUDA_AUTH_EVAL="1"
+    else
+        RUN_CONTEST_CUDA_AUTH_EVAL="0"
+    fi
+else
+    RUN_CONTEST_CUDA_AUTH_EVAL="$T1_RUN_CONTEST_CUDA_AUTH_EVAL"
+fi
+DISPATCH_INSTANCE_JOB_ID="${T1_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-}}"
+DISPATCH_CLAIMS_PATH="${T1_DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_lane_dispatch_claims.md}"
+DISPATCH_PLATFORM="${DISPATCH_PLATFORM:-vastai}"
+CLAIM_VERIFIED=0
+TERMINAL_CLAIM_CLOSED=0
+HEARTBEAT_PID=""
 
-if [ "$ALLOW_REMOTE_SCAFFOLD_SMOKE" != "1" ]; then
-    echo "[lane-t1] FATAL: remote T1 scaffold path refused by default. Phase 1 uses synthetic smoke targets / no-op scorer losses and is not a real remote GPU or auth-eval dispatch. Set T1_ALLOW_REMOTE_SCAFFOLD_SMOKE=1 only for explicit manual smoke verification." >&2
+require_active_dispatch_claim() {
+    if [ -z "$DISPATCH_INSTANCE_JOB_ID" ]; then
+        echo "[lane-t1] FATAL: T1_ALLOW_SCORE_DOMAIN_TRAINING=1 requires T1_DISPATCH_INSTANCE_JOB_ID or DISPATCH_INSTANCE_JOB_ID for active lane-claim verification." >&2
+        exit 21
+    fi
+    if [ ! -f "$WORKSPACE/tools/claim_lane_dispatch.py" ]; then
+        echo "[lane-t1] FATAL: claim helper missing at $WORKSPACE/tools/claim_lane_dispatch.py" >&2
+        exit 21
+    fi
+    if [ ! -f "$DISPATCH_CLAIMS_PATH" ]; then
+        echo "[lane-t1] FATAL: dispatch-claims ledger missing at $DISPATCH_CLAIMS_PATH; copy the active claim ledger to the remote host before training" >&2
+        exit 21
+    fi
+    CLAIM_PYTHON="${PYBIN:-}"
+    if [ -z "$CLAIM_PYTHON" ] && [ -x "$WORKSPACE/.venv/bin/python" ]; then
+        CLAIM_PYTHON="$WORKSPACE/.venv/bin/python"
+    fi
+    if [ -z "$CLAIM_PYTHON" ]; then
+        CLAIM_PYTHON="python3"
+    fi
+    "$CLAIM_PYTHON" - "$WORKSPACE" "$LANE_ID" "$DISPATCH_INSTANCE_JOB_ID" "$DISPATCH_CLAIMS_PATH" <<'PY'
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+workspace = Path(sys.argv[1])
+lane_id = sys.argv[2]
+instance_job_id = sys.argv[3]
+claims_path = Path(sys.argv[4])
+cmd = [
+    sys.executable,
+    str(workspace / "tools" / "claim_lane_dispatch.py"),
+    "summary",
+    "--claims-path",
+    str(claims_path),
+    "--format",
+    "json",
+]
+proc = subprocess.run(cmd, check=False, text=True, capture_output=True)
+if proc.returncode != 0:
+    print(proc.stderr or proc.stdout, file=sys.stderr)
+    raise SystemExit(21)
+payload = json.loads(proc.stdout)
+for row in payload.get("active", []):
+    if row.get("lane_id") == lane_id and row.get("instance_job_id") == instance_job_id:
+        raise SystemExit(0)
+print(
+    f"no active dispatch claim for lane_id={lane_id!r} "
+    f"instance_job_id={instance_job_id!r}",
+    file=sys.stderr,
+)
+raise SystemExit(21)
+PY
+}
+
+close_dispatch_claim() {
+    local status="$1"
+    local notes="$2"
+    if [ "$CLAIM_VERIFIED" != "1" ] || [ "$TERMINAL_CLAIM_CLOSED" = "1" ]; then
+        return 0
+    fi
+    if [ -z "$DISPATCH_INSTANCE_JOB_ID" ] || [ ! -f "$WORKSPACE/tools/claim_lane_dispatch.py" ]; then
+        return 0
+    fi
+    local claim_python="${PYBIN:-}"
+    if [ -z "$claim_python" ] && [ -x "$WORKSPACE/.venv/bin/python" ]; then
+        claim_python="$WORKSPACE/.venv/bin/python"
+    fi
+    if [ -z "$claim_python" ]; then
+        claim_python="python3"
+    fi
+    "$claim_python" "$WORKSPACE/tools/claim_lane_dispatch.py" claim \
+        --claims-path "$DISPATCH_CLAIMS_PATH" \
+        --lane-id "$LANE_ID" \
+        --platform "$DISPATCH_PLATFORM" \
+        --instance-job-id "$DISPATCH_INSTANCE_JOB_ID" \
+        --agent "codex:remote_lane_t1_balle_endtoend" \
+        --predicted-eta-utc "$(date -u +%FT%TZ)" \
+        --status "$status" \
+        --notes "$notes" \
+        --force >/dev/null 2>>"$LOG_DIR/run.log" || true
+    TERMINAL_CLAIM_CLOSED=1
+}
+
+cleanup() {
+    local rc=$?
+    if [ -n "${HEARTBEAT_PID:-}" ]; then
+        kill "$HEARTBEAT_PID" 2>/dev/null || true
+    fi
+    if [ "$rc" -ne 0 ]; then
+        close_dispatch_claim "failed_remote_script_rc_${rc}" "T1 remote script exited rc=${rc} before terminal stage-specific closure"
+    fi
+}
+
+if [ "$ALLOW_SCORE_DOMAIN_TRAINING" != "1" ] && [ "$ALLOW_REMOTE_SCAFFOLD_SMOKE" != "1" ]; then
+    echo "[lane-t1] FATAL: remote T1 refused by default. Set T1_ALLOW_SCORE_DOMAIN_TRAINING=1 for real scorer-domain training, or T1_ALLOW_REMOTE_SCAFFOLD_SMOKE=1 only for explicit synthetic smoke verification." >&2
     exit 20
 fi
 
-mkdir -p "$LOG_DIR" "$OUTPUT_DIR"
-
 cd "$WORKSPACE"
+if [ "$ALLOW_SCORE_DOMAIN_TRAINING" = "1" ]; then
+    require_active_dispatch_claim
+fi
+
+mkdir -p "$LOG_DIR" "$OUTPUT_DIR"
+if [ "$ALLOW_SCORE_DOMAIN_TRAINING" = "1" ]; then
+    CLAIM_VERIFIED=1
+fi
+trap cleanup EXIT
 rm -f upstream/videos/._*.mkv
 export PYTHONHASHSEED=20
 export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}$WORKSPACE/src:$WORKSPACE/upstream:$WORKSPACE"
@@ -101,8 +219,10 @@ cat > "$PROVENANCE" <<EOF
   "git_head": "${LOCAL_HEAD}",
   "pythonhashseed": "${PYTHONHASHSEED}",
   "allow_remote_scaffold_smoke_env": "${ALLOW_REMOTE_SCAFFOLD_SMOKE}",
+  "allow_score_domain_training_env": "${ALLOW_SCORE_DOMAIN_TRAINING}",
+  "run_contest_cuda_auth_eval_env": "${RUN_CONTEST_CUDA_AUTH_EVAL}",
   "predicted_band": [0.155, 0.180],
-  "prediction_scope": "Phase 2 co-trained substrate target; this Phase 1 script runs scaffold smoke only",
+  "prediction_scope": "Phase 1 scorer-domain A1 substrate training when T1_ALLOW_SCORE_DOMAIN_TRAINING=1; no score claim unless packet compiler plus contest-CUDA auth-eval adjudication both pass",
   "score_claim": false
 }
 EOF
@@ -146,6 +266,10 @@ uv pip install --system compressai==1.2.8 \
 
 # Stage 3: NVDEC probe (per CLAUDE.md remote_scripts_have_nvdec_probe rule).
 log "Stage 3: NVDEC probe"
+if [[ "${LOCAL_CUDA_WORKER:-0}" != "1" ]]; then
+    log "FATAL: LOCAL_CUDA_WORKER=1 must be set on the remote CUDA provider before NVDEC/CUDA probing"
+    exit 13
+fi
 bash "$WORKSPACE/scripts/probe_nvdec.sh" || {
     log "FATAL: probe_nvdec.sh failed; refusing CUDA training on this host"
     exit 13
@@ -167,37 +291,76 @@ HEARTBEAT="$LOG_DIR/heartbeat.log"
 ) &
 HEARTBEAT_PID=$!
 log "Stage 4: heartbeat started (pid=$HEARTBEAT_PID)"
-trap "kill $HEARTBEAT_PID 2>/dev/null || true" EXIT
 
-# Stage 5: Run trainer in scaffold-smoke mode only. Full/non-smoke training
-# and auth-eval are deliberately refused by the trainer in Phase 1 while the
-# scorer loss remains a no-op scaffold.
-log "Stage 5: scaffold smoke training (epochs=1)"
-"$PYBIN" -u "$WORKSPACE/experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py" \
-    --output-dir "$OUTPUT_DIR" \
-    --device cuda \
-    --epochs 1 \
-    --batch-size "${BATCH_SIZE:-16}" \
-    --learning-rate "${LR:-1e-4}" \
-    --aux-learning-rate "${AUX_LR:-1e-3}" \
-    --ema-decay 0.997 \
-    --rate-target-bytes "${RATE_TARGET_BYTES:-80000}" \
-    --noise-std 0.5 \
-    --eval-every-epochs "${EVAL_EVERY_EPOCHS:-100}" \
-    --smoke \
-    --allow-missing-canonical-a1 \
-    --no-auth-eval \
-    --seed 20 \
-    2>&1 | tee "$LOG_DIR/train.log"
+# Stage 5: Run either real score-domain training or the legacy synthetic smoke
+# probe. The real path trains on frozen A1 latents + upstream/videos/0.mkv
+# under PR95 eval-roundtrip/YUV6, T8 Sinkhorn-by-default, T13 sqrt(n) budget,
+# and T19 adaptive rho. Auth eval remains separate so scored evidence gets its
+# own dispatch claim, archive SHA, runtime custody, hardware tag, and logs.
+TRAIN_CMD=(
+    "$PYBIN" -u "$WORKSPACE/experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py"
+    --output-dir "$OUTPUT_DIR"
+    --device cuda
+    --epochs "${EPOCHS:-3000}"
+    --batch-size "${BATCH_SIZE:-16}"
+    --learning-rate "${LR:-1e-4}"
+    --aux-learning-rate "${AUX_LR:-1e-3}"
+    --ema-decay 0.997
+    --rate-target-bytes "${RATE_TARGET_BYTES:-80000}"
+    --noise-std 0.5
+    --grad-clip-norm "${GRAD_CLIP_NORM:-1.0}"
+    --eval-every-epochs "${EVAL_EVERY_EPOCHS:-100}"
+    --enable-t13-sqrt-n-budget
+    --enable-t19-adaptive-rho
+    --no-auth-eval
+    --seed 20
+)
 
+if [ "$ALLOW_SCORE_DOMAIN_TRAINING" = "1" ]; then
+    log "Stage 5: score-domain training (epochs=${EPOCHS:-3000})"
+    TRAIN_CMD+=(
+        --enable-scorer-domain-loss
+        --segmentation-surrogate "${SEGMENTATION_SURROGATE:-sinkhorn}"
+        --pixel-l1-anchor-weight "${PIXEL_L1_ANCHOR_WEIGHT:-0.0}"
+    )
+    if [ -n "${MAX_TARGET_PAIRS:-}" ]; then
+        TRAIN_CMD+=(--max-target-pairs "$MAX_TARGET_PAIRS")
+    fi
+else
+    log "Stage 5: scaffold smoke training (epochs=1)"
+    TRAIN_CMD=(
+        "$PYBIN" -u "$WORKSPACE/experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py"
+        --output-dir "$OUTPUT_DIR"
+        --device cuda
+        --epochs 1
+        --batch-size "${BATCH_SIZE:-16}"
+        --learning-rate "${LR:-1e-4}"
+        --aux-learning-rate "${AUX_LR:-1e-3}"
+        --ema-decay 0.997
+        --rate-target-bytes "${RATE_TARGET_BYTES:-80000}"
+        --noise-std 0.5
+        --eval-every-epochs "${EVAL_EVERY_EPOCHS:-100}"
+        --smoke
+        --allow-missing-canonical-a1
+        --no-auth-eval
+        --seed 20
+    )
+fi
+
+set +e
+"${TRAIN_CMD[@]}" 2>&1 | tee "$LOG_DIR/train.log"
 TRAIN_RC=${PIPESTATUS[0]}
+set -e
 log "Stage 5: train exited with rc=$TRAIN_RC"
 if [ "$TRAIN_RC" -ne 0 ]; then
     log "FATAL: trainer failed"
     exit "$TRAIN_RC"
 fi
 
-# Stage 6: Surface results.
+# Stage 6: Surface results, then optionally compile + exact-auth-eval the
+# emitted packet. The trainer keeps --no-auth-eval so score custody is owned by
+# this stage: exact archive bytes, runtime tree SHA, durable work dir/json, and
+# dispatch-claim closure are recorded together.
 ARCHIVE="$OUTPUT_DIR/archive.zip"
 if [ ! -f "$ARCHIVE" ]; then
     log "FATAL: expected scaffold archive missing: $ARCHIVE"
@@ -206,6 +369,153 @@ fi
 ARCHIVE_BYTES=$(stat -f%z "$ARCHIVE" 2>/dev/null || stat -c%s "$ARCHIVE")
 ARCHIVE_SHA=$(sha256sum "$ARCHIVE" 2>/dev/null | cut -d' ' -f1 || shasum -a 256 "$ARCHIVE" | cut -d' ' -f1)
 log "ARCHIVE bytes=$ARCHIVE_BYTES sha=$ARCHIVE_SHA"
-log "AUTH_EVAL_JSON=not_applicable_phase1_scaffold_smoke_no_score_claim"
-echo "[lane-t1] LANE_T1_LOCAL_SCAFFOLD_SMOKE_DONE [scaffold-smoke only; no provider score/eval claim]"
+if [ "$ALLOW_SCORE_DOMAIN_TRAINING" = "1" ]; then
+    if [ "$RUN_CONTEST_CUDA_AUTH_EVAL" != "1" ]; then
+        log "AUTH_EVAL_JSON=not_applicable_training_only_no_score_claim"
+        echo "[lane-t1] LANE_T1_SCORE_DOMAIN_TRAINING_DONE [archive produced; no contest score claim]"
+        close_dispatch_claim "completed_t1_score_domain_training_no_score_claim" "T1 score-domain training completed and produced archive; auth eval disabled; score_claim=false"
+    else
+        SUBMISSION_DIR="$OUTPUT_DIR/submission_dir"
+        if [ ! -d "$SUBMISSION_DIR" ]; then
+            log "FATAL: expected submission_dir missing: $SUBMISSION_DIR"
+            close_dispatch_claim "failed_t1_missing_submission_dir" "trainer produced archive but no submission_dir runtime for exact eval"
+            exit 15
+        fi
+        PACKET_DIR="${T1_PACKET_DIR:-$LOG_DIR/packet_compiled}"
+        BASELINE_ARCHIVE_SHA="${T1_BASELINE_ARCHIVE_SHA256:-87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5}"
+        BASELINE_ARCHIVE_SIZE="${T1_BASELINE_ARCHIVE_SIZE_BYTES:-178262}"
+        PACKET_CMD=(
+            "$PYBIN" -u "$WORKSPACE/tools/build_phase1_packet_compiler.py"
+            --input-packet "$SUBMISSION_DIR"
+            --output-dir "$PACKET_DIR"
+            --mode optimize
+            --target-mode contest_one_video_replay
+            --runtime-dep-closure torch brotli compressai
+            --export-format phase1_three_member_x_decoder_bin_balle_bin
+            --bolt-on-loc-budget 400
+            --allow-existing-output-dir
+            --score-affecting-payload-changed
+            --baseline-archive-sha256 "$BASELINE_ARCHIVE_SHA"
+            --baseline-archive-size-bytes "$BASELINE_ARCHIVE_SIZE"
+            --print-result-json
+        )
+        log "Stage 6a: compile Phase 1 packet for exact eval"
+        set +e
+        "${PACKET_CMD[@]}" 2>&1 | tee "$LOG_DIR/packet_compiler.log"
+        PACKET_RC=${PIPESTATUS[0]}
+        set -e
+        log "Stage 6a: packet compiler exited with rc=$PACKET_RC"
+        if [ "$PACKET_RC" -ne 0 ]; then
+            close_dispatch_claim "failed_t1_packet_compile_rc_${PACKET_RC}" "T1 packet compiler refused exact-eval packet; see packet_compiler.log"
+            exit "$PACKET_RC"
+        fi
+        if [ ! -f "$PACKET_DIR/build_manifest.json" ] || [ ! -f "$PACKET_DIR/archive.zip" ] || [ ! -x "$PACKET_DIR/inflate.sh" ]; then
+            log "FATAL: packet compiler did not emit required archive/runtime custody files"
+            close_dispatch_claim "failed_t1_packet_compile_missing_custody" "missing build_manifest/archive.zip/executable inflate.sh after compile"
+            exit 16
+        fi
+        RUNTIME_TREE_SHA=$("$PYBIN" - "$PACKET_DIR/build_manifest.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+manifest = json.loads(Path(sys.argv[1]).read_text())
+print(manifest["runtime_tree_sha256"])
+PY
+)
+        AUTH_EVAL_JSON="${T1_AUTH_EVAL_JSON:-$LOG_DIR/contest_auth_eval.json}"
+        AUTH_EVAL_WORK_DIR="${T1_AUTH_EVAL_WORK_DIR:-$LOG_DIR/auth_eval_work}"
+        AUTH_EVAL_ADJUDICATION_JSON="${T1_AUTH_EVAL_ADJUDICATION_JSON:-$LOG_DIR/auth_eval_adjudication.json}"
+        AUTH_EVAL_CMD=(
+            "$PYBIN" -u "$WORKSPACE/experiments/contest_auth_eval.py"
+            --archive "$PACKET_DIR/archive.zip"
+            --inflate-sh "$PACKET_DIR/inflate.sh"
+            --upstream-dir "$WORKSPACE/upstream"
+            --device cuda
+            --work-dir "$AUTH_EVAL_WORK_DIR"
+            --json-out "$AUTH_EVAL_JSON"
+            --keep-work-dir
+            --expected-runtime-tree-sha256 "$RUNTIME_TREE_SHA"
+        )
+        log "Stage 6b: contest-CUDA auth eval"
+        set +e
+        "${AUTH_EVAL_CMD[@]}" 2>&1 | tee "$LOG_DIR/contest_auth_eval.log"
+        AUTH_EVAL_RC=${PIPESTATUS[0]}
+        set -e
+        log "Stage 6b: contest_auth_eval exited with rc=$AUTH_EVAL_RC"
+        if [ "$AUTH_EVAL_RC" -ne 0 ]; then
+            close_dispatch_claim "failed_t1_contest_auth_eval_rc_${AUTH_EVAL_RC}" "contest_auth_eval.py failed; no score claim"
+            exit "$AUTH_EVAL_RC"
+        fi
+        set +e
+        "$PYBIN" - "$AUTH_EVAL_JSON" "$PACKET_DIR/build_manifest.json" "$PACKET_DIR/archive.zip" "$AUTH_EVAL_ADJUDICATION_JSON" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+from tac.auth_eval_schema import eval_metric_summary, required_contest_cuda_evidence_blockers
+
+auth_json = Path(sys.argv[1])
+manifest_json = Path(sys.argv[2])
+archive_path = Path(sys.argv[3])
+out_json = Path(sys.argv[4])
+
+eval_data = json.loads(auth_json.read_text())
+manifest = json.loads(manifest_json.read_text())
+metrics = eval_metric_summary(eval_data)
+blockers = required_contest_cuda_evidence_blockers(
+    eval_data,
+    metrics,
+    expected_archive_bytes=archive_path.stat().st_size,
+    expected_n_samples=600,
+)
+if eval_data.get("provenance", {}).get("archive_sha256") != manifest.get("archive_sha256"):
+    blockers.append("provenance_archive_sha256_mismatch_packet_manifest")
+if eval_data.get("provenance", {}).get("archive_size_bytes") != manifest.get("archive_size_bytes"):
+    blockers.append("provenance_archive_size_mismatch_packet_manifest")
+if manifest.get("score_claim") is not False:
+    blockers.append("packet_manifest_unexpected_score_claim")
+if manifest.get("no_op_proof", {}).get("runtime_consumption_proof") is not True:
+    blockers.append("packet_no_op_runtime_consumption_not_proven")
+if manifest.get("blockers"):
+    blockers.append("packet_manifest_has_blockers")
+
+payload = {
+    "schema_version": "t1_contest_cuda_auth_eval_adjudication.v1",
+    "auth_eval_json": auth_json.as_posix(),
+    "packet_build_manifest": manifest_json.as_posix(),
+    "packet_archive": archive_path.as_posix(),
+    "packet_archive_sha256": manifest.get("archive_sha256"),
+    "packet_archive_size_bytes": manifest.get("archive_size_bytes"),
+    "runtime_tree_sha256": manifest.get("runtime_tree_sha256"),
+    "metrics": metrics,
+    "blockers": blockers,
+    "score_claim": not blockers,
+    "promotion_eligible": False,
+    "promotion_blockers": [
+        "paired_contest_cpu_reproduction_required",
+        "registry_level_promotion_required",
+        "operator_submission_policy_required",
+    ],
+    "evidence_semantics": "contest_cuda_exact_auth_eval" if not blockers else "blocked_contest_cuda_auth_eval",
+}
+out_json.write_text(json.dumps(payload, indent=2) + "\n")
+if blockers:
+    print("[lane-t1-adjudication] BLOCKERS: " + ", ".join(blockers), file=sys.stderr)
+    raise SystemExit(17)
+print("[lane-t1-adjudication] contest-CUDA exact auth-eval evidence accepted")
+PY
+        ADJUDICATION_RC=$?
+        set -e
+        if [ "$ADJUDICATION_RC" -ne 0 ]; then
+            close_dispatch_claim "failed_t1_auth_eval_adjudication" "contest_auth_eval completed but evidence semantics/custody failed; see auth_eval_adjudication.json"
+            exit "$ADJUDICATION_RC"
+        fi
+        log "AUTH_EVAL_JSON=$AUTH_EVAL_JSON"
+        log "AUTH_EVAL_ADJUDICATION_JSON=$AUTH_EVAL_ADJUDICATION_JSON"
+        echo "[lane-t1] LANE_T1_CONTEST_CUDA_AUTH_EVAL_DONE [contest-CUDA]"
+        close_dispatch_claim "completed_t1_contest_cuda_auth_eval" "T1 packet compiler + contest-CUDA auth eval completed with exact archive/runtime custody"
+    fi
+else
+    echo "[lane-t1] LANE_T1_LOCAL_SCAFFOLD_SMOKE_DONE [scaffold-smoke only; no provider score/eval claim]"
+fi
 log "===== Remote lane T1 DONE ====="

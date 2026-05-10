@@ -202,8 +202,10 @@ fi
 # preflight check_remote_lane_arity can see the required flag literally on the
 # invocation line (it doesn't trace through bash array spread). Argparse takes
 # the LAST --output value, which from the array is still $CODEC_PT — no behavior change.
+set +e
 python3 -u experiments/train_neural_weight_codec.py --output "$CODEC_PT" "${NWC_TRAIN_ARGS[@]}" 2>&1 | tee "$LOG_DIR/train_codec.log" | tail -40
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -373,6 +375,7 @@ RESULT_JSON="$LOG_DIR/RESULT_JSON"
 rm -rf "$EVAL_WORK"
 # AppleDouble cleanup before contest_auth_eval (Lane F-V2 bug 2026-04-27).
 rm -f upstream/videos/._*.mkv
+set +e
 python3 -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -381,6 +384,7 @@ python3 -u experiments/contest_auth_eval.py \
     --keep-work-dir \
     --work-dir "$EVAL_WORK" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -30
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -396,6 +400,7 @@ fi
 [ -s "$RESULT_JSON" ] || { log "FATAL: auth eval did not write RESULT_JSON"; exit 2; }
 ADJUDICATION_PROVENANCE="$LOG_DIR/adjudication_provenance.json"
 ADJUDICATED_RESULT_JSON="$LOG_DIR/contest_auth_eval.adjudicated.json"
+set +e
 python3 -u scripts/adjudicate_contest_auth_eval.py \
     --contest-json "$RESULT_JSON" \
     --provenance "$ADJUDICATION_PROVENANCE" \
@@ -416,6 +421,7 @@ python3 -u scripts/adjudicate_contest_auth_eval.py \
     --component-reference-label "Lane G v3 PFP16 A++ frontier" \
     2>&1 | tee "$LOG_DIR/adjudication.log"
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: adjudication failed rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
 fi

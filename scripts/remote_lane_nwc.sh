@@ -244,6 +244,7 @@ print(f'  Delta:         {orig_bytes - nbytes:+,} bytes ({100.0*(orig_bytes - nb
 # Use the canonical build_baseline_archive.py flow to extract masks for
 # the same anchor, then copy the NWC renderer.bin into iter_0 and zip.
 log "=== Stage 3b: build masks.mkv via build_baseline_archive (CRF 50) ==="
+set +e
 "$PYBIN" experiments/build_baseline_archive.py \
     --renderer "$ANCHOR_RENDERER" \
     --poses "$ANCHOR_POSES" \
@@ -251,6 +252,7 @@ log "=== Stage 3b: build masks.mkv via build_baseline_archive (CRF 50) ==="
     --device cuda \
     --output "$LOG_DIR/anchor_archive_seed.zip" 2>&1 | tee "$LOG_DIR/build.log" | tail -5
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: build_baseline_archive exited rc=${PIPE_RC[0]}" >&2
     exit "${PIPE_RC[0]}"
@@ -288,6 +290,7 @@ print(f'archive {dst}: {os.path.getsize(dst)} bytes ({len(files)} files)')
 echo "stage_4_auth_eval" > "$LOG_DIR/.stage"
 log "=== Stage 4: contest_auth_eval on Lane J-NWC archive ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -296,6 +299,7 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2
     exit "${PIPE_RC[0]}"

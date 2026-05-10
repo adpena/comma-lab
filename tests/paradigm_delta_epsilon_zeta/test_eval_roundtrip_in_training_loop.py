@@ -78,6 +78,27 @@ def test_balle_trainer_argparse_includes_pr95_flags(tmp_path):
     assert ns.yuv6_mode == "auto"
 
 
+def test_balle_trainer_argparse_includes_scorer_domain_flags(tmp_path):
+    """The T1 trainer must expose the non-scaffold score-domain training path."""
+    mod = importlib.import_module("experiments.train_paradigm_delta_epsilon_zeta_track1_balle_endtoend")
+    ns = mod.parse_args(["--output-dir", str(tmp_path)])
+    assert hasattr(ns, "enable_scorer_domain_loss")
+    assert hasattr(ns, "segmentation_surrogate")
+    assert hasattr(ns, "segmentation_temperature")
+    assert hasattr(ns, "pixel_l1_anchor_weight")
+    assert hasattr(ns, "grad_clip_norm")
+    assert ns.enable_scorer_domain_loss is False
+    assert ns.segmentation_surrogate == "sinkhorn"
+    assert ns.grad_clip_norm == 0.0
+    enabled = mod.parse_args([
+        "--output-dir", str(tmp_path),
+        "--enable-scorer-domain-loss",
+        "--segmentation-surrogate", "soft_cosine",
+    ])
+    assert enabled.enable_scorer_domain_loss is True
+    assert enabled.segmentation_surrogate == "soft_cosine"
+
+
 def test_score_gradient_trainer_disable_flag_inverts_default():
     """--disable-* flag must produce False namespace value."""
     mod = importlib.import_module("experiments.train_score_gradient_pr101_finetune")
@@ -327,3 +348,65 @@ def test_balle_trainer_disable_roundtrip_skips_canonical(monkeypatch):
         enable_eval_roundtrip_in_training=False,
     )
     assert out.item() == 1.0
+
+
+def test_scorer_domain_terms_backpropagate_into_predicted_frames():
+    """The shared score-domain oracle must return tensor terms with gradients."""
+    from tac.losses import scorer_loss_terms_btchw
+
+    class FakePoseNet:
+        def preprocess_input(self, x):
+            return x
+
+        def __call__(self, x):
+            pose = x.mean(dim=(1, 2, 3, 4), keepdim=False).unsqueeze(1).repeat(1, 12)
+            return {"pose": pose}
+
+    class FakeSegNet:
+        def preprocess_input(self, x):
+            return x
+
+        def __call__(self, x):
+            b, t, c, h, w = x.shape
+            flat = x.reshape(b * t, c, h, w)
+            base = torch.nn.functional.avg_pool2d(flat[:, :1], kernel_size=2, stride=2)
+            zeros = torch.zeros_like(base)
+            return torch.cat([base, -base, zeros, zeros, zeros], dim=1)
+
+    pred = torch.rand(2, 2, 3, 8, 8, requires_grad=True)
+    target = torch.zeros_like(pred)
+    loss, pose_dist, seg_dist = scorer_loss_terms_btchw(
+        pred,
+        target,
+        FakePoseNet(),
+        FakeSegNet(),
+        segmentation_surrogate="soft_cosine",
+    )
+    assert loss.requires_grad
+    assert pose_dist.requires_grad
+    assert seg_dist.requires_grad
+    loss.backward()
+    assert pred.grad is not None
+    assert pred.grad.abs().sum().item() > 0.0
+
+
+def test_balle_trainer_score_domain_grad_reachability_guard():
+    mod = importlib.import_module("experiments.train_paradigm_delta_epsilon_zeta_track1_balle_endtoend")
+    decoder_param = torch.nn.Parameter(torch.tensor([1.0]))
+    balle_param = torch.nn.Parameter(torch.tensor([1.0]))
+    decoder_param.grad = torch.tensor([0.5])
+    balle_param.grad = torch.tensor([0.25])
+
+    report = mod.assert_score_domain_gradient_reachability(
+        decoder_params=[decoder_param],
+        balle_main_params=[balle_param],
+    )
+    assert report["decoder_grad_l2"] > 0
+    assert report["balle_main_grad_l2"] > 0
+
+    balle_param.grad = torch.tensor([0.0])
+    with pytest.raises(RuntimeError, match="gradient reachability failed"):
+        mod.assert_score_domain_gradient_reachability(
+            decoder_params=[decoder_param],
+            balle_main_params=[balle_param],
+        )

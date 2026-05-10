@@ -145,6 +145,7 @@ print(f'OK: sweep={len(used)} flags all real (qat real_count={len(qat_real)})')
 
 # Stage 1 — sweep over budgets.
 log "=== Stage 1: rate-distortion frontier sweep (5 budgets) ==="
+set +e
 "$PYBIN" -u experiments/sweep_omega_rate_frontier.py \
     --checkpoint "$ANCHOR_RENDERER" \
     --video upstream/videos/0.mkv \
@@ -167,6 +168,7 @@ log "=== Stage 1: rate-distortion frontier sweep (5 budgets) ==="
     --seed 1234 \
     --log-every 10 2>&1 | tee "$LOG_DIR/sweep.log" | tail -40
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

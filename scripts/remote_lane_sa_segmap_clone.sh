@@ -98,6 +98,7 @@ fi
 # --scorer-chunk 2 splits dual scorer_forward_pair calls into 2-pair chunks (DF3).
 # --batch-size 4 keeps B*N (effective per-scorer-call frame count) <= 8 → fits
 # RTX 4090 24 GB / A10G 22 GB with margin (Council C recommendation).
+set +e
 "$PYBIN" -u experiments/train_segmap.py \
     --variant plain \
     --hidden 24 --block-hidden 24 --num-blocks 8 \
@@ -114,6 +115,7 @@ fi
     --tag "$LANE_ID" \
     --output-dir "$LOG_DIR/train" 2>&1 | tee "$LOG_DIR/train.log" | tail -30
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: train_segmap.py exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
 fi
@@ -246,6 +248,7 @@ fi
 
 log "=== Stage 5: contest_auth_eval [contest-CUDA] ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 CONFIG_ENV_PATH="$INFLATE_CONFIG" "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -254,6 +257,7 @@ CONFIG_ENV_PATH="$INFLATE_CONFIG" "$PYBIN" -u experiments/contest_auth_eval.py \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: contest_auth_eval exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
 fi

@@ -37,6 +37,7 @@ from tac.phase1_packet_compiler import (
     DETERMINISTIC_ZIP_DATE_TIME,
     FORBIDDEN_INFLATE_TOKENS,
     FORBIDDEN_NETWORK_TOKENS,
+    FORBIDDEN_PYTHON_RUNTIME_MODULES,
     HNERV_PARITY_FIELDS,
     Phase1PacketCompilerError,
     Phase1PacketResult,
@@ -432,6 +433,83 @@ def test_fail_closed_on_network_token_in_inflate_py(tmp_path: Path) -> None:
         for b in result.blockers
     )
     assert any("inflate.py" in b and "https://" in b for b in result.blockers)
+    assert any(
+        "inflate.py" in b and "Python runtime literal contains external URL" in b
+        for b in result.blockers
+    )
+
+
+def test_fail_closed_on_python_network_import_in_inflate_py(tmp_path: Path) -> None:
+    packet_dir = _write_synthetic_packet(tmp_path)
+    text = (packet_dir / "inflate.py").read_text()
+    text += (
+        "\nimport requests as req\n"
+        "from urllib.request import urlopen\n"
+        "def _unused_fetch():\n"
+        "    return req.get('file://local'), urlopen\n"
+    )
+    (packet_dir / "inflate.py").write_text(text, encoding="utf-8")
+    out_dir = tmp_path / "out"
+    result = compile_phase1_packet(
+        input_packet=packet_dir,
+        output_dir=out_dir,
+        mode="identity",
+        runtime_dep_closure=["requests", "urllib"],
+    )
+    assert any(
+        "inflate.py" in b and "forbidden Python runtime module 'requests'" in b
+        for b in result.blockers
+    )
+    assert any(
+        "inflate.py" in b and "forbidden Python runtime module 'urllib.request'" in b
+        for b in result.blockers
+    )
+
+
+def test_fail_closed_on_python_package_install_command_in_inflate_py(tmp_path: Path) -> None:
+    packet_dir = _write_synthetic_packet(tmp_path)
+    text = (packet_dir / "inflate.py").read_text()
+    text += (
+        "\nimport subprocess\n"
+        "installer = [\n"
+        "    'pip',\n"
+        "    'install',\n"
+        "    'brotli',\n"
+        "]\n"
+        "subprocess.run(installer, check=False)\n"
+    )
+    (packet_dir / "inflate.py").write_text(text, encoding="utf-8")
+    out_dir = tmp_path / "out"
+    result = compile_phase1_packet(
+        input_packet=packet_dir,
+        output_dir=out_dir,
+        mode="identity",
+    )
+    assert any(
+        "inflate.py" in b and "forbidden sequence 'pip install'" in b
+        for b in result.blockers
+    )
+
+
+def test_fail_closed_on_network_import_in_runtime_python_tree(tmp_path: Path) -> None:
+    packet_dir = _write_synthetic_packet(tmp_path)
+    (packet_dir / "src" / "codec.py").write_text(
+        "import socket\n"
+        "def decode(data):\n"
+        "    return data\n",
+        encoding="utf-8",
+    )
+    out_dir = tmp_path / "out"
+    result = compile_phase1_packet(
+        input_packet=packet_dir,
+        output_dir=out_dir,
+        mode="identity",
+        runtime_dep_closure=["socket"],
+    )
+    assert any(
+        "src/codec.py" in b and "forbidden Python runtime module 'socket'" in b
+        for b in result.blockers
+    )
 
 
 def test_fail_closed_on_uv_runtime_dependency_fetch_in_sh(tmp_path: Path) -> None:
@@ -451,6 +529,44 @@ def test_fail_closed_on_uv_runtime_dependency_fetch_in_sh(tmp_path: Path) -> Non
     )
     for token in ("uv run --with", "--extra-index-url", "https://"):
         assert any(token in b for b in result.blockers)
+
+
+def test_fail_closed_on_network_token_in_runtime_shell_helper(tmp_path: Path) -> None:
+    packet_dir = _write_synthetic_packet(tmp_path)
+    helper = packet_dir / "helper.sh"
+    helper.write_text("curl https://example.com/x -o /tmp/x\n", encoding="utf-8")
+    text = (packet_dir / "inflate.sh").read_text()
+    text += '\n"$HERE/helper.sh"\n'
+    (packet_dir / "inflate.sh").write_text(text, encoding="utf-8")
+    out_dir = tmp_path / "out"
+
+    result = compile_phase1_packet(
+        input_packet=packet_dir,
+        output_dir=out_dir,
+        mode="identity",
+    )
+
+    assert any("helper.sh" in b and "curl " in b for b in result.blockers)
+    assert any("helper.sh" in b and "https://" in b for b in result.blockers)
+
+
+def test_fail_closed_on_executable_runtime_shell_helper(tmp_path: Path) -> None:
+    packet_dir = _write_synthetic_packet(tmp_path)
+    helper = packet_dir / "helper.sh"
+    helper.write_text("echo helper\n", encoding="utf-8")
+    helper.chmod(0o755)
+    out_dir = tmp_path / "out"
+
+    result = compile_phase1_packet(
+        input_packet=packet_dir,
+        output_dir=out_dir,
+        mode="identity",
+    )
+
+    assert any(
+        "runtime_file_mode_mismatch:helper.sh" in blocker
+        for blocker in result.blockers
+    )
 
 
 def test_fail_closed_on_external_state_path_in_sh(tmp_path: Path) -> None:
@@ -829,6 +945,71 @@ def test_declared_runtime_dep_in_inflate_py_passes(tmp_path: Path) -> None:
     assert not any("undeclared_runtime_dep" in b for b in result.blockers)
 
 
+def test_missing_packet_local_tac_import_is_blocker(tmp_path: Path) -> None:
+    packet_dir = _write_synthetic_packet(tmp_path)
+    (packet_dir / "src" / "model.py").write_text(
+        "from tac.paradigm_delta_epsilon_zeta.decoder_128k import Decoder128K\n",
+        encoding="utf-8",
+    )
+    out_dir = tmp_path / "out"
+
+    result = compile_phase1_packet(
+        input_packet=packet_dir,
+        output_dir=out_dir,
+        mode="identity",
+        runtime_dep_closure=["torch"],
+    )
+
+    assert any("undeclared_runtime_dep" in b and "tac" in b for b in result.blockers)
+
+
+def test_packet_local_tac_import_passes_without_declaring_repo_tac(tmp_path: Path) -> None:
+    packet_dir = _write_synthetic_packet(tmp_path)
+    local_pkg = packet_dir / "src" / "tac" / "paradigm_delta_epsilon_zeta"
+    local_pkg.mkdir(parents=True)
+    (packet_dir / "src" / "tac" / "__init__.py").write_text("", encoding="utf-8")
+    (local_pkg / "__init__.py").write_text("", encoding="utf-8")
+    (local_pkg / "decoder_128k.py").write_text("class Decoder128K: pass\n", encoding="utf-8")
+    (packet_dir / "src" / "model.py").write_text(
+        "from tac.paradigm_delta_epsilon_zeta.decoder_128k import Decoder128K\n",
+        encoding="utf-8",
+    )
+    out_dir = tmp_path / "out"
+
+    result = compile_phase1_packet(
+        input_packet=packet_dir,
+        output_dir=out_dir,
+        mode="identity",
+        runtime_dep_closure=["torch"],
+    )
+
+    assert not any("undeclared_runtime_dep" in b and "tac" in b for b in result.blockers)
+
+
+def test_repo_local_runtime_search_token_is_blocker(tmp_path: Path) -> None:
+    packet_dir = _write_synthetic_packet(tmp_path)
+    (packet_dir / "src" / "model.py").write_text(
+        "from pathlib import Path\n"
+        "def _find_repo_src():\n"
+        "    here = Path(__file__).resolve()\n"
+        "    for parent in here.parents:\n"
+        "        candidate = parent / 'src' / 'tac'\n"
+        "        if candidate.is_dir():\n"
+        "            return candidate.parent\n",
+        encoding="utf-8",
+    )
+    out_dir = tmp_path / "out"
+
+    result = compile_phase1_packet(
+        input_packet=packet_dir,
+        output_dir=out_dir,
+        mode="identity",
+    )
+
+    assert any("src/model.py" in b and "_find_repo_src" in b for b in result.blockers)
+    assert any("src/model.py" in b and "for parent in here.parents" in b for b in result.blockers)
+
+
 def test_parser_section_manifest_declares_required_fields(tmp_path: Path) -> None:
     packet_dir = _write_synthetic_packet(tmp_path)
     out_dir = tmp_path / "out"
@@ -848,6 +1029,42 @@ def test_parser_section_manifest_declares_required_fields(tmp_path: Path) -> Non
         "old_new_section_boundaries",
     ):
         assert field in manifest, f"parser_section_manifest missing field: {field}"
+    assert "three-member ZIP grammar" in manifest["old_new_section_boundaries"]
+
+
+def test_hnerv_parity_manifest_declares_three_member_phase1_grammar(tmp_path: Path) -> None:
+    packet_dir = _write_synthetic_packet(tmp_path)
+    out_dir = tmp_path / "out"
+    result = compile_phase1_packet(
+        input_packet=packet_dir,
+        output_dir=out_dir,
+        mode="identity",
+    )
+
+    assert (
+        result.hnerv_parity_manifest["archive_grammar"]
+        == "Phase1-three-member-x-decoder-bin-balle-bin"
+    )
+    assert (
+        result.hnerv_parity_manifest["export_format"]
+        == "phase1_three_member_x_decoder_bin_balle_bin"
+    )
+
+
+def test_executable_no_op_smoke_uses_inflate_sh_and_nonempty_file_list(tmp_path: Path) -> None:
+    packet_dir = _write_synthetic_packet(tmp_path)
+    out_dir = tmp_path / "out"
+
+    result = compile_phase1_packet(
+        input_packet=packet_dir,
+        output_dir=out_dir,
+        mode="identity",
+    )
+
+    smoke = result.no_op_proof["executable_smoke"]
+    assert smoke["executable_smoke_attempted"] is True
+    assert smoke["executable_smoke_passed"] is True
+    assert "byte_mutation_changed" in smoke["executable_smoke_reason"]
 
 
 # ---------------------------------------------------------------------------
@@ -936,6 +1153,18 @@ def test_cli_parser_flag_set_matches_api_kwargs() -> None:
     assert not unexpected, f"CLI has dead flags not in API: {unexpected}"
 
 
+def test_cli_parser_defaults_to_phase1_three_member_export_format() -> None:
+    cli_path = REPO_ROOT / "tools" / "build_phase1_packet_compiler.py"
+    spec = importlib.util.spec_from_file_location("build_phase1_packet_compiler_cli", cli_path)
+    assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    args = mod.build_arg_parser().parse_args(["--input-packet", "packet_dir"])
+
+    assert args.export_format == "phase1_three_member_x_decoder_bin_balle_bin"
+
+
 def test_compiler_modes_constant_matches_documented_set() -> None:
     assert COMPILER_MODES == ("identity", "canonicalize", "optimize")
 
@@ -962,6 +1191,11 @@ def test_forbidden_network_tokens_includes_curl_wget() -> None:
     assert "uv run --with" in FORBIDDEN_NETWORK_TOKENS
     assert "--extra-index-url" in FORBIDDEN_NETWORK_TOKENS
     assert "https://" in FORBIDDEN_NETWORK_TOKENS
+
+
+def test_forbidden_python_runtime_modules_include_network_install_surfaces() -> None:
+    for module in ("requests", "urllib", "httpx", "socket", "pip", "ensurepip"):
+        assert module in FORBIDDEN_PYTHON_RUNTIME_MODULES
 
 
 def test_a1_canonical_constants_match_designation() -> None:

@@ -175,6 +175,7 @@ log "=== Stage 1: per-weight Hessian profile (OPTIONAL warm-start) ==="
 HESSIAN_PT=""
 if [ "${LANE_OMEGA_V2_HESSIAN_INIT:-0}" = "1" ]; then
     HESSIAN_PT="$LOG_DIR/hessian_per_weight.pt"
+    set +e
     "$PYBIN" -u experiments/profile_hessian_per_weight.py \
         --checkpoint "$ANCHOR_RENDERER" \
         --video upstream/videos/0.mkv \
@@ -187,6 +188,7 @@ if [ "${LANE_OMEGA_V2_HESSIAN_INIT:-0}" = "1" ]; then
         --device cuda \
         --pair-batch 4 2>&1 | tee "$LOG_DIR/profile.log" | tail -20
         PIPE_RC=("${PIPESTATUS[@]}")
+    set -e
         if [ "${PIPE_RC[0]}" -ne 0 ]; then
             echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
         fi
@@ -204,6 +206,7 @@ HESSIAN_FLAG=""
 if [ -n "$HESSIAN_PT" ] && [ -f "$HESSIAN_PT" ]; then
     HESSIAN_FLAG="--hessian-init $HESSIAN_PT"
 fi
+set +e
 "$PYBIN" -u experiments/qat_omega_lagrangian.py \
     --checkpoint "$ANCHOR_RENDERER" \
     --video upstream/videos/0.mkv \
@@ -227,6 +230,7 @@ fi
     --log-every 10 \
     $HESSIAN_FLAG 2>&1 | tee "$LOG_DIR/qat.log" | tail -40
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -267,6 +271,7 @@ log "  archive: $ARCHIVE ($ARCHIVE_BYTES bytes)"
 # Stage 5 — contest_auth_eval on the EXACT archive that would be submitted.
 log "=== Stage 5: contest_auth_eval on Lane Ω-V2 archive [contest-CUDA] ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -275,6 +280,7 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

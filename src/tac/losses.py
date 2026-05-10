@@ -671,6 +671,50 @@ def scorer_loss(
     return loss, pose_dist.item(), seg_dist.item()
 
 
+def scorer_loss_terms_btchw(
+    filtered_pair_btchw: torch.Tensor,
+    gt_pair_btchw: torch.Tensor,
+    posenet,
+    segnet,
+    class_weights: torch.Tensor | None = None,
+    segmentation_surrogate: str = SEGMENTATION_SURROGATE_SOFT_COSINE,
+    segmentation_temperature: float = 1.0,
+    fisher_rao_eps: float = 1e-6,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Differentiable scorer-domain loss terms for trainer inner loops.
+
+    Unlike :func:`scorer_loss`, this returns tensor-valued ``pose_dist`` and
+    ``seg_dist`` so augmented-Lagrangian coordinators can backpropagate through
+    the actual scorer residuals instead of detached logging scalars.
+
+    Args:
+        filtered_pair_btchw: predicted pair in ``(B, T, C, H, W)``.
+        gt_pair_btchw: ground-truth pair in ``(B, T, C, H, W)``.
+
+    Returns:
+        ``(loss, pose_dist, seg_dist)`` where
+        ``loss = 100 * seg_dist + sqrt(10 * pose_dist)``.
+    """
+    fp_out, fs_out = scorer_forward_pair(filtered_pair_btchw, posenet, segnet)
+    with torch.no_grad():
+        gp_out, gs_out = scorer_forward_pair(gt_pair_btchw, posenet, segnet)
+
+    pose_dist = (fp_out["pose"][..., :6] - gp_out["pose"][..., :6]).pow(2).mean()
+    seg_per_pixel = segnet_surrogate_per_pixel(
+        fs_out,
+        gs_out,
+        surrogate=segmentation_surrogate,
+        temperature=segmentation_temperature,
+        fisher_rao_eps=fisher_rao_eps,
+        num_classes=gs_out.shape[1],
+    )
+    if class_weights is not None:
+        seg_per_pixel = _apply_class_weights(seg_per_pixel, gs_out, class_weights)
+    seg_dist = seg_per_pixel.mean()
+    loss = 100.0 * seg_dist + torch.sqrt(10.0 * pose_dist + 1e-8)
+    return loss, pose_dist, seg_dist
+
+
 def scorer_loss_cached(
     filtered_pair_hwc: torch.Tensor,
     gt_pose_6: torch.Tensor,

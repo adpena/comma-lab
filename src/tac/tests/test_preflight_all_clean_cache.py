@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import tac.preflight as preflight
 
 from tac.preflight import (
@@ -99,6 +101,88 @@ def test_prewarm_preflight_source_index_populates_common_fact_groups(
 
     assert stats["facts_group_cache_entries"] >= 4
     assert stats["text_facts_cache_entries"] >= 5
+
+
+def test_prewarm_preflight_source_index_covers_developer_hot_scan_groups(
+    tmp_path,
+):
+    for rel in (
+        "scripts/remote_lane.sh",
+        "experiments/train_example.py",
+        "experiments/run_example.sh",
+        "src/tac/example.py",
+        "src/tac/contrib/hook.py",
+        "src/tac/deploy/launcher.py",
+        "src/tac/experiments/worker.py",
+        "tools/claim.py",
+        "submissions/robust_current/inflate.sh",
+    ):
+        path = tmp_path / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("# preflight fixture\n")
+
+    from tac.source_index import source_index_context
+
+    hot_groups = (
+        (
+            (
+                "scripts",
+                "experiments",
+                "src/tac/contrib",
+                "src/tac/deploy",
+                "src/tac/experiments",
+            ),
+            "*.py",
+        ),
+        (("experiments",), "*.sh"),
+        (("src/tac", "tools", "experiments"), "*.py"),
+        (("src/tac", "tools", "experiments", "scripts"), "*.py"),
+        (("src/tac", "experiments", "scripts"), "*.py"),
+        (("scripts", "tools", "submissions/robust_current"), "*.sh"),
+    )
+    with source_index_context(tmp_path) as index:
+        preflight._prewarm_preflight_source_index(tmp_path)
+        before = index.stats()["facts_group_hits"]
+        for dirs, pattern in hot_groups:
+            assert index.facts_for_files(dirs, pattern=pattern)
+        after = index.stats()["facts_group_hits"]
+
+    assert after - before == len(hot_groups)
+
+
+def test_preflight_developer_warms_source_index_before_nested_scan(
+    tmp_path,
+    monkeypatch,
+):
+    calls: list[Path] = []
+
+    def fake_prewarm(root):
+        calls.append(Path(root))
+
+    monkeypatch.setattr(preflight, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(preflight, "_prewarm_preflight_source_index", fake_prewarm)
+
+    preflight.preflight_developer(
+        check_codebase=False,
+        use_fs_cache=True,
+        verbose=False,
+    )
+
+    assert calls == []
+
+    try:
+        preflight.preflight_developer(
+            check_codebase=True,
+            use_fs_cache=True,
+            verbose=False,
+        )
+    except Exception:
+        # The tiny fixture repo is not expected to satisfy the whole developer
+        # preflight; this test only proves the wrapper invokes the prewarm
+        # before nested checks run.
+        pass
+
+    assert calls == [tmp_path]
 
 
 def test_preflight_all_clean_cache_ignores_rebuildable_research_artifacts(tmp_path):

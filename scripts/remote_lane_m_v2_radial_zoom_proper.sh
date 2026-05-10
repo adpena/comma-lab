@@ -115,6 +115,7 @@ log "=== Stage 2: pose TTO with --pose-mode radial-zoom (1-DOF optimizable) ==="
 log "   --gt-poses-path = $ANCHOR_POSES (warm-start AND frozen-pad source for dims 1-5)"
 log "   --pose-mode radial-zoom (V2: optimizable is (N, 1), saved as (N, 6) padded)"
 log "   --eval-roundtrip + --posetto-noise-std=0.5 (Fridrich C1 fixes)"
+set +e
 "$PYBIN" -u experiments/optimize_poses.py \
     --checkpoint "$ANCHOR_RENDERER" \
     --masks "$LOG_DIR/extracted/masks.mkv" \
@@ -127,6 +128,7 @@ log "   --eval-roundtrip + --posetto-noise-std=0.5 (Fridrich C1 fixes)"
     --pose-mode radial-zoom \
     --output-dir "$LOG_DIR" 2>&1 | tee "$LOG_DIR/optimize_poses.log" | tail -30
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -172,6 +174,7 @@ print(f'archive {dst}: {os.path.getsize(dst)} bytes')
 
 log "=== Stage 4: contest_auth_eval on Lane M-V2 archive ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -180,6 +183,7 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -15
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

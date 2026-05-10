@@ -167,6 +167,7 @@ done
 cost_guard
 log "=== Stage 3: derive_poses_from_raft.py ==="
 RAFT_POSES="$LOG_DIR/raft_poses.pt"
+set +e
 "$PYBIN" -u experiments/derive_poses_from_raft.py \
     --video "$GT_VIDEO" \
     --baseline-poses "$ANCHOR_POSES" \
@@ -174,6 +175,7 @@ RAFT_POSES="$LOG_DIR/raft_poses.pt"
     --device cuda \
     --n-frames 1200 2>&1 | tee "$LOG_DIR/derive_poses_from_raft.log" | tail -15
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -218,6 +220,7 @@ RESULT_JSON="$LOG_DIR/RESULT_JSON"
 rm -rf "$EVAL_WORK"
 # Strip macOS AppleDouble files before contest_auth_eval — Lane F-V2 bug 2026-04-27.
 rm -f upstream/videos/._*.mkv
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -226,6 +229,7 @@ rm -f upstream/videos/._*.mkv
     --keep-work-dir \
     --work-dir "$EVAL_WORK" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -30
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

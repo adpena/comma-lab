@@ -236,6 +236,7 @@ log "   profile drives quantization_mode='hardware_fp8' + qat_warmup_batches=50"
 log "   eval_roundtrip=True inherited from DILATED_H64_HALF_FRAME"
 log "   ~3-4h on RTX 4090"
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+set +e
 "$PYBIN" -u src/tac/experiments/train_renderer.py \
     --profile f_v5_hardware_fp8_dilated_h64 \
     --device cuda \
@@ -243,6 +244,7 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
     --tag f_v5_hardware_fp8 \
     --output-dir "$LOG_DIR/train" 2>&1 | tee "$LOG_DIR/train.log" | tail -50
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -300,8 +302,10 @@ sd_loaded = loaded.state_dict()
 sd_orig = model.state_dict()
 common = [k for k in sd_orig if k in sd_loaded and sd_orig[k].numel() > 0]
 print(f'round-trip: {len(common)} common tensors')
+set +e
 " 2>&1 | tee "$LOG_DIR/fp8_export.log"
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
 fi
@@ -355,6 +359,7 @@ assert 100_000 < size < 1_500_000, f'archive size {size} outside sane band [100K
 # ──────────────────────────────────────────────────────────────────────────
 log "=== Stage 6: contest_auth_eval [contest-CUDA] ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -363,6 +368,7 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

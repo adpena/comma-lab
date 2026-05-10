@@ -277,10 +277,12 @@ print('halfframe-profile-assertion OK: quantizr_replica_88k_halfframe_annealed')
 # NOTE: --profile quantizr_replica_88k_halfframe_annealed used in Stage 1
 # train above (asserted by previous python check). build_baseline_archive
 # itself doesn't take --profile, just packages the trained renderer.
+set +e
 "$PYBIN" experiments/build_baseline_archive.py \
     --device cuda --crf 50 --half-frame \
     --output "$LOG_DIR/archive_halfframe_seed.zip" 2>&1 | tee "$LOG_DIR/build.log" | tail -5
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -290,6 +292,7 @@ cd "$WORKSPACE"
 cp "$LOG_DIR/extracted/masks.mkv" "$LOG_DIR/iter_0/masks.mkv"
 
 log "=== Stage 3: pose TTO with the new annealed half-frame renderer ==="
+set +e
 "$PYBIN" -u experiments/optimize_poses.py \
     --checkpoint "$LOG_DIR/iter_0/renderer.bin" \
     --masks "$LOG_DIR/iter_0/masks.mkv" \
@@ -301,6 +304,7 @@ log "=== Stage 3: pose TTO with the new annealed half-frame renderer ==="
     --posetto-noise-std 0.5 \
     --output-dir "$LOG_DIR" 2>&1 | tee "$LOG_DIR/optimize_poses.log" | tail -30
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -337,6 +341,7 @@ print(f'archive {dst}: {os.path.getsize(dst)} bytes ({len(files)} files)')
 
 log "=== Stage 4: contest_auth_eval on Lane V-V2 archive ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -345,6 +350,7 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

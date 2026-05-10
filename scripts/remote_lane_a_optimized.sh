@@ -93,11 +93,13 @@ print('provenance:', json.dumps(prov))
     # this same template with concrete params and runs it sequentially. The
     # driver tracks the best trial and emits scripts/remote_lane_a_optimized.sh.
     echo "=== Stage 3: Bayesian sweep over pose-TTO hyperparameters ==="
+    set +e
     "$PYBIN" -u experiments/sweep_lane_a_pose_tto.py \
         --n-trials 30 \
         --objective auth_score \
         --output-dir "$LOG_DIR" 2>&1 | tee "$LOG_DIR/sweep.log" | tail -50
         PIPE_RC=("${PIPESTATUS[@]}")
+    set -e
         if [ "${PIPE_RC[0]}" -ne 0 ]; then
             echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
         fi
@@ -109,8 +111,10 @@ print('provenance:', json.dumps(prov))
         exit 2
     }
     echo "=== Stage 4: official Lane A-Sweep result (best-trial archive) ==="
+    set +e
     bash "$OPT_SCRIPT" 2>&1 | tee "$LOG_DIR/optimized.log" | tail -30
     PIPE_RC=("${PIPESTATUS[@]}")
+    set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -163,10 +167,12 @@ for f in submissions/baseline_dilated_h64_0_90/renderer.bin \
 done
 
 log "=== rebuild masks (same as Lane A baseline) ==="
+set +e
 "$PYBIN" experiments/build_baseline_archive.py \
     --device cuda --crf 50 \
     --output "$LOG_DIR/archive_baseline_seed.zip" 2>&1 | tee "$LOG_DIR/build.log" | tail -3
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -178,6 +184,7 @@ cd "$WORKSPACE"
 log "=== pose TTO with sampled hyperparameters ==="
 log "  tto_steps=800 batch_pairs=12"
 log "  tto_lr=0.005 posetto_noise_std=0.4"
+set +e
 "$PYBIN" -u experiments/optimize_poses.py \
     --checkpoint submissions/baseline_dilated_h64_0_90/renderer.bin \
     --masks "$LOG_DIR/extracted/masks.mkv" \
@@ -190,6 +197,7 @@ log "  tto_lr=0.005 posetto_noise_std=0.4"
     --posetto-noise-std 0.4 \
     --output-dir "$LOG_DIR" 2>&1 | tee "$LOG_DIR/optimize_poses.log" | tail -20
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -221,6 +229,7 @@ fi
 
 log "=== contest_auth_eval ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -229,6 +238,7 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -10
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

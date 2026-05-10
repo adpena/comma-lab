@@ -119,6 +119,7 @@ done
 # ─── Stage 1: profile scorer saliency ────────────────────────────────────
 log "=== Stage 1: profile PoseNet + SegNet saliency ==="
 SAL_OUT="$LOG_DIR/saliency_maps.pt"
+set +e
 "$PYBIN" -u experiments/profile_scorer_saliency.py \
     --checkpoint submissions/baseline_dilated_h64_0_90/renderer.bin \
     --poses submissions/baseline_dilated_h64_0_90/optimized_poses.pt \
@@ -130,6 +131,7 @@ SAL_OUT="$LOG_DIR/saliency_maps.pt"
     --n-pairs 64 \
     --reduce mean 2>&1 | tee "$LOG_DIR/saliency.log" | tail -20
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -233,6 +235,7 @@ print(f'archive {dst}: {os.path.getsize(dst)} bytes')
 # ─── Stage 4: contest_auth_eval ──────────────────────────────────────────
 log "=== Stage 4: contest_auth_eval on Lane SI-V2 archive ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -241,6 +244,7 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -15
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

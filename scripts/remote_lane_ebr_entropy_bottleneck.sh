@@ -169,6 +169,7 @@ log "  --profile ebr_dilated_h64  (use_entropy_bottleneck=True, eb_lambda=0.01)"
 log "  --auth-eval-masks=Lane-A-masks  --auth-eval-poses=Lane-A-poses"
 TRAIN_OUT="$LOG_DIR/train"
 mkdir -p "$TRAIN_OUT"
+set +e
 "$PYBIN" -u -m tac.experiments.train_renderer \
     --profile ebr_dilated_h64 \
     --tag ebr \
@@ -183,6 +184,7 @@ mkdir -p "$TRAIN_OUT"
     --auth-eval-upstream-dir upstream \
     2>&1 | tee "$LOG_DIR/train_renderer.log" | tail -60
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -275,6 +277,7 @@ rm -f upstream/videos/._*.mkv
 
 log "=== Stage 4: contest_auth_eval on Lane EBR archive [contest-CUDA] ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -283,6 +286,7 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

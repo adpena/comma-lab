@@ -185,6 +185,7 @@ log "  best checkpoint: $BEST_CKPT ($(stat -c '%s' "$BEST_CKPT" 2>/dev/null || s
 # ── Stage 2: SZv1 export. ──────────────────────────────────────────────
 log "=== Stage 2: SZv1 export ==="
 SZV1_BIN="$LOG_DIR/renderer_szabolcs.bin"
+set +e
 "$PYBIN" -u experiments/export_szabolcs_archive.py \
     --checkpoint "$BEST_CKPT" \
     --output "$SZV1_BIN" \
@@ -194,6 +195,7 @@ SZV1_BIN="$LOG_DIR/renderer_szabolcs.bin"
     --predicted-band-high 0.50 \
     2>&1 | tee "$LOG_DIR/export.log"
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -223,6 +225,7 @@ log "  contents: renderer.bin only (NO masks.mkv, NO optimized_poses.pt)"
 # ── Stage 4: contest_auth_eval [contest-CUDA]. ─────────────────────────
 log "=== Stage 4: contest_auth_eval on Lane SZ archive [contest-CUDA] ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -231,6 +234,7 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

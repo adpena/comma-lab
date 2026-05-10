@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 import shutil
 import stat
 import sys
@@ -25,6 +26,8 @@ DEFAULT_KERNEL_DIR = REPO_ROOT / "experiments/kaggle_kernels/pr101_proxy_sweep"
 DEFAULT_OWNER = "adpena"
 DEFAULT_SLUG = "pr101-proxy-sweep"
 DEFAULT_TITLE = "PR101 Proxy Sweep"
+DEFAULT_LANE_ID = "kaggle_pr101_proxy_sweep"
+DEFAULT_AGENT = "codex:kaggle_proxy_readiness"
 SCRIPT_NAME = "pr101_proxy_sweep.py"
 METADATA_NAME = "kernel-metadata.json"
 MANIFEST_NAME = "proxy_sweep_build_manifest.json"
@@ -410,8 +413,15 @@ Generated outputs always declare:
 Operator-controlled launch command:
 
 ```bash
+.venv/bin/python tools/claim_lane_dispatch.py claim --dry-run --lane-id kaggle_pr101_proxy_sweep --platform kaggle --instance-job-id kaggle:adpena/pr101-proxy-sweep --agent codex:kaggle_proxy_readiness --status active_proxy_dispatch --notes "Kaggle PR101 proxy sweep only; score_claim=false; exact CUDA promotion required"
+.venv/bin/python tools/claim_lane_dispatch.py claim --lane-id kaggle_pr101_proxy_sweep --platform kaggle --instance-job-id kaggle:adpena/pr101-proxy-sweep --agent codex:kaggle_proxy_readiness --status active_proxy_dispatch --notes "Kaggle PR101 proxy sweep only; score_claim=false; exact CUDA promotion required"
 uv run --with kaggle kaggle kernels push -p experiments/kaggle_kernels/pr101_proxy_sweep
 ```
+
+The first command is a claim dry-run; the second records the active proxy
+dispatch claim. Do not run the push command without a successful active claim.
+When the Kaggle run reaches a terminal state, close the claim with the
+terminal-claim template in `proxy_sweep_build_manifest.json`.
 
 Any promising `best_proxy_candidate.json` must be promoted through a separate
 claimed exact CUDA archive/eval path before it can influence score status.
@@ -425,7 +435,10 @@ class BuildResult:
     script_path: Path
     manifest_path: Path
     readme_path: Path
+    claim_command: list[str]
+    claim_dry_run_command: list[str]
     push_command: list[str]
+    terminal_claim_command_template: list[str]
     score_claim: bool
     ready_for_exact_eval_dispatch: bool
     proxy_only: bool
@@ -475,13 +488,94 @@ def _command_path(path: Path) -> str:
         return str(path)
 
 
-def build_manifest(*, owner: str, slug: str, title: str, kernel_dir: Path) -> dict[str, object]:
+def command_text(command: list[str]) -> str:
+    return shlex.join(command)
+
+
+def build_claim_command(
+    *,
+    owner: str,
+    slug: str,
+    lane_id: str,
+    agent: str,
+    dry_run: bool = False,
+    status: str = "active_proxy_dispatch",
+    notes: str = "Kaggle PR101 proxy sweep only; score_claim=false; exact CUDA promotion required",
+) -> list[str]:
+    command = [
+        ".venv/bin/python",
+        "tools/claim_lane_dispatch.py",
+        "claim",
+    ]
+    if dry_run:
+        command.append("--dry-run")
+    command.extend(
+        [
+            "--lane-id",
+            lane_id,
+            "--platform",
+            "kaggle",
+            "--instance-job-id",
+            f"kaggle:{owner}/{slug}",
+            "--agent",
+            agent,
+            "--status",
+            status,
+            "--notes",
+            notes,
+        ]
+    )
+    return command
+
+
+def build_manifest(
+    *,
+    owner: str,
+    slug: str,
+    title: str,
+    kernel_dir: Path,
+    lane_id: str,
+    agent: str,
+) -> dict[str, object]:
     kernel_dir_for_command = _command_path(kernel_dir)
+    claim_dry_run_command = build_claim_command(
+        owner=owner,
+        slug=slug,
+        lane_id=lane_id,
+        agent=agent,
+        dry_run=True,
+    )
+    claim_command = build_claim_command(
+        owner=owner,
+        slug=slug,
+        lane_id=lane_id,
+        agent=agent,
+    )
+    terminal_claim_command_template = build_claim_command(
+        owner=owner,
+        slug=slug,
+        lane_id=lane_id,
+        agent=agent,
+        status="completed_proxy_or_failed_proxy_SET_EXACT_STATUS",
+        notes="Set exact Kaggle terminal status and artifact path; still score_claim=false",
+    ) + ["--force"]
+    push_command = [
+        "uv",
+        "run",
+        "--with",
+        "kaggle",
+        "kaggle",
+        "kernels",
+        "push",
+        "-p",
+        kernel_dir_for_command,
+    ]
     return {
         "schema": "kaggle_proxy_sweep_kernel_build_manifest_v1",
         "generated_at_utc": utc_now(),
         "kernel_id": f"{owner}/{slug}",
         "kernel_title": title,
+        "lane_id": lane_id,
         "kernel_dir": kernel_dir_for_command,
         "code_file": SCRIPT_NAME,
         "proxy_only": True,
@@ -498,17 +592,25 @@ def build_manifest(*, owner: str, slug: str, title: str, kernel_dir: Path) -> di
         "inflate_runtime_emitted": False,
         "evidence_semantics": EVIDENCE_SEMANTICS,
         "dispatch_blockers": list(DISPATCH_BLOCKERS),
-        "push_command": [
-            "uv",
-            "run",
-            "--with",
-            "kaggle",
-            "kaggle",
-            "kernels",
-            "push",
-            "-p",
-            kernel_dir_for_command,
+        "dispatch_claim_required": True,
+        "claim_command_dry_run": claim_dry_run_command,
+        "claim_command_dry_run_text": command_text(claim_dry_run_command),
+        "claim_command": claim_command,
+        "claim_command_text": command_text(claim_command),
+        "push_command": push_command,
+        "push_command_text": command_text(push_command),
+        "safe_push_sequence": [
+            claim_dry_run_command,
+            claim_command,
+            push_command,
         ],
+        "safe_push_sequence_text": [
+            command_text(claim_dry_run_command),
+            command_text(claim_command),
+            command_text(push_command),
+        ],
+        "terminal_claim_command_template": terminal_claim_command_template,
+        "terminal_claim_command_template_text": command_text(terminal_claim_command_template),
         "operator_controlled_launch": True,
     }
 
@@ -519,6 +621,8 @@ def build_kernel(
     owner: str = DEFAULT_OWNER,
     slug: str = DEFAULT_SLUG,
     title: str = DEFAULT_TITLE,
+    lane_id: str = DEFAULT_LANE_ID,
+    agent: str = DEFAULT_AGENT,
     force: bool = False,
 ) -> BuildResult:
     metadata_path = kernel_dir / METADATA_NAME
@@ -527,7 +631,14 @@ def build_kernel(
     readme_path = kernel_dir / README_NAME
 
     metadata = kernel_metadata(owner=owner, slug=slug, title=title)
-    manifest = build_manifest(owner=owner, slug=slug, title=title, kernel_dir=kernel_dir)
+    manifest = build_manifest(
+        owner=owner,
+        slug=slug,
+        title=title,
+        kernel_dir=kernel_dir,
+        lane_id=lane_id,
+        agent=agent,
+    )
 
     _write_text(
         metadata_path,
@@ -543,6 +654,15 @@ def build_kernel(
     readme = README_TEXT.replace(
         "experiments/kaggle_kernels/pr101_proxy_sweep",
         _command_path(kernel_dir),
+    ).replace(
+        "kaggle_pr101_proxy_sweep",
+        lane_id,
+    ).replace(
+        "codex:kaggle_proxy_readiness",
+        agent,
+    ).replace(
+        "kaggle:adpena/pr101-proxy-sweep",
+        f"kaggle:{owner}/{slug}",
     )
     _write_text(readme_path, readme, force=force)
 
@@ -552,7 +672,10 @@ def build_kernel(
         script_path=script_path,
         manifest_path=manifest_path,
         readme_path=readme_path,
+        claim_command=list(manifest["claim_command"]),  # type: ignore[arg-type]
+        claim_dry_run_command=list(manifest["claim_command_dry_run"]),  # type: ignore[arg-type]
         push_command=list(manifest["push_command"]),  # type: ignore[arg-type]
+        terminal_claim_command_template=list(manifest["terminal_claim_command_template"]),  # type: ignore[arg-type]
         score_claim=False,
         ready_for_exact_eval_dispatch=False,
         proxy_only=True,
@@ -566,6 +689,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--owner", default=DEFAULT_OWNER)
     parser.add_argument("--slug", default=DEFAULT_SLUG)
     parser.add_argument("--title", default=DEFAULT_TITLE)
+    parser.add_argument("--lane-id", default=DEFAULT_LANE_ID)
+    parser.add_argument("--agent", default=DEFAULT_AGENT)
     parser.add_argument("--force", action="store_true")
     return parser.parse_args(argv)
 
@@ -577,6 +702,8 @@ def main(argv: list[str] | None = None) -> int:
         owner=args.owner,
         slug=args.slug,
         title=args.title,
+        lane_id=args.lane_id,
+        agent=args.agent,
         force=args.force,
     )
     print(json.dumps({
@@ -586,15 +713,24 @@ def main(argv: list[str] | None = None) -> int:
         "script_path": str(result.script_path),
         "manifest_path": str(result.manifest_path),
         "readme_path": str(result.readme_path),
+        "dispatch_claim_required": True,
+        "claim_dry_run_command": command_text(result.claim_dry_run_command),
+        "claim_command": command_text(result.claim_command),
         "score_claim": result.score_claim,
         "ready_for_exact_eval_dispatch": result.ready_for_exact_eval_dispatch,
         "proxy_only": result.proxy_only,
         "evidence_semantics": result.evidence_semantics,
-        "push_command": " ".join(result.push_command),
+        "push_command": command_text(result.push_command),
     }, indent=2, sort_keys=True))
     print()
-    print("Operator-controlled launch command:")
-    print(" ".join(result.push_command))
+    print("Claim dry-run command:")
+    print(command_text(result.claim_dry_run_command))
+    print()
+    print("Claim command:")
+    print(command_text(result.claim_command))
+    print()
+    print("Operator-controlled launch command after successful claim:")
+    print(command_text(result.push_command))
     return 0
 
 

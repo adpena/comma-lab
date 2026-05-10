@@ -252,14 +252,17 @@ if [ "${IMP_C067_FORCE:-0}" = "1" ]; then
     BUILD_CMD+=(--force)
 fi
 
-set +e
 if command -v timeout >/dev/null 2>&1; then
+    set +e
     timeout "${IMP_C067_BUILD_TIMEOUT_SECONDS:-7200}" "${BUILD_CMD[@]}" 2>&1 | tee "$OUT_DIR/build_imp_c067_bridge_candidates.log"
+    PIPE_RC=("${PIPESTATUS[@]}")
+    set -e
 else
+    set +e
     "${BUILD_CMD[@]}" 2>&1 | tee "$OUT_DIR/build_imp_c067_bridge_candidates.log"
+    PIPE_RC=("${PIPESTATUS[@]}")
+    set -e
 fi
-PIPE_RC=("${PIPESTATUS[@]}")
-set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     log "FATAL: build_imp_c067_bridge_candidates.py failed rc=${PIPE_RC[0]}"
     exit "${PIPE_RC[0]}"

@@ -156,12 +156,14 @@ log "    predicted_band=[0.92, 1.02]"
 export PYTHONHASHSEED=1234
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 export PYTHONPATH="src:upstream:$WORKSPACE"
+set +e
 "$PYBIN" -u src/tac/experiments/train_renderer.py \
     --profile j_jbl_dilated_h64 \
     --device cuda \
     --tag j_jbl \
     --output-dir "$LOG_DIR/train" 2>&1 | tee "$LOG_DIR/train.log" | tail -50
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -211,6 +213,7 @@ log "archive size guard: $ARCHIVE_BYTES bytes (within sanity bounds)"
 # (every auth eval must use the EXACT archive that will be submitted).
 log "=== Stage 5: contest-CUDA auth eval [contest-CUDA] ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -219,6 +222,7 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

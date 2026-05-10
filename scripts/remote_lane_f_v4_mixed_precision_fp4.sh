@@ -168,6 +168,7 @@ log "=== Stage 2: per-layer FP4 sensitivity profile (Phase 1) ==="
 log "  output: $LOG_DIR/layer_sensitivity.pt"
 log "  ~5 min on RTX 4090 (~80 layers * 30 pairs * ~1.5s/pair)"
 SENSITIVITY="$LOG_DIR/layer_sensitivity.pt"
+set +e
 "$PYBIN" -u experiments/profile_fp4_layer_sensitivity.py \
     --checkpoint "$ANCHOR_RENDERER" \
     --video upstream/videos/0.mkv \
@@ -179,6 +180,7 @@ SENSITIVITY="$LOG_DIR/layer_sensitivity.pt"
     --n-pairs 30 \
     --predicted-band 1.20 1.50 2>&1 | tee "$LOG_DIR/profile.log" | tail -40
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -194,6 +196,7 @@ log "  output: $LOG_DIR/qat/renderer_fp4.bin"
 log "  schedule: 50 INT8 warmup + 500 FP4 (V3+V4 default)"
 log "  lr: 2.5e-6 (V3 default; same as V4)"
 log "  mixed-precision target_rate: 0.70 (bulk 70% FP4, critical 30% FP16)"
+set +e
 "$PYBIN" -u experiments/qat_finetune.py \
     --checkpoint "$ANCHOR_RENDERER" \
     --poses "$ANCHOR_POSES" \
@@ -211,6 +214,7 @@ log "  mixed-precision target_rate: 0.70 (bulk 70% FP4, critical 30% FP16)"
     --mixed-precision-bulk-bits 4 \
     --mixed-precision-critical-bits 16 2>&1 | tee "$LOG_DIR/qat.log" | tail -30
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -246,6 +250,7 @@ print(f'archive {dst}: {os.path.getsize(dst)} bytes')
 
 log "=== Stage 5: contest_auth_eval on Lane F-V4 archive ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -254,6 +259,7 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -15
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

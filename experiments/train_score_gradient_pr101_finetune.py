@@ -70,8 +70,13 @@ if str(REPO_ROOT) not in sys.path:
 # Canonical project-internal imports (post-sys-path).
 # These are GUARANTEED to exist per Round-1 grep verification.
 from tac.losses import (
+    DEFAULT_SINKHORN_BLUR,
+    DEFAULT_SINKHORN_ITERS,
+    SEGMENTATION_SURROGATE_FISHER_RAO,
+    SEGMENTATION_SURROGATE_SINKHORN,
+    SEGMENTATION_SURROGATE_SOFT_COSINE,
     kl_distill_segnet_only,
-    scorer_loss,
+    scorer_loss_terms_btchw,
 )
 from tac.training import EMA  # decay-default 0.997 enforced below
 
@@ -110,6 +115,10 @@ DUAL_UPDATE_PERIOD: int = 100     # Lagrangian update cadence (steps)
 
 KL_DISTILL_TEMPERATURE: float = 2.0  # Hinton 2014 T=2.0 (council Decision 2)
 KL_DISTILL_AUX_WEIGHT: float = 1.0   # tasted from kl_distill_segnet_only docstring
+DEFAULT_SEGMENTATION_SURROGATE: str = SEGMENTATION_SURROGATE_SINKHORN
+DEFAULT_SEGMENTATION_TEMPERATURE: float = 1.0
+DEFAULT_FISHER_RAO_EPS: float = 1e-6
+DEFAULT_GRAD_CLIP_NORM: float = 1.0
 
 PIXEL_L1_WEIGHT: float = 0.0  # OFF by default — scorer_loss already supervises
                               # reconstruction at the score-relevant axis.
@@ -120,6 +129,7 @@ DEFAULT_LR_FINETUNE: float = 1e-4  # 0.1x base (per CLAUDE.md QAT pipeline rule)
 FINAL_EMA_CHECKPOINT = "checkpoint_ema.pt"
 BEST_PROXY_CHECKPOINT = "checkpoint_best_proxy.pt"
 BEST_PROXY_MANIFEST = "checkpoint_best_proxy_manifest.json"
+ARCHIVE_BUILD_MANIFEST = "archive_builds_manifest.json"
 
 
 # ---------------------------------------------------------------------------
@@ -471,6 +481,86 @@ def load_cuda_scorers(device: torch.device) -> tuple[nn.Module, nn.Module]:
     return posenet, segnet
 
 
+def assert_score_gradient_reachability(
+    decoder: nn.Module,
+    *,
+    min_grad_l2: float = 0.0,
+) -> dict[str, float]:
+    """Prove the scorer-domain loss reached trainable decoder parameters."""
+    grad_sq = 0.0
+    param_count = 0
+    grad_param_count = 0
+    for param in decoder.parameters():
+        param_count += int(param.numel())
+        if param.grad is None:
+            continue
+        grad = param.grad.detach()
+        if not torch.isfinite(grad).all():
+            raise RuntimeError(
+                "score-gradient reachability failed: non-finite decoder gradient"
+            )
+        grad_param_count += int(param.numel())
+        grad_sq += float(grad.pow(2).sum().item())
+    grad_l2 = math.sqrt(grad_sq)
+    if grad_l2 <= min_grad_l2:
+        raise RuntimeError(
+            "score-gradient reachability failed: scorer-domain loss produced "
+            f"decoder_grad_l2={grad_l2:.6e} across {param_count} parameters"
+        )
+    return {
+        "decoder_grad_l2": grad_l2,
+        "decoder_param_count": float(param_count),
+        "decoder_grad_param_count": float(grad_param_count),
+    }
+
+
+def assert_loss_gradient_reachability(
+    loss: torch.Tensor,
+    decoder: nn.Module,
+    *,
+    label: str,
+    min_grad_l2: float = 0.0,
+) -> dict[str, float]:
+    """Prove a specific loss term reaches decoder parameters.
+
+    This is intentionally separate from the post-``backward`` aggregate guard:
+    auxiliary pixel or KL losses are allowed to stabilize training, but they
+    must not mask a dead scorer-domain objective.
+    """
+
+    params = [param for param in decoder.parameters() if param.requires_grad]
+    grads = torch.autograd.grad(
+        loss,
+        params,
+        retain_graph=True,
+        allow_unused=True,
+    )
+    grad_sq = 0.0
+    grad_param_count = 0
+    param_count = 0
+    for param, grad in zip(params, grads):
+        param_count += int(param.numel())
+        if grad is None:
+            continue
+        if not torch.isfinite(grad).all():
+            raise RuntimeError(
+                f"{label} reachability failed: non-finite decoder gradient"
+            )
+        grad_param_count += int(param.numel())
+        grad_sq += float(grad.detach().pow(2).sum().item())
+    grad_l2 = math.sqrt(grad_sq)
+    if grad_l2 <= min_grad_l2:
+        raise RuntimeError(
+            f"{label} reachability failed: loss produced decoder_grad_l2="
+            f"{grad_l2:.6e} across {param_count} parameters"
+        )
+    return {
+        f"{label}_decoder_grad_l2": grad_l2,
+        f"{label}_decoder_param_count": float(param_count),
+        f"{label}_decoder_grad_param_count": float(grad_param_count),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Eval-roundtrip simulation (CLAUDE.md eval_roundtrip — NON-NEGOTIABLE)
 # ---------------------------------------------------------------------------
@@ -563,6 +653,123 @@ class TrainResult:
     best_proxy_metrics: dict[str, float] | None
 
 
+def build_selected_archives(
+    *,
+    output_dir: Path,
+    pr101_archive: Path,
+    pr101_source_dir: Path,
+    checkpoints: dict[str, str],
+) -> dict[str, Any]:
+    """Build byte-closed PR101 archive candidates from selected checkpoints."""
+    from tools import build_pr101_finetuned_archive
+
+    builds: list[dict[str, Any]] = []
+    for label, checkpoint_name in checkpoints.items():
+        checkpoint_path = output_dir / checkpoint_name
+        if not checkpoint_path.is_file():
+            raise RuntimeError(
+                f"Cannot build A1 archive for {label}: selected checkpoint "
+                f"missing at {checkpoint_path}"
+            )
+        archive_output = output_dir / "archive_candidates" / label
+        rc = build_pr101_finetuned_archive.main(
+            [
+                "--state-dict",
+                str(checkpoint_path),
+                "--source-archive",
+                str(pr101_archive),
+                "--pr101-source-dir",
+                str(pr101_source_dir),
+                "--output-dir",
+                str(archive_output),
+                "--lane-id",
+                f"track1_phase_a1_score_gradient_{label}",
+            ]
+        )
+        if rc != 0:
+            raise RuntimeError(
+                f"PR101 archive builder failed for {label} with rc={rc}; "
+                "refusing to leave a checkpoint-only non-smoke artifact"
+            )
+        manifest_path = archive_output / "build_manifest.json"
+        manifest: dict[str, Any] = {}
+        if manifest_path.is_file():
+            manifest = json.loads(manifest_path.read_text())
+        archive_path = archive_output / "archive.zip"
+        if not archive_path.is_file():
+            raise RuntimeError(
+                f"PR101 archive builder reported success for {label}, but "
+                f"did not create {archive_path}"
+            )
+        builds.append(
+            {
+                "label": label,
+                "checkpoint": checkpoint_name,
+                "status": "built",
+                "archive_dir": str(archive_output),
+                "archive_path": str(archive_path),
+                "manifest_path": str(manifest_path),
+                "archive_bytes": manifest.get("archive_bytes"),
+                "archive_sha256": manifest.get("archive_sha256"),
+                "source_archive_sha256": manifest.get("source_archive_sha256"),
+                "score_affecting_payload_changed": manifest.get(
+                    "score_affecting_payload_changed"
+                ),
+                "no_op_detector": manifest.get("no_op_detector"),
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        )
+    payload = {
+        "schema": "track1_phase_a1_archive_builds.v1",
+        "score_claim": False,
+        "evidence_grade": "[CPU-build proxy; no contest-CUDA eval yet]",
+        "source_archive": str(pr101_archive),
+        "pr101_source_dir": str(pr101_source_dir),
+        "builds": builds,
+        "next_step": (
+            "Run exact CUDA auth eval on a selected archive only after dispatch "
+            "claim and runtime custody are recorded."
+        ),
+    }
+    (output_dir / ARCHIVE_BUILD_MANIFEST).write_text(
+        json.dumps(payload, indent=2, sort_keys=True)
+    )
+    return payload
+
+
+def validate_non_smoke_archive_closure_args(args: argparse.Namespace) -> None:
+    """Fail closed before paid training when score-bearing archive export is impossible."""
+    if not args.enable_eval_roundtrip_in_training:
+        raise RuntimeError(
+            "Non-smoke PR101 fine-tune requires eval_roundtrip inside the "
+            "training loop. --disable-eval-roundtrip-in-training is "
+            "smoke/research-only and cannot produce score-bearing work."
+        )
+    if not args.enable_differentiable_yuv6:
+        raise RuntimeError(
+            "Non-smoke PR101 fine-tune requires differentiable rgb_to_yuv6. "
+            "--disable-differentiable-yuv6 is smoke/research-only and "
+            "recreates the PR #95 PoseNet-gradient bug."
+        )
+    if args.pr101_archive is None:
+        raise RuntimeError(
+            "Non-smoke training requires --pr101-archive pointing at a "
+            "PR101 archive.zip. Run with --smoke for gradient-path "
+            "validation, or provide the archive."
+        )
+    if args.pr101_source_dir is None:
+        raise RuntimeError(
+            "Non-smoke PR101 fine-tune requires --pr101-source-dir so the "
+            "selected best/EMA checkpoint can be exported into archive.zip "
+            "before the run is considered score-bearing."
+        )
+    if not args.pr101_source_dir.is_dir():
+        raise RuntimeError(
+            f"--pr101-source-dir does not exist: {args.pr101_source_dir}"
+        )
+
+
 def save_ema_checkpoint(decoder: nn.Module, ema: EMA, path: Path) -> None:
     """Save an EMA snapshot without leaving EMA weights installed."""
     orig_state = {k: v.detach().clone() for k, v in decoder.state_dict().items()}
@@ -587,6 +794,11 @@ def train_one_step(
     aux_kl_weight: float,
     aux_pixel_l1_weight: float,
     enable_eval_roundtrip_in_training: bool,
+    segmentation_surrogate: str,
+    segmentation_temperature: float,
+    fisher_rao_eps: float,
+    grad_clip_norm: float,
+    require_score_gradient_reachability: bool,
 ) -> dict[str, float]:
     """Single training step. Returns metrics dict."""
     decoder.train()
@@ -597,15 +809,22 @@ def train_one_step(
         pred_pair_btchw = simulate_eval_roundtrip(
             pred_pair_btchw, noise_std=EVAL_ROUNDTRIP_NOISE_STD
         )
-    # Convert (B, T, C, H, W) → (B, T, H, W, C) for scorer_loss expectation.
-    pred_pair_hwc = pred_pair_btchw.permute(0, 1, 3, 4, 2).contiguous()
+    gt_pair_btchw = gt_pair_hwc.permute(0, 1, 4, 2, 3).contiguous()
 
-    primary_loss, pose_dist, seg_dist = scorer_loss(
-        pred_pair_hwc,
-        gt_pair_hwc,
+    primary_loss, pose_dist_t, seg_dist_t = scorer_loss_terms_btchw(
+        pred_pair_btchw,
+        gt_pair_btchw,
         posenet,
         segnet,
+        segmentation_surrogate=segmentation_surrogate,
+        segmentation_temperature=segmentation_temperature,
+        fisher_rao_eps=fisher_rao_eps,
     )
+    pose_dist = float(pose_dist_t.detach().item())
+    seg_dist = float(seg_dist_t.detach().item())
+
+    # Convert (B, T, C, H, W) → (B, T, H, W, C) for scorer_loss expectation.
+    pred_pair_hwc = pred_pair_btchw.permute(0, 1, 3, 4, 2).contiguous()
 
     aux_kl_loss = torch.tensor(0.0, device=primary_loss.device)
     if aux_kl_weight > 0:
@@ -639,8 +858,22 @@ def train_one_step(
             "weighted_proxy": float(weighted),
             "lambda_R": lagrangian.lambda_R,
         }
+    reachability = {
+        "decoder_grad_l2": math.nan,
+        "primary_scorer_decoder_grad_l2": math.nan,
+    }
+    if require_score_gradient_reachability:
+        reachability.update(
+            assert_loss_gradient_reachability(
+                primary_loss,
+                decoder,
+                label="primary_scorer",
+            )
+        )
     total.backward()
-    torch.nn.utils.clip_grad_norm_(decoder.parameters(), max_norm=1.0)
+    if require_score_gradient_reachability:
+        reachability.update(assert_score_gradient_reachability(decoder))
+    torch.nn.utils.clip_grad_norm_(decoder.parameters(), max_norm=grad_clip_norm)
     optimizer.step()
     ema.update(decoder)
     lagrangian.step += 1
@@ -658,6 +891,10 @@ def train_one_step(
         "aux_pixel_l1": float(aux_pixel_l1.item()),
         "weighted_proxy": float(weighted),
         "lambda_R": lagrangian.lambda_R,
+        "decoder_grad_l2": float(reachability["decoder_grad_l2"]),
+        "primary_scorer_decoder_grad_l2": float(
+            reachability["primary_scorer_decoder_grad_l2"]
+        ),
     }
 
 
@@ -677,8 +914,12 @@ def train(
     output_dir: Path,
     aux_kl_weight: float,
     aux_pixel_l1_weight: float,
-    enable_eval_roundtrip_in_training: bool,
-    batch_source: Any,  # callable(batch_size) → (z, gt_pair_hwc) OR None for synthetic-smoke
+    enable_eval_roundtrip_in_training: bool = True,
+    batch_source: Any = None,  # callable(batch_size) → (z, gt_pair_hwc)
+    segmentation_surrogate: str = DEFAULT_SEGMENTATION_SURROGATE,
+    segmentation_temperature: float = DEFAULT_SEGMENTATION_TEMPERATURE,
+    fisher_rao_eps: float = DEFAULT_FISHER_RAO_EPS,
+    grad_clip_norm: float = DEFAULT_GRAD_CLIP_NORM,
     seed: int = 20260508,
 ) -> TrainResult:
     """Full training loop with EMA + Lagrangian + per-epoch logging.
@@ -741,6 +982,13 @@ def train(
                     aux_kl_weight=aux_kl_weight,
                     aux_pixel_l1_weight=aux_pixel_l1_weight,
                     enable_eval_roundtrip_in_training=enable_eval_roundtrip_in_training,
+                    segmentation_surrogate=segmentation_surrogate,
+                    segmentation_temperature=segmentation_temperature,
+                    fisher_rao_eps=fisher_rao_eps,
+                    grad_clip_norm=grad_clip_norm,
+                    require_score_gradient_reachability=(
+                        epoch == 0 and _step_in_epoch == 0
+                    ),
                 )
                 epoch_metrics["step_metrics"].append(metrics)
                 if math.isnan(metrics["loss"]):
@@ -905,7 +1153,11 @@ def write_build_manifest(
         "remote_dispatch_allowed": False,
         "byte_proxy_only": True,
         "dispatch_blockers": (
-            ["fine_tune_checkpoint_requires_archive_build_and_exact_cuda_eval"]
+            (
+                ["built_archive_requires_exact_cuda_eval"]
+                if getattr(args, "pr101_source_dir", None) is not None
+                else ["fine_tune_checkpoint_requires_archive_build_and_exact_cuda_eval"]
+            )
             if not args.smoke
             else []
         ),
@@ -941,6 +1193,12 @@ def write_build_manifest(
         "lambda_r_warmup_steps": LAMBDA_R_WARMUP_STEPS,
         "kl_distill_temperature": KL_DISTILL_TEMPERATURE,
         "kl_distill_aux_weight": args.aux_kl_weight,
+        "segmentation_surrogate": args.segmentation_surrogate,
+        "segmentation_temperature": args.segmentation_temperature,
+        "fisher_rao_eps": args.fisher_rao_eps,
+        "sinkhorn_blur": DEFAULT_SINKHORN_BLUR,
+        "sinkhorn_iters": DEFAULT_SINKHORN_ITERS,
+        "grad_clip_norm": args.grad_clip_norm,
         "epochs": args.epochs,
         "batch_size": args.batch_size,
         "lr": args.lr,
@@ -970,9 +1228,35 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--smoke-steps-per-epoch", type=int, default=4)
     parser.add_argument("--aux-kl-weight", type=float, default=KL_DISTILL_AUX_WEIGHT)
     parser.add_argument("--aux-pixel-l1-weight", type=float, default=PIXEL_L1_WEIGHT)
+    parser.add_argument(
+        "--segmentation-surrogate",
+        choices=[
+            SEGMENTATION_SURROGATE_SOFT_COSINE,
+            SEGMENTATION_SURROGATE_FISHER_RAO,
+            SEGMENTATION_SURROGATE_SINKHORN,
+        ],
+        default=DEFAULT_SEGMENTATION_SURROGATE,
+        help=(
+            "Differentiable SegNet surrogate for the primary score-domain term. "
+            "Default is T8 Sinkhorn per the 2026-05-09 sub-additivity probe."
+        ),
+    )
+    parser.add_argument("--segmentation-temperature", type=float, default=DEFAULT_SEGMENTATION_TEMPERATURE)
+    parser.add_argument("--fisher-rao-eps", type=float, default=DEFAULT_FISHER_RAO_EPS)
+    parser.add_argument("--grad-clip-norm", type=float, default=DEFAULT_GRAD_CLIP_NORM)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--pr101-archive", type=Path, default=None,
                         help="Path to PR101 archive.zip (required for non-smoke)")
+    parser.add_argument(
+        "--pr101-source-dir",
+        type=Path,
+        default=None,
+        help=(
+            "Path to PR101 codec/model source dir. Required in non-smoke "
+            "mode so the trainer builds byte-closed archive candidates from "
+            "checkpoint_best_proxy.pt and checkpoint_ema.pt at the end."
+        ),
+    )
     parser.add_argument("--video-path", type=Path, default=None,
                         help="Path to canonical contest video (required for non-smoke; "
                              "default upstream/videos/0.mkv if present and --video-path omitted)")
@@ -1107,6 +1391,8 @@ def main() -> int:
     output_dir = Path(args.output).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     write_provenance(output_dir, args)
+    if not args.smoke:
+        validate_non_smoke_archive_closure_args(args)
 
     # ------------------------------------------------------------------
     # PR #95 binary-forensics replication: activate autograd-preserving
@@ -1178,12 +1464,6 @@ def main() -> int:
         # FAIL-LOUD GUARD: non-smoke requires both PR101 archive AND a real
         # contest video. The codex finding 2026-05-08 explicitly demanded
         # this check.
-        if args.pr101_archive is None:
-            raise RuntimeError(
-                "Non-smoke training requires --pr101-archive pointing at a "
-                "PR101 archive.zip. Run with --smoke for gradient-path "
-                "validation, or provide the archive."
-            )
         # Auto-resolve canonical video path if --video-path omitted.
         video_path = args.video_path
         if video_path is None:
@@ -1276,6 +1556,10 @@ def main() -> int:
             aux_pixel_l1_weight=args.aux_pixel_l1_weight,
             enable_eval_roundtrip_in_training=args.enable_eval_roundtrip_in_training,
             batch_source=batch_source,
+            segmentation_surrogate=args.segmentation_surrogate,
+            segmentation_temperature=args.segmentation_temperature,
+            fisher_rao_eps=args.fisher_rao_eps,
+            grad_clip_norm=args.grad_clip_norm,
             seed=args.seed,
         )
     finally:
@@ -1291,6 +1575,16 @@ def main() -> int:
     pr101_substrate_source = dict(pr101_substrate_source)
     pr101_substrate_source["data_source"] = real_data_source
     write_build_manifest(output_dir, args, result, pr101_substrate_source)
+    if (not args.smoke) and args.pr101_source_dir is not None:
+        build_selected_archives(
+            output_dir=output_dir,
+            pr101_archive=args.pr101_archive,
+            pr101_source_dir=args.pr101_source_dir,
+            checkpoints={
+                "best_proxy": BEST_PROXY_CHECKPOINT,
+                "final_ema": FINAL_EMA_CHECKPOINT,
+            },
+        )
 
     # Smoke pass criteria: NO NaN + at least one of (seg, pose) decreased.
     if args.smoke:

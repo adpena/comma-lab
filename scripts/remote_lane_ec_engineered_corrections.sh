@@ -145,6 +145,7 @@ log "=== Stage 2: engineered_quant_noise (compress-time SegNet correction search
 log "  --max-delta=2 (perturbation magnitude per channel, int8 packed)"
 log "  --max-artifact-bytes=51200 (50KB cap → bounded rate cost ~0.0014)"
 log "  --gt-poses-path=baseline optimized_poses (so renderer FiLM matches eval)"
+set +e
 "$PYBIN" -u experiments/engineered_quant_noise.py \
     --checkpoint "$STAGED_DIR/renderer.bin" \
     --video "$GT_VIDEO" \
@@ -157,6 +158,7 @@ log "  --gt-poses-path=baseline optimized_poses (so renderer FiLM matches eval)"
     --max-artifact-bytes 51200 \
     --output-dir "$LOG_DIR/corrections" 2>&1 | tee "$LOG_DIR/engineered_quant_noise.log" | tail -30
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -238,6 +240,7 @@ rm -f upstream/videos/._*.mkv
 
 log "=== Stage 4: contest_auth_eval on Lane EC archive [contest-CUDA] ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -246,6 +249,7 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

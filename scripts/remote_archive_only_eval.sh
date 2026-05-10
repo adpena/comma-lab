@@ -380,6 +380,7 @@ JSON
 log "=== Stage 4: contest_auth_eval [contest-CUDA] ==="
 rm -rf "$LOG_DIR/eval_work"
 export INFLATE_REQUIRE_CUDA="${INFLATE_REQUIRE_CUDA:-1}"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE_PATH" \
     --inflate-sh "$INFLATE_SH_ABS" \
@@ -389,6 +390,7 @@ export INFLATE_REQUIRE_CUDA="${INFLATE_REQUIRE_CUDA:-1}"
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -30
 
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     log "FATAL: contest_auth_eval failed rc=${PIPE_RC[0]}"
     exit "${PIPE_RC[0]}"

@@ -143,6 +143,7 @@ log "  anchor masks.mkv: $(stat -c '%s' "$EXTRACT_DIR/masks.mkv") bytes"
 log "  anchor optimized_poses.pt: $(stat -c '%s' "$EXTRACT_DIR/optimized_poses.pt") bytes"
 
 log "=== Stage 2: train_renderer.py --profile hm_dilated_h64 (motion_type=homography_analytical) ==="
+set +e
 python3 -u src/tac/experiments/train_renderer.py \
     --profile hm_dilated_h64 \
     --tag "$TAG" \
@@ -152,6 +153,7 @@ python3 -u src/tac/experiments/train_renderer.py \
     --no-auth-eval-on-best \
     2>&1 | tee "$LOG_DIR/train.log"
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -208,6 +210,7 @@ print(f"exported FP4A renderer.bin: {os.environ['RENDERER_BIN']} ({nbytes} bytes
 PY
 
 log "=== Stage 3: pose TTO on best checkpoint ==="
+set +e
 python3 -u experiments/optimize_poses.py \
     --checkpoint "$RENDERER_BIN" \
     --masks "$EXTRACT_DIR/masks.mkv" \
@@ -220,6 +223,7 @@ python3 -u experiments/optimize_poses.py \
     --output-dir "$LOG_DIR" \
     2>&1 | tee "$LOG_DIR/optimize_poses.log"
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -251,6 +255,7 @@ PY
 
 log "=== Stage 5: CUDA auth eval writing RESULT_JSON ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 python3 -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -260,6 +265,7 @@ python3 -u experiments/contest_auth_eval.py \
     --work-dir "$LOG_DIR/eval_work" \
     2>&1 | tee "$LOG_DIR/auth_eval.log"
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

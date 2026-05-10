@@ -14,16 +14,18 @@ latent table as input, trains:
 against the Phase 1 pixel proxy. The emitted archive/runtime is now
 contest-contract-shaped and byte-closed, but score promotion still requires
 the normal dispatch-claim, exact-eval custody, and CUDA/CPU evidence gates.
-Phase 2 wires real scorer-domain objectives and replaces the interim
-state-dict payloads with a deterministic byte-optimised wire format.
+When ``--enable-scorer-domain-loss`` is set, Phase 1 trains against the real
+PoseNet/SegNet scorer-domain surrogate under the PR #95 eval-roundtrip/YUV6
+inner-loop discipline. Phase 2 replaces the interim state-dict payloads with a
+deterministic byte-optimised wire format.
 
 REPRESENTATION_ARCHIVE_GRAMMAR_BLUEPRINT:
   archive_grammar: three ZIP members ``x`` / ``decoder.bin`` / ``balle.bin``
   parser_section_manifest: member names, SHA-256s, and byte sizes
   inflate_runtime_loc_budget: contest-shaped runtime, budget checked by packet compiler
-  runtime_dep_closure: PACT_RUNTIME_DEPENDENCY_ROOT declares repo tac dependency
+  runtime_dep_closure: packet-local tac runtime subset + torch/brotli/compressai
   export_format: phase1_contest_contract
-  score_aware_loss: Phase 1 real-pixel eval-roundtrip proxy; Phase 2 scorer loss
+  score_aware_loss: Phase 1 real-pixel eval-roundtrip proxy; optional scorer-domain loss
   bolt_on_loc_budget: substrate_engineering
   no_op_detector_planned: exact old/new archive SHA plus inflate consumption
 
@@ -68,8 +70,13 @@ CLI surface (DO NOT INVENT FLAGS — verified by tests)
   --seg-target         7e-4 default
   --pose-target        1.7e-4 default
   --rho-init           1.0 default
+  --enable-scorer-domain-loss  train against differentiable PoseNet/SegNet
+                       score-domain terms instead of pixel-L1 scaffold
+  --segmentation-surrogate  soft_cosine|fisher_rao|sinkhorn (default sinkhorn)
+  --pixel-l1-anchor-weight  optional pixel-L1 anchor during score-domain training
+  --grad-clip-norm     optional global norm clip; remote score-domain default is 1.0
   --eval-every-epochs  100 default
-  --auth-eval          refused in Phase 1 while scorer loss/runtime are scaffold-only
+  --auth-eval          refused until hermetic runtime/export custody is closed
   --video-path         real contest video for non-smoke target pixels
   --target-pixels-path optional pre-extracted real target tensor
   --max-target-pairs   optional real-target pair cap for local debug
@@ -122,6 +129,7 @@ import struct
 import subprocess
 import sys
 import time
+import math
 from copy import deepcopy
 from dataclasses import asdict
 from pathlib import Path
@@ -161,6 +169,12 @@ from tac.differentiable_eval_roundtrip import (  # noqa: E402
     patch_upstream_yuv6_globally,
     unpatch_upstream_yuv6,
 )
+from tac.losses import (  # noqa: E402
+    SEGMENTATION_SURROGATE_FISHER_RAO,
+    SEGMENTATION_SURROGATE_SINKHORN,
+    SEGMENTATION_SURROGATE_SOFT_COSINE,
+    scorer_loss_terms_btchw,
+)
 
 
 CONTEST_AUTH_EVAL_RELATIVE = "experiments/contest_auth_eval.py"
@@ -169,10 +183,10 @@ INFLATE_ROUNDTRIP_CAMERA_HW = (874, 1164)
 EVAL_HW = (384, 512)
 PHASE1_SCAFFOLD_ONLY = True
 PHASE1_SCAFFOLD_BLOCKERS = (
-    "seg_pose_loss_is_constant_noop",
-    "make_smoke_target_is_synthetic_and_smoke_only",
-    "runtime_depends_on_repo_local_tac_modules",
-    "no_scorer_domain_training_or_exact_eval_custody",
+    "auth_eval_custody_not_wired",
+    "exact_cuda_score_not_run",
+    "no_op_runtime_consumption_exact_one_video_pending",
+    "state_dict_wire_format_not_rate_tightened",
 )
 
 
@@ -187,9 +201,10 @@ def refuse_phase1_scaffold_path(path_name: str) -> None:
     raise SystemExit(
         f"[t1] {path_name} refused: T1/Ballé Phase 1 is scaffold-only and "
         f"not dispatch/eval/promotable yet. blockers={blockers}. Use --smoke "
-        "only for local build verification; Phase 2 must wire real scorer "
-        "losses and a hermetic contest runtime before non-smoke/auth-eval/remote "
-        "work is allowed."
+        "only for local build verification. Non-smoke score-domain training "
+        "requires --enable-scorer-domain-loss plus an active remote dispatch "
+        "claim, but auth-eval and promotion remain blocked until the runtime is "
+        "hermetic and exact CUDA custody is wired."
     )
 
 
@@ -198,17 +213,15 @@ def refuse_phase1_scaffold_path(path_name: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-def eval_roundtrip_pixel_l1(
+def eval_roundtrip_decoded(
     decoded: torch.Tensor,
-    target_pixels: torch.Tensor,
     *,
     noise_std: float,
     enable_eval_roundtrip_in_training: bool = True,
 ) -> torch.Tensor:
-    """Proxy distortion that simulates the inflate roundtrip + uint8 cast.
+    """Return decoded frames after the differentiable inflate roundtrip.
 
     decoded: (B, 2, 3, H_eval, W_eval) in [0, 255] (sigmoid * 255)
-    target_pixels: same shape, [0, 255]
 
     Per CLAUDE.md "eval_roundtrip — non-negotiable", the proxy MUST simulate
     the contest's inflate→evaluate path unless an explicit ablation disables
@@ -218,7 +231,7 @@ def eval_roundtrip_pixel_l1(
          (bicubic up + bilinear down + STE uint8 round).
     """
     if not enable_eval_roundtrip_in_training:
-        return F.l1_loss(decoded, target_pixels)
+        return decoded
 
     B, P, C, H, W = decoded.shape
     flat = decoded.reshape(B * P, C, H, W)
@@ -232,8 +245,63 @@ def eval_roundtrip_pixel_l1(
         target_h=INFLATE_ROUNDTRIP_CAMERA_HW[0],
         target_w=INFLATE_ROUNDTRIP_CAMERA_HW[1],
     )
-    down = down.reshape(B, P, C, H, W)
-    return F.l1_loss(down, target_pixels)
+    return down.reshape(B, P, C, H, W)
+
+
+def eval_roundtrip_pixel_l1(
+    decoded: torch.Tensor,
+    target_pixels: torch.Tensor,
+    *,
+    noise_std: float,
+    enable_eval_roundtrip_in_training: bool = True,
+) -> torch.Tensor:
+    """Proxy pixel distortion after the PR #95-faithful eval roundtrip."""
+    decoded_rt = eval_roundtrip_decoded(
+        decoded,
+        noise_std=noise_std,
+        enable_eval_roundtrip_in_training=enable_eval_roundtrip_in_training,
+    )
+    return F.l1_loss(decoded_rt, target_pixels)
+
+
+def _grad_l2_norm(params: list[torch.nn.Parameter]) -> tuple[float, bool]:
+    """Return total grad L2 norm and whether every present grad is finite."""
+    total_sq = 0.0
+    saw_grad = False
+    for param in params:
+        grad = param.grad
+        if grad is None:
+            continue
+        saw_grad = True
+        if not torch.isfinite(grad).all().item():
+            return float("nan"), False
+        total_sq += float(grad.detach().double().pow(2).sum().item())
+    if not saw_grad:
+        return 0.0, True
+    return math.sqrt(total_sq), True
+
+
+def assert_score_domain_gradient_reachability(
+    *,
+    decoder_params: list[torch.nn.Parameter],
+    balle_main_params: list[torch.nn.Parameter],
+) -> dict[str, float]:
+    """Fail closed if scorer-domain loss did not reach trainable weights."""
+    decoder_norm, decoder_finite = _grad_l2_norm(decoder_params)
+    balle_norm, balle_finite = _grad_l2_norm(balle_main_params)
+    if not decoder_finite or not balle_finite:
+        raise RuntimeError(
+            "[t1] score-domain gradient reachability failed: non-finite gradient"
+        )
+    if decoder_norm <= 0.0 or balle_norm <= 0.0:
+        raise RuntimeError(
+            "[t1] score-domain gradient reachability failed: "
+            f"decoder_grad_l2={decoder_norm:.6g} balle_main_grad_l2={balle_norm:.6g}"
+        )
+    return {
+        "decoder_grad_l2": float(decoder_norm),
+        "balle_main_grad_l2": float(balle_norm),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -579,7 +647,7 @@ def build_archive_from_ema(
     members (not monolithic single-file) is justified by ``lane_class=
     substrate_engineering`` + parser_section_manifest legibility. Recorded
     in build_manifest.json::hnerv_parity_manifest::archive_grammar=
-    ``Phase1-monolithic-x-decoder-balle``.
+    ``Phase1-three-member-x-decoder-bin-balle-bin``.
     """
     import brotli
     import io
@@ -723,6 +791,43 @@ def _serialise_balle_strings(strings: object) -> bytes:
     return b"".join(parts)
 
 
+def _write_packet_local_runtime_modules(src: Path) -> None:
+    """Vendor the exact T1 runtime modules needed by inflate.
+
+    The contest packet must not search for the operator checkout at inflate
+    time. We therefore copy the narrow decoder/hyperprior runtime subset into
+    ``submission_dir/src/tac``. Third-party dependencies remain explicit in the
+    packet compiler contract: ``torch``, ``brotli``, and ``compressai``.
+    """
+
+    package_root = src / "tac"
+    runtime_pkg = package_root / "paradigm_delta_epsilon_zeta"
+    runtime_pkg.mkdir(parents=True, exist_ok=True)
+    (package_root / "__init__.py").write_text(
+        "\"\"\"Packet-local tac runtime subset for Phase 1 inflate.\"\"\"\n",
+        encoding="utf-8",
+    )
+    (runtime_pkg / "__init__.py").write_text(
+        "\"\"\"Packet-local PARADIGM-dezeta runtime modules.\"\"\"\n",
+        encoding="utf-8",
+    )
+
+    source_root = (
+        Path(__file__).resolve().parents[1]
+        / "src"
+        / "tac"
+        / "paradigm_delta_epsilon_zeta"
+    )
+    for name in ("decoder_128k.py", "balle_hyperprior.py"):
+        text = (source_root / name).read_text(encoding="utf-8")
+        if name == "balle_hyperprior.py":
+            text = text.replace(
+                "Install via `uv pip install compressai==1.2.8`.",
+                "Ensure compressai is present in the contest runtime environment.",
+            )
+        (runtime_pkg / name).write_text(text, encoding="utf-8")
+
+
 def _write_runtime(
     *,
     submission_dir: Path,
@@ -767,6 +872,7 @@ def _write_runtime(
     """
     src = submission_dir / "src"
     src.mkdir(exist_ok=True)
+    _write_packet_local_runtime_modules(src)
 
     # Per Q3+Q4: 3-positional-arg inflate.sh per upstream/submissions/baseline_fast/inflate.sh.
     # Per CLAUDE.md `check_shell_set_e_present`: set -euo pipefail.
@@ -911,20 +1017,10 @@ def _write_runtime(
     (src / "codec.py").write_text(codec_py)
 
     # The runtime model file embeds the same Decoder128K + Balle configs the
-    # trainer used so the runtime can re-instantiate identically.
+    # trainer used so the runtime can re-instantiate identically. It imports
+    # only from the packet-local `src/tac` subset emitted above, never from the
+    # operator checkout.
     model_py = (
-        "import sys\n"
-        "from pathlib import Path\n"
-        "def _find_repo_src():\n"
-        "    here = Path(__file__).resolve()\n"
-        "    for parent in here.parents:\n"
-        "        candidate = parent / 'src' / 'tac'\n"
-        "        if candidate.exists():\n"
-        "            return parent / 'src'\n"
-        "    raise RuntimeError('repo-local tac runtime dependency not found')\n"
-        "REPO_SRC = _find_repo_src()\n"
-        "if str(REPO_SRC) not in sys.path:\n"
-        "    sys.path.insert(0, str(REPO_SRC))\n"
         "from tac.paradigm_delta_epsilon_zeta.decoder_128k import Decoder128K, Decoder128KConfig\n"
         "from tac.paradigm_delta_epsilon_zeta.balle_hyperprior import BalleHyperpriorWrapper, BalleHyperpriorConfig\n"
         f"_DEC_CFG = Decoder128KConfig(latent_dim={decoder_config.latent_dim}, base_channels={decoder_config.base_channels})\n"
@@ -950,6 +1046,7 @@ def write_provenance(
     completed_at_utc: str | None,
     t13_bit_reallocation: dict | None = None,
     t19_adaptive_rho: dict | None = None,
+    score_domain_gradcheck: dict[str, float] | None = None,
 ) -> Path:
     p = {
         "schema_version": 1,
@@ -967,7 +1064,24 @@ def write_provenance(
         "encoder_provenance": encoder_provenance,
         "decoder_param_count": n_decoder_params,
         "balle_param_count": n_balle_params,
-        "score_band": "[predicted; Phase 1 scaffold; not yet empirical]",
+        "score_band": (
+            "[predicted; Phase 1 scorer-domain training; not yet empirical]"
+            if getattr(args, "enable_scorer_domain_loss", False)
+            else "[predicted; Phase 1 scaffold; not yet empirical]"
+        ),
+        "score_domain_loss": {
+            "enabled": bool(getattr(args, "enable_scorer_domain_loss", False)),
+            "segmentation_surrogate": getattr(args, "segmentation_surrogate", None),
+            "segmentation_temperature": getattr(args, "segmentation_temperature", None),
+            "fisher_rao_eps": getattr(args, "fisher_rao_eps", None),
+            "pixel_l1_anchor_weight": getattr(args, "pixel_l1_anchor_weight", None),
+            "first_batch_gradcheck": score_domain_gradcheck,
+            "trainable_signal": (
+                "PoseNet/SegNet tensor losses are wired into the ADMM residuals"
+                if getattr(args, "enable_scorer_domain_loss", False)
+                else "pixel-L1 scaffold; seg/pose residuals are constants"
+            ),
+        },
         # T13 / T19 wire-in surfaces (memo
         # feedback_t11_t13_t19_free_lateral_leaps_landed_20260509). Both
         # default to None when the corresponding --enable flag is OFF
@@ -1140,6 +1254,62 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--pose-target", type=float, default=1.7e-4)
     parser.add_argument("--rho-init", type=float, default=1.0)
     parser.add_argument("--noise-std", type=float, default=0.5)
+    parser.add_argument(
+        "--enable-scorer-domain-loss",
+        action="store_true",
+        default=False,
+        help=(
+            "Train the Phase 1 decoder/hyperprior against differentiable "
+            "PoseNet/SegNet scorer-domain terms instead of the historical "
+            "pixel-L1 proxy. This removes the scaffold-only constant seg/pose "
+            "placeholders and wires the ADMM residuals to real scorer outputs."
+        ),
+    )
+    parser.add_argument(
+        "--segmentation-surrogate",
+        choices=[
+            SEGMENTATION_SURROGATE_SOFT_COSINE,
+            SEGMENTATION_SURROGATE_FISHER_RAO,
+            SEGMENTATION_SURROGATE_SINKHORN,
+        ],
+        default=SEGMENTATION_SURROGATE_SINKHORN,
+        help=(
+            "SegNet differentiable surrogate used when "
+            "--enable-scorer-domain-loss is set. Default sinkhorn follows the "
+            "T7/T8/T11 disambiguator verdict: T8 alone for Phase 1."
+        ),
+    )
+    parser.add_argument(
+        "--segmentation-temperature",
+        type=float,
+        default=1.0,
+        help="Softmax temperature for scorer-domain SegNet surrogate.",
+    )
+    parser.add_argument(
+        "--fisher-rao-eps",
+        type=float,
+        default=1e-6,
+        help="Numerical epsilon used by the fisher_rao SegNet surrogate.",
+    )
+    parser.add_argument(
+        "--pixel-l1-anchor-weight",
+        type=float,
+        default=0.0,
+        help=(
+            "Optional auxiliary pixel-L1 anchor added to scorer-domain loss. "
+            "Default 0.0 so score-domain terms are primary."
+        ),
+    )
+    parser.add_argument(
+        "--grad-clip-norm",
+        type=float,
+        default=0.0,
+        help=(
+            "Optional global gradient norm clip after backward. 0 disables. "
+            "Recommended for scorer-domain CUDA runs because early random "
+            "decoder residuals can be large."
+        ),
+    )
     parser.add_argument("--eval-every-epochs", type=int, default=100)
     parser.add_argument("--auth-eval", action="store_true", default=False)
     parser.add_argument("--no-auth-eval", dest="auth_eval", action="store_false")
@@ -1340,7 +1510,7 @@ def main() -> int:
     args = parse_args()
     if args.auth_eval:
         refuse_phase1_scaffold_path("--auth-eval")
-    if not args.smoke and PHASE1_SCAFFOLD_ONLY:
+    if not args.smoke and PHASE1_SCAFFOLD_ONLY and not args.enable_scorer_domain_loss:
         refuse_phase1_scaffold_path("non-smoke training")
     if args.allow_missing_canonical_a1 and not args.smoke:
         raise SystemExit(
@@ -1349,6 +1519,31 @@ def main() -> int:
         )
     if args.max_target_pairs is not None and args.max_target_pairs <= 0:
         raise SystemExit("[t1] --max-target-pairs must be positive when set")
+    if args.enable_scorer_domain_loss and not args.enable_eval_roundtrip_in_training:
+        raise SystemExit(
+            "[t1] --enable-scorer-domain-loss requires "
+            "--enable-eval-roundtrip-in-training. Score-domain training without "
+            "the PR #95 eval-roundtrip path recreates the known proxy/auth gap."
+        )
+    if args.enable_scorer_domain_loss and not args.enable_differentiable_yuv6:
+        raise SystemExit(
+            "[t1] --enable-scorer-domain-loss requires "
+            "--enable-differentiable-yuv6. Disabling YUV6 differentiability in "
+            "score-domain mode recreates the PR #95 PoseNet-gradient bug."
+        )
+    if args.enable_scorer_domain_loss and args.epochs <= 0:
+        raise SystemExit(
+            "[t1] --enable-scorer-domain-loss requires --epochs > 0 so the "
+            "first-batch score-domain gradient reachability guard can run."
+        )
+    if args.pixel_l1_anchor_weight < 0:
+        raise SystemExit("[t1] --pixel-l1-anchor-weight must be non-negative")
+    if args.grad_clip_norm < 0:
+        raise SystemExit("[t1] --grad-clip-norm must be non-negative")
+    if args.segmentation_temperature <= 0:
+        raise SystemExit("[t1] --segmentation-temperature must be positive")
+    if not (0.0 < args.fisher_rao_eps < 1e-3):
+        raise SystemExit("[t1] --fisher-rao-eps must be in (0, 1e-3)")
     args.output_dir.mkdir(parents=True, exist_ok=True)
     started_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     _seed_everything(args.seed)
@@ -1381,13 +1576,10 @@ def main() -> int:
         "score_claim": False,
         "binary_forensics_dossier": ".omx/research/hnerv_leaderboard_binary_forensics_dossier_20260509.md",
         "note": (
-            "Phase 1 trainer currently uses pixel-L1 distortion (no scorer "
-            "forwards in inner loop), so the YUV6 monkey-patch primarily "
-            "becomes load-bearing once Phase 2 wires real PoseNet/SegNet "
-            "forwards into the inner loop. Activated proactively per "
-            "CLAUDE.md 'Eval-roundtrip + autograd-YUV6 in training inner "
-            "loop' to make pose-gradient flow available to any subagent "
-            "extending the trainer."
+            "When --enable-scorer-domain-loss is set, Phase 1 forwards "
+            "through PoseNet/SegNet in the training inner loop, making the "
+            "YUV6 patch load-bearing immediately. Without that flag, this "
+            "remains a pixel-L1 scaffold/debug run."
         ),
     }
     (args.output_dir / "pr95_replication_provenance.json").write_text(
@@ -1447,6 +1639,26 @@ def main() -> int:
     latents = latents.to(device)
     target_pixels = target_pixels.to(device)
 
+    posenet = None
+    segnet = None
+    if args.enable_scorer_domain_loss:
+        from tac.scorer import load_differentiable_scorers  # noqa: WPS433
+
+        posenet, segnet = load_differentiable_scorers(
+            REPO_ROOT / "upstream",
+            device=device,
+        )
+        posenet.eval()
+        segnet.eval()
+        for scorer_module in (posenet, segnet):
+            for param in scorer_module.parameters():
+                param.requires_grad_(False)
+        print(
+            f"[t1] scorer-domain loss enabled: surrogate="
+            f"{args.segmentation_surrogate}; pixel_l1_anchor_weight="
+            f"{args.pixel_l1_anchor_weight}"
+        )
+
     # Build modules.
     decoder_config = Decoder128KConfig(latent_dim=int(latents.shape[1]))
     decoder = build_decoder_128k(decoder_config).to(device)
@@ -1458,8 +1670,15 @@ def main() -> int:
     print(f"[t1] decoder params: {n_decoder_params:,}; balle params: {n_balle_params:,}")
 
     # Optimisers (CompressAI requires SEPARATE aux optimiser).
-    main_params = [p for n, p in list(decoder.named_parameters()) + list(balle.named_parameters())
-                   if "entropy_bottleneck" not in n or "quantiles" not in n]
+    decoder_trainable_params = [p for p in decoder.parameters() if p.requires_grad]
+    balle_main_trainable_params = [
+        p for n, p in balle.named_parameters()
+        if p.requires_grad and ("entropy_bottleneck" not in n or "quantiles" not in n)
+    ]
+    main_params = [
+        *decoder_trainable_params,
+        *balle_main_trainable_params,
+    ]
     aux_params = [p for n, p in balle.named_parameters() if "quantiles" in n]
     optim_main = torch.optim.Adam(
         [p for p in main_params if p.requires_grad], lr=args.learning_rate
@@ -1535,6 +1754,7 @@ def main() -> int:
 
     best_proxy = float("inf")
     history = []
+    score_domain_gradcheck: dict[str, float] | None = None
 
     for epoch in range(epochs):
         decoder.train()
@@ -1550,25 +1770,67 @@ def main() -> int:
 
             balle_out = balle(y)
             decoded = decoder(balle_out["y_hat"])
-            distortion = eval_roundtrip_pixel_l1(
-                decoded,
-                tgt,
-                noise_std=args.noise_std,
-                enable_eval_roundtrip_in_training=args.enable_eval_roundtrip_in_training,
-            )
-            # Per-pair seg/pose targets approximated as constant (Phase 2 will
-            # plug real SegNet/PoseNet forwards under no-grad so the
-            # Lagrangian sees real signal).
-            seg_loss = torch.tensor(args.seg_target, device=device)
-            pose_loss = torch.tensor(args.pose_target, device=device)
+            if args.enable_scorer_domain_loss:
+                if posenet is None or segnet is None:  # pragma: no cover - defensive
+                    raise RuntimeError("scorer-domain loss requested without loaded scorers")
+                decoded_rt = eval_roundtrip_decoded(
+                    decoded,
+                    noise_std=args.noise_std,
+                    enable_eval_roundtrip_in_training=args.enable_eval_roundtrip_in_training,
+                )
+                scorer_distortion, pose_loss, seg_loss = scorer_loss_terms_btchw(
+                    decoded_rt,
+                    tgt,
+                    posenet,
+                    segnet,
+                    segmentation_surrogate=args.segmentation_surrogate,
+                    segmentation_temperature=args.segmentation_temperature,
+                    fisher_rao_eps=args.fisher_rao_eps,
+                )
+                if args.pixel_l1_anchor_weight > 0:
+                    pixel_anchor = F.l1_loss(decoded_rt, tgt)
+                    distortion = scorer_distortion + args.pixel_l1_anchor_weight * pixel_anchor
+                else:
+                    distortion = scorer_distortion
+            else:
+                distortion = eval_roundtrip_pixel_l1(
+                    decoded,
+                    tgt,
+                    noise_std=args.noise_std,
+                    enable_eval_roundtrip_in_training=args.enable_eval_roundtrip_in_training,
+                )
+                # Scaffold/debug mode only. Real score-lowering non-smoke runs
+                # must use --enable-scorer-domain-loss so these ADMM residuals
+                # are actual PoseNet/SegNet tensors, not constants.
+                seg_loss = torch.tensor(args.seg_target, device=device)
+                pose_loss = torch.tensor(args.pose_target, device=device)
             res = coord.step(
                 distortion=distortion,
                 rate_bits=balle_out["rate_total_bits"],
                 seg_loss=seg_loss,
                 pose_loss=pose_loss,
             )
+            if not torch.isfinite(res.augmented_lagrangian).all():
+                raise RuntimeError(
+                    "[t1] non-finite augmented Lagrangian; refusing to update weights"
+                )
             optim_main.zero_grad()
             res.augmented_lagrangian.backward()
+            if args.grad_clip_norm > 0:
+                if args.enable_scorer_domain_loss and score_domain_gradcheck is None:
+                    score_domain_gradcheck = assert_score_domain_gradient_reachability(
+                        decoder_params=decoder_trainable_params,
+                        balle_main_params=balle_main_trainable_params,
+                    )
+                torch.nn.utils.clip_grad_norm_(
+                    [p for p in main_params if p.requires_grad],
+                    max_norm=float(args.grad_clip_norm),
+                )
+            elif args.enable_scorer_domain_loss and score_domain_gradcheck is None:
+                score_domain_gradcheck = assert_score_domain_gradient_reachability(
+                    decoder_params=decoder_trainable_params,
+                    balle_main_params=balle_main_trainable_params,
+                )
             optim_main.step()
 
             if optim_aux is not None:
@@ -1619,6 +1881,12 @@ def main() -> int:
                 epoch=epoch + 1,
                 best_proxy_score=best_proxy,
             )
+
+    if args.enable_scorer_domain_loss and score_domain_gradcheck is None:
+        raise RuntimeError(
+            "[t1] score-domain gradcheck missing after training loop; refusing "
+            "archive emission because scorer-domain gradients were never proven"
+        )
 
     # Build the EMA archive + maybe-run auth eval.
     archive_path = build_archive_from_ema(
@@ -1671,6 +1939,10 @@ def main() -> int:
                 else "[legacy adaptive-ρ backend]"
             ),
         }
+    if score_domain_gradcheck is not None:
+        (args.output_dir / "score_domain_gradcheck.json").write_text(
+            json.dumps(score_domain_gradcheck, indent=2)
+        )
     write_provenance(
         output_dir=args.output_dir,
         args=args,
@@ -1681,6 +1953,7 @@ def main() -> int:
         completed_at_utc=completed_at,
         t13_bit_reallocation=t13_report,
         t19_adaptive_rho=t19_summary,
+        score_domain_gradcheck=score_domain_gradcheck,
     )
     (args.output_dir / "training_history.json").write_text(json.dumps(history, indent=2))
     (args.output_dir / "auth_eval_summary.json").write_text(

@@ -33,7 +33,7 @@ fail closed on:
 * Scorer modifications (``PoseNet`` / ``SegNet`` / ``rgb_to_yuv6`` patched at
   inflate time per the strict-scorer-rule).
 * External state (any path outside the packet root).
-* Network dependencies in ``inflate.sh``.
+* Network/package-install dependencies in ``inflate.sh`` and runtime Python.
 * Unsupported ZIP features (only ``ZIP_STORED`` + ``ZIP_DEFLATED`` allowed).
 * Parser divergence (decoder must produce bit-exact output to the PR101
   polymorphic codec port — verified via member SHA-256 comparison in identity
@@ -85,8 +85,10 @@ Check #125):
 """
 from __future__ import annotations
 
+import ast
 import dataclasses
 import datetime as _dt
+import io
 import json
 import re
 import shutil
@@ -184,6 +186,49 @@ FORBIDDEN_NETWORK_TOKENS: tuple[str, ...] = (
     "'uv', 'pip', 'install'",
     '"uv", "pip", "install"',
     "git clone",
+)
+
+#: Python modules that make an inflate runtime non-hermetic. These are kept
+#: separate from ``FORBIDDEN_NETWORK_TOKENS`` because Python code can hide
+#: network/package-install behavior behind imports, aliases, or subprocess
+#: argument lists that do not look like shell snippets.
+FORBIDDEN_PYTHON_RUNTIME_MODULES: tuple[str, ...] = (
+    "aiohttp",
+    "ensurepip",
+    "ftplib",
+    "http.client",
+    "httpx",
+    "pip",
+    "pip._internal",
+    "requests",
+    "socket",
+    "urllib",
+    "urllib.request",
+    "urllib3",
+)
+
+FORBIDDEN_PYTHON_RUNTIME_CALLS: tuple[str, ...] = (
+    "ensurepip.bootstrap",
+    "pip.main",
+    "urlopen",
+    "urlretrieve",
+)
+
+FORBIDDEN_PYTHON_COMMAND_SEQUENCES: tuple[tuple[str, ...], ...] = (
+    ("curl",),
+    ("git", "clone"),
+    ("pip", "install"),
+    ("uv", "pip", "install"),
+    ("uv", "run", "--with"),
+    ("wget",),
+)
+
+FORBIDDEN_REPO_LOCAL_RUNTIME_TOKENS: tuple[str, ...] = (
+    "_find_repo_src",
+    "repo-local tac runtime dependency",
+    "for parent in here.parents",
+    "parent / 'src' / 'tac'",
+    'parent / "src" / "tac"',
 )
 
 #: HNeRV-parity 8-field manifest declaration required per CLAUDE.md "HNeRV
@@ -381,6 +426,189 @@ def _scan_text_for_forbidden(
     return hits
 
 
+def _python_module_is_forbidden(module: str) -> bool:
+    return any(
+        module == forbidden or module.startswith(f"{forbidden}.")
+        for forbidden in FORBIDDEN_PYTHON_RUNTIME_MODULES
+    )
+
+
+def _qualified_name(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        prefix = _qualified_name(node.value)
+        if prefix:
+            return f"{prefix}.{node.attr}"
+        return node.attr
+    return None
+
+
+def _normalise_command_token(token: str) -> str:
+    lowered = token.strip().lower()
+    if "/" in lowered:
+        lowered = lowered.rsplit("/", 1)[-1]
+    return lowered
+
+
+def _contains_command_sequence(
+    tokens: list[str],
+    pattern: tuple[str, ...],
+) -> bool:
+    if len(pattern) > len(tokens):
+        return False
+    for start in range(0, len(tokens) - len(pattern) + 1):
+        if tuple(tokens[start : start + len(pattern)]) == pattern:
+            return True
+    return False
+
+
+def _python_literal_strings(
+    node: ast.AST,
+    constants: dict[str, tuple[str, ...]],
+) -> tuple[str, ...]:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return (node.value,)
+    if isinstance(node, ast.Name):
+        return constants.get(node.id, ())
+    if isinstance(node, (ast.List, ast.Tuple)):
+        out: list[str] = []
+        for elt in node.elts:
+            if isinstance(elt, ast.Starred):
+                out.extend(_python_literal_strings(elt.value, constants))
+            else:
+                out.extend(_python_literal_strings(elt, constants))
+        return tuple(out)
+    return ()
+
+
+def _python_import_literal(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    return None
+
+
+def _scan_python_ast_for_hermeticity(
+    tree: ast.AST,
+    *,
+    label: str,
+) -> list[str]:
+    blockers: list[str] = []
+    constants: dict[str, tuple[str, ...]] = {}
+
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Assign, ast.AnnAssign)):
+            value = node.value
+            if value is None:
+                continue
+            resolved = _python_literal_strings(value, constants)
+            if not resolved:
+                continue
+            for token in resolved:
+                if token.startswith(("http://", "https://")):
+                    blockers.append(
+                        f"{label}: Python runtime literal contains external URL"
+                    )
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            for target in targets:
+                if isinstance(target, ast.Name):
+                    constants[target.id] = resolved
+            continue
+
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if _python_module_is_forbidden(alias.name):
+                    blockers.append(
+                        f"{label}: imports forbidden Python runtime module "
+                        f"{alias.name!r}"
+                    )
+            continue
+
+        if isinstance(node, ast.ImportFrom):
+            module = node.module or ""
+            candidates = [module]
+            candidates.extend(
+                f"{module}.{alias.name}" if module else alias.name
+                for alias in node.names
+            )
+            for candidate in candidates:
+                if candidate and _python_module_is_forbidden(candidate):
+                    blockers.append(
+                        f"{label}: imports forbidden Python runtime module "
+                        f"{candidate!r}"
+                    )
+                    break
+            continue
+
+        if not isinstance(node, ast.Call):
+            continue
+
+        call_name = _qualified_name(node.func) or ""
+        if any(
+            call_name == forbidden or call_name.endswith(f".{forbidden}")
+            for forbidden in FORBIDDEN_PYTHON_RUNTIME_CALLS
+        ):
+            blockers.append(
+                f"{label}: calls forbidden Python runtime API {call_name!r}"
+            )
+
+        import_target = None
+        if call_name in {"__import__", "importlib.import_module"} and node.args:
+            import_target = _python_import_literal(node.args[0])
+        if import_target and _python_module_is_forbidden(import_target):
+            blockers.append(
+                f"{label}: dynamically imports forbidden Python runtime module "
+                f"{import_target!r}"
+            )
+
+        literal_tokens: list[str] = []
+        for arg in node.args:
+            literal_tokens.extend(_python_literal_strings(arg, constants))
+        for keyword in node.keywords:
+            if keyword.value is not None:
+                literal_tokens.extend(
+                    _python_literal_strings(keyword.value, constants)
+                )
+
+        normalised_tokens: list[str] = []
+        for token in literal_tokens:
+            normalised_tokens.extend(
+                _normalise_command_token(part)
+                for part in token.split()
+                if part.strip()
+            )
+        for pattern in FORBIDDEN_PYTHON_COMMAND_SEQUENCES:
+            if _contains_command_sequence(normalised_tokens, pattern):
+                blockers.append(
+                    f"{label}: Python runtime command contains forbidden "
+                    f"sequence {' '.join(pattern)!r}"
+                )
+        for token in literal_tokens:
+            if token.startswith(("http://", "https://")):
+                blockers.append(
+                    f"{label}: Python runtime literal contains external URL"
+                )
+
+    return sorted(set(blockers))
+
+
+def _scan_python_runtime_hermeticity(py_file: Path, *, label: str) -> list[str]:
+    text = py_file.read_text(encoding="utf-8", errors="replace")
+    try:
+        tree = ast.parse(text, filename=py_file.as_posix())
+    except SyntaxError as exc:
+        return [f"{label}: Python syntax parse failed: {exc.msg}"]
+    blockers = _scan_python_ast_for_hermeticity(tree, label=label)
+    blockers.extend(
+        _scan_text_for_forbidden(
+            text,
+            forbidden_tokens=FORBIDDEN_REPO_LOCAL_RUNTIME_TOKENS,
+            label=label,
+        )
+    )
+    return blockers
+
+
 def _bash_n_check(inflate_sh: Path) -> dict[str, Any]:
     """Round 2 Contrarian MEDIUM fix: verify inflate.sh syntactic validity
     via ``bash -n`` (parse-only). Catches missing fi/done/'' before the
@@ -510,6 +738,53 @@ def _scan_inflate_py(inflate_py: Path) -> list[str]:
             label="inflate.py",
         )
     )
+    blockers.extend(_scan_python_runtime_hermeticity(inflate_py, label="inflate.py"))
+    return blockers
+
+
+def _scan_runtime_python_surfaces(packet_dir: Path) -> list[str]:
+    blockers: list[str] = []
+    for py_file in sorted(packet_dir.rglob("*.py")):
+        if "__pycache__" in py_file.parts:
+            continue
+        if py_file == packet_dir / "inflate.py":
+            continue
+        rel = py_file.relative_to(packet_dir).as_posix()
+        blockers.extend(_scan_python_runtime_hermeticity(py_file, label=rel))
+    return blockers
+
+
+def _scan_runtime_shell_surfaces(packet_dir: Path) -> list[str]:
+    """Scan non-inflate shell helpers for hermetic-runtime violations."""
+    blockers: list[str] = []
+    for sh_file in sorted(packet_dir.rglob("*.sh")):
+        if "__pycache__" in sh_file.parts:
+            continue
+        if sh_file == packet_dir / "inflate.sh":
+            continue
+        rel = sh_file.relative_to(packet_dir).as_posix()
+        text = sh_file.read_text(encoding="utf-8", errors="replace")
+        blockers.extend(
+            _scan_text_for_forbidden(
+                text,
+                forbidden_tokens=FORBIDDEN_NETWORK_TOKENS,
+                label=rel,
+            )
+        )
+        blockers.extend(
+            _scan_text_for_forbidden(
+                text,
+                forbidden_tokens=FORBIDDEN_INFLATE_TOKENS,
+                label=rel,
+            )
+        )
+        blockers.extend(
+            _scan_text_for_forbidden(
+                text,
+                forbidden_tokens=FORBIDDEN_EXTERNAL_STATE_PATTERNS,
+                label=rel,
+            )
+        )
     return blockers
 
 
@@ -520,15 +795,26 @@ def _undeclared_python_imports_in_runtime_tree(
     """Round 1 Selfcomp MEDIUM fix: scan every .py file in the runtime tree
     for top-level ``import X`` / ``from X import ...`` and emit a hint when
     third-party deps appear that are NOT in the declared dep closure. Stdlib
-    + repo-local imports are tolerated.
+    + packet-local imports are tolerated. Repo-local ``tac`` imports are not:
+    a contest packet must carry any needed runtime subset under ``src/``.
     """
-    stdlib_or_local_prefixes = {
-        "sys", "os", "io", "re", "json", "pickle", "struct", "argparse",
+    local_top_level_modules = {"model", "codec"}
+    for base in (packet_dir, packet_dir / "src"):
+        if not base.is_dir():
+            continue
+        for child in base.iterdir():
+            if child.name.startswith("__"):
+                continue
+            if child.is_dir() and (child / "__init__.py").is_file():
+                local_top_level_modules.add(child.name)
+            elif child.is_file() and child.suffix == ".py":
+                local_top_level_modules.add(child.stem)
+
+    stdlib_prefixes = {
+        "__future__", "sys", "os", "io", "re", "json", "pickle", "struct", "argparse",
         "pathlib", "typing", "dataclasses", "datetime", "stat", "shutil",
         "hashlib", "zipfile", "subprocess", "math", "warnings", "abc",
         "collections", "functools", "itertools", "enum", "contextlib",
-        # repo-local modules (resolved via sys.path insert in inflate.py)
-        "model", "codec", "tac",
     }
     found: list[str] = []
     declared_set = {dep.lower() for dep in declared_dep_closure}
@@ -542,7 +828,7 @@ def _undeclared_python_imports_in_runtime_tree(
             if not match:
                 continue
             module = match.group(1)
-            if module in stdlib_or_local_prefixes:
+            if module in stdlib_prefixes or module in local_top_level_modules:
                 continue
             if module.lower() in declared_set:
                 continue
@@ -648,12 +934,11 @@ def _build_parser_section_manifest(
     member offsets, lengths, names, SHAs, entropy estimates, and section
     boundaries.
 
-    For Phase 1 packets the archive is a single ``x`` member containing the
-    Ballé strings + decoder/balle state-dict blobs. The trainer emits the
-    intra-member section breakdown to ``archive_section_manifest.json``
-    when present; this manifest is FOLDED IN here so the parser-section
-    manifest reflects the true HNeRV-cluster grammar (not just the ZIP
-    member count) — Round 2 Shannon HIGH fix.
+    Phase 1 packets use three deterministic ZIP members: ``x`` for Ballé
+    strings, ``decoder.bin`` for the decoder state dict, and ``balle.bin`` for
+    the hyperprior state dict. The trainer may also emit
+    ``archive_section_manifest.json``; when present, this manifest is folded in
+    as additional parser metadata.
     """
     out: dict[str, Any] = {
         "schema_version": "phase1_parser_section_manifest.v1",
@@ -664,9 +949,9 @@ def _build_parser_section_manifest(
         "offsets": "see ZIP central directory; deterministic via DETERMINISTIC_ZIP_DATE_TIME",
         "entropy_estimates": "deferred to trainer's archive_section_manifest.json (Phase 2 byte-tightening)",
         "old_new_section_boundaries": (
-            "Phase 1 packets share one ``x`` member; section boundaries inside ``x`` "
-            "(uint32 strings_len + strings + uint32 dec_len + decoder + uint32 balle_len + balle) "
-            "are emitted in provenance only"
+            "Phase 1 packet boundary is the deterministic three-member ZIP "
+            "grammar: x / decoder.bin / balle.bin. Intra-member offsets are "
+            "not used until the Phase 2 deterministic tensor wire format."
         ),
         "intra_member_section_manifest_present": False,
     }
@@ -695,7 +980,7 @@ def _build_hnerv_parity_manifest(
 ) -> dict[str, Any]:
     """Emit the 8-field HNeRV parity manifest for the lane registry / preflight."""
     return {
-        "archive_grammar": "Phase1-monolithic-x-with-Balle-side-info",
+        "archive_grammar": "Phase1-three-member-x-decoder-bin-balle-bin",
         "parser_section_manifest": "tac.phase1_packet_compiler._build_parser_section_manifest",
         "inflate_runtime_loc_budget": 100,
         "inflate_runtime_loc_actual": inflate_sh_loc,
@@ -812,9 +1097,8 @@ def _verify_runtime_consumes_payload_bytes_executable(
 
     1. Reads ``archive.zip`` byte content.
     2. Computes a SHA-256 reference fingerprint of all FILE outputs of a
-       reference inflate run (best-effort: tries python ``inflate.py`` with
-       the archive piped through a temporary mirrored archive_dir alongside
-       a writable inflated_dir).
+       reference inflate run through the contest ``inflate.sh`` three-argument
+       contract with a non-empty ``video_names`` file.
     3. Mutates a single non-trivial byte in a copy of the archive.
     4. Re-runs the same inflate.py against the mutated archive into a
        SECOND inflated_dir.
@@ -836,11 +1120,9 @@ def _verify_runtime_consumes_payload_bytes_executable(
     """
     import shutil
     import subprocess
-    import sys
-
-    inflate_py = packet_dir / "inflate.py"
-    if not inflate_py.is_file():
-        return False, "inflate_py_missing"
+    inflate_sh = packet_dir / "inflate.sh"
+    if not inflate_sh.is_file():
+        return False, "inflate_sh_missing"
     if not archive_path.is_file():
         return False, "archive_missing"
     try:
@@ -859,10 +1141,48 @@ def _verify_runtime_consumes_payload_bytes_executable(
         return False, f"smoke_dir_setup_failed:{exc}"
 
     try:
-        # Reference run: archive_dir contains the original archive.zip.
+        def _materialise_archive_dir(
+            archive_dir: Path,
+            *,
+            archive_zip_bytes: bytes,
+            member_payload_mutation: bool,
+        ) -> None:
+            """Write archive.zip plus best-effort extracted member files.
+
+            Most contest runtimes read ``archive.zip``. A few minimal test
+            fixtures read raw member files from ``archive_dir``. Materialising
+            both surfaces keeps the smoke faithful while still detecting no-op
+            runtimes in simple fixtures.
+            """
+
+            archive_dir.mkdir(parents=True)
+            (archive_dir / "archive.zip").write_bytes(archive_zip_bytes)
+            try:
+                with zipfile.ZipFile(io.BytesIO(archive_bytes), "r") as zf:
+                    names = sorted(zf.namelist())
+                    for idx, name in enumerate(names):
+                        if name.endswith("/"):
+                            continue
+                        payload = bytearray(zf.read(name))
+                        if member_payload_mutation and idx == 0 and payload:
+                            mutate_at = len(payload) // 2
+                            payload[mutate_at] = (payload[mutate_at] ^ 0xFF) & 0xFF
+                        dst = archive_dir / name
+                        dst.parent.mkdir(parents=True, exist_ok=True)
+                        dst.write_bytes(bytes(payload))
+            except (zipfile.BadZipFile, OSError, RuntimeError):
+                # The archive.zip path remains available; runtimes that use the
+                # canonical ZIP surface will still be tested.
+                return
+
+        # Reference run: archive_dir contains the original archive.zip and raw
+        # member files for fixtures that use a direct member surface.
         ref_archive_dir = smoke_dir / "ref" / "archive_dir"
-        ref_archive_dir.mkdir(parents=True)
-        (ref_archive_dir / "archive.zip").write_bytes(archive_bytes)
+        _materialise_archive_dir(
+            ref_archive_dir,
+            archive_zip_bytes=archive_bytes,
+            member_payload_mutation=False,
+        )
         ref_inflated = smoke_dir / "ref" / "inflated"
         ref_inflated.mkdir(parents=True)
 
@@ -874,23 +1194,24 @@ def _verify_runtime_consumes_payload_bytes_executable(
         mutated_bytes = bytearray(archive_bytes)
         mutated_bytes[offset] = (mutated_bytes[offset] ^ 0xFF) & 0xFF
         mut_archive_dir = smoke_dir / "mut" / "archive_dir"
-        mut_archive_dir.mkdir(parents=True)
-        (mut_archive_dir / "archive.zip").write_bytes(bytes(mutated_bytes))
+        _materialise_archive_dir(
+            mut_archive_dir,
+            archive_zip_bytes=bytes(mutated_bytes),
+            member_payload_mutation=True,
+        )
         mut_inflated = smoke_dir / "mut" / "inflated"
         mut_inflated.mkdir(parents=True)
 
-        # Empty video-names file (the contest signature is positional;
-        # inflate.py implementations typically accept zero names by reading
-        # archive contents directly).
+        # Non-empty video-names file: the smoke must exercise the contest
+        # per-video output path, not an empty-list shortcut.
         names_file = smoke_dir / "video_names.txt"
-        names_file.write_text("", encoding="utf-8")
+        names_file.write_text("0.mkv\n", encoding="utf-8")
 
         def _run_inflate(archive_dir: Path, inflated_dir: Path) -> int:
             try:
                 proc = subprocess.run(
                     [
-                        sys.executable,
-                        str(inflate_py),
+                        str(inflate_sh),
                         str(archive_dir),
                         str(inflated_dir),
                         str(names_file),
@@ -1220,6 +1541,12 @@ def _finalize_packet_result(
     runtime_files = _runtime_tree_files(output_dir)
     if not runtime_files:
         blockers.append("runtime_tree_empty_no_inflate_runtime_custody")
+    for row in runtime_files:
+        if not row.get("mode_matches_expected", False):
+            blockers.append(
+                "runtime_file_mode_mismatch:"
+                f"{row['relpath']}:mode={row['mode']}:expected={row['expected_mode']}"
+            )
     runtime_tree_sha = _runtime_tree_sha256(runtime_files)
 
     inflate_sh_info: dict[str, Any] = {}
@@ -1239,6 +1566,9 @@ def _finalize_packet_result(
     else:
         py_blockers = _scan_inflate_py(inflate_py)
         blockers.extend(py_blockers)
+
+    blockers.extend(_scan_runtime_python_surfaces(output_dir))
+    blockers.extend(_scan_runtime_shell_surfaces(output_dir))
 
     # Round 1 Selfcomp MEDIUM fix: scan runtime tree for undeclared third-
     # party imports. Catches the case where the inflate.py imports e.g.
@@ -1406,7 +1736,7 @@ def compile_phase1_packet(
     mode: CompilerMode = "identity",
     target_mode: TargetMode = "contest_one_video_replay",
     runtime_dep_closure: Iterable[str] = ("torch", "brotli", "compressai"),
-    export_format: str = "monolithic_single_file_x_with_balle_side_info",
+    export_format: str = "phase1_three_member_x_decoder_bin_balle_bin",
     bolt_on_loc_budget: int = 400,
     allow_existing_output_dir: bool = False,
     score_affecting_payload_changed: bool = False,
@@ -1597,6 +1927,7 @@ __all__ = [
     "FORBIDDEN_EXTERNAL_STATE_PATTERNS",
     "FORBIDDEN_INFLATE_TOKENS",
     "FORBIDDEN_NETWORK_TOKENS",
+    "FORBIDDEN_PYTHON_RUNTIME_MODULES",
     "HNERV_PARITY_FIELDS",
     "Phase1PacketCompilerError",
     "Phase1PacketResult",

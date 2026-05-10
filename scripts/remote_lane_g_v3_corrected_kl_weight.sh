@@ -149,10 +149,12 @@ print(f'OK: {len(used)} flags all real')
 "
 
 log "=== Stage 1: rebuild full-res masks (same as Lane A baseline) ==="
+set +e
 "$PYBIN" experiments/build_baseline_archive.py \
     --device cuda --crf 50 \
     --output "$LOG_DIR/archive_baseline_seed.zip" 2>&1 | tee "$LOG_DIR/build.log" | tail -5
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -173,6 +175,7 @@ export PYTHONHASHSEED=1234
 # this OOMs at --batch-pairs 8 (Lane A's setting) — peak alloc 23GB.
 # Halving to 4 fits in ~13GB. Total work (600 pairs × 500 steps) is unchanged.
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+set +e
 "$PYBIN" -u experiments/optimize_poses.py \
     --checkpoint "$ANCHOR_RENDERER" \
     --masks "$LOG_DIR/extracted/masks.mkv" \
@@ -186,6 +189,7 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
     --kl-distill-temperature 2.0 \
     --output-dir "$LOG_DIR" 2>&1 | tee "$LOG_DIR/optimize_poses.log" | tail -30
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -214,6 +218,7 @@ print(f'archive {dst}: {os.path.getsize(dst)} bytes')
 
 log "=== Stage 4: contest_auth_eval on Lane G V3 archive ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -222,6 +227,7 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -15
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

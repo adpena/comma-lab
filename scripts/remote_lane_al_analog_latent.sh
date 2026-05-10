@@ -125,6 +125,7 @@ mkdir -p "$ITER_DIR"
 
 log "=== Stage 2: optimize_grayscale_canvas (Adam SGD on per-pixel gray) ==="
 log "  steps=200 lr=1e-2 sigma=15 noise_std=0.5 batch=8 device=cuda"
+set +e
 "$PYBIN" -u experiments/optimize_grayscale_canvas.py \
     --anchor-archive "$ANCHOR_ARCHIVE" \
     --gt-video "$GT_VIDEO" \
@@ -139,6 +140,7 @@ log "  steps=200 lr=1e-2 sigma=15 noise_std=0.5 batch=8 device=cuda"
     --device cuda \
     --seed 41377 2>&1 | tee "$LOG_DIR/optimize_grayscale_canvas.log" | tail -30
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: optimize_grayscale_canvas exited rc=${PIPE_RC[0]}" >&2
     exit "${PIPE_RC[0]}"
@@ -154,12 +156,14 @@ log "  optimized_grayscale.npy = ${NPY_BYTES} bytes"
 
 log "=== Stage 3a: build_lane_al_archive (pack grayscale.mkv + Lane A renderer/poses) ==="
 ARCHIVE="$ITER_DIR/archive_lane_al.zip"
+set +e
 "$PYBIN" -u experiments/build_lane_al_archive.py \
     --anchor-archive "$ANCHOR_ARCHIVE" \
     --grayscale-npy "$OPTIMIZED_NPY" \
     --output "$ARCHIVE" \
     --crf 50 2>&1 | tee "$LOG_DIR/build.log" | tail -10
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: build_lane_al_archive exited rc=${PIPE_RC[0]}" >&2
     exit "${PIPE_RC[0]}"
@@ -204,6 +208,7 @@ export LANE_MM_SIGMA
 EOF
 
 rm -rf "$ITER_DIR/eval_work"
+set +e
 CONFIG_ENV_PATH="$INFLATE_CONFIG" "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -212,6 +217,7 @@ CONFIG_ENV_PATH="$INFLATE_CONFIG" "$PYBIN" -u experiments/contest_auth_eval.py \
     --keep-work-dir \
     --work-dir "$ITER_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: contest_auth_eval exited rc=${PIPE_RC[0]}" >&2
     exit "${PIPE_RC[0]}"

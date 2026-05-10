@@ -46,6 +46,38 @@ def test_builds_private_gpu_kernel_and_proxy_contract(tmp_path: Path) -> None:
     assert manifest["score_claim_valid"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert manifest["proxy_only"] is True
+    assert manifest["dispatch_claim_required"] is True
+    assert manifest["lane_id"] == "kaggle_pr101_proxy_sweep"
+    assert manifest["claim_command_dry_run"][:4] == [
+        ".venv/bin/python",
+        "tools/claim_lane_dispatch.py",
+        "claim",
+        "--dry-run",
+    ]
+    assert manifest["claim_command"][:3] == [
+        ".venv/bin/python",
+        "tools/claim_lane_dispatch.py",
+        "claim",
+    ]
+    assert "--dry-run" not in manifest["claim_command"]
+    assert manifest["claim_command"][manifest["claim_command"].index("--platform") + 1] == "kaggle"
+    assert (
+        manifest["claim_command"][manifest["claim_command"].index("--status") + 1]
+        == "active_proxy_dispatch"
+    )
+    assert manifest["safe_push_sequence"] == [
+        manifest["claim_command_dry_run"],
+        manifest["claim_command"],
+        manifest["push_command"],
+    ]
+    assert manifest["safe_push_sequence_text"] == [
+        manifest["claim_command_dry_run_text"],
+        manifest["claim_command_text"],
+        manifest["push_command_text"],
+    ]
+    assert "score_claim=false" in manifest["claim_command_text"]
+    assert "'Kaggle PR101 proxy sweep only;" in manifest["claim_command_text"]
+    assert "--force" in manifest["terminal_claim_command_template"]
     assert manifest["exact_auth_eval_performed"] is False
     assert manifest["archive_zip_emitted"] is False
     assert manifest["inflate_runtime_emitted"] is False
@@ -63,6 +95,8 @@ def test_builds_private_gpu_kernel_and_proxy_contract(tmp_path: Path) -> None:
         "-p",
         str(kernel_dir),
     ]
+    assert result.claim_command == manifest["claim_command"]
+    assert result.claim_dry_run_command == manifest["claim_command_dry_run"]
 
 
 def test_cli_prints_push_command_without_launching(tmp_path: Path) -> None:
@@ -84,7 +118,12 @@ def test_cli_prints_push_command_without_launching(tmp_path: Path) -> None:
         text=True,
     )
 
-    assert "Operator-controlled launch command:" in proc.stdout
+    assert "Claim dry-run command:" in proc.stdout
+    assert "Claim command:" in proc.stdout
+    assert "Operator-controlled launch command after successful claim:" in proc.stdout
+    assert "tools/claim_lane_dispatch.py claim --dry-run" in proc.stdout
+    assert "tools/claim_lane_dispatch.py claim --lane-id kaggle_pr101_proxy_sweep" in proc.stdout
+    assert "'Kaggle PR101 proxy sweep only;" in proc.stdout
     assert f"uv run --with kaggle kaggle kernels push -p {kernel_dir}" in proc.stdout
     assert "kaggle kernels push" in proc.stdout
     assert "score_claim" in proc.stdout

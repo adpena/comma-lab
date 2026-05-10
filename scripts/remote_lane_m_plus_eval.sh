@@ -85,11 +85,13 @@ done
 
 log "=== Stage 1: build archive WITH zero-cost-poses sentinel (NO poses.pt) ==="
 log "   --use-zero-cost-poses → omits optimized_poses.pt, writes sentinel"
+set +e
 "$PYBIN" experiments/build_baseline_archive.py \
     --device cuda --crf 50 \
     --use-zero-cost-poses \
     --output "$LOG_DIR/archive_lane_m_plus.zip" 2>&1 | tee "$LOG_DIR/build.log" | tail -10
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -128,6 +130,7 @@ rm -rf "$LOG_DIR/eval_work"
 # does not pass an explicit env= dict to the inflate subprocess.run).
 export INFLATE_ZERO_COST_POSES=1
 log "   INFLATE_ZERO_COST_POSES=$INFLATE_ZERO_COST_POSES"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -136,6 +139,7 @@ log "   INFLATE_ZERO_COST_POSES=$INFLATE_ZERO_COST_POSES"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

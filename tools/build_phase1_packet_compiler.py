@@ -117,7 +117,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--export-format",
-        default="monolithic_single_file_x_with_balle_side_info",
+        default="phase1_three_member_x_decoder_bin_balle_bin",
         help="HNeRV-parity export_format field (recorded in manifest).",
     )
     parser.add_argument(

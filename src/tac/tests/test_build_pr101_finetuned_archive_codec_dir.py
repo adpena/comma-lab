@@ -11,10 +11,13 @@ after a successful 200-epoch training run (1825 GPU-seconds wasted).
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
+import zipfile
 from pathlib import Path
 
 import pytest
+import torch
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -107,6 +110,69 @@ def test_finetuned_inflate_sh_uses_portable_python_fallback() -> None:
     mod = _load_build_module()
     assert '"${PYTHON:-python3}" "$HERE/inflate.py" "$SRC" "$DST"' in mod.INFLATE_SH_NO_DEAD_K
     assert 'python "$HERE/inflate.py" "$SRC" "$DST"' not in mod.INFLATE_SH_NO_DEAD_K
+
+
+def test_build_manifest_records_old_new_sha_and_no_op_metadata(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mod = _load_build_module()
+    monkeypatch.setattr(mod, "DECODER_BLOB_LEN", 3)
+    monkeypatch.setattr(mod, "LATENT_BLOB_LEN", 2)
+    monkeypatch.setattr(mod, "FIXED_STATE_SCHEMA", [("w", (1,))])
+    monkeypatch.setattr(mod, "encode_decoder_compact", lambda _sd, brotli_quality: b"NEW")
+
+    import tac.pr101_split_brotli_codec as codec_mod
+
+    monkeypatch.setattr(
+        codec_mod,
+        "decode_decoder_compact",
+        lambda _blob: {"w": torch.tensor([1.0])},
+    )
+
+    state_dict = tmp_path / "checkpoint.pt"
+    torch.save({"w": torch.tensor([1.0])}, state_dict)
+
+    source_archive = tmp_path / "source_archive.zip"
+    with zipfile.ZipFile(source_archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("x", b"OLDLASIDE")
+
+    source_dir = tmp_path / "src"
+    source_dir.mkdir()
+    (source_dir / "codec.py").write_text("# codec\n")
+    (source_dir / "model.py").write_text("# model\n")
+
+    out_dir = tmp_path / "out"
+    rc = mod.main(
+        [
+            "--state-dict",
+            str(state_dict),
+            "--source-archive",
+            str(source_archive),
+            "--pr101-source-dir",
+            str(source_dir),
+            "--output-dir",
+            str(out_dir),
+        ]
+    )
+
+    assert rc == 0
+    manifest = json.loads((out_dir / "build_manifest.json").read_text())
+    assert manifest["score_claim"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["score_affecting_payload_changed"] is True
+    assert manifest["source_archive_sha256"]
+    assert manifest["archive_sha256"]
+    no_op = manifest["no_op_detector"]
+    assert no_op["score_affecting_payload_changed"] is True
+    assert no_op["decoder_payload_changed"] is True
+    assert no_op["latent_payload_preserved"] is True
+    assert no_op["sidecar_payload_preserved"] is True
+    old_new = manifest["old_new_sha_metadata"]
+    assert old_new["source_archive_sha256"] == manifest["source_archive_sha256"]
+    assert old_new["new_archive_sha256"] == manifest["archive_sha256"]
+    assert old_new["source_latent_blob_sha256"] == old_new["new_latent_blob_sha256"]
+    assert old_new["source_sidecar_blob_sha256"] == old_new["new_sidecar_blob_sha256"]
 
 
 def test_harvest_modal_calls_handles_none_elapsed_and_stdout_tail() -> None:

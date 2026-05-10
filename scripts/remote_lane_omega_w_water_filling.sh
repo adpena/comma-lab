@@ -102,6 +102,7 @@ for B in "${BUDGETS[@]}"; do
     log "=== Stage 3.${B}: water-filling export at total_bits=${B} ==="
     PAYLOAD="$LOG_DIR/segmap_weights_${B}.tar.xz"
     SUMMARY="$LOG_DIR/water_fill_summary_${B}.json"
+    set +e
     "$PYBIN" -u experiments/lane_omega_w_water_filling.py \
         --checkpoint "$ANCHOR_INFERENCE" \
         --anchor-masks "$ANCHOR_MASKS" \
@@ -115,6 +116,7 @@ for B in "${BUDGETS[@]}"; do
         --summary-json "$SUMMARY" \
         --verify-tol 1e-1 2>&1 | tee "$LOG_DIR/water_fill_${B}.log" | tail -30
     PIPE_RC=("${PIPESTATUS[@]}")
+    set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: water-filling export rc=${PIPE_RC[0]} at budget=$B" >&2
         exit "${PIPE_RC[0]}"
@@ -180,6 +182,7 @@ EOF
     log "=== Stage 5.${B}: contest_auth_eval [contest-CUDA] at budget=${B} ==="
     rm -rf "$LOG_DIR/eval_work_${B}"
     EVAL_LOG="$LOG_DIR/auth_eval_${B}.log"
+    set +e
     CONFIG_ENV_PATH="$INFLATE_CONFIG" "$PYBIN" -u experiments/contest_auth_eval.py \
         --archive "$ARCHIVE" \
         --inflate-sh submissions/robust_current/inflate.sh \
@@ -188,6 +191,7 @@ EOF
         --keep-work-dir \
         --work-dir "$LOG_DIR/eval_work_${B}" 2>&1 | tee "$EVAL_LOG" | tail -20
     PIPE_RC=("${PIPESTATUS[@]}")
+    set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "WARN: contest_auth_eval exited rc=${PIPE_RC[0]} at budget=$B (continuing)" >&2
         continue

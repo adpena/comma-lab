@@ -157,6 +157,7 @@ PRECOMPUTED_FLAG=""
 if [ -d "experiments/precomputed_local" ]; then
     PRECOMPUTED_FLAG="--precomputed experiments/precomputed_local"
 fi
+set +e
 "$PYBIN" -u src/tac/experiments/train_renderer.py \
     --profile mae_v_dilated_h64 \
     --use-mae-mask-aug \
@@ -165,14 +166,16 @@ fi
     --tag "$TAG" \
     --device cuda \
     $PRECOMPUTED_FLAG \
-    --output-dir "$TRAIN_DIR" \
-    --no-auth-eval-on-best \
-    2>&1 | tee "$LOG_DIR/train.log"
+	--output-dir "$TRAIN_DIR" \
+	--no-auth-eval-on-best \
+	2>&1 | tee "$LOG_DIR/train.log"
 # Check first stage of pipe (train_renderer) — `tee` always exits 0, swallowing
 # train crash under set -e + pipefail. Round 8 catch.
-if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-    echo "FATAL: train_renderer.py exited non-zero (rc=${PIPESTATUS[0]})" >&2
-    exit "${PIPESTATUS[0]}"
+TRAIN_RC="${PIPESTATUS[0]}"
+set -e
+if [ "${TRAIN_RC}" -ne 0 ]; then
+    echo "FATAL: train_renderer.py exited non-zero (rc=${TRAIN_RC})" >&2
+    exit "${TRAIN_RC}"
 fi
 
 BEST_FP32="$TRAIN_DIR/renderer_${TAG}_best_fp32.pt"
@@ -267,6 +270,7 @@ log "  archive bytes: $ARCHIVE_BYTES"
 
 log "=== Stage 4: CUDA auth eval [contest-CUDA] writing RESULT_JSON ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 python3 -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -276,6 +280,7 @@ python3 -u experiments/contest_auth_eval.py \
     --work-dir "$LOG_DIR/eval_work" \
     2>&1 | tee "$LOG_DIR/auth_eval.log"
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

@@ -73,10 +73,12 @@ for f in submissions/baseline_dilated_h64_0_90/renderer.bin \
 done
 
 log "=== Stage 1: rebuild full-res masks (same as 2.29 baseline) ==="
+set +e
 "$PYBIN" experiments/build_baseline_archive.py \
     --device cuda --crf 50 \
     --output "$LOG_DIR/archive_baseline_seed.zip" 2>&1 | tee "$LOG_DIR/build.log" | tail -5
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -91,6 +93,7 @@ log "   --gt-poses-path = submissions/baseline_dilated_h64_0_90/optimized_poses.
 log "   --eval-roundtrip + --posetto-noise-std=0.5 (Fridrich C1 fixes)"
 # Determinism: pin seeds + cublas + python hash (CLAUDE.md non-negotiable).
 export PYTHONHASHSEED=1234
+set +e
 "$PYBIN" -u experiments/optimize_poses.py \
     --checkpoint submissions/baseline_dilated_h64_0_90/renderer.bin \
     --masks "$LOG_DIR/extracted/masks.mkv" \
@@ -102,6 +105,7 @@ export PYTHONHASHSEED=1234
     --posetto-noise-std 0.5 \
     --output-dir "$LOG_DIR" 2>&1 | tee "$LOG_DIR/optimize_poses.log" | tail -30
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -131,6 +135,7 @@ print(f'archive {dst}: {os.path.getsize(dst)} bytes')
 
 log "=== Stage 4: contest_auth_eval on Lane A archive ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -139,6 +144,7 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -15
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

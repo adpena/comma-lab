@@ -304,6 +304,7 @@ fi
 if [ -n "${NERV_WEIGHT_DTYPE:-}" ]; then
     NERV_TRAINING_ARGS+=(--weight-dtype "$NERV_WEIGHT_DTYPE")
 fi
+set +e
 "$PYBIN" -u experiments/train_nerv_mask.py \
     --profile "$PROFILE" \
     --device cuda \
@@ -314,6 +315,7 @@ fi
     "${NERV_TRAINING_ARGS[@]}" \
     2>&1 | tee "$LOG_DIR/train_nerv_mask.log"
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
 fi
@@ -468,6 +470,7 @@ fi
 log "=== Stage 3: CUDA auth eval [contest-CUDA] ==="
 EVAL_WORK_DIR="$LOG_DIR/eval_work"
 rm -rf "$EVAL_WORK_DIR"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -477,6 +480,7 @@ rm -rf "$EVAL_WORK_DIR"
     --work-dir "$EVAL_WORK_DIR" \
     2>&1 | tee "$LOG_DIR/auth_eval.log"
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
 fi

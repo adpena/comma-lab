@@ -117,6 +117,7 @@ log "   --riemannian-momentum 0.9 (Polyak heavy-ball in se(3) coords)"
 log "   --eval-roundtrip + --posetto-noise-std=0.5 (Fridrich C1 fixes)"
 # Determinism: pin seeds + python hash (CLAUDE.md non-negotiable).
 export PYTHONHASHSEED=1234
+set +e
 "$PYBIN" -u experiments/optimize_poses.py \
     --checkpoint experiments/results/lane_a_landed/iter_0/renderer.bin \
     --masks experiments/results/lane_a_landed/iter_0/masks.mkv \
@@ -131,6 +132,7 @@ export PYTHONHASHSEED=1234
     --pose-mode full-6dof \
     --output-dir "$LOG_DIR" 2>&1 | tee "$LOG_DIR/optimize_poses.log" | tail -30
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -208,6 +210,7 @@ grep -q '^PYTHON_INFLATE=renderer' submissions/robust_current/config.env || {
     exit 3
 }
 
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -216,6 +219,7 @@ grep -q '^PYTHON_INFLATE=renderer' submissions/robust_current/config.env || {
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -15
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

@@ -120,11 +120,13 @@ log "=== Pre-flight: argparse dead-flag scan SKIPPED (inline scanner buggy, see 
 
 log "=== Stage 1: build Lane MM archive (Selfcomp grayscale-LUT mask re-encoding) ==="
 ARCHIVE="$LOG_DIR/archive_lane_mm.zip"
+set +e
 "$PYBIN" -u experiments/build_lane_mm_archive.py \
     --anchor-archive "$ANCHOR_ARCHIVE" \
     --output "$ARCHIVE" \
     --crf 50 2>&1 | tee "$LOG_DIR/build.log" | tail -10
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: build_lane_mm_archive exited rc=${PIPE_RC[0]}" >&2
     exit "${PIPE_RC[0]}"
@@ -146,6 +148,7 @@ EOF
 
 log "=== Stage 2: contest_auth_eval on Lane MM archive ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 CONFIG_ENV_PATH="$INFLATE_CONFIG" "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -154,6 +157,7 @@ CONFIG_ENV_PATH="$INFLATE_CONFIG" "$PYBIN" -u experiments/contest_auth_eval.py \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: contest_auth_eval exited rc=${PIPE_RC[0]}" >&2
     exit "${PIPE_RC[0]}"

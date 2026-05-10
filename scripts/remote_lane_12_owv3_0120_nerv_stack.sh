@@ -214,6 +214,7 @@ print(f"Class distribution: {counts.tolist()} (sum={counts.sum()})", flush=True)
 PY
 
 log "=== Stage 3: pose regeneration against decoded masks.nrv on owv3_0120 renderer ==="
+set +e
 "$PYBIN" -u experiments/optimize_poses.py \
     --checkpoint "$EXTRACT_DIR/renderer.bin" \
     --masks "$CANDIDATE_MASKS_PT" \
@@ -231,6 +232,7 @@ log "=== Stage 3: pose regeneration against decoded masks.nrv on owv3_0120 rende
     --output-dir "$POSE_DIR" \
     2>&1 | tee "$LOG_DIR/optimize_poses.log"
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: optimize_poses failed rc=${PIPE_RC[0]}" >&2
     exit "${PIPE_RC[0]}"
@@ -269,6 +271,7 @@ PY
 
 log "=== Stage 5: CUDA contest auth eval ==="
 rm -rf "$EVAL_WORK_DIR"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -278,6 +281,7 @@ rm -rf "$EVAL_WORK_DIR"
     --work-dir "$EVAL_WORK_DIR" \
     2>&1 | tee "$LOG_DIR/auth_eval.log"
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: contest_auth_eval failed rc=${PIPE_RC[0]}" >&2
     exit "${PIPE_RC[0]}"

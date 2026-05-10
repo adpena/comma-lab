@@ -96,6 +96,22 @@ def test_modal_phase_a1_claims_lane_before_spawn() -> None:
     assert "aborting before GPU spend" in text
 
 
+def test_modal_phase_a1_records_mounted_code_snapshot_before_dispatch_metadata() -> None:
+    text = _source()
+
+    assert "MOUNTED_CODE_PATHS = (" in text
+    assert "def _mounted_code_snapshot(" in text
+    assert '"experiments/train_score_gradient_pr101_finetune.py"' in text
+    assert '"tools/build_pr101_finetuned_archive.py"' in text
+    assert '"mounted_code_snapshot": code_snapshot' in text
+    metadata_src = text[text.index("def _write_dispatch_metadata("):text.index("@app.local_entrypoint()")]
+    assert metadata_src.index("code_snapshot = _mounted_code_snapshot(out_dir)") < metadata_src.index(
+        '"mounted_code_snapshot": code_snapshot'
+    )
+    assert "mounted_code_worktree.patch" in text
+    assert "recorded patch artifacts or by rerunning from a clean commit" in text
+
+
 def test_modal_phase_a1_requires_t4_dali_and_nvdec_preflight() -> None:
     text = _source()
 

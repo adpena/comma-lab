@@ -314,6 +314,7 @@ for i in 0 1 2 3 4 5 6 7 8 9; do
     log "  Stage 1.X: real train_distill fine-tune (cycle $i, ${EPOCHS_PER_CYCLE_DISTILL} phase1 epochs)"
     DISTILL_DIR="$CYC_DIR/distill"
     mkdir -p "$DISTILL_DIR"
+    set +e
     "$PYBIN" -u experiments/train_distill.py \
         --resume "$CYC_DIR/renderer.pt" \
         --masks "$ANCHOR_MASKS" \
@@ -330,6 +331,7 @@ for i in 0 1 2 3 4 5 6 7 8 9; do
         --device cuda --seed 42 \
         2>&1 | tee "$DISTILL_DIR/distill.log" | tail -10
     DISTILL_RC="${PIPESTATUS[0]}"
+    set -e
     if [ "$DISTILL_RC" -ne 0 ]; then
         log "FATAL: cycle $i train_distill exited rc=$DISTILL_RC"
         exit "$DISTILL_RC"
@@ -556,8 +558,10 @@ stats = {
 print('export stats:', json.dumps(stats, indent=2))
 with open('$LOG_DIR/export_stats.json', 'w') as f:
     json.dump(stats, f, indent=2)
+set +e
 " 2>&1 | tee "$LOG_DIR/export.log"
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
 fi
@@ -594,6 +598,7 @@ log "  archive bytes = $ARCHIVE_BYTES (must include renderer + masks + poses)"
 
 log "=== Stage 4: contest_auth_eval [contest-CUDA] on Lane J-IMP archive ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -602,6 +607,7 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -15
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

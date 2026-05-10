@@ -213,6 +213,34 @@ def test_emitted_inflate_py_exists(written_runtime):
 def test_emitted_src_codec_and_model_exist(written_runtime):
     assert (written_runtime / "src" / "codec.py").is_file()
     assert (written_runtime / "src" / "model.py").is_file()
+    assert (written_runtime / "src" / "tac" / "__init__.py").is_file()
+    assert (
+        written_runtime
+        / "src"
+        / "tac"
+        / "paradigm_delta_epsilon_zeta"
+        / "decoder_128k.py"
+    ).is_file()
+    assert (
+        written_runtime
+        / "src"
+        / "tac"
+        / "paradigm_delta_epsilon_zeta"
+        / "balle_hyperprior.py"
+    ).is_file()
+
+
+def test_emitted_model_uses_packet_local_tac_only(written_runtime):
+    text = (written_runtime / "src" / "model.py").read_text()
+    for token in (
+        "_find_repo_src",
+        "here.parents",
+        "repo-local tac runtime dependency",
+        "sys.path.insert",
+    ):
+        assert token not in text
+    assert "from tac.paradigm_delta_epsilon_zeta.decoder_128k import" in text
+    assert "from tac.paradigm_delta_epsilon_zeta.balle_hyperprior import" in text
 
 
 def test_emitted_inflate_sh_under_100_loc(written_runtime):
@@ -532,7 +560,7 @@ def test_packet_compiler_optimize_mode_accepts_emitted_packet(trainer, tmp_path)
         mode="optimize",
         target_mode="contest_one_video_replay",
         runtime_dep_closure=("torch", "brotli", "compressai"),
-        export_format="monolithic_single_file_x_with_balle_side_info",
+        export_format="phase1_three_member_x_decoder_bin_balle_bin",
         bolt_on_loc_budget=400,
         score_affecting_payload_changed=True,
         baseline_archive_sha256=A1_CANONICAL_ARCHIVE_SHA256,

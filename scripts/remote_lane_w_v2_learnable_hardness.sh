@@ -129,6 +129,7 @@ log "  anchor_masks:    $ANCHOR_MASKS   ($(stat -c '%s' "$ANCHOR_MASKS") bytes)"
 # ── Stage 1: per-pair sensitivity profile in CONTINUOUS mode ──
 log "=== Stage 1: profile_pair_sensitivity --mode continuous (Lane W-V2) ==="
 PAIR_WEIGHTS="$LOG_DIR/pair_weights_continuous.pt"
+set +e
 "$PYBIN" -u experiments/profile_pair_sensitivity.py \
     --checkpoint "$ANCHOR_RENDERER" \
     --poses "$ANCHOR_POSES" \
@@ -141,6 +142,7 @@ PAIR_WEIGHTS="$LOG_DIR/pair_weights_continuous.pt"
     --mode continuous \
     --device cuda 2>&1 | tee "$LOG_DIR/profile.log" | tail -40
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -151,6 +153,7 @@ log "  pair_weights: $PAIR_WEIGHTS ($(stat -c '%s' "$PAIR_WEIGHTS") bytes)"
 log "=== Stage 2: train_renderer.py SC + LearnablePairWeights ==="
 TRAIN_OUT="$LOG_DIR/train"
 mkdir -p "$TRAIN_OUT"
+set +e
 "$PYBIN" -u -m tac.experiments.train_renderer \
     --tag lane_w_v2_learnable \
     --output-dir "$TRAIN_OUT" \
@@ -165,6 +168,7 @@ mkdir -p "$TRAIN_OUT"
     --lr 5e-5 \
     --no-auth-eval-on-best 2>&1 | tee "$LOG_DIR/train.log" | tail -40
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -215,8 +219,10 @@ missing, unexpected = model.load_state_dict(sd, strict=False)
 print(f'load_state_dict: missing={len(missing)} unexpected={len(unexpected)}')
 n = export_self_compressed_renderer(model, out, use_lzma=True)
 print(f'SCv1 exported {n} bytes to {out}')
+set +e
 " 2>&1 | tee "$LOG_DIR/export.log" | tail -15
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
 fi
@@ -249,6 +255,7 @@ log "  archive: $ARCHIVE ($ARCHIVE_BYTES bytes)"
 # ── Stage 5: contest_auth_eval (the ONLY trustworthy score) ──
 log "=== Stage 5: contest_auth_eval ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -257,6 +264,7 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

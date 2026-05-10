@@ -46,6 +46,8 @@ def test_build_remote_command_enforces_main_before_remote_script(tmp_path: Path)
 
     assert 'test "$(git branch --show-current)" = main' in shell
     assert "git pull --ff-only origin main" in shell
+    assert "T1_RUN_CONTEST_CUDA_AUTH_EVAL=1" in shell
+    assert "LOCAL_CUDA_WORKER=1" in shell
     assert "bash scripts/remote_lane_t1_balle_endtoend.sh" in shell
 
 
@@ -67,7 +69,7 @@ def test_non_dry_run_refuses_before_metadata(tmp_path: Path) -> None:
     )
 
     assert result.returncode == 2
-    assert "scaffold-only" in result.stdout
+    assert "provider launch is not implemented" in result.stdout
     assert "No lane claim or provider job was created" in result.stdout
     assert not (tmp_path / "vastai_scaffold_plan.json").exists()
 
@@ -103,6 +105,8 @@ def test_dry_run_vastai_writes_metadata_default_4090(tmp_path: Path) -> None:
     assert metadata["dispatched_at_utc"] is None
     assert metadata["instance_id"] is None
     assert "bash scripts/remote_lane_t1_balle_endtoend.sh" in metadata["vastai_remote_command_template_only"]
+    assert "LOCAL_CUDA_WORKER=1" in metadata["vastai_remote_command_template_only"]
+    assert "T1_DISPATCH_CLAIMS_PATH" in metadata["vastai_remote_command_template_only"]
     assert not (tmp_path / "vastai_metadata.json").exists()
 
 
@@ -177,6 +181,10 @@ def test_modal_dry_run_writes_scaffold_plan_not_harvest_metadata(tmp_path: Path)
     assert result.returncode == 0
     metadata = json.loads((tmp_path / "modal_scaffold_plan.json").read_text())
     assert metadata["modal_spawn_status"] == t1.SCAFFOLD_PLAN_STATUS
+    assert metadata["modal_actuator"] == "experiments/modal_t1_balle_endtoend.py"
+    assert "experiments/modal_t1_balle_endtoend.py --execute" in metadata[
+        "modal_execute_command_template_only"
+    ]
     assert metadata["modal_call_id"] is None
     assert metadata["harvester_invocation"] is None
     assert metadata["provider_job_created"] is False
@@ -201,5 +209,141 @@ def test_remote_scaffold_script_refuses_by_default(tmp_path: Path) -> None:
     )
 
     assert result.returncode == 20
-    assert "remote T1 scaffold path refused by default" in result.stderr
+    assert "remote T1 refused by default" in result.stderr
+    assert "T1_ALLOW_SCORE_DOMAIN_TRAINING=1" in result.stderr
     assert not (tmp_path / "logs").exists()
+
+
+def test_remote_score_domain_requires_dispatch_instance_job_id(tmp_path: Path) -> None:
+    result = subprocess.run(
+        [
+            "bash",
+            str(REMOTE_SCRIPT),
+        ],
+        cwd=REPO,
+        env={
+            "WORKSPACE": str(REPO),
+            "LOG_DIR": str(tmp_path / "logs"),
+            "OUTPUT_DIR": str(tmp_path / "out"),
+            "T1_ALLOW_SCORE_DOMAIN_TRAINING": "1",
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 21
+    assert "requires T1_DISPATCH_INSTANCE_JOB_ID" in result.stderr
+    assert not (tmp_path / "logs").exists()
+
+
+def test_remote_score_domain_requires_active_matching_claim(tmp_path: Path) -> None:
+    result = subprocess.run(
+        [
+            "bash",
+            str(REMOTE_SCRIPT),
+        ],
+        cwd=REPO,
+        env={
+            "WORKSPACE": str(REPO),
+            "LOG_DIR": str(tmp_path / "logs"),
+            "OUTPUT_DIR": str(tmp_path / "out"),
+            "T1_ALLOW_SCORE_DOMAIN_TRAINING": "1",
+            "T1_DISPATCH_INSTANCE_JOB_ID": "fake-t1-job-for-test",
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 21
+    assert "no active dispatch claim" in result.stderr
+    assert "fake-t1-job-for-test" in result.stderr
+    assert not (tmp_path / "logs").exists()
+
+
+def test_remote_score_domain_refuses_env_only_claim_summary_without_remote_state_ledger(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "clean-remote"
+    workspace.mkdir()
+
+    result = subprocess.run(
+        [
+            "bash",
+            str(REMOTE_SCRIPT),
+        ],
+        cwd=REPO,
+        env={
+            "WORKSPACE": str(workspace),
+            "LOG_DIR": str(tmp_path / "logs"),
+            "OUTPUT_DIR": str(tmp_path / "out"),
+            "T1_ALLOW_SCORE_DOMAIN_TRAINING": "1",
+            "T1_DISPATCH_INSTANCE_JOB_ID": "claimed-job-123",
+            "T1_DISPATCH_CLAIM_SUMMARY_B64": "ignored-not-a-trusted-claim",
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    combined = result.stdout + result.stderr
+    assert result.returncode == 21
+    assert "claim helper missing" in combined
+    assert "no active dispatch claim" not in combined
+    assert not (tmp_path / "logs").exists()
+
+
+def test_remote_train_pipeline_disables_pipefail_around_rc_capture() -> None:
+    text = REMOTE_SCRIPT.read_text()
+
+    assert "set +e\n\"${TRAIN_CMD[@]}\" 2>&1 | tee \"$LOG_DIR/train.log\"\nTRAIN_RC=${PIPESTATUS[0]}\nset -e" in text
+    assert "set +e\n        \"${PACKET_CMD[@]}\" 2>&1 | tee \"$LOG_DIR/packet_compiler.log\"\n        PACKET_RC=${PIPESTATUS[0]}\n        set -e" in text
+    assert "set +e\n        \"${AUTH_EVAL_CMD[@]}\" 2>&1 | tee \"$LOG_DIR/contest_auth_eval.log\"\n        AUTH_EVAL_RC=${PIPESTATUS[0]}\n        set -e" in text
+
+
+def test_remote_t1_script_wires_packet_compile_and_contest_cuda_auth_eval() -> None:
+    text = REMOTE_SCRIPT.read_text()
+
+    assert "T1_RUN_CONTEST_CUDA_AUTH_EVAL" in text
+    assert "tools/build_phase1_packet_compiler.py" in text
+    assert "--input-packet \"$SUBMISSION_DIR\"" in text
+    assert "--mode optimize" in text
+    assert "--runtime-dep-closure torch brotli compressai" in text
+    assert "--export-format phase1_three_member_x_decoder_bin_balle_bin" in text
+    assert "--score-affecting-payload-changed" in text
+    assert "experiments/contest_auth_eval.py" in text
+    assert "--archive \"$PACKET_DIR/archive.zip\"" in text
+    assert "--inflate-sh \"$PACKET_DIR/inflate.sh\"" in text
+    assert "--device cuda" in text
+    assert "--work-dir \"$AUTH_EVAL_WORK_DIR\"" in text
+    assert "--json-out \"$AUTH_EVAL_JSON\"" in text
+    assert "--expected-runtime-tree-sha256 \"$RUNTIME_TREE_SHA\"" in text
+    assert "required_contest_cuda_evidence_blockers" in text
+    assert "device mps" not in text.lower()
+
+
+def test_remote_t1_script_closes_dispatch_claim_terminally() -> None:
+    text = REMOTE_SCRIPT.read_text()
+
+    assert "close_dispatch_claim()" in text
+    assert "trap cleanup EXIT" in text
+    assert "failed_remote_script_rc_${rc}" in text
+    assert "completed_t1_score_domain_training_no_score_claim" in text
+    assert "failed_t1_packet_compile_rc_${PACKET_RC}" in text
+    assert "failed_t1_contest_auth_eval_rc_${AUTH_EVAL_RC}" in text
+    assert "failed_t1_auth_eval_adjudication" in text
+    assert "completed_t1_contest_cuda_auth_eval" in text
+    assert "score_claim=false" in text
+    assert '"promotion_eligible": False' in text
+    assert "paired_contest_cpu_reproduction_required" in text
+    assert "registry_level_promotion_required" in text
+    assert "lane_registry_level_promotion_required" not in text
+    contest_cuda_lines = [
+        line
+        for line in text.splitlines()
+        if "[contest-CUDA]" in line and ("echo " in line or "log " in line)
+    ]
+    assert contest_cuda_lines == [
+        '        echo "[lane-t1] LANE_T1_CONTEST_CUDA_AUTH_EVAL_DONE [contest-CUDA]"'
+    ]

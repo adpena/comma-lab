@@ -147,6 +147,7 @@ print(f'OK: {len(used)} flags all real')
 # either). Uses Lane A's renderer + masks + poses for the gradient signal.
 log "=== Stage 1: per-weight Hessian importance profile ==="
 HESSIAN_PT="$LOG_DIR/hessian_per_weight.pt"
+set +e
 "$PYBIN" -u experiments/profile_hessian_per_weight.py \
     --checkpoint "$ANCHOR_RENDERER" \
     --video upstream/videos/0.mkv \
@@ -159,6 +160,7 @@ HESSIAN_PT="$LOG_DIR/hessian_per_weight.pt"
     --device cuda \
     --pair-batch 4 2>&1 | tee "$LOG_DIR/profile.log" | tail -30
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -247,6 +249,7 @@ log "  archive: $ARCHIVE ($ARCHIVE_BYTES bytes)"
 # Stage 5 — contest_auth_eval on the EXACT archive that would be submitted.
 log "=== Stage 5: contest_auth_eval on Lane Ω archive [contest-CUDA] ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -255,6 +258,7 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

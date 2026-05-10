@@ -276,8 +276,10 @@ fi
 # NOTE: --output also in NWC_TRAIN_ARGS (line 242); duplicating here so
 # preflight check_remote_lane_arity can see the required flag literally on
 # the invocation line (it doesn't trace through bash array spread).
+set +e
 "$PYBIN" -u experiments/train_neural_weight_codec.py --output "$BASE_CODEC_PT" "${NWC_TRAIN_ARGS[@]}" 2>&1 | tee "$LOG_DIR/train_base_codec.log" | tail -40
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -714,6 +716,7 @@ cost_guard
 log "=== Stage 6: Lane EC engineered_quant_noise (compress-time SegNet correction search) ==="
 log "  --max-delta=$EC_MAX_DELTA --max-artifact-bytes=$EC_RATE_CAP_BYTES"
 EC_OUTPUT_DIR="$LOG_DIR/corrections"
+set +e
 "$PYBIN" -u experiments/engineered_quant_noise.py \
     --checkpoint "$ANCHOR_RENDERER_BIN" \
     --video "$GT_VIDEO" \
@@ -726,6 +729,7 @@ EC_OUTPUT_DIR="$LOG_DIR/corrections"
     --max-artifact-bytes "$EC_RATE_CAP_BYTES" \
     --output-dir "$EC_OUTPUT_DIR" 2>&1 | tee "$LOG_DIR/engineered_quant_noise.log" | tail -30
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -909,6 +913,7 @@ RESULT_JSON="$LOG_DIR/RESULT_JSON"
 rm -rf "$EVAL_WORK"
 # Belt-and-suspenders AppleDouble re-strip.
 rm -f upstream/videos/._*.mkv
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -917,6 +922,7 @@ rm -f upstream/videos/._*.mkv
     --keep-work-dir \
     --work-dir "$EVAL_WORK" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -30
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -932,6 +938,7 @@ fi
 [ -s "$RESULT_JSON" ] || { log "FATAL: auth eval did not write RESULT_JSON"; exit 2; }
 ADJUDICATION_PROVENANCE="$LOG_DIR/adjudication_provenance.json"
 ADJUDICATED_RESULT_JSON="$LOG_DIR/contest_auth_eval.adjudicated.json"
+set +e
 "$PYBIN" -u scripts/adjudicate_contest_auth_eval.py \
     --contest-json "$RESULT_JSON" \
     --provenance "$ADJUDICATION_PROVENANCE" \
@@ -952,6 +959,7 @@ ADJUDICATED_RESULT_JSON="$LOG_DIR/contest_auth_eval.adjudicated.json"
     --component-reference-label "Lane G v3 PFP16 A++ frontier" \
     2>&1 | tee "$LOG_DIR/adjudication.log"
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: adjudication failed rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
 fi

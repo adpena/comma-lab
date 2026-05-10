@@ -168,11 +168,13 @@ cost_guard
 log "=== Stage 3: fit_pose_gp.py + reconstruct optimized_poses.pt ==="
 POSE_GP_BIN="$LOG_DIR/pose_gp.bin"
 RECON_POSES="$LOG_DIR/optimized_poses.pt"
+set +e
 "$PYBIN" -u experiments/fit_pose_gp.py \
     --poses "$ANCHOR_POSES" \
     --output "$POSE_GP_BIN" \
     --n-pairs 600 2>&1 | tee "$LOG_DIR/fit_pose_gp.log" | tail -10
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -260,6 +262,7 @@ RESULT_JSON="$LOG_DIR/RESULT_JSON"
 rm -rf "$EVAL_WORK"
 # Strip macOS AppleDouble files before contest_auth_eval — Lane F-V2 bug 2026-04-27.
 rm -f upstream/videos/._*.mkv
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -268,6 +271,7 @@ rm -f upstream/videos/._*.mkv
     --keep-work-dir \
     --work-dir "$EVAL_WORK" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -30
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

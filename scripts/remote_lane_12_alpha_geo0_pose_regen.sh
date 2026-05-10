@@ -150,6 +150,7 @@ done
 
 log "=== Stage 1: deterministic Alpha-Geo decode and cache ==="
 mkdir -p "$EXTRACT_DIR" "$MASK_CACHE_DIR"
+set +e
 "$PYBIN" -u experiments/diagnose_nerv_geometry.py \
     --baseline "$BASELINE_ARCHIVE" \
     --baseline-member masks.mkv \
@@ -164,6 +165,7 @@ mkdir -p "$EXTRACT_DIR" "$MASK_CACHE_DIR"
     --width 512 \
     2>&1 | tee "$LOG_DIR/diagnose_nerv_geometry.log"
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: diagnose_nerv_geometry failed rc=${PIPE_RC[0]}" >&2
     exit "${PIPE_RC[0]}"
@@ -238,6 +240,7 @@ print(json.dumps({"extracted": sorted(allowed), "dir": str(extract_dir)}, sort_k
 PY
 
 log "=== Stage 3: pose regeneration against decoded masks.nrv ==="
+set +e
 "$PYBIN" -u experiments/optimize_poses.py \
     --checkpoint "$EXTRACT_DIR/renderer.bin" \
     --masks "$CANDIDATE_MASKS_PT" \
@@ -255,6 +258,7 @@ log "=== Stage 3: pose regeneration against decoded masks.nrv ==="
     --output-dir "$POSE_DIR" \
     2>&1 | tee "$LOG_DIR/optimize_poses.log"
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: optimize_poses failed rc=${PIPE_RC[0]}" >&2
     exit "${PIPE_RC[0]}"
@@ -295,6 +299,7 @@ PY
 
 log "=== Stage 5: CUDA auth eval ==="
 rm -rf "$EVAL_WORK_DIR"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -304,6 +309,7 @@ rm -rf "$EVAL_WORK_DIR"
     --work-dir "$EVAL_WORK_DIR" \
     2>&1 | tee "$LOG_DIR/auth_eval.log"
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: contest_auth_eval failed rc=${PIPE_RC[0]}" >&2
     exit "${PIPE_RC[0]}"

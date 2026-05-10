@@ -87,6 +87,7 @@ done
 log "=== Stage 1: rebuild masks at CRF=56 ON CUDA (single variable test) ==="
 log "   Inputs: baseline renderer + LANE A poses + GT video"
 log "   Encoder: CUDA AV1 via mask_codec (deterministic per device+seed)"
+set +e
 "$PYBIN" experiments/build_baseline_archive.py \
     --renderer submissions/baseline_dilated_h64_0_90/renderer.bin \
     --poses "$LANE_A_POSES" \
@@ -94,6 +95,7 @@ log "   Encoder: CUDA AV1 via mask_codec (deterministic per device+seed)"
     --device cuda --crf 56 \
     --output "$LOG_DIR/archive_crf56.zip" 2>&1 | tee "$LOG_DIR/build.log" | tail -10
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
@@ -118,6 +120,7 @@ log "=== Stage 3: archive ready at $ARCHIVE (${ARCH_BYTES} bytes) ==="
 
 log "=== Stage 4: contest_auth_eval on Lane H CRF56 archive ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -126,6 +129,7 @@ rm -rf "$LOG_DIR/eval_work"
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
     PIPE_RC=("${PIPESTATUS[@]}")
+set -e
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi

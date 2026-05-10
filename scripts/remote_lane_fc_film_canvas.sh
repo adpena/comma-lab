@@ -91,6 +91,7 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 # train_segmap_film_canvas.py wraps the same SegMapTrainer that triggered
 # the 21 GiB FastViT-attention OOM; --bf16 + --scorer-chunk required.
 # B*N=4*2=8 satisfies Check 87's _OOM_GUARD_BN_PRODUCT_CAP.
+set +e
 "$PYBIN" -u experiments/train_segmap_film_canvas.py \
     --variant kl_distill \
     --hidden 24 --block-hidden 24 --num-blocks 8 \
@@ -108,6 +109,7 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
     --tag "$LANE_ID" \
     --output-dir "$LOG_DIR/train" 2>&1 | tee "$LOG_DIR/train.log" | tail -30
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: train_segmap_film_canvas.py exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
 fi
@@ -191,6 +193,7 @@ EOF
 
 log "=== Stage 5: contest_auth_eval [contest-CUDA] ==="
 rm -rf "$LOG_DIR/eval_work"
+set +e
 CONFIG_ENV_PATH="$INFLATE_CONFIG" "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
@@ -199,6 +202,7 @@ CONFIG_ENV_PATH="$INFLATE_CONFIG" "$PYBIN" -u experiments/contest_auth_eval.py \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
 PIPE_RC=("${PIPESTATUS[@]}")
+set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: contest_auth_eval exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
 fi

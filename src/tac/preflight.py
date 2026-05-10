@@ -790,6 +790,14 @@ def _prewarm_preflight_source_index(root: Path) -> None:
     if source_index is None:
         return
     groups = (
+        # Exact developer-hot groups. These keys intentionally match the
+        # downstream checks so SourceIndex can reuse one file/fact pass.
+        (("scripts", "experiments", "src/tac/contrib", "src/tac/deploy", "src/tac/experiments"), "*.py"),
+        (("experiments",), "*.sh"),
+        (("src/tac", "tools", "experiments"), "*.py"),
+        (("src/tac", "tools", "experiments", "scripts"), "*.py"),
+        (("src/tac", "experiments", "scripts"), "*.py"),
+        (("scripts", "tools", "submissions/robust_current"), "*.sh"),
         (("experiments", "src/tac", "submissions/robust_current"), "*.py"),
         (("experiments", "src/tac", "submissions/robust_current"), "*.sh"),
         (("src/tac", "experiments", "scripts", "submissions"), "*.py"),
@@ -1305,6 +1313,7 @@ def preflight_all(
         # from repeated per-check rglob/read/parse loops. Artifact-only callers
         # skip this path and still read their inputs live.
         with cached_filesystem(cache_reads=True), source_index_context(REPO_ROOT):
+            _prewarm_preflight_source_index(REPO_ROOT)
             preflight_all(
                 profile_name=profile_name,
                 profile_arch=profile_arch,
@@ -3314,6 +3323,7 @@ def preflight_developer(
         from tac.source_index import source_index_context
 
         with cached_filesystem(cache_reads=True), source_index_context(REPO_ROOT):
+            _prewarm_preflight_source_index(REPO_ROOT)
             preflight_developer(
                 profile_name=profile_name,
                 profile_arch=profile_arch,
