@@ -309,3 +309,8 @@
 - Next T1 action after this commit is another bounded guard rerun from clean
   code. Do not escalate to full T1 until the guard proves training entry,
   packet compile, inflate closure, and exact-CUDA auth-eval schema closure.
+- That rerun is now active from clean commit `c0ea27df`:
+  `t1_balle_modal_guard_c0ea27df_20260510T0927Z`, call id
+  `fc-01KR8KCXEGTVFGSZ75HAK9S2QX`, Modal URL
+  `https://modal.com/apps/adpena/main/ap-g6JJhRr82ENgaEaOcfduIu`.
+  Immediate recovery returned `NOT READY`; no score claim exists.

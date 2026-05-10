@@ -106,6 +106,34 @@ flattened spatial rows by default instead of building one full graph-wide
 fragmentation. The next T1 guard rerun should keep the same bounded training
 intent but uses the chunked Sinkhorn implementation.
 
+## c0ea27df rerun
+
+After commit `c0ea27df` landed the chunked Sinkhorn and Modal allocator fix, a
+fresh bounded T1 guard was dispatched:
+
+- Label / instance job id: `t1_balle_modal_guard_c0ea27df_20260510T0927Z`
+- Function call id: `fc-01KR8KCXEGTVFGSZ75HAK9S2QX`
+- Modal run URL:
+  `https://modal.com/apps/adpena/main/ap-g6JJhRr82ENgaEaOcfduIu`
+- Mounted code snapshot:
+  `c0ea27dfaf06db1d143f30d950ac18abba334d7b`, `dirty=false`, worktree patch
+  bytes `0`, index patch bytes `0`
+- Parameters remain bounded: `epochs=50`, `batch_size=8`,
+  `max_target_pairs=64`, `train_timeout_hours=2`
+- Claim state at dispatch: `active_dispatching`
+
+Immediate recovery returned:
+
+```text
+NOT READY: call_id=fc-01KR8KCXEGTVFGSZ75HAK9S2QX still queued or running. Re-run later.
+```
+
+Do not duplicate T1 while this claim is active. Harvest with:
+
+```bash
+.venv/bin/python experiments/modal_t1_balle_endtoend.py recover --label t1_balle_modal_guard_c0ea27df_20260510T0927Z
+```
+
 ## Kaggle proxy materialization
 
 The completed Kaggle/Optuna/CMA-ES proxy candidate has been converted only into
