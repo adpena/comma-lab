@@ -716,3 +716,61 @@ Dispatch blockers remain unchanged:
 
 Current completion: `288/600` pairs. Continue scalar chunks until `600/600`;
 do not dispatch partial sidecars.
+
+## Codex follow-up local chunk 13
+
+<!-- generated_at: 2026-05-10T02:26:42Z -->
+<!-- evidence_grade: local_cpu_proxy_partial; no score claim; no remote dispatch -->
+
+Codex resumed the same ignored local artifact using the scalar candidate path:
+
+```bash
+/usr/bin/time -p .venv/bin/python tools/build_a1_per_pair_latent_correction_sidecar.py \
+  --n-pairs 336 \
+  --resume-search-state \
+  --max-search-seconds 900 \
+  --candidate-batch-size 1 \
+  --runtime-smoke \
+  --runtime-smoke-pairs 1 \
+  --output-dir experiments/results/a1_sidecar_resumable_codex_20260509T_local
+```
+
+Observed:
+
+- skipped already-completed pairs `0` through `287`;
+- searched pairs `288` through `335`;
+- elapsed `real 743.54`, `user 1804.03`, `sys 41.90`;
+- `candidate_batch_size=1`;
+- sidecar encoded bytes `661` (old preserved sidecar was `607`);
+- choice-state SHA-256
+  `873b252c2c445928632ec870f741991ffce7b05f5022b3f46e4471fbb596ede3`;
+- manifest SHA-256
+  `8349d20c90f0ebc3c700d0d012562c888013447be3bb868451feac0e3e893a5c`;
+- archive SHA-256
+  `5e8d6d64f926c02da94cf1a7ba4f67283db8c2d74faf7140e8f2277555c8d989`;
+- archive bytes `178316`;
+- runtime tree SHA-256
+  `3497c774d94fe202563bccba2af4a5f90925cb8d9b2e982cf4428d0efbea0190`;
+- `runtime_smoke_checked=true`;
+- `n_pairs_searched=336`;
+- `n_pairs_completed_this_run=48`;
+- `n_pairs_skipped_already_completed=288`;
+- `full_non_smoke_search=false`;
+- `ready_for_exact_eval_dispatch=false`.
+
+Dispatch blockers remain unchanged:
+
+- claim lane before any GHA/remote eval dispatch;
+- run exact-eval dispatcher preflight against `submission_dir`;
+- record runtime tree SHA and terminal dispatch claim row;
+- `non_full_sidecar_search_not_exact_eval_ready`.
+
+Adversarial review during this chunk found that pre-patch chunk history lacks
+machine-readable per-pair scalar-equivalence provenance. The builder now emits
+per-pair search records and a single-writer output-dir lock; future exact-eval
+readiness must fail closed unless every completed pair has scalar-equivalent
+provenance. This chunk is therefore preserved as local proxy progress only.
+
+Current completion: `336/600` pairs. Continue scalar chunks until `600/600`,
+then either recheck legacy-unproven pairs with the patched builder or preserve
+the candidate as non-dispatchable proxy evidence.

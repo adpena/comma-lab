@@ -7623,7 +7623,7 @@ def _scan_python_for_mps_fallback(
         text = source_index.read_text(path) if source_index is not None else path.read_text()
     except (OSError, UnicodeDecodeError):
         return []
-    if "mps" not in text or "cuda.is_available" not in text:
+    if "mps" not in text or "is_available" not in text:
         return []
     if source_index is not None:
         try:
@@ -7637,13 +7637,34 @@ def _scan_python_for_mps_fallback(
 
     violations: list[str] = []
 
+    cuda_aliases = {"cuda"}
+    for top in getattr(tree, "body", []):
+        if isinstance(top, ast.ImportFrom) and top.module == "torch":
+            for alias in top.names:
+                if alias.name == "cuda":
+                    cuda_aliases.add(alias.asname or alias.name)
+
+    def _is_getattr_torch_cuda(node: ast.AST) -> bool:
+        return (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "getattr"
+            and len(node.args) >= 2
+            and isinstance(node.args[0], ast.Name)
+            and node.args[0].id == "torch"
+            and isinstance(node.args[1], ast.Constant)
+            and node.args[1].value == "cuda"
+        )
+
     def _is_cuda_is_available_func(func: ast.AST) -> bool:
         if not isinstance(func, ast.Attribute) or func.attr != "is_available":
             return False
         value = func.value
-        if isinstance(value, ast.Name) and value.id == "cuda":
+        if isinstance(value, ast.Name) and value.id in cuda_aliases:
             return True
-        return isinstance(value, ast.Attribute) and value.attr == "cuda"
+        if isinstance(value, ast.Attribute) and value.attr == "cuda":
+            return True
+        return _is_getattr_torch_cuda(value)
 
     def _tree_has_cuda_check(node: ast.AST) -> bool:
         for sub in ast.walk(node):
@@ -7774,12 +7795,24 @@ def check_no_mps_fallback_default(
     if source_index is not None:
         facts_rows = source_index.facts_for_files(_META_PY_SCAN_DIRS, pattern="*.py")
         n_scanned = len(facts_rows)
-        for path in source_index.files_containing_substrings(
-            _META_PY_SCAN_DIRS,
-            pattern="*.py",
-            substrings=("mps", "cuda.is_available"),
-            require_all=True,
-        ):
+        candidate_paths = set(
+            source_index.files_containing_substrings(
+                _META_PY_SCAN_DIRS,
+                pattern="*.py",
+                substrings=("mps", "cuda.is_available"),
+                require_all=True,
+            )
+        )
+        candidate_paths.update(
+            facts.path
+            for facts in facts_rows
+            if facts.contains("mps")
+            and (
+                facts.contains("from torch import cuda")
+                or facts.contains("getattr(torch")
+            )
+        )
+        for path in sorted(candidate_paths, key=lambda item: item.as_posix()):
             violations.extend(
                 _scan_python_for_mps_fallback(
                     path,

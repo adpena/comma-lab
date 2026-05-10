@@ -57,9 +57,11 @@ NOTE on operational scope:
 from __future__ import annotations
 
 import argparse
+import atexit
 import datetime as dt
 import hashlib
 import json
+import os
 import shutil
 import stat
 import struct
@@ -88,6 +90,7 @@ LOCAL_RUNTIME_CUSTODY_SCHEMA = "a1_sidecar_local_runtime_custody_v1"
 MEMBER_SECTION_PROOF_SCHEMA = "a1_sidecar_member_section_proof_v1"
 RUNTIME_SMOKE_SCHEMA = "a1_sidecar_runtime_smoke_v1"
 SIDECAR_CHOICE_STATE_SCHEMA = "a1_sidecar_choice_state_v1"
+SIDECAR_PAIR_SEARCH_RECORDS_SCHEMA = "a1_sidecar_pair_search_records_v1"
 REQUIRED_RUNTIME_FILES = ("inflate.py", "inflate.sh", "src/codec.py", "src/model.py")
 RUNTIME_TREE_EXCLUDED_FILES = frozenset({"archive.zip"})
 RUNTIME_TREE_EXCLUDED_PARTS = frozenset({"__pycache__"})
@@ -103,6 +106,50 @@ LATENT_DIM = 28
 A1_LATENT_BLOB_LEN = 15_387
 EVAL_H, EVAL_W = 384, 512
 CAMERA_H, CAMERA_W = 874, 1164
+
+
+class SidecarOutputLock:
+    """Fail-closed single-writer sentinel for resumable sidecar state."""
+
+    def __init__(self, output_dir: Path) -> None:
+        self.path = output_dir / ".sidecar_choice_state.lock"
+        self._acquired = False
+
+    def acquire(self) -> None:
+        try:
+            fd = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+        except FileExistsError as exc:
+            detail = ""
+            try:
+                detail = self.path.read_text(encoding="utf-8", errors="replace").strip()
+            except OSError:
+                pass
+            raise RuntimeError(
+                f"sidecar output directory is already locked: {self.path}"
+                + (f" ({detail})" if detail else "")
+                + ". Do not run duplicate writers into one output dir; remove the "
+                "lock only after verifying no builder process is active."
+            ) from exc
+        payload = {
+            "pid": os.getpid(),
+            "started_at_utc": dt.datetime.now(dt.UTC).isoformat(),
+            "path": str(self.path),
+        }
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(json.dumps(payload, sort_keys=True) + "\n")
+        self._acquired = True
+        atexit.register(self.release)
+
+    def release(self) -> None:
+        if not self._acquired:
+            return
+        try:
+            self.path.unlink()
+        except FileNotFoundError:
+            pass
+        except OSError:
+            return
+        self._acquired = False
 
 
 def sha256_of(path: Path) -> str:
@@ -574,6 +621,74 @@ def _sidecar_choice_state_blockers(manifest: dict[str, Any]) -> list[str]:
         blockers.append("sidecar_choice_state_incomplete_for_full_search")
 
     try:
+        records_by_pair = pair_search_records_from_payload(payload)
+    except ValueError as exc:
+        blockers.append(f"sidecar_pair_search_records_unreadable:{exc}")
+        records_by_pair = {}
+    searched_pairs = [int(i) for i in np.flatnonzero(searched_mask)]
+    if completed and payload.get("pair_search_records_schema") != SIDECAR_PAIR_SEARCH_RECORDS_SCHEMA:
+        blockers.append("sidecar_pair_search_records_schema_missing_or_mismatch")
+    if record.get("pair_search_records_schema") != payload.get("pair_search_records_schema"):
+        blockers.append("sidecar_choice_state_record_pair_search_schema_mismatch")
+    missing_records = [i for i in searched_pairs if i not in records_by_pair]
+    if missing_records:
+        blockers.append(
+            "sidecar_pair_search_records_missing_for_completed_pairs:"
+            f"{len(missing_records)}"
+        )
+    unsafe_records: list[int] = []
+    mismatched_records: list[int] = []
+    for pair_index, pair_record in sorted(records_by_pair.items()):
+        if pair_index < 0 or pair_index >= total_pairs:
+            blockers.append(f"sidecar_pair_search_record_pair_index_out_of_range:{pair_index}")
+            continue
+        if pair_index not in searched_pairs:
+            blockers.append(f"sidecar_pair_search_record_for_unsearched_pair:{pair_index}")
+            continue
+        if pair_record.get("schema_version") != SIDECAR_PAIR_SEARCH_RECORDS_SCHEMA:
+            mismatched_records.append(pair_index)
+        if pair_record.get("search_signal") != payload.get("search_signal"):
+            mismatched_records.append(pair_index)
+        if pair_record.get("search_device") != payload.get("search_device"):
+            mismatched_records.append(pair_index)
+        if pair_record.get("best_dim") != int(dims[pair_index]):
+            mismatched_records.append(pair_index)
+        if pair_record.get("best_delta_idx") != int(delta_idx[pair_index]):
+            mismatched_records.append(pair_index)
+        if pair_record.get("dispatch_safe_scalar_equivalent") is not True:
+            unsafe_records.append(pair_index)
+    if mismatched_records:
+        blockers.append(
+            "sidecar_pair_search_records_context_or_choice_mismatch:"
+            f"{len(set(mismatched_records))}"
+        )
+    if unsafe_records:
+        blockers.append(
+            "sidecar_pair_search_records_not_scalar_equivalent:"
+            f"{len(unsafe_records)}"
+        )
+    safe_count = sum(
+        1
+        for i in searched_pairs
+        if records_by_pair.get(i, {}).get("dispatch_safe_scalar_equivalent") is True
+    )
+    if record.get("n_pairs_with_search_records") not in (None, len(records_by_pair)):
+        blockers.append("sidecar_choice_state_record_pair_search_count_mismatch")
+    if payload.get("n_pairs_with_search_records") != len(records_by_pair):
+        blockers.append("sidecar_choice_state_payload_pair_search_count_mismatch")
+    if payload.get("n_pairs_dispatch_safe_scalar_equivalent") != safe_count:
+        blockers.append("sidecar_choice_state_payload_dispatch_safe_count_mismatch")
+    if record.get("n_pairs_dispatch_safe_scalar_equivalent") not in (None, safe_count):
+        blockers.append("sidecar_choice_state_record_dispatch_safe_count_mismatch")
+    all_safe = safe_count == completed and not unsafe_records and not missing_records
+    if payload.get("all_searched_pairs_dispatch_safe_scalar_equivalent") is not all_safe:
+        blockers.append("sidecar_choice_state_payload_dispatch_safe_flag_mismatch")
+    if record.get("all_searched_pairs_dispatch_safe_scalar_equivalent") not in (None, all_safe):
+        blockers.append("sidecar_choice_state_record_dispatch_safe_flag_mismatch")
+    if payload.get("search_device") == "mps":
+        blockers.append("sidecar_choice_state_mps_proxy_search_advisory_only")
+
+    try:
         encoded_sidecar = _encode_sidecar_from_state_payload(
             payload,
             encode_format=str(manifest.get("encode_format")),
@@ -834,6 +949,7 @@ def _sidecar_choice_state_payload(
     dims: np.ndarray,
     delta_idx: np.ndarray,
     searched_mask: np.ndarray,
+    pair_search_records: dict[int, dict[str, Any]] | None = None,
     old_archive_sha256: str,
     old_sidecar_sha256: str,
     search_signal: str,
@@ -850,6 +966,17 @@ def _sidecar_choice_state_payload(
         latent_dim=latent_dim,
     )
     searched_pair_indices = [int(i) for i in np.flatnonzero(searched_mask)]
+    records_by_pair = pair_search_records or {}
+    records = [
+        dict(records_by_pair[int(i)])
+        for i in sorted(records_by_pair)
+        if 0 <= int(i) < int(total_pairs)
+    ]
+    dispatch_safe_pairs = {
+        int(record["pair_index"])
+        for record in records
+        if record.get("dispatch_safe_scalar_equivalent") is True
+    }
     return {
         "schema_version": SIDECAR_CHOICE_STATE_SCHEMA,
         "lane_id": SIDECAR_LANE_ID,
@@ -868,6 +995,15 @@ def _sidecar_choice_state_payload(
         "n_pairs_completed_total": len(searched_pair_indices),
         "full_coverage": len(searched_pair_indices) == int(total_pairs),
         "unsearched_pairs_preserve_old_sidecar": True,
+        "pair_search_records_schema": SIDECAR_PAIR_SEARCH_RECORDS_SCHEMA,
+        "pair_search_records": records,
+        "n_pairs_with_search_records": len(records),
+        "n_pairs_dispatch_safe_scalar_equivalent": len(
+            dispatch_safe_pairs.intersection(searched_pair_indices)
+        ),
+        "all_searched_pairs_dispatch_safe_scalar_equivalent": all(
+            int(i) in dispatch_safe_pairs for i in searched_pair_indices
+        ),
     }
 
 
@@ -877,6 +1013,7 @@ def write_sidecar_choice_state(
     dims: np.ndarray,
     delta_idx: np.ndarray,
     searched_mask: np.ndarray,
+    pair_search_records: dict[int, dict[str, Any]] | None = None,
     old_archive_sha256: str,
     old_sidecar_sha256: str,
     search_signal: str,
@@ -891,6 +1028,7 @@ def write_sidecar_choice_state(
         dims=dims,
         delta_idx=delta_idx,
         searched_mask=searched_mask,
+        pair_search_records=pair_search_records,
         old_archive_sha256=old_archive_sha256,
         old_sidecar_sha256=old_sidecar_sha256,
         search_signal=search_signal,
@@ -900,7 +1038,7 @@ def write_sidecar_choice_state(
         latent_dim=latent_dim,
     )
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp_path = path.with_name(path.name + ".tmp")
+    tmp_path = path.with_name(f".{path.name}.{os.getpid()}.{time.time_ns()}.tmp")
     tmp_path.write_bytes(_canonical_json_bytes(payload) + b"\n")
     tmp_path.replace(path)
     return payload
@@ -937,6 +1075,61 @@ def sidecar_choice_arrays_from_payload(
         latent_dim=latent_dim,
     )
     return dims, delta_idx, searched_mask
+
+
+def pair_search_records_from_payload(payload: dict[str, Any]) -> dict[int, dict[str, Any]]:
+    """Return validated per-pair search-provenance records from saved state."""
+
+    raw_records = payload.get("pair_search_records")
+    if raw_records is None:
+        return {}
+    if not isinstance(raw_records, list):
+        raise ValueError("sidecar choice state pair_search_records must be a list")
+    out: dict[int, dict[str, Any]] = {}
+    for raw in raw_records:
+        if not isinstance(raw, dict):
+            raise ValueError("sidecar choice state pair_search_records entries must be objects")
+        pair_index = raw.get("pair_index")
+        if not isinstance(pair_index, int):
+            raise ValueError("sidecar pair_search_record missing integer pair_index")
+        if pair_index in out:
+            raise ValueError(f"duplicate sidecar pair_search_record for pair {pair_index}")
+        out[pair_index] = dict(raw)
+    return out
+
+
+def _sidecar_pair_search_record(
+    *,
+    pair_index: int,
+    search_signal: str,
+    search_device: str,
+    requested_candidate_batch_size: int,
+    candidate_batch_size: int,
+    base_mse: float,
+    best_mse: float,
+    best_dim: int,
+    best_delta_idx: int,
+    scalar_reference_status: str,
+) -> dict[str, Any]:
+    dispatch_safe = scalar_reference_status in {
+        "scalar_direct",
+        "scalar_equivalent_profiled_this_pair",
+        "scalar_equivalent_recheck",
+    }
+    return {
+        "schema_version": SIDECAR_PAIR_SEARCH_RECORDS_SCHEMA,
+        "pair_index": int(pair_index),
+        "search_signal": search_signal,
+        "search_device": search_device,
+        "requested_candidate_batch_size": int(requested_candidate_batch_size),
+        "candidate_batch_size": int(candidate_batch_size),
+        "base_mse": float(base_mse),
+        "best_mse": float(best_mse),
+        "best_dim": int(best_dim),
+        "best_delta_idx": int(best_delta_idx),
+        "scalar_reference_status": scalar_reference_status,
+        "dispatch_safe_scalar_equivalent": bool(dispatch_safe),
+    }
 
 
 def load_sidecar_choice_state(
@@ -982,11 +1175,13 @@ def load_sidecar_choice_state(
         raise ValueError("sidecar choice state completed-count mismatch")
     if payload.get("full_coverage") is not (len(completed) == int(total_pairs)):
         raise ValueError("sidecar choice state full_coverage mismatch")
+    pair_search_records_from_payload(payload)
     return dims, delta_idx, searched_mask, payload
 
 
 def sidecar_choice_state_manifest_record(path: Path) -> dict[str, Any]:
     payload = _load_sidecar_choice_state_payload(path)
+    records = pair_search_records_from_payload(payload)
     return {
         "schema_version": payload.get("schema_version"),
         "path": manifest_path(path),
@@ -995,6 +1190,14 @@ def sidecar_choice_state_manifest_record(path: Path) -> dict[str, Any]:
         "total_pairs": payload.get("total_pairs"),
         "full_coverage": payload.get("full_coverage"),
         "searched_pair_indices": payload.get("searched_pair_indices"),
+        "pair_search_records_schema": payload.get("pair_search_records_schema"),
+        "n_pairs_with_search_records": payload.get("n_pairs_with_search_records", len(records)),
+        "n_pairs_dispatch_safe_scalar_equivalent": payload.get(
+            "n_pairs_dispatch_safe_scalar_equivalent"
+        ),
+        "all_searched_pairs_dispatch_safe_scalar_equivalent": payload.get(
+            "all_searched_pairs_dispatch_safe_scalar_equivalent"
+        ),
     }
 
 
@@ -1061,11 +1264,13 @@ def search_per_pair_proxy_mse(
     initial_dims: np.ndarray | None = None,
     initial_delta_idx: np.ndarray | None = None,
     initial_searched_mask: np.ndarray | None = None,
+    initial_pair_search_records: dict[int, dict[str, Any]] | None = None,
     state_path: Path | None = None,
     state_context: dict[str, Any] | None = None,
     max_search_seconds: float | None = None,
     candidate_batch_profile_sizes: list[int] | None = None,
     auto_candidate_batch_size: bool = False,
+    recheck_unproven_pairs: bool = False,
 ) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
     """Greedy per-pair single-dim search using pixel MSE (fast proxy)."""
     import torch
@@ -1131,8 +1336,25 @@ def search_per_pair_proxy_mse(
 
     log_lines = []
     t0 = time.time()
-    skipped_already_completed = [k for k in pair_indices if searched_mask[k]]
-    work_pair_indices = [k for k in pair_indices if not searched_mask[k]]
+    pair_search_records = dict(initial_pair_search_records or {})
+
+    def _is_pair_dispatch_safe(pair_index: int) -> bool:
+        return (
+            pair_search_records.get(int(pair_index), {}).get(
+                "dispatch_safe_scalar_equivalent"
+            )
+            is True
+        )
+
+    recheck_pairs = {
+        k for k in pair_indices if searched_mask[k] and not _is_pair_dispatch_safe(k)
+    } if recheck_unproven_pairs else set()
+    skipped_already_completed = [
+        k for k in pair_indices if searched_mask[k] and k not in recheck_pairs
+    ]
+    work_pair_indices = [
+        k for k in pair_indices if (not searched_mask[k]) or k in recheck_pairs
+    ]
     progress_every = max(1, min(25, len(work_pair_indices) or 1))
     completed_this_run = 0
     stopped_for_wall_clock = False
@@ -1168,6 +1390,7 @@ def search_per_pair_proxy_mse(
                 active_candidate_batch_size = int(
                     candidate_batch_profile["selected_candidate_batch_size"]
                 )
+                candidate_batch_profile["profiled_pair_index"] = int(k)
                 print(
                     "[profile] candidate_batch_size "
                     f"selected={active_candidate_batch_size} "
@@ -1187,6 +1410,29 @@ def search_per_pair_proxy_mse(
         dims_out[k] = best_dim
         delta_idx_out[k] = best_didx
         searched_mask[k] = True
+        if active_candidate_batch_size == 1:
+            scalar_reference_status = "scalar_direct"
+        elif (
+            candidate_batch_profile is not None
+            and candidate_batch_profile.get("profiled_pair_index") == int(k)
+            and int(candidate_batch_profile.get("selected_candidate_batch_size", -1))
+            == int(active_candidate_batch_size)
+        ):
+            scalar_reference_status = "scalar_equivalent_profiled_this_pair"
+        else:
+            scalar_reference_status = "non_scalar_unproven_for_this_pair"
+        pair_search_records[int(k)] = _sidecar_pair_search_record(
+            pair_index=int(k),
+            search_signal="proxy_mse",
+            search_device=device.type,
+            requested_candidate_batch_size=candidate_batch_size,
+            candidate_batch_size=active_candidate_batch_size,
+            base_mse=base_mse,
+            best_mse=best_mse,
+            best_dim=best_dim,
+            best_delta_idx=best_didx,
+            scalar_reference_status=scalar_reference_status,
+        )
         completed_this_run += 1
         if state_path is not None:
             if state_context is None:
@@ -1196,6 +1442,7 @@ def search_per_pair_proxy_mse(
                 dims=dims_out,
                 delta_idx=delta_idx_out,
                 searched_mask=searched_mask,
+                pair_search_records=pair_search_records,
                 **state_context,
             )
         if n_done % progress_every == 0 or n_done == len(work_pair_indices):
@@ -1222,6 +1469,7 @@ def search_per_pair_proxy_mse(
             dims=dims_out,
             delta_idx=delta_idx_out,
             searched_mask=searched_mask,
+            pair_search_records=pair_search_records,
             **state_context,
         )
     elapsed = time.time() - t0
@@ -1248,6 +1496,14 @@ def search_per_pair_proxy_mse(
         "candidate_batch_size": active_candidate_batch_size,
         "auto_candidate_batch_size": auto_candidate_batch_size,
         "candidate_batch_profile": candidate_batch_profile,
+        "recheck_unproven_pairs": recheck_unproven_pairs,
+        "n_pairs_rechecked_unproven": len(recheck_pairs),
+        "n_pairs_dispatch_safe_scalar_equivalent": sum(
+            1 for i in np.flatnonzero(searched_mask) if _is_pair_dispatch_safe(int(i))
+        ),
+        "all_searched_pairs_dispatch_safe_scalar_equivalent": all(
+            _is_pair_dispatch_safe(int(i)) for i in np.flatnonzero(searched_mask)
+        ),
         "search_device": device.type,
         "elapsed_seconds": elapsed,
         "search_stopped_for_wall_clock": stopped_for_wall_clock,
@@ -1715,6 +1971,14 @@ def main() -> int:
         ),
     )
     p.add_argument(
+        "--recheck-unproven-pairs",
+        action="store_true",
+        help=(
+            "when resuming, recompute already searched pairs that lack "
+            "per-pair scalar-equivalence provenance"
+        ),
+    )
+    p.add_argument(
         "--max-search-seconds",
         type=float,
         default=None,
@@ -1733,6 +1997,12 @@ def main() -> int:
         / f"experiments/results/a1_per_pair_latent_sidecar_resampled_{timestamp}"
     )
     out_dir.mkdir(parents=True, exist_ok=True)
+    output_lock = SidecarOutputLock(out_dir)
+    try:
+        output_lock.acquire()
+    except RuntimeError as exc:
+        sys.stderr.write(f"[fatal] {exc}\n")
+        return 2
 
     if args.search_signal == "joint_seg_pose" and not args.accept_cpu_budget:
         sys.stderr.write(
@@ -1771,6 +2041,7 @@ def main() -> int:
     initial_dims = None
     initial_delta_idx = None
     initial_searched_mask = None
+    initial_pair_search_records: dict[int, dict[str, Any]] | None = None
     resumed_state = False
     if args.resume_search_state and state_path.exists():
         print(f"[ok] resuming sidecar choice state from {state_path}", flush=True)
@@ -1780,6 +2051,7 @@ def main() -> int:
             initial_searched_mask,
             _state_payload,
         ) = load_sidecar_choice_state(state_path, **state_context)
+        initial_pair_search_records = pair_search_records_from_payload(_state_payload)
         resumed_state = True
     elif args.resume_search_state:
         print(f"[ok] no prior state at {state_path}; starting fresh", flush=True)
@@ -1804,11 +2076,13 @@ def main() -> int:
             initial_dims=initial_dims,
             initial_delta_idx=initial_delta_idx,
             initial_searched_mask=initial_searched_mask,
+            initial_pair_search_records=initial_pair_search_records,
             state_path=state_path,
             state_context=state_context,
             max_search_seconds=args.max_search_seconds,
             candidate_batch_profile_sizes=args.profile_candidate_batches,
             auto_candidate_batch_size=args.auto_candidate_batch_size,
+            recheck_unproven_pairs=args.recheck_unproven_pairs,
         )
     else:
         sys.stderr.write(

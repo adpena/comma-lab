@@ -932,6 +932,28 @@ class TestNoMpsFallbackDefault:
         v = _scan_python_for_mps_fallback(script, root)
         assert len(v) >= 1, v
 
+    def test_aliased_cuda_module_check_with_mps_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        script = root / "experiments" / "bad_alias_cuda.py"
+        _write(script, """
+            from torch import cuda as torch_cuda
+            def pick():
+                return "cuda" if torch_cuda.is_available() else "mps"
+        """)
+        v = _scan_python_for_mps_fallback(script, root)
+        assert len(v) >= 1, v
+
+    def test_getattr_cuda_module_check_with_mps_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        script = root / "experiments" / "bad_getattr_cuda.py"
+        _write(script, """
+            import torch
+            def pick():
+                return "cuda" if getattr(torch, "cuda").is_available() else "mps"
+        """)
+        v = _scan_python_for_mps_fallback(script, root)
+        assert len(v) >= 1, v
+
     def test_cuda_required_default_passes(self, tmp_path: Path) -> None:
         root = _stub_repo(tmp_path)
         script = root / "experiments" / "good.py"

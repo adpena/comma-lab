@@ -572,3 +572,57 @@ Observed:
   largest steps were MPS fallback (`1.255s`), public-PR pristine (`0.819s`),
   authoritative-tag custody (`0.651s`), bare-writes (`0.648s`), dispatch
   hazards (`0.580s`), and eval-roundtrip false (`0.412s`).
+
+## Codex Follow-Up: MPS Alias Soundness + Fact-Filter Candidate Narrowing
+
+<!-- generated_at: 2026-05-10T02:26:42Z -->
+<!-- evidence_grade: local_dev_correctness_and_performance; no dispatch; no score claim -->
+
+Fresh read-only review found a correctness gap in the hot MPS fallback check:
+the candidate prefilter required the exact text `cuda.is_available`, so
+`from torch import cuda as torch_cuda` and `getattr(torch, "cuda").is_available()`
+forms could evade the AST detector. Codex fixed the detector by:
+
+- adding alias binding for `from torch import cuda [as name]`;
+- detecting `getattr(torch, "cuda").is_available()`;
+- narrowing candidates with one shared text-facts pass over files containing
+  `mps` plus one of `cuda.is_available`, `from torch import cuda`, or
+  `getattr(torch`;
+- bumping the persistent text-facts schema to `v12` so the new lexical facts
+  are not read from stale cache rows.
+
+Verification:
+
+```bash
+.venv/bin/python -m py_compile \
+  tools/build_a1_per_pair_latent_correction_sidecar.py \
+  src/tac/preflight.py src/tac/source_index.py \
+  src/tac/tests/test_a1_sidecar_builder_hardening.py \
+  src/tac/tests/test_preflight_meta_bugs.py
+.venv/bin/python -m pytest \
+  src/tac/tests/test_preflight_meta_bugs.py::TestNoMpsFallbackDefault \
+  src/tac/tests/test_source_index.py \
+  src/tac/tests/test_a1_sidecar_builder_hardening.py -q
+.venv/bin/python tools/profile_preflight_latency.py \
+  --surface preflight-checks \
+  --preflight-check check_no_mps_fallback_default \
+  --json-out .omx/research/artifacts/preflight_mps_profile_20260510_alias_factfilter.json \
+  --top 20 --fail-on-surface-failure
+```
+
+Observed:
+
+- focused MPS/source-index/sidecar tests: `29 passed in 1.04s`;
+- MPS check after alias/fact-filter patch: `1.482s` step time in the focused
+  profile (`2.114s` surface).
+- full developer preflight profile after the sidecar/MPS hardening patches:
+  `7.728s PASSED`, with the largest steps now MPS fallback (`1.158s`),
+  public-PR pristine (`0.715s`), authoritative-tag custody (`0.630s`),
+  bare-writes (`0.585s`), dispatch hazards (`0.537s`), and eval-roundtrip
+  false (`0.349s`).
+
+This is slightly slower than the earlier exact-string candidate path, but it
+removes a real false-negative class while staying far below the 30s crash
+budget. Next speed target is to move dispatch-shell hazards onto the same
+shared source-index/text-provider contract instead of importing and rescanning
+files through the helper.

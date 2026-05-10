@@ -25,7 +25,7 @@ _CURRENT_SOURCE_INDEX: contextvars.ContextVar[SourceIndex | None] = contextvars.
     "tac_current_source_index",
     default=None,
 )
-_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v10"
+_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v12"
 
 
 def _safe_resolve(path: Path) -> Path:
@@ -70,6 +70,9 @@ _DEFAULT_TEXT_FACT_NEEDLES = frozenset(
         "eval_roundtrip",
         "eval_roundtrip=False",
         "extractall(",
+        "from torch import cuda",
+        "getattr(torch",
+        "is_available",
         "kl_div",
         ".amrc",
         ".bin",
