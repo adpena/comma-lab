@@ -376,3 +376,31 @@ Current score-lowering queue while this is active:
    `experiments/results/preflight_timings_20260510T1237_poststage_codex.json`:
    top slow steps are Modal image build order, A2 packet ladder closure,
    untracked source inventory, PR91/HPM1, and tooling consolidation.
+
+## 2026-05-10T12:45Z PR101 proxy runtime packet materialized locally
+
+Local-only PR101 Kaggle proxy runtime packet artifact has been built:
+
+- packet dir:
+  `experiments/results/kaggle_pr101_proxy_sweep_20260510_codex/pr101_proxy_sweep/proxy_runtime_packet`
+- manifest:
+  `experiments/results/kaggle_pr101_proxy_sweep_20260510_codex/pr101_proxy_sweep/proxy_runtime_packet/runtime_packet_manifest.json`
+- manifest SHA-256:
+  `3b4993724e91ba112be6e02184d020b3485e5458eb759208be4bf78bd2395251`
+- runtime tree SHA-256:
+  `0d24791f96d614cdb2eb36baafb9412d3d8bc9b6bffd9acec1ad75e6f8cbe628`
+- unchanged archive SHA-256:
+  `b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e`
+
+Authority boundary remains fail-closed:
+
+- `score_claim=false`
+- `ready_for_exact_eval_dispatch=false`
+- `dispatch_attempted=false`
+- blockers include unsupported proxy params not runtime-consumed:
+  `delta_scale`, `latent_delta_scale`, `smooth_weight`
+- no Level 2 dispatch claim was opened for this local materialization
+
+Next bridge work is a runtime-consumption proof and either compiling the
+unsupported params into real runtime-consumed bytes or shrinking the candidate
+contract to only the three bias params before any exact eval dispatch.
