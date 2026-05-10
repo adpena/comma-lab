@@ -5,11 +5,14 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 from tac.repo_io import write_json
 
 
 REPO = Path(__file__).resolve().parents[1]
 SCRIPT = REPO / "tools/plan_pr103_arithmetic_transform.py"
+RETARGET_SCRIPT = REPO / "tools/probe_pr103_arithmetic_retarget.py"
 
 
 def test_plan_pr103_arithmetic_transform_cli_writes_json_and_markdown(tmp_path: Path) -> None:
@@ -70,6 +73,93 @@ def test_plan_pr103_arithmetic_transform_cli_fails_closed_for_unknown_target(
 
     assert proc.returncode == 2
     assert "target label not found" in proc.stderr
+
+
+def test_probe_pr103_arithmetic_retarget_cli_real_manifest_if_available(
+    tmp_path: Path,
+) -> None:
+    manifest = (
+        REPO
+        / "experiments/results/hnerv_pr103_lc_ac_schema_refresh_20260510_codex/manifest.json"
+    )
+    if not manifest.exists():
+        pytest.skip("local PR103 schema refresh manifest is not present")
+    json_out = tmp_path / "probe.json"
+    md_out = tmp_path / "probe.md"
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(RETARGET_SCRIPT),
+            "--schema-manifest",
+            str(manifest),
+            "--target-label",
+            "stem.weight",
+            "--json-out",
+            str(json_out),
+            "--md-out",
+            str(md_out),
+        ],
+        cwd=REPO,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    report = json.loads(json_out.read_text(encoding="utf-8"))
+    assert report["target_stream"]["label"] == "stem.weight"
+    assert report["score_claim"] is False
+    assert report["ready_for_archive_preflight"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert "candidate_runtime_adapter_missing" in report["readiness_blockers"]
+    assert "stem.weight" in md_out.read_text(encoding="utf-8")
+
+
+def test_probe_pr103_arithmetic_coordinate_search_cli_real_manifest_if_available(
+    tmp_path: Path,
+) -> None:
+    manifest = (
+        REPO
+        / "experiments/results/hnerv_pr103_lc_ac_schema_refresh_20260510_codex/manifest.json"
+    )
+    if not manifest.exists():
+        pytest.skip("local PR103 schema refresh manifest is not present")
+    json_out = tmp_path / "coordinate.json"
+    md_out = tmp_path / "coordinate.md"
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(RETARGET_SCRIPT),
+            "--schema-manifest",
+            str(manifest),
+            "--target-label",
+            "stem.weight",
+            "--probe-mode",
+            "coordinate-search",
+            "--top-symbols",
+            "2",
+            "--deltas=-1,1",
+            "--json-out",
+            str(json_out),
+            "--md-out",
+            str(md_out),
+        ],
+        cwd=REPO,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    report = json.loads(json_out.read_text(encoding="utf-8"))
+    assert report["schema"] == "pr103_arithmetic_histogram_coordinate_probe_v1"
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["search_config"]["candidate_count"] > 0
+    assert "candidate_runtime_adapter_missing" in report["readiness_blockers"]
+    assert "Coordinate Probe" in md_out.read_text(encoding="utf-8")
 
 
 def _manifest() -> dict:

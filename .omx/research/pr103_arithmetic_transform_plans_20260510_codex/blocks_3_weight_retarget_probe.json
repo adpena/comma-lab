@@ -1,0 +1,124 @@
+{
+  "byte_accounting": {
+    "caveats": [
+      "archive_not_emitted",
+      "runtime_adapter_not_integrated",
+      "fixed_pr103_section_lengths_do_not_accept_changed_merged_ac_bytes",
+      "component_distortion_unknown_until_exact_cuda"
+    ],
+    "estimate_is_score_claim": false,
+    "estimated_member_delta_if_runtime_adapter_supported": 0,
+    "estimated_rate_score_delta_if_components_unchanged": 0.0,
+    "fixed_layout_requires_runtime_adapter": true
+  },
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "pr103_arithmetic_retarget_probe_is_not_dispatch_authorization",
+    "retarget_probe_noop",
+    "candidate_archive_missing",
+    "candidate_runtime_adapter_missing",
+    "candidate_inflate_output_parity_missing",
+    "strict_pre_submission_compliance_json_missing",
+    "lane_dispatch_claim_missing",
+    "exact_cuda_auth_eval_missing"
+  ],
+  "gpu_required": false,
+  "planning_only": true,
+  "proposal_id": "pr103_ac_plan_d282cb04a286eddc",
+  "readiness_blockers": [
+    "retarget_probe_noop",
+    "candidate_archive_missing",
+    "candidate_runtime_adapter_missing",
+    "candidate_inflate_output_parity_missing",
+    "strict_pre_submission_compliance_json_missing",
+    "lane_dispatch_claim_missing",
+    "exact_cuda_auth_eval_missing"
+  ],
+  "ready_for_archive_preflight": false,
+  "ready_for_exact_eval_dispatch": false,
+  "retargeted_histogram": {
+    "brotli_byte_delta": 0,
+    "retargeted_brotli_bytes": 895,
+    "retargeted_raw_sha256": "b91ca03bcf0aea5db16daefdc0da3453bbf69e25dce0075fe43e6b5b49945d97",
+    "retargeted_weights_sha256": "8374b2aa8ada2c99c5697515d94dcc169c786e503b7d477cdc0695b3abf97c66",
+    "source_brotli_bytes": 895,
+    "source_raw_sha256": "b91ca03bcf0aea5db16daefdc0da3453bbf69e25dce0075fe43e6b5b49945d97"
+  },
+  "retargeted_merged_stream": {
+    "byte_delta": 0,
+    "no_op": true,
+    "retargeted_bytes": 153856,
+    "retargeted_sha256": "08f0a219b395e6783c522bacc8239f01dcb3d27d9f7f8d2291a7478d04859de7",
+    "source_bytes": 153856,
+    "source_sha256": "08f0a219b395e6783c522bacc8239f01dcb3d27d9f7f8d2291a7478d04859de7"
+  },
+  "schema": "pr103_arithmetic_retarget_probe_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 178223,
+    "member_bytes": 178123,
+    "member_name": "x",
+    "member_sha256": "dd92b065b8fbd2bfe9de837eb110a971c2675ecca4247e2658b4628b464d72ec",
+    "path": "experiments/results/public_pr_intake_full/public_pr103_intake_20260505_auto/archive.zip",
+    "sha256": "31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30"
+  },
+  "source_roundtrip": {
+    "byte_identical": true,
+    "decoder_maybe_exhausted": true,
+    "merged_ac_bytes": 153856,
+    "merged_ac_sha256": "08f0a219b395e6783c522bacc8239f01dcb3d27d9f7f8d2291a7478d04859de7",
+    "reencoded_bytes": 153856,
+    "reencoded_sha256": "08f0a219b395e6783c522bacc8239f01dcb3d27d9f7f8d2291a7478d04859de7"
+  },
+  "source_schema_manifest": {
+    "bytes": 26522,
+    "dispatch_attempted": false,
+    "path": "experiments/results/hnerv_pr103_lc_ac_schema_refresh_20260510_codex/manifest.json",
+    "provided_inline": false,
+    "score_claim": false,
+    "sha256": "2639e904ced829eeefb885c4f6a8019543277b9a4d19eb85d895c4427b95702f"
+  },
+  "strategy": "retarget_categorical_model_to_decoded_symbols",
+  "target_stream": {
+    "alphabet_size": 256,
+    "decoded_stream_index": 4,
+    "decoded_symbols_sha256": "f2c0a1d162dac74c94216ca3933c8e6690104a1cfe2c6f1cda84d863d17b484c",
+    "label": "blocks.3.weight",
+    "model_cross_entropy_bits_per_symbol": 5.774054970427397,
+    "model_cross_entropy_bytes_floor": 14031,
+    "model_gap_bytes_estimate": 9,
+    "observed_decoded_symbols_sha256": "f2c0a1d162dac74c94216ca3933c8e6690104a1cfe2c6f1cda84d863d17b484c",
+    "observed_entropy_bits_per_symbol": 5.770686023766473,
+    "observed_entropy_bytes_floor": 14023,
+    "required_next_artifact": "byte_different_archive_manifest_with_old_new_sha256_runtime_parity_and_exact_cuda",
+    "role": "ac_weight_tensor",
+    "schema_index": 8,
+    "symbol_count": 19440
+  },
+  "tool_run_manifest": {
+    "argv": [
+      "--schema-manifest",
+      "experiments/results/hnerv_pr103_lc_ac_schema_refresh_20260510_codex/manifest.json",
+      "--target-label",
+      "blocks.3.weight",
+      "--json-out",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_3_weight_retarget_probe.json",
+      "--md-out",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_3_weight_retarget_probe.md"
+    ],
+    "canonical_payload_without_tool_manifest_sha256": "c9d0d32fc1185c26e27af2a711e91d925f2dbb61ff293d3a505b89cf6714c705",
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 26522,
+        "path": "experiments/results/hnerv_pr103_lc_ac_schema_refresh_20260510_codex/manifest.json",
+        "sha256": "2639e904ced829eeefb885c4f6a8019543277b9a4d19eb85d895c4427b95702f"
+      }
+    ],
+    "output_path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_3_weight_retarget_probe.json",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "tools/probe_pr103_arithmetic_retarget.py"
+  }
+}

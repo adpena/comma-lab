@@ -43,6 +43,63 @@ Command:
 - model-gap byte upper bound: `46`
 - rate-score upper-bound delta: `-3.0629511843619884e-05`
 
+## Apples-to-apples correction: baseline retarget versus coordinate search
+
+Artifact:
+
+```text
+.omx/research/pr103_arithmetic_transform_plans_20260510_codex/stem_weight_retarget_probe.json
+.omx/research/pr103_arithmetic_transform_plans_20260510_codex/stem_weight_retarget_probe.md
+.omx/research/pr103_arithmetic_transform_plans_20260510_codex/*_coordinate_probe.json
+.omx/research/pr103_arithmetic_transform_plans_20260510_codex/*_coordinate_probe.md
+```
+
+Command:
+
+```bash
+.venv/bin/python tools/probe_pr103_arithmetic_retarget.py \
+  --schema-manifest experiments/results/hnerv_pr103_lc_ac_schema_refresh_20260510_codex/manifest.json \
+  --target-label stem.weight \
+  --json-out .omx/research/pr103_arithmetic_transform_plans_20260510_codex/stem_weight_retarget_probe.json \
+  --md-out .omx/research/pr103_arithmetic_transform_plans_20260510_codex/stem_weight_retarget_probe.md
+```
+
+That command was only a baseline reconstruction check. It rebuilds the q8 model
+from the decoded symbols using the same rule PR103 already used, so a no-op is
+not evidence that the local histogram neighborhood is exhausted. Treating it as
+such would be an apples-to-oranges conclusion.
+
+Corrected coordinate-search probes:
+
+```bash
+.venv/bin/python tools/probe_pr103_arithmetic_retarget.py \
+  --schema-manifest experiments/results/hnerv_pr103_lc_ac_schema_refresh_20260510_codex/manifest.json \
+  --target-label stem.weight \
+  --probe-mode coordinate-search \
+  --top-symbols 32 \
+  --deltas=-2,-1,1,2 \
+  --json-out .omx/research/pr103_arithmetic_transform_plans_20260510_codex/stem_weight_coordinate_probe.json \
+  --md-out .omx/research/pr103_arithmetic_transform_plans_20260510_codex/stem_weight_coordinate_probe.md
+```
+
+Coordinate-search results across the top-5 targets:
+
+| target | merged delta | histogram Brotli delta | total member delta | blocker |
+|---|---:|---:|---:|---|
+| `stem.weight` | `0` | `-2` | `-2` | `candidate_runtime_adapter_missing` |
+| `blocks.1.weight` | `0` | `-1` | `-1` | `candidate_runtime_adapter_missing` |
+| `blocks.0.weight` | `0` | `-2` | `-2` | `candidate_runtime_adapter_missing` |
+| `blocks.2.weight` | `0` | `-2` | `-2` | `candidate_runtime_adapter_missing` |
+| `blocks.3.weight` | `0` | `-2` | `-2` | `candidate_runtime_adapter_missing` |
+
+Interpretation: the simple reconstruction path is a no-op, but actual q8
+histogram coordinate perturbations do expose tiny byte-positive local moves.
+They are far too small to justify exact CUDA alone and are not archive-ready
+because PR103 has fixed section lengths and no runtime adapter for changed
+sections. The valid next PR103 arithmetic work is a runtime-adapter prototype
+or a larger multi-coordinate/multi-stream search that can amortize adapter
+overhead and produce a material byte delta.
+
 ## Adversarial classification
 
 This is not a score candidate. It is the next byte-closed planning artifact
@@ -65,13 +122,15 @@ Current blockers:
 
 ## Next implementation target
 
-Implement the runtime-adapter prototype for this one `stem.weight` target only:
+Implement a runtime-adapter prototype for PR103 AC-section changes:
 
 1. decode the source merged AC stream;
-2. rebuild the target stream categorical model from observed symbols;
-3. re-encode the merged stream;
+2. accept explicit q8 histogram coordinate changes, not just source-rule
+   reconstruction;
+3. re-encode the merged stream and compressed histogram section;
 4. reject no-op or wrong-stream proposals by symbol SHA and stream count;
-5. emit a byte-different candidate archive only if the runtime adapter can
+5. account for runtime-adapter overhead before archive materialization;
+6. emit a byte-different candidate archive only if the runtime adapter can
    parse the new section lengths and consume the changed stream.
 
 No GPU dispatch is warranted until that byte-different archive exists and

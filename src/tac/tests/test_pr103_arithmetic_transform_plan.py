@@ -2,14 +2,25 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import brotli
+import numpy as np
 import pytest
 
+from tac.hnerv_lowlevel_packer import write_stored_single_member_zip
+from tac.hnerv_pr103_lc_ac_schema import (
+    Pr103LcAcLayout,
+    encode_pr103_merged_ac_stream,
+)
 from tac.pr103_arithmetic_transform_plan import (
+    COORDINATE_SCHEMA,
     PLAN_SCHEMA,
+    RETARGET_SCHEMA,
     Pr103ArithmeticTransformPlanError,
+    build_pr103_arithmetic_histogram_coordinate_probe,
+    build_pr103_arithmetic_retarget_probe,
     build_pr103_arithmetic_transform_plan,
 )
-from tac.repo_io import write_json
+from tac.repo_io import sha256_bytes, write_json
 
 
 def test_pr103_transform_plan_defaults_to_top_target_and_blocks_dispatch() -> None:
@@ -79,6 +90,80 @@ def test_pr103_transform_plan_reads_manifest_from_path(tmp_path: Path) -> None:
     assert plan["source_schema_manifest"]["sha256"]
 
 
+def test_pr103_arithmetic_retarget_probe_reports_real_byte_delta_fail_closed(
+    tmp_path: Path,
+) -> None:
+    fixture = _probe_fixture(tmp_path)
+
+    report = build_pr103_arithmetic_retarget_probe(
+        schema_manifest=fixture["manifest"],
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+    )
+
+    assert report["schema"] == RETARGET_SCHEMA
+    assert report["score_claim"] is False
+    assert report["dispatch_attempted"] is False
+    assert report["ready_for_archive_preflight"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["target_stream"]["label"] == "fixture.weight0"
+    assert report["source_roundtrip"]["byte_identical"] is True
+    assert report["retargeted_merged_stream"]["retargeted_sha256"]
+    assert report["retargeted_histogram"]["retargeted_raw_sha256"]
+    assert report["byte_accounting"]["estimate_is_score_claim"] is False
+    assert "candidate_runtime_adapter_missing" in report["readiness_blockers"]
+    assert "exact_cuda_auth_eval_missing" in report["dispatch_blockers"]
+
+
+def test_pr103_arithmetic_retarget_probe_detects_target_symbol_sha_mismatch(
+    tmp_path: Path,
+) -> None:
+    fixture = _probe_fixture(tmp_path)
+    fixture["manifest"]["next_arithmetic_schema_targets"][0][
+        "decoded_symbols_sha256"
+    ] = "f" * 64
+
+    report = build_pr103_arithmetic_retarget_probe(
+        schema_manifest=fixture["manifest"],
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+    )
+
+    assert "target_decoded_symbols_sha_mismatch" in report["readiness_blockers"]
+    assert report["ready_for_archive_preflight"] is False
+
+
+def test_pr103_arithmetic_histogram_coordinate_probe_searches_changed_weights(
+    tmp_path: Path,
+) -> None:
+    fixture = _probe_fixture(tmp_path)
+
+    report = build_pr103_arithmetic_histogram_coordinate_probe(
+        schema_manifest=fixture["manifest"],
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+        top_symbols=2,
+        deltas=(-1, 1),
+    )
+
+    assert report["schema"] == COORDINATE_SCHEMA
+    assert report["score_claim"] is False
+    assert report["ready_for_archive_preflight"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["search_config"]["candidate_count"] > 0
+    best = report["best_candidate"]
+    assert best["new_weight"] != best["old_weight"]
+    assert "merged_ac_delta" in best
+    assert "histogram_brotli_delta" in best
+    assert "candidate_runtime_adapter_missing" in report["readiness_blockers"]
+
+
 def _manifest() -> dict:
     return {
         "planning_only": True,
@@ -128,4 +213,85 @@ def _manifest() -> dict:
                 "model_gap_bytes_estimate": 45,
             },
         ],
+    }
+
+
+def _probe_fixture(tmp_path: Path) -> dict:
+    histograms = np.ones((2, 256), dtype=np.uint8)
+    histograms[0, :4] = np.asarray([2, 3, 5, 7], dtype=np.uint8)
+    histograms[1, :4] = np.asarray([7, 5, 3, 2], dtype=np.uint8)
+    hi_histogram = np.asarray([3, 1, 4], dtype="<u2")
+    stream_specs = (
+        ("fixture.weight0", 4, 0),
+        ("fixture.weight1", 3, 1),
+    )
+    hi_symbol_count = 5
+    symbol_streams = [
+        np.asarray([0, 1, 2, 2], dtype=np.int32),
+        np.asarray([0, 0, 1], dtype=np.int32),
+        np.asarray([2, 0, 2, 1, 0], dtype=np.int32),
+    ]
+    merged_ac = encode_pr103_merged_ac_stream(
+        symbol_streams,
+        [histograms[0], histograms[1], hi_histogram],
+    )
+    scales = b"sc"
+    non_ac = brotli.compress(b"non-ac-weights")
+    hists = brotli.compress(histograms.tobytes())
+    latent_meta = b"meta"
+    low = brotli.compress(bytes([1, 2, 3, 4, 5]))
+    hi_hist = brotli.compress(hi_histogram.tobytes())
+    layout = Pr103LcAcLayout(
+        scales_fp16=len(scales),
+        non_ac_weights_brotli=len(non_ac),
+        ac_histograms_brotli=len(hists),
+        merged_range_coded_weights_and_hi_latents=len(merged_ac),
+        latent_min_scale_fp16=len(latent_meta),
+        latent_low_bytes_brotli=len(low),
+        latent_hi_histogram_brotli=len(hi_hist),
+    )
+    payload = scales + non_ac + hists + merged_ac + latent_meta + low + hi_hist
+    archive = tmp_path / "source.zip"
+    write_stored_single_member_zip(archive, member_name="x", payload=payload)
+    manifest = {
+        "planning_only": True,
+        "score_claim": False,
+        "ready_for_schema_review": True,
+        "source_archive": {
+            "path": "source.zip",
+            "bytes": archive.stat().st_size,
+            "sha256": "a" * 64,
+            "member_name": "x",
+            "member_bytes": len(payload),
+            "member_sha256": sha256_bytes(payload),
+        },
+        "merged_arithmetic_stream": {
+            "source_bytes": len(merged_ac),
+            "source_sha256": sha256_bytes(merged_ac),
+            "decoded_symbol_count": 12,
+            "decoder_maybe_exhausted": True,
+            "reencoded_byte_identical": True,
+        },
+        "next_arithmetic_schema_targets": [
+            {
+                "label": "fixture.weight0",
+                "role": "ac_weight_tensor",
+                "schema_index": 0,
+                "symbol_count": 4,
+                "alphabet_size": 256,
+                "decoded_symbols_sha256": sha256_bytes(
+                    symbol_streams[0].astype(np.uint16).tobytes()
+                ),
+                "observed_entropy_bytes_floor": 1,
+                "model_cross_entropy_bytes_floor": 2,
+                "model_gap_bytes_estimate": 1,
+            }
+        ],
+    }
+    return {
+        "archive": archive,
+        "manifest": manifest,
+        "layout": layout,
+        "stream_specs": stream_specs,
+        "hi_symbol_count": hi_symbol_count,
     }
