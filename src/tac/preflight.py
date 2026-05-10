@@ -942,6 +942,7 @@ class _PreflightCliTimingRecorder:
         self.runner = runner
         self._originals: dict[str, object] = {}
         self._rows: list[dict[str, object]] = []
+        self._active: dict[int, dict[str, object]] = {}
         self._lock = threading.Lock()
         self._started = 0.0
         self._sequence = 0
@@ -965,6 +966,18 @@ class _PreflightCliTimingRecorder:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             row_started = time.perf_counter()
+            with self._lock:
+                self._sequence += 1
+                sequence = self._sequence
+                self._active[sequence] = {
+                    "sequence": sequence,
+                    "name": name,
+                    "status": "running",
+                    "elapsed_s": 0.0,
+                    "started_offset_s": round(row_started - self._started, 6),
+                    "finished_offset_s": None,
+                    "thread": threading.current_thread().name,
+                }
             status = "passed"
             detail = ""
             try:
@@ -976,9 +989,8 @@ class _PreflightCliTimingRecorder:
             finally:
                 row_finished = time.perf_counter()
                 with self._lock:
-                    self._sequence += 1
                     row: dict[str, object] = {
-                        "sequence": self._sequence,
+                        "sequence": sequence,
                         "name": name,
                         "status": status,
                         "elapsed_s": round(row_finished - row_started, 6),
@@ -988,13 +1000,24 @@ class _PreflightCliTimingRecorder:
                     }
                     if detail:
                         row["detail"] = detail
+                    self._active.pop(sequence, None)
                     self._rows.append(row)
 
         return wrapper
 
     def rows(self) -> list[dict[str, object]]:
         with self._lock:
-            return [dict(row) for row in self._rows]
+            rows = [dict(row) for row in self._rows]
+            now = time.perf_counter()
+            for row in self._active.values():
+                active = dict(row)
+                active["elapsed_s"] = round(
+                    now - (self._started + float(active["started_offset_s"])),
+                    6,
+                )
+                active["finished_offset_s"] = round(now - self._started, 6)
+                rows.append(active)
+            return rows
 
 
 def _build_preflight_cli_timing_payload(
@@ -3471,47 +3494,170 @@ def preflight_developer(
         return
 
     if check_codebase:
-        check_codebase_drift(strict=True, verbose=verbose)
-        check_dispatch_claim_helper_present(strict=True, verbose=verbose)
-        preflight_arity(strict=True, verbose=verbose)
-        preflight_shell_lane_arity(strict=True, verbose=verbose)
-        preflight_t4_oom_training_guard(strict=True, verbose=verbose)
-        check_dispatch_cli_shell_hazards(strict=True, verbose=verbose)
-        check_subagent_landing_has_solver_wire_in(strict=True, verbose=verbose)
-        check_lane_pre_registered_before_work_starts(strict=True, verbose=verbose)
-        check_authoritative_tag_requires_custody_metadata(
-            strict=True, verbose=verbose,
+        _parallel = _ParallelPreflightRunner(
+            enabled=_preflight_parallel_enabled(),
+            verbose=verbose,
         )
-        check_continual_learning_writes_use_lock(
-            strict=True, verbose=verbose,
+        dev_checks: tuple[tuple[str, str, object], ...] = (
+            (
+                "check_codebase_drift",
+                "[codebase-drift]",
+                lambda: check_codebase_drift(strict=True, verbose=False),
+            ),
+            (
+                "check_dispatch_claim_helper_present",
+                "[dispatch-claim-helper]",
+                lambda: check_dispatch_claim_helper_present(
+                    strict=True, verbose=False
+                ),
+            ),
+            (
+                "preflight_arity",
+                "[arity]",
+                lambda: preflight_arity(strict=True, verbose=False),
+            ),
+            (
+                "preflight_shell_lane_arity",
+                "[shell-lane-arity]",
+                lambda: preflight_shell_lane_arity(strict=True, verbose=False),
+            ),
+            (
+                "preflight_t4_oom_training_guard",
+                "[t4-oom-training-guard]",
+                lambda: preflight_t4_oom_training_guard(
+                    strict=True, verbose=False
+                ),
+            ),
+            (
+                "check_dispatch_cli_shell_hazards",
+                "[dispatch-cli-shell-hazards]",
+                lambda: check_dispatch_cli_shell_hazards(
+                    strict=True, verbose=False
+                ),
+            ),
+            (
+                "check_subagent_landing_has_solver_wire_in",
+                "[subagent-landing-solver-wire-in]",
+                lambda: check_subagent_landing_has_solver_wire_in(
+                    strict=True, verbose=False
+                ),
+            ),
+            (
+                "check_lane_pre_registered_before_work_starts",
+                "[lane-pre-registered]",
+                lambda: check_lane_pre_registered_before_work_starts(
+                    strict=True, verbose=False
+                ),
+            ),
+            (
+                "check_authoritative_tag_requires_custody_metadata",
+                "[authoritative-tag-custody-metadata]",
+                lambda: check_authoritative_tag_requires_custody_metadata(
+                    strict=True, verbose=False
+                ),
+            ),
+            (
+                "check_continual_learning_writes_use_lock",
+                "[continual-learning-lock]",
+                lambda: check_continual_learning_writes_use_lock(
+                    strict=True, verbose=False
+                ),
+            ),
+            (
+                "check_no_tag_only_custody_validation",
+                "[no-tag-only-custody]",
+                lambda: check_no_tag_only_custody_validation(
+                    strict=True, verbose=False
+                ),
+            ),
+            (
+                "check_no_bare_writes_to_shared_state",
+                "[no-bare-shared-state-writes]",
+                lambda: check_no_bare_writes_to_shared_state(
+                    strict=True, verbose=False
+                ),
+            ),
+            (
+                "check_locked_writes_preserve_deletions",
+                "[locked-writes-preserve-deletions]",
+                lambda: check_locked_writes_preserve_deletions(
+                    strict=True, verbose=False
+                ),
+            ),
+            (
+                "check_custody_gate_accept_tokens_concrete_only",
+                "[custody-gate-concrete-tokens]",
+                lambda: check_custody_gate_accept_tokens_concrete_only(
+                    strict=True, verbose=False
+                ),
+            ),
+            (
+                "check_remote_dispatch_runbooks_no_local_cuda_probe_default",
+                "[remote-runbooks-no-local-cuda-probe]",
+                lambda: check_remote_dispatch_runbooks_no_local_cuda_probe_default(
+                    strict=True, verbose=False
+                ),
+            ),
+            (
+                "check_state_writers_strict_load_for_mutating_path",
+                "[state-writers-strict-load]",
+                lambda: check_state_writers_strict_load_for_mutating_path(
+                    strict=True, verbose=False
+                ),
+            ),
+            (
+                "check_no_mps_fallback_default",
+                "[no-mps-fallback-default]",
+                lambda: check_no_mps_fallback_default(strict=True, verbose=False),
+            ),
+            (
+                "check_no_eval_roundtrip_false",
+                "[no-eval-roundtrip-false]",
+                lambda: check_no_eval_roundtrip_false(strict=True, verbose=False),
+            ),
+            (
+                "check_no_disable_eval_roundtrip_flag",
+                "[no-disable-eval-roundtrip-flag]",
+                lambda: check_no_disable_eval_roundtrip_flag(
+                    strict=True, verbose=False
+                ),
+            ),
+            (
+                "check_no_pipefail_tee_pipestatus_loss",
+                "[no-pipefail-tee-pipestatus-loss]",
+                lambda: check_no_pipefail_tee_pipestatus_loss(
+                    strict=True, verbose=False
+                ),
+            ),
+            (
+                "check_training_scripts_use_real_data_in_nonsmoke_mode",
+                "[training-real-data-nonsmoke]",
+                lambda: check_training_scripts_use_real_data_in_nonsmoke_mode(
+                    strict=True, verbose=False
+                ),
+            ),
+            (
+                "check_no_scorer_load_at_inflate",
+                "[no-scorer-load-at-inflate]",
+                lambda: check_no_scorer_load_at_inflate(
+                    strict=True, verbose=False
+                ),
+            ),
+            (
+                "check_public_pr_intake_clones_pristine",
+                "[public-pr-intake-pristine]",
+                lambda: check_public_pr_intake_clones_pristine(
+                    strict=True, verbose=False
+                ),
+            ),
         )
-        check_no_tag_only_custody_validation(
-            strict=True, verbose=verbose,
-        )
-        check_no_bare_writes_to_shared_state(
-            strict=True, verbose=verbose,
-        )
-        check_locked_writes_preserve_deletions(
-            strict=True, verbose=verbose,
-        )
-        check_custody_gate_accept_tokens_concrete_only(
-            strict=True, verbose=verbose,
-        )
-        check_remote_dispatch_runbooks_no_local_cuda_probe_default(
-            strict=True, verbose=verbose,
-        )
-        check_state_writers_strict_load_for_mutating_path(
-            strict=True, verbose=verbose,
-        )
-        check_no_mps_fallback_default(strict=True, verbose=verbose)
-        check_no_eval_roundtrip_false(strict=True, verbose=verbose)
-        check_no_disable_eval_roundtrip_flag(strict=True, verbose=verbose)
-        check_no_pipefail_tee_pipestatus_loss(strict=True, verbose=verbose)
-        check_training_scripts_use_real_data_in_nonsmoke_mode(
-            strict=True, verbose=verbose,
-        )
-        check_no_scorer_load_at_inflate(strict=True, verbose=verbose)
-        check_public_pr_intake_clones_pristine(strict=True, verbose=verbose)
+        for name, _label, fn in dev_checks:
+            _parallel.submit(name, fn)
+        try:
+            for name, label, fn in dev_checks:
+                _parallel.run(name, label, fn)
+        finally:
+            _parallel.close(cancel=False)
         if codebase_cache_token is not None:
             _store_preflight_developer_clean_cache(
                 REPO_ROOT,
@@ -38022,18 +38168,25 @@ if __name__ == "__main__":
         # fail loudly and force profiling instead of silently taxing every edit.
         runner = preflight_developer if args.scope == "dev" else preflight_all
         recorder = _PreflightCliTimingRecorder(scope=args.scope, runner=runner)
+        runner_kwargs = {
+            "profile_name": args.profile,
+            "profile_arch": profile_arch,
+            "tto_frames_path": args.tto_frames,
+            "gt_poses_path": args.gt_poses,
+            "masks_path": args.masks,
+            "renderer_path": args.renderer,
+            "archive_path": args.archive,
+            "check_codebase": not args.no_codebase,
+            "verbose": True,
+        }
+        if runner is preflight_developer:
+            # The CLI already owns the user-facing timeout and timing JSON.
+            # Avoid a nested developer recorder/timer so parallel checks pay
+            # one instrumentation layer while direct library calls still get
+            # the 30s DX crash budget by default.
+            runner_kwargs["wall_clock_budget_s"] = None
         with recorder, _preflight_timeout_after(timeout_s):
-            runner(
-                profile_name=args.profile,
-                profile_arch=profile_arch,
-                tto_frames_path=args.tto_frames,
-                gt_poses_path=args.gt_poses,
-                masks_path=args.masks,
-                renderer_path=args.renderer,
-                archive_path=args.archive,
-                check_codebase=not args.no_codebase,
-                verbose=True,
-            )
+            runner(**runner_kwargs)
         print("\nPREFLIGHT PASSED")
     except (PreflightError, ArityViolation, FilenameContractError,
             CodebaseDriftError, LoaderFormatSafetyError) as e:

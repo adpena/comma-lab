@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import threading
 import time
 
 import pytest
@@ -116,6 +117,50 @@ def test_cli_timing_recorder_wraps_scope_checks(monkeypatch) -> None:
     assert rows[0]["status"] == "passed"
     assert rows[0]["elapsed_s"] >= 0
     assert rows[0]["sequence"] == 1
+
+
+def test_cli_timing_recorder_reports_active_parallel_step(monkeypatch) -> None:
+    started = threading.Event()
+    release = threading.Event()
+
+    def check_fake_active_step(*, strict: bool, verbose: bool) -> None:
+        assert strict is True
+        assert verbose is False
+        started.set()
+        assert release.wait(timeout=2.0)
+
+    def fake_runner() -> None:
+        preflight.check_fake_active_step(strict=True, verbose=False)
+
+    monkeypatch.setattr(
+        preflight,
+        "check_fake_active_step",
+        check_fake_active_step,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        preflight.inspect,
+        "getsource",
+        lambda func: (
+            "def fake_runner():\n"
+            "    check_fake_active_step(strict=True, verbose=False)\n"
+        ),
+    )
+
+    with _PreflightCliTimingRecorder(scope="dev", runner=fake_runner) as recorder:
+        thread = threading.Thread(target=fake_runner, name="test-preflight-worker")
+        thread.start()
+        assert started.wait(timeout=2.0)
+        rows = recorder.rows()
+        release.set()
+        thread.join(timeout=2.0)
+
+    assert any(
+        row["name"] == "check_fake_active_step"
+        and row["status"] == "running"
+        and row["thread"] == "test-preflight-worker"
+        for row in rows
+    )
 
 
 def test_cli_timing_payload_is_hot_sorted_and_records_budget() -> None:
