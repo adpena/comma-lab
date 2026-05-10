@@ -237,3 +237,25 @@ PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach \
   --train-timeout-hours 2 \
   --cost-cap-usd 80
 ```
+
+## 2026-05-10T12:40Z strict guard launched from 80b139c9
+
+Strict T1 guard dispatch is now active:
+
+- commit: `80b139c9`
+- label / instance job id:
+  `t1_balle_modal_guard_80b139c9_20260510T1240Z`
+- Modal call id: `fc-01KR8YCW8F12KACG5TKWSNZ7A7`
+- Modal run URL:
+  `https://modal.com/apps/adpena/main/ap-QR661mpdFN68qaOLXXv2JC`
+- bounded params: `epochs=50`, `batch_size=1`, `max_target_pairs=8`,
+  `sinkhorn_max_positions_per_chunk=2048`, `train_timeout_hours=2`
+- claim status after dispatch: `active_dispatching`
+- immediate recovery poll: `NOT READY`, queued or running
+
+Do not launch another T1 job while this claim is active. Harvest with:
+
+```bash
+.venv/bin/python experiments/modal_t1_balle_endtoend.py recover \
+  --label t1_balle_modal_guard_80b139c9_20260510T1240Z
+```

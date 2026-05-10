@@ -349,3 +349,30 @@ Provider/runtime architecture remains separated: Modal logic lives under
 `src/tac/deploy/modal/` plus thin experiment adapters, Vast/AWS/Azure/GCP/Kaggle
 work should follow the same provider-neutral runtime contract, and no
 experiment script should become the provider abstraction.
+
+## 2026-05-10T12:40Z strict T1 guard active
+
+Commit `80b139c9` launched the strict bounded T1 Modal guard:
+
+- lane id: `t1_balle_128k_endtoend`
+- instance job id: `t1_balle_modal_guard_80b139c9_20260510T1240Z`
+- Modal call id: `fc-01KR8YCW8F12KACG5TKWSNZ7A7`
+- Modal URL:
+  `https://modal.com/apps/adpena/main/ap-QR661mpdFN68qaOLXXv2JC`
+- exact limits: `epochs=50`, `batch_size=1`, `max_target_pairs=8`,
+  `sinkhorn_max_positions_per_chunk=2048`, `train_timeout_hours=2`
+- immediate recover result: queued/running, not ready
+
+Current score-lowering queue while this is active:
+
+1. Harvest this T1 guard. If it clears training entry + packet compile +
+   exact-CUDA auth-eval schema, promote to a full T1 dispatch decision; if it
+   fails, classify the exact stage and add the next fail-closed guard.
+2. In parallel, keep PR101 proxy packet work local-only: build packet manifests
+   and runtime-consumption proofs, but do not dispatch until unsupported proxy
+   params are either compiled into runtime-consumed bytes or explicitly
+   removed from the candidate.
+3. Begin preflight source-index migration using the timing profile from
+   `experiments/results/preflight_timings_20260510T1237_poststage_codex.json`:
+   top slow steps are Modal image build order, A2 packet ladder closure,
+   untracked source inventory, PR91/HPM1, and tooling consolidation.
