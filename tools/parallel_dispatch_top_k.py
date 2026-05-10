@@ -442,14 +442,17 @@ def _candidate_target_modes(candidate: dict) -> set[str]:
 def _candidate_targets_contest_dispatch(candidate: dict) -> bool:
     modes = _candidate_target_modes(candidate)
     if not modes:
-        return True
+        return False
     return bool(modes & CONTEST_TARGET_MARKERS)
 
 
 def _target_mode_blockers(candidate: dict) -> list[str]:
     modes = _candidate_target_modes(candidate)
     if not modes:
-        return []
+        return [
+            "target_modes_missing; parallel_dispatch_top_k requires explicit "
+            "contest_exact_eval target metadata for paid dispatch"
+        ]
     blockers: list[str] = []
     if modes & PRODUCTION_TARGET_MARKERS and not _candidate_targets_contest_dispatch(candidate):
         mode_text = ",".join(sorted(modes))

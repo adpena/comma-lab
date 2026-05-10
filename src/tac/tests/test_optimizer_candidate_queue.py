@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from tac.optimizer.candidate_queue import QUEUE_SCHEMA, build_candidate_queue
+from tac.optimization.proxy_candidate_contract import validate_proxy_candidate
 
 
 def _write_json(path: Path, payload: object) -> Path:
@@ -181,6 +182,52 @@ def test_predicted_param_sweep_manifest_is_forced_non_dispatchable(
     assert row["promotion_eligible"] is False
     assert row["evidence_semantics"] == "cpu_substrate_predicted_band"
     assert "predicted_score_is_not_score_evidence" in row["dispatch_blockers"]
+
+
+def test_kaggle_proxy_manifest_becomes_canonical_non_dispatchable_queue_row(
+    tmp_path: Path,
+) -> None:
+    manifest = _write_json(
+        tmp_path / "proxy_sweep_manifest.json",
+        {
+            "schema": "pr101_kaggle_proxy_sweep_v1",
+            "optimizer": "cmaes",
+            "optimizer_status": "cmaes_style_stdlib",
+            "evidence_semantics": "kaggle_gpu_proxy_config_search_only_not_exact_auth_eval",
+            "dispatch_blockers": [
+                "kaggle_proxy_substrate_not_contest_exact_eval",
+                "no_archive_zip_emitted",
+            ],
+            "best_candidate": {
+                "candidate_id": "proxy_cmaes_0007",
+                "trial_index": 7,
+                "optimizer": "cmaes",
+                "optimizer_status": "cmaes_style_stdlib",
+                "params": {"delta_scale": 0.01, "bias_r": -1.0},
+                "proxy_objective": 0.192851,
+                "proxy_components": {"anchor_proximity": 0.0},
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+                "proxy_only": True,
+            },
+        },
+    )
+
+    queue = build_candidate_queue([manifest], repo_root=tmp_path)
+    row = queue["top_k"][0]
+
+    assert row["candidate_id"] == "proxy_cmaes_0007"
+    assert row["rank_score"] == 0.192851
+    assert row["rank_score_field"] == "proxy_objective"
+    assert row["target_modes"] == ["contest_exact_eval_planning"]
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert row["promotion_eligible"] is False
+    assert row["rank_or_kill_eligible"] is False
+    assert "kaggle_proxy_substrate_not_contest_exact_eval" in row["dispatch_blockers"]
+    assert "kaggle_proxy_output_requires_archive_builder_promotion" in row["dispatch_blockers"]
+    assert validate_proxy_candidate(row) == []
+    assert queue["dispatch_ready_count"] == 0
 
 
 def test_queue_sanitizes_non_finite_legacy_telemetry(tmp_path: Path) -> None:

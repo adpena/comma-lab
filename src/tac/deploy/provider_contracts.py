@@ -53,6 +53,10 @@ class ProviderDeployContract:
             violations.append(f"{self.provider}: dispatch path must be plan-only by default")
         if self.implemented and not self.execution_flag:
             violations.append(f"{self.provider}: implemented dispatch requires explicit execution flag")
+        if self.scaffold_only and self.exact_cuda_eval_supported:
+            violations.append(
+                f"{self.provider}: scaffold contracts must not advertise exact CUDA eval support"
+            )
         if not self.requires_lane_claim_before_dispatch:
             violations.append(f"{self.provider}: lane claim required before remote dispatch")
         if not self.terminal_claim_required:
@@ -124,9 +128,9 @@ PROVIDER_CONTRACTS: dict[str, ProviderDeployContract] = {
         requires_lane_claim_before_dispatch=True,
         terminal_claim_required=True,
         custody_manifest_required=True,
-        exact_cuda_eval_supported=True,
+        exact_cuda_eval_supported=False,
         setup_blockers=("boto3", "AWS credentials", "region-specific DLAMI", "SSH key/security group"),
-        notes="AWS scaffold targets claimed CUDA hosts after EC2 lifecycle implementation lands.",
+        notes="AWS scaffold is a future CUDA host target after EC2 lifecycle implementation lands.",
     ),
     "azure": ProviderDeployContract(
         provider="azure",
@@ -152,9 +156,9 @@ PROVIDER_CONTRACTS: dict[str, ProviderDeployContract] = {
         requires_lane_claim_before_dispatch=True,
         terminal_claim_required=True,
         custody_manifest_required=True,
-        exact_cuda_eval_supported=True,
+        exact_cuda_eval_supported=False,
         setup_blockers=("gcloud auth", "GPU quota", "project/zone selection", "GCS harvest bucket"),
-        notes="GCP scaffold targets claimed CUDA hosts after lifecycle implementation lands.",
+        notes="GCP scaffold is a future CUDA host target after lifecycle implementation lands.",
     ),
 }
 

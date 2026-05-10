@@ -30,6 +30,7 @@ def _ready_lightning_candidate() -> dict:
         "archive_path": "experiments/results/candidate42/archive.zip",
         "predicted_band": [0.19, 0.24],
         "ready_for_exact_eval_dispatch": True,
+        "target_modes": ["contest_exact_eval"],
         "evidence_semantics": "contest_cuda_exact_eval_positive",
         "score_claim": False,
     }
@@ -522,6 +523,7 @@ def test_parallel_dispatch_rejects_production_only_target_for_contest_dispatch(
     candidate = _ready_custody_candidate(
         tmp_path,
         candidate_id="openpilot_edge_prod_probe",
+        target_modes=["openpilot_edge"],
         optimization_target="openpilot_edge",
         deployment_target="comma_ai_production",
     )
@@ -536,6 +538,25 @@ def test_parallel_dispatch_rejects_production_only_target_for_contest_dispatch(
 
     assert "non_contest_target_mode:" in message
     assert "parallel_dispatch_top_k only dispatches contest exact-eval archives" in message
+
+
+def test_parallel_dispatch_requires_explicit_contest_target_metadata(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    candidate = _ready_custody_candidate(tmp_path)
+    candidate.pop("target_modes", None)
+    ranked = _write_ranked_input(tmp_path, [candidate])
+
+    try:
+        tool._load_top_k(ranked, k=None)
+    except tool.DispatchInputError as exc:
+        message = str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected DispatchInputError")
+
+    assert "target_modes_missing" in message
+    assert "requires explicit contest_exact_eval target metadata" in message
 
 
 def test_parallel_dispatch_allows_dual_contest_and_production_target_with_custody(

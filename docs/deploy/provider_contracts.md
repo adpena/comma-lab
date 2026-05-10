@@ -25,7 +25,10 @@ Non-negotiable invariants:
 - Provider artifacts require a custody manifest with git state, command, hardware, archive bytes/SHA when applicable, logs, and harvest path.
 - Kaggle and any other proxy/free substrate cannot promote, rank, kill, or claim score truth.
 - MPS auth eval is never score truth.
-- Modal/AWS/Azure/GCP can host CUDA exact-eval only after lane claim, runtime closure, and adjudication over byte-closed artifacts.
+- Modal/Azure are the currently implemented CUDA exact-eval provider surfaces.
+  AWS/GCP are scaffolds only until lifecycle, quota, budget, and harvest
+  contracts land. Any provider can host CUDA exact-eval only after lane claim,
+  runtime closure, and adjudication over byte-closed artifacts.
 
 Readiness command:
 
@@ -52,9 +55,11 @@ Current setup blockers:
 - Modal: `modal login`, billing/credits context, CUDA scorer import probe,
   active-call harvest before refire.
 - Kaggle: API credentials, uploaded `tac-*.whl` dataset, GPU session quota.
-- AWS: `boto3`, credentials, region DLAMI resolution, SSH key/security group.
+- AWS: scaffold only; `boto3`, credentials, region DLAMI resolution, SSH
+  key/security group, budget/quota, and lifecycle/harvest implementation.
 - Azure: `az login`, quota/spot availability, SSH public key, lane tarball wiring.
-- GCP: `gcloud` auth, GPU quota, project/zone selection, GCS harvest bucket.
+- GCP: scaffold only; `gcloud` auth, billing, GPU quota, project/zone
+  selection, GCS harvest bucket, and lifecycle/harvest implementation.
 
 Landing integration note: `research_only=true` for this runbook/check landing.
 It changes dispatch safety infrastructure only. Sensitivity-map, Pareto,

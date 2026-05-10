@@ -33,6 +33,17 @@ def test_provider_contracts_preserve_custody_and_proxy_rules() -> None:
         assert contract.mps_auth_eval_allowed is False
 
 
+def test_only_implemented_cuda_surfaces_advertise_exact_eval_support() -> None:
+    contracts = provider_contracts()
+
+    assert {
+        name for name, contract in contracts.items() if contract.exact_cuda_eval_supported
+    } == {"modal", "azure"}
+    for name in ("aws", "gcp"):
+        assert contracts[name].scaffold_only is True
+        assert contracts[name].exact_cuda_eval_supported is False
+
+
 def test_validate_provider_contracts_passes_on_live_repo() -> None:
     assert validate_provider_contracts(repo_root=REPO_ROOT) == []
 
@@ -54,6 +65,22 @@ def test_preflight_provider_contract_guard_raises_on_registry_violation(monkeypa
     )
     monkeypatch.setattr(contracts_mod, "PROVIDER_CONTRACTS", bad)
     with pytest.raises(PreflightError, match="provider proxy score claims"):
+        check_provider_deploy_contracts(strict=True, verbose=False)
+
+
+def test_scaffold_contract_cannot_advertise_exact_cuda_support(monkeypatch) -> None:
+    import tac.deploy.provider_contracts as contracts_mod
+
+    original = contracts_mod.PROVIDER_CONTRACTS["gcp"]
+    bad = {**contracts_mod.PROVIDER_CONTRACTS}
+    bad["gcp"] = type(original)(
+        **{
+            **original.__dict__,
+            "exact_cuda_eval_supported": True,
+        }
+    )
+    monkeypatch.setattr(contracts_mod, "PROVIDER_CONTRACTS", bad)
+    with pytest.raises(PreflightError, match="scaffold contracts must not advertise"):
         check_provider_deploy_contracts(strict=True, verbose=False)
 
 

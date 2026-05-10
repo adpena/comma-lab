@@ -220,6 +220,21 @@ Every provider actuator must preserve deterministic reproducibility:
   Modal CPU; promote only byte-closed archive/runtime packets through claimed
   exact CUDA eval.
 
+Provider contract registries must not advertise exact-CUDA support for scaffold
+providers. A provider is exact-eval capable only after a real lifecycle,
+runtime-closure, claim, harvest, and adjudication path exists. Scaffolds such
+as AWS/GCP are useful capacity planning targets, but they must stay
+`exact_cuda_eval_supported=false` until implementation catches up.
+
+Optimizer/search substrates must share one false-authority contract. Kaggle,
+macOS/MPS, Optuna, CMA-ES, and other proxy rows must flow through
+`tac.optimization.proxy_candidate_contract` or an equivalent canonical helper
+that forces `score_claim=false`, `promotion_eligible=false`,
+`rank_or_kill_eligible=false`, and
+`ready_for_exact_eval_dispatch=false`. Paid dispatch queues must require an
+explicit contest target marker such as `target_modes=["contest_exact_eval"]`;
+missing target metadata fails closed.
+
 If a lane-specific provider script starts accumulating package lists, path
 mount rules, import probes, cost tables, timeout policy, or runtime closure
 logic, stop and extract that logic to `src/tac/deploy/<provider>/` first. The

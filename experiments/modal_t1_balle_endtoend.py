@@ -64,25 +64,39 @@ REMOTE_PYTHONPATH = f"{REMOTE_REPO / 'src'}:{REMOTE_REPO / 'upstream'}:{REMOTE_R
 T1_EXTRACTED_ARCHIVE_RUNTIME_CUSTODY_MIN_GIT_HEAD = (
     "0be54cbf9aa407a551a7371a5c438c2df4e3822f"
 )
-MOUNTED_CODE_PATHS = (
-    "src",
-    "pyproject.toml",
-    "uv.lock",
-    "upstream/evaluate.py",
-    "upstream/frame_utils.py",
-    "upstream/modules.py",
-    "upstream/public_test_video_names.txt",
-    "upstream/pyproject.toml",
-    "upstream/uv.lock",
-    "experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py",
-    "experiments/contest_auth_eval.py",
-    "tools/build_phase1_packet_compiler.py",
-    "tools/tool_bootstrap.py",
-    "tools/claim_lane_dispatch.py",
-    "scripts/remote_lane_t1_balle_endtoend.sh",
-    "scripts/remote_archive_only_eval.sh",
-    "scripts/probe_nvdec.sh",
-    ".omx/research/pr95_hnerv_muon_trainer_parity_profile_20260510.json",
+MODAL_MOUNT_MANIFEST: tuple[dict[str, str | bool], ...] = (
+    {"kind": "dir", "local_path": "src", "remote_path": str(REMOTE_REPO / "src"), "snapshot_policy": "git_diff"},
+    {"kind": "file", "local_path": "pyproject.toml", "remote_path": str(REMOTE_REPO / "pyproject.toml"), "snapshot_policy": "git_diff"},
+    {"kind": "file", "local_path": "uv.lock", "remote_path": str(REMOTE_REPO / "uv.lock"), "snapshot_policy": "git_diff"},
+    {"kind": "dir", "local_path": "upstream/models", "remote_path": str(REMOTE_REPO / "upstream/models"), "snapshot_policy": "identity_only"},
+    {"kind": "dir", "local_path": "upstream/videos", "remote_path": str(REMOTE_REPO / "upstream/videos"), "snapshot_policy": "identity_only"},
+    {"kind": "file", "local_path": "upstream/evaluate.py", "remote_path": str(REMOTE_REPO / "upstream/evaluate.py"), "snapshot_policy": "git_diff"},
+    {"kind": "file", "local_path": "upstream/frame_utils.py", "remote_path": str(REMOTE_REPO / "upstream/frame_utils.py"), "snapshot_policy": "git_diff"},
+    {"kind": "file", "local_path": "upstream/modules.py", "remote_path": str(REMOTE_REPO / "upstream/modules.py"), "snapshot_policy": "git_diff"},
+    {"kind": "file", "local_path": "upstream/public_test_video_names.txt", "remote_path": str(REMOTE_REPO / "upstream/public_test_video_names.txt"), "snapshot_policy": "git_diff"},
+    {"kind": "file", "local_path": "upstream/pyproject.toml", "remote_path": str(REMOTE_REPO / "upstream/pyproject.toml"), "snapshot_policy": "git_diff"},
+    {"kind": "file", "local_path": "upstream/uv.lock", "remote_path": str(REMOTE_REPO / "upstream/uv.lock"), "snapshot_policy": "git_diff"},
+    {"kind": "file", "local_path": "experiments/modal_t1_balle_endtoend.py", "remote_path": str(REMOTE_REPO / "experiments/modal_t1_balle_endtoend.py"), "snapshot_policy": "git_diff"},
+    {"kind": "file", "local_path": "experiments/__init__.py", "remote_path": str(REMOTE_REPO / "experiments/__init__.py"), "snapshot_policy": "git_diff"},
+    {"kind": "file", "local_path": "experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py", "remote_path": str(REMOTE_REPO / "experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py"), "snapshot_policy": "git_diff"},
+    {"kind": "file", "local_path": "experiments/contest_auth_eval.py", "remote_path": str(REMOTE_REPO / "experiments/contest_auth_eval.py"), "snapshot_policy": "git_diff"},
+    {"kind": "file", "local_path": "tools/build_phase1_packet_compiler.py", "remote_path": str(REMOTE_REPO / "tools/build_phase1_packet_compiler.py"), "snapshot_policy": "git_diff"},
+    {"kind": "file", "local_path": "tools/tool_bootstrap.py", "remote_path": str(REMOTE_REPO / "tools/tool_bootstrap.py"), "snapshot_policy": "git_diff"},
+    {"kind": "file", "local_path": "tools/claim_lane_dispatch.py", "remote_path": str(REMOTE_REPO / "tools/claim_lane_dispatch.py"), "snapshot_policy": "git_diff"},
+    {"kind": "file", "local_path": "scripts/remote_lane_t1_balle_endtoend.sh", "remote_path": str(REMOTE_REPO / "scripts/remote_lane_t1_balle_endtoend.sh"), "snapshot_policy": "git_diff"},
+    {"kind": "file", "local_path": "scripts/remote_archive_only_eval.sh", "remote_path": str(REMOTE_REPO / "scripts/remote_archive_only_eval.sh"), "snapshot_policy": "git_diff"},
+    {"kind": "file", "local_path": "scripts/probe_nvdec.sh", "remote_path": str(REMOTE_REPO / "scripts/probe_nvdec.sh"), "snapshot_policy": "git_diff"},
+    {"kind": "file", "local_path": ".omx/research/pr95_hnerv_muon_trainer_parity_profile_20260510.json", "remote_path": str(REMOTE_REPO / ".omx/research/pr95_hnerv_muon_trainer_parity_profile_20260510.json"), "snapshot_policy": "git_diff", "optional": True},
+)
+MOUNTED_CODE_PATHS = tuple(
+    str(spec["local_path"])
+    for spec in MODAL_MOUNT_MANIFEST
+    if spec.get("snapshot_policy") == "git_diff"
+)
+MOUNTED_DATA_PATHS = tuple(
+    str(spec["local_path"])
+    for spec in MODAL_MOUNT_MANIFEST
+    if spec.get("snapshot_policy") == "identity_only"
 )
 A1_CANONICAL_LOCAL_PATH = REPO_ROOT / "experiments/results/A1_canonical"
 A1_DESIGNATION_LOCAL_PATH = REPO_ROOT / ".omx/state/canonical_a1_designation.md"
@@ -122,66 +136,37 @@ from tac.deploy.modal.runtime import (  # noqa: E402
 
 app = modal.App(APP_NAME)
 
+
+def _apply_modal_mount_manifest(image: Any) -> Any:
+    """Apply the same mount manifest that custody snapshots report."""
+
+    for spec in MODAL_MOUNT_MANIFEST:
+        local_path = str(spec["local_path"])
+        remote_path = str(spec["remote_path"])
+        local = REPO_ROOT / local_path
+        if bool(spec.get("optional")) and not local.exists():
+            continue
+        if spec["kind"] == "dir":
+            image = image.add_local_dir(local_path, remote_path=remote_path)
+        elif spec["kind"] == "file":
+            image = image.add_local_file(local_path, remote_path=remote_path)
+        else:  # pragma: no cover - static manifest is test-covered.
+            raise ValueError(f"unsupported Modal mount kind: {spec['kind']!r}")
+    return image
+
 base_image = build_contest_cuda_base_image(
     modal,
     python_version="3.11",
     extra_pip_packages=("compressai==1.2.8",),
 )
 
-run_image = (
+run_image = _apply_modal_mount_manifest(
     base_image.env(
         {
             "PYTHONPATH": REMOTE_PYTHONPATH,
             "DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE,
             "PYTORCH_CUDA_ALLOC_CONF": PYTORCH_CUDA_ALLOC_CONF_VALUE,
         }
-    )
-    .add_local_dir("src", remote_path=str(REMOTE_REPO / "src"))
-    .add_local_file("pyproject.toml", remote_path=str(REMOTE_REPO / "pyproject.toml"))
-    .add_local_file("uv.lock", remote_path=str(REMOTE_REPO / "uv.lock"))
-    .add_local_dir("upstream/models", remote_path=str(REMOTE_REPO / "upstream/models"))
-    .add_local_dir("upstream/videos", remote_path=str(REMOTE_REPO / "upstream/videos"))
-    .add_local_file("upstream/evaluate.py", remote_path=str(REMOTE_REPO / "upstream/evaluate.py"))
-    .add_local_file("upstream/frame_utils.py", remote_path=str(REMOTE_REPO / "upstream/frame_utils.py"))
-    .add_local_file("upstream/modules.py", remote_path=str(REMOTE_REPO / "upstream/modules.py"))
-    .add_local_file(
-        "upstream/public_test_video_names.txt",
-        remote_path=str(REMOTE_REPO / "upstream/public_test_video_names.txt"),
-    )
-    .add_local_file("upstream/pyproject.toml", remote_path=str(REMOTE_REPO / "upstream/pyproject.toml"))
-    .add_local_file("upstream/uv.lock", remote_path=str(REMOTE_REPO / "upstream/uv.lock"))
-    .add_local_file("experiments/__init__.py", remote_path=str(REMOTE_REPO / "experiments/__init__.py"))
-    .add_local_file(
-        "experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py",
-        remote_path=str(REMOTE_REPO / "experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py"),
-    )
-    .add_local_file(
-        "experiments/contest_auth_eval.py",
-        remote_path=str(REMOTE_REPO / "experiments/contest_auth_eval.py"),
-    )
-    .add_local_file(
-        "tools/build_phase1_packet_compiler.py",
-        remote_path=str(REMOTE_REPO / "tools/build_phase1_packet_compiler.py"),
-    )
-    .add_local_file(
-        "tools/tool_bootstrap.py",
-        remote_path=str(REMOTE_REPO / "tools/tool_bootstrap.py"),
-    )
-    .add_local_file(
-        "tools/claim_lane_dispatch.py",
-        remote_path=str(REMOTE_REPO / "tools/claim_lane_dispatch.py"),
-    )
-    .add_local_file(
-        "scripts/remote_lane_t1_balle_endtoend.sh",
-        remote_path=str(REMOTE_REPO / "scripts/remote_lane_t1_balle_endtoend.sh"),
-    )
-    .add_local_file(
-        "scripts/remote_archive_only_eval.sh",
-        remote_path=str(REMOTE_REPO / "scripts/remote_archive_only_eval.sh"),
-    )
-    .add_local_file(
-        "scripts/probe_nvdec.sh",
-        remote_path=str(REMOTE_REPO / "scripts/probe_nvdec.sh"),
     )
 )
 
@@ -346,7 +331,9 @@ def _mounted_code_snapshot(out_dir: Path) -> dict[str, Any]:
         "schema_version": "mounted_modal_code_snapshot_v1",
         "git_head": head_stdout.strip() if head_rc == 0 else None,
         "git_head_error": head_stderr.strip() if head_rc != 0 else None,
+        "modal_mount_manifest": list(MODAL_MOUNT_MANIFEST),
         "mounted_code_paths": mounted_paths,
+        "mounted_data_paths": list(MOUNTED_DATA_PATHS),
         "dirty": bool(status_stdout.strip()),
         "status_short": status_stdout.splitlines(),
         "status_rc": status_rc,
@@ -458,7 +445,7 @@ def _active_lane_dispatch_conflicts(
             timeout=30,
         )
     except subprocess.TimeoutExpired:
-        return [], ["active_claim_summary_timeout"]
+        return [], [], ["active_claim_summary_timeout"]
     if proc.returncode != 0:
         detail = _tail((proc.stderr or proc.stdout).strip(), limit=500).replace("\n", " ")
         return [], [], [f"active_claim_summary_failed:rc={proc.returncode}:{detail}"]
@@ -890,7 +877,12 @@ def _finish_remote(
 ) -> dict[str, Any]:
     auth_eval = _load_json_if_exists(out_dir / "contest_auth_eval.json")
     adjudication = _load_json_if_exists(out_dir / "auth_eval_adjudication.json")
-    score_claim = bool(adjudication and adjudication.get("score_claim") is True)
+    remote_adjudication_score_claim = bool(
+        adjudication and adjudication.get("score_claim") is True
+    )
+    remote_adjudication_promotion_eligible = bool(
+        adjudication and adjudication.get("promotion_eligible") is True
+    )
     summary: dict[str, Any] = {
         "schema_version": "t1_modal_remote_summary_v1",
         "app": APP_NAME,
@@ -903,7 +895,10 @@ def _finish_remote(
         "expected_n_samples": 600,
         "commands": commands,
         "validation_errors": list(validation_errors or []),
-        "score_claim": score_claim,
+        "score_claim": False,
+        "score_claim_authority": "local_recover_only_after_exact_cuda_custody_gate",
+        "remote_adjudication_score_claim": remote_adjudication_score_claim,
+        "remote_adjudication_promotion_eligible": remote_adjudication_promotion_eligible,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
         "auth_eval_json": str(out_dir / "contest_auth_eval.json") if auth_eval else None,
@@ -1381,8 +1376,14 @@ def _contest_cuda_score_claim_from_result(
         eval_size = metrics.get("archive_size_bytes")
         if isinstance(packet_size, int) and isinstance(eval_size, int) and packet_size != eval_size:
             blockers.append("t1_recover_archive_size_mismatch_adjudication_vs_eval")
-    if result.get("summary", {}).get("score_claim") is not True:
-        blockers.append("t1_remote_summary_score_claim_not_true")
+    summary = result.get("summary")
+    if isinstance(summary, dict):
+        if summary.get("score_claim") is True:
+            blockers.append("t1_remote_summary_score_claim_must_be_false_until_recover")
+        if summary.get("remote_adjudication_score_claim") is not True:
+            blockers.append("t1_remote_summary_remote_adjudication_score_claim_not_true")
+    else:
+        blockers.append("t1_remote_summary_missing")
     if metadata is not None:
         mounted_head = _mounted_code_git_head(metadata)
         if not mounted_head:
@@ -1454,7 +1455,7 @@ def recover(label: str) -> int:
         metadata=metadata,
     )
     adjudication = result.get("auth_eval_adjudication")
-    promotion_eligible = (
+    remote_adjudication_promotion_eligible = (
         bool(adjudication.get("promotion_eligible"))
         if isinstance(adjudication, dict)
         else False
@@ -1464,6 +1465,11 @@ def recover(label: str) -> int:
         if isinstance(adjudication, dict)
         and isinstance(adjudication.get("promotion_blockers"), list)
         else []
+    )
+    promotion_eligible = bool(
+        score_claim
+        and remote_adjudication_promotion_eligible
+        and not promotion_blockers
     )
     summary_path = out_dir / "harvest_summary.json"
     _write_json(
@@ -1478,6 +1484,7 @@ def recover(label: str) -> int:
             "metrics": metrics,
             "score_claim": score_claim,
             "promotion_eligible": promotion_eligible,
+            "remote_adjudication_promotion_eligible": remote_adjudication_promotion_eligible,
             "rank_or_kill_eligible": False,
             "promotion_blockers": promotion_blockers,
             "blockers": blockers,

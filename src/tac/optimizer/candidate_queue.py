@@ -16,16 +16,18 @@ from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.proxy_candidate_contract import (
+    PROXY_DEPLOYMENT_TARGET,
+    PROXY_DISPATCH_BLOCKERS,
+    PROXY_TARGET_MODES,
+    apply_proxy_evidence_boundary,
+)
+
 QUEUE_SCHEMA = "optimizer_candidate_queue_v1"
 TOOL_NAME = "tools/build_optimizer_candidate_queue.py"
-PLANNING_TARGET_MODES = ["contest_exact_eval_planning"]
-PLANNING_DEPLOYMENT_TARGET = "desktop_research"
-BASE_DISPATCH_BLOCKERS = [
-    "optimizer_candidate_queue_is_planning_only",
-    "requires_exact_eval_readiness_gate",
-    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
-    "requires_non_proxy_score_evidence_before_promotion",
-]
+PLANNING_TARGET_MODES = list(PROXY_TARGET_MODES)
+PLANNING_DEPLOYMENT_TARGET = PROXY_DEPLOYMENT_TARGET
+BASE_DISPATCH_BLOCKERS = list(PROXY_DISPATCH_BLOCKERS)
 
 
 def _utc_now() -> str:
@@ -97,21 +99,10 @@ def _source_schema(payload: Any) -> str:
 
 
 def _base_candidate(candidate_id: str, *, source_path: Path, repo_root: Path) -> dict[str, Any]:
-    return {
+    return apply_proxy_evidence_boundary({
         "candidate_id": candidate_id,
         "source_paths": [_repo_rel(source_path, repo_root)],
-        "target_modes": list(PLANNING_TARGET_MODES),
-        "deployment_target": PLANNING_DEPLOYMENT_TARGET,
-        "ready_for_exact_eval_dispatch": False,
-        "dispatch_attempted": False,
-        "score_claim": False,
-        "promotion_eligible": False,
-        "field_selection_ready_for_exact_eval_dispatch": False,
-        "exact_cuda_auth_eval": False,
-        "score_affecting_payload_changed": False,
-        "charged_bits_changed": False,
-        "dispatch_blockers": list(BASE_DISPATCH_BLOCKERS),
-    }
+    })
 
 
 def _add_blockers(row: dict[str, Any], blockers: Iterable[str]) -> None:
@@ -429,6 +420,51 @@ def _meta_lagrangian_candidates(
     return rows
 
 
+def _kaggle_proxy_sweep_candidates(
+    payload: Mapping[str, Any], *, source_path: Path, repo_root: Path
+) -> list[dict[str, Any]]:
+    best = payload.get("best_candidate")
+    if not isinstance(best, Mapping):
+        return []
+    candidate_id = str(best.get("candidate_id") or "kaggle_proxy_best")
+    row = _base_candidate(candidate_id, source_path=source_path, repo_root=repo_root)
+    proxy_objective = _as_float(best.get("proxy_objective"))
+    row.update(
+        {
+            "lane_id": payload.get("lane_id") or "kaggle_pr101_proxy_sweep",
+            "lane_class": "pr101_kaggle_proxy_sweep",
+            "candidate_family": "pr101_proxy_config_search",
+            "optimizer_tool": payload.get("tool") or "tools/build_kaggle_proxy_sweep_kernel.py",
+            "optimizer": payload.get("optimizer") or best.get("optimizer"),
+            "optimizer_status": payload.get("optimizer_status") or best.get("optimizer_status"),
+            "trial_index": _as_int(best.get("trial_index")),
+            "op_params": dict(best.get("params") or {}),
+            "proxy_components": dict(best.get("proxy_components") or {}),
+            "proxy_score": proxy_objective,
+            "rank_score": proxy_objective,
+            "rank_score_field": "proxy_objective",
+            "evidence_semantics": payload.get("evidence_semantics")
+            or "kaggle_gpu_proxy_config_search_only_not_exact_auth_eval",
+            "evidence_grade": "[Kaggle-proxy-only]",
+            "proxy_only": True,
+            "source_manifest_path": _repo_rel(source_path, repo_root),
+        }
+    )
+    _add_blockers(
+        row,
+        [
+            *[
+                str(item)
+                for item in payload.get("dispatch_blockers", [])
+                if str(item)
+            ],
+            "kaggle_proxy_output_requires_archive_builder_promotion",
+            "kaggle_proxy_result_is_not_rank_or_kill_evidence",
+        ],
+    )
+    return [row]
+
+
 def extract_candidates_from_source(path: Path, *, repo_root: Path) -> tuple[str, list[dict[str, Any]]]:
     payload = _load_json(path)
     schema = _source_schema(payload)
@@ -444,6 +480,8 @@ def extract_candidates_from_source(path: Path, *, repo_root: Path) -> tuple[str,
         return schema, _codec_param_manifest_candidates(payload, source_path=path, repo_root=repo_root)
     if schema == "meta_lagrangian_search_v1":
         return schema, _meta_lagrangian_candidates(payload, source_path=path, repo_root=repo_root)
+    if schema == "pr101_kaggle_proxy_sweep_v1":
+        return schema, _kaggle_proxy_sweep_candidates(payload, source_path=path, repo_root=repo_root)
     if isinstance(payload.get("candidates"), list):
         return schema, _codec_param_manifest_candidates(payload, source_path=path, repo_root=repo_root)
     return schema, []

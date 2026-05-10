@@ -321,11 +321,17 @@ def test_modal_t1_image_installs_scorer_runtime_dependencies() -> None:
 
 
 def test_modal_t1_mounts_packet_compiler_bootstrap_dependency() -> None:
-    text = _source()
+    module = _load_module()
+    mounted = {
+        str(spec["local_path"]): str(spec["remote_path"])
+        for spec in module.MODAL_MOUNT_MANIFEST
+    }
 
-    assert '"tools/build_phase1_packet_compiler.py"' in text
-    assert '"tools/tool_bootstrap.py"' in text
-    assert 'remote_path=str(REMOTE_REPO / "tools/tool_bootstrap.py")' in text
+    assert mounted["tools/build_phase1_packet_compiler.py"].endswith(
+        "/tools/build_phase1_packet_compiler.py"
+    )
+    assert mounted["tools/tool_bootstrap.py"].endswith("/tools/tool_bootstrap.py")
+    assert "experiments/modal_t1_balle_endtoend.py" in mounted
 
 
 def test_modal_t1_guard_labels_require_bounded_guard_params() -> None:
@@ -481,6 +487,23 @@ def test_modal_t1_plan_fails_closed_on_active_same_lane_claim(tmp_path: Path) ->
     ]
 
 
+def test_active_claim_summary_timeout_returns_three_tuple(monkeypatch, tmp_path: Path) -> None:
+    module = _load_module()
+
+    def fake_run(*_args, **_kwargs):
+        raise subprocess.TimeoutExpired(cmd=["claim_lane_dispatch.py"], timeout=30)
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    conflicts, stale_conflicts, errors = module._active_lane_dispatch_conflicts(
+        tmp_path / "claims.md"
+    )
+
+    assert conflicts == []
+    assert stale_conflicts == []
+    assert errors == ["active_claim_summary_timeout"]
+
+
 def test_modal_t1_recover_classifies_training_only_success_without_failed_label() -> None:
     text = _source()
     recover_src = text[text.index("def recover("):]
@@ -539,11 +562,36 @@ def test_recover_uses_auth_eval_schema_and_600_sample_blockers() -> None:
     assert "required_contest_cuda_evidence_blockers" in recover_src
     assert "expected_n_samples=600" in recover_src
     assert "t1_remote_adjudication_score_claim_not_true" in recover_src
-    assert "t1_remote_summary_score_claim_not_true" in recover_src
+    assert "t1_remote_summary_remote_adjudication_score_claim_not_true" in recover_src
     assert "completed_t1_contest_cuda_recovered" in recover_body
     assert "failed_t1_modal_recovered_no_score_claim" in recover_body
     assert '"promotion_eligible": promotion_eligible' in recover_body
+    assert '"remote_adjudication_promotion_eligible": remote_adjudication_promotion_eligible' in recover_body
     assert '"promotion_blockers": promotion_blockers' in recover_body
+
+
+def test_finish_remote_never_emits_authoritative_score_claim(tmp_path: Path) -> None:
+    module = _load_module()
+    out_dir = tmp_path / "remote"
+    out_dir.mkdir()
+    module._write_json(
+        out_dir / "auth_eval_adjudication.json",
+        {
+            "score_claim": True,
+            "promotion_eligible": True,
+            "packet_archive_sha256": "a" * 64,
+            "packet_archive_size_bytes": 123,
+            "blockers": [],
+        },
+    )
+
+    result = module._finish_remote(out_dir, returncode=0, stage="unit", commands=[])
+
+    summary = result["summary"]
+    assert summary["score_claim"] is False
+    assert summary["score_claim_authority"] == "local_recover_only_after_exact_cuda_custody_gate"
+    assert summary["remote_adjudication_score_claim"] is True
+    assert summary["remote_adjudication_promotion_eligible"] is True
 
 
 def test_score_claim_helper_rejects_training_only_result() -> None:
@@ -563,7 +611,7 @@ def test_score_claim_helper_rejects_training_only_result() -> None:
 
     assert score_claim is False
     assert "t1_remote_adjudication_score_claim_not_true" in blockers
-    assert "t1_remote_summary_score_claim_not_true" in blockers
+    assert "t1_remote_summary_remote_adjudication_score_claim_not_true" in blockers
     assert metrics["score"] is None
 
 
@@ -573,7 +621,7 @@ def test_score_claim_helper_uses_adjudicated_packet_bytes_not_self_reported_eval
     score_claim, blockers, metrics = module._contest_cuda_score_claim_from_result(
         {
             "returncode": 0,
-            "summary": {"score_claim": True},
+            "summary": {"score_claim": False, "remote_adjudication_score_claim": True},
             "auth_eval_adjudication": {
                 "score_claim": True,
                 "packet_archive_sha256": "packet-sha",
@@ -615,7 +663,7 @@ def test_score_claim_helper_requires_adjudicated_packet_custody_fields() -> None
     score_claim, blockers, _metrics = module._contest_cuda_score_claim_from_result(
         {
             "returncode": 0,
-            "summary": {"score_claim": True},
+            "summary": {"score_claim": False, "remote_adjudication_score_claim": True},
             "auth_eval_adjudication": {"score_claim": True, "blockers": []},
             "eval_data": {
                 "canonical_score": 0.2,
@@ -646,7 +694,7 @@ def test_score_claim_helper_accepts_exact_evidence_when_promotion_ineligible() -
     score_claim, blockers, metrics = module._contest_cuda_score_claim_from_result(
         {
             "returncode": 0,
-            "summary": {"score_claim": True},
+            "summary": {"score_claim": False, "remote_adjudication_score_claim": True},
             "auth_eval_adjudication": {
                 "score_claim": True,
                 "packet_archive_sha256": "packet-sha",
@@ -694,7 +742,7 @@ def test_score_claim_helper_rejects_pre_runtime_hardening_mounted_head(monkeypat
     score_claim, blockers, _metrics = module._contest_cuda_score_claim_from_result(
         {
             "returncode": 0,
-            "summary": {"score_claim": True},
+            "summary": {"score_claim": False, "remote_adjudication_score_claim": True},
             "auth_eval_adjudication": {
                 "score_claim": True,
                 "packet_archive_sha256": "packet-sha",
@@ -743,7 +791,7 @@ def test_score_claim_helper_accepts_mounted_head_after_runtime_hardening(monkeyp
     score_claim, blockers, _metrics = module._contest_cuda_score_claim_from_result(
         {
             "returncode": 0,
-            "summary": {"score_claim": True},
+            "summary": {"score_claim": False, "remote_adjudication_score_claim": True},
             "auth_eval_adjudication": {
                 "score_claim": True,
                 "packet_archive_sha256": "packet-sha",
@@ -812,7 +860,8 @@ def test_modal_t1_metadata_starts_as_no_score_claim(tmp_path: Path, monkeypatch)
 def test_modal_t1_records_mounted_code_snapshot_for_score_bearing_dispatches() -> None:
     text = _source()
 
-    assert "MOUNTED_CODE_PATHS = (" in text
+    assert "MODAL_MOUNT_MANIFEST" in text
+    assert "MOUNTED_CODE_PATHS = tuple(" in text
     assert "def _mounted_code_snapshot(" in text
     assert '"scripts/remote_lane_t1_balle_endtoend.sh"' in text
     assert '"tools/build_phase1_packet_compiler.py"' in text
