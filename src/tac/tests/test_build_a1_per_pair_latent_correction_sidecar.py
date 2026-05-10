@@ -93,6 +93,9 @@ def _changed_sidecar_no_op(new_sha: str | None = None) -> dict[str, object]:
         "old_inner_sidecar_sha256": "1" * 64,
         "new_inner_sidecar_sha256": new_sha or "2" * 64,
         "sidecar_changed": True,
+        "baseline_output_sha256": "4" * 64,
+        "candidate_output_sha256": "5" * 64,
+        "runtime_output_changed": True,
     }
 
 
@@ -118,11 +121,32 @@ def _proof_sidecar_bytes(proof: dict[str, object]) -> int:
 
 def _runtime_smoke_evidence(tool, archive: Path, custody: dict[str, object]) -> dict[str, object]:
     return {
+        "schema_version": tool.RUNTIME_SMOKE_SCHEMA,
+        "runtime_surface": "inflate_sh_exact_signature",
         "command": ["./inflate.sh", "archive_dir", "out", "file_list.txt"],
         "exit_code": 0,
         "archive_sha256": tool.sha256_of(archive),
         "runtime_tree_sha256": custody["runtime_tree_sha256"],
         "output_digest_sha256": "3" * 64,
+    }
+
+
+def _dispatch_claim_record(tool, archive: Path, custody: dict[str, object]) -> dict[str, object]:
+    return {
+        "schema_version": tool.SIDECAR_DISPATCH_CLAIM_SCHEMA,
+        "lane_id": tool.SIDECAR_LANE_ID,
+        "status": "active_claimed",
+        "archive_sha256": tool.sha256_of(archive),
+        "runtime_tree_sha256": custody["runtime_tree_sha256"],
+    }
+
+
+def _exact_eval_preflight_record(tool, archive: Path, custody: dict[str, object]) -> dict[str, object]:
+    return {
+        "schema_version": tool.SIDECAR_EXACT_EVAL_PREFLIGHT_SCHEMA,
+        "passed": True,
+        "archive_sha256": tool.sha256_of(archive),
+        "runtime_tree_sha256": custody["runtime_tree_sha256"],
     }
 
 
@@ -154,12 +178,28 @@ def _write_choice_state_record(
         if searched_mask is None
         else searched_mask.astype(bool, copy=True)
     )
+    pair_search_records = {
+        int(i): tool._sidecar_pair_search_record(
+            pair_index=int(i),
+            search_signal=search_signal,
+            search_device=search_device,
+            requested_candidate_batch_size=1,
+            candidate_batch_size=1,
+            base_mse=1.0,
+            best_mse=1.0,
+            best_dim=int(dims[int(i)]),
+            best_delta_idx=int(delta_idx[int(i)]),
+            scalar_reference_status="scalar_direct",
+        )
+        for i in np.flatnonzero(searched_mask)
+    }
     state_path = tmp_path / "sidecar_choice_state.json"
     tool.write_sidecar_choice_state(
         state_path,
         dims=dims,
         delta_idx=delta_idx,
         searched_mask=searched_mask,
+        pair_search_records=pair_search_records,
         old_archive_sha256=old_archive_sha256,
         old_sidecar_sha256=old_sidecar_sha256,
         search_signal=search_signal,
@@ -321,6 +361,8 @@ def test_manifest_readiness_accepts_complete_local_custody(tmp_path: Path) -> No
         "runtime_manifest": custody,
         "runtime_tree_sha256": custody["runtime_tree_sha256"],
         "runtime_smoke_evidence": _runtime_smoke_evidence(tool, archive, custody),
+        "dispatch_claim": _dispatch_claim_record(tool, archive, custody),
+        "exact_eval_preflight": _exact_eval_preflight_record(tool, archive, custody),
         "member_section_proof": proof,
         "sidecar_choice_state": choice_state,
     }
@@ -333,6 +375,124 @@ def test_manifest_readiness_accepts_complete_local_custody(tmp_path: Path) -> No
 
     assert out["ready_for_exact_eval_dispatch"] is True
     assert out["dispatch_blockers"] == []
+
+
+def test_manifest_readiness_requires_structured_dispatch_custody(tmp_path: Path) -> None:
+    tool = load_tool()
+    dims = np.full(tool.N_PAIRS, 255, dtype=np.int64)
+    delta_idx = np.full(tool.N_PAIRS, -1, dtype=np.int64)
+    sidecar = tool.encode_sidecar_huff_enum(dims, delta_idx)
+    sub_dir, archive = _write_runtime_fixture(tmp_path, sidecar=sidecar)
+    archive_sha = tool.sha256_of(archive)
+    archive_bytes = archive.stat().st_size
+    custody = tool.collect_local_runtime_custody(sub_dir, archive_path=archive)
+    proof = tool.collect_member_section_proof(archive)
+    choice_state = _write_choice_state_record(
+        tool,
+        tmp_path,
+        dims=dims,
+        delta_idx=delta_idx,
+        old_archive_sha256="a" * 64,
+        old_sidecar_sha256="1" * 64,
+    )
+    manifest = {
+        "lane_id": tool.SIDECAR_LANE_ID,
+        "dispatch_blockers": [],
+        "archive_path": tool.manifest_path(archive),
+        "archive_sha256": archive_sha,
+        "archive_size_bytes": archive_bytes,
+        "candidate_archive_path": tool.manifest_path(archive),
+        "candidate_archive_sha256": archive_sha,
+        "candidate_archive_bytes": archive_bytes,
+        "new_archive_path": tool.manifest_path(archive),
+        "new_archive_sha256": archive_sha,
+        "new_archive_bytes": archive_bytes,
+        "new_sidecar_bytes": _proof_sidecar_bytes(proof),
+        "old_archive_sha256": "a" * 64,
+        "ready_for_exact_eval_dispatch": True,
+        "runtime_smoke_checked": True,
+        "search_signal": "proxy_mse",
+        "search_device": "cpu",
+        "encode_format": "packed_661",
+        "smoke_only": False,
+        "full_non_smoke_search": True,
+        "no_op_detector": _changed_sidecar_no_op(_proof_sidecar_sha(proof)),
+        "local_runtime_custody": custody,
+        "runtime_manifest": custody,
+        "runtime_tree_sha256": custody["runtime_tree_sha256"],
+        "runtime_smoke_evidence": _runtime_smoke_evidence(tool, archive, custody),
+        "member_section_proof": proof,
+        "sidecar_choice_state": choice_state,
+    }
+
+    out = tool.enforce_manifest_dispatch_readiness(
+        manifest,
+        archive_path=archive,
+        submission_dir=sub_dir,
+    )
+
+    assert out["ready_for_exact_eval_dispatch"] is False
+    assert "dispatch_claim_record_missing" in out["dispatch_blockers"]
+    assert "exact_eval_preflight_record_missing" in out["dispatch_blockers"]
+
+
+def test_manifest_readiness_rejects_import_only_runtime_smoke(tmp_path: Path) -> None:
+    tool = load_tool()
+    dims = np.full(tool.N_PAIRS, 255, dtype=np.int64)
+    delta_idx = np.full(tool.N_PAIRS, -1, dtype=np.int64)
+    sidecar = tool.encode_sidecar_huff_enum(dims, delta_idx)
+    sub_dir, archive = _write_runtime_fixture(tmp_path, sidecar=sidecar)
+    archive_sha = tool.sha256_of(archive)
+    archive_bytes = archive.stat().st_size
+    custody = tool.collect_local_runtime_custody(sub_dir, archive_path=archive)
+    proof = tool.collect_member_section_proof(archive)
+    choice_state = _write_choice_state_record(
+        tool,
+        tmp_path,
+        dims=dims,
+        delta_idx=delta_idx,
+        old_archive_sha256="a" * 64,
+        old_sidecar_sha256="1" * 64,
+    )
+    smoke = _runtime_smoke_evidence(tool, archive, custody)
+    smoke["runtime_surface"] = "inflate_py_import_smoke"
+    manifest = {
+        "lane_id": tool.SIDECAR_LANE_ID,
+        "dispatch_blockers": [],
+        "archive_path": tool.manifest_path(archive),
+        "archive_sha256": archive_sha,
+        "archive_size_bytes": archive_bytes,
+        "new_archive_path": tool.manifest_path(archive),
+        "new_archive_sha256": archive_sha,
+        "new_archive_bytes": archive_bytes,
+        "new_sidecar_bytes": _proof_sidecar_bytes(proof),
+        "old_archive_sha256": "a" * 64,
+        "ready_for_exact_eval_dispatch": True,
+        "runtime_smoke_checked": True,
+        "search_signal": "proxy_mse",
+        "search_device": "cpu",
+        "encode_format": "packed_661",
+        "smoke_only": False,
+        "full_non_smoke_search": True,
+        "no_op_detector": _changed_sidecar_no_op(_proof_sidecar_sha(proof)),
+        "local_runtime_custody": custody,
+        "runtime_manifest": custody,
+        "runtime_tree_sha256": custody["runtime_tree_sha256"],
+        "runtime_smoke_evidence": smoke,
+        "dispatch_claim": _dispatch_claim_record(tool, archive, custody),
+        "exact_eval_preflight": _exact_eval_preflight_record(tool, archive, custody),
+        "member_section_proof": proof,
+        "sidecar_choice_state": choice_state,
+    }
+
+    out = tool.enforce_manifest_dispatch_readiness(
+        manifest,
+        archive_path=archive,
+        submission_dir=sub_dir,
+    )
+
+    assert out["ready_for_exact_eval_dispatch"] is False
+    assert "runtime_smoke_evidence_not_inflate_sh_exact_signature" in out["dispatch_blockers"]
 
 
 def test_manifest_readiness_keeps_smoke_only_blocked_even_with_runtime_smoke(

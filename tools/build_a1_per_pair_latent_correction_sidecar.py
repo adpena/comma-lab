@@ -91,6 +91,8 @@ MEMBER_SECTION_PROOF_SCHEMA = "a1_sidecar_member_section_proof_v1"
 RUNTIME_SMOKE_SCHEMA = "a1_sidecar_runtime_smoke_v1"
 SIDECAR_CHOICE_STATE_SCHEMA = "a1_sidecar_choice_state_v1"
 SIDECAR_PAIR_SEARCH_RECORDS_SCHEMA = "a1_sidecar_pair_search_records_v1"
+SIDECAR_DISPATCH_CLAIM_SCHEMA = "a1_sidecar_dispatch_claim_v1"
+SIDECAR_EXACT_EVAL_PREFLIGHT_SCHEMA = "a1_sidecar_exact_eval_preflight_v1"
 REQUIRED_RUNTIME_FILES = ("inflate.py", "inflate.sh", "src/codec.py", "src/model.py")
 RUNTIME_TREE_EXCLUDED_FILES = frozenset({"archive.zip"})
 RUNTIME_TREE_EXCLUDED_PARTS = frozenset({"__pycache__"})
@@ -474,6 +476,61 @@ def _no_op_detector_blockers(manifest: dict[str, Any]) -> list[str]:
         blockers.append("sidecar_no_op_hashes_equal")
     if no_op.get("sidecar_changed") is not True:
         blockers.append("sidecar_no_op_detector_not_changed")
+    baseline_output_sha = no_op.get("baseline_output_sha256")
+    candidate_output_sha = no_op.get("candidate_output_sha256")
+    if not _is_sha256(baseline_output_sha):
+        blockers.append("sidecar_no_op_baseline_output_sha256_missing_or_invalid")
+    if not _is_sha256(candidate_output_sha):
+        blockers.append("sidecar_no_op_candidate_output_sha256_missing_or_invalid")
+    if (
+        _is_sha256(baseline_output_sha)
+        and _is_sha256(candidate_output_sha)
+        and baseline_output_sha == candidate_output_sha
+    ):
+        blockers.append("sidecar_no_op_runtime_outputs_equal")
+    if no_op.get("runtime_output_changed") is not True:
+        blockers.append("sidecar_no_op_runtime_output_not_proven_changed")
+    return blockers
+
+
+def _dispatch_custody_record_blockers(
+    manifest: dict[str, Any],
+    *,
+    archive_path: Path,
+    runtime_tree_sha256: str | None,
+) -> list[str]:
+    """Require structured pre-dispatch custody before readiness can flip true."""
+
+    archive_sha = sha256_of(archive_path) if archive_path.is_file() else None
+    blockers: list[str] = []
+    dispatch_claim = manifest.get("dispatch_claim")
+    if not isinstance(dispatch_claim, dict):
+        blockers.append("dispatch_claim_record_missing")
+    else:
+        if dispatch_claim.get("schema_version") != SIDECAR_DISPATCH_CLAIM_SCHEMA:
+            blockers.append("dispatch_claim_schema_mismatch")
+        if dispatch_claim.get("lane_id") != SIDECAR_LANE_ID:
+            blockers.append("dispatch_claim_lane_id_mismatch")
+        if archive_sha is not None and dispatch_claim.get("archive_sha256") != archive_sha:
+            blockers.append("dispatch_claim_archive_sha256_mismatch")
+        if runtime_tree_sha256 and dispatch_claim.get("runtime_tree_sha256") != runtime_tree_sha256:
+            blockers.append("dispatch_claim_runtime_tree_sha256_mismatch")
+        if dispatch_claim.get("status") not in {"active_claimed", "ready_for_dispatch"}:
+            blockers.append("dispatch_claim_status_not_active")
+
+    preflight = manifest.get("exact_eval_preflight")
+    if not isinstance(preflight, dict):
+        blockers.append("exact_eval_preflight_record_missing")
+    else:
+        if preflight.get("schema_version") != SIDECAR_EXACT_EVAL_PREFLIGHT_SCHEMA:
+            blockers.append("exact_eval_preflight_schema_mismatch")
+        if preflight.get("passed") is not True:
+            blockers.append("exact_eval_preflight_not_passed")
+        if archive_sha is not None and preflight.get("archive_sha256") != archive_sha:
+            blockers.append("exact_eval_preflight_archive_sha256_mismatch")
+        if runtime_tree_sha256 and preflight.get("runtime_tree_sha256") != runtime_tree_sha256:
+            blockers.append("exact_eval_preflight_runtime_tree_sha256_mismatch")
+
     return blockers
 
 
@@ -489,6 +546,8 @@ def _runtime_smoke_evidence_blockers(
     if not isinstance(evidence, dict):
         return ["runtime_smoke_evidence_missing"]
     blockers: list[str] = []
+    if evidence.get("runtime_surface") != "inflate_sh_exact_signature":
+        blockers.append("runtime_smoke_evidence_not_inflate_sh_exact_signature")
     command = evidence.get("command")
     if not isinstance(command, (str, list)) or not command:
         blockers.append("runtime_smoke_evidence_command_missing")
@@ -1918,6 +1977,12 @@ def enforce_manifest_dispatch_readiness(
             block("runtime_smoke_evidence_runtime_tree_sha256_mismatch")
         else:
             block("runtime_smoke_not_checked")
+    for reason in _dispatch_custody_record_blockers(
+        manifest,
+        archive_path=archive_path,
+        runtime_tree_sha256=runtime_tree if isinstance(runtime_tree, str) else None,
+    ):
+        block(reason)
     for reason in _no_op_detector_blockers(manifest):
         block(reason)
 
