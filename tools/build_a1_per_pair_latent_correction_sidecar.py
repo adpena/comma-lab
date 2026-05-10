@@ -861,6 +861,7 @@ def run_local_runtime_smoke(
         exit_code = exit_code or 1
     evidence = {
         "schema_version": RUNTIME_SMOKE_SCHEMA,
+        "runtime_surface": "inflate_py_import_smoke",
         "command": command,
         "exit_code": exit_code,
         "stdout": proc.stdout[-4000:],
@@ -887,6 +888,54 @@ def run_local_runtime_smoke(
     evidence_path.write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n")
     evidence["evidence_path"] = manifest_path(evidence_path)
     return evidence
+
+
+def collect_runtime_output_change_probe(
+    *,
+    baseline_submission_dir: Path,
+    candidate_submission_dir: Path,
+    baseline_archive_path: Path,
+    candidate_archive_path: Path,
+    probe_dir: Path,
+    smoke_pairs: int,
+    candidate_runtime_tree_sha256: str,
+) -> dict[str, Any]:
+    """Compare bounded baseline/candidate decoded outputs for no-op proof."""
+
+    baseline_evidence = run_local_runtime_smoke(
+        baseline_submission_dir,
+        archive_path=baseline_archive_path,
+        smoke_dir=probe_dir / "baseline",
+        smoke_pairs=smoke_pairs,
+        runtime_tree_sha256=candidate_runtime_tree_sha256,
+    )
+    candidate_evidence = run_local_runtime_smoke(
+        candidate_submission_dir,
+        archive_path=candidate_archive_path,
+        smoke_dir=probe_dir / "candidate",
+        smoke_pairs=smoke_pairs,
+        runtime_tree_sha256=candidate_runtime_tree_sha256,
+    )
+    baseline_sha = baseline_evidence.get("output_digest_sha256")
+    candidate_sha = candidate_evidence.get("output_digest_sha256")
+    output_changed = (
+        _is_sha256(baseline_sha)
+        and _is_sha256(candidate_sha)
+        and baseline_sha != candidate_sha
+    )
+    return {
+        "schema_version": "a1_sidecar_runtime_output_change_probe_v1",
+        "runtime_surface": "inflate_py_import_smoke",
+        "smoke_pairs": smoke_pairs,
+        "baseline_archive_sha256": sha256_of(baseline_archive_path),
+        "candidate_archive_sha256": sha256_of(candidate_archive_path),
+        "runtime_tree_sha256": candidate_runtime_tree_sha256,
+        "baseline_output_sha256": baseline_sha,
+        "candidate_output_sha256": candidate_sha,
+        "runtime_output_changed": output_changed,
+        "baseline_evidence": baseline_evidence,
+        "candidate_evidence": candidate_evidence,
+    }
 
 
 def load_upstream_yuv420_to_rgb():
@@ -2335,6 +2384,32 @@ def main() -> int:
         )
         manifest["runtime_smoke_checked"] = smoke_evidence.get("exit_code") == 0
         manifest["runtime_smoke_evidence"] = smoke_evidence
+        output_change_probe = collect_runtime_output_change_probe(
+            baseline_submission_dir=A1_SUBMISSION_DIR,
+            candidate_submission_dir=sub_dir,
+            baseline_archive_path=A1_ARCHIVE_PATH,
+            candidate_archive_path=new_archive_path,
+            probe_dir=out_dir / "runtime_output_change_probe",
+            smoke_pairs=args.runtime_smoke_pairs,
+            candidate_runtime_tree_sha256=local_runtime_custody["runtime_tree_sha256"],
+        )
+        manifest["runtime_output_change_probe"] = output_change_probe
+        manifest["no_op_detector"].update(
+            {
+                "baseline_output_sha256": output_change_probe.get(
+                    "baseline_output_sha256"
+                ),
+                "candidate_output_sha256": output_change_probe.get(
+                    "candidate_output_sha256"
+                ),
+                "runtime_output_changed": output_change_probe.get(
+                    "runtime_output_changed"
+                ),
+                "runtime_output_probe_schema": output_change_probe.get(
+                    "schema_version"
+                ),
+            }
+        )
     manifest = enforce_manifest_dispatch_readiness(
         manifest,
         archive_path=new_archive_path,

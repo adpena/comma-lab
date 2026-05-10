@@ -495,6 +495,51 @@ def test_manifest_readiness_rejects_import_only_runtime_smoke(tmp_path: Path) ->
     assert "runtime_smoke_evidence_not_inflate_sh_exact_signature" in out["dispatch_blockers"]
 
 
+def test_runtime_output_change_probe_records_baseline_and_candidate_digests(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    tool = load_tool()
+    baseline_dir, baseline_archive = _write_runtime_fixture(
+        tmp_path / "baseline",
+        sidecar=b"baseline",
+    )
+    candidate_dir, candidate_archive = _write_runtime_fixture(
+        tmp_path / "candidate",
+        sidecar=b"candidate",
+    )
+    calls: list[Path] = []
+
+    def fake_smoke(submission_dir: Path, **kwargs):
+        calls.append(submission_dir)
+        digest = "4" * 64 if submission_dir == baseline_dir else "5" * 64
+        return {
+            "schema_version": tool.RUNTIME_SMOKE_SCHEMA,
+            "runtime_surface": "inflate_py_import_smoke",
+            "exit_code": 0,
+            "archive_sha256": tool.sha256_of(kwargs["archive_path"]),
+            "runtime_tree_sha256": kwargs["runtime_tree_sha256"],
+            "output_digest_sha256": digest,
+        }
+
+    monkeypatch.setattr(tool, "run_local_runtime_smoke", fake_smoke)
+
+    probe = tool.collect_runtime_output_change_probe(
+        baseline_submission_dir=baseline_dir,
+        candidate_submission_dir=candidate_dir,
+        baseline_archive_path=baseline_archive,
+        candidate_archive_path=candidate_archive,
+        probe_dir=tmp_path / "probe",
+        smoke_pairs=1,
+        candidate_runtime_tree_sha256="3" * 64,
+    )
+
+    assert calls == [baseline_dir, candidate_dir]
+    assert probe["baseline_output_sha256"] == "4" * 64
+    assert probe["candidate_output_sha256"] == "5" * 64
+    assert probe["runtime_output_changed"] is True
+
+
 def test_manifest_readiness_keeps_smoke_only_blocked_even_with_runtime_smoke(
     tmp_path: Path,
 ) -> None:
