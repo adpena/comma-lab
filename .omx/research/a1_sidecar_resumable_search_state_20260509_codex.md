@@ -834,3 +834,62 @@ Patched guard check on the terminal manifest returned only:
 Current completion: `384/600` pairs. Continue scalar chunks for coverage, but
 do not dispatch until legacy searched pairs have per-pair scalar-equivalence
 records or are rechecked with `--recheck-unproven-pairs`.
+
+## Codex follow-up local chunk 15
+
+<!-- generated_at: 2026-05-10T03:02:40Z -->
+<!-- evidence_grade: local_cpu_proxy_partial; no score claim; no remote dispatch -->
+
+Codex resumed the same ignored local artifact:
+
+```bash
+/usr/bin/time -p .venv/bin/python tools/build_a1_per_pair_latent_correction_sidecar.py \
+  --n-pairs 432 \
+  --resume-search-state \
+  --max-search-seconds 900 \
+  --candidate-batch-size 1 \
+  --runtime-smoke \
+  --runtime-smoke-pairs 1 \
+  --output-dir experiments/results/a1_sidecar_resumable_codex_20260509T_local
+```
+
+Observed:
+
+- skipped already-completed pairs `0` through `383`;
+- searched pairs `384` through `431`;
+- elapsed `real 830.86`, `user 1891.49`, `sys 42.30`;
+- `candidate_batch_size=1`;
+- sidecar encoded bytes `661` (old preserved sidecar was `607`);
+- choice-state SHA-256
+  `44eea97d7ff1533bf4dbb86e464310d19c06f1f1eeee425ec8e584ee444d81e6`;
+- manifest SHA-256
+  `02006ca0733d5fd3537eacf1a02c0c332897672cbfabcf88bd6a4fa9de9c320f`;
+- archive SHA-256
+  `9a2df4d31377e95283b9531f9eea2164575e8d52355ac99442f5e75b643a6507`;
+- archive bytes `178316`;
+- runtime tree SHA-256
+  `3497c774d94fe202563bccba2af4a5f90925cb8d9b2e982cf4428d0efbea0190`;
+- `runtime_smoke_checked=true`;
+- `n_pairs_searched=432`;
+- `n_pairs_completed_this_run=48`;
+- `n_pairs_skipped_already_completed=384`;
+- `full_non_smoke_search=false`;
+- `ready_for_exact_eval_dispatch=false`;
+- sidecar choice-state provenance: `96` machine-recorded scalar-equivalent
+  pairs, all from post-patch chunks.
+
+Dispatch blockers:
+
+- claim lane before any GHA/remote eval dispatch;
+- run exact-eval dispatcher preflight against `submission_dir`;
+- record runtime tree SHA and terminal dispatch claim row;
+- `sidecar_pair_search_records_missing_for_completed_pairs:336`;
+- `non_full_sidecar_search_not_exact_eval_ready`.
+
+Patched sidecar choice-state guard on the terminal manifest returned only:
+
+- `sidecar_pair_search_records_missing_for_completed_pairs:336`.
+
+Current completion: `432/600` pairs. Continue scalar chunks for coverage, then
+run `--recheck-unproven-pairs` to replace legacy `0..335` provenance before
+any exact-eval dispatch.

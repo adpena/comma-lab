@@ -139,6 +139,58 @@ def test_choice_state_blocks_mps_proxy_search_for_dispatch(tmp_path: Path):
     assert "sidecar_choice_state_mps_proxy_search_advisory_only" in blockers
 
 
+def test_manifest_top_level_blocks_mps_proxy_search_for_dispatch():
+    mod = _load_tool()
+
+    blockers = mod._manifest_top_level_dispatch_blockers({"search_device": "mps"})
+
+    assert "mps_search_device_advisory_only_not_exact_eval_ready" in blockers
+
+
+def test_recheck_unproven_pairs_reopens_legacy_completed_pairs():
+    mod = _load_tool()
+    _, _, searched_mask = _state_arrays(mod, searched=(0, 1, 2))
+    safe_record = mod._sidecar_pair_search_record(
+        pair_index=2,
+        search_signal="proxy_mse",
+        search_device="cpu",
+        requested_candidate_batch_size=1,
+        candidate_batch_size=1,
+        base_mse=1.0,
+        best_mse=1.0,
+        best_dim=255,
+        best_delta_idx=-1,
+        scalar_reference_status="scalar_direct",
+    )
+
+    plan = mod._sidecar_pair_work_plan(
+        pair_indices=[0, 1, 2, 3],
+        searched_mask=searched_mask,
+        pair_search_records={2: safe_record},
+        recheck_unproven_pairs=True,
+    )
+
+    assert plan["recheck_pairs"] == {0, 1}
+    assert plan["work_pair_indices"] == [0, 1, 3]
+    assert plan["skipped_already_completed"] == [2]
+
+
+def test_recheck_unproven_pairs_disabled_preserves_existing_resume_behavior():
+    mod = _load_tool()
+    _, _, searched_mask = _state_arrays(mod, searched=(0, 1, 2))
+
+    plan = mod._sidecar_pair_work_plan(
+        pair_indices=[0, 1, 2, 3],
+        searched_mask=searched_mask,
+        pair_search_records={},
+        recheck_unproven_pairs=False,
+    )
+
+    assert plan["recheck_pairs"] == set()
+    assert plan["work_pair_indices"] == [3]
+    assert plan["skipped_already_completed"] == [0, 1, 2]
+
+
 def test_sidecar_output_lock_blocks_duplicate_writers(tmp_path: Path):
     mod = _load_tool()
     lock = mod.SidecarOutputLock(tmp_path)

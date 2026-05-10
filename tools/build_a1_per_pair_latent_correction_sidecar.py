@@ -713,6 +713,15 @@ def _sidecar_choice_state_blockers(manifest: dict[str, Any]) -> list[str]:
     return blockers
 
 
+def _manifest_top_level_dispatch_blockers(manifest: dict[str, Any]) -> list[str]:
+    """Top-level proxy/evidence blockers that do not require file IO."""
+
+    blockers: list[str] = []
+    if manifest.get("search_device") == "mps":
+        blockers.append("mps_search_device_advisory_only_not_exact_eval_ready")
+    return blockers
+
+
 def run_local_runtime_smoke(
     submission_dir: Path,
     *,
@@ -1253,6 +1262,50 @@ def encode_sidecar_n_pairs(dims: np.ndarray, delta_idx: np.ndarray) -> bytes:
     return choices.tobytes()
 
 
+def _sidecar_pair_work_plan(
+    *,
+    pair_indices: list[int],
+    searched_mask: np.ndarray,
+    pair_search_records: dict[int, dict[str, Any]],
+    recheck_unproven_pairs: bool,
+) -> dict[str, Any]:
+    """Plan resumable sidecar work without touching decoder state.
+
+    Legacy partial states created before per-pair scalar provenance existed
+    have ``searched_mask=True`` but no dispatch-safe record. Exact-eval custody
+    requires rechecking those pairs before promotion.
+    """
+
+    def _is_pair_dispatch_safe(pair_index: int) -> bool:
+        return (
+            pair_search_records.get(int(pair_index), {}).get(
+                "dispatch_safe_scalar_equivalent"
+            )
+            is True
+        )
+
+    recheck_pairs = {
+        int(k)
+        for k in pair_indices
+        if searched_mask[int(k)] and not _is_pair_dispatch_safe(int(k))
+    } if recheck_unproven_pairs else set()
+    skipped_already_completed = [
+        int(k)
+        for k in pair_indices
+        if searched_mask[int(k)] and int(k) not in recheck_pairs
+    ]
+    work_pair_indices = [
+        int(k)
+        for k in pair_indices
+        if (not searched_mask[int(k)]) or int(k) in recheck_pairs
+    ]
+    return {
+        "recheck_pairs": recheck_pairs,
+        "skipped_already_completed": skipped_already_completed,
+        "work_pair_indices": work_pair_indices,
+    }
+
+
 def search_per_pair_proxy_mse(
     components: dict[str, Any],
     ground_truth_frames: np.ndarray,
@@ -1346,15 +1399,15 @@ def search_per_pair_proxy_mse(
             is True
         )
 
-    recheck_pairs = {
-        k for k in pair_indices if searched_mask[k] and not _is_pair_dispatch_safe(k)
-    } if recheck_unproven_pairs else set()
-    skipped_already_completed = [
-        k for k in pair_indices if searched_mask[k] and k not in recheck_pairs
-    ]
-    work_pair_indices = [
-        k for k in pair_indices if (not searched_mask[k]) or k in recheck_pairs
-    ]
+    work_plan = _sidecar_pair_work_plan(
+        pair_indices=pair_indices,
+        searched_mask=searched_mask,
+        pair_search_records=pair_search_records,
+        recheck_unproven_pairs=recheck_unproven_pairs,
+    )
+    recheck_pairs = work_plan["recheck_pairs"]
+    skipped_already_completed = work_plan["skipped_already_completed"]
+    work_pair_indices = work_plan["work_pair_indices"]
     progress_every = max(1, min(25, len(work_pair_indices) or 1))
     completed_this_run = 0
     stopped_for_wall_clock = False
@@ -1805,6 +1858,8 @@ def enforce_manifest_dispatch_readiness(
 
     if manifest.get("lane_id") != SIDECAR_LANE_ID:
         block("sidecar_lane_id_missing_or_mismatch")
+    for reason in _manifest_top_level_dispatch_blockers(manifest):
+        block(reason)
 
     manifest_archive_value = _manifest_archive_path_value(manifest)
     manifest_archive_path = _resolve_manifest_path(manifest_archive_value)
