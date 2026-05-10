@@ -226,6 +226,7 @@ def test_profile_preflight_dev_cli_runs_bounded_developer_gate(monkeypatch) -> N
         assert kwargs["check_codebase"] is True
         assert kwargs["verbose"] is False
         assert kwargs["use_fs_cache"] is True
+        assert kwargs["wall_clock_budget_s"] is None
         fake_preflight.check_alpha(strict=True, verbose=False)
 
     fake_preflight.preflight_developer = preflight_developer

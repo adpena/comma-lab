@@ -376,6 +376,7 @@ def _profile_preflight_dev_cli(
                 check_codebase=True,
                 verbose=False,
                 use_fs_cache=use_fs_cache,
+                wall_clock_budget_s=None,
             )
     except Exception as exc:
         status = "failed"
