@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import textwrap
 
 from tac import preflight
@@ -234,6 +235,29 @@ def test_source_index_persistent_text_facts_invalidate_on_mtime_size(tmp_path):
 
     assert not changed_facts.contains("mps")
     assert changed_facts.contains_all(("kl_div", "batchmean"))
+    changed_stats = changed_index.stats()
+    assert changed_stats["text_facts_persistent_hits"] == 0
+    assert changed_stats["text_misses"] == 1
+
+
+def test_source_index_persistent_text_facts_invalidate_on_ctime_even_same_mtime_size(
+    tmp_path,
+):
+    module = tmp_path / "src/tac/module.py"
+    _write(module, "VALUE = 'mps'\n")
+    original_stat = module.stat()
+    with source_index_context(tmp_path) as index:
+        assert index.text_facts(module).contains("mps")
+
+    module.write_text("VALUE = 'cpu'\n", encoding="utf-8")
+    # Simulate a same-size same-mtime rewrite; ctime/inode/device still prevent
+    # stale persistent facts from being reused.
+    os.utime(module, ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns))
+
+    changed_index = SourceIndex(tmp_path)
+    changed_facts = changed_index.text_facts(module)
+
+    assert not changed_facts.contains("mps")
     changed_stats = changed_index.stats()
     assert changed_stats["text_facts_persistent_hits"] == 0
     assert changed_stats["text_misses"] == 1

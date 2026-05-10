@@ -25,7 +25,7 @@ _CURRENT_SOURCE_INDEX: contextvars.ContextVar[SourceIndex | None] = contextvars.
     "tac_current_source_index",
     default=None,
 )
-_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v12"
+_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v13"
 
 
 def _safe_resolve(path: Path) -> Path:
@@ -166,6 +166,9 @@ class SourceTextFacts:
     suffix: str
     size_bytes: int
     mtime_ns: int
+    ctime_ns: int
+    inode: int
+    device: int
     line_count: int
     tokens: frozenset[str]
     substrings: frozenset[str]
@@ -377,6 +380,9 @@ class SourceIndex:
             suffix=target.suffix,
             size_bytes=stat.st_size,
             mtime_ns=stat.st_mtime_ns,
+            ctime_ns=stat.st_ctime_ns,
+            inode=stat.st_ino,
+            device=stat.st_dev,
             line_count=len(text.splitlines()),
             tokens=frozenset(),
             substrings=frozenset(
@@ -810,6 +816,9 @@ class SourceIndex:
             and row.get("suffix") == target.suffix
             and row.get("size_bytes") == stat.st_size
             and row.get("mtime_ns") == stat.st_mtime_ns
+            and row.get("ctime_ns") == stat.st_ctime_ns
+            and row.get("inode") == stat.st_ino
+            and row.get("device") == stat.st_dev
             and isinstance(row.get("line_count"), int)
             and isinstance(row.get("substrings"), list)
         )
@@ -828,6 +837,9 @@ class SourceIndex:
             suffix=str(row["suffix"]),
             size_bytes=int(stat.st_size),
             mtime_ns=int(stat.st_mtime_ns),
+            ctime_ns=int(stat.st_ctime_ns),
+            inode=int(stat.st_ino),
+            device=int(stat.st_dev),
             line_count=int(row["line_count"]),
             tokens=frozenset(str(item) for item in tokens if isinstance(item, str)),
             substrings=frozenset(
@@ -842,6 +854,9 @@ class SourceIndex:
             "suffix": facts.suffix,
             "size_bytes": facts.size_bytes,
             "mtime_ns": facts.mtime_ns,
+            "ctime_ns": facts.ctime_ns,
+            "inode": facts.inode,
+            "device": facts.device,
             "line_count": facts.line_count,
             "tokens": sorted(facts.tokens),
             "substrings": sorted(facts.substrings),

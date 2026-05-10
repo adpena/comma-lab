@@ -667,3 +667,39 @@ The helper-specific profile is not a useful comparison because it now pays the
 source-index setup cost by itself. The full developer surface is the relevant
 DX target and improved from the prior `7.728s` profile to `7.325s` while
 keeping all hazard semantics covered by the existing fixture set.
+
+## Codex Follow-Up: Source-Facts Persistent Cache Identity Hardening
+
+<!-- generated_at: 2026-05-10T03:05:00Z -->
+<!-- evidence_grade: local_dev_correctness_and_performance; no dispatch; no score claim -->
+
+Codex hardened the persistent `SourceIndex` text-facts cache against same-size
+same-mtime rewrites by storing and validating `ctime_ns`, inode, and device in
+addition to path, relpath, suffix, size, and mtime. This closes the stale-cache
+false-negative class without changing scanner semantics. The text-facts schema
+was bumped to `v13`, so the first profile after this patch rebuilds the cache.
+
+Verification:
+
+```bash
+.venv/bin/python -m py_compile src/tac/source_index.py src/tac/tests/test_source_index.py
+.venv/bin/python -m pytest src/tac/tests/test_source_index.py -q
+.venv/bin/python tools/profile_preflight_latency.py \
+  --surface preflight-dev-cli \
+  --json-out .omx/research/artifacts/preflight_dev_profile_20260510_sourceindex_v13_identity.json \
+  --top 20 --fail-on-surface-failure
+.venv/bin/python tools/profile_preflight_latency.py \
+  --surface preflight-dev-cli \
+  --json-out .omx/research/artifacts/preflight_dev_profile_20260510_sourceindex_v13_warm.json \
+  --top 20 --fail-on-surface-failure
+```
+
+Observed:
+
+- source-index focused tests: `13 passed in 0.76s`;
+- cold post-schema-bump developer preflight profile: `10.169s PASSED`;
+- warm developer preflight clean-cache path: `1.984s PASSED`.
+
+The cold one-time schema rebuild is still under the 30s operator crash budget.
+The normal repeat developer loop now returns in about two seconds while using
+stronger cache invalidation.
