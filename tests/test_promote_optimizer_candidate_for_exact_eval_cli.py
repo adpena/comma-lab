@@ -7,6 +7,8 @@ import sys
 import zipfile
 from pathlib import Path
 
+import pytest
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TOOL_PATH = REPO_ROOT / "tools" / "promote_optimizer_candidate_for_exact_eval.py"
@@ -30,7 +32,27 @@ def _write_archive(path: Path) -> tuple[int, str]:
     return len(raw), hashlib.sha256(raw).hexdigest()
 
 
-def test_cli_refuses_to_write_outputs_inside_submission_runtime_tree(tmp_path: Path) -> None:
+def _write_claims(path: Path, rows: list[str] | None = None) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    body = [
+        "# Active lane dispatch claims - fixture\n",
+        "\n",
+        "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n",
+        "|---|---|---|---|---|---|---|---|\n",
+    ]
+    body.extend(rows or [])
+    path.write_text("".join(body), encoding="utf-8")
+    return path
+
+
+def _active_claim_row(lane_id: str, *, job: str = "fixture_job") -> str:
+    return (
+        "| 2099-01-01T00:00:00Z | test | "
+        f"{lane_id} | modal | {job} |  | active_dispatching | fixture |\n"
+    )
+
+
+def _make_ready_fixture(tmp_path: Path, *, lane_id: str = "fixture_lane") -> dict[str, Path]:
     submission = tmp_path / "submission"
     archive_bytes, archive_sha = _write_archive(submission / "archive.zip")
     inflate = submission / "inflate.sh"
@@ -55,7 +77,7 @@ def test_cli_refuses_to_write_outputs_inside_submission_runtime_tree(tmp_path: P
             "top_k": [
                 {
                     "candidate_id": "fixture",
-                    "lane_id": "fixture_lane",
+                    "lane_id": lane_id,
                     "archive_path": (submission / "archive.zip").relative_to(tmp_path).as_posix(),
                     "candidate_archive_sha256": archive_sha,
                     "candidate_archive_bytes": archive_bytes,
@@ -71,33 +93,118 @@ def test_cli_refuses_to_write_outputs_inside_submission_runtime_tree(tmp_path: P
             "dispatch_ready": [],
         },
     )
+    claims = _write_claims(tmp_path / "claims.md")
+    return {
+        "queue": queue,
+        "claims": claims,
+        "submission": submission,
+    }
 
-    proc = subprocess.run(
-        [
-            sys.executable,
-            str(TOOL_PATH),
-            "--repo-root",
-            str(tmp_path),
-            "--queue",
-            str(queue),
-            "--candidate-id",
-            "fixture",
-            "--output",
-            str(submission / "exact_ready_queue.json"),
-            "--report-output",
-            str(submission / "exact_ready_report.json"),
-            "--active-floor-archive-bytes",
-            "0",
-            "--allow-above-active-floor-dispatch",
-            "--operator-override-reason",
-            "fixture",
-            "--skip-active-claim-check",
-        ],
-        capture_output=True,
-        text=True,
+
+def _run_tool(
+    fixture: dict[str, Path],
+    *,
+    output: Path,
+    report_output: Path | None = None,
+    extra_args: list[str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    cmd = [
+        sys.executable,
+        str(TOOL_PATH),
+        "--repo-root",
+        str(fixture["submission"].parent),
+        "--queue",
+        str(fixture["queue"]),
+        "--candidate-id",
+        "fixture",
+        "--output",
+        str(output),
+        "--dispatch-claims-path",
+        str(fixture["claims"]),
+        "--active-floor-archive-bytes",
+        "999999",
+    ]
+    if report_output is not None:
+        cmd.extend(["--report-output", str(report_output)])
+    if extra_args:
+        cmd.extend(extra_args)
+    return subprocess.run(cmd, capture_output=True, text=True)
+
+
+def test_cli_refuses_to_write_outputs_inside_submission_runtime_tree(tmp_path: Path) -> None:
+    fixture = _make_ready_fixture(tmp_path)
+    submission = fixture["submission"]
+
+    proc = _run_tool(
+        fixture,
+        output=submission / "exact_ready_queue.json",
+        report_output=submission / "exact_ready_report.json",
     )
 
     assert proc.returncode == 2
     assert "output_inside_submission_dir_would_mutate_runtime_tree" in proc.stderr
     assert not (submission / "exact_ready_queue.json").exists()
     assert not (submission / "exact_ready_report.json").exists()
+
+
+def test_cli_fail_closes_deprecated_skip_active_claim_check(tmp_path: Path) -> None:
+    fixture = _make_ready_fixture(tmp_path)
+    output = tmp_path / "out" / "exact_ready_queue.json"
+
+    proc = _run_tool(
+        fixture,
+        output=output,
+        extra_args=["--skip-active-claim-check"],
+    )
+
+    assert proc.returncode == 2
+    assert "--skip-active-claim-check is disabled" in proc.stderr
+    assert not output.exists()
+
+
+def test_cli_fail_closes_missing_dispatch_claim_ledger(tmp_path: Path) -> None:
+    fixture = _make_ready_fixture(tmp_path)
+    fixture["claims"].unlink()
+    output = tmp_path / "out" / "exact_ready_queue.json"
+
+    proc = _run_tool(fixture, output=output)
+
+    assert proc.returncode == 2
+    assert "dispatch claim ledger missing or not a file" in proc.stderr
+    assert not output.exists()
+
+
+def test_cli_blocks_active_same_lane_claim_before_exact_ready_output(tmp_path: Path) -> None:
+    fixture = _make_ready_fixture(tmp_path, lane_id="fixture_lane")
+    _write_claims(fixture["claims"], [_active_claim_row("fixture_lane")])
+    output = tmp_path / "out" / "exact_ready_queue.json"
+
+    proc = _run_tool(fixture, output=output)
+
+    assert proc.returncode == 2
+    assert "active dispatch claim check blocked exact-eval promotion" in proc.stderr
+    assert "same_lane_active_dispatch_claim:fixture_lane:fixture_job:active_dispatching" in proc.stderr
+    assert not output.exists()
+
+
+@pytest.mark.parametrize(
+    ("source_lane_id", "claimed_lane_id"),
+    [
+        ("fixture_alias", "lane_fixture_alias"),
+        ("lane_fixture_alias", "fixture_alias"),
+    ],
+)
+def test_cli_blocks_active_lane_prefix_alias_claims(
+    tmp_path: Path,
+    source_lane_id: str,
+    claimed_lane_id: str,
+) -> None:
+    fixture = _make_ready_fixture(tmp_path, lane_id=source_lane_id)
+    _write_claims(fixture["claims"], [_active_claim_row(claimed_lane_id)])
+    output = tmp_path / "out" / "exact_ready_queue.json"
+
+    proc = _run_tool(fixture, output=output)
+
+    assert proc.returncode == 2
+    assert f"same_lane_active_dispatch_claim:{claimed_lane_id}:fixture_job" in proc.stderr
+    assert not output.exists()

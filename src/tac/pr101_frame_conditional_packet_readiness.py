@@ -24,6 +24,7 @@ SCHEMA = "pr101_frame_conditional_packet_readiness.v1"
 A5_ANCHOR_SCHEMA = "pr101_frame_conditional_bit_anchor.v1"
 PER_PAIR_SCORE_MARGINAL_SCHEMA = "pr101_a5_per_pair_score_marginals.v1"
 SCORE_MARGINAL_QBITS_SCHEDULE_SCHEMA = "pr101_a5_score_marginal_qbits_schedule.v1"
+CHANNEL_QBITS_SCHEDULE_SCHEMA = "pr101_a5_channel_qbits_schedule.v1"
 
 CANDIDATE_ARCHIVE_MANIFEST = "candidate_archive_manifest"
 PACKET_RUNTIME_PATCH_MANIFEST = "packet_local_runtime_patch_manifest"
@@ -115,6 +116,10 @@ def build_packet_readiness(
     expected_n_pairs = _as_int(a5_summary.get("n_pairs"))
     source_archive_sha = _as_str(a5_summary.get("input_archive_sha256"))
     source_archive_bytes = _as_int(a5_summary.get("input_archive_bytes"))
+    if _is_sha256(_as_str(candidate_wire_context.get("source_archive_sha"))):
+        source_archive_sha = _as_str(candidate_wire_context.get("source_archive_sha"))
+    if _as_int(candidate_wire_context.get("source_archive_bytes")) is not None:
+        source_archive_bytes = _as_int(candidate_wire_context.get("source_archive_bytes"))
 
     artifact_records: list[dict[str, Any]] = []
     missing_artifacts: list[str] = []
@@ -132,6 +137,7 @@ def build_packet_readiness(
                 "sideinfo_sha": sideinfo_sha,
                 "latent_sha": latent_sha,
                 "expected_n_pairs": expected_n_pairs,
+                "expected_latent_dim": _as_int(a5_summary.get("latent_dim")),
                 "source_archive_sha": source_archive_sha,
                 "source_archive_bytes": source_archive_bytes,
             },
@@ -412,13 +418,22 @@ def _candidate_manifest_wire_context(
     latent_payload = _nested_mapping(wire_contract, "latent_wire_payload")
     sideinfo_sha = _as_str(sideinfo.get("sha256"))
     latent_sha = _as_str(latent_payload.get("sha256"))
-    if not (_is_sha256(sideinfo_sha) and _is_sha256(latent_sha)):
-        return {}
-    return {
-        "source": "candidate_archive_manifest",
-        "sideinfo_sha": sideinfo_sha,
-        "latent_sha": latent_sha,
-    }
+    source_archive = _nested_mapping(payload, "source_archive")
+    source_archive_sha = _as_str(source_archive.get("sha256"))
+    source_archive_bytes = _as_int(source_archive.get("bytes"))
+    context: dict[str, Any] = {}
+    if _is_sha256(sideinfo_sha) and _is_sha256(latent_sha):
+        context.update(
+            {
+                "source": "candidate_archive_manifest",
+                "sideinfo_sha": sideinfo_sha,
+                "latent_sha": latent_sha,
+            }
+        )
+    if _is_sha256(source_archive_sha):
+        context["source_archive_sha"] = source_archive_sha
+        context["source_archive_bytes"] = source_archive_bytes
+    return context
 
 
 def _validate_runtime_patch_manifest(
@@ -510,6 +525,35 @@ def _validate_score_marginal_manifest(
             blockers.append(f"{PER_PAIR_SCORE_MARGINAL_MANIFEST}:schedule_q_bits_invalid")
         else:
             ready = True
+    elif payload.get("schema") == CHANNEL_QBITS_SCHEDULE_SCHEMA:
+        expected_latent_dim = _as_int(context.get("expected_latent_dim"))
+        q_bits = payload.get("per_channel_q_bits")
+        source_archive = _nested_mapping(
+            _nested_mapping(payload, "source_artifacts"),
+            "source_archive",
+        )
+        source_archive_sha = _as_str(context.get("source_archive_sha"))
+        if _is_sha256(source_archive_sha) and source_archive.get("sha256") != source_archive_sha:
+            blockers.append(
+                f"{PER_PAIR_SCORE_MARGINAL_MANIFEST}:channel_source_archive_sha_mismatch"
+            )
+        if not _valid_channel_q_bits(q_bits, expected_latent_dim=expected_latent_dim):
+            blockers.append(f"{PER_PAIR_SCORE_MARGINAL_MANIFEST}:channel_q_bits_invalid")
+        if not _is_sha256(_as_str(_nested_mapping(payload, "q_bits_summary").get("sha256"))):
+            blockers.append(f"{PER_PAIR_SCORE_MARGINAL_MANIFEST}:channel_q_bits_sha256_missing")
+        if not _is_sha256(_as_str(_nested_mapping(payload, "q_bits_sideinfo").get("sha256"))):
+            blockers.append(f"{PER_PAIR_SCORE_MARGINAL_MANIFEST}:channel_sideinfo_sha256_missing")
+        if not _is_sha256(_as_str(_nested_mapping(payload, "latent_wire_payload").get("sha256"))):
+            blockers.append(f"{PER_PAIR_SCORE_MARGINAL_MANIFEST}:channel_latent_payload_sha256_missing")
+        proxy = _nested_mapping(payload, "proxy_objective")
+        if proxy.get("optimal_for_target_qsum") is not True:
+            blockers.append(f"{PER_PAIR_SCORE_MARGINAL_MANIFEST}:channel_dp_not_optimal")
+        if proxy.get("score_affecting_payload_changed") is not True:
+            blockers.append(
+                f"{PER_PAIR_SCORE_MARGINAL_MANIFEST}:channel_payload_not_score_affecting"
+            )
+        if not blockers:
+            ready = True
     if isinstance(marginals, Sequence) and not isinstance(marginals, (str, bytes)):
         if expected_n_pairs is not None and len(marginals) != expected_n_pairs:
             blockers.append(f"{PER_PAIR_SCORE_MARGINAL_MANIFEST}:marginal_count_mismatch")
@@ -531,6 +575,17 @@ def _valid_q_bits(value: Any, *, expected_n_pairs: int | None) -> bool:
         return False
     for item in value:
         if not isinstance(item, int) or isinstance(item, bool) or item < 1 or item > 16:
+            return False
+    return True
+
+
+def _valid_channel_q_bits(value: Any, *, expected_latent_dim: int | None) -> bool:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        return False
+    if expected_latent_dim is not None and len(value) != expected_latent_dim:
+        return False
+    for item in value:
+        if not isinstance(item, int) or isinstance(item, bool) or item < 1 or item > 8:
             return False
     return True
 

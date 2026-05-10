@@ -1,0 +1,183 @@
+from __future__ import annotations
+
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+from tac.optimization.optimizer_guided_candidate_generation import (
+    QUEUE_SCHEMA,
+    CandidateGenerationError,
+    CandidateGenerationProfile,
+    generate_candidate_queue,
+    load_profile,
+)
+from tac.optimization.proxy_candidate_contract import validate_proxy_candidate
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+TOOL = REPO_ROOT / "tools" / "build_optimizer_guided_candidate_queue.py"
+
+
+def test_pr101_bias_sidecar_cmaes_queue_is_seed_deterministic_and_proxy_only() -> None:
+    profile = load_profile("pr101_bias_sidecar")
+
+    first = generate_candidate_queue(
+        profile=profile,
+        optimizer="cmaes",
+        max_candidates=12,
+        top_k=8,
+        seed=77,
+    )
+    second = generate_candidate_queue(
+        profile=profile,
+        optimizer="cmaes",
+        max_candidates=12,
+        top_k=8,
+        seed=77,
+    )
+
+    assert first == second
+    assert first["schema"] == QUEUE_SCHEMA
+    assert first["dispatch_ready_count"] == 0
+    assert first["dispatch_ready"] == []
+    assert first["top_k"] == sorted(
+        first["top_k"], key=lambda row: (row["rank_score"], row["candidate_id"])
+    )
+    for row in first["top_k"]:
+        assert validate_proxy_candidate(row) == []
+        assert row["score_claim"] is False
+        assert row["promotion_eligible"] is False
+        assert row["rank_or_kill_eligible"] is False
+        assert row["ready_for_exact_eval_dispatch"] is False
+        assert row["proxy_only"] is True
+        assert row["provider_agnostic"] is True
+        assert row["candidate_params"].keys() == {
+            "bias_b",
+            "bias_g",
+            "bias_r",
+            "sidecar_f1_r",
+        }
+        assert -1.08 <= row["candidate_params"]["bias_b"] <= -0.92
+        assert -1.08 <= row["candidate_params"]["bias_g"] <= -0.92
+        assert -1.08 <= row["candidate_params"]["bias_r"] <= -0.92
+        assert -0.25 <= row["candidate_params"]["sidecar_f1_r"] <= 0.25
+        assert "no_contest_cuda_auth_eval" in row["dispatch_blockers"]
+        assert "sidecar_param_requires_archive_builder_support" in row["dispatch_blockers"]
+
+
+def test_seed_changes_non_anchor_cmaes_candidates() -> None:
+    profile = load_profile("pr101_bias_refine")
+
+    first = generate_candidate_queue(
+        profile=profile,
+        optimizer="cmaes",
+        max_candidates=10,
+        seed=1,
+    )
+    second = generate_candidate_queue(
+        profile=profile,
+        optimizer="cmaes",
+        max_candidates=10,
+        seed=2,
+    )
+
+    first_params = [
+        row["candidate_params"]
+        for row in first["top_k"]
+        if not row["candidate_id"].endswith("_anchor")
+    ]
+    second_params = [
+        row["candidate_params"]
+        for row in second["top_k"]
+        if not row["candidate_id"].endswith("_anchor")
+    ]
+    assert first_params != second_params
+
+
+def test_custom_profile_supports_int_param_and_optuna_style_fallback() -> None:
+    profile = CandidateGenerationProfile.from_mapping(
+        {
+            "profile_id": "unit_int_profile",
+            "lane_id": "offline_unit_int",
+            "lane_class": "unit_int",
+            "candidate_family": "unit_int_family",
+            "param_schema": "unit_params_v1",
+            "candidate_prefix": "unit",
+            "score_lowering_hypothesis": "exercise bounded integer profile support",
+            "parameters": [
+                {"name": "q", "kind": "int", "low": 1, "high": 11, "anchor": 5},
+                {"name": "bias", "low": -1.0, "high": 1.0, "anchor": 0.0},
+            ],
+        }
+    )
+
+    queue = generate_candidate_queue(
+        profile=profile,
+        optimizer="optuna",
+        max_candidates=9,
+        seed=123,
+    )
+
+    assert queue["optimizer_status"] == "optuna_tpe_style_stdlib"
+    assert len(queue["top_k"]) == 9
+    for row in queue["top_k"]:
+        assert isinstance(row["candidate_params"]["q"], int)
+        assert 1 <= row["candidate_params"]["q"] <= 11
+        assert -1.0 <= row["candidate_params"]["bias"] <= 1.0
+        assert validate_proxy_candidate(row) == []
+
+
+def test_invalid_profile_bounds_fail_closed() -> None:
+    with pytest.raises(CandidateGenerationError, match="high must be greater"):
+        CandidateGenerationProfile.from_mapping(
+            {
+                "profile_id": "bad",
+                "lane_id": "bad",
+                "lane_class": "bad",
+                "candidate_family": "bad",
+                "param_schema": "bad",
+                "candidate_prefix": "bad",
+                "score_lowering_hypothesis": "bad",
+                "parameters": [
+                    {"name": "x", "low": 1.0, "high": 1.0, "anchor": 1.0},
+                ],
+            }
+        )
+
+
+def test_cli_writes_stable_queue_without_dispatching(tmp_path: Path) -> None:
+    output = tmp_path / "queue.json"
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--profile",
+            "pr101_bias_refine",
+            "--optimizer",
+            "grid",
+            "--max-candidates",
+            "6",
+            "--top-k",
+            "4",
+            "--seed",
+            "20260510",
+            "--output",
+            str(output),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    queue = json.loads(output.read_text(encoding="utf-8"))
+    assert "dispatch_ready=0" in proc.stdout
+    assert "score_claim=false" in proc.stdout
+    assert queue["schema"] == QUEUE_SCHEMA
+    assert queue["generated_at_utc"] == "1970-01-01T00:00:00Z"
+    assert queue["dispatch_ready_count"] == 0
+    assert len(queue["top_k"]) == 4
+    assert all(row["score_claim"] is False for row in queue["top_k"])
+    assert all(row["ready_for_exact_eval_dispatch"] is False for row in queue["top_k"])

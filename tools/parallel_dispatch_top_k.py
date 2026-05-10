@@ -812,6 +812,7 @@ def _load_top_k(
     operator_override_reason: str | None = None,
 ) -> list[dict]:
     """Load candidates from a meta-Lagrangian ranked-output JSON file."""
+    ranked_input = ranked_input.resolve()
     payload = json.loads(ranked_input.read_text())
     if isinstance(payload, dict) and payload.get("ready_for_exact_eval_dispatch") is False:
         raise DispatchInputError(
@@ -833,9 +834,14 @@ def _load_top_k(
         and isinstance(payload, dict)
         and payload.get("schema") == "optimizer_candidate_exact_eval_ready_queue_v1"
     ):
+        try:
+            ranked_input.relative_to(REPO.resolve())
+            audit_repo_root = REPO
+        except ValueError:
+            audit_repo_root = ranked_input.parent
         audit = audit_exact_ready_queue(
             ranked_input,
-            repo_root=REPO,
+            repo_root=audit_repo_root,
             dispatch_claims_path=dispatch_claims_path,
             active_floor_score=active_floor_score,
             candidate_ids=selected_candidate_ids,

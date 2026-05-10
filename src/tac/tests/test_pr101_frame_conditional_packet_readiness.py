@@ -118,6 +118,10 @@ def test_a5_packet_readiness_accepts_valid_local_prerequisites_but_keeps_dispatc
             {
                 "score_claim": False,
                 "charged_bits_changed": True,
+                "source_archive": {
+                    "bytes": 1000,
+                    "sha256": "0" * 64,
+                },
                 "candidate_archive": {
                     "path": "candidate/archive.zip",
                     "bytes": 900,
@@ -189,6 +193,10 @@ def test_a5_packet_readiness_uses_candidate_wire_contract_for_recomputed_qbits(
             {
                 "score_claim": False,
                 "charged_bits_changed": True,
+                "source_archive": {
+                    "bytes": 1000,
+                    "sha256": "0" * 64,
+                },
                 "candidate_archive": {
                     "path": "candidate/archive.zip",
                     "bytes": 900,
@@ -314,6 +322,87 @@ def test_a5_packet_readiness_accepts_score_marginal_qbits_schedule(
 
     assert manifest["readiness_blockers"] == []
     assert manifest["ready_for_exact_eval_after_lane_claim"] is True
+
+
+def test_a5_packet_readiness_accepts_channel_qbits_schedule_proxy_evidence(
+    tmp_path: Path,
+) -> None:
+    a5_manifest = _a5_manifest(tmp_path / "a5.json")
+    artifacts = {
+        CANDIDATE_ARCHIVE_MANIFEST: _write_json(
+            tmp_path / "candidate_archive.json",
+            {
+                "score_claim": False,
+                "charged_bits_changed": True,
+                "source_archive": {
+                    "bytes": 1000,
+                    "sha256": "0" * 64,
+                },
+                "candidate_archive": {
+                    "path": "candidate/archive.zip",
+                    "bytes": 900,
+                    "sha256": "d" * 64,
+                },
+            },
+        ),
+        PACKET_RUNTIME_PATCH_MANIFEST: _write_json(
+            tmp_path / "runtime_patch.json",
+            {
+                "score_claim": False,
+                "packet_local_runtime_patch": {
+                    "consumes_schema": FRAME_CONDITIONAL_LATENT_WIRE_SCHEMA,
+                    "parse_archive_consumes_q_bits_sideinfo": True,
+                    "decode_latents_consumes_variable_width_payload": True,
+                },
+            },
+        ),
+        RUNTIME_CONSUMPTION_PROOF: _write_json(
+            tmp_path / "runtime_proof.json",
+            {
+                "score_claim": False,
+                "ready_for_exact_eval_runtime": True,
+                "consumed_q_bits_sideinfo_sha256": "b" * 64,
+                "consumed_latent_wire_payload_sha256": "c" * 64,
+            },
+        ),
+        PER_PAIR_SCORE_MARGINAL_MANIFEST: _write_json(
+            tmp_path / "channel_schedule.json",
+            {
+                "schema": "pr101_a5_channel_qbits_schedule.v1",
+                "score_claim": False,
+                "n_pairs": 2,
+                "latent_dim": 4,
+                "per_channel_q_bits": [7, 8, 7, 8],
+                "source_artifacts": {
+                    "source_archive": {
+                        "sha256": "0" * 64,
+                    },
+                },
+                "q_bits_summary": {"sha256": "e" * 64},
+                "q_bits_sideinfo": {"sha256": "f" * 64},
+                "latent_wire_payload": {"sha256": "1" * 64},
+                "proxy_objective": {
+                    "optimal_for_target_qsum": True,
+                    "score_affecting_payload_changed": True,
+                },
+            },
+        ),
+        STRICT_PRE_SUBMISSION_COMPLIANCE_JSON: _write_json(
+            tmp_path / "strict_compliance.json",
+            {"score_claim": False, "ok": True},
+        ),
+    }
+
+    manifest = build_packet_readiness(
+        a5_manifest_path=a5_manifest,
+        artifact_paths=artifacts,
+        repo_root=tmp_path,
+    )
+
+    assert manifest["readiness_blockers"] == []
+    assert manifest["ready_for_exact_eval_after_lane_claim"] is True
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["score_claim"] is False
 
 
 def test_a5_packet_readiness_rejects_score_claiming_anchor(tmp_path: Path) -> None:

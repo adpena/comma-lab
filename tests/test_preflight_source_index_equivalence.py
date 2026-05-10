@@ -330,6 +330,147 @@ def export(state, path):
     assert "export_bad.py" in with_index[0]
 
 
+def test_phase3_dispatch_gate_source_index_matches_no_index(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "src" / "tac" / "phase3_callsite.py",
+        """def build_gate():
+    return Phase3DispatchGate(
+        phase2_anchor_verified=True,
+    )
+""",
+    )
+
+    no_index = preflight.check_phase3_dispatch_gate_fail_closed(
+        repo_root=tmp_path,
+        strict=False,
+        verbose=False,
+    )
+    with_index = _with_source_index(
+        tmp_path,
+        preflight.check_phase3_dispatch_gate_fail_closed,
+    )
+
+    assert with_index == no_index
+    assert len(with_index) == 1
+    assert "phase3_callsite.py:2" in with_index[0]
+
+
+def test_setup_first_seen_transactional_source_index_matches_no_index(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "scripts" / "verify_vast_instances.py",
+        """def _load_setup_first_seen():
+    return {}
+
+def _save_setup_first_seen(state):
+    return None
+
+def main():
+    state = _load_setup_first_seen()
+    state["abc"] = 1
+    _save_setup_first_seen(state)
+""",
+    )
+
+    no_index = preflight.check_setup_first_seen_uses_transactional_update_inside_lock(
+        repo_root=tmp_path,
+        strict=False,
+        verbose=False,
+    )
+    with_index = _with_source_index(
+        tmp_path,
+        preflight.check_setup_first_seen_uses_transactional_update_inside_lock,
+    )
+
+    assert with_index == no_index
+    assert len(with_index) == 1
+    assert "verify_vast_instances.py:8" in with_index[0]
+
+
+def test_packet_no_op_proof_source_index_matches_no_index(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "src" / "tac" / "packet_bad.py",
+        """def finalize_packet():
+    blockers = []
+    proof = _build_no_op_proof()
+    if proof is not None:
+        blockers.append("advisory_only")
+    return blockers
+""",
+    )
+
+    no_index = preflight.check_packet_compiler_no_op_proof_promotes_to_blocker(
+        repo_root=tmp_path,
+        strict=False,
+        verbose=False,
+    )
+    with_index = _with_source_index(
+        tmp_path,
+        preflight.check_packet_compiler_no_op_proof_promotes_to_blocker,
+    )
+
+    assert with_index == no_index
+    assert len(with_index) == 1
+    assert "packet_bad.py:1" in with_index[0]
+
+
+def test_paid_job_register_before_submit_source_index_matches_no_index(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "src" / "tac" / "deploy" / "lightning_submit_bad.py",
+        """class Job:
+    @staticmethod
+    def run(*args):
+        return object()
+
+def submit():
+    return Job.run("train")
+""",
+    )
+
+    no_index = preflight.check_paid_job_register_before_submit(
+        repo_root=tmp_path,
+        strict=False,
+        verbose=False,
+    )
+    with_index = _with_source_index(
+        tmp_path,
+        preflight.check_paid_job_register_before_submit,
+    )
+
+    assert with_index == no_index
+    assert len(with_index) == 1
+    assert "lightning_submit_bad.py:6" in with_index[0]
+
+
+def test_setup_first_seen_no_split_source_index_matches_no_index(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "scripts" / "verify_vast_instances.py",
+        """def reconcile(observed, left):
+    update_setup_first_seen_locked(observed)
+    remove_setup_first_seen_locked(left)
+""",
+    )
+
+    no_index = preflight.check_setup_first_seen_no_split_transactions(
+        repo_root=tmp_path,
+        strict=False,
+        verbose=False,
+    )
+    with_index = _with_source_index(
+        tmp_path,
+        preflight.check_setup_first_seen_no_split_transactions,
+    )
+
+    assert with_index == no_index
+    assert len(with_index) == 1
+    assert "verify_vast_instances.py:1" in with_index[0]
+
+
 def test_custody_window_tokenizer_handles_mid_block_indentation() -> None:
     lines = [
         "if current_score is not None:",

@@ -34581,34 +34581,50 @@ def check_phase3_dispatch_gate_fail_closed(
 
     violations: list[str] = []
     scanned_files = 0
-    for scan_dir in scan_dirs:
-        if not scan_dir.is_dir():
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        candidate_paths = source_index.files_containing_substrings(
+            scan_dirs,
+            pattern="*.py",
+            substrings=("Phase3DispatchGate",),
+            require_all=True,
+        )
+    else:
+        candidate_paths = tuple(
+            py
+            for scan_dir in scan_dirs
+            if scan_dir.is_dir()
+            for py in scan_dir.rglob("*.py")
+        )
+    for py in candidate_paths:
+        if _is_oss_export_mirror_path(py):
             continue
-        for py in scan_dir.rglob("*.py"):
-            if _is_oss_export_mirror_path(py):
-                continue
-            if py in EXCLUDED_FILES:
-                continue
-            # Test files are exempt — they legitimately exercise the gate
-            s = str(py)
-            if "/tests/" in s or py.name.startswith("test_"):
-                continue
-            # Vendored intakes / hosted exports
-            if (
-                "experiments/results/public_pr" in s
-                or "experiments/results/comma_lab_public_export" in s
-                or "experiments/results/vast_harvest" in s
-            ):
-                continue
-            try:
-                text = py.read_text(encoding="utf-8", errors="replace")
-            except OSError:
-                continue
-            if "Phase3DispatchGate" not in text:
-                continue
-            scanned_files += 1
-            lines = text.splitlines()
-            for lineno, line in enumerate(lines):
+        if py in EXCLUDED_FILES:
+            continue
+        # Test files are exempt — they legitimately exercise the gate
+        s = str(py)
+        if "/tests/" in s or py.name.startswith("test_"):
+            continue
+        # Vendored intakes / hosted exports
+        if (
+            "experiments/results/public_pr" in s
+            or "experiments/results/comma_lab_public_export" in s
+            or "experiments/results/vast_harvest" in s
+        ):
+            continue
+        try:
+            text = (
+                source_index.read_text(py, encoding="utf-8", errors="replace")
+                if source_index is not None
+                else py.read_text(encoding="utf-8", errors="replace")
+            )
+        except OSError:
+            continue
+        if "Phase3DispatchGate" not in text:
+            continue
+        scanned_files += 1
+        lines = text.splitlines()
+        for lineno, line in enumerate(lines):
                 # Look for `Phase3DispatchGate(` (constructor call, not type
                 # annotation or import).
                 if "Phase3DispatchGate(" not in line:
@@ -34787,34 +34803,50 @@ def check_setup_first_seen_uses_transactional_update_inside_lock(
 
     violations: list[str] = []
     scanned_files = 0
-    for scan_dir in scan_dirs:
-        if not scan_dir.is_dir():
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        candidate_paths = source_index.files_containing_substrings(
+            scan_dirs,
+            pattern="*.py",
+            substrings=("_load_", "_save_"),
+            require_all=True,
+        )
+    else:
+        candidate_paths = tuple(
+            src
+            for scan_dir in scan_dirs
+            if scan_dir.is_dir()
+            for src in scan_dir.rglob("*.py")
+        )
+    for src in candidate_paths:
+        if _is_oss_export_mirror_path(src):
             continue
-        for src in scan_dir.rglob("*.py"):
-            if _is_oss_export_mirror_path(src):
-                continue
-            s = str(src)
-            if "/tests/" in s or src.name.startswith("test_"):
-                continue
-            if (
-                "experiments/results/public_pr" in s
-                or "experiments/results/comma_lab_public_export" in s
-                or "experiments/results/vast_harvest" in s
-            ):
-                continue
-            try:
-                text = src.read_text(encoding="utf-8", errors="replace")
-            except OSError:
-                continue
-            # Quick prefilter — file must reference both load + save first-seen
-            if not (LOAD_PATTERNS.search(text) and SAVE_PATTERNS.search(text)):
-                continue
-            scanned_files += 1
-            lines = text.splitlines()
-            # Find every CALL site of a load helper that is OUTSIDE a `def
-            # _load_*` or `def _save_*` definition (i.e. not the helpers
-            # themselves) and OUTSIDE any visible `with ...lock` context.
-            for lineno, line in enumerate(lines):
+        s = str(src)
+        if "/tests/" in s or src.name.startswith("test_"):
+            continue
+        if (
+            "experiments/results/public_pr" in s
+            or "experiments/results/comma_lab_public_export" in s
+            or "experiments/results/vast_harvest" in s
+        ):
+            continue
+        try:
+            text = (
+                source_index.read_text(src, encoding="utf-8", errors="replace")
+                if source_index is not None
+                else src.read_text(encoding="utf-8", errors="replace")
+            )
+        except OSError:
+            continue
+        # Quick prefilter — file must reference both load + save first-seen
+        if not (LOAD_PATTERNS.search(text) and SAVE_PATTERNS.search(text)):
+            continue
+        scanned_files += 1
+        lines = text.splitlines()
+        # Find every CALL site of a load helper that is OUTSIDE a `def
+        # _load_*` or `def _save_*` definition (i.e. not the helpers
+        # themselves) and OUTSIDE any visible `with ...lock` context.
+        for lineno, line in enumerate(lines):
                 stripped = line.lstrip()
                 if stripped.startswith("#"):
                     continue
@@ -35785,10 +35817,25 @@ def check_packet_compiler_no_op_proof_promotes_to_blocker(
 
     violations: list[str] = []
     scanned_files = 0
-    for scan_dir in scan_dirs:
-        if not scan_dir.is_dir():
-            continue
-        for py in scan_dir.rglob("*.py"):
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        candidate_paths = source_index.files_containing_substrings(
+            scan_dirs,
+            pattern="*.py",
+            substrings=(
+                _PACKET_NO_OP_PROOF_REQUIRED_TOKEN,
+                "blockers",
+            ),
+            require_all=True,
+        )
+    else:
+        candidate_paths = tuple(
+            py
+            for scan_dir in scan_dirs
+            if scan_dir.is_dir()
+            for py in scan_dir.rglob("*.py")
+        )
+    for py in candidate_paths:
             if _is_oss_export_mirror_path(py):
                 continue
             s = str(py)
@@ -35801,7 +35848,11 @@ def check_packet_compiler_no_op_proof_promotes_to_blocker(
             ):
                 continue
             try:
-                text = py.read_text(encoding="utf-8", errors="replace")
+                text = (
+                    source_index.read_text(py, encoding="utf-8", errors="replace")
+                    if source_index is not None
+                    else py.read_text(encoding="utf-8", errors="replace")
+                )
             except OSError:
                 continue
             # Quick prefilter — file must call the CANONICAL no_op_proof
@@ -36541,7 +36592,18 @@ def check_paid_job_register_before_submit(
     root = Path(repo_root or REPO_ROOT)
     violations: list[str] = []
     scanned_files = 0
-    for py in _iter_python_files(root, ["experiments", "tools", "scripts", "src/tac"]):
+    scan_dirs = ["experiments", "tools", "scripts", "src/tac"]
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        py_paths = source_index.files_containing_substrings(
+            scan_dirs,
+            pattern="*.py",
+            substrings=("Job.run",),
+            require_all=True,
+        )
+    else:
+        py_paths = tuple(_iter_python_files(root, scan_dirs))
+    for py in py_paths:
             if _is_oss_export_mirror_path(py):
                 continue
             s = str(py)
@@ -36557,7 +36619,11 @@ def check_paid_job_register_before_submit(
             if not _is_lightning_dispatch_file(py):
                 continue
             try:
-                text = py.read_text(encoding="utf-8", errors="replace")
+                text = (
+                    source_index.read_text(py, encoding="utf-8", errors="replace")
+                    if source_index is not None
+                    else py.read_text(encoding="utf-8", errors="replace")
+                )
             except OSError:
                 continue
             if "Job.run" not in text:
@@ -36734,10 +36800,35 @@ def check_setup_first_seen_no_split_transactions(
 
     violations: list[str] = []
     scanned_files = 0
-    for scan_dir in scan_dirs:
-        if not scan_dir.is_dir():
-            continue
-        for py in scan_dir.rglob("*.py"):
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        observed_paths = set(
+            source_index.files_containing_substrings(
+                scan_dirs,
+                pattern="*.py",
+                substrings=_SETUP_FIRST_SEEN_OBSERVED_HELPER_TOKENS,
+                require_all=False,
+            )
+        )
+        left_paths = set(
+            source_index.files_containing_substrings(
+                scan_dirs,
+                pattern="*.py",
+                substrings=_SETUP_FIRST_SEEN_LEFT_HELPER_TOKENS,
+                require_all=False,
+            )
+        )
+        candidate_paths = tuple(
+            sorted(observed_paths & left_paths, key=lambda item: item.as_posix())
+        )
+    else:
+        candidate_paths = tuple(
+            py
+            for scan_dir in scan_dirs
+            if scan_dir.is_dir()
+            for py in scan_dir.rglob("*.py")
+        )
+    for py in candidate_paths:
             if _is_oss_export_mirror_path(py):
                 continue
             if py in EXCLUDED_FILES:
@@ -36752,7 +36843,11 @@ def check_setup_first_seen_no_split_transactions(
             ):
                 continue
             try:
-                text = py.read_text(encoding="utf-8", errors="replace")
+                text = (
+                    source_index.read_text(py, encoding="utf-8", errors="replace")
+                    if source_index is not None
+                    else py.read_text(encoding="utf-8", errors="replace")
+                )
             except OSError:
                 continue
             # Quick prefilter
