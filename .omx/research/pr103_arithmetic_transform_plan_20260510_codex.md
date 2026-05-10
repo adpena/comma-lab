@@ -357,6 +357,7 @@ pending the parity gate above:
 | non-additivity delta | `1` |
 | candidate archive SHA-256 | `578c8f4e86eafc9dc04eefe61cc0e7f3f3f43e134ef4447cf9ef26fd23a23551` |
 | packet runtime tree SHA-256 | `8b81480b74919295c37707ac5124934571314f30d3bfe0164cbe7b456e589936` |
+| sampled frame parity | `true` for pairs `[0, 1, 127, 599]` |
 
 Artifacts:
 
@@ -364,13 +365,18 @@ Artifacts:
 .omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_probe.json
 .omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/archive.zip
 .omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/packet/
+.omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_candidate/frame_parity_probe_sampled.json
 ```
 
 The global-combo search is the first non-greedy recomputation over the full
 merged AC stream plus the Brotli-compressed histogram sideband. It beats the
 greedy materialized packet on rate (`-12B` vs `-8B`) while preserving decoded
-state/latent parity. It is **not** a score claim and not exact-eval dispatch
-authorization.
+state/latent parity. A sampled same-runtime frame-digest probe also matches
+source output bytes for pairs `[0, 1, 127, 599]`
+(`146892fa4c3b80f4901438b7aa8b004e4ca7ee0a80bb3ae07f4e34f7b3b51044`).
+It is **not** a score claim and not exact-eval dispatch authorization; the
+remaining blocker is full 600-pair frame parity or same-runtime source/candidate
+auth eval.
 
 ## Next implementation target
 

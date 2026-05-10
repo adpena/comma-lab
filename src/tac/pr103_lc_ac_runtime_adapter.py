@@ -24,6 +24,7 @@ from tac.repo_io import json_text, read_json, repo_relative, sha256_bytes, sha25
 ADAPTER_SCHEMA = "pr103_lc_ac_runtime_adapter_v1"
 PACKET_SCHEMA = "pr103_lc_ac_histogram_candidate_packet_v1"
 ARCHIVE_MANIFEST_SCHEMA = "pr103_lc_ac_histogram_candidate_archive_manifest_v1"
+FRAME_PARITY_SCHEMA = "pr103_lc_ac_frame_parity_probe_v1"
 REQUIRED_RUNTIME_CONSTANTS = (
     "BR_LEN",
     "HIST_LEN",
@@ -218,6 +219,89 @@ def build_pr103_lc_ac_candidate_packet(
     }
     write_json(output_dir / "packet_manifest.json", packet_manifest)
     return packet_manifest
+
+
+def probe_pr103_lc_ac_frame_parity(
+    *,
+    source_runtime_py: str | Path,
+    source_archive: str | Path,
+    candidate_runtime_py: str | Path,
+    candidate_archive: str | Path,
+    pair_indices: list[int],
+    device: str = "cpu",
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Hash rendered frame bytes for selected PR103 pair indices.
+
+    This is a same-runtime sanity probe, not an auth-eval substitute. A sampled
+    pass is useful for catching adapter/parser mistakes before CUDA spend; only
+    a full-scope pass or same-runtime exact auth eval can clear the full-frame
+    parity blocker.
+    """
+
+    repo = Path(repo_root) if repo_root is not None else Path.cwd()
+    source_runtime = _repo_path(Path(source_runtime_py), repo)
+    candidate_runtime = _repo_path(Path(candidate_runtime_py), repo)
+    source_zip = _repo_path(Path(source_archive), repo)
+    candidate_zip = _repo_path(Path(candidate_archive), repo)
+    if not pair_indices:
+        raise Pr103RuntimeAdapterError("pair_indices must not be empty")
+    source_result = _render_frame_digest(
+        runtime_py=source_runtime,
+        archive_path=source_zip,
+        pair_indices=pair_indices,
+        device=device,
+    )
+    candidate_result = _render_frame_digest(
+        runtime_py=candidate_runtime,
+        archive_path=candidate_zip,
+        pair_indices=pair_indices,
+        device=device,
+    )
+    pair_hashes_match = source_result["pair_hashes"] == candidate_result["pair_hashes"]
+    output_sha_match = source_result["output_sha256"] == candidate_result["output_sha256"]
+    parsed_lengths_match = source_result["parsed_lengths"] == candidate_result["parsed_lengths"]
+    full_scope = _is_full_pair_scope(pair_indices, int(source_result["n_pairs"]))
+    parity_passed = bool(pair_hashes_match and output_sha_match)
+    full_parity = bool(parity_passed and full_scope)
+    blockers = _unique_ordered(
+        [
+            *(["frame_output_parity_mismatch"] if not parity_passed else []),
+            *(["full_frame_inflate_output_parity_missing"] if not full_parity else []),
+            "lane_dispatch_claim_missing",
+            "exact_cuda_auth_eval_missing",
+        ]
+    )
+    return {
+        "schema": FRAME_PARITY_SCHEMA,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "gpu_required": device != "cpu",
+        "ready_for_exact_eval_dispatch": False,
+        "device": device,
+        "pair_indices": [int(index) for index in pair_indices],
+        "frame_output_parity_scope": "full" if full_scope else "sampled",
+        "sampled_frame_output_parity_proven": parity_passed,
+        "full_frame_output_parity_proven": full_parity,
+        "pair_hashes_match": pair_hashes_match,
+        "output_sha_match": output_sha_match,
+        "parsed_lengths_match": parsed_lengths_match,
+        "source": {
+            "runtime_py": _file_record(source_runtime, relpath=repo_relative(source_runtime, repo)),
+            "archive": _file_record(source_zip, relpath=repo_relative(source_zip, repo)),
+            "render": source_result,
+        },
+        "candidate": {
+            "runtime_py": _file_record(candidate_runtime, relpath=repo_relative(candidate_runtime, repo)),
+            "archive": _file_record(candidate_zip, relpath=repo_relative(candidate_zip, repo)),
+            "render": candidate_result,
+        },
+        "readiness_blockers": blockers,
+        "dispatch_blockers": [
+            "pr103_frame_parity_probe_is_not_dispatch_authorization",
+            *blockers,
+        ],
+    }
 
 
 def _read_candidate_manifest(path: Path) -> dict[str, Any]:
@@ -469,6 +553,93 @@ def _runtime_consumption_probe(
     }
 
 
+def _render_frame_digest(
+    *,
+    runtime_py: Path,
+    archive_path: Path,
+    pair_indices: list[int],
+    device: str,
+) -> dict[str, Any]:
+    constants = _integer_constant_assignments(runtime_py.read_text(encoding="utf-8"))
+    missing = [name for name in REQUIRED_RUNTIME_CONSTANTS if name not in constants]
+    if missing:
+        raise Pr103RuntimeAdapterError(f"runtime missing required constants: {missing}")
+    runtime = _load_runtime_module(runtime_py)
+    source = read_strict_single_member_zip(archive_path)
+    sections = runtime.parse_archive(source.payload)
+    if len(sections) != 8:
+        raise Pr103RuntimeAdapterError(f"runtime parse_archive returned {len(sections)} sections")
+    sca, br_b, hists_b, merged_ac, mins_scales, lo_b, hi_hist_b, wrp_b = sections
+    lengths = {
+        "BR_LEN": len(br_b),
+        "HIST_LEN": len(hists_b),
+        "MERGED_AC_LEN": len(merged_ac),
+        "LO_LEN": len(lo_b),
+        "HI_HIST_LEN": len(hi_hist_b),
+    }
+    mismatches = {
+        key: {"expected": value, "actual": lengths[key]}
+        for key, value in constants.items()
+        if lengths[key] != value
+    }
+    if mismatches:
+        raise Pr103RuntimeAdapterError(f"runtime parse length mismatch: {mismatches}")
+    hi_hist = np.frombuffer(runtime.brotli.decompress(hi_hist_b), dtype=np.uint16)
+    state_dict, hi_decoded = runtime.build_state_dict(br_b, hists_b, merged_ac, sca, hi_hist)
+    latents = runtime.decode_latents(mins_scales, lo_b, hi_decoded)
+    runtime.apply_corrections(latents, wrp_b)
+    n_pairs = int(latents.shape[0])
+    normalized_indices = _normalize_pair_indices(pair_indices, n_pairs=n_pairs)
+    torch = runtime.torch
+    nn_device = torch.device(device)
+    decoder = runtime.HNeRVDecoder(runtime.LATENT_DIM, runtime.BASE_CHANNELS, runtime.EVAL_SIZE).to(
+        nn_device
+    )
+    decoder.load_state_dict(state_dict)
+    decoder.eval()
+    latents = latents.to(nn_device)
+    pair_hashes = []
+    chunks: list[bytes] = []
+    with torch.inference_mode():
+        for pair_index in normalized_indices:
+            decoded = decoder(latents[pair_index : pair_index + 1])
+            flat = decoded.reshape(2, 3, *runtime.EVAL_SIZE)
+            up = runtime.F.interpolate(
+                flat,
+                size=(runtime.CAMERA_H, runtime.CAMERA_W),
+                mode="bicubic",
+                align_corners=False,
+            )
+            frames = (
+                up.clamp(0, 255)
+                .permute(0, 2, 3, 1)
+                .round()
+                .to(torch.uint8)
+                .cpu()
+                .numpy()
+            )
+            payload = np.ascontiguousarray(frames).tobytes()
+            chunks.append(payload)
+            pair_hashes.append(
+                {
+                    "pair_index": pair_index,
+                    "frame_count": 2,
+                    "bytes": len(payload),
+                    "sha256": sha256_bytes(payload),
+                }
+            )
+    output = b"".join(chunks)
+    return {
+        "member_name": source.member_name,
+        "payload_bytes": source.member_bytes,
+        "parsed_lengths": lengths,
+        "n_pairs": n_pairs,
+        "pair_hashes": pair_hashes,
+        "output_bytes": len(output),
+        "output_sha256": sha256_bytes(output),
+    }
+
+
 def _load_runtime_module(path: Path) -> ModuleType:
     module_name = "pr103_lc_ac_runtime_adapter_" + sha256_file(path)[:16]
     spec = importlib.util.spec_from_file_location(module_name, path)
@@ -586,6 +757,25 @@ def _tensor_numel(value: Any) -> int:
     if hasattr(value, "numel"):
         return int(value.numel())
     return int(np.asarray(value).size)
+
+
+def _normalize_pair_indices(pair_indices: list[int], *, n_pairs: int) -> list[int]:
+    normalized: list[int] = []
+    seen: set[int] = set()
+    for raw_index in pair_indices:
+        index = int(raw_index)
+        if index < 0 or index >= n_pairs:
+            raise Pr103RuntimeAdapterError(
+                f"pair index {index} outside valid range [0, {n_pairs - 1}]"
+            )
+        if index not in seen:
+            seen.add(index)
+            normalized.append(index)
+    return normalized
+
+
+def _is_full_pair_scope(pair_indices: list[int], n_pairs: int) -> bool:
+    return _normalize_pair_indices(pair_indices, n_pairs=n_pairs) == list(range(n_pairs))
 
 
 def _decoder_state_parity_proof(

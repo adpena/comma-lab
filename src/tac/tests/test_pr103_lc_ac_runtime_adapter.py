@@ -10,16 +10,19 @@ import pytest
 from tac.hnerv_lowlevel_packer import write_stored_single_member_zip
 from tac.pr103_lc_ac_runtime_adapter import (
     ADAPTER_SCHEMA,
+    FRAME_PARITY_SCHEMA,
     PACKET_SCHEMA,
     Pr103RuntimeAdapterError,
     build_pr103_lc_ac_candidate_packet,
     build_pr103_lc_ac_runtime_adapter,
+    probe_pr103_lc_ac_frame_parity,
 )
 from tac.repo_io import sha256_file, write_json
 
 
 REPO = Path(__file__).resolve().parents[3]
 SCRIPT = REPO / "tools/build_pr103_lc_ac_runtime_adapter.py"
+FRAME_PARITY_SCRIPT = REPO / "tools/probe_pr103_lc_ac_frame_parity.py"
 
 
 def test_pr103_runtime_adapter_patches_constants_and_proves_consumption(
@@ -143,6 +146,61 @@ def test_pr103_candidate_packet_copies_archive_runtime_and_custody(
     assert "full_frame_inflate_output_parity_missing" in packet["readiness_blockers"]
 
 
+def test_pr103_frame_parity_probe_hashes_same_runtime_rendered_pairs(tmp_path: Path) -> None:
+    fixture = _frame_fixture(tmp_path)
+
+    report = probe_pr103_lc_ac_frame_parity(
+        source_runtime_py=fixture["runtime"] / "inflate.py",
+        source_archive=fixture["source_archive"],
+        candidate_runtime_py=fixture["runtime"] / "inflate.py",
+        candidate_archive=fixture["candidate_archive"],
+        pair_indices=[1, 0, 1],
+        repo_root=tmp_path,
+    )
+
+    assert report["schema"] == FRAME_PARITY_SCHEMA
+    assert report["score_claim"] is False
+    assert report["sampled_frame_output_parity_proven"] is True
+    assert report["full_frame_output_parity_proven"] is False
+    assert report["pair_indices"] == [1, 0, 1]
+    assert report["source"]["render"]["pair_hashes"] == report["candidate"]["render"]["pair_hashes"]
+    assert "full_frame_inflate_output_parity_missing" in report["readiness_blockers"]
+
+
+def test_pr103_frame_parity_probe_cli_writes_json(tmp_path: Path) -> None:
+    fixture = _frame_fixture(tmp_path)
+    json_out = tmp_path / "frame_parity.json"
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(FRAME_PARITY_SCRIPT),
+            "--source-runtime-py",
+            str(fixture["runtime"] / "inflate.py"),
+            "--source-archive",
+            str(fixture["source_archive"]),
+            "--candidate-runtime-py",
+            str(fixture["runtime"] / "inflate.py"),
+            "--candidate-archive",
+            str(fixture["candidate_archive"]),
+            "--pair-index",
+            "0",
+            "--json-out",
+            str(json_out),
+        ],
+        cwd=REPO,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    report = json.loads(json_out.read_text(encoding="utf-8"))
+    assert report["schema"] == FRAME_PARITY_SCHEMA
+    assert report["sampled_frame_output_parity_proven"] is True
+    assert report["tool_run_manifest"]["ready_for_exact_eval_dispatch"] is False
+
+
 def _fixture(tmp_path: Path) -> dict[str, Path]:
     runtime = tmp_path / "runtime"
     runtime.mkdir()
@@ -254,3 +312,83 @@ def apply_corrections(latents, wrp_b):
         },
     )
     return {"runtime": runtime, "manifest": manifest, "archive": archive, "source_archive": source_archive}
+
+
+def _frame_fixture(tmp_path: Path) -> dict[str, Path]:
+    runtime = tmp_path / "frame_runtime"
+    runtime.mkdir()
+    runtime.joinpath("inflate.py").write_text(
+        """
+from __future__ import annotations
+
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+CAMERA_H, CAMERA_W = 2, 2
+N_PAIRS = 2
+LATENT_DIM = 1
+BASE_CHANNELS = 1
+EVAL_SIZE = (2, 2)
+SCA_LEN = 1
+BR_LEN = 1
+HIST_LEN = 1
+MERGED_AC_LEN = 1
+LATENT_META_LEN = 1
+LO_LEN = 1
+HI_HIST_LEN = 2
+
+
+class brotli:
+    @staticmethod
+    def decompress(data):
+        return data
+
+
+class HNeRVDecoder(nn.Module):
+    def __init__(self, latent_dim, base_channels, eval_size):
+        super().__init__()
+        self.eval_size = eval_size
+
+    def forward(self, z):
+        b = z.shape[0]
+        return z.view(b, 1, 1, 1, 1).expand(b, 2, 3, self.eval_size[0], self.eval_size[1])
+
+
+def parse_archive(blob):
+    o = 0
+    sca = blob[o:o + SCA_LEN]; o += SCA_LEN
+    br = blob[o:o + BR_LEN]; o += BR_LEN
+    hists_b = blob[o:o + HIST_LEN]; o += HIST_LEN
+    merged_ac = blob[o:o + MERGED_AC_LEN]; o += MERGED_AC_LEN
+    mins_scales = blob[o:o + LATENT_META_LEN]; o += LATENT_META_LEN
+    lo_b = blob[o:o + LO_LEN]; o += LO_LEN
+    hi_hist_b = blob[o:o + HI_HIST_LEN]; o += HI_HIST_LEN
+    wrp_b = blob[o:]
+    return sca, br, hists_b, merged_ac, mins_scales, lo_b, hi_hist_b, wrp_b
+
+
+def build_state_dict(br_b, hists_b, merged_ac, sca, hi_hist):
+    return {}, np.asarray([0, 1], dtype=np.uint16)
+
+
+def decode_latents(mins_scales, lo_b, hi_decoded):
+    return torch.tensor([[17.0], [23.0]], dtype=torch.float32)
+
+
+def apply_corrections(latents, wrp_b):
+    return latents
+""".lstrip(),
+        encoding="utf-8",
+    )
+    payload = b"a" + b"b" + b"h" + b"m" + b"z" + b"l" + b"\x01\x00"
+    source_archive = tmp_path / "source_frame.zip"
+    candidate_archive = tmp_path / "candidate_frame.zip"
+    write_stored_single_member_zip(source_archive, member_name="x", payload=payload)
+    write_stored_single_member_zip(candidate_archive, member_name="x", payload=payload)
+    return {
+        "runtime": runtime,
+        "source_archive": source_archive,
+        "candidate_archive": candidate_archive,
+    }

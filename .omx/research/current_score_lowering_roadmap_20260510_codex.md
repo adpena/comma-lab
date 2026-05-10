@@ -199,9 +199,13 @@
   `578c8f4e86eafc9dc04eefe61cc0e7f3f3f43e134ef4447cf9ef26fd23a23551`, packet
   runtime tree SHA-256
   `8b81480b74919295c37707ac5124934571314f30d3bfe0164cbe7b456e589936`.
+- Sampled same-runtime rendered-frame parity now passes for PR103 source versus
+  `global_combo_candidate` on pairs `[0, 1, 127, 599]`; source and candidate
+  output SHA-256 both equal
+  `146892fa4c3b80f4901438b7aa8b004e4ca7ee0a80bb3ae07f4e34f7b3b51044`.
 - The next PR103 implementation blocker is not another optimizer sweep; it is
-  same-runtime source/candidate frame or auth-eval parity. Without that, tiny
-  CUDA component deltas can be harness/runtime artifacts.
+  full-scope same-runtime source/candidate frame or auth-eval parity. Without
+  that, tiny CUDA component deltas can be harness/runtime artifacts.
 - Score-lowering priority order now: harvest T1; build PR103 same-runtime
   comparator; only then decide whether the `-12B` global-combo packet deserves
   a fresh claimed exact CUDA run.
