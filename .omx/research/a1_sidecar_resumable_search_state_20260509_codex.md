@@ -1143,3 +1143,59 @@ The next local action is `--recheck-unproven-pairs` for the legacy `0..335`
 pairs. Only after all 600 pairs have scalar-equivalent provenance should we
 build the exact `inflate.sh` signature smoke, runtime-output no-op proof, and
 structured dispatch/preflight records.
+
+## Codex follow-up local recheck chunk 20
+
+<!-- generated_at: 2026-05-10T04:39:05Z -->
+<!-- evidence_grade: local_cpu_proxy_recheck_partial; no score claim; no remote dispatch -->
+
+Codex started the legacy-provenance repair path:
+
+```bash
+/usr/bin/time -p .venv/bin/python tools/build_a1_per_pair_latent_correction_sidecar.py \
+  --n-pairs 600 \
+  --resume-search-state \
+  --recheck-unproven-pairs \
+  --max-search-seconds 900 \
+  --candidate-batch-size 1 \
+  --runtime-smoke \
+  --runtime-smoke-pairs 1 \
+  --output-dir experiments/results/a1_sidecar_resumable_codex_20260509T_local
+```
+
+Observed:
+
+- rechecked legacy pairs `0` through `57` before the wall-clock guard stopped
+  after completing the in-progress pair;
+- elapsed `real 915.17`, `user 2195.60`, `sys 51.80`;
+- `candidate_batch_size=1`;
+- archive SHA-256 remained
+  `c7f3d88e1ad23bf8cda987583e702ac57e293b64bc7bfea77902e835d19cea10`;
+- archive bytes remained `178316`;
+- choice-state SHA-256
+  `31ac03cd9065f821f5d8f170896f81eba452a054f78fb42733c7b74b57152a8b`;
+- manifest SHA-256
+  `18b5c45935528f92e334a1023333aaa86233fa80c44649f197df7c9c23398435`;
+- runtime tree SHA-256
+  `3497c774d94fe202563bccba2af4a5f90925cb8d9b2e982cf4428d0efbea0190`;
+- `runtime_smoke_checked=true`;
+- `n_pairs_completed_this_run=58`;
+- sidecar choice-state provenance improved from `264` to `322`
+  machine-recorded scalar-equivalent pairs.
+
+Remaining dispatch/readiness blockers under the current strict guard:
+
+- claim lane before any GHA/remote eval dispatch;
+- run exact-eval dispatcher preflight against `submission_dir`;
+- record runtime tree SHA and terminal dispatch claim row;
+- `sidecar_pair_search_records_missing_for_completed_pairs:278`;
+- `runtime_smoke_evidence_not_inflate_sh_exact_signature`;
+- `dispatch_claim_record_missing`;
+- `exact_eval_preflight_record_missing`;
+- `sidecar_no_op_baseline_output_sha256_missing_or_invalid`;
+- `sidecar_no_op_candidate_output_sha256_missing_or_invalid`;
+- `sidecar_no_op_runtime_output_not_proven_changed`.
+
+Classification: **local provenance-repair progress, not dispatchable**. The
+next recheck tranche should resume with `--recheck-unproven-pairs`; remaining
+legacy records: `278`.
