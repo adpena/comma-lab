@@ -48,6 +48,8 @@ fi
 DISPATCH_INSTANCE_JOB_ID="${T1_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-}}"
 DISPATCH_CLAIMS_PATH="${T1_DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_lane_dispatch_claims.md}"
 DISPATCH_PLATFORM="${DISPATCH_PLATFORM:-vastai}"
+DECLARED_MOUNTED_GIT_HEAD="${T1_MOUNTED_CODE_GIT_HEAD:-}"
+DECLARED_MOUNTED_GIT_BRANCH="${T1_MOUNTED_CODE_GIT_BRANCH:-}"
 CLAIM_VERIFIED=0
 TERMINAL_CLAIM_CLOSED=0
 HEARTBEAT_PID=""
@@ -206,6 +208,20 @@ LOCAL_BRANCH="$(git -C "$WORKSPACE" branch --show-current 2>/dev/null || echo un
 LOCAL_HEAD="$(git -C "$WORKSPACE" rev-parse HEAD 2>/dev/null || echo unknown)"
 log "local branch: $LOCAL_BRANCH"
 log "local HEAD: $LOCAL_HEAD"
+log "declared mounted git branch: ${DECLARED_MOUNTED_GIT_BRANCH:-unset}"
+log "declared mounted git HEAD: ${DECLARED_MOUNTED_GIT_HEAD:-unset}"
+if [ -z "$DECLARED_MOUNTED_GIT_HEAD" ] || [ -z "$DECLARED_MOUNTED_GIT_BRANCH" ]; then
+    log "FATAL: missing T1_MOUNTED_CODE_GIT_HEAD/T1_MOUNTED_CODE_GIT_BRANCH custody metadata"
+    exit 10
+fi
+if [ "$DECLARED_MOUNTED_GIT_BRANCH" != "main" ]; then
+    log "FATAL: refusing T1 remote work for non-main mounted branch ($DECLARED_MOUNTED_GIT_BRANCH)"
+    exit 10
+fi
+if [ "$LOCAL_HEAD" != "unknown" ] && [ "$LOCAL_HEAD" != "$DECLARED_MOUNTED_GIT_HEAD" ]; then
+    log "FATAL: local git HEAD mismatch (observed=$LOCAL_HEAD declared=$DECLARED_MOUNTED_GIT_HEAD)"
+    exit 10
+fi
 cat > "$PROVENANCE" <<EOF
 {
   "schema_version": "remote_run_provenance.v1",
@@ -217,6 +233,8 @@ cat > "$PROVENANCE" <<EOF
   "output_dir": "${OUTPUT_DIR}",
   "git_branch": "${LOCAL_BRANCH}",
   "git_head": "${LOCAL_HEAD}",
+  "declared_mounted_git_branch": "${DECLARED_MOUNTED_GIT_BRANCH}",
+  "declared_mounted_git_head": "${DECLARED_MOUNTED_GIT_HEAD}",
   "pythonhashseed": "${PYTHONHASHSEED}",
   "allow_remote_scaffold_smoke_env": "${ALLOW_REMOTE_SCAFFOLD_SMOKE}",
   "allow_score_domain_training_env": "${ALLOW_SCORE_DOMAIN_TRAINING}",
@@ -235,7 +253,7 @@ cat > "$RUN_RECORD" <<EOF
   "heartbeat_log": "${LOG_DIR}/heartbeat.log"
 }
 EOF
-if [ "$LOCAL_BRANCH" != "main" ]; then
+if [ "$LOCAL_BRANCH" != "main" ] && [ "$LOCAL_BRANCH" != "unknown" ]; then
     log "FATAL: refusing T1 remote work outside main (branch=$LOCAL_BRANCH)"
     exit 10
 fi
@@ -321,6 +339,7 @@ if [ "$ALLOW_SCORE_DOMAIN_TRAINING" = "1" ]; then
     TRAIN_CMD+=(
         --enable-scorer-domain-loss
         --segmentation-surrogate "${SEGMENTATION_SURROGATE:-sinkhorn}"
+        --sinkhorn-max-positions-per-chunk "${SINKHORN_MAX_POSITIONS_PER_CHUNK:-2048}"
         --pixel-l1-anchor-weight "${PIXEL_L1_ANCHOR_WEIGHT:-0.0}"
     )
     if [ -n "${MAX_TARGET_PAIRS:-}" ]; then

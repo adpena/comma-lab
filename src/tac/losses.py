@@ -459,6 +459,7 @@ def segnet_surrogate_per_pixel(
     sinkhorn_blur: float = DEFAULT_SINKHORN_BLUR,
     sinkhorn_n_iters: int = DEFAULT_SINKHORN_ITERS,
     sinkhorn_cost_matrix: torch.Tensor | None = None,
+    sinkhorn_max_positions_per_chunk: int | None = DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK,
     gt_already_probs: bool = False,
     num_classes: int = DEFAULT_SEGNET_NUM_CLASSES,
 ) -> torch.Tensor:
@@ -497,6 +498,7 @@ def segnet_surrogate_per_pixel(
             blur=sinkhorn_blur,
             n_iters=sinkhorn_n_iters,
             cost_matrix=sinkhorn_cost_matrix,
+            max_positions_per_chunk=sinkhorn_max_positions_per_chunk,
             num_classes=num_classes,
         )
     if pred_probs.shape != gt_probs.shape:
@@ -663,6 +665,7 @@ def scorer_loss(
     segmentation_surrogate: str = SEGMENTATION_SURROGATE_SOFT_COSINE,
     segmentation_temperature: float = 1.0,
     fisher_rao_eps: float = 1e-6,
+    sinkhorn_max_positions_per_chunk: int | None = DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK,
 ) -> tuple[torch.Tensor, float, float]:
     """Standard scorer loss: 100*seg + sqrt(10*pose).
 
@@ -694,6 +697,7 @@ def scorer_loss(
         surrogate=segmentation_surrogate,
         temperature=segmentation_temperature,
         fisher_rao_eps=fisher_rao_eps,
+        sinkhorn_max_positions_per_chunk=sinkhorn_max_positions_per_chunk,
         num_classes=gs_out.shape[1],
     )
     if class_weights is not None:
@@ -713,6 +717,7 @@ def scorer_loss_terms_btchw(
     segmentation_surrogate: str = SEGMENTATION_SURROGATE_SOFT_COSINE,
     segmentation_temperature: float = 1.0,
     fisher_rao_eps: float = 1e-6,
+    sinkhorn_max_positions_per_chunk: int | None = DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Differentiable scorer-domain loss terms for trainer inner loops.
 
@@ -739,6 +744,7 @@ def scorer_loss_terms_btchw(
         surrogate=segmentation_surrogate,
         temperature=segmentation_temperature,
         fisher_rao_eps=fisher_rao_eps,
+        sinkhorn_max_positions_per_chunk=sinkhorn_max_positions_per_chunk,
         num_classes=gs_out.shape[1],
     )
     if class_weights is not None:
@@ -758,6 +764,7 @@ def scorer_loss_cached(
     segmentation_surrogate: str = SEGMENTATION_SURROGATE_SOFT_COSINE,
     segmentation_temperature: float = 1.0,
     fisher_rao_eps: float = 1e-6,
+    sinkhorn_max_positions_per_chunk: int | None = DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK,
 ) -> tuple[torch.Tensor, float, float]:
     """Standard scorer loss using pre-cached GT scorer outputs.
 
@@ -789,6 +796,7 @@ def scorer_loss_cached(
         surrogate=segmentation_surrogate,
         temperature=segmentation_temperature,
         fisher_rao_eps=fisher_rao_eps,
+        sinkhorn_max_positions_per_chunk=sinkhorn_max_positions_per_chunk,
         gt_already_probs=True,
         num_classes=gt_seg_soft.shape[1],
     )
@@ -814,6 +822,7 @@ def scorer_loss_with_aux(
     segmentation_surrogate: str = SEGMENTATION_SURROGATE_SOFT_COSINE,
     segmentation_temperature: float = 1.0,
     fisher_rao_eps: float = 1e-6,
+    sinkhorn_max_positions_per_chunk: int | None = DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK,
 ) -> tuple[torch.Tensor, float, float, dict]:
     """Variant of :func:`scorer_loss` that also returns per-pair pose loss
     and per-class SegNet distortion for the Round 11 Finding 2 dual-update
@@ -844,6 +853,7 @@ def scorer_loss_with_aux(
         surrogate=segmentation_surrogate,
         temperature=segmentation_temperature,
         fisher_rao_eps=fisher_rao_eps,
+        sinkhorn_max_positions_per_chunk=sinkhorn_max_positions_per_chunk,
         num_classes=num_classes,
     )
     per_class_d = per_class_seg_distortion(seg_per_pixel, gs_out, num_classes)
@@ -870,6 +880,7 @@ def scorer_loss_cached_with_aux(
     segmentation_surrogate: str = SEGMENTATION_SURROGATE_SOFT_COSINE,
     segmentation_temperature: float = 1.0,
     fisher_rao_eps: float = 1e-6,
+    sinkhorn_max_positions_per_chunk: int | None = DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK,
 ) -> tuple[torch.Tensor, float, float, dict]:
     """Cached counterpart to :func:`scorer_loss_with_aux`."""
     fx = _hwc_to_chw(filtered_pair_hwc)
@@ -885,6 +896,7 @@ def scorer_loss_cached_with_aux(
         surrogate=segmentation_surrogate,
         temperature=segmentation_temperature,
         fisher_rao_eps=fisher_rao_eps,
+        sinkhorn_max_positions_per_chunk=sinkhorn_max_positions_per_chunk,
         gt_already_probs=True,
         num_classes=num_classes,
     )

@@ -442,15 +442,28 @@ def _load_stability(path: Path) -> dict[str, Any]:
     return payload
 
 
+def _resolve_input_path(path: str | Path, *, root: str | Path | None) -> Path:
+    """Resolve a manifest input for local reads without changing manifest custody paths."""
+    p = Path(path)
+    if p.is_absolute() or root is None:
+        return p
+    return Path(root) / p
+
+
 def build_manifest(args: argparse.Namespace) -> dict[str, Any]:
+    contest_auth_eval_json = _resolve_input_path(
+        args.contest_auth_eval_json,
+        root=args.root,
+    )
+    archive = _resolve_input_path(args.archive, root=args.root)
     contest_payload = _load_contest_eval(
-        Path(args.contest_auth_eval_json),
+        contest_auth_eval_json,
         expected_n_samples=args.n_samples,
     )
     _validate_contest_eval_archive_custody(
         contest_payload,
-        archive=Path(args.archive),
-        contest_auth_eval_json=Path(args.contest_auth_eval_json),
+        archive=archive,
+        contest_auth_eval_json=contest_auth_eval_json,
     )
     manifest: dict[str, Any] = {
         "schema_version": 1,
@@ -464,13 +477,19 @@ def build_manifest(args: argparse.Namespace) -> dict[str, Any]:
             "upstream": {"path": str(args.upstream)},
         },
         "sample_plan": _load_or_generate_sample_plan(
-            args.sample_plan_json,
+            (
+                _resolve_input_path(args.sample_plan_json, root=args.root)
+                if args.sample_plan_json is not None
+                else None
+            ),
             n_pairs=args.n_pairs,
             split_seed=args.split_seed,
             holdout_fraction=args.holdout_fraction,
         ),
         "component_maps": {},
-        "stability": _load_stability(args.stability_json),
+        "stability": _load_stability(
+            _resolve_input_path(args.stability_json, root=args.root)
+        ),
         "response_curves": {},
         "contest_eval": {
             "archive": {"path": str(args.archive)},
@@ -483,12 +502,19 @@ def build_manifest(args: argparse.Namespace) -> dict[str, Any]:
 
     for component, map_path in args.component_maps.items():
         entry = {"path": str(map_path), "scorer_target": component}
-        entry.update(_tensor_metadata_for_path(map_path, component=component))
+        entry.update(
+            _tensor_metadata_for_path(
+                _resolve_input_path(map_path, root=args.root),
+                component=component,
+            )
+        )
         manifest["component_maps"][component] = entry
 
     for component, curve_path in args.response_curves.items():
         entry = {"path": str(curve_path)}
-        entry.update(_response_curve_metadata(curve_path))
+        entry.update(
+            _response_curve_metadata(_resolve_input_path(curve_path, root=args.root))
+        )
         manifest["response_curves"][component] = entry
 
     return materialize_component_sensitivity_manifest(
@@ -498,28 +524,53 @@ def build_manifest(args: argparse.Namespace) -> dict[str, Any]:
     )
 
 
-def _existing_path(value: str) -> Path:
-    path = Path(value)
-    if not path.exists():
-        raise argparse.ArgumentTypeError(f"not found: {value}")
-    return path
+def _path_arg(value: str) -> Path:
+    return Path(value)
+
+
+def _validate_existing_input_paths(
+    args: argparse.Namespace,
+    parser: argparse.ArgumentParser,
+) -> None:
+    for attr in (
+        "checkpoint",
+        "video",
+        "upstream",
+        "archive",
+        "contest_auth_eval_json",
+        "posenet_map",
+        "segnet_map",
+        "combined_map",
+        "posenet_response_curve",
+        "segnet_response_curve",
+        "combined_response_curve",
+        "stability_json",
+        "sample_plan_json",
+    ):
+        value = getattr(args, attr)
+        if value is None:
+            continue
+        resolved = _resolve_input_path(value, root=args.root)
+        if not resolved.exists():
+            option = "--" + attr.replace("_", "-")
+            parser.error(f"{option}: not found: {value} (resolved as {resolved})")
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--checkpoint", type=_existing_path, required=True)
-    parser.add_argument("--video", type=_existing_path, required=True)
-    parser.add_argument("--upstream", type=_existing_path, required=True)
-    parser.add_argument("--archive", type=_existing_path, required=True)
-    parser.add_argument("--contest-auth-eval-json", type=_existing_path, required=True)
-    parser.add_argument("--posenet-map", type=_existing_path, required=True)
-    parser.add_argument("--segnet-map", type=_existing_path, required=True)
-    parser.add_argument("--combined-map", type=_existing_path, required=True)
-    parser.add_argument("--posenet-response-curve", type=_existing_path, required=True)
-    parser.add_argument("--segnet-response-curve", type=_existing_path, required=True)
-    parser.add_argument("--combined-response-curve", type=_existing_path, required=True)
-    parser.add_argument("--stability-json", type=_existing_path, required=True)
-    parser.add_argument("--sample-plan-json", type=_existing_path, default=None)
+    parser.add_argument("--checkpoint", type=_path_arg, required=True)
+    parser.add_argument("--video", type=_path_arg, required=True)
+    parser.add_argument("--upstream", type=_path_arg, required=True)
+    parser.add_argument("--archive", type=_path_arg, required=True)
+    parser.add_argument("--contest-auth-eval-json", type=_path_arg, required=True)
+    parser.add_argument("--posenet-map", type=_path_arg, required=True)
+    parser.add_argument("--segnet-map", type=_path_arg, required=True)
+    parser.add_argument("--combined-map", type=_path_arg, required=True)
+    parser.add_argument("--posenet-response-curve", type=_path_arg, required=True)
+    parser.add_argument("--segnet-response-curve", type=_path_arg, required=True)
+    parser.add_argument("--combined-response-curve", type=_path_arg, required=True)
+    parser.add_argument("--stability-json", type=_path_arg, required=True)
+    parser.add_argument("--sample-plan-json", type=_path_arg, default=None)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--root", type=Path, default=None)
     parser.add_argument("--device", default="cuda", choices=["cuda"])
@@ -529,6 +580,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--split-seed", type=int, default=20260430)
     parser.add_argument("--holdout-fraction", type=float, default=0.2)
     args = parser.parse_args(argv)
+    _validate_existing_input_paths(args, parser)
     args.component_maps = {
         "posenet": args.posenet_map,
         "segnet": args.segnet_map,

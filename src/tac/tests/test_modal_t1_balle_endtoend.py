@@ -182,6 +182,8 @@ def test_modal_t1_remote_runs_existing_script_with_score_domain_exact_eval_env()
     assert "SEGMENTATION_SURROGATE" in remote_src
     assert "sinkhorn" in remote_src
     assert '"PYTORCH_CUDA_ALLOC_CONF": PYTORCH_CUDA_ALLOC_CONF_VALUE' in remote_src
+    assert '"T1_MOUNTED_CODE_GIT_HEAD": mounted_code_git_head' in remote_src
+    assert '"SINKHORN_MAX_POSITIONS_PER_CHUNK": str(int(sinkhorn_max_positions_per_chunk))' in remote_src
 
 
 def test_modal_t1_image_installs_scorer_runtime_dependencies() -> None:
@@ -223,9 +225,9 @@ def test_modal_t1_guard_labels_require_bounded_guard_params() -> None:
     assert rc == 2
     assert payload["ready_for_modal_dispatch_command"] is False
     assert "guard_label_requires_epochs_lte_100:epochs=3000" in payload["validation_errors"]
-    assert "guard_label_requires_batch_size_lte_8:batch_size=16" in payload["validation_errors"]
+    assert "guard_label_requires_batch_size_lte_1:batch_size=16" in payload["validation_errors"]
     assert (
-        "guard_label_requires_max_target_pairs_lte_64:max_target_pairs=None"
+        "guard_label_requires_max_target_pairs_lte_8:max_target_pairs=None"
         in payload["validation_errors"]
     )
     assert (
@@ -240,17 +242,18 @@ def test_modal_t1_guard_labels_accept_true_bounded_guard_params() -> None:
     payload, rc = module.build_local_plan(
         label="unit-guard-bounded",
         epochs=50,
-        batch_size=8,
+        batch_size=1,
         timeout_hours=24,
         cost_cap_usd=80,
         train_timeout_hours=2,
-        max_target_pairs=64,
+        max_target_pairs=8,
     )
 
     assert rc == 0
     assert payload["ready_for_modal_dispatch_command"] is True
     assert payload["params"]["epochs"] == 50
-    assert payload["params"]["max_target_pairs"] == 64
+    assert payload["params"]["max_target_pairs"] == 8
+    assert payload["params"]["sinkhorn_max_positions_per_chunk"] == 2048
 
 
 def test_modal_t1_default_train_timeout_leaves_artifact_collection_buffer() -> None:
@@ -305,7 +308,8 @@ def test_recover_uses_auth_eval_schema_and_600_sample_blockers() -> None:
     assert "t1_remote_summary_score_claim_not_true" in recover_src
     assert "completed_t1_contest_cuda_recovered" in recover_body
     assert "failed_t1_modal_recovered_no_score_claim" in recover_body
-    assert "promotion_eligible\": False" in recover_body
+    assert '"promotion_eligible": promotion_eligible' in recover_body
+    assert '"promotion_blockers": promotion_blockers' in recover_body
 
 
 def test_score_claim_helper_rejects_training_only_result() -> None:
@@ -343,11 +347,11 @@ def test_score_claim_helper_uses_adjudicated_packet_bytes_not_self_reported_eval
                 "blockers": [],
             },
             "eval_data": {
-                "canonical_score": 0.2,
+                "canonical_score": 0.200147820688,
                 "avg_posenet_dist": 0.001,
                 "avg_segnet_dist": 0.001,
-                "score_rate_contribution": 0.01,
-                "rate_unscaled": 0.001,
+                "score_rate_contribution": 0.000147820688,
+                "rate_unscaled": 222 / 37_545_489,
                 "archive_size_bytes": 222,
                 "n_samples": 600,
                 "canonical_score_source": "score_recomputed_from_components",
@@ -402,7 +406,7 @@ def test_score_claim_helper_requires_adjudicated_packet_custody_fields() -> None
     assert "t1_remote_adjudication_packet_archive_sha256_missing" in blockers
 
 
-def test_score_claim_helper_blocks_adjudicated_promotion_ineligible_result() -> None:
+def test_score_claim_helper_accepts_exact_evidence_when_promotion_ineligible() -> None:
     module = _load_module()
 
     score_claim, blockers, metrics = module._contest_cuda_score_claim_from_result(
@@ -418,11 +422,11 @@ def test_score_claim_helper_blocks_adjudicated_promotion_ineligible_result() -> 
                 "promotion_blockers": ["contest_cpu_eval_pending"],
             },
             "eval_data": {
-                "canonical_score": 0.2,
+                "canonical_score": 0.200147820688,
                 "avg_posenet_dist": 0.001,
                 "avg_segnet_dist": 0.001,
-                "score_rate_contribution": 0.01,
-                "rate_unscaled": 0.001,
+                "score_rate_contribution": 0.000147820688,
+                "rate_unscaled": 222 / 37_545_489,
                 "archive_size_bytes": 222,
                 "n_samples": 600,
                 "canonical_score_source": "score_recomputed_from_components",
@@ -439,10 +443,10 @@ def test_score_claim_helper_blocks_adjudicated_promotion_ineligible_result() -> 
         }
     )
 
-    assert score_claim is False
-    assert metrics["score"] == 0.2
-    assert "t1_remote_adjudication_has_promotion_blockers" in blockers
-    assert "t1_remote_adjudication_promotion_eligible_false" in blockers
+    assert score_claim is True
+    assert metrics["score"] == 0.200147820688
+    assert "t1_remote_adjudication_has_promotion_blockers" not in blockers
+    assert "t1_remote_adjudication_promotion_eligible_false" not in blockers
 
 
 def test_modal_t1_metadata_starts_as_no_score_claim(tmp_path: Path, monkeypatch) -> None:

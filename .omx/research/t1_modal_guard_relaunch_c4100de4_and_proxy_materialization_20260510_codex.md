@@ -170,3 +170,70 @@ certified A2 sensitivity-weighted packet ladder. Existing A2 byte savings are
 not enough for sub-0.17 by themselves and are blocked from exact-dispatch as
 score evidence until stub/proxy sensitivity is replaced with certified
 sensitivity.
+
+## 2026-05-10T10:20Z c0 guard harvest + hardening follow-up
+
+T1 guard `t1_balle_modal_guard_c0ea27df_20260510T0927Z` is now terminal:
+`failed_t1_modal_recovered_no_score_claim`, with local dispatch summary
+`active=0`. The result remains a guard/runtime finding only.
+
+Evidence classification:
+
+- import probe passed;
+- NVDEC/CUDA surfaced on Tesla T4;
+- Stage 5 score-domain training still OOMed inside the chunked
+  `sinkhorn_w2_mask_distortion_per_pixel` path;
+- no archive score, no promotion, no T1 model negative.
+
+Adversarial diagnosis: the first chunked implementation reduced a single large
+allocation but retained the autograd graph for all chunks, and the Modal guard
+still used full-run-ish settings (`batch_size=8`, `max_target_pairs=64`) with no
+trainer CLI to shrink Sinkhorn chunks. That is a guard sizing and actuator
+configuration bug.
+
+Hardening landed in this tranche:
+
+- scorer-domain Sinkhorn chunk size is now plumbed from CLI to
+  `scorer_loss_terms_btchw`;
+- Modal guard labels fail closed unless `batch_size <= 1`,
+  `max_target_pairs <= 8`, `train_timeout_hours <= 3`, and
+  `sinkhorn_max_positions_per_chunk <= 2048`;
+- Modal passes explicit mounted-code git custody into the remote script instead
+  of synthesizing a fake `.git` directory;
+- recover now separates exact-CUDA evidence validity from promotion
+  eligibility, so `promotion_eligible=false` does not discard otherwise valid
+  contest-CUDA evidence;
+- provider dry-run templates set `T1_MOUNTED_CODE_GIT_*` and
+  `SINKHORN_MAX_POSITIONS_PER_CHUNK=2048` for non-Modal launch paths.
+
+Focused verification for this hardening:
+
+```bash
+.venv/bin/python -m pytest \
+  src/tac/tests/test_sinkhorn_w2_segnet_surrogate.py \
+  src/tac/tests/test_modal_t1_balle_endtoend.py \
+  tests/test_dispatch_t1_balle_endtoend.py \
+  tests/paradigm_delta_epsilon_zeta/test_eval_roundtrip_in_training_loop.py \
+  src/tac/tests/test_build_component_sensitivity_manifest.py \
+  tests/test_build_a2_sensitivity_weighted_pr101_packet.py \
+  tests/test_probe_a2_packet_runtime_closure.py \
+  src/tac/tests/test_audit_a2_packet_ladder_closure.py \
+  src/tac/tests/test_component_sensitivity_artifact.py \
+  tests/test_build_pr101_kaggle_proxy_runtime_packet.py -q
+# 184 passed
+```
+
+Next T1 dispatch should use the stricter guard only:
+
+```bash
+PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach \
+  experiments/modal_t1_balle_endtoend.py --execute \
+  --label t1_balle_modal_guard_<commit>_<stamp> \
+  --epochs 50 \
+  --batch-size 1 \
+  --max-target-pairs 8 \
+  --sinkhorn-max-positions-per-chunk 2048 \
+  --timeout-hours 24 \
+  --train-timeout-hours 2 \
+  --cost-cap-usd 80
+```

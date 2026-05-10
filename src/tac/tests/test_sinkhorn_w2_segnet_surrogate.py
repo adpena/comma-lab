@@ -318,6 +318,7 @@ def test_segnet_surrogate_dispatches_sinkhorn_path() -> None:
         surrogate=SEGMENTATION_SURROGATE_SINKHORN,
         sinkhorn_blur=0.05,
         sinkhorn_n_iters=20,
+        sinkhorn_max_positions_per_chunk=1,
         gt_already_probs=True,
     )
     direct = sinkhorn_w2_mask_distortion_per_pixel(
@@ -325,6 +326,7 @@ def test_segnet_surrogate_dispatches_sinkhorn_path() -> None:
         gt_probs,
         blur=0.05,
         n_iters=20,
+        max_positions_per_chunk=1,
     )
 
     assert torch.allclose(via_dispatch, direct, atol=1e-6)

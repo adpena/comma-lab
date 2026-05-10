@@ -55,6 +55,7 @@ DEFAULT_TRAIN_TIMEOUT_HOURS = 22.5
 REMOTE_POST_TRAIN_EVAL_BUFFER_HOURS = 1.0
 REMOTE_ARTIFACT_COLLECTION_BUFFER_HOURS = 0.25
 DEFAULT_COST_CAP_USD = 80.0
+DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK = 2048
 REMOTE_PYTHONPATH = f"{REMOTE_REPO / 'src'}:{REMOTE_REPO / 'upstream'}:{REMOTE_REPO}"
 MOUNTED_CODE_PATHS = (
     "src",
@@ -389,6 +390,18 @@ def _local_git_head() -> str | None:
     return proc.stdout.strip() if proc.returncode == 0 else None
 
 
+def _local_git_branch() -> str | None:
+    proc = subprocess.run(
+        ["git", "branch", "--show-current"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    branch = proc.stdout.strip()
+    return branch if proc.returncode == 0 and branch else None
+
+
 def _read_claims_ledger_bytes() -> bytes:
     path = REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md"
     if not path.is_file():
@@ -442,6 +455,7 @@ def _dispatch_command(
     cost_cap_usd: float,
     train_timeout_hours: float,
     max_target_pairs: int | None,
+    sinkhorn_max_positions_per_chunk: int,
 ) -> list[str]:
     cmd = [
         "PYTHONPATH=src:upstream:$PWD",
@@ -462,6 +476,8 @@ def _dispatch_command(
         str(float(cost_cap_usd)),
         "--train-timeout-hours",
         str(float(train_timeout_hours)),
+        "--sinkhorn-max-positions-per-chunk",
+        str(int(sinkhorn_max_positions_per_chunk)),
     ]
     if max_target_pairs is not None:
         cmd.extend(["--max-target-pairs", str(int(max_target_pairs))])
@@ -477,6 +493,7 @@ def build_local_plan(
     cost_cap_usd: float,
     train_timeout_hours: float,
     max_target_pairs: int | None,
+    sinkhorn_max_positions_per_chunk: int = DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK,
 ) -> tuple[dict[str, Any], int]:
     instance_job_id = _safe_label(label or f"t1_balle_modal_{_compact_stamp()}")
     modal_function_timeout_hours = DEFAULT_TIMEOUT_HOURS
@@ -512,14 +529,19 @@ def build_local_plan(
             validation_errors.append(
                 f"guard_label_requires_epochs_lte_100:epochs={int(epochs)}"
             )
-        if batch_size > 8:
+        if batch_size > 1:
             validation_errors.append(
-                f"guard_label_requires_batch_size_lte_8:batch_size={int(batch_size)}"
+                f"guard_label_requires_batch_size_lte_1:batch_size={int(batch_size)}"
             )
-        if max_target_pairs is None or int(max_target_pairs) > 64:
+        if max_target_pairs is None or int(max_target_pairs) > 8:
             validation_errors.append(
-                "guard_label_requires_max_target_pairs_lte_64:"
+                "guard_label_requires_max_target_pairs_lte_8:"
                 f"max_target_pairs={max_target_pairs}"
+            )
+        if int(sinkhorn_max_positions_per_chunk) > DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK:
+            validation_errors.append(
+                "guard_label_requires_sinkhorn_chunk_lte_2048:"
+                f"sinkhorn_max_positions_per_chunk={int(sinkhorn_max_positions_per_chunk)}"
             )
         if float(train_timeout_hours) > 3.0:
             validation_errors.append(
@@ -536,6 +558,8 @@ def build_local_plan(
         validation_errors.append("batch_size_must_be_positive")
     if max_target_pairs is not None and max_target_pairs <= 0:
         validation_errors.append("max_target_pairs_must_be_positive")
+    if int(sinkhorn_max_positions_per_chunk) <= 0:
+        validation_errors.append("sinkhorn_max_positions_per_chunk_must_be_positive")
     canonical_a1_payload = _canonical_a1_payload_snapshot()
     validation_errors.extend(
         f"canonical_a1_payload_{err}"
@@ -560,6 +584,7 @@ def build_local_plan(
             "timeout_hours": float(timeout_hours),
             "train_timeout_hours": float(train_timeout_hours),
             "max_target_pairs": max_target_pairs,
+            "sinkhorn_max_positions_per_chunk": int(sinkhorn_max_positions_per_chunk),
             "device": "cuda",
             "segmentation_surrogate": "sinkhorn",
             "enable_t13_sqrt_n_budget": True,
@@ -588,6 +613,7 @@ def build_local_plan(
             cost_cap_usd=cost_cap_usd,
             train_timeout_hours=train_timeout_hours,
             max_target_pairs=max_target_pairs,
+            sinkhorn_max_positions_per_chunk=sinkhorn_max_positions_per_chunk,
         ),
         "recover_command_after_dispatch": (
             ".venv/bin/python experiments/modal_t1_balle_endtoend.py recover "
@@ -614,6 +640,11 @@ def plan_cli(argv: list[str] | None = None) -> int:
     parser.add_argument("--cost-cap-usd", type=float, default=DEFAULT_COST_CAP_USD)
     parser.add_argument("--train-timeout-hours", type=float, default=DEFAULT_TRAIN_TIMEOUT_HOURS)
     parser.add_argument("--max-target-pairs", type=int, default=None)
+    parser.add_argument(
+        "--sinkhorn-max-positions-per-chunk",
+        type=int,
+        default=DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK,
+    )
     parser.add_argument("--json-out", default=None)
     args = parser.parse_args(argv)
     payload, rc = build_local_plan(
@@ -624,6 +655,7 @@ def plan_cli(argv: list[str] | None = None) -> int:
         cost_cap_usd=args.cost_cap_usd,
         train_timeout_hours=args.train_timeout_hours,
         max_target_pairs=args.max_target_pairs,
+        sinkhorn_max_positions_per_chunk=args.sinkhorn_max_positions_per_chunk,
     )
     if args.json_out:
         _write_json(Path(args.json_out), payload)
@@ -693,12 +725,23 @@ def _collect_artifacts(out_dir: Path, max_bytes: int = 500 * 1024 * 1024) -> dic
     return artifacts
 
 
-def _bootstrap_mounted_git_snapshot() -> None:
-    """Make the mounted Modal workspace satisfy the remote script's main check."""
-    git_dir = REMOTE_REPO / ".git"
-    if git_dir.exists():
-        return
-    subprocess.run(["git", "init", "-b", "main"], cwd=REMOTE_REPO, check=False)
+def _write_mounted_code_custody_marker(
+    *,
+    mounted_code_git_head: str,
+    mounted_code_git_branch: str,
+) -> None:
+    """Record the local source commit Modal mounted without synthesizing git state."""
+    payload = {
+        "schema_version": "modal_mounted_code_custody_marker_v1",
+        "mounted_code_git_head": mounted_code_git_head,
+        "mounted_code_git_branch": mounted_code_git_branch,
+        "note": (
+            "Modal mounts selected files, not the local .git directory. "
+            "The remote script must treat this marker and matching env vars "
+            "as custody metadata, not as a synthetic repository HEAD."
+        ),
+    }
+    _write_json(REMOTE_REPO / ".modal_mounted_code_custody.json", payload)
 
 
 def _load_json_if_exists(path: Path) -> dict[str, Any] | None:
@@ -766,6 +809,9 @@ def run_t1_balle_modal(
     batch_size: int,
     train_timeout_seconds: int,
     max_target_pairs: int | None,
+    sinkhorn_max_positions_per_chunk: int,
+    mounted_code_git_head: str,
+    mounted_code_git_branch: str,
 ) -> dict[str, Any]:
     out_dir = REMOTE_OUT_ROOT / _safe_label(instance_job_id)
     if out_dir.exists():
@@ -774,7 +820,10 @@ def run_t1_balle_modal(
     (REMOTE_REPO / ".omx/state").mkdir(parents=True, exist_ok=True)
     claim_path = REMOTE_REPO / ".omx/state/active_lane_dispatch_claims.md"
     claim_path.write_bytes(claim_ledger_bytes)  # BARE_WRITE_OK: single-writer Modal worker copies immutable local claim snapshot
-    _bootstrap_mounted_git_snapshot()
+    _write_mounted_code_custody_marker(
+        mounted_code_git_head=mounted_code_git_head,
+        mounted_code_git_branch=mounted_code_git_branch,
+    )
     start = time.monotonic()
     missing_payload = [
         str(path)
@@ -794,7 +843,8 @@ def run_t1_balle_modal(
                 "elapsed_seconds": time.monotonic() - start,
                 "instance_job_id": instance_job_id,
                 "remote_claims_path": str(claim_path),
-                "mounted_workspace_git_snapshot": True,
+                "mounted_code_git_head": mounted_code_git_head,
+                "mounted_code_git_branch": mounted_code_git_branch,
             },
         )
 
@@ -814,8 +864,11 @@ def run_t1_balle_modal(
         "DISPATCH_PLATFORM": "modal",
         "T1_DISPATCH_INSTANCE_JOB_ID": instance_job_id,
         "T1_DISPATCH_CLAIMS_PATH": str(claim_path),
+        "T1_MOUNTED_CODE_GIT_HEAD": mounted_code_git_head,
+        "T1_MOUNTED_CODE_GIT_BRANCH": mounted_code_git_branch,
         "EPOCHS": str(int(epochs)),
         "BATCH_SIZE": str(int(batch_size)),
+        "SINKHORN_MAX_POSITIONS_PER_CHUNK": str(int(sinkhorn_max_positions_per_chunk)),
         "SEGMENTATION_SURROGATE": "sinkhorn",
         "GRAD_CLIP_NORM": "1.0",
     }
@@ -856,7 +909,8 @@ def run_t1_balle_modal(
                     "elapsed_seconds": time.monotonic() - start,
                     "instance_job_id": instance_job_id,
                     "remote_claims_path": str(claim_path),
-                    "mounted_workspace_git_snapshot": True,
+                    "mounted_code_git_head": mounted_code_git_head,
+                    "mounted_code_git_branch": mounted_code_git_branch,
                 },
             )
         run = _run_logged(
@@ -877,7 +931,8 @@ def run_t1_balle_modal(
                 "elapsed_seconds": time.monotonic() - start,
                 "instance_job_id": instance_job_id,
                 "remote_claims_path": str(claim_path),
-                "mounted_workspace_git_snapshot": True,
+                "mounted_code_git_head": mounted_code_git_head,
+                "mounted_code_git_branch": mounted_code_git_branch,
             },
         )
         result["elapsed_seconds"] = time.monotonic() - start
@@ -960,6 +1015,7 @@ def main(
     train_timeout_hours: float = DEFAULT_TRAIN_TIMEOUT_HOURS,
     cost_cap_usd: float = DEFAULT_COST_CAP_USD,
     max_target_pairs: int | None = None,
+    sinkhorn_max_positions_per_chunk: int = DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK,
     execute: bool = False,
     force_claim: bool = False,
 ) -> None:
@@ -972,6 +1028,7 @@ def main(
         cost_cap_usd=cost_cap_usd,
         train_timeout_hours=train_timeout_hours,
         max_target_pairs=max_target_pairs,
+        sinkhorn_max_positions_per_chunk=sinkhorn_max_positions_per_chunk,
     )
     if not execute:
         print(json.dumps(plan, indent=2, sort_keys=True))
@@ -998,6 +1055,23 @@ def main(
             f"FATAL: lane claim failed rc={claim_rc}; aborting before GPU spend."
         )
     claim_ledger_bytes = _read_claims_ledger_bytes()
+    mounted_code_git_head = _local_git_head()
+    mounted_code_git_branch = _local_git_branch()
+    if not mounted_code_git_head or mounted_code_git_branch != "main":
+        _claim_lane(
+            instance_job_id=instance_job_id,
+            predicted_eta_utc=_utc_now(),
+            notes=(
+                "T1 Modal dispatch refused before spawn: local mounted code "
+                f"custody invalid branch={mounted_code_git_branch!r} "
+                f"head={mounted_code_git_head!r}"
+            ),
+            status="refused_dispatch_invalid_local_code_custody",
+            force=True,
+        )
+        raise SystemExit(
+            "FATAL: refusing Modal dispatch without local main-branch git custody."
+        )
 
     try:
         call = run_t1_balle_modal.spawn(
@@ -1007,6 +1081,9 @@ def main(
             batch_size=int(batch_size),
             train_timeout_seconds=max(300, int(float(train_timeout_hours) * 3600)),
             max_target_pairs=max_target_pairs,
+            sinkhorn_max_positions_per_chunk=int(sinkhorn_max_positions_per_chunk),
+            mounted_code_git_head=mounted_code_git_head,
+            mounted_code_git_branch=mounted_code_git_branch,
         )
     except Exception as exc:
         _claim_lane(
@@ -1084,14 +1161,6 @@ def _contest_cuda_score_claim_from_result(result: dict[str, Any]) -> tuple[bool,
         blockers.append("t1_remote_adjudication_score_claim_not_true")
     elif adjudication.get("blockers"):
         blockers.append("t1_remote_adjudication_has_blockers")
-    if isinstance(adjudication, dict) and adjudication.get("score_claim") is True:
-        promotion_blockers = adjudication.get("promotion_blockers")
-        if isinstance(promotion_blockers, list) and promotion_blockers:
-            blockers.append("t1_remote_adjudication_has_promotion_blockers")
-        elif promotion_blockers:
-            blockers.append("t1_remote_adjudication_promotion_blockers_not_empty")
-        if adjudication.get("promotion_eligible") is False:
-            blockers.append("t1_remote_adjudication_promotion_eligible_false")
     if isinstance(adjudication, dict) and isinstance(eval_data, dict):
         packet_sha = adjudication.get("packet_archive_sha256")
         eval_sha = eval_data.get("provenance", {}).get("archive_sha256")
@@ -1159,6 +1228,18 @@ def recover(label: str) -> int:
             target.write_bytes(data)
 
     score_claim, blockers, metrics = _contest_cuda_score_claim_from_result(result)
+    adjudication = result.get("auth_eval_adjudication")
+    promotion_eligible = (
+        bool(adjudication.get("promotion_eligible"))
+        if isinstance(adjudication, dict)
+        else False
+    )
+    promotion_blockers = (
+        adjudication.get("promotion_blockers")
+        if isinstance(adjudication, dict)
+        and isinstance(adjudication.get("promotion_blockers"), list)
+        else []
+    )
     summary_path = out_dir / "harvest_summary.json"
     _write_json(
         summary_path,
@@ -1171,8 +1252,9 @@ def recover(label: str) -> int:
             "passed": result.get("passed"),
             "metrics": metrics,
             "score_claim": score_claim,
-            "promotion_eligible": False,
+            "promotion_eligible": promotion_eligible,
             "rank_or_kill_eligible": False,
+            "promotion_blockers": promotion_blockers,
             "blockers": blockers,
             "artifacts_dir": str(artifacts_dir),
         },

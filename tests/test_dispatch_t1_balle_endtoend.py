@@ -48,6 +48,9 @@ def test_build_remote_command_enforces_main_before_remote_script(tmp_path: Path)
     assert "git pull --ff-only origin main" in shell
     assert "T1_RUN_CONTEST_CUDA_AUTH_EVAL=1" in shell
     assert "LOCAL_CUDA_WORKER=1" in shell
+    assert 'T1_MOUNTED_CODE_GIT_BRANCH="$(git branch --show-current)"' in shell
+    assert 'T1_MOUNTED_CODE_GIT_HEAD="$(git rev-parse HEAD)"' in shell
+    assert "SINKHORN_MAX_POSITIONS_PER_CHUNK=2048" in shell
     assert "bash scripts/remote_lane_t1_balle_endtoend.sh" in shell
 
 
@@ -107,6 +110,8 @@ def test_dry_run_vastai_writes_metadata_default_4090(tmp_path: Path) -> None:
     assert "bash scripts/remote_lane_t1_balle_endtoend.sh" in metadata["vastai_remote_command_template_only"]
     assert "LOCAL_CUDA_WORKER=1" in metadata["vastai_remote_command_template_only"]
     assert "T1_DISPATCH_CLAIMS_PATH" in metadata["vastai_remote_command_template_only"]
+    assert "T1_MOUNTED_CODE_GIT_HEAD" in metadata["vastai_remote_command_template_only"]
+    assert "SINKHORN_MAX_POSITIONS_PER_CHUNK=2048" in metadata["vastai_remote_command_template_only"]
     assert not (tmp_path / "vastai_metadata.json").exists()
 
 

@@ -314,3 +314,38 @@
   `fc-01KR8KCXEGTVFGSZ75HAK9S2QX`, Modal URL
   `https://modal.com/apps/adpena/main/ap-g6JJhRr82ENgaEaOcfduIu`.
   Immediate recovery returned `NOT READY`; no score claim exists.
+
+## 2026-05-10T10:20Z Codex score-lowering queue after c0 guard harvest
+
+Current custody state:
+
+- T1 guard `t1_balle_modal_guard_c0ea27df_20260510T0927Z` harvested terminal:
+  `failed_t1_modal_recovered_no_score_claim`.
+- Claim summary after harvest is `active=0`; no duplicate T1 claim remains.
+- Classification is runtime/trainer guard OOM, not score evidence and not a
+  T1 model-family negative.
+
+Near-term score-lowering order:
+
+1. Relaunch T1 only as a strict bounded guard from the next clean commit:
+   `epochs=50`, `batch_size=1`, `max_target_pairs=8`,
+   `sinkhorn_max_positions_per_chunk=2048`, `train_timeout_hours=2`. The goal
+   is training entry + packet compile + exact-CUDA auth-eval schema closure,
+   not a score claim unless the full archive/runtime path actually passes.
+2. Materialize the PR101 Kaggle proxy candidate with
+   `tools/build_pr101_kaggle_proxy_runtime_packet.py`. This is still
+   fail-closed and `score_claim=false`: it copies PR101 runtime + archive,
+   patches only the proven per-channel bias lines, records unsupported proxy
+   params as blockers, and emits runtime custody. It is a bridge to a future
+   exact-eval packet, not evidence by itself.
+3. Promote certified A2 sensitivity only after the now-fixed manifest builder
+   is fed a real certified sensitivity map. A2 remains a stacking component,
+   not a standalone sub-0.17 path.
+4. Start the preflight wall-clock tranche: migrate the remaining slow checks to
+   the existing source-index snapshot and keep all strict checks under the
+   operator's 30s crash threshold, ideally warm full preflight under 5s.
+
+Provider/runtime architecture remains separated: Modal logic lives under
+`src/tac/deploy/modal/` plus thin experiment adapters, Vast/AWS/Azure/GCP/Kaggle
+work should follow the same provider-neutral runtime contract, and no
+experiment script should become the provider abstraction.

@@ -1074,6 +1074,11 @@ def write_provenance(
             "segmentation_surrogate": getattr(args, "segmentation_surrogate", None),
             "segmentation_temperature": getattr(args, "segmentation_temperature", None),
             "fisher_rao_eps": getattr(args, "fisher_rao_eps", None),
+            "sinkhorn_max_positions_per_chunk": getattr(
+                args,
+                "sinkhorn_max_positions_per_chunk",
+                None,
+            ),
             "pixel_l1_anchor_weight": getattr(args, "pixel_l1_anchor_weight", None),
             "first_batch_gradcheck": score_domain_gradcheck,
             "trainable_signal": (
@@ -1290,6 +1295,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=float,
         default=1e-6,
         help="Numerical epsilon used by the fisher_rao SegNet surrogate.",
+    )
+    parser.add_argument(
+        "--sinkhorn-max-positions-per-chunk",
+        type=int,
+        default=2048,
+        help=(
+            "Maximum flattened SegNet rows per T8 Sinkhorn chunk in "
+            "score-domain training. Keep small for T4 guard dispatches; "
+            "raise only after memory telemetry proves headroom."
+        ),
     )
     parser.add_argument(
         "--pixel-l1-anchor-weight",
@@ -1544,6 +1559,8 @@ def main() -> int:
         raise SystemExit("[t1] --segmentation-temperature must be positive")
     if not (0.0 < args.fisher_rao_eps < 1e-3):
         raise SystemExit("[t1] --fisher-rao-eps must be in (0, 1e-3)")
+    if args.sinkhorn_max_positions_per_chunk <= 0:
+        raise SystemExit("[t1] --sinkhorn-max-positions-per-chunk must be positive")
     args.output_dir.mkdir(parents=True, exist_ok=True)
     started_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     _seed_everything(args.seed)
@@ -1786,6 +1803,7 @@ def main() -> int:
                     segmentation_surrogate=args.segmentation_surrogate,
                     segmentation_temperature=args.segmentation_temperature,
                     fisher_rao_eps=args.fisher_rao_eps,
+                    sinkhorn_max_positions_per_chunk=args.sinkhorn_max_positions_per_chunk,
                 )
                 if args.pixel_l1_anchor_weight > 0:
                     pixel_anchor = F.l1_loss(decoded_rt, tgt)

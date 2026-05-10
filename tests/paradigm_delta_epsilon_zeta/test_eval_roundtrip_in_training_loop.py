@@ -85,10 +85,12 @@ def test_balle_trainer_argparse_includes_scorer_domain_flags(tmp_path):
     assert hasattr(ns, "enable_scorer_domain_loss")
     assert hasattr(ns, "segmentation_surrogate")
     assert hasattr(ns, "segmentation_temperature")
+    assert hasattr(ns, "sinkhorn_max_positions_per_chunk")
     assert hasattr(ns, "pixel_l1_anchor_weight")
     assert hasattr(ns, "grad_clip_norm")
     assert ns.enable_scorer_domain_loss is False
     assert ns.segmentation_surrogate == "sinkhorn"
+    assert ns.sinkhorn_max_positions_per_chunk == 2048
     assert ns.grad_clip_norm == 0.0
     enabled = mod.parse_args([
         "--output-dir", str(tmp_path),

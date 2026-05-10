@@ -121,6 +121,7 @@ def _write_inputs(root: Path) -> dict[str, Path]:
             + "\n"
         )
     return {
+        "_root": root,
         "checkpoint": checkpoint,
         "video": video,
         "upstream": upstream,
@@ -184,37 +185,47 @@ def _certified_map_metadata(component: str) -> dict[str, object]:
     }
 
 
-def _base_argv(paths: dict[str, Path], output: Path) -> list[str]:
-    return [
+def _path_arg(paths: dict[str, Path], key: str, *, rooted: bool) -> str:
+    path = paths[key]
+    if not rooted:
+        return str(path)
+    return path.relative_to(paths["_root"]).as_posix()
+
+
+def _base_argv(paths: dict[str, Path], output: Path, *, rooted: bool = True) -> list[str]:
+    argv = [
         "--checkpoint",
-        str(paths["checkpoint"]),
+        _path_arg(paths, "checkpoint", rooted=rooted),
         "--video",
-        str(paths["video"]),
+        _path_arg(paths, "video", rooted=rooted),
         "--upstream",
-        str(paths["upstream"]),
+        _path_arg(paths, "upstream", rooted=rooted),
         "--archive",
-        str(paths["archive"]),
+        _path_arg(paths, "archive", rooted=rooted),
         "--contest-auth-eval-json",
-        str(paths["contest"]),
+        _path_arg(paths, "contest", rooted=rooted),
         "--posenet-map",
-        str(paths["posenet_map"]),
+        _path_arg(paths, "posenet_map", rooted=rooted),
         "--segnet-map",
-        str(paths["segnet_map"]),
+        _path_arg(paths, "segnet_map", rooted=rooted),
         "--combined-map",
-        str(paths["combined_map"]),
+        _path_arg(paths, "combined_map", rooted=rooted),
         "--posenet-response-curve",
-        str(paths["posenet_curve"]),
+        _path_arg(paths, "posenet_curve", rooted=rooted),
         "--segnet-response-curve",
-        str(paths["segnet_curve"]),
+        _path_arg(paths, "segnet_curve", rooted=rooted),
         "--combined-response-curve",
-        str(paths["combined_curve"]),
+        _path_arg(paths, "combined_curve", rooted=rooted),
         "--stability-json",
-        str(paths["stability"]),
+        _path_arg(paths, "stability", rooted=rooted),
         "--split-seed",
         "123",
         "--output",
         str(output),
     ]
+    if rooted:
+        argv.extend(["--root", str(paths["_root"])])
+    return argv
 
 
 def test_build_manifest_materializes_and_validates(tmp_path: Path) -> None:
@@ -264,6 +275,20 @@ def test_cli_writes_deterministic_manifest(tmp_path: Path) -> None:
         check=True,
     )
     assert output.read_text() == first
+
+
+def test_absolute_tmp_evidence_paths_still_rejected(tmp_path: Path) -> None:
+    module = _load_module()
+    paths = _write_inputs(tmp_path)
+
+    args = module.parse_args(
+        _base_argv(paths, tmp_path / "manifest.json", rooted=False)
+    )
+    with pytest.raises(
+        module.ComponentSensitivityArtifactError,
+        match="refusing transient /tmp-style evidence path",
+    ):
+        module.build_manifest(args)
 
 
 def test_rejects_non_cuda_contest_eval(tmp_path: Path) -> None:
