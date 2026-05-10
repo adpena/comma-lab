@@ -1,0 +1,344 @@
+{
+  "applied_beam_reports": [
+    {
+      "move_count": 2,
+      "selection_source": "global_combo_report",
+      "source_probe_sha256": "",
+      "source_probe_total_delta": null,
+      "target_label": "blocks.0.weight"
+    },
+    {
+      "move_count": 3,
+      "selection_source": "global_combo_report",
+      "source_probe_sha256": "",
+      "source_probe_total_delta": null,
+      "target_label": "blocks.1.weight"
+    },
+    {
+      "move_count": 3,
+      "selection_source": "global_combo_report",
+      "source_probe_sha256": "",
+      "source_probe_total_delta": null,
+      "target_label": "blocks.3.weight"
+    },
+    {
+      "move_count": 2,
+      "selection_source": "global_combo_report",
+      "source_probe_sha256": "",
+      "source_probe_total_delta": null,
+      "target_label": "latent_hi_bytes"
+    }
+  ],
+  "byte_accounting": {
+    "archive_byte_delta": -13,
+    "candidate_archive_bytes": 178210,
+    "candidate_payload_bytes": 178110,
+    "estimate_is_score_claim": false,
+    "estimated_rate_score_delta_if_components_unchanged": -8.656166390588228e-06,
+    "non_additivity_delta": 1,
+    "payload_byte_delta": -13,
+    "selection_mode": "global_combo_best",
+    "source_archive_bytes": 178223,
+    "source_payload_bytes": 178123,
+    "source_probe_delta_sum": -14
+  },
+  "candidate_archive": {
+    "bytes": 178210,
+    "dispatch_attempted": false,
+    "member_bytes": 178110,
+    "member_name": "x",
+    "member_sha256": "ea44c415bc4d81148e93613a9afa3966eaf7af94418f06c31607ed6c32e4e2da",
+    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_plus_latent_hi_candidate/archive.zip",
+    "provided": true,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false,
+    "sha256": "dce57371d666c9232e41b4715baf3110e9a73e10c38728206f5c2f170ea14161"
+  },
+  "candidate_roundtrip": {
+    "decoded_symbol_count": 237561,
+    "decoder_maybe_exhausted": true,
+    "merged_ac_bytes": 153856,
+    "merged_ac_sha256": "47687ea9627a105886a076e0b4693af85e4e0b4d3a8486c18ffe88aa5b6de070",
+    "reencoded_byte_identical": true
+  },
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "pr103_arithmetic_histogram_candidate_is_not_dispatch_authorization",
+    "candidate_runtime_adapter_missing",
+    "candidate_inflate_output_parity_missing",
+    "strict_pre_submission_compliance_json_missing",
+    "lane_dispatch_claim_missing",
+    "exact_cuda_auth_eval_missing"
+  ],
+  "gpu_required": false,
+  "planning_only": false,
+  "readiness_blockers": [
+    "candidate_runtime_adapter_missing",
+    "candidate_inflate_output_parity_missing",
+    "strict_pre_submission_compliance_json_missing",
+    "lane_dispatch_claim_missing",
+    "exact_cuda_auth_eval_missing"
+  ],
+  "ready_for_archive_preflight": false,
+  "ready_for_exact_eval_dispatch": false,
+  "runtime_adapter_contract": {
+    "public_runtime_constants": {
+      "BR_LEN": 7097,
+      "HIST_LEN": 883,
+      "HI_HIST_LEN": 14,
+      "LATENT_META_LEN": 112,
+      "LO_LEN": 15537,
+      "MERGED_AC_LEN": 153856,
+      "SCA_LEN": 56,
+      "fixed_bytes_before_tail": 177555,
+      "sidecar_corrections_brotli": "payload_tail"
+    },
+    "required_code_changes": [
+      "update HIST_LEN to candidate hists_b length",
+      "update MERGED_AC_LEN to candidate merged_ac length",
+      "preserve section order in parse_archive",
+      "prove inflate consumes candidate archive bytes"
+    ],
+    "runtime_tree_missing": true,
+    "source_runtime_constants": {
+      "BR_LEN": 7097,
+      "HIST_LEN": 895,
+      "HI_HIST_LEN": 15,
+      "LATENT_META_LEN": 112,
+      "LO_LEN": 15537,
+      "MERGED_AC_LEN": 153856,
+      "SCA_LEN": 56,
+      "fixed_bytes_before_tail": 177568,
+      "sidecar_corrections_brotli": "payload_tail"
+    }
+  },
+  "schema": "pr103_arithmetic_histogram_candidate_v1",
+  "score_claim": false,
+  "section_diffs": [
+    {
+      "byte_delta": -12,
+      "candidate_bytes": 883,
+      "candidate_sha256": "ab69985d9a0c2baaee685072d0bfecc985a7f7e6fc9562d02cd7f6e0fde0df30",
+      "changed": true,
+      "name": "ac_histograms_brotli",
+      "source_bytes": 895,
+      "source_sha256": "ce7c9a404015b19ef1b8e70de61da4aa3dbdb952a78e38e6c25cbaeb32078a95"
+    },
+    {
+      "byte_delta": -1,
+      "candidate_bytes": 14,
+      "candidate_sha256": "beb9ba107f881dbb2f2b527784fffe9a44e7f706ebbdaf74253c8cb7b68e7e99",
+      "changed": true,
+      "name": "latent_hi_histogram_brotli",
+      "source_bytes": 15,
+      "source_sha256": "1bbb4815aa10e8709b9bcce908f498d6bd15cc5274ffb9ce55e293dfe8390a19"
+    },
+    {
+      "byte_delta": 0,
+      "candidate_bytes": 15537,
+      "candidate_sha256": "5f33edaf176f52572b0406f8bfd1ef658f731125109b8284e1089b564f1ce896",
+      "changed": false,
+      "name": "latent_low_bytes_brotli",
+      "source_bytes": 15537,
+      "source_sha256": "5f33edaf176f52572b0406f8bfd1ef658f731125109b8284e1089b564f1ce896"
+    },
+    {
+      "byte_delta": 0,
+      "candidate_bytes": 112,
+      "candidate_sha256": "7cf743ec1151536cd6cab55ebf3041dc8311cd08362208fb347b5bdb4b3c40b6",
+      "changed": false,
+      "name": "latent_min_scale_fp16",
+      "source_bytes": 112,
+      "source_sha256": "7cf743ec1151536cd6cab55ebf3041dc8311cd08362208fb347b5bdb4b3c40b6"
+    },
+    {
+      "byte_delta": 0,
+      "candidate_bytes": 153856,
+      "candidate_sha256": "47687ea9627a105886a076e0b4693af85e4e0b4d3a8486c18ffe88aa5b6de070",
+      "changed": true,
+      "name": "merged_range_coded_weights_and_hi_latents",
+      "source_bytes": 153856,
+      "source_sha256": "08f0a219b395e6783c522bacc8239f01dcb3d27d9f7f8d2291a7478d04859de7"
+    },
+    {
+      "byte_delta": 0,
+      "candidate_bytes": 7097,
+      "candidate_sha256": "1a25a07b4c9e24b6497a193dd80a3c67086bb3a70e14f56b7b2384ae697a7002",
+      "changed": false,
+      "name": "non_ac_weights_brotli",
+      "source_bytes": 7097,
+      "source_sha256": "1a25a07b4c9e24b6497a193dd80a3c67086bb3a70e14f56b7b2384ae697a7002"
+    },
+    {
+      "byte_delta": 0,
+      "candidate_bytes": 56,
+      "candidate_sha256": "778f6dc4f27ef44b4fd197a3e22fe8b0bc07acdc72475ec36bed0f218182ce94",
+      "changed": false,
+      "name": "scales_fp16",
+      "source_bytes": 56,
+      "source_sha256": "778f6dc4f27ef44b4fd197a3e22fe8b0bc07acdc72475ec36bed0f218182ce94"
+    },
+    {
+      "byte_delta": 0,
+      "candidate_bytes": 555,
+      "candidate_sha256": "91d819d805a0640dd706b29228372d0a09d7a03275066b7b5659200c04afc198",
+      "changed": false,
+      "name": "sidecar_corrections_brotli",
+      "source_bytes": 555,
+      "source_sha256": "91d819d805a0640dd706b29228372d0a09d7a03275066b7b5659200c04afc198"
+    }
+  ],
+  "semantic_stream_parity": {
+    "all_stream_symbol_sha_match": true,
+    "dispatch_attempted": false,
+    "score_claim": false,
+    "stream_count": 9,
+    "streams": [
+      {
+        "candidate_decoded_symbols_sha256": "a0c5e83fa8837d96bdb05b41129a3ae4baf869b47261be98200dc8d1e8996e88",
+        "label": "stem.weight",
+        "match": true,
+        "source_decoded_symbols_sha256": "a0c5e83fa8837d96bdb05b41129a3ae4baf869b47261be98200dc8d1e8996e88"
+      },
+      {
+        "candidate_decoded_symbols_sha256": "7694627f7d05703801d0cc061667cdd84a61cf8bee2d02aab0e41992198b0e17",
+        "label": "blocks.0.weight",
+        "match": true,
+        "source_decoded_symbols_sha256": "7694627f7d05703801d0cc061667cdd84a61cf8bee2d02aab0e41992198b0e17"
+      },
+      {
+        "candidate_decoded_symbols_sha256": "89bea32b764a0f06e7daa71240d85ee48746846ba568110176be15d7ffaa5957",
+        "label": "blocks.1.weight",
+        "match": true,
+        "source_decoded_symbols_sha256": "89bea32b764a0f06e7daa71240d85ee48746846ba568110176be15d7ffaa5957"
+      },
+      {
+        "candidate_decoded_symbols_sha256": "5b03b5dab493f6e9425f86c7c699ca2ab2b3301b0c072a2cb3f2fb56c30a3b41",
+        "label": "blocks.2.weight",
+        "match": true,
+        "source_decoded_symbols_sha256": "5b03b5dab493f6e9425f86c7c699ca2ab2b3301b0c072a2cb3f2fb56c30a3b41"
+      },
+      {
+        "candidate_decoded_symbols_sha256": "f2c0a1d162dac74c94216ca3933c8e6690104a1cfe2c6f1cda84d863d17b484c",
+        "label": "blocks.3.weight",
+        "match": true,
+        "source_decoded_symbols_sha256": "f2c0a1d162dac74c94216ca3933c8e6690104a1cfe2c6f1cda84d863d17b484c"
+      },
+      {
+        "candidate_decoded_symbols_sha256": "8b6760ebc6e46c14706097b82be0e5b739e807da413af9142431a04cb9b86aa3",
+        "label": "blocks.4.weight",
+        "match": true,
+        "source_decoded_symbols_sha256": "8b6760ebc6e46c14706097b82be0e5b739e807da413af9142431a04cb9b86aa3"
+      },
+      {
+        "candidate_decoded_symbols_sha256": "d68936bf2aa0d1680fd74af77b2a7dd3274d791c92ccf50f02a1c4743ee03caf",
+        "label": "blocks.5.weight",
+        "match": true,
+        "source_decoded_symbols_sha256": "d68936bf2aa0d1680fd74af77b2a7dd3274d791c92ccf50f02a1c4743ee03caf"
+      },
+      {
+        "candidate_decoded_symbols_sha256": "ba24b48b2ab99a57f2f85794bdf42c1f1c9f00020be32975b3ec5cd54d421af8",
+        "label": "refine.0.bias",
+        "match": true,
+        "source_decoded_symbols_sha256": "ba24b48b2ab99a57f2f85794bdf42c1f1c9f00020be32975b3ec5cd54d421af8"
+      },
+      {
+        "candidate_decoded_symbols_sha256": "d2510a94e458e3bd6ebbdf5821bbefa342c74fb31b72b069207d97b1059801d4",
+        "label": "latent_hi_bytes",
+        "match": true,
+        "source_decoded_symbols_sha256": "d2510a94e458e3bd6ebbdf5821bbefa342c74fb31b72b069207d97b1059801d4"
+      }
+    ]
+  },
+  "source_archive": {
+    "bytes": 178223,
+    "member_bytes": 178123,
+    "member_name": "x",
+    "member_sha256": "dd92b065b8fbd2bfe9de837eb110a971c2675ecca4247e2658b4628b464d72ec",
+    "path": "experiments/results/public_pr_intake_full/public_pr103_intake_20260505_auto/archive.zip",
+    "sha256": "31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30"
+  },
+  "source_schema_manifest": {
+    "bytes": 26522,
+    "dispatch_attempted": false,
+    "path": "experiments/results/hnerv_pr103_lc_ac_schema_refresh_20260510_codex/manifest.json",
+    "provided_inline": false,
+    "score_claim": false,
+    "sha256": "2639e904ced829eeefb885c4f6a8019543277b9a4d19eb85d895c4427b95702f"
+  },
+  "tool_run_manifest": {
+    "argv": [
+      "--schema-manifest",
+      "experiments/results/hnerv_pr103_lc_ac_schema_refresh_20260510_codex/manifest.json",
+      "--beam-probe-report",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_0_weight_beam_probe.json",
+      "--beam-probe-report",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_1_weight_beam_probe.json",
+      "--beam-probe-report",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_2_weight_beam_probe.json",
+      "--beam-probe-report",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_3_weight_beam_probe.json",
+      "--beam-probe-report",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/stem_weight_beam_probe.json",
+      "--beam-probe-report",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/latent_hi_bytes_beam_probe.json",
+      "--global-combo-report",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_plus_latent_hi_probe.json",
+      "--output-archive",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_plus_latent_hi_candidate/archive.zip",
+      "--json-out",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_plus_latent_hi_candidate/manifest.json",
+      "--md-out",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_plus_latent_hi_candidate/manifest.md"
+    ],
+    "canonical_payload_without_tool_manifest_sha256": "25e64e87b600c264917f7ad4569b38f1ead5d2841c8b7e9384969d89fc3fff51",
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 26522,
+        "path": "experiments/results/hnerv_pr103_lc_ac_schema_refresh_20260510_codex/manifest.json",
+        "sha256": "2639e904ced829eeefb885c4f6a8019543277b9a4d19eb85d895c4427b95702f"
+      },
+      {
+        "bytes": 33995,
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_0_weight_beam_probe.json",
+        "sha256": "346cff09ce24a2ec121cce0851c82ec22537f77886e0353b943b401584264507"
+      },
+      {
+        "bytes": 33680,
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_1_weight_beam_probe.json",
+        "sha256": "ffd7f14b7f9ce508c0f40c7c703177788de1de8b3ec4f842879232a2da8daa4a"
+      },
+      {
+        "bytes": 33986,
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_2_weight_beam_probe.json",
+        "sha256": "80c49f2849ba71c353e365fe927a7b98b942fdfbaf7e7d030559711e6dad53c4"
+      },
+      {
+        "bytes": 33767,
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/blocks_3_weight_beam_probe.json",
+        "sha256": "8130035b064a156625472512b9115a7a4689706fd61994c9f3ce165c2c6c9462"
+      },
+      {
+        "bytes": 31485,
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/stem_weight_beam_probe.json",
+        "sha256": "c302252f3219bab9da4cc4d712fdff230537884dd0d9b8c46b1fd4801461aa7d"
+      },
+      {
+        "bytes": 40171,
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/latent_hi_bytes_beam_probe.json",
+        "sha256": "ebc474cbb04632a4eb2208bbb33f203731683781189603c7a61147b0a0c0624f"
+      },
+      {
+        "bytes": 90121,
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_plus_latent_hi_probe.json",
+        "sha256": "77dc17aee4e481a6208efb7124cc1ff42ccac0da837c0b48cd046a3332b9ee07"
+      }
+    ],
+    "output_path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_plus_latent_hi_candidate/manifest.json",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "tools/materialize_pr103_arithmetic_histogram_candidate.py"
+  }
+}

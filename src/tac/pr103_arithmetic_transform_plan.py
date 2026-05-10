@@ -199,8 +199,10 @@ def build_pr103_arithmetic_retarget_probe(
     archive_path = context["archive_path"]
     source = context["source"]
     histograms = context["histograms"]
+    hi_histogram = context["hi_histogram"]
     source_merged = context["source_merged"]
     source_histogram_blob = context["source_histogram_blob"]
+    source_hi_histogram_blob = context["source_hi_histogram_blob"]
     source_symbol_streams = context["source_symbol_streams"]
     source_model_weights = context["source_model_weights"]
     source_roundtrip = context["source_roundtrip"]
@@ -361,8 +363,10 @@ def build_pr103_arithmetic_histogram_coordinate_probe(
     archive_path = context["archive_path"]
     source = context["source"]
     histograms = context["histograms"]
+    hi_histogram = context["hi_histogram"]
     source_merged = context["source_merged"]
     source_histogram_blob = context["source_histogram_blob"]
+    source_hi_histogram_blob = context["source_hi_histogram_blob"]
     source_symbol_streams = context["source_symbol_streams"]
     source_model_weights = context["source_model_weights"]
     source_roundtrip = context["source_roundtrip"]
@@ -372,15 +376,10 @@ def build_pr103_arithmetic_histogram_coordinate_probe(
     observed_symbol_sha = str(context["observed_symbol_sha"])
     source_roundtrip_identical = bool(context["source_roundtrip_identical"])
     manifest_blockers = list(context["manifest_blockers"])
-    source_histogram_raw = histograms.astype(np.uint8).tobytes()
-
-    if target_index >= len(histograms):
-        raise Pr103ArithmeticTransformPlanError(
-            "latent_hi_bytes coordinate probe is not supported by the q8 AC histogram probe"
-        )
-    base_target_weights = np.asarray(source_model_weights[target_index], dtype=np.uint8)
+    base_target_weights = np.asarray(source_model_weights[target_index]).copy()
     target_symbols = np.asarray(source_symbol_streams[target_index], dtype=np.int64)
     counts = np.bincount(target_symbols.reshape(-1), minlength=base_target_weights.size)
+    max_weight = _histogram_weight_max(base_target_weights)
     candidate_symbols = [
         int(symbol)
         for symbol in sorted(
@@ -393,20 +392,22 @@ def build_pr103_arithmetic_histogram_coordinate_probe(
         old_weight = int(base_target_weights[symbol])
         for delta in deltas:
             new_weight = old_weight + int(delta)
-            if new_weight < 0 or new_weight > 255 or new_weight == old_weight:
+            if new_weight < 0 or new_weight > max_weight or new_weight == old_weight:
                 continue
             weights = base_target_weights.copy()
-            weights[symbol] = np.uint8(new_weight)
+            weights[symbol] = new_weight
             candidate_rows.append(
                 _public_candidate_row(
                     _score_histogram_candidate(
                         weights=weights,
                         histograms=histograms,
+                        hi_histogram=hi_histogram,
                         target_index=target_index,
                         source_symbol_streams=source_symbol_streams,
                         source_model_weights=source_model_weights,
                         source_merged=source_merged,
                         source_histogram_blob=source_histogram_blob,
+                        source_hi_histogram_blob=source_hi_histogram_blob,
                         moves=[
                             {
                                 "round": 1,
@@ -477,7 +478,10 @@ def build_pr103_arithmetic_histogram_coordinate_probe(
             "deltas": [int(delta) for delta in deltas],
             "candidate_symbol_count": len(candidate_symbols),
             "candidate_count": len(candidate_rows),
-            "objective": "minimize_merged_ac_delta_plus_ac_histograms_brotli_delta",
+            "objective": (
+                "minimize_merged_ac_delta_plus_ac_histograms_brotli_delta"
+                "_plus_latent_hi_histogram_brotli_delta"
+            ),
         },
         "source_roundtrip": {
             "merged_ac_bytes": len(source_merged),
@@ -549,8 +553,10 @@ def build_pr103_arithmetic_histogram_beam_probe(
     archive_path = context["archive_path"]
     source = context["source"]
     histograms = context["histograms"]
+    hi_histogram = context["hi_histogram"]
     source_merged = context["source_merged"]
     source_histogram_blob = context["source_histogram_blob"]
+    source_hi_histogram_blob = context["source_hi_histogram_blob"]
     source_symbol_streams = context["source_symbol_streams"]
     source_model_weights = context["source_model_weights"]
     source_roundtrip = context["source_roundtrip"]
@@ -560,14 +566,11 @@ def build_pr103_arithmetic_histogram_beam_probe(
     observed_symbol_sha = str(context["observed_symbol_sha"])
     source_roundtrip_identical = bool(context["source_roundtrip_identical"])
     manifest_blockers = list(context["manifest_blockers"])
-    if target_index >= len(histograms):
-        raise Pr103ArithmeticTransformPlanError(
-            "latent_hi_bytes beam probe is not supported by the q8 AC histogram probe"
-        )
 
-    base_target_weights = np.asarray(source_model_weights[target_index], dtype=np.uint8)
+    base_target_weights = np.asarray(source_model_weights[target_index]).copy()
     target_symbols = np.asarray(source_symbol_streams[target_index], dtype=np.int64)
     counts = np.bincount(target_symbols.reshape(-1), minlength=base_target_weights.size)
+    max_weight = _histogram_weight_max(base_target_weights)
     candidate_symbols = [
         int(symbol)
         for symbol in sorted(
@@ -579,36 +582,40 @@ def build_pr103_arithmetic_histogram_beam_probe(
     base_row = _score_histogram_candidate(
         weights=base_target_weights,
         histograms=histograms,
+        hi_histogram=hi_histogram,
         target_index=target_index,
         source_symbol_streams=source_symbol_streams,
         source_model_weights=source_model_weights,
         source_merged=source_merged,
         source_histogram_blob=source_histogram_blob,
+        source_hi_histogram_blob=source_hi_histogram_blob,
         moves=[],
     )
     beam = [base_row]
-    seen = {str(base_row["histogram_raw_sha256"])}
+    seen = {str(base_row["histogram_state_sha256"])}
     all_rows: list[dict[str, Any]] = []
     for round_index in range(1, rounds + 1):
         expanded: list[dict[str, Any]] = []
         for state in beam:
-            state_weights = np.asarray(state["_weights"], dtype=np.uint8)
+            state_weights = np.asarray(state["_weights"]).copy()
             for symbol in candidate_symbols:
                 old_weight = int(state_weights[symbol])
                 for delta in deltas:
                     new_weight = old_weight + int(delta)
-                    if new_weight < 0 or new_weight > 255 or new_weight == old_weight:
+                    if new_weight < 0 or new_weight > max_weight or new_weight == old_weight:
                         continue
                     weights = state_weights.copy()
-                    weights[symbol] = np.uint8(new_weight)
+                    weights[symbol] = new_weight
                     row = _score_histogram_candidate(
                         weights=weights,
                         histograms=histograms,
+                        hi_histogram=hi_histogram,
                         target_index=target_index,
                         source_symbol_streams=source_symbol_streams,
                         source_model_weights=source_model_weights,
                         source_merged=source_merged,
                         source_histogram_blob=source_histogram_blob,
+                        source_hi_histogram_blob=source_hi_histogram_blob,
                         moves=[
                             *list(state.get("moves") or []),
                             {
@@ -621,7 +628,7 @@ def build_pr103_arithmetic_histogram_beam_probe(
                             },
                         ],
                     )
-                    key = str(row["histogram_raw_sha256"])
+                    key = str(row["histogram_state_sha256"])
                     if key in seen:
                         continue
                     seen.add(key)
@@ -691,7 +698,10 @@ def build_pr103_arithmetic_histogram_beam_probe(
             "beam_width": int(beam_width),
             "candidate_symbol_count": len(candidate_symbols),
             "evaluated_candidate_count": len(all_rows),
-            "objective": "minimize_merged_ac_delta_plus_ac_histograms_brotli_delta",
+            "objective": (
+                "minimize_merged_ac_delta_plus_ac_histograms_brotli_delta"
+                "_plus_latent_hi_histogram_brotli_delta"
+            ),
         },
         "source_roundtrip": {
             "merged_ac_bytes": len(source_merged),
@@ -763,12 +773,10 @@ def materialize_pr103_arithmetic_histogram_candidate(
     archive_path = context["archive_path"]
     parsed = parse_pr103_lc_ac_payload(source.payload, layout=layout)
     histograms = np.asarray(context["histograms"], dtype=np.uint8).copy()
+    hi_histogram = np.asarray(context["hi_histogram"]).copy()
     source_model_weights = [np.asarray(item).copy() for item in context["source_model_weights"]]
     source_symbol_streams = [np.asarray(item).copy() for item in context["source_symbol_streams"]]
-    label_to_index = {
-        str(label): index
-        for index, (label, _count, _schema_index) in enumerate(stream_specs)
-    }
+    target_entries = _histogram_target_entries(stream_specs=stream_specs)
     applied_reports: list[dict[str, Any]] = []
     source_probe_delta_sum = 0
     if global_report is not None:
@@ -781,18 +789,25 @@ def materialize_pr103_arithmetic_histogram_candidate(
             )
         for label, moves_value in moves_by_label.items():
             label = str(label)
-            if label not in label_to_index:
+            if label not in target_entries:
                 raise Pr103ArithmeticTransformPlanError(
-                    f"global combo target is not a q8 AC stream: {label!r}"
+                    f"global combo target is not a supported histogram stream: {label!r}"
                 )
+            target_entry = target_entries[label]
             moves = _moves_sequence(moves_value, label=label)
-            _apply_histogram_moves(
-                histograms,
-                target_index=label_to_index[label],
-                moves=moves,
-                label=label,
-            )
-            source_model_weights[label_to_index[label]] = histograms[label_to_index[label]].copy()
+            if target_entry["histogram_kind"] == "ac_histograms_brotli":
+                _apply_histogram_moves(
+                    histograms,
+                    target_index=int(target_entry["row_index"]),
+                    moves=moves,
+                    label=label,
+                )
+                source_model_weights[int(target_entry["model_index"])] = histograms[
+                    int(target_entry["row_index"])
+                ].copy()
+            else:
+                _apply_histogram_moves_to_weights(hi_histogram, moves=moves, label=label)
+                source_model_weights[int(target_entry["model_index"])] = hi_histogram.copy()
             applied_reports.append(
                 {
                     "target_label": label,
@@ -808,11 +823,17 @@ def materialize_pr103_arithmetic_histogram_candidate(
             _validate_candidate_report_source(report, source)
             target = _mapping(report.get("target_stream"))
             label = str(target.get("label") or "")
-            if label not in label_to_index:
+            if label not in target_entries:
                 raise Pr103ArithmeticTransformPlanError(
-                    f"beam report target is not a q8 AC stream: {label!r}"
+                    f"beam report target is not a supported histogram stream: {label!r}"
                 )
-            target_index = label_to_index[label]
+            target_entry = target_entries[label]
+            if target_entry["histogram_kind"] != "ac_histograms_brotli":
+                raise Pr103ArithmeticTransformPlanError(
+                    f"greedy beam materialization only supports q8 AC streams; "
+                    f"use a global combo report for {label!r}"
+                )
+            target_index = int(target_entry["row_index"])
             best = _mapping(report.get("best_candidate"))
             moves = _moves_sequence(best.get("moves"), label=label)
             _apply_histogram_moves(
@@ -839,11 +860,13 @@ def materialize_pr103_arithmetic_histogram_candidate(
 
     candidate_histogram_raw = histograms.astype(np.uint8).tobytes()
     candidate_histogram_blob = brotli.compress(candidate_histogram_raw, quality=11)
+    candidate_hi_histogram_blob = brotli.compress(_hi_histogram_raw(hi_histogram), quality=11)
     candidate_merged = encode_pr103_merged_ac_stream(source_symbol_streams, source_model_weights)
     candidate_layout = dataclasses.replace(
         layout,
         ac_histograms_brotli=len(candidate_histogram_blob),
         merged_range_coded_weights_and_hi_latents=len(candidate_merged),
+        latent_hi_histogram_brotli=len(candidate_hi_histogram_blob),
     )
     candidate_payload = b"".join(
         [
@@ -853,7 +876,7 @@ def materialize_pr103_arithmetic_histogram_candidate(
             candidate_merged,
             parsed.section_bytes("latent_min_scale_fp16"),
             parsed.section_bytes("latent_low_bytes_brotli"),
-            parsed.section_bytes("latent_hi_histogram_brotli"),
+            candidate_hi_histogram_blob,
             parsed.section_bytes("sidecar_corrections_brotli"),
         ]
     )
@@ -1047,102 +1070,45 @@ def build_pr103_arithmetic_histogram_global_combo_probe(
     source = context["source"]
     archive_path = context["archive_path"]
     histograms = np.asarray(context["histograms"], dtype=np.uint8)
+    hi_histogram = np.asarray(context["hi_histogram"]).copy()
     source_model_weights = [np.asarray(item).copy() for item in context["source_model_weights"]]
     source_symbol_streams = [np.asarray(item).copy() for item in context["source_symbol_streams"]]
     source_merged = context["source_merged"]
     source_histogram_blob = context["source_histogram_blob"]
-    label_to_index = {
-        str(label): index
-        for index, (label, _count, _schema_index) in enumerate(stream_specs)
-    }
+    source_hi_histogram_blob = context["source_hi_histogram_blob"]
+    target_entries = _histogram_target_entries(stream_specs=stream_specs)
     option_groups: list[dict[str, Any]] = []
     for report in reports:
         _validate_candidate_report_source(report, source)
         target = _mapping(report.get("target_stream"))
         label = str(target.get("label") or "")
-        if label not in label_to_index:
+        if label not in target_entries:
             raise Pr103ArithmeticTransformPlanError(
-                f"beam report target is not a q8 AC stream: {label!r}"
+                f"beam report target is not a supported histogram stream: {label!r}"
             )
-        target_index = label_to_index[label]
+        target_entry = target_entries[label]
         options = _combo_options_for_report(
             report,
             label=label,
-            target_index=target_index,
+            target_index=int(target_entry["model_index"]),
             top_per_stream=top_per_stream,
         )
-        option_groups.append({"label": label, "target_index": target_index, "options": options})
+        option_groups.append({**target_entry, "label": label, "options": options})
 
-    states = [
-        {
-            "histograms": histograms.copy(),
-            "moves_by_label": {},
-            "selected_options": [],
-        }
-    ]
-    evaluated_state_count = 0
-    frontier_sizes: list[dict[str, Any]] = []
-    for group in option_groups:
-        expanded = []
-        for state in states:
-            for option in group["options"]:
-                next_histograms = np.asarray(state["histograms"], dtype=np.uint8).copy()
-                if option["moves"]:
-                    _apply_histogram_moves(
-                        next_histograms,
-                        target_index=int(group["target_index"]),
-                        moves=option["moves"],
-                        label=str(group["label"]),
-                    )
-                row = _score_combined_histograms(
-                    histograms=next_histograms,
-                    source_symbol_streams=source_symbol_streams,
-                    source_model_weights=source_model_weights,
-                    source_merged=source_merged,
-                    source_histogram_blob=source_histogram_blob,
-                )
-                selected_options = [*list(state["selected_options"]), option["option_id"]]
-                selected_deltas = [
-                    *list(state.get("selected_option_source_deltas") or []),
-                    option.get("source_probe_delta"),
-                ]
-                source_delta_sum = sum(
-                    int(delta) for delta in selected_deltas if delta is not None
-                )
-                moves_by_label = dict(state["moves_by_label"])
-                if option["moves"]:
-                    moves_by_label[str(group["label"])] = option["moves"]
-                row.update(
-                    {
-                        "histograms": next_histograms,
-                        "selected_options": selected_options,
-                        "selected_option_source_deltas": selected_deltas,
-                        "source_probe_delta_sum": source_delta_sum,
-                        "non_additivity_delta": int(
-                            row["estimated_member_delta_if_runtime_adapter_supported"]
-                        )
-                        - source_delta_sum,
-                        "moves_by_label": moves_by_label,
-                    }
-                )
-                expanded.append(row)
-        evaluated_state_count += len(expanded)
-        expanded = _dedupe_combo_states(expanded)
-        expanded.sort(key=_combo_sort_key)
-        states = expanded[:beam_width]
-        frontier_sizes.append(
-            {
-                "label": group["label"],
-                "option_count": len(group["options"]),
-                "expanded_state_count": len(expanded),
-                "kept_state_count": len(states),
-                "best_total_delta": states[0]["estimated_member_delta_if_runtime_adapter_supported"]
-                if states
-                else None,
-            }
-        )
-        if not states:
-            break
+    optimization = optimize_pr103_histogram_frontier_combinations(
+        histograms=histograms,
+        hi_histogram=hi_histogram,
+        source_symbol_streams=source_symbol_streams,
+        source_model_weights=source_model_weights,
+        source_merged=source_merged,
+        source_histogram_blob=source_histogram_blob,
+        source_hi_histogram_blob=source_hi_histogram_blob,
+        option_groups=option_groups,
+        beam_width=beam_width,
+    )
+    states = optimization["states"]
+    evaluated_state_count = int(optimization["evaluated_state_count"])
+    frontier_sizes = list(optimization["frontier_sizes"])
 
     states.sort(key=_combo_sort_key)
     best = states[0] if states else {}
@@ -1195,8 +1161,8 @@ def build_pr103_arithmetic_histogram_global_combo_probe(
                 "stream plus the full Brotli-compressed histogram sideband"
             ),
             "known_scope_limit": (
-                "q8 AC histogram rows only; latent_hi_histogram_brotli remains a "
-                "separate optimization surface"
+                "supports q8 AC histogram rows and latent_hi_histogram_brotli "
+                "when the input frontier contains a latent_hi_bytes target"
             ),
             "score_claim": False,
         },
@@ -1542,6 +1508,13 @@ def _select_target(
     if selector.label:
         matches = [row for row in rows if str(row.get("label") or "") == selector.label]
         if not matches:
+            if selector.label == "latent_hi_bytes":
+                return {
+                    "label": "latent_hi_bytes",
+                    "role": "latent_hi_stream",
+                    "schema_index": None,
+                    "required_next_artifact": "latent_hi_histogram_frontier_probe",
+                }
             raise Pr103ArithmeticTransformPlanError(
                 f"target label not found in schema manifest: {selector.label}"
             )
@@ -1606,6 +1579,7 @@ def _load_pr103_retarget_context(
     hi_histogram = np.asarray(auxiliary.pop("_hi_histogram_array"))
     source_merged = parsed.section_bytes("merged_range_coded_weights_and_hi_latents")
     source_histogram_blob = parsed.section_bytes("ac_histograms_brotli")
+    source_hi_histogram_blob = parsed.section_bytes("latent_hi_histogram_brotli")
     decoded = _decode_pr103_merged_ac_symbol_streams(
         source_merged,
         histograms,
@@ -1619,18 +1593,21 @@ def _load_pr103_retarget_context(
     source_model_weights = [np.asarray(item).copy() for item in decoded["model_weights"]]
     source_roundtrip = encode_pr103_merged_ac_stream(source_symbol_streams, source_model_weights)
     target_record = dict(stream_records[target_index])
+    output_target = {**target_record, **target}
     expected_symbol_sha = str(target.get("decoded_symbols_sha256") or "")
     observed_symbol_sha = str(target_record.get("decoded_symbols_sha256") or "")
     return {
         "repo": repo,
         "manifest": manifest,
         "manifest_record": manifest_record,
-        "target": target,
+        "target": output_target,
         "archive_path": archive_path,
         "source": source,
         "histograms": histograms,
+        "hi_histogram": hi_histogram,
         "source_merged": source_merged,
         "source_histogram_blob": source_histogram_blob,
+        "source_hi_histogram_blob": source_hi_histogram_blob,
         "source_symbol_streams": source_symbol_streams,
         "source_model_weights": source_model_weights,
         "source_roundtrip": source_roundtrip,
@@ -1956,51 +1933,59 @@ def _score_histogram_candidate(
     *,
     weights: np.ndarray,
     histograms: np.ndarray,
+    hi_histogram: np.ndarray,
     target_index: int,
     source_symbol_streams: Sequence[np.ndarray],
     source_model_weights: Sequence[np.ndarray],
     source_merged: bytes,
     source_histogram_blob: bytes,
+    source_hi_histogram_blob: bytes,
     moves: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
-    changed_weights = np.asarray(weights, dtype=np.uint8).copy()
-    model_weights = [np.asarray(item).copy() for item in source_model_weights]
-    model_weights[target_index] = changed_weights
-    merged = encode_pr103_merged_ac_stream(source_symbol_streams, model_weights)
+    changed_weights = np.asarray(weights).copy()
     changed_histograms = np.asarray(histograms, dtype=np.uint8).copy()
-    changed_histograms[target_index] = changed_weights
+    changed_hi_histogram = np.asarray(hi_histogram).copy()
+    if target_index < changed_histograms.shape[0]:
+        changed_histograms[target_index] = changed_weights.astype(np.uint8)
+    else:
+        changed_hi_histogram = changed_weights
+    row = _score_combined_histograms(
+        histograms=changed_histograms,
+        hi_histogram=changed_hi_histogram,
+        source_symbol_streams=source_symbol_streams,
+        source_model_weights=source_model_weights,
+        source_merged=source_merged,
+        source_histogram_blob=source_histogram_blob,
+        source_hi_histogram_blob=source_hi_histogram_blob,
+    )
     changed_histogram_raw = changed_histograms.astype(np.uint8).tobytes()
-    changed_histogram_blob = brotli.compress(changed_histogram_raw, quality=11)
-    merged_delta = len(merged) - len(source_merged)
-    histogram_delta = len(changed_histogram_blob) - len(source_histogram_blob)
-    total_delta = merged_delta + histogram_delta
+    changed_hi_histogram_raw = _hi_histogram_raw(changed_hi_histogram)
+    source_hi_histogram_raw = _hi_histogram_raw(hi_histogram)
     move_rows = [dict(move) for move in moves]
-    row: dict[str, Any] = {
-        "moves": move_rows,
-        "change_count": len(move_rows),
-        "merged_ac_bytes": len(merged),
-        "merged_ac_sha256": sha256_bytes(merged),
-        "merged_ac_delta": merged_delta,
-        "histogram_brotli_bytes": len(changed_histogram_blob),
-        "histogram_brotli_sha256": sha256_bytes(changed_histogram_blob),
-        "histogram_brotli_delta": histogram_delta,
-        "histogram_raw_sha256": sha256_bytes(changed_histogram_raw),
-        "estimated_member_delta_if_runtime_adapter_supported": total_delta,
-        "estimated_rate_score_delta_if_components_unchanged": (
-            float(total_delta) * RATE_SCORE_PER_BYTE
-        ),
-        "no_op": merged == source_merged
-        and changed_histogram_raw == np.asarray(histograms, dtype=np.uint8).tobytes(),
-        "score_claim": False,
-        "dispatch_attempted": False,
-        "ready_for_exact_eval_dispatch": False,
-        "_weights": changed_weights,
-    }
+    row.update(
+        {
+            "moves": move_rows,
+            "change_count": len(move_rows),
+            "no_op": (
+                int(row.get("merged_ac_delta") or 0) == 0
+                and changed_histogram_raw == np.asarray(histograms, dtype=np.uint8).tobytes()
+                and changed_hi_histogram_raw == source_hi_histogram_raw
+            ),
+            "_weights": changed_weights,
+        }
+    )
     if move_rows:
         last = move_rows[-1]
         for key in ("symbol", "symbol_count", "delta", "old_weight", "new_weight"):
             row[key] = last.get(key)
     return row
+
+
+def _histogram_weight_max(weights: np.ndarray) -> int:
+    dtype = np.asarray(weights).dtype
+    if np.issubdtype(dtype, np.unsignedinteger):
+        return int(np.iinfo(dtype).max)
+    return 255
 
 
 def _combo_options_for_report(
@@ -2050,6 +2035,27 @@ def _combo_options_for_report(
     return options
 
 
+def _histogram_target_entries(
+    *,
+    stream_specs: Sequence[tuple[str, int, int | None]],
+) -> dict[str, dict[str, Any]]:
+    entries: dict[str, dict[str, Any]] = {}
+    for index, (label, _count, _schema_index) in enumerate(stream_specs):
+        entries[str(label)] = {
+            "label": str(label),
+            "model_index": index,
+            "row_index": index,
+            "histogram_kind": "ac_histograms_brotli",
+        }
+    entries["latent_hi_bytes"] = {
+        "label": "latent_hi_bytes",
+        "model_index": len(stream_specs),
+        "row_index": None,
+        "histogram_kind": "latent_hi_histogram_brotli",
+    }
+    return entries
+
+
 def _apply_histogram_moves(
     histograms: np.ndarray,
     *,
@@ -2075,23 +2081,192 @@ def _apply_histogram_moves(
         histograms[target_index, symbol] = np.uint8(new_weight)
 
 
-def _score_combined_histograms(
+def _apply_histogram_moves_to_weights(
+    weights: np.ndarray,
+    *,
+    moves: Sequence[Mapping[str, Any]],
+    label: str,
+) -> None:
+    flat = np.asarray(weights).reshape(-1)
+    for move in moves:
+        item = _mapping(move)
+        symbol = int(item.get("symbol"))
+        old_weight = int(item.get("old_weight"))
+        new_weight = int(item.get("new_weight"))
+        if symbol < 0 or symbol >= flat.size:
+            raise Pr103ArithmeticTransformPlanError(
+                f"combo move symbol out of range for {label}: {symbol}"
+            )
+        current = int(flat[symbol])
+        if current != old_weight:
+            raise Pr103ArithmeticTransformPlanError(
+                f"combo move old_weight mismatch for {label}[{symbol}]: "
+                f"move={old_weight} current={current}"
+            )
+        flat[symbol] = new_weight
+
+
+def optimize_pr103_histogram_frontier_combinations(
     *,
     histograms: np.ndarray,
+    hi_histogram: np.ndarray,
     source_symbol_streams: Sequence[np.ndarray],
     source_model_weights: Sequence[np.ndarray],
     source_merged: bytes,
     source_histogram_blob: bytes,
+    source_hi_histogram_blob: bytes,
+    option_groups: Sequence[Mapping[str, Any]],
+    beam_width: int,
+) -> dict[str, Any]:
+    """Optimize one histogram option per stream with the exact local objective.
+
+    The objective minimized for a state ``s`` is explicitly:
+
+    ``delta(s) = (len(AC_s) - len(AC_0)) + (len(Brotli(H_q8_s)) - len(Brotli(H_q8_0)))
+    + (len(Brotli(H_hi_s)) - len(Brotli(H_hi_0)))``.
+
+    ``AC_s`` is the merged PR103 range-coded stream re-encoded from the source
+    symbols and the candidate histogram models. ``H_q8_s`` is the full q8 AC
+    histogram sideband, and ``H_hi_s`` is the latent-hi histogram sideband. The
+    per-stream proposal deltas are retained only for audit; ranking always
+    recomputes the full state so Brotli cross-row effects cannot be hidden by
+    greedy per-stream accounting.
+    """
+
+    if beam_width <= 0:
+        raise Pr103ArithmeticTransformPlanError("beam_width must be positive")
+    states = [
+        {
+            "histograms": np.asarray(histograms, dtype=np.uint8).copy(),
+            "hi_histogram": np.asarray(hi_histogram).copy(),
+            "moves_by_label": {},
+            "selected_options": [],
+            "selected_option_source_deltas": [],
+        }
+    ]
+    evaluated_state_count = 0
+    frontier_sizes: list[dict[str, Any]] = []
+    for group in option_groups:
+        expanded: list[dict[str, Any]] = []
+        label = str(group.get("label") or "")
+        histogram_kind = str(group.get("histogram_kind") or "")
+        options = group.get("options")
+        if not isinstance(options, Sequence) or isinstance(options, (str, bytes)):
+            raise Pr103ArithmeticTransformPlanError(
+                f"combo option group for {label!r} has no option sequence"
+            )
+        for state in states:
+            for option_value in options:
+                option = _mapping(option_value)
+                next_histograms = np.asarray(state["histograms"], dtype=np.uint8).copy()
+                next_hi_histogram = np.asarray(state["hi_histogram"]).copy()
+                moves = option.get("moves")
+                if moves:
+                    move_rows = _moves_sequence(moves, label=label)
+                    if histogram_kind == "ac_histograms_brotli":
+                        _apply_histogram_moves(
+                            next_histograms,
+                            target_index=int(group["row_index"]),
+                            moves=move_rows,
+                            label=label,
+                        )
+                    elif histogram_kind == "latent_hi_histogram_brotli":
+                        _apply_histogram_moves_to_weights(
+                            next_hi_histogram,
+                            moves=move_rows,
+                            label=label,
+                        )
+                    else:
+                        raise Pr103ArithmeticTransformPlanError(
+                            f"unsupported histogram kind for {label}: {histogram_kind!r}"
+                        )
+                row = _score_combined_histograms(
+                    histograms=next_histograms,
+                    hi_histogram=next_hi_histogram,
+                    source_symbol_streams=source_symbol_streams,
+                    source_model_weights=source_model_weights,
+                    source_merged=source_merged,
+                    source_histogram_blob=source_histogram_blob,
+                    source_hi_histogram_blob=source_hi_histogram_blob,
+                )
+                selected_options = [
+                    *list(state.get("selected_options") or []),
+                    str(option.get("option_id") or ""),
+                ]
+                selected_deltas = [
+                    *list(state.get("selected_option_source_deltas") or []),
+                    option.get("source_probe_delta"),
+                ]
+                source_delta_sum = sum(
+                    int(delta) for delta in selected_deltas if delta is not None
+                )
+                moves_by_label = dict(_mapping(state.get("moves_by_label")))
+                if moves:
+                    moves_by_label[label] = _moves_sequence(moves, label=label)
+                row.update(
+                    {
+                        "histograms": next_histograms,
+                        "hi_histogram": next_hi_histogram,
+                        "selected_options": selected_options,
+                        "selected_option_source_deltas": selected_deltas,
+                        "source_probe_delta_sum": source_delta_sum,
+                        "non_additivity_delta": int(
+                            row["estimated_member_delta_if_runtime_adapter_supported"]
+                        )
+                        - source_delta_sum,
+                        "moves_by_label": moves_by_label,
+                    }
+                )
+                expanded.append(row)
+        evaluated_state_count += len(expanded)
+        expanded = _dedupe_combo_states(expanded)
+        expanded.sort(key=_combo_sort_key)
+        states = expanded[:beam_width]
+        frontier_sizes.append(
+            {
+                "label": label,
+                "histogram_kind": histogram_kind,
+                "option_count": len(options),
+                "expanded_state_count": len(expanded),
+                "kept_state_count": len(states),
+                "best_total_delta": states[0]["estimated_member_delta_if_runtime_adapter_supported"]
+                if states
+                else None,
+            }
+        )
+        if not states:
+            break
+    states.sort(key=_combo_sort_key)
+    return {
+        "states": states,
+        "evaluated_state_count": evaluated_state_count,
+        "frontier_sizes": frontier_sizes,
+    }
+
+
+def _score_combined_histograms(
+    *,
+    histograms: np.ndarray,
+    hi_histogram: np.ndarray,
+    source_symbol_streams: Sequence[np.ndarray],
+    source_model_weights: Sequence[np.ndarray],
+    source_merged: bytes,
+    source_histogram_blob: bytes,
+    source_hi_histogram_blob: bytes,
 ) -> dict[str, Any]:
     model_weights = [np.asarray(item).copy() for item in source_model_weights]
     for index in range(np.asarray(histograms).shape[0]):
         model_weights[index] = np.asarray(histograms[index], dtype=np.uint8).copy()
+    model_weights[np.asarray(histograms).shape[0]] = np.asarray(hi_histogram).copy()
     merged = encode_pr103_merged_ac_stream(source_symbol_streams, model_weights)
     histogram_raw = np.asarray(histograms, dtype=np.uint8).tobytes()
+    hi_histogram_raw = _hi_histogram_raw(hi_histogram)
     histogram_blob = brotli.compress(histogram_raw, quality=11)
+    hi_histogram_blob = brotli.compress(hi_histogram_raw, quality=11)
     merged_delta = len(merged) - len(source_merged)
     histogram_delta = len(histogram_blob) - len(source_histogram_blob)
-    total_delta = merged_delta + histogram_delta
+    hi_histogram_delta = len(hi_histogram_blob) - len(source_hi_histogram_blob)
+    total_delta = merged_delta + histogram_delta + hi_histogram_delta
     return {
         "merged_ac_bytes": len(merged),
         "merged_ac_sha256": sha256_bytes(merged),
@@ -2100,20 +2275,34 @@ def _score_combined_histograms(
         "histogram_brotli_sha256": sha256_bytes(histogram_blob),
         "histogram_brotli_delta": histogram_delta,
         "histogram_raw_sha256": sha256_bytes(histogram_raw),
+        "latent_hi_histogram_brotli_bytes": len(hi_histogram_blob),
+        "latent_hi_histogram_brotli_sha256": sha256_bytes(hi_histogram_blob),
+        "latent_hi_histogram_brotli_delta": hi_histogram_delta,
+        "latent_hi_histogram_raw_sha256": sha256_bytes(hi_histogram_raw),
+        "histogram_state_sha256": sha256_bytes(histogram_raw + b"\0PR103HI\0" + hi_histogram_raw),
         "estimated_member_delta_if_runtime_adapter_supported": total_delta,
         "estimated_rate_score_delta_if_components_unchanged": (
             float(total_delta) * RATE_SCORE_PER_BYTE
         ),
+        "objective_components": {
+            "merged_ac_delta": merged_delta,
+            "ac_histograms_brotli_delta": histogram_delta,
+            "latent_hi_histogram_brotli_delta": hi_histogram_delta,
+        },
         "score_claim": False,
         "dispatch_attempted": False,
         "ready_for_exact_eval_dispatch": False,
     }
 
 
+def _hi_histogram_raw(hi_histogram: np.ndarray) -> bytes:
+    return np.asarray(hi_histogram, dtype="<u2").reshape(-1).tobytes()
+
+
 def _dedupe_combo_states(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
     best_by_key: dict[str, dict[str, Any]] = {}
     for row in rows:
-        key = str(row.get("histogram_raw_sha256") or "")
+        key = str(row.get("histogram_state_sha256") or row.get("histogram_raw_sha256") or "")
         if not key:
             continue
         current = best_by_key.get(key)
@@ -2122,7 +2311,7 @@ def _dedupe_combo_states(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, An
     return list(best_by_key.values())
 
 
-def _combo_sort_key(row: Mapping[str, Any]) -> tuple[int, int, int, int, str]:
+def _combo_sort_key(row: Mapping[str, Any]) -> tuple[int, int, int, int, int, str]:
     moves_by_label = row.get("moves_by_label")
     move_count = 0
     if isinstance(moves_by_label, Mapping):
@@ -2133,13 +2322,18 @@ def _combo_sort_key(row: Mapping[str, Any]) -> tuple[int, int, int, int, str]:
         int(row.get("estimated_member_delta_if_runtime_adapter_supported") or 0),
         int(row.get("merged_ac_delta") or 0),
         int(row.get("histogram_brotli_delta") or 0),
+        int(row.get("latent_hi_histogram_brotli_delta") or 0),
         move_count,
-        str(row.get("histogram_raw_sha256") or ""),
+        str(row.get("histogram_state_sha256") or row.get("histogram_raw_sha256") or ""),
     )
 
 
 def _public_combo_row(row: Mapping[str, Any]) -> dict[str, Any]:
-    return {str(key): value for key, value in row.items() if str(key) != "histograms"}
+    return {
+        str(key): value
+        for key, value in row.items()
+        if str(key) not in {"histograms", "hi_histogram"}
+    }
 
 
 def _candidate_sort_key(row: Mapping[str, Any]) -> tuple[int, int, int, int, str]:
@@ -2238,6 +2432,7 @@ __all__ = [
     "build_pr103_arithmetic_retarget_probe",
     "build_pr103_arithmetic_transform_plan",
     "materialize_pr103_arithmetic_histogram_candidate",
+    "optimize_pr103_histogram_frontier_combinations",
     "render_beam_markdown",
     "render_candidate_markdown",
     "render_coordinate_markdown",

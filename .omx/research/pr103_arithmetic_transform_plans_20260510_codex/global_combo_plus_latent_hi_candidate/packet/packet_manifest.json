@@ -1,0 +1,101 @@
+{
+  "adapter_runtime_tree_sha256": "747ce3876d53ef09e5022f6cd67f5624a9e00922d80b44d2f345e38348cba77e",
+  "archive": {
+    "bytes": 178210,
+    "mode": "0644",
+    "relpath": "archive.zip",
+    "sha256": "dce57371d666c9232e41b4715baf3110e9a73e10c38728206f5c2f170ea14161"
+  },
+  "archive_manifest": {
+    "bytes": 2127,
+    "mode": "0644",
+    "relpath": "archive_manifest.json",
+    "sha256": "61c1dc70a65b3993bd0fc8f3849dfd390e67e594b456ade6171e58e65074ea16"
+  },
+  "decoder_state_parity_proof": {
+    "basis": "source_and_candidate_decode_to_identical_decoder_state_and_latents",
+    "candidate_latents_sha256": "97319245cff323e04aaa4738fb5137364a16da5a2bb725083b8ed8a099c422cc",
+    "candidate_state_dict_sha256": "38976b8970232e89571eed675737a3426764f1b2797649e49c0dde4fcb84548d",
+    "dispatch_attempted": false,
+    "full_frame_inflate_ran": false,
+    "full_frame_output_parity_note": "decoded state/latent parity is necessary but not sufficient; promotion requires source-vs-candidate inflate output parity or exact same-runtime auth eval on both packets",
+    "full_frame_output_parity_proven": false,
+    "full_frame_output_parity_required": true,
+    "latents_sha_match": true,
+    "latents_shape_match": true,
+    "passed": true,
+    "score_claim": false,
+    "source_latents_sha256": "97319245cff323e04aaa4738fb5137364a16da5a2bb725083b8ed8a099c422cc",
+    "source_state_dict_sha256": "38976b8970232e89571eed675737a3426764f1b2797649e49c0dde4fcb84548d",
+    "state_dict_sha_match": true,
+    "state_dict_tensor_records_match": true
+  },
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "pr103_candidate_packet_is_not_dispatch_authorization",
+    "full_frame_inflate_output_parity_missing",
+    "lane_dispatch_claim_missing",
+    "exact_cuda_auth_eval_missing"
+  ],
+  "frame_output_parity_proof": {
+    "full_frame_output_parity_proven": false,
+    "provided": false
+  },
+  "packet_dir": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_plus_latent_hi_candidate/packet",
+  "readiness_blockers": [
+    "full_frame_inflate_output_parity_missing",
+    "lane_dispatch_claim_missing",
+    "exact_cuda_auth_eval_missing"
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "report": {
+    "bytes": 579,
+    "mode": "0644",
+    "relpath": "report.txt",
+    "sha256": "1e7121dfe88ede482d68338fcc85c27889c2bfa91df66e1b184a1c473cd4b964"
+  },
+  "runtime_adapter_manifest": {
+    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_plus_latent_hi_candidate/runtime_adapter_manifest.json",
+    "sha256": "fa177e670d07afe691301a921591b4c4924f0cc8229367fdda71010d170e288c"
+  },
+  "runtime_files": [
+    {
+      "bytes": 178210,
+      "mode": "0644",
+      "relpath": "archive.zip",
+      "sha256": "dce57371d666c9232e41b4715baf3110e9a73e10c38728206f5c2f170ea14161"
+    },
+    {
+      "bytes": 2127,
+      "mode": "0644",
+      "relpath": "archive_manifest.json",
+      "sha256": "61c1dc70a65b3993bd0fc8f3849dfd390e67e594b456ade6171e58e65074ea16"
+    },
+    {
+      "bytes": 8068,
+      "mode": "0644",
+      "relpath": "inflate.py",
+      "sha256": "068cd0f31514b695242821b2e92f00a917994aabd201d457a9a0d95c121f2ef4"
+    },
+    {
+      "bytes": 438,
+      "mode": "0755",
+      "relpath": "inflate.sh",
+      "sha256": "a158107216321609a1cbf9abc073c19579194266c177504a7fa055ed612eca51"
+    },
+    {
+      "bytes": 579,
+      "mode": "0644",
+      "relpath": "report.txt",
+      "sha256": "1e7121dfe88ede482d68338fcc85c27889c2bfa91df66e1b184a1c473cd4b964"
+    }
+  ],
+  "runtime_files_copied": [
+    "inflate.py",
+    "inflate.sh"
+  ],
+  "runtime_tree_sha256": "26c93ff1963163b2d8e7c3d16fefb5df71d462cac6da76ebbd0f4a58aaf45bcc",
+  "schema": "pr103_lc_ac_histogram_candidate_packet_v1",
+  "score_claim": false,
+  "scorers_invoked": false
+}

@@ -1,0 +1,195 @@
+{
+  "batch_size": 4,
+  "candidate": {
+    "archive": {
+      "bytes": 178210,
+      "mode": "0644",
+      "relpath": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_plus_latent_hi_candidate/archive.zip",
+      "sha256": "dce57371d666c9232e41b4715baf3110e9a73e10c38728206f5c2f170ea14161"
+    },
+    "render": {
+      "member_name": "x",
+      "n_pairs": 600,
+      "output_bytes": 24416064,
+      "output_sha256": "91d56759c97045a8b0734c10558a5d97073f4992828de78cad14a572874ad5e7",
+      "pair_hashes": [
+        {
+          "bytes": 6104016,
+          "frame_count": 2,
+          "pair_index": 0,
+          "sha256": "c1f8aa5555970adcb5534d261eb02e5c178b206ba78e6aec4b9498fb8a00c096"
+        },
+        {
+          "bytes": 6104016,
+          "frame_count": 2,
+          "pair_index": 1,
+          "sha256": "cac77cfe4103434e8626bd4052e875198841813ee04bae1cd684008fbd11deb9"
+        },
+        {
+          "bytes": 6104016,
+          "frame_count": 2,
+          "pair_index": 127,
+          "sha256": "739ce2c429afbf5032cce2f7a67b0e9f63f34878f3d1e8c39c1be4f3e8c8027e"
+        },
+        {
+          "bytes": 6104016,
+          "frame_count": 2,
+          "pair_index": 599,
+          "sha256": "2484024bfc803f7225230510e724be1bdbccf9f9db11c2e301f4e1c3a0c6c941"
+        }
+      ],
+      "parsed_lengths": {
+        "BR_LEN": 7097,
+        "HIST_LEN": 883,
+        "HI_HIST_LEN": 14,
+        "LO_LEN": 15537,
+        "MERGED_AC_LEN": 153856
+      },
+      "payload_bytes": 178110
+    },
+    "runtime_py": {
+      "bytes": 8068,
+      "mode": "0644",
+      "relpath": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_plus_latent_hi_candidate/runtime_adapter/inflate.py",
+      "sha256": "068cd0f31514b695242821b2e92f00a917994aabd201d457a9a0d95c121f2ef4"
+    }
+  },
+  "device": "cpu",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "pr103_frame_parity_probe_is_not_dispatch_authorization",
+    "full_frame_inflate_output_parity_missing",
+    "lane_dispatch_claim_missing",
+    "exact_cuda_auth_eval_missing"
+  ],
+  "frame_output_parity_scope": "sampled",
+  "full_frame_output_parity_proven": false,
+  "gpu_required": false,
+  "output_sha_match": true,
+  "pair_hashes_match": true,
+  "pair_indices": [
+    0,
+    1,
+    127,
+    599
+  ],
+  "parsed_lengths_match": false,
+  "readiness_blockers": [
+    "full_frame_inflate_output_parity_missing",
+    "lane_dispatch_claim_missing",
+    "exact_cuda_auth_eval_missing"
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "sampled_frame_output_parity_proven": true,
+  "schema": "pr103_lc_ac_frame_parity_probe_v1",
+  "score_claim": false,
+  "source": {
+    "archive": {
+      "bytes": 178223,
+      "mode": "0644",
+      "relpath": "experiments/results/public_pr_intake_full/public_pr103_intake_20260505_auto/archive.zip",
+      "sha256": "31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30"
+    },
+    "render": {
+      "member_name": "x",
+      "n_pairs": 600,
+      "output_bytes": 24416064,
+      "output_sha256": "91d56759c97045a8b0734c10558a5d97073f4992828de78cad14a572874ad5e7",
+      "pair_hashes": [
+        {
+          "bytes": 6104016,
+          "frame_count": 2,
+          "pair_index": 0,
+          "sha256": "c1f8aa5555970adcb5534d261eb02e5c178b206ba78e6aec4b9498fb8a00c096"
+        },
+        {
+          "bytes": 6104016,
+          "frame_count": 2,
+          "pair_index": 1,
+          "sha256": "cac77cfe4103434e8626bd4052e875198841813ee04bae1cd684008fbd11deb9"
+        },
+        {
+          "bytes": 6104016,
+          "frame_count": 2,
+          "pair_index": 127,
+          "sha256": "739ce2c429afbf5032cce2f7a67b0e9f63f34878f3d1e8c39c1be4f3e8c8027e"
+        },
+        {
+          "bytes": 6104016,
+          "frame_count": 2,
+          "pair_index": 599,
+          "sha256": "2484024bfc803f7225230510e724be1bdbccf9f9db11c2e301f4e1c3a0c6c941"
+        }
+      ],
+      "parsed_lengths": {
+        "BR_LEN": 7097,
+        "HIST_LEN": 895,
+        "HI_HIST_LEN": 15,
+        "LO_LEN": 15537,
+        "MERGED_AC_LEN": 153856
+      },
+      "payload_bytes": 178123
+    },
+    "runtime_py": {
+      "bytes": 8069,
+      "mode": "0644",
+      "relpath": "experiments/results/public_pr_archive_release_view/public_pr103_intake_20260505_auto/source/submissions/hnerv_lc_ac/inflate.py",
+      "sha256": "ff65369b4105ee8fabd9926bba29b62b82d159810ebfc06acc62d48913d89934"
+    }
+  },
+  "tool_run_manifest": {
+    "argv": [
+      "--source-runtime-py",
+      "experiments/results/public_pr_archive_release_view/public_pr103_intake_20260505_auto/source/submissions/hnerv_lc_ac/inflate.py",
+      "--source-archive",
+      "experiments/results/public_pr_intake_full/public_pr103_intake_20260505_auto/archive.zip",
+      "--candidate-runtime-py",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_plus_latent_hi_candidate/runtime_adapter/inflate.py",
+      "--candidate-archive",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_plus_latent_hi_candidate/archive.zip",
+      "--pair-index",
+      "0",
+      "--pair-index",
+      "1",
+      "--pair-index",
+      "127",
+      "--pair-index",
+      "599",
+      "--device",
+      "cpu",
+      "--batch-size",
+      "4",
+      "--json-out",
+      ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_plus_latent_hi_candidate/frame_parity_probe_sampled.json"
+    ],
+    "canonical_payload_without_tool_manifest_sha256": "a88017aa74dc77d80ef2efd0e4ebc7367eba0f75d971df51d69c92f517b7eac9",
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 8069,
+        "path": "experiments/results/public_pr_archive_release_view/public_pr103_intake_20260505_auto/source/submissions/hnerv_lc_ac/inflate.py",
+        "sha256": "ff65369b4105ee8fabd9926bba29b62b82d159810ebfc06acc62d48913d89934"
+      },
+      {
+        "bytes": 178223,
+        "path": "experiments/results/public_pr_intake_full/public_pr103_intake_20260505_auto/archive.zip",
+        "sha256": "31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30"
+      },
+      {
+        "bytes": 8068,
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_plus_latent_hi_candidate/runtime_adapter/inflate.py",
+        "sha256": "068cd0f31514b695242821b2e92f00a917994aabd201d457a9a0d95c121f2ef4"
+      },
+      {
+        "bytes": 178210,
+        "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_plus_latent_hi_candidate/archive.zip",
+        "sha256": "dce57371d666c9232e41b4715baf3110e9a73e10c38728206f5c2f170ea14161"
+      }
+    ],
+    "output_path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_plus_latent_hi_candidate/frame_parity_probe_sampled.json",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "tools/probe_pr103_lc_ac_frame_parity.py"
+  }
+}

@@ -314,6 +314,156 @@ def test_pr103_arithmetic_histogram_global_combo_probe_rescores_full_sideband(
     assert "candidate_runtime_adapter_missing" in report["readiness_blockers"]
 
 
+def test_pr103_arithmetic_histogram_global_combo_beats_greedy_per_stream_best(
+    tmp_path: Path,
+) -> None:
+    fixture = _global_combo_synergy_fixture(tmp_path)
+    source = _source_record_for_report(fixture)
+    beam0 = _synthetic_beam_report(
+        source=source,
+        label="fixture.weight0",
+        moves=[
+            {
+                "round": 1,
+                "symbol": 0,
+                "symbol_count": 2,
+                "delta": -5,
+                "old_weight": 8,
+                "new_weight": 3,
+            }
+        ],
+        source_probe_delta=0,
+    )
+    beam1 = _synthetic_beam_report(
+        source=source,
+        label="fixture.weight1",
+        moves=[
+            {
+                "round": 1,
+                "symbol": 13,
+                "symbol_count": 1,
+                "delta": -5,
+                "old_weight": 18,
+                "new_weight": 13,
+            }
+        ],
+        source_probe_delta=-3,
+    )
+
+    greedy = materialize_pr103_arithmetic_histogram_candidate(
+        schema_manifest=fixture["manifest"],
+        beam_probe_reports=(beam0, beam1),
+        output_archive=tmp_path / "greedy.zip",
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+    )
+    combo = build_pr103_arithmetic_histogram_global_combo_probe(
+        schema_manifest=fixture["manifest"],
+        beam_probe_reports=(beam0, beam1),
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+        top_per_stream=5,
+        beam_width=20,
+    )
+    global_candidate = materialize_pr103_arithmetic_histogram_candidate(
+        schema_manifest=fixture["manifest"],
+        beam_probe_reports=(beam0, beam1),
+        global_combo_report=combo,
+        output_archive=tmp_path / "global.zip",
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+    )
+
+    assert greedy["byte_accounting"]["selection_mode"] == "greedy_per_stream_best"
+    assert global_candidate["byte_accounting"]["selection_mode"] == "global_combo_best"
+    assert combo["best_candidate"]["estimated_member_delta_if_runtime_adapter_supported"] < greedy[
+        "byte_accounting"
+    ]["payload_byte_delta"]
+    assert global_candidate["byte_accounting"]["payload_byte_delta"] < greedy[
+        "byte_accounting"
+    ]["payload_byte_delta"]
+    assert combo["best_candidate"]["selected_options"][0].endswith(":source")
+    assert combo["best_candidate"]["score_claim"] is False
+    assert global_candidate["score_claim"] is False
+    assert "candidate_runtime_adapter_missing" in global_candidate["readiness_blockers"]
+
+
+def test_pr103_arithmetic_histogram_global_combo_supports_latent_hi_frontier(
+    tmp_path: Path,
+) -> None:
+    fixture = _latent_hi_fixture(tmp_path)
+    fixture["manifest"]["next_arithmetic_schema_targets"].append(
+        {
+            "label": "latent_hi_bytes",
+            "role": "latent_hi_stream",
+            "schema_index": None,
+            "symbol_count": int(fixture["hi_symbols"].size),
+            "alphabet_size": int(fixture["hi_histogram"].size),
+            "decoded_symbols_sha256": sha256_bytes(
+                fixture["hi_symbols"].astype(np.uint16).tobytes()
+            ),
+            "model_gap_bytes_estimate": 0,
+        }
+    )
+    source = _source_record_for_report(fixture)
+    latent_report = _synthetic_beam_report(
+        source=source,
+        label="latent_hi_bytes",
+        moves=[
+            {
+                "round": 1,
+                "symbol": 0,
+                "symbol_count": 1,
+                "delta": -10,
+                "old_weight": 41,
+                "new_weight": 31,
+            }
+        ],
+        source_probe_delta=-1,
+    )
+
+    combo = build_pr103_arithmetic_histogram_global_combo_probe(
+        schema_manifest=fixture["manifest"],
+        beam_probe_reports=(latent_report,),
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+        top_per_stream=1,
+        beam_width=4,
+    )
+    candidate = materialize_pr103_arithmetic_histogram_candidate(
+        schema_manifest=fixture["manifest"],
+        beam_probe_reports=(latent_report,),
+        global_combo_report=combo,
+        output_archive=tmp_path / "latent-hi.zip",
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+    )
+
+    assert combo["frontier_sizes"][0]["histogram_kind"] == "latent_hi_histogram_brotli"
+    assert "latent_hi_histogram_brotli_delta" in combo["best_candidate"]
+    assert combo["best_candidate"]["objective_components"][
+        "latent_hi_histogram_brotli_delta"
+    ] == combo["best_candidate"]["latent_hi_histogram_brotli_delta"]
+    assert candidate["candidate_roundtrip"]["reencoded_byte_identical"] is True
+    assert candidate["semantic_stream_parity"]["all_stream_symbol_sha_match"] is True
+    changed_sections = {
+        row["name"] for row in candidate["section_diffs"] if row["changed"] is True
+    }
+    assert "latent_hi_histogram_brotli" in changed_sections
+    assert candidate["score_claim"] is False
+    assert candidate["ready_for_exact_eval_dispatch"] is False
+
+
 def test_pr103_arithmetic_histogram_candidate_can_materialize_global_combo(
     tmp_path: Path,
 ) -> None:
@@ -547,4 +697,408 @@ def _probe_fixture(tmp_path: Path) -> dict:
         "layout": layout,
         "stream_specs": stream_specs,
         "hi_symbol_count": hi_symbol_count,
+    }
+
+
+def _global_combo_synergy_fixture(tmp_path: Path) -> dict:
+    histograms = np.ones((2, 256), dtype=np.uint8)
+    histograms[:, :32] = np.asarray(
+        [
+            [
+                8,
+                10,
+                15,
+                17,
+                16,
+                18,
+                2,
+                13,
+                3,
+                16,
+                17,
+                10,
+                19,
+                2,
+                6,
+                14,
+                18,
+                16,
+                6,
+                13,
+                5,
+                10,
+                1,
+                3,
+                18,
+                5,
+                2,
+                14,
+                3,
+                5,
+                1,
+                5,
+            ],
+            [
+                17,
+                4,
+                9,
+                10,
+                4,
+                16,
+                6,
+                3,
+                5,
+                13,
+                9,
+                7,
+                13,
+                18,
+                10,
+                14,
+                18,
+                10,
+                9,
+                10,
+                6,
+                12,
+                6,
+                12,
+                10,
+                19,
+                8,
+                6,
+                15,
+                14,
+                15,
+                10,
+            ],
+        ],
+        dtype=np.uint8,
+    )
+    hi_histogram = np.asarray([1, 2, 3], dtype="<u2")
+    stream_specs = (
+        ("fixture.weight0", 20, 0),
+        ("fixture.weight1", 20, 1),
+    )
+    hi_symbol_count = 5
+    symbol_streams = [
+        np.asarray(
+            [17, 17, 29, 8, 26, 21, 0, 12, 27, 17, 1, 24, 23, 27, 5, 2, 27, 0, 17, 2],
+            dtype=np.int32,
+        ),
+        np.asarray(
+            [9, 15, 13, 12, 0, 0, 3, 0, 21, 16, 20, 8, 19, 24, 12, 14, 31, 25, 31, 12],
+            dtype=np.int32,
+        ),
+        np.asarray([2, 2, 1, 2, 2], dtype=np.int32),
+    ]
+    merged_ac = encode_pr103_merged_ac_stream(
+        symbol_streams,
+        [histograms[0], histograms[1], hi_histogram],
+    )
+    scales = b"sc"
+    non_ac = brotli.compress(b"non-ac-weights")
+    hists = brotli.compress(histograms.tobytes(), quality=11)
+    latent_meta = b"meta"
+    low = brotli.compress(bytes([1, 2, 3, 4, 5]))
+    hi_hist = brotli.compress(hi_histogram.tobytes(), quality=11)
+    layout = Pr103LcAcLayout(
+        scales_fp16=len(scales),
+        non_ac_weights_brotli=len(non_ac),
+        ac_histograms_brotli=len(hists),
+        merged_range_coded_weights_and_hi_latents=len(merged_ac),
+        latent_min_scale_fp16=len(latent_meta),
+        latent_low_bytes_brotli=len(low),
+        latent_hi_histogram_brotli=len(hi_hist),
+    )
+    payload = scales + non_ac + hists + merged_ac + latent_meta + low + hi_hist
+    archive = tmp_path / "source.zip"
+    write_stored_single_member_zip(archive, member_name="x", payload=payload)
+    manifest = {
+        "planning_only": True,
+        "score_claim": False,
+        "ready_for_schema_review": True,
+        "source_archive": {
+            "path": "source.zip",
+            "bytes": archive.stat().st_size,
+            "sha256": "a" * 64,
+            "member_name": "x",
+            "member_bytes": len(payload),
+            "member_sha256": sha256_bytes(payload),
+        },
+        "merged_arithmetic_stream": {
+            "source_bytes": len(merged_ac),
+            "source_sha256": sha256_bytes(merged_ac),
+            "decoded_symbol_count": sum(int(stream.size) for stream in symbol_streams),
+            "decoder_maybe_exhausted": True,
+            "reencoded_byte_identical": True,
+        },
+        "next_arithmetic_schema_targets": [
+            {
+                "label": "fixture.weight0",
+                "role": "ac_weight_tensor",
+                "schema_index": 0,
+                "symbol_count": int(symbol_streams[0].size),
+                "alphabet_size": 256,
+                "decoded_symbols_sha256": sha256_bytes(
+                    symbol_streams[0].astype(np.uint16).tobytes()
+                ),
+                "model_gap_bytes_estimate": 1,
+            },
+            {
+                "label": "fixture.weight1",
+                "role": "ac_weight_tensor",
+                "schema_index": 1,
+                "symbol_count": int(symbol_streams[1].size),
+                "alphabet_size": 256,
+                "decoded_symbols_sha256": sha256_bytes(
+                    symbol_streams[1].astype(np.uint16).tobytes()
+                ),
+                "model_gap_bytes_estimate": 1,
+            },
+        ],
+    }
+    return {
+        "archive": archive,
+        "manifest": manifest,
+        "layout": layout,
+        "stream_specs": stream_specs,
+        "hi_symbol_count": hi_symbol_count,
+    }
+
+
+def _latent_hi_fixture(tmp_path: Path) -> dict:
+    histograms = np.ones((1, 256), dtype=np.uint8)
+    histograms[0, :4] = np.asarray([2, 3, 5, 7], dtype=np.uint8)
+    hi_histogram = np.asarray(
+        [
+            41,
+            77,
+            15,
+            85,
+            2,
+            22,
+            98,
+            59,
+            98,
+            80,
+            74,
+            26,
+            13,
+            35,
+            48,
+            84,
+            3,
+            58,
+            32,
+            51,
+            42,
+            67,
+            61,
+            51,
+            97,
+            98,
+            59,
+            75,
+            50,
+            6,
+            22,
+            15,
+            89,
+            54,
+            6,
+            82,
+            2,
+            7,
+            89,
+            68,
+            21,
+            76,
+            19,
+            78,
+            60,
+            87,
+            76,
+            19,
+            87,
+            55,
+            74,
+            80,
+            72,
+            36,
+            60,
+            19,
+            78,
+            48,
+            63,
+            9,
+            88,
+            22,
+            16,
+            85,
+        ],
+        dtype="<u2",
+    )
+    hi_symbols = np.asarray(
+        [
+            42,
+            55,
+            53,
+            56,
+            19,
+            30,
+            39,
+            17,
+            58,
+            0,
+            53,
+            41,
+            16,
+            46,
+            26,
+            53,
+            63,
+            18,
+            30,
+            13,
+            44,
+            40,
+            54,
+            51,
+            62,
+            61,
+            57,
+            9,
+            2,
+            30,
+            22,
+            57,
+            51,
+            27,
+            36,
+            37,
+            57,
+            1,
+            31,
+            43,
+            28,
+            58,
+            60,
+            52,
+            29,
+            56,
+            4,
+            42,
+            17,
+            15,
+        ],
+        dtype=np.int32,
+    )
+    stream_specs = (("fixture.weight0", 4, 0),)
+    symbol_streams = [
+        np.asarray([0, 1, 2, 2], dtype=np.int32),
+        hi_symbols,
+    ]
+    merged_ac = encode_pr103_merged_ac_stream(
+        symbol_streams,
+        [histograms[0], hi_histogram],
+    )
+    scales = b"sc"
+    non_ac = brotli.compress(b"non-ac-weights")
+    hists = brotli.compress(histograms.tobytes(), quality=11)
+    latent_meta = b"meta"
+    low = brotli.compress(bytes([1, 2, 3, 4, 5]))
+    hi_hist = brotli.compress(hi_histogram.tobytes(), quality=11)
+    layout = Pr103LcAcLayout(
+        scales_fp16=len(scales),
+        non_ac_weights_brotli=len(non_ac),
+        ac_histograms_brotli=len(hists),
+        merged_range_coded_weights_and_hi_latents=len(merged_ac),
+        latent_min_scale_fp16=len(latent_meta),
+        latent_low_bytes_brotli=len(low),
+        latent_hi_histogram_brotli=len(hi_hist),
+    )
+    payload = scales + non_ac + hists + merged_ac + latent_meta + low + hi_hist
+    archive = tmp_path / "source.zip"
+    write_stored_single_member_zip(archive, member_name="x", payload=payload)
+    manifest = {
+        "planning_only": True,
+        "score_claim": False,
+        "ready_for_schema_review": True,
+        "source_archive": {
+            "path": "source.zip",
+            "bytes": archive.stat().st_size,
+            "sha256": "a" * 64,
+            "member_name": "x",
+            "member_bytes": len(payload),
+            "member_sha256": sha256_bytes(payload),
+        },
+        "merged_arithmetic_stream": {
+            "source_bytes": len(merged_ac),
+            "source_sha256": sha256_bytes(merged_ac),
+            "decoded_symbol_count": sum(int(stream.size) for stream in symbol_streams),
+            "decoder_maybe_exhausted": True,
+            "reencoded_byte_identical": True,
+        },
+        "next_arithmetic_schema_targets": [
+            {
+                "label": "fixture.weight0",
+                "role": "ac_weight_tensor",
+                "schema_index": 0,
+                "symbol_count": int(symbol_streams[0].size),
+                "alphabet_size": 256,
+                "decoded_symbols_sha256": sha256_bytes(
+                    symbol_streams[0].astype(np.uint16).tobytes()
+                ),
+                "model_gap_bytes_estimate": 0,
+            }
+        ],
+    }
+    return {
+        "archive": archive,
+        "manifest": manifest,
+        "layout": layout,
+        "stream_specs": stream_specs,
+        "hi_symbol_count": int(hi_symbols.size),
+        "hi_histogram": hi_histogram,
+        "hi_symbols": hi_symbols,
+    }
+
+
+def _source_record_for_report(fixture: dict) -> dict:
+    archive = Path(fixture["archive"])
+    payload = bytes(archive.read_bytes())
+    import zipfile
+
+    with zipfile.ZipFile(archive) as zf:
+        member = zf.infolist()[0]
+        member_payload = zf.read(member.filename)
+    return {
+        "path": archive.name,
+        "bytes": archive.stat().st_size,
+        "sha256": sha256_bytes(payload),
+        "member_name": member.filename,
+        "member_bytes": len(member_payload),
+        "member_sha256": sha256_bytes(member_payload),
+    }
+
+
+def _synthetic_beam_report(
+    *,
+    source: dict,
+    label: str,
+    moves: list[dict],
+    source_probe_delta: int,
+) -> dict:
+    return {
+        "schema": BEAM_SCHEMA,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "source_archive": source,
+        "target_stream": {"label": label},
+        "best_candidate": {
+            "moves": moves,
+            "estimated_member_delta_if_runtime_adapter_supported": source_probe_delta,
+        },
+        "top_candidates": [],
     }

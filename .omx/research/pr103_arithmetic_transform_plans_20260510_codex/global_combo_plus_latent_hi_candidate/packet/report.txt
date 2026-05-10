@@ -1,0 +1,15 @@
+PR103 LC-AC histogram candidate packet
+
+score_claim: false
+dispatch_attempted: false
+ready_for_exact_eval_dispatch: false
+archive_sha256: dce57371d666c9232e41b4715baf3110e9a73e10c38728206f5c2f170ea14161
+archive_size_bytes: 178210
+runtime_tree_sha256: 747ce3876d53ef09e5022f6cd67f5624a9e00922d80b44d2f345e38348cba77e
+decoder_state_parity_passed: True
+full_frame_output_parity_proven: False
+full_frame_output_parity_required: True
+frame_parity_report_provided: False
+frame_parity_full_output_proven: False
+
+This packet is a compliance-smoke artifact only. It is not a score claim.

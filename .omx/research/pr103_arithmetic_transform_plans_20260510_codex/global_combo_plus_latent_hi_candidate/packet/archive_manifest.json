@@ -1,0 +1,46 @@
+{
+  "candidate_archive": {
+    "bytes": 178210,
+    "members": [
+      {
+        "compress_size": 178110,
+        "crc": 1906646061,
+        "file_size": 178110,
+        "name": "x",
+        "sha256": "ea44c415bc4d81148e93613a9afa3966eaf7af94418f06c31607ed6c32e4e2da"
+      }
+    ],
+    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_plus_latent_hi_candidate/packet/archive.zip",
+    "sha256": "dce57371d666c9232e41b4715baf3110e9a73e10c38728206f5c2f170ea14161"
+  },
+  "decoder_state_parity_proof": {
+    "basis": "source_and_candidate_decode_to_identical_decoder_state_and_latents",
+    "candidate_latents_sha256": "97319245cff323e04aaa4738fb5137364a16da5a2bb725083b8ed8a099c422cc",
+    "candidate_state_dict_sha256": "38976b8970232e89571eed675737a3426764f1b2797649e49c0dde4fcb84548d",
+    "dispatch_attempted": false,
+    "full_frame_inflate_ran": false,
+    "full_frame_output_parity_note": "decoded state/latent parity is necessary but not sufficient; promotion requires source-vs-candidate inflate output parity or exact same-runtime auth eval on both packets",
+    "full_frame_output_parity_proven": false,
+    "full_frame_output_parity_required": true,
+    "latents_sha_match": true,
+    "latents_shape_match": true,
+    "passed": true,
+    "score_claim": false,
+    "source_latents_sha256": "97319245cff323e04aaa4738fb5137364a16da5a2bb725083b8ed8a099c422cc",
+    "source_state_dict_sha256": "38976b8970232e89571eed675737a3426764f1b2797649e49c0dde4fcb84548d",
+    "state_dict_sha_match": true,
+    "state_dict_tensor_records_match": true
+  },
+  "dispatch_attempted": false,
+  "frame_output_parity_proof": {
+    "full_frame_output_parity_proven": false,
+    "provided": false
+  },
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "pr103_lc_ac_histogram_candidate_archive_manifest_v1",
+  "score_claim": false,
+  "source_runtime_adapter_manifest": {
+    "path": ".omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_plus_latent_hi_candidate/runtime_adapter_manifest.json",
+    "sha256": "fa177e670d07afe691301a921591b4c4924f0cc8229367fdda71010d170e288c"
+  }
+}
