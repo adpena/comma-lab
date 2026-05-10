@@ -8,6 +8,8 @@ byte-proved low-level packer support.
 """
 from __future__ import annotations
 
+import concurrent.futures
+import os
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -32,10 +34,14 @@ from tac.hnerv_section_repack import RATE_SCORE_PER_BYTE
 from tac.repo_io import sha256_file
 
 SCHEMA = "packet_section_transform.v1"
+OPPORTUNITY_SCHEMA = "hnerv_brotli_section_recode_opportunities.v1"
 CONTEST_CANDIDATE_BLOCKERS = (
     "requires_archive_manifest_preflight",
     "requires_lane_dispatch_claim",
     "requires_exact_cuda_auth_eval",
+)
+PR106_RUNTIME_RECODE_SECTIONS = frozenset(
+    {"decoder_packed_brotli", "latents_and_sidecar_brotli"}
 )
 
 
@@ -411,6 +417,122 @@ def compile_hnerv_pr106_section_transform_candidate(
     }
 
 
+def scan_hnerv_brotli_recode_opportunities(
+    archives: Sequence[tuple[str, str | Path, str]],
+    *,
+    qualities: Sequence[int] = (9, 10, 11),
+    lgwins: Sequence[int | None] = (None, 18, 20, 22, 24),
+    lgblocks: Sequence[int | None] = (None,),
+    jobs: int = 1,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Rank parser-section Brotli recode opportunities without emitting candidates.
+
+    PR101/PR103 sections may have rate-positive Brotli recodes, but their public
+    runtimes use fixed section layouts. Those rows are deliberately blocked as
+    runtime-adapter work rather than archive-preflight candidates.
+    """
+
+    blockers: list[str] = []
+    rows: list[dict[str, Any]] = []
+    if not archives:
+        blockers.append("missing_archives")
+    for label, archive_path, parser in archives:
+        path = Path(archive_path)
+        try:
+            packet_ir = build_hnerv_packet_ir(
+                path,
+                label=label,
+                parser=parser,
+                repo_root=repo_root,
+            )
+            single = read_strict_single_member_zip(path)
+        except (PacketSectionTransformError, HnervLowlevelPackError) as exc:
+            blockers.append(f"{label}:archive_unreadable:{exc}")
+            continue
+        for section in packet_ir.sections:
+            payload = single.payload[section.offset : section.offset + section.length]
+            rows.append(
+                _scan_one_brotli_section(
+                    label=label,
+                    packet_ir=packet_ir,
+                    section=section,
+                    payload=payload,
+                    qualities=qualities,
+                    lgwins=lgwins,
+                    lgblocks=lgblocks,
+                    jobs=jobs,
+                )
+            )
+    rate_positive = [
+        row
+        for row in rows
+        if row.get("brotli_decompressible") is True
+        and row.get("rate_positive") is True
+        and row.get("raw_equal") is True
+    ]
+    compilable = [
+        row
+        for row in rate_positive
+        if row.get("candidate_compilable_by_existing_bridge") is True
+        and row.get("runtime_adapter_required") is False
+    ]
+    adapter_required = [
+        row
+        for row in rate_positive
+        if row.get("runtime_adapter_required") is True
+    ]
+    ranked = sorted(
+        rate_positive,
+        key=lambda row: (
+            int(row.get("byte_delta", 0)),
+            str(row.get("label", "")),
+            str(row.get("section_name", "")),
+        ),
+    )
+    return {
+        "schema": OPPORTUNITY_SCHEMA,
+        "tool": "tac.packet_section_transform.scan_hnerv_brotli_recode_opportunities",
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "gpu_required": False,
+        "ready_for_archive_preflight": False,
+        "ready_for_candidate_build": bool(compilable) and not blockers,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_blockers": list(CONTEST_CANDIDATE_BLOCKERS),
+        "blockers": blockers,
+        "scan_config": {
+            "archive_count": len(archives),
+            "qualities": [int(quality) for quality in qualities],
+            "lgwins": [_optional_json(value) for value in lgwins],
+            "lgblocks": [_optional_json(value) for value in lgblocks],
+            "jobs": jobs,
+        },
+        "summary": {
+            "section_count": len(rows),
+            "brotli_decompressible_count": sum(
+                1 for row in rows if row.get("brotli_decompressible") is True
+            ),
+            "rate_positive_count": len(rate_positive),
+            "candidate_compilable_by_existing_bridge_count": len(compilable),
+            "runtime_adapter_required_count": len(adapter_required),
+            "best_byte_delta": int(ranked[0]["byte_delta"]) if ranked else 0,
+            "best_existing_bridge_byte_delta": (
+                int(
+                    min(
+                        compilable,
+                        key=lambda row: int(row.get("byte_delta", 0)),
+                    )["byte_delta"]
+                )
+                if compilable
+                else 0
+            ),
+        },
+        "ranked_rate_positive": ranked,
+        "sections": rows,
+    }
+
+
 def _changed_sections(source_ir: PacketIR, candidate_ir: PacketIR | None) -> list[dict[str, Any]]:
     if candidate_ir is None:
         return []
@@ -454,6 +576,199 @@ def _changed_sections(source_ir: PacketIR, candidate_ir: PacketIR | None) -> lis
     return rows
 
 
+def _scan_one_brotli_section(
+    *,
+    label: str,
+    packet_ir: PacketIR,
+    section: SectionIR,
+    payload: bytes,
+    qualities: Sequence[int],
+    lgwins: Sequence[int | None],
+    lgblocks: Sequence[int | None],
+    jobs: int,
+) -> dict[str, Any]:
+    base = {
+        "label": label,
+        "archive_sha256": packet_ir.archive_sha256,
+        "archive_bytes": packet_ir.archive_bytes,
+        "parser_name": packet_ir.parser_name,
+        "section_name": section.name,
+        "optimization_role": section.optimization_role,
+        "section_offset": section.offset,
+        "source_bytes": section.length,
+        "source_section_sha256": section.sha256,
+        "brotli_decompressible": False,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    if len(payload) != section.length or sha256_bytes(payload) != section.sha256:
+        return {
+            **base,
+            "blockers": [f"section_payload_mismatch:{section.name}"],
+        }
+    try:
+        raw = brotli.decompress(payload)
+    except brotli.error:
+        return {
+            **base,
+            "blockers": [f"section_not_brotli_decompressible:{section.name}"],
+        }
+    try:
+        attempt = _generic_brotli_recode_search(
+            payload,
+            raw,
+            qualities=qualities,
+            lgwins=lgwins,
+            lgblocks=lgblocks,
+            jobs=jobs,
+        )
+    except PacketSectionTransformError as exc:
+        return {
+            **base,
+            "brotli_decompressible": True,
+            "raw_bytes": len(raw),
+            "raw_sha256": sha256_bytes(raw),
+            "blockers": [f"brotli_recode_failed:{section.name}:{exc}"],
+        }
+    raw_equal = brotli.decompress(attempt["payload"]) == raw
+    byte_delta = int(attempt["candidate_bytes"]) - section.length
+    rate_positive = byte_delta < 0
+    runtime_contract = _runtime_recode_contract(packet_ir.parser_name, section.name)
+    candidate_compilable = (
+        rate_positive
+        and raw_equal
+        and runtime_contract["candidate_compilable_by_existing_bridge"] is True
+    )
+    blockers = []
+    if not raw_equal:
+        blockers.append(f"brotli_raw_mismatch:{section.name}")
+    if not rate_positive:
+        blockers.append(f"candidate_section_not_rate_positive:{section.name}")
+    if runtime_contract["runtime_adapter_required"]:
+        blockers.append(f"runtime_adapter_required:{packet_ir.parser_name}:{section.name}")
+    return {
+        **base,
+        "brotli_decompressible": True,
+        "raw_bytes": len(raw),
+        "raw_sha256": sha256_bytes(raw),
+        "candidate_section_sha256": attempt["candidate_section_sha256"],
+        "candidate_bytes": attempt["candidate_bytes"],
+        "byte_delta": byte_delta,
+        "rate_positive": rate_positive,
+        "raw_equal": raw_equal,
+        "quality": attempt["quality"],
+        "lgwin": attempt["lgwin"],
+        "lgblock": attempt["lgblock"],
+        "runtime_adapter_required": runtime_contract["runtime_adapter_required"],
+        "candidate_compilable_by_existing_bridge": candidate_compilable,
+        "runtime_contract": runtime_contract["runtime_contract"],
+        "ready_for_archive_preflight": candidate_compilable,
+        "rate_score_delta_if_components_equal": round(byte_delta * RATE_SCORE_PER_BYTE, 12),
+        "blockers": blockers,
+    }
+
+
+def _generic_brotli_recode_search(
+    source: bytes,
+    raw: bytes,
+    *,
+    qualities: Sequence[int],
+    lgwins: Sequence[int | None],
+    lgblocks: Sequence[int | None],
+    jobs: int,
+) -> dict[str, Any]:
+    attempts = [
+        (int(quality), None if lgwin is None else int(lgwin), None if lgblock is None else int(lgblock))
+        for quality in qualities
+        for lgwin in lgwins
+        for lgblock in lgblocks
+    ]
+    attempts = sorted(set(attempts), key=lambda item: (item[0], _optional_sort(item[1]), _optional_sort(item[2])))
+    if not attempts:
+        raise PacketSectionTransformError("brotli search did not evaluate any variants")
+    for quality, lgwin, lgblock in attempts:
+        if not 0 <= quality <= 11:
+            raise PacketSectionTransformError(f"brotli quality out of range: {quality}")
+        if lgwin is not None and not 10 <= lgwin <= 24:
+            raise PacketSectionTransformError(f"brotli lgwin out of range: {lgwin}")
+        if lgblock is not None and not 16 <= lgblock <= 24:
+            raise PacketSectionTransformError(f"brotli lgblock out of range: {lgblock}")
+    workers = _bounded_jobs(jobs, len(attempts))
+    if workers == 1:
+        results = [_generic_brotli_attempt(source, raw, attempt) for attempt in attempts]
+    else:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+            results = list(
+                executor.map(
+                    lambda attempt: _generic_brotli_attempt(source, raw, attempt),
+                    attempts,
+                )
+            )
+    return min(
+        results,
+        key=lambda row: (
+            int(row["candidate_bytes"]),
+            0 if row["candidate_section_sha256"] != sha256_bytes(source) else 1,
+            int(row["quality"]),
+            _optional_sort(row["lgwin"]),
+            _optional_sort(row["lgblock"]),
+            str(row["candidate_section_sha256"]),
+        ),
+    )
+
+
+def _generic_brotli_attempt(
+    source: bytes,
+    raw: bytes,
+    attempt: tuple[int, int | None, int | None],
+) -> dict[str, Any]:
+    quality, lgwin, lgblock = attempt
+    kwargs = {"quality": quality}
+    if lgwin is not None:
+        kwargs["lgwin"] = lgwin
+    if lgblock is not None:
+        kwargs["lgblock"] = lgblock
+    candidate = brotli.compress(raw, **kwargs)
+    return {
+        "payload": candidate,
+        "candidate_bytes": len(candidate),
+        "candidate_section_sha256": sha256_bytes(candidate),
+        "quality": quality,
+        "lgwin": lgwin,
+        "lgblock": lgblock,
+        "changed": candidate != source,
+    }
+
+
+def _runtime_recode_contract(parser_name: str, section_name: str) -> dict[str, Any]:
+    if parser_name == PARSER_PR106 and section_name in PR106_RUNTIME_RECODE_SECTIONS:
+        return {
+            "runtime_adapter_required": False,
+            "candidate_compilable_by_existing_bridge": True,
+            "runtime_contract": "pr106_len24_header_recomputed_by_packet_section_compiler",
+        }
+    return {
+        "runtime_adapter_required": True,
+        "candidate_compilable_by_existing_bridge": False,
+        "runtime_contract": "fixed_layout_or_unknown_runtime_requires_adapter_update",
+    }
+
+
+def _bounded_jobs(jobs: int, attempt_count: int) -> int:
+    if jobs < 1:
+        raise PacketSectionTransformError(f"jobs must be >= 1, got {jobs}")
+    return max(1, min(jobs, attempt_count, os.cpu_count() or 1))
+
+
+def _optional_sort(value: int | None) -> int:
+    return -1 if value is None else int(value)
+
+
+def _optional_json(value: int | None) -> int | None:
+    return None if value is None else int(value)
+
+
 def _transform_summary(
     transform: PacketSectionTransform,
     outputs: Sequence[TransformOutput],
@@ -492,4 +807,5 @@ __all__ = [
     "TransformOutput",
     "build_hnerv_packet_ir",
     "compile_hnerv_pr106_section_transform_candidate",
+    "scan_hnerv_brotli_recode_opportunities",
 ]
