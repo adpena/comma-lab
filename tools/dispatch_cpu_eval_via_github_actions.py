@@ -384,6 +384,13 @@ def trigger_workflow(
     # Poll for the new run ID. Under concurrent dispatches, "latest run after
     # workflow_dispatch" is not enough: another agent can dispatch in the same
     # second. Select the run whose workflow log mentions this submission_name.
+    #
+    # GitHub does not always expose ``gh run view --log`` while a run is still
+    # in progress. If this dispatch created exactly one new eval.yml run, the
+    # pre/post run-set delta is already a unique custody handle, so accept it
+    # rather than waiting five minutes for logs that will only appear after the
+    # job completes. If multiple new runs exist, keep the stricter log-token
+    # discriminator and fail closed on ambiguity.
     deadline = time.monotonic() + 300
     seen_candidates: set[int] = set()
     while time.monotonic() < deadline:
@@ -403,6 +410,11 @@ def trigger_workflow(
         )
         if runs_q.returncode == 0 and runs_q.stdout.strip():
             runs = json.loads(runs_q.stdout)
+            new_ids = [
+                int(row["databaseId"])
+                for row in runs
+                if int(row["databaseId"]) not in pre_ids
+            ]
             for row in runs:
                 rid = int(row["databaseId"])
                 if rid in pre_ids:
@@ -410,6 +422,8 @@ def trigger_workflow(
                 seen_candidates.add(rid)
                 if run_log_mentions_submission(rid, repo, submission_name):
                     return rid
+            if len(new_ids) == 1:
+                return new_ids[0]
         time.sleep(5)
     sys.stderr.write(
         "[fatal] could not identify matching workflow run within 300s; "

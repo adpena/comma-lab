@@ -166,6 +166,67 @@ def test_gha_cpu_run_log_matching_accepts_requested_submission(monkeypatch) -> N
     ) is True
 
 
+def test_gha_cpu_trigger_accepts_single_new_run_when_logs_unavailable(
+    monkeypatch,
+) -> None:
+    tool = _load_tool()
+    run_gh_calls: list[list[str]] = []
+
+    def fake_run_gh(args, capture=True):
+        run_gh_calls.append(args)
+        if args[:2] == ["run", "list"] and args[-1] == "databaseId":
+            return SimpleNamespace(
+                returncode=0,
+                stdout=json.dumps([{"databaseId": 100}]),
+                stderr="",
+            )
+        if args[:2] == ["workflow", "run"]:
+            return SimpleNamespace(returncode=0, stdout="", stderr="")
+        if args[:2] == ["run", "list"] and args[-1] == "databaseId,status,createdAt":
+            return SimpleNamespace(
+                returncode=0,
+                stdout=json.dumps(
+                    [
+                        {
+                            "databaseId": 200,
+                            "status": "in_progress",
+                            "createdAt": "2026-05-10T05:36:01Z",
+                        },
+                        {
+                            "databaseId": 100,
+                            "status": "completed",
+                            "createdAt": "2026-05-10T05:00:00Z",
+                        },
+                    ]
+                ),
+                stderr="",
+            )
+        raise AssertionError(f"unexpected gh call: {args!r}")
+
+    def fake_run(cmd, check, capture_output, text):
+        assert "--log" in cmd
+        return SimpleNamespace(
+            returncode=1,
+            stdout="",
+            stderr="logs are unavailable until the run completes",
+        )
+
+    monkeypatch.setattr(tool, "run_gh", fake_run_gh)
+    monkeypatch.setattr(tool.subprocess, "run", fake_run)
+    monkeypatch.setattr(tool.time, "sleep", lambda _seconds: None)
+
+    assert (
+        tool.trigger_workflow(
+            "wanted_submission",
+            "https://example.invalid/archive.zip",
+            "ubuntu-latest",
+            "example/fork",
+        )
+        == 200
+    )
+    assert any(call[:2] == ["workflow", "run"] for call in run_gh_calls)
+
+
 def test_gha_cpu_download_artifact_fallback_selects_matching_report(
     tmp_path: Path,
     monkeypatch,
