@@ -404,3 +404,43 @@ Authority boundary remains fail-closed:
 Next bridge work is a runtime-consumption proof and either compiling the
 unsupported params into real runtime-consumed bytes or shrinking the candidate
 contract to only the three bias params before any exact eval dispatch.
+
+## 2026-05-10T12:55Z PR101 proxy runtime-consumption proof
+
+Static local runtime-consumption proof was emitted for the PR101 proxy packet:
+
+- proof:
+  `experiments/results/kaggle_pr101_proxy_sweep_20260510_codex/pr101_proxy_sweep/proxy_runtime_packet/runtime_consumption_proof.json`
+- proof SHA-256 excluding self:
+  `29dec2c1db61bb8bf93cc0229af8f4e8801d8fbe6e8c0dc245ce7428db321cfa`
+- supported runtime-consumed params:
+  `bias_r -> up[:, 0, 0]`, `bias_b -> up[:, 0, 2]`,
+  `bias_g -> up[:, 1, 1]`
+- old PR101 `sub_(1.0)` bias lines absent from `inflate.py`
+- archive unchanged SHA-256:
+  `b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e`
+
+Authority boundary remains unchanged:
+
+- `score_claim=false`
+- `ready_for_exact_eval_dispatch=false`
+- `dispatch_attempted=false`
+- no scorer/inflate/eval was run
+- unsupported `delta_scale`, `latent_delta_scale`, and `smooth_weight` remain
+  blockers and are explicitly not runtime-consumed
+
+Verification:
+
+```bash
+.venv/bin/python -m pytest \
+  tests/test_prove_pr101_kaggle_proxy_runtime_consumption.py \
+  tests/test_build_pr101_kaggle_proxy_runtime_packet.py -q
+# 10 passed
+.venv/bin/python -m py_compile \
+  tools/prove_pr101_kaggle_proxy_runtime_consumption.py \
+  tests/test_prove_pr101_kaggle_proxy_runtime_consumption.py
+```
+
+Next PR101 proxy step: either compile the three unsupported params into
+runtime-consumed bytes with tests, or shrink the candidate schema to the
+three proven bias params before any Level-2 exact-eval claim can be opened.
