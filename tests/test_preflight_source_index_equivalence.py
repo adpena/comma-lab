@@ -213,6 +213,59 @@ def main() -> int:
     assert "train_bad.py:5" in with_index[0]
 
 
+def test_state_writer_strict_load_source_index_matches_no_index(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "src" / "tac" / "state_bad.py",
+        """import json
+
+def update_records_locked(path):
+    rows = _load_records(path)
+    path.write_text(json.dumps(rows))
+""",
+    )
+
+    no_index = preflight.check_state_writers_strict_load_for_mutating_path(
+        repo_root=tmp_path,
+        strict=False,
+        verbose=False,
+    )
+    with_index = _with_source_index(
+        tmp_path,
+        preflight.check_state_writers_strict_load_for_mutating_path,
+    )
+
+    assert with_index == no_index
+    assert len(with_index) == 1
+    assert "state_bad.py:3" in with_index[0]
+
+
+def test_phase_b_auth_memo_source_index_matches_no_index(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "experiments" / "phase_b_bad.py",
+        """from tac.lane_12_v2_nerv_as_renderer import phase_b_preconditions_status
+
+def main():
+    return phase_b_preconditions_status(auth_memo_path="/tmp/operator.md")
+""",
+    )
+
+    no_index = preflight.check_phase_b_auth_memo_in_repo(
+        repo_root=tmp_path,
+        strict=False,
+        verbose=False,
+    )
+    with_index = _with_source_index(
+        tmp_path,
+        preflight.check_phase_b_auth_memo_in_repo,
+    )
+
+    assert with_index == no_index
+    assert len(with_index) == 1
+    assert "phase_b_bad.py:4" in with_index[0]
+
+
 def test_custody_window_tokenizer_handles_mid_block_indentation() -> None:
     lines = [
         "if current_score is not None:",

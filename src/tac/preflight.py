@@ -35534,17 +35534,9 @@ def check_state_writers_strict_load_for_mutating_path(
     Cross-ref Catalog #131/#132/#133/#135 (sister concurrency/locking gates).
     """
     root = Path(repo_root or REPO_ROOT)
-    scan_dirs = [
-        root / "src" / "tac",
-        root / "tools",
-    ]
-
     violations: list[str] = []
     scanned_files = 0
-    for scan_dir in scan_dirs:
-        if not scan_dir.is_dir():
-            continue
-        for py in scan_dir.rglob("*.py"):
+    for py in _iter_python_files(root, ["src/tac", "tools"]):
             if _is_oss_export_mirror_path(py):
                 continue
             s = str(py)
@@ -35963,18 +35955,9 @@ def check_state_writers_own_their_lock_end_to_end(
     feedback_codex_round5_findings_fix_with_self_protection_landed_20260509.md.
     """
     root = Path(repo_root or REPO_ROOT)
-    scan_dirs = [
-        root / "src" / "tac",
-        root / "tools",
-        root / "scripts",
-    ]
-
     violations: list[str] = []
     scanned_files = 0
-    for scan_dir in scan_dirs:
-        if not scan_dir.is_dir():
-            continue
-        for py in scan_dir.rglob("*.py"):
+    for py in _iter_python_files(root, ["src/tac", "tools", "scripts"]):
             if _is_oss_export_mirror_path(py):
                 continue
             s = str(py)
@@ -36150,12 +36133,6 @@ def check_state_helper_paths_explicit(
     feedback_codex_round5_findings_fix_with_self_protection_landed_20260509.md.
     """
     root = Path(repo_root or REPO_ROOT)
-    scan_dirs = [
-        root / "src" / "tac",
-        root / "tools",
-        root / "scripts",
-    ]
-
     helper_modules = (
         "tac.deploy.azure.active_vms_state",
         "tac.deploy.lightning.active_jobs_state",
@@ -36164,10 +36141,7 @@ def check_state_helper_paths_explicit(
 
     violations: list[str] = []
     scanned_files = 0
-    for scan_dir in scan_dirs:
-        if not scan_dir.is_dir():
-            continue
-        for py in scan_dir.rglob("*.py"):
+    for py in _iter_python_files(root, ["src/tac", "tools", "scripts"]):
             if _is_oss_export_mirror_path(py):
                 continue
             s = str(py)
@@ -36558,19 +36532,9 @@ def check_paid_job_register_before_submit(
     feedback_codex_round6_findings_fix_with_self_protection_landed_20260509.md.
     """
     root = Path(repo_root or REPO_ROOT)
-    scan_dirs = [
-        root / "experiments",
-        root / "tools",
-        root / "scripts",
-        root / "src" / "tac",
-    ]
-
     violations: list[str] = []
     scanned_files = 0
-    for scan_dir in scan_dirs:
-        if not scan_dir.is_dir():
-            continue
-        for py in scan_dir.rglob("*.py"):
+    for py in _iter_python_files(root, ["experiments", "tools", "scripts", "src/tac"]):
             if _is_oss_export_mirror_path(py):
                 continue
             s = str(py)
@@ -37175,19 +37139,9 @@ def check_lightning_submit_cancel_only_before_network(
     feedback_codex_round78_findings_fix_with_self_protection_landed_20260509.md.
     """
     root = Path(repo_root or REPO_ROOT)
-    scan_dirs = [
-        root / "experiments",
-        root / "tools",
-        root / "scripts",
-        root / "src" / "tac",
-    ]
-
     violations: list[str] = []
     scanned_files = 0
-    for scan_dir in scan_dirs:
-        if not scan_dir.is_dir():
-            continue
-        for py in scan_dir.rglob("*.py"):
+    for py in _iter_python_files(root, ["experiments", "tools", "scripts", "src/tac"]):
             if _is_oss_export_mirror_path(py):
                 continue
             s = str(py)
@@ -37623,19 +37577,9 @@ def check_phase_b_auth_memo_in_repo(
     feedback_phase_b_option_c_landed_20260509.md.
     """
     root = Path(repo_root or REPO_ROOT)
-    scan_dirs = [
-        root / "src" / "tac",
-        root / "tools",
-        root / "experiments",
-        root / "scripts",
-    ]
-
     violations: list[str] = []
     scanned_files = 0
-    for scan_dir in scan_dirs:
-        if not scan_dir.is_dir():
-            continue
-        for py in scan_dir.rglob("*.py"):
+    for py in _iter_python_files(root, ["src/tac", "tools", "experiments", "scripts"]):
             if _is_oss_export_mirror_path(py):
                 continue
             s = str(py)
