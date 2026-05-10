@@ -14,10 +14,19 @@ Codex converted recursive adversarial review findings into durable guards:
 ## Current A1 sidecar classification
 
 The local sidecar archive remains **not dispatch-ready**. The latest completed
-pre-patch tranche reached full coverage but only 380/600 searched pairs had
-machine-readable scalar-equivalent provenance; 220 legacy pairs still require
+patched tranche reached full coverage with 436/600 searched pairs carrying
+machine-readable scalar-equivalent provenance; 164 legacy pairs still require
 `--recheck-unproven-pairs`. The next tranche is running locally under the
 patched builder.
+
+Current byte-different archive:
+
+- path: `experiments/results/a1_sidecar_resumable_codex_20260509T_local/submission_dir/archive.zip`
+- bytes: `178316`
+- sha256: `c7f3d88e1ad23bf8cda987583e702ac57e293b64bc7bfea77902e835d19cea10`
+- current blockers: missing 164 pair records, import-smoke is not exact
+  `inflate.sh`, missing dispatch claim record, missing exact-eval preflight
+  record
 
 No CUDA/GHA dispatch was launched. No MPS result is promoted; MPS remains
 advisory only for sweeps and configuration discovery.
