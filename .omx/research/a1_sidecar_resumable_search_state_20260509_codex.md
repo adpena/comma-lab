@@ -952,3 +952,71 @@ Patched sidecar choice-state guard on the terminal manifest returned only:
 Current completion: `480/600` pairs. Continue scalar chunks to `600/600`, then
 run `--recheck-unproven-pairs` to replace legacy `0..335` provenance before
 any exact-eval dispatch.
+
+## Codex follow-up local chunk 17
+
+<!-- generated_at: 2026-05-10T03:49:07Z -->
+<!-- evidence_grade: local_cpu_proxy_partial; no score claim; no remote dispatch -->
+
+Codex resumed the same ignored local artifact:
+
+```bash
+/usr/bin/time -p .venv/bin/python tools/build_a1_per_pair_latent_correction_sidecar.py \
+  --n-pairs 528 \
+  --resume-search-state \
+  --max-search-seconds 900 \
+  --candidate-batch-size 1 \
+  --runtime-smoke \
+  --runtime-smoke-pairs 1 \
+  --output-dir experiments/results/a1_sidecar_resumable_codex_20260509T_local
+```
+
+Observed:
+
+- skipped already-completed pairs `0` through `479`;
+- searched pairs `480` through `527`;
+- elapsed `real 760.95`, `user 1822.25`, `sys 42.43`;
+- `candidate_batch_size=1`;
+- sidecar encoded bytes `661` (old preserved sidecar was `607`);
+- choice-state SHA-256
+  `75aff8538cafcf4e8be3d809b445e7efa61f00390f20753f24207da6c9571e7e`;
+- manifest SHA-256
+  `14e96f190dc918bab4744587cae15c75cfa9413827f7390605bbbbad38a93ca7`;
+- archive SHA-256
+  `b7c74bac342c8d8381a037c019ed446498632d464a133f05dc393d4804a6250b`;
+- archive bytes `178316`;
+- runtime tree SHA-256
+  `3497c774d94fe202563bccba2af4a5f90925cb8d9b2e982cf4428d0efbea0190`;
+- `runtime_smoke_checked=true`;
+- `n_pairs_searched=528`;
+- `n_pairs_completed_this_run=48`;
+- `n_pairs_skipped_already_completed=480`;
+- `full_non_smoke_search=false`;
+- `ready_for_exact_eval_dispatch=false`;
+- sidecar choice-state provenance: `192` machine-recorded scalar-equivalent
+  pairs, all from post-patch chunks.
+
+Manifest-produced dispatch blockers:
+
+- claim lane before any GHA/remote eval dispatch;
+- run exact-eval dispatcher preflight against `submission_dir`;
+- record runtime tree SHA and terminal dispatch claim row;
+- `sidecar_pair_search_records_missing_for_completed_pairs:336`;
+- `non_full_sidecar_search_not_exact_eval_ready`.
+
+Post-hoc classification with the stricter current readiness guard from
+`a1_sidecar_dispatch_readiness_hardening_20260509_codex.md` remains
+non-dispatchable and adds:
+
+- `runtime_smoke_evidence_not_inflate_sh_exact_signature`;
+- `dispatch_claim_record_missing`;
+- `exact_eval_preflight_record_missing`;
+- `sidecar_no_op_baseline_output_sha256_missing_or_invalid`;
+- `sidecar_no_op_candidate_output_sha256_missing_or_invalid`;
+- `sidecar_no_op_runtime_output_not_proven_changed`.
+
+Current completion: `528/600` pairs. Continue scalar chunks to `600/600`, then
+run `--recheck-unproven-pairs` to replace legacy `0..335` provenance before
+any exact-eval dispatch. The final candidate also needs exact `inflate.sh`
+signature smoke, runtime-output no-op proof, and structured dispatch/preflight
+records.
