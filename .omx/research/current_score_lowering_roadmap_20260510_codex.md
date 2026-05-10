@@ -503,3 +503,30 @@ Preflight/DX status:
   16.66s serial sum, 3.29x estimated speedup, all 29 checks passed after
   refreshing the raw `experiments/results/` runtime-source baseline for the
   newly harvested T1/proxy artifacts.
+
+## 2026-05-10T13:01Z strict T1 guard relaunched from fixed commit
+
+Commit `1aac11aa` relaunched the bounded T1 Modal guard after the runtime-tree
+custody fix:
+
+- lane id: `t1_balle_128k_endtoend`
+- instance job id: `t1_balle_modal_guard_1aac11aa_20260510T1301Z`
+- Modal call id: `fc-01KR8ZNESYP42EP7928ZK94ZQB`
+- Modal URL:
+  `https://modal.com/apps/adpena/main/ap-RNwmDecklm1TEfPvNrgYFo`
+- exact limits: `epochs=50`, `batch_size=1`, `max_target_pairs=8`,
+  `sinkhorn_max_positions_per_chunk=2048`, `train_timeout_hours=2`
+- estimated cost in claim: `$14.16`
+- immediate recover result: queued/running, not ready
+
+Next harvest command:
+
+```bash
+.venv/bin/python experiments/modal_t1_balle_endtoend.py recover \
+  --label t1_balle_modal_guard_1aac11aa_20260510T1301Z
+```
+
+Authority boundary: this is still a guard dispatch. It may become useful
+contest-CUDA evidence only if recover verifies exact archive/runtime custody,
+600 samples, CUDA/T4 hardware, component recomputation, zero auth-eval
+blockers, and `score_claim=true` in the adjudication artifact.
