@@ -101,3 +101,32 @@ Hardening follow-up:
 Next valid T1 score-path probe is a full 600-pair, batch-1 full-path smoke
 (`epochs=1`, no `max_target_pairs`) to validate memory, export, packet compile,
 and exact auth-eval plumbing before any long training run.
+
+## 2026-05-10T13:47Z batch-1 full-path smoke launched
+
+Launched the follow-up full 600-pair, batch-1 Modal T4 smoke from clean commit
+`b82164a7` after the OOM guard, tracked PR95 parity profile, and Modal mount
+fix landed.
+
+- Lane: `t1_balle_128k_endtoend`
+- Instance/job id: `t1_balle_modal_fullpath_smoke_b82164a7_20260510T1348Z`
+- Modal call id: `fc-01KR928YET5BZGFV803ANT8CTS`
+- Modal app: `comma-t1-balle-endtoend`
+- Mounted PR95 parity profile:
+  `.omx/research/pr95_hnerv_muon_trainer_parity_profile_20260510.json`
+- Epochs: `1`
+- Batch size: `1`
+- `max_target_pairs`: unset, so full 600-pair export/auth eval is requested
+- Train timeout: `3h`
+- Estimated cost cap: `$14.16` planned Modal T4 upper bound
+
+Recover:
+
+```bash
+.venv/bin/python experiments/modal_t1_balle_endtoend.py recover \
+  --label t1_balle_modal_fullpath_smoke_b82164a7_20260510T1348Z
+```
+
+This is a full-path plumbing and memory probe. It may produce an exact score,
+but no score claim is valid until recover closes the active dispatch claim and
+auth-eval adjudication reports zero blockers.
