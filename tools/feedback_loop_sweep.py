@@ -336,6 +336,16 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
+    if args.allow_paid_dispatch:
+        print(
+            "FATAL: tools/feedback_loop_sweep.py paid dispatch is retired. "
+            "This recovered scaffold has only shallow candidate checks and must "
+            "not launch Lightning/Vast.ai jobs directly. Generate a ranked "
+            "queue, promote it through tools/promote_optimizer_candidate_for_exact_eval.py, "
+            "then dispatch through the audited exact-ready actuator.",
+            file=sys.stderr,
+        )
+        return 2
 
     # Generator function
     generator = GENERATORS[args.candidate_generator]

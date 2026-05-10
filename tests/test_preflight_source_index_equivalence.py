@@ -266,6 +266,70 @@ def main():
     assert "phase_b_bad.py:4" in with_index[0]
 
 
+def test_block_fp_qint_exp_source_index_matches_no_index(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "src" / "tac" / "consumer_bad.py",
+        """def decode(state):
+    return state["weight_qint"]
+""",
+    )
+    _write(
+        tmp_path / "src" / "tac" / "consumer_good.py",
+        """def decode(state):
+    return state["weight_qint"], state["weight_exponents"]
+""",
+    )
+
+    no_index = preflight.check_block_fp_exponents_alongside_qint(
+        repo_root=tmp_path,
+        strict=False,
+        verbose=False,
+    )
+    with_index = _with_source_index(
+        tmp_path,
+        preflight.check_block_fp_exponents_alongside_qint,
+    )
+
+    assert with_index == no_index
+    assert len(with_index) == 1
+    assert "consumer_bad.py" in with_index[0]
+
+
+def test_segmap_export_roundtrip_source_index_matches_no_index(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "experiments" / "export_bad.py",
+        """from tac.block_fp_codec import pack_payload_tar_xz
+
+def export(state, path):
+    return pack_payload_tar_xz(state, path)
+""",
+    )
+    _write(
+        tmp_path / "experiments" / "export_good.py",
+        """from tac.block_fp_codec import pack_payload_tar_xz, verify_roundtrip
+
+def export(state, path):
+    payload = pack_payload_tar_xz(state, path)
+    verify_roundtrip(state, path)
+    return payload
+""",
+    )
+
+    no_index = preflight.check_segmap_export_calls_verify_roundtrip(
+        repo_root=tmp_path,
+        strict=False,
+        verbose=False,
+    )
+    with_index = _with_source_index(
+        tmp_path,
+        preflight.check_segmap_export_calls_verify_roundtrip,
+    )
+
+    assert with_index == no_index
+    assert len(with_index) == 1
+    assert "export_bad.py" in with_index[0]
+
+
 def test_custody_window_tokenizer_handles_mid_block_indentation() -> None:
     lines = [
         "if current_score is not None:",

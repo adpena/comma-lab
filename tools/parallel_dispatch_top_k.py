@@ -49,6 +49,7 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
 from tac.zipwire_archive import inspect_zip_headers  # noqa: E402
+from tac.optimizer.exact_ready_audit import audit_exact_ready_queue  # noqa: E402
 
 
 @dataclass
@@ -804,6 +805,7 @@ def _load_top_k(
     ranked_input: Path,
     k: int | None,
     *,
+    dispatch_claims_path: Path | None = REPO / ".omx" / "state" / "active_lane_dispatch_claims.md",
     active_floor_archive_bytes: int | None = DEFAULT_ACTIVE_FLOOR_ARCHIVE_BYTES,
     active_floor_score: float | None = DEFAULT_ACTIVE_FLOOR_SCORE,
     allow_above_active_floor_dispatch: bool = False,
@@ -820,6 +822,43 @@ def _load_top_k(
         raise ValueError(f"ranked-input must contain a top_k or dispatch_ready list, got {type(candidates)}")
     if k is not None:
         candidates = candidates[:k]
+    selected_candidate_ids = [
+        str(candidate.get("candidate_id"))
+        for candidate in candidates
+        if isinstance(candidate, dict) and candidate.get("candidate_id") is not None
+    ]
+    if (
+        selected_candidate_ids
+        and dispatch_claims_path is not None
+        and isinstance(payload, dict)
+        and payload.get("schema") == "optimizer_candidate_exact_eval_ready_queue_v1"
+    ):
+        audit = audit_exact_ready_queue(
+            ranked_input,
+            repo_root=REPO,
+            dispatch_claims_path=dispatch_claims_path,
+            active_floor_score=active_floor_score,
+            candidate_ids=selected_candidate_ids,
+        )
+        stale_rows = audit.get("stale_ready_rows")
+        if isinstance(stale_rows, list) and stale_rows:
+            details: list[str] = []
+            for row in stale_rows[:10]:
+                if not isinstance(row, dict):
+                    continue
+                candidate_id = row.get("candidate_id")
+                lane_id = row.get("lane_id")
+                blockers = row.get("blockers")
+                blocker_text = (
+                    ",".join(str(blocker) for blocker in blockers[:6])
+                    if isinstance(blockers, list)
+                    else str(blockers)
+                )
+                details.append(f"{candidate_id}:{lane_id}:{blocker_text}")
+            raise DispatchInputError(
+                "ranked-input exact-ready audit failed; refusing paid dispatch:\n  - "
+                + "\n  - ".join(details)
+            )
     blocked: list[str] = []
     for idx, candidate in enumerate(candidates):
         if not isinstance(candidate, dict):
@@ -873,6 +912,9 @@ def main(argv: list[str] | None = None) -> int:
                         "are larger than --active-floor-archive-bytes")
     parser.add_argument("--operator-override-reason", default=None,
                         help="required with --allow-above-active-floor-dispatch")
+    parser.add_argument("--dispatch-claims-path", type=Path,
+                        default=REPO / ".omx/state/active_lane_dispatch_claims.md",
+                        help="lane-claim ledger used by the exact-ready audit before paid dispatch")
     parser.add_argument("--max-dph", type=float, default=0.30,
                         help="passed to vastai dispatcher to gate per-hour cost")
     parser.add_argument("--per-dispatch-timeout-seconds", type=float, default=1800.0,
@@ -889,11 +931,21 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
+    if args.provider == "vastai" and not args.dry_run:
+        print(
+            "FATAL: provider=vastai is disabled for exact-ready paid fan-out "
+            "until scripts/launch_lane_on_vastai.py owns a mandatory "
+            "claim_lane_dispatch.py pre-instance claim and terminal claim update. "
+            "Use dry-run only or a provider launcher with enforced lane claims.",
+            file=sys.stderr,
+        )
+        return 2
 
     try:
         candidates = _load_top_k(
             args.ranked_input,
             args.top_k,
+            dispatch_claims_path=args.dispatch_claims_path,
             active_floor_archive_bytes=args.active_floor_archive_bytes,
             active_floor_score=args.active_floor_score,
             allow_above_active_floor_dispatch=args.allow_above_active_floor_dispatch,

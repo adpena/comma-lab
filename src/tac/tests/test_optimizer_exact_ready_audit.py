@@ -115,6 +115,37 @@ def test_audit_flags_ready_queue_after_cuda_score_not_below_floor(
     )
 
 
+def test_audit_flags_active_same_lane_claim_before_dispatch(
+    tmp_path: Path,
+) -> None:
+    archive_sha = "c" * 64
+    queue = _ready_queue(
+        tmp_path / "experiments/results/fixture/exact_ready_queue.json",
+        lane_id="pr106_latent_sidecar",  # FAKE_LANE_OK: synthetic active-claim fixture.
+        archive_sha=archive_sha,
+    )
+    claims = _write_claims(
+        tmp_path / ".omx/state/active_lane_dispatch_claims.md",
+        [
+            "| 2026-05-10T00:00:00Z | test | lane_pr106_latent_sidecar | modal | job1 |  | active_dispatching | same canonical lane already running |"
+        ],
+    )
+
+    payload = audit_exact_ready_queues(
+        [queue],
+        repo_root=tmp_path,
+        dispatch_claims_path=claims,
+        claim_ttl_hours=10_000,
+    )
+
+    assert payload["passed"] is False
+    blockers = payload["queues"][0]["stale_ready_rows"][0]["blockers"]
+    assert any(
+        blocker.startswith("same_lane_active_dispatch_claim:lane_pr106_latent_sidecar")
+        for blocker in blockers
+    )
+
+
 def test_audit_flags_promotable_terminal_success_as_already_evaluated(
     tmp_path: Path,
 ) -> None:

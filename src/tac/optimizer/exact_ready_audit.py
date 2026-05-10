@@ -9,6 +9,7 @@ from typing import Any
 
 from tac.optimizer.exact_readiness import (
     ACTIVE_FLOOR_SCORE,
+    active_claim_conflicts,
     as_bool,
     candidate_archive_byte_values,
     default_manifest_path,
@@ -27,6 +28,14 @@ from tac.optimizer.exact_readiness import (
 from tac.zipwire_archive import inspect_zip_headers
 
 AUDIT_SCHEMA = "optimizer_exact_ready_queue_terminal_evidence_audit_v1"
+
+
+def _claim_lane_aliases(lane_id: str) -> tuple[str, ...]:
+    """Return claim-ledger lane ids that legacy dispatch wrappers may use."""
+
+    if lane_id.startswith("lane_"):
+        return (lane_id,)
+    return (lane_id, f"lane_{lane_id}")
 
 
 def _row_archive_sha(row: Mapping[str, Any]) -> str | None:
@@ -239,6 +248,8 @@ def audit_exact_ready_queue(
     repo_root: Path,
     dispatch_claims_path: Path,
     active_floor_score: float | None = ACTIVE_FLOOR_SCORE,
+    candidate_ids: Iterable[str] | None = None,
+    claim_ttl_hours: float = 24.0,
 ) -> dict[str, Any]:
     """Return stale-row findings for one generated exact-ready queue."""
 
@@ -262,10 +273,19 @@ def audit_exact_ready_queue(
     seen: set[
         tuple[str | None, str | None, str | None, str | None, tuple[str, ...]]
     ] = set()
+    candidate_id_filter = (
+        {str(candidate_id) for candidate_id in candidate_ids}
+        if candidate_ids is not None
+        else None
+    )
     row_count = 0
     queue_dir = queue_path.parent
     for row in _queue_rows(payload):
         row_count += 1
+        if candidate_id_filter is not None:
+            candidate_id = row.get("candidate_id")
+            if str(candidate_id) not in candidate_id_filter:
+                continue
         if row.get("ready_for_exact_eval_dispatch") is not True:
             continue
         lane_id = row.get("lane_id")
@@ -281,17 +301,32 @@ def audit_exact_ready_queue(
         )
         if not isinstance(lane_id, str) or not lane_id.strip():
             blockers = ["lane_id_missing"]
-        elif archive_sha is None:
-            blockers = ["archive_sha256_missing_or_invalid"]
         else:
-            blockers = custody_blockers + terminal_claim_result_conflicts(
-                lane_id,
-                archive_sha,
-                dispatch_claims_path=dispatch_claims_path,
-                active_floor_score=active_floor_score,
-                runtime_tree_sha256=runtime_tree_sha,
-                score_affecting_runtime_changed=runtime_changed,
-            )
+            lane_aliases = _claim_lane_aliases(lane_id.strip())
+            blockers = []
+            for claim_lane_id in lane_aliases:
+                blockers.extend(
+                    active_claim_conflicts(
+                        claim_lane_id,
+                        dispatch_claims_path=dispatch_claims_path,
+                        ttl_hours=claim_ttl_hours,
+                    )
+                )
+            if archive_sha is None:
+                blockers.append("archive_sha256_missing_or_invalid")
+            else:
+                blockers.extend(custody_blockers)
+                for claim_lane_id in lane_aliases:
+                    blockers.extend(
+                        terminal_claim_result_conflicts(
+                            claim_lane_id,
+                            archive_sha,
+                            dispatch_claims_path=dispatch_claims_path,
+                            active_floor_score=active_floor_score,
+                            runtime_tree_sha256=runtime_tree_sha,
+                            score_affecting_runtime_changed=runtime_changed,
+                        )
+                    )
         if not blockers:
             continue
         candidate_id = row.get("candidate_id")
@@ -350,6 +385,8 @@ def audit_exact_ready_queues(
     repo_root: Path,
     dispatch_claims_path: Path,
     active_floor_score: float | None = ACTIVE_FLOOR_SCORE,
+    candidate_ids: Iterable[str] | None = None,
+    claim_ttl_hours: float = 24.0,
 ) -> dict[str, Any]:
     queues = [
         audit_exact_ready_queue(
@@ -357,6 +394,8 @@ def audit_exact_ready_queues(
             repo_root=repo_root,
             dispatch_claims_path=dispatch_claims_path,
             active_floor_score=active_floor_score,
+            candidate_ids=candidate_ids,
+            claim_ttl_hours=claim_ttl_hours,
         )
         for path in queue_paths
     ]

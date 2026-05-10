@@ -24404,9 +24404,10 @@ def check_block_fp_exponents_alongside_qint(
     root = repo_root or REPO_ROOT
     violations: list[str] = []
     n_scanned = 0
+    source_index = _current_source_index(root)
     for py in _iter_python_files(root, _META_PY_SCAN_DIRS + ["submissions/robust_current"]):
         try:
-            text = py.read_text()
+            text = source_index.read_text(py) if source_index is not None else py.read_text()
         except (OSError, UnicodeDecodeError):
             continue
         n_scanned += 1
@@ -24464,9 +24465,10 @@ def check_segmap_export_calls_verify_roundtrip(
     root = repo_root or REPO_ROOT
     violations: list[str] = []
     n_scanned = 0
+    source_index = _current_source_index(root)
     for py in _iter_python_files(root, ["src/tac", "experiments", "submissions/robust_current"]):
         try:
-            text = py.read_text()
+            text = source_index.read_text(py) if source_index is not None else py.read_text()
         except (OSError, UnicodeDecodeError):
             continue
         n_scanned += 1
@@ -35536,28 +35538,94 @@ def check_state_writers_strict_load_for_mutating_path(
     root = Path(repo_root or REPO_ROOT)
     violations: list[str] = []
     scanned_files = 0
+    source_index = _current_source_index(root)
     for py in _iter_python_files(root, ["src/tac", "tools"]):
-            if _is_oss_export_mirror_path(py):
+        if _is_oss_export_mirror_path(py):
+            continue
+        s = str(py)
+        if "/tests/" in s or py.name.startswith("test_"):
+            continue
+        if (
+            "experiments/results/public_pr" in s
+            or "experiments/results/comma_lab_public_export" in s
+            or "_intake_" in s
+        ):
+            continue
+        try:
+            text = (
+                source_index.read_text(py, encoding="utf-8", errors="replace")
+                if source_index is not None
+                else py.read_text(encoding="utf-8", errors="replace")
+            )
+        except OSError:
+            continue
+        # Quick prefilter — file must contain at least one writer-fn name
+        if not any(p in text for p in _STATE_WRITER_FN_NAME_PATTERNS):
+            continue
+        # Quick prefilter — file must mention a load OR write op
+        if not any(
+            t in text
+            for t in (
+                "_load_",
+                "load_active",
+                "load_setup",
+                "load_first_seen",
+                "read_text(",
+                "read_bytes(",
+                "json.load",
+            )
+        ):
+            continue
+        scanned_files += 1
+        lines = text.splitlines()
+
+        # Walk the file: find each `def NAME(` whose name matches the
+        # state-writer pattern. Then scan that function's body (until
+        # a less-or-equal-indented def/class) for the strict-load token.
+        for lineno, line in enumerate(lines):
+            stripped = line.lstrip()
+            if not stripped.startswith("def "):
                 continue
-            s = str(py)
-            if "/tests/" in s or py.name.startswith("test_"):
+            m = re.match(r"def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(", stripped)
+            if not m:
                 continue
-            if (
-                "experiments/results/public_pr" in s
-                or "experiments/results/comma_lab_public_export" in s
-                or "_intake_" in s
-            ):
+            fn_name = m.group(1)
+            # Match name pattern
+            name_matches = (
+                any(
+                    fn_name.startswith(p) and (
+                        any(fn_name.endswith(suf) for suf in _STATE_WRITER_LOCKED_SUFFIXES)
+                        or p in ("_save_",)  # _save_* matches without suffix
+                    )
+                    for p in _STATE_WRITER_FN_NAME_PATTERNS
+                )
+            )
+            if not name_matches:
                 continue
-            try:
-                text = py.read_text(encoding="utf-8", errors="replace")
-            except OSError:
+            # Same-line waiver on def line
+            if _STATE_WRITER_STRICT_LOAD_WAIVER_MARKER in line:
                 continue
-            # Quick prefilter — file must contain at least one writer-fn name
-            if not any(p in text for p in _STATE_WRITER_FN_NAME_PATTERNS):
-                continue
-            # Quick prefilter — file must mention a load OR write op
-            if not any(
-                t in text
+            # Find function body — scan forward until less-or-equal-indent
+            fn_indent = len(line) - len(stripped)
+            body_start = lineno + 1
+            body_end = len(lines)
+            for j in range(body_start, len(lines)):
+                cand = lines[j]
+                cand_stripped = cand.lstrip(" ")
+                if not cand_stripped:
+                    continue
+                cand_indent = len(cand) - len(cand_stripped)
+                if cand_indent <= fn_indent and (
+                    cand_stripped.startswith("def ")
+                    or cand_stripped.startswith("class ")
+                    or cand_stripped.startswith("@")
+                ):
+                    body_end = j
+                    break
+            body_text = "\n".join(lines[body_start:body_end])
+            # Body must do a load AND a write to be in-scope
+            does_load = any(
+                t in body_text
                 for t in (
                     "_load_",
                     "load_active",
@@ -35567,99 +35635,38 @@ def check_state_writers_strict_load_for_mutating_path(
                     "read_bytes(",
                     "json.load",
                 )
-            ):
+            )
+            does_write = any(
+                t in body_text
+                for t in (
+                    "write_text(",
+                    "write_bytes(",
+                    "json.dump",
+                    ".dump(",
+                    "atomic_write",
+                )
+            )
+            if not (does_load and does_write):
                 continue
-            scanned_files += 1
-            lines = text.splitlines()
-
-            # Walk the file: find each `def NAME(` whose name matches the
-            # state-writer pattern. Then scan that function's body (until
-            # a less-or-equal-indented def/class) for the strict-load token.
-            for lineno, line in enumerate(lines):
-                stripped = line.lstrip()
-                if not stripped.startswith("def "):
-                    continue
-                m = re.match(r"def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(", stripped)
-                if not m:
-                    continue
-                fn_name = m.group(1)
-                # Match name pattern
-                name_matches = (
-                    any(
-                        fn_name.startswith(p) and (
-                            any(fn_name.endswith(suf) for suf in _STATE_WRITER_LOCKED_SUFFIXES)
-                            or p in ("_save_",)  # _save_* matches without suffix
-                        )
-                        for p in _STATE_WRITER_FN_NAME_PATTERNS
-                    )
-                )
-                if not name_matches:
-                    continue
-                # Same-line waiver on def line
-                if _STATE_WRITER_STRICT_LOAD_WAIVER_MARKER in line:
-                    continue
-                # Find function body — scan forward until less-or-equal-indent
-                fn_indent = len(line) - len(stripped)
-                body_start = lineno + 1
-                body_end = len(lines)
-                for j in range(body_start, len(lines)):
-                    cand = lines[j]
-                    cand_stripped = cand.lstrip(" ")
-                    if not cand_stripped:
-                        continue
-                    cand_indent = len(cand) - len(cand_stripped)
-                    if cand_indent <= fn_indent and (
-                        cand_stripped.startswith("def ")
-                        or cand_stripped.startswith("class ")
-                        or cand_stripped.startswith("@")
-                    ):
-                        body_end = j
-                        break
-                body_text = "\n".join(lines[body_start:body_end])
-                # Body must do a load AND a write to be in-scope
-                does_load = any(
-                    t in body_text
-                    for t in (
-                        "_load_",
-                        "load_active",
-                        "load_setup",
-                        "load_first_seen",
-                        "read_text(",
-                        "read_bytes(",
-                        "json.load",
-                    )
-                )
-                does_write = any(
-                    t in body_text
-                    for t in (
-                        "write_text(",
-                        "write_bytes(",
-                        "json.dump",
-                        ".dump(",
-                        "atomic_write",
-                    )
-                )
-                if not (does_load and does_write):
-                    continue
-                # Must use a strict-load token OR the body must explicitly
-                # raise on corrupt state
-                has_strict_load = any(
-                    t in body_text for t in _STATE_WRITER_STRICT_LOAD_TOKENS
-                )
-                if has_strict_load:
-                    continue
-                rel = py.relative_to(root) if py.is_relative_to(root) else py
-                violations.append(
-                    f"[Check 138] {rel}:{lineno + 1}: "
-                    f"state writer `{fn_name}` does load + write WITHOUT a "
-                    f"strict load helper. If the load returns `[]`/`{{}}` on "
-                    f"corrupt state, the writer will silently reset the file "
-                    f"and DROP every active row. Use a `load_*_strict` "
-                    f"helper that raises on corrupt state (e.g. "
-                    f"`ActiveJobsCorruptError`) OR add a same-line "
-                    f"`# STATE_WRITER_STRICT_LOAD_OK:<reason>` waiver on "
-                    f"the `def` line."
-                )
+            # Must use a strict-load token OR the body must explicitly
+            # raise on corrupt state
+            has_strict_load = any(
+                t in body_text for t in _STATE_WRITER_STRICT_LOAD_TOKENS
+            )
+            if has_strict_load:
+                continue
+            rel = py.relative_to(root) if py.is_relative_to(root) else py
+            violations.append(
+                f"[Check 138] {rel}:{lineno + 1}: "
+                f"state writer `{fn_name}` does load + write WITHOUT a "
+                f"strict load helper. If the load returns `[]`/`{{}}` on "
+                f"corrupt state, the writer will silently reset the file "
+                f"and DROP every active row. Use a `load_*_strict` "
+                f"helper that raises on corrupt state (e.g. "
+                f"`ActiveJobsCorruptError`) OR add a same-line "
+                f"`# STATE_WRITER_STRICT_LOAD_OK:<reason>` waiver on "
+                f"the `def` line."
+            )
 
     if verbose:
         if violations:
@@ -37579,109 +37586,114 @@ def check_phase_b_auth_memo_in_repo(
     root = Path(repo_root or REPO_ROOT)
     violations: list[str] = []
     scanned_files = 0
+    source_index = _current_source_index(root)
     for py in _iter_python_files(root, ["src/tac", "tools", "experiments", "scripts"]):
-            if _is_oss_export_mirror_path(py):
+        if _is_oss_export_mirror_path(py):
+            continue
+        s = str(py)
+        # Skip vendored / intake / tests / results paths — they are not
+        # production callers.
+        if "/tests/" in s or py.name.startswith("test_"):
+            continue
+        if (
+            "experiments/results/public_pr" in s
+            or "experiments/results/comma_lab_public_export" in s
+            or "_intake_" in s
+        ):
+            continue
+        # Exempt the implementation files (they define the parameter).
+        try:
+            rel = py.relative_to(root)
+        except ValueError:
+            rel = py
+        if str(rel).replace("\\", "/") in _PHASE_B_AUTH_MEMO_IMPL_FILES:
+            continue
+        try:
+            text = (
+                source_index.read_text(py, encoding="utf-8", errors="replace")
+                if source_index is not None
+                else py.read_text(encoding="utf-8", errors="replace")
+            )
+        except OSError:
+            continue
+        # Cheap filter: skip files that don't reference the function
+        # name AT ALL. Both the call and the kw must appear; we still
+        # parse the AST below to confirm.
+        if _PHASE_B_AUTH_MEMO_FUNCTION_TOKEN not in text:
+            continue
+        if _PHASE_B_AUTH_MEMO_KW_TOKEN not in text:
+            continue
+        scanned_files += 1
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            continue
+        lines = text.splitlines()
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
                 continue
-            s = str(py)
-            # Skip vendored / intake / tests / results paths — they are not
-            # production callers.
-            if "/tests/" in s or py.name.startswith("test_"):
+            if not _check_150_call_targets_phase_b_status(node):
                 continue
-            if (
-                "experiments/results/public_pr" in s
-                or "experiments/results/comma_lab_public_export" in s
-                or "_intake_" in s
-            ):
+            value_node = _check_150_call_node_kwarg_value(node)
+            if value_node is None:
                 continue
-            # Exempt the implementation files (they define the parameter).
-            try:
-                rel = py.relative_to(root)
-            except ValueError:
-                rel = py
-            if str(rel).replace("\\", "/") in _PHASE_B_AUTH_MEMO_IMPL_FILES:
-                continue
-            try:
-                text = py.read_text(encoding="utf-8", errors="replace")
-            except OSError:
-                continue
-            # Cheap filter: skip files that don't reference the function
-            # name AT ALL. Both the call and the kw must appear; we still
-            # parse the AST below to confirm.
-            if _PHASE_B_AUTH_MEMO_FUNCTION_TOKEN not in text:
-                continue
-            if _PHASE_B_AUTH_MEMO_KW_TOKEN not in text:
-                continue
-            scanned_files += 1
-            try:
-                tree = ast.parse(text)
-            except SyntaxError:
-                continue
-            lines = text.splitlines()
-            for node in ast.walk(tree):
-                if not isinstance(node, ast.Call):
-                    continue
-                if not _check_150_call_targets_phase_b_status(node):
-                    continue
-                value_node = _check_150_call_node_kwarg_value(node)
-                if value_node is None:
-                    continue
 
-                # Extract any visible literal anchor.
-                literal = _check_150_extract_string_literal(value_node)
-                forbidden_anchor: str | None = None
-                if literal is not None:
-                    expanded = literal.replace("$HOME", "~")
-                    for anchor in _PHASE_B_AUTH_MEMO_FORBIDDEN_ANCHORS:
-                        if expanded.startswith(anchor) or (
-                            anchor.rstrip("/") in expanded.split("/")[:4]
-                        ):
-                            forbidden_anchor = anchor
-                            break
-                    # ~/.claude expansion: also catch the literal "~/.claude"
-                    # if path-joined later.
-                    if forbidden_anchor is None and "~/.claude" in expanded:
-                        forbidden_anchor = "~/.claude"
-
-                # AST-shape check: Path.home() / ".claude/..." form.
-                if forbidden_anchor is None:
-                    if _check_150_value_uses_path_home_dot_claude(value_node):
-                        forbidden_anchor = "Path.home()/.claude"
-
-                if forbidden_anchor is None:
-                    continue
-
-                # Waiver lookup: same line as the kwarg value, OR the Call
-                # line, OR the line above the value.
-                waiver_lines = {
-                    getattr(value_node, "lineno", node.lineno),
-                    node.lineno,
-                    node.lineno - 1,
-                }
-                waived = False
-                for ln in waiver_lines:
-                    idx = ln - 1
-                    if 0 <= idx < len(lines) and (
-                        _PHASE_B_AUTH_MEMO_WAIVER_MARKER in lines[idx]
+            # Extract any visible literal anchor.
+            literal = _check_150_extract_string_literal(value_node)
+            forbidden_anchor: str | None = None
+            if literal is not None:
+                expanded = literal.replace("$HOME", "~")
+                for anchor in _PHASE_B_AUTH_MEMO_FORBIDDEN_ANCHORS:
+                    if expanded.startswith(anchor) or (
+                        anchor.rstrip("/") in expanded.split("/")[:4]
                     ):
-                        waived = True
+                        forbidden_anchor = anchor
                         break
-                if waived:
-                    continue
+                # ~/.claude expansion: also catch the literal "~/.claude"
+                # if path-joined later.
+                if forbidden_anchor is None and "~/.claude" in expanded:
+                    forbidden_anchor = "~/.claude"
 
-                violations.append(
-                    f"[Check 150] {rel}:{node.lineno}: "
-                    f"`phase_b_preconditions_status(auth_memo_path=...)` "
-                    f"references forbidden non-repo anchor "
-                    f"({forbidden_anchor!r}). Per the Phase B Option C "
-                    "operator decision 2026-05-09, the authorization memo "
-                    "MUST be a committed repo-relative path; ~/.claude, "
-                    "/tmp, and any non-repo absolute path are FORBIDDEN. "
-                    "Place the memo under "
-                    ".omx/research/operator_authorizations/ and update the "
-                    "call. Same-line waiver "
-                    "`# PHASE_B_AUTH_MEMO_OK:<reason>` on the kwarg / call "
-                    "line for the rare consult_session_state=True fallback."
-                )
+            # AST-shape check: Path.home() / ".claude/..." form.
+            if forbidden_anchor is None:
+                if _check_150_value_uses_path_home_dot_claude(value_node):
+                    forbidden_anchor = "Path.home()/.claude"
+
+            if forbidden_anchor is None:
+                continue
+
+            # Waiver lookup: same line as the kwarg value, OR the Call
+            # line, OR the line above the value.
+            waiver_lines = {
+                getattr(value_node, "lineno", node.lineno),
+                node.lineno,
+                node.lineno - 1,
+            }
+            waived = False
+            for ln in waiver_lines:
+                idx = ln - 1
+                if 0 <= idx < len(lines) and (
+                    _PHASE_B_AUTH_MEMO_WAIVER_MARKER in lines[idx]
+                ):
+                    waived = True
+                    break
+            if waived:
+                continue
+
+            violations.append(
+                f"[Check 150] {rel}:{node.lineno}: "
+                f"`phase_b_preconditions_status(auth_memo_path=...)` "
+                f"references forbidden non-repo anchor "
+                f"({forbidden_anchor!r}). Per the Phase B Option C "
+                "operator decision 2026-05-09, the authorization memo "
+                "MUST be a committed repo-relative path; ~/.claude, "
+                "/tmp, and any non-repo absolute path are FORBIDDEN. "
+                "Place the memo under "
+                ".omx/research/operator_authorizations/ and update the "
+                "call. Same-line waiver "
+                "`# PHASE_B_AUTH_MEMO_OK:<reason>` on the kwarg / call "
+                "line for the rare consult_session_state=True fallback."
+            )
 
     if verbose:
         if violations:

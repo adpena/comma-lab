@@ -295,6 +295,15 @@ Current durable gates:
   zsh-facing `path` shell variables, and local/macOS `find -printf`.
 - `tools/check_dispatch_cli_shell_hazards.py --strict` is the standalone
   scanner and is also run by `tools/all_lanes_preflight.py`.
+- `tools/parallel_dispatch_top_k.py` runs the exact-ready live-custody audit
+  before provider fan-out. A row with `ready_for_exact_eval_dispatch=true`
+  is still refused if its archive/runtime/report/manifest custody is stale, if
+  terminal lane-claim evidence already retired the same lane/archive, or if the
+  selected row cannot survive the same audit used by `tools/operator_briefing.py`.
+  The Vast.ai provider path is dry-run-only until that launcher owns a mandatory
+  pre-instance `claim_lane_dispatch.py` claim and terminal claim update. The
+  recovered `tools/feedback_loop_sweep.py` scaffold is also dry-run/research
+  only; paid feedback-loop work must emit a promoted exact-ready queue first.
 - `scripts/pre_submission_compliance_check.py --contest-final --strict ...`
   is the canonical upload-surface gate before a judge-facing packet or public
   release. It validates required files, executable `inflate.sh`, ZIP member
