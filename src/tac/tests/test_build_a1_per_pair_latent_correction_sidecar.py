@@ -176,6 +176,37 @@ def test_exact_inflate_sh_smoke_uses_contest_signature(tmp_path: Path) -> None:
     assert evidence["command"][3].endswith("file_list.txt")
 
 
+def test_exact_inflate_sh_smoke_fails_when_output_missing(tmp_path: Path) -> None:
+    tool = load_tool()
+    sub_dir = tmp_path / "submission_dir"
+    sub_dir.mkdir()
+    archive = sub_dir / "archive.zip"
+    zinfo = zipfile.ZipInfo(filename="x", date_time=(2024, 1, 1, 0, 0, 0))
+    zinfo.external_attr = 0o644 << 16
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr(zinfo, b"payload")
+    inflate_sh = sub_dir / "inflate.sh"
+    inflate_sh.write_text(
+        "#!/bin/sh\n"
+        "set -eu\n"
+        "mkdir -p \"$2\"\n"
+        "cat \"$3\" >/dev/null\n"
+        "exit 0\n"
+    )
+    inflate_sh.chmod(0o755)
+
+    evidence = tool.run_exact_inflate_sh_smoke(
+        sub_dir,
+        archive_path=archive,
+        smoke_dir=tmp_path / "exact_smoke_missing",
+        runtime_tree_sha256="a" * 64,
+    )
+
+    assert evidence["exit_code"] == 1
+    assert evidence["output_digest_sha256"] is None
+    assert "runtime_smoke_exact_inflate_sh_output_missing" in evidence["blockers"]
+
+
 def _dispatch_claim_record(tool, archive: Path, custody: dict[str, object]) -> dict[str, object]:
     return {
         "schema_version": tool.SIDECAR_DISPATCH_CLAIM_SCHEMA,

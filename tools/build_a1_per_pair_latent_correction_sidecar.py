@@ -558,8 +558,11 @@ def _runtime_smoke_evidence_blockers(
     if evidence.get("runtime_tree_sha256") != runtime_tree_sha256:
         blockers.append("runtime_smoke_evidence_runtime_tree_sha256_mismatch")
     output_digest = evidence.get("output_digest_sha256")
-    if output_digest is not None and not _is_sha256(output_digest):
-        blockers.append("runtime_smoke_evidence_output_digest_invalid")
+    if not _is_sha256(output_digest):
+        blockers.append("runtime_smoke_evidence_output_digest_missing_or_invalid")
+    evidence_blockers = evidence.get("blockers")
+    if isinstance(evidence_blockers, list) and evidence_blockers:
+        blockers.append("runtime_smoke_evidence_has_blockers")
     return blockers
 
 
@@ -972,6 +975,7 @@ def run_exact_inflate_sh_smoke(
         blockers.append("runtime_smoke_exact_inflate_sh_failed")
     if not raw_out.is_file():
         blockers.append("runtime_smoke_exact_inflate_sh_output_missing")
+        exit_code = exit_code or 1
 
     evidence = {
         "schema_version": RUNTIME_SMOKE_SCHEMA,

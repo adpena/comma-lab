@@ -5,6 +5,7 @@
 Codex converted recursive adversarial review findings into durable guards:
 
 - A1 sidecar runtime readiness now has an explicit exact `inflate.sh <archive_dir> <output_dir> <file_list>` smoke producer, separate from bounded import-smoke.
+- Exact smoke evidence now requires a real output digest and empty evidence-local blockers; a zero-exit `inflate.sh` that writes no raw output fails readiness.
 - A1 sidecar dispatch blockers are recomputed from structured facts instead of preserving stale provisional text blockers forever.
 - Recheck telemetry distinguishes planned unproven rechecks from pairs actually rechecked this run, with a remaining-unproven counter.
 - Developer/full preflight clean-cache hits run before filesystem/source-index setup, so clean repeat runs do not pay source-index construction.
