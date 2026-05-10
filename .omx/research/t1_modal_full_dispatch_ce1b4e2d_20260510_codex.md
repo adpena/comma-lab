@@ -262,3 +262,56 @@ Next valid T1 score-lowering work is a bounded guard or full dispatch from a
 post-`0be54cbf` commit that keeps the extracted-archive runtime contract,
 small Sinkhorn memory settings, mounted-code custody, and schema blockers at
 zero before any score claim.
+
+## 2026-05-10T14:38Z current-head full Phase 1 dispatch launched
+
+Commit `ab2d0f6e` launched the next T1 run after the e7845 pre-hardening smoke
+closed. This is no longer a one-epoch smoke: it is a full 3000-epoch,
+600-pair T1 Phase 1 run, still bounded by Modal function timeout and the
+operator cost cap.
+
+- Instance job id: `t1_balle_modal_phase1_ab2d0f6_20260510T1437Z`
+- Modal call id: `fc-01KR955JSYQAVTTYZA48VAV7WJ`
+- Modal URL:
+  `https://modal.com/apps/adpena/main/ap-1fCuVHqShCT1puDuPs7SHY`
+- Mounted code git head:
+  `ab2d0f6ec1cf7aed05b8424a0b5f5d79b42698bf`
+- Mounted code dirty: `false`
+- Worktree/index patch SHA-256: empty patch
+  `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
+- Metadata SHA-256:
+  `e3cfc8dc088c42822edb3cf1b035612057b4d16da17ffbc6b4e1bc28104cce09`
+- Plan SHA-256:
+  `7003baabb61c0545ff9177a5c3759d050f5a9e5d502004d4994b5d3eafac1d35`
+
+Parameters:
+
+```text
+epochs=3000
+batch_size=1
+max_target_pairs=null
+sinkhorn_max_positions_per_chunk=2048
+train_timeout_hours=22.5
+timeout_hours=24
+cost_cap_usd=80
+contest_cuda_auth_eval_requested=true
+```
+
+Immediate Modal status:
+
+```text
+result_state=pending
+function_call_id=fc-01KR955JSYQAVTTYZA48VAV7WJ
+```
+
+The Level-2 claim is active. Do not duplicate this lane. Recovery command:
+
+```bash
+.venv/bin/python experiments/modal_t1_balle_endtoend.py recover \
+  --label t1_balle_modal_phase1_ab2d0f6_20260510T1437Z
+```
+
+Authority boundary: `score_claim=false` until recovery verifies exact
+contest-CUDA auth-eval schema blockers at zero. If this run fails, classify the
+stage precisely and preserve it as implementation/runtime/training evidence,
+not a family kill.

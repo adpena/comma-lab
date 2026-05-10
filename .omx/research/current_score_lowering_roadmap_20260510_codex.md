@@ -584,3 +584,59 @@ Next score-lowering order:
    opened.
 3. Keep Kaggle/CMA-ES/Optuna as candidate generators only; exact movement still
    requires byte-closed archive/runtime custody and contest-CUDA auth eval.
+
+## 2026-05-10T14:38Z full T1 Phase 1 Modal dispatch active
+
+After the pre-hardening e7845 smoke was harvested and the active claim closed,
+commit `ab2d0f6e` launched a real full-path T1 Phase 1 Modal T4 run:
+
+- lane id: `t1_balle_128k_endtoend`
+- instance job id: `t1_balle_modal_phase1_ab2d0f6_20260510T1437Z`
+- Modal call id: `fc-01KR955JSYQAVTTYZA48VAV7WJ`
+- Modal run URL:
+  `https://modal.com/apps/adpena/main/ap-1fCuVHqShCT1puDuPs7SHY`
+- label commit: `ab2d0f6ec1cf7aed05b8424a0b5f5d79b42698bf`
+- mounted code status: clean, worktree patch bytes `0`, index patch bytes `0`
+- plan artifact:
+  `experiments/results/t1_balle_modal_phase1_ab2d0f6_20260510T1437Z_plan.json`
+- plan SHA-256:
+  `7003baabb61c0545ff9177a5c3759d050f5a9e5d502004d4994b5d3eafac1d35`
+- metadata artifact:
+  `experiments/results/t1_balle_modal_phase1_ab2d0f6_20260510T1437Z/modal_metadata.json`
+- metadata SHA-256:
+  `e3cfc8dc088c42822edb3cf1b035612057b4d16da17ffbc6b4e1bc28104cce09`
+
+Training/eval parameters:
+
+- `epochs=3000`
+- `batch_size=1`
+- full target set (`max_target_pairs=null`)
+- `sinkhorn_max_positions_per_chunk=2048`
+- `train_timeout_hours=22.5`
+- `timeout_hours=24`
+- `cost_cap_usd=80`
+- estimated cost in plan: `$14.16`
+- contest-CUDA auth eval requested for the exported packet.
+
+Immediate status poll returned `pending`; active-claim summary is now one row:
+
+```text
+ACTIVE lane_id=t1_balle_128k_endtoend
+job=t1_balle_modal_phase1_ab2d0f6_20260510T1437Z
+platform=modal
+status=active_dispatching
+```
+
+Recover with:
+
+```bash
+.venv/bin/python experiments/modal_t1_balle_endtoend.py recover \
+  --label t1_balle_modal_phase1_ab2d0f6_20260510T1437Z
+```
+
+Do not launch another T1 job while this claim is active. This run is the first
+current-head T1 attempt aligned with the operator's actual score-lowering
+goal: full training plus packet compile plus exact contest-CUDA auth eval.
+Promotion still requires recovery to verify archive/runtime custody, 600
+samples, CUDA/T4 hardware, component recomputation, zero auth-eval blockers,
+and `score_claim=true` in adjudication.
