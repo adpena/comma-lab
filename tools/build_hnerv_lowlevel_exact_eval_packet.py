@@ -919,6 +919,7 @@ def refresh_static_compliance(args: argparse.Namespace) -> dict[str, Any]:
 
 def refresh_dispatch_readiness(args: argparse.Namespace) -> dict[str, Any]:
     output = args.result_dir / "dispatch_readiness_preflight.json"
+    now_utc = _format_utc(_now_utc(args))
     cmd = [
         sys.executable,
         "experiments/preflight_candidate_manifest_dispatch_readiness.py",
@@ -927,7 +928,7 @@ def refresh_dispatch_readiness(args: argparse.Namespace) -> dict[str, Any]:
         "--claims-path",
         args.claims_path.as_posix(),
         "--now-utc",
-        args.now_utc,
+        now_utc,
         "--ttl-hours",
         str(args.claim_ttl_hours),
         "--json-out",

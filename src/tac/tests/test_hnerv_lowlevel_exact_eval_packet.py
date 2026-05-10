@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 import zipfile
+import datetime as dt
 from pathlib import Path
 
 import brotli
@@ -28,6 +29,44 @@ def _load_module():
 
 
 module = _load_module()
+
+
+def test_refresh_dispatch_readiness_default_now_is_subprocess_safe(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    captured: dict[str, list[str]] = {}
+
+    def fake_run_json_cmd(cmd, output):
+        captured["cmd"] = cmd
+        return {"ready_for_exact_eval_dispatch": True, "blockers": [], "stdout_tail": ""}
+
+    monkeypatch.setattr(module, "_run_json_cmd", fake_run_json_cmd)
+    result_dir = tmp_path / "packet"
+    result_dir.mkdir()
+    args = module.build_arg_parser().parse_args(
+        [
+            "--result-dir",
+            str(result_dir),
+            "--claims-path",
+            str(tmp_path / "claims.md"),
+            "--lane-id",
+            "fixture_q10",
+            "--job-name",
+            "exact_eval_fixture_q10",
+        ]
+    )
+
+    payload = module.refresh_dispatch_readiness(args)
+
+    cmd = captured["cmd"]
+    assert all(isinstance(item, str) for item in cmd)
+    now_value = cmd[cmd.index("--now-utc") + 1]
+    assert args.now_utc is None
+    assert now_value.endswith("Z")
+    dt.datetime.fromisoformat(now_value[:-1] + "+00:00")
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert any(row["code"] == "missing_active_lane_dispatch_claim" for row in payload["blockers"])
 
 
 def test_lowlevel_exact_eval_packet_builds_static_release_surface(tmp_path: Path) -> None:
