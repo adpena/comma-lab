@@ -6,7 +6,7 @@
 
 ## score lane
 
-- [x] current exact frontier recorded: PR100 HNeRV-LC-v2 adapter replay,
+- [x] historical May 4 exact frontier recorded: PR100 HNeRV-LC-v2 adapter replay,
       `0.22826947142244708`.
 - [x] archive bytes/SHA recorded:
       `178981`,

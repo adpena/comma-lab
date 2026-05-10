@@ -14,7 +14,7 @@
 
 ## score target
 
-- Current exact contest-CUDA score: **`0.22826947142244708`** `[A++]`
+- Historical May 4 exact contest-CUDA score: **`0.22826947142244708`** `[A++]`
 - Archive bytes: `178981`
 - Archive SHA-256:
   `afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641`
@@ -67,7 +67,7 @@
 - PR95 HNeRV/Muon exact replay established the sub-`0.231` semantic-bundle
   anchor
 - PR95 stem-permutation repack established `0.23089404465634825`
-- PR100 adapter replay established the current exact frontier at
+- PR100 adapter replay established the May 4 exact frontier at
   **`0.22826947142244708`**
 
 ## meta-lagrangian summary
@@ -104,9 +104,11 @@ compiler.
 
 ## active follow-on
 
-- current upload packet is `apogee_pr100_hnerv_lc_v2_adapter`
-- PR100 exact T4 replay landed and passed strict pre-submission compliance;
-  use it as the follow-up packet if late upstream submission is accepted
+- archived upload-packet snapshot is `apogee_pr100_hnerv_lc_v2_adapter`
+- PR100 exact T4 replay landed and passed its then-current pre-submission
+  compliance gate; do not use it as a current follow-up packet without
+  regenerating archive/runtime custody, strict compliance, exact eval, and
+  operator policy
 - final public URLs stay placeholders until published through a sanitized
   release manifest
 - no public PR, body score, or leaderboard title should rank unless exact CUDA

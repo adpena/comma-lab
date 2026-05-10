@@ -7,9 +7,9 @@
 
 ## submission posture
 
-- Current score champion is the contest-faithful PR100 HNeRV-LC-v2 adapter exact
-  replay.
-- Submit the PR100 adapter packet from
+- Historical May 4 score champion was the contest-faithful PR100 HNeRV-LC-v2
+  adapter exact replay.
+- The archived PR100 adapter packet lived at
   `experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter`.
 - Cite `0.22826947142244708` as the exact local Tesla T4 A++ score, not the
   rounded `0.23` display.
@@ -37,7 +37,7 @@
 
 ## concise framing
 
-The current score champion is the public PR100 HNeRV-LC-v2 archive evaluated
+The historical May 4 score champion was the public PR100 HNeRV-LC-v2 archive evaluated
 through a strict contest-signature adapter. The adapter preserves the exact
 archive bytes and records runtime-tree custody; the score claim is for this
 archive/runtime pair, not for the rounded public display score.

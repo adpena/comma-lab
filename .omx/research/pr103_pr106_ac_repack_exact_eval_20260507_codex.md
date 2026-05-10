@@ -2,7 +2,7 @@
 
 Date: 2026-05-07
 Owner: codex
-Evidence grade: A++ contest T4
+Evidence grade: A++ exact CUDA score anchor; upload-packet release blocked
 
 ## Result
 
@@ -54,10 +54,11 @@ charged archive bytes. The report-reconstructed score is lower by
 to 8 decimal places and `contest_auth_eval.py` reconstructs its JSON score from
 that rounded report field.
 
-The strict contest-final compliance gate passed after harvest. It verified the
-archive SHA/bytes, single safe ZIP member, manifest, report, T4-equivalent auth
-eval, runtime-tree SHA, strict formula proof, score reconstruction, and terminal
-dispatch claim.
+Historical note: the strict contest-final compliance gate passed after harvest
+for the evidence surface available that day. The 2026-05-10 supersession above
+is binding for release use: the tracked static wrapper is not a contest-final
+upload packet until the wrapper itself is exact-evaluated or a reviewed
+delegate-root proof is encoded and re-evaluated.
 
 ## Dispatch Custody
 

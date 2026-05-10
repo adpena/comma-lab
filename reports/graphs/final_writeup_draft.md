@@ -15,10 +15,11 @@ We got nerd-sniped by the challenge in the best possible way: the problem kept
 opening into deeper systems questions about what a video is when the consumer is
 a fixed neural scorer, not a human viewer.
 
-The current confirmed champion packet is the PR100 HNeRV-LC-v2 adapter replay,
-built as an Apogee follow-up packet after Apogee PR #107. PR #107 remains the
-earlier public Apogee submission; PR100 exact replay is now the lower local
-A++ score-bearing packet.
+The historical May 4 confirmed champion packet was the PR100 HNeRV-LC-v2
+adapter replay, built as an Apogee follow-up packet after Apogee PR #107.
+PR #107 remains the earlier public Apogee submission. Treat this draft as
+archival until regenerated against current archive/runtime/eval/compliance
+evidence.
 
 The score-bearing claim is:
 
