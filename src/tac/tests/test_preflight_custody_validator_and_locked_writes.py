@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 
+from tac.source_index import source_index_context
 from tac.preflight import (
     PreflightError,
     check_authoritative_tag_requires_custody_metadata,
@@ -804,3 +805,29 @@ def test_check131_same_line_waiver_accepted(tmp_path: Path) -> None:
         repo_root=root, strict=False, verbose=False
     )
     assert violations == []
+
+
+def test_check131_uses_source_index_marker_prefilter(tmp_path: Path) -> None:
+    """SourceIndex-backed runs should build substring candidates once."""
+    root = _mkrepo(
+        tmp_path,
+        {
+            "tools/no_marker.py": "def noop():\n    return 1\n",
+            "tools/bad_state_writer.py": (
+                "from pathlib import Path\n"
+                "STATE = Path('.omx/state/foo.json')\n"
+                "def write():\n"
+                "    STATE.write_text('{}')\n"
+            ),
+        },
+    )
+
+    with source_index_context(root) as index:
+        violations = check_no_bare_writes_to_shared_state(
+            repo_root=root, strict=False, verbose=False
+        )
+        stats = index.stats()
+
+    assert len(violations) == 1
+    assert "tools/bad_state_writer.py" in violations[0]
+    assert stats["substring_index_entries"] > 0

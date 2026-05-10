@@ -212,3 +212,73 @@ Remaining top hot checks from the new profile:
 - `check_no_bare_writes_to_shared_state`: `1.333s`;
 - `check_public_pr_intake_clones_pristine`: `1.324s`;
 - `check_no_mps_fallback_default`: `1.209s`.
+
+## Codex Follow-Up: Shared-State Marker Prefilter
+
+<!-- generated_at: 2026-05-10T01:20:00Z -->
+<!-- evidence_grade: local_dev_performance; no dispatch; no lane claim -->
+
+Codex moved `check_no_bare_writes_to_shared_state()` onto the shared
+`SourceIndex` substring candidate path when a source-index context is active.
+The gate still runs the same line/AST logic on every candidate, and the raw
+recursive scan remains the fallback when no source index exists.
+
+Implementation:
+
+- bumped `src/tac/source_index.py` text-facts schema to `v8`;
+- added the shared-state marker strings to the text-facts needle set;
+- used `SourceIndex.files_containing_substrings(..., require_all=False)` to
+  select candidate Python files for catalog #131;
+- added a regression test proving the gate uses the source-index substring
+  index while still catching a bare shared-state write.
+
+Verification:
+
+```bash
+.venv/bin/python -m py_compile src/tac/preflight.py src/tac/source_index.py
+.venv/bin/python -m pytest \
+  src/tac/tests/test_preflight_custody_validator_and_locked_writes.py \
+  src/tac/tests/test_source_index.py -q
+.venv/bin/python -m pytest \
+  src/tac/tests/test_preflight_custody_validator_and_locked_writes.py \
+  src/tac/tests/test_source_index.py \
+  src/tac/tests/test_preflight_arity.py \
+  src/tac/tests/test_preflight_shell_lane_arity.py \
+  src/tac/tests/test_build_a1_per_pair_latent_correction_sidecar.py -q
+.venv/bin/python tools/profile_preflight_latency.py \
+  --surface preflight-dev-cli \
+  --json-out experiments/results/preflight_dev_profile_shared_state_sourceindex_codex_20260510T0118Z.json \
+  --top 12 \
+  --fail-on-surface-failure
+.venv/bin/python tools/profile_preflight_latency.py \
+  --surface preflight-dev-cli \
+  --json-out experiments/results/preflight_dev_profile_shared_state_sourceindex_warm_codex_20260510T0120Z.json \
+  --top 12 \
+  --fail-on-surface-failure
+PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE=1 \
+  .venv/bin/python tools/profile_preflight_latency.py \
+  --surface preflight-dev-cli \
+  --json-out experiments/results/preflight_dev_profile_shared_state_sourceindex_cold_codex_20260510T0120Z.json \
+  --top 12 \
+  --fail-on-surface-failure
+```
+
+Observed:
+
+- focused custody/source-index tests: `51 passed in 3.66s`;
+- broader focused suite: `148 passed in 10.31s`;
+- normal developer profile: `9.918s`;
+- warm clean-cache developer profile: `0.601s`;
+- cache-disabled developer profile: `10.480s`;
+- target check improved from `1.333s` in the previous profile to `0.688s`
+  normal / `0.582s` cache-disabled;
+- total cold wall-clock remains around `10s`, still below the 30s crash
+  budget, with current hot checks shifting to codebase drift, locked-write
+  deletion preservation, dispatch shell hazards, and public PR clone status.
+
+Next target per read-only red-team:
+
+- add a conservative clean-status cache for
+  `check_public_pr_intake_clones_pristine()`, caching only empty
+  `git status --short` results and failing open to live `git status` on any
+  fingerprint uncertainty.

@@ -464,3 +464,52 @@ Dispatch blockers remain unchanged:
 The next custody-preserving continuation should keep
 `--candidate-batch-size 1` unless a future disambiguator proves a faster batch
 mode matches scalar choices across more than one lucky profiled pair.
+
+## Codex follow-up local chunk 8
+
+<!-- generated_at: 2026-05-10T01:18:00Z -->
+<!-- evidence_grade: local_cpu_proxy_partial; no score claim; no remote dispatch -->
+
+Codex resumed the same ignored local artifact using the scalar candidate path:
+
+```bash
+/usr/bin/time -p .venv/bin/python tools/build_a1_per_pair_latent_correction_sidecar.py \
+  --n-pairs 96 \
+  --resume-search-state \
+  --max-search-seconds 900 \
+  --candidate-batch-size 1 \
+  --runtime-smoke \
+  --runtime-smoke-pairs 1 \
+  --output-dir experiments/results/a1_sidecar_resumable_codex_20260509T_local
+```
+
+Observed:
+
+- skipped already-completed pairs `0` through `47`;
+- searched pairs `48` through `95`;
+- elapsed `real 774.86`, `user 1830.16`, `sys 45.21`;
+- `candidate_batch_size=1`;
+- choice-state SHA-256
+  `385ba5b1280c24c2908f02bde48266994806c82ccfca3d92297e28decdcb7f9b`;
+- archive SHA-256
+  `f97373eec890d42a7cdc6d109de2c6d906683c703e30d2425e29bcebec8196e6`;
+- archive bytes `178316`;
+- runtime tree SHA-256
+  `3497c774d94fe202563bccba2af4a5f90925cb8d9b2e982cf4428d0efbea0190`;
+- `runtime_smoke_checked=true`;
+- `n_pairs_searched=96`;
+- `n_pairs_completed_this_run=48`;
+- `n_pairs_skipped_already_completed=48`;
+- `full_non_smoke_search=false`;
+- `ready_for_exact_eval_dispatch=false`.
+
+Dispatch blockers remain unchanged:
+
+- claim lane before any GHA/remote eval dispatch;
+- run exact-eval dispatcher preflight against `submission_dir`;
+- record runtime tree SHA and terminal dispatch claim row;
+- `non_full_sidecar_search_not_exact_eval_ready`.
+
+Custody note from read-only review: during active builder runs,
+`sidecar_choice_state.json` can be ahead of the manifest/archive. Treat only the
+post-exit manifest-bound state above as finalized.

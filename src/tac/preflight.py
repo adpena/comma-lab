@@ -32286,36 +32286,52 @@ def check_no_bare_writes_to_shared_state(
 
     violations: list[str] = []
     scanned_files = 0
-    for scan_dir in scan_dirs:
-        if not scan_dir.is_dir():
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        candidate_files = source_index.files_containing_substrings(
+            [p for p in scan_dirs if p.is_dir()],
+            pattern="*.py",
+            substrings=_SHARED_STATE_PATH_MARKERS,
+            require_all=False,
+        )
+    else:
+        raw_candidates: list[Path] = []
+        for scan_dir in scan_dirs:
+            if not scan_dir.is_dir():
+                continue
+            raw_candidates.extend(scan_dir.rglob("*.py"))
+        candidate_files = tuple(raw_candidates)
+
+    for py in candidate_files:
+        if _is_oss_export_mirror_path(py):
             continue
-        for py in scan_dir.rglob("*.py"):
-            if _is_oss_export_mirror_path(py):
-                continue
-            if py in excluded_files:
-                continue
-            # Skip tests
-            if "/tests/" in str(py) or py.name.startswith("test_"):
-                continue
-            # Skip vendored public-PR intakes / hosted exports
-            s = str(py)
-            if (
-                "experiments/results/public_pr" in s
-                or "experiments/results/comma_lab_public_export" in s
-                or "experiments/results/vast_harvest" in s
-            ):
-                continue
-            try:
+        if py in excluded_files:
+            continue
+        # Skip tests
+        if "/tests/" in str(py) or py.name.startswith("test_"):
+            continue
+        # Skip vendored public-PR intakes / hosted exports
+        s = str(py)
+        if (
+            "experiments/results/public_pr" in s
+            or "experiments/results/comma_lab_public_export" in s
+            or "experiments/results/vast_harvest" in s
+        ):
+            continue
+        try:
+            if source_index is not None:
+                text = source_index.read_text(py, encoding="utf-8", errors="replace")
+            else:
                 text = py.read_text(encoding="utf-8", errors="replace")
-            except OSError:
-                continue
-            # Quick prefilter — file must reference a shared-state marker.
-            if not any(m in text for m in _SHARED_STATE_PATH_MARKERS):
-                continue
-            scanned_files += 1
-            shared_vars = _bare_write_collect_shared_vars(text)
-            lines = text.splitlines()
-            for lineno, line in enumerate(lines):
+        except OSError:
+            continue
+        # Quick prefilter — file must reference a shared-state marker.
+        if not any(m in text for m in _SHARED_STATE_PATH_MARKERS):
+            continue
+        scanned_files += 1
+        shared_vars = _bare_write_collect_shared_vars(text)
+        lines = text.splitlines()
+        for lineno, line in enumerate(lines):
                 stripped = line.lstrip()
                 if stripped.startswith("#"):
                     continue

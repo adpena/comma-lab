@@ -25,7 +25,7 @@ _CURRENT_SOURCE_INDEX: contextvars.ContextVar[SourceIndex | None] = contextvars.
     "tac_current_source_index",
     default=None,
 )
-_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v7"
+_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v8"
 
 
 def _safe_resolve(path: Path) -> Path:
@@ -112,6 +112,22 @@ _DEFAULT_TEXT_FACT_NEEDLES = frozenset(
         "blessed",
         "save_posterior",
         "_posterior_lock",
+        ".omx/state/",
+        ".commit-lock",
+        "active_lane_dispatch_claims",
+        "azure_active_vms",
+        "commit-serializer",
+        "continual_learning_posterior",
+        "cuda_cpu_axis_profile_registry",
+        "lane_c_compliance_attestations",
+        "lane_maturity_audit",
+        "lane_registry.json",
+        "lightning_active_jobs",
+        "lightning_active_sessions",
+        "lightning_batch_jobs",
+        "next_catalog_number",
+        "review_policy",
+        "vastai_active_instances",
     }
 )
 
