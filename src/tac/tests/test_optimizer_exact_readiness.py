@@ -1,0 +1,281 @@
+from __future__ import annotations
+
+import json
+import stat
+import zipfile
+import importlib.util
+import sys
+from pathlib import Path
+
+from tac.optimizer.exact_readiness import promote_candidate_for_exact_eval
+
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+def _load_parallel_dispatch_tool():
+    path = REPO_ROOT / "tools" / "parallel_dispatch_top_k.py"
+    spec = importlib.util.spec_from_file_location("parallel_dispatch_top_k_for_test", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _write_json(path: Path, payload: object) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return path
+
+
+def _write_archive(path: Path, member: str = "0.bin", payload: bytes = b"payload") -> tuple[int, str]:
+    import hashlib
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    info = zipfile.ZipInfo(member, date_time=(1980, 1, 1, 0, 0, 0))
+    info.compress_type = zipfile.ZIP_STORED
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr(info, payload, compress_type=zipfile.ZIP_STORED)
+    raw = path.read_bytes()
+    return len(raw), hashlib.sha256(raw).hexdigest()
+
+
+def _make_submission(repo: Path) -> tuple[Path, int, str]:
+    submission = repo / "experiments/results/exact_ready_fixture"
+    archive = submission / "archive.zip"
+    archive_bytes, archive_sha = _write_archive(archive)
+    inflate = submission / "inflate.sh"
+    inflate.write_text(
+        "#!/usr/bin/env bash\nset -euo pipefail\nexit 0\n",
+        encoding="utf-8",
+    )
+    inflate.chmod(inflate.stat().st_mode | stat.S_IXUSR)
+    (submission / "report.txt").write_text(
+        f"archive.zip sha256={archive_sha} bytes={archive_bytes}\n",
+        encoding="utf-8",
+    )
+    _write_json(
+        submission / "archive_manifest.json",
+        {
+            "score_claim": False,
+            "candidate_archive_sha256": archive_sha,
+            "candidate_archive_bytes": archive_bytes,
+            "candidate_archive": {"member_name": "0.bin"},
+        },
+    )
+    (repo / "upstream").mkdir(parents=True, exist_ok=True)
+    (repo / "upstream/evaluate.py").write_text("# fixture\n", encoding="utf-8")
+    return submission, archive_bytes, archive_sha
+
+
+def _make_queue(repo: Path, submission: Path, archive_bytes: int, archive_sha: str) -> Path:
+    return _write_json(
+        repo / "queue.json",
+        {
+            "schema": "optimizer_candidate_queue_v1",
+            "top_k": [
+                {
+                    "candidate_id": "fixture_candidate",
+                    "lane_id": "fixture_lane",
+                    "archive_path": (submission / "archive.zip").relative_to(repo).as_posix(),
+                    "candidate_archive_sha256": archive_sha,
+                    "candidate_archive_bytes": archive_bytes,
+                    "ready_for_exact_eval_dispatch": False,
+                    "score_claim": False,
+                    "predicted_contest_cpu_gha": 0.1,
+                    "score_affecting_payload_changed": True,
+                    "charged_bits_changed": True,
+                    "dispatch_blockers": [
+                        "optimizer_candidate_queue_is_planning_only",
+                        "requires_exact_eval_readiness_gate",
+                        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+                    ],
+                }
+            ],
+            "dispatch_ready": [],
+        },
+    )
+
+
+def test_promotes_byte_closed_candidate_without_score_claim(tmp_path: Path) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["report"]["ready_for_exact_eval_dispatch"] is True
+    promoted = result["promoted_queue"]
+    assert promoted["dispatch_ready_count"] == 1
+    row = promoted["dispatch_ready"][0]
+    assert row["ready_for_exact_eval_dispatch"] is True
+    assert row["score_claim"] is False
+    assert row["promotion_eligible"] is False
+    assert row["target_modes"] == ["contest_exact_eval"]
+    assert row["archive_sha256"] == archive_sha
+    assert row["archive_bytes"] == archive_bytes
+    assert "predicted_contest_cpu_gha" not in row
+    assert row["dispatch_blockers"] == []
+    assert row["runtime_tree_sha256"]
+    assert row["score_affecting_payload_changed"] is True
+    assert row["charged_bits_changed"] is True
+
+
+def test_promoted_queue_passes_existing_dispatcher_readiness_loader(tmp_path: Path) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+    promoted_path = tmp_path / "promoted.json"
+    promoted_path.write_text(
+        json.dumps(result["promoted_queue"], indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    tool = _load_parallel_dispatch_tool()
+    rows = tool._load_top_k(promoted_path, 1, active_floor_archive_bytes=None)
+
+    assert [row["candidate_id"] for row in rows] == ["fixture_candidate"]
+
+
+def test_refuses_kaggle_proxy_row_without_archive(tmp_path: Path) -> None:
+    queue = _write_json(
+        tmp_path / "queue.json",
+        {
+            "schema": "optimizer_candidate_queue_v1",
+            "top_k": [
+                {
+                    "candidate_id": "proxy_only",
+                    "lane_id": "kaggle_proxy_sweep",
+                    "proxy_only": True,
+                    "score_claim": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "dispatch_blockers": [
+                        "optimizer_candidate_queue_is_planning_only",
+                        "kaggle_proxy_output_requires_archive_builder_promotion",
+                        "no_archive_zip_emitted",
+                    ],
+                }
+            ],
+            "dispatch_ready": [],
+        },
+    )
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "proxy_only",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["promoted_queue"] is None
+    assert "source_row_proxy_only" in result["report"]["blockers"]
+    assert "archive_path_missing" in result["report"]["blockers"]
+    assert "score_affecting_change_proof_missing" in result["report"]["blockers"]
+
+
+def test_refuses_archive_sha_mismatch(tmp_path: Path) -> None:
+    submission, archive_bytes, _archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, "a" * 64)
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["promoted_queue"] is None
+    assert "archive_sha256_mismatch" in result["report"]["blockers"]
+
+
+def test_refuses_non_executable_inflate(tmp_path: Path) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    inflate = submission / "inflate.sh"
+    inflate.chmod(inflate.stat().st_mode & ~(
+        stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+    ))
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["promoted_queue"] is None
+    assert "inflate_sh_not_executable" in result["report"]["blockers"]
+
+
+def test_refuses_above_active_floor_without_override(tmp_path: Path) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=1,
+    )
+
+    assert result["promoted_queue"] is None
+    assert any(
+        blocker.startswith("above_active_floor_archive_bytes_without_operator_override")
+        for blocker in result["report"]["blockers"]
+    )
+
+
+def test_refuses_cosmetic_candidate_without_change_proof(tmp_path: Path) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    payload["top_k"][0].pop("score_affecting_payload_changed")
+    payload["top_k"][0].pop("charged_bits_changed")
+    queue.write_text(json.dumps(payload), encoding="utf-8")
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["promoted_queue"] is None
+    assert "score_affecting_change_proof_missing" in result["report"]["blockers"]
+
+
+def test_refuses_same_lane_active_claim(tmp_path: Path) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    claims = tmp_path / ".omx/state/active_lane_dispatch_claims.md"
+    claims.parent.mkdir(parents=True)
+    claims.write_text(
+        "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
+        "|---|---|---|---|---|---|---|---|\n"
+        "| 2026-05-10T00:00:00Z | test | fixture_lane | modal | job1 | 2026-05-10T01:00:00Z | active_dispatching | cost=$0.50 |\n",
+        encoding="utf-8",
+    )
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+        dispatch_claims_path=claims,
+    )
+
+    assert result["promoted_queue"] is None
+    assert any(
+        blocker.startswith("same_lane_active_dispatch_claim")
+        for blocker in result["report"]["blockers"]
+    )
