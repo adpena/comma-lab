@@ -49,6 +49,7 @@ REMOTE_OUT_ROOT = REMOTE_REPO / "experiments/results/modal_t1_balle_remote"
 APP_NAME = "comma-t1-balle-endtoend"
 LANE_ID = "t1_balle_128k_endtoend"
 CLAIM_AGENT = "codex:modal_t1_balle_endtoend"
+DEFAULT_CLAIMS_PATH = REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md"
 MODAL_SPAWN_SUBMISSION_UNKNOWN_STATUS = "ambiguous_modal_spawn_submission_recovery_required"
 HOURLY_RATE_T4_USD = 0.59
 DEFAULT_TIMEOUT_HOURS = 24.0
@@ -411,10 +412,71 @@ def _local_git_branch() -> str | None:
 
 
 def _read_claims_ledger_bytes() -> bytes:
-    path = REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md"
+    path = DEFAULT_CLAIMS_PATH
     if not path.is_file():
         raise SystemExit(f"FATAL: missing dispatch claims ledger: {path}")
     return path.read_bytes()
+
+
+def _active_lane_dispatch_conflicts(
+    claims_path: Path = DEFAULT_CLAIMS_PATH,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
+    """Return unresolved same-lane dispatch claims using the canonical helper."""
+
+    cmd = [
+        sys.executable,
+        str(REPO_ROOT / "tools" / "claim_lane_dispatch.py"),
+        "summary",
+        "--claims-path",
+        str(claims_path),
+        "--format",
+        "json",
+    ]
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+    except subprocess.TimeoutExpired:
+        return [], ["active_claim_summary_timeout"]
+    if proc.returncode != 0:
+        detail = _tail((proc.stderr or proc.stdout).strip(), limit=500).replace("\n", " ")
+        return [], [], [f"active_claim_summary_failed:rc={proc.returncode}:{detail}"]
+    try:
+        payload = json.loads(proc.stdout)
+    except json.JSONDecodeError as exc:
+        return [], [], [f"active_claim_summary_invalid_json:{exc}"]
+    active = payload.get("active")
+    stale = payload.get("stale_nonterminal")
+    if not isinstance(active, list) or not isinstance(stale, list):
+        return [], [], ["active_claim_summary_invalid_schema:missing_unresolved_lists"]
+    conflicts: list[dict[str, Any]] = []
+    stale_conflicts: list[dict[str, Any]] = []
+
+    def _project(row: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "timestamp_utc": row.get("timestamp_utc"),
+            "agent": row.get("agent"),
+            "lane_id": row.get("lane_id"),
+            "platform": row.get("platform"),
+            "instance_job_id": row.get("instance_job_id"),
+            "status": row.get("status"),
+            "predicted_eta_utc": row.get("predicted_eta_utc"),
+        }
+
+    for row in active:
+        if not isinstance(row, dict) or row.get("lane_id") != LANE_ID:
+            continue
+        conflicts.append(_project(row))
+    for row in stale:
+        if not isinstance(row, dict) or row.get("lane_id") != LANE_ID:
+            continue
+        stale_conflicts.append(_project(row))
+    return conflicts, stale_conflicts, []
 
 
 def _claim_lane(
@@ -502,6 +564,7 @@ def build_local_plan(
     train_timeout_hours: float,
     max_target_pairs: int | None,
     sinkhorn_max_positions_per_chunk: int = DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK,
+    claims_path: Path = DEFAULT_CLAIMS_PATH,
 ) -> tuple[dict[str, Any], int]:
     instance_job_id = _safe_label(label or f"t1_balle_modal_{_compact_stamp()}")
     modal_function_timeout_hours = DEFAULT_TIMEOUT_HOURS
@@ -574,6 +637,22 @@ def build_local_plan(
         f"canonical_a1_payload_{err}"
         for err in canonical_a1_payload["validation_errors"]
     )
+    (
+        active_lane_dispatch_conflicts,
+        stale_lane_dispatch_conflicts,
+        active_claim_errors,
+    ) = _active_lane_dispatch_conflicts(Path(claims_path))
+    validation_errors.extend(active_claim_errors)
+    for conflict in active_lane_dispatch_conflicts:
+        validation_errors.append(
+            "active_lane_dispatch_conflict:"
+            f"{conflict.get('instance_job_id')}:{conflict.get('status')}"
+        )
+    for conflict in stale_lane_dispatch_conflicts:
+        validation_errors.append(
+            "stale_lane_dispatch_conflict:"
+            f"{conflict.get('instance_job_id')}:{conflict.get('status')}"
+        )
 
     payload = {
         "schema_version": "t1_modal_local_plan_v1",
@@ -613,6 +692,9 @@ def build_local_plan(
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
+        "claims_path": str(claims_path),
+        "active_lane_dispatch_conflicts": active_lane_dispatch_conflicts,
+        "stale_lane_dispatch_conflicts": stale_lane_dispatch_conflicts,
         "dispatch_attempted": False,
         "remote_or_gpu_eval_started": False,
         "lane_claim_opened": False,
@@ -665,6 +747,7 @@ def plan_cli(argv: list[str] | None = None) -> int:
         type=int,
         default=DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK,
     )
+    parser.add_argument("--claims-path", type=Path, default=DEFAULT_CLAIMS_PATH)
     parser.add_argument("--json-out", default=None)
     args = parser.parse_args(argv)
     payload, rc = build_local_plan(
@@ -676,6 +759,7 @@ def plan_cli(argv: list[str] | None = None) -> int:
         train_timeout_hours=args.train_timeout_hours,
         max_target_pairs=args.max_target_pairs,
         sinkhorn_max_positions_per_chunk=args.sinkhorn_max_positions_per_chunk,
+        claims_path=args.claims_path,
     )
     if args.json_out:
         _write_json(Path(args.json_out), payload)

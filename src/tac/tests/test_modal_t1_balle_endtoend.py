@@ -27,10 +27,15 @@ def _source() -> str:
     return SCRIPT.read_text()
 
 
+def _empty_claims_path(tmp_path: Path) -> Path:
+    return tmp_path / "empty_claims.md"
+
+
 def test_plan_cli_is_default_safe_and_writes_no_claim(tmp_path: Path) -> None:
     claim_file = REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md"
     before_claims = claim_file.read_text()
     json_out = tmp_path / "plan.json"
+    claims_path = _empty_claims_path(tmp_path)
 
     result = subprocess.run(
         [
@@ -45,6 +50,8 @@ def test_plan_cli_is_default_safe_and_writes_no_claim(tmp_path: Path) -> None:
             "3",
             "--timeout-hours",
             "24",
+            "--claims-path",
+            str(claims_path),
             "--json-out",
             str(json_out),
         ],
@@ -85,6 +92,7 @@ def test_plan_cli_cost_cap_failure_still_opens_no_claim(tmp_path: Path) -> None:
     claim_file = REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md"
     before_claims = claim_file.read_text()
     json_out = tmp_path / "plan.json"
+    claims_path = _empty_claims_path(tmp_path)
 
     result = subprocess.run(
         [
@@ -97,6 +105,8 @@ def test_plan_cli_cost_cap_failure_still_opens_no_claim(tmp_path: Path) -> None:
             "24",
             "--cost-cap-usd",
             "1",
+            "--claims-path",
+            str(claims_path),
             "--json-out",
             str(json_out),
         ],
@@ -119,6 +129,7 @@ def test_plan_cli_rejects_timeout_that_does_not_match_modal_function(tmp_path: P
     claim_file = REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md"
     before_claims = claim_file.read_text()
     json_out = tmp_path / "plan.json"
+    claims_path = _empty_claims_path(tmp_path)
 
     result = subprocess.run(
         [
@@ -131,6 +142,8 @@ def test_plan_cli_rejects_timeout_that_does_not_match_modal_function(tmp_path: P
             "1.5",
             "--train-timeout-hours",
             "1",
+            "--claims-path",
+            str(claims_path),
             "--json-out",
             str(json_out),
         ],
@@ -341,7 +354,7 @@ def test_modal_t1_guard_labels_require_bounded_guard_params() -> None:
     )
 
 
-def test_modal_t1_guard_labels_accept_true_bounded_guard_params() -> None:
+def test_modal_t1_guard_labels_accept_true_bounded_guard_params(tmp_path: Path) -> None:
     module = _load_module()
 
     payload, rc = module.build_local_plan(
@@ -352,6 +365,7 @@ def test_modal_t1_guard_labels_accept_true_bounded_guard_params() -> None:
         cost_cap_usd=80,
         train_timeout_hours=2,
         max_target_pairs=8,
+        claims_path=_empty_claims_path(tmp_path),
     )
 
     assert rc == 0
@@ -363,7 +377,7 @@ def test_modal_t1_guard_labels_accept_true_bounded_guard_params() -> None:
     assert payload["contest_cuda_auth_eval_requested"] is False
 
 
-def test_modal_t1_full_export_requests_contest_cuda_auth_eval() -> None:
+def test_modal_t1_full_export_requests_contest_cuda_auth_eval(tmp_path: Path) -> None:
     module = _load_module()
 
     payload, rc = module.build_local_plan(
@@ -374,11 +388,75 @@ def test_modal_t1_full_export_requests_contest_cuda_auth_eval() -> None:
         cost_cap_usd=80,
         train_timeout_hours=module.DEFAULT_TRAIN_TIMEOUT_HOURS,
         max_target_pairs=None,
+        claims_path=_empty_claims_path(tmp_path),
     )
 
     assert rc == 0
     assert payload["params"]["contest_cuda_auth_eval_requested"] is True
     assert payload["contest_cuda_auth_eval_requested"] is True
+
+
+def test_modal_t1_plan_fails_closed_on_active_same_lane_claim(tmp_path: Path) -> None:
+    module = _load_module()
+    claims_path = tmp_path / "claims.md"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "claim_lane_dispatch.py"),
+            "claim",
+            "--claims-path",
+            str(claims_path),
+            "--lane-id",
+            module.LANE_ID,
+            "--platform",
+            "modal",
+            "--instance-job-id",
+            "active-t1-job",
+            "--agent",
+            "unit-test",
+            "--predicted-eta-utc",
+            "2026-05-11T00:00:00Z",
+            "--status",
+            "active_dispatching",
+            "--notes",
+            "unit test active T1 claim",
+            "--now-utc",
+            "2026-05-10T00:00:00Z",
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+
+    payload, rc = module.build_local_plan(
+        label="unit-full-run",
+        epochs=3000,
+        batch_size=16,
+        timeout_hours=24,
+        cost_cap_usd=80,
+        train_timeout_hours=module.DEFAULT_TRAIN_TIMEOUT_HOURS,
+        max_target_pairs=None,
+        claims_path=claims_path,
+    )
+
+    assert rc == 2
+    assert payload["ready_for_modal_dispatch_command"] is False
+    assert payload["active_lane_dispatch_conflicts"] == [
+        {
+            "timestamp_utc": "2026-05-10T00:00:00Z",
+            "agent": "unit-test",
+            "lane_id": module.LANE_ID,
+            "platform": "modal",
+            "instance_job_id": "active-t1-job",
+            "status": "active_dispatching",
+            "predicted_eta_utc": "2026-05-11T00:00:00Z",
+        }
+    ]
+    assert "active_lane_dispatch_conflict:active-t1-job:active_dispatching" in payload[
+        "validation_errors"
+    ]
 
 
 def test_modal_t1_recover_classifies_training_only_success_without_failed_label() -> None:
@@ -389,7 +467,7 @@ def test_modal_t1_recover_classifies_training_only_success_without_failed_label(
     assert "elif _returncode_is_zero(result.get(\"returncode\")):" in recover_src
 
 
-def test_modal_t1_default_train_timeout_leaves_artifact_collection_buffer() -> None:
+def test_modal_t1_default_train_timeout_leaves_artifact_collection_buffer(tmp_path: Path) -> None:
     module = _load_module()
 
     payload, rc = module.build_local_plan(
@@ -400,6 +478,7 @@ def test_modal_t1_default_train_timeout_leaves_artifact_collection_buffer() -> N
         cost_cap_usd=80,
         train_timeout_hours=module.DEFAULT_TRAIN_TIMEOUT_HOURS,
         max_target_pairs=None,
+        claims_path=_empty_claims_path(tmp_path),
     )
 
     assert rc == 0

@@ -123,6 +123,29 @@ STALE_DISPATCH_AUTHORIZATION_PATTERNS = (
     ),
 )
 
+# SourceIndex candidate facts. These are intentionally broader than the
+# precise policy regexes below; they only decide which files need the existing
+# scan_text validator.
+_SOURCE_INDEX_ANY_SUBSTRINGS = frozenset(
+    {
+        "launch_lightning_batch_job.py",
+        "--required-device",
+        "--required-samples",
+        "--rmote",
+        "-printf",
+        "path=",
+        "for path in",
+        "PYTHONPATH",
+        "/Users/",
+        "/home/adpena/",
+        *REMOTE_PATH_FLAGS,
+    }
+)
+_SOURCE_INDEX_DOC_CASEFOLD_SUBSTRINGS = (
+    "READY-TO-LAUNCH",
+    "No additional approval needed",
+)
+
 
 @dataclass(frozen=True)
 class Hazard:
@@ -493,7 +516,7 @@ def scan_paths(
     else:
         patterns = tuple(f"*{suffix}" for suffix in sorted(TEXT_SUFFIXES))
         grouped = source_index.files_by_pattern(scan_paths, patterns=patterns)
-        files = sorted(
+        all_files = sorted(
             {
                 path
                 for paths_for_pattern in grouped.values()
@@ -503,6 +526,39 @@ def scan_paths(
             },
             key=lambda item: item.as_posix(),
         )
+        files = []
+        for path in all_files:
+            rel = _repo_rel(path, root)
+            suffix = path.suffix.lower()
+            try:
+                facts = source_index.text_facts(path)
+            except OSError:
+                # Preserve fail-open parity with the text-read loop below:
+                # unreadable files are skipped there, so they should not
+                # become hard failures only because SourceIndex is present.
+                files.append(path)
+                continue
+            if facts.contains_any(_SOURCE_INDEX_ANY_SUBSTRINGS):
+                files.append(path)
+                continue
+            if suffix in {".md", ".rst", ".txt", ".zsh", ".sh", ".bash"}:
+                if facts.contains("path"):
+                    files.append(path)
+                    continue
+                if any(
+                    facts.contains_casefold(needle)
+                    for needle in _SOURCE_INDEX_DOC_CASEFOLD_SUBSTRINGS
+                ):
+                    files.append(path)
+                    continue
+                if (
+                    facts.contains_casefold("Standing instruction")
+                    and facts.contains_casefold("launch")
+                ):
+                    files.append(path)
+                    continue
+            if suffix == ".py" and _is_dispatcher_file(rel):
+                files.append(path)
     for file_path in files:
         try:
             if source_index is None:

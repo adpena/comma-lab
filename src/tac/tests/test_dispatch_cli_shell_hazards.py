@@ -90,6 +90,85 @@ def test_scanner_uses_source_index_without_changing_hazards(tmp_path: Path) -> N
     assert stats["files_by_pattern_misses"] == 1
 
 
+def test_scanner_source_index_candidate_filter_covers_hazard_families(
+    tmp_path: Path,
+) -> None:
+    helper = _load_helper()
+    scripts = tmp_path / "scripts"
+    tools = tmp_path / "tools"
+    reports = tmp_path / "reports"
+    docs = tmp_path / "docs"
+    for directory in (scripts, tools, reports, docs):
+        directory.mkdir()
+    (scripts / "flags.sh").write_text(
+        textwrap.dedent(
+            """
+            python scripts/launch_lightning_batch_job.py exact-eval \
+              --required-device cuda
+            python tools/x.py --rmote lightning
+            find . -name '*.json' -printf '%p\\n'
+            read\tpath
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+    (scripts / "remote_lane_buggy.sh").write_text(
+        'export PYTHONPATH="src:/Users/adpena/projects/pact:${PYTHONPATH:-}"\n',
+        encoding="utf-8",
+    )
+    (tools / "lightning_dispatch_buggy.py").write_text(
+        textwrap.dedent(
+            """
+            import subprocess
+            from pathlib import Path
+            REPO_ROOT = Path(__file__).resolve().parents[1]
+            subprocess.run([
+                "python", "scripts/launch_lightning_batch_job.py", "exact-eval",
+                "--repo-dir", str(REPO_ROOT),
+            ])
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+    (reports / "old.md").write_text(
+        "cuda dispatch ready-to-launch\nno additional approval needed\n",
+        encoding="utf-8",
+    )
+    (docs / "standing.md").write_text(
+        "standing instruction: launch when a gpu appears\n",
+        encoding="utf-8",
+    )
+    (docs / "irrelevant.md").write_text("ordinary operations notes\n", encoding="utf-8")
+
+    baseline = helper.scan_paths(
+        tmp_path,
+        scan_paths=("scripts", "tools", "reports", "docs"),
+    )
+    with source_index_context(tmp_path) as index:
+        indexed = helper.scan_paths(
+            tmp_path,
+            scan_paths=("scripts", "tools", "reports", "docs"),
+            source_index=index,
+        )
+        stats = index.stats()
+
+    normalize = lambda rows: sorted((h.path, h.line, h.kind, h.message) for h in rows)
+    assert normalize(indexed) == normalize(baseline)
+    assert _kinds(indexed) == {
+        "dispatch_local_path_leak",
+        "known_typo_flag",
+        "macos_find_printf",
+        "remote_script_local_pythonpath_leak",
+        "stale_dispatch_authorization_doc",
+        "stale_lightning_launcher_flag",
+        "zsh_path_special_variable",
+    }
+    # The facts pass opens every suffix-matched file once, while the precise
+    # scanner should reopen only hazard candidates. Six fixture files means
+    # an unfiltered second pass would create twelve text cache entries.
+    assert stats["text_cache_entries"] < 12
+
+
 def test_scanner_catches_stale_dispatch_authorization_docs(tmp_path: Path) -> None:
     helper = _load_helper()
     report = tmp_path / "reports" / "old_dispatch.md"
