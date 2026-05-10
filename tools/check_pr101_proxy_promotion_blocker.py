@@ -13,8 +13,9 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 try:
     from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
@@ -24,8 +25,8 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
-from tac.repo_io import json_text, read_json, repo_relative, sha256_file, write_json  # noqa: E402
 from tac.continual_learning import ContestResult  # noqa: E402
+from tac.repo_io import json_text, read_json, repo_relative, sha256_file, write_json  # noqa: E402
 
 TOOL_NAME = "tools/check_pr101_proxy_promotion_blocker.py"
 CHECKLIST_SCHEMA = "pr101_a1_proxy_promotion_blocker_checklist_v1"
