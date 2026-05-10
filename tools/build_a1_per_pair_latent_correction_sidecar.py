@@ -95,7 +95,9 @@ SIDECAR_DISPATCH_CLAIM_SCHEMA = "a1_sidecar_dispatch_claim_v1"
 SIDECAR_EXACT_EVAL_PREFLIGHT_SCHEMA = "a1_sidecar_exact_eval_preflight_v1"
 DEFAULT_DISPATCH_CLAIMS_PATH = REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md"
 REQUIRED_RUNTIME_FILES = ("inflate.py", "inflate.sh", "src/codec.py", "src/model.py")
-RUNTIME_TREE_EXCLUDED_FILES = frozenset({"archive.zip"})
+RUNTIME_TREE_EXCLUDED_FILES = frozenset(
+    {"archive.zip", "archive_manifest.json", "contest_auth_eval.json", "report.txt"}
+)
 RUNTIME_TREE_EXCLUDED_PARTS = frozenset({"__pycache__"})
 TERMINAL_DISPATCH_STATUS_PREFIXES = (
     "completed_",

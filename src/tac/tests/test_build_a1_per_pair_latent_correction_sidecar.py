@@ -62,6 +62,20 @@ def test_manifest_path_allows_external_outputs(tmp_path: Path) -> None:
     assert tool.manifest_path(tmp_path / "x.py") == str(tmp_path / "x.py")
 
 
+def test_local_runtime_custody_excludes_nonruntime_custody_files(tmp_path: Path) -> None:
+    tool = load_tool()
+    sub_dir, archive = _write_runtime_fixture(tmp_path)
+    baseline = tool.collect_local_runtime_custody(sub_dir, archive_path=archive)
+    (sub_dir / "report.txt").write_text("custody report\n")
+    (sub_dir / "archive_manifest.json").write_text("{}\n")
+    (sub_dir / "contest_auth_eval.json").write_text("{}\n")
+
+    with_custody = tool.collect_local_runtime_custody(sub_dir, archive_path=archive)
+
+    assert with_custody["runtime_tree_sha256"] == baseline["runtime_tree_sha256"]
+    assert with_custody["file_count"] == baseline["file_count"]
+
+
 def test_ground_truth_loader_uses_upstream_yuv420_helper() -> None:
     tool_text = TOOL_PATH.read_text()
 
