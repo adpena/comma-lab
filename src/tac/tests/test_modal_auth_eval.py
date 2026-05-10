@@ -86,6 +86,16 @@ def test_source_uses_literal_cuda_canonical_contest_eval() -> None:
     assert eval_image.index(".env(") < eval_image.index(".add_local_")
 
 
+def test_modal_auth_eval_images_include_hard_runtime_entropy_deps() -> None:
+    cuda_text = TOOL_PATH.read_text()
+    cpu_text = (REPO_ROOT / "experiments" / "modal_auth_eval_cpu.py").read_text()
+
+    for text in (cuda_text, cpu_text):
+        assert '"brotli>=1.0"' in text
+        assert '"constriction>=0.4,<0.5"' in text
+        assert '"pyppmd>=1.3,<2.0"' in text
+
+
 def test_submission_dir_transport_zip_is_deterministic_and_filtered(mod, tmp_path):
     submission_dir = tmp_path / "submission_dir"
     submission_dir.mkdir()

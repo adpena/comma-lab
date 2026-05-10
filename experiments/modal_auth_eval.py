@@ -90,6 +90,8 @@ base_image = (
         "Pillow",
         "pydantic>=2.0",
         "brotli>=1.0",
+        "constriction>=0.4,<0.5",
+        "pyppmd>=1.3,<2.0",
         "cryptography>=41.0",
         extra_index_url="https://pypi.nvidia.com",
     )
