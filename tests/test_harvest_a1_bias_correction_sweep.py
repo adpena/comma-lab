@@ -100,3 +100,87 @@ def test_harvest_one_refuses_mismatched_report_without_score_claim(
     assert row["score"] is None
     assert row["tag"] == "[report_custody_failed]"
     assert "score_claim" not in row
+
+
+def test_harvest_one_report_only_artifact_is_not_score_claim(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(
+        harvest,
+        "find_run_for_submission",
+        lambda _name: {
+            "run_id": 256,
+            "conclusion": "success",
+            "createdAt": "2026-05-09T00:00:00Z",
+            "headSha": "f" * 40,
+            "artifact_name": "eval-a1_bias_v1",
+        },
+    )
+
+    def fake_gh(args: list[str], capture: bool = True) -> subprocess.CompletedProcess[str]:
+        del capture
+        dest = Path(args[args.index("-D") + 1])
+        dest.mkdir(parents=True, exist_ok=True)
+        (dest / "report.txt").write_text(report_text("a1_bias_v1"))
+        return subprocess.CompletedProcess(["gh", *args], 0, "", "")
+
+    monkeypatch.setattr(harvest, "gh", fake_gh)
+
+    row = harvest.harvest_one(
+        "a1_bias_v1",
+        expected_identity={
+            "archive_sha256": "a" * 64,
+            "archive_size_bytes": 178_262,
+            "inflate_py_sha256": "b" * 64,
+            "runtime_tree_sha256": "c" * 64,
+        },
+    )
+
+    assert row["status"] == "report_identity_incomplete"
+    assert row["score"] is not None
+    assert row["score_claim"] is False
+    assert row["exact_report_custody"] is False
+    assert "artifact_archive_sha256_missing" in row["identity_blockers"]
+    assert row["tag"] == "[contest-CPU GHA report-only; identity-incomplete]"
+
+
+def test_harvest_one_score_claim_requires_artifact_identity(
+    tmp_path: Path, monkeypatch
+) -> None:
+    expected = {
+        "archive_sha256": "a" * 64,
+        "archive_size_bytes": 178_262,
+        "inflate_py_sha256": "b" * 64,
+        "runtime_tree_sha256": "c" * 64,
+    }
+    monkeypatch.setattr(
+        harvest,
+        "find_run_for_submission",
+        lambda _name: {
+            "run_id": 257,
+            "conclusion": "success",
+            "createdAt": "2026-05-09T00:00:00Z",
+            "headSha": "e" * 40,
+            "artifact_name": "eval-a1_bias_v1",
+        },
+    )
+
+    def fake_gh(args: list[str], capture: bool = True) -> subprocess.CompletedProcess[str]:
+        del capture
+        dest = Path(args[args.index("-D") + 1])
+        dest.mkdir(parents=True, exist_ok=True)
+        (dest / "report.txt").write_text(report_text("a1_bias_v1"))
+        (dest / "identity.json").write_text(
+            harvest.json.dumps(expected, sort_keys=True)
+        )
+        return subprocess.CompletedProcess(["gh", *args], 0, "", "")
+
+    monkeypatch.setattr(harvest, "gh", fake_gh)
+
+    row = harvest.harvest_one("a1_bias_v1", expected_identity=expected)
+
+    assert row["status"] == "completed"
+    assert row["score_claim"] is True
+    assert row["exact_report_custody"] is True
+    assert row["identity_blockers"] == []
+    assert row["artifact_identity"]["archive_sha256"] == "a" * 64

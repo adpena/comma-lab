@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from tac import preflight
-from tac.source_index import source_index_context
+from tac.source_index import SourceIndex, source_index_context
 
 
 def _write(path: Path, text: str) -> None:
@@ -14,6 +16,31 @@ def _write(path: Path, text: str) -> None:
 def _with_source_index(root: Path, fn):
     with source_index_context(root):
         return fn(repo_root=root, strict=False, verbose=False)
+
+
+def test_source_index_facts_group_fill_is_single_flight(tmp_path: Path, monkeypatch) -> None:
+    for idx in range(4):
+        _write(tmp_path / "src" / "tac" / f"mod_{idx}.py", f"VALUE = {idx}\n")
+
+    source_index = SourceIndex(tmp_path)
+    original_files_via_rg = source_index._files_via_rg
+
+    def _slow_files_via_rg(dirs, pattern):
+        time.sleep(0.05)
+        return original_files_via_rg(dirs, pattern)
+
+    monkeypatch.setattr(source_index, "_files_via_rg", _slow_files_via_rg)
+
+    def _load_group():
+        return source_index.facts_for_files(["src/tac"], pattern="*.py", parallel=False)
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        rows = list(pool.map(lambda _: _load_group(), range(4)))
+
+    assert all(row == rows[0] for row in rows)
+    stats = source_index.stats()
+    assert stats["facts_group_misses"] == 1
+    assert stats["file_list_misses"] == 1
 
 
 def test_comment_only_contract_source_index_matches_no_index(tmp_path: Path) -> None:

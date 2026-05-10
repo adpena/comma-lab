@@ -189,7 +189,7 @@ def test_prewarm_preflight_source_index_reuses_multi_pattern_inventory(
     }
 
 
-def test_preflight_developer_warms_source_index_before_nested_scan(
+def test_preflight_developer_source_index_prewarm_is_opt_in(
     tmp_path,
     monkeypatch,
 ):
@@ -217,8 +217,20 @@ def test_preflight_developer_warms_source_index_before_nested_scan(
         )
     except Exception:
         # The tiny fixture repo is not expected to satisfy the whole developer
-        # preflight; this test only proves the wrapper invokes the prewarm
-        # before nested checks run.
+        # preflight; this test only proves default preflight skips the
+        # experimental prewarm path.
+        pass
+
+    assert calls == []
+
+    monkeypatch.setenv("PACT_PREFLIGHT_PREWARM_SOURCE_INDEX", "1")
+    try:
+        preflight.preflight_developer(
+            check_codebase=True,
+            use_fs_cache=True,
+            verbose=False,
+        )
+    except Exception:
         pass
 
     assert calls == [tmp_path]

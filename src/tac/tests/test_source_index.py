@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import textwrap
+from pathlib import Path
 
 from tac import preflight
 from tac.source_index import SourceIndex, get_current_source_index, source_index_context
@@ -239,6 +240,15 @@ def test_source_index_substring_index_filters_candidates(tmp_path):
     assert stats["substring_index_entries"] >= 2
     assert stats["substring_index_hits"] >= 2
     assert stats["substring_index_misses"] == 0
+
+
+def test_source_index_comment_contract_prefilter_does_not_self_trigger():
+    import tac.source_index as source_index
+
+    needle = "overrides this stub"
+
+    assert needle in source_index._DEFAULT_TEXT_FACT_NEEDLES
+    assert needle not in Path(source_index.__file__).read_text(encoding="utf-8")
 
 
 def test_source_index_unknown_substring_queries_still_scan_text(tmp_path):

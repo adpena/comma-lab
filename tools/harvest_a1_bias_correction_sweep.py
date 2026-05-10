@@ -40,6 +40,26 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parent.parent
 FORK_REPO = "adpena/comma_video_compression_challenge"
 EVAL_WORKFLOW_FILE = "eval.yml"
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+ARCHIVE_SHA_KEYS = (
+    "archive_sha256",
+    "candidate_archive_sha256",
+    "new_archive_sha256",
+    "intended_archive_sha256",
+)
+ARCHIVE_BYTES_KEYS = (
+    "archive_size_bytes",
+    "archive_bytes",
+    "candidate_archive_bytes",
+    "new_archive_bytes",
+    "intended_archive_bytes",
+)
+INFLATE_SHA_KEYS = (
+    "inflate_py_sha256",
+    "inflate_sha256",
+    "intended_inflate_py_sha256",
+)
+RUNTIME_TREE_SHA_KEYS = ("runtime_tree_sha256", "runtime_sha256")
 
 
 REPORT_PATTERNS = {
@@ -77,7 +97,7 @@ def find_run_for_submission(submission_name: str) -> dict[str, Any] | None:
         "-L",
         "50",
         "--json",
-        "databaseId,status,conclusion,createdAt,name",
+        "databaseId,status,conclusion,createdAt,name,headSha",
     ])
     if runs_q.returncode != 0:
         return None
@@ -104,6 +124,7 @@ def find_run_for_submission(submission_name: str) -> dict[str, Any] | None:
                     "run_id": rid,
                     "conclusion": run["conclusion"],
                     "createdAt": run["createdAt"],
+                    "headSha": run.get("headSha"),
                     "artifact_name": target,
                 }
     return None
@@ -185,7 +206,192 @@ def select_custodial_report_path(artifact_dir: Path, submission_name: str) -> Pa
     return matches[0]
 
 
-def harvest_one(submission_name: str) -> dict[str, Any]:
+def _is_sha256(value: object) -> bool:
+    return isinstance(value, str) and SHA256_RE.fullmatch(value.strip().lower()) is not None
+
+
+def _walk_json_objects(value: object):
+    if isinstance(value, dict):
+        yield value
+        for child in value.values():
+            yield from _walk_json_objects(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from _walk_json_objects(child)
+
+
+def _first_sha(payload: object, keys: tuple[str, ...]) -> str | None:
+    for obj in _walk_json_objects(payload):
+        for key in keys:
+            value = obj.get(key)
+            if _is_sha256(value):
+                return str(value).strip().lower()
+    return None
+
+
+def _first_int(payload: object, keys: tuple[str, ...]) -> int | None:
+    for obj in _walk_json_objects(payload):
+        for key in keys:
+            value = obj.get(key)
+            if isinstance(value, bool) or value is None:
+                continue
+            try:
+                parsed = int(value)
+            except (TypeError, ValueError):
+                continue
+            if parsed > 0:
+                return parsed
+    return None
+
+
+def collect_artifact_identity(artifact_dir: Path) -> dict[str, Any]:
+    """Collect archive/runtime identity fields from downloaded GHA artifacts.
+
+    A report-only artifact is not enough to prove that GitHub evaluated the
+    same archive/runtime bytes as the local rollup. Future dispatch artifacts
+    should include at least archive SHA/bytes, runtime tree SHA, and inflate
+    SHA in a JSON manifest; this collector validates that surface when present.
+    """
+    identity: dict[str, Any] = {
+        "artifact_identity_json_paths": [],
+        "archive_sha256": None,
+        "archive_size_bytes": None,
+        "inflate_py_sha256": None,
+        "runtime_tree_sha256": None,
+    }
+    for json_path in sorted(artifact_dir.rglob("*.json")):
+        try:
+            payload = json.loads(json_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError, UnicodeDecodeError):
+            continue
+        rel = json_path.relative_to(artifact_dir).as_posix()
+        identity["artifact_identity_json_paths"].append(rel)
+        identity["archive_sha256"] = identity["archive_sha256"] or _first_sha(
+            payload, ARCHIVE_SHA_KEYS
+        )
+        identity["archive_size_bytes"] = identity["archive_size_bytes"] or _first_int(
+            payload, ARCHIVE_BYTES_KEYS
+        )
+        identity["inflate_py_sha256"] = identity["inflate_py_sha256"] or _first_sha(
+            payload, INFLATE_SHA_KEYS
+        )
+        identity["runtime_tree_sha256"] = identity["runtime_tree_sha256"] or _first_sha(
+            payload, RUNTIME_TREE_SHA_KEYS
+        )
+    return identity
+
+
+def expected_identity_for_variant(variant: dict[str, Any]) -> dict[str, Any]:
+    """Build the local byte identity expected for a harvested variant."""
+    identity: dict[str, Any] = {
+        "variant_id": variant.get("variant_id"),
+        "submission_name": variant.get("submission_name"),
+        "archive_sha256": variant.get("archive_sha256"),
+        "archive_size_bytes": (
+            variant.get("archive_size_bytes")
+            or variant.get("archive_bytes")
+            or variant.get("candidate_archive_bytes")
+        ),
+        "inflate_py_sha256": variant.get("inflate_py_sha256"),
+        "runtime_tree_sha256": variant.get("runtime_tree_sha256"),
+        "build_manifest_relpath": variant.get("build_manifest_relpath"),
+        "out_dir": variant.get("out_dir"),
+    }
+
+    manifest_rel = variant.get("build_manifest_relpath")
+    manifest_path = REPO_ROOT / str(manifest_rel) if manifest_rel else None
+    if manifest_path is None and variant.get("out_dir"):
+        manifest_path = REPO_ROOT / str(variant["out_dir"]) / "build_manifest.json"
+    if manifest_path is not None and manifest_path.is_file():
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError, UnicodeDecodeError):
+            manifest = {}
+        identity["build_manifest_relpath"] = str(manifest_path.relative_to(REPO_ROOT))
+        identity["archive_sha256"] = identity["archive_sha256"] or manifest.get("archive_sha256")
+        identity["archive_size_bytes"] = (
+            identity["archive_size_bytes"]
+            or manifest.get("archive_size_bytes")
+            or manifest.get("archive_bytes")
+        )
+        identity["inflate_py_sha256"] = (
+            identity["inflate_py_sha256"] or manifest.get("inflate_py_sha256_new")
+        )
+        identity["runtime_tree_sha256"] = (
+            identity["runtime_tree_sha256"] or manifest.get("runtime_tree_sha256")
+        )
+
+    if identity["archive_size_bytes"] is None and variant.get("out_dir"):
+        archive_path = REPO_ROOT / str(variant["out_dir"]) / "submission_dir" / "archive.zip"
+        if archive_path.is_file():
+            identity["archive_size_bytes"] = archive_path.stat().st_size
+    return identity
+
+
+def validate_artifact_identity(
+    parsed_report: dict[str, Any],
+    artifact_identity: dict[str, Any],
+    expected_identity: dict[str, Any] | None,
+) -> dict[str, Any]:
+    blockers: list[str] = []
+    expected = expected_identity or {}
+    expected_archive_sha = expected.get("archive_sha256")
+    expected_archive_bytes = expected.get("archive_size_bytes")
+    expected_inflate_sha = expected.get("inflate_py_sha256")
+    expected_runtime_tree = expected.get("runtime_tree_sha256")
+
+    if not _is_sha256(expected_archive_sha):
+        blockers.append("expected_archive_sha256_missing")
+    if not isinstance(expected_archive_bytes, int) or expected_archive_bytes <= 0:
+        blockers.append("expected_archive_size_bytes_missing")
+    if not _is_sha256(expected_inflate_sha):
+        blockers.append("expected_inflate_py_sha256_missing")
+    if not _is_sha256(expected_runtime_tree):
+        blockers.append("expected_runtime_tree_sha256_missing")
+
+    report_bytes = parsed_report.get("submission_file_size")
+    if isinstance(expected_archive_bytes, int) and report_bytes != expected_archive_bytes:
+        blockers.append(
+            f"report_archive_bytes_mismatch:expected={expected_archive_bytes}:actual={report_bytes}"
+        )
+
+    artifact_archive_sha = artifact_identity.get("archive_sha256")
+    artifact_archive_bytes = artifact_identity.get("archive_size_bytes")
+    artifact_inflate_sha = artifact_identity.get("inflate_py_sha256")
+    artifact_runtime_tree = artifact_identity.get("runtime_tree_sha256")
+
+    if not _is_sha256(artifact_archive_sha):
+        blockers.append("artifact_archive_sha256_missing")
+    elif _is_sha256(expected_archive_sha) and artifact_archive_sha != expected_archive_sha:
+        blockers.append("artifact_archive_sha256_mismatch")
+
+    if not isinstance(artifact_archive_bytes, int) or artifact_archive_bytes <= 0:
+        blockers.append("artifact_archive_size_bytes_missing")
+    elif isinstance(expected_archive_bytes, int) and artifact_archive_bytes != expected_archive_bytes:
+        blockers.append("artifact_archive_size_bytes_mismatch")
+
+    if not _is_sha256(artifact_inflate_sha):
+        blockers.append("artifact_inflate_py_sha256_missing")
+    elif _is_sha256(expected_inflate_sha) and artifact_inflate_sha != expected_inflate_sha:
+        blockers.append("artifact_inflate_py_sha256_mismatch")
+
+    if not _is_sha256(artifact_runtime_tree):
+        blockers.append("artifact_runtime_tree_sha256_missing")
+    elif _is_sha256(expected_runtime_tree) and artifact_runtime_tree != expected_runtime_tree:
+        blockers.append("artifact_runtime_tree_sha256_mismatch")
+
+    return {
+        "identity_blockers": blockers,
+        "artifact_identity": artifact_identity,
+        "expected_identity": expected,
+    }
+
+
+def harvest_one(
+    submission_name: str,
+    *,
+    expected_identity: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     found = find_run_for_submission(submission_name)
     if not found:
         return {
@@ -248,11 +454,16 @@ def harvest_one(submission_name: str) -> dict[str, Any]:
                 "artifact_name": found["artifact_name"],
                 "report_error": parsed["_error"],
             }
+        artifact_identity = collect_artifact_identity(Path(td))
+        identity = validate_artifact_identity(parsed, artifact_identity, expected_identity)
+    identity_blockers = identity["identity_blockers"]
+    exact_identity = not identity_blockers
     return {
         "submission_name": submission_name,
-        "status": "completed",
+        "status": "completed" if exact_identity else "report_identity_incomplete",
         "run_id": rid,
         "run_url": f"https://github.com/{FORK_REPO}/actions/runs/{rid}",
+        "workflow_head_sha": found.get("headSha"),
         "score": parsed.get("score_recomputed"),
         "score_reported_rounded": parsed.get("reported_score"),
         "avg_posenet_dist": parsed.get("avg_posenet_dist"),
@@ -260,13 +471,27 @@ def harvest_one(submission_name: str) -> dict[str, Any]:
         "compression_rate": parsed.get("compression_rate"),
         "archive_bytes_from_report": parsed.get("submission_file_size"),
         "n_samples": parsed.get("n_samples"),
-        "tag": "[contest-CPU GHA Linux x86_64]",
+        "tag": (
+            "[contest-CPU GHA Linux x86_64]"
+            if exact_identity
+            else "[contest-CPU GHA report-only; identity-incomplete]"
+        ),
         "hardware": "github-actions-ubuntu-latest-x86_64",
-        "evidence_grade": "contest-CPU-1to1",
-        "score_claim": True,
+        "evidence_grade": (
+            "contest-CPU-1to1" if exact_identity else "contest-CPU-report-only"
+        ),
+        "score_claim": exact_identity,
         "promotion_eligible": False,
-        "promotion_blockers": ["missing_paired_contest_cuda"],
-        "exact_report_custody": True,
+        "promotion_blockers": (
+            ["missing_paired_contest_cuda"]
+            if exact_identity
+            else ["gha_artifact_identity_incomplete", *identity_blockers]
+        ),
+        "exact_report_custody": exact_identity,
+        "report_submission_name_custody": True,
+        "identity_blockers": identity_blockers,
+        "artifact_identity": identity["artifact_identity"],
+        "expected_identity": identity["expected_identity"],
         "artifact_name": found["artifact_name"],
         "report_sha256": report_sha256,
         "report_submission_dir": parsed.get("report_submission_dir"),
@@ -323,7 +548,7 @@ def main() -> int:
         candidates.append(sub)
         result = None
         for cand in dict.fromkeys(candidates):  # preserve order; drop dups
-            r = harvest_one(cand)
+            r = harvest_one(cand, expected_identity=expected_identity_for_variant(v))
             if r["status"] == "completed":
                 result = r
                 break

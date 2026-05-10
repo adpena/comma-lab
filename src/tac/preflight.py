@@ -797,6 +797,13 @@ def _preflight_parallel_enabled() -> bool:
     return value in {"1", "true", "yes", "on"}
 
 
+def _preflight_source_index_prewarm_enabled() -> bool:
+    """Return true when the experimental source-index prewarm is enabled."""
+
+    value = os.environ.get("PACT_PREFLIGHT_PREWARM_SOURCE_INDEX", "").strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
+
 def _prewarm_preflight_source_index(root: Path) -> None:
     """Populate shared source-index fact groups before parallel checks fan out.
 
@@ -1412,7 +1419,8 @@ def preflight_all(
         # from repeated per-check rglob/read/parse loops. Artifact-only callers
         # skip this path and still read their inputs live.
         with cached_filesystem(cache_reads=True), source_index_context(REPO_ROOT):
-            _prewarm_preflight_source_index(REPO_ROOT)
+            if _preflight_source_index_prewarm_enabled():
+                _prewarm_preflight_source_index(REPO_ROOT)
             preflight_all(
                 profile_name=profile_name,
                 profile_arch=profile_arch,
@@ -3475,7 +3483,8 @@ def preflight_developer(
         from tac.source_index import source_index_context
 
         with cached_filesystem(cache_reads=True), source_index_context(REPO_ROOT):
-            _prewarm_preflight_source_index(REPO_ROOT)
+            if _preflight_source_index_prewarm_enabled():
+                _prewarm_preflight_source_index(REPO_ROOT)
             preflight_developer(
                 profile_name=profile_name,
                 profile_arch=profile_arch,

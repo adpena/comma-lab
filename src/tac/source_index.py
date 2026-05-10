@@ -72,7 +72,7 @@ _DEFAULT_TEXT_FACT_NEEDLES = frozenset(
         "READY-TO-LAUNCH",
         "caller is responsible",
         "deploy",
-        "overrides this stub",
+        "overrides " "this stub",
         "production",
         "wrapper",
         "WARN ",
@@ -275,6 +275,7 @@ class SourceIndex:
     _persistent_text_facts: dict[str, dict[str, object]] = field(default_factory=dict, init=False)
     _persistent_text_facts_dirty: bool = field(default=False, init=False)
     _lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
+    _key_locks: dict[tuple[object, ...], threading.Lock] = field(default_factory=dict, init=False, repr=False)
     _stats: dict[str, int] = field(
         default_factory=lambda: {
             "file_list_hits": 0,
@@ -315,15 +316,22 @@ class SourceIndex:
             if cached is not None:
                 self._stats["file_list_hits"] += 1
                 return cached
-            self._stats["file_list_misses"] += 1
 
-        paths = self._files_via_rg(dirs, pattern)
-        if paths is None:
-            paths = self._files_via_os_walk(dirs, pattern)
-        out = tuple(paths[key] for key in sorted(paths))
-        with self._lock:
-            self._file_cache[key] = out
-        return out
+        with self._key_lock("files", key):
+            with self._lock:
+                cached = self._file_cache.get(key)
+                if cached is not None:
+                    self._stats["file_list_hits"] += 1
+                    return cached
+                self._stats["file_list_misses"] += 1
+
+            paths = self._files_via_rg(dirs, pattern)
+            if paths is None:
+                paths = self._files_via_os_walk(dirs, pattern)
+            out = tuple(paths[key] for key in sorted(paths))
+            with self._lock:
+                self._file_cache[key] = out
+            return out
 
     def files_by_pattern(
         self,
@@ -350,22 +358,29 @@ class SourceIndex:
             if cached is not None:
                 self._stats["files_by_pattern_hits"] += 1
                 return dict(cached)
-            self._stats["files_by_pattern_misses"] += 1
 
-        paths = self._files_via_rg_many(dirs, unique_patterns)
-        if paths is None:
-            paths = self._files_via_os_walk_many(dirs, unique_patterns)
-        grouped: dict[str, list[Path]] = {pattern: [] for pattern in unique_patterns}
-        for path in (paths[key] for key in sorted(paths)):
-            for pattern in unique_patterns:
-                if fnmatch.fnmatch(path.name, pattern):
-                    grouped[pattern].append(path)
-        out = {pattern: tuple(grouped[pattern]) for pattern in unique_patterns}
-        with self._lock:
-            self._files_by_pattern_cache[key] = out
-            for pattern, paths_for_pattern in out.items():
-                self._file_cache[(dir_keys, pattern)] = paths_for_pattern
-        return dict(out)
+        with self._key_lock("files_by_pattern", key):
+            with self._lock:
+                cached = self._files_by_pattern_cache.get(key)
+                if cached is not None:
+                    self._stats["files_by_pattern_hits"] += 1
+                    return dict(cached)
+                self._stats["files_by_pattern_misses"] += 1
+
+            paths = self._files_via_rg_many(dirs, unique_patterns)
+            if paths is None:
+                paths = self._files_via_os_walk_many(dirs, unique_patterns)
+            grouped: dict[str, list[Path]] = {pattern: [] for pattern in unique_patterns}
+            for path in (paths[key] for key in sorted(paths)):
+                for pattern in unique_patterns:
+                    if fnmatch.fnmatch(path.name, pattern):
+                        grouped[pattern].append(path)
+            out = {pattern: tuple(grouped[pattern]) for pattern in unique_patterns}
+            with self._lock:
+                self._files_by_pattern_cache[key] = out
+                for pattern, paths_for_pattern in out.items():
+                    self._file_cache[(dir_keys, pattern)] = paths_for_pattern
+            return dict(out)
 
     def read_text(
         self,
@@ -383,12 +398,19 @@ class SourceIndex:
             if cached is not None:
                 self._stats["text_hits"] += 1
                 return cached
-            self._stats["text_misses"] += 1
 
-        text = target.read_text(encoding=encoding, errors=errors)
-        with self._lock:
-            self._text_cache[key] = text
-        return text
+        with self._key_lock("text", key):
+            with self._lock:
+                cached = self._text_cache.get(key)
+                if cached is not None:
+                    self._stats["text_hits"] += 1
+                    return cached
+                self._stats["text_misses"] += 1
+
+            text = target.read_text(encoding=encoding, errors=errors)
+            with self._lock:
+                self._text_cache[key] = text
+            return text
 
     def python_ast(self, path: str | Path) -> ast.AST:
         """Parse and cache a Python AST for ``path``."""
@@ -400,12 +422,19 @@ class SourceIndex:
             if cached is not None:
                 self._stats["ast_hits"] += 1
                 return cached
-            self._stats["ast_misses"] += 1
 
-        tree = ast.parse(self.read_text(target), filename=str(target))
-        with self._lock:
-            self._ast_cache[key] = tree
-        return tree
+        with self._key_lock("ast", key):
+            with self._lock:
+                cached = self._ast_cache.get(key)
+                if cached is not None:
+                    self._stats["ast_hits"] += 1
+                    return cached
+                self._stats["ast_misses"] += 1
+
+            tree = ast.parse(self.read_text(target), filename=str(target))
+            with self._lock:
+                self._ast_cache[key] = tree
+            return tree
 
     def text_facts(self, path: str | Path) -> SourceTextFacts:
         """Return cached one-pass lexical facts for ``path``."""
@@ -417,44 +446,51 @@ class SourceIndex:
             if cached is not None:
                 self._stats["text_facts_hits"] += 1
                 return cached
-            self._stats["text_facts_misses"] += 1
 
-        stat = target.stat()
-        persistent = self._persistent_text_facts.get(key)
-        if self._persistent_row_matches(target, stat, persistent):
-            facts = self._facts_from_persistent_row(target, stat, persistent)
+        with self._key_lock("text_facts", key):
+            with self._lock:
+                cached = self._text_facts_cache.get(key)
+                if cached is not None:
+                    self._stats["text_facts_hits"] += 1
+                    return cached
+                self._stats["text_facts_misses"] += 1
+
+            stat = target.stat()
+            persistent = self._persistent_text_facts.get(key)
+            if self._persistent_row_matches(target, stat, persistent):
+                facts = self._facts_from_persistent_row(target, stat, persistent)
+                with self._lock:
+                    self._text_facts_cache[key] = facts
+                    self._stats["text_facts_persistent_hits"] += 1
+                return facts
+
+            text = self.read_text(target)
+            folded_text = text.casefold()
+            facts = SourceTextFacts(
+                path=target,
+                rel_path=self.repo_relative(target),
+                suffix=target.suffix,
+                size_bytes=stat.st_size,
+                mtime_ns=stat.st_mtime_ns,
+                ctime_ns=stat.st_ctime_ns,
+                inode=stat.st_ino,
+                device=stat.st_dev,
+                line_count=len(text.splitlines()),
+                tokens=frozenset(),
+                substrings=frozenset(
+                    needle for needle in _DEFAULT_TEXT_FACT_NEEDLES if needle in text
+                ),
+                casefold_substrings=frozenset(
+                    needle.casefold()
+                    for needle in _DEFAULT_TEXT_FACT_NEEDLES
+                    if needle.casefold() in folded_text
+                ),
+            )
             with self._lock:
                 self._text_facts_cache[key] = facts
-                self._stats["text_facts_persistent_hits"] += 1
+                self._persistent_text_facts[key] = self._facts_to_persistent_row(facts)
+                self._persistent_text_facts_dirty = True
             return facts
-
-        text = self.read_text(target)
-        folded_text = text.casefold()
-        facts = SourceTextFacts(
-            path=target,
-            rel_path=self.repo_relative(target),
-            suffix=target.suffix,
-            size_bytes=stat.st_size,
-            mtime_ns=stat.st_mtime_ns,
-            ctime_ns=stat.st_ctime_ns,
-            inode=stat.st_ino,
-            device=stat.st_dev,
-            line_count=len(text.splitlines()),
-            tokens=frozenset(),
-            substrings=frozenset(
-                needle for needle in _DEFAULT_TEXT_FACT_NEEDLES if needle in text
-            ),
-            casefold_substrings=frozenset(
-                needle.casefold()
-                for needle in _DEFAULT_TEXT_FACT_NEEDLES
-                if needle.casefold() in folded_text
-            ),
-        )
-        with self._lock:
-            self._text_facts_cache[key] = facts
-            self._persistent_text_facts[key] = self._facts_to_persistent_row(facts)
-            self._persistent_text_facts_dirty = True
-        return facts
 
     def save_persistent_text_facts(self) -> None:
         """Persist valid text facts for future preflight processes."""
@@ -503,20 +539,27 @@ class SourceIndex:
             if cached is not None:
                 self._stats["facts_group_hits"] += 1
                 return cached
-            self._stats["facts_group_misses"] += 1
 
-        paths = self.files(dirs, pattern=pattern)
-        if not paths:
-            return ()
-        if not parallel or len(paths) < 32:
-            rows = tuple(self.text_facts(path) for path in paths)
-        else:
-            workers = min(32, (os.cpu_count() or 1) + 4, len(paths))
-            with ThreadPoolExecutor(max_workers=workers) as pool:
-                rows = tuple(pool.map(self.text_facts, paths))
-        with self._lock:
-            self._facts_group_cache[group_key] = rows
-        return rows
+        with self._key_lock("facts_group", group_key):
+            with self._lock:
+                cached = self._facts_group_cache.get(group_key)
+                if cached is not None:
+                    self._stats["facts_group_hits"] += 1
+                    return cached
+                self._stats["facts_group_misses"] += 1
+
+            paths = self.files(dirs, pattern=pattern)
+            if not paths:
+                rows: tuple[SourceTextFacts, ...] = ()
+            elif not parallel or len(paths) < 32:
+                rows = tuple(self.text_facts(path) for path in paths)
+            else:
+                workers = min(32, (os.cpu_count() or 1) + 4, len(paths))
+                with ThreadPoolExecutor(max_workers=workers) as pool:
+                    rows = tuple(pool.map(self.text_facts, paths))
+            with self._lock:
+                self._facts_group_cache[group_key] = rows
+            return rows
 
     def files_containing_substrings(
         self,
@@ -876,18 +919,31 @@ class SourceIndex:
         with self._lock:
             if group_key in self._substring_index_groups:
                 return
-        buckets: dict[str, set[Path]] = {
-            needle: set() for needle in _DEFAULT_TEXT_FACT_NEEDLES
-        }
-        for facts in facts_rows:
-            for substring in facts.substrings:
-                bucket = buckets.get(substring)
-                if bucket is not None:
-                    bucket.add(facts.path)
+
+        with self._key_lock("substring_group", group_key):
+            with self._lock:
+                if group_key in self._substring_index_groups:
+                    return
+            buckets: dict[str, set[Path]] = {
+                needle: set() for needle in _DEFAULT_TEXT_FACT_NEEDLES
+            }
+            for facts in facts_rows:
+                for substring in facts.substrings:
+                    bucket = buckets.get(substring)
+                    if bucket is not None:
+                        bucket.add(facts.path)
+            with self._lock:
+                for substring, paths in buckets.items():
+                    self._substring_index[(group_key, substring)] = frozenset(paths)
+                self._substring_index_groups.add(group_key)
+
+    def _key_lock(self, *parts: object) -> threading.Lock:
         with self._lock:
-            for substring, paths in buckets.items():
-                self._substring_index[(group_key, substring)] = frozenset(paths)
-            self._substring_index_groups.add(group_key)
+            lock = self._key_locks.get(parts)
+            if lock is None:
+                lock = threading.Lock()
+                self._key_locks[parts] = lock
+            return lock
 
     def _persistent_text_facts_path(self) -> Path:
         return self.root / ".omx" / "cache" / "source_text_facts.json"
