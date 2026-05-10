@@ -9,6 +9,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = REPO_ROOT / "experiments" / "modal_t1_balle_endtoend.py"
+RUNTIME_SCRIPT = REPO_ROOT / "src" / "tac" / "deploy" / "modal" / "runtime.py"
 
 
 def _load_module():
@@ -166,6 +167,9 @@ def test_modal_t1_remote_runs_existing_script_with_score_domain_exact_eval_env()
     text = _source()
     remote_src = text[text.index("def run_t1_balle_modal("):text.index("def _write_dispatch_metadata")]
 
+    assert "t1_modal_import_probe" in remote_src
+    assert "CONTEST_SCORER_IMPORT_PROBE_MODULES" in text
+    assert "remote_import_probe_failed" in remote_src
     assert "missing_canonical_a1_payload" in remote_src
     assert "A1_CANONICAL_REMOTE_PATH" in remote_src
     assert "A1_DESIGNATION_REMOTE_PATH" in remote_src
@@ -177,6 +181,114 @@ def test_modal_t1_remote_runs_existing_script_with_score_domain_exact_eval_env()
     assert "remote_lane_t1_balle_endtoend.sh" in remote_src
     assert "SEGMENTATION_SURROGATE" in remote_src
     assert "sinkhorn" in remote_src
+
+
+def test_modal_t1_image_installs_scorer_runtime_dependencies() -> None:
+    text = _source()
+    runtime_src = RUNTIME_SCRIPT.read_text()
+
+    assert "build_contest_cuda_base_image(" in text
+    assert '"safetensors"' in runtime_src
+    assert '"segmentation-models-pytorch"' in runtime_src
+    assert '"timm"' in runtime_src
+    assert '"einops"' in runtime_src
+    assert '"nvidia-dali-cuda120==1.52.0"' in runtime_src
+    assert '"compressai==1.2.8"' in text
+
+
+def test_modal_t1_mounts_packet_compiler_bootstrap_dependency() -> None:
+    text = _source()
+
+    assert '"tools/build_phase1_packet_compiler.py"' in text
+    assert '"tools/tool_bootstrap.py"' in text
+    assert 'remote_path=str(REMOTE_REPO / "tools/tool_bootstrap.py")' in text
+
+
+def test_modal_t1_guard_labels_require_bounded_guard_params() -> None:
+    module = _load_module()
+
+    payload, rc = module.build_local_plan(
+        label="unit-guard-defaults",
+        epochs=3000,
+        batch_size=16,
+        timeout_hours=24,
+        cost_cap_usd=80,
+        train_timeout_hours=module.DEFAULT_TRAIN_TIMEOUT_HOURS,
+        max_target_pairs=None,
+    )
+
+    assert rc == 2
+    assert payload["ready_for_modal_dispatch_command"] is False
+    assert "guard_label_requires_epochs_lte_100:epochs=3000" in payload["validation_errors"]
+    assert "guard_label_requires_batch_size_lte_8:batch_size=16" in payload["validation_errors"]
+    assert (
+        "guard_label_requires_max_target_pairs_lte_64:max_target_pairs=None"
+        in payload["validation_errors"]
+    )
+    assert (
+        "guard_label_requires_train_timeout_lte_3h:train_timeout_hours=22.50"
+        in payload["validation_errors"]
+    )
+
+
+def test_modal_t1_guard_labels_accept_true_bounded_guard_params() -> None:
+    module = _load_module()
+
+    payload, rc = module.build_local_plan(
+        label="unit-guard-bounded",
+        epochs=50,
+        batch_size=8,
+        timeout_hours=24,
+        cost_cap_usd=80,
+        train_timeout_hours=2,
+        max_target_pairs=64,
+    )
+
+    assert rc == 0
+    assert payload["ready_for_modal_dispatch_command"] is True
+    assert payload["params"]["epochs"] == 50
+    assert payload["params"]["max_target_pairs"] == 64
+
+
+def test_modal_t1_default_train_timeout_leaves_artifact_collection_buffer() -> None:
+    module = _load_module()
+
+    payload, rc = module.build_local_plan(
+        label="unit-full-run",
+        epochs=3000,
+        batch_size=16,
+        timeout_hours=24,
+        cost_cap_usd=80,
+        train_timeout_hours=module.DEFAULT_TRAIN_TIMEOUT_HOURS,
+        max_target_pairs=None,
+    )
+
+    assert rc == 0
+    assert payload["params"]["train_timeout_hours"] == module.DEFAULT_TRAIN_TIMEOUT_HOURS
+    assert not any(
+        err.startswith("train_timeout_leaves_no_modal_artifact_buffer")
+        for err in payload["validation_errors"]
+    )
+
+
+def test_modal_t1_rejects_train_timeout_without_artifact_collection_buffer() -> None:
+    module = _load_module()
+
+    payload, rc = module.build_local_plan(
+        label="unit-full-run",
+        epochs=3000,
+        batch_size=16,
+        timeout_hours=24,
+        cost_cap_usd=80,
+        train_timeout_hours=23,
+        max_target_pairs=None,
+    )
+
+    assert rc == 2
+    assert (
+        "train_timeout_leaves_no_modal_artifact_buffer:"
+        "train_plus_eval_plus_artifact_buffer=24.25>24.00"
+    ) in payload["validation_errors"]
 
 
 def test_recover_uses_auth_eval_schema_and_600_sample_blockers() -> None:

@@ -196,3 +196,67 @@
 - Next score-lowering action is a fresh, short T1 Modal guard rerun only after
   reviewing this combined hardening patch. It must open a new claim and remains
   `score_claim=false` unless exact CUDA auth-eval schema blockers are zero.
+
+## 2026-05-10T08:58Z Codex active-dispatch addendum
+
+- Commit `740778ba` landed the red-team score-evidence hardening and the T1
+  canonical-A1 payload mount fix. Commit `9dd26850` recorded the relaunch
+  custody note.
+- Current active claim is `t1_balle_128k_endtoend` on Modal:
+  `t1_balle_modal_guard_740778ba_20260510T1000Z`, call id
+  `fc-01KR8HFZPJRQHWTXAX7TT72D04`, Modal app
+  `ap-DFruX1atbAs8UnQYECRrOx`.
+- The mounted code snapshot is clean at
+  `740778bab317aa93c60fa1208685f1bcbd4383dc`; mounted worktree and index patch
+  files are zero bytes. The canonical A1 payload is recorded in the Modal
+  metadata with archive/checkpoint/latents/designation-memo SHA-256 custody.
+- This run is not a submission or promotion claim. Recovery currently returns
+  `NOT READY`, and the active claim must remain open until:
+  `.venv/bin/python experiments/modal_t1_balle_endtoend.py recover --label t1_balle_modal_guard_740778ba_20260510T1000Z`
+  returns a terminal result and writes a terminal claim row.
+- Do not launch another T1 or duplicate exact CUDA run while this active claim
+  exists. Parallel work should stay local/proxy: PR95/PR101 packetization,
+  Kaggle/Optuna/CMA-ES advisory sweeps that materialize byte-closed candidates,
+  xray candidate selection, and preflight/DX hardening.
+- Kaggle proxy lane `kaggle_pr101_proxy_sweep` is also active as of
+  `2026-05-10T09:00:22Z`: kernel `adpena/pr101-proxy-sweep`, version `1`,
+  URL `https://www.kaggle.com/code/adpena/pr101-proxy-sweep`, status
+  `KernelWorkerStatus.RUNNING`. This is explicitly `score_claim=false`,
+  `proxy_only=true`, and cannot affect lane status until a harvested candidate
+  is promoted into a byte-closed archive/runtime and evaluated through a
+  separate exact-CUDA claim.
+
+## 2026-05-10T09:08Z Codex terminal-state and runtime-architecture addendum
+
+- T1 Modal relaunch `t1_balle_modal_guard_740778ba_20260510T1000Z` is now
+  terminal: `failed_t1_modal_recovered_no_score_claim`. It reached Stage 5
+  score-domain training but failed importing `segmentation_models_pytorch` from
+  `upstream/modules.py`. This is a Modal scorer-runtime dependency closure bug,
+  not a T1 model result and not score evidence.
+- T1 dependency closure was fixed architecturally, not by adding another
+  lane-local package list. Shared Modal contest-CUDA runtime now lives in
+  `src/tac/deploy/modal/runtime.py`; T1 uses that helper, mounts
+  `tools/tool_bootstrap.py`, and runs a remote scorer import probe before GPU
+  training.
+- `AGENTS.md` now records Provider Runtime Architecture as a non-negotiable:
+  provider/runtime contracts go under `src/tac/deploy/<provider>/`; experiment
+  files stay thin lane adapters; deterministic reproducibility and claim/custody
+  metadata are mandatory.
+- Kaggle proxy sweep `adpena/pr101-proxy-sweep` completed and was closed as
+  `completed_proxy_no_score_claim`. Best proxy candidate:
+  `experiments/results/kaggle_pr101_proxy_sweep_20260510_codex/pr101_proxy_sweep/best_proxy_candidate.json`.
+  Candidate `proxy_cmaes_0037` is proxy-only with objective
+  `0.19287550335547282`; it cannot affect lane status until materialized into a
+  byte-closed archive/runtime and exact-CUDA evaluated under a fresh claim.
+- Current claim summary after recovery/harvest: `active=0`,
+  `stale_nonterminal=0`, `terminal_latest=568`.
+- Dev preflight remains inside the 30s budget after direct-call timeout
+  hardening and Modal runtime refactor:
+  `wall_elapsed_s=9.804019`, `serial_elapsed_s=5.035127`,
+  `timeout_s=30.0`.
+- Next exact score-lowering step is not a duplicate full T1 launch. Relaunch T1
+  only as a true bounded guard (`--epochs 50 --batch-size 8
+  --max-target-pairs 64 --train-timeout-hours 2`) to validate dependency
+  closure, training entry, packet compile, and auth-eval path before any full
+  run. In parallel, materialize the Kaggle proxy candidate only as a byte-closed
+  candidate artifact with no score claim.

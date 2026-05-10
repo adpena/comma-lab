@@ -53,6 +53,35 @@ def test_cli_timeout_context_raises_quickly() -> None:
             time.sleep(0.05)
 
 
+def test_developer_preflight_budget_timeout_reports_hot_step(monkeypatch) -> None:
+    monkeypatch.setenv("PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE", "1")
+
+    def slow_check_codebase_drift(*, strict: bool, verbose: bool) -> None:
+        assert strict is True
+        assert verbose is False
+        time.sleep(0.05)
+
+    monkeypatch.setattr(
+        preflight,
+        "check_codebase_drift",
+        slow_check_codebase_drift,
+    )
+
+    with pytest.raises(PreflightTimeoutError) as exc_info:
+        preflight.preflight_developer(
+            check_codebase=True,
+            verbose=False,
+            use_fs_cache=False,
+            wall_clock_budget_s=0.01,
+        )
+
+    message = str(exc_info.value)
+    assert "developer preflight exceeded 0.01s wall-clock DX budget" in message
+    assert "Slowest preflight checks recorded before failure:" in message
+    assert "check_codebase_drift" in message
+    assert "--timings-json reports/preflight_dev_timing.json" in message
+
+
 def test_cli_timing_recorder_wraps_scope_checks(monkeypatch) -> None:
     events: list[tuple[bool, bool]] = []
 

@@ -830,7 +830,11 @@ def _preflight_timeout_after(seconds: float | None) -> Iterator[None]:
         return
     if seconds <= 0:
         raise ValueError("preflight timeout must be positive")
-    if not hasattr(signal, "SIGALRM") or not hasattr(signal, "setitimer"):
+    if (
+        threading.current_thread() is not threading.main_thread()
+        or not hasattr(signal, "SIGALRM")
+        or not hasattr(signal, "setitimer")
+    ):
         yield
         return
 
@@ -1017,6 +1021,55 @@ def _build_preflight_cli_timing_payload(
 def _write_preflight_cli_timing_json(path: Path, payload: dict[str, object]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+
+
+def _format_preflight_timing_summary(
+    step_rows: list[dict[str, object]],
+    *,
+    max_steps: int = 5,
+) -> str:
+    """Return a concise hot-step summary for DX budget failures."""
+
+    if not step_rows:
+        return "No individual preflight check timings were recorded."
+    hot_steps = sorted(
+        step_rows,
+        key=lambda row: (-float(row.get("elapsed_s", 0.0)), str(row.get("name", ""))),
+    )[:max_steps]
+    lines = ["Slowest preflight checks recorded before failure:"]
+    for row in hot_steps:
+        status = str(row.get("status", "unknown"))
+        name = str(row.get("name", "<unknown>"))
+        elapsed = float(row.get("elapsed_s", 0.0))
+        thread_name = str(row.get("thread", ""))
+        thread_suffix = f" [{thread_name}]" if thread_name else ""
+        lines.append(f"  - {name}: {elapsed:.3f}s ({status}){thread_suffix}")
+    return "\n".join(lines)
+
+
+def _preflight_budget_error_message(
+    *,
+    scope: str,
+    budget_s: float,
+    elapsed_s: float,
+    step_rows: list[dict[str, object]],
+    cause: str = "",
+) -> str:
+    """Build an actionable timeout/over-budget error for normal preflight."""
+
+    headline = (
+        f"{scope} preflight exceeded {budget_s:g}s wall-clock DX budget "
+        f"(elapsed {elapsed_s:.1f}s)."
+    )
+    details = _format_preflight_timing_summary(step_rows)
+    action = (
+        "Write a timing profile with `python -m tac.preflight --scope dev "
+        "--timings-json reports/preflight_dev_timing.json`, then split, cache, "
+        "or move the slow check out of the normal dev scope."
+    )
+    if cause:
+        return f"{headline}\n{details}\nCause: {cause}\n{action}"
+    return f"{headline}\n{details}\n{action}"
 
 
 class PreflightWarning:
@@ -3273,6 +3326,8 @@ def preflight_developer(
     verbose: bool = True,
     use_fs_cache: bool = True,
     _fs_cache_wrapped: bool = False,
+    wall_clock_budget_s: float | None = DEFAULT_PREFLIGHT_CLI_TIMEOUT_S,
+    _timing_wrapped: bool = False,
 ) -> None:
     """Fast strict developer preflight.
 
@@ -3282,6 +3337,52 @@ def preflight_developer(
     ``preflight_all``. The contract is explicit: developer preflight must fit
     inside the 30s wall-clock budget; release/custody preflight is opt-in.
     """
+    if wall_clock_budget_s is not None and wall_clock_budget_s <= 0:
+        raise ValueError("developer preflight wall-clock budget must be positive")
+
+    if wall_clock_budget_s is not None and not _timing_wrapped:
+        started = time.perf_counter()
+        recorder = _PreflightCliTimingRecorder(scope="dev", runner=preflight_developer)
+        try:
+            with recorder, _preflight_timeout_after(wall_clock_budget_s):
+                preflight_developer(
+                    profile_name=profile_name,
+                    profile_arch=profile_arch,
+                    tto_frames_path=tto_frames_path,
+                    gt_poses_path=gt_poses_path,
+                    masks_path=masks_path,
+                    renderer_path=renderer_path,
+                    archive_path=archive_path,
+                    check_codebase=check_codebase,
+                    verbose=verbose,
+                    use_fs_cache=use_fs_cache,
+                    _fs_cache_wrapped=_fs_cache_wrapped,
+                    wall_clock_budget_s=None,
+                    _timing_wrapped=True,
+                )
+        except PreflightTimeoutError as exc:
+            elapsed = time.perf_counter() - started
+            raise PreflightTimeoutError(
+                _preflight_budget_error_message(
+                    scope="developer",
+                    budget_s=wall_clock_budget_s,
+                    elapsed_s=elapsed,
+                    step_rows=recorder.rows(),
+                    cause=str(exc),
+                )
+            ) from exc
+        elapsed = time.perf_counter() - started
+        if elapsed > wall_clock_budget_s:
+            raise PreflightTimeoutError(
+                _preflight_budget_error_message(
+                    scope="developer",
+                    budget_s=wall_clock_budget_s,
+                    elapsed_s=elapsed,
+                    step_rows=recorder.rows(),
+                )
+            )
+        return
+
     codebase_cache_token: str | None = None
     codebase_cache_paths: tuple[Path, ...] = ()
     if (
@@ -3336,7 +3437,9 @@ def preflight_developer(
                 verbose=verbose,
                 use_fs_cache=use_fs_cache,
                 _fs_cache_wrapped=True,
-        )
+                wall_clock_budget_s=wall_clock_budget_s,
+                _timing_wrapped=_timing_wrapped,
+            )
         return
 
     if check_codebase:
@@ -37486,9 +37589,27 @@ if __name__ == "__main__":
             CodebaseDriftError, LoaderFormatSafetyError) as e:
         status = "failed"
         error_type = type(e).__name__
-        error = str(e)
+        if isinstance(e, PreflightTimeoutError) and recorder is not None:
+            raw_error = str(e)
+            if "Slowest preflight checks recorded before failure:" in raw_error:
+                error = raw_error
+            else:
+                budget = (
+                    DEFAULT_PREFLIGHT_CLI_TIMEOUT_S
+                    if timeout_s is None
+                    else timeout_s
+                )
+                error = _preflight_budget_error_message(
+                    scope=args.scope,
+                    budget_s=budget,
+                    elapsed_s=time.perf_counter() - cli_started,
+                    step_rows=recorder.rows(),
+                    cause=raw_error,
+                )
+        else:
+            error = str(e)
         exit_code = 1
-        print(f"\nPREFLIGHT FAILED: {e}", file=sys.stderr)
+        print(f"\nPREFLIGHT FAILED: {error}", file=sys.stderr)
     finally:
         if args.timings_json is not None:
             payload = _build_preflight_cli_timing_payload(

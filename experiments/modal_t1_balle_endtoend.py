@@ -51,6 +51,9 @@ LANE_ID = "t1_balle_128k_endtoend"
 CLAIM_AGENT = "codex:modal_t1_balle_endtoend"
 HOURLY_RATE_T4_USD = 0.59
 DEFAULT_TIMEOUT_HOURS = 24.0
+DEFAULT_TRAIN_TIMEOUT_HOURS = 22.5
+REMOTE_POST_TRAIN_EVAL_BUFFER_HOURS = 1.0
+REMOTE_ARTIFACT_COLLECTION_BUFFER_HOURS = 0.25
 DEFAULT_COST_CAP_USD = 80.0
 REMOTE_PYTHONPATH = f"{REMOTE_REPO / 'src'}:{REMOTE_REPO / 'upstream'}:{REMOTE_REPO}"
 MOUNTED_CODE_PATHS = (
@@ -66,6 +69,7 @@ MOUNTED_CODE_PATHS = (
     "experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py",
     "experiments/contest_auth_eval.py",
     "tools/build_phase1_packet_compiler.py",
+    "tools/tool_bootstrap.py",
     "tools/claim_lane_dispatch.py",
     "scripts/remote_lane_t1_balle_endtoend.sh",
     "scripts/remote_archive_only_eval.sh",
@@ -93,49 +97,26 @@ def _ensure_repo_import_paths() -> None:
 
 _ensure_repo_import_paths()
 
+from tac.deploy.modal.runtime import (  # noqa: E402
+    CONTEST_SCORER_IMPORT_PROBE_MODULES,
+    DALI_DISABLE_NVML_VALUE,
+    build_contest_cuda_base_image,
+)
+
 
 app = modal.App(APP_NAME)
 
-base_image = (
-    modal.Image.debian_slim(python_version="3.11")
-    .apt_install(
-        "bash",
-        "build-essential",
-        "curl",
-        "ffmpeg",
-        "git",
-        "libgl1",
-        "libglib2.0-0",
-        "unzip",
-        "wget",
-    )
-    .pip_install(
-        "torch==2.5.1",
-        "torchvision",
-        "compressai==1.2.8",
-        "brotli",
-        "av",
-        "einops",
-        "numpy<2.0",
-        "Pillow",
-        "pydantic>=2.0",
-        "scipy",
-        "timm",
-        "tqdm",
-        "nvidia-dali-cuda120==1.52.0",
-        extra_index_url="https://pypi.nvidia.com",
-    )
-    .run_commands(
-        "curl -LsSf https://astral.sh/uv/install.sh | sh",
-        "ln -sf /root/.local/bin/uv /usr/local/bin/uv",
-    )
+base_image = build_contest_cuda_base_image(
+    modal,
+    python_version="3.11",
+    extra_pip_packages=("compressai==1.2.8",),
 )
 
 run_image = (
     base_image.env(
         {
             "PYTHONPATH": REMOTE_PYTHONPATH,
-            "DALI_DISABLE_NVML": "1",
+            "DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE,
         }
     )
     .add_local_dir("src", remote_path=str(REMOTE_REPO / "src"))
@@ -164,6 +145,10 @@ run_image = (
     .add_local_file(
         "tools/build_phase1_packet_compiler.py",
         remote_path=str(REMOTE_REPO / "tools/build_phase1_packet_compiler.py"),
+    )
+    .add_local_file(
+        "tools/tool_bootstrap.py",
+        remote_path=str(REMOTE_REPO / "tools/tool_bootstrap.py"),
     )
     .add_local_file(
         "tools/claim_lane_dispatch.py",
@@ -509,6 +494,36 @@ def build_local_plan(
             f"train_plus_eval_buffer={float(train_timeout_hours) + 1.0:.2f}>"
             f"{modal_function_timeout_hours:.2f}"
         )
+    remote_finish_budget = (
+        float(train_timeout_hours)
+        + REMOTE_POST_TRAIN_EVAL_BUFFER_HOURS
+        + REMOTE_ARTIFACT_COLLECTION_BUFFER_HOURS
+    )
+    if remote_finish_budget > modal_function_timeout_hours:
+        validation_errors.append(
+            "train_timeout_leaves_no_modal_artifact_buffer:"
+            f"train_plus_eval_plus_artifact_buffer={remote_finish_budget:.2f}>"
+            f"{modal_function_timeout_hours:.2f}"
+        )
+    if "guard" in instance_job_id.lower():
+        if epochs > 100:
+            validation_errors.append(
+                f"guard_label_requires_epochs_lte_100:epochs={int(epochs)}"
+            )
+        if batch_size > 8:
+            validation_errors.append(
+                f"guard_label_requires_batch_size_lte_8:batch_size={int(batch_size)}"
+            )
+        if max_target_pairs is None or int(max_target_pairs) > 64:
+            validation_errors.append(
+                "guard_label_requires_max_target_pairs_lte_64:"
+                f"max_target_pairs={max_target_pairs}"
+            )
+        if float(train_timeout_hours) > 3.0:
+            validation_errors.append(
+                "guard_label_requires_train_timeout_lte_3h:"
+                f"train_timeout_hours={float(train_timeout_hours):.2f}"
+            )
     if estimated_cost > cost_cap_usd:
         validation_errors.append(
             f"estimated_cost_exceeds_cap:{estimated_cost:.2f}>{float(cost_cap_usd):.2f}"
@@ -595,7 +610,7 @@ def plan_cli(argv: list[str] | None = None) -> int:
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--timeout-hours", type=float, default=DEFAULT_TIMEOUT_HOURS)
     parser.add_argument("--cost-cap-usd", type=float, default=DEFAULT_COST_CAP_USD)
-    parser.add_argument("--train-timeout-hours", type=float, default=23.0)
+    parser.add_argument("--train-timeout-hours", type=float, default=DEFAULT_TRAIN_TIMEOUT_HOURS)
     parser.add_argument("--max-target-pairs", type=int, default=None)
     parser.add_argument("--json-out", default=None)
     args = parser.parse_args(argv)
@@ -785,7 +800,7 @@ def run_t1_balle_modal(
         **os.environ,
         "PYTHONPATH": REMOTE_PYTHONPATH,
         "TAC_UPSTREAM_DIR": str(REMOTE_REPO / "upstream"),
-        "DALI_DISABLE_NVML": "1",
+        "DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE,
         "PYTHONHASHSEED": "20",
         "WORKSPACE": str(REMOTE_REPO),
         "LOG_DIR": str(out_dir),
@@ -805,6 +820,42 @@ def run_t1_balle_modal(
         env["MAX_TARGET_PAIRS"] = str(int(max_target_pairs))
 
     try:
+        import_probe = _run_logged(
+            "t1_modal_import_probe",
+            [
+                sys.executable,
+                "-c",
+                (
+                    "; ".join(
+                        f"import {module}"
+                        for module in CONTEST_SCORER_IMPORT_PROBE_MODULES
+                    )
+                    + "; "
+                    "from tac.scorer import load_differentiable_scorers; "
+                    "print('t1 modal scorer import probe OK')"
+                ),
+            ],
+            cwd=REMOTE_REPO,
+            env=env,
+            log_dir=out_dir / "modal_logs",
+            timeout=180,
+        )
+        if import_probe["returncode"] != 0:
+            return _finish_remote(
+                out_dir,
+                returncode=import_probe["returncode"],
+                stage="remote_import_probe_failed",
+                commands=[import_probe],
+                validation_errors=[
+                    f"remote_import_probe_rc={import_probe['returncode']}"
+                ],
+                extra={
+                    "elapsed_seconds": time.monotonic() - start,
+                    "instance_job_id": instance_job_id,
+                    "remote_claims_path": str(claim_path),
+                    "mounted_workspace_git_snapshot": True,
+                },
+            )
         run = _run_logged(
             "remote_lane_t1_balle_endtoend",
             ["bash", str(REMOTE_REPO / "scripts/remote_lane_t1_balle_endtoend.sh")],
@@ -817,7 +868,7 @@ def run_t1_balle_modal(
             out_dir,
             returncode=run["returncode"],
             stage="completed" if run["returncode"] == 0 else "remote_script_failed",
-            commands=[run],
+            commands=[import_probe, run],
             validation_errors=[] if run["returncode"] == 0 else [f"remote_script_rc={run['returncode']}"],
             extra={
                 "elapsed_seconds": time.monotonic() - start,
@@ -903,7 +954,7 @@ def main(
     epochs: int = 3000,
     batch_size: int = 16,
     timeout_hours: float = DEFAULT_TIMEOUT_HOURS,
-    train_timeout_hours: float = 23.0,
+    train_timeout_hours: float = DEFAULT_TRAIN_TIMEOUT_HOURS,
     cost_cap_usd: float = DEFAULT_COST_CAP_USD,
     max_target_pairs: int | None = None,
     execute: bool = False,

@@ -183,6 +183,49 @@ submission checker matters, wire it into at least one of: `preflight_all()`,
 runbook, or a dated `.omx/research/` control ledger. Hidden one-off scripts
 are treated as incomplete work.
 
+## Provider Runtime Architecture — NON-NEGOTIABLE
+
+Provider dispatch logic must stay composable, deterministic, and reusable.
+Do not bury cloud-provider runtime contracts inside a lane experiment just
+because a lane is urgent. Experiment files may be thin actuators that bind a
+specific lane label, claim lifecycle, parameter set, and recovery policy, but
+shared provider/runtime concerns belong in deploy-layer modules:
+
+- reusable provider contracts: `src/tac/deploy/<provider>/`;
+- provider-agnostic path/bootstrap logic: `src/tac/deploy/cloud_*` or
+  `src/tac/deploy/base.py`;
+- thin operator CLIs: `scripts/`, `tools/`, or `experiments/` only when they
+  delegate to the reusable deploy/runtime module.
+
+For Modal specifically, shared scorer/runtime dependency closure belongs in
+`src/tac/deploy/modal/`, not in each lane-local Modal script. If a Modal lane
+needs `upstream/modules.py`, `tac.scorer`, DALI, `safetensors`,
+`segmentation-models-pytorch`, or other contest-scorer imports, use the
+canonical Modal runtime helper and add an import probe before GPU training.
+Missing scorer/runtime packages are an infrastructure failure
+(`failed_scorer_runtime_deps` / `remote_import_probe_failed`), not a model or
+lane result.
+
+Every provider actuator must preserve deterministic reproducibility:
+
+- plan-only default path; real spend requires an explicit execution flag;
+- lane claim before provider job creation and terminal claim on all outcomes;
+- mounted-code or shipped-tarball manifest with git SHA, dirty status, diff
+  SHA-256s, mounted files, and runtime dependency contract;
+- artifact/result harvest path that records provider job id, command, hardware,
+  archive bytes/SHA, runtime-tree SHA, logs, and exact score schema;
+- no provider-specific hidden state, account paths, credentials, or transient
+  URLs in public artifacts;
+- no score or promotion claim from proxy substrates such as Kaggle, MPS, or
+  Modal CPU; promote only byte-closed archive/runtime packets through claimed
+  exact CUDA eval.
+
+If a lane-specific provider script starts accumulating package lists, path
+mount rules, import probes, cost tables, timeout policy, or runtime closure
+logic, stop and extract that logic to `src/tac/deploy/<provider>/` first. The
+experiment script should become a small, reviewable adapter around the shared
+provider contract.
+
 ## TAC / comma-lab Boundary And Research State Tracking
 
 Keep `tac` clean, but put real reusable Python implementation in `tac`.
