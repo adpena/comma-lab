@@ -25,7 +25,7 @@ _CURRENT_SOURCE_INDEX: contextvars.ContextVar[SourceIndex | None] = contextvars.
     "tac_current_source_index",
     default=None,
 )
-_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v9"
+_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v10"
 
 
 def _safe_resolve(path: Path) -> Path:
@@ -135,6 +135,13 @@ _DEFAULT_TEXT_FACT_NEEDLES = frozenset(
         "stored.update(",
         "on_disk.update(",
         "loaded.update(",
+        "VALIDATOR_TOKENS",
+        "VALIDATOR_PATTERNS",
+        "VALIDATOR_FNS",
+        "ACCEPT_TOKENS",
+        "CUSTODY_TOKENS",
+        "GATE_TOKENS",
+        "GUARD_TOKENS",
     }
 )
 

@@ -33605,10 +33605,32 @@ def check_custody_gate_accept_tokens_concrete_only(
 
     violations: list[str] = []
     scanned_files = 0
-    for scan_dir in scan_dirs:
-        if not scan_dir.is_dir():
-            continue
-        for py in scan_dir.rglob("*.py"):
+    source_index = _current_source_index(root)
+    accept_list_markers = (
+        "VALIDATOR_TOKENS",
+        "VALIDATOR_PATTERNS",
+        "VALIDATOR_FNS",
+        "ACCEPT_TOKENS",
+        "CUSTODY_TOKENS",
+        "GATE_TOKENS",
+        "GUARD_TOKENS",
+    )
+    if source_index is not None:
+        candidate_paths = source_index.files_containing_substrings(
+            scan_dirs,
+            pattern="*.py",
+            substrings=accept_list_markers,
+            require_all=False,
+        )
+    else:
+        candidate_paths = tuple(
+            py
+            for scan_dir in scan_dirs
+            if scan_dir.is_dir()
+            for py in scan_dir.rglob("*.py")
+        )
+
+    for py in candidate_paths:
             if _is_oss_export_mirror_path(py):
                 continue
             s = str(py)
@@ -33622,7 +33644,10 @@ def check_custody_gate_accept_tokens_concrete_only(
             ):
                 continue
             try:
-                text = py.read_text(encoding="utf-8", errors="replace")
+                if source_index is not None:
+                    text = source_index.read_text(py, encoding="utf-8", errors="replace")
+                else:
+                    text = py.read_text(encoding="utf-8", errors="replace")
             except OSError:
                 continue
             if not _ACCEPT_TOKENS_CONSTANT_NAME_RE.search(text):

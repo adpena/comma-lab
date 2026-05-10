@@ -20,6 +20,7 @@ from tac.preflight import (
     PreflightError,
     check_custody_gate_accept_tokens_concrete_only,
 )
+from tac.source_index import source_index_context
 
 
 def _make_repo(tmp_path: Path) -> Path:
@@ -47,6 +48,26 @@ def test_136_catches_blockers(tmp_path):
     matches = [x for x in v if "bad.py" in x]
     assert len(matches) == 1
     assert "blockers" in matches[0]
+
+
+def test_136_uses_source_index_substring_prefilter(tmp_path):
+    root = _make_repo(tmp_path)
+    (root / "tools" / "irrelevant.py").write_text("VALUE = 'blockers'\n")
+    (root / "src" / "tac" / "bad.py").write_text(
+        '_X_VALIDATOR_TOKENS = (\n'
+        '    "validate_custody",\n'
+        '    "blockers",\n'
+        ')\n'
+    )
+
+    with source_index_context(root) as index:
+        v = check_custody_gate_accept_tokens_concrete_only(
+            repo_root=root, strict=False, verbose=False
+        )
+        stats = index.stats()
+
+    assert any("bad.py" in item and "blockers" in item for item in v)
+    assert stats["substring_index_entries"] >= 1
 
 
 def test_136_catches_errors(tmp_path):

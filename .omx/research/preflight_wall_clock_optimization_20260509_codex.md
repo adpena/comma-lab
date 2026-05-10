@@ -404,3 +404,55 @@ Observed:
 - new dominant checks: `check_authoritative_tag_requires_custody_metadata`
   (`2.152s`), `check_custody_gate_accept_tokens_concrete_only` (`1.457s`),
   and `check_no_mps_fallback_default` (`1.402s`).
+
+## Codex Follow-Up: Custody Accept-Token SourceIndex Path
+
+<!-- generated_at: 2026-05-10T02:35:00Z -->
+<!-- evidence_grade: local_dev_performance; no dispatch; no lane claim -->
+
+Codex moved `check_custody_gate_accept_tokens_concrete_only()` onto the shared
+`SourceIndex` candidate path. The precise AST validation is unchanged; only
+candidate discovery changed from "read every Python file" to "files containing
+validator/accept-list constant-name markers".
+
+Implementation:
+
+- bumped `src/tac/source_index.py` text-facts schema to `v10`;
+- added accept-list marker substrings (`VALIDATOR_TOKENS`,
+  `VALIDATOR_PATTERNS`, `ACCEPT_TOKENS`, `CUSTODY_TOKENS`, etc.) to the
+  one-pass text-facts needle set;
+- used `SourceIndex.files_containing_substrings(..., require_all=False)` for
+  Check 136 candidate discovery;
+- retained the raw recursive fallback when no source index is active;
+- added a regression test for the source-index path.
+
+Verification:
+
+```bash
+.venv/bin/python -m py_compile \
+  src/tac/preflight.py src/tac/source_index.py \
+  src/tac/tests/test_check_136_custody_gate_accept_tokens_concrete_only.py
+.venv/bin/python -m pytest \
+  src/tac/tests/test_check_136_custody_gate_accept_tokens_concrete_only.py \
+  src/tac/tests/test_preflight_custody_validator_and_locked_writes.py \
+  src/tac/tests/test_source_index.py -q
+.venv/bin/python tools/profile_preflight_latency.py \
+  --surface preflight-checks \
+  --preflight-check check_custody_gate_accept_tokens_concrete_only \
+  --json-out .omx/research/artifacts/preflight_check136_profile_20260509_sourceindex.json \
+  --top 20
+.venv/bin/python tools/profile_preflight_latency.py \
+  --surface preflight-dev-cli \
+  --json-out .omx/research/artifacts/preflight_dev_profile_20260509_after_check136_sourceindex.json \
+  --top 20 --fail-on-surface-failure
+```
+
+Observed:
+
+- focused tests: `70 passed in 4.56s`;
+- standalone cold Check 136: `2.556s` because the v10 text-facts cache was
+  populated;
+- developer preflight Check 136: `0.353s`, down from `1.457s`;
+- total developer preflight: `10.036s`, still below the 30s crash budget;
+- remaining dominant checks: `check_authoritative_tag_requires_custody_metadata`
+  (`2.209s`) and `check_no_mps_fallback_default` (`1.264s`).
