@@ -513,3 +513,53 @@ Dispatch blockers remain unchanged:
 Custody note from read-only review: during active builder runs,
 `sidecar_choice_state.json` can be ahead of the manifest/archive. Treat only the
 post-exit manifest-bound state above as finalized.
+
+## Codex follow-up local chunk 9
+
+<!-- generated_at: 2026-05-10T02:25:00Z -->
+<!-- evidence_grade: local_cpu_proxy_partial; no score claim; no remote dispatch -->
+
+Codex resumed the same ignored local artifact using the scalar candidate path:
+
+```bash
+/usr/bin/time -p .venv/bin/python tools/build_a1_per_pair_latent_correction_sidecar.py \
+  --n-pairs 144 \
+  --resume-search-state \
+  --max-search-seconds 900 \
+  --candidate-batch-size 1 \
+  --runtime-smoke \
+  --runtime-smoke-pairs 1 \
+  --output-dir experiments/results/a1_sidecar_resumable_codex_20260509T_local
+```
+
+Observed:
+
+- skipped already-completed pairs `0` through `95`;
+- searched pairs `96` through `143`;
+- elapsed `real 804.27`, `user 1862.40`, `sys 40.40`;
+- `candidate_batch_size=1`;
+- choice-state SHA-256
+  `b0e309862d902934b25d82723314302d92efd2b933bea4f469f0dc383fe7a97c`;
+- manifest SHA-256
+  `91e778214c365088bdc221f50eb4a08c7a65a1084598c463ffc84b208a919b71`;
+- archive SHA-256
+  `666aaca900cf2537d35294b315956db272d940a38e1fc392ca67e3fce0fbbb48`;
+- archive bytes `178316`;
+- runtime tree SHA-256
+  `3497c774d94fe202563bccba2af4a5f90925cb8d9b2e982cf4428d0efbea0190`;
+- `runtime_smoke_checked=true`;
+- `n_pairs_searched=144`;
+- `n_pairs_completed_this_run=48`;
+- `n_pairs_skipped_already_completed=96`;
+- `full_non_smoke_search=false`;
+- `ready_for_exact_eval_dispatch=false`.
+
+Dispatch blockers remain unchanged:
+
+- claim lane before any GHA/remote eval dispatch;
+- run exact-eval dispatcher preflight against `submission_dir`;
+- record runtime tree SHA and terminal dispatch claim row;
+- `non_full_sidecar_search_not_exact_eval_ready`.
+
+Current completion: `144/600` pairs. Continue scalar chunks until `600/600`;
+do not dispatch partial sidecars.
