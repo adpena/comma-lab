@@ -93,9 +93,24 @@ SIDECAR_CHOICE_STATE_SCHEMA = "a1_sidecar_choice_state_v1"
 SIDECAR_PAIR_SEARCH_RECORDS_SCHEMA = "a1_sidecar_pair_search_records_v1"
 SIDECAR_DISPATCH_CLAIM_SCHEMA = "a1_sidecar_dispatch_claim_v1"
 SIDECAR_EXACT_EVAL_PREFLIGHT_SCHEMA = "a1_sidecar_exact_eval_preflight_v1"
+DEFAULT_DISPATCH_CLAIMS_PATH = REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md"
 REQUIRED_RUNTIME_FILES = ("inflate.py", "inflate.sh", "src/codec.py", "src/model.py")
 RUNTIME_TREE_EXCLUDED_FILES = frozenset({"archive.zip"})
 RUNTIME_TREE_EXCLUDED_PARTS = frozenset({"__pycache__"})
+TERMINAL_DISPATCH_STATUS_PREFIXES = (
+    "completed_",
+    "failed_",
+    "preempted",
+    "cancelled",
+    "refused_dispatch",
+    "stale_assumed_dead",
+    "stale_superseded",
+    "stopped_",
+    "falsified_",
+    "retired_",
+    "config_retired_",
+    "measured_implementation_retired_",
+)
 
 # Sidecar fixed delta vocabulary (PR99-PR103 lineage)
 SIDECAR_DELTAS_X100 = np.array(
@@ -515,8 +530,10 @@ def _dispatch_custody_record_blockers(
             blockers.append("dispatch_claim_archive_sha256_mismatch")
         if runtime_tree_sha256 and dispatch_claim.get("runtime_tree_sha256") != runtime_tree_sha256:
             blockers.append("dispatch_claim_runtime_tree_sha256_mismatch")
-        if dispatch_claim.get("status") not in {"active_claimed", "ready_for_dispatch"}:
+        status = dispatch_claim.get("status")
+        if not isinstance(status, str) or _is_terminal_dispatch_status(status):
             blockers.append("dispatch_claim_status_not_active")
+        blockers.extend(_dispatch_claim_live_ledger_blockers(dispatch_claim))
 
     preflight = manifest.get("exact_eval_preflight")
     if not isinstance(preflight, dict):
@@ -530,7 +547,129 @@ def _dispatch_custody_record_blockers(
             blockers.append("exact_eval_preflight_archive_sha256_mismatch")
         if runtime_tree_sha256 and preflight.get("runtime_tree_sha256") != runtime_tree_sha256:
             blockers.append("exact_eval_preflight_runtime_tree_sha256_mismatch")
+        if not preflight.get("command"):
+            blockers.append("exact_eval_preflight_command_missing")
+        if not _is_sha256(preflight.get("report_sha256")):
+            blockers.append("exact_eval_preflight_report_sha256_missing_or_invalid")
 
+    return blockers
+
+
+def _is_terminal_dispatch_status(status: str) -> bool:
+    return any(status.startswith(prefix) for prefix in TERMINAL_DISPATCH_STATUS_PREFIXES)
+
+
+def _parse_claim_timestamp(value: object) -> dt.datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    text = value.strip()
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        parsed = dt.datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=dt.UTC)
+    return parsed.astimezone(dt.UTC)
+
+
+def _parse_dispatch_claim_rows(path: Path) -> list[dict[str, str]]:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return []
+    rows: list[dict[str, str]] = []
+    for line in text.splitlines():
+        if not line.startswith("|"):
+            continue
+        if "timestamp_utc" in line and "lane_id" in line:
+            continue
+        if set(line.replace("|", "").strip()) <= {"-"}:
+            continue
+        cells = [cell.strip().replace("\\|", "|") for cell in line.strip("|").split("|")]
+        if len(cells) < 8:
+            continue
+        rows.append(
+            {
+                "timestamp_utc": cells[0],
+                "agent": cells[1],
+                "lane_id": cells[2],
+                "platform": cells[3],
+                "instance_job_id": cells[4],
+                "predicted_eta_utc": cells[5],
+                "status": cells[6],
+                "notes": cells[7],
+            }
+        )
+    return rows
+
+
+def _latest_dispatch_claim_row(
+    *,
+    claims_path: Path,
+    lane_id: str,
+    instance_job_id: str,
+) -> dict[str, str] | None:
+    latest: dict[str, str] | None = None
+    latest_ts: dt.datetime | None = None
+    for row in _parse_dispatch_claim_rows(claims_path):
+        if row.get("lane_id") != lane_id:
+            continue
+        if row.get("instance_job_id") != instance_job_id:
+            continue
+        ts = _parse_claim_timestamp(row.get("timestamp_utc"))
+        if latest is None or latest_ts is None or (ts is not None and ts > latest_ts):
+            latest = row
+            latest_ts = ts
+    return latest
+
+
+def _dispatch_claim_live_ledger_blockers(dispatch_claim: dict[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    instance_job_id = dispatch_claim.get("instance_job_id")
+    platform = dispatch_claim.get("platform")
+    timestamp_utc = dispatch_claim.get("timestamp_utc")
+    claims_path = _resolve_manifest_path(
+        dispatch_claim.get("claims_path") or manifest_path(DEFAULT_DISPATCH_CLAIMS_PATH)
+    )
+    if not isinstance(instance_job_id, str) or not instance_job_id:
+        blockers.append("dispatch_claim_instance_job_id_missing")
+    if not isinstance(platform, str) or not platform:
+        blockers.append("dispatch_claim_platform_missing")
+    if _parse_claim_timestamp(timestamp_utc) is None:
+        blockers.append("dispatch_claim_timestamp_utc_missing_or_invalid")
+    if claims_path is None or not claims_path.is_file():
+        blockers.append("dispatch_claim_ledger_missing")
+        return blockers
+    if blockers:
+        return blockers
+
+    latest = _latest_dispatch_claim_row(
+        claims_path=claims_path,
+        lane_id=SIDECAR_LANE_ID,
+        instance_job_id=instance_job_id,
+    )
+    if latest is None:
+        blockers.append("dispatch_claim_ledger_matching_row_missing")
+        return blockers
+    latest_status = latest.get("status", "")
+    if _is_terminal_dispatch_status(latest_status):
+        blockers.append("dispatch_claim_ledger_latest_row_terminal")
+    if latest.get("timestamp_utc") != timestamp_utc:
+        blockers.append("dispatch_claim_ledger_timestamp_mismatch")
+    if latest.get("platform") != platform:
+        blockers.append("dispatch_claim_ledger_platform_mismatch")
+    if latest_status != dispatch_claim.get("status"):
+        blockers.append("dispatch_claim_ledger_status_mismatch")
+    latest_ts = _parse_claim_timestamp(latest.get("timestamp_utc"))
+    if latest_ts is None:
+        blockers.append("dispatch_claim_ledger_timestamp_invalid")
+    else:
+        ttl_hours = float(dispatch_claim.get("ttl_hours", 24.0))
+        age_hours = (dt.datetime.now(dt.UTC) - latest_ts).total_seconds() / 3600.0
+        if age_hours > ttl_hours:
+            blockers.append("dispatch_claim_ledger_row_stale")
     return blockers
 
 
@@ -560,6 +699,12 @@ def _runtime_smoke_evidence_blockers(
     output_digest = evidence.get("output_digest_sha256")
     if not _is_sha256(output_digest):
         blockers.append("runtime_smoke_evidence_output_digest_missing_or_invalid")
+    output_bytes = evidence.get("output_bytes")
+    expected_output_bytes = evidence.get("expected_output_bytes")
+    if not isinstance(expected_output_bytes, int) or expected_output_bytes <= 0:
+        blockers.append("runtime_smoke_evidence_expected_output_bytes_missing")
+    elif output_bytes != expected_output_bytes:
+        blockers.append("runtime_smoke_evidence_output_size_mismatch")
     evidence_blockers = evidence.get("blockers")
     if isinstance(evidence_blockers, list) and evidence_blockers:
         blockers.append("runtime_smoke_evidence_has_blockers")
@@ -900,6 +1045,7 @@ def run_exact_inflate_sh_smoke(
     smoke_dir: Path,
     runtime_tree_sha256: str,
     video_name: str = "0.mkv",
+    expected_output_bytes: int | None = N_PAIRS * 2 * CAMERA_H * CAMERA_W * 3,
     timeout_seconds: int | None = None,
 ) -> dict[str, Any]:
     """Run the candidate runtime through the contest ``inflate.sh`` signature.
@@ -976,6 +1122,9 @@ def run_exact_inflate_sh_smoke(
     if not raw_out.is_file():
         blockers.append("runtime_smoke_exact_inflate_sh_output_missing")
         exit_code = exit_code or 1
+    if expected_output_bytes is not None and output_bytes != expected_output_bytes:
+        blockers.append("runtime_smoke_exact_inflate_sh_output_size_mismatch")
+        exit_code = exit_code or 1
 
     evidence = {
         "schema_version": RUNTIME_SMOKE_SCHEMA,
@@ -997,6 +1146,7 @@ def run_exact_inflate_sh_smoke(
         "file_list_path": manifest_path(file_list),
         "output_raw_path": manifest_path(raw_out),
         "output_bytes": output_bytes,
+        "expected_output_bytes": expected_output_bytes,
         "output_digest_sha256": output_digest,
         "blockers": blockers,
         "contract": (
@@ -2169,8 +2319,7 @@ def enforce_manifest_dispatch_readiness(
         block(reason)
 
     manifest["dispatch_blockers"] = blockers
-    if blockers:
-        manifest["ready_for_exact_eval_dispatch"] = False
+    manifest["ready_for_exact_eval_dispatch"] = not blockers
     return manifest
 
 

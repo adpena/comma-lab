@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import importlib.util
 import json
 import sys
@@ -127,7 +128,10 @@ def _runtime_smoke_evidence(tool, archive: Path, custody: dict[str, object]) -> 
         "exit_code": 0,
         "archive_sha256": tool.sha256_of(archive),
         "runtime_tree_sha256": custody["runtime_tree_sha256"],
+        "output_bytes": 123,
+        "expected_output_bytes": 123,
         "output_digest_sha256": "3" * 64,
+        "blockers": [],
     }
 
 
@@ -162,6 +166,7 @@ def test_exact_inflate_sh_smoke_uses_contest_signature(tmp_path: Path) -> None:
         archive_path=archive,
         smoke_dir=tmp_path / "exact_smoke",
         runtime_tree_sha256="a" * 64,
+        expected_output_bytes=len(payload),
     )
 
     assert evidence["runtime_surface"] == "inflate_sh_exact_signature"
@@ -169,6 +174,7 @@ def test_exact_inflate_sh_smoke_uses_contest_signature(tmp_path: Path) -> None:
     assert evidence["archive_sha256"] == tool.sha256_of(archive)
     assert evidence["runtime_tree_sha256"] == "a" * 64
     assert evidence["output_bytes"] == len(payload)
+    assert evidence["expected_output_bytes"] == len(payload)
     assert evidence["output_digest_sha256"] == tool.hashlib.sha256(payload).hexdigest()
     assert evidence["command"][0].endswith("inflate.sh")
     assert evidence["command"][1].endswith("data")
@@ -207,11 +213,84 @@ def test_exact_inflate_sh_smoke_fails_when_output_missing(tmp_path: Path) -> Non
     assert "runtime_smoke_exact_inflate_sh_output_missing" in evidence["blockers"]
 
 
-def _dispatch_claim_record(tool, archive: Path, custody: dict[str, object]) -> dict[str, object]:
+def test_exact_inflate_sh_smoke_fails_when_output_truncated(tmp_path: Path) -> None:
+    tool = load_tool()
+    sub_dir = tmp_path / "submission_dir"
+    sub_dir.mkdir()
+    archive = sub_dir / "archive.zip"
+    payload = b"payload"
+    zinfo = zipfile.ZipInfo(filename="x", date_time=(2024, 1, 1, 0, 0, 0))
+    zinfo.external_attr = 0o644 << 16
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr(zinfo, payload)
+    inflate_sh = sub_dir / "inflate.sh"
+    inflate_sh.write_text(
+        "#!/bin/sh\n"
+        "set -eu\n"
+        "mkdir -p \"$2\"\n"
+        "while IFS= read -r line; do\n"
+        "  base=\"${line%.*}\"\n"
+        "  printf x > \"$2/${base}.raw\"\n"
+        "done < \"$3\"\n"
+    )
+    inflate_sh.chmod(0o755)
+
+    evidence = tool.run_exact_inflate_sh_smoke(
+        sub_dir,
+        archive_path=archive,
+        smoke_dir=tmp_path / "exact_smoke_truncated",
+        runtime_tree_sha256="a" * 64,
+        expected_output_bytes=len(payload),
+    )
+
+    assert evidence["exit_code"] == 1
+    assert evidence["output_bytes"] == 1
+    assert "runtime_smoke_exact_inflate_sh_output_size_mismatch" in evidence["blockers"]
+
+
+def _write_claims_file(
+    tool,
+    tmp_path: Path,
+    *,
+    timestamp_utc: str,
+    lane_id: str | None = None,
+    platform: str = "github_actions",
+    instance_job_id: str = "job-a1-sidecar",
+    status: str = "active_claimed",
+) -> Path:
+    claims_path = tmp_path / "active_lane_dispatch_claims.md"
+    claims_path.write_text(
+        "# Active lane dispatch claims\n\n"
+        "## Claims (newest first)\n\n"
+        "| timestamp_utc | agent | lane_id | platform | instance/job_id | "
+        "predicted_eta_utc | status | notes |\n"
+        "|---|---|---|---|---|---|---|---|\n"
+        f"| {timestamp_utc} | codex:test | {lane_id or tool.SIDECAR_LANE_ID} | "
+        f"{platform} | {instance_job_id} |  | {status} | test claim |\n"
+    )
+    return claims_path
+
+
+def _dispatch_claim_record(
+    tool,
+    archive: Path,
+    custody: dict[str, object],
+    *,
+    claims_path: Path,
+    timestamp_utc: str,
+    platform: str = "github_actions",
+    instance_job_id: str = "job-a1-sidecar",
+    status: str = "active_claimed",
+) -> dict[str, object]:
     return {
         "schema_version": tool.SIDECAR_DISPATCH_CLAIM_SCHEMA,
         "lane_id": tool.SIDECAR_LANE_ID,
-        "status": "active_claimed",
+        "status": status,
+        "timestamp_utc": timestamp_utc,
+        "platform": platform,
+        "instance_job_id": instance_job_id,
+        "claims_path": str(claims_path),
+        "ttl_hours": 24.0,
         "archive_sha256": tool.sha256_of(archive),
         "runtime_tree_sha256": custody["runtime_tree_sha256"],
     }
@@ -221,6 +300,8 @@ def _exact_eval_preflight_record(tool, archive: Path, custody: dict[str, object]
     return {
         "schema_version": tool.SIDECAR_EXACT_EVAL_PREFLIGHT_SCHEMA,
         "passed": True,
+        "command": ["dispatch", "sidecar"],
+        "report_sha256": "6" * 64,
         "archive_sha256": tool.sha256_of(archive),
         "runtime_tree_sha256": custody["runtime_tree_sha256"],
     }
@@ -411,6 +492,13 @@ def test_manifest_readiness_accepts_complete_local_custody(tmp_path: Path) -> No
         old_archive_sha256="a" * 64,
         old_sidecar_sha256="1" * 64,
     )
+    claim_ts = (
+        dt.datetime.now(dt.UTC)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+    claims_path = _write_claims_file(tool, tmp_path, timestamp_utc=claim_ts)
     manifest = {
         "lane_id": tool.SIDECAR_LANE_ID,
         "dispatch_blockers": [
@@ -428,7 +516,7 @@ def test_manifest_readiness_accepts_complete_local_custody(tmp_path: Path) -> No
         "new_archive_bytes": archive_bytes,
         "new_sidecar_bytes": _proof_sidecar_bytes(proof),
         "old_archive_sha256": "a" * 64,
-        "ready_for_exact_eval_dispatch": True,
+        "ready_for_exact_eval_dispatch": False,
         "runtime_smoke_checked": True,
         "search_signal": "proxy_mse",
         "search_device": "cpu",
@@ -440,7 +528,13 @@ def test_manifest_readiness_accepts_complete_local_custody(tmp_path: Path) -> No
         "runtime_manifest": custody,
         "runtime_tree_sha256": custody["runtime_tree_sha256"],
         "runtime_smoke_evidence": _runtime_smoke_evidence(tool, archive, custody),
-        "dispatch_claim": _dispatch_claim_record(tool, archive, custody),
+        "dispatch_claim": _dispatch_claim_record(
+            tool,
+            archive,
+            custody,
+            claims_path=claims_path,
+            timestamp_utc=claim_ts,
+        ),
         "exact_eval_preflight": _exact_eval_preflight_record(tool, archive, custody),
         "member_section_proof": proof,
         "sidecar_choice_state": choice_state,
@@ -519,6 +613,46 @@ def test_manifest_readiness_requires_structured_dispatch_custody(tmp_path: Path)
     assert "exact_eval_preflight_record_missing" in out["dispatch_blockers"]
 
 
+def test_dispatch_custody_rejects_terminal_live_claim_row(tmp_path: Path) -> None:
+    tool = load_tool()
+    sub_dir, archive = _write_runtime_fixture(tmp_path)
+    custody = tool.collect_local_runtime_custody(sub_dir, archive_path=archive)
+    claim_ts = (
+        dt.datetime.now(dt.UTC)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+    claims_path = _write_claims_file(
+        tool,
+        tmp_path,
+        timestamp_utc=claim_ts,
+        status="completed_success",
+    )
+    blockers = tool._dispatch_custody_record_blockers(
+        {
+            "dispatch_claim": _dispatch_claim_record(
+                tool,
+                archive,
+                custody,
+                claims_path=claims_path,
+                timestamp_utc=claim_ts,
+                status="completed_success",
+            ),
+            "exact_eval_preflight": _exact_eval_preflight_record(
+                tool,
+                archive,
+                custody,
+            ),
+        },
+        archive_path=archive,
+        runtime_tree_sha256=str(custody["runtime_tree_sha256"]),
+    )
+
+    assert "dispatch_claim_status_not_active" in blockers
+    assert "dispatch_claim_ledger_latest_row_terminal" in blockers
+
+
 def test_manifest_readiness_rejects_import_only_runtime_smoke(tmp_path: Path) -> None:
     tool = load_tool()
     dims = np.full(tool.N_PAIRS, 255, dtype=np.int64)
@@ -539,6 +673,13 @@ def test_manifest_readiness_rejects_import_only_runtime_smoke(tmp_path: Path) ->
     )
     smoke = _runtime_smoke_evidence(tool, archive, custody)
     smoke["runtime_surface"] = "inflate_py_import_smoke"
+    claim_ts = (
+        dt.datetime.now(dt.UTC)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+    claims_path = _write_claims_file(tool, tmp_path, timestamp_utc=claim_ts)
     manifest = {
         "lane_id": tool.SIDECAR_LANE_ID,
         "dispatch_blockers": [],
@@ -562,7 +703,13 @@ def test_manifest_readiness_rejects_import_only_runtime_smoke(tmp_path: Path) ->
         "runtime_manifest": custody,
         "runtime_tree_sha256": custody["runtime_tree_sha256"],
         "runtime_smoke_evidence": smoke,
-        "dispatch_claim": _dispatch_claim_record(tool, archive, custody),
+        "dispatch_claim": _dispatch_claim_record(
+            tool,
+            archive,
+            custody,
+            claims_path=claims_path,
+            timestamp_utc=claim_ts,
+        ),
         "exact_eval_preflight": _exact_eval_preflight_record(tool, archive, custody),
         "member_section_proof": proof,
         "sidecar_choice_state": choice_state,

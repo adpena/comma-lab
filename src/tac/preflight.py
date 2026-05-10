@@ -326,6 +326,16 @@ def _preflight_all_fingerprint_paths(root: Path) -> tuple[Path, ...]:
     ):
         paths.update(path for path in root.glob(pattern) if path.is_file())
     paths.update(_public_pr_clone_fingerprint_paths(root))
+    results_dir = root / "experiments" / "results"
+    if results_dir.is_dir():
+        for pattern in ("*status*.json", "*manifest*.json", "rebuild_command.txt"):
+            for path in results_dir.rglob(pattern):
+                if not path.is_file():
+                    continue
+                rel = path.relative_to(root).as_posix()
+                if "/public_pr" in rel:
+                    continue
+                paths.add(path)
     return tuple(sorted(paths, key=lambda item: item.as_posix()))
 
 
@@ -7922,7 +7932,7 @@ def check_no_mps_fallback_default(
             source_index.files_containing_substrings(
                 _META_PY_SCAN_DIRS,
                 pattern="*.py",
-                substrings=("mps", "cuda.is_available"),
+                substrings=("mps", "is_available"),
                 require_all=True,
             )
         )

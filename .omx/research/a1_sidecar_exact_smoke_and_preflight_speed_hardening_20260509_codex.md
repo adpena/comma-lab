@@ -6,6 +6,16 @@ Codex converted recursive adversarial review findings into durable guards:
 
 - A1 sidecar runtime readiness now has an explicit exact `inflate.sh <archive_dir> <output_dir> <file_list>` smoke producer, separate from bounded import-smoke.
 - Exact smoke evidence now requires a real output digest and empty evidence-local blockers; a zero-exit `inflate.sh` that writes no raw output fails readiness.
+- Red-team follow-up: exact smoke evidence now also requires the expected full
+  raw byte count (`600 * 2 * 874 * 1164 * 3` by default for A1). Truncated or
+  wrong-size raw output fails readiness even with exit code 0.
+- Red-team follow-up: dispatch custody now binds embedded claim records to the
+  live `.omx/state/active_lane_dispatch_claims.md` row by lane, job, platform,
+  status, timestamp, and freshness. Terminal/latest-stale rows block readiness.
+- Red-team follow-up: full-preflight clean-cache fingerprints now include the
+  narrow result artifacts guarded by status/manifest/rebuild checks, and the
+  MPS fallback scanner catches formatted `torch.cuda \ .is_available()` through
+  the SourceIndex path.
 - A1 sidecar dispatch blockers are recomputed from structured facts instead of preserving stale provisional text blockers forever.
 - Recheck telemetry distinguishes planned unproven rechecks from pairs actually rechecked this run, with a remaining-unproven counter.
 - Developer/full preflight clean-cache hits run before filesystem/source-index setup, so clean repeat runs do not pay source-index construction.
@@ -37,6 +47,11 @@ advisory only for sweeps and configuration discovery.
   - 32 passed
 - `python -m pytest src/tac/tests/test_preflight_all_clean_cache.py src/tac/tests/test_preflight_meta_bugs.py::TestNoMpsFallbackDefault src/tac/tests/test_build_a1_per_pair_latent_correction_sidecar.py -q`
   - 52 passed
+- Red-team follow-up focused tests:
+  - `python -m pytest src/tac/tests/test_build_a1_per_pair_latent_correction_sidecar.py src/tac/tests/test_preflight_all_clean_cache.py src/tac/tests/test_preflight_meta_bugs.py::TestNoMpsFallbackDefault -q`
+  - 57 passed
+  - `python -m pytest src/tac/tests/test_source_index.py src/tac/tests/test_profile_preflight_latency.py src/tac/tests/test_build_phase1_packet_compiler.py -q`
+  - 99 passed
 - `python tools/profile_preflight_latency.py --surface preflight-dev-cli --top 20 --fail-on-surface-failure`
   - passed, 10.556s while the worktree was dirty
 - Post-commit repeat measurement:

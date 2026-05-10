@@ -1009,6 +1009,26 @@ class TestNoMpsFallbackDefault:
         v = check_no_mps_fallback_default(repo_root=root, strict=False, verbose=False)
         assert len(v) >= 1
 
+    def test_source_index_path_catches_formatted_cuda_attr(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        from tac.source_index import source_index_context
+
+        root = _stub_repo(tmp_path)
+        _write(root / "experiments" / "bad_wrapped_cuda_attr.py", """
+            import torch
+            d = "cuda" if torch.cuda \\
+                .is_available() else "mps"
+        """)
+        with source_index_context(root):
+            v = check_no_mps_fallback_default(
+                repo_root=root,
+                strict=False,
+                verbose=False,
+            )
+        assert len(v) >= 1
+
     def test_clean_check_cache_skips_mps_rescan(
         self,
         tmp_path: Path,

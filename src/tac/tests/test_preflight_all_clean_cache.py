@@ -191,6 +191,39 @@ def test_preflight_all_clean_cache_misses_after_public_pr_clone_change(tmp_path)
     assert hit is False
 
 
+def test_preflight_all_clean_cache_misses_after_result_status_change(tmp_path):
+    (tmp_path / "src" / "tac").mkdir(parents=True)
+    (tmp_path / "src" / "tac" / "example.py").write_text("VALUE = 1\n")
+    status = tmp_path / "experiments" / "results" / "candidate" / "dispatch_status.json"
+    status.parent.mkdir(parents=True)
+    status.write_text('{"dirty_path_count": 0}\n')
+
+    hit, token, paths = _preflight_all_clean_cache_hit(
+        tmp_path,
+        profile_name=None,
+        tto_frames_path=None,
+        gt_poses_path=None,
+        masks_path=None,
+        renderer_path=None,
+        archive_path=None,
+    )
+    assert hit is False
+    assert status in paths
+    _store_preflight_all_clean_cache(tmp_path, cache_token=token, paths=paths)
+
+    status.write_text('{"dirty_paths": ["stale.py"]}\n')
+    hit, _, _ = _preflight_all_clean_cache_hit(
+        tmp_path,
+        profile_name=None,
+        tto_frames_path=None,
+        gt_poses_path=None,
+        masks_path=None,
+        renderer_path=None,
+        archive_path=None,
+    )
+    assert hit is False
+
+
 def test_preflight_developer_clean_cache_is_separate_and_hits_unchanged_tree(tmp_path):
     (tmp_path / "src" / "tac").mkdir(parents=True)
     (tmp_path / "src" / "tac" / "example.py").write_text("VALUE = 1\n")
