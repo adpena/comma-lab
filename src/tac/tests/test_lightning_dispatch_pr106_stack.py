@@ -328,6 +328,35 @@ def test_main_print_only_has_no_stage_or_claim_side_effects(monkeypatch) -> None
     assert len(submit_calls) == 1
 
 
+def test_main_print_only_accepts_repo_relative_inflate_sh(capsys) -> None:
+    dispatcher = _load_dispatcher()
+
+    rc = dispatcher.main(
+        [
+            "--lane",
+            "apogee_int4",
+            "--archive",
+            "pyproject.toml",
+            "--inflate-sh",
+            "pyproject.toml",
+            "--predicted-low",
+            "0.1",
+            "--predicted-high",
+            "0.2",
+            "--print-only",
+            "--allow-forensic-apogee-intN",
+            "--job-name",
+            "dry_print_only",
+        ]
+    )
+
+    assert rc == 0
+    output = capsys.readouterr().out
+    assert "=== resolved invocation (would run) ===" in output
+    assert "--inflate-sh \\\n  pyproject.toml" in output
+    assert "--archive \\\n  pyproject.toml" in output
+
+
 def test_claim_lane_does_not_force_without_explicit_force_claim(monkeypatch) -> None:
     dispatcher = _load_dispatcher()
     calls = []

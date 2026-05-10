@@ -179,21 +179,19 @@ def test_scoped_fast_gates_run_in_process_without_subprocess(monkeypatch) -> Non
     def forbidden_subprocess(*_args: object, **_kwargs: object) -> None:
         raise AssertionError("scoped fast gates must not shell out")
 
-    monkeypatch.setattr(module.subprocess, "run", forbidden_subprocess)
-    monkeypatch.setattr(
-        check_dispatch_cli_shell_hazards,
-        "scan_paths",
-        lambda *_args, **_kwargs: [],
-    )
-    monkeypatch.setattr(
-        audit_semantic_label_contract,
-        "audit_semantic_label_contract",
-        lambda **_kwargs: _SemanticResult(),
-    )
-    monkeypatch.setattr(
-        audit_tooling_consolidation,
-        "audit_tooling",
-        lambda *_args, **_kwargs: AuditReport(
+    source_index = object()
+
+    def fake_scan_paths(*_args: object, **kwargs: object) -> list[object]:
+        assert kwargs["source_index"] is source_index
+        return []
+
+    def fake_semantic_audit(**kwargs: object) -> _SemanticResult:
+        assert kwargs["source_index"] is source_index
+        return _SemanticResult()
+
+    def fake_tooling_audit(*_args: object, **kwargs: object) -> AuditReport:
+        assert kwargs["source_index"] is source_index
+        return AuditReport(
             audit="tooling_consolidation_inventory",
             readiness_key="ready_for_incremental_consolidation",
             ready=True,
@@ -204,15 +202,35 @@ def test_scoped_fast_gates_run_in_process_without_subprocess(monkeypatch) -> Non
                     "local_json_dump": 0,
                 },
             },
-        ),
+        )
+
+    monkeypatch.setattr(module.subprocess, "run", forbidden_subprocess)
+    monkeypatch.setattr(
+        check_dispatch_cli_shell_hazards,
+        "scan_paths",
+        fake_scan_paths,
+    )
+    monkeypatch.setattr(
+        audit_semantic_label_contract,
+        "audit_semantic_label_contract",
+        fake_semantic_audit,
+    )
+    monkeypatch.setattr(
+        audit_tooling_consolidation,
+        "audit_tooling",
+        fake_tooling_audit,
     )
 
-    assert module._run_dispatch_cli_shell_hazards_gate() == (
+    assert module._run_dispatch_cli_shell_hazards_gate(source_index=source_index) == (
         True,
         "dispatch CLI/shell hazards: PASS",
     )
-    semantic_ok, semantic_output = module._run_semantic_label_contract_gate()
-    tooling_ok, tooling_output = module._run_tooling_consolidation_gate()
+    semantic_ok, semantic_output = module._run_semantic_label_contract_gate(
+        source_index=source_index
+    )
+    tooling_ok, tooling_output = module._run_tooling_consolidation_gate(
+        source_index=source_index
+    )
 
     assert semantic_ok is True
     assert "semantic-label contract: PASS" in semantic_output

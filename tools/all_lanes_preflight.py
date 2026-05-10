@@ -176,6 +176,7 @@ from tac.geometry_feedback_readiness import (  # noqa: E402
     geometry_feedback_contract_failures,
 )
 from tac.repo_io import json_text, sha256_bytes  # noqa: E402
+from tac.source_index import SourceIndex  # noqa: E402
 
 TOOLS = REPO / "tools"
 SHELL_HAZARDS = TOOLS / "check_dispatch_cli_shell_hazards.py"
@@ -355,7 +356,7 @@ def _run_gate(name: str, tool: Path, extra_args: list[str] | None = None) -> tup
     return proc.returncode == 0, output
 
 
-def _run_dispatch_cli_shell_hazards_gate() -> tuple[bool, str]:
+def _run_dispatch_cli_shell_hazards_gate(source_index=None) -> tuple[bool, str]:
     """Run Gate #0 in-process to avoid Python startup cost.
 
     This preserves the standalone tool's strict behavior: any hazard is a
@@ -369,6 +370,7 @@ def _run_dispatch_cli_shell_hazards_gate() -> tuple[bool, str]:
         REPO,
         scan_paths=module.DEFAULT_SCAN_PATHS,
         excludes=module.DEFAULT_EXCLUDES,
+        source_index=source_index,
     )
     if hazards:
         lines = [
@@ -433,12 +435,12 @@ def _run_hidden_gem_readiness_gate() -> tuple[bool, str]:
     )
 
 
-def _run_semantic_label_contract_gate() -> tuple[bool, str]:
+def _run_semantic_label_contract_gate(source_index=None) -> tuple[bool, str]:
     from dataclasses import asdict
 
     from tools.audit_semantic_label_contract import audit_semantic_label_contract
 
-    result = audit_semantic_label_contract(repo_root=REPO)
+    result = audit_semantic_label_contract(repo_root=REPO, source_index=source_index)
     payload = {
         "ok": result.ok,
         "contract_ok": result.contract_ok,
@@ -608,11 +610,11 @@ def _run_hnerv_scorecard_gate() -> tuple[bool, str]:
     return proc.returncode == 0, proc.stdout + proc.stderr
 
 
-def _run_tooling_consolidation_gate() -> tuple[bool, str]:
+def _run_tooling_consolidation_gate(source_index=None) -> tuple[bool, str]:
     from tac.audit_contract import audit_exit_code
     from tools.audit_tooling_consolidation import DEFAULT_SCAN_ROOTS, audit_tooling
 
-    report = audit_tooling(REPO, DEFAULT_SCAN_ROOTS)
+    report = audit_tooling(REPO, DEFAULT_SCAN_ROOTS, source_index=source_index)
     payload = report.to_dict()
     counts = payload["summary"]["pattern_counts"]
     lines = [
@@ -1937,12 +1939,16 @@ def main(argv: list[str] | None = None) -> int:
             print(f"FATAL: missing sub-tool {tool.relative_to(REPO)}", file=sys.stderr)
             return 2
 
+    source_index = SourceIndex(REPO)
+
     gate_steps = [
         PreflightStep(
             "GATE",
             0,
             "dispatch CLI/shell hazards",
-            _run_dispatch_cli_shell_hazards_gate,
+            lambda source_index=source_index: _run_dispatch_cli_shell_hazards_gate(
+                source_index=source_index
+            ),
             "  ✓ Gate #0: dispatch CLI/shell hazards — PASSED",
             "  ✗ Gate #0: dispatch CLI/shell hazards — FAILED",
         ),
@@ -1966,7 +1972,9 @@ def main(argv: list[str] | None = None) -> int:
             "GATE",
             3,
             "semantic-label contract",
-            _run_semantic_label_contract_gate,
+            lambda source_index=source_index: _run_semantic_label_contract_gate(
+                source_index=source_index
+            ),
             "  ✓ Gate #3: semantic-label contract — PASSED",
             "  ✗ Gate #3: semantic-label contract — FAILED",
         ),
@@ -2006,7 +2014,9 @@ def main(argv: list[str] | None = None) -> int:
             "GATE",
             8,
             "tooling consolidation inventory",
-            _run_tooling_consolidation_gate,
+            lambda source_index=source_index: _run_tooling_consolidation_gate(
+                source_index=source_index
+            ),
             "  ✓ Gate #8: tooling consolidation inventory — PASSED",
             "  ✗ Gate #8: tooling consolidation inventory — FAILED",
         ),
@@ -2190,6 +2200,7 @@ def main(argv: list[str] | None = None) -> int:
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = [executor.submit(_execute_step, step) for step in steps]
             results = [future.result() for future in futures]
+    source_index.save_persistent_text_facts()
     wall_elapsed_s = time.perf_counter() - run_started
 
     n_passed = 0

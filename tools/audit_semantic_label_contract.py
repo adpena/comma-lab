@@ -8,6 +8,7 @@ import json
 import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Protocol
 
 try:
     from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
@@ -89,6 +90,16 @@ STALE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
 )
 
 
+class _SourceIndexLike(Protocol):
+    def read_text(
+        self,
+        path: str | Path,
+        *,
+        encoding: str | None = None,
+        errors: str | None = None,
+    ) -> str: ...
+
+
 @dataclass(frozen=True)
 class AuditFinding:
     path: str
@@ -113,8 +124,18 @@ class AuditResult:
         return self.contract_ok and not self.blocking_findings
 
 
-def _line_findings(path: Path, rel_path: str, severity: str) -> list[AuditFinding]:
-    text = path.read_text(encoding="utf-8")
+def _line_findings(
+    path: Path,
+    rel_path: str,
+    severity: str,
+    *,
+    source_index: _SourceIndexLike | None = None,
+) -> list[AuditFinding]:
+    text = (
+        source_index.read_text(path, encoding="utf-8")
+        if source_index is not None
+        else path.read_text(encoding="utf-8")
+    )
     findings: list[AuditFinding] = []
     for line_no, line in enumerate(text.splitlines(), start=1):
         for pattern_name, pattern in STALE_PATTERNS:
@@ -137,6 +158,7 @@ def audit_semantic_label_contract(
     repo_root: Path = REPO_ROOT,
     rel_paths: tuple[str, ...] = CORE_REL_PATHS,
     advisory_rel_paths: tuple[str, ...] = ADVISORY_REL_PATHS,
+    source_index: _SourceIndexLike | None = None,
 ) -> AuditResult:
     validate_contest_class_table()
     contract_ok = (
@@ -162,7 +184,9 @@ def audit_semantic_label_contract(
                 )
             )
             continue
-        blocking_findings.extend(_line_findings(path, rel_path, "blocking"))
+        blocking_findings.extend(
+            _line_findings(path, rel_path, "blocking", source_index=source_index)
+        )
 
     advisory_findings: list[AuditFinding] = []
     for rel_path in tuple(dict.fromkeys(advisory_rel_paths)):
@@ -180,7 +204,9 @@ def audit_semantic_label_contract(
                 )
             )
             continue
-        advisory_findings.extend(_line_findings(path, rel_path, "advisory"))
+        advisory_findings.extend(
+            _line_findings(path, rel_path, "advisory", source_index=source_index)
+        )
 
     return AuditResult(
         contract_ok=contract_ok,

@@ -355,8 +355,14 @@ def main(argv: list[str] | None = None) -> int:
         # pr106_latent_sidecar → submissions/pr106_latent_sidecar/inflate.sh
         inflate_dir = "apogee_intN" if args.lane.startswith("apogee_int") else args.lane
         args.inflate_sh = REPO_ROOT / "submissions" / inflate_dir / "inflate.sh"
+    elif not args.inflate_sh.is_absolute():
+        args.inflate_sh = REPO_ROOT / args.inflate_sh
     if not args.inflate_sh.is_file():
         sys.exit(f"FATAL: inflate.sh not found: {args.inflate_sh}")
+    try:
+        args.inflate_sh.relative_to(REPO_ROOT)
+    except ValueError:
+        sys.exit(f"FATAL: inflate.sh must be inside repo root: {args.inflate_sh}")
 
     validate_apogee_dispatch_gate(
         lane=args.lane,

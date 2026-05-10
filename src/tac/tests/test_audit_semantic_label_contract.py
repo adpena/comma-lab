@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from tac.source_index import SourceIndex
 from tools.audit_semantic_label_contract import (
     ADVISORY_REL_PATHS,
     CORE_REL_PATHS,
@@ -24,6 +25,25 @@ def test_semantic_label_contract_audit_reports_stale_phrase(tmp_path: Path) -> N
     assert not result.ok
     assert len(result.blocking_findings) == 1
     assert result.blocking_findings[0].path == "stale.py"
+
+
+def test_semantic_label_contract_source_index_matches_direct_scan(tmp_path: Path) -> None:
+    path = tmp_path / "stale.py"
+    path.write_text("# class 0: background\n", encoding="utf-8")
+
+    direct = audit_semantic_label_contract(
+        repo_root=tmp_path,
+        rel_paths=("stale.py",),
+        advisory_rel_paths=(),
+    )
+    indexed = audit_semantic_label_contract(
+        repo_root=tmp_path,
+        rel_paths=("stale.py",),
+        advisory_rel_paths=(),
+        source_index=SourceIndex(tmp_path),
+    )
+
+    assert indexed == direct
 
 
 def test_semantic_label_contract_audit_reports_regex_patterns(tmp_path: Path) -> None:

@@ -5,6 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from tac.source_index import SourceIndex
 from tools.audit_tooling_consolidation import audit_tooling
 
 REPO = Path(__file__).resolve().parents[3]
@@ -63,6 +64,20 @@ def test_audit_tooling_prunes_excluded_result_trees(tmp_path: Path) -> None:
     assert payload["summary"]["pattern_counts"]["local_sha256_helper"] == 1
     assert "experiments/live.py" in payload["per_file_counts"]
     assert "experiments/results/public_pr/archived.py" not in payload["per_file_counts"]
+
+
+def test_audit_tooling_source_index_matches_direct_scan(tmp_path: Path) -> None:
+    sample_dir = tmp_path / "tools"
+    sample_dir.mkdir()
+    (sample_dir / "sample.py").write_text(
+        "def _sha256_file(path):\n    return 'x'\n",
+        encoding="utf-8",
+    )
+
+    direct = audit_tooling(tmp_path, ("tools",))
+    indexed = audit_tooling(tmp_path, ("tools",), source_index=SourceIndex(tmp_path))
+
+    assert indexed == direct
 
 
 def test_audit_tooling_cli_json_contract() -> None:

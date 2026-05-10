@@ -14,6 +14,7 @@ import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Protocol
 
 try:
     from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
@@ -38,12 +39,23 @@ DEFAULT_EXCLUDES = (
 TEXT_SUFFIXES = {".py"}
 
 
+class _SourceIndexLike(Protocol):
+    def read_text(
+        self,
+        path: str | Path,
+        *,
+        encoding: str | None = None,
+        errors: str | None = None,
+    ) -> str: ...
+
+
 @dataclass(frozen=True)
 class Pattern:
     key: str
     regex: re.Pattern[str]
     canonical_target: str
     severity: str
+    candidate_substrings: tuple[str, ...]
 
 
 PATTERNS: tuple[Pattern, ...] = (
@@ -52,30 +64,35 @@ PATTERNS: tuple[Pattern, ...] = (
         regex=re.compile(r"def _?sha256(?:_file|_path|_of)?\("),
         canonical_target="tac.repo_io.sha256_file or a byte-specific helper",
         severity="medium",
+        candidate_substrings=("sha256",),
     ),
     Pattern(
         key="local_json_dump",
         regex=re.compile(r"json\.dumps\([^\\n]+indent=2,\s*sort_keys=True"),
         canonical_target="tac.repo_io.json_text/write_json",
         severity="medium",
+        candidate_substrings=("json.dumps",),
     ),
     Pattern(
         key="manual_sys_path_bootstrap",
         regex=re.compile(r"sys\.path\.insert\(0,\s*str\("),
         canonical_target="canonical tool bootstrap helper",
         severity="medium",
+        candidate_substrings=("sys.path.insert",),
     ),
     Pattern(
         key="manual_repo_root_parents",
         regex=re.compile(r"Path\(__file__\)\.resolve\(\)\.parents\[[0-9]+\]"),
         canonical_target="comma_lab.paths.repo_root or tool bootstrap helper",
         severity="low",
+        candidate_substrings=("Path(__file__).resolve().parents",),
     ),
     Pattern(
         key="manual_audit_score_dispatch_metadata",
         regex=re.compile(r"score_claim|dispatch_attempted"),
         canonical_target="tac.audit_contract.AuditReport",
         severity="high",
+        candidate_substrings=("score_claim", "dispatch_attempted"),
     ),
 )
 
@@ -125,19 +142,45 @@ def iter_files(repo_root: Path, scan_roots: tuple[str, ...]) -> list[Path]:
     return files
 
 
-def audit_tooling(repo_root: Path, scan_roots: tuple[str, ...]) -> AuditReport:
+def _candidate_patterns(text: str) -> tuple[Pattern, ...]:
+    return tuple(
+        pattern
+        for pattern in PATTERNS
+        if any(needle in text for needle in pattern.candidate_substrings)
+    )
+
+
+def _pattern_matches(pattern: Pattern, line: str) -> bool:
+    if pattern.key == "manual_audit_score_dispatch_metadata":
+        return "score_claim" in line or "dispatch_attempted" in line
+    return bool(pattern.regex.search(line))
+
+
+def audit_tooling(
+    repo_root: Path,
+    scan_roots: tuple[str, ...],
+    *,
+    source_index: _SourceIndexLike | None = None,
+) -> AuditReport:
     occurrences: dict[str, list[dict[str, object]]] = defaultdict(list)
     per_file_counts: dict[str, Counter[str]] = defaultdict(Counter)
     files = iter_files(repo_root, scan_roots)
     for path in files:
         rel = repo_relative(path, repo_root)
         try:
-            text = path.read_text(encoding="utf-8")
+            text = (
+                source_index.read_text(path, encoding="utf-8")
+                if source_index is not None
+                else path.read_text(encoding="utf-8")
+            )
         except UnicodeDecodeError:
             continue
+        active_patterns = _candidate_patterns(text)
+        if not active_patterns:
+            continue
         for lineno, line in enumerate(text.splitlines(), start=1):
-            for pattern in PATTERNS:
-                if pattern.regex.search(line):
+            for pattern in active_patterns:
+                if _pattern_matches(pattern, line):
                     per_file_counts[rel][pattern.key] += 1
                     occurrences[pattern.key].append(
                         {
