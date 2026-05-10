@@ -691,3 +691,60 @@ goal: full training plus packet compile plus exact contest-CUDA auth eval.
 Promotion still requires recovery to verify archive/runtime custody, 600
 samples, CUDA/T4 hardware, component recomputation, zero auth-eval blockers,
 and `score_claim=true` in adjudication.
+
+## 2026-05-10T15:08Z swarm harvest addendum
+
+Current active remote state is unchanged: `t1_balle_128k_endtoend` remains the
+only active claim, job `t1_balle_modal_phase1_ab2d0f6_20260510T1437Z`, call id
+`fc-01KR955JSYQAVTTYZA48VAV7WJ`. Recovery still returns `NOT READY`, so no
+duplicate T1 or same-lane exact-CUDA dispatch is allowed.
+
+Three local-only swarm results advanced the queue without score overclaim:
+
+1. HNeRV frontier hidden-gem routing is unblocked. The refreshed local
+   scorecard at
+   `experiments/results/hnerv_frontier_scorecard_refresh_20260510_codex/`
+   now has section profiles for `PR102`, `PR103-ac-repack`, `PR104`, and
+   `PR106x-lowlevel`. `tools/audit_hnerv_frontier_scorecard.py --format json`
+   reports `ready_for_hidden_gem_routing=true`, zero blockers, 8 canonical
+   labels, 24 follow-up targets, and 8 payload section manifests. The next
+   routing target is still not a score claim: `PR103-ac-repack` /
+   `merged_range_coded_weights_and_hi_latents` at `153856` bytes. Required
+   next gate is a byte-different candidate with old/new section SHA-256,
+   charged-byte proof, runtime-consumption proof, lane claim, then exact CUDA
+   auth eval.
+2. PR106 sidechannel triage found the shortest static-packet path is not the
+   three-sister scaffold. It is the already byte-closed WR01 PR106x packet:
+   `experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive.zip`
+   at `186222` bytes, archive SHA-256
+   `d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628`.
+   It remains `score_claim=false` and dispatch-blocked until exact CUDA auth
+   eval, adjudication, terminal dispatch claim, and operator score review.
+   The three PR106 sidechannel smoke manifests now record local archive paths,
+   archive SHA-256s, `dispatch_attempted=false`, and exact dispatch blockers.
+3. A2 sensitivity-weighted packetization now fails closed with structured
+   blocker evidence instead of a generic certification error. Current blocker
+   artifact:
+   `reports/a2_certified_sensitivity_blocker_20260510_codex.json`. Stable
+   blockers are `a2_certified_sensitivity_binding_invalid`,
+   `a2_component_sensitivity_manifest_reference_missing`,
+   `a2_sensitivity_artifact_diagnostic_allowed`, and
+   `a2_sensitivity_artifact_metadata_blockers_present`. The raw combined map
+   found locally is not enough: promotion still requires a promotion-grade
+   `component_sensitivity_v1` manifest binding the map, not a synthesized or
+   diagnostic stub.
+
+Immediate score-lowering order after this harvest:
+
+1. Continue polling and recover the active T1 Modal run; close the claim
+   terminally before any same-lane rerun or score promotion.
+2. Use the unblocked HNeRV scorecard to build the next byte-different hidden
+   gem candidate locally, starting with `PR103-ac-repack` section-level
+   transforms; do not dispatch until old/new section hashes and runtime closure
+   are recorded.
+3. Keep WR01 PR106x as a static exact-eval candidate for the next available
+   non-conflicting CUDA slot, but do not call it a result before auth eval.
+4. Build a real promotion-grade A2 component-sensitivity manifest or keep A2
+   blocked. Do not downgrade the certification gate.
+5. Keep preflight under the 30s crash budget and continue only speedups that
+   preserve the strict guard surface.

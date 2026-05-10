@@ -9,8 +9,14 @@ from pathlib import Path
 
 import torch
 
+from tac.component_sensitivity_artifact import write_component_sensitivity_manifest
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TOOL_PATH = REPO_ROOT / "tools" / "build_a2_sensitivity_weighted_pr101_packet.py"
+SHA_A = "a" * 64
+SHA_B = "b" * 64
+SHA_C = "c" * 64
+SHA_D = "d" * 64
 
 
 def _load_tool():
@@ -173,6 +179,203 @@ def _write_a2_manifest(path: Path, selected_ks: list[int]) -> Path:
     return path
 
 
+def _pair_record(pair_index: int) -> dict[str, int]:
+    return {
+        "video": 0,
+        "pair_index": pair_index,
+        "t": 2 * pair_index,
+        "t1": 2 * pair_index + 1,
+    }
+
+
+def _component_certification(component: str) -> dict[str, object]:
+    return {
+        "format": "component_sensitivity_map_certification_v1",
+        "component": component,
+        "device": "cuda",
+        "official_component_response": True,
+        "canonical_scorer_path": True,
+        "promotion_eligible": True,
+        "source_map_sha256": SHA_A,
+        "official_response_curve_sha256": SHA_B,
+        "stability_sha256": SHA_C,
+        "sample_plan_sha256": SHA_D,
+        "baseline_archive_sha256": SHA_A,
+        "baseline_archive_bytes": 686635,
+        "contest_auth_eval_json_sha256": SHA_B,
+        "prediction_deltas_sha256": SHA_C,
+        "perturbation_basis_sha256": SHA_D,
+        "review_packet_sha256": SHA_A,
+        "review_clean_passes": 3,
+        "review_unresolved_blockers": [],
+        "response_gate_results": {
+            "finite_values": True,
+            "coverage_passed": True,
+            "zero_repro": True,
+            "zero_repro_error": 0.0,
+            "signal_present": True,
+            "observed_delta_max": 0.01,
+            "prediction_error_passed": True,
+            "max_relative_prediction_error": 0.02,
+            "promotion_gate_passed": True,
+        },
+        "stability_gate_results": {
+            "passed": True,
+            "cv_max": 0.04,
+            "spearman_min": 0.96,
+            "top_decile_overlap_min": 0.91,
+        },
+    }
+
+
+def _component_map(component: str, sha256: str) -> dict[str, object]:
+    return {
+        "path": f"{component}_sensitivity_map.pt",
+        "bytes": 123,
+        "sha256": sha256,
+        "scorer_target": component,
+        "map_format": "tac_score_sensitivity_map_v1",
+        "certification": _component_certification(component),
+        "tensor": {"dtype": "float32", "shape": [2], "numel": 2},
+    }
+
+
+def _response_curve(component: str, sha256: str) -> dict[str, object]:
+    readouts = {
+        "posenet": "official_pose_mse",
+        "segnet": "official_argmax_disagreement",
+        "combined": "official_component_formula",
+    }
+    return {
+        "path": f"{component}_curve.json",
+        "bytes": 456,
+        "sha256": sha256,
+        "count": 5,
+        "holdout_error": 0.02,
+        "official_component_response": True,
+        "passed": True,
+        "gate_results": {
+            "finite_values": True,
+            "coverage_passed": True,
+            "zero_repro": True,
+            "zero_repro_error": 0.0,
+            "signal_present": True,
+            "observed_delta_max": 0.01,
+            "prediction_error_passed": True,
+            "max_relative_prediction_error": 0.02,
+            "promotion_gate_passed": True,
+        },
+        "gate_spec": {
+            "zero_repro_tolerance": 1e-7,
+            "holdout_error_max": 0.05,
+            "spearman_min": 0.3,
+        },
+        "promotion_blockers": [],
+        "component_readout": readouts[component],
+        "response_kind": "symmetric",
+        "epsilon_ladder": [-0.001, 0.0, 0.001],
+    }
+
+
+def _write_component_sensitivity_manifest(path: Path, *, combined_map_sha256: str) -> Path:
+    write_component_sensitivity_manifest(
+        path,
+        {
+            "schema_version": 1,
+            "format": "component_sensitivity_v1",
+            "device": "cuda",
+            "promotion_eligible": True,
+            "evidence_grade": "A",
+            "inputs": {
+                "checkpoint": {"path": "checkpoint.bin", "bytes": 1, "sha256": SHA_A},
+                "video": {"path": "0.mkv", "bytes": 1, "sha256": SHA_B},
+                "upstream": {"path": "upstream", "bytes": 1, "sha256": SHA_C},
+            },
+            "sample_plan": {
+                "calibration_pairs": [_pair_record(idx) for idx in range(480)],
+                "holdout_pairs": [_pair_record(idx) for idx in range(480, 600)],
+                "split_seed": 123,
+                "split_hash": SHA_D,
+            },
+            "component_maps": {
+                "posenet": _component_map("posenet", SHA_A),
+                "segnet": _component_map("segnet", SHA_B),
+                "combined": _component_map("combined", combined_map_sha256),
+            },
+            "stability": {
+                "cv": {"posenet": 0.04, "segnet": 0.05, "combined": 0.03},
+                "rank": {"posenet": 0.98, "segnet": 0.97, "combined": 0.96},
+                "top_k": {
+                    "posenet": {"k": 16, "overlap": 0.91},
+                    "segnet": {"k": 16, "overlap": 0.89},
+                    "combined": {"k": 16, "overlap": 0.93},
+                },
+                "thresholds": {
+                    "cv_max": 0.35,
+                    "spearman_min": 0.3,
+                    "top_decile_overlap_min": 0.5,
+                },
+                "passed": True,
+            },
+            "response_curves": {
+                "posenet": _response_curve("posenet", SHA_A),
+                "segnet": _response_curve("segnet", SHA_B),
+                "combined": _response_curve("combined", SHA_C),
+            },
+            "contest_eval": {
+                "archive_bytes": 37_000_000,
+                "archive_sha256": SHA_A,
+                "contest_auth_eval_json": {
+                    "path": "contest_auth_eval.json",
+                    "bytes": 1,
+                    "sha256": SHA_B,
+                },
+                "device": "cuda",
+                "n_samples": 600,
+            },
+        },
+    )
+    return path
+
+
+def _write_certified_a2_manifest(path: Path, selected_ks: list[int], *, sensitivity_sha: str) -> Path:
+    component_manifest = _write_component_sensitivity_manifest(
+        path.parent / "component_sensitivity_v1.json",
+        combined_map_sha256=sensitivity_sha,
+    )
+    _write_a2_manifest(path, selected_ks)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["status"] = "completed_local_sensitivity_weighted_allocation"
+    payload["dispatch_blockers"] = [
+        "cpu_local_allocator_proxy_only",
+        "no_byte_closed_runtime_packet_built",
+        "no_contest_cpu_auth_eval",
+        "no_exact_cuda_auth_eval",
+    ]
+    payload["inputs"] = {}
+    payload["inputs"]["sensitivity_map_sha256"] = sensitivity_sha
+    payload["sensitivity_artifact"] = {
+        "allow_diagnostic_sensitivity": False,
+        "metadata_blockers": [],
+        "path": "combined_sensitivity_map.pt",
+        "sha256": sensitivity_sha,
+        "status": "certified",
+        "component_sensitivity_manifest": {
+            "path": component_manifest.name,
+            "sha256": tool_sha256(component_manifest),
+            "component": "combined",
+        },
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    return path
+
+
+def tool_sha256(path: Path) -> str:
+    import hashlib
+
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def test_builds_byte_closed_packet_ladder_with_non_promotable_manifest(tmp_path: Path, monkeypatch) -> None:
     tool = _load_tool()
     _install_tiny_pr101_contract(monkeypatch, tool)
@@ -274,8 +477,53 @@ def test_require_certified_sensitivity_rejects_stub_a2_manifest(tmp_path: Path, 
     manifest = json.loads(blocked_json.read_text(encoding="utf-8"))
     assert manifest["status"] == "blocked_fail_closed"
     assert "a2_certified_sensitivity_binding_invalid" in manifest["dispatch_blockers"]
+    assert "a2_sensitivity_artifact_diagnostic_allowed" in manifest["dispatch_blockers"]
+    assert "a2_sensitivity_artifact_metadata_blockers_present" in manifest["dispatch_blockers"]
+    assert "a2_component_sensitivity_manifest_reference_missing" in manifest["dispatch_blockers"]
     assert "certified sensitivity binding" in manifest["reason"]
     assert manifest["packet_closure"]["require_certified_sensitivity"] is True
+    diagnostics = manifest["blocker_details"]["certified_sensitivity_binding"]
+    assert diagnostics["status"] == "failed"
+    assert diagnostics["observations"]["metadata_blockers"] == ["is_stub=true"]
+    assert manifest["score_claim"] is False
+
+
+def test_require_certified_sensitivity_accepts_bound_component_manifest(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    tool = _load_tool()
+    _install_tiny_pr101_contract(monkeypatch, tool)
+    _install_fake_encoder(monkeypatch, tool)
+    source_archive = tmp_path / "source" / "archive.zip"
+    _write_zip(source_archive, b"DECO" + b"LA" + b"SIDE")
+    runtime = _write_runtime(tmp_path / "runtime")
+    state_dict = _write_state_dict(tmp_path / "state.pt")
+    a2_manifest = _write_certified_a2_manifest(
+        tmp_path / "a2.json",
+        [2, 1],
+        sensitivity_sha=SHA_C,
+    )
+
+    manifest = tool.build_packet_ladder(
+        a2_manifest_path=a2_manifest,
+        state_dict_path=state_dict,
+        source_archive=source_archive,
+        source_runtime_dir=runtime,
+        output_dir=tmp_path / "out",
+        recorded_at_utc=datetime(2026, 5, 8, 12, 0, tzinfo=UTC),
+        require_certified_sensitivity=True,
+    )
+
+    assert manifest["status"] == "completed_byte_closed_packet_ladder"
+    binding = manifest["upstream_a2_manifest"]["certified_sensitivity_binding"]
+    assert binding["status"] == "passed"
+    assert binding["required"] is True
+    assert binding["a2_sensitivity_map_sha256"] == SHA_C
+    assert "a2_certified_sensitivity_binding_invalid" not in manifest["dispatch_blockers"]
+    assert "score_sensitivity_artifact_must_be_certified_before_promotion" not in (
+        manifest["dispatch_blockers"]
+    )
     assert manifest["score_claim"] is False
 
 

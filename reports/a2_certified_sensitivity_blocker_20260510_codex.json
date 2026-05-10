@@ -1,0 +1,79 @@
+{
+  "blocker_details": {
+    "certified_sensitivity_binding": {
+      "blockers": [
+        "a2_component_sensitivity_manifest_reference_missing",
+        "a2_sensitivity_artifact_diagnostic_allowed",
+        "a2_sensitivity_artifact_metadata_blockers_present"
+      ],
+      "component": "combined",
+      "format": "a2_certified_component_sensitivity_binding_v1",
+      "observations": {
+        "allow_diagnostic_sensitivity": true,
+        "component_sensitivity_manifest_reference_error": "sensitivity_artifact.component_sensitivity_manifest with path and sha256 is required for certified A2 sensitivity bindings",
+        "declared_a2_sensitivity_map_sha256s": [
+          {
+            "field": "inputs.sensitivity_map_sha256",
+            "sha256": "ac259e314a23477d10bebaa0b89b0dc2fed0c5534c7201b05ded9239340caafb"
+          }
+        ],
+        "metadata_blockers": [
+          "is_stub=true",
+          "tag contains 'stub'"
+        ],
+        "sensitivity_artifact_status": "diagnostic_allowed"
+      },
+      "reason": "sensitivity_artifact.allow_diagnostic_sensitivity must be false for certified A2 sensitivity bindings",
+      "status": "failed"
+    }
+  },
+  "charged_bits_changed": false,
+  "created_utc": "2026-05-10T15:01:56Z",
+  "decision": "A2",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "a2_certified_sensitivity_binding_invalid",
+    "a2_component_sensitivity_manifest_reference_missing",
+    "a2_sensitivity_artifact_diagnostic_allowed",
+    "a2_sensitivity_artifact_metadata_blockers_present",
+    "no_active_level2_lane_dispatch_claim",
+    "no_contest_cpu_auth_eval",
+    "no_exact_cuda_auth_eval",
+    "operator_score_claim_review_not_done",
+    "packet_closure_blocked",
+    "packet_local_inflate_parity_not_run"
+  ],
+  "evidence_grade": "blocked",
+  "evidence_semantics": "no_score_no_dispatch",
+  "inputs": {
+    "a2_manifest": "experiments/results/track1_phase_a2_sensitivity_quant_20260508T154125Z/A2_result.json",
+    "source_archive": "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip",
+    "source_runtime_dir": "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/source/submissions/hnerv_ft_microcodec",
+    "state_dict": "experiments/results/pr101_codecop_sweep_20260507_codex/pr101_decoder_state_dict.pt"
+  },
+  "lane_id": "track1_phase_a2_sensitivity_quant_packet_ladder",
+  "packet_closure": {
+    "byte_closed_packet_ladder_built": false,
+    "missing_wire_contracts": [
+      "a2_certified_sensitivity_binding_invalid",
+      "a2_component_sensitivity_manifest_reference_missing",
+      "a2_sensitivity_artifact_diagnostic_allowed",
+      "a2_sensitivity_artifact_metadata_blockers_present"
+    ],
+    "require_certified_sensitivity": true,
+    "runtime_source_mutated": false
+  },
+  "phase": "A2",
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "reason": "A2 manifest failed certified sensitivity binding validation: sensitivity_artifact.allow_diagnostic_sensitivity must be false for certified A2 sensitivity bindings",
+  "remote_dispatch_allowed": false,
+  "remote_gpu_run": false,
+  "schema": "a2_sensitivity_weighted_pr101_packet_ladder.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "semantic_payload_changed": false,
+  "status": "blocked_fail_closed",
+  "tool": "tools/build_a2_sensitivity_weighted_pr101_packet.py"
+}

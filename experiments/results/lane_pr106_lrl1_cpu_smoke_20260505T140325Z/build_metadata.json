@@ -1,6 +1,7 @@
 {
-  "archive_path": "/tmp/lrl1_smoke_20260505T140305Z/pr106_lrl1_sidechannel_archive.zip",
+  "archive_path": "experiments/results/lane_pr106_lrl1_cpu_smoke_20260505T140325Z/pr106_lrl1_sidechannel_archive.zip",
   "archive_size_bytes": 186289,
+  "archive_sha256": "983e34a01c60604eb87b1f971ed989527f4aa5d60c9f8f5ee494c041e6f50e6f",
   "pr106_size_bytes": 186239,
   "delta_bytes": 50,
   "rate_component_score_delta_vs_pr106": 3.3292947656108566e-05,
@@ -19,5 +20,14 @@
   "tag": "[advisory only]",
   "council_status": "PROPOSAL \u2014 pre-registered at L1; gated on lane_pr106_latent_sidecar AND lane_pr106_yshift_sidechannel BOTH winning empirically (3rd stack-on)",
   "score_claim": false,
+  "dispatch_attempted": false,
+  "remote_jobs_dispatched": false,
+  "ready_for_exact_eval_dispatch": false,
+  "dispatch_blockers": [
+    "zero_search_is_wire_format_smoke_only",
+    "requires_real_cuda_lrl1_search",
+    "requires_exact_cuda_auth_eval_on_built_archive",
+    "requires_lane_claim_before_remote_gpu_or_eval_dispatch"
+  ],
   "next_step": "search-mode=zero is CPU smoke ONLY (all-zero basis+coeffs; pure wire-format proof). For real distortion improvement, dispatch via scripts/remote_lane_pr106_lrl1_sidechannel.sh with PR106_LRL1_MODE=gradient (or brute_force) on Vast.ai 4090. ONLY dispatch if BOTH lane_pr106_latent_sidecar AND lane_pr106_yshift_sidechannel land < 0.20650 [contest-CUDA] (per docs/INDEX_score_aware_sidechannel_thread_20260504.md decision pipeline TICK 3)."
 }

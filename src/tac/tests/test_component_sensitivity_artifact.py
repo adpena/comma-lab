@@ -7,6 +7,7 @@ import pytest
 
 from tac.component_sensitivity_artifact import (
     ComponentSensitivityArtifactError,
+    diagnose_a2_certified_sensitivity_binding,
     dumps_component_sensitivity_manifest,
     has_a2_certified_sensitivity_binding_reference,
     materialize_component_sensitivity_manifest,
@@ -259,6 +260,33 @@ def test_a2_certified_binding_rejects_stub_and_map_sha_mismatch(tmp_path) -> Non
         validate_a2_certified_sensitivity_binding(stale, manifest_root=tmp_path)
 
 
+def test_a2_certified_binding_diagnosis_names_stub_blockers(tmp_path) -> None:
+    manifest_path = tmp_path / "component_sensitivity_v1.json"
+    write_component_sensitivity_manifest(manifest_path, _valid_manifest())
+    a2_manifest = {
+        "sensitivity_artifact": {
+            "path": "stub_sensitivity_map.pt",
+            "status": "diagnostic_allowed",
+            "allow_diagnostic_sensitivity": True,
+            "metadata_blockers": ["is_stub=true"],
+        },
+        "inputs": {
+            "sensitivity_map_sha256": SHA_A,
+        },
+    }
+
+    diagnosis = diagnose_a2_certified_sensitivity_binding(
+        a2_manifest,
+        manifest_root=tmp_path,
+    )
+
+    assert diagnosis["status"] == "failed"
+    assert "a2_sensitivity_artifact_diagnostic_allowed" in diagnosis["blockers"]
+    assert "a2_sensitivity_artifact_metadata_blockers_present" in diagnosis["blockers"]
+    assert "a2_component_sensitivity_manifest_reference_missing" in diagnosis["blockers"]
+    assert diagnosis["observations"]["metadata_blockers"] == ["is_stub=true"]
+
+
 def test_a2_certified_binding_rejects_conflicting_declared_sensitivity_shas(tmp_path) -> None:
     manifest_path = tmp_path / "component_sensitivity_v1.json"
     write_component_sensitivity_manifest(manifest_path, _valid_manifest())
@@ -285,6 +313,10 @@ def test_a2_certified_binding_rejects_conflicting_declared_sensitivity_shas(tmp_
         match=r"inputs\.sensitivity_map_sha256 does not match certified combined map",
     ):
         validate_a2_certified_sensitivity_binding(a2_manifest, manifest_root=tmp_path)
+
+    diagnosis = diagnose_a2_certified_sensitivity_binding(a2_manifest, manifest_root=tmp_path)
+    assert diagnosis["status"] == "failed"
+    assert "a2_sensitivity_map_sha256_mismatch_certified_component" in diagnosis["blockers"]
 
 
 def test_promotion_sample_plan_requires_full_absolute_pair_ids() -> None:

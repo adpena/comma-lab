@@ -42,6 +42,7 @@ from tac.analysis import hnerv_packet_sections  # noqa: E402
 from tac.component_sensitivity_artifact import (  # noqa: E402
     A2_CERTIFIED_SENSITIVITY_BINDING_FORMAT,
     ComponentSensitivityArtifactError,
+    diagnose_a2_certified_sensitivity_binding,
     has_a2_certified_sensitivity_binding_reference,
     validate_a2_certified_sensitivity_binding,
 )
@@ -135,9 +136,16 @@ UPSTREAM_FALSE_AUTHORITY_FIELDS = (*FALSE_AUTHORITY_FIELDS, "dispatch_attempted"
 class PacketClosureBlocked(ValueError):
     """Raised when a selected-K schedule cannot be made byte-closed."""
 
-    def __init__(self, reason: str, missing_wire_contracts: list[str]):
+    def __init__(
+        self,
+        reason: str,
+        missing_wire_contracts: list[str],
+        *,
+        blocker_details: dict[str, Any] | None = None,
+    ):
         super().__init__(reason)
         self.missing_wire_contracts = missing_wire_contracts
+        self.blocker_details = blocker_details or {}
 
 
 def _utc_ts() -> str:
@@ -565,6 +573,11 @@ def _validate_a2_manifest_contracts(
         "component": "combined",
     }
     if require_certified_sensitivity or has_a2_certified_sensitivity_binding_reference(a2_manifest):
+        certification_diagnostics = diagnose_a2_certified_sensitivity_binding(
+            a2_manifest,
+            manifest_root=manifest_path.parent,
+            component="combined",
+        )
         try:
             certified_binding = validate_a2_certified_sensitivity_binding(
                 a2_manifest,
@@ -572,9 +585,22 @@ def _validate_a2_manifest_contracts(
                 component="combined",
             )
         except ComponentSensitivityArtifactError as exc:
+            blockers_for_binding = sorted(
+                {
+                    "a2_certified_sensitivity_binding_invalid",
+                    *[
+                        str(blocker)
+                        for blocker in certification_diagnostics.get("blockers", [])
+                        if isinstance(blocker, str)
+                    ],
+                }
+            )
             raise PacketClosureBlocked(
                 f"A2 manifest failed certified sensitivity binding validation: {exc}",
-                ["a2_certified_sensitivity_binding_invalid"],
+                blockers_for_binding,
+                blocker_details={
+                    "certified_sensitivity_binding": certification_diagnostics,
+                },
             ) from exc
         certified_binding["required"] = bool(require_certified_sensitivity)
     return {
@@ -1670,8 +1696,9 @@ def _blocked_manifest(
     missing_wire_contracts: list[str],
     args: argparse.Namespace,
     recorded_at_utc: dt.datetime,
+    blocker_details: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return {
+    manifest = {
         "schema": SCHEMA_VERSION,
         "tool": TOOL_NAME,
         "created_utc": _format_utc(recorded_at_utc),
@@ -1707,6 +1734,9 @@ def _blocked_manifest(
         "score_affecting_payload_changed": False,
         "semantic_payload_changed": False,
     }
+    if blocker_details:
+        manifest["blocker_details"] = blocker_details
+    return manifest
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -1842,6 +1872,7 @@ def main(argv: list[str] | None = None) -> int:
             missing_wire_contracts=exc.missing_wire_contracts,
             args=args,
             recorded_at_utc=recorded_at_utc,
+            blocker_details=exc.blocker_details,
         )
         write_json(_repo_path(json_out), manifest)
         print(f"blocked manifest: {repo_relative(_repo_path(json_out), REPO_ROOT)}")

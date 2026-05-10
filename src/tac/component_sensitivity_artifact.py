@@ -631,6 +631,109 @@ def has_a2_certified_sensitivity_binding_reference(a2_manifest: Mapping[str, Any
     return any(key in artifact for key in _A2_COMPONENT_SENSITIVITY_MANIFEST_PATH_KEYS)
 
 
+def diagnose_a2_certified_sensitivity_binding(
+    a2_manifest: Mapping[str, Any],
+    *,
+    manifest_root: str | Path | None = None,
+    component: str = "combined",
+) -> dict[str, Any]:
+    """Return machine-checkable certification status for an A2 manifest.
+
+    This is intentionally a diagnostic wrapper around
+    :func:`validate_a2_certified_sensitivity_binding`. It does not relax any
+    promotion rule; it only classifies the first-order blocker so packet
+    builders can fail closed with actionable evidence.
+    """
+
+    blockers: list[str] = []
+    observations: dict[str, Any] = {}
+    artifact = a2_manifest.get("sensitivity_artifact") if isinstance(a2_manifest, Mapping) else None
+    if not isinstance(artifact, Mapping):
+        return {
+            "format": A2_CERTIFIED_SENSITIVITY_BINDING_FORMAT,
+            "status": "failed",
+            "component": component,
+            "blockers": ["a2_sensitivity_artifact_missing"],
+            "reason": "A2 manifest is missing sensitivity_artifact mapping",
+            "observations": observations,
+        }
+
+    observations["allow_diagnostic_sensitivity"] = artifact.get("allow_diagnostic_sensitivity")
+    observations["sensitivity_artifact_status"] = artifact.get("status")
+    metadata_blockers = artifact.get("metadata_blockers")
+    observations["metadata_blockers"] = (
+        list(metadata_blockers) if _is_nonstring_sequence(metadata_blockers) else metadata_blockers
+    )
+    if artifact.get("allow_diagnostic_sensitivity") is True:
+        blockers.append("a2_sensitivity_artifact_diagnostic_allowed")
+    if not _is_nonstring_sequence(metadata_blockers):
+        blockers.append("a2_sensitivity_artifact_metadata_blockers_not_list")
+    elif metadata_blockers:
+        blockers.append("a2_sensitivity_artifact_metadata_blockers_present")
+
+    reference: Mapping[str, Any] | None = None
+    reference_key: str | None = None
+    try:
+        reference, reference_key = _a2_component_sensitivity_manifest_reference(artifact)
+    except ComponentSensitivityArtifactError as exc:
+        blockers.append("a2_component_sensitivity_manifest_reference_missing")
+        observations["component_sensitivity_manifest_reference_error"] = str(exc)
+
+    if reference is not None and reference_key is not None:
+        observations["component_sensitivity_manifest_reference_key"] = reference_key
+        path_value = reference.get("path")
+        sha_value = reference.get("sha256")
+        observations["component_sensitivity_manifest_path"] = path_value
+        observations["component_sensitivity_manifest_sha256"] = sha_value
+        root = Path(manifest_root) if manifest_root is not None else None
+        if isinstance(path_value, str):
+            manifest_path = _resolve_manifest_path(path_value, root=root)
+            observations["component_sensitivity_manifest_resolved_path"] = str(manifest_path)
+            if not manifest_path.is_file():
+                blockers.append("a2_component_sensitivity_manifest_path_missing")
+        else:
+            blockers.append("a2_component_sensitivity_manifest_path_not_string")
+        if not isinstance(sha_value, str):
+            blockers.append("a2_component_sensitivity_manifest_sha256_not_string")
+
+    declared_shas = _a2_sensitivity_map_sha256s(a2_manifest, artifact)
+    observations["declared_a2_sensitivity_map_sha256s"] = [
+        {"field": field, "sha256": value} for field, value in declared_shas
+    ]
+    if not declared_shas:
+        blockers.append("a2_sensitivity_map_sha256_missing")
+
+    try:
+        proof = validate_a2_certified_sensitivity_binding(
+            a2_manifest,
+            manifest_root=manifest_root,
+            component=component,
+        )
+    except ComponentSensitivityArtifactError as exc:
+        reason = str(exc)
+        if "sha256 mismatch" in reason:
+            blockers.append("a2_component_sensitivity_manifest_sha256_mismatch")
+        if "does not match certified" in reason:
+            blockers.append("a2_sensitivity_map_sha256_mismatch_certified_component")
+        if "promotion_eligible" in reason or "promotion" in reason or "component_maps" in reason:
+            blockers.append("a2_component_sensitivity_manifest_not_promotion_grade")
+        return {
+            "format": A2_CERTIFIED_SENSITIVITY_BINDING_FORMAT,
+            "status": "failed",
+            "component": component,
+            "blockers": sorted(set(blockers)) or ["a2_certified_sensitivity_binding_invalid"],
+            "reason": reason,
+            "observations": observations,
+        }
+
+    return {
+        **proof,
+        "blockers": [],
+        "reason": "passed",
+        "observations": observations,
+    }
+
+
 def validate_a2_certified_sensitivity_binding(
     a2_manifest: Mapping[str, Any],
     *,
@@ -1688,6 +1791,7 @@ __all__ = [
     "custody_metadata",
     "dumps_component_sensitivity_manifest",
     "file_metadata",
+    "diagnose_a2_certified_sensitivity_binding",
     "has_a2_certified_sensitivity_binding_reference",
     "materialize_component_sensitivity_manifest",
     "sha256_file",
