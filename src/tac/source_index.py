@@ -550,7 +550,11 @@ class SourceIndex:
     def _dir_key(self, item: str | Path) -> str:
         path = Path(item)
         if path.is_absolute():
-            return _path_key(path)
+            resolved = _safe_resolve(path)
+            try:
+                return resolved.relative_to(self.root).as_posix().rstrip("/")
+            except ValueError:
+                return resolved.as_posix().rstrip("/")
         return path.as_posix().rstrip("/")
 
     def _files_group_key(

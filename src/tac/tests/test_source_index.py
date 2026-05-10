@@ -154,6 +154,48 @@ def test_source_index_parallel_facts_for_files_reuses_file_inventory(tmp_path):
     assert stats["text_facts_hits"] == 0
 
 
+def test_source_index_canonicalizes_absolute_dirs_for_file_cache(tmp_path):
+    _write(tmp_path / "src/tac/a.py", "VALUE = 'kl_div batchmean'\n")
+    index = SourceIndex(tmp_path)
+
+    rel_files = index.files(["src/tac"], pattern="*.py")
+    abs_files = index.files([tmp_path / "src/tac"], pattern="*.py")
+
+    assert rel_files == abs_files
+    stats = index.stats()
+    assert stats["file_list_misses"] == 1
+    assert stats["file_list_hits"] == 1
+
+
+def test_source_index_canonicalizes_absolute_dirs_for_fact_and_substring_caches(tmp_path):
+    _write(tmp_path / "src/tac/a.py", "VALUE = 'kl_div batchmean'\n")
+    _write(tmp_path / "src/tac/b.py", "VALUE = 'kl_div only'\n")
+    index = SourceIndex(tmp_path)
+
+    rel_facts = index.facts_for_files(["src/tac"], pattern="*.py")
+    abs_facts = index.facts_for_files([tmp_path / "src/tac"], pattern="*.py")
+    rel_matches = index.files_containing_substrings(
+        ["src/tac"],
+        pattern="*.py",
+        substrings=("kl_div", "batchmean"),
+        require_all=True,
+    )
+    abs_matches = index.files_containing_substrings(
+        [tmp_path / "src/tac"],
+        pattern="*.py",
+        substrings=("kl_div", "batchmean"),
+        require_all=True,
+    )
+
+    assert [row.path for row in rel_facts] == [row.path for row in abs_facts]
+    assert rel_matches == abs_matches
+    stats = index.stats()
+    assert stats["facts_group_misses"] == 1
+    assert stats["facts_group_hits"] >= 1
+    assert stats["substring_index_misses"] == 0
+    assert stats["substring_index_hits"] >= 2
+
+
 def test_source_index_substring_index_filters_candidates(tmp_path):
     _write(tmp_path / "src/tac/a.py", "VALUE = 'kl_div batchmean'\n")
     _write(tmp_path / "src/tac/b.py", "VALUE = 'kl_div only'\n")

@@ -703,3 +703,29 @@ Observed:
 The cold one-time schema rebuild is still under the 30s operator crash budget.
 The normal repeat developer loop now returns in about two seconds while using
 stronger cache invalidation.
+
+## Codex Follow-Up: SourceIndex Directory-Key Canonicalization
+
+<!-- generated_at: 2026-05-10T03:42:00Z -->
+<!-- evidence_grade: local_dev_performance_correctness; no dispatch; no score claim -->
+
+Fresh read-only performance review found that `SourceIndex` keyed absolute
+scan roots and repo-relative scan roots differently even when they named the
+same directory. Hot preflight checks mix both styles, splitting file-list,
+fact-group, and substring-index caches.
+
+Codex changed `SourceIndex._dir_key()` so absolute paths under the index root
+canonicalize to the same repo-relative key as relative paths. External absolute
+paths remain absolute. Returned file paths are unchanged.
+
+Verification:
+
+```bash
+.venv/bin/python -m py_compile src/tac/source_index.py src/tac/tests/test_source_index.py
+.venv/bin/python -m pytest src/tac/tests/test_source_index.py -q
+```
+
+Observed: `15 passed in 0.77s`.
+
+Follow-up profile should be run after the active A1 sidecar CPU builder exits,
+so wall-clock numbers are not confounded by the decoder/MSE search.
