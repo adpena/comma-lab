@@ -23,6 +23,7 @@ from tac.preflight import (
     PreflightError,
     check_locked_writes_preserve_deletions,
 )
+from tac.source_index import source_index_context
 
 
 def _make_repo(tmp_path: Path) -> Path:
@@ -253,3 +254,29 @@ def test_132_live_repo_clean():
         f"Catalog #132 landed with {len(v)} violations:\n"
         + "\n".join(v[:3])
     )
+
+
+def test_132_uses_source_index_substring_prefilter(tmp_path):
+    root = _make_repo(tmp_path)
+    (root / "tools" / "irrelevant.py").write_text(
+        "import fcntl\n"
+        "def unrelated(data):\n"
+        "    return data\n"
+    )
+    (root / "scripts" / "bad_save.py").write_text(
+        "import fcntl\n"
+        "def _save_state(data):\n"
+        "    with open('/tmp/lock', 'w') as fd:\n"
+        "        fcntl.flock(fd.fileno(), fcntl.LOCK_EX)\n"
+        "        existing = {}\n"
+        "        existing.update(data)\n"
+    )
+
+    with source_index_context(root) as index:
+        v = check_locked_writes_preserve_deletions(
+            repo_root=root, strict=False, verbose=False
+        )
+        stats = index.stats()
+
+    assert any("bad_save.py" in item for item in v)
+    assert stats["substring_index_entries"] >= 1

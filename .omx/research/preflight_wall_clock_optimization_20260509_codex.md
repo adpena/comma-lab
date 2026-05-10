@@ -350,3 +350,57 @@ Next perf targets:
 - `check_no_mps_fallback_default`: source-facts candidate narrowing before AST;
 - `check_codebase_drift`: split cheap file inventory from full AST scanners so
   repeated developer preflight can use one index per opened file.
+
+## Codex Follow-Up: Locked-Write Deletion-Preservation SourceIndex Path
+
+<!-- generated_at: 2026-05-10T02:12:00Z -->
+<!-- evidence_grade: local_dev_performance; no dispatch; no lane claim -->
+
+Codex moved `check_locked_writes_preserve_deletions()` onto the shared
+`SourceIndex` substring candidate path for the deletion-merge anti-pattern
+markers. This preserves the existing precise line/window logic, but avoids a
+fresh recursive read of every `.py` / `.sh` file when the developer preflight
+already has a source index active.
+
+Implementation:
+
+- bumped `src/tac/source_index.py` text-facts schema to `v9`;
+- added deletion-merge markers (`existing.update(`, `loaded.update(`, etc.) to
+  the one-pass text-facts needle set;
+- used `SourceIndex.files_containing_substrings(..., require_all=False)` for
+  Check 132 candidate discovery;
+- kept raw recursive scan as the no-source-index fallback;
+- added a regression test proving Check 132 works inside a source-index
+  context and builds substring index entries.
+
+Verification:
+
+```bash
+.venv/bin/python -m py_compile \
+  src/tac/preflight.py src/tac/source_index.py \
+  src/tac/tests/test_codex_round3_check_132_locked_writes_preserve_deletions.py
+.venv/bin/python -m pytest \
+  src/tac/tests/test_codex_round3_check_132_locked_writes_preserve_deletions.py \
+  src/tac/tests/test_source_index.py -q
+.venv/bin/python tools/profile_preflight_latency.py \
+  --surface preflight-checks \
+  --preflight-check check_locked_writes_preserve_deletions \
+  --json-out .omx/research/artifacts/preflight_locked_writes_profile_20260509_sourceindex.json \
+  --top 20
+.venv/bin/python tools/profile_preflight_latency.py \
+  --surface preflight-dev-cli \
+  --json-out .omx/research/artifacts/preflight_dev_profile_20260509_after_locked_sourceindex.json \
+  --top 20 --fail-on-surface-failure
+```
+
+Observed:
+
+- focused tests: `23 passed in 2.32s`;
+- standalone cold Check 132: `2.218s` because it has to populate the v9
+  text-facts cache;
+- developer preflight Check 132: `0.151s`, down from `1.438s` in the previous
+  profile;
+- total developer preflight: `10.778s`, still under the 30s crash budget;
+- new dominant checks: `check_authoritative_tag_requires_custody_metadata`
+  (`2.152s`), `check_custody_gate_accept_tokens_concrete_only` (`1.457s`),
+  and `check_no_mps_fallback_default` (`1.402s`).

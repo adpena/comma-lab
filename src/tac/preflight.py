@@ -32756,10 +32756,27 @@ def check_locked_writes_preserve_deletions(
 
     violations: list[str] = []
     scanned_files = 0
-    for scan_dir in scan_dirs:
-        if not scan_dir.is_dir():
-            continue
-        for src in list(scan_dir.rglob("*.py")) + list(scan_dir.rglob("*.sh")):
+    source_index = _current_source_index(root)
+    if source_index is not None:
+        source_paths = []
+        for pattern in ("*.py", "*.sh"):
+            source_paths.extend(
+                source_index.files_containing_substrings(
+                    scan_dirs,
+                    pattern=pattern,
+                    substrings=_DELETION_MERGE_PATTERNS,
+                    require_all=False,
+                )
+            )
+    else:
+        source_paths = []
+        for scan_dir in scan_dirs:
+            if not scan_dir.is_dir():
+                continue
+            source_paths.extend(list(scan_dir.rglob("*.py")))
+            source_paths.extend(list(scan_dir.rglob("*.sh")))
+
+    for src in sorted(set(source_paths), key=lambda item: item.as_posix()):
             if _is_oss_export_mirror_path(src):
                 continue
             # Skip tests + vendored intakes / hosted exports
@@ -32773,7 +32790,10 @@ def check_locked_writes_preserve_deletions(
             ):
                 continue
             try:
-                text = src.read_text(encoding="utf-8", errors="replace")
+                if source_index is not None:
+                    text = source_index.read_text(src, encoding="utf-8", errors="replace")
+                else:
+                    text = src.read_text(encoding="utf-8", errors="replace")
             except OSError:
                 continue
             # Quick prefilter — file must have at least one anti-pattern AND
