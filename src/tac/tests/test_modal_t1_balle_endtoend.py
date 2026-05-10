@@ -683,6 +683,104 @@ def test_score_claim_helper_accepts_exact_evidence_when_promotion_ineligible() -
     assert "t1_remote_adjudication_promotion_eligible_false" not in blockers
 
 
+def test_score_claim_helper_rejects_pre_runtime_hardening_mounted_head(monkeypatch) -> None:
+    module = _load_module()
+    monkeypatch.setattr(
+        module,
+        "_git_head_contains_required_commit",
+        lambda head, required: False,
+    )
+
+    score_claim, blockers, _metrics = module._contest_cuda_score_claim_from_result(
+        {
+            "returncode": 0,
+            "summary": {"score_claim": True},
+            "auth_eval_adjudication": {
+                "score_claim": True,
+                "packet_archive_sha256": "packet-sha",
+                "packet_archive_size_bytes": 222,
+                "blockers": [],
+            },
+            "eval_data": {
+                "canonical_score": 0.200147820688,
+                "avg_posenet_dist": 0.001,
+                "avg_segnet_dist": 0.001,
+                "score_rate_contribution": 0.000147820688,
+                "rate_unscaled": 222 / 37_545_489,
+                "archive_size_bytes": 222,
+                "n_samples": 600,
+                "canonical_score_source": "score_recomputed_from_components",
+                "lane_tag": "[contest-CUDA]",
+                "score_axis": "contest_cuda",
+                "evidence_semantics": "contest_cuda_exact_auth_eval",
+                "score_claim_valid": True,
+                "provenance": {
+                    "device": "cuda",
+                    "gpu_t4_match": True,
+                    "archive_sha256": "packet-sha",
+                },
+            },
+        },
+        metadata={
+            "mounted_code_snapshot": {
+                "git_head": "e7845e4cbe6a9b4ed7a2f4e77984f01bd5f2cc90",
+            },
+        },
+    )
+
+    assert score_claim is False
+    assert "t1_mounted_code_missing_extracted_archive_runtime_hardening" in blockers
+
+
+def test_score_claim_helper_accepts_mounted_head_after_runtime_hardening(monkeypatch) -> None:
+    module = _load_module()
+    monkeypatch.setattr(
+        module,
+        "_git_head_contains_required_commit",
+        lambda head, required: True,
+    )
+
+    score_claim, blockers, _metrics = module._contest_cuda_score_claim_from_result(
+        {
+            "returncode": 0,
+            "summary": {"score_claim": True},
+            "auth_eval_adjudication": {
+                "score_claim": True,
+                "packet_archive_sha256": "packet-sha",
+                "packet_archive_size_bytes": 222,
+                "blockers": [],
+            },
+            "eval_data": {
+                "canonical_score": 0.200147820688,
+                "avg_posenet_dist": 0.001,
+                "avg_segnet_dist": 0.001,
+                "score_rate_contribution": 0.000147820688,
+                "rate_unscaled": 222 / 37_545_489,
+                "archive_size_bytes": 222,
+                "n_samples": 600,
+                "canonical_score_source": "score_recomputed_from_components",
+                "lane_tag": "[contest-CUDA]",
+                "score_axis": "contest_cuda",
+                "evidence_semantics": "contest_cuda_exact_auth_eval",
+                "score_claim_valid": True,
+                "provenance": {
+                    "device": "cuda",
+                    "gpu_t4_match": True,
+                    "archive_sha256": "packet-sha",
+                },
+            },
+        },
+        metadata={
+            "mounted_code_snapshot": {
+                "git_head": module.T1_EXTRACTED_ARCHIVE_RUNTIME_CUSTODY_MIN_GIT_HEAD,
+            },
+        },
+    )
+
+    assert score_claim is True
+    assert blockers == []
+
+
 def test_modal_t1_metadata_starts_as_no_score_claim(tmp_path: Path, monkeypatch) -> None:
     module = _load_module()
     monkeypatch.setattr(module, "RESULT_ROOT", tmp_path)

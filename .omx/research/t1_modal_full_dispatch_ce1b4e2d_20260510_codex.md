@@ -204,6 +204,9 @@ Current working-tree hardening closes that bug class for future T1 dispatches:
 - `tac.phase1_packet_compiler` no-op smoke materializes extracted archive
   members only, matching `contest_auth_eval.py`;
 - Catalog #146 preflight rejects runtime-local `HERE/archive.zip` fallback.
+- Modal T1 recovery now adds
+  `t1_mounted_code_missing_extracted_archive_runtime_hardening` for any
+  harvested result whose mounted code does not contain commit `0be54cbf`.
 
 Next valid score-lowering dispatch after this active claim closes is a patched
 T1 Modal smoke from the post-hardening commit. Do not duplicate the active

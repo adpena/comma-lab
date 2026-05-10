@@ -21,6 +21,8 @@ diff hygiene.
 - src/tac/tests/test_build_phase1_packet_compiler.py CLEAN
 - src/tac/tests/test_preflight_phase1_runtime_guard.py CLEAN
 - tests/paradigm_delta_epsilon_zeta/test_phase1_trainer_write_runtime_fix.py CLEAN
+- experiments/modal_t1_balle_endtoend.py CLEAN
+- src/tac/tests/test_modal_t1_balle_endtoend.py CLEAN
 
 ## Verification
 
@@ -63,6 +65,9 @@ PY
 
 git diff --check
 # passed
+
+.venv/bin/python -m pytest src/tac/tests/test_modal_t1_balle_endtoend.py
+# 29 passed
 ```
 
 ## Score-Lowering Relevance

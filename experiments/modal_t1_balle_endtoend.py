@@ -61,6 +61,9 @@ DEFAULT_COST_CAP_USD = 80.0
 DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK = 2048
 CONTEST_EXPECTED_PAIRS = 600
 REMOTE_PYTHONPATH = f"{REMOTE_REPO / 'src'}:{REMOTE_REPO / 'upstream'}:{REMOTE_REPO}"
+T1_EXTRACTED_ARCHIVE_RUNTIME_CUSTODY_MIN_GIT_HEAD = (
+    "0be54cbf9aa407a551a7371a5c438c2df4e3822f"
+)
 MOUNTED_CODE_PATHS = (
     "src",
     "pyproject.toml",
@@ -1297,6 +1300,31 @@ def _returncode_is_zero(value: Any) -> bool:
     return False
 
 
+def _mounted_code_git_head(metadata: dict[str, Any] | None) -> str | None:
+    if not isinstance(metadata, dict):
+        return None
+    snapshot = metadata.get("mounted_code_snapshot")
+    if not isinstance(snapshot, dict):
+        return None
+    head = snapshot.get("git_head")
+    return head if isinstance(head, str) and head else None
+
+
+def _git_head_contains_required_commit(head: str, required_commit: str) -> bool:
+    if not re.fullmatch(r"[0-9a-fA-F]{40}", head):
+        return False
+    if not re.fullmatch(r"[0-9a-fA-F]{40}", required_commit):
+        return False
+    proc = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", required_commit, head],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return proc.returncode == 0
+
+
 def _close_recovery_claim(
     *,
     instance_job_id: str,
@@ -1313,7 +1341,11 @@ def _close_recovery_claim(
     )
 
 
-def _contest_cuda_score_claim_from_result(result: dict[str, Any]) -> tuple[bool, list[str], dict[str, Any]]:
+def _contest_cuda_score_claim_from_result(
+    result: dict[str, Any],
+    *,
+    metadata: dict[str, Any] | None = None,
+) -> tuple[bool, list[str], dict[str, Any]]:
     from tac.auth_eval_schema import eval_metric_summary, required_contest_cuda_evidence_blockers
 
     eval_data = result.get("eval_data")
@@ -1351,6 +1383,17 @@ def _contest_cuda_score_claim_from_result(result: dict[str, Any]) -> tuple[bool,
             blockers.append("t1_recover_archive_size_mismatch_adjudication_vs_eval")
     if result.get("summary", {}).get("score_claim") is not True:
         blockers.append("t1_remote_summary_score_claim_not_true")
+    if metadata is not None:
+        mounted_head = _mounted_code_git_head(metadata)
+        if not mounted_head:
+            blockers.append("t1_mounted_code_git_head_missing")
+        elif not _git_head_contains_required_commit(
+            mounted_head,
+            T1_EXTRACTED_ARCHIVE_RUNTIME_CUSTODY_MIN_GIT_HEAD,
+        ):
+            blockers.append(
+                "t1_mounted_code_missing_extracted_archive_runtime_hardening"
+            )
     score_claim = _returncode_is_zero(result.get("returncode")) and not blockers
     return score_claim, blockers, metrics
 
@@ -1406,7 +1449,10 @@ def recover(label: str) -> int:
         if isinstance(data, bytes):
             target.write_bytes(data)
 
-    score_claim, blockers, metrics = _contest_cuda_score_claim_from_result(result)
+    score_claim, blockers, metrics = _contest_cuda_score_claim_from_result(
+        result,
+        metadata=metadata,
+    )
     adjudication = result.get("auth_eval_adjudication")
     promotion_eligible = (
         bool(adjudication.get("promotion_eligible"))
