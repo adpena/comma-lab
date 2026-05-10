@@ -162,3 +162,53 @@ Next target from the new profile:
 - `check_public_pr_intake_clones_pristine` is now the top hot check
   (`1.452s`) and should cache clone-root discovery/status inputs without
   weakening dirty-clone fail-closed behavior.
+
+## Codex Follow-Up: Python And Remote-Lane Arity Target Filtering
+
+<!-- generated_at: 2026-05-10T00:58:00Z -->
+<!-- evidence_grade: local_dev_performance; no dispatch; no lane claim -->
+
+Codex extended the same invoked-target filter to the Python launcher arity path
+and the older remote-lane argparse-arity check:
+
+- `preflight_arity()` now scans launchers first, records invoked targets, and
+  parses argparse signatures only for those targets on cache misses.
+- `check_remote_lane_argparse_arity()` now reads each `remote_lane_*.sh` once,
+  records target-path candidates, and parses only those target signatures
+  before validating each invocation.
+
+This preserves Rule A/B validation on every observed callsite while removing
+unrelated argparse parsing from cold paths.
+
+Verification:
+
+```bash
+.venv/bin/python -m py_compile src/tac/preflight.py
+.venv/bin/python -m pytest \
+  src/tac/tests/test_preflight_arity.py \
+  src/tac/tests/test_preflight_shell_lane_arity.py -q
+.venv/bin/python -m pytest \
+  src/tac/tests/test_preflight_arity.py \
+  src/tac/tests/test_preflight_shell_lane_arity.py \
+  src/tac/tests/test_profile_preflight_latency.py \
+  src/tac/tests/test_build_a1_per_pair_latent_correction_sidecar.py -q
+.venv/bin/python tools/profile_preflight_latency.py \
+  --surface preflight-dev-cli \
+  --json-out experiments/results/preflight_dev_profile_invoked_target_filters_codex_20260510T0050Z.json \
+  --top 12 \
+  --fail-on-surface-failure
+```
+
+Observed:
+
+- arity focused suite: `69 passed in 7.99s`;
+- combined focused suite: `108 passed in 7.56s`;
+- developer preflight profile: `8.556s` wall-clock;
+- `preflight_shell_lane_arity` stayed low at `0.237s`;
+- default developer preflight remains below the 30s crash budget.
+
+Remaining top hot checks from the new profile:
+
+- `check_no_bare_writes_to_shared_state`: `1.333s`;
+- `check_public_pr_intake_clones_pristine`: `1.324s`;
+- `check_no_mps_fallback_default`: `1.209s`.

@@ -412,3 +412,55 @@ Dispatch blockers remain:
 
 The search remains scalar-custody preserving: batch `4` was used only after
 matching the scalar reference exactly on the profiled pair for this chunk.
+
+## Codex follow-up local chunk 7
+
+<!-- generated_at: 2026-05-10T00:58:00Z -->
+<!-- evidence_grade: local_cpu_proxy_partial; no score claim; no remote dispatch -->
+
+After a read-only custody review found that batch acceleration is not globally
+exactness-preserving, Codex resumed the same ignored local artifact using the
+scalar candidate path:
+
+```bash
+/usr/bin/time -p .venv/bin/python tools/build_a1_per_pair_latent_correction_sidecar.py \
+  --n-pairs 48 \
+  --resume-search-state \
+  --max-search-seconds 900 \
+  --candidate-batch-size 1 \
+  --runtime-smoke \
+  --runtime-smoke-pairs 1 \
+  --output-dir experiments/results/a1_sidecar_resumable_codex_20260509T_local
+```
+
+Observed:
+
+- skipped already-completed pairs `0` through `23`;
+- searched pairs `24` through `47`;
+- elapsed `real 389.31`, `user 930.65`, `sys 21.90`;
+- `candidate_batch_size=1`;
+- no candidate-batch profiler was used;
+- choice-state SHA-256
+  `1a56e3527575740e1678d8044105bd43aade4b98f2688672eb7a3d64f92e9079`;
+- archive SHA-256
+  `f19c42e229f6b2b855c9cd124f4f19a5ffd8360b6ce853ec192f9faf8b85fc1e`;
+- archive bytes `178316`;
+- runtime tree SHA-256
+  `3497c774d94fe202563bccba2af4a5f90925cb8d9b2e982cf4428d0efbea0190`;
+- `runtime_smoke_checked=true`;
+- `n_pairs_searched=48`;
+- `n_pairs_completed_this_run=24`;
+- `n_pairs_skipped_already_completed=24`;
+- `full_non_smoke_search=false`;
+- `ready_for_exact_eval_dispatch=false`.
+
+Dispatch blockers remain unchanged:
+
+- claim lane before any GHA/remote eval dispatch;
+- run exact-eval dispatcher preflight against `submission_dir`;
+- record runtime tree SHA and terminal dispatch claim row;
+- `non_full_sidecar_search_not_exact_eval_ready`.
+
+The next custody-preserving continuation should keep
+`--candidate-batch-size 1` unless a future disambiguator proves a faster batch
+mode matches scalar choices across more than one lucky profiled pair.

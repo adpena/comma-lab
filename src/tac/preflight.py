@@ -4040,15 +4040,23 @@ def preflight_arity(
             )
         return []
 
-    sigs = _build_target_signatures(root)
-    violations: list[str] = []
-
+    launcher_scans: list[
+        tuple[str, list[tuple[int, str, list[str]]], set[str]]
+    ] = []
+    invoked_targets: set[str] = set()
     for launcher_rel in launcher_files:
         launcher_path = root / launcher_rel
         if not launcher_path.exists():
             continue
         invocations, all_flag_literals = _scan_launcher_invocations(launcher_path)
+        launcher_scans.append((launcher_rel, invocations, all_flag_literals))
+        for _lineno, target, _flags_passed in invocations:
+            invoked_targets.add(target)
 
+    sigs = _build_target_signatures(root, target_filter=invoked_targets)
+    violations: list[str] = []
+
+    for launcher_rel, invocations, all_flag_literals in launcher_scans:
         for lineno, target, flags_passed in invocations:
             target_sig = sigs.get(target)
             if target_sig is None:
@@ -17860,7 +17868,30 @@ def check_remote_lane_argparse_arity(
     if not scripts_dir.is_dir():
         return []
 
-    sigs = _build_target_signatures(root)
+    target_path_re = re.compile(
+        r'(?:"?\$PYBIN"?|\bpython3?\b)\s+(?:-u\s+)?(?:-m\s+)?'
+        r'(?P<target>[\w./-]+\.py)\b'
+    )
+    shell_texts: list[tuple[Path, str]] = []
+    invoked_targets: set[str] = set()
+    for sh in sorted(scripts_dir.glob("remote_lane_*.sh")):
+        try:
+            text = sh.read_text(errors="ignore")
+        except (FileNotFoundError, PermissionError):
+            continue
+        shell_texts.append((sh, text))
+        for m in target_path_re.finditer(text):
+            target_path = m.group("target")
+            target_name = Path(target_path).name
+            invoked_targets.update(
+                {
+                    target_path,
+                    f"src/tac/experiments/{target_name}",
+                    f"experiments/{target_name}",
+                }
+            )
+
+    sigs = _build_target_signatures(root, target_filter=invoked_targets)
     violations: list[str] = []
 
     # Pattern: invocation start (line begins with optional whitespace,
@@ -17869,12 +17900,7 @@ def check_remote_lane_argparse_arity(
         r'^\s*"?\$PYBIN"?|^\s*python3?\b'
     )
 
-    for sh in sorted(scripts_dir.glob("remote_lane_*.sh")):
-        try:
-            text = sh.read_text(errors="ignore")
-        except (FileNotFoundError, PermissionError):
-            continue
-
+    for sh, text in shell_texts:
         # Walk lines, find invocation starts. Handle line-continuation `\`
         # and bash array `VAR=( ... )` blocks.
         lines = text.splitlines()
@@ -17897,11 +17923,7 @@ def check_remote_lane_argparse_arity(
                 i += 1
                 continue
             # Detect invocation start with python script .py
-            m = re.search(
-                r'(?:"?\$PYBIN"?|\bpython3?\b)\s+(?:-u\s+)?(?:-m\s+)?'
-                r'(?P<target>[\w./-]+\.py)\b',
-                line,
-            )
+            m = target_path_re.search(line)
             if not m:
                 i += 1
                 continue

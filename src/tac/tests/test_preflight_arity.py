@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 
+from tac import preflight as preflight_module
 from tac.preflight import (
     ARCH_FLAGS_BOOLEAN,
     ARCH_FLAGS_REQUIRED,
@@ -23,6 +24,7 @@ from tac.preflight import (
     _extract_artifact_filenames,
     _parse_argparse_signature,
     _scan_launcher_invocations,
+    check_remote_lane_argparse_arity,
     preflight_arity,
     preflight_filename_contract,
     preflight_profiles,
@@ -444,6 +446,92 @@ def test_arity_rule_d_passes_when_boolean_flag_mentioned_conditionally(tmp_path:
         verbose=False,
     )
     assert violations == []
+
+
+def test_arity_parses_only_invoked_targets_on_cache_miss(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Python launcher arity should parse only targets it actually invokes."""
+    repo = _stub_repo(tmp_path)
+    _write(repo / "experiments/invoked.py", """
+        import argparse
+        p = argparse.ArgumentParser()
+        p.add_argument("--checkpoint", required=True)
+        args = p.parse_args()
+    """)
+    _write(repo / "experiments/uninvoked.py", """
+        import argparse
+        p = argparse.ArgumentParser()
+        p.add_argument("--unused")
+        args = p.parse_args()
+    """)
+    _write(repo / "experiments/launcher.py", """
+        import subprocess
+        subprocess.run([
+            "python", "experiments/invoked.py",
+            "--checkpoint", "x",
+        ])
+    """)
+    parsed: list[str] = []
+    original = preflight_module._parse_argparse_signature
+
+    def wrapped(path: Path):
+        parsed.append(path.relative_to(repo).as_posix())
+        return original(path)
+
+    monkeypatch.setattr(preflight_module, "_parse_argparse_signature", wrapped)
+    monkeypatch.setenv("PACT_PREFLIGHT_DISABLE_INCREMENTAL_CACHE", "1")
+
+    violations = preflight_arity(
+        repo_root=repo,
+        launcher_files=["experiments/launcher.py"],
+        strict=True,
+        verbose=False,
+    )
+
+    assert violations == []
+    assert parsed == ["experiments/invoked.py"]
+
+
+def test_remote_lane_argparse_arity_parses_only_invoked_targets(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Remote-lane argparse arity should filter target signatures too."""
+    repo = _stub_repo(tmp_path)
+    _write(repo / "experiments/invoked.py", """
+        import argparse
+        p = argparse.ArgumentParser()
+        p.add_argument("--tag", required=True)
+        args = p.parse_args()
+    """)
+    _write(repo / "experiments/uninvoked.py", """
+        import argparse
+        p = argparse.ArgumentParser()
+        p.add_argument("--unused")
+        args = p.parse_args()
+    """)
+    _write(repo / "scripts/remote_lane_test.sh", """
+        "$PYBIN" -u experiments/invoked.py --tag ok
+    """)
+    parsed: list[str] = []
+    original = preflight_module._parse_argparse_signature
+
+    def wrapped(path: Path):
+        parsed.append(path.relative_to(repo).as_posix())
+        return original(path)
+
+    monkeypatch.setattr(preflight_module, "_parse_argparse_signature", wrapped)
+
+    violations = check_remote_lane_argparse_arity(
+        repo_root=repo,
+        strict=True,
+        verbose=False,
+    )
+
+    assert violations == []
+    assert parsed == ["experiments/invoked.py"]
 
 
 def test_profiles_validator_fails_on_missing_experiment_type(monkeypatch) -> None:
