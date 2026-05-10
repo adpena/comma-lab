@@ -165,6 +165,31 @@ def test_self_match_pgrep_in_python_fstring(tmp_path: Path) -> None:
     assert len(self_match) >= 1, violations
 
 
+def test_auth_eval_mps_python_invocation_caught(tmp_path: Path) -> None:
+    py = tmp_path / "auth_eval_mps.py"
+    py.write_text(
+        "import subprocess\n"
+        "subprocess.run([\n"
+        "    'python', 'experiments/auth_eval_renderer.py',\n"
+        "    '--device', 'mps',\n"
+        "])\n"
+    )
+    violations = _scan_python_for_forbidden(py)
+    assert any("auth_eval invocation" in v for v in violations), violations
+
+
+def test_auth_eval_cuda_python_invocation_passes(tmp_path: Path) -> None:
+    py = tmp_path / "auth_eval_cuda.py"
+    py.write_text(
+        "import subprocess\n"
+        "subprocess.run([\n"
+        "    'python', 'experiments/auth_eval_renderer.py',\n"
+        "    '--device', 'cuda',\n"
+        "])\n"
+    )
+    assert _scan_python_for_forbidden(py) == []
+
+
 def test_pgrep_unique_token_does_not_false_positive(tmp_path: Path) -> None:
     """A wait loop with a token that appears NOWHERE else in the file is fine
     (the token won't self-match). Don't punish correct usage."""

@@ -642,3 +642,40 @@ def test_dirty_worktree_unregistered_lane_is_caught_before_commit(tmp_path: Path
     )
 
     assert any("lane_unregistered_wip" in v and "WORKTREE" in v for v in violations)
+
+
+def test_tracked_worktree_scans_only_changed_lines(tmp_path: Path) -> None:
+    """Mechanical edits should not re-flag old lane strings in the same file."""
+    repo = _init_repo(tmp_path, [{"id": "lane_g_v3", "name": "g v3"}])
+    _commit_file(
+        repo,
+        "scripts/legacy.sh",
+        'LANE="lane_legacy_unregistered"\necho old\n',
+        "legacy unregistered lane before strict gate",
+    )
+    (repo / "scripts" / "legacy.sh").write_text(
+        'LANE="lane_legacy_unregistered"\necho old\necho mechanical-hardening\n',
+        encoding="utf-8",
+    )
+
+    violations = check_lane_pre_registered_before_work_starts(
+        repo_root=repo, n_commits=0, strict=False, verbose=False,
+    )
+
+    assert violations == []
+
+
+def test_tracked_worktree_changed_lane_line_still_fails(tmp_path: Path) -> None:
+    """The changed-line narrowing must still catch newly introduced lane IDs."""
+    repo = _init_repo(tmp_path, [{"id": "lane_g_v3", "name": "g v3"}])
+    _commit_file(repo, "scripts/lane.sh", 'echo old\n', "plain legacy script")
+    (repo / "scripts" / "lane.sh").write_text(
+        'echo old\nLANE="lane_new_unregistered_wip"\n',
+        encoding="utf-8",
+    )
+
+    violations = check_lane_pre_registered_before_work_starts(
+        repo_root=repo, n_commits=0, strict=False, verbose=False,
+    )
+
+    assert any("lane_new_unregistered_wip" in v for v in violations)

@@ -35,24 +35,29 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 LOG_DIR = REPO_ROOT / "reports" / "raw" / "kaggle_logs"
 
 
-def _kaggle_bin() -> str:
+def _kaggle_cmd() -> list[str]:
     venv_kaggle = REPO_ROOT / ".venv" / "bin" / "kaggle"
     if venv_kaggle.exists():
-        return str(venv_kaggle)
+        return [str(venv_kaggle)]
     import shutil
     found = shutil.which("kaggle")
     if found:
-        return found
+        return [found]
+    if shutil.which("uv"):
+        return ["uv", "run", "--with", "kaggle", "kaggle"]
     print(f"{RED}kaggle CLI not found. Install with: uv pip install kaggle{RESET}")
     sys.exit(1)
 
 
-def get_kernel_status(kaggle: str, slug: str) -> str | None:
+def get_kernel_status(kaggle_cmd: list[str], slug: str, *, timeout_s: int = 10) -> str | None:
     """Return status string or None if kernel not found."""
-    result = subprocess.run(
-        [kaggle, "kernels", "status", slug],
-        capture_output=True, text=True,
-    )
+    try:
+        result = subprocess.run(
+            [*kaggle_cmd, "kernels", "status", slug],
+            capture_output=True, text=True, timeout=timeout_s,
+        )
+    except subprocess.TimeoutExpired:
+        return f"STATUS_TIMEOUT_AFTER_{timeout_s}S"
     if result.returncode != 0:
         return None
     # Output format: 'slug has status "STATUS"'
@@ -62,27 +67,37 @@ def get_kernel_status(kaggle: str, slug: str) -> str | None:
     return stdout
 
 
-def get_kernel_log(kaggle: str, slug: str, download_dir: Path | None = None) -> list[str]:
+def get_kernel_log(
+    kaggle_cmd: list[str],
+    slug: str,
+    download_dir: Path | None = None,
+    *,
+    timeout_s: int = 20,
+) -> list[str]:
     """Download kernel output and return stderr lines from the log."""
     with tempfile.TemporaryDirectory() as tmpdir:
         out_dir = Path(tmpdir)
-        result = subprocess.run(
-            [kaggle, "kernels", "output", slug, "-p", str(out_dir)],
-            capture_output=True, text=True,
-        )
+        try:
+            result = subprocess.run(
+                [*kaggle_cmd, "kernels", "output", slug, "-p", str(out_dir)],
+                capture_output=True, text=True, timeout=timeout_s,
+            )
+        except subprocess.TimeoutExpired:
+            return [f"(log fetch timed out after {timeout_s}s for {slug})"]
         if result.returncode != 0:
             return [f"(could not fetch log: {result.stderr.strip()})"]
 
         # Kaggle outputs a JSON log file
         log_lines: list[str] = []
-        for log_file in sorted(out_dir.iterdir()):
+        for log_file in sorted(p for p in out_dir.rglob("*") if p.is_file()):
             content = log_file.read_text(errors="replace")
 
             # Save locally if requested
             if download_dir is not None:
                 download_dir.mkdir(parents=True, exist_ok=True)
                 slug_name = slug.split("/")[-1]
-                dest = download_dir / f"{slug_name}_{log_file.name}"
+                rel_name = "_".join(log_file.relative_to(out_dir).parts)
+                dest = download_dir / f"{slug_name}_{rel_name}"
                 dest.write_text(content)
 
             # Try to parse as JSON log (Kaggle format: list of {data, stream} objects)
@@ -99,7 +114,7 @@ def get_kernel_log(kaggle: str, slug: str, download_dir: Path | None = None) -> 
             # Fallback: treat as plain text.
             # Inject the filename as a log line so marker files (e.g.
             # P100_RETRY_NEEDED) are discoverable by name, not just content.
-            log_lines.append(f"[file: {log_file.name}]")
+            log_lines.append(f"[file: {log_file.relative_to(out_dir)}]")
             log_lines.extend(content.splitlines())
 
         return log_lines
@@ -109,14 +124,26 @@ def format_status(status: str | None) -> str:
     if status is None:
         return f"{YELLOW}NOT FOUND{RESET}"
     s = status.upper()
-    if s == "RUNNING":
+    if "RUNNING" in s:
         return f"{GREEN}{BOLD}{s}{RESET}"
-    elif s in ("ERROR", "CANCELACKNOWLEDGED", "CANCEL"):
+    elif any(token in s for token in ("ERROR", "CANCELACKNOWLEDGED", "CANCEL_ACKNOWLEDGED", "CANCELLED", "CANCEL")):
         return f"{RED}{BOLD}{s}{RESET}"
-    elif s == "COMPLETE":
+    elif "COMPLETE" in s:
         return f"{BLUE}{BOLD}{s}{RESET}"
+    elif "TIMEOUT" in s:
+        return f"{YELLOW}{BOLD}{s}{RESET}"
     else:
         return f"{YELLOW}{s}{RESET}"
+
+
+def is_error_status(status: str | None) -> bool:
+    if status is None:
+        return False
+    s = status.upper()
+    return any(
+        token in s
+        for token in ("ERROR", "CANCELACKNOWLEDGED", "CANCEL_ACKNOWLEDGED", "CANCELLED", "TIMEOUT")
+    )
 
 
 def main() -> int:
@@ -126,8 +153,20 @@ def main() -> int:
         action="store_true",
         help="Save logs locally to reports/raw/kaggle_logs/",
     )
+    parser.add_argument(
+        "--log-timeout-s",
+        type=int,
+        default=20,
+        help="Per-kernel timeout for `kaggle kernels output` when fetching failed-kernel logs.",
+    )
+    parser.add_argument(
+        "--status-timeout-s",
+        type=int,
+        default=10,
+        help="Per-kernel timeout for `kaggle kernels status`.",
+    )
     args = parser.parse_args()
-    kaggle = _kaggle_bin()
+    kaggle_cmd = _kaggle_cmd()
     download_dir = LOG_DIR if args.download_logs else None
 
     print(f"\n{BOLD}Kaggle Kernel Status Check{RESET}")
@@ -137,11 +176,11 @@ def main() -> int:
     error_slugs: list[str] = []
     for slug in KERNEL_SLUGS:
         short = slug.split("/")[-1]
-        status = get_kernel_status(kaggle, slug)
+        status = get_kernel_status(kaggle_cmd, slug, timeout_s=args.status_timeout_s)
         status_str = format_status(status)
         print(f"  {short:<45s} {status_str}")
 
-        if status and status.upper() in ("ERROR", "CANCELACKNOWLEDGED"):
+        if is_error_status(status):
             error_slugs.append(slug)
 
     if error_slugs:
@@ -149,7 +188,7 @@ def main() -> int:
         print(f"{RED}{BOLD}Error logs:{RESET}\n")
         for slug in error_slugs:
             short = slug.split("/")[-1]
-            lines = get_kernel_log(kaggle, slug, download_dir=download_dir)
+            lines = get_kernel_log(kaggle_cmd, slug, download_dir=download_dir, timeout_s=args.log_timeout_s)
 
             # Detect P100 retry marker in output files.
             # The bootstrap writes a marker file to /kaggle/working/P100_RETRY_NEEDED

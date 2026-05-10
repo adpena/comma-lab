@@ -109,8 +109,9 @@ RESULT_ROOT = REPO_ROOT / "experiments" / "results"
 
 # Modal T4 hourly rate — per CLAUDE.md "GPU budget" / docs/hourly_costs.
 HOURLY_RATE_T4_USD = 0.59
-DEFAULT_TIMEOUT_HOURS = 4.0
+DEFAULT_TIMEOUT_HOURS = 6.0
 DEFAULT_COST_CAP_USD = 8.0
+MODAL_TIMEOUT_SAFETY_SECONDS = 10 * 60
 
 # Default operator inputs (override via CLI). These are the operator-specified
 # A1 paths from the dispatch ticket.
@@ -376,6 +377,85 @@ def _eval_metric_summary(eval_data: dict[str, Any] | None) -> dict[str, float | 
     }
 
 
+def _as_dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _unique_strings(values: Any) -> list[str]:
+    if not isinstance(values, list):
+        return []
+    out: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        item = str(value)
+        if item in seen:
+            continue
+        seen.add(item)
+        out.append(item)
+    return out
+
+
+def _recover_evidence_summary(
+    eval_data: dict[str, Any] | None,
+    summary: dict[str, Any],
+) -> dict[str, Any]:
+    """Return fail-closed local evidence status for harvested Modal results."""
+    from tac.auth_eval_schema import (  # noqa: PLC0415
+        eval_metric_summary,
+        required_contest_cuda_evidence_blockers,
+    )
+
+    build_manifest = _as_dict(summary.get("build_manifest"))
+    archive_meta = _as_dict(summary.get("archive_meta"))
+    expected_archive_bytes = build_manifest.get("archive_bytes", archive_meta.get("bytes"))
+    if not isinstance(expected_archive_bytes, int):
+        expected_archive_bytes = None
+
+    metrics = eval_metric_summary(eval_data)
+    auth_eval_blockers = required_contest_cuda_evidence_blockers(
+        eval_data,
+        metrics,
+        expected_archive_bytes=expected_archive_bytes,
+        expected_n_samples=600,
+    )
+
+    remote_claim_blockers: list[str] = []
+    if summary.get("passed") is not True:
+        remote_claim_blockers.append("remote_summary_passed_not_true")
+    if not build_manifest:
+        remote_claim_blockers.append("remote_build_manifest_missing")
+    elif build_manifest.get("score_claim_valid") is not True:
+        remote_claim_blockers.append("remote_build_manifest_score_claim_valid_not_true")
+    if build_manifest and build_manifest.get("exact_cuda_eval_complete") is not True:
+        remote_claim_blockers.append("remote_build_manifest_exact_cuda_eval_complete_not_true")
+    if build_manifest and build_manifest.get("score_claim") is not True:
+        remote_claim_blockers.append("remote_build_manifest_score_claim_not_true")
+
+    claim_blockers = _unique_strings(auth_eval_blockers + remote_claim_blockers)
+    score_claim = not claim_blockers
+    dispatch_blockers = _unique_strings(build_manifest.get("dispatch_blockers"))
+    return {
+        "metrics": metrics,
+        "score_claim": score_claim,
+        "score_claim_valid": score_claim,
+        "exact_cuda_eval_complete": score_claim,
+        "promotion_eligible": build_manifest.get("promotion_eligible") is True,
+        "rank_or_kill_eligible": build_manifest.get("rank_or_kill_eligible") is True,
+        "evidence_grade": "[contest-CUDA]" if score_claim else "[exact-eval incomplete]",
+        "auth_eval_blockers": auth_eval_blockers,
+        "claim_blockers": claim_blockers,
+        "dispatch_blockers": dispatch_blockers,
+        "canonical_score_source": metrics["canonical_score_source"],
+        "eval_archive_size_bytes": metrics["archive_size_bytes"],
+        "n_samples": metrics["n_samples"],
+        "score_axis": eval_data.get("score_axis") if isinstance(eval_data, dict) else None,
+        "evidence_semantics": (
+            eval_data.get("evidence_semantics") if isinstance(eval_data, dict) else None
+        ),
+        "lane_tag": eval_data.get("lane_tag") if isinstance(eval_data, dict) else None,
+    }
+
+
 def _selected_checkpoint_path(train_output: Path, checkpoint_selection: str) -> Path:
     checkpoint_name = CHECKPOINT_SELECTIONS.get(checkpoint_selection)
     if checkpoint_name is None:
@@ -384,6 +464,47 @@ def _selected_checkpoint_path(train_output: Path, checkpoint_selection: str) -> 
             f"expected one of {sorted(CHECKPOINT_SELECTIONS)}"
         )
     return train_output / checkpoint_name
+
+
+def _stage_timeout_budget_seconds(
+    *,
+    train_timeout_hours: float,
+    build_timeout_minutes: float,
+    eval_timeout_minutes: float,
+) -> int:
+    return (
+        max(120, int(float(train_timeout_hours) * 3600))
+        + max(60, int(float(build_timeout_minutes) * 60))
+        + max(120, int(float(eval_timeout_minutes) * 60))
+    )
+
+
+def _modal_timeout_validation_errors(
+    *,
+    timeout_hours: float,
+    train_timeout_hours: float,
+    build_timeout_minutes: float,
+    eval_timeout_minutes: float,
+) -> list[str]:
+    """Return blockers when user-facing timeout no longer matches Modal reality."""
+    errors: list[str] = []
+    if abs(float(timeout_hours) - DEFAULT_TIMEOUT_HOURS) > 1e-9:
+        errors.append(
+            "timeout_hours_must_match_modal_function_timeout:"
+            f"requested={float(timeout_hours):.2f}:actual={DEFAULT_TIMEOUT_HOURS:.2f}"
+        )
+    stage_budget = _stage_timeout_budget_seconds(
+        train_timeout_hours=train_timeout_hours,
+        build_timeout_minutes=build_timeout_minutes,
+        eval_timeout_minutes=eval_timeout_minutes,
+    )
+    usable_budget = int(DEFAULT_TIMEOUT_HOURS * 3600) - MODAL_TIMEOUT_SAFETY_SECONDS
+    if stage_budget > usable_budget:
+        errors.append(
+            "stage_timeouts_exceed_modal_budget:"
+            f"stage_budget_s={stage_budget}:usable_modal_budget_s={usable_budget}"
+        )
+    return errors
 
 
 def _read_input(path: Path, label: str) -> tuple[bytes, str, int]:
@@ -831,6 +952,7 @@ def _run_phase_a1_inner(
             "--batch-size", str(batch_size),
             "--lr", str(lr),
             "--pr101-archive", str(pr101_archive),
+            "--pr101-source-dir", str(pr101_source_dir),
             "--video-path", str(video_path),
             "--max-frames", str(max_frames),
             "--aux-kl-weight", str(aux_kl_weight),
@@ -1020,6 +1142,19 @@ def _run_phase_a1_inner(
 
         # --- Stage 4: REPORT ----------------------------------------------
         stage = "report"
+        from tac.auth_eval_schema import (
+            eval_metric_summary,
+            required_contest_cuda_evidence_blockers,
+        )
+
+        metrics = eval_metric_summary(eval_data)
+        metric_blockers = required_contest_cuda_evidence_blockers(
+            eval_data,
+            metrics,
+            expected_archive_bytes=archive_meta["bytes"],
+            expected_n_samples=600,
+        )
+        score_claim = eval_rc == 0 and not metric_blockers
         build_manifest = {
             "lane_id": label_safe,
             "schema_version": "phase_a1_modal_build_manifest_v1",
@@ -1032,15 +1167,27 @@ def _run_phase_a1_inner(
             "eval_work_dir": str(eval_work),
             "eval_rc": eval_rc,
             "eval_data": eval_data,
-            "evidence_grade": "[contest-CUDA]",
-            "score_claim": True,
-            "ready_for_exact_eval_dispatch": True,
+            "evidence_grade": "[contest-CUDA]" if score_claim else "[exact-eval incomplete]",
+            "score_claim": score_claim,
+            "score_claim_valid": score_claim,
+            "ready_for_exact_eval_dispatch": False,
+            "exact_cuda_eval_complete": score_claim,
             # Promotion still requires the CPU paired axis per CLAUDE.md
             # "Submission auth eval — BOTH CPU AND CUDA". The Modal CUDA result
             # IS the contest-CUDA truth; CPU eval comes via GHA later.
             "promotion_eligible": False,
             "rank_or_kill_eligible": False,
-            "dispatch_blockers": ["contest_cpu_eval_pending"],
+            "dispatch_blockers": (
+                ["contest_cpu_eval_pending"] if score_claim else metric_blockers
+            ),
+            "canonical_score_source": metrics["canonical_score_source"],
+            "eval_archive_size_bytes": metrics["archive_size_bytes"],
+            "n_samples": metrics["n_samples"],
+            "score_axis": eval_data.get("score_axis") if isinstance(eval_data, dict) else None,
+            "evidence_semantics": (
+                eval_data.get("evidence_semantics") if isinstance(eval_data, dict) else None
+            ),
+            "lane_tag": eval_data.get("lane_tag") if isinstance(eval_data, dict) else None,
             "council_memo_ref": ".omx/research/grand_council_extreme_rigor_track_1_20260508.md",
             "council_decision": "A1 — score-gradient supervision (UNANIMOUS HIGHEST PRIORITY)",
             "modal_app": APP_NAME,
@@ -1057,14 +1204,29 @@ def _run_phase_a1_inner(
                 "checkpoint_selection": checkpoint_selection,
             },
         }
-        if eval_data:
-            metrics = _eval_metric_summary(eval_data)
-            build_manifest["score"] = metrics["score"]
-            build_manifest["pose_avg"] = metrics["pose_avg"]
-            build_manifest["seg_avg"] = metrics["seg_avg"]
-            build_manifest["rate"] = metrics["rate"]
-            build_manifest["rate_unscaled"] = metrics["rate_unscaled"]
+        build_manifest["score"] = metrics["score"]
+        build_manifest["pose_avg"] = metrics["pose_avg"]
+        build_manifest["seg_avg"] = metrics["seg_avg"]
+        build_manifest["rate"] = metrics["rate"]
+        build_manifest["rate_unscaled"] = metrics["rate_unscaled"]
         _write_json(out_dir / "build_manifest.json", build_manifest)
+
+        if not score_claim:
+            result = _finish_remote(
+                out_dir,
+                passed=False,
+                returncode=6,
+                stage="contest_cuda_evidence_refused",
+                validation_errors=metric_blockers,
+                extra={
+                    "commands": command_results,
+                    "archive_meta": archive_meta,
+                    "build_manifest": build_manifest,
+                },
+                eval_data=eval_data,
+            )
+            result["elapsed_seconds"] = time.monotonic() - t_start
+            return result
 
         result = _finish_remote(
             out_dir,
@@ -1245,11 +1407,19 @@ def build_local_plan(
 
     now = dt.datetime.now(tz=dt.UTC)
     predicted_eta_utc = (
-        now + dt.timedelta(hours=float(timeout_hours))
+        now + dt.timedelta(hours=DEFAULT_TIMEOUT_HOURS)
     ).isoformat(timespec="seconds").replace("+00:00", "Z")
-    estimated_cost = HOURLY_RATE_T4_USD * float(timeout_hours)
+    estimated_cost = HOURLY_RATE_T4_USD * DEFAULT_TIMEOUT_HOURS
 
     validation_errors: list[str] = []
+    validation_errors.extend(
+        _modal_timeout_validation_errors(
+            timeout_hours=timeout_hours,
+            train_timeout_hours=train_timeout_hours,
+            build_timeout_minutes=build_timeout_minutes,
+            eval_timeout_minutes=eval_timeout_minutes,
+        )
+    )
     if not pr101_archive_path.is_file():
         validation_errors.append(f"missing_pr101_archive:{pr101_archive_path}")
     if not pr101_source_dir_path.is_dir():
@@ -1348,6 +1518,9 @@ def build_local_plan(
         "created_at_utc": now.isoformat(timespec="seconds").replace("+00:00", "Z"),
         "predicted_eta_utc": predicted_eta_utc,
         "estimated_cost_usd": estimated_cost,
+        "modal_function_timeout_hours": DEFAULT_TIMEOUT_HOURS,
+        "requested_timeout_hours": float(timeout_hours),
+        "modal_timeout_safety_seconds": MODAL_TIMEOUT_SAFETY_SECONDS,
         "predicted_band": [float(predicted_low), float(predicted_high)],
         "inputs": inputs,
         "params": params,
@@ -1512,15 +1685,18 @@ def _close_modal_recovery_claim(
     call_id: str,
     rc: Any,
     summary: dict[str, Any],
+    score_claim_valid: bool,
 ) -> int:
-    status = (
-        "completed_modal_recovered"
-        if _returncode_is_zero(rc) and summary.get("passed") is True
-        else "failed_modal_recovered"
-    )
+    if _returncode_is_zero(rc) and summary.get("passed") is True and score_claim_valid:
+        status = "completed_modal_contest_cuda_recovered"
+    elif _returncode_is_zero(rc) and summary.get("passed") is True:
+        status = "failed_modal_recovered_no_score_claim"
+    else:
+        status = "failed_modal_recovered"
     notes = (
         f"Phase A1 Modal recover harvested call_id={call_id}; rc={rc!r}; "
-        f"stage={summary.get('stage')!r}; passed={summary.get('passed')!r}. "
+        f"stage={summary.get('stage')!r}; passed={summary.get('passed')!r}; "
+        f"score_claim_valid={score_claim_valid}. "
         "Terminal claim row closes the dispatch once cached artifacts are recovered."
     )
     return _claim_lane(
@@ -1702,9 +1878,18 @@ def main(
     if not video_path_resolved.is_file():
         raise SystemExit(f"FATAL: --video-path not found: {video_path_resolved}")
 
-    estimated_cost = HOURLY_RATE_T4_USD * float(timeout_hours)
+    timeout_errors = _modal_timeout_validation_errors(
+        timeout_hours=timeout_hours,
+        train_timeout_hours=train_timeout_hours,
+        build_timeout_minutes=build_timeout_minutes,
+        eval_timeout_minutes=eval_timeout_minutes,
+    )
+    if timeout_errors:
+        raise SystemExit(f"FATAL: Modal timeout validation failed: {timeout_errors}")
+
+    estimated_cost = HOURLY_RATE_T4_USD * DEFAULT_TIMEOUT_HOURS
     print(
-        f"[cost-gate] estimated ${estimated_cost:.2f} for Modal T4 × {timeout_hours:.1f}h "
+        f"[cost-gate] estimated ${estimated_cost:.2f} for Modal T4 × {DEFAULT_TIMEOUT_HOURS:.1f}h "
         f"(cap ${cost_cap_usd:.2f})"
     )
     if estimated_cost > cost_cap_usd:
@@ -1739,19 +1924,14 @@ def main(
 
     started_at_utc = dt.datetime.now(tz=dt.UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
     predicted_eta_utc = (
-        dt.datetime.now(tz=dt.UTC) + dt.timedelta(hours=float(timeout_hours))
+        dt.datetime.now(tz=dt.UTC) + dt.timedelta(hours=DEFAULT_TIMEOUT_HOURS)
     ).isoformat(timespec="seconds").replace("+00:00", "Z")
 
     # ---- Build container function args ------------------------------------
     train_timeout_seconds = max(120, int(float(train_timeout_hours) * 3600))
     build_timeout_seconds = max(60, int(float(build_timeout_minutes) * 60))
     eval_timeout_seconds = max(120, int(float(eval_timeout_minutes) * 60))
-    max_seconds = max(120, int(float(timeout_hours) * 3600))
-    # Modal hard timeout (set on the function) is DEFAULT_TIMEOUT_HOURS;
-    # max_seconds sometimes can be larger if user passes --timeout-hours > 4
-    # — but Modal will kill at the function's compile-time timeout regardless.
-    # We clamp to 14h max as a sanity ceiling.
-    max_seconds = min(max_seconds, 14 * 3600)
+    max_seconds = max(120, int(DEFAULT_TIMEOUT_HOURS * 3600))
 
     params = {
         "epochs": int(epochs),
@@ -1871,7 +2051,7 @@ def main(
         },
         params=params,
         estimated_cost_usd=estimated_cost,
-        timeout_hours=float(timeout_hours),
+        timeout_hours=DEFAULT_TIMEOUT_HOURS,
         predicted_low=float(predicted_low),
         predicted_high=float(predicted_high),
         predicted_eta_utc=predicted_eta_utc,
@@ -1881,7 +2061,10 @@ def main(
     print(f"  instance_job_id: {instance_job_id}")
     print(f"  metadata:        {metadata_path}")
     print(f"  estimated cost:  ${estimated_cost:.2f}")
-    print(f"  predicted band:  [{predicted_low}, {predicted_high}] [contest-CUDA]")
+    print(
+        f"  predicted band:  [{predicted_low}, {predicted_high}] "
+        "[planning forecast; not evidence]"
+    )
     print(f"  predicted ETA:   {predicted_eta_utc}")
     print()
     print("  Recover (within 24h of dispatch — Modal result-cache TTL):")
@@ -1958,14 +2141,22 @@ def recover(label: str) -> int:
         except Exception as exc:
             print(f"[recover] SKIP {relpath}: {exc!r}")
 
-    eval_data = result.get("eval_data") or {}
-    metrics = _eval_metric_summary(eval_data)
+    eval_data = result.get("eval_data") if isinstance(result.get("eval_data"), dict) else None
+    evidence = _recover_evidence_summary(eval_data, summary)
+    metrics = evidence["metrics"]
     if eval_data:
-        print(
-            f"[recover] [contest-CUDA] score={metrics['score']} "
-            f"pose={metrics['pose_avg']} seg={metrics['seg_avg']} "
-            f"rate={metrics['rate']}"
-        )
+        if evidence["score_claim_valid"]:
+            print(
+                f"[recover] [contest-CUDA] score={metrics['score']} "
+                f"pose={metrics['pose_avg']} seg={metrics['seg_avg']} "
+                f"rate={metrics['rate']}"
+            )
+        else:
+            print(
+                f"[recover] [exact-eval incomplete] score={metrics['score']} "
+                f"pose={metrics['pose_avg']} seg={metrics['seg_avg']} "
+                f"rate={metrics['rate']} blockers={evidence['claim_blockers']}"
+            )
 
     summary_path = out_dir / "harvest_summary.json"
     _write_json(summary_path, {
@@ -1983,6 +2174,21 @@ def recover(label: str) -> int:
         "seg_avg": metrics["seg_avg"],
         "rate": metrics["rate"],
         "rate_unscaled": metrics["rate_unscaled"],
+        "evidence_grade": evidence["evidence_grade"],
+        "score_claim": evidence["score_claim"],
+        "score_claim_valid": evidence["score_claim_valid"],
+        "exact_cuda_eval_complete": evidence["exact_cuda_eval_complete"],
+        "promotion_eligible": evidence["promotion_eligible"],
+        "rank_or_kill_eligible": evidence["rank_or_kill_eligible"],
+        "auth_eval_blockers": evidence["auth_eval_blockers"],
+        "claim_blockers": evidence["claim_blockers"],
+        "dispatch_blockers": evidence["dispatch_blockers"],
+        "canonical_score_source": evidence["canonical_score_source"],
+        "eval_archive_size_bytes": evidence["eval_archive_size_bytes"],
+        "n_samples": evidence["n_samples"],
+        "score_axis": evidence["score_axis"],
+        "evidence_semantics": evidence["evidence_semantics"],
+        "lane_tag": evidence["lane_tag"],
         "tag": summary.get("tag"),
     })
     print(f"[recover] summary saved: {summary_path}")
@@ -1991,11 +2197,12 @@ def recover(label: str) -> int:
         call_id=call_id,
         rc=rc,
         summary=summary,
+        score_claim_valid=bool(evidence["score_claim_valid"]),
     )
     if close_rc != 0:
         print(f"FATAL: failed to close recovered Modal claim rc={close_rc}", file=sys.stderr)
         return 6
-    return 0 if _returncode_is_zero(rc) else 1
+    return 0 if _returncode_is_zero(rc) and evidence["score_claim_valid"] else 1
 
 
 # ---------------------------------------------------------------------------

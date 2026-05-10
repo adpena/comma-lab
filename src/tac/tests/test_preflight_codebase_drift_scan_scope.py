@@ -99,3 +99,36 @@ def test_codebase_drift_prefilter_skips_harmless_python_parse(
 
     assert violations == []
     assert calls == 0
+
+
+def test_codebase_drift_uses_rg_prefilter_for_python_scan(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = _stub_repo(tmp_path)
+    harmless = repo / "experiments" / "harmless.py"
+    bad = repo / "experiments" / "source_bad.py"
+    _write(harmless, "VALUE = 1\n")
+    _write(bad, _NOHUP_PY)
+    scanned: list[Path] = []
+    original_scan = preflight_mod._scan_python_for_forbidden
+
+    def fake_rg(root, dirs, regex, **kwargs):
+        assert regex == preflight_mod._CODEBASE_DRIFT_PY_PREFILTER_RE
+        return (bad.resolve(),)
+
+    def recording_scan(path, *, source_index=None):
+        scanned.append(path.resolve())
+        return original_scan(path, source_index=source_index)
+
+    monkeypatch.setattr(preflight_mod, "_rg_python_files_matching_regex", fake_rg)
+    monkeypatch.setattr(preflight_mod, "_scan_python_for_forbidden", recording_scan)
+
+    violations = check_codebase_drift(
+        strict=False,
+        repo_root=repo,
+        verbose=False,
+    )
+
+    assert any("nohup" in violation for violation in violations)
+    assert scanned == [bad.resolve()]

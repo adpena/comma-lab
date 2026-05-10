@@ -75,6 +75,32 @@ def test_preflight_developer_clean_cache_hit_skips_source_index_setup(
     preflight.preflight_developer(verbose=False)
 
 
+def test_prewarm_preflight_source_index_populates_common_fact_groups(
+    tmp_path,
+    monkeypatch,
+):
+    for rel, text in {
+        "experiments/train_example.py": "import torch\n",
+        "experiments/run_example.sh": "#!/bin/sh\n",
+        "src/tac/example.py": "VALUE = 'MPS'\n",
+        "src/tac/tests/test_example.py": "from tac import example\n",
+        "docs/example.md": "CPU advisory only\n",
+    }.items():
+        path = tmp_path / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+
+    from tac.source_index import SourceIndex, source_index_context
+
+    monkeypatch.setattr(preflight, "REPO_ROOT", tmp_path)
+    with source_index_context(tmp_path) as index:
+        preflight._prewarm_preflight_source_index(tmp_path)
+        stats = index.stats()
+
+    assert stats["facts_group_cache_entries"] >= 4
+    assert stats["text_facts_cache_entries"] >= 5
+
+
 def test_preflight_all_clean_cache_ignores_rebuildable_research_artifacts(tmp_path):
     (tmp_path / "src" / "tac").mkdir(parents=True)
     (tmp_path / "src" / "tac" / "example.py").write_text("VALUE = 1\n")

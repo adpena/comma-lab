@@ -33,6 +33,8 @@ PARETO = TOOLS / "apogee_intN_pareto.py"
 DASHBOARD = TOOLS / "score_dashboard.py"
 RECONCILER = TOOLS / "predicted_vs_actual_reconciler.py"
 CLAIM_DISPATCH = TOOLS / "claim_lane_dispatch.py"
+CLOUD_PROVIDER_READINESS = TOOLS / "cloud_provider_readiness.py"
+PROVIDER_READINESS_LATEST = REPO_ROOT / "experiments/results/cloud_provider_readiness_latest.json"
 PR91_HPM1_READINESS = TOOLS / "audit_pr91_hpm1_readiness.py"
 PR91_HPM1_RUNTIME_CONTRACT = TOOLS / "audit_pr91_hpm1_runtime_contract.py"
 PR91_HPM1_READINESS_ARTIFACT = (
@@ -489,6 +491,81 @@ def _dispatch_claim_summary() -> dict[str, object]:
     return _run_json(CLAIM_DISPATCH, ["summary", "--format", "json"])
 
 
+def _latest_provider_readiness_artifact() -> Path | None:
+    if PROVIDER_READINESS_LATEST.is_file():
+        return PROVIDER_READINESS_LATEST
+    candidates = sorted(
+        (REPO_ROOT / "experiments/results").glob("cloud_provider_readiness_*.json"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    return candidates[0] if candidates else None
+
+
+def _provider_readiness(refresh: bool = False) -> dict[str, object]:
+    """Return cloud-provider status without implicit network checks.
+
+    Normal operator briefing loads the latest provider-readiness artifact from
+    disk. Live cloud CLI checks are intentionally opt-in via
+    ``--refresh-provider-readiness`` so a status briefing cannot hang or mutate
+    provider state.
+    """
+
+    if refresh:
+        return _run_json(
+            CLOUD_PROVIDER_READINESS,
+            [
+                "--output",
+                str(PROVIDER_READINESS_LATEST),
+                "--timeout-s",
+                "8",
+            ],
+        )
+    latest = _latest_provider_readiness_artifact()
+    if latest is None:
+        return {
+            "_error": "no provider readiness artifact found",
+            "next_command": (
+                ".venv/bin/python tools/cloud_provider_readiness.py "
+                "--output experiments/results/cloud_provider_readiness_latest.json"
+            ),
+        }
+    payload = _load_json_file(latest)
+    payload["artifact_path"] = _repo_rel(latest)
+    return payload
+
+
+def _format_provider_readiness(refresh: bool = False) -> str:
+    payload = _provider_readiness(refresh=refresh)
+    if payload.get("_error"):
+        return (
+            "Provider readiness unavailable; no remote dispatch should be inferred.\n"
+            f"  error: {payload.get('_error')}\n"
+            f"  next:  {payload.get('next_command')}"
+        )
+    providers = payload.get("providers") if isinstance(payload.get("providers"), list) else []
+    lines = [
+        "Read-only provider readiness. This is not a dispatch or score claim.",
+        f"  generated_at_utc: {payload.get('generated_at_utc', '<unknown>')}",
+        f"  artifact:         {payload.get('artifact_path', _repo_rel(PROVIDER_READINESS_LATEST))}",
+        f"  score_claim:      {payload.get('score_claim', False)}",
+        f"  exact_dispatch:   {payload.get('ready_for_exact_eval_dispatch', False)}",
+    ]
+    for row in providers:
+        if not isinstance(row, dict):
+            continue
+        blockers = ", ".join(str(x) for x in row.get("blockers", [])) or "-"
+        lines.append(
+            "  - "
+            f"{row.get('provider', '<unknown>')}: "
+            f"{row.get('status', '<unknown>')} "
+            f"exact_cuda_now={bool(row.get('exact_cuda_evidence_allowed'))} "
+            f"proxy_only={bool(row.get('proxy_only'))} "
+            f"blockers={blockers}"
+        )
+    return "\n".join(lines)
+
+
 def _format_dispatch_claim_summary() -> str:
     summary = _dispatch_claim_summary()
     if summary.get("_error"):
@@ -765,6 +842,10 @@ def main(argv: list[str] | None = None) -> int:
                         help="Skip Phase 4 (gated next-tick lanes).")
     parser.add_argument("--skip-composition", action="store_true",
                         help="Skip Phase 5 (meta-composition lanes).")
+    parser.add_argument("--skip-provider-readiness", action="store_true",
+                        help="Skip cached cloud-provider readiness section.")
+    parser.add_argument("--refresh-provider-readiness", action="store_true",
+                        help="Run read-only cloud provider checks before rendering the briefing.")
     parser.add_argument("--json", action="store_true",
                         help="Machine-readable composite JSON output.")
     args = parser.parse_args(argv)
@@ -775,9 +856,17 @@ def main(argv: list[str] | None = None) -> int:
             print(f"FATAL: missing dependency tool {tool.relative_to(REPO_ROOT)}",
                   file=sys.stderr)
             return 2
+    if args.refresh_provider_readiness and not CLOUD_PROVIDER_READINESS.is_file():
+        print(
+            f"FATAL: missing dependency tool {CLOUD_PROVIDER_READINESS.relative_to(REPO_ROOT)}",
+            file=sys.stderr,
+        )
+        return 2
 
     if args.json:
         out = {"dispatch_claim_summary": _dispatch_claim_summary()}
+        if not args.skip_provider_readiness:
+            out["provider_readiness"] = _provider_readiness(refresh=args.refresh_provider_readiness)
         if not args.skip_pareto:
             out["pareto"] = _run_json(PARETO, ["--json"])
             out["supplementary_lanes"] = PHASE_1_SUPPLEMENTARY_LANES
@@ -800,6 +889,11 @@ def main(argv: list[str] | None = None) -> int:
         "Dispatch claim coordination — active lane guard",
         _format_dispatch_claim_summary(),
     ))
+    if not args.skip_provider_readiness:
+        parts.append(_section(
+            "Cloud provider readiness — cached exact/proxy boundary",
+            _format_provider_readiness(refresh=args.refresh_provider_readiness),
+        ))
     if not args.skip_pareto:
         parts.append(_section(
             "Phase 1 — Pre-dispatch: apogee_intN Pareto frontier",

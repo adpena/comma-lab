@@ -43,6 +43,7 @@ from tac.preflight import (
     _scan_remote_script_for_plain_pmg_dispatch,
     _scan_shell_for_missing_set_e,
     _scan_shell_for_pipefail_grep_q,
+    _scan_shell_for_pipefail_tee_pipestatus_loss,
     _scan_shell_for_zip_binary,
     _scan_submission_for_provider_or_cpu_score_leakage,
     _scan_test_file_for_dead_imports,
@@ -64,6 +65,7 @@ from tac.preflight import (
     check_no_mps_fallback_default,
     check_no_pack_sparse_delta_approved_outside_promotion_tool,
     check_no_pipefail_grep_q_trap,
+    check_no_pipefail_tee_pipestatus_loss,
     check_no_raw_zip_extractall,
     check_no_scorer_load_at_inflate,
     check_no_shell_zip_binary,
@@ -981,6 +983,40 @@ class TestNoMpsFallbackDefault:
         v = _scan_python_for_mps_fallback(script, root)
         assert v == [], v
 
+    def test_mps_backend_probe_without_cuda_fallback_skips_ast(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        root = _stub_repo(tmp_path)
+        script = root / "experiments" / "mps_probe.py"
+        _write(script, """
+            import torch
+            def probe():
+                return torch.backends.mps.is_available()
+        """)
+
+        def fail_parse(*args, **kwargs):
+            raise AssertionError("pure MPS probe should not force AST parsing")
+
+        monkeypatch.setattr(preflight_mod.ast, "parse", fail_parse)
+
+        v = _scan_python_for_mps_fallback(script, root)
+        assert v == [], v
+
+    def test_torch_alias_cuda_fallback_still_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        script = root / "experiments" / "torch_alias_fallback.py"
+        _write(script, """
+            import torch as th
+
+            def pick_device():
+                return "cuda" if th.cuda.is_available() else "mps"
+        """)
+        v = _scan_python_for_mps_fallback(script, root)
+        assert len(v) == 1, v
+        assert "MPS-fallback" in v[0]
+
     def test_test_files_are_skipped(self, tmp_path: Path) -> None:
         root = _stub_repo(tmp_path)
         script = root / "src" / "tac" / "tests" / "test_dev.py"
@@ -1006,7 +1042,11 @@ class TestNoMpsFallbackDefault:
             import torch
             d = "cuda" if torch.cuda.is_available() else "mps"
         """)
-        v = check_no_mps_fallback_default(repo_root=root, strict=False, verbose=False)
+        v = check_no_mps_fallback_default(
+            repo_root=root,
+            strict=False,
+            verbose=False,
+        )
         assert len(v) >= 1
 
     def test_source_index_path_catches_formatted_cuda_attr(
@@ -1018,8 +1058,10 @@ class TestNoMpsFallbackDefault:
         root = _stub_repo(tmp_path)
         _write(root / "experiments" / "bad_wrapped_cuda_attr.py", """
             import torch
-            d = "cuda" if torch.cuda \\
-                .is_available() else "mps"
+            d = (
+                "cuda" if torch.cuda
+                    .is_available() else "mps"
+            )
         """)
         with source_index_context(root):
             v = check_no_mps_fallback_default(
@@ -1027,6 +1069,115 @@ class TestNoMpsFallbackDefault:
                 strict=False,
                 verbose=False,
             )
+        assert len(v) >= 1
+
+    def test_source_index_shared_scan_reuses_python_predicate_results(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from tac.source_index import source_index_context
+
+        root = _stub_repo(tmp_path)
+        _write(root / "experiments" / "bad_shared_predicates.py", """
+            import argparse
+            import torch
+
+            device = "cuda" if torch.cuda.is_available() else "mps"
+
+            def train(*, eval_roundtrip=False):
+                return device
+
+            parser = argparse.ArgumentParser()
+            parser.add_argument("--no-eval-roundtrip", action="store_true")
+        """)
+        calls = {"mps": 0, "eval": 0, "disable": 0}
+        original_mps = preflight_mod._scan_python_for_mps_fallback
+        original_eval = preflight_mod._scan_python_for_eval_roundtrip_false
+        original_disable = preflight_mod._scan_python_for_disable_eval_roundtrip_flag
+
+        def counting_mps(*args, **kwargs):
+            calls["mps"] += 1
+            return original_mps(*args, **kwargs)
+
+        def counting_eval(*args, **kwargs):
+            calls["eval"] += 1
+            return original_eval(*args, **kwargs)
+
+        def counting_disable(*args, **kwargs):
+            calls["disable"] += 1
+            return original_disable(*args, **kwargs)
+
+        monkeypatch.setattr(preflight_mod, "_scan_python_for_mps_fallback", counting_mps)
+        monkeypatch.setattr(
+            preflight_mod,
+            "_scan_python_for_eval_roundtrip_false",
+            counting_eval,
+        )
+        monkeypatch.setattr(
+            preflight_mod,
+            "_scan_python_for_disable_eval_roundtrip_flag",
+            counting_disable,
+        )
+
+        with source_index_context(root):
+            mps = check_no_mps_fallback_default(
+                repo_root=root,
+                strict=False,
+                verbose=False,
+            )
+            eval_roundtrip = check_no_eval_roundtrip_false(
+                repo_root=root,
+                strict=False,
+                verbose=False,
+            )
+            disable = check_no_disable_eval_roundtrip_flag(
+                repo_root=root,
+                strict=False,
+                verbose=False,
+            )
+
+        assert len(mps) >= 1
+        assert len(eval_roundtrip) >= 1
+        assert len(disable) >= 1
+        assert calls == {"mps": 1, "eval": 1, "disable": 1}
+
+    def test_rg_candidate_prefilter_catches_formatted_cuda_attr(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        root = _stub_repo(tmp_path)
+        bad = root / "experiments" / "bad_wrapped_cuda_attr.py"
+        _write(bad, """
+            import torch
+            d = (
+                "cuda" if torch.cuda
+                    .is_available() else "mps"
+            )
+        """)
+        _write(root / "experiments" / "mps_literal_only.py", """
+            DEVICE = "mps"
+        """)
+        _write(root / "experiments" / "cuda_availability_only.py", """
+            import torch
+            CUDA_OK = torch.cuda.is_available()
+        """)
+
+        candidates = preflight_mod._rg_mps_fallback_candidate_files(
+            root,
+            ["experiments"],
+        )
+        if candidates is None:
+            pytest.skip("ripgrep candidate prefilter unavailable")
+        assert bad.resolve() in candidates
+        assert (
+            root / "experiments" / "mps_literal_only.py"
+        ).resolve() not in candidates
+        assert (
+            root / "experiments" / "cuda_availability_only.py"
+        ).resolve() not in candidates
+
+        v = check_no_mps_fallback_default(repo_root=root, strict=False, verbose=False)
         assert len(v) >= 1
 
     def test_clean_check_cache_skips_mps_rescan(
@@ -1078,8 +1229,13 @@ class TestNoMpsFallbackDefault:
         _write(
             script,
             """
+            import torch
+
+            def pick_device():
+                return "cuda" if torch.cuda.is_available() else "mps"
+
             def train(*, eval_roundtrip=True):
-                return "cuda"
+                return pick_device()
             """,
         )
         preflight_mod._cached_python_text_and_tree.cache_clear()
@@ -1093,7 +1249,7 @@ class TestNoMpsFallbackDefault:
 
         monkeypatch.setattr(preflight_mod.ast, "parse", counting_parse)
 
-        assert _scan_python_for_mps_fallback(script, root) == []
+        assert len(_scan_python_for_mps_fallback(script, root)) >= 1
         assert _scan_python_for_eval_roundtrip_false(script, root) == []
         assert _scan_python_for_disable_eval_roundtrip_flag(script, root) == []
         assert calls == 1
@@ -1358,6 +1514,154 @@ class TestNoPipefailGrepQTrap:
             check_no_pipefail_grep_q_trap(repo_root=root, strict=True, verbose=False)
 
 
+class TestNoPipefailTeePipeStatusLoss:
+    def test_tee_pipestatus_under_errexit_pipefail_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        sh = root / "scripts" / "bad_tee.sh"
+        _write(sh, """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            python remote_eval.py 2>&1 | tee eval.log
+            EVAL_RC=${PIPESTATUS[0]}
+        """)
+        v = _scan_shell_for_pipefail_tee_pipestatus_loss(sh, root)
+        assert len(v) == 1, v
+        assert "PIPESTATUS" in v[0]
+
+    def test_set_plus_e_guarded_tee_pipestatus_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        sh = root / "scripts" / "good_tee.sh"
+        _write(sh, """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            set +e
+            python remote_eval.py 2>&1 | tee eval.log
+            EVAL_RC=${PIPESTATUS[0]}
+            set -e
+            exit "${EVAL_RC}"
+        """)
+        v = _scan_shell_for_pipefail_tee_pipestatus_loss(sh, root)
+        assert v == [], v
+
+    def test_direct_pipestatus_use_before_capture_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        sh = root / "scripts" / "bad_direct_use.sh"
+        _write(sh, """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            set +e
+            python remote_eval.py 2>&1 | tee eval.log
+            if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+                set -e
+                exit "${PIPESTATUS[0]}"
+            fi
+        """)
+        v = _scan_shell_for_pipefail_tee_pipestatus_loss(sh, root)
+        assert len(v) == 1, v
+        assert "immediately" in v[0]
+
+    def test_missing_strict_restore_after_capture_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        sh = root / "scripts" / "bad_no_restore.sh"
+        _write(sh, """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            set +e
+            python remote_eval.py 2>&1 | tee eval.log
+            EVAL_RC=${PIPESTATUS[0]}
+            if [ "${EVAL_RC}" -ne 0 ]; then
+                exit "${EVAL_RC}"
+            fi
+        """)
+        v = _scan_shell_for_pipefail_tee_pipestatus_loss(sh, root)
+        assert len(v) == 1, v
+        assert "restored" in v[0]
+
+    def test_split_pipe_to_tee_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        sh = root / "scripts" / "bad_split_pipe.sh"
+        _write(sh, """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            python remote_eval.py |
+                tee eval.log
+            EVAL_RC=${PIPESTATUS[0]}
+        """)
+        v = _scan_shell_for_pipefail_tee_pipestatus_loss(sh, root)
+        assert len(v) == 1, v
+
+    def test_tee_tail_pipeline_guarded_capture_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        sh = root / "scripts" / "good_tee_tail.sh"
+        _write(sh, """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            set +e
+            python remote_eval.py 2>&1 | tee eval.log | tail -20
+            PIPE_RC=("${PIPESTATUS[@]}")
+            set -e
+            if [ "${PIPE_RC[0]}" -ne 0 ]; then
+                exit "${PIPE_RC[0]}"
+            fi
+        """)
+        v = _scan_shell_for_pipefail_tee_pipestatus_loss(sh, root)
+        assert v == [], v
+
+    def test_set_plus_o_pipefail_guarded_tee_pipestatus_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        sh = root / "scripts" / "good_pipefail_off.sh"
+        _write(sh, """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            set +o pipefail
+            python remote_eval.py 2>&1 | tee eval.log
+            EVAL_RC=${PIPESTATUS[0]}
+            set -o pipefail
+            exit "${EVAL_RC}"
+        """)
+        v = _scan_shell_for_pipefail_tee_pipestatus_loss(sh, root)
+        assert v == [], v
+
+    def test_tee_without_pipestatus_capture_is_not_this_bug_class(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        sh = root / "scripts" / "plain_tee.sh"
+        _write(sh, """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            echo "progress" | tee progress.log
+        """)
+        v = _scan_shell_for_pipefail_tee_pipestatus_loss(sh, root)
+        assert v == [], v
+
+    def test_tee_pipestatus_inside_heredoc_is_not_flagged(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        sh = root / "scripts" / "doc_tee.sh"
+        _write(sh, """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            cat > README <<'EOF'
+            Bad example:
+                python remote_eval.py | tee eval.log
+                EVAL_RC=${PIPESTATUS[0]}
+            EOF
+        """)
+        v = _scan_shell_for_pipefail_tee_pipestatus_loss(sh, root)
+        assert v == [], v
+
+    def test_check_strict_raises(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / "scripts" / "bad_tee.sh", """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            cmd | tee out.log
+            RC=${PIPESTATUS[0]}
+        """)
+        with pytest.raises(MetaBugViolation):
+            check_no_pipefail_tee_pipestatus_loss(
+                repo_root=root, strict=True, verbose=False,
+            )
+
+
 # ─── Check 5: eval_roundtrip=False ───────────────────────────────────────────
 
 
@@ -1396,6 +1700,42 @@ class TestNoEvalRoundtripFalse:
         v = _scan_python_for_eval_roundtrip_false(script, root)
         assert v == [], v
 
+    def test_eval_roundtrip_prefilter_skips_unrelated_false(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        root = _stub_repo(tmp_path)
+        script = root / "experiments" / "good_unrelated_false.py"
+        _write(script, """
+            def train(model, eval_roundtrip: bool = True):
+                unrelated_flag = False
+                return unrelated_flag
+        """)
+
+        def fail_parse(*args, **kwargs):
+            raise AssertionError("unrelated False should not force AST parsing")
+
+        monkeypatch.setattr(preflight_mod.ast, "parse", fail_parse)
+
+        v = _scan_python_for_eval_roundtrip_false(script, root)
+        assert v == [], v
+
+    def test_multiline_default_false_still_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        script = root / "experiments" / "bad_multiline_default.py"
+        _write(script, """
+            def train(
+                model,
+                eval_roundtrip: bool =
+                    False,
+            ):
+                pass
+        """)
+        v = _scan_python_for_eval_roundtrip_false(script, root)
+        assert len(v) == 1, v
+        assert "eval_roundtrip=False" in v[0]
+
     def test_kwonly_default_false_is_caught(self, tmp_path: Path) -> None:
         root = _stub_repo(tmp_path)
         script = root / "experiments" / "kwonly.py"
@@ -1420,6 +1760,10 @@ class TestNoEvalRoundtripFalse:
         _write(root / "experiments" / "bad.py", "go(eval_roundtrip=False)\n")
         with pytest.raises(MetaBugViolation):
             check_no_eval_roundtrip_false(repo_root=root, strict=True, verbose=False)
+
+    def test_shared_meta_scan_parallelizes_large_candidate_sets(self) -> None:
+        assert preflight_mod._meta_python_shared_scan_worker_count(63) == 1
+        assert preflight_mod._meta_python_shared_scan_worker_count(64) > 1
 
 
 # ─── Check 6: scorer load at inflate ─────────────────────────────────────────
@@ -2436,6 +2780,7 @@ class TestPreflightAllInvokesMetaBugChecks:
             "check_shell_set_e_present",
             "check_no_shell_zip_binary",
             "check_no_pipefail_grep_q_trap",
+            "check_no_pipefail_tee_pipestatus_loss",
             "check_no_eval_roundtrip_false",
             "check_no_scorer_load_at_inflate",
             "check_training_scripts_have_auth_eval",
@@ -2485,6 +2830,7 @@ class TestPreflightAllInvokesMetaBugChecks:
             "check_shell_set_e_present",
             "check_no_shell_zip_binary",
             "check_no_pipefail_grep_q_trap",
+            "check_no_pipefail_tee_pipestatus_loss",
             "check_no_eval_roundtrip_false",
             "check_no_scorer_load_at_inflate",
             "check_training_scripts_have_auth_eval",

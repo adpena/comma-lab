@@ -32,6 +32,7 @@ import datetime as _dt
 import fnmatch
 import functools
 import hashlib
+import inspect
 import importlib.util
 import io
 import json
@@ -42,6 +43,7 @@ import signal
 import struct
 import subprocess
 import sys
+import threading
 import time
 import tokenize
 from concurrent.futures import Future, ThreadPoolExecutor
@@ -54,11 +56,12 @@ from pathlib import Path
 import torch
 
 DEFAULT_PREFLIGHT_CLI_TIMEOUT_S = 30.0
+PREFLIGHT_CLI_TIMING_SCHEMA = "pact.tac_preflight_cli_timing.v1"
 _PREFLIGHT_CACHE_SCHEMA = "pact.preflight_cache.v1"
 _PREFLIGHT_ALL_CLEAN_CACHE_VERSION = "preflight_all_clean.v1"
 _PREFLIGHT_DEVELOPER_CLEAN_CACHE_VERSION = "preflight_developer_clean.v1"
 _PUBLIC_PR_PRISTINE_CACHE_VERSION = "public_pr_intake_pristine.v1"
-_NO_MPS_FALLBACK_CLEAN_CACHE_VERSION = "no_mps_fallback_default_clean.v1"
+_NO_MPS_FALLBACK_CLEAN_CACHE_VERSION = "no_mps_fallback_default_clean.v2"
 
 
 def _safe_resolve_path(path: Path) -> Path:
@@ -773,6 +776,38 @@ def _preflight_parallel_enabled() -> bool:
     return value in {"1", "true", "yes", "on"}
 
 
+def _prewarm_preflight_source_index(root: Path) -> None:
+    """Populate shared source-index fact groups before parallel checks fan out.
+
+    The broad preflight checks are intentionally parallel, but many of them ask
+    for overlapping ``*.py`` / ``*.sh`` / ``*.md`` source facts. Without this
+    prewarm, concurrent cache misses can rebuild the same one-pass file facts
+    several times. This keeps policy unchanged: precise checks still run their
+    own validators over conservative candidate sets.
+    """
+
+    source_index = _current_source_index(root)
+    if source_index is None:
+        return
+    groups = (
+        (("experiments", "src/tac", "submissions/robust_current"), "*.py"),
+        (("experiments", "src/tac", "submissions/robust_current"), "*.sh"),
+        (("src/tac", "experiments", "scripts", "submissions"), "*.py"),
+        (("docs", "reports", "scripts", "src/tac", "experiments", "submissions"), "*.py"),
+        (("docs", "reports", "scripts", "src/tac", "experiments", "submissions"), "*.sh"),
+        (("docs", "reports", "scripts", "src/tac", "experiments", "submissions"), "*.md"),
+        (("src/tac/tests", "tests"), "test_*.py"),
+    )
+    for dirs, pattern in groups:
+        if not any((root / d).exists() for d in dirs):
+            continue
+        try:
+            source_index.facts_for_files(dirs, pattern=pattern)
+        except OSError:
+            # The owning check will report the real failure if the path matters.
+            continue
+
+
 @contextmanager
 def _preflight_timeout_after(seconds: float | None) -> Iterator[None]:
     """Raise ``PreflightTimeoutError`` when the CLI exceeds ``seconds``.
@@ -825,6 +860,155 @@ def _preflight_cli_timeout_seconds(
     if timeout_s <= 0:
         raise ValueError("--timeout-s must be > 0")
     return timeout_s
+
+
+def _called_preflight_cli_check_names(func) -> list[str]:
+    """Return preflight/check function names called by a CLI scope runner."""
+
+    try:
+        source = inspect.getsource(func)
+        tree = ast.parse(source)
+    except (OSError, TypeError, SyntaxError):
+        return []
+
+    names: list[str] = []
+    seen: set[str] = set()
+
+    class Visitor(ast.NodeVisitor):
+        def visit_Call(self, node: ast.Call) -> None:
+            callee = node.func
+            if isinstance(callee, ast.Name):
+                name = callee.id
+            elif isinstance(callee, ast.Attribute):
+                name = callee.attr
+            else:
+                name = ""
+            target = globals().get(name)
+            if (
+                name
+                and name not in {func.__name__, "preflight_all", "preflight_developer"}
+                and name not in seen
+                and callable(target)
+                and (name.startswith("check_") or name.startswith("preflight_"))
+            ):
+                seen.add(name)
+                names.append(name)
+            self.generic_visit(node)
+
+    Visitor().visit(tree)
+    return names
+
+
+class _PreflightCliTimingRecorder:
+    """Wrap scope-local checks and record wall-clock timing rows."""
+
+    def __init__(self, *, scope: str, runner) -> None:
+        self.scope = scope
+        self.runner = runner
+        self._originals: dict[str, object] = {}
+        self._rows: list[dict[str, object]] = []
+        self._lock = threading.Lock()
+        self._started = 0.0
+        self._sequence = 0
+
+    def __enter__(self) -> "_PreflightCliTimingRecorder":
+        self._started = time.perf_counter()
+        for name in _called_preflight_cli_check_names(self.runner):
+            func = globals().get(name)
+            if not callable(func):
+                continue
+            self._originals[name] = func
+            globals()[name] = self._wrap(name, func)
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        for name, func in self._originals.items():
+            globals()[name] = func
+        self._originals.clear()
+
+    def _wrap(self, name: str, func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            row_started = time.perf_counter()
+            status = "passed"
+            detail = ""
+            try:
+                return func(*args, **kwargs)
+            except BaseException as exc:
+                status = "failed"
+                detail = f"{type(exc).__name__}: {exc}"
+                raise
+            finally:
+                row_finished = time.perf_counter()
+                with self._lock:
+                    self._sequence += 1
+                    row: dict[str, object] = {
+                        "sequence": self._sequence,
+                        "name": name,
+                        "status": status,
+                        "elapsed_s": round(row_finished - row_started, 6),
+                        "started_offset_s": round(row_started - self._started, 6),
+                        "finished_offset_s": round(row_finished - self._started, 6),
+                        "thread": threading.current_thread().name,
+                    }
+                    if detail:
+                        row["detail"] = detail
+                    self._rows.append(row)
+
+        return wrapper
+
+    def rows(self) -> list[dict[str, object]]:
+        with self._lock:
+            return [dict(row) for row in self._rows]
+
+
+def _build_preflight_cli_timing_payload(
+    *,
+    scope: str,
+    status: str,
+    wall_elapsed_s: float,
+    timeout_s: float | None,
+    allow_slow_preflight: bool,
+    check_codebase: bool,
+    step_rows: list[dict[str, object]],
+    error_type: str = "",
+    error: str = "",
+) -> dict[str, object]:
+    hot_steps = sorted(
+        step_rows,
+        key=lambda row: (-float(row.get("elapsed_s", 0.0)), str(row.get("name", ""))),
+    )
+    serial_elapsed_s = sum(float(row.get("elapsed_s", 0.0)) for row in step_rows)
+    payload: dict[str, object] = {
+        "schema": PREFLIGHT_CLI_TIMING_SCHEMA,
+        "generated_at": _dt.datetime.now(_dt.UTC).isoformat().replace("+00:00", "Z"),
+        "repo_root": str(REPO_ROOT),
+        "scope": scope,
+        "status": status,
+        "check_codebase": check_codebase,
+        "timeout_s": 0 if timeout_s is None else timeout_s,
+        "allow_slow_preflight": allow_slow_preflight,
+        "wall_elapsed_s": round(wall_elapsed_s, 6),
+        "serial_elapsed_s": round(serial_elapsed_s, 6),
+        "step_count": len(step_rows),
+        "failed_step_count": sum(1 for row in step_rows if row.get("status") != "passed"),
+        "slow_step_threshold_s": 0.5,
+        "slow_step_count": sum(
+            1 for row in step_rows if float(row.get("elapsed_s", 0.0)) >= 0.5
+        ),
+        "steps": sorted(step_rows, key=lambda row: int(row.get("sequence", 0))),
+        "hot_steps": hot_steps[:20],
+    }
+    if error_type:
+        payload["error_type"] = error_type
+    if error:
+        payload["error"] = error
+    return payload
+
+
+def _write_preflight_cli_timing_json(path: Path, payload: dict[str, object]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
 
 class PreflightWarning:
@@ -1764,6 +1948,7 @@ def preflight_all(
         _parallel.submit("check_shell_set_e_present", lambda: check_shell_set_e_present(strict=True, verbose=False))
         _parallel.submit("check_no_shell_zip_binary", lambda: check_no_shell_zip_binary(strict=True, verbose=False))
         _parallel.submit("check_no_pipefail_grep_q_trap", lambda: check_no_pipefail_grep_q_trap(strict=True, verbose=False))
+        _parallel.submit("check_no_pipefail_tee_pipestatus_loss", lambda: check_no_pipefail_tee_pipestatus_loss(strict=True, verbose=False))
         _parallel.submit("check_no_eval_roundtrip_false", lambda: check_no_eval_roundtrip_false(strict=True, verbose=False))
         _parallel.submit("check_no_scorer_load_at_inflate", lambda: check_no_scorer_load_at_inflate(strict=True, verbose=False))
         _parallel.submit("check_no_disable_eval_roundtrip_flag", lambda: check_no_disable_eval_roundtrip_flag(strict=True, verbose=False))
@@ -1825,6 +2010,11 @@ def preflight_all(
             "check_no_pipefail_grep_q_trap",
             "[no-pipefail-grep-q]",
             lambda: check_no_pipefail_grep_q_trap(strict=True, verbose=verbose),
+        )
+        _parallel.run(
+            "check_no_pipefail_tee_pipestatus_loss",
+            "[no-pipefail-tee-pipestatus-loss]",
+            lambda: check_no_pipefail_tee_pipestatus_loss(strict=True, verbose=verbose),
         )
         _parallel.run(
             "check_no_eval_roundtrip_false",
@@ -3175,6 +3365,7 @@ def preflight_developer(
         check_no_mps_fallback_default(strict=True, verbose=verbose)
         check_no_eval_roundtrip_false(strict=True, verbose=verbose)
         check_no_disable_eval_roundtrip_flag(strict=True, verbose=verbose)
+        check_no_pipefail_tee_pipestatus_loss(strict=True, verbose=verbose)
         check_training_scripts_use_real_data_in_nonsmoke_mode(
             strict=True, verbose=verbose,
         )
@@ -3469,18 +3660,11 @@ def _python_forbidden_scan_may_match(text: str) -> bool:
     surface files do not contain any relevant token, so AST-parsing them on
     every developer preflight is pure latency.
     """
-    if any(
-        tok in text
-        for tok in (
-            "nohup",
-            "pgrep -f",
-            "/tmp/",
-            "auth_eval",
-            "--device mps",
-            '"mps"',
-            "'mps'",
-        )
-    ):
+    if "nohup" in text or "pgrep -f" in text:
+        return True
+    if "/tmp/" in text and any(tok in text for tok in ("bash", "sh", "python")):
+        return True
+    if "auth_eval" in text and "--device" in text and "mps" in text:
         return True
     ship_tokens = ("cp ", "mv ", "install", "ln -s", "tar", "zip", "scp", "rsync")
     if "_partial" in text and any(tok in text for tok in ship_tokens):
@@ -3492,22 +3676,41 @@ def _python_forbidden_scan_may_match(text: str) -> bool:
     )
 
 
-def _scan_python_for_forbidden(path: Path) -> list[str]:
+_CODEBASE_DRIFT_PY_PREFILTER_RE = (
+    r"nohup|pgrep\s+-[A-Za-z]*f|/tmp/|auth_eval|_partial|\.pt|\.bin"
+)
+
+
+def _scan_python_for_forbidden(path: Path, *, source_index=None) -> list[str]:
     """AST-scan a Python file for forbidden subprocess patterns.
 
     Returns list of human-readable violations.
     """
     violations: list[str] = []
-    text, error = _read_python_text(path)
-    if error is not None or text is None:
-        return []
+    if source_index is not None:
+        try:
+            text = source_index.read_text(path)
+        except (OSError, UnicodeDecodeError):
+            return []
+    else:
+        text, error = _read_python_text(path)
+        if error is not None or text is None:
+            return []
     if not _python_forbidden_scan_may_match(text):
         return []
-    _text, tree, error = _read_python_text_and_tree(path)
-    if isinstance(error, SyntaxError):
-        return [f"{path}: SyntaxError (cannot parse)"]
-    if error is not None or tree is None:
-        return []
+    if source_index is not None:
+        try:
+            tree = source_index.python_ast(path)
+        except SyntaxError:
+            return [f"{path}: SyntaxError (cannot parse)"]
+        except (OSError, UnicodeDecodeError):
+            return []
+    else:
+        _text, tree, error = _read_python_text_and_tree(path)
+        if isinstance(error, SyntaxError):
+            return [f"{path}: SyntaxError (cannot parse)"]
+        if error is not None or tree is None:
+            return []
 
     # R-mps-noise-rule 2026-04-25: NEW. Per CLAUDE.md "MPS auth eval is NOISE",
     # detect any auth_eval invocation hardcoded to --device mps. Allowed only
@@ -3697,11 +3900,24 @@ def check_codebase_drift(
                 for filename in sorted(f for f in filenames if f.endswith(".py")):
                     py_paths.append(base / filename)
 
+    all_py_paths = tuple(py_paths)
+    py_scan_paths: tuple[Path, ...] = all_py_paths
+    rg_py_candidates = _rg_python_files_matching_regex(
+        root,
+        drift_scan_dirs,
+        _CODEBASE_DRIFT_PY_PREFILTER_RE,
+    )
+    if rg_py_candidates is not None:
+        rg_candidate_set = {path.resolve() for path in rg_py_candidates}
+        py_scan_paths = tuple(
+            path for path in all_py_paths if path.resolve() in rg_candidate_set
+        )
+
     scan_paths = tuple(
         sorted(
             {
                 path.resolve()
-                for path in sh_paths + py_paths
+                for path in sh_paths + list(all_py_paths)
                 if not _is_oss_export_mirror_path(path)
                 and not _is_codebase_drift_result_artifact(path, root)
             },
@@ -3798,13 +4014,15 @@ def check_codebase_drift(
     # membership (path components never contain `/`). Round 13 R13-1
     # corrected the previous "across all scanners" claim which would
     # mislead a future reviewer into flagging that scanner as a bug.
-    for py_path in py_paths:
+    for py_path in py_scan_paths:
         if _is_codebase_drift_result_artifact(py_path, root):
             continue
         if _is_oss_export_mirror_path(py_path):
             continue
         n_python_scanned += 1
-        all_violations.extend(_scan_python_for_forbidden(py_path))
+        all_violations.extend(
+            _scan_python_for_forbidden(py_path, source_index=source_index)
+        )
 
     if cache_enabled:
         if all_violations:
@@ -7761,7 +7979,7 @@ def _scan_python_for_mps_fallback(
         text = source_index.read_text(path) if source_index is not None else path.read_text()
     except (OSError, UnicodeDecodeError):
         return []
-    if "mps" not in text or "is_available" not in text:
+    if not _mps_fallback_text_may_match(text):
         return []
     if source_index is not None:
         try:
@@ -7912,6 +8130,224 @@ def _scan_python_for_mps_fallback(
     return violations
 
 
+def _rg_mps_fallback_candidate_files(
+    root: Path,
+    dirs: Sequence[str | Path],
+) -> tuple[Path, ...] | None:
+    """Return fast no-MPS candidate files without requiring contiguous CUDA text.
+
+    The precise scanner is AST-based and handles formatted calls like
+    ``torch.cuda\n    .is_available()``. The prefilter must therefore key on
+    the stable pieces that survive formatting: lowercase ``mps`` plus an
+    availability probe token.
+    """
+
+    mps_candidates = _rg_python_files_matching_regex(root, dirs, r"mps")
+    availability_candidates = _rg_python_files_matching_regex(
+        root,
+        dirs,
+        r"is_available|getattr\(torch|from torch import cuda",
+    )
+    if mps_candidates is None or availability_candidates is None:
+        return None
+    matched = set(mps_candidates)
+    matched.intersection_update(availability_candidates)
+    return tuple(sorted(matched, key=lambda item: item.as_posix()))
+
+
+class _MetaPythonSharedScanResult:
+    """Shared source-index result for overlapping Python meta predicates."""
+
+    __slots__ = (
+        "root",
+        "n_scanned",
+        "mps_fallback_violations",
+        "eval_roundtrip_false_violations",
+        "disable_eval_roundtrip_flag_violations",
+    )
+
+    def __init__(
+        self,
+        *,
+        root: Path,
+        n_scanned: int,
+        mps_fallback_violations: tuple[str, ...],
+        eval_roundtrip_false_violations: tuple[str, ...],
+        disable_eval_roundtrip_flag_violations: tuple[str, ...],
+    ) -> None:
+        self.root = root
+        self.n_scanned = n_scanned
+        self.mps_fallback_violations = mps_fallback_violations
+        self.eval_roundtrip_false_violations = eval_roundtrip_false_violations
+        self.disable_eval_roundtrip_flag_violations = (
+            disable_eval_roundtrip_flag_violations
+        )
+
+
+_META_PYTHON_SHARED_SCAN_CACHE_ATTR = "_tac_meta_python_shared_scan_v1"
+_EVAL_ROUNDTRIP_FALSE_SHAPE_RE = re.compile(
+    r"\beval_roundtrip\b\s*(?::\s*[^=,)]*)?=\s*False\b",
+    re.MULTILINE,
+)
+_MPS_FALLBACK_CUDA_AVAILABILITY_RE = re.compile(
+    r"(?:\bcuda\s*\.\s*is_available\s*\("
+    r"|\b[A-Za-z_][A-Za-z0-9_]*\s*\.\s*cuda\s*\.\s*is_available\s*\("
+    r"|getattr\(\s*torch\s*,\s*['\"]cuda['\"]\s*\)\s*\.\s*is_available\s*\("
+    r"|from\s+torch\s+import\s+cuda)",
+    re.DOTALL,
+)
+_MPS_FALLBACK_VALUE_SHAPE_RE = re.compile(
+    r"(?:else\s*(?:['\"]mps['\"]|[^\n#]{0,200}['\"]mps['\"])"
+    r"|(?:\band\b|\bor\b)\s*['\"]mps['\"]"
+    r"|['\"]mps['\"]\s*(?:\band\b|\bor\b))",
+    re.DOTALL,
+)
+
+
+def _mps_fallback_text_may_match(text: str) -> bool:
+    """Cheap exact-shape prefilter for the AST MPS fallback scanner."""
+
+    return (
+        "mps" in text
+        and "is_available" in text
+        and _MPS_FALLBACK_CUDA_AVAILABILITY_RE.search(text) is not None
+        and _MPS_FALLBACK_VALUE_SHAPE_RE.search(text) is not None
+    )
+
+
+def _meta_python_shared_scan_worker_count(n_candidates: int) -> int:
+    """Return the worker count for the fused Python meta scan."""
+
+    if n_candidates < 64:
+        return 1
+    return min(16, (os.cpu_count() or 1) + 4, n_candidates)
+
+
+def _meta_python_shared_scan(
+    root: Path,
+    source_index,
+    *,
+    facts_rows=None,
+    mps_candidate_paths: set[Path] | None = None,
+) -> _MetaPythonSharedScanResult:
+    """Run overlapping Python meta predicates from one indexed candidate set.
+
+    The MPS fallback, eval_roundtrip=False, and --no-eval-roundtrip checks all
+    target the same repo trees and mostly the same files. SourceIndex already
+    caches file text and ASTs; this helper adds a higher-level result cache so
+    developer preflight opens/parses a candidate once, then reuses the precise
+    predicate results from each public check.
+    """
+
+    resolved_root = Path(root).resolve()
+    cached = getattr(source_index, _META_PYTHON_SHARED_SCAN_CACHE_ATTR, None)
+    if (
+        isinstance(cached, _MetaPythonSharedScanResult)
+        and cached.root == resolved_root
+    ):
+        return cached
+
+    if facts_rows is None:
+        facts_rows = source_index.facts_for_files(_META_PY_SCAN_DIRS, pattern="*.py")
+    if mps_candidate_paths is None:
+        mps_candidate_paths = set(
+            source_index.files_containing_substrings(
+                _META_PY_SCAN_DIRS,
+                pattern="*.py",
+                substrings=("mps", "is_available"),
+                require_all=True,
+            )
+        )
+        mps_candidate_paths.update(
+            facts.path
+            for facts in facts_rows
+            if facts.contains("mps")
+            and (
+                facts.contains("from torch import cuda")
+                or facts.contains("getattr(torch")
+            )
+        )
+    else:
+        mps_candidate_paths = set(mps_candidate_paths)
+    eval_candidate_paths = set(
+        source_index.files_containing_substrings(
+            _META_PY_SCAN_DIRS,
+            pattern="*.py",
+            substrings=("eval_roundtrip", "False"),
+            require_all=True,
+        )
+    )
+    disable_candidate_paths = set(
+        source_index.files_containing_substrings(
+            _META_PY_SCAN_DIRS,
+            pattern="*.py",
+            substrings=("--no-eval-roundtrip",),
+            require_all=True,
+        )
+    )
+    candidate_paths = tuple(
+        sorted(
+            mps_candidate_paths | eval_candidate_paths | disable_candidate_paths,
+            key=lambda item: item.as_posix(),
+        )
+    )
+
+    def _scan_one(path: Path) -> tuple[list[str], list[str], list[str]]:
+        mps_rows: list[str] = []
+        eval_rows: list[str] = []
+        disable_rows: list[str] = []
+        if path in mps_candidate_paths:
+            mps_rows.extend(
+                _scan_python_for_mps_fallback(
+                    path,
+                    resolved_root,
+                    source_index=source_index,
+                )
+            )
+        if path in eval_candidate_paths:
+            eval_rows.extend(
+                _scan_python_for_eval_roundtrip_false(
+                    path,
+                    resolved_root,
+                    source_index=source_index,
+                )
+            )
+        if path in disable_candidate_paths:
+            disable_rows.extend(
+                _scan_python_for_disable_eval_roundtrip_flag(
+                    path,
+                    resolved_root,
+                    source_index=source_index,
+                )
+            )
+        return mps_rows, eval_rows, disable_rows
+
+    workers = _meta_python_shared_scan_worker_count(len(candidate_paths))
+    if workers > 1:
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            rows = list(pool.map(_scan_one, candidate_paths))
+    else:
+        rows = [_scan_one(path) for path in candidate_paths]
+
+    mps_violations: list[str] = []
+    eval_violations: list[str] = []
+    disable_violations: list[str] = []
+    for mps_rows, eval_rows, disable_rows in rows:
+        mps_violations.extend(mps_rows)
+        eval_violations.extend(eval_rows)
+        disable_violations.extend(disable_rows)
+
+    result = _MetaPythonSharedScanResult(
+        root=resolved_root,
+        n_scanned=len(facts_rows),
+        mps_fallback_violations=tuple(mps_violations),
+        eval_roundtrip_false_violations=tuple(eval_violations),
+        disable_eval_roundtrip_flag_violations=tuple(disable_violations),
+    )
+    setattr(source_index, _META_PYTHON_SHARED_SCAN_CACHE_ATTR, result)
+    return result
+
+
 def check_no_mps_fallback_default(
     repo_root: Path | None = None,
     strict: bool = True,
@@ -7933,27 +8369,29 @@ def check_no_mps_fallback_default(
     cache_fingerprint: str | None = None
     source_index = _current_source_index(root)
     if source_index is not None:
-        facts_rows = source_index.facts_for_files(_META_PY_SCAN_DIRS, pattern="*.py")
-        n_scanned = len(facts_rows)
-        candidate_paths = set(
-            source_index.files_containing_substrings(
-                _META_PY_SCAN_DIRS,
-                pattern="*.py",
-                substrings=("mps", "is_available"),
-                require_all=True,
-            )
-        )
-        candidate_paths.update(
-            facts.path
-            for facts in facts_rows
-            if facts.contains("mps")
-            and (
-                facts.contains("from torch import cuda")
-                or facts.contains("getattr(torch")
-            )
-        )
-        candidate_tuple = tuple(sorted(candidate_paths, key=lambda item: item.as_posix()))
         if cache_enabled:
+            facts_rows = source_index.facts_for_files(_META_PY_SCAN_DIRS, pattern="*.py")
+            n_scanned = len(facts_rows)
+            candidate_paths = set(
+                source_index.files_containing_substrings(
+                    _META_PY_SCAN_DIRS,
+                    pattern="*.py",
+                    substrings=("mps", "is_available"),
+                    require_all=True,
+                )
+            )
+            candidate_paths.update(
+                facts.path
+                for facts in facts_rows
+                if facts.contains("mps")
+                and (
+                    facts.contains("from torch import cuda")
+                    or facts.contains("getattr(torch")
+                )
+            )
+            candidate_tuple = tuple(
+                sorted(candidate_paths, key=lambda item: item.as_posix())
+            )
             cache_hit, cache_fingerprint = _clean_check_cache_hit(
                 root,
                 cache_name="check_no_mps_fallback_default",
@@ -7968,20 +8406,18 @@ def check_no_mps_fallback_default(
                         f"{n_scanned} indexed files"
                     )
                 return []
-        for path in candidate_tuple:
-            violations.extend(
-                _scan_python_for_mps_fallback(
-                    path,
-                    root,
-                    source_index=source_index,
-                )
+            shared_scan = _meta_python_shared_scan(
+                root,
+                source_index,
+                facts_rows=facts_rows,
+                mps_candidate_paths=candidate_paths,
             )
+        else:
+            shared_scan = _meta_python_shared_scan(root, source_index)
+            n_scanned = shared_scan.n_scanned
+        violations.extend(shared_scan.mps_fallback_violations)
     else:
-        rg_candidates = _rg_python_files_matching_regex(
-            root,
-            _META_PY_SCAN_DIRS,
-            r"cuda.*is_available|getattr\(torch|from torch import cuda",
-        )
+        rg_candidates = _rg_mps_fallback_candidate_files(root, _META_PY_SCAN_DIRS)
         candidate_tuple = (
             rg_candidates
             if rg_candidates is not None
@@ -8331,6 +8767,258 @@ def check_no_pipefail_grep_q_trap(
     return violations
 
 
+def _shell_uses_errexit_and_pipefail(text: str) -> bool:
+    """Return True when a shell source enables both errexit and pipefail."""
+    has_errexit = False
+    has_pipefail = False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("set "):
+            continue
+        no_comment = stripped.split("#", 1)[0].strip()
+        if "pipefail" in no_comment:
+            has_pipefail = True
+        if "errexit" in no_comment:
+            has_errexit = True
+        m = re.match(r"set\s+-([a-zA-Z]+)", no_comment)
+        if m and "e" in m.group(1):
+            has_errexit = True
+    return has_errexit and has_pipefail
+
+
+def _line_disables_errexit_or_pipefail(line: str) -> bool:
+    return _line_disable_errexit_or_pipefail_mode(line) is not None
+
+
+def _line_disable_errexit_or_pipefail_mode(line: str) -> str | None:
+    no_comment = line.split("#", 1)[0].strip()
+    if re.search(r"\bset\s+\+[a-zA-Z]*e[a-zA-Z]*\b", no_comment):
+        return "errexit"
+    if re.search(r"\bset\s+\+o\s+(?:errexit|pipefail)\b", no_comment):
+        if "pipefail" in no_comment:
+            return "pipefail"
+        return "errexit"
+    return None
+
+
+def _line_enables_errexit(line: str) -> bool:
+    no_comment = line.split("#", 1)[0].strip()
+    if re.search(r"\bset\s+-o\s+errexit\b", no_comment):
+        return True
+    m = re.search(r"\bset\s+-([a-zA-Z]+)\b", no_comment)
+    return bool(m and "e" in m.group(1))
+
+
+def _line_enables_pipefail(line: str) -> bool:
+    no_comment = line.split("#", 1)[0].strip()
+    return bool(re.search(r"\bset\s+-o\s+pipefail\b", no_comment))
+
+
+def _shell_command_block(lines: list[str], start_index: int) -> tuple[int, int, str]:
+    """Return physical-line bounds and normalized text for one shell command."""
+    start = start_index
+    while start > 0:
+        previous = lines[start - 1].split("#", 1)[0].rstrip()
+        if previous.endswith("\\") or previous.endswith("|"):
+            start -= 1
+            continue
+        break
+    end = start_index
+    while end + 1 < len(lines):
+        current = lines[end].split("#", 1)[0].rstrip()
+        if current.endswith("\\") or current.endswith("|"):
+            end += 1
+            continue
+        break
+    normalized = " ".join(line.split("#", 1)[0].strip().rstrip("\\") for line in lines[start:end + 1])
+    return start, end, normalized
+
+
+def _tee_pipeline_guard_mode(lines: list[str], command_start_index: int) -> str | None:
+    """Return guard mode when a nearby active command disables abort."""
+    start = max(0, command_start_index - 12)
+    guard_mode: str | None = None
+    for prior in range(start, command_start_index):
+        stripped = lines[prior].strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        mode = _line_disable_errexit_or_pipefail_mode(lines[prior])
+        if mode is not None:
+            guard_mode = mode
+            continue
+        if _line_enables_errexit(lines[prior]) or _line_enables_pipefail(lines[prior]):
+            guard_mode = None
+    return guard_mode
+
+
+def _tee_pipeline_has_safe_capture_and_restore(
+    lines: list[str],
+    command_end_index: int,
+    guard_mode: str,
+) -> tuple[bool, str]:
+    """Validate the safe result-capture idiom after a guarded tee pipeline."""
+    significant: list[tuple[int, str]] = []
+    for j in range(command_end_index + 1, min(len(lines), command_end_index + 7)):
+        stripped = lines[j].strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        significant.append((j, lines[j]))
+        if len(significant) >= 2:
+            break
+    if not significant:
+        return False, "PIPESTATUS is not captured immediately after the tee pipeline"
+
+    capture_lineno, capture_line = significant[0]
+    no_comment = capture_line.split("#", 1)[0].strip()
+    capture_re = re.compile(
+        r"^(?:local\s+|readonly\s+)?[A-Za-z_][A-Za-z0-9_]*="
+        r"\(?[\"']?\$\{PIPESTATUS(?:\[[0-9@]+\])?\}[\"']?\)?$"
+    )
+    if "PIPESTATUS" not in no_comment or not capture_re.search(no_comment):
+        return (
+            False,
+            f"PIPESTATUS must be assigned to a variable immediately after the "
+            f"tee pipeline before any test/echo/command (line {capture_lineno + 1})",
+        )
+    if len(significant) < 2:
+        return False, "strict mode is not restored after PIPESTATUS capture"
+
+    restore_lineno, restore_line = significant[1]
+    if guard_mode == "pipefail":
+        restored = _line_enables_pipefail(restore_line)
+        restore_text = "set -o pipefail"
+    else:
+        restored = _line_enables_errexit(restore_line)
+        restore_text = "set -e"
+    if not restored:
+        return (
+            False,
+            f"strict mode must be restored with `{restore_text}` immediately "
+            f"after PIPESTATUS capture (line {restore_lineno + 1})",
+        )
+    return True, ""
+
+
+def _tee_pipeline_has_recent_errexit_guard(lines: list[str], lineno: int) -> bool:
+    """True when `set +e`/`set +o pipefail` directly guards the pipeline line."""
+    command_start_lineno = lineno
+    while command_start_lineno > 1 and lines[command_start_lineno - 2].rstrip().endswith("\\"):
+        command_start_lineno -= 1
+    start = max(0, command_start_lineno - 9)
+    guarded = False
+    for prior in lines[start:command_start_lineno - 1]:
+        stripped = prior.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if _line_disables_errexit_or_pipefail(prior):
+            guarded = True
+            continue
+        if _line_enables_errexit(prior):
+            guarded = False
+    return guarded
+
+
+def _scan_shell_for_pipefail_tee_pipestatus_loss(path: Path, repo_root: Path) -> list[str]:
+    """Catch `cmd | tee log; RC=${PIPESTATUS[0]}` under errexit/pipefail.
+
+    With `set -euo pipefail`, a failing upstream command aborts the script at
+    the pipeline before the intended `PIPESTATUS` capture, which loses the
+    remote result and can make a score/eval failure look like infrastructure.
+    Remediation: wrap the pipeline with `set +e`, capture `PIPESTATUS`, then
+    restore `set -e`.
+    """
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    try:
+        text = path.read_text()
+    except (UnicodeDecodeError, FileNotFoundError):
+        return []
+    text = _mask_shell_heredocs(text)
+    if not _shell_uses_errexit_and_pipefail(text):
+        return []
+
+    lines = text.splitlines()
+    tee_pipe_re = re.compile(r"\|\s*tee(?:\s|$)")
+    violations: list[str] = []
+    processed_blocks: set[tuple[int, int]] = set()
+    for idx, line in enumerate(lines):
+        i = idx + 1
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if "PIPESTATUS_PIPEFAIL_OK" in line:
+            continue
+        command_start, command_end, command_text = _shell_command_block(lines, idx)
+        block_key = (command_start, command_end)
+        if block_key in processed_blocks:
+            continue
+        processed_blocks.add(block_key)
+        if "PIPESTATUS_PIPEFAIL_OK" in command_text:
+            continue
+        if not tee_pipe_re.search(command_text):
+            continue
+        pipe_status_window = "\n".join(lines[command_end:min(len(lines), command_end + 6)])
+        if "PIPESTATUS" not in pipe_status_window:
+            continue
+        guard_mode = _tee_pipeline_guard_mode(lines, command_start)
+        if guard_mode is None:
+            violations.append(
+                f"{rel}:{command_start + 1}: `| tee` pipeline captures "
+                f"PIPESTATUS under `set -e`/`pipefail` without an immediate "
+                f"`set +e` or `set +o pipefail` guard. A nonzero upstream "
+                f"command can abort before PIPESTATUS is recorded, losing "
+                f"eval/dispatch custody (feedback_pipefail_tee_pipestatus_loss)."
+            )
+            continue
+        safe, reason = _tee_pipeline_has_safe_capture_and_restore(
+            lines,
+            command_end,
+            guard_mode,
+        )
+        if safe:
+            continue
+        violations.append(
+            f"{rel}:{command_start + 1}: unsafe `| tee` PIPESTATUS capture "
+            f"under `set -e`/`pipefail`: {reason}. Use the exact idiom "
+            f"`set +e`; `cmd | tee log`; `RC=${{PIPESTATUS[0]}}`; `set -e` "
+            f"before branching (feedback_pipefail_tee_pipestatus_loss)."
+        )
+    return violations
+
+
+def check_no_pipefail_tee_pipestatus_loss(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Catch lost-result `tee` pipelines under errexit/pipefail."""
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    for sh in _iter_shell_files(root, _META_SH_SCAN_DIRS):
+        n_scanned += 1
+        violations.extend(_scan_shell_for_pipefail_tee_pipestatus_loss(sh, root))
+
+    if verbose and violations:
+        print(
+            f"  [no-pipefail-tee-pipestatus-loss] {len(violations)} "
+            f"violation(s) across {n_scanned} files:"
+        )
+        for v in violations:
+            print(f"    • {v}")
+    elif verbose:
+        print(f"  [no-pipefail-tee-pipestatus-loss] OK: {n_scanned} files scanned")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "PIPEFAIL + TEE + PIPESTATUS LOST-RESULT violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nWrap intentional result-capturing `cmd | tee log` pipelines "
+            "with `set +e`, capture `${PIPESTATUS[0]}`, then restore `set -e` "
+            "(feedback_pipefail_tee_pipestatus_loss)."
+        )
+    return violations
+
+
 # ── Check 5: eval_roundtrip=False anywhere ────────────────────────────────────
 
 
@@ -8355,6 +9043,8 @@ def _scan_python_for_eval_roundtrip_false(
     except (OSError, UnicodeDecodeError):
         return []
     if "eval_roundtrip" not in text:
+        return []
+    if _EVAL_ROUNDTRIP_FALSE_SHAPE_RE.search(text) is None:
         return []
     if source_index is not None:
         try:
@@ -8422,21 +9112,9 @@ def check_no_eval_roundtrip_false(
     n_scanned = 0
     source_index = _current_source_index(root)
     if source_index is not None:
-        facts_rows = source_index.facts_for_files(_META_PY_SCAN_DIRS, pattern="*.py")
-        n_scanned = len(facts_rows)
-        for path in source_index.files_containing_substrings(
-            _META_PY_SCAN_DIRS,
-            pattern="*.py",
-            substrings=("eval_roundtrip", "False"),
-            require_all=True,
-        ):
-            violations.extend(
-                _scan_python_for_eval_roundtrip_false(
-                    path,
-                    root,
-                    source_index=source_index,
-                )
-            )
+        shared_scan = _meta_python_shared_scan(root, source_index)
+        n_scanned = shared_scan.n_scanned
+        violations.extend(shared_scan.eval_roundtrip_false_violations)
     else:
         for py in _iter_python_files(root, _META_PY_SCAN_DIRS):
             n_scanned += 1
@@ -9195,21 +9873,9 @@ def check_no_disable_eval_roundtrip_flag(
     n_scanned = 0
     source_index = _current_source_index(root)
     if source_index is not None:
-        facts_rows = source_index.facts_for_files(_META_PY_SCAN_DIRS, pattern="*.py")
-        n_scanned = len(facts_rows)
-        for path in source_index.files_containing_substrings(
-            _META_PY_SCAN_DIRS,
-            pattern="*.py",
-            substrings=("--no-eval-roundtrip",),
-            require_all=True,
-        ):
-            violations.extend(
-                _scan_python_for_disable_eval_roundtrip_flag(
-                    path,
-                    root,
-                    source_index=source_index,
-                )
-            )
+        shared_scan = _meta_python_shared_scan(root, source_index)
+        n_scanned = shared_scan.n_scanned
+        violations.extend(shared_scan.disable_eval_roundtrip_flag_violations)
     else:
         for py in _iter_python_files(root, _META_PY_SCAN_DIRS):
             n_scanned += 1
@@ -31587,6 +32253,60 @@ def _worktree_changed_files(repo_root: Path) -> list[str]:
     return sorted(paths)
 
 
+def _worktree_changed_line_numbers(repo_root: Path) -> dict[str, set[int]]:
+    """Return changed NEW-file line numbers for tracked worktree diffs.
+
+    Check #126 enforces "before work starts", so unregistered lane IDs newly
+    introduced in WIP must fail. But a mechanical edit to a legacy lane script
+    should not reactivate historical unregistered lane strings elsewhere in the
+    same file. For tracked worktree files, use the zero-context git diff hunks
+    and scan only modified/additional new-file lines. Untracked files are not
+    present in this map and are intentionally scanned in full by the caller.
+    """
+
+    cmd = ["git", "diff", "--unified=0", "--diff-filter=AMRT", "HEAD"]
+    try:
+        result = subprocess.run(
+            cmd,
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return {}
+    if result.returncode != 0:
+        return {}
+
+    changed: dict[str, set[int]] = {}
+    current_rel: str | None = None
+    hunk_re = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
+    for raw_line in result.stdout.splitlines():
+        if raw_line.startswith("+++ "):
+            target = raw_line[4:].strip()
+            if target == "/dev/null":
+                current_rel = None
+            elif target.startswith("b/"):
+                current_rel = target[2:]
+                changed.setdefault(current_rel, set())
+            else:
+                current_rel = target
+                changed.setdefault(current_rel, set())
+            continue
+        if not raw_line.startswith("@@") or current_rel is None:
+            continue
+        m = hunk_re.match(raw_line)
+        if not m:
+            continue
+        start = int(m.group(1))
+        length = int(m.group(2) or "1")
+        if length <= 0:
+            continue
+        changed[current_rel].update(range(start, start + length))
+    return changed
+
+
 # Path prefixes that are scanned for lane_id references. Per the spec:
 # src/tac/, tools/, experiments/, scripts/.
 _LANE_ID_SCAN_PREFIXES: tuple[str, ...] = (
@@ -31737,6 +32457,7 @@ def check_lane_pre_registered_before_work_starts(
 
     paths_by_source = _commit_introduced_files(root, n_commits)
     worktree_paths = _worktree_changed_files(root)
+    worktree_changed_lines = _worktree_changed_line_numbers(root) if worktree_paths else {}
     if worktree_paths:
         paths_by_source["WORKTREE"] = worktree_paths
     if not paths_by_source:
@@ -31769,10 +32490,18 @@ def check_lane_pre_registered_before_work_starts(
             scanned_files += 1
             lines = text.splitlines()
             scanned_lines += len(lines)
+            tracked_worktree_changed_lines: set[int] | None = None
+            if source == "WORKTREE" and rel in worktree_changed_lines:
+                tracked_worktree_changed_lines = worktree_changed_lines[rel]
             is_test = _is_test_path(rel)
             if is_test and _file_level_fake_lane_waiver_applies(rel, lines):
                 continue
             for lineno, line in enumerate(lines):
+                if (
+                    tracked_worktree_changed_lines is not None
+                    and (lineno + 1) not in tracked_worktree_changed_lines
+                ):
+                    continue
                 # Quick prefilter — skip lines without "lane_" prefix.
                 if "lane_" not in line:
                     continue
@@ -32835,6 +33564,14 @@ def check_no_bare_writes_to_shared_state(
             continue
         # Quick prefilter — file must reference a shared-state marker.
         if not any(m in text for m in _SHARED_STATE_PATH_MARKERS):
+            continue
+        has_write_surface = (
+            _BARE_WRITE_OPEN_RE.search(text)
+            or _BARE_WRITE_TEXT_RE.search(text)
+            or _BARE_WRITE_BYTES_RE.search(text)
+            or _BARE_OS_REPLACE_RE.search(text)
+        )
+        if not has_write_surface:
             continue
         scanned_files += 1
         shared_vars = _bare_write_collect_shared_vars(text)
@@ -36668,8 +37405,26 @@ if __name__ == "__main__":
             "developer timeout. Do not use for routine edit/green loops."
         ),
     )
+    parser.add_argument(
+        "--timings-json",
+        type=Path,
+        default=None,
+        help=(
+            "Write a JSON timing profile for this tac.preflight CLI run. "
+            "Useful for keeping the dev scope under 30s and finding "
+            "broad-scan regressions."
+        ),
+    )
     args = parser.parse_args()
 
+    status = "passed"
+    error_type = ""
+    error = ""
+    exit_code = 0
+    timeout_s: float | None = None
+    runner = preflight_developer
+    cli_started = time.perf_counter()
+    recorder: _PreflightCliTimingRecorder | None = None
     try:
         # R38 fixed the old artifact-only CLI by routing through
         # preflight_all. Catalog #145 was later superseded by the 2026-05-09
@@ -36701,8 +37456,9 @@ if __name__ == "__main__":
             )
         # The CLI adds a hard DX budget: routine preflight must be fast, or
         # fail loudly and force profiling instead of silently taxing every edit.
-        with _preflight_timeout_after(timeout_s):
-            runner = preflight_developer if args.scope == "dev" else preflight_all
+        runner = preflight_developer if args.scope == "dev" else preflight_all
+        recorder = _PreflightCliTimingRecorder(scope=args.scope, runner=runner)
+        with recorder, _preflight_timeout_after(timeout_s):
             runner(
                 profile_name=args.profile,
                 profile_arch=profile_arch,
@@ -36717,5 +37473,25 @@ if __name__ == "__main__":
         print("\nPREFLIGHT PASSED")
     except (PreflightError, ArityViolation, FilenameContractError,
             CodebaseDriftError, LoaderFormatSafetyError) as e:
+        status = "failed"
+        error_type = type(e).__name__
+        error = str(e)
+        exit_code = 1
         print(f"\nPREFLIGHT FAILED: {e}", file=sys.stderr)
-        sys.exit(1)
+    finally:
+        if args.timings_json is not None:
+            payload = _build_preflight_cli_timing_payload(
+                scope=args.scope,
+                status=status,
+                wall_elapsed_s=time.perf_counter() - cli_started,
+                timeout_s=timeout_s,
+                allow_slow_preflight=args.allow_slow_preflight,
+                check_codebase=not args.no_codebase,
+                step_rows=recorder.rows() if recorder is not None else [],
+                error_type=error_type,
+                error=error,
+            )
+            _write_preflight_cli_timing_json(args.timings_json, payload)
+            stream = sys.stderr if exit_code else sys.stdout
+            print(f"Timing profile JSON: {args.timings_json}", file=stream)
+    sys.exit(exit_code)

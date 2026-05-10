@@ -38,6 +38,7 @@ def test_briefing_runs_all_three_phases():
     proc = _run("--top", "3")
     assert "Dispatch claim coordination" in proc.stdout
     assert "claim_lane_dispatch.py summary" in proc.stdout
+    assert "Cloud provider readiness" in proc.stdout
     assert "Phase 1" in proc.stdout
     assert "Phase 2" in proc.stdout
     assert "Phase 3" in proc.stdout
@@ -80,6 +81,8 @@ def test_briefing_json_composite_has_all_three_keys():
     proc = _run("--json", "--top", "3")
     out = json.loads(proc.stdout)
     assert out["dispatch_claim_summary"]["schema"] == "pact.dispatch_claim_summary.v1"
+    assert "provider_readiness" in out
+    assert out["provider_readiness"].get("score_claim") is False
     assert "pareto" in out
     assert "dashboard" in out
     assert "reconciler" in out
@@ -218,3 +221,35 @@ def test_dispatch_claim_summary_formats_active_claim(monkeypatch):
     assert "lane_id=lane_a1_cuda" in text
     assert "job=job-123" in text
     assert "platform=lightning" in text
+
+
+def test_provider_readiness_formatter_preserves_proxy_boundary(monkeypatch):
+    mod = _load_briefing_module()
+    monkeypatch.setattr(
+        mod,
+        "_provider_readiness",
+        lambda refresh=False: {
+            "schema": "cloud_provider_readiness_v1",
+            "generated_at_utc": "2026-05-10T00:00:00Z",
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+            "artifact_path": "experiments/results/cloud_provider_readiness_latest.json",
+            "providers": [
+                {
+                    "provider": "kaggle",
+                    "status": "ready_proxy",
+                    "exact_cuda_evidence_allowed": False,
+                    "proxy_only": True,
+                    "blockers": [],
+                }
+            ],
+        },
+    )
+
+    text = mod._format_provider_readiness()
+
+    assert "not a dispatch or score claim" in text
+    assert "score_claim:      False" in text
+    assert "exact_dispatch:   False" in text
+    assert "kaggle: ready_proxy" in text
+    assert "proxy_only=True" in text

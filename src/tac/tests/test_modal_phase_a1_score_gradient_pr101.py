@@ -40,6 +40,53 @@ def test_modal_phase_a1_dispatcher_is_cuda_auth_eval_only() -> None:
     assert '"auth_eval_advisory_only": False' in text
 
 
+def test_modal_phase_a1_training_receives_pr101_source_dir() -> None:
+    text = _source()
+    train_cmd = text[
+        text.index('str(REMOTE_REPO / "experiments/train_score_gradient_pr101_finetune.py")'):
+        text.index('run = _run_logged_remote(\n            "stage1_train"')
+    ]
+
+    assert '"--pr101-source-dir", str(pr101_source_dir)' in train_cmd
+
+
+def test_modal_phase_a1_uses_strict_contest_cuda_evidence_blockers() -> None:
+    text = _source()
+
+    assert "required_contest_cuda_evidence_blockers" in text
+    assert "score_claim = eval_rc == 0 and not metric_blockers" in text
+    assert '"evidence_grade": "[contest-CUDA]" if score_claim else "[exact-eval incomplete]"' in text
+    assert '"score_claim_valid": score_claim' in text
+    assert '"ready_for_exact_eval_dispatch": False' in text
+    assert '"exact_cuda_eval_complete": score_claim' in text
+    assert '"eval_archive_size_bytes": metrics["archive_size_bytes"]' in text
+    assert '"n_samples": metrics["n_samples"]' in text
+
+
+def test_modal_phase_a1_recover_is_fail_closed_for_score_claims() -> None:
+    text = _source()
+    recover = text[text.index("def recover("):]
+
+    assert "def _recover_evidence_summary(" in text
+    assert "auth_eval_blockers = required_contest_cuda_evidence_blockers(" in text
+    assert "claim_blockers = _unique_strings(auth_eval_blockers + remote_claim_blockers)" in text
+    assert "remote_build_manifest_score_claim_valid_not_true" in text
+    assert 'if evidence["score_claim_valid"]:' in recover
+    assert '"score_claim_valid": evidence["score_claim_valid"]' in recover
+    assert '"exact_cuda_eval_complete": evidence["exact_cuda_eval_complete"]' in recover
+    assert '"claim_blockers": evidence["claim_blockers"]' in recover
+    assert "[exact-eval incomplete]" in recover
+    assert 'score_claim_valid=bool(evidence["score_claim_valid"])' in recover
+    assert 'return 0 if _returncode_is_zero(rc) and evidence["score_claim_valid"] else 1' in recover
+
+
+def test_modal_phase_a1_dispatch_prints_forecast_not_cuda_evidence() -> None:
+    text = _source()
+
+    assert "[planning forecast; not evidence]" in text
+    assert 'predicted band:  [{predicted_low}, {predicted_high}] [contest-CUDA]' not in text
+
+
 def test_modal_phase_a1_claims_lane_before_spawn() -> None:
     text = _source()
 
@@ -94,13 +141,25 @@ def test_modal_phase_a1_recover_closes_terminal_claim_rows() -> None:
     text = _source()
     recover = text[text.index("def recover("):]
 
-    assert "completed_modal_recovered" in text
+    assert "completed_modal_contest_cuda_recovered" in text
+    assert "failed_modal_recovered_no_score_claim" in text
     assert "failed_modal_recovered" in text
     assert "failed_modal_result_cache_expired" in text
     assert "_returncode_is_zero(rc)" in recover
     assert recover.index("result = fc.get(timeout=2)") < recover.index(
         "_close_modal_recovery_claim("
     )
+
+
+def test_modal_phase_a1_timeout_budget_is_not_understated() -> None:
+    text = _source()
+
+    assert "DEFAULT_TIMEOUT_HOURS = 6.0" in text
+    assert "MODAL_TIMEOUT_SAFETY_SECONDS = 10 * 60" in text
+    assert "def _modal_timeout_validation_errors(" in text
+    assert "stage_timeouts_exceed_modal_budget" in text
+    assert "timeout_hours_must_match_modal_function_timeout" in text
+    assert "estimated_cost = HOURLY_RATE_T4_USD * DEFAULT_TIMEOUT_HOURS" in text
 
 
 def test_modal_phase_a1_direct_plan_does_not_spawn_or_claim(tmp_path: Path) -> None:
