@@ -530,3 +530,57 @@ Authority boundary: this is still a guard dispatch. It may become useful
 contest-CUDA evidence only if recover verifies exact archive/runtime custody,
 600 samples, CUDA/T4 hardware, component recomputation, zero auth-eval
 blockers, and `score_claim=true` in the adjudication artifact.
+
+## 2026-05-10T14:33Z T1 e7845 harvest + PR101 proxy packet refresh
+
+T1 Modal full-path smoke
+`t1_balle_modal_fullpath_smoke_e7845e4c_20260510T1410Z` is terminal. Claim
+summary after recovery is `active=0`, `stale_nonterminal=0`.
+
+Result classification:
+
+- exact CUDA auth eval executed on `Tesla T4` with `n_samples=600`;
+- measured diagnostic score was `56.06364706567909`, with `seg_avg=0.50482631`,
+  `pose_avg=2.75759292`, and `archive_size_bytes=495206`;
+- `score_claim=false`;
+- hard blocker:
+  `t1_mounted_code_missing_extracted_archive_runtime_hardening`;
+- this is a full-path diagnostic negative from a pre-hardening code snapshot,
+  not a promotion result and not a T1/Ballé model-family kill.
+
+The positive signal is path coverage: the post-EMA-fix remote path reached
+archive export, packet compile, no-op proof, and contest-CUDA auth eval. The
+negative signal is that one epoch of the current T1 setup is catastrophically
+untrained and that pre-hardening runtime custody is not acceptable evidence.
+
+PR101 Kaggle proxy packet was regenerated under the current bias-only contract:
+
+- runtime packet manifest SHA-256:
+  `c3b20ed70442b0b5128692d02fa7d097edc0807495b495a85cd9c565ed2ce48b`
+- runtime-consumption proof SHA-256:
+  `108b7ab532a8e4ad17d511e17635fdbf4e4584cfba5dc8b1e01d454304b09ecf`
+- routed candidate params: `bias_b`, `bias_g`, `bias_r`
+- legacy proxy-search params `delta_scale`, `latent_delta_scale`, and
+  `smooth_weight` are explicitly ignored rather than treated as candidate
+  bytes.
+
+Promotion blocker verdict remains correct:
+
+```text
+BLOCKED_PROXY_ONLY_NOT_PROMOTABLE
+blockers = [
+  "full_runtime_consumption_not_proven",
+  "no_candidate_contest_cuda_auth_eval",
+]
+```
+
+Next score-lowering order:
+
+1. If relaunching T1, do it only from the hardened head with extracted-archive
+   runtime custody and a bounded guard/full-run choice recorded in the claim.
+2. For PR101 proxy, either run a no-scorer full inflate-body smoke that proves
+   supported bias params execute through the real runtime, or explicitly keep
+   the packet as local static-patch evidence until a fresh exact-CUDA claim is
+   opened.
+3. Keep Kaggle/CMA-ES/Optuna as candidate generators only; exact movement still
+   requires byte-closed archive/runtime custody and contest-CUDA auth eval.

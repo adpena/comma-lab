@@ -211,3 +211,54 @@ Current working-tree hardening closes that bug class for future T1 dispatches:
 Next valid score-lowering dispatch after this active claim closes is a patched
 T1 Modal smoke from the post-hardening commit. Do not duplicate the active
 claim while it is pending.
+
+## 2026-05-10T14:33Z e7845e4c smoke harvest classified
+
+Recovery harvested `t1_balle_modal_fullpath_smoke_e7845e4c_20260510T1410Z`
+terminally and closed the active dispatch claim as
+`completed_t1_training_only_recovered_no_score_claim`.
+
+Custody:
+
+- Modal call id: `fc-01KR93KESQB87VSD2WKE4GYZEC`
+- Harvest summary:
+  `experiments/results/t1_balle_modal_fullpath_smoke_e7845e4c_20260510T1410Z/harvest_summary.json`
+- Harvest summary SHA-256:
+  `adc672d0b13a565882c0ea23c7a0cd76ba28385c90214da3855eec9a954c1bab`
+- Contest CUDA auth-eval JSON SHA-256:
+  `651e0bdf9e792c6322f03e8cac0421f46e964c66686a2d6e92ca9c2582bd2124`
+- Packet compiler manifest SHA-256:
+  `3f0fee9175fbcd9f542de7453c0cb965a6c34db8b5a0284aed5faccf1d6f2290`
+
+Auth-eval did run on `Tesla T4`, `n_samples=600`, and recomputed the formula
+from components, but this is **not score evidence for promotion**:
+
+- `score_claim=false`
+- blocker:
+  `t1_mounted_code_missing_extracted_archive_runtime_hardening`
+- mounted code was pre-`0be54cbf` runtime-custody hardening
+- `promotion_eligible=false`
+- `rank_or_kill_eligible=false`
+
+Measured diagnostic result:
+
+```text
+score_recomputed_from_components = 56.06364706567909
+seg_avg = 0.50482631
+pose_avg = 2.75759292
+archive_size_bytes = 495206
+archive_sha256 = 8cd20cc0caaa2327e4ca5a1b642d9e666bdea926e75fe53ae72e38cca65435e2
+runtime_tree_sha256 = bf459a0f84619c01bf12ff45e2797ecb1850da4bf2be87265e9914e420e8708e
+```
+
+Classification: this is a T1 full-path training/runtime diagnostic negative,
+not a T1/Ballé family kill and not a score-lowering candidate. It proves the
+post-EMA-fix remote path can reach archive export, packet compile, and exact
+CUDA auth eval, but the one-epoch output is catastrophically untrained and the
+run cannot be promoted because the runtime-custody hardening was absent at
+dispatch time.
+
+Next valid T1 score-lowering work is a bounded guard or full dispatch from a
+post-`0be54cbf` commit that keeps the extracted-archive runtime contract,
+small Sinkhorn memory settings, mounted-code custody, and schema blockers at
+zero before any score claim.

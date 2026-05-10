@@ -3,8 +3,11 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from tac.audit_contract import AuditReport
 
 REPO = Path(__file__).resolve().parents[3]
 ALL_LANES = REPO / "tools" / "all_lanes_preflight.py"
@@ -152,3 +155,66 @@ def test_write_timing_profile_creates_parent_and_uses_repo_json_style(tmp_path: 
 
     assert json.loads(path.read_text(encoding="utf-8")) == payload
     assert path.read_text(encoding="utf-8").endswith("\n")
+
+
+@dataclass(frozen=True)
+class _SemanticResult:
+    ok: bool = True
+    contract_ok: bool = True
+    blocking_findings: tuple[object, ...] = ()
+    advisory_findings: tuple[object, ...] = ()
+
+    @property
+    def findings(self) -> tuple[object, ...]:
+        return self.blocking_findings + self.advisory_findings
+
+
+def test_scoped_fast_gates_run_in_process_without_subprocess(monkeypatch) -> None:
+    module = _load_all_lanes_module()
+
+    from tools import audit_semantic_label_contract
+    from tools import audit_tooling_consolidation
+    from tools import check_dispatch_cli_shell_hazards
+
+    def forbidden_subprocess(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("scoped fast gates must not shell out")
+
+    monkeypatch.setattr(module.subprocess, "run", forbidden_subprocess)
+    monkeypatch.setattr(
+        check_dispatch_cli_shell_hazards,
+        "scan_paths",
+        lambda *_args, **_kwargs: [],
+    )
+    monkeypatch.setattr(
+        audit_semantic_label_contract,
+        "audit_semantic_label_contract",
+        lambda **_kwargs: _SemanticResult(),
+    )
+    monkeypatch.setattr(
+        audit_tooling_consolidation,
+        "audit_tooling",
+        lambda *_args, **_kwargs: AuditReport(
+            audit="tooling_consolidation_inventory",
+            readiness_key="ready_for_incremental_consolidation",
+            ready=True,
+            summary={
+                "file_count": 2,
+                "pattern_counts": {
+                    "local_sha256_helper": 0,
+                    "local_json_dump": 0,
+                },
+            },
+        ),
+    )
+
+    assert module._run_dispatch_cli_shell_hazards_gate() == (
+        True,
+        "dispatch CLI/shell hazards: PASS",
+    )
+    semantic_ok, semantic_output = module._run_semantic_label_contract_gate()
+    tooling_ok, tooling_output = module._run_tooling_consolidation_gate()
+
+    assert semantic_ok is True
+    assert "semantic-label contract: PASS" in semantic_output
+    assert tooling_ok is True
+    assert "2 files scanned" in tooling_output

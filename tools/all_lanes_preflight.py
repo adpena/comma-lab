@@ -355,6 +355,30 @@ def _run_gate(name: str, tool: Path, extra_args: list[str] | None = None) -> tup
     return proc.returncode == 0, output
 
 
+def _run_dispatch_cli_shell_hazards_gate() -> tuple[bool, str]:
+    """Run Gate #0 in-process to avoid Python startup cost.
+
+    This preserves the standalone tool's strict behavior: any hazard is a
+    failed gate, and scanner exceptions are allowed to bubble to the step
+    fail-closed wrapper.
+    """
+
+    from tools import check_dispatch_cli_shell_hazards as module
+
+    hazards = module.scan_paths(
+        REPO,
+        scan_paths=module.DEFAULT_SCAN_PATHS,
+        excludes=module.DEFAULT_EXCLUDES,
+    )
+    if hazards:
+        lines = [
+            f"{hazard.path}:{hazard.line}: {hazard.kind}: {hazard.message}"
+            for hazard in hazards
+        ]
+        return False, "\n".join(lines)
+    return True, "dispatch CLI/shell hazards: PASS"
+
+
 def _run_hidden_gems_gate() -> tuple[bool, str]:
     proc = subprocess.run(
         [sys.executable, str(HIDDEN_GEMS_REGISTRY), "--format", "json"],
@@ -410,28 +434,23 @@ def _run_hidden_gem_readiness_gate() -> tuple[bool, str]:
 
 
 def _run_semantic_label_contract_gate() -> tuple[bool, str]:
-    proc = subprocess.run(
-        [
-            sys.executable,
-            str(SEMANTIC_LABEL_AUDIT),
-            "--format",
-            "json",
-            "--fail-on-advisory",
-        ],
-        capture_output=True,
-        text=True,
-    )
-    output = proc.stdout + proc.stderr
-    if proc.returncode != 0:
+    from dataclasses import asdict
+
+    from tools.audit_semantic_label_contract import audit_semantic_label_contract
+
+    result = audit_semantic_label_contract(repo_root=REPO)
+    payload = {
+        "ok": result.ok,
+        "contract_ok": result.contract_ok,
+        "blocking_findings": [asdict(finding) for finding in result.blocking_findings],
+        "advisory_findings": [asdict(finding) for finding in result.advisory_findings],
+        "findings": [asdict(finding) for finding in result.findings],
+    }
+    output = json_text(payload)
+    if payload["ok"] is not True:
         return False, output
-    try:
-        payload = json.loads(proc.stdout)
-    except json.JSONDecodeError as exc:
-        return False, f"semantic-label audit emitted invalid JSON: {exc}\n{output}"
-    if payload.get("ok") is not True:
-        return False, output
-    blocking = len(payload.get("blocking_findings", []))
-    advisory = len(payload.get("advisory_findings", []))
+    blocking = len(payload["blocking_findings"])
+    advisory = len(payload["advisory_findings"])
     if blocking or advisory:
         return False, (
             "semantic-label audit must have zero blocking/advisory findings; "
@@ -590,12 +609,19 @@ def _run_hnerv_scorecard_gate() -> tuple[bool, str]:
 
 
 def _run_tooling_consolidation_gate() -> tuple[bool, str]:
-    proc = subprocess.run(
-        [sys.executable, str(TOOLING_CONSOLIDATION_AUDIT)],
-        capture_output=True,
-        text=True,
-    )
-    return proc.returncode == 0, proc.stdout + proc.stderr
+    from tac.audit_contract import audit_exit_code
+    from tools.audit_tooling_consolidation import DEFAULT_SCAN_ROOTS, audit_tooling
+
+    report = audit_tooling(REPO, DEFAULT_SCAN_ROOTS)
+    payload = report.to_dict()
+    counts = payload["summary"]["pattern_counts"]
+    lines = [
+        "tooling consolidation inventory: PASS "
+        f"({payload['summary']['file_count']} files scanned)"
+    ]
+    for key, count in counts.items():
+        lines.append(f"  - {key}: {count}")
+    return audit_exit_code(report) == 0, "\n".join(lines)
 
 
 def _run_recovered_remote_lanes_gate() -> tuple[bool, str]:
@@ -1264,6 +1290,19 @@ def _geometry_feedback_inventory_failures(payload: dict[str, object]) -> list[st
 
 
 def _json_tool(tool: Path) -> tuple[bool, dict[str, object], str]:
+    if tool == PR91_HPM1_READINESS_AUDIT:
+        try:
+            payload = _direct_pr91_hpm1_readiness_payload()
+        except Exception as exc:
+            return False, {}, f"{tool.name} direct run failed: {type(exc).__name__}: {exc}"
+        return True, payload, json_text(payload)
+    if tool == PR91_HPM1_RUNTIME_CONTRACT_AUDIT:
+        try:
+            payload = _direct_pr91_hpm1_runtime_contract_payload()
+        except Exception as exc:
+            return False, {}, f"{tool.name} direct run failed: {type(exc).__name__}: {exc}"
+        return True, payload, json_text(payload)
+
     proc = subprocess.run([sys.executable, str(tool)], capture_output=True, text=True)
     output = proc.stdout + proc.stderr
     if proc.returncode != 0:
@@ -1273,6 +1312,59 @@ def _json_tool(tool: Path) -> tuple[bool, dict[str, object], str]:
     except json.JSONDecodeError as exc:
         return False, {}, f"{tool.name} emitted invalid JSON: {exc}\n{output}"
     return True, payload, output
+
+
+def _direct_pr91_hpm1_readiness_payload() -> dict[str, object]:
+    """Build the same JSON payload as tools/audit_pr91_hpm1_readiness.py."""
+
+    from tac.pr91_hpm1_codec import DEFAULT_PR91_ARCHIVE, DEFAULT_PR91_RUNTIME_SOURCE_DIR
+    from tac.pr91_hpm1_readiness import audit_pr91_hpm1_readiness
+    from tac.tool_manifest import attach_tool_run_manifest
+
+    payload = audit_pr91_hpm1_readiness(
+        archive=DEFAULT_PR91_ARCHIVE,
+        runtime_source_dir=DEFAULT_PR91_RUNTIME_SOURCE_DIR,
+        parity_report=None,
+    )
+    input_paths = [DEFAULT_PR91_ARCHIVE] if DEFAULT_PR91_ARCHIVE.is_file() else []
+    return attach_tool_run_manifest(
+        payload,
+        tool=PR91_HPM1_READINESS_AUDIT.relative_to(REPO).as_posix(),
+        argv=[],
+        input_paths=input_paths,
+        repo_root=REPO,
+        output_path=None,
+    )
+
+
+def _direct_pr91_hpm1_runtime_contract_payload() -> dict[str, object]:
+    """Build the same JSON payload as tools/audit_pr91_hpm1_runtime_contract.py."""
+
+    from tac.pr91_hpm1_runtime_contract import (
+        DEFAULT_PR91_RELEASE_RUNTIME_SOURCE_DIR,
+        audit_pr91_hpm1_runtime_contract,
+    )
+    from tac.tool_manifest import attach_tool_run_manifest
+
+    payload = audit_pr91_hpm1_runtime_contract(
+        source_dir=DEFAULT_PR91_RELEASE_RUNTIME_SOURCE_DIR
+    )
+    input_paths = [
+        path
+        for path in (
+            DEFAULT_PR91_RELEASE_RUNTIME_SOURCE_DIR / "inflate.py",
+            DEFAULT_PR91_RELEASE_RUNTIME_SOURCE_DIR / "pr86_hpac.py",
+        )
+        if path.is_file()
+    ]
+    return attach_tool_run_manifest(
+        payload,
+        tool=PR91_HPM1_RUNTIME_CONTRACT_AUDIT.relative_to(REPO).as_posix(),
+        argv=[],
+        input_paths=input_paths,
+        repo_root=REPO,
+        output_path=None,
+    )
 
 
 def _load_json_artifact(path: Path) -> tuple[bool, dict[str, object], str]:
@@ -1850,7 +1942,7 @@ def main(argv: list[str] | None = None) -> int:
             "GATE",
             0,
             "dispatch CLI/shell hazards",
-            lambda: _run_gate("dispatch CLI/shell hazards", SHELL_HAZARDS),
+            _run_dispatch_cli_shell_hazards_gate,
             "  ✓ Gate #0: dispatch CLI/shell hazards — PASSED",
             "  ✗ Gate #0: dispatch CLI/shell hazards — FAILED",
         ),

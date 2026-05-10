@@ -1489,6 +1489,11 @@ def preflight_all(
         # evaluate.py on CPU. Keep provider orchestration out of submission
         # surfaces and require CUDA for any helper that scores.
         check_no_submission_provider_or_cpu_score_leakage(strict=True, verbose=verbose)
+        # 2026-05-10: provider-agnostic deploy contracts must stay visible
+        # before any cloud fallback becomes a score-moving path. This keeps
+        # Modal/Kaggle/AWS/Azure/GCP aligned on plan-only defaults, lane
+        # claims, custody manifests, and no proxy/MPS score truth.
+        check_provider_deploy_contracts(strict=True, verbose=verbose)
         # 2026-04-30 Lightning r3 exact-eval failure: CUDA preflight and
         # archive/inflate succeeded, but upstream evaluate.py crashed on
         # missing `nvidia.dali`. Exact-eval runners must bootstrap/probe DALI
@@ -26442,6 +26447,44 @@ def check_modal_cpu_auth_eval_is_advisory_only(
             + "\n\nModal CPU/MPS auth output is diagnostic telemetry only. "
             "Rerun exact archive bytes through contest_auth_eval.py --device "
             "cuda before promotion, ranking, retirement, or stack claims."
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 102b (2026-05-10): provider-agnostic deploy contract registry.
+# ════════════════════════════════════════════════════════════════════════════
+
+
+def check_provider_deploy_contracts(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Validate static provider-agnostic deploy contracts.
+
+    This guard is metadata/importability only. It does not contact Modal,
+    Kaggle, AWS, Azure, GCP, or launch remote jobs.
+    """
+    root = repo_root or REPO_ROOT
+    from tac.deploy.provider_contracts import validate_provider_contracts
+
+    violations = validate_provider_contracts(repo_root=root)
+    if verbose:
+        if violations:
+            print(f"  [provider-deploy-contracts] {len(violations)} violation(s):")
+            for violation in violations:
+                print(f"    • {violation}")
+        else:
+            print("  [provider-deploy-contracts] OK: Modal/Kaggle/AWS/Azure/GCP contracts valid")
+
+    if violations and strict:
+        raise PreflightError(
+            "PROVIDER DEPLOY CONTRACT VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nRemote provider surfaces must remain provider-agnostic, "
+            "plan-only by default, lane-claimed before dispatch, "
+            "custody-manifested, and unable to promote proxy/MPS score truth."
         )
     return violations
 
