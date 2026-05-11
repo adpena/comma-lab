@@ -13,13 +13,19 @@ created here.
 Evidence axes remain separate:
 
 - active internal `[contest-CUDA]` floor:
-  PR103-on-PR106 AC repack, score `0.20898105277982337`, archive bytes
-  `185578`, archive SHA-256
-  `ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce`;
+  PR106 latent sidecar, score `0.20739428085403283`, archive bytes
+  `186808`, archive SHA-256
+  `947b85e8a69db295d4dcf80b0b528639c47839f40f289a2c05b70a2064658b48`,
+  adjudicated at
+  `experiments/results/modal_auth_eval/pr106_latent_sidecar_20260511T150517Z/contest_auth_eval.adjudicated.json`;
 - best exact `[contest-CPU]` public-axis artifact found locally:
   A1 PR101-derived, score `0.19284757743677347`, archive bytes `178262`,
   archive SHA-256
   `87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5`;
+- previous exact `[contest-CUDA]` HNeRV rate anchor:
+  PR103-on-PR106 AC repack, score `0.20898105277982337`, archive bytes
+  `185578`, archive SHA-256
+  `ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce`;
 - PR103 `-16B` clean-runtime packet:
   exact Modal T4 rate-only positive versus PR103 source, but score
   `0.22776742708207615`, so it is not the active CUDA floor.
@@ -58,12 +64,13 @@ CUDA axis, and mistaking a local packet-byte optimum for a global score optimum.
 
 ## Highest-EV execution order
 
-1. **Dual-axis custody for active CUDA floor.**
-   The shortest route to eliminate ambiguity is paired CPU replay of the same
-   PR103-on-PR106 active-floor archive/runtime. The plan artifact is:
-   `experiments/results/dual_device_auth_eval/pr103_pr106_active_floor_plan_20260511.json`.
-   It is dispatch-ready in the planning sense but blocked from pair completion
-   by `missing_contest_cpu_score_artifact`.
+1. **Exploit PR106 latent sidecar on the CUDA floor.**
+   PR106 latent sidecar is now the active exact-CUDA floor. Paired Linux CPU
+   replay exists and is worse (`0.2286802845175232`), with the regression
+   concentrated in PoseNet. This makes the next score-lowering move the
+   radius-2 latent table and byte-closed materialization path, not another
+   PR103-on-PR106 rate-only replay. CPU/CUDA remains packet-specific evidence,
+   never a monotone rule.
 
 2. **T1 Ballé/HNeRV substrate harvest, not duplicate launch.**
    Active Modal call `fc-01KR955JSYQAVTTYZA48VAV7WJ` remains pending for lane
@@ -77,7 +84,7 @@ CUDA axis, and mistaking a local packet-byte optimum for a global score optimum.
    EMA/export discipline, archive builder in loop, strict runtime closure,
    and exact eval custody.
 
-4. **PR103 grammar-aware byte work only on consumed sections.**
+4. **PR103/PR106 grammar-aware byte work only on consumed sections.**
    Generic recompression of `decoder.merged_ac` is low EV because it is near
    entropy saturation. Continue only through parser-proven consumed grammar:
    `decoder.hists`, hardcoded constants, ZIP/header bytes, latent-hi histogram

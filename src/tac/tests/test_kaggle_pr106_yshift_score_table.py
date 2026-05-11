@@ -97,7 +97,7 @@ def test_write_source_bundle_contains_runtime_contract_and_claim_ledger(tmp_path
     assert "submissions/pr106_yshift_sidechannel/inflate.py" in names
 
 
-def test_write_bundle_declares_source_dataset_without_copying_runtime_tree(tmp_path: Path) -> None:
+def test_write_bundle_declares_source_dataset_and_inlines_fresh_source_bundle(tmp_path: Path) -> None:
     archive = tmp_path / "archive.zip"
     archive.write_bytes(b"archive")
     claims = tmp_path / "active_lane_dispatch_claims.md"
@@ -136,10 +136,17 @@ def test_write_bundle_declares_source_dataset_without_copying_runtime_tree(tmp_p
     assert metadata["launch_policy"]["score_claim"] is False
     assert manifest["score_claim"] is False
     assert manifest["schema"] == "kaggle_pr106_yshift_score_table_bundle_v2"
+    assert manifest["inline_source_bundle"] == DEFAULT_SOURCE_BUNDLE_NAME
+    assert (bundle / DEFAULT_SOURCE_BUNDLE_NAME).is_file()
     assert not (bundle / "inputs/pr106_archive.zip").exists()
     assert not (bundle / ".omx/state/active_lane_dispatch_claims.md").exists()
     assert not (bundle / "src/tac/deploy/pr106_yshift.py").exists()
     assert "score_claim" in launcher
+
+    with tarfile.open(bundle / DEFAULT_SOURCE_BUNDLE_NAME, "r:gz") as tar:
+        names = set(tar.getnames())
+    assert ".omx/state/active_lane_dispatch_claims.md" in names
+    assert "inputs/pr106_archive.zip" in names
 
 
 def test_write_bundle_requires_claim_ledger(tmp_path: Path) -> None:

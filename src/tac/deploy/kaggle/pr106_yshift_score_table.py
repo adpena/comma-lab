@@ -103,16 +103,17 @@ def write_source_bundle(
     if output_path.exists():
         output_path.unlink()
 
-    with gzip.GzipFile(filename=str(output_path), mode="wb", mtime=0) as gz:
-        with tarfile.open(fileobj=gz, mode="w") as tar:
-            for rel_path in REQUIRED_REPO_PATHS:
-                source = repo_root / rel_path
-                if not source.exists():
-                    raise FileNotFoundError(f"required Kaggle source-bundle path missing: {rel_path}")
-                add_path_to_tar(tar, source, Path(rel_path))
+    with gzip.GzipFile(filename=str(output_path), mode="wb", mtime=0) as gz, tarfile.open(
+        fileobj=gz, mode="w"
+    ) as tar:
+        for rel_path in REQUIRED_REPO_PATHS:
+            source = repo_root / rel_path
+            if not source.exists():
+                raise FileNotFoundError(f"required Kaggle source-bundle path missing: {rel_path}")
+            add_path_to_tar(tar, source, Path(rel_path))
 
-            add_path_to_tar(tar, claims_path, Path(".omx/state/active_lane_dispatch_claims.md"))
-            add_path_to_tar(tar, pr106_archive, Path(spec.pr106_archive_in_bundle))
+        add_path_to_tar(tar, claims_path, Path(".omx/state/active_lane_dispatch_claims.md"))
+        add_path_to_tar(tar, pr106_archive, Path(spec.pr106_archive_in_bundle))
 
     return {
         "schema": "kaggle_pr106_yshift_source_bundle_v1",
@@ -432,6 +433,13 @@ def write_bundle(
     )
     (bundle_dir / "kernel-metadata.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
     (bundle_dir / "run_kernel.py").write_text(render_launcher(spec), encoding="utf-8")
+    inline_source_manifest = write_source_bundle(
+        repo_root=repo_root,
+        output_path=bundle_dir / spec.source_bundle_name,
+        spec=spec,
+        pr106_archive=pr106_archive,
+        claims_path=claims_path,
+    )
 
     manifest = {
         "schema": "kaggle_pr106_yshift_score_table_bundle_v2",
@@ -439,6 +447,8 @@ def write_bundle(
         "kernel_metadata": "kernel-metadata.json",
         "code_file": "run_kernel.py",
         "dataset_sources": list(dataset_sources(spec)),
+        "inline_source_bundle": spec.source_bundle_name,
+        "inline_source_manifest": inline_source_manifest,
         "source_bundle_name": spec.source_bundle_name,
         "job_name": spec.job_name,
         "lane_id": spec.score_table_spec().lane_id,
@@ -455,8 +465,8 @@ __all__ = [
     "DEFAULT_PR106_ARCHIVE_IN_BUNDLE",
     "DEFAULT_SOURCE_BUNDLE_NAME",
     "DEFAULT_SOURCE_DATASET_SLUG",
-    "KagglePr106YshiftBundleSpec",
     "REQUIRED_REPO_PATHS",
+    "KagglePr106YshiftBundleSpec",
     "render_launcher",
     "write_bundle",
     "write_source_bundle",

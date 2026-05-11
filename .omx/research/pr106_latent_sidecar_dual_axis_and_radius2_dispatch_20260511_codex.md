@@ -121,3 +121,58 @@ Corrective action:
 This remains `score_claim=false`. The yshift score table is only a
 compress-time profiler until harvested, compiled into a runtime-consumed
 sidechannel archive, and adjudicated by exact contest-CUDA auth eval.
+
+## Yshift retry classification: stale embedded claim snapshot
+
+The retry kernel later returned `KernelWorkerStatus.ERROR`. Harvested log:
+
+- log: `reports/raw/kaggle_logs/pr106_yshift_retry_20260511T1526/comma-lab-pr106-yshift-score-table.log`
+- failure:
+
+```text
+ValueError: no active lane claim found for lane_id=lane_pr106_yshift_score_table instance_job_id=kaggle_pr106_yshift_score_table_retry_20260511T1526Z
+```
+
+Classification: `failed_kaggle_embedded_claim_snapshot_stale_no_score_claim`.
+This is a packaging/custody bug, not a yshift method negative. The locally built
+source tar contained the correct retry claim, but Kaggle executed against a
+stale mounted source dataset snapshot whose embedded
+`.omx/state/active_lane_dispatch_claims.md` did not include the retry job row.
+
+Hardening fix:
+
+- `src/tac/deploy/kaggle/pr106_yshift_score_table.py` now inlines the
+  deterministic source bundle into the kernel package itself.
+- `src/tac/deploy/kaggle/pr106_latent_score_table.py` received the same
+  source-bundle inlining so future latent retries do not depend solely on
+  Kaggle dataset-version freshness.
+- The source dataset remains as a fallback mount, but the launcher searches its
+  own kernel directory first, so a pushed kernel and its embedded claim snapshot
+  are atomically paired.
+- This is still `score_claim=false`; a future successful table must be reduced
+  into charged bytes and exact-CUDA adjudicated before any score claim.
+
+Verification:
+
+- `.venv/bin/python -m pytest src/tac/tests/test_kaggle_pr106_yshift_score_table.py src/tac/tests/test_kaggle_pr106_latent_score_table.py src/tac/tests/test_materialize_pr106_latent_score_table_candidate.py -q`:
+  `15 passed`
+- `.venv/bin/python -m ruff check src/tac/deploy/kaggle/pr106_yshift_score_table.py src/tac/deploy/kaggle/pr106_latent_score_table.py src/tac/tests/test_kaggle_pr106_yshift_score_table.py src/tac/tests/test_kaggle_pr106_latent_score_table.py tools/materialize_pr106_latent_score_table_candidate.py src/tac/tests/test_materialize_pr106_latent_score_table_candidate.py`:
+  pass
+
+Retry after hardening:
+
+- terminal old job:
+  `failed_kaggle_embedded_claim_snapshot_stale_no_score_claim`
+- new job id:
+  `kaggle_pr106_yshift_score_table_inline_20260511T154114Z`
+- kernel version: `4`
+- kernel URL:
+  `https://www.kaggle.com/code/adpena/comma-lab-pr106-yshift-score-table`
+- source dataset version message:
+  `PR106 yshift inline source bundle retry 20260511`
+- pushed status: `KernelWorkerStatus.RUNNING`
+
+This retry remains a CUDA table producer only. It is not a score claim and is
+not promotion-eligible until it emits a table, the table is materialized into a
+charged yshift archive, and exact contest-CUDA auth eval adjudicates that
+archive.
