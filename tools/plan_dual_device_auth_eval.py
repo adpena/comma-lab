@@ -255,7 +255,10 @@ def _dual_axis_completion(
         "mechanism_blockers": mechanism_blockers,
         "frontier_or_medal_band_complete": paired_score_complete,
         "global_priority_eligible": paired_score_complete and drift_mechanism_complete,
-        "rank_or_kill_eligible": paired_score_complete,
+        "rank_or_kill_eligible": False,
+        "rank_or_kill_blockers": [
+            "dual_axis_pair_completeness_is_not_adjudicated_rank_or_kill_authority"
+        ],
         "blockers": unique_blockers,
         "notes": [
             "A candidate is paired/complete only when both contest-CUDA and contest-CPU score artifacts are present.",

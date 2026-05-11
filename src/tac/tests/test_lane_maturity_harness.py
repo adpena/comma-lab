@@ -58,7 +58,7 @@ def _empty_gates() -> dict:
 
 
 def _all_true_gates(repo: Path) -> dict:
-    """All 7 gates true with evidence pointing to a file we create in `repo`."""
+    """All gates true with evidence pointing to a file we create in `repo`."""
     f = repo / "src" / "tac" / "fake_module.py"
     f.write_text("# fake\n")
     return {g: {"status": True, "evidence": "src/tac/fake_module.py"} for g in lm.GATES}
@@ -76,6 +76,36 @@ def test_load_registry_happy_path(tmp_path, monkeypatch):
     data = lm.load_registry()
     assert data["schema_version"] == 1
     assert len(data["lanes"]) == 1
+
+
+def test_load_registry_migrates_missing_contest_cpu_gate_fail_closed(
+    tmp_path, monkeypatch
+):
+    repo = _make_repo(tmp_path, [])
+    old_gates = [g for g in lm.GATES if g != "contest_cpu"]
+    data = json.loads((repo / lm.REGISTRY_REL).read_text())
+    data["gate_definitions"] = {g: f"<def of {g}>" for g in old_gates}
+    data.setdefault("level_rules", {})["3"] = "ALL 7 gates satisfied"
+    data["lanes"].append(
+        {
+            "id": "lane_old_l3",
+            "name": "Old L3",
+            "phase": 1,
+            "level": 3,
+            "gates": {g: {"status": True, "evidence": "documented"} for g in old_gates},
+            "notes": "",
+        }
+    )
+    (repo / lm.REGISTRY_REL).write_text(json.dumps(data), encoding="utf-8")
+    monkeypatch.setattr(lm, "REPO_ROOT", repo)
+
+    migrated = lm.load_registry()
+    lane = migrated["lanes"][0]
+
+    assert "contest_cpu" in migrated["gate_definitions"]
+    assert lane["gates"]["contest_cpu"] == {"status": False, "evidence": ""}
+    assert lane["level"] == 2
+    assert lm.validate_registry(migrated, repo_root=repo) == []
 
 
 def test_load_registry_schema_mismatch(tmp_path, monkeypatch):
@@ -126,13 +156,13 @@ def test_compute_level_4_gates_but_missing_required_is_still_l1():
     assert lm.compute_level(g) == 1
 
 
-def test_compute_level_all_seven_is_l3():
+def test_compute_level_all_gates_is_l3():
     g = {gn: {"status": True, "evidence": "x"} for gn in lm.GATES}
     assert lm.compute_level(g) == 3
 
 
-def test_compute_level_six_of_seven_is_l2_or_l1():
-    """6/7 is L2 if both required are present, L1 if not."""
+def test_compute_level_one_missing_gate_is_l2_or_l1():
+    """One missing gate is L2 if both required are present, L1 if not."""
     g = {gn: {"status": True, "evidence": "x"} for gn in lm.GATES}
     g["deploy_runbook"]["status"] = False
     assert lm.compute_level(g) == 2  # required gates still satisfied

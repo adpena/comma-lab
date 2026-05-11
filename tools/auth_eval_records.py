@@ -365,9 +365,9 @@ def parse_auth_eval_payload(payload: dict[str, Any]) -> AuthEvalRecord | None:
     """
     if not isinstance(payload, dict):
         return None
-    provenance = payload.get("provenance")
-    if not isinstance(provenance, dict):
-        provenance = {}
+    raw_provenance = payload.get("provenance")
+    provenance_present = isinstance(raw_provenance, dict)
+    provenance = raw_provenance if provenance_present else {}
     report = _parse_report_text(payload.get("report_text")) or {}
     top_level_seg = _first_float(
         payload.get("avg_segnet_dist"),
@@ -422,11 +422,12 @@ def parse_auth_eval_payload(payload: dict[str, Any]) -> AuthEvalRecord | None:
         payload.get("archive_size"),
         payload.get("bytes"),
     )
-    device = str(provenance.get("device") or payload.get("device") or "")
+    device_value = provenance.get("device") or payload.get("device")
+    device = str(device_value or "")
     samples = _first_int(payload.get("n_samples"), payload.get("samples"), report.get("n_samples"))
     gpu_t4_raw = (
         provenance.get("gpu_t4_match")
-        if "gpu_t4_match" in provenance
+        if provenance_present
         else payload.get("gpu_t4_match")
     )
     gpu_t4_match = _strict_bool(gpu_t4_raw)
@@ -439,12 +440,7 @@ def parse_auth_eval_payload(payload: dict[str, Any]) -> AuthEvalRecord | None:
         samples=samples,
         gpu_t4_match=gpu_t4_match,
     )
-    if axis == "contest_cuda":
-        if "promotion_eligible" not in payload:
-            promotion_eligible = True
-        if "score_claim_valid" not in payload:
-            score_claim_valid = True
-    else:
+    if axis != "contest_cuda":
         promotion_eligible = False
         score_claim_valid = False
     cpu_leaderboard_reproduction_eligible = (
@@ -455,7 +451,7 @@ def parse_auth_eval_payload(payload: dict[str, Any]) -> AuthEvalRecord | None:
     rank_or_kill_eligible = (
         _strict_bool(payload.get("rank_or_kill_eligible"))
         if "rank_or_kill_eligible" in payload
-        else promotion_eligible and axis == "contest_cuda"
+        else False
     ) and promotion_eligible and axis == "contest_cuda"
     evidence_grade = str(payload.get("evidence_grade") or "")
     evidence_grade_norm = evidence_grade.lower()

@@ -41,6 +41,8 @@ def _write_score_artifact(
     }
     if inflated_output_aggregate_sha256 is not None:
         payload["provenance"] = {
+            "device": device,
+            "gpu_t4_match": device == "cuda",
             "inflated_output_manifest": {
                 "path": f"{device}/inflated_outputs_manifest.json",
                 "sha256": f"{device}-manifest-sha",
@@ -226,6 +228,10 @@ def test_dual_plan_marks_pair_complete_only_with_matching_cpu_and_cuda_artifacts
     assert completion["mechanism_blockers"] == ["raw_output_manifest_missing"]
     assert completion["global_priority_eligible"] is False
     assert completion["frontier_or_medal_band_complete"] is True
+    assert completion["rank_or_kill_eligible"] is False
+    assert completion["rank_or_kill_blockers"] == [
+        "dual_axis_pair_completeness_is_not_adjudicated_rank_or_kill_authority"
+    ]
     assert completion["same_archive_sha256"] is True
     assert completion["same_archive_bytes"] is True
     assert completion["same_runtime_tree_sha256"] is True
@@ -281,6 +287,7 @@ def test_dual_plan_compares_raw_output_hashes_without_blocking_score_pair(
     assert completion["drift_mechanism_complete"] is True
     assert completion["mechanism_blockers"] == []
     assert completion["global_priority_eligible"] is True
+    assert completion["rank_or_kill_eligible"] is False
     assert completion["same_inflated_output_aggregate_sha256"] is False
     assert completion["raw_output_pairing_status"] == "different_inflated_outputs"
     assert (

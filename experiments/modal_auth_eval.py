@@ -316,6 +316,19 @@ def _run_auth_eval_inner(
             "score_claim": False,
             "promotion_eligible": False,
         }
+    if scorer_device == "cpu" and inflate_device_policy == "auto":
+        return {
+            "schema_version": 1,
+            "passed": False,
+            "returncode": 13,
+            "error": (
+                "Modal GPU-host CPU scorer diagnostics require explicit "
+                "inflate_device_policy cpu or cuda; use modal_auth_eval_cpu.py "
+                "for pure contest-CPU host eval"
+            ),
+            "score_claim": False,
+            "promotion_eligible": False,
+        }
     diagnostic_only = (
         bool(inflate_env_overrides)
         or inflate_device_policy != "auto"

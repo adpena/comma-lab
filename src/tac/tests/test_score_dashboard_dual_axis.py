@@ -77,7 +77,7 @@ def test_dashboard_ingests_cpu_and_cuda_as_separate_score_axes(tmp_path: Path) -
     assert by_axis["contest_cpu"].promotion_eligible is False
     assert by_axis["contest_cpu"].cpu_leaderboard_reproduction_eligible is True
     assert by_axis["contest_cuda"].promotion_eligible is True
-    assert by_axis["contest_cuda"].rank_or_kill_eligible is True
+    assert by_axis["contest_cuda"].rank_or_kill_eligible is False
 
     payload = json.loads(dashboard._format_json(rows))
     assert payload["axis_counts"] == {"contest_cpu": 1, "contest_cuda": 1}
@@ -190,6 +190,6 @@ def test_dashboard_ignores_forged_top_level_hardware_fields(tmp_path: Path) -> N
     assert forged_cpu.hardware_compliance_blocker == "contest_cpu_requires_linux_x86_64"
 
     forged_cuda = by_dir["forged_cuda"]
-    assert forged_cuda.score_axis == "unknown"
+    assert forged_cuda.score_axis == "cuda"
     assert forged_cuda.promotion_eligible is False
     assert forged_cuda.rank_or_kill_eligible is False

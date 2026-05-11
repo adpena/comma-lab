@@ -310,6 +310,27 @@ def test_validate_contest_result_accepts_cpu_scorer_on_cuda_host_diagnostic(mod)
     ) == []
 
 
+def test_remote_inner_rejects_cpu_scorer_auto_inflate_on_gpu_host(mod):
+    result = mod._run_auth_eval_inner(
+        archive_bytes=b"zip",
+        archive_sha256="a" * 64,
+        archive_size_bytes=3,
+        inflate_sh_rel="inflate.sh",
+        submission_dir_zip_bytes=None,
+        submission_dir_zip_sha256=None,
+        source_repo_commit="unit",
+        inflate_timeout=1,
+        evaluate_timeout=1,
+        scorer_device="cpu",
+        inflate_device_policy="auto",
+    )
+
+    assert result["passed"] is False
+    assert result["returncode"] == 13
+    assert result["score_claim"] is False
+    assert result["promotion_eligible"] is False
+
+
 def test_local_request_metadata_is_non_promotable_shape(mod, tmp_path, monkeypatch):
     archive = tmp_path / "point_004_eps_p2.zip"
     archive.write_bytes(b"archive bytes")

@@ -92,6 +92,11 @@ def _artifact_summary(label: str, path: Path) -> dict[str, Any]:
         "score": record.score,
         "score_recomputed": recomputed,
         "score_axis": record.score_axis,
+        "scorer_device": (
+            payload.get("scorer_device")
+            or prov.get("scorer_device")
+            or record.device
+        ),
         "device": record.device,
         "evidence_grade": record.evidence_grade,
         "score_claim": record.score_claim_valid,
@@ -202,14 +207,15 @@ def format_markdown(analysis: dict[str, Any]) -> str:
         "score_claim: `false`",
         "promotion_eligible: `false`",
         "",
-        "| Label | Axis | Inflate | Score | Pose | Seg | Runtime SHA | Raw SHA |",
-        "| --- | --- | --- | ---: | ---: | ---: | --- | --- |",
+        "| Label | Axis | Scorer | Inflate | Score | Pose | Seg | Runtime SHA | Raw SHA |",
+        "| --- | --- | --- | --- | ---: | ---: | ---: | --- | --- |",
     ]
     for entry in analysis["entries"]:
         lines.append(
-            "| {label} | {axis} | {inflate} | {score} | {pose} | {seg} | {runtime} | {raw} |".format(
+            "| {label} | {axis} | {scorer} | {inflate} | {score} | {pose} | {seg} | {runtime} | {raw} |".format(
                 label=entry["label"],
                 axis=entry.get("score_axis"),
+                scorer=entry.get("scorer_device"),
                 inflate=entry.get("inflate_device_policy"),
                 score=entry.get("score"),
                 pose=entry.get("avg_posenet_dist"),

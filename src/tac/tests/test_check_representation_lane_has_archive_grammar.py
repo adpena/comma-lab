@@ -49,11 +49,12 @@ from tac.preflight import (
 # Lane registry path (constant from tools/lane_maturity.py)
 _REGISTRY_REL = ".omx/state/lane_registry.json"
 
-# Canonical 7-gate set — matches tools/lane_maturity.GATES
+# Canonical gate set — matches tools/lane_maturity.GATES
 _GATES = [
     "impl_complete",
     "real_archive_empirical",
     "contest_cuda",
+    "contest_cpu",
     "strict_preflight",
     "three_clean_review",
     "memory_entry",

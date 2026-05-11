@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 """Lane Maturity Harness — canonical CLI for the lane registry.
 
-Tracks every lane's level (0/1/2/3) status against the 7-gate Level-3
+Tracks every lane's level (0/1/2/3) status against the 8-gate Level-3
 checklist defined in
 `feedback_production_hardened_standard_definition_20260430.md`:
 
   1. impl_complete            — production code lands
   2. real_archive_empirical   — real-archive empirical measurement
   3. contest_cuda             — [contest-CUDA] score, NEVER MPS, NEVER advisory
-  4. strict_preflight         — STRICT preflight check covers the bug class
-  5. three_clean_review       — 3-clean-pass adversarial review counter @ 3/3
-  6. memory_entry             — memory file with empirical result + cross-refs
-  7. deploy_runbook           — remote_lane script + heartbeat + watchdog +
+  4. contest_cpu              — [contest-CPU] Linux x86_64 public-axis replay
+  5. strict_preflight         — STRICT preflight check covers the bug class
+  6. three_clean_review       — 3-clean-pass adversarial review counter @ 3/3
+  7. memory_entry             — memory file with empirical result + cross-refs
+  8. deploy_runbook           — remote_lane script + heartbeat + watchdog +
                                  harvest path
 
 Computed level rules (anything that disagrees with these is a CLI bug):
@@ -19,7 +20,7 @@ Computed level rules (anything that disagrees with these is a CLI bug):
   level 0 — 0 gates satisfied (SKETCH)
   level 1 — 1+ gate satisfied  (SCAFFOLD)
   level 2 — impl_complete AND real_archive_empirical satisfied (INTEGRATION)
-  level 3 — ALL 7 gates satisfied  (FULL PRODUCTION HARDENED + RECURSIVE
+  level 3 — ALL 8 gates satisfied  (FULL PRODUCTION HARDENED + RECURSIVE
             ADVERSARIAL REVIEWED)
 
 NOTE on the level-2-vs-1 tie-break: a lane that has, say, 4 gates satisfied
@@ -67,12 +68,17 @@ AUDIT_LOG_REL = ".omx/state/lane_maturity_audit.log"
 REPORT_REL = "reports/lane_maturity.md"
 
 EXPECTED_SCHEMA_VERSION = 1
+CONTEST_CPU_GATE_DEFINITION = (
+    "[contest-CPU] Linux x86_64 public-axis replay for the same archive/runtime; "
+    "not promotion authority and never macOS/MPS advisory."
+)
 
-# The 7 gates, in fixed display order.
+# The 8 gates, in fixed display order.
 GATES = [
     "impl_complete",
     "real_archive_empirical",
     "contest_cuda",
+    "contest_cpu",
     "strict_preflight",
     "three_clean_review",
     "memory_entry",
@@ -127,7 +133,57 @@ def load_registry(repo_root: Path | None = None) -> dict[str, Any]:
         )
     if "lanes" not in data or not isinstance(data["lanes"], list):
         raise ValueError("registry missing 'lanes' list")
+    _normalize_registry_gates(data)
     return data
+
+
+def _normalize_registry_gates(data: dict[str, Any]) -> None:
+    """Migrate older registries to the current gate set in memory.
+
+    `.omx/state/lane_registry.json` is local custody state and may predate a
+    stricter gate list. Normalizing here keeps operator tools fail-closed under
+    the newest standard without turning every historical registry into a manual
+    rescue task. Newly added gates are always false until explicit evidence is
+    recorded.
+    """
+
+    gate_definitions = data.setdefault("gate_definitions", {})
+    if isinstance(gate_definitions, dict):
+        ordered_defs: dict[str, Any] = {}
+        for gate in GATES:
+            if gate == "contest_cpu":
+                ordered_defs[gate] = gate_definitions.get(gate) or CONTEST_CPU_GATE_DEFINITION
+            elif gate in gate_definitions:
+                ordered_defs[gate] = gate_definitions[gate]
+        for gate, definition in gate_definitions.items():
+            if gate not in ordered_defs:
+                ordered_defs[gate] = definition
+        data["gate_definitions"] = ordered_defs
+
+    level_rules = data.setdefault("level_rules", {})
+    if isinstance(level_rules, dict):
+        level_rules["3"] = (
+            "ALL 8 gates satisfied — FULL PRODUCTION HARDENED + "
+            "RECURSIVE ADVERSARIAL REVIEWED."
+        )
+
+    for lane in data.get("lanes", []):
+        if not isinstance(lane, dict):
+            continue
+        gates = lane.setdefault("gates", {})
+        if not isinstance(gates, dict):
+            continue
+        had_contest_cpu = "contest_cpu" in gates
+        ordered_gates: dict[str, Any] = {}
+        for gate, value in gates.items():
+            ordered_gates[gate] = value
+            if gate == "contest_cuda" and not had_contest_cpu:
+                ordered_gates["contest_cpu"] = {"status": False, "evidence": ""}
+        if not had_contest_cpu and "contest_cpu" not in ordered_gates:
+            ordered_gates["contest_cpu"] = {"status": False, "evidence": ""}
+        if not had_contest_cpu:
+            lane["gates"] = ordered_gates
+            lane["level"] = compute_level(lane["gates"])
 
 
 def save_registry(data: dict[str, Any], repo_root: Path | None = None) -> None:
@@ -188,7 +244,7 @@ def compute_level(gates: dict[str, dict[str, Any]]) -> int:
     """Compute the level from gate status (0/1/2/3).
 
     Rules (binding):
-      - Level 3: ALL 7 gates true.
+      - Level 3: ALL 8 gates true.
       - Level 2: impl_complete AND real_archive_empirical true.
       - Level 1: at least 1 gate true.
       - Level 0: 0 gates true.
@@ -524,6 +580,7 @@ def render_audit_table(data: dict[str, Any]) -> str:
             "impl_complete": "impl",
             "real_archive_empirical": "emp",
             "contest_cuda": "cuda",
+            "contest_cpu": "cpu",
             "strict_preflight": "preflt",
             "three_clean_review": "3clean",
             "memory_entry": "mem",
@@ -598,10 +655,10 @@ def render_report_md(data: dict[str, Any]) -> str:
         lines.append(f"## Phase {phase}")
         lines.append("")
         lines.append(
-            "| Lane | Level | impl | emp | cuda | preflt | 3clean | mem | deploy | Notes |"
+            "| Lane | Level | impl | emp | cuda | cpu | preflt | 3clean | mem | deploy | Notes |"
         )
         lines.append(
-            "|------|-------|------|-----|------|--------|--------|-----|--------|-------|"
+            "|------|-------|------|-----|------|-----|--------|--------|-----|--------|-------|"
         )
         for lane in phases[phase]:
             lvl = lane.get("level", 0)
@@ -617,6 +674,7 @@ def render_report_md(data: dict[str, Any]) -> str:
                 f"{_cell('impl_complete')} | "
                 f"{_cell('real_archive_empirical')} | "
                 f"{_cell('contest_cuda')} | "
+                f"{_cell('contest_cpu')} | "
                 f"{_cell('strict_preflight')} | "
                 f"{_cell('three_clean_review')} | "
                 f"{_cell('memory_entry')} | "

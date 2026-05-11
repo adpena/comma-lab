@@ -19,6 +19,7 @@ def _load_tool():
 def _payload(
     *,
     device: str,
+    scorer_device: str | None = None,
     score_axis: str,
     score: float,
     pose: float,
@@ -36,6 +37,7 @@ def _payload(
         "archive_size_bytes": 185_578,
         "runtime_tree_sha256": runtime_sha,
         "device": device,
+        "scorer_device": scorer_device or device,
         "score_axis": score_axis,
         "n_samples": 600,
         "score_claim": score_claim,
@@ -104,6 +106,7 @@ def test_analyze_device_axis_matrix_preserves_raw_and_runtime_groups(tmp_path: P
     assert analysis["score_claim"] is False
     assert analysis["blockers"] == []
     assert set(analysis["raw_output_groups"]) == {"1" * 64, "2" * 64}
+    assert analysis["entries"][0]["scorer_device"] == "cuda"
     assert analysis["runtime_tree_groups"] == {
         "b" * 64: ["cuda_auto", "cuda_cpu_inflate"]
     }
@@ -137,4 +140,4 @@ def test_matrix_markdown_lists_axes_without_promoting(tmp_path: Path) -> None:
     )
 
     assert "score_claim: `false`" in markdown
-    assert "| cuda_auto | contest_cuda | auto |" in markdown
+    assert "| cuda_auto | contest_cuda | cuda | auto |" in markdown
