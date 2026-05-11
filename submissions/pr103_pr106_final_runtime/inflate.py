@@ -455,6 +455,20 @@ def parse_pr103_pr106_archive(archive_bytes: bytes) -> tuple[dict[str, torch.Ten
     return state_dict, latents, meta
 
 
+def select_inflate_device() -> torch.device:
+    """Return the best available inflate device for this runtime.
+
+    CUDA remains the contest-promotion path for the existing active floor.
+    CPU is required for the public GHA axis, so absence of CUDA is not a
+    runtime-contract failure. The resulting runtime tree must be re-evaluated
+    on both axes before any score promotion.
+    """
+
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    return torch.device("cpu")
+
+
 def inflate(src_bin: str, dst_raw: str) -> int:
     versions = runtime_dependency_versions()
     print(
@@ -464,9 +478,8 @@ def inflate(src_bin: str, dst_raw: str) -> int:
     )
     decoder_sd, latents, meta = parse_pr103_pr106_archive(Path(src_bin).read_bytes())
 
-    if not torch.cuda.is_available():
-        sys.exit("pr103_pr106_final_runtime inflate requires CUDA for contest-faithful output")
-    device = torch.device("cuda")
+    device = select_inflate_device()
+    print(f"[pr103-pr106-final] inflate_device={device.type}", file=sys.stderr)
     decoder = HNeRVDecoder(
         latent_dim=int(meta["latent_dim"]),
         base_channels=int(meta["base_channels"]),

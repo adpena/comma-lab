@@ -53,8 +53,15 @@ The current PR103-on-PR106 active CUDA floor remains:
 - runtime tree SHA-256
   `54db9e5ddee85ae7f486fae900ff3907932efb1c8d3062bc264b0e5c7456d8f6`
 
-It remains missing a CPU pair. The correct next action is a CPU-capable
-PR103-on-PR106 runtime variant with explicit CUDA/CPU output-parity or drift
-classification, followed by fresh paired CPU and CUDA auth evals for the same
-new runtime tree. Do not call this failed attempt a CPU regression, and do not
-promote a CPU pair from this run.
+It remains missing a CPU pair.
+
+## Follow-up implementation
+
+After this failure classification, `submissions/pr103_pr106_final_runtime/inflate.py`
+was changed to select CUDA when available and CPU otherwise. This creates a new
+runtime tree and does not retroactively update the existing CUDA score evidence.
+
+The correct next action is explicit CUDA/CPU output-parity or drift
+classification, followed by fresh paired CPU and CUDA auth evals for the new
+dual-device runtime tree. Do not call the failed GHA run a CPU regression, and
+do not promote a CPU pair from it.

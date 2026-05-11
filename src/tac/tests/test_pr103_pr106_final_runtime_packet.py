@@ -92,6 +92,18 @@ def test_final_runtime_dependency_check_covers_brotli_and_constriction() -> None
     assert versions["constriction"]
 
 
+def test_final_runtime_selects_cpu_when_cuda_is_unavailable(monkeypatch) -> None:
+    monkeypatch.setattr(runtime.torch.cuda, "is_available", lambda: False)
+
+    assert runtime.select_inflate_device().type == "cpu"
+
+
+def test_final_runtime_selects_cuda_when_available(monkeypatch) -> None:
+    monkeypatch.setattr(runtime.torch.cuda, "is_available", lambda: True)
+
+    assert runtime.select_inflate_device().type == "cuda"
+
+
 def test_pyproject_keeps_brotli_and_constriction_as_hard_runtime_deps() -> None:
     text = PYPROJECT.read_text()
     assert re.search(r'"brotli>=1\.0"', text)
