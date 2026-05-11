@@ -122,6 +122,7 @@ data/runs/*/__pycache__/
 #   python src/tac/deploy/kaggle/build_kaggle_kernels.py
 # Then push with: kaggle kernels push -p experiments/kaggle_kernels/<name>
 experiments/kaggle_kernels/
+experiments/kaggle_datasets/
 
 # Python wheel builds
 dist/

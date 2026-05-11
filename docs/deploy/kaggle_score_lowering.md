@@ -37,6 +37,26 @@ the three runtime-consumed bias parameters and declares
 `param_schema=pr101_kaggle_proxy_bias_runtime_params_v1`, so downstream
 materialization cannot silently drop searched parameters.
 
+`pr106_latent_score_table` is the current PR106 latent-sidecar producer. Build
+it with:
+
+```bash
+.venv/bin/python tools/kaggle_build_pr106_latent_score_table.py --write-source-bundle
+```
+
+Then create or version the generated source dataset and push the generated
+script kernel:
+
+```bash
+uv run --with kaggle kaggle datasets create -p experiments/kaggle_datasets/comma-lab-pr106-latent-source
+uv run --with kaggle kaggle datasets version -p experiments/kaggle_datasets/comma-lab-pr106-latent-source -m 'PR106 latent source bundle'
+uv run --with kaggle kaggle kernels push -p experiments/kaggle_kernels/comma-lab-pr106-latent-score-table
+```
+
+Use `datasets create` only for the first upload; use `datasets version` after
+that. The generated source bundle carries the active lane-claim ledger and the
+PR106 archive, and the generated kernel manifest keeps `score_claim=false`.
+
 ## Required Launch Sequence
 
 Use the command strings in each generated `proxy_sweep_build_manifest.json`.
