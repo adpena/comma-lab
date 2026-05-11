@@ -205,6 +205,12 @@ PIP_DEPS = (
     "segmentation-models-pytorch",
     "timm",
 )
+PYTORCH_P100_FALLBACK_DEPS = (
+    "torch==2.4.1+cu121",
+    "torchvision==0.19.1+cu121",
+    "torchaudio==2.4.1+cu121",
+)
+PYTORCH_CU121_INDEX_URL = "https://download.pytorch.org/whl/cu121"
 UPSTREAM_REPO = "https://github.com/commaai/comma_video_compression_challenge.git"
 SOURCE_BUNDLE_NAME = {spec.source_bundle_name!r}
 SOURCE_TREE_NAME = SOURCE_BUNDLE_NAME.removesuffix(".tar.gz")
@@ -228,6 +234,48 @@ def _install_missing_deps() -> None:
             missing.append(dep)
     if missing:
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", *missing])
+
+
+def _ensure_torch_supports_visible_cuda() -> None:
+    import torch
+
+    if not torch.cuda.is_available():
+        return
+    major, minor = torch.cuda.get_device_capability(0)
+    arch = f"sm_{{major}}{{minor}}"
+    arch_list = set(torch.cuda.get_arch_list())
+    if arch in arch_list:
+        return
+    if (major, minor) != (6, 0):
+        raise RuntimeError(
+            f"Visible CUDA device requires {{arch}}, but torch {{torch.__version__}} "
+            f"supports {{sorted(arch_list)}}"
+        )
+    if os.environ.get("PR106_YSHIFT_TORCH_FALLBACK_REEXEC") == "1":
+        raise RuntimeError(
+            f"P100 torch fallback installed but torch {{torch.__version__}} still "
+            f"does not support {{arch}}; arch_list={{sorted(arch_list)}}"
+        )
+    print(
+        f"[kaggle] Installing PyTorch P100 fallback for {{arch}}; "
+        f"current torch={{torch.__version__}} arch_list={{sorted(arch_list)}}",
+        flush=True,
+    )
+    subprocess.check_call([
+        sys.executable,
+        "-m",
+        "pip",
+        "install",
+        "-q",
+        "--force-reinstall",
+        "--no-cache-dir",
+        *PYTORCH_P100_FALLBACK_DEPS,
+        "--index-url",
+        PYTORCH_CU121_INDEX_URL,
+    ])
+    env = os.environ.copy()
+    env["PR106_YSHIFT_TORCH_FALLBACK_REEXEC"] = "1"
+    os.execve(sys.executable, [sys.executable, str(SCRIPT_PATH)], env)
 
 
 def _search_roots() -> list[Path]:
@@ -339,6 +387,7 @@ def main() -> int:
     sys.path.insert(0, str(workspace))
     import tac.deploy.pr106_yshift  # noqa: F401
     _install_missing_deps()
+    _ensure_torch_supports_visible_cuda()
     upstream = _ensure_upstream(workspace)
 
     pythonpath_parts = [
