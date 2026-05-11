@@ -2,18 +2,19 @@
 
 The lane itself is provider-neutral in :mod:`tac.deploy.pr106_yshift`.  This
 module owns only the Kaggle script-kernel packaging: generated launcher source,
-minimal runtime/source copies, private-GPU kernel metadata, and the active
+source-dataset tarball creation, private-GPU kernel metadata, and the active
 dispatch-claim ledger that the CUDA score-table producer verifies before doing
 scorer work.
 """
 from __future__ import annotations
 
+import gzip
 import json
 import shutil
+import tarfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from tac.deploy.cloud_bootstrap import BOOTSTRAP_STUB
 from tac.deploy.claims import active_claim_row
 from tac.deploy.kaggle.kaggle_kernel_builder import build_kernel_metadata
 from tac.deploy.pr106_yshift import (
@@ -23,10 +24,12 @@ from tac.deploy.pr106_yshift import (
 )
 
 DEFAULT_DATASET_SLUG = "comma-lab-private-assets"
+DEFAULT_SOURCE_DATASET_SLUG = "comma-lab-pr106-yshift-source"
 DEFAULT_KERNEL_SLUG = "comma-lab-pr106-yshift-score-table"
 DEFAULT_KERNEL_TITLE = "comma-lab PR106 yshift score-table"
 DEFAULT_JOB_NAME = "kaggle_pr106_yshift_score_table"
 DEFAULT_PR106_ARCHIVE_IN_BUNDLE = "inputs/pr106_archive.zip"
+DEFAULT_SOURCE_BUNDLE_NAME = "pact_pr106_yshift_source_bundle.tar.gz"
 
 REQUIRED_REPO_PATHS: tuple[str, ...] = (
     "src/tac",
@@ -53,12 +56,14 @@ class KagglePr106YshiftBundleSpec:
     slug: str = DEFAULT_KERNEL_SLUG
     title: str = DEFAULT_KERNEL_TITLE
     dataset_ref: str | None = None
+    source_dataset_ref: str | None = None
     candidate_radius: int = 3
     score_step: float = 1.0
     n_pairs: int = 600
     batch_pairs: int = 8
     candidate_batch_size: int = 32
     pr106_archive_in_bundle: str = DEFAULT_PR106_ARCHIVE_IN_BUNDLE
+    source_bundle_name: str = DEFAULT_SOURCE_BUNDLE_NAME
 
     def score_table_spec(self) -> Pr106YshiftScoreTableSpec:
         return Pr106YshiftScoreTableSpec(
@@ -72,32 +77,101 @@ class KagglePr106YshiftBundleSpec:
         )
 
 
-def _copy_tree_filtered(source: Path, destination: Path) -> None:
-    if destination.exists():
-        shutil.rmtree(destination)
-    shutil.copytree(
-        source,
-        destination,
-        ignore=shutil.ignore_patterns(
-            "__pycache__",
-            "*.pyc",
-            ".pytest_cache",
-            ".ruff_cache",
-            ".mypy_cache",
-        ),
+def _dataset_sources(spec: KagglePr106YshiftBundleSpec) -> tuple[str, ...]:
+    sources: list[str] = []
+    for ref in (spec.source_dataset_ref, spec.dataset_ref):
+        if ref and ref not in sources:
+            sources.append(ref)
+    return tuple(sources)
+
+
+def _tar_filter(info: tarfile.TarInfo) -> tarfile.TarInfo:
+    info.uid = 0
+    info.gid = 0
+    info.uname = ""
+    info.gname = ""
+    info.mtime = 0
+    if info.isdir():
+        info.mode = 0o755
+    elif info.isfile():
+        info.mode = 0o644
+    return info
+
+
+def _include_in_source_bundle(path: Path) -> bool:
+    ignored_dirs = {
+        "__pycache__",
+        ".git",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".ruff_cache",
+    }
+    if any(part in ignored_dirs for part in path.parts):
+        return False
+    return path.suffix not in {".pyc", ".pyo"}
+
+
+def _add_path_to_tar(
+    tar: tarfile.TarFile,
+    source: Path,
+    arcname: Path,
+) -> None:
+    if source.is_dir():
+        for path in sorted(source.rglob("*")):
+            rel = path.relative_to(source)
+            if not _include_in_source_bundle(rel):
+                continue
+            tar.add(path, arcname=str(arcname / rel), recursive=False, filter=_tar_filter)
+    else:
+        tar.add(source, arcname=str(arcname), recursive=False, filter=_tar_filter)
+
+
+def write_source_bundle(
+    *,
+    repo_root: Path,
+    output_path: Path,
+    spec: KagglePr106YshiftBundleSpec,
+    pr106_archive: Path,
+    claims_path: Path,
+) -> dict[str, object]:
+    """Write the source/runtime/archive tarball consumed by the Kaggle kernel."""
+
+    spec.score_table_spec().validate()
+    if not claims_path.is_file():
+        raise FileNotFoundError(f"active lane-claim ledger is required: {claims_path}")
+    if not pr106_archive.is_file():
+        raise FileNotFoundError(f"PR106 archive is required: {pr106_archive}")
+    active_claim_row(
+        claims_path,
+        lane_id=spec.score_table_spec().lane_id,
+        instance_job_id=spec.job_name,
     )
 
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    if output_path.exists():
+        output_path.unlink()
 
-def _copy_repo_path(repo_root: Path, rel_path: str, bundle_dir: Path) -> None:
-    source = repo_root / rel_path
-    if not source.exists():
-        raise FileNotFoundError(f"required Kaggle bundle path missing: {rel_path}")
-    destination = bundle_dir / rel_path
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    if source.is_dir():
-        _copy_tree_filtered(source, destination)
-    else:
-        shutil.copy2(source, destination)
+    with gzip.GzipFile(filename=str(output_path), mode="wb", mtime=0) as gz:
+        with tarfile.open(fileobj=gz, mode="w") as tar:
+            for rel_path in REQUIRED_REPO_PATHS:
+                source = repo_root / rel_path
+                if not source.exists():
+                    raise FileNotFoundError(f"required Kaggle source-bundle path missing: {rel_path}")
+                _add_path_to_tar(tar, source, Path(rel_path))
+
+            _add_path_to_tar(tar, claims_path, Path(".omx/state/active_lane_dispatch_claims.md"))
+            _add_path_to_tar(tar, pr106_archive, Path(spec.pr106_archive_in_bundle))
+
+    return {
+        "schema": "kaggle_pr106_yshift_source_bundle_v1",
+        "source_bundle": output_path.name,
+        "required_repo_paths": list(REQUIRED_REPO_PATHS),
+        "claim_ledger": ".omx/state/active_lane_dispatch_claims.md",
+        "pr106_archive": spec.pr106_archive_in_bundle,
+        "job_name": spec.job_name,
+        "lane_id": spec.score_table_spec().lane_id,
+        "score_claim": False,
+    }
 
 
 def render_launcher(spec: KagglePr106YshiftBundleSpec) -> str:
@@ -116,12 +190,11 @@ import os
 import shutil
 import subprocess
 import sys
+import tarfile
 import time
 from pathlib import Path
 
 SCRIPT_PATH = Path(__file__).resolve()
-
-{BOOTSTRAP_STUB}
 
 PIP_DEPS = (
     "av",
@@ -132,6 +205,8 @@ PIP_DEPS = (
     "timm",
 )
 UPSTREAM_REPO = "https://github.com/commaai/comma_video_compression_challenge.git"
+SOURCE_BUNDLE_NAME = {spec.source_bundle_name!r}
+WORKSPACE = Path("/kaggle/working/pact_pr106_yshift_workspace")
 
 
 def _install_missing_deps() -> None:
@@ -151,6 +226,36 @@ def _install_missing_deps() -> None:
             missing.append(dep)
     if missing:
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", *missing])
+
+
+def _find_source_bundle() -> Path:
+    input_root = Path(os.environ.get("CLOUD_INPUT_ROOT", "/kaggle/input"))
+    search_roots = [SCRIPT_PATH.parent, input_root]
+    for root in search_roots:
+        if not root.exists():
+            continue
+        hits = sorted(root.rglob(SOURCE_BUNDLE_NAME))
+        if hits:
+            return hits[0]
+    raise FileNotFoundError(
+        f"required source bundle {{SOURCE_BUNDLE_NAME!r}} not found under "
+        f"{{[str(root) for root in search_roots]}}"
+    )
+
+
+def _safe_extract_tarball(bundle: Path, destination: Path) -> None:
+    if destination.exists():
+        shutil.rmtree(destination)
+    destination.mkdir(parents=True, exist_ok=True)
+    with tarfile.open(bundle, "r:gz") as tar:
+        base = destination.resolve()
+        for member in tar.getmembers():
+            target = destination / member.name
+            try:
+                target.resolve().relative_to(base)
+            except ValueError as exc:
+                raise RuntimeError(f"unsafe source-bundle member: {{member.name}}") from exc
+        tar.extractall(destination)
 
 
 def _ensure_git_lfs() -> None:
@@ -177,15 +282,13 @@ def _ensure_upstream(workspace: Path) -> Path:
 
 
 def main() -> int:
-    workspace = SCRIPT_PATH.parent
     os.environ.setdefault("PYTHONUNBUFFERED", "1")
+    bundle = _find_source_bundle()
+    _safe_extract_tarball(bundle, WORKSPACE)
+    workspace = WORKSPACE
     sys.path.insert(0, str(workspace / "src"))
     sys.path.insert(0, str(workspace))
-    _tac_bootstrap(
-        dataset_hint={DEFAULT_DATASET_SLUG!r},
-        verify_submodule="tac.deploy.pr106_yshift",
-        extra_search_dirs=(str(workspace),),
-    )
+    import tac.deploy.pr106_yshift  # noqa: F401
     _install_missing_deps()
     upstream = _ensure_upstream(workspace)
 
@@ -215,9 +318,10 @@ def main() -> int:
         check=False,
     )
     summary = {{
-        "schema": "kaggle_pr106_yshift_score_table_run_v1",
+        "schema": "kaggle_pr106_yshift_score_table_run_v2",
         "score_claim": False,
         "promotion_requires_adjudication": True,
+        "source_bundle": str(bundle),
         "returncode": result.returncode,
         "job_name": {spec.job_name!r},
         "lane_id": env["PR106_YSHIFT_SCORE_TABLE_LANE_ID"],
@@ -266,7 +370,7 @@ def write_bundle(
         slug=spec.slug,
         title=spec.title,
         code_file="run_kernel.py",
-        dataset_sources=(spec.dataset_ref,) if spec.dataset_ref else (),
+        dataset_sources=_dataset_sources(spec),
         launch_policy={
             "score_claim": False,
             "provider": "kaggle",
@@ -278,25 +382,13 @@ def write_bundle(
     (bundle_dir / "kernel-metadata.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
     (bundle_dir / "run_kernel.py").write_text(render_launcher(spec), encoding="utf-8")
 
-    for rel_path in REQUIRED_REPO_PATHS:
-        _copy_repo_path(repo_root, rel_path, bundle_dir)
-
-    claim_destination = bundle_dir / ".omx" / "state" / "active_lane_dispatch_claims.md"
-    claim_destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(claims_path, claim_destination)
-
-    archive_destination = bundle_dir / spec.pr106_archive_in_bundle
-    archive_destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(pr106_archive, archive_destination)
-
     manifest = {
-        "schema": "kaggle_pr106_yshift_score_table_bundle_v1",
+        "schema": "kaggle_pr106_yshift_score_table_bundle_v2",
         "score_claim": False,
         "kernel_metadata": "kernel-metadata.json",
         "code_file": "run_kernel.py",
-        "required_repo_paths": list(REQUIRED_REPO_PATHS),
-        "claim_ledger": ".omx/state/active_lane_dispatch_claims.md",
-        "pr106_archive": spec.pr106_archive_in_bundle,
+        "dataset_sources": list(_dataset_sources(spec)),
+        "source_bundle_name": spec.source_bundle_name,
         "job_name": spec.job_name,
         "lane_id": spec.score_table_spec().lane_id,
     }
@@ -305,12 +397,16 @@ def write_bundle(
 
 
 __all__ = [
+    "DEFAULT_DATASET_SLUG",
     "DEFAULT_JOB_NAME",
     "DEFAULT_KERNEL_SLUG",
     "DEFAULT_KERNEL_TITLE",
     "DEFAULT_PR106_ARCHIVE_IN_BUNDLE",
+    "DEFAULT_SOURCE_BUNDLE_NAME",
+    "DEFAULT_SOURCE_DATASET_SLUG",
     "KagglePr106YshiftBundleSpec",
     "REQUIRED_REPO_PATHS",
     "render_launcher",
     "write_bundle",
+    "write_source_bundle",
 ]

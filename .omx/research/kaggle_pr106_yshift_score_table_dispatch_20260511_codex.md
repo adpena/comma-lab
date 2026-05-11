@@ -51,3 +51,32 @@ Expected classification after harvest:
 - `completed_negative`: exact CUDA candidate regresses but leaves score-table evidence for trust-region updates.
 - `failed_kaggle_runtime`: dependency, DALI/NVDEC, mount, upstream clone/LFS, or Kaggle environment failure.
 - `failed_kaggle_push`: not applicable; push succeeded.
+
+## v1 terminal update — 2026-05-11T08:37:52Z
+
+`kaggle kernels logs adpena/comma-lab-pr106-yshift-score-table` returned
+`KernelWorkerStatus.ERROR`.
+
+Failure class: `failed_kaggle_runtime`.
+
+Root cause: v1 assumed Kaggle script-kernel upload would expose copied repo
+paths next to `run_kernel.py`. The runtime instead reached the stale mounted
+wheel from `adpena/comma-lab-private-assets`, and that
+`tac-1.0.5-py3-none-any.whl` did not include `tac.deploy.pr106_yshift`.
+
+Terminal claim recorded:
+
+```bash
+.venv/bin/python tools/claim_lane_dispatch.py claim --force \
+  --lane-id lane_pr106_yshift_score_table \
+  --platform kaggle \
+  --instance-job-id kaggle_pr106_yshift_score_table \
+  --agent codex:gpt-5.5 \
+  --status failed_kaggle_runtime \
+  --notes "Kaggle v1 failed: script kernel uploaded only run_kernel.py; source paths unavailable; dataset wheel tac-1.0.5 missing tac.deploy.pr106_yshift"
+```
+
+This is not a method result and not a PR106 y-shift score claim.
+
+Supersession: v2 source-bundle fix is recorded in
+`kaggle_pr106_yshift_score_table_v2_source_bundle_20260511_codex.md`.

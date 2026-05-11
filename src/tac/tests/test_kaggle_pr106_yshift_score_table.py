@@ -3,15 +3,18 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
+import tarfile
 from pathlib import Path
 
 import pytest
 
 from tac.deploy.kaggle.pr106_yshift_score_table import (
     DEFAULT_JOB_NAME,
+    DEFAULT_SOURCE_BUNDLE_NAME,
     KagglePr106YshiftBundleSpec,
     render_launcher,
     write_bundle,
+    write_source_bundle,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -41,17 +44,20 @@ def test_render_launcher_uses_canonical_score_table_env() -> None:
 
     launcher = render_launcher(spec)
 
-    assert "verify_submodule=\"tac.deploy.pr106_yshift\"" in launcher
+    assert DEFAULT_SOURCE_BUNDLE_NAME in launcher
+    assert "pact_pr106_yshift_workspace" in launcher
+    assert "import tac.deploy.pr106_yshift" in launcher
     assert "'PR106_YSHIFT_MODE': 'score_table'" in launcher
     assert "'PR106_YSHIFT_SCORE_TABLE_INSTANCE_JOB_ID': 'kaggle_pr106_yshift_test'" in launcher
     assert "'PR106_YSHIFT_CANDIDATE_RADIUS': '4'" in launcher
     assert "'PR106_YSHIFT_SCORE_STEP': '0.5'" in launcher
     assert "'PR106_YSHIFT_SCORE_TABLE_BATCH_PAIRS': '16'" in launcher
     assert '"bash", \'scripts/remote_lane_pr106_yshift_sidechannel.sh\'' in launcher
+    assert "_safe_extract_tarball(bundle, WORKSPACE)" in launcher
     compile(launcher, "run_kernel.py", "exec")
 
 
-def test_write_bundle_copies_runtime_contract_and_claim_ledger(tmp_path: Path) -> None:
+def test_write_source_bundle_contains_runtime_contract_and_claim_ledger(tmp_path: Path) -> None:
     archive = tmp_path / "archive.zip"
     archive.write_bytes(b"archive")
     claims = tmp_path / "active_lane_dispatch_claims.md"
@@ -66,6 +72,45 @@ def test_write_bundle_copies_runtime_contract_and_claim_ledger(tmp_path: Path) -
         username="alice",
         job_name="kaggle_pr106_yshift_test",
         dataset_ref="alice/comma-lab-private-assets",
+        source_dataset_ref="alice/comma-lab-pr106-yshift-source",
+    )
+
+    manifest = write_source_bundle(
+        repo_root=REPO_ROOT,
+        output_path=bundle / DEFAULT_SOURCE_BUNDLE_NAME,
+        spec=spec,
+        pr106_archive=archive,
+        claims_path=claims,
+    )
+
+    assert manifest["schema"] == "kaggle_pr106_yshift_source_bundle_v1"
+    with tarfile.open(bundle / DEFAULT_SOURCE_BUNDLE_NAME, "r:gz") as tar:
+        names = set(tar.getnames())
+
+    assert "inputs/pr106_archive.zip" in names
+    assert ".omx/state/active_lane_dispatch_claims.md" in names
+    assert "src/tac/deploy/pr106_yshift.py" in names
+    assert "experiments/build_pr106_yshift_score_table.py" in names
+    assert "scripts/remote_lane_pr106_yshift_sidechannel.sh" in names
+    assert "submissions/pr106_yshift_sidechannel/inflate.py" in names
+
+
+def test_write_bundle_declares_source_dataset_without_copying_runtime_tree(tmp_path: Path) -> None:
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive")
+    claims = tmp_path / "active_lane_dispatch_claims.md"
+    claims.write_text(
+        "| timestamp_utc | agent | lane_id | platform | instance_job_id | predicted_eta_utc | status | notes |\n"
+        "| 2026-05-11T00:00:00Z | codex:test | lane_pr106_yshift_score_table | kaggle | "
+        "kaggle_pr106_yshift_test | 2026-05-11T03:00:00Z | active_dispatching | test |\n",
+        encoding="utf-8",
+    )
+    bundle = tmp_path / "bundle"
+    spec = KagglePr106YshiftBundleSpec(
+        username="alice",
+        job_name="kaggle_pr106_yshift_test",
+        dataset_ref="alice/comma-lab-private-assets",
+        source_dataset_ref="alice/comma-lab-pr106-yshift-source",
     )
 
     manifest = write_bundle(
@@ -82,15 +127,16 @@ def test_write_bundle_copies_runtime_contract_and_claim_ledger(tmp_path: Path) -
     assert metadata["id"] == "alice/comma-lab-pr106-yshift-score-table"
     assert metadata["enable_gpu"] is True
     assert metadata["is_private"] is True
-    assert metadata["dataset_sources"] == ["alice/comma-lab-private-assets"]
+    assert metadata["dataset_sources"] == [
+        "alice/comma-lab-pr106-yshift-source",
+        "alice/comma-lab-private-assets",
+    ]
     assert metadata["launch_policy"]["score_claim"] is False
     assert manifest["score_claim"] is False
-    assert (bundle / "inputs/pr106_archive.zip").read_bytes() == b"archive"
-    assert (bundle / ".omx/state/active_lane_dispatch_claims.md").is_file()
-    assert (bundle / "src/tac/deploy/pr106_yshift.py").is_file()
-    assert (bundle / "experiments/build_pr106_yshift_score_table.py").is_file()
-    assert (bundle / "scripts/remote_lane_pr106_yshift_sidechannel.sh").is_file()
-    assert (bundle / "submissions/pr106_yshift_sidechannel/inflate.py").is_file()
+    assert manifest["schema"] == "kaggle_pr106_yshift_score_table_bundle_v2"
+    assert not (bundle / "inputs/pr106_archive.zip").exists()
+    assert not (bundle / ".omx/state/active_lane_dispatch_claims.md").exists()
+    assert not (bundle / "src/tac/deploy/pr106_yshift.py").exists()
     assert "score_claim" in launcher
 
 
