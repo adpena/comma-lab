@@ -2,12 +2,18 @@
 
 ## Evidence anchors
 
+- Active internal `[contest-CUDA]` floor: PR103-on-PR106 AC repack,
+  `0.20898105277982337`, archive bytes `185578`, archive SHA-256
+  `ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce`.
 - A1 `[contest-CPU GHA Linux x86_64]`: `0.19284757743677347`,
   archive bytes `178262`, archive SHA-256
   `87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5`.
 - A1 paired `[contest-CUDA T4]`: `0.2263520234784395`.
 - Do not describe the A1 CPU anchor as CUDA-frontier, gold-equivalent, or
   submission-ready until paired CUDA policy is satisfied.
+- Do not describe the PR103 `-16B` clean-runtime rate-only packet as the active
+  CUDA frontier; it is a small positive versus PR103 source, not a better score
+  than the PR103-on-PR106 active CUDA floor.
 - Current theoretical-floor planning anchor remains approximate:
   `0.140 ± 0.012`; lower movement requires byte-closed substrate/training work,
   not MPS or macOS advisory promotion.
@@ -27,8 +33,9 @@
 
 | Workstream | Status | Exact next action | Evidence and claim gate |
 |---|---|---|---|
+| PR103-on-PR106 active CUDA floor | ACTIVE INTERNAL CUDA FLOOR; CPU PAIR MISSING | Complete dual-axis custody by producing a `[contest-CPU]` artifact for the same archive/runtime. A plan exists at `experiments/results/dual_device_auth_eval/pr103_pr106_active_floor_plan_20260511.json`; dispatch needs a fresh lane claim. | Current CUDA artifact: score `0.20898105277982337`, archive `ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce`, bytes `185578`, runtime tree `54db9e5ddee85ae7f486fae900ff3907932efb1c8d3062bc264b0e5c7456d8f6`; blocker: `missing_contest_cpu_score_artifact`. |
 | A1 CUDA readiness | READY as evaluator/custody baseline; BLOCKED as a new score-lowering config | Use the paired A1 CPU/CUDA anchor to sanity-check future archive candidates. Do not spend on another baseline replay unless it validates infrastructure drift. | For any A1-derived candidate: changed archive bytes/SHA, runtime-tree SHA, exact `inflate.sh` closure, `contest_auth_eval.json` with recomputed component score and `n_samples=600`, hardware tag, logs, and terminal dispatch claim. |
-| PR103 global-combo histogram packet | BYTE-CLOSED LOCAL ARTIFACT; SUPERSEDED BY CLEAN-RUNTIME `-16B` PACKET | Use the `-16B` mid32+latent-hi packet as the current PR103 byte target, and require source-shell-contract source/candidate frame or auth-eval parity before CUDA spend. | Candidate archive `8460014d70855ce9226285f80513d6d743ed23723870a6a38b009cfca40f423e`, `178207` bytes, evaluated runtime tree `59c6a80f62b6bd8d7fab1b7252898b4dc19fa8736a91e2b7ecac6f8bb2e23ee2`; strict pre-submission compliance now passes; remaining blockers: paired CPU/adjudication policy and shell-level inflate parity scope. |
+| PR103 global-combo histogram packet | BYTE-CLOSED LOCAL ARTIFACT; SUPERSEDED BY CLEAN-RUNTIME `-16B` PACKET | Use the `-16B` mid32+latent-hi packet as the current PR103 byte target, and require source-shell-contract source/candidate frame or auth-eval parity before CUDA spend. | Candidate archive `8460014d70855ce9226285f80513d6d743ed23723870a6a38b009cfca40f423e`, `178207` bytes, evaluated runtime tree `59c6a80f62b6bd8d7fab1b7252898b4dc19fa8736a91e2b7ecac6f8bb2e23ee2`; strict pre-submission compliance and shell-level inflate parity now pass; remaining blocker: paired CPU/adjudication policy. |
 | PR101 archive-in-loop A1 training | READY-TO-CLAIM after current WIP/preflight is the code under test | Claim `track1_phase_a1_score_gradient`, run the PR101 source-backed remote driver, build `best_proxy`/`final_ema` archives in-loop, then exact CUDA-eval only byte-closed candidates. | Required artifacts: `archive_builds_manifest.json`, selected archive/inflate path, archive bytes/SHA, PR101 source/archive custody, `canonical_score_source=score_recomputed_from_components`, `avg_posenet_dist`, `avg_segnet_dist`, `rate_unscaled`, `archive_size_bytes`, `n_samples=600`, logs, active then terminal claim. Checkpoint-only non-smoke runs are refused. |
 | T1 Phase 1 Ballé end-to-end | ACTIVE Modal dispatch; BLOCKED for duplicate launch and score promotion | Monitor Modal call `fc-01KR955JSYQAVTTYZA48VAV7WJ` for lane `t1_balle_128k_endtoend`; do not launch a duplicate. Harvest artifacts when it reaches terminal state. | Score promotion remains blocked until auth-eval custody is wired, packet-local runtime/export closure is re-proved, rate-tight state-dict format is selected, exact CUDA auth eval exists, and the claim lifecycle closes terminally. Training artifacts alone are `score_claim=false`. |
 | HNeRV / PR95 / PR101 parity | READY as a gate; BLOCKED for lanes missing the gate | Apply the 13 HNeRV lessons before any representation dispatch: score-aware substrate, export-first archive grammar, eval-roundtrip/YUV6 differentiability, runtime closure, no-op proof, and exact CUDA anchor. | Every lane must declare the 8 archive-grammar fields, prove consumed bytes changed, and carry lane-specific dispatch claims. PR95/PR101 reproduction is useful only when it produces a packet, not just a checkpoint or proxy curve. |
@@ -58,8 +65,8 @@
    - Current candidate: `178207` bytes (`-16B` versus PR103 source) with exact
      source-shell-contract Modal T4 CUDA evidence.
    - Promotion blocker is engineering/custody completion, not lack of byte
-     signal: strict pre-submission compliance now passes; paired
-     CPU/adjudication policy and shell-level inflate parity scope remain open.
+     signal: strict pre-submission compliance and shell-level inflate parity
+     now pass; paired CPU/adjudication policy remains open.
    - Next implementation slice is a reusable source-shell-contract comparator,
      not a
      blind CUDA rerun.
@@ -213,7 +220,8 @@
   not the earlier `-12B` packet. It remains an internal `[contest-CUDA]`
   frontier observation until paired policy/adjudication gates are recorded.
   Strict pre-submission compliance was closed in the `2026-05-11T01:38Z`
-  addendum below.
+  addendum below. Shell-level inflate parity was closed in the
+  `2026-05-11T02:04Z` addendum below.
 - Next PR103 work: extend only grammar-aware transforms with decoder-state or
   full-render parity proof; do not spend exact CUDA on raw stream deletion or
   non-consumed bit edits.
@@ -895,3 +903,35 @@ This is not a new score result; it removes a custody/checker blocker from the
 existing PR103 `-16B` `[contest-CUDA]` rate-only observation. Remaining PR103
 questions are paired CPU/adjudication policy and shell-level parity-scope
 classification.
+
+## 2026-05-11T02:04Z PR103 shell-level parity closure addendum
+
+The PR103 clean-runtime mid32+latent-hi `-16B` packet now has source-vs-candidate
+shell-level inflate output parity through the exact contest shell contract:
+
+`.omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_mid32_plus_latent_hi_candidate/inflate_shell_output_parity_full_cpu.json`
+
+Closure facts:
+
+- `passed=true`;
+- parity method: `exact_inflate_sh_archive_dir_output_dir_file_list`;
+- source archive SHA-256
+  `31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30`;
+- candidate archive SHA-256
+  `8460014d70855ce9226285f80513d6d743ed23723870a6a38b009cfca40f423e`;
+- source and candidate `0.raw` output bytes: `3662409600`;
+- source and candidate `0.raw` SHA-256:
+  `074f834f14ba4611f9358bb0a3f8e729bb43e4ea673be23e2acf85e7448dd1e5`;
+- output mismatches: `[]`;
+- `score_claim=false`, `dispatch_attempted=false`.
+
+The local macOS environment lacks a `python` executable on PATH, while the PR103
+shell contract invokes `python`. The reusable probe therefore used a temporary
+PATH shim to `.venv/bin/python` and recorded that in the proof JSON. The packet
+runtime files were not modified.
+
+This is not a new score result. It removes the shell-parity-scope blocker from
+the existing exact Modal T4 `[contest-CUDA]` rate-only observation. Remaining
+PR103 blocker is paired CPU/adjudication policy; future score-lowering should
+focus on larger training-time substrate work or new grammar-aware transform
+axes, not rerunning this same rate-only packet.
