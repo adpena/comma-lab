@@ -70,6 +70,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import hashlib
+import importlib.util
 import json
 import re
 import shutil
@@ -204,6 +205,44 @@ def sha256_of(path: Path) -> str:
         for chunk in iter(lambda: f.read(1 << 20), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def runtime_dependency_manifest_for_submission(
+    submission_dir: Path | None,
+    *,
+    submission_name: str,
+    repo_root: Path,
+) -> dict[str, Any] | None:
+    """Return the same runtime custody manifest used by contest_auth_eval.
+
+    GitHub Actions only returns ``report.txt`` for CPU evals, so the dispatcher
+    attaches the local runtime manifest used to create the fork PR. The manifest
+    is still non-promotional: it is custody metadata for same-runtime pairing
+    and does not alter the score.
+    """
+
+    runtime_dir = submission_dir or repo_root / "submissions" / submission_name
+    inflate_sh = runtime_dir / "inflate.sh"
+    if not inflate_sh.is_file():
+        return None
+
+    module_path = repo_root / "experiments" / "contest_auth_eval.py"
+    spec = importlib.util.spec_from_file_location(
+        "pact_dispatch_cpu_contest_auth_eval",
+        module_path,
+    )
+    if spec is None or spec.loader is None:
+        return None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    manifest_fn = getattr(module, "_runtime_dependency_manifest", None)
+    if manifest_fn is None:
+        return None
+    return manifest_fn(
+        inflate_sh,
+        repo_root / "upstream",
+        repo_root=repo_root,
+    )
 
 
 def run_gh(args: list[str], capture: bool = True) -> subprocess.CompletedProcess[str]:
@@ -680,6 +719,7 @@ def write_adjudicated(
     dispatched_at: str,
     completed_at: str,
     repo: str,
+    runtime_manifest: dict[str, Any] | None,
 ) -> Path:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     record = {
@@ -705,8 +745,31 @@ def write_adjudicated(
         "n_samples": parsed["n_samples"],
         "device": "cpu",
         "hardware": HARDWARE_LABEL,
+        "platform_system": "Linux",
+        "platform_machine": "x86_64",
         "runner_os_release": runner_os_release,
         "evaluate_py_sha256": evaluate_py_sha,
+        "runtime_tree_sha256": (
+            runtime_manifest.get("runtime_tree_sha256")
+            if isinstance(runtime_manifest, dict)
+            else None
+        ),
+        "runtime_content_tree_sha256": (
+            runtime_manifest.get("runtime_content_tree_sha256")
+            if isinstance(runtime_manifest, dict)
+            else None
+        ),
+        "inflate_runtime_manifest": runtime_manifest,
+        "provenance": {
+            "archive_path": str(archive_path),
+            "archive_sha256": archive_sha,
+            "archive_size_bytes": archive_size,
+            "device": "cpu",
+            "platform_system": "Linux",
+            "platform_machine": "x86_64",
+            "hardware": HARDWARE_LABEL,
+            "inflate_runtime_manifest": runtime_manifest,
+        },
         "workflow_run_id": run_id,
         "workflow_run_url": run_url,
         "fork_repo": repo,
@@ -863,6 +926,12 @@ def main() -> int:
         if args.evaluate_py_path.exists()
         else "<not-found>"
     )
+    repo_root = Path(__file__).resolve().parents[1]
+    runtime_manifest = runtime_dependency_manifest_for_submission(
+        args.submission_dir,
+        submission_name=args.submission_name,
+        repo_root=repo_root,
+    )
 
     dispatched_at = dt.datetime.now(dt.UTC).isoformat()
     release_tag = args.release_tag or (
@@ -929,6 +998,7 @@ def main() -> int:
         dispatched_at=dispatched_at,
         completed_at=completed_at,
         repo=args.repo,
+        runtime_manifest=runtime_manifest,
     )
     print(
         f"[done] adjudicated.json written to {out}\n"

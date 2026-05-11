@@ -189,6 +189,32 @@ def test_parser_recovers_components_from_gha_report_text_when_fields_are_null() 
     assert record.score_axis == "contest_cpu"
 
 
+def test_parser_accepts_dispatcher_top_level_gha_cpu_custody_fields() -> None:
+    records = _load_records_module()
+
+    record = records.parse_auth_eval_payload(
+        {
+            "archive_sha256": "e" * 64,
+            "archive_size_bytes": 185_578,
+            "avg_posenet_dist": 0.000164,
+            "avg_segnet_dist": 0.00065603,
+            "canonical_score": 0.22966866346263318,
+            "compression_rate": 0.00494275,
+            "device": "cpu",
+            "evidence_grade": "contest-CPU-1to1",
+            "hardware": "github-actions-ubuntu-latest-x86_64",
+            "lane_tag": "[contest-CPU]",
+            "n_samples": 600,
+        }
+    )
+
+    assert record is not None
+    assert record.score_axis == "contest_cpu"
+    assert record.cpu_leaderboard_reproduction_eligible is True
+    assert record.promotion_eligible is False
+    assert record.score_claim_valid is False
+
+
 def test_parser_downgrades_explicit_contest_cpu_on_macos() -> None:
     records = _load_records_module()
 

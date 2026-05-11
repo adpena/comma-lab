@@ -73,6 +73,16 @@ def _nested_get(payload: dict[str, Any], *keys: str) -> Any:
 def _runtime_tree_sha256(payload: dict[str, Any]) -> str | None:
     manifest = payload.get("inflate_runtime_manifest")
     candidates = (
+        payload.get("runtime_content_tree_sha256"),
+        payload.get("inflate_runtime_content_tree_sha256"),
+        _nested_get(payload, "provenance", "runtime_content_tree_sha256"),
+        _nested_get(
+            payload,
+            "provenance",
+            "inflate_runtime_manifest",
+            "runtime_content_tree_sha256",
+        ),
+        manifest.get("runtime_content_tree_sha256") if isinstance(manifest, dict) else None,
         payload.get("runtime_tree_sha256"),
         payload.get("inflate_runtime_tree_sha256"),
         _nested_get(payload, "provenance", "runtime_tree_sha256"),

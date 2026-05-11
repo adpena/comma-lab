@@ -76,10 +76,18 @@ def test_gha_cpu_dispatch_adjudicated_record_uses_requested_repo(tmp_path: Path)
         dispatched_at="2026-05-08T18:09:40+00:00",
         completed_at="2026-05-08T18:39:40+00:00",
         repo="example/fork",
+        runtime_manifest={
+            "runtime_tree_sha256": "c" * 64,
+            "runtime_content_tree_sha256": "d" * 64,
+        },
     )
 
     record = json.loads(out.read_text(encoding="utf-8"))
     assert record["fork_repo"] == "example/fork"
+    assert record["runtime_tree_sha256"] == "c" * 64
+    assert record["runtime_content_tree_sha256"] == "d" * 64
+    assert record["provenance"]["device"] == "cpu"
+    assert record["provenance"]["inflate_runtime_manifest"]["runtime_tree_sha256"] == "c" * 64
 
 
 def test_gha_cpu_parse_report_uses_recomputed_score_as_canonical(tmp_path: Path) -> None:

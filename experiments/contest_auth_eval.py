@@ -410,11 +410,46 @@ def _runtime_dependency_manifest(
     tree_sha = hashlib.sha256(
         json.dumps(tree_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
+    content_payload = {
+        "files": [
+            {
+                "relative_path": f["relative_path"],
+                "bytes": f["bytes"],
+                "sha256": f["sha256"],
+            }
+            for f in files
+        ],
+        "external_dependency_roots": [
+            {
+                "repo_relative_root": root.get("repo_relative_root"),
+                "exists": root.get("exists"),
+                "files": [
+                    {
+                        "relative_path": f["relative_path"],
+                        "bytes": f["bytes"],
+                        "sha256": f["sha256"],
+                    }
+                    for f in root.get("files", [])
+                ],
+            }
+            for root in external_dependency_roots
+        ],
+        "repo_local_tac_import_manifest": {
+            key: value
+            for key, value in repo_local_tac.items()
+            if key != "runtime_root_name"
+        },
+        "upstream_evaluate_py": upstream_eval,
+    }
+    content_tree_sha = hashlib.sha256(
+        json.dumps(content_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
     return {
         "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
         "runtime_root": str(root),
         "runtime_file_count": len(files),
         "runtime_tree_sha256": tree_sha,
+        "runtime_content_tree_sha256": content_tree_sha,
         "files": files,
         "external_dependency_roots": external_dependency_roots,
         "repo_local_tac_import_manifest": repo_local_tac,

@@ -107,28 +107,29 @@ def _parse_report_text(value: Any) -> dict[str, float | int] | None:
 
 
 def _platform_is_linux_x86_64(provenance: dict[str, Any], payload: dict[str, Any]) -> bool:
-    del payload
     system = str(
         provenance.get("platform_system")
+        or payload.get("platform_system")
         or ""
     )
     machine = str(
         provenance.get("platform_machine")
+        or payload.get("platform_machine")
         or ""
     ).lower()
-    hardware = str(provenance.get("hardware") or "").lower()
+    hardware = str(provenance.get("hardware") or payload.get("hardware") or "").lower()
     return (
         system == "Linux" and machine in {"x86_64", "amd64"}
     ) or "linux x86_64" in hardware or "github-actions-ubuntu-latest-x86_64" in hardware
 
 
 def _platform_is_macos(provenance: dict[str, Any], payload: dict[str, Any]) -> bool:
-    del payload
     system = str(
         provenance.get("platform_system")
+        or payload.get("platform_system")
         or ""
     )
-    hardware = str(provenance.get("hardware") or "").lower()
+    hardware = str(provenance.get("hardware") or payload.get("hardware") or "").lower()
     return system == "Darwin" or "macos" in hardware or "apple silicon" in hardware
 
 
@@ -322,9 +323,14 @@ def parse_auth_eval_payload(payload: dict[str, Any]) -> AuthEvalRecord | None:
         payload.get("archive_size"),
         payload.get("bytes"),
     )
-    device = str(provenance.get("device") or "")
+    device = str(provenance.get("device") or payload.get("device") or "")
     samples = _first_int(payload.get("n_samples"), payload.get("samples"), report.get("n_samples"))
-    gpu_t4_match = _strict_bool(provenance.get("gpu_t4_match"))
+    gpu_t4_raw = (
+        provenance.get("gpu_t4_match")
+        if "gpu_t4_match" in provenance
+        else payload.get("gpu_t4_match")
+    )
+    gpu_t4_match = _strict_bool(gpu_t4_raw)
     promotion_eligible = _strict_bool(payload.get("promotion_eligible"))
     score_claim_valid = _strict_bool(payload.get("score_claim_valid"))
     axis = _score_axis(
@@ -334,7 +340,12 @@ def parse_auth_eval_payload(payload: dict[str, Any]) -> AuthEvalRecord | None:
         samples=samples,
         gpu_t4_match=gpu_t4_match,
     )
-    if axis != "contest_cuda":
+    if axis == "contest_cuda":
+        if "promotion_eligible" not in payload:
+            promotion_eligible = True
+        if "score_claim_valid" not in payload:
+            score_claim_valid = True
+    else:
         promotion_eligible = False
         score_claim_valid = False
     cpu_leaderboard_reproduction_eligible = (
