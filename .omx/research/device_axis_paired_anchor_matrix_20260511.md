@@ -22,7 +22,7 @@ authoritative and is excluded.
 | **A1** (PR101-derived, score-gradient training) | HNeRV-cluster | 178,262 | **0.22635** | 0.000663 | 0.000171 | **0.19285** | 0.000560 | 0.000033 | +0.03350 | 5.18× | 1.18× | **CPU** (silver-medal-band proximity; rounds to 0.19 = PR101 gold display tier) |
 | PR103-on-PR106 AC repack | HNeRV decoder + AC rate work | 185,578 | 0.20898 | (per dual_device analysis 2026-05-11) | — | 0.22966 | — | — | −0.02068 | inverted | — | **CUDA** |
 | **PR106 latent sidecar r1** (Kaggle table → exact T4) | HNeRV + per-pair latent perturbation | 186,808 | 0.20739 | 0.000649 | 0.000033 | 0.22868 | 0.000638 | 0.000164 | −0.02129 | 0.20× | 1.02× | **CUDA** |
-| **PR106 latent sidecar r2** (NEW FLOOR 2026-05-11) | HNeRV + per-pair latent r2 perturbation | 186,822 | **0.20665** | 0.000643 | 0.000032 | (CPU paired not yet harvested) | — | — | — | — | — | **CUDA exact-floor**; r2−r1 Δ = −0.00075 |
+| **PR106 latent sidecar r2** (NEW FLOOR 2026-05-11) | HNeRV + per-pair latent r2 perturbation | 186,822 | **0.20665** | 0.000643 | 0.000032 | **0.22809** (claude 2026-05-11T17:21Z, Modal CPU Linux x86_64) | 0.000632 | 0.000164 | +0.02145 | 0.197× | 1.017× | **CUDA exact-floor**; r2−r1 Δ = −0.00075 CUDA, −0.00059 CPU; pose ratio matches r1 within 1.2% — substrate-class boundary RATIFIED at N=1+2 |
 
 ## Mechanism reading
 
