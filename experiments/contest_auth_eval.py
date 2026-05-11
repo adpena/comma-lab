@@ -630,6 +630,68 @@ def _record_inflate_runtime_artifacts(prov: dict, work_dir: Path, extracted_dir:
         json.dump(prov, f, indent=2)
 
 
+def _record_inflated_output_artifacts(
+    prov: dict,
+    work_dir: Path,
+    inflated_dir: Path,
+    video_names_file: Path,
+) -> dict:
+    """Hash exact raw files produced by inflate.sh.
+
+    Same archive bytes and same runtime source can still produce different
+    scored frames when the runtime branches on CPU vs CUDA. The raw output
+    hashes are the byte-level bridge between inflate and upstream/evaluate.py.
+    """
+
+    files: list[dict] = []
+    for name in [n.strip() for n in video_names_file.read_text().splitlines() if n.strip()]:
+        rel_raw = Path(name).with_suffix(".raw")
+        raw_path = inflated_dir / rel_raw
+        files.append(
+            {
+                "video_name": name,
+                "relative_path": rel_raw.as_posix(),
+                "exists": raw_path.exists(),
+                "bytes": raw_path.stat().st_size if raw_path.exists() else None,
+                "sha256": _sha256(raw_path, prefix=0) if raw_path.exists() else None,
+            }
+        )
+    aggregate_payload = {
+        "schema": "contest_auth_eval_inflated_output_manifest_v1",
+        "inflated_dir": str(inflated_dir),
+        "video_names_file": str(video_names_file),
+        "raw_file_count": len(files),
+        "total_bytes": sum(int(f["bytes"] or 0) for f in files),
+        "files": files,
+    }
+    aggregate_payload["aggregate_sha256"] = hashlib.sha256(
+        json.dumps(
+            {
+                "files": [
+                    {
+                        "relative_path": f["relative_path"],
+                        "bytes": f["bytes"],
+                        "sha256": f["sha256"],
+                    }
+                    for f in files
+                ]
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+    manifest_path = work_dir / "inflated_outputs_manifest.json"
+    manifest_path.write_text(json.dumps(aggregate_payload, indent=2) + "\n")
+    prov["inflated_output_manifest"] = {
+        "path": str(manifest_path),
+        "sha256": _sha256(manifest_path, prefix=0),
+        "payload": aggregate_payload,
+    }
+    with open(work_dir / "provenance.json", "w") as f:
+        json.dump(prov, f, indent=2)
+    return aggregate_payload
+
+
 def _validate_expected_runtime_tree(prov: dict, expected_runtime_tree_sha256: str | None) -> None:
     if not expected_runtime_tree_sha256:
         return
@@ -1460,6 +1522,7 @@ def main() -> int:
             timeout=args.inflate_timeout,
         )
         _record_inflate_runtime_artifacts(prov, work_dir, extracted)
+        _record_inflated_output_artifacts(prov, work_dir, inflated, video_names_file)
 
         # Stage 3: run upstream/evaluate.py on submission_dir = work_dir
         # Note: evaluate.py needs (submission_dir / 'archive.zip') AND

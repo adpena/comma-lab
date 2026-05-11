@@ -27,6 +27,7 @@ def _write_score_artifact(
     archive_sha256: str,
     archive_bytes: int,
     runtime_tree_sha256: str = "runtime-tree-fixture",
+    inflated_output_aggregate_sha256: str | None = None,
 ) -> None:
     payload = {
         "canonical_score": 0.2 if device == "cpu" else 0.23,
@@ -38,6 +39,18 @@ def _write_score_artifact(
         "n_samples": 600,
         "runtime_tree_sha256": runtime_tree_sha256,
     }
+    if inflated_output_aggregate_sha256 is not None:
+        payload["provenance"] = {
+            "inflated_output_manifest": {
+                "path": f"{device}/inflated_outputs_manifest.json",
+                "sha256": f"{device}-manifest-sha",
+                "payload": {
+                    "aggregate_sha256": inflated_output_aggregate_sha256,
+                    "raw_file_count": 1,
+                    "total_bytes": 603_979_776,
+                },
+            }
+        }
     if device == "cpu":
         payload.update(
             {
@@ -186,7 +199,61 @@ def test_dual_plan_marks_pair_complete_only_with_matching_cpu_and_cuda_artifacts
     assert completion["same_archive_sha256"] is True
     assert completion["same_archive_bytes"] is True
     assert completion["same_runtime_tree_sha256"] is True
+    assert completion["same_inflated_output_aggregate_sha256"] is None
+    assert completion["raw_output_pairing_status"] == "raw_output_manifest_missing"
     assert plan["promotion_eligible"] is False
+
+
+def test_dual_plan_compares_raw_output_hashes_without_blocking_score_pair(
+    tmp_path: Path,
+) -> None:
+    mod = _load_tool()
+    archive = tmp_path / "archive.zip"
+    with ZipFile(archive, "w") as zf:
+        zf.writestr("x", b"payload")
+    archive_sha = mod._sha256(archive)
+    archive_bytes = archive.stat().st_size
+    cpu_json = tmp_path / "cpu.json"
+    cuda_json = tmp_path / "cuda.json"
+    _write_score_artifact(
+        cpu_json,
+        device="cpu",
+        archive_sha256=archive_sha,
+        archive_bytes=archive_bytes,
+        inflated_output_aggregate_sha256="1" * 64,
+    )
+    _write_score_artifact(
+        cuda_json,
+        device="cuda",
+        archive_sha256=archive_sha,
+        archive_bytes=archive_bytes,
+        inflated_output_aggregate_sha256="2" * 64,
+    )
+
+    plan = mod.build_plan(
+        archive=archive,
+        inflate_sh=tmp_path / "inflate.sh",
+        label="fixture",
+        repo_root=Path("."),
+        run_id="fixture-run",
+        output_root=Path("experiments/results/dual_device_auth_eval"),
+        upstream_dir=Path("upstream"),
+        video_names_file=Path("upstream/public_test_video_names.txt"),
+        inflate_timeout=1800,
+        evaluate_timeout=1800,
+        cpu_artifact_json=cpu_json,
+        cuda_artifact_json=cuda_json,
+    )
+
+    completion = plan["dual_axis_completion"]
+    assert completion["blockers"] == []
+    assert completion["paired_score_artifacts_complete"] is True
+    assert completion["same_inflated_output_aggregate_sha256"] is False
+    assert completion["raw_output_pairing_status"] == "different_inflated_outputs"
+    assert (
+        completion["artifacts"]["cpu"]["inflated_output_manifest"]["aggregate_sha256"]
+        == "1" * 64
+    )
 
 
 def test_dual_plan_rejects_paired_artifacts_for_different_archive_sha(

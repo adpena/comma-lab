@@ -83,6 +83,13 @@ def test_plan_cli_is_default_safe_and_writes_no_claim(tmp_path: Path) -> None:
     assert payload["params"]["device"] == "cuda"
     assert payload["params"]["enable_t13_sqrt_n_budget"] is True
     assert payload["params"]["enable_t19_adaptive_rho"] is True
+    assert payload["params"]["archive_in_loop"] is True
+    assert payload["params"]["archive_every_epochs"] == 100
+    assert payload["params"]["max_candidate_archive_bytes"] == 190_000
+    assert payload["params"]["max_exact_cuda_candidates"] == 1
+    assert "--archive-every-epochs" in payload["dispatch_command"]
+    assert "--max-candidate-archive-bytes" in payload["dispatch_command"]
+    assert "--max-exact-cuda-candidates" in payload["dispatch_command"]
     assert payload["canonical_a1_payload"]["ready_for_modal_mount"] is True
     assert "archive" in payload["canonical_a1_payload"]["files"]
     assert claim_file.read_text() == before_claims
@@ -249,6 +256,16 @@ def test_modal_t1_remote_runs_existing_script_with_score_domain_exact_eval_env()
     assert '"LOCAL_CUDA_WORKER": "1"' in remote_src
     assert '"T1_DISPATCH_INSTANCE_JOB_ID": instance_job_id' in remote_src
     assert '"T1_DISPATCH_CLAIMS_PATH": str(claim_path)' in remote_src
+    assert '"T1_ARCHIVE_IN_LOOP": "1"' in remote_src
+    assert '"T1_ARCHIVE_EVERY_EPOCHS": str(int(archive_every_epochs))' in remote_src
+    assert (
+        '"T1_MAX_CANDIDATE_ARCHIVE_BYTES": str(int(max_candidate_archive_bytes))'
+        in remote_src
+    )
+    assert (
+        '"T1_MAX_EXACT_CUDA_CANDIDATES": str(int(max_exact_cuda_candidates))'
+        in remote_src
+    )
     assert "remote_lane_t1_balle_endtoend.sh" in remote_src
     assert "SEGMENTATION_SURROGATE" in remote_src
     assert "sinkhorn" in remote_src
@@ -334,6 +351,18 @@ def test_modal_t1_mounts_packet_compiler_bootstrap_dependency() -> None:
     assert "experiments/modal_t1_balle_endtoend.py" in mounted
 
 
+def test_remote_t1_selects_archive_in_loop_candidates_without_cwd_fallback() -> None:
+    text = REMOTE_SCRIPT.read_text()
+
+    assert 'ARCHIVE_BUILDS_MANIFEST="$OUTPUT_DIR/archive_builds_manifest.json"' in text
+    assert 'EXACT_CUDA_CANDIDATES_JSONL="$LOG_DIR/exact_cuda_candidates.jsonl"' in text
+    assert 'SELECTED_EXACT_CUDA_CANDIDATE_JSON="$LOG_DIR/selected_exact_cuda_candidate.json"' in text
+    assert "selected archive-in-loop packet for exact eval" in text
+    assert "raw_packet_dir = row.get(\"compiled_packet_dir\")" in text
+    assert "if not isinstance(raw_packet_dir, str) or not raw_packet_dir:" in text
+    assert "Path(str(row.get(\"compiled_packet_dir\") or \"\"))" not in text
+
+
 def test_modal_t1_guard_labels_require_bounded_guard_params() -> None:
     module = _load_module()
 
@@ -357,6 +386,29 @@ def test_modal_t1_guard_labels_require_bounded_guard_params() -> None:
     )
     assert (
         "guard_label_requires_train_timeout_lte_3h:train_timeout_hours=22.50"
+        in payload["validation_errors"]
+    )
+
+
+def test_modal_t1_rejects_excessive_archive_exact_cuda_candidates(tmp_path: Path) -> None:
+    module = _load_module()
+
+    payload, rc = module.build_local_plan(
+        label="unit-archive-candidate-cap",
+        epochs=50,
+        batch_size=1,
+        timeout_hours=24,
+        cost_cap_usd=80,
+        train_timeout_hours=2,
+        max_target_pairs=8,
+        max_exact_cuda_candidates=3,
+        claims_path=_empty_claims_path(tmp_path),
+    )
+
+    assert rc == 2
+    assert payload["ready_for_modal_dispatch_command"] is False
+    assert (
+        "max_exact_cuda_candidates_cost_cap_lte_2:max_exact_cuda_candidates=3"
         in payload["validation_errors"]
     )
 
@@ -448,8 +500,6 @@ def test_modal_t1_plan_fails_closed_on_active_same_lane_claim(tmp_path: Path) ->
             "active_dispatching",
             "--notes",
             "unit test active T1 claim",
-            "--now-utc",
-            "2026-05-10T00:00:00Z",
         ],
         cwd=REPO_ROOT,
         capture_output=True,
@@ -471,17 +521,27 @@ def test_modal_t1_plan_fails_closed_on_active_same_lane_claim(tmp_path: Path) ->
 
     assert rc == 2
     assert payload["ready_for_modal_dispatch_command"] is False
-    assert payload["active_lane_dispatch_conflicts"] == [
-        {
-            "timestamp_utc": "2026-05-10T00:00:00Z",
-            "agent": "unit-test",
-            "lane_id": module.LANE_ID,
-            "platform": "modal",
-            "instance_job_id": "active-t1-job",
-            "status": "active_dispatching",
-            "predicted_eta_utc": "2026-05-11T00:00:00Z",
-        }
-    ]
+    assert len(payload["active_lane_dispatch_conflicts"]) == 1
+    conflict = payload["active_lane_dispatch_conflicts"][0]
+    assert conflict["timestamp_utc"].endswith("Z")
+    assert {
+        key: conflict[key]
+        for key in (
+            "agent",
+            "lane_id",
+            "platform",
+            "instance_job_id",
+            "status",
+            "predicted_eta_utc",
+        )
+    } == {
+        "agent": "unit-test",
+        "lane_id": module.LANE_ID,
+        "platform": "modal",
+        "instance_job_id": "active-t1-job",
+        "status": "active_dispatching",
+        "predicted_eta_utc": "2026-05-11T00:00:00Z",
+    }
     assert "active_lane_dispatch_conflict:active-t1-job:active_dispatching" in payload[
         "validation_errors"
     ]

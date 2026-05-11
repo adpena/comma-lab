@@ -32,8 +32,9 @@ def _auth_payload(
     platform_system: str = "Linux",
     platform_machine: str = "x86_64",
     gpu_t4_match: bool = False,
+    inflated_output_aggregate_sha256: str | None = None,
 ) -> dict:
-    return {
+    payload = {
         "score_recomputed_from_components": score,
         "avg_posenet_dist": pose,
         "avg_segnet_dist": seg,
@@ -55,6 +56,17 @@ def _auth_payload(
             "runtime_tree_sha256": runtime_tree_sha256,
         },
     }
+    if inflated_output_aggregate_sha256 is not None:
+        payload["provenance"]["inflated_output_manifest"] = {
+            "path": f"{device}/inflated_outputs_manifest.json",
+            "sha256": f"{device}-manifest-sha",
+            "payload": {
+                "aggregate_sha256": inflated_output_aggregate_sha256,
+                "raw_file_count": 1,
+                "total_bytes": 603_979_776,
+            },
+        }
+    return payload
 
 
 def _write_json(path: Path, payload: dict) -> Path:
@@ -95,7 +107,47 @@ def test_pair_builder_requires_same_archive_and_runtime_custody(tmp_path: Path) 
     assert combined["sample_count"] == 600
     assert combined["cpu"]["score_axis"] == "contest_cpu"
     assert combined["cuda"]["score_axis"] == "contest_cuda"
+    assert combined["inflated_outputs"]["raw_output_pairing_status"] == "raw_output_manifest_missing"
     assert combined["score_claim"] is False
+
+
+def test_pair_builder_preserves_different_raw_output_hashes_as_xray_signal(
+    tmp_path: Path,
+) -> None:
+    mod = _load_tool()
+    cpu_json = _write_json(
+        tmp_path / "cpu.json",
+        _auth_payload(
+            device="cpu",
+            score=0.196,
+            pose=3.4e-5,
+            seg=5.7e-4,
+            inflated_output_aggregate_sha256="1" * 64,
+        ),
+    )
+    cuda_json = _write_json(
+        tmp_path / "cuda.json",
+        _auth_payload(
+            device="cuda",
+            score=0.229,
+            pose=1.7e-4,
+            seg=6.7e-4,
+            gpu_t4_match=True,
+            inflated_output_aggregate_sha256="2" * 64,
+        ),
+    )
+
+    combined, blockers = mod.build_combined_payload_from_pair(
+        cpu_json=cpu_json,
+        cuda_json=cuda_json,
+        architecture_class="hnerv_ft_microcodec",
+    )
+
+    assert blockers == []
+    assert combined is not None
+    assert combined["inflated_outputs"]["same_inflated_output_aggregate_sha256"] is False
+    assert combined["inflated_outputs"]["raw_output_pairing_status"] == "different_inflated_outputs"
+    assert combined["inflated_outputs"]["cpu"]["aggregate_sha256"] == "1" * 64
 
 
 def test_harvest_updates_registry_and_audit_log_from_explicit_pair(tmp_path: Path) -> None:

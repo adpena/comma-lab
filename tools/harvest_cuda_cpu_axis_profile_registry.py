@@ -37,9 +37,13 @@ from tac.optimization.cuda_cpu_axis_profile_registry import (
 )
 
 try:
-    from tools.auth_eval_records import AuthEvalRecord, parse_auth_eval_payload
+    from tools.auth_eval_records import (
+        AuthEvalRecord,
+        inflated_output_manifest_summary,
+        parse_auth_eval_payload,
+    )
 except ModuleNotFoundError:  # pragma: no cover - direct script execution
-    from auth_eval_records import AuthEvalRecord, parse_auth_eval_payload
+    from auth_eval_records import AuthEvalRecord, inflated_output_manifest_summary, parse_auth_eval_payload
 
 
 AUTH_EVAL_GLOB = "contest_auth_eval*.json"
@@ -186,6 +190,22 @@ def build_combined_payload_from_pair(
     if blockers:
         return None, blockers
 
+    cpu_raw = inflated_output_manifest_summary(cpu_axis.payload)
+    cuda_raw = inflated_output_manifest_summary(cuda_axis.payload)
+    same_inflated_output_aggregate_sha256 = None
+    raw_output_pairing_status = "raw_output_manifest_missing"
+    if cpu_raw and cuda_raw:
+        same_inflated_output_aggregate_sha256 = (
+            cpu_raw.get("aggregate_sha256") == cuda_raw.get("aggregate_sha256")
+        )
+        raw_output_pairing_status = (
+            "same_inflated_outputs"
+            if same_inflated_output_aggregate_sha256
+            else "different_inflated_outputs"
+        )
+    elif cpu_raw or cuda_raw:
+        raw_output_pairing_status = "partial_raw_output_manifest"
+
     payload: dict[str, Any] = {
         "schema": "paired_cuda_cpu_axis_profile_anchor.v1",
         "source": "paired_contest_auth_eval_artifacts",
@@ -197,6 +217,12 @@ def build_combined_payload_from_pair(
         "archive_bytes": int(cpu.archive_bytes or 0),
         "archive_sha256": str(cpu.archive_sha256 or ""),
         "runtime_tree_sha256": str(cpu_runtime or ""),
+        "inflated_outputs": {
+            "cpu": cpu_raw,
+            "cuda": cuda_raw,
+            "same_inflated_output_aggregate_sha256": same_inflated_output_aggregate_sha256,
+            "raw_output_pairing_status": raw_output_pairing_status,
+        },
         "sample_count": int(cpu.samples or 0),
         "cpu": {
             "score": float(cpu.score or 0.0),

@@ -215,6 +215,34 @@ def test_parser_accepts_dispatcher_top_level_gha_cpu_custody_fields() -> None:
     assert record.score_claim_valid is False
 
 
+def test_inflated_output_manifest_summary_reads_nested_provenance_payload() -> None:
+    records = _load_records_module()
+
+    summary = records.inflated_output_manifest_summary(
+        {
+            "provenance": {
+                "inflated_output_manifest": {
+                    "path": "work/inflated_outputs_manifest.json",
+                    "sha256": "b" * 64,
+                    "payload": {
+                        "aggregate_sha256": "c" * 64,
+                        "raw_file_count": 1,
+                        "total_bytes": 603_979_776,
+                    },
+                }
+            }
+        }
+    )
+
+    assert summary == {
+        "aggregate_sha256": "c" * 64,
+        "raw_file_count": 1,
+        "total_bytes": 603_979_776,
+        "manifest_path": "work/inflated_outputs_manifest.json",
+        "manifest_sha256": "b" * 64,
+    }
+
+
 def test_parser_downgrades_explicit_contest_cpu_on_macos() -> None:
     records = _load_records_module()
 

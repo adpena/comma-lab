@@ -449,6 +449,29 @@ def test_record_inflate_runtime_artifacts_captures_packed_payload_summary(cae, t
     assert (tmp_path / "provenance.json").is_file()
 
 
+def test_record_inflated_output_artifacts_hashes_raw_outputs(cae, tmp_path: Path):
+    inflated = tmp_path / "inflated"
+    inflated.mkdir()
+    names = tmp_path / "video_names.txt"
+    names.write_text("0.mkv\n")
+    raw = inflated / "0.raw"
+    raw.write_bytes(b"abc123")
+    prov: dict[str, object] = {}
+
+    manifest = cae._record_inflated_output_artifacts(prov, tmp_path, inflated, names)
+
+    assert manifest["schema"] == "contest_auth_eval_inflated_output_manifest_v1"
+    assert manifest["raw_file_count"] == 1
+    assert manifest["total_bytes"] == 6
+    assert manifest["files"][0]["relative_path"] == "0.raw"
+    assert manifest["files"][0]["sha256"] == cae._sha256(raw, prefix=0)
+    assert len(manifest["aggregate_sha256"]) == 64
+    recorded = prov["inflated_output_manifest"]
+    assert recorded["payload"]["aggregate_sha256"] == manifest["aggregate_sha256"]
+    assert (tmp_path / "inflated_outputs_manifest.json").is_file()
+    assert (tmp_path / "provenance.json").is_file()
+
+
 def test_run_inflate_defaults_python_to_current_interpreter(
     cae,
     tmp_path: Path,

@@ -17,9 +17,12 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from tools.auth_eval_records import parse_auth_eval_payload
+    from tools.auth_eval_records import (
+        inflated_output_manifest_summary,
+        parse_auth_eval_payload,
+    )
 except ModuleNotFoundError:  # pragma: no cover - script execution from tools/
-    from auth_eval_records import parse_auth_eval_payload
+    from auth_eval_records import inflated_output_manifest_summary, parse_auth_eval_payload
 
 DEFAULT_LEDGER = Path("experiments/results/pr100_107_reproduction_ledger_20260507_codex/ledger.json")
 CUDA_SCORE_GRADES = {
@@ -155,6 +158,7 @@ def _artifact_axis_summary(
             "promotion_eligible": record.promotion_eligible,
             "score_claim_valid": record.score_claim_valid,
             "runtime_tree_sha256": _runtime_tree_sha256(payload),
+            "inflated_output_manifest": inflated_output_manifest_summary(payload),
         }
     )
 
@@ -218,6 +222,22 @@ def _dual_axis_completion(
         if not same_runtime_tree_sha256:
             blockers.append("cpu_cuda_runtime_tree_sha256_mismatch")
 
+    cpu_raw = cpu.get("inflated_output_manifest")
+    cuda_raw = cuda.get("inflated_output_manifest")
+    same_inflated_output_aggregate_sha256 = None
+    raw_output_pairing_status = "raw_output_manifest_missing"
+    if cpu_raw and cuda_raw:
+        same_inflated_output_aggregate_sha256 = (
+            cpu_raw.get("aggregate_sha256") == cuda_raw.get("aggregate_sha256")
+        )
+        raw_output_pairing_status = (
+            "same_inflated_outputs"
+            if same_inflated_output_aggregate_sha256
+            else "different_inflated_outputs"
+        )
+    elif cpu_raw or cuda_raw:
+        raw_output_pairing_status = "partial_raw_output_manifest"
+
     if cuda.get("provided") and cpu.get("provided") and not same_archive_sha256:
         blockers.append("cpu_cuda_archive_sha256_mismatch")
     if cuda.get("provided") and cpu.get("provided") and not same_archive_bytes:
@@ -246,6 +266,8 @@ def _dual_axis_completion(
         "same_archive_sha256": same_archive_sha256,
         "same_archive_bytes": same_archive_bytes,
         "same_runtime_tree_sha256": same_runtime_tree_sha256,
+        "same_inflated_output_aggregate_sha256": same_inflated_output_aggregate_sha256,
+        "raw_output_pairing_status": raw_output_pairing_status,
         "paired_score_artifacts_complete": paired_complete,
         "frontier_or_medal_band_complete": paired_complete,
         "global_priority_eligible": paired_complete,
@@ -255,6 +277,7 @@ def _dual_axis_completion(
             "A candidate is paired/complete only when both contest-CUDA and contest-CPU score artifacts are present.",
             "Both artifacts must parse as full-sample auth evals for the same archive bytes and SHA-256.",
             "Runtime tree hashes are compared when both artifacts expose them.",
+            "Inflated raw-output hashes diagnose render-device drift but do not by themselves block paired score custody.",
         ],
     }
 
@@ -395,6 +418,8 @@ def build_plan(
             "Run both commands on the same archive bytes before PR/frontier claims.",
             "CUDA is the internal promotion/ranking axis; CPU is the public leaderboard reproduction axis.",
             "Do not extrapolate CPU from CUDA or CUDA from CPU; compare paired JSON artifacts only.",
+            "Do not assume CPU or CUDA is universally better; treat the CPU/CUDA gap as per-submission and per-runtime.",
+            "Use inflated_outputs_manifest aggregate hashes to separate render-device drift from scorer-device drift.",
             "Use dual_axis_completion.paired_score_artifacts_complete as the machine-checkable pair-completion guard.",
         ],
     }

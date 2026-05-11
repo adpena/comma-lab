@@ -146,6 +146,11 @@ baseline on the same evidence axis and runtime contract.
   signals are separate evidence spaces. The public HNeRV leaderboard CPU axis
   can be materially better than the CUDA/T4 axis. Never convert CPU to CUDA or
   CUDA to CPU for promotion, ranking, retirement, or submission readiness.
+- There is no universal CPU-better or CUDA-better ordering. Treat the
+  CPU/CUDA gap as a per-submission, per-runtime, per-inflate-device, and
+  per-scorer-device property. A valid mechanism claim must record archive SHA,
+  runtime content SHA, inflate device, evaluate device, inflated raw-output
+  aggregate SHA when available, and PoseNet/SegNet component deltas.
 - Public PR baselines must use the source archive plus the source runtime that
   actually produced the cited result. If an adapter changes `inflate.py`,
   `inflate.sh`, section constants, dependency closure, or Python invocation,

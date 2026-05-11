@@ -38,6 +38,44 @@ def _get(payload: dict[str, Any], *keys: str, default: Any = None) -> Any:
     return value
 
 
+def inflated_output_manifest_summary(payload: dict[str, Any]) -> dict[str, Any] | None:
+    """Return a compact summary of ``contest_auth_eval`` raw-output custody.
+
+    This is deliberately separate from :class:`AuthEvalRecord`: same
+    archive/runtime score artifacts can have different inflated frames when the
+    runtime branches on CPU vs CUDA. The summary lets paired-axis tools compare
+    decoded-frame custody without making it a score-promotion requirement.
+    """
+
+    if not isinstance(payload, dict):
+        return None
+    provenance = payload.get("provenance")
+    if not isinstance(provenance, dict):
+        provenance = {}
+    candidates = (
+        payload.get("inflated_output_manifest"),
+        payload.get("inflated_outputs_manifest"),
+        provenance.get("inflated_output_manifest"),
+        provenance.get("inflated_outputs_manifest"),
+    )
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            continue
+        nested_payload = candidate.get("payload")
+        manifest = nested_payload if isinstance(nested_payload, dict) else candidate
+        aggregate_sha256 = manifest.get("aggregate_sha256")
+        if not isinstance(aggregate_sha256, str) or not aggregate_sha256:
+            continue
+        return {
+            "aggregate_sha256": aggregate_sha256,
+            "raw_file_count": _int(manifest.get("raw_file_count")),
+            "total_bytes": _int(manifest.get("total_bytes")),
+            "manifest_path": candidate.get("path"),
+            "manifest_sha256": candidate.get("sha256"),
+        }
+    return None
+
+
 def _float(value: Any) -> float | None:
     try:
         if isinstance(value, bool):

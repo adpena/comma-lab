@@ -59,6 +59,9 @@ REMOTE_POST_TRAIN_EVAL_BUFFER_HOURS = 1.0
 REMOTE_ARTIFACT_COLLECTION_BUFFER_HOURS = 0.25
 DEFAULT_COST_CAP_USD = 80.0
 DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK = 2048
+DEFAULT_T1_ARCHIVE_EVERY_EPOCHS = 100
+DEFAULT_T1_MAX_CANDIDATE_ARCHIVE_BYTES = 190_000
+DEFAULT_T1_MAX_EXACT_CUDA_CANDIDATES = 1
 CONTEST_EXPECTED_PAIRS = 600
 REMOTE_PYTHONPATH = f"{REMOTE_REPO / 'src'}:{REMOTE_REPO / 'upstream'}:{REMOTE_REPO}"
 T1_EXTRACTED_ARCHIVE_RUNTIME_CUSTODY_MIN_GIT_HEAD = (
@@ -529,6 +532,9 @@ def _dispatch_command(
     train_timeout_hours: float,
     max_target_pairs: int | None,
     sinkhorn_max_positions_per_chunk: int,
+    archive_every_epochs: int,
+    max_candidate_archive_bytes: int,
+    max_exact_cuda_candidates: int,
 ) -> list[str]:
     cmd = [
         "PYTHONPATH=src:upstream:$PWD",
@@ -551,6 +557,12 @@ def _dispatch_command(
         str(float(train_timeout_hours)),
         "--sinkhorn-max-positions-per-chunk",
         str(int(sinkhorn_max_positions_per_chunk)),
+        "--archive-every-epochs",
+        str(int(archive_every_epochs)),
+        "--max-candidate-archive-bytes",
+        str(int(max_candidate_archive_bytes)),
+        "--max-exact-cuda-candidates",
+        str(int(max_exact_cuda_candidates)),
     ]
     if max_target_pairs is not None:
         cmd.extend(["--max-target-pairs", str(int(max_target_pairs))])
@@ -567,6 +579,9 @@ def build_local_plan(
     train_timeout_hours: float,
     max_target_pairs: int | None,
     sinkhorn_max_positions_per_chunk: int = DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK,
+    archive_every_epochs: int = DEFAULT_T1_ARCHIVE_EVERY_EPOCHS,
+    max_candidate_archive_bytes: int = DEFAULT_T1_MAX_CANDIDATE_ARCHIVE_BYTES,
+    max_exact_cuda_candidates: int = DEFAULT_T1_MAX_EXACT_CUDA_CANDIDATES,
     claims_path: Path = DEFAULT_CLAIMS_PATH,
 ) -> tuple[dict[str, Any], int]:
     instance_job_id = _safe_label(label or f"t1_balle_modal_{_compact_stamp()}")
@@ -634,6 +649,17 @@ def build_local_plan(
         validation_errors.append("max_target_pairs_must_be_positive")
     if int(sinkhorn_max_positions_per_chunk) <= 0:
         validation_errors.append("sinkhorn_max_positions_per_chunk_must_be_positive")
+    if int(archive_every_epochs) <= 0:
+        validation_errors.append("archive_every_epochs_must_be_positive")
+    if int(max_candidate_archive_bytes) <= 0:
+        validation_errors.append("max_candidate_archive_bytes_must_be_positive")
+    if int(max_exact_cuda_candidates) <= 0:
+        validation_errors.append("max_exact_cuda_candidates_must_be_positive")
+    if int(max_exact_cuda_candidates) > 2:
+        validation_errors.append(
+            "max_exact_cuda_candidates_cost_cap_lte_2:"
+            f"max_exact_cuda_candidates={int(max_exact_cuda_candidates)}"
+        )
     contest_auth_eval_requested = _contest_auth_eval_requested(max_target_pairs)
     if contest_auth_eval_requested and int(batch_size) > DEFAULT_T4_SCORE_DOMAIN_BATCH_SIZE:
         validation_errors.append(
@@ -681,6 +707,10 @@ def build_local_plan(
             "train_timeout_hours": float(train_timeout_hours),
             "max_target_pairs": max_target_pairs,
             "sinkhorn_max_positions_per_chunk": int(sinkhorn_max_positions_per_chunk),
+            "archive_in_loop": True,
+            "archive_every_epochs": int(archive_every_epochs),
+            "max_candidate_archive_bytes": int(max_candidate_archive_bytes),
+            "max_exact_cuda_candidates": int(max_exact_cuda_candidates),
             "device": "cuda",
             "segmentation_surrogate": "sinkhorn",
             "enable_t13_sqrt_n_budget": True,
@@ -720,6 +750,9 @@ def build_local_plan(
             train_timeout_hours=train_timeout_hours,
             max_target_pairs=max_target_pairs,
             sinkhorn_max_positions_per_chunk=sinkhorn_max_positions_per_chunk,
+            archive_every_epochs=archive_every_epochs,
+            max_candidate_archive_bytes=max_candidate_archive_bytes,
+            max_exact_cuda_candidates=max_exact_cuda_candidates,
         ),
         "recover_command_after_dispatch": (
             ".venv/bin/python experiments/modal_t1_balle_endtoend.py recover "
@@ -755,6 +788,17 @@ def plan_cli(argv: list[str] | None = None) -> int:
         type=int,
         default=DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK,
     )
+    parser.add_argument("--archive-every-epochs", type=int, default=DEFAULT_T1_ARCHIVE_EVERY_EPOCHS)
+    parser.add_argument(
+        "--max-candidate-archive-bytes",
+        type=int,
+        default=DEFAULT_T1_MAX_CANDIDATE_ARCHIVE_BYTES,
+    )
+    parser.add_argument(
+        "--max-exact-cuda-candidates",
+        type=int,
+        default=DEFAULT_T1_MAX_EXACT_CUDA_CANDIDATES,
+    )
     parser.add_argument("--claims-path", type=Path, default=DEFAULT_CLAIMS_PATH)
     parser.add_argument("--json-out", default=None)
     args = parser.parse_args(argv)
@@ -767,6 +811,9 @@ def plan_cli(argv: list[str] | None = None) -> int:
         train_timeout_hours=args.train_timeout_hours,
         max_target_pairs=args.max_target_pairs,
         sinkhorn_max_positions_per_chunk=args.sinkhorn_max_positions_per_chunk,
+        archive_every_epochs=args.archive_every_epochs,
+        max_candidate_archive_bytes=args.max_candidate_archive_bytes,
+        max_exact_cuda_candidates=args.max_exact_cuda_candidates,
         claims_path=args.claims_path,
     )
     if args.json_out:
@@ -930,6 +977,9 @@ def run_t1_balle_modal(
     train_timeout_seconds: int,
     max_target_pairs: int | None,
     sinkhorn_max_positions_per_chunk: int,
+    archive_every_epochs: int,
+    max_candidate_archive_bytes: int,
+    max_exact_cuda_candidates: int,
     mounted_code_git_head: str,
     mounted_code_git_branch: str,
 ) -> dict[str, Any]:
@@ -990,6 +1040,10 @@ def run_t1_balle_modal(
         "EPOCHS": str(int(epochs)),
         "BATCH_SIZE": str(int(batch_size)),
         "SINKHORN_MAX_POSITIONS_PER_CHUNK": str(int(sinkhorn_max_positions_per_chunk)),
+        "T1_ARCHIVE_IN_LOOP": "1",
+        "T1_ARCHIVE_EVERY_EPOCHS": str(int(archive_every_epochs)),
+        "T1_MAX_CANDIDATE_ARCHIVE_BYTES": str(int(max_candidate_archive_bytes)),
+        "T1_MAX_EXACT_CUDA_CANDIDATES": str(int(max_exact_cuda_candidates)),
         "SEGMENTATION_SURROGATE": "sinkhorn",
         "GRAD_CLIP_NORM": "1.0",
     }
@@ -1191,6 +1245,9 @@ def main(
     cost_cap_usd: float = DEFAULT_COST_CAP_USD,
     max_target_pairs: int | None = None,
     sinkhorn_max_positions_per_chunk: int = DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK,
+    archive_every_epochs: int = DEFAULT_T1_ARCHIVE_EVERY_EPOCHS,
+    max_candidate_archive_bytes: int = DEFAULT_T1_MAX_CANDIDATE_ARCHIVE_BYTES,
+    max_exact_cuda_candidates: int = DEFAULT_T1_MAX_EXACT_CUDA_CANDIDATES,
     execute: bool = False,
     force_claim: bool = False,
 ) -> None:
@@ -1204,6 +1261,9 @@ def main(
         train_timeout_hours=train_timeout_hours,
         max_target_pairs=max_target_pairs,
         sinkhorn_max_positions_per_chunk=sinkhorn_max_positions_per_chunk,
+        archive_every_epochs=archive_every_epochs,
+        max_candidate_archive_bytes=max_candidate_archive_bytes,
+        max_exact_cuda_candidates=max_exact_cuda_candidates,
     )
     if not execute:
         print(json.dumps(plan, indent=2, sort_keys=True))
@@ -1257,6 +1317,9 @@ def main(
             train_timeout_seconds=max(300, int(float(train_timeout_hours) * 3600)),
             max_target_pairs=max_target_pairs,
             sinkhorn_max_positions_per_chunk=int(sinkhorn_max_positions_per_chunk),
+            archive_every_epochs=int(archive_every_epochs),
+            max_candidate_archive_bytes=int(max_candidate_archive_bytes),
+            max_exact_cuda_candidates=int(max_exact_cuda_candidates),
             mounted_code_git_head=mounted_code_git_head,
             mounted_code_git_branch=mounted_code_git_branch,
         )

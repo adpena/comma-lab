@@ -123,6 +123,7 @@ is recorded in the run manifest.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import platform
@@ -190,6 +191,11 @@ PHASE1_SCAFFOLD_BLOCKERS = (
     "no_op_runtime_consumption_exact_one_video_pending",
     "state_dict_wire_format_not_rate_tightened",
 )
+A1_BASELINE_ARCHIVE_SHA256 = (
+    "87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5"
+)
+A1_BASELINE_ARCHIVE_SIZE_BYTES = 178_262
+ARCHIVE_IN_LOOP_MANIFEST_SCHEMA = "t1_archive_in_loop_manifest_v1"
 DEFAULT_PR95_PARITY_PROFILE = (
     REPO_ROOT
     / ".omx/research/pr95_hnerv_muon_trainer_parity_profile_20260510.json"
@@ -816,6 +822,194 @@ def build_archive_from_ema(
     return archive_path
 
 
+def _sha256_path(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _archive_in_loop_manifest_path(output_dir: Path) -> Path:
+    return output_dir / "archive_builds_manifest.json"
+
+
+def _load_archive_in_loop_manifest(path: Path) -> dict:
+    if not path.exists():
+        return {
+            "schema_version": ARCHIVE_IN_LOOP_MANIFEST_SCHEMA,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "rows": [],
+        }
+    payload = json.loads(path.read_text())
+    if payload.get("schema_version") != ARCHIVE_IN_LOOP_MANIFEST_SCHEMA:
+        raise RuntimeError(
+            f"archive-in-loop manifest schema mismatch: {path} "
+            f"schema={payload.get('schema_version')!r}"
+        )
+    if not isinstance(payload.get("rows"), list):
+        raise RuntimeError(f"archive-in-loop manifest rows missing/list-invalid: {path}")
+    return payload
+
+
+def _append_archive_in_loop_manifest(output_dir: Path, row: dict) -> Path:
+    path = _archive_in_loop_manifest_path(output_dir)
+    payload = _load_archive_in_loop_manifest(path)
+    payload["rows"].append(row)
+    payload["candidate_count"] = len(payload["rows"])
+    payload["ready_for_exact_eval_dispatch"] = any(
+        bool(r.get("exact_cuda_eligible")) for r in payload["rows"]
+    )
+    payload["updated_at_utc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    return path
+
+
+def _compile_archive_in_loop_packet(
+    *,
+    candidate_dir: Path,
+    output_dir: Path,
+    baseline_archive_sha256: str,
+    baseline_archive_size_bytes: int,
+) -> tuple[Path, int, str]:
+    packet_dir = output_dir / "packet_compiled"
+    cmd = [
+        sys.executable,
+        "-u",
+        str(REPO_ROOT / "tools" / "build_phase1_packet_compiler.py"),
+        "--input-packet",
+        str(candidate_dir / "submission_dir"),
+        "--output-dir",
+        str(packet_dir),
+        "--mode",
+        "optimize",
+        "--target-mode",
+        "contest_one_video_replay",
+        "--runtime-dep-closure",
+        "torch",
+        "brotli",
+        "compressai",
+        "--export-format",
+        "phase1_three_member_x_decoder_bin_balle_bin",
+        "--bolt-on-loc-budget",
+        "400",
+        "--allow-existing-output-dir",
+        "--score-affecting-payload-changed",
+        "--baseline-archive-sha256",
+        baseline_archive_sha256,
+        "--baseline-archive-size-bytes",
+        str(int(baseline_archive_size_bytes)),
+        "--print-result-json",
+    ]
+    proc = subprocess.run(
+        cmd,
+        cwd=REPO_ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
+    )
+    log_path = output_dir / "packet_compiler.log"
+    log_path.write_text(proc.stdout)
+    return packet_dir, int(proc.returncode), proc.stdout
+
+
+def materialize_archive_in_loop_candidate(
+    *,
+    output_dir: Path,
+    decoder: Decoder128K,
+    balle: BalleHyperpriorWrapper,
+    ema_decoder: EMA,
+    ema_balle: EMA,
+    latents: torch.Tensor,
+    decoder_config: Decoder128KConfig,
+    balle_config: BalleHyperpriorConfig,
+    epoch: int,
+    metrics: dict,
+    best_proxy_improved: bool,
+    max_candidate_archive_bytes: int,
+    baseline_archive_sha256: str,
+    baseline_archive_size_bytes: int,
+) -> dict:
+    """Emit one byte-closed candidate row without claiming score movement."""
+    candidate_root = output_dir / "archive_candidates"
+    candidate_dir = candidate_root / f"epoch_{int(epoch):06d}"
+    candidate_dir.mkdir(parents=True, exist_ok=True)
+    archive_path = build_archive_from_ema(
+        output_dir=candidate_dir,
+        decoder=decoder,
+        balle=balle,
+        ema_decoder=ema_decoder,
+        ema_balle=ema_balle,
+        latents=latents,
+        decoder_config=decoder_config,
+        balle_config=balle_config,
+    )
+    archive_bytes = archive_path.stat().st_size
+    archive_sha256 = _sha256_path(archive_path)
+    rate_cap_passed = int(archive_bytes) <= int(max_candidate_archive_bytes)
+    compiler_blockers: list[str] = []
+    packet_dir: Path | None = None
+    packet_compile_rc: int | None = None
+    if rate_cap_passed:
+        packet_dir, packet_compile_rc, compiler_stdout = _compile_archive_in_loop_packet(
+            candidate_dir=candidate_dir,
+            output_dir=candidate_dir,
+            baseline_archive_sha256=baseline_archive_sha256,
+            baseline_archive_size_bytes=baseline_archive_size_bytes,
+        )
+        if packet_compile_rc != 0:
+            compiler_blockers.append(f"packet_compiler_rc={packet_compile_rc}")
+        try:
+            build_manifest_path = packet_dir / "build_manifest.json"
+            build_manifest = json.loads(build_manifest_path.read_text())
+            compiler_blockers.extend(str(x) for x in build_manifest.get("blockers", []))
+        except Exception as exc:
+            compiler_blockers.append(f"packet_manifest_unreadable:{type(exc).__name__}")
+        if not compiler_stdout:
+            compiler_blockers.append("packet_compiler_stdout_empty")
+    else:
+        compiler_blockers.append(
+            "rate_cap_exceeded:"
+            f"{int(archive_bytes)}>{int(max_candidate_archive_bytes)}"
+        )
+
+    row = {
+        "schema_version": "t1_archive_in_loop_candidate_v1",
+        "epoch": int(epoch),
+        "candidate_dir": candidate_dir.as_posix(),
+        "archive_path": archive_path.as_posix(),
+        "archive_bytes": int(archive_bytes),
+        "archive_sha256": archive_sha256,
+        "baseline_archive_sha256": baseline_archive_sha256,
+        "baseline_archive_size_bytes": int(baseline_archive_size_bytes),
+        "max_candidate_archive_bytes": int(max_candidate_archive_bytes),
+        "rate_cap_passed": bool(rate_cap_passed),
+        "best_proxy_improved": bool(best_proxy_improved),
+        "proxy_metrics": {
+            key: float(value) if isinstance(value, (int, float)) else value
+            for key, value in metrics.items()
+        },
+        "compiled_packet_dir": packet_dir.as_posix() if packet_dir is not None else None,
+        "packet_compile_rc": packet_compile_rc,
+        "compiler_blockers": sorted(set(compiler_blockers)),
+        "exact_cuda_eligible": bool(rate_cap_passed and not compiler_blockers),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "created_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    manifest_path = _append_archive_in_loop_manifest(output_dir, row)
+    print(
+        "[t1] archive-in-loop candidate "
+        f"epoch={epoch} bytes={archive_bytes} "
+        f"eligible={row['exact_cuda_eligible']} manifest={manifest_path}"
+    )
+    return row
+
+
 def _serialise_balle_strings(strings: object) -> bytes:
     """Serialise BalleHyperpriorWrapper.compress(...) output deterministically.
 
@@ -1438,6 +1632,54 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "before archive export."
         ),
     )
+    parser.add_argument(
+        "--archive-in-loop",
+        action="store_true",
+        default=False,
+        help=(
+            "Materialise byte-closed EMA archive candidates during the eval loop. "
+            "Rows are written to archive_builds_manifest.json with score_claim=false; "
+            "remote Stage 6 decides which eligible packets receive exact CUDA eval."
+        ),
+    )
+    parser.add_argument(
+        "--archive-every-epochs",
+        type=int,
+        default=100,
+        help=(
+            "When --archive-in-loop is enabled, build a candidate every N epochs "
+            "in addition to every new-best proxy checkpoint and final epoch."
+        ),
+    )
+    parser.add_argument(
+        "--max-candidate-archive-bytes",
+        type=int,
+        default=190_000,
+        help=(
+            "Archive-in-loop rate cap. Candidates above this byte count are "
+            "recorded but not packet-compiled or exact-CUDA eligible."
+        ),
+    )
+    parser.add_argument(
+        "--max-exact-cuda-candidates",
+        type=int,
+        default=1,
+        help=(
+            "Candidate-count budget surfaced to remote Stage 6. The trainer "
+            "records it in the manifest; exact CUDA dispatch remains external."
+        ),
+    )
+    parser.add_argument(
+        "--baseline-archive-sha256",
+        default=A1_BASELINE_ARCHIVE_SHA256,
+        help="Baseline archive SHA-256 for archive-in-loop no-op proof.",
+    )
+    parser.add_argument(
+        "--baseline-archive-size-bytes",
+        type=int,
+        default=A1_BASELINE_ARCHIVE_SIZE_BYTES,
+        help="Baseline archive size for archive-in-loop no-op proof.",
+    )
     parser.add_argument("--auth-eval", action="store_true", default=False)
     parser.add_argument("--no-auth-eval", dest="auth_eval", action="store_false")
     parser.add_argument(
@@ -1697,6 +1939,21 @@ def main() -> int:
         raise SystemExit("[t1] --fisher-rao-eps must be in (0, 1e-3)")
     if args.sinkhorn_max_positions_per_chunk <= 0:
         raise SystemExit("[t1] --sinkhorn-max-positions-per-chunk must be positive")
+    if args.archive_in_loop:
+        if args.archive_every_epochs <= 0:
+            raise SystemExit("[t1] --archive-every-epochs must be positive")
+        if args.max_candidate_archive_bytes <= 0:
+            raise SystemExit("[t1] --max-candidate-archive-bytes must be positive")
+        if args.max_exact_cuda_candidates <= 0:
+            raise SystemExit("[t1] --max-exact-cuda-candidates must be positive")
+        if (
+            not isinstance(args.baseline_archive_sha256, str)
+            or len(args.baseline_archive_sha256) != 64
+            or any(c not in "0123456789abcdefABCDEF" for c in args.baseline_archive_sha256)
+        ):
+            raise SystemExit("[t1] --baseline-archive-sha256 must be 64 hex chars")
+        if args.baseline_archive_size_bytes <= 0:
+            raise SystemExit("[t1] --baseline-archive-size-bytes must be positive")
     args.output_dir.mkdir(parents=True, exist_ok=True)
     started_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     _seed_everything(args.seed)
@@ -2029,6 +2286,7 @@ def main() -> int:
                 "rho": coord.rho,
                 "lambdas": dict(coord.lambdas),
             })
+            previous_best_proxy = best_proxy
             best_proxy = _maybe_save_ema_checkpoint(
                 output_dir=args.output_dir,
                 decoder=decoder,
@@ -2040,6 +2298,38 @@ def main() -> int:
                 epoch=epoch + 1,
                 best_proxy_score=best_proxy,
             )
+            best_proxy_improved = best_proxy < previous_best_proxy
+            if args.archive_in_loop:
+                should_build_candidate = (
+                    best_proxy_improved
+                    or (epoch + 1) % args.archive_every_epochs == 0
+                    or epoch == epochs - 1
+                )
+                if should_build_candidate:
+                    candidate_row = materialize_archive_in_loop_candidate(
+                        output_dir=args.output_dir,
+                        decoder=decoder,
+                        balle=balle,
+                        ema_decoder=ema_decoder,
+                        ema_balle=ema_balle,
+                        latents=latents,
+                        decoder_config=decoder_config,
+                        balle_config=balle_config,
+                        epoch=epoch + 1,
+                        metrics=metrics,
+                        best_proxy_improved=best_proxy_improved,
+                        max_candidate_archive_bytes=args.max_candidate_archive_bytes,
+                        baseline_archive_sha256=args.baseline_archive_sha256.lower(),
+                        baseline_archive_size_bytes=args.baseline_archive_size_bytes,
+                    )
+                    history[-1]["archive_in_loop_candidate"] = {
+                        "candidate_dir": candidate_row["candidate_dir"],
+                        "archive_bytes": candidate_row["archive_bytes"],
+                        "archive_sha256": candidate_row["archive_sha256"],
+                        "rate_cap_passed": candidate_row["rate_cap_passed"],
+                        "exact_cuda_eligible": candidate_row["exact_cuda_eligible"],
+                        "compiler_blockers": candidate_row["compiler_blockers"],
+                    }
 
     if args.enable_scorer_domain_loss and score_domain_gradcheck is None:
         raise RuntimeError(

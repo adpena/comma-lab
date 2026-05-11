@@ -66,6 +66,39 @@ is a separate public-replay diagnostic axis. The CPU/CUDA gap is therefore a
 measured property requiring mechanism analysis, not a license to substitute
 CPU replay values for contest-CUDA results.
 
+Follow-up adversarial note after component inspection: this packet is
+CUDA-better, not CPU-better. The component deltas are:
+
+- CPU: SegNet `0.00065592`, PoseNet `0.00016400`, rate contribution
+  `0.123568773`, canonical score `0.2296576634626332`.
+- CUDA: SegNet `0.00067084`, PoseNet `0.00003360`, rate contribution
+  `0.123568773`, canonical score `0.20898305277982338`.
+- CUDA - CPU: SegNet contribution `+0.001492000` worse, Pose contribution
+  `-0.022166611` better, net score `-0.020674611` better.
+
+This does not contradict the A1/PR101 CPU-better trend. The PR103/PR106 runtime
+auto-selects CUDA in `submissions/pr103_pr106_final_runtime/inflate.py`, so the
+CUDA run can produce different raw decoded frames before `upstream/evaluate.py`
+scores them. That makes this a full-pipeline device-drift finding
+(`archive bytes + runtime source + inflate device + evaluate device`), not a
+shared-decoded-output scorer-only drift finding. Future dual-axis artifacts must
+record inflated raw-output hashes so comparisons can distinguish same archive
+and same runtime source from same decoded frames.
+
+Operator correction + xhigh review: do not invert the public HNeRV trend into
+any universal CPU-better rule. The observed PR100/101/102/103/107 CPU-better
+cluster and the PR103-on-PR106 CUDA-better pair are both legitimate measured
+full-pipeline facts under their own runtime contracts. The operational model is
+per-submission and per-runtime:
+
+`archive bytes + runtime content + inflate device + inflated raw-output SHA +
+evaluate device + PoseNet/SegNet components`.
+
+The xray follow-up is therefore not "choose CPU" or "choose CUDA"; it is to
+measure both axes, compare inflated raw-output aggregate hashes, then localize
+the delta through PoseNet/SegNet/Hydra/dual-head diagnostics before treating a
+gap as an exploitable mechanism.
+
 ## Dispatch claims
 
 The CPU and CUDA lane claims for this v2 pair were closed with terminal

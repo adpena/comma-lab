@@ -137,6 +137,10 @@ Hard rules:
    medal-band proximity is real public-axis evidence, but it is not CUDA
    readiness, CUDA frontier status, or a conversion shortcut. Never infer one
    axis from the other; run both when shipment/frontier language is used.
+   Do not invert this into a universal "CPU is better" rule either: every
+   packet must be measured per archive/runtime/inflate-device/evaluate-device,
+   with inflated raw-output hashes and PoseNet/SegNet component deltas when
+   diagnosing the mechanism.
 3. **Source runtime must match the comparison.** For public PR clones, compare
    original archive + original `inflate.sh` against candidate archive +
    candidate runtime under the same evaluator path. If the candidate adapter

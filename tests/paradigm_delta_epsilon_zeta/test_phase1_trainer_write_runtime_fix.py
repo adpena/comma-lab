@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import importlib.util
 import io
+import json
 import re
 import struct
 import sys
@@ -525,6 +526,46 @@ def test_emitted_archive_has_three_named_zip_members(trainer, tmp_path):
     assert names == sorted(["x", "decoder.bin", "balle.bin"]), (
         f"archive must have exactly 3 named members; got {names}"
     )
+
+
+def test_archive_in_loop_manifest_is_score_claim_false(trainer, tmp_path):
+    row = {
+        "schema_version": "t1_archive_in_loop_candidate_v1",
+        "epoch": 7,
+        "candidate_dir": (tmp_path / "candidate").as_posix(),
+        "archive_bytes": 180_000,
+        "archive_sha256": "a" * 64,
+        "rate_cap_passed": True,
+        "compiled_packet_dir": (tmp_path / "packet").as_posix(),
+        "compiler_blockers": [],
+        "exact_cuda_eligible": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+    }
+
+    manifest_path = trainer._append_archive_in_loop_manifest(tmp_path, row)
+    payload = json.loads(manifest_path.read_text())
+
+    assert payload["schema_version"] == trainer.ARCHIVE_IN_LOOP_MANIFEST_SCHEMA
+    assert payload["candidate_count"] == 1
+    assert payload["ready_for_exact_eval_dispatch"] is True
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["rank_or_kill_eligible"] is False
+    assert payload["rows"][0]["score_claim"] is False
+
+
+def test_archive_in_loop_is_wired_to_packet_compiler_and_not_score_claiming() -> None:
+    text = TRAINER_PATH.read_text(encoding="utf-8")
+
+    assert "--archive-in-loop" in text
+    assert "archive_builds_manifest.json" in text
+    assert "materialize_archive_in_loop_candidate(" in text
+    assert "tools\" / \"build_phase1_packet_compiler.py" in text
+    assert '"score_claim": False' in text
+    assert '"promotion_eligible": False' in text
+    assert '"rank_or_kill_eligible": False' in text
 
 
 def test_packet_compiler_optimize_mode_accepts_emitted_packet(trainer, tmp_path):

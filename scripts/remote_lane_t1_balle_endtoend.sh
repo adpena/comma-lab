@@ -279,6 +279,10 @@ cat > "$PROVENANCE" <<EOF
   "allow_remote_scaffold_smoke_env": "${ALLOW_REMOTE_SCAFFOLD_SMOKE}",
   "allow_score_domain_training_env": "${ALLOW_SCORE_DOMAIN_TRAINING}",
   "run_contest_cuda_auth_eval_env": "${RUN_CONTEST_CUDA_AUTH_EVAL}",
+  "archive_in_loop_env": "${T1_ARCHIVE_IN_LOOP:-1}",
+  "archive_every_epochs_env": "${T1_ARCHIVE_EVERY_EPOCHS:-${EVAL_EVERY_EPOCHS:-100}}",
+  "max_candidate_archive_bytes_env": "${T1_MAX_CANDIDATE_ARCHIVE_BYTES:-190000}",
+  "max_exact_cuda_candidates_env": "${T1_MAX_EXACT_CUDA_CANDIDATES:-1}",
   "predicted_band": [0.155, 0.180],
   "prediction_scope": "Phase 1 scorer-domain A1 substrate training when T1_ALLOW_SCORE_DOMAIN_TRAINING=1; no score claim unless packet compiler plus contest-CUDA auth-eval adjudication both pass",
   "score_claim": false
@@ -369,6 +373,12 @@ TRAIN_CMD=(
     --grad-clip-norm "${GRAD_CLIP_NORM:-1.0}"
     --eval-every-epochs "${EVAL_EVERY_EPOCHS:-100}"
     --eval-batch-size "${EVAL_BATCH_SIZE:-${BATCH_SIZE:-16}}"
+    --archive-in-loop
+    --archive-every-epochs "${T1_ARCHIVE_EVERY_EPOCHS:-${EVAL_EVERY_EPOCHS:-100}}"
+    --max-candidate-archive-bytes "${T1_MAX_CANDIDATE_ARCHIVE_BYTES:-190000}"
+    --max-exact-cuda-candidates "${T1_MAX_EXACT_CUDA_CANDIDATES:-1}"
+    --baseline-archive-sha256 "${T1_BASELINE_ARCHIVE_SHA256:-87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5}"
+    --baseline-archive-size-bytes "${T1_BASELINE_ARCHIVE_SIZE_BYTES:-178262}"
     --enable-t13-sqrt-n-budget
     --enable-t19-adaptive-rho
     --no-auth-eval
@@ -443,6 +453,73 @@ if [ "$ALLOW_SCORE_DOMAIN_TRAINING" = "1" ]; then
             exit 15
         fi
         PACKET_DIR="${T1_PACKET_DIR:-$LOG_DIR/packet_compiled}"
+        SKIP_PACKET_COMPILE=0
+        ARCHIVE_BUILDS_MANIFEST="$OUTPUT_DIR/archive_builds_manifest.json"
+        EXACT_CUDA_CANDIDATES_JSONL="$LOG_DIR/exact_cuda_candidates.jsonl"
+        SELECTED_EXACT_CUDA_CANDIDATE_JSON="$LOG_DIR/selected_exact_cuda_candidate.json"
+        if [ -f "$ARCHIVE_BUILDS_MANIFEST" ]; then
+            SELECTED_PACKET_DIR=$("$PYBIN" - "$ARCHIVE_BUILDS_MANIFEST" "$EXACT_CUDA_CANDIDATES_JSONL" "$SELECTED_EXACT_CUDA_CANDIDATE_JSON" "${T1_MAX_EXACT_CUDA_CANDIDATES:-1}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+manifest_path = Path(sys.argv[1])
+jsonl_path = Path(sys.argv[2])
+selected_path = Path(sys.argv[3])
+limit = int(sys.argv[4])
+payload = json.loads(manifest_path.read_text())
+rows = payload.get("rows", [])
+eligible = []
+for row in rows:
+    raw_packet_dir = row.get("compiled_packet_dir")
+    if not isinstance(raw_packet_dir, str) or not raw_packet_dir:
+        continue
+    packet_dir = Path(raw_packet_dir)
+    blockers = list(row.get("compiler_blockers") or [])
+    if (
+        row.get("exact_cuda_eligible") is True
+        and row.get("rate_cap_passed") is True
+        and not blockers
+        and (packet_dir / "archive.zip").is_file()
+        and (packet_dir / "inflate.sh").is_file()
+        and (packet_dir / "build_manifest.json").is_file()
+    ):
+        eligible.append(row)
+
+def score_key(row):
+    metrics = row.get("proxy_metrics") if isinstance(row.get("proxy_metrics"), dict) else {}
+    proxy = metrics.get("ema_proxy_pixel_l1")
+    rate_bits = metrics.get("ema_proxy_rate_bits")
+    return (
+        float(proxy) if isinstance(proxy, (int, float)) else float("inf"),
+        float(rate_bits) if isinstance(rate_bits, (int, float)) else float("inf"),
+        int(row.get("archive_bytes") or 10**18),
+        int(row.get("epoch") or 10**18),
+    )
+
+selected_rows = sorted(eligible, key=score_key)[:max(1, limit)]
+jsonl_path.parent.mkdir(parents=True, exist_ok=True)
+with jsonl_path.open("w") as f:
+    for row in selected_rows:
+        f.write(json.dumps(row, sort_keys=True) + "\n")
+selected = selected_rows[0] if selected_rows else {
+    "selected": False,
+    "reason": "no_archive_in_loop_exact_cuda_eligible_candidates",
+    "manifest": manifest_path.as_posix(),
+}
+selected_path.write_text(json.dumps(selected, indent=2, sort_keys=True) + "\n")
+print(selected.get("compiled_packet_dir") or "")
+PY
+)
+            if [ -n "$SELECTED_PACKET_DIR" ]; then
+                PACKET_DIR="$SELECTED_PACKET_DIR"
+                SKIP_PACKET_COMPILE=1
+                log "Stage 6a: selected archive-in-loop packet for exact eval: $PACKET_DIR"
+                log "Stage 6a: candidate selection json: $SELECTED_EXACT_CUDA_CANDIDATE_JSON"
+            else
+                log "Stage 6a: no archive-in-loop exact-CUDA-eligible candidate; falling back to terminal archive packet compile"
+            fi
+        fi
         BASELINE_ARCHIVE_SHA="${T1_BASELINE_ARCHIVE_SHA256:-87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5}"
         BASELINE_ARCHIVE_SIZE="${T1_BASELINE_ARCHIVE_SIZE_BYTES:-178262}"
         PACKET_CMD=(
@@ -460,15 +537,17 @@ if [ "$ALLOW_SCORE_DOMAIN_TRAINING" = "1" ]; then
             --baseline-archive-size-bytes "$BASELINE_ARCHIVE_SIZE"
             --print-result-json
         )
-        log "Stage 6a: compile Phase 1 packet for exact eval"
-        set +e
-        "${PACKET_CMD[@]}" 2>&1 | tee "$LOG_DIR/packet_compiler.log"
-        PACKET_RC=${PIPESTATUS[0]}
-        set -e
-        log "Stage 6a: packet compiler exited with rc=$PACKET_RC"
-        if [ "$PACKET_RC" -ne 0 ]; then
-            close_dispatch_claim "failed_t1_packet_compile_rc_${PACKET_RC}" "T1 packet compiler refused exact-eval packet; see packet_compiler.log"
-            exit "$PACKET_RC"
+        if [ "$SKIP_PACKET_COMPILE" != "1" ]; then
+            log "Stage 6a: compile Phase 1 packet for exact eval"
+            set +e
+            "${PACKET_CMD[@]}" 2>&1 | tee "$LOG_DIR/packet_compiler.log"
+            PACKET_RC=${PIPESTATUS[0]}
+            set -e
+            log "Stage 6a: packet compiler exited with rc=$PACKET_RC"
+            if [ "$PACKET_RC" -ne 0 ]; then
+                close_dispatch_claim "failed_t1_packet_compile_rc_${PACKET_RC}" "T1 packet compiler refused exact-eval packet; see packet_compiler.log"
+                exit "$PACKET_RC"
+            fi
         fi
         if [ ! -f "$PACKET_DIR/build_manifest.json" ] || [ ! -f "$PACKET_DIR/archive.zip" ] || [ ! -x "$PACKET_DIR/inflate.sh" ]; then
             log "FATAL: packet compiler did not emit required archive/runtime custody files"
