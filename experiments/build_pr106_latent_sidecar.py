@@ -484,8 +484,16 @@ def validate_score_table_manifest(
         raise ValueError("score table manifest must keep score_claim=false")
     if manifest.get("ready_for_builder") is not True:
         raise ValueError("score table manifest must have ready_for_builder=true")
-    if manifest.get("source_archive_sha256") != hashlib.sha256(source_archive.read_bytes()).hexdigest():
-        raise ValueError("score table manifest source_archive_sha256 mismatch")
+    archive_sha256 = hashlib.sha256(source_archive.read_bytes()).hexdigest()
+    archive_sha256_matches = manifest.get("source_archive_sha256") == archive_sha256
+    zero_bin_sha256_matches = False
+    if not archive_sha256_matches:
+        source_zero_bin_sha256 = manifest.get("source_zero_bin_sha256")
+        if isinstance(source_zero_bin_sha256, str):
+            with zipfile.ZipFile(source_archive) as zf:
+                zero_bin_sha256_matches = hashlib.sha256(zf.read("0.bin")).hexdigest() == source_zero_bin_sha256
+        if not zero_bin_sha256_matches:
+            raise ValueError("score table manifest source archive payload mismatch")
     if manifest.get("score_table_npy_sha256") != hashlib.sha256(score_table_npy.read_bytes()).hexdigest():
         raise ValueError("score table manifest score_table_npy_sha256 mismatch")
     expected_grid_sha256 = latent_candidate_grid_npy_sha256(
@@ -507,6 +515,9 @@ def validate_score_table_manifest(
         raise ValueError("score table manifest must not claim exact-eval dispatch readiness")
     if manifest.get("dispatch_attempted") is True or manifest.get("remote_jobs_dispatched") is True:
         raise ValueError("score table manifest must not mark dispatch attempted")
+    manifest = dict(manifest)
+    manifest["validated_source_archive_sha256_match"] = archive_sha256_matches
+    manifest["validated_source_zero_bin_sha256_match"] = zero_bin_sha256_matches
     return manifest
 
 
@@ -619,6 +630,16 @@ def main() -> int:
             "score_table_manifest_validated": score_table_manifest is not None,
             "score_table_manifest_schema": (
                 score_table_manifest.get("manifest_schema") if score_table_manifest is not None else None
+            ),
+            "validated_source_archive_sha256_match": (
+                score_table_manifest.get("validated_source_archive_sha256_match")
+                if score_table_manifest is not None
+                else None
+            ),
+            "validated_source_zero_bin_sha256_match": (
+                score_table_manifest.get("validated_source_zero_bin_sha256_match")
+                if score_table_manifest is not None
+                else None
             ),
             "score_table_is_score_claim": False,
             "score_table_required_provenance": (

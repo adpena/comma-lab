@@ -16,6 +16,7 @@ provides the contest-CUDA empirical measurement.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -446,3 +447,116 @@ def test_score_table_builder_reduces_measured_table_without_claiming_score(tmp_p
     dim_arr, delta_q_arr = build.decode_sidecar_corrections((out_dir / "sidecar.bin").read_bytes())
     assert int(np.count_nonzero(delta_q_arr)) == 2
     assert int(np.count_nonzero(dim_arr != build.NO_OP_DIM)) == 2
+
+
+@pytest.mark.skipif(
+    not PR106_ARCHIVE.is_file(),
+    reason=f"PR106 archive not present at {PR106_ARCHIVE} — skipping score-table manifest test",
+)
+def test_score_table_manifest_accepts_reframed_archive_with_same_zero_bin(tmp_path: Path):
+    """Kaggle may reframe the ZIP, but the measured PR106 payload is 0.bin."""
+    build = _import_build_module()
+    with zipfile.ZipFile(PR106_ARCHIVE) as zf:
+        zero_bin = zf.read("0.bin")
+
+    score_table = np.zeros((600, 57), dtype=np.float32)
+    table_path = tmp_path / "score_table.npy"
+    np.save(table_path, score_table, allow_pickle=False)
+    candidates = build.build_latent_candidate_grid(latent_dim=28, delta_radius=1)
+    candidate_path = tmp_path / "candidate_grid.npy"
+    np.save(candidate_path, candidates, allow_pickle=False)
+    reframed_archive = tmp_path / "pr106_reframed.zip"
+    with zipfile.ZipFile(reframed_archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        info = zipfile.ZipInfo("0.bin", date_time=(1980, 1, 1, 0, 0, 0))
+        info.compress_type = zipfile.ZIP_STORED
+        info.external_attr = 0o644 << 16
+        zf.writestr(info, zero_bin)
+
+    manifest_path = tmp_path / "score_table_manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "manifest_schema": "pr106_latent_score_table_manifest_v1",
+                "producer": "experiments/build_pr106_latent_score_table.py",
+                "score_claim": False,
+                "ready_for_builder": True,
+                "source_archive_sha256": hashlib.sha256(
+                    reframed_archive.read_bytes()
+                ).hexdigest(),
+                "source_zero_bin_sha256": hashlib.sha256(zero_bin).hexdigest(),
+                "score_table_npy_sha256": hashlib.sha256(table_path.read_bytes()).hexdigest(),
+                "candidate_grid_sha256": build.latent_candidate_grid_npy_sha256(candidates),
+                "n_pairs": 600,
+                "latent_dim": 28,
+                "delta_radius": 1,
+                "candidate_count": 57,
+                "score_table_shape": [600, 57],
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "remote_jobs_dispatched": False,
+            }
+        )
+    )
+
+    validated = build.validate_score_table_manifest(
+        manifest_path,
+        score_table_npy=table_path,
+        source_archive=PR106_ARCHIVE,
+        n_pairs=600,
+        latent_dim=28,
+        delta_radius=1,
+        candidate_count=57,
+    )
+
+    assert validated["validated_source_archive_sha256_match"] is False
+    assert validated["validated_source_zero_bin_sha256_match"] is True
+
+
+@pytest.mark.skipif(
+    not PR106_ARCHIVE.is_file(),
+    reason=f"PR106 archive not present at {PR106_ARCHIVE} — skipping score-table manifest test",
+)
+def test_score_table_manifest_rejects_different_zero_bin_when_archive_sha_mismatches(
+    tmp_path: Path,
+):
+    """Archive SHA fallback must not accept a table measured on another payload."""
+    build = _import_build_module()
+    score_table = np.zeros((600, 57), dtype=np.float32)
+    table_path = tmp_path / "score_table.npy"
+    np.save(table_path, score_table, allow_pickle=False)
+    candidates = build.build_latent_candidate_grid(latent_dim=28, delta_radius=1)
+
+    manifest_path = tmp_path / "score_table_manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "manifest_schema": "pr106_latent_score_table_manifest_v1",
+                "producer": "experiments/build_pr106_latent_score_table.py",
+                "score_claim": False,
+                "ready_for_builder": True,
+                "source_archive_sha256": "a" * 64,
+                "source_zero_bin_sha256": "b" * 64,
+                "score_table_npy_sha256": hashlib.sha256(table_path.read_bytes()).hexdigest(),
+                "candidate_grid_sha256": build.latent_candidate_grid_npy_sha256(candidates),
+                "n_pairs": 600,
+                "latent_dim": 28,
+                "delta_radius": 1,
+                "candidate_count": 57,
+                "score_table_shape": [600, 57],
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "remote_jobs_dispatched": False,
+            }
+        )
+    )
+
+    with pytest.raises(ValueError, match="source archive payload mismatch"):
+        build.validate_score_table_manifest(
+            manifest_path,
+            score_table_npy=table_path,
+            source_archive=PR106_ARCHIVE,
+            n_pairs=600,
+            latent_dim=28,
+            delta_radius=1,
+            candidate_count=57,
+        )
