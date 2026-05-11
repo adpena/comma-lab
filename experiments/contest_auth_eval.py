@@ -1430,7 +1430,7 @@ def _auth_eval_evidence_contract(
     return {
         "evidence_grade": "B",
         "lane_tag": "[diagnostic-auth-eval]",
-        "score_axis": device,
+        "score_axis": f"diagnostic_{device}",
         "evidence_semantics": "diagnostic_auth_eval_non_promotable",
         "exact_cuda_eval_complete": False,
         "score_claim": False,

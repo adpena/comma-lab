@@ -606,6 +606,23 @@ def test_auth_eval_evidence_contract_demotes_inflate_env_diagnostic(cae) -> None
     assert contract["diagnostic_blockers"] == ["inflate_env_overrides_present"]
 
 
+def test_auth_eval_evidence_contract_marks_non_t4_cuda_as_diagnostic_axis(cae) -> None:
+    contract = cae._auth_eval_evidence_contract(
+        "cuda",
+        600,
+        {
+            "platform_system": "Linux",
+            "platform_machine": "x86_64",
+            "gpu_t4_match": False,
+        },
+    )
+
+    assert contract["evidence_grade"] == "B"
+    assert contract["lane_tag"] == "[diagnostic-auth-eval]"
+    assert contract["score_axis"] == "diagnostic_cuda"
+    assert contract["score_claim"] is False
+
+
 def test_expected_runtime_tree_hash_mismatch_fails_closed(cae) -> None:
     prov = {
         "inflate_runtime_manifest": {

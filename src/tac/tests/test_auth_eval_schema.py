@@ -1,8 +1,14 @@
 from __future__ import annotations
 
+import io
+import json
+from contextlib import redirect_stdout
+
 from tac.auth_eval_schema import (
+    auth_eval_completion_summary,
     contest_formula_score,
     eval_metric_summary,
+    main,
     required_contest_cuda_evidence_blockers,
     required_exact_eval_metric_blockers,
 )
@@ -279,3 +285,54 @@ def test_required_contest_cuda_evidence_blockers_accepts_documented_equivalent_c
     metrics = eval_metric_summary(payload)
 
     assert required_contest_cuda_evidence_blockers(payload, metrics, expected_n_samples=600) == []
+
+
+def test_auth_eval_completion_summary_uses_evaluator_evidence_fields() -> None:
+    payload = _contest_cuda_payload(
+        evidence_grade="B",
+        lane_tag="[diagnostic-auth-eval]",
+        score_axis="diagnostic_cuda",
+        evidence_semantics="diagnostic_auth_eval_non_promotable",
+        score_claim=False,
+        score_claim_valid=False,
+        provenance={"device": "cuda", "gpu_model": "Tesla P100", "gpu_t4_match": False},
+    )
+
+    summary = auth_eval_completion_summary(payload)
+
+    assert summary["score"] == payload["score_recomputed_from_components"]
+    assert summary["lane_tag"] == "[diagnostic-auth-eval]"
+    assert summary["score_axis"] == "diagnostic_cuda"
+    assert summary["score_claim"] is False
+    assert summary["score_claim_valid"] is False
+    assert summary["device"] == "cuda"
+    assert summary["gpu_model"] == "Tesla P100"
+    assert summary["gpu_t4_match"] is False
+
+
+def test_auth_eval_completion_summary_cli_outputs_json_and_fields(tmp_path) -> None:
+    payload = _contest_cuda_payload(
+        evidence_grade="B",
+        lane_tag="[diagnostic-auth-eval]",
+        score_axis="diagnostic_cuda",
+        evidence_semantics="diagnostic_auth_eval_non_promotable",
+        score_claim=False,
+        score_claim_valid=False,
+    )
+    path = tmp_path / "contest_auth_eval.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert main(["completion-summary", str(path)]) == 0
+    summary = json.loads(out.getvalue())
+
+    assert summary["score"] == payload["score_recomputed_from_components"]
+    assert summary["score_axis"] == "diagnostic_cuda"
+    assert summary["score_claim"] is False
+
+    out = io.StringIO()
+    with redirect_stdout(out):
+        assert main(["completion-summary", str(path), "--field", "score"]) == 0
+
+    assert float(out.getvalue().strip()) == payload["score_recomputed_from_components"]

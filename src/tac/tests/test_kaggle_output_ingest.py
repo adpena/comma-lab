@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from types import SimpleNamespace
 from pathlib import Path
 
 import tac.deploy.kaggle.kaggle_output_ingest as mod
@@ -197,6 +198,78 @@ class KaggleOutputIngestTests(unittest.TestCase):
             )
 
         self.assertEqual(report["latest_checkpoint"]["epoch"], 42)
+
+    def test_download_policy_skips_rebuildable_raw_and_cache_noise(self) -> None:
+        keep, reason = mod.should_download_output("run/eval/contest_auth_eval.json")
+        self.assertTrue(keep)
+        self.assertEqual(reason, "matched")
+
+        keep, reason = mod.should_download_output("run/eval/inflated/0.raw")
+        self.assertFalse(keep)
+        self.assertEqual(reason, "matched_exclude_patterns")
+
+        keep, reason = mod.should_download_output("src/tac/__pycache__/module.cpython-312.pyc")
+        self.assertFalse(keep)
+        self.assertEqual(reason, "matched_exclude_patterns")
+
+    def test_download_policy_supports_narrow_include_patterns(self) -> None:
+        keep, reason = mod.should_download_output(
+            "workspace/src/tac/preflight.py",
+            include_patterns=(r"^pr106_yshift_score_table/",),
+        )
+        self.assertFalse(keep)
+        self.assertEqual(reason, "not_matched_by_include_patterns")
+
+        keep, reason = mod.should_download_output(
+            "pr106_yshift_score_table/yshift_run/eval/contest_auth_eval.json",
+            include_patterns=(r"^pr106_yshift_score_table/",),
+        )
+        self.assertTrue(keep)
+
+    def test_download_output_items_writes_hash_manifest_inputs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            items = [
+                SimpleNamespace(file_name="run/eval/contest_auth_eval.json", url="mem://eval"),
+                SimpleNamespace(file_name="run/eval/inflated/0.raw", url="mem://raw"),
+            ]
+
+            downloaded, skipped, log_downloaded, files_seen, files_matched = mod._download_output_items(
+                kernel_slug="demo",
+                page_items=items,
+                log_text="hello\n",
+                download_dir=root,
+                fetch_bytes=lambda url: {"mem://eval": b'{"score_claim": false}'}[url],
+                include_patterns=None,
+                exclude_patterns=mod.DEFAULT_EXCLUDE_OUTPUT_PATTERNS,
+            )
+
+            self.assertEqual(files_seen, 2)
+            self.assertEqual(files_matched, 1)
+            self.assertTrue(log_downloaded)
+            self.assertEqual([row.file_name for row in downloaded], ["run/eval/contest_auth_eval.json", "demo.log"])
+            self.assertEqual(skipped[0].file_name, "run/eval/inflated/0.raw")
+            self.assertEqual(downloaded[0].bytes, len(b'{"score_claim": false}'))
+            self.assertEqual(len(downloaded[0].sha256), 64)
+            self.assertTrue((root / "run/eval/contest_auth_eval.json").exists())
+            self.assertTrue((root / "demo.log").exists())
+
+    def test_skipped_by_reason_is_compact_and_counted(self) -> None:
+        counts = mod._skipped_by_reason(
+            [
+                mod.SkippedOutput(file_name="a.py", reason="not_matched_by_include_patterns"),
+                mod.SkippedOutput(file_name="b.py", reason="not_matched_by_include_patterns"),
+                mod.SkippedOutput(file_name="0.raw", reason="matched_exclude_patterns"),
+            ]
+        )
+
+        self.assertEqual(
+            counts,
+            {
+                "matched_exclude_patterns": 1,
+                "not_matched_by_include_patterns": 2,
+            },
+        )
 
 
 if __name__ == "__main__":

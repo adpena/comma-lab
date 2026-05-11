@@ -9,7 +9,10 @@ when canonical fields are missing.
 
 from __future__ import annotations
 
+import argparse
+import json
 import math
+from pathlib import Path
 from typing import Any
 
 
@@ -132,6 +135,84 @@ def eval_metric_summary(eval_data: dict[str, Any] | None) -> dict[str, Any]:
         "n_samples": int_or_none(eval_data.get("n_samples")),
         "canonical_score_source": eval_data.get("canonical_score_source"),
     }
+
+
+def auth_eval_completion_summary(eval_data: dict[str, Any] | None) -> dict[str, Any]:
+    """Return compact authenticated fields for completion logs.
+
+    Remote wrappers should quote this summary instead of inventing labels such
+    as ``contest_cuda_score`` from the requested device alone. The evaluator's
+    own evidence fields decide whether a result is a score claim.
+    """
+
+    metrics = eval_metric_summary(eval_data)
+    prov = _provenance(eval_data)
+    payload = eval_data if isinstance(eval_data, dict) else {}
+    return {
+        "score": metrics.get("score"),
+        "score_source": metrics.get("canonical_score_source"),
+        "archive_size_bytes": metrics.get("archive_size_bytes"),
+        "n_samples": metrics.get("n_samples"),
+        "evidence_grade": payload.get("evidence_grade"),
+        "lane_tag": payload.get("lane_tag"),
+        "score_axis": payload.get("score_axis"),
+        "evidence_semantics": payload.get("evidence_semantics"),
+        "score_claim": payload.get("score_claim") is True,
+        "score_claim_valid": payload.get("score_claim_valid") is True,
+        "promotion_eligible": payload.get("promotion_eligible") is True,
+        "rank_or_kill_eligible": payload.get("rank_or_kill_eligible") is True,
+        "device": eval_device(eval_data),
+        "gpu_model": prov.get("gpu_model"),
+        "gpu_t4_match": prov.get("gpu_t4_match"),
+    }
+
+
+def load_auth_eval_json(path: Path) -> dict[str, Any]:
+    """Load an auth-eval JSON object from disk, failing closed on bad shape."""
+
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"auth-eval JSON must contain an object, got {type(payload).__name__}")
+    return payload
+
+
+def _print_auth_eval_completion_summary(args: argparse.Namespace) -> int:
+    summary = auth_eval_completion_summary(load_auth_eval_json(args.path))
+    if args.field:
+        value = summary.get(args.field)
+        if value is None:
+            return 2
+        if isinstance(value, str):
+            print(value)
+        else:
+            print(json.dumps(value, sort_keys=True, separators=(",", ":")))
+        return 0
+    print(json.dumps(summary, sort_keys=True, separators=(",", ":")))
+    return 0
+
+
+def build_arg_parser() -> argparse.ArgumentParser:
+    """Build the small CLI used by remote wrappers."""
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    completion = subparsers.add_parser(
+        "completion-summary",
+        help="Print compact authenticated completion fields from contest_auth_eval.json.",
+    )
+    completion.add_argument("path", type=Path)
+    completion.add_argument(
+        "--field",
+        choices=tuple(auth_eval_completion_summary({}).keys()),
+        help="Print one summary field instead of the full JSON object.",
+    )
+    completion.set_defaults(func=_print_auth_eval_completion_summary)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_arg_parser().parse_args(argv)
+    return int(args.func(args))
 
 
 def required_exact_eval_metric_blockers(
@@ -280,3 +361,7 @@ def required_contest_cuda_evidence_blockers(
         if "score_claim_valid" in eval_data and eval_data.get("score_claim_valid") is not True:
             blockers.append("score_claim_valid_not_true")
     return blockers
+
+
+if __name__ == "__main__":  # pragma: no cover
+    raise SystemExit(main())
