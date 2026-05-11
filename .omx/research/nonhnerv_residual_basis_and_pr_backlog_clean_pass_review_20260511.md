@@ -11,7 +11,7 @@ Per CLAUDE.md "Recursive adversarial review protocol" non-negotiable. 3 sequenti
 * `src/tac/residual_basis/coordinate_mlp_residual.py` (family-agnostic Laplacian smoothness prior)
 * `src/tac/tests/test_residual_basis_numpy_inverse_dwt.py` (25 tests)
 * `src/tac/tests/test_residual_basis_nonhnerv_scaffolds.py` (30 tests)
-* `experiments/results/public_pr_nonhnerv_mechanism_backlog_20260511T171636Z/backlog.jsonl` (8 typed rows)
+* `experiments/results/public_pr_nonhnerv_mechanism_backlog_20260511T171636Z/backlog.jsonl` (7 JSONL rows as validated by Codex on 2026-05-11; ignored synthesis prose elsewhere says 8 typed rows)
 * `experiments/results/public_pr_nonhnerv_mechanism_backlog_20260511T171636Z/synthesis.md` (Top 3 EV/byte ranking)
 
 ## Pass 1 — Shannon LEAD + Dykstra CO-LEAD + Contrarian
@@ -78,6 +78,17 @@ Per CLAUDE.md "Recursive adversarial review protocol" non-negotiable. 3 sequenti
 **3/3 CLEAN PASSES** — the 6 new lanes (numpy_inverse_dwt + 4 non-HNeRV residual scaffolds + public PR backlog) are cleared for landing.
 
 No design decisions surfaced (each scaffold is research-only by construction; promotion-status frozen). No GPU dispatch authorized. Loop remains PAUSED.
+
+## Codex validation addendum (2026-05-11)
+
+`partner_pr106_r2_pr101_grammar_validation_20260511_codex.md` checked the
+public-PR mechanism backlog while validating partner-agent findings. The PR93
+delta-varint pose codec rank-1 claim is supported by the synthesis, but the
+row-count language is imprecise: `backlog.jsonl` has 7 JSONL rows, while
+ignored synthesis prose says 8 typed rows and 30+ reusable primitives. Treat
+the backlog as planning metadata until each promoted primitive has a canonical
+`tac.packet_compiler` port, golden vectors, runtime consumer, no-op proof, lane
+claim, and paired exact eval.
 
 ## Test result inventory
 

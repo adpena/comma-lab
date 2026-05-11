@@ -22,7 +22,7 @@ authoritative and is excluded.
 | **A1** (PR101-derived, score-gradient training) | HNeRV-cluster | 178,262 | **0.22635** | 0.000663 | 0.000171 | **0.19285** | 0.000560 | 0.000033 | +0.03350 | 5.18× | 1.18× | **CPU** (silver-medal-band proximity; rounds to 0.19 = PR101 gold display tier) |
 | PR103-on-PR106 AC repack | HNeRV decoder + AC rate work | 185,578 | 0.20898 | (per dual_device analysis 2026-05-11) | — | 0.22966 | — | — | −0.02068 | inverted | — | **CUDA** |
 | **PR106 latent sidecar r1** (Kaggle table → exact T4) | HNeRV + per-pair latent perturbation | 186,808 | 0.20739 | 0.000649 | 0.000033 | 0.22868 | 0.000638 | 0.000164 | −0.02129 | 0.20× | 1.02× | **CUDA** |
-| **PR106 latent sidecar r2** (NEW FLOOR 2026-05-11) | HNeRV + per-pair latent r2 perturbation | 186,822 | **0.20665** | 0.000643 | 0.000032 | **0.22809** (claude 2026-05-11T17:21Z, Modal CPU Linux x86_64) | 0.000632 | 0.000164 | +0.02145 | 0.197× | 1.017× | **CUDA exact-floor**; r2−r1 Δ = −0.00075 CUDA, −0.00059 CPU; pose ratio matches r1 within 1.2% — substrate-class boundary RATIFIED at N=1+2 |
+| **PR106 latent sidecar r2** (NEW FLOOR 2026-05-11) | HNeRV + per-pair latent r2 perturbation | 186,822 | **0.20665** | 0.000643 | 0.000032 | **0.22809** (claude 2026-05-11T17:21Z, Modal CPU Linux x86_64) | 0.000632 | 0.000164 | -0.02145 | 0.197× | 1.017× | **CUDA exact-floor**; r2−r1 Δ = −0.00075 CUDA, −0.00059 CPU; CPU/CUDA pose ratio matches r1 within ~1.25% — substrate-class boundary RATIFIED at N=1+2 |
 
 ## Mechanism reading
 
@@ -93,12 +93,20 @@ targeting the pose term directly.
 
 This is informational; the dispatch decision remains operator-gated.
 
-### PR106 r2 paired CPU eval is the next $0 follow-up
+### PR106 r2 paired CPU eval is closed
 
-The r2 floor (CUDA 0.20665) has no paired Linux x86_64 CPU value yet. The
-codex session's pattern is to harvest via Modal CPU after each new CUDA exact.
-Doing this on r2 is cheap ($<$0.10 Modal CPU) and closes the 4-cell axis
-matrix from the synthesis memo. This is a sibling-codex action, not mine.
+Validation addendum `partner_pr106_r2_pr101_grammar_validation_20260511_codex.md`
+recomputed the paired r2 row from on-disk JSON:
+
+- r2 CUDA score: `0.206645885457`
+- r2 CPU score: `0.228092382711`
+- archive SHA-256 on both axes:
+  `7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f`
+- CPU/CUDA pose ratio: `5.068603`
+
+The old "next $0 follow-up" text is superseded. The remaining action is not
+another CPU harvest; it is a runtime-consumed byte candidate or a broader
+paired-axis mechanism study.
 
 ## Cross-references
 

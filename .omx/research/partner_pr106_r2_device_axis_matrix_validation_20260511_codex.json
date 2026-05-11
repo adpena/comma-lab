@@ -1,0 +1,243 @@
+{
+  "baseline_label": "r2_cuda",
+  "blockers": [],
+  "created_at_utc": "2026-05-11T17:50:41Z",
+  "deltas_vs_baseline": [
+    {
+      "baseline_label": "r2_cuda",
+      "label": "r1_cuda",
+      "pose_delta": 4.499999999999974e-07,
+      "same_archive_sha256": false,
+      "same_raw_output_aggregate_sha256": false,
+      "same_runtime_tree_sha256": false,
+      "score_delta": 0.0007483953966177515,
+      "seg_delta": 6.330000000000029e-06
+    },
+    {
+      "baseline_label": "r2_cuda",
+      "label": "r1_cpu",
+      "pose_delta": 0.00013188000000000002,
+      "same_archive_sha256": false,
+      "same_raw_output_aggregate_sha256": false,
+      "same_runtime_tree_sha256": true,
+      "score_delta": 0.022034399060108123,
+      "seg_delta": -4.940000000000044e-06
+    },
+    {
+      "baseline_label": "r2_cuda",
+      "label": "r2_cpu",
+      "pose_delta": 0.00013166,
+      "same_archive_sha256": true,
+      "same_raw_output_aggregate_sha256": false,
+      "same_runtime_tree_sha256": false,
+      "score_delta": 0.021446497253930052,
+      "seg_delta": -1.064000000000002e-05
+    }
+  ],
+  "entries": [
+    {
+      "archive_bytes": 186808,
+      "archive_sha256": "947b85e8a69db295d4dcf80b0b528639c47839f40f289a2c05b70a2064658b48",
+      "avg_posenet_dist": 3.281e-05,
+      "avg_segnet_dist": 0.00064893,
+      "blockers": [],
+      "device": "cuda",
+      "diagnostic_blockers": [],
+      "evidence_grade": "A++",
+      "hardware": null,
+      "inflate_device_policy": "auto",
+      "inflate_env_override_mode": null,
+      "label": "r1_cuda",
+      "parse_ok": true,
+      "path": "experiments/results/modal_auth_eval/pr106_latent_sidecar_20260511T150517Z/contest_auth_eval.adjudicated.json",
+      "promotion_eligible": true,
+      "rank_or_kill_eligible": false,
+      "raw_output_aggregate_sha256": "235752e9c7e4d4cc447ec1973f48f3be5135b8db36cc278ce2efaddc07badbe4",
+      "raw_output_manifest": {
+        "aggregate_sha256": "235752e9c7e4d4cc447ec1973f48f3be5135b8db36cc278ce2efaddc07badbe4",
+        "files": [
+          {
+            "bytes": 3662409600,
+            "exists": true,
+            "relative_path": "0.raw",
+            "sha256": "98da6d361d7b9a0c0f609dc3cb6968f8c825d1d9bc694bc0508cd3ca8dcf0e35",
+            "video_name": "0.mkv"
+          }
+        ],
+        "manifest_path": "/root/modal_auth_eval_work/eval_work/inflated_outputs_manifest.json",
+        "manifest_sha256": "0a876e0ee6fd78aa9d9e870ccaf2d40cfcbac7cbeb52813c134df9c5682a5eb9",
+        "raw_file_count": 1,
+        "total_bytes": 3662409600
+      },
+      "runtime_tree_sha256": "55989d263d4eb36e29c59998f87e9bbd432e69fab80ea1cc704c442dd083012e",
+      "samples": 600,
+      "score": 0.20739428085403283,
+      "score_axis": "contest_cuda",
+      "score_claim": true,
+      "score_recomputed": 0.20739431016887944,
+      "scorer_device": "cuda"
+    },
+    {
+      "archive_bytes": 186808,
+      "archive_sha256": "947b85e8a69db295d4dcf80b0b528639c47839f40f289a2c05b70a2064658b48",
+      "avg_posenet_dist": 0.00016424,
+      "avg_segnet_dist": 0.00063766,
+      "blockers": [],
+      "device": "cpu",
+      "diagnostic_blockers": [],
+      "evidence_grade": "contest-CPU",
+      "hardware": null,
+      "inflate_device_policy": "auto",
+      "inflate_env_override_mode": null,
+      "label": "r1_cpu",
+      "parse_ok": true,
+      "path": "experiments/results/modal_auth_eval_cpu/pr106_latent_sidecar_20260511T151955Z/contest_auth_eval.json",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "raw_output_aggregate_sha256": "936d9c568d7adcf9b0da76c25531b668f8ad94bc1d64037ca2f583123318c7aa",
+      "raw_output_manifest": {
+        "aggregate_sha256": "936d9c568d7adcf9b0da76c25531b668f8ad94bc1d64037ca2f583123318c7aa",
+        "files": [
+          {
+            "bytes": 3662409600,
+            "exists": true,
+            "relative_path": "0.raw",
+            "sha256": "f8c874966200a4a274b3de991f8d08fa545c00570d9e99628f5b8899e136011e",
+            "video_name": "0.mkv"
+          }
+        ],
+        "manifest_path": "/root/modal_auth_eval_cpu_work/eval_work/inflated_outputs_manifest.json",
+        "manifest_sha256": "ed43e48bdf1054c61ba5d472d075908bf5e4b8890d900a480f039a00526e23df",
+        "raw_file_count": 1,
+        "total_bytes": 3662409600
+      },
+      "runtime_tree_sha256": "7a49e777d9d8bc598183237c6e29a405e0ada7294d19f3dda2c42cd2a3b1336d",
+      "samples": 600,
+      "score": 0.2286802845175232,
+      "score_axis": "contest_cpu",
+      "score_claim": false,
+      "score_recomputed": 0.22868031383236978,
+      "scorer_device": "cpu"
+    },
+    {
+      "archive_bytes": 186822,
+      "archive_sha256": "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f",
+      "avg_posenet_dist": 3.236e-05,
+      "avg_segnet_dist": 0.0006426,
+      "blockers": [],
+      "device": "cuda",
+      "diagnostic_blockers": [],
+      "evidence_grade": "contest-CUDA",
+      "hardware": null,
+      "inflate_device_policy": "auto",
+      "inflate_env_override_mode": null,
+      "label": "r2_cuda",
+      "parse_ok": true,
+      "path": "experiments/results/modal_auth_eval/pr106_latent_sidecar_r2_20260511T160358Z/contest_auth_eval.json",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "raw_output_aggregate_sha256": "5f65c70f59c78e5a4394dc062fe750cf721619f6d67790c4844d52f14d248993",
+      "raw_output_manifest": {
+        "aggregate_sha256": "5f65c70f59c78e5a4394dc062fe750cf721619f6d67790c4844d52f14d248993",
+        "files": [
+          {
+            "bytes": 3662409600,
+            "exists": true,
+            "relative_path": "0.raw",
+            "sha256": "fb8eaaae74a6e86094681602769c3ba98126ae181c1c1106efd57eb421e3e0e6",
+            "video_name": "0.mkv"
+          }
+        ],
+        "manifest_path": "/root/modal_auth_eval_work/eval_work/inflated_outputs_manifest.json",
+        "manifest_sha256": "18a683613eb35cbdc90fd1f1e7d30e2779f59bdf0c1c530406a20ca23934ad64",
+        "raw_file_count": 1,
+        "total_bytes": 3662409600
+      },
+      "runtime_tree_sha256": "7a49e777d9d8bc598183237c6e29a405e0ada7294d19f3dda2c42cd2a3b1336d",
+      "samples": 600,
+      "score": 0.20664588545741508,
+      "score_axis": "contest_cuda",
+      "score_claim": true,
+      "score_recomputed": 0.20664598679760537,
+      "scorer_device": "cuda"
+    },
+    {
+      "archive_bytes": 186822,
+      "archive_sha256": "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f",
+      "avg_posenet_dist": 0.00016402,
+      "avg_segnet_dist": 0.00063196,
+      "blockers": [],
+      "device": "cpu",
+      "diagnostic_blockers": [],
+      "evidence_grade": "A score-grade; T4/equivalent promotion required",
+      "hardware": null,
+      "inflate_device_policy": "auto",
+      "inflate_env_override_mode": null,
+      "label": "r2_cpu",
+      "parse_ok": true,
+      "path": "experiments/results/modal_auth_eval_cpu/pr106_latent_sidecar_r2_20260511T171453Z/contest_auth_eval.adjudicated.json",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "raw_output_aggregate_sha256": "08675dc4d129c8a1848de9c81dc158a80d6927061a60a8e8ac15befc5ecea107",
+      "raw_output_manifest": {
+        "aggregate_sha256": "08675dc4d129c8a1848de9c81dc158a80d6927061a60a8e8ac15befc5ecea107",
+        "files": [
+          {
+            "bytes": 3662409600,
+            "exists": true,
+            "relative_path": "0.raw",
+            "sha256": "5e210e739f4d92b0edef0d7c670a67b7f60bbb9b1cf44d7f5ed6ee4a35cc93a3",
+            "video_name": "0.mkv"
+          }
+        ],
+        "manifest_path": "/root/modal_auth_eval_cpu_work/eval_work/inflated_outputs_manifest.json",
+        "manifest_sha256": "085739244edf40123d595b84021a990a01ceee00a28ad0c946fd69f247b2dded",
+        "raw_file_count": 1,
+        "total_bytes": 3662409600
+      },
+      "runtime_tree_sha256": "9181713cd849c80f6e0d24e1652c25f6d058c5ae00b3132da726ff840c7370b8",
+      "samples": 600,
+      "score": 0.22809238271134513,
+      "score_axis": "contest_cpu",
+      "score_claim": false,
+      "score_recomputed": 0.22809248405153543,
+      "scorer_device": "cpu"
+    }
+  ],
+  "notes": [
+    "This analysis is diagnostic only; use canonical auth-eval artifacts for score claims.",
+    "A non-auto inflate_device_policy is never promotion-eligible.",
+    "Raw-output SHA equality localizes drift after inflate; raw-output SHA mismatch localizes drift at or before inflate.",
+    "Do not infer CPU or CUDA is globally better from this matrix; keep the conclusion per archive/runtime."
+  ],
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "raw_output_groups": {
+    "08675dc4d129c8a1848de9c81dc158a80d6927061a60a8e8ac15befc5ecea107": [
+      "r2_cpu"
+    ],
+    "235752e9c7e4d4cc447ec1973f48f3be5135b8db36cc278ce2efaddc07badbe4": [
+      "r1_cuda"
+    ],
+    "5f65c70f59c78e5a4394dc062fe750cf721619f6d67790c4844d52f14d248993": [
+      "r2_cuda"
+    ],
+    "936d9c568d7adcf9b0da76c25531b668f8ad94bc1d64037ca2f583123318c7aa": [
+      "r1_cpu"
+    ]
+  },
+  "runtime_tree_groups": {
+    "55989d263d4eb36e29c59998f87e9bbd432e69fab80ea1cc704c442dd083012e": [
+      "r1_cuda"
+    ],
+    "7a49e777d9d8bc598183237c6e29a405e0ada7294d19f3dda2c42cd2a3b1336d": [
+      "r1_cpu",
+      "r2_cuda"
+    ],
+    "9181713cd849c80f6e0d24e1652c25f6d058c5ae00b3132da726ff840c7370b8": [
+      "r2_cpu"
+    ]
+  },
+  "schema": "device_axis_eval_matrix_analysis.v1",
+  "score_claim": false
+}
