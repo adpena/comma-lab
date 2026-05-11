@@ -542,6 +542,7 @@ def render_markdown(payload: dict[str, Any]) -> str:
         f"- name: `{_md(payload['next_comprehensive_tranche']['name'])}`",
         f"- objective: {_md(payload['next_comprehensive_tranche']['objective'])}",
         f"- candidate_packet_count: `{packet_selection['candidate_count']}`",
+        f"- duplicate_candidate_id_count: `{packet_selection.get('duplicate_candidate_id_count', 0)}`",
         f"- candidate_local_preflight_ready_count: `{packet_selection['candidate_local_preflight_ready_count']}`",
         f"- candidate_static_preflight_ready_count: `{packet_selection['candidate_static_preflight_ready_count']}`",
         f"- ready_candidate_packet_count: `{packet_selection['ready_candidate_count']}`",
@@ -598,7 +599,7 @@ def render_markdown(payload: dict[str, Any]) -> str:
                 "| "
                 + " | ".join(
                     (
-                        f"`{_md(row.get('candidate_id') or '')}`",
+                        f"`{_md(row.get('candidate_packet_key') or row.get('candidate_id') or '')}`",
                         f"`{_md(row.get('selection_decision') or '')}`",
                         f"`{_md(action.get('id') or 'none')}`",
                         _md_list(summary.get("claim_blockers") or []),

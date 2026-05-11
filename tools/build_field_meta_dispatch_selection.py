@@ -15,6 +15,7 @@ import argparse
 import datetime as dt
 import importlib.util
 import zipfile
+from collections import Counter
 from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -4081,6 +4082,34 @@ def _expand_manifest_inputs(
     return out
 
 
+def _annotate_candidate_packet_identity(rows: list[dict[str, Any]]) -> dict[str, list[str]]:
+    """Add unambiguous packet identity fields for duplicate candidate ids.
+
+    A candidate id names the conceptual lane/candidate, but several manifests
+    can legitimately describe successive hardening attempts for the same id.
+    Operator surfaces need a stable packet key so tables do not appear to carry
+    accidental duplicates.
+    """
+
+    counts: Counter[str] = Counter(str(row.get("candidate_id") or "") for row in rows)
+    duplicate_groups: dict[str, list[str]] = {}
+    for row in rows:
+        candidate_id = str(row.get("candidate_id") or "")
+        manifest_path = str(row.get("manifest_path") or "")
+        duplicate_count = counts[candidate_id]
+        packet_key = (
+            f"{candidate_id}@{manifest_path}"
+            if duplicate_count > 1 and manifest_path
+            else candidate_id
+        )
+        row["candidate_packet_key"] = packet_key
+        row["candidate_id_duplicate_count"] = duplicate_count
+        row["candidate_id_is_ambiguous"] = duplicate_count > 1
+        if duplicate_count > 1:
+            duplicate_groups.setdefault(candidate_id, []).append(manifest_path)
+    return {key: sorted(paths) for key, paths in sorted(duplicate_groups.items())}
+
+
 def build_selection_report(
     *,
     repo_root: Path,
@@ -4109,6 +4138,7 @@ def build_selection_report(
         )
         for path in manifests
     ]
+    duplicate_candidate_id_groups = _annotate_candidate_packet_identity(rows)
     pareto_summary = _annotate_pareto_frontier(rows)
     _annotate_selection_scores(rows)
     _annotate_row_explanations(rows)
@@ -4190,6 +4220,8 @@ def build_selection_report(
         "candidate_local_preflight_ready": bool(selected and selected["candidate_local_preflight_ready"]),
         "candidate_static_preflight_ready": bool(selected and selected["candidate_static_preflight_ready"]),
         "candidate_count": len(rows),
+        "duplicate_candidate_id_count": len(duplicate_candidate_id_groups),
+        "duplicate_candidate_id_groups": duplicate_candidate_id_groups,
         "frontier_row_schema": FRONTIER_ROW_SCHEMA,
         "frontier_row_fields": list(FRONTIER_ROW_FIELDS),
         "frontier_row_count": len(rows),

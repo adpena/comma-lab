@@ -148,6 +148,36 @@ def test_field_meta_selector_summarizes_operator_next_steps_without_dispatch(
     assert row["ready_for_exact_eval_dispatch"] is False
 
 
+def test_field_meta_selector_marks_duplicate_candidate_ids_with_packet_keys(
+    tmp_path: Path,
+) -> None:
+    first = _packet_manifest(
+        tmp_path / "first",
+        candidate_id="duplicate_candidate",
+        lane_id="lane_duplicate_candidate",
+        job_name="job_duplicate_candidate_a",
+    )
+    second = _packet_manifest(
+        tmp_path / "second",
+        candidate_id="duplicate_candidate",
+        lane_id="lane_duplicate_candidate",
+        job_name="job_duplicate_candidate_b",
+        expected_score_delta=-0.0002,
+    )
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[first, second])
+
+    assert report["candidate_count"] == 2
+    assert report["duplicate_candidate_id_count"] == 1
+    assert set(report["duplicate_candidate_id_groups"]) == {"duplicate_candidate"}
+    rows = report["rows"]
+    assert all(row["candidate_id"] == "duplicate_candidate" for row in rows)
+    assert all(row["candidate_id_duplicate_count"] == 2 for row in rows)
+    assert all(row["candidate_id_is_ambiguous"] is True for row in rows)
+    assert all(row["candidate_packet_key"].startswith("duplicate_candidate@") for row in rows)
+    assert len({row["candidate_packet_key"] for row in rows}) == 2
+
+
 def test_field_meta_selector_records_operator_approval_context_without_unlocking_dispatch(
     tmp_path: Path,
 ) -> None:
