@@ -1326,7 +1326,7 @@ dependencies = [
 
 [[package]]
 name = "tac-packet-compiler"
-version = "0.1.0-prerelease"
+version = "0.2.0-rc1"
 dependencies = [
  "brotli",
  "brotli-decompressor",

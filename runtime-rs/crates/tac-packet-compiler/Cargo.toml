@@ -2,9 +2,15 @@
 #
 # Status (2026-05-11): 19 of 19 primitives byte-for-byte parity GREEN against
 # the committed Python golden vectors — COMPLETE NATIVE PARITY. See README
-# for the per-function table. Per Pre-stage I council D4 verdict: eligible
-# for `publish = true` (drop `-prerelease` suffix) — operator decision
-# pending in the landing memo.
+# for the per-function table.
+#
+# Version v0.2.0-rc1 (LOCAL release tag, 2026-05-11):
+#   Per council Q5 verdict (b) (9/10 Shannon/Dykstra/Yousfi/Fridrich/
+#   Quantizr/Hotz/Selfcomp/MacKay/Balle): tag the GitHub release first as a
+#   reversible artifact; crates.io publish is OPERATOR-GATED and irreversible
+#   per crates.io no-unpublish policy. `publish = false` is INTENTIONAL and
+#   stays false until operator approves crates.io publish; a future v0.2.0
+#   (drop the `-rc1` suffix) is the publish-eligible bump.
 #
 # Promotion path:
 #   1. Python oracle (`src/tac/packet_compiler/`) is the canonical reference.
@@ -12,24 +18,26 @@
 #      `src/tac/packet_compiler/golden_vectors/`.
 #   3. Parity test (`tests/golden_vector_parity.rs`) compares Rust output
 #      byte-for-byte against the committed SHA-256 digests.
-#   4. Promotable to a crate version > `0.1.0-prerelease` only after every
-#      golden vector parity test is green AND a deterministic rebuild
-#      verifies. `publish = false` remains until the contract stabilises.
+#   4. Crate is now `v0.2.0-rc1` (release-candidate) — 19/19 GREEN +
+#      deterministic rebuild verified. `publish = false` retained pending
+#      operator approval per CLAUDE.md "Public Disclosure Hygiene".
 #
 # Source memo: handoff Bottom-line tranche item #7 + "Native-first candidates"
 # ordering 1-2 + CLAUDE.md "Deterministic packet compiler" non-negotiable.
-# Operator directive 2026-05-11: "production hardened OSS direction".
-# N D4 council verdict: 3-impl tranche (LZMA → Brotli → single-tensor AC).
+# Operator directive 2026-05-11: "production hardened OSS direction" +
+# "don't submit the PR yet" (interpreted as: tag locally; don't push remote).
+# Council verdicts: N D4 (3-impl tranche LZMA → Brotli → single-tensor AC) +
+# council Q5 (b) (tag-first; publish-on-operator-trigger).
 #
 # Per CLAUDE.md "Rust/Zig is a speed layer, not a license to change semantics":
 # Python remains the oracle until native parity is proven on the golden vectors.
 
 [package]
 name = "tac-packet-compiler"
-version = "0.1.0-prerelease"
+version = "0.2.0-rc1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-description = "Rust native port scaffold for tac.packet_compiler (PR101 sidecar grammar + PR103 arithmetic coding). SCAFFOLD-ONLY: no impl yet; parity test harness wired against committed golden vectors."
+description = "Rust native port for tac.packet_compiler (PR101 sidecar grammar + PR103 arithmetic coding + PR91/92/93/97/sparse PacketIR primitives). 19 of 19 primitives byte-for-byte parity GREEN against committed Python golden vectors."
 repository = "https://github.com/commaai/commavq-comma-video-compression-challenge"
 readme = "README.md"
 rust-version = "1.85"

@@ -4,11 +4,18 @@ Rust native port for [`tac.packet_compiler`](../../../src/tac/packet_compiler/),
 the reusable byte-grammar and entropy-coder primitives extracted from the
 public PR101 (`hnerv_ft_microcodec`) and PR103 (`hnerv_lc_ac`) submissions.
 
-> **Status — 19 of 19 primitives byte-for-byte-parity GREEN (2026-05-11). COMPLETE NATIVE PARITY.**
+> **Status — `v0.2.0-rc1` LOCAL release tag (2026-05-11). 19 of 19 primitives byte-for-byte-parity GREEN. COMPLETE NATIVE PARITY.**
 >
-> Per Pre-stage I council D4 verdict: the crate is now eligible for
-> `publish = true` (drop the `-prerelease` version suffix) — operator
-> decision pending in the landing memo.
+> Per council Q5 verdict (b) (9/10 Shannon/Dykstra/Yousfi/Fridrich/Quantizr/
+> Hotz/Selfcomp/MacKay/Ballé): tag the GitHub release locally first as a
+> reversible artifact; **crates.io publish is OPERATOR-GATED** and
+> IRREVERSIBLE per crates.io no-unpublish policy. The `-rc1` suffix +
+> `publish = false` are intentional; they stay until the operator approves
+> crates.io publish (drop suffix; flip to `publish = true`).
+>
+> Per operator directive 2026-05-11 ("don't submit the PR yet"): the
+> v0.2.0-rc1 tag is **LOCAL ONLY** — no `git push --tags` until operator
+> explicitly authorizes.
 >
 > Implemented + parity-verified against committed Python golden vectors:
 >
