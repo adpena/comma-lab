@@ -1,0 +1,20 @@
+{
+  "schema": "pre_submission_archive_manifest_v1",
+  "archive_path": "submissions/pr106_latent_sidecar_r2/archive.zip",
+  "archive_sha256": "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f",
+  "archive_size_bytes": 186822,
+  "member_count": 1,
+  "members": [
+    {
+      "name": "0.bin",
+      "file_size": 186714,
+      "compress_size": 186714,
+      "crc": 4224370340,
+      "sha256": "52d23dd695f95493891f89d45431d94f40cb84f354243facbc6f0bdee889776d"
+    }
+  ],
+  "score_claim": false,
+  "lane_id": "lane_pr106_latent_sidecar",
+  "job_id": "pr106_latent_sidecar_r2_20260511T160358Z",
+  "notes": "Single-member ZIP carrying the PR106 HNeRV decoder bytes followed by a per-pair latent-correction sidecar (radius-2 score-table winner materialized from Kaggle P100 search). score_claim=false here because this manifest exists only to declare member identity for the pre-submission compliance gate; the actual contest-CUDA score lives in contest_auth_eval.json with promotion_eligible=false until the gate passes."
+}

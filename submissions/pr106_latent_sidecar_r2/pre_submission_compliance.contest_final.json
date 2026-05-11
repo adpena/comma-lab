@@ -1,0 +1,611 @@
+{
+  "archive": {
+    "bytes": 186822,
+    "exists": true,
+    "members": [
+      {
+        "compress_size": 186714,
+        "crc": 4224370340,
+        "file_size": 186714,
+        "local_header": {
+          "compress_size": 186714,
+          "compress_type": 0,
+          "crc32": 4224370340,
+          "extra_len": 0,
+          "file_size": 186714,
+          "flag_bits": 0,
+          "mod_date": 33,
+          "mod_time": 0,
+          "name": "0.bin",
+          "version_needed": 20
+        },
+        "local_header_name": "0.bin",
+        "name": "0.bin",
+        "sha256": "52d23dd695f95493891f89d45431d94f40cb84f354243facbc6f0bdee889776d",
+        "unsafe_reason": null
+      }
+    ],
+    "path": "submissions/pr106_latent_sidecar_r2/archive.zip",
+    "sha256": "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f"
+  },
+  "archive_manifest": {
+    "exists": true,
+    "path": "submissions/pr106_latent_sidecar_r2/archive_manifest.json"
+  },
+  "auth_eval": {
+    "anchor_proof": {
+      "archive": {
+        "bytes": 186822,
+        "members": [
+          {
+            "compress_size": 186714,
+            "crc": 4224370340,
+            "file_size": 186714,
+            "local_header": {
+              "compress_size": 186714,
+              "compress_type": 0,
+              "crc32": 4224370340,
+              "extra_len": 0,
+              "file_size": 186714,
+              "flag_bits": 0,
+              "mod_date": 33,
+              "mod_time": 0,
+              "name": "0.bin",
+              "version_needed": 20
+            },
+            "local_header_name": "0.bin",
+            "name": "0.bin",
+            "sha256": "52d23dd695f95493891f89d45431d94f40cb84f354243facbc6f0bdee889776d",
+            "unsafe_reason": null
+          }
+        ],
+        "path": "submissions/pr106_latent_sidecar_r2/archive.zip",
+        "sha256": "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f"
+      },
+      "auth_eval": {
+        "contest_auth_eval_elapsed_seconds": 108.17910770600001,
+        "cuda_version": "12.4",
+        "device": "cuda",
+        "eval_command_sanitized": [
+          "experiments/contest_auth_eval.py",
+          "--archive",
+          "archive.zip",
+          "--inflate-sh",
+          "submissions/pr103_pr106_final_runtime/inflate.sh",
+          "--upstream-dir",
+          "upstream",
+          "--device",
+          "cuda"
+        ],
+        "evaluate_elapsed_seconds": 52.88055246600001,
+        "evidence_grade": "contest-CUDA",
+        "gpu_driver": "580.95.05",
+        "gpu_model": "Tesla T4",
+        "gpu_t4_match": true,
+        "inflate_elapsed_seconds": 44.03983042200001,
+        "samples": 600,
+        "tool": "experiments/contest_auth_eval.py",
+        "torch_version": "2.5.1+cu124",
+        "upstream_commit": "11ad728f563d8970929e8947a1cf6124ee6303e4",
+        "upstream_evaluate_py": {
+          "bytes": 6005,
+          "relative_path": "evaluate.py",
+          "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+        }
+      },
+      "auth_eval_local_custody_ignored_by_git": true,
+      "auth_eval_local_custody_path": "experiments/results/modal_auth_eval/pr106_latent_sidecar_r2_20260511T160358Z/contest_auth_eval.json",
+      "record_score_source": "tools.auth_eval_records.parse_auth_eval_payload",
+      "runtime": {
+        "runtime_file_count": 4,
+        "runtime_files": [
+          {
+            "bytes": 7449,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/inflate.py",
+            "sha256": "093d20785ff29759ac835f01efc3caa2210d31b11b5b3874256be774bc22a6db"
+          },
+          {
+            "bytes": 1053,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/inflate.sh",
+            "sha256": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4"
+          },
+          {
+            "bytes": 16850,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/codec.py",
+            "sha256": "2abb3ae103e92f65677e8ad0178b9015651ba58f4d5364e59b396aef9fe8dda1"
+          },
+          {
+            "bytes": 2197,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/model.py",
+            "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+          }
+        ],
+        "runtime_tree_sha256": "2be589180d57de731fdce4954db90c383b4987321196e64544d28386fca4dd4d",
+        "runtime_tree_sha256_candidates": {
+          "provenance.inflate_runtime_manifest.runtime_tree_sha256": "2be589180d57de731fdce4954db90c383b4987321196e64544d28386fca4dd4d"
+        }
+      },
+      "schema": "pre_submission_compliance_anchor_proof_v1",
+      "score_basis": {
+        "archive_bytes": 186822,
+        "archive_rate_unscaled": 0.004975884053607612,
+        "avg_posenet_dist": 3.236e-05,
+        "avg_segnet_dist": 0.0006426,
+        "basis": "auth_eval_report_components_plus_exact_archive_bytes",
+        "note": "contest_auth_eval reconstructs score from upstream report fields; this strict value recomputes the contest formula from those report components and exact charged archive bytes for clean-checkout anchor comparisons",
+        "report_reconstructed_score": 0.20664588545741508,
+        "score": 0.20664598679760537,
+        "score_delta_vs_report_reconstruction": 1.0134019029495178e-07
+      }
+    },
+    "exists": true,
+    "path": "experiments/results/modal_auth_eval/pr106_latent_sidecar_r2_20260511T160358Z/contest_auth_eval.json",
+    "record": {
+      "archive_bytes": 186822,
+      "archive_sha256": "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f",
+      "avg_posenet_dist": 3.236e-05,
+      "avg_segnet_dist": 0.0006426,
+      "cpu_leaderboard_reproduction_eligible": false,
+      "device": "cuda",
+      "evidence_grade": "contest-CUDA",
+      "gpu_t4_match": true,
+      "hardware_compliance_blocker": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rate_unscaled": 0.00497588,
+      "samples": 600,
+      "score": 0.20664588545741508,
+      "score_axis": "contest_cuda",
+      "score_claim_valid": true
+    },
+    "runtime_tree_candidates": {
+      "provenance.inflate_runtime_manifest.runtime_tree_sha256": "2be589180d57de731fdce4954db90c383b4987321196e64544d28386fca4dd4d"
+    },
+    "runtime_tree_pruned_candidates": {
+      "provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files": "7a49e777d9d8bc598183237c6e29a405e0ada7294d19f3dda2c42cd2a3b1336d",
+      "provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files": "2be589180d57de731fdce4954db90c383b4987321196e64544d28386fca4dd4d"
+    },
+    "strict_formula": {
+      "archive_bytes": 186822,
+      "archive_rate_unscaled": 0.004975884053607612,
+      "avg_posenet_dist": 3.236e-05,
+      "avg_segnet_dist": 0.0006426,
+      "basis": "auth_eval_report_components_plus_exact_archive_bytes",
+      "note": "contest_auth_eval reconstructs score from upstream report fields; this strict value recomputes the contest formula from those report components and exact charged archive bytes for clean-checkout anchor comparisons",
+      "report_reconstructed_score": 0.20664588545741508,
+      "score": 0.20664598679760537,
+      "score_delta_vs_report_reconstruction": 1.0134019029495178e-07
+    }
+  },
+  "checks": [
+    {
+      "details": "submissions/pr106_latent_sidecar_r2/archive.zip",
+      "name": "required_file_present:archive.zip",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submissions/pr106_latent_sidecar_r2/inflate.sh",
+      "name": "required_file_present:inflate.sh",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submissions/pr106_latent_sidecar_r2/report.txt",
+      "name": "required_file_present:report.txt",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "mode=0o755",
+      "name": "inflate_sh_executable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submissions/pr106_latent_sidecar_r2/archive.zip",
+      "name": "archive_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "0.bin",
+      "name": "zip_member_safe:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "central='0.bin' local='0.bin' local_reason=None",
+      "name": "zip_local_header_matches:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "0.bin",
+      "name": "zip_local_header_metadata_matches:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "0.bin",
+      "name": "zip_member_payload_readable:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=1",
+      "name": "archive_zip_readable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['0.bin']",
+      "name": "zip_no_duplicate_members",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['0.bin']",
+      "name": "zip_expected_single_member",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "packed_payload_count=0",
+      "name": "zip_at_most_one_packed_payload_container",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f",
+      "name": "expected_archive_sha256_is_well_formed",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f actual=7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f",
+      "name": "expected_archive_sha256_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=186822 actual=186822",
+      "name": "expected_archive_size_bytes_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/modal_auth_eval/pr106_latent_sidecar_r2_20260511T160358Z/contest_auth_eval.json",
+      "name": "auth_eval_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/modal_auth_eval/pr106_latent_sidecar_r2_20260511T160358Z/contest_auth_eval.json",
+      "name": "auth_eval_json_object",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "canonical auth eval parser",
+      "name": "auth_eval_score_parseable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f actual=7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f",
+      "name": "auth_eval_archive_sha_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=186822 actual=186822",
+      "name": "auth_eval_archive_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "canonical score/components/formula consistent",
+      "name": "auth_eval_schema_metric_consistency",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "",
+      "name": "auth_eval_has_components",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "record=0.20664588545741508 recomputed=0.20664598679760537",
+      "name": "auth_eval_score_recomputes",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "strict=0.20664598679760537 record=0.20664588545741508 delta=1.0134019029495178e-07",
+      "name": "auth_eval_strict_formula_score_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "device=cuda samples=600 gpu_t4_match=True",
+      "name": "auth_eval_t4_equivalent",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "device=cuda samples=600 gpu_t4_match=True claim=True exact_cuda_eval_complete=True",
+      "name": "auth_eval_exact_cuda_stamp",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final requires explicit exact_cuda_eval_complete=true, score_claim_valid=true, lane_tag=[contest-CUDA], score_axis=contest_cuda in the auth-eval JSON; promotion eligibility is decided by this compliance gate, not raw contest_auth_eval.py",
+      "name": "auth_eval_explicit_exact_cuda_stamp",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': '2be589180d57de731fdce4954db90c383b4987321196e64544d28386fca4dd4d'}",
+      "name": "auth_eval_runtime_tree_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=2be589180d57de731fdce4954db90c383b4987321196e64544d28386fca4dd4d candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': '2be589180d57de731fdce4954db90c383b4987321196e64544d28386fca4dd4d'}",
+      "name": "auth_eval_runtime_tree_expected_match",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submissions/pr106_latent_sidecar_r2/inflate.sh",
+      "name": "submission_runtime_inflate_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "pre_submission_runtime_dependency_manifest_v1",
+      "name": "submission_runtime_manifest_computable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "runtime_tree_sha256=da30d14a6f0481168d31db58ed77cbe8b97ef8e46889629330f817ba0507e389",
+      "name": "submission_runtime_tree_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submission_candidates=['7a49e777d9d8bc598183237c6e29a405e0ada7294d19f3dda2c42cd2a3b1336d', 'da30d14a6f0481168d31db58ed77cbe8b97ef8e46889629330f817ba0507e389'] auth_eval_candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': '2be589180d57de731fdce4954db90c383b4987321196e64544d28386fca4dd4d', 'provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files': '2be589180d57de731fdce4954db90c383b4987321196e64544d28386fca4dd4d', 'provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files': '7a49e777d9d8bc598183237c6e29a405e0ada7294d19f3dda2c42cd2a3b1336d'}",
+      "name": "submission_runtime_tree_matches_auth_eval",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submissions/pr106_latent_sidecar_r2/archive_manifest.json",
+      "name": "archive_manifest_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submissions/pr106_latent_sidecar_r2/archive_manifest.json",
+      "name": "archive_manifest_json_object",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f actual=7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f",
+      "name": "archive_manifest_sha_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=186822 actual=186822",
+      "name": "archive_manifest_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed_members=1 actual_members=1",
+      "name": "archive_manifest_members_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed_members=1 actual_members=1",
+      "name": "archive_manifest_member_count_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed='0.bin' actual='0.bin'",
+      "name": "archive_manifest_member_0_name_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=186714 actual=186714",
+      "name": "archive_manifest_member_0_file_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=186714 actual=186714",
+      "name": "archive_manifest_member_0_compress_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=4224370340 actual=4224370340",
+      "name": "archive_manifest_member_0_crc_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed='52d23dd695f95493891f89d45431d94f40cb84f354243facbc6f0bdee889776d' actual='52d23dd695f95493891f89d45431d94f40cb84f354243facbc6f0bdee889776d'",
+      "name": "archive_manifest_member_0_sha256_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submissions/pr106_latent_sidecar_r2/report.txt",
+      "name": "report_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "7f926bc3e213af1c",
+      "name": "report_mentions_archive_sha256",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "186822",
+      "name": "report_mentions_archive_size_bytes",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final requires --expected-lane-id",
+      "name": "contest_final_expected_lane_id_supplied",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final requires --expected-job-id",
+      "name": "contest_final_expected_job_id_supplied",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": ".omx/state/active_lane_dispatch_claims.md",
+      "name": "dispatch_claims_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "lane_id=lane_pr106_latent_sidecar job_id=pr106_latent_sidecar_r2_20260511T160358Z matching_rows=3 latest_matching_status='completed_modal_auth_eval_recovered'",
+      "name": "dispatch_claim_terminal_row",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "lane_id=lane_pr106_latent_sidecar job_id=pr106_latent_sidecar_r2_20260511T160358Z matching_rows=3 has_prior_nonterminal_matching_row=True",
+      "name": "dispatch_claim_prior_active_row",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "",
+      "name": "public_scan_has_no_private_surface",
+      "passed": true,
+      "severity": "error"
+    }
+  ],
+  "dispatch_claims": {
+    "exists": true,
+    "has_prior_nonterminal_matching_row": true,
+    "latest_matching_row": "| 2026-05-11T16:06:55Z | codex:gpt-5.5 | lane_pr106_latent_sidecar | modal | pr106_latent_sidecar_r2_20260511T160358Z | 2026-05-11T16:06:55Z | completed_modal_auth_eval_recovered | Modal auth eval recovered; passed=True; result_json=experiments/results/modal_auth_eval/pr106_latent_sidecar_r2_20260511T160358Z/modal_cuda_auth_eval_result.json |",
+    "latest_matching_status": "completed_modal_auth_eval_recovered",
+    "matching_rows": 3,
+    "path": ".omx/state/active_lane_dispatch_claims.md",
+    "rows": 1243
+  },
+  "passed": true,
+  "public_hygiene": {
+    "hits": [],
+    "scan_paths": [
+      "submissions/pr106_latent_sidecar_r2/archive.zip",
+      "submissions/pr106_latent_sidecar_r2/inflate.sh",
+      "submissions/pr106_latent_sidecar_r2/inflate.py",
+      "submissions/pr106_latent_sidecar_r2/src",
+      "submissions/pr106_latent_sidecar_r2/README.md",
+      "submissions/pr106_latent_sidecar_r2/report.txt",
+      "submissions/pr106_latent_sidecar_r2/archive_manifest.json",
+      "submissions/pr106_latent_sidecar_r2/contest_auth_eval.json"
+    ]
+  },
+  "report": {
+    "exists": true,
+    "path": "submissions/pr106_latent_sidecar_r2/report.txt"
+  },
+  "schema": "pre_submission_compliance_check_v1",
+  "submission_dir": {
+    "path": "submissions/pr106_latent_sidecar_r2",
+    "required_files": {
+      "archive.zip": {
+        "exists": true,
+        "path": "submissions/pr106_latent_sidecar_r2/archive.zip"
+      },
+      "inflate.sh": {
+        "exists": true,
+        "path": "submissions/pr106_latent_sidecar_r2/inflate.sh"
+      },
+      "report.txt": {
+        "exists": true,
+        "path": "submissions/pr106_latent_sidecar_r2/report.txt"
+      }
+    }
+  },
+  "submission_runtime": {
+    "basis": "contest_auth_eval_runtime_dependency_manifest_v1_without_custody_files",
+    "excluded_custody_filenames": [
+      "archive_manifest.json",
+      "contest_auth_eval.json",
+      "report.txt"
+    ],
+    "excluded_custody_prefixes": [
+      "pre_submission_compliance."
+    ],
+    "external_dependency_roots": [],
+    "files": [
+      {
+        "bytes": 7449,
+        "relative_path": "inflate.py",
+        "repo_relative_path": "submissions/pr106_latent_sidecar_r2/inflate.py",
+        "sha256": "093d20785ff29759ac835f01efc3caa2210d31b11b5b3874256be774bc22a6db"
+      },
+      {
+        "bytes": 1053,
+        "relative_path": "inflate.sh",
+        "repo_relative_path": "submissions/pr106_latent_sidecar_r2/inflate.sh",
+        "sha256": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4"
+      },
+      {
+        "bytes": 16850,
+        "relative_path": "src/codec.py",
+        "repo_relative_path": "submissions/pr106_latent_sidecar_r2/src/codec.py",
+        "sha256": "2abb3ae103e92f65677e8ad0178b9015651ba58f4d5364e59b396aef9fe8dda1"
+      },
+      {
+        "bytes": 2197,
+        "relative_path": "src/model.py",
+        "repo_relative_path": "submissions/pr106_latent_sidecar_r2/src/model.py",
+        "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+      }
+    ],
+    "portable_runtime_tree_sha256_without_custody_files": "7a49e777d9d8bc598183237c6e29a405e0ada7294d19f3dda2c42cd2a3b1336d",
+    "repo_local_tac_import_manifest": {
+      "discovery": "static_ast_recursive_import_closure",
+      "file_count": 0,
+      "files": [],
+      "module_count": 0,
+      "parse_errors": [],
+      "root_import_modules": [],
+      "runtime_root_name": "pr106_latent_sidecar_r2",
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "tac_root_relative_path": "src/tac",
+      "unresolved_modules": []
+    },
+    "runtime_file_count": 4,
+    "runtime_root": "submissions/pr106_latent_sidecar_r2",
+    "runtime_tree_sha256": "da30d14a6f0481168d31db58ed77cbe8b97ef8e46889629330f817ba0507e389",
+    "schema": "pre_submission_runtime_dependency_manifest_v1",
+    "upstream_evaluate_py": {
+      "bytes": 6005,
+      "relative_path": "evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  }
+}

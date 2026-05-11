@@ -1,0 +1,148 @@
+{
+  "schema": "pr106_r2_custody_packet_v1",
+  "generated_at_utc": "2026-05-11T00:00:00Z",
+  "lane_id": "lane_pr106_latent_sidecar",
+  "job_id": "pr106_latent_sidecar_r2_20260511T160358Z",
+  "release_surface_repo_relative": "submissions/pr106_latent_sidecar_r2",
+  "archive": {
+    "path": "submissions/pr106_latent_sidecar_r2/archive.zip",
+    "sha256": "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f",
+    "bytes": 186822,
+    "member_count": 1,
+    "members": [
+      {
+        "name": "0.bin",
+        "file_size": 186714,
+        "compress_size": 186714,
+        "crc": 4224370340,
+        "sha256": "52d23dd695f95493891f89d45431d94f40cb84f354243facbc6f0bdee889776d"
+      }
+    ]
+  },
+  "runtime_tree": {
+    "runtime_tree_sha256": "2be589180d57de731fdce4954db90c383b4987321196e64544d28386fca4dd4d",
+    "runtime_content_tree_sha256": "7a49e777d9d8bc598183237c6e29a405e0ada7294d19f3dda2c42cd2a3b1336d",
+    "file_count": 4,
+    "files": [
+      {
+        "relative_path": "inflate.py",
+        "bytes": 7449,
+        "sha256": "093d20785ff29759ac835f01efc3caa2210d31b11b5b3874256be774bc22a6db"
+      },
+      {
+        "relative_path": "inflate.sh",
+        "bytes": 1053,
+        "sha256": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4"
+      },
+      {
+        "relative_path": "src/codec.py",
+        "bytes": 16850,
+        "sha256": "2abb3ae103e92f65677e8ad0178b9015651ba58f4d5364e59b396aef9fe8dda1"
+      },
+      {
+        "relative_path": "src/model.py",
+        "bytes": 2197,
+        "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+      }
+    ]
+  },
+  "raw_output_aggregate_sha256": "5f65c70f59c78e5a4394dc062fe750cf721619f6d67790c4844d52f14d248993",
+  "inflated_outputs": [
+    {
+      "video_name": "0.mkv",
+      "relative_path": "0.raw",
+      "bytes": 3662409600,
+      "sha256": "fb8eaaae74a6e86094681602769c3ba98126ae181c1c1106efd57eb421e3e0e6"
+    }
+  ],
+  "auth_eval": {
+    "path": "submissions/pr106_latent_sidecar_r2/contest_auth_eval.json",
+    "sha256": "9b478775397a6c1e877b4101d15758c8896476c788328a8d36bb2bd0e8787056",
+    "bytes": 8904,
+    "canonical_score": 0.20664588545741508,
+    "final_score_rounded_display": 0.21,
+    "avg_posenet_dist": 3.236e-05,
+    "avg_segnet_dist": 0.0006426,
+    "rate_unscaled": 0.00497588,
+    "n_samples": 600,
+    "device": "cuda",
+    "gpu_model": "Tesla T4",
+    "gpu_driver": "580.95.05",
+    "gpu_t4_match": true,
+    "torch_version": "2.5.1+cu124",
+    "cuda_version": "12.4",
+    "platform_system": "Linux",
+    "platform_machine": "x86_64",
+    "pact_commit": "4db14b4dd713b56d5581c34660dc7d0760a88402",
+    "upstream_commit": "11ad728f563d8970929e8947a1cf6124ee6303e4",
+    "evidence_grade": "contest-CUDA",
+    "lane_tag": "[contest-CUDA]",
+    "score_axis": "contest_cuda",
+    "score_claim_valid": true,
+    "exact_cuda_eval_complete": true
+  },
+  "dispatch_claim": {
+    "ledger": ".omx/state/active_lane_dispatch_claims.md",
+    "matched_rows": 3,
+    "latest_terminal_row": {
+      "timestamp_utc": "2026-05-11T16:06:55Z",
+      "agent": "codex:gpt-5.5",
+      "lane_id": "lane_pr106_latent_sidecar",
+      "platform": "modal",
+      "instance_or_job_id": "pr106_latent_sidecar_r2_20260511T160358Z",
+      "status": "completed_modal_auth_eval_recovered",
+      "notes": "Modal auth eval recovered; passed=True; result_json=experiments/results/modal_auth_eval/pr106_latent_sidecar_r2_20260511T160358Z/modal_cuda_auth_eval_result.json"
+    }
+  },
+  "compliance": {
+    "path": "submissions/pr106_latent_sidecar_r2/pre_submission_compliance.contest_final.json",
+    "sha256": "f46f81603e3e71d98cbc59133fe4d121ef400c7bcdb06a10816b653f533e9f2e",
+    "bytes": 22340,
+    "schema": "pre_submission_compliance_check_v1",
+    "passed": true,
+    "strict": true,
+    "contest_final": true,
+    "total_checks": 54,
+    "failed_errors": 0,
+    "warnings": 0,
+    "public_scan_scope": "release-surface (excludes pre_submission_compliance.* internal custody files to avoid forensic-path scan recursion)"
+  },
+  "promotion_status": {
+    "promotion_eligible": false,
+    "score_claim_valid": true,
+    "cpu_leaderboard_reproduction_eligible": false,
+    "rank_or_kill_eligible": false,
+    "blockers_cleared": [
+      "pre_submission_compliance_check_not_recorded",
+      "raw_auth_eval_does_not_verify_submission_policy_gates"
+    ],
+    "blockers_remaining": [
+      "cpu_leaderboard_reproduction_not_adjudicated",
+      "five_turn_council_greenup_not_executed",
+      "operator_pr_submission_approval_not_recorded"
+    ],
+    "reactivation_notes": "The radius-2 archive (sha 7f926bc3...3a3f) does NOT yet have a Linux x86_64 [contest-CPU] paired anchor; the contest leaderboard ranks on the CPU axis. The CLAUDE.md \"Submission auth eval — BOTH CPU AND CUDA on 1:1 contest-compliant hardware\" non-negotiable requires both axes on this exact archive before any submission decision. The paired R2 CPU eval is the council-unanimous next $<$0.10 GPU dollar per feedback_grand_council_pose_axis_insights_review_20260511.md; pending operator gate."
+  },
+  "release_surface_files": {
+    "archive.zip": "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f",
+    "inflate.py": "093d20785ff29759ac835f01efc3caa2210d31b11b5b3874256be774bc22a6db",
+    "inflate.sh": "bfcceb491c01a97c1f5ee46919abd3ce921040a1e0b7d431eb2fbe8184369fe4",
+    "src/codec.py": "2abb3ae103e92f65677e8ad0178b9015651ba58f4d5364e59b396aef9fe8dda1",
+    "src/model.py": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b",
+    "report.txt": "5eb7d0484d323ed6b30661754060f55704e30a4b736f66a90c392451a5881754",
+    "archive_manifest.json": "6272814dda2e989b5fb418ba2b88d809b947c8111f4821dfbfa170db493629ce",
+    "contest_auth_eval.json": "9b478775397a6c1e877b4101d15758c8896476c788328a8d36bb2bd0e8787056",
+    "README.md": "b19fb4f2c68967d9600e87340d564b94226a3333e78424e449c0e22daa8ce566",
+    "pre_submission_compliance.contest_final.json": "f46f81603e3e71d98cbc59133fe4d121ef400c7bcdb06a10816b653f533e9f2e",
+    "pre_submission_compliance.custody_packet.json": "self-referential; recompute via sha256 on disk"
+  },
+  "cross_references": {
+    "auth_eval_custody": "experiments/results/modal_auth_eval/pr106_latent_sidecar_r2_20260511T160358Z/",
+    "candidate_source": "experiments/results/pr106_latent_sidecar_r2_from_kaggle_table_20260511_codex/",
+    "canonical_runtime": "submissions/pr106_latent_sidecar/",
+    "handoff_doc": "~/Downloads/pact_score_lowering_handoff_2026-05-11.md",
+    "council_ratification": "feedback_grand_council_pose_axis_insights_review_20260511.md",
+    "takeover_memo": "project_full_custody_takeover_codex_offline_20260511.md",
+    "device_axis_matrix": ".omx/research/device_axis_paired_anchor_matrix_20260511.md"
+  }
+}

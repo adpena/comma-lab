@@ -1,0 +1,52 @@
+=== PR106 latent sidecar radius-2 release report ===
+  lane_id: lane_pr106_latent_sidecar
+  job_id: pr106_latent_sidecar_r2_20260511T160358Z
+  archive_sha256: 7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f
+  archive_size_bytes: 186822
+  runtime_tree_sha256: 2be589180d57de731fdce4954db90c383b4987321196e64544d28386fca4dd4d
+  runtime_content_tree_sha256: 7a49e777d9d8bc598183237c6e29a405e0ada7294d19f3dda2c42cd2a3b1336d
+  raw_output_aggregate_sha256: 5f65c70f59c78e5a4394dc062fe750cf721619f6d67790c4844d52f14d248993
+  inflated_output_files: 1
+  inflated_output_total_bytes: 3662409600
+  inflated_output_0_mkv_sha256: fb8eaaae74a6e86094681602769c3ba98126ae181c1c1106efd57eb421e3e0e6
+  gpu_model: Tesla T4
+  gpu_t4_match: true
+  gpu_driver: 580.95.05
+  torch_version: 2.5.1+cu124
+  cuda_version: 12.4
+  platform: Linux x86_64
+  device: cuda
+  pact_commit: 4db14b4dd713b56d5581c34660dc7d0760a88402
+  upstream_commit: 11ad728f563d8970929e8947a1cf6124ee6303e4
+  evidence_grade: contest-CUDA
+  lane_tag: [contest-CUDA]
+  score_axis: contest_cuda
+  exact_cuda_eval_complete: true
+  score_claim_valid: true
+=== Evaluation config (from auth-eval provenance) ===
+  batch_size: 16
+  device: cuda
+  num_threads: 2
+  prefetch_queue_depth: 4
+  report: /root/modal_auth_eval_work/eval_work/report.txt
+  seed: 1234
+  submission_dir: /root/modal_auth_eval_work/eval_work
+  uncompressed_dir: /workspace/pact/upstream/videos
+  video_names_file: /workspace/pact/upstream/public_test_video_names.txt
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.00003236
+  Average SegNet Distortion: 0.00064260
+  Submission file size: 186822 bytes
+  Submission file size (with thousands separator): 186,822 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 0.00497588
+  Score components (recomputed):
+    score_pose_contribution: 0.017988885457415088
+    score_seg_contribution: 0.06426
+    score_rate_contribution: 0.12439700000000001
+  Canonical score (recomputed from components): 0.20664588545741508
+  Final score (rounded display): 0.21
+=== Promotion blockers (from auth-eval JSON) ===
+  raw_auth_eval_does_not_verify_submission_policy_gates
+  cpu_leaderboard_reproduction_not_adjudicated
+  pre_submission_compliance_check_not_recorded
