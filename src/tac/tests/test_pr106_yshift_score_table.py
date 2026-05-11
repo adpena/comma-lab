@@ -117,6 +117,102 @@ def test_batched_candidate_table_matches_pairwise_reference():
     assert np.allclose(batched, pairwise, rtol=0.0, atol=1e-6)
 
 
+def test_adaptive_candidate_table_retries_cuda_oom_without_changing_scores():
+    mod = _load_module()
+
+    class FakeDistortionNet:
+        def __init__(self, *, max_rows: int | None = None):
+            self.max_rows = max_rows
+
+        def compute_distortion(self, gt_batch: torch.Tensor, cand_batch: torch.Tensor):
+            if self.max_rows is not None and int(cand_batch.shape[0]) > self.max_rows:
+                raise RuntimeError("CUDA out of memory. Tried to allocate test bytes")
+            diff = (gt_batch.float() - cand_batch.float()).abs()
+            pose = diff.mean(dim=(1, 2, 3, 4))
+            seg = diff[:, 1].mean(dim=(1, 2, 3))
+            return pose, seg
+
+    gt_pairs = torch.zeros((2, 2, 4, 5, 3), dtype=torch.uint8)
+    comp_pairs = torch.zeros_like(gt_pairs)
+    comp_pairs[0, 0, 1, 1] = torch.tensor([40, 50, 60], dtype=torch.uint8)
+    comp_pairs[0, 1, 2, 2] = torch.tensor([80, 90, 100], dtype=torch.uint8)
+    comp_pairs[1, 0, 1, 3] = torch.tensor([120, 90, 30], dtype=torch.uint8)
+    comp_pairs[1, 1, 3, 4] = torch.tensor([15, 25, 35], dtype=torch.uint8)
+    candidates = torch.tensor(
+        [
+            [0, 0, 0],
+            [5, 0, 0],
+            [0, 1, -1],
+            [-3, -1, 1],
+        ],
+        dtype=torch.int8,
+    )
+
+    reference = mod.score_pair_batch_candidate_table(
+        FakeDistortionNet(),
+        gt_pairs=gt_pairs,
+        comp_pairs=comp_pairs,
+        candidates=candidates,
+        candidate_batch_size=4,
+        score_step=1.0,
+    )
+    adaptive, telemetry = mod.score_pair_batch_candidate_table_adaptive(
+        FakeDistortionNet(max_rows=2),
+        gt_pairs=gt_pairs,
+        comp_pairs=comp_pairs,
+        candidates=candidates,
+        pair_chunk_size=2,
+        candidate_batch_size=4,
+        score_step=1.0,
+        device=torch.device("cpu"),
+    )
+
+    assert np.allclose(adaptive, reference, rtol=0.0, atol=1e-6)
+    assert telemetry["oom_retry_count"] > 0
+    assert telemetry["min_candidate_batch_size_used"] == 1
+
+
+def test_adaptive_candidate_table_reduces_pair_chunk_after_candidate_floor():
+    mod = _load_module()
+
+    class FakeDistortionNet:
+        def compute_distortion(self, gt_batch: torch.Tensor, cand_batch: torch.Tensor):
+            if int(cand_batch.shape[0]) > 1:
+                raise RuntimeError("CUDA out of memory. Tried to allocate test bytes")
+            diff = (gt_batch.float() - cand_batch.float()).abs()
+            pose = diff.mean(dim=(1, 2, 3, 4))
+            seg = diff[:, 1].mean(dim=(1, 2, 3))
+            return pose, seg
+
+    gt_pairs = torch.zeros((2, 2, 2, 2, 3), dtype=torch.uint8)
+    comp_pairs = torch.zeros_like(gt_pairs)
+    candidates = torch.tensor([[0, 0, 0], [1, 0, 0]], dtype=torch.int8)
+
+    rows, telemetry = mod.score_pair_batch_candidate_table_adaptive(
+        FakeDistortionNet(),
+        gt_pairs=gt_pairs,
+        comp_pairs=comp_pairs,
+        candidates=candidates,
+        pair_chunk_size=2,
+        candidate_batch_size=2,
+        score_step=1.0,
+        device=torch.device("cpu"),
+    )
+
+    assert rows.shape == (4, 2)
+    assert np.isfinite(rows).all()
+    assert telemetry["min_candidate_batch_size_used"] == 1
+    assert telemetry["min_pair_chunk_size_used"] == 1
+
+
+def test_is_cuda_oom_requires_cuda_oom_signal():
+    mod = _load_module()
+
+    assert mod._is_cuda_oom(RuntimeError("CUDA out of memory. Tried to allocate 4 GiB"))
+    assert not mod._is_cuda_oom(RuntimeError("cpu out of memory in unrelated parser"))
+    assert not mod._is_cuda_oom(ValueError("candidate shape mismatch"))
+
+
 def test_verify_active_lane_claim_accepts_newest_nonterminal(tmp_path):
     mod = _load_module()
     claims = tmp_path / "claims.md"
