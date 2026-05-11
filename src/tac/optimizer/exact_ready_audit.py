@@ -36,7 +36,7 @@ def _claim_lane_aliases(lane_id: str) -> tuple[str, ...]:
     """Return claim-ledger lane ids that legacy dispatch wrappers may use."""
 
     if lane_id.startswith("lane_"):
-        return (lane_id,)
+        return (lane_id, lane_id.removeprefix("lane_"))
     return (lane_id, f"lane_{lane_id}")
 
 
