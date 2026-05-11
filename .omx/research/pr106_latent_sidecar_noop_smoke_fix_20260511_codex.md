@@ -27,6 +27,8 @@ selected dimensions while the encoded sidecar was effectively no-op.
   smoke pairs.
 - Count corrections with both `dim != 255` and `delta_q != 0`.
 - Record `nonzero_delta_count` in diagnostics.
+- Keep PR100-derived sidecar gain as a `planning_target_*` field, not a
+  predicted score for heuristic smoke artifacts.
 - Update the latent-sidecar runbook comments so heuristic smoke is not described
   as scorer-backed search.
 - Update the PCC9 live-registry test to assert the current strict state: no

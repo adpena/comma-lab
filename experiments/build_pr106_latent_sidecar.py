@@ -440,8 +440,10 @@ def main() -> int:
         "archive_zip_bytes": archive_size,
         "delta_bytes_vs_pr106": delta,
         "rate_component_score_delta_vs_pr106": score_delta,
-        "predicted_total_score_delta_vs_pr106": -0.00218,  # PR100-vs-PR105 extrapolation
-        "predicted_total_score": 0.20945 + score_delta + 0.00218 - 2 * 0.00218,
+        "planning_target_total_score_delta_vs_pr106": -0.00218,  # PR100-vs-PR105 extrapolation
+        "planning_target_source": "PR100-vs-PR105 extrapolation; not a heuristic-smoke prediction",
+        "predicted_total_score_delta_vs_pr106": None,
+        "predicted_total_score": None,
         "score_claim": False,
         "dispatch_attempted": False,
         "remote_jobs_dispatched": False,

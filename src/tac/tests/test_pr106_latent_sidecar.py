@@ -307,6 +307,9 @@ def test_cpu_smoke_builder_metadata_is_dispatch_fail_closed(tmp_path: Path):
     assert metadata["promotion_eligible"] is False
     assert metadata["ready_for_exact_eval_dispatch"] is False
     assert metadata["dispatch_blockers"]
+    assert metadata["planning_target_total_score_delta_vs_pr106"] == -0.00218
+    assert metadata["predicted_total_score_delta_vs_pr106"] is None
+    assert metadata["predicted_total_score"] is None
     assert metadata["wall_clock_seconds"] == 0.0
     assert metadata["wall_clock_seconds_note"] == "omitted_for_deterministic_smoke_manifest"
     assert metadata["diagnostics"]["n_corrections"] == 1
