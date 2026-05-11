@@ -27,6 +27,9 @@ from tac.hnerv_entropy_frontier_selector import (  # noqa: E402
     ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES,
 )
 from tac.repo_io import json_text  # noqa: E402
+from tac.optimization.scorer_surface_shaking import (  # noqa: E402
+    build_scorer_surface_shaking_plan,
+)
 from tools.build_cross_paradigm_frontier_inventory import build_inventory  # noqa: E402
 from tools.build_field_meta_dispatch_selection import build_selection_report  # noqa: E402
 
@@ -184,6 +187,7 @@ def build_next_comprehensive_tranche(
     rows: list[dict[str, Any]],
     *,
     field_meta_candidate_packet_selection: dict[str, Any] | None = None,
+    scorer_surface_shaking_plan: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return the next score-lowering tranche as a deterministic work plan.
 
@@ -307,7 +311,29 @@ def build_next_comprehensive_tranche(
         },
     ]
     workstreams = [stream for stream in workstreams if stream["keys"]]
+    if scorer_surface_shaking_plan is not None:
+        surface_stream = {
+            "id": "scorer_surface_shaking",
+            "objective": (
+                "Exploit the raw pixel/frame/scorer surface with local CPU passes, "
+                "then lower only materialized winners into PacketIR streams with "
+                "no-op and exact-eval custody."
+            ),
+            "keys": list(scorer_surface_shaking_plan.get("top_atom_ids", [])),
+            "acceptance_gates": [
+                "proxy/local rows never update score or continual-learning posteriors",
+                "each atom declares the charged PacketIR stream it would occupy",
+                "identity/no-op control proves inflate consumes the same runtime path",
+                "paired CPU/CUDA exact eval is required before any status promotion",
+            ],
+            "unblocked_keys": list(scorer_surface_shaking_plan.get("top_atom_ids", [])),
+            "dirty_blocked_keys": [],
+            "all_keys_safe_to_touch_now": True,
+        }
+        workstreams.insert(0, surface_stream)
     for stream in workstreams:
+        if stream["id"] == "scorer_surface_shaking":
+            continue
         keys = [str(key) for key in stream["keys"]]
         dirty_blocked_keys = [
             key
@@ -375,7 +401,13 @@ def build_next_comprehensive_tranche(
             "exact_eval_or_review": exact_eval_candidates,
             "needs_byte_closed_candidate": byte_closed_candidates,
             "needs_research_or_contract_hardening": research_hardening_candidates,
+            "scorer_surface_proxy_atoms": (
+                list(scorer_surface_shaking_plan.get("top_atom_ids", []))
+                if scorer_surface_shaking_plan is not None
+                else []
+            ),
         },
+        "scorer_surface_shaking_plan": scorer_surface_shaking_plan,
         "field_meta_candidate_packet_selection": packet_selection,
         "selected_candidate_dispatch_status": selected_dispatch_status,
         "effective_dispatch_candidate_id": selected_dispatch_status[
@@ -476,9 +508,11 @@ def build_roadmap_status(
         dirty_paths=live_dirty_paths,
         operator_approved_exact_cuda=operator_approved_exact_cuda,
     )
+    scorer_surface_shaking_plan = build_scorer_surface_shaking_plan()
     next_tranche = build_next_comprehensive_tranche(
         rows,
         field_meta_candidate_packet_selection=field_meta_candidate_packet_selection,
+        scorer_surface_shaking_plan=scorer_surface_shaking_plan,
     )
     # DerivedOutputGuard regen header (Catalog #113 META gate). The payload
     # ITSELF carries `generated_at` (the run's now_utc) + `from_state_hash`
@@ -510,6 +544,7 @@ def build_roadmap_status(
         "dirty_blocked_row_count": dirty_blocked_count,
         "stage_counts": dict(sorted(stage_counts.items())),
         "next_unblocked_keys": next_unblocked,
+        "scorer_surface_shaking_plan": scorer_surface_shaking_plan,
         "next_comprehensive_tranche": next_tranche,
         "rows": rows,
         "dispatch_blockers": [
@@ -524,6 +559,7 @@ def build_roadmap_status(
 def render_markdown(payload: dict[str, Any]) -> str:
     packet_selection = payload["next_comprehensive_tranche"]["field_meta_candidate_packet_selection"]
     dispatch_status = payload["next_comprehensive_tranche"]["selected_candidate_dispatch_status"]
+    surface_plan = payload.get("scorer_surface_shaking_plan") or {}
     selected_packet = packet_selection.get("selected_candidate") or {}
     selected_operator = selected_packet.get("operator_next_steps_summary") or {}
     selected_next_action = selected_operator.get("next_local_non_gpu_action") or {}
@@ -606,6 +642,37 @@ def render_markdown(payload: dict[str, Any]) -> str:
                         _md_list(summary.get("refresh_blockers") or []),
                         _md_list(summary.get("approval_blockers") or []),
                         _md(summary.get("next_local_non_gpu_command") or "none"),
+                    )
+                )
+                + " |"
+            )
+    if surface_plan.get("ranked_atoms"):
+        point = surface_plan.get("operating_point") or {}
+        slopes = point.get("score_slopes") or {}
+        lines += [
+            "",
+            "## Scorer Surface Shaking",
+            "",
+            "Planning-only local CPU search surface. It is wired by default but cannot dispatch or claim score.",
+            "",
+            f"- operating_point: `{_md(point.get('label') or 'unknown')}`",
+            f"- device_axis: `{_md(point.get('device_axis') or 'unknown')}`",
+            f"- d_score_d_byte: `{_md(slopes.get('d_score_d_byte') or 'unknown')}`",
+            f"- d_score_d_pose: `{_md(slopes.get('d_score_d_pose') or 'unknown')}`",
+            f"- recommended_worker_count: `{_md((surface_plan.get('local_execution') or {}).get('recommended_worker_count') or 'unknown')}`",
+            "",
+            "| atom | predicted score delta | stream | solver |",
+            "|---|---:|---|---|",
+        ]
+        for atom in surface_plan["ranked_atoms"][:8]:
+            lines.append(
+                "| "
+                + " | ".join(
+                    (
+                        f"`{_md(atom['atom_id'])}`",
+                        f"`{float(atom['predicted_score_delta']):.9f}`",
+                        _md(atom["packetir_stream"]),
+                        _md(atom["primary_solver"]),
                     )
                 )
                 + " |"

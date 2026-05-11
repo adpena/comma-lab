@@ -74,6 +74,16 @@ def test_frontier_roadmap_status_is_non_dispatching_and_dirty_aware() -> None:
     assert payload["next_comprehensive_tranche"]["ready_for_exact_eval_dispatch"] is False
     assert payload["next_comprehensive_tranche"]["schema"] == "next_comprehensive_tranche_v1"
     assert payload["next_comprehensive_tranche"]["effective_dispatch_candidate_id"] is None
+    assert payload["scorer_surface_shaking_plan"]["score_claim"] is False
+    assert payload["scorer_surface_shaking_plan"]["ready_for_exact_eval_dispatch"] is False
+    assert (
+        "pixel_lsb_threshold_probe"
+        in payload["next_comprehensive_tranche"]["candidate_pools"]["scorer_surface_proxy_atoms"]
+    )
+    assert payload["next_comprehensive_tranche"]["workstreams"][0]["id"] == (
+        "scorer_surface_shaking"
+    )
+    assert payload["next_comprehensive_tranche"]["workstreams"][0]["all_keys_safe_to_touch_now"] is True
     assert (
         payload["next_comprehensive_tranche"]["selected_candidate_dispatch_status"][
             "selected_row_dispatchable"
@@ -138,6 +148,10 @@ def test_frontier_roadmap_status_markdown_is_operator_briefing() -> None:
     assert "selected_candidate_claim_blockers" in markdown
     assert "selected_candidate_static_refresh_status" in markdown
     assert "selected_candidate_approval_blockers" in markdown
+    assert "Scorer Surface Shaking" in markdown
+    assert "Planning-only local CPU search surface" in markdown
+    assert "pixel_lsb_threshold_probe" in markdown
+    assert "renderer_training_score_surface_loop" in markdown
     assert "Candidate Packets" in markdown
     assert "verify_lightning_env" in markdown
     assert "missing_operator_exact_cuda_approval" in markdown

@@ -228,7 +228,15 @@ def main(argv: list[str] | None = None) -> int:
         type=int,
         default=ACTIVE_FLOOR_ARCHIVE_BYTES,
     )
-    parser.add_argument("--active-floor-score", type=float, default=ACTIVE_FLOOR_SCORE)
+    parser.add_argument(
+        "--active-floor-score",
+        type=float,
+        default=ACTIVE_FLOOR_SCORE,
+        help=(
+            "Active score frontier for terminal/exact-score routing; archive-byte "
+            "comparisons use --active-floor-archive-bytes separately."
+        ),
+    )
     parser.add_argument("--allow-above-active-floor-dispatch", action="store_true")
     parser.add_argument("--operator-override-reason", default=None)
     args = parser.parse_args(argv)

@@ -26,7 +26,13 @@ QUEUE_SCHEMA = "optimizer_candidate_exact_eval_ready_queue_v1"
 TOOL_NAME = "tools/promote_optimizer_candidate_for_exact_eval.py"
 PR101_RUNTIME_CONSUMPTION_PROOF_SCHEMA = "pr101_kaggle_proxy_runtime_consumption_proof_v1"
 ACTIVE_FLOOR_ARCHIVE_BYTES = 185_578
-ACTIVE_FLOOR_SCORE = 0.2089810755823297
+ACTIVE_RATE_ONLY_FLOOR_SCORE = 0.2089810755823297
+ACTIVE_SCORE_FRONTIER_SCORE = 0.2066181354574151
+ACTIVE_SCORE_FRONTIER_LABEL = "pr106_latent_sidecar_r2_pr101_grammar_exact_t4_cuda"
+# Backward-compatible name used by dispatch gates for score comparisons.
+# Archive-byte comparisons still use ACTIVE_FLOOR_ARCHIVE_BYTES, which is the
+# separate rate-only PR103-on-PR106 byte floor.
+ACTIVE_FLOOR_SCORE = ACTIVE_SCORE_FRONTIER_SCORE
 SHA256_HEX = frozenset("0123456789abcdef")
 PREDICTED_SCORE_FIELDS = frozenset(
     {
@@ -505,7 +511,8 @@ def terminal_claim_result_conflicts(
     This is intentionally narrow: infrastructure failures such as missing
     provider dependencies do not block a corrected rerun, while terminal
     measured negatives and completed exact-CUDA scores that fail to beat the
-    active floor do block silent re-promotion of the same lane/archive row.
+    active score frontier do block silent re-promotion of the same
+    lane/archive row.
     """
 
     if (
@@ -857,13 +864,14 @@ def readiness_blockers(
     ):
         if not allow_above_active_floor_dispatch:
             score_text = (
-                f", active_floor_score={active_floor_score:.12f}"
+                f", active_score_frontier={active_floor_score:.12f}"
                 if active_floor_score is not None
                 else ""
             )
             blockers.append(
                 "above_active_floor_archive_bytes_without_operator_override:"
-                f"{facts['archive_bytes']}>{active_floor_archive_bytes}{score_text}"
+                f"{facts['archive_bytes']}>{active_floor_archive_bytes}{score_text}; "
+                "above rate-only byte floor"
             )
         elif not operator_override_reason:
             blockers.append("above_active_floor_override_missing_reason")

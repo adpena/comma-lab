@@ -112,7 +112,15 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         default=REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md",
     )
-    parser.add_argument("--active-floor-score", type=float, default=ACTIVE_FLOOR_SCORE)
+    parser.add_argument(
+        "--active-floor-score",
+        type=float,
+        default=ACTIVE_FLOOR_SCORE,
+        help=(
+            "Active score frontier for terminal/exact-score routing; the flag name "
+            "is kept for compatibility and does not set the rate-only byte floor."
+        ),
+    )
     parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
     parser.add_argument("--output", type=Path)
     parser.add_argument(

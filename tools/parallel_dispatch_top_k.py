@@ -70,7 +70,12 @@ class DispatchResult:
 _LIGHTNING_DISPATCH = REPO / "tools" / "lightning_dispatch_pr106_stack.py"
 _VASTAI_DISPATCH = REPO / "scripts" / "launch_lane_on_vastai.py"
 DEFAULT_ACTIVE_FLOOR_ARCHIVE_BYTES = 185_578
-DEFAULT_ACTIVE_FLOOR_SCORE = 0.2089810755823297
+DEFAULT_ACTIVE_RATE_ONLY_FLOOR_SCORE = 0.2089810755823297
+DEFAULT_ACTIVE_SCORE_FRONTIER_SCORE = 0.2066181354574151
+DEFAULT_ACTIVE_SCORE_FRONTIER_LABEL = "pr106_latent_sidecar_r2_pr101_grammar_exact_t4_cuda"
+# Backward-compatible flag/default name. Score comparisons use the active score
+# frontier; archive-byte comparisons use the separate rate-only byte floor.
+DEFAULT_ACTIVE_FLOOR_SCORE = DEFAULT_ACTIVE_SCORE_FRONTIER_SCORE
 BLOCKED_EVIDENCE_SEMANTICS = {
     "prediction_only_forensic",
     "local_proxy_prediction_forensic",
@@ -661,13 +666,14 @@ def _candidate_blockers(
     ):
         if not allow_above_active_floor_dispatch:
             score_note = (
-                f", active_floor_score={active_floor_score:.12f}"
+                f", active_score_frontier={active_floor_score:.12f}"
                 if active_floor_score is not None else ""
             )
             blockers.append(
                 "above_active_floor_archive_bytes:"
                 f"{archive_bytes}>{active_floor_archive_bytes}{score_note}; "
-                "treat as research/calibration unless explicitly overridden"
+                "above rate-only byte floor; treat as research/calibration unless "
+                "explicitly overridden"
             )
         elif not operator_override_reason:
             blockers.append("above_active_floor_override_missing_reason")
@@ -681,7 +687,8 @@ def _candidate_blockers(
             blockers.append(
                 "above_active_floor_score:"
                 f"{exact_score:.12f}>{active_floor_score:.12f}; "
-                "treat as research/calibration unless explicitly overridden"
+                "above active score frontier; treat as research/calibration unless "
+                "explicitly overridden"
             )
         elif not operator_override_reason:
             blockers.append("above_active_floor_override_missing_reason")
@@ -907,11 +914,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-total-cost", type=float, default=5.00,
                         help="hard cap on total $ across all dispatches; refuse if exceeded")
     parser.add_argument("--active-floor-archive-bytes", type=int, default=DEFAULT_ACTIVE_FLOOR_ARCHIVE_BYTES,
-                        help="refuse paid dispatch for candidates larger than the current active "
-                        "archive-byte floor unless --allow-above-active-floor-dispatch is set "
+                        help="refuse paid dispatch for rate-only candidates larger than the current "
+                        "rate-only archive-byte floor unless --allow-above-active-floor-dispatch is set "
                         f"(default: {DEFAULT_ACTIVE_FLOOR_ARCHIVE_BYTES})")
     parser.add_argument("--active-floor-score", type=float, default=DEFAULT_ACTIVE_FLOOR_SCORE,
-                        help="current active score floor for diagnostic blocker text "
+                        help="active score frontier for terminal/exact-score routing; "
+                        "kept as --active-floor-score for CLI compatibility "
                         f"(default: {DEFAULT_ACTIVE_FLOOR_SCORE:.12f})")
     parser.add_argument("--allow-above-active-floor-dispatch", action="store_true",
                         help="operator override for calibration/non-rate experiments whose archives "

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 import json
 import stat
 import zipfile
@@ -7,10 +8,23 @@ import importlib.util
 import sys
 from pathlib import Path
 
-from tac.optimizer.exact_readiness import promote_candidate_for_exact_eval
+from tac.optimizer.exact_readiness import (
+    ACTIVE_FLOOR_ARCHIVE_BYTES,
+    ACTIVE_FLOOR_SCORE,
+    ACTIVE_RATE_ONLY_FLOOR_SCORE,
+    ACTIVE_SCORE_FRONTIER_SCORE,
+    promote_candidate_for_exact_eval,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+def test_active_floor_score_tracks_score_frontier_not_rate_only_anchor() -> None:
+    assert ACTIVE_FLOOR_ARCHIVE_BYTES == 185_578
+    assert ACTIVE_RATE_ONLY_FLOOR_SCORE == 0.2089810755823297
+    assert ACTIVE_SCORE_FRONTIER_SCORE == 0.2066181354574151
+    assert ACTIVE_FLOOR_SCORE == ACTIVE_SCORE_FRONTIER_SCORE
 
 
 def _load_parallel_dispatch_tool():
@@ -381,10 +395,11 @@ def test_refuses_same_lane_active_claim(tmp_path: Path) -> None:
     queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
     claims = tmp_path / ".omx/state/active_lane_dispatch_claims.md"
     claims.parent.mkdir(parents=True)
+    timestamp = dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     claims.write_text(
         "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
         "|---|---|---|---|---|---|---|---|\n"
-        "| 2026-05-10T00:00:00Z | test | fixture_lane | modal | job1 | 2026-05-10T01:00:00Z | active_dispatching | cost=$0.50 |\n",
+        f"| {timestamp} | test | fixture_lane | modal | job1 | 2026-05-10T01:00:00Z | active_dispatching | cost=$0.50 |\n",
         encoding="utf-8",
     )
 
