@@ -10,12 +10,20 @@ rows.
 from __future__ import annotations
 
 import argparse
-import json
 import math
 import statistics
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
 
 try:
     from tools.auth_eval_records import (
@@ -29,6 +37,7 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
         parse_auth_eval_payload,
         runtime_tree_sha256,
     )
+from tac.repo_io import json_text, read_json, write_json  # noqa: E402
 
 CONTEST_N_BYTES = 37_545_489
 
@@ -274,8 +283,8 @@ def _component_pair_from_auth_eval(
 
 
 def analyze_exact_pair(cpu_json: Path, cuda_json: Path) -> dict[str, Any]:
-    cpu_payload = json.loads(cpu_json.read_text(encoding="utf-8"))
-    cuda_payload = json.loads(cuda_json.read_text(encoding="utf-8"))
+    cpu_payload = read_json(cpu_json)
+    cuda_payload = read_json(cuda_json)
     if not isinstance(cpu_payload, dict) or not isinstance(cuda_payload, dict):
         raise ValueError("auth eval artifacts must be JSON objects")
     return _component_pair_from_auth_eval(
@@ -481,16 +490,14 @@ def main() -> int:
         }
     else:
         assert args.scorecard_json is not None
-        scorecard = json.loads(args.scorecard_json.read_text(encoding="utf-8"))
+        scorecard = read_json(args.scorecard_json)
         analysis = build_analysis(scorecard)
-    text = json.dumps(analysis, indent=2, sort_keys=True)
     if args.json_out:
-        args.json_out.parent.mkdir(parents=True, exist_ok=True)
-        args.json_out.write_text(text + "\n", encoding="utf-8")
+        write_json(args.json_out, analysis)
     if args.markdown_out:
         args.markdown_out.parent.mkdir(parents=True, exist_ok=True)
         args.markdown_out.write_text(format_markdown(analysis), encoding="utf-8")
-    print(text)
+    sys.stdout.write(json_text(analysis))
     return 0
 
 
