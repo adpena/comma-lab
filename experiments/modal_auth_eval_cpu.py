@@ -71,6 +71,7 @@ APP_NAME = "comma-auth-eval-cpu"
 REMOTE_REPO = Path("/workspace/pact")
 REMOTE_PYTHONPATH = f"{REMOTE_REPO / 'src'}:{REMOTE_REPO / 'upstream'}:{REMOTE_REPO}"
 REMOTE_OUT = Path("/tmp/modal_auth_eval_cpu")
+REMOTE_WORK_ROOT = Path("/root/modal_auth_eval_cpu_work")
 REQUIRED_SAMPLES = 600
 
 app = modal.App(APP_NAME)
@@ -360,11 +361,13 @@ def _run_auth_eval_inner(
     import time
 
     out_dir = REMOTE_OUT
-    work_dir = out_dir / "eval_work"
+    work_dir = REMOTE_WORK_ROOT / "eval_work"
     archive_path = out_dir / "archive.zip"
     uv_env = out_dir / "uv_project_env"
     if out_dir.exists():
         shutil.rmtree(out_dir)
+    if REMOTE_WORK_ROOT.exists():
+        shutil.rmtree(REMOTE_WORK_ROOT)
     out_dir.mkdir(parents=True, exist_ok=True)
     work_dir.mkdir(parents=True, exist_ok=True)
 
@@ -677,7 +680,7 @@ def _run_auth_eval_cpu_fail_closed(
     except Exception as exc:  # pragma: no cover - remote diagnostic path
         return fail_closed_remote_exception_result(
             out_dir=REMOTE_OUT,
-            work_dir=REMOTE_OUT / "eval_work",
+            work_dir=REMOTE_WORK_ROOT / "eval_work",
             validation_path=REMOTE_OUT / "modal_cpu_auth_eval_validation.json",
             canonical_path="archive.zip -> inflate.sh -> upstream/evaluate.py --device cpu",
             exc=exc,

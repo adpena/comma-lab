@@ -162,6 +162,10 @@ def test_modal_auth_eval_images_include_hard_runtime_entropy_deps() -> None:
         assert '"constriction>=0.4,<0.5"' in text
         assert '"pyppmd>=1.3,<2.0"' in text
         assert 'work_dir / "inflated_outputs_manifest.json"' in text
+    assert 'REMOTE_WORK_ROOT = Path("/root/modal_auth_eval_work")' in cuda_text
+    assert 'REMOTE_WORK_ROOT = Path("/root/modal_auth_eval_cpu_work")' in cpu_text
+    assert 'work_dir = out_dir / "eval_work"' not in cuda_text
+    assert 'work_dir = out_dir / "eval_work"' not in cpu_text
 
 
 def test_cuda_artifact_harvest_includes_inflated_output_manifest(mod, tmp_path):

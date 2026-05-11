@@ -94,3 +94,18 @@ The provider-level command must also be detached:
 `experiments/modal_auth_eval.py` and `experiments/modal_auth_eval_cpu.py` now
 fail before claim/spend when wrapper `--detach` is used without
 `--provider-detach-ack`. `AGENTS.md` records this as durable operator protocol.
+
+## Addendum: CPU work-dir custody parity
+
+The first Modal CPU paired raw-output run after the CUDA harvest failed closed:
+
+```text
+lane_id=pr103_pr106_dual_runtime_contest_cpu_raw_manifest
+job=pr103_pr106_cpu_raw_manifest_modal_20260511T060431Z
+classification=modal_cpu_wrapper_work_dir_custody_bug
+error=contest_auth_eval evidence path is under temp storage: /tmp/modal_auth_eval_cpu/eval_work
+```
+
+CUDA already wrote scorer custody under `/root/modal_auth_eval_work/eval_work`.
+CPU now mirrors that with `/root/modal_auth_eval_cpu_work/eval_work`; tests
+assert neither Modal auth-eval wrapper regresses to `out_dir / "eval_work"`.
