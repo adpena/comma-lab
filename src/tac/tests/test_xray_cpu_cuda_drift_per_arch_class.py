@@ -146,6 +146,7 @@ def test_predict_cpu_band_records_n_anchors():
 def test_main_no_archive_no_metadata_returns_2(tmp_path):
     rc = xd.main([
         "--cuda-score", "0.229",
+        "--manual-cuda-score-justification", "unit-test diagnostic no-input guard",
         "--output-dir", str(tmp_path / "out"),
     ])
     assert rc == 2
@@ -158,6 +159,7 @@ def test_main_metadata_path_writes_outputs(tmp_path):
     rc = xd.main([
         "--metadata-json", str(md),
         "--cuda-score", "0.22933",
+        "--manual-cuda-score-justification", "unit-test diagnostic fixture",
         "--label", "pr107_apogee",
         "--output-dir", str(out),
     ])
@@ -176,6 +178,7 @@ def test_main_records_verdict_and_next_step(tmp_path):
     xd.main([
         "--metadata-json", str(md),
         "--cuda-score", "0.22933",
+        "--manual-cuda-score-justification", "unit-test diagnostic fixture",
         "--output-dir", str(out),
     ])
     rep = json.loads((out / "drift_prediction.json").read_text())
@@ -193,6 +196,7 @@ def test_markdown_includes_diagnostic_tag(tmp_path):
     xd.main([
         "--metadata-json", str(md),
         "--cuda-score", "0.229",
+        "--manual-cuda-score-justification", "unit-test diagnostic fixture",
         "--output-dir", str(out),
     ])
     md_text = (out / "drift_prediction.md").read_text()
@@ -206,6 +210,7 @@ def test_main_invalid_metadata_returns_2(tmp_path):
     rc = xd.main([
         "--metadata-json", str(bad),
         "--cuda-score", "0.229",
+        "--manual-cuda-score-justification", "unit-test diagnostic fixture",
         "--output-dir", str(tmp_path / "out"),
     ])
     assert rc == 2
@@ -218,11 +223,57 @@ def test_main_default_medal_floor_matches_pr102_silver(tmp_path):
     xd.main([
         "--metadata-json", str(md),
         "--cuda-score", "0.229",
+        "--manual-cuda-score-justification", "unit-test diagnostic fixture",
         "--output-dir", str(out),
     ])
     rep = json.loads((out / "drift_prediction.json").read_text())
     # PR102 silver score
     assert abs(rep["medal_floor"] - 0.19538) < 1e-6
+
+
+def test_main_refuses_unjustified_manual_cuda_score(tmp_path):
+    md = tmp_path / "md.json"
+    md.write_text(json.dumps({"architecture_class": "hnerv_ft_microcodec"}))
+    rc = xd.main([
+        "--metadata-json", str(md),
+        "--cuda-score", "0.229",
+        "--output-dir", str(tmp_path / "out"),
+    ])
+    assert rc == 2
+
+
+def test_main_accepts_cuda_auth_eval_json_score_source(tmp_path):
+    md = tmp_path / "md.json"
+    md.write_text(json.dumps({"architecture_class": "hnerv_ft_microcodec"}))
+    artifact = tmp_path / "contest_auth_eval.json"
+    artifact.write_text(json.dumps({
+        "score_recomputed_from_components": 0.22933,
+        "avg_posenet_dist": 3.4e-5,
+        "avg_segnet_dist": 6.7e-4,
+        "rate_unscaled": 0.005,
+        "archive_size_bytes": 185578,
+        "n_samples": 600,
+        "score_axis": "contest_cuda",
+        "evidence_grade": "contest-CUDA",
+        "score_claim_valid": True,
+        "promotion_eligible": False,
+        "provenance": {
+            "device": "cuda",
+            "gpu_t4_match": True,
+            "archive_sha256": "a" * 64,
+        },
+    }))
+    out = tmp_path / "out"
+    rc = xd.main([
+        "--metadata-json", str(md),
+        "--cuda-auth-eval-json", str(artifact),
+        "--output-dir", str(out),
+    ])
+    assert rc == 0
+    rep = json.loads((out / "drift_prediction.json").read_text())
+    assert rep["cuda_score"] == 0.22933
+    assert rep["cuda_score_source"] == "contest_cuda_auth_eval_json"
+    assert rep["cuda_auth_eval_json"] == str(artifact)
 
 
 def test_default_constants_match_dossier():

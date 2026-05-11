@@ -47,10 +47,8 @@ app alive, and the wrapper spawns the remote function.
 """
 from __future__ import annotations
 
-import hashlib
 import json
 import math
-import re
 from pathlib import Path
 from typing import Any
 
@@ -61,7 +59,7 @@ from tac.deploy.modal.auth_eval import (
     claim_modal_auth_eval_dispatch,
     fail_closed_remote_exception_result,
     function_call_id,
-    submission_dir_zip_bytes,
+    prepare_modal_auth_eval_request,
     terminal_modal_auth_eval_claim,
     write_spawn_metadata,
 )
@@ -174,20 +172,11 @@ eval_image = (
 )
 
 
-def _sha256_bytes(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
-
-
 _sha256_path = sha256_file
 
 
 def _json_bytes(payload: dict[str, Any]) -> bytes:
     return json_text(payload).encode("utf-8")
-
-
-def _safe_label(value: str) -> str:
-    label = re.sub(r"[^A-Za-z0-9_.-]+", "_", value).strip("._")
-    return label or "archive"
 
 
 def _probe_cpu_environment() -> dict[str, Any]:
@@ -746,9 +735,6 @@ def main(
 ) -> None:
     """Upload an archive and harvest Modal CPU auth-eval artifacts."""
 
-    archive_path = Path(archive).resolve()
-    if not archive_path.is_file():
-        raise SystemExit(f"FATAL: archive not found: {archive_path}")
     if detach and not provider_detach_ack:
         raise SystemExit(
             "FATAL: wrapper --detach requires provider-level Modal CLI detach. "
@@ -758,59 +744,22 @@ def main(
             "blank RemoteError and no score artifact."
         )
 
-    archive_bytes = archive_path.read_bytes()
-    archive_sha256 = _sha256_bytes(archive_bytes)
-    archive_size_bytes = len(archive_bytes)
-    submission_dir_zip: bytes | None = None
-    submission_dir_zip_sha256: str | None = None
-    submission_dir_path = Path(submission_dir).resolve() if submission_dir else None
-    inflate_sh_path = Path(inflate_sh)
-    if submission_dir_path is not None:
-        if not submission_dir_path.is_dir():
-            raise SystemExit(f"FATAL: --submission-dir is not a directory: {submission_dir_path}")
-        if inflate_sh_path.is_absolute():
-            try:
-                inflate_sh_rel = str(inflate_sh_path.resolve().relative_to(submission_dir_path))
-            except ValueError as exc:
-                raise SystemExit(
-                    "FATAL: absolute --inflate-sh must be inside --submission-dir "
-                    f"when uploading a runtime tree: {inflate_sh_path}"
-                ) from exc
-        else:
-            inflate_sh_rel = str(inflate_sh_path)
-        if ".." in Path(inflate_sh_rel).parts:
-            raise SystemExit(
-                f"FATAL: --inflate-sh must not contain parent traversal: {inflate_sh_rel}"
-            )
-        if not (submission_dir_path / inflate_sh_rel).is_file():
-            raise SystemExit(
-                f"FATAL: --inflate-sh {inflate_sh_rel!r} not found under --submission-dir "
-                f"{submission_dir_path}"
-            )
-        submission_dir_zip = submission_dir_zip_bytes(submission_dir_path)
-        submission_dir_zip_sha256 = _sha256_bytes(submission_dir_zip)
-    else:
-        if inflate_sh_path.is_absolute():
-            try:
-                inflate_sh_rel = str(inflate_sh_path.resolve().relative_to(Path.cwd().resolve()))
-            except ValueError as exc:
-                raise SystemExit(
-                    "FATAL: --inflate-sh must be relative to repo root or inside it: "
-                    f"{inflate_sh_path}"
-                ) from exc
-        else:
-            inflate_sh_rel = str(inflate_sh_path)
-        if ".." in Path(inflate_sh_rel).parts:
-            raise SystemExit(
-                f"FATAL: --inflate-sh must not contain parent traversal: {inflate_sh_rel}"
-            )
-    label = _safe_label(archive_path.stem)
-    out_dir = (
-        Path(output_dir).resolve()
-        if output_dir
-        else Path("experiments/results/modal_auth_eval_cpu") / f"{label}_{archive_sha256[:12]}"
+    prepared = prepare_modal_auth_eval_request(
+        archive=archive,
+        output_dir=output_dir,
+        inflate_sh=inflate_sh,
+        submission_dir=submission_dir,
+        default_output_root=Path("experiments/results/modal_auth_eval_cpu"),
     )
-    out_dir.mkdir(parents=True, exist_ok=True)
+    archive_path = prepared.archive_path
+    archive_bytes = prepared.archive_bytes
+    archive_sha256 = prepared.archive_sha256
+    archive_size_bytes = prepared.archive_size_bytes
+    inflate_sh_rel = prepared.inflate_sh_rel
+    submission_dir_path = prepared.submission_dir_path
+    submission_dir_zip = prepared.submission_dir_zip
+    submission_dir_zip_sha256 = prepared.submission_dir_zip_sha256
+    out_dir = prepared.output_dir
 
     local_summary = {
         "schema_version": 1,

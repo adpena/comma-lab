@@ -16,6 +16,11 @@ from pathlib import Path
 
 import pytest
 
+from tac.deploy.modal.auth_eval import (
+    prepare_modal_auth_eval_request,
+    submission_dir_zip_bytes,
+)
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL_PATH = REPO_ROOT / "experiments" / "modal_auth_eval.py"
 CPU_TOOL_PATH = REPO_ROOT / "experiments" / "modal_auth_eval_cpu.py"
@@ -154,7 +159,7 @@ def test_source_uses_literal_cuda_canonical_contest_eval() -> None:
     assert '"--device", "cpu"' not in text
     assert '"/root/submission/inflate_renderer.py"' not in text
     assert "promotion_eligible\": False" in text
-    eval_image = text[text.index("eval_image = ("):text.index("def _sha256_bytes")]
+    eval_image = text[text.index("eval_image = ("):text.index("def _probe_cuda_environment")]
     assert eval_image.index(".env(") < eval_image.index(".add_local_")
 
 
@@ -201,8 +206,8 @@ def test_submission_dir_transport_zip_is_deterministic_and_filtered(mod, tmp_pat
     (pycache / "inflate.cpython-311.pyc").write_bytes(b"pyc")
     (submission_dir / ".DS_Store").write_bytes(b"junk")
 
-    first = mod.submission_dir_zip_bytes(submission_dir)
-    second = mod.submission_dir_zip_bytes(submission_dir)
+    first = submission_dir_zip_bytes(submission_dir)
+    second = submission_dir_zip_bytes(submission_dir)
 
     assert first == second
     zip_path = tmp_path / "transport.zip"
@@ -228,7 +233,7 @@ def test_submission_dir_transport_zip_rejects_hidden_and_secrets(mod, tmp_path, 
     path.write_text("do-not-upload")
 
     with pytest.raises(ValueError, match="refusing"):
-        mod.submission_dir_zip_bytes(submission_dir)
+        submission_dir_zip_bytes(submission_dir)
 
 
 def test_submission_dir_transport_zip_rejects_symlinks(mod, tmp_path):
@@ -243,7 +248,36 @@ def test_submission_dir_transport_zip_rejects_symlinks(mod, tmp_path):
         pytest.skip("symlinks unavailable on this filesystem")
 
     with pytest.raises(ValueError, match="symlink"):
-        mod.submission_dir_zip_bytes(submission_dir)
+        submission_dir_zip_bytes(submission_dir)
+
+
+def test_prepare_modal_auth_eval_request_centralizes_upload_shape(tmp_path):
+    archive = tmp_path / "candidate archive.zip"
+    archive.write_bytes(b"archive bytes")
+    runtime = tmp_path / "runtime"
+    runtime.mkdir()
+    (runtime / "inflate.sh").write_text("#!/usr/bin/env bash\npython inflate.py\n")
+    (runtime / "inflate.py").write_text("print('ok')\n")
+
+    prepared = prepare_modal_auth_eval_request(
+        archive=archive,
+        output_dir="",
+        inflate_sh=runtime / "inflate.sh",
+        submission_dir=runtime,
+        default_output_root=Path("modal_results"),
+        cwd=tmp_path,
+    )
+
+    assert prepared.archive_path == archive.resolve()
+    assert prepared.archive_bytes == b"archive bytes"
+    assert len(prepared.archive_sha256) == 64
+    assert prepared.archive_size_bytes == len(b"archive bytes")
+    assert prepared.inflate_sh_rel == "inflate.sh"
+    assert prepared.submission_dir_path == runtime.resolve()
+    assert prepared.submission_dir_zip is not None
+    assert len(prepared.submission_dir_zip_sha256 or "") == 64
+    assert prepared.output_dir.parent == (tmp_path / "modal_results").resolve()
+    assert "candidate_archive" in prepared.output_dir.name
 
 
 def test_validate_contest_result_rejects_non_cuda(mod):

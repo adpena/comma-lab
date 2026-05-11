@@ -32,7 +32,7 @@ Output:
 Usage:
   .venv/bin/python tools/xray_cpu_cuda_drift_per_arch_class.py \
       --archive experiments/results/track4_sg_a1_t178000_20260509/archive.zip \
-      --cuda-score 0.22933 \
+      --cuda-auth-eval-json experiments/results/.../contest_auth_eval.json \
       [--label pr107_apogee]
       [--medal-floor 0.19538]
       [--medal-tolerance 0.005]
@@ -47,12 +47,79 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT / "src"))
+sys.path.insert(0, str(REPO_ROOT))
+
+from tools.auth_eval_records import parse_auth_eval_payload  # noqa: E402
+
 SCHEMA = "xray_cpu_cuda_drift_per_arch_class_v1"
 TOOL = "tools/xray_cpu_cuda_drift_per_arch_class.py"
 
 # Default medal-band thresholds from CLAUDE.md / dossier.
 DEFAULT_MEDAL_FLOOR = 0.19538  # PR102 silver
 DEFAULT_MEDAL_TOLERANCE = 0.005  # 0.005 above silver still counts as borderline
+
+
+def cuda_score_from_auth_eval_json(path: Path) -> dict:
+    """Extract a CUDA score from a canonical contest-auth-eval artifact."""
+
+    try:
+        payload = json.loads(path.read_text())
+    except (FileNotFoundError, json.JSONDecodeError) as exc:
+        raise ValueError(f"could not load --cuda-auth-eval-json {path}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("--cuda-auth-eval-json must contain a JSON object")
+    record = parse_auth_eval_payload(payload)
+    if record is None or record.score is None:
+        raise ValueError("--cuda-auth-eval-json is not a parseable auth-eval score artifact")
+    blockers: list[str] = []
+    if record.score_axis != "contest_cuda":
+        blockers.append(f"score_axis={record.score_axis!r}, expected 'contest_cuda'")
+    if record.samples != 600:
+        blockers.append(f"samples={record.samples!r}, expected 600")
+    if not record.gpu_t4_match:
+        blockers.append("gpu_t4_match is not true")
+    if blockers:
+        raise ValueError("; ".join(blockers))
+    return {
+        "score": float(record.score),
+        "source": "contest_cuda_auth_eval_json",
+        "path": str(path),
+        "archive_sha256": record.archive_sha256,
+        "archive_bytes": record.archive_bytes,
+        "samples": record.samples,
+        "score_axis": record.score_axis,
+        "evidence_grade": record.evidence_grade,
+        "score_claim_valid": record.score_claim_valid,
+        "promotion_eligible": record.promotion_eligible,
+    }
+
+
+def resolve_cuda_score_input(args: argparse.Namespace) -> dict:
+    """Resolve CUDA score input without accepting unlabelled loose numbers."""
+
+    if args.cuda_auth_eval_json is not None:
+        if args.cuda_score is not None:
+            raise ValueError("use either --cuda-auth-eval-json or --cuda-score, not both")
+        return cuda_score_from_auth_eval_json(args.cuda_auth_eval_json)
+    if args.cuda_score is None:
+        raise ValueError("provide --cuda-auth-eval-json")
+    justification = str(args.manual_cuda_score_justification or "").strip()
+    if not justification:
+        raise ValueError(
+            "--cuda-score is diagnostic-only and requires "
+            "--manual-cuda-score-justification; prefer --cuda-auth-eval-json"
+        )
+    return {
+        "score": float(args.cuda_score),
+        "source": "manual_cuda_score_diagnostic",
+        "path": None,
+        "manual_justification": justification,
+        "score_axis": "manual_contest_cuda_input_unverified",
+        "evidence_grade": "manual_diagnostic_input",
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+    }
 
 
 def predict_cpu_band(
@@ -65,7 +132,6 @@ def predict_cpu_band(
 
     Imports lazily so this CLI doesn't pull torch into every invocation.
     """
-    sys.path.insert(0, str(REPO_ROOT / "src"))
     from tac.optimization.cuda_cpu_axis_profile_registry import (  # noqa: E402
         bootstrap_registry_from_hnerv_anchors,
         classify_archive_into_profile,
@@ -208,6 +274,13 @@ def render_markdown(report: dict, regen_header: str) -> str:
     lines.append(f"- archive: `{report['archive_path']}`")
     lines.append(f"- label: `{report['label']}`")
     lines.append(f"- CUDA score: **{report['cuda_score']:.5f}**")
+    lines.append(f"- CUDA score source: `{report['cuda_score_source']}`")
+    if report.get("cuda_auth_eval_json"):
+        lines.append(f"- CUDA auth-eval JSON: `{report['cuda_auth_eval_json']}`")
+    if report.get("manual_cuda_score_justification"):
+        lines.append(
+            f"- manual CUDA-score justification: {report['manual_cuda_score_justification']}"
+        )
     lines.append(f"- medal floor: {report['medal_floor']:.5f}")
     lines.append(f"- medal tolerance: ±{report['medal_tolerance']:.5f}")
     lines.append("")
@@ -256,8 +329,26 @@ def main(argv: list[str] | None = None) -> int:
                         help="Archive ZIP to classify (optional if --metadata-json provided)")
     parser.add_argument("--metadata-json", type=Path, default=None,
                         help="Pre-computed archive metadata for classification")
-    parser.add_argument("--cuda-score", type=float, required=True,
-                        help="CUDA score from upstream/evaluate.py [contest-CUDA]")
+    parser.add_argument(
+        "--cuda-auth-eval-json",
+        type=Path,
+        default=None,
+        help="Canonical contest_auth_eval.json whose score_axis is contest_cuda.",
+    )
+    parser.add_argument(
+        "--cuda-score",
+        type=float,
+        default=None,
+        help=(
+            "Manual diagnostic CUDA score. Requires "
+            "--manual-cuda-score-justification and is never evidence by itself."
+        ),
+    )
+    parser.add_argument(
+        "--manual-cuda-score-justification",
+        default="",
+        help="Why a loose numeric --cuda-score is acceptable for this diagnostic run.",
+    )
     parser.add_argument("--label", default="unlabeled")
     parser.add_argument("--medal-floor", type=float, default=DEFAULT_MEDAL_FLOOR)
     parser.add_argument("--medal-tolerance", type=float, default=DEFAULT_MEDAL_TOLERANCE)
@@ -269,6 +360,11 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     if args.archive is not None and not args.archive.exists():
         print(f"ERROR: archive not found: {args.archive}", file=sys.stderr)
+        return 2
+    try:
+        cuda_score_record = resolve_cuda_score_input(args)
+    except ValueError as e:
+        print(f"ERROR: {e}", file=sys.stderr)
         return 2
 
     metadata: dict | None = None
@@ -282,7 +378,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         prediction = predict_cpu_band(
             archive_path=args.archive,
-            cuda_score=args.cuda_score,
+            cuda_score=float(cuda_score_record["score"]),
             metadata=metadata,
         )
     except Exception as e:  # noqa: BLE001
@@ -311,7 +407,8 @@ def main(argv: list[str] | None = None) -> int:
     state_basis = json.dumps(
         {
             "label": args.label,
-            "cuda_score": args.cuda_score,
+            "cuda_score": float(cuda_score_record["score"]),
+            "cuda_score_source": cuda_score_record["source"],
             "arch_class": prediction["architecture_class"],
         },
         sort_keys=True,
@@ -329,7 +426,11 @@ def main(argv: list[str] | None = None) -> int:
         "evidence_grade": "predicted_learning_layer_registry_posterior",
         "label": args.label,
         "archive_path": str(args.archive) if args.archive else None,
-        "cuda_score": args.cuda_score,
+        "cuda_score": float(cuda_score_record["score"]),
+        "cuda_score_source": cuda_score_record["source"],
+        "cuda_score_input": cuda_score_record,
+        "cuda_auth_eval_json": cuda_score_record.get("path"),
+        "manual_cuda_score_justification": cuda_score_record.get("manual_justification"),
         "medal_floor": args.medal_floor,
         "medal_tolerance": args.medal_tolerance,
         "prediction": prediction,
@@ -351,7 +452,14 @@ def main(argv: list[str] | None = None) -> int:
         parts.append(f"--archive {args.archive}")
     if args.metadata_json:
         parts.append(f"--metadata-json {args.metadata_json}")
-    parts.append(f"--cuda-score {args.cuda_score}")
+    if args.cuda_auth_eval_json:
+        parts.append(f"--cuda-auth-eval-json {args.cuda_auth_eval_json}")
+    else:
+        parts.append(f"--cuda-score {args.cuda_score}")
+        parts.append(
+            "--manual-cuda-score-justification "
+            + json.dumps(args.manual_cuda_score_justification)
+        )
     parts.append(f"--label {args.label}")
     parts.append(f"--medal-floor {args.medal_floor}")
     parts.append(f"--medal-tolerance {args.medal_tolerance}")

@@ -873,7 +873,8 @@ XRAY_TOOLKIT = [
         "example": (
             ".venv/bin/python tools/xray_cpu_cuda_drift_per_arch_class.py \\\n"
             "  --archive experiments/results/track4_sg_a1_t178000_20260509/archive.zip \\\n"
-            "  --cuda-score 0.22933 --label pr107_apogee"
+            "  --cuda-auth-eval-json experiments/results/.../contest_auth_eval.json \\\n"
+            "  --label pr107_apogee"
         ),
     },
 ]

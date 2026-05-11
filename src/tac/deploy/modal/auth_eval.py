@@ -7,6 +7,8 @@ Modal call metadata, artifact harvest, and result JSON materialization.
 from __future__ import annotations
 
 import io
+import hashlib
+import re
 import subprocess
 import traceback
 import zipfile
@@ -41,10 +43,38 @@ SENSITIVE_RUNTIME_UPLOAD_SUBSTRINGS = (
 )
 
 
+@dataclass(frozen=True)
+class PreparedModalAuthEvalRequest:
+    """Canonical local upload payload for Modal auth-eval entry points."""
+
+    archive_path: Path
+    archive_bytes: bytes
+    archive_sha256: str
+    archive_size_bytes: int
+    inflate_sh_rel: str
+    submission_dir_path: Path | None
+    submission_dir_zip: bytes | None
+    submission_dir_zip_sha256: str | None
+    output_dir: Path
+
+
 def utc_now() -> str:
     """Return a compact UTC timestamp for custody metadata."""
 
     return datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def sha256_bytes(data: bytes) -> str:
+    """Return the SHA-256 digest for in-memory custody payloads."""
+
+    return hashlib.sha256(data).hexdigest()
+
+
+def safe_artifact_label(value: str) -> str:
+    """Return a filesystem-safe label for Modal auth-eval artifact directories."""
+
+    label = re.sub(r"[^A-Za-z0-9_.-]+", "_", value).strip("._")
+    return label or "archive"
 
 
 def predicted_eta(hours: float = 3.0) -> str:
@@ -106,6 +136,98 @@ def submission_dir_zip_bytes(submission_dir: Path) -> bytes:
             info.external_attr = 0o644 << 16
             zf.writestr(info, path.read_bytes(), compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
     return buffer.getvalue()
+
+
+def prepare_modal_auth_eval_request(
+    *,
+    archive: str | Path,
+    output_dir: str | Path,
+    inflate_sh: str | Path,
+    submission_dir: str | Path,
+    default_output_root: Path,
+    cwd: Path | None = None,
+) -> PreparedModalAuthEvalRequest:
+    """Build the shared local request shape for Modal CPU/CUDA auth eval.
+
+    This function intentionally owns path traversal checks, deterministic
+    runtime-tree transport zipping, archive hashing, and default artifact
+    directory naming for both Modal auth-eval entry points. Keeping that
+    normalization in one place prevents CPU/CUDA wrapper drift.
+    """
+
+    root = (cwd or Path.cwd()).resolve()
+    archive_path = Path(archive).resolve()
+    if not archive_path.is_file():
+        raise SystemExit(f"FATAL: archive not found: {archive_path}")
+
+    archive_bytes = archive_path.read_bytes()
+    archive_sha256 = sha256_bytes(archive_bytes)
+    archive_size_bytes = len(archive_bytes)
+
+    submission_dir_path = Path(submission_dir).resolve() if str(submission_dir or "") else None
+    inflate_sh_path = Path(inflate_sh)
+    transport_zip: bytes | None = None
+    transport_zip_sha256: str | None = None
+
+    if submission_dir_path is not None:
+        if not submission_dir_path.is_dir():
+            raise SystemExit(f"FATAL: --submission-dir is not a directory: {submission_dir_path}")
+        if inflate_sh_path.is_absolute():
+            try:
+                inflate_sh_rel = str(inflate_sh_path.resolve().relative_to(submission_dir_path))
+            except ValueError as exc:
+                raise SystemExit(
+                    "FATAL: absolute --inflate-sh must be inside --submission-dir "
+                    f"when uploading a runtime tree: {inflate_sh_path}"
+                ) from exc
+        else:
+            inflate_sh_rel = str(inflate_sh_path)
+        if ".." in Path(inflate_sh_rel).parts:
+            raise SystemExit(
+                f"FATAL: --inflate-sh must not contain parent traversal: {inflate_sh_rel}"
+            )
+        if not (submission_dir_path / inflate_sh_rel).is_file():
+            raise SystemExit(
+                f"FATAL: --inflate-sh {inflate_sh_rel!r} not found under --submission-dir "
+                f"{submission_dir_path}"
+            )
+        transport_zip = submission_dir_zip_bytes(submission_dir_path)
+        transport_zip_sha256 = sha256_bytes(transport_zip)
+    else:
+        if inflate_sh_path.is_absolute():
+            try:
+                inflate_sh_rel = str(inflate_sh_path.resolve().relative_to(root))
+            except ValueError as exc:
+                raise SystemExit(
+                    "FATAL: --inflate-sh must be relative to repo root or inside it: "
+                    f"{inflate_sh_path}"
+                ) from exc
+        else:
+            inflate_sh_rel = str(inflate_sh_path)
+        if ".." in Path(inflate_sh_rel).parts:
+            raise SystemExit(
+                f"FATAL: --inflate-sh must not contain parent traversal: {inflate_sh_rel}"
+            )
+
+    label = safe_artifact_label(archive_path.stem)
+    out_dir = (
+        Path(output_dir).resolve()
+        if str(output_dir or "")
+        else (root / default_output_root / f"{label}_{archive_sha256[:12]}").resolve()
+    )
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    return PreparedModalAuthEvalRequest(
+        archive_path=archive_path,
+        archive_bytes=archive_bytes,
+        archive_sha256=archive_sha256,
+        archive_size_bytes=archive_size_bytes,
+        inflate_sh_rel=inflate_sh_rel,
+        submission_dir_path=submission_dir_path,
+        submission_dir_zip=transport_zip,
+        submission_dir_zip_sha256=transport_zip_sha256,
+        output_dir=out_dir,
+    )
 
 
 @dataclass(frozen=True)
