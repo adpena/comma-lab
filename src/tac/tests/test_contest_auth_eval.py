@@ -509,6 +509,103 @@ def test_run_inflate_defaults_python_to_current_interpreter(
     assert captured["PYTHON"] == sys.executable
 
 
+def test_run_inflate_applies_diagnostic_env_to_inflate_only(
+    cae,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, str] = {}
+    video_names = tmp_path / "names.txt"
+    video_names.write_text("0.mkv\n")
+    inflate_sh = tmp_path / "inflate.sh"
+    inflate_sh.write_text("#!/usr/bin/env bash\n")
+    archive_dir = tmp_path / "archive"
+    inflated_dir = tmp_path / "inflated"
+    archive_dir.mkdir()
+
+    def fake_run(cmd, *, timeout, check, env):
+        captured.update(env)
+        raw_path = Path(cmd[3]) / "0.raw"
+        raw_path.parent.mkdir(parents=True, exist_ok=True)
+        with raw_path.open("wb") as f:
+            f.truncate(1164 * 874 * 1200 * 3)
+        return subprocess.CompletedProcess(args=cmd, returncode=0)
+
+    monkeypatch.setattr(cae.subprocess, "run", fake_run)
+
+    cae._run_inflate(
+        inflate_sh,
+        archive_dir,
+        inflated_dir,
+        video_names,
+        timeout=5,
+        extra_env={"CUDA_VISIBLE_DEVICES": ""},
+    )
+
+    assert captured["CUDA_VISIBLE_DEVICES"] == ""
+
+
+def test_parse_inflate_env_overrides_allowlist(cae) -> None:
+    parsed = cae._parse_inflate_env_overrides(
+        ["CUDA_VISIBLE_DEVICES=", "PACT_FORCE_INFLATE_DEVICE=cpu", "INFLATE_MODE=probe"]
+    )
+
+    assert parsed == {
+        "CUDA_VISIBLE_DEVICES": "",
+        "INFLATE_MODE": "probe",
+        "PACT_FORCE_INFLATE_DEVICE": "cpu",
+    }
+    with pytest.raises(ValueError, match="KEY=VALUE"):
+        cae._parse_inflate_env_overrides(["CUDA_VISIBLE_DEVICES"])
+    with pytest.raises(ValueError, match="not allowed"):
+        cae._parse_inflate_env_overrides(["AWS_SECRET_ACCESS_KEY=nope"])
+
+
+def test_inflate_device_policy_builds_diagnostic_env(cae) -> None:
+    env, blockers = cae._inflate_env_for_device_policy("cpu", {})
+
+    assert env == {
+        "CUDA_VISIBLE_DEVICES": "",
+        "PACT_INFLATE_DEVICE": "cpu",
+    }
+    assert blockers == ["inflate_device_policy_cpu"]
+
+    env, blockers = cae._inflate_env_for_device_policy(
+        "cuda",
+        {"INFLATE_MODE": "probe"},
+    )
+    assert env == {
+        "INFLATE_MODE": "probe",
+        "PACT_INFLATE_DEVICE": "cuda",
+    }
+    assert blockers == [
+        "inflate_device_policy_cuda",
+        "inflate_env_overrides_present",
+    ]
+
+    with pytest.raises(ValueError, match="conflicting PACT_INFLATE_DEVICE"):
+        cae._inflate_env_for_device_policy("cpu", {"PACT_INFLATE_DEVICE": "cuda"})
+
+
+def test_auth_eval_evidence_contract_demotes_inflate_env_diagnostic(cae) -> None:
+    contract = cae._auth_eval_evidence_contract(
+        "cuda",
+        600,
+        {
+            "platform_system": "Linux",
+            "platform_machine": "x86_64",
+            "gpu_t4_match": True,
+        },
+        diagnostic_blockers=["inflate_env_overrides_present"],
+    )
+
+    assert contract["evidence_grade"] == "B"
+    assert contract["score_axis"] == "diagnostic_cuda"
+    assert contract["score_claim"] is False
+    assert contract["exact_cuda_eval_complete"] is False
+    assert contract["diagnostic_blockers"] == ["inflate_env_overrides_present"]
+
+
 def test_expected_runtime_tree_hash_mismatch_fails_closed(cae) -> None:
     prov = {
         "inflate_runtime_manifest": {

@@ -72,6 +72,8 @@ def test_run_auth_eval_function_signature(mod):
     assert "archive_size_bytes" in sig.parameters
     assert "submission_dir_zip_bytes" in sig.parameters
     assert "submission_dir_zip_sha256" in sig.parameters
+    assert "inflate_device_policy" in sig.parameters
+    assert "inflate_env_overrides" in sig.parameters
 
 
 def test_cuda_remote_unexpected_exception_returns_fail_closed_result(mod, tmp_path, monkeypatch):
@@ -131,6 +133,8 @@ def test_source_uses_literal_cuda_canonical_contest_eval() -> None:
     assert "experiments/contest_auth_eval.py" in text
     assert '"--device",' in text
     assert '"cuda",' in text
+    assert '"--inflate-device"' in text
+    assert '"--inflate-env"' in text
     assert 'DALI_DISABLE_NVML_VALUE = "1"' in text
     assert "REMOTE_PYTHONPATH =" in text
     assert '"DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE' in text
@@ -339,6 +343,98 @@ def test_local_request_metadata_is_non_promotable_shape(mod, tmp_path, monkeypat
     assert terminal_calls[0]["status"] == "completed_modal_auth_eval_recovered"
 
 
+def test_modal_cuda_inflate_env_request_is_diagnostic_only(mod, tmp_path, monkeypatch):
+    archive = tmp_path / "point_004_eps_p2.zip"
+    archive.write_bytes(b"archive bytes")
+    out_dir = tmp_path / "out"
+    captured_args = []
+
+    class FakeRemote:
+        @staticmethod
+        def remote(*args):
+            captured_args.append(args)
+            return {
+                "passed": True,
+                "returncode": 0,
+                "score_recomputed_from_components": 1.23,
+                "avg_posenet_dist": 0.01,
+                "avg_segnet_dist": 0.002,
+                "archive_size_bytes": archive.stat().st_size,
+                "promotion_eligible": False,
+                "score_claim": False,
+                "artifacts": {
+                    "contest_auth_eval.json": b"{}\n",
+                    "modal_cuda_auth_eval_validation.json": b"{}\n",
+                },
+            }
+
+    monkeypatch.setattr(mod, "run_auth_eval", FakeRemote)
+    monkeypatch.setattr(mod, "claim_modal_auth_eval_dispatch", lambda **_kwargs: None)
+    monkeypatch.setattr(mod, "terminal_modal_auth_eval_claim", lambda **_kwargs: None)
+
+    mod.main(
+        str(archive),
+        str(out_dir),
+        inflate_env="CUDA_VISIBLE_DEVICES=",
+        lane_id="lane_unit_modal_auth_eval_diag",
+        instance_job_id="job_unit_modal_auth_eval_diag",
+    )
+
+    request = json.loads((out_dir / "modal_cuda_auth_eval_local_request.json").read_text())
+    result = json.loads((out_dir / "modal_cuda_auth_eval_result.json").read_text())
+    assert request["diagnostic_only"] is True
+    assert request["inflate_env_overrides"] == ["CUDA_VISIBLE_DEVICES="]
+    assert result["inflate_env_overrides"] == ["CUDA_VISIBLE_DEVICES="]
+    assert captured_args[0][-1] == ("CUDA_VISIBLE_DEVICES=",)
+    assert captured_args[0][-2] == "auto"
+
+
+def test_modal_cuda_inflate_device_request_is_diagnostic_only(mod, tmp_path, monkeypatch):
+    archive = tmp_path / "point_004_eps_p2.zip"
+    archive.write_bytes(b"archive bytes")
+    out_dir = tmp_path / "out"
+    captured_args = []
+
+    class FakeRemote:
+        @staticmethod
+        def remote(*args):
+            captured_args.append(args)
+            return {
+                "passed": True,
+                "returncode": 0,
+                "score_recomputed_from_components": 1.23,
+                "avg_posenet_dist": 0.01,
+                "avg_segnet_dist": 0.002,
+                "archive_size_bytes": archive.stat().st_size,
+                "promotion_eligible": False,
+                "score_claim": False,
+                "artifacts": {
+                    "contest_auth_eval.json": b"{}\n",
+                    "modal_cuda_auth_eval_validation.json": b"{}\n",
+                },
+            }
+
+    monkeypatch.setattr(mod, "run_auth_eval", FakeRemote)
+    monkeypatch.setattr(mod, "claim_modal_auth_eval_dispatch", lambda **_kwargs: None)
+    monkeypatch.setattr(mod, "terminal_modal_auth_eval_claim", lambda **_kwargs: None)
+
+    mod.main(
+        str(archive),
+        str(out_dir),
+        inflate_device="cpu",
+        lane_id="lane_unit_modal_auth_eval_diag_device",
+        instance_job_id="job_unit_modal_auth_eval_diag_device",
+    )
+
+    request = json.loads((out_dir / "modal_cuda_auth_eval_local_request.json").read_text())
+    result = json.loads((out_dir / "modal_cuda_auth_eval_result.json").read_text())
+    assert request["diagnostic_only"] is True
+    assert request["inflate_device_policy"] == "cpu"
+    assert result["inflate_device_policy"] == "cpu"
+    assert captured_args[0][-2] == "cpu"
+    assert captured_args[0][-1] == ()
+
+
 def test_detached_modal_auth_eval_writes_canonical_spawn_metadata(mod, tmp_path, monkeypatch):
     archive = tmp_path / "point_004_eps_p2.zip"
     archive.write_bytes(b"archive bytes")
@@ -377,6 +473,37 @@ def test_detached_modal_auth_eval_writes_canonical_spawn_metadata(mod, tmp_path,
         "active_modal_auth_eval_spawning",
         "active_modal_auth_eval_spawned",
     ]
+
+
+def test_detached_modal_auth_eval_marks_inflate_env_as_diagnostic_axis(mod, tmp_path, monkeypatch):
+    archive = tmp_path / "point_004_eps_p2.zip"
+    archive.write_bytes(b"archive bytes")
+    out_dir = tmp_path / "out"
+
+    class FakeSpawn:
+        @staticmethod
+        def spawn(*_args):
+            return type("Call", (), {"object_id": "fc-test-modal-auth-diag"})()
+
+    monkeypatch.setattr(mod, "run_auth_eval", FakeSpawn)
+    monkeypatch.setattr(mod, "claim_modal_auth_eval_dispatch", lambda **_kwargs: None)
+
+    mod.main(
+        str(archive),
+        str(out_dir),
+        inflate_env="CUDA_VISIBLE_DEVICES=",
+        inflate_device="cpu",
+        detach=True,
+        provider_detach_ack=True,
+        lane_id="lane_unit_modal_auth_eval",
+        instance_job_id="job_unit_modal_auth_eval_diag_detached",
+    )
+
+    metadata = json.loads((out_dir / "modal_auth_eval_spawn.json").read_text())
+    assert metadata["axis"] == "diagnostic_cuda"
+    assert metadata["diagnostic_only"] is True
+    assert metadata["inflate_device_policy"] == "cpu"
+    assert metadata["inflate_env_overrides"] == ["CUDA_VISIBLE_DEVICES="]
 
 
 def test_detached_modal_auth_eval_requires_provider_detach_ack(mod, tmp_path, monkeypatch):

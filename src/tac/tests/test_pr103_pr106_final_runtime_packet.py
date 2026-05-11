@@ -104,6 +104,24 @@ def test_final_runtime_selects_cuda_when_available(monkeypatch) -> None:
     assert runtime.select_inflate_device().type == "cuda"
 
 
+def test_final_runtime_inflate_device_override_is_fail_closed(monkeypatch) -> None:
+    monkeypatch.setattr(runtime.torch.cuda, "is_available", lambda: True)
+    monkeypatch.setenv("PACT_INFLATE_DEVICE", "cpu")
+
+    assert runtime.select_inflate_device().type == "cpu"
+
+    monkeypatch.setenv("PACT_INFLATE_DEVICE", "cuda")
+    assert runtime.select_inflate_device().type == "cuda"
+
+    monkeypatch.setattr(runtime.torch.cuda, "is_available", lambda: False)
+    with pytest.raises(runtime.RuntimeClosureError, match="CUDA is unavailable"):
+        runtime.select_inflate_device()
+
+    monkeypatch.setenv("PACT_INFLATE_DEVICE", "bogus")
+    with pytest.raises(runtime.RuntimeClosureError, match="invalid PACT_INFLATE_DEVICE"):
+        runtime.select_inflate_device()
+
+
 def test_pyproject_keeps_brotli_and_constriction_as_hard_runtime_deps() -> None:
     text = PYPROJECT.read_text()
     assert re.search(r'"brotli>=1\.0"', text)

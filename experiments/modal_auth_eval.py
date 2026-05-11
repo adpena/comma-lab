@@ -283,6 +283,8 @@ def _run_auth_eval_inner(
     source_repo_commit: str,
     inflate_timeout: int,
     evaluate_timeout: int,
+    inflate_device_policy: str = "auto",
+    inflate_env_overrides: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     import os
     import shutil
@@ -311,6 +313,8 @@ def _run_auth_eval_inner(
             "submission_dir_zip_sha256": submission_dir_zip_sha256,
             "source_repo_commit": source_repo_commit,
             "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
+            "inflate_device_policy": inflate_device_policy,
+            "inflate_env_overrides": list(inflate_env_overrides),
         }
     )
     write_json(out_dir / "modal_cuda_preflight.json", preflight)
@@ -450,7 +454,11 @@ def _run_auth_eval_inner(
         str(int(inflate_timeout)),
         "--evaluate-timeout",
         str(int(evaluate_timeout)),
+        "--inflate-device",
+        inflate_device_policy,
     ]
+    for item in inflate_env_overrides:
+        cmd.extend(["--inflate-env", item])
     env = {
         **os.environ,
         "PYTHONPATH": REMOTE_PYTHONPATH,
@@ -592,6 +600,8 @@ def _run_auth_eval_fail_closed(
     source_repo_commit: str,
     inflate_timeout: int,
     evaluate_timeout: int,
+    inflate_device_policy: str = "auto",
+    inflate_env_overrides: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     try:
         return _run_auth_eval_inner(
@@ -604,6 +614,8 @@ def _run_auth_eval_fail_closed(
             source_repo_commit=source_repo_commit,
             inflate_timeout=inflate_timeout,
             evaluate_timeout=evaluate_timeout,
+            inflate_device_policy=inflate_device_policy,
+            inflate_env_overrides=inflate_env_overrides,
         )
     except Exception as exc:  # pragma: no cover - remote diagnostic path
         return fail_closed_remote_exception_result(
@@ -631,6 +643,8 @@ def run_auth_eval(
     source_repo_commit: str = "",
     inflate_timeout: int = 1800,
     evaluate_timeout: int = 1800,
+    inflate_device_policy: str = "auto",
+    inflate_env_overrides: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     """Run the canonical CUDA auth eval on Modal T4."""
 
@@ -644,6 +658,8 @@ def run_auth_eval(
         source_repo_commit=source_repo_commit,
         inflate_timeout=inflate_timeout,
         evaluate_timeout=evaluate_timeout,
+        inflate_device_policy=inflate_device_policy,
+        inflate_env_overrides=inflate_env_overrides,
     )
 
 
@@ -662,6 +678,8 @@ def run_auth_eval_a100(
     source_repo_commit: str = "",
     inflate_timeout: int = 1800,
     evaluate_timeout: int = 1800,
+    inflate_device_policy: str = "auto",
+    inflate_env_overrides: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     """Run the canonical CUDA auth eval on Modal A100."""
 
@@ -675,6 +693,8 @@ def run_auth_eval_a100(
         source_repo_commit=source_repo_commit,
         inflate_timeout=inflate_timeout,
         evaluate_timeout=evaluate_timeout,
+        inflate_device_policy=inflate_device_policy,
+        inflate_env_overrides=inflate_env_overrides,
     )
 
 
@@ -693,6 +713,8 @@ def run_auth_eval_h100(
     source_repo_commit: str = "",
     inflate_timeout: int = 1800,
     evaluate_timeout: int = 1800,
+    inflate_device_policy: str = "auto",
+    inflate_env_overrides: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     """Run the canonical CUDA auth eval on Modal H100."""
 
@@ -706,6 +728,8 @@ def run_auth_eval_h100(
         source_repo_commit=source_repo_commit,
         inflate_timeout=inflate_timeout,
         evaluate_timeout=evaluate_timeout,
+        inflate_device_policy=inflate_device_policy,
+        inflate_env_overrides=inflate_env_overrides,
     )
 
 
@@ -718,6 +742,8 @@ def main(
     gpu: str = "T4",
     inflate_timeout: int = 1800,
     evaluate_timeout: int = 1800,
+    inflate_device: str = "auto",
+    inflate_env: str = "",
     detach: bool = False,
     provider_detach_ack: bool = False,
     lane_id: str = "",
@@ -744,6 +770,11 @@ def main(
     archive_sha256 = _sha256_bytes(archive_bytes)
     archive_size_bytes = len(archive_bytes)
     source_repo_commit = _local_git_commit()
+    inflate_device_policy = str(inflate_device or "auto").lower()
+    if inflate_device_policy not in {"auto", "cpu", "cuda"}:
+        raise SystemExit("FATAL: --inflate-device must be one of auto, cpu, cuda")
+    inflate_env_overrides = (inflate_env,) if inflate_env else ()
+    diagnostic_only = bool(inflate_env_overrides) or inflate_device_policy != "auto"
     submission_dir_zip: bytes | None = None
     submission_dir_zip_sha256: str | None = None
     submission_dir_path = Path(submission_dir).resolve() if submission_dir else None
@@ -803,6 +834,9 @@ def main(
         "source_repo_commit": source_repo_commit,
         "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
         "modal_dispatch_mode": "detached_spawn" if detach else "blocking_remote",
+        "inflate_device_policy": inflate_device_policy,
+        "inflate_env_overrides": list(inflate_env_overrides),
+        "diagnostic_only": diagnostic_only,
         "score_claim": False,
         "promotion_eligible": False,
         "adjudication_required": True,
@@ -847,6 +881,8 @@ def main(
         source_repo_commit,
         int(inflate_timeout),
         int(evaluate_timeout),
+        inflate_device_policy,
+        inflate_env_overrides,
     )
     claim_modal_auth_eval_dispatch(
         repo_root=Path.cwd(),
@@ -877,12 +913,15 @@ def main(
             out_dir=out_dir,
             tool="experiments/modal_auth_eval.py",
             app=APP_NAME,
-            axis="contest_cuda",
+            axis="diagnostic_cuda" if diagnostic_only else "contest_cuda",
             call_id=call_id,
             local_request=local_summary,
             result_json_name="modal_cuda_auth_eval_result.json",
             extra={
                 "gpu": gpu_key,
+                "diagnostic_only": diagnostic_only,
+                "inflate_device_policy": inflate_device_policy,
+                "inflate_env_overrides": list(inflate_env_overrides),
                 "lane_id": lane_id,
                 "instance_job_id": instance_job_id,
                 "claim_agent": claim_agent,
@@ -934,6 +973,8 @@ def main(
     result["archive_size_bytes"] = archive_size_bytes
     result["inflate_sh"] = inflate_sh_rel
     result["source_repo_commit"] = source_repo_commit
+    result["inflate_device_policy"] = inflate_device_policy
+    result["inflate_env_overrides"] = list(inflate_env_overrides)
     write_json(out_dir / "modal_cuda_auth_eval_result.json", result)
 
     print("=" * 60)

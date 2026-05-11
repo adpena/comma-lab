@@ -89,6 +89,9 @@ _RUNTIME_DEPENDENCY_ROOT_DIRECTIVE_RE = re.compile(
     r"^\s*#\s*PACT_RUNTIME_DEPENDENCY_ROOT\s*=\s*(?P<path>.+?)\s*$",
     re.MULTILINE,
 )
+_INFLATE_ENV_KEY_RE = re.compile(r"^[A-Z_][A-Z0-9_]*$")
+_ALLOWED_INFLATE_ENV_PREFIXES = ("PACT_", "INFLATE_")
+_ALLOWED_INFLATE_ENV_KEYS = {"CUDA_VISIBLE_DEVICES"}
 
 
 def _repo_root() -> Path:
@@ -924,8 +927,58 @@ def _validate_archive_members(members: list[str]) -> None:
         )
 
 
+def _parse_inflate_env_overrides(items: list[str] | None) -> dict[str, str]:
+    """Parse diagnostic-only environment overrides for the inflate subprocess."""
+
+    overrides: dict[str, str] = {}
+    for raw in items or []:
+        if "=" not in raw:
+            raise ValueError(f"inflate env override must be KEY=VALUE, got {raw!r}")
+        key, value = raw.split("=", 1)
+        if not _INFLATE_ENV_KEY_RE.fullmatch(key):
+            raise ValueError(f"invalid inflate env key {key!r}")
+        if "\x00" in value:
+            raise ValueError(f"inflate env override for {key!r} contains NUL")
+        allowed = key in _ALLOWED_INFLATE_ENV_KEYS or key.startswith(_ALLOWED_INFLATE_ENV_PREFIXES)
+        if not allowed:
+            allowed_keys = sorted(_ALLOWED_INFLATE_ENV_KEYS)
+            raise ValueError(
+                f"inflate env key {key!r} is not allowed; use PACT_*/INFLATE_* "
+                f"or one of {allowed_keys}"
+            )
+        overrides[key] = value
+    return dict(sorted(overrides.items()))
+
+
+def _inflate_env_for_device_policy(
+    policy: str,
+    overrides: dict[str, str],
+) -> tuple[dict[str, str], list[str]]:
+    """Return inflate env plus diagnostic blockers for an inflate-device policy."""
+
+    normalized = str(policy or "auto").strip().lower()
+    if normalized not in {"auto", "cpu", "cuda"}:
+        raise ValueError(f"invalid inflate device policy {policy!r}")
+    env = dict(overrides)
+    blockers: list[str] = []
+    if normalized != "auto":
+        if "PACT_INFLATE_DEVICE" in env and env["PACT_INFLATE_DEVICE"] != normalized:
+            raise ValueError(
+                "conflicting PACT_INFLATE_DEVICE override: "
+                f"{env['PACT_INFLATE_DEVICE']!r} vs --inflate-device {normalized!r}"
+            )
+        env["PACT_INFLATE_DEVICE"] = normalized
+        blockers.append(f"inflate_device_policy_{normalized}")
+        if normalized == "cpu":
+            env.setdefault("CUDA_VISIBLE_DEVICES", "")
+    if overrides:
+        blockers.append("inflate_env_overrides_present")
+    return dict(sorted(env.items())), sorted(set(blockers))
+
+
 def _run_inflate(inflate_sh: Path, archive_dir: Path, inflated_dir: Path,
-                 video_names_file: Path, *, timeout: int = 1800) -> float:
+                 video_names_file: Path, *, timeout: int = 1800,
+                 extra_env: dict[str, str] | None = None) -> float:
     """Invoke the submission's inflate.sh. Contest budget: 30 min on T4.
     Default timeout here is 30 min (1800s); pass --inflate-timeout for
     longer development runs.
@@ -952,6 +1005,9 @@ def _run_inflate(inflate_sh: Path, archive_dir: Path, inflated_dir: Path,
     # repo venv that loaded this tool; callers may still override PYTHON for a
     # contest container or public replay environment.
     env.setdefault("PYTHON", sys.executable)
+    if extra_env:
+        env.update(extra_env)
+        print(f"[inflate] diagnostic env override keys: {sorted(extra_env)}")
     try:
         result = subprocess.run(cmd, timeout=timeout, check=False, env=env)
     except subprocess.TimeoutExpired as exc:
@@ -1261,8 +1317,33 @@ def _parse_report(report_path: Path | str, *, archive_size: int,
     }
 
 
-def _auth_eval_evidence_contract(device: str, n_samples: int, provenance: dict) -> dict:
+def _auth_eval_evidence_contract(
+    device: str,
+    n_samples: int,
+    provenance: dict,
+    *,
+    diagnostic_blockers: list[str] | None = None,
+) -> dict:
     """Return explicit evidence semantics for the selected eval device."""
+
+    if diagnostic_blockers:
+        return {
+            "evidence_grade": "B",
+            "lane_tag": "[diagnostic-auth-eval]",
+            "score_axis": f"diagnostic_{device}",
+            "evidence_semantics": "diagnostic_auth_eval_non_promotable",
+            "exact_cuda_eval_complete": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "score_claim_valid": False,
+            "rank_or_kill_eligible": False,
+            "cpu_leaderboard_reproduction_eligible": False,
+            "diagnostic_blockers": sorted(set(diagnostic_blockers)),
+            "allowed_uses": [
+                "diagnostic_debugging",
+                "mechanism_localization",
+            ],
+        }
 
     is_linux_x86_64 = (
         provenance.get("platform_system") == "Linux"
@@ -1434,6 +1515,29 @@ def main() -> int:
                         help="Don't delete work dir on success (for debugging)")
     parser.add_argument("--expected-runtime-tree-sha256", default=None,
                         help="Fail if the inflate runtime dependency tree hash differs.")
+    parser.add_argument(
+        "--inflate-env",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+        help=(
+            "Diagnostic-only environment override for inflate.sh. Overrides "
+            "apply only to the inflate subprocess and demote the result to "
+            "non-promotable diagnostic evidence. Allowed keys: PACT_*, "
+            "INFLATE_*, CUDA_VISIBLE_DEVICES."
+        ),
+    )
+    parser.add_argument(
+        "--inflate-device",
+        choices=["auto", "cpu", "cuda"],
+        default="auto",
+        help=(
+            "Diagnostic-only inflate device policy. 'auto' preserves the "
+            "submission runtime default. 'cpu' sets PACT_INFLATE_DEVICE=cpu "
+            "and hides CUDA from inflate; 'cuda' sets PACT_INFLATE_DEVICE=cuda. "
+            "Non-auto values demote the result to diagnostic evidence."
+        ),
+    )
     args = parser.parse_args()
 
     # Resolve required paths
@@ -1474,6 +1578,14 @@ def main() -> int:
             raise SystemExit(f"--video-names-file does not exist: {video_names_file}")
 
     _ensure_uv_available()
+    try:
+        raw_inflate_env_overrides = _parse_inflate_env_overrides(args.inflate_env)
+        inflate_env_overrides, diagnostic_blockers = _inflate_env_for_device_policy(
+            args.inflate_device,
+            raw_inflate_env_overrides,
+        )
+    except ValueError as exc:
+        raise SystemExit(f"invalid inflate diagnostic override: {exc}") from exc
 
     # Set up working directory in canonical contest-shape:
     #   work/
@@ -1499,6 +1611,10 @@ def main() -> int:
 
         # Provenance snapshot
         prov = _record_provenance(work_dir, archive, inflate_sh, upstream_dir, args)
+        prov["inflate_device_policy"] = args.inflate_device
+        if inflate_env_overrides:
+            prov["inflate_env_overrides"] = inflate_env_overrides
+            prov["inflate_env_override_mode"] = "diagnostic_non_promotable"
         _validate_expected_runtime_tree(prov, args.expected_runtime_tree_sha256)
         print(f"[contest_auth_eval] provenance saved: {work_dir / 'provenance.json'}")
         print(f"[contest_auth_eval] archive sha256: {prov['archive_sha256']}")
@@ -1520,6 +1636,7 @@ def main() -> int:
         inflate_elapsed_seconds = _run_inflate(
             inflate_sh, extracted, inflated, video_names_file,
             timeout=args.inflate_timeout,
+            extra_env=inflate_env_overrides,
         )
         _record_inflate_runtime_artifacts(prov, work_dir, extracted)
         _record_inflated_output_artifacts(prov, work_dir, inflated, video_names_file)
@@ -1544,6 +1661,7 @@ def main() -> int:
                 args.device,
                 int(result.get("n_samples") or 0),
                 prov,
+                diagnostic_blockers=diagnostic_blockers or None,
             )
         )
         result["work_dir"] = str(work_dir)

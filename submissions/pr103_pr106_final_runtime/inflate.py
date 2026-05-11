@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.metadata as metadata
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -464,6 +465,15 @@ def select_inflate_device() -> torch.device:
     on both axes before any score promotion.
     """
 
+    override = os.environ.get("PACT_INFLATE_DEVICE", "auto").strip().lower()
+    if override not in {"auto", "cpu", "cuda"}:
+        raise RuntimeClosureError(f"invalid PACT_INFLATE_DEVICE={override!r}")
+    if override == "cpu":
+        return torch.device("cpu")
+    if override == "cuda":
+        if not torch.cuda.is_available():
+            raise RuntimeClosureError("PACT_INFLATE_DEVICE=cuda requested but CUDA is unavailable")
+        return torch.device("cuda")
     if torch.cuda.is_available():
         return torch.device("cuda")
     return torch.device("cpu")
