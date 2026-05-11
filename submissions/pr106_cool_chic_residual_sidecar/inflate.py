@@ -27,6 +27,10 @@ sys.path.insert(0, str(HERE / "src"))
 
 from codec import parse_packed_archive  # type: ignore[import-not-found]
 from model import HNeRVDecoder  # type: ignore[import-not-found]
+from pr106_inner_sidecar import (  # type: ignore[import-not-found]
+    apply_pr106_r2_sidecar_corrections,
+    unwrap_pr106_r2_sidecar,
+)
 
 PR106_RESIDUAL_MAGIC = 0xFD
 COOL_CHIC_FORMAT_ID = 0x11
@@ -105,8 +109,10 @@ def select_inflate_device() -> torch.device:
 
 def inflate(src_bin: str, dst_raw: str) -> int:
     blob = Path(src_bin).read_bytes()
-    pr106_bytes, residual_blob = parse_residual_archive(blob)
-    decoder_sd, latents, meta = parse_packed_archive(pr106_bytes)
+    pr106_r2_bytes, residual_blob = parse_residual_archive(blob)
+    raw_pr106, sidecar_blob = unwrap_pr106_r2_sidecar(pr106_r2_bytes)
+    decoder_sd, latents, meta = parse_packed_archive(raw_pr106)
+    apply_pr106_r2_sidecar_corrections(latents, sidecar_blob)
     device = select_inflate_device()
     decoder = HNeRVDecoder(
         latent_dim=meta["latent_dim"],
