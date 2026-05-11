@@ -4,7 +4,7 @@ Rust native port for [`tac.packet_compiler`](../../../src/tac/packet_compiler/),
 the reusable byte-grammar and entropy-coder primitives extracted from the
 public PR101 (`hnerv_ft_microcodec`) and PR103 (`hnerv_lc_ac`) submissions.
 
-> **Status — 8 of 19 primitives byte-for-byte-parity GREEN (2026-05-11).**
+> **Status — 13 of 19 primitives byte-for-byte-parity GREEN (2026-05-11).**
 >
 > Implemented + parity-verified against committed Python golden vectors:
 >
@@ -40,12 +40,28 @@ public PR101 (`hnerv_ft_microcodec`) and PR103 (`hnerv_lc_ac`) submissions.
 > 8. **`encode_adaptive_context_stream` / `decode_adaptive_context_stream`** —
 >    PR84 adaptive context-routed range coder: per-context categoricals
 >    routed by parallel `context_ids` array. SHA-256 `cd0f0d…a28e`.
+> 9. **`FP4Codebook::quantize` + `pack_nibbles`** — PR81 asymmetric 8-level
+>    FP4 codebook (`[0, 0.5, 1, 1.5, 2, 3, 4, 6]`) + sign bit; 2 nibbles per
+>    byte (hi-first). SHA-256 `12b69f…4e40`.
+> 10. **`encode_router_actions` / `decode_router_actions`** — PR81 LSB-first
+>     bit-packing for small-integer per-frame action streams (`bits=3,
+>     count=600 → 225 bytes`); generalises to `1 <= bits <= 8`. SHA-256
+>     `3360cb…9878`.
+> 11. **`emit_qmqh_header` + `pack_hi_lo_split` / `parse_qmqh_header` +
+>     `unpack_hi_lo_split`** — PR91 QM0/QH0 magic-prefix header + hi-lo
+>     nibble split permutation. SHA-256 `6262b0…25ac`.
+> 12. **`pack_rmc1_composite` + `pack_rsa1_side` (+ `pack_rsb1_side`)** —
+>     PR92 RMC1/RSA1/RSB1 joint-stream meta-codec: composite framing for
+>     correlated mask + side-action streams; RSB1 brotli-fallback for
+>     peaked action distributions. SHA-256 `683827…b2f5`.
+> 13. **`pack_qzmb1_block` / `unpack_qzmb1_block`** — PR93 QZMB1 compact-
+>     model block grammar: 8-byte magic + `<HH` header (block_size,
+>     arch_len) + arch JSON + opaque body. SHA-256 `d1c85e…8725`.
 >
 > Still scaffold-only (return `NotImplemented` so they cannot silently lie):
-> `adaptive_brotli_param_search`, `decode_ranked_no_op_sidecar`, the
-> PR81/PR92/PR97 / sparse PacketIR codecs / PR93 lowpass-luma / magic-codec
-> / PR91 QMQH / PR93 QZMB1 grammars (each still has its `try_load_only`
-> stub harness in `tests/golden_vector_parity.rs`).
+> `adaptive_brotli_param_search`, `decode_ranked_no_op_sidecar`, the PR97 /
+> sparse PacketIR codecs / PR93 lowpass-luma / magic-codec (each still has
+> its `try_load_only` stub harness in `tests/golden_vector_parity.rs`).
 >
 > See "Roadmap" below for the remaining implementation order.
 
@@ -112,6 +128,15 @@ runtime-rs/crates/tac-packet-compiler/
 │   ├── pr84_adaptive_mask/
 │   │   ├── mod.rs                        re-exports
 │   │   └── adaptive_mask_context.rs      IMPL: per-context adaptive-context coder (parity GREEN)
+│   ├── pr81_quantizr/
+│   │   ├── mod.rs                        re-exports
+│   │   ├── fp4_codebook.rs               IMPL: asymmetric 8-level FP4 codebook + nibble packing (parity GREEN)
+│   │   └── router_action.rs              IMPL: LSB-first bit-stream pack/unpack (parity GREEN)
+│   ├── pr92_joint_stream/
+│   │   ├── mod.rs                        re-exports
+│   │   └── rmc.rs                        IMPL: RMC1/RSA1/RSB1 joint-stream meta-codec (parity GREEN)
+│   ├── pr91_hpac_grammar/qmqh_grammar.rs    IMPL: QM0/QH0 magic + hi-lo split (parity GREEN; sibling of arithmetic_coder_constriction)
+│   ├── pr93_pose_codec/qzmb1.rs             IMPL: QZMB1 compact-model block (parity GREEN; sibling of delta_varint)
 │   ├── sparse_packet_ir/                 (all scaffold-only)
 │   └── conformance/
 │       └── mod.rs                        golden-vector loader + sha256 helpers
@@ -182,7 +207,10 @@ The first 3 primitives (cheapest per N D4 council verdict) landed
 2026-05-11 with byte-for-byte parity GREEN; the next 5 (PR101 ranked
 sidecar + PR103 merged range stream + PR93 pose + PR91 per-symbol AC +
 PR84 adaptive context) landed in the same session per operator directive
-"compiler and insanely low level" + "keep building outside the \$5 window".
+"compiler and insanely low level" + "keep building outside the \$5 window";
+the next 5 (PR81 FP4 codebook + PR81 ROUTER_ACTION + PR91 QMQH grammar +
+PR92 RMC joint stream + PR93 QZMB1 grammar) landed in the same session
+under the same directive, bringing the total to **13 of 19 GREEN**.
 Remaining order:
 
 | # | Function | Status | Notes |
@@ -195,16 +223,21 @@ Remaining order:
 | 6 | `encode_delta_varint_pose` (PR93 QZPDV1) | **GREEN 2026-05-11** | Pure-stdlib: 8-byte magic + LE shape header + fp32 lo/scale + uint8/uint16 first row + zigzag-LEB128 row-major deltas. |
 | 7 | `encode_categorical_stream` (PR91) | **GREEN 2026-05-11** | Per-position constriction Categorical (one model PER symbol; matrix layout `(n_symbols, alphabet)`). |
 | 8 | `encode_adaptive_context_stream` (PR84) | **GREEN 2026-05-11** | Per-context categorical lookup (matrix layout `(n_contexts, alphabet)`); symbols routed by parallel `context_ids` array. |
-| 9 | `adaptive_brotli_param_search` | scaffold | Contract test (Pareto-frontier membership) — no byte-level golden vector. |
-| 10 | `decode_ranked_no_op_sidecar` | scaffold | Inverse of impl #4; needs decode-side length-rank inversion + huff bit-unpacker. |
-| 11-19 | PR81/PR92/PR97 / sparse PacketIR codecs / PR93 lowpass-luma / PR91 QMQH / PR93 QZMB1 magic grammars / magic-codec | scaffold | Each has a paired Python golden vector + paired Rust test stub already wired. |
+| 9 | `FP4Codebook::quantize` + `pack_nibbles` (PR81) | **GREEN 2026-05-11** | Asymmetric 8-level positive codebook + sign bit; 2 nibbles per byte (hi << 4 \| lo). Numpy `argmin` tie-break preserved. |
+| 10 | `encode_router_actions` (PR81) | **GREEN 2026-05-11** | LSB-first bit packing for `1 <= bits <= 8`; pure stdlib `u64` accumulator. |
+| 11 | `emit_qmqh_header` + `pack_hi_lo_split` (PR91) | **GREEN 2026-05-11** | 3-byte magic + per-byte hi-/lo-nibble permutation (run-length-friendly under Brotli). |
+| 12 | `pack_rmc1_composite` + `pack_rsa1_side` + `pack_rsb1_side` (PR92) | **GREEN 2026-05-11** | RMC1 outer frame + RSA1 range-coded inner frame + RSB1 brotli-fallback. Brotli compress/decompress mirrors PR101 split-Brotli helpers. |
+| 13 | `pack_qzmb1_block` (PR93) | **GREEN 2026-05-11** | 8-byte magic + `<HH` (block_size, arch_len) + opaque arch JSON + opaque tensor body. |
+| 14 | `adaptive_brotli_param_search` | scaffold | Contract test (Pareto-frontier membership) — no byte-level golden vector. |
+| 15 | `decode_ranked_no_op_sidecar` | scaffold | Inverse of impl #4; needs decode-side length-rank inversion + huff bit-unpacker. |
+| 16-19 | PR97 / sparse PacketIR codecs / PR93 lowpass-luma / magic-codec | scaffold | Each has a paired Python golden vector + paired Rust test stub already wired. |
 
 | Question | Resolution |
 |---|---|
-| Who implements? | Subagent dispatch under operator directive 2026-05-11 ("compiler and insanely low level" + "keep building outside the \$5 window" + "recursively adversarially review and greenup"); 8 done. |
-| Effort delivered | 8 impls + 1 regen helper + 13 binary fixtures + parity-test wire-in — ~1700 LOC of Rust + ~200 LOC of Python + 70 tests passing (49 unit + 21 integration). |
+| Who implements? | Subagent dispatch under operator directive 2026-05-11 ("compiler and insanely low level" + "keep building outside the \$5 window" + "recursively adversarially review and greenup"); 13 done across 3 sibling-subagent tranches (Y: 3, CC: 5, EE: 5). |
+| Effort delivered | 13 impls + 1 regen helper + 18 binary fixtures + parity-test wire-in — ~2600 LOC of Rust + ~270 LOC of Python + 107 tests passing (86 unit + 21 integration). |
 | Cost | \$0 GPU. |
-| Risk audit | Brotli pure-Rust ↔ Python C library byte-parity was the largest unknown going in; verified GREEN on the committed 3-stream fixture. constriction (same upstream as Python package) and liblzma (same C library) were lower-risk and also GREEN. The bounded-length package-merge in PR101 ranked sidecar was the largest algorithmic risk — also GREEN on first attempt (matched the Python's iteration count + truncation + Kraft fallback exactly). |
+| Risk audit | Brotli pure-Rust ↔ Python C library byte-parity was the largest unknown going in; verified GREEN on the committed 3-stream fixture AND on the PR92 RSB1 fallback path. constriction (same upstream as Python package) and liblzma (same C library) were lower-risk and also GREEN. The bounded-length package-merge in PR101 ranked sidecar was the largest algorithmic risk — also GREEN on first attempt. PR81 FP4 codebook required numpy `argmin` tie-break semantics (smallest-index wins) — reproduced exactly in Rust via `<` strict-less comparison. |
 
 See [`.omx/research/staged_rust_packet_compiler_native_port_readiness_*.md`](
 ../../../.omx/research/) for the operator-decision packet.

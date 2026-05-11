@@ -229,6 +229,69 @@ def write_pr84_adaptive_mask_inputs() -> None:
     )
 
 
+def write_pr81_fp4_codebook_inputs() -> None:
+    """fp32 (64,) values + fp32 (2,) scales for the PR81 FP4 codebook +
+    pack-nibbles golden vector.
+
+    Matches `test_fp4_codebook_golden_vector` in
+    ``src/tac/tests/test_packet_compiler_pr81_quantizr.py``.
+
+    Recipe: ``rng=np.random.default_rng(20260511);
+    values = rng.uniform(-3, 3, 64).astype(np.float32);
+    scales = np.array([1.5, 0.75], dtype=np.float32);
+    block_size=32``.
+    """
+    rng = np.random.default_rng(seed=20260511)
+    values = rng.uniform(-3.0, 3.0, size=64).astype(np.float32)
+    scales = np.array([1.5, 0.75], dtype=np.float32)
+    (_GOLDEN_DIR / "pr81_fp4_codebook_v1_values.bin").write_bytes(
+        np.asarray(values, dtype="<f4").tobytes()
+    )
+    (_GOLDEN_DIR / "pr81_fp4_codebook_v1_scales.bin").write_bytes(
+        np.asarray(scales, dtype="<f4").tobytes()
+    )
+
+
+def write_pr81_router_action_inputs() -> None:
+    """uint8 (600,) action stream for the PR81 ROUTER_ACTION packing
+    golden vector.
+
+    Matches `test_router_action_golden_vector` in
+    ``src/tac/tests/test_packet_compiler_pr81_quantizr.py``.
+
+    Recipe: ``rng=np.random.default_rng(20260511);
+    actions = rng.integers(0, 8, size=600, dtype=np.uint8); bits=3``.
+    """
+    rng = np.random.default_rng(seed=20260511)
+    actions = rng.integers(0, 8, size=600, dtype=np.uint8)
+    (_GOLDEN_DIR / "pr81_router_action_v1_actions.bin").write_bytes(
+        np.asarray(actions, dtype=np.uint8).tobytes()
+    )
+
+
+def write_pr92_rmc_joint_stream_inputs() -> None:
+    """uint8 (128,) seg + uint8 (120,) actions for the PR92 RMC1 joint
+    stream golden vector.
+
+    Matches `test_rmc_joint_stream_golden_vector` in
+    ``src/tac/tests/test_packet_compiler_pr92_joint_stream.py``.
+
+    Recipe: ``rng=np.random.default_rng(20260511);
+    seg_bytes = rng.integers(0, 256, size=128, dtype=np.uint8);
+    actions = rng.integers(0, 8, size=120, dtype=np.uint8);
+    action_bits=3, table_id=2``.
+    """
+    rng = np.random.default_rng(seed=20260511)
+    seg_bytes = rng.integers(0, 256, size=128, dtype=np.uint8)
+    actions = rng.integers(0, 8, size=120, dtype=np.uint8)
+    (_GOLDEN_DIR / "pr92_rmc_joint_stream_v1_seg.bin").write_bytes(
+        np.asarray(seg_bytes, dtype=np.uint8).tobytes()
+    )
+    (_GOLDEN_DIR / "pr92_rmc_joint_stream_v1_actions.bin").write_bytes(
+        np.asarray(actions, dtype=np.uint8).tobytes()
+    )
+
+
 def write_ranked_no_op_sidecar_inputs() -> None:
     """int64 dims + int64 delta_indices for PR101 ranked-no-op sidecar.
 
@@ -266,6 +329,9 @@ def main() -> None:
     write_pr93_delta_varint_pose_inputs()
     write_pr91_arithmetic_coder_inputs()
     write_pr84_adaptive_mask_inputs()
+    write_pr81_fp4_codebook_inputs()
+    write_pr81_router_action_inputs()
+    write_pr92_rmc_joint_stream_inputs()
     write_ranked_no_op_sidecar_inputs()
     written = sorted(p.name for p in _GOLDEN_DIR.glob("*_v1_*.bin"))
     print(f"Wrote {len(written)} fixture(s) to {_GOLDEN_DIR.relative_to(_GOLDEN_DIR.parent.parent.parent.parent)}:")

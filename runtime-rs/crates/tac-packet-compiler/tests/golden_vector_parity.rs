@@ -70,9 +70,11 @@ use tac_packet_compiler::{
     pr103_arithmetic_coding::{
         encode_latent_hi_arithmetic, encode_merged_range_stream, WeightTensorACSpec,
     },
+    pr81_quantizr::{encode_router_actions, pack_nibbles, FP4Codebook},
     pr84_adaptive_mask::{encode_adaptive_context_stream, AdaptiveContextSpec},
-    pr91_hpac_grammar::encode_categorical_stream,
-    pr93_pose_codec::encode_delta_varint_pose,
+    pr91_hpac_grammar::{emit_qmqh_header, encode_categorical_stream, pack_hi_lo_split},
+    pr92_joint_stream::{pack_rmc1_composite, pack_rsa1_side},
+    pr93_pose_codec::{encode_delta_varint_pose, pack_qzmb1_block},
     sparse_packet_ir::{
         encode_arithmetic_coefficients as sparse_encode_arithmetic_coefficients,
         encode_rle_of_zeros as sparse_encode_rle_of_zeros,
@@ -366,12 +368,57 @@ fn try_load_only(name: &'static str) {
 
 #[test]
 fn pr81_fp4_codebook_parity() {
-    try_load_only("pr81_fp4_codebook_v1");
+    let manifest = match try_load("pr81_fp4_codebook_v1") {
+        Some(m) => m,
+        None => return,
+    };
+    let values_bin = match try_load_bin("pr81_fp4_codebook_v1_values.bin") {
+        Some(b) => b,
+        None => return,
+    };
+    let scales_bin = match try_load_bin("pr81_fp4_codebook_v1_scales.bin") {
+        Some(b) => b,
+        None => return,
+    };
+    // Manifest pins block_size=32, n_blocks=2, n_values=64.
+    let block_size = 32usize;
+    let n_blocks = 2usize;
+    let n_values = 64usize;
+    assert_eq!(values_bin.len(), n_values * 4);
+    let mut values: Vec<f32> = Vec::with_capacity(n_values);
+    for chunk in values_bin.chunks_exact(4) {
+        values.push(f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]));
+    }
+    assert_eq!(scales_bin.len(), n_blocks * 4);
+    let mut scales: Vec<f32> = Vec::with_capacity(n_blocks);
+    for chunk in scales_bin.chunks_exact(4) {
+        scales.push(f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]));
+    }
+    let cb = FP4Codebook::default();
+    let nibbles = cb
+        .quantize(&values, &scales, block_size)
+        .expect("FP4Codebook.quantize must succeed");
+    let packed = pack_nibbles(&nibbles).expect("pack_nibbles must succeed");
+    assert_sha256_parity(&packed, &manifest)
+        .expect("PR81 FP4 codebook payload must match Python oracle SHA-256");
 }
 
 #[test]
 fn pr81_router_action_parity() {
-    try_load_only("pr81_router_action_v1");
+    let manifest = match try_load("pr81_router_action_v1") {
+        Some(m) => m,
+        None => return,
+    };
+    let actions_bin = match try_load_bin("pr81_router_action_v1_actions.bin") {
+        Some(b) => b,
+        None => return,
+    };
+    // Manifest pins bits=3, count=600, packed_len=225.
+    assert_eq!(actions_bin.len(), 600);
+    let payload = encode_router_actions(&actions_bin, 3)
+        .expect("encode_router_actions must succeed");
+    assert_sha256_parity(&payload, &manifest)
+        .expect("PR81 ROUTER_ACTION payload must match Python oracle SHA-256");
 }
 
 // ── PR84 parity (2026-05-11) ────────────────────────────────────────────────
@@ -462,14 +509,51 @@ fn pr91_arithmetic_coder_constriction_parity() {
 
 #[test]
 fn pr91_qmqh_grammar_parity() {
-    try_load_only("pr91_qmqh_grammar_v1");
+    let manifest = match try_load("pr91_qmqh_grammar_v1") {
+        Some(m) => m,
+        None => return,
+    };
+    // Python recipe: body = bytes(range(64)); split = pack_hi_lo_split(body);
+    // full = emit_qmqh_header(hilo_split=True) + split.
+    let body: Vec<u8> = (0..64).map(|i| i as u8).collect();
+    let split = pack_hi_lo_split(&body).expect("pack_hi_lo_split must succeed");
+    let header = emit_qmqh_header(true);
+    let mut full = Vec::with_capacity(header.len() + split.len());
+    full.extend_from_slice(&header);
+    full.extend_from_slice(&split);
+    assert_sha256_parity(&full, &manifest)
+        .expect("PR91 QH0 grammar payload must match Python oracle SHA-256");
 }
 
-// ── PR92 parity stub ────────────────────────────────────────────────────────
+// ── PR92 parity (2026-05-11) ────────────────────────────────────────────────
 
 #[test]
 fn pr92_rmc_joint_stream_parity() {
-    try_load_only("pr92_rmc_joint_stream_v1");
+    let manifest = match try_load("pr92_rmc_joint_stream_v1") {
+        Some(m) => m,
+        None => return,
+    };
+    let seg_bin = match try_load_bin("pr92_rmc_joint_stream_v1_seg.bin") {
+        Some(b) => b,
+        None => return,
+    };
+    let actions_bin = match try_load_bin("pr92_rmc_joint_stream_v1_actions.bin") {
+        Some(b) => b,
+        None => return,
+    };
+    // Manifest pins seg_bytes_len=128, action_count=120, action_bits=3, table_id=2.
+    assert_eq!(seg_bin.len(), 128);
+    assert_eq!(actions_bin.len(), 120);
+    // Step 1: pack actions via PR81 router_actions (bits=3).
+    let body = encode_router_actions(&actions_bin, 3)
+        .expect("encode_router_actions must succeed");
+    // Step 2: wrap in RSA1 (count=120, action_bits=3, table_id=2).
+    let rsa = pack_rsa1_side(120, 3, 2, &body).expect("pack_rsa1_side must succeed");
+    // Step 3: wrap in RMC1 (seg_bytes + rsa.payload).
+    let composite = pack_rmc1_composite(&seg_bin, &rsa.payload)
+        .expect("pack_rmc1_composite must succeed");
+    assert_sha256_parity(&composite.payload, &manifest)
+        .expect("PR92 RMC1 joint stream payload must match Python oracle SHA-256");
 }
 
 // ── PR93 parity (2026-05-11) ────────────────────────────────────────────────
@@ -519,7 +603,20 @@ fn pr93_delta_varint_pose_parity() {
 
 #[test]
 fn pr93_qzmb1_parity() {
-    try_load_only("pr93_qzmb1_v1");
+    let manifest = match try_load("pr93_qzmb1_v1") {
+        Some(m) => m,
+        None => return,
+    };
+    // Python recipe:
+    //   arch_json = b'{"hidden": 64, "blocks": 3, "input_dim": 5}';
+    //   body = bytes(range(64));
+    //   block = pack_qzmb1_block(block_size=32, arch_config_json=arch_json, body=body)
+    let arch_json: &[u8] = b"{\"hidden\": 64, \"blocks\": 3, \"input_dim\": 5}";
+    let body: Vec<u8> = (0..64).map(|i| i as u8).collect();
+    let block = pack_qzmb1_block(32, arch_json, &body)
+        .expect("pack_qzmb1_block must succeed");
+    assert_sha256_parity(&block.payload, &manifest)
+        .expect("PR93 QZMB1 payload must match Python oracle SHA-256");
 }
 
 #[test]

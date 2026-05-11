@@ -12,11 +12,8 @@ use constriction::stream::{Decode, Encode};
 
 use crate::{PacketCompilerError, Result};
 
-/// 3-byte magic for plain QM0 (single-byte FP4 packed) layout.
-pub const MAGIC_QM0: [u8; 3] = *b"QM0";
-
-/// 3-byte magic for QH0 (hi-lo split FP4 packed) layout.
-pub const MAGIC_QH0: [u8; 3] = *b"QH0";
+// MAGIC_QM0 / MAGIC_QH0 live in `super::qmqh_grammar` now (re-exported from
+// `super::*` for backward compatibility).
 
 /// Floor + per-row renormalisation matching Python's `_normalise_probs`:
 /// each row floored at `1e-10`, then divided by its row sum.

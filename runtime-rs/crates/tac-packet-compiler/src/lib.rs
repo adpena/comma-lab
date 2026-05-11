@@ -58,6 +58,10 @@
 //!   + QM0/QH0 magic grammar (2026-05-11).
 //! - [`pr84_adaptive_mask`] — per-context adaptive-context range coder
 //!   (2026-05-11).
+//! - [`pr81_quantizr`] — asymmetric 8-level FP4 codebook (+ sign bit) +
+//!   ROUTER_ACTION small-integer LSB-first bit-packer (2026-05-11).
+//! - [`pr92_joint_stream`] — RMC1 / RSA1 / RSB1 joint-stream meta-codec
+//!   for correlated mask + action byte streams (2026-05-11).
 //! - [`sparse_packet_ir`] — RLE-of-zeros + arithmetic-coded coefficient
 //!   stream + temporal-subsampling indicator vector. Closes O's L2
 //!   wire-format ceiling (2026-05-11).
@@ -90,8 +94,10 @@ pub mod conformance;
 pub mod custom_binary_container;
 pub mod pr101_sidecar_grammar;
 pub mod pr103_arithmetic_coding;
+pub mod pr81_quantizr;
 pub mod pr84_adaptive_mask;
 pub mod pr91_hpac_grammar;
+pub mod pr92_joint_stream;
 pub mod pr93_pose_codec;
 pub mod simd;
 pub mod sparse_packet_ir;

@@ -4,16 +4,16 @@
 //! [`tac.packet_compiler.pr93_pose_codec`](
 //! file:../../../../../src/tac/packet_compiler/pr93_pose_codec.py).
 //!
-//! Two primitives are exposed (this batch lands the delta-varint codec; the
-//! QZMB1 magic grammar is a trivial framing layer that will follow):
+//! Two primitives are exposed:
 //!
 //! 1. **Delta-varint pose codec** ([`encode_delta_varint_pose`] /
 //!    [`decode_delta_varint_pose`]) — implemented; byte-for-byte parity
 //!    against `pr93_delta_varint_pose_v1.json`.
 //!
-//! 2. **QZMB1 / QZPDV1 magic grammar** — magic constants exposed; the
-//!    pack / unpack helpers are scaffold for now (the QZPDV1 magic is
-//!    consumed inside [`encode_delta_varint_pose`]).
+//! 2. **QZMB1 compact-model block grammar** ([`pack_qzmb1_block`] /
+//!    [`unpack_qzmb1_block`]) — implemented; byte-for-byte parity against
+//!    `pr93_qzmb1_v1.json`. The QZPDV1 magic is consumed inside
+//!    [`encode_delta_varint_pose`].
 //!
 //! # Byte layout (matches the Python oracle exactly)
 //!
@@ -35,8 +35,10 @@
 //! - `src/tac/packet_compiler/golden_vectors/pr93_delta_varint_pose_v1_scale.bin`
 
 pub mod delta_varint;
+pub mod qzmb1;
 
 pub use delta_varint::{
     decode_delta_varint_pose, encode_delta_varint_pose, DeltaVarintPoseStream, MAGIC_MODEL_COMPACT,
     MAGIC_POSE_DV,
 };
+pub use qzmb1::{pack_qzmb1_block, unpack_qzmb1_block, QZMB1Block};
