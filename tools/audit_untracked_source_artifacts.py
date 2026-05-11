@@ -341,7 +341,68 @@ def _git_tracked_files(repo_root: Path) -> set[str]:
     return {path for path in proc.stdout.decode().split("\0") if path}
 
 
-def _generated_source_filesystem_records(
+def _generated_source_records_under(
+    root_path: Path,
+    root_rel: str,
+    *,
+    tracked_paths: set[str],
+) -> list[UntrackedRecord]:
+    records: list[UntrackedRecord] = []
+    stack = [(root_path, root_rel)]
+    while stack:
+        current, current_rel = stack.pop()
+        with os.scandir(current) as entries:
+            for entry in entries:
+                entry_rel = f"{current_rel}/{entry.name}"
+                if entry.is_dir(follow_symlinks=False):
+                    stack.append((Path(entry.path), entry_rel))
+                    continue
+                if os.path.splitext(entry.name)[1].lower() not in SOURCE_SUFFIXES:
+                    continue
+                if not entry.is_file():
+                    continue
+                if entry_rel in tracked_paths:
+                    continue
+                records.append(_generated_custody_record(entry_rel))
+    return records
+
+
+def _generated_source_filesystem_records_via_rg(
+    repo_root: Path,
+    *,
+    tracked_paths: set[str],
+) -> list[UntrackedRecord] | None:
+    roots = [root for root in GENERATED_ROOTS if (repo_root / root).exists()]
+    if not roots:
+        return []
+    cmd = ["rg", "--files", "--hidden", "--no-ignore", "-0"]
+    for suffix in sorted(SOURCE_SUFFIXES):
+        cmd.extend(["-g", f"*{suffix}"])
+    cmd.extend(roots)
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=repo_root,
+            capture_output=True,
+            timeout=5.0,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if proc.returncode not in (0, 1):
+        return None
+    records: list[UntrackedRecord] = []
+    for raw_path in proc.stdout.split(b"\0"):
+        if not raw_path:
+            continue
+        posix = raw_path.decode("utf-8", errors="surrogateescape")
+        if posix in tracked_paths:
+            continue
+        records.append(_generated_custody_record(posix))
+    return records
+
+
+def _generated_source_filesystem_records_via_walk(
     repo_root: Path,
     *,
     tracked_paths: set[str],
@@ -359,23 +420,51 @@ def _generated_source_filesystem_records(
         root_path = repo_root / root
         if not root_path.exists():
             continue
-        stack = [(root_path, root)]
-        while stack:
-            current, current_rel = stack.pop()
-            with os.scandir(current) as entries:
-                for entry in entries:
-                    if entry.is_dir(follow_symlinks=False):
-                        stack.append((Path(entry.path), f"{current_rel}/{entry.name}"))
-                        continue
-                    if os.path.splitext(entry.name)[1].lower() not in SOURCE_SUFFIXES:
-                        continue
-                    if not entry.is_file():
-                        continue
-                    posix = f"{current_rel}/{entry.name}"
-                    if posix in tracked_paths:
-                        continue
-                    records.append(_generated_custody_record(posix))
+        with os.scandir(root_path) as entries:
+            for entry in entries:
+                relpath = f"{root}/{entry.name}"
+                if entry.is_dir(follow_symlinks=False):
+                    records.extend(
+                        _generated_source_records_under(
+                            Path(entry.path),
+                            relpath,
+                            tracked_paths=tracked_paths,
+                        )
+                    )
+                    continue
+                if os.path.splitext(entry.name)[1].lower() not in SOURCE_SUFFIXES:
+                    continue
+                if not entry.is_file():
+                    continue
+                if relpath in tracked_paths:
+                    continue
+                records.append(_generated_custody_record(relpath))
     return records
+
+
+def _generated_source_filesystem_records(
+    repo_root: Path,
+    *,
+    tracked_paths: set[str],
+) -> list[UntrackedRecord]:
+    """Return ignored generated source-like files using a fast exact inventory.
+
+    ``rg --files --hidden --no-ignore`` gives the same bounded file inventory as
+    the Python walk here, but uses ripgrep's optimized parallel walker and avoids
+    tens of thousands of Python ``os.scandir`` iterations on the hot all-lanes
+    preflight path. The pure-Python walk remains the parity fallback.
+    """
+
+    records = _generated_source_filesystem_records_via_rg(
+        repo_root,
+        tracked_paths=tracked_paths,
+    )
+    if records is not None:
+        return records
+    return _generated_source_filesystem_records_via_walk(
+        repo_root,
+        tracked_paths=tracked_paths,
+    )
 
 
 def find_invalid_disposition_paths(

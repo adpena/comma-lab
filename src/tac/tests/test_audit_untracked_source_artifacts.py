@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from tools.audit_untracked_source_artifacts import (
     _generated_source_filesystem_records,
+    _generated_source_filesystem_records_via_rg,
+    _generated_source_filesystem_records_via_walk,
     build_runtime_source_baseline,
     classify_untracked_path,
     find_disposition_for_path,
@@ -202,6 +204,39 @@ def test_generated_source_filesystem_records_filters_suffixes_and_ignores_dirs(t
 
     assert sorted(record.path for record in records) == [source_rel, nested_source_rel]
     assert {record.classification for record in records} == {"generated_custody_source_untracked"}
+
+
+def test_generated_source_filesystem_records_rg_fast_path_matches_python_walk(tmp_path) -> None:
+    relpaths = [
+        "experiments/results/a/manifest.json",
+        "experiments/results/b/submission_dir/inflate.py",
+        ".omx/state/provider.json",
+        "outputs/local/config.yaml",
+        "reports/raw/run/log.txt",
+    ]
+    for relpath in relpaths:
+        path = tmp_path / relpath
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("{}\n", encoding="utf-8")
+    (tmp_path / "experiments/results/a/blob.pt").write_bytes(b"not source")
+
+    walked = sorted(
+        record.path
+        for record in _generated_source_filesystem_records_via_walk(tmp_path, tracked_paths=set())
+    )
+    ripgrep = _generated_source_filesystem_records_via_rg(tmp_path, tracked_paths=set())
+    if ripgrep is None:
+        return
+    indexed = sorted(
+        record.path
+        for record in ripgrep
+    )
+    public = sorted(
+        record.path
+        for record in _generated_source_filesystem_records(tmp_path, tracked_paths=set())
+    )
+
+    assert indexed == walked == public == sorted(relpaths)
 
 
 def test_runtime_source_under_broad_prefix_requires_exact_entry_or_baseline(tmp_path) -> None:

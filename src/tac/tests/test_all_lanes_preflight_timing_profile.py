@@ -392,3 +392,34 @@ def test_scoped_fast_gates_run_in_process_without_subprocess(monkeypatch) -> Non
     assert "semantic-label contract: PASS" in semantic_output
     assert tooling_ok is True
     assert "2 files scanned" in tooling_output
+
+
+def test_shared_source_index_gate_serializes_cache_heavy_scans(monkeypatch) -> None:
+    module = _load_all_lanes_module()
+    events: list[str] = []
+    inside = module.threading.Event()
+    release = module.threading.Event()
+
+    def first_runner() -> tuple[bool, str]:
+        events.append("first-enter")
+        inside.set()
+        assert release.wait(timeout=1.0)
+        events.append("first-exit")
+        return True, "first"
+
+    def second_runner() -> tuple[bool, str]:
+        events.append("second-enter")
+        events.append("second-exit")
+        return True, "second"
+
+    with module.concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(module._run_source_index_gate, first_runner)
+        assert inside.wait(timeout=1.0)
+        second = pool.submit(module._run_source_index_gate, second_runner)
+        module.time.sleep(0.01)
+        assert events == ["first-enter"]
+        release.set()
+
+    assert first.result(timeout=1.0) == (True, "first")
+    assert second.result(timeout=1.0) == (True, "second")
+    assert events == ["first-enter", "first-exit", "second-enter", "second-exit"]

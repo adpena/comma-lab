@@ -354,11 +354,25 @@ class PreflightRunContext:
 
 
 _THREAD_CONTEXT = threading.local()
+_SOURCE_INDEX_GATE_LOCK = threading.Lock()
 
 
 def _current_run_context() -> PreflightRunContext | None:
     context = getattr(_THREAD_CONTEXT, "context", None)
     return context if isinstance(context, PreflightRunContext) else None
+
+
+def _run_source_index_gate(runner: Callable[[], tuple[bool, str]]) -> tuple[bool, str]:
+    """Serialize broad shared-index gates to avoid cache-lock thrash.
+
+    Gates #0/#3/#8 share one ``SourceIndex`` and each touches hundreds or
+    thousands of files. Running them concurrently on the same Python cache
+    increases RLock contention and duplicate cache work on macOS; other
+    subprocess-heavy gates still run in parallel around this critical section.
+    """
+
+    with _SOURCE_INDEX_GATE_LOCK:
+        return runner()
 
 
 def _remaining_wall_budget_s() -> float | None:
@@ -2196,8 +2210,8 @@ def main(argv: list[str] | None = None) -> int:
             "GATE",
             0,
             "dispatch CLI/shell hazards",
-            lambda source_index=source_index: _run_dispatch_cli_shell_hazards_gate(
-                source_index=source_index
+            lambda source_index=source_index: _run_source_index_gate(
+                lambda: _run_dispatch_cli_shell_hazards_gate(source_index=source_index)
             ),
             "  ✓ Gate #0: dispatch CLI/shell hazards — PASSED",
             "  ✗ Gate #0: dispatch CLI/shell hazards — FAILED",
@@ -2222,8 +2236,8 @@ def main(argv: list[str] | None = None) -> int:
             "GATE",
             3,
             "semantic-label contract",
-            lambda source_index=source_index: _run_semantic_label_contract_gate(
-                source_index=source_index
+            lambda source_index=source_index: _run_source_index_gate(
+                lambda: _run_semantic_label_contract_gate(source_index=source_index)
             ),
             "  ✓ Gate #3: semantic-label contract — PASSED",
             "  ✗ Gate #3: semantic-label contract — FAILED",
@@ -2264,8 +2278,8 @@ def main(argv: list[str] | None = None) -> int:
             "GATE",
             8,
             "tooling consolidation inventory",
-            lambda source_index=source_index: _run_tooling_consolidation_gate(
-                source_index=source_index
+            lambda source_index=source_index: _run_source_index_gate(
+                lambda: _run_tooling_consolidation_gate(source_index=source_index)
             ),
             "  ✓ Gate #8: tooling consolidation inventory — PASSED",
             "  ✗ Gate #8: tooling consolidation inventory — FAILED",
