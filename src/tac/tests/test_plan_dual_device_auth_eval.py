@@ -448,3 +448,81 @@ def test_execute_refuses_missing_input_closure(tmp_path: Path, monkeypatch: pyte
 
     with pytest.raises(SystemExit, match="missing inputs: archive, inflate_sh"):
         mod.main()
+
+
+def test_execute_refuses_without_dispatch_claim_metadata(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mod = _load_tool()
+    archive = tmp_path / "archive.zip"
+    with ZipFile(archive, "w") as zf:
+        zf.writestr("x", b"payload")
+    inflate = tmp_path / "inflate.sh"
+    inflate.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "plan_dual_device_auth_eval.py",
+            "--archive",
+            str(archive),
+            "--inflate-sh",
+            str(inflate),
+            "--execute",
+            "cpu",
+        ],
+    )
+
+    with pytest.raises(SystemExit, match="requires --lane-id and --instance-job-id"):
+        mod.main()
+
+
+def test_execute_claims_and_closes_terminally_before_and_after_eval(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mod = _load_tool()
+    archive = tmp_path / "archive.zip"
+    with ZipFile(archive, "w") as zf:
+        zf.writestr("x", b"payload")
+    inflate = tmp_path / "inflate.sh"
+    inflate.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    calls: list[list[str]] = []
+
+    def fake_run(command, **_kwargs):
+        calls.append([str(part) for part in command])
+        return mod.subprocess.CompletedProcess(command, 0)
+
+    monkeypatch.setattr(mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "plan_dual_device_auth_eval.py",
+            "--archive",
+            str(archive),
+            "--inflate-sh",
+            str(inflate),
+            "--run-id",
+            "fixture-run",
+            "--execute",
+            "cpu",
+            "--lane-id",
+            "dual_eval_fixture",
+            "--instance-job-id",
+            "fixture-job",
+        ],
+    )
+
+    assert mod.main() == 0
+
+    assert len(calls) == 3
+    assert calls[0][:3] == [".venv/bin/python", "tools/claim_lane_dispatch.py", "claim"]
+    assert "--status" in calls[0]
+    assert calls[0][calls[0].index("--status") + 1] == "active_eval_running"
+    assert calls[1][0:2] == [".venv/bin/python", "experiments/contest_auth_eval.py"]
+    assert calls[1][calls[1].index("--device") + 1] == "cpu"
+    assert calls[2][:3] == [".venv/bin/python", "tools/claim_lane_dispatch.py", "claim"]
+    assert calls[2][calls[2].index("--status") + 1] == "completed_auth_eval_plan_execute"
+    assert "--force" in calls[2]

@@ -37,6 +37,8 @@ CUDA_SCORE_GRADES = {
     "contest-cuda-t4",
     "[contest-cuda t4]",
 }
+DEFAULT_CLAIM_AGENT = "codex:plan_dual_device_auth_eval"
+DEFAULT_CLAIM_PLATFORM = "local_dual_device_auth_eval"
 
 
 def _utc_now_compact() -> str:
@@ -327,6 +329,64 @@ def _command(
     ]
 
 
+def _claim_command(
+    *,
+    lane_id: str,
+    instance_job_id: str,
+    platform: str,
+    agent: str,
+    status: str,
+    notes: str,
+    force: bool = False,
+) -> list[str]:
+    command = [
+        ".venv/bin/python",
+        "tools/claim_lane_dispatch.py",
+        "claim",
+        "--lane-id",
+        lane_id,
+        "--platform",
+        platform,
+        "--instance-job-id",
+        instance_job_id,
+        "--agent",
+        agent,
+        "--status",
+        status,
+        "--notes",
+        notes,
+    ]
+    if force:
+        command.append("--force")
+    return command
+
+
+def _run_claim(
+    *,
+    repo_root: Path,
+    lane_id: str,
+    instance_job_id: str,
+    platform: str,
+    agent: str,
+    status: str,
+    notes: str,
+    force: bool = False,
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        _claim_command(
+            lane_id=lane_id,
+            instance_job_id=instance_job_id,
+            platform=platform,
+            agent=agent,
+            status=status,
+            notes=notes,
+            force=force,
+        ),
+        cwd=repo_root,
+        text=True,
+    )
+
+
 def build_plan(
     *,
     archive: Path,
@@ -432,6 +492,26 @@ def main() -> int:
     parser.add_argument("--cuda-artifact-json", type=Path, help="Existing contest-CUDA auth-eval JSON for pair-completion checks.")
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--execute", choices=("cpu", "cuda", "both"), help="Run planned local command(s).")
+    parser.add_argument(
+        "--lane-id",
+        help=(
+            "Required with --execute. Lane id recorded in "
+            ".omx/state/active_lane_dispatch_claims.md before eval starts."
+        ),
+    )
+    parser.add_argument(
+        "--instance-job-id",
+        help=(
+            "Required with --execute. Instance/job id recorded in the dispatch "
+            "claim before eval starts."
+        ),
+    )
+    parser.add_argument("--claim-platform", default=DEFAULT_CLAIM_PLATFORM)
+    parser.add_argument("--claim-agent", default=DEFAULT_CLAIM_AGENT)
+    parser.add_argument(
+        "--claim-notes",
+        default="dual-device auth eval planner execute; score_claim=false until artifacts are parsed and adjudicated",
+    )
     args = parser.parse_args()
 
     public_pr_row = None
@@ -469,11 +549,53 @@ def main() -> int:
         if not plan["input_closure"]["ready_to_execute"]:
             missing = ", ".join(plan["input_closure"]["missing_inputs"])
             raise SystemExit(f"refusing to execute dual-device auth eval plan with missing inputs: {missing}")
+        if not args.lane_id or not args.instance_job_id:
+            raise SystemExit(
+                "--execute requires --lane-id and --instance-job-id so the "
+                "eval is claimed before it starts"
+            )
+        claim_notes = (
+            f"{args.claim_notes}; run_id={plan['run_id']}; execute={args.execute}; "
+            f"archive_sha256={plan['archive'].get('sha256')}"
+        )
+        claim = _run_claim(
+            repo_root=args.repo_root,
+            lane_id=args.lane_id,
+            instance_job_id=args.instance_job_id,
+            platform=args.claim_platform,
+            agent=args.claim_agent,
+            status="active_eval_running",
+            notes=claim_notes,
+        )
+        if claim.returncode:
+            return claim.returncode
         devices = ("cpu", "cuda") if args.execute == "both" else (args.execute,)
         for device in devices:
             result = subprocess.run(plan["evals"][device]["command"], cwd=args.repo_root)
             if result.returncode:
+                _run_claim(
+                    repo_root=args.repo_root,
+                    lane_id=args.lane_id,
+                    instance_job_id=args.instance_job_id,
+                    platform=args.claim_platform,
+                    agent=args.claim_agent,
+                    status=f"failed_auth_eval_plan_execute_rc{result.returncode}",
+                    notes=claim_notes,
+                    force=True,
+                )
                 return result.returncode
+        terminal = _run_claim(
+            repo_root=args.repo_root,
+            lane_id=args.lane_id,
+            instance_job_id=args.instance_job_id,
+            platform=args.claim_platform,
+            agent=args.claim_agent,
+            status="completed_auth_eval_plan_execute",
+            notes=claim_notes,
+            force=True,
+        )
+        if terminal.returncode:
+            return terminal.returncode
     return 0
 
 
