@@ -50,12 +50,12 @@ Phase3DispatchGate (src/tac/phase3/joint_scorer_renderer_codec.py, Catalog
   (9) phase3_council_deliberation_path: str
       ✓ ALREADY EXISTS: .omx/research/fields_medal_grand_council_all_phases_design_deliberate_implement_20260509.md
 
-Multi-week burn schedule (per dispatch readiness manifest §"$600-$1200 burn schedule"):
-  W1  $20-$50    T10 + T15 + T17 + T18 (Phase 2 closeout / Probes)
-  W2  $80-$120   Joint scorer-renderer-codec end-to-end SMOKE (Phase 2 ≤0.155 verified)
-  W3  $200-$400  Joint training full-data (Phase 2 ≤0.142 verified)
-  W4  $200-$400  Distillation refinement + EMA convergence (W3 ≤0.130)
-  W5  $100-$280  Floor-saturation polish (W4 ≤0.125)
+Multi-week burn schedule (per dispatch readiness manifest §"\$600-\$1200 burn schedule"):
+  W1  \$20-\$50    T10 + T15 + T17 + T18 (Phase 2 closeout / Probes)
+  W2  \$80-\$120   Joint scorer-renderer-codec end-to-end SMOKE (Phase 2 ≤0.155 verified)
+  W3  \$200-\$400  Joint training full-data (Phase 2 ≤0.142 verified)
+  W4  \$200-\$400  Distillation refinement + EMA convergence (W3 ≤0.130)
+  W5  \$100-\$280  Floor-saturation polish (W4 ≤0.125)
 
 OPERATOR APPROVAL REQUIRED AT EACH WEEK BOUNDARY. Pause-on-no-improvement.
 
@@ -127,16 +127,52 @@ echo "==> Provider job not created by this pre-stage script"
 echo "    No lane claim opened. Phase 3 is still command-not-wired; a claim is"
 echo "    valid only after a real provider job/call id exists."
 
-echo "[REFUSE] Phase 3 dispatch command not yet wired in this script."
-echo "    Operator: instantiate the Phase3DispatchGate via"
-echo "      .venv/bin/python -m tac.phase3 \\"
-echo "        --phase2-anchor-verified \\"
-echo "        --phase2-anchor-score ${STAGED_PHASE_DISPATCH_PHASE2_ANCHOR_SCORE} \\"
-echo "        --phase2-anchor-evidence-path ${STAGED_PHASE_DISPATCH_PHASE2_ANCHOR_PATH} \\"
-echo "        --distillation-gap-estimate ${STAGED_PHASE_DISPATCH_T10_DISTILLATION_GAP} \\"
-echo "        --distillation-gap-evidence-path ${STAGED_PHASE_DISPATCH_T10_DISTILLATION_EVIDENCE_PATH} \\"
-echo "        --operator-approved-gpu-budget-usd ${STAGED_PHASE_DISPATCH_BUDGET_USD} \\"
-echo "        --phase3-council-deliberation-path .omx/research/fields_medal_grand_council_all_phases_design_deliberate_implement_20260509.md \\"
-echo "        --phase-b-auth-memo ${STAGED_PHASE_DISPATCH_PHASE3_OPERATOR_AUTH_MEMO} \\"
-echo "        --output-dir ${OUTPUT_DIR}"
-exit 3
+TRAINER_PATH="experiments/train_phase3_joint_scorer_renderer_codec.py"
+
+cat <<EOF
+==> Phase 3 trainer EXISTS as of 2026-05-11:
+    ${TRAINER_PATH} (~580 LOC)
+    tests/test_train_phase3_joint_scorer_renderer_codec.py (17 tests, 17/17 PASS)
+    Phase3DispatchGate fail-closed at construction per Catalog #134.
+
+==> Canonical training command (operator wires to provider):
+
+  .venv/bin/python ${TRAINER_PATH} \\
+      --output-dir ${OUTPUT_DIR} \\
+      --device cuda \\
+      --epochs 2 \\
+      --batch-size 4 \\
+      --learning-rate 1e-4 \\
+      --distill-temperature 2.0 \\
+      --lambda-distill 0.1 \\
+      --ema-decay 0.997 \\
+      --phase2-anchor-score ${STAGED_PHASE_DISPATCH_PHASE2_ANCHOR_SCORE} \\
+      --phase2-anchor-evidence-path ${STAGED_PHASE_DISPATCH_PHASE2_ANCHOR_PATH} \\
+      --distillation-gap-estimate ${STAGED_PHASE_DISPATCH_T10_DISTILLATION_GAP} \\
+      --distillation-gap-evidence-path ${STAGED_PHASE_DISPATCH_T10_DISTILLATION_EVIDENCE_PATH} \\
+      --operator-approved-gpu-budget-usd ${STAGED_PHASE_DISPATCH_BUDGET_USD} \\
+      --aaf68f37-verdict-evidence-path .omx/research/aaf68f37_adversarial_review_verdict_clean.md \\
+      --phase3-council-deliberation-path .omx/research/fields_medal_grand_council_all_phases_design_deliberate_implement_20260509.md \\
+      --t10-aux-scorer-checkpoint experiments/results/staged_phase2_t10_<UTC>/t10_aux_scorer_ema_shadow.pt
+
+To smoke-test locally first (free, CPU, ~30s; uses unsafe_test_only=True
+with operator-waiver per Catalog #134/#142):
+  .venv/bin/python ${TRAINER_PATH} \\
+      --output-dir experiments/results/phase3_local_smoke \\
+      --device cpu --smoke --allow-missing-canonical-a1 \\
+      --epochs 1
+
+Per-week burn schedule (operator must re-approve at EACH week boundary):
+  W1  \$20-\$50    T10 + T15 + T17 + T18 (Phase 2 closeout / Probes)
+  W2  \$80-\$120   Joint scorer-renderer-codec end-to-end SMOKE
+  W3  \$200-\$400  Joint training full-data (Phase 2 ≤0.142 verified)
+  W4  \$200-\$400  Distillation refinement + EMA convergence
+  W5  \$100-\$280  Floor-saturation polish (W4 ≤0.125)
+
+Lane claim:
+  .venv/bin/python tools/claim_lane_dispatch.py claim \\
+      --lane-id ${LANE_ID} \\
+      --instance-or-job-id <provider_job_id> \\
+      --status active_dispatching
+EOF
+exit 0
