@@ -16,16 +16,7 @@ from typing import Any
 import numpy as np
 import torch
 
-TERMINAL_PREFIXES = (
-    "completed_",
-    "failed_",
-    "preempted",
-    "cancelled",
-    "refused_dispatch",
-    "stale_assumed_dead",
-    "stale_superseded",
-    "stopped_",
-)
+from tac.deploy.claims import active_claim_row, is_terminal_status
 
 
 def repo_root_from_tac() -> Path:
@@ -76,10 +67,6 @@ def resume_safe_prefix_pairs(table: np.ndarray) -> int:
     return complete
 
 
-def is_terminal_status(status: str) -> bool:
-    return any(status.startswith(prefix) for prefix in TERMINAL_PREFIXES)
-
-
 def verify_active_lane_claim(
     claims_path: Path,
     *,
@@ -87,37 +74,10 @@ def verify_active_lane_claim(
     instance_job_id: str,
 ) -> dict[str, str]:
     """Return the newest matching active claim row or raise ValueError."""
-    if not claims_path.is_file():
-        raise ValueError(f"missing lane-claim ledger: {claims_path}")
-    for line in claims_path.read_text(encoding="utf-8").splitlines():
-        if not line.startswith("|"):
-            continue
-        if "timestamp_utc" in line and "lane_id" in line:
-            continue
-        cells = [cell.strip() for cell in line.strip("|").split("|")]
-        if len(cells) < 8:
-            continue
-        row = {
-            "timestamp_utc": cells[0],
-            "agent": cells[1],
-            "lane_id": cells[2],
-            "platform": cells[3],
-            "instance_job_id": cells[4],
-            "predicted_eta_utc": cells[5],
-            "status": cells[6],
-            "notes": cells[7],
-        }
-        if row["lane_id"] != lane_id or row["instance_job_id"] != instance_job_id:
-            continue
-        if is_terminal_status(row["status"]):
-            raise ValueError(
-                "newest matching claim is terminal: "
-                f"lane_id={lane_id} instance_job_id={instance_job_id} status={row['status']}"
-            )
-        return row
-    raise ValueError(
-        "no active lane claim found for "
-        f"lane_id={lane_id} instance_job_id={instance_job_id}"
+    return active_claim_row(
+        claims_path,
+        lane_id=lane_id,
+        instance_job_id=instance_job_id,
     )
 
 

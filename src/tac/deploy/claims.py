@@ -12,6 +12,17 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+TERMINAL_PREFIXES = (
+    "completed_",
+    "failed_",
+    "preempted",
+    "cancelled",
+    "refused_dispatch",
+    "stale_assumed_dead",
+    "stale_superseded",
+    "stopped_",
+)
+
 
 @dataclass(frozen=True)
 class DispatchClaimSpec:
@@ -38,6 +49,55 @@ def predicted_eta(hours: float = 3.0) -> str:
     return (
         datetime.now(UTC).replace(microsecond=0) + timedelta(hours=float(hours))
     ).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def is_terminal_status(status: str) -> bool:
+    """Return true when a dispatch-claim status closes a lane/job row."""
+
+    return any(status.startswith(prefix) for prefix in TERMINAL_PREFIXES)
+
+
+def active_claim_row(
+    claims_path: Path,
+    *,
+    lane_id: str,
+    instance_job_id: str,
+) -> dict[str, str]:
+    """Return the newest matching active claim row or raise ``ValueError``."""
+
+    if not claims_path.is_file():
+        raise ValueError(f"missing lane-claim ledger: {claims_path}")
+    for line in claims_path.read_text(encoding="utf-8").splitlines():
+        if not line.startswith("|"):
+            continue
+        if "timestamp_utc" in line and "lane_id" in line:
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if len(cells) < 8:
+            continue
+        row = {
+            "timestamp_utc": cells[0],
+            "agent": cells[1],
+            "lane_id": cells[2],
+            "platform": cells[3],
+            "instance_job_id": cells[4],
+            "predicted_eta_utc": cells[5],
+            "status": cells[6],
+            "notes": cells[7],
+        }
+        if row["lane_id"] != lane_id or row["instance_job_id"] != instance_job_id:
+            continue
+        if is_terminal_status(row["status"]):
+            raise ValueError(
+                "newest matching claim is terminal: "
+                f"lane_id={lane_id} instance_job_id={instance_job_id} "
+                f"status={row['status']}"
+            )
+        return row
+    raise ValueError(
+        "no active lane claim found for "
+        f"lane_id={lane_id} instance_job_id={instance_job_id}"
+    )
 
 
 def dispatch_claim_command(
@@ -145,7 +205,10 @@ def terminal_dispatch_claim(
 
 __all__ = [
     "DispatchClaimSpec",
+    "TERMINAL_PREFIXES",
+    "active_claim_row",
     "dispatch_claim_command",
+    "is_terminal_status",
     "predicted_eta",
     "record_dispatch_claim",
     "terminal_dispatch_claim",
