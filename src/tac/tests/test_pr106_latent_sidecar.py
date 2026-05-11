@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import zipfile
@@ -131,7 +132,7 @@ def test_heuristic_smoke_search_emits_nonzero_delta_for_selected_pairs():
     latents[1, 6] = -3.0
     latents[2, 7] = 0.25
 
-    dim_arr, delta_q_arr, diagnostics = build._heuristic_self_consistency_search(  # noqa: SLF001
+    dim_arr, delta_q_arr, diagnostics = build._heuristic_self_consistency_search(
         decoder=object(),
         latents=latents,
         device=torch.device("cpu"),
@@ -287,6 +288,54 @@ def test_inflate_decoder_matches_build_decoder():
     d2, q2 = inflate.decode_sidecar_corrections(blob)
     assert np.array_equal(d1, d2)
     assert np.array_equal(q1, q2)
+
+
+def test_inflate_sh_runs_self_contained_uploaded_runtime(tmp_path: Path):
+    """Modal/custom-runtime uploads must not require repo-root submissions imports."""
+    runtime = tmp_path / "runtime"
+    runtime.mkdir()
+    (runtime / "src").mkdir()
+    inflate_sh = runtime / "inflate.sh"
+    inflate_sh.write_text((SUBMISSION_DIR / "inflate.sh").read_text(), encoding="utf-8")
+    os.chmod(inflate_sh, 0o755)
+    (runtime / "inflate.py").write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env python",
+                "from __future__ import annotations",
+                "import json",
+                "import sys",
+                "from pathlib import Path",
+                "Path(sys.argv[2]).write_bytes(b'RAW')",
+                "Path(__file__).with_name('argv.json').write_text(json.dumps(sys.argv[1:]))",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    data_dir = tmp_path / "data"
+    out_dir = tmp_path / "out"
+    data_dir.mkdir()
+    out_dir.mkdir()
+    (data_dir / "0.bin").write_bytes(b"sidecar-packet")
+    file_list = tmp_path / "video_names.txt"
+    file_list.write_text("0.mkv\n", encoding="utf-8")
+
+    subprocess.run(
+        ["bash", str(inflate_sh), str(data_dir), str(out_dir), str(file_list)],
+        cwd=tmp_path,
+        env={**os.environ, "PYTHON_BIN": sys.executable},
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    assert (out_dir / "0.raw").read_bytes() == b"RAW"
+    assert json.loads((runtime / "argv.json").read_text()) == [
+        str(data_dir / "0.bin"),
+        str(out_dir / "0.raw"),
+    ]
 
 
 # =====================================================================

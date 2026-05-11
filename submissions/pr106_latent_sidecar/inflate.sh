@@ -5,14 +5,23 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="$(cd "$HERE/../.." && pwd)"
-SUB_NAME="$(basename "$HERE")"
+PYTHON_BIN="${PYTHON_BIN:-python}"
 
 DATA_DIR="$1"
 OUTPUT_DIR="$2"
 FILE_LIST="$3"
 
 mkdir -p "$OUTPUT_DIR"
+
+if [ -f "$HERE/inflate.py" ] && [ -d "$HERE/src" ]; then
+  export PYTHONPATH="$HERE/src:$HERE:${PYTHONPATH:-}"
+  RUNNER=("$PYTHON_BIN" "$HERE/inflate.py")
+else
+  ROOT="$(cd "$HERE/../.." && pwd)"
+  SUB_NAME="$(basename "$HERE")"
+  cd "$ROOT"
+  RUNNER=("$PYTHON_BIN" -m "submissions.${SUB_NAME}.inflate")
+fi
 
 while IFS= read -r line; do
   [ -z "$line" ] && continue
@@ -23,6 +32,5 @@ while IFS= read -r line; do
   [ ! -f "$SRC" ] && echo "ERROR: ${SRC} not found" >&2 && exit 1
 
   printf "Inflating %s ... " "$line"
-  cd "$ROOT"
-  python -m "submissions.${SUB_NAME}.inflate" "$SRC" "$DST"
+  "${RUNNER[@]}" "$SRC" "$DST"
 done < "$FILE_LIST"
