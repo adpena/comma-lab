@@ -104,7 +104,11 @@ def main(argv: list[str] | None = None) -> int:
                 ),
             )
 
-    return 0 if summary.get("passed") else int(summary.get("returncode") or 1)
+    if summary.get("passed"):
+        return 0
+    if summary.get("status") in {"remote_error", "invalid_result"}:
+        return 5
+    return int(summary.get("returncode") or 1)
 
 
 if __name__ == "__main__":

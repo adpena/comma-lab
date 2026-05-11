@@ -18,6 +18,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL_PATH = REPO_ROOT / "experiments" / "modal_auth_eval.py"
+CPU_TOOL_PATH = REPO_ROOT / "experiments" / "modal_auth_eval_cpu.py"
 
 
 def _load_module():
@@ -26,6 +27,16 @@ def _load_module():
     )
     mod = importlib.util.module_from_spec(spec)
     sys.modules["modal_auth_eval_mod"] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _load_cpu_module():
+    spec = importlib.util.spec_from_file_location(
+        "modal_auth_eval_cpu_mod", str(CPU_TOOL_PATH),
+    )
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["modal_auth_eval_cpu_mod"] = mod
     spec.loader.exec_module(mod)
     return mod
 
@@ -61,6 +72,57 @@ def test_run_auth_eval_function_signature(mod):
     assert "archive_size_bytes" in sig.parameters
     assert "submission_dir_zip_bytes" in sig.parameters
     assert "submission_dir_zip_sha256" in sig.parameters
+
+
+def test_cuda_remote_unexpected_exception_returns_fail_closed_result(mod, tmp_path, monkeypatch):
+    def raise_unexpected(**_kwargs):
+        raise ValueError("synthetic runtime envelope failure")
+
+    remote_out = tmp_path / "remote_out"
+    remote_root = tmp_path / "remote_root"
+    monkeypatch.setattr(mod, "REMOTE_OUT", remote_out)
+    monkeypatch.setattr(mod, "REMOTE_WORK_ROOT", remote_root)
+    monkeypatch.setattr(mod, "_run_auth_eval_inner", raise_unexpected)
+
+    raw = mod.run_auth_eval.get_raw_f() if hasattr(mod.run_auth_eval, "get_raw_f") else mod.run_auth_eval
+    result = raw(b"zip", "a" * 64, 3)
+
+    assert result["passed"] is False
+    assert result["score_claim"] is False
+    assert result["promotion_eligible"] is False
+    assert result["returncode"] == 98
+    assert result["error_type"] == "ValueError"
+    assert "synthetic runtime envelope failure" in result["error"]
+    assert "ValueError" in result["traceback"]
+    assert "modal_cuda_auth_eval_validation.json" in result["artifacts"]
+
+
+def test_cpu_remote_unexpected_exception_returns_fail_closed_result(tmp_path, monkeypatch):
+    pytest.importorskip("modal", reason="modal SDK not installed")
+    cpu_mod = _load_cpu_module()
+
+    def raise_unexpected(**_kwargs):
+        raise RuntimeError("synthetic cpu runtime envelope failure")
+
+    remote_out = tmp_path / "remote_cpu_out"
+    monkeypatch.setattr(cpu_mod, "REMOTE_OUT", remote_out)
+    monkeypatch.setattr(cpu_mod, "_run_auth_eval_inner", raise_unexpected)
+
+    raw = (
+        cpu_mod.run_auth_eval_cpu.get_raw_f()
+        if hasattr(cpu_mod.run_auth_eval_cpu, "get_raw_f")
+        else cpu_mod.run_auth_eval_cpu
+    )
+    result = raw(b"zip", "b" * 64, 3)
+
+    assert result["passed"] is False
+    assert result["score_claim"] is False
+    assert result["promotion_eligible"] is False
+    assert result["returncode"] == 98
+    assert result["error_type"] == "RuntimeError"
+    assert "synthetic cpu runtime envelope failure" in result["error"]
+    assert "RuntimeError" in result["traceback"]
+    assert "modal_cpu_auth_eval_validation.json" in result["artifacts"]
 
 
 def test_source_uses_literal_cuda_canonical_contest_eval() -> None:

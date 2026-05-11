@@ -49,6 +49,7 @@ import modal
 from tac.deploy.modal.auth_eval import (
     ClaimSpec,
     claim_modal_auth_eval_dispatch,
+    fail_closed_remote_exception_result,
     function_call_id,
     submission_dir_zip_bytes,
     terminal_modal_auth_eval_claim,
@@ -641,6 +642,39 @@ def _run_auth_eval_inner(
     return {**validation, "artifacts": _collect_artifacts(out_dir, work_dir)}
 
 
+def _run_auth_eval_cpu_fail_closed(
+    *,
+    archive_bytes: bytes,
+    archive_sha256: str,
+    archive_size_bytes: int,
+    inflate_sh_rel: str,
+    submission_dir_zip_bytes: bytes | None,
+    submission_dir_zip_sha256: str | None,
+    inflate_timeout: int,
+    evaluate_timeout: int,
+) -> dict[str, Any]:
+    try:
+        return _run_auth_eval_inner(
+            archive_bytes=archive_bytes,
+            archive_sha256=archive_sha256,
+            archive_size_bytes=archive_size_bytes,
+            inflate_sh_rel=inflate_sh_rel,
+            submission_dir_zip_bytes=submission_dir_zip_bytes,
+            submission_dir_zip_sha256=submission_dir_zip_sha256,
+            inflate_timeout=inflate_timeout,
+            evaluate_timeout=evaluate_timeout,
+        )
+    except Exception as exc:  # pragma: no cover - remote diagnostic path
+        return fail_closed_remote_exception_result(
+            out_dir=REMOTE_OUT,
+            work_dir=REMOTE_OUT / "eval_work",
+            validation_path=REMOTE_OUT / "modal_cpu_auth_eval_validation.json",
+            canonical_path="archive.zip -> inflate.sh -> upstream/evaluate.py --device cpu",
+            exc=exc,
+            collect_artifacts=_collect_artifacts,
+        )
+
+
 # CPU-only Modal function. ``cpu`` parameter requests N logical cores; default
 # 8 should be plenty for 600-sample CPU eval. Memory is generous (16 GiB) since
 # upstream/evaluate.py loads SegNet (smp Unet B2) + PoseNet (FastViT-T12) + the
@@ -664,7 +698,7 @@ def run_auth_eval_cpu(
 ) -> dict[str, Any]:
     """Run the canonical CPU auth eval on Modal Linux x86_64."""
 
-    return _run_auth_eval_inner(
+    return _run_auth_eval_cpu_fail_closed(
         archive_bytes=archive_bytes,
         archive_sha256=archive_sha256,
         archive_size_bytes=archive_size_bytes,

@@ -6,13 +6,14 @@ Modal call metadata, artifact harvest, and result JSON materialization.
 """
 from __future__ import annotations
 
-import subprocess
 import io
+import subprocess
+import traceback
 import zipfile
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from tac.repo_io import read_json, write_json
 
@@ -219,6 +220,50 @@ def write_spawn_metadata(
     return path
 
 
+def fail_closed_remote_exception_result(
+    *,
+    out_dir: Path,
+    work_dir: Path,
+    validation_path: Path,
+    canonical_path: str,
+    exc: BaseException,
+    collect_artifacts: Callable[[Path, Path], dict[str, bytes]],
+) -> dict[str, Any]:
+    """Return a structured, non-promotable result for unexpected remote errors.
+
+    Modal can surface remote exceptions as a provider-level ``RemoteError`` with
+    little or no message. Wrapping the remote body with this helper preserves the
+    traceback as a normal artifact-bearing result, so recovery tooling can close
+    dispatch claims without fabricating a score.
+    """
+
+    validation: dict[str, Any] = {
+        "schema_version": 1,
+        "passed": False,
+        "returncode": 98,
+        "canonical_path": canonical_path,
+        "error": str(exc),
+        "error_type": type(exc).__name__,
+        "traceback": traceback.format_exc(),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "adjudication_required": True,
+        "allowed_use": ["debug", "no_score_claim", "no_promotion"],
+    }
+    try:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        validation_path.parent.mkdir(parents=True, exist_ok=True)
+        write_json(validation_path, validation)
+    except Exception as write_exc:  # pragma: no cover - defensive remote diagnostic path
+        validation["artifact_write_error"] = repr(write_exc)
+    try:
+        artifacts = collect_artifacts(out_dir, work_dir)
+    except Exception as collect_exc:  # pragma: no cover - defensive remote diagnostic path
+        validation["artifact_collection_error"] = repr(collect_exc)
+        artifacts = {}
+    return {**validation, "artifacts": artifacts}
+
+
 def read_spawn_metadata(out_dir: Path) -> dict[str, Any]:
     """Read detached Modal auth-eval metadata."""
 
@@ -281,9 +326,34 @@ def recover_modal_auth_eval(
         }
         write_json(out_dir / "modal_auth_eval_recover_summary.json", summary)
         return summary
+    except Exception as exc:
+        summary = {
+            "schema_version": "modal_auth_eval_recover_summary_v1",
+            "status": "remote_error",
+            "call_id": resolved_call_id,
+            "output_dir": str(out_dir),
+            "recovered_at_utc": utc_now(),
+            "error_type": type(exc).__name__,
+            "error": str(exc),
+            "score_claim": False,
+            "promotion_eligible": False,
+        }
+        write_json(out_dir / "modal_auth_eval_recover_summary.json", summary)
+        return summary
 
     if not isinstance(result, dict):
-        raise TypeError(f"Modal result must be a dict, got {type(result).__name__}")
+        summary = {
+            "schema_version": "modal_auth_eval_recover_summary_v1",
+            "status": "invalid_result",
+            "call_id": resolved_call_id,
+            "output_dir": str(out_dir),
+            "recovered_at_utc": utc_now(),
+            "error": f"Modal result must be a dict, got {type(result).__name__}",
+            "score_claim": False,
+            "promotion_eligible": False,
+        }
+        write_json(out_dir / "modal_auth_eval_recover_summary.json", summary)
+        return summary
 
     artifacts = result.get("artifacts")
     artifact_names: list[str] = []
@@ -327,6 +397,7 @@ def recover_modal_auth_eval(
 __all__ = [
     "ClaimSpec",
     "claim_modal_auth_eval_dispatch",
+    "fail_closed_remote_exception_result",
     "function_call_id",
     "predicted_eta",
     "read_spawn_metadata",

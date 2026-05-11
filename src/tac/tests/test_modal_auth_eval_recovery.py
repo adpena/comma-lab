@@ -99,3 +99,31 @@ def test_recover_pending_writes_pending_summary(tmp_path: Path) -> None:
     assert json.loads((tmp_path / "modal_auth_eval_recover_summary.json").read_text())[
         "status"
     ] == "pending"
+
+
+def test_recover_remote_error_writes_fail_closed_summary(tmp_path: Path) -> None:
+    write_spawn_metadata(
+        out_dir=tmp_path,
+        tool="experiments/modal_auth_eval.py",
+        app="comma-auth-eval",
+        axis="contest_cuda",
+        call_id="fc-test",
+        local_request={},
+        result_json_name="modal_cuda_auth_eval_result.json",
+    )
+
+    class FunctionCall(_FakeFunctionCall):
+        def get(self, timeout: float = 0.0):
+            raise RuntimeError("remote failed before artifact return")
+
+    modal_module = types.SimpleNamespace(functions=types.SimpleNamespace(FunctionCall=FunctionCall))
+    summary = recover_modal_auth_eval(
+        out_dir=tmp_path,
+        timeout_s=0,
+        modal_module=modal_module,
+    )
+
+    assert summary["status"] == "remote_error"
+    assert summary["score_claim"] is False
+    assert summary["promotion_eligible"] is False
+    assert "remote failed" in summary["error"]
