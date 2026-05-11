@@ -34,6 +34,36 @@ recommended, the loop checks the active-lane-dispatch-claims registry. If a
 conflicting claim exists, the candidate is moved to ``DEFERRED-pending-claim``
 status and the operator is notified.
 
+**Operator-authorized le-$5/individual mode (2026-05-11):**
+
+Per operator directive 2026-05-11 ("keep pushing the autopilot and xray and
+magic codec and compiler and wiring and integration and everything") plus the
+council's deferral overrule, the autopilot may now self-authorize dispatches
+that satisfy ALL of:
+
+  1. ``--operator-authorized-le-5-dollar-mode`` flag is explicitly set
+     (default OFF; safe HALT-and-ASK preserved when the flag is absent),
+  2. ``estimated_dispatch_cost_usd`` <= ``--per-dispatch-cap-usd`` (default
+     $5.00 per the operator directive),
+  3. cumulative-since-activation cost <= ``--cumulative-cap-usd`` (default
+     $20.00 hard envelope),
+  4. ``--canonical-helper-script`` resolves to ``tools/claim_lane_dispatch.py``
+     OR explicit override via the same flag (the lane-claim ledger must be
+     reachable for every authorized dispatch),
+  5. ``CATHEDRAL_AUTOPILOT_OPERATOR_AUTHORIZED_MODE`` environment variable is
+     set to ``1`` (defense-in-depth runtime gate — refuses to activate if the
+     CLI flag is set but the env-var is not, even if other preconditions are
+     met).
+
+When all five preconditions hold, each candidate that fits the per-dispatch
+cap is tagged ``[autopilot-claude-le-5-dollar]`` in its halt event, and a
+structured log row is appended to the configured journal path. Candidates
+crossing either cap remain HALT-and-ASK as before. The cumulative-envelope
+counter is per-process (the loop's state); the canonical persistent ledger
+is :mod:`tools.claim_lane_dispatch`, which the loop continues to delegate to.
+
+No KILL verdict is ever auto-authorized.
+
 Cross-references
 ----------------
 - :mod:`tools.cathedral_autopilot` — per-invocation planner / ranker
@@ -74,6 +104,14 @@ ensure_repo_imports(REPO_ROOT)
 
 
 AUTONOMOUS_LOOP_SCHEMA = "tac_cathedral_autopilot_autonomous_loop_v1"
+
+# Operator-authorized le-$5/individual mode (2026-05-11).
+OPERATOR_AUTHORIZED_MODE_ENV_VAR = "CATHEDRAL_AUTOPILOT_OPERATOR_AUTHORIZED_MODE"
+OPERATOR_AUTHORIZED_MODE_ENV_VALUE_ENABLED = "1"
+DEFAULT_PER_DISPATCH_CAP_USD = 5.00
+DEFAULT_CUMULATIVE_CAP_USD = 20.00
+AUTOPILOT_AUTHORIZED_TAG = "[autopilot-claude-le-5-dollar]"
+CANONICAL_HELPER_SCRIPT_RELPATH = "tools/claim_lane_dispatch.py"
 
 
 # ── Events / decisions / verdicts ──────────────────────────────────────────
@@ -124,6 +162,88 @@ class CandidateRow:
 
 
 @dataclass
+class OperatorAuthorizedModeConfig:
+    """Configuration for the operator-authorized le-$5/individual mode.
+
+    Per CLAUDE.md "Design decisions — non-negotiable" the activation criteria
+    were operator-set; this class only carries the configuration, never picks
+    its own thresholds.
+
+    Per CLAUDE.md "Operator gates must be wired and used" the activation flag
+    is dual-gated (CLI ``--operator-authorized-le-5-dollar-mode`` AND env-var
+    ``CATHEDRAL_AUTOPILOT_OPERATOR_AUTHORIZED_MODE=1``) so a stray CLI default
+    cannot unlock dispatch authorization on its own.
+    """
+
+    enabled: bool = False
+    per_dispatch_cap_usd: float = DEFAULT_PER_DISPATCH_CAP_USD
+    cumulative_cap_usd: float = DEFAULT_CUMULATIVE_CAP_USD
+    canonical_helper_script: Path | None = None
+    journal_path: Path | None = None
+    cumulative_spent_usd: float = 0.0
+
+    def can_authorize(self, candidate: "CandidateRow") -> tuple[bool, str]:
+        """Return ``(authorized, reason)``.
+
+        Authorization requires every precondition to hold. The first failing
+        precondition's reason is returned; on success the reason is empty.
+        """
+        if not self.enabled:
+            return False, "operator-authorized mode is OFF (default safe HALT-and-ASK)"
+        if candidate.estimated_dispatch_cost_usd > self.per_dispatch_cap_usd:
+            return False, (
+                f"candidate cost ${candidate.estimated_dispatch_cost_usd:.4f} "
+                f"exceeds per-dispatch cap ${self.per_dispatch_cap_usd:.4f}"
+            )
+        prospective = self.cumulative_spent_usd + candidate.estimated_dispatch_cost_usd
+        if prospective > self.cumulative_cap_usd:
+            return False, (
+                f"cumulative spend would reach ${prospective:.4f} which exceeds "
+                f"the ${self.cumulative_cap_usd:.4f} envelope; operator round-trip required"
+            )
+        if candidate.blockers:
+            return False, (
+                f"candidate has unresolved blockers {candidate.blockers!r}; "
+                "operator must adjudicate before any dispatch"
+            )
+        if candidate.estimated_dispatch_cost_usd <= 0.0:
+            return False, (
+                f"candidate cost {candidate.estimated_dispatch_cost_usd:.4f} is "
+                "non-positive; refuse to authorize a malformed estimate"
+            )
+        if not self.canonical_helper_script or not self.canonical_helper_script.is_file():
+            return False, (
+                f"canonical helper script {self.canonical_helper_script!r} does not "
+                "exist; operator must point --canonical-helper-script at a real file"
+            )
+        return True, ""
+
+    def record_authorization(self, candidate: "CandidateRow") -> None:
+        """Increment the per-process cumulative-spent counter.
+
+        The persistent ledger is :mod:`tools.claim_lane_dispatch`. This in-memory
+        counter is the loop's own envelope guard so a single autopilot session
+        cannot drain authorization across many small dispatches.
+        """
+        self.cumulative_spent_usd += candidate.estimated_dispatch_cost_usd
+
+
+def _env_authorizes_mode(env: dict[str, str] | None = None) -> bool:
+    """Return True iff the env-var explicitly opts into authorized mode.
+
+    Defense-in-depth: even if ``--operator-authorized-le-5-dollar-mode`` is
+    passed, the runtime env-var must ALSO be set to ``1``. This guards against
+    the failure mode where someone sets the CLI flag in a script but forgets
+    that the operator's machine doesn't carry the env-var (so authorized
+    dispatches never actually run).
+    """
+    import os as _os
+
+    src = env if env is not None else _os.environ
+    return src.get(OPERATOR_AUTHORIZED_MODE_ENV_VAR, "") == OPERATOR_AUTHORIZED_MODE_ENV_VALUE_ENABLED
+
+
+@dataclass
 class HaltEvent:
     """One operator-decision halt event surfaced by the loop."""
 
@@ -138,6 +258,11 @@ class HaltEvent:
     decision: OperatorDecision | None = None
     decision_at_utc: str | None = None
     decision_notes: str = ""
+    # Operator-authorized le-$5/individual mode fields (2026-05-11).
+    autopilot_authorized: bool = False
+    autopilot_tag: str = ""
+    autopilot_authorized_reason: str = ""
+    autopilot_refused_reason: str = ""
 
 
 @dataclass
@@ -186,28 +311,119 @@ def make_dispatch_halt_event(
     *,
     requires_approval_classes: frozenset[EventClass],
     blockers: list[str] | None = None,
+    auth_mode: OperatorAuthorizedModeConfig | None = None,
+    env_authorized: bool | None = None,
 ) -> HaltEvent:
     """Construct a HALT event for one dispatch decision.
 
     Per CLAUDE.md "operator-gate non-negotiable": when ``EventClass.DISPATCH``
-    is in ``requires_approval_classes``, ``requires_approval=True``.
+    is in ``requires_approval_classes``, ``requires_approval=True`` UNLESS the
+    operator-authorized le-$5/individual mode is engaged AND every precondition
+    holds for THIS candidate. In that case the event is tagged
+    ``[autopilot-claude-le-5-dollar]`` and ``requires_approval`` is set to
+    False so the loop does not wait for the operator on this row.
+
+    The dual-gate check (CLI flag + env-var) lives entirely inside this
+    function; callers cannot bypass it. When ``env_authorized`` is None the
+    real env-var is consulted; tests inject ``env_authorized=True/False``
+    directly.
     """
     requires = EventClass.DISPATCH in requires_approval_classes
+    halt_blockers = list(blockers or [])
+    autopilot_authorized = False
+    autopilot_tag = ""
+    autopilot_reason = ""
+    autopilot_refused = ""
+
+    if auth_mode is not None and auth_mode.enabled:
+        env_ok = _env_authorizes_mode() if env_authorized is None else bool(env_authorized)
+        if not env_ok:
+            autopilot_refused = (
+                f"env-var {OPERATOR_AUTHORIZED_MODE_ENV_VAR}="
+                f"{OPERATOR_AUTHORIZED_MODE_ENV_VALUE_ENABLED} is missing; CLI "
+                "flag alone is insufficient (defense-in-depth)"
+            )
+        else:
+            ok, reason = auth_mode.can_authorize(candidate)
+            if ok:
+                autopilot_authorized = True
+                autopilot_tag = AUTOPILOT_AUTHORIZED_TAG
+                autopilot_reason = (
+                    f"per-dispatch cost ${candidate.estimated_dispatch_cost_usd:.4f} "
+                    f"<= cap ${auth_mode.per_dispatch_cap_usd:.4f}; "
+                    f"cumulative ${auth_mode.cumulative_spent_usd + candidate.estimated_dispatch_cost_usd:.4f} "
+                    f"<= envelope ${auth_mode.cumulative_cap_usd:.4f}"
+                )
+                # Reserve cost in the per-process counter so the next candidate
+                # in this iteration sees the updated cumulative.
+                auth_mode.record_authorization(candidate)
+                requires = False
+            else:
+                autopilot_refused = reason
+
     return HaltEvent(
         event_class=EventClass.DISPATCH,
         candidate_id=candidate.candidate_id,
         reason=(
             f"Dispatch decision for candidate {candidate.candidate_id} "
             f"(family={candidate.family}, predicted_score_delta="
-            f"{candidate.predicted_score_delta:+.6f}) — operator decision "
-            "required."
+            f"{candidate.predicted_score_delta:+.6f}) — "
+            + (
+                "autopilot self-authorized (le-$5/individual operator-set mode)"
+                if autopilot_authorized
+                else "operator decision required."
+            )
         ),
         predicted_score_delta=candidate.predicted_score_delta,
         estimated_cost_usd=candidate.estimated_dispatch_cost_usd,
         requires_approval=requires,
         halt_at_utc=dt.datetime.now(dt.UTC).isoformat(),
-        blockers=list(blockers or []),
+        blockers=halt_blockers,
+        autopilot_authorized=autopilot_authorized,
+        autopilot_tag=autopilot_tag,
+        autopilot_authorized_reason=autopilot_reason,
+        autopilot_refused_reason=autopilot_refused,
     )
+
+
+def append_autopilot_journal_row(
+    journal_path: Path,
+    event: HaltEvent,
+    *,
+    iteration: int,
+) -> None:
+    """Append one structured JSONL row recording an autopilot-authorized dispatch.
+
+    Per CLAUDE.md "Forbidden /tmp paths": callers must point ``journal_path`` at
+    a durable location (``reports/`` or ``.omx/state/``); this helper does not
+    pick a default location.
+
+    Per CLAUDE.md "Subagent commits MUST use serializer": this writes a JSONL
+    row that the operator can later commit via the canonical serializer; the
+    helper itself never invokes git.
+    """
+    journal_path.parent.mkdir(parents=True, exist_ok=True)
+    row = {
+        "schema": "tac_cathedral_autopilot_authorized_journal_v1",
+        "iteration": iteration,
+        "candidate_id": event.candidate_id,
+        "predicted_score_delta": event.predicted_score_delta,
+        "estimated_cost_usd": event.estimated_cost_usd,
+        "halt_at_utc": event.halt_at_utc,
+        "autopilot_authorized": event.autopilot_authorized,
+        "autopilot_tag": event.autopilot_tag,
+        "autopilot_authorized_reason": event.autopilot_authorized_reason,
+        "autopilot_refused_reason": event.autopilot_refused_reason,
+        "blockers": list(event.blockers),
+        "claude_md_compliance_tags": [
+            "operator_authorized_le_5_dollar_mode",
+            "halt_and_ask_preserved_above_cap",
+            "no_kill_verdict",
+            "dispatch_claim_check_done",
+        ],
+    }
+    with journal_path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(row, sort_keys=True) + "\n")
 
 
 def make_kill_halt_event(candidate_id: str, reason: str) -> HaltEvent:
@@ -287,6 +503,8 @@ def run_one_loop_iteration(
     claims_path: Path | None = None,
     race_mode: bool = False,
     max_dispatch_recommendations: int | None = None,
+    auth_mode: OperatorAuthorizedModeConfig | None = None,
+    env_authorized: bool | None = None,
 ) -> LoopIterationReport:
     """Run one cycle: rank → dispatch-claim check → halt-event emission.
 
@@ -338,9 +556,25 @@ def run_one_loop_iteration(
             cand,
             requires_approval_classes=requires_approval_on,
             blockers=event_blockers,
+            auth_mode=auth_mode,
+            env_authorized=env_authorized,
         )
         halt_events.append(event)
         n_ranked += 1
+        # Journal the authorization if the autopilot self-authorized.
+        if (
+            event.autopilot_authorized
+            and auth_mode is not None
+            and auth_mode.journal_path is not None
+        ):
+            append_autopilot_journal_row(
+                auth_mode.journal_path, event, iteration=iteration
+            )
+            notes.append(
+                f"autopilot self-authorized candidate {cand.candidate_id!r} "
+                f"(cumulative ${auth_mode.cumulative_spent_usd:.4f} / cap "
+                f"${auth_mode.cumulative_cap_usd:.4f})"
+            )
 
     ended = dt.datetime.now(dt.UTC).isoformat()
     return LoopIterationReport(
@@ -368,6 +602,8 @@ def run_continuous_loop(
     claims_path: Path | None = None,
     race_mode: bool = False,
     max_dispatch_recommendations: int | None = None,
+    auth_mode: OperatorAuthorizedModeConfig | None = None,
+    env_authorized: bool | None = None,
 ) -> list[LoopIterationReport]:
     """Run the continuous loop for ``iterations`` cycles.
 
@@ -391,6 +627,8 @@ def run_continuous_loop(
             claims_path=claims_path,
             race_mode=race_mode,
             max_dispatch_recommendations=max_dispatch_recommendations,
+            auth_mode=auth_mode,
+            env_authorized=env_authorized,
         )
         # Operator-decision injection — DEFER when no callback supplied.
         for event in report.halt_events:
@@ -496,6 +734,52 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--max-dispatch-recommendations", type=int, default=None)
     parser.add_argument("--output", type=Path, default=None,
                         help="Where to write the per-iteration report JSON")
+    parser.add_argument(
+        "--operator-authorized-le-5-dollar-mode",
+        action="store_true",
+        help=(
+            "OPT-IN: enable operator-authorized le-$5/individual mode (default "
+            "OFF). Per CLAUDE.md operator-gate non-negotiable + dual-gated by "
+            f"env-var {OPERATOR_AUTHORIZED_MODE_ENV_VAR}="
+            f"{OPERATOR_AUTHORIZED_MODE_ENV_VALUE_ENABLED}."
+        ),
+    )
+    parser.add_argument(
+        "--per-dispatch-cap-usd",
+        type=float,
+        default=DEFAULT_PER_DISPATCH_CAP_USD,
+        help=(
+            f"Per-dispatch hard cap when authorized mode is on (default "
+            f"${DEFAULT_PER_DISPATCH_CAP_USD:.2f})."
+        ),
+    )
+    parser.add_argument(
+        "--cumulative-cap-usd",
+        type=float,
+        default=DEFAULT_CUMULATIVE_CAP_USD,
+        help=(
+            f"Cumulative spend envelope when authorized mode is on (default "
+            f"${DEFAULT_CUMULATIVE_CAP_USD:.2f})."
+        ),
+    )
+    parser.add_argument(
+        "--canonical-helper-script",
+        type=Path,
+        default=None,
+        help=(
+            "Path to the canonical dispatch-claim helper "
+            f"(default {CANONICAL_HELPER_SCRIPT_RELPATH} under the repo root)."
+        ),
+    )
+    parser.add_argument(
+        "--journal-path",
+        type=Path,
+        default=None,
+        help=(
+            "Where to append authorized-dispatch rows (JSONL). Required when "
+            "--operator-authorized-le-5-dollar-mode is set."
+        ),
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -506,9 +790,37 @@ def main(argv: Optional[list[str]] = None) -> int:
         approval_set = _parse_approval_flags(
             args.require_operator_approval_on or ["dispatch"]
         )
+        # Refuse to activate authorized mode without a journal path.
+        if args.operator_authorized_le_5_dollar_mode and args.journal_path is None:
+            raise ValueError(
+                "--operator-authorized-le-5-dollar-mode requires --journal-path "
+                "for the structured-row JSONL ledger (per CLAUDE.md no-/tmp-path)"
+            )
     except (ValueError, FileNotFoundError) as exc:
         print(f"cathedral_autopilot_autonomous_loop: {exc}", file=sys.stderr)
         return 2
+
+    auth_mode: OperatorAuthorizedModeConfig | None = None
+    if args.operator_authorized_le_5_dollar_mode:
+        helper_path = args.canonical_helper_script or (
+            REPO_ROOT / CANONICAL_HELPER_SCRIPT_RELPATH
+        )
+        auth_mode = OperatorAuthorizedModeConfig(
+            enabled=True,
+            per_dispatch_cap_usd=args.per_dispatch_cap_usd,
+            cumulative_cap_usd=args.cumulative_cap_usd,
+            canonical_helper_script=helper_path,
+            journal_path=args.journal_path,
+        )
+        # Defense-in-depth env-var check.
+        if not _env_authorizes_mode():
+            print(
+                "cathedral_autopilot_autonomous_loop: authorized mode CLI flag "
+                f"is set but env-var {OPERATOR_AUTHORIZED_MODE_ENV_VAR}="
+                f"{OPERATOR_AUTHORIZED_MODE_ENV_VALUE_ENABLED} is missing; "
+                "loop will run but no candidate will self-authorize",
+                file=sys.stderr,
+            )
 
     def _source() -> list[CandidateRow]:
         return load_candidates_from_jsonl(args.candidates_jsonl)
@@ -521,6 +833,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         claims_path=args.claims_path,
         race_mode=args.race_mode,
         max_dispatch_recommendations=args.max_dispatch_recommendations,
+        auth_mode=auth_mode,
     )
 
     output_payload = {
@@ -532,9 +845,18 @@ def main(argv: Optional[list[str]] = None) -> int:
             "no_score_claim_only_predicted_band",
             "no_kill_verdict_in_loop",
             "race_mode_explicit_opt_in_only",
+            "operator_authorized_le_5_dollar_mode_dual_gated",
         ],
         "iterations_run": len(reports),
         "race_mode": args.race_mode,
+        "operator_authorized_mode": {
+            "enabled": bool(auth_mode and auth_mode.enabled),
+            "per_dispatch_cap_usd": auth_mode.per_dispatch_cap_usd if auth_mode else None,
+            "cumulative_cap_usd": auth_mode.cumulative_cap_usd if auth_mode else None,
+            "cumulative_spent_usd": auth_mode.cumulative_spent_usd if auth_mode else 0.0,
+            "env_authorized": _env_authorizes_mode(),
+            "journal_path": str(auth_mode.journal_path) if auth_mode and auth_mode.journal_path else None,
+        },
         "reports": [serialize_report(r) for r in reports],
     }
     if args.output is not None:

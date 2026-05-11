@@ -480,3 +480,376 @@ def test_operator_decision_enum_members():
     assert loop.OperatorDecision.APPROVE.value == "approve"
     assert loop.OperatorDecision.REJECT.value == "reject"
     assert loop.OperatorDecision.DEFER.value == "defer"
+
+
+# ── Operator-authorized le-$5/individual mode (2026-05-11) ────────────────
+
+
+def _auth_mode(
+    tmp_path,
+    *,
+    enabled: bool = True,
+    per_dispatch_cap: float = 5.0,
+    cumulative_cap: float = 20.0,
+    helper_exists: bool = True,
+) -> loop.OperatorAuthorizedModeConfig:
+    helper = tmp_path / "claim_lane_dispatch.py"
+    if helper_exists:
+        helper.write_text("# canonical helper\n", encoding="utf-8")
+    journal = tmp_path / "autopilot_journal.jsonl"
+    return loop.OperatorAuthorizedModeConfig(
+        enabled=enabled,
+        per_dispatch_cap_usd=per_dispatch_cap,
+        cumulative_cap_usd=cumulative_cap,
+        canonical_helper_script=helper,
+        journal_path=journal,
+    )
+
+
+def test_authorized_mode_disabled_by_default():
+    cfg = loop.OperatorAuthorizedModeConfig()
+    assert cfg.enabled is False
+    assert cfg.per_dispatch_cap_usd == loop.DEFAULT_PER_DISPATCH_CAP_USD
+    assert cfg.cumulative_cap_usd == loop.DEFAULT_CUMULATIVE_CAP_USD
+    assert cfg.cumulative_spent_usd == 0.0
+
+
+def test_authorized_mode_default_caps_match_operator_directive():
+    # Operator directive 2026-05-11: le-$5/individual + le-$20 cumulative.
+    assert loop.DEFAULT_PER_DISPATCH_CAP_USD == 5.0
+    assert loop.DEFAULT_CUMULATIVE_CAP_USD == 20.0
+
+
+def test_can_authorize_refuses_when_disabled(tmp_path):
+    cfg = _auth_mode(tmp_path, enabled=False)
+    c = _cand(cost_usd=1.0)
+    ok, reason = cfg.can_authorize(c)
+    assert ok is False
+    assert "OFF" in reason
+
+
+def test_can_authorize_refuses_above_per_dispatch_cap(tmp_path):
+    cfg = _auth_mode(tmp_path, per_dispatch_cap=5.0)
+    c = _cand(cost_usd=5.01)
+    ok, reason = cfg.can_authorize(c)
+    assert ok is False
+    assert "per-dispatch cap" in reason
+
+
+def test_can_authorize_refuses_above_cumulative_envelope(tmp_path):
+    cfg = _auth_mode(tmp_path, per_dispatch_cap=5.0, cumulative_cap=10.0)
+    cfg.cumulative_spent_usd = 7.0
+    c = _cand(cost_usd=4.0)  # 7+4=11 > 10
+    ok, reason = cfg.can_authorize(c)
+    assert ok is False
+    assert "envelope" in reason
+
+
+def test_can_authorize_refuses_when_blockers_present(tmp_path):
+    cfg = _auth_mode(tmp_path)
+    c = _cand(cost_usd=1.0, blockers=["unresolved_dep"])
+    ok, reason = cfg.can_authorize(c)
+    assert ok is False
+    assert "blockers" in reason
+
+
+def test_can_authorize_refuses_when_helper_missing(tmp_path):
+    cfg = _auth_mode(tmp_path, helper_exists=False)
+    c = _cand(cost_usd=1.0)
+    ok, reason = cfg.can_authorize(c)
+    assert ok is False
+    assert "helper" in reason
+
+
+def test_can_authorize_refuses_non_positive_cost(tmp_path):
+    cfg = _auth_mode(tmp_path)
+    c = _cand(cost_usd=0.0)
+    ok, reason = cfg.can_authorize(c)
+    assert ok is False
+    assert "non-positive" in reason
+
+
+def test_can_authorize_approves_within_caps(tmp_path):
+    cfg = _auth_mode(tmp_path)
+    c = _cand(cost_usd=4.5)
+    ok, reason = cfg.can_authorize(c)
+    assert ok is True
+    assert reason == ""
+
+
+def test_record_authorization_increments_cumulative(tmp_path):
+    cfg = _auth_mode(tmp_path)
+    c = _cand(cost_usd=2.5)
+    cfg.record_authorization(c)
+    assert cfg.cumulative_spent_usd == 2.5
+    cfg.record_authorization(c)
+    assert cfg.cumulative_spent_usd == 5.0
+
+
+def test_make_dispatch_halt_event_authorized_when_mode_on_and_env_set(tmp_path):
+    cfg = _auth_mode(tmp_path)
+    c = _cand(cost_usd=3.0)
+    e = loop.make_dispatch_halt_event(
+        c,
+        requires_approval_classes=frozenset({loop.EventClass.DISPATCH}),
+        auth_mode=cfg,
+        env_authorized=True,
+    )
+    assert e.autopilot_authorized is True
+    assert e.autopilot_tag == loop.AUTOPILOT_AUTHORIZED_TAG
+    assert e.requires_approval is False
+    assert cfg.cumulative_spent_usd == 3.0
+
+
+def test_make_dispatch_halt_event_refused_when_env_not_set(tmp_path):
+    cfg = _auth_mode(tmp_path)
+    c = _cand(cost_usd=3.0)
+    e = loop.make_dispatch_halt_event(
+        c,
+        requires_approval_classes=frozenset({loop.EventClass.DISPATCH}),
+        auth_mode=cfg,
+        env_authorized=False,
+    )
+    assert e.autopilot_authorized is False
+    assert e.requires_approval is True  # falls back to operator gate
+    assert "env-var" in e.autopilot_refused_reason
+    assert cfg.cumulative_spent_usd == 0.0
+
+
+def test_make_dispatch_halt_event_refused_when_over_per_dispatch_cap(tmp_path):
+    cfg = _auth_mode(tmp_path, per_dispatch_cap=5.0)
+    c = _cand(cost_usd=7.0)
+    e = loop.make_dispatch_halt_event(
+        c,
+        requires_approval_classes=frozenset({loop.EventClass.DISPATCH}),
+        auth_mode=cfg,
+        env_authorized=True,
+    )
+    assert e.autopilot_authorized is False
+    assert e.requires_approval is True
+    assert "per-dispatch cap" in e.autopilot_refused_reason
+
+
+def test_make_dispatch_halt_event_no_auth_mode_keeps_existing_behaviour(tmp_path):
+    c = _cand(cost_usd=3.0)
+    e = loop.make_dispatch_halt_event(
+        c,
+        requires_approval_classes=frozenset({loop.EventClass.DISPATCH}),
+        auth_mode=None,
+        env_authorized=True,
+    )
+    assert e.autopilot_authorized is False
+    assert e.requires_approval is True
+
+
+def test_kill_event_never_auto_authorized(tmp_path):
+    cfg = _auth_mode(tmp_path)
+    e = loop.make_kill_halt_event("c1", "advisory")
+    # KILL events bypass dispatch helpers; they always require approval.
+    assert e.requires_approval is True
+    assert e.autopilot_authorized is False
+
+
+def test_loop_iteration_journal_row_written_on_authorization(tmp_path):
+    cfg = _auth_mode(tmp_path)
+    c = _cand("a", cost_usd=2.0)
+    rep = loop.run_one_loop_iteration(
+        [c],
+        claims_path=tmp_path / "no_claims.md",
+        auth_mode=cfg,
+        env_authorized=True,
+    )
+    assert rep.halt_events[0].autopilot_authorized is True
+    assert cfg.journal_path.is_file()
+    lines = cfg.journal_path.read_text(encoding="utf-8").strip().splitlines()
+    assert len(lines) == 1
+    row = json.loads(lines[0])
+    assert row["candidate_id"] == "a"
+    assert row["autopilot_authorized"] is True
+    assert row["autopilot_tag"] == loop.AUTOPILOT_AUTHORIZED_TAG
+
+
+def test_loop_iteration_journal_appends_one_row_per_authorization(tmp_path):
+    cfg = _auth_mode(tmp_path)
+    cands = [_cand("a", cost_usd=2.0), _cand("b", cost_usd=3.0)]
+    rep = loop.run_one_loop_iteration(
+        cands,
+        claims_path=tmp_path / "no_claims.md",
+        auth_mode=cfg,
+        env_authorized=True,
+    )
+    assert all(e.autopilot_authorized for e in rep.halt_events)
+    lines = cfg.journal_path.read_text(encoding="utf-8").strip().splitlines()
+    assert len(lines) == 2
+    assert cfg.cumulative_spent_usd == 5.0
+
+
+def test_loop_iteration_cumulative_envelope_halts_excess(tmp_path):
+    cfg = _auth_mode(tmp_path, cumulative_cap=10.0)
+    cands = [
+        _cand("a", cost_usd=5.0),
+        _cand("b", cost_usd=4.0),
+        _cand("c", cost_usd=4.0),  # 5+4+4=13 > 10
+    ]
+    rep = loop.run_one_loop_iteration(
+        cands,
+        claims_path=tmp_path / "no_claims.md",
+        auth_mode=cfg,
+        env_authorized=True,
+        rank_axis="predicted_score_delta",
+    )
+    # First two authorized, third refused on envelope.
+    authorized = [e for e in rep.halt_events if e.autopilot_authorized]
+    refused = [e for e in rep.halt_events if not e.autopilot_authorized]
+    assert len(authorized) == 2
+    assert len(refused) == 1
+    assert "envelope" in refused[0].autopilot_refused_reason
+    assert refused[0].requires_approval is True
+    assert cfg.cumulative_spent_usd == 9.0
+
+
+def test_env_authorizes_mode_reads_real_env(monkeypatch):
+    monkeypatch.setenv(loop.OPERATOR_AUTHORIZED_MODE_ENV_VAR, "1")
+    assert loop._env_authorizes_mode() is True
+    monkeypatch.setenv(loop.OPERATOR_AUTHORIZED_MODE_ENV_VAR, "0")
+    assert loop._env_authorizes_mode() is False
+    monkeypatch.delenv(loop.OPERATOR_AUTHORIZED_MODE_ENV_VAR, raising=False)
+    assert loop._env_authorizes_mode() is False
+
+
+def test_env_authorizes_mode_accepts_injected_dict():
+    assert loop._env_authorizes_mode(
+        {loop.OPERATOR_AUTHORIZED_MODE_ENV_VAR: "1"}
+    ) is True
+    assert loop._env_authorizes_mode(
+        {loop.OPERATOR_AUTHORIZED_MODE_ENV_VAR: "true"}
+    ) is False
+    assert loop._env_authorizes_mode({}) is False
+
+
+def test_main_refuses_authorized_mode_without_journal(tmp_path, capsys):
+    cand_file = tmp_path / "c.jsonl"
+    cand_file.write_text(
+        json.dumps({
+            "candidate_id": "test_auth_mode_uniq_abc123",
+            "family": "hnerv",
+            "predicted_score_delta": -0.005,
+            "expected_information_gain": 0.5,
+            "estimated_dispatch_cost_usd": 1.0,
+        }) + "\n",
+        encoding="utf-8",
+    )
+    rc = loop.main([
+        "--candidates-jsonl", str(cand_file),
+        "--iterations", "1",
+        "--operator-authorized-le-5-dollar-mode",
+        # No --journal-path
+    ])
+    assert rc == 2
+    err = capsys.readouterr().err
+    assert "--journal-path" in err
+
+
+def test_main_authorized_mode_with_journal_succeeds(tmp_path, monkeypatch, capsys):
+    cand_file = tmp_path / "c.jsonl"
+    cand_file.write_text(
+        json.dumps({
+            "candidate_id": "test_auth_mode_uniq_abc123",
+            "family": "hnerv",
+            "predicted_score_delta": -0.005,
+            "expected_information_gain": 0.5,
+            "estimated_dispatch_cost_usd": 2.0,
+        }) + "\n",
+        encoding="utf-8",
+    )
+    helper = tmp_path / "claim_lane_dispatch.py"
+    helper.write_text("# canonical\n", encoding="utf-8")
+    journal = tmp_path / "journal.jsonl"
+    monkeypatch.setenv(loop.OPERATOR_AUTHORIZED_MODE_ENV_VAR, "1")
+    rc = loop.main([
+        "--candidates-jsonl", str(cand_file),
+        "--iterations", "1",
+        "--operator-authorized-le-5-dollar-mode",
+        "--journal-path", str(journal),
+        "--canonical-helper-script", str(helper),
+        "--claims-path", str(tmp_path / "no_claims.md"),
+    ])
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["operator_authorized_mode"]["enabled"] is True
+    assert payload["operator_authorized_mode"]["env_authorized"] is True
+    assert payload["operator_authorized_mode"]["cumulative_spent_usd"] == 2.0
+    assert journal.is_file()
+
+
+def test_main_authorized_mode_without_env_warns_but_still_runs(tmp_path, monkeypatch, capsys):
+    cand_file = tmp_path / "c.jsonl"
+    cand_file.write_text(
+        json.dumps({
+            "candidate_id": "test_auth_mode_uniq_abc123",
+            "family": "hnerv",
+            "predicted_score_delta": -0.005,
+            "expected_information_gain": 0.5,
+            "estimated_dispatch_cost_usd": 1.5,
+        }) + "\n",
+        encoding="utf-8",
+    )
+    helper = tmp_path / "claim_lane_dispatch.py"
+    helper.write_text("# canonical\n", encoding="utf-8")
+    journal = tmp_path / "journal.jsonl"
+    monkeypatch.delenv(loop.OPERATOR_AUTHORIZED_MODE_ENV_VAR, raising=False)
+    rc = loop.main([
+        "--candidates-jsonl", str(cand_file),
+        "--iterations", "1",
+        "--operator-authorized-le-5-dollar-mode",
+        "--journal-path", str(journal),
+        "--canonical-helper-script", str(helper),
+        "--claims-path", str(tmp_path / "no_claims.md"),
+    ])
+    assert rc == 0
+    captured = capsys.readouterr()
+    assert "env-var" in captured.err
+    payload = json.loads(captured.out)
+    assert payload["operator_authorized_mode"]["env_authorized"] is False
+    # No candidate should self-authorize when env is missing.
+    halt_events = payload["reports"][0]["halt_events"]
+    assert all(not e["autopilot_authorized"] for e in halt_events)
+
+
+def test_authorized_tag_constant_matches_directive():
+    # The structured tag enforces the operator-set audit identifier.
+    assert loop.AUTOPILOT_AUTHORIZED_TAG == "[autopilot-claude-le-5-dollar]"
+
+
+def test_canonical_helper_script_relpath_is_claim_lane_dispatch():
+    assert loop.CANONICAL_HELPER_SCRIPT_RELPATH == "tools/claim_lane_dispatch.py"
+
+
+def test_env_var_name_stable():
+    # Used by preflight + docs; if this string changes, every doc must update.
+    assert loop.OPERATOR_AUTHORIZED_MODE_ENV_VAR == "CATHEDRAL_AUTOPILOT_OPERATOR_AUTHORIZED_MODE"
+
+
+def test_authorized_event_serialization_round_trip(tmp_path):
+    cfg = _auth_mode(tmp_path)
+    c = _cand("a", cost_usd=2.0)
+    e = loop.make_dispatch_halt_event(
+        c,
+        requires_approval_classes=frozenset({loop.EventClass.DISPATCH}),
+        auth_mode=cfg,
+        env_authorized=True,
+    )
+    report = loop.LoopIterationReport(
+        iteration=1,
+        started_at_utc="x",
+        ended_at_utc="y",
+        n_candidates_seen=1,
+        n_candidates_blocked_by_dispatch_claim=0,
+        n_candidates_ranked=1,
+        halt_events=[e],
+    )
+    serialized = loop.serialize_report(report)
+    assert serialized["halt_events"][0]["autopilot_authorized"] is True
+    assert serialized["halt_events"][0]["autopilot_tag"] == loop.AUTOPILOT_AUTHORIZED_TAG
+    # JSON round-trip:
+    assert json.loads(json.dumps(serialized))["halt_events"][0]["autopilot_authorized"] is True
