@@ -37,19 +37,13 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
         parse_auth_eval_payload,
         runtime_tree_sha256,
     )
+from tac.device_axis_eval import (  # noqa: E402
+    cuda_minus_cpu_gaps,
+    mechanism_class_from_pair,
+    score_terms,
+    raw_output_pairing,
+)
 from tac.repo_io import json_text, read_json, write_json  # noqa: E402
-
-CONTEST_N_BYTES = 37_545_489
-
-
-def score_terms(*, pose: float, seg: float, archive_bytes: int) -> dict[str, float]:
-    rate = 25.0 * archive_bytes / CONTEST_N_BYTES
-    return {
-        "seg_term": 100.0 * seg,
-        "pose_term": math.sqrt(10.0 * pose),
-        "rate_term": rate,
-        "score": 100.0 * seg + math.sqrt(10.0 * pose) + rate,
-    }
 
 
 def _latest_by_device(eval_comments: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
@@ -81,10 +75,7 @@ def analyze_pair(pr_row: dict[str, Any]) -> dict[str, Any] | None:
         seg=float(cuda["seg"]),
         archive_bytes=int(cuda["archive_bytes"]),
     )
-    score_gap = cuda_terms["score"] - cpu_terms["score"]
-    seg_gap = cuda_terms["seg_term"] - cpu_terms["seg_term"]
-    pose_gap = cuda_terms["pose_term"] - cpu_terms["pose_term"]
-    rate_gap = cuda_terms["rate_term"] - cpu_terms["rate_term"]
+    gaps = cuda_minus_cpu_gaps(cpu_terms=cpu_terms, cuda_terms=cuda_terms)
     return {
         "pr": pr_row.get("pr"),
         "title": pr_row.get("title"),
@@ -108,15 +99,7 @@ def analyze_pair(pr_row: dict[str, Any]) -> dict[str, Any] | None:
             "seg_distortion_cuda_over_cpu": float(cuda["seg"]) / float(cpu["seg"]),
             "seg_term_cuda_over_cpu": cuda_terms["seg_term"] / cpu_terms["seg_term"],
         },
-        "gaps_cuda_minus_cpu": {
-            "score": score_gap,
-            "seg_term": seg_gap,
-            "pose_term": pose_gap,
-            "rate_term": rate_gap,
-            "seg_gap_share": seg_gap / score_gap if score_gap else None,
-            "pose_gap_share": pose_gap / score_gap if score_gap else None,
-            "rate_gap_share": rate_gap / score_gap if score_gap else None,
-        },
+        "gaps_cuda_minus_cpu": gaps,
     }
 
 
@@ -193,37 +176,21 @@ def _component_pair_from_auth_eval(
         seg=float(cuda_record.avg_segnet_dist or 0.0),
         archive_bytes=int(cuda_record.archive_bytes or 0),
     )
-    score_gap = cuda_terms["score"] - cpu_terms["score"]
-    seg_gap = cuda_terms["seg_term"] - cpu_terms["seg_term"]
-    pose_gap = cuda_terms["pose_term"] - cpu_terms["pose_term"]
-    rate_gap = cuda_terms["rate_term"] - cpu_terms["rate_term"]
+    gaps = cuda_minus_cpu_gaps(cpu_terms=cpu_terms, cuda_terms=cuda_terms)
 
     cpu_raw = inflated_output_manifest_summary(cpu_payload)
     cuda_raw = inflated_output_manifest_summary(cuda_payload)
-    same_raw = None
-    raw_status = "raw_output_manifest_missing"
-    if cpu_raw and cuda_raw:
-        same_raw = cpu_raw.get("aggregate_sha256") == cuda_raw.get("aggregate_sha256")
-        raw_status = "same_inflated_outputs" if same_raw else "different_inflated_outputs"
-    elif cpu_raw or cuda_raw:
-        raw_status = "partial_raw_output_manifest"
-
-    mechanism_blockers: list[str] = []
-    if raw_status == "raw_output_manifest_missing":
-        mechanism_blockers.append("raw_output_manifest_missing")
-    elif raw_status == "partial_raw_output_manifest":
-        mechanism_blockers.append("partial_raw_output_manifest")
+    raw_pairing = raw_output_pairing(cpu_raw=cpu_raw, cuda_raw=cuda_raw)
+    mechanism_blockers = raw_pairing["mechanism_blockers"]
     pair_score_complete = not blockers
     mechanism_complete = pair_score_complete and not mechanism_blockers
-
-    if same_raw is True:
-        mechanism_class = "same_raw_outputs_scorer_or_loader_drift"
-    elif same_raw is False:
-        mechanism_class = "different_raw_outputs_runtime_or_inflate_drift"
-    elif same_runtime_tree_sha256 is True and same_archive_sha256:
-        mechanism_class = "same_archive_runtime_raw_outputs_unmeasured"
-    else:
-        mechanism_class = "custody_incomplete"
+    mechanism_class = mechanism_class_from_pair(
+        same_inflated_output_aggregate_sha256=raw_pairing[
+            "same_inflated_output_aggregate_sha256"
+        ],
+        same_runtime_tree_sha256=same_runtime_tree_sha256,
+        same_archive_sha256=same_archive_sha256,
+    )
 
     return {
         "source": source or {},
@@ -234,8 +201,10 @@ def _component_pair_from_auth_eval(
         "same_archive_sha256": same_archive_sha256,
         "same_archive_bytes": same_archive_bytes,
         "same_runtime_tree_sha256": same_runtime_tree_sha256,
-        "raw_output_pairing_status": raw_status,
-        "same_inflated_output_aggregate_sha256": same_raw,
+        "raw_output_pairing_status": raw_pairing["raw_output_pairing_status"],
+        "same_inflated_output_aggregate_sha256": raw_pairing[
+            "same_inflated_output_aggregate_sha256"
+        ],
         "mechanism_class": mechanism_class,
         "score_claim": False,
         "promotion_eligible": False,
@@ -264,15 +233,7 @@ def _component_pair_from_auth_eval(
             "seg": cuda_record.avg_segnet_dist,
             **cuda_terms,
         },
-        "gaps_cuda_minus_cpu": {
-            "score": score_gap,
-            "seg_term": seg_gap,
-            "pose_term": pose_gap,
-            "rate_term": rate_gap,
-            "seg_gap_share": seg_gap / score_gap if score_gap else None,
-            "pose_gap_share": pose_gap / score_gap if score_gap else None,
-            "rate_gap_share": rate_gap / score_gap if score_gap else None,
-        },
+        "gaps_cuda_minus_cpu": gaps,
         "interpretation": [
             "Negative score gap means CUDA scored lower than CPU for this exact pair; positive means CPU scored lower.",
             "Do not infer global CPU-better or CUDA-better behavior from one row.",

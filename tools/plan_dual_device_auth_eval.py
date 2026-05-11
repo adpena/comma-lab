@@ -17,6 +17,16 @@ from pathlib import Path
 from typing import Any
 
 try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
+
+from tac.device_axis_eval import raw_output_pairing  # noqa: E402
+
+try:
     from tools.auth_eval_records import (
         inflated_output_manifest_summary,
         parse_auth_eval_payload,
@@ -30,6 +40,8 @@ except ModuleNotFoundError:  # pragma: no cover - script execution from tools/
     )
 
 DEFAULT_LEDGER = Path("experiments/results/pr100_107_reproduction_ledger_20260507_codex/ledger.json")
+SCORER_DEVICES = ("cuda", "cpu")
+INFLATE_DEVICE_POLICIES = ("auto", "cpu", "cuda")
 CUDA_SCORE_GRADES = {
     "a++",
     "[contest-cuda]",
@@ -202,24 +214,8 @@ def _dual_axis_completion(
 
     cpu_raw = cpu.get("inflated_output_manifest")
     cuda_raw = cuda.get("inflated_output_manifest")
-    same_inflated_output_aggregate_sha256 = None
-    raw_output_pairing_status = "raw_output_manifest_missing"
-    if cpu_raw and cuda_raw:
-        same_inflated_output_aggregate_sha256 = (
-            cpu_raw.get("aggregate_sha256") == cuda_raw.get("aggregate_sha256")
-        )
-        raw_output_pairing_status = (
-            "same_inflated_outputs"
-            if same_inflated_output_aggregate_sha256
-            else "different_inflated_outputs"
-        )
-    elif cpu_raw or cuda_raw:
-        raw_output_pairing_status = "partial_raw_output_manifest"
-    mechanism_blockers: list[str] = []
-    if raw_output_pairing_status == "raw_output_manifest_missing":
-        mechanism_blockers.append("raw_output_manifest_missing")
-    elif raw_output_pairing_status == "partial_raw_output_manifest":
-        mechanism_blockers.append("partial_raw_output_manifest")
+    raw_pairing = raw_output_pairing(cpu_raw=cpu_raw, cuda_raw=cuda_raw)
+    mechanism_blockers = raw_pairing["mechanism_blockers"]
 
     if cuda.get("provided") and cpu.get("provided") and not same_archive_sha256:
         blockers.append("cpu_cuda_archive_sha256_mismatch")
@@ -250,8 +246,10 @@ def _dual_axis_completion(
         "same_archive_sha256": same_archive_sha256,
         "same_archive_bytes": same_archive_bytes,
         "same_runtime_tree_sha256": same_runtime_tree_sha256,
-        "same_inflated_output_aggregate_sha256": same_inflated_output_aggregate_sha256,
-        "raw_output_pairing_status": raw_output_pairing_status,
+        "same_inflated_output_aggregate_sha256": raw_pairing[
+            "same_inflated_output_aggregate_sha256"
+        ],
+        "raw_output_pairing_status": raw_pairing["raw_output_pairing_status"],
         "paired_score_artifacts_complete": paired_score_complete,
         "drift_mechanism_complete": drift_mechanism_complete,
         "mechanism_blockers": mechanism_blockers,
@@ -302,9 +300,10 @@ def _command(
     work_dir: Path,
     inflate_timeout: int,
     evaluate_timeout: int,
+    inflate_device: str | None = None,
 ) -> list[str]:
     json_out = work_dir / "contest_auth_eval.json"
-    return [
+    command = [
         ".venv/bin/python",
         "experiments/contest_auth_eval.py",
         "--archive",
@@ -327,6 +326,76 @@ def _command(
         str(evaluate_timeout),
         "--keep-work-dir",
     ]
+    if inflate_device is not None:
+        command.extend(["--inflate-device", inflate_device])
+    return command
+
+
+def _device_axis_matrix(
+    *,
+    archive: Path,
+    inflate_sh: Path,
+    upstream_dir: Path,
+    video_names_file: Path,
+    work_root: Path,
+    inflate_timeout: int,
+    evaluate_timeout: int,
+) -> dict[str, Any]:
+    """Return explicit scorer-device x inflate-device diagnostic commands."""
+
+    entries: dict[str, dict[str, Any]] = {}
+    for scorer_device in SCORER_DEVICES:
+        for inflate_device in INFLATE_DEVICE_POLICIES:
+            key = f"scorer_{scorer_device}__inflate_{inflate_device}"
+            work_dir = work_root / "device_axis_matrix" / key
+            diagnostic_only = inflate_device != "auto"
+            if diagnostic_only:
+                score_axis = f"diagnostic_{scorer_device}"
+                semantics = "diagnostic_auth_eval_non_promotable"
+            elif scorer_device == "cuda":
+                score_axis = "contest_cuda"
+                semantics = "contest_cuda_exact_auth_eval_promotion_axis"
+            else:
+                score_axis = "contest_cpu"
+                semantics = "public_leaderboard_cpu_reproduction_axis"
+            entries[key] = {
+                "scorer_device": scorer_device,
+                "inflate_device": inflate_device,
+                "score_axis": score_axis,
+                "diagnostic_only": diagnostic_only,
+                "promotion_eligible_from_this_axis": scorer_device == "cuda" and not diagnostic_only,
+                "work_dir": str(work_dir),
+                "json_out": str(work_dir / "contest_auth_eval.json"),
+                "command": _command(
+                    archive=archive,
+                    inflate_sh=inflate_sh,
+                    upstream_dir=upstream_dir,
+                    video_names_file=video_names_file,
+                    device=scorer_device,
+                    work_dir=work_dir,
+                    inflate_timeout=inflate_timeout,
+                    evaluate_timeout=evaluate_timeout,
+                    inflate_device=inflate_device,
+                ),
+                "evidence_semantics": semantics,
+            }
+    return {
+        "schema": "device_axis_auth_eval_matrix_plan.v1",
+        "axes": {
+            "scorer_device": list(SCORER_DEVICES),
+            "inflate_device": list(INFLATE_DEVICE_POLICIES),
+        },
+        "entries": entries,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "notes": [
+            "Only scorer=cuda, inflate=auto is the contest-CUDA promotion axis.",
+            "Only scorer=cpu, inflate=auto is the contest-CPU reproduction axis.",
+            "Any non-auto inflate-device policy is diagnostic and non-promotable.",
+            "Use raw-output manifests to decide whether drift starts in inflate/runtime or scorer/evaluator math.",
+        ],
+    }
 
 
 def _claim_command(
@@ -418,7 +487,7 @@ def build_plan(
     )
 
     evals: dict[str, dict[str, Any]] = {}
-    for device in ("cuda", "cpu"):
+    for device in SCORER_DEVICES:
         semantics = (
             "contest_cuda_exact_auth_eval_promotion_axis"
             if device == "cuda"
@@ -453,6 +522,15 @@ def build_plan(
         "video_names_file": str(video_names_file),
         "input_closure": input_closure,
         "evals": evals,
+        "device_axis_matrix": _device_axis_matrix(
+            archive=archive,
+            inflate_sh=inflate_sh,
+            upstream_dir=upstream_dir,
+            video_names_file=video_names_file,
+            work_root=work_root,
+            inflate_timeout=inflate_timeout,
+            evaluate_timeout=evaluate_timeout,
+        ),
         "dual_axis_completion": _dual_axis_completion(
             archive_meta=archive_meta,
             cpu_artifact_json=cpu_artifact_json,

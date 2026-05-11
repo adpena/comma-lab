@@ -113,6 +113,27 @@ def test_dual_plan_emits_cpu_and_cuda_commands_for_same_archive(tmp_path: Path) 
         assert "--keep-work-dir" in command
     assert plan["evals"]["cuda"]["promotion_eligible_from_this_axis"] is True
     assert plan["evals"]["cpu"]["promotion_eligible_from_this_axis"] is False
+    matrix = plan["device_axis_matrix"]
+    assert matrix["schema"] == "device_axis_auth_eval_matrix_plan.v1"
+    assert set(matrix["entries"]) == {
+        "scorer_cuda__inflate_auto",
+        "scorer_cuda__inflate_cpu",
+        "scorer_cuda__inflate_cuda",
+        "scorer_cpu__inflate_auto",
+        "scorer_cpu__inflate_cpu",
+        "scorer_cpu__inflate_cuda",
+    }
+    cuda_cpu_inflate = matrix["entries"]["scorer_cuda__inflate_cpu"]
+    assert cuda_cpu_inflate["score_axis"] == "diagnostic_cuda"
+    assert cuda_cpu_inflate["diagnostic_only"] is True
+    assert cuda_cpu_inflate["promotion_eligible_from_this_axis"] is False
+    assert cuda_cpu_inflate["command"][
+        cuda_cpu_inflate["command"].index("--inflate-device") + 1
+    ] == "cpu"
+    cuda_auto = matrix["entries"]["scorer_cuda__inflate_auto"]
+    assert cuda_auto["score_axis"] == "contest_cuda"
+    assert cuda_auto["promotion_eligible_from_this_axis"] is True
+    assert cuda_auto["command"][cuda_auto["command"].index("--inflate-device") + 1] == "auto"
     completion = plan["dual_axis_completion"]
     assert completion["paired_score_artifacts_complete"] is False
     assert completion["global_priority_eligible"] is False

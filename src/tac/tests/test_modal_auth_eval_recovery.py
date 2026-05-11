@@ -77,6 +77,54 @@ def test_write_spawn_metadata_and_recover_artifacts(tmp_path: Path) -> None:
     assert persisted["returncode"] == 0
 
 
+def test_recover_prefers_canonical_auth_eval_claim_flags(tmp_path: Path) -> None:
+    write_spawn_metadata(
+        out_dir=tmp_path,
+        tool="experiments/modal_auth_eval.py",
+        app="comma-auth-eval",
+        axis="diagnostic_cuda",
+        call_id="fc-test",
+        local_request={},
+        result_json_name="modal_cuda_auth_eval_result.json",
+    )
+
+    result = {
+        "passed": True,
+        "returncode": 0,
+        "score_claim": True,
+        "promotion_eligible": True,
+        "score_recomputed_from_components": 0.208,
+        "artifacts": {
+            "contest_auth_eval.json": (
+                b'{'
+                b'"score_recomputed_from_components": 0.208,'
+                b'"score_claim": false,'
+                b'"score_claim_valid": false,'
+                b'"promotion_eligible": false,'
+                b'"score_axis": "diagnostic_cuda",'
+                b'"evidence_grade": "B",'
+                b'"diagnostic_blockers": ["inflate_device_policy_cpu"],'
+                b'"provenance": {"inflate_device_policy": "cpu"}'
+                b'}\n'
+            ),
+        },
+    }
+
+    summary = recover_modal_auth_eval(
+        out_dir=tmp_path,
+        timeout_s=0,
+        modal_module=_fake_modal(result),
+    )
+
+    assert summary["status"] == "recovered"
+    assert summary["passed"] is True
+    assert summary["score_claim"] is False
+    assert summary["promotion_eligible"] is False
+    assert summary["score_axis"] == "diagnostic_cuda"
+    assert summary["diagnostic_blockers"] == ["inflate_device_policy_cpu"]
+    assert summary["inflate_device_policy"] == "cpu"
+
+
 def test_recover_pending_writes_pending_summary(tmp_path: Path) -> None:
     write_spawn_metadata(
         out_dir=tmp_path,

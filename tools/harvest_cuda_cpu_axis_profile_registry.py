@@ -26,6 +26,15 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
+
+from tac.device_axis_eval import raw_output_pairing  # noqa: E402
 from tac.optimization.cuda_cpu_axis_profile_registry import (
     DEFAULT_AUDIT_LOG_PATH,
     DEFAULT_REGISTRY_PATH,
@@ -166,26 +175,10 @@ def build_combined_payload_from_pair(
     if blockers:
         return None, blockers
 
-    cpu_raw = inflated_output_manifest_summary(cpu_axis.payload)
-    cuda_raw = inflated_output_manifest_summary(cuda_axis.payload)
-    same_inflated_output_aggregate_sha256 = None
-    raw_output_pairing_status = "raw_output_manifest_missing"
-    if cpu_raw and cuda_raw:
-        same_inflated_output_aggregate_sha256 = (
-            cpu_raw.get("aggregate_sha256") == cuda_raw.get("aggregate_sha256")
-        )
-        raw_output_pairing_status = (
-            "same_inflated_outputs"
-            if same_inflated_output_aggregate_sha256
-            else "different_inflated_outputs"
-        )
-    elif cpu_raw or cuda_raw:
-        raw_output_pairing_status = "partial_raw_output_manifest"
-    mechanism_blockers: list[str] = []
-    if raw_output_pairing_status == "raw_output_manifest_missing":
-        mechanism_blockers.append("raw_output_manifest_missing")
-    elif raw_output_pairing_status == "partial_raw_output_manifest":
-        mechanism_blockers.append("partial_raw_output_manifest")
+    raw_pairing = raw_output_pairing(
+        cpu_raw=inflated_output_manifest_summary(cpu_axis.payload),
+        cuda_raw=inflated_output_manifest_summary(cuda_axis.payload),
+    )
 
     payload: dict[str, Any] = {
         "schema": "paired_cuda_cpu_axis_profile_anchor.v1",
@@ -199,12 +192,7 @@ def build_combined_payload_from_pair(
         "archive_sha256": str(cpu.archive_sha256 or ""),
         "runtime_tree_sha256": str(cpu_runtime or ""),
         "inflated_outputs": {
-            "cpu": cpu_raw,
-            "cuda": cuda_raw,
-            "same_inflated_output_aggregate_sha256": same_inflated_output_aggregate_sha256,
-            "raw_output_pairing_status": raw_output_pairing_status,
-            "mechanism_analysis_complete": not mechanism_blockers,
-            "mechanism_blockers": mechanism_blockers,
+            **raw_pairing,
         },
         "sample_count": int(cpu.samples or 0),
         "cpu": {

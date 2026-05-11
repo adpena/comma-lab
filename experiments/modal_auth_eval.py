@@ -538,6 +538,16 @@ def _run_auth_eval_inner(
         )
 
     passed = proc.returncode == 0 and not validation_errors
+    payload_score_claim = bool(
+        passed
+        and isinstance(payload, dict)
+        and (payload.get("score_claim") is True or payload.get("score_claim_valid") is True)
+    )
+    payload_promotion_eligible = bool(
+        passed
+        and isinstance(payload, dict)
+        and payload.get("promotion_eligible") is True
+    )
     validation = {
         "schema_version": 1,
         "passed": passed,
@@ -550,11 +560,13 @@ def _run_auth_eval_inner(
         "inflate_sh_rel": inflate_sh_rel,
         "submission_dir_zip_sha256": submission_dir_zip_sha256,
         "validation_errors": validation_errors,
-        "score_claim": bool(passed),
-        "promotion_eligible": False,
+        "score_claim": payload_score_claim,
+        "promotion_eligible": payload_promotion_eligible,
         "adjudication_required": True,
         "allowed_use": (
             ["cuda_auth_eval_review", "adjudication_required"]
+            if payload_score_claim
+            else ["diagnostic_debugging", "no_score_claim", "no_promotion"]
             if passed
             else ["debug", "no_score_claim", "no_promotion"]
         ),
@@ -579,6 +591,9 @@ def _run_auth_eval_inner(
                 "gpu_t4_match": (payload.get("provenance") or {}).get("gpu_t4_match")
                 if isinstance(payload.get("provenance"), dict)
                 else None,
+                "score_axis": payload.get("score_axis"),
+                "evidence_grade": payload.get("evidence_grade"),
+                "diagnostic_blockers": payload.get("diagnostic_blockers"),
             }
         )
     (out_dir / "modal_cuda_auth_eval_validation.json").write_bytes(_json_bytes(validation))

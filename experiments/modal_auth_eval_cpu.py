@@ -600,6 +600,11 @@ def _run_auth_eval_inner(
         )
 
     passed = proc.returncode == 0 and not validation_errors
+    payload_score_claim = bool(
+        passed
+        and isinstance(payload, dict)
+        and (payload.get("score_claim") is True or payload.get("score_claim_valid") is True)
+    )
     validation = {
         "schema_version": 1,
         "passed": passed,
@@ -611,11 +616,11 @@ def _run_auth_eval_inner(
         "expected_archive_size_bytes": archive_size_bytes,
         "inflate_sh_rel": inflate_sh_rel,
         "validation_errors": validation_errors,
-        "score_claim": bool(passed),
+        "score_claim": payload_score_claim,
         "promotion_eligible": False,  # CPU axis: not promotion-eligible
         "adjudication_required": True,
-        "score_axis": "contest_cpu",
-        "evidence_grade": "contest-CPU" if passed else None,
+        "score_axis": payload.get("score_axis") if isinstance(payload, dict) else "contest_cpu",
+        "evidence_grade": payload.get("evidence_grade") if isinstance(payload, dict) else None,
         "allowed_use": (
             ["public_leaderboard_reproduction", "cpu_cuda_drift_diagnosis"]
             if passed

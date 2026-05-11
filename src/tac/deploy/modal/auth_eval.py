@@ -288,6 +288,55 @@ def _function_call_from_id(modal_module: Any, call_id: str) -> Any:
     return function_call.from_id(call_id)
 
 
+def _truthy(value: Any) -> bool:
+    return value is True or (
+        isinstance(value, str) and value.strip().lower() in {"1", "true", "yes"}
+    )
+
+
+def _recovered_claim_flags(
+    *,
+    out_dir: Path,
+    result_without_artifacts: dict[str, Any],
+) -> dict[str, Any]:
+    """Return claim flags, preferring canonical auth-eval artifact custody."""
+
+    flags: dict[str, Any] = {
+        "score_claim": bool(result_without_artifacts.get("score_claim")),
+        "promotion_eligible": bool(result_without_artifacts.get("promotion_eligible")),
+    }
+    artifact = out_dir / "contest_auth_eval.json"
+    if not artifact.is_file():
+        return flags
+    try:
+        payload = read_json(artifact)
+    except Exception:
+        return flags
+    if not isinstance(payload, dict):
+        return flags
+
+    if "score_claim" in payload or "score_claim_valid" in payload:
+        flags["score_claim"] = _truthy(payload.get("score_claim")) or _truthy(
+            payload.get("score_claim_valid")
+        )
+    if "promotion_eligible" in payload:
+        flags["promotion_eligible"] = _truthy(payload.get("promotion_eligible"))
+    for key in (
+        "score_axis",
+        "evidence_grade",
+        "diagnostic_blockers",
+        "inflate_device_policy",
+    ):
+        if key in payload:
+            flags[key] = payload.get(key)
+    provenance = payload.get("provenance")
+    if isinstance(provenance, dict):
+        for key in ("inflate_device_policy", "inflate_env_override_mode"):
+            if key in provenance:
+                flags[key] = provenance.get(key)
+    return flags
+
+
 def recover_modal_auth_eval(
     *,
     out_dir: Path,
@@ -371,6 +420,10 @@ def recover_modal_auth_eval(
         metadata.get("result_json_name") or "modal_auth_eval_result.json"
     )
     write_json(out_dir / result_name, result_without_artifacts)
+    claim_flags = _recovered_claim_flags(
+        out_dir=out_dir,
+        result_without_artifacts=result_without_artifacts,
+    )
 
     summary = {
         "schema_version": "modal_auth_eval_recover_summary_v1",
@@ -382,14 +435,23 @@ def recover_modal_auth_eval(
         "artifact_names": artifact_names,
         "passed": bool(result_without_artifacts.get("passed")),
         "returncode": result_without_artifacts.get("returncode"),
-        "score_claim": bool(result_without_artifacts.get("score_claim")),
-        "promotion_eligible": bool(result_without_artifacts.get("promotion_eligible")),
+        "score_claim": claim_flags["score_claim"],
+        "promotion_eligible": claim_flags["promotion_eligible"],
         "score_recomputed_from_components": result_without_artifacts.get(
             "score_recomputed_from_components"
         ),
         "avg_posenet_dist": result_without_artifacts.get("avg_posenet_dist"),
         "avg_segnet_dist": result_without_artifacts.get("avg_segnet_dist"),
     }
+    for key in (
+        "score_axis",
+        "evidence_grade",
+        "diagnostic_blockers",
+        "inflate_device_policy",
+        "inflate_env_override_mode",
+    ):
+        if key in claim_flags:
+            summary[key] = claim_flags[key]
     write_json(out_dir / "modal_auth_eval_recover_summary.json", summary)
     return summary
 
