@@ -25,7 +25,7 @@ from tac.deploy.claims import (
 from tac.repo_io import read_json, write_json
 
 SPAWN_SCHEMA = "modal_auth_eval_spawn_v1"
-SKIPPED_RUNTIME_UPLOAD_FILENAMES = {".DS_Store"}
+SKIPPED_RUNTIME_UPLOAD_FILENAMES = {".DS_Store", ".gitignore", ".gitattributes"}
 SENSITIVE_RUNTIME_UPLOAD_NAMES = {
     ".env",
     ".env.local",
