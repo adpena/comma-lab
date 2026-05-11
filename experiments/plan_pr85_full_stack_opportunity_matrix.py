@@ -10,11 +10,12 @@ from __future__ import annotations
 
 import argparse
 import glob
-import hashlib
 import json
 import math
 from pathlib import Path
 from typing import Any
+
+from tac.repo_io import json_text, sha256_bytes, sha256_file
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -95,10 +96,6 @@ def _rel(path: Path | str, *, root: Path = REPO_ROOT) -> str:
         return str(path)
 
 
-def _json_text(payload: Any) -> str:
-    return json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
-
-
 def _read_json(path: Path) -> dict[str, Any]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -107,18 +104,6 @@ def _read_json(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise MatrixError(f"JSON input must be an object: {_rel(path)}")
     return payload
-
-
-def _sha256_bytes(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
-
-
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def _stable_digest(payload: dict[str, Any]) -> str:
@@ -130,7 +115,7 @@ def _stable_digest(payload: dict[str, Any]) -> str:
     encoded = json.dumps(stable, sort_keys=True, separators=(",", ":"), allow_nan=False).encode(
         "utf-8"
     )
-    return _sha256_bytes(encoded)
+    return sha256_bytes(encoded)
 
 
 def _as_int(value: Any) -> int | None:
@@ -208,7 +193,7 @@ def _inventory(root: Path, inputs: dict[str, list[Path]]) -> dict[str, Any]:
             }
             if exists and path.is_file():
                 entry["bytes"] = path.stat().st_size
-                entry["sha256"] = _sha256_file(path)
+                entry["sha256"] = sha256_file(path)
             entries.append(entry)
         rows[category] = {
             "count": sum(1 for entry in entries if entry["exists"]),
@@ -1384,7 +1369,7 @@ def write_outputs(matrix: dict[str, Any], out_dir: Path) -> dict[str, str]:
     out_dir.mkdir(parents=True, exist_ok=True)
     json_path = out_dir / "pr85_full_stack_opportunity_matrix.json"
     md_path = out_dir / "pr85_full_stack_opportunity_matrix.md"
-    json_path.write_text(_json_text(matrix), encoding="utf-8")
+    json_path.write_text(json_text(matrix), encoding="utf-8")
     md_path.write_text(_markdown(matrix), encoding="utf-8")
     return {"json": _rel(json_path), "markdown": _rel(md_path)}
 
@@ -1419,7 +1404,7 @@ def main() -> int:
     overrides = _parse_overrides(args.input)
     matrix = build_matrix(repo_root=args.repo_root, overrides=overrides or None)
     outputs = write_outputs(matrix, args.out_dir)
-    print(_json_text({"outputs": outputs, "stable_matrix_digest_sha256": matrix["stable_matrix_digest_sha256"]}), end="")
+    print(json_text({"outputs": outputs, "stable_matrix_digest_sha256": matrix["stable_matrix_digest_sha256"]}), end="")
     return 0
 
 

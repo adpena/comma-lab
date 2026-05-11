@@ -9,16 +9,16 @@ resulting ``archive.zip`` is required before ranking or promotion.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import importlib.util
 import json
 import struct
 import sys
-import zipfile
 from pathlib import Path
 from typing import Any
 
 import numpy as np
+
+from tac.repo_io import json_text, read_json, sha256_bytes, sha256_file
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -46,24 +46,12 @@ def _load_module(path: Path, name: str):
     return module
 
 
-def _sha256_bytes(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
-
-
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def _json_bytes(payload: Any) -> bytes:
-    return (json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n").encode("utf-8")
+    return json_text(payload).encode("utf-8")
 
 
 def _read_json(path: Path) -> dict[str, Any]:
-    payload = json.loads(path.read_text())
+    payload = read_json(path)
     if not isinstance(payload, dict):
         raise ValueError(f"expected JSON object in {path}")
     return payload
@@ -184,7 +172,7 @@ def residual_records_from_atom_ledger(
         "schema": "pmg_hotspot_atom_ledger_selection_v1",
         "score_claim": False,
         "ledger_path": str(ledger_path),
-        "ledger_sha256": _sha256_file(ledger_path),
+        "ledger_sha256": sha256_file(ledger_path),
         "ledger_schema": ledger.get("schema"),
         "ledger_evidence_grade": ledger.get("evidence_grade"),
         "ledger_atom_count": int(ledger.get("atom_count", len(atoms))),
@@ -195,12 +183,12 @@ def residual_records_from_atom_ledger(
         "requested_row_run_atom_count": int(atom_count),
         "selected_row_run_atom_count": len(records),
         "skipped_non_row_run_top_atoms": int(skipped_non_row_run),
-        "selected_atom_ids_sha256": _sha256_bytes(selected_atom_id_bytes),
+        "selected_atom_ids_sha256": sha256_bytes(selected_atom_id_bytes),
         "selected_atom_id_prefix": selected_atom_ids[:16],
         "selected_residual_record_count": len(records),
         "selected_residual_pixels_touched": int(sum(x1 - x0 for _frame, _y, x0, x1, _cls in records)),
         "selected_residual_stream_bytes": len(selected_raw),
-        "selected_residual_stream_sha256": _sha256_bytes(selected_raw),
+        "selected_residual_stream_sha256": sha256_bytes(selected_raw),
         "selection_note": (
             "Rows come from the planning-only atom ledger ordering. This is "
             "archive byte construction only; exact CUDA auth eval is required "
@@ -329,11 +317,11 @@ def encode_pmg_hotspot_payload(
         "pmg_hotspot_plan_sha256": plan_sha256,
         "span_shape": [int(v) for v in spans.shape],
         "span_tensor_bytes": len(span_raw),
-        "span_tensor_sha256": _sha256_bytes(span_raw),
+        "span_tensor_sha256": sha256_bytes(span_raw),
         "body_raw_bytes": len(body_raw),
-        "body_raw_sha256": _sha256_bytes(body_raw),
+        "body_raw_sha256": sha256_bytes(body_raw),
         "body_bytes": len(body),
-        "body_sha256": _sha256_bytes(body),
+        "body_sha256": sha256_bytes(body),
         "frame_count": int(spans.shape[0]),
         "height": 384,
         "width": 512,
@@ -345,7 +333,7 @@ def encode_pmg_hotspot_payload(
         "residual_record_struct": RESIDUAL_RECORD_STRUCT_NAME,
         "residual_record_count": len(residual_records),
         "residual_record_bytes": len(residual_raw),
-        "residual_stream_sha256": _sha256_bytes(residual_raw),
+        "residual_stream_sha256": sha256_bytes(residual_raw),
         "source_mask_u8_sha256": source_mask_sha256,
         "base_reconstructed_mask_u8_sha256": base_reconstructed_sha256,
         "reconstructed_mask_u8_sha256": final_reconstructed_sha256,
@@ -389,7 +377,7 @@ def build_candidate(
     source_info = plan.get("source") or {}
     mask_array_path = (decoded_mask_array or Path(str(source_info["decoded_mask_array_path"]))).resolve()
     masks = _load_decoded_masks(mask_array_path)
-    source_mask_sha = _sha256_bytes(masks.tobytes(order="C"))
+    source_mask_sha = sha256_bytes(masks.tobytes(order="C"))
     expected_source_sha = source_info.get("decoded_mask_tensor_sha256")
     if expected_source_sha is not None and str(expected_source_sha) != source_mask_sha:
         raise ValueError(
@@ -419,7 +407,7 @@ def build_candidate(
             residual_atom_ledger,
             atom_count=residual_atom_count,
             expected_source_mask_sha256=source_mask_sha,
-            expected_source_npy_sha256=_sha256_file(mask_array_path),
+            expected_source_npy_sha256=sha256_file(mask_array_path),
         )
     plan_atom_records = validate_residual_records(plan_residual_records + atom_residual_records)
     plan_final = apply_residual_records(base, plan_atom_records)
@@ -435,9 +423,9 @@ def build_candidate(
         residual_records=residual_records,
         policy=policy,
         source_mask_sha256=source_mask_sha,
-        base_reconstructed_sha256=_sha256_bytes(base.tobytes(order="C")),
-        final_reconstructed_sha256=_sha256_bytes(final.tobytes(order="C")),
-        plan_sha256=_sha256_file(plan_json.resolve()),
+        base_reconstructed_sha256=sha256_bytes(base.tobytes(order="C")),
+        final_reconstructed_sha256=sha256_bytes(final.tobytes(order="C")),
+        plan_sha256=sha256_file(plan_json.resolve()),
         candidate_id=str(candidate["candidate_id"]),
         compressor=compressor,
     )
@@ -476,24 +464,24 @@ def build_candidate(
         ),
         "pmg_hotspot_plan": {
             "path": str(plan_json.resolve()),
-            "sha256": _sha256_file(plan_json.resolve()),
+            "sha256": sha256_file(plan_json.resolve()),
             "candidate_id": str(candidate["candidate_id"]),
         },
         "frontier_archive": {
             "path": str(frontier_archive.resolve()),
             "bytes": frontier_size,
-            "sha256": _sha256_file(frontier_archive.resolve()),
+            "sha256": sha256_file(frontier_archive.resolve()),
         },
         "decoded_mask_array": {
             "path": str(mask_array_path),
-            "npy_sha256": _sha256_file(mask_array_path),
+            "npy_sha256": sha256_file(mask_array_path),
             "tensor_sha256": source_mask_sha,
             "shape": [int(v) for v in masks.shape],
         },
         "pmg_hotspot_cmg3": {
             **header,
             "payload_bytes": len(payload),
-            "payload_sha256": _sha256_bytes(payload),
+            "payload_sha256": sha256_bytes(payload),
             "base_pixel_disagreement_vs_source_count": int((base != masks).sum()),
             "base_pixel_disagreement_vs_source_fraction": float((base != masks).mean()),
             "final_pixel_disagreement_vs_source_count": int((final != masks).sum()),
@@ -512,7 +500,7 @@ def build_candidate(
                 "additional_residual_pixels_touched": int(
                     sum(x1 - x0 for _frame, _y, x0, x1, _cls in additional_records)
                 ),
-                "additional_residual_stream_sha256": _sha256_bytes(
+                "additional_residual_stream_sha256": sha256_bytes(
                     encode_residual_records(additional_records)
                 ),
             },
@@ -521,12 +509,12 @@ def build_candidate(
         "source_archive": {
             "path": str(source_archive),
             "bytes": source_archive.stat().st_size,
-            "sha256": _sha256_file(source_archive),
+            "sha256": sha256_file(source_archive),
         },
         "output_archive": {
             "path": str(archive_path),
             "bytes": archive_size,
-            "sha256": _sha256_file(archive_path),
+            "sha256": sha256_file(archive_path),
             "delta_bytes_vs_frontier": delta_bytes,
             "formula_only_rate_delta_vs_frontier": 25.0 * float(delta_bytes) / float(ORIGINAL_VIDEO_BYTES),
             "score_claim": False,

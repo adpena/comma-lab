@@ -8,10 +8,8 @@ with a charged CDO1 overlay. It emits no archive and no score claim.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import lzma
-import struct
 import sys
 import zlib
 from dataclasses import dataclass
@@ -19,6 +17,8 @@ from pathlib import Path
 from typing import Any, Iterable
 
 import numpy as np
+
+from tac.repo_io import json_text, read_json, sha256_bytes, sha256_file
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -97,24 +97,12 @@ class ReversedBasePlannerError(ValueError):
 
 
 def _json_bytes(payload: Any) -> bytes:
-    return (json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n").encode("utf-8")
+    return json_text(payload).encode("utf-8")
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(_json_bytes(payload))
-
-
-def _sha256_bytes(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
-
-
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def _display_path(path: Path, repo_root: Path) -> str:
@@ -128,9 +116,9 @@ def _compressed_payloads(raw_payload: bytes) -> dict[str, dict[str, Any]]:
     zlib_payload = zlib.compress(raw_payload, level=9)
     lzma_payload = lzma.compress(raw_payload, format=lzma.FORMAT_XZ, preset=9 | lzma.PRESET_EXTREME)
     return {
-        "raw": {"bytes": len(raw_payload), "sha256": _sha256_bytes(raw_payload)},
-        "zlib": {"bytes": len(zlib_payload), "sha256": _sha256_bytes(zlib_payload)},
-        "lzma_xz": {"bytes": len(lzma_payload), "sha256": _sha256_bytes(lzma_payload)},
+        "raw": {"bytes": len(raw_payload), "sha256": sha256_bytes(raw_payload)},
+        "zlib": {"bytes": len(zlib_payload), "sha256": sha256_bytes(zlib_payload)},
+        "lzma_xz": {"bytes": len(lzma_payload), "sha256": sha256_bytes(lzma_payload)},
     }
 
 
@@ -140,7 +128,7 @@ def _best_compressor(payloads: dict[str, dict[str, Any]]) -> str:
 
 def _read_json(path: Path) -> dict[str, Any]:
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload = read_json(path)
     except json.JSONDecodeError as exc:
         raise ReversedBasePlannerError(f"{path} is not valid JSON") from exc
     if not isinstance(payload, dict):
@@ -403,7 +391,7 @@ def _candidate_summary(
             "decoded_mask_array": _display_path(base.decoded_mask_array, repo_root),
             "payload_path": _display_path(base.payload_path, repo_root),
             "payload_bytes": base_payload_bytes,
-            "payload_sha256": _sha256_file(base.payload_path),
+            "payload_sha256": sha256_file(base.payload_path),
             "decoded_mask_tensor_sha256": base_sha,
         },
         "policy": policy,
@@ -428,7 +416,7 @@ def _candidate_summary(
         },
         "cdo1_payload": {
             "raw_bytes": len(raw_payload),
-            "raw_sha256": _sha256_bytes(raw_payload),
+            "raw_sha256": sha256_bytes(raw_payload),
             "run_count": len(runs),
             "payload_header": header,
             "compressed_payloads": payloads,
