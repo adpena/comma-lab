@@ -226,6 +226,7 @@ def encode_c3_residual_l2(
     lagrangian: ScoreAwareLagrangian | None = None,
     device: str = "cpu",
     seed: int | None = 20260511,
+    sparse_aware: bool = False,
 ) -> C3EncoderL2Result:
     """L2 score-aware C3 conditional residual encoder.
 
@@ -236,9 +237,12 @@ def encode_c3_residual_l2(
     gt_frames
         ``(T, H, W, 3)`` ground-truth frames.
     byte_budget
-        Hard residual blob cap. The current L1 wire is dense, so this must be
-        at least ``dense_c3_residual_blob_bytes(T)``; smaller sparse budgets
-        fail closed until a sparse PacketIR C3 runtime lands.
+        Hard residual blob cap. When ``sparse_aware=False`` (default), the L1
+        wire is dense and this must be ``>= dense_c3_residual_blob_bytes(T)``.
+        When ``sparse_aware=True``, this is the cap on the sparse-encoded
+        ``residual_bytes`` actually emitted; the encoder evaluates the proxy
+        Lagrangian against the sparse byte size and returns sparse-repacked
+        bytes ready for the ``c3_sparse`` (0x22) family.
     pr106_wrapper_bytes
         PR106 r2 outer wrapper byte count.
     n_iterations
@@ -249,12 +253,22 @@ def encode_c3_residual_l2(
         Optional override of contest-faithful Lagrangian.
     device
         "cpu" (default), "mps" (research-signal only), "cuda".
+    sparse_aware
+        If True, optimize for byte-cost AFTER sparse PacketIR encoding (RLE-of-
+        zeros over per-frame int8 deltas, wrapped in temporal-subsampled). The
+        encoder returns ``residual_bytes`` that are the SPARSE-REPACKED bytes
+        ready for the 0x22 family inflate runtime; the rate term in the proxy
+        Lagrangian uses ``len(sparse_residual_bytes)`` not the dense size. Per
+        HNeRV parity discipline lesson 6 (score-domain Lagrangian) this makes
+        the inner loop directly optimize the contest-relevant byte cost.
 
     Returns
     -------
     C3EncoderL2Result
         Frozen result with ``residual_bytes`` + permanent promotion-status
-        invariants.
+        invariants. When ``sparse_aware=True``, ``residual_bytes`` are
+        sparse-repacked (family ``c3_sparse``, format_id 0x22) and
+        ``archive_bytes_estimate`` reflects the sparse-encoded size.
     """
     if decoded_frames.shape != gt_frames.shape:
         raise C3EncoderL2Error(
@@ -278,7 +292,21 @@ def encode_c3_residual_l2(
         torch.manual_seed(seed)
     lag = lagrangian or ScoreAwareLagrangian()
     lag.assert_invariants()
-    kept_indices = _select_subsample_indices(n_frames, byte_budget)
+    if sparse_aware:
+        # Sparse mode: bypass the dense-budget gate. The byte budget refers to
+        # the sparse-encoded ``residual_bytes`` cap; the encoder evaluates the
+        # rate term against the actual sparse byte size each iteration.
+        if byte_budget <= 0:
+            raise C3EncoderL2Error("byte_budget must be > 0")
+        kept_indices = list(range(n_frames))
+        # Sparsity coefficient threshold sweep: per HNeRV parity discipline
+        # lesson 6 we need the proxy Lagrangian to find a coefficient-magnitude
+        # cutoff that maximizes sparsity for a given seg+pose loss. The
+        # coordinate descent picks the threshold that minimizes the proxy loss.
+        sparse_threshold_grid: tuple[int, ...] = (0, 1, 2, 4, 8, 16, 32)
+    else:
+        kept_indices = _select_subsample_indices(n_frames, byte_budget)
+        sparse_threshold_grid = (0,)
     n_keep = len(kept_indices)
     is_kept = np.zeros(n_frames, dtype=bool)
     for t in kept_indices:
@@ -325,21 +353,44 @@ def encode_c3_residual_l2(
         if t not in kept_set:
             continue
         s_auto = _auto_scale_for(deltas[t])
-        best_s = s_auto
-        best_mse = float("inf")
-        for mult in scale_grid:
-            s = s_auto * mult
-            _, mse = _quantize_delta_with_scale(deltas[t], s)
-            if mse < best_mse:
-                best_mse = mse
-                best_s = s
+        if sparse_aware:
+            # Per HNeRV parity discipline lesson 6 (score-domain Lagrangian):
+            # in sparse-aware mode the rate term penalizes nonzero coefficients
+            # directly. Bias the per-frame initial scale toward the LARGEST
+            # multiplier in the grid (yielding the sparsest int8 quantization);
+            # coordinate descent can refine downward if the proxy loss
+            # demands more fidelity than the sparse-friendly start provides.
+            best_s = s_auto * max(scale_grid)
+        else:
+            best_s = s_auto
+            best_mse = float("inf")
+            for mult in scale_grid:
+                s = s_auto * mult
+                _, mse = _quantize_delta_with_scale(deltas[t], s)
+                if mse < best_mse:
+                    best_mse = mse
+                    best_s = s
         q, _ = _quantize_delta_with_scale(deltas[t], best_s)
         deltas_q[t] = q
         scales[t] = best_s
 
     # Step 4: compute the proxy Lagrangian on the reconstructed residual.
+    def _apply_sparse_threshold(deltas_arr: np.ndarray, thr: int) -> np.ndarray:
+        """Zero out int8 coefficients with magnitude below thr (sparsity sweep)."""
+        if thr <= 0:
+            return deltas_arr
+        out = deltas_arr.copy()
+        out[np.abs(out) < thr] = 0
+        return out
+
     def _evaluate(scales_arr: np.ndarray, deltas_arr: np.ndarray) -> tuple[float, dict[str, float], int]:
-        """Reconstruct via cumsum + upsample; eval proxy loss."""
+        """Reconstruct via cumsum + upsample; eval proxy loss.
+
+        When ``sparse_aware=True`` the archive_bytes term reflects the
+        SPARSE-REPACKED byte cost of the dense (scales, deltas) pair, so the
+        proxy Lagrangian directly optimizes for the contest-relevant byte
+        size after sparse encoding.
+        """
         # Integrate cumulatively.
         integrated = np.zeros_like(r_q)
         running = np.zeros_like(r_q[0])
@@ -351,9 +402,21 @@ def encode_c3_residual_l2(
         up = F.interpolate(t_chw, size=(CAMERA_H, CAMERA_W), mode="bilinear", align_corners=False)
         residual_full = up.permute(0, 2, 3, 1).numpy()
         decoded_with_residual = np.clip(decoded_frames.astype(np.float32) + residual_full, 0, 255)
-        blob = _pack_c3_residual_bytes(
+        blob_dense = _pack_c3_residual_bytes(
             n_frames=n_frames, scales_per_frame=scales_arr, deltas_q=deltas_arr
         )
+        if sparse_aware:
+            # Per HNeRV parity discipline lesson 6: the rate term must reflect
+            # the BYTES THAT THE INFLATE RUNTIME ACTUALLY CONSUMES. For the
+            # 0x22 c3_sparse runtime that's the sparse-repacked size.
+            from tac.residual_basis.pr106_materializer_helpers import (
+                repack_dense_as_sparse,
+            )
+            blob = repack_dense_as_sparse(
+                family="c3", dense_residual_bytes=blob_dense, n_frames=n_frames,
+            )
+        else:
+            blob = blob_dense
         total_archive_bytes = pr106_wrapper_bytes + 6 + 4 + len(blob)
         # Evaluate whole frame pairs so SegNet-last-frame and PoseNet-pair
         # semantics stay contest-faithful under subsampling.
@@ -371,15 +434,31 @@ def encode_c3_residual_l2(
                 eval_roundtrip=True, yuv6_routing=True,
             )
         diag["c3_residual_blob_bytes"] = float(len(blob))
+        diag["c3_residual_blob_dense_bytes"] = float(len(blob_dense))
+        diag["c3_sparse_aware"] = float(1.0 if sparse_aware else 0.0)
         return float(loss.detach().item()), diag, len(blob)
 
-    init_loss, init_diag, init_blob = _evaluate(scales, deltas_q)
-    best_loss = init_loss
+    # Initial threshold sweep (sparse_aware only; thr=0 in dense mode).
+    best_loss = float("inf")
     best_scales = scales.copy()
     best_deltas = deltas_q.copy()
-    best_diag = init_diag
+    best_diag: dict[str, float] = {}
+    init_loss = float("inf")
+    init_diag: dict[str, float] = {}
+    for thr in sparse_threshold_grid:
+        cand_deltas_init = _apply_sparse_threshold(deltas_q, thr)
+        cand_loss_init, cand_diag_init, _ = _evaluate(scales, cand_deltas_init)
+        cand_diag_init["sparse_threshold"] = float(thr)
+        if not init_diag:
+            init_loss = cand_loss_init
+            init_diag = cand_diag_init
+        if cand_loss_init < best_loss:
+            best_loss = cand_loss_init
+            best_scales = scales.copy()
+            best_deltas = cand_deltas_init
+            best_diag = cand_diag_init
 
-    # Coordinate-descent across global scale multipliers.
+    # Coordinate-descent across global scale multipliers + threshold grid.
     converged = False
     iters_done = 0
     for it in range(n_iterations):
@@ -390,26 +469,43 @@ def encode_c3_residual_l2(
                 continue
             cand_scales = best_scales.copy() * float(mult)
             # Re-quantize deltas with the new scales.
-            cand_deltas = np.zeros_like(deltas_q)
+            base_cand_deltas = np.zeros_like(deltas_q)
             for t in range(n_frames):
                 if t not in kept_set:
                     continue
                 cand_q, _ = _quantize_delta_with_scale(deltas[t], float(cand_scales[t]))
-                cand_deltas[t] = cand_q
-            cand_loss, cand_diag, _ = _evaluate(cand_scales, cand_deltas)
-            if cand_loss + 1e-12 < best_loss:
-                best_loss = cand_loss
-                best_scales = cand_scales
-                best_deltas = cand_deltas
-                best_diag = cand_diag
-                any_improved = True
+                base_cand_deltas[t] = cand_q
+            for thr in sparse_threshold_grid:
+                cand_deltas = _apply_sparse_threshold(base_cand_deltas, thr)
+                cand_loss, cand_diag, _ = _evaluate(cand_scales, cand_deltas)
+                cand_diag["sparse_threshold"] = float(thr)
+                if cand_loss + 1e-12 < best_loss:
+                    best_loss = cand_loss
+                    best_scales = cand_scales
+                    best_deltas = cand_deltas
+                    best_diag = cand_diag
+                    any_improved = True
         if not any_improved:
             converged = True
             break
 
-    final_blob = _pack_c3_residual_bytes(
+    final_blob_dense = _pack_c3_residual_bytes(
         n_frames=n_frames, scales_per_frame=best_scales, deltas_q=best_deltas
     )
+    if sparse_aware:
+        from tac.residual_basis.pr106_materializer_helpers import (
+            repack_dense_as_sparse,
+        )
+        final_blob = repack_dense_as_sparse(
+            family="c3", dense_residual_bytes=final_blob_dense, n_frames=n_frames,
+        )
+        if len(final_blob) > byte_budget:
+            raise C3EncoderL2Error(
+                f"sparse-aware c3 final residual {len(final_blob)} bytes exceeds "
+                f"byte_budget={byte_budget}; coordinate descent did not converge under cap"
+            )
+    else:
+        final_blob = final_blob_dense
     result = C3EncoderL2Result(
         residual_bytes=final_blob,
         n_frames_encoded=n_frames,

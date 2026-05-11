@@ -612,3 +612,196 @@ def test_all_three_encoders_refuse_score_claim_mutation() -> None:
     # The dataclass is frozen; attribute assignment must fail.
     with pytest.raises((AttributeError, TypeError)):
         rw.score_claim = True  # type: ignore[misc]
+
+
+# --------------------------------------------------------------------------- #
+# Sparse-aware L2 encoder paths                                                 #
+#                                                                               #
+# Per O's wire-format-ceiling finding + S's sparse PacketIR codec landing       #
+# + operator 2026-05-11 $5/individual envelope: each L2 encoder gains a         #
+# ``sparse_aware=True`` opt-in that (a) bypasses the dense byte-budget gate,    #
+# (b) computes the proxy Lagrangian rate term against the sparse-repacked       #
+# byte size, and (c) emits sparse-encoded residual bytes ready for the          #
+# matching sparse family inflate runtime (format_id 0x20-0x24).                 #
+# --------------------------------------------------------------------------- #
+
+
+def _make_sparse_residual_pair(n_frames: int = 2, nonzero_fraction: float = 0.005) -> tuple[np.ndarray, np.ndarray]:
+    """Build (decoded, gt) where most pixels are exactly equal (sparse residual).
+
+    Only a small fraction of pixels carry a perturbation. This is the realistic
+    PR106-r2-vs-GT regime where the residual is dominated by semantic-edge
+    pixels rather than full-grid noise.
+    """
+    rng = np.random.default_rng(SEED)
+    decoded = rng.integers(0, 256, size=(n_frames, CAMERA_H, CAMERA_W, RGB_CHANNELS), dtype=np.uint8)
+    mask = rng.random(decoded.shape) < nonzero_fraction
+    delta = rng.integers(-4, 5, size=decoded.shape) * mask
+    gt = np.clip(decoded.astype(np.int16) + delta, 0, 255).astype(np.uint8)
+    return decoded, gt
+
+
+def test_c3_l2_sparse_aware_runs_at_small_budget_when_residual_is_sparse() -> None:
+    """Sparse-aware c3 fits a small byte budget when the residual is mostly zero."""
+    decoded, gt = _make_sparse_residual_pair(n_frames=2, nonzero_fraction=0.005)
+    result = encode_c3_residual_l2(
+        decoded, gt,
+        byte_budget=2_000_000,
+        sparse_aware=True,
+        n_iterations=1,
+    )
+    # Sparse-aware mode emits the sparse-repacked bytes directly.
+    assert len(result.residual_bytes) <= 2_000_000
+    # The sparse size must be smaller than the dense size for this sparse input.
+    assert "c3_residual_blob_dense_bytes" in result.diagnostics
+    sparse_size = result.diagnostics["c3_residual_blob_bytes"]
+    dense_size = result.diagnostics["c3_residual_blob_dense_bytes"]
+    assert sparse_size <= dense_size
+    assert result.diagnostics["c3_sparse_aware"] == 1.0
+
+
+def test_c3_l2_sparse_aware_residual_bytes_round_trip_via_sparse_parse_archive() -> None:
+    """Sparse c3 bytes wrap into the c3_sparse family (format_id 0x22)."""
+    decoded, gt = _make_sparse_residual_pair(n_frames=2, nonzero_fraction=0.005)
+    result = encode_c3_residual_l2(
+        decoded, gt, byte_budget=2_000_000, sparse_aware=True, n_iterations=1,
+    )
+    built = build_archive(
+        family="c3_sparse", pr106_bytes=b"PR106_PLACEHOLDER", residual_bytes=result.residual_bytes,
+    )
+    parsed = parse_archive(built.archive_bytes)
+    assert parsed.format_id == 0x22
+    assert parsed.residual_bytes == result.residual_bytes
+
+
+def test_c3_l2_dense_path_still_works_when_sparse_aware_false() -> None:
+    """Setting sparse_aware=False preserves the existing dense byte path."""
+    decoded, gt = _make_synthetic_pair(n_frames=2)
+    result = encode_c3_residual_l2(
+        decoded, gt,
+        byte_budget=dense_c3_residual_blob_bytes(2),
+        sparse_aware=False,
+        n_iterations=1,
+    )
+    assert result.diagnostics["c3_sparse_aware"] == 0.0
+    assert len(result.residual_bytes) == dense_c3_residual_blob_bytes(2)
+
+
+def test_c3_l2_sparse_aware_refuses_too_small_budget() -> None:
+    """Sparse-aware refuses if even the sparse-encoded bytes exceed the cap.
+
+    The sparse-aware encoder includes a coefficient-magnitude threshold sweep
+    that can produce extreme sparsity (only ~10K bytes for 2 frames at the
+    highest threshold). To test the refusal path we set an impossibly small
+    budget that the temporal-subsampled wrapper alone exceeds.
+    """
+    decoded, gt = _make_synthetic_pair(n_frames=2)  # dense random residual
+    with pytest.raises(C3EncoderL2Error, match="exceeds byte_budget"):
+        encode_c3_residual_l2(
+            decoded, gt,
+            byte_budget=10,  # smaller than even the temporal-subsampled header
+            sparse_aware=True,
+            n_iterations=1,
+        )
+
+
+def test_wavelet_l2_sparse_aware_runs_at_small_budget_when_residual_is_sparse() -> None:
+    decoded, gt = _make_sparse_residual_pair(n_frames=2, nonzero_fraction=0.005)
+    result = encode_wavelet_residual_l2(
+        decoded, gt,
+        byte_budget=20_000_000,
+        sparse_aware=True,
+        n_iterations=1,
+    )
+    assert len(result.residual_bytes) <= 20_000_000
+    sparse_size = result.diagnostics["wavelet_residual_blob_bytes"]
+    dense_size = result.diagnostics["wavelet_residual_blob_dense_bytes"]
+    assert sparse_size <= dense_size
+    assert result.diagnostics["wavelet_sparse_aware"] == 1.0
+
+
+def test_wavelet_l2_sparse_aware_residual_bytes_round_trip_via_sparse_parse_archive() -> None:
+    decoded, gt = _make_sparse_residual_pair(n_frames=2, nonzero_fraction=0.005)
+    result = encode_wavelet_residual_l2(
+        decoded, gt, byte_budget=20_000_000, sparse_aware=True, n_iterations=1,
+    )
+    built = build_archive(
+        family="wavelet_sparse", pr106_bytes=b"PR106_PLACEHOLDER",
+        residual_bytes=result.residual_bytes,
+    )
+    parsed = parse_archive(built.archive_bytes)
+    assert parsed.format_id == 0x20
+    assert parsed.residual_bytes == result.residual_bytes
+
+
+def test_wavelet_l2_dense_path_still_works_when_sparse_aware_false() -> None:
+    decoded, gt = _make_synthetic_pair(n_frames=2)
+    result = encode_wavelet_residual_l2(
+        decoded, gt,
+        byte_budget=dense_wavelet_residual_blob_bytes(2),
+        sparse_aware=False,
+        n_iterations=1,
+    )
+    assert result.diagnostics["wavelet_sparse_aware"] == 0.0
+    assert len(result.residual_bytes) == dense_wavelet_residual_blob_bytes(2)
+
+
+def test_cool_chic_l2_sparse_aware_runs_at_small_budget_when_residual_is_sparse() -> None:
+    decoded, gt = _make_sparse_residual_pair(n_frames=2, nonzero_fraction=0.005)
+    result = encode_cool_chic_residual_l2(
+        decoded, gt,
+        byte_budget=20_000_000,
+        candidate_n_levels=(1, 2),
+        sparse_aware=True,
+    )
+    assert len(result.residual_bytes) <= 20_000_000
+    sparse_size = result.diagnostics["cool_chic_residual_blob_bytes"]
+    dense_size = result.diagnostics["cool_chic_residual_blob_dense_bytes"]
+    assert sparse_size <= dense_size
+    assert result.diagnostics["cool_chic_sparse_aware"] == 1.0
+
+
+def test_cool_chic_l2_sparse_aware_residual_bytes_round_trip_via_sparse_parse_archive() -> None:
+    decoded, gt = _make_sparse_residual_pair(n_frames=2, nonzero_fraction=0.005)
+    result = encode_cool_chic_residual_l2(
+        decoded, gt, byte_budget=20_000_000,
+        candidate_n_levels=(1,),
+        sparse_aware=True,
+    )
+    built = build_archive(
+        family="cool_chic_sparse", pr106_bytes=b"PR106_PLACEHOLDER",
+        residual_bytes=result.residual_bytes,
+    )
+    parsed = parse_archive(built.archive_bytes)
+    assert parsed.format_id == 0x21
+    assert parsed.residual_bytes == result.residual_bytes
+
+
+def test_cool_chic_l2_dense_path_still_works_when_sparse_aware_false() -> None:
+    decoded, gt = _make_synthetic_pair(n_frames=2)
+    result = encode_cool_chic_residual_l2(
+        decoded, gt,
+        byte_budget=dense_cool_chic_residual_blob_bytes(2, 1),
+        candidate_n_levels=(1,),
+        sparse_aware=False,
+    )
+    assert result.diagnostics["cool_chic_sparse_aware"] == 0.0
+
+
+def test_all_three_encoders_sparse_aware_keep_score_claim_invariants() -> None:
+    """Sparse-aware path preserves the permanent promotion-status invariants."""
+    decoded, gt = _make_sparse_residual_pair(n_frames=2, nonzero_fraction=0.005)
+    r_c3 = encode_c3_residual_l2(
+        decoded, gt, byte_budget=2_000_000, sparse_aware=True, n_iterations=1,
+    )
+    r_w = encode_wavelet_residual_l2(
+        decoded, gt, byte_budget=20_000_000, sparse_aware=True, n_iterations=1,
+    )
+    r_cc = encode_cool_chic_residual_l2(
+        decoded, gt, byte_budget=20_000_000, candidate_n_levels=(1,), sparse_aware=True,
+    )
+    for r in (r_c3, r_w, r_cc):
+        assert r.score_claim is False
+        assert r.promotion_eligible is False
+        assert r.ready_for_exact_eval_dispatch is False
+        assert r.evidence_grade == "research_signal_l2_proxy"

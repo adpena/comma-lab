@@ -152,16 +152,30 @@ def _upsample_level_to_camera(coeffs_thwc: np.ndarray, level: int) -> np.ndarray
 
 
 def _quantize_level(
-    level_target: np.ndarray, *, scale_grid: tuple[float, ...]
+    level_target: np.ndarray,
+    *,
+    scale_grid: tuple[float, ...],
+    sparse_bias: bool = False,
 ) -> tuple[np.ndarray, float, float]:
     """int8 quantize a level's target with grid-searched scale.
 
     Returns ``(level_q, best_scale, best_mse)``.
+
+    When ``sparse_bias=True``, picks the largest-multiplier scale (sparsest
+    quantization) instead of MSE-min so the per-level starting point biases
+    toward more zero coefficients. Used by sparse-aware encoder mode.
     """
     max_abs = float(np.abs(level_target).max())
     if max_abs <= 1e-9:
         return np.zeros_like(level_target, dtype=np.int8), 0.0, 0.0
     s_auto = max_abs / 120.0
+    if sparse_bias:
+        s = s_auto * float(max(scale_grid))
+        scaled = level_target / s
+        q = np.clip(np.round(scaled), -128, 127).astype(np.int8)
+        recon = q.astype(np.float64) * s
+        mse = float(np.mean((level_target - recon) ** 2))
+        return q, s, mse
     best_s = s_auto
     best_mse = float("inf")
     best_q: np.ndarray | None = None
@@ -243,6 +257,7 @@ def _encode_pyramid_for_n_levels(
     *,
     n_levels: int,
     scale_grid: tuple[float, ...],
+    sparse_aware: bool = False,
 ) -> tuple[list[float], list[np.ndarray], np.ndarray]:
     """Laplacian-pyramid decomposition of the (gt - decoded) residual.
 
@@ -272,7 +287,9 @@ def _encode_pyramid_for_n_levels(
         # Target at this level: (residual - reconstructed_so_far) downsampled.
         target_full = residual_full.astype(np.float32) - reconstructed
         target_level = _downsample_thwc_to_level(target_full, L)
-        q, scale, _ = _quantize_level(target_level, scale_grid=scale_grid)
+        q, scale, _ = _quantize_level(
+            target_level, scale_grid=scale_grid, sparse_bias=sparse_aware,
+        )
         scales[L] = scale
         coeffs[L] = q
         # Update reconstruction: upsample q*scale to camera res and add.
@@ -300,6 +317,7 @@ def encode_cool_chic_residual_l2(
     lagrangian: ScoreAwareLagrangian | None = None,
     device: str = "cpu",
     seed: int | None = 20260511,
+    sparse_aware: bool = False,
 ) -> CoolChicEncoderL2Result:
     """L2 score-aware Cool-Chic hierarchical residual encoder.
 
@@ -359,9 +377,20 @@ def encode_cool_chic_residual_l2(
         decoded_with_residual = np.clip(
             decoded_frames.astype(np.float32) + reconstructed.astype(np.float32), 0, 255
         )
-        blob = _pack_cool_chic_residual_bytes(
+        blob_dense = _pack_cool_chic_residual_bytes(
             n_frames=n_frames, scales=scales, coeffs_per_level=coeffs
         )
+        if sparse_aware:
+            from tac.residual_basis.pr106_materializer_helpers import (
+                repack_dense_as_sparse,
+            )
+            blob = repack_dense_as_sparse(
+                family="cool_chic",
+                dense_residual_bytes=blob_dense,
+                n_frames=n_frames,
+            )
+        else:
+            blob = blob_dense
         total_archive_bytes = pr106_wrapper_bytes + 6 + 4 + len(blob)
         # Evaluate whole frame pairs so SegNet-last-frame and PoseNet-pair
         # semantics stay contest-faithful under subsampling.
@@ -379,7 +408,9 @@ def encode_cool_chic_residual_l2(
                 eval_roundtrip=True, yuv6_routing=True,
             )
         diag["cool_chic_residual_blob_bytes"] = float(len(blob))
+        diag["cool_chic_residual_blob_dense_bytes"] = float(len(blob_dense))
         diag["cool_chic_n_levels"] = float(len(scales))
+        diag["cool_chic_sparse_aware"] = float(1.0 if sparse_aware else 0.0)
         return float(loss.detach().item()), diag, len(blob)
 
     init_loss = float("inf")
@@ -401,16 +432,28 @@ def encode_cool_chic_residual_l2(
         if n_lvl < 1 or n_lvl > MAX_N_LEVELS:
             continue
         dense_bytes = dense_cool_chic_residual_blob_bytes(n_frames, n_lvl)
-        if dense_bytes > byte_budget:
+        if not sparse_aware and dense_bytes > byte_budget:
+            # Dense mode: skip n_lvl that exceeds dense budget. Sparse mode
+            # bypasses the dense gate; the proxy loss evaluates against actual
+            # sparse byte size so coordinate descent picks a feasible n_lvl.
             refusals.append((n_lvl, dense_bytes))
             continue
         scales, coeffs, recon = _encode_pyramid_for_n_levels(
-            decoded_frames, gt_frames, n_levels=n_lvl, scale_grid=scale_grid
+            decoded_frames, gt_frames,
+            n_levels=n_lvl, scale_grid=scale_grid,
+            sparse_aware=sparse_aware,
         )
         loss, diag, _ = _eval_pyramid(scales, coeffs, recon)
         if not init_diag:
             init_loss = loss
             init_diag = diag
+        if sparse_aware:
+            # Reject this n_lvl if its sparse-encoded size exceeds the budget;
+            # otherwise feed it into the loss-min comparison.
+            sparse_blob_size = int(diag.get("cool_chic_residual_blob_bytes", 0.0))
+            if sparse_blob_size > byte_budget:
+                refusals.append((n_lvl, sparse_blob_size))
+                continue
         if loss < best_loss:
             best_loss = loss
             best_scales = scales
@@ -419,20 +462,42 @@ def encode_cool_chic_residual_l2(
             best_n_levels = n_lvl
 
     if not best_scales:
-        # Build a descriptive error explaining the dense-byte floor.
+        # Build a descriptive error explaining the byte floor (dense or sparse).
         refusal_summary = ", ".join(
             f"n_levels={lvl}->{dense}B" for lvl, dense in refusals
         )
+        floor_kind = "sparse-encoded" if sparse_aware else "dense"
         raise CoolChicEncoderL2Error(
-            "current cool_chic residual wire format is dense: no candidate "
-            f"n_levels fits byte_budget={byte_budget}. Dense stream sizes: "
-            f"[{refusal_summary}]. Land a sparse PacketIR cool_chic stream + "
-            "matching inflate runtime before L2 score-aware dispatch."
+            f"current cool_chic residual {floor_kind} wire format too large: no "
+            f"candidate n_levels fits byte_budget={byte_budget}. Stream sizes: "
+            f"[{refusal_summary}]."
+            + (
+                ""
+                if sparse_aware
+                else " Land a sparse PacketIR cool_chic stream + matching inflate"
+                " runtime before L2 score-aware dispatch."
+            )
         )
 
-    final_blob = _pack_cool_chic_residual_bytes(
+    final_blob_dense = _pack_cool_chic_residual_bytes(
         n_frames=n_frames, scales=best_scales, coeffs_per_level=best_coeffs
     )
+    if sparse_aware:
+        from tac.residual_basis.pr106_materializer_helpers import (
+            repack_dense_as_sparse,
+        )
+        final_blob = repack_dense_as_sparse(
+            family="cool_chic",
+            dense_residual_bytes=final_blob_dense,
+            n_frames=n_frames,
+        )
+        if len(final_blob) > byte_budget:
+            raise CoolChicEncoderL2Error(
+                f"sparse-aware cool_chic final residual {len(final_blob)} bytes "
+                f"exceeds byte_budget={byte_budget}; descent did not converge under cap"
+            )
+    else:
+        final_blob = final_blob_dense
     result = CoolChicEncoderL2Result(
         residual_bytes=final_blob,
         n_levels_used=best_n_levels,

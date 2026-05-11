@@ -332,6 +332,7 @@ def encode_wavelet_residual_l2(
     device: str = "cpu",
     skip_approximation_band: bool = True,
     seed: int | None = 20260511,
+    sparse_aware: bool = False,
 ) -> WaveletEncoderL2Result:
     """L2 score-aware wavelet encoder over (T, H, W, 3) decoded vs GT frames.
 
@@ -393,13 +394,25 @@ def encode_wavelet_residual_l2(
     budget = ResidualByteBudget(max_bytes=byte_budget + pr106_wrapper_bytes)
     budget.assert_invariants()
 
-    kept_indices = _select_subsample_indices(
-        n_frames=n_frames,
-        budget_bytes=byte_budget,
-    )
+    if sparse_aware:
+        # Sparse mode: bypass the dense-budget gate. The byte budget refers to
+        # the sparse-encoded residual bytes; the encoder evaluates the rate
+        # term against the actual sparse byte size each iteration.
+        if byte_budget <= 0:
+            raise WaveletEncoderL2Error("byte_budget must be > 0")
+        kept_indices = list(range(n_frames))
+    else:
+        kept_indices = _select_subsample_indices(
+            n_frames=n_frames,
+            budget_bytes=byte_budget,
+        )
     n_keep = len(kept_indices)
 
     # Initial per-frame band quantization (auto-tuned scale per frame).
+    # In sparse-aware mode, BIAS the initial scale upward (largest multiplier in
+    # the grid) so the int8 quantization yields more zeros at the starting
+    # point. Coordinate descent can refine downward if the proxy loss demands.
+    sparse_scale_bias = float(max(scale_grid)) if sparse_aware else 1.0
     bands_per_frame: list[tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]] = []
     scales_per_frame = np.zeros((n_keep, 4), dtype=np.float32)
     recon_per_frame = np.zeros((n_keep, CAMERA_H, CAMERA_W, RGB_CHANNELS), dtype=np.float64)
@@ -410,7 +423,9 @@ def encode_wavelet_residual_l2(
             decoded_chw, gt_chw, skip_approximation=skip_approximation_band
         )
         bands_per_frame.append(bands_q)
-        scales_per_frame[i] = scales
+        # Per HNeRV parity discipline lesson 6 (score-domain Lagrangian):
+        # bias scales upward in sparse_aware mode for a sparser starting point.
+        scales_per_frame[i] = tuple(s * sparse_scale_bias for s in scales)
         # recon is (3, H, W); transpose to (H, W, 3).
         recon_per_frame[i] = np.transpose(recon, (1, 2, 0))
 
@@ -440,12 +455,23 @@ def encode_wavelet_residual_l2(
             ]
             recon = _haar_inverse_2d_single_level(*bands_recon)
             local_recon[i] = np.transpose(recon, (1, 2, 0))
-        residual_blob = _pack_wavelet_residual_bytes(
+        residual_blob_dense = _pack_wavelet_residual_bytes(
             n_frames=n_frames,
             scales_per_frame=scales_arr,
             bands_per_frame=local_bands,
             kept_indices=kept_indices,
         )
+        if sparse_aware:
+            from tac.residual_basis.pr106_materializer_helpers import (
+                repack_dense_as_sparse,
+            )
+            residual_blob = repack_dense_as_sparse(
+                family="wavelet",
+                dense_residual_bytes=residual_blob_dense,
+                n_frames=n_frames,
+            )
+        else:
+            residual_blob = residual_blob_dense
         # Total archive bytes = PR106 wrapper + residual length prefix + residual.
         # The wrapper itself is the PR106 r2 bytes + the 6-byte residual-archive
         # header + 4-byte residual length prefix.
@@ -469,6 +495,8 @@ def encode_wavelet_residual_l2(
                 eval_roundtrip=True, yuv6_routing=True,
             )
         diag["wavelet_residual_blob_bytes"] = float(len(residual_blob))
+        diag["wavelet_residual_blob_dense_bytes"] = float(len(residual_blob_dense))
+        diag["wavelet_sparse_aware"] = float(1.0 if sparse_aware else 0.0)
         return float(loss.detach().item()), diag, len(residual_blob)
 
     init_loss, init_diag, init_blob_size = _evaluate_current(scales_per_frame)
@@ -516,12 +544,28 @@ def encode_wavelet_residual_l2(
                 q = np.clip(np.round(band / s), -128, 127).astype(np.int8)
                 bands_q_local.append(q)
         final_bands.append(tuple(bands_q_local))  # type: ignore[arg-type]
-    final_blob = _pack_wavelet_residual_bytes(
+    final_blob_dense = _pack_wavelet_residual_bytes(
         n_frames=n_frames,
         scales_per_frame=best_scales,
         bands_per_frame=final_bands,
         kept_indices=kept_indices,
     )
+    if sparse_aware:
+        from tac.residual_basis.pr106_materializer_helpers import (
+            repack_dense_as_sparse,
+        )
+        final_blob = repack_dense_as_sparse(
+            family="wavelet",
+            dense_residual_bytes=final_blob_dense,
+            n_frames=n_frames,
+        )
+        if len(final_blob) > byte_budget:
+            raise WaveletEncoderL2Error(
+                f"sparse-aware wavelet final residual {len(final_blob)} bytes exceeds "
+                f"byte_budget={byte_budget}; coordinate descent did not converge under cap"
+            )
+    else:
+        final_blob = final_blob_dense
 
     result = WaveletEncoderL2Result(
         residual_bytes=final_blob,

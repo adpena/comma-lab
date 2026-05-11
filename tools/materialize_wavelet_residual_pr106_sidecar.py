@@ -43,6 +43,7 @@ from tac.residual_basis.pr106_materializer_helpers import (  # noqa: E402
     materialize_family_archive,
     repack_dense_as_sparse,
     run_no_op_detector_byte_mutation,
+    truncate_wavelet_dense_to_top_k,
 )
 from tac.residual_basis.pr106_sidecar_packing import (  # noqa: E402
     PR106_RESIDUAL_FORMAT_IDS,
@@ -92,15 +93,21 @@ def _build_l2_encoded_residual_blob(
     n_frames: int,
     byte_budget: int,
     n_iterations: int,
+    sparse_wire: bool,
+    sparse_aware: bool = False,
 ) -> tuple[bytes, dict[str, float]]:
     """Run the L2 score-aware wavelet encoder on decoded/GT raw frame streams.
 
     Emits permanent ``score_claim=False`` / ``promotion_eligible=False`` /
     ``ready_for_exact_eval_dispatch=False`` invariants per CLAUDE.md HNeRV
     parity discipline.
+
+    When ``sparse_aware=True``, the encoder's Lagrangian uses the sparse-
+    encoded byte cost in the rate term and emits sparse-repacked bytes
+    directly (ready for the 0x20 wavelet_sparse family wrapper).
     """
     import numpy as np
-    from tac.residual_basis import encode_wavelet_residual_l2
+    from tac.residual_basis import dense_wavelet_residual_blob_bytes, encode_wavelet_residual_l2
 
     frame_bytes = CAMERA_H * CAMERA_W * RGB_CHANNELS
     decoded_total = decoded_raw_path.stat().st_size
@@ -118,6 +125,10 @@ def _build_l2_encoded_residual_blob(
     n_to_use = min(n_frames, n_decoded, n_gt) if n_frames > 0 else min(n_decoded, n_gt)
     if n_to_use <= 0:
         raise MaterializerError("no frames to encode")
+    if n_to_use % 2 != 0:
+        n_to_use -= 1
+    if n_to_use <= 0:
+        raise MaterializerError("need at least 2 frames after even-count truncation")
 
     decoded_mm = np.memmap(
         decoded_raw_path, dtype=np.uint8, mode="r",
@@ -129,16 +140,33 @@ def _build_l2_encoded_residual_blob(
     )
     decoded = np.array(decoded_mm[:n_to_use])
     gt = np.array(gt_mm[:n_to_use])
+    encoder_byte_budget = int(byte_budget)
+    if sparse_wire and not sparse_aware:
+        # The L2 encoder still emits the dense oracle stream; sparse PacketIR
+        # repack happens immediately after and is the charged wire. Keep the
+        # dense floor internal so sparse budget checks happen on the consumed
+        # runtime format instead of blocking before sparse bytes exist.
+        encoder_byte_budget = max(
+            encoder_byte_budget,
+            dense_wavelet_residual_blob_bytes(n_to_use),
+        )
     try:
         result = encode_wavelet_residual_l2(
-            decoded, gt, byte_budget=byte_budget, n_iterations=n_iterations,
+            decoded, gt, byte_budget=encoder_byte_budget, n_iterations=n_iterations,
+            sparse_aware=sparse_aware,
         )
     except ValueError as exc:
         raise MaterializerError(str(exc)) from exc
     assert result.score_claim is False
     assert result.promotion_eligible is False
     assert result.ready_for_exact_eval_dispatch is False
-    return result.residual_bytes, dict(result.diagnostics)
+    diag = dict(result.diagnostics)
+    if sparse_wire and not sparse_aware:
+        diag["requested_sparse_byte_budget"] = float(byte_budget)
+        diag["dense_oracle_byte_budget"] = float(encoder_byte_budget)
+    diag["sparse_aware_lagrangian"] = float(1.0 if sparse_aware else 0.0)
+    diag["n_frames_encoded"] = float(n_to_use)
+    return result.residual_bytes, diag
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -217,7 +245,32 @@ def main(argv: list[str] | None = None) -> int:
             "RLE-of-zeros inner. Closes O's L2 wire-format ceiling."
         ),
     )
+    parser.add_argument(
+        "--sparse-top-k-per-frame",
+        type=int,
+        default=None,
+        help=(
+            "Sparse wavelet only: keep the largest-magnitude int8 coefficients "
+            "per frame before PacketIR repack. This enforces real sparse-byte "
+            "budgets without pretending the dense L2 proxy rate still applies."
+        ),
+    )
+    parser.add_argument(
+        "--sparse-aware",
+        action="store_true",
+        help=(
+            "(l2_encoded + --encoding sparse) Activate score-aware encoder "
+            "Lagrangian that optimizes for byte cost AFTER sparse PacketIR "
+            "encoding directly (instead of dense + posthoc repack)."
+        ),
+    )
     args = parser.parse_args(argv)
+    if args.sparse_aware and args.encoding != "sparse":
+        print("ERROR: --sparse-aware requires --encoding sparse", file=sys.stderr)
+        return 2
+    if args.sparse_aware and args.residual_mode != "l2_encoded":
+        print("ERROR: --sparse-aware requires --residual-mode l2_encoded", file=sys.stderr)
+        return 2
     if args.output_dir.exists() and any(args.output_dir.iterdir()):
         print(
             f"ERROR: --output-dir must be empty or not exist: {args.output_dir}",
@@ -247,6 +300,8 @@ def main(argv: list[str] | None = None) -> int:
                 n_frames=args.n_frames,
                 byte_budget=args.byte_budget,
                 n_iterations=args.l2_iterations,
+                sparse_wire=args.encoding == "sparse",
+                sparse_aware=args.sparse_aware,
             )
         except MaterializerError as exc:
             print(f"ERROR: {exc}", file=sys.stderr)
@@ -264,16 +319,44 @@ def main(argv: list[str] | None = None) -> int:
             default_scale=args.default_scale,
         )
     is_sparse = args.encoding == "sparse"
-    if is_sparse and residual_bytes:
+    if args.sparse_top_k_per_frame is not None and not is_sparse:
+        print("ERROR: --sparse-top-k-per-frame requires --encoding sparse", file=sys.stderr)
+        return 2
+    if is_sparse and residual_bytes and not args.sparse_aware:
         try:
+            n_frames_for_repack = int(
+                encoder_diagnostics.get("n_frames_encoded", args.n_frames)
+            ) or args.n_frames
+            if args.sparse_top_k_per_frame is not None:
+                residual_bytes = truncate_wavelet_dense_to_top_k(
+                    dense_residual_bytes=residual_bytes,
+                    n_frames=n_frames_for_repack,
+                    top_k_per_frame=args.sparse_top_k_per_frame,
+                )
+                encoder_diagnostics["sparse_top_k_per_frame"] = float(
+                    args.sparse_top_k_per_frame
+                )
             residual_bytes = repack_dense_as_sparse(
                 family="wavelet",
                 dense_residual_bytes=residual_bytes,
-                n_frames=args.n_frames,
+                n_frames=n_frames_for_repack,
             )
+            if args.residual_mode == "l2_encoded" and len(residual_bytes) > args.byte_budget:
+                print(
+                    "ERROR: sparse residual bytes "
+                    f"{len(residual_bytes)} exceed --byte-budget {args.byte_budget}",
+                    file=sys.stderr,
+                )
+                return 2
+            if args.residual_mode == "l2_encoded":
+                encoder_diagnostics["sparse_residual_blob_bytes"] = float(len(residual_bytes))
+                encoder_diagnostics["sparse_rate_term_is_posthoc_not_encoder_loss"] = 1.0
         except MaterializerError as exc:
             print(f"ERROR: sparse repack failed: {exc}", file=sys.stderr)
             return 2
+    elif is_sparse and residual_bytes and args.sparse_aware:
+        encoder_diagnostics["sparse_residual_blob_bytes"] = float(len(residual_bytes))
+        encoder_diagnostics["sparse_rate_term_is_posthoc_not_encoder_loss"] = 0.0
     family = sparse_family_name("wavelet") if is_sparse else "wavelet"
     archive_zip, manifest_path, manifest, build = materialize_family_archive(
         family=family,
@@ -283,6 +366,7 @@ def main(argv: list[str] | None = None) -> int:
         extra={
             "residual_mode": args.residual_mode,
             "encoding": args.encoding,
+            "sparse_aware_lagrangian": bool(args.sparse_aware),
             "default_scale": args.default_scale,
             "n_frames": args.n_frames,
             "per_frame_bytes": PER_FRAME_BYTES,
