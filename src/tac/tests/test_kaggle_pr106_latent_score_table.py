@@ -1,0 +1,171 @@
+from __future__ import annotations
+
+import importlib.util
+import json
+import sys
+import tarfile
+from pathlib import Path
+
+import pytest
+
+from tac.deploy.kaggle.pr106_latent_score_table import (
+    DEFAULT_JOB_NAME,
+    DEFAULT_SOURCE_BUNDLE_NAME,
+    KagglePr106LatentBundleSpec,
+    render_launcher,
+    write_bundle,
+    write_source_bundle,
+)
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+TOOL_PATH = REPO_ROOT / "tools" / "kaggle_build_pr106_latent_score_table.py"
+
+
+def _load_tool():
+    spec = importlib.util.spec_from_file_location(
+        "kaggle_build_pr106_latent_score_table_test",
+        TOOL_PATH,
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _claim_ledger(path: Path, *, job_name: str = "kaggle_pr106_latent_test") -> None:
+    path.write_text(
+        "| timestamp_utc | agent | lane_id | platform | instance_job_id | predicted_eta_utc | status | notes |\n"
+        "| 2026-05-11T00:00:00Z | codex:test | lane_pr106_latent_sidecar | kaggle | "
+        f"{job_name} | 2026-05-11T03:00:00Z | active_dispatching | test |\n",
+        encoding="utf-8",
+    )
+
+
+def test_render_launcher_uses_canonical_latent_score_table_env() -> None:
+    spec = KagglePr106LatentBundleSpec(
+        username="alice",
+        job_name="kaggle_pr106_latent_test",
+        delta_radius=2,
+        batch_pairs=3,
+        candidate_batch_size=5,
+        sidecar_top_k=400,
+    )
+
+    launcher = render_launcher(spec)
+
+    assert DEFAULT_SOURCE_BUNDLE_NAME in launcher
+    assert "pact_pr106_latent_workspace" in launcher
+    assert "import tac.deploy.pr106_latent" in launcher
+    assert "'PR106_LATENT_MODE': 'score_table'" in launcher
+    assert "'PR106_LATENT_DELTA_RADIUS': '2'" in launcher
+    assert "'PR106_LATENT_SCORE_TABLE_BATCH_PAIRS': '3'" in launcher
+    assert "'PR106_LATENT_SCORE_TABLE_CANDIDATE_BATCH_SIZE': '5'" in launcher
+    assert "'PR106_LATENT_SCORE_TABLE_INSTANCE_JOB_ID': 'kaggle_pr106_latent_test'" in launcher
+    assert "'SIDECAR_TOP_K': '400'" in launcher
+    assert '"bash", \'scripts/remote_lane_pr106_latent_sidecar.sh\'' in launcher
+    assert "torch==2.4.1+cu121" in launcher
+    assert "PR106_LATENT_TORCH_FALLBACK_REEXEC" in launcher
+    assert "PYTORCH_CUDA_ALLOC_CONF" in launcher
+    compile(launcher, "run_kernel.py", "exec")
+
+
+def test_write_source_bundle_contains_latent_runtime_contract_and_claim_ledger(tmp_path: Path) -> None:
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive")
+    claims = tmp_path / "active_lane_dispatch_claims.md"
+    _claim_ledger(claims)
+    bundle = tmp_path / "bundle"
+    spec = KagglePr106LatentBundleSpec(
+        username="alice",
+        job_name="kaggle_pr106_latent_test",
+        dataset_ref="alice/comma-lab-private-assets",
+        source_dataset_ref="alice/comma-lab-pr106-latent-source",
+    )
+
+    manifest = write_source_bundle(
+        repo_root=REPO_ROOT,
+        output_path=bundle / DEFAULT_SOURCE_BUNDLE_NAME,
+        spec=spec,
+        pr106_archive=archive,
+        claims_path=claims,
+    )
+
+    assert manifest["schema"] == "kaggle_pr106_latent_source_bundle_v1"
+    with tarfile.open(bundle / DEFAULT_SOURCE_BUNDLE_NAME, "r:gz") as tar:
+        names = set(tar.getnames())
+
+    assert "inputs/pr106_archive.zip" in names
+    assert ".omx/state/active_lane_dispatch_claims.md" in names
+    assert "src/tac/deploy/pr106_latent.py" in names
+    assert "experiments/build_pr106_latent_score_table.py" in names
+    assert "scripts/remote_lane_pr106_latent_sidecar.sh" in names
+    assert "submissions/pr106_latent_sidecar/inflate.py" in names
+
+
+def test_write_bundle_declares_latent_source_dataset(tmp_path: Path) -> None:
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive")
+    claims = tmp_path / "active_lane_dispatch_claims.md"
+    _claim_ledger(claims)
+    bundle = tmp_path / "bundle"
+    spec = KagglePr106LatentBundleSpec(
+        username="alice",
+        job_name="kaggle_pr106_latent_test",
+        dataset_ref="alice/comma-lab-private-assets",
+        source_dataset_ref="alice/comma-lab-pr106-latent-source",
+    )
+
+    manifest = write_bundle(
+        repo_root=REPO_ROOT,
+        bundle_dir=bundle,
+        spec=spec,
+        pr106_archive=archive,
+        claims_path=claims,
+    )
+
+    metadata = json.loads((bundle / "kernel-metadata.json").read_text(encoding="utf-8"))
+    launcher = (bundle / "run_kernel.py").read_text(encoding="utf-8")
+
+    assert metadata["id"] == "alice/comma-lab-pr106-latent-score-table"
+    assert metadata["enable_gpu"] is True
+    assert metadata["dataset_sources"] == [
+        "alice/comma-lab-pr106-latent-source",
+        "alice/comma-lab-private-assets",
+    ]
+    assert metadata["launch_policy"]["score_claim"] is False
+    assert manifest["schema"] == "kaggle_pr106_latent_score_table_bundle_v1"
+    assert manifest["score_claim"] is False
+    assert not (bundle / "inputs/pr106_archive.zip").exists()
+    assert "score_claim" in launcher
+
+
+def test_write_bundle_requires_matching_active_latent_claim(tmp_path: Path) -> None:
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive")
+    claims = tmp_path / "active_lane_dispatch_claims.md"
+    _claim_ledger(claims, job_name="wrong_job")
+    spec = KagglePr106LatentBundleSpec(
+        username="alice",
+        job_name="kaggle_pr106_latent_test",
+    )
+
+    with pytest.raises(ValueError, match="no active lane claim"):
+        write_bundle(
+            repo_root=REPO_ROOT,
+            bundle_dir=tmp_path / "bundle",
+            spec=spec,
+            pr106_archive=archive,
+            claims_path=claims,
+        )
+
+
+def test_tool_print_claim_uses_kaggle_platform(capsys: pytest.CaptureFixture[str]) -> None:
+    tool = _load_tool()
+
+    assert tool.main(["--username", "alice", "--print-claim"]) == 0
+    output = capsys.readouterr().out
+
+    assert "--lane-id \\\n+  lane_pr106_latent_sidecar" in output
+    assert "--platform \\\n+  kaggle" in output
+    assert f"--instance-job-id \\\n+  {DEFAULT_JOB_NAME}" in output

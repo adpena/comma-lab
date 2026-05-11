@@ -27,6 +27,7 @@ KERNEL_SLUGS = [
     "adpena/pr101-bias-refine",
     "adpena/pr101-proxy-sweep",
     "adpena/comma-lab-pr106-yshift-score-table",
+    "adpena/comma-lab-pr106-latent-score-table",
     "adpena/comma-lab-asym-warp-base",
     "adpena/comma-lab-asym-warp-raft-only",
     "adpena/comma-lab-asym-warp-supervised",

@@ -101,6 +101,8 @@ class KaggleCheckTests(unittest.TestCase):
 
         self.assertIn("adpena/pr101-proxy-sweep", mod.KERNEL_SLUGS)
         self.assertIn("adpena/pr101-bias-refine", mod.KERNEL_SLUGS)
+        self.assertIn("adpena/comma-lab-pr106-yshift-score-table", mod.KERNEL_SLUGS)
+        self.assertIn("adpena/comma-lab-pr106-latent-score-table", mod.KERNEL_SLUGS)
 
 
 if __name__ == "__main__":

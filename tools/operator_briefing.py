@@ -88,6 +88,8 @@ PHASE_1_SUPPLEMENTARY_LANES = [
             "  --estimated-cost 0.60 --council-priority 1 --max-dph 0.30 \\\n"
             "  --env PR106_LATENT_MODE=score_table --env PR106_LATENT_SCORE_TABLE_RESUME=1"
         ),
+        "kaggle_bundle_tool": "tools/kaggle_build_pr106_latent_score_table.py",
+        "kaggle_kernel_slug": "adpena/comma-lab-pr106-latent-score-table",
     },
 ]
 

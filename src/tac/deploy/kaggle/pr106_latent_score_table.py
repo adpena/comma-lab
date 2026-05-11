@@ -1,11 +1,4 @@
-"""Kaggle bundle writer for the PR106 y-shift score-table lane.
-
-The lane itself is provider-neutral in :mod:`tac.deploy.pr106_yshift`.  This
-module owns only the Kaggle script-kernel packaging: generated launcher source,
-source-dataset tarball creation, private-GPU kernel metadata, and the active
-dispatch-claim ledger that the CUDA score-table producer verifies before doing
-scorer work.
-"""
+"""Kaggle bundle writer for the PR106 latent-sidecar score-table lane."""
 from __future__ import annotations
 
 import gzip
@@ -18,39 +11,44 @@ from pathlib import Path
 from tac.deploy.claims import active_claim_row
 from tac.deploy.kaggle.kaggle_kernel_builder import build_kernel_metadata
 from tac.deploy.kaggle.source_bundle import add_path_to_tar, dataset_sources
-from tac.deploy.pr106_yshift import (
+from tac.deploy.pr106_latent import (
     REMOTE_SCRIPT,
-    Pr106YshiftScoreTableSpec,
+    Pr106LatentScoreTableSpec,
     score_table_env,
 )
 
 DEFAULT_DATASET_SLUG = "comma-lab-private-assets"
-DEFAULT_SOURCE_DATASET_SLUG = "comma-lab-pr106-yshift-source"
-DEFAULT_KERNEL_SLUG = "comma-lab-pr106-yshift-score-table"
-DEFAULT_KERNEL_TITLE = "comma-lab PR106 yshift score-table"
-DEFAULT_JOB_NAME = "kaggle_pr106_yshift_score_table"
+DEFAULT_SOURCE_DATASET_SLUG = "comma-lab-pr106-latent-source"
+DEFAULT_KERNEL_SLUG = "comma-lab-pr106-latent-score-table"
+DEFAULT_KERNEL_TITLE = "comma-lab PR106 latent score-table"
+DEFAULT_JOB_NAME = "kaggle_pr106_latent_score_table"
 DEFAULT_PR106_ARCHIVE_IN_BUNDLE = "inputs/pr106_archive.zip"
-DEFAULT_SOURCE_BUNDLE_NAME = "pact_pr106_yshift_source_bundle.tar.gz"
+DEFAULT_SOURCE_BUNDLE_NAME = "pact_pr106_latent_source_bundle.tar.gz"
+PYTORCH_P100_FALLBACK_DEPS = (
+    "torch==2.4.1+cu121",
+    "torchvision==0.19.1+cu121",
+    "torchaudio==2.4.1+cu121",
+)
+PYTORCH_CU121_INDEX_URL = "https://download.pytorch.org/whl/cu121"
 
 REQUIRED_REPO_PATHS: tuple[str, ...] = (
     "src/tac",
-    "experiments/build_pr106_yshift_score_table.py",
-    "experiments/build_pr106_yshift_sidechannel.py",
+    "experiments/build_pr106_latent_score_table.py",
+    "experiments/build_pr106_latent_sidecar.py",
     "experiments/contest_auth_eval.py",
     "scripts/bootstrap_dali_hash_pinned.py",
     "scripts/ensure_remote_pip.sh",
     "scripts/probe_nvdec.sh",
-    "scripts/remote_lane_pr106_yshift_sidechannel.sh",
+    "scripts/remote_lane_pr106_latent_sidecar.sh",
     "submissions/__init__.py",
-    "submissions/apogee_intN/src",
-    "submissions/pr106_yshift_sidechannel",
+    "submissions/pr106_latent_sidecar",
     "tools/tool_bootstrap.py",
 )
 
 
 @dataclass(frozen=True)
-class KagglePr106YshiftBundleSpec:
-    """Inputs for a deterministic Kaggle PR106 y-shift score-table bundle."""
+class KagglePr106LatentBundleSpec:
+    """Inputs for a deterministic Kaggle PR106 latent score-table bundle."""
 
     username: str
     job_name: str = DEFAULT_JOB_NAME
@@ -58,23 +56,25 @@ class KagglePr106YshiftBundleSpec:
     title: str = DEFAULT_KERNEL_TITLE
     dataset_ref: str | None = None
     source_dataset_ref: str | None = None
-    candidate_radius: int = 3
-    score_step: float = 1.0
+    delta_radius: int = 1
+    latent_dim: int = 28
     n_pairs: int = 600
-    batch_pairs: int = 8
-    candidate_batch_size: int = 32
+    batch_pairs: int = 2
+    candidate_batch_size: int = 8
+    sidecar_top_k: int = 600
     pr106_archive_in_bundle: str = DEFAULT_PR106_ARCHIVE_IN_BUNDLE
     source_bundle_name: str = DEFAULT_SOURCE_BUNDLE_NAME
 
-    def score_table_spec(self) -> Pr106YshiftScoreTableSpec:
-        return Pr106YshiftScoreTableSpec(
+    def score_table_spec(self) -> Pr106LatentScoreTableSpec:
+        return Pr106LatentScoreTableSpec(
             job_name=self.job_name,
             pr106_archive=self.pr106_archive_in_bundle,
-            candidate_radius=self.candidate_radius,
-            score_step=self.score_step,
+            delta_radius=self.delta_radius,
+            latent_dim=self.latent_dim,
             n_pairs=self.n_pairs,
             batch_pairs=self.batch_pairs,
             candidate_batch_size=self.candidate_batch_size,
+            sidecar_top_k=self.sidecar_top_k,
         )
 
 
@@ -82,7 +82,7 @@ def write_source_bundle(
     *,
     repo_root: Path,
     output_path: Path,
-    spec: KagglePr106YshiftBundleSpec,
+    spec: KagglePr106LatentBundleSpec,
     pr106_archive: Path,
     claims_path: Path,
 ) -> dict[str, object]:
@@ -115,7 +115,7 @@ def write_source_bundle(
             add_path_to_tar(tar, pr106_archive, Path(spec.pr106_archive_in_bundle))
 
     return {
-        "schema": "kaggle_pr106_yshift_source_bundle_v1",
+        "schema": "kaggle_pr106_latent_source_bundle_v1",
         "source_bundle": output_path.name,
         "required_repo_paths": list(REQUIRED_REPO_PATHS),
         "claim_ledger": ".omx/state/active_lane_dispatch_claims.md",
@@ -126,12 +126,12 @@ def write_source_bundle(
     }
 
 
-def render_launcher(spec: KagglePr106YshiftBundleSpec) -> str:
+def render_launcher(spec: KagglePr106LatentBundleSpec) -> str:
     """Render the Kaggle script-kernel launcher."""
 
     env = score_table_env(
         spec.score_table_spec(),
-        output_dir="/kaggle/working/pr106_yshift_score_table",
+        output_dir="/kaggle/working/pr106_latent_score_table",
     )
     env_literal = repr(env)
     return f'''#!/usr/bin/env python3
@@ -157,16 +157,12 @@ PIP_DEPS = (
     "segmentation-models-pytorch",
     "timm",
 )
-PYTORCH_P100_FALLBACK_DEPS = (
-    "torch==2.4.1+cu121",
-    "torchvision==0.19.1+cu121",
-    "torchaudio==2.4.1+cu121",
-)
-PYTORCH_CU121_INDEX_URL = "https://download.pytorch.org/whl/cu121"
+PYTORCH_P100_FALLBACK_DEPS = {PYTORCH_P100_FALLBACK_DEPS!r}
+PYTORCH_CU121_INDEX_URL = {PYTORCH_CU121_INDEX_URL!r}
 UPSTREAM_REPO = "https://github.com/commaai/comma_video_compression_challenge.git"
 SOURCE_BUNDLE_NAME = {spec.source_bundle_name!r}
 SOURCE_TREE_NAME = SOURCE_BUNDLE_NAME.removesuffix(".tar.gz")
-WORKSPACE = Path("/kaggle/working/pact_pr106_yshift_workspace")
+WORKSPACE = Path("/kaggle/working/pact_pr106_latent_workspace")
 
 
 def _install_missing_deps() -> None:
@@ -203,7 +199,7 @@ def _ensure_torch_supports_visible_cuda() -> None:
             f"Visible CUDA device requires {{arch}}, but torch {{torch.__version__}} "
             f"supports {{sorted(arch_list)}}"
         )
-    if os.environ.get("PR106_YSHIFT_TORCH_FALLBACK_REEXEC") == "1":
+    if os.environ.get("PR106_LATENT_TORCH_FALLBACK_REEXEC") == "1":
         raise RuntimeError(
             f"P100 torch fallback installed but torch {{torch.__version__}} still "
             f"does not support {{arch}}; arch_list={{sorted(arch_list)}}"
@@ -226,7 +222,7 @@ def _ensure_torch_supports_visible_cuda() -> None:
         PYTORCH_CU121_INDEX_URL,
     ])
     env = os.environ.copy()
-    env["PR106_YSHIFT_TORCH_FALLBACK_REEXEC"] = "1"
+    env["PR106_LATENT_TORCH_FALLBACK_REEXEC"] = "1"
     os.execve(sys.executable, [sys.executable, str(SCRIPT_PATH)], env)
 
 
@@ -338,7 +334,7 @@ def main() -> int:
     _ensure_pr106_archive_zip(workspace)
     sys.path.insert(0, str(workspace / "src"))
     sys.path.insert(0, str(workspace))
-    import tac.deploy.pr106_yshift  # noqa: F401
+    import tac.deploy.pr106_latent  # noqa: F401
     _install_missing_deps()
     _ensure_torch_supports_visible_cuda()
     upstream = _ensure_upstream(workspace)
@@ -359,7 +355,7 @@ def main() -> int:
         "WORKSPACE": str(workspace),
     }})
 
-    out_dir = Path(env["PR106_YSHIFT_LOG_DIR"]).parent
+    out_dir = Path(env["PR106_LATENT_LOG_DIR"]).parent
     out_dir.mkdir(parents=True, exist_ok=True)
     result = subprocess.run(
         ["bash", {REMOTE_SCRIPT!r}],
@@ -369,17 +365,17 @@ def main() -> int:
         check=False,
     )
     summary = {{
-        "schema": "kaggle_pr106_yshift_score_table_run_v2",
+        "schema": "kaggle_pr106_latent_score_table_run_v1",
         "score_claim": False,
         "promotion_requires_adjudication": True,
         "source_bundle": str(bundle),
         "returncode": result.returncode,
         "job_name": {spec.job_name!r},
-        "lane_id": env["PR106_YSHIFT_SCORE_TABLE_LANE_ID"],
-        "log_dir": env["PR106_YSHIFT_LOG_DIR"],
-        "contest_auth_eval_json": str(Path(env["PR106_YSHIFT_LOG_DIR"]) / "eval" / "contest_auth_eval.json"),
+        "lane_id": env["PR106_LATENT_SCORE_TABLE_LANE_ID"],
+        "log_dir": env["PR106_LATENT_LOG_DIR"],
+        "contest_auth_eval_json": str(Path(env["PR106_LATENT_LOG_DIR"]) / "eval" / "contest_auth_eval.json"),
     }}
-    (out_dir / "kaggle_pr106_yshift_score_table_summary.json").write_text(
+    (out_dir / "kaggle_pr106_latent_score_table_summary.json").write_text(
         json.dumps(summary, indent=2) + "\\n",
         encoding="utf-8",
     )
@@ -395,7 +391,7 @@ def write_bundle(
     *,
     repo_root: Path,
     bundle_dir: Path,
-    spec: KagglePr106YshiftBundleSpec,
+    spec: KagglePr106LatentBundleSpec,
     pr106_archive: Path,
     claims_path: Path,
 ) -> dict[str, object]:
@@ -434,7 +430,7 @@ def write_bundle(
     (bundle_dir / "run_kernel.py").write_text(render_launcher(spec), encoding="utf-8")
 
     manifest = {
-        "schema": "kaggle_pr106_yshift_score_table_bundle_v2",
+        "schema": "kaggle_pr106_latent_score_table_bundle_v1",
         "score_claim": False,
         "kernel_metadata": "kernel-metadata.json",
         "code_file": "run_kernel.py",
@@ -455,7 +451,7 @@ __all__ = [
     "DEFAULT_PR106_ARCHIVE_IN_BUNDLE",
     "DEFAULT_SOURCE_BUNDLE_NAME",
     "DEFAULT_SOURCE_DATASET_SLUG",
-    "KagglePr106YshiftBundleSpec",
+    "KagglePr106LatentBundleSpec",
     "REQUIRED_REPO_PATHS",
     "render_launcher",
     "write_bundle",
