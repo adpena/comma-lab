@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# ruff: noqa: E402, I001
 """Inflate lane_pr106_latent_sidecar archive: PR106 HNeRV decoder + per-pair
 latent-correction sidecar.
 
@@ -19,7 +20,7 @@ Invoked by inflate.sh as:
 """
 from __future__ import annotations
 
-import io
+import os
 import struct
 import sys
 from pathlib import Path
@@ -33,8 +34,8 @@ HERE = Path(__file__).resolve().parent
 SRC_DIR = HERE / "src"
 sys.path.insert(0, str(SRC_DIR))
 
-from model import HNeRVDecoder  # type: ignore[import-not-found]
 from codec import parse_packed_archive  # type: ignore[import-not-found]
+from model import HNeRVDecoder  # type: ignore[import-not-found]
 
 
 CAMERA_H, CAMERA_W = 874, 1164
@@ -42,6 +43,7 @@ SIDECAR_MAGIC = 0xFE
 SIDECAR_FORMAT_ID = 0x01
 DELTA_SCALE = 0.01
 NO_OP_DIM = 255
+DEFAULT_BATCH_PAIRS = 16
 
 
 def parse_sidecar_archive(bin_bytes: bytes) -> tuple[bytes, bytes]:
@@ -101,6 +103,52 @@ def apply_sidecar_corrections(
     return latents
 
 
+def select_inflate_device() -> torch.device:
+    """Select an auth-eval-safe inflate device.
+
+    CUDA is preferred when present. CPU fallback is required for the
+    contest-CPU axis; MPS is intentionally not selected because it is not a
+    contest auth-eval target and can hide device-axis mistakes.
+    """
+    policy = os.environ.get("PACT_INFLATE_DEVICE", "auto").strip().lower()
+    if policy in {"mps", "metal"}:
+        raise RuntimeError(
+            "PACT_INFLATE_DEVICE=mps is forbidden for auth-eval inflate; use cpu or cuda"
+        )
+    if policy not in {"auto", "cpu", "cuda"}:
+        raise RuntimeError(
+            "PACT_INFLATE_DEVICE must be one of auto, cpu, cuda "
+            f"(got {policy!r})"
+        )
+    if policy == "cpu":
+        return torch.device("cpu")
+    if policy == "cuda":
+        if not torch.cuda.is_available():
+            raise RuntimeError("PACT_INFLATE_DEVICE=cuda requested but CUDA is unavailable")
+        return torch.device("cuda")
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    return torch.device("cpu")
+
+
+def select_batch_pairs() -> int:
+    """Return the deterministic decoder batch size for pair forwards."""
+    raw = os.environ.get("PACT_INFLATE_BATCH_PAIRS")
+    if raw is None:
+        return DEFAULT_BATCH_PAIRS
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise RuntimeError(
+            f"PACT_INFLATE_BATCH_PAIRS must be a positive integer (got {raw!r})"
+        ) from exc
+    if value <= 0:
+        raise RuntimeError(
+            f"PACT_INFLATE_BATCH_PAIRS must be a positive integer (got {value})"
+        )
+    return value
+
+
 def inflate(src_bin: str, dst_raw: str) -> int:
     archive_bytes = Path(src_bin).read_bytes()
 
@@ -118,12 +166,11 @@ def inflate(src_bin: str, dst_raw: str) -> int:
     else:
         print("[inflate] sidecar empty (no corrections)", file=sys.stderr)
 
-    if not torch.cuda.is_available():
-        sys.exit(
-            "pr106_latent_sidecar inflate requires GPU "
-            "(per CLAUDE.md MPS-auth-eval-is-NOISE)."
-        )
-    device = torch.device("cuda")
+    try:
+        device = select_inflate_device()
+        batch_pairs = select_batch_pairs()
+    except RuntimeError as exc:
+        sys.exit(str(exc))
     decoder = HNeRVDecoder(
         latent_dim=meta["latent_dim"],
         base_channels=meta["base_channels"],
@@ -136,14 +183,15 @@ def inflate(src_bin: str, dst_raw: str) -> int:
     n_pairs = meta["n_pairs"]
     eval_h, eval_w = meta["eval_size"]
     print(
-        f"[inflate] PR106+sidecar: decoder loaded, running {n_pairs} pair forwards...",
+        f"[inflate] PR106+sidecar: decoder loaded, device={device.type}, "
+        f"batch_pairs={batch_pairs}, running {n_pairs} pair forwards...",
         file=sys.stderr,
     )
 
     n = 0
     with torch.inference_mode(), open(dst_raw, "wb") as fout:
-        for i in range(0, n_pairs, 16):
-            j = min(i + 16, n_pairs)
+        for i in range(0, n_pairs, batch_pairs):
+            j = min(i + batch_pairs, n_pairs)
             B = j - i
             decoded = decoder(latents[i:j])  # (B, 2, 3, eval_h, eval_w)
             flat = decoded.reshape(B * 2, 3, eval_h, eval_w)

@@ -290,6 +290,48 @@ def test_inflate_decoder_matches_build_decoder():
     assert np.array_equal(q1, q2)
 
 
+def test_inflate_device_auto_falls_back_to_cpu_without_cuda(monkeypatch):
+    """contest-CPU auth eval must not be blocked by a CUDA-only inflate guard."""
+    inflate = _import_inflate_module()
+    monkeypatch.delenv("PACT_INFLATE_DEVICE", raising=False)
+    monkeypatch.setattr(inflate.torch.cuda, "is_available", lambda: False)
+
+    assert inflate.select_inflate_device() == torch.device("cpu")
+
+
+def test_inflate_device_auto_prefers_cuda_when_available(monkeypatch):
+    """CUDA remains the default fast path when the runtime exposes it."""
+    inflate = _import_inflate_module()
+    monkeypatch.delenv("PACT_INFLATE_DEVICE", raising=False)
+    monkeypatch.setattr(inflate.torch.cuda, "is_available", lambda: True)
+
+    assert inflate.select_inflate_device() == torch.device("cuda")
+
+
+def test_inflate_device_rejects_mps_auth_eval(monkeypatch):
+    """MPS is useful for sweeps, not auth-eval custody."""
+    inflate = _import_inflate_module()
+    monkeypatch.setenv("PACT_INFLATE_DEVICE", "mps")
+
+    with pytest.raises(RuntimeError, match="mps is forbidden"):
+        inflate.select_inflate_device()
+
+
+def test_inflate_batch_pairs_env_validation(monkeypatch):
+    """Batch-size tuning is explicit and fails closed on invalid values."""
+    inflate = _import_inflate_module()
+
+    monkeypatch.delenv("PACT_INFLATE_BATCH_PAIRS", raising=False)
+    assert inflate.select_batch_pairs() == inflate.DEFAULT_BATCH_PAIRS
+
+    monkeypatch.setenv("PACT_INFLATE_BATCH_PAIRS", "8")
+    assert inflate.select_batch_pairs() == 8
+
+    monkeypatch.setenv("PACT_INFLATE_BATCH_PAIRS", "0")
+    with pytest.raises(RuntimeError, match="positive integer"):
+        inflate.select_batch_pairs()
+
+
 def test_inflate_sh_runs_self_contained_uploaded_runtime(tmp_path: Path):
     """Modal/custom-runtime uploads must not require repo-root submissions imports."""
     runtime = tmp_path / "runtime"
