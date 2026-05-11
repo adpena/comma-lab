@@ -68,6 +68,8 @@ def _build_l2_encoded_residual_blob(
     n_iterations: int,
     sparse_wire: bool,
     sparse_aware: bool = False,
+    use_hinton_distilled_scorer: bool = False,
+    use_saliency_masking: bool = False,
 ) -> tuple[bytes, dict[str, float]]:
     """Run the L2 score-aware encoder on decoded/GT raw frame streams.
 
@@ -126,12 +128,35 @@ def _build_l2_encoded_residual_blob(
             dense_c3_residual_blob_bytes(n_to_use),
         )
 
+    distilled_segnet = None
+    distilled_posenet = None
+    if use_hinton_distilled_scorer or use_saliency_masking:
+        # Per W reactivation criteria #1+#2 + Catalog #123: load the
+        # Hinton-distilled scorer surrogate so the L2 encoder's Lagrangian
+        # uses the score-aware proxy instead of the YUV6 MSE proxy. Both
+        # `use_hinton_distilled_scorer` and `use_saliency_masking` require
+        # the surrogate (saliency is computed via score gradient on the
+        # surrogate per Catalog #123).
+        from tac.residual_basis.hinton_distilled_scorer_surrogate import (
+            ScorerSurrogateConfig,
+            load_pretrained_distilled_scorer_pair,
+        )
+
+        config = ScorerSurrogateConfig.council_canonical()
+        distilled_segnet, distilled_posenet = load_pretrained_distilled_scorer_pair(
+            config=config
+        )
+
     try:
         result = encode_c3_residual_l2(
             decoded, gt,
             byte_budget=encoder_byte_budget,
             n_iterations=n_iterations,
             sparse_aware=sparse_aware,
+            use_hinton_distilled_scorer=use_hinton_distilled_scorer,
+            distilled_segnet=distilled_segnet,
+            distilled_posenet=distilled_posenet,
+            use_saliency_masking=use_saliency_masking,
         )
     except ValueError as exc:
         raise MaterializerError(str(exc)) from exc
@@ -143,6 +168,8 @@ def _build_l2_encoded_residual_blob(
         diag["requested_sparse_byte_budget"] = float(byte_budget)
         diag["dense_oracle_byte_budget"] = float(encoder_byte_budget)
     diag["sparse_aware_lagrangian"] = float(1.0 if sparse_aware else 0.0)
+    diag["use_hinton_distilled_scorer"] = float(1.0 if use_hinton_distilled_scorer else 0.0)
+    diag["use_saliency_masking"] = float(1.0 if use_saliency_masking else 0.0)
     diag["n_frames_encoded"] = float(n_to_use)
     return result.residual_bytes, diag
 
@@ -199,12 +226,41 @@ def main(argv: list[str] | None = None) -> int:
             "coefficient count for a given seg+pose proxy."
         ),
     )
+    parser.add_argument(
+        "--use-hinton-distilled-scorer",
+        action="store_true",
+        help=(
+            "(l2_encoded only; opt-in research mode) Replace the YUV6 MSE proxy "
+            "in the L2 Lagrangian with Hinton-distilled SegNet+PoseNet surrogate "
+            "outputs (KL-distill at T=2.0 on seg + MSE on first-6 pose dims). "
+            "Per W's DEFERRED reactivation criterion #1, this is the canonical "
+            "fix for the YUV6 MSE proxy mismatch that produced 0.2066 (noise) "
+            "on the c3 sparse-empty dispatch."
+        ),
+    )
+    parser.add_argument(
+        "--use-saliency-masking",
+        action="store_true",
+        help=(
+            "(l2_encoded only; opt-in research mode) Apply per-pixel saliency "
+            "mask to the residual before encoding. Pixels with low score-aware "
+            "saliency (computed via score gradient on distilled scorer per "
+            "Catalog #123) are zeroed; bytes saved by RLE-of-zeros runs. "
+            "REQUIRES --use-hinton-distilled-scorer (saliency uses surrogate)."
+        ),
+    )
     args = parser.parse_args(argv)
     if args.sparse_aware and args.encoding != "sparse":
         print("ERROR: --sparse-aware requires --encoding sparse", file=sys.stderr)
         return 2
     if args.sparse_aware and args.residual_mode != "l2_encoded":
         print("ERROR: --sparse-aware requires --residual-mode l2_encoded", file=sys.stderr)
+        return 2
+    if args.use_hinton_distilled_scorer and args.residual_mode != "l2_encoded":
+        print("ERROR: --use-hinton-distilled-scorer requires --residual-mode l2_encoded", file=sys.stderr)
+        return 2
+    if args.use_saliency_masking and not args.use_hinton_distilled_scorer:
+        print("ERROR: --use-saliency-masking requires --use-hinton-distilled-scorer (per Catalog #123)", file=sys.stderr)
         return 2
     if args.output_dir.exists() and any(args.output_dir.iterdir()):
         print(f"ERROR: --output-dir must be empty or not exist: {args.output_dir}", file=sys.stderr)
@@ -234,6 +290,8 @@ def main(argv: list[str] | None = None) -> int:
                 n_iterations=args.l2_iterations,
                 sparse_wire=args.encoding == "sparse",
                 sparse_aware=args.sparse_aware,
+                use_hinton_distilled_scorer=args.use_hinton_distilled_scorer,
+                use_saliency_masking=args.use_saliency_masking,
             )
         except MaterializerError as exc:
             print(f"ERROR: {exc}", file=sys.stderr)

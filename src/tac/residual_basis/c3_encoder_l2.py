@@ -227,6 +227,11 @@ def encode_c3_residual_l2(
     device: str = "cpu",
     seed: int | None = 20260511,
     sparse_aware: bool = False,
+    use_hinton_distilled_scorer: bool = False,
+    distilled_segnet=None,
+    distilled_posenet=None,
+    use_saliency_masking: bool = False,
+    saliency_masking_config=None,
 ) -> C3EncoderL2Result:
     """L2 score-aware C3 conditional residual encoder.
 
@@ -312,10 +317,84 @@ def encode_c3_residual_l2(
     for t in kept_indices:
         is_kept[t] = True
 
+    # Step 0: saliency masking (per W reactivation criterion #2 + N D2 council).
+    # Zero out residual at low-saliency pixels BEFORE quantization so the
+    # zeroed regions become RLE-of-zeros runs in the sparse PacketIR encoding.
+    # Per Catalog #123: saliency is computed via score gradient on the
+    # distilled scorer (NOT a weight-domain proxy).
+    saliency_diagnostics: dict[str, float] = {}
+    if use_saliency_masking:
+        if not use_hinton_distilled_scorer or distilled_segnet is None or distilled_posenet is None:
+            raise C3EncoderL2Error(
+                "use_saliency_masking=True requires use_hinton_distilled_scorer=True "
+                "AND non-None distilled_segnet + distilled_posenet "
+                "(saliency is computed via the distilled scorer's gradient per Catalog #123)"
+            )
+        from tac.residual_basis.saliency_masked_residual import (
+            SaliencyMaskingConfig,
+            compute_score_aware_saliency,
+            mask_residual_by_saliency,
+        )
+
+        sal_config = saliency_masking_config or SaliencyMaskingConfig.council_canonical()
+        # Compute saliency on a small subset of frames to avoid OOM.
+        # The saliency map is per-pixel at camera resolution; we use it as
+        # a per-pixel weight on the GT residual.
+        n_sal_frames = min(8, n_frames)
+        sal_indices = list(range(0, n_frames, max(1, n_frames // n_sal_frames)))[:n_sal_frames]
+        if len(sal_indices) % 2 != 0:
+            sal_indices = sal_indices[:-1]
+        if len(sal_indices) < 2:
+            sal_indices = list(range(2))
+        sal_decoded_t = torch.from_numpy(
+            decoded_frames[sal_indices].astype(np.float32)
+        )
+        sal_gt_t = torch.from_numpy(gt_frames[sal_indices].astype(np.float32))
+        saliency = compute_score_aware_saliency(
+            sal_decoded_t,
+            sal_gt_t,
+            distilled_segnet=distilled_segnet,
+            distilled_posenet=distilled_posenet,
+            eval_roundtrip=True,
+            distill_temperature=2.0,
+        )
+        # Average saliency across the sampled frames as a global per-pixel mask.
+        saliency_global = saliency.mean(dim=0)  # (H, W)
+        sal_h, sal_w = saliency_global.shape
+        # Compute per-pixel keep mask via percentile or threshold.
+        if sal_config.percentile is not None:
+            threshold_value = float(
+                torch.quantile(saliency_global.flatten(), q=float(sal_config.percentile)).item()
+            )
+        else:
+            threshold_value = float(sal_config.threshold)
+        keep_mask_hw = (saliency_global >= threshold_value).cpu().numpy()
+        kept_fraction = float(keep_mask_hw.mean())
+        if kept_fraction < sal_config.minimum_kept_fraction:
+            raise C3EncoderL2Error(
+                f"saliency mask kept_fraction={kept_fraction:.4f} < "
+                f"minimum_kept_fraction={sal_config.minimum_kept_fraction:.4f} "
+                "(saliency mask too aggressive)"
+            )
+        saliency_diagnostics = {
+            "saliency_threshold_value": threshold_value,
+            "saliency_kept_fraction": kept_fraction,
+            "saliency_min": float(saliency_global.min().item()),
+            "saliency_max": float(saliency_global.max().item()),
+            "saliency_mean": float(saliency_global.mean().item()),
+            "saliency_n_sample_frames": float(len(sal_indices)),
+        }
+    else:
+        keep_mask_hw = None
+
     # Step 1: compute per-frame quarter-res target residual r_q[t].
     r_q = np.zeros((n_frames, QUARTER_H, QUARTER_W, RGB_CHANNELS), dtype=np.float64)
     for t in range(n_frames):
         residual = gt_frames[t].astype(np.float64) - decoded_frames[t].astype(np.float64)
+        if keep_mask_hw is not None:
+            # Apply per-pixel saliency mask BEFORE quarter-res downsample.
+            # Broadcast (H, W) mask across the 3 RGB channels.
+            residual = residual * keep_mask_hw[..., np.newaxis].astype(np.float64)
         r_q[t] = _downsample_to_quarter(residual.astype(np.float32)).astype(np.float64)
 
     # Step 2: compute per-frame deltas (first-difference). For non-kept frames,
@@ -432,10 +511,17 @@ def encode_c3_residual_l2(
             loss, diag = compute_score_aware_proxy_loss(
                 decoded_t, gt_t, total_archive_bytes, lagrangian=lag, budget=None,
                 eval_roundtrip=True, yuv6_routing=True,
+                use_hinton_distilled_scorer=use_hinton_distilled_scorer,
+                distilled_segnet=distilled_segnet,
+                distilled_posenet=distilled_posenet,
             )
         diag["c3_residual_blob_bytes"] = float(len(blob))
         diag["c3_residual_blob_dense_bytes"] = float(len(blob_dense))
         diag["c3_sparse_aware"] = float(1.0 if sparse_aware else 0.0)
+        diag["c3_use_hinton_distilled_scorer"] = float(
+            1.0 if use_hinton_distilled_scorer else 0.0
+        )
+        diag["c3_use_saliency_masking"] = float(1.0 if use_saliency_masking else 0.0)
         return float(loss.detach().item()), diag, len(blob)
 
     # Initial threshold sweep (sparse_aware only; thr=0 in dense mode).
@@ -506,6 +592,11 @@ def encode_c3_residual_l2(
             )
     else:
         final_blob = final_blob_dense
+    # Merge saliency diagnostics into the result diagnostics dict.
+    if saliency_diagnostics:
+        best_diag = dict(best_diag)
+        for k, v in saliency_diagnostics.items():
+            best_diag[f"c3_{k}"] = v
     result = C3EncoderL2Result(
         residual_bytes=final_blob,
         n_frames_encoded=n_frames,

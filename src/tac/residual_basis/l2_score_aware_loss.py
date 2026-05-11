@@ -302,6 +302,10 @@ def compute_score_aware_proxy_loss(
     budget: ResidualByteBudget | None = None,
     eval_roundtrip: bool = True,
     yuv6_routing: bool = True,
+    use_hinton_distilled_scorer: bool = False,
+    distilled_segnet=None,
+    distilled_posenet=None,
+    distill_temperature: float = 2.0,
 ) -> tuple[torch.Tensor, dict[str, float]]:
     """Compute the score-aware proxy Lagrangian.
 
@@ -330,13 +334,33 @@ def compute_score_aware_proxy_loss(
         ``differentiable_rgb_to_yuv6`` so the proxy MSE lives in the
         scorer-preprocess domain (per CLAUDE.md "eval_roundtrip" + HNeRV
         parity lesson 8).
+    use_hinton_distilled_scorer
+        If True, REPLACE the YUV6 MSE proxy with the Hinton-distilled scorer
+        surrogate's d_seg + d_pose outputs (per W's reactivation criterion #1).
+        Requires ``distilled_segnet`` and ``distilled_posenet`` to be supplied
+        (not None). When True, the Lagrangian is computed using the distilled
+        scorer's gradient-reachable distortion estimate, NOT the YUV6 MSE
+        proxy. Per Catalog #123 the distilled scorer is score-aware (NOT
+        weight-domain). Default False (back-compat with YUV6 MSE proxy).
+    distilled_segnet
+        Loaded ``DistilledSegNet`` instance. REQUIRED when
+        ``use_hinton_distilled_scorer=True``.
+    distilled_posenet
+        Loaded ``DistilledPoseNet`` instance. REQUIRED when
+        ``use_hinton_distilled_scorer=True``.
+    distill_temperature
+        Hinton T for the seg KL distill term when
+        ``use_hinton_distilled_scorer=True``. Council canon = 2.0.
 
     Returns
     -------
     (loss_scalar, diagnostics_dict)
         ``loss_scalar`` has requires_grad if any input did. ``diagnostics_dict``
         holds floats: ``alpha_term`` (rate), ``beta_term`` (seg), ``gamma_term``
-        (pose), ``soft_barrier_term`` (budget), ``total``.
+        (pose), ``soft_barrier_term`` (budget), ``total``. When
+        ``use_hinton_distilled_scorer=True``, ``beta_term`` and ``gamma_term``
+        reflect the distilled-scorer outputs and ``diagnostics`` carries
+        ``use_hinton_distilled_scorer=1.0``.
     """
     lag = lagrangian or ScoreAwareLagrangian()
     lag.assert_invariants()
@@ -347,6 +371,15 @@ def compute_score_aware_proxy_loss(
         if archive_bytes > budget.max_bytes:
             raise L2ScoreAwareLossError(
                 f"archive_bytes={archive_bytes} exceeds budget.max_bytes={budget.max_bytes}"
+            )
+
+    if use_hinton_distilled_scorer:
+        if distilled_segnet is None or distilled_posenet is None:
+            raise L2ScoreAwareLossError(
+                "use_hinton_distilled_scorer=True requires distilled_segnet and "
+                "distilled_posenet to be loaded (use "
+                "tac.residual_basis.hinton_distilled_scorer_surrogate."
+                "load_pretrained_distilled_scorer_pair)."
             )
 
     decoded_bchw = _validate_pixel_range(
@@ -363,64 +396,88 @@ def compute_score_aware_proxy_loss(
             f"expected an even number of frames (frame pairs); got B={decoded_bchw.shape[0]}"
         )
 
-    if eval_roundtrip:
-        # Local import to avoid a circular import: differentiable_eval_roundtrip
-        # imports from tac.quantization which is in the same package.
-        from tac.differentiable_eval_roundtrip import (
-            apply_eval_roundtrip_during_training,
-        )
-
-        # The roundtrip simulates 384->874->uint8->384 for renderer-sized
-        # inputs and preserves camera-sized inputs through the same uint8
-        # bottleneck. Apply it symmetrically to decoded and GT; otherwise the
-        # proxy compares roundtripped predictions against non-roundtripped GT.
-        decoded_bchw = apply_eval_roundtrip_during_training(
-            decoded_bchw,
-            simulate_uint8=True,
-            simulate_resize=True,
-            ste_round=True,
-            target_h=CAMERA_H,
-            target_w=CAMERA_W,
-        )
-        gt_bchw = apply_eval_roundtrip_during_training(
-            gt_bchw,
-            simulate_uint8=True,
-            simulate_resize=True,
-            ste_round=True,
-            target_h=CAMERA_H,
-            target_w=CAMERA_W,
-        )
-
-    decoded_scorer = _resize_to_scorer(decoded_bchw)
-    gt_scorer = _resize_to_scorer(gt_bchw)
-
-    if yuv6_routing:
-        from tac.differentiable_eval_roundtrip import differentiable_rgb_to_yuv6
-
-        # differentiable_rgb_to_yuv6 expects (B, 3, H, W).
-        decoded_yuv6 = differentiable_rgb_to_yuv6(decoded_scorer)
-        gt_yuv6 = differentiable_rgb_to_yuv6(gt_scorer)
-    else:
-        # Trivial pass-through: replicate channels to a 6-channel placeholder
-        # so the proxy shape contract holds even without YUV6.
-        decoded_yuv6 = torch.cat([decoded_scorer, decoded_scorer], dim=1)
-        gt_yuv6 = torch.cat([gt_scorer, gt_scorer], dim=1)
-
-    seg_proxy = _seg_proxy_distortion(decoded_yuv6, gt_yuv6)
-    pose_proxy = _pose_proxy_distortion(decoded_yuv6, gt_yuv6)
-
     rate_value = float(archive_bytes) / float(lag.rate_denominator_bytes)
     alpha_term = lag.alpha * rate_value
-    beta_term = lag.beta * seg_proxy
-    gamma_term = (
-        lag.gamma
-        * lag.proxy_pose_marginal_multiplier
-        * _zero_preserving_sqrt(lag.pose_sqrt_factor * pose_proxy)
-    )
+
+    if use_hinton_distilled_scorer:
+        # Per W's reactivation criterion #1: replace YUV6 MSE proxy with the
+        # Hinton-distilled scorer surrogate. The surrogate consumes RGB + YUV6
+        # (per HNeRV parity discipline lesson 8) and produces gradient-reachable
+        # d_seg (Hinton KL distill at T) + d_pose (MSE on first 6 dims).
+        from tac.residual_basis.hinton_distilled_scorer_surrogate import (
+            compute_distortion_via_distilled_scorer,
+        )
+
+        d_seg, d_pose, distill_diag = compute_distortion_via_distilled_scorer(
+            decoded_bchw,
+            gt_bchw,
+            distilled_segnet=distilled_segnet,
+            distilled_posenet=distilled_posenet,
+            eval_roundtrip=eval_roundtrip,
+            distill_temperature=distill_temperature,
+        )
+        # Score-domain Lagrangian terms in distilled-scorer units. Pose uses
+        # the contest's sqrt(10 * d_pose) form to match the contest's marginal-
+        # value derivative at the L2 operating point.
+        beta_term = lag.beta * d_seg
+        gamma_term = (
+            lag.gamma
+            * lag.proxy_pose_marginal_multiplier
+            * _zero_preserving_sqrt(lag.pose_sqrt_factor * d_pose)
+        )
+        seg_proxy_diag = float(d_seg.detach().item())
+        pose_proxy_diag = float(d_pose.detach().item())
+        proxy_kind = "hinton_distilled_scorer"
+    else:
+        # Default: YUV6 MSE proxy (W's pre-fix behavior; back-compat).
+        if eval_roundtrip:
+            from tac.differentiable_eval_roundtrip import (
+                apply_eval_roundtrip_during_training,
+            )
+
+            decoded_bchw = apply_eval_roundtrip_during_training(
+                decoded_bchw,
+                simulate_uint8=True,
+                simulate_resize=True,
+                ste_round=True,
+                target_h=CAMERA_H,
+                target_w=CAMERA_W,
+            )
+            gt_bchw = apply_eval_roundtrip_during_training(
+                gt_bchw,
+                simulate_uint8=True,
+                simulate_resize=True,
+                ste_round=True,
+                target_h=CAMERA_H,
+                target_w=CAMERA_W,
+            )
+
+        decoded_scorer = _resize_to_scorer(decoded_bchw)
+        gt_scorer = _resize_to_scorer(gt_bchw)
+
+        if yuv6_routing:
+            from tac.differentiable_eval_roundtrip import differentiable_rgb_to_yuv6
+
+            decoded_yuv6 = differentiable_rgb_to_yuv6(decoded_scorer)
+            gt_yuv6 = differentiable_rgb_to_yuv6(gt_scorer)
+        else:
+            decoded_yuv6 = torch.cat([decoded_scorer, decoded_scorer], dim=1)
+            gt_yuv6 = torch.cat([gt_scorer, gt_scorer], dim=1)
+
+        seg_proxy = _seg_proxy_distortion(decoded_yuv6, gt_yuv6)
+        pose_proxy = _pose_proxy_distortion(decoded_yuv6, gt_yuv6)
+        beta_term = lag.beta * seg_proxy
+        gamma_term = (
+            lag.gamma
+            * lag.proxy_pose_marginal_multiplier
+            * _zero_preserving_sqrt(lag.pose_sqrt_factor * pose_proxy)
+        )
+        seg_proxy_diag = float(seg_proxy.detach().item())
+        pose_proxy_diag = float(pose_proxy.detach().item())
+        proxy_kind = "yuv6_mse"
 
     soft_barrier_term_value = 0.0
     if budget is not None and budget.soft_barrier_coeff > 0.0:
-        # Soft barrier: penalize as archive_bytes approaches max_bytes.
         utilization = float(archive_bytes) / float(budget.max_bytes)
         soft_barrier_term_value = budget.soft_barrier_coeff * (utilization * utilization)
 
@@ -437,12 +494,17 @@ def compute_score_aware_proxy_loss(
         "gamma_term": float(gamma_term.detach().item()),
         "soft_barrier_term": float(soft_barrier_term_value),
         "total": float(total.detach().item()),
-        "seg_proxy_mse": float(seg_proxy.detach().item()),
-        "pose_proxy_mse": float(pose_proxy.detach().item()),
+        "seg_proxy_mse": seg_proxy_diag,
+        "pose_proxy_mse": pose_proxy_diag,
         "rate_term_raw": float(rate_value),
         "archive_bytes": float(archive_bytes),
         "eval_roundtrip": float(1.0 if eval_roundtrip else 0.0),
         "yuv6_routing": float(1.0 if yuv6_routing else 0.0),
+        "use_hinton_distilled_scorer": float(1.0 if use_hinton_distilled_scorer else 0.0),
+        "proxy_kind_yuv6_mse": float(1.0 if proxy_kind == "yuv6_mse" else 0.0),
+        "proxy_kind_hinton_distilled": float(
+            1.0 if proxy_kind == "hinton_distilled_scorer" else 0.0
+        ),
     }
     return total, diagnostics
 

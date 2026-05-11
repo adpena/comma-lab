@@ -318,6 +318,11 @@ def encode_cool_chic_residual_l2(
     device: str = "cpu",
     seed: int | None = 20260511,
     sparse_aware: bool = False,
+    use_hinton_distilled_scorer: bool = False,
+    distilled_segnet=None,
+    distilled_posenet=None,
+    use_saliency_masking: bool = False,
+    saliency_masking_config=None,
 ) -> CoolChicEncoderL2Result:
     """L2 score-aware Cool-Chic hierarchical residual encoder.
 
@@ -369,6 +374,79 @@ def encode_cool_chic_residual_l2(
     lag = lagrangian or ScoreAwareLagrangian()
     lag.assert_invariants()
 
+    # Saliency masking (per W reactivation criterion #2 + N D2 council).
+    # Per Catalog #123: score-gradient saliency on distilled scorer (NOT
+    # weight-domain). The mask is applied to GT so that the residual
+    # `(masked_gt - decoded)` is zero at low-saliency pixels — sparse-friendly.
+    saliency_diagnostics: dict[str, float] = {}
+    masked_gt_frames = gt_frames
+    if use_saliency_masking:
+        if not use_hinton_distilled_scorer or distilled_segnet is None or distilled_posenet is None:
+            raise CoolChicEncoderL2Error(
+                "use_saliency_masking=True requires use_hinton_distilled_scorer=True "
+                "AND non-None distilled_segnet + distilled_posenet "
+                "(saliency is computed via the distilled scorer's gradient per Catalog #123)"
+            )
+        from tac.residual_basis.saliency_masked_residual import (
+            SaliencyMaskingConfig,
+            compute_score_aware_saliency,
+        )
+
+        sal_config = saliency_masking_config or SaliencyMaskingConfig.council_canonical()
+        n_sal_frames = min(8, n_frames)
+        sal_indices = list(range(0, n_frames, max(1, n_frames // n_sal_frames)))[:n_sal_frames]
+        if len(sal_indices) % 2 != 0:
+            sal_indices = sal_indices[:-1]
+        if len(sal_indices) < 2:
+            sal_indices = list(range(2))
+        sal_decoded_t = torch.from_numpy(
+            decoded_frames[sal_indices].astype(np.float32)
+        )
+        sal_gt_t = torch.from_numpy(gt_frames[sal_indices].astype(np.float32))
+        saliency = compute_score_aware_saliency(
+            sal_decoded_t,
+            sal_gt_t,
+            distilled_segnet=distilled_segnet,
+            distilled_posenet=distilled_posenet,
+            eval_roundtrip=True,
+            distill_temperature=2.0,
+        )
+        saliency_global = saliency.mean(dim=0)  # (H, W)
+        if sal_config.percentile is not None:
+            threshold_value = float(
+                torch.quantile(
+                    saliency_global.flatten(), q=float(sal_config.percentile)
+                ).item()
+            )
+        else:
+            threshold_value = float(sal_config.threshold)
+        keep_mask_hw = (saliency_global >= threshold_value).cpu().numpy()
+        kept_fraction = float(keep_mask_hw.mean())
+        if kept_fraction < sal_config.minimum_kept_fraction:
+            raise CoolChicEncoderL2Error(
+                f"saliency mask kept_fraction={kept_fraction:.4f} < "
+                f"minimum_kept_fraction={sal_config.minimum_kept_fraction:.4f}"
+            )
+        # Mask gt s.t. (gt - decoded) is zero at low-saliency pixels.
+        # broadcast (H, W) → (T, H, W, 3)
+        keep_mask_thwc = np.broadcast_to(
+            keep_mask_hw[np.newaxis, :, :, np.newaxis].astype(np.float32),
+            gt_frames.shape,
+        )
+        masked_gt_frames = (
+            decoded_frames.astype(np.float32)
+            + (gt_frames.astype(np.float32) - decoded_frames.astype(np.float32))
+            * keep_mask_thwc
+        ).clip(0, 255).astype(gt_frames.dtype)
+        saliency_diagnostics = {
+            "saliency_threshold_value": threshold_value,
+            "saliency_kept_fraction": kept_fraction,
+            "saliency_min": float(saliency_global.min().item()),
+            "saliency_max": float(saliency_global.max().item()),
+            "saliency_mean": float(saliency_global.mean().item()),
+            "saliency_n_sample_frames": float(len(sal_indices)),
+        }
+
     def _eval_pyramid(
         scales: list[float],
         coeffs: list[np.ndarray],
@@ -406,11 +484,18 @@ def encode_cool_chic_residual_l2(
             loss, diag = compute_score_aware_proxy_loss(
                 decoded_t, gt_t, total_archive_bytes, lagrangian=lag, budget=None,
                 eval_roundtrip=True, yuv6_routing=True,
+                use_hinton_distilled_scorer=use_hinton_distilled_scorer,
+                distilled_segnet=distilled_segnet,
+                distilled_posenet=distilled_posenet,
             )
         diag["cool_chic_residual_blob_bytes"] = float(len(blob))
         diag["cool_chic_residual_blob_dense_bytes"] = float(len(blob_dense))
         diag["cool_chic_n_levels"] = float(len(scales))
         diag["cool_chic_sparse_aware"] = float(1.0 if sparse_aware else 0.0)
+        diag["cool_chic_use_hinton_distilled_scorer"] = float(
+            1.0 if use_hinton_distilled_scorer else 0.0
+        )
+        diag["cool_chic_use_saliency_masking"] = float(1.0 if use_saliency_masking else 0.0)
         return float(loss.detach().item()), diag, len(blob)
 
     init_loss = float("inf")
@@ -439,7 +524,7 @@ def encode_cool_chic_residual_l2(
             refusals.append((n_lvl, dense_bytes))
             continue
         scales, coeffs, recon = _encode_pyramid_for_n_levels(
-            decoded_frames, gt_frames,
+            decoded_frames, masked_gt_frames,
             n_levels=n_lvl, scale_grid=scale_grid,
             sparse_aware=sparse_aware,
         )
@@ -498,6 +583,10 @@ def encode_cool_chic_residual_l2(
             )
     else:
         final_blob = final_blob_dense
+    if saliency_diagnostics:
+        best_diag = dict(best_diag)
+        for k, v in saliency_diagnostics.items():
+            best_diag[f"cool_chic_{k}"] = v
     result = CoolChicEncoderL2Result(
         residual_bytes=final_blob,
         n_levels_used=best_n_levels,
