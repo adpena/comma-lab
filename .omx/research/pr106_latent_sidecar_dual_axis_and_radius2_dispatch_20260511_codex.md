@@ -176,3 +176,35 @@ This retry remains a CUDA table producer only. It is not a score claim and is
 not promotion-eligible until it emits a table, the table is materialized into a
 charged yshift archive, and exact contest-CUDA auth eval adjudicates that
 archive.
+
+## Materialization tools
+
+Both active PR106 score-table producers now have scorer-free local materializers:
+
+- `tools/materialize_pr106_latent_score_table_candidate.py`
+  - consumes completed latent `score_table.npy` +
+    `score_table_manifest.json`
+  - calls `experiments/build_pr106_latent_sidecar.py --search-mode score_table`
+  - emits `sidecar_archive.zip` + `materialization_manifest.json`
+- `tools/materialize_pr106_yshift_score_table_candidate.py`
+  - consumes completed yshift `score_table.npy` +
+    `score_table_manifest.json`
+  - calls
+    `experiments/build_pr106_yshift_sidechannel.py --search-mode score_table`
+  - emits `pr106_yshift_sidechannel_archive.zip` +
+    `materialization_manifest.json`
+
+Both tools enforce:
+
+- `score_claim=false`
+- `promotion_eligible=false`
+- `ready_for_exact_eval_dispatch=false`
+- builder metadata must validate the score-table manifest
+- exact contest-CUDA adjudication remains the promotion gate
+
+Focused verification:
+
+- `.venv/bin/python -m pytest src/tac/tests/test_materialize_pr106_yshift_score_table_candidate.py src/tac/tests/test_materialize_pr106_latent_score_table_candidate.py -q`:
+  `8 passed`
+- `.venv/bin/python -m ruff check tools/materialize_pr106_yshift_score_table_candidate.py src/tac/tests/test_materialize_pr106_yshift_score_table_candidate.py`:
+  pass
