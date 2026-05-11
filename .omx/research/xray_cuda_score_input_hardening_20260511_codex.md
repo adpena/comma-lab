@@ -28,6 +28,12 @@ escape hatch and now requires `--manual-cuda-score-justification`. The artifact
 records `cuda_score_source=manual_cuda_score_diagnostic` so it cannot be
 mistaken for artifact-backed CUDA evidence.
 
+The tool also now fails closed when classification resolves to
+`unknown_uncalibrated` unless the operator passes
+`--allow-unknown-architecture-class`. This prevents wrong-shape metadata, such
+as a device-axis matrix analysis JSON, from silently producing an HNeRV-style
+CPU prediction under the wrong architecture class.
+
 ## Score-lowering relevance
 
 This protects the score-lowering queue from apples-to-oranges CPU/CUDA drift

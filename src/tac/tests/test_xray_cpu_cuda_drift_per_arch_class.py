@@ -276,6 +276,34 @@ def test_main_accepts_cuda_auth_eval_json_score_source(tmp_path):
     assert rep["cuda_auth_eval_json"] == str(artifact)
 
 
+def test_main_refuses_wrong_shape_metadata_that_resolves_unknown(tmp_path):
+    md = tmp_path / "analysis.json"
+    md.write_text(json.dumps({"schema": "device_axis_eval_matrix_analysis.v1", "entries": []}))
+    rc = xd.main([
+        "--metadata-json", str(md),
+        "--cuda-score", "0.229",
+        "--manual-cuda-score-justification", "unit-test diagnostic fixture",
+        "--output-dir", str(tmp_path / "out"),
+    ])
+    assert rc == 2
+
+
+def test_main_can_explicitly_allow_unknown_architecture_class(tmp_path):
+    md = tmp_path / "analysis.json"
+    md.write_text(json.dumps({"schema": "device_axis_eval_matrix_analysis.v1", "entries": []}))
+    out = tmp_path / "out"
+    rc = xd.main([
+        "--metadata-json", str(md),
+        "--cuda-score", "0.229",
+        "--manual-cuda-score-justification", "unit-test diagnostic fixture",
+        "--allow-unknown-architecture-class",
+        "--output-dir", str(out),
+    ])
+    assert rc == 0
+    rep = json.loads((out / "drift_prediction.json").read_text())
+    assert rep["prediction"]["architecture_class"] == "unknown_uncalibrated"
+
+
 def test_default_constants_match_dossier():
     assert abs(xd.DEFAULT_MEDAL_FLOOR - 0.19538) < 1e-6
     assert abs(xd.DEFAULT_MEDAL_TOLERANCE - 0.005) < 1e-6

@@ -353,6 +353,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--medal-floor", type=float, default=DEFAULT_MEDAL_FLOOR)
     parser.add_argument("--medal-tolerance", type=float, default=DEFAULT_MEDAL_TOLERANCE)
     parser.add_argument("--output-dir", type=Path, default=None)
+    parser.add_argument(
+        "--allow-unknown-architecture-class",
+        action="store_true",
+        help=(
+            "Allow unknown_uncalibrated fallback. Diagnostic only; normally "
+            "wrong-shape metadata should fail closed."
+        ),
+    )
     args = parser.parse_args(argv)
 
     if args.archive is None and args.metadata_json is None:
@@ -383,6 +391,18 @@ def main(argv: list[str] | None = None) -> int:
         )
     except Exception as e:  # noqa: BLE001
         print(f"ERROR: prediction failed: {e}", file=sys.stderr)
+        return 2
+    if (
+        prediction.get("architecture_class") == "unknown_uncalibrated"
+        and not args.allow_unknown_architecture_class
+    ):
+        print(
+            "ERROR: architecture class resolved to unknown_uncalibrated; provide "
+            "classifier metadata with architecture_class/inferred_kind/sections, "
+            "or pass --allow-unknown-architecture-class for an explicitly "
+            "wide diagnostic fallback.",
+            file=sys.stderr,
+        )
         return 2
 
     verdict = medal_band_verdict(
@@ -463,6 +483,8 @@ def main(argv: list[str] | None = None) -> int:
     parts.append(f"--label {args.label}")
     parts.append(f"--medal-floor {args.medal_floor}")
     parts.append(f"--medal-tolerance {args.medal_tolerance}")
+    if args.allow_unknown_architecture_class:
+        parts.append("--allow-unknown-architecture-class")
     (out_dir / "rebuild_command.txt").write_text(" \\\n  ".join(parts) + "\n")
 
     print(f"[xray-drift] wrote {out_json}")
