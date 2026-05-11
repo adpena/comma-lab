@@ -181,6 +181,11 @@ def build_combined_payload_from_pair(
         )
     elif cpu_raw or cuda_raw:
         raw_output_pairing_status = "partial_raw_output_manifest"
+    mechanism_blockers: list[str] = []
+    if raw_output_pairing_status == "raw_output_manifest_missing":
+        mechanism_blockers.append("raw_output_manifest_missing")
+    elif raw_output_pairing_status == "partial_raw_output_manifest":
+        mechanism_blockers.append("partial_raw_output_manifest")
 
     payload: dict[str, Any] = {
         "schema": "paired_cuda_cpu_axis_profile_anchor.v1",
@@ -198,6 +203,8 @@ def build_combined_payload_from_pair(
             "cuda": cuda_raw,
             "same_inflated_output_aggregate_sha256": same_inflated_output_aggregate_sha256,
             "raw_output_pairing_status": raw_output_pairing_status,
+            "mechanism_analysis_complete": not mechanism_blockers,
+            "mechanism_blockers": mechanism_blockers,
         },
         "sample_count": int(cpu.samples or 0),
         "cpu": {

@@ -108,6 +108,8 @@ def test_pair_builder_requires_same_archive_and_runtime_custody(tmp_path: Path) 
     assert combined["cpu"]["score_axis"] == "contest_cpu"
     assert combined["cuda"]["score_axis"] == "contest_cuda"
     assert combined["inflated_outputs"]["raw_output_pairing_status"] == "raw_output_manifest_missing"
+    assert combined["inflated_outputs"]["mechanism_analysis_complete"] is False
+    assert combined["inflated_outputs"]["mechanism_blockers"] == ["raw_output_manifest_missing"]
     assert combined["score_claim"] is False
 
 
@@ -147,6 +149,8 @@ def test_pair_builder_preserves_different_raw_output_hashes_as_xray_signal(
     assert combined is not None
     assert combined["inflated_outputs"]["same_inflated_output_aggregate_sha256"] is False
     assert combined["inflated_outputs"]["raw_output_pairing_status"] == "different_inflated_outputs"
+    assert combined["inflated_outputs"]["mechanism_analysis_complete"] is True
+    assert combined["inflated_outputs"]["mechanism_blockers"] == []
     assert combined["inflated_outputs"]["cpu"]["aggregate_sha256"] == "1" * 64
 
 

@@ -213,6 +213,11 @@ def _dual_axis_completion(
         )
     elif cpu_raw or cuda_raw:
         raw_output_pairing_status = "partial_raw_output_manifest"
+    mechanism_blockers: list[str] = []
+    if raw_output_pairing_status == "raw_output_manifest_missing":
+        mechanism_blockers.append("raw_output_manifest_missing")
+    elif raw_output_pairing_status == "partial_raw_output_manifest":
+        mechanism_blockers.append("partial_raw_output_manifest")
 
     if cuda.get("provided") and cpu.get("provided") and not same_archive_sha256:
         blockers.append("cpu_cuda_archive_sha256_mismatch")
@@ -234,7 +239,8 @@ def _dual_axis_completion(
                 blockers.append(f"{device}_artifact_archive_bytes_mismatch_with_plan")
 
     unique_blockers = list(dict.fromkeys(blockers))
-    paired_complete = not unique_blockers
+    paired_score_complete = not unique_blockers
+    drift_mechanism_complete = paired_score_complete and not mechanism_blockers
     return {
         "schema": "dual_axis_auth_eval_completion.v1",
         "required_axes": ["contest_cuda", "contest_cpu"],
@@ -244,16 +250,18 @@ def _dual_axis_completion(
         "same_runtime_tree_sha256": same_runtime_tree_sha256,
         "same_inflated_output_aggregate_sha256": same_inflated_output_aggregate_sha256,
         "raw_output_pairing_status": raw_output_pairing_status,
-        "paired_score_artifacts_complete": paired_complete,
-        "frontier_or_medal_band_complete": paired_complete,
-        "global_priority_eligible": paired_complete,
-        "rank_or_kill_eligible": paired_complete,
+        "paired_score_artifacts_complete": paired_score_complete,
+        "drift_mechanism_complete": drift_mechanism_complete,
+        "mechanism_blockers": mechanism_blockers,
+        "frontier_or_medal_band_complete": paired_score_complete,
+        "global_priority_eligible": paired_score_complete and drift_mechanism_complete,
+        "rank_or_kill_eligible": paired_score_complete,
         "blockers": unique_blockers,
         "notes": [
             "A candidate is paired/complete only when both contest-CUDA and contest-CPU score artifacts are present.",
             "Both artifacts must parse as full-sample auth evals for the same archive bytes and SHA-256.",
             "Runtime tree hashes are compared when both artifacts expose them.",
-            "Inflated raw-output hashes diagnose render-device drift but do not by themselves block paired score custody.",
+            "Inflated raw-output hashes diagnose render-device drift; missing raw hashes do not block paired score custody, but they do block mechanism-complete global-priority routing.",
         ],
     }
 

@@ -199,6 +199,14 @@ def _component_pair_from_auth_eval(
     elif cpu_raw or cuda_raw:
         raw_status = "partial_raw_output_manifest"
 
+    mechanism_blockers: list[str] = []
+    if raw_status == "raw_output_manifest_missing":
+        mechanism_blockers.append("raw_output_manifest_missing")
+    elif raw_status == "partial_raw_output_manifest":
+        mechanism_blockers.append("partial_raw_output_manifest")
+    pair_score_complete = not blockers
+    mechanism_complete = pair_score_complete and not mechanism_blockers
+
     if same_raw is True:
         mechanism_class = "same_raw_outputs_scorer_or_loader_drift"
     elif same_raw is False:
@@ -210,8 +218,10 @@ def _component_pair_from_auth_eval(
 
     return {
         "source": source or {},
-        "valid_for_mechanism_analysis": not blockers,
+        "valid_for_pair_score_analysis": pair_score_complete,
+        "valid_for_mechanism_analysis": mechanism_complete,
         "blockers": sorted(set(blockers)),
+        "mechanism_blockers": mechanism_blockers,
         "same_archive_sha256": same_archive_sha256,
         "same_archive_bytes": same_archive_bytes,
         "same_runtime_tree_sha256": same_runtime_tree_sha256,
@@ -343,6 +353,7 @@ def format_markdown(analysis: dict[str, Any]) -> str:
             "## Pair",
             "",
             f"- valid_for_mechanism_analysis: `{pair.get('valid_for_mechanism_analysis')}`",
+            f"- valid_for_pair_score_analysis: `{pair.get('valid_for_pair_score_analysis')}`",
             f"- mechanism_class: `{pair.get('mechanism_class')}`",
             f"- raw_output_pairing_status: `{pair.get('raw_output_pairing_status')}`",
             f"- same_archive_sha256: `{pair.get('same_archive_sha256')}`",
@@ -381,6 +392,12 @@ def format_markdown(analysis: dict[str, Any]) -> str:
         blockers = pair.get("blockers") or []
         if blockers:
             lines.extend(f"- `{blocker}`" for blocker in blockers)
+        else:
+            lines.append("- none")
+        mechanism_blockers = pair.get("mechanism_blockers") or []
+        lines.extend(["", "## Mechanism Blockers", ""])
+        if mechanism_blockers:
+            lines.extend(f"- `{blocker}`" for blocker in mechanism_blockers)
         else:
             lines.append("- none")
         lines.extend(["", "## Interpretation", ""])

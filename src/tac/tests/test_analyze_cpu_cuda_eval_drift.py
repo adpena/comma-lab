@@ -172,3 +172,37 @@ def test_analyze_exact_pair_classifies_different_raw_outputs(tmp_path: Path) -> 
     assert pair["gaps_cuda_minus_cpu"]["pose_term"] < 0
     assert pair["gaps_cuda_minus_cpu"]["seg_term"] > 0
     assert pair["score_claim"] is False
+
+
+def test_analyze_exact_pair_keeps_score_pair_but_blocks_mechanism_without_raw_outputs(
+    tmp_path: Path,
+) -> None:
+    mod = _load_tool("analyze_cpu_cuda_eval_drift")
+    cpu_payload = _exact_payload(
+        device="cpu",
+        score=0.2296576634626332,
+        pose=0.000164,
+        seg=0.00065592,
+        raw_sha="1" * 64,
+    )
+    cuda_payload = _exact_payload(
+        device="cuda",
+        score=0.20898305277982338,
+        pose=0.00003360,
+        seg=0.00067084,
+        raw_sha="2" * 64,
+    )
+    cpu_payload["provenance"].pop("inflated_output_manifest")
+    cuda_payload["provenance"].pop("inflated_output_manifest")
+    cpu_json = tmp_path / "cpu.json"
+    cuda_json = tmp_path / "cuda.json"
+    cpu_json.write_text(json.dumps(cpu_payload), encoding="utf-8")
+    cuda_json.write_text(json.dumps(cuda_payload), encoding="utf-8")
+
+    pair = mod.analyze_exact_pair(cpu_json, cuda_json)
+
+    assert pair["valid_for_pair_score_analysis"] is True
+    assert pair["valid_for_mechanism_analysis"] is False
+    assert pair["mechanism_class"] == "same_archive_runtime_raw_outputs_unmeasured"
+    assert pair["mechanism_blockers"] == ["raw_output_manifest_missing"]
+    assert pair["blockers"] == []

@@ -194,7 +194,9 @@ def test_dual_plan_marks_pair_complete_only_with_matching_cpu_and_cuda_artifacts
     completion = plan["dual_axis_completion"]
     assert completion["blockers"] == []
     assert completion["paired_score_artifacts_complete"] is True
-    assert completion["global_priority_eligible"] is True
+    assert completion["drift_mechanism_complete"] is False
+    assert completion["mechanism_blockers"] == ["raw_output_manifest_missing"]
+    assert completion["global_priority_eligible"] is False
     assert completion["frontier_or_medal_band_complete"] is True
     assert completion["same_archive_sha256"] is True
     assert completion["same_archive_bytes"] is True
@@ -248,6 +250,9 @@ def test_dual_plan_compares_raw_output_hashes_without_blocking_score_pair(
     completion = plan["dual_axis_completion"]
     assert completion["blockers"] == []
     assert completion["paired_score_artifacts_complete"] is True
+    assert completion["drift_mechanism_complete"] is True
+    assert completion["mechanism_blockers"] == []
+    assert completion["global_priority_eligible"] is True
     assert completion["same_inflated_output_aggregate_sha256"] is False
     assert completion["raw_output_pairing_status"] == "different_inflated_outputs"
     assert (

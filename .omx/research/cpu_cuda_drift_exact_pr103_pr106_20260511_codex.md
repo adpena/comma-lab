@@ -10,7 +10,8 @@ JSON artifact:
 
 ## Pair
 
-- valid_for_mechanism_analysis: `True`
+- valid_for_mechanism_analysis: `False`
+- valid_for_pair_score_analysis: `True`
 - mechanism_class: `same_archive_runtime_raw_outputs_unmeasured`
 - raw_output_pairing_status: `raw_output_manifest_missing`
 - same_archive_sha256: `True`
@@ -33,6 +34,10 @@ JSON artifact:
 ## Blockers
 
 - none
+
+## Mechanism Blockers
+
+- `raw_output_manifest_missing`
 
 ## Interpretation
 
