@@ -22,21 +22,64 @@ API:
 Current public API
 ------------------
 
-`wavelet_residual_pr106` is the only exported module. It is a research-signal
-scaffold, not a score lane: it computes DWT sparsity/entropy statistics over
-decoded PR106-family RGB frames and freezes all result manifests to
-`score_claim=False`.
+* `wavelet_residual_pr106` — DWT sparsity/entropy stats (Mallat 1989).
+* `numpy_inverse_dwt` — numpy-only Haar inverse-DWT (≤80 LOC; clears the
+  wavelet L1 inflate-runtime-dep blocker per
+  `feedback_numpy_inverse_dwt_landed_20260511.md`).
+* `cool_chic_residual` — hierarchical pyramid signal (Ladune et al. 2023).
+* `c3_residual` — conditional residual signal (Kim et al. 2024).
+* `siren_residual` — frequency-domain signature for sinusoidal coordinate
+  MLPs (Sitzmann et al. 2020).
+* `coordinate_mlp_residual` — family-agnostic Laplacian smoothness prior
+  (Tancik et al. 2020).
+
+All six modules emit research-signal artifacts with promotion-status frozen
+to False; no callsite can promote them past L0 without satisfying the 8
+archive-grammar fields per HNeRV parity discipline.
 
 See also
 --------
 
-`feedback_wavelet_residual_basis_pr106_scaffold_landed_20260511.md` —
-the canonical landing memo with the 6-hook wire-in declaration and the
-operator-gated path to L1+ promotion.
+* `feedback_wavelet_residual_basis_pr106_scaffold_landed_20260511.md`
+* `feedback_numpy_inverse_dwt_landed_20260511.md`
+* `feedback_nonhnerv_residual_basis_scaffolds_landed_20260511.md`
 """
 
 from __future__ import annotations
 
+from tac.residual_basis.c3_residual import (
+    C3ConditionalStats,
+    C3ResidualError,
+    C3ResidualResult,
+    compute_c3_residual_stats,
+    compute_conditional_residual,
+)
+from tac.residual_basis.cool_chic_residual import (
+    CoolChicPyramidLevelStats,
+    CoolChicResidualError,
+    CoolChicResidualResult,
+    compute_cool_chic_residual_stats,
+    compute_pyramid_residual,
+)
+from tac.residual_basis.coordinate_mlp_residual import (
+    CoordinateMlpResidualError,
+    CoordinateMlpResidualResult,
+    CoordinateMlpSmoothnessStats,
+    compute_coordinate_mlp_residual_stats,
+    compute_finite_difference_laplacian,
+)
+from tac.residual_basis.numpy_inverse_dwt import (
+    NumpyInverseDWTError,
+    haar_inverse_2d_multi_level,
+    haar_inverse_2d_single_level,
+)
+from tac.residual_basis.siren_residual import (
+    SirenFrequencyBandStats,
+    SirenResidualError,
+    SirenResidualResult,
+    compute_radial_frequency_buckets,
+    compute_siren_residual_stats,
+)
 from tac.residual_basis.wavelet_residual_pr106 import (
     BandStats,
     WaveletResidualError,
@@ -49,10 +92,33 @@ from tac.residual_basis.wavelet_residual_pr106 import (
 
 __all__ = [
     "BandStats",
+    "C3ConditionalStats",
+    "C3ResidualError",
+    "C3ResidualResult",
+    "CoolChicPyramidLevelStats",
+    "CoolChicResidualError",
+    "CoolChicResidualResult",
+    "CoordinateMlpResidualError",
+    "CoordinateMlpResidualResult",
+    "CoordinateMlpSmoothnessStats",
+    "NumpyInverseDWTError",
+    "SirenFrequencyBandStats",
+    "SirenResidualError",
+    "SirenResidualResult",
     "WaveletResidualError",
     "WaveletResidualResult",
+    "compute_c3_residual_stats",
+    "compute_conditional_residual",
+    "compute_cool_chic_residual_stats",
+    "compute_coordinate_mlp_residual_stats",
+    "compute_finite_difference_laplacian",
+    "compute_pyramid_residual",
+    "compute_radial_frequency_buckets",
+    "compute_siren_residual_stats",
     "compute_wavelet_residual_stats",
     "decompose_frame_to_bands",
+    "haar_inverse_2d_multi_level",
+    "haar_inverse_2d_single_level",
     "load_decoded_raw_frames",
     "reconstruct_frame_from_bands",
 ]
