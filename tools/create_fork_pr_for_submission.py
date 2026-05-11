@@ -59,6 +59,17 @@ from typing import Any
 
 DEFAULT_FORK_REPO = "adpena/comma_video_compression_challenge"
 DEFAULT_BASE_BRANCH = "master"
+EXCLUDED_SUBMISSION_DIR_NAMES = frozenset(
+    {
+        "__pycache__",
+        ".git",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".ruff_cache",
+    }
+)
+EXCLUDED_SUBMISSION_FILE_NAMES = frozenset({".DS_Store"})
+EXCLUDED_SUBMISSION_SUFFIXES = frozenset({".pyc", ".pyo"})
 
 
 def run(
@@ -149,6 +160,36 @@ def find_existing_pr(fork_repo: str, branch: str) -> int | None:
     return None
 
 
+def should_copy_submission_path(path: Path) -> bool:
+    """Return whether a runtime file should be copied into the fork PR.
+
+    The GHA fork PR is a public runtime surface, not a local custody snapshot.
+    Rebuildable caches and host-specific metadata must be filtered at the
+    canonical helper so every caller gets the same hygiene guarantee.
+    """
+
+    if any(part in EXCLUDED_SUBMISSION_DIR_NAMES for part in path.parts):
+        return False
+    if path.name in EXCLUDED_SUBMISSION_FILE_NAMES:
+        return False
+    if path.suffix in EXCLUDED_SUBMISSION_SUFFIXES:
+        return False
+    return True
+
+
+def _copy_submission_tree(src: Path, dst: Path, *, root: Path) -> None:
+    dst.mkdir(parents=True, exist_ok=True)
+    for entry in sorted(src.iterdir(), key=lambda item: item.name):
+        rel = entry.relative_to(root)
+        if not should_copy_submission_path(rel):
+            continue
+        target = dst / entry.name
+        if entry.is_dir():
+            _copy_submission_tree(entry, target, root=root)
+        else:
+            shutil.copy2(entry, target)
+
+
 def copy_submission_dir(src: Path, clone_dir: Path, submission_name: str) -> Path:
     """Copy src/* to <clone_dir>/submissions/<submission_name>/."""
     target = clone_dir / "submissions" / submission_name
@@ -156,12 +197,7 @@ def copy_submission_dir(src: Path, clone_dir: Path, submission_name: str) -> Pat
         # Preserve repository state by removing to ensure clean copy.
         shutil.rmtree(target)
     target.mkdir(parents=True)
-    for entry in src.iterdir():
-        dst = target / entry.name
-        if entry.is_dir():
-            shutil.copytree(entry, dst)
-        else:
-            shutil.copy2(entry, dst)
+    _copy_submission_tree(src, target, root=src)
     return target
 
 

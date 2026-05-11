@@ -104,6 +104,39 @@ def test_copy_submission_dir_preserves_contents(tmp_path: Path) -> None:
     assert (target / "scripts" / "helper.py").read_text() == "# helper\n"
 
 
+def test_copy_submission_dir_excludes_rebuildable_cache_files(tmp_path: Path) -> None:
+    """Fork PR runtime publication must not copy local bytecode/cache clutter."""
+    mod = _load_module()
+    src = tmp_path / "src_submission"
+    src.mkdir()
+    (src / "inflate.sh").write_text("#!/usr/bin/env bash\necho hi\n")
+    (src / "inflate.py").write_text("print('ok')\n")
+    (src / "__pycache__").mkdir()
+    (src / "__pycache__" / "inflate.cpython-312.pyc").write_bytes(b"cache")
+    (src / "helpers").mkdir()
+    (src / "helpers" / "codec.py").write_text("# helper\n")
+    (src / "helpers" / "codec.pyc").write_bytes(b"cache")
+    (src / "helpers" / "__pycache__").mkdir()
+    (src / "helpers" / "__pycache__" / "codec.cpython-312.pyc").write_bytes(b"cache")
+    (src / ".pytest_cache").mkdir()
+    (src / ".pytest_cache" / "README.md").write_text("cache\n")
+    (src / ".DS_Store").write_bytes(b"finder")
+
+    clone_dir = tmp_path / "clone"
+    (clone_dir / "submissions").mkdir(parents=True)
+
+    target = mod.copy_submission_dir(src, clone_dir, "pr101_test")
+
+    assert (target / "inflate.sh").is_file()
+    assert (target / "inflate.py").is_file()
+    assert (target / "helpers" / "codec.py").is_file()
+    assert not (target / "__pycache__").exists()
+    assert not (target / "helpers" / "__pycache__").exists()
+    assert not (target / "helpers" / "codec.pyc").exists()
+    assert not (target / ".pytest_cache").exists()
+    assert not (target / ".DS_Store").exists()
+
+
 def test_copy_submission_dir_replaces_existing(tmp_path: Path) -> None:
     """If submissions/<name>/ already exists, it must be replaced cleanly."""
     mod = _load_module()
