@@ -14,11 +14,13 @@ import numpy as np
 import pytest
 
 from tac.arithmetic_qint_codec import encode_qints_arithmetic_compact
+from tac.jcsp_stream_builder import rawvideo_bytes_to_stream_source
 from tac.joint_codec_stack_orchestrator import (
     JCSP_LOCAL_SKELETON_RUNTIME_BLOCKER,
     JCSP_LOCAL_SKELETON_SCHEMA,
     JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
     KIND_ARITHMETIC_STATIC,
+    KIND_BALLE_HYPERPRIOR,
     KIND_RAW_PASSTHROUGH,
     StreamSource,
     pack_jcsp_local_skeleton_container,
@@ -66,14 +68,7 @@ def _fixture_raw_jcsp_bytes(raw_output: str, payload: bytes) -> bytes:
 
 
 def _real_rawvideo_jcsp_bytes(raw_output: str, payload: bytes) -> bytes:
-    stream = StreamSource(
-        name=raw_output,
-        qints=np.frombuffer(payload, dtype=np.uint8).copy(),
-        num_symbols=256,
-        offset=0,
-        codec_kind=KIND_ARITHMETIC_STATIC,
-        score_per_byte_marginal=0.0,
-    )
+    stream = rawvideo_bytes_to_stream_source(payload, name=raw_output)
     return run_sequential_codec_stack(streams=[stream]).container_bytes
 
 
@@ -87,6 +82,26 @@ def _offset_aq_jcsp_bytes(raw_output: str, payload: bytes) -> bytes:
         score_per_byte_marginal=0.0,
     )
     return run_sequential_codec_stack(streams=[stream]).container_bytes
+
+
+def _balle_raw_named_jcsp_bytes(raw_output: str) -> bytes:
+    name = raw_output.encode("utf-8")
+    payload = b"BHv1not-real-rawvideo"
+    out = bytearray()
+    out += b"JCSP"
+    out += struct.pack("<H", 1)
+    out += struct.pack("<B", 1)
+    out += struct.pack("<B", len(name))
+    out += name
+    out += struct.pack("<B", KIND_BALLE_HYPERPRIOR)
+    out += struct.pack("<I", len(payload))
+    out += struct.pack("<I", len(payload))
+    out += struct.pack("<i", 0)
+    out += struct.pack("<i", 0)
+    out += struct.pack("<I", len(payload))
+    out += payload
+    out += struct.pack("<IIB", 0, 0, 0)
+    return bytes(out)
 
 
 def _jcsk_preview_bytes() -> bytes:
@@ -926,6 +941,178 @@ def test_runtime_bridge_cli_plans_real_aq_without_writing_raw(
     assert manifest["ready_for_exact_eval_dispatch"] is False
 
 
+def test_runtime_bridge_cli_consume_real_aq_outputs_returns_zero(
+    tmp_path: Path,
+) -> None:
+    archive_dir = tmp_path / "archive"
+    archive_dir.mkdir()
+    payload = bytes(range(36))
+    (archive_dir / "jcsp.bin").write_bytes(
+        _real_rawvideo_jcsp_bytes("route/video.raw", payload)
+    )
+    inflated_dir = tmp_path / "inflated"
+    names_file = tmp_path / "names.txt"
+    names_file.write_text("route/video.hevc\n", encoding="utf-8")
+    manifest_path = tmp_path / "consume.json"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(BRIDGE_PATH),
+            str(archive_dir),
+            "--mode",
+            "consume-real-raw-outputs",
+            "--inflated-dir",
+            str(inflated_dir),
+            "--video-names-file",
+            str(names_file),
+            "--manifest-json",
+            str(manifest_path),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    assert "consumed real AQ rawvideo JCSP streams" in result.stderr
+    assert (inflated_dir / "route" / "video.raw").read_bytes() == payload
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["runtime_action"] == "consume_real_aq_rawvideo_outputs"
+    assert manifest["production_bridge_mode"] == "consume-real-raw-outputs"
+    assert manifest["score_claim"] is False
+    assert manifest["dispatch_attempted"] is False
+    assert manifest["no_scorer_at_inflate"] is True
+    assert manifest["consumes_required_member"] is True
+    assert manifest["real_raw_outputs_emitted"] is True
+    assert manifest["fixture_raw_outputs_emitted"] is False
+    assert manifest["candidate_outputs_from_real_bridge_rawvideo"] is True
+    assert manifest["raw_output_parity_required_for_runtime_consumption"] is False
+    assert manifest["ready_for_output_parity"] is False
+    assert manifest["ready_for_submission_runtime_consumption"] is True
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["dispatch_blockers"] == ["exact_cuda_auth_eval_missing"]
+
+
+def test_runtime_bridge_cli_consume_mode_refuses_missing_jcsp_member(
+    tmp_path: Path,
+) -> None:
+    archive_dir = tmp_path / "archive"
+    archive_dir.mkdir()
+    inflated_dir = tmp_path / "inflated"
+    names_file = tmp_path / "names.txt"
+    names_file.write_text("route/video.hevc\n", encoding="utf-8")
+    manifest_path = tmp_path / "missing_consume.json"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(BRIDGE_PATH),
+            str(archive_dir),
+            "--mode",
+            "consume-real-raw-outputs",
+            "--inflated-dir",
+            str(inflated_dir),
+            "--video-names-file",
+            str(names_file),
+            "--manifest-json",
+            str(manifest_path),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 44
+    assert "production consumption refused" in result.stderr
+    assert not any(inflated_dir.rglob("*.raw"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["member_present"] is False
+    assert manifest["consumes_required_member"] is False
+    assert manifest["real_raw_outputs_emitted"] is False
+    assert manifest["ready_for_submission_runtime_consumption"] is False
+    assert "jcsp_member_missing_for_real_raw_output_emission" in (
+        manifest["dispatch_blockers"]
+    )
+
+
+@pytest.mark.parametrize(
+    ("member_bytes", "expected_blocker"),
+    [
+        (
+            _fixture_raw_jcsp_bytes("route/video.raw", b"raw-fixture"),
+            "jcsp_aq_rawvideo_stream_not_arithmetic_static",
+        ),
+        (
+            _balle_raw_named_jcsp_bytes("route/video.raw"),
+            "jcsp_aq_rawvideo_stream_not_arithmetic_static",
+        ),
+    ],
+)
+def test_runtime_bridge_consume_real_outputs_refuses_non_real_stream_kinds(
+    tmp_path: Path,
+    member_bytes: bytes,
+    expected_blocker: str,
+) -> None:
+    bridge = _load_bridge_module()
+    archive_dir = tmp_path / "archive"
+    archive_dir.mkdir()
+    (archive_dir / "jcsp.bin").write_bytes(member_bytes)
+    inflated_dir = tmp_path / "inflated"
+    names_file = tmp_path / "names.txt"
+    names_file.write_text("route/video.hevc\n", encoding="utf-8")
+
+    manifest = bridge.consume_jcsp_real_raw_outputs(
+        archive_dir,
+        video_names_file=names_file,
+        output_dir=inflated_dir,
+    )
+
+    assert manifest["real_raw_outputs_emitted"] is False
+    assert manifest["raw_output_emission_attempted"] is False
+    assert not (inflated_dir / "route" / "video.raw").exists()
+    assert manifest["ready_for_submission_runtime_consumption"] is False
+    assert expected_blocker in manifest["dispatch_blockers"]
+    assert JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER in (
+        manifest["dispatch_blockers"]
+    )
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
+def test_runtime_bridge_consume_real_outputs_refuses_extra_streams(
+    tmp_path: Path,
+) -> None:
+    bridge = _load_bridge_module()
+    archive_dir = tmp_path / "archive"
+    archive_dir.mkdir()
+    streams = [
+        rawvideo_bytes_to_stream_source(bytes(range(36)), name="route/video.raw"),
+        rawvideo_bytes_to_stream_source(bytes(range(36)), name="extra/video.raw"),
+    ]
+    (archive_dir / "jcsp.bin").write_bytes(
+        run_sequential_codec_stack(streams=streams).container_bytes
+    )
+    inflated_dir = tmp_path / "inflated"
+    names_file = tmp_path / "names.txt"
+    names_file.write_text("route/video.hevc\n", encoding="utf-8")
+
+    manifest = bridge.consume_jcsp_real_raw_outputs(
+        archive_dir,
+        video_names_file=names_file,
+        output_dir=inflated_dir,
+    )
+
+    assert manifest["real_raw_outputs_emitted"] is False
+    assert not (inflated_dir / "route" / "video.raw").exists()
+    assert "jcsp_aq_rawvideo_unexpected_raw_stream" in (
+        manifest["dispatch_blockers"]
+    )
+    assert JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER in (
+        manifest["dispatch_blockers"]
+    )
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
 def test_runtime_bridge_cli_real_aq_preflight_emits_raw_but_blocks_exact_eval(
     tmp_path: Path,
 ) -> None:
@@ -996,19 +1183,88 @@ def test_runtime_bridge_cli_real_aq_preflight_emits_raw_but_blocks_exact_eval(
     assert proof["ready_for_submission_runtime_consumption"] is True
 
 
-def test_inflate_sh_probes_jcsp_before_branch_dispatch() -> None:
+def test_inflate_sh_consumes_jcsp_before_branch_dispatch() -> None:
     text = INFLATE_SH_PATH.read_text(encoding="utf-8")
     hook = text.index("jcsp_runtime_bridge.py")
     branch_dispatch = text.index("while IFS= read -r rel")
 
     assert hook < branch_dispatch
-    assert 'JCSP_RUNTIME_BRIDGE_MODE="${JCSP_RUNTIME_BRIDGE_MODE:-probe}"' in text
+    assert (
+        'JCSP_RUNTIME_BRIDGE_MODE="${JCSP_RUNTIME_BRIDGE_MODE:-consume-real-raw-outputs}"'
+        in text
+    )
     assert '--mode "$JCSP_RUNTIME_BRIDGE_MODE"' in text
     assert "--inflated-dir \"$INFLATED_DIR\"" in text
     assert "--output-dir \"$INFLATED_DIR\"" in text
     assert "--video-names-file \"$VIDEO_NAMES_FILE\"" in text
     assert "--manifest-json \"$JCSP_RUNTIME_PROBE_MANIFEST\"" in text
     assert "--parity-manifest-json \"$JCSP_RUNTIME_PARITY_MANIFEST\"" in text
+    assert "exit 0" in text[hook:branch_dispatch]
+
+
+def test_inflate_sh_default_jcsp_mode_consumes_and_exits_zero(
+    tmp_path: Path,
+) -> None:
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    ffmpeg = fake_bin / "ffmpeg"
+    ffmpeg.write_text(
+        "#!/bin/sh\n"
+        "printf '%s\\n' 'in_range out_range in_color_matrix in_primaries in_transfer'\n",
+        encoding="utf-8",
+    )
+    ffmpeg.chmod(0o755)
+    uv = fake_bin / "uv"
+    uv.write_text("#!/bin/sh\nexit 127\n", encoding="utf-8")
+    uv.chmod(0o755)
+
+    archive_dir = tmp_path / "archive"
+    archive_dir.mkdir()
+    payload = bytes(range(36))
+    (archive_dir / "jcsp.bin").write_bytes(
+        _real_rawvideo_jcsp_bytes("route/video.raw", payload)
+    )
+    inflated_dir = tmp_path / "inflated"
+    names_file = tmp_path / "names.txt"
+    names_file.write_text("route/video.hevc\n", encoding="utf-8")
+
+    env = os.environ.copy()
+    env.update(
+        {
+            "PATH": f"{fake_bin}{os.pathsep}{env.get('PATH', '')}",
+            "FFMPEG_BIN": "ffmpeg",
+            "UV_BIN": "uv",
+            "PYTHON": sys.executable,
+        }
+    )
+
+    result = subprocess.run(
+        [
+            "/bin/bash",
+            str(INFLATE_SH_PATH),
+            str(archive_dir),
+            str(inflated_dir),
+            str(names_file),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    assert result.returncode == 0
+    assert "mode=consume-real-raw-outputs" in result.stderr
+    assert "emitted contest .raw outputs" in result.stderr
+    assert (inflated_dir / "route" / "video.raw").read_bytes() == payload
+    manifest = json.loads(
+        (inflated_dir / "jcsp_runtime_probe_manifest.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert manifest["runtime_action"] == "consume_real_aq_rawvideo_outputs"
+    assert manifest["ready_for_submission_runtime_consumption"] is True
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["dispatch_blockers"] == ["exact_cuda_auth_eval_missing"]
 
 
 def test_inflate_sh_emit_real_jcsp_mode_consumes_then_fails_closed(

@@ -22,6 +22,7 @@ import pytest
 import torch
 
 from tac.jcsp_stream_builder import (
+    JCSP_RAWVIDEO_STREAM_SOURCE_SCHEMA,
     JCSP_STREAM_SOURCE_ARCHIVE_MEMBER_SCHEMA,
     JCSP_STREAM_SOURCE_DRY_RUN_SCHEMA,
     JCSP_STREAM_SOURCE_LOCAL_ARCHIVE_MEMBER_SCHEMA,
@@ -31,6 +32,7 @@ from tac.jcsp_stream_builder import (
     load_jcsp_score_marginals,
     model_to_stream_sources,
     quantize_tensor_symmetric,
+    rawvideo_bytes_to_stream_source,
     tensor_to_stream_source,
 )
 from tac.joint_codec_stack_orchestrator import (
@@ -138,6 +140,40 @@ def test_tensor_to_stream_source_raw_passthrough_preserves_payload() -> None:
     assert src.codec_kind == KIND_RAW_PASSTHROUGH
     assert src.raw_passthrough_bytes == payload
     assert src.qints.size == 0
+
+
+def test_rawvideo_bytes_to_stream_source_builds_production_aq_stream() -> None:
+    payload = bytes(range(36))
+    src = rawvideo_bytes_to_stream_source(
+        payload,
+        name="route/video.raw",
+        score_per_byte_marginal=0.0,
+    )
+    assert JCSP_RAWVIDEO_STREAM_SOURCE_SCHEMA == (
+        "jcsp_rawvideo_stream_source_contract_v1"
+    )
+    assert src.name == "route/video.raw"
+    assert src.codec_kind == KIND_ARITHMETIC_STATIC
+    assert src.num_symbols == 256
+    assert src.offset == 0
+    assert src.qints.dtype == np.uint8
+    assert src.qints.tobytes() == payload
+
+    result = run_sequential_codec_stack(streams=[src])
+    parsed = unpack_jcsp_container(result.container_bytes)
+    [stream] = parsed["streams"]
+    assert stream["name"] == "route/video.raw"
+    assert stream["codec_kind"] == KIND_ARITHMETIC_STATIC
+    assert stream["payload_magic"] in (b"AQv1", b"AQc1")
+
+
+def test_rawvideo_bytes_to_stream_source_rejects_fixture_shapes() -> None:
+    with pytest.raises(ValueError, match=r"end with \.raw"):
+        rawvideo_bytes_to_stream_source(b"\x00\x01\x02", name="route/video.hevc")
+    with pytest.raises(ValueError, match="divisible by 3"):
+        rawvideo_bytes_to_stream_source(b"\x00\x01", name="route/video.raw")
+    with pytest.raises(ValueError, match="unsafe"):
+        rawvideo_bytes_to_stream_source(b"\x00\x01\x02", name="../video.raw")
 
 
 def test_tensor_to_stream_source_balle_without_codec_raises() -> None:

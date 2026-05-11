@@ -177,6 +177,41 @@ not promotion-eligible until it emits a table, the table is materialized into a
 charged yshift archive, and exact contest-CUDA auth eval adjudicates that
 archive.
 
+## Yshift inline retry classification + dataset-ready retry
+
+The inline retry also failed before scorer work. Log recovered outside the repo
+raw tree:
+
+- temp log:
+  `/tmp/pr106_yshift_inline_logs/comma-lab-pr106-yshift-score-table.log`
+- failure:
+
+```text
+ValueError: no active lane claim found for lane_id=lane_pr106_yshift_score_table instance_job_id=kaggle_pr106_yshift_score_table_inline_20260511T154114Z
+```
+
+The runtime workspace still contained a stale source dataset snapshot whose
+embedded claim ledger ended at
+`kaggle_pr106_yshift_score_table_retry_20260511T1526Z`. The extra kernel
+directory tarball was not used by the Kaggle script runtime. Classification:
+`failed_kaggle_source_dataset_snapshot_stale_no_score_claim`.
+
+Corrective action was to retry only after source-dataset readiness:
+
+- terminal inline job:
+  `failed_kaggle_source_dataset_snapshot_stale_no_score_claim`
+- new job id:
+  `kaggle_pr106_yshift_score_table_datasetready_20260511T154910Z`
+- source dataset version message:
+  `PR106 yshift dataset-ready source bundle 20260511`
+- dataset readiness checked with:
+  `uv tool run kaggle datasets status adpena/comma-lab-pr106-yshift-source`
+  returning `ready`
+- kernel version: `5`
+- pushed status: `KernelWorkerStatus.RUNNING`
+
+This is still `score_claim=false` and only a CUDA table producer.
+
 ## Materialization tools
 
 Both active PR106 score-table producers now have scorer-free local materializers:
@@ -208,3 +243,38 @@ Focused verification:
   `8 passed`
 - `.venv/bin/python -m ruff check tools/materialize_pr106_yshift_score_table_candidate.py src/tac/tests/test_materialize_pr106_yshift_score_table_candidate.py`:
   pass
+
+## Latent radius-2 Kaggle harvest
+
+The radius-2 latent score-table producer completed and was harvested locally.
+This is high-signal but still non-promotable diagnostic evidence until exact
+contest-equivalent CUDA adjudication lands.
+
+- completed job:
+  `kaggle_pr106_latent_score_table_r2_20260511T151955Z`
+- kernel:
+  `https://www.kaggle.com/code/adpena/comma-lab-pr106-latent-score-table`
+- score table:
+  `experiments/results/kaggle_pr106_latent_score_table_r2_20260511T151955Z/pr106_latent_score_table/latent_run/score_table/score_table.npy`
+- score-table SHA-256:
+  `326038a5e2dbb9daf8498e7e8c07fdfc15d832b443b7ad1758cab4f0517001fe`
+- materialized archive:
+  `experiments/results/pr106_latent_sidecar_r2_from_kaggle_table_20260511_codex/sidecar_archive.zip`
+- materialized archive bytes:
+  `186822`
+- materialized archive SHA-256:
+  `7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f`
+- Kaggle P100 diagnostic CUDA canonical score:
+  `0.2066238854574151`
+- score axis:
+  `diagnostic_cuda`
+- evidence grade:
+  `B`
+- promotion:
+  `false`
+
+Adversarial reading: this beats the prior PR106 latent-sidecar exact T4 score
+numerically, but the run was Kaggle P100 with non-T4 diagnostic metadata and is
+not a score claim. The correct next step is Modal T4 exact CUDA adjudication on
+the local materialized archive, not leaderboard/paper promotion from the Kaggle
+log.

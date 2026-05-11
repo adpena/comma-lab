@@ -185,7 +185,7 @@ if [ -f "$ARCHIVE_DIR/renderer_payload.bin" ] \
 fi
 
 if [ -f "$ARCHIVE_DIR/jcsp.bin" ]; then
-  JCSP_RUNTIME_BRIDGE_MODE="${JCSP_RUNTIME_BRIDGE_MODE:-probe}"
+  JCSP_RUNTIME_BRIDGE_MODE="${JCSP_RUNTIME_BRIDGE_MODE:-consume-real-raw-outputs}"
   JCSP_RUNTIME_PROBE_MANIFEST="$INFLATED_DIR/jcsp_runtime_probe_manifest.json"
   JCSP_RUNTIME_PARITY_MANIFEST="$INFLATED_DIR/jcsp_runtime_raw_output_parity_manifest.json"
   echo "[inflate] jcsp.bin detected; running JCSP runtime bridge mode=$JCSP_RUNTIME_BRIDGE_MODE" >&2
@@ -206,6 +206,8 @@ if [ -f "$ARCHIVE_DIR/jcsp.bin" ]; then
     echo "       Probe manifest: $JCSP_RUNTIME_PROBE_MANIFEST" >&2
     exit 44
   fi
+  echo "[inflate] jcsp.bin consumed by JCSP runtime bridge; emitted contest .raw outputs" >&2
+  exit 0
 fi
 
 if [ "$PYTHON_INFLATE" = "renderer" ] \

@@ -14,6 +14,8 @@ Exposed surface:
   ``(qints, num_symbols, offset, scale)``.
 * ``tensor_to_stream_source(tensor, *, name, codec_kind, ...)`` — single-
   tensor wrapper that builds a validated ``StreamSource``.
+* ``rawvideo_bytes_to_stream_source(payload, *, name=...)`` — builds the
+  production AQ/rawvideo stream shape consumed by robust_current inflate.
 * ``model_to_stream_sources(model, ...)`` — walks ``model_to_jcsp_streams``
   + per-tensor quantization, returning ``(streams, specs)`` aligned by index.
 
@@ -63,6 +65,7 @@ JCSP_STREAM_SOURCE_LOCAL_ARCHIVE_MEMBER_SCHEMA = JCSP_LOCAL_SKELETON_SCHEMA
 JCSP_STREAM_SOURCE_ARCHIVE_MEMBER_SCHEMA = (
     "jcsp_stream_source_archive_member_contract_v1"
 )
+JCSP_RAWVIDEO_STREAM_SOURCE_SCHEMA = "jcsp_rawvideo_stream_source_contract_v1"
 
 
 def _coerce_to_float32_numpy(tensor: Any) -> np.ndarray:
@@ -328,6 +331,53 @@ def tensor_to_stream_source(
         offset=offset,
         codec_kind=codec_kind,
         balle_codec=balle_codec,
+        score_per_byte_marginal=float(score_per_byte_marginal),
+    )
+
+
+def _validate_rawvideo_stream_name(name: str) -> str:
+    text = str(name).strip()
+    if not text:
+        raise ValueError("rawvideo stream name must not be empty")
+    if "\x00" in text or text.startswith("/"):
+        raise ValueError(f"unsafe rawvideo stream name {text!r}")
+    parts = Path(text).parts
+    if any(part == ".." for part in parts):
+        raise ValueError(f"unsafe rawvideo stream name {text!r}")
+    if not text.endswith(".raw"):
+        raise ValueError(f"rawvideo stream name must end with .raw: {text!r}")
+    return text
+
+
+def rawvideo_bytes_to_stream_source(
+    payload: bytes | bytearray | memoryview,
+    *,
+    name: str,
+    score_per_byte_marginal: float = 0.0,
+) -> StreamSource:
+    """Build the production JCSP rawvideo stream consumed by ``inflate.sh``.
+
+    The returned stream is not a raw-passthrough fixture.  It is encoded by the
+    JCSP arithmetic-static codec as a byte alphabet (`num_symbols=256`,
+    `offset=0`) and is accepted by ``consume-real-raw-outputs`` only when the
+    stream name exactly matches an expected relative ``.raw`` output path.
+    """
+
+    if not isinstance(payload, (bytes, bytearray, memoryview)):
+        raise ValueError("rawvideo payload must be bytes-like")
+    raw = bytes(payload)
+    if not raw:
+        raise ValueError("rawvideo payload must be nonempty")
+    if len(raw) % 3:
+        raise ValueError("rawvideo payload length must be divisible by 3")
+    if not np.isfinite(score_per_byte_marginal):
+        raise ValueError("score_per_byte_marginal must be finite")
+    return StreamSource(
+        name=_validate_rawvideo_stream_name(name),
+        qints=np.frombuffer(raw, dtype=np.uint8).copy(),
+        num_symbols=256,
+        offset=0,
+        codec_kind=KIND_ARITHMETIC_STATIC,
         score_per_byte_marginal=float(score_per_byte_marginal),
     )
 
@@ -912,6 +962,7 @@ def jcsp_stream_source_archive_member(
 
 
 __all__ = [
+    "JCSP_RAWVIDEO_STREAM_SOURCE_SCHEMA",
     "JCSP_STREAM_SOURCE_ARCHIVE_MEMBER_SCHEMA",
     "JCSP_STREAM_SOURCE_DRY_RUN_SCHEMA",
     "JCSP_STREAM_SOURCE_LOCAL_ARCHIVE_MEMBER_SCHEMA",
@@ -921,5 +972,6 @@ __all__ = [
     "load_jcsp_score_marginals",
     "model_to_stream_sources",
     "quantize_tensor_symmetric",
+    "rawvideo_bytes_to_stream_source",
     "tensor_to_stream_source",
 ]

@@ -3,10 +3,11 @@
 
 This module is intentionally stdlib-only.  It runs from ``inflate.sh`` before
 any rendering branch so an archive carrying ``jcsp.bin`` cannot silently fall
-through to an unrelated runtime path.  The CLI probe still refuses every
-present ``jcsp.bin`` before branch dispatch.  The separate emitter helpers are
-for narrow raw-output bridge proofs and must prove byte parity before they can
-clear submission-runtime consumption blockers.
+through to an unrelated runtime path.  The default production mode only clears
+submission-runtime consumption for the narrow real AQ rawvideo contract:
+expected ``.raw`` stream names, arithmetic-static AQv1/AQc1 payloads,
+nonempty RGB24-aligned bytes, no fixtures, no no-ops, and no extra streams.
+Exact CUDA dispatch remains blocked in metadata.
 """
 from __future__ import annotations
 
@@ -1302,6 +1303,7 @@ def emit_jcsp_real_raw_outputs(
     member_name: str = JCSP_ARCHIVE_MEMBER_NAME,
     manifest_json: str | Path | None = None,
     parity_manifest_json: str | Path | None = None,
+    require_output_parity_for_runtime_consumption: bool = True,
 ) -> dict[str, Any]:
     """Decode the narrow real JCSP AQ/rawvideo stream contract.
 
@@ -1416,15 +1418,25 @@ def emit_jcsp_real_raw_outputs(
         parity_proof is not None
         and parity_proof.get("ready_for_output_parity") is True
     )
-    ready_for_submission_runtime_consumption = ready_for_output_parity
+    raw_contract_consumed = bool(expected and emitted_rows and not blockers)
+    ready_for_submission_runtime_consumption = (
+        ready_for_output_parity
+        if require_output_parity_for_runtime_consumption
+        else raw_contract_consumed
+    )
+    parity_blockers = (
+        parity_proof.get("dispatch_blockers", [])
+        if parity_proof is not None
+        else (
+            [JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER]
+            if require_output_parity_for_runtime_consumption
+            else []
+        )
+    )
     dispatch_blockers = _dedupe(
         [
             *blockers,
-            *(
-                parity_proof.get("dispatch_blockers", [])
-                if parity_proof is not None
-                else [JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER]
-            ),
+            *parity_blockers,
             *(
                 []
                 if ready_for_submission_runtime_consumption
@@ -1477,6 +1489,9 @@ def emit_jcsp_real_raw_outputs(
         ),
         "raw_output_parity_proof": parity_proof,
         "byte_exact_raw_output_parity": byte_exact_parity,
+        "raw_output_parity_required_for_runtime_consumption": bool(
+            require_output_parity_for_runtime_consumption
+        ),
         "ready_for_output_parity": ready_for_output_parity,
         "ready_for_submission_runtime_consumption": (
             ready_for_submission_runtime_consumption
@@ -1484,6 +1499,72 @@ def emit_jcsp_real_raw_outputs(
         "ready_for_exact_eval_dispatch": False,
         "dispatch_blockers": dispatch_blockers,
     }
+    manifest = _with_manifest_sha256(manifest)
+    if manifest_json is not None:
+        _write_manifest(Path(manifest_json), manifest)
+    return manifest
+
+
+def consume_jcsp_real_raw_outputs(
+    archive_dir: str | Path,
+    *,
+    video_names_file: str | Path | None,
+    output_dir: str | Path,
+    member_name: str = JCSP_ARCHIVE_MEMBER_NAME,
+    manifest_json: str | Path | None = None,
+) -> dict[str, Any]:
+    """Production JCSP runtime consumer for real AQ/rawvideo streams.
+
+    This mode is intentionally narrow: every expected contest ``.raw`` output
+    must be present as exactly one real AQv1/AQc1 arithmetic-static JCSP stream
+    named by its relative ``.raw`` path.  Zero-stream no-ops, missing streams,
+    extra streams, raw passthrough fixtures, Ballé streams, and stale output
+    files all fail closed.  The bridge writes rawvideo bytes and clears only
+    submission-runtime consumption; exact CUDA dispatch remains blocked.
+    """
+
+    expected_raw_outputs, names_error = _expected_raw_outputs_from_names_file(
+        video_names_file
+    )
+    manifest = emit_jcsp_real_raw_outputs(
+        archive_dir,
+        expected_raw_outputs=expected_raw_outputs,
+        output_dir=output_dir,
+        member_name=member_name,
+        manifest_json=None,
+        parity_manifest_json=None,
+        require_output_parity_for_runtime_consumption=False,
+    )
+    consume_blockers: list[str] = []
+    if video_names_file is None:
+        consume_blockers.append("jcsp_video_names_file_missing")
+    if names_error is not None:
+        consume_blockers.append("jcsp_video_names_file_parse_failed")
+    if consume_blockers:
+        manifest["ready_for_submission_runtime_consumption"] = False
+        manifest["ready_for_exact_eval_dispatch"] = False
+
+    manifest.update(
+        {
+            "runtime_action": "consume_real_aq_rawvideo_outputs",
+            "production_bridge_mode": "consume-real-raw-outputs",
+            "video_names_file": (
+                str(Path(video_names_file)) if video_names_file is not None else None
+            ),
+            "video_names_file_parse_error": names_error,
+            "no_scorer_at_inflate": True,
+            "score_affecting_sidecars_allowed": False,
+            "exact_eval_dispatch_blocked": True,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_blockers": _dedupe(
+                [
+                    *manifest.get("dispatch_blockers", []),
+                    *consume_blockers,
+                    "exact_cuda_auth_eval_missing",
+                ]
+            ),
+        }
+    )
     manifest = _with_manifest_sha256(manifest)
     if manifest_json is not None:
         _write_manifest(Path(manifest_json), manifest)
@@ -2018,11 +2099,17 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("archive_dir", help="inflater archive directory")
     parser.add_argument(
         "--mode",
-        choices=("probe", "plan-real-raw-outputs", "emit-real-raw-outputs"),
+        choices=(
+            "probe",
+            "plan-real-raw-outputs",
+            "emit-real-raw-outputs",
+            "consume-real-raw-outputs",
+        ),
         default="probe",
         help=(
             "probe only, plan the real AQ rawvideo consumer without writes, "
-            "or run the fail-closed real AQ rawvideo preflight emitter"
+            "run the fail-closed real AQ rawvideo preflight emitter, or consume "
+            "real AQ rawvideo streams into contest .raw outputs"
         ),
     )
     parser.add_argument(
@@ -2044,8 +2131,8 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         "--output-dir",
         default=None,
         help=(
-            "raw output directory for emit-real-raw-outputs mode; defaults to "
-            "--inflated-dir"
+            "raw output directory for emit-real-raw-outputs and "
+            "consume-real-raw-outputs modes; defaults to --inflated-dir"
         ),
     )
     parser.add_argument(
@@ -2068,6 +2155,46 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(sys.argv[1:] if argv is None else argv)
+    if args.mode == "consume-real-raw-outputs":
+        output_dir = args.output_dir or args.inflated_dir
+        if output_dir is None:
+            print(
+                "[jcsp-runtime-bridge] FATAL: --mode consume-real-raw-outputs "
+                "requires --output-dir or --inflated-dir",
+                file=sys.stderr,
+            )
+            return 2
+        manifest = consume_jcsp_real_raw_outputs(
+            args.archive_dir,
+            member_name=args.member_name,
+            video_names_file=args.video_names_file,
+            output_dir=output_dir,
+            manifest_json=args.manifest_json,
+        )
+        if (
+            manifest.get("ready_for_submission_runtime_consumption") is True
+            and manifest.get("real_raw_outputs_emitted") is True
+            and manifest.get("candidate_outputs_from_real_bridge_rawvideo") is True
+        ):
+            print(
+                "[jcsp-runtime-bridge] consumed real AQ rawvideo JCSP streams; "
+                f"manifest: {args.manifest_json}",
+                file=sys.stderr,
+            )
+            return 0
+        print(
+            "[jcsp-runtime-bridge] wrote deterministic real AQ rawvideo "
+            f"production manifest: {args.manifest_json}",
+            file=sys.stderr,
+        )
+        print(
+            "[jcsp-runtime-bridge] FATAL: real AQ rawvideo production "
+            "consumption refused; blockers="
+            f"{','.join(manifest.get('dispatch_blockers', []))}",
+            file=sys.stderr,
+        )
+        return EXIT_JCSP_MEMBER_REFUSED
+
     if args.mode == "plan-real-raw-outputs":
         expected_raw_outputs, names_error = _expected_raw_outputs_from_names_file(
             args.video_names_file
