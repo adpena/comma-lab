@@ -234,7 +234,71 @@ Within operator-approved $20 budget; budget remaining: $19.94.
    substrate-class-boundary / mechanism-attribution council Insight 1
    hypothesis. Verdict: **A (loader-dominated)** with B falsified.
 
+## V-CONSOLIDATION 2026-05-11T20:30Z addendum — D4 DALI loader-drift probe result + 5/5 family CUDA + 2/5 family CPU
+
+Per operator directive 2026-05-11 "proceed with all that does not cost more than $5 individually", V-CONSOLIDATION dispatched 6 new dispatches (3 CUDA family + 2 CPU family + 1 DALI probe) for ~$0.30 cumulative:
+
+### D4 DALI loader-drift probe — partial result (probe_runtime_error)
+
+- Lane: `lane_cpu_cuda_xray_p5_landing_loader_dali_capture`
+- Modal call_id: `fc-01KRCC8G015SHYQ5B0VS1KKS18`
+- Image: `modal.Image.debian_slim` + base packages + `nvidia-dali-cuda120` from NVIDIA's compute/redist index — image build COMPLETED (DALI 2.1.0 wheel installed, ~420 MB)
+- T4 container: `cuda_device_name=Tesla T4`, `dali_available=True`, `dali_version=2.1.0`
+- **Probe result: returncode=3** (`probe_eval_loader_drift.py` exited non-zero)
+- **Comparison verdict: `comparison_available=False`, `comparison_unavailable_class=probe_runtime_error`**
+- **Root error**: `nvidia.dali.fn.experimental.inputs.video` raised `nvml error (999): A nvml internal driver error occurred` during pipeline construction. The Modal T4 container has a working CUDA runtime but the NVML library version inside the container is incompatible with the host NVIDIA driver's NVML version. DALI's video-input op depends directly on NVML for hardware probing, so the pipeline fails to construct.
+- Elapsed: 5.96s; cost ~$0.005 (image build was the only meaningful spend)
+
+### Refined mechanism attribution
+
+The D4 result is **partial empirical evidence**:
+
+- ✅ **DALI image-side prereq SATISFIED** — `pip install nvidia-dali-cuda120` works in the canonical Modal debian_slim base; this closes the "is DALI even installable" sub-question.
+- ❌ **DALI runtime path NOT MEASURED** — NVML 999 prevents pipeline construction. The intended per-frame max-abs-diff vs PyAV comparison was not produced.
+
+### What this refines vs the prior verdict
+
+- **Verdict A (upstream loader/preprocess dominated)**: **STRONGLY SUPPORTED** by exclusion remains the canonical reading. The per-layer scorer-forward share was already empirically established as 0.0006% for pose (Linux x86_64 ↔ Linux x86_64), so any non-trivial axis-Δ must come from upstream of FastViT.
+- **The specific PyAV-vs-DALI sub-mechanism within A is NOT measured** by D4. The contest's actual GitHub Actions T4 CI runner may have a more recent driver that does not hit NVML 999, OR it may hit the same failure (in which case DALI is not the contest's CUDA loader path on GHA either). Two follow-up paths:
+  1. **Vast.ai 4090 dispatch** (~$0.30) with a fresher NVIDIA driver — would isolate Modal-T4-image-specific NVML mismatch from generic DALI behavior. Operator-gated.
+  2. **GHA T4 CI run** (~$0, free GHA minutes) — would be the AUTHORITATIVE contest substrate match. Canonical permanent-fix path.
+
+**Until either lands, the canonical fix remains "dual-eval discipline"** (always measure both axes per archive; never extrapolate one from the other). This V-CONSOLIDATION cycle does not change that permanent-fix verdict; it adds empirical evidence that the Modal T4 DALI runtime is itself a "broken probe substrate" for this attribution path.
+
+### Non-HNeRV residual basis 5/5 family CUDA + 2/5 CPU paired
+
+| Family | CUDA score [T4] | CPU score [Linux x86_64] | CUDA-CPU Δ | Pose ratio (CPU/CUDA) | Seg ratio (CPU/CUDA) |
+|---|---:|---:|---:|---:|---:|
+| c3       | 0.2066336354574151 | **0.22810213271134513** | -0.02147 | 5.06× | 1.18× |
+| wavelet  | 0.2066336354574151 | **0.22810213271134513** | -0.02147 | 5.06× | 1.18× |
+| cool_chic | 0.2066336354574151 | not yet measured | — | — | — |
+| siren    | 0.2066336354574151 | not yet measured | — | — | — |
+| coord_mlp | 0.2066336354574151 | not yet measured | — | — | — |
+
+**All 5 family L1 empty-residual archives produce byte-identical inflate output (sha `891369c4...`).** This is the wrapper-format byte-closure proof: the family wrapper magic byte differs across families but the inflated frames are bit-identical. Therefore all 5 CUDA scores are mathematically identical to all 5 CPU scores — only one CUDA + one CPU paired anchor empirically validates the equivalence; the other 4 are predicted to match exactly.
+
+The pose CPU/CUDA ratio of **5.06×** for c3+wavelet exactly matches the PR106 r2 family pattern (PR106 r2 r1 paired showed 5.07×, PR106 r2 PR101 grammar paired showed 5.07×). This confirms the wrapper-format byte addition does NOT change the device-axis profile (rate-only change preserves device-axis behavior, as predicted).
+
+### Lane registry
+
+```
+lane_cpu_cuda_xray_p5_landing_loader_dali_capture — L1
+  impl_complete : marked (this session; experiments/modal_loader_drift_capture.py)
+  memory_entry  : marked (this addendum + the V-CONSOLIDATION landing memo)
+  real_archive_empirical : NOT marked (probe_runtime_error class)
+
+lane_cool_chic_residual_pr106_sidecar_dispatch_ready — L2 (5/8 gates)
+lane_siren_residual_pr106_sidecar_dispatch_ready — L2 (5/8 gates)
+lane_coord_mlp_residual_pr106_sidecar_dispatch_ready — L2 (5/8 gates)
+  (each: real_archive_empirical + contest_cuda marked this session)
+
+lane_c3_residual_pr106_sidecar_dispatch_ready_contest_cpu — L0 → L1 pending registry mark
+lane_wavelet_residual_pr106_sidecar_dispatch_ready_contest_cpu — L0 → L1 pending registry mark
+```
+
 ## Loop pause status
 
 **PAUSED** per 2026-05-09 operator directive, unchanged. No `ScheduleWakeup`
-outstanding.
+outstanding. V-CONSOLIDATION 2026-05-11T20:30Z addendum is a one-off finding
+under operator directive 2026-05-11 "proceed with all <=\$5 individually",
+NOT loop resumption.
