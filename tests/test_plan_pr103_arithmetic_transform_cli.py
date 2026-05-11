@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from tac.repo_io import write_json
+from tools.probe_pr103_arithmetic_retarget import _estimate_global_combo_state_count
 
 
 REPO = Path(__file__).resolve().parents[1]
@@ -270,6 +271,74 @@ def test_probe_pr103_arithmetic_global_combo_cli_real_manifest_if_available(
     assert "non_additivity_delta" in report["best_candidate"]
     assert "candidate_runtime_adapter_missing" in report["readiness_blockers"]
     assert "Global Combo Probe" in md_out.read_text(encoding="utf-8")
+
+
+def test_probe_pr103_arithmetic_global_combo_cli_refuses_slow_serial_search(
+    tmp_path: Path,
+) -> None:
+    manifest = (
+        REPO
+        / "experiments/results/hnerv_pr103_lc_ac_schema_refresh_20260510_codex/manifest.json"
+    )
+    beam_reports = [
+        REPO
+        / f".omx/research/pr103_arithmetic_transform_plans_20260510_codex/{name}_beam_probe.json"
+        for name in (
+            "blocks_0_weight",
+            "blocks_1_weight",
+            "blocks_2_weight",
+            "blocks_3_weight",
+            "stem_weight",
+            "latent_hi_bytes",
+        )
+    ]
+    if not manifest.exists() or not all(path.exists() for path in beam_reports):
+        pytest.skip("local PR103 schema refresh and beam reports are not present")
+    json_out = tmp_path / "slow.json"
+    command = [
+        sys.executable,
+        str(RETARGET_SCRIPT),
+        "--schema-manifest",
+        str(manifest),
+        "--probe-mode",
+        "global-combo-search",
+        "--top-per-stream",
+        "25",
+        "--beam-width",
+        "512",
+        "--json-out",
+        str(json_out),
+    ]
+    for report in beam_reports:
+        command.extend(["--beam-probe-report", str(report)])
+
+    proc = subprocess.run(
+        command,
+        cwd=REPO,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert proc.returncode == 2
+    assert "serial states" in proc.stderr
+    assert not json_out.exists()
+
+
+def test_estimate_global_combo_state_count_matches_known_frontier() -> None:
+    assert (
+        _estimate_global_combo_state_count(
+            stream_count=6,
+            top_per_stream=20,
+            beam_width=256,
+        )
+        == 21_966
+    )
+    assert _estimate_global_combo_state_count(
+        stream_count=6,
+        top_per_stream=25,
+        beam_width=512,
+    ) > 25_000
 
 
 def test_materialize_pr103_arithmetic_histogram_candidate_cli_real_manifest_if_available(

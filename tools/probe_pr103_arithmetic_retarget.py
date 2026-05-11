@@ -74,6 +74,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="-2,-1,1,2",
         help="Comma-separated q8 weight deltas for coordinate and beam search modes.",
     )
+    parser.add_argument(
+        "--max-global-combo-states",
+        type=int,
+        default=25_000,
+        help=(
+            "Fail closed before a serial global-combo probe if the estimated "
+            "state count exceeds this budget. Use --allow-slow-global-combo "
+            "only after adding parallel/vectorized execution or accepting the "
+            "wall-clock cost."
+        ),
+    )
+    parser.add_argument(
+        "--allow-slow-global-combo",
+        action="store_true",
+        help="Allow a global-combo probe above --max-global-combo-states.",
+    )
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--md-out", type=Path)
     parser.add_argument(
@@ -94,6 +110,24 @@ def main(argv: list[str] | None = None) -> int:
     ]
     try:
         if args.probe_mode == "global-combo-search":
+            estimated_states = _estimate_global_combo_state_count(
+                stream_count=len(args.beam_probe_report),
+                top_per_stream=args.top_per_stream,
+                beam_width=args.beam_width,
+            )
+            if (
+                estimated_states > args.max_global_combo_states
+                and not args.allow_slow_global_combo
+            ):
+                print(
+                    "FATAL: PR103 global-combo probe would evaluate about "
+                    f"{estimated_states} serial states; budget is "
+                    f"{args.max_global_combo_states}. Lower --top-per-stream/"
+                    "--beam-width or pass --allow-slow-global-combo after "
+                    "parallel/vectorized execution is justified.",
+                    file=sys.stderr,
+                )
+                return 2
             report = build_pr103_arithmetic_histogram_global_combo_probe(
                 schema_manifest=args.schema_manifest,
                 source_archive=args.source_archive,
@@ -169,6 +203,26 @@ def _parse_deltas(value: str) -> list[int]:
     if not deltas:
         raise Pr103ArithmeticTransformPlanError("--deltas must include at least one integer")
     return deltas
+
+
+def _estimate_global_combo_state_count(
+    *,
+    stream_count: int,
+    top_per_stream: int,
+    beam_width: int,
+) -> int:
+    """Return the serial state count for a global-combo frontier probe."""
+
+    if stream_count <= 0 or top_per_stream <= 0 or beam_width <= 0:
+        return 0
+    option_count = top_per_stream + 1  # include source option
+    evaluated = 0
+    kept = 1
+    for _ in range(stream_count):
+        expanded = kept * option_count
+        evaluated += expanded
+        kept = min(beam_width, expanded)
+    return evaluated
 
 
 if __name__ == "__main__":
