@@ -135,6 +135,49 @@ def test_heuristic_smoke_search_emits_nonzero_delta_for_selected_pairs():
     assert diagnostics["delta_q_max"] == 1
 
 
+def test_latent_candidate_grid_has_single_noop_and_no_zero_deltas():
+    """score_table mode must have an unambiguous no-op baseline row."""
+    build = _import_build_module()
+    candidates = build.build_latent_candidate_grid(latent_dim=3, delta_radius=2)
+
+    assert candidates.dtype == np.int16
+    assert candidates.shape == (1 + 3 * 4, 2)
+    assert candidates[0].tolist() == [build.NO_OP_DIM, 0]
+    noop = (candidates[:, 0] == build.NO_OP_DIM) & (candidates[:, 1] == 0)
+    assert int(noop.sum()) == 1
+    assert not ((candidates[1:, 1] == 0).any())
+    assert set(candidates[1:, 0].tolist()) == {0, 1, 2}
+    assert set(candidates[1:, 1].tolist()) == {-2, -1, 1, 2}
+
+
+def test_score_table_reducer_requires_strict_improvement_and_top_k():
+    """The score-table reducer should emit bytes only for measured improvements."""
+    build = _import_build_module()
+    candidates = build.build_latent_candidate_grid(latent_dim=2, delta_radius=1)
+    # candidates: [noop], dim0/-1, dim0/+1, dim1/-1, dim1/+1
+    scores = np.array(
+        [
+            [10.0, 9.5, 10.2, 9.9, 11.0],   # improve dim0/-1 by 0.5
+            [10.0, 10.1, 9.2, 9.4, 10.3],   # improve dim0/+1 by 0.8
+            [10.0, 10.0, 10.1, 10.2, 10.3], # tie/no strict improvement -> noop
+        ],
+        dtype=np.float32,
+    )
+
+    dim, delta, diagnostics = build.choose_latent_corrections_from_scores(
+        scores,
+        candidates,
+        top_k=1,
+    )
+
+    assert dim.tolist() == [build.NO_OP_DIM, 0, build.NO_OP_DIM]
+    assert delta.tolist() == [0, 1, 0]
+    assert diagnostics["strict_improvement_pair_count"] == 2
+    assert diagnostics["selected_nonzero_pair_count"] == 1
+    assert diagnostics["selected_noop_pair_count"] == 2
+    assert diagnostics["top_k_cap"] == 1
+
+
 def test_sidecar_archive_blob_roundtrip_synthetic():
     """build → parse on synthetic PR106-shaped bytes preserves payload bit-exactly."""
     build = _import_build_module()
@@ -334,3 +377,61 @@ def test_cpu_smoke_builder_metadata_is_dispatch_fail_closed(tmp_path: Path):
     assert info.date_time == (1980, 1, 1, 0, 0, 0)
     assert info.compress_type == zipfile.ZIP_STORED
     assert (info.external_attr >> 16) == 0o644
+
+
+@pytest.mark.skipif(
+    not PR106_ARCHIVE.is_file(),
+    reason=f"PR106 archive not present at {PR106_ARCHIVE} — skipping score-table reducer smoke test",
+)
+def test_score_table_builder_reduces_measured_table_without_claiming_score(tmp_path: Path):
+    """score_table mode lowers measured rows into bytes but remains exact-eval gated."""
+    build = _import_build_module()
+    candidates = build.build_latent_candidate_grid(latent_dim=28, delta_radius=1)
+    scores = np.full((600, len(candidates)), 10.0, dtype=np.float32)
+    # Candidate row 1 is dim0/delta=-1, row 2 is dim0/delta=+1.
+    scores[0, 1] = 9.0
+    scores[1, 2] = 8.0
+    scores[2, 1] = 9.5
+    table_path = tmp_path / "score_table.npy"
+    np.save(table_path, scores, allow_pickle=False)
+
+    out_dir = tmp_path / "out"
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "experiments" / "build_pr106_latent_sidecar.py"),
+            "--source-archive",
+            str(PR106_ARCHIVE),
+            "--output-dir",
+            str(out_dir),
+            "--device",
+            "cpu",
+            "--smoke",
+            "--search-mode",
+            "score_table",
+            "--score-table-npy",
+            str(table_path),
+            "--top-k",
+            "2",
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "search complete: 2 pairs corrected" in proc.stdout
+
+    metadata = json.loads((out_dir / "build_metadata.json").read_text())
+    assert metadata["search_mode"] == "score_table"
+    assert metadata["score_claim"] is False
+    assert metadata["ready_for_exact_eval_dispatch"] is False
+    assert metadata["score_table"]["score_table_npy_sha256"]
+    assert metadata["score_table"]["score_table_manifest_validated"] is False
+    assert "missing_cuda_score_table_manifest" in metadata["dispatch_blockers"]
+    assert metadata["diagnostics"]["strict_improvement_pair_count"] == 3
+    assert metadata["diagnostics"]["selected_nonzero_pair_count"] == 2
+    assert metadata["diagnostics"]["selected_noop_pair_count"] == 598
+
+    dim_arr, delta_q_arr = build.decode_sidecar_corrections((out_dir / "sidecar.bin").read_bytes())
+    assert int(np.count_nonzero(delta_q_arr)) == 2
+    assert int(np.count_nonzero(dim_arr != build.NO_OP_DIM)) == 2

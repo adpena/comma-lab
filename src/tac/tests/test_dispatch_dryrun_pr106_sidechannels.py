@@ -95,6 +95,7 @@ def test_missing_builder_files_fail_closed(tmp_path: Path) -> None:
     missing = [c for c in report.checks if c.name.endswith(":file") and not c.ok]
     assert {c.name for c in missing} == {
         "latent:file",
+        "latent_score_table:file",
         "yshift:file",
         "yshift_score_table:file",
         "lrl1:file",

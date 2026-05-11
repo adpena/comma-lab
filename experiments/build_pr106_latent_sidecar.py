@@ -2,9 +2,9 @@
 """Build PR106 + per-pair latent-correction sidecar archive.
 
 Pattern: ports PR100's hnerv_lc_v2 sidecar idea (1.2KB per-pair correction blob)
-onto PR106's belt_and_suspenders archive (28-dim x 600-pair latents). Predicted
-score delta -0.00218 vs PR106 0.20945 baseline (extrapolated from PR100-vs-PR105
-empirical: same arch family, +1124b cost / -0.00218 score = net win).
+onto PR106's belt_and_suspenders archive (28-dim x 600-pair latents). The
+PR100-vs-PR105 empirical sidecar gain (-0.00218 score at +1124B) is tracked as a
+planning target, not as a prediction for heuristic smoke output.
 
 Wire format (lane_pr106_latent_sidecar 0.bin):
 
@@ -24,9 +24,10 @@ Per-pair (dim, delta) selection strategy:
     This validates the wrapper/sidecar/runtime path but is not a score-aware
     optimizer.
 
-  Future production mode: scorer-backed gradient or brute-force search over
-    (dim_idx, delta_q) per pair. Until that lands, generated artifacts remain
-    score_claim=false and ready_for_exact_eval_dispatch=false.
+  Score-table mode: reduce a precomputed CUDA scorer table over (dim_idx,
+    delta_q) candidates into charged sidecar bytes. The table is compress-time
+    evidence only; generated artifacts remain score_claim=false and
+    ready_for_exact_eval_dispatch=false until exact CUDA auth eval scores them.
 
 CUDA REQUIRED per CLAUDE.md MPS-auth-eval-is-NOISE rule. CPU is acceptable
 ONLY for smoke tests labeled [advisory only] via --device cpu --smoke.
@@ -42,6 +43,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import io
+import json
 import struct
 import sys
 import time
@@ -248,7 +250,7 @@ def _heuristic_self_consistency_search(
     device: torch.device,
     top_k: int | None = None,
 ) -> tuple[np.ndarray, np.ndarray, dict]:
-    """For each pair, pick the dim with largest |dscore/dlatent| and quantize delta.
+    """For each pair, emit a small nonzero heuristic latent nudge.
 
     Without scorers loaded, we use a self-consistency proxy: minimize the L2
     distance between decoder(latents) and decoder(latents + correction). This
@@ -306,6 +308,205 @@ def _heuristic_self_consistency_search(
     return dim_arr, delta_q_arr, diagnostics
 
 
+def build_latent_candidate_grid(
+    *,
+    latent_dim: int = 28,
+    delta_radius: int = 1,
+) -> np.ndarray:
+    """Return canonical [dim, delta_q] candidates for scorer-backed search.
+
+    Row 0 is the no-op sentinel ``[255, 0]``. Remaining rows enumerate every
+    latent dimension with nonzero integer deltas in ``[-delta_radius, +delta_radius]``.
+    """
+    if latent_dim <= 0 or latent_dim >= NO_OP_DIM:
+        raise ValueError(f"latent_dim must be in 1..{NO_OP_DIM - 1}, got {latent_dim}")
+    if delta_radius < 1 or delta_radius > 127:
+        raise ValueError(f"delta_radius must be in 1..127, got {delta_radius}")
+    rows: list[tuple[int, int]] = [(NO_OP_DIM, 0)]
+    for dim in range(latent_dim):
+        for delta_q in range(-delta_radius, delta_radius + 1):
+            if delta_q == 0:
+                continue
+            rows.append((dim, delta_q))
+    return np.asarray(rows, dtype=np.int16)
+
+
+def latent_candidate_grid_npy_sha256(candidates: np.ndarray) -> str:
+    """Return deterministic .npy SHA-256 for candidate-grid custody."""
+    raw = io.BytesIO()
+    np.save(raw, np.asarray(candidates, dtype=np.int16), allow_pickle=False)
+    return hashlib.sha256(raw.getvalue()).hexdigest()
+
+
+def choose_latent_corrections_from_scores(
+    score_table: np.ndarray,
+    candidates: np.ndarray,
+    *,
+    top_k: int | None = None,
+    require_improvement: bool = True,
+) -> tuple[np.ndarray, np.ndarray, dict]:
+    """Reduce a precomputed scorer table into one latent correction per pair.
+
+    ``score_table[p, c]`` must be the CUDA-measured pair objective for pair
+    ``p`` under candidate ``c``. This reducer is deliberately scorer-free: it
+    only lowers measured compress-time evidence into charged archive bytes.
+    """
+    scores = np.asarray(score_table, dtype=np.float64)
+    cands = np.asarray(candidates)
+    if cands.dtype.kind not in {"i", "u"}:
+        raise TypeError(f"candidates must be integer typed, got {cands.dtype}")
+    if cands.ndim != 2 or cands.shape[1] != 2:
+        raise ValueError(f"candidates must have shape (n_candidates, 2), got {cands.shape}")
+    if scores.ndim != 2 or scores.shape[1] != cands.shape[0]:
+        raise ValueError(
+            "score_table must have shape (n_pairs, n_candidates), got "
+            f"{scores.shape} for {cands.shape[0]} candidates"
+        )
+    if not np.isfinite(scores).all():
+        raise ValueError("score_table contains NaN/Inf")
+
+    noop_matches = np.flatnonzero((cands[:, 0] == NO_OP_DIM) & (cands[:, 1] == 0))
+    if len(noop_matches) != 1:
+        raise ValueError("candidates must contain exactly one [255, 0] no-op row")
+    noop_idx = int(noop_matches[0])
+
+    best_idx = scores.argmin(axis=1)
+    best_scores = scores[np.arange(scores.shape[0]), best_idx]
+    noop_scores = scores[:, noop_idx]
+    improvements = noop_scores - best_scores
+    if require_improvement:
+        best_idx = np.where(improvements > 0.0, best_idx, noop_idx)
+        improvements = np.where(improvements > 0.0, improvements, 0.0)
+
+    selected = cands[best_idx].astype(np.int16, copy=True)
+    selected_nonzero = (selected[:, 0] != NO_OP_DIM) & (selected[:, 1] != 0)
+    if top_k is not None and top_k < int(selected_nonzero.sum()):
+        if top_k < 0:
+            raise ValueError(f"top_k must be non-negative, got {top_k}")
+        keep = np.zeros(scores.shape[0], dtype=bool)
+        ranked_pairs = np.argsort(improvements)[::-1]
+        kept = 0
+        for pair_idx in ranked_pairs:
+            if selected_nonzero[pair_idx]:
+                keep[pair_idx] = True
+                kept += 1
+                if kept >= top_k:
+                    break
+        selected[~keep] = (NO_OP_DIM, 0)
+        selected_nonzero = (selected[:, 0] != NO_OP_DIM) & (selected[:, 1] != 0)
+
+    dim_arr = selected[:, 0].astype(np.uint8)
+    delta_q_arr = selected[:, 1].astype(np.int8)
+    diagnostics = {
+        "search_mode": "score_table",
+        "n_pairs": int(scores.shape[0]),
+        "n_corrections": int(selected_nonzero.sum()),
+        "n_no_op": int((~selected_nonzero).sum()),
+        "nonzero_delta_count": int(np.count_nonzero(selected[:, 1])),
+        "candidate_count": int(cands.shape[0]),
+        "noop_candidate_index": int(noop_idx),
+        "selected_nonzero_pair_count": int(selected_nonzero.sum()),
+        "selected_noop_pair_count": int((~selected_nonzero).sum()),
+        "strict_improvement_pair_count": int((noop_scores - best_scores > 0.0).sum()),
+        "best_improvement_min": float((noop_scores - best_scores).min()),
+        "best_improvement_mean": float((noop_scores - best_scores).mean()),
+        "best_improvement_max": float((noop_scores - best_scores).max()),
+        "require_strict_improvement_over_noop": bool(require_improvement),
+        "top_k_cap": None if top_k is None else int(top_k),
+        "scorer_available": False,
+    }
+    return dim_arr, delta_q_arr, diagnostics
+
+
+def choose_latent_corrections_from_score_table_file(
+    score_table_npy: Path,
+    *,
+    n_pairs: int,
+    latent_dim: int,
+    delta_radius: int,
+    top_k: int | None,
+) -> tuple[np.ndarray, np.ndarray, dict]:
+    """Load a CUDA scorer table and reduce it into deterministic corrections."""
+    candidates = build_latent_candidate_grid(
+        latent_dim=latent_dim,
+        delta_radius=delta_radius,
+    )
+    loaded = np.load(score_table_npy, allow_pickle=False)
+    if not isinstance(loaded, np.ndarray):
+        raise TypeError(f"score table must be a .npy ndarray, got {type(loaded).__name__}")
+    if loaded.shape != (n_pairs, len(candidates)):
+        raise ValueError(
+            "score table shape mismatch: expected "
+            f"({n_pairs}, {len(candidates)}), got {loaded.shape}"
+        )
+    dim_arr, delta_q_arr, diagnostics = choose_latent_corrections_from_scores(
+        loaded,
+        candidates,
+        top_k=top_k,
+        require_improvement=True,
+    )
+    diagnostics.update(
+        {
+            "latent_dim": int(latent_dim),
+            "delta_radius": int(delta_radius),
+            "candidate_grid_sha256": latent_candidate_grid_npy_sha256(candidates),
+            "score_table_shape": [int(loaded.shape[0]), int(loaded.shape[1])],
+        }
+    )
+    return dim_arr, delta_q_arr, diagnostics
+
+
+def validate_score_table_manifest(
+    manifest_path: Path,
+    *,
+    score_table_npy: Path,
+    source_archive: Path,
+    n_pairs: int,
+    latent_dim: int,
+    delta_radius: int,
+    candidate_count: int,
+) -> dict[str, object]:
+    """Validate CUDA score-table provenance before reducing it to bytes."""
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"score table manifest is not valid JSON: {exc}") from exc
+    if not isinstance(manifest, dict):
+        raise ValueError("score table manifest must be a JSON object")
+    if manifest.get("manifest_schema") != "pr106_latent_score_table_manifest_v1":
+        raise ValueError("score table manifest_schema mismatch")
+    if manifest.get("producer") != "experiments/build_pr106_latent_score_table.py":
+        raise ValueError("score table manifest producer mismatch")
+    if manifest.get("score_claim") is not False:
+        raise ValueError("score table manifest must keep score_claim=false")
+    if manifest.get("ready_for_builder") is not True:
+        raise ValueError("score table manifest must have ready_for_builder=true")
+    if manifest.get("source_archive_sha256") != hashlib.sha256(source_archive.read_bytes()).hexdigest():
+        raise ValueError("score table manifest source_archive_sha256 mismatch")
+    if manifest.get("score_table_npy_sha256") != hashlib.sha256(score_table_npy.read_bytes()).hexdigest():
+        raise ValueError("score table manifest score_table_npy_sha256 mismatch")
+    expected_grid_sha256 = latent_candidate_grid_npy_sha256(
+        build_latent_candidate_grid(latent_dim=latent_dim, delta_radius=delta_radius)
+    )
+    if manifest.get("candidate_grid_sha256") != expected_grid_sha256:
+        raise ValueError("score table manifest candidate_grid_sha256 mismatch")
+    if manifest.get("n_pairs") != int(n_pairs):
+        raise ValueError("score table manifest n_pairs mismatch")
+    if manifest.get("latent_dim") != int(latent_dim):
+        raise ValueError("score table manifest latent_dim mismatch")
+    if manifest.get("delta_radius") != int(delta_radius):
+        raise ValueError("score table manifest delta_radius mismatch")
+    if manifest.get("candidate_count") != int(candidate_count):
+        raise ValueError("score table manifest candidate_count mismatch")
+    if manifest.get("score_table_shape") != [int(n_pairs), int(candidate_count)]:
+        raise ValueError("score table manifest score_table_shape mismatch")
+    if manifest.get("ready_for_exact_eval_dispatch") is True:
+        raise ValueError("score table manifest must not claim exact-eval dispatch readiness")
+    if manifest.get("dispatch_attempted") is True or manifest.get("remote_jobs_dispatched") is True:
+        raise ValueError("score table manifest must not mark dispatch attempted")
+    return manifest
+
+
 # =====================================================================
 # Main
 # =====================================================================
@@ -325,10 +526,19 @@ def main() -> int:
                              "measured here — Stage 3 of remote_lane runbook does that).")
     parser.add_argument("--top-k", type=int, default=600,
                         help="Limit how many pairs receive a correction (default 600 = all).")
-    parser.add_argument("--search-mode", choices=["heuristic"], default="heuristic",
+    parser.add_argument("--search-mode", choices=["heuristic", "score_table"], default="heuristic",
                         help="Search strategy. 'heuristic' = self-consistency proxy "
-                             "(fast scaffolding); brute and gradient_guided modes are "
-                             "wired in Stage 3 of remote runbook where scorer is loaded.")
+                             "(fast scaffolding); 'score_table' = reduce a precomputed "
+                             "CUDA scorer table into charged sidecar bytes.")
+    parser.add_argument("--score-table-npy", type=Path, default=None,
+                        help="Required for --search-mode score_table. Shape must be "
+                             "(n_pairs, 1 + latent_dim * 2 * delta_radius).")
+    parser.add_argument("--score-table-manifest", type=Path, default=None,
+                        help="Optional JSON provenance for the CUDA scorer table. The "
+                             "builder validates it when present; exact CUDA auth eval "
+                             "is still required on the emitted archive.")
+    parser.add_argument("--delta-radius", type=int, default=1,
+                        help="Integer latent delta grid radius for score_table mode.")
     args = parser.parse_args()
 
     if args.device == "cpu" and not args.smoke:
@@ -372,9 +582,49 @@ def main() -> int:
         dim_arr, delta_q_arr, diagnostics = _heuristic_self_consistency_search(
             decoder, latents, device=device, top_k=args.top_k
         )
-    else:
-        sys.exit(f"FATAL: search_mode {args.search_mode!r} not yet implemented in this scaffolding "
-                 f"(Stage 3 of remote runbook handles scorer-driven modes).")
+        score_table_metadata: dict[str, object] | None = None
+    elif args.search_mode == "score_table":
+        if args.score_table_npy is None:
+            sys.exit("FATAL: --score-table-npy is required when --search-mode score_table")
+        dim_arr, delta_q_arr, diagnostics = choose_latent_corrections_from_score_table_file(
+            args.score_table_npy,
+            n_pairs=int(meta["n_pairs"]),
+            latent_dim=int(meta["latent_dim"]),
+            delta_radius=int(args.delta_radius),
+            top_k=args.top_k,
+        )
+        score_table_manifest: dict[str, object] | None = None
+        if args.score_table_manifest is not None:
+            score_table_manifest = validate_score_table_manifest(
+                args.score_table_manifest,
+                score_table_npy=args.score_table_npy,
+                source_archive=args.source_archive,
+                n_pairs=int(meta["n_pairs"]),
+                latent_dim=int(meta["latent_dim"]),
+                delta_radius=int(args.delta_radius),
+                candidate_count=int(diagnostics["candidate_count"]),
+            )
+        score_table_metadata = {
+            "score_table_npy_path": str(args.score_table_npy),
+            "score_table_npy_bytes": int(args.score_table_npy.stat().st_size),
+            "score_table_npy_sha256": hashlib.sha256(args.score_table_npy.read_bytes()).hexdigest(),
+            "score_table_manifest_path": str(args.score_table_manifest) if args.score_table_manifest else None,
+            "score_table_manifest_sha256": (
+                hashlib.sha256(args.score_table_manifest.read_bytes()).hexdigest()
+                if args.score_table_manifest else None
+            ),
+            "score_table_manifest_validated": score_table_manifest is not None,
+            "score_table_manifest_schema": (
+                score_table_manifest.get("manifest_schema") if score_table_manifest is not None else None
+            ),
+            "score_table_is_score_claim": False,
+            "score_table_required_provenance": (
+                "CUDA scorer table must be generated against the exact source archive; "
+                "this builder only reduces measured table entries into charged bytes."
+            ),
+        }
+    else:  # pragma: no cover - argparse owns choices
+        raise AssertionError(f"unhandled search_mode={args.search_mode!r}")
 
     print(f"[sidecar-build] search complete: {diagnostics['n_corrections']} pairs corrected, "
           f"{diagnostics['n_no_op']} no-op (top_k={args.top_k})")
@@ -418,6 +668,19 @@ def main() -> int:
     # Stage J: write build metadata.
     elapsed = time.time() - started_at
     recorded_wall_clock = 0.0 if args.smoke else elapsed
+    dispatch_blockers = [
+        "requires_exact_cuda_auth_eval",
+    ]
+    if args.search_mode == "heuristic":
+        dispatch_blockers.extend(
+            [
+                "cpu_smoke_or_heuristic_builder_output",
+                "requires_scorer_backed_cuda_latent_search",
+            ]
+        )
+    if args.search_mode == "score_table" and args.score_table_manifest is None:
+        dispatch_blockers.append("missing_cuda_score_table_manifest")
+
     metadata = {
         "lane_id": "lane_pr106_latent_sidecar",
         "wall_clock_seconds": recorded_wall_clock,
@@ -449,11 +712,8 @@ def main() -> int:
         "remote_jobs_dispatched": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
-        "dispatch_blockers": [
-            "cpu_smoke_or_heuristic_builder_output",
-            "requires_scorer_backed_cuda_latent_search",
-            "requires_exact_cuda_auth_eval",
-        ],
+        "dispatch_blockers": dispatch_blockers,
+        "score_table": score_table_metadata,
         "evidence_grade": "empirical_build_only",
         "diagnostics": diagnostics,
         "tag": "[design-validation]" if args.smoke else "[empirical:pending-stage-3]",
