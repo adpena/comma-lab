@@ -1,16 +1,11 @@
-"""
-Legacy Modal deployment scripts — preserved for reference.
+"""Retired Modal deployment archive namespace.
 
-These scripts are superseded by the canonical asymmetric warp deploy pipeline.
-They contain useful patterns (resume logic, volume mounting, precompute upload)
-that may be harvested for future deploys.
+Do not add executable score-lowering dispatch scripts here. Provider launch
+logic belongs in the canonical deploy surfaces under :mod:`tac.deploy` and
+must use the shared claim, custody, and provider-contract helpers.
 
-Moved here 2026-04-12 during Modal infrastructure canonicalization.
-
-Dead techniques (do NOT revive):
-  - modal_dilated_kl_hardframe_deploy.py — KL distill is structurally dead
-
-Historical value:
-  - modal_nuclear_deploy.py — good resume/checkpoint pattern
-  - modal_renderer_smoke_deploy.py — renderer smoke test pattern
+The stale ``train_tac.py`` archive launchers were replaced with fail-closed
+stubs on 2026-05-11 after the score path moved to canonical provider bundles
+and Modal-specific T1 actuators. Their reusable lessons are preserved in the
+corresponding dated ``.omx/research`` ledger, not as runnable legacy code.
 """

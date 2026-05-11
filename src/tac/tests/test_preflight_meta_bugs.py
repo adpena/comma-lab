@@ -625,6 +625,17 @@ class TestNoCompromisedLightningSupplyChain:
         ):
             assert stale_flag not in source
 
+    def test_modal_archive_contains_no_retired_train_tac_launchers(self) -> None:
+        archive_dir = Path(__file__).parents[3] / "src" / "tac" / "deploy" / "modal" / "archive"
+        offenders = []
+        for path in archive_dir.glob("*.py"):
+            if path.name == "__init__.py":
+                continue
+            source = path.read_text()
+            if "experiments/train_tac.py" in source or "/app/train_tac.py" in source:
+                offenders.append(path.relative_to(Path(__file__).parents[3]).as_posix())
+        assert offenders == []
+
 
 class TestLightningExactEvalDaliBootstrap:
     def test_exact_eval_dali_bootstrap_preflight_passes_current_runner(self) -> None:
