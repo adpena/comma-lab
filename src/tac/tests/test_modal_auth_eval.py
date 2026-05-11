@@ -8,6 +8,7 @@ context, and a live T4. We verify:
 """
 from __future__ import annotations
 
+import io
 import json
 import importlib.util
 import sys
@@ -18,6 +19,7 @@ import pytest
 
 from tac.deploy.modal.auth_eval import (
     prepare_modal_auth_eval_request,
+    runtime_upload_skip_reason,
     submission_dir_zip_bytes,
 )
 
@@ -278,6 +280,24 @@ def test_prepare_modal_auth_eval_request_centralizes_upload_shape(tmp_path):
     assert len(prepared.submission_dir_zip_sha256 or "") == 64
     assert prepared.output_dir.parent == (tmp_path / "modal_results").resolve()
     assert "candidate_archive" in prepared.output_dir.name
+
+
+def test_modal_runtime_upload_skips_host_metadata_files(tmp_path):
+    """Runtime zips skip host metadata files before hidden-path validation."""
+    runtime = tmp_path / "runtime"
+    runtime.mkdir()
+    (runtime / "inflate.sh").write_text("#!/usr/bin/env bash\npython inflate.py\n")
+    (runtime / "inflate.py").write_text("print('ok')\n")
+    (runtime / ".gitignore").write_text("*.pyc\n")
+    (runtime / ".gitattributes").write_text("* text=auto\n")
+
+    assert runtime_upload_skip_reason(".gitignore") == "ignored host metadata"
+    assert runtime_upload_skip_reason(".gitattributes") == "ignored host metadata"
+    blob = submission_dir_zip_bytes(runtime)
+    with zipfile.ZipFile(io.BytesIO(blob), mode="r") as zf:
+        names = zf.namelist()
+    assert ".gitignore" not in names
+    assert ".gitattributes" not in names
 
 
 def test_validate_contest_result_rejects_non_cuda(mod):
