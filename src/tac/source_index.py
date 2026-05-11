@@ -26,7 +26,7 @@ _CURRENT_SOURCE_INDEX: contextvars.ContextVar[SourceIndex | None] = contextvars.
     "tac_current_source_index",
     default=None,
 )
-_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v20"
+_TEXT_FACTS_CACHE_SCHEMA = "pact.source_text_facts.v21"
 _DEFAULT_FACT_WORKERS = 8
 
 
@@ -141,6 +141,7 @@ _DEFAULT_TEXT_FACT_NEEDLES = frozenset(
         "compliance_status",
         "reconstruct_poses",
         "score_claim",
+        "dispatch_attempted",
         "sha256",
         "torch",
         "torch.frombuffer",

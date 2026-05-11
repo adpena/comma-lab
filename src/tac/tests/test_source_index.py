@@ -242,6 +242,28 @@ def test_source_index_substring_index_filters_candidates(tmp_path):
     assert stats["substring_index_misses"] == 0
 
 
+def test_source_index_dispatch_attempted_is_indexed_for_audit_scans(tmp_path):
+    _write(tmp_path / "tools/a.py", "score_claim = False\n")
+    _write(tmp_path / "tools/b.py", "dispatch_attempted = False\n")
+    _write(tmp_path / "tools/c.py", "other = True\n")
+    index = SourceIndex(tmp_path)
+
+    matched = index.files_containing_substrings(
+        ["tools"],
+        pattern="*.py",
+        substrings=("score_claim", "dispatch_attempted"),
+        require_all=False,
+    )
+
+    assert [index.repo_relative(path) for path in matched] == [
+        "tools/a.py",
+        "tools/b.py",
+    ]
+    stats = index.stats()
+    assert stats["substring_index_misses"] == 0
+    assert stats["text_hits"] == 0
+
+
 def test_source_index_comment_contract_prefilter_does_not_self_trigger():
     import tac.source_index as source_index
 

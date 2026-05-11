@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import bisect
+import concurrent.futures
 import os
 import re
 from collections import Counter, defaultdict
@@ -112,6 +113,23 @@ TOOLING_CANDIDATE_SUBSTRINGS = tuple(
         for needle in pattern.candidate_substrings
     )
 )
+DEFAULT_SCAN_WORKERS = 4
+OCCURRENCE_LIMIT_PER_PATTERN = 50
+SCORE_DISPATCH_METADATA_NEEDLES = ("score_claim", "dispatch_attempted")
+
+
+def _scan_worker_count(file_count: int) -> int:
+    """Return a bounded worker count for deterministic per-file scans."""
+
+    raw = os.environ.get("PACT_AUDIT_TOOLING_SCAN_WORKERS", "").strip()
+    if raw:
+        try:
+            requested = int(raw)
+        except ValueError:
+            requested = DEFAULT_SCAN_WORKERS
+    else:
+        requested = DEFAULT_SCAN_WORKERS
+    return max(1, min(file_count, requested, 16))
 
 
 def _is_excluded(path: Path, root: Path) -> bool:
@@ -200,18 +218,31 @@ def _line_starts(text: str) -> list[int]:
     return starts
 
 
+def _line_numbers_with_any_substring(text: str, needles: tuple[str, ...]) -> list[int]:
+    line_numbers: list[int] = []
+    lineno = 1
+    start = 0
+    text_len = len(text)
+    while start <= text_len:
+        end = text.find("\n", start)
+        if end < 0:
+            end = text_len
+        if any(text.find(needle, start, end) >= 0 for needle in needles):
+            line_numbers.append(lineno)
+        if end == text_len:
+            break
+        start = end + 1
+        lineno += 1
+    return line_numbers
+
+
 def _matching_line_numbers(
     pattern: Pattern,
     text: str,
-    lines: list[str],
     line_starts: list[int],
 ) -> list[int]:
     if pattern.key == "manual_audit_score_dispatch_metadata":
-        return [
-            lineno
-            for lineno, line in enumerate(lines, start=1)
-            if "score_claim" in line or "dispatch_attempted" in line
-        ]
+        return _line_numbers_with_any_substring(text, SCORE_DISPATCH_METADATA_NEEDLES)
     matched: set[int] = set()
     for match in pattern.regex.finditer(text):
         lineno = bisect.bisect_right(line_starts, match.start())
@@ -237,7 +268,6 @@ def _scan_file(
     active_patterns = _candidate_patterns(text)
     if not active_patterns:
         return rel, Counter(), {}
-    lines = text.splitlines()
     line_starts = (
         []
         if all(pattern.key == "manual_audit_score_dispatch_metadata" for pattern in active_patterns)
@@ -246,16 +276,17 @@ def _scan_file(
     counts: Counter[str] = Counter()
     occurrences: dict[str, list[dict[str, object]]] = defaultdict(list)
     for pattern in active_patterns:
-        for lineno in _matching_line_numbers(pattern, text, lines, line_starts):
+        for lineno in _matching_line_numbers(pattern, text, line_starts):
             counts[pattern.key] += 1
-            occurrences[pattern.key].append(
-                {
-                    "canonical_target": pattern.canonical_target,
-                    "line": lineno,
-                    "path": rel,
-                    "severity": pattern.severity,
-                }
-            )
+            if len(occurrences[pattern.key]) < OCCURRENCE_LIMIT_PER_PATTERN:
+                occurrences[pattern.key].append(
+                    {
+                        "canonical_target": pattern.canonical_target,
+                        "line": lineno,
+                        "path": rel,
+                        "severity": pattern.severity,
+                    }
+                )
     return rel, counts, dict(occurrences)
 
 
@@ -267,25 +298,46 @@ def audit_tooling(
 ) -> AuditReport:
     occurrences: dict[str, list[dict[str, object]]] = defaultdict(list)
     per_file_counts: dict[str, Counter[str]] = defaultdict(Counter)
+    pattern_totals: Counter[str] = Counter()
     files = (
         _indexed_files(repo_root, scan_roots, source_index)
         if source_index is not None
         else iter_files(repo_root, scan_roots)
     )
-    scanned = [
-        _scan_file(repo_root, path, source_index=source_index)
-        for path in files
-    ]
+    workers = _scan_worker_count(len(files))
+    if source_index is not None or workers <= 1 or len(files) < 32:
+        scanned = [
+            _scan_file(repo_root, path, source_index=source_index)
+            for path in files
+        ]
+    else:
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=workers,
+            thread_name_prefix="audit-tooling",
+        ) as pool:
+            scanned = list(
+                pool.map(
+                    lambda path: _scan_file(
+                        repo_root,
+                        path,
+                        source_index=source_index,
+                    ),
+                    files,
+                )
+            )
     for rel, counts, file_occurrences in scanned:
         if not counts:
             continue
+        pattern_totals.update(counts)
         per_file_counts[rel].update(counts)
         for key, values in file_occurrences.items():
-            occurrences[key].extend(values)
+            remaining = OCCURRENCE_LIMIT_PER_PATTERN - len(occurrences[key])
+            if remaining > 0:
+                occurrences[key].extend(values[:remaining])
     summary = {
         "file_count": len(files),
         "pattern_counts": {
-            pattern.key: len(occurrences.get(pattern.key, ()))
+            pattern.key: int(pattern_totals.get(pattern.key, 0))
             for pattern in PATTERNS
         },
         "affected_file_count": len(per_file_counts),
@@ -303,9 +355,9 @@ def audit_tooling(
         ready=True,
         summary=summary,
         metadata={
-            "occurrence_limit_per_pattern": 50,
+            "occurrence_limit_per_pattern": OCCURRENCE_LIMIT_PER_PATTERN,
             "occurrences": {
-                key: values[:50]
+                key: values
                 for key, values in sorted(occurrences.items())
             },
             "per_file_counts": {

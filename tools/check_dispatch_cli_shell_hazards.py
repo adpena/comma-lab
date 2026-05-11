@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import concurrent.futures
 import os
 import re
 import sys
@@ -55,6 +56,7 @@ DEFAULT_EXCLUDES = (
     "runtime-rs/target",
 )
 TEXT_SUFFIXES = {".py", ".sh", ".bash", ".md", ".rst", ".txt", ".zsh"}
+DEFAULT_SCAN_WORKERS = 4
 
 # Flags whose values are paths consumed inside a remote runner script.
 # Passing the operator's local mac path here generates `cd /Users/adpena/...`
@@ -209,6 +211,20 @@ def iter_scan_files(
                     continue
                 files.append(candidate)
     return files
+
+
+def _scan_worker_count(file_count: int) -> int:
+    """Return a bounded worker count for deterministic per-file hazard scans."""
+
+    raw = os.environ.get("PACT_DISPATCH_HAZARD_SCAN_WORKERS", "").strip()
+    if raw:
+        try:
+            requested = int(raw)
+        except ValueError:
+            requested = DEFAULT_SCAN_WORKERS
+    else:
+        requested = DEFAULT_SCAN_WORKERS
+    return max(1, min(file_count, requested, 16))
 
 
 _HEREDOC_START_RE = re.compile(r"<<-?\s*['\"]?(?P<tag>[A-Za-z_][A-Za-z0-9_]*)['\"]?")
@@ -561,8 +577,7 @@ def scan_paths(
                     continue
             if suffix == ".py" and _is_dispatcher_file(rel):
                 files.append(path)
-    hazards: list[Hazard] = []
-    for file_path in files:
+    def scan_file(file_path: Path) -> list[Hazard]:
         try:
             if source_index is None:
                 text = file_path.read_text(encoding="utf-8", errors="ignore")
@@ -573,8 +588,21 @@ def scan_paths(
                     errors="ignore",
                 )
         except OSError:
-            continue
-        hazards.extend(scan_text(file_path, text, root=root))
+            return []
+        return scan_text(file_path, text, root=root)
+
+    hazards: list[Hazard] = []
+    workers = _scan_worker_count(len(files))
+    if workers <= 1 or len(files) < 32:
+        scanned = [scan_file(file_path) for file_path in files]
+    else:
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=workers,
+            thread_name_prefix="dispatch-hazard",
+        ) as pool:
+            scanned = list(pool.map(scan_file, files))
+    for file_hazards in scanned:
+        hazards.extend(file_hazards)
     return hazards
 
 
