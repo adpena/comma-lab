@@ -8,8 +8,13 @@ import json
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT / "src"))
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
 
 from tac.optimizer.exact_ready_audit import (  # noqa: E402
     apply_suppression_manifest,
@@ -19,6 +24,7 @@ from tac.optimizer.exact_ready_audit import (  # noqa: E402
     load_suppression_manifest,
 )
 from tac.optimizer.exact_readiness import ACTIVE_FLOOR_SCORE  # noqa: E402
+from tac.repo_io import json_text, write_json  # noqa: E402
 
 DEFAULT_SCAN_ROOTS = (Path("experiments/results"), Path(".omx/research"))
 
@@ -159,11 +165,7 @@ def main(argv: list[str] | None = None) -> int:
             else repo_root / args.write_suppression_manifest
         )
         suppression_manifest = build_suppression_manifest(payload)
-        suppression_manifest_path.parent.mkdir(parents=True, exist_ok=True)
-        suppression_manifest_path.write_text(
-            json.dumps(suppression_manifest, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
+        write_json(suppression_manifest_path, suppression_manifest)
     if args.suppression_manifest is not None:
         suppression_manifest_path = (
             args.suppression_manifest
@@ -181,11 +183,7 @@ def main(argv: list[str] | None = None) -> int:
             manifest_path=suppression_manifest_path,
             repo_root=repo_root,
         )
-    text = (
-        json.dumps(payload, indent=2, sort_keys=True) + "\n"
-        if args.format == "json"
-        else _markdown(payload)
-    )
+    text = json_text(payload) if args.format == "json" else _markdown(payload)
     if args.output is not None:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(text, encoding="utf-8")

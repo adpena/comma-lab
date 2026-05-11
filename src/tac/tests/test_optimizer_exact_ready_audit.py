@@ -188,7 +188,7 @@ def test_audit_allows_runtime_changed_row_after_different_runtime_terminal(
         lane_id="lane_runtime_patch",  # FAKE_LANE_OK: synthetic runtime fixture.
         archive_sha="2" * 64,
     )
-    new_runtime = _add_live_runtime_fields(queue, repo_root=tmp_path)
+    _add_live_runtime_fields(queue, repo_root=tmp_path)
     payload = json.loads(queue.read_text(encoding="utf-8"))
     row = payload["dispatch_ready"][0]
     archive_sha = row["archive_sha256"]
