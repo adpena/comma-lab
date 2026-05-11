@@ -278,3 +278,56 @@ numerically, but the run was Kaggle P100 with non-T4 diagnostic metadata and is
 not a score claim. The correct next step is Modal T4 exact CUDA adjudication on
 the local materialized archive, not leaderboard/paper promotion from the Kaggle
 log.
+
+## Latent radius-2 exact T4 CUDA adjudication
+
+Modal T4 exact CUDA adjudication completed for the same byte-closed archive.
+
+- job id:
+  `pr106_latent_sidecar_r2_20260511T160358Z`
+- Modal call id:
+  `fc-01KRBWG7KGBX0A26NZZF9CNJXE`
+- artifact directory:
+  `experiments/results/modal_auth_eval/pr106_latent_sidecar_r2_20260511T160358Z`
+- result JSON:
+  `experiments/results/modal_auth_eval/pr106_latent_sidecar_r2_20260511T160358Z/contest_auth_eval.json`
+- archive bytes:
+  `186822`
+- archive SHA-256:
+  `7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f`
+- device:
+  `cuda`
+- GPU:
+  `Tesla T4`
+- samples:
+  `600`
+- PoseNet distortion:
+  `0.00003236`
+- SegNet distortion:
+  `0.00064260`
+- canonical score:
+  `0.20664588545741508`
+- evidence grade:
+  `contest-CUDA`
+
+Delta versus prior exact PR106 latent sidecar:
+
+- prior exact T4 score:
+  `0.20739428085403283`
+- new exact T4 score:
+  `0.20664588545741508`
+- score delta:
+  `-0.00074839539661775`
+
+Delta versus Kaggle P100 diagnostic:
+
+- Kaggle P100 diagnostic:
+  `0.2066238854574151`
+- Modal T4 exact:
+  `0.20664588545741508`
+- T4 minus P100:
+  `+0.00002199999999996649`
+
+Classification: legitimate score-lowering exact CUDA result. The P100 signal
+transferred to T4, but with a measurable SegNet-axis drift; keep axis labels in
+all future sidecar score-table comparisons.
