@@ -198,6 +198,11 @@ def test_known_transform_tokens_match_packet_compiler_module() -> None:
         # PR93 — delta-varint pose + QZMB1 (2026-05-11)
         "pr93_delta_varint_pose",
         "pr93_qzmb_qzpdv_grammar",
+        # PR93 — lowpass-luma residual codec (2026-05-11 punchlist cleanup)
+        "pr93_lowpass_luma_residual",
+        # PR97 — H3 wire-format grammar (2026-05-11 punchlist cleanup)
+        "pr97_length_prefixed_sections",
+        "pr97_tile_band_streams",
         # Sparse PacketIR codec — closes O's L2 wire-format ceiling (2026-05-11)
         "sparse_rle_of_zeros",
         "sparse_arithmetic_coefficients",
