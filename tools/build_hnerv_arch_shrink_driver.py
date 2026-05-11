@@ -16,8 +16,6 @@ exact CUDA auth eval exist.
 from __future__ import annotations
 
 import argparse
-import hashlib
-import json
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -25,8 +23,13 @@ from typing import Any
 
 import torch
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT / "src"))
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
 
 from tac.hnerv_arch_schema import (  # noqa: E402
     HNeRVArchConfig,
@@ -39,6 +42,7 @@ from tac.hnerv_arch_schema import (  # noqa: E402
     select_base_channels_for_element_retention,
     state_dict_schema_rows,
 )
+from tac.repo_io import json_text, repo_relative, sha256_file, write_json  # noqa: E402
 
 TOOL_NAME = "tools/build_hnerv_arch_shrink_driver.py"
 SCHEMA_VERSION = "hnerv_arch_shrink_training_driver.v1"
@@ -49,15 +53,8 @@ def _utc_iso() -> str:
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _sha256_file(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
 def _repo_rel(path: Path) -> str:
-    try:
-        return str(path.resolve().relative_to(REPO_ROOT))
-    except ValueError:
-        return str(path)
+    return repo_relative(path, REPO_ROOT)
 
 
 def _load_state_dict(path: Path) -> dict[str, torch.Tensor]:
@@ -71,11 +68,7 @@ def _load_state_dict(path: Path) -> dict[str, torch.Tensor]:
 
 
 def _save_json(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(payload, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    write_json(path, payload)
 
 
 def _select_config(args: argparse.Namespace) -> HNeRVArchConfig:
@@ -191,17 +184,17 @@ def build_driver_artifacts(
         ),
         "inputs": {
             "source_state_dict_path": _repo_rel(source_state_dict_path),
-            "source_state_dict_sha256": _sha256_file(source_state_dict_path),
+            "source_state_dict_sha256": sha256_file(source_state_dict_path),
             "targets_json": _repo_rel(targets_path) if targets_path else None,
-            "targets_json_sha256": _sha256_file(targets_path) if targets_path else None,
+            "targets_json_sha256": sha256_file(targets_path) if targets_path else None,
         },
         "outputs": {
             "output_dir": _repo_rel(output_dir),
             "generated_schema_path": _repo_rel(generated_schema_path),
-            "generated_schema_sha256": _sha256_file(generated_schema_path),
+            "generated_schema_sha256": sha256_file(generated_schema_path),
             "initial_state_dict_path": _repo_rel(target_state_path),
             "initial_state_dict_bytes": target_state_path.stat().st_size,
-            "initial_state_dict_sha256": _sha256_file(target_state_path),
+            "initial_state_dict_sha256": sha256_file(target_state_path),
         },
         "target_config": target_config.to_jsonable(),
         "source_schema": {
@@ -234,7 +227,7 @@ def build_driver_artifacts(
     }
     _save_json(manifest_path, manifest)
     manifest["outputs"]["training_driver_manifest_path"] = _repo_rel(manifest_path)
-    manifest["outputs"]["training_driver_manifest_sha256"] = _sha256_file(manifest_path)
+    manifest["outputs"]["training_driver_manifest_sha256"] = sha256_file(manifest_path)
     _save_json(manifest_path, manifest)
     return manifest
 
@@ -266,12 +259,16 @@ def main(argv: list[str] | None = None) -> int:
         targets_json=Path(args.targets_json) if args.targets_json else None,
         force=args.force,
     )
-    print(json.dumps({
-        "manifest": manifest["outputs"]["training_driver_manifest_path"],
-        "initial_state_dict": manifest["outputs"]["initial_state_dict_path"],
-        "generated_schema": manifest["outputs"]["generated_schema_path"],
-        "ready_for_exact_eval_dispatch": manifest["ready_for_exact_eval_dispatch"],
-    }, indent=2, sort_keys=True))
+    sys.stdout.write(
+        json_text(
+            {
+                "manifest": manifest["outputs"]["training_driver_manifest_path"],
+                "initial_state_dict": manifest["outputs"]["initial_state_dict_path"],
+                "generated_schema": manifest["outputs"]["generated_schema_path"],
+                "ready_for_exact_eval_dispatch": manifest["ready_for_exact_eval_dispatch"],
+            }
+        )
+    )
     return 0
 
 

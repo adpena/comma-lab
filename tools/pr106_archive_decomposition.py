@@ -11,18 +11,23 @@ This is CPU-only archive custody evidence. It emits no score claim.
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT / "src"))
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
 
 from tac.frontier_archive_layout import (  # noqa: E402
     dumps_manifest,
     inspect_frontier_archive_layout,
     render_frontier_archive_layout_summary,
 )
+from tac.repo_io import json_text  # noqa: E402
 
 DEFAULT_ARCHIVES = (
     REPO_ROOT / "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip",
@@ -74,7 +79,7 @@ def main(argv: list[str] | None = None) -> int:
             print()
         print(f"manifest: {args.output_json}")
     else:
-        print(json.dumps(payload, indent=2, sort_keys=True))
+        sys.stdout.write(json_text(payload))
     return 0
 
 

@@ -35,10 +35,7 @@ Usage::
 from __future__ import annotations
 
 import argparse
-import hashlib
-import json
 import math
-import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -46,14 +43,20 @@ from typing import Any
 import numpy as np
 import torch
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT / "src"))
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
 
 from tac.pr101_split_brotli_codec import (  # noqa: E402
     FIXED_STATE_SCHEMA,
     N_QUANT,
     _quantize_tensor,
 )
+from tac.repo_io import sha256_file, write_json  # noqa: E402
 
 TOOL_NAME = "tools/pr101_constriction_marginal_floor.py"
 SCHEMA_VERSION = "pr101_constriction_marginal_floor.v1"
@@ -114,8 +117,7 @@ def encode_marginal_floor(
     cmodel = constriction.stream.model
     RangeEncoder = constriction.stream.queue.RangeEncoder
 
-    input_bytes = state_dict_path.read_bytes()
-    input_sha256 = hashlib.sha256(input_bytes).hexdigest()
+    input_sha256 = sha256_file(state_dict_path)
     state_dict = torch.load(state_dict_path, map_location="cpu", weights_only=False)
     if not isinstance(state_dict, dict):
         raise SystemExit(f"loaded {state_dict_path} is not a dict")
@@ -210,8 +212,7 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(f"state_dict not found: {args.state_dict_path}")
 
     manifest = encode_marginal_floor(args.state_dict_path)
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
+    write_json(args.output, manifest)
 
     print(f"Wrote {args.output}")
     print(f"Total encoded payload:           {manifest['total_encoded_payload_bytes']:>10,} bytes")
