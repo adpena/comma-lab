@@ -842,3 +842,24 @@ The active PR103 byte target remains the clean-runtime `-16B` packet
 work should be source-shell-contract parity/compliance for that packet or a
 different grammar-aware transform axis, not another unconstrained histogram
 frontier expansion.
+
+## 2026-05-11T01:25Z preflight coverage equivalence addendum
+
+The all-lanes preflight wall-clock reduction has an explicit coverage audit:
+`.omx/research/preflight_parallel_coverage_audit_20260511_codex.md`.
+
+Serial `--jobs 1` and parallel `--jobs 8` profiles were compared mechanically
+on `(section, number, name, passed, status, forensic_only, local_smoke_only)`.
+The result is coverage-equivalent:
+
+- `29` total rows in both profiles;
+- `26` gate checks and `3` lane dry-runs in both profiles;
+- `29` passed / `0` failed in both profiles;
+- zero ordered identity/status mismatches;
+- serial wall `6.809072s`;
+- parallel wall `2.919316s`;
+- measured speedup `4.561765x`.
+
+The reduced wall-clock path is therefore a scheduling/performance improvement,
+not a coverage reduction. A regression test now locks that invariant:
+`test_run_steps_with_budget_parallel_preserves_full_coverage_and_order`.

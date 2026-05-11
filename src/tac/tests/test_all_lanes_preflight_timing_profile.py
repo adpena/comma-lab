@@ -206,6 +206,59 @@ def test_run_steps_with_budget_cancels_unstarted_serial_work() -> None:
     assert "CANCELLED" in results[1].output
 
 
+def test_run_steps_with_budget_parallel_preserves_full_coverage_and_order() -> None:
+    module = _load_all_lanes_module()
+    ran: list[str] = []
+
+    def runner(name: str, passed: bool, delay_s: float) -> tuple[bool, str]:
+        time.sleep(delay_s)
+        ran.append(name)
+        return passed, f"{name} done"
+
+    steps = [
+        module.PreflightStep(
+            "LANE",
+            2,
+            "lane two",
+            lambda: runner("lane two", True, 0.005),
+            "lane two passed",
+            "lane two failed",
+        ),
+        module.PreflightStep(
+            "GATE",
+            1,
+            "gate one",
+            lambda: runner("gate one", True, 0.015),
+            "gate one passed",
+            "gate one failed",
+        ),
+        module.PreflightStep(
+            "GATE",
+            2,
+            "gate two",
+            lambda: runner("gate two", False, 0.001),
+            "gate two passed",
+            "gate two failed",
+        ),
+    ]
+
+    results = module._run_steps_with_budget(
+        steps,
+        max_workers=3,
+        wall_clock_budget_s=5.0,
+        run_started=time.perf_counter(),
+    )
+
+    assert set(ran) == {"gate one", "gate two", "lane two"}
+    assert [(r.step.section, r.step.number, r.step.name) for r in results] == [
+        ("GATE", 1, "gate one"),
+        ("GATE", 2, "gate two"),
+        ("LANE", 2, "lane two"),
+    ]
+    assert [r.passed for r in results] == [True, False, True]
+    assert [r.status for r in results] == ["passed", "failed", "passed"]
+
+
 def test_write_timing_profile_creates_parent_and_uses_repo_json_style(tmp_path: Path) -> None:
     module = _load_all_lanes_module()
     path = tmp_path / "profiles" / "all_lanes_timing.json"
