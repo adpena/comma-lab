@@ -176,7 +176,23 @@ from tac.losses import (  # noqa: E402
     SEGMENTATION_SURROGATE_FISHER_RAO,
     SEGMENTATION_SURROGATE_SINKHORN,
     SEGMENTATION_SURROGATE_SOFT_COSINE,
+    scorer_forward_pair,
     scorer_loss_terms_btchw,
+)
+# T20 / T22 wire-in (memo
+# feedback_t20_t22_pose_axis_temporal_lateral_leaps_landed_20260509). Both
+# are training-time additive losses; default OFF for backward-compat per
+# T13/T19 pattern + coherence council.
+from tac.kl_pose_distill import (  # noqa: E402
+    DEFAULT_TEMPERATURE as KL_POSE_DEFAULT_TEMPERATURE,
+    KLPoseDistillConfig,
+    apply_kl_pose_distill,
+)
+from tac.temporal_consistency_regularizer import (  # noqa: E402
+    DEFAULT_BOUNDARY_HANDLING as TC_DEFAULT_BOUNDARY_HANDLING,
+    DEFAULT_LAMBDA_WEIGHT as TC_DEFAULT_LAMBDA_WEIGHT,
+    TemporalConsistencyConfig,
+    apply_temporal_consistency,
 )
 
 
@@ -1340,6 +1356,8 @@ def write_provenance(
     completed_at_utc: str | None,
     t13_bit_reallocation: dict | None = None,
     t19_adaptive_rho: dict | None = None,
+    t20_kl_pose_distill: dict | None = None,
+    t22_temporal_consistency: dict | None = None,
     score_domain_gradcheck: dict[str, float] | None = None,
     pr95_trainer_parity: dict | None = None,
 ) -> Path:
@@ -1389,6 +1407,12 @@ def write_provenance(
         # (backward-compat preserved).
         "t13_bit_reallocation": t13_bit_reallocation,
         "t19_adaptive_rho": t19_adaptive_rho,
+        # T20 / T22 wire-in surfaces (memo
+        # feedback_t20_t22_pose_axis_temporal_lateral_leaps_landed_20260509).
+        # Both default to None when the corresponding --enable flag is OFF
+        # (backward-compat preserved per T13/T19 pattern).
+        "t20_kl_pose_distill": t20_kl_pose_distill,
+        "t22_temporal_consistency": t22_temporal_consistency,
         "platform": {
             "python": sys.version.split()[0],
             "torch": torch.__version__,
@@ -1795,6 +1819,63 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=0.5,
         help="T19 ρ-shrink factor (Boyd canonical 0.5). Must be in (0, 1).",
     )
+    # T20 — KL pose-axis distillation loss (memo
+    # feedback_t20_t22_pose_axis_temporal_lateral_leaps_landed_20260509)
+    parser.add_argument(
+        "--enable-t20-kl-pose-distill",
+        action="store_true",
+        default=False,
+        help="Opt-in T20 Hinton-Vinyals-Dean 2014 KL distillation on the "
+             "PoseNet 12-dim head logits at T=2.0 (matches Quantizr's "
+             "verified 0.33 archive recipe). Student = PoseNet(decoded_rt); "
+             "teacher = PoseNet(target). Requires --enable-scorer-domain-loss. "
+             "Default OFF for backward-compat per T13/T19 pattern.",
+    )
+    parser.add_argument(
+        "--t20-temperature",
+        type=float,
+        default=KL_POSE_DEFAULT_TEMPERATURE,
+        help="T20 Hinton softmax temperature (default 2.0; Quantizr canonical).",
+    )
+    parser.add_argument(
+        "--t20-weight-pose",
+        type=float,
+        default=1.0,
+        help="T20 multiplier added to the augmented Lagrangian. Default 1.0 "
+             "(per T20 landing's `KLPoseDistillConfig.weight_pose` default).",
+    )
+    parser.add_argument(
+        "--t20-mode",
+        choices=["distill_softmax_full", "distill_softmax_first6", "regression_mse"],
+        default="distill_softmax_full",
+        help="T20 loss form: distill_softmax_full (canonical Hinton, default), "
+             "distill_softmax_first6 (softmax restricted to scored region), or "
+             "regression_mse (ablation baseline).",
+    )
+    # T22 — Temporal-consistency regularizer (memo
+    # feedback_t20_t22_pose_axis_temporal_lateral_leaps_landed_20260509)
+    parser.add_argument(
+        "--enable-t22-temporal-consistency",
+        action="store_true",
+        default=False,
+        help="Opt-in T22 Horn-Schunck 1981 brightness-constancy temporal "
+             "regularizer on per-pair rendered frames (B, P=2, C, H, W). "
+             "Identity-warp form (no flow): "
+             "λ · mean(|R_{t+1} - R_t|²). Default OFF for backward-compat.",
+    )
+    parser.add_argument(
+        "--t22-lambda-weight",
+        type=float,
+        default=TC_DEFAULT_LAMBDA_WEIGHT,
+        help="T22 λ multiplier (default 0.1; T20 landing recommends 0.05-0.5).",
+    )
+    parser.add_argument(
+        "--t22-boundary-handling",
+        choices=["zeros", "border", "reflection"],
+        default=TC_DEFAULT_BOUNDARY_HANDLING,
+        help="T22 grid_sample padding_mode (default border; matches renderer "
+             "convention per T22 landing's commit-pinned coordinate convention).",
+    )
     # ----------------------------------------------------------------------
     # PR #95 binary-forensics replication (Finding A + Finding B)
     # See `src/tac/differentiable_eval_roundtrip.py`.
@@ -2158,6 +2239,20 @@ def main() -> int:
             f"[predicted; T19 adaptive ρ 2-3× convergence speedup; "
             f"not direct score]"
         )
+    # T20 / T22 enable banners (memo
+    # feedback_t20_t22_pose_axis_temporal_lateral_leaps_landed_20260509).
+    if args.enable_t20_kl_pose_distill:
+        print(
+            f"[t1] T20 enabled: KL pose-axis distill at T={args.t20_temperature} "
+            f"(weight_pose={args.t20_weight_pose}, mode={args.t20_mode}) "
+            f"[predicted; T20 KL pose distill at T=2.0]"
+        )
+    if args.enable_t22_temporal_consistency:
+        print(
+            f"[t1] T22 enabled: temporal consistency "
+            f"(λ={args.t22_lambda_weight}, boundary={args.t22_boundary_handling}) "
+            f"[predicted; T22 temporal consistency penalty]"
+        )
 
     n_pairs = int(latents.shape[0])
     epochs = 1 if args.smoke else args.epochs
@@ -2169,6 +2264,13 @@ def main() -> int:
     best_proxy = float("inf")
     history = []
     score_domain_gradcheck: dict[str, float] | None = None
+    # T20 + T22 running totals for provenance summary (memo
+    # feedback_t20_t22_pose_axis_temporal_lateral_leaps_landed_20260509). When
+    # both flags OFF, both stay 0.0 and provenance emits an "enabled=false"
+    # row per the T13/T19 backward-compat pattern.
+    t20_loss_running: float = 0.0
+    t22_loss_running: float = 0.0
+    t20_t22_n_batches: int = 0
 
     for epoch in range(epochs):
         decoder.train()
@@ -2229,8 +2331,77 @@ def main() -> int:
                 raise RuntimeError(
                     "[t1] non-finite augmented Lagrangian; refusing to update weights"
                 )
+            # T20 — KL pose-axis distillation (memo
+            # feedback_t20_t22_pose_axis_temporal_lateral_leaps_landed_20260509).
+            # Adds Hinton-Vinyals-Dean 2014 KL on PoseNet 12-dim head logits.
+            # Requires --enable-scorer-domain-loss (needs posenet loaded).
+            # When OFF, the augmented Lagrangian is unchanged (backward-compat).
+            total_loss = res.augmented_lagrangian
+            t20_loss_value: float = 0.0
+            t22_loss_value: float = 0.0
+            if args.enable_t20_kl_pose_distill:
+                if not args.enable_scorer_domain_loss or posenet is None or segnet is None:
+                    raise RuntimeError(
+                        "[t1] --enable-t20-kl-pose-distill requires "
+                        "--enable-scorer-domain-loss (PoseNet must be loaded). "
+                        "Refusing silent skip per CLAUDE.md fail-loud rule."
+                    )
+                # Student logits (gradient-reaching): decoded_rt → PoseNet.
+                # Teacher logits (stop-grad inside KL helper): tgt → PoseNet
+                # under no_grad to mirror scorer_loss_terms_btchw teacher path.
+                student_pose_out, _ = scorer_forward_pair(
+                    decoded_rt, posenet, segnet
+                )
+                with torch.no_grad():
+                    teacher_pose_out, _ = scorer_forward_pair(
+                        tgt, posenet, segnet
+                    )
+                t20_cfg = KLPoseDistillConfig(
+                    temperature=float(args.t20_temperature),
+                    weight_pose=float(args.t20_weight_pose),
+                    mode=args.t20_mode,
+                )
+                t20_loss = apply_kl_pose_distill(
+                    student_pose_out["pose"],
+                    teacher_pose_out["pose"],
+                    t20_cfg,
+                )
+                if not torch.isfinite(t20_loss).all():
+                    raise RuntimeError(
+                        "[t1] T20 KL pose distill produced non-finite loss; "
+                        "refusing to update weights"
+                    )
+                total_loss = total_loss + t20_loss
+                t20_loss_value = float(t20_loss.detach())
+            # T22 — Temporal-consistency regularizer. Identity-warp form on
+            # per-pair (B, P=2, C, H, W) decoded frames. Works regardless of
+            # whether scorer-domain loss is enabled (operates on decoded RGB).
+            if args.enable_t22_temporal_consistency:
+                # Use decoded_rt when scorer-domain loss is on (matches the
+                # roundtrip-aware proxy); otherwise use raw decoded.
+                t22_input = decoded_rt if args.enable_scorer_domain_loss else decoded
+                t22_cfg = TemporalConsistencyConfig(
+                    lambda_weight=float(args.t22_lambda_weight),
+                    flow_source="identity",
+                    boundary_handling=args.t22_boundary_handling,
+                )
+                t22_loss = apply_temporal_consistency(
+                    t22_input,
+                    flow=None,  # identity-warp: λ · mean(|R_{t+1} - R_t|²)
+                    config=t22_cfg,
+                )
+                if not torch.isfinite(t22_loss).all():
+                    raise RuntimeError(
+                        "[t1] T22 temporal-consistency produced non-finite "
+                        "loss; refusing to update weights"
+                    )
+                total_loss = total_loss + t22_loss
+                t22_loss_value = float(t22_loss.detach())
+            # Track per-batch contributions for provenance summary.
+            t20_loss_running += t20_loss_value
+            t22_loss_running += t22_loss_value
             optim_main.zero_grad()
-            res.augmented_lagrangian.backward()
+            total_loss.backward()
             if args.grad_clip_norm > 0:
                 if args.enable_scorer_domain_loss and score_domain_gradcheck is None:
                     score_domain_gradcheck = assert_score_domain_gradient_reachability(
@@ -2259,6 +2430,7 @@ def main() -> int:
 
             epoch_loss += float(res.augmented_lagrangian.detach())
             n_batches += 1
+            t20_t22_n_batches += 1
 
         avg_loss = epoch_loss / max(n_batches, 1)
         if epoch == 0 or (epoch + 1) % args.eval_every_epochs == 0 or epoch == epochs - 1:
@@ -2392,6 +2564,37 @@ def main() -> int:
         (args.output_dir / "score_domain_gradcheck.json").write_text(
             json.dumps(score_domain_gradcheck, indent=2)
         )
+    # T20 — KL pose-axis distillation summary (memo
+    # feedback_t20_t22_pose_axis_temporal_lateral_leaps_landed_20260509).
+    t20_summary: dict | None = None
+    if args.enable_t20_kl_pose_distill:
+        t20_summary = {
+            "enabled": True,
+            "temperature": float(args.t20_temperature),
+            "weight_pose": float(args.t20_weight_pose),
+            "mode": args.t20_mode,
+            "n_batches": int(t20_t22_n_batches),
+            "loss_total": float(t20_loss_running),
+            "loss_mean_per_batch": float(
+                t20_loss_running / max(t20_t22_n_batches, 1)
+            ),
+            "tag": "[predicted; T20 KL pose distill at T=2.0]",
+        }
+    # T22 — Temporal-consistency summary (same memo).
+    t22_summary: dict | None = None
+    if args.enable_t22_temporal_consistency:
+        t22_summary = {
+            "enabled": True,
+            "lambda_weight": float(args.t22_lambda_weight),
+            "boundary_handling": args.t22_boundary_handling,
+            "flow_source": "identity",  # this trainer wires the no-flow form
+            "n_batches": int(t20_t22_n_batches),
+            "loss_total": float(t22_loss_running),
+            "loss_mean_per_batch": float(
+                t22_loss_running / max(t20_t22_n_batches, 1)
+            ),
+            "tag": "[predicted; T22 temporal consistency penalty]",
+        }
     write_provenance(
         output_dir=args.output_dir,
         args=args,
@@ -2402,6 +2605,8 @@ def main() -> int:
         completed_at_utc=completed_at,
         t13_bit_reallocation=t13_report,
         t19_adaptive_rho=t19_summary,
+        t20_kl_pose_distill=t20_summary,
+        t22_temporal_consistency=t22_summary,
         score_domain_gradcheck=score_domain_gradcheck,
         pr95_trainer_parity=pr95_trainer_parity,
     )
