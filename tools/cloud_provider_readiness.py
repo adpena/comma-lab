@@ -14,6 +14,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -21,6 +22,14 @@ from typing import Callable
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+SRC_ROOT = REPO_ROOT / "src"
+for _path in (REPO_ROOT, SRC_ROOT):
+    _value = str(_path)
+    if _value not in sys.path:
+        sys.path.insert(0, _value)
+
+from tac.deploy.provider_contracts import provider_contracts  # noqa: E402
+
 DEFAULT_OUTPUT = REPO_ROOT / "experiments/results/cloud_provider_readiness_latest.json"
 DEFAULT_KAGGLE_KERNEL = "adpena/comma-gpu-lane-smoke"
 
@@ -229,6 +238,88 @@ def probe_kaggle(
     )
 
 
+def probe_lightning(*, runner: Runner = run_command, timeout_s: int = 20) -> ProviderReadiness:
+    python = _venv_bin("python")
+    command = [str(python if python.exists() else Path(sys.executable))]
+    result = runner(
+        command
+        + [
+            "-c",
+            (
+                "import importlib.metadata as m; "
+                "print(m.version('lightning-sdk'))"
+            ),
+        ],
+        timeout_s,
+    )
+    ok = result.returncode == 0
+    return _provider(
+        provider="lightning",
+        status="ready_sdk_check_credit_quota_next" if ok else "blocked_sdk_missing",
+        role="claimed_cuda_batch_jobs_when_credits_quota_and_studio_route_are_ready",
+        exact_cuda=False,
+        proxy_only=False,
+        result=result,
+        blockers=(
+            ["credits_or_quota_not_checked", "studio_route_not_checked", "no_dispatch_claim"]
+            if ok
+            else ["lightning_sdk_missing_or_broken"]
+        ),
+        next_actions=(
+            [
+                "Run `scripts/launch_lightning_batch_job.py doctor` before any Lightning dispatch.",
+                "Use claim_lane_dispatch.py before every non-dry-run Lightning job.",
+                "Treat Lightning exact CUDA only after artifact custody and adjudication land.",
+            ]
+            if ok
+            else ["Install or repair lightning-sdk in .venv, or use another CUDA provider."]
+        ),
+    )
+
+
+def probe_vastai(*, runner: Runner = run_command, timeout_s: int = 30) -> ProviderReadiness:
+    command = find_cli_command("vastai", uv_package="vastai")
+    if command is None:
+        return _provider(
+            provider="vastai",
+            status="blocked_cli_missing",
+            role="claimed_cuda_dispatch_when_api_key_offer_and_heartbeat_are_ready",
+            exact_cuda=False,
+            proxy_only=False,
+            blockers=["vastai_cli_missing"],
+            next_actions=["Install Vast.ai CLI in .venv or make vastai available on PATH."],
+        )
+    api_key = Path.home() / ".vast_api_key"
+    if not api_key.exists():
+        return _provider(
+            provider="vastai",
+            status="blocked_credentials_missing",
+            role="claimed_cuda_dispatch_when_api_key_offer_and_heartbeat_are_ready",
+            exact_cuda=False,
+            proxy_only=False,
+            command=command,
+            blockers=["vastai_api_key_missing"],
+            next_actions=["Run `vastai set api-key <key>` before any Vast.ai launch."],
+        )
+    query = "gpu_name=RTX_4090 num_gpus=1 disk_space>60 rentable=True"
+    result = runner(command + ["search", "offers", query, "--order", "dph_total", "--limit", "1", "--raw"], timeout_s)
+    ok = result.returncode == 0
+    return _provider(
+        provider="vastai",
+        status="ready_offer_query_claim_heartbeat_next" if ok else "blocked_offer_query",
+        role="claimed_cuda_dispatch_with_nvdec_probe_heartbeat_and_artifact_custody",
+        exact_cuda=False,
+        proxy_only=False,
+        result=result,
+        blockers=["no_dispatch_claim", "heartbeat_not_checked", "nvdec_cuda_probe_not_run"] if ok else ["vastai_offer_query_failed"],
+        next_actions=[
+            "Use scripts/launch_lane_on_vastai.py only after a non-conflicting lane claim.",
+            "Require NVDEC/CUDA probe, heartbeat, and artifact custody before score promotion.",
+            "Prefer Modal/Azure/GCP/AWS if Vast.ai offer or network readiness is unstable.",
+        ] if ok else ["Check Vast.ai API/network access and retry the read-only offer query."],
+    )
+
+
 def probe_aws(*, runner: Runner = run_command, timeout_s: int = 20) -> ProviderReadiness:
     command = find_cli_command("aws")
     if command is None:
@@ -387,12 +478,19 @@ def probe_azure(*, runner: Runner = run_command, timeout_s: int = 20) -> Provide
 
 
 def collect_readiness(*, kaggle_kernel: str, timeout_s: int) -> dict[str, object]:
+    probes_by_provider = {
+        "modal": probe_modal(timeout_s=timeout_s),
+        "kaggle": probe_kaggle(kernel_ref=kaggle_kernel, timeout_s=timeout_s),
+        "lightning": probe_lightning(timeout_s=timeout_s),
+        "vastai": probe_vastai(timeout_s=timeout_s),
+        "aws": probe_aws(timeout_s=timeout_s),
+        "azure": probe_azure(timeout_s=timeout_s),
+        "gcp": probe_gcp(timeout_s=timeout_s),
+    }
     probes = [
-        probe_modal(timeout_s=timeout_s),
-        probe_kaggle(kernel_ref=kaggle_kernel, timeout_s=timeout_s),
-        probe_aws(timeout_s=timeout_s),
-        probe_gcp(timeout_s=timeout_s),
-        probe_azure(timeout_s=timeout_s),
+        probes_by_provider[name]
+        for name in provider_contracts()
+        if name in probes_by_provider
     ]
     return {
         "schema": "cloud_provider_readiness_v1",

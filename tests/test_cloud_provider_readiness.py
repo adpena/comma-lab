@@ -79,6 +79,61 @@ class CloudProviderReadinessTests(unittest.TestCase):
         self.assertIn("modal_billing_not_checked", payload.blockers)
         self.assertIn("cuda_runtime_import_probe_not_run", payload.blockers)
 
+    def test_probe_lightning_sdk_ready_still_requires_credit_and_claim(self) -> None:
+        mod = load_module()
+
+        def fake_runner(command: list[str], _timeout: int):
+            return mod.CommandResult(command=command, returncode=0, stdout="2026.4.10\n")
+
+        payload = mod.probe_lightning(runner=fake_runner)
+
+        self.assertEqual(payload.status, "ready_sdk_check_credit_quota_next")
+        self.assertFalse(payload.exact_cuda_evidence_allowed)
+        self.assertIn("credits_or_quota_not_checked", payload.blockers)
+        self.assertIn("no_dispatch_claim", payload.blockers)
+
+    def test_probe_vastai_offer_ready_still_requires_claim_probe_and_heartbeat(self) -> None:
+        mod = load_module()
+
+        def fake_runner(command: list[str], _timeout: int):
+            return mod.CommandResult(command=command, returncode=0, stdout='[{"id": 123}]\n')
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fake_home = Path(tmpdir)
+            (fake_home / ".vast_api_key").write_text("secret\n")
+            with mock.patch.object(mod.Path, "home", return_value=fake_home):
+                with mock.patch.object(mod.shutil, "which", return_value="/usr/bin/vastai"):
+                    payload = mod.probe_vastai(runner=fake_runner)
+
+        self.assertEqual(payload.status, "ready_offer_query_claim_heartbeat_next")
+        self.assertFalse(payload.exact_cuda_evidence_allowed)
+        self.assertIn("no_dispatch_claim", payload.blockers)
+        self.assertIn("heartbeat_not_checked", payload.blockers)
+
+    def test_collect_readiness_uses_provider_contract_order(self) -> None:
+        mod = load_module()
+
+        def fake_provider(name: str):
+            return mod.ProviderReadiness(
+                provider=name,
+                status="stub",
+                score_lowering_role="stub",
+                exact_cuda_evidence_allowed=False,
+                proxy_only=False,
+            )
+
+        with mock.patch.object(mod, "probe_modal", return_value=fake_provider("modal")), \
+             mock.patch.object(mod, "probe_kaggle", return_value=fake_provider("kaggle")), \
+             mock.patch.object(mod, "probe_lightning", return_value=fake_provider("lightning")), \
+             mock.patch.object(mod, "probe_vastai", return_value=fake_provider("vastai")), \
+             mock.patch.object(mod, "probe_aws", return_value=fake_provider("aws")), \
+             mock.patch.object(mod, "probe_azure", return_value=fake_provider("azure")), \
+             mock.patch.object(mod, "probe_gcp", return_value=fake_provider("gcp")):
+            payload = mod.collect_readiness(kaggle_kernel="unit/kernel", timeout_s=1)
+
+        providers = [row["provider"] for row in payload["providers"]]
+        self.assertEqual(providers, list(mod.provider_contracts()))
+
     def test_probe_aws_classifies_expired_session(self) -> None:
         mod = load_module()
 

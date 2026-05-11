@@ -19,7 +19,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 def test_provider_contract_registry_covers_required_providers() -> None:
     contracts = provider_contracts()
     assert tuple(contracts) == PROVIDER_NAMES
-    assert set(contracts) == {"modal", "kaggle", "aws", "azure", "gcp"}
+    assert set(contracts) == {"modal", "kaggle", "lightning", "vastai", "aws", "azure", "gcp"}
 
 
 def test_provider_contracts_preserve_custody_and_proxy_rules() -> None:
@@ -38,7 +38,7 @@ def test_only_implemented_cuda_surfaces_advertise_exact_eval_support() -> None:
 
     assert {
         name for name, contract in contracts.items() if contract.exact_cuda_eval_supported
-    } == {"modal", "azure"}
+    } == {"modal", "lightning", "vastai", "azure"}
     for name in ("aws", "gcp"):
         assert contracts[name].scaffold_only is True
         assert contracts[name].exact_cuda_eval_supported is False
@@ -46,6 +46,16 @@ def test_only_implemented_cuda_surfaces_advertise_exact_eval_support() -> None:
 
 def test_validate_provider_contracts_passes_on_live_repo() -> None:
     assert validate_provider_contracts(repo_root=REPO_ROOT) == []
+
+
+def test_validate_provider_contracts_detects_unregistered_provider_package(tmp_path: Path) -> None:
+    provider_dir = tmp_path / "src" / "tac" / "deploy" / "newcloud"
+    provider_dir.mkdir(parents=True)
+    (provider_dir / "__init__.py").write_text("\n", encoding="utf-8")
+
+    violations = validate_provider_contracts(repo_root=tmp_path)
+
+    assert any("newcloud" in violation for violation in violations)
 
 
 def test_preflight_provider_contract_guard_is_strict() -> None:

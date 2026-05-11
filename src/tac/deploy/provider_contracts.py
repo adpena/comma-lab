@@ -11,7 +11,15 @@ from importlib.util import find_spec
 from pathlib import Path
 
 
-PROVIDER_NAMES: tuple[str, ...] = ("modal", "kaggle", "aws", "azure", "gcp")
+PROVIDER_NAMES: tuple[str, ...] = (
+    "modal",
+    "kaggle",
+    "lightning",
+    "vastai",
+    "aws",
+    "azure",
+    "gcp",
+)
 
 
 @dataclass(frozen=True)
@@ -118,6 +126,40 @@ PROVIDER_CONTRACTS: dict[str, ProviderDeployContract] = {
         setup_blockers=("Kaggle API credentials", "tac wheel dataset", "GPU session quota"),
         notes="Kaggle is proxy/free-GPU capacity; it must not create score truth.",
     ),
+    "lightning": ProviderDeployContract(
+        provider="lightning",
+        module="tac.deploy.lightning.batch_jobs",
+        canonical_entrypoints=(
+            "scripts/launch_lightning_batch_job.py",
+            "src/tac/deploy/lightning/batch_jobs.py",
+        ),
+        status="implemented",
+        plan_only_default=True,
+        execution_flag="exact-eval submit",
+        requires_lane_claim_before_dispatch=True,
+        terminal_claim_required=True,
+        custody_manifest_required=True,
+        exact_cuda_eval_supported=True,
+        setup_blockers=("Lightning SDK auth", "Studio cloud-account route", "CUDA machine quota"),
+        notes="Lightning Batch Jobs can host claimed CUDA exact eval when credits/quota are available.",
+    ),
+    "vastai": ProviderDeployContract(
+        provider="vastai",
+        module="tac.deploy.vastai.client",
+        canonical_entrypoints=(
+            "scripts/launch_lane_on_vastai.py",
+            "src/tac/deploy/vastai/cli.py",
+        ),
+        status="implemented",
+        plan_only_default=True,
+        execution_flag="--no-dry-run",
+        requires_lane_claim_before_dispatch=True,
+        terminal_claim_required=True,
+        custody_manifest_required=True,
+        exact_cuda_eval_supported=True,
+        setup_blockers=("vastai API key", "offer availability", "NVDEC/CUDA probe", "SSH heartbeat"),
+        notes="Vast.ai can host claimed CUDA remote lanes; heartbeat/artifact custody gates promotion.",
+    ),
     "aws": ProviderDeployContract(
         provider="aws",
         module="tac.deploy.aws.ec2_client",
@@ -183,4 +225,22 @@ def validate_provider_contracts(repo_root: Path | None = None) -> list[str]:
         if contract is None:
             continue
         violations.extend(contract.validate_static(repo_root=repo_root))
+
+    if repo_root is not None:
+        deploy_root = repo_root / "src" / "tac" / "deploy"
+        if deploy_root.is_dir():
+            package_providers = sorted(
+                path.name
+                for path in deploy_root.iterdir()
+                if path.is_dir()
+                and not path.name.startswith("_")
+                and path.name != "__pycache__"
+                and (path / "__init__.py").exists()
+            )
+            unregistered = sorted(set(package_providers) - set(PROVIDER_NAMES))
+            if unregistered:
+                violations.append(
+                    "provider package(s) missing canonical contract: "
+                    + ", ".join(unregistered)
+                )
     return violations

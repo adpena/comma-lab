@@ -42,6 +42,8 @@ from typing import Any
 
 import modal
 
+from tac.deploy.claims import DispatchClaimSpec, dispatch_claim_command
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 REMOTE_REPO = Path("/workspace/pact")
 RESULT_ROOT = REPO_ROOT / "experiments" / "results"
@@ -493,27 +495,20 @@ def _claim_lane(
     status: str = "active_dispatching",
     force: bool = False,
 ) -> int:
-    cmd = [
-        sys.executable,
-        str(REPO_ROOT / "tools/claim_lane_dispatch.py"),
-        "claim",
-        "--lane-id",
-        LANE_ID,
-        "--platform",
-        "modal",
-        "--instance-job-id",
-        instance_job_id,
-        "--agent",
-        CLAIM_AGENT,
-        "--predicted-eta-utc",
-        predicted_eta_utc,
-        "--status",
-        status,
-    ]
-    if notes:
-        cmd.extend(["--notes", notes])
-    if force:
-        cmd.append("--force")
+    cmd = dispatch_claim_command(
+        spec=DispatchClaimSpec(
+            lane_id=LANE_ID,
+            platform="modal",
+            instance_job_id=instance_job_id,
+            agent=CLAIM_AGENT,
+            predicted_eta_utc=predicted_eta_utc,
+            force=force,
+            notes=notes,
+        ),
+        status=status,
+        python_executable=sys.executable,
+        claim_tool=REPO_ROOT / "tools/claim_lane_dispatch.py",
+    )
     print(f"[claim] {' '.join(shlex.quote(c) for c in cmd)}")
     proc = subprocess.run(cmd, cwd=REPO_ROOT, capture_output=True, text=True, check=False)
     sys.stdout.write(proc.stdout)

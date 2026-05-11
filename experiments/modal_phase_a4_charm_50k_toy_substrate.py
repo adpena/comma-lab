@@ -106,6 +106,8 @@ from typing import Any
 
 import modal
 
+from tac.deploy.claims import DispatchClaimSpec, dispatch_claim_command
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 REMOTE_REPO = Path("/workspace/pact")
 REMOTE_PYTHONPATH = f"{REMOTE_REPO / 'src'}:{REMOTE_REPO / 'upstream'}:{REMOTE_REPO}"
@@ -924,21 +926,20 @@ def _claim_lane(
     """Open or close a lane claim via tools/claim_lane_dispatch.py."""
     import shlex
 
-    cmd = [
-        sys.executable,
-        str(REPO_ROOT / "tools" / "claim_lane_dispatch.py"),
-        "claim",
-        "--lane-id", lane_id,
-        "--platform", "modal",
-        "--instance-job-id", instance_job_id,
-        "--agent", "claude:modal_phase_a4",
-        "--predicted-eta-utc", predicted_eta_utc,
-        "--status", status,
-    ]
-    if notes:
-        cmd.extend(["--notes", notes])
-    if force:
-        cmd.append("--force")
+    cmd = dispatch_claim_command(
+        spec=DispatchClaimSpec(
+            lane_id=lane_id,
+            platform="modal",
+            instance_job_id=instance_job_id,
+            agent="claude:modal_phase_a4",
+            predicted_eta_utc=predicted_eta_utc,
+            force=force,
+            notes=notes,
+        ),
+        status=status,
+        python_executable=sys.executable,
+        claim_tool=REPO_ROOT / "tools" / "claim_lane_dispatch.py",
+    )
     print(f"[claim] {' '.join(shlex.quote(c) for c in cmd)}")
     proc = subprocess.run(cmd, cwd=REPO_ROOT, capture_output=True, text=True)
     sys.stdout.write(proc.stdout)

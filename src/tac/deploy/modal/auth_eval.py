@@ -9,14 +9,19 @@ from __future__ import annotations
 import io
 import hashlib
 import re
-import subprocess
 import traceback
 import zipfile
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Callable
 
+from tac.deploy.claims import (
+    DispatchClaimSpec,
+    predicted_eta,
+    record_dispatch_claim,
+    terminal_dispatch_claim,
+    utc_now,
+)
 from tac.repo_io import read_json, write_json
 
 SPAWN_SCHEMA = "modal_auth_eval_spawn_v1"
@@ -58,10 +63,11 @@ class PreparedModalAuthEvalRequest:
     output_dir: Path
 
 
-def utc_now() -> str:
-    """Return a compact UTC timestamp for custody metadata."""
+@dataclass(frozen=True)
+class ClaimSpec(DispatchClaimSpec):
+    """Dispatch-claim metadata for a Modal auth-eval job."""
 
-    return datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
+    platform: str = "modal"
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -75,14 +81,6 @@ def safe_artifact_label(value: str) -> str:
 
     label = re.sub(r"[^A-Za-z0-9_.-]+", "_", value).strip("._")
     return label or "archive"
-
-
-def predicted_eta(hours: float = 3.0) -> str:
-    """Return a conservative UTC ETA for claim rows."""
-
-    return (
-        datetime.now(UTC).replace(microsecond=0) + timedelta(hours=float(hours))
-    ).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def function_call_id(call: Any) -> str:
@@ -230,19 +228,6 @@ def prepare_modal_auth_eval_request(
     )
 
 
-@dataclass(frozen=True)
-class ClaimSpec:
-    """Dispatch-claim metadata for a Modal auth-eval job."""
-
-    lane_id: str
-    instance_job_id: str
-    agent: str
-    platform: str = "modal"
-    predicted_eta_utc: str = ""
-    force: bool = False
-    notes: str = ""
-
-
 def claim_modal_auth_eval_dispatch(
     *,
     repo_root: Path,
@@ -256,32 +241,12 @@ def claim_modal_auth_eval_dispatch(
             "FATAL: Modal auth eval dispatch requires --lane-id and "
             "--instance-job-id before provider work starts"
         )
-    cmd = [
-        ".venv/bin/python",
-        "tools/claim_lane_dispatch.py",
-        "claim",
-        "--lane-id",
-        spec.lane_id,
-        "--platform",
-        spec.platform,
-        "--instance-job-id",
-        spec.instance_job_id,
-        "--agent",
-        spec.agent,
-        "--predicted-eta-utc",
-        spec.predicted_eta_utc or predicted_eta(),
-        "--status",
-        status,
-        "--notes",
-        spec.notes or "Modal auth eval dispatch; score_claim=false until recovered",
-    ]
-    if spec.force:
-        cmd.append("--force")
-    proc = subprocess.run(cmd, cwd=repo_root, text=True, check=False)
-    if proc.returncode:
-        raise SystemExit(
-            f"FATAL: dispatch claim failed rc={proc.returncode}; aborting before Modal spend"
-        )
+    record_dispatch_claim(
+        repo_root=repo_root,
+        spec=spec,
+        status=status,
+        default_notes="Modal auth eval dispatch; score_claim=false until recovered",
+    )
 
 
 def terminal_modal_auth_eval_claim(
@@ -293,16 +258,7 @@ def terminal_modal_auth_eval_claim(
 ) -> None:
     """Close or update a Modal auth-eval claim with a terminal status."""
 
-    terminal = ClaimSpec(
-        lane_id=spec.lane_id,
-        instance_job_id=spec.instance_job_id,
-        agent=spec.agent,
-        platform=spec.platform,
-        predicted_eta_utc=utc_now(),
-        force=True,
-        notes=notes,
-    )
-    claim_modal_auth_eval_dispatch(repo_root=repo_root, spec=terminal, status=status)
+    terminal_dispatch_claim(repo_root=repo_root, spec=spec, status=status, notes=notes)
 
 
 def write_spawn_metadata(

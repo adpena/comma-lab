@@ -49,17 +49,38 @@ References:
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import shlex
 import subprocess
 import sys
 import tempfile
 import time
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    _bootstrap_path = Path(__file__).resolve().parent.parent / "tools" / "tool_bootstrap.py"
+    _spec = importlib.util.spec_from_file_location("tool_bootstrap", _bootstrap_path)
+    if _spec is None or _spec.loader is None:
+        raise
+    _tool_bootstrap = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_tool_bootstrap)
+    ensure_repo_imports = _tool_bootstrap.ensure_repo_imports
+    repo_root_from_tool = _tool_bootstrap.repo_root_from_tool
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
+
+from tac.deploy.claims import (
+    DispatchClaimSpec,
+    dispatch_claim_command,
+    predicted_eta,
+    utc_now,
+)
+
+
 TRACKER_PATH = REPO_ROOT / ".omx/state/vastai_active_instances.json"
 DISPATCH_CLAIMS_PATH = REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md"
 VASTAI = REPO_ROOT / ".venv/bin/vastai"
@@ -125,30 +146,23 @@ def claim_vastai_lane_dispatch(args, *, instance_id: int) -> int:
     """Record the mandatory dispatch claim after Vast returns a real job id."""
     if not DISPATCH_CLAIMS_PATH.parent.is_dir():
         DISPATCH_CLAIMS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    eta = (datetime.now(timezone.utc) + timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M:%SZ")
     notes = (
         "Vast.ai launcher created instance before claim because instance_id is "
         "the provider job id; tarball includes refreshed claim ledger"
     )
-    cmd = [
-        sys.executable,
-        str(REPO_ROOT / "tools" / "claim_lane_dispatch.py"),
-        "claim",
-        "--lane-id",
-        args.label,
-        "--platform",
-        "vastai",
-        "--instance-job-id",
-        str(instance_id),
-        "--agent",
-        "codex:vastai-launcher",
-        "--predicted-eta-utc",
-        eta,
-        "--status",
-        "active_dispatching",
-        "--notes",
-        notes,
-    ]
+    cmd = dispatch_claim_command(
+        spec=DispatchClaimSpec(
+            lane_id=args.label,
+            platform="vastai",
+            instance_job_id=str(instance_id),
+            agent="codex:vastai-launcher",
+            predicted_eta_utc=predicted_eta(hours=2),
+            notes=notes,
+        ),
+        status="active_dispatching",
+        python_executable=sys.executable,
+        claim_tool=REPO_ROOT / "tools" / "claim_lane_dispatch.py",
+    )
     rc, out, err = run(cmd, timeout=30)
     if out.strip():
         print(out.strip())
@@ -181,27 +195,20 @@ def close_vastai_lane_dispatch(
     """Best-effort terminal claim row for pre-run Vast failures."""
     if not lane_id:
         return
-    eta = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    cmd = [
-        sys.executable,
-        str(REPO_ROOT / "tools" / "claim_lane_dispatch.py"),
-        "claim",
-        "--lane-id",
-        lane_id,
-        "--platform",
-        "vastai",
-        "--instance-job-id",
-        str(instance_id),
-        "--agent",
-        "codex:vastai-launcher",
-        "--predicted-eta-utc",
-        eta,
-        "--status",
-        status,
-        "--notes",
-        notes,
-        "--force",
-    ]
+    cmd = dispatch_claim_command(
+        spec=DispatchClaimSpec(
+            lane_id=lane_id,
+            platform="vastai",
+            instance_job_id=str(instance_id),
+            agent="codex:vastai-launcher",
+            predicted_eta_utc=utc_now(),
+            force=True,
+            notes=notes,
+        ),
+        status=status,
+        python_executable=sys.executable,
+        claim_tool=REPO_ROOT / "tools" / "claim_lane_dispatch.py",
+    )
     rc, _out, err = run(cmd, timeout=30)
     if rc != 0 and err.strip():
         print(f"WARNING: failed to close dispatch claim: {err.strip()}", file=sys.stderr)
