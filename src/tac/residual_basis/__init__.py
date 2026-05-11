@@ -73,6 +73,17 @@ from tac.residual_basis.numpy_inverse_dwt import (
     haar_inverse_2d_multi_level,
     haar_inverse_2d_single_level,
 )
+from tac.residual_basis.pr106_sidecar_packing import (
+    PR106_RESIDUAL_FORMAT_IDS,
+    PR106_RESIDUAL_FORMAT_NAMES,
+    PR106_RESIDUAL_MAGIC,
+    BuildResidualArchiveResult,
+    ParsedResidualArchive,
+    ResidualArchiveError,
+    build_archive,
+    expect_format_id,
+    parse_archive,
+)
 from tac.residual_basis.siren_residual import (
     SirenFrequencyBandStats,
     SirenResidualError,
@@ -92,6 +103,7 @@ from tac.residual_basis.wavelet_residual_pr106 import (
 
 __all__ = [
     "BandStats",
+    "BuildResidualArchiveResult",
     "C3ConditionalStats",
     "C3ResidualError",
     "C3ResidualResult",
@@ -102,11 +114,17 @@ __all__ = [
     "CoordinateMlpResidualResult",
     "CoordinateMlpSmoothnessStats",
     "NumpyInverseDWTError",
+    "PR106_RESIDUAL_FORMAT_IDS",
+    "PR106_RESIDUAL_FORMAT_NAMES",
+    "PR106_RESIDUAL_MAGIC",
+    "ParsedResidualArchive",
+    "ResidualArchiveError",
     "SirenFrequencyBandStats",
     "SirenResidualError",
     "SirenResidualResult",
     "WaveletResidualError",
     "WaveletResidualResult",
+    "build_archive",
     "compute_c3_residual_stats",
     "compute_conditional_residual",
     "compute_cool_chic_residual_stats",
@@ -117,8 +135,10 @@ __all__ = [
     "compute_siren_residual_stats",
     "compute_wavelet_residual_stats",
     "decompose_frame_to_bands",
+    "expect_format_id",
     "haar_inverse_2d_multi_level",
     "haar_inverse_2d_single_level",
     "load_decoded_raw_frames",
+    "parse_archive",
     "reconstruct_frame_from_bands",
 ]
