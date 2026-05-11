@@ -243,6 +243,24 @@ def test_inflated_output_manifest_summary_reads_nested_provenance_payload() -> N
     }
 
 
+def test_runtime_tree_sha256_prefers_content_hash_from_nested_manifest() -> None:
+    records = _load_records_module()
+
+    value = records.runtime_tree_sha256(
+        {
+            "runtime_tree_sha256": "path-tree",
+            "provenance": {
+                "inflate_runtime_manifest": {
+                    "runtime_content_tree_sha256": "content-tree",
+                    "runtime_tree_sha256": "nested-path-tree",
+                }
+            },
+        }
+    )
+
+    assert value == "content-tree"
+
+
 def test_parser_downgrades_explicit_contest_cpu_on_macos() -> None:
     records = _load_records_module()
 

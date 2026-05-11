@@ -76,6 +76,38 @@ def inflated_output_manifest_summary(payload: dict[str, Any]) -> dict[str, Any] 
     return None
 
 
+def runtime_tree_sha256(payload: dict[str, Any]) -> str | None:
+    """Return the preferred runtime content/tree SHA from auth-eval payloads."""
+
+    if not isinstance(payload, dict):
+        return None
+    provenance = payload.get("provenance")
+    if not isinstance(provenance, dict):
+        provenance = {}
+    manifest = payload.get("inflate_runtime_manifest")
+    provenance_manifest = provenance.get("inflate_runtime_manifest")
+    if not isinstance(manifest, dict):
+        manifest = {}
+    if not isinstance(provenance_manifest, dict):
+        provenance_manifest = {}
+    candidates = (
+        payload.get("runtime_content_tree_sha256"),
+        payload.get("inflate_runtime_content_tree_sha256"),
+        provenance.get("runtime_content_tree_sha256"),
+        provenance_manifest.get("runtime_content_tree_sha256"),
+        manifest.get("runtime_content_tree_sha256"),
+        payload.get("runtime_tree_sha256"),
+        payload.get("inflate_runtime_tree_sha256"),
+        provenance.get("runtime_tree_sha256"),
+        provenance_manifest.get("runtime_tree_sha256"),
+        manifest.get("runtime_tree_sha256"),
+    )
+    for value in candidates:
+        if isinstance(value, str) and value:
+            return value
+    return None
+
+
 def _float(value: Any) -> float | None:
     try:
         if isinstance(value, bool):

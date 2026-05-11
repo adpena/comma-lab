@@ -20,9 +20,14 @@ try:
     from tools.auth_eval_records import (
         inflated_output_manifest_summary,
         parse_auth_eval_payload,
+        runtime_tree_sha256 as auth_eval_runtime_tree_sha256,
     )
 except ModuleNotFoundError:  # pragma: no cover - script execution from tools/
-    from auth_eval_records import inflated_output_manifest_summary, parse_auth_eval_payload
+    from auth_eval_records import (
+        inflated_output_manifest_summary,
+        parse_auth_eval_payload,
+        runtime_tree_sha256 as auth_eval_runtime_tree_sha256,
+    )
 
 DEFAULT_LEDGER = Path("experiments/results/pr100_107_reproduction_ledger_20260507_codex/ledger.json")
 CUDA_SCORE_GRADES = {
@@ -72,37 +77,8 @@ def _input_closure(paths: dict[str, Path]) -> dict[str, Any]:
     }
 
 
-def _nested_get(payload: dict[str, Any], *keys: str) -> Any:
-    value: Any = payload
-    for key in keys:
-        if not isinstance(value, dict):
-            return None
-        value = value.get(key)
-    return value
-
-
 def _runtime_tree_sha256(payload: dict[str, Any]) -> str | None:
-    candidates = (
-        payload.get("runtime_content_tree_sha256"),
-        _nested_get(payload, "provenance", "runtime_content_tree_sha256"),
-        _nested_get(
-            payload,
-            "provenance",
-            "inflate_runtime_manifest",
-            "runtime_content_tree_sha256",
-        ),
-        _nested_get(payload, "inflate_runtime_manifest", "runtime_content_tree_sha256"),
-        _nested_get(payload, "runtime", "runtime_content_tree_sha256"),
-        payload.get("runtime_tree_sha256"),
-        _nested_get(payload, "provenance", "runtime_tree_sha256"),
-        _nested_get(payload, "provenance", "inflate_runtime_manifest", "runtime_tree_sha256"),
-        _nested_get(payload, "inflate_runtime_manifest", "runtime_tree_sha256"),
-        _nested_get(payload, "runtime", "runtime_tree_sha256"),
-    )
-    for value in candidates:
-        if isinstance(value, str) and value:
-            return value
-    return None
+    return auth_eval_runtime_tree_sha256(payload)
 
 
 def _artifact_axis_summary(

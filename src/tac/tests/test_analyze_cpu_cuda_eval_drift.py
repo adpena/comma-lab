@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 
 
@@ -87,3 +88,87 @@ def test_build_analysis_preserves_non_promotable_mechanism_boundary() -> None:
     assert analysis["rank_or_kill_eligible"] is False
     assert analysis["mechanism_claim_proven"] is False
     assert abs(analysis["summary"]["pose_tau_from_public_cpu_comments"] - 0.00586770824) < 1e-12
+
+
+def _exact_payload(
+    *,
+    device: str,
+    score: float,
+    pose: float,
+    seg: float,
+    raw_sha: str,
+) -> dict:
+    return {
+        "score_recomputed_from_components": score,
+        "avg_posenet_dist": pose,
+        "avg_segnet_dist": seg,
+        "archive_sha256": "a" * 64,
+        "archive_size_bytes": 185_578,
+        "runtime_content_tree_sha256": "b" * 64,
+        "device": device,
+        "n_samples": 600,
+        "evidence_grade": "contest-CPU" if device == "cpu" else "A++",
+        "gpu_t4_match": device == "cuda",
+        "hardware": (
+            "github-actions-ubuntu-latest-x86_64"
+            if device == "cpu"
+            else "Tesla T4"
+        ),
+        "provenance": {
+            "device": device,
+            "platform_system": "Linux",
+            "platform_machine": "x86_64",
+            "gpu_t4_match": device == "cuda",
+            "inflated_output_manifest": {
+                "path": f"{device}/inflated_outputs_manifest.json",
+                "sha256": f"{device}-manifest",
+                "payload": {
+                    "aggregate_sha256": raw_sha,
+                    "raw_file_count": 1,
+                    "total_bytes": 603_979_776,
+                },
+            },
+        },
+    }
+
+
+def test_analyze_exact_pair_classifies_different_raw_outputs(tmp_path: Path) -> None:
+    mod = _load_tool("analyze_cpu_cuda_eval_drift")
+    cpu_json = tmp_path / "cpu.json"
+    cuda_json = tmp_path / "cuda.json"
+    cpu_json.write_text(
+        json.dumps(
+            _exact_payload(
+                device="cpu",
+                score=0.2296576634626332,
+                pose=0.000164,
+                seg=0.00065592,
+                raw_sha="1" * 64,
+            )
+        ),
+        encoding="utf-8",
+    )
+    cuda_json.write_text(
+        json.dumps(
+            _exact_payload(
+                device="cuda",
+                score=0.20898305277982338,
+                pose=0.00003360,
+                seg=0.00067084,
+                raw_sha="2" * 64,
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    pair = mod.analyze_exact_pair(cpu_json, cuda_json)
+
+    assert pair["valid_for_mechanism_analysis"] is True
+    assert pair["same_archive_sha256"] is True
+    assert pair["same_runtime_tree_sha256"] is True
+    assert pair["raw_output_pairing_status"] == "different_inflated_outputs"
+    assert pair["mechanism_class"] == "different_raw_outputs_runtime_or_inflate_drift"
+    assert pair["gaps_cuda_minus_cpu"]["score"] < 0
+    assert pair["gaps_cuda_minus_cpu"]["pose_term"] < 0
+    assert pair["gaps_cuda_minus_cpu"]["seg_term"] > 0
+    assert pair["score_claim"] is False

@@ -41,9 +41,15 @@ try:
         AuthEvalRecord,
         inflated_output_manifest_summary,
         parse_auth_eval_payload,
+        runtime_tree_sha256 as auth_eval_runtime_tree_sha256,
     )
 except ModuleNotFoundError:  # pragma: no cover - direct script execution
-    from auth_eval_records import AuthEvalRecord, inflated_output_manifest_summary, parse_auth_eval_payload
+    from auth_eval_records import (
+        AuthEvalRecord,
+        inflated_output_manifest_summary,
+        parse_auth_eval_payload,
+        runtime_tree_sha256 as auth_eval_runtime_tree_sha256,
+    )
 
 
 AUTH_EVAL_GLOB = "contest_auth_eval*.json"
@@ -65,38 +71,8 @@ def _load_json(path: Path) -> dict[str, Any]:
     return data
 
 
-def _nested_get(payload: dict[str, Any], *keys: str) -> Any:
-    value: Any = payload
-    for key in keys:
-        if not isinstance(value, dict):
-            return None
-        value = value.get(key)
-    return value
-
-
 def _runtime_tree_sha256(payload: dict[str, Any]) -> str | None:
-    manifest = payload.get("inflate_runtime_manifest")
-    candidates = (
-        payload.get("runtime_content_tree_sha256"),
-        payload.get("inflate_runtime_content_tree_sha256"),
-        _nested_get(payload, "provenance", "runtime_content_tree_sha256"),
-        _nested_get(
-            payload,
-            "provenance",
-            "inflate_runtime_manifest",
-            "runtime_content_tree_sha256",
-        ),
-        manifest.get("runtime_content_tree_sha256") if isinstance(manifest, dict) else None,
-        payload.get("runtime_tree_sha256"),
-        payload.get("inflate_runtime_tree_sha256"),
-        _nested_get(payload, "provenance", "runtime_tree_sha256"),
-        _nested_get(payload, "provenance", "inflate_runtime_manifest", "runtime_tree_sha256"),
-        manifest.get("runtime_tree_sha256") if isinstance(manifest, dict) else None,
-    )
-    for value in candidates:
-        if isinstance(value, str) and value:
-            return value
-    return None
+    return auth_eval_runtime_tree_sha256(payload)
 
 
 def _hardware_label(payload: dict[str, Any], record: AuthEvalRecord) -> str:
