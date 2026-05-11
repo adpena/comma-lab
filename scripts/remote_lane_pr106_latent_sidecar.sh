@@ -1,30 +1,49 @@
 #!/bin/bash
-# NO_NVDEC_NEEDED — pure tensor-side codec + scorer-forward; no DALI/NVDEC video pipeline.
+# CUDA_REQUIRED — tensor-side codec build plus contest auth eval.
 # Lane PR106 + latent sidecar — 28-dim x 600-pair latents corrected via per-pair (dim, delta_q)
 #
-# Planning target: reproduce the PR100-style sidecar gain on PR106. The current
-# builder emits a heuristic nonzero smoke sidecar, so any exact eval from this
-# script is exploratory until a scorer-backed selector replaces the heuristic.
+# Planning target: reproduce the PR100-style sidecar gain on PR106. The default
+# path is now score_table: build a CUDA scorer table over latent perturbation
+# candidates, reduce measured improvements into charged sidecar bytes, then run
+# exact CUDA auth eval on the emitted archive.
 #
-# Pipeline (3 stages, single Vast.ai 4090 ~$0.30/hr × 30min ≈ $0.30 OR
+# Pipeline (4 stages, single Vast.ai 4090 ~$0.30/hr × 30min ≈ $0.30 OR
 # Lightning T4 final auth eval ~$0.22/hr × 30min ≈ $0.11):
 #
 #   Stage 0 (CPU): Provenance + CUDA preflight + heartbeat
-#   Stage 1 (CUDA): Build PR106 + sidecar archive (heuristic per-pair selector;
-#                   score_claim=false until a scorer-backed selector lands)
+#   Stage 1a (CUDA): Build latent candidate score table when mode=score_table
+#   Stage 1b (CUDA): Build PR106 + sidecar archive from score table
 #   Stage 2 (CPU): Local parser-roundtrip sanity check
 #   Stage 3 (CUDA-T4): contest_auth_eval — score must be < 0.20945 (PR106) to ship
 #
-# Strict-scorer-rule: scorer is loaded only by future score-aware build modes
-# and by Stage 3 contest auth eval. Inflate-time has NO scorer dependency.
-# Inflate-time only needs HNeRVDecoder + brotli.
+# Strict-scorer-rule: scorer is loaded only by Stage 1a compress-time table
+# generation and Stage 3 contest auth eval. Inflate-time has NO scorer
+# dependency. Inflate-time only needs HNeRVDecoder + brotli.
 set -euo pipefail
 WORKSPACE="${WORKSPACE:-/workspace/pact}"
 PYBIN="${PYBIN:-/opt/conda/bin/python}"
+LANE_ID="lane_pr106_latent_sidecar"
 PR106_ARCHIVE="${PR106_ARCHIVE:-experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip}"
 SIDECAR_TOP_K="${SIDECAR_TOP_K:-600}"
+PR106_LATENT_MODE="${PR106_LATENT_MODE:-score_table}"
+PR106_LATENT_DELTA_RADIUS="${PR106_LATENT_DELTA_RADIUS:-1}"
+PR106_LATENT_N_PAIRS="${PR106_LATENT_N_PAIRS:-600}"
+PR106_LATENT_DIM="${PR106_LATENT_DIM:-28}"
+PR106_LATENT_SCORE_TABLE_BATCH_PAIRS="${PR106_LATENT_SCORE_TABLE_BATCH_PAIRS:-2}"
+PR106_LATENT_SCORE_TABLE_CANDIDATE_BATCH_SIZE="${PR106_LATENT_SCORE_TABLE_CANDIDATE_BATCH_SIZE:-8}"
+PR106_LATENT_SCORE_TABLE_RESUME="${PR106_LATENT_SCORE_TABLE_RESUME:-1}"
+PR106_LATENT_SCORE_TABLE_NPY="${PR106_LATENT_SCORE_TABLE_NPY:-}"
+PR106_LATENT_SCORE_TABLE_MANIFEST="${PR106_LATENT_SCORE_TABLE_MANIFEST:-}"
+PR106_LATENT_SCORE_TABLE_LANE_ID="${PR106_LATENT_SCORE_TABLE_LANE_ID:-$LANE_ID}"
+PR106_LATENT_SCORE_TABLE_INSTANCE_JOB_ID="${PR106_LATENT_SCORE_TABLE_INSTANCE_JOB_ID:-${INSTANCE_JOB_ID:-}}"
 
 [ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
+
+cd "$WORKSPACE"
+
+LOG_DIR="${PR106_LATENT_LOG_DIR:-$WORKSPACE/experiments/results/${LANE_ID}_$(date -u +%Y%m%dT%H%M%SZ)}"
+mkdir -p "$LOG_DIR"
+log() { echo "[lane-pr106-sidecar] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
 
 # Stage 0: NVDEC probe — required by preflight check_remote_scripts_have_nvdec_probe.
 # probe MUST come before any GPU-work marker including bare `nvidia-smi`.
@@ -34,13 +53,6 @@ if [ "${SKIP_NVDEC_PROBE:-0}" != "1" ] && [ -f "$WORKSPACE/scripts/probe_nvdec.s
         exit 2
     }
 fi
-
-cd "$WORKSPACE"
-
-LANE_ID="lane_pr106_latent_sidecar"
-LOG_DIR="$WORKSPACE/experiments/results/${LANE_ID}_$(date -u +%Y%m%dT%H%M%SZ)"
-mkdir -p "$LOG_DIR"
-log() { echo "[lane-pr106-sidecar] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
 
 # Heartbeat (per CLAUDE.md remote-code-parity rule)
 HEARTBEAT="$LOG_DIR/heartbeat.log"
@@ -64,6 +76,10 @@ prov = {
     'torch_version': torch.__version__,
     'cuda_version': getattr(torch.version, 'cuda', None),
     'pr106_archive': '$PR106_ARCHIVE',
+    'latent_mode': '$PR106_LATENT_MODE',
+    'latent_delta_radius': int('$PR106_LATENT_DELTA_RADIUS'),
+    'latent_score_table_lane_id': '$PR106_LATENT_SCORE_TABLE_LANE_ID',
+    'latent_score_table_instance_job_id': '$PR106_LATENT_SCORE_TABLE_INSTANCE_JOB_ID',
     'sidecar_top_k': int('$SIDECAR_TOP_K'),
 }
 with open('$LOG_DIR/provenance.json', 'w') as f:
@@ -71,15 +87,62 @@ with open('$LOG_DIR/provenance.json', 'w') as f:
 print(f'[stage-0] provenance written; CUDA={torch.cuda.is_available()}; top_k={prov[\"sidecar_top_k\"]}')
 "
 
-# ── Stage 1: Build PR106 + sidecar archive ────────────────────────────────
-log "=== Stage 1: build PR106 + latent-correction sidecar (top_k=$SIDECAR_TOP_K) ==="
+# ── Stage 1: Build score table + PR106 sidecar archive ────────────────────
+log "=== Stage 1: build PR106 + latent-correction sidecar (mode=$PR106_LATENT_MODE, top_k=$SIDECAR_TOP_K) ==="
 BUILD_DIR="$LOG_DIR/build"
 mkdir -p "$BUILD_DIR"
-"$PYBIN" -u experiments/build_pr106_latent_sidecar.py \
+
+if [ "$PR106_LATENT_MODE" = "score_table" ] && [ -z "$PR106_LATENT_SCORE_TABLE_NPY" ]; then
+    log "=== Stage 1a: generate CUDA latent score table ==="
+    if [ -z "$PR106_LATENT_SCORE_TABLE_INSTANCE_JOB_ID" ]; then
+        log "FATAL: PR106_LATENT_SCORE_TABLE_INSTANCE_JOB_ID is required for score_table mode"
+        exit 3
+    fi
+    SCORE_TABLE_DIR="$LOG_DIR/score_table"
+    mkdir -p "$SCORE_TABLE_DIR"
+    PR106_LATENT_SCORE_TABLE_NPY="$SCORE_TABLE_DIR/score_table.npy"
+    PR106_LATENT_SCORE_TABLE_MANIFEST="$SCORE_TABLE_DIR/score_table_manifest.json"
+    if [ "$PR106_LATENT_SCORE_TABLE_RESUME" = "1" ] && [ -f "$PR106_LATENT_SCORE_TABLE_NPY" ] && [ -f "$PR106_LATENT_SCORE_TABLE_MANIFEST" ]; then
+        log "Stage 1a RESUME: validating completed latent score table at $PR106_LATENT_SCORE_TABLE_NPY"
+    fi
+    SCORE_TABLE_ARGS=(
+        experiments/build_pr106_latent_score_table.py
+        --pr106-archive "$PR106_ARCHIVE"
+        --out-dir "$SCORE_TABLE_DIR"
+        --delta-radius "$PR106_LATENT_DELTA_RADIUS"
+        --latent-dim "$PR106_LATENT_DIM"
+        --n-pairs "$PR106_LATENT_N_PAIRS"
+        --batch-pairs "$PR106_LATENT_SCORE_TABLE_BATCH_PAIRS"
+        --candidate-batch-size "$PR106_LATENT_SCORE_TABLE_CANDIDATE_BATCH_SIZE"
+        --lane-id "$PR106_LATENT_SCORE_TABLE_LANE_ID"
+        --instance-job-id "$PR106_LATENT_SCORE_TABLE_INSTANCE_JOB_ID"
+    )
+    if [ "$PR106_LATENT_SCORE_TABLE_RESUME" = "1" ]; then
+        SCORE_TABLE_ARGS+=(--resume-checkpoint)
+    fi
+    "$PYBIN" -u "${SCORE_TABLE_ARGS[@]}" 2>&1 | tee -a "$LOG_DIR/run.log"
+    if [ ! -f "$PR106_LATENT_SCORE_TABLE_NPY" ] || [ ! -f "$PR106_LATENT_SCORE_TABLE_MANIFEST" ]; then
+        log "FATAL: latent score-table generation did not produce table+manifest"
+        exit 3
+    fi
+fi
+
+BUILD_ARGS=(
+    experiments/build_pr106_latent_sidecar.py
     --source-archive "$PR106_ARCHIVE" \
     --output-dir "$BUILD_DIR" \
     --top-k "$SIDECAR_TOP_K" \
-    --device cuda 2>&1 | tee -a "$LOG_DIR/run.log"
+    --device cuda \
+    --search-mode "$PR106_LATENT_MODE" \
+    --delta-radius "$PR106_LATENT_DELTA_RADIUS"
+)
+if [ "$PR106_LATENT_MODE" = "score_table" ]; then
+    BUILD_ARGS+=(--score-table-npy "$PR106_LATENT_SCORE_TABLE_NPY")
+    if [ -n "$PR106_LATENT_SCORE_TABLE_MANIFEST" ]; then
+        BUILD_ARGS+=(--score-table-manifest "$PR106_LATENT_SCORE_TABLE_MANIFEST")
+    fi
+fi
+"$PYBIN" -u "${BUILD_ARGS[@]}" 2>&1 | tee -a "$LOG_DIR/run.log"
 SIDECAR_ARCHIVE="$BUILD_DIR/sidecar_archive.zip"
 if [ ! -f "$SIDECAR_ARCHIVE" ]; then
     log "FATAL: stage 1 did not produce $SIDECAR_ARCHIVE"

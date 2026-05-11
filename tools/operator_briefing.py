@@ -85,7 +85,8 @@ PHASE_1_SUPPLEMENTARY_LANES = [
             "  --lane-script scripts/remote_lane_pr106_latent_sidecar.sh \\\n"
             "  --label lane_pr106_latent_sidecar \\\n"
             "  --predicted-band 0.205 0.208 \\\n"
-            "  --estimated-cost 0.60 --council-priority 1 --max-dph 0.30"
+            "  --estimated-cost 0.60 --council-priority 1 --max-dph 0.30 \\\n"
+            "  --env PR106_LATENT_MODE=score_table --env PR106_LATENT_SCORE_TABLE_RESUME=1"
         ),
     },
 ]

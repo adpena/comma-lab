@@ -55,12 +55,13 @@ import subprocess
 import sys
 import tempfile
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TRACKER_PATH = REPO_ROOT / ".omx/state/vastai_active_instances.json"
+DISPATCH_CLAIMS_PATH = REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md"
 VASTAI = REPO_ROOT / ".venv/bin/vastai"
 
 SSH_OPTS = [
@@ -79,6 +80,131 @@ def run(cmd: list[str], timeout: int = 60, capture: bool = True) -> tuple[int, s
         return r.returncode, r.stdout or "", r.stderr or ""
     except subprocess.TimeoutExpired:
         return -1, "", "TIMEOUT"
+
+
+def parse_env_overrides(items: list[str] | None) -> dict[str, str]:
+    """Parse repeated KEY=VALUE launcher env overrides."""
+    out: dict[str, str] = {}
+    for raw in items or []:
+        if "=" not in raw:
+            raise ValueError(f"--env requires KEY=VALUE, got {raw!r}")
+        key, value = raw.split("=", 1)
+        key = key.strip()
+        if not key:
+            raise ValueError(f"--env has empty key: {raw!r}")
+        if not (key[0].isalpha() or key[0] == "_") or not all(c.isalnum() or c == "_" for c in key):
+            raise ValueError(f"--env key is not shell-safe: {key!r}")
+        out[key] = value
+    return out
+
+
+def _export_lines_for_lane(
+    *,
+    env_overrides: dict[str, str],
+    instance_id: int,
+) -> list[str]:
+    lines = [
+        f"export INSTANCE_JOB_ID={shlex.quote(str(instance_id))}",
+        f"export DISPATCH_INSTANCE_JOB_ID={shlex.quote(str(instance_id))}",
+        f"export VASTAI_INSTANCE_ID={shlex.quote(str(instance_id))}",
+        f"export DISPATCH_CLAIMS_PATH={shlex.quote('.omx/state/active_lane_dispatch_claims.md')}",
+    ]
+    for key, value in sorted(env_overrides.items()):
+        lines.append(f"export {key}={shlex.quote(value)}")
+    return lines
+
+
+def _print_forwarded_env_args(items: list[str] | None) -> None:
+    env_items = list(items or [])
+    for idx, item in enumerate(env_items):
+        suffix = " \\" if idx < len(env_items) - 1 else ""
+        print(f"    --env {shlex.quote(item)}{suffix}")
+
+
+def claim_vastai_lane_dispatch(args, *, instance_id: int) -> int:
+    """Record the mandatory dispatch claim after Vast returns a real job id."""
+    if not DISPATCH_CLAIMS_PATH.parent.is_dir():
+        DISPATCH_CLAIMS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    eta = (datetime.now(timezone.utc) + timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    notes = (
+        "Vast.ai launcher created instance before claim because instance_id is "
+        "the provider job id; tarball includes refreshed claim ledger"
+    )
+    cmd = [
+        sys.executable,
+        str(REPO_ROOT / "tools" / "claim_lane_dispatch.py"),
+        "claim",
+        "--lane-id",
+        args.label,
+        "--platform",
+        "vastai",
+        "--instance-job-id",
+        str(instance_id),
+        "--agent",
+        "codex:vastai-launcher",
+        "--predicted-eta-utc",
+        eta,
+        "--status",
+        "active_dispatching",
+        "--notes",
+        notes,
+    ]
+    rc, out, err = run(cmd, timeout=30)
+    if out.strip():
+        print(out.strip())
+    if rc != 0 and err.strip():
+        print(err.strip(), file=sys.stderr)
+    return rc
+
+
+def _label_for_instance(instance_id: int) -> str | None:
+    try:
+        rows = json.loads(TRACKER_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(rows, list):
+        return None
+    for row in reversed(rows):
+        if isinstance(row, dict) and str(row.get("instance_id")) == str(instance_id):
+            label = row.get("label")
+            return label if isinstance(label, str) and label else None
+    return None
+
+
+def close_vastai_lane_dispatch(
+    *,
+    lane_id: str | None,
+    instance_id: int,
+    status: str,
+    notes: str,
+) -> None:
+    """Best-effort terminal claim row for pre-run Vast failures."""
+    if not lane_id:
+        return
+    eta = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    cmd = [
+        sys.executable,
+        str(REPO_ROOT / "tools" / "claim_lane_dispatch.py"),
+        "claim",
+        "--lane-id",
+        lane_id,
+        "--platform",
+        "vastai",
+        "--instance-job-id",
+        str(instance_id),
+        "--agent",
+        "codex:vastai-launcher",
+        "--predicted-eta-utc",
+        eta,
+        "--status",
+        status,
+        "--notes",
+        notes,
+        "--force",
+    ]
+    rc, _out, err = run(cmd, timeout=30)
+    if rc != 0 and err.strip():
+        print(f"WARNING: failed to close dispatch claim: {err.strip()}", file=sys.stderr)
 
 
 def find_offer(
@@ -564,6 +690,7 @@ def build_tarball(anchor_dirs: list[str] | None = None) -> Path:
     canonical = [
         "pyproject.toml", "README.md",
         "upstream/__init__.py", "upstream/public_test_video_names.txt",
+        ".omx/state/active_lane_dispatch_claims.md",
     ]
     paths += [p for p in canonical if (REPO_ROOT / p).exists()]
     # Auto-include ALL .py files at upstream/ top-level (small ~30KB total)
@@ -653,7 +780,12 @@ def lightweight_nvdec_probe(host: str, port: int) -> tuple[bool, str]:
 
 
 def execute_lane_in_tmux(
-    host: str, port: int, lane_script: str,
+    host: str,
+    port: int,
+    lane_script: str,
+    *,
+    instance_id: int,
+    env_overrides: dict[str, str] | None = None,
 ) -> bool:
     """Start setup + lane in detached background. Returns True on success.
 
@@ -666,6 +798,12 @@ def execute_lane_in_tmux(
       2. SSH + setsid+nohup the wrapper → returns immediately
       3. Verify the wrapper PID is alive via SSH
     """
+    exports = "\n".join(
+        _export_lines_for_lane(
+            env_overrides=env_overrides or {},
+            instance_id=instance_id,
+        )
+    )
     # Write wrapper script that does setup_full.sh + lane in sequence
     # 2026-04-28 metabug C fix: gate lane on setup success. If setup_full.sh
     # fails (e.g., NVDEC probe at Stage 4), `env.sh` never gets written and
@@ -674,6 +812,7 @@ def execute_lane_in_tmux(
         "#!/bin/bash\n"
         "set +e  # don't abort on setup errors so logs are visible\n"
         "cd /workspace/pact || exit 1\n"
+        f"{exports}\n"
         f"bash scripts/remote_setup_full.sh > /workspace/setup.log 2>&1\n"
         "SETUP_RC=$?\n"
         "if [ $SETUP_RC -ne 0 ]; then\n"
@@ -826,6 +965,11 @@ def cmd_phase1(args) -> int:
         return 2
     min_disk_gb = int(getattr(args, "min_disk_gb", 60) or 60)
     prefer_fast_chip = bool(getattr(args, "prefer_fast_chip", False))
+    try:
+        env_overrides = parse_env_overrides(getattr(args, "env", []))
+    except ValueError as exc:
+        print(f"FATAL: {exc}", file=sys.stderr)
+        return 2
     offer_mode = "fast-chip preference" if prefer_fast_chip else "RTX 4090 legacy"
     print(
         f"=== phase1 Stage 0: Find offer ({offer_mode}, max ${args.max_dph}/hr, "
@@ -843,22 +987,44 @@ def cmd_phase1(args) -> int:
     print(f"  offer_id={offer_id}")
     print(f"=== phase1 Stage 1: Create instance (disk={min_disk_gb}GB) ===")
     instance_id = create_instance(offer_id, args.label, disk_gb=min_disk_gb)
-    register_in_tracker(instance_id, args.label, {
-        "estimated_cost_usd": args.estimated_cost,
-        "predicted_band": list(args.predicted_band),
-        "script": args.lane_script,
-        "council_priority": args.council_priority,
-        "anchor_dirs": args.anchor_dirs,
-        "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2",
-        "prefer_fast_chip": prefer_fast_chip,
-    })
+    print("=== phase1 Stage 2: Claim lane dispatch ===")
+    claim_rc = claim_vastai_lane_dispatch(args, instance_id=instance_id)
+    if claim_rc != 0:
+        print(
+            f"FATAL: dispatch claim refused for lane={args.label} instance={instance_id}; "
+            "destroying the newly created instance before any GPU work",
+            file=sys.stderr,
+        )
+        destroy_instance(instance_id, recover=False, lane_label=args.label)
+        return claim_rc
+    try:
+        register_in_tracker(instance_id, args.label, {
+            "estimated_cost_usd": args.estimated_cost,
+            "predicted_band": list(args.predicted_band),
+            "script": args.lane_script,
+            "council_priority": args.council_priority,
+            "anchor_dirs": args.anchor_dirs,
+            "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2",
+            "prefer_fast_chip": prefer_fast_chip,
+            "env_override_keys": sorted(env_overrides),
+        })
+    except Exception:
+        close_vastai_lane_dispatch(
+            lane_id=args.label,
+            instance_id=instance_id,
+            status="failed_tracker_registration",
+            notes="Vast.ai tracker registration failed after instance creation; destroying instance before GPU work",
+        )
+        destroy_instance(instance_id, recover=False, lane_label=args.label)
+        raise
     print(f"\n✓ phase1 SUCCESS")
     print(f"INSTANCE_ID={instance_id}")
     print(f"  label={args.label}")
     print(f"\nNext step (run phase2 after waiting ~3 min for OS boot):")
     print(f"  .venv/bin/python scripts/launch_lane_on_vastai.py phase2 \\")
     print(f"    --instance-id {instance_id} \\")
-    print(f"    --lane-script {args.lane_script}")
+    print(f"    --lane-script {args.lane_script}" + (" \\" if getattr(args, "env", []) else ""))
+    _print_forwarded_env_args(getattr(args, "env", []))
     return 0
 
 
@@ -887,7 +1053,8 @@ def cmd_phase2_wait(args) -> int:
     print(f"\nNext step:")
     print(f"  .venv/bin/python scripts/launch_lane_on_vastai.py phase2-deploy \\")
     print(f"    --instance-id {instance_id} \\")
-    print(f"    --lane-script {args.lane_script}")
+    print(f"    --lane-script {args.lane_script}" + (" \\" if getattr(args, "env", []) else ""))
+    _print_forwarded_env_args(getattr(args, "env", []))
     return 0
 
 
@@ -945,7 +1112,8 @@ def cmd_phase2_scp(args) -> int:
     print(f"\nNext step:")
     print(f"  .venv/bin/python scripts/launch_lane_on_vastai.py phase2-extract \\")
     print(f"    --instance-id {instance_id} \\")
-    print(f"    --lane-script {args.lane_script}")
+    print(f"    --lane-script {args.lane_script}" + (" \\" if getattr(args, "env", []) else ""))
+    _print_forwarded_env_args(getattr(args, "env", []))
     return 0
 
 
@@ -960,6 +1128,7 @@ def cmd_phase2_extract(args) -> int:
     except RuntimeError as e:
         print(f"FATAL: {e}", file=sys.stderr)
         return 1
+    lane_label = getattr(args, "label", None) or _label_for_instance(instance_id)
     print(f"  ssh=root@{host}:{port}")
     print("=== phase2-extract Stage 1: Extract on remote ===")
     try:
@@ -971,20 +1140,27 @@ def cmd_phase2_extract(args) -> int:
     ok, msg = lightweight_nvdec_probe(host, port)
     if not ok:
         print(f"FATAL: CUDA probe failed: {msg}", file=sys.stderr)
+        close_vastai_lane_dispatch(
+            lane_id=lane_label,
+            instance_id=instance_id,
+            status="failed_cuda_probe",
+            notes="phase2-extract CUDA probe failed before lane script launch",
+        )
         if not getattr(args, "no_destroy_on_fail", False):
             # CUDA probe failure means instance never produced artifacts — skip
             # recovery (no training output yet). Instance label not relevant.
             destroy_instance(
                 instance_id,
                 recover=not getattr(args, "no_recover", False),
-                lane_label=getattr(args, "label", None) or args.lane_script,
+                lane_label=lane_label or args.lane_script,
             )
         return 1
     print(f"\n✓ phase2-extract SUCCESS")
     print(f"\nNext step:")
     print(f"  .venv/bin/python scripts/launch_lane_on_vastai.py phase2-launch \\")
     print(f"    --instance-id {instance_id} \\")
-    print(f"    --lane-script {args.lane_script}")
+    print(f"    --lane-script {args.lane_script}" + (" \\" if getattr(args, "env", []) else ""))
+    _print_forwarded_env_args(getattr(args, "env", []))
     return 0
 
 
@@ -1060,15 +1236,33 @@ def cmd_phase2_launch(args) -> int:
     except RuntimeError as e:
         print(f"FATAL: {e}", file=sys.stderr)
         return 1
+    lane_label = getattr(args, "label", None) or _label_for_instance(instance_id)
     print(f"  ssh=root@{host}:{port}")
     print("=== phase2-launch Stage 1: Subshell-detach lane ===")
-    if not execute_lane_in_tmux(host, port, args.lane_script):
+    try:
+        env_overrides = parse_env_overrides(getattr(args, "env", []))
+    except ValueError as exc:
+        print(f"FATAL: {exc}", file=sys.stderr)
+        return 2
+    if not execute_lane_in_tmux(
+        host,
+        port,
+        args.lane_script,
+        instance_id=instance_id,
+        env_overrides=env_overrides,
+    ):
         print("FATAL: launch failed", file=sys.stderr)
+        close_vastai_lane_dispatch(
+            lane_id=lane_label,
+            instance_id=instance_id,
+            status="failed_remote_launch",
+            notes="phase2-launch failed before remote wrapper detached",
+        )
         if not getattr(args, "no_destroy_on_fail", False):
             destroy_instance(
                 instance_id,
                 recover=not getattr(args, "no_recover", False),
-                lane_label=getattr(args, "label", None) or args.lane_script,
+                lane_label=lane_label or args.lane_script,
             )
         return 1
 
@@ -1085,10 +1279,16 @@ def cmd_phase2_launch(args) -> int:
             print(f"FATAL: setup_full.sh hit NVDEC_BAD on this host — auto-destroying", file=sys.stderr)
             print(f"  Instance had no NVDEC despite passing offer filter.", file=sys.stderr)
             print(f"  Per memory feedback_vastai_nvdec_host_variation: same image, different host = different NVDEC.", file=sys.stderr)
+            close_vastai_lane_dispatch(
+                lane_id=lane_label,
+                instance_id=instance_id,
+                status="failed_nvdec_probe",
+                notes="remote setup_full.sh reported NVDEC_BAD before score work",
+            )
             destroy_instance(
                 instance_id,
                 recover=False,
-                lane_label=getattr(args, "label", None) or args.lane_script,
+                lane_label=lane_label or args.lane_script,
             )
             print(f"\nRetry: re-run phase1 + phase2 to get a fresh host.", file=sys.stderr)
             return 2
@@ -1096,12 +1296,18 @@ def cmd_phase2_launch(args) -> int:
             print(f"FATAL: lane script crashed early — python process gone, run.log stale.", file=sys.stderr)
             print(f"  Likely a code bug surfaced at training startup (e.g., UnboundLocalError, missing dep).", file=sys.stderr)
             print(f"  Recovering artifacts before destroy...", file=sys.stderr)
+            close_vastai_lane_dispatch(
+                lane_id=lane_label,
+                instance_id=instance_id,
+                status="failed_lane_crashed_early",
+                notes="phase2-launch post-verify found early lane crash before stable heartbeat",
+            )
             # Lane crashed → likely no training output, but recover anyway in case
             # any logs/artifacts were written.
             destroy_instance(
                 instance_id,
                 recover=True,
-                lane_label=getattr(args, "label", None) or args.lane_script,
+                lane_label=lane_label or args.lane_script,
             )
             return 3
         elif outcome == "SETUP_COMPLETE":
@@ -1165,6 +1371,12 @@ def main() -> int:
         p_.add_argument("--anchor-dirs", nargs="*",
                        default=["experiments/results/lane_a_landed/iter_0"],
                        help="Directories to include in tarball (anchor data)")
+        p_.add_argument(
+            "--env",
+            action="append",
+            default=[],
+            help="KEY=VALUE environment override exported inside the remote lane wrapper.",
+        )
 
     # phase1
     p1 = sub.add_parser("phase1", help="Create instance + register (fast, ~10-30s)")
@@ -1271,6 +1483,7 @@ def main() -> int:
     p.add_argument("--anchor-dirs", nargs="*",
                    default=["experiments/results/lane_a_landed/iter_0"],
                    help=argparse.SUPPRESS)
+    p.add_argument("--env", action="append", default=[], help=argparse.SUPPRESS)
     p.add_argument("--council-priority", type=int, default=99, help=argparse.SUPPRESS)
     p.add_argument("--dry-run", action="store_true", help=argparse.SUPPRESS)
     p.add_argument("--max-dph", type=float, default=0.50, help=argparse.SUPPRESS)

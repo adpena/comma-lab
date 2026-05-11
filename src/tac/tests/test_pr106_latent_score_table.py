@@ -18,6 +18,7 @@ SCRIPT = REPO_ROOT / "experiments/build_pr106_latent_score_table.py"
 PR106_ARCHIVE = REPO_ROOT / (
     "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip"
 )
+REMOTE_SCRIPT = REPO_ROOT / "scripts/remote_lane_pr106_latent_sidecar.sh"
 
 
 def _load_module():
@@ -141,3 +142,26 @@ def test_dry_run_plan_writes_candidate_grid_and_manifest(tmp_path):
     assert manifest["max_pairs"] == 2
     assert manifest["expected_score_table_shape"] == [2, 7]
     assert "requires_real_cuda_score_table" in manifest["dispatch_blockers"]
+
+
+def test_remote_latent_lane_defaults_to_score_table_and_resume():
+    text = REMOTE_SCRIPT.read_text(encoding="utf-8")
+
+    assert 'PR106_LATENT_MODE="${PR106_LATENT_MODE:-score_table}"' in text
+    assert 'PR106_LATENT_SCORE_TABLE_RESUME="${PR106_LATENT_SCORE_TABLE_RESUME:-1}"' in text
+    assert 'LANE_ID="lane_pr106_latent_sidecar"' in text
+    assert 'PR106_LATENT_SCORE_TABLE_LANE_ID="${PR106_LATENT_SCORE_TABLE_LANE_ID:-$LANE_ID}"' in text
+    assert "experiments/build_pr106_latent_score_table.py" in text
+    assert "Stage 1a RESUME: validating completed latent score table" in text
+    assert "SCORE_TABLE_ARGS+=(--resume-checkpoint)" in text
+    assert "--search-mode \"$PR106_LATENT_MODE\"" in text
+    assert "--score-table-manifest \"$PR106_LATENT_SCORE_TABLE_MANIFEST\"" in text
+
+
+def test_remote_latent_lane_defines_log_before_nvdec_probe():
+    text = REMOTE_SCRIPT.read_text(encoding="utf-8")
+
+    log_pos = text.index("log() {")
+    probe_pos = text.index("probe MUST come before")
+    assert log_pos < probe_pos
+    assert "NVDEC/DALI probe failed" in text

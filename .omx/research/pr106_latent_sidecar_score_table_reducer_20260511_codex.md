@@ -23,6 +23,25 @@ so latent and yshift producers use the same atomic writes, active-claim parser,
 finite-prefix checkpoint validation, objective function, and official scorer /
 ground-truth loader wiring.
 
+The remote runner `scripts/remote_lane_pr106_latent_sidecar.sh` now defaults to
+`PR106_LATENT_MODE=score_table`, generates the CUDA score table before reducing
+sidecar bytes, and uses the parent `lane_pr106_latent_sidecar` dispatch claim by
+default. Its `log()` setup now occurs before the NVDEC/DALI probe, so an early
+host-probe failure reports cleanly instead of crashing before it can write the
+fatal reason.
+
+The Vast launcher now accepts repeatable `--env KEY=VALUE`, exports the provider
+instance id as `INSTANCE_JOB_ID` / `DISPATCH_INSTANCE_JOB_ID`, records a mandatory
+`tools/claim_lane_dispatch.py` claim immediately after instance creation, and
+packs the refreshed claim ledger into the remote tarball. This closes the
+previous operator-briefing bug where PR106 sidechannel one-liners advertised
+`--env` flags that the launcher could not parse or propagate.
+
+Early Vast failures now close the just-created claim with a terminal row:
+tracker-registration failure, CUDA-probe failure, remote launch failure,
+NVDEC_BAD, and early lane crash. Successful detached jobs remain active until
+the normal verifier/harvester records final evidence.
+
 ## Scientific guardrails
 
 - Candidate row `0` is the single no-op baseline: `[255, 0]`.
@@ -49,6 +68,14 @@ ground-truth loader wiring.
   after shared-helper canonicalization.
 - `.venv/bin/python tools/dispatch_dryrun_pr106_sidechannels.py` passed and now
   checks the latent reducer and latent score-table producer surfaces.
+- Remote-runner/launcher hardening refresh passed: `bash -n` on the latent
+  remote runner, `py_compile` on launcher/operator/builder surfaces, 36 focused
+  PR106/Vast tests, 11 operator/Vast/latent tests after briefing coverage,
+  `tools/dispatch_dryrun_pr106_sidechannels.py`, `git diff --check`, and
+  `tools/all_lanes_preflight.py` at 2.95s wall-clock.
+- Terminal-claim closure refresh passed: focused Vast launcher tests,
+  `git diff --check`, and `tools/all_lanes_preflight.py` at 3.13s wall-clock
+  after the commit hook caught and blocked an undefined-name regression.
 
 ## Next score-lowering step
 

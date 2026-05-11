@@ -214,6 +214,19 @@ def test_briefing_json_each_phase_has_n_total_or_n_configs():
     assert out["non_dispatchable_readiness_artifacts"][0]["score_claim"] is False
 
 
+def test_pr106_latent_operator_oneliner_uses_score_table_env() -> None:
+    mod = _load_briefing_module()
+    rows = {
+        row["lane_id"]: row
+        for row in mod.PHASE_1_SUPPLEMENTARY_LANES
+    }
+    one_liner = rows["lane_pr106_latent_sidecar"]["one_liner"]
+
+    assert "--env PR106_LATENT_MODE=score_table" in one_liner
+    assert "--env PR106_LATENT_SCORE_TABLE_RESUME=1" in one_liner
+    assert "--label lane_pr106_latent_sidecar" in one_liner
+
+
 def test_pr91_readiness_row_surfaces_audit_errors(monkeypatch):
     mod = _load_briefing_module()
     manifest = {"canonical_payload_without_tool_manifest_sha256": "not-recomputed-in-this-test"}
