@@ -409,23 +409,174 @@ def _runtime_tree_candidates(payload: dict[str, Any]) -> dict[str, str]:
     return candidates
 
 
+def _is_submission_runtime_custody_file(row: dict[str, Any]) -> bool:
+    rel = str(row.get("relative_path") or "")
+    name = PurePosixPath(rel).name
+    return name in SUBMISSION_RUNTIME_CUSTODY_FILENAMES or any(
+        name.startswith(prefix) for prefix in SUBMISSION_RUNTIME_CUSTODY_PREFIXES
+    )
+
+
+def _runtime_tree_root_name(runtime_manifest: dict[str, Any]) -> str | None:
+    runtime_root = runtime_manifest.get("runtime_root")
+    if isinstance(runtime_root, str) and runtime_root:
+        return Path(runtime_root).name
+    runtime_root_name = runtime_manifest.get("runtime_root_name")
+    if isinstance(runtime_root_name, str) and runtime_root_name:
+        return runtime_root_name
+    return None
+
+
+def _runtime_tree_sha_from_manifest(
+    runtime_manifest: dict[str, Any],
+    *,
+    files: list[dict[str, Any]] | None = None,
+) -> str | None:
+    root_name = _runtime_tree_root_name(runtime_manifest)
+    if root_name is None:
+        return None
+    runtime_files = files if files is not None else runtime_manifest.get("files")
+    if not isinstance(runtime_files, list):
+        return None
+    external_roots = runtime_manifest.get("external_dependency_roots", [])
+    if not isinstance(external_roots, list):
+        return None
+    tree_payload = {
+        "runtime_root_name": root_name,
+        "files": runtime_files,
+        "external_dependency_roots": external_roots,
+        "repo_local_tac_import_manifest": runtime_manifest.get("repo_local_tac_import_manifest"),
+        "upstream_evaluate_py": runtime_manifest.get("upstream_evaluate_py"),
+    }
+    return hashlib.sha256(
+        json.dumps(tree_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+
+def _portable_file_rows(files: list[Any]) -> list[dict[str, Any]] | None:
+    normalized: list[dict[str, Any]] = []
+    for row in files:
+        if not isinstance(row, dict):
+            return None
+        relative_path = row.get("relative_path")
+        sha256 = row.get("sha256")
+        byte_count = row.get("bytes")
+        if not isinstance(relative_path, str) or not isinstance(sha256, str):
+            return None
+        try:
+            bytes_int = int(byte_count)
+        except (TypeError, ValueError):
+            return None
+        portable_row: dict[str, Any] = {
+            "relative_path": relative_path,
+            "bytes": bytes_int,
+            "sha256": sha256,
+        }
+        module = row.get("module")
+        if isinstance(module, str):
+            portable_row["module"] = module
+        normalized.append(portable_row)
+    return sorted(normalized, key=lambda item: (item["relative_path"], item.get("module", "")))
+
+
+def _portable_repo_local_tac_manifest(manifest: Any) -> Any:
+    if not isinstance(manifest, dict):
+        return manifest
+    portable = dict(manifest)
+    portable.pop("runtime_root_name", None)
+    files = portable.get("files", [])
+    if isinstance(files, list):
+        portable_files = _portable_file_rows(files)
+        if portable_files is not None:
+            portable["files"] = portable_files
+    return portable
+
+
+def _portable_external_roots(roots: Any) -> list[dict[str, Any]] | None:
+    if not isinstance(roots, list):
+        return None
+    portable_roots: list[dict[str, Any]] = []
+    for root in roots:
+        if not isinstance(root, dict):
+            return None
+        files = root.get("files", [])
+        if not isinstance(files, list):
+            return None
+        portable_files = _portable_file_rows(files)
+        if portable_files is None:
+            return None
+        portable_roots.append(
+            {
+                "repo_relative_root": root.get("repo_relative_root"),
+                "exists": bool(root.get("exists")),
+                "files": portable_files,
+            }
+        )
+    return sorted(portable_roots, key=lambda item: str(item.get("repo_relative_root")))
+
+
+def _portable_runtime_tree_sha_from_manifest(
+    runtime_manifest: dict[str, Any],
+    *,
+    files: list[dict[str, Any]] | None = None,
+) -> str | None:
+    runtime_files = files if files is not None else runtime_manifest.get("files")
+    if not isinstance(runtime_files, list):
+        return None
+    portable_files = _portable_file_rows(runtime_files)
+    portable_external_roots = _portable_external_roots(
+        runtime_manifest.get("external_dependency_roots", [])
+    )
+    if portable_files is None or portable_external_roots is None:
+        return None
+    tree_payload = {
+        "files": portable_files,
+        "external_dependency_roots": portable_external_roots,
+        "repo_local_tac_import_manifest": _portable_repo_local_tac_manifest(
+            runtime_manifest.get("repo_local_tac_import_manifest")
+        ),
+        "upstream_evaluate_py": runtime_manifest.get("upstream_evaluate_py"),
+    }
+    return hashlib.sha256(
+        json.dumps(tree_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+
+def _pruned_runtime_tree_candidates(payload: dict[str, Any]) -> dict[str, str]:
+    candidates: dict[str, str] = {}
+    provenance = payload.get("provenance") if isinstance(payload.get("provenance"), dict) else {}
+    for scope, obj in (("root", payload), ("provenance", provenance)):
+        runtime = obj.get("inflate_runtime_manifest") if isinstance(obj, dict) else None
+        if not isinstance(runtime, dict) or not isinstance(runtime.get("files"), list):
+            continue
+        files = [
+            row
+            for row in runtime["files"]
+            if isinstance(row, dict) and not _is_submission_runtime_custody_file(row)
+        ]
+        pruned_sha = _runtime_tree_sha_from_manifest(runtime, files=files)
+        if isinstance(pruned_sha, str):
+            candidates[
+                f"{scope}.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files"
+            ] = pruned_sha
+        portable_sha = _portable_runtime_tree_sha_from_manifest(runtime, files=files)
+        if isinstance(portable_sha, str):
+            candidates[
+                f"{scope}.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files"
+            ] = portable_sha
+    return candidates
+
+
 def _submission_runtime_manifest(submission_dir: Path) -> dict[str, Any]:
     inflate_sh = submission_dir / "inflate.sh"
     runtime_root = inflate_sh.parent.resolve()
     repo_root = REPO_ROOT.resolve()
     upstream_dir = repo_root / "upstream"
 
-    def _is_custody_file(row: dict[str, Any]) -> bool:
-        rel = str(row.get("relative_path") or "")
-        name = PurePosixPath(rel).name
-        return name in SUBMISSION_RUNTIME_CUSTODY_FILENAMES or any(
-            name.startswith(prefix) for prefix in SUBMISSION_RUNTIME_CUSTODY_PREFIXES
-        )
-
     files = [
         row
         for row in _contest_runtime_root_file_manifest(runtime_root, repo_root)
-        if not _is_custody_file(row)
+        if not _is_submission_runtime_custody_file(row)
     ]
     extra_roots = _contest_runtime_dependency_extra_roots(inflate_sh, repo_root)
     external_dependency_roots = []
@@ -458,12 +609,14 @@ def _submission_runtime_manifest(submission_dir: Path) -> dict[str, Any]:
     tree_sha = hashlib.sha256(
         json.dumps(tree_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
+    portable_tree_sha = _portable_runtime_tree_sha_from_manifest(tree_payload)
     return {
         "schema": "pre_submission_runtime_dependency_manifest_v1",
         "basis": "contest_auth_eval_runtime_dependency_manifest_v1_without_custody_files",
         "runtime_root": str(runtime_root),
         "runtime_file_count": len(files),
         "runtime_tree_sha256": tree_sha,
+        "portable_runtime_tree_sha256_without_custody_files": portable_tree_sha,
         "files": files,
         "external_dependency_roots": external_dependency_roots,
         "repo_local_tac_import_manifest": repo_local_tac,
@@ -474,10 +627,14 @@ def _submission_runtime_manifest(submission_dir: Path) -> dict[str, Any]:
 
 
 def _auth_runtime_candidates(auth_eval: dict[str, Any]) -> dict[str, str]:
-    candidates = auth_eval.get("runtime_tree_candidates")
-    if isinstance(candidates, dict):
-        return {str(key): str(value) for key, value in candidates.items()}
-    return {}
+    merged: dict[str, str] = {}
+    for key in ("runtime_tree_candidates", "runtime_tree_pruned_candidates"):
+        candidates = auth_eval.get(key)
+        if isinstance(candidates, dict):
+            merged.update(
+                {str(candidate_key): str(value) for candidate_key, value in candidates.items()}
+            )
+    return merged
 
 
 def inspect_submission_runtime(
@@ -519,11 +676,19 @@ def inspect_submission_runtime(
     )
     candidates = _auth_runtime_candidates(auth_eval)
     expected = set(candidates.values())
+    submission_candidates = {
+        str(value)
+        for value in (
+            runtime_sha,
+            manifest.get("portable_runtime_tree_sha256_without_custody_files"),
+        )
+        if isinstance(value, str)
+    }
     _add(
         checks,
         "submission_runtime_tree_matches_auth_eval",
-        (not required) or (isinstance(runtime_sha, str) and runtime_sha in expected),
-        f"submission={runtime_sha} auth_eval_candidates={candidates}",
+        (not required) or bool(submission_candidates & expected),
+        f"submission_candidates={sorted(submission_candidates)} auth_eval_candidates={candidates}",
     )
     return manifest, checks
 
@@ -784,6 +949,7 @@ def inspect_auth_eval(
         )
 
     runtime_candidates = _runtime_tree_candidates(payload)
+    runtime_pruned_candidates = _pruned_runtime_tree_candidates(payload)
     require_runtime = args.require_auth_eval or args.require_submission_runtime_match or args.contest_final
     _add(
         checks,
@@ -817,6 +983,7 @@ def inspect_auth_eval(
             else None
         ),
         "runtime_tree_candidates": runtime_candidates,
+        "runtime_tree_pruned_candidates": runtime_pruned_candidates,
     }, checks
 
 

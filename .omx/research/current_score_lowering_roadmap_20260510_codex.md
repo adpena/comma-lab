@@ -28,7 +28,7 @@
 | Workstream | Status | Exact next action | Evidence and claim gate |
 |---|---|---|---|
 | A1 CUDA readiness | READY as evaluator/custody baseline; BLOCKED as a new score-lowering config | Use the paired A1 CPU/CUDA anchor to sanity-check future archive candidates. Do not spend on another baseline replay unless it validates infrastructure drift. | For any A1-derived candidate: changed archive bytes/SHA, runtime-tree SHA, exact `inflate.sh` closure, `contest_auth_eval.json` with recomputed component score and `n_samples=600`, hardware tag, logs, and terminal dispatch claim. |
-| PR103 global-combo histogram packet | BYTE-CLOSED LOCAL ARTIFACT; SUPERSEDED BY CLEAN-RUNTIME `-16B` PACKET | Use the `-16B` mid32+latent-hi packet as the current PR103 byte target, and require source-shell-contract source/candidate frame or auth-eval parity before CUDA spend. | Candidate archive `8460014d70855ce9226285f80513d6d743ed23723870a6a38b009cfca40f423e`, `178207` bytes, evaluated runtime tree `59c6a80f62b6bd8d7fab1b7252898b4dc19fa8736a91e2b7ecac6f8bb2e23ee2`; blockers: strict pre-submission compliance, paired CPU/adjudication policy, shell-level inflate parity. |
+| PR103 global-combo histogram packet | BYTE-CLOSED LOCAL ARTIFACT; SUPERSEDED BY CLEAN-RUNTIME `-16B` PACKET | Use the `-16B` mid32+latent-hi packet as the current PR103 byte target, and require source-shell-contract source/candidate frame or auth-eval parity before CUDA spend. | Candidate archive `8460014d70855ce9226285f80513d6d743ed23723870a6a38b009cfca40f423e`, `178207` bytes, evaluated runtime tree `59c6a80f62b6bd8d7fab1b7252898b4dc19fa8736a91e2b7ecac6f8bb2e23ee2`; strict pre-submission compliance now passes; remaining blockers: paired CPU/adjudication policy and shell-level inflate parity scope. |
 | PR101 archive-in-loop A1 training | READY-TO-CLAIM after current WIP/preflight is the code under test | Claim `track1_phase_a1_score_gradient`, run the PR101 source-backed remote driver, build `best_proxy`/`final_ema` archives in-loop, then exact CUDA-eval only byte-closed candidates. | Required artifacts: `archive_builds_manifest.json`, selected archive/inflate path, archive bytes/SHA, PR101 source/archive custody, `canonical_score_source=score_recomputed_from_components`, `avg_posenet_dist`, `avg_segnet_dist`, `rate_unscaled`, `archive_size_bytes`, `n_samples=600`, logs, active then terminal claim. Checkpoint-only non-smoke runs are refused. |
 | T1 Phase 1 Ballé end-to-end | ACTIVE Modal dispatch; BLOCKED for duplicate launch and score promotion | Monitor Modal call `fc-01KR955JSYQAVTTYZA48VAV7WJ` for lane `t1_balle_128k_endtoend`; do not launch a duplicate. Harvest artifacts when it reaches terminal state. | Score promotion remains blocked until auth-eval custody is wired, packet-local runtime/export closure is re-proved, rate-tight state-dict format is selected, exact CUDA auth eval exists, and the claim lifecycle closes terminally. Training artifacts alone are `score_claim=false`. |
 | HNeRV / PR95 / PR101 parity | READY as a gate; BLOCKED for lanes missing the gate | Apply the 13 HNeRV lessons before any representation dispatch: score-aware substrate, export-first archive grammar, eval-roundtrip/YUV6 differentiability, runtime closure, no-op proof, and exact CUDA anchor. | Every lane must declare the 8 archive-grammar fields, prove consumed bytes changed, and carry lane-specific dispatch claims. PR95/PR101 reproduction is useful only when it produces a packet, not just a checkpoint or proxy curve. |
@@ -58,8 +58,8 @@
    - Current candidate: `178207` bytes (`-16B` versus PR103 source) with exact
      source-shell-contract Modal T4 CUDA evidence.
    - Promotion blocker is engineering/custody completion, not lack of byte
-     signal: strict pre-submission compliance, paired CPU/adjudication policy,
-     and shell-level inflate parity remain open.
+     signal: strict pre-submission compliance now passes; paired
+     CPU/adjudication policy and shell-level inflate parity scope remain open.
    - Next implementation slice is a reusable source-shell-contract comparator,
      not a
      blind CUDA rerun.
@@ -210,9 +210,10 @@
   `0.22776742708207615`, delta `-0.00001075` with unchanged reported
   SegNet/PoseNet components.
 - Current PR103 rate-only anchor is therefore the `-16B` clean-runtime packet,
-  not the earlier `-12B` packet.  It remains an internal `[contest-CUDA]`
-  frontier observation until strict pre-submission compliance and paired
-  policy/adjudication gates are recorded.
+  not the earlier `-12B` packet. It remains an internal `[contest-CUDA]`
+  frontier observation until paired policy/adjudication gates are recorded.
+  Strict pre-submission compliance was closed in the `2026-05-11T01:38Z`
+  addendum below.
 - Next PR103 work: extend only grammar-aware transforms with decoder-state or
   full-render parity proof; do not spend exact CUDA on raw stream deletion or
   non-consumed bit edits.
@@ -863,3 +864,34 @@ The result is coverage-equivalent:
 The reduced wall-clock path is therefore a scheduling/performance improvement,
 not a coverage reduction. A regression test now locks that invariant:
 `test_run_steps_with_budget_parallel_preserves_full_coverage_and_order`.
+
+## 2026-05-11T01:38Z PR103 strict-compliance closure addendum
+
+The PR103 clean-runtime mid32+latent-hi `-16B` packet now passes strict
+pre-submission compliance:
+
+`.omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_mid32_plus_latent_hi_candidate/pre_submission_compliance.strict.json`
+
+The earlier compliance failure was a checker apples-to-apples bug. The local
+submission runtime manifest intentionally excludes submission-custody files;
+the auth-eval side previously exposed only the raw runtime tree that included
+custody files and Modal's `/tmp/modal_auth_eval/submission_dir` root. The
+checker now preserves raw auth-eval runtime custody while also comparing a
+portable executable-runtime hash after custody-file pruning.
+
+Closure facts:
+
+- `passed=true`, `checks=53`;
+- archive SHA-256
+  `8460014d70855ce9226285f80513d6d743ed23723870a6a38b009cfca40f423e`;
+- archive bytes `178207`;
+- auth-eval raw runtime tree
+  `59c6a80f62b6bd8d7fab1b7252898b4dc19fa8736a91e2b7ecac6f8bb2e23ee2`;
+- portable executable-runtime match
+  `89cd87b144b4441420931947aa1b0e2661d8231ce8b84a534afd87d2c163e9e2`;
+- strict formula score `0.22776740354111893`.
+
+This is not a new score result; it removes a custody/checker blocker from the
+existing PR103 `-16B` `[contest-CUDA]` rate-only observation. Remaining PR103
+questions are paired CPU/adjudication policy and shell-level parity-scope
+classification.

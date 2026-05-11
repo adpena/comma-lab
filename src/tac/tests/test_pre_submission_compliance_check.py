@@ -104,6 +104,46 @@ def _write_submission(
     return {"archive_sha256": archive_sha, "archive_size_bytes": archive_bytes, "runtime_tree": runtime_tree}
 
 
+def _auth_runtime_manifest_with_custody_files(
+    mod,
+    root: Path,
+    *,
+    corrupt_inflate_sha: bool = False,
+) -> dict:
+    repo_root = mod.REPO_ROOT.resolve()
+    runtime_root = root.resolve()
+    files = []
+    for row in mod._contest_runtime_root_file_manifest(runtime_root, repo_root):
+        if row["relative_path"] == "contest_auth_eval.json":
+            continue
+        row = dict(row)
+        if corrupt_inflate_sha and row["relative_path"] == "inflate.sh":
+            row["sha256"] = "0" * 64
+        files.append(row)
+    upstream_eval_path = repo_root / "upstream" / "evaluate.py"
+    upstream_eval = None
+    if upstream_eval_path.exists():
+        upstream_eval = {
+            "relative_path": "evaluate.py",
+            "bytes": upstream_eval_path.stat().st_size,
+            "sha256": mod._contest_sha256(upstream_eval_path, prefix=0),
+        }
+    manifest = {
+        "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+        "runtime_root": str(runtime_root),
+        "runtime_file_count": len(files),
+        "files": files,
+        "external_dependency_roots": [],
+        "repo_local_tac_import_manifest": mod._contest_repo_local_tac_import_manifest(
+            runtime_root,
+            repo_root,
+        ),
+        "upstream_evaluate_py": upstream_eval,
+    }
+    manifest["runtime_tree_sha256"] = mod._runtime_tree_sha_from_manifest(manifest)
+    return manifest
+
+
 def _failed_check_names(report: dict) -> set[str]:
     return {check["name"] for check in report["checks"] if not check["passed"]}
 
@@ -185,6 +225,115 @@ def test_pre_submission_check_contest_final_rejects_runtime_tree_mismatch(
                 expected["archive_sha256"],
                 "--expected-archive-size-bytes",
                 str(expected["archive_size_bytes"]),
+            ]
+        )
+    )
+
+    assert not report["passed"]
+    assert "submission_runtime_tree_matches_auth_eval" in _failed_check_names(report)
+
+
+def test_pre_submission_check_matches_auth_runtime_after_custody_pruning_and_remote_root(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission")
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(claims)
+    auth_path = tmp_path / "submission" / "contest_auth_eval.json"
+    auth = json.loads(auth_path.read_text(encoding="utf-8"))
+    full_auth_manifest = _auth_runtime_manifest_with_custody_files(
+        mod,
+        tmp_path / "submission",
+    )
+    assert full_auth_manifest["runtime_tree_sha256"] != expected["runtime_tree"]
+    full_auth_manifest["runtime_root"] = "/tmp/modal_auth_eval/submission_dir"
+    full_auth_manifest["repo_local_tac_import_manifest"]["runtime_root_name"] = "submission_dir"
+    for row in full_auth_manifest["files"]:
+        row["repo_relative_path"] = f"/tmp/modal_auth_eval/submission_dir/{row['relative_path']}"
+    auth["inflate_runtime_manifest"] = full_auth_manifest
+    auth["provenance"]["inflate_runtime_manifest"] = full_auth_manifest
+    auth_path.write_text(json.dumps(auth, indent=2) + "\n", encoding="utf-8")
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--auth-eval-json",
+                str(auth_path),
+                "--contest-final",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+
+    assert report["passed"], [c for c in report["checks"] if not c["passed"]]
+    pruned_candidates = report["auth_eval"]["runtime_tree_pruned_candidates"]
+    assert (
+        pruned_candidates[
+            "provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files"
+        ]
+        != expected["runtime_tree"]
+    )
+    assert (
+        pruned_candidates[
+            "provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files"
+        ]
+        == report["submission_runtime"]["portable_runtime_tree_sha256_without_custody_files"]
+    )
+    assert report["submission_runtime"]["runtime_tree_sha256"] == expected["runtime_tree"]
+
+
+def test_pre_submission_check_rejects_non_custody_runtime_manifest_mismatch(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission")
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(claims)
+    auth_path = tmp_path / "submission" / "contest_auth_eval.json"
+    auth = json.loads(auth_path.read_text(encoding="utf-8"))
+    full_auth_manifest = _auth_runtime_manifest_with_custody_files(
+        mod,
+        tmp_path / "submission",
+        corrupt_inflate_sha=True,
+    )
+    auth["inflate_runtime_manifest"] = full_auth_manifest
+    auth["provenance"]["inflate_runtime_manifest"] = full_auth_manifest
+    auth_path.write_text(json.dumps(auth, indent=2) + "\n", encoding="utf-8")
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--auth-eval-json",
+                str(auth_path),
+                "--contest-final",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
             ]
         )
     )
