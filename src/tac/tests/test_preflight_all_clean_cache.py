@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import tac.preflight as preflight
 
 from tac.preflight import (
+    _ParallelPreflightRunner,
     _preflight_all_clean_cache_hit,
     _preflight_developer_clean_cache_hit,
     _store_preflight_developer_clean_cache,
@@ -46,6 +48,93 @@ def test_preflight_all_clean_cache_hits_unchanged_tree(tmp_path):
         archive_path=None,
     )
     assert hit is True
+
+
+def test_preflight_all_clean_cache_misses_same_size_restored_mtime_change(tmp_path):
+    source_path = tmp_path / "src" / "tac" / "example.py"
+    source_path.parent.mkdir(parents=True)
+    source_path.write_text("VALUE = 1\n")
+
+    hit, token, paths = _preflight_all_clean_cache_hit(
+        tmp_path,
+        profile_name=None,
+        tto_frames_path=None,
+        gt_poses_path=None,
+        masks_path=None,
+        renderer_path=None,
+        archive_path=None,
+    )
+    assert hit is False
+    _store_preflight_all_clean_cache(tmp_path, cache_token=token, paths=paths)
+
+    before = source_path.stat()
+    source_path.write_text("VALUE = 2\n")
+    os.utime(source_path, ns=(before.st_atime_ns, before.st_mtime_ns))
+
+    hit, _, _ = _preflight_all_clean_cache_hit(
+        tmp_path,
+        profile_name=None,
+        tto_frames_path=None,
+        gt_poses_path=None,
+        masks_path=None,
+        renderer_path=None,
+        archive_path=None,
+    )
+    assert hit is False
+
+
+def test_preflight_clean_cache_refuses_advisory_rows(tmp_path):
+    (tmp_path / "src" / "tac").mkdir(parents=True)
+    (tmp_path / "src" / "tac" / "example.py").write_text("VALUE = 1\n")
+    hit, token, paths = _preflight_all_clean_cache_hit(
+        tmp_path,
+        profile_name=None,
+        tto_frames_path=None,
+        gt_poses_path=None,
+        masks_path=None,
+        renderer_path=None,
+        archive_path=None,
+    )
+    assert hit is False
+
+    _store_preflight_all_clean_cache(
+        tmp_path,
+        cache_token=token,
+        paths=paths,
+        advisory_count=1,
+    )
+    hit, _, _ = _preflight_all_clean_cache_hit(
+        tmp_path,
+        profile_name=None,
+        tto_frames_path=None,
+        gt_poses_path=None,
+        masks_path=None,
+        renderer_path=None,
+        archive_path=None,
+    )
+    assert hit is False
+
+
+def test_parallel_preflight_runner_counts_warn_only_advisories():
+    runner = _ParallelPreflightRunner(enabled=False, verbose=False, max_workers=1)
+    try:
+        assert runner.run(
+            "warn",
+            "[warn]",
+            lambda: ["warn-only signal"],
+            strict=False,
+        ) == ["warn-only signal"]
+        assert runner.advisory_count == 1
+
+        assert runner.run(
+            "strict",
+            "[strict]",
+            lambda: ["strict violation"],
+            strict=True,
+        ) == ["strict violation"]
+        assert runner.advisory_count == 1
+    finally:
+        runner.close(cancel=False)
 
 
 def test_preflight_developer_clean_cache_hit_skips_source_index_setup(

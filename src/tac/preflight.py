@@ -58,8 +58,8 @@ import torch
 DEFAULT_PREFLIGHT_CLI_TIMEOUT_S = 30.0
 PREFLIGHT_CLI_TIMING_SCHEMA = "pact.tac_preflight_cli_timing.v1"
 _PREFLIGHT_CACHE_SCHEMA = "pact.preflight_cache.v1"
-_PREFLIGHT_ALL_CLEAN_CACHE_VERSION = "preflight_all_clean.v1"
-_PREFLIGHT_DEVELOPER_CLEAN_CACHE_VERSION = "preflight_developer_clean.v1"
+_PREFLIGHT_ALL_CLEAN_CACHE_VERSION = "preflight_all_clean.v2"
+_PREFLIGHT_DEVELOPER_CLEAN_CACHE_VERSION = "preflight_developer_clean.v2"
 _PUBLIC_PR_PRISTINE_CACHE_VERSION = "public_pr_intake_pristine.v1"
 _NO_MPS_FALLBACK_CLEAN_CACHE_VERSION = "no_mps_fallback_default_clean.v2"
 
@@ -385,7 +385,7 @@ def _preflight_codebase_clean_cache_hit(
         root,
         include_result_artifacts=cache_name == "preflight_all_clean",
     )
-    fingerprint = _fingerprint_paths(
+    fingerprint = _strong_fingerprint_paths(
         paths,
         root,
         salt=version,
@@ -407,6 +407,7 @@ def _preflight_codebase_clean_cache_hit(
         isinstance(row, dict)
         and row.get("version") == version
         and row.get("fingerprint") == fingerprint
+        and int(row.get("advisory_count", 0)) == 0
     )
     return hit, cache_key + ":" + fingerprint, paths
 
@@ -418,15 +419,19 @@ def _store_preflight_codebase_clean_cache(
     version: str,
     cache_token: str,
     paths: tuple[Path, ...],
+    advisory_count: int = 0,
 ) -> None:
     """Record a clean preflight for the current source/state fingerprint."""
 
+    if advisory_count:
+        return
     cache_key, fingerprint = cache_token.split(":", 1)
     rows = _load_preflight_cache(root, cache_name)
     rows[cache_key] = {
         "version": version,
         "fingerprint": fingerprint,
         "path_count": len(paths),
+        "advisory_count": advisory_count,
         "stored_at_unix": int(time.time()),
     }
     _store_preflight_cache(root, cache_name, rows)
@@ -462,6 +467,7 @@ def _store_preflight_all_clean_cache(
     *,
     cache_token: str,
     paths: tuple[Path, ...],
+    advisory_count: int = 0,
 ) -> None:
     """Record a clean full preflight for the current source/state fingerprint."""
 
@@ -471,6 +477,7 @@ def _store_preflight_all_clean_cache(
         version=_PREFLIGHT_ALL_CLEAN_CACHE_VERSION,
         cache_token=cache_token,
         paths=paths,
+        advisory_count=advisory_count,
     )
 
 
@@ -504,6 +511,7 @@ def _store_preflight_developer_clean_cache(
     *,
     cache_token: str,
     paths: tuple[Path, ...],
+    advisory_count: int = 0,
 ) -> None:
     """Record a clean developer preflight for the current source/state fingerprint."""
 
@@ -513,6 +521,7 @@ def _store_preflight_developer_clean_cache(
         version=_PREFLIGHT_DEVELOPER_CLEAN_CACHE_VERSION,
         cache_token=cache_token,
         paths=paths,
+        advisory_count=advisory_count,
     )
 
 
@@ -744,6 +753,7 @@ class _ParallelPreflightRunner:
             if self.enabled else None
         )
         self._futures: dict[str, Future[object]] = {}
+        self.advisory_count = 0
 
     def __enter__(self) -> "_ParallelPreflightRunner":
         return self
@@ -761,12 +771,17 @@ class _ParallelPreflightRunner:
     def run(self, name: str, label: str, fn, *, strict: bool = True):
         future = self._futures.pop(name, None)
         if future is None:
-            return fn()
+            result = fn()
+            self._record_result(result, strict=strict)
+            if not self._futures:
+                self.close(cancel=False)
+            return result
         try:
             result = future.result()
         except BaseException:
             self.close(cancel=True)
             raise
+        self._record_result(result, strict=strict)
         if self.verbose:
             if isinstance(result, list):
                 if result:
@@ -783,6 +798,11 @@ class _ParallelPreflightRunner:
         if not self._futures:
             self.close(cancel=False)
         return result
+
+    def _record_result(self, result: object, *, strict: bool) -> None:
+        if strict or not isinstance(result, list):
+            return
+        self.advisory_count += len(result)
 
     def close(self, *, cancel: bool) -> None:
         if self._executor is not None:
@@ -1648,8 +1668,13 @@ def preflight_all(
         # until live count is driven to 0 by faithful re-tests of the
         # audited 4 technique classes). Memory ref:
         # `feedback_implementation_vs_model_gap_audit_20260508.md`.
-        check_evidence_implementation_matches_model_spec(
-            strict=False, verbose=verbose,
+        _parallel.run(
+            "check_evidence_implementation_matches_model_spec",
+            "[implementation-model-match]",
+            lambda: check_evidence_implementation_matches_model_spec(
+                strict=False, verbose=verbose,
+            ),
+            strict=False,
         )
         # 2026-05-08 codex ChARM finding: a class may be labelled ChARM/AR
         # while declaring a context network that is never called. That turns a
@@ -1727,9 +1752,23 @@ def preflight_all(
         # promotion-path is to clear with allowlist annotations + flip
         # strict once live count = 0. Memory ref:
         # feedback_meta_meta_commit_machinery_protections_20260508.md
-        check_subagent_commit_serializer_uses_lock(strict=False, verbose=verbose)
+        _parallel.run(
+            "check_subagent_commit_serializer_uses_lock",
+            "[subagent-commit-serializer-lock]",
+            lambda: check_subagent_commit_serializer_uses_lock(
+                strict=False, verbose=verbose,
+            ),
+            strict=False,
+        )
         check_claude_md_catalog_no_duplicate_numbers(strict=True, verbose=verbose)
-        check_subagent_commits_have_co_author_trailer(strict=False, verbose=verbose)
+        _parallel.run(
+            "check_subagent_commits_have_co_author_trailer",
+            "[subagent-co-author-trailer]",
+            lambda: check_subagent_commits_have_co_author_trailer(
+                strict=False, verbose=verbose,
+            ),
+            strict=False,
+        )
         # 2026-05-09 Catalog #146 — operator decision B: Phase 1 trainer
         # _write_runtime contest-compliant inflate emission. STRICT @ 0
         # because the trainer was rewritten in the same commit-batch and the
@@ -1746,8 +1785,24 @@ def preflight_all(
         # opt-out help text is being cleaned incrementally. Keep them visible
         # in normal operator preflight until live count reaches zero, then
         # promote to strict.
-        check_no_fastvit_attention_compounding_claim(strict=False, verbose=verbose)
-        check_no_auth_eval_optout_help_text_consumer_unverified(strict=False, verbose=verbose)
+        _parallel.run(
+            "check_no_fastvit_attention_compounding_claim",
+            "[fastvit-attention-compounding-claim]",
+            lambda: check_no_fastvit_attention_compounding_claim(
+                strict=False,
+                verbose=verbose,
+            ),
+            strict=False,
+        )
+        _parallel.run(
+            "check_no_auth_eval_optout_help_text_consumer_unverified",
+            "[auth-eval-optout-help-text]",
+            lambda: check_no_auth_eval_optout_help_text_consumer_unverified(
+                strict=False,
+                verbose=verbose,
+            ),
+            strict=False,
+        )
         # 2026-05-09 Track 4 bug-class fix (#123): weight-domain saliency
         # proxies such as mean(theta^2) are forbidden on score-gradient
         # substrates unless the file exposes the canonical score-gradient
@@ -2225,7 +2280,14 @@ def preflight_all(
         # legacy private custody/state docs, so the default full-preflight pass
         # keeps this warn-only. Release tooling should call the same checker
         # with strict=True over the explicit public publish surface.
-        check_public_release_hygiene(strict=False, verbose=verbose)
+        _parallel.run(
+            "check_public_release_hygiene",
+            "[public-release-hygiene]",
+            lambda: check_public_release_hygiene(
+                strict=False, verbose=verbose,
+            ),
+            strict=False,
+        )
         # 2026-04-29 PM: silent-default override class. Audit hardened in
         # commit 4eeb6452 (246 noisy → 0 actionable); 3 real bugs fixed in
         # commit 256c5e42. Lands STRICT directly at 0 live violations.
@@ -2781,7 +2843,14 @@ def preflight_all(
         # Tuna-2 lanes. WARN-ONLY initially because it only applies to
         # remote_lane scripts added/modified after 2026-04-29 and is a
         # methodology guard, not a current correctness blocker.
-        check_remote_lane_scripts_have_controlled_baseline(strict=False, verbose=verbose)
+        _parallel.run(
+            "check_remote_lane_scripts_have_controlled_baseline",
+            "[remote-lane-controlled-baseline]",
+            lambda: check_remote_lane_scripts_have_controlled_baseline(
+                strict=False, verbose=verbose,
+            ),
+            strict=False,
+        )
 
         # 2026-04-28 evening: 4 NEW meta-bug checks (44, 45, 46, 47) for
         # test-assertion strength + archive-size discipline. Ref Round 22
@@ -2935,7 +3004,15 @@ def preflight_all(
         # Check 60 ships warn-only because MEMORY.md is a user-controlled
         # file and the operator should fix it on their own cadence (this
         # session: 234 lines, under the 250 ceiling — currently 0 violations).
-        check_memory_md_size_under_ceiling(strict=False, verbose=verbose)
+        _parallel.run(
+            "check_memory_md_size_under_ceiling",
+            "[memory-md-size]",
+            lambda: check_memory_md_size_under_ceiling(
+                strict=False,
+                verbose=verbose,
+            ),
+            strict=False,
+        )
         check_canonical_bootstraps_write_provenance(strict=True, verbose=verbose)
 
         # 2026-04-28 Codex F5 (5-finding adversarial review): every lane
@@ -3247,17 +3324,37 @@ def preflight_all(
         #   B6 (retired-config redispatch guard)       0  → STRICT
         #   B7 (paper/research lane-tag extension)    58  warn
         #   B8 (pr101 torch.load weights_only=False)  32  warn
-        check_encoder_decoder_dequantization_roundtrip_tested(
-            strict=False, verbose=verbose,
+        _parallel.run(
+            "check_encoder_decoder_dequantization_roundtrip_tested",
+            "[encoder-decoder-dequantization-roundtrip]",
+            lambda: check_encoder_decoder_dequantization_roundtrip_tested(
+                strict=False, verbose=verbose,
+            ),
+            strict=False,
         )
-        check_evidence_row_archive_bytes_has_provenance(
-            strict=False, verbose=verbose,
+        _parallel.run(
+            "check_evidence_row_archive_bytes_has_provenance",
+            "[evidence-archive-bytes-provenance]",
+            lambda: check_evidence_row_archive_bytes_has_provenance(
+                strict=False, verbose=verbose,
+            ),
+            strict=False,
         )
-        check_build_manifest_archive_custody_clean(
-            strict=False, verbose=verbose,
+        _parallel.run(
+            "check_build_manifest_archive_custody_clean",
+            "[build-manifest-archive-custody]",
+            lambda: check_build_manifest_archive_custody_clean(
+                strict=False, verbose=verbose,
+            ),
+            strict=False,
         )
-        check_admm_naming_matches_iterative_consensus_implementation(
-            strict=False, verbose=verbose,
+        _parallel.run(
+            "check_admm_naming_matches_iterative_consensus_implementation",
+            "[admm-naming-consensus]",
+            lambda: check_admm_naming_matches_iterative_consensus_implementation(
+                strict=False, verbose=verbose,
+            ),
+            strict=False,
         )
         check_inflate_wire_format_no_dead_bytes(
             strict=True, verbose=verbose,
@@ -3289,19 +3386,37 @@ def preflight_all(
         check_recovery_metadata_append_only(
             strict=True, verbose=verbose,
         )
-        check_scores_have_lane_tag_paper_research(
-            strict=False, verbose=verbose,
+        _parallel.run(
+            "check_scores_have_lane_tag_paper_research",
+            "[scores-lane-tag-paper-research]",
+            lambda: check_scores_have_lane_tag_paper_research(
+                strict=False,
+                verbose=verbose,
+            ),
+            strict=False,
         )
-        check_pr101_tools_torch_load_allowlist(
-            strict=False, verbose=verbose,
+        _parallel.run(
+            "check_pr101_tools_torch_load_allowlist",
+            "[pr101-tools-torch-load-allowlist]",
+            lambda: check_pr101_tools_torch_load_allowlist(
+                strict=False,
+                verbose=verbose,
+            ),
+            strict=False,
         )
         # B9 — rel_err canonical-definition discipline (codex adversarial
         # review #1, 2026-05-08). Live count on landing: 0. Held warn-only
         # for one tranche; flip to STRICT after a follow-on review of any
         # new call sites. Memory:
         # ``feedback_rel_err_l1_rms_canonicalization_20260508.md``.
-        check_rel_err_definition_canonical(
-            strict=False, verbose=verbose,
+        _parallel.run(
+            "check_rel_err_definition_canonical",
+            "[rel-err-definition-canonical]",
+            lambda: check_rel_err_definition_canonical(
+                strict=False,
+                verbose=verbose,
+            ),
+            strict=False,
         )
         # 2026-05-08 DUAL-AXIS-RANKING (operator mandate): solver/
         # recommender outputs must distinguish predicted_cuda_score vs
@@ -3335,7 +3450,12 @@ def preflight_all(
         )
         check_gate2_no_naked_bytes(strict=True, verbose=verbose)
         check_gate3_parser_section_manifest(strict=True, verbose=verbose)
-        check_gate4_export_first(strict=False, verbose=verbose)
+        _parallel.run(
+            "check_gate4_export_first",
+            "[gate4-export-first]",
+            lambda: check_gate4_export_first(strict=False, verbose=verbose),
+            strict=False,
+        )
         check_gate6_mask_pose_coupling(strict=True, verbose=verbose)
         check_gate7_no_op_provenance(strict=True, verbose=verbose)
         check_gate8_exact_evidence(strict=True, verbose=verbose)
@@ -3352,14 +3472,30 @@ def preflight_all(
                 check_shell_script_runtime_refs_resolve,
                 check_test_imports_resolve_to_disk,
             )
-            check_shell_script_runtime_refs_resolve(strict=False, verbose=verbose)
+            _parallel.run(
+                "check_shell_script_runtime_refs_resolve",
+                "[shell-runtime-refs-resolve]",
+                lambda: check_shell_script_runtime_refs_resolve(
+                    strict=False,
+                    verbose=verbose,
+                ),
+                strict=False,
+            )
             # PCC9b: sister check — test-file `from <experiments|tools|submissions>.X
             # import` references must resolve. Catches the same lost-helper bug
             # class but at pytest-collection time (e.g. test_qzs3_packer.py
             # depending on lost experiments/repack_quantizr_faithful_qzs3_archive.py
             # and experiments/build_renderer_packed_payload_archive.py — both
             # safe-stubbed 2026-05-04). Warn-only initially.
-            check_test_imports_resolve_to_disk(strict=False, verbose=verbose)
+            _parallel.run(
+                "check_test_imports_resolve_to_disk",
+                "[test-imports-resolve-to-disk]",
+                lambda: check_test_imports_resolve_to_disk(
+                    strict=False,
+                    verbose=verbose,
+                ),
+                strict=False,
+            )
         except ImportError:
             pass  # graceful if module missing during partial install
 
@@ -3368,6 +3504,7 @@ def preflight_all(
                 REPO_ROOT,
                 cache_token=codebase_cache_token,
                 paths=codebase_cache_paths,
+                advisory_count=_parallel.advisory_count,
             )
 
     # 2. Training inputs (only if profile + tto_frames provided)
@@ -3691,6 +3828,7 @@ def preflight_developer(
                 REPO_ROOT,
                 cache_token=codebase_cache_token,
                 paths=codebase_cache_paths,
+                advisory_count=_parallel.advisory_count,
             )
 
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
