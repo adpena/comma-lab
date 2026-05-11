@@ -29,6 +29,9 @@ DEFAULT_ANCHOR_AVG_POSE_DIST = 0.0000336
 DEFAULT_ANCHOR_AVG_SEG_DIST = 0.00067082
 DEFAULT_ANCHOR_SHA256 = "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce"
 DEFAULT_PROTECTED_NONWEIGHT_BYTES = 15_957
+DEFAULT_RELERR_SCHEDULE_JSON = Path(
+    ".omx/research/artifacts/factorized_hnerv_pr107_relerr_schedule_20260511_codex/plan.json"
+)
 
 
 @dataclass(frozen=True)
@@ -202,6 +205,7 @@ def evaluate_option(
     target_max_archive_bytes: int,
     avg_seg_dist: float,
     avg_pose_dist: float,
+    relerr_probe_summary: dict[str, Any],
 ) -> dict[str, Any]:
     layers = _layer_by_name()
     rows = [
@@ -225,6 +229,7 @@ def evaluate_option(
     meets_byte_budget = (
         target_max_archive_bytes >= 0 and estimated_archive_bytes <= target_max_archive_bytes
     )
+    relerr_blocker = str(relerr_probe_summary["dispatch_blocker"])
     return {
         "candidate_id": option["candidate_id"],
         "risk": option["risk"],
@@ -242,12 +247,97 @@ def evaluate_option(
         "target_max_archive_bytes": target_max_archive_bytes,
         "meets_sub017_byte_budget_if_components_hold": meets_byte_budget,
         "projected_score_if_components_hold": projected_score_if_components_hold,
+        "posthoc_relerr_probe_verdict": relerr_probe_summary["status"],
+        "reactivation_required": [
+            "train low-rank/factorized HNeRV substrate end-to-end",
+            "score-domain or eval-roundtrip-aware QAT on factor streams",
+            "byte-closed runtime consuming factor/residual sections",
+        ],
         "dispatch_blockers": [
             "cpu_design_only_no_archive_built",
             "component_preservation_unproven",
-            "relerr_safe_factorized_schedule_not_proven",
+            relerr_blocker,
             "exact_cuda_auth_eval_required_before_score_claim",
         ],
+    }
+
+
+def summarize_relerr_schedule(path: Path) -> dict[str, Any]:
+    if not path.is_file():
+        return {
+            "path": str(path),
+            "exists": False,
+            "status": "missing",
+            "dispatch_blocker": "posthoc_factorized_hnerv_relerr_safe_schedule_missing",
+            "schedule_count": 0,
+            "positive_schedule_count": 0,
+            "max_estimated_isolated_brotli_savings_bytes": None,
+            "interpretation": (
+                "No measured relerr-safe schedule artifact is present; keep this "
+                "planner design-only."
+            ),
+        }
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {
+            "path": str(path),
+            "exists": True,
+            "status": "unreadable",
+            "dispatch_blocker": "posthoc_factorized_hnerv_relerr_safe_schedule_unreadable",
+            "error": type(exc).__name__,
+            "schedule_count": 0,
+            "positive_schedule_count": 0,
+            "max_estimated_isolated_brotli_savings_bytes": None,
+            "interpretation": "Relerr schedule artifact could not be parsed.",
+        }
+    schedules = payload.get("schedules")
+    if not isinstance(schedules, list):
+        return {
+            "path": str(path),
+            "exists": True,
+            "status": "invalid_schema",
+            "dispatch_blocker": "posthoc_factorized_hnerv_relerr_safe_schedule_invalid_schema",
+            "schedule_count": 0,
+            "positive_schedule_count": 0,
+            "max_estimated_isolated_brotli_savings_bytes": None,
+            "interpretation": "Relerr schedule artifact has no schedules list.",
+        }
+
+    positive = []
+    best_savings: int | None = None
+    for row in schedules:
+        if not isinstance(row, dict):
+            continue
+        savings = int(row.get("estimated_isolated_brotli_savings_bytes") or 0)
+        best_savings = savings if best_savings is None else max(best_savings, savings)
+        selected = row.get("selected_rows")
+        if savings > 0 or (isinstance(selected, list) and selected):
+            positive.append(row)
+    if positive:
+        status = "positive_posthoc_schedule_available"
+        blocker = "posthoc_factorized_hnerv_relerr_safe_schedule_needs_packet_build"
+        interpretation = (
+            "At least one posthoc relerr-safe schedule has positive isolated "
+            "brotli savings; packet/runtime closure is still required."
+        )
+    else:
+        status = "falsified_for_posthoc_factorization"
+        blocker = "posthoc_factorized_hnerv_relerr_safe_schedule_falsified"
+        interpretation = (
+            "Measured posthoc factorization found no positive isolated brotli "
+            "savings under tested relerr caps. Use this planner as a trained "
+            "low-rank substrate design, not as a posthoc archive rewrite."
+        )
+    return {
+        "path": str(path),
+        "exists": True,
+        "status": status,
+        "dispatch_blocker": blocker,
+        "schedule_count": len(schedules),
+        "positive_schedule_count": len(positive),
+        "max_estimated_isolated_brotli_savings_bytes": best_savings,
+        "interpretation": interpretation,
     }
 
 
@@ -258,6 +348,7 @@ def build_plan(
     anchor_avg_pose_dist: float = DEFAULT_ANCHOR_AVG_POSE_DIST,
     anchor_avg_seg_dist: float = DEFAULT_ANCHOR_AVG_SEG_DIST,
     protected_nonweight_bytes: int = DEFAULT_PROTECTED_NONWEIGHT_BYTES,
+    relerr_schedule_json: Path = DEFAULT_RELERR_SCHEDULE_JSON,
 ) -> dict[str, Any]:
     target_max_archive_bytes = max_archive_bytes_for_target(
         target_score=target_score,
@@ -271,6 +362,7 @@ def build_plan(
         avg_seg_dist=anchor_avg_seg_dist,
         avg_pose_dist=anchor_avg_pose_dist,
     )
+    relerr_probe_summary = summarize_relerr_schedule(relerr_schedule_json)
     candidates = [
         evaluate_option(
             option,
@@ -278,6 +370,7 @@ def build_plan(
             target_max_archive_bytes=target_max_archive_bytes,
             avg_seg_dist=anchor_avg_seg_dist,
             avg_pose_dist=anchor_avg_pose_dist,
+            relerr_probe_summary=relerr_probe_summary,
         )
         for option in LOW_RANK_OPTIONS
     ]
@@ -314,6 +407,7 @@ def build_plan(
             "target_weight_payload_bytes": weight_payload_target,
             "rate_only_assumption": "avg_pose_dist and avg_seg_dist held fixed for budget math only",
         },
+        "posthoc_relerr_schedule_probe": relerr_probe_summary,
         "safe_stacking_order": [
             {
                 "step": 1,
@@ -363,12 +457,12 @@ def build_plan(
         "global_dispatch_blockers": [
             "no_archive_built_by_this_tool",
             "cpu_projection_not_score_evidence",
-            "posthoc_factorized_hnerv_relerr_safe_schedule_missing",
+            relerr_probe_summary["dispatch_blocker"],
             "exact_cuda_auth_eval_required_before_score_claim",
             "remote_dispatch_forbidden_for_this_task",
         ],
         "next_local_artifacts": [
-            "tools/plan_factorized_hnerv_relerr_schedule.py measured rank/error/byte schedule",
+            "trained low-rank/factorized HNeRV substrate artifact with eval-roundtrip-aware loss",
             "continuous-K allocation manifest over factor/residual streams",
             "byte-closed forked inflate runtime consuming low-rank factors",
             "strict no-score compliance report",
@@ -390,6 +484,13 @@ def render_markdown(plan: dict[str, Any]) -> str:
         f"- max archive bytes if components hold: `{plan['byte_budget']['target_max_archive_bytes_if_components_hold']}`",
         f"- required archive savings: `{plan['byte_budget']['required_archive_savings_bytes']}`",
         f"- target weight payload bytes: `{plan['byte_budget']['target_weight_payload_bytes']}`",
+        "",
+        "## Posthoc Relerr Probe",
+        "",
+        f"- status: `{plan['posthoc_relerr_schedule_probe']['status']}`",
+        f"- artifact: `{plan['posthoc_relerr_schedule_probe']['path']}`",
+        f"- best isolated brotli savings: `{plan['posthoc_relerr_schedule_probe']['max_estimated_isolated_brotli_savings_bytes']}`",
+        f"- interpretation: {plan['posthoc_relerr_schedule_probe']['interpretation']}",
         "",
         "## Recommended Candidate",
         "",
@@ -416,6 +517,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--anchor-avg-pose-dist", type=float, default=DEFAULT_ANCHOR_AVG_POSE_DIST)
     parser.add_argument("--anchor-avg-seg-dist", type=float, default=DEFAULT_ANCHOR_AVG_SEG_DIST)
     parser.add_argument("--protected-nonweight-bytes", type=int, default=DEFAULT_PROTECTED_NONWEIGHT_BYTES)
+    parser.add_argument(
+        "--relerr-schedule-json",
+        type=Path,
+        default=DEFAULT_RELERR_SCHEDULE_JSON,
+        help=(
+            "Measured factorized-HNeRV relerr schedule artifact. The planner "
+            "uses this to avoid recommending falsified posthoc archive rewrites."
+        ),
+    )
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--markdown-out", type=Path)
     parser.add_argument("--print-markdown", action="store_true")
@@ -427,6 +537,7 @@ def main(argv: list[str] | None = None) -> int:
         anchor_avg_pose_dist=args.anchor_avg_pose_dist,
         anchor_avg_seg_dist=args.anchor_avg_seg_dist,
         protected_nonweight_bytes=args.protected_nonweight_bytes,
+        relerr_schedule_json=args.relerr_schedule_json,
     )
     text = json.dumps(plan, indent=2, sort_keys=True)
     if args.json_out:

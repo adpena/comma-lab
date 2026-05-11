@@ -18,10 +18,35 @@ def _load_tool():
     return mod
 
 
-def test_default_plan_is_non_dispatching_cpu_design() -> None:
-    mod = _load_tool()
+def _write_falsified_relerr_schedule(path: Path) -> None:
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "factorized_hnerv_relerr_schedule_plan.v1",
+                "schedules": [
+                    {
+                        "relerr_cap": 0.02,
+                        "estimated_isolated_brotli_savings_bytes": 0,
+                        "selected_rows": [],
+                    },
+                    {
+                        "relerr_cap": 0.04,
+                        "estimated_isolated_brotli_savings_bytes": 0,
+                        "selected_rows": [],
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
 
-    plan = mod.build_plan()
+
+def test_default_plan_is_non_dispatching_cpu_design(tmp_path: Path) -> None:
+    mod = _load_tool()
+    relerr_schedule = tmp_path / "relerr.json"
+    _write_falsified_relerr_schedule(relerr_schedule)
+
+    plan = mod.build_plan(relerr_schedule_json=relerr_schedule)
 
     assert plan["schema"] == "sub017_cpu_frontier_plan.v1"
     assert plan["score_claim"] is False
@@ -30,14 +55,25 @@ def test_default_plan_is_non_dispatching_cpu_design() -> None:
     assert plan["ready_for_exact_eval_dispatch"] is False
     assert plan["dispatch_attempted"] is False
     assert "remote_dispatch_forbidden_for_this_task" in plan["global_dispatch_blockers"]
+    assert (
+        "posthoc_factorized_hnerv_relerr_safe_schedule_falsified"
+        in plan["global_dispatch_blockers"]
+    )
+    assert plan["posthoc_relerr_schedule_probe"]["status"] == (
+        "falsified_for_posthoc_factorization"
+    )
     assert plan["byte_budget"]["target_max_archive_bytes_if_components_hold"] < plan["anchor"]["archive_bytes"]
     assert plan["byte_budget"]["required_archive_savings_bytes"] > 50_000
 
 
-def test_plan_targets_stem_and_early_conv2d_with_svd_before_coarsening() -> None:
+def test_plan_targets_stem_and_early_conv2d_with_svd_before_coarsening(
+    tmp_path: Path,
+) -> None:
     mod = _load_tool()
+    relerr_schedule = tmp_path / "relerr.json"
+    _write_falsified_relerr_schedule(relerr_schedule)
 
-    plan = mod.build_plan()
+    plan = mod.build_plan(relerr_schedule_json=relerr_schedule)
     recommended = plan["recommended_cpu_candidate"]
     layer_names = {row["name"] for row in recommended["target_layers"]}
     order = [step["name"] for step in plan["safe_stacking_order"]]
@@ -59,10 +95,12 @@ def test_plan_targets_stem_and_early_conv2d_with_svd_before_coarsening() -> None
         assert "CPU SVD on dequantized fp32 weights" in row["construction"]
 
 
-def test_recommended_candidate_reaches_sub017_only_as_projection() -> None:
+def test_recommended_candidate_reaches_sub017_only_as_projection(tmp_path: Path) -> None:
     mod = _load_tool()
+    relerr_schedule = tmp_path / "relerr.json"
+    _write_falsified_relerr_schedule(relerr_schedule)
 
-    plan = mod.build_plan()
+    plan = mod.build_plan(relerr_schedule_json=relerr_schedule)
     recommended = plan["recommended_cpu_candidate"]
 
     assert recommended["meets_sub017_byte_budget_if_components_hold"] is True
@@ -71,21 +109,54 @@ def test_recommended_candidate_reaches_sub017_only_as_projection() -> None:
     assert recommended["score_claim"] is False
     assert recommended["ready_for_exact_eval_dispatch"] is False
     assert "component_preservation_unproven" in recommended["dispatch_blockers"]
-    assert "relerr_safe_factorized_schedule_not_proven" in recommended["dispatch_blockers"]
-    assert "posthoc_factorized_hnerv_relerr_safe_schedule_missing" in plan["global_dispatch_blockers"]
+    assert (
+        "posthoc_factorized_hnerv_relerr_safe_schedule_falsified"
+        in recommended["dispatch_blockers"]
+    )
+    assert recommended["posthoc_relerr_probe_verdict"] == (
+        "falsified_for_posthoc_factorization"
+    )
+
+
+def test_plan_keeps_missing_relerr_schedule_fail_closed(tmp_path: Path) -> None:
+    mod = _load_tool()
+
+    plan = mod.build_plan(relerr_schedule_json=tmp_path / "missing.json")
+
+    assert plan["posthoc_relerr_schedule_probe"]["status"] == "missing"
+    assert (
+        "posthoc_factorized_hnerv_relerr_safe_schedule_missing"
+        in plan["global_dispatch_blockers"]
+    )
+    assert (
+        "posthoc_factorized_hnerv_relerr_safe_schedule_missing"
+        in plan["recommended_cpu_candidate"]["dispatch_blockers"]
+    )
 
 
 def test_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     mod = _load_tool()
     json_out = tmp_path / "plan.json"
     md_out = tmp_path / "plan.md"
+    relerr_schedule = tmp_path / "relerr.json"
+    _write_falsified_relerr_schedule(relerr_schedule)
 
-    rc = mod.main(["--json-out", str(json_out), "--markdown-out", str(md_out)])
+    rc = mod.main(
+        [
+            "--relerr-schedule-json",
+            str(relerr_schedule),
+            "--json-out",
+            str(json_out),
+            "--markdown-out",
+            str(md_out),
+        ]
+    )
 
     assert rc == 0
     payload = json.loads(json_out.read_text(encoding="utf-8"))
     markdown = md_out.read_text(encoding="utf-8")
     assert payload["schema"] == "sub017_cpu_frontier_plan.v1"
     assert payload["score_claim"] is False
+    assert "Posthoc Relerr Probe" in markdown
     assert "Sub-0.17 CPU Frontier Plan" in markdown
     assert payload["recommended_cpu_candidate_id"] in markdown
