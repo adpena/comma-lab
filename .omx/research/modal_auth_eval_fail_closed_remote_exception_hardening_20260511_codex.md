@@ -68,3 +68,29 @@ and uploaded runtime. If the remote path fails again, the recovered result must
 contain the traceback. If it passes, pair it with the Modal CPU axis using the
 same archive/runtime to distinguish raw renderer-output drift from
 SegNet/PoseNet device drift.
+
+## Addendum: detached launch semantics
+
+The first post-hardening detached rerun still returned a blank `RemoteError`.
+A blocking debug invocation with `--inflate-timeout 1 --evaluate-timeout 1`
+entered the remote body, executed `inflate.sh`, and failed closed at the
+expected timeout:
+
+```text
+lane_id=pr103_pr106_modal_bootstrap_debug
+job=pr103_pr106_cuda_bootstrap_debug_modal_20260511T055852Z
+classification=modal_wrapper_detach_semantics_bug_not_codec_runtime_bug
+```
+
+Conclusion: wrapper `--detach` alone is insufficient for ephemeral Modal apps.
+The provider-level command must also be detached:
+
+```bash
+.venv/bin/modal run --detach experiments/modal_auth_eval.py \
+  ... \
+  --detach --provider-detach-ack
+```
+
+`experiments/modal_auth_eval.py` and `experiments/modal_auth_eval_cpu.py` now
+fail before claim/spend when wrapper `--detach` is used without
+`--provider-detach-ack`. `AGENTS.md` records this as durable operator protocol.

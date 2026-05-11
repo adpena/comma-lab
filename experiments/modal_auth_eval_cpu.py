@@ -34,6 +34,16 @@ Usage:
         --archive experiments/results/public_pr_intake_full/.../archive.zip \
         --inflate-sh experiments/results/.../source/submissions/apogee/inflate.sh \
         --output-dir experiments/results/pr107_apogee_cpu_auth_eval_<ts>
+
+Detached long runs must detach at BOTH layers: Modal CLI keeps the ephemeral
+app alive, and the wrapper spawns the remote function.
+
+    PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach \
+        experiments/modal_auth_eval_cpu.py \
+        --archive experiments/results/.../archive.zip \
+        --output-dir experiments/results/modal_auth_eval_cpu/<run_id> \
+        --detach --provider-detach-ack \
+        --lane-id <lane> --instance-job-id <job>
 """
 from __future__ import annotations
 
@@ -719,6 +729,7 @@ def main(
     inflate_timeout: int = 1800,
     evaluate_timeout: int = 5400,
     detach: bool = False,
+    provider_detach_ack: bool = False,
     lane_id: str = "",
     instance_job_id: str = "",
     claim_agent: str = "codex:modal_auth_eval_cpu",
@@ -730,6 +741,14 @@ def main(
     archive_path = Path(archive).resolve()
     if not archive_path.is_file():
         raise SystemExit(f"FATAL: archive not found: {archive_path}")
+    if detach and not provider_detach_ack:
+        raise SystemExit(
+            "FATAL: wrapper --detach requires provider-level Modal CLI detach. "
+            "Use `.venv/bin/modal run --detach experiments/modal_auth_eval_cpu.py ... "
+            "--detach --provider-detach-ack ...`. Without CLI --detach the ephemeral "
+            "Modal app may stop before the spawned function returns, producing a "
+            "blank RemoteError and no score artifact."
+        )
 
     archive_bytes = archive_path.read_bytes()
     archive_sha256 = _sha256_bytes(archive_bytes)

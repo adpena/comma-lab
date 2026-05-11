@@ -357,6 +357,7 @@ def test_detached_modal_auth_eval_writes_canonical_spawn_metadata(mod, tmp_path,
         str(archive),
         str(out_dir),
         detach=True,
+        provider_detach_ack=True,
         lane_id="lane_unit_modal_auth_eval",
         instance_job_id="job_unit_modal_auth_eval_detached",
     )
@@ -372,3 +373,27 @@ def test_detached_modal_auth_eval_writes_canonical_spawn_metadata(mod, tmp_path,
         "active_modal_auth_eval_spawning",
         "active_modal_auth_eval_spawned",
     ]
+
+
+def test_detached_modal_auth_eval_requires_provider_detach_ack(mod, tmp_path, monkeypatch):
+    archive = tmp_path / "point_004_eps_p2.zip"
+    archive.write_bytes(b"archive bytes")
+    out_dir = tmp_path / "out"
+    claim_calls = []
+
+    monkeypatch.setattr(
+        mod,
+        "claim_modal_auth_eval_dispatch",
+        lambda **kwargs: claim_calls.append(kwargs),
+    )
+
+    with pytest.raises(SystemExit, match="provider-level Modal CLI detach"):
+        mod.main(
+            str(archive),
+            str(out_dir),
+            detach=True,
+            lane_id="lane_unit_modal_auth_eval",
+            instance_job_id="job_unit_modal_auth_eval_detached",
+        )
+
+    assert claim_calls == []
