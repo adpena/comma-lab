@@ -70,6 +70,9 @@ use tac_packet_compiler::{
     pr103_arithmetic_coding::{
         encode_latent_hi_arithmetic, encode_merged_range_stream, WeightTensorACSpec,
     },
+    pr84_adaptive_mask::{encode_adaptive_context_stream, AdaptiveContextSpec},
+    pr91_hpac_grammar::encode_categorical_stream,
+    pr93_pose_codec::encode_delta_varint_pose,
     sparse_packet_ir::{
         encode_arithmetic_coefficients as sparse_encode_arithmetic_coefficients,
         encode_rle_of_zeros as sparse_encode_rle_of_zeros,
@@ -141,7 +144,32 @@ fn assert_scaffold_refuses<T: std::fmt::Debug>(
 
 #[test]
 fn pr101_ranked_no_op_sidecar_parity() {
-    let _manifest = try_load("ranked_no_op_sidecar_v1");
+    let manifest = match try_load("ranked_no_op_sidecar_v1") {
+        Some(m) => m,
+        None => return,
+    };
+    let dims_bin = match try_load_bin("ranked_no_op_sidecar_v1_dims.bin") {
+        Some(b) => b,
+        None => return,
+    };
+    let delta_idx_bin = match try_load_bin("ranked_no_op_sidecar_v1_delta_indices.bin") {
+        Some(b) => b,
+        None => return,
+    };
+    assert_eq!(dims_bin.len() % 8, 0);
+    assert_eq!(delta_idx_bin.len() % 8, 0);
+    let mut dims: Vec<i64> = Vec::with_capacity(dims_bin.len() / 8);
+    for chunk in dims_bin.chunks_exact(8) {
+        let mut buf = [0u8; 8];
+        buf.copy_from_slice(chunk);
+        dims.push(i64::from_le_bytes(buf));
+    }
+    let mut delta_indices: Vec<i64> = Vec::with_capacity(delta_idx_bin.len() / 8);
+    for chunk in delta_idx_bin.chunks_exact(8) {
+        let mut buf = [0u8; 8];
+        buf.copy_from_slice(chunk);
+        delta_indices.push(i64::from_le_bytes(buf));
+    }
     let schema = RankedSidecarSchema {
         n_pairs: 24,
         n_dims: 8,
@@ -150,12 +178,10 @@ fn pr101_ranked_no_op_sidecar_parity() {
         huff_max_len: 8,
         no_op_sentinel: 255,
     };
-    let mut dims = vec![255i64; 24];
-    let mut delta_indices = vec![0i64; 24];
-    dims[12] = 3;
-    delta_indices[12] = 7;
-    let result = encode_ranked_no_op_sidecar(&dims, &delta_indices, &schema);
-    assert_scaffold_refuses(result, "encode_ranked_no_op_sidecar");
+    let payload = encode_ranked_no_op_sidecar(&dims, &delta_indices, &schema)
+        .expect("encode_ranked_no_op_sidecar must succeed");
+    assert_sha256_parity(&payload, &manifest)
+        .expect("PR101 ranked-no-op sidecar payload must match Python oracle SHA-256");
 }
 
 #[test]
@@ -228,30 +254,61 @@ fn pr101_split_brotli_self_delim_parity() {
 
 #[test]
 fn pr103_merged_range_stream_parity() {
-    let _manifest = try_load("merged_range_stream_v1");
+    let manifest = match try_load("merged_range_stream_v1") {
+        Some(m) => m,
+        None => return,
+    };
+    // Sibling binary fixtures: flat int32 symbols (60 + 80 + 36 = 176) and
+    // three per-tensor fp64 histograms (256 floats each).
+    let flat_bytes = match try_load_bin("merged_range_stream_v1_flat.bin") {
+        Some(b) => b,
+        None => return,
+    };
+    let mut hists: Vec<Vec<f64>> = Vec::with_capacity(3);
+    for i in 0..3 {
+        let name = format!("merged_range_stream_v1_hist{i}.bin");
+        let bin = match try_load_bin(&name) {
+            Some(b) => b,
+            None => return,
+        };
+        assert_eq!(bin.len() % 8, 0);
+        let mut row: Vec<f64> = Vec::with_capacity(bin.len() / 8);
+        for chunk in bin.chunks_exact(8) {
+            row.push(f64::from_le_bytes([
+                chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6], chunk[7],
+            ]));
+        }
+        hists.push(row);
+    }
+    assert_eq!(flat_bytes.len() % 4, 0);
+    let mut flat: Vec<i32> = Vec::with_capacity(flat_bytes.len() / 4);
+    for chunk in flat_bytes.chunks_exact(4) {
+        flat.push(i32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]));
+    }
     let specs = vec![
         WeightTensorACSpec {
-            name: "t0".to_string(),
+            name: "golden_t0".to_string(),
             shape: vec![60],
-            histogram: vec![1.0; 256],
+            histogram: hists[0].clone(),
             alphabet_size: 256,
         },
         WeightTensorACSpec {
-            name: "t1".to_string(),
+            name: "golden_t1".to_string(),
             shape: vec![10, 8],
-            histogram: vec![1.0; 256],
+            histogram: hists[1].clone(),
             alphabet_size: 256,
         },
         WeightTensorACSpec {
-            name: "t2".to_string(),
+            name: "golden_t2".to_string(),
             shape: vec![3, 3, 4],
-            histogram: vec![1.0; 256],
+            histogram: hists[2].clone(),
             alphabet_size: 256,
         },
     ];
-    let flat: Vec<i32> = vec![0i32; 60 + 80 + 36];
-    let result = encode_merged_range_stream(&flat, &specs);
-    assert_scaffold_refuses(result, "encode_merged_range_stream");
+    let stream = encode_merged_range_stream(&flat, &specs)
+        .expect("encode_merged_range_stream must succeed");
+    assert_sha256_parity(&stream.payload, &manifest)
+        .expect("merged-range-stream payload must match Python oracle SHA-256");
 }
 
 #[test]
@@ -317,18 +374,90 @@ fn pr81_router_action_parity() {
     try_load_only("pr81_router_action_v1");
 }
 
-// ── PR84 parity stub ────────────────────────────────────────────────────────
+// ── PR84 parity (2026-05-11) ────────────────────────────────────────────────
 
 #[test]
 fn pr84_adaptive_mask_context_parity() {
-    try_load_only("pr84_adaptive_mask_context_v1");
+    let manifest = match try_load("pr84_adaptive_mask_context_v1") {
+        Some(m) => m,
+        None => return,
+    };
+    let cdf_bin = match try_load_bin("pr84_adaptive_mask_context_v1_cdf.bin") {
+        Some(b) => b,
+        None => return,
+    };
+    let symbols_bin = match try_load_bin("pr84_adaptive_mask_context_v1_symbols.bin") {
+        Some(b) => b,
+        None => return,
+    };
+    let contexts_bin = match try_load_bin("pr84_adaptive_mask_context_v1_contexts.bin") {
+        Some(b) => b,
+        None => return,
+    };
+    // Manifest pins n_contexts=4, alphabet=5, n_symbols=256.
+    let alphabet = 5u32;
+    let n_contexts = 4u32;
+    let cdf_len = (alphabet as usize) * (n_contexts as usize);
+    assert_eq!(cdf_bin.len(), cdf_len * 8);
+    let mut cdf: Vec<f64> = Vec::with_capacity(cdf_len);
+    for chunk in cdf_bin.chunks_exact(8) {
+        cdf.push(f64::from_le_bytes([
+            chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6], chunk[7],
+        ]));
+    }
+    assert_eq!(symbols_bin.len() % 4, 0);
+    let mut symbols: Vec<i32> = Vec::with_capacity(symbols_bin.len() / 4);
+    for chunk in symbols_bin.chunks_exact(4) {
+        symbols.push(i32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]));
+    }
+    assert_eq!(contexts_bin.len() % 4, 0);
+    let mut context_ids: Vec<i32> = Vec::with_capacity(contexts_bin.len() / 4);
+    for chunk in contexts_bin.chunks_exact(4) {
+        context_ids.push(i32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]));
+    }
+    let spec = AdaptiveContextSpec::new(alphabet, n_contexts, cdf)
+        .expect("AdaptiveContextSpec must construct");
+    let payload = encode_adaptive_context_stream(&symbols, &context_ids, &spec)
+        .expect("encode_adaptive_context_stream must succeed");
+    assert_sha256_parity(&payload, &manifest)
+        .expect("PR84 adaptive-context payload must match Python oracle SHA-256");
 }
 
-// ── PR91 parity stubs ───────────────────────────────────────────────────────
+// ── PR91 parity (2026-05-11) ────────────────────────────────────────────────
 
 #[test]
 fn pr91_arithmetic_coder_constriction_parity() {
-    try_load_only("pr91_arithmetic_coder_constriction_v1");
+    let manifest = match try_load("pr91_arithmetic_coder_constriction_v1") {
+        Some(m) => m,
+        None => return,
+    };
+    let symbols_bin = match try_load_bin("pr91_arithmetic_coder_constriction_v1_symbols.bin") {
+        Some(b) => b,
+        None => return,
+    };
+    let probs_bin = match try_load_bin("pr91_arithmetic_coder_constriction_v1_probs.bin") {
+        Some(b) => b,
+        None => return,
+    };
+    // Manifest pins n_symbols=200, alphabet=8.
+    let n_symbols = 200usize;
+    let alphabet = 8usize;
+    assert_eq!(symbols_bin.len(), n_symbols * 4);
+    let mut symbols: Vec<i32> = Vec::with_capacity(n_symbols);
+    for chunk in symbols_bin.chunks_exact(4) {
+        symbols.push(i32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]));
+    }
+    assert_eq!(probs_bin.len(), n_symbols * alphabet * 8);
+    let mut probs: Vec<f64> = Vec::with_capacity(n_symbols * alphabet);
+    for chunk in probs_bin.chunks_exact(8) {
+        probs.push(f64::from_le_bytes([
+            chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6], chunk[7],
+        ]));
+    }
+    let payload = encode_categorical_stream(&symbols, &probs, n_symbols, alphabet)
+        .expect("encode_categorical_stream must succeed");
+    assert_sha256_parity(&payload, &manifest)
+        .expect("PR91 constriction AC payload must match Python oracle SHA-256");
 }
 
 #[test]
@@ -343,11 +472,49 @@ fn pr92_rmc_joint_stream_parity() {
     try_load_only("pr92_rmc_joint_stream_v1");
 }
 
-// ── PR93 parity stubs ───────────────────────────────────────────────────────
+// ── PR93 parity (2026-05-11) ────────────────────────────────────────────────
 
 #[test]
 fn pr93_delta_varint_pose_parity() {
-    try_load_only("pr93_delta_varint_pose_v1");
+    let manifest = match try_load("pr93_delta_varint_pose_v1") {
+        Some(m) => m,
+        None => return,
+    };
+    let poses_bin = match try_load_bin("pr93_delta_varint_pose_v1_poses.bin") {
+        Some(b) => b,
+        None => return,
+    };
+    let lo_bin = match try_load_bin("pr93_delta_varint_pose_v1_lo.bin") {
+        Some(b) => b,
+        None => return,
+    };
+    let scale_bin = match try_load_bin("pr93_delta_varint_pose_v1_scale.bin") {
+        Some(b) => b,
+        None => return,
+    };
+    // Manifest pins n_rows=16, n_dims=4, bits=8.
+    let n_rows = 16usize;
+    let n_dims = 4usize;
+    let bits = 8u32;
+    assert_eq!(poses_bin.len(), n_rows * n_dims * 4);
+    let mut poses: Vec<f32> = Vec::with_capacity(n_rows * n_dims);
+    for chunk in poses_bin.chunks_exact(4) {
+        poses.push(f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]));
+    }
+    assert_eq!(lo_bin.len(), n_dims * 4);
+    let mut lo: Vec<f32> = Vec::with_capacity(n_dims);
+    for chunk in lo_bin.chunks_exact(4) {
+        lo.push(f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]));
+    }
+    assert_eq!(scale_bin.len(), n_dims * 4);
+    let mut scale: Vec<f32> = Vec::with_capacity(n_dims);
+    for chunk in scale_bin.chunks_exact(4) {
+        scale.push(f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]));
+    }
+    let stream = encode_delta_varint_pose(&poses, n_rows, n_dims, &lo, &scale, bits)
+        .expect("encode_delta_varint_pose must succeed");
+    assert_sha256_parity(&stream.payload, &manifest)
+        .expect("PR93 delta-varint pose payload must match Python oracle SHA-256");
 }
 
 #[test]
@@ -417,6 +584,20 @@ fn sparse_temporal_subsampled_parity() {
     assert_scaffold_refuses(result, "encode_temporal_subsampled");
 }
 
+// ── Magic codec auto-selector parity stub (2026-05-11) ──────────────────────
+//
+// The magic codec is a per-stream auto-selector over the existing
+// packet_compiler primitives. The Rust scaffold is `try_load_only` — the
+// canonical Python oracle in `src/tac/packet_compiler/magic_codec.py`
+// produces the pinned SHA, and Rust ports must reproduce it byte-for-byte
+// once the inner primitives (RLE / AC / centered-delta / delta-varint /
+// categorical / lowpass-luma) land in the Rust crate.
+
+#[test]
+fn magic_codec_v1_parity() {
+    try_load_only("magic_codec_v1");
+}
+
 // ── Coverage gate — every golden vector must have a parity test ─────────────
 
 /// This test exists to fail-loud if a new golden vector is committed without
@@ -467,6 +648,8 @@ fn every_golden_vector_has_paired_parity_test() {
         "sparse_rle_of_zeros_v1",
         "sparse_arithmetic_coefficients_v1",
         "sparse_temporal_subsampled_v1",
+        // Magic codec auto-selector (2026-05-11)
+        "magic_codec_v1",
     ]
     .into_iter()
     .collect();

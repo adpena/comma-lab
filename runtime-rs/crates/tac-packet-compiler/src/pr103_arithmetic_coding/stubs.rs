@@ -1,8 +1,9 @@
-//! Stub function signatures for the PR103 arithmetic-coding primitives.
+//! Stable function signatures for the PR103 arithmetic-coding primitives.
 //!
-//! Every function is `unimplemented!()` and returns
+//! Some functions are scaffold-only and return
 //! [`PacketCompilerError::NotImplemented`](crate::PacketCompilerError::NotImplemented).
-//! Signatures mirror the Python oracle one-to-one.
+//! Implemented primitives delegate to concrete modules. Signatures mirror the
+//! Python oracle one-to-one.
 
 use crate::{PacketCompilerError, Result};
 
@@ -65,9 +66,6 @@ pub struct AdaptiveBrotliResult {
 
 /// Encode multiple weight tensors into a single range-coded byte string.
 ///
-/// **SCAFFOLD-ONLY** — returns
-/// `Err(PacketCompilerError::NotImplemented("encode_merged_range_stream"))`.
-///
 /// Mirrors `tac.packet_compiler.encode_merged_range_stream`. Tensors are
 /// encoded in order; each symbol is coded against its corresponding
 /// [`WeightTensorACSpec::histogram`].
@@ -76,58 +74,45 @@ pub struct AdaptiveBrotliResult {
 /// tensors in `specs` order; `specs` carries the per-tensor shape so the
 /// implementer can slice on encode. The Python oracle's wire format uses
 /// `constriction::stream::queue::RangeEncoder` + big-endian uint32
-/// serialisation; the Rust impl MUST match byte-for-byte.
+/// serialisation; the Rust impl matches byte-for-byte.
 ///
-/// Target SHA-256: see
+/// Implementation lives in [`super::merged_range_stream::encode_merged_range_stream`].
+/// Byte-for-byte parity target:
 /// `src/tac/packet_compiler/golden_vectors/merged_range_stream_v1.json`.
 pub fn encode_merged_range_stream(
-    _tensors_flat_int32: &[i32],
-    _specs: &[WeightTensorACSpec],
+    tensors_flat_int32: &[i32],
+    specs: &[WeightTensorACSpec],
 ) -> Result<MergedRangeStream> {
-    Err(PacketCompilerError::NotImplemented(
-        "encode_merged_range_stream",
-    ))
+    super::merged_range_stream::encode_merged_range_stream(tensors_flat_int32, specs)
 }
 
-/// Inverse of [`encode_merged_range_stream`].
-///
-/// **SCAFFOLD-ONLY**. Returns a flat int32 buffer; the caller reshapes per
-/// `specs[i].shape`.
+/// Inverse of [`encode_merged_range_stream`]. Returns a flat int32 buffer;
+/// the caller reshapes per `specs[i].shape`.
 pub fn decode_merged_range_stream(
-    _stream: &MergedRangeStream,
-    _specs: &[WeightTensorACSpec],
+    stream: &MergedRangeStream,
+    specs: &[WeightTensorACSpec],
 ) -> Result<Vec<i32>> {
-    Err(PacketCompilerError::NotImplemented(
-        "decode_merged_range_stream",
-    ))
+    super::merged_range_stream::decode_merged_range_stream(stream, specs)
 }
 
 /// Encode the high byte of a uint16 zigzag-delta latent stream.
 ///
-/// **SCAFFOLD-ONLY**.
-///
-/// Input is a flat `&[u16]`; the high byte is `(x >> 8) & 0xFF`. Output is
-/// constriction's uint32 stream serialised as big-endian bytes.
-///
-/// Target SHA-256: see
-/// `src/tac/packet_compiler/golden_vectors/latent_hi_arithmetic_v1.json`.
-pub fn encode_latent_hi_arithmetic(_latents: &[u16], _histogram: &[f64]) -> Result<Vec<u8>> {
-    Err(PacketCompilerError::NotImplemented(
-        "encode_latent_hi_arithmetic",
-    ))
+/// Implementation lives in [`super::latent_hi::encode_latent_hi_arithmetic`].
+/// Output is constriction's uint32 stream serialised as **big-endian bytes**
+/// to match the Python wire format.
+pub fn encode_latent_hi_arithmetic(latents: &[u16], histogram: &[f64]) -> Result<Vec<u8>> {
+    super::latent_hi::encode_latent_hi_arithmetic(latents, histogram)
 }
 
 /// Decode a high-byte stream produced by [`encode_latent_hi_arithmetic`].
 ///
-/// **SCAFFOLD-ONLY**.
+/// Implementation lives in [`super::latent_hi::decode_latent_hi_arithmetic`].
 pub fn decode_latent_hi_arithmetic(
-    _payload: &[u8],
-    _histogram: &[f64],
-    _n_symbols: usize,
+    payload: &[u8],
+    histogram: &[f64],
+    n_symbols: usize,
 ) -> Result<Vec<u8>> {
-    Err(PacketCompilerError::NotImplemented(
-        "decode_latent_hi_arithmetic",
-    ))
+    super::latent_hi::decode_latent_hi_arithmetic(payload, histogram, n_symbols)
 }
 
 /// Sweep Brotli `(lgwin, quality)` and return the smallest output.
@@ -157,14 +142,29 @@ pub fn adaptive_brotli_param_search(
 mod tests {
     use super::*;
 
-    /// All three stubs report `NotImplemented` so they cannot silently
-    /// pretend to be authoritative.
+    /// `encode_merged_range_stream` is implemented (see merged_range_stream.rs);
+    /// callers cannot silently get a fake stream. The remaining scaffold
+    /// surface is [`adaptive_brotli_param_search`]; we keep this regression
+    /// pinned so a future refactor cannot accidentally re-stub the impl.
     #[test]
-    fn pr103_scaffold_refuses_with_not_implemented_error() {
-        let err = encode_latent_hi_arithmetic(&[], &[]).expect_err("scaffold must refuse");
+    fn pr103_merged_range_stream_impl_landed() {
+        // Empty inputs surface a `GoldenVectorIo` error, NOT `NotImplemented`;
+        // the impl is now wired through.
+        let err = encode_merged_range_stream(&[], &[]).expect_err("must reject empty input");
+        assert!(
+            !matches!(err, PacketCompilerError::NotImplemented(_)),
+            "encode_merged_range_stream must NOT return NotImplemented; got {err:?}"
+        );
+    }
+
+    /// `adaptive_brotli_param_search` is still scaffold-only.
+    #[test]
+    fn pr103_adaptive_brotli_param_search_still_scaffold() {
+        let err = adaptive_brotli_param_search(b"x", 1.0, (10, 24), (0, 11), 0)
+            .expect_err("scaffold must refuse");
         assert!(matches!(
             err,
-            PacketCompilerError::NotImplemented("encode_latent_hi_arithmetic")
+            PacketCompilerError::NotImplemented("adaptive_brotli_param_search")
         ));
     }
 }

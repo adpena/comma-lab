@@ -1,10 +1,9 @@
-//! Stub function signatures for the PR101 sidecar grammar primitives.
+//! Stable function signatures for the PR101 sidecar grammar primitives.
 //!
-//! Every function is `unimplemented!()` and returns
-//! [`PacketCompilerError::NotImplemented`](crate::PacketCompilerError::NotImplemented)
-//! when called via the explicit-Result variant. The signatures mirror the
-//! Python oracle one-to-one so an implementer can build inside-out without
-//! relitigating the API surface.
+//! Some functions are scaffold-only and return
+//! [`PacketCompilerError::NotImplemented`](crate::PacketCompilerError::NotImplemented).
+//! Implemented primitives delegate to concrete modules while preserving the
+//! Python oracle's one-to-one API surface.
 
 use crate::{PacketCompilerError, Result};
 
@@ -82,23 +81,19 @@ pub struct SplitBrotliStream {
 
 /// Encode a per-pair sparse correction sidecar.
 ///
-/// **SCAFFOLD-ONLY** — returns
-/// `Err(PacketCompilerError::NotImplemented("encode_ranked_no_op_sidecar"))`.
-///
 /// Mirrors `tac.packet_compiler.encode_ranked_no_op_sidecar`. Output bytes
 /// are the layout `[dim_packed_le | length_rank_le | huffman_bits | noop_rank_le]`
 /// (PR101 "huff_enum" variant).
 ///
-/// Target SHA-256: see
+/// Implementation lives in [`super::ranked_no_op_sidecar::encode_ranked_no_op_sidecar`].
+/// Byte-for-byte parity target:
 /// `src/tac/packet_compiler/golden_vectors/ranked_no_op_sidecar_v1.json`.
 pub fn encode_ranked_no_op_sidecar(
-    _dims: &[i64],
-    _delta_indices: &[i64],
-    _schema: &RankedSidecarSchema,
+    dims: &[i64],
+    delta_indices: &[i64],
+    schema: &RankedSidecarSchema,
 ) -> Result<Vec<u8>> {
-    Err(PacketCompilerError::NotImplemented(
-        "encode_ranked_no_op_sidecar",
-    ))
+    super::ranked_no_op_sidecar::encode_ranked_no_op_sidecar(dims, delta_indices, schema)
 }
 
 /// Decode a ranked Huffman/no-op sidecar produced by
@@ -122,82 +117,65 @@ pub fn decode_ranked_no_op_sidecar(
 
 /// Encode a per-column quantised stream as centered-delta uint8 under raw-LZMA.
 ///
-/// **SCAFFOLD-ONLY**.
+/// `values` is row-major `(n_pairs, n_dims)` `f32`; when `mins` / `scales`
+/// are `None` they are derived per-column as fp16. The byte-for-byte parity
+/// target is the SHA-256 in
+/// `src/tac/packet_compiler/golden_vectors/centered_delta_uint8_v1.json`.
 ///
-/// `values` is expected as row-major `(n_pairs, n_dims)` `f32`. The
-/// implementer derives per-column `mins` / `scales` (fp16) when the caller
-/// passes `None`. Header parity with Python's `lzma.FILTER_LZMA1 dict=4096
-/// lc=3 lp=0 pb=0` is non-negotiable; see liblzma's
-/// `LzmaOptions::dict_size(4096).literal_context_bits(3)` style API.
+/// Implementation lives in
+/// [`super::centered_delta_uint8::encode_centered_delta_uint8`].
 pub fn encode_centered_delta_uint8(
-    _values: &[f32],
-    _n_pairs: usize,
-    _n_dims: usize,
-    _mins: Option<&[u8]>,
-    _scales: Option<&[u8]>,
+    values: &[f32],
+    n_pairs: usize,
+    n_dims: usize,
+    mins: Option<&[u8]>,
+    scales: Option<&[u8]>,
 ) -> Result<CenteredDeltaUint8Stream> {
-    Err(PacketCompilerError::NotImplemented(
-        "encode_centered_delta_uint8",
-    ))
+    super::centered_delta_uint8::encode_centered_delta_uint8(
+        values, n_pairs, n_dims, mins, scales,
+    )
 }
 
 /// Decode a centered-delta uint8 stream back to row-major `(n_pairs, n_dims)`
-/// `f32`.
-///
-/// **SCAFFOLD-ONLY**. The implementer accepts either the typed stream
-/// (preferred) or raw `lzma_bytes` with explicit `n_pairs` / `n_dims`.
+/// `f32`. Implementation lives in
+/// [`super::centered_delta_uint8::decode_centered_delta_uint8`].
 pub fn decode_centered_delta_uint8(
-    _lzma_bytes: &[u8],
-    _n_pairs: usize,
-    _n_dims: usize,
+    lzma_bytes: &[u8],
+    n_pairs: usize,
+    n_dims: usize,
 ) -> Result<Vec<f32>> {
-    Err(PacketCompilerError::NotImplemented(
-        "decode_centered_delta_uint8",
-    ))
+    super::centered_delta_uint8::decode_centered_delta_uint8(lzma_bytes, n_pairs, n_dims)
 }
 
 /// Concatenate N independently-Brotli-compressed byte streams.
 ///
-/// **SCAFFOLD-ONLY**.
-///
-/// PR101 hardcodes `lgwin=22, quality=11`; the implementer must accept those
-/// as inputs so other callers (PR103 adaptive search) can sweep the space.
-/// Each sub-stream is compressed with the same parameters and the Brotli
-/// payloads are concatenated; the reader uses Brotli's frame structure to
-/// know where each stream ends — there is no length prefix.
+/// Implementation lives in [`super::split_brotli::split_brotli_self_delimiting`].
 pub fn split_brotli_self_delimiting(
-    _streams: &[&[u8]],
-    _lgwin: u8,
-    _quality: u8,
+    streams: &[&[u8]],
+    lgwin: u8,
+    quality: u8,
 ) -> Result<SplitBrotliStream> {
-    Err(PacketCompilerError::NotImplemented(
-        "split_brotli_self_delimiting",
-    ))
+    super::split_brotli::split_brotli_self_delimiting(streams, lgwin, quality)
 }
 
 /// Inverse of [`split_brotli_self_delimiting`].
 ///
-/// **SCAFFOLD-ONLY**. The reader walks the concatenated Brotli payload
-/// byte-by-byte until each `n_streams` decoder reports end-of-stream. PR101
-/// does exactly this in `decompress_brotli_streams`.
+/// Implementation lives in [`super::split_brotli::parse_split_brotli_self_delimiting`].
 pub fn parse_split_brotli_self_delimiting(
-    _payload: &[u8],
-    _n_streams: usize,
+    payload: &[u8],
+    n_streams: usize,
 ) -> Result<Vec<Vec<u8>>> {
-    Err(PacketCompilerError::NotImplemented(
-        "parse_split_brotli_self_delimiting",
-    ))
+    super::split_brotli::parse_split_brotli_self_delimiting(payload, n_streams)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// The scaffold MUST refuse to be called silently — explicit
-    /// `NotImplemented` error matches the contract documented in
-    /// `crate::PacketCompilerError`.
+    /// `encode_ranked_no_op_sidecar` is implemented; calling it on a
+    /// schema-validated input must NOT return `NotImplemented`.
     #[test]
-    fn scaffold_refuses_with_not_implemented_error() {
+    fn ranked_no_op_sidecar_impl_landed() {
         let schema = RankedSidecarSchema {
             n_pairs: 24,
             n_dims: 8,
@@ -208,11 +186,31 @@ mod tests {
         };
         let dims = vec![255i64; 24];
         let delta_indices = vec![0i64; 24];
-        let err = encode_ranked_no_op_sidecar(&dims, &delta_indices, &schema)
+        let result = encode_ranked_no_op_sidecar(&dims, &delta_indices, &schema);
+        assert!(
+            !matches!(&result, Err(PacketCompilerError::NotImplemented(_))),
+            "encode_ranked_no_op_sidecar must NOT return NotImplemented; got {result:?}"
+        );
+    }
+
+    /// `decode_ranked_no_op_sidecar` remains scaffold-only (the decoder
+    /// requires a length-rank cdf inverse that is not yet wired); pin the
+    /// stub error so the parity test does not silently regress.
+    #[test]
+    fn decode_ranked_no_op_sidecar_still_scaffold() {
+        let schema = RankedSidecarSchema {
+            n_pairs: 24,
+            n_dims: 8,
+            deltas: vec![-10, -8, -6, -5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6, 8, 10],
+            huff_min_len: 2,
+            huff_max_len: 8,
+            no_op_sentinel: 255,
+        };
+        let err = decode_ranked_no_op_sidecar(&[], &schema, 1, 1, 1, 0)
             .expect_err("scaffold must refuse");
         assert!(matches!(
             err,
-            PacketCompilerError::NotImplemented("encode_ranked_no_op_sidecar")
+            PacketCompilerError::NotImplemented("decode_ranked_no_op_sidecar")
         ));
     }
 }

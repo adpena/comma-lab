@@ -1,19 +1,53 @@
 # `tac-packet-compiler`
 
-Rust native port **scaffold** for [`tac.packet_compiler`](../../../src/tac/packet_compiler/),
+Rust native port for [`tac.packet_compiler`](../../../src/tac/packet_compiler/),
 the reusable byte-grammar and entropy-coder primitives extracted from the
 public PR101 (`hnerv_ft_microcodec`) and PR103 (`hnerv_lc_ac`) submissions.
 
-> **Status — SCAFFOLD ONLY (no Rust implementation yet).** Every public
-> function in this crate is `unimplemented!()` and returns
-> `PacketCompilerError::NotImplemented`. The crate exists so that:
+> **Status — 8 of 19 primitives byte-for-byte-parity GREEN (2026-05-11).**
 >
-> 1. The byte-for-byte parity contract is documented and reviewable.
-> 2. The golden-vector parity test harness is wired and runnable.
-> 3. The dependency choices (`constriction`, `brotli`, `liblzma`, `ndarray`)
->    are pinned before an implementer starts.
+> Implemented + parity-verified against committed Python golden vectors:
 >
-> See "Roadmap" below for the implementation gate.
+> 1. **`encode_centered_delta_uint8` / `decode_centered_delta_uint8`** —
+>    raw LZMA1 (FILTER_LZMA1, dict=4 KiB, lc=3, lp=0, pb=0) over fp16
+>    mins/scales + column-major centered-delta uint8 latents. SHA-256
+>    `939c66…4af9`.
+> 2. **`split_brotli_self_delimiting` / `parse_split_brotli_self_delimiting`** —
+>    PR101's concatenated-Brotli wire format (no length prefixes; the
+>    decoder uses Brotli frame structure to detect each stream's end).
+>    SHA-256 `8184f2…4915`.
+> 3. **`encode_latent_hi_arithmetic` / `decode_latent_hi_arithmetic`** —
+>    PR103's single-tensor categorical arithmetic coder (constriction
+>    `DefaultRangeEncoder` + `DefaultContiguousCategoricalEntropyModel`,
+>    serialised as **big-endian uint32**). SHA-256 `6381f1…befc`.
+> 4. **`encode_ranked_no_op_sidecar`** (PR101 "huff_enum" variant) —
+>    bounded-length package-merge Huffman + canonical-Huffman MSB-first
+>    bit-packing + co-lex combination rank over no-op positions +
+>    mixed-radix dim packing. SHA-256
+>    `565a7b…786ba`.
+> 5. **`encode_merged_range_stream` / `decode_merged_range_stream`** —
+>    PR103's multi-tensor constriction range coder with per-tensor
+>    categoricals re-used across every symbol of that tensor; symbol-count
+>    boundaries serialised out-of-band. SHA-256 `ab00a8…b1a1`.
+> 6. **`encode_delta_varint_pose` / `decode_delta_varint_pose`** —
+>    PR93's QZPDV1 pose codec: 8-byte magic + LE shape header + fp32
+>    lo/scale + uint8/uint16 absolute first row + zigzag-LEB128 deltas.
+>    SHA-256 `e10f29…d988`.
+> 7. **`encode_categorical_stream` / `decode_categorical_stream`** —
+>    PR91 HPACMini universal AC wrapper: one
+>    `DefaultContiguousCategoricalEntropyModel` per symbol position;
+>    big-endian uint32 serialisation. SHA-256 `f208c4…c88f`.
+> 8. **`encode_adaptive_context_stream` / `decode_adaptive_context_stream`** —
+>    PR84 adaptive context-routed range coder: per-context categoricals
+>    routed by parallel `context_ids` array. SHA-256 `cd0f0d…a28e`.
+>
+> Still scaffold-only (return `NotImplemented` so they cannot silently lie):
+> `adaptive_brotli_param_search`, `decode_ranked_no_op_sidecar`, the
+> PR81/PR92/PR97 / sparse PacketIR codecs / PR93 lowpass-luma / magic-codec
+> / PR91 QMQH / PR93 QZMB1 grammars (each still has its `try_load_only`
+> stub harness in `tests/golden_vector_parity.rs`).
+>
+> See "Roadmap" below for the remaining implementation order.
 
 ## Why this exists
 
@@ -60,10 +94,25 @@ runtime-rs/crates/tac-packet-compiler/
 │   ├── lib.rs                            public API + error type
 │   ├── pr101_sidecar_grammar/
 │   │   ├── mod.rs                        re-exports
-│   │   └── stubs.rs                      unimplemented!() stubs
+│   │   ├── stubs.rs                      delegates to impls; remaining unimplemented!() stubs
+│   │   ├── centered_delta_uint8.rs       IMPL: LZMA1 raw centered-delta uint8 (parity GREEN)
+│   │   ├── ranked_no_op_sidecar.rs       IMPL: PR101 ranked Huffman/no-op sidecar (parity GREEN)
+│   │   └── split_brotli.rs               IMPL: self-delimiting concat-Brotli (parity GREEN)
 │   ├── pr103_arithmetic_coding/
 │   │   ├── mod.rs                        re-exports
-│   │   └── stubs.rs                      unimplemented!() stubs
+│   │   ├── stubs.rs                      delegates to impls; remaining unimplemented!() stubs
+│   │   ├── latent_hi.rs                  IMPL: single-tensor categorical AC (parity GREEN)
+│   │   └── merged_range_stream.rs        IMPL: multi-tensor constriction range coder (parity GREEN)
+│   ├── pr93_pose_codec/
+│   │   ├── mod.rs                        re-exports
+│   │   └── delta_varint.rs               IMPL: PR93 QZPDV1 zigzag-LEB128 pose codec (parity GREEN)
+│   ├── pr91_hpac_grammar/
+│   │   ├── mod.rs                        re-exports
+│   │   └── arithmetic_coder_constriction.rs  IMPL: per-symbol categorical AC (parity GREEN)
+│   ├── pr84_adaptive_mask/
+│   │   ├── mod.rs                        re-exports
+│   │   └── adaptive_mask_context.rs      IMPL: per-context adaptive-context coder (parity GREEN)
+│   ├── sparse_packet_ir/                 (all scaffold-only)
 │   └── conformance/
 │       └── mod.rs                        golden-vector loader + sha256 helpers
 ├── tests/
@@ -71,6 +120,13 @@ runtime-rs/crates/tac-packet-compiler/
 └── benches/
     └── golden_vector_parity.rs           criterion scaffold (no-op sentinel)
 ```
+
+The binary input fixtures consumed by the parity tests live alongside the
+JSON manifests under
+[`src/tac/packet_compiler/golden_vectors/*_v1_*.bin`](../../../src/tac/packet_compiler/golden_vectors/).
+Regenerate them via
+[`tools/regenerate_packet_compiler_rust_parity_fixtures.py`](../../../tools/regenerate_packet_compiler_rust_parity_fixtures.py)
+whenever the Python recipe changes.
 
 ## Dependency choices
 
@@ -122,15 +178,33 @@ the CI diagnostic is human-readable.
 
 ## Roadmap
 
-The implementation work itself is **deferred pending operator approval** on
-ownership + effort. Surfaced for decision:
+The first 3 primitives (cheapest per N D4 council verdict) landed
+2026-05-11 with byte-for-byte parity GREEN; the next 5 (PR101 ranked
+sidecar + PR103 merged range stream + PR93 pose + PR91 per-symbol AC +
+PR84 adaptive context) landed in the same session per operator directive
+"compiler and insanely low level" + "keep building outside the \$5 window".
+Remaining order:
 
-| Question | Options |
+| # | Function | Status | Notes |
+|---|---|---|---|
+| 1 | `encode_centered_delta_uint8` | **GREEN 2026-05-11** | LZMA1 raw stream; +half crate for fp16. |
+| 2 | `split_brotli_self_delimiting` | **GREEN 2026-05-11** | brotli 8 + brotli-decompressor 5; pure-Rust brotli IS byte-for-byte compatible with Python C brotli for `(GENERIC, q=11, lgwin=22)`. |
+| 3 | `encode_latent_hi_arithmetic` | **GREEN 2026-05-11** | constriction 0.4.2 `DefaultRangeEncoder` + 24-bit categorical; big-endian uint32 serialisation. |
+| 4 | `encode_ranked_no_op_sidecar` | **GREEN 2026-05-11** | Most algorithmic of all primitives: bounded-length package-merge Huffman + canonical-Huffman MSB-first bit-packer + co-lex combination rank + mixed-radix dim packing. ~480 LOC. |
+| 5 | `encode_merged_range_stream` | **GREEN 2026-05-11** | Multi-tensor constriction encode; one Categorical per tensor; symbol-count boundaries serialised out-of-band. |
+| 6 | `encode_delta_varint_pose` (PR93 QZPDV1) | **GREEN 2026-05-11** | Pure-stdlib: 8-byte magic + LE shape header + fp32 lo/scale + uint8/uint16 first row + zigzag-LEB128 row-major deltas. |
+| 7 | `encode_categorical_stream` (PR91) | **GREEN 2026-05-11** | Per-position constriction Categorical (one model PER symbol; matrix layout `(n_symbols, alphabet)`). |
+| 8 | `encode_adaptive_context_stream` (PR84) | **GREEN 2026-05-11** | Per-context categorical lookup (matrix layout `(n_contexts, alphabet)`); symbols routed by parallel `context_ids` array. |
+| 9 | `adaptive_brotli_param_search` | scaffold | Contract test (Pareto-frontier membership) — no byte-level golden vector. |
+| 10 | `decode_ranked_no_op_sidecar` | scaffold | Inverse of impl #4; needs decode-side length-rank inversion + huff bit-unpacker. |
+| 11-19 | PR81/PR92/PR97 / sparse PacketIR codecs / PR93 lowpass-luma / PR91 QMQH / PR93 QZMB1 magic grammars / magic-codec | scaffold | Each has a paired Python golden vector + paired Rust test stub already wired. |
+
+| Question | Resolution |
 |---|---|
-| Who implements? | (a) claude-direct in a follow-up subagent; (b) dispatch to a Rust-specialist subagent; (c) defer pending external contributor / contest-window timing. |
-| Effort estimate | ~900–1400 LOC of Rust + ~400 LOC of tests; 1–2 wall-clock days of focused work. Constriction-sensitive parity is the highest-risk axis (5/5 golden vectors require it). |
-| Cost estimate | $0 GPU (the parity tests are pure CPU). |
-| Order of attack | 1) `encode_centered_delta_uint8` (no constriction, exercise liblzma binding) → 2) `split_brotli_self_delimiting` (exercise brotli binding) → 3) `encode_latent_hi_arithmetic` (single-tensor constriction smoke) → 4) `encode_merged_range_stream` (multi-tensor constriction) → 5) `encode_ranked_no_op_sidecar` (most algorithmic — package-merge + co-lex combination rank). |
+| Who implements? | Subagent dispatch under operator directive 2026-05-11 ("compiler and insanely low level" + "keep building outside the \$5 window" + "recursively adversarially review and greenup"); 8 done. |
+| Effort delivered | 8 impls + 1 regen helper + 13 binary fixtures + parity-test wire-in — ~1700 LOC of Rust + ~200 LOC of Python + 70 tests passing (49 unit + 21 integration). |
+| Cost | \$0 GPU. |
+| Risk audit | Brotli pure-Rust ↔ Python C library byte-parity was the largest unknown going in; verified GREEN on the committed 3-stream fixture. constriction (same upstream as Python package) and liblzma (same C library) were lower-risk and also GREEN. The bounded-length package-merge in PR101 ranked sidecar was the largest algorithmic risk — also GREEN on first attempt (matched the Python's iteration count + truncation + Kraft fallback exactly). |
 
 See [`.omx/research/staged_rust_packet_compiler_native_port_readiness_*.md`](
 ../../../.omx/research/) for the operator-decision packet.
