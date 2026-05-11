@@ -192,6 +192,7 @@ import subprocess
 import sys
 import tarfile
 import time
+import zipfile
 from pathlib import Path
 
 SCRIPT_PATH = Path(__file__).resolve()
@@ -206,6 +207,7 @@ PIP_DEPS = (
 )
 UPSTREAM_REPO = "https://github.com/commaai/comma_video_compression_challenge.git"
 SOURCE_BUNDLE_NAME = {spec.source_bundle_name!r}
+SOURCE_TREE_NAME = SOURCE_BUNDLE_NAME.removesuffix(".tar.gz")
 WORKSPACE = Path("/kaggle/working/pact_pr106_yshift_workspace")
 
 
@@ -228,19 +230,32 @@ def _install_missing_deps() -> None:
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", *missing])
 
 
-def _find_source_bundle() -> Path:
+def _search_roots() -> list[Path]:
     input_root = Path(os.environ.get("CLOUD_INPUT_ROOT", "/kaggle/input"))
-    search_roots = [SCRIPT_PATH.parent, input_root]
-    for root in search_roots:
+    return [SCRIPT_PATH.parent, input_root]
+
+
+def _find_source_bundle() -> Path | None:
+    for root in _search_roots():
         if not root.exists():
             continue
         hits = sorted(root.rglob(SOURCE_BUNDLE_NAME))
         if hits:
             return hits[0]
-    raise FileNotFoundError(
-        f"required source bundle {{SOURCE_BUNDLE_NAME!r}} not found under "
-        f"{{[str(root) for root in search_roots]}}"
-    )
+    return None
+
+
+def _find_expanded_source_tree() -> Path | None:
+    for root in _search_roots():
+        if not root.exists():
+            continue
+        candidates = [p for p in root.rglob(SOURCE_TREE_NAME) if p.is_dir()]
+        candidates.extend(p for p in root.rglob("src") if (p / "tac").is_dir())
+        for candidate in sorted(candidates):
+            source_tree = candidate if (candidate / "src" / "tac").is_dir() else candidate.parent
+            if (source_tree / "src" / "tac").is_dir():
+                return source_tree
+    return None
 
 
 def _safe_extract_tarball(bundle: Path, destination: Path) -> None:
@@ -256,6 +271,30 @@ def _safe_extract_tarball(bundle: Path, destination: Path) -> None:
             except ValueError as exc:
                 raise RuntimeError(f"unsafe source-bundle member: {{member.name}}") from exc
         tar.extractall(destination)
+
+
+def _copy_expanded_source_tree(source_tree: Path, destination: Path) -> None:
+    if destination.exists():
+        shutil.rmtree(destination)
+    shutil.copytree(source_tree, destination)
+
+
+def _ensure_pr106_archive_zip(workspace: Path) -> None:
+    archive = workspace / {spec.pr106_archive_in_bundle!r}
+    if archive.is_file():
+        return
+    extracted = archive.with_suffix("")
+    payload = extracted / "0.bin"
+    if not payload.is_file():
+        raise FileNotFoundError(
+            f"required PR106 archive missing: {{archive}}; also missing extracted payload {{payload}}"
+        )
+    archive.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as z:
+        info = zipfile.ZipInfo("0.bin", date_time=(1980, 1, 1, 0, 0, 0))
+        info.compress_type = zipfile.ZIP_STORED
+        info.external_attr = 0o644 << 16
+        z.writestr(info, payload.read_bytes())
 
 
 def _ensure_git_lfs() -> None:
@@ -284,8 +323,18 @@ def _ensure_upstream(workspace: Path) -> Path:
 def main() -> int:
     os.environ.setdefault("PYTHONUNBUFFERED", "1")
     bundle = _find_source_bundle()
-    _safe_extract_tarball(bundle, WORKSPACE)
+    if bundle is not None:
+        _safe_extract_tarball(bundle, WORKSPACE)
+    else:
+        source_tree = _find_expanded_source_tree()
+        if source_tree is None:
+            raise FileNotFoundError(
+                f"required source bundle {{SOURCE_BUNDLE_NAME!r}} or expanded tree "
+                f"{{SOURCE_TREE_NAME!r}} not found under {{[str(root) for root in _search_roots()]}}"
+            )
+        _copy_expanded_source_tree(source_tree, WORKSPACE)
     workspace = WORKSPACE
+    _ensure_pr106_archive_zip(workspace)
     sys.path.insert(0, str(workspace / "src"))
     sys.path.insert(0, str(workspace))
     import tac.deploy.pr106_yshift  # noqa: F401

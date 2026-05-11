@@ -45,6 +45,7 @@ def test_render_launcher_uses_canonical_score_table_env() -> None:
     launcher = render_launcher(spec)
 
     assert DEFAULT_SOURCE_BUNDLE_NAME in launcher
+    assert "SOURCE_TREE_NAME = SOURCE_BUNDLE_NAME.removesuffix" in launcher
     assert "pact_pr106_yshift_workspace" in launcher
     assert "import tac.deploy.pr106_yshift" in launcher
     assert "'PR106_YSHIFT_MODE': 'score_table'" in launcher
@@ -54,6 +55,9 @@ def test_render_launcher_uses_canonical_score_table_env() -> None:
     assert "'PR106_YSHIFT_SCORE_TABLE_BATCH_PAIRS': '16'" in launcher
     assert '"bash", \'scripts/remote_lane_pr106_yshift_sidechannel.sh\'' in launcher
     assert "_safe_extract_tarball(bundle, WORKSPACE)" in launcher
+    assert "_copy_expanded_source_tree(source_tree, WORKSPACE)" in launcher
+    assert "_ensure_pr106_archive_zip(workspace)" in launcher
+    assert "zipfile.ZipFile(archive, \"w\", compression=zipfile.ZIP_STORED)" in launcher
     compile(launcher, "run_kernel.py", "exec")
 
 
