@@ -22,13 +22,13 @@
     {
       "classification": "generated_custody_source_untracked",
       "disposition": "ignore_rebuildable",
-      "note": "prefix: experiment result trees are raw rebuildable custody; track only promoted source, ledgers, or compact manifests outside this root. Runtime-source baseline refreshed after A5 channel-DP, Track4, Phase-2 raw custody, A1 bias/drift runtime packets, AV discriminator raw custody, T1 Modal guard harvest, T1 full-path smoke harvest, Kaggle proxy local materialization, HNeRV frontier section-profile refresh, PR103 hidden-gem release-surface portable-wrapper consolidation, Kaggle PR101 bias-refine proxy materialization, PR106 exhaustive Brotli release-surface custody, optimizer-guided PR101/A1 bias-refine 0127 runtime packet custody, and factorized PR107 HNeRV packet-surface closure; durable signal is summarized in .omx/research ledgers.",
+      "note": "prefix: experiment result trees are raw rebuildable custody; track only promoted source, ledgers, or compact manifests outside this root. Runtime-source baseline refreshed after A5 channel-DP, Track4, Phase-2 raw custody, A1 bias/drift runtime packets, AV discriminator raw custody, T1 Modal guard harvest, T1 full-path smoke harvest, Kaggle proxy local materialization, HNeRV frontier section-profile refresh, PR103 hidden-gem release-surface portable-wrapper consolidation, Kaggle PR101 bias-refine proxy materialization, PR106 exhaustive Brotli release-surface custody, optimizer-guided PR101/A1 bias-refine 0127 runtime packet custody, factorized PR107 HNeRV packet-surface closure, and Kaggle PR101 bias-refine harvest/runtime packet custody; durable signal is summarized in .omx/research ledgers.",
       "path": "experiments/results/",
       "path_kind": "prefix",
       "runtime_source_baseline": {
         "algorithm": "pact_runtime_source_set_v1",
-        "count": 11074,
-        "sha256": "a32f33fd4cb6be98cde1f4af09d17698b06b6244f9e85c684c9ac7d041c3c156"
+        "count": 11076,
+        "sha256": "0e6470aba0ff9ed0206b861abc831529f917c7c0a5c4c23a1f79ee2febf09bc5"
       }
     },
     {
