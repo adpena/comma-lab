@@ -10528,12 +10528,15 @@ def _files_with_all_source_index_substrings(
     actually match the bug class.
     """
 
+    from tac.source_index import ScannerQuery
+
     facts_rows = source_index.facts_for_files(dirs, pattern=pattern)
-    paths = source_index.files_containing_substrings(
-        dirs,
-        pattern=pattern,
-        substrings=required,
-        require_all=True,
+    paths = source_index.query_files(
+        ScannerQuery(
+            dirs=tuple(dirs),
+            pattern=pattern,
+            require_all=tuple(required),
+        )
     )
     return len(facts_rows), paths
 
@@ -10548,28 +10551,18 @@ def _files_with_any_then_all_source_index_substrings(
 ) -> tuple[int, tuple[Path, ...]]:
     """Return indexed candidate files matching ``all_of`` and any ``any_of``."""
 
+    from tac.source_index import ScannerQuery
+
     facts_rows = source_index.facts_for_files(dirs, pattern=pattern)
-    if any_of:
-        candidates = set(
-            source_index.files_containing_substrings(
-                dirs,
-                pattern=pattern,
-                substrings=any_of,
-                require_all=False,
-            )
+    paths = source_index.query_files(
+        ScannerQuery(
+            dirs=tuple(dirs),
+            pattern=pattern,
+            require_all=tuple(all_of),
+            require_any=tuple(any_of),
         )
-    else:
-        candidates = set(source_index.files(dirs, pattern=pattern))
-    if all_of:
-        candidates.intersection_update(
-            source_index.files_containing_substrings(
-                dirs,
-                pattern=pattern,
-                substrings=all_of,
-                require_all=True,
-            )
-        )
-    return len(facts_rows), tuple(sorted(candidates, key=lambda item: item.as_posix()))
+    )
+    return len(facts_rows), paths
 
 
 def check_no_pack_sparse_delta_approved_outside_promotion_tool(

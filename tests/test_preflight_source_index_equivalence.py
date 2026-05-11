@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from tac import preflight
-from tac.source_index import SourceIndex, source_index_context
+from tac.source_index import ScannerQuery, SourceIndex, source_index_context
 
 
 def _write(path: Path, text: str) -> None:
@@ -41,6 +41,62 @@ def test_source_index_facts_group_fill_is_single_flight(tmp_path: Path, monkeypa
     stats = source_index.stats()
     assert stats["facts_group_misses"] == 1
     assert stats["file_list_misses"] == 1
+
+
+def test_scanner_query_filters_and_caches_single_candidate_pass(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "src" / "tac" / "a.py",
+        "def f():\n    return 'score_claim archive.zip'\n",
+    )
+    _write(
+        tmp_path / "src" / "tac" / "b.py",
+        "def f():\n    return 'score_claim archive.zip DISPATCH_ATTEMPTED'\n",
+    )
+    _write(tmp_path / "src" / "tac" / "c.py", "VALUE = 'archive.zip'\n")
+
+    source_index = SourceIndex(tmp_path)
+    query = ScannerQuery(
+        dirs=("src/tac",),
+        pattern="*.py",
+        require_all=("score_claim", "archive.zip"),
+        require_any_casefold=("SCORE_CLAIM",),
+        exclude_any=("DISPATCH_ATTEMPTED",),
+    )
+
+    rows = source_index.query_text_facts(query)
+    rows_again = source_index.query_text_facts(query)
+
+    assert [row.rel_path for row in rows] == ["src/tac/a.py"]
+    assert rows_again is rows
+    stats = source_index.stats()
+    assert stats["scanner_query_misses"] == 1
+    assert stats["scanner_query_hits"] == 1
+    assert stats["facts_group_misses"] == 1
+
+
+def test_scanner_query_fingerprint_is_semantic_not_order_sensitive(tmp_path: Path) -> None:
+    source_index = SourceIndex(tmp_path)
+    left = ScannerQuery(
+        dirs=("src/tac", "experiments"),
+        pattern="*.py",
+        require_all=("archive.zip", "score_claim"),
+        require_any=("torch", "numpy"),
+    )
+    right = ScannerQuery(
+        dirs=("experiments", "src/tac"),
+        pattern="*.py",
+        require_all=("score_claim", "archive.zip"),
+        require_any=("numpy", "torch"),
+    )
+    changed = ScannerQuery(
+        dirs=("experiments", "src/tac"),
+        pattern="*.py",
+        require_all=("score_claim",),
+        require_any=("numpy", "torch"),
+    )
+
+    assert source_index.scanner_query_fingerprint(left) == source_index.scanner_query_fingerprint(right)
+    assert source_index.scanner_query_fingerprint(left) != source_index.scanner_query_fingerprint(changed)
 
 
 def test_comment_only_contract_source_index_matches_no_index(tmp_path: Path) -> None:

@@ -12,6 +12,7 @@ import ast
 import contextlib
 import contextvars
 import fnmatch
+import hashlib
 import json
 import os
 import subprocess
@@ -271,6 +272,25 @@ class SourceTextFacts:
         return needle.casefold() in self.casefold_substrings
 
 
+@dataclass(frozen=True)
+class ScannerQuery:
+    """Declarative candidate-file query for broad scanner checks.
+
+    Checks should describe the candidate set they need and let ``SourceIndex``
+    perform one inventory/fact pass. This keeps policy checks readable while
+    making it possible to fuse repeated scans and, later, replace lexical fact
+    extraction with a native backend without changing check logic.
+    """
+
+    dirs: tuple[str | Path, ...]
+    pattern: str
+    require_all: tuple[str, ...] = ()
+    require_any: tuple[str, ...] = ()
+    require_all_casefold: tuple[str, ...] = ()
+    require_any_casefold: tuple[str, ...] = ()
+    exclude_any: tuple[str, ...] = ()
+
+
 @dataclass
 class SourceIndex:
     """Process-local source index for one repo root.
@@ -299,6 +319,7 @@ class SourceIndex:
         init=False,
     )
     _substring_index_groups: set[tuple[tuple[str, ...], str]] = field(default_factory=set, init=False)
+    _scanner_query_cache: dict[str, tuple[SourceTextFacts, ...]] = field(default_factory=dict, init=False)
     _persistent_text_facts: dict[str, dict[str, object]] = field(default_factory=dict, init=False)
     _persistent_text_facts_dirty: bool = field(default=False, init=False)
     _lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
@@ -320,6 +341,8 @@ class SourceIndex:
             "text_facts_persistent_hits": 0,
             "substring_index_hits": 0,
             "substring_index_misses": 0,
+            "scanner_query_hits": 0,
+            "scanner_query_misses": 0,
         },
         init=False,
     )
@@ -654,6 +677,105 @@ class SourceIndex:
                 matched.update(rows)
         return tuple(sorted(matched, key=lambda item: item.as_posix()))
 
+    def query_text_facts(self, query: ScannerQuery) -> tuple[SourceTextFacts, ...]:
+        """Return facts for files matching a declarative scanner query."""
+
+        cache_key = self.scanner_query_fingerprint(query)
+        with self._lock:
+            cached = self._scanner_query_cache.get(cache_key)
+            if cached is not None:
+                self._stats["scanner_query_hits"] += 1
+                return cached
+
+        with self._key_lock("scanner_query", cache_key):
+            with self._lock:
+                cached = self._scanner_query_cache.get(cache_key)
+                if cached is not None:
+                    self._stats["scanner_query_hits"] += 1
+                    return cached
+                self._stats["scanner_query_misses"] += 1
+
+            facts_rows = self.facts_for_files(query.dirs, pattern=query.pattern)
+            matched = {facts.path for facts in facts_rows}
+            if query.require_all:
+                matched.intersection_update(
+                    self.files_containing_substrings(
+                        query.dirs,
+                        pattern=query.pattern,
+                        substrings=query.require_all,
+                        require_all=True,
+                    )
+                )
+            if query.require_any:
+                matched.intersection_update(
+                    self.files_containing_substrings(
+                        query.dirs,
+                        pattern=query.pattern,
+                        substrings=query.require_any,
+                        require_all=False,
+                    )
+                )
+            if query.require_all_casefold:
+                matched.intersection_update(
+                    self.files_containing_casefold_substrings(
+                        query.dirs,
+                        pattern=query.pattern,
+                        substrings=query.require_all_casefold,
+                        require_all=True,
+                    )
+                )
+            if query.require_any_casefold:
+                matched.intersection_update(
+                    self.files_containing_casefold_substrings(
+                        query.dirs,
+                        pattern=query.pattern,
+                        substrings=query.require_any_casefold,
+                        require_all=False,
+                    )
+                )
+            if query.exclude_any:
+                matched.difference_update(
+                    self.files_containing_substrings(
+                        query.dirs,
+                        pattern=query.pattern,
+                        substrings=query.exclude_any,
+                        require_all=False,
+                    )
+                )
+            out = tuple(facts for facts in facts_rows if facts.path in matched)
+            with self._lock:
+                self._scanner_query_cache[cache_key] = out
+            return out
+
+    def query_files(self, query: ScannerQuery) -> tuple[Path, ...]:
+        """Return paths for files matching a declarative scanner query."""
+
+        return tuple(facts.path for facts in self.query_text_facts(query))
+
+    def scanner_query_fingerprint(self, query: ScannerQuery) -> str:
+        """Return a stable fingerprint for query semantics within this repo."""
+
+        def _stable_unique(values: Sequence[str]) -> list[str]:
+            return sorted(dict.fromkeys(str(value) for value in values))
+
+        payload = {
+            "schema": "pact.source_index.scanner_query.v1",
+            "root": self.root.as_posix(),
+            "dirs": sorted(dict.fromkeys(self._dir_key(item) for item in query.dirs)),
+            "pattern": query.pattern,
+            "require_all": _stable_unique(query.require_all),
+            "require_any": _stable_unique(query.require_any),
+            "require_all_casefold": _stable_unique(
+                item.casefold() for item in query.require_all_casefold
+            ),
+            "require_any_casefold": _stable_unique(
+                item.casefold() for item in query.require_any_casefold
+            ),
+            "exclude_any": _stable_unique(query.exclude_any),
+        }
+        encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+        return hashlib.sha256(encoded).hexdigest()
+
     def files_containing_casefold_substrings(
         self,
         dirs: Sequence[str | Path],
@@ -716,6 +838,7 @@ class SourceIndex:
             "ast_cache_entries": len(self._ast_cache),
             "text_facts_cache_entries": len(self._text_facts_cache),
             "substring_index_entries": len(self._substring_index),
+            "scanner_query_cache_entries": len(self._scanner_query_cache),
             "persistent_text_facts_entries": len(self._persistent_text_facts),
         }
 
@@ -1088,6 +1211,7 @@ def source_index_context(repo_root: str | Path) -> Iterator[SourceIndex]:
 
 
 __all__ = [
+    "ScannerQuery",
     "SourceIndex",
     "SourceTextFacts",
     "get_current_source_index",
