@@ -26,6 +26,7 @@ from tac.pr103_arithmetic_transform_plan import (  # noqa: E402
     render_coordinate_markdown,
     render_global_combo_markdown,
     render_retarget_markdown,
+    resolve_pr103_combo_worker_count,
 )
 from tac.repo_io import json_text, write_json  # noqa: E402
 from tac.tool_manifest import attach_tool_run_manifest  # noqa: E402
@@ -90,6 +91,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Allow a global-combo probe above --max-global-combo-states.",
     )
+    parser.add_argument(
+        "--global-combo-workers",
+        type=int,
+        default=0,
+        help=(
+            "Worker count for exact global-combo candidate scoring. Zero uses "
+            "PACT_PR103_COMBO_WORKERS or the local CPU count, capped by the "
+            "library worker budget."
+        ),
+    )
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--md-out", type=Path)
     parser.add_argument(
@@ -110,21 +121,24 @@ def main(argv: list[str] | None = None) -> int:
     ]
     try:
         if args.probe_mode == "global-combo-search":
+            combo_workers = resolve_pr103_combo_worker_count(args.global_combo_workers)
             estimated_states = _estimate_global_combo_state_count(
                 stream_count=len(args.beam_probe_report),
                 top_per_stream=args.top_per_stream,
                 beam_width=args.beam_width,
             )
             if (
-                estimated_states > args.max_global_combo_states
+                estimated_states > args.max_global_combo_states * combo_workers
                 and not args.allow_slow_global_combo
             ):
                 print(
                     "FATAL: PR103 global-combo probe would evaluate about "
                     f"{estimated_states} serial states; budget is "
-                    f"{args.max_global_combo_states}. Lower --top-per-stream/"
-                    "--beam-width or pass --allow-slow-global-combo after "
-                    "parallel/vectorized execution is justified.",
+                    f"{args.max_global_combo_states} states per worker "
+                    f"across {combo_workers} worker(s). Lower "
+                    "--top-per-stream/--beam-width, increase "
+                    "--global-combo-workers, or pass --allow-slow-global-combo "
+                    "after accepting the wall-clock cost.",
                     file=sys.stderr,
                 )
                 return 2
@@ -134,6 +148,7 @@ def main(argv: list[str] | None = None) -> int:
                 beam_probe_reports=args.beam_probe_report,
                 top_per_stream=args.top_per_stream,
                 beam_width=args.beam_width,
+                combo_workers=combo_workers,
                 repo_root=REPO_ROOT,
             )
             renderer = render_global_combo_markdown

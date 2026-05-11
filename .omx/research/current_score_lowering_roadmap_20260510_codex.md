@@ -810,3 +810,35 @@ Immediate score-lowering order after this harvest:
    blocked. Do not downgrade the certification gate.
 5. Keep preflight under the 30s crash budget and continue only speedups that
    preserve the strict guard surface.
+
+## 2026-05-11T01:16Z PR103 widened-combo saturation addendum
+
+The PR103 arithmetic global-combo search is now parallelized over process
+workers and was rerun at the wider local frontier requested by the operator:
+`top_per_stream=25`, `beam_width=512`, `combo_workers=8`, `stream_count=6`.
+The exact local objective evaluated `41979` states in `77.58s` wall /
+`568.12s` user CPU.
+
+Result: the widened search **does not beat** the current clean-runtime `-16B`
+packet. Best widened candidate is `-13B`:
+
+- artifact:
+  `.omx/research/pr103_arithmetic_transform_plans_20260510_codex/global_combo_top25_beam512_plus_latent_hi_probe.json`
+- note:
+  `.omx/research/pr103_global_combo_top25_beam512_saturation_20260511_codex.md`
+- best selected options:
+  `blocks.0.weight:candidate13`, `blocks.1.weight:candidate8`,
+  `blocks.2.weight:source`, `blocks.3.weight:candidate1`,
+  `stem.weight:source`, `latent_hi_bytes:candidate2`
+- exact objective components: `merged_ac_delta=0`,
+  `ac_histograms_brotli_delta=-12`,
+  `latent_hi_histogram_brotli_delta=-1`
+
+Classification: planning-only local negative evidence for further q8/latent-hi
+histogram-grid widening. Do not materialize or dispatch the `-13B` candidate.
+The active PR103 byte target remains the clean-runtime `-16B` packet
+(`178207` bytes, archive SHA-256
+`8460014d70855ce9226285f80513d6d743ed23723870a6a38b009cfca40f423e`). Next PR103
+work should be source-shell-contract parity/compliance for that packet or a
+different grammar-aware transform axis, not another unconstrained histogram
+frontier expansion.

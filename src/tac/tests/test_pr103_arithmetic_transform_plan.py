@@ -25,6 +25,7 @@ from tac.pr103_arithmetic_transform_plan import (
     build_pr103_arithmetic_retarget_probe,
     build_pr103_arithmetic_transform_plan,
     materialize_pr103_arithmetic_histogram_candidate,
+    optimize_pr103_histogram_frontier_combinations,
 )
 from tac.repo_io import sha256_bytes, write_json
 
@@ -313,6 +314,155 @@ def test_pr103_arithmetic_histogram_global_combo_probe_rescores_full_sideband(
         best["source_probe_delta_sum"] + best["non_additivity_delta"]
     )
     assert "candidate_runtime_adapter_missing" in report["readiness_blockers"]
+
+
+def test_pr103_arithmetic_histogram_global_combo_parallel_matches_serial(
+    tmp_path: Path,
+) -> None:
+    fixture = _probe_fixture(tmp_path)
+    beam0 = build_pr103_arithmetic_histogram_beam_probe(
+        schema_manifest=fixture["manifest"],
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+        target_label="fixture.weight0",
+        top_symbols=2,
+        deltas=(-1, 1),
+        rounds=2,
+        beam_width=3,
+    )
+    beam1 = build_pr103_arithmetic_histogram_beam_probe(
+        schema_manifest=fixture["manifest"],
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+        target_label="fixture.weight1",
+        top_symbols=2,
+        deltas=(-1, 1),
+        rounds=2,
+        beam_width=3,
+    )
+
+    serial = build_pr103_arithmetic_histogram_global_combo_probe(
+        schema_manifest=fixture["manifest"],
+        beam_probe_reports=(beam0, beam1),
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+        top_per_stream=3,
+        beam_width=8,
+        combo_workers=1,
+    )
+    parallel = build_pr103_arithmetic_histogram_global_combo_probe(
+        schema_manifest=fixture["manifest"],
+        beam_probe_reports=(beam0, beam1),
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+        top_per_stream=3,
+        beam_width=8,
+        combo_workers=2,
+    )
+
+    assert parallel["search_config"]["combo_workers"] == 2
+    assert parallel["best_candidate"] == serial["best_candidate"]
+    assert parallel["top_candidates"] == serial["top_candidates"]
+    assert parallel["frontier_sizes"] == serial["frontier_sizes"]
+
+
+def test_pr103_arithmetic_histogram_global_combo_process_pool_matches_serial() -> None:
+    histograms = np.ones((1, 256), dtype=np.uint8)
+    histograms[0, :3] = np.asarray([5, 7, 9], dtype=np.uint8)
+    hi_histogram = np.asarray([3, 4, 5], dtype="<u2")
+    source_symbol_streams = [
+        np.asarray([0, 1, 2, 1, 0, 2, 2, 1], dtype=np.int32),
+        np.asarray([0, 1, 2, 1, 0], dtype=np.int32),
+    ]
+    source_model_weights = [histograms[0].copy(), hi_histogram.copy()]
+    source_merged = encode_pr103_merged_ac_stream(
+        source_symbol_streams,
+        source_model_weights,
+    )
+    source_histogram_blob = brotli.compress(histograms.tobytes(), quality=11)
+    source_hi_histogram_blob = brotli.compress(hi_histogram.tobytes(), quality=11)
+    options = [
+        {
+            "option_id": "fixture.weight0:source",
+            "moves": [],
+            "source_probe_delta": 0,
+        }
+    ]
+    for index in range(512):
+        options.append(
+            {
+                "option_id": f"fixture.weight0:candidate{index}",
+                "moves": [
+                    {
+                        "symbol": 0,
+                        "symbol_count": 8,
+                        "delta": 1,
+                        "old_weight": 5,
+                        "new_weight": 6,
+                    }
+                ],
+                "source_probe_delta": index,
+            }
+        )
+    option_groups = [
+        {
+            "label": "fixture.weight0",
+            "histogram_kind": "ac_histograms_brotli",
+            "row_index": 0,
+            "options": options,
+        }
+    ]
+
+    serial = optimize_pr103_histogram_frontier_combinations(
+        histograms=histograms,
+        hi_histogram=hi_histogram,
+        source_symbol_streams=source_symbol_streams,
+        source_model_weights=source_model_weights,
+        source_merged=source_merged,
+        source_histogram_blob=source_histogram_blob,
+        source_hi_histogram_blob=source_hi_histogram_blob,
+        option_groups=option_groups,
+        beam_width=16,
+        combo_workers=1,
+    )
+    process_pool = optimize_pr103_histogram_frontier_combinations(
+        histograms=histograms,
+        hi_histogram=hi_histogram,
+        source_symbol_streams=source_symbol_streams,
+        source_model_weights=source_model_weights,
+        source_merged=source_merged,
+        source_histogram_blob=source_histogram_blob,
+        source_hi_histogram_blob=source_hi_histogram_blob,
+        option_groups=option_groups,
+        beam_width=16,
+        combo_workers=2,
+    )
+
+    assert process_pool["combo_workers"] == 2
+    assert process_pool["evaluated_state_count"] == serial["evaluated_state_count"]
+    assert process_pool["frontier_sizes"] == serial["frontier_sizes"]
+    public_keys = (
+        "estimated_member_delta_if_runtime_adapter_supported",
+        "estimated_rate_score_delta_if_components_unchanged",
+        "merged_ac_delta",
+        "histogram_brotli_delta",
+        "latent_hi_histogram_brotli_delta",
+        "histogram_state_sha256",
+        "selected_options",
+        "source_probe_delta_sum",
+        "non_additivity_delta",
+    )
+    assert [
+        {key: state[key] for key in public_keys} for state in process_pool["states"]
+    ] == [{key: state[key] for key in public_keys} for state in serial["states"]]
 
 
 def test_pr103_arithmetic_histogram_global_combo_beats_greedy_per_stream_best(

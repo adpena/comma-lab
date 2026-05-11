@@ -306,6 +306,8 @@ def test_probe_pr103_arithmetic_global_combo_cli_refuses_slow_serial_search(
         "25",
         "--beam-width",
         "512",
+        "--global-combo-workers",
+        "1",
         "--json-out",
         str(json_out),
     ]
@@ -321,7 +323,7 @@ def test_probe_pr103_arithmetic_global_combo_cli_refuses_slow_serial_search(
     )
 
     assert proc.returncode == 2
-    assert "serial states" in proc.stderr
+    assert "states per worker" in proc.stderr
     assert not json_out.exists()
 
 

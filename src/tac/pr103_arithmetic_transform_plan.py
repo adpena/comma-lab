@@ -12,7 +12,9 @@ It intentionally emits no candidate archive and never authorizes dispatch.
 from __future__ import annotations
 
 import dataclasses
+import os
 from collections.abc import Mapping, Sequence
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -49,6 +51,7 @@ BEAM_SCHEMA = "pr103_arithmetic_histogram_beam_probe_v1"
 CANDIDATE_SCHEMA = "pr103_arithmetic_histogram_candidate_v1"
 GLOBAL_COMBO_SCHEMA = "pr103_arithmetic_histogram_global_combo_probe_v1"
 DEFAULT_STRATEGY = "retarget_categorical_model_to_decoded_symbols"
+_PR103_PROCESS_COMBO_CONTEXT: dict[str, Any] = {}
 
 
 class Pr103ArithmeticTransformPlanError(ValueError):
@@ -1032,6 +1035,7 @@ def build_pr103_arithmetic_histogram_global_combo_probe(
     source_archive: str | Path | None = None,
     top_per_stream: int = 20,
     beam_width: int = 128,
+    combo_workers: int | None = None,
     repo_root: str | Path | None = None,
     layout: Pr103LcAcLayout = PUBLIC_PR103_LAYOUT,
     stream_specs: Sequence[tuple[str, int, int | None]] = AC_STREAM_SPECS,
@@ -1105,6 +1109,7 @@ def build_pr103_arithmetic_histogram_global_combo_probe(
         source_hi_histogram_blob=source_hi_histogram_blob,
         option_groups=option_groups,
         beam_width=beam_width,
+        combo_workers=combo_workers,
     )
     states = optimization["states"]
     evaluated_state_count = int(optimization["evaluated_state_count"])
@@ -1153,6 +1158,7 @@ def build_pr103_arithmetic_histogram_global_combo_probe(
             "top_per_stream": int(top_per_stream),
             "beam_width": int(beam_width),
             "stream_count": len(option_groups),
+            "combo_workers": int(optimization["combo_workers"]),
             "evaluated_state_count": evaluated_state_count,
             "objective": (
                 "minimize_exact_merged_ac_delta_plus_exact_ac_histograms_brotli_delta"
@@ -1439,6 +1445,7 @@ def render_global_combo_markdown(report: Mapping[str, Any]) -> str:
         f"- stream_count: `{search.get('stream_count')}`",
         f"- top_per_stream: `{search.get('top_per_stream')}`",
         f"- beam_width: `{search.get('beam_width')}`",
+        f"- combo_workers: `{search.get('combo_workers')}`",
         f"- evaluated_state_count: `{search.get('evaluated_state_count')}`",
         f"- objective: `{search.get('objective')}`",
         f"- mathematical_guard: `{search.get('mathematical_guard')}`",
@@ -1448,6 +1455,7 @@ def render_global_combo_markdown(report: Mapping[str, Any]) -> str:
         "",
         f"- merged_ac_delta: `{best.get('merged_ac_delta')}`",
         f"- histogram_brotli_delta: `{best.get('histogram_brotli_delta')}`",
+        f"- latent_hi_histogram_brotli_delta: `{best.get('latent_hi_histogram_brotli_delta')}`",
         f"- estimated_member_delta_if_runtime_adapter_supported: `{best.get('estimated_member_delta_if_runtime_adapter_supported')}`",
         f"- source_probe_delta_sum: `{best.get('source_probe_delta_sum')}`",
         f"- non_additivity_delta: `{best.get('non_additivity_delta')}`",
@@ -2121,6 +2129,7 @@ def optimize_pr103_histogram_frontier_combinations(
     source_hi_histogram_blob: bytes,
     option_groups: Sequence[Mapping[str, Any]],
     beam_width: int,
+    combo_workers: int | None = None,
 ) -> dict[str, Any]:
     """Optimize one histogram option per stream with the exact local objective.
 
@@ -2139,6 +2148,7 @@ def optimize_pr103_histogram_frontier_combinations(
 
     if beam_width <= 0:
         raise Pr103ArithmeticTransformPlanError("beam_width must be positive")
+    worker_count = resolve_pr103_combo_worker_count(combo_workers)
     states = [
         {
             "histograms": np.asarray(histograms, dtype=np.uint8).copy(),
@@ -2151,7 +2161,6 @@ def optimize_pr103_histogram_frontier_combinations(
     evaluated_state_count = 0
     frontier_sizes: list[dict[str, Any]] = []
     for group in option_groups:
-        expanded: list[dict[str, Any]] = []
         label = str(group.get("label") or "")
         histogram_kind = str(group.get("histogram_kind") or "")
         options = group.get("options")
@@ -2159,69 +2168,66 @@ def optimize_pr103_histogram_frontier_combinations(
             raise Pr103ArithmeticTransformPlanError(
                 f"combo option group for {label!r} has no option sequence"
             )
-        for state in states:
-            for option_value in options:
-                option = _mapping(option_value)
-                next_histograms = np.asarray(state["histograms"], dtype=np.uint8).copy()
-                next_hi_histogram = np.asarray(state["hi_histogram"]).copy()
-                moves = option.get("moves")
-                if moves:
-                    move_rows = _moves_sequence(moves, label=label)
-                    if histogram_kind == "ac_histograms_brotli":
-                        _apply_histogram_moves(
-                            next_histograms,
-                            target_index=int(group["row_index"]),
-                            moves=move_rows,
-                            label=label,
+        tasks = [
+            _combo_task_from_state_option(
+                state=state,
+                option_value=option_value,
+                group=group,
+                label=label,
+                histogram_kind=histogram_kind,
+            )
+            for state in states
+            for option_value in options
+        ]
+        if worker_count > 1 and len(tasks) >= worker_count * 2:
+            max_workers = min(worker_count, len(tasks))
+            if len(tasks) >= 512:
+                chunksize = max(1, len(tasks) // (max_workers * 8))
+                with ProcessPoolExecutor(
+                    max_workers=max_workers,
+                    initializer=_init_pr103_combo_process_worker,
+                    initargs=(
+                        source_symbol_streams,
+                        source_model_weights,
+                        source_merged,
+                        source_histogram_blob,
+                        source_hi_histogram_blob,
+                    ),
+                ) as pool:
+                    expanded = list(
+                        pool.map(
+                            _score_combo_task_from_process_context,
+                            tasks,
+                            chunksize=chunksize,
                         )
-                    elif histogram_kind == "latent_hi_histogram_brotli":
-                        _apply_histogram_moves_to_weights(
-                            next_hi_histogram,
-                            moves=move_rows,
-                            label=label,
+                    )
+            else:
+                with ThreadPoolExecutor(max_workers=max_workers) as pool:
+                    expanded = list(
+                        pool.map(
+                            lambda task: _score_combo_task(
+                                task,
+                                source_symbol_streams=source_symbol_streams,
+                                source_model_weights=source_model_weights,
+                                source_merged=source_merged,
+                                source_histogram_blob=source_histogram_blob,
+                                source_hi_histogram_blob=source_hi_histogram_blob,
+                            ),
+                            tasks,
                         )
-                    else:
-                        raise Pr103ArithmeticTransformPlanError(
-                            f"unsupported histogram kind for {label}: {histogram_kind!r}"
-                        )
-                row = _score_combined_histograms(
-                    histograms=next_histograms,
-                    hi_histogram=next_hi_histogram,
+                    )
+        else:
+            expanded = [
+                _score_combo_task(
+                    task,
                     source_symbol_streams=source_symbol_streams,
                     source_model_weights=source_model_weights,
                     source_merged=source_merged,
                     source_histogram_blob=source_histogram_blob,
                     source_hi_histogram_blob=source_hi_histogram_blob,
                 )
-                selected_options = [
-                    *list(state.get("selected_options") or []),
-                    str(option.get("option_id") or ""),
-                ]
-                selected_deltas = [
-                    *list(state.get("selected_option_source_deltas") or []),
-                    option.get("source_probe_delta"),
-                ]
-                source_delta_sum = sum(
-                    int(delta) for delta in selected_deltas if delta is not None
-                )
-                moves_by_label = dict(_mapping(state.get("moves_by_label")))
-                if moves:
-                    moves_by_label[label] = _moves_sequence(moves, label=label)
-                row.update(
-                    {
-                        "histograms": next_histograms,
-                        "hi_histogram": next_hi_histogram,
-                        "selected_options": selected_options,
-                        "selected_option_source_deltas": selected_deltas,
-                        "source_probe_delta_sum": source_delta_sum,
-                        "non_additivity_delta": int(
-                            row["estimated_member_delta_if_runtime_adapter_supported"]
-                        )
-                        - source_delta_sum,
-                        "moves_by_label": moves_by_label,
-                    }
-                )
-                expanded.append(row)
+                for task in tasks
+            ]
         evaluated_state_count += len(expanded)
         expanded = _dedupe_combo_states(expanded)
         expanded.sort(key=_combo_sort_key)
@@ -2245,7 +2251,149 @@ def optimize_pr103_histogram_frontier_combinations(
         "states": states,
         "evaluated_state_count": evaluated_state_count,
         "frontier_sizes": frontier_sizes,
+        "combo_workers": worker_count,
     }
+
+
+def resolve_pr103_combo_worker_count(requested: int | None = None) -> int:
+    """Resolve the PR103 combo-search worker budget.
+
+    The CLI and library share this resolver so fail-fast state budgets and the
+    actual optimizer use the same worker cap.
+    """
+
+    if requested is not None and requested > 0:
+        value = requested
+    else:
+        raw = os.environ.get("PACT_PR103_COMBO_WORKERS", "").strip()
+        if raw:
+            try:
+                value = int(raw)
+            except ValueError:
+                value = 0
+        else:
+            value = 0
+        if value <= 0:
+            value = os.cpu_count() or 1
+    return max(1, min(value, 32))
+
+
+def _init_pr103_combo_process_worker(
+    source_symbol_streams: Sequence[np.ndarray],
+    source_model_weights: Sequence[np.ndarray],
+    source_merged: bytes,
+    source_histogram_blob: bytes,
+    source_hi_histogram_blob: bytes,
+) -> None:
+    global _PR103_PROCESS_COMBO_CONTEXT
+    _PR103_PROCESS_COMBO_CONTEXT = {
+        "source_symbol_streams": [np.asarray(item) for item in source_symbol_streams],
+        "source_model_weights": [np.asarray(item) for item in source_model_weights],
+        "source_merged": source_merged,
+        "source_histogram_blob": source_histogram_blob,
+        "source_hi_histogram_blob": source_hi_histogram_blob,
+    }
+
+
+def _score_combo_task_from_process_context(task: Mapping[str, Any]) -> dict[str, Any]:
+    if not _PR103_PROCESS_COMBO_CONTEXT:
+        raise Pr103ArithmeticTransformPlanError("PR103 combo process context is missing")
+    return _score_combo_task(
+        task,
+        source_symbol_streams=_PR103_PROCESS_COMBO_CONTEXT["source_symbol_streams"],
+        source_model_weights=_PR103_PROCESS_COMBO_CONTEXT["source_model_weights"],
+        source_merged=_PR103_PROCESS_COMBO_CONTEXT["source_merged"],
+        source_histogram_blob=_PR103_PROCESS_COMBO_CONTEXT["source_histogram_blob"],
+        source_hi_histogram_blob=_PR103_PROCESS_COMBO_CONTEXT["source_hi_histogram_blob"],
+    )
+
+
+def _combo_task_from_state_option(
+    *,
+    state: Mapping[str, Any],
+    option_value: Any,
+    group: Mapping[str, Any],
+    label: str,
+    histogram_kind: str,
+) -> dict[str, Any]:
+    option = _mapping(option_value)
+    next_histograms = np.asarray(state["histograms"], dtype=np.uint8).copy()
+    next_hi_histogram = np.asarray(state["hi_histogram"]).copy()
+    moves = option.get("moves")
+    if moves:
+        move_rows = _moves_sequence(moves, label=label)
+        if histogram_kind == "ac_histograms_brotli":
+            _apply_histogram_moves(
+                next_histograms,
+                target_index=int(group["row_index"]),
+                moves=move_rows,
+                label=label,
+            )
+        elif histogram_kind == "latent_hi_histogram_brotli":
+            _apply_histogram_moves_to_weights(
+                next_hi_histogram,
+                moves=move_rows,
+                label=label,
+            )
+        else:
+            raise Pr103ArithmeticTransformPlanError(
+                f"unsupported histogram kind for {label}: {histogram_kind!r}"
+            )
+    selected_options = [
+        *list(state.get("selected_options") or []),
+        str(option.get("option_id") or ""),
+    ]
+    selected_deltas = [
+        *list(state.get("selected_option_source_deltas") or []),
+        option.get("source_probe_delta"),
+    ]
+    moves_by_label = dict(_mapping(state.get("moves_by_label")))
+    if moves:
+        moves_by_label[label] = _moves_sequence(moves, label=label)
+    return {
+        "histograms": next_histograms,
+        "hi_histogram": next_hi_histogram,
+        "moves_by_label": moves_by_label,
+        "selected_options": selected_options,
+        "selected_option_source_deltas": selected_deltas,
+    }
+
+
+def _score_combo_task(
+    task: Mapping[str, Any],
+    *,
+    source_symbol_streams: Sequence[np.ndarray],
+    source_model_weights: Sequence[np.ndarray],
+    source_merged: bytes,
+    source_histogram_blob: bytes,
+    source_hi_histogram_blob: bytes,
+) -> dict[str, Any]:
+    selected_deltas = list(task.get("selected_option_source_deltas") or [])
+    source_delta_sum = sum(int(delta) for delta in selected_deltas if delta is not None)
+    row = _score_combined_histograms(
+        histograms=np.asarray(task["histograms"], dtype=np.uint8),
+        hi_histogram=np.asarray(task["hi_histogram"]),
+        source_symbol_streams=source_symbol_streams,
+        source_model_weights=source_model_weights,
+        source_merged=source_merged,
+        source_histogram_blob=source_histogram_blob,
+        source_hi_histogram_blob=source_hi_histogram_blob,
+    )
+    row.update(
+        {
+            "histograms": np.asarray(task["histograms"], dtype=np.uint8),
+            "hi_histogram": np.asarray(task["hi_histogram"]),
+            "selected_options": list(task.get("selected_options") or []),
+            "selected_option_source_deltas": selected_deltas,
+            "source_probe_delta_sum": source_delta_sum,
+            "non_additivity_delta": int(
+                row["estimated_member_delta_if_runtime_adapter_supported"]
+            )
+            - source_delta_sum,
+            "moves_by_label": dict(_mapping(task.get("moves_by_label"))),
+        }
+    )
+    return row
 
 
 def _score_combined_histograms(
@@ -2437,6 +2585,7 @@ __all__ = [
     "build_pr103_arithmetic_transform_plan",
     "materialize_pr103_arithmetic_histogram_candidate",
     "optimize_pr103_histogram_frontier_combinations",
+    "resolve_pr103_combo_worker_count",
     "render_beam_markdown",
     "render_candidate_markdown",
     "render_coordinate_markdown",
