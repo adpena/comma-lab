@@ -45,6 +45,14 @@ from tac.packet_compiler.pr92_joint_stream import (
     unpack_rsa1_side,
     unpack_rsb1_side,
 )
+from tac.packet_compiler.pr93_lowpass_luma import (
+    LUMA_BT601_COEFFS,
+    LowpassLumaResidual,
+    decode_lowpass_luma_residual,
+    deserialize_lowpass_luma_residual,
+    encode_lowpass_luma_residual,
+    serialize_lowpass_luma_residual,
+)
 from tac.packet_compiler.pr93_pose_codec import (
     MAGIC_MODEL_COMPACT,
     MAGIC_POSE_DV,
@@ -54,6 +62,14 @@ from tac.packet_compiler.pr93_pose_codec import (
     encode_delta_varint_pose,
     pack_qzmb1_block,
     unpack_qzmb1_block,
+)
+from tac.packet_compiler.pr97_h3_grammar import (
+    LengthPrefixedSectionPayload,
+    TileBandStreamPayload,
+    decode_length_prefixed_sections,
+    decode_tile_band_streams,
+    encode_length_prefixed_sections,
+    encode_tile_band_streams,
 )
 from tac.packet_compiler.pr101_sidecar_grammar import (
     CenteredDeltaUint8Stream,
@@ -146,6 +162,20 @@ __all__ = [
     "encode_delta_varint_pose",
     "pack_qzmb1_block",
     "unpack_qzmb1_block",
+    # PR93 — lowpass-luma residual codec (3 or 6 fp32 coeffs)
+    "LUMA_BT601_COEFFS",
+    "LowpassLumaResidual",
+    "decode_lowpass_luma_residual",
+    "deserialize_lowpass_luma_residual",
+    "encode_lowpass_luma_residual",
+    "serialize_lowpass_luma_residual",
+    # PR97 — H3 wire-format grammar (length-prefixed sections + tile-band streams)
+    "LengthPrefixedSectionPayload",
+    "TileBandStreamPayload",
+    "decode_length_prefixed_sections",
+    "decode_tile_band_streams",
+    "encode_length_prefixed_sections",
+    "encode_tile_band_streams",
     # PR101 — sidecar grammar
     "CenteredDeltaUint8Stream",
     "RankedSidecarSchema",

@@ -1774,6 +1774,11 @@ PACKET_COMPILER_TRANSFORMS: tuple[str, ...] = (
     # PR93 — delta-varint pose + QZMB1
     "pr93_delta_varint_pose",
     "pr93_qzmb_qzpdv_grammar",
+    # PR93 — lowpass-luma residual codec (3 or 6 fp32 coeffs, low-freq RGB-luma correction)
+    "pr93_lowpass_luma_residual",
+    # PR97 — H3 wire-format grammar (length-prefixed sections + tile-band multi-stream)
+    "pr97_length_prefixed_sections",
+    "pr97_tile_band_streams",
     # Sparse PacketIR codec — closes O's L2 wire-format ceiling (2026-05-11)
     "sparse_rle_of_zeros",
     "sparse_arithmetic_coefficients",

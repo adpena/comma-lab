@@ -1,0 +1,17 @@
+{
+  "coefficients": [
+    1.0,
+    0.5,
+    -0.25,
+    0.125,
+    -0.0625,
+    0.03125
+  ],
+  "height": 384,
+  "n_coeffs": 6,
+  "payload_len": 29,
+  "schema": "pr93_lowpass_luma.v1",
+  "seed": 20260511,
+  "sha256": "72705f3c53169141aa5db1888a4ff79333a1262b224a6a278728d7af9c66ceaa",
+  "width": 512
+}

@@ -3,14 +3,11 @@
 //! This file is the **canonical parity gate** between the Python oracle in
 //! `src/tac/packet_compiler/` and the Rust scaffold in `tac-packet-compiler`.
 //!
-//! # Today (SCAFFOLD)
+//! # Today (MIXED IMPLEMENTATION)
 //!
-//! Every stub function returns `PacketCompilerError::NotImplemented`. The
-//! parity tests are written to **expect that error explicitly** so the
-//! scaffold passes `cargo test -p tac-packet-compiler` without lying about
-//! parity. The moment any stub is implemented, the corresponding test must
-//! be flipped to assert byte-for-byte parity (the test is structured so the
-//! `match` arm is the only thing that changes).
+//! Scaffold-only functions return `PacketCompilerError::NotImplemented`.
+//! Implemented functions assert byte-for-byte SHA parity against the committed
+//! golden-vector manifest and its sibling input fixtures.
 //!
 //! # After implementation
 //!
@@ -31,10 +28,10 @@
 //!
 //! # Why the inputs are not in the manifest
 //!
-//! The committed manifests are intentionally tiny (a few hundred bytes each).
-//! They pin metadata + SHA-256 only; the inputs are reconstructed
-//! deterministically from a documented seed/recipe. This avoids inflating the
-//! repo with binary fixtures while preserving byte-level reproducibility.
+//! The committed manifests are intentionally tiny and pin metadata + SHA-256.
+//! Implemented native ports may also commit small sibling binary fixtures for
+//! exact byte-for-byte input reproduction. This avoids reimplementing numpy's
+//! random generator in Rust while preserving deterministic reproducibility.
 //! See `src/tac/packet_compiler/README.md` "Golden vectors" section for the
 //! recipe contract.
 //!
@@ -63,7 +60,9 @@
 use std::path::PathBuf;
 
 use tac_packet_compiler::{
-    conformance::{golden_vectors_dir, load_golden_vector, GoldenVectorManifest},
+    conformance::{
+        assert_sha256_parity, golden_vectors_dir, load_golden_vector, GoldenVectorManifest,
+    },
     pr101_sidecar_grammar::{
         encode_centered_delta_uint8, encode_ranked_no_op_sidecar, split_brotli_self_delimiting,
         RankedSidecarSchema,
@@ -78,6 +77,23 @@ use tac_packet_compiler::{
     },
     PacketCompilerError,
 };
+
+/// Load a sibling binary fixture from the golden_vectors directory.
+///
+/// Returns `None` (with a skip message) if the file is missing, mirroring
+/// `try_load`'s convention.
+fn try_load_bin(name: &str) -> Option<Vec<u8>> {
+    let path = golden_vectors_dir().join(name);
+    if !path.exists() {
+        eprintln!(
+            "input fixture {} not present at {}; skipping (regenerate via the Python recipe)",
+            name,
+            path.display()
+        );
+        return None;
+    }
+    Some(std::fs::read(&path).expect("input fixture must read"))
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -144,23 +160,68 @@ fn pr101_ranked_no_op_sidecar_parity() {
 
 #[test]
 fn pr101_centered_delta_uint8_parity() {
-    let _manifest = try_load("centered_delta_uint8_v1");
+    // Manifest pins the SHA-256 of the LZMA byte stream produced by the
+    // Python oracle on the same `(40, 6) f32` input + per-column fp16
+    // mins/scales. The input/mins/scales byte fixtures live alongside the
+    // manifest so the Rust port reads bit-exact source bytes.
+    let manifest = match try_load("centered_delta_uint8_v1") {
+        Some(m) => m,
+        None => return,
+    };
+    let input_le = match try_load_bin("centered_delta_uint8_v1_input.bin") {
+        Some(b) => b,
+        None => return,
+    };
+    let mins = match try_load_bin("centered_delta_uint8_v1_mins.bin") {
+        Some(b) => b,
+        None => return,
+    };
+    let scales = match try_load_bin("centered_delta_uint8_v1_scales.bin") {
+        Some(b) => b,
+        None => return,
+    };
     let n_pairs = 40usize;
     let n_dims = 6usize;
-    let values = vec![0.0f32; n_pairs * n_dims];
-    let result = encode_centered_delta_uint8(&values, n_pairs, n_dims, None, None);
-    assert_scaffold_refuses(result, "encode_centered_delta_uint8");
+    assert_eq!(input_le.len(), n_pairs * n_dims * 4);
+    // Decode fp32 little-endian -> Vec<f32>.
+    let mut values = Vec::with_capacity(n_pairs * n_dims);
+    for chunk in input_le.chunks_exact(4) {
+        values.push(f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]));
+    }
+    let stream = encode_centered_delta_uint8(&values, n_pairs, n_dims, Some(&mins), Some(&scales))
+        .expect("encode_centered_delta_uint8 must succeed");
+    assert_sha256_parity(&stream.lzma_bytes, &manifest)
+        .expect("centered-delta uint8 LZMA bytes must match Python oracle SHA-256");
 }
 
 #[test]
 fn pr101_split_brotli_self_delim_parity() {
-    let _manifest = try_load("split_brotli_self_delim_v1");
-    let s0: &[u8] = b"stream-zero placeholder bytes";
-    let s1: &[u8] = b"stream-one placeholder bytes";
-    let s2: &[u8] = b"stream-two placeholder bytes";
-    let streams = [s0, s1, s2];
-    let result = split_brotli_self_delimiting(&streams, 22, 11);
-    assert_scaffold_refuses(result, "split_brotli_self_delimiting");
+    let manifest = match try_load("split_brotli_self_delim_v1") {
+        Some(m) => m,
+        None => return,
+    };
+    let raw = match try_load_bin("split_brotli_self_delim_v1_streams.bin") {
+        Some(b) => b,
+        None => return,
+    };
+    // Format: [n_streams: u32 LE][len_0: u32 LE][bytes_0]…
+    assert!(raw.len() >= 4);
+    let n_streams = u32::from_le_bytes([raw[0], raw[1], raw[2], raw[3]]) as usize;
+    let mut pos = 4usize;
+    let mut streams_owned: Vec<Vec<u8>> = Vec::with_capacity(n_streams);
+    for _ in 0..n_streams {
+        assert!(pos + 4 <= raw.len(), "fixture truncated reading length prefix");
+        let len = u32::from_le_bytes([raw[pos], raw[pos + 1], raw[pos + 2], raw[pos + 3]]) as usize;
+        pos += 4;
+        assert!(pos + len <= raw.len(), "fixture truncated reading sub-stream body");
+        streams_owned.push(raw[pos..pos + len].to_vec());
+        pos += len;
+    }
+    let streams: Vec<&[u8]> = streams_owned.iter().map(|v| v.as_slice()).collect();
+    let result = split_brotli_self_delimiting(&streams, 22, 11)
+        .expect("split_brotli_self_delimiting must succeed");
+    assert_sha256_parity(&result.payload, &manifest)
+        .expect("split-Brotli payload must match Python oracle SHA-256");
 }
 
 // ── PR103 parity tests ───────────────────────────────────────────────────────
@@ -195,11 +256,36 @@ fn pr103_merged_range_stream_parity() {
 
 #[test]
 fn pr103_latent_hi_arithmetic_parity() {
-    let _manifest = try_load("latent_hi_arithmetic_v1");
-    let latents = vec![0u16; 1000];
-    let histogram = vec![1.0; 256];
-    let result = encode_latent_hi_arithmetic(&latents, &histogram);
-    assert_scaffold_refuses(result, "encode_latent_hi_arithmetic");
+    let manifest = match try_load("latent_hi_arithmetic_v1") {
+        Some(m) => m,
+        None => return,
+    };
+    let latents_bin = match try_load_bin("latent_hi_arithmetic_v1_latents.bin") {
+        Some(b) => b,
+        None => return,
+    };
+    let histogram_bin = match try_load_bin("latent_hi_arithmetic_v1_histogram.bin") {
+        Some(b) => b,
+        None => return,
+    };
+    // Decode uint16 little-endian latents.
+    assert_eq!(latents_bin.len() % 2, 0);
+    let mut latents: Vec<u16> = Vec::with_capacity(latents_bin.len() / 2);
+    for chunk in latents_bin.chunks_exact(2) {
+        latents.push(u16::from_le_bytes([chunk[0], chunk[1]]));
+    }
+    // Decode fp64 little-endian histogram.
+    assert_eq!(histogram_bin.len() % 8, 0);
+    let mut histogram: Vec<f64> = Vec::with_capacity(histogram_bin.len() / 8);
+    for chunk in histogram_bin.chunks_exact(8) {
+        histogram.push(f64::from_le_bytes([
+            chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6], chunk[7],
+        ]));
+    }
+    let payload = encode_latent_hi_arithmetic(&latents, &histogram)
+        .expect("encode_latent_hi_arithmetic must succeed");
+    assert_sha256_parity(&payload, &manifest)
+        .expect("latent-hi arithmetic payload must match Python oracle SHA-256");
 }
 
 // ── PR81 parity stubs ───────────────────────────────────────────────────────
@@ -267,6 +353,23 @@ fn pr93_delta_varint_pose_parity() {
 #[test]
 fn pr93_qzmb1_parity() {
     try_load_only("pr93_qzmb1_v1");
+}
+
+#[test]
+fn pr93_lowpass_luma_parity() {
+    try_load_only("pr93_lowpass_luma_v1");
+}
+
+// ── PR97 H3 wire-format grammar parity stubs (2026-05-11) ───────────────────
+
+#[test]
+fn pr97_h3_length_prefixed_sections_parity() {
+    try_load_only("pr97_h3_length_prefixed_sections_v1");
+}
+
+#[test]
+fn pr97_h3_tile_band_streams_parity() {
+    try_load_only("pr97_h3_tile_band_streams_v1");
 }
 
 // ── Sparse PacketIR codec parity tests (2026-05-11) ─────────────────────────
@@ -356,6 +459,10 @@ fn every_golden_vector_has_paired_parity_test() {
         // PR93
         "pr93_delta_varint_pose_v1",
         "pr93_qzmb1_v1",
+        "pr93_lowpass_luma_v1",
+        // PR97 — H3 wire-format grammar (2026-05-11 punchlist cleanup)
+        "pr97_h3_length_prefixed_sections_v1",
+        "pr97_h3_tile_band_streams_v1",
         // Sparse PacketIR codec — RLE-of-zeros + AC coefficient + temporal-subsampled
         "sparse_rle_of_zeros_v1",
         "sparse_arithmetic_coefficients_v1",

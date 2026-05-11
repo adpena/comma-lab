@@ -1,0 +1,13 @@
+{
+  "n_sections": 4,
+  "payload_len": 76,
+  "schema": "pr97_h3_length_prefixed_sections.v1",
+  "section_sizes": [
+    16,
+    32,
+    8,
+    4
+  ],
+  "seed": 20260511,
+  "sha256": "2be96edee01d150810c62c80ef6883495096e9205a93eae7267cb5a3c826d517"
+}
