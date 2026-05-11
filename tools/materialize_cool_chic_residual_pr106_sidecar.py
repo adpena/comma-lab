@@ -62,6 +62,58 @@ def build_cool_chic_residual_blob(
     return b"".join(parts)
 
 
+def _build_l2_encoded_residual_blob(
+    *,
+    decoded_raw_path: Path,
+    gt_raw_path: Path,
+    n_frames: int,
+    byte_budget: int,
+    candidate_n_levels: tuple[int, ...],
+) -> tuple[bytes, dict[str, float]]:
+    """Run the L2 score-aware cool_chic encoder on decoded/GT raw frame streams."""
+    import numpy as np
+    from tac.residual_basis import encode_cool_chic_residual_l2
+
+    frame_bytes = CAMERA_H * CAMERA_W * RGB_CHANNELS
+    decoded_total = decoded_raw_path.stat().st_size
+    gt_total = gt_raw_path.stat().st_size
+    if decoded_total % frame_bytes != 0 or gt_total % frame_bytes != 0:
+        raise MaterializerError(
+            "decoded_raw / gt_raw size not divisible by frame_bytes"
+        )
+    n_decoded = decoded_total // frame_bytes
+    n_gt = gt_total // frame_bytes
+    n_to_use = min(n_frames, n_decoded, n_gt) if n_frames > 0 else min(n_decoded, n_gt)
+    if n_to_use <= 0:
+        raise MaterializerError("no frames to encode")
+
+    decoded_mm = np.memmap(
+        decoded_raw_path, dtype=np.uint8, mode="r",
+        shape=(n_decoded, CAMERA_H, CAMERA_W, RGB_CHANNELS),
+    )
+    gt_mm = np.memmap(
+        gt_raw_path, dtype=np.uint8, mode="r",
+        shape=(n_gt, CAMERA_H, CAMERA_W, RGB_CHANNELS),
+    )
+    decoded = np.array(decoded_mm[:n_to_use])
+    gt = np.array(gt_mm[:n_to_use])
+
+    try:
+        result = encode_cool_chic_residual_l2(
+            decoded, gt,
+            byte_budget=byte_budget,
+            candidate_n_levels=candidate_n_levels,
+        )
+    except ValueError as exc:
+        raise MaterializerError(str(exc)) from exc
+    assert result.score_claim is False
+    assert result.promotion_eligible is False
+    assert result.ready_for_exact_eval_dispatch is False
+    diag = dict(result.diagnostics)
+    diag["chosen_n_levels"] = float(result.n_levels_used)
+    return result.residual_bytes, diag
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Materialize PR106 + Cool-Chic residual sidecar candidate"
@@ -71,16 +123,61 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--n-frames", type=int, default=0)
     parser.add_argument("--n-levels", type=int, default=3)
     parser.add_argument(
-        "--residual-mode", choices=("empty", "zero", "probe"), default="empty"
+        "--residual-mode", choices=("empty", "zero", "probe", "l2_encoded"), default="empty",
+        help=(
+            "empty/zero/probe = L1 scaffold modes; l2_encoded = L2 score-aware encoder "
+            "(requires --decoded-raw + --gt-raw). L2 emits permanent score_claim=False invariants."
+        ),
     )
     parser.add_argument("--default-scale", type=float, default=0.0)
+    parser.add_argument(
+        "--decoded-raw", type=Path, default=None,
+        help="(l2_encoded only) Path to (N,874,1164,3) uint8 PR106 decoded raw frames",
+    )
+    parser.add_argument(
+        "--gt-raw", type=Path, default=None,
+        help="(l2_encoded only) Path to (N,874,1164,3) uint8 GT raw frames",
+    )
+    parser.add_argument(
+        "--byte-budget", type=int, default=0,
+        help="(l2_encoded only) Residual byte budget. Must be explicit; encoder enforces dense floor.",
+    )
+    parser.add_argument(
+        "--l2-candidate-n-levels", type=int, nargs="+", default=(1, 2, 3),
+        help="(l2_encoded only) Candidate pyramid depths to sweep",
+    )
     parser.add_argument("--skip-no-op-smoke", action="store_true")
     args = parser.parse_args(argv)
     if args.output_dir.exists() and any(args.output_dir.iterdir()):
         print(f"ERROR: --output-dir must be empty or not exist: {args.output_dir}", file=sys.stderr)
         return 2
+    encoder_diagnostics: dict[str, float] = {}
     if args.residual_mode == "empty":
         residual_bytes = b""
+    elif args.residual_mode == "l2_encoded":
+        if args.decoded_raw is None or args.gt_raw is None:
+            print(
+                "ERROR: --decoded-raw and --gt-raw required for --residual-mode l2_encoded",
+                file=sys.stderr,
+            )
+            return 2
+        if args.byte_budget <= 0:
+            print(
+                "ERROR: --byte-budget > 0 required for --residual-mode l2_encoded",
+                file=sys.stderr,
+            )
+            return 2
+        try:
+            residual_bytes, encoder_diagnostics = _build_l2_encoded_residual_blob(
+                decoded_raw_path=args.decoded_raw,
+                gt_raw_path=args.gt_raw,
+                n_frames=args.n_frames,
+                byte_budget=args.byte_budget,
+                candidate_n_levels=tuple(args.l2_candidate_n_levels),
+            )
+        except MaterializerError as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 2
     else:
         if args.n_frames <= 0:
             print("ERROR: --n-frames > 0 required when --residual-mode != empty", file=sys.stderr)
@@ -103,6 +200,10 @@ def main(argv: list[str] | None = None) -> int:
             "default_scale": args.default_scale,
             "pyramid_kind": "upsample_cascade_int8",
             "rationale": "Ladune et al. 2023 Cool-Chic hierarchical pyramid; INT8-quantised per level",
+            "l2_encoder_diagnostics": encoder_diagnostics,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
         },
     )
     if not args.skip_no_op_smoke and residual_bytes:

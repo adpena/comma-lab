@@ -81,6 +81,62 @@ def build_wavelet_residual_blob(
     return b"".join(parts)
 
 
+def _build_l2_encoded_residual_blob(
+    *,
+    decoded_raw_path: Path,
+    gt_raw_path: Path,
+    n_frames: int,
+    byte_budget: int,
+    n_iterations: int,
+) -> tuple[bytes, dict[str, float]]:
+    """Run the L2 score-aware wavelet encoder on decoded/GT raw frame streams.
+
+    Emits permanent ``score_claim=False`` / ``promotion_eligible=False`` /
+    ``ready_for_exact_eval_dispatch=False`` invariants per CLAUDE.md HNeRV
+    parity discipline.
+    """
+    import numpy as np
+    from tac.residual_basis import encode_wavelet_residual_l2
+
+    frame_bytes = CAMERA_H * CAMERA_W * RGB_CHANNELS
+    decoded_total = decoded_raw_path.stat().st_size
+    gt_total = gt_raw_path.stat().st_size
+    if decoded_total % frame_bytes != 0:
+        raise MaterializerError(
+            f"decoded raw file {decoded_raw_path} size {decoded_total} not divisible by frame_bytes"
+        )
+    if gt_total % frame_bytes != 0:
+        raise MaterializerError(
+            f"gt raw file {gt_raw_path} size {gt_total} not divisible by frame_bytes"
+        )
+    n_decoded = decoded_total // frame_bytes
+    n_gt = gt_total // frame_bytes
+    n_to_use = min(n_frames, n_decoded, n_gt) if n_frames > 0 else min(n_decoded, n_gt)
+    if n_to_use <= 0:
+        raise MaterializerError("no frames to encode")
+
+    decoded_mm = np.memmap(
+        decoded_raw_path, dtype=np.uint8, mode="r",
+        shape=(n_decoded, CAMERA_H, CAMERA_W, RGB_CHANNELS),
+    )
+    gt_mm = np.memmap(
+        gt_raw_path, dtype=np.uint8, mode="r",
+        shape=(n_gt, CAMERA_H, CAMERA_W, RGB_CHANNELS),
+    )
+    decoded = np.array(decoded_mm[:n_to_use])
+    gt = np.array(gt_mm[:n_to_use])
+    try:
+        result = encode_wavelet_residual_l2(
+            decoded, gt, byte_budget=byte_budget, n_iterations=n_iterations,
+        )
+    except ValueError as exc:
+        raise MaterializerError(str(exc)) from exc
+    assert result.score_claim is False
+    assert result.promotion_eligible is False
+    assert result.ready_for_exact_eval_dispatch is False
+    return result.residual_bytes, dict(result.diagnostics)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Materialize PR106 + wavelet residual sidecar candidate"
@@ -110,12 +166,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--residual-mode",
-        choices=("empty", "zero", "probe"),
+        choices=("empty", "zero", "probe", "l2_encoded"),
         default="empty",
         help=(
-            "empty: no residual bytes (scaffold-readiness archive); "
-            "zero: all-zero per-frame residual (identity bolt-on); "
-            "probe: alternating ±1 for inflate-runtime byte-mutation smoke."
+            "empty/zero/probe = L1 scaffold modes; "
+            "l2_encoded = L2 score-aware encoder (requires --decoded-raw + --gt-raw). "
+            "L2 emits permanent score_claim=False invariants."
         ),
     )
     parser.add_argument(
@@ -123,6 +179,25 @@ def main(argv: list[str] | None = None) -> int:
         type=float,
         default=0.0,
         help="Per-band float32 scale (zero by default; non-zero requires explicit opt-in)",
+    )
+    parser.add_argument(
+        "--decoded-raw", type=Path, default=None,
+        help="(l2_encoded only) Path to (N,874,1164,3) uint8 PR106 decoded raw frames",
+    )
+    parser.add_argument(
+        "--gt-raw", type=Path, default=None,
+        help="(l2_encoded only) Path to (N,874,1164,3) uint8 ground-truth raw frames",
+    )
+    parser.add_argument(
+        "--byte-budget", type=int, default=0,
+        help=(
+            "(l2_encoded only) Residual byte budget. Encoder enforces dense "
+            "floor; smaller budgets refused."
+        ),
+    )
+    parser.add_argument(
+        "--l2-iterations", type=int, default=2,
+        help="(l2_encoded only) Coordinate-descent outer-loop iterations",
     )
     parser.add_argument(
         "--skip-no-op-smoke", action="store_true", help="Skip the byte-mutation smoke"
@@ -134,8 +209,33 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
+    encoder_diagnostics: dict[str, float] = {}
     if args.residual_mode == "empty":
         residual_bytes = b""
+    elif args.residual_mode == "l2_encoded":
+        if args.decoded_raw is None or args.gt_raw is None:
+            print(
+                "ERROR: --decoded-raw and --gt-raw required for --residual-mode l2_encoded",
+                file=sys.stderr,
+            )
+            return 2
+        if args.byte_budget <= 0:
+            print(
+                "ERROR: --byte-budget > 0 required for --residual-mode l2_encoded",
+                file=sys.stderr,
+            )
+            return 2
+        try:
+            residual_bytes, encoder_diagnostics = _build_l2_encoded_residual_blob(
+                decoded_raw_path=args.decoded_raw,
+                gt_raw_path=args.gt_raw,
+                n_frames=args.n_frames,
+                byte_budget=args.byte_budget,
+                n_iterations=args.l2_iterations,
+            )
+        except MaterializerError as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 2
     else:
         if args.n_frames <= 0:
             print(
@@ -163,6 +263,10 @@ def main(argv: list[str] | None = None) -> int:
                 "single-level Haar matches the numpy_inverse_dwt scaffold; "
                 "multi-level extensions belong to the L2-promotion bolt-on."
             ),
+            "l2_encoder_diagnostics": encoder_diagnostics,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
         },
     )
     if not args.skip_no_op_smoke:

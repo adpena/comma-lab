@@ -32,8 +32,14 @@ Current public API
   MLPs (Sitzmann et al. 2020).
 * `coordinate_mlp_residual` — family-agnostic Laplacian smoothness prior
   (Tancik et al. 2020).
+* `l2_score_aware_loss` — proxy-grade score-domain Lagrangian for residual
+  encoders; emits no score claims.
+* `wavelet_encoder_l2` / `c3_encoder_l2` / `cool_chic_encoder_l2` —
+  score-aware residual encoder scaffolds. The wavelet L2 encoder currently
+  fails closed for sub-dense byte budgets until a sparse PacketIR wavelet
+  stream and matching inflate runtime land.
 
-All six modules emit research-signal artifacts with promotion-status frozen
+All modules emit research-signal artifacts with promotion-status frozen
 to False; no callsite can promote them past L0 without satisfying the 8
 archive-grammar fields per HNeRV parity discipline.
 
@@ -47,6 +53,12 @@ See also
 
 from __future__ import annotations
 
+from tac.residual_basis.c3_encoder_l2 import (
+    C3EncoderL2Error,
+    C3EncoderL2Result,
+    dense_c3_residual_blob_bytes,
+    encode_c3_residual_l2,
+)
 from tac.residual_basis.c3_residual import (
     C3ConditionalStats,
     C3ResidualError,
@@ -54,12 +66,24 @@ from tac.residual_basis.c3_residual import (
     compute_c3_residual_stats,
     compute_conditional_residual,
 )
+from tac.residual_basis.cool_chic_encoder_l2 import (
+    CoolChicEncoderL2Error,
+    CoolChicEncoderL2Result,
+    dense_cool_chic_residual_blob_bytes,
+    encode_cool_chic_residual_l2,
+)
 from tac.residual_basis.cool_chic_residual import (
     CoolChicPyramidLevelStats,
     CoolChicResidualError,
     CoolChicResidualResult,
     compute_cool_chic_residual_stats,
     compute_pyramid_residual,
+)
+from tac.residual_basis.l2_score_aware_loss import (
+    L2ScoreAwareLossError,
+    ResidualByteBudget,
+    ScoreAwareLagrangian,
+    compute_score_aware_proxy_loss,
 )
 from tac.residual_basis.coordinate_mlp_residual import (
     CoordinateMlpResidualError,
@@ -91,6 +115,14 @@ from tac.residual_basis.siren_residual import (
     compute_radial_frequency_buckets,
     compute_siren_residual_stats,
 )
+from tac.residual_basis.wavelet_encoder_l2 import (
+    DEFAULT_BYTE_BUDGET,
+    PER_FRAME_BYTES,
+    WaveletEncoderL2Error,
+    WaveletEncoderL2Result,
+    dense_wavelet_residual_blob_bytes,
+    encode_wavelet_residual_l2,
+)
 from tac.residual_basis.wavelet_residual_pr106 import (
     BandStats,
     WaveletResidualError,
@@ -105,23 +137,34 @@ __all__ = [
     "BandStats",
     "BuildResidualArchiveResult",
     "C3ConditionalStats",
+    "C3EncoderL2Error",
+    "C3EncoderL2Result",
     "C3ResidualError",
     "C3ResidualResult",
+    "CoolChicEncoderL2Error",
+    "CoolChicEncoderL2Result",
     "CoolChicPyramidLevelStats",
     "CoolChicResidualError",
     "CoolChicResidualResult",
     "CoordinateMlpResidualError",
     "CoordinateMlpResidualResult",
     "CoordinateMlpSmoothnessStats",
+    "DEFAULT_BYTE_BUDGET",
+    "L2ScoreAwareLossError",
     "NumpyInverseDWTError",
+    "PER_FRAME_BYTES",
     "PR106_RESIDUAL_FORMAT_IDS",
     "PR106_RESIDUAL_FORMAT_NAMES",
     "PR106_RESIDUAL_MAGIC",
     "ParsedResidualArchive",
     "ResidualArchiveError",
+    "ResidualByteBudget",
+    "ScoreAwareLagrangian",
     "SirenFrequencyBandStats",
     "SirenResidualError",
     "SirenResidualResult",
+    "WaveletEncoderL2Error",
+    "WaveletEncoderL2Result",
     "WaveletResidualError",
     "WaveletResidualResult",
     "build_archive",
@@ -132,9 +175,16 @@ __all__ = [
     "compute_finite_difference_laplacian",
     "compute_pyramid_residual",
     "compute_radial_frequency_buckets",
+    "compute_score_aware_proxy_loss",
     "compute_siren_residual_stats",
     "compute_wavelet_residual_stats",
+    "dense_c3_residual_blob_bytes",
+    "dense_cool_chic_residual_blob_bytes",
+    "dense_wavelet_residual_blob_bytes",
     "decompose_frame_to_bands",
+    "encode_c3_residual_l2",
+    "encode_cool_chic_residual_l2",
+    "encode_wavelet_residual_l2",
     "expect_format_id",
     "haar_inverse_2d_multi_level",
     "haar_inverse_2d_single_level",
