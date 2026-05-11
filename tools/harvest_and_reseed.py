@@ -11,13 +11,10 @@ empirical anchor. The next sweep uses the strengthened calibration and predicts
 more accurately. Over a few iterations, the proxy converges on the true
 rate-distortion frontier and the engine starts ranking correctly.
 
-Per CLAUDE.md "every score must be tagged [contest-CUDA] or [advisory only]":
-this script ONLY ingests rows tagged `[contest-CUDA]` from the harvested JSONL.
-Any row with `tag != "[contest-CUDA]"` is dropped with a warning.
-
 Per AGENTS.md "Auth eval EVERYWHERE": this script requires each harvested row
-to include a readable `score_json_path`. The JSON must carry a score-like value
-and is recorded as harvested evidence, not as a fresh score claim by this tool.
+to include a readable `score_json_path`. The JSON must validate as an
+authoritative contest-CUDA artifact via the canonical continual-learning
+custody bridge; harvested JSONL tags are advisory only.
 
 Usage:
     .venv/bin/python tools/harvest_and_reseed.py \\
@@ -33,8 +30,18 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 REPO = Path(__file__).resolve().parents[1]
+
+try:
+    from tools.tool_bootstrap import ensure_repo_imports
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from tool_bootstrap import ensure_repo_imports
+
+ensure_repo_imports(REPO)
+
+from tac.continual_learning import contest_result_from_auth_eval_payload  # noqa: E402
 
 
 def _load_harvested(path: Path) -> list[dict]:
@@ -57,19 +64,32 @@ def _load_anchors(path: Path) -> list[dict]:
     return json.loads(path.read_text())
 
 
-def _read_score_json(path: str | None) -> dict | None:
+def _read_score_json(path: str | None) -> dict[str, Any] | None:
     if not path:
         return None
     try:
         payload = json.loads(Path(path).read_text())
     except (FileNotFoundError, json.JSONDecodeError, OSError):
         return None
-    score = payload.get("score_recomputed_from_components")
-    score = payload.get("final_score", payload.get("contest_score", payload.get("score", score)))
+    if not isinstance(payload, dict):
+        return None
     try:
-        payload["_harvest_score"] = float(score)
+        result = contest_result_from_auth_eval_payload(
+            payload,
+            architecture_class="harvest_and_reseed",
+            source_path=path,
+        )
     except (TypeError, ValueError):
         return None
+    verdict = result.validate_custody_verdict()
+    if not verdict.accepted or result.axis != "cuda":
+        return None
+    payload["_harvest_score"] = float(result.score_value)
+    payload["_harvest_archive_sha256"] = result.archive_sha256
+    payload["_harvest_archive_bytes"] = result.archive_bytes
+    payload["_harvest_pose_dist"] = result.cuda_pose
+    payload["_harvest_seg_dist"] = result.cuda_seg
+    payload["_harvest_hardware_substrate"] = result.hardware_substrate
     return payload
 
 
@@ -115,20 +135,20 @@ def main(argv: list[str] | None = None) -> int:
         print(f"FATAL: no rows in {args.harvested_jsonl}", file=sys.stderr)
         return 2
 
-    contest_rows = [r for r in rows if r.get("tag") == "[contest-CUDA]" and r.get("contest_cuda_score") is not None]  # CUSTODY_VALIDATOR_OK: legacy harvested JSONL prefilter; score_json_path custody is verified before anchor write
-    skipped = len(rows) - len(contest_rows)
-    if skipped:
-        print(f"WARN: skipping {skipped} non-contest-CUDA rows (failed dispatches or pending scores)", file=sys.stderr)
-
-    if not contest_rows:
-        print(f"FATAL: 0 of {len(rows)} rows had [contest-CUDA] tag + parsed score", file=sys.stderr)
-        return 3
-
     anchors = _load_anchors(args.anchors_path)
     existing_labels = {a.get("lane_id") for a in anchors}
 
     new_anchors = []
-    for r in contest_rows:
+    skipped = 0
+    for r in rows:
+        detail = _read_score_json(r.get("score_json_path"))
+        if detail is None:
+            skipped += 1
+            print(
+                f"  WARN: {r.get('label', '<unknown>')} missing authoritative contest-CUDA score_json_path — skipping",
+                file=sys.stderr,
+            )
+            continue
         label = r["label"]
         if label in existing_labels:
             print(f"  skip (already in anchors): {label}")
@@ -137,45 +157,60 @@ def main(argv: list[str] | None = None) -> int:
         if rel_err is None:
             print(f"  WARN: could not find rel_err for {label} — skipping", file=sys.stderr)
             continue
-        archive_bytes = archive_bytes or r.get("archive_size_bytes")
+        archive_bytes = archive_bytes or r.get("archive_size_bytes") or detail.get("_harvest_archive_bytes")
         if archive_bytes is None:
             print(f"  WARN: no archive_size_bytes for {label} — skipping", file=sys.stderr)
             continue
-        detail = _read_score_json(r.get("score_json_path"))
-        if detail is None:
-            print(
-                f"  WARN: {label} missing readable score_json_path with numeric score — skipping",
-                file=sys.stderr,
-            )
-            continue
-        score_delta = abs(float(r["contest_cuda_score"]) - float(detail["_harvest_score"]))
+        row_score = r.get("contest_cuda_score")
+        if row_score is not None:
+            score_delta = abs(float(row_score) - float(detail["_harvest_score"]))
+        else:
+            score_delta = 0.0
         if score_delta > 1e-9:
             print(
                 f"  WARN: {label} harvested score disagrees with score_json_path by {score_delta:.6g} — skipping",
                 file=sys.stderr,
             )
             continue
-        pose_dist = float(detail.get("avg_pose_dist") or detail.get("pose_dist") or args.lossless_pose_dist)
-        seg_dist = float(detail.get("avg_seg_dist") or detail.get("seg_dist") or args.lossless_seg_dist)
+        pose_source = detail.get("_harvest_pose_dist")
+        if pose_source is None:
+            pose_source = detail.get("avg_pose_dist")
+        if pose_source is None:
+            pose_source = detail.get("pose_dist")
+        if pose_source is None:
+            pose_source = args.lossless_pose_dist
+        seg_source = detail.get("_harvest_seg_dist")
+        if seg_source is None:
+            seg_source = detail.get("avg_seg_dist")
+        if seg_source is None:
+            seg_source = detail.get("seg_dist")
+        if seg_source is None:
+            seg_source = args.lossless_seg_dist
+        pose_dist = float(pose_source)
+        seg_dist = float(seg_source)
 
         from datetime import UTC, datetime
         new_anchors.append({
             "lane_id": label,
             "rel_err_pct_per_weight": rel_err,
             "archive_bytes": archive_bytes,
-            "contest_cuda_score": r["contest_cuda_score"],
+            "contest_cuda_score": detail["_harvest_score"],
             "avg_pose_dist": pose_dist,
             "avg_seg_dist": seg_dist,
             "rate_unscaled": archive_bytes / 37545489,
-            "measured_utc": r["started_utc"],
+            "measured_utc": r.get("started_utc") or r.get("completed_utc") or "",
             "job_id": r.get("label", "unknown"),
-            "archive_sha256": (r.get("archive_sha256") or "")[:16] or "unknown",
+            "archive_sha256": detail["_harvest_archive_sha256"],
             "harvested_from": str(args.harvested_jsonl.resolve()),
             "score_json_path": str(Path(r["score_json_path"]).resolve()),
             "harvested_at_utc": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "evidence_semantics": "contest_cuda_harvested_score_json_required",
+            "hardware_substrate": detail["_harvest_hardware_substrate"],
             "score_claim": False,
         })
+
+    if skipped:
+        print(f"WARN: skipped {skipped} rows without authoritative contest-CUDA custody", file=sys.stderr)
 
     if not new_anchors:
         print("[harvest-reseed] no new anchors to add (all were duplicates or missing rel_err)")
