@@ -1,25 +1,19 @@
 from __future__ import annotations
 
-import importlib.util
-import sys
 from pathlib import Path
 
 from tac.repo_io import read_json, write_json
+from tac.tests.tool_loader import load_repo_tool
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-TOOL_PATH = REPO_ROOT / "tools" / "harvest_kaggle_pr106_latent_score_table.py"
 
 
 def _load_tool():
-    spec = importlib.util.spec_from_file_location(
+    return load_repo_tool(
+        REPO_ROOT,
+        "tools/harvest_kaggle_pr106_latent_score_table.py",
         "harvest_kaggle_pr106_latent_score_table_test",
-        TOOL_PATH,
     )
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
 
 
 def test_harvester_writes_manifest_and_uses_latent_prefix(monkeypatch, tmp_path: Path, capsys) -> None:

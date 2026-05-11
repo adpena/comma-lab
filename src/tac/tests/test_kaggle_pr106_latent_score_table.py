@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import importlib.util
 import json
-import sys
 import tarfile
 from pathlib import Path
 
@@ -16,21 +14,17 @@ from tac.deploy.kaggle.pr106_latent_score_table import (
     write_bundle,
     write_source_bundle,
 )
+from tac.tests.tool_loader import load_repo_tool
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-TOOL_PATH = REPO_ROOT / "tools" / "kaggle_build_pr106_latent_score_table.py"
 
 
 def _load_tool():
-    spec = importlib.util.spec_from_file_location(
+    return load_repo_tool(
+        REPO_ROOT,
+        "tools/kaggle_build_pr106_latent_score_table.py",
         "kaggle_build_pr106_latent_score_table_test",
-        TOOL_PATH,
     )
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
 
 
 def _claim_ledger(path: Path, *, job_name: str = "kaggle_pr106_latent_test") -> None:
