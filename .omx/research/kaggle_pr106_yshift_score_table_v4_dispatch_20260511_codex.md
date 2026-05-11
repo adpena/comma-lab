@@ -86,3 +86,42 @@ Expected classification after harvest:
 - `failed_kaggle_runtime`: dependency, DALI/NVDEC, mount, upstream clone/LFS, or
   Kaggle environment failure.
 - `indeterminate`: terminal output lacks contest-auth JSON or custody closure.
+
+## Terminal update — 2026-05-11T08:55:00Z
+
+`kaggle kernels status adpena/comma-lab-pr106-yshift-score-table-v4` returned
+`KernelWorkerStatus.ERROR`.
+
+This run reached real lane execution:
+
+- source tree mounted and copied;
+- upstream clone and Git LFS completed;
+- DALI was installed through the hash-pinned bootstrap;
+- NVDEC probe passed;
+- y-shift score-table stage started.
+
+Failure class: `failed_kaggle_gpu_arch_unsupported`.
+
+Relevant log evidence:
+
+```text
+Found GPU0 Tesla P100-PCIE-16GB which is of cuda capability 6.0.
+The current PyTorch install supports CUDA capabilities sm_70 sm_75 sm_80 sm_86 sm_90 sm_100 sm_120.
+torch.AcceleratorError: CUDA error: no kernel image is available for execution on the device
+```
+
+Interpretation: this is a Kaggle toolchain/GPU-architecture failure, not a
+PR106 y-shift method result and not a score claim. The v4 source/archive
+transport fix is validated up to CUDA model execution. The remaining Kaggle path
+needs either a T4-class assignment or a pinned PyTorch wheel that still supports
+sm_60 on Python 3.12.
+
+Terminal claim recorded:
+
+```bash
+.venv/bin/python tools/claim_lane_dispatch.py claim --force \
+  --lane-id lane_pr106_yshift_score_table \
+  --platform kaggle \
+  --instance-job-id kaggle_pr106_yshift_score_table_v4 \
+  --status failed_kaggle_gpu_arch_unsupported
+```
