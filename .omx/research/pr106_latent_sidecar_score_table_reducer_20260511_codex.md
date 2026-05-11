@@ -18,6 +18,11 @@ score-table pattern: active lane claim before real CUDA work, checkpoint/resume
 artifacts, official DistortionNet objective, and dry-run plan mode for $0
 operator validation.
 
+Shared score-table plumbing is centralized in `src/tac/sidechannel_score_table.py`
+so latent and yshift producers use the same atomic writes, active-claim parser,
+finite-prefix checkpoint validation, objective function, and official scorer /
+ground-truth loader wiring.
+
 ## Scientific guardrails
 
 - Candidate row `0` is the single no-op baseline: `[255, 0]`.
@@ -37,6 +42,11 @@ operator validation.
 - `.venv/bin/python -m pytest -q src/tac/tests/test_pr106_latent_sidecar.py
   src/tac/tests/test_pr106_latent_score_table.py
   src/tac/tests/test_dispatch_dryrun_pr106_sidechannels.py` passed: 29 tests.
+- `.venv/bin/python -m pytest -q src/tac/tests/test_pr106_latent_score_table.py
+  src/tac/tests/test_pr106_yshift_score_table.py
+  src/tac/tests/test_pr106_latent_sidecar.py
+  src/tac/tests/test_dispatch_dryrun_pr106_sidechannels.py` passed: 39 tests
+  after shared-helper canonicalization.
 - `.venv/bin/python tools/dispatch_dryrun_pr106_sidechannels.py` passed and now
   checks the latent reducer and latent score-table producer surfaces.
 

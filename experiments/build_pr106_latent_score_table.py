@@ -19,7 +19,6 @@ CUDA auth eval on the emitted archive.
 from __future__ import annotations
 
 import argparse
-import json
 import importlib.util
 import os
 import time
@@ -60,6 +59,16 @@ from build_pr106_latent_sidecar import (  # type: ignore[import-not-found]
 from codec import parse_packed_archive  # type: ignore[import-not-found]
 from model import HNeRVDecoder  # type: ignore[import-not-found]
 from tac.repo_io import json_text, sha256_bytes, sha256_file
+from tac.sidechannel_score_table import (
+    atomic_save_npy as _atomic_save_npy,
+    atomic_write_text as _atomic_write_text,
+    completed_prefix_rows,
+    load_distortion_net,
+    load_gt_dataloader,
+    read_json_object,
+    score_without_rate,
+    verify_active_lane_claim,
+)
 
 CAMERA_H = 874
 CAMERA_W = 1164
@@ -68,105 +77,12 @@ SCORE_TABLE_NPY = "score_table.npy"
 SCORE_TABLE_MANIFEST = "score_table_manifest.json"
 CHECKPOINT_TABLE_NPY = "score_table.partial.npy"
 CHECKPOINT_MANIFEST = "score_table_checkpoint.json"
-TERMINAL_PREFIXES = (
-    "completed_",
-    "failed_",
-    "preempted",
-    "cancelled",
-    "refused_dispatch",
-    "stale_assumed_dead",
-    "stale_superseded",
-    "stopped_",
-)
 
-
-def _atomic_write_text(path: Path, text: str) -> None:
-    tmp = path.with_name(path.name + ".tmp")
-    tmp.write_text(text, encoding="utf-8")
-    tmp.replace(path)
-
-
-def _atomic_save_npy(path: Path, array: np.ndarray) -> None:
-    tmp = path.with_name(path.name + ".tmp")
-    with tmp.open("wb") as f:
-        np.save(f, array, allow_pickle=False)
-        f.flush()
-        os.fsync(f.fileno())
-    tmp.replace(path)
-
-
-def completed_prefix_frames(table: np.ndarray) -> int:
-    """Return the finite scored-row prefix, rejecting non-prefix checkpoints."""
-    if table.ndim != 2:
-        raise ValueError(f"score table checkpoint must be 2-D, got shape {table.shape}")
-    finite_rows = np.isfinite(table).all(axis=1)
-    incomplete = np.flatnonzero(~finite_rows)
-    if incomplete.size == 0:
-        return int(table.shape[0])
-    first_incomplete = int(incomplete[0])
-    if finite_rows[first_incomplete:].any():
-        raise ValueError("score table checkpoint has non-prefix finite rows")
-    return first_incomplete
-
-
-def _is_terminal_status(status: str) -> bool:
-    return any(status.startswith(prefix) for prefix in TERMINAL_PREFIXES)
-
-
-def verify_active_lane_claim(
-    claims_path: Path,
-    *,
-    lane_id: str,
-    instance_job_id: str,
-) -> dict[str, str]:
-    """Return the newest matching active claim row or raise ValueError."""
-    if not claims_path.is_file():
-        raise ValueError(f"missing lane-claim ledger: {claims_path}")
-    for line in claims_path.read_text(encoding="utf-8").splitlines():
-        if not line.startswith("|"):
-            continue
-        if "timestamp_utc" in line and "lane_id" in line:
-            continue
-        cells = [cell.strip() for cell in line.strip("|").split("|")]
-        if len(cells) < 8:
-            continue
-        row = {
-            "timestamp_utc": cells[0],
-            "agent": cells[1],
-            "lane_id": cells[2],
-            "platform": cells[3],
-            "instance_job_id": cells[4],
-            "predicted_eta_utc": cells[5],
-            "status": cells[6],
-            "notes": cells[7],
-        }
-        if row["lane_id"] != lane_id or row["instance_job_id"] != instance_job_id:
-            continue
-        if _is_terminal_status(row["status"]):
-            raise ValueError(
-                "newest matching claim is terminal: "
-                f"lane_id={lane_id} instance_job_id={instance_job_id} status={row['status']}"
-            )
-        return row
-    raise ValueError(
-        "no active lane claim found for "
-        f"lane_id={lane_id} instance_job_id={instance_job_id}"
-    )
-
-
-def score_without_rate(pose_dist: torch.Tensor, seg_dist: torch.Tensor) -> torch.Tensor:
-    """Contest objective without the archive-rate constant."""
-    return 100.0 * seg_dist + torch.sqrt(torch.clamp(10.0 * pose_dist, min=0.0))
+completed_prefix_frames = completed_prefix_rows
 
 
 def _load_distortion_net(device: torch.device):
-    upstream_dir = REPO_ROOT / "upstream"
-    prepend_paths(upstream_dir)
-    from modules import DistortionNet, posenet_sd_path, segnet_sd_path  # type: ignore[import-not-found]
-
-    net = DistortionNet().eval().to(device=device)
-    net.load_state_dicts(posenet_sd_path, segnet_sd_path, device)
-    return net
+    return load_distortion_net(device, repo_root=REPO_ROOT)
 
 
 def _load_gt_dataloader(
@@ -179,22 +95,16 @@ def _load_gt_dataloader(
     num_threads: int,
     prefetch_queue_depth: int,
 ):
-    upstream_dir = REPO_ROOT / "upstream"
-    prepend_paths(upstream_dir)
-    from frame_utils import DaliVideoDataset  # type: ignore[import-not-found]
-
-    names = [line.strip() for line in video_names_file.read_text(encoding="utf-8").splitlines() if line.strip()]
-    ds_gt = DaliVideoDataset(
-        names,
-        data_dir=uncompressed_dir,
-        batch_size=batch_pairs,
+    return load_gt_dataloader(
         device=device,
-        num_threads=num_threads,
+        video_names_file=video_names_file,
+        uncompressed_dir=uncompressed_dir,
+        batch_pairs=batch_pairs,
         seed=seed,
+        num_threads=num_threads,
         prefetch_queue_depth=prefetch_queue_depth,
+        repo_root=REPO_ROOT,
     )
-    ds_gt.prepare_data()
-    return torch.utils.data.DataLoader(ds_gt, batch_size=None, num_workers=0)
 
 
 def _read_pr106_bytes(pr106_archive: Path) -> bytes:
@@ -250,7 +160,7 @@ def _load_score_table_checkpoint(
             "incomplete latent score-table checkpoint; expected both "
             f"{table_path.name} and {manifest_path.name}"
         )
-    manifest = json_text_to_dict(manifest_path)
+    manifest = read_json_object(manifest_path)
     if manifest.get("manifest_schema") != "pr106_latent_score_table_checkpoint_v1":
         raise ValueError(f"unsupported latent score-table checkpoint schema: {manifest.get('manifest_schema')!r}")
     _validate_checkpoint_contract(manifest, contract)
@@ -265,15 +175,6 @@ def _load_score_table_checkpoint(
         flush=True,
     )
     return table.astype(np.float32, copy=False), int(complete_pairs)
-
-
-def json_text_to_dict(path: Path) -> dict[str, Any]:
-    import json
-
-    data = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(data, dict):
-        raise ValueError(f"{path} must contain a JSON object")
-    return data
 
 
 def _write_score_table_checkpoint(
@@ -319,7 +220,7 @@ def _reuse_completed_score_table_if_valid(
             "incomplete completed latent score table; expected both "
             f"{table_path.name} and {manifest_path.name}"
         )
-    manifest = json_text_to_dict(manifest_path)
+    manifest = read_json_object(manifest_path)
     _validate_checkpoint_contract(manifest, contract)
     if manifest.get("ready_for_builder") is not True or manifest.get("score_claim") is not False:
         raise ValueError("existing latent score-table manifest is not reusable builder evidence")
