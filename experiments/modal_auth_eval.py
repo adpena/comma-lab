@@ -307,6 +307,7 @@ def _collect_artifacts(out_dir: Path, work_dir: Path) -> dict[str, bytes]:
         out_dir / "contest_auth_eval.stdout.log",
         out_dir / "contest_auth_eval.stderr.log",
         work_dir / "contest_auth_eval.json",
+        work_dir / "inflated_outputs_manifest.json",
         work_dir / "provenance.json",
         work_dir / "report.txt",
     ):

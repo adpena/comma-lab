@@ -99,6 +99,25 @@ def test_modal_auth_eval_images_include_hard_runtime_entropy_deps() -> None:
         assert '"brotli>=1.0"' in text
         assert '"constriction>=0.4,<0.5"' in text
         assert '"pyppmd>=1.3,<2.0"' in text
+        assert 'work_dir / "inflated_outputs_manifest.json"' in text
+
+
+def test_cuda_artifact_harvest_includes_inflated_output_manifest(mod, tmp_path):
+    out_dir = tmp_path / "out"
+    work_dir = tmp_path / "work"
+    out_dir.mkdir()
+    work_dir.mkdir()
+    (work_dir / "contest_auth_eval.json").write_text("{}\n")
+    (work_dir / "inflated_outputs_manifest.json").write_text(
+        '{"aggregate_sha256": "' + ("c" * 64) + '"}\n'
+    )
+    (work_dir / "provenance.json").write_text("{}\n")
+
+    artifacts = mod._collect_artifacts(out_dir, work_dir)
+
+    assert "contest_auth_eval.json" in artifacts
+    assert "inflated_outputs_manifest.json" in artifacts
+    assert b'"aggregate_sha256"' in artifacts["inflated_outputs_manifest.json"]
 
 
 def test_submission_dir_transport_zip_is_deterministic_and_filtered(mod, tmp_path):
