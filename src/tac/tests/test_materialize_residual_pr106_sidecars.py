@@ -24,6 +24,7 @@ import sys
 import zipfile
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from tac.residual_basis.pr106_materializer_helpers import PR106_BIN_MEMBER_NAME
@@ -73,6 +74,12 @@ def _run_materializer(
         text=True,
         env=env,
     )
+
+
+def _write_raw_frames(path: Path, *, n_frames: int = 1) -> None:
+    """Write contest-camera RGB frames as uint8 raw bytes."""
+    frame = np.zeros((n_frames, 874, 1164, 3), dtype=np.uint8)
+    frame.tofile(path)
 
 
 # ── Per-family default scaffold-readiness invocation ───────────────────────
@@ -271,6 +278,66 @@ def test_materializer_refuses_non_empty_mode_without_n_count(
     assert result.returncode == 2
     # The error message names "--n-frames" or "--n-coefs" depending on the family.
     assert "n-frames" in result.stderr or "n-coefs" in result.stderr
+
+
+@pytest.mark.parametrize("family", ("wavelet", "cool_chic", "c3"))
+def test_l2_encoded_materializer_requires_explicit_byte_budget(
+    family: str, fake_pr106_archive: Path, tmp_path: Path
+) -> None:
+    decoded_raw = tmp_path / f"{family}_decoded.raw"
+    gt_raw = tmp_path / f"{family}_gt.raw"
+    _write_raw_frames(decoded_raw)
+    _write_raw_frames(gt_raw)
+    result = _run_materializer(
+        MATERIALIZERS[family],
+        [
+            "--pr106-archive",
+            str(fake_pr106_archive),
+            "--output-dir",
+            str(tmp_path / f"{family}_l2_no_budget"),
+            "--residual-mode",
+            "l2_encoded",
+            "--decoded-raw",
+            str(decoded_raw),
+            "--gt-raw",
+            str(gt_raw),
+            "--n-frames",
+            "1",
+        ],
+    )
+    assert result.returncode == 2
+    assert "--byte-budget > 0" in result.stderr
+
+
+@pytest.mark.parametrize("family", ("wavelet", "cool_chic", "c3"))
+def test_l2_encoded_materializer_does_not_silently_raise_sub_dense_budget(
+    family: str, fake_pr106_archive: Path, tmp_path: Path
+) -> None:
+    decoded_raw = tmp_path / f"{family}_decoded.raw"
+    gt_raw = tmp_path / f"{family}_gt.raw"
+    _write_raw_frames(decoded_raw, n_frames=2)
+    _write_raw_frames(gt_raw, n_frames=2)
+    result = _run_materializer(
+        MATERIALIZERS[family],
+        [
+            "--pr106-archive",
+            str(fake_pr106_archive),
+            "--output-dir",
+            str(tmp_path / f"{family}_l2_sub_dense"),
+            "--residual-mode",
+            "l2_encoded",
+            "--decoded-raw",
+            str(decoded_raw),
+            "--gt-raw",
+            str(gt_raw),
+            "--n-frames",
+            "2",
+            "--byte-budget",
+            "1",
+        ],
+    )
+    assert result.returncode == 2
+    assert "dense" in result.stderr
 
 
 # ── Deterministic bytes ──────────────────────────────────────────────────────

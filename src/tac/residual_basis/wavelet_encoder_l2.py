@@ -377,6 +377,10 @@ def encode_wavelet_residual_l2(
             f"expected (T, H, W, 3); got {decoded_frames.shape}"
         )
     n_frames, h, w, _ = decoded_frames.shape
+    if n_frames % 2 != 0:
+        raise WaveletEncoderL2Error(
+            f"expected an even number of contest frames (pairs); got {n_frames}"
+        )
     if h != CAMERA_H or w != CAMERA_W:
         raise WaveletEncoderL2Error(
             f"expected ({CAMERA_H}, {CAMERA_W}); got ({h}, {w})"

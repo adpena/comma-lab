@@ -265,6 +265,10 @@ def encode_c3_residual_l2(
             f"expected (T, H, W, 3); got {decoded_frames.shape}"
         )
     n_frames, h, w, _ = decoded_frames.shape
+    if n_frames % 2 != 0:
+        raise C3EncoderL2Error(
+            f"expected an even number of contest frames (pairs); got {n_frames}"
+        )
     if h != CAMERA_H or w != CAMERA_W:
         raise C3EncoderL2Error(
             f"expected ({CAMERA_H}, {CAMERA_W}); got ({h}, {w})"
@@ -351,10 +355,12 @@ def encode_c3_residual_l2(
             n_frames=n_frames, scales_per_frame=scales_arr, deltas_q=deltas_arr
         )
         total_archive_bytes = pr106_wrapper_bytes + 6 + 4 + len(blob)
-        # Evaluate on a subsample of frames to keep CPU cost manageable
-        # (the proxy is monotone in mean-square so a uniform subset is fine).
-        eval_stride = max(1, n_frames // 64)
-        eval_idx = list(range(0, n_frames, eval_stride))[:64]
+        # Evaluate whole frame pairs so SegNet-last-frame and PoseNet-pair
+        # semantics stay contest-faithful under subsampling.
+        n_pairs = n_frames // 2
+        pair_stride = max(1, n_pairs // 32)
+        eval_pairs = list(range(0, n_pairs, pair_stride))[:32]
+        eval_idx = [frame_idx for pair in eval_pairs for frame_idx in (2 * pair, 2 * pair + 1)]
         decoded_eval = decoded_with_residual[eval_idx].astype(np.float32)
         gt_eval = gt_frames[eval_idx].astype(np.float32)
         with torch.no_grad():

@@ -113,6 +113,7 @@ CONTEST_POSE_SQRT_FACTOR: Final[float] = 10.0
 # PR106 r2 operating-point reference (for the marginal-value docstring above).
 PR106_R2_FRONTIER_POSE_AVG: Final[float] = 3.4e-5
 PR106_R2_FRONTIER_SEG_AVG: Final[float] = 6.4e-4
+POSE_SQRT_EPS: Final[float] = 1e-12
 
 # Camera + scorer dimensions (per upstream evaluate.py).
 CAMERA_H: Final[int] = 874
@@ -195,9 +196,21 @@ def _coerce_rgb_to_bchw_float(rgb: torch.Tensor) -> torch.Tensor:
     )
 
 
-def _ensure_pixel_range(rgb_bchw: torch.Tensor) -> torch.Tensor:
-    """Clamp to [0, 255] without breaking autograd."""
-    return rgb_bchw.clamp(min=0.0, max=255.0)
+def _validate_pixel_range(rgb_bchw: torch.Tensor, *, name: str) -> torch.Tensor:
+    """Fail closed on invalid pixel ranges instead of silently rescaling/clamping."""
+    if not torch.isfinite(rgb_bchw).all().item():
+        raise L2ScoreAwareLossError(f"{name} contains NaN or Inf")
+    min_value = float(rgb_bchw.detach().amin().item())
+    max_value = float(rgb_bchw.detach().amax().item())
+    if min_value < 0.0 or max_value > 255.0:
+        raise L2ScoreAwareLossError(
+            f"{name} pixels must be in [0, 255]; observed min={min_value} max={max_value}"
+        )
+    if 0.0 < max_value <= 1.0:
+        raise L2ScoreAwareLossError(
+            f"{name} appears normalized to [0, 1]; pass uint8-scale [0, 255] frames"
+        )
+    return rgb_bchw
 
 
 def _resize_to_scorer(rgb_bchw: torch.Tensor) -> torch.Tensor:
@@ -226,16 +239,21 @@ def _seg_proxy_distortion(decoded_yuv6: torch.Tensor, gt_yuv6: torch.Tensor) -> 
     architectures". MSE is monotone-correlated with mask disagreement at
     sub-perceptual perturbation scales (the L2 encoder's operating regime).
 
-    Shape: ``(B, 6, H, W)`` YUV6 -> scalar.
+    Shape: ``(2 * P, 6, H, W)`` YUV6 -> scalar over the second frame of each pair.
     """
     if decoded_yuv6.shape != gt_yuv6.shape:
         raise L2ScoreAwareLossError(
             f"seg proxy shape mismatch: decoded={tuple(decoded_yuv6.shape)} "
             f"gt={tuple(gt_yuv6.shape)}"
         )
-    # SegNet sees the LAST frame; we replicate that by using all of the
-    # current batch (caller passes the relevant frames).
-    diff = decoded_yuv6 - gt_yuv6
+    if decoded_yuv6.ndim != 4 or decoded_yuv6.shape[0] % 2 != 0:
+        raise L2ScoreAwareLossError(
+            f"seg proxy expects an even frame-pair batch (2*P,6,H,W); got {tuple(decoded_yuv6.shape)}"
+        )
+    decoded_pairs = decoded_yuv6.reshape(-1, 2, *decoded_yuv6.shape[1:])
+    gt_pairs = gt_yuv6.reshape(-1, 2, *gt_yuv6.shape[1:])
+    # Contest SegNet scores the second/last frame of each pair, not both frames.
+    diff = decoded_pairs[:, 1] - gt_pairs[:, 1]
     return (diff * diff).mean()
 
 
@@ -250,15 +268,29 @@ def _pose_proxy_distortion(
     every 2 frames as a pair). This is the most gradient-reachable proxy
     without loading the FastViT-T12 backbone.
 
-    Shape: ``(B, 6, H, W)`` YUV6 with B even -> scalar.
+    Shape: ``(2 * P, 6, H, W)`` YUV6 with B even -> scalar.
     """
     if decoded_yuv6.shape != gt_yuv6.shape:
         raise L2ScoreAwareLossError(
             f"pose proxy shape mismatch: decoded={tuple(decoded_yuv6.shape)} "
             f"gt={tuple(gt_yuv6.shape)}"
         )
-    diff = decoded_yuv6 - gt_yuv6
+    if decoded_yuv6.ndim != 4 or decoded_yuv6.shape[0] % 2 != 0:
+        raise L2ScoreAwareLossError(
+            f"pose proxy expects an even frame-pair batch (2*P,6,H,W); got {tuple(decoded_yuv6.shape)}"
+        )
+    diff = decoded_yuv6.reshape(-1, 2, *decoded_yuv6.shape[1:]) - gt_yuv6.reshape(
+        -1, 2, *gt_yuv6.shape[1:]
+    )
     return (diff * diff).mean()
+
+
+def _zero_preserving_sqrt(x: torch.Tensor) -> torch.Tensor:
+    """Finite-gradient sqrt surrogate with exact zero value at x=0."""
+    x_nonnegative = torch.clamp(x, min=0.0)
+    return torch.sqrt(x_nonnegative + POSE_SQRT_EPS) - torch.sqrt(
+        torch.as_tensor(POSE_SQRT_EPS, dtype=x.dtype, device=x.device)
+    )
 
 
 def compute_score_aware_proxy_loss(
@@ -317,8 +349,19 @@ def compute_score_aware_proxy_loss(
                 f"archive_bytes={archive_bytes} exceeds budget.max_bytes={budget.max_bytes}"
             )
 
-    decoded_bchw = _ensure_pixel_range(_coerce_rgb_to_bchw_float(decoded_rgb))
-    gt_bchw = _ensure_pixel_range(_coerce_rgb_to_bchw_float(gt_rgb)).detach()
+    decoded_bchw = _validate_pixel_range(
+        _coerce_rgb_to_bchw_float(decoded_rgb), name="decoded_rgb"
+    )
+    gt_bchw = _validate_pixel_range(_coerce_rgb_to_bchw_float(gt_rgb), name="gt_rgb").detach()
+    if decoded_bchw.shape != gt_bchw.shape:
+        raise L2ScoreAwareLossError(
+            f"decoded/gt shape mismatch after layout coercion: decoded={tuple(decoded_bchw.shape)} "
+            f"gt={tuple(gt_bchw.shape)}"
+        )
+    if decoded_bchw.shape[0] % 2 != 0:
+        raise L2ScoreAwareLossError(
+            f"expected an even number of frames (frame pairs); got B={decoded_bchw.shape[0]}"
+        )
 
     if eval_roundtrip:
         # Local import to avoid a circular import: differentiable_eval_roundtrip
@@ -372,7 +415,7 @@ def compute_score_aware_proxy_loss(
     gamma_term = (
         lag.gamma
         * lag.proxy_pose_marginal_multiplier
-        * torch.sqrt(torch.clamp(lag.pose_sqrt_factor * pose_proxy, min=0.0))
+        * _zero_preserving_sqrt(lag.pose_sqrt_factor * pose_proxy)
     )
 
     soft_barrier_term_value = 0.0
@@ -415,6 +458,7 @@ __all__ = [
     "L2ScoreAwareLossError",
     "PR106_R2_FRONTIER_POSE_AVG",
     "PR106_R2_FRONTIER_SEG_AVG",
+    "POSE_SQRT_EPS",
     "ResidualByteBudget",
     "SCORER_H",
     "SCORER_W",

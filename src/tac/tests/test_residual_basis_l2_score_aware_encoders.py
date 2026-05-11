@@ -23,7 +23,9 @@ wire format produces multi-MB blobs at N=4. The mathematics are scale-free.
 
 from __future__ import annotations
 
+import importlib.util
 import struct
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -52,6 +54,7 @@ CAMERA_H = 874
 CAMERA_W = 1164
 RGB_CHANNELS = 3
 SEED = 20260511
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 def _make_synthetic_pair(n_frames: int = 4) -> tuple[np.ndarray, np.ndarray]:
@@ -61,6 +64,15 @@ def _make_synthetic_pair(n_frames: int = 4) -> tuple[np.ndarray, np.ndarray]:
     delta = rng.integers(-3, 4, size=decoded.shape)
     gt = np.clip(decoded.astype(np.int16) + delta, 0, 255).astype(np.uint8)
     return decoded, gt
+
+
+def _load_submission_inflate_module(family: str):
+    path = REPO_ROOT / f"submissions/pr106_{family}_residual_sidecar/inflate.py"
+    spec = importlib.util.spec_from_file_location(f"_test_pr106_{family}_inflate", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 # --------------------------------------------------------------------------- #
@@ -187,6 +199,83 @@ def test_proxy_loss_gradient_reaches_decoded_tensor() -> None:
     assert diag["pose_proxy_mse"] > 0.0
 
 
+def test_proxy_loss_pair_faithful_seg_uses_second_frame_only() -> None:
+    gt = torch.full((4, 3, 32, 32), 128.0)
+    first_frame_only = gt.clone()
+    first_frame_only[0::2] += 5.0
+    _, first_diag = compute_score_aware_proxy_loss(
+        first_frame_only,
+        gt,
+        archive_bytes=200_000,
+        eval_roundtrip=False,
+        yuv6_routing=False,
+    )
+    assert pytest.approx(first_diag["seg_proxy_mse"], abs=1e-8) == 0.0
+    assert first_diag["pose_proxy_mse"] > 0.0
+
+    second_frame_only = gt.clone()
+    second_frame_only[1::2] += 5.0
+    _, second_diag = compute_score_aware_proxy_loss(
+        second_frame_only,
+        gt,
+        archive_bytes=200_000,
+        eval_roundtrip=False,
+        yuv6_routing=False,
+    )
+    assert second_diag["seg_proxy_mse"] > 0.0
+    assert second_diag["pose_proxy_mse"] > 0.0
+
+
+def test_proxy_loss_refuses_odd_frame_count() -> None:
+    decoded_t = torch.full((3, 3, 32, 32), 128.0)
+    gt_t = decoded_t.clone()
+    with pytest.raises(L2ScoreAwareLossError, match="even"):
+        compute_score_aware_proxy_loss(
+            decoded_t,
+            gt_t,
+            archive_bytes=200_000,
+            eval_roundtrip=False,
+            yuv6_routing=False,
+        )
+
+
+def test_proxy_loss_zero_pose_baseline_has_finite_gradient() -> None:
+    decoded_t = torch.full((2, 3, 32, 32), 128.0, requires_grad=True)
+    gt_t = decoded_t.detach().clone()
+    loss, diag = compute_score_aware_proxy_loss(
+        decoded_t,
+        gt_t,
+        archive_bytes=200_000,
+        eval_roundtrip=False,
+        yuv6_routing=True,
+    )
+    assert pytest.approx(diag["gamma_term"], abs=1e-8) == 0.0
+    loss.backward()
+    assert decoded_t.grad is not None
+    assert torch.isfinite(decoded_t.grad).all()
+
+
+def test_proxy_loss_rejects_normalized_or_out_of_range_inputs() -> None:
+    normalized = torch.full((2, 3, 32, 32), 0.5)
+    with pytest.raises(L2ScoreAwareLossError, match="normalized"):
+        compute_score_aware_proxy_loss(
+            normalized,
+            normalized,
+            archive_bytes=200_000,
+            eval_roundtrip=False,
+            yuv6_routing=False,
+        )
+    out_of_range = torch.full((2, 3, 32, 32), 300.0)
+    with pytest.raises(L2ScoreAwareLossError, match=r"\[0, 255\]"):
+        compute_score_aware_proxy_loss(
+            out_of_range,
+            out_of_range,
+            archive_bytes=200_000,
+            eval_roundtrip=False,
+            yuv6_routing=False,
+        )
+
+
 def test_proxy_loss_refuses_zero_archive_bytes() -> None:
     decoded, gt = _make_synthetic_pair(n_frames=2)
     decoded_t = torch.from_numpy(decoded.astype(np.float32))
@@ -288,6 +377,24 @@ def test_wavelet_l2_residual_bytes_round_trip_via_parse_archive() -> None:
     assert parsed.pr106_bytes == fake_pr106
 
 
+def test_wavelet_l2_residual_bytes_are_consumed_by_submission_decoder() -> None:
+    decoded, gt = _make_synthetic_pair(n_frames=2)
+    dense = dense_wavelet_residual_blob_bytes(2)
+    result = encode_wavelet_residual_l2(decoded, gt, byte_budget=dense, n_iterations=1)
+    inflate = _load_submission_inflate_module("wavelet")
+    residual = inflate.decode_wavelet_residual(result.residual_bytes, n_frames=2)
+    assert residual.shape == (2, CAMERA_H, CAMERA_W, RGB_CHANNELS)
+    assert np.isfinite(residual).all()
+    assert np.abs(residual).sum() > 0.0
+    mutated = bytearray(result.residual_bytes)
+    # Offset 16 is the first cA byte; cA scale is intentionally zero. Mutate
+    # cH instead so the runtime-consumed detail band output must change.
+    first_detail_band_offset = 16 + RGB_CHANNELS * (CAMERA_H // 2) * (CAMERA_W // 2)
+    mutated[first_detail_band_offset] = (mutated[first_detail_band_offset] + 1) % 256
+    mutated_residual = inflate.decode_wavelet_residual(bytes(mutated), n_frames=2)
+    assert not np.array_equal(mutated_residual, residual)
+
+
 def test_wavelet_l2_shape_mismatch_raises() -> None:
     decoded, _ = _make_synthetic_pair(n_frames=2)
     gt_wrong = decoded[:1]  # mismatched n_frames
@@ -300,6 +407,14 @@ def test_wavelet_l2_camera_resolution_required() -> None:
     bad = rng.integers(0, 256, size=(2, 32, 32, 3), dtype=np.uint8)
     with pytest.raises(WaveletEncoderL2Error):
         encode_wavelet_residual_l2(bad, bad, byte_budget=10_000)
+
+
+def test_wavelet_l2_refuses_odd_frame_count() -> None:
+    decoded, gt = _make_synthetic_pair(n_frames=3)
+    with pytest.raises(WaveletEncoderL2Error, match="even"):
+        encode_wavelet_residual_l2(
+            decoded, gt, byte_budget=dense_wavelet_residual_blob_bytes(3)
+        )
 
 
 # --------------------------------------------------------------------------- #
@@ -340,6 +455,21 @@ def test_c3_l2_residual_bytes_round_trip_via_parse_archive() -> None:
     assert parsed.residual_bytes == result.residual_bytes
 
 
+def test_c3_l2_residual_bytes_are_consumed_by_submission_decoder() -> None:
+    decoded, gt = _make_synthetic_pair(n_frames=2)
+    dense = dense_c3_residual_blob_bytes(2)
+    result = encode_c3_residual_l2(decoded, gt, byte_budget=dense, n_iterations=1)
+    inflate = _load_submission_inflate_module("c3")
+    residual = inflate.decode_c3_residual(result.residual_bytes, n_frames=2)
+    assert residual.shape == (2, CAMERA_H, CAMERA_W, RGB_CHANNELS)
+    assert np.isfinite(residual).all()
+    assert np.abs(residual).sum() > 0.0
+    mutated = bytearray(result.residual_bytes)
+    mutated[4] = (mutated[4] + 1) % 256
+    mutated_residual = inflate.decode_c3_residual(bytes(mutated), n_frames=2)
+    assert not np.array_equal(mutated_residual, residual)
+
+
 def test_c3_l2_first_difference_encodes_zero_residual_to_zero_deltas() -> None:
     """If decoded == gt, the residual is zero, so deltas should all be zero."""
     decoded, _ = _make_synthetic_pair(n_frames=2)
@@ -358,6 +488,12 @@ def test_c3_l2_first_difference_encodes_zero_residual_to_zero_deltas() -> None:
         # Scale may be 0 OR deltas may be 0 (both encode zero residual).
         if abs(scale) > 1e-9:
             assert np.all(deltas == 0)
+
+
+def test_c3_l2_refuses_odd_frame_count() -> None:
+    decoded, gt = _make_synthetic_pair(n_frames=3)
+    with pytest.raises(C3EncoderL2Error, match="even"):
+        encode_c3_residual_l2(decoded, gt, byte_budget=dense_c3_residual_blob_bytes(3))
 
 
 # --------------------------------------------------------------------------- #
@@ -402,6 +538,23 @@ def test_cool_chic_l2_residual_bytes_round_trip_via_parse_archive() -> None:
     assert parsed.residual_bytes == result.residual_bytes
 
 
+def test_cool_chic_l2_residual_bytes_are_consumed_by_submission_decoder() -> None:
+    decoded, gt = _make_synthetic_pair(n_frames=2)
+    dense_l1 = dense_cool_chic_residual_blob_bytes(2, 1)
+    result = encode_cool_chic_residual_l2(
+        decoded, gt, byte_budget=dense_l1, candidate_n_levels=(1,)
+    )
+    inflate = _load_submission_inflate_module("cool_chic")
+    residual = inflate.decode_cool_chic_residual(result.residual_bytes, n_frames=2)
+    assert residual.shape == (2, CAMERA_H, CAMERA_W, RGB_CHANNELS)
+    assert np.isfinite(residual).all()
+    assert np.abs(residual).sum() > 0.0
+    mutated = bytearray(result.residual_bytes)
+    mutated[6] = (mutated[6] + 1) % 256
+    mutated_residual = inflate.decode_cool_chic_residual(bytes(mutated), n_frames=2)
+    assert not np.array_equal(mutated_residual, residual)
+
+
 def test_cool_chic_l2_picks_largest_n_levels_under_budget() -> None:
     """When multiple n_levels fit budget, the encoder picks the one with best loss."""
     decoded, gt = _make_synthetic_pair(n_frames=2)
@@ -412,6 +565,17 @@ def test_cool_chic_l2_picks_largest_n_levels_under_budget() -> None:
     )
     # The encoder picks whichever level minimizes proxy loss within budget.
     assert result.n_levels_used in (1, 2)
+
+
+def test_cool_chic_l2_refuses_odd_frame_count() -> None:
+    decoded, gt = _make_synthetic_pair(n_frames=3)
+    with pytest.raises(CoolChicEncoderL2Error, match="even"):
+        encode_cool_chic_residual_l2(
+            decoded,
+            gt,
+            byte_budget=dense_cool_chic_residual_blob_bytes(3, 1),
+            candidate_n_levels=(1,),
+        )
 
 
 # --------------------------------------------------------------------------- #
