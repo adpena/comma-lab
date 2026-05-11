@@ -4,15 +4,15 @@
 //! [`tac.packet_compiler.pr103_arithmetic_coding`](
 //! file:../../../../../src/tac/packet_compiler/pr103_arithmetic_coding.py).
 //!
-//! Three primitives are exposed (none implemented yet):
+//! Three primitives are exposed:
 //!
-//! 1. **Merged range stream over multiple weight tensors** — one
+//! 1. **Merged range stream over multiple weight tensors** — scaffold-only. One
 //!    range-coded byte string spanning N tensors with per-tensor histograms.
 //!    Uses [`constriction::stream::queue::RangeEncoder`].
-//! 2. **Latent-hi arithmetic** — encode the high byte of a uint16 zigzag
+//! 2. **Latent-hi arithmetic** — implemented. Encode the high byte of a uint16 zigzag
 //!    delta with a peaked histogram; beats LZMA/Brotli by ≈ 8 KB on PR103's
 //!    600×28 latent stream.
-//! 3. **Adaptive Brotli parameter search** — sweep `(lgwin, quality)` under
+//! 3. **Adaptive Brotli parameter search** — scaffold-only. Sweep `(lgwin, quality)` under
 //!    a time/eval budget and keep the smallest output.
 //!
 //! Each primitive has a paired golden vector under
@@ -32,7 +32,14 @@
 //! the underlying `get_compressed()` API. See the Python helpers
 //! `_words_to_uint32_bytes` / `_uint32_bytes_to_words`.
 
+pub mod latent_hi;
+pub mod latent_hi_hand_optimized;
+pub mod merged_range_stream;
 pub mod stubs;
+
+pub use latent_hi_hand_optimized::{
+    encode_latent_hi_arithmetic_hand_optimized, PreparedCategorical,
+};
 
 pub use stubs::{
     adaptive_brotli_param_search, decode_latent_hi_arithmetic, decode_merged_range_stream,

@@ -52,9 +52,21 @@
 //!   centered-delta uint8 + self-delimiting split Brotli.
 //! - [`pr103_arithmetic_coding`] — merged range stream over multiple weight
 //!   tensors + latent-hi arithmetic + adaptive Brotli param search.
+//! - [`pr93_pose_codec`] — delta-varint pose codec (QZPDV1) + QZMB1 magic
+//!   grammar (2026-05-11).
+//! - [`pr91_hpac_grammar`] — universal per-symbol constriction AC wrapper
+//!   + QM0/QH0 magic grammar (2026-05-11).
+//! - [`pr84_adaptive_mask`] — per-context adaptive-context range coder
+//!   (2026-05-11).
 //! - [`sparse_packet_ir`] — RLE-of-zeros + arithmetic-coded coefficient
 //!   stream + temporal-subsampling indicator vector. Closes O's L2
 //!   wire-format ceiling (2026-05-11).
+//! - [`simd`] — NEON (aarch64) + AVX2 (x86_64) hot-path kernels for
+//!   pre-encoding transforms (hi-byte extraction, RLE-of-zeros nonzero
+//!   scan, centered-delta column-major emit) with portable Rust fallback
+//!   and byte-for-byte parity proptests (2026-05-11).
+//! - [`custom_binary_container`] — RESEARCH-ONLY non-ZIP container format
+//!   exploration; archive bytes do NOT enter the contest packet (2026-05-11).
 //! - [`conformance`] — golden-vector loader + byte-for-byte parity helpers.
 //!
 //! # Source references
@@ -66,11 +78,22 @@
 //! - Compliance: CLAUDE.md "Deterministic packet compiler" non-negotiable.
 
 #![warn(missing_docs)]
-#![forbid(unsafe_code)]
+// `unsafe_code` is FORBIDDEN at the crate's public surface. Architecture-
+// specific SIMD intrinsics (NEON / AVX2) require `unsafe` to call the
+// `std::arch::*` family; those usages live exclusively in the [`simd`]
+// submodule and carry per-function `#[allow(unsafe_code)]` + a `# Safety`
+// doc comment. Every other module remains `unsafe_code`-free.
+#![deny(unsafe_op_in_unsafe_fn)]
+#![warn(unsafe_code)]
 
 pub mod conformance;
+pub mod custom_binary_container;
 pub mod pr101_sidecar_grammar;
 pub mod pr103_arithmetic_coding;
+pub mod pr84_adaptive_mask;
+pub mod pr91_hpac_grammar;
+pub mod pr93_pose_codec;
+pub mod simd;
 pub mod sparse_packet_ir;
 
 /// Crate-level error type. SCAFFOLD-ONLY variants are surfaced now so callers

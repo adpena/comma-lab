@@ -1,0 +1,50 @@
+# `tac-packet-compiler-wasm` — WebAssembly target for the canonical
+# packet-compiler primitives.
+#
+# Status (2026-05-11): SCAFFOLD-ONLY. Exports the byte-parity-verified
+# primitives from `tac-packet-compiler` (the standard Rust port) as
+# WASM-callable functions. Browser demo lives in `web/`. Builds via
+# `wasm-pack build --target web` per https://rustwasm.github.io/wasm-pack/.
+#
+# This crate is RESEARCH / OSS-DEMO only — contest archives must remain
+# native (no WASM-compiled inflate.sh consumer). Tag every score-relevant
+# claim coming through this crate `[advisory only]` per CLAUDE.md
+# "Submission auth eval — BOTH CPU AND CUDA, ON 1:1 CONTEST-COMPLIANT HARDWARE".
+
+[package]
+name = "tac-packet-compiler-wasm"
+version = "0.1.0-prerelease"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "WebAssembly target for tac-packet-compiler primitives — browser-runnable encode/decode demo."
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Direct dependency on the sister crate to share the byte-parity-verified
+# implementations. The WASM crate is a thin export-layer — no parity drift
+# is possible because we delegate to the same code paths.
+tac-packet-compiler = { path = "../tac-packet-compiler" }
+
+# wasm-bindgen exposes Rust functions to JavaScript.
+wasm-bindgen = "0.2"
+
+# js_sys gives us strongly-typed bindings to JS standard library types
+# (Uint8Array, Uint32Array, Array, etc.).
+js-sys = "0.3"
+
+# Enable better panic messages in the browser console.
+console_error_panic_hook = { version = "0.1", optional = true }
+
+[features]
+default = ["console_error_panic_hook"]
+
+[dev-dependencies]
+# WebAssembly test runner; runs the parity tests inside a headless browser.
+wasm-bindgen-test = "0.3"
+
+[package.metadata.wasm-pack.profile.release]
+# Smaller WASM output for the OSS demo.
+wasm-opt = ["-Os"]

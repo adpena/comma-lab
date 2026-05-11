@@ -9,4 +9,18 @@ members = [
   "crates/tac-packet-compiler",
   "crates/zipwire"
 ]
+# `tac-packet-compiler-wasm` is intentionally excluded from the default
+# workspace member list because it targets `wasm32-unknown-unknown` and
+# its dependencies (wasm-bindgen, js-sys) pull in build chains that are
+# wrong for the default native build. Build it directly:
+#
+# ```bash
+# wasm-pack build --target web crates/tac-packet-compiler-wasm
+# ```
+#
+# This keeps `cargo test --workspace` clean on native hosts while the WASM
+# crate remains live and reviewable.
+exclude = [
+  "crates/tac-packet-compiler-wasm"
+]
 resolver = "2"

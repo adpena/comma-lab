@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>tac-packet-compiler WASM demo</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", monospace; margin: 2em; max-width: 64em; }
+  h1 { font-weight: 600; font-size: 1.25rem; }
+  h2 { font-weight: 500; font-size: 1.05rem; border-bottom: 1px solid #ddd; padding-bottom: 0.25rem; }
+  .out { background: #f4f4f4; padding: 0.5em 0.75em; border-radius: 4px; font-size: 0.85rem; overflow-x: auto; white-space: pre-wrap; }
+  .row { display: flex; gap: 1em; margin: 0.75em 0; }
+  .row > div { flex: 1; }
+  .warn { background: #fff7e6; border-left: 3px solid #d97706; padding: 0.5em 0.75em; margin: 1em 0; }
+  button { padding: 0.4em 0.9em; font-size: 0.9rem; cursor: pointer; }
+  code { background: #f4f4f4; padding: 0 0.2em; }
+</style>
+</head>
+<body>
+<h1>tac-packet-compiler WASM demo</h1>
+
+<div class="warn">
+  <strong>RESEARCH-ONLY.</strong> This demo runs the byte-parity-verified
+  packet-compiler primitives in a browser via WebAssembly. It exists as an
+  OSS reproducibility artefact. Per CLAUDE.md "Submission auth eval — BOTH
+  CPU AND CUDA, ON 1:1 CONTEST-COMPLIANT HARDWARE", scores produced via
+  this WASM path are <strong>[advisory only]</strong>. The contest CI runs
+  native x86_64 Linux; do not use a WASM-compiled encoder for contest
+  submission archives.
+</div>
+
+<h2>SIMD hi-byte extraction (PR103 input prep)</h2>
+<div class="row">
+  <div>
+    <button id="run-hi">Run hi-byte extraction (1000 random u16)</button>
+  </div>
+</div>
+<div id="out-hi" class="out">Click the button to run.</div>
+
+<h2>RLE-of-zeros nonzero scan (sparse PacketIR)</h2>
+<div class="row">
+  <div>
+    <button id="run-rle">Run nonzero scan (1024 i8, ~6% density)</button>
+  </div>
+</div>
+<div id="out-rle" class="out">Click the button to run.</div>
+
+<h2>Centered-delta uint8 (PR101 pre-LZMA)</h2>
+<div class="row">
+  <div>
+    <button id="run-cd">Run centered-delta (40×6 u8 matrix)</button>
+  </div>
+</div>
+<div id="out-cd" class="out">Click the button to run.</div>
+
+<h2>Custom binary container (TACP)</h2>
+<div class="row">
+  <div>
+    <button id="run-tacp">Encode + decode TACP container</button>
+  </div>
+</div>
+<div id="out-tacp" class="out">Click the button to run.</div>
+
+<script type="module">
+import init, {
+  extractHiBytes, scanNonzeroIndices, centeredDeltaUint8,
+  encodeTacpContainer, decodeTacpContainer,
+} from "../pkg/tac_packet_compiler_wasm.js";
+
+await init();
+
+function logTo(id, msg) {
+  document.getElementById(id).textContent = msg;
+}
+
+document.getElementById("run-hi").addEventListener("click", () => {
+  // Deterministic LCG stream — matches the Rust unit-test recipe.
+  let state = 0x20260511 >>> 0;
+  const latents = new Uint16Array(1000);
+  for (let i = 0; i < latents.length; i++) {
+    state = ((Math.imul(state, 1664525) + 1013904223) >>> 0);
+    latents[i] = state & 0xFFFF;
+  }
+  const t0 = performance.now();
+  const out = extractHiBytes(latents);
+  const t1 = performance.now();
+  logTo("out-hi",
+    `Input:  Uint16Array(${latents.length})\n` +
+    `Output: Uint32Array(${out.length}), first 16 = [${Array.from(out.slice(0, 16)).join(", ")}]\n` +
+    `Time:   ${(t1 - t0).toFixed(3)} ms`
+  );
+});
+
+document.getElementById("run-rle").addEventListener("click", () => {
+  let state = 0x20260511 >>> 0;
+  const dense = new Int8Array(1024);
+  for (let k = 0; k < 64; k++) {
+    state = ((Math.imul(state, 1664525) + 1013904223) >>> 0);
+    const idx = (state >>> 16) % 1024;
+    state = ((Math.imul(state, 1664525) + 1013904223) >>> 0);
+    const v = Math.max(1, state & 0x1F);
+    dense[idx] = v;
+  }
+  const t0 = performance.now();
+  const [indices, values] = scanNonzeroIndices(dense);
+  const t1 = performance.now();
+  logTo("out-rle",
+    `Input:  Int8Array(${dense.length})\n` +
+    `Nonzero count: ${indices.length}\n` +
+    `First 8 indices: [${Array.from(indices.slice(0, 8)).join(", ")}]\n` +
+    `First 8 values:  [${Array.from(values.slice(0, 8)).join(", ")}]\n` +
+    `Time:   ${(t1 - t0).toFixed(3)} ms`
+  );
+});
+
+document.getElementById("run-cd").addEventListener("click", () => {
+  let state = 0x20260511 >>> 0;
+  const n_pairs = 40, n_dims = 6;
+  const q = new Uint8Array(n_pairs * n_dims);
+  for (let i = 0; i < q.length; i++) {
+    state = ((Math.imul(state, 1664525) + 1013904223) >>> 0);
+    q[i] = state & 0xFF;
+  }
+  const t0 = performance.now();
+  const out = centeredDeltaUint8(q, n_pairs, n_dims);
+  const t1 = performance.now();
+  logTo("out-cd",
+    `Input:  ${n_pairs}×${n_dims} uint8 row-major\n` +
+    `Output: ${out.length} bytes column-major centered-delta\n` +
+    `First 12 output bytes: [${Array.from(out.slice(0, 12)).join(", ")}]\n` +
+    `Time:   ${(t1 - t0).toFixed(3)} ms`
+  );
+});
+
+document.getElementById("run-tacp").addEventListener("click", () => {
+  const names = ["renderer.bin", "masks.mkv", "poses.pt"];
+  const bodies = [
+    new Uint8Array(100).fill(0xAA),
+    new Uint8Array(200).fill(0xBB),
+    new Uint8Array(50).fill(0xCC),
+  ];
+  const t0 = performance.now();
+  const blob = encodeTacpContainer(names, bodies);
+  const t1 = performance.now();
+  const [decodedNames, decodedBodies] = decodeTacpContainer(blob);
+  const t2 = performance.now();
+  const namesMatch = JSON.stringify(decodedNames) === JSON.stringify(names);
+  const bodyLenMatch = decodedBodies.every((b, i) => b.length === bodies[i].length);
+  logTo("out-tacp",
+    `Encoded ${names.length} records → ${blob.length} bytes\n` +
+    `Encode: ${(t1 - t0).toFixed(3)} ms\n` +
+    `Decode: ${(t2 - t1).toFixed(3)} ms\n` +
+    `Names round-trip: ${namesMatch}\n` +
+    `Body-length round-trip: ${bodyLenMatch}`
+  );
+});
+</script>
+</body>
+</html>

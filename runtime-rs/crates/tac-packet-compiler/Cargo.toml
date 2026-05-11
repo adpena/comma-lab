@@ -1,18 +1,24 @@
-# `tac-packet-compiler` — Rust native port scaffold for `tac.packet_compiler`.
+# `tac-packet-compiler` — Rust native port for `tac.packet_compiler`.
 #
-# Status: SCAFFOLD-ONLY (no implementation; every public fn is `unimplemented!()`).
+# Status (2026-05-11): 3 of 16 primitives byte-for-byte parity GREEN against
+# the committed Python golden vectors. See README for the per-function table.
+# Remaining functions are still `unimplemented!()` and return
+# `PacketCompilerError::NotImplemented`.
+#
 # Promotion path:
 #   1. Python oracle (`src/tac/packet_compiler/`) is the canonical reference.
 #   2. Native impl writes against the golden vectors checked in under
 #      `src/tac/packet_compiler/golden_vectors/`.
 #   3. Parity test (`tests/golden_vector_parity.rs`) compares Rust output
 #      byte-for-byte against the committed SHA-256 digests.
-#   4. Promotable only after `cargo test -p tac-packet-compiler` is green on
-#      every golden vector AND a deterministic rebuild verifies.
+#   4. Promotable to a crate version > `0.1.0-prerelease` only after every
+#      golden vector parity test is green AND a deterministic rebuild
+#      verifies. `publish = false` remains until the contract stabilises.
 #
 # Source memo: handoff Bottom-line tranche item #7 + "Native-first candidates"
 # ordering 1-2 + CLAUDE.md "Deterministic packet compiler" non-negotiable.
 # Operator directive 2026-05-11: "production hardened OSS direction".
+# N D4 council verdict: 3-impl tranche (LZMA → Brotli → single-tensor AC).
 #
 # Per CLAUDE.md "Rust/Zig is a speed layer, not a license to change semantics":
 # Python remains the oracle until native parity is proven on the golden vectors.
@@ -38,6 +44,11 @@ constriction = "0.4"
 # wire format. Used by PR101 split-Brotli + PR103 adaptive search.
 brotli = "8"
 
+# Brotli decoder companion crate (re-exported but private symbols like
+# `BrotliDecompressStream` need a direct dep). Pinned to the version the
+# `brotli` 8.x crate links against.
+brotli-decompressor = "5"
+
 # liblzma — Rust bindings to the *same* liblzma C library that Python's
 # stdlib `lzma` module wraps; RAW LZMA1 (FILTER_LZMA1) bit-stream parity is
 # the design target for PR101 centered-delta uint8 latents.
@@ -57,6 +68,12 @@ hex = "0.4"
 # column-major 2D block; merged range stream has per-tensor shape metadata).
 ndarray = "0.16"
 
+# Half-precision float (fp16) — PR101 stores per-column `mins` / `scales` as
+# fp16 little-endian and the Python oracle hashes those exact bytes into the
+# pre-LZMA payload. We need `half::f16` so the Rust port quantises and
+# serialises identically.
+half = "2"
+
 [dev-dependencies]
 # Property-based round-trip tests once impl lands (encode ∘ decode = id).
 proptest = "1"
@@ -66,5 +83,10 @@ criterion = { version = "0.6", default-features = false }
 
 [[bench]]
 name = "golden_vector_parity"
+harness = false
+required-features = []
+
+[[bench]]
+name = "simd_kernels"
 harness = false
 required-features = []
