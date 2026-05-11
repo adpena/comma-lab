@@ -66,14 +66,43 @@ def inflated_output_manifest_summary(payload: dict[str, Any]) -> dict[str, Any] 
         aggregate_sha256 = manifest.get("aggregate_sha256")
         if not isinstance(aggregate_sha256, str) or not aggregate_sha256:
             continue
-        return {
+        summary = {
             "aggregate_sha256": aggregate_sha256,
             "raw_file_count": _int(manifest.get("raw_file_count")),
             "total_bytes": _int(manifest.get("total_bytes")),
             "manifest_path": candidate.get("path"),
             "manifest_sha256": candidate.get("sha256"),
         }
+        files = _inflated_output_files_summary(manifest.get("files"))
+        if files:
+            summary["files"] = files
+        return summary
     return None
+
+
+def _inflated_output_files_summary(files: Any) -> list[dict[str, Any]]:
+    if not isinstance(files, list):
+        return []
+    rows: list[dict[str, Any]] = []
+    for item in files:
+        if not isinstance(item, dict):
+            continue
+        sha = item.get("sha256")
+        if not isinstance(sha, str) or not sha:
+            continue
+        row: dict[str, Any] = {
+            "sha256": sha,
+            "bytes": _int(item.get("bytes")),
+        }
+        for key in ("video_name", "relative_path"):
+            value = item.get(key)
+            if isinstance(value, str) and value:
+                row[key] = value
+        exists = item.get("exists")
+        if isinstance(exists, bool):
+            row["exists"] = exists
+        rows.append(row)
+    return rows
 
 
 def runtime_tree_sha256(payload: dict[str, Any]) -> str | None:

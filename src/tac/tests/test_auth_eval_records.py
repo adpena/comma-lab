@@ -228,6 +228,15 @@ def test_inflated_output_manifest_summary_reads_nested_provenance_payload() -> N
                         "aggregate_sha256": "c" * 64,
                         "raw_file_count": 1,
                         "total_bytes": 603_979_776,
+                        "files": [
+                            {
+                                "video_name": "0.mkv",
+                                "relative_path": "0.raw",
+                                "exists": True,
+                                "bytes": 603_979_776,
+                                "sha256": "d" * 64,
+                            }
+                        ],
                     },
                 }
             }
@@ -240,6 +249,15 @@ def test_inflated_output_manifest_summary_reads_nested_provenance_payload() -> N
         "total_bytes": 603_979_776,
         "manifest_path": "work/inflated_outputs_manifest.json",
         "manifest_sha256": "b" * 64,
+        "files": [
+            {
+                "video_name": "0.mkv",
+                "relative_path": "0.raw",
+                "exists": True,
+                "bytes": 603_979_776,
+                "sha256": "d" * 64,
+            }
+        ],
     }
 
 
