@@ -34,6 +34,9 @@ Kaggle itself is not a contest score authority.
 uv run --with kaggle kaggle datasets create -p experiments/kaggle_datasets/comma-lab-pr106-latent-source
 uv run --with kaggle kaggle kernels push -p experiments/kaggle_kernels/comma-lab-pr106-latent-score-table
 uv run --with kaggle kaggle kernels status adpena/comma-lab-pr106-latent-score-table
+
+PYTHONPATH=src uv run --with kaggle --with requests \
+  python tools/harvest_kaggle_pr106_latent_score_table.py
 ```
 
 ## Boundary

@@ -226,6 +226,7 @@ def test_pr106_latent_operator_oneliner_uses_score_table_env() -> None:
     assert "--env PR106_LATENT_SCORE_TABLE_RESUME=1" in one_liner
     assert "--label lane_pr106_latent_sidecar" in one_liner
     assert rows["lane_pr106_latent_sidecar"]["kaggle_bundle_tool"] == "tools/kaggle_build_pr106_latent_score_table.py"
+    assert rows["lane_pr106_latent_sidecar"]["kaggle_harvest_tool"] == "tools/harvest_kaggle_pr106_latent_score_table.py"
     assert rows["lane_pr106_latent_sidecar"]["kaggle_kernel_slug"] == "adpena/comma-lab-pr106-latent-score-table"
 
 

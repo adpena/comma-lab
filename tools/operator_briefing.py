@@ -89,6 +89,7 @@ PHASE_1_SUPPLEMENTARY_LANES = [
             "  --env PR106_LATENT_MODE=score_table --env PR106_LATENT_SCORE_TABLE_RESUME=1"
         ),
         "kaggle_bundle_tool": "tools/kaggle_build_pr106_latent_score_table.py",
+        "kaggle_harvest_tool": "tools/harvest_kaggle_pr106_latent_score_table.py",
         "kaggle_kernel_slug": "adpena/comma-lab-pr106-latent-score-table",
     },
 ]
@@ -900,8 +901,8 @@ def _format_xray_toolkit() -> str:
 # having to grep experiments/results/.
 def _format_constrained_coord_search_status() -> str:
     """Locate latest constrained_coord_search rollup; format key metadata."""
-    import datetime as _dt
     import json as _json
+
     glob_root = REPO_ROOT / "experiments" / "results"
     candidates = sorted(
         glob_root.glob("constrained_coord_search_pr101_bias_*/rollup.json"),

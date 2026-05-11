@@ -57,6 +57,18 @@ Use `datasets create` only for the first upload; use `datasets version` after
 that. The generated source bundle carries the active lane-claim ledger and the
 PR106 archive, and the generated kernel manifest keeps `score_claim=false`.
 
+Harvest the finished kernel through the lane-specific wrapper, which delegates
+to the canonical paginated output ingester and keeps the proxy boundary explicit:
+
+```bash
+PYTHONPATH=src uv run --with kaggle --with requests \
+  python tools/harvest_kaggle_pr106_latent_score_table.py
+```
+
+The wrapper downloads only the `pr106_latent_score_table/` output prefix plus
+kernel logs, writes a harvest manifest with `score_claim=false`, and copies the
+evidence into `reports/raw/kaggle_ingested/<run_id>/`.
+
 ## Required Launch Sequence
 
 Use the command strings in each generated `proxy_sweep_build_manifest.json`.
