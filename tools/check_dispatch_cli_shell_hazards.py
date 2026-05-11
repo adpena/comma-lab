@@ -156,7 +156,10 @@ class Hazard:
 
 
 def _repo_rel(path: Path, root: Path) -> str:
-    return repo_relative(path, root)
+    try:
+        return path.relative_to(root).as_posix()
+    except ValueError:
+        return repo_relative(path, root)
 
 
 def _is_excluded(path: Path, root: Path, excludes: tuple[str, ...]) -> bool:
@@ -510,7 +513,6 @@ def scan_paths(
     excludes: tuple[str, ...] = DEFAULT_EXCLUDES,
     source_index=None,
 ) -> list[Hazard]:
-    hazards: list[Hazard] = []
     if source_index is None:
         files = iter_scan_files(root, scan_paths=scan_paths, excludes=excludes)
     else:
@@ -559,6 +561,7 @@ def scan_paths(
                     continue
             if suffix == ".py" and _is_dispatcher_file(rel):
                 files.append(path)
+    hazards: list[Hazard] = []
     for file_path in files:
         try:
             if source_index is None:

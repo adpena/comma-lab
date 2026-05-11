@@ -115,7 +115,14 @@ TOOLING_CANDIDATE_SUBSTRINGS = tuple(
 
 
 def _is_excluded(path: Path, root: Path) -> bool:
-    return _is_excluded_rel(repo_relative(path, root))
+    return _is_excluded_rel(_repo_rel(path, root))
+
+
+def _repo_rel(path: Path, root: Path) -> str:
+    try:
+        return path.relative_to(root).as_posix()
+    except ValueError:
+        return repo_relative(path, root)
 
 
 def _is_excluded_rel(rel: str) -> bool:
@@ -145,13 +152,13 @@ def iter_files(repo_root: Path, scan_roots: tuple[str, ...]) -> list[Path]:
             dirnames[:] = [
                 dirname
                 for dirname in sorted(dirnames)
-                if not _is_excluded_rel(repo_relative(dirpath_path / dirname, repo_root))
+                if not _is_excluded_rel(_repo_rel(dirpath_path / dirname, repo_root))
             ]
             for filename in sorted(filenames):
                 candidate = dirpath_path / filename
                 if candidate.suffix not in TEXT_SUFFIXES:
                     continue
-                if _is_excluded_rel(repo_relative(candidate, repo_root)):
+                if _is_excluded_rel(_repo_rel(candidate, repo_root)):
                     continue
                 if not candidate.is_file():
                     continue
@@ -174,7 +181,7 @@ def _indexed_files(
         path
         for path in indexed
         if path.suffix in TEXT_SUFFIXES
-        and not _is_excluded_rel(repo_relative(path, repo_root))
+        and not _is_excluded_rel(_repo_rel(path, repo_root))
         and path.is_file()
     ]
 
@@ -212,6 +219,46 @@ def _matching_line_numbers(
     return sorted(matched)
 
 
+def _scan_file(
+    repo_root: Path,
+    path: Path,
+    *,
+    source_index: _SourceIndexLike | None,
+) -> tuple[str, Counter[str], dict[str, list[dict[str, object]]]]:
+    rel = _repo_rel(path, repo_root)
+    try:
+        text = (
+            source_index.read_text(path, encoding="utf-8")
+            if source_index is not None
+            else path.read_text(encoding="utf-8")
+        )
+    except UnicodeDecodeError:
+        return rel, Counter(), {}
+    active_patterns = _candidate_patterns(text)
+    if not active_patterns:
+        return rel, Counter(), {}
+    lines = text.splitlines()
+    line_starts = (
+        []
+        if all(pattern.key == "manual_audit_score_dispatch_metadata" for pattern in active_patterns)
+        else _line_starts(text)
+    )
+    counts: Counter[str] = Counter()
+    occurrences: dict[str, list[dict[str, object]]] = defaultdict(list)
+    for pattern in active_patterns:
+        for lineno in _matching_line_numbers(pattern, text, lines, line_starts):
+            counts[pattern.key] += 1
+            occurrences[pattern.key].append(
+                {
+                    "canonical_target": pattern.canonical_target,
+                    "line": lineno,
+                    "path": rel,
+                    "severity": pattern.severity,
+                }
+            )
+    return rel, counts, dict(occurrences)
+
+
 def audit_tooling(
     repo_root: Path,
     scan_roots: tuple[str, ...],
@@ -225,32 +272,16 @@ def audit_tooling(
         if source_index is not None
         else iter_files(repo_root, scan_roots)
     )
-    for path in files:
-        rel = repo_relative(path, repo_root)
-        try:
-            text = (
-                source_index.read_text(path, encoding="utf-8")
-                if source_index is not None
-                else path.read_text(encoding="utf-8")
-            )
-        except UnicodeDecodeError:
+    scanned = [
+        _scan_file(repo_root, path, source_index=source_index)
+        for path in files
+    ]
+    for rel, counts, file_occurrences in scanned:
+        if not counts:
             continue
-        active_patterns = _candidate_patterns(text)
-        if not active_patterns:
-            continue
-        lines = text.splitlines()
-        line_starts = _line_starts(text)
-        for pattern in active_patterns:
-            for lineno in _matching_line_numbers(pattern, text, lines, line_starts):
-                per_file_counts[rel][pattern.key] += 1
-                occurrences[pattern.key].append(
-                    {
-                        "canonical_target": pattern.canonical_target,
-                        "line": lineno,
-                        "path": rel,
-                        "severity": pattern.severity,
-                    }
-                )
+        per_file_counts[rel].update(counts)
+        for key, values in file_occurrences.items():
+            occurrences[key].extend(values)
     summary = {
         "file_count": len(files),
         "pattern_counts": {
