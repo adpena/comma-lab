@@ -123,14 +123,9 @@ UTC_TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 OUTPUT_DIR="experiments/results/staged_phase3_${STAGED_PHASE_DISPATCH_PHASE3_WEEK:-W?}_${UTC_TIMESTAMP}"
 mkdir -p "${OUTPUT_DIR}"
 
-echo "==> Claiming Phase 3 lane dispatch (TTL conflict check)..."
-.venv/bin/python tools/claim_lane_dispatch.py claim \
-  --lane-id "${LANE_ID}" \
-  --platform "${PROVIDER}" \
-  --instance-job-id "staged_phase3_${STAGED_PHASE_DISPATCH_PHASE3_WEEK:-W?}_${UTC_TIMESTAMP}" \
-  --agent "claude:opus-4-7" \
-  --status "operator_approved_phase3_${STAGED_PHASE_DISPATCH_PHASE3_WEEK:-W?}" \
-  --notes "Phase 3 ${STAGED_PHASE_DISPATCH_PHASE3_WEEK:-W?} operator-approved \$${STAGED_PHASE_DISPATCH_BUDGET_USD}; Phase 2 anchor ${STAGED_PHASE_DISPATCH_PHASE2_ANCHOR_SCORE}; T10 gap ${STAGED_PHASE_DISPATCH_T10_DISTILLATION_GAP}; output ${OUTPUT_DIR}"
+echo "==> Provider job not created by this pre-stage script"
+echo "    No lane claim opened. Phase 3 is still command-not-wired; a claim is"
+echo "    valid only after a real provider job/call id exists."
 
 echo "[REFUSE] Phase 3 dispatch command not yet wired in this script."
 echo "    Operator: instantiate the Phase3DispatchGate via"

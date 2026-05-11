@@ -1457,6 +1457,42 @@ def _contest_cuda_score_claim_from_result(
     return score_claim, blockers, metrics
 
 
+def _eval_data_terminal_claim_facts(eval_data: Any, metrics: dict[str, Any]) -> str:
+    if not isinstance(eval_data, dict):
+        return ""
+    provenance = eval_data.get("provenance")
+    if not isinstance(provenance, dict):
+        provenance = {}
+    runtime_manifest = eval_data.get("inflate_runtime_manifest")
+    if not isinstance(runtime_manifest, dict):
+        runtime_manifest = {}
+    archive_sha = (
+        provenance.get("archive_sha256")
+        or eval_data.get("archive_sha256")
+        or eval_data.get("expected_archive_sha256")
+    )
+    runtime_sha = (
+        eval_data.get("runtime_tree_sha256")
+        or eval_data.get("inflate_runtime_tree_sha256")
+        or eval_data.get("runtime_content_tree_sha256")
+        or eval_data.get("inflate_runtime_content_tree_sha256")
+        or runtime_manifest.get("runtime_tree_sha256")
+        or runtime_manifest.get("runtime_content_tree_sha256")
+    )
+    facts: list[str] = []
+    if isinstance(archive_sha, str) and archive_sha:
+        facts.append(f"archive_sha={archive_sha}")
+    archive_bytes = metrics.get("archive_size_bytes")
+    if isinstance(archive_bytes, int):
+        facts.append(f"archive_bytes={archive_bytes}")
+    score = metrics.get("score")
+    if isinstance(score, (int, float)):
+        facts.append(f"score_recomputed={float(score):.17g}")
+    if isinstance(runtime_sha, str) and runtime_sha:
+        facts.append(f"runtime_tree_sha256={runtime_sha}")
+    return "; ".join(facts)
+
+
 def recover(label: str) -> int:
     instance_job_id = _safe_label(label)
     out_dir = _result_dir(instance_job_id)
@@ -1550,15 +1586,18 @@ def recover(label: str) -> int:
         },
     )
     if score_claim:
-        status = "completed_t1_contest_cuda_recovered"
+        status = "completed_contest_cuda_t1_recovered"
     elif _returncode_is_zero(result.get("returncode")):
         status = "completed_t1_training_only_recovered_no_score_claim"
     else:
         status = "failed_t1_modal_recovered_no_score_claim"
+    terminal_facts = _eval_data_terminal_claim_facts(result.get("eval_data"), metrics)
     notes = (
         f"rc={result.get('returncode')!r}; stage={result.get('stage')!r}; "
         f"score_claim={score_claim}; blockers={blockers}; summary={summary_path}"
     )
+    if terminal_facts:
+        notes = f"{notes}; {terminal_facts}"
     close_rc = _close_recovery_claim(
         instance_job_id=instance_job_id,
         call_id=call_id,

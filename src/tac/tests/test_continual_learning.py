@@ -30,11 +30,13 @@ from tac.continual_learning import (
     ContinualLearningPosterior,
     PerTrackPosterior,
     SourceRhoPosterior,
+    contest_result_from_auth_eval_payload,
     harvest_anchors_from_iter,
     load_posterior,
     posterior_query_source_rho,
     posterior_query_track_correction,
     posterior_update,
+    posterior_update_locked_from_auth_eval_json,
     save_posterior,
 )
 
@@ -105,14 +107,15 @@ def test_macos_substrate_refused_by_default():
     assert "macOS" in update.refusal_reason or "1:1 contest-compliant" in update.refusal_reason
 
 
-def test_macos_substrate_accepted_when_explicitly_allowed():
+def test_macos_substrate_refused_even_when_legacy_override_requested():
     posterior = ContinualLearningPosterior()
     result = _make_authoritative_result(
         substrate="macos_arm64_m5max",
         tag="[contest-CPU GHA Linux x86_64]",
     )
     update = posterior_update(posterior, result, forbid_macos_promotion=False)
-    assert update.accepted is True
+    assert update.accepted is False
+    assert "macOS" in update.refusal_reason
 
 
 def test_duplicate_sha256_refused():
@@ -454,7 +457,8 @@ def test_cuda_cpu_drift_signal_present_when_all_components_supplied():
     result.cpu_pose = 7.5e-4
     result.cpu_seg = 7.85e-4
     update = posterior_update(posterior, result)
-    assert update.cuda_cpu_drift_updated is True
+    assert update.cuda_cpu_drift_signal_present is True
+    assert update.cuda_cpu_drift_updated is False
     assert any("cuda_cpu" in n for n in update.notes)
 
 
@@ -462,7 +466,156 @@ def test_cuda_cpu_drift_not_signaled_when_components_missing():
     posterior = ContinualLearningPosterior()
     result = _make_authoritative_result()
     update = posterior_update(posterior, result)
+    assert update.cuda_cpu_drift_signal_present is False
     assert update.cuda_cpu_drift_updated is False
+
+
+# ── Auth-eval JSON bridge ─────────────────────────────────────────────────
+
+
+def _auth_eval_payload(
+    *,
+    axis: str = "contest_cuda",
+    device: str = "cuda",
+    hardware: str = "Modal Tesla T4 Linux x86_64",
+    gpu_model: str = "Tesla T4",
+    gpu_t4_match: bool | None = True,
+    platform_system: str = "Linux",
+    platform_machine: str = "x86_64",
+    evidence_grade: str = "contest-CUDA",
+    lane_tag: str = "[contest-CUDA]",
+    score_claim_valid: bool = True,
+) -> dict:
+    provenance = {
+        "archive_sha256": "1" * 64,
+        "archive_size_bytes": 186822,
+        "device": device,
+        "hardware": hardware,
+        "platform_system": platform_system,
+        "platform_machine": platform_machine,
+    }
+    if gpu_model:
+        provenance["gpu_model"] = gpu_model
+    if gpu_t4_match is not None:
+        provenance["gpu_t4_match"] = gpu_t4_match
+    return {
+        "score_axis": axis,
+        "device": device,
+        "canonical_score": 0.20664588545741508,
+        "avg_segnet_dist": 0.00064260,
+        "avg_posenet_dist": 0.00003236,
+        "archive_size_bytes": 186822,
+        "n_samples": 600,
+        "evidence_grade": evidence_grade,
+        "lane_tag": lane_tag,
+        "score_claim_valid": score_claim_valid,
+        "promotion_eligible": score_claim_valid,
+        "provenance": provenance,
+    }
+
+
+def test_contest_result_from_auth_eval_payload_cuda_t4_promotable_shape():
+    result = contest_result_from_auth_eval_payload(
+        _auth_eval_payload(),
+        architecture_class="pr106_latent_sidecar",
+        source_path="eval.json",
+    )
+    assert result.axis == "cuda"
+    assert result.hardware_substrate == "linux_x86_64_t4"
+    assert result.evidence_tag == "[contest-CUDA]"
+    assert result.archive_sha256 == "1" * 64
+    assert result.cuda_pose == pytest.approx(0.00003236)
+    assert result.cpu_pose is None
+    assert result.validate_custody_verdict().accepted is True
+    assert result.metadata["source_path"] == "eval.json"
+
+
+def test_contest_result_from_auth_eval_payload_cpu_gha_accepted_shape():
+    payload = _auth_eval_payload(
+        axis="contest_cpu",
+        device="cpu",
+        hardware="github-actions-ubuntu-latest-x86_64",
+        gpu_model="",
+        gpu_t4_match=None,
+        evidence_grade="contest-CPU",
+        lane_tag="[contest-CPU GHA Linux x86_64]",
+        score_claim_valid=False,
+    )
+    result = contest_result_from_auth_eval_payload(
+        payload,
+        architecture_class="pr106_latent_sidecar",
+    )
+    assert result.axis == "cpu"
+    assert result.hardware_substrate == "linux_x86_64_gha_cpu"
+    assert result.evidence_tag == "[contest-CPU GHA Linux x86_64]"
+    assert result.cpu_pose == pytest.approx(0.00003236)
+    assert result.validate_custody_verdict().accepted is True
+
+
+def test_contest_result_from_auth_eval_payload_modal_cpu_refused_shape():
+    payload = _auth_eval_payload(
+        axis="contest_cpu",
+        device="cpu",
+        hardware="Modal CPU Linux x86_64",
+        gpu_model="",
+        gpu_t4_match=None,
+        evidence_grade="contest-CPU",
+        lane_tag="[contest-CPU]",
+        score_claim_valid=False,
+    )
+    result = contest_result_from_auth_eval_payload(
+        payload,
+        architecture_class="pr106_latent_sidecar",
+    )
+    verdict = result.validate_custody_verdict()
+    assert result.hardware_substrate == "linux_x86_64_modal_cpu"
+    assert result.evidence_tag == "[contest-CPU]"
+    assert verdict.accepted is False
+    assert verdict.refused_class == "cpu_tag_non_gha_linux"
+
+
+def test_contest_result_from_auth_eval_payload_accepts_wrapper_expected_archive_fields():
+    payload = _auth_eval_payload()
+    payload.pop("archive_size_bytes")
+    payload["expected_archive_sha256"] = "b" * 64
+    payload["expected_archive_size_bytes"] = 186700
+    payload["provenance"].pop("archive_sha256")
+    payload["provenance"].pop("archive_size_bytes")
+
+    result = contest_result_from_auth_eval_payload(
+        payload,
+        architecture_class="pr106_latent_sidecar",
+    )
+
+    assert result.archive_sha256 == "b" * 64
+    assert result.archive_bytes == 186700
+
+
+def test_posterior_update_locked_from_auth_eval_json_updates_once(tmp_path: Path):
+    eval_path = tmp_path / "contest_auth_eval.json"
+    eval_path.write_text(json.dumps(_auth_eval_payload()), encoding="utf-8")
+    posterior_path = tmp_path / "posterior.json"
+    lock_path = tmp_path / "posterior.lock"
+
+    first = posterior_update_locked_from_auth_eval_json(
+        eval_path,
+        architecture_class="pr106_latent_sidecar",
+        posterior_path=posterior_path,
+        lock_path=lock_path,
+    )
+    second = posterior_update_locked_from_auth_eval_json(
+        eval_path,
+        architecture_class="pr106_latent_sidecar",
+        posterior_path=posterior_path,
+        lock_path=lock_path,
+    )
+
+    assert first.accepted is True
+    assert second.accepted is False
+    assert "duplicate" in second.refusal_reason
+    posterior = load_posterior(posterior_path)
+    assert posterior.accepted_anchor_count == 1
+    assert posterior.refused_anchor_count == 1
 
 
 # ── Persistence ────────────────────────────────────────────────────────────

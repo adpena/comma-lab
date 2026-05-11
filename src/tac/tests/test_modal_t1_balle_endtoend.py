@@ -623,7 +623,10 @@ def test_recover_uses_auth_eval_schema_and_600_sample_blockers() -> None:
     assert "expected_n_samples=600" in recover_src
     assert "t1_remote_adjudication_score_claim_not_true" in recover_src
     assert "t1_remote_summary_remote_adjudication_score_claim_not_true" in recover_src
-    assert "completed_t1_contest_cuda_recovered" in recover_body
+    assert "completed_contest_cuda_t1_recovered" in recover_body
+    assert "archive_sha=" in text
+    assert "score_recomputed=" in text
+    assert "runtime_tree_sha256=" in text
     assert "failed_t1_modal_recovered_no_score_claim" in recover_body
     assert '"promotion_eligible": promotion_eligible' in recover_body
     assert '"remote_adjudication_promotion_eligible": remote_adjudication_promotion_eligible' in recover_body

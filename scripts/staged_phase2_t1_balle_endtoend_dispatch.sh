@@ -20,7 +20,7 @@
 # Per CLAUDE.md non-negotiables:
 #   - set -euo pipefail (Catalog #2)
 #   - No /tmp paths in persisted artifacts (Catalog "Forbidden /tmp paths")
-#   - Routes through tools/claim_lane_dispatch.py claim BEFORE paid call
+#   - Does NOT open a lane claim unless a provider job is actually created
 #   - Provider: Modal T4 (canonical Phase 2 dispatch substrate; matches
 #     A1 retry3 anchor at SHA 87ec7ca5...)
 #   - Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
@@ -64,9 +64,9 @@ To dispatch:
   bash $0
 
 The dispatch will:
-  1. Route through tools/claim_lane_dispatch.py claim (TTL conflict check)
-  2. Launch via Modal T4 (canonical Phase 2 substrate)
-  3. Write provenance to ${OUTPUT_DIR}/provenance.json
+  1. Write provenance to ${OUTPUT_DIR}/provenance.json
+  2. Print the canonical Modal actuator command
+  3. The actuator creates the provider job id and opens the lane claim
   4. Auth-eval (CUDA + CPU per dual-eval mandate) on landing
   5. Update lane registry via tools/lane_maturity.py mark
 EOF
@@ -92,16 +92,9 @@ fi
 
 mkdir -p "${OUTPUT_DIR}"
 
-# Lane-claim atomicity per CLAUDE.md cross-agent dispatch coordination.
-echo "==> Claiming lane dispatch (TTL conflict check)..."
-.venv/bin/python tools/claim_lane_dispatch.py claim \
-  --lane-id "${LANE_ID}" \
-  --platform "${PROVIDER}" \
-  --instance-job-id "staged_${LANE_ID}_${UTC_TIMESTAMP}" \
-  --agent "claude:opus-4-7" \
-  --status "operator_approved_phase2_dispatch" \
-  --notes "Phase 2 dispatch operator-approved \$${STAGED_PHASE_DISPATCH_BUDGET_USD}; predicted ${PREDICTED_DELTA_SCORE}; output ${OUTPUT_DIR}" \
-  --predicted-eta-utc "$(date -u -v+4H +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d '+4 hours' +%Y-%m-%dT%H:%M:%SZ)"
+echo "==> Provider job not created by this pre-stage script"
+echo "    No lane claim opened. The canonical Modal actuator opens the claim only"
+echo "    after a real Modal call id exists, preventing phantom active claims."
 
 # Provenance.
 .venv/bin/python -c "
@@ -137,14 +130,11 @@ echo "    Trainer: experiments/train_paradigm_delta_epsilon_zeta_track1_balle_en
 echo "    Output: ${OUTPUT_DIR}"
 echo
 echo "[NEXT] Operator: run the actual Modal dispatch command. Suggested:"
-echo "  .venv/bin/python experiments/modal_train_lane.py \\"
-echo "    --lane ${LANE_ID} \\"
-echo "    --provider modal \\"
-echo "    --gpu t4 \\"
-echo "    --output-dir ${OUTPUT_DIR} \\"
-echo "    --auth-eval-on-best \\"
-echo "    --enable-eval-roundtrip-in-training \\"
-echo "    --apply-autograd-yuv6"
+echo "  PYTHONPATH=src:upstream:\$PWD .venv/bin/modal run --detach \\"
+echo "    experiments/modal_t1_balle_endtoend.py --execute \\"
+echo "    --epochs 3000 \\"
+echo "    --timeout-hours 24 \\"
+echo "    --cost-cap-usd ${STAGED_PHASE_DISPATCH_BUDGET_USD}"
 echo
 echo "[NEXT] On landing, harvest via:"
 echo "  .venv/bin/python tools/harvest_modal_calls.py --lane ${LANE_ID}"
@@ -157,5 +147,5 @@ echo "  .venv/bin/python tools/plan_dual_device_auth_eval.py --archive ${OUTPUT_
 # the prepared environment.
 echo
 echo "==> PRE-STAGED dispatch prepared. Operator-approved environment ready."
-echo "    Lane claimed; provenance written; manifest aligned."
-echo "    Run the suggested 'experiments/modal_train_lane.py ...' command above to actually dispatch."
+echo "    No lane claim opened; provenance written; manifest aligned."
+echo "    Run the suggested 'experiments/modal_t1_balle_endtoend.py ...' Modal command above to actually dispatch."

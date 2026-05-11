@@ -205,7 +205,7 @@ Per-lane pre-built dispatch scripts (every script gates on operator approval; NO
 
 | Script | Lane | Status | Approval gate |
 |---|---|---|---|
-| `scripts/staged_phase2_t1_ballle_endtoend_dispatch.sh` | T1 (production trainer) | STAGED | operator approves $80 + funding lands |
+| `scripts/staged_phase2_t1_balle_endtoend_dispatch.sh` | T1 (production trainer) | STAGED | operator approves $80 + funding lands |
 | `scripts/staged_phase2_t6_balle_uniward_dispatch.sh` | T6 | STAGED-BUT-BLOCKED | operator approves T6 trainer build first |
 | `scripts/staged_phase2_t10_ib_lagrangian_dispatch.sh` | T10 | STAGED-BUT-BLOCKED | operator approves T10 trainer build first |
 | `scripts/staged_phase2_t15_film_dispatch.sh` | T15 | STAGED-WITH-WIRING-GAP | operator approves T15 wiring + funding |
@@ -216,8 +216,12 @@ Per-lane pre-built dispatch scripts (every script gates on operator approval; NO
 Each script:
 - Refuses to run without `STAGED_PHASE_DISPATCH_OPERATOR_APPROVED=1` environment variable
 - Prints the cost cap + dispatch command on dry-run
-- Routes through `tools/claim_lane_dispatch.py claim` BEFORE any paid call
-- Routes through `scripts/launch_lane_on_vastai.py` OR `scripts/launch_lane_lightning.py` (NOT through `nohup` directly; per CLAUDE.md Codex CLI invocation rule analog)
+- Does **not** open a lane claim unless a real provider job/call id exists.
+  This supersedes the earlier claim-at-prestage wording and prevents phantom
+  active claims.
+- Routes through the canonical provider actuator (`experiments/modal_t1_balle_endtoend.py`
+  for T1; future Phase 3 actuator still blocked) rather than ad hoc launch
+  commands.
 - Writes provenance to `experiments/results/<lane>_<utc>/provenance.json`
 
 ---
@@ -227,7 +231,7 @@ Each script:
 | Lane id | Pre-staged level | Pre-allocated claim |
 |---|---|---|
 | `lane_phase2_phase3_dispatch_readiness_prestage` | L1 (impl_complete + memory_entry on this manifest landing) | none (research-only lane) |
-| `t1_balle_128k_endtoend` | unchanged L0 (Modal job in flight) | staged_pending_operator_approval claim added |
+| `t1_balle_128k_endtoend` | unchanged L0 (Modal job in flight) | none from pre-stage; claim opens only inside provider actuator |
 | `lane_t6_balle_uniward_cross_paradigm_phase2_preregistered` | unchanged L0 | staged_pending_operator_approval claim added |
 | `lane_t10_ib_lagrangian_aux_scorer_phase2_preregistered` | unchanged L0 | staged_pending_operator_approval claim added |
 | `lane_t15_time_varying_film_phase2_preregistered` | unchanged L0 | staged_pending_operator_approval claim added |

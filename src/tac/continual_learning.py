@@ -354,6 +354,7 @@ class PosteriorUpdate:
     posterior_n_anchors_after: int
     track_correction_factors_updated: list[str]
     cuda_cpu_drift_updated: bool
+    cuda_cpu_drift_signal_present: bool = False
     notes: list[str] = field(default_factory=list)
 
 
@@ -644,6 +645,292 @@ def posterior_update_locked(
         return update
 
 
+# ── Auth-eval JSON bridge ─────────────────────────────────────────────────
+
+
+def _payload_get(payload: dict[str, Any], *keys: str, default: Any = None) -> Any:
+    value: Any = payload
+    for key in keys:
+        if isinstance(value, dict) and key in value:
+            value = value[key]
+        else:
+            return default
+    return value
+
+
+def _first_present(*values: Any) -> Any:
+    for value in values:
+        if value is not None:
+            return value
+    return None
+
+
+def _finite_float_or_none(value: Any) -> float | None:
+    import math
+
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if math.isfinite(parsed) else None
+
+
+def _int_or_none(value: Any) -> int | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _score_axis_from_payload(payload: dict[str, Any], provenance: dict[str, Any]) -> str:
+    raw_axis = str(
+        _first_present(
+            payload.get("score_axis"),
+            payload.get("device_axis"),
+            provenance.get("score_axis"),
+            provenance.get("device_axis"),
+            payload.get("device"),
+            provenance.get("device"),
+        )
+        or ""
+    ).lower()
+    if "cuda" in raw_axis:
+        return "cuda"
+    if "cpu" in raw_axis:
+        return "cpu"
+    return raw_axis
+
+
+def _hardware_substrate_from_auth_eval_payload(
+    payload: dict[str, Any],
+    provenance: dict[str, Any],
+    *,
+    axis: str,
+) -> str:
+    system = str(
+        _first_present(provenance.get("platform_system"), payload.get("platform_system"))
+        or ""
+    )
+    machine = str(
+        _first_present(provenance.get("platform_machine"), payload.get("platform_machine"))
+        or ""
+    ).lower()
+    hardware = str(_first_present(provenance.get("hardware"), payload.get("hardware")) or "").lower()
+    gpu_model = str(_first_present(provenance.get("gpu_model"), payload.get("gpu_model")) or "").lower()
+    gpu_t4_match = bool(_first_present(provenance.get("gpu_t4_match"), payload.get("gpu_t4_match")))
+
+    if system == "Darwin" or "macos" in hardware or "apple silicon" in hardware:
+        return "macos_arm64"
+    if axis == "cuda":
+        if gpu_t4_match or "t4" in gpu_model or "tesla t4" in hardware:
+            return "linux_x86_64_t4"
+        if "4090" in gpu_model or "4090" in hardware:
+            return "linux_x86_64_4090"
+        if "a100" in gpu_model or "a100" in hardware:
+            return "linux_x86_64_a100"
+        if "h100" in gpu_model or "h100" in hardware:
+            return "linux_x86_64_h100"
+        if "a10g" in gpu_model or "a10g" in hardware:
+            return "linux_x86_64_a10g"
+        if "l40s" in gpu_model or "l40s" in hardware:
+            return "linux_x86_64_l40s"
+        return "linux_x86_64_unknown_cuda"
+    if axis == "cpu":
+        if system == "Linux" and machine in {"x86_64", "amd64"}:
+            if (
+                "github-actions" in hardware
+                or "github actions" in hardware
+                or "gha" in hardware
+                or payload.get("score_axis") in {"contest_cpu_gha", "contest-cpu-gha"}
+            ):
+                return "linux_x86_64_gha_cpu"
+            return "linux_x86_64_modal_cpu"
+        return "unknown_cpu"
+    return "unknown"
+
+
+def _evidence_tag_from_auth_eval_payload(
+    payload: dict[str, Any],
+    *,
+    axis: str,
+    hardware_substrate: str,
+) -> str:
+    if hardware_substrate.startswith("macos"):
+        return "[macOS-CPU advisory only]"
+    evidence_grade = str(payload.get("evidence_grade") or "").lower()
+    lane_tag = str(payload.get("lane_tag") or "")
+    score_axis = str(payload.get("score_axis") or "").lower()
+    if axis == "cuda" and (
+        "contest-cuda" in evidence_grade
+        or "contest_cuda" in score_axis
+        or lane_tag.startswith("[contest-CUDA")
+        or payload.get("score_claim_valid") is True
+    ):
+        return "[contest-CUDA]"
+    if axis == "cpu" and (
+        "contest-cpu" in evidence_grade
+        or "contest_cpu" in score_axis
+        or lane_tag.startswith("[contest-CPU")
+    ):
+        if hardware_substrate == "linux_x86_64_gha_cpu":
+            return "[contest-CPU GHA Linux x86_64]"
+        return "[contest-CPU]"
+    return "[advisory only]"
+
+
+def contest_result_from_auth_eval_payload(
+    payload: dict[str, Any],
+    *,
+    architecture_class: str,
+    source_path: str | Path | None = None,
+    notes: str = "",
+    source_rho_estimate: float | None = None,
+    track_correction_observations: dict[str, float] | None = None,
+) -> ContestResult:
+    """Build a :class:`ContestResult` from an auth-eval JSON payload.
+
+    This is the canonical bridge from exact auth-eval artifacts into the
+    continual-learning posterior. It preserves custody boundaries: macOS and
+    generic Linux CPU artifacts can be parsed and recorded as refused attempts,
+    but they cannot promote as authoritative posterior anchors.
+    """
+
+    if not isinstance(payload, dict):
+        raise TypeError("auth-eval payload must be a JSON object")
+    if not isinstance(architecture_class, str) or not architecture_class.strip():
+        raise ValueError("architecture_class must be a non-empty string")
+    provenance = payload.get("provenance")
+    if not isinstance(provenance, dict):
+        provenance = {}
+
+    axis = _score_axis_from_payload(payload, provenance)
+    hardware_substrate = _hardware_substrate_from_auth_eval_payload(
+        payload,
+        provenance,
+        axis=axis,
+    )
+    evidence_tag = _evidence_tag_from_auth_eval_payload(
+        payload,
+        axis=axis,
+        hardware_substrate=hardware_substrate,
+    )
+
+    score_value = _finite_float_or_none(
+        _first_present(
+            payload.get("score_recomputed_from_components"),
+            payload.get("canonical_score"),
+            payload.get("score"),
+            payload.get("final_score"),
+        )
+    )
+    archive_sha256 = _first_present(
+        payload.get("archive_sha256"),
+        payload.get("expected_archive_sha256"),
+        provenance.get("archive_sha256"),
+        provenance.get("expected_archive_sha256"),
+        _payload_get(payload, "archive", "sha256"),
+    )
+    archive_bytes = _int_or_none(
+        _first_present(
+            payload.get("archive_size_bytes"),
+            payload.get("archive_bytes"),
+            payload.get("expected_archive_size_bytes"),
+            provenance.get("archive_size_bytes"),
+            provenance.get("archive_bytes"),
+            provenance.get("expected_archive_size_bytes"),
+        )
+    )
+    seg = _finite_float_or_none(
+        _first_present(
+            payload.get("avg_segnet_dist"),
+            payload.get("seg_dist"),
+            _payload_get(payload, "score_components", "seg"),
+            _payload_get(payload, "score_components", "seg_avg"),
+        )
+    )
+    pose = _finite_float_or_none(
+        _first_present(
+            payload.get("avg_posenet_dist"),
+            payload.get("pose_dist"),
+            _payload_get(payload, "score_components", "pose"),
+            _payload_get(payload, "score_components", "pose_avg"),
+        )
+    )
+    if score_value is None:
+        raise ValueError("auth-eval payload missing finite score")
+    if not isinstance(archive_sha256, str) or not archive_sha256:
+        raise ValueError("auth-eval payload missing archive_sha256")
+    if archive_bytes is None:
+        raise ValueError("auth-eval payload missing archive_size_bytes/archive_bytes")
+
+    if axis == "cuda":
+        cuda_pose, cuda_seg, cpu_pose, cpu_seg = pose, seg, None, None
+    elif axis == "cpu":
+        cuda_pose, cuda_seg, cpu_pose, cpu_seg = None, None, pose, seg
+    else:
+        cuda_pose = cuda_seg = cpu_pose = cpu_seg = None
+
+    return ContestResult(
+        axis=axis,
+        hardware_substrate=hardware_substrate,
+        architecture_class=architecture_class.strip(),
+        score_value=score_value,
+        evidence_tag=evidence_tag,
+        archive_sha256=archive_sha256,
+        archive_bytes=archive_bytes,
+        cuda_pose=cuda_pose,
+        cuda_seg=cuda_seg,
+        cpu_pose=cpu_pose,
+        cpu_seg=cpu_seg,
+        source_rho_estimate=source_rho_estimate,
+        track_correction_observations=track_correction_observations or {},
+        notes=notes,
+        metadata={
+            "source": "auth_eval_json_bridge",
+            "source_path": str(source_path) if source_path is not None else "",
+            "score_axis": payload.get("score_axis"),
+            "evidence_grade": payload.get("evidence_grade"),
+            "lane_tag": payload.get("lane_tag"),
+            "score_claim_valid": payload.get("score_claim_valid"),
+            "promotion_eligible": payload.get("promotion_eligible"),
+            "n_samples": _int_or_none(payload.get("n_samples")),
+        },
+    )
+
+
+def posterior_update_locked_from_auth_eval_json(
+    path: Path,
+    *,
+    architecture_class: str,
+    posterior_path: Path | None = None,
+    lock_path: Path | None = None,
+    notes: str = "",
+    source_rho_estimate: float | None = None,
+    track_correction_observations: dict[str, float] | None = None,
+) -> PosteriorUpdate:
+    """Load an auth-eval JSON artifact and transactionally update posterior."""
+
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    result = contest_result_from_auth_eval_payload(
+        payload,
+        architecture_class=architecture_class,
+        source_path=path,
+        notes=notes,
+        source_rho_estimate=source_rho_estimate,
+        track_correction_observations=track_correction_observations,
+    )
+    return posterior_update_locked(
+        result,
+        posterior_path=posterior_path,
+        lock_path=lock_path,
+        forbid_macos_promotion=True,
+    )
+
+
 # ── Posterior update entry point ───────────────────────────────────────────
 
 
@@ -658,9 +945,9 @@ def posterior_update(
     Refusal policy (CLAUDE.md non-negotiable):
       - non-AUTHORITATIVE evidence_tag → REFUSED for promotion (still recorded
         in refusal count but not promoted into running mean).
-      - macOS-CPU substrate (forbid_macos_promotion=True) → REFUSED unless
-        explicitly tagged 'calibrated' AND the operator passes
-        forbid_macos_promotion=False.
+      - macOS-CPU substrate → REFUSED for authoritative promotion even if an
+        older caller passes ``forbid_macos_promotion=False``. macOS remains
+        advisory/proxy only.
       - duplicate archive_sha256 → REFUSED (idempotent; same anchor twice
         does NOT double-count).
     """
@@ -713,15 +1000,8 @@ def posterior_update(
 
     # Codex round-2 HIGH 2 fix: custody validator replaces tag-only check.
     # Validates (tag, axis, hardware_substrate) jointly + 1:1 contest-compliance.
-    # macOS substrate is refused unless forbid_macos_promotion=False (preserved
-    # for back-compat with the prior macOS-substrate path).
     custody_ok, custody_reason = result.validate_custody()
-    macos_override_active = (
-        not forbid_macos_promotion
-        and result.hardware_substrate.startswith("macos")
-        and result.evidence_tag in AUTHORITATIVE_TAGS
-    )
-    if not custody_ok and not macos_override_active:
+    if not custody_ok:
         posterior.refused_anchor_count += 1
         return PosteriorUpdate(
             accepted=False,
@@ -735,11 +1015,6 @@ def posterior_update(
             track_correction_factors_updated=[],
             cuda_cpu_drift_updated=False,
             notes=["custody validation failed; refused per codex round-2 HIGH 2"],
-        )
-    if macos_override_active:
-        notes.append(
-            "macOS substrate accepted via forbid_macos_promotion=False override; "
-            "result is NOT 1:1 contest-compliant"
         )
 
     # Refusal policy 3: duplicate archive_sha256.
@@ -791,6 +1066,7 @@ def posterior_update(
         )
 
     # 3. CUDA-CPU drift hand-off (delegated to cuda_cpu_axis_profile_registry).
+    cuda_cpu_drift_signal_present = False
     cuda_cpu_drift_updated = False
     if (
         result.cuda_pose is not None
@@ -805,7 +1081,7 @@ def posterior_update(
             "cuda_cpu drift signal present; downstream hand-off to "
             "tac.optimization.cuda_cpu_axis_profile_registry.update_profile_from_anchor"
         )
-        cuda_cpu_drift_updated = True
+        cuda_cpu_drift_signal_present = True
 
     # Append to history (truncate to 500 most recent for size control).
     posterior.accepted_anchor_history.append({
@@ -834,6 +1110,7 @@ def posterior_update(
         posterior_n_anchors_after=posterior.accepted_anchor_count,
         track_correction_factors_updated=track_updated,
         cuda_cpu_drift_updated=cuda_cpu_drift_updated,
+        cuda_cpu_drift_signal_present=cuda_cpu_drift_signal_present,
         notes=notes or ["accepted into posterior"],
     )
 
@@ -899,6 +1176,8 @@ __all__ = [
     "save_posterior",
     "posterior_update",
     "posterior_update_locked",
+    "contest_result_from_auth_eval_payload",
+    "posterior_update_locked_from_auth_eval_json",
     "posterior_query_track_correction",
     "posterior_query_source_rho",
     "harvest_anchors_from_iter",
