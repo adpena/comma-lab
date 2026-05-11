@@ -18,7 +18,6 @@ The score-table producer refuses CUDA scoring unless the remote copy of
 from __future__ import annotations
 
 import argparse
-import datetime as dt
 import subprocess
 import sys
 from pathlib import Path
@@ -42,6 +41,15 @@ from tac.deploy.lightning.defaults import (  # noqa: E402
     default_teamspace,
     default_user,
 )
+from tac.deploy.claims import dispatch_claim_command  # noqa: E402
+from tac.deploy.pr106_yshift import (  # noqa: E402
+    REMOTE_SCRIPT,
+    SCORE_TABLE_LANE_ID,
+    SCORE_TABLE_ROLE,
+    Pr106YshiftScoreTableSpec,
+    dispatch_claim_spec,
+    score_table_env as canonical_score_table_env,
+)
 
 DEFAULT_REMOTE_PACT = DEFAULT_LIGHTNING_REMOTE_PACT
 DEFAULT_PR106_ARCHIVE = (
@@ -49,20 +57,12 @@ DEFAULT_PR106_ARCHIVE = (
     / "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip"
 )
 CLAIMS_PATH = REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md"
-REMOTE_SCRIPT = "scripts/remote_lane_pr106_yshift_sidechannel.sh"
-SCORE_TABLE_LANE_ID = "lane_pr106_yshift_score_table"
-
-
-def _utc_now() -> dt.datetime:
-    return dt.datetime.now(tz=dt.UTC).replace(microsecond=0)
-
-
-def _utc_iso(value: dt.datetime) -> str:
-    return value.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def default_job_name() -> str:
-    return f"lane_pr106_yshift_score_table_{_utc_now().strftime('%Y%m%dT%H%M%SZ')}"
+    from tac.deploy.claims import utc_now
+
+    return f"lane_pr106_yshift_score_table_{utc_now().replace('-', '').replace(':', '')}"
 
 
 def _repo_rel(path: Path) -> str:
@@ -70,6 +70,18 @@ def _repo_rel(path: Path) -> str:
         return path.resolve().relative_to(REPO_ROOT).as_posix()
     except ValueError as exc:
         raise SystemExit(f"FATAL: path must be inside repo root: {path}") from exc
+
+
+def _score_table_spec(args: argparse.Namespace) -> Pr106YshiftScoreTableSpec:
+    return Pr106YshiftScoreTableSpec(
+        job_name=args.job_name,
+        pr106_archive=_repo_rel(args.pr106_archive),
+        candidate_radius=args.candidate_radius,
+        score_step=args.score_step,
+        n_pairs=args.n_pairs,
+        batch_pairs=args.batch_pairs,
+        candidate_batch_size=args.candidate_batch_size,
+    )
 
 
 def build_ssh_check_command(args: argparse.Namespace) -> list[str]:
@@ -94,28 +106,20 @@ def build_ssh_check_command(args: argparse.Namespace) -> list[str]:
 
 
 def build_claim_command(args: argparse.Namespace, *, status: str, notes: str) -> list[str]:
-    cmd = [
-        sys.executable,
-        str(REPO_ROOT / "tools/claim_lane_dispatch.py"),
-        "claim",
-        "--lane-id",
-        SCORE_TABLE_LANE_ID,
-        "--platform",
-        "lightning",
-        "--instance-job-id",
-        args.job_name,
-        "--agent",
-        args.agent,
-        "--predicted-eta-utc",
-        _utc_iso(_utc_now() + dt.timedelta(hours=args.predicted_eta_hours)),
-        "--status",
-        status,
-        "--notes",
-        notes,
-    ]
-    if args.force_claim:
-        cmd.append("--force")
-    return cmd
+    spec = dispatch_claim_spec(
+        _score_table_spec(args),
+        platform="lightning",
+        agent=args.agent,
+        predicted_eta_hours=args.predicted_eta_hours,
+        force=args.force_claim,
+        notes=notes,
+    )
+    return dispatch_claim_command(
+        spec=spec,
+        status=status,
+        python_executable=sys.executable,
+        claim_tool=REPO_ROOT / "tools/claim_lane_dispatch.py",
+    )
 
 
 def build_stage_command(args: argparse.Namespace) -> list[str]:
@@ -180,20 +184,11 @@ def score_table_env(
 ) -> dict[str, str]:
     if output_dir is None:
         output_dir = f"{args.remote_pact}/experiments/results/lightning_batch/{args.job_name}"
-    env = {
-        "PR106_YSHIFT_MODE": "score_table",
-        "PR106_ARCHIVE": _repo_rel(args.pr106_archive),
-        "PR106_YSHIFT_SCORE_TABLE_LANE_ID": SCORE_TABLE_LANE_ID,
-        "PR106_YSHIFT_SCORE_TABLE_INSTANCE_JOB_ID": args.job_name,
-        "PR106_YSHIFT_CANDIDATE_RADIUS": str(args.candidate_radius),
-        "PR106_YSHIFT_SCORE_STEP": str(args.score_step),
-        "PR106_YSHIFT_N_PAIRS": str(args.n_pairs),
-        "PR106_YSHIFT_SCORE_TABLE_BATCH_PAIRS": str(args.batch_pairs),
-        "PR106_YSHIFT_SCORE_TABLE_CANDIDATE_BATCH_SIZE": str(args.candidate_batch_size),
-    }
-    if include_log_dir:
-        env["PR106_YSHIFT_LOG_DIR"] = f"{output_dir}/yshift_run"
-    return env
+    return canonical_score_table_env(
+        _score_table_spec(args),
+        output_dir=output_dir,
+        include_log_dir=include_log_dir,
+    )
 
 
 def build_dispatch_command(args: argparse.Namespace) -> list[str]:
@@ -304,7 +299,7 @@ def build_batch_spec(args: argparse.Namespace) -> LightningBatchJobSpec:
         cloud_account=args.cloud_account or None,
         max_runtime=args.max_runtime_seconds,
         reuse_snapshot=False,
-        role="pr106_yshift_score_table_cuda",
+        role=SCORE_TABLE_ROLE,
         local_artifact_dir=f"experiments/results/lightning_batch/{args.job_name}",
         remote_output_dir=output_dir,
         queue_metadata={
