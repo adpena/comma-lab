@@ -90,6 +90,17 @@ def test_sidecar_no_op_when_delta_zero():
     assert torch.equal(latents, snapshot), "no-op corrections mutated latents"
 
 
+def test_builder_prefers_portable_submission_codec_path():
+    """Remote bundles must not depend on the local public-PR intake clone."""
+
+    build = _import_build_module()
+    paths = [Path(path).resolve() for path in build.PR106_SRC_CANDIDATE_PATHS]
+
+    assert paths[0] == (SUBMISSION_DIR / "src").resolve()
+    assert (paths[0] / "codec.py").is_file()
+    assert (paths[0] / "model.py").is_file()
+
+
 def test_sidecar_apply_modifies_correct_dim():
     """Non-no-op corrections add delta_q * 0.01 to the named dim only."""
     build = _import_build_module()

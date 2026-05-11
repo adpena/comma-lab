@@ -171,6 +171,7 @@ def ingest_downloaded_outputs(
     logs: list[dict[str, object]] = []
     latest_failure: dict[str, object] | None = None
     latest_checkpoint: dict[str, object] | None = None
+    latest_score_table: dict[str, object] | None = None
     for path in sorted(download_dir.rglob("*")):
         if path.is_file():
             rel = path.relative_to(download_dir)
@@ -197,6 +198,33 @@ def ingest_downloaded_outputs(
                     "hidden": meta.get("hidden"),
                     "meta_path": str(dest),
                 }
+            if path.name == "score_table_manifest.json":
+                payload = _read_manifest(dest)
+                if payload.get("manifest_schema") == "pr106_latent_score_table_manifest_v1":
+                    latest_score_table = {
+                        "manifest_path": str(dest),
+                        "producer": payload.get("producer"),
+                        "device": payload.get("device"),
+                        "elapsed_seconds": payload.get("elapsed_seconds"),
+                        "source_archive_sha256": payload.get("source_archive_sha256"),
+                        "source_zero_bin_sha256": payload.get("source_zero_bin_sha256"),
+                        "score_table_npy_path": payload.get("score_table_npy_path"),
+                        "score_table_npy_bytes": payload.get("score_table_npy_bytes"),
+                        "score_table_npy_sha256": payload.get("score_table_npy_sha256"),
+                        "score_table_shape": payload.get("score_table_shape"),
+                        "candidate_count": payload.get("candidate_count"),
+                        "strict_improvement_pair_count": payload.get(
+                            "strict_improvement_pair_count"
+                        ),
+                        "best_improvement_min": payload.get("best_improvement_min"),
+                        "best_improvement_mean": payload.get("best_improvement_mean"),
+                        "best_improvement_max": payload.get("best_improvement_max"),
+                        "ready_for_builder": payload.get("ready_for_builder"),
+                        "score_claim": payload.get("score_claim"),
+                        "ready_for_exact_eval_dispatch": payload.get(
+                            "ready_for_exact_eval_dispatch"
+                        ),
+                    }
 
     summary = {
         "run_id": run_id,
@@ -206,6 +234,7 @@ def ingest_downloaded_outputs(
         "logs": logs,
         "latest_failure": latest_failure,
         "latest_checkpoint": latest_checkpoint,
+        "latest_score_table": latest_score_table,
     }
     (evidence_dir / "ingest_summary.json").write_text(json.dumps(summary, indent=2))
     return summary

@@ -57,12 +57,15 @@ import torch
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
-PR106_SRC_PATH = (
+PR106_SRC_CANDIDATE_PATHS = (
+    REPO_ROOT / "submissions" / "pr106_latent_sidecar" / "src",
     REPO_ROOT
     / "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex"
-    / "source/submissions/belt_and_suspenders/src"
+    / "source/submissions/belt_and_suspenders/src",
 )
-sys.path.insert(0, str(PR106_SRC_PATH.resolve()))
+for candidate in reversed(PR106_SRC_CANDIDATE_PATHS):
+    if candidate.exists():
+        sys.path.insert(0, str(candidate.resolve()))
 
 # Imported AFTER path insertion: PR106's reference codec + decoder model.
 from codec import parse_packed_archive  # type: ignore[import-not-found]  # noqa: E402

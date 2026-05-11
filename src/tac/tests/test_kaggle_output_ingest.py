@@ -162,6 +162,66 @@ class KaggleOutputIngestTests(unittest.TestCase):
         self.assertEqual(report["latest_checkpoint"]["scorer"], 3.96)
         self.assertEqual(report["latest_checkpoint"]["variant"], "dilated")
 
+    def test_ingest_summary_surfaces_completed_latent_score_table(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            manifest_path = root / "kaggle-run.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "slug": "kaggle-demo",
+                        "run_id": "kaggle-demo-v1",
+                        "kernel_ref": "adpena/comma-lab-demo",
+                    }
+                )
+            )
+            downloaded = root / "downloaded"
+            score_dir = downloaded / "pr106_latent_score_table/latent_run/score_table"
+            score_dir.mkdir(parents=True)
+            (score_dir / "score_table_manifest.json").write_text(
+                json.dumps(
+                    {
+                        "manifest_schema": "pr106_latent_score_table_manifest_v1",
+                        "producer": "experiments/build_pr106_latent_score_table.py",
+                        "device": "cuda:0",
+                        "elapsed_seconds": 771.1,
+                        "source_archive_sha256": "a" * 64,
+                        "source_zero_bin_sha256": "b" * 64,
+                        "score_table_npy_path": "/kaggle/working/score_table.npy",
+                        "score_table_npy_bytes": 136928,
+                        "score_table_npy_sha256": "c" * 64,
+                        "score_table_shape": [600, 57],
+                        "candidate_count": 57,
+                        "strict_improvement_pair_count": 600,
+                        "best_improvement_min": 0.00006,
+                        "best_improvement_mean": 0.00251,
+                        "best_improvement_max": 0.00596,
+                        "ready_for_builder": True,
+                        "score_claim": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                )
+            )
+            log_path = downloaded / "demo.log"
+            log_path.write_text(
+                "Traceback (most recent call last):\n"
+                "ModuleNotFoundError: No module named 'codec'\n"
+            )
+            out_root = root / "reports"
+
+            report = mod.ingest_downloaded_outputs(
+                manifest_path=manifest_path,
+                download_dir=downloaded,
+                output_root=out_root,
+            )
+
+        self.assertEqual(report["latest_failure"]["error_type"], "ModuleNotFoundError")
+        score_table = report["latest_score_table"]
+        self.assertEqual(score_table["score_table_shape"], [600, 57])
+        self.assertEqual(score_table["strict_improvement_pair_count"], 600)
+        self.assertEqual(score_table["score_claim"], False)
+        self.assertEqual(score_table["ready_for_builder"], True)
+
     def test_ingest_summary_finds_checkpoint_meta_in_nested_output_dirs(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
