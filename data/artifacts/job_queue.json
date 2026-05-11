@@ -1,69 +1,71 @@
 [
   {
     "tag": "standard_h64_long2500",
-    "cmd": "experiments/train_postfilter_qat_ema.py --hidden 64 --epochs 2500 --alpha 20 --tag standard_h64_long2500",
+    "cmd": "retired_historical_queue_entry",
     "platform": "mps",
-    "status": "running",
-    "priority": 1
+    "status": "retired_historical",
+    "priority": 1,
+    "notes": "Retired postfilter queue row. Re-port through experiments/job_queue.json or canonical pipeline before any run."
   },
   {
     "tag": "h96_modal",
-    "cmd": "modal run experiments/modal_h96_deploy.py",
+    "cmd": "retired_historical_queue_entry",
     "platform": "modal",
-    "status": "running",
-    "priority": 1
+    "status": "retired_historical",
+    "priority": 1,
+    "notes": "Retired Modal h96 queue row. Use canonical provider claim/custody path before any Modal dispatch."
   },
   {
     "tag": "h64_no_sal_recon",
-    "cmd": "experiments/train_tac.py --hidden 64 --epochs 2500 --sal-lambda 0 --tag h64_no_sal_recon",
+    "cmd": "retired_historical_queue_entry",
     "platform": "mps",
-    "status": "completed",
+    "status": "retired_historical",
     "priority": 2,
-    "notes": "BOUNDED SIDE LANE: sal_lambda=0 is high-variance. Run after h64 proxy confirms."
+    "notes": "Retired train-tac lane: sal_lambda=0 high-variance. Port to canonical pipeline/deploy_config before any new run."
   },
   {
     "tag": "h64_temp_anneal",
-    "cmd": "experiments/train_tac.py --hidden 64 --epochs 2500 --loss-mode temperature --tag h64_temp_anneal",
+    "cmd": "retired_historical_queue_entry",
     "platform": "mps",
-    "status": "completed",
+    "status": "retired_historical",
     "priority": 2,
     "depends_on": "h64_no_sal_recon",
-    "notes": "Council #2: temperature-annealed softmax"
+    "notes": "Retired train-tac lane: Council #2 temperature-annealed softmax. Port to canonical pipeline/deploy_config before any new run."
   },
   {
     "tag": "h64_focal_ste",
-    "cmd": "experiments/train_tac.py --hidden 64 --epochs 2500 --loss-mode focal_ste --use-ste --tag h64_focal_ste",
+    "cmd": "retired_historical_queue_entry",
     "platform": "mps",
-    "status": "completed",
+    "status": "retired_historical",
     "priority": 2,
     "depends_on": "h64_temp_anneal",
-    "notes": "Council #3: focal cross-entropy STE"
+    "notes": "Retired train-tac lane: Council #3 focal cross-entropy STE. Port to canonical pipeline/deploy_config before any new run."
   },
   {
     "tag": "h64_dual_saliency",
-    "cmd": "experiments/train_tac.py --hidden 64 --epochs 2500 --use-dual-saliency --alpha-seg 200 --tag h64_dual_saliency",
+    "cmd": "retired_historical_queue_entry",
     "platform": "mps",
-    "status": "completed",
+    "status": "retired_historical",
     "priority": 2,
     "depends_on": "h64_focal_ste",
-    "notes": "Council #1: PoseNet + SegNet boundary saliency"
+    "notes": "Retired train-tac lane: Council #1 PoseNet + SegNet boundary saliency. Port to canonical pipeline/deploy_config before any new run."
   },
   {
     "tag": "h64_segnet_overweight",
-    "cmd": "experiments/train_tac.py --hidden 64 --epochs 2500 --segnet-loss-weight 200 --tag h64_segnet_overweight",
+    "cmd": "retired_historical_queue_entry",
     "platform": "mps",
-    "status": "completed",
+    "status": "retired_historical",
     "priority": 3,
     "depends_on": "h64_dual_saliency",
-    "notes": "Council #5: over-weight SegNet 200x"
+    "notes": "Retired train-tac lane: Council #5 over-weight SegNet 200x. Port to canonical pipeline/deploy_config before any new run."
   },
   {
     "tag": "h128_modal",
-    "cmd": "modal run experiments/modal_h96_deploy.py",
+    "cmd": "retired_historical_queue_entry",
     "platform": "modal",
-    "status": "queued",
+    "status": "retired_historical",
     "priority": 3,
     "depends_on": "h96_modal",
-    "notes": "Width scaling to h=128 (rate crossover risk)"
+    "notes": "Retired Modal h128 queue row. Use canonical provider claim/custody path before any Modal dispatch."
   }
 ]

@@ -95,7 +95,8 @@ Three experiment profiles encode different training philosophies. All share the 
 
 ```bash
 # Train with a named profile
-PYTHONPATH=src:upstream python experiments/train_tac.py --profile wilde --device cuda
+PYTHONPATH=src:upstream python experiments/pipeline.py compress \
+    --profile wilde --device cuda --output-dir results/wilde
 ```
 
 Profiles are defined in `src/tac/profiles.py` with full provenance for every hyperparameter choice.

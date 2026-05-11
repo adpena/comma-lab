@@ -235,9 +235,9 @@ that these lanes remain optimal, dispatch-ready, or score-bearing.
 - Teacher-student with MSE on teacher outputs + scorer loss
 - Standard technique in model compression
 - **Implementation sketch:**
-  1. Train teacher model: `python experiments/train_tac.py --profile proven_baseline --base-ch 96 --mid-ch 160 --depth 2` (2M params, ~1MB FP4). Train for 5000 epochs on Kaggle P100.
+  1. Train teacher model through the canonical pipeline with a teacher-capacity profile, e.g. `python experiments/pipeline.py compress --profile proven_baseline_teacher --device cuda --output-dir results/proven_teacher`. Train for 5000 epochs on a proxy GPU only when the run is tagged `score_claim=false`.
   2. Add distillation loss to `src/tac/training.py`: `loss_distill = MSE(student_output, teacher_output.detach())`. Weight: `distill_weight=1.0` alongside existing scorer losses.
-  3. Train student: `python experiments/train_tac.py --profile proven_baseline --distill-from teacher_checkpoint.pt --distill-weight 1.0`. Student is standard 287K params.
+  3. Train student through the canonical pipeline with an explicit distillation profile and teacher checkpoint manifest. Student is standard 287K params.
   4. The student learns to approximate the teacher's output distribution, which is higher quality than what the student discovers on its own.
   5. Eval both teacher (for quality ceiling) and student (for deployable quality).
 - **Dependencies:** GPU hours: teacher training ~12h on P100, student distillation ~8h. Total ~20h GPU time = ~1 Kaggle weekly allocation.
@@ -254,7 +254,7 @@ that these lanes remain optimal, dispatch-ready, or score-bearing.
 - Also: gradient accumulation as a free alternative to larger batches
 - **Implementation sketch:**
   1. Modify `src/tac/profiles.py`: add `batch_size` to profile configs. Current `proven_baseline` uses batch_size=4.
-  2. Test batch_size=16 on Lightning T4: `python experiments/train_tac.py --profile proven_baseline --batch-size 16`. Monitor VRAM with `nvidia-smi`.
+  2. Test batch_size=16 with a provider-neutral profile override through `experiments/pipeline.py` or `tac.deploy.deploy_config`; monitor VRAM with `nvidia-smi`. MPS is proxy-only and never auth eval.
   3. If T4 OOMs at 16, try gradient accumulation: `--accumulate-grad-batches 4` (effective batch=16 at batch=4 memory cost). Add to `src/tac/training.py` training loop.
   4. Compare convergence curves: proxy score at epoch 500 for batch=4 vs batch=16.
 - **Dependencies:** Lightning T4 access (free tier). No code changes needed beyond config.

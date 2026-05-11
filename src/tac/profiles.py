@@ -4,8 +4,8 @@ Each profile is a dict of TrainConfig overrides. Use with:
     from tac.profiles import PROFILES
     config = TrainConfig(**{**PROFILES["council_v1"], "tag": "my_run"})
 
-Or from CLI:
-    python train_tac.py --profile council_v1 --tag my_run
+Or from the canonical operator pipeline:
+    python experiments/pipeline.py compress --profile council_v1 --output-dir results/my_run
 """
 
 # Council-recommended settings (2026-04-10 master session)

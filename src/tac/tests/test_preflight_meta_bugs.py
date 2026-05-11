@@ -636,6 +636,27 @@ class TestNoCompromisedLightningSupplyChain:
                 offenders.append(path.relative_to(Path(__file__).parents[3]).as_posix())
         assert offenders == []
 
+    def test_operator_surfaces_do_not_route_to_retired_train_tac(self) -> None:
+        root = Path(__file__).parents[3]
+        operator_surfaces = [
+            root / "README.md",
+            root / "src" / "tac" / "profiles.py",
+            root / "docs" / "research_roadmap.md",
+            root / "data" / "artifacts" / "job_queue.json",
+        ]
+        offenders = []
+        for path in operator_surfaces:
+            source = path.read_text()
+            stale_tokens = (
+                "experiments/train_tac.py",
+                "python train_tac.py",
+                "experiments/modal_h96_deploy.py",
+                "experiments/train_postfilter_qat_ema.py",
+            )
+            if any(token in source for token in stale_tokens):
+                offenders.append(path.relative_to(root).as_posix())
+        assert offenders == []
+
 
 class TestLightningExactEvalDaliBootstrap:
     def test_exact_eval_dali_bootstrap_preflight_passes_current_runner(self) -> None:
