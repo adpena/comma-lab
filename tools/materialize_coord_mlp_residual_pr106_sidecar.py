@@ -29,9 +29,13 @@ from tac.residual_basis.pr106_materializer_helpers import (  # noqa: E402
     DEFAULT_PR106_ARCHIVE,
     MaterializerError,
     materialize_family_archive,
+    repack_dense_as_sparse,
     run_no_op_detector_byte_mutation,
 )
-from tac.residual_basis.pr106_sidecar_packing import PR106_RESIDUAL_FORMAT_IDS  # noqa: E402
+from tac.residual_basis.pr106_sidecar_packing import (  # noqa: E402
+    PR106_RESIDUAL_FORMAT_IDS,
+    sparse_family_name,
+)
 
 CAMERA_H, CAMERA_W = 874, 1164
 DOWNSAMPLE_FACTOR = 8
@@ -71,6 +75,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--default-scale", type=float, default=0.0)
     parser.add_argument("--skip-no-op-smoke", action="store_true")
+    parser.add_argument(
+        "--encoding",
+        choices=("dense", "sparse"),
+        default="dense",
+        help="Wire-format encoding: dense (0x14) or sparse PacketIR (0x24).",
+    )
     args = parser.parse_args(argv)
     if args.output_dir.exists() and any(args.output_dir.iterdir()):
         print(f"ERROR: --output-dir must be empty or not exist: {args.output_dir}", file=sys.stderr)
@@ -86,13 +96,26 @@ def main(argv: list[str] | None = None) -> int:
             mode=args.residual_mode,
             default_scale=args.default_scale,
         )
+    is_sparse = args.encoding == "sparse"
+    if is_sparse and residual_bytes:
+        try:
+            residual_bytes = repack_dense_as_sparse(
+                family="coord_mlp",
+                dense_residual_bytes=residual_bytes,
+                n_frames=args.n_frames,
+            )
+        except MaterializerError as exc:
+            print(f"ERROR: sparse repack failed: {exc}", file=sys.stderr)
+            return 2
+    family = sparse_family_name("coord_mlp") if is_sparse else "coord_mlp"
     archive_zip, manifest_path, manifest, build = materialize_family_archive(
-        family="coord_mlp",
+        family=family,
         pr106_archive=args.pr106_archive,
         residual_bytes=residual_bytes,
         output_dir=args.output_dir,
         extra={
             "residual_mode": args.residual_mode,
+            "encoding": args.encoding,
             "n_frames": args.n_frames,
             "per_frame_bytes": PER_FRAME_BYTES,
             "downsample_factor": DOWNSAMPLE_FACTOR,
@@ -108,7 +131,7 @@ def main(argv: list[str] | None = None) -> int:
     if not args.skip_no_op_smoke and residual_bytes:
         smoke = run_no_op_detector_byte_mutation(
             archive_bytes=build.archive_bytes,
-            expected_format_id=PR106_RESIDUAL_FORMAT_IDS["coord_mlp"],
+            expected_format_id=PR106_RESIDUAL_FORMAT_IDS[family],
         )
         print(f"[no_op_detector_byte_mutation_smoke] {smoke}", file=sys.stderr)
     print(f"materialized archive: {archive_zip}")

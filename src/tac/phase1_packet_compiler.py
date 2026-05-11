@@ -1774,6 +1774,10 @@ PACKET_COMPILER_TRANSFORMS: tuple[str, ...] = (
     # PR93 — delta-varint pose + QZMB1
     "pr93_delta_varint_pose",
     "pr93_qzmb_qzpdv_grammar",
+    # Sparse PacketIR codec — closes O's L2 wire-format ceiling (2026-05-11)
+    "sparse_rle_of_zeros",
+    "sparse_arithmetic_coefficients",
+    "sparse_temporal_subsampled",
 )
 
 

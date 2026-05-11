@@ -240,6 +240,139 @@ def materialize_family_archive(
     return archive_zip, manifest_path, manifest, build_result
 
 
+def repack_dense_as_sparse(
+    *,
+    family: str,
+    dense_residual_bytes: bytes,
+    n_frames: int,
+) -> bytes:
+    """Repack a dense-wire-format residual blob into the sparse PacketIR envelope.
+
+    The sparse envelope for wavelet/c3/cool_chic/coord_mlp families is
+    temporal-subsampled outer (all-frames-carrying-signal in this dense
+    rewrap) + per-frame (scale prefix + RLE-of-zeros over band int8 coeffs).
+
+    For an EMPTY dense input (``residual_mode=empty``) the result is also
+    empty — sparse over zero frames is zero bytes (the L1 sparse decoder
+    short-circuits an empty blob).
+
+    Closes O's L2 wire-format ceiling: a sparse-aware materializer + sparse
+    inflate path is required before L2 score-aware encoders can emit bytes
+    that fit inside any meaningful contest byte budget. This helper is the
+    byte-stable scaffold path; the L2 encoder's sparse output integration
+    is the score-aware research-only path layered on top.
+    """
+
+    from tac.packet_compiler.sparse_packet_ir import (
+        encode_rle_of_zeros,
+        encode_temporal_subsampled,
+        serialize_rle_of_zeros,
+        serialize_temporal_subsampled,
+    )
+    import struct
+
+    import numpy as np
+
+    if not dense_residual_bytes:
+        return b""
+    if family == "wavelet":
+        camera_h, camera_w, rgb = 874, 1164, 3
+        half_h, half_w = camera_h // 2, camera_w // 2
+        band_size = half_h * half_w
+        per_frame_bytes = 16 + 4 * rgb * band_size
+        if len(dense_residual_bytes) != n_frames * per_frame_bytes:
+            raise MaterializerError(
+                f"wavelet dense bytes {len(dense_residual_bytes)} != "
+                f"n_frames*per_frame {n_frames * per_frame_bytes}"
+            )
+        per_frame: list[np.ndarray | None] = []
+        pos = 0
+        for _t in range(n_frames):
+            scales_blob = dense_residual_bytes[pos : pos + 16]
+            pos += 16
+            band_int8 = np.frombuffer(
+                dense_residual_bytes, dtype=np.int8, count=4 * rgb * band_size, offset=pos
+            )
+            pos += 4 * rgb * band_size
+            rle = encode_rle_of_zeros(band_int8.copy())
+            rle_bytes = serialize_rle_of_zeros(rle)
+            frame_bytes = scales_blob + rle_bytes
+            per_frame.append(np.frombuffer(frame_bytes, dtype=np.uint8).copy())
+        return serialize_temporal_subsampled(encode_temporal_subsampled(per_frame))
+    if family in ("c3", "coord_mlp"):
+        camera_h, camera_w, rgb = 874, 1164, 3
+        if family == "c3":
+            grid_h, grid_w = camera_h // 4, camera_w // 4
+        else:  # coord_mlp
+            grid_h, grid_w = camera_h // 8, camera_w // 8
+        per_frame_bytes = 4 + grid_h * grid_w * rgb
+        if len(dense_residual_bytes) != n_frames * per_frame_bytes:
+            raise MaterializerError(
+                f"{family} dense bytes {len(dense_residual_bytes)} != "
+                f"n_frames*per_frame {n_frames * per_frame_bytes}"
+            )
+        per_frame_list: list[np.ndarray | None] = []
+        pos = 0
+        for _t in range(n_frames):
+            scale_bytes = dense_residual_bytes[pos : pos + 4]
+            pos += 4
+            coeffs = np.frombuffer(
+                dense_residual_bytes, dtype=np.int8, count=grid_h * grid_w * rgb, offset=pos
+            )
+            pos += grid_h * grid_w * rgb
+            rle_bytes = serialize_rle_of_zeros(encode_rle_of_zeros(coeffs.copy()))
+            per_frame_list.append(
+                np.frombuffer(scale_bytes + rle_bytes, dtype=np.uint8).copy()
+            )
+        return serialize_temporal_subsampled(encode_temporal_subsampled(per_frame_list))
+    if family == "cool_chic":
+        if len(dense_residual_bytes) < 2:
+            raise MaterializerError("cool_chic dense bytes too short for header")
+        (n_levels,) = struct.unpack_from("<H", dense_residual_bytes, 0)
+        pos = 2
+        out_parts: list[bytes] = [struct.pack("<H", n_levels)]
+        camera_h, camera_w, rgb = 874, 1164, 3
+        for L in range(n_levels):
+            (scale,) = struct.unpack_from("<f", dense_residual_bytes, pos)
+            pos += 4
+            h_L = camera_h // (2 ** L)
+            w_L = camera_w // (2 ** L)
+            level_bytes = n_frames * h_L * w_L * rgb
+            level_int8 = np.frombuffer(
+                dense_residual_bytes, dtype=np.int8, count=level_bytes, offset=pos
+            )
+            pos += level_bytes
+            rle_bytes = serialize_rle_of_zeros(encode_rle_of_zeros(level_int8.copy()))
+            out_parts.append(struct.pack("<fI", scale, len(rle_bytes)))
+            out_parts.append(rle_bytes)
+        if pos != len(dense_residual_bytes):
+            raise MaterializerError(
+                f"cool_chic trailing bytes after pyramid: pos={pos} total={len(dense_residual_bytes)}"
+            )
+        return b"".join(out_parts)
+    if family == "siren":
+        # Dense layout: 4B scale + 2B n_coefs + n_coefs * 9B records.
+        if len(dense_residual_bytes) < 6:
+            raise MaterializerError("siren dense bytes too short")
+        scale_bytes = dense_residual_bytes[:4]
+        (n_coefs,) = struct.unpack_from("<H", dense_residual_bytes, 4)
+        record_size = 9
+        addr_parts: list[bytes] = []
+        coef_pairs: list[int] = []
+        pos = 6
+        for _ in range(n_coefs):
+            frame_idx, k_row, k_col, channel, real_q, imag_q = struct.unpack_from(
+                "<HhhBbb", dense_residual_bytes, pos
+            )
+            pos += record_size
+            addr_parts.append(struct.pack("<HhhB", frame_idx, k_row, k_col, channel))
+            coef_pairs.extend([real_q, imag_q])
+        coef_stream = np.array(coef_pairs, dtype=np.int8)
+        rle_bytes = serialize_rle_of_zeros(encode_rle_of_zeros(coef_stream))
+        return scale_bytes + struct.pack("<I", n_coefs) + b"".join(addr_parts) + rle_bytes
+    raise MaterializerError(f"sparse repack not implemented for family {family!r}")
+
+
 def run_no_op_detector_byte_mutation(
     *,
     archive_bytes: bytes,

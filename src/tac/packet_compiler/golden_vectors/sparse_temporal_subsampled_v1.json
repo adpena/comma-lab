@@ -1,0 +1,8 @@
+{
+  "K": 10,
+  "N": 50,
+  "payload_len": 223,
+  "per_frame_bytes": 20,
+  "schema": "sparse_temporal_subsampled.v1",
+  "sha256": "f4b2e6621c2ac75f60e53f9cbe4be73d7aef54e4a2acdafbc0b646ff6af438c0"
+}

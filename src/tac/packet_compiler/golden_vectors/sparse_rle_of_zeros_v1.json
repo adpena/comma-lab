@@ -1,0 +1,9 @@
+{
+  "n_nonzero": 64,
+  "nonzero_dtype": "int8",
+  "payload_len": 333,
+  "schema": "sparse_rle_of_zeros.v1",
+  "sha256": "fcff82533195f4f6ddbd9488090e15da0343902dbcc567adae4bb4dd747afd57",
+  "sparsity_ratio": 0.9375,
+  "total_length": 1024
+}

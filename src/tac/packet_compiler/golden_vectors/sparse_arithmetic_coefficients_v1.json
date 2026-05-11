@@ -1,0 +1,8 @@
+{
+  "alphabet_size": 17,
+  "n_symbols": 500,
+  "payload_len": 344,
+  "schema": "sparse_arithmetic_coefficients.v1",
+  "sha256": "2672210a6efb225b64a2ce597a93fadee29d4ad41a59a30e0d9434ecb06629d8",
+  "symbol_offset": 8
+}

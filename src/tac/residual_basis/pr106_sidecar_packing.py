@@ -66,14 +66,21 @@ from typing import Final
 # Differs from 0xFE used by submissions/pr106_latent_sidecar/inflate.py.
 PR106_RESIDUAL_MAGIC: Final[int] = 0xFD
 
-# Per-family format_id bytes. Each family owns ONE byte; sister inflate.py
-# scripts test for their own byte and refuse the others.
+# Per-family format_id bytes. Each family owns TWO bytes: 0x1N for dense, 0x2N
+# for sparse PacketIR (RLE/AC/temporal-subsampled). Sister inflate.py scripts
+# accept both and dispatch on format_id.
 PR106_RESIDUAL_FORMAT_IDS: Final[dict[str, int]] = {
     "wavelet": 0x10,
     "cool_chic": 0x11,
     "c3": 0x12,
     "siren": 0x13,
     "coord_mlp": 0x14,
+    # Sparse PacketIR variants (closes O's L2 wire-format ceiling).
+    "wavelet_sparse": 0x20,
+    "cool_chic_sparse": 0x21,
+    "c3_sparse": 0x22,
+    "siren_sparse": 0x23,
+    "coord_mlp_sparse": 0x24,
 }
 
 PR106_RESIDUAL_FORMAT_NAMES: Final[dict[int, str]] = {
@@ -290,6 +297,21 @@ def expect_format_id(blob: bytes, *, family: str) -> ParsedResidualArchive:
     return parsed
 
 
+def sparse_family_name(dense_family: str) -> str:
+    """Return the sparse-PacketIR sibling family name for a dense family.
+
+    Example: ``"wavelet"`` -> ``"wavelet_sparse"``. Raises if the dense
+    family lacks a sparse sibling.
+    """
+
+    sparse = f"{dense_family}_sparse"
+    if sparse not in PR106_RESIDUAL_FORMAT_IDS:
+        raise ResidualArchiveError(
+            f"no sparse sibling registered for family {dense_family!r}"
+        )
+    return sparse
+
+
 __all__ = [
     "BuildResidualArchiveResult",
     "ParsedResidualArchive",
@@ -300,4 +322,5 @@ __all__ = [
     "build_archive",
     "expect_format_id",
     "parse_archive",
+    "sparse_family_name",
 ]

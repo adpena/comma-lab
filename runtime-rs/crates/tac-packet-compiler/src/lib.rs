@@ -52,6 +52,9 @@
 //!   centered-delta uint8 + self-delimiting split Brotli.
 //! - [`pr103_arithmetic_coding`] — merged range stream over multiple weight
 //!   tensors + latent-hi arithmetic + adaptive Brotli param search.
+//! - [`sparse_packet_ir`] — RLE-of-zeros + arithmetic-coded coefficient
+//!   stream + temporal-subsampling indicator vector. Closes O's L2
+//!   wire-format ceiling (2026-05-11).
 //! - [`conformance`] — golden-vector loader + byte-for-byte parity helpers.
 //!
 //! # Source references
@@ -68,6 +71,7 @@
 pub mod conformance;
 pub mod pr101_sidecar_grammar;
 pub mod pr103_arithmetic_coding;
+pub mod sparse_packet_ir;
 
 /// Crate-level error type. SCAFFOLD-ONLY variants are surfaced now so callers
 /// see them in API docs; implementation work will extend the variant set.

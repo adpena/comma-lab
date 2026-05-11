@@ -1,23 +1,12 @@
 #!/usr/bin/env python
 # ruff: noqa: E402, I001
-"""Inflate PR106 + SIREN-style sparse frequency-domain residual sidecar.
+"""Inflate PR106 + SIREN sparse FFT-coefficient residual sidecar.
 
-SIREN's coordinate-MLP with sinusoidal activations naturally encodes signal as
-a sum of frequencies. Rather than embed an MLP runtime (which would inflate
-the LOC budget), we store the SPARSE FFT coefficients directly: a small set
-of (k_row, k_col, channel, real, imag) tuples with INT16 frequency indices
-and INT8 quantised complex amplitudes, plus a per-coefficient float32 scale.
+Wire format: magic 0xFD + format_id (0x13 dense | 0x23 sparse) + PR106 bytes +
+length-prefixed sparse FFT-coef residual blob. Inverse 2D-FFT per frame.
 
-The inflate runtime reconstructs each frame as the inverse-2D-FFT of the
-sparse coefficient set. This is the closest byte-closed analog of SIREN's
-"smooth low-frequency-dominant residual" assumption.
-
-Wire format: magic 0xFD + format_id 0x13 + PR106 bytes + length-prefixed
-SIREN residual blob.
-
-Family-scoped: rejects any archive whose format_id ≠ 0x13.
-
-Per CLAUDE.md HNeRV parity lesson 4 (inflate ≤ 200 LOC). NO_NVDEC_NEEDED.
+Per CLAUDE.md HNeRV parity lesson 4 (inflate ≤ 200 LOC waiver,
+``lane_class=substrate_engineering``). NO_NVDEC_NEEDED.
 """
 from __future__ import annotations
 
@@ -41,19 +30,21 @@ from pr106_inner_sidecar import (  # type: ignore[import-not-found]
 )
 
 PR106_RESIDUAL_MAGIC = 0xFD
-SIREN_FORMAT_ID = 0x13
+SIREN_FORMAT_ID = 0x13  # dense (already sparse-FFT-style)
+SIREN_SPARSE_FORMAT_ID = 0x23  # sparse PacketIR (RLE over (frame,k_row,k_col,ch) idx)
 CAMERA_H, CAMERA_W = 874, 1164
 RGB_CHANNELS = 3
 
 
-def parse_residual_archive(blob: bytes) -> tuple[bytes, bytes]:
+def parse_residual_archive(blob: bytes) -> tuple[bytes, bytes, int]:
+    """Returns (pr106_bytes, residual_bytes, format_id); accepts dense + sparse."""
     if len(blob) < 6:
         raise ValueError("archive too short")
     magic, format_id, pr106_len = struct.unpack_from("<BBI", blob, 0)
     if magic != PR106_RESIDUAL_MAGIC:
         raise ValueError(f"magic 0x{magic:02X}")
-    if format_id != SIREN_FORMAT_ID:
-        raise ValueError(f"format_id 0x{format_id:02X} != siren 0x{SIREN_FORMAT_ID:02X}")
+    if format_id not in (SIREN_FORMAT_ID, SIREN_SPARSE_FORMAT_ID):
+        raise ValueError(f"format_id 0x{format_id:02X} not in siren set")
     pos = 6
     pr106_bytes = blob[pos : pos + pr106_len]
     pos += pr106_len
@@ -62,54 +53,80 @@ def parse_residual_archive(blob: bytes) -> tuple[bytes, bytes]:
     residual_bytes = blob[pos : pos + residual_len]
     if pos + residual_len != len(blob):
         raise ValueError("trailing bytes")
-    return bytes(pr106_bytes), bytes(residual_bytes)
+    return bytes(pr106_bytes), bytes(residual_bytes), int(format_id)
+
+
+def decode_siren_residual_sparse(blob: bytes, n_frames: int) -> np.ndarray:
+    """Sparse: 4B scale + 4B n_coefs + RLE-of-zeros over packed (real_q,imag_q) bytes.
+
+    Reuses the dense format's per-coef (frame,k_row,k_col,channel) addressing
+    table written separately, then runs RLE over the int8 (real_q, imag_q)
+    coefficient pair sequence (2 bytes per coef). The RLE saves bytes when
+    most coefficients quantise to zero (Quantizr/Selfcomp pattern).
+    Wire format:
+        4B scale (float32)
+        4B n_coefs (uint32 LE)
+        n_coefs * 7B (frame_idx + k_row + k_col + channel) address table
+        RLE-of-zeros blob over the int8 (real_q, imag_q) interleaved stream.
+    """
+    from sparse_packet_ir_inline import (  # type: ignore[import-not-found]
+        decode_rle_of_zeros_bytes,
+    )
+    if not blob:
+        return np.zeros((n_frames, CAMERA_H, CAMERA_W, RGB_CHANNELS), dtype=np.float64)
+    if len(blob) < 8:
+        raise ValueError(f"sparse siren header too short: {len(blob)}")
+    (scale, n_coefs) = struct.unpack_from("<fI", blob, 0)
+    pos = 8
+    addr_size = n_coefs * 7
+    if pos + addr_size > len(blob):
+        raise ValueError(f"sparse siren address table truncated")
+    addr_bytes = blob[pos : pos + addr_size]
+    pos += addr_size
+    rle_blob = blob[pos:]
+    coef_stream = decode_rle_of_zeros_bytes(rle_blob)
+    if coef_stream.size != 2 * n_coefs:
+        raise ValueError(f"sparse siren coef stream size {coef_stream.size} != {2 * n_coefs}")
+    spectrum = np.zeros((n_frames, RGB_CHANNELS, CAMERA_H, CAMERA_W), dtype=np.complex128)
+    for i in range(n_coefs):
+        a_pos = i * 7
+        (frame_idx,) = struct.unpack_from("<H", addr_bytes, a_pos)
+        (k_row,) = struct.unpack_from("<h", addr_bytes, a_pos + 2)
+        (k_col,) = struct.unpack_from("<h", addr_bytes, a_pos + 4)
+        channel = addr_bytes[a_pos + 6]
+        if frame_idx >= n_frames or channel >= RGB_CHANNELS:
+            raise ValueError(f"sparse siren coef out of range: frame={frame_idx} ch={channel}")
+        real_q = int(coef_stream[2 * i])
+        imag_q = int(coef_stream[2 * i + 1])
+        row_idx = int(k_row) % CAMERA_H
+        col_idx = int(k_col) % CAMERA_W
+        spectrum[frame_idx, channel, row_idx, col_idx] = (real_q + 1j * imag_q) * scale
+    residual = np.zeros((n_frames, CAMERA_H, CAMERA_W, RGB_CHANNELS), dtype=np.float64)
+    for t in range(n_frames):
+        for c in range(RGB_CHANNELS):
+            residual[t, :, :, c] = np.real(np.fft.ifft2(spectrum[t, c]))
+    return residual
 
 
 def decode_siren_residual(blob: bytes, n_frames: int) -> np.ndarray:
-    """Decode (T, H, W, 3) float residual from sparse FFT coefficients.
-
-    Wire format:
-        4B scale (float32) — global amplitude scale for all coefs
-        2B n_coefs (uint16 LE)
-        per coef:
-            2B frame_idx (uint16 LE)
-            2B k_row     (int16 LE; freq index; can be negative)
-            2B k_col     (int16 LE)
-            1B channel   (uint8; 0/1/2)
-            1B real_q    (int8)
-            1B imag_q    (int8)
-        Total per coef = 9B.
-
-    The residual frequency-domain coefficients are inverse-FFT'd per frame
-    per channel and the real part is taken.
-    """
+    """Dense FFT-coef decode: 4B scale + 2B n_coefs + n_coefs*9B records."""
     if not blob:
         return np.zeros((n_frames, CAMERA_H, CAMERA_W, RGB_CHANNELS), dtype=np.float64)
     if len(blob) < 6:
         raise ValueError(f"siren header too short: {len(blob)}")
     (scale,) = struct.unpack_from("<f", blob, 0)
     (n_coefs,) = struct.unpack_from("<H", blob, 4)
-    expected = 6 + n_coefs * 9
-    if len(blob) != expected:
-        raise ValueError(f"siren residual size mismatch: {len(blob)} != {expected}")
-    # Frequency-domain accumulator (per-frame per-channel COMPLEX).
-    spectrum = np.zeros(
-        (n_frames, RGB_CHANNELS, CAMERA_H, CAMERA_W), dtype=np.complex128
-    )
+    if len(blob) != 6 + n_coefs * 9:
+        raise ValueError(f"siren size mismatch: {len(blob)} != {6 + n_coefs * 9}")
+    spectrum = np.zeros((n_frames, RGB_CHANNELS, CAMERA_H, CAMERA_W), dtype=np.complex128)
     pos = 6
     for _ in range(n_coefs):
-        frame_idx, k_row, k_col = struct.unpack_from("<HhH", blob, pos)
-        # NOTE: format string for k_col should be signed int16; redo correctly:
-        frame_idx = struct.unpack_from("<H", blob, pos)[0]
-        k_row = struct.unpack_from("<h", blob, pos + 2)[0]
-        k_col = struct.unpack_from("<h", blob, pos + 4)[0]
-        channel = blob[pos + 6]
-        real_q = struct.unpack_from("<b", blob, pos + 7)[0]
-        imag_q = struct.unpack_from("<b", blob, pos + 8)[0]
+        frame_idx, k_row, k_col, channel, real_q, imag_q = struct.unpack_from(
+            "<HhhBbb", blob, pos
+        )
         pos += 9
         if frame_idx >= n_frames or channel >= RGB_CHANNELS:
-            raise ValueError(f"coef out of range: frame={frame_idx} channel={channel}")
-        # k_row, k_col are signed; map to FFT array indices via modulo.
+            raise ValueError(f"coef out of range: frame={frame_idx} ch={channel}")
         row_idx = int(k_row) % CAMERA_H
         col_idx = int(k_col) % CAMERA_W
         spectrum[frame_idx, channel, row_idx, col_idx] = (real_q + 1j * imag_q) * scale
@@ -135,7 +152,7 @@ def select_inflate_device() -> torch.device:
 
 def inflate(src_bin: str, dst_raw: str) -> int:
     blob = Path(src_bin).read_bytes()
-    pr106_r2_bytes, residual_blob = parse_residual_archive(blob)
+    pr106_r2_bytes, residual_blob, format_id = parse_residual_archive(blob)
     raw_pr106, sidecar_blob = unwrap_pr106_r2_sidecar(pr106_r2_bytes)
     decoder_sd, latents, meta = parse_packed_archive(raw_pr106)
     apply_pr106_r2_sidecar_corrections(latents, sidecar_blob)
@@ -151,10 +168,12 @@ def inflate(src_bin: str, dst_raw: str) -> int:
     n_pairs = meta["n_pairs"]
     eval_h, eval_w = meta["eval_size"]
     n_frames = n_pairs * 2
-    residual = decode_siren_residual(residual_blob, n_frames)
+    is_sparse = format_id == SIREN_SPARSE_FORMAT_ID
+    decode_fn = decode_siren_residual_sparse if is_sparse else decode_siren_residual
+    residual = decode_fn(residual_blob, n_frames)
     print(
-        f"[inflate] PR106+siren residual: device={device.type}, "
-        f"residual_bytes={len(residual_blob)}",
+        f"[inflate] PR106+siren mode={'sparse' if is_sparse else 'dense'} "
+        f"device={device.type} residual_bytes={len(residual_blob)}",
         file=sys.stderr,
     )
     written = 0

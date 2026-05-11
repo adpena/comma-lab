@@ -50,6 +50,15 @@
 //!   `(60,)`, `(10, 8)`, `(3, 3, 4)` with histograms from the same recipe.
 //! - `latent_hi_arithmetic_v1.json` — 1000 pinned uint16 latents from
 //!   `np.random.default_rng(20260511)` with peaked-at-0 histogram.
+//! - `sparse_rle_of_zeros_v1.json` — `rng=np.random.default_rng(20260511)`,
+//!   1024 int8 zeros with 64 random positions set to values in [1, 32).
+//! - `sparse_arithmetic_coefficients_v1.json` —
+//!   `rng=np.random.default_rng(20260511)`,
+//!   `rng.integers(-8, 9, size=500, dtype=np.int32)`.
+//! - `sparse_temporal_subsampled_v1.json` — `N=50, per_frame=20`; frames at
+//!   `i % 5 == 0` carry signal (10 of 50); signal frames pinned via
+//!   `rng=np.random.default_rng(20260511)`,
+//!   `rng.integers(-10, 11, size=20, dtype=np.int8)`.
 
 use std::path::PathBuf;
 
@@ -61,6 +70,11 @@ use tac_packet_compiler::{
     },
     pr103_arithmetic_coding::{
         encode_latent_hi_arithmetic, encode_merged_range_stream, WeightTensorACSpec,
+    },
+    sparse_packet_ir::{
+        encode_arithmetic_coefficients as sparse_encode_arithmetic_coefficients,
+        encode_rle_of_zeros as sparse_encode_rle_of_zeros,
+        encode_temporal_subsampled as sparse_encode_temporal_subsampled,
     },
     PacketCompilerError,
 };
@@ -255,6 +269,51 @@ fn pr93_qzmb1_parity() {
     try_load_only("pr93_qzmb1_v1");
 }
 
+// ── Sparse PacketIR codec parity tests (2026-05-11) ─────────────────────────
+//
+// Closes O's L2 wire-format ceiling. Each test calls the scaffold stub and
+// asserts it currently refuses with `NotImplemented`; flip to
+// `assert_sha256_parity` once the Rust impl lands.
+
+#[test]
+fn sparse_rle_of_zeros_parity() {
+    let _manifest = try_load("sparse_rle_of_zeros_v1");
+    // Pinned recipe: rng=np.random.default_rng(20260511), 1024 int8 zeros,
+    // 64 nonzero positions, values in [1, 32). The encoder input is a flat
+    // dense `&[i8]`.
+    let dense = vec![0i8; 1024];
+    let result = sparse_encode_rle_of_zeros(&dense);
+    assert_scaffold_refuses(result, "encode_rle_of_zeros");
+}
+
+#[test]
+fn sparse_arithmetic_coefficients_parity() {
+    let _manifest = try_load("sparse_arithmetic_coefficients_v1");
+    // Pinned recipe: rng=np.random.default_rng(20260511),
+    // np.random.integers(-8, 9, size=500, dtype=np.int32).
+    let values = vec![0i32; 500];
+    let result = sparse_encode_arithmetic_coefficients(&values, None, None, None);
+    assert_scaffold_refuses(result, "encode_arithmetic_coefficients");
+}
+
+#[test]
+fn sparse_temporal_subsampled_parity() {
+    let _manifest = try_load("sparse_temporal_subsampled_v1");
+    // Pinned recipe: N=50, per_frame=20, signal-carrying frames at i%5==0
+    // (10 frames). The encoder input is `Option<&[u8]>` per frame.
+    let signal = vec![0u8; 20];
+    let mut frames: Vec<Option<&[u8]>> = Vec::with_capacity(50);
+    for i in 0..50 {
+        if i % 5 == 0 {
+            frames.push(Some(&signal));
+        } else {
+            frames.push(None);
+        }
+    }
+    let result = sparse_encode_temporal_subsampled(&frames);
+    assert_scaffold_refuses(result, "encode_temporal_subsampled");
+}
+
 // ── Coverage gate — every golden vector must have a parity test ─────────────
 
 /// This test exists to fail-loud if a new golden vector is committed without
@@ -297,6 +356,10 @@ fn every_golden_vector_has_paired_parity_test() {
         // PR93
         "pr93_delta_varint_pose_v1",
         "pr93_qzmb1_v1",
+        // Sparse PacketIR codec — RLE-of-zeros + AC coefficient + temporal-subsampled
+        "sparse_rle_of_zeros_v1",
+        "sparse_arithmetic_coefficients_v1",
+        "sparse_temporal_subsampled_v1",
     ]
     .into_iter()
     .collect();

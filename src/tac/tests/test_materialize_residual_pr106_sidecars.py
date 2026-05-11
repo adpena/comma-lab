@@ -18,7 +18,9 @@ construct a single-member synthetic zip on-the-fly via the helper.
 
 from __future__ import annotations
 
+import importlib.util
 import json
+import struct
 import subprocess
 import sys
 import zipfile
@@ -27,7 +29,10 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from tac.residual_basis.pr106_materializer_helpers import PR106_BIN_MEMBER_NAME
+from tac.residual_basis.pr106_materializer_helpers import (
+    PR106_BIN_MEMBER_NAME,
+    repack_dense_as_sparse,
+)
 from tac.residual_basis.pr106_sidecar_packing import (
     PR106_RESIDUAL_FORMAT_IDS,
     parse_archive,
@@ -80,6 +85,45 @@ def _write_raw_frames(path: Path, *, n_frames: int = 1) -> None:
     """Write contest-camera RGB frames as uint8 raw bytes."""
     frame = np.zeros((n_frames, 874, 1164, 3), dtype=np.uint8)
     frame.tofile(path)
+
+
+def _load_inflate_module(family: str):
+    path = REPO_ROOT / f"submissions/pr106_{family}_residual_sidecar/inflate.py"
+    spec = importlib.util.spec_from_file_location(f"inflate_{family}_residual_test", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _dense_probe_residual_bytes(family: str, *, n_frames: int = 1) -> bytes:
+    """Construct a tiny non-zero dense residual payload for decoder parity tests."""
+    camera_h, camera_w, rgb = 874, 1164, 3
+    if family == "wavelet":
+        half_h, half_w = camera_h // 2, camera_w // 2
+        bands = np.zeros(4 * rgb * half_h * half_w, dtype=np.int8)
+        bands[0] = 3
+        frame = struct.pack("<4f", 0.25, 0.125, 0.0625, 0.03125) + bands.tobytes()
+        return frame * n_frames
+    if family == "c3":
+        grid_h, grid_w = camera_h // 4, camera_w // 4
+        coeffs = np.zeros(grid_h * grid_w * rgb, dtype=np.int8)
+        coeffs[0] = 5
+        frame = struct.pack("<f", 0.2) + coeffs.tobytes()
+        return frame * n_frames
+    if family == "coord_mlp":
+        grid_h, grid_w = camera_h // 8, camera_w // 8
+        coeffs = np.zeros(grid_h * grid_w * rgb, dtype=np.int8)
+        coeffs[0] = -4
+        frame = struct.pack("<f", 0.15) + coeffs.tobytes()
+        return frame * n_frames
+    if family == "cool_chic":
+        coeffs = np.zeros(n_frames * camera_h * camera_w * rgb, dtype=np.int8)
+        coeffs[0] = 2
+        return struct.pack("<Hf", 1, 0.1) + coeffs.tobytes()
+    if family == "siren":
+        return struct.pack("<fH", 0.125, 1) + struct.pack("<HhhBbb", 0, 0, 0, 0, 7, -3)
+    raise AssertionError(f"unknown family {family}")
 
 
 # ── Per-family default scaffold-readiness invocation ───────────────────────
@@ -253,6 +297,28 @@ def test_coord_mlp_probe_mode_produces_nonzero_residual(
         ],
     )
     assert result.returncode == 0, f"stderr: {result.stderr}"
+
+
+@pytest.mark.parametrize("family", sorted(MATERIALIZERS))
+def test_sparse_repack_decodes_to_same_residual_as_dense(family: str) -> None:
+    """Sparse PacketIR repack preserves each family decoder's dense residual semantics."""
+    n_frames = 1
+    dense = _dense_probe_residual_bytes(family, n_frames=n_frames)
+    sparse = repack_dense_as_sparse(
+        family=family,
+        dense_residual_bytes=dense,
+        n_frames=n_frames,
+    )
+    assert sparse
+    inflate = _load_inflate_module(family)
+    dense_decode = getattr(inflate, f"decode_{family}_residual")
+    sparse_decode = getattr(inflate, f"decode_{family}_residual_sparse")
+    np.testing.assert_allclose(
+        sparse_decode(sparse, n_frames=n_frames),
+        dense_decode(dense, n_frames=n_frames),
+        rtol=0,
+        atol=0,
+    )
 
 
 # ── Negative invocations ─────────────────────────────────────────────────────
