@@ -77,7 +77,10 @@ def get_kernel_log(
     timeout_s: int = 20,
 ) -> list[str]:
     """Download kernel output and return stderr lines from the log."""
-    with tempfile.TemporaryDirectory() as tmpdir:
+    # Kaggle output can contain nested directories created or touched by the
+    # CLI while a timeout/error path is unwinding. A failed cleanup is not a
+    # status-check failure; the actionable signal is the kernel status/log.
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmpdir:
         out_dir = Path(tmpdir)
         try:
             result = subprocess.run(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import inspect
 from types import SimpleNamespace
 from pathlib import Path
 import subprocess
@@ -70,6 +71,13 @@ class KaggleCheckTests(unittest.TestCase):
             mod.subprocess.run = original_run
 
         self.assertEqual(lines, ["(log fetch timed out after 1s for adpena/demo)"])
+
+    def test_get_kernel_log_ignores_tempdir_cleanup_errors(self) -> None:
+        mod = load_module()
+
+        source = inspect.getsource(mod.get_kernel_log)
+
+        self.assertIn("ignore_cleanup_errors=True", source)
 
     def test_get_kernel_status_timeout_returns_status_marker(self) -> None:
         mod = load_module()
