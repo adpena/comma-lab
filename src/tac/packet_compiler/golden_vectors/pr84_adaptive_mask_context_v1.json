@@ -1,0 +1,9 @@
+{
+  "alphabet": 5,
+  "n_contexts": 4,
+  "n_symbols": 256,
+  "payload_len": 32,
+  "schema": "pr84_adaptive_mask_context.v1",
+  "seed": 20260511,
+  "sha256": "cd0f0dad6462d1719b5f105c0bb0ef7a12cdb26bbb3eaa9fc015eea86cb1a28e"
+}

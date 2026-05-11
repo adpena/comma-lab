@@ -1,0 +1,23 @@
+{
+  "block_size": 32,
+  "n_blocks": 2,
+  "n_values": 64,
+  "packed_len": 32,
+  "pos_levels": [
+    0.0,
+    0.5,
+    1.0,
+    1.5,
+    2.0,
+    3.0,
+    4.0,
+    6.0
+  ],
+  "scales": [
+    1.5,
+    0.75
+  ],
+  "schema": "pr81_fp4_codebook.v1",
+  "seed": 20260511,
+  "sha256": "12b69fd5842d880a7a7122c540233f75d1e5b4bd75f9471e1398fb4dfcde4e40"
+}

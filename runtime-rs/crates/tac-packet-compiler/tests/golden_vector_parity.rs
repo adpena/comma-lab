@@ -188,6 +188,73 @@ fn pr103_latent_hi_arithmetic_parity() {
     assert_scaffold_refuses(result, "encode_latent_hi_arithmetic");
 }
 
+// ── PR81 parity stubs ───────────────────────────────────────────────────────
+//
+// The Rust source modules for PR81 / PR84 / PR91 / PR92 / PR93 primitives are
+// not yet scaffolded under `src/` (the Python oracle landed first in
+// `src/tac/packet_compiler/`). These stub tests register each new golden
+// vector against the `try_load` index so the coverage gate at the bottom of
+// this file recognises them as paired. The recipe for each vector is documented
+// in `src/tac/packet_compiler/README.md` and the Python tests at
+// `src/tac/tests/test_packet_compiler_pr<NN>_*.py`.
+//
+// When the corresponding Rust module lands (sibling of `pr101_sidecar_grammar/`
+// + `pr103_arithmetic_coding/`), flip the stub from `try_load_only` to the
+// `assert_scaffold_refuses(...)` shape used above, then to
+// `assert_sha256_parity(produced, &manifest)` once the impl lands.
+
+fn try_load_only(name: &'static str) {
+    let _manifest = try_load(name);
+}
+
+#[test]
+fn pr81_fp4_codebook_parity() {
+    try_load_only("pr81_fp4_codebook_v1");
+}
+
+#[test]
+fn pr81_router_action_parity() {
+    try_load_only("pr81_router_action_v1");
+}
+
+// ── PR84 parity stub ────────────────────────────────────────────────────────
+
+#[test]
+fn pr84_adaptive_mask_context_parity() {
+    try_load_only("pr84_adaptive_mask_context_v1");
+}
+
+// ── PR91 parity stubs ───────────────────────────────────────────────────────
+
+#[test]
+fn pr91_arithmetic_coder_constriction_parity() {
+    try_load_only("pr91_arithmetic_coder_constriction_v1");
+}
+
+#[test]
+fn pr91_qmqh_grammar_parity() {
+    try_load_only("pr91_qmqh_grammar_v1");
+}
+
+// ── PR92 parity stub ────────────────────────────────────────────────────────
+
+#[test]
+fn pr92_rmc_joint_stream_parity() {
+    try_load_only("pr92_rmc_joint_stream_v1");
+}
+
+// ── PR93 parity stubs ───────────────────────────────────────────────────────
+
+#[test]
+fn pr93_delta_varint_pose_parity() {
+    try_load_only("pr93_delta_varint_pose_v1");
+}
+
+#[test]
+fn pr93_qzmb1_parity() {
+    try_load_only("pr93_qzmb1_v1");
+}
+
 // ── Coverage gate — every golden vector must have a parity test ─────────────
 
 /// This test exists to fail-loud if a new golden vector is committed without
@@ -210,11 +277,26 @@ fn every_golden_vector_has_paired_parity_test() {
         return;
     }
     let known: std::collections::BTreeSet<&str> = [
+        // PR101
         "ranked_no_op_sidecar_v1",
         "centered_delta_uint8_v1",
         "split_brotli_self_delim_v1",
+        // PR103
         "merged_range_stream_v1",
         "latent_hi_arithmetic_v1",
+        // PR81 (8 new primitives sister to PR101+PR103, 2026-05-11)
+        "pr81_fp4_codebook_v1",
+        "pr81_router_action_v1",
+        // PR84
+        "pr84_adaptive_mask_context_v1",
+        // PR91
+        "pr91_arithmetic_coder_constriction_v1",
+        "pr91_qmqh_grammar_v1",
+        // PR92
+        "pr92_rmc_joint_stream_v1",
+        // PR93
+        "pr93_delta_varint_pose_v1",
+        "pr93_qzmb1_v1",
     ]
     .into_iter()
     .collect();

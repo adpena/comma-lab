@@ -1,0 +1,8 @@
+{
+  "arch_config_json_len": 43,
+  "block_size": 32,
+  "body_len": 64,
+  "payload_len": 119,
+  "schema": "pr93_qzmb1.v1",
+  "sha256": "d1c85effa4e7d238a9059f9b65e112a7c8f1254bf4f987b87609406eb43e8725"
+}

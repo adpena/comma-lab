@@ -18,6 +18,49 @@ golden-vector-backed building blocks.
 
 ```python
 from tac.packet_compiler import (
+    # PR81 — Quantizr FP4 codebook + ROUTER_ACTION
+    FP4Codebook,
+    PR81_POS_LEVELS,
+    encode_router_actions,
+    decode_router_actions,
+    pack_nibbles,
+    unpack_nibbles,
+    # PR84 — adaptive-context range coder
+    AdaptiveContextSpec,
+    encode_adaptive_context_stream,
+    decode_adaptive_context_stream,
+    # PR91 — universal AC wrapper + QMQH grammar
+    MAGIC_QM0,
+    MAGIC_QH0,
+    QMQHHeader,
+    encode_categorical_stream,
+    decode_categorical_stream,
+    emit_qmqh_header,
+    parse_qmqh_header,
+    pack_hi_lo_split,
+    unpack_hi_lo_split,
+    # PR92 — RMC1 / RSA1 / RSB1 joint-stream meta-codec
+    MAGIC_RMC1,
+    MAGIC_RSA1,
+    MAGIC_RSB1,
+    RMC1Composite,
+    RSA1Side,
+    RSB1Side,
+    pack_rmc1_composite,
+    unpack_rmc1_composite,
+    pack_rsa1_side,
+    unpack_rsa1_side,
+    pack_rsb1_side,
+    unpack_rsb1_side,
+    # PR93 — delta-varint pose codec + QZMB1 grammar
+    MAGIC_POSE_DV,
+    MAGIC_MODEL_COMPACT,
+    DeltaVarintPoseStream,
+    QZMB1Block,
+    encode_delta_varint_pose,
+    decode_delta_varint_pose,
+    pack_qzmb1_block,
+    unpack_qzmb1_block,
     # PR101 sidecar grammar
     RankedSidecarSchema,
     CenteredDeltaUint8Stream,
@@ -137,6 +180,141 @@ res = adaptive_brotli_param_search(raw_bytes, time_budget_s=30.0)
 print(res.lgwin, res.quality, len(res.payload))
 ```
 
+### Delta-varint pose codec (PR93) — pose-axis #1 EV/byte
+
+Encode a pose tensor as fp32 lo/scale plus signed-varint cumulative deltas
+under the `QZPDV1` magic. Pose axis is 2.79x higher marginal value than
+SegNet at the PR106 r2 operating point:
+
+```python
+import numpy as np
+from tac.packet_compiler import encode_delta_varint_pose, decode_delta_varint_pose
+
+poses = np.random.uniform(-0.5, 0.5, size=(600, 6)).astype(np.float32)
+stream = encode_delta_varint_pose(poses)
+recovered = decode_delta_varint_pose(stream.payload)
+```
+
+### PR81 FP4 codebook (asymmetric 8-level + sign)
+
+Quantizr's `[0, 0.5, 1, 1.5, 2, 3, 4, 6]` non-negative codebook plus a sign
+bit; 4-bit nibbles packed two per byte:
+
+```python
+import numpy as np
+from tac.packet_compiler import FP4Codebook, pack_nibbles, unpack_nibbles
+
+cb = FP4Codebook()  # uses PR81's asymmetric levels by default
+values = np.random.uniform(-3, 3, size=64).astype(np.float32)
+scales = np.array([1.5, 0.75], dtype=np.float32)  # one per 32-value block
+nibbles = cb.quantize(values, scales=scales, block_size=32)
+packed = pack_nibbles(nibbles)
+recovered = cb.dequantize_from_nibbles(
+    unpack_nibbles(packed, count=nibbles.size),
+    scales=scales, block_size=32, n_values=values.size,
+)
+```
+
+### PR81 ROUTER_ACTION packing (3-bit per frame)
+
+Pack 600 frame-level small-integer router decisions into 225 bytes:
+
+```python
+import numpy as np
+from tac.packet_compiler import encode_router_actions, decode_router_actions
+
+actions = np.random.randint(0, 8, size=600).astype(np.uint8)
+packed = encode_router_actions(actions, bits=3)  # 225 bytes
+recovered = decode_router_actions(packed, count=600, bits=3)
+```
+
+### PR84 adaptive-context range coder
+
+Per-symbol distribution selected by a context id; the smallest reusable
+primitive that compresses correlated streams under a small finite set of
+context distributions:
+
+```python
+import numpy as np
+from tac.packet_compiler import (
+    AdaptiveContextSpec, encode_adaptive_context_stream, decode_adaptive_context_stream
+)
+
+cdf = np.array([[0.85, 0.05, 0.05, 0.05],
+                [0.05, 0.05, 0.85, 0.05]], dtype=np.float64)
+spec = AdaptiveContextSpec(alphabet_size=4, cdf_table=cdf)
+context_ids = np.tile(np.array([0, 1]), 100).astype(np.int32)
+symbols = np.where(context_ids == 0, 0, 2).astype(np.int32)
+payload = encode_adaptive_context_stream(symbols, context_ids, spec)
+recovered = decode_adaptive_context_stream(payload, context_ids, spec)
+```
+
+### PR91 universal AC wrapper (per-symbol probabilities)
+
+Generalises PR103's merged-range-stream to the case where each position has
+its own distribution (HPACMini-style):
+
+```python
+import numpy as np
+from tac.packet_compiler import encode_categorical_stream, decode_categorical_stream
+
+probs = np.full((200, 8), 0.02)
+probs[:, 0] = 0.86  # peaked at symbol 0
+probs /= probs.sum(axis=1, keepdims=True)
+symbols = np.zeros(200, dtype=np.int32)
+payload = encode_categorical_stream(symbols, probs)
+recovered = decode_categorical_stream(payload, probs)
+```
+
+### PR91 QM0 / QH0 grammar + hi-lo split
+
+```python
+from tac.packet_compiler import (
+    emit_qmqh_header, parse_qmqh_header, pack_hi_lo_split, unpack_hi_lo_split,
+)
+header = emit_qmqh_header(hilo_split=True)  # b"QH0"
+permuted = pack_hi_lo_split(b"\x00\x11" * 32)
+recovered = unpack_hi_lo_split(permuted)
+```
+
+### PR92 RMC1 / RSA1 / RSB1 joint stream
+
+Frame two correlated streams as ONE composite payload (vs separately):
+
+```python
+import numpy as np
+from tac.packet_compiler import (
+    pack_rmc1_composite, unpack_rmc1_composite,
+    pack_rsa1_side, unpack_rsa1_side,
+    pack_rsb1_side, unpack_rsb1_side,
+    encode_router_actions,
+)
+
+# RMC1: joint mask + side-action
+composite = pack_rmc1_composite(seg_bytes=b"...mask logits...", side_bytes=b"...actions...")
+parsed = unpack_rmc1_composite(composite.payload)
+
+# RSA1: range-coded side-action
+body = encode_router_actions(np.array([0, 1, 2, 3], dtype=np.uint8), bits=3)
+side = pack_rsa1_side(count=4, action_bits=3, table_id=0, body=body)
+
+# RSB1: Brotli-fallback side-action
+actions = np.random.randint(0, 256, size=300).astype(np.uint8)
+side = pack_rsb1_side(actions=actions, table_id=7)
+```
+
+### QZMB1 compact-model framing (PR93)
+
+```python
+from tac.packet_compiler import pack_qzmb1_block, unpack_qzmb1_block
+block = pack_qzmb1_block(
+    block_size=32,
+    arch_config_json=b'{"hidden": 64}',
+    body=b"...tensor records...",
+)
+parsed = unpack_qzmb1_block(block.payload)
+```
+
 ## Composition
 
 All primitives are pure-function transducers over `bytes`/`np.ndarray`, so they
@@ -174,7 +352,7 @@ Every primitive in this package satisfies:
 
 ## Golden vectors
 
-Five golden vectors land alongside this README:
+Thirteen golden vectors land alongside this README:
 
 | File | What it pins | Constriction-sensitive? |
 |---|---|---|
@@ -183,6 +361,14 @@ Five golden vectors land alongside this README:
 | `golden_vectors/ranked_no_op_sidecar_v1.json` | Sidecar bytes for a pinned 24-pair, 8-dim pattern | No |
 | `golden_vectors/merged_range_stream_v1.json` | Range-coded bytes for three pinned tensors | Yes |
 | `golden_vectors/latent_hi_arithmetic_v1.json` | AC payload for 1000 pinned uint16 latents | Yes |
+| `golden_vectors/pr81_fp4_codebook_v1.json` | 64-value FP4 codebook quantise+pack bytes | No |
+| `golden_vectors/pr81_router_action_v1.json` | 225-byte 600×3-bit packed router actions | No |
+| `golden_vectors/pr84_adaptive_mask_context_v1.json` | AC payload for 256 symbols × 4 raster contexts × 5 classes | Yes |
+| `golden_vectors/pr91_arithmetic_coder_constriction_v1.json` | AC payload for 200 symbols under per-symbol probs | Yes |
+| `golden_vectors/pr91_qmqh_grammar_v1.json` | QH0 magic + hi-lo-split 64-byte body | No |
+| `golden_vectors/pr92_rmc_joint_stream_v1.json` | RMC1 framing of `seg + RSA1(120×3-bit actions)` | No |
+| `golden_vectors/pr93_delta_varint_pose_v1.json` | QZPDV1 16×4 pose at 1/255 scale | No |
+| `golden_vectors/pr93_qzmb1_v1.json` | QZMB1 framing with 42-byte arch-config JSON + 64-byte body | No |
 
 Native ports MUST reproduce these SHA-256 digests. Any regeneration of a
 constriction-sensitive vector requires a paired version bump (`_v2`).
@@ -208,7 +394,33 @@ This package is the **substrate** for the Phase 1 packet compiler's
    own bit-packer.
 2. Wire merged range stream + latent-hi AC into the same optimise pass for
    non-HNeRV weight families (NeRV/MNeRV/SIREN/Cool-Chic/C3).
-3. Add a `_v2` adaptive Brotli search that uses Bayesian-EI on prior
+3. Wire PR93 delta-varint pose codec into PR106 r2's pose sidechannel
+   (pose-axis #1 marginal value at the current operating point per CLAUDE.md
+   "SegNet vs PoseNet importance" rule).
+4. Wire PR81 FP4 codebook + ROUTER_ACTION into the rate-axis optimise pass
+   for Quantizr-family substrates.
+5. Wire PR91 universal AC + QMQH grammar + PR84 adaptive-context coder into
+   the per-axis mask-codec optimise pass.
+6. Wire PR92 RMC1 joint-stream pattern into the cross-stream meta-codec when
+   two correlated archive streams (pose-residual + flow-residual; sidecar
+   latent + per-pair delta) appear together.
+7. Add a `_v2` adaptive Brotli search that uses Bayesian-EI on prior
    `(lgwin, quality, size)` triples rather than monotone sweep.
-4. Promote Rust/Zig ports once the golden vectors stabilise across two
-   consecutive contest releases.
+8. Promote Rust/Zig ports once the golden vectors stabilise across two
+   consecutive contest releases. The `runtime-rs/crates/tac-packet-compiler/`
+   crate's coverage gate already enforces every golden vector has a paired
+   Rust parity test stub.
+
+## Composition example — full stack
+
+Each primitive is pure-function over `bytes`/`np.ndarray`, so any subset
+composes orthogonally. A typical Quantizr-family archive might bind:
+
+```
+PR81 FP4 codebook    ─→ weight nibbles ─→ PR91 QH0 hi-lo split ─→ Brotli ─→ archive member 1
+PR93 delta-varint    ─→ pose payload                                ──────→ archive member 2
+PR84 adaptive context ─→ mask AC payload                            ──────→ archive member 3
+PR81 ROUTER_ACTION    ─→ 225-byte action stream                     ──────→ archive member 4
+PR101 ranked sidecar  ─→ per-pair correction sidecar                ──────→ archive member 5
+                        (or PR92 RMC1 wrapping multiple correlated sidecars)
+```

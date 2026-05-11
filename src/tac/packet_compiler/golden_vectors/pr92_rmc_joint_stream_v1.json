@@ -1,0 +1,10 @@
+{
+  "action_bits": 3,
+  "action_count": 120,
+  "payload_len": 193,
+  "schema": "pr92_rmc_joint_stream.v1",
+  "seed": 20260511,
+  "seg_bytes_len": 128,
+  "sha256": "683827abcdbd81097a29586421fce7491d0906ed79c2d21f78d86544ce6eb2f5",
+  "table_id": 2
+}

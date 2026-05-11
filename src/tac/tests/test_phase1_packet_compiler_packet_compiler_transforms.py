@@ -177,12 +177,27 @@ def test_rejects_transforms_in_canonicalize_mode(tmp_path: Path) -> None:
 def test_known_transform_tokens_match_packet_compiler_module() -> None:
     """The declared token set must cover every public packet_compiler primitive."""
     expected = {
+        # PR101 — sidecar grammar
         "pr101_ranked_no_op_sidecar",
         "pr101_centered_delta_uint8_lzma",
         "pr101_split_brotli_self_delimiting",
+        # PR103 — arithmetic coding
         "pr103_merged_range_stream",
         "pr103_latent_hi_arithmetic",
         "pr103_adaptive_brotli_param_search",
+        # PR81 — Quantizr FP4 codebook + ROUTER_ACTION (2026-05-11)
+        "pr81_fp4_codebook",
+        "pr81_router_action",
+        # PR84 — adaptive-context range coder (2026-05-11)
+        "pr84_adaptive_mask_context",
+        # PR91 — universal AC wrapper + QMQH grammar (2026-05-11)
+        "pr91_arithmetic_coder_constriction",
+        "pr91_qmqh_grammar",
+        # PR92 — RMC1 joint-stream meta-codec (2026-05-11)
+        "pr92_rmc_joint_stream",
+        # PR93 — delta-varint pose + QZMB1 (2026-05-11)
+        "pr93_delta_varint_pose",
+        "pr93_qzmb_qzpdv_grammar",
     }
     assert set(PACKET_COMPILER_TRANSFORMS) == expected
 

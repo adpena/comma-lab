@@ -1,0 +1,9 @@
+{
+  "bits": 8,
+  "n_dims": 4,
+  "n_rows": 16,
+  "payload_len": 151,
+  "schema": "pr93_delta_varint_pose.v1",
+  "seed": 20260511,
+  "sha256": "e10f29fa699701459b66082c0b671494107192274b8f72b94ae18c98a909d988"
+}

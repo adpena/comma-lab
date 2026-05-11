@@ -1,0 +1,8 @@
+{
+  "bits": 3,
+  "count": 600,
+  "packed_len": 225,
+  "schema": "pr81_router_action.v1",
+  "seed": 20260511,
+  "sha256": "3360cb7c3d7febfb097694fd6941f0a7a47358dbcd6f13b3bb0c5e2188469878"
+}

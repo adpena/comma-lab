@@ -1,0 +1,8 @@
+{
+  "alphabet": 8,
+  "n_symbols": 200,
+  "payload_len": 24,
+  "schema": "pr91_arithmetic_coder_constriction.v1",
+  "seed": 20260511,
+  "sha256": "f208c44ae02da0f04e8e1c5c40f8d9d3f529eb2cf1cd51c0eb1b8002a2d5c88f"
+}

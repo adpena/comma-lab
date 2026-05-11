@@ -1753,12 +1753,27 @@ def _finalize_packet_result(
 #: declared transforms for downstream audit + future Rust/Zig port routing.
 #: Unknown tokens are refused so a typo cannot silently slip into a manifest.
 PACKET_COMPILER_TRANSFORMS: tuple[str, ...] = (
+    # PR101 — sidecar grammar
     "pr101_ranked_no_op_sidecar",
     "pr101_centered_delta_uint8_lzma",
     "pr101_split_brotli_self_delimiting",
+    # PR103 — arithmetic coding
     "pr103_merged_range_stream",
     "pr103_latent_hi_arithmetic",
     "pr103_adaptive_brotli_param_search",
+    # PR81 — Quantizr FP4 codebook + ROUTER_ACTION
+    "pr81_fp4_codebook",
+    "pr81_router_action",
+    # PR84 — adaptive-context range coder
+    "pr84_adaptive_mask_context",
+    # PR91 — universal AC wrapper + QMQH grammar
+    "pr91_arithmetic_coder_constriction",
+    "pr91_qmqh_grammar",
+    # PR92 — RMC1 joint stream meta-codec
+    "pr92_rmc_joint_stream",
+    # PR93 — delta-varint pose + QZMB1
+    "pr93_delta_varint_pose",
+    "pr93_qzmb_qzpdv_grammar",
 )
 
 
