@@ -301,6 +301,7 @@ def _command(
     inflate_timeout: int,
     evaluate_timeout: int,
 ) -> list[str]:
+    json_out = work_dir / "contest_auth_eval.json"
     return [
         ".venv/bin/python",
         "experiments/contest_auth_eval.py",
@@ -316,6 +317,8 @@ def _command(
         device,
         "--work-dir",
         str(work_dir),
+        "--json-out",
+        str(json_out),
         "--inflate-timeout",
         str(inflate_timeout),
         "--evaluate-timeout",
@@ -364,6 +367,7 @@ def build_plan(
         evals[device] = {
             "device": device,
             "work_dir": str(work_root / device),
+            "json_out": str(work_root / device / "contest_auth_eval.json"),
             "command": _command(
                 archive=archive,
                 inflate_sh=inflate_sh,

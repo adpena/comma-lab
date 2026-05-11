@@ -104,6 +104,13 @@ def test_dual_plan_emits_cpu_and_cuda_commands_for_same_archive(tmp_path: Path) 
         assert command[command.index("--archive") + 1] == str(archive)
         assert command[command.index("--inflate-sh") + 1] == str(inflate)
         assert command[command.index("--device") + 1] == device
+        assert command[command.index("--json-out") + 1] == (
+            f"experiments/results/dual_device_auth_eval/fixture-run/{device}/contest_auth_eval.json"
+        )
+        assert plan["evals"][device]["json_out"] == (
+            f"experiments/results/dual_device_auth_eval/fixture-run/{device}/contest_auth_eval.json"
+        )
+        assert "--keep-work-dir" in command
     assert plan["evals"]["cuda"]["promotion_eligible_from_this_axis"] is True
     assert plan["evals"]["cpu"]["promotion_eligible_from_this_axis"] is False
     completion = plan["dual_axis_completion"]
