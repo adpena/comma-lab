@@ -604,6 +604,26 @@ class TestNoCompromisedLightningSupplyChain:
         source = (Path(__file__).parents[3] / "src" / "tac" / "deploy" / "cloud_deploy.py").read_text()
         assert 'subprocess.run(["lightning", "--version"]' not in source
         assert "importlib.metadata.version(\"lightning-sdk\")" in source
+        assert "from tac.deploy.build_bundle import build as build_bundle" in source
+        assert "train_tac.py" not in source
+
+    def test_build_bundle_uses_canonical_repo_root_and_deploy_config(self) -> None:
+        source = (Path(__file__).parents[3] / "src" / "tac" / "deploy" / "build_bundle.py").read_text()
+        assert "REPO = repo_root()" in source
+        assert "from tac.deploy.deploy_config import EXPERIMENT_SCRIPT" in source
+        assert "experiments/train_tac.py" not in source
+        assert "TAC_UPSTREAM_DIR" in source
+        assert "TAC_MODELS_DIR" in source
+        assert "TAC_RESULTS_DIR" in source
+        for stale_flag in (
+            "--archive",
+            "--gt-video",
+            "--saliency",
+            "--models-dir",
+            "--upstream-dir",
+            "--resume-from",
+        ):
+            assert stale_flag not in source
 
 
 class TestLightningExactEvalDaliBootstrap:

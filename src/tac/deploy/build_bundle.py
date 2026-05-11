@@ -9,22 +9,26 @@ Contents:
   upstream/      — scorer models + GT video only (~126MB)
   archive.zip    — compressed submission (~864KB)
   saliency.npy   — precomputed saliency (~116MB, optional)
-  train_tac.py   — training script
+  train_renderer_fridrich.py — canonical training script from deploy_config
   setup.sh       — uv-based dependency install
   train.sh       — configurable training launcher
 
 Usage:
-    python deploy/build_bundle.py                    # build to /tmp/tac_bundle
-    python deploy/build_bundle.py --output ./bundle  # custom output
-    python deploy/build_bundle.py --no-saliency      # skip saliency (generate on fly)
-    python deploy/build_bundle.py --precomputed       # include precomputed tensors (~7.5GB)
+    python -m tac.deploy.build_bundle                    # build to /tmp/tac_bundle
+    python -m tac.deploy.build_bundle --output ./bundle  # custom output
+    python -m tac.deploy.build_bundle --no-saliency      # skip saliency
+    python -m tac.deploy.build_bundle --precomputed      # include precomputed tensors
 """
 import argparse
 import os
 import shutil
 from pathlib import Path
 
-REPO = Path(__file__).parent.parent
+from tac.deploy.base import repo_root
+from tac.deploy.deploy_config import EXPERIMENT_SCRIPT
+
+REPO = repo_root()
+TRAINING_SCRIPT = Path(EXPERIMENT_SCRIPT)
 
 
 def build(output: str = "/tmp/tac_bundle", include_saliency: bool = True, include_precomputed: bool = False):
@@ -33,14 +37,14 @@ def build(output: str = "/tmp/tac_bundle", include_saliency: bool = True, includ
         shutil.rmtree(out)
     out.mkdir(parents=True)
 
-    upstream = REPO / "workspace" / "upstream" / "comma_video_compression_challenge"
+    upstream = REPO / "upstream"
 
     # tac library
     shutil.copytree(REPO / "src" / "tac", out / "src" / "tac",
                     ignore=shutil.ignore_patterns("__pycache__"))
 
-    # training script
-    shutil.copy2(REPO / "experiments" / "train_tac.py", out / "train_tac.py")
+    # training script: keep the bundle wired to the canonical provider config.
+    shutil.copy2(REPO / TRAINING_SCRIPT, out / TRAINING_SCRIPT.name)
 
     # upstream essentials only (not 6GB git repo)
     (out / "upstream" / "models").mkdir(parents=True)
@@ -87,25 +91,32 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"
 export PATH="$HOME/.local/bin:$PATH"
 TAG="${TAG:-cloud_h64_standard}"
-HIDDEN="${HIDDEN:-64}"
-EPOCHS="${EPOCHS:-2500}"
-LOSS="${LOSS:-standard}"
-TEMP_START="${TEMP_START:-1.0}"
-TEMP_END="${TEMP_END:-0.05}"
+VARIANT="${VARIANT:-base}"
+RESULTS_DIR="${RESULTS_DIR:-./weights/${TAG}}"
+mkdir -p "$RESULTS_DIR"
+export TAC_UPSTREAM_DIR="${TAC_UPSTREAM_DIR:-./upstream}"
+export TAC_MODELS_DIR="${TAC_MODELS_DIR:-./upstream/models}"
+export TAC_RESULTS_DIR="$RESULTS_DIR"
 RESUME=""
-[ -f "weights/training_state_${TAG}.pt" ] && RESUME="--resume-from weights/training_state_${TAG}.pt" && echo "Resuming from $RESUME"
-echo "=== Training: $TAG h=$HIDDEN epochs=$EPOCHS loss=$LOSS ==="
-PYTHONPATH=src:upstream PYTHONUNBUFFERED=1 python train_tac.py \
-    --tag "$TAG" --hidden "$HIDDEN" --epochs "$EPOCHS" \
-    --loss-mode "$LOSS" --temperature-start "$TEMP_START" --temperature-end "$TEMP_END" \
-    --alpha 20 --sal-lambda 1.0 --subsample 4 \
-    --output-dir ./weights \
-    --archive ./archive.zip \
-    --gt-video ./upstream/videos/0.mkv \
-    --saliency ./saliency.npy \
-    --models-dir ./upstream/models \
-    --upstream-dir ./upstream \
-    $RESUME
+[ -f "${RESULTS_DIR}/renderer_best.pt" ] && RESUME="${RESULTS_DIR}/renderer_best.pt" && echo "Resuming from $RESUME"
+echo "=== Training: $TAG variant=$VARIANT ==="
+PYTHONPATH=src:upstream PYTHONUNBUFFERED=1 python - "$VARIANT" "$RESUME" <<'PY'
+import json
+import subprocess
+import sys
+
+from tac.deploy.deploy_config import build_flags
+
+variant = sys.argv[1]
+resume = sys.argv[2].strip()
+cmd = build_flags(
+    variant=variant,
+    provider_script_path="./""" + TRAINING_SCRIPT.name + """",
+    resume_from=resume or None,
+)
+print(json.dumps({"cmd": cmd}, indent=2))
+raise SystemExit(subprocess.run(cmd, check=False).returncode)
+PY
 """)
     os.chmod(out / "train.sh", 0o755)
 
