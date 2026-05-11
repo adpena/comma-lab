@@ -7,6 +7,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 SUB_NAME="$(basename "$HERE")"
+LOCAL_INFLATE_PY="$HERE/inflate.py"
 
 DATA_DIR="${1:?data dir required}"
 OUTPUT_DIR="${2:?output dir required}"
@@ -19,7 +20,13 @@ if [ ! -x "$PYBIN" ]; then
 fi
 
 cd "$ROOT"
-"$PYBIN" -m "submissions.${SUB_NAME}.inflate" --dependency-check
+if [ -f "$LOCAL_INFLATE_PY" ]; then
+  PY_INFLATE=( "$PYBIN" "$LOCAL_INFLATE_PY" )
+else
+  PY_INFLATE=( "$PYBIN" -m "submissions.${SUB_NAME}.inflate" )
+fi
+
+"${PY_INFLATE[@]}" --dependency-check
 
 mkdir -p "$OUTPUT_DIR"
 
@@ -44,5 +51,5 @@ while IFS= read -r line; do
 
   DST="${OUTPUT_DIR}/${BASE}.raw"
   echo "[pr103-pr106-final] inflating ${SRC} -> ${DST}"
-  "$PYBIN" -m "submissions.${SUB_NAME}.inflate" "$SRC" "$DST"
+  "${PY_INFLATE[@]}" "$SRC" "$DST"
 done < "$FILE_LIST"

@@ -110,6 +110,14 @@ def test_pyproject_keeps_brotli_and_constriction_as_hard_runtime_deps() -> None:
     assert re.search(r'"constriction>=0\.4,<0\.5"', text)
 
 
+def test_final_runtime_inflate_sh_is_upload_root_safe() -> None:
+    text = (REPO_ROOT / "submissions/pr103_pr106_final_runtime/inflate.sh").read_text()
+    assert 'LOCAL_INFLATE_PY="$HERE/inflate.py"' in text
+    assert 'PY_INFLATE=( "$PYBIN" "$LOCAL_INFLATE_PY" )' in text
+    assert '"${PY_INFLATE[@]}" --dependency-check' in text
+    assert '"${PY_INFLATE[@]}" "$SRC" "$DST"' in text
+
+
 def test_final_runtime_has_no_tac_or_scorer_import_surface() -> None:
     text = (REPO_ROOT / "submissions/pr103_pr106_final_runtime/inflate.py").read_text().lower()
     assert "from tac." not in text
