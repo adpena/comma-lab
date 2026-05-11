@@ -401,6 +401,7 @@ def main() -> int:
     # 6. Build manifest.
     archive_zip_bytes = int(archive_zip.stat().st_size)
     archive_zip_sha256 = _sha256_file(archive_zip)
+    archive_members = _archive_member_manifest(archive_zip)
     manifest: dict[str, object] = {
         "schema_version": WIRE_FORMAT_VERSION,
         "lane_id": "factorized_hnerv_v1",
@@ -416,9 +417,12 @@ def main() -> int:
         "latent_section_bytes": int(len(latent_section)),
         "archive_payload_bytes": int(len(archive_bytes)),
         "archive_payload_sha256": archive_payload_sha256,
+        "archive_bytes": archive_zip_bytes,
+        "archive_size_bytes": archive_zip_bytes,
         "archive_zip_bytes": archive_zip_bytes,
         "archive_zip_sha256": archive_zip_sha256,
         "archive_sha256": archive_zip_sha256,
+        "archive_member_manifest": archive_members,
         "brotli_quality": args.brotli_quality,
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,

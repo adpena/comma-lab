@@ -51,7 +51,10 @@ def test_synthetic_build_closes_submission_surface(tmp_path: Path) -> None:
     assert manifest["archive_sha256"] == archive_sha
     assert manifest["archive_size_bytes"] == archive_bytes
     assert build["archive_sha256"] == archive_sha
+    assert build["archive_bytes"] == archive_bytes
+    assert build["archive_size_bytes"] == archive_bytes
     assert build["archive_zip_sha256"] == archive_sha
+    assert build["archive_member_manifest"] == manifest["members"]
     assert build["submission_custody"]["archive_zip_sha256"] == archive_sha
     assert f"archive_sha256: {archive_sha}" in report.read_text(encoding="utf-8")
     assert f"archive_size_bytes: {archive_bytes}" in report.read_text(encoding="utf-8")

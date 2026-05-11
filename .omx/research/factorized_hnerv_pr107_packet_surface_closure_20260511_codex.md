@@ -93,6 +93,19 @@ The lane is not killed. The useful score-lowering signal is that the packet
 compiler and runtime are now contest-surface compliant enough for future
 low-rank/QAT variants to materialize without manual glue.
 
+## Follow-up manifest hardening
+
+Codex follow-up on 2026-05-11 restored top-level charged-byte fields in the
+builder output:
+
+- `archive_bytes`
+- `archive_size_bytes`
+- `archive_member_manifest`
+
+This removes an avoidable ambiguity where downstream custody tools had to infer
+the charged ZIP byte count from `archive_zip_bytes` even though AGENTS.md score
+math and exact-eval ledgers standardize on `archive_bytes`.
+
 ## Next score-lowering move from this lane
 
 Do not exact-dispatch this high-error build as a primary score-lowering job.
