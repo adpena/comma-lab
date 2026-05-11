@@ -71,6 +71,8 @@ def test_recommended_candidate_reaches_sub017_only_as_projection() -> None:
     assert recommended["score_claim"] is False
     assert recommended["ready_for_exact_eval_dispatch"] is False
     assert "component_preservation_unproven" in recommended["dispatch_blockers"]
+    assert "relerr_safe_factorized_schedule_not_proven" in recommended["dispatch_blockers"]
+    assert "posthoc_factorized_hnerv_relerr_safe_schedule_missing" in plan["global_dispatch_blockers"]
 
 
 def test_cli_writes_json_and_markdown(tmp_path: Path) -> None:

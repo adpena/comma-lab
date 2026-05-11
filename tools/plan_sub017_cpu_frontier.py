@@ -245,7 +245,7 @@ def evaluate_option(
         "dispatch_blockers": [
             "cpu_design_only_no_archive_built",
             "component_preservation_unproven",
-            "factorized_inflate_runtime_not_built",
+            "relerr_safe_factorized_schedule_not_proven",
             "exact_cuda_auth_eval_required_before_score_claim",
         ],
     }
@@ -323,6 +323,7 @@ def build_plan(
                     "CPU reconstruction rel_err per tensor",
                     "charged factor and residual bytes",
                     "runtime consumes factorized tensors",
+                    "relerr-safe rank schedule has positive charged-byte savings",
                 ],
             },
             {
@@ -362,12 +363,12 @@ def build_plan(
         "global_dispatch_blockers": [
             "no_archive_built_by_this_tool",
             "cpu_projection_not_score_evidence",
-            "factorized_hnerv_runtime_not_implemented",
+            "posthoc_factorized_hnerv_relerr_safe_schedule_missing",
             "exact_cuda_auth_eval_required_before_score_claim",
             "remote_dispatch_forbidden_for_this_task",
         ],
         "next_local_artifacts": [
-            "layerwise SVD reconstruction manifest for stem.weight and blocks.0-2.weight",
+            "tools/plan_factorized_hnerv_relerr_schedule.py measured rank/error/byte schedule",
             "continuous-K allocation manifest over factor/residual streams",
             "byte-closed forked inflate runtime consuming low-rank factors",
             "strict no-score compliance report",
