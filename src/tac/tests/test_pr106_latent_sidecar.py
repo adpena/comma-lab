@@ -110,6 +110,31 @@ def test_sidecar_apply_modifies_correct_dim():
                 assert latents[p, d_other].item() == 0.0
 
 
+def test_heuristic_smoke_search_emits_nonzero_delta_for_selected_pairs():
+    """The smoke search must not silently emit an all-zero sidecar."""
+    build = _import_build_module()
+
+    latents = torch.zeros(3, 28)
+    latents[0, 5] = 2.0
+    latents[1, 6] = -3.0
+    latents[2, 7] = 0.25
+
+    dim_arr, delta_q_arr, diagnostics = build._heuristic_self_consistency_search(  # noqa: SLF001
+        decoder=object(),
+        latents=latents,
+        device=torch.device("cpu"),
+        top_k=2,
+    )
+
+    assert dim_arr.tolist() == [5, 6, build.NO_OP_DIM]
+    assert delta_q_arr.tolist() == [-1, 1, 0]
+    assert diagnostics["n_corrections"] == 2
+    assert diagnostics["n_no_op"] == 1
+    assert diagnostics["nonzero_delta_count"] == 2
+    assert diagnostics["delta_q_min"] == -1
+    assert diagnostics["delta_q_max"] == 1
+
+
 def test_sidecar_archive_blob_roundtrip_synthetic():
     """build → parse on synthetic PR106-shaped bytes preserves payload bit-exactly."""
     build = _import_build_module()
@@ -284,8 +309,20 @@ def test_cpu_smoke_builder_metadata_is_dispatch_fail_closed(tmp_path: Path):
     assert metadata["dispatch_blockers"]
     assert metadata["wall_clock_seconds"] == 0.0
     assert metadata["wall_clock_seconds_note"] == "omitted_for_deterministic_smoke_manifest"
+    assert metadata["diagnostics"]["n_corrections"] == 1
+    assert metadata["diagnostics"]["nonzero_delta_count"] == 1
+    assert (
+        metadata["diagnostics"]["delta_q_min"] != 0
+        or metadata["diagnostics"]["delta_q_max"] != 0
+    )
     assert Path(metadata["archive_path"]).resolve() == archive.resolve()
     assert metadata["archive_zip_bytes"] == archive.stat().st_size
+    sidecar_bin = Path(metadata["sidecar_path"])
+    dim_arr, delta_q_arr = _import_build_module().decode_sidecar_corrections(
+        sidecar_bin.read_bytes()
+    )
+    assert int(np.count_nonzero(delta_q_arr)) == 1
+    assert int(np.count_nonzero(dim_arr != 255)) == 1
     with zipfile.ZipFile(archive) as zf:
         infos = zf.infolist()
     assert len(infos) == 1

@@ -2,20 +2,21 @@
 # NO_NVDEC_NEEDED — pure tensor-side codec + scorer-forward; no DALI/NVDEC video pipeline.
 # Lane PR106 + latent sidecar — 28-dim x 600-pair latents corrected via per-pair (dim, delta_q)
 #
-# Predicted score: 0.20945 (PR106 baseline) - 0.00218 (sidecar gain) + tiny rate cost ≈ 0.207
-# (PR100-vs-PR105 empirical: same arch family, +1124b cost / -0.00218 score = net win).
+# Planning target: reproduce the PR100-style sidecar gain on PR106. The current
+# builder emits a heuristic nonzero smoke sidecar, so any exact eval from this
+# script is exploratory until a scorer-backed selector replaces the heuristic.
 #
 # Pipeline (3 stages, single Vast.ai 4090 ~$0.30/hr × 30min ≈ $0.30 OR
 # Lightning T4 final auth eval ~$0.22/hr × 30min ≈ $0.11):
 #
 #   Stage 0 (CPU): Provenance + CUDA preflight + heartbeat
 #   Stage 1 (CUDA): Build PR106 + sidecar archive (heuristic per-pair selector;
-#                   scorer-driven refinement is enabled when scorers reachable)
+#                   score_claim=false until a scorer-backed selector lands)
 #   Stage 2 (CPU): Local parser-roundtrip sanity check
 #   Stage 3 (CUDA-T4): contest_auth_eval — score must be < 0.20945 (PR106) to ship
 #
-# Strict-scorer-rule: scorer is loaded ONLY at Stage 1 (compress-time, with TTO
-# semantics) + Stage 3 (contest auth eval). Inflate-time has NO scorer dependency.
+# Strict-scorer-rule: scorer is loaded only by future score-aware build modes
+# and by Stage 3 contest auth eval. Inflate-time has NO scorer dependency.
 # Inflate-time only needs HNeRVDecoder + brotli.
 set -euo pipefail
 WORKSPACE="${WORKSPACE:-/workspace/pact}"

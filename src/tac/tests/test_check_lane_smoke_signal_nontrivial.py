@@ -204,19 +204,8 @@ def test_pcc9_strict_exits_nonzero(tmp_path: Path) -> None:
     assert rc == 1
 
 
-def test_pcc9_against_live_registry_finds_three_known_violations() -> None:
-    """Live integration: the real registry has 3 known smoke-promoted lanes."""
+def test_pcc9_against_live_registry_has_no_unresolved_smoke_promotions() -> None:
+    """Live integration: current registry must not carry unresolved smoke promotions."""
     mod = _load_module()
     violations = mod.scan_registry(REPO_ROOT)
-    flagged_lanes = {v.lane_id for v in violations}
-    # The forensic audit identified 4 (latent/yshift/lrl1/stacked); PCC9 catches the 3
-    # whose evidence points into experiments/results/. The 4th (stacked) has /tmp/
-    # evidence which is a separate kind of bad hygiene.
-    expected_subset = {
-        "lane_pr106_latent_sidecar",
-        "lane_pr106_yshift_sidechannel",
-        "lane_pr106_lrl1_sidechannel",
-    }
-    assert expected_subset.issubset(flagged_lanes), (
-        f"PCC9 missed expected violations. Flagged: {flagged_lanes}"
-    )
+    assert violations == []

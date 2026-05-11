@@ -19,15 +19,14 @@ Wire format (lane_pr106_latent_sidecar 0.bin):
                                           #             i8 delta_quantized (real = i8 * 0.01)
 
 Per-pair (dim, delta) selection strategy:
-  Default: gradient-guided (1 backward pass per pair, ~600 forward+backward total).
-    For each of 600 pairs:
-      g = grad_d(score) at current latents
-      best_dim = argmax_d |g[d]|
-      best_delta_quantized = clip(round(-g[best_dim] / 0.01), -127, 127)
-      Compute score with this correction; if no improvement, set dim=255 (no-op).
+  Default: heuristic nonzero smoke signal. For each pair, choose the largest
+    magnitude latent dimension and emit a one-quantum signed nudge toward zero.
+    This validates the wrapper/sidecar/runtime path but is not a score-aware
+    optimizer.
 
-  Optional: --search-mode brute -> full sweep (dim_idx in 0..27, delta_q in -127..127)
-    per pair. ~4.3M scorer forwards; only viable on CUDA with batched scoring.
+  Future production mode: scorer-backed gradient or brute-force search over
+    (dim_idx, delta_q) per pair. Until that lands, generated artifacts remain
+    score_claim=false and ready_for_exact_eval_dispatch=false.
 
 CUDA REQUIRED per CLAUDE.md MPS-auth-eval-is-NOISE rule. CPU is acceptable
 ONLY for smoke tests labeled [advisory only] via --device cpu --smoke.
@@ -242,7 +241,7 @@ def _try_load_scorers(device: torch.device):
 # =====================================================================
 
 
-def _gradient_guided_search(
+def _heuristic_self_consistency_search(
     decoder: HNeRVDecoder,
     latents: torch.Tensor,
     *,
@@ -268,12 +267,12 @@ def _gradient_guided_search(
     abs_lat = latents.detach().cpu().abs().numpy()
     candidate_dim = abs_lat.argmax(axis=1).astype(np.uint8)
 
-    # Quantize delta to nudge each latent slightly toward zero — a simple
-    # smoke target for the wire format. Gradient-guided / scorer-driven
-    # delta selection happens in Stage 3 of the remote runbook (where the
-    # scorer is reachable on CUDA) once this scaffolding is dispatched.
-    raw_delta = -0.005 * np.sign(abs_lat[np.arange(n_pairs), candidate_dim])
-    delta_q = np.clip(np.round(raw_delta / DELTA_SCALE), -127, 127).astype(np.int8)
+    # Quantize a one-step nudge toward zero. This is intentionally not a score
+    # objective; it is a nontrivial wire-format smoke signal. Use the signed
+    # latent values, not abs_lat, and avoid half-step rounding-to-zero.
+    lat_np = latents.detach().cpu().numpy()
+    selected_values = lat_np[np.arange(n_pairs), candidate_dim]
+    delta_q = (-np.sign(selected_values)).astype(np.int8)
 
     # If top_k specified, only correct top-k pairs (by latent magnitude).
     if top_k is not None and top_k < n_pairs:
@@ -289,12 +288,15 @@ def _gradient_guided_search(
     delta_q_arr = delta_q
 
     histogram = {int(d): int((dim_arr == d).sum()) for d in np.unique(dim_arr)}
-    n_corrections = int((dim_arr != NO_OP_DIM).sum())
+    correction_mask = (dim_arr != NO_OP_DIM) & (delta_q_arr != 0)
+    n_corrections = int(correction_mask.sum())
+    nonzero_delta_count = int(np.count_nonzero(delta_q_arr))
     diagnostics = {
         "search_mode": "self_consistency_heuristic",
         "n_pairs": int(n_pairs),
         "n_corrections": n_corrections,
         "n_no_op": int(n_pairs - n_corrections),
+        "nonzero_delta_count": nonzero_delta_count,
         "dim_histogram": histogram,
         "delta_q_min": int(delta_q_arr.min()),
         "delta_q_max": int(delta_q_arr.max()),
@@ -367,7 +369,7 @@ def main() -> int:
 
     # Stage D: run search to pick per-pair (dim, delta).
     if args.search_mode == "heuristic":
-        dim_arr, delta_q_arr, diagnostics = _gradient_guided_search(
+        dim_arr, delta_q_arr, diagnostics = _heuristic_self_consistency_search(
             decoder, latents, device=device, top_k=args.top_k
         )
     else:
