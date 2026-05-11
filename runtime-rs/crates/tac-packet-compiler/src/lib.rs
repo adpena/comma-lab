@@ -99,6 +99,7 @@ pub mod pr84_adaptive_mask;
 pub mod pr91_hpac_grammar;
 pub mod pr92_joint_stream;
 pub mod pr93_pose_codec;
+pub mod pr97_h3_grammar;
 pub mod simd;
 pub mod sparse_packet_ir;
 

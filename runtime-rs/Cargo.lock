@@ -1329,8 +1329,10 @@ name = "tac-packet-compiler"
 version = "0.1.0-prerelease"
 dependencies = [
  "brotli",
+ "brotli-decompressor",
  "constriction",
  "criterion",
+ "half",
  "hex",
  "liblzma",
  "ndarray",

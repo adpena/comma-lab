@@ -1,9 +1,10 @@
 # `tac-packet-compiler` — Rust native port for `tac.packet_compiler`.
 #
-# Status (2026-05-11): 3 of 16 primitives byte-for-byte parity GREEN against
-# the committed Python golden vectors. See README for the per-function table.
-# Remaining functions are still `unimplemented!()` and return
-# `PacketCompilerError::NotImplemented`.
+# Status (2026-05-11): 19 of 19 primitives byte-for-byte parity GREEN against
+# the committed Python golden vectors — COMPLETE NATIVE PARITY. See README
+# for the per-function table. Per Pre-stage I council D4 verdict: eligible
+# for `publish = true` (drop `-prerelease` suffix) — operator decision
+# pending in the landing memo.
 #
 # Promotion path:
 #   1. Python oracle (`src/tac/packet_compiler/`) is the canonical reference.

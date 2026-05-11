@@ -320,6 +320,79 @@ def write_ranked_no_op_sidecar_inputs() -> None:
     )
 
 
+def write_sparse_rle_of_zeros_inputs() -> None:
+    """int8 dense input for the sparse RLE-of-zeros primitive.
+
+    Matches `test_golden_vector_sparse_rle` in
+    `src/tac/tests/test_packet_compiler_sparse_packet_ir.py`:
+
+    ::
+
+        rng = np.random.default_rng(20260511)
+        dense = np.zeros(1024, dtype=np.int8)
+        positions = rng.choice(1024, size=64, replace=False)
+        values = rng.integers(1, 32, size=64, dtype=np.int8)
+        dense[positions] = values
+    """
+    rng = np.random.default_rng(20260511)
+    dense = np.zeros(1024, dtype=np.int8)
+    positions = rng.choice(1024, size=64, replace=False)
+    values = rng.integers(1, 32, size=64, dtype=np.int8)
+    dense[positions] = values
+    (_GOLDEN_DIR / "sparse_rle_of_zeros_v1_dense.bin").write_bytes(dense.tobytes())
+
+
+def write_sparse_arithmetic_coefficients_inputs() -> None:
+    """int32 values for the sparse arithmetic coefficients primitive.
+
+    Matches `test_golden_vector_sparse_arithmetic`:
+
+    ::
+
+        rng = np.random.default_rng(20260511)
+        raw = rng.integers(-8, 9, size=500, dtype=np.int32)
+    """
+    rng = np.random.default_rng(20260511)
+    raw = rng.integers(-8, 9, size=500, dtype=np.int32)
+    (_GOLDEN_DIR / "sparse_arithmetic_coefficients_v1_values.bin").write_bytes(
+        raw.astype("<i4").tobytes()
+    )
+
+
+def write_sparse_temporal_subsampled_inputs() -> None:
+    """K-of-N int8 per-frame residuals for the sparse temporal-subsampled primitive.
+
+    Matches `test_golden_vector_sparse_temporal`:
+
+    ::
+
+        rng = np.random.default_rng(20260511)
+        N = 50; per_frame = 20
+        frames: list[np.ndarray | None] = []
+        for i in range(N):
+            if i % 5 == 0:
+                frames.append(rng.integers(-10, 11, size=per_frame, dtype=np.int8))
+            else:
+                frames.append(None)
+
+    On disk we store ONLY the K signal-carrying frames concatenated as a flat
+    int8 stream. The Rust port reconstructs the indicator vector from
+    ``i % 5 == 0`` over ``i in [0, N)``. K = ceil(N/5) = 10 frames at 20
+    bytes each = 200 bytes.
+    """
+    rng = np.random.default_rng(20260511)
+    n_frames = 50
+    per_frame = 20
+    parts: list[bytes] = []
+    for i in range(n_frames):
+        if i % 5 == 0:
+            arr = rng.integers(-10, 11, size=per_frame, dtype=np.int8)
+            parts.append(arr.tobytes())
+    flat = b"".join(parts)
+    assert len(flat) == 10 * 20, f"expected 200 bytes, got {len(flat)}"
+    (_GOLDEN_DIR / "sparse_temporal_subsampled_v1_signal_frames.bin").write_bytes(flat)
+
+
 def main() -> None:
     _GOLDEN_DIR.mkdir(parents=True, exist_ok=True)
     write_centered_delta_uint8_inputs()
@@ -333,6 +406,9 @@ def main() -> None:
     write_pr81_router_action_inputs()
     write_pr92_rmc_joint_stream_inputs()
     write_ranked_no_op_sidecar_inputs()
+    write_sparse_rle_of_zeros_inputs()
+    write_sparse_arithmetic_coefficients_inputs()
+    write_sparse_temporal_subsampled_inputs()
     written = sorted(p.name for p in _GOLDEN_DIR.glob("*_v1_*.bin"))
     print(f"Wrote {len(written)} fixture(s) to {_GOLDEN_DIR.relative_to(_GOLDEN_DIR.parent.parent.parent.parent)}:")
     for name in written:

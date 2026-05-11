@@ -35,10 +35,14 @@
 //! - `src/tac/packet_compiler/golden_vectors/pr93_delta_varint_pose_v1_scale.bin`
 
 pub mod delta_varint;
+pub mod lowpass_luma;
 pub mod qzmb1;
 
 pub use delta_varint::{
     decode_delta_varint_pose, encode_delta_varint_pose, DeltaVarintPoseStream, MAGIC_MODEL_COMPACT,
     MAGIC_POSE_DV,
+};
+pub use lowpass_luma::{
+    deserialize_lowpass_luma_residual, serialize_lowpass_luma_residual, LowpassLumaResidual,
 };
 pub use qzmb1::{pack_qzmb1_block, unpack_qzmb1_block, QZMB1Block};

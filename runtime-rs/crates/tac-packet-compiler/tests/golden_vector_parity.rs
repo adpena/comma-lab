@@ -74,13 +74,19 @@ use tac_packet_compiler::{
     pr84_adaptive_mask::{encode_adaptive_context_stream, AdaptiveContextSpec},
     pr91_hpac_grammar::{emit_qmqh_header, encode_categorical_stream, pack_hi_lo_split},
     pr92_joint_stream::{pack_rmc1_composite, pack_rsa1_side},
-    pr93_pose_codec::{encode_delta_varint_pose, pack_qzmb1_block},
+    pr93_pose_codec::{
+        encode_delta_varint_pose, pack_qzmb1_block, serialize_lowpass_luma_residual,
+        LowpassLumaResidual,
+    },
+    pr97_h3_grammar::{encode_length_prefixed_sections, encode_tile_band_streams},
     sparse_packet_ir::{
         encode_arithmetic_coefficients as sparse_encode_arithmetic_coefficients,
         encode_rle_of_zeros as sparse_encode_rle_of_zeros,
         encode_temporal_subsampled as sparse_encode_temporal_subsampled,
+        serialize_arithmetic_coefficients as sparse_serialize_arithmetic_coefficients,
+        serialize_rle_of_zeros as sparse_serialize_rle_of_zeros,
+        serialize_temporal_subsampled as sparse_serialize_temporal_subsampled,
     },
-    PacketCompilerError,
 };
 
 /// Load a sibling binary fixture from the golden_vectors directory.
@@ -119,28 +125,10 @@ fn try_load(name: &str) -> Option<GoldenVectorManifest> {
     Some(load_golden_vector(&path).expect("golden vector must parse"))
 }
 
-/// Assert that a stub call is currently scaffold-only.
-///
-/// Once the stub is implemented, replace this helper with
-/// `tac_packet_compiler::conformance::assert_sha256_parity(produced, &manifest)`.
-fn assert_scaffold_refuses<T: std::fmt::Debug>(
-    result: tac_packet_compiler::Result<T>,
-    expected_fn: &'static str,
-) {
-    match result {
-        Err(PacketCompilerError::NotImplemented(name)) => {
-            assert_eq!(
-                name, expected_fn,
-                "scaffold reported wrong fn name in NotImplemented error"
-            );
-        }
-        Ok(_) => panic!(
-            "{expected_fn} unexpectedly returned Ok during scaffold phase; \
-             flip this test to assert_sha256_parity once the impl lands"
-        ),
-        Err(other) => panic!("{expected_fn} returned unexpected error: {other:?}"),
-    }
-}
+// `assert_scaffold_refuses` was retired after the last 6 impls flipped from
+// scaffold-only to `assert_sha256_parity` (2026-05-11). The pattern is
+// preserved in git history; future stub additions should re-introduce it
+// locally to this test file rather than re-export it as crate API.
 
 // ── PR101 parity tests ───────────────────────────────────────────────────────
 
@@ -621,64 +609,152 @@ fn pr93_qzmb1_parity() {
 
 #[test]
 fn pr93_lowpass_luma_parity() {
-    try_load_only("pr93_lowpass_luma_v1");
+    let manifest = match try_load("pr93_lowpass_luma_v1") {
+        Some(m) => m,
+        None => return,
+    };
+    // Recipe from src/tac/tests/test_packet_compiler_pr93_lowpass_luma.py:
+    //   coeffs = (1.0, 0.5, -0.25, 0.125, -0.0625, 0.03125)
+    //   res = LowpassLumaResidual(coefficients=coeffs, height=384, width=512)
+    //   blob = serialize_lowpass_luma_residual(res)
+    let r = LowpassLumaResidual {
+        coefficients: vec![1.0_f32, 0.5, -0.25, 0.125, -0.0625, 0.03125],
+        height: 384,
+        width: 512,
+    };
+    let blob = serialize_lowpass_luma_residual(&r)
+        .expect("serialize_lowpass_luma_residual must succeed");
+    assert_sha256_parity(&blob, &manifest)
+        .expect("PR93 lowpass-luma payload must match Python oracle SHA-256");
 }
 
-// ── PR97 H3 wire-format grammar parity stubs (2026-05-11) ───────────────────
+// ── PR97 H3 wire-format grammar parity (2026-05-11) ─────────────────────────
 
 #[test]
 fn pr97_h3_length_prefixed_sections_parity() {
-    try_load_only("pr97_h3_length_prefixed_sections_v1");
+    let manifest = match try_load("pr97_h3_length_prefixed_sections_v1") {
+        Some(m) => m,
+        None => return,
+    };
+    // Recipe from src/tac/tests/test_packet_compiler_pr97_h3_grammar.py:
+    //   sections = [b"\x00"*16, b"\x01"*32, b"\x02"*8, b"\x03"*4]
+    //   blob = encode_length_prefixed_sections(sections)
+    let s0 = vec![0u8; 16];
+    let s1 = vec![1u8; 32];
+    let s2 = vec![2u8; 8];
+    let s3 = vec![3u8; 4];
+    let sections: Vec<&[u8]> = vec![&s0, &s1, &s2, &s3];
+    let blob = encode_length_prefixed_sections(&sections)
+        .expect("encode_length_prefixed_sections must succeed");
+    assert_sha256_parity(&blob, &manifest)
+        .expect("PR97 H3 length-prefixed sections payload must match Python oracle SHA-256");
 }
 
 #[test]
 fn pr97_h3_tile_band_streams_parity() {
-    try_load_only("pr97_h3_tile_band_streams_v1");
+    let manifest = match try_load("pr97_h3_tile_band_streams_v1") {
+        Some(m) => m,
+        None => return,
+    };
+    // Recipe from src/tac/tests/test_packet_compiler_pr97_h3_grammar.py:
+    //   streams = [bytes([i]) * (i + 1) for i in range(22)]
+    //   blob = encode_tile_band_streams(streams)
+    let bufs: Vec<Vec<u8>> = (0..22u8).map(|i| vec![i; (i + 1) as usize]).collect();
+    let streams: Vec<&[u8]> = bufs.iter().map(|v| v.as_slice()).collect();
+    let blob =
+        encode_tile_band_streams(&streams).expect("encode_tile_band_streams must succeed");
+    assert_sha256_parity(&blob, &manifest)
+        .expect("PR97 H3 tile-band streams payload must match Python oracle SHA-256");
 }
 
 // ── Sparse PacketIR codec parity tests (2026-05-11) ─────────────────────────
 //
-// Closes O's L2 wire-format ceiling. Each test calls the scaffold stub and
-// asserts it currently refuses with `NotImplemented`; flip to
-// `assert_sha256_parity` once the Rust impl lands.
+// Closes O's L2 wire-format ceiling. Each test loads its sibling binary
+// fixture (regenerated via tools/regenerate_packet_compiler_rust_parity_fixtures.py)
+// and asserts byte-for-byte SHA parity against the committed manifest.
 
 #[test]
 fn sparse_rle_of_zeros_parity() {
-    let _manifest = try_load("sparse_rle_of_zeros_v1");
-    // Pinned recipe: rng=np.random.default_rng(20260511), 1024 int8 zeros,
-    // 64 nonzero positions, values in [1, 32). The encoder input is a flat
-    // dense `&[i8]`.
-    let dense = vec![0i8; 1024];
-    let result = sparse_encode_rle_of_zeros(&dense);
-    assert_scaffold_refuses(result, "encode_rle_of_zeros");
+    let manifest = match try_load("sparse_rle_of_zeros_v1") {
+        Some(m) => m,
+        None => return,
+    };
+    let dense_bin = match try_load_bin("sparse_rle_of_zeros_v1_dense.bin") {
+        Some(b) => b,
+        None => return,
+    };
+    // 1024 int8 dense bytes (mostly zero, 64 nonzero in [1, 32)).
+    assert_eq!(dense_bin.len(), 1024);
+    let dense: Vec<i8> = dense_bin.iter().map(|&b| b as i8).collect();
+    let stream =
+        sparse_encode_rle_of_zeros(&dense).expect("sparse_encode_rle_of_zeros must succeed");
+    let blob = sparse_serialize_rle_of_zeros(&stream)
+        .expect("sparse_serialize_rle_of_zeros must succeed");
+    assert_sha256_parity(&blob, &manifest)
+        .expect("sparse RLE-of-zeros payload must match Python oracle SHA-256");
 }
 
 #[test]
 fn sparse_arithmetic_coefficients_parity() {
-    let _manifest = try_load("sparse_arithmetic_coefficients_v1");
-    // Pinned recipe: rng=np.random.default_rng(20260511),
-    // np.random.integers(-8, 9, size=500, dtype=np.int32).
-    let values = vec![0i32; 500];
-    let result = sparse_encode_arithmetic_coefficients(&values, None, None, None);
-    assert_scaffold_refuses(result, "encode_arithmetic_coefficients");
+    let manifest = match try_load("sparse_arithmetic_coefficients_v1") {
+        Some(m) => m,
+        None => return,
+    };
+    let values_bin = match try_load_bin("sparse_arithmetic_coefficients_v1_values.bin") {
+        Some(b) => b,
+        None => return,
+    };
+    // 500 int32 little-endian values.
+    assert_eq!(values_bin.len(), 500 * 4);
+    let mut values: Vec<i32> = Vec::with_capacity(500);
+    for chunk in values_bin.chunks_exact(4) {
+        values.push(i32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]));
+    }
+    let stream = sparse_encode_arithmetic_coefficients(&values, None, None, None)
+        .expect("sparse_encode_arithmetic_coefficients must succeed");
+    let blob = sparse_serialize_arithmetic_coefficients(&stream)
+        .expect("sparse_serialize_arithmetic_coefficients must succeed");
+    assert_sha256_parity(&blob, &manifest)
+        .expect("sparse arithmetic coefficients payload must match Python oracle SHA-256");
 }
 
 #[test]
 fn sparse_temporal_subsampled_parity() {
-    let _manifest = try_load("sparse_temporal_subsampled_v1");
-    // Pinned recipe: N=50, per_frame=20, signal-carrying frames at i%5==0
-    // (10 frames). The encoder input is `Option<&[u8]>` per frame.
-    let signal = vec![0u8; 20];
-    let mut frames: Vec<Option<&[u8]>> = Vec::with_capacity(50);
-    for i in 0..50 {
+    let manifest = match try_load("sparse_temporal_subsampled_v1") {
+        Some(m) => m,
+        None => return,
+    };
+    let signal_bin = match try_load_bin("sparse_temporal_subsampled_v1_signal_frames.bin") {
+        Some(b) => b,
+        None => return,
+    };
+    // K=10 signal frames * 20 bytes each = 200 bytes total.
+    let n_frames = 50usize;
+    let per_frame = 20usize;
+    assert_eq!(signal_bin.len(), 10 * per_frame);
+    // Reconstruct frame list: signal-carrying at i % 5 == 0, else None.
+    let mut frame_storage: Vec<Vec<u8>> = Vec::with_capacity(10);
+    for i in 0..10 {
+        let off = i * per_frame;
+        frame_storage.push(signal_bin[off..off + per_frame].to_vec());
+    }
+    let mut frames: Vec<Option<&[u8]>> = Vec::with_capacity(n_frames);
+    let mut k_index = 0usize;
+    for i in 0..n_frames {
         if i % 5 == 0 {
-            frames.push(Some(&signal));
+            frames.push(Some(&frame_storage[k_index]));
+            k_index += 1;
         } else {
             frames.push(None);
         }
     }
-    let result = sparse_encode_temporal_subsampled(&frames);
-    assert_scaffold_refuses(result, "encode_temporal_subsampled");
+    assert_eq!(k_index, 10);
+    let stream = sparse_encode_temporal_subsampled(&frames)
+        .expect("sparse_encode_temporal_subsampled must succeed");
+    let blob = sparse_serialize_temporal_subsampled(&stream)
+        .expect("sparse_serialize_temporal_subsampled must succeed");
+    assert_sha256_parity(&blob, &manifest)
+        .expect("sparse temporal-subsampled payload must match Python oracle SHA-256");
 }
 
 // ── Magic codec auto-selector parity stub (2026-05-11) ──────────────────────
