@@ -10,7 +10,6 @@ frames, load scorers, run CUDA, dispatch jobs, or make score claims.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import lzma
 import math
@@ -20,6 +19,8 @@ import zlib
 from collections import Counter
 from pathlib import Path
 from typing import Any, Mapping, Sequence
+
+from tac.repo_io import json_text, read_json, sha256_bytes, sha256_file
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -55,22 +56,8 @@ class ProfileError(RuntimeError):
     """Raised when the PR85 model profile cannot be built safely."""
 
 
-def _sha256_bytes(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
-
-
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def _json_bytes(payload: Mapping[str, Any]) -> bytes:
-    return (json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n").encode(
-        "utf-8"
-    )
+    return json_text(payload).encode("utf-8")
 
 
 def _rel(path: Path | None) -> str | None:
@@ -90,7 +77,7 @@ def _read_json(path: Path | None, *, required: bool) -> dict[str, Any]:
             raise ProfileError(f"required JSON artifact is missing: {_rel(path)}")
         return {}
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload = read_json(path)
     except json.JSONDecodeError as exc:
         raise ProfileError(f"malformed JSON artifact: {_rel(path)}: {exc}") from exc
     if not isinstance(payload, dict):
@@ -152,7 +139,7 @@ def _byte_profile(data: bytes) -> dict[str, Any]:
     ff_count = int(counts.get(255, 0))
     return {
         "bytes": int(len(data)),
-        "sha256": _sha256_bytes(data),
+        "sha256": sha256_bytes(data),
         "magic_hex": data[:8].hex(),
         "magic_ascii": _magic_ascii(data),
         "entropy_bits_per_byte": round(entropy, 12),
@@ -291,12 +278,12 @@ def _read_pr85_archive(archive: Path) -> tuple[bytes, dict[str, Any]]:
     return raw, {
         "archive_path": _rel(archive),
         "archive_bytes": int(archive.stat().st_size),
-        "archive_sha256": _sha256_file(archive),
+        "archive_sha256": sha256_file(archive),
         "member_name": info.filename,
         "member_file_size": int(info.file_size),
         "member_compress_size": int(info.compress_size),
         "member_crc32_hex": f"{info.CRC:08x}",
-        "member_sha256": _sha256_bytes(raw),
+        "member_sha256": sha256_bytes(raw),
         "zip_stored": bool(info.compress_type == zipfile.ZIP_STORED),
     }
 
@@ -332,7 +319,7 @@ def _profile_artifact_consistency(
         if isinstance(model_row, Mapping):
             if int(model_row.get("bytes", -1)) != len(bundle.segments["model"]):
                 mismatches.append("bundle_profile_model_bytes")
-            if model_row.get("sha256") and model_row["sha256"] != _sha256_bytes(bundle.segments["model"]):
+            if model_row.get("sha256") and model_row["sha256"] != sha256_bytes(bundle.segments["model"]):
                 mismatches.append("bundle_profile_model_sha256")
     return {
         "checked": True,

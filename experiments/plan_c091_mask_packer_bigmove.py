@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import argparse
 import bz2
-import hashlib
 import importlib.util
 import json
 import lzma
@@ -28,6 +27,8 @@ from typing import Any
 
 import brotli
 import numpy as np
+
+from tac.repo_io import read_json, sha256_bytes, sha256_file, write_json
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -74,25 +75,8 @@ FIXED_SLICE_TABLE: dict[int, tuple[int, int, int, str]] = {
 }
 
 
-def _sha256_bytes(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
-
-
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def _json_bytes(payload: Any) -> bytes:
-    return (json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n").encode("utf-8")
-
-
 def _write_json(path: Path, payload: Any) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(_json_bytes(payload))
+    write_json(path, payload)
 
 
 def _rel(path: Path) -> str:
@@ -131,7 +115,7 @@ def read_single_payload_zip(path: Path) -> tuple[bytes, dict[str, Any]]:
     return payload, {
         "archive_path": _rel(path),
         "archive_bytes": path.stat().st_size,
-        "archive_sha256": _sha256_file(path),
+        "archive_sha256": sha256_file(path),
         "member_count": 1,
         "member_name": info.filename,
         "member_compress_type": int(info.compress_type),
@@ -214,7 +198,7 @@ def runtime_parse_summary(payload: bytes) -> dict[str, Any]:
         "members": {
             name: {
                 "decoded_bytes": len(blob),
-                "decoded_sha256": _sha256_bytes(blob),
+                "decoded_sha256": sha256_bytes(blob),
                 "decoded_prefix_hex": blob[:8].hex(),
             }
             for name, blob in sorted(decoded.items())
@@ -251,18 +235,18 @@ def stream_profile(archive: Path) -> dict[str, Any]:
         "zip": zip_meta,
         "payload": {
             "bytes": len(payload),
-            "sha256": _sha256_bytes(payload),
+            "sha256": sha256_bytes(payload),
             "payload_format": slices.payload_format,
             "action_record_count": slices.action_record_count,
         },
         "encoded_streams": {
-            name: {"bytes": len(blob), "sha256": _sha256_bytes(blob)}
+            name: {"bytes": len(blob), "sha256": sha256_bytes(blob)}
             for name, blob in sorted(encoded.items())
         },
         "decoded_streams": {
             name: {
                 "bytes": len(blob),
-                "sha256": _sha256_bytes(blob),
+                "sha256": sha256_bytes(blob),
                 "prefix_hex": blob[:8].hex(),
             }
             for name, blob in sorted(decoded.items())
@@ -291,7 +275,7 @@ def mask_lossless_probes(mask_obu: bytes, source_mask_br: bytes) -> dict[str, An
         {
             "codec": "source_brotli",
             "bytes": len(source_mask_br),
-            "sha256": _sha256_bytes(source_mask_br),
+            "sha256": sha256_bytes(source_mask_br),
             "delta_bytes_vs_source": 0,
             "roundtrip_equal": True,
             "params": "source",
@@ -299,7 +283,7 @@ def mask_lossless_probes(mask_obu: bytes, source_mask_br: bytes) -> dict[str, An
         {
             "codec": "raw_obu",
             "bytes": len(mask_obu),
-            "sha256": _sha256_bytes(mask_obu),
+            "sha256": sha256_bytes(mask_obu),
             "delta_bytes_vs_source": len(mask_obu) - len(source_mask_br),
             "roundtrip_equal": True,
             "params": "none",
@@ -311,7 +295,7 @@ def mask_lossless_probes(mask_obu: bytes, source_mask_br: bytes) -> dict[str, An
             {
                 "codec": "brotli",
                 "bytes": len(encoded),
-                "sha256": _sha256_bytes(encoded),
+                "sha256": sha256_bytes(encoded),
                 "delta_bytes_vs_source": len(encoded) - len(source_mask_br),
                 "roundtrip_equal": brotli.decompress(encoded) == mask_obu,
                 "params": {
@@ -331,7 +315,7 @@ def mask_lossless_probes(mask_obu: bytes, source_mask_br: bytes) -> dict[str, An
             {
                 "codec": codec,
                 "bytes": len(encoded),
-                "sha256": _sha256_bytes(encoded),
+                "sha256": sha256_bytes(encoded),
                 "delta_bytes_vs_source": len(encoded) - len(source_mask_br),
                 "roundtrip_equal": decode(encoded) == mask_obu,
                 "params": "default_max",
@@ -341,9 +325,9 @@ def mask_lossless_probes(mask_obu: bytes, source_mask_br: bytes) -> dict[str, An
     best = rows[0]
     return {
         "source_mask_brotli_bytes": len(source_mask_br),
-        "source_mask_brotli_sha256": _sha256_bytes(source_mask_br),
+        "source_mask_brotli_sha256": sha256_bytes(source_mask_br),
         "decoded_mask_obu_bytes": len(mask_obu),
-        "decoded_mask_obu_sha256": _sha256_bytes(mask_obu),
+        "decoded_mask_obu_sha256": sha256_bytes(mask_obu),
         "probe_count": len(rows),
         "best": best,
         "best_savings_bytes": max(0, len(source_mask_br) - int(best["bytes"])),
@@ -365,7 +349,9 @@ def read_frontier_eval(path: Path) -> dict[str, Any]:
             "sha256": FRONTIER_SHA256_FALLBACK,
             "source": "fallback_constants",
         }
-    data = json.loads(path.read_text())
+    data = read_json(path)
+    if not isinstance(data, dict):
+        raise ValueError(f"{path} must contain a JSON object")
     return {
         "score": float(data.get("canonical_score", data.get("score_recomputed_from_components", FRONTIER_SCORE_FALLBACK))),
         "bytes": int(data.get("archive_size_bytes", FRONTIER_BYTES_FALLBACK)),
@@ -418,7 +404,10 @@ def _load_json_if_exists(path_text: str | None) -> dict[str, Any] | None:
         path = REPO_ROOT / path
     if not path.exists():
         return None
-    return json.loads(path.read_text())
+    payload = read_json(path)
+    if not isinstance(payload, dict):
+        raise ValueError(f"{path} must contain a JSON object")
+    return payload
 
 
 def collect_candidate_rows(
@@ -433,7 +422,9 @@ def collect_candidate_rows(
     for matrix_path in matrix_paths:
         if not matrix_path.exists():
             continue
-        matrix = json.loads(matrix_path.read_text())
+        matrix = read_json(matrix_path)
+        if not isinstance(matrix, dict):
+            raise ValueError(f"{matrix_path} must contain a JSON object")
         for raw in matrix.get("candidates", []):
             archive_bytes = raw.get("archive_bytes")
             candidate_id = str(raw.get("candidate_id", ""))
@@ -626,7 +617,7 @@ def lossy_transcode_probe(
                     {
                         "cq": cq,
                         "encoded_obu_bytes": encoded.stat().st_size,
-                        "encoded_obu_sha256": _sha256_file(encoded),
+                        "encoded_obu_sha256": sha256_file(encoded),
                         "delta_bytes_vs_source_first_frames": encoded.stat().st_size - source_first.stat().st_size,
                         "class_mismatch_count": int(class_mismatch.sum()),
                         "class_mismatch_rate": float(class_mismatch.mean()),
@@ -652,7 +643,7 @@ def lossy_transcode_probe(
             "status": "completed",
             "frames": frames,
             "source_first_frames_obu_bytes": source_first.stat().st_size,
-            "source_first_frames_obu_sha256": _sha256_file(source_first),
+            "source_first_frames_obu_sha256": sha256_file(source_first),
             "cq_values": cq_values,
             "rows": rows,
             "geometry_safe_byte_saving_candidate_found": bool(safe_byte_saving),

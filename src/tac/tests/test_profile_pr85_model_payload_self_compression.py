@@ -8,7 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from tac.pr85_bundle import FIXED_V5_LENGTHS, SEGMENT_ORDER, pack_pr85_bundle
+from tac.pr85_bundle import FIXED_V5_LENGTHS, pack_pr85_bundle
+from tac.repo_io import sha256_bytes
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -70,10 +71,10 @@ def test_profiles_brotli_qh0_model_segment_and_routes(tmp_path: Path) -> None:
     assert profile["score_claim"] is False
     assert profile["dispatch_performed"] is False
     assert profile["model_segment"]["offset_in_x_member"] == 24 + len(segments["mask"])
-    assert profile["model_segment"]["encoded"]["sha256"] == module._sha256_bytes(model)
+    assert profile["model_segment"]["encoded"]["sha256"] == sha256_bytes(model)
     assert profile["model_segment"]["container"]["brotli_decodable"] is True
     assert profile["model_segment"]["container"]["decoded_payload_kind"] == "pr85_qh0_joint_frame_model"
-    assert profile["model_segment"]["decoded"]["sha256"] == module._sha256_bytes(decoded_model)
+    assert profile["model_segment"]["decoded"]["sha256"] == sha256_bytes(decoded_model)
     assert (
         profile["model_segment"]["decoded_windows"]["summary"]["zero_heavy_window_count"]
         >= 1

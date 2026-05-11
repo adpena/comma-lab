@@ -10,11 +10,12 @@ run scorers, claim scores, touch dispatch state, or dispatch remote jobs.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import time
 from pathlib import Path
 from typing import Any
+
+from tac.repo_io import json_text, read_json, sha256_bytes, sha256_file
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -105,28 +106,12 @@ def _read_json(path: Path, *, required: bool = True) -> dict[str, Any]:
             raise ContractPortError(f"required JSON input is missing: {_rel(path)}")
         return {}
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload = read_json(path)
     except json.JSONDecodeError as exc:
         raise ContractPortError(f"invalid JSON input: {_rel(path)}") from exc
     if not isinstance(payload, dict):
         raise ContractPortError(f"JSON input must be an object: {_rel(path)}")
     return payload
-
-
-def _sha256_bytes(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
-
-
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def _json_text(payload: Any) -> str:
-    return json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
 
 
 def _stable_digest(payload: dict[str, Any]) -> str:
@@ -138,7 +123,7 @@ def _stable_digest(payload: dict[str, Any]) -> str:
     encoded = json.dumps(stable, sort_keys=True, separators=(",", ":"), allow_nan=False).encode(
         "utf-8"
     )
-    return _sha256_bytes(encoded)
+    return sha256_bytes(encoded)
 
 
 def _int_or_none(value: Any) -> int | None:
@@ -203,7 +188,7 @@ def _artifact_identity(path: Path | None) -> dict[str, Any]:
         "path": _rel(path),
         "exists": True,
         "bytes": path.stat().st_size,
-        "sha256": _sha256_file(path),
+        "sha256": sha256_file(path),
     }
 
 
@@ -1098,8 +1083,8 @@ def main(argv: list[str] | None = None) -> int:
         request_score_claim=args.request_score_claim,
     )
     args.json_out.parent.mkdir(parents=True, exist_ok=True)
-    args.json_out.write_text(_json_text(plan), encoding="utf-8")
-    print(_json_text(plan), end="")
+    args.json_out.write_text(json_text(plan), encoding="utf-8")
+    print(json_text(plan), end="")
     return 0
 
 

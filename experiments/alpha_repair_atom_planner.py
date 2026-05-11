@@ -10,7 +10,6 @@ does not make score claims.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import importlib.util
 import json
 import math
@@ -20,6 +19,8 @@ import time
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Iterable
+
+from tac.repo_io import read_json, sha256_bytes, sha256_file, write_json
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -57,32 +58,13 @@ def _load_archive_builder() -> Any:
     return module
 
 
-def _sha256_bytes(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
-
-
-def _sha256_file(path: Path, *, chunk_size: int = 1024 * 1024) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(chunk_size), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def _json_bytes(payload: dict[str, Any]) -> bytes:
-    return (
-        json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
-    ).encode("utf-8")
-
-
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(_json_bytes(payload))
+    write_json(path, payload)
 
 
 def _read_json(path: Path) -> dict[str, Any]:
     try:
-        payload = json.loads(path.read_text())
+        payload = read_json(path)
     except json.JSONDecodeError as exc:
         raise AlphaRepairAtomPlannerError(f"{path} is not valid JSON") from exc
     if not isinstance(payload, dict):
@@ -91,7 +73,7 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 
 def _file_meta(path: Path) -> dict[str, Any]:
-    return {"path": str(path), "sha256": _sha256_file(path)}
+    return {"path": str(path), "sha256": sha256_file(path)}
 
 
 def _finite_number(value: Any, *, field: str) -> float:
@@ -201,7 +183,7 @@ def _load_component_trace_pair_meta(
     hardest = ranked_pairs[: min(pair_signal_top_k, EXPECTED_PAIR_COUNT)]
     return {
         "path": str(path),
-        "sha256": _sha256_file(path),
+        "sha256": sha256_file(path),
         "source_schema": "diagnostic_component_trace",
         "signal_source": "score_combined_contribution_first_order",
         "pair_signal_top_k": min(pair_signal_top_k, EXPECTED_PAIR_COUNT),
@@ -263,7 +245,7 @@ def _load_pair_meta(
     )
     return {
         "path": str(path),
-        "sha256": _sha256_file(path),
+        "sha256": sha256_file(path),
         "source_schema": payload.get("schema") or payload.get("schema_version"),
         "signal_source": "legacy_pose_seg_formula",
         "pair_signal_top_k": None,
@@ -553,10 +535,10 @@ def build_atom_plan(
             "selected_repair_runs": int(len(runs)),
             "residual_pixel_coverage": round(0.0 if total_pixels == 0 else selected_pixels / total_pixels, 12),
             "raw_amr1_bytes": len(raw_payload),
-            "raw_amr1_sha256": _sha256_bytes(raw_payload),
+            "raw_amr1_sha256": sha256_bytes(raw_payload),
             "compressed_member_name": member_name,
             "compressed_bytes": compressed_bytes,
-            "compressed_sha256": _sha256_bytes(compressed),
+            "compressed_sha256": sha256_bytes(compressed),
             "rate_term_cost": round(25.0 * compressed_bytes / 37_545_489, 12),
             "pixels_per_compressed_byte": round(selected_pixels / compressed_bytes, 12)
             if compressed_bytes
@@ -639,11 +621,11 @@ def build_atom_plan(
         "compressor": compressor,
         "candidate_manifest": {
             "path": str(candidate_manifest_path),
-            "sha256": _sha256_file(candidate_manifest_path),
+            "sha256": sha256_file(candidate_manifest_path),
         },
         "repair_artifact": {
             "path": str(repair_record["resolved_path"]),
-            "sha256": _sha256_file(Path(repair_record["resolved_path"])),
+            "sha256": sha256_file(Path(repair_record["resolved_path"])),
             "bytes": int(Path(repair_record["resolved_path"]).stat().st_size),
             "manifest_record": repair_record,
         },
