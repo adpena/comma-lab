@@ -141,6 +141,16 @@ def test_pr81_dequantize_rejects_negative_n_values() -> None:
         )
 
 
+def test_pr81_dequantize_rejects_non_nibble_values() -> None:
+    cb = FP4Codebook()
+    with pytest.raises(ValueError, match="4 bits"):
+        cb.dequantize_from_nibbles(
+            np.array([0, 16] + [0] * 30),
+            scales=np.ones(1, dtype=np.float32),
+            block_size=32,
+        )
+
+
 # ── Nibble packing helpers ──────────────────────────────────────────────────
 
 
@@ -162,6 +172,12 @@ def test_pr81_pack_nibbles_rejects_odd_count() -> None:
 
 def test_pr81_pack_nibbles_rejects_value_overflow() -> None:
     nibbles = np.array([0, 16], dtype=np.uint8)
+    with pytest.raises(ValueError, match="4 bits"):
+        pack_nibbles(nibbles)
+
+
+def test_pr81_pack_nibbles_rejects_pre_cast_wraparound() -> None:
+    nibbles = np.array([0, 256], dtype=np.int64)
     with pytest.raises(ValueError, match="4 bits"):
         pack_nibbles(nibbles)
 

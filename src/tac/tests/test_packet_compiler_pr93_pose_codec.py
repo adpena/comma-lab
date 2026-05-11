@@ -49,7 +49,16 @@ def test_pr93_magic_constants_match_source_pinning() -> None:
 
 
 def test_pr93_zigzag_roundtrips_signed_ints() -> None:
-    for value in (-1 << 30, -1, 0, 1, 17, -17, 1 << 30 - 1, (1 << 31) - 1):
+    for value in (
+        -(1 << 30),
+        -1,
+        0,
+        1,
+        17,
+        -17,
+        (1 << 30) - 1,
+        (1 << 31) - 1,
+    ):
         u = _zigzag_encode_i32(int(value))
         assert u >= 0
         recovered = _zigzag_decode_u32(u)
@@ -207,6 +216,51 @@ def test_pr93_delta_varint_decoder_rejects_unsupported_bits() -> None:
 
     payload = MAGIC_POSE_DV + _st.pack("<III", 1, 1, 12)
     with pytest.raises(ValueError, match="unsupported bits"):
+        decode_delta_varint_pose(payload)
+
+
+def test_pr93_delta_varint_decoder_rejects_truncated_header() -> None:
+    with pytest.raises(ValueError, match="shape header"):
+        decode_delta_varint_pose(MAGIC_POSE_DV + b"\x00\x00")
+
+
+def test_pr93_delta_varint_decoder_rejects_zero_rows_or_dims() -> None:
+    import struct as _st
+
+    with pytest.raises(ValueError, match="n_rows"):
+        decode_delta_varint_pose(MAGIC_POSE_DV + _st.pack("<III", 0, 1, 8))
+    with pytest.raises(ValueError, match="n_dims"):
+        decode_delta_varint_pose(MAGIC_POSE_DV + _st.pack("<III", 1, 0, 8))
+
+
+def test_pr93_delta_varint_decoder_rejects_truncated_vectors() -> None:
+    import struct as _st
+
+    base = MAGIC_POSE_DV + _st.pack("<III", 1, 2, 8)
+    with pytest.raises(ValueError, match="lo vector"):
+        decode_delta_varint_pose(base + b"\x00" * 4)
+    lo = np.zeros(2, dtype=np.float32).tobytes()
+    with pytest.raises(ValueError, match="scale vector"):
+        decode_delta_varint_pose(base + lo + b"\x00" * 4)
+    scale = np.ones(2, dtype=np.float32).tobytes()
+    with pytest.raises(ValueError, match="first-row vector"):
+        decode_delta_varint_pose(base + lo + scale + b"\x00")
+
+
+def test_pr93_delta_varint_decoder_rejects_invalid_scale_and_negative_q() -> None:
+    import struct as _st
+
+    lo = np.zeros(1, dtype=np.float32).tobytes()
+    bad_scale = np.zeros(1, dtype=np.float32).tobytes()
+    first = np.array([0], dtype=np.uint8).tobytes()
+    payload = MAGIC_POSE_DV + _st.pack("<III", 1, 1, 8) + lo + bad_scale + first
+    with pytest.raises(ValueError, match="strictly positive"):
+        decode_delta_varint_pose(payload)
+
+    scale = np.ones(1, dtype=np.float32).tobytes()
+    # n_rows=2, first=0, one delta=-1 encoded as zigzag unsigned 1.
+    payload = MAGIC_POSE_DV + _st.pack("<III", 2, 1, 8) + lo + scale + first + b"\x01"
+    with pytest.raises(ValueError, match="quantised pose value < 0"):
         decode_delta_varint_pose(payload)
 
 

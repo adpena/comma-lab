@@ -179,7 +179,10 @@ class FP4Codebook:
         """
         if block_size <= 0:
             raise ValueError(f"block_size must be > 0; got {block_size}")
-        nib = np.asarray(nibbles, dtype=np.uint8).reshape(-1)
+        raw = np.asarray(nibbles).reshape(-1)
+        if raw.size and (int(raw.min()) < 0 or int(raw.max()) > 0xF):
+            raise ValueError("nibble values must fit in 4 bits ([0, 15])")
+        nib = raw.astype(np.uint8, copy=False)
         scales = np.asarray(scales, dtype=np.float32).reshape(-1)
         n_blocks_needed = (nib.size + block_size - 1) // block_size
         if scales.size != n_blocks_needed:
@@ -215,13 +218,14 @@ def pack_nibbles(nibbles: np.ndarray) -> bytes:
     Two nibbles per byte, ``hi << 4 | lo``. PR81's exact layout.
     Length must be even — if odd, the caller should pad with 0 first.
     """
-    flat = np.asarray(nibbles, dtype=np.uint8).reshape(-1)
+    raw = np.asarray(nibbles).reshape(-1)
+    if raw.size and (int(raw.min()) < 0 or int(raw.max()) > 0xF):
+        raise ValueError("nibble values must fit in 4 bits ([0, 15])")
+    flat = raw.astype(np.uint8, copy=False)
     if flat.size & 1:
         raise ValueError(
             f"nibble count must be even for clean packing; got {flat.size}"
         )
-    if int(flat.max(initial=0)) > 0xF:
-        raise ValueError("nibble values must fit in 4 bits ([0, 15])")
     hi = flat[0::2].astype(np.uint8) & 0xF
     lo = flat[1::2].astype(np.uint8) & 0xF
     packed = ((hi << 4) | lo).astype(np.uint8)

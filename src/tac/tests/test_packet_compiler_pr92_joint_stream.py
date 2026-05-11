@@ -159,6 +159,12 @@ def test_pr92_rsa1_decoder_rejects_unsupported_action_bits() -> None:
         unpack_rsa1_side(payload)
 
 
+def test_pr92_rsa1_decoder_rejects_undersized_body() -> None:
+    payload = MAGIC_RSA1 + struct.pack("<HBB", 600, 3, 0) + b"\x00"
+    with pytest.raises(ValueError, match="body too small"):
+        unpack_rsa1_side(payload)
+
+
 # ── RSB1 side-action round-trip ─────────────────────────────────────────────
 
 
@@ -204,6 +210,14 @@ def test_pr92_rsb1_decoder_rejects_wrong_magic() -> None:
 def test_pr92_rsb1_decoder_rejects_truncated_header() -> None:
     with pytest.raises(ValueError, match="truncated"):
         unpack_rsb1_side(MAGIC_RSB1 + b"\x00\x00\x00")
+
+
+def test_pr92_rsb1_decoder_rejects_nonzero_reserved_byte() -> None:
+    actions = np.arange(8, dtype=np.uint8)
+    side = pack_rsb1_side(actions=actions, table_id=0)
+    corrupted = side.payload[:7] + b"\x01" + side.payload[8:]
+    with pytest.raises(ValueError, match="reserved byte"):
+        unpack_rsb1_side(corrupted)
 
 
 # ── Frozen dataclass invariants ─────────────────────────────────────────────

@@ -206,6 +206,12 @@ def unpack_rsa1_side(payload: bytes) -> RSA1Side:
             f"unsupported RSA1 action_bits {action_bits}; expected 1..8"
         )
     body = payload[8:]
+    required = (count * action_bits + 7) // 8
+    if len(body) < required:
+        raise ValueError(
+            f"RSA1 body too small for count={count} action_bits={action_bits}; "
+            f"need >= {required} bytes, got {len(body)}"
+        )
     return RSA1Side(
         payload=payload,
         count=int(count),
@@ -269,6 +275,8 @@ def unpack_rsb1_side(payload: bytes) -> RSB1Side:
     if len(payload) < 8:
         raise ValueError("truncated RSB1 side-action payload")
     count, table_id, _reserved = struct.unpack_from("<HBB", payload, 4)
+    if _reserved != 0:
+        raise ValueError(f"unsupported RSB1 reserved byte {_reserved}; expected 0")
     compressed = payload[8:]
     body_bytes = brotli.decompress(compressed)
     if len(body_bytes) != count:

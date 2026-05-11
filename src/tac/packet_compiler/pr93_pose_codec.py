@@ -290,18 +290,30 @@ def decode_delta_varint_pose(payload: bytes) -> np.ndarray:
             f"missing QZPDV1 magic; got prefix {payload[:8]!r}"
         )
     off = len(MAGIC_POSE_DV)
+    if len(payload) < off + 12:
+        raise ValueError("truncated QZPDV1 shape header")
     n_rows, n_dims, bits = struct.unpack_from("<III", payload, off)
     off += 12
     if bits not in (8, 16):
         raise ValueError(f"unsupported bits {bits}; expected 8 or 16")
+    if n_rows == 0:
+        raise ValueError("n_rows must be > 0")
     if n_dims == 0:
         raise ValueError("n_dims must be > 0")
+    if len(payload) < off + n_dims * 4:
+        raise ValueError("truncated QZPDV1 lo vector")
     lo = np.frombuffer(payload, dtype=np.float32, count=n_dims, offset=off).copy()
     off += n_dims * 4
+    if len(payload) < off + n_dims * 4:
+        raise ValueError("truncated QZPDV1 scale vector")
     scale = np.frombuffer(payload, dtype=np.float32, count=n_dims, offset=off).copy()
+    if not np.all(scale > 0):
+        raise ValueError("scale must be strictly positive everywhere")
     off += n_dims * 4
     dtype = np.uint8 if bits == 8 else np.uint16
     item_size = 1 if bits == 8 else 2
+    if len(payload) < off + n_dims * item_size:
+        raise ValueError("truncated QZPDV1 first-row vector")
     first = np.frombuffer(payload, dtype=dtype, count=n_dims, offset=off).astype(np.int64)
     off += n_dims * item_size
 
@@ -309,6 +321,8 @@ def decode_delta_varint_pose(payload: bytes) -> np.ndarray:
     deltas = np.empty(n_deltas, dtype=np.int64)
     for i in range(n_deltas):
         u, off = _decode_unsigned_varint(payload, off)
+        if u > 0xFFFFFFFF:
+            raise ValueError("zigzag varint exceeds unsigned 32-bit range")
         deltas[i] = _zigzag_decode_u32(u)
     if off != len(payload):
         raise ValueError(
@@ -320,6 +334,8 @@ def decode_delta_varint_pose(payload: bytes) -> np.ndarray:
     if n_rows > 1:
         deltas2d = deltas.reshape(n_rows - 1, n_dims)
         q[1:] = first + np.cumsum(deltas2d, axis=0)
+    if int(q.min()) < 0:
+        raise ValueError("decoded quantised pose value < 0")
     return (lo + q.astype(np.float32) * scale).astype(np.float32)
 
 
